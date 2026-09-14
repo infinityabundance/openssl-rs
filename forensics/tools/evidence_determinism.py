@@ -56,6 +56,7 @@ from atlas_common import REPO_ROOT, rel  # noqa: E402
 # `implemented_surface.py` needs a built archive, so the build is a precondition
 # and the caller runs it first.
 GENERATORS = [
+    "forensics/tools/symbol_ownership.py",
     "forensics/tools/implemented_surface.py",
     "forensics/tools/ownership_audit.py",
     "forensics/tools/prototype_court.py",
@@ -70,6 +71,7 @@ GENERATORS = [
 # business (court transcripts, staged probe binaries and the ABI shell are
 # produced by the court venue, not by these generators).
 COMPARED = [
+    "forensics/atlas/symbol-ownership.json",
     "forensics/atlas/implemented-surface.json",
     "forensics/atlas/ownership-audit.json",
     "forensics/atlas/prototype-court.json",

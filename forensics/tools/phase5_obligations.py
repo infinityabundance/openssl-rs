@@ -1,31 +1,29 @@
 #!/usr/bin/env python3
-"""openssl-rs — the Phase 5 obligation ledger, with **derived** symbol families.
+"""openssl-rs — the Phase 5 obligation ledger, and it is a *projection*.
 
-Why the families are derived here rather than typed
---------------------------------------------------
-`phase3_obligations.py` and `phase4_obligations.py` list their families as
-explicit `(module, prefixes)` pairs. That works while a stratum is a handful of
-subsystems whose prefixes a person can hold in their head, and it is exactly how
-the D49/D51 defect class arose twice: an export whose name matches no listed
-prefix is invisible to every ledger at once.
+This ledger does not decide its own universe
+--------------------------------------------
+It used to. The rule was stated correctly -- *a symbol belongs to the stratum that
+owns the header declaring it* -- but the candidates were chosen with a prefix test,
+`^(BN_|ASN1_|d2i_|i2d_|PEM_)`. So discovery and assignment used different rules,
+and an export like `a2d_ASN1_OBJECT` (declared in `asn1.h`, matching no prefix) was
+invisible to this ledger, to every other ledger and to `ownership_audit.py`
+simultaneously. That is the D49/D51 defect class a third time.
 
-Phase 5 cannot be done that way. Its surface is 1,093 exports spanning 270
-distinct ASN.1 type names, and the question "does this belong to Phase 5?" is not
-answerable from the *name* at all: `d2i_X509` and `d2i_ASN1_INTEGER` look alike and
-belong to different strata. What does answer it is *where the symbol is declared*,
-which the Phase 1 atlas already records per function.
+The universe now comes from `forensics/atlas/symbol-ownership.json`, which assigns
+**every one of the authority's 6,499 exports** to exactly one stratum by one stated
+rule (`forensics/tools/ownership_rules.py`, documented in D72). This file selects
+the rows that atlas assigns to Phase 5 and reports them as owned / implemented /
+handed-on / open. There is no prefix here and no per-symbol judgement: a symbol
+this ledger does not mention is a symbol the atlas gives to another stratum, and a
+symbol the atlas gives to this stratum cannot be absent from the ledger.
 
-So the rule is mechanical, and it is stated rather than implied:
+The hand-off machinery (`HANDED_ON`) is unchanged and is not a discovery
+mechanism: a hand-off names a *dependency* on a subsystem that does not exist yet,
+which is why each row carries the stratum that will absorb it and a reason.
 
-    A symbol belongs to the stratum that owns the header declaring it.
-
-with one exception that the header alone cannot express: `pem.h` declares both the
-generic PEM machinery *and* the typed readers and writers for types owned
-elsewhere (`PEM_read_bio_X509` is Phase 11's, not Phase 5's, even though `pem.h`
-declares it). Those are resolved by the type in the name, looked up in the atlas.
-
-Failure is loud. A header with no entry in `HEADER_PHASE`, or a PEM type that
-cannot be resolved, stops the ledger rather than defaulting to "probably Phase 5".
+Failure is loud. An empty projection, an atlas that cannot be read, or an export
+the atlas could not assign stops the run; none of them quietly becomes "unowned".
 
 SPDX-License-Identifier: Apache-2.0
 """
@@ -196,12 +194,11 @@ HANDED_ON.update({
 HANDED_ON["BN_generate_dsa_nonce"] = (
     9, "derives a nonce from the digest and entropy; RAND is Phase 9",
 )
-
-# The type in a PEM name is the last `_`-separated token group, after any of the
-# call-shape suffixes. `PEM_read_bio_X509` -> `X509`; `PEM_write_bio_PKCS7` ->
-# `PKCS7`; `PEM_def_callback` has no type and is generic.
-PEM_TYPE_RE = re.compile(r"^PEM_[a-z0-9]+(?:_bio|_fp|_asn1)?_(.+)$")
-
+HANDED_ON.update({
+    sym: (7, "digests and signs through EVP_PKEY/EVP_MD/X509_ALGOR; the EVP "
+             "framework is Phase 7 and the algorithm identifier is Phase 11")
+    for sym in ("ASN1_item_sign_ex", "ASN1_item_verify_ex")
+})
 
 def load(atlas: Path, name: str) -> dict:
     return json.loads((atlas / name).read_text(encoding="utf-8"))["body"]
@@ -219,55 +216,6 @@ def declared_headers(atlas: Path) -> dict[str, str]:
     return {r["name"]: r["header"] for r in load(atlas, "functions.json")["records"]}
 
 
-def type_headers(atlas: Path) -> dict[str, str]:
-    """Best header for each type name.
-
-    A forward declaration in `types.h` is a real declaration and a useless one:
-    every type has one, so it never distinguishes anything. `pem.h` is the same
-    kind of container -- it declares the typed readers and writers for every type
-    it can serialise, so a type resolved to `pem.h` has told us nothing.
-
-    The evidence used, strongest first, is the struct definition, then the
-    function names that take or return the type (`X509_free`, `d2i_X509`), then
-    the typedef. `types.h` and `pem.h` are accepted only when nothing stronger
-    exists, and the caller treats them as "no opinion".
-    """
-    best: dict[str, Counter] = {}
-
-    def note(type_name: str, header: str, weight: int) -> None:
-        best.setdefault(type_name, Counter())[header] += weight
-
-    for rec in load(atlas, "structs.json")["records"]:
-        if rec.get("header"):
-            note(rec["name"], rec["header"], 100)
-
-    for name, header in declared_headers(atlas).items():
-        # `d2i_T` / `i2d_T` / `PEM_write_bio_T`: the tail names the type outright.
-        m = re.match(r"^(?:d2i|i2d|PEM_[a-z0-9]+(?:_bio|_fp|_asn1)?)_(.+)$", name)
-        if m:
-            note(m.group(1), header, 10)
-        # `T_something`: the leading token may be a type. Weighted below the
-        # explicit forms because a leading token can be a verb.
-        lead = re.match(r"^([A-Z][A-Za-z0-9]*?)_", name)
-        if lead:
-            note(lead.group(1), header, 5)
-
-    for rec in load(atlas, "typedefs.json")["records"]:
-        note(rec["name"], rec["header"], 1)
-
-    weak = {"types.h", "pem.h"}
-    out: dict[str, str] = {}
-    for type_name, counts in best.items():
-        ranked = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
-        strong = [h for h, _ in ranked if h not in weak]
-        out[type_name] = (strong or [h for h, _ in ranked])[0]
-    return out
-
-
-def weak_type_header(header: str | None) -> bool:
-    """True when a type's resolved header says nothing about who owns it."""
-    return header is None or header in ("types.h", "pem.h")
-
 
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
@@ -278,7 +226,6 @@ def main(argv: list[str]) -> int:
     atlas = REPO_ROOT / "forensics" / "atlas" / auth.id
     exports = authority_exports(atlas)
     headers = declared_headers(atlas)
-    types = type_headers(atlas)
 
     implemented = set(
         json.loads(
@@ -288,10 +235,27 @@ def main(argv: list[str]) -> int:
         )["body"]["libraries"]["libcrypto"]["implemented_symbols"]
     )
 
-    # The stratum's scope: everything declared in a header this stratum owns, plus
-    # the PEM names whose type resolves into it.
-    prefix = re.compile(r"^(BN_|ASN1_|d2i_|i2d_|PEM_)")
-    candidates = [s for s in exports if prefix.match(s)]
+    # The stratum's scope comes from the **global ownership atlas**, not from a
+    # prefix. `forensics/atlas/symbol-ownership.json` assigns every one of the
+    # authority's 6,499 exports to exactly one stratum using the declaring-header
+    # rule this tool always documented (D66) and could not previously enforce: a
+    # prefix test chose the candidates, so `a2d_ASN1_OBJECT` -- declared in
+    # `asn1.h`, matching none of `^(BN_|ASN1_|d2i_|i2d_|PEM_)` -- was invisible to
+    # this ledger, to every other ledger and to `ownership_audit.py` at once. That
+    # is the D49/D51 defect class, and D72 records the fix: one artifact, one rule,
+    # applied to the whole authority, with `unknown == 0` and
+    # `multiply_owned == 0` asserted there rather than assumed here.
+    atlas_ownership = json.loads(
+        (REPO_ROOT / "forensics" / "atlas" / "symbol-ownership.json").read_text(
+            encoding="utf-8"
+        )
+    )["body"]
+    mine = [r for r in atlas_ownership["records"] if r["owner_phase"] == 5]
+    if not mine:
+        raise SystemExit(
+            "phase5-obligations: the ownership atlas assigns this stratum no "
+            "exports, which means the atlas or this tool is wrong"
+        )
 
     owned: dict[str, dict] = {}
     deferred: list[dict] = []
@@ -302,15 +266,16 @@ def main(argv: list[str]) -> int:
             "symbol": sym, "module": module, "declaring_header": header,
         }
 
-    for sym in candidates:
-        header = headers.get(sym)
+    for row in mine:
+        sym = row["symbol"]
+        header = row["declaring_header"]
         handed = HANDED_ON.get(sym)
         if handed is not None:
-            # `bn.h` declares these, so the stratum owns them and the ledger counts
-            # them as covered -- and then hands them on, because what they need is a
-            # subsystem that does not exist yet. The reason is a *dependency*, not a
-            # difficulty, which is what makes the hand-off checkable: RAND is Phase 9,
-            # and no RAND surface exists in this crate yet.
+            # The header declares it, so the stratum owns it and the ledger counts
+            # it as covered -- and then hands it on, because what it needs is a
+            # subsystem that does not exist yet. The reason is a *dependency*, not
+            # a difficulty, which is what makes the hand-off checkable: RAND is
+            # Phase 9, and no RAND surface exists in this crate yet.
             phase, reason = handed
             claim(sym, f"(phase {phase})", header or "bn.h")
             deferred.append({
@@ -319,66 +284,7 @@ def main(argv: list[str]) -> int:
                 "reason": reason,
             })
             continue
-        if header is not None and header in HEADER_PHASE:
-            phase = HEADER_PHASE[header]
-            if phase == 5:
-                claim(sym, MODULE_OF_HEADER[header], header)
-            else:
-                # The family's *prefixes* still match this symbol -- `d2i_X509`
-                # starts with `d2i_` -- so the ledger counts it as an export the
-                # stratum's families cover and then hands it on. That is the same
-                # shape Phase 3 and Phase 4 use, and it is what makes
-                # `implemented + deferred + open == owned` hold here too.
-                claim(sym, f"(phase {phase})", header)
-                deferred.append({
-                    "symbol": sym, "owning_phase": phase,
-                    "declaring_header": header,
-                    "reason": f"declared in {header}; that subsystem is phase {phase}",
-                })
-            continue
-
-        # `pem.h`, or a header the table does not know: resolve by type.
-        if header not in (None, "pem.h") and header not in HEADER_PHASE:
-            unresolved.append(f"{sym}: header {header} is not in HEADER_PHASE")
-            continue
-        m = PEM_TYPE_RE.match(sym)
-        if m is None:
-            # A generic PEM entry point with no type in its name.
-            claim(sym, "src/pem/", header or "(pem.h)")
-            continue
-        type_name = m.group(1)
-        type_header = types.get(type_name)
-        if weak_type_header(type_header):
-            # Nothing stronger than a forward declaration names this type, so the
-            # name is not evidence and the generic machinery is what is being
-            # declared here.
-            claim(sym, "src/pem/", header or "(pem.h)")
-            continue
-        if type_header not in HEADER_PHASE:
-            unresolved.append(f"{sym}: type {type_name} is declared in {type_header}, "
-                              "which is not in HEADER_PHASE")
-            continue
-        phase = HEADER_PHASE[type_header]
-        if phase == 5:
-            claim(sym, "src/pem/", type_header)
-        else:
-            claim(sym, f"(phase {phase})", type_header)
-            deferred.append({
-                "symbol": sym, "owning_phase": phase,
-                "declaring_header": type_header,
-                "reason": f"operates on {type_name}, declared in {type_header}; "
-                          f"that subsystem is phase {phase}",
-            })
-
-    if unresolved:
-        shown = "\n  ".join(sorted(unresolved)[:25])
-        more = ("\n  ... and " + str(len(unresolved) - 25) + " more"
-                if len(unresolved) > 25 else "")
-        raise SystemExit(
-            "phase5-obligations: these symbols could not be assigned without "
-            "guessing. Add the header to HEADER_PHASE, or state the rule that "
-            "resolves them:\n  " + shown + more
-        )
+        claim(sym, MODULE_OF_HEADER.get(header, "src/asn1/"), header or "(no installed header)")
 
     # The hand-offs Phase 4 handed this stratum must be accounted for here: a symbol
     # Phase 4 deferred to Phase 5 that this stratum does not even claim is an
@@ -404,13 +310,15 @@ def main(argv: list[str]) -> int:
             "one:\n  " + "\n  ".join(r["symbol"] for r in bad)
         )
 
-    if len(owned) != len(candidates) + len(HANDED_OFF_FROM_PHASE4):
+    atlas_symbols = {r["symbol"] for r in mine}
+    by_name = [s for s in HANDED_OFF_FROM_PHASE4 if s not in atlas_symbols]
+    if len(owned) != len(mine) + len(by_name):
         raise SystemExit(
-            "phase5-obligations: the family covers "
-            f"{len(owned)} exports but the candidates plus the Phase 4 hand-offs "
-            f"are {len(candidates) + len(HANDED_OFF_FROM_PHASE4)} (the hand-offs are "
-            "claimed by name rather than by prefix, and a deferred symbol is still "
-            "counted as covered by the family that matches its prefix)"
+            "phase5-obligations: the projection covers "
+            f"{len(owned)} exports but the atlas assigns this stratum {len(mine)} "
+            f"plus {len(by_name)} of the {len(HANDED_OFF_FROM_PHASE4)} Phase 4 "
+            "hand-offs (the rest the atlas already assigns, because their "
+            "declaration moved to a header this stratum owns)"
         )
 
     implemented_here = sorted(s for s in owned if s in implemented)
@@ -423,14 +331,16 @@ def main(argv: list[str]) -> int:
 
     body = {
         "rule": (
-            "a symbol belongs to the stratum that owns the header declaring it; "
-            "`pem.h` is the one header that declares surface owned elsewhere, so "
-            "its typed readers and writers are resolved by the type in the name"
+            "the stratum's scope is the projection of forensics/atlas/"
+            "symbol-ownership.json for phase 5: a symbol belongs to the stratum "
+            "that owns the header declaring it, `pem.h`'s typed names resolve "
+            "through the type's header, and the exports no installed header "
+            "declares are dispositioned in ownership_rules.ABI_ONLY_OWNER"
         ),
         "header_phase": dict(sorted(HEADER_PHASE.items())),
         "module_of_header": dict(sorted(MODULE_OF_HEADER.items())),
         "counts": {
-            "candidates": len(candidates),
+            "atlas_owned": len(mine),
             "owned": len(owned),
             "implemented": len(implemented_here),
             "deferred_to_later_phase": len(deferred),
@@ -478,7 +388,7 @@ def main(argv: list[str]) -> int:
     write_json(OUT, doc)
 
     c = body["counts"]
-    print(f"[phase5-obligations] candidates={c['candidates']} owned={c['owned']} "
+    print(f"[phase5-obligations] atlas={c['atlas_owned']} owned={c['owned']} "
           f"implemented={c['implemented']} deferred={c['deferred_to_later_phase']} "
           f"open={c['open_in_this_stratum']}")
     print(f"  complete={body['complete']}")

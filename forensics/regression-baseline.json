@@ -1,4 +1,10 @@
 {
+  "court_phases": [
+    "phase2",
+    "phase3",
+    "phase4",
+    "phase5"
+  ],
   "courts": {
     "ABI-CONSTANTS": {
       "observations": 0,
@@ -92,6 +98,10 @@
       "observations": 157,
       "verdict": "pass"
     },
+    "RT-BN": {
+      "observations": 633,
+      "verdict": "pass"
+    },
     "RT-CONF": {
       "observations": 736,
       "verdict": "pass"
@@ -139,7 +149,8 @@
   },
   "deferred": {
     "phase3": 11,
-    "phase4": 31
+    "phase4": 31,
+    "phase5": 33
   },
   "implemented": {
     "libcrypto": 625,
@@ -147,7 +158,13 @@
   },
   "open_obligations": {
     "phase3": 0,
-    "phase4": 0
+    "phase4": 0,
+    "phase5": 362
+  },
+  "owned_obligations": {
+    "phase3": 235,
+    "phase4": 262,
+    "phase5": 565
   },
   "phases": {
     "0": "complete",

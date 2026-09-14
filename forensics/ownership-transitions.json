@@ -1,0 +1,18 @@
+{
+  "schema": "openssl-rs/ownership-transitions/v1",
+  "note": "Approved changes to an obligation ledger's *universe*. An increase in open_in_this_stratum is a regression by default (forensics/tools/regression_guard.py); it is accepted only when a row here matches the observed change exactly on every field, so a transition can bless the change it describes and nothing else. Each row names the decision that recorded it and the artifact that is the authority for the new universe. This file is not a place to hide a regression: remove the transition and the same change fails the guard again.",
+  "transitions": [
+    {
+      "phase": 5,
+      "reason": "Phase 5's universe moved from a prefix test to the global ownership atlas (forensics/atlas/symbol-ownership.json), so discovery and assignment are now the same rule. The stratum's owned set shrinks because the exports its prefixes used to match but whose declaring header belongs to another stratum are now owned by that stratum, and grows because twenty-nine ASN.1 exports the prefix test could not see are now visible. implemented is unchanged: nothing was undone and no implementation was lost.",
+      "open_before": 318,
+      "open_after": 362,
+      "owned_before": 1099,
+      "owned_after": 565,
+      "implemented_before": 170,
+      "implemented_after": 170,
+      "authority_artifact": "forensics/atlas/symbol-ownership.json",
+      "recorded_by": "docs/DECISIONS.md D72"
+    }
+  ]
+}

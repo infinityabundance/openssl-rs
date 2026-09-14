@@ -70,6 +70,8 @@ GENERATOR = "forensics/tools/ownership_audit.py"
 # The ledgers that publish a family list. Adding a phase means adding its module
 # here, which is the point: a new stratum cannot be introduced without its
 # families becoming visible to this audit.
+ATLAS_OWNERSHIP = "forensics/atlas/symbol-ownership.json"
+
 LEDGERS = [
     (3, "forensics/tools/phase3_obligations.py"),
     (4, "forensics/tools/phase4_obligations.py"),
@@ -144,6 +146,40 @@ def main(argv: list[str]) -> int:
     auth = resolve_authority(args.authority)
     authdir = REPO_ROOT / "forensics" / "atlas" / auth.id
 
+    # The **global ownership atlas** is the primary plane. It assigns every one of
+    # the authority's exports to exactly one stratum by one rule
+    # (`forensics/tools/ownership_rules.py`), so the invariant enforced here is now
+    # the stronger one the atlas makes checkable:
+    #
+    #   every authority export has exactly one declared owner, before any
+    #   implementation exists
+    #
+    # rather than "every *implemented* export has an owner", which was the old and
+    # much weaker statement and is what let `a2d_ASN1_OBJECT` be invisible to every
+    # ledger at once (D72).
+    #
+    # The prefix families below are kept as a *cross-check* for the strata that
+    # still declare them. Where a family claims a symbol the atlas gives to another
+    # phase, that disagreement is reported; it is never resolved silently.
+    atlas_doc = json.loads(
+        (REPO_ROOT / ATLAS_OWNERSHIP).read_text(encoding="utf-8")
+    )["body"]
+    atlas_owner: dict[tuple[str, str], int] = {}
+    for row in atlas_doc["records"]:
+        atlas_owner[(row["library"], row["symbol"])] = row["owner_phase"]
+    atlas_problems: list[str] = []
+    for field, expected in (("unknown", 0), ("multiply_owned", 0),
+                            ("unassigned_headers", 0)):
+        if atlas_doc["invariants"].get(field) != expected:
+            atlas_problems.append(
+                f"the ownership atlas reports {field}="
+                f"{atlas_doc['invariants'].get(field)}, expected {expected}")
+    if atlas_doc["universe"]["exports"] != len(atlas_owner):
+        atlas_problems.append(
+            "the ownership atlas lists "
+            f"{atlas_doc['universe']['exports']} exports but has "
+            f"{len(atlas_owner)} rows")
+
     # (phase, module, prefix) -> the symbols it claims.
     claims: list[dict] = []
     owner: dict[tuple[str, str], list[tuple[int, str, str]]] = {}
@@ -167,18 +203,20 @@ def main(argv: list[str]) -> int:
                             )
 
     impl = implemented()
-    problems: list[str] = []
+    problems: list[str] = list(atlas_problems)
 
-    # An implemented export must be owned, or its work is invisible.
+    # An implemented export must be owned, or its work is invisible. The atlas
+    # answers this directly now: a symbol with no atlas row could not have been
+    # exported at all, and one the atlas could not assign stopped the atlas run.
     unowned_implemented: list[dict] = []
     for lib in CLAIM_LIBS:
         for sym in sorted(impl[lib]):
-            if (lib, sym) not in owner:
+            if (lib, sym) not in atlas_owner:
                 unowned_implemented.append({"lib": lib, "symbol": sym})
     if unowned_implemented:
         problems.append(
-            "these exports are implemented but no phase family claims them, so no "
-            "ledger can account for them:\n  "
+            "these exports are implemented but the ownership atlas does not "
+            "assign them, so no ledger can account for them:\n  "
             + "\n  ".join(f"{r['lib']}:{r['symbol']}" for r in unowned_implemented)
         )
 
@@ -332,8 +370,74 @@ def main(argv: list[str]) -> int:
             "symbols": symbols,
         }
 
+    # Ledger-versus-atlas agreement, per phase. A phase's ledger owns the symbols
+    # the atlas gives it, minus its explicit hand-offs; a difference in either
+    # direction is reported here rather than left for a reader to notice.
+    ledger_agreement: list[dict] = []
+    for phase, _generator in LEDGERS:
+        # `LEDGERS` names the *generator* modules, because the family cross-check
+        # below reads their `FAMILIES`. The ledger it produces is the JSON.
+        ledger_rel = f"forensics/phase{phase}-obligations.json"
+        path = REPO_ROOT / ledger_rel
+        if not path.is_file():
+            continue
+        rows = json.loads(path.read_text(encoding="utf-8"))["body"]
+        owned = rows.get("owned")
+        def symbols_of(field: object) -> set[str]:
+            """A ledger's symbol list, whether its rows are names or objects."""
+            out: set[str] = set()
+            for r in field or []:
+                if isinstance(r, str):
+                    out.add(r)
+                elif isinstance(r, dict) and "symbol" in r:
+                    out.add(r["symbol"])
+            return out
+
+        ledger_symbols = (
+            symbols_of(owned) if owned is not None
+            else symbols_of(rows.get("implemented")) | symbols_of(rows.get("open"))
+        )
+        if not ledger_symbols:
+            counts = rows.get("counts", {})
+            ledger_symbols = set()
+            ledger_agreement.append({
+                "phase": phase,
+                "ledger": ledger_rel,
+                "atlas": sum(1 for p in atlas_owner.values() if p == phase),
+                "ledger_reported": counts.get("owned", 0),
+                "note": "this ledger does not list its symbols, only counts",
+            })
+            continue
+        atlas_symbols = {s for (l, s), p in atlas_owner.items()
+                         if p == phase and l in CLAIM_LIBS}
+        only_atlas = sorted(atlas_symbols - ledger_symbols)
+        only_ledger = sorted(ledger_symbols - atlas_symbols)
+        ledger_agreement.append({
+            "phase": phase,
+            "ledger": ledger_rel,
+            "atlas": len(atlas_symbols),
+            "ledger": len(ledger_symbols),
+            "only_in_atlas": len(only_atlas),
+            "only_in_ledger": len(only_ledger),
+            "only_in_atlas_examples": only_atlas[:10],
+            "only_in_ledger_examples": only_ledger[:10],
+        })
+
     body = {
         "invariant": (
+            "every authority export has exactly one declared owner in "
+            "forensics/atlas/symbol-ownership.json, and every implemented export's "
+            "owner is therefore declared before any implementation exists"
+        ),
+        "atlas": {
+            "artifact": ATLAS_OWNERSHIP,
+            "exports": atlas_doc["universe"]["exports"],
+            "invariants": atlas_doc["invariants"],
+            "by_phase": atlas_doc["by_phase"],
+            "rules": atlas_doc["rules"],
+        },
+        "ledger_agreement": ledger_agreement,
+        "previous_invariant": (
             "every implemented export is claimed by at least one phase family"
         ),
         "why": (

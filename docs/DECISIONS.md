@@ -2795,3 +2795,116 @@ artefact), so regenerating it drifted from the committed file silently and only
 shape, which removes the manual step rather than documenting it. The same class of
 gap applies to the other `.rs` generator, `gen_bn_primes.py`, and is recorded here
 rather than assumed away.
+
+## D72 — One ownership atlas, because discovery was still prefix-derived
+
+**Decision.** Scope discovery stops being per-phase and becomes global. A new
+generated artifact, `forensics/atlas/symbol-ownership.json`, has **every export of
+`libcrypto.so.3` and `libssl.so.3`** as its universe — 6,499 symbols — and assigns
+each to exactly one stratum by one rule, stated once in
+`forensics/tools/ownership_rules.py` and applied by
+`forensics/tools/symbol_ownership.py`. Phase 5's ledger becomes a projection of it.
+
+**The defect this closes.** Phase 5 had already documented the right rule — *a
+symbol belongs to the stratum that owns the header declaring it* — and then chosen
+its candidates with a prefix test:
+
+```python
+prefix = re.compile(r"^(BN_|ASN1_|d2i_|i2d_|PEM_)")
+```
+
+So discovery and assignment used different rules, which is the D49/D51 defect
+class a third time. The concrete misses are the ones a reviewer found by reading:
+`a2d_ASN1_OBJECT` and `a2i_ASN1_INTEGER` are declared in `asn1.h` and match no
+prefix, so they were invisible to the Phase 5 ledger, to every other ledger, and to
+`ownership_audit.py`, whose invariant was only *every **implemented** export has an
+owner*. `i2a_ASN1_OBJECT`, `i2a_ASN1_STRING`, `i2a_ASN1_INTEGER`,
+`i2a_ASN1_ENUMERATED`, `a2i_ASN1_STRING`, `a2i_ASN1_ENUMERATED`, `i2t_ASN1_OBJECT`,
+`UTF8_getc`, `UTF8_putc`, `BIGNUM_it`, `CBIGNUM_it`, the eight `{Z,}{U,}INT{32,64}_it`
+items, `LONG_it`, `ZLONG_it`, `DIRECTORYSTRING_{new,free,it}` and
+`DISPLAYTEXT_{new,free,it}` were the rest: **29 exports**, all of them ASN.1's.
+`i2a_ASN1_OBJECT` is not a convenience — `ASN1_parse` calls it.
+
+The fix is not more prefixes. The atlas asserts what the prefix rule could only
+approximate, and it asserts it over the whole authority:
+
+```text
+rows == 6,499      unknown == 0      multiply_owned == 0      unassigned_headers == 0
+```
+
+**Three rules, tried in order.** `abi-only` for the 26 exports the DSO exports and
+no installed header declares (15 `DSO_*`, `OPENSSL_DIR_{read,end}`,
+`err_free_strings_int`, the three `conf_ssl_*`, `asn1_d2i_read_bio`, and the four
+`PEM_*_CMS`), each named in `ABI_ONLY_OWNER` with the stratum that owns it;
+`declaring-header` for everything a header declares; and `pem-typed-object` for
+`pem.h`'s typed names, where the type in the name is resolved through the Phase 1
+atlas's type→header evidence and *that* header decides. An export the rules cannot
+place stops the atlas run; it never defaults.
+
+The result: `declaring-header` 6,376, `pem-typed-object` 97, `abi-only` 26, and
+per-phase counts `{2: 15, 3: 304, 4: 256, 5: 561, 6: 112, 7: 924, 8: 759, 9: 25,
+10: 272, 11: 1455, 12: 1024, 13: 189, 14: 600, 15: 3}`.
+
+**Phase 5's numbers move, and that is the point.** Owned 1,099 → **565**; open
+318 → **362**; implemented **unchanged at 170**. `owned` shrinks because the
+exports its prefixes used to match but whose declaring header belongs to another
+stratum are now owned by *that* stratum — the deferred rows that used to be counted
+here are gone, because a symbol deferred out of a stratum it never belonged to was
+never this stratum's. `open` grows because 29 exports that were invisible are now
+visible, and because the ASN.1 surface it *does* own is larger than the prefix test
+admitted. Nothing was undone and no implementation was lost, which is why
+`implemented` is the field that must not move, and does not.
+
+**A scope correction has to be recordable, or it is indistinguishable from a
+regression.** The regression guard's invariant is that `open_obligations` never
+increases, and an honest correction does increase it. Weakening the invariant was
+not an option, so `forensics/ownership-transitions.json` records the approved move
+with its before/after numbers, and the guard accepts an increase **only** when a
+row matches the observed change exactly on *every* field — phase, `open_before`,
+`open_after`, `owned_after`. A larger increase, a different owned count, or an
+unrecorded phase all fail. The transition names the decision that recorded it and
+the artifact that is the authority for the new universe, and removing the row makes
+the same change fail the guard again.
+
+**The guard's evidence inventory is now discovered, not listed.** It held
+`phase3-obligations`, `phase4-obligations` and three `COURTS.json` paths by hand,
+so adding a stratum meant remembering to update the guard — the same failure mode
+this entry is about. It now globs `forensics/phase*-obligations.json` and
+`artifacts/phase*/COURTS.json`, and a new `inventory_problems` check cross-reads
+`phase-state.json` in both directions: a ledger or court directory for a phase the
+state does not know, and a phase that is not `not-started` with no ledger, are both
+failures. This was already load-bearing when it landed: **the guard had been
+ignoring `RT-BN` entirely**, so the court count went 34 → 35 and the observation
+count 7,481 → 8,114 without a single new observation being taken.
+
+**`ownership_audit.py` consumes the atlas.** Its invariant is now the stronger one:
+*every authority export has exactly one declared owner*, checked against the
+atlas's own assertions, instead of *every implemented export is claimed by a phase
+family*. The prefix families remain as a **cross-check** for the strata that still
+declare them, and a new `ledger_agreement` plane reports, per phase, the symbols
+the atlas gives it that its ledger does not list and vice versa — a disagreement is
+reported, never resolved silently.
+
+**Two consequences worth naming rather than discovering later.** First, the rule is
+mechanical, so where it disagrees with intent the *table* must be changed: for
+example `PKCS8_PRIV_KEY_INFO` is declared in `x509.h`, so
+`PEM_read_bio_PKCS8_PRIV_KEY_INFO` resolves to Phase 11 rather than to the PKCS and
+key-format stratum a reader might expect. That is a decision in
+`HEADER_PHASE`/`ABI_ONLY_OWNER` and is visible in the atlas's `records`, not a
+hidden consequence of a regex. Second, `HEADER_PHASE` is asserted to contain no
+duplicate key by scanning the source text, because a dict literal keeps the last
+value silently and a silently-overridden decision is the class of defect this
+entry removes.
+
+**Not yet done, and named.** `ABI-PROTOTYPE` — a build-time C-signature check over
+every implemented export, generated from the Clang AST, so an arity or constness
+error fails at compile time rather than when a probe happens to call the function.
+The ERR getters' wrong arities are the precedent. It is the next structural
+change, before the ASN.1 surface starts moving.
+
+**Re-verified.** `symbol_ownership.py`, `implemented_surface.py`,
+`ownership_audit.py`, `prototype_court.py`, the three ledgers, `phase_state.py`,
+`render_status.py`, `evidence_determinism.py` (now **10** artefacts, the atlas
+included), `check_evidence_portability.py`, `gen_frf_courts.py --check`,
+`regression_guard.py --update` and `regression_guard.py --baseline-ref HEAD
+--require-current` — all green. Phase 5 remains `in-progress`, and no claim moves.

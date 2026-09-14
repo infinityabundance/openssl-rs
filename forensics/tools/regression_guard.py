@@ -58,6 +58,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -71,15 +72,32 @@ BASELINE = REPO_ROOT / BASELINE_REL
 
 IMPLEMENTED_SURFACE = "forensics/atlas/implemented-surface.json"
 PHASE_STATE = "forensics/phase-state.json"
-OBLIGATION_LEDGERS = {
-    "phase3": "forensics/phase3-obligations.json",
-    "phase4": "forensics/phase4-obligations.json",
-}
-COURT_RESULTS = {
-    "phase2": "artifacts/phase2/COURTS.json",
-    "phase3": "artifacts/phase3/COURTS.json",
-    "phase4": "artifacts/phase4/COURTS.json",
-}
+TRANSITIONS = "forensics/ownership-transitions.json"
+
+# The ledgers and court results are **discovered**, not listed. Listing them meant
+# every new stratum had to remember to update this guard, which is the failure mode
+# the project exists to remove: an obligation that disappears between classification
+# layers. The glob is cross-checked against `phase-state.json`'s phase inventory, so
+# a ledger for a phase the state does not know -- or a non-`not-started` phase with
+# no ledger -- is a failure rather than a silent omission.
+def discover_ledgers() -> dict[str, str]:
+    out: dict[str, str] = {}
+    for p in sorted(REPO_ROOT.glob("forensics/phase*-obligations.json")):
+        m = re.fullmatch(r"phase(\d+)-obligations\.json", p.name)
+        if m:
+            out[f"phase{m.group(1)}"] = rel(p)
+    return out
+
+
+def discover_courts() -> dict[str, str]:
+    out: dict[str, str] = {}
+    for p in sorted(REPO_ROOT.glob("artifacts/phase*/COURTS.json")):
+        out[p.parent.name] = rel(p)
+    return out
+
+
+OBLIGATION_LEDGERS = discover_ledgers()
+COURT_RESULTS = discover_courts()
 
 STATE_RANK = {"not-started": 0, "in-progress": 1, "complete": 2}
 
@@ -122,8 +140,8 @@ def baseline_from_ref(ref: str, allow_missing: bool) -> dict | None:
 
 def observe() -> dict:
     """The current evidence, reduced to the numbers the guard compares."""
-    obs: dict = {"implemented": {}, "open_obligations": {}, "deferred": {},
-                 "courts": {}, "phases": {}}
+    obs: dict = {"implemented": {}, "open_obligations": {}, "owned_obligations": {},
+                 "deferred": {}, "courts": {}, "phases": {}, "court_phases": []}
 
     surface = read_json(IMPLEMENTED_SURFACE)
     if surface:
@@ -136,6 +154,9 @@ def observe() -> dict:
             continue
         counts = doc["body"]["counts"]
         obs["open_obligations"][name] = counts.get("open_in_this_stratum", 0)
+        # The owned count is what makes a scope correction distinguishable from a
+        # regression: see `transition_for`.
+        obs["owned_obligations"][name] = counts.get("owned", 0)
         obs["deferred"][name] = counts.get(
             "deferred", counts.get("deferred_to_later_phase", 0))
 
@@ -143,6 +164,7 @@ def observe() -> dict:
         doc = read_json(path)
         if not doc:
             continue
+        obs["court_phases"].append(name)
         for c in doc["body"]["courts"]:
             obs["courts"][c["court"]] = {
                 "verdict": c["verdict"],
@@ -195,6 +217,63 @@ def uncertified_planes(authority: dict, current: dict) -> list[str]:
     return notes
 
 
+def transition_for(phase: str, was: int, now: int, owned_now: int) -> dict | None:
+    """An approved ownership transition covering an open-obligation increase.
+
+    An obligation ledger's universe can legitimately *change*: when discovery stops
+    being a prefix test and becomes the global ownership atlas (D72), a stratum's
+    owned set moves and so does its open count. That is not a regression -- nothing
+    was undone -- but it is arithmetically indistinguishable from one, so it must be
+    recorded rather than argued about.
+
+    `forensics/ownership-transitions.json` records each approved move with the
+    before and after numbers. The match is **exact on every field**, so a transition
+    can bless the change it describes and nothing else: a larger increase, a
+     different owned count, or an unrecorded phase all fail.
+    """
+    doc = read_json(TRANSITIONS)
+    if not doc:
+        return None
+    for t in doc.get("transitions", []):
+        if (str(t.get("phase")) == str(phase).removeprefix("phase")
+                and t.get("open_before") == was
+                and t.get("open_after") == now
+                and t.get("owned_after") == owned_now):
+            return t
+    return None
+
+
+def inventory_problems(current: dict) -> list[str]:
+    """The phase inventory must be complete in both directions.
+
+    A ledger for a phase `phase-state.json` does not know, and a phase that is not
+    `not-started` whose ledger is missing, are both failures. Without this the
+    discovery-by-glob above could silently drop a stratum -- which is the same
+    defect as the hardcoded list, reached from the other side.
+    """
+    problems: list[str] = []
+    known = set(current.get("phases", {}))
+    for name in sorted(current.get("open_obligations", {})):
+        phase = str(name).removeprefix("phase")
+        if phase not in known:
+            problems.append(
+                f"{name}: there is an obligation ledger for a phase phase-state.json"
+                " does not know")
+    for phase, state in sorted(current.get("phases", {}).items()):
+        if int(phase) >= 3 and state != "not-started":
+            if f"phase{phase}" not in current.get("open_obligations", {}):
+                problems.append(
+                    f"phase {phase} is {state} but has no obligation ledger: a"
+                    " stratum that moved off `not-started` must have one")
+    for name in sorted(current.get("court_phases", [])):
+        phase = str(name).removeprefix("phase")
+        if phase not in known:
+            problems.append(
+                f"{name}: there are court results for a phase phase-state.json does"
+                " not know")
+    return problems
+
+
 def compare(baseline: dict, current: dict) -> tuple[list[str], list[str]]:
     """Return (regressions, movements). Movements are informational."""
     regressions: list[str] = []
@@ -225,8 +304,21 @@ def compare(baseline: dict, current: dict) -> tuple[list[str], list[str]]:
             continue
         now = current["open_obligations"][name]
         if now > was:
-            regressions.append(
-                f"open_obligations[{name}]: {was} -> {now} (+{now - was})")
+            # An increase is a regression **unless** an approved ownership
+            # transition accounts for exactly this change.
+            t = transition_for(name, was, now,
+                               current.get("owned_obligations", {}).get(name, 0))
+            if t is None:
+                regressions.append(
+                    f"open_obligations[{name}]: {was} -> {now} (+{now - was})")
+            else:
+                movements.append(
+                    f"open_obligations[{name}]: {was} -> {now} (+{now - was}), "
+                    f"an approved ownership transition ({t.get('reason', 'no reason ')}"
+                    f" recorded in {TRANSITIONS})")
+        elif now < was:
+            movements.append(
+                f"open_obligations[{name}]: {was} -> {now} (-{was - now})")
 
     for name, was in baseline.get("deferred", {}).items():
         now = current["deferred"].get(name)
@@ -370,6 +462,9 @@ def main(argv: list[str]) -> int:
                   "certify this comparison")
             for p in problems:
                 print(f"  INADEQUATE: {p}")
+        for problem in inventory_problems(current):
+            print(f"[regression-guard] FAIL: {problem}")
+            failed = True
         for note in uncertified_planes(authority, current):
             print(f"  UNCERTIFIED: {note}")
         regressions, movements = compare(authority, current)
