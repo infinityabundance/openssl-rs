@@ -1,48 +1,67 @@
 //! Phase 4 — `BIO_ADDR`, the address value type `libssl` and BIO use everywhere.
 //!
 //! `BIO_ADDR` is opaque (`typedef union bio_addr_st BIO_ADDR`), so the layout is
-//! ours; what has to match is the *behaviour*. The authority was measured with
-//! `courts/phase4/discover_bio_addr.c` before any of this was written, and several
-//! of its behaviours are not what the documentation suggests:
+//! ours; what has to match is the *behaviour*. Every behaviour below was measured
+//! against the authority (`courts/phase4/discover_bio_addr.c`) and then confirmed
+//! against the pinned source, because the two disagreed with the documentation.
+//!
+//! ## The port is stored, not converted
+//!
+//! This is the single most easily-mistaken part of the whole stratum.
+//! `BIO_ADDR_rawmake` assigns `sin_port = port` **without `htons`**, and
+//! `BIO_ADDR_rawport` returns the field **without `ntohs`**. So a `rawmake`
+//! address carries the host-order port in a network-order field. The consequence
+//! is that `BIO_ADDR_rawport` *looks* correct — it returns the number the caller
+//! passed — while the bytes a socket syscall reads are byte-swapped. Only a
+//! socket-layer observation can see it, which is why `RT-BIO-ADDR` alone was not
+//! enough and the socket courts exist. See `docs/DECISIONS.md` D37.
+//!
+//! `BIO_ADDR_service_string` inherits the same asymmetry rather than correcting
+//! it: `addr_strings` hands the address to `getnameinfo`, which un-swaps whatever
+//! is in the field. So `rawmake(…, 8080)` reports service `"36895"`, while a
+//! `BIO_lookup` result for the same port reports `"8080"` — because a lookup
+//! address is a *real* `sockaddr` from the resolver and its field holds
+//! `htons(8080)`. Both were measured, and both are reproduced.
+//!
+//! ## Other measured non-obvious behaviour
 //!
 //! * `BIO_ADDR_new()` leaves the family `AF_UNSPEC`, and `BIO_ADDR_rawaddress()`
 //!   on an `AF_UNSPEC` address **fails** (`0`) rather than reporting a length.
-//! * `BIO_ADDR_rawaddress()` treats `*l` as an **out** parameter: a caller that
-//!   passes `*l = 1` gets back `*l = 4` and a 4-byte copy, not a failure. The
-//!   caller's contract is that the buffer is large enough (`bio.h` documents 16
-//!   bytes as sufficient for any family this type carries), so this is parity and
-//!   not a memory-safety divergence.
-//! * `BIO_ADDR_rawmake()` validates the family and the `wherelen` **before**
-//!   clearing, so a rejected call leaves the previous address intact. Measured:
-//!   after a successful `AF_INET` make and a rejected `AF_UNSPEC` make, the family
-//!   is still `AF_INET` and the port still the earlier one.
-//! * `BIO_ADDR_rawport()` returns a **host-order** port (`ntohs` of the stored
-//!   field), which is the useful convention, but `BIO_ADDR_service_string()`
-//!   reports the **byte-swapped** value: port 80 prints as `20480`, 443 as
-//!   `47873`. The model that reproduces every measured case is that the authority
-//!   builds a temporary socket address whose port field receives the *host-order*
-//!   value with no `htons`, so `getnameinfo` then un-swaps it. The same model
-//!   explains the `AF_UNIX` result, where glibc's `getnameinfo` returns
-//!   `"localhost"` for the host and the path for the service.
+//! * `BIO_ADDR_rawaddress()` treats `*l` as an **out** parameter: a caller passing
+//!   `*l = 1` gets back `*l = 4` and a 4-byte copy, not the documented failure.
+//!   The caller's contract is that the buffer is large enough, so this is parity.
+//! * `BIO_ADDR_rawmake()` validates family and length **before** clearing, so a
+//!   rejected call leaves the previous address intact.
+//! * `AF_UNIX` `rawmake` bounds the length by `wherelen + 1 > sizeof(sun_path)`
+//!   but then copies with `strncpy` semantics — that is, to the NUL, ignoring
+//!   `wherelen` for the copy itself.
 //! * `BIO_ADDR_path_string()` returns NULL for every family except `AF_UNIX`.
-//! * `AF_UNIX` addresses round-trip their path, and `BIO_ADDR_rawport` is `0`.
+//! * `addr_strings` always asks `getnameinfo` for **both** the host and the
+//!   service, even when only one is wanted, and on failure raises
+//!   `ERR_LIB_BIO`/`ERR_R_SYS_LIB` with `gai_strerror` as data. A NULL result and
+//!   a raised error therefore arrive together, which a court that only compares
+//!   the returned pointer would miss.
 //!
-//! Fault boundaries are recorded, not reproduced (`docs/SECURITY_DIVERGENCE_POLICY.md`):
-//! the authority dereferences a NULL argument in `BIO_ADDR_clear`,
-//! `BIO_ADDR_rawaddress`, `BIO_ADDR_rawport`, `BIO_ADDR_family`,
+//! ## Fault boundaries
+//!
+//! Recorded, not reproduced (`docs/SECURITY_DIVERGENCE_POLICY.md`,
+//! `D-BIO-ADDR-1`/`D-BIO-ADDR-2`): the authority dereferences a NULL address in
+//! `BIO_ADDR_clear`, `BIO_ADDR_rawaddress`, `BIO_ADDR_rawport`, `BIO_ADDR_family`,
 //! `BIO_ADDR_hostname_string`, `BIO_ADDR_service_string` and
-//! `BIO_ADDR_path_string`, and each case was measured in its own process by
-//! `courts/phase4/bio_addr_null_calls.c`. Those entry points here are total: they
-//! return the harmless value instead of faulting. `BIO_ADDR_free(NULL)`,
-//! `BIO_ADDR_dup(NULL)`, `BIO_ADDR_copy(NULL, ...)` and `BIO_ADDRINFO_next(NULL)`
-//! are defined by the authority and are matched exactly.
+//! `BIO_ADDR_path_string`, and copies from a NULL `where` in `BIO_ADDR_rawmake`.
+//! Those entry points here are total and return the harmless value instead.
+//! `BIO_ADDR_free(NULL)`, `BIO_ADDR_dup(NULL)`, `BIO_ADDR_copy(NULL, …)` and
+//! `BIO_ADDRINFO_next(NULL)` are defined by the authority and matched exactly.
 
 use core::ffi::{c_char, c_int, c_void, CStr};
 use core::ptr;
 
 use crate::ffi::guard_ffi;
+use crate::runtime::err::err_sites::{BIO_ADDR_251, BIO_ADDR_256};
+use crate::runtime::err::{raise_site_data, raise_site_dynamic_data};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup};
 
+use super::bss_sock::BIO_sock_init;
 use super::sys;
 
 /// The `file`/`line` recorded by an allocation, mirroring the authority's
@@ -50,6 +69,14 @@ use super::sys;
 const ALLOC_FILE: &CStr = c"crypto/bio/bio_addr.c";
 /// See [`ALLOC_FILE`].
 const ALLOC_LINE: c_int = 0;
+
+/// `NI_MAXHOST` — the host buffer `addr_strings` hands to `getnameinfo`.
+const NI_MAXHOST: usize = 1025;
+/// `NI_MAXSERV` — the service buffer `addr_strings` hands to `getnameinfo`.
+const NI_MAXSERV: usize = 32;
+
+/// `EAI_SYSTEM`: `getnameinfo`/`getaddrinfo` could not report through a name.
+const EAI_SYSTEM: c_int = -11;
 
 /// A `BIO_ADDR`: a family plus the largest socket address this stratum stores.
 ///
@@ -74,10 +101,21 @@ unsafe fn family_of(ap: *const BioAddr) -> c_int {
     }
 }
 
+/// `BIO_ADDR_sockaddr_size` — the length `getnameinfo` is told to read.
+///
+/// # Safety
+/// `ap` must point at a live [`BioAddr`].
+unsafe fn sockaddr_size(ap: *const BioAddr) -> sys::SockLen {
+    match unsafe { family_of(ap) } {
+        sys::AF_INET => core::mem::size_of::<sys::SockAddrIn>() as sys::SockLen,
+        sys::AF_INET6 => core::mem::size_of::<sys::SockAddrIn6>() as sys::SockLen,
+        sys::AF_UNIX => core::mem::size_of::<sys::SockAddrUn>() as sys::SockLen,
+        _ => core::mem::size_of::<BioAddr>() as sys::SockLen,
+    }
+}
+
 /// Allocate a zeroed address, or NULL if the allocator refused.
 fn alloc_zeroed() -> *mut BioAddr {
-    // `CRYPTO_malloc` returns NULL or a fresh block of at least the requested
-    // size, which is then fully initialised before it is returned.
     let raw = CRYPTO_malloc(
         core::mem::size_of::<BioAddr>(),
         ALLOC_FILE.as_ptr(),
@@ -100,6 +138,83 @@ unsafe fn free_addr(p: *mut BioAddr) {
     }
 }
 
+/// `void BIO_ADDR_clear(BIO_ADDR *ap)`
+///
+/// The authority faults on NULL; this is total by policy.
+#[no_mangle]
+pub unsafe extern "C" fn BIO_ADDR_clear(ap: *mut BioAddr) {
+    guard_ffi((), || {
+        // SAFETY: the caller passes NULL or a live address.
+        unsafe { clear_addr(ap) };
+    })
+}
+
+/// # Safety
+/// `ap` must be NULL or point at a live, writable [`BioAddr`].
+pub(crate) unsafe fn clear_addr(ap: *mut BioAddr) {
+    let Some(a) = (unsafe { ap.as_mut() }) else {
+        return;
+    };
+    // SAFETY: `a` is live. The family word is set to `AF_UNSPEC`, which is zero,
+    // so the memset alone would suffice; it is kept explicit because the
+    // authority spells it out.
+    unsafe {
+        sys::memset(
+            ptr::from_mut(a).cast::<c_void>(),
+            0,
+            core::mem::size_of::<BioAddr>(),
+        );
+        a.sa.ss_family = sys::AF_UNSPEC as sys::SaFamily;
+    }
+}
+
+/// `BIO_ADDR_make` — fill an address from a `struct sockaddr`.
+///
+/// Clears the whole address first, then copies exactly the family's sockaddr, so
+/// bytes outside that family are zero. Returns 0 for a family the authority does
+/// not know.
+///
+/// # Safety
+/// `dst` must be NULL or live and writable; `sa` must be NULL or point at a
+/// readable `struct sockaddr` whose family indicates the bytes actually present.
+pub(crate) unsafe fn make_from_sockaddr(dst: *mut BioAddr, sa: *const sys::SockAddr) -> c_int {
+    if dst.is_null() || sa.is_null() {
+        return 0;
+    }
+    // SAFETY: both pointers are non-NULL and live per the caller's contract.
+    unsafe {
+        let base = dst.cast::<u8>();
+        sys::memset(base.cast::<c_void>(), 0, core::mem::size_of::<BioAddr>());
+        match c_int::from((*sa).sa_family) {
+            sys::AF_INET => {
+                sys::memcpy(
+                    base.cast::<c_void>(),
+                    sa.cast::<c_void>(),
+                    core::mem::size_of::<sys::SockAddrIn>(),
+                );
+                1
+            }
+            sys::AF_INET6 => {
+                sys::memcpy(
+                    base.cast::<c_void>(),
+                    sa.cast::<c_void>(),
+                    core::mem::size_of::<sys::SockAddrIn6>(),
+                );
+                1
+            }
+            sys::AF_UNIX => {
+                sys::memcpy(
+                    base.cast::<c_void>(),
+                    sa.cast::<c_void>(),
+                    core::mem::size_of::<sys::SockAddrUn>(),
+                );
+                1
+            }
+            _ => 0,
+        }
+    }
+}
+
 /// `BIO_ADDR *BIO_ADDR_new(void)`
 #[no_mangle]
 pub extern "C" fn BIO_ADDR_new() -> *mut BioAddr {
@@ -117,28 +232,6 @@ pub unsafe extern "C" fn BIO_ADDR_free(ap: *mut BioAddr) {
     })
 }
 
-/// `void BIO_ADDR_clear(BIO_ADDR *ap)`
-///
-/// The authority faults on NULL; this is total by policy.
-#[no_mangle]
-pub unsafe extern "C" fn BIO_ADDR_clear(ap: *mut BioAddr) {
-    guard_ffi((), || {
-        // SAFETY: the caller passes NULL or a live address; a NULL payload is
-        // unreachable because the pointer itself is only written when non-NULL.
-        let Some(a) = (unsafe { ap.as_mut() }) else {
-            return;
-        };
-        // SAFETY: `a` is a live address.
-        unsafe {
-            sys::memset(
-                ptr::from_mut(a).cast::<c_void>(),
-                0,
-                core::mem::size_of::<BioAddr>(),
-            )
-        };
-    })
-}
-
 /// `BIO_ADDR *BIO_ADDR_dup(const BIO_ADDR *ap)`
 ///
 /// A NULL argument yields NULL; matched.
@@ -153,13 +246,12 @@ pub unsafe extern "C" fn BIO_ADDR_dup(ap: *const BioAddr) -> *mut BioAddr {
         if dst.is_null() {
             return ptr::null_mut();
         }
-        // SAFETY: `dst` is a fresh block and `src` is live; they cannot overlap.
-        unsafe {
-            sys::memcpy(
-                dst.cast::<c_void>(),
-                ptr::from_ref(src).cast::<c_void>(),
-                core::mem::size_of::<BioAddr>(),
-            );
+        // SAFETY: `dst` is freshly allocated and `src` is live and distinct.
+        let copied = unsafe { copy_addr(dst, src) };
+        if copied != 1 {
+            // SAFETY: `dst` came from `alloc_zeroed` and has not been published.
+            unsafe { free_addr(dst) };
+            return ptr::null_mut();
         }
         dst
     })
@@ -167,24 +259,34 @@ pub unsafe extern "C" fn BIO_ADDR_dup(ap: *const BioAddr) -> *mut BioAddr {
 
 /// `int BIO_ADDR_copy(BIO_ADDR *dst, const BIO_ADDR *src)`
 ///
-/// Either argument being NULL fails; matched against the authority.
+/// Either argument being NULL fails; an `AF_UNSPEC` source clears the
+/// destination rather than copying; any other family copies that family's
+/// sockaddr. Matched against the authority.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_ADDR_copy(dst: *mut BioAddr, src: *const BioAddr) -> c_int {
     guard_ffi(0, || {
         if dst.is_null() || src.is_null() {
             return 0;
         }
-        // SAFETY: both pointers are non-NULL and, per the caller's contract, live
-        // and distinct.
-        unsafe {
-            sys::memcpy(
-                dst.cast::<c_void>(),
-                src.cast::<c_void>(),
-                core::mem::size_of::<BioAddr>(),
-            );
-        }
-        1
+        // SAFETY: both pointers are non-NULL; `src` is live and `dst` is writable
+        // per the caller's contract.
+        unsafe { copy_addr(dst, &*src) }
     })
+}
+
+/// The shared body of `BIO_ADDR_copy`.
+///
+/// # Safety
+/// `dst` must be live and writable and `src` live and readable.
+unsafe fn copy_addr(dst: *mut BioAddr, src: *const BioAddr) -> c_int {
+    if unsafe { (*src).sa.ss_family } == sys::AF_UNSPEC as sys::SaFamily {
+        // SAFETY: `dst` is live and writable.
+        unsafe { clear_addr(dst) };
+        return 1;
+    }
+    // SAFETY: `dst` is live and writable; `src.sa` is the address to copy, and
+    // both start with the family word so the cast only ever reads that.
+    unsafe { make_from_sockaddr(dst, ptr::addr_of!((*src).sa).cast::<sys::SockAddr>()) }
 }
 
 /// `int BIO_ADDR_family(const BIO_ADDR *ap)`
@@ -201,10 +303,12 @@ pub unsafe extern "C" fn BIO_ADDR_family(ap: *const BioAddr) -> c_int {
 /// `int BIO_ADDR_rawmake(BIO_ADDR *ap, int family, const void *where, size_t wherelen, unsigned short port)`
 ///
 /// Validates family and length **before** touching `ap`, so a rejected call keeps
-/// the previous address. Ports are stored in network order.
+/// the previous address. The port is stored **as given**, without `htons`; see
+/// the module comment.
 ///
 /// # Safety
-/// `where` must be readable for `wherelen` bytes, and `ap` must be live.
+/// `where` must be readable for `wherelen` bytes and, for `AF_UNIX`, its NUL must
+/// be within `sizeof(sun_path) - 1` bytes; `ap` must be live.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_ADDR_rawmake(
     ap: *mut BioAddr,
@@ -223,30 +327,39 @@ pub unsafe extern "C" fn BIO_ADDR_rawmake(
         let base = ptr::from_mut(a).cast::<u8>();
         match family {
             sys::AF_INET => {
-                if wherelen != 4 {
+                if wherelen != core::mem::size_of::<sys::InAddr>() {
                     return 0;
                 }
-                // SAFETY: `base` is the start of a live `BioAddr`; every field
-                // written is inside it, and `where_` is readable for 4 bytes.
+                // SAFETY: `base` is the start of a live `BioAddr` and every field
+                // written lies inside it; `where_` is readable for 4 bytes.
                 unsafe {
-                    sys::memset(base.cast::<c_void>(), 0, core::mem::size_of::<BioAddr>());
+                    sys::memset(
+                        base.cast::<c_void>(),
+                        0,
+                        core::mem::size_of::<sys::SockAddrIn>(),
+                    );
                     let sin = base.cast::<sys::SockAddrIn>();
                     (*sin).sin_family = sys::AF_INET as sys::SaFamily;
-                    (*sin).sin_port = sys::htons(port);
-                    (*sin).sin_addr.s_addr = core::ptr::read_unaligned(where_.cast::<u32>());
+                    // Deliberately no `htons`: this is what the authority stores.
+                    (*sin).sin_port = port;
+                    (*sin).sin_addr.s_addr = ptr::read_unaligned(where_.cast::<u32>());
                 }
                 1
             }
             sys::AF_INET6 => {
-                if wherelen != 16 {
+                if wherelen != core::mem::size_of::<sys::In6Addr>() {
                     return 0;
                 }
                 // SAFETY: as above, with a 16-byte read from `where_`.
                 unsafe {
-                    sys::memset(base.cast::<c_void>(), 0, core::mem::size_of::<BioAddr>());
+                    sys::memset(
+                        base.cast::<c_void>(),
+                        0,
+                        core::mem::size_of::<sys::SockAddrIn6>(),
+                    );
                     let sin6 = base.cast::<sys::SockAddrIn6>();
                     (*sin6).sin6_family = sys::AF_INET6 as sys::SaFamily;
-                    (*sin6).sin6_port = sys::htons(port);
+                    (*sin6).sin6_port = port;
                     sys::memcpy(
                         (*sin6).sin6_addr.s6_addr.as_mut_ptr().cast::<c_void>(),
                         where_,
@@ -256,21 +369,34 @@ pub unsafe extern "C" fn BIO_ADDR_rawmake(
                 1
             }
             sys::AF_UNIX => {
-                let max = core::mem::size_of::<sys::SockAddrUn>() - ADDR_OFFSET;
-                if wherelen > max {
+                let cap = core::mem::size_of::<sys::SockAddrUn>() - ADDR_OFFSET;
+                if wherelen + 1 > cap {
                     return 0;
                 }
-                // SAFETY: as above, with a `wherelen`-byte read that the length
-                // check above bounds to the destination's capacity.
+                // SAFETY: `base` is a live `BioAddr`; the loop below reads from
+                // `where_` until its NUL or `cap - 1` bytes, which is exactly what
+                // `strncpy(sun_path, where, sizeof(sun_path) - 1)` does. `where_`
+                // is a NUL-terminated string per the caller's contract, and the
+                // read is bounded to `cap - 1` bytes in the worst case.
                 unsafe {
-                    sys::memset(base.cast::<c_void>(), 0, core::mem::size_of::<BioAddr>());
+                    sys::memset(
+                        base.cast::<c_void>(),
+                        0,
+                        core::mem::size_of::<sys::SockAddrUn>(),
+                    );
                     let sun = base.cast::<sys::SockAddrUn>();
                     (*sun).sun_family = sys::AF_UNIX as sys::SaFamily;
-                    sys::memcpy(
-                        (*sun).sun_path.as_mut_ptr().cast::<c_void>(),
-                        where_,
-                        wherelen,
-                    );
+                    let dst = (*sun).sun_path.as_mut_ptr().cast::<u8>();
+                    let src = where_.cast::<u8>();
+                    let mut i = 0usize;
+                    while i < cap - 1 {
+                        let byte = *src.add(i);
+                        if byte == 0 {
+                            break;
+                        }
+                        *dst.add(i) = byte;
+                        i += 1;
+                    }
                 }
                 1
             }
@@ -285,8 +411,8 @@ pub unsafe extern "C" fn BIO_ADDR_rawmake(
 /// known, and `p` receives the bytes when it is non-NULL. `AF_UNSPEC` fails.
 ///
 /// # Safety
-/// `l` must be NULL or writable; `p` must be NULL or writable for the length of
-/// the address family, which the caller owns (`bio.h` documents 16 bytes).
+/// `l` must be NULL or writable; `p` must be NULL or writable for the address
+/// length of the family, which the caller owns (`bio.h` documents 16 bytes).
 #[no_mangle]
 pub unsafe extern "C" fn BIO_ADDR_rawaddress(
     ap: *const BioAddr,
@@ -301,7 +427,8 @@ pub unsafe extern "C" fn BIO_ADDR_rawaddress(
         let base = ptr::from_ref(a).cast::<u8>();
         let (len, addrptr) = match c_int::from(a.sa.ss_family) {
             // SAFETY: for each family the family word was written by
-            // `BIO_ADDR_rawmake`, so the address bytes below are initialised.
+            // `BIO_ADDR_rawmake` or `make_from_sockaddr`, so the address bytes
+            // below are initialised.
             sys::AF_INET => unsafe {
                 let sin = base.cast::<sys::SockAddrIn>();
                 (4usize, ptr::from_ref(&(*sin).sin_addr).cast::<c_void>())
@@ -312,8 +439,8 @@ pub unsafe extern "C" fn BIO_ADDR_rawaddress(
             },
             sys::AF_UNIX => unsafe {
                 let sun = base.cast::<sys::SockAddrUn>();
-                // The stored path is NUL-terminated and `sun_path` is zeroed by
-                // the clear, so the length is the string length, not the capacity.
+                // The stored path is NUL-terminated and the family's sockaddr was
+                // zeroed before the copy, so the length is the string length.
                 (
                     sys::strlen((*sun).sun_path.as_ptr()),
                     (*sun).sun_path.as_ptr().cast::<c_void>(),
@@ -321,14 +448,14 @@ pub unsafe extern "C" fn BIO_ADDR_rawaddress(
             },
             _ => return 0,
         };
-        if !l.is_null() {
-            // SAFETY: `l` is the caller's out-parameter.
-            unsafe { *l = len };
-        }
         if !p.is_null() {
             // SAFETY: `p` is writable for `len` bytes per the caller's contract,
             // and `addrptr` points at `len` initialised bytes.
             unsafe { sys::memcpy(p, addrptr, len) };
+        }
+        if !l.is_null() {
+            // SAFETY: `l` is the caller's out-parameter.
+            unsafe { *l = len };
         }
         1
     })
@@ -336,8 +463,9 @@ pub unsafe extern "C" fn BIO_ADDR_rawaddress(
 
 /// `unsigned short BIO_ADDR_rawport(const BIO_ADDR *ap)`
 ///
-/// Host order, as the authority returns it. The authority faults on NULL; this
-/// returns 0 by policy.
+/// Returns the stored field **as stored**, which for a `rawmake` address is the
+/// value the caller passed and for a resolver address is in network order. See
+/// the module comment. The authority faults on NULL; this returns 0 by policy.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_ADDR_rawport(ap: *const BioAddr) -> u16 {
     guard_ffi(0, || {
@@ -349,124 +477,149 @@ pub unsafe extern "C" fn BIO_ADDR_rawport(ap: *const BioAddr) -> u16 {
         match c_int::from(a.sa.ss_family) {
             // SAFETY: the family word implies the corresponding field was set.
             sys::AF_INET => unsafe {
-                sys::ntohs(
-                    base.cast::<sys::SockAddrIn>()
-                        .as_ref()
-                        .map_or(0, |s| s.sin_port),
-                )
+                base.cast::<sys::SockAddrIn>()
+                    .as_ref()
+                    .map_or(0, |s| s.sin_port)
             },
             sys::AF_INET6 => unsafe {
-                sys::ntohs(
-                    base.cast::<sys::SockAddrIn6>()
-                        .as_ref()
-                        .map_or(0, |s| s.sin6_port),
-                )
+                base.cast::<sys::SockAddrIn6>()
+                    .as_ref()
+                    .map_or(0, |s| s.sin6_port)
             },
             _ => 0,
         }
     })
 }
 
-/// Format an address through `getnameinfo`, reproducing the authority's inputs.
+/// Write a `u16` as decimal into `dst`, the way the authority's
+/// `BIO_snprintf(serv, sizeof(serv), "%d", …)` does.
 ///
-/// The temporary socket address is built with the **host-order** port in the port
-/// field, which is what makes `BIO_ADDR_service_string` report a byte-swapped
-/// number; see the module comment. `AF_UNIX` is passed through unchanged so that
-/// glibc's own `AF_UNIX` handling (`"localhost"` / the path) is observed.
-fn getnameinfo_dup(ap: *const BioAddr, want_host: bool, numeric: bool) -> *mut c_char {
-    // SAFETY: the caller checked `ap` is live.
-    let a = unsafe { &*ap };
-    let mut store: sys::SockAddrStorage = sys::SockAddrStorage {
-        ss_family: 0,
-        __pad: [0; 126],
-    };
-    let base = ptr::from_mut(&mut store).cast::<u8>();
-    match c_int::from(a.sa.ss_family) {
-        sys::AF_INET => {
-            // SAFETY: `store` is at least as large as `SockAddrIn`.
-            unsafe {
-                let src = ptr::from_ref(a).cast::<sys::SockAddrIn>().as_ref();
-                if let Some(src) = src {
-                    let dst = base.cast::<sys::SockAddrIn>();
-                    (*dst).sin_family = src.sin_family;
-                    (*dst).sin_addr = src.sin_addr;
-                    // Deliberate: the raw port value, not `htons`ed. This is what
-                    // the authority passes, and it is observable.
-                    (*dst).sin_port = sys::ntohs(src.sin_port);
-                }
-            }
+/// # Safety
+/// `dst` must be writable for `len` bytes.
+unsafe fn write_decimal(dst: *mut c_char, len: usize, value: u16) {
+    if len == 0 {
+        return;
+    }
+    let mut digits = [0u8; 5];
+    let mut n = 0usize;
+    let mut v = value;
+    loop {
+        digits[n] = b'0' + (v % 10) as u8;
+        n += 1;
+        v /= 10;
+        if v == 0 {
+            break;
         }
-        sys::AF_INET6 => {
-            // SAFETY: `store` is at least as large as `SockAddrIn6`.
-            unsafe {
-                if let Some(src) = ptr::from_ref(a).cast::<sys::SockAddrIn6>().as_ref() {
-                    let dst = base.cast::<sys::SockAddrIn6>();
-                    (*dst).sin6_family = src.sin6_family;
-                    (*dst).sin6_addr = src.sin6_addr;
-                    (*dst).sin6_scope_id = src.sin6_scope_id;
-                    (*dst).sin6_port = sys::ntohs(src.sin6_port);
-                }
-            }
+    }
+    let count = core::cmp::min(n + 1, len);
+    // SAFETY: `dst` is writable for `len` bytes; at most `count` are written.
+    unsafe {
+        for i in 0..count - 1 {
+            *dst.add(i) = digits[n - 1 - i] as c_char;
         }
-        sys::AF_UNIX => {
-            // SAFETY: `store` is at least as large as `SockAddrUn`.
-            unsafe {
-                sys::memcpy(
-                    base.cast::<c_void>(),
-                    ptr::from_ref(a).cast::<c_void>(),
-                    core::mem::size_of::<sys::SockAddrUn>(),
-                );
-            }
-        }
-        _ => return ptr::null_mut(),
+        *dst.add(count - 1) = 0;
+    }
+}
+
+/// `addr_strings` — the shared body of `BIO_ADDR_hostname_string` and
+/// `BIO_ADDR_service_string`.
+///
+/// Always asks `getnameinfo` for both names, as the authority does, and raises on
+/// failure. Returns `(ok, hostname, service)`, where an unrequested name is NULL.
+///
+/// # Safety
+/// `ap` must point at a live [`BioAddr`].
+unsafe fn addr_strings(
+    ap: *const BioAddr,
+    numeric: c_int,
+    want_host: bool,
+    want_service: bool,
+) -> (bool, *mut c_char, *mut c_char) {
+    if BIO_sock_init() != 1 {
+        return (false, ptr::null_mut(), ptr::null_mut());
     }
 
-    let mut host = [0 as c_char; 1025];
-    let mut serv = [0 as c_char; 32];
-    let flags = match (want_host, numeric) {
-        (true, true) => sys::NI_NUMERICHOST,
-        (false, true) => sys::NI_NUMERICSERV,
-        _ => 0,
+    let base = unsafe { ptr::addr_of!((*ap).sa) }.cast::<sys::SockAddr>();
+    let addrlen = unsafe { sockaddr_size(ap) };
+    let flags = if numeric != 0 {
+        sys::NI_NUMERICHOST | sys::NI_NUMERICSERV
+    } else {
+        0
     };
-    // SAFETY: `store` holds an initialised address of the family in `ss_family`;
-    // the output buffers are sized as `getnameinfo` requires.
+
+    // The authority initialises both buffers to the empty string, which is what
+    // makes its `serv[0] == '\0'` fallback well defined.
+    let mut host = [0 as c_char; NI_MAXHOST];
+    let mut serv = [0 as c_char; NI_MAXSERV];
+    // SAFETY: `base` points at an address of the family in `ss_family` and
+    // `addrlen` is that family's size; both output buffers are sized as
+    // `getnameinfo` requires.
     let rc = unsafe {
         sys::getnameinfo(
-            base.cast::<sys::SockAddr>(),
-            core::mem::size_of::<sys::SockAddrStorage>() as sys::SockLen,
-            if want_host {
-                host.as_mut_ptr()
-            } else {
-                ptr::null_mut()
-            },
-            if want_host {
-                host.len() as sys::SockLen
-            } else {
-                0
-            },
-            if want_host {
-                ptr::null_mut()
-            } else {
-                serv.as_mut_ptr()
-            },
-            if want_host {
-                0
-            } else {
-                serv.len() as sys::SockLen
-            },
+            base,
+            addrlen,
+            host.as_mut_ptr(),
+            NI_MAXHOST as sys::SockLen,
+            serv.as_mut_ptr(),
+            NI_MAXSERV as sys::SockLen,
             flags,
         )
     };
     if rc != 0 {
-        return ptr::null_mut();
+        // SAFETY: the site is a compile-time constant and the message is a
+        // static NUL-terminated string.
+        unsafe {
+            if rc == EAI_SYSTEM {
+                raise_site_dynamic_data(
+                    &BIO_ADDR_251,
+                    sys::errno(),
+                    c"calling getnameinfo()".as_ptr(),
+                );
+            } else {
+                raise_site_data(&BIO_ADDR_256, sys::gai_strerror(rc));
+            }
+        }
+        return (false, ptr::null_mut(), ptr::null_mut());
     }
-    let text = if want_host {
-        host.as_ptr()
-    } else {
-        serv.as_ptr()
+
+    if serv[0] == 0 {
+        // SAFETY: `serv` is a 32-byte buffer and the decimal form of a `u16` needs
+        // at most six bytes including the terminator.
+        unsafe { write_decimal(serv.as_mut_ptr(), NI_MAXSERV, BIO_ADDR_rawport(ap)) };
+    }
+
+    // SAFETY: `host` and `serv` are NUL-terminated after a successful
+    // `getnameinfo`, or after the decimal fallback above.
+    let hostname = unsafe {
+        if want_host {
+            CRYPTO_strdup(host.as_ptr(), ALLOC_FILE.as_ptr(), ALLOC_LINE)
+        } else {
+            ptr::null_mut()
+        }
     };
-    // SAFETY: the buffer `getnameinfo` filled is NUL-terminated by its contract.
-    unsafe { CRYPTO_strdup(text, ALLOC_FILE.as_ptr(), ALLOC_LINE) }
+    // SAFETY: as above.
+    let service = unsafe {
+        if want_service {
+            CRYPTO_strdup(serv.as_ptr(), ALLOC_FILE.as_ptr(), ALLOC_LINE)
+        } else {
+            ptr::null_mut()
+        }
+    };
+
+    if (want_host && hostname.is_null()) || (want_service && service.is_null()) {
+        // SAFETY: each is either NULL or a string this function allocated.
+        unsafe {
+            if !hostname.is_null() {
+                CRYPTO_free(hostname.cast::<c_void>(), ALLOC_FILE.as_ptr(), ALLOC_LINE);
+            }
+            if !service.is_null() {
+                CRYPTO_free(service.cast::<c_void>(), ALLOC_FILE.as_ptr(), ALLOC_LINE);
+            }
+        }
+        return (false, ptr::null_mut(), ptr::null_mut());
+    }
+
+    (true, hostname, service)
 }
 
 /// `char *BIO_ADDR_hostname_string(const BIO_ADDR *ap, int numeric)`
@@ -482,15 +635,21 @@ pub unsafe extern "C" fn BIO_ADDR_hostname_string(
         if ap.is_null() {
             return ptr::null_mut();
         }
-        getnameinfo_dup(ap, true, numeric != 0)
+        // SAFETY: `ap` is live.
+        let (ok, hostname, _) = unsafe { addr_strings(ap, numeric, true, false) };
+        if ok {
+            hostname
+        } else {
+            ptr::null_mut()
+        }
     })
 }
 
 /// `char *BIO_ADDR_service_string(const BIO_ADDR *ap, int numeric)`
 ///
-/// Reports the byte-swapped port for `AF_INET`/`AF_INET6` and the path for
-/// `AF_UNIX`; both are reproduced rather than corrected. The authority faults on
-/// NULL; this returns NULL by policy.
+/// Reports whatever `getnameinfo` makes of the stored port, so a `rawmake`
+/// address reports a byte-swapped service while a resolver address does not; both
+/// are reproduced. The authority faults on NULL; this returns NULL by policy.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_ADDR_service_string(
     ap: *const BioAddr,
@@ -500,7 +659,13 @@ pub unsafe extern "C" fn BIO_ADDR_service_string(
         if ap.is_null() {
             return ptr::null_mut();
         }
-        getnameinfo_dup(ap, false, numeric != 0)
+        // SAFETY: `ap` is live.
+        let (ok, _, service) = unsafe { addr_strings(ap, numeric, false, true) };
+        if ok {
+            service
+        } else {
+            ptr::null_mut()
+        }
     })
 }
 
@@ -576,12 +741,14 @@ mod tests {
     }
 
     #[test]
-    fn ipv4_round_trips_with_a_host_order_port() {
+    fn ipv4_round_trips_with_the_port_stored_verbatim() {
         let a = BIO_ADDR_new();
         // SAFETY: `a` is live.
         unsafe {
             assert_eq!(make_v4(a, [127, 0, 0, 1], 8080), 1);
             assert_eq!(BIO_ADDR_family(a), sys::AF_INET);
+            // The authority stores the port without `htons` and returns the field
+            // without `ntohs`, so this reads back the caller's own value.
             assert_eq!(BIO_ADDR_rawport(a), 8080);
             let mut buf = [0u8; 16];
             let mut len = buf.len();
@@ -591,6 +758,9 @@ mod tests {
             );
             assert_eq!(len, 4);
             assert_eq!(&buf[..4], &[127, 0, 0, 1]);
+            // The *stored field* is the observable the socket layer sees; it is
+            // `htons(8080)` only in a resolver-built address.
+            assert_eq!((*a.cast::<sys::SockAddrIn>()).sin_port, 8080);
             BIO_ADDR_free(a);
         }
     }
@@ -618,8 +788,10 @@ mod tests {
     }
 
     #[test]
-    fn service_string_reports_the_byte_swapped_port() {
-        // Measured against the authority: 80 -> "20480", 443 -> "47873", 1 -> "256".
+    fn service_string_unswaps_whatever_is_in_the_port_field() {
+        // Measured against the authority: a rawmake address with 80 reports
+        // "20480", with 443 "47873", with 1 "256" -- because `getnameinfo`
+        // un-swaps a field that already holds the host-order value.
         let a = BIO_ADDR_new();
         // SAFETY: `a` is live for the whole block.
         unsafe {
@@ -636,6 +808,33 @@ mod tests {
                 Some("127.0.0.1")
             );
             assert_eq!(BIO_ADDR_path_string(a), ptr::null_mut());
+            BIO_ADDR_free(a);
+        }
+    }
+
+    #[test]
+    fn a_resolver_shaped_address_reports_the_network_order_port() {
+        // The other side of the same asymmetry: an address whose field holds the
+        // network-order port reports the *correct* service and a swapped rawport.
+        let a = BIO_ADDR_new();
+        // SAFETY: `a` is live, and `sa` is a fully initialised `sockaddr_in`.
+        unsafe {
+            let mut sa: sys::SockAddrIn = core::mem::zeroed();
+            sa.sin_family = sys::AF_INET as sys::SaFamily;
+            sa.sin_port = sys::htons(8080);
+            // `s_addr`'s *memory* bytes are the network-order address, so a
+            // native-endian read of the dotted quad is what puts 127.0.0.1 there.
+            sa.sin_addr.s_addr = u32::from_ne_bytes([127, 0, 0, 1]);
+            assert_eq!(
+                make_from_sockaddr(a, ptr::from_ref(&sa).cast::<sys::SockAddr>()),
+                1
+            );
+            assert_eq!(BIO_ADDR_rawport(a), 36895, "the field read verbatim");
+            assert_eq!(take(BIO_ADDR_service_string(a, 1)).as_deref(), Some("8080"));
+            assert_eq!(
+                take(BIO_ADDR_hostname_string(a, 1)).as_deref(),
+                Some("127.0.0.1")
+            );
             BIO_ADDR_free(a);
         }
     }
@@ -675,6 +874,45 @@ mod tests {
     }
 
     #[test]
+    fn unix_rawmake_ignores_wherelen_for_the_copy_but_bounds_it() {
+        // `strncpy` semantics: the copy runs to the NUL, so a `wherelen` shorter
+        // than the string does not truncate it, while a `wherelen` that would
+        // overflow `sun_path` is rejected outright.
+        let a = BIO_ADDR_new();
+        // SAFETY: `a` is live and the literal is NUL-terminated.
+        unsafe {
+            assert_eq!(
+                BIO_ADDR_rawmake(a, sys::AF_UNIX, c"/tmp/abc".as_ptr().cast(), 4, 0),
+                1
+            );
+            assert_eq!(take(BIO_ADDR_path_string(a)).as_deref(), Some("/tmp/abc"));
+
+            // No NUL inside `sun_path - 1` bytes: the copy fills the field even
+            // though only 4 bytes were declared readable, which is what `strncpy`
+            // does and is why `wherelen` is only a bound, not a length.
+            let long = [b'x'; 110];
+            assert_eq!(
+                BIO_ADDR_rawmake(a, sys::AF_UNIX, long.as_ptr().cast(), 4, 0),
+                1
+            );
+            let path = take(BIO_ADDR_path_string(a)).expect("a path");
+            assert_eq!(path.len(), 107, "copied to the destination's capacity");
+
+            // The bound itself is `wherelen + 1 > sizeof(sun_path)`, so 107 is
+            // the largest accepted value and 108 is refused.
+            assert_eq!(
+                BIO_ADDR_rawmake(a, sys::AF_UNIX, long.as_ptr().cast(), 107, 0),
+                1
+            );
+            assert_eq!(
+                BIO_ADDR_rawmake(a, sys::AF_UNIX, long.as_ptr().cast(), 108, 0),
+                0
+            );
+            BIO_ADDR_free(a);
+        }
+    }
+
+    #[test]
     fn clear_duplicate_and_copy_agree_with_the_authority() {
         let a = BIO_ADDR_new();
         // SAFETY: every pointer below is live for the whole block.
@@ -692,6 +930,13 @@ mod tests {
 
             assert_eq!(BIO_ADDR_copy(dup, a), 1);
             assert_eq!(BIO_ADDR_rawport(dup), 4660);
+
+            // An AF_UNSPEC source clears rather than failing.
+            let empty = BIO_ADDR_new();
+            assert_eq!(BIO_ADDR_copy(dup, empty), 1);
+            assert_eq!(BIO_ADDR_family(dup), sys::AF_UNSPEC);
+            BIO_ADDR_free(empty);
+
             BIO_ADDR_free(dup);
             BIO_ADDR_free(a);
         }

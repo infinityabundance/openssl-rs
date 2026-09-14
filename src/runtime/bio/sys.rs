@@ -284,6 +284,8 @@ pub const SO_RCVTIMEO: c_int = 20;
 pub const SO_SNDTIMEO: c_int = 21;
 /// `IPPROTO_TCP`.
 pub const IPPROTO_TCP: c_int = 6;
+/// `IPPROTO_UDP`.
+pub const IPPROTO_UDP: c_int = 17;
 /// `IPPROTO_IPV6`.
 pub const IPPROTO_IPV6: c_int = 41;
 /// `IPV6_V6ONLY`.

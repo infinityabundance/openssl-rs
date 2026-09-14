@@ -957,3 +957,82 @@ that established the table is committed so the conversion can be courted the sam
 way, and `discover_bio_lookup.c` also records the entry count and ordering for
 those lookups (one entry each for the numeric cases probed, with `socktype` 1 and
 `protocol` 6 filled in by the resolver).
+
+---
+
+## D37 — D34's and D36's *mechanism* for the port was wrong; the observations were right
+
+**Correction.** `BIO_ADDR_rawmake` stores the port **verbatim** — `sin_port = port`,
+with no `htons` — and `BIO_ADDR_rawport` returns the field **verbatim**, with no
+`ntohs`. D34 described the observable correctly and attributed it to the wrong
+cause ("the authority rebuilds the address for `getnameinfo` with the host-order
+port"); D36 went further and described a lookup path that "un-swaps" the port,
+which does not exist. The truth is simpler and worse: one function forgets to
+convert, and a resolver-built address is not one of its outputs at all — it is
+glibc's `struct sockaddr` seen through a cast, so *its* field holds `htons(port)`
+and the two accessors report the opposite way round.
+
+**Why the court did not catch it.** `RT-BIO-ADDR` compared what the public API
+returns: `BIO_ADDR_rawport` and `BIO_ADDR_service_string` agree under both models,
+because D34's implementation un-swapped the field on the way into `getnameinfo` and
+so reproduced the same string. The two models differ only in **what is stored**, and
+that is visible only where something else reads the address — a socket syscall. The
+observations were correct and insufficient; the mechanism was wrong and undetected.
+The court now also compares the error queue, which closes the adjacent gap, and
+`RT-BIO-SOCK` (the socket-layer court) is where the stored bytes are pinned.
+
+**Consequence.** `BIO_ADDR_rawmake` stores `port` directly; `BIO_ADDR_rawport`
+returns the field directly; `addr_strings` calls `getnameinfo` on the stored address
+with no reconstruction and falls back to `ntohs(BIO_ADDR_rawport(ap))` only when
+`getnameinfo` left the service empty. A unit test asserts the stored field directly,
+so the model cannot silently regress.
+
+---
+
+## D38 — The resolver surface is implemented, and the court found two Phase 3 defects
+
+**Decision.** `BIO_ADDRINFO` (6 exports), `BIO_lookup`, `BIO_lookup_ex`,
+`BIO_parse_hostserv`, `BIO_get_port`, `BIO_get_host_ip` and `BIO_gethostbyname` are
+implemented and courted by a new `RT-BIO-RESOLVE` (501 observations, passing).
+Phase 4 is now implemented 157 / deferred 14 / open 85 of 256 owned; the baseline is
+22 courts and 5,085 observations.
+
+**Behaviours the source confirmed and the probe pinned.**
+
+* `AI_ADDRCONFIG` is set **only** when the host is non-NULL *and* the family is
+  `AF_UNSPEC`; `AI_PASSIVE` only for `BIO_LOOKUP_SERVER`. A one-shot retry clears
+  `AI_ADDRCONFIG`, sets `AI_NUMERICHOST` and reports the *first* `gai_strerror`.
+* `BIO_lookup_ex` validates the family explicitly
+  (`BIO_R_UNSUPPORTED_PROTOCOL_FAMILY` at `bio_addr.c:698`) before any resolver
+  call, and raises `ERR_LIB_BIO`/`ERR_R_SYS_LIB` with `gai_strerror` as data
+  otherwise — at three different coordinates (`:746`, `:751`, `:767`), all of which
+  `ERR_get_error_line_data` exposes.
+* **`*res` is written only on success**: probed with a sentinel, the authority
+  leaves it untouched when the lookup fails.
+* `BIO_get_port` and `BIO_get_host_ip` are thin wrappers over `BIO_lookup`, not
+  string parsers, which is why `BIO_get_host_ip("1.2.3")` yields `1.2.0.3` (the
+  resolver accepts `inet_aton` shorthands) and `BIO_get_port("70000")` yields `4464`
+  (the resolver truncates to 16 bits and the result is un-swapped).
+* On the Linux authority the `gethostbyname`/`getservbyname` fallback and the
+  `AF_UNSPEC` string fallback are both compiled out, so neither is implemented.
+
+**Two Phase 3 defects, found by the new court.** The first run produced exactly one
+residual, in `BIO_get_host_ip(NULL, ip)`:
+
+    ip.null.err.data: authority='Name or service not knownhost=<NULL>'
+                      candidate='Name or service not knownhost='
+
+The authority's `ERR_add_error_vdata` substitutes the literal `"<NULL>"` for a NULL
+argument, and **grows** its buffer rather than truncating. This project's
+`err_variadic.c` did neither: it skipped NULL arguments and capped the result at
+1023 bytes. Both were observable through `ERR_get_error_data` — the truncation by
+any long argument, which nothing had probed. Both are fixed, and the probe now
+observes `ERR_add_error_data` directly (NULL argument, both-NULL, a 3 KB argument,
+and `num == 0`) so the exported function is covered rather than only the helper that
+happened to exercise it.
+
+**Non-claim.** `RT-BIO-RESOLVE` passing means the candidate matched the authority for
+the lookups, failure modes, error coordinates and helper behaviours the probe
+exercises, in this container's resolver environment. It says nothing about a
+container with different `/etc/hosts`, `/etc/services` or NSS configuration, and it
+is not a claim about the socket layer, which is a separate court.

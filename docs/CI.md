@@ -37,8 +37,8 @@ rule the loss would be invisible.
 is where", and it is reviewed like any other change.
 
 Current baseline (`forensics/regression-baseline.json` is authoritative; these
-numbers are a snapshot of it): 357 implemented `libcrypto` symbols, 97 open
-Phase 4 obligations, 21 courts all passing, 4,568 observations.
+numbers are a snapshot of it): 369 implemented `libcrypto` symbols, 85 open
+Phase 4 obligations, 22 courts all passing, 5,085 observations.
 
 ## The jobs
 
@@ -127,7 +127,7 @@ re-runs every court from scratch:
    contamination).
 2. `phase3_courts.py` — the 7 runtime differential courts.
 3. `phase4_courts.py` — the BIO differential courts (`RT-BIO`, `RT-ERR-BIO`,
-   `RT-BIO-ADDR`).
+   `RT-BIO-ADDR`, `RT-BIO-RESOLVE`).
 4. `regression_guard.py` — run again over the **freshly derived** results.
 
 Step 4 is what makes the gate behavioural rather than a claim about a file: the

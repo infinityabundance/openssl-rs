@@ -1,8 +1,8 @@
 {
   "authority_exit_code": 0,
-  "authority_observations": 82,
+  "authority_observations": 98,
   "candidate_exit_code": 0,
-  "candidate_observations": 82,
+  "candidate_observations": 98,
   "candidate_stderr_tail": [],
   "court": "RT-BIO-ADDR",
   "probe": "courts/phase4/rt_bio_addr_probe.c",

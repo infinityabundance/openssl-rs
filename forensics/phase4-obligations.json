@@ -4,8 +4,8 @@
     "complete": false,
     "counts": {
       "deferred_to_later_phase": 14,
-      "implemented": 145,
-      "open_in_this_stratum": 97,
+      "implemented": 157,
+      "open_in_this_stratum": 85,
       "owned": 256
     },
     "deferred": [
@@ -132,6 +132,12 @@
       }
     ],
     "implemented": [
+      "BIO_ADDRINFO_address",
+      "BIO_ADDRINFO_family",
+      "BIO_ADDRINFO_free",
+      "BIO_ADDRINFO_next",
+      "BIO_ADDRINFO_protocol",
+      "BIO_ADDRINFO_socktype",
       "BIO_ADDR_clear",
       "BIO_ADDR_copy",
       "BIO_ADDR_dup",
@@ -172,18 +178,23 @@
       "BIO_get_callback_ex",
       "BIO_get_data",
       "BIO_get_ex_data",
+      "BIO_get_host_ip",
       "BIO_get_init",
       "BIO_get_line",
       "BIO_get_new_index",
+      "BIO_get_port",
       "BIO_get_retry_BIO",
       "BIO_get_retry_reason",
       "BIO_get_rpoll_descriptor",
       "BIO_get_shutdown",
       "BIO_get_wpoll_descriptor",
+      "BIO_gethostbyname",
       "BIO_gets",
       "BIO_hex_string",
       "BIO_indent",
       "BIO_int_ctrl",
+      "BIO_lookup",
+      "BIO_lookup_ex",
       "BIO_meth_free",
       "BIO_meth_get_callback_ctrl",
       "BIO_meth_get_create",
@@ -223,6 +234,7 @@
       "BIO_number_written",
       "BIO_nwrite",
       "BIO_nwrite0",
+      "BIO_parse_hostserv",
       "BIO_pop",
       "BIO_printf",
       "BIO_ptr_ctrl",
@@ -280,30 +292,6 @@
     ],
     "note": "`complete` is true only when every export in these families is either implemented or handed to a later stratum. `open` entries belong to this stratum and are recorded gaps, not deferrals; while any exist Phase 4 cannot be called complete. Nothing here is a parity claim.",
     "open": [
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_ADDRINFO_address"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_ADDRINFO_family"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_ADDRINFO_free"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_ADDRINFO_next"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_ADDRINFO_protocol"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_ADDRINFO_socktype"
-      },
       {
         "module": "src/runtime/bio/",
         "symbol": "BIO_accept"
@@ -382,27 +370,7 @@
       },
       {
         "module": "src/runtime/bio/",
-        "symbol": "BIO_get_host_ip"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_get_port"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_gethostbyname"
-      },
-      {
-        "module": "src/runtime/bio/",
         "symbol": "BIO_listen"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_lookup"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_lookup_ex"
       },
       {
         "module": "src/runtime/bio/",
@@ -435,10 +403,6 @@
       {
         "module": "src/runtime/bio/",
         "symbol": "BIO_new_fp"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_parse_hostserv"
       },
       {
         "module": "src/runtime/bio/",
@@ -680,7 +644,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "57874d0ffe7ca6a242d00fd60b71757a65169e7c6af481d733be51474bd87526"
+      "sha256": "1fe43a8ac2e73959e37f9fd2f7028db72f36458839d6c5e9fe267b333770bc59"
     }
   ],
   "kind": "phase4-obligations",

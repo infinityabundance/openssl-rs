@@ -21,33 +21,62 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 /* Provided by src/runtime/err.rs. */
 extern void openssl_rs_err_set_error(int lib, int reason, const char *msg);
 extern void openssl_rs_err_add_data(const char *msg);
 
-/* Render up to `num` NUL-terminated strings, concatenated, into `buf`. The
- * authority concatenates without a separator for ERR_add_error_data. */
-static void join_strings(char *buf, size_t buflen, int num, va_list ap)
+/*
+ * Render up to `num` NUL-terminated strings, concatenated, into a freshly
+ * allocated buffer sized exactly to fit. The caller frees it.
+ *
+ * Two details here are the authority's own and are observable through
+ * `ERR_get_error_data` (`crypto/err/err.c`, `ERR_add_error_vdata`):
+ *
+ *   * a NULL argument becomes the literal `"<NULL>"` rather than being skipped;
+ *   * the result is **not** truncated -- the authority grows its buffer to fit,
+ *     so a long argument reaches the queue whole.
+ *
+ * Both were found by the Phase 4 `RT-BIO-RESOLVE` court, in the case where
+ * `BIO_get_host_ip(NULL, ip)` appends a NULL host to the resolver's error.
+ *
+ * Returns NULL when there is nothing to allocate, or when allocation failed.
+ */
+static char *join_strings(int num, va_list ap)
 {
+    va_list ap2;
+    size_t total = 1;
+    int i;
+    char *buf;
     size_t used = 0;
-    if (buflen == 0)
-        return;
-    buf[0] = '\0';
-    for (int i = 0; i < num; i++) {
-        const char *s = va_arg(ap, const char *);
+
+    va_copy(ap2, ap);
+    for (i = 0; i < num; i++) {
+        const char *s = va_arg(ap2, const char *);
         if (s == NULL)
-            continue;
-        size_t n = strlen(s);
-        if (n > buflen - 1 - used)
-            n = buflen - 1 - used;
+            s = "<NULL>";
+        total += strlen(s);
+    }
+    va_end(ap2);
+
+    buf = malloc(total);
+    if (buf == NULL)
+        return NULL;
+
+    for (i = 0; i < num; i++) {
+        const char *s = va_arg(ap, const char *);
+        size_t n;
+
+        if (s == NULL)
+            s = "<NULL>";
+        n = strlen(s);
         memcpy(buf + used, s, n);
         used += n;
-        buf[used] = '\0';
-        if (used >= buflen - 1)
-            break;
     }
+    buf[used] = '\0';
+    return buf;
 }
 
 /*
@@ -89,21 +118,25 @@ void ERR_set_error(int lib, int reason, const char *fmt, ...)
 /*
  * void ERR_add_error_data(int num, ...)
  *
- * Concatenates `num` strings onto the current error's data field.
+ * Concatenates `num` strings onto the current error's data field, replacing a
+ * NULL argument with `"<NULL>"` and growing as needed.
  */
 void ERR_add_error_data(int num, ...)
 {
-    char buf[1024];
     va_list ap;
+    char *joined;
 
     if (num <= 0)
         return;
 
     va_start(ap, num);
-    join_strings(buf, sizeof(buf), num, ap);
+    joined = join_strings(num, ap);
     va_end(ap);
+    if (joined == NULL)
+        return;
 
-    openssl_rs_err_add_data(buf);
+    openssl_rs_err_add_data(joined);
+    free(joined);
 }
 
 /*
@@ -114,11 +147,15 @@ void ERR_add_error_data(int num, ...)
  */
 void ERR_add_error_vdata(int num, va_list args)
 {
-    char buf[1024];
+    char *joined;
 
     if (num <= 0)
         return;
 
-    join_strings(buf, sizeof(buf), num, args);
-    openssl_rs_err_add_data(buf);
+    joined = join_strings(num, args);
+    if (joined == NULL)
+        return;
+
+    openssl_rs_err_add_data(joined);
+    free(joined);
 }

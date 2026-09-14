@@ -19,12 +19,32 @@
  */
 #include <openssl/bio.h>
 #include <openssl/crypto.h>
+#include <openssl/err.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+
+/* Print the error queue's observable state and clear it. */
+static void err_state(const char *key)
+{
+    unsigned long e = ERR_peek_error();
+
+    printf("%s.err=%lu\n", key, e);
+    if (e != 0) {
+        const char *file = NULL, *data = NULL;
+        int line = 0, flags = 0;
+
+        (void)ERR_get_error_line_data(&file, &line, &data, &flags);
+        printf("%s.err.file=%s\n", key, file ? file : "<NULL>");
+        printf("%s.err.line=%d\n", key, line);
+        printf("%s.err.data=%s\n", key, data ? data : "<NULL>");
+        printf("%s.err.flags=%d\n", key, flags);
+        ERR_clear_error();
+    }
+}
 
 static void hex(const unsigned char *p, size_t n, char *out, size_t outlen)
 {
@@ -267,6 +287,49 @@ int main(void)
         printf("copy.nullsrc=%d\n", BIO_ADDR_copy(copy, NULL));
         printf("copy.nulldst=%d\n", BIO_ADDR_copy(NULL, copy));
         BIO_ADDR_free(copy);
+    }
+
+    /*
+     * The string conversions raise on failure as well as returning NULL, and the
+     * raise's coordinates and data are observable. An earlier version of this
+     * probe compared only the returned pointer, which let an implementation with
+     * the wrong internal port convention pass -- the error queue is part of the
+     * contract, so it is compared here.
+     */
+    {
+        BIO_ADDR *a = BIO_ADDR_new();
+        char *s;
+
+        ERR_clear_error();
+        s = BIO_ADDR_hostname_string(a, 1);
+        printf("unspec.hostname.isnull=%d\n", s == NULL);
+        OPENSSL_free(s);
+        err_state("unspec.hostname");
+
+        ERR_clear_error();
+        s = BIO_ADDR_service_string(a, 1);
+        printf("unspec.service.isnull=%d\n", s == NULL);
+        OPENSSL_free(s);
+        err_state("unspec.service");
+
+        s = BIO_ADDR_path_string(a);
+        printf("unspec.path.isnull=%d\n", s == NULL);
+        OPENSSL_free(s);
+        err_state("unspec.path");
+
+        /* A successful conversion leaves the queue alone. */
+        {
+            struct in_addr in;
+
+            inet_pton(AF_INET, "127.0.0.1", &in);
+            BIO_ADDR_rawmake(a, AF_INET, &in, sizeof(in), 80);
+            ERR_clear_error();
+            s = BIO_ADDR_hostname_string(a, 1);
+            printf("v4.hostname.ok=%s\n", s == NULL ? "<NULL>" : s);
+            OPENSSL_free(s);
+            err_state("v4.hostname");
+        }
+        BIO_ADDR_free(a);
     }
 
     /* --- the null-argument calls the authority defines ------------------ */

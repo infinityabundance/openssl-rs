@@ -529,6 +529,29 @@ pub(crate) unsafe fn raise_site_dynamic(site: &err_sites::ErrSite, reason: c_int
     });
 }
 
+/// The data half of `ERR_raise_data`: an allocated, NUL-terminated copy of `msg`
+/// marked `ERR_TXT_MALLOCED | ERR_TXT_STRING`.
+///
+/// # Safety
+/// `msg` must be NULL or a NUL-terminated C string.
+unsafe fn attach_message(s: &mut ErrState, t: usize, msg: *const c_char) {
+    if msg.is_null() {
+        return;
+    }
+    // SAFETY: `msg` is NUL-terminated per the caller's contract.
+    let len = unsafe { c_strlen(msg) };
+    // SAFETY: allocate `len + 1`, copy, terminate.
+    unsafe {
+        let p = CRYPTO_malloc(len + 1, core::ptr::null(), 0).cast::<c_char>();
+        if p.is_null() {
+            return;
+        }
+        core::ptr::copy_nonoverlapping(msg, p, len);
+        *p.add(len) = 0;
+        s.set_data(t, p, len + 1, ERR_TXT_MALLOCED | ERR_TXT_STRING);
+    }
+}
+
 /// `ERR_raise_data(lib, reason, "...")` at a recorded authority site.
 ///
 /// The authority's `ERR_vset_error` formats the message into an allocated
@@ -544,21 +567,39 @@ pub(crate) unsafe fn raise_site_data(site: &err_sites::ErrSite, msg: *const c_ch
         s.clear(t, false);
         s.set_debug(t, site.file.as_ptr(), site.line, site.func.as_ptr());
         s.set_error(t, site.lib, site.reason);
-        if msg.is_null() {
-            return;
-        }
         // SAFETY: `msg` is NUL-terminated per the caller's contract.
-        let len = unsafe { c_strlen(msg) };
-        // SAFETY: allocate `len + 1`, copy, terminate.
-        unsafe {
-            let p = CRYPTO_malloc(len + 1, core::ptr::null(), 0).cast::<c_char>();
-            if p.is_null() {
-                return;
-            }
-            core::ptr::copy_nonoverlapping(msg, p, len);
-            *p.add(len) = 0;
-            s.set_data(t, p, len + 1, ERR_TXT_MALLOCED | ERR_TXT_STRING);
-        }
+        unsafe { attach_message(s, t, msg) };
+    });
+}
+
+/// `ERR_raise_data(lib, reason, "...")` at a recorded authority site whose
+/// *reason* the authority computes at run time **and** which carries fixed text.
+///
+/// `raise_site_dynamic` covers a run-time reason with no data and
+/// `raise_site_data` a constant reason with data; this is the combination the
+/// socket helpers need, where the authority raises a system error with a
+/// constant "calling ...()" message.
+///
+/// # Safety
+/// The `ErrSite` is a compile-time constant whose pointers are static, and `msg`
+/// must be NULL or a NUL-terminated C string.
+pub(crate) unsafe fn raise_site_dynamic_data(
+    site: &err_sites::ErrSite,
+    reason: c_int,
+    msg: *const c_char,
+) {
+    debug_assert!(
+        site.dynamic_reason,
+        "raise_site_dynamic_data used with a constant-reason site"
+    );
+    with_state(|s| {
+        s.get_slot();
+        let t = s.top as usize;
+        s.clear(t, false);
+        s.set_debug(t, site.file.as_ptr(), site.line, site.func.as_ptr());
+        s.set_error(t, site.lib, reason);
+        // SAFETY: `msg` is NUL-terminated per the caller's contract.
+        unsafe { attach_message(s, t, msg) };
     });
 }
 

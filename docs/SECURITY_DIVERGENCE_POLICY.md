@@ -214,3 +214,44 @@ observations that *can* be made around each boundary are compared normally.
   because those are defined: a wrong `wherelen`, `AF_UNSPEC`, an unknown family,
   and an `AF_UNIX` path longer than `sun_path` all return `0` and leave the
   previous address intact in both.
+
+### D-BIO-ADDR-3 — `BIO_ADDR_rawmake` copies from `where` with `strncpy` semantics
+
+- **Obligation:** `BIO_ADDR_rawmake(ap, AF_UNIX, path, wherelen, 0)` where `wherelen`
+  is smaller than `strlen(path)`.
+- **Authority:** bounds the call with `wherelen + 1 > sizeof(sun_path)` but then
+  copies with `strncpy(sun_path, where, sizeof(sun_path) - 1)`, which **ignores
+  `wherelen`** and reads up to `strlen(path)` bytes (or 107, whichever is first). A
+  caller that declares four readable bytes but passes a longer string has bytes
+  beyond that boundary read.
+- **Candidate:** reproduces the copy exactly — it is the defined behaviour for a
+  valid C string, and the destination is zero-filled first, so the stored path is
+  always NUL-terminated. The read is bounded to 107 bytes, as `strncpy`'s `n`
+  bounds it. What is *not* reproduced is a caller passing a buffer shorter than the
+  string it points at; that is a caller error in both.
+- **Claim removed:** no claim is made about a caller whose buffer is shorter than
+  the string it passes. `RT-BIO-ADDR` compares the defined cases (`wherelen` 4 with
+  a 8-byte string still yields the whole path; 107 is accepted, 108 is refused) and
+  a unit test asserts them.
+
+### D-BIO-RESOLVE-1 — the resolver entry points dereference their out-parameters
+
+- **Obligation:** `BIO_lookup_ex(…, res == NULL)`; `BIO_lookup_ex(NULL, …, AF_UNIX,
+  …)`; `BIO_parse_hostserv(NULL, …)`; `BIO_get_host_ip(str, NULL)`;
+  `BIO_get_port(str, NULL)`.
+- **Authority:** faults in each case — `res` is passed to `getaddrinfo`, the AF_UNIX
+  path calls `strlen(host)`, `BIO_parse_hostserv` dereferences `hostserv`
+  immediately, and the two helpers copy into or assign through their out-parameter.
+  Measured for `BIO_parse_hostserv`/`BIO_ADDR` by
+  `courts/phase4/bio_addr_null_calls.c` (one call per process); the rest follow
+  directly from the pinned source and are *not* probed, because a probe cannot
+  compare a crash and these calls are not ambiguous.
+- **Candidate:** total. `BIO_lookup_ex` returns `0`; `BIO_parse_hostserv` returns `0`;
+  the helpers skip the write and, where the authority would have raised first, the
+  raise still happens (`BIO_get_port(NULL, NULL)` raises `BIO_R_NO_PORT_DEFINED`,
+  which the authority does before touching `port_ptr`).
+- **Reason:** an out-parameter the callee cannot write is a caller error, and
+  dereferencing it is an exploitable fault rather than a defined behaviour.
+- **Claim removed:** not claimed compatible. Note that `BIO_get_host_ip(NULL, ip)`
+  **is** defined and matched: a NULL *host* is legal for the resolver, which returns
+  the loopback, and the authority raises and appends `host=<NULL>`.

@@ -55,12 +55,14 @@ use crate::runtime::ex_data::{
 };
 
 pub mod addr;
+pub mod addr_info;
 pub mod bf_null;
 pub mod bss_mem;
 pub mod bss_null;
 pub mod bss_sock;
 pub mod dump;
 pub mod iolib;
+pub mod legacy_host;
 pub mod method;
 pub mod print;
 pub mod sys;
@@ -1546,6 +1548,10 @@ pub use addr::{
     BIO_ADDR_hostname_string, BIO_ADDR_new, BIO_ADDR_path_string, BIO_ADDR_rawaddress,
     BIO_ADDR_rawmake, BIO_ADDR_rawport, BIO_ADDR_service_string,
 };
+pub use addr_info::{
+    BIO_ADDRINFO_address, BIO_ADDRINFO_family, BIO_ADDRINFO_free, BIO_ADDRINFO_next,
+    BIO_ADDRINFO_protocol, BIO_ADDRINFO_socktype, BIO_lookup, BIO_lookup_ex, BIO_parse_hostserv,
+};
 pub use dump::{
     BIO_dump, BIO_dump_cb, BIO_dump_fp, BIO_dump_indent, BIO_dump_indent_cb, BIO_dump_indent_fp,
     BIO_hex_string,
@@ -1556,6 +1562,7 @@ pub use iolib::{
     BIO_int_ctrl, BIO_nread, BIO_nread0, BIO_nwrite, BIO_nwrite0, BIO_ptr_ctrl, BIO_puts, BIO_read,
     BIO_read_ex, BIO_recvmmsg, BIO_sendmmsg, BIO_write, BIO_write_ex,
 };
+pub use legacy_host::{BIO_get_host_ip, BIO_get_port, BIO_gethostbyname};
 pub use method::{
     BIO_meth_free, BIO_meth_get_callback_ctrl, BIO_meth_get_create, BIO_meth_get_ctrl,
     BIO_meth_get_gets, BIO_meth_get_puts, BIO_meth_get_read, BIO_meth_get_read_ex,
