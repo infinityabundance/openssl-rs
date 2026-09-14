@@ -7,8 +7,12 @@
     "timeout: the monitored command dumped core"
   ],
   "court": "RT-THREAD",
-  "probe": "courts/phase3/rt_thread_probe.c",
+  "probe": "court/phase3/rt_thread_probe.candidate",
   "residual_count": 0,
   "residuals": [],
+  "staged_binaries": {
+    "authority": "artifacts/phase3/probes/rt_thread_probe.authority",
+    "candidate": "artifacts/phase3/probes/rt_thread_probe.candidate"
+  },
   "verdict": "pass"
 }

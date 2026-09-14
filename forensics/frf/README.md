@@ -58,8 +58,14 @@ snapshotted and content-addressed rather than hidden.
 |---|---|---|
 | `openssl-cli-version` | `openssl version` stdout + exit | **diverges** (release identity) |
 | `openssl-cli-dgst` | `openssl dgst -sha256 <fixture>` stdout + exit | agrees |
-| `openssl-cli-list-disabled` | `openssl list -disabled` stdout + exit | agrees |
-| `openssl-cli-list-cipher` | `openssl list -cipher-algorithms -1` stdout + exit | agrees |
+| `openssl-cli-inventory` | disabled-feature + cipher membership for a queried name list | agrees |
+
+`openssl-cli-inventory` replaced `openssl-cli-list-disabled` and
+`openssl-cli-list-cipher`, which were not fixture-driven and could not be
+challenged (`docs/DECISIONS.md` D13). The observed surface is unchanged; only the
+framing changed, so the sensitivity evidence became obtainable. The superseded
+court directories are gone — they never held a manifest of their own after the
+replacement, so nothing evidentiary was removed.
 
 ## Recorded Phase 1 result
 
@@ -108,44 +114,176 @@ requires each mutation to be seen on its targeted axis **and on no other**.
 | court | `stdout-first-line` | `exit-class` | consequence |
 |---|---|---|---|
 | `openssl-cli-dgst` | seen on stdout only | seen on exit only | **has** sensitivity evidence |
-| `openssl-cli-list-disabled` | refused (also diverged on exit) | refused (also diverged on stdout) | observations only |
-| `openssl-cli-list-cipher` | refused (same cause) | refused (same cause) | observations only |
+| `openssl-cli-inventory` | seen on stdout only | seen on exit only | **has** sensitivity evidence |
+| `openssl-cli-version` | refused | refused | observations only |
+| `openssl-rs-rt-*` (all seven) | seen on stdout only | seen on exit only | **have** sensitivity evidence |
 
-### The cause, established by inspection
+### The cause of the refusals, and the remedy that was applied
 
 The FRF 0.1.86 challenge mutant wrapper resolves the reference object by scanning
 its own arguments for a path under the object store. That works only when the
 court's declared arguments reference `{fixture}` — which is true for
-`openssl-cli-dgst` (the fixture is the hashed input) and false for the two
-`list-*` courts (they take no input file). For those courts the mutant prints
-`FRF-MUTANT: cannot locate reference object …`, exits 2 with empty stdout, and so
-perturbs **both** axes at once. FRF therefore refuses, correctly.
+`openssl-cli-dgst` and false for the old `list-*` courts. For those, the mutant
+printed `FRF-MUTANT: cannot locate reference object …`, exited 2 with empty
+stdout, and so perturbed **both** axes at once. FRF therefore refused, correctly,
+and the four residuals this produced were disposed `harness` with that reason.
 
-The four residuals this produced are disposed `harness`, with that reason.
+D13's concrete remedy — make every trajectory court fixture-driven — was applied
+in Phase 3 by replacing the two `list-*` courts with `openssl-cli-inventory`,
+whose fixture *is* the query list. That court now demonstrates axis isolation on
+both axes. `docs/DECISIONS.md` D13 is retained as the record of the gap; the
+remedy is superseding context, not a rewrite of it.
+
+### `openssl-cli-version` remains uncovered
+
+That court's mutants reproduce evidence that an existing run already holds, so
+FRF refuses to re-capture and the challenge cannot be adjudicated. The court's
+stdout still diverges by design (the release banner), so its axis cannot be
+claimed anyway; its claim contribution is the **exit class** only, as the
+Phase 1 prose already says.
 
 ### Why the obvious "fix" is refused
 
-Declaring only `stdout` for those courts would make the challenge *pass* on a
-mutant that never ran the reference — a false sensitivity result. An honestly
-refused court is strictly better than a falsely passing one. See
+Declaring only `stdout` for an unchallengeable court would make the challenge
+*pass* on a mutant that never ran the reference — a false sensitivity result. An
+honestly refused court is strictly better than a falsely passing one. See
 `docs/DECISIONS.md` D13.
 
 ### Effect on the compiled claim
 
 The Phase 1 claim was compiled at `--policy baseline` (observation evidence
-only), which does not require challenge coverage, and it re-verifies after the
-harness dispositions. A stronger `--policy sensitivity-backed` claim is **not**
-available until every claimed axis has demonstrated coverage — so the `list-*`
-courts currently block it.
+only). With the runtime courts, `openssl-cli-dgst` and `openssl-cli-inventory`
+now both carry sensitivity evidence, and each was compiled at
+`--policy sensitivity-backed` on its own — they bind different authority
+references (`openssl-3.6.3` and `openssl-cli-3.6.3`), and a claim asserts parity
+against one reference, so they cannot be premises of a single claim. The
+`version`+`dgst` pair is compiled at `--policy baseline` because the version
+court's axis is the release banner, which diverges by design.
 
-The concrete remedy is to make every trajectory court fixture-driven. That is
-also better forensic practice: a court should be a statement about a *fixture
-family*, not about an argument list.
+## Phase 3 — runtime courts
+
+The Phase 1 courts above compare two OpenSSL releases. The Phase 3 courts compare
+the authority against **openssl-rs itself**, which is what makes them the first
+courts in this repository that can bear a candidate claim.
+
+| court | fixture family | subject |
+|---|---|---|
+| `openssl-rs-rt-mem` | `rt-mem` | allocation, sizing, cleansing, installable allocator |
+| `openssl-rs-rt-exdata` | `rt-exdata` | `CRYPTO_*_ex_data` |
+| `openssl-rs-rt-err` | `rt-err` | the thread-local error queue and its load-gated string tables |
+| `openssl-rs-rt-stack` | `rt-stack` | `OPENSSL_sk_*` |
+| `openssl-rs-rt-thread` | `rt-thread` | threads, atomics, thread-local storage |
+| `openssl-rs-rt-secure` | `rt-secure` | the secure heap |
+| `openssl-rs-rt-lhash` | `rt-lhash` | `OPENSSL_LH_*` |
+
+Each court executes the same C probe source twice: once compiled against the
+authority's headers and library, once against the candidate's. The probe prints
+one `key=value` line per observation. The two binaries are staged by
+`forensics/tools/phase3_courts.py` (this container has no compiler), and both
+wrappers bind `LD_LIBRARY_PATH` for the probe invocation **only** — see below.
+
+### The reference identity includes a harness revision
+
+The runtime reference is admitted as `openssl-rt-3.6.4-r2`, not
+`openssl-rt-3.6.4`. FRF refuses to run against an admitted reference whose file
+has changed, and rightly so: the reference *is* the harness that produces the
+observation. Revision `r1` compared only the first stdout line; `r2` makes the
+first line a digest of the whole transcript, so the declared `stdout` axis covers
+every observation rather than one of them. That is a change in the observation
+method, hence a new reference identity, and the receipts from `r1` remain in the
+store as the earlier method's record.
+
+### The harness must not leak the library under test
+
+`LD_LIBRARY_PATH` is applied per invocation, never exported. Debian's `sha256sum`
+links `libcrypto.so.3`, so exporting the binding made the harness's own digest
+tool load the candidate library: with the binding exported, `sha256sum` aborted
+on the candidate's scaffolded `SHA256_Init`. That is a true statement about the
+candidate — a real unmodified consumer really did stop working — but it is not a
+statement this harness should be making about itself.
+
+### Re-observing a rebuilt candidate
+
+Run identities in FRF 0.1.86 do not vary with the hashes of the
+`execution_context` artifacts. Measured: after rebuilding the candidate library
+(which changed `artifacts/phase2/libcrypto.so.3`), every runtime court's run id
+was unchanged, and FRF refused to re-capture — the stored captures still recorded
+the previous library's hash. The declared `candidate.version_or_commit` is not
+enough either, because it did not change.
+
+The consequence is deliberate here: `run_courts.sh` **recreates the store from
+clean**. Authority admission and run identities are content-addressed, so a fresh
+store is the only way to take a fresh observation of a rebuilt candidate, and it
+is what a release does. Evidence is therefore per-release and is never carried
+forward between releases — which is what `docs/CUSTODIAN_CONTRACT.md` asks for
+when it says a claim must not generalise across versions silently.
+
+The recreation is a working-tree replacement, not a destruction of the record:
+the previous release's tree is the previous commit. Anyone asking "what did the
+store say before this release" reads it out of Git history, which is why the
+store is committed at all.
+
+### Phase 3 sensitivity (challenge) results
+
+Unlike the Phase 1 `list-*` courts, every runtime court is fixture-driven, so
+FRF's mutant wrapper can locate its reference object and every challenge is
+adjudicated rather than refused:
+
+| court | `stdout-first-line` | `exit-class` |
+|---|---|---|
+| `openssl-rs-rt-mem` | seen on stdout only | seen on exit only |
+| `openssl-rs-rt-exdata` | seen on stdout only | seen on exit only |
+| `openssl-rs-rt-err` | seen on stdout only | seen on exit only |
+| `openssl-rs-rt-stack` | seen on stdout only | seen on exit only |
+| `openssl-rs-rt-thread` | seen on stdout only | seen on exit only |
+| `openssl-rs-rt-secure` | seen on stdout only | seen on exit only |
+| `openssl-rs-rt-lhash` | seen on stdout only | seen on exit only |
+
+### Phase 3 claim
+
+`forensics/frf/run_courts.sh` compiles the whole set. The Phase 3 runtime claim is
+
+```
+ffd0d7b3b15bf8fd97f70f023ace973577e4b79b723ce1fe23cfb2ef9a31d87d
+```
+
+from the seven runtime receipts, at `--policy sensitivity-backed`. The other
+claims in the store are the Phase 2 ABI court
+(`1d9f93df30b87fc87c2899abb74b014b5a9ccc21274b3af4ae8f865a8c04e4d7`), the two
+Phase 1 trajectory courts compiled individually at `sensitivity-backed`
+(`590ddff04c3480cd71b54487e9be9907f49912b0e2cc894056c82630a211f60e` for the
+digest court and
+`2be01424768b3a566baa7784fe25208948bb38acd73aff6bb9fc56a8a4543ac8` for the
+inventory court), and the digest+version pair at `--policy baseline`
+(`bdc8ab134293990afe9e4a002b0c0c95357e1add33fc2acc746d97f77ea10c3a`), because the
+version court's axis is the release banner and diverges by design.
+
+**Read the scope literally.** FRF extracts the `stdout` observable as
+`stdout-first-line`, so the claim says "preserves `<family>` first stdout line and
+`<family>` exit class". Because the first line of each transcript is a digest of
+every line that follows it — see the harness note above — that is a statement
+about the whole transcript. The claim's wording does not say so, which is why the
+mapping is recorded here. The *atlas* court
+(`artifacts/phase3/COURTS.json`) independently compares the transcripts line by
+line with no digest involved, and the two agree.
+
+The claim also does not cover `stderr` (both sides write none), and does not
+extend beyond the fixtures, the platform, or the observations the probes make.
+
+### A consumer observation, incidentally recorded
+
+Running the candidate wrapper with `LD_LIBRARY_PATH` exported made Debian's
+`sha256sum` fail against openssl-rs, because `sha256sum` links `libcrypto.so.3`
+and calls `SHA256_Init`, which is still `SCAFFOLDED`. That is a genuine
+Phase 17 signal — a real, unmodified downstream consumer — arriving early. It is
+recorded here because it was observed, not because SHA-2 is in scope: Phase 8
+owns the digest algorithms.
 
 ## Not yet represented
 
-These courts exercise the CLI surface. They do **not** yet constitute a claim
-about `libcrypto`/`libssl` ABI or semantics — that requires a candidate, and
-Phase 1 has none. The `.num`/version-script/DSO reconciliation in
-`forensics/atlas/*/symbols-*.json` is the corresponding *atlas* evidence, not an
-FRF claim.
+These courts exercise the CLI surface and the Phase 3 runtime substrate. They do
+**not** yet constitute a claim about `libcrypto`/`libssl` ABI or semantics beyond
+the seven runtime families above — that requires the later strata, and Phase 3
+expressly excludes cryptographic behaviour. The `.num`/version-script/DSO
+reconciliation in `forensics/atlas/*/symbols-*.json` is the corresponding *atlas*
+evidence, and `forensics/frf/courts/openssl-abi-surface` is its FRF counterpart.

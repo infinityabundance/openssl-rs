@@ -1,7 +1,7 @@
 {
-  "aggregate_hash": "f93a42f7992e62122523995f9cd5976ede38f1138dff1b3abac87dd90424c0d1",
+  "aggregate_hash": "29accda9a8ec56ac78f979dd77bbfecd252cd968dd310b11203c51f83cba500b",
   "aggregate_hash_algorithm": "sha256(<file-sha256>  <path>\\n, lexicographic)",
-  "file_count": 49,
+  "file_count": 51,
   "files": [
     {
       "path": "forensics/atlas/BUILD_RECORDS.json",
@@ -16,8 +16,16 @@
       "sha256": "d252e52b037d4b94cca69b09e09cf8e7131b47c18ae61cac6c869f4def08b0b0"
     },
     {
+      "path": "forensics/atlas/err-raise-sites.json",
+      "sha256": "41d421616d3da2b04ea90ac6efc065c530e246c78a091c41ddf03524e6ac45cf"
+    },
+    {
+      "path": "forensics/atlas/err-strings.json",
+      "sha256": "2e889ef8539013dab5130e1498c022b20b9b95a1d33b4584bad017e83ae88747"
+    },
+    {
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "e71fae0dd3f2b19d2bba99a23677a4cf391a2ee6b705f80ac5661660fca3fa6b"
+      "sha256": "b411c386c802fba6cbcd3f7671616fca772544eeb39f3e6b6b8591cfe04770a8"
     },
     {
       "path": "forensics/atlas/openssl-3.6.3-historical/ATLAS.md",

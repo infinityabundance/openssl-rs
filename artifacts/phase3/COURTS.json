@@ -11,12 +11,16 @@
         "candidate_exit_code": 0,
         "candidate_observations": 82,
         "candidate_stderr_tail": [
-          "counts.malloc=31 realloc=1 free=17 live=14"
+          "counts.malloc=34 realloc=1 free=20 live=14"
         ],
         "court": "RT-MEM",
-        "probe": "courts/phase3/rt_mem_probe.c",
+        "probe": "court/phase3/rt_mem_probe.candidate",
         "residual_count": 0,
         "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase3/probes/rt_mem_probe.authority",
+          "candidate": "artifacts/phase3/probes/rt_mem_probe.candidate"
+        },
         "verdict": "pass"
       },
       {
@@ -26,9 +30,45 @@
         "candidate_observations": 38,
         "candidate_stderr_tail": [],
         "court": "RT-EXDATA",
-        "probe": "courts/phase3/rt_exdata_probe.c",
+        "probe": "court/phase3/rt_exdata_probe.candidate",
         "residual_count": 0,
         "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase3/probes/rt_exdata_probe.authority",
+          "candidate": "artifacts/phase3/probes/rt_exdata_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 3857,
+        "candidate_exit_code": 0,
+        "candidate_observations": 3857,
+        "candidate_stderr_tail": [],
+        "court": "RT-ERR",
+        "probe": "court/phase3/rt_err_probe.candidate",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase3/probes/rt_err_probe.authority",
+          "candidate": "artifacts/phase3/probes/rt_err_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 159,
+        "candidate_exit_code": 0,
+        "candidate_observations": 159,
+        "candidate_stderr_tail": [],
+        "court": "RT-STACK",
+        "probe": "court/phase3/rt_stack_probe.candidate",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase3/probes/rt_stack_probe.authority",
+          "candidate": "artifacts/phase3/probes/rt_stack_probe.candidate"
+        },
         "verdict": "pass"
       },
       {
@@ -40,9 +80,13 @@
           "timeout: the monitored command dumped core"
         ],
         "court": "RT-THREAD",
-        "probe": "courts/phase3/rt_thread_probe.c",
+        "probe": "court/phase3/rt_thread_probe.candidate",
         "residual_count": 0,
         "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase3/probes/rt_thread_probe.authority",
+          "candidate": "artifacts/phase3/probes/rt_thread_probe.candidate"
+        },
         "verdict": "pass"
       },
       {
@@ -52,9 +96,13 @@
         "candidate_observations": 32,
         "candidate_stderr_tail": [],
         "court": "RT-SECURE",
-        "probe": "courts/phase3/rt_secure_probe.c",
+        "probe": "court/phase3/rt_secure_probe.candidate",
         "residual_count": 0,
         "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase3/probes/rt_secure_probe.authority",
+          "candidate": "artifacts/phase3/probes/rt_secure_probe.candidate"
+        },
         "verdict": "pass"
       },
       {
@@ -64,19 +112,23 @@
         "candidate_observations": 45,
         "candidate_stderr_tail": [],
         "court": "RT-LHASH",
-        "probe": "courts/phase3/rt_lhash_probe.c",
+        "probe": "court/phase3/rt_lhash_probe.candidate",
         "residual_count": 0,
         "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase3/probes/rt_lhash_probe.authority",
+          "candidate": "artifacts/phase3/probes/rt_lhash_probe.candidate"
+        },
         "verdict": "pass"
       }
     ],
     "summary": {
       "fail": 0,
-      "pass": 5,
-      "total": 5
+      "pass": 7,
+      "total": 7
     }
   },
-  "body_hash": "e8682b3cb7e7376e533dcfd4aefbb01fc6234251c0ea191e161e2ccf4eb1eb4b",
+  "body_hash": "88d04dbbb6f2b245a87545939d3aaa22b7b6b140de292295f8e1cc737447bb20",
   "generator": "forensics/tools/phase3_courts.py",
   "inputs": [],
   "kind": "phase3-courts",

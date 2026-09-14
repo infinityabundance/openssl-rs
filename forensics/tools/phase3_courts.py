@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -56,6 +57,11 @@ PROBE_DIR = REPO_ROOT / "courts" / "phase3"
 PHASE2 = REPO_ROOT / "artifacts" / "phase2"
 OUT = REPO_ROOT / "artifacts" / "phase3"
 DETAIL = OUT / "courts"
+# The compiled probes are staged here, beside the transcripts, so the FRF runtime
+# courts can re-execute exactly the same binaries at observation time instead of
+# rebuilding them in a container that has no compiler. They are committed for the
+# same reason the distribution shell is.
+STAGED = OUT / "probes"
 
 # Runtime budget per probe run. A probe that hangs is a finding, not a reason to
 # block the suite: it is reported as `timeout`.
@@ -66,6 +72,8 @@ RUN_TIMEOUT_S = 60
 COURTS = [
     ("RT-MEM", "rt_mem_probe.c"),
     ("RT-EXDATA", "rt_exdata_probe.c"),
+    ("RT-ERR", "rt_err_probe.c"),
+    ("RT-STACK", "rt_stack_probe.c"),
     ("RT-THREAD", "rt_thread_probe.c"),
     ("RT-SECURE", "rt_secure_probe.c"),
     ("RT-LHASH", "rt_lhash_probe.c"),
@@ -148,6 +156,19 @@ def court(name: str, src: Path, auth, work: Path) -> dict:
     a_out, a_err, a_code = run_probe(auth_bin)
     c_out, c_err, c_code = run_probe(cand_bin)
 
+    # Stage the binaries for the FRF runtime courts. A failure to stage is not a
+    # court failure -- the differential evidence above is already complete -- so
+    # it is reported and the transcript comparison continues.
+    staged = {}
+    if not STAGED.exists():
+        STAGED.mkdir(parents=True, exist_ok=True)
+    for side, src in (("authority", auth_bin), ("candidate", cand_bin)):
+        dst = STAGED / f"{src.stem}.{side}"
+        if src.is_file():
+            shutil.copyfile(src, dst)
+            dst.chmod(0o755)
+            staged[side] = rel(dst)
+
     if not a_out.strip():
         # Without an authority transcript there is nothing to compare against.
         return {"court": name, "verdict": "fail", "stage": "authority-run",
@@ -164,6 +185,7 @@ def court(name: str, src: Path, auth, work: Path) -> dict:
         "residual_count": len(residuals),
         "residuals": residuals,
         "verdict": "pass" if not residuals and c_code == a_code else "fail",
+        "staged_binaries": staged,
         # stderr is diagnostics, not contract: it carries the internal allocation
         # counts and the tool's own warnings, which are legitimately different.
         "candidate_stderr_tail": c_err.splitlines()[-3:],

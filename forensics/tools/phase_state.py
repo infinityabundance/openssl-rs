@@ -140,10 +140,13 @@ def evidence_for(phase: int) -> tuple[list[str], list[str], str]:
                       if c["verdict"] != "pass"]
             if failed:
                 blocking = f"Phase 3 courts not passing: {failed}"
-            else:
-                blocking = PHASE3_OUTSTANDING
         else:
             absent.append(PHASE3_COURTS)
+        ledger = read_json(PHASE3_OBLIGATIONS)
+        if ledger:
+            present.append(PHASE3_OBLIGATIONS)
+        else:
+            absent.append(PHASE3_OBLIGATIONS)
         return present, absent, blocking
 
     return present, absent, "not started"
@@ -152,11 +155,20 @@ def evidence_for(phase: int) -> tuple[list[str], list[str], str]:
 # Phase 3 evidence: the core-runtime modules, the differential courts that
 # exercise them, and the seal that records what they establish.
 PHASE3_COURTS = "artifacts/phase3/COURTS.json"
+# Every symbol in the Phase 3 families is either implemented or deferred to a
+# later phase with a stated reason. `phase3_obligations.py` fails closed if any
+# export in those families is neither, so the ledger -- not this file -- decides
+# whether anything is unaccounted for.
+PHASE3_OBLIGATIONS = "forensics/phase3-obligations.json"
 PHASE3_MODULES = [
     "docs/PHASE-3-CORE-RUNTIME-SEAL.md",
     "src/runtime/mod.rs",
     "src/runtime/mem.rs",
     "src/runtime/err.rs",
+    "src/runtime/err_strings.rs",
+    "src/runtime/err_sites.rs",
+    "src/runtime/err_loaders.rs",
+    "src/runtime/err_variadic.c",
     "src/runtime/stack.rs",
     "src/runtime/ex_data.rs",
     "src/runtime/lhash.rs",
@@ -165,25 +177,37 @@ PHASE3_MODULES = [
     "src/runtime/init.rs",
     "src/runtime/obj.rs",
     "src/runtime/obj_table.rs",
+    "forensics/tools/phase3_courts.py",
+    "forensics/tools/phase3_obligations.py",
+    "courts/phase3/rt_err_probe.c",
+    "courts/phase3/rt_stack_probe.c",
 ]
-# Phase 3 deliberately does NOT claim completion. The runtime is implemented and
-# five of its subsystems have differential courts, but the ERR queue and the
-# stack -- both implemented and unit-tested -- have no probe yet, and a dimension
-# without a court is not a proved dimension (docs/PARITY_MODEL.md). This string
-# is the reason the stratum stays `in-progress`; it is derived evidence, not a
-# placeholder.
-PHASE3_OUTSTANDING = (
-    "the runtime is implemented and RT-MEM, RT-EXDATA, RT-THREAD, RT-SECURE and "
-    "RT-LHASH pass differentially, but RT-ERR and RT-STACK courts do not exist "
-    "yet, so ERR_* and OPENSSL_sk_* have no differential evidence; the ERR "
-    "reason-string tables are also still ungenerated, which RT-ERR will show as "
-    "a residual. See docs/PHASE-3-CORE-RUNTIME-SEAL.md §5-§7."
-)
+# Whether anything in the Phase 3 families is unaccounted for is decided by the
+# ledger (`phase3_obligations.py` fails closed), not by a string here.
 
 
 def seal_identity(doc: str) -> str | None:
     p = REPO_ROOT / doc
     return sha256_file(p) if p.exists() else None
+
+
+def deferred_rows(phase: int) -> list[str]:
+    """The recorded, phase-scoped hand-offs for a stratum.
+
+    A deferral is not a claim of parity: it names the phase that owns the
+    subsystem a symbol needs. Phase 3 has one such list, produced by
+    `phase3_obligations.py`, which refuses to run if any export in the Phase 3
+    families is neither implemented nor listed there.
+    """
+    if phase != 3:
+        return []
+    doc = read_json(PHASE3_OBLIGATIONS)
+    if not doc:
+        return []
+    return [
+        f"{row['symbol']} -> phase {row['owning_phase']} ({row['reason']})"
+        for row in doc["body"]["deferred"]
+    ]
 
 
 def main() -> int:
@@ -219,6 +243,7 @@ def main() -> int:
             "phase": phase, "name": name, "stratum": stratum, "state": state,
             "evidence_present": present, "evidence_absent": absent,
             "blocking": blocking, "seal_sha256": seals.get(f"phase{phase}"),
+            "deferred": deferred_rows(phase),
         })
 
     body = {
@@ -244,6 +269,14 @@ def main() -> int:
     for r in rows:
         L.append(f"| {r['phase']} | {r['stratum']} | `{r['state']}` | {r['blocking']} |")
     L.append("")
+    for r in rows:
+        if not r["deferred"]:
+            continue
+        L += [f"Deferred out of phase {r['phase']} (recorded hand-offs, not parity",
+              "claims):", ""]
+        for entry in r["deferred"]:
+            L.append(f"* {entry}")
+        L.append("")
     write_text(REPO_ROOT / "forensics" / "phase-state.md", "\n".join(L))
 
     print(f"[phase-state] {body['summary']}")

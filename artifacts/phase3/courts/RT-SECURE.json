@@ -5,8 +5,12 @@
   "candidate_observations": 32,
   "candidate_stderr_tail": [],
   "court": "RT-SECURE",
-  "probe": "courts/phase3/rt_secure_probe.c",
+  "probe": "court/phase3/rt_secure_probe.candidate",
   "residual_count": 0,
   "residuals": [],
+  "staged_binaries": {
+    "authority": "artifacts/phase3/probes/rt_secure_probe.authority",
+    "candidate": "artifacts/phase3/probes/rt_secure_probe.candidate"
+  },
   "verdict": "pass"
 }

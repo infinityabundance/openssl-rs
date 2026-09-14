@@ -23,13 +23,21 @@
 //!
 //! ## Current state
 //!
-//! Phase 0 (constitution) and Phase 1 (archaeology / atlas) are in progress.
-//! **No product subsystem is implemented yet, and none is claimed.** The crate
-//! exists so that the archaeology, the court machinery and the product share one
-//! canonical home, and so that the evidence binding below is a compile-time
-//! fact.
+//! Phases 0 (constitution), 1 (archaeology / atlas), 2 (distribution and ABI
+//! shell) and 3 (core runtime) are **complete** in the derived phase state. The
+//! core runtime — allocation, the thread-local error queue, stacks, `ex_data`,
+//! the hash table, the secure heap, threads and atomics, initialisation and the
+//! object/NID database — is implemented and differentially courted against the
+//! authority; BIO, CONF, BN, ASN.1, the provider and EVP layers, the algorithms,
+//! X.509 and libssl are not started.
 //!
-//! The authoritative state is machine-readable, not prose: see [`status`].
+//! **No symbol is `PARITY_VERIFIED`.** "Implemented" means the crate's compiled
+//! output defines a symbol with that name; parity is promoted only by courts,
+//! dimension by dimension (`docs/PARITY_MODEL.md`). Everything outside the Phase
+//! 3 families is `SCAFFOLDED` and aborts rather than returning a plausible value.
+//!
+//! The authoritative state is machine-readable, not prose: see [`status`] and
+//! `forensics/phase-state.json`.
 //!
 //! ## Evidence binding
 //!

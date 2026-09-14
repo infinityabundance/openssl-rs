@@ -350,3 +350,142 @@ opposite interop models; this file records both rather than assuming consistency
 between them.
 
 ---
+
+## D18 — ERR string text comes from the compiled `*_err.c` arrays, not `openssl.txt`
+
+**Decision.** `gen_err_strings.py` takes each library's reason **text** from the
+checked-in `*_err.c` array the library actually compiles, and each reason's
+**code** from the header (`include/openssl/*err.h`, `include/crypto/*err.h`, …)
+that the array's macro expands against. `crypto/err/openssl.txt` is no longer an
+input at all.
+
+**Why.** `openssl.txt` is the *input* to `util/mkerr.pl`; the `*_err.c` files are
+what ships compiled, and a released tree can have them out of sync. Measured with
+the RT-ERR court against the admitted authority:
+
+```
+openssl.txt                     : BIO_R_LOCAL_ADDR_NOT_AVAILABLE:111:local addr not available
+crypto/bio/bio_err.c            : { ERR_PACK(ERR_LIB_BIO, 0, BIO_R_LOCAL_ADDR_NOT_AVAILABLE),
+                                    "local address not available" }
+openssl.txt                     : BIO_R_PEER_ADDR_NOT_AVAILABLE:114:peer addr not available
+include/openssl/bioerr.h        : #define BIO_R_PEER_ADDR_NOT_AVAILABLE 151
+```
+
+A caller sees the compiled text at the header's code. Taking either value from
+`openssl.txt` produces a table that is wrong for 74 entries — 72 descriptions and
+2 codes — which the court reports as residuals rather than hiding.
+
+**Consequence.** The generator fails closed if an array references a symbol no
+installed header declares. The array's file is found by content, not by filename,
+because 3.6.4 spells three of them `pkcs7err.c`, `pk12err.c` and `v3err.c`.
+
+---
+
+## D19 — The ERR string registry is modelled as loaded state, not a compiled table
+
+**Decision.** `ERR_lib_error_string` and `ERR_reason_error_string` consult a
+per-process load state: a bit per library plus a flag for the generic tables.
+Nothing is visible until a loader has run.
+
+**Why.** The authority's `int_error_hash` starts empty. `ossl_err_get_state_int`
+creates a thread's `ERR_STATE` and then calls
+`OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CRYPTO_STRINGS)` — with the comment
+"Ignore failures from these" — which loads the generic tables and every library in
+`ossl_err_load_crypto_strings`. Two further facts follow from the same code:
+
+* `err_all.c` skips `ossl_err_load_SSL_strings` on purpose, so all 357 SSL reasons
+  are NULL until `OPENSSL_INIT_LOAD_SSL_STRINGS` is processed;
+* `OSSL_DECODER` and `OSSL_ENCODER` ship compiled arrays that **no** loader in the
+  crypto set loads, so those 6 reasons are always NULL.
+
+All three were measured, not inferred: before any ERR call on a thread,
+`ERR_lib_error_string(ERR_PACK(3,0,0))` returns NULL even though BN's table is
+compiled in, and `ERR_error_string` renders the numeric fallback. The RT-ERR
+probe asserts the before/after state on both sides.
+
+**Consequence.** `ERR_load_<LIB>_strings` stops being a no-op. It loads the generic
+tables plus that library, which is what the authority does through
+`ERR_load_strings_const` and `ossl_err_load_ERR_strings`. Those 31 entry points are
+now generated rather than hand-written.
+
+**Supersedes** the Phase 3 seal's earlier §5 note that the reason tables were
+"not yet generated" and that `ERR_reason_error_string` returning NULL was a known
+deviation. That note is removed, not softened.
+
+---
+
+## D20 — ERR records reproduce the authority's source coordinates exactly
+
+**Decision.** Every error the runtime raises carries the authority's own
+`OPENSSL_FILE`, `OPENSSL_LINE` and `OPENSSL_FUNC`, derived by
+`forensics/tools/gen_err_raise_sites.py` from the pinned source and the admitted
+build record.
+
+**Why.** `ERR_raise` is a macro:
+`(ERR_new(), ERR_set_debug(OPENSSL_FILE, OPENSSL_LINE, OPENSSL_FUNC), ERR_set_error)`.
+`ERR_get_error_all` hands all three to the caller and `ERR_print_errors` prints
+them, so they are observed contract. Two alternatives were considered and
+rejected:
+
+1. *Leave them empty.* That is a measurable divergence with no benefit, and the
+   earlier code did exactly this for `ex_data.c` and `init.c`.
+2. *Store the intrinsic path and normalize the build prefix away in the court.*
+   This would make the court's verdict depend on a normalizer, when the value is
+   reproducible exactly.
+
+The `__FILE__` prefix is computed as `relpath(source_tree, build_dir)` from the
+build record rather than typed, because the authority was built out of tree and
+`__FILE__` is the source path as spelled on the compiler's command line. A
+different admitted build therefore yields a different, still-correct prefix.
+
+**Consequence.** The candidate's error records compare byte-for-byte with the
+authority's, and the derivation is data-driven: 14 sites today, and the same
+generator covers later phases by adding the files whose sites that phase
+reconstructs. Two arms (`stack.c:212`, `stack.c:275`) need on the order of a
+billion elements to reach; their conditions are reproduced and the probe records
+the boundary rather than claiming them.
+
+---
+
+## D21 — Phase completion requires an obligation ledger with explicit deferrals
+
+**Decision.** A stratum may only derive `complete` when every export in its
+symbol families is either implemented or listed in a ledger with the phase that
+owns it and a reason. For Phase 3 that ledger is
+`forensics/phase3-obligations.json`, produced by
+`forensics/tools/phase3_obligations.py`, which **fails closed**: an export in a
+Phase 3 family that is neither implemented nor deferred makes the generator exit
+non-zero, so `forensics/phase-state.json` cannot report `complete`.
+
+**Why.** "Either the phase is finished or it is not" is not honest when a
+subsystem genuinely depends on a later one. Eleven Phase 3 symbols need a `BIO *`
+or a `FILE *` (`ERR_print_errors*`, `ERR_add_error_mem_bio`, the six
+`OPENSSL_LH_*stats*`, `OBJ_create_objects`), and BIO is Phase 4 by the same
+ordering that puts ERR in Phase 3. Left unstated, that would read as an oversight;
+stated in a hand-written list, it would rot silently. A machine-checked list that
+fails closed is the only version that stays true.
+
+**Consequence.** `phase-state.json` now carries a `deferred` field per stratum and
+`phase-state.md` prints it beside the status. A deferral is not a parity claim and
+does not soften any obligation; the symbols stay `SCAFFOLDED` and abort.
+
+---
+
+## D22 — The `ABI-SYMBOL` court does not compare prototypes, and that gap is recorded
+
+**Decision.** `ABI-SYMBOL` continues to compare name, ELF symbol version, type,
+binding and visibility. It does **not** claim to compare C prototypes, and the
+Phase 3 seal says so explicitly.
+
+**Why.** The RT-ERR probe found a real defect of exactly this class: the legacy
+error getters were defined through one five-parameter macro while the installed
+headers declare one, two or four parameters. Every symbol involved had the right
+name, version, type, binding and visibility, so `ABI-SYMBOL` passed while a caller
+following the header would read and dereference garbage. The differential probe
+caught it because it *called* the functions as declared; the symbol court
+structurally cannot.
+
+**Consequence.** The class is not claimed closed. A declaration-vs-definition
+arity check is recorded as an open obligation for the phase that owns the header
+generator. Until then the seal states the gap rather than letting "symbols match
+exactly" be read as "signatures match exactly".

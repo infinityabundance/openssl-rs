@@ -51,12 +51,13 @@ static void join_strings(char *buf, size_t buflen, int num, va_list ap)
 }
 
 /*
- * void ERR_set_error(int lib, int reason, const char *fmt, ...)
+ * void ERR_vset_error(int lib, int reason, const char *fmt, va_list args)
  *
- * The authority formats the message into the error's data field. `fmt == NULL`
- * means "no message", which must not be treated as an empty format string.
+ * The va_list form of ERR_set_error. The authority declares it publicly, so it
+ * is an entry point in its own right rather than only a helper, and ERR_set_error
+ * routes through it there too.
  */
-void ERR_set_error(int lib, int reason, const char *fmt, ...)
+void ERR_vset_error(int lib, int reason, const char *fmt, va_list args)
 {
     char buf[1024];
 
@@ -65,13 +66,24 @@ void ERR_set_error(int lib, int reason, const char *fmt, ...)
         return;
     }
 
-    va_list ap;
-    va_start(ap, fmt);
     buf[0] = '\0';
-    vsnprintf(buf, sizeof(buf), fmt, ap);
-    va_end(ap);
-
+    vsnprintf(buf, sizeof(buf), fmt, args);
     openssl_rs_err_set_error(lib, reason, buf);
+}
+
+/*
+ * void ERR_set_error(int lib, int reason, const char *fmt, ...)
+ *
+ * `fmt == NULL` means "no message", which clears any data on the slot rather
+ * than being treated as an empty format string.
+ */
+void ERR_set_error(int lib, int reason, const char *fmt, ...)
+{
+    va_list ap;
+
+    va_start(ap, fmt);
+    ERR_vset_error(lib, reason, fmt, ap);
+    va_end(ap);
 }
 
 /*

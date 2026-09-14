@@ -4,11 +4,15 @@
   "candidate_exit_code": 0,
   "candidate_observations": 82,
   "candidate_stderr_tail": [
-    "counts.malloc=31 realloc=1 free=17 live=14"
+    "counts.malloc=34 realloc=1 free=20 live=14"
   ],
   "court": "RT-MEM",
-  "probe": "courts/phase3/rt_mem_probe.c",
+  "probe": "court/phase3/rt_mem_probe.candidate",
   "residual_count": 0,
   "residuals": [],
+  "staged_binaries": {
+    "authority": "artifacts/phase3/probes/rt_mem_probe.authority",
+    "candidate": "artifacts/phase3/probes/rt_mem_probe.candidate"
+  },
   "verdict": "pass"
 }

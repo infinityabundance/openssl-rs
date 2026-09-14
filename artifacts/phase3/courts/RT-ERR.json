@@ -1,0 +1,16 @@
+{
+  "authority_exit_code": 0,
+  "authority_observations": 3857,
+  "candidate_exit_code": 0,
+  "candidate_observations": 3857,
+  "candidate_stderr_tail": [],
+  "court": "RT-ERR",
+  "probe": "court/phase3/rt_err_probe.candidate",
+  "residual_count": 0,
+  "residuals": [],
+  "staged_binaries": {
+    "authority": "artifacts/phase3/probes/rt_err_probe.authority",
+    "candidate": "artifacts/phase3/probes/rt_err_probe.candidate"
+  },
+  "verdict": "pass"
+}

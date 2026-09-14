@@ -73,23 +73,12 @@ use core::ffi::{c_int, c_long, c_void};
 use std::sync::Mutex;
 
 use crate::ffi::guard_ffi;
-use crate::runtime::err::{openssl_rs_err_set_error, ERR_new};
+use crate::runtime::err::err_sites::{ErrSite, EX_DATA_37, EX_DATA_474, EX_DATA_481, EX_DATA_487};
+use crate::runtime::err::raise_site;
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_push, OPENSSL_sk_set,
     OPENSSL_sk_value, OpenSslStack,
 };
-
-/// `ERR_LIB_CRYPTO`, from the authority's `err.h`/`cryptoerr.h`.
-const ERR_LIB_CRYPTO: c_int = 15;
-
-/// `ERR_R_PASSED_INVALID_ARGUMENT == 262 | ERR_RFLAG_COMMON` (`err.h`).
-const ERR_R_PASSED_INVALID_ARGUMENT: c_int = 0x80106;
-
-/// `ERR_R_CRYPTO_LIB == ERR_LIB_CRYPTO | ERR_RFLAG_COMMON` (`err.h`).
-///
-/// The authority raises this reason, not a generic malloc failure, when the
-/// slot stack cannot be grown.
-const ERR_R_CRYPTO_LIB: c_int = 0x8000F;
 
 /// `CRYPTO_EX_INDEX__COUNT` from the authority's `crypto.h`.
 const CLASS_COUNT: usize = 18;
@@ -212,14 +201,22 @@ fn with_registry<R>(f: impl FnOnce(&mut Registry) -> R) -> R {
     f(&mut guard)
 }
 
-/// Report a failure on the thread-local `ERR` queue, matching the authority's
-/// `(lib, reason)` pair. The textual message and debug position are omitted;
-/// the reason code is the observable classification.
-fn raise(lib: c_int, reason: c_int) {
-    ERR_new();
-    // SAFETY: a NULL message pointer is accepted by ERR_set_error; it is never
-    // dereferenced.
-    unsafe { openssl_rs_err_set_error(lib, reason, core::ptr::null()) };
+/// Report a failure on the thread-local `ERR` queue at the authority site this
+/// code path reconstructs.
+///
+/// The three debug strings (file, line, function) and the `(lib, reason)` pair
+/// all come from the generated table, so a caller reading them back through
+/// `ERR_get_error_all` sees the authority's values rather than a placeholder.
+///
+/// The authority has two further raise sites in
+/// `ossl_crypto_get_ex_new_index_ex` (`crypto/ex_data.c:175` and `:191`) that
+/// fire only when an allocation fails. This crate's registry grows through
+/// `Vec`, whose failure mode is an abort rather than a NULL, so those two sites
+/// have no reachable counterpart here; they remain registered obligations in
+/// `forensics/atlas/err-raise-sites.json`.
+fn raise(site: &ErrSite) {
+    // SAFETY: the site is a compile-time constant whose pointers are static.
+    unsafe { raise_site(site) };
 }
 
 /// `0 <= class_index < CRYPTO_EX_INDEX__COUNT`.
@@ -280,7 +277,7 @@ pub extern "C" fn CRYPTO_get_ex_new_index(
 ) -> c_int {
     guard_ffi(-1, || {
         if !valid_class(class_index) {
-            raise(ERR_LIB_CRYPTO, ERR_R_PASSED_INVALID_ARGUMENT);
+            raise(&EX_DATA_37);
             return -1;
         }
         with_registry(|reg| {
@@ -310,7 +307,7 @@ pub extern "C" fn CRYPTO_get_ex_new_index(
 pub extern "C" fn CRYPTO_free_ex_index(class_index: c_int, idx: c_int) -> c_int {
     guard_ffi(0, || {
         if !valid_class(class_index) {
-            raise(ERR_LIB_CRYPTO, ERR_R_PASSED_INVALID_ARGUMENT);
+            raise(&EX_DATA_37);
             return 0;
         }
         with_registry(|reg| {
@@ -359,7 +356,7 @@ pub unsafe extern "C" fn CRYPTO_set_ex_data(
         if sk.is_null() {
             sk = OPENSSL_sk_new_null();
             if sk.is_null() {
-                raise(ERR_LIB_CRYPTO, ERR_R_CRYPTO_LIB);
+                raise(&EX_DATA_474);
                 return 0;
             }
             // SAFETY: `ad` is writable; the freshly created stack is owned by
@@ -375,14 +372,14 @@ pub unsafe extern "C" fn CRYPTO_set_ex_data(
             // SAFETY: `sk` is live; a NULL data slot is a valid padding value.
             let pushed = unsafe { OPENSSL_sk_push(sk, core::ptr::null()) };
             if pushed == 0 {
-                raise(ERR_LIB_CRYPTO, ERR_R_CRYPTO_LIB);
+                raise(&EX_DATA_481);
                 return 0;
             }
         }
         // SAFETY: `sk` is live and `idx` is within range after padding.
         let stored = unsafe { OPENSSL_sk_set(sk, idx, val) };
         if !core::ptr::eq(stored, val.cast_const()) {
-            raise(ERR_LIB_CRYPTO, ERR_R_PASSED_INVALID_ARGUMENT);
+            raise(&EX_DATA_487);
             return 0;
         }
         1
@@ -436,7 +433,7 @@ pub unsafe extern "C" fn CRYPTO_new_ex_data(
 ) -> c_int {
     guard_ffi(0, || {
         if !valid_class(class_index) {
-            raise(ERR_LIB_CRYPTO, ERR_R_PASSED_INVALID_ARGUMENT);
+            raise(&EX_DATA_37);
             return 0;
         }
         if ad.is_null() {
@@ -487,7 +484,7 @@ pub unsafe extern "C" fn CRYPTO_free_ex_data(
         }
         let valid = valid_class(class_index);
         if !valid {
-            raise(ERR_LIB_CRYPTO, ERR_R_PASSED_INVALID_ARGUMENT);
+            raise(&EX_DATA_37);
         }
         let cbs = if valid {
             snapshot(class_index)
@@ -551,7 +548,7 @@ pub unsafe extern "C" fn CRYPTO_dup_ex_data(
             return 1;
         }
         if !valid_class(class_index) {
-            raise(ERR_LIB_CRYPTO, ERR_R_PASSED_INVALID_ARGUMENT);
+            raise(&EX_DATA_37);
             return 0;
         }
         let cbs = snapshot(class_index);
@@ -618,7 +615,7 @@ pub unsafe extern "C" fn CRYPTO_alloc_ex_data(
             return 1;
         }
         if !valid_class(class_index) {
-            raise(ERR_LIB_CRYPTO, ERR_R_PASSED_INVALID_ARGUMENT);
+            raise(&EX_DATA_37);
             return 0;
         }
         let cb = with_registry(|reg| {

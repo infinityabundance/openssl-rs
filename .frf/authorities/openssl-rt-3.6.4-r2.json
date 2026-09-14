@@ -1,0 +1,1 @@
+{"executable_sha256":"54ee16ef37108b4501ab883a09923fac25321c687e3be29f353c34922df7fa70","id":"openssl-rt-3.6.4-r2","kind":"executable_reference","name":"openssl-rt","path":"forensics/frf/refs/authority-runtime-probe.sh","platform":"x86_64-linux","schema_version":"frf-authority-v1","version":"3.6.4-r2"}

@@ -1,0 +1,1 @@
+{"authority":"openssl-3.6.3","blocks_claims":["cli-version exit parity"],"disposition":"open","kind":"exit","magnitude":"class-change","next_court":"cli-exit-minimize","residual_id":"07eddb800e30ba4e08577282b92bf3701919411ec59e6e5de7615d78e7545e46","schema_version":"frf-token-v1","scope":"cli-version","surface":"exit-class","token":"exit/exit-class/class-change/open"}

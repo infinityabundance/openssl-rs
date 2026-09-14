@@ -1,0 +1,219 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "counts": {
+      "sites": 14
+    },
+    "covered_files": [
+      "crypto/stack/stack.c",
+      "crypto/ex_data.c",
+      "crypto/init.c"
+    ],
+    "note": "`file` is the authority's `__FILE__` string, derived from relpath(source_tree, build_dir) of the admitted build record. It is a build artifact of the forensic build, reproduced exactly rather than normalized away, so the candidate's ERR records compare byte-for-byte with the authority's.",
+    "prefix": "../../src/openssl-3.6.4/",
+    "sites": [
+      {
+        "const_name": "STACK_186",
+        "data_format": null,
+        "file": "../../src/openssl-3.6.4/crypto/stack/stack.c",
+        "function": "sk_reserve",
+        "lib": 15,
+        "lib_symbol": "ERR_LIB_CRYPTO",
+        "line": 186,
+        "macro": "ERR_raise",
+        "reason": 114,
+        "reason_symbol": "CRYPTO_R_TOO_MANY_RECORDS",
+        "rel_source": "crypto/stack/stack.c"
+      },
+      {
+        "const_name": "STACK_212",
+        "data_format": null,
+        "file": "../../src/openssl-3.6.4/crypto/stack/stack.c",
+        "function": "sk_reserve",
+        "lib": 15,
+        "lib_symbol": "ERR_LIB_CRYPTO",
+        "line": 212,
+        "macro": "ERR_raise",
+        "reason": 114,
+        "reason_symbol": "CRYPTO_R_TOO_MANY_RECORDS",
+        "rel_source": "crypto/stack/stack.c"
+      },
+      {
+        "const_name": "STACK_251",
+        "data_format": null,
+        "file": "../../src/openssl-3.6.4/crypto/stack/stack.c",
+        "function": "OPENSSL_sk_reserve",
+        "lib": 15,
+        "lib_symbol": "ERR_LIB_CRYPTO",
+        "line": 251,
+        "macro": "ERR_raise",
+        "reason": 786690,
+        "reason_symbol": "ERR_R_PASSED_NULL_PARAMETER",
+        "rel_source": "crypto/stack/stack.c"
+      },
+      {
+        "const_name": "STACK_271",
+        "data_format": null,
+        "file": "../../src/openssl-3.6.4/crypto/stack/stack.c",
+        "function": "OPENSSL_sk_insert",
+        "lib": 15,
+        "lib_symbol": "ERR_LIB_CRYPTO",
+        "line": 271,
+        "macro": "ERR_raise",
+        "reason": 786690,
+        "reason_symbol": "ERR_R_PASSED_NULL_PARAMETER",
+        "rel_source": "crypto/stack/stack.c"
+      },
+      {
+        "const_name": "STACK_275",
+        "data_format": null,
+        "file": "../../src/openssl-3.6.4/crypto/stack/stack.c",
+        "function": "OPENSSL_sk_insert",
+        "lib": 15,
+        "lib_symbol": "ERR_LIB_CRYPTO",
+        "line": 275,
+        "macro": "ERR_raise",
+        "reason": 114,
+        "reason_symbol": "CRYPTO_R_TOO_MANY_RECORDS",
+        "rel_source": "crypto/stack/stack.c"
+      },
+      {
+        "const_name": "STACK_482",
+        "data_format": null,
+        "file": "../../src/openssl-3.6.4/crypto/stack/stack.c",
+        "function": "OPENSSL_sk_set",
+        "lib": 15,
+        "lib_symbol": "ERR_LIB_CRYPTO",
+        "line": 482,
+        "macro": "ERR_raise",
+        "reason": 786690,
+        "reason_symbol": "ERR_R_PASSED_NULL_PARAMETER",
+        "rel_source": "crypto/stack/stack.c"
+      },
+      {
+        "const_name": "STACK_486",
+        "data_format": "\"i=%d\"",
+        "file": "../../src/openssl-3.6.4/crypto/stack/stack.c",
+        "function": "OPENSSL_sk_set",
+        "lib": 15,
+        "lib_symbol": "ERR_LIB_CRYPTO",
+        "line": 486,
+        "macro": "ERR_raise_data",
+        "reason": 524550,
+        "reason_symbol": "ERR_R_PASSED_INVALID_ARGUMENT",
+        "rel_source": "crypto/stack/stack.c"
+      },
+      {
+        "const_name": "EX_DATA_37",
+        "data_format": null,
+        "file": "../../src/openssl-3.6.4/crypto/ex_data.c",
+        "function": "get_and_lock",
+        "lib": 15,
+        "lib_symbol": "ERR_LIB_CRYPTO",
+        "line": 37,
+        "macro": "ERR_raise",
+        "reason": 524550,
+        "reason_symbol": "ERR_R_PASSED_INVALID_ARGUMENT",
+        "rel_source": "crypto/ex_data.c"
+      },
+      {
+        "const_name": "EX_DATA_175",
+        "data_format": null,
+        "file": "../../src/openssl-3.6.4/crypto/ex_data.c",
+        "function": "ossl_crypto_get_ex_new_index_ex",
+        "lib": 15,
+        "lib_symbol": "ERR_LIB_CRYPTO",
+        "line": 175,
+        "macro": "ERR_raise",
+        "reason": 524303,
+        "reason_symbol": "ERR_R_CRYPTO_LIB",
+        "rel_source": "crypto/ex_data.c"
+      },
+      {
+        "const_name": "EX_DATA_191",
+        "data_format": null,
+        "file": "../../src/openssl-3.6.4/crypto/ex_data.c",
+        "function": "ossl_crypto_get_ex_new_index_ex",
+        "lib": 15,
+        "lib_symbol": "ERR_LIB_CRYPTO",
+        "line": 191,
+        "macro": "ERR_raise",
+        "reason": 524303,
+        "reason_symbol": "ERR_R_CRYPTO_LIB",
+        "rel_source": "crypto/ex_data.c"
+      },
+      {
+        "const_name": "EX_DATA_474",
+        "data_format": null,
+        "file": "../../src/openssl-3.6.4/crypto/ex_data.c",
+        "function": "CRYPTO_set_ex_data",
+        "lib": 15,
+        "lib_symbol": "ERR_LIB_CRYPTO",
+        "line": 474,
+        "macro": "ERR_raise",
+        "reason": 524303,
+        "reason_symbol": "ERR_R_CRYPTO_LIB",
+        "rel_source": "crypto/ex_data.c"
+      },
+      {
+        "const_name": "EX_DATA_481",
+        "data_format": null,
+        "file": "../../src/openssl-3.6.4/crypto/ex_data.c",
+        "function": "CRYPTO_set_ex_data",
+        "lib": 15,
+        "lib_symbol": "ERR_LIB_CRYPTO",
+        "line": 481,
+        "macro": "ERR_raise",
+        "reason": 524303,
+        "reason_symbol": "ERR_R_CRYPTO_LIB",
+        "rel_source": "crypto/ex_data.c"
+      },
+      {
+        "const_name": "EX_DATA_487",
+        "data_format": null,
+        "file": "../../src/openssl-3.6.4/crypto/ex_data.c",
+        "function": "CRYPTO_set_ex_data",
+        "lib": 15,
+        "lib_symbol": "ERR_LIB_CRYPTO",
+        "line": 487,
+        "macro": "ERR_raise",
+        "reason": 524550,
+        "reason_symbol": "ERR_R_PASSED_INVALID_ARGUMENT",
+        "rel_source": "crypto/ex_data.c"
+      },
+      {
+        "const_name": "INIT_504",
+        "data_format": null,
+        "file": "../../src/openssl-3.6.4/crypto/init.c",
+        "function": "OPENSSL_init_crypto",
+        "lib": 15,
+        "lib_symbol": "ERR_LIB_CRYPTO",
+        "line": 504,
+        "macro": "ERR_raise",
+        "reason": 786693,
+        "reason_symbol": "ERR_R_INIT_FAIL",
+        "rel_source": "crypto/init.c"
+      }
+    ]
+  },
+  "generator": "forensics/tools/gen_err_raise_sites.py",
+  "inputs": [
+    {
+      "name": "authority:crypto/stack/stack.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/stack/stack.c",
+      "sha256": "e4a69f00e651b9c121bfe38c53157d5295ff9b5b3a792f7320f293f8f6e7ccb8"
+    },
+    {
+      "name": "authority:crypto/ex_data.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/ex_data.c",
+      "sha256": "85eb44724897e9d77149cd344946c5b064863b0345cd8daffe01b4b7bf343487"
+    },
+    {
+      "name": "authority:crypto/init.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/init.c",
+      "sha256": "bdc53d8ac8b200ddb1785ed4a496ae860aad2d80f3bc986c4041ee436f83e5fd"
+    }
+  ],
+  "kind": "err-raise-sites",
+  "schema": "openssl-rs/atlas/err-raise-sites/v1"
+}

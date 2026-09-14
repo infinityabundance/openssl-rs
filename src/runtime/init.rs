@@ -18,9 +18,10 @@
 //!
 //! | option | why accepting is honest |
 //! |---|---|
-//! | `NO_LOAD_CRYPTO_STRINGS` | the authority's alternative initialiser is empty |
-//! | `LOAD_CRYPTO_STRINGS` | the ERR subsystem exists and already accepts `ERR_load_*_strings` as a documented no-op; reason tables are a recorded deviation (`err.rs` module note), not something init can conjure |
-//! | `NO_LOAD_SSL_STRINGS`, `LOAD_SSL_STRINGS` | same mechanism; libssl does not exist yet, and the string registration is the same recorded no-op |
+//! | `NO_LOAD_CRYPTO_STRINGS` | the authority's alternative initialiser is empty, and it wins over `LOAD_CRYPTO_STRINGS` when both bits are set, exactly as `RUN_ONCE_ALT` does |
+//! | `LOAD_CRYPTO_STRINGS` | **implemented**: loads the generic ERR tables and every library in `ossl_err_load_crypto_strings`, which is what makes a reason string visible at all (`docs/DECISIONS.md` D19) |
+//! | `NO_LOAD_SSL_STRINGS` | as `NO_LOAD_CRYPTO_STRINGS` |
+//! | `LOAD_SSL_STRINGS` | **implemented**: loads library 20's reason table, which `err_all.c` deliberately excludes from the crypto set |
 //! | `NO_ADD_ALL_CIPHERS`, `NO_ADD_ALL_DIGESTS` | the authority's alternative initialisers are empty |
 //! | `NO_LOAD_CONFIG` | requests exactly this build's behaviour: no config is loaded |
 //! | `OPENSSL_INIT_ATFORK` | the authority's `openssl_init_fork_handlers()` is `return 1`, i.e. a no-op on the admitted pthread profile (verified in the 3.6.4 source) |
@@ -64,12 +65,16 @@
 //! compare-and-swap so concurrent or repeated calls are safe, which is a
 //! strictly stronger property.
 //!
-//! Phase 3 has no subsystems to tear down. The authority's teardown sequence
-//! (compression, async, RAND, config modules, ENGINE, STORE, the default
-//! `OSSL_LIB_CTX`, per-thread state, BIO, EVP, OBJ, ERR, secure memory, CMP,
+//! Cleanup also calls `err_cleanup()`, which releases the error-string registry.
+//! Because `ossl_err_get_state_int` begins with
+//! `OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY)`, a stopped library hands out no
+//! `ERR_STATE` at all: every `ERR_*` call becomes a no-op and **no** error is
+//! recorded, including the one a refused `OPENSSL_init_crypto` would otherwise
+//! raise. That is measured by the RT-ERR probe's `stopped` section. The rest of
+//! the authority's teardown (compression, async, RAND, config modules, ENGINE,
+//! STORE, the default `OSSL_LIB_CTX`, BIO, EVP, OBJ, secure memory, CMP,
 //! tracing) is empty here; each entry is unlocked by the phase named in
-//! `docs/RELEASE_GATES.md` §1. This is recorded as an open obligation rather than
-//! pretended.
+//! `docs/RELEASE_GATES.md` §1, and the Phase 3 ledger records what is deferred.
 //!
 //! ## Runtime identity — captured from the authority, and where it would lie
 //!
@@ -140,11 +145,11 @@ use crate::ffi::guard_ffi;
 // The accepted-only options below are referenced by the tests and by the module
 // documentation table; the product path classifies options by the complementary
 // `INIT_UNSUPPORTED` mask, so they are `dead_code` in a non-test build.
-/// `OPENSSL_INIT_NO_LOAD_CRYPTO_STRINGS` — accepted no-op.
-#[allow(dead_code)]
+/// `OPENSSL_INIT_NO_LOAD_CRYPTO_STRINGS` — the authority's alternative
+/// initialiser is empty, and this registry starts empty, so nothing is needed.
 const OPENSSL_INIT_NO_LOAD_CRYPTO_STRINGS: u64 = 0x0000_0001;
-/// `OPENSSL_INIT_LOAD_CRYPTO_STRINGS` — accepted (recorded ERR deviation).
-#[allow(dead_code)]
+/// `OPENSSL_INIT_LOAD_CRYPTO_STRINGS` — loads the generic tables and the crypto
+/// set of library reason tables.
 const OPENSSL_INIT_LOAD_CRYPTO_STRINGS: u64 = 0x0000_0002;
 /// `OPENSSL_INIT_ADD_ALL_CIPHERS`
 const OPENSSL_INIT_ADD_ALL_CIPHERS: u64 = 0x0000_0004;
@@ -177,10 +182,14 @@ const OPENSSL_INIT_ENGINE_CAPI: u64 = 0x0000_2000;
 const OPENSSL_INIT_ENGINE_PADLOCK: u64 = 0x0000_4000;
 /// `OPENSSL_INIT_ENGINE_AFALG`
 const OPENSSL_INIT_ENGINE_AFALG: u64 = 0x0000_8000;
-// The libssl string flags (`OPENSSL_INIT_NO_LOAD_SSL_STRINGS` 0x00100000,
-// `OPENSSL_INIT_LOAD_SSL_STRINGS` 0x00200000, from `ssl.h`) are accepted for the
-// same reason as the crypto-string flags; they are unknown bits here and are
-// recorded and ignored exactly as the authority records them.
+// The libssl string flags come from `ssl.h`: `NO_LOAD_SSL_STRINGS` 0x00100000
+// and `LOAD_SSL_STRINGS` 0x00200000. The SSL reason table lives in libcrypto
+// (`crypto/ssl_err.c`) but is loaded by its own flag, which is why they are not
+// part of the crypto set.
+/// `OPENSSL_INIT_NO_LOAD_SSL_STRINGS` — empty alternative initialiser.
+const OPENSSL_INIT_NO_LOAD_SSL_STRINGS: u64 = 0x0010_0000;
+/// `OPENSSL_INIT_LOAD_SSL_STRINGS` — loads library 20's reason table.
+const OPENSSL_INIT_LOAD_SSL_STRINGS: u64 = 0x0020_0000;
 /// `OPENSSL_INIT_ATFORK` — accepted: a no-op on this profile.
 #[allow(dead_code)]
 const OPENSSL_INIT_ATFORK: u64 = 0x0002_0000;
@@ -350,23 +359,22 @@ pub struct OpenSslInitSettings {
 }
 
 /// Raises `ERR_LIB_CRYPTO`/`ERR_R_INIT_FAIL`, the authority's error for a failed
-/// initialisation.
+/// initialisation, **at the authority's own raise site**.
 ///
-/// The authority's `ERR_raise` also records `crypto/init.c`, a line number and
-/// `OPENSSL_init_crypto`. Those are compile-time C source locations that have no
-/// honest counterpart here, so file/line/function are left unset; this is part of
-/// the ERR subsystem's already-recorded string/metadata deviation (`err.rs`).
+/// `crypto/init.c:504` inside `OPENSSL_init_crypto` is where the authority raises
+/// this, and `ERR_get_error_all` hands the translation unit, line and function
+/// straight to the caller, so the coordinates come from the generated table
+/// rather than being left blank.
 fn raise_init_fail() {
-    crate::runtime::err::ERR_new();
-    // SAFETY: the ERR adapter accepts a NULL message; the library and reason are
-    // compile-time constants.
-    unsafe {
-        crate::runtime::err::openssl_rs_err_set_error(
-            ERR_LIB_CRYPTO,
-            ERR_R_INIT_FAIL,
-            core::ptr::null(),
-        );
-    }
+    // The generated table must agree with the reason this module documents; a
+    // drift in the generator would otherwise silently change the raised code.
+    debug_assert_eq!(crate::runtime::err::err_sites::INIT_504.lib, ERR_LIB_CRYPTO);
+    debug_assert_eq!(
+        crate::runtime::err::err_sites::INIT_504.reason,
+        ERR_R_INIT_FAIL
+    );
+    // SAFETY: the site is a compile-time constant whose pointers are static.
+    unsafe { crate::runtime::err::raise_site(&crate::runtime::err::err_sites::INIT_504) };
 }
 
 /// Base initialisation. See the module note on why this cannot fail.
@@ -433,6 +441,26 @@ pub extern "C" fn OPENSSL_init_crypto(opts: u64, _settings: *const OpenSslInitSe
             return 1;
         }
 
+        // Error strings, in the authority's order: the crypto tables (which
+        // `err_all.c` defines as the generic tables plus the crypto set, and
+        // deliberately excludes SSL) and then the SSL ones.
+        //
+        // Each pair is a `RUN_ONCE_ALT` partnership in the authority, and the
+        // *first* of the pair to be seen wins. That matters when a caller sets
+        // both bits: `NO_LOAD | LOAD` marks the once as done without loading, so
+        // the `LOAD` branch is skipped. The `NO_LOAD` body is otherwise empty,
+        // and the registry already starts empty, so nothing is undone.
+        if opts & OPENSSL_INIT_NO_LOAD_CRYPTO_STRINGS != 0 {
+            // The alternative initialiser ran; it does nothing.
+        } else if opts & OPENSSL_INIT_LOAD_CRYPTO_STRINGS != 0 {
+            crate::runtime::err::load_crypto_strings();
+        }
+        if opts & OPENSSL_INIT_NO_LOAD_SSL_STRINGS != 0 {
+            // The alternative initialiser ran; it does nothing.
+        } else if opts & OPENSSL_INIT_LOAD_SSL_STRINGS != 0 {
+            crate::runtime::err::load_ssl_strings();
+        }
+
         // The authority repeats the done-check once `optsdone_lock` exists.
         if (OPTSDONE.load(Ordering::Acquire) & opts) == opts {
             return 1;
@@ -460,9 +488,18 @@ pub extern "C" fn OPENSSL_init_crypto(opts: u64, _settings: *const OpenSslInitSe
 /// Idempotent and safe to call concurrently. The authority assumes a
 /// single-threaded caller; the atomic swap here makes the guard robust anyway.
 ///
-/// This phase has no subsystems to tear down, so the body only flips the flags
-/// that make initialisation terminal. See the module note for the authority's
-/// full teardown sequence and the phase that unlocks each part.
+/// The authority's teardown sequence ends with `err_cleanup()` (via
+/// `crypto/init.c`), which frees the error-string hash. That is observable: after
+/// cleanup, `ERR_*` operations are refused because
+/// `ossl_err_get_state_int`'s `OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY)`
+/// returns 0, and string lookups see an empty registry. Both are reproduced
+/// here, and the RT-ERR probe measures them.
+///
+/// The rest of the authority's teardown (compression, async, RAND, config
+/// modules, ENGINE, STORE, the default `OSSL_LIB_CTX`, BIO, EVP, OBJ, secure
+/// memory, CMP, tracing) is empty here; each entry is unlocked by the phase named
+/// in `docs/RELEASE_GATES.md` §1. This is a recorded open obligation rather than
+/// a pretence.
 #[no_mangle]
 pub extern "C" fn OPENSSL_cleanup() {
     guard_ffi((), || {
@@ -476,7 +513,16 @@ pub extern "C" fn OPENSSL_cleanup() {
             return;
         }
         BASE_INITED.store(false, Ordering::Release);
+        // `err_cleanup()`: the string registry is released.
+        crate::runtime::err::unload_strings();
     })
+}
+
+/// Whether `OPENSSL_cleanup` has run. Exposed so the `ERR` subsystem can model
+/// `ossl_err_get_state_int`'s refusal to hand out a state once the library is
+/// stopped.
+pub(crate) fn stopped() -> bool {
+    STOPPED.load(Ordering::Acquire)
 }
 
 // ---------------------------------------------------------------------------
@@ -789,10 +835,13 @@ mod tests {
 
             ERR_clear_error();
             assert_eq!(OPENSSL_init_crypto(0, core::ptr::null()), 0);
-            let e = ERR_peek_error();
-            assert_ne!(e, 0);
-            assert_eq!((e >> 23) & 0xFF, ERR_LIB_CRYPTO as c_ulong);
-            ERR_clear_error();
+            // The refusal raises ... nothing. `err_cleanup()` has released the
+            // string registry and `ossl_err_get_state_int` now returns NULL,
+            // because its `OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY)` fails
+            // once `stopped` is set. Every `ERR_*` call is therefore a no-op and
+            // the queue stays empty. Measured by the RT-ERR probe's `stopped`
+            // section, which asserts code 0 on both sides.
+            assert_eq!(ERR_peek_error(), 0);
 
             // BASE_ONLY after cleanup returns 0 without raising, per the authority.
             assert_eq!(

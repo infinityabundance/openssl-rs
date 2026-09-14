@@ -126,3 +126,58 @@ observations that *can* be made around each boundary are compared normally.
   in this configuration, so `src/runtime/lhash.rs` makes no order claim. Callers
   that go through the generated `lh_TYPE_*` accessors (the normal path, which does
   install thunks) are unaffected in either implementation.
+
+### D-STACK-1 — `OPENSSL_sk_set_cmp_func` dereferences a NULL stack
+
+- **Obligation:** `OPENSSL_sk_set_cmp_func(NULL, cmp)`.
+- **Authority:** segfaults; the function reads `sk->comp` with no NULL check.
+- **Candidate:** returns NULL.
+- **Claim removed:** not claimed compatible.
+
+### D-STACK-2 — `OPENSSL_sk_pop_free` calls a NULL destructor
+
+- **Obligation:** `OPENSSL_sk_pop_free(st, NULL)` where `st` holds a non-NULL
+  element and no thunk has been installed.
+- **Authority:** calls through the NULL function pointer. (With a thunk installed
+  — the normal path, because every generated `sk_TYPE_new_reserve` installs one —
+  the thunk receives the NULL `func` and decides.)
+- **Candidate:** leaves the element untouched and frees the stack.
+- **Reason:** reproducing a NULL call is not a compatibility goal, and the
+  element cannot be freed without a destructor anyway.
+- **Claim removed:** the NULL-`func`/no-thunk case is not claimed compatible.
+  With a destructor or a thunk the call is compared normally and matches.
+
+### D-STACK-3 — `OPENSSL_sk_deep_copy` calls a NULL copy function
+
+- **Obligation:** `OPENSSL_sk_deep_copy(st, NULL, f)` where `st` holds a non-NULL
+  element.
+- **Authority:** calls through the NULL copy function.
+- **Candidate:** returns NULL. A NULL or empty source is *not* affected: the
+  authority never calls the copy function in that case, and both sides return a
+  fresh empty stack.
+- **Claim removed:** not claimed compatible.
+
+### D-STACK-4 — `OPENSSL_sk_deep_copy(NULL, …)` leaves `free_thunk` uninitialised
+
+- **Obligation:** `OPENSSL_sk_deep_copy(NULL, c, f)`, then using the result in a
+  way that consults the thunk.
+- **Authority:** reads an uninitialised field. The `sk == NULL` branch sets only
+  `num`, `sorted` and `comp`, leaving `free_thunk` as whatever `OPENSSL_malloc`
+  returned; the field is then copied by the structure assignment on every
+  non-NULL path.
+- **Candidate:** stores NULL.
+- **Reason:** an uninitialised read is nondeterministic, so no two runs of the
+  authority need agree and no probe can compare it. A deterministic value is the
+  only reproducible choice.
+- **Claim removed:** the thunk observed on a `deep_copy(NULL, …)` result is not
+  claimed compatible.
+
+### D-ERR-1 — `ERR_error_string_n` with a NULL buffer
+
+- **Obligation:** `ERR_error_string_n(e, NULL, len)` with a non-zero `len`.
+- **Authority:** passes the NULL pointer to its bounded formatter, which
+  dereferences it.
+- **Candidate:** returns without writing. The installed header documents `buf` as
+  the destination, so a NULL there is a caller error either way.
+- **Claim removed:** not claimed compatible. `ERR_error_string_n(e, NULL, 0)` is a
+  documented no-op in both and *is* compared (the probe calls it).
