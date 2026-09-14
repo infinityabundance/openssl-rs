@@ -3260,6 +3260,686 @@ pub(crate) const O_STR_352: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `BN_usub` at `crypto/bn/bn_add.c:142` (BN_R_ARG2_LT_ARG3).
+pub(crate) const BN_ADD_142: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_add.c",
+    line: 142,
+    func: c"BN_usub",
+    lib: 3,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `BN_BLINDING_new` at `crypto/bn/bn_blind.c:41` (ERR_R_CRYPTO_LIB).
+pub(crate) const BN_BLIND_41: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_blind.c",
+    line: 41,
+    func: c"BN_BLINDING_new",
+    lib: 3,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `BN_BLINDING_update` at `crypto/bn/bn_blind.c:96` (BN_R_NOT_INITIALIZED).
+pub(crate) const BN_BLIND_96: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_blind.c",
+    line: 96,
+    func: c"BN_BLINDING_update",
+    lib: 3,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `BN_BLINDING_convert_ex` at `crypto/bn/bn_blind.c:138` (BN_R_NOT_INITIALIZED).
+pub(crate) const BN_BLIND_138: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_blind.c",
+    line: 138,
+    func: c"BN_BLINDING_convert_ex",
+    lib: 3,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `BN_BLINDING_invert_ex` at `crypto/bn/bn_blind.c:172` (BN_R_NOT_INITIALIZED).
+pub(crate) const BN_BLIND_172: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_blind.c",
+    line: 172,
+    func: c"BN_BLINDING_invert_ex",
+    lib: 3,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `BN_BLINDING_create_param` at `crypto/bn/bn_blind.c:283` (BN_R_TOO_MANY_ITERATIONS).
+pub(crate) const BN_BLIND_283: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_blind.c",
+    line: 283,
+    func: c"BN_BLINDING_create_param",
+    lib: 3,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `BN_hex2bn` at `crypto/bn/bn_conv.c:151` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const BN_CONV_151: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_conv.c",
+    line: 151,
+    func: c"BN_hex2bn",
+    lib: 3,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `BN_CTX_start` at `crypto/bn/bn_ctx.c:193` (BN_R_TOO_MANY_TEMPORARY_VARIABLES).
+pub(crate) const BN_CTX_193: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_ctx.c",
+    line: 193,
+    func: c"BN_CTX_start",
+    lib: 3,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `BN_CTX_get` at `crypto/bn/bn_ctx.c:231` (BN_R_TOO_MANY_TEMPORARY_VARIABLES).
+pub(crate) const BN_CTX_231: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_ctx.c",
+    line: 231,
+    func: c"BN_CTX_get",
+    lib: 3,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `BN_div` at `crypto/bn/bn_div.c:27` (BN_R_DIV_BY_ZERO).
+pub(crate) const BN_DIV_27: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_div.c",
+    line: 27,
+    func: c"BN_div",
+    lib: 3,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `BN_div` at `crypto/bn/bn_div.c:217` (BN_R_DIV_BY_ZERO).
+pub(crate) const BN_DIV_217: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_div.c",
+    line: 217,
+    func: c"BN_div",
+    lib: 3,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `BN_div` at `crypto/bn/bn_div.c:227` (BN_R_NOT_INITIALIZED).
+pub(crate) const BN_DIV_227: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_div.c",
+    line: 227,
+    func: c"BN_div",
+    lib: 3,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `BN_exp` at `crypto/bn/bn_exp.c:57` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const BN_EXP_57: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_exp.c",
+    line: 57,
+    func: c"BN_exp",
+    lib: 3,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `BN_mod_exp_recp` at `crypto/bn/bn_exp.c:183` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const BN_EXP_183: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_exp.c",
+    line: 183,
+    func: c"BN_mod_exp_recp",
+    lib: 3,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `BN_mod_exp_mont` at `crypto/bn/bn_exp.c:327` (BN_R_CALLED_WITH_EVEN_MODULUS).
+pub(crate) const BN_EXP_327: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_exp.c",
+    line: 327,
+    func: c"BN_mod_exp_mont",
+    lib: 3,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `bn_mod_exp_mont_fixed_top` at `crypto/bn/bn_exp.c:622` (BN_R_CALLED_WITH_EVEN_MODULUS).
+pub(crate) const BN_EXP_622: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_exp.c",
+    line: 622,
+    func: c"bn_mod_exp_mont_fixed_top",
+    lib: 3,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `BN_mod_exp_mont_word` at `crypto/bn/bn_exp.c:1187` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const BN_EXP_1187: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_exp.c",
+    line: 1187,
+    func: c"BN_mod_exp_mont_word",
+    lib: 3,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `BN_mod_exp_mont_word` at `crypto/bn/bn_exp.c:1195` (BN_R_CALLED_WITH_EVEN_MODULUS).
+pub(crate) const BN_EXP_1195: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_exp.c",
+    line: 1195,
+    func: c"BN_mod_exp_mont_word",
+    lib: 3,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `BN_mod_exp_simple` at `crypto/bn/bn_exp.c:1319` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const BN_EXP_1319: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_exp.c",
+    line: 1319,
+    func: c"BN_mod_exp_simple",
+    lib: 3,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `BN_mod_exp_simple` at `crypto/bn/bn_exp.c:1324` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const BN_EXP_1324: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_exp.c",
+    line: 1324,
+    func: c"BN_mod_exp_simple",
+    lib: 3,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `BN_mod_exp2_mont` at `crypto/bn/bn_exp2.c:35` (BN_R_CALLED_WITH_EVEN_MODULUS).
+pub(crate) const BN_EXP2_35: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_exp2.c",
+    line: 35,
+    func: c"BN_mod_exp2_mont",
+    lib: 3,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `BN_mod_inverse` at `crypto/bn/bn_gcd.c:525` (ERR_R_BN_LIB).
+pub(crate) const BN_GCD_525: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_gcd.c",
+    line: 525,
+    func: c"BN_mod_inverse",
+    lib: 3,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `BN_mod_inverse` at `crypto/bn/bn_gcd.c:532` (BN_R_NO_INVERSE).
+pub(crate) const BN_GCD_532: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_gcd.c",
+    line: 532,
+    func: c"BN_mod_inverse",
+    lib: 3,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `BN_GF2m_mod` at `crypto/bn/bn_gf2m.c:389` (BN_R_INVALID_LENGTH).
+pub(crate) const BN_GF2M_389: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_gf2m.c",
+    line: 389,
+    func: c"BN_GF2m_mod",
+    lib: 3,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `BN_GF2m_mod_mul` at `crypto/bn/bn_gf2m.c:472` (BN_R_INVALID_LENGTH).
+pub(crate) const BN_GF2M_472: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_gf2m.c",
+    line: 472,
+    func: c"BN_GF2m_mod_mul",
+    lib: 3,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `BN_GF2m_mod_sqr` at `crypto/bn/bn_gf2m.c:532` (BN_R_INVALID_LENGTH).
+pub(crate) const BN_GF2M_532: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_gf2m.c",
+    line: 532,
+    func: c"BN_GF2m_mod_sqr",
+    lib: 3,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `BN_GF2m_mod_exp` at `crypto/bn/bn_gf2m.c:915` (BN_R_INVALID_LENGTH).
+pub(crate) const BN_GF2M_915: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_gf2m.c",
+    line: 915,
+    func: c"BN_GF2m_mod_exp",
+    lib: 3,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `BN_GF2m_mod_sqrt` at `crypto/bn/bn_gf2m.c:977` (BN_R_INVALID_LENGTH).
+pub(crate) const BN_GF2M_977: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_gf2m.c",
+    line: 977,
+    func: c"BN_GF2m_mod_sqrt",
+    lib: 3,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `BN_GF2m_mod_solve_quad_arr` at `crypto/bn/bn_gf2m.c:1065` (BN_R_TOO_MANY_ITERATIONS).
+pub(crate) const BN_GF2M_1065: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_gf2m.c",
+    line: 1065,
+    func: c"BN_GF2m_mod_solve_quad_arr",
+    lib: 3,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `BN_GF2m_mod_solve_quad_arr` at `crypto/bn/bn_gf2m.c:1075` (BN_R_NO_SOLUTION).
+pub(crate) const BN_GF2M_1075: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_gf2m.c",
+    line: 1075,
+    func: c"BN_GF2m_mod_solve_quad_arr",
+    lib: 3,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `BN_GF2m_mod_solve_quad` at `crypto/bn/bn_gf2m.c:1111` (BN_R_INVALID_LENGTH).
+pub(crate) const BN_GF2M_1111: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_gf2m.c",
+    line: 1111,
+    func: c"BN_GF2m_mod_solve_quad",
+    lib: 3,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `bn_compute_wNAF` at `crypto/bn/bn_intern.c:41` (ERR_R_INTERNAL_ERROR).
+pub(crate) const BN_INTERN_41: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_intern.c",
+    line: 41,
+    func: c"bn_compute_wNAF",
+    lib: 3,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `bn_compute_wNAF` at `crypto/bn/bn_intern.c:53` (ERR_R_INTERNAL_ERROR).
+pub(crate) const BN_INTERN_53: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_intern.c",
+    line: 53,
+    func: c"bn_compute_wNAF",
+    lib: 3,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `bn_compute_wNAF` at `crypto/bn/bn_intern.c:97` (ERR_R_INTERNAL_ERROR).
+pub(crate) const BN_INTERN_97: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_intern.c",
+    line: 97,
+    func: c"bn_compute_wNAF",
+    lib: 3,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `bn_compute_wNAF` at `crypto/bn/bn_intern.c:109` (ERR_R_INTERNAL_ERROR).
+pub(crate) const BN_INTERN_109: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_intern.c",
+    line: 109,
+    func: c"bn_compute_wNAF",
+    lib: 3,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `bn_compute_wNAF` at `crypto/bn/bn_intern.c:120` (ERR_R_INTERNAL_ERROR).
+pub(crate) const BN_INTERN_120: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_intern.c",
+    line: 120,
+    func: c"bn_compute_wNAF",
+    lib: 3,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `bn_compute_wNAF` at `crypto/bn/bn_intern.c:126` (ERR_R_INTERNAL_ERROR).
+pub(crate) const BN_INTERN_126: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_intern.c",
+    line: 126,
+    func: c"bn_compute_wNAF",
+    lib: 3,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `bn_set_words` at `crypto/bn/bn_intern.c:187` (ERR_R_BN_LIB).
+pub(crate) const BN_INTERN_187: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_intern.c",
+    line: 187,
+    func: c"bn_set_words",
+    lib: 3,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `bn_expand_internal` at `crypto/bn/bn_lib.c:269` (BN_R_BIGNUM_TOO_LONG).
+pub(crate) const BN_LIB_269: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_lib.c",
+    line: 269,
+    func: c"bn_expand_internal",
+    lib: 3,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `bn_expand_internal` at `crypto/bn/bn_lib.c:273` (BN_R_EXPAND_ON_STATIC_BIGNUM_DATA).
+pub(crate) const BN_LIB_273: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_lib.c",
+    line: 273,
+    func: c"bn_expand_internal",
+    lib: 3,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `BN_nnmod` at `crypto/bn/bn_mod.c:22` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const BN_MOD_22: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_mod.c",
+    line: 22,
+    func: c"BN_nnmod",
+    lib: 3,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `BN_mod_sub_quick` at `crypto/bn/bn_mod.c:194` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const BN_MOD_194: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_mod.c",
+    line: 194,
+    func: c"BN_mod_sub_quick",
+    lib: 3,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `BN_mod_lshift_quick` at `crypto/bn/bn_mod.c:307` (BN_R_INPUT_NOT_REDUCED).
+pub(crate) const BN_MOD_307: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_mod.c",
+    line: 307,
+    func: c"BN_mod_lshift_quick",
+    lib: 3,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `BN_mpi2bn` at `crypto/bn/bn_mpi.c:49` (BN_R_INVALID_LENGTH).
+pub(crate) const BN_MPI_49: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_mpi.c",
+    line: 49,
+    func: c"BN_mpi2bn",
+    lib: 3,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `BN_mpi2bn` at `crypto/bn/bn_mpi.c:54` (BN_R_ENCODING_ERROR).
+pub(crate) const BN_MPI_54: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_mpi.c",
+    line: 54,
+    func: c"BN_mpi2bn",
+    lib: 3,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `BN_generate_prime_ex2` at `crypto/bn/bn_prime.c:135` (BN_R_BITS_TOO_SMALL).
+pub(crate) const BN_PRIME_135: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_prime.c",
+    line: 135,
+    func: c"BN_generate_prime_ex2",
+    lib: 3,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `BN_generate_prime_ex2` at `crypto/bn/bn_prime.c:143` (BN_R_BITS_TOO_SMALL).
+pub(crate) const BN_PRIME_143: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_prime.c",
+    line: 143,
+    func: c"BN_generate_prime_ex2",
+    lib: 3,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `bnrand` at `crypto/bn/bn_rand.c:98` (BN_R_BITS_TOO_SMALL).
+pub(crate) const BN_RAND_98: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_rand.c",
+    line: 98,
+    func: c"bnrand",
+    lib: 3,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `bnrand_range` at `crypto/bn/bn_rand.c:140` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const BN_RAND_140: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_rand.c",
+    line: 140,
+    func: c"bnrand_range",
+    lib: 3,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `bnrand_range` at `crypto/bn/bn_rand.c:145` (BN_R_INVALID_RANGE).
+pub(crate) const BN_RAND_145: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_rand.c",
+    line: 145,
+    func: c"bnrand_range",
+    lib: 3,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `bnrand_range` at `crypto/bn/bn_rand.c:180` (BN_R_TOO_MANY_ITERATIONS).
+pub(crate) const BN_RAND_180: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_rand.c",
+    line: 180,
+    func: c"bnrand_range",
+    lib: 3,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `bnrand_range` at `crypto/bn/bn_rand.c:193` (BN_R_TOO_MANY_ITERATIONS).
+pub(crate) const BN_RAND_193: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_rand.c",
+    line: 193,
+    func: c"bnrand_range",
+    lib: 3,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `ossl_bn_priv_rand_range_fixed_top` at `crypto/bn/bn_rand.c:248` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const BN_RAND_248: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_rand.c",
+    line: 248,
+    func: c"ossl_bn_priv_rand_range_fixed_top",
+    lib: 3,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_bn_priv_rand_range_fixed_top` at `crypto/bn/bn_rand.c:253` (BN_R_INVALID_RANGE).
+pub(crate) const BN_RAND_253: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_rand.c",
+    line: 253,
+    func: c"ossl_bn_priv_rand_range_fixed_top",
+    lib: 3,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `ossl_bn_priv_rand_range_fixed_top` at `crypto/bn/bn_rand.c:271` (BN_R_TOO_MANY_ITERATIONS).
+pub(crate) const BN_RAND_271: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_rand.c",
+    line: 271,
+    func: c"ossl_bn_priv_rand_range_fixed_top",
+    lib: 3,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `ossl_bn_gen_dsa_nonce_fixed_top` at `crypto/bn/bn_rand.c:332` (BN_R_PRIVATE_KEY_TOO_LARGE).
+pub(crate) const BN_RAND_332: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_rand.c",
+    line: 332,
+    func: c"ossl_bn_gen_dsa_nonce_fixed_top",
+    lib: 3,
+    reason: 117,
+    dynamic_reason: false,
+};
+
+/// `ossl_bn_gen_dsa_nonce_fixed_top` at `crypto/bn/bn_rand.c:338` (BN_R_NO_SUITABLE_DIGEST).
+pub(crate) const BN_RAND_338: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_rand.c",
+    line: 338,
+    func: c"ossl_bn_gen_dsa_nonce_fixed_top",
+    lib: 3,
+    reason: 120,
+    dynamic_reason: false,
+};
+
+/// `ossl_bn_gen_dsa_nonce_fixed_top` at `crypto/bn/bn_rand.c:385` (ERR_R_INTERNAL_ERROR).
+pub(crate) const BN_RAND_385: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_rand.c",
+    line: 385,
+    func: c"ossl_bn_gen_dsa_nonce_fixed_top",
+    lib: 3,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `BN_div_recp` at `crypto/bn/bn_recp.c:147` (BN_R_BAD_RECIPROCAL).
+pub(crate) const BN_RECP_147: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_recp.c",
+    line: 147,
+    func: c"BN_div_recp",
+    lib: 3,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `ossl_bn_rsa_fips186_4_derive_prime` at `crypto/bn/bn_rsa_fips186_4.c:391` (BN_R_NO_PRIME_CANDIDATE).
+pub(crate) const BN_RSA_FIPS186_4_391: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_rsa_fips186_4.c",
+    line: 391,
+    func: c"ossl_bn_rsa_fips186_4_derive_prime",
+    lib: 3,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `BN_lshift` at `crypto/bn/bn_shift.c:86` (BN_R_INVALID_SHIFT).
+pub(crate) const BN_SHIFT_86: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_shift.c",
+    line: 86,
+    func: c"BN_lshift",
+    lib: 3,
+    reason: 119,
+    dynamic_reason: false,
+};
+
+/// `BN_rshift` at `crypto/bn/bn_shift.c:155` (BN_R_INVALID_SHIFT).
+pub(crate) const BN_SHIFT_155: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_shift.c",
+    line: 155,
+    func: c"BN_rshift",
+    lib: 3,
+    reason: 119,
+    dynamic_reason: false,
+};
+
+/// `BN_mod_sqrt` at `crypto/bn/bn_sqrt.c:43` (BN_R_P_IS_NOT_PRIME).
+pub(crate) const BN_SQRT_43: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_sqrt.c",
+    line: 43,
+    func: c"BN_mod_sqrt",
+    lib: 3,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `BN_mod_sqrt` at `crypto/bn/bn_sqrt.c:203` (BN_R_P_IS_NOT_PRIME).
+pub(crate) const BN_SQRT_203: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_sqrt.c",
+    line: 203,
+    func: c"BN_mod_sqrt",
+    lib: 3,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `BN_mod_sqrt` at `crypto/bn/bn_sqrt.c:214` (BN_R_TOO_MANY_ITERATIONS).
+pub(crate) const BN_SQRT_214: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_sqrt.c",
+    line: 214,
+    func: c"BN_mod_sqrt",
+    lib: 3,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `BN_mod_sqrt` at `crypto/bn/bn_sqrt.c:229` (BN_R_P_IS_NOT_PRIME).
+pub(crate) const BN_SQRT_229: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_sqrt.c",
+    line: 229,
+    func: c"BN_mod_sqrt",
+    lib: 3,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `BN_mod_sqrt` at `crypto/bn/bn_sqrt.c:321` (BN_R_NOT_A_SQUARE).
+pub(crate) const BN_SQRT_321: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_sqrt.c",
+    line: 321,
+    func: c"BN_mod_sqrt",
+    lib: 3,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `BN_mod_sqrt` at `crypto/bn/bn_sqrt.c:352` (BN_R_NOT_A_SQUARE).
+pub(crate) const BN_SQRT_352: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/bn/bn_sqrt.c",
+    line: 352,
+    func: c"BN_mod_sqrt",
+    lib: 3,
+    reason: 111,
+    dynamic_reason: false,
+};
+
 /// Every recorded raise site, in authority source order.
 ///
 /// This is the complete inventory for the covered files, including the
@@ -3594,4 +4274,72 @@ pub(crate) static ALL: &[ErrSite] = &[
     O_STR_303,
     O_STR_315,
     O_STR_352,
+    BN_ADD_142,
+    BN_BLIND_41,
+    BN_BLIND_96,
+    BN_BLIND_138,
+    BN_BLIND_172,
+    BN_BLIND_283,
+    BN_CONV_151,
+    BN_CTX_193,
+    BN_CTX_231,
+    BN_DIV_27,
+    BN_DIV_217,
+    BN_DIV_227,
+    BN_EXP_57,
+    BN_EXP_183,
+    BN_EXP_327,
+    BN_EXP_622,
+    BN_EXP_1187,
+    BN_EXP_1195,
+    BN_EXP_1319,
+    BN_EXP_1324,
+    BN_EXP2_35,
+    BN_GCD_525,
+    BN_GCD_532,
+    BN_GF2M_389,
+    BN_GF2M_472,
+    BN_GF2M_532,
+    BN_GF2M_915,
+    BN_GF2M_977,
+    BN_GF2M_1065,
+    BN_GF2M_1075,
+    BN_GF2M_1111,
+    BN_INTERN_41,
+    BN_INTERN_53,
+    BN_INTERN_97,
+    BN_INTERN_109,
+    BN_INTERN_120,
+    BN_INTERN_126,
+    BN_INTERN_187,
+    BN_LIB_269,
+    BN_LIB_273,
+    BN_MOD_22,
+    BN_MOD_194,
+    BN_MOD_307,
+    BN_MPI_49,
+    BN_MPI_54,
+    BN_PRIME_135,
+    BN_PRIME_143,
+    BN_RAND_98,
+    BN_RAND_140,
+    BN_RAND_145,
+    BN_RAND_180,
+    BN_RAND_193,
+    BN_RAND_248,
+    BN_RAND_253,
+    BN_RAND_271,
+    BN_RAND_332,
+    BN_RAND_338,
+    BN_RAND_385,
+    BN_RECP_147,
+    BN_RSA_FIPS186_4_391,
+    BN_SHIFT_86,
+    BN_SHIFT_155,
+    BN_SQRT_43,
+    BN_SQRT_203,
+    BN_SQRT_214,
+    BN_SQRT_229,
+    BN_SQRT_321,
+    BN_SQRT_352,
 ];

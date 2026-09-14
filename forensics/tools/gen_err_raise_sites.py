@@ -134,6 +134,32 @@ COVERED_FILES = [
     # `OPENSSL_strlcat`, `OPENSSL_strcasecmp`), which is how the gap surfaced;
     # see docs/DECISIONS.md D51.
     ("crypto/o_str.c", "O_STR"),
+    # Phase 5: the `crypto/bn` stratum. Every authority file in this subsystem that
+    # raises an error belongs to the obligation set — the list is the subsystem set
+    # of the phase, not a selection of convenient files. Functions this phase
+    # deliberately hands to a later stratum (the `BN_rand*` family, which needs the
+    # RAND stratum) still contribute their file's coordinates, because the phase
+    # owns the *surface* the coordinates belong to; what is deferred is the
+    # implementation, and `phase5-obligations.json` records that separately.
+    ("crypto/bn/bn_add.c", "BN_ADD"),
+    ("crypto/bn/bn_blind.c", "BN_BLIND"),
+    ("crypto/bn/bn_conv.c", "BN_CONV"),
+    ("crypto/bn/bn_ctx.c", "BN_CTX"),
+    ("crypto/bn/bn_div.c", "BN_DIV"),
+    ("crypto/bn/bn_exp.c", "BN_EXP"),
+    ("crypto/bn/bn_exp2.c", "BN_EXP2"),
+    ("crypto/bn/bn_gcd.c", "BN_GCD"),
+    ("crypto/bn/bn_gf2m.c", "BN_GF2M"),
+    ("crypto/bn/bn_intern.c", "BN_INTERN"),
+    ("crypto/bn/bn_lib.c", "BN_LIB"),
+    ("crypto/bn/bn_mod.c", "BN_MOD"),
+    ("crypto/bn/bn_mpi.c", "BN_MPI"),
+    ("crypto/bn/bn_prime.c", "BN_PRIME"),
+    ("crypto/bn/bn_rand.c", "BN_RAND"),
+    ("crypto/bn/bn_recp.c", "BN_RECP"),
+    ("crypto/bn/bn_rsa_fips186_4.c", "BN_RSA_FIPS186_4"),
+    ("crypto/bn/bn_shift.c", "BN_SHIFT"),
+    ("crypto/bn/bn_sqrt.c", "BN_SQRT"),
 ]
 
 # Raise macros, in the forms the authority actually spells them. `ERR_raise`
@@ -447,6 +473,7 @@ def resolve_symbols(authority, symbols: list[str], work: Path) -> dict[str, int]
         "#include <openssl/cryptoerr.h>",
         "#include <openssl/asn1err.h>",
         "#include <openssl/bioerr.h>",
+        "#include <openssl/bnerr.h>",
         "#include <openssl/conferr.h>",
         "#include <openssl/objectserr.h>",
         "#include <openssl/x509err.h>",

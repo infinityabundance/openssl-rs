@@ -25,8 +25,9 @@ renderer does not know any phase status.
 | 2 | Distribution / ABI shell | `complete` |  |
 | 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `complete` |  |
 | 4 | BIO + CONF + object database | `complete` |  |
+| 5 | BN + ASN.1 + DER/PEM | `in-progress` | 414 open obligation(s) of this stratum recorded in forensics/phase5-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
 
-Not started: strata 5-21 (17 total).
+Not started: strata 6-21 (16 total).
 
 ## Atlas census
 
@@ -79,9 +80,9 @@ that name is defined, nothing more.
 
 | library | exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 455 | 5441 |
+| libcrypto | 5896 | 560 | 5336 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **455** | **6044** |
+| **total** | **6499** | **560** | **5939** |
 
 ### Phase 3 obligation ledger
 

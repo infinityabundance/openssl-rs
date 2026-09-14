@@ -142,7 +142,7 @@
     "phase4": 31
   },
   "implemented": {
-    "libcrypto": 455,
+    "libcrypto": 560,
     "libssl": 0
   },
   "open_obligations": {
@@ -167,7 +167,7 @@
     "21": "not-started",
     "3": "complete",
     "4": "complete",
-    "5": "not-started",
+    "5": "in-progress",
     "6": "not-started",
     "7": "not-started",
     "8": "not-started",

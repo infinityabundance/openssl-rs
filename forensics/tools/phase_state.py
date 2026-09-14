@@ -181,6 +181,38 @@ def evidence_for(phase: int) -> tuple[list[str], list[str], str]:
             blocking = blocking or f"no Phase 4 courts yet ({PHASE4_COURTS} absent)"
         return present, absent, blocking
 
+    if phase == 5:
+        for d in PHASE5_MODULES:
+            (present if exists(d) else absent).append(d)
+        ledger = read_json(PHASE5_OBLIGATIONS)
+        if ledger:
+            present.append(PHASE5_OBLIGATIONS)
+            body5 = ledger["body"]
+            open_count = body5["counts"]["open_in_this_stratum"]
+            if open_count:
+                blocking = (
+                    f"{open_count} open obligation(s) of this stratum recorded in "
+                    f"{PHASE5_OBLIGATIONS}; a stratum cannot be complete while any "
+                    f"export it owns is neither implemented nor handed to a later "
+                    f"phase"
+                )
+        else:
+            absent.append(PHASE5_OBLIGATIONS)
+        courts = read_json(PHASE5_COURTS)
+        if courts:
+            present.append(PHASE5_COURTS)
+            failed = [c["court"] for c in courts["body"]["courts"]
+                      if c["verdict"] != "pass"]
+            if failed:
+                blocking = f"Phase 5 courts not passing: {failed}"
+        else:
+            # Missing courts are a blocker, not evidence of a phase that has not
+            # begun: the modules exist, so the stratum is under way and the gap is
+            # what must be closed. Listing it as absent would report `not-started`
+            # and understate the recorded work.
+            blocking = blocking or f"no Phase 5 courts yet ({PHASE5_COURTS} absent)"
+        return present, absent, blocking
+
     return present, absent, "not started"
 
 
@@ -314,6 +346,30 @@ PHASE4_MODULES = [
     "courts/phase4/bio_addr_null_calls.c",
     "forensics/tools/phase4_courts.py",
     "forensics/tools/phase4_obligations.py",
+]
+
+
+# Phase 5 evidence: the arithmetic and encoding substrate, the differential courts
+# that exercise it, and the seal that records what they establish. As with Phase 4,
+# the obligation ledger decides whether anything in the phase's families is
+# unaccounted for: `phase5_obligations.py` separates hand-offs to later strata from
+# open work, and `open_in_this_stratum > 0` keeps the phase `in-progress`.
+PHASE5_COURTS = "artifacts/phase5/COURTS.json"
+PHASE5_OBLIGATIONS = "forensics/phase5-obligations.json"
+PHASE5_MODULES = [
+    "docs/PHASE-5-BN-ASN1-PEM-SEAL.md",
+    # The limb primitives and the opaque `BIGNUM` object, then the `BN_*` entry
+    # points over them.
+    "src/bn/mod.rs",
+    "src/bn/limbs.rs",
+    "src/bn/bignum.rs",
+    "src/bn/arith.rs",
+    "src/bn/ctx.rs",
+    # The differential court and the runner that compiles it against both
+    # distributions.
+    "courts/phase5/rt_bn_probe.c",
+    "forensics/tools/phase5_courts.py",
+    "forensics/tools/phase5_obligations.py",
 ]
 
 

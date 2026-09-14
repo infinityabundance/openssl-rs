@@ -5,9 +5,9 @@
     "counts": {
       "candidates": 1093,
       "deferred_to_later_phase": 580,
-      "implemented": 0,
-      "open_in_this_stratum": 513,
-      "owned": 513
+      "implemented": 105,
+      "open_in_this_stratum": 414,
+      "owned": 1099
     },
     "deferred": [
       {
@@ -3498,6 +3498,16 @@
       "11": 346,
       "12": 141
     },
+    "handoffs_discharged": {
+      "4": [
+        "BIO_asn1_get_prefix",
+        "BIO_asn1_get_suffix",
+        "BIO_asn1_set_prefix",
+        "BIO_asn1_set_suffix",
+        "BIO_f_asn1",
+        "BIO_new_NDEF"
+      ]
+    },
     "header_phase": {
       "asn1.h": 5,
       "asn1t.h": 5,
@@ -3528,14 +3538,120 @@
       "x509_vfy.h": 11,
       "x509v3.h": 11
     },
-    "implemented": [],
+    "implemented": [
+      "BN_CTX_end",
+      "BN_CTX_free",
+      "BN_CTX_get",
+      "BN_CTX_new",
+      "BN_CTX_new_ex",
+      "BN_CTX_secure_new",
+      "BN_CTX_secure_new_ex",
+      "BN_CTX_start",
+      "BN_GENCB_call",
+      "BN_GENCB_free",
+      "BN_GENCB_get_arg",
+      "BN_GENCB_new",
+      "BN_GENCB_set",
+      "BN_GENCB_set_old",
+      "BN_abs_is_word",
+      "BN_add",
+      "BN_add_word",
+      "BN_are_coprime",
+      "BN_asc2bn",
+      "BN_bin2bn",
+      "BN_bn2bin",
+      "BN_bn2binpad",
+      "BN_bn2dec",
+      "BN_bn2hex",
+      "BN_bn2lebinpad",
+      "BN_bn2mpi",
+      "BN_bn2nativepad",
+      "BN_clear",
+      "BN_clear_bit",
+      "BN_clear_free",
+      "BN_cmp",
+      "BN_consttime_swap",
+      "BN_copy",
+      "BN_dec2bn",
+      "BN_div",
+      "BN_div_word",
+      "BN_dup",
+      "BN_exp",
+      "BN_free",
+      "BN_gcd",
+      "BN_get_flags",
+      "BN_get_params",
+      "BN_get_word",
+      "BN_hex2bn",
+      "BN_is_bit_set",
+      "BN_is_negative",
+      "BN_is_odd",
+      "BN_is_one",
+      "BN_is_word",
+      "BN_is_zero",
+      "BN_lebin2bn",
+      "BN_lshift",
+      "BN_lshift1",
+      "BN_mask_bits",
+      "BN_mod_add",
+      "BN_mod_add_quick",
+      "BN_mod_exp",
+      "BN_mod_exp_simple",
+      "BN_mod_inverse",
+      "BN_mod_lshift",
+      "BN_mod_lshift1",
+      "BN_mod_lshift1_quick",
+      "BN_mod_lshift_quick",
+      "BN_mod_mul",
+      "BN_mod_sqr",
+      "BN_mod_sqrt",
+      "BN_mod_sub",
+      "BN_mod_sub_quick",
+      "BN_mod_word",
+      "BN_mpi2bn",
+      "BN_mul",
+      "BN_mul_word",
+      "BN_native2bn",
+      "BN_new",
+      "BN_nnmod",
+      "BN_num_bits",
+      "BN_num_bits_word",
+      "BN_options",
+      "BN_print",
+      "BN_print_fp",
+      "BN_rshift",
+      "BN_rshift1",
+      "BN_secure_new",
+      "BN_security_bits",
+      "BN_set_bit",
+      "BN_set_flags",
+      "BN_set_negative",
+      "BN_set_params",
+      "BN_set_word",
+      "BN_signed_bin2bn",
+      "BN_signed_bn2bin",
+      "BN_signed_bn2lebin",
+      "BN_signed_bn2native",
+      "BN_signed_lebin2bn",
+      "BN_signed_native2bn",
+      "BN_sqr",
+      "BN_sub",
+      "BN_sub_word",
+      "BN_swap",
+      "BN_uadd",
+      "BN_ucmp",
+      "BN_usub",
+      "BN_value_one",
+      "BN_with_flags",
+      "BN_zero_ex"
+    ],
     "module_of_header": {
       "asn1.h": "src/asn1/",
       "asn1t.h": "src/asn1/",
       "bn.h": "src/bn/",
       "pem.h": "src/pem/"
     },
-    "note": "The families are derived from the atlas, not typed: see this generator's header for why. A deferred symbol names the stratum that owns the header it is declared in, which is checkable without reading this file. Nothing here is a parity claim.",
+    "note": "`owned` is every export the stratum's families cover, which includes the ones the declaring-header rule hands to a later phase: a deferred symbol is still matched by this stratum's prefixes, so counting it here is what makes `implemented + deferred + open == owned`. `open` is the only list that blocks the stratum. The families are derived from the atlas, not typed: see this generator's header for why, and note that a deferred symbol names the stratum that owns the header it is declared in, which is checkable without reading this file. Nothing here is a parity claim.",
     "open": [
       {
         "declaring_header": "asn1.h",
@@ -4653,6 +4769,36 @@
         "symbol": "ASN1_tag2str"
       },
       {
+        "declaring_header": "bio.h",
+        "module": "src/asn1/",
+        "symbol": "BIO_asn1_get_prefix"
+      },
+      {
+        "declaring_header": "bio.h",
+        "module": "src/asn1/",
+        "symbol": "BIO_asn1_get_suffix"
+      },
+      {
+        "declaring_header": "bio.h",
+        "module": "src/asn1/",
+        "symbol": "BIO_asn1_set_prefix"
+      },
+      {
+        "declaring_header": "bio.h",
+        "module": "src/asn1/",
+        "symbol": "BIO_asn1_set_suffix"
+      },
+      {
+        "declaring_header": "asn1.h",
+        "module": "src/asn1/",
+        "symbol": "BIO_f_asn1"
+      },
+      {
+        "declaring_header": "asn1.h",
+        "module": "src/asn1/",
+        "symbol": "BIO_new_NDEF"
+      },
+      {
         "declaring_header": "bn.h",
         "module": "src/bn/",
         "symbol": "BN_BLINDING_convert"
@@ -4721,76 +4867,6 @@
         "declaring_header": "bn.h",
         "module": "src/bn/",
         "symbol": "BN_BLINDING_update"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_CTX_end"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_CTX_free"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_CTX_get"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_CTX_new"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_CTX_new_ex"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_CTX_secure_new"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_CTX_secure_new_ex"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_CTX_start"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_GENCB_call"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_GENCB_free"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_GENCB_get_arg"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_GENCB_new"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_GENCB_set"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_GENCB_set_old"
       },
       {
         "declaring_header": "bn.h",
@@ -4945,71 +5021,6 @@
       {
         "declaring_header": "bn.h",
         "module": "src/bn/",
-        "symbol": "BN_abs_is_word"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_add"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_add_word"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_are_coprime"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_asc2bn"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_bin2bn"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_bn2bin"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_bn2binpad"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_bn2dec"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_bn2hex"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_bn2lebinpad"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_bn2mpi"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_bn2nativepad"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
         "symbol": "BN_bntest_rand"
       },
       {
@@ -5020,77 +5031,12 @@
       {
         "declaring_header": "bn.h",
         "module": "src/bn/",
-        "symbol": "BN_clear"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_clear_bit"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_clear_free"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_cmp"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_consttime_swap"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_copy"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_dec2bn"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_div"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
         "symbol": "BN_div_recp"
       },
       {
         "declaring_header": "bn.h",
         "module": "src/bn/",
-        "symbol": "BN_div_word"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_dup"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_exp"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_free"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
         "symbol": "BN_from_montgomery"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_gcd"
       },
       {
         "declaring_header": "bn.h",
@@ -5140,16 +5086,6 @@
       {
         "declaring_header": "bn.h",
         "module": "src/bn/",
-        "symbol": "BN_get_flags"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_get_params"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
         "symbol": "BN_get_rfc2409_prime_1024"
       },
       {
@@ -5190,36 +5126,6 @@
       {
         "declaring_header": "bn.h",
         "module": "src/bn/",
-        "symbol": "BN_get_word"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_hex2bn"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_is_bit_set"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_is_negative"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_is_odd"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_is_one"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
         "symbol": "BN_is_prime"
       },
       {
@@ -5240,52 +5146,7 @@
       {
         "declaring_header": "bn.h",
         "module": "src/bn/",
-        "symbol": "BN_is_word"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_is_zero"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
         "symbol": "BN_kronecker"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_lebin2bn"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_lshift"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_lshift1"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_mask_bits"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_mod_add"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_mod_add_quick"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_mod_exp"
       },
       {
         "declaring_header": "bn.h",
@@ -5320,97 +5181,12 @@
       {
         "declaring_header": "bn.h",
         "module": "src/bn/",
-        "symbol": "BN_mod_exp_simple"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_mod_inverse"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_mod_lshift"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_mod_lshift1"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_mod_lshift1_quick"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_mod_lshift_quick"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_mod_mul"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
         "symbol": "BN_mod_mul_montgomery"
       },
       {
         "declaring_header": "bn.h",
         "module": "src/bn/",
         "symbol": "BN_mod_mul_reciprocal"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_mod_sqr"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_mod_sqrt"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_mod_sub"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_mod_sub_quick"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_mod_word"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_mpi2bn"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_mul"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_mul_word"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_native2bn"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_new"
       },
       {
         "declaring_header": "bn.h",
@@ -5441,36 +5217,6 @@
         "declaring_header": "bn.h",
         "module": "src/bn/",
         "symbol": "BN_nist_mod_func"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_nnmod"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_num_bits"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_num_bits_word"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_options"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_print"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_print_fp"
       },
       {
         "declaring_header": "bn.h",
@@ -5528,101 +5274,6 @@
         "symbol": "BN_reciprocal"
       },
       {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_rshift"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_rshift1"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_secure_new"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_security_bits"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_set_bit"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_set_flags"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_set_negative"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_set_params"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_set_word"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_signed_bin2bn"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_signed_bn2bin"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_signed_bn2lebin"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_signed_bn2native"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_signed_lebin2bn"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_signed_native2bn"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_sqr"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_sub"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_sub_word"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_swap"
-      },
-      {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
         "symbol": "BN_to_ASN1_ENUMERATED"
@@ -5636,36 +5287,6 @@
         "declaring_header": "bn.h",
         "module": "src/bn/",
         "symbol": "BN_to_montgomery"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_uadd"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_ucmp"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_usub"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_value_one"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_with_flags"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_zero_ex"
       },
       {
         "declaring_header": "pem.h",
@@ -6104,7 +5725,7 @@
       }
     ],
     "owned_by_module": {
-      "src/asn1/": 274,
+      "src/asn1/": 280,
       "src/bn/": 201,
       "src/pem/": 38
     },
@@ -6135,7 +5756,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "ebeccba59da6e871755b547905a738e6e4754b0ff88182f4c9993e421731a2b7"
+      "sha256": "fe60db5e95dc803786891e037898c69a58452e83be0bdb793f00e64290b91493"
     }
   ],
   "kind": "phase5-obligations",

@@ -73,6 +73,7 @@ GENERATOR = "forensics/tools/ownership_audit.py"
 LEDGERS = [
     (3, "forensics/tools/phase3_obligations.py"),
     (4, "forensics/tools/phase4_obligations.py"),
+    (5, "forensics/tools/phase5_obligations.py"),
 ]
 
 # The generated ledgers, for the cross-ledger reconciliation below. They are read
@@ -82,6 +83,7 @@ LEDGERS = [
 LEDGER_JSON = {
     3: "forensics/phase3-obligations.json",
     4: "forensics/phase4-obligations.json",
+    5: "forensics/phase5-obligations.json",
 }
 
 LIBS = ("libcrypto", "libssl")

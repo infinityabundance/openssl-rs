@@ -1,0 +1,38 @@
+//! Phase 5 — `BIGNUM`, the ASN.1 substrate and PEM.
+//!
+//! Phase 5 is the arithmetic and encoding substrate: arbitrary-precision integers,
+//! the ASN.1 type system with its DER codec, and PEM framing. Everything above it —
+//! the provider core, EVP, the algorithms, X.509 and `libssl` — is built on these
+//! types, so this is the stratum where an error is most expensive to find later.
+//!
+//! ## Scope, and how it was decided
+//!
+//! Phase 5 owns 513 of the authority's exports. That number is not typed: it is
+//! derived by `forensics/tools/phase5_obligations.py` from the Phase 1 atlas, with
+//! one stated rule — **a symbol belongs to the stratum that owns the header
+//! declaring it**. `d2i_X509` and `d2i_ASN1_INTEGER` look alike and belong to
+//! different strata, and the name cannot separate them; the declaring header can.
+//! The same tool hands 580 further candidates to the strata that own their headers,
+//! each with that header recorded as the reason.
+//!
+//! ## Layering
+//!
+//! * [`limbs`] — pure limb arithmetic, no FFI, no OpenSSL types. The part that must
+//!   be provably right, and the only part testable without an authority.
+//! * [`bignum`] — the opaque `BIGNUM` object, its lifetime, predicates, flags and
+//!   the byte/string conversions.
+//! * [`ctx`] — `BN_CTX`, the temporary pool, and `BN_GENCB`, the generation
+//!   callback object.
+//! * `arith`, `mont`, `gf2m`, `nist`, `primality`, `blinding` — the `BN_*` surface
+//!   that operates on them.
+//!
+//! ## What "implemented" means here
+//!
+//! A symbol being *defined* is not parity (`docs/PARITY_MODEL.md`). The ledger
+//! records the difference, and `forensics/tools/phase5_obligations.py` reports
+//! which exports remain open.
+
+pub mod arith;
+pub mod bignum;
+pub mod ctx;
+pub mod limbs;

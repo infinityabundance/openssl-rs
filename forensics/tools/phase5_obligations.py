@@ -105,6 +105,41 @@ MODULE_OF_HEADER: dict[str, str] = {
     "pem.h": "src/pem/",
 }
 
+# The prefix *projection* of the header rule above, in the shape
+# `forensics/tools/ownership_audit.py` consumes: that audit asks whether every
+# implemented export is claimed by some phase family, and it reads families as
+# prefixes. The authoritative rule for this stratum remains the declaring header —
+# the prefixes cannot separate `d2i_X509` from `d2i_ASN1_INTEGER`, which is the
+# whole reason the rule is header-based — so this list is deliberately the union of
+# what the modules' symbols actually look like, and a symbol that fits no entry here
+# is exactly what that audit exists to surface.
+#
+# `PEM_write_bio_ASN1_stream` is declared in `asn1.h` and so belongs to `src/asn1/`,
+# while `d2i_PKCS8PrivateKey_*`/`i2d_PKCS8PrivateKey_*` are declared in `pem.h` and
+# belong to `src/pem/`; both are named here because a prefix cannot express them.
+FAMILIES = [
+    ("src/bn/", ("BN_",)),
+    ("src/asn1/", ("ASN1_", "d2i_", "i2d_", "PEM_write_bio_ASN1_stream",
+                   "BIO_asn1_", "BIO_f_asn1", "BIO_new_NDEF")),
+    ("src/pem/", ("PEM_", "d2i_PKCS8PrivateKey", "i2d_PKCS8PrivateKey")),
+]
+
+# Symbols the Phase 4 ledger hands to this stratum (`forensics/phase4-obligations.json`,
+# `deferred` rows whose `owning_phase` is 5). Each is a BIO that exists only to carry
+# an ASN.1 or DER codec, so the obligation is this stratum's even though the code
+# that needed the sink already lives in Phase 4. Declaring them here is what lets
+# `ownership_audit.py` prove the two ledgers agree: Phase 4 must list exactly these
+# as deferred to Phase 5, and this stratum must list exactly these as the hand-offs
+# it discharged, so no symbol can be counted as implemented by two strata at once.
+HANDED_OFF_FROM_PHASE4 = (
+    "BIO_asn1_get_prefix",
+    "BIO_asn1_get_suffix",
+    "BIO_asn1_set_prefix",
+    "BIO_asn1_set_suffix",
+    "BIO_f_asn1",
+    "BIO_new_NDEF",
+)
+
 # The type in a PEM name is the last `_`-separated token group, after any of the
 # call-shape suffixes. `PEM_read_bio_X509` -> `X509`; `PEM_write_bio_PKCS7` ->
 # `PKCS7`; `PEM_def_callback` has no type and is generic.
@@ -205,16 +240,24 @@ def main(argv: list[str]) -> int:
     deferred: list[dict] = []
     unresolved: list[str] = []
 
+    def claim(sym: str, module: str, header: str) -> None:
+        owned[sym] = {
+            "symbol": sym, "module": module, "declaring_header": header,
+        }
+
     for sym in candidates:
         header = headers.get(sym)
         if header is not None and header in HEADER_PHASE:
             phase = HEADER_PHASE[header]
             if phase == 5:
-                owned[sym] = {
-                    "symbol": sym, "module": MODULE_OF_HEADER[header],
-                    "declaring_header": header,
-                }
+                claim(sym, MODULE_OF_HEADER[header], header)
             else:
+                # The family's *prefixes* still match this symbol -- `d2i_X509`
+                # starts with `d2i_` -- so the ledger counts it as an export the
+                # stratum's families cover and then hands it on. That is the same
+                # shape Phase 3 and Phase 4 use, and it is what makes
+                # `implemented + deferred + open == owned` hold here too.
+                claim(sym, f"(phase {phase})", header)
                 deferred.append({
                     "symbol": sym, "owning_phase": phase,
                     "declaring_header": header,
@@ -229,10 +272,7 @@ def main(argv: list[str]) -> int:
         m = PEM_TYPE_RE.match(sym)
         if m is None:
             # A generic PEM entry point with no type in its name.
-            owned[sym] = {
-                "symbol": sym, "module": "src/pem/",
-                "declaring_header": header or "(pem.h)",
-            }
+            claim(sym, "src/pem/", header or "(pem.h)")
             continue
         type_name = m.group(1)
         type_header = types.get(type_name)
@@ -240,10 +280,7 @@ def main(argv: list[str]) -> int:
             # Nothing stronger than a forward declaration names this type, so the
             # name is not evidence and the generic machinery is what is being
             # declared here.
-            owned[sym] = {
-                "symbol": sym, "module": "src/pem/",
-                "declaring_header": header or "(pem.h)",
-            }
+            claim(sym, "src/pem/", header or "(pem.h)")
             continue
         if type_header not in HEADER_PHASE:
             unresolved.append(f"{sym}: type {type_name} is declared in {type_header}, "
@@ -251,11 +288,9 @@ def main(argv: list[str]) -> int:
             continue
         phase = HEADER_PHASE[type_header]
         if phase == 5:
-            owned[sym] = {
-                "symbol": sym, "module": "src/pem/",
-                "declaring_header": type_header,
-            }
+            claim(sym, "src/pem/", type_header)
         else:
+            claim(sym, f"(phase {phase})", type_header)
             deferred.append({
                 "symbol": sym, "owning_phase": phase,
                 "declaring_header": type_header,
@@ -273,6 +308,23 @@ def main(argv: list[str]) -> int:
             "resolves them:\n  " + shown + more
         )
 
+    # The hand-offs Phase 4 handed this stratum must be accounted for here: a symbol
+    # Phase 4 deferred to Phase 5 that this stratum does not even claim is an
+    # obligation that fell between the two ledgers. They do not match the candidate
+    # prefix, because the header that declares them is `bio.h` -- Phase 4's header --
+    # so they are claimed by name.
+    for sym in HANDED_OFF_FROM_PHASE4:
+        if sym not in exports:
+            raise SystemExit(
+                f"phase5-obligations: {sym} is handed from Phase 4 but the "
+                "authority does not export it from this build profile"
+            )
+        owned.setdefault(sym, {
+            "symbol": sym,
+            "module": "src/asn1/",
+            "declaring_header": headers.get(sym, "bio.h"),
+        })
+
     bad = [r for r in deferred if r["owning_phase"] <= 5]
     if bad:
         raise SystemExit(
@@ -280,16 +332,21 @@ def main(argv: list[str]) -> int:
             "one:\n  " + "\n  ".join(r["symbol"] for r in bad)
         )
 
-    if len(owned) + len(deferred) != len(candidates):
+    if len(owned) != len(candidates) + len(HANDED_OFF_FROM_PHASE4):
         raise SystemExit(
-            "phase5-obligations: accounted for "
-            f"{len(owned) + len(deferred)} of {len(candidates)} candidate exports"
+            "phase5-obligations: the family covers "
+            f"{len(owned)} exports but the candidates plus the Phase 4 hand-offs "
+            f"are {len(candidates) + len(HANDED_OFF_FROM_PHASE4)} (the hand-offs are "
+            "claimed by name rather than by prefix, and a deferred symbol is still "
+            "counted as covered by the family that matches its prefix)"
         )
 
     implemented_here = sorted(s for s in owned if s in implemented)
+    handed_on = {r["symbol"] for r in deferred}
     open_rows = [
-        {"symbol": s, "module": owned[s]["module"], "declaring_header": owned[s]["declaring_header"]}
-        for s in sorted(owned) if s not in implemented
+        {"symbol": s, "module": owned[s]["module"],
+         "declaring_header": owned[s]["declaring_header"]}
+        for s in sorted(owned) if s not in implemented and s not in handed_on
     ]
 
     body = {
@@ -310,8 +367,14 @@ def main(argv: list[str]) -> int:
         "implemented": implemented_here,
         "deferred": sorted(deferred, key=lambda r: r["symbol"]),
         "open": open_rows,
+        "handoffs_discharged": {"4": sorted(HANDED_OFF_FROM_PHASE4)},
         "owned_by_module": dict(
-            sorted(Counter(v["module"] for v in owned.values()).items())
+            sorted(
+                Counter(
+                    v["module"] for v in owned.values()
+                    if not v["module"].startswith("(")
+                ).items()
+            )
         ),
         "deferred_by_phase": dict(
             sorted(Counter(r["owning_phase"] for r in deferred).items())
@@ -320,10 +383,14 @@ def main(argv: list[str]) -> int:
         # stratum: it is this stratum's unimplemented surface.
         "complete": not open_rows,
         "note": (
-            "The families are derived from the atlas, not typed: see this "
-            "generator's header for why. A deferred symbol names the stratum that "
-            "owns the header it is declared in, which is checkable without reading "
-            "this file. Nothing here is a parity claim."
+            "`owned` is every export the stratum's families cover, which includes the "
+            "ones the declaring-header rule hands to a later phase: a deferred symbol "
+            "is still matched by this stratum's prefixes, so counting it here is what "
+            "makes `implemented + deferred + open == owned`. `open` is the only list "
+            "that blocks the stratum. The families are derived from the atlas, not "
+            "typed: see this generator's header for why, and note that a deferred "
+            "symbol names the stratum that owns the header it is declared in, which is "
+            "checkable without reading this file. Nothing here is a parity claim."
         ),
     }
 

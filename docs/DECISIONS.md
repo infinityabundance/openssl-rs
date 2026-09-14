@@ -2391,3 +2391,121 @@ bignum, and the implementation was right. The `mod_inverse` test then asserted a
 inverse for operands sharing the factor 147, which correctly does not exist. This
 is the same failure mode the courts guard against, and it is recorded because the
 lesson generalises: in this project the expectation is the suspect, every time.
+
+## D65 — `RT-BN` found nine behaviours, and one of them was an ABI-level signature
+
+**Decision.** The `BIGNUM` stratum is committed with its differential court, and the
+court's findings are the reason the stratum is trustworthy rather than the reason it
+looks finished. `RT-BN` compiles `courts/phase5/rt_bn_probe.c` twice — against the
+admitted authority and against the candidate shell — runs both and diffs the
+transcripts line by line on `key=value`. It passes with **475 observations and 0
+residuals**. It is not a parity percentage and it is not security evidence; it is a
+differential result for the behaviours the probe exercises, on one build profile
+(D2).
+
+**The first run was a probe bug, and that is now the tenth time.** The probe died
+with `SIGSEGV` on the *authority* side, at `stage=authority-run`. `BN_free` does not
+clear the caller's pointer, and the probe reused a freed `BIGNUM` slot through
+`BN_asc2bn(&a, ...)` after freeing it. Clearing the slot turned a crash into 45
+residuals. The rule that produced that diagnosis is worth restating because it has
+now paid ten times: when a court fails, the probe is the suspect before the
+implementation is.
+
+**What the 45 residuals were.** Every one was a plausible reading of the API that is
+wrong:
+
+- **`BN_bn2hex` is byte-oriented**, not nibble-oriented: the authority suppresses
+  leading zero *bytes* and then writes both digits of every byte it keeps, so `2` is
+  `"02"`. Thirty-two of the 45 residuals were exactly this, one nibble wide.
+- **`BN_cmp` orders by sign before magnitude.** Negating the magnitude comparison
+  whenever `a` is negative is right for two negatives and inverts the mixed-sign case;
+  the probe's `a = -0xffffffffffffffff`, `b = 1` separates them.
+- **`BN_asc2bn` answers 1 or 0**, not the digit count its radix-specific relatives
+  return.
+- **`BN_usub` reports only a limb-count shortfall** (`bn_add.c`), and at equal width it
+  lets the final borrow escape, returning `a - b mod 2^(64*len)`. `BN_add(3)` calls
+  that undefined; a precompiled caller sees the wrap, so the wrap is reproduced.
+- **`BN_mask_bits` refuses a width the value does not have**:
+  `ossl_bn_mask_bits_fixed_top` answers 0 when the width reaches past the top limb.
+- **The `mod` family reduces last, not first.** `BN_mod_add`/`_sub`/`_mul` are the true
+  signed operation followed by one `BN_nnmod`; reducing the operands first differs by
+  exactly the modulus whenever an operand is negative.
+- **The `_quick` variants are their own algorithms**, not aliases: `BN_mod_lshift_quick`
+  reports `BN_R_INPUT_NOT_REDUCED` for an operand outside `[0, |m|)` rather than
+  reducing it.
+- **A negative exponent is not rejected.** `BN_exp` and `BN_mod_exp` are driven by
+  `BN_num_bits`/`BN_is_bit_set`, which read the magnitude, so they compute `a^|p|`.
+- **The error queue is part of the answer**, at the authority's own coordinates:
+  `BN_R_DIV_BY_ZERO` inside `BN_div`, `BN_R_NO_INVERSE` after `BN_mod_inverse`'s
+  internal helper reports through a flag, `BN_R_NOT_A_SQUARE` at `BN_mod_sqrt`'s
+  verification step, `BN_R_P_IS_NOT_PRIME` before it does any work when `p` is even and
+  not two. All nineteen `crypto/bn` translation units that raise are now in
+  `gen_err_raise_sites.py`'s covered set, so those coordinates are generated from the
+  authority rather than transcribed.
+
+**The one that matters most.** `BN_signed_lebin2bn`, `BN_signed_bin2bn` and
+`BN_signed_native2bn` were declared `-> c_int` in the crate while the atlas records
+`BIGNUM *(...)`. Worse, they required a non-null `ret` and so *failed* for the
+documented `NULL`-means-allocate form that `BN_bin2bn` and `BN_lebin2bn` already
+implemented correctly three functions away. This is not a wrong value; it is a wrong
+call convention, and no C caller could have compiled against it without a warning they
+were entitled to ignore.
+
+**The gap the atlas already knew about.** The Phase 1 atlas records every export's full
+C prototype — return type and parameter list — and **nothing compared the candidate's
+Rust declaration against it**. That is why a signature error of this size survived
+until a probe happened to call one of the three functions. A `prototype` court that
+derives both sides and compares return class and arity would have caught it before any
+probe ran, and would catch the class anywhere in the 5,896 `libcrypto` exports. It is
+recorded here as the next quality gate for this stratum rather than as a claim that it
+exists.
+
+**One residual was a panic, not a wrong value.** `BN_mod_inverse(a, 0)` reached
+`limbs::rem`'s division-by-zero assertion; `guard_ffi` caught it and returned `NULL`
+with no error raised, because the raise happens after the arithmetic. The fix is at the
+root and is also the mathematically right answer: `limbs::mod_inverse` answers `None`
+for a zero modulus instead of letting the assertion fire, so a misuse of a public entry
+point is a reported failure rather than a panic at the ABI boundary.
+
+**Why this is the argument for the whole method.** The BN code passed the lint gate,
+the unit tests, and a reading of `BN_add(3)` before this court ran. Thirty-two of the
+45 residuals were one hex digit wide. A stratum cannot be trusted because it looks
+finished; it is trusted because something independent disagreed with it first and lost.
+
+## D66 — A phase's ledger counts what its families *cover*, and Phase 5 is now in progress
+
+**Decision.** A stratum's `owned` count is every export its families cover — including
+the ones the declaring-header rule hands to a later phase — and `implemented`,
+`deferred` and `open` partition it. Phase 3 and Phase 4 read naturally that way because
+their families are prefix lists: `BIO_f_md` matches Phase 4's `BIO_` and is then handed
+to Phase 7, so it is counted once and deferred once.
+
+Phase 5's families are header-derived (D64) and a hand-off is decided by the *declaring
+header*, not by the name, so its first ledger reported `owned = 513` while its
+`deferred` list held 580 symbols. That is the same fact stated twice in two different
+vocabularies, and `ownership_audit.py` — whose invariant is
+`implemented + deferred + open == owned` — correctly refused it:
+
+> phase 5 ledger accounts for 1099 of 519 family exports … so some export it owns is
+> neither implemented, handed on, nor recorded as open
+
+**The resolution, and why it is the right one.** A symbol the family's prefixes match is
+*covered* by that stratum even when the stratum then hands it on: `d2i_X509` starts with
+`d2i_`, which is why it needed a ledger to hand it on in the first place. So `owned`
+becomes the covered set (1,099 = 1,093 candidates plus the six Phase 4 hand-offs), and
+`open` becomes `owned − implemented − deferred` (414). The arithmetic now closes, and it
+closes for the same reason it closes in Phases 3 and 4.
+
+**Phase 5 is `in-progress`, and that is derived.** `phase_state.py` gained a Phase 5
+branch with a required-evidence list (the seal, the four `src/bn` modules, the probe,
+the two tools) and two derived gates: the court file's verdicts, and
+`open_in_this_stratum`. It reports `in-progress` with the blocking count — 414 open
+obligations (280 ASN.1, 96 BN, 38 PEM) — and it will report `complete` only when that
+count reaches zero and the courts pass. No string in the renderer says either.
+
+**The hand-off edges now reconcile in both directions.** Phase 4 hands six
+BIO-to-ASN.1 symbols to Phase 5 (`BIO_f_asn1`, `BIO_new_NDEF`, the four
+`BIO_asn1_{get,set}_{prefix,suffix}`), and Phase 5's ledger declares exactly those six
+as discharged; `ownership_audit.py` reports `phase 4 -> 5: 6 discharged` and
+`0 mismatched hand-off edge(s)`. Before that, the edge was recorded in one ledger only —
+which is the failure mode the reconciliation exists to catch, and it caught it.
