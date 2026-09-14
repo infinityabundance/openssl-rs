@@ -894,3 +894,31 @@ comparison.
 the behaviours this probe exercises: the value round-trips, the string conversions,
 and the rejection cases. It is not a claim about `BIO_ADDRINFO`, `BIO_lookup` or the
 connect/accept BIOs, which remain open Phase 4 obligations.
+
+---
+
+## D35 — The CI runner owns the shared scratch directory before the container does
+
+**Decision.** The `courts` job creates `court/` immediately after checkout, before
+building or starting the court container.
+
+**Why.** The repository is bind-mounted at `/work` and the container runs as root,
+so every file and directory it creates lands on host disk owned by root. `court/` is
+shared between the two: the courts write evidence and staged probes into
+`court/phase2/` and `court/phase4/`, and later the *runner* user writes
+`court/trusted-baseline.json` there with `git show`. When the container created
+`court/` itself, that last write failed:
+
+    court/trusted-baseline.json: Permission denied
+
+which is how the first `courts` run to get that far failed — the step is the last
+one reached, so every earlier green run had hidden the problem. Creating the
+directory on the runner first leaves it runner-owned; the container can still write
+inside it (it runs as root), and its own subdirectories stay separate.
+
+**Consequence.** With this and D31, the `courts` job runs end to end: image,
+container, preconditions, authority acquisition and build, the 11 ABI courts, the 7
+runtime courts, the 3 BIO courts, and the baseline extraction. `static` passes
+independently. The remaining red job is `lint`, which is `continue-on-error` by
+D-something recorded in `docs/PHASE-4-BIO-CONF-SEAL.md` and still carrying the
+Phase 4 `# Safety` documentation debt.

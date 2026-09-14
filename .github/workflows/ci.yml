@@ -175,6 +175,16 @@ jobs:
         with:
           fetch-depth: 0
 
+      # The repository is bind-mounted at /work and the container runs as root, so
+      # anything it creates lands on host disk owned by root. `court/` is shared
+      # scratch: `build_phase2.sh` and the court harnesses create subdirectories
+      # inside it, and the baseline extraction further down runs as the *runner*
+      # user. Creating the directory here, before the container can, is what keeps
+      # that later write permission-clean; otherwise git show fails with
+      # "court/trusted-baseline.json: Permission denied".
+      - name: Prepare the shared scratch directory
+        run: mkdir -p court
+
       - name: Build court image
         run: bash docker/openssl-rs-court.sh build
 
