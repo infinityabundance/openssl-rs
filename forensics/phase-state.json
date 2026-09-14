@@ -107,6 +107,7 @@
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
+          "docs/PHASE-4-BIO-CONF-SEAL.md",
           "src/runtime/bio/mod.rs",
           "src/runtime/bio/iolib.rs",
           "src/runtime/bio/method.rs",
@@ -120,7 +121,8 @@
           "src/runtime/bio/bio_variadic.c",
           "src/runtime/buffer.rs",
           "forensics/tools/phase4_obligations.py",
-          "forensics/phase4-obligations.json"
+          "forensics/phase4-obligations.json",
+          "artifacts/phase4/COURTS.json"
         ],
         "name": "bio-conf-objects",
         "phase": 4,
@@ -323,7 +325,7 @@
       "not_started": 17
     }
   },
-  "body_hash": "c3ceccf675e9a9029c6784a2946b071db164c19694543800e6c204e5fbc3be6d",
+  "body_hash": "c8bc8ea6d0bb7a7b1bbeb3746e0bd4067aefddd7f5c624f6c93b37efc9282763",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

@@ -226,6 +226,7 @@ PHASE3_MODULES = [
 PHASE4_COURTS = "artifacts/phase4/COURTS.json"
 PHASE4_OBLIGATIONS = "forensics/phase4-obligations.json"
 PHASE4_MODULES = [
+    "docs/PHASE-4-BIO-CONF-SEAL.md",
     "src/runtime/bio/mod.rs",
     "src/runtime/bio/iolib.rs",
     "src/runtime/bio/method.rs",
