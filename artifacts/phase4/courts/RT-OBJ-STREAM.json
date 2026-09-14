@@ -5,6 +5,7 @@
   "candidate_observations": 91,
   "candidate_stderr_tail": [],
   "court": "RT-OBJ-STREAM",
+  "crashed": false,
   "probe": "courts/phase4/rt_obj_stream_probe.c",
   "residual_count": 0,
   "residuals": [],

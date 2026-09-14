@@ -76,6 +76,7 @@ COURTS = [
     ("RT-BIO-PAIR", "rt_bio_pair_probe.c"),
     ("RT-BIO-DGRAM-PAIR", "rt_bio_dgram_pair_probe.c"),
     ("RT-BIO-DGRAM", "rt_bio_dgram_probe.c"),
+    ("RT-BIO-CONN", "rt_bio_conn_probe.c"),
     ("RT-OBJ-STREAM", "rt_obj_stream_probe.c"),
 ]
 
@@ -165,16 +166,34 @@ def court(name: str, src: Path, auth, work: Path) -> dict:
                 "detail": {"exit_code": a_code, "stderr": a_err.splitlines()[:12]}}
 
     residuals = diff(a_out, c_out)
+    #
+    # A probe that died on a signal compared nothing beyond the prefix it managed
+    # to print, so two sides dying the same way is *not* agreement. The exit-code
+    # comparison below cannot see that (`-11 == -11`), so a signal is made an
+    # explicit failure. This was found by `RT-BIO-CONN`, whose probe passed a
+    # `BIO_METHOD *` to `BIO_method_name` and segfaulted identically on both
+    # sides.
+    crashed = (
+        a_code is None
+        or a_code < 0
+        or c_code is None
+        or c_code < 0
+    )
     record = {
         "court": name,
         "probe": rel(src),
         "authority_exit_code": a_code,
         "candidate_exit_code": c_code,
+        "crashed": crashed,
         "authority_observations": len([l for l in a_out.splitlines() if "=" in l]),
         "candidate_observations": len([l for l in c_out.splitlines() if "=" in l]),
         "residual_count": len(residuals),
         "residuals": residuals,
-        "verdict": "pass" if not residuals and c_code == a_code else "fail",
+        "verdict": (
+            "pass"
+            if not residuals and c_code == a_code and not crashed
+            else "fail"
+        ),
         "staged_binaries": staged,
         "candidate_stderr_tail": c_err.splitlines()[-3:],
     }
@@ -205,7 +224,13 @@ def main(argv: list[str]) -> int:
         if rec["verdict"] == "pass":
             print(f"  {name:<12} pass   ({rec['authority_observations']} observations)")
         else:
-            extra = rec.get("stage", f"{rec.get('residual_count', '?')} residual(s)")
+            if rec.get("crashed"):
+                extra = (
+                    f"probe died on a signal (authority={rec['authority_exit_code']}, "
+                    f"candidate={rec['candidate_exit_code']})"
+                )
+            else:
+                extra = rec.get("stage", f"{rec.get('residual_count', '?')} residual(s)")
             print(f"  {name:<12} FAIL   {extra}")
             for r in rec.get("residuals", [])[:25]:
                 print(f"      {r['observation']}: authority={r['authority']!r} "

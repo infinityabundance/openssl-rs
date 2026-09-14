@@ -63,7 +63,9 @@ pub mod bf_prefix;
 pub mod bf_readbuff;
 pub mod bio_cb;
 pub mod bio_sock2;
+pub mod bss_acpt;
 pub mod bss_bio;
+pub mod bss_conn;
 pub mod bss_dgram;
 pub mod bss_dgram_pair;
 pub mod bss_fd;
@@ -180,6 +182,19 @@ pub const BIO_FLAGS_IN_EOF: c_int = 0x800;
 /// `BIO_FLAGS_DGRAM` — the flag a datagram BIO sets on its method data.
 pub const BIO_FLAGS_DGRAM: c_int = 0x20;
 
+// The kernel-TLS flags. `bio.h` reserves 0x1000..0x8000 for them and names them
+// only in `include/internal/bio.h`, so they are internal contract: the record
+// layer reads them through `BIO_get_ktls_send`/`BIO_get_ktls_recv`, which are
+// public macros over the two *getter* controls below.
+/// `BIO_FLAGS_KTLS_TX_CTRL_MSG` — a control message is about to be sent.
+pub const BIO_FLAGS_KTLS_TX_CTRL_MSG: c_int = 0x1000;
+/// `BIO_FLAGS_KTLS_RX` — the socket receives through kernel TLS.
+pub const BIO_FLAGS_KTLS_RX: c_int = 0x2000;
+/// `BIO_FLAGS_KTLS_TX` — the socket sends through kernel TLS.
+pub const BIO_FLAGS_KTLS_TX: c_int = 0x4000;
+/// `BIO_FLAGS_KTLS_TX_ZEROCOPY_SENDFILE` — the zerocopy sendfile path is armed.
+pub const BIO_FLAGS_KTLS_TX_ZEROCOPY_SENDFILE: c_int = 0x8000;
+
 /// `BIO_CTRL_RESET`.
 pub const BIO_CTRL_RESET: c_int = 1;
 /// `BIO_CTRL_EOF`.
@@ -257,8 +272,22 @@ pub const BIO_CTRL_DGRAM_GET_MTU_OVERHEAD: c_int = 49;
 pub const BIO_CTRL_DGRAM_SCTP_SET_IN_HANDSHAKE: c_int = 50;
 /// `BIO_CTRL_DGRAM_SET_PEEK_MODE`.
 pub const BIO_CTRL_DGRAM_SET_PEEK_MODE: c_int = 71;
-/// `BIO_CTRL_GET_KTLS_SEND`.
+/// `BIO_CTRL_GET_KTLS_SEND` — the getter behind the public `BIO_get_ktls_send`
+/// macro. Public macros and method tables disagree about kernel TLS under
+/// `no-ktls`: the header still names the control, but `BIO_get_ktls_send` itself
+/// expands to `0` and no method answers the control.
 pub const BIO_CTRL_GET_KTLS_SEND: c_int = 73;
+/// `BIO_CTRL_SET_KTLS_TX_SEND_CTRL_MSG` — one of the three internal KTLS control
+/// numbers the public header documents only in a comment, because the argument
+/// type (`ktls_crypto_info_t`) is not public.
+///
+/// No method table in this build profile has a case for it: the authority was
+/// configured `no-ktls`, so this and the three siblings below reach `default` and
+/// answer 0. The numbers are declared because they are taken, and because a
+/// profile with kernel TLS would need them.
+pub const BIO_CTRL_SET_KTLS_TX_SEND_CTRL_MSG: c_int = 74;
+/// `BIO_CTRL_CLEAR_KTLS_TX_CTRL_MSG`.
+pub const BIO_CTRL_CLEAR_KTLS_TX_CTRL_MSG: c_int = 75;
 /// `BIO_CTRL_GET_KTLS_RECV`.
 pub const BIO_CTRL_GET_KTLS_RECV: c_int = 76;
 /// `BIO_CTRL_SET_PREFIX`.
@@ -289,6 +318,13 @@ pub const BIO_CTRL_GET_RPOLL_DESCRIPTOR: c_int = 91;
 pub const BIO_CTRL_GET_WPOLL_DESCRIPTOR: c_int = 92;
 /// `BIO_CTRL_DGRAM_DETECT_PEER_ADDR`.
 pub const BIO_CTRL_DGRAM_DETECT_PEER_ADDR: c_int = 93;
+/// `BIO_CTRL_SET_KTLS` — installs kernel-TLS keys on a socket. Internal: its
+/// argument is the record layer's `ktls_crypto_info_t`. Not implemented in this
+/// profile; see [`BIO_CTRL_SET_KTLS_TX_SEND_CTRL_MSG`].
+pub const BIO_CTRL_SET_KTLS: c_int = 72;
+/// `BIO_CTRL_SET_KTLS_TX_ZEROCOPY_SENDFILE` — internal, and enabled only where
+/// the kernel headers provide `TLS_TX_ZEROCOPY_RO` (they do for this profile).
+pub const BIO_CTRL_SET_KTLS_TX_ZEROCOPY_SENDFILE: c_int = 90;
 /// `BIO_CTRL_DGRAM_SET0_LOCAL_ADDR`.
 pub const BIO_CTRL_DGRAM_SET0_LOCAL_ADDR: c_int = 94;
 
@@ -528,6 +564,23 @@ pub const BIO_R_GETTING_SOCKTYPE: c_int = 134;
 pub const BIO_R_INVALID_SOCKET: c_int = 135;
 /// `BIO_R_LISTEN_V6_ONLY`.
 pub const BIO_R_LISTEN_V6_ONLY: c_int = 136;
+/// `BIO_R_TFO_DISABLED` — TCP Fast Open is supported by the kernel but turned
+/// off. Not raised on this platform, whose kernel exposes no TFO switch to
+/// query; it is part of the enumerated reason space `ERR_reason_error_string`
+/// answers for.
+pub const BIO_R_TFO_DISABLED: c_int = 106;
+/// `BIO_R_TFO_NO_KERNEL_SUPPORT` — the kernel has no TFO support to query. As for
+/// [`BIO_R_TFO_DISABLED`], not raised here.
+pub const BIO_R_TFO_NO_KERNEL_SUPPORT: c_int = 108;
+/// `BIO_R_UNABLE_TO_TFO` — a TFO socket option was refused. Raised by
+/// `BIO_connect` and `BIO_listen` for `BIO_SOCK_TFO`.
+pub const BIO_R_UNABLE_TO_TFO: c_int = 109;
+/// `BIO_FAMILY_IPV4` — the family value `BIO_set_conn_ip_family` accepts.
+pub const BIO_FAMILY_IPV4: c_int = 4;
+/// `BIO_FAMILY_IPV6`.
+pub const BIO_FAMILY_IPV6: c_int = 6;
+/// `BIO_FAMILY_IPANY`.
+pub const BIO_FAMILY_IPANY: c_int = 256;
 /// `BIO_R_UNABLE_TO_KEEPALIVE`.
 pub const BIO_R_UNABLE_TO_KEEPALIVE: c_int = 137;
 /// `BIO_R_UNABLE_TO_NODELAY`.
@@ -1590,7 +1643,9 @@ pub use bio_sock2::{
     BIO_accept, BIO_accept_ex, BIO_bind, BIO_connect, BIO_get_accept_socket, BIO_listen,
     BIO_set_tcp_ndelay, BIO_sock_info, BIO_socket,
 };
+pub use bss_acpt::{BIO_new_accept, BIO_s_accept};
 pub use bss_bio::{BIO_new_bio_pair, BIO_s_bio};
+pub use bss_conn::{BIO_new_connect, BIO_s_connect};
 pub use bss_dgram::{BIO_new_dgram, BIO_s_datagram};
 pub use bss_dgram_pair::{BIO_new_bio_dgram_pair, BIO_s_dgram_mem, BIO_s_dgram_pair};
 pub use bss_fd::{BIO_new_fd, BIO_s_fd};

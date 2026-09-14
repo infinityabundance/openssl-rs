@@ -4,9 +4,10 @@
   "candidate_exit_code": 0,
   "candidate_observations": 55,
   "candidate_stderr_tail": [
-    "BIO[0x55d2517ee3a0]: ctrl(0) - memory buffer"
+    "BIO[0x5587d53293a0]: ctrl(0) - memory buffer"
   ],
   "court": "RT-BIO-DEBUG",
+  "crashed": false,
   "probe": "courts/phase4/rt_bio_debug_probe.c",
   "residual_count": 0,
   "residuals": [],

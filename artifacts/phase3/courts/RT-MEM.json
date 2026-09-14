@@ -7,6 +7,7 @@
     "counts.malloc=34 realloc=1 free=20 live=14"
   ],
   "court": "RT-MEM",
+  "crashed": false,
   "probe": "court/phase3/rt_mem_probe.candidate",
   "residual_count": 0,
   "residuals": [],

@@ -366,6 +366,7 @@ pub const IPV6_PKTINFO: c_int = 50;
 pub const IPV6_DONTFRAG: c_int = 62;
 /// `MSG_WAITFORONE` — with `recvmmsg`, return as soon as one message arrived.
 pub const MSG_WAITFORONE: c_int = 0x10000;
+
 /// `SOL_TCP` — the level `BIO_set_tcp_ndelay` sets `TCP_NODELAY` at.
 pub const SOL_TCP: c_int = 6;
 /// `SO_TYPE` — what `BIO_listen` reads to tell a datagram socket from a stream one.

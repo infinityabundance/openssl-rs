@@ -5,6 +5,7 @@
   "candidate_observations": 45,
   "candidate_stderr_tail": [],
   "court": "RT-BIO-COMP",
+  "crashed": false,
   "probe": "courts/phase4/rt_bio_comp_probe.c",
   "residual_count": 0,
   "residuals": [],

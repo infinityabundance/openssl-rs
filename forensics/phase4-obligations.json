@@ -4,8 +4,8 @@
     "complete": false,
     "counts": {
       "deferred_to_later_phase": 16,
-      "implemented": 192,
-      "open_in_this_stratum": 48,
+      "implemented": 196,
+      "open_in_this_stratum": 44,
       "owned": 256
     },
     "deferred": [
@@ -254,8 +254,10 @@
       "BIO_method_name",
       "BIO_method_type",
       "BIO_new",
+      "BIO_new_accept",
       "BIO_new_bio_dgram_pair",
       "BIO_new_bio_pair",
+      "BIO_new_connect",
       "BIO_new_dgram",
       "BIO_new_ex",
       "BIO_new_fd",
@@ -279,7 +281,9 @@
       "BIO_read",
       "BIO_read_ex",
       "BIO_recvmmsg",
+      "BIO_s_accept",
       "BIO_s_bio",
+      "BIO_s_connect",
       "BIO_s_datagram",
       "BIO_s_dgram_mem",
       "BIO_s_dgram_pair",
@@ -339,22 +343,6 @@
     ],
     "note": "`complete` is true only when every export in these families is either implemented or handed to a later stratum. `open` entries belong to this stratum and are recorded gaps, not deferrals; while any exist Phase 4 cannot be called complete. Nothing here is a parity claim.",
     "open": [
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_new_accept"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_new_connect"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_s_accept"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_s_connect"
-      },
       {
         "module": "src/runtime/conf/",
         "symbol": "CONF_dump_bio"
@@ -543,7 +531,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "1e0368ef40c9c34c922df0d947b60795f06967a43cf4f7a93dcde9a0a2e4c24b"
+      "sha256": "1a06991692e0338a38578a0babe5f75fe80e6e3b4224d68b38200b7111a3de4e"
     }
   ],
   "kind": "phase4-obligations",

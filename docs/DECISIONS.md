@@ -1607,3 +1607,119 @@ implemented, 16 deferred to a named later phase, and 48 open**:
 
 32 courts pass over 6,440 observations. Phase 0–3 remain `complete` and Phase 4
 remains `in-progress`.
+
+## D48 — The connect and accept BIOs, and three lessons the courts taught back
+
+**Decision.** `BIO_s_connect`, `BIO_new_connect`, `BIO_s_accept` and
+`BIO_new_accept` are implemented in `src/runtime/bio/bss_conn.rs` and
+`src/runtime/bio/bss_acpt.rs`, and `RT-BIO-CONN` (296 observations) compares them
+against the authority. Phase 4 moves from 48 to 44 open obligations; `implemented`
+`libcrypto` exports move from 404 to 408. The connect BIO also required the
+TCP-Fast-Open and kernel-TLS surfaces, which turned out to be a lesson in itself.
+
+### Lesson 1 — the build record decides the profile, not the platform headers
+
+The first draft inferred the conditional-compilation surface from what the
+*container's* headers define. They define `TCP_FASTOPEN`, `TCP_FASTOPEN_CONNECT`,
+`SOL_TLS`, `TLS_TX` and the rest, and a kernel-TLS module was written to match.
+`RT-BIO-CONN` measured `BIO_C_SET_TFO` answering **0** — the `default` arm — where
+the draft answered 1.
+
+The authoritative source is `forensics/authorities/build/openssl-3.6.4-production/configdata.pm`:
+the build was configured `no-tfo` **and** `no-ktls`, so every fast-open and
+kernel-TLS branch is compiled out, in `bss_conn.c`, `bss_acpt.c`, `bss_sock.c`
+and `bio_sock2.c` alike. The `src/runtime/bio/ktls.rs` module, the KTLS arms in
+`sock_ctrl` and `conn_ctrl`, the `TCP_FASTOPEN*` constants and the `BIO_connect`/
+`BIO_listen` fast-open branches were all deleted. What remains is the inert
+`tfo_first` field (written by the connect-mode control, read by nothing) and the
+two KTLS control numbers in `mod.rs`, documented as taken-but-unimplemented
+because a profile with kernel TLS would need them.
+
+This is the same discipline the SCTP exclusion already had: **read the build
+record, then the source, then the headers** — and never the headers alone.
+
+### Lesson 2 — a court that cannot see a crash accepts two of them
+
+`RT-BIO-CONN`'s first run "passed" with 65 observations while **both** sides died
+of `SIGSEGV` in the same place: the probe passed a `BIO_METHOD *` to
+`BIO_method_name`. The verdict compared exit codes, and `-11 == -11` is equality.
+
+Both court harnesses now take a signal — a negative exit code on either side — as
+an explicit failure (`"crashed": true`), because a probe that dies compared
+nothing beyond the prefix it printed. That change immediately found two more
+identical-crash pairs in **Phase 3**'s own courts, which had been passing the same
+way for the same reason:
+
+* `RT-LHASH`'s probe captured a `FILE *` report with `open_memstream`, which
+  `<stdio.h>` declares only under `_GNU_SOURCE` — and `phase3_courts.py` did not
+  pass `-D_GNU_SOURCE`. The implicit declaration returned `int`, the `FILE *` was
+  truncated, and the probe wrote through a bogus stream. With the flag added the
+  probe gains the observation that had been lost (`stats.file`, 53 → 56
+  observations, and the two NULL-boundary markers).
+* `RT-THREAD`'s probe called the NULL-argument `CRYPTO_atomic_*` entry points,
+  which fault in the authority — the behaviour divergence `D-MEM-ATOMIC-1` already
+  recorded but which the probe still exercised. Those calls are now markers
+  (36 → 40 observations).
+
+Neither was a candidate defect. Both were courts that could not tell agreement from
+a shared crash, which is the same failure mode as a court that cannot see the axis
+it claims to test.
+
+### Lesson 3 — the four defects `RT-BIO-CONN` found
+
+1. **`BIO_sock_non_fatal_error`'s membership set was wrong.** It accepted
+   `ECONNREFUSED`, `ECONNRESET` and `ENOBUFS`, which the authority's list does
+   **not** — that list is `EWOULDBLOCK`, `ENOTCONN`, `EINTR`, `EAGAIN`, `EPROTO`,
+   `EINPROGRESS`, `EALREADY`, identical to `BIO_fd_non_fatal_error`'s. The defect
+   is visible only through a *refused* `connect(2)`: the authority raises the
+   `BIO_connect` error pair and walks to its next address, where the candidate
+   treated the refusal as retryable and raised only its own error. `retry.rs` was
+   already right; `bss_sock.rs` now shares its predicate. The probe gained a
+   direct classifier table over sixteen `errno` values so the sets are compared
+   value for value.
+2. **`conn_state`'s info callback must observe the arm's result.** The authority
+   threads one `ret` variable through the state machine and hands it to the
+   callback, so the callback sees the descriptor a `CREATE_SOCKET` arm just made
+   and the 1-or-0 a `CONNECT` arm just returned. The first draft assigned the
+   results to locals and left `ret` at its initialised `-1`, so every callback
+   reported `-1` while the connection still succeeded — an observation only an
+   installed callback can make.
+3. **A C `switch` break is not a `goto exit_loop`.** `conn_state` uses `break` to
+   re-enter the machine *through* the callback and `goto exit_loop` to leave it.
+   The draft wrote both as one construct, which skipped the callback on one path —
+   and that mattered: a callback returning 0 stops the machine, so the authority
+   never reaches the terminal `CONNECT_ERROR` raise when a callback is installed,
+   and the draft raised a fourth error the authority does not.
+4. **`acpt_state` has two exits and the draft had one.** The authority's `goto end`
+   skips the cleanup and `goto exit_loop` runs it; three arms deliberately leave a
+   live descriptor parked in the BIO. Collapsing them closed the *accepted* socket
+   on the way out, so every read and write on the connection failed with `EBADF`.
+   The probe's round trip is what caught it: the client's write reported 4 bytes,
+   and the server's read reported `-1` with `errno` 9.
+
+### The two state machines, as reconstructed
+
+`conn_state` and `acpt_state` are transcribed as record types plus a loop whose
+arms reproduce the authority's `break`/`goto` structure exactly, including the
+error *marks*: `BIO_connect`'s non-retryable failure pops the mark it set, keeps
+the two errors it raised, and the terminal state raises again on the next pass —
+which is why a refused connect leaves three queue entries and not one. The accept
+machine's `LISTEN` arm returns success before accepting anything, `ACCEPT` with a
+chain already present is a successful no-op, and `OK` with no chain returns to
+`ACCEPT`, so one BIO serves a sequence of connections.
+
+### Non-claim
+
+`RT-BIO-CONN` passing means the candidate matched the authority for the controls,
+the two state machines, the callback sequences, the error queues and the loopback
+transfers it drove. It is not a claim about the datagram connect mode's DTLS use,
+nor about the `AF_UNIX` or `AF_INET6` paths, which the probe does not drive.
+
+**The inventory after this batch.** Phase 4 owns 256 exports and stands at **196
+implemented, 16 deferred to a named later phase, and 44 open** — the whole CONF
+subsystem, which is the last stratum of this phase:
+
+    src/runtime/conf/ 44   the CONF_* and NCONF_* families
+
+33 courts pass over 6,743 observations. Phase 0–3 remain `complete` and Phase 4
+remains `in-progress`.

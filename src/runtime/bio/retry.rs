@@ -15,12 +15,10 @@ use crate::ffi::guard_ffi;
 
 use super::sys;
 
-/// The retryable-`errno` set both classifiers share.
-///
-/// The authority writes one `switch` per function, conditioned on which macros
-/// its platform defines; on Linux the two lists differ only in `ENOTCONN`, which
-/// only the file-descriptor classifier accepts.
-const fn shared_non_fatal(err: c_int) -> bool {
+/// The retryable-`errno` set `BIO_dgram_non_fatal_error` accepts, and — with
+/// `ENOTCONN` added — the set `BIO_fd_non_fatal_error` and
+/// `BIO_sock_non_fatal_error` accept.
+pub(crate) const fn shared_non_fatal(err: c_int) -> bool {
     matches!(
         err,
         sys::EWOULDBLOCK |  // == EAGAIN on Linux; the authority guards the duplicate

@@ -26,12 +26,18 @@
 //!   returns `-2` for a retryable failure, which is neither a descriptor nor the
 //!   failure the caller might assume.
 //!
-//! Configuration notes, all from the admitted build rather than from taste: the
-//! TCP-Fast-Open branches (`OSSL_TFO_*`) are FreeBSD/macOS-only and are compiled out
-//! on Linux, as is the core `getaddrinfo` fallback; `IPV6_V6ONLY`, `SO_TYPE`,
-//! `SOL_TCP` and `FIONBIO` *are* defined, so those branches are live and their
-//! constants come from the container's headers (`SOMAXCONN` in particular is 4096
-//! here, not the 128 a reader might assume).
+//! Configuration notes, all from the admitted build record rather than from the
+//! platform: the authority was configured `no-tfo`, so **every** TCP-Fast-Open
+//! branch in this file is compiled out — `OSSL_TFO_*` is guarded by
+//! `TCP_FASTOPEN && !OPENSSL_NO_TFO`, and the option is disabled. The kernel
+//! headers define `TCP_FASTOPEN` and `TCP_FASTOPEN_CONNECT`, so inferring the
+//! profile from the headers alone gives the wrong answer; the build record does
+//! not. `no-ktls` is set for the same build, and it is why nothing here consults
+//! the kernel-TLS options either.
+//!
+//! What *is* live, from the container's headers: `IPV6_V6ONLY`, `SO_TYPE`,
+//! `SOL_TCP` and `FIONBIO`, and their constants are the platform's (`SOMAXCONN`
+//! in particular is 4096 here, not the 128 a reader might assume).
 
 use core::ffi::{c_char, c_int};
 use core::ptr;
@@ -170,8 +176,9 @@ pub unsafe extern "C" fn BIO_connect(sock: c_int, addr: *const BioAddr, options:
                 return 0;
             }
         }
-        // The authority's TCP-Fast-Open branch is compiled out here; see the module
-        // comment.
+        // `BIO_SOCK_TFO` is inert in this build profile: the authority was
+        // configured `no-tfo`, so the fast-open branch does not exist and the
+        // option is simply carried in `options` to `connect(2)` and below.
         // SAFETY: `addr` is NULL or live, and `sockaddr_size` reads only its family
         // word and the bytes that family implies.
         let rc = unsafe { sys::connect(sock, sockaddr(addr), sockaddr_size(addr)) };
@@ -372,6 +379,8 @@ pub unsafe extern "C" fn BIO_listen(sock: c_int, addr: *const BioAddr, options: 
                 return 0;
             }
         }
+        // The server-side fast-open `setsockopt` after `listen(2)` is compiled out
+        // by the same `no-tfo`.
         1
     })
 }

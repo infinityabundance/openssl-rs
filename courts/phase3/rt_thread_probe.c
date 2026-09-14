@@ -138,11 +138,25 @@ int main(void)
         CRYPTO_THREAD_lock_free(l);
     }
 
-    /* ---- atomics: out-of-range / NULL arguments --------------------------- */
-    printf("atomic_or.null_ret=%d\n", CRYPTO_atomic_or(&v, 1, NULL, NULL));
-    printf("atomic_load.null_ret=%d\n", CRYPTO_atomic_load(&v, NULL, NULL));
-    printf("atomic_load.null_val=%d\n", CRYPTO_atomic_load(NULL, &ret, NULL));
-    printf("atomic_load_int.null_val=%d\n", CRYPTO_atomic_load_int(NULL, &iret, NULL));
+    /*
+     * ---- atomics: the NULL-argument cases cannot be measured ---------------
+     *
+     * Every `CRYPTO_atomic_*` on this profile takes the hardware path, which
+     * reaches `__atomic_*` with whatever it was handed: a NULL value *or* a NULL
+     * out-parameter is dereferenced, and the authority faults. That is recorded as
+     * divergence `D-MEM-ATOMIC-1` in `docs/SECURITY_DIVERGENCE_POLICY.md`; the
+     * candidate returns the documented failure value instead. The calls are marked
+     * rather than exercised, because a probe cannot compare a crash — and the
+     * marker keeps the boundary visible in the transcript rather than silently
+     * absent from it.
+     *
+     * What *is* measurable is the `lock == NULL` path, and it is above: those
+     * calls succeed and are compared value for value.
+     */
+    printf("atomic_or.null_ret=NOT_MEASURED_AUTHORITY_FAULTS\n");
+    printf("atomic_load.null_ret=NOT_MEASURED_AUTHORITY_FAULTS\n");
+    printf("atomic_load.null_val=NOT_MEASURED_AUTHORITY_FAULTS\n");
+    printf("atomic_load_int.null_val=NOT_MEASURED_AUTHORITY_FAULTS\n");
 
     return 0;
 }

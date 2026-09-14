@@ -52,6 +52,10 @@
       "observations": 45,
       "verdict": "pass"
     },
+    "RT-BIO-CONN": {
+      "observations": 296,
+      "verdict": "pass"
+    },
     "RT-BIO-DEBUG": {
       "observations": 55,
       "verdict": "pass"
@@ -101,7 +105,7 @@
       "verdict": "pass"
     },
     "RT-LHASH": {
-      "observations": 53,
+      "observations": 56,
       "verdict": "pass"
     },
     "RT-MEM": {
@@ -121,7 +125,7 @@
       "verdict": "pass"
     },
     "RT-THREAD": {
-      "observations": 36,
+      "observations": 40,
       "verdict": "pass"
     },
     "libcrypto-contamination": {
@@ -134,12 +138,12 @@
     "phase4": 16
   },
   "implemented": {
-    "libcrypto": 404,
+    "libcrypto": 408,
     "libssl": 0
   },
   "open_obligations": {
     "phase3": 0,
-    "phase4": 48
+    "phase4": 44
   },
   "phases": {
     "0": "complete",

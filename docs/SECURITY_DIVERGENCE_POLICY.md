@@ -255,3 +255,23 @@ observations that *can* be made around each boundary are compared normally.
 - **Claim removed:** not claimed compatible. Note that `BIO_get_host_ip(NULL, ip)`
   **is** defined and matched: a NULL *host* is legal for the resolver, which returns
   the loopback, and the authority raises and appends `host=<NULL>`.
+
+### D-LHASH-2 — `OPENSSL_LH_stats_bio` and friends dereference a NULL table
+
+- **Obligation:** `OPENSSL_LH_stats_bio(NULL, out)`,
+  `OPENSSL_LH_node_stats_bio(NULL, out)`, `OPENSSL_LH_node_usage_stats_bio(NULL,
+  out)` and the `FILE *` forms with a NULL table.
+- **Authority:** faults. Every one of them reads `lh->num_items` (or `lh->num_nodes`)
+  before doing anything else, so the NULL table is dereferenced immediately. Unlike
+  `D-LHASH-1` this is not a thunk that a generated accessor would have installed —
+  there is no configuration in which a NULL table is readable. Measured directly
+  against the authority: `OPENSSL_LH_stats_bio(NULL, b)` segfaults while
+  `OPENSSL_LH_stats_bio(lh, NULL)` survives, because the BIO layer's write path
+  tolerates a NULL `BIO *` and the table is never reached.
+- **Candidate:** total. A NULL table writes nothing and returns, and `RT-LHASH`
+  records the boundary as `stats.null_table=NOT_MEASURED_AUTHORITY_FAULTS` rather
+  than calling it, because a probe cannot compare a crash.
+- **Reason:** a NULL dereference is not a contract to reproduce.
+- **Claim removed:** the behaviour of these entry points with a NULL table is not
+  claimed compatible; it is claimed *safe*. The NULL-*destination* forms **are**
+  matched and compared, and `RT-LHASH` asserts them.

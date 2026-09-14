@@ -5,6 +5,7 @@
   "candidate_observations": 38,
   "candidate_stderr_tail": [],
   "court": "RT-EXDATA",
+  "crashed": false,
   "probe": "court/phase3/rt_exdata_probe.candidate",
   "residual_count": 0,
   "residuals": [],

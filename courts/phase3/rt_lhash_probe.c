@@ -227,9 +227,19 @@ int main(void)
         emit_lines("stats.file", filebuf);
         free(filebuf);
 
-        /* A NULL table and a NULL destination must not crash. */
-        OPENSSL_LH_stats_bio(NULL, b);
-        printf("stats.null_table=1\n");
+        /*
+         * A NULL *destination* is tolerated and worth recording.
+         *
+         * A NULL *table* is not: every `OPENSSL_LH_stats_bio` dereferences `lh`
+         * immediately, so `OPENSSL_LH_stats_bio(NULL, b)` faults in the authority.
+         * That is a fault boundary, not a documented failure, so the candidate
+         * must not copy it — it returns without writing, and that is recorded as a
+         * safety divergence in `docs/SECURITY_DIVERGENCE_POLICY.md`. The call is
+         * not exercised here because a probe cannot compare a crash, and the line
+         * is kept as a visible marker so the boundary is not silently absent from
+         * the transcript.
+         */
+        printf("stats.null_table=NOT_MEASURED_AUTHORITY_FAULTS\n");
         OPENSSL_LH_stats_bio(lh, NULL);
         printf("stats.null_bio=1\n");
 

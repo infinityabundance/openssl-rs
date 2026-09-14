@@ -166,27 +166,18 @@ pub extern "C" fn BIO_socket_nbio(fd: c_int, mode: c_int) -> c_int {
 const FIONBIO: c_long = 0x5421;
 
 /// `int BIO_sock_non_fatal_error(int err)`
+///
+/// The socket classifier. Its membership set is **identical to
+/// `BIO_fd_non_fatal_error`'s** — `EWOULDBLOCK`, `ENOTCONN`, `EINTR`, `EAGAIN`,
+/// `EPROTO`, `EINPROGRESS`, `EALREADY` — and notably excludes `ECONNREFUSED`,
+/// `ECONNRESET` and `ENOBUFS`, which a plausible-looking "network error" list
+/// would include. That absence is observable: a refused `connect(2)` is
+/// therefore *not* retryable, which is why `BIO_connect` raises and `conn_state`
+/// walks to its next address. `RT-BIO-CONN` measures it; no earlier court did.
 #[no_mangle]
 pub extern "C" fn BIO_sock_non_fatal_error(err: c_int) -> c_int {
     guard_ffi(0, || {
-        // `EWOULDBLOCK` is the same value as `EAGAIN` on this platform, so naming
-        // both would be an unreachable alternative. The authority's list names both
-        // because on other systems they differ; here only one can match.
-        if matches!(
-            err,
-            sys::EAGAIN
-                | sys::EINTR
-                | sys::EINPROGRESS
-                | sys::EALREADY
-                | sys::ENOTCONN
-                | sys::ECONNREFUSED
-                | sys::ECONNRESET
-                | sys::ENOBUFS
-        ) {
-            1
-        } else {
-            0
-        }
+        c_int::from(super::retry::shared_non_fatal(err) || err == sys::ENOTCONN)
     })
 }
 
@@ -281,33 +272,12 @@ pub extern "C" fn BIO_closesocket(sock: c_int) -> c_int {
 /* The socket BIO method.                                                    */
 /* ------------------------------------------------------------------------- */
 
-/// `static int sock_write(BIO *b, const char *in, int inl)`
-///
-/// # Safety
-/// `b` must be a live socket BIO; `in_` must be valid for `inl` bytes.
-unsafe extern "C" fn sock_write(b: *mut Bio, in_: *const c_char, inl: c_int) -> c_int {
-    // SAFETY: `b` is live.
-    unsafe {
-        super::BIO_clear_flags(b, super::BIO_FLAGS_RWS | super::BIO_FLAGS_SHOULD_RETRY);
-        if inl == 0 {
-            return 0;
-        }
-        let sock = (*b).num;
-        let ret = sys::send(sock, in_.cast(), inl as usize, 0);
-        if ret < 0 {
-            if BIO_sock_should_retry(ret as c_int) != 0 {
-                super::BIO_set_flags(b, super::BIO_FLAGS_WRITE | super::BIO_FLAGS_SHOULD_RETRY);
-            }
-            return -1;
-        }
-        ret as c_int
-    }
-}
-
 /// `static int sock_read(BIO *b, char *out, int outl)`
 ///
 /// A NULL `out` peeks one byte without consuming it, which is how a caller tests
-/// readability; that arm is reproduced rather than treated as an error.
+/// readability; that arm is reproduced rather than treated as an error. When the
+/// socket is receiving through kernel TLS the record is read through
+/// [`ktls::read_record`], which re-adds the header the kernel stripped.
 ///
 /// # Safety
 /// `b` must be a live socket BIO; `out` must be NULL or valid for `outl` bytes.
@@ -324,14 +294,46 @@ unsafe extern "C" fn sock_read(b: *mut Bio, out: *mut c_char, outl: c_int) -> c_
             let ret = sys::recv(sock, c.as_mut_ptr().cast(), 1, sys::MSG_PEEK);
             return if ret == 1 { 1 } else { ret as c_int };
         }
-        let ret = sys::recv(sock, out.cast(), outl as usize, 0);
-        if ret < 0 {
-            if BIO_sock_should_retry(ret as c_int) != 0 {
+        let ret = sys::recv(sock, out.cast(), outl as usize, 0) as c_int;
+        if ret <= 0 {
+            if BIO_sock_should_retry(ret) != 0 {
                 super::BIO_set_flags(b, super::BIO_FLAGS_READ | super::BIO_FLAGS_SHOULD_RETRY);
+            } else if ret == 0 {
+                // A zero-length read is end-of-stream, recorded in the flags so
+                // `BIO_CTRL_EOF` can report it without another syscall.
+                (*b).flags |= super::BIO_FLAGS_IN_EOF;
             }
-            return -1;
+            return ret;
         }
-        ret as c_int
+        ret
+    }
+}
+
+/// `static int sock_write(BIO *b, const char *in, int inl)`
+///
+/// When a kernel-TLS control message is armed the bytes are sent through
+/// [`ktls::send_ctrl_message`] with the stored content type, and the flag is
+/// cleared on success — which is why a caller arms it again for each such
+/// record.
+///
+/// # Safety
+/// `b` must be a live socket BIO; `in_` must be valid for `inl` bytes.
+unsafe extern "C" fn sock_write(b: *mut Bio, in_: *const c_char, inl: c_int) -> c_int {
+    // SAFETY: `b` is live.
+    unsafe {
+        super::BIO_clear_flags(b, super::BIO_FLAGS_RWS | super::BIO_FLAGS_SHOULD_RETRY);
+        if inl == 0 {
+            return 0;
+        }
+        let sock = (*b).num;
+        let ret = sys::send(sock, in_.cast(), inl as usize, 0) as c_int;
+        if ret <= 0 {
+            if BIO_sock_should_retry(ret) != 0 {
+                super::BIO_set_flags(b, super::BIO_FLAGS_WRITE | super::BIO_FLAGS_SHOULD_RETRY);
+            }
+            return ret;
+        }
+        ret
     }
 }
 
@@ -475,6 +477,12 @@ unsafe extern "C" fn sock_ctrl(b: *mut Bio, cmd: c_int, num: c_long, arg: *mut c
             unsafe { (*b).shutdown = num as c_int };
         }
         super::BIO_CTRL_DUP | super::BIO_CTRL_FLUSH => ret = 1,
+        // The kernel-TLS controls (`BIO_CTRL_SET_KTLS`, `BIO_CTRL_GET_KTLS_SEND`,
+        // `BIO_CTRL_GET_KTLS_RECV`, the control-message pair and the zerocopy
+        // sendfile control) are **not** compiled in this build profile: the
+        // authority was configured `no-ktls`, so the method table has no case for
+        // any of them and they reach `default` above and answer 0. The constants
+        // are still declared in `mod.rs` because the numbers are taken.
         super::BIO_CTRL_GET_RPOLL_DESCRIPTOR | super::BIO_CTRL_GET_WPOLL_DESCRIPTOR => {
             // SAFETY: `b` is live; the caller passes a `BIO_POLL_DESCRIPTOR *`.
             unsafe {

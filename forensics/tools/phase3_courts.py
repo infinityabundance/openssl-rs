@@ -82,7 +82,14 @@ COURTS = [
 
 def compile_probe(src: Path, out: Path, include: Path, libdir: Path) -> tuple[bool, str]:
     res = run([
-        "clang", "-std=c11", "-Wall", "-O1",
+        # `-D_GNU_SOURCE` is required, not optional: `rt_lhash_probe.c` captures a
+        # `FILE *` report through `open_memstream`, which `<stdio.h>` only declares
+        # under that macro. Without it the call is implicitly declared as returning
+        # `int`, the pointer is truncated, and the probe writes through a bogus
+        # `FILE *` — which crashed both sides identically and so looked like
+        # agreement until the exit code was checked. The Phase 4 court already
+        # passed it.
+        "clang", "-std=c11", "-Wall", "-O1", "-D_GNU_SOURCE",
         "-I", str(include),
         "-o", str(out), str(src),
         "-L", str(libdir), "-lcrypto",
@@ -175,6 +182,7 @@ def court(name: str, src: Path, auth, work: Path) -> dict:
                 "detail": {"exit_code": a_code, "stderr": a_err.splitlines()[:12]}}
 
     residuals = diff(a_out, c_out)
+    crashed = a_code is None or a_code < 0 or c_code is None or c_code < 0
     record = {
         "court": name,
         "probe": rel(src),
@@ -184,7 +192,15 @@ def court(name: str, src: Path, auth, work: Path) -> dict:
         "candidate_observations": len([l for l in c_out.splitlines() if "=" in l]),
         "residual_count": len(residuals),
         "residuals": residuals,
-        "verdict": "pass" if not residuals and c_code == a_code else "fail",
+        # A probe that died on a signal compared nothing beyond the prefix it
+        # printed, so two sides dying the same way is not agreement; see the
+        # longer note in phase4_courts.py.
+        "crashed": crashed,
+        "verdict": (
+            "pass"
+            if not residuals and c_code == a_code and not crashed
+            else "fail"
+        ),
         "staged_binaries": staged,
         # stderr is diagnostics, not contract: it carries the internal allocation
         # counts and the tool's own warnings, which are legitimately different.

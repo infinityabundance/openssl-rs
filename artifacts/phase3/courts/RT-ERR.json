@@ -5,6 +5,7 @@
   "candidate_observations": 3857,
   "candidate_stderr_tail": [],
   "court": "RT-ERR",
+  "crashed": false,
   "probe": "court/phase3/rt_err_probe.candidate",
   "residual_count": 0,
   "residuals": [],

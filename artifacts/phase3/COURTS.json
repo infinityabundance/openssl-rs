@@ -14,6 +14,7 @@
           "counts.malloc=34 realloc=1 free=20 live=14"
         ],
         "court": "RT-MEM",
+        "crashed": false,
         "probe": "court/phase3/rt_mem_probe.candidate",
         "residual_count": 0,
         "residuals": [],
@@ -30,6 +31,7 @@
         "candidate_observations": 38,
         "candidate_stderr_tail": [],
         "court": "RT-EXDATA",
+        "crashed": false,
         "probe": "court/phase3/rt_exdata_probe.candidate",
         "residual_count": 0,
         "residuals": [],
@@ -46,6 +48,7 @@
         "candidate_observations": 3857,
         "candidate_stderr_tail": [],
         "court": "RT-ERR",
+        "crashed": false,
         "probe": "court/phase3/rt_err_probe.candidate",
         "residual_count": 0,
         "residuals": [],
@@ -62,6 +65,7 @@
         "candidate_observations": 159,
         "candidate_stderr_tail": [],
         "court": "RT-STACK",
+        "crashed": false,
         "probe": "court/phase3/rt_stack_probe.candidate",
         "residual_count": 0,
         "residuals": [],
@@ -72,14 +76,13 @@
         "verdict": "pass"
       },
       {
-        "authority_exit_code": -11,
-        "authority_observations": 36,
-        "candidate_exit_code": -11,
-        "candidate_observations": 36,
-        "candidate_stderr_tail": [
-          "timeout: the monitored command dumped core"
-        ],
+        "authority_exit_code": 0,
+        "authority_observations": 40,
+        "candidate_exit_code": 0,
+        "candidate_observations": 40,
+        "candidate_stderr_tail": [],
         "court": "RT-THREAD",
+        "crashed": false,
         "probe": "court/phase3/rt_thread_probe.candidate",
         "residual_count": 0,
         "residuals": [],
@@ -96,6 +99,7 @@
         "candidate_observations": 32,
         "candidate_stderr_tail": [],
         "court": "RT-SECURE",
+        "crashed": false,
         "probe": "court/phase3/rt_secure_probe.candidate",
         "residual_count": 0,
         "residuals": [],
@@ -106,14 +110,13 @@
         "verdict": "pass"
       },
       {
-        "authority_exit_code": -11,
-        "authority_observations": 53,
-        "candidate_exit_code": -11,
-        "candidate_observations": 53,
-        "candidate_stderr_tail": [
-          "timeout: the monitored command dumped core"
-        ],
+        "authority_exit_code": 0,
+        "authority_observations": 56,
+        "candidate_exit_code": 0,
+        "candidate_observations": 56,
+        "candidate_stderr_tail": [],
         "court": "RT-LHASH",
+        "crashed": false,
         "probe": "court/phase3/rt_lhash_probe.candidate",
         "residual_count": 0,
         "residuals": [],
@@ -130,7 +133,7 @@
       "total": 7
     }
   },
-  "body_hash": "22adfe2cf84772faf65c4b47c64fbe774423b374dfda67566479d954d8234c72",
+  "body_hash": "503aaec0c27d03d6e3e1c7a3288a9242bc6002a5b1c1d609c30833a64aafe18b",
   "generator": "forensics/tools/phase3_courts.py",
   "inputs": [],
   "kind": "phase3-courts",
