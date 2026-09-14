@@ -3,9 +3,9 @@
   "body": {
     "complete": false,
     "counts": {
-      "deferred_to_later_phase": 15,
-      "implemented": 184,
-      "open_in_this_stratum": 57,
+      "deferred_to_later_phase": 16,
+      "implemented": 186,
+      "open_in_this_stratum": 54,
       "owned": 256
     },
     "deferred": [
@@ -38,6 +38,12 @@
         "owning_phase": 5,
         "reason": "its only controls are ASN.1 prefix/suffix functions; ASN.1 is Phase 5",
         "symbol": "BIO_f_asn1"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "owning_phase": 7,
+        "reason": "wraps an EVP_ENCODE_CTX; the codec is EVP, Phase 7",
+        "symbol": "BIO_f_base64"
       },
       {
         "module": "src/runtime/bio/",
@@ -248,6 +254,7 @@
       "BIO_method_name",
       "BIO_method_type",
       "BIO_new",
+      "BIO_new_bio_pair",
       "BIO_new_ex",
       "BIO_new_fd",
       "BIO_new_file",
@@ -270,6 +277,7 @@
       "BIO_read",
       "BIO_read_ex",
       "BIO_recvmmsg",
+      "BIO_s_bio",
       "BIO_s_fd",
       "BIO_s_file",
       "BIO_s_log",
@@ -327,19 +335,11 @@
     "open": [
       {
         "module": "src/runtime/bio/",
-        "symbol": "BIO_f_base64"
-      },
-      {
-        "module": "src/runtime/bio/",
         "symbol": "BIO_new_accept"
       },
       {
         "module": "src/runtime/bio/",
         "symbol": "BIO_new_bio_dgram_pair"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_new_bio_pair"
       },
       {
         "module": "src/runtime/bio/",
@@ -352,10 +352,6 @@
       {
         "module": "src/runtime/bio/",
         "symbol": "BIO_s_accept"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_s_bio"
       },
       {
         "module": "src/runtime/bio/",
@@ -565,7 +561,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "79469f5db1059e5e9ee84916e38994f01984289ba2d75e4965e16ee01635227c"
+      "sha256": "bc2a321bbd321067a0e9e592040eea42ecaa82738b6350460886801170a9f2c6"
     }
   ],
   "kind": "phase4-obligations",

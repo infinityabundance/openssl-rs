@@ -63,6 +63,7 @@ pub mod bf_prefix;
 pub mod bf_readbuff;
 pub mod bio_cb;
 pub mod bio_sock2;
+pub mod bss_bio;
 pub mod bss_fd;
 pub mod bss_file;
 pub mod bss_log;
@@ -1583,6 +1584,7 @@ pub use bio_sock2::{
     BIO_accept, BIO_accept_ex, BIO_bind, BIO_connect, BIO_get_accept_socket, BIO_listen,
     BIO_set_tcp_ndelay, BIO_sock_info, BIO_socket,
 };
+pub use bss_bio::{BIO_new_bio_pair, BIO_s_bio};
 pub use bss_fd::{BIO_new_fd, BIO_s_fd};
 pub use bss_file::{BIO_new_file, BIO_new_fp, BIO_s_file};
 pub use bss_log::BIO_s_log;

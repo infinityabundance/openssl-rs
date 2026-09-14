@@ -24,7 +24,7 @@ renderer does not know any phase status.
 | 1 | Complete archaeology / API / ABI atlas | `complete` |  |
 | 2 | Distribution / ABI shell | `complete` |  |
 | 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `complete` |  |
-| 4 | BIO + CONF + object database | `in-progress` | 57 open obligation(s) of this stratum recorded in forensics/phase4-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
+| 4 | BIO + CONF + object database | `in-progress` | 54 open obligation(s) of this stratum recorded in forensics/phase4-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
 
 Not started: strata 5-21 (17 total).
 
@@ -79,9 +79,9 @@ that name is defined, nothing more.
 
 | library | exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 396 | 5500 |
+| libcrypto | 5896 | 398 | 5498 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **396** | **6103** |
+| **total** | **6499** | **398** | **6101** |
 
 ### Phase 3 obligation ledger
 

@@ -64,6 +64,10 @@
       "observations": 114,
       "verdict": "pass"
     },
+    "RT-BIO-PAIR": {
+      "observations": 111,
+      "verdict": "pass"
+    },
     "RT-BIO-PRINT": {
       "observations": 213,
       "verdict": "pass"
@@ -115,15 +119,15 @@
   },
   "deferred": {
     "phase3": 1,
-    "phase4": 15
+    "phase4": 16
   },
   "implemented": {
-    "libcrypto": 396,
+    "libcrypto": 398,
     "libssl": 0
   },
   "open_obligations": {
     "phase3": 0,
-    "phase4": 57
+    "phase4": 54
   },
   "phases": {
     "0": "complete",

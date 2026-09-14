@@ -72,6 +72,9 @@ DEFERRED: dict[str, tuple[int, str]] = {
     "BIO_f_cipher": (7, "wraps an EVP_CIPHER_CTX; EVP is Phase 7"),
     "BIO_f_reliable": (7, "wraps EVP_AES_256_CBC message authentication; EVP is Phase 7"),
     "BIO_set_cipher": (7, "sets the EVP_CIPHER of a BIO_f_cipher; EVP is Phase 7"),
+    # The base64 filter is a wrapper over EVP_ENCODE_CTX and the EVP_ENCODE_*
+    # codec, both of which are EVP surface.
+    "BIO_f_base64": (7, "wraps an EVP_ENCODE_CTX; the codec is EVP, Phase 7"),
     # ASN.1 owns the prefix/suffix compiler feature the ASN.1 BIO exists for.
     "BIO_f_asn1": (5, "its only controls are ASN.1 prefix/suffix functions; ASN.1 is Phase 5"),
     "BIO_asn1_set_prefix": (5, "ASN.1 prefix/suffix compiler hooks; ASN.1 is Phase 5"),

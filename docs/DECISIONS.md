@@ -1317,3 +1317,50 @@ for the byte movements, retained counts, control returns and error queue the
 probe exercises over memory sources. It is not a claim about the filters over a
 socket or a FILE, nor about the buffer-size controls at sizes the probe does not
 use.
+
+## D43 — The in-process BIO pair, and `BIO_f_base64`'s real dependency
+
+**Decision.** `BIO_s_bio` and `BIO_new_bio_pair` are implemented (`bss_bio.rs`)
+and courted by a new `RT-BIO-PAIR` (111 observations, passing, zero residuals on
+its first run). `BIO_f_base64` is **deferred to Phase 7**: its context embeds an
+`EVP_ENCODE_CTX` and its read/write paths call the `EVP_Encode*`/`EVP_Decode*`
+codec, so it is EVP surface in the same way `BIO_f_md` and `BIO_f_cipher` are.
+Phase 4 is now implemented 186 / deferred 16 / open 54 of 256 owned; the baseline
+is 29 courts and 5,914 observations; `implemented` `libcrypto` exports move
+396 -> 398.
+
+**What the pair court established.** A BIO pair is two ring buffers, and its
+contract is the retry protocol rather than the bytes:
+
+* an empty read returns `-1` with the read retry flag set **and records the
+  requested size on the peer**; the request is clamped to the peer's buffer size,
+  so `BIO_read(b, buf, 100000)` records `17408` (17 KiB, the default) while
+  `BIO_read(b, buf, 32)` records `32`;
+* a write into a nearly full ring is **partial, not refused**:
+  `BIO_write(a, "ijklmn", 6)` into four free bytes returns **4**, and
+  `BIO_ctrl(BIO_CTRL_WPENDING)` becomes 8. Only a completely full buffer returns
+  `-1` with the write retry flag;
+* the ring wraps: writing eight, reading four and writing six again makes the
+  write head pass the end of the buffer, and reading everything back gives
+  `efghijkl` — which a flat-buffer implementation would also produce, but only
+  because it had silently reordered the copy. The two-step sequence is what makes
+  the split observable;
+* `BIO_ctrl(BIO_CTRL_PENDING)` reports the **peer's** length while
+  `BIO_CTRL_WPENDING` reports this endpoint's own;
+* a write after the peer shut down its send side raises `BIO_R_BROKEN_PIPE`
+  (reason 92) and returns `-1`, while a **read** on a closed-and-empty peer
+  returns `0` and raises nothing at all;
+* `BIO_ctrl(BIO_C_SET_WRITE_BUF_SIZE)` refuses on a paired BIO
+  (`BIO_R_IN_USE`) and refuses a zero size (`BIO_R_INVALID_ARGUMENT`), with the
+  two different reasons at two different coordinates;
+* an **unpaired** BIO is not initialised — `bio_new` allocates the context but
+  never sets `init` — so `BIO_read` and `BIO_write` answer `-1` with
+  `BIO_R_UNINITIALIZED` from the public wrappers, while its controls report the
+  unpaired defaults (`EOF` 1, pending 0). That asymmetry between a method that
+  returns early and a wrapper that raises first is why `ctl.raw.*` is in the
+  probe.
+
+**Non-claim.** `RT-BIO-PAIR` passing means the candidate matched the authority for
+the buffer arithmetic, retry flags, request recording, control refusals and error
+queue the probe exercises. It is not a claim about a pair used as an SSL channel,
+nor about `BIO_nread`/`BIO_nwrite` beyond the sequences driven here.
