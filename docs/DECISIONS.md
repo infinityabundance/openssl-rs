@@ -777,3 +777,60 @@ treated as though it were evidence — and D30's own remedy (normalise, report, 
 compare only what must be reproducible) would apply here as "do not track it". Not
 recording the observation would lose the finding; acting on it unasked would change
 what the Phase 2 seal's `install/` row means.
+
+---
+
+## D33 — The symbol table is read in Python, because `nm` is machine-dependent
+
+**Decision.** The implemented surface is derived by reading the **native ELF symbol
+tables** directly (`forensics/tools/elf_symbols.py`), not by running `nm`. The
+reader is deliberately narrow — ELFCLASS64, little-endian, `ar` archives and single
+objects — and raises `ElfError` on anything else rather than guessing. `nm` is no
+longer in the evidence path, and `internal_symbols.nm_diagnostic_lines` is gone
+with it, leaving two normalised build-product fields instead of three.
+
+**Why.** D30 fixed the *parse* of `nm`'s output; this fixes the choice of `nm`
+itself. Rust objects carry LLVM bitcode beside their machine code, and binutils
+reads that bitcode through a plugin whose availability depends on the host. Where
+the plugin works, `nm` additionally reports symbols that exist only in the
+bitcode; where it does not, `nm` reports the native table alone (and prints
+`bfd plugin: LLVM gold plugin has failed to create LTO module: ...`). So the same
+archive yields different answers on different machines. The evidence: CI reported
+`internal_symbols.c_style: 39 entries vs 260` with the extra 221 being
+`compiler_builtins` definitions (`__adddf3`, `__addhf3`, ...), and the court's `nm`
+printed `nm: memchr-...rcgu.o: no symbols` for a member whose `.symtab` in fact
+defines 29 external symbols.
+
+**Evidence that the reader is right.**
+
+1. The court's own `nm` is the lossy one: a member it calls "no symbols" carries 29
+   defined external symbols.
+2. Reading `.symtab` in Python yields **260** C-identifier internals — *exactly*
+   the number the plugin-enabled `nm` on the CI runner produced. Two independent
+   readers on two machines now agree.
+3. The `ar` walk is correct: 346 payloads for 346 `ar t` entries, every payload a
+   valid ELF object, and the reader agrees with `nm` byte-for-byte on both a single
+   extracted object and the `.rlib`.
+4. `implemented` did not move: 345 before and after, on every path.
+
+**Consequence.** The reader's set is a superset of the court's old `nm` set, and the
+new members are Rust-mangled dependency symbols plus `compiler_builtins` and
+`math` intrinsics (`__adddf3`, `cbrt`, `fabs`, `sqrt`, ...). Those are real C
+identifiers that a *static* link against `libcrypto.a` could collide with, and they
+are now visible in `internal_symbols.c_style` instead of being hidden by the
+reader — which is the kind of thing `local: *;` exists to contain for the shared
+object (and `ABI-SYMBOL` verifies it does). The `c_style` list is compared exactly.
+
+**Non-claim.** No parity claim changes. This makes the artefact a function of the
+archive rather than of the machine that inspects it.
+
+**Enforcement.** A fix that nothing tests is a fix that will be undone, and
+`evidence_determinism.py` structurally cannot catch this defect class: on any single
+machine the generator and the committed artefact both use that machine's `nm` and
+agree. So `forensics/tools/check_evidence_portability.py` stubs `nm`, `objdump`,
+`readelf`, `ar` and `file` out of `PATH`, re-runs the whole generator chain, and
+requires all six compared artefacts to be byte-identical anyway. It then runs a
+seeded generator that *does* call `nm` through the same mechanism and fails unless
+that is reported as a failure, so the gate carries its own sensitivity control on
+every invocation rather than asserting one in prose. It is wired into the `static`
+CI job.

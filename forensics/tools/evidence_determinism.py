@@ -10,11 +10,9 @@ byte-identical when regenerated. A few *fields* are not, because they record the
   * `inputs[name=crate-archive|extra-object].sha256` in
     `forensics/atlas/implemented-surface.json`. A Rust static archive is not
     guaranteed byte-reproducible across build environments.
-  * `internal_symbols.compiler_emitted_count` and
-    `internal_symbols.nm_diagnostic_lines` in the same artefact. Which global
-    symbols a toolchain emits, and how many diagnostics its object reader
-    prints, are properties of that toolchain: most of the archive's symbol
-    population is LLVM-internalised anonymous data named
+  * `internal_symbols.compiler_emitted_count` in the same artefact. Which global
+    symbols a toolchain emits is a property of that toolchain: most of the
+    archive's symbol population is LLVM-internalised anonymous data named
     `anon.<hash>.<n>.llvm.<hash>`, and those hashes change from build to build.
     The *names* are not recorded at all for this reason; the stable C-identifier
     subset is (`internal_symbols.c_style`) and **is** compared exactly.
@@ -88,7 +86,7 @@ NORMALISED_COUNT = "<build-product-count-normalised>"
 BUILD_PRODUCT_INPUT_NAMES = frozenset({"crate-archive", "extra-object"})
 
 # `body.internal_symbols.<field>` values that are build products, by field name.
-BUILD_PRODUCT_SYMBOL_FIELDS = ("compiler_emitted_count", "nm_diagnostic_lines")
+BUILD_PRODUCT_SYMBOL_FIELDS = ("compiler_emitted_count",)
 
 # How many differences to print before truncating. Enough to diagnose, bounded
 # so a wholesale drift does not produce an unreadable wall of text.
@@ -231,7 +229,7 @@ def main(argv: list[str]) -> int:
               "environments, and the archive's compiler-emitted symbol population "
               "is a property of the toolchain;")
         print("  every other field is compared exactly "
-              "(docs/DECISIONS.md D30).")
+              "(docs/DECISIONS.md D30, D33).")
 
     if problems:
         print(f"[evidence-determinism] FAIL: {len(problems)} stale artefact(s)")

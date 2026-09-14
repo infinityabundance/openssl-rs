@@ -59,8 +59,8 @@ real and the debt should stay visible until it is paid.
 ### `static` — no authority required
 
 Formatting, build, unit tests, the forbidden-dependency gate, a check that the
-crate still declares no dependencies, **evidence determinism**, and the regression
-guard over the committed court results.
+crate still declares no dependencies, **evidence determinism**, **evidence
+portability**, and the regression guard over the committed court results.
 
 Evidence determinism is the load-bearing step: every generated artefact
 (`implemented-surface.json`, the two obligation ledgers, `phase-state.json`,
@@ -69,22 +69,39 @@ compared against the committed copy. If a committed artefact is stale relative t
 its generator, every claim built on it is unverifiable, so staleness is a hard
 failure rather than a warning.
 
-The comparison is *not* a plain `git diff`, and the reason matters. Three fields
+The comparison is *not* a plain `git diff`, and the reason matters. Two fields
 record the **build product** rather than a committed input:
 
 | field | why it is a build product |
 |---|---|
 | `inputs[name=crate-archive\|extra-object].sha256` | a Rust static archive is not byte-reproducible across build environments |
 | `internal_symbols.compiler_emitted_count` | most of the archive's symbols are LLVM-internalised anonymous data (`anon.<hash>.<n>.llvm.<hash>`) whose names change per build |
-| `internal_symbols.nm_diagnostic_lines` | how many diagnostics `nm` prints depends on the host's binutils and LTO plugin |
 
-Those three are normalised, and the tool **prints exactly which of them it
+Those two are normalised, and the tool **prints exactly which of them it
 normalised** so the exception is visible rather than silent. Everything else —
 every count, every symbol name, every phase state, every obligation — is compared
-exactly. The `internal_symbols.c_style` subset (the names a consumer's own symbols
-could collide with) *is* compared exactly; only the compiler-emitted population is
-not, which is why it is recorded as a count and not as names. See
-`docs/DECISIONS.md` D30.
+exactly. The `internal_symbols.c_style` subset (the 260 plain C identifiers a
+consumer's own symbols could collide with) *is* compared exactly; only the
+compiler-emitted population is not, which is why it is recorded as a count and not
+as names.
+
+Symbol tables are read by `forensics/tools/elf_symbols.py`, not by `nm`. A host's
+`nm` reads Rust's LLVM bitcode through a plugin whose availability varies, so the
+same archive yielded 39 C-identifier internals in the court and 260 on the CI
+runner. The native `.symtab` is the thing the shell must reason about and it is a
+function of the archive alone. See `docs/DECISIONS.md` D30 and D33.
+
+### Evidence portability
+
+Determinism cannot catch a generator that depends on the host's binutils: on any
+one machine both sides use whatever `nm` that machine has and agree. So
+`check_evidence_portability.py` stubs `nm`, `objdump`, `readelf`, `ar` and `file`
+out of `PATH`, re-runs the whole generator chain, and requires all six compared
+artefacts to be byte-identical anyway.
+
+The gate then tests itself: it runs a seeded generator that *does* call `nm`
+through the same mechanism and fails unless that is reported as a failure. A check
+that cannot detect the defect class it claims to cover is not evidence.
 
 ### `courts` — the authority-backed behavioural gate
 

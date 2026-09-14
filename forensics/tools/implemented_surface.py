@@ -38,6 +38,11 @@ are not recorded as names. What is recorded and compared exactly is the subset a
 consumer's own symbols could actually collide with: plain C identifiers. The
 compiler-emitted population is kept only as a declared build-product count, which
 `evidence_determinism.py` normalises and reports (docs/DECISIONS.md D30).
+
+The symbol tables are read by `elf_symbols.py` rather than by `nm`, because a
+host's `nm` may read Rust's LLVM bitcode and report symbols the object does not
+define natively -- a reader-dependent symbol set, which is what made CI and the
+court disagree (docs/DECISIONS.md D33).
 """
 
 from __future__ import annotations
@@ -45,7 +50,6 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import subprocess
 import sys
 from pathlib import Path
 
@@ -63,6 +67,7 @@ from atlas_common import (  # noqa: E402
     write_json,
     authority_atlas_dir,
 )
+from elf_symbols import defined_external_symbols  # noqa: E402
 
 # The distribution artifacts and the symbol namespaces they carry. Kept here
 # rather than parameterised because the *separation* (libcrypto vs libssl as two
@@ -72,37 +77,17 @@ LIBRARIES = ("libcrypto", "libssl")
 DEFAULT_ARCHIVE = REPO_ROOT / "target" / "release" / "libopenssl_rs.a"
 OUT = REPO_ROOT / "forensics" / "atlas" / "implemented-surface.json"
 
-# --- reading `nm` without reading its diagnostics as symbols -----------------
+# --- symbol tables -----------------------------------------------------------
 #
-# `nm` interleaves its own diagnostics into the same stream a parser would take
-# symbols from. With `--format=posix` an archive member is announced with a
-# single-field "<archive>[<member>]" line, and the bfd LTO plugin writes
-# "bfd plugin: LLVM gold plugin has failed to create LTO module: ..." to stdout.
+# Read via `elf_symbols.py`, never via `nm`. See that module's header: a host's
+# binfmt plugin may read Rust's LLVM bitcode, so `nm` reports more symbols on one
+# machine than another for the *same* archive. The native `.symtab` is what the
+# shell must reason about, and it is a function of the archive alone.
 #
-# The previous parse took the third whitespace field of *any* line with three or
-# more fields. For the plugin diagnostic above that field is the word "LLVM", so
-# a compiler diagnostic was recorded as a defined symbol. How many such lines
-# appear depends on the host's binutils and on its LTO plugin, which made the
-# recorded surface differ between two machines for reasons that had nothing to do
-# with the crate -- the reason CI disagreed with the court.
-#
-# So records are recognised by *shape*: POSIX emits "name type value [size]",
-# which is 3 or 4 fields with a one-character type and a hexadecimal value. Every
-# other line must be a known diagnostic class or a hard error. Silently dropping
-# (or inventing) a symbol is the one failure mode this must not have: a dropped
-# symbol would make the shell scaffold a *defined* symbol and the link would
-# break, and an invented one would silently inflate the record.
-NM_RECORD_TYPE_CHARS = frozenset("AaBbCcDdGgIiNnRrSsTtUuVvWw-?")
-NM_KNOWN_DIAGNOSTIC_PREFIXES = ("bfd plugin:", "nm:", "plugin:")
-
 # A name a C consumer could collide with: a plain C identifier that is not a
 # Rust mangling (legacy `_ZN...` or v0 `_R...`).
 C_IDENT_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")
 RUST_MANGLED_RE = re.compile(r"_(R|ZN)")
-
-
-class NmParseError(RuntimeError):
-    """`nm` emitted a line that is neither a POSIX record nor a known diagnostic."""
 
 
 def is_c_style(name: str) -> bool:
@@ -110,51 +95,18 @@ def is_c_style(name: str) -> bool:
     return bool(C_IDENT_RE.match(name)) and not RUST_MANGLED_RE.match(name)
 
 
-def _is_hex(text: str) -> bool:
-    return bool(text) and all(c in "0123456789abcdefABCDEF" for c in text)
+def defined_symbols(path: Path) -> set[str]:
+    """Global symbols *defined* by an archive or object.
 
-
-def defined_symbols(path: Path) -> tuple[set[str], int]:
-    """Global symbols *defined* by an archive or object, plus a diagnostic count.
-
-    `--defined-only --extern-only` is the right filter: a scaffold and an
-    implementation differ precisely in whether the symbol is defined here.
+    Defined-but-external is the right filter: a scaffold and an implementation
+    differ precisely in whether the symbol is defined here.
     """
     if not path.is_file():
         raise SystemExit(
             f"implemented_surface: {rel(path)} does not exist.\n"
             f"  Build the crate first:  cargo build --release"
         )
-    proc = subprocess.run(
-        ["nm", "--format=posix", "--defined-only", "--extern-only", str(path)],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    names: set[str] = set()
-    diagnostics = 0
-    for line in proc.stdout.splitlines():
-        if not line.strip():
-            continue
-        fields = line.split()
-        if (
-            3 <= len(fields) <= 4
-            and len(fields[1]) == 1
-            and fields[1] in NM_RECORD_TYPE_CHARS
-            and _is_hex(fields[2])
-        ):
-            names.add(fields[0])
-            continue
-        if line.endswith("]:"):
-            diagnostics += 1  # archive member announcement: "<archive>[<member>]:"
-            continue
-        if line.startswith(NM_KNOWN_DIAGNOSTIC_PREFIXES):
-            diagnostics += 1
-            continue
-        raise NmParseError(
-            f"unrecognised `nm` output line, refusing to guess: {line!r}"
-        )
-    return names, diagnostics
+    return defined_external_symbols(path)
 
 
 def authority_exports(authority_id: str, lib: str) -> list[dict]:
@@ -177,11 +129,9 @@ def authority_exports(authority_id: str, lib: str) -> list[dict]:
 
 def build(authority_id: str, archive: Path, extra_objects: list[Path]) -> dict:
     auth = resolve_authority(authority_id)
-    defined, diagnostics = defined_symbols(archive)
+    defined = defined_symbols(archive)
     for obj in extra_objects:
-        extra, extra_diagnostics = defined_symbols(obj)
-        defined |= extra
-        diagnostics += extra_diagnostics
+        defined |= defined_symbols(obj)
 
     per_lib: dict[str, dict] = {}
     claimed: set[str] = set()
@@ -227,13 +177,14 @@ def build(authority_id: str, archive: Path, extra_objects: list[Path]) -> dict:
             ),
             "c_style": c_style,
             "compiler_emitted_count": len(compiler_emitted),
-            "nm_diagnostic_lines": diagnostics,
             "note": (
-                "`c_style` is compared exactly. `compiler_emitted_count` and "
-                "`nm_diagnostic_lines` are properties of the toolchain (its object "
-                "reader and codegen), not of the source, so they are build products: "
-                "evidence_determinism.py normalises them and reports what it "
-                "normalised. They are excluded from body_hash for the same reason."
+                "`c_style` is compared exactly: these are the names a consumer's "
+                "own symbols could collide with. `compiler_emitted_count` is a "
+                "property of the toolchain (its codegen), not of the source, so "
+                "it is recorded as a count and evidence_determinism.py normalises "
+                "and reports it. It is excluded from body_hash for the same "
+                "reason. The symbol tables are read by elf_symbols.py rather than "
+                "by `nm`, so the set does not depend on the host's binutils."
             ),
         },
         "claim": (
@@ -303,8 +254,7 @@ def main(argv: list[str]) -> int:
           f"implemented={t['implemented']:<6} scaffolded={t['scaffolded']}")
     internal = doc["body"]["internal_symbols"]
     print(f"  internal symbols (not ABI): c_style={len(internal['c_style'])} "
-          f"compiler_emitted={internal['compiler_emitted_count']} "
-          f"nm_diagnostics={internal['nm_diagnostic_lines']}")
+          f"compiler_emitted={internal['compiler_emitted_count']}")
     print(f"    c_style: {', '.join(internal['c_style'])}")
     print(f"  -> {rel(args.out)}")
     return 0

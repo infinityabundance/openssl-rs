@@ -126,6 +126,13 @@ jobs:
       - name: Evidence determinism
         run: python3 forensics/tools/evidence_determinism.py
 
+      # Determinism alone cannot catch a generator that depends on the host's
+      # binutils: on any single machine both sides use the same tools and agree.
+      # This stubs them out of PATH and requires the evidence to reproduce
+      # anyway. It is the gate that keeps D33's fix from being undone.
+      - name: Evidence portability (no host binutils)
+        run: python3 forensics/tools/check_evidence_portability.py
+
       - name: Resolve trusted baseline ref
         id: baseline
         run: |
