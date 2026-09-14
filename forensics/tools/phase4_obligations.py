@@ -85,6 +85,13 @@ DEFERRED: dict[str, tuple[int, str]] = {
     # The provider core owns OSSL_LIB_CTX and the core dispatch table.
     "BIO_s_core": (6, "the provider core-to-BIO method; OSSL_LIB_CTX is Phase 6"),
     "BIO_new_from_core_bio": (6, "wraps an OSSL_CORE_BIO; OSSL_LIB_CTX is Phase 6"),
+    # The non-blocking test filter is a RAND consumer: its read and write paths
+    # both call RAND_priv_bytes to decide whether to report a retry, so its
+    # observable behaviour cannot be reproduced without the RAND subsystem. The
+    # factory, create, destroy, gets, puts and ctrl are independent of RAND, but
+    # the obligation is per symbol and a method whose read/write abort would be a
+    # scaffold, not an implementation.
+    "BIO_f_nbio_test": (9, "its read and write call RAND_priv_bytes; RAND is Phase 9"),
 }
 
 

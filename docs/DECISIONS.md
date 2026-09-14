@@ -1262,3 +1262,58 @@ not `double`, nor about format strings outside the probe's matrix.
 `RT-BIO-FILE` passing means the candidate matched the authority for the FILE,
 descriptor and syslog state machines and error shapes the probe exercises; the
 syslog text leaves the process and is deliberately not compared.
+
+## D42 — The four filter families, and why `BIO_f_nbio_test` is not one of them
+
+**Decision.** `BIO_f_buffer`, `BIO_f_linebuffer`, `BIO_f_readbuffer` and
+`BIO_f_prefix` are implemented and courted by a new `RT-BIO-FILTER`
+(114 observations, passing, zero residuals on its first run). `BIO_f_nbio_test`
+is **deferred to Phase 9** and recorded as such in the Phase 4 ledger. Phase 4 is
+now implemented 184 / deferred 15 / open 57 of 256 owned; the baseline is
+28 courts and 5,803 observations; `implemented` `libcrypto` exports move
+392 -> 396.
+
+**Why `BIO_f_nbio_test` is not implemented here.** Its factory, `create`,
+`destroy`, `gets`, `puts` and `ctrl` do not need anything this stratum lacks, but
+its **read and write both call `RAND_priv_bytes`** to decide whether to report a
+retry. The obligation ledger is per symbol, so marking the symbol implemented
+while leaving the method's two data paths to abort would be exactly the
+"scaffold counted as parity" failure the release gates exist to prevent. RAND is
+Phase 9 (`docs/RELEASE_GATES.md`); the deferral carries that reason in
+`forensics/tools/phase4_obligations.py` so the disposition travels with the
+ledger rather than with a comment.
+
+**What the new court established.** The four filters are all "a BIO in front of a
+BIO", so the probe measures *when* bytes cross the boundary by observing the
+destination memory BIO after each step, rather than only what the return value
+was:
+
+* `BIO_f_buffer` retains a short write (`buff.mem.small.n=0` while
+  `BIO_ctrl(BIO_CTRL_INFO)` is 3) and releases it on `BIO_flush`; a write of ten
+  bytes likewise stays retained, and only an overflow of the 4096-byte buffer
+  would pass through directly.
+* `BIO_f_buffer`'s `BIO_ctrl(BIO_CTRL_PEEK)` **forces a read first**: on a source
+  at end of file the forced read returns the memory BIO's empty-buffer value
+  (`-1`), the input buffer stays empty, and PEEK therefore returns **0** rather
+  than failing. That interaction between PEEK and the memory BIO's `num` is
+  measured, not predicted.
+* `BIO_f_buffer`'s `BIO_gets` inherits the same value: with the source drained it
+  returns `-1`, because the memory BIO reports `-1` for an empty buffer and the
+  filter passes a negative result through.
+* `BIO_f_linebuffer` flushes up to and including the newline and retains the tail
+  (`line.mem.nl.v=abcdef\n` with `info` 3), and the retained tail is what a later
+  flush emits.
+* `BIO_f_readbuffer` reports its **consumed** offset from
+  `BIO_C_FILE_TELL`/`BIO_CTRL_INFO` (9 after a nine-byte read), accepts a backward
+  seek and refuses a forward or negative one, and answers `BIO_CTRL_EOF` from its
+  own cache rather than from the source.
+* `BIO_f_prefix` emits the prefix at each line start and emits **nothing** for an
+  indent of 0, because the indent goes through a `"%*s"` field; a seek re-arms the
+  line start, so the byte written after `BIO_C_FILE_SEEK` acquires the prefix
+  again.
+
+**Non-claim.** `RT-BIO-FILTER` passing means the candidate matched the authority
+for the byte movements, retained counts, control returns and error queue the
+probe exercises over memory sources. It is not a claim about the filters over a
+socket or a FILE, nor about the buffer-size controls at sizes the probe does not
+use.

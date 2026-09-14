@@ -56,7 +56,11 @@ use crate::runtime::ex_data::{
 
 pub mod addr;
 pub mod addr_info;
+pub mod bf_buff;
+pub mod bf_lbuf;
 pub mod bf_null;
+pub mod bf_prefix;
+pub mod bf_readbuff;
 pub mod bio_cb;
 pub mod bio_sock2;
 pub mod bss_fd;
@@ -1570,6 +1574,10 @@ pub use addr_info::{
     BIO_ADDRINFO_address, BIO_ADDRINFO_family, BIO_ADDRINFO_free, BIO_ADDRINFO_next,
     BIO_ADDRINFO_protocol, BIO_ADDRINFO_socktype, BIO_lookup, BIO_lookup_ex, BIO_parse_hostserv,
 };
+pub use bf_buff::BIO_f_buffer;
+pub use bf_lbuf::BIO_f_linebuffer;
+pub use bf_prefix::BIO_f_prefix;
+pub use bf_readbuff::BIO_f_readbuffer;
 pub use bio_cb::{BIO_debug_callback, BIO_debug_callback_ex};
 pub use bio_sock2::{
     BIO_accept, BIO_accept_ex, BIO_bind, BIO_connect, BIO_get_accept_socket, BIO_listen,

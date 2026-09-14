@@ -60,6 +60,10 @@
       "observations": 134,
       "verdict": "pass"
     },
+    "RT-BIO-FILTER": {
+      "observations": 114,
+      "verdict": "pass"
+    },
     "RT-BIO-PRINT": {
       "observations": 213,
       "verdict": "pass"
@@ -111,15 +115,15 @@
   },
   "deferred": {
     "phase3": 1,
-    "phase4": 14
+    "phase4": 15
   },
   "implemented": {
-    "libcrypto": 392,
+    "libcrypto": 396,
     "libssl": 0
   },
   "open_obligations": {
     "phase3": 0,
-    "phase4": 62
+    "phase4": 57
   },
   "phases": {
     "0": "complete",

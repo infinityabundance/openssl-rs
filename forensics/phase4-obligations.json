@@ -3,9 +3,9 @@
   "body": {
     "complete": false,
     "counts": {
-      "deferred_to_later_phase": 14,
-      "implemented": 180,
-      "open_in_this_stratum": 62,
+      "deferred_to_later_phase": 15,
+      "implemented": 184,
+      "open_in_this_stratum": 57,
       "owned": 256
     },
     "deferred": [
@@ -50,6 +50,12 @@
         "owning_phase": 7,
         "reason": "wraps an EVP_MD_CTX; EVP is Phase 7",
         "symbol": "BIO_f_md"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "owning_phase": 9,
+        "reason": "its read and write call RAND_priv_bytes; RAND is Phase 9",
+        "symbol": "BIO_f_nbio_test"
       },
       {
         "module": "src/runtime/bio/",
@@ -177,7 +183,11 @@
       "BIO_dup_chain",
       "BIO_err_is_non_fatal",
       "BIO_f_brotli",
+      "BIO_f_buffer",
+      "BIO_f_linebuffer",
       "BIO_f_null",
+      "BIO_f_prefix",
+      "BIO_f_readbuffer",
       "BIO_f_zlib",
       "BIO_f_zstd",
       "BIO_fd_non_fatal_error",
@@ -318,26 +328,6 @@
       {
         "module": "src/runtime/bio/",
         "symbol": "BIO_f_base64"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_f_buffer"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_f_linebuffer"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_f_nbio_test"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_f_prefix"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_f_readbuffer"
       },
       {
         "module": "src/runtime/bio/",
@@ -575,7 +565,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "cf3c94c2b6f4944de304fc0cd8cfe48ece8482464e21db3ca040b938afec051c"
+      "sha256": "79469f5db1059e5e9ee84916e38994f01984289ba2d75e4965e16ee01635227c"
     }
   ],
   "kind": "phase4-obligations",

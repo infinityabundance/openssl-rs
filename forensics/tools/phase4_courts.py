@@ -72,6 +72,7 @@ COURTS = [
     ("RT-BIO-DEBUG", "rt_bio_debug_probe.c"),
     ("RT-BIO-PRINT", "rt_bio_print_probe.c"),
     ("RT-BIO-FILE", "rt_bio_file_probe.c"),
+    ("RT-BIO-FILTER", "rt_bio_filter_probe.c"),
 ]
 
 
