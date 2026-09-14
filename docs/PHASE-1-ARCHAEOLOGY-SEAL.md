@@ -99,12 +99,27 @@ see its own declared defect classes.
 
 ## 7. Gemel
 
-`.gemel` (committed) with a legible projection at `forensics/GEMEL_TRAJECTORY.md`.
+The native Gemel store is **not** Git-tracked. Gemel's own `.gemel/.gitignore`
+contains `*` with explicit re-inclusions (`!.gitignore`, `!exchange/`,
+`!exchange/**`), so what Git carries is:
 
-- `C1` — Phase 0 constitution and Phase 1 archaeology atlas
-- `C2` — Phase 1 foundation closure
-- checkpoint `K1` — Phase 1 → Phase 2 handoff
-- 5 open claims, 2 open residuals, carried forward
+- Gemel's Git-carried `exchange/` projection (the native sync namespace);
+- the human-readable trajectory projection at `forensics/GEMEL_TRAJECTORY.md`;
+- the change, trajectory and checkpoint identities recorded in
+  `docs/DECISIONS.md` D17 and in this seal.
+
+Recorded here rather than implied, because an earlier revision of this file
+claimed `.gemel` was "committed", which is false; `docs/DECISIONS.md` D17
+corrects it. This is the canonical wording:
+
+> The native Gemel store is not Git-tracked. Gemel's Git-carried `exchange/`
+> projection is tracked, along with the human-readable trajectory projection and
+> the checkpoint identities.
+
+- change `C1` — Phase 0 constitution and Phase 1 archaeology atlas
+- change `C2` — Phase 1 foundation closure
+- Gemel checkpoint at the Phase 1 → Phase 2 handoff
+- open claims and open residuals carried forward
 
 ## 8. Open unknowns carried forward
 

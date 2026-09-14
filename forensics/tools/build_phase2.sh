@@ -39,12 +39,29 @@ for lib in libcrypto libssl; do
   # and -Wl,--version-script for the version nodes.
   rustc --edition 2021 --crate-type staticlib -O --crate-name "${lib}_shell" \
     -o "$lib.shell.a" "shell/$lib.shell.rs"
+  # libssl must carry the authority-observed dependency on libcrypto:
+  #
+  #   authority libssl.so.3: DT_NEEDED [libcrypto.so.3, libc.so.6]
+  #
+  # Without --no-as-needed the linker drops it (nothing is referenced) and the
+  # candidate links WITHOUT a dependency that is part of the contract: ELF
+  # symbol resolution order and transitive loading are observable. Same
+  # technique already used for legacy.so.
+  #
+  # --as-needed is then restored so that toolchain runtime libraries our stubs
+  # do not actually reference are not dragged in.
+  if [ "$lib" = "libssl" ]; then
+    depflags="-Wl,--no-as-needed -L$PWD -lcrypto -Wl,--as-needed"
+  else
+    depflags="-Wl,--as-needed"
+  fi
   cc -shared -o "$lib.so.3" \
     -Wl,--whole-archive "$lib.shell.a" -Wl,--no-whole-archive \
     -Wl,--version-script="$PWD/$lib.ld" \
     -Wl,-soname,"$lib.so.3" \
+    $depflags \
     -lpthread -ldl -lm -lrt -lutil
-  echo "  built $(stat -c %s "$lib.so.3") bytes"
+  echo "  built $(stat -c %s "$lib.so.3") bytes, NEEDED: $(readelf -d "$lib.so.3" | sed -n 's/.*Shared library: \[\(.*\)\]/\1/p' | tr '\n' ' ')"
 done
 
 # --- provider module (legacy.so) ---------------------------------------------

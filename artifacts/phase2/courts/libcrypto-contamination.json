@@ -2,23 +2,29 @@
   "court": "libcrypto-contamination",
   "libraries": {
     "libcrypto": {
-      "contaminating": [],
       "needed": [
         "ld-linux-x86-64.so.2",
         "libc.so.6",
         "libgcc_s.so.1"
       ],
-      "note": "libssl.so.3 in the authority has NEEDED libcrypto.so.3; the shell's stubs never call libcrypto, so it does not. That is a recorded ABI difference, not a contamination finding."
+      "resolved_openssl_closure": [],
+      "resolved_outside_candidate": [],
+      "verdict": "pass"
     },
     "libssl": {
-      "contaminating": [],
       "needed": [
         "ld-linux-x86-64.so.2",
         "libc.so.6",
+        "libcrypto.so.3",
         "libgcc_s.so.1"
       ],
-      "note": "libssl.so.3 in the authority has NEEDED libcrypto.so.3; the shell's stubs never call libcrypto, so it does not. That is a recorded ABI difference, not a contamination finding."
+      "resolved_openssl_closure": [
+        "libcrypto.so.3 => /work/artifacts/phase2/install/lib/libcrypto.so.3 (0x00007f77ffccf000)"
+      ],
+      "resolved_outside_candidate": [],
+      "verdict": "pass"
     }
   },
+  "note": "necessity of libcrypto.so.3 for libssl is asserted by ABI-DYNAMIC, not here; this court asserts the RESOLVED PATH",
   "verdict": "pass"
 }

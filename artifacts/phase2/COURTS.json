@@ -13,6 +13,10 @@
         "verdict": "pass"
       },
       {
+        "court": "ABI-DYNAMIC",
+        "verdict": "pass"
+      },
+      {
         "court": "ABI-LAYOUT",
         "verdict": "pass"
       },
@@ -47,7 +51,7 @@
     ],
     "scaffold_warning": "PASSING THESE COURTS IS NOT PARITY. Every symbol in the shell is SCAFFOLDED and aborts when called; these courts establish the structural distribution shell only (docs/CUSTODIAN_CONTRACT.md §5)."
   },
-  "body_hash": "49165926ee1f8c768e2c511711475a10cb5f49eb425252c68e52f24b922d12cd",
+  "body_hash": "d4b9e82420753db75260424af6865214a4bcd6384d701d13a757d83fa29b1d53",
   "generator": "forensics/tools/phase2_courts.py",
   "inputs": [],
   "kind": "phase2-courts",

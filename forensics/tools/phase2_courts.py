@@ -89,36 +89,143 @@ LOAD_PROBE = ""  # superseded: replaced by a version-parameterised probe
 
 
 def candidate_export(dso: Path) -> dict:
-    """Exported API symbols of a candidate DSO: name -> (type, bind, version)."""
+    """Exported API symbols of a candidate DSO.
+
+    Records type, binding, visibility AND version, because ABI-SYMBOL compares
+    all four: a symbol that is `OBJECT/WEAK` in the authority and
+    `FUNC/GLOBAL` in the candidate is a different ABI, not a match.
+    """
     out = {}
     for s in read_dynsyms(dso):
         if s.defined and s.bind in ("GLOBAL", "WEAK") and s.ndx != "ABS":
-            out[s.name] = {"type": s.stype, "bind": s.bind, "version": s.version}
+            out[s.name] = {"type": s.stype, "bind": s.bind,
+                           "visibility": s.vis, "version": s.version}
     return out
 
 
 def court_abi_symbol(auth, atlas: dict) -> dict:
+    """The exported symbol surface, compared on name, ELF type, binding,
+    visibility AND version node.
+
+    Comparing only name+version would accept a symbol that is `OBJECT/WEAK` in
+    the authority and `FUNC/GLOBAL` in the candidate. That is a real ABI
+    difference: a consumer taking the address of a data object and the dynamic
+    linker binding a function are not interchangeable. The shell generates every
+    scaffold as `extern "C" fn`, so this court is specifically what proves that
+    choice did not silently change any symbol's ELF type.
+    """
     result = {"court": "ABI-SYMBOL", "libraries": {}}
     for lib, soname in sorted(LIBS.items()):
         doc = json.loads((authority_atlas_dir(auth.id) / f"symbols-{lib}.json").read_text())
         expected = {
-            r["symbol"]: {"type": (r["dso"] or {}).get("type"),
-                          "version": (r["dso"] or {}).get("version")}
+            r["symbol"]: {
+                "type": (r["dso"] or {}).get("type"),
+                "bind": (r["dso"] or {}).get("bind"),
+                "visibility": (r["dso"] or {}).get("visibility"),
+                "version": (r["dso"] or {}).get("version"),
+            }
             for r in doc["body"]["records"] if (r.get("dso") or {}).get("present")
         }
         actual = candidate_export(PHASE2 / soname)
+        common = set(expected) & set(actual)
         missing = sorted(set(expected) - set(actual))
         extra = sorted(set(actual) - set(expected))
-        version_diff = sorted(
-            s for s in set(expected) & set(actual)
-            if expected[s]["version"] != actual[s]["version"]
-        )
+
+        def mismatch(field: str) -> list[dict]:
+            return [
+                {"symbol": s, "authority": expected[s].get(field),
+                 "candidate": actual[s].get(field)}
+                for s in sorted(common)
+                if expected[s].get(field) != actual[s].get(field)
+            ]
+
+        version_mismatch = mismatch("version")
+        type_mismatch = mismatch("type")
+        bind_mismatch = mismatch("bind")
+        visibility_mismatch = mismatch("visibility")
         result["libraries"][lib] = {
             "authority_exported": len(expected),
             "candidate_exported": len(actual),
             "missing": missing, "extra": extra,
-            "version_mismatch": version_diff,
-            "verdict": "pass" if not (missing or extra or version_diff) else "fail",
+            "version_mismatch": version_mismatch,
+            "type_mismatch": type_mismatch,
+            "bind_mismatch": bind_mismatch,
+            "visibility_mismatch": visibility_mismatch,
+            "fields_compared": ["name", "version", "type", "bind", "visibility"],
+            "verdict": "pass" if not (missing or extra or version_mismatch
+                                      or type_mismatch or bind_mismatch
+                                      or visibility_mismatch) else "fail",
+        }
+    result["verdict"] = "pass" if all(
+        v["verdict"] == "pass" for v in result["libraries"].values()) else "fail"
+    return result
+
+
+# The dynamic contract: the tags a downstream loader and a packaging system act
+# on. Only the REQUIRED subset can be equal in full, because a Rust-linked
+# artifact necessarily carries toolchain runtime dependencies the C authority
+# does not; that is why the court distinguishes required from extra rather than
+# pretending a set equality it cannot have.
+REQUIRED_DYNAMIC = ["DT_SONAME"]
+
+
+def _dynamic_tags(dso: Path) -> dict:
+    res = run(["readelf", "-d", "--wide", str(dso)])
+    needed, soname = [], None
+    for line in res.stdout.splitlines():
+        if "(NEEDED)" in line:
+            needed.append(line.split("[")[-1].rstrip("]"))
+        elif "(SONAME)" in line:
+            soname = line.split("[")[-1].rstrip("]")
+    hdr = run(["readelf", "-h", str(dso)])
+    klass = typ = machine = None
+    for line in hdr.stdout.splitlines():
+        s = line.strip()
+        if s.startswith("Class:"):
+            klass = s.split(":", 1)[1].strip()
+        elif s.startswith("Type:"):
+            typ = s.split(":", 1)[1].strip()
+        elif s.startswith("Machine:"):
+            machine = s.split(":", 1)[1].strip()
+    return {"soname": soname, "needed": sorted(needed),
+            "class": klass, "type": typ, "machine": machine}
+
+
+def court_abi_dynamic(auth) -> dict:
+    """ABI-DYNAMIC: SONAME, DT_NEEDED, ELF class/type/machine.
+
+    Required: identical SONAME and ELF identity, and every dependency the
+    authority declares must be present in the candidate. Found by review: the
+    candidate libssl.so.3 was missing `DT_NEEDED libcrypto.so.3`, which the
+    authority declares and which `docs/CUSTODIAN_CONTRACT.md` §2 names as part
+    of the contract (separate runtime dependency relationships).
+
+    Extra dependencies (the toolchain runtime) are recorded, not ignored, and do
+    not fail the court: they cannot be removed from a Rust-linked artifact and
+    are visible to any consumer who looks.
+    """
+    result = {"court": "ABI-DYNAMIC", "libraries": {}}
+    for lib, soname in sorted(LIBS.items()):
+        a = _dynamic_tags(auth.dso(lib))
+        c = _dynamic_tags(PHASE2 / soname)
+        required_missing = sorted(set(a["needed"]) - set(c["needed"]))
+        extra = sorted(set(c["needed"]) - set(a["needed"]))
+        identity_ok = (a["class"] == c["class"] and a["machine"] == c["machine"]
+                       and a["type"] == c["type"])
+        soname_ok = a["soname"] == c["soname"]
+        result["libraries"][lib] = {
+            "authority": a, "candidate": c,
+            "soname_match": soname_ok,
+            "elf_identity_match": identity_ok,
+            "required_needed_missing": required_missing,
+            "extra_needed_recorded": extra,
+            "extra_needed_note": (
+                "toolchain runtime dependencies of the Rust-linked artifact; "
+                "recorded differences, visible to consumers, not silently "
+                "dropped" if extra else ""
+            ),
+            "verdict": "pass" if (soname_ok and identity_ok and not required_missing)
+                       else "fail",
         }
     result["verdict"] = "pass" if all(
         v["verdict"] == "pass" for v in result["libraries"].values()) else "fail"
@@ -301,25 +408,47 @@ def court_abi_load(auth) -> dict:
 
 
 def court_contamination(auth) -> dict:
-    """The candidate DSO must not pull in a non-authority OpenSSL at runtime."""
+    """No non-authority OpenSSL may appear in the candidate's RUNTIME CLOSURE.
+
+    The question is not "does the candidate depend on a library called
+    libcrypto" -- `libssl.so.3` SHOULD declare `NEEDED libcrypto.so.3`, the
+    authority does, and `docs/CUSTODIAN_CONTRACT.md` §2 names that dependency as
+    part of the contract. The question is whether anything resolves to an OpenSSL
+    that is not ours.
+
+    An earlier revision of this court conflated the two and flagged the correct
+    dependency as contamination. That was a defect in the court, found when
+    libssl's dependency was restored; the corrected form below resolves the
+    closure and requires every OpenSSL it finds to live inside the candidate's
+    own install tree.
+    """
+    libdir = PHASE2 / "install" / "lib"
+    env = dict(os.environ)
+    env["LD_LIBRARY_PATH"] = str(libdir)
     findings = {}
     for lib, soname in sorted(LIBS.items()):
         dso = PHASE2 / soname
         res = run(["readelf", "-d", "--wide", str(dso)])
-        needed = []
-        for line in res.stdout.splitlines():
-            if "(NEEDED)" in line:
-                needed.append(line.split("[")[-1].rstrip("]"))
-        bad = [n for n in needed if "crypto" in n or n.startswith("libssl")]
+        needed = sorted(
+            l.split("[")[-1].rstrip("]") for l in res.stdout.splitlines()
+            if "(NEEDED)" in l
+        )
+        ex = subprocess.run(["ldd", str(dso)], capture_output=True, text=True,
+                            env=env, check=False)
+        resolved = [l.strip() for l in ex.stdout.splitlines()
+                    if "libcrypto" in l or "libssl" in l]
+        outside = [l for l in resolved if str(PHASE2) not in l]
         findings[lib] = {
-            "needed": sorted(needed),
-            "contaminating": sorted(bad),
-            "note": "libssl.so.3 in the authority has NEEDED libcrypto.so.3; the "
-                    "shell's stubs never call libcrypto, so it does not. That is a "
-                    "recorded ABI difference, not a contamination finding.",
+            "needed": needed,
+            "resolved_openssl_closure": resolved,
+            "resolved_outside_candidate": outside,
+            "verdict": "pass" if not outside else "fail",
         }
     return {"court": "libcrypto-contamination", "libraries": findings,
-            "verdict": "pass" if all(not f["contaminating"] for f in findings.values()) else "fail"}
+            "note": "necessity of libcrypto.so.3 for libssl is asserted by "
+                    "ABI-DYNAMIC, not here; this court asserts the RESOLVED PATH",
+            "verdict": "pass" if all(f["verdict"] == "pass" for f in findings.values())
+                       else "fail"}
 
 
 
@@ -530,6 +659,7 @@ def main(argv: list[str]) -> int:
     courts = [
         court_abi_symbol(auth, {}),
         court_abi_version(auth, {}),
+        court_abi_dynamic(auth),
         court_abi_layout(auth),
         court_abi_link(auth),
         court_abi_load(auth),

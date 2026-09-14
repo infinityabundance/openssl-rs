@@ -1,0 +1,70 @@
+{
+  "court": "ABI-DYNAMIC",
+  "libraries": {
+    "libcrypto": {
+      "authority": {
+        "class": "ELF64",
+        "machine": "Advanced Micro Devices X86-64",
+        "needed": [
+          "libc.so.6"
+        ],
+        "soname": "libcrypto.so.3",
+        "type": "DYN (Shared object file)"
+      },
+      "candidate": {
+        "class": "ELF64",
+        "machine": "Advanced Micro Devices X86-64",
+        "needed": [
+          "ld-linux-x86-64.so.2",
+          "libc.so.6",
+          "libgcc_s.so.1"
+        ],
+        "soname": "libcrypto.so.3",
+        "type": "DYN (Shared object file)"
+      },
+      "elf_identity_match": true,
+      "extra_needed_note": "toolchain runtime dependencies of the Rust-linked artifact; recorded differences, visible to consumers, not silently dropped",
+      "extra_needed_recorded": [
+        "ld-linux-x86-64.so.2",
+        "libgcc_s.so.1"
+      ],
+      "required_needed_missing": [],
+      "soname_match": true,
+      "verdict": "pass"
+    },
+    "libssl": {
+      "authority": {
+        "class": "ELF64",
+        "machine": "Advanced Micro Devices X86-64",
+        "needed": [
+          "libc.so.6",
+          "libcrypto.so.3"
+        ],
+        "soname": "libssl.so.3",
+        "type": "DYN (Shared object file)"
+      },
+      "candidate": {
+        "class": "ELF64",
+        "machine": "Advanced Micro Devices X86-64",
+        "needed": [
+          "ld-linux-x86-64.so.2",
+          "libc.so.6",
+          "libcrypto.so.3",
+          "libgcc_s.so.1"
+        ],
+        "soname": "libssl.so.3",
+        "type": "DYN (Shared object file)"
+      },
+      "elf_identity_match": true,
+      "extra_needed_note": "toolchain runtime dependencies of the Rust-linked artifact; recorded differences, visible to consumers, not silently dropped",
+      "extra_needed_recorded": [
+        "ld-linux-x86-64.so.2",
+        "libgcc_s.so.1"
+      ],
+      "required_needed_missing": [],
+      "soname_match": true,
+      "verdict": "pass"
+    }
+  },
+  "verdict": "pass"
+}

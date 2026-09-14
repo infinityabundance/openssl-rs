@@ -15,11 +15,17 @@ They say nothing about other profiles, other platforms, or OpenSSL 4.x.
 
 ## Conservation strata
 
-| phase | stratum | state |
-|---|---|---|
-| 0 | constitution | complete |
-| 1 | archaeology / API / ABI atlas | in progress |
-| 2–21 | (see docs/RELEASE_GATES.md) | not started |
+Derived from evidence by `forensics/tools/phase_state.py`; the
+renderer does not know any phase status.
+
+| phase | stratum | state | blocking |
+|---|---|---|---|
+| 0 | Constitution, authorities, claim algebra | `complete` |  |
+| 1 | Complete archaeology / API / ABI atlas | `in-progress` | 4 open unknown(s) recorded in the Phase 1 completeness inventory; the FRF sensitivity gap for the two non-fixture-driven courts (docs/DECISIONS.md D13) is one of them |
+| 2 | Distribution / ABI shell | `in-progress` | blocked by the dependency-order invariant: phase 1 is not complete |
+| 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `not-started` | not started |
+
+Remaining strata 4-21 are `not-started` (19 total).
 
 ## Atlas census
 

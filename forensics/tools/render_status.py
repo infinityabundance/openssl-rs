@@ -76,11 +76,24 @@ def main() -> int:
 
     L.append("## Conservation strata")
     L.append("")
-    L.append("| phase | stratum | state |")
-    L.append("|---|---|---|")
-    L.append("| 0 | constitution | complete |")
-    L.append("| 1 | archaeology / API / ABI atlas | in progress |")
-    L.append("| 2–21 | (see docs/RELEASE_GATES.md) | not started |")
+    phase_state = load(FORENSICS / "phase-state.json")
+    if phase_state:
+        L.append("Derived from evidence by `forensics/tools/phase_state.py`; the")
+        L.append("renderer does not know any phase status.")
+        L.append("")
+        L.append("| phase | stratum | state | blocking |")
+        L.append("|---|---|---|---|")
+        for row in phase_state["body"]["phases"]:
+            if row["state"] == "not-started" and row["phase"] > 3:
+                continue
+            L.append(f"| {row['phase']} | {row['stratum']} | `{row['state']}` | "
+                     f"{row['blocking'] or ''} |")
+        L.append("")
+        L.append(f"Remaining strata 4-21 are `not-started` "
+                 f"({phase_state['body']['summary']['not_started']} total).")
+    else:
+        L.append("`forensics/phase-state.json` is absent; run "
+                 "`forensics/tools/phase_state.py`.")
     L.append("")
 
     L.append("## Atlas census")
