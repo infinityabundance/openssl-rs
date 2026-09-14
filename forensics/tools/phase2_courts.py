@@ -31,6 +31,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -445,7 +446,7 @@ def court_contamination(auth) -> dict:
         )
         ex = subprocess.run(["ldd", str(dso)], capture_output=True, text=True,
                             env=env, check=False)
-        resolved = [l.strip() for l in ex.stdout.splitlines()
+        resolved = [mask_load_address(l.strip()) for l in ex.stdout.splitlines()
                     if "libcrypto" in l or "libssl" in l]
         outside = [l for l in resolved if str(PHASE2) not in l]
         findings[lib] = {
@@ -534,12 +535,12 @@ def court_abi_substitution(auth) -> dict:
     env = dict(os.environ)
     env["LD_LIBRARY_PATH"] = str(PHASE2 / "install" / "lib")
     p2 = subprocess.run([str(out)], capture_output=True, text=True, env=env, check=False)
-    p2 = subprocess.run([str(out)], capture_output=True, text=True, env=env, check=False)
     ldd = subprocess.run(
         ["sh", "-c", f"LD_LIBRARY_PATH={PHASE2 / 'install' / 'lib'} ldd {out}"],
         capture_output=True, text=True, check=False,
     )
-    lines = [l.strip() for l in ldd.stdout.splitlines() if "libcrypto" in l or "libssl" in l]
+    lines = [mask_load_address(l.strip()) for l in ldd.stdout.splitlines()
+             if "libcrypto" in l or "libssl" in l]
     substituted = all(str(PHASE2 / "install" / "lib") in l for l in lines) and bool(lines)
     return {
         "court": "ABI-SUBSTITUTION",
@@ -552,6 +553,22 @@ def court_abi_substitution(auth) -> dict:
         "verdict": "pass" if (ex1.returncode == 0 and p2.returncode == 0 and substituted)
                    else "fail",
     }
+
+
+# `ldd` prints each resolved object with its load address, and the address is an
+# ASLR artifact of the run rather than part of the observation: the courts below
+# claim *which file* each library resolved to. Recording the address made the
+# committed artifact differ on every run -- measured: two identical runs of
+# ABI-SUBSTITUTION produced different `dynamic_closure_under_substitution`
+# entries -- which is the same defect class as the RT-BIO-DEBUG capture (D61).
+# The address is masked, nothing else in the line is touched, and the verdict
+# logic compares paths, so it is unaffected.
+_LOAD_ADDR_RE = re.compile(r"\(0x[0-9a-f]+\)")
+
+
+def mask_load_address(line: str) -> str:
+    """Replace an `ldd` load address with a stable placeholder."""
+    return _LOAD_ADDR_RE.sub("(0x<load-addr>)", line)
 
 
 CONSTANTS_PROBE = r"""

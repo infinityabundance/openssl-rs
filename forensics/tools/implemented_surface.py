@@ -75,6 +75,13 @@ from elf_symbols import defined_external_symbols  # noqa: E402
 LIBRARIES = ("libcrypto", "libssl")
 
 DEFAULT_ARCHIVE = REPO_ROOT / "target" / "release" / "libopenssl_rs.a"
+# The crate archive's location. It is deliberately the repository's `target/`
+# rather than anything environment-dependent: the court purges host-written
+# dev-profile artifacts before running (D62), so the release archive this reads
+# is always the court's own, and the path recorded in the artefact stays the
+# same string in every environment that regenerates it.
+DEFAULT_ARCHIVE = REPO_ROOT / "target" / "release" / "libopenssl_rs.a"
+
 OUT = REPO_ROOT / "forensics" / "atlas" / "implemented-surface.json"
 
 # --- symbol tables -----------------------------------------------------------

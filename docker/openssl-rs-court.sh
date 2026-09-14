@@ -129,7 +129,26 @@ do_status() {
 do_exec() {
   # `exec` is not needed here: the shell is the process under the limit and it
   # waits for the command, so the limit covers the whole tree it spawns.
-  docker exec -i "${NAME}" sh -c 'ulimit -d "$1" 2>/dev/null || { echo "openssl-rs-court: cannot set RLIMIT_DATA to $1" >&2; exit 3; }; shift; exec "$@"' sh "${DATA}" "$@"
+  #
+  # Before running anything, drop build artifacts the *host* wrote into the
+  # bind-mounted `target/`. The editor's rust-analyzer runs `cargo check` on the
+  # host, linked against the host's glibc, while this image is pinned to an
+  # older one; a dev-profile build in the court can then reuse a host-built
+  # build script and die with "GLIBC_2.3x not found", which is a toolchain
+  # collision that looks exactly like a defect in the crate. Only host-owned
+  # debris is removed, only from the dev profile, and only when this shell is
+  # root (as the court is): the release artifacts the distribution shell is
+  # built from are always the court's own and are never touched. Isolating the
+  # court's target directory instead was rejected because it changes the
+  # archive path recorded in `forensics/atlas/implemented-surface.json`, and
+  # evidence is not reshaped to suit the tooling. See docs/DECISIONS.md D62.
+  docker exec -i "${NAME}" sh -c 'ulimit -d "$1" 2>/dev/null || { echo "openssl-rs-court: cannot set RLIMIT_DATA to $1" >&2; exit 3; }; shift;
+    if [ "$(id -u)" = 0 ] && { [ -d /work/target/flycheck0 ] \
+       || { [ -d /work/target/debug ] \
+            && find /work/target/debug -mindepth 1 ! -user 0 -print -quit 2>/dev/null | grep -q .; }; }; then
+      rm -rf /work/target/debug /work/target/flycheck0
+    fi
+    exec "$@"' sh "${DATA}" "$@"
 }
 
 do_verify() {

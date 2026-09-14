@@ -9,8 +9,8 @@
   ],
   "court": "ABI-SUBSTITUTION",
   "dynamic_closure_under_substitution": [
-    "libssl.so.3 => /work/artifacts/phase2/install/lib/libssl.so.3 (0x00007f80b722e000)",
-    "libcrypto.so.3 => /work/artifacts/phase2/install/lib/libcrypto.so.3 (0x00007f80b6e00000)"
+    "libssl.so.3 => /work/artifacts/phase2/install/lib/libssl.so.3 (0x<load-addr>)",
+    "libcrypto.so.3 => /work/artifacts/phase2/install/lib/libcrypto.so.3 (0x<load-addr>)"
   ],
   "substitution_took_effect": true,
   "verdict": "pass"

@@ -28,6 +28,9 @@ set -euo pipefail
 cd /work
 
 OBJ=/work/court/phase2
+# The court purges host-written dev-profile artifacts before running (D62); the
+# release artifacts are always the court's own, and `target/release` is where the
+# crate archive the shell links against lives.
 CRATE=/work/target/release/libopenssl_rs.a
 mkdir -p "$OBJ"
 

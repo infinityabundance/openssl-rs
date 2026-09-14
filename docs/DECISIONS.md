@@ -2244,3 +2244,48 @@ identical run id, and FRF *refuses to re-capture*: `already exists and verifies
 (identical evidence was already captured)`. That refusal is the acceptance test, and
 it is falsifiable in one command. The claim ids recorded in
 `docs/PHASE-4-BIO-CONF-SEAL.md` §8 are the ones this fix produced.
+
+## D62 — The court owns its build directory, and no committed artefact records an ASLR address
+
+Two tooling defects found by re-running a verification step, both of which made
+committed evidence depend on something that is not part of the observation.
+
+**The court and the host were sharing `target/` across two glibc versions.**
+`target/flycheck0` is rust-analyzer's footprint: the editor runs `cargo check` on
+the *host*, linked against the host's glibc (measured: 2.44), while the court image
+is pinned to 2.36. Because `target/` is inside the bind mount, a dev-profile build
+in the court picked up a host-built build script and died with
+
+```
+/lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.39' not found
+```
+
+which reads exactly like a defect in the crate and is not one. The court now
+removes host-owned entries under `target/debug` (and `target/flycheck0`) before it
+runs anything, only when it is root, and only in the dev profile: the release
+artifacts the distribution shell is built from are always the court's own and are
+never touched.
+
+Isolating the court's build directory with `CARGO_TARGET_DIR` was implemented first
+and reverted. It fixes the collision, but it changes the archive path recorded in
+`forensics/atlas/implemented-surface.json`, so the same artefact would be generated
+with two different recorded paths depending on the environment that ran the
+generator — and `evidence_determinism.py` compares every field except the declared
+build-product digests. Reshaping a recorded evidence field to suit the tooling is
+the wrong trade; purging debris that was never evidence is the right one.
+
+**`ABI-SUBSTITUTION` and `libcrypto-contamination` recorded `ldd` load addresses.**
+`ldd` prints each resolved object with its load address, which is an ASLR artifact of
+the run, and those lines are committed. Measured: two runs of
+`build_phase2.sh` produced different `dynamic_closure_under_substitution` entries.
+Both courts' claim is *which file* each library resolved to, and their verdicts
+compare paths, so the address is masked to `(0x<load-addr>)` and nothing else in the
+line changes. Two consecutive runs now reproduce those two artefacts byte for byte.
+This is the same defect class D61 found in the `RT-BIO-DEBUG` capture: a court whose
+verdict is deterministic and whose *record* was not.
+
+`evidence_determinism.py` did not catch either one, and the reason is worth stating:
+court transcripts and staged binaries are deliberately outside its compared set,
+because they are produced by the court venue rather than by the generators it
+re-runs. That boundary is right — but it means a court's own output is only checked
+by re-running the court, which is how both of these were found.
