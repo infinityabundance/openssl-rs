@@ -1,0 +1,1 @@
+{"executable_sha256":"a94a3a68b4eec904462523655e624f95953af2c99fdbb77248dc2112025e8487","id":"openssl-cli-3.6.3","kind":"executable_reference","name":"openssl-cli","path":"forensics/frf/refs/authority-cli-inventory.sh","platform":"x86_64-linux","schema_version":"frf-authority-v1","version":"3.6.3"}

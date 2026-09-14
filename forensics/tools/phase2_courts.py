@@ -219,16 +219,26 @@ def court_abi_dynamic(auth) -> dict:
             "elf_identity_match": identity_ok,
             "required_needed_missing": required_missing,
             "extra_needed_recorded": extra,
-            "extra_needed_note": (
-                "toolchain runtime dependencies of the Rust-linked artifact; "
-                "recorded differences, visible to consumers, not silently "
-                "dropped" if extra else ""
-            ),
-            "verdict": "pass" if (soname_ok and identity_ok and not required_missing)
-                       else "fail",
+            # TWO VERDICTS, deliberately. The required contract must hold; full
+            # DT_NEEDED set equality cannot, because a Rust-linked artifact
+            # necessarily carries toolchain runtime dependencies the C authority
+            # does not (libgcc_s.so.1, ld-linux-x86-64.so.2). One clean "pass"
+            # would hide a structural residual; one "fail" would block on
+            # something that is not a defect.
+            "required_verdict": "pass" if (soname_ok and identity_ok and not required_missing)
+                               else "fail",
+            "exact_verdict": "pass" if not extra else "residual",
+            "exact_residual_note": (
+                "authority DT_NEEDED is a strict subset of the candidate's; "
+                + str(len(extra)) + " extra runtime dependency/ies: "
+                + ", ".join(extra)
+            ) if extra else "",
         }
-    result["verdict"] = "pass" if all(
-        v["verdict"] == "pass" for v in result["libraries"].values()) else "fail"
+    result["required_verdict"] = "pass" if all(
+        v["required_verdict"] == "pass" for v in result["libraries"].values()) else "fail"
+    result["exact_verdict"] = "pass" if all(
+        v["exact_verdict"] == "pass" for v in result["libraries"].values()) else "residual"
+    result["verdict"] = result["required_verdict"]
     return result
 
 

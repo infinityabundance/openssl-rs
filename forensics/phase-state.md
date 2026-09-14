@@ -9,9 +9,9 @@ enforced here:
 | phase | stratum | state | blocking |
 |---|---|---|---|
 | 0 | Constitution, authorities, claim algebra | `complete` |  |
-| 1 | Complete archaeology / API / ABI atlas | `in-progress` | 4 open unknown(s) recorded in the Phase 1 completeness inventory; the FRF sensitivity gap for the two non-fixture-driven courts (docs/DECISIONS.md D13) is one of them |
-| 2 | Distribution / ABI shell | `in-progress` | blocked by the dependency-order invariant: phase 1 is not complete |
-| 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `not-started` | not started |
+| 1 | Complete archaeology / API / ABI atlas | `complete` |  |
+| 2 | Distribution / ABI shell | `complete` |  |
+| 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `in-progress` | the runtime substrate is under construction: implemented so far are memory, the ERR queue and the stack. Outstanding: ex_data, lhash, the OBJ/NID database, secure memory, CRYPTO_THREAD_*, initialisation/cleanup, and the remaining reference-counting surface. |
 | 4 | BIO + CONF + object database | `not-started` | not started |
 | 5 | BN + ASN.1 + DER/PEM | `not-started` | not started |
 | 6 | OSSL_LIB_CTX + provider core | `not-started` | not started |

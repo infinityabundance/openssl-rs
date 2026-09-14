@@ -2,26 +2,8 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority": "openssl-3.6.4-production",
-    "complete_count": 22,
+    "complete_count": 28,
     "deferred": [
-      {
-        "owning_phase": "2",
-        "plane": "abi-cross-compile-matrix",
-        "reason": "the four oracle/candidate header x DSO combinations; Phase 2 has landed ABI-LINK and ABI-LAYOUT, the remaining combinations are Phase 2 work",
-        "status": "deferred"
-      },
-      {
-        "owning_phase": "2",
-        "plane": "binary-substitution-skeleton",
-        "reason": "build once against OpenSSL, run against candidate DSOs; Phase 2",
-        "status": "deferred"
-      },
-      {
-        "owning_phase": "2",
-        "plane": "static-archives-provider-modules-cli",
-        "reason": "libcrypto.a/libssl.a, legacy.so, the `openssl` executable and a real install layout",
-        "status": "deferred"
-      },
       {
         "owning_phase": "3",
         "plane": "ownership-behavioural-probes",
@@ -29,78 +11,37 @@
         "status": "deferred"
       },
       {
-        "owning_phase": "2",
-        "plane": "enum-constant-values",
-        "reason": "enum constant integers are captured in the declaration atlas as AST values, but a compiled constant-value court belongs with the ABI shell",
+        "owning_phase": "3",
+        "plane": "panic-payload-surfacing-at-ffi",
+        "reason": "the FFI boundary drops the panic payload because it is not ABI-stable; Phase 3 surfaces the condition through the thread-local ERR queue (docs/DECISIONS.md D16). A Phase-3 obligation, not a Phase-1 unknown.",
         "status": "deferred"
       },
       {
-        "owning_phase": "1-closure",
-        "plane": "frf-receipts-for-the-atlas",
-        "reason": "FRF receipts covering the archaeology itself, compiled into a phase claim",
+        "owning_phase": "3",
+        "plane": "secure-memory-semantics",
+        "reason": "CRYPTO_secure_malloc/secure_arena behaviour and its mmap/mlock/guard-page policy; part of the core runtime, not archaeology",
+        "status": "deferred"
+      },
+      {
+        "owning_phase": "3",
+        "plane": "initialisation-and-cleanup",
+        "reason": "OPENSSL_init_crypto flags, implicit init, atexit/OPENSSL_cleanup ordering",
+        "status": "deferred"
+      },
+      {
+        "owning_phase": "3",
+        "plane": "object-and-nid-database",
+        "reason": "OBJ_*/NID tables, which are large but derivable from the authority's own sources",
         "status": "deferred"
       }
     ],
-    "deferred_count": 6,
+    "deferred_count": 5,
+    "dispositioned_count": 2,
     "missing": [],
     "missing_count": 0,
     "note": "Phase 1 is archaeology only: no candidate parity is claimed anywhere in this inventory, and no obligation is PARITY_VERIFIED.",
-    "open_unknown_count": 4,
-    "open_unknowns": [
-      {
-        "count": 11,
-        "sample": [
-          "OSSL_provider_init",
-          "_CONF_add_string",
-          "_CONF_free_data",
-          "_CONF_get_number",
-          "_CONF_get_section",
-          "_CONF_get_section_values",
-          "_CONF_get_string",
-          "_CONF_new_data",
-          "_CONF_new_section",
-          "_openssl_ascii2ebcdic"
-        ],
-        "unknown": "declared-but-not-in-ABI-inventory symbols",
-        "why": "declared in a public header, not exported by the DSO, and not listed in .num. Not a defect and not yet explained; each needs a per-symbol disposition."
-      },
-      {
-        "count": 26,
-        "sample": [
-          "DSO_METHOD_openssl",
-          "DSO_bind_func",
-          "DSO_convert_filename",
-          "DSO_ctrl",
-          "DSO_dsobyaddr",
-          "DSO_flags",
-          "DSO_free",
-          "DSO_get_filename",
-          "DSO_global_lookup",
-          "DSO_load",
-          "DSO_merge",
-          "DSO_new"
-        ],
-        "unknown": "exported symbols with no installed declaration",
-        "why": "the DSO exports them and no installed header declares them (the DSO_* family belongs to dso.h, which the authority does not install). A consumer can link these but cannot see a declaration; whether the candidate must export them is an open contract question."
-      },
-      {
-        "count": 2,
-        "sample": [
-          "openssl-cli-list-disabled",
-          "openssl-cli-list-cipher"
-        ],
-        "unknown": "FRF sensitivity coverage for the non-fixture-driven courts",
-        "why": "docs/DECISIONS.md D13: the challenge mutant cannot locate the reference when the court's arguments do not reference {fixture}, so axis isolation cannot be demonstrated. Remedy: make the courts fixture-driven. Blocks a sensitivity-backed claim, not a baseline one."
-      },
-      {
-        "count": 1,
-        "sample": [
-          "src/ffi/mod.rs"
-        ],
-        "unknown": "panic payload not surfaced at the FFI boundary",
-        "why": "docs/DECISIONS.md D16: the payload is dropped because it is not ABI-stable. Phase 3 surfaces the condition through the thread-local ERR queue, which is what an OpenSSL caller expects after a failure."
-      }
-    ],
+    "open_unknown_count": 0,
+    "open_unknowns": [],
     "planes": [
       {
         "artifact": "forensics/authorities/AUTHORITIES.json",
@@ -255,10 +196,145 @@
         "plane": "rendered-atlas",
         "sha256": "00da160f2df41d5077205e5c56df0b4688416390735387b69c6ccef305eedb9f",
         "status": "complete"
+      },
+      {
+        "artifact": "forensics/atlas/differential/openssl-3.6.3-historical-vs-openssl-3.6.4-production.json",
+        "description": "measured 3.6.3 -> 3.6.4 movement across every plane",
+        "plane": "oracle-oracle-differential",
+        "sha256": "bfe481912c918864b0c7891388e6f0254b5546b15b2d65885c3b6ddecd2a9a88",
+        "status": "complete"
+      },
+      {
+        "artifact": "artifacts/phase2/COURTS.json",
+        "description": "all four authority/candidate header x library combinations (court ABI-MATRIX)",
+        "plane": "abi-cross-compile-matrix",
+        "sha256": "07ed4b78909ae394fc81ca3ddc321304e0c7219fb853da4e290cfbbfa137104e",
+        "status": "complete"
+      },
+      {
+        "artifact": "artifacts/phase2/COURTS.json",
+        "description": "one executable built against the authority runs against candidate libraries (ABI-SUBSTITUTION)",
+        "plane": "binary-substitution",
+        "sha256": "07ed4b78909ae394fc81ca3ddc321304e0c7219fb853da4e290cfbbfa137104e",
+        "status": "complete"
+      },
+      {
+        "artifact": "artifacts/phase2/SHELL_MANIFEST.json",
+        "description": "libcrypto.a/libssl.a, legacy.so provider module, openssl and c_rehash, install layout",
+        "plane": "static-archives-provider-module-cli",
+        "sha256": "62ff77f9f2403ecd67bfb790ecdbc4e59760a6588d870f52a0b87cbe9edd03e8",
+        "status": "complete"
+      },
+      {
+        "artifact": "artifacts/phase2/COURTS.json",
+        "description": "27 compile-time constants compared across header sets (court ABI-CONSTANTS)",
+        "plane": "compiled-constant-values",
+        "sha256": "07ed4b78909ae394fc81ca3ddc321304e0c7219fb853da4e290cfbbfa137104e",
+        "status": "complete"
+      },
+      {
+        "artifact": "artifacts/phase2/COURTS.json",
+        "description": "SONAME, DT_NEEDED and ELF identity (court ABI-DYNAMIC)",
+        "plane": "dynamic-elf-contract",
+        "sha256": "07ed4b78909ae394fc81ca3ddc321304e0c7219fb853da4e290cfbbfa137104e",
+        "status": "complete"
+      }
+    ],
+    "residual_dispositions": [
+      {
+        "binary_public": true,
+        "candidate_exports": true,
+        "class": "ABI_ONLY_EXPORTED",
+        "closed": true,
+        "count": 26,
+        "must_export": true,
+        "source_public": false,
+        "symbols_sample": [
+          "DSO_METHOD_openssl",
+          "DSO_bind_func",
+          "DSO_convert_filename",
+          "DSO_ctrl",
+          "DSO_dsobyaddr",
+          "DSO_flags",
+          "DSO_free",
+          "DSO_get_filename",
+          "DSO_global_lookup",
+          "DSO_load",
+          "DSO_merge",
+          "DSO_new"
+        ],
+        "why": "exported by the authority DSO but declared by no installed header (the DSO_* family; dso.h is not installed). A precompiled consumer can resolve these, so they are part of the observed binary ABI even though they are invisible to source compatibility. The candidate exports them because its scaffold set is derived from the authority's DSO exports."
+      },
+      {
+        "binary_public": false,
+        "candidate_exports": false,
+        "class": "DECLARED_NOT_EXPORTED_BY_AUTHORITY",
+        "closed": true,
+        "count": 11,
+        "must_export": false,
+        "source_public": true,
+        "symbols": [
+          {
+            "header": "core.h",
+            "line": 200,
+            "symbol": "OSSL_provider_init"
+          },
+          {
+            "header": "conf_api.h",
+            "line": 34,
+            "symbol": "_CONF_add_string"
+          },
+          {
+            "header": "conf_api.h",
+            "line": 41,
+            "symbol": "_CONF_free_data"
+          },
+          {
+            "header": "conf_api.h",
+            "line": 37,
+            "symbol": "_CONF_get_number"
+          },
+          {
+            "header": "conf_api.h",
+            "line": 29,
+            "symbol": "_CONF_get_section"
+          },
+          {
+            "header": "conf_api.h",
+            "line": 31,
+            "symbol": "_CONF_get_section_values"
+          },
+          {
+            "header": "conf_api.h",
+            "line": 35,
+            "symbol": "_CONF_get_string"
+          },
+          {
+            "header": "conf_api.h",
+            "line": 40,
+            "symbol": "_CONF_new_data"
+          },
+          {
+            "header": "conf_api.h",
+            "line": 27,
+            "symbol": "_CONF_new_section"
+          },
+          {
+            "header": "ebcdic.h",
+            "line": 34,
+            "symbol": "_openssl_ascii2ebcdic"
+          },
+          {
+            "header": "ebcdic.h",
+            "line": 33,
+            "symbol": "_openssl_ebcdic2ascii"
+          }
+        ],
+        "why": "declared in a public header, but the authority neither exports them nor lists them in .num. A consumer can compile a reference and will fail to link against the authority, so the candidate must not export them either -- and does not, for the same reason as above."
       }
     ]
   },
-  "body_hash": "194ba8d075b77151096f7afb911b26939c6f7c663beb8d4e02e3d9194511bbb4",
+  "body_hash": "98f54a5382ed2c9f7f49c3d804882ebae39b10fbebfbb1d3bd3a107e0ad74cac",
   "generator": "forensics/tools/atlas_phase1_completeness.py",
   "inputs": [],
   "kind": "phase1-completeness",

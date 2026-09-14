@@ -27,6 +27,30 @@ by `docs/CUSTODIAN_CONTRACT.md` §5:
     instead of silently receiving invented output. That is the honest failure
     mode for an unimplemented obligation.
 
+The scaffold set is DERIVED, not maintained
+-------------------------------------------
+The generator does not keep its own list of what is implemented. It reads
+`forensics/atlas/implemented-surface.json`, which `implemented_surface.py`
+derives by intersecting the authority's measured DSO exports with the symbols
+the *built crate archive* actually defines. A symbol the crate defines is
+scaffolded here **zero** times, so a scaffold and an implementation of the same
+symbol can never collide in the link, and the implementation — not a generator's
+opinion — decides the scaffold set.
+
+Runtime flavour is decided by the link
+--------------------------------------
+`libcrypto.so.3` is linked together with the crate archive, so its scaffolds may
+use `std` and resolve against the single Rust runtime already present. It is
+built as an object rather than a second archive precisely because a second Rust
+`staticlib` would drag a second copy of `std`/`core` into the same link.
+
+`libssl.so.3` is linked from its scaffolds plus `libcrypto.so.3` **only**. It must
+not carry a private copy of `libcrypto`'s implementation, because that would give
+`libssl` its own copies of observable `libcrypto` state (the error queue is
+thread-local, for instance) and applications would then observe two divergent
+OpenSSLs in one process. Its scaffolds are therefore `no_std` and reference only
+`write(2)` and `abort(3)`.
+
 The header shell
 ----------------
 `docs/ABI_POLICY.md` §4 and the contract's provenance rule allow interface
@@ -65,6 +89,66 @@ from atlas_common import (  # noqa: E402
 
 OUT = REPO_ROOT / "artifacts" / "phase2"
 LIBRARIES = {"libcrypto": "libcrypto.so.3", "libssl": "libssl.so.3"}
+
+# Which libraries are linked standalone (their scaffolds must be `no_std` and
+# reference only libc) versus linked together with the crate archive (their
+# scaffolds may use `std`, which the crate runtime already provides).
+STANDALONE = {"libcrypto": False, "libssl": True}
+
+IMPLEMENTED_SURFACE = REPO_ROOT / "forensics" / "atlas" / "implemented-surface.json"
+
+# `#![no_std]` flavour: no Rust runtime is available in the link, so the scaffold
+# speaks to libc directly. `write(2)`/`abort(3)` are the only undefined symbols it
+# may leave behind.
+SCAFFOLD_PRELUDE_NOSTD = """#![no_std]
+#![allow(non_snake_case)]
+
+use core::ffi::{c_int, c_void};
+
+extern "C" {
+    fn write(fd: c_int, buf: *const c_void, n: usize) -> isize;
+    fn abort() -> !;
+}
+
+#[panic_handler]
+fn openssl_rs_scaffold_panic(_: &core::panic::PanicInfo) -> ! {
+    // SAFETY: `abort` takes no arguments and does not return.
+    unsafe { abort() }
+}
+
+#[cold]
+#[inline(never)]
+fn openssl_rs_scaffolded(name: &'static [u8]) -> ! {
+    // SAFETY: `name` points at static storage for its whole length, and
+    // `write`/`abort` are libc entry points that do not retain the pointer.
+    unsafe {
+        write(2, name.as_ptr().cast::<c_void>(), name.len());
+        abort()
+    }
+}
+"""
+
+# `std` flavour: the crate archive is in the link, so the scaffold can report
+# through the ordinary Rust runtime.
+SCAFFOLD_PRELUDE_STD = """#![allow(non_snake_case)]
+
+use core::ffi::c_int;
+use std::io::Write;
+
+#[cold]
+#[inline(never)]
+fn openssl_rs_scaffolded(name: &str) -> ! {
+    let _ = writeln!(std::io::stderr(), "{name}");
+    std::process::abort();
+}
+
+/// Report that `name` is scaffolded. Never returns.
+macro_rules! scaffolded {
+    ($name:literal) => {
+        openssl_rs_scaffolded($name)
+    };
+}
+"""
 
 HEADER_SHELL_NOTICE = """/* SPDX-License-Identifier: Apache-2.0
  *
@@ -124,15 +208,36 @@ def generate_version_script(doc: dict, soname: str) -> str:
     return "\n".join(lines) + "\n"
 
 
-def generate_shell_rs(doc: dict, lib: str) -> str:
-    """Emit SCAFFOLDED Rust symbol definitions for one library."""
-    symbols = sorted(
-        rec["symbol"] for rec in doc["body"]["records"]
-        if (rec.get("dso") or {}).get("present")
-    )
+def generate_shell_rs(doc: dict, lib: str, implemented: set[str], standalone: bool) -> str:
+    """Emit SCAFFOLDED Rust symbol definitions for one library.
+
+    `implemented` is the set of symbols the built crate archive already defines
+    for this library's namespace; those are omitted so the shell cannot collide
+    with the implementation it would otherwise shadow.
+
+    `standalone` selects the runtime flavour: a `no_std` scaffold that references
+    only `write(2)`/`abort(3)` when the DSO is linked without the crate archive,
+    or a `std` scaffold when the crate runtime is already in the link.
+    """
+    present = [rec for rec in doc["body"]["records"]
+               if (rec.get("dso") or {}).get("present")]
+    # A scaffold is a function definition. If the authority ever exports a data
+    # symbol, emitting a function for it would produce a symbol whose ELF type is
+    # wrong and the ABI-SYMBOL court would (correctly) fail. Refuse to guess.
+    non_func = sorted({(r.get("dso") or {}).get("type")
+                       for r in present
+                       if (r.get("dso") or {}).get("type") not in (None, "FUNC")})
+    if non_func:
+        raise SystemExit(
+            f"phase2_shell: {lib} exports non-FUNC symbol types {non_func}; "
+            "the scaffold emitter only knows how to emit functions. Extend the "
+            "emitter (and the ABI-SYMBOL court) rather than emitting a wrong type."
+        )
+
+    symbols = sorted(r["symbol"] for r in present if r["symbol"] not in implemented)
     out = [
         "// GENERATED by forensics/tools/phase2_shell.py — do not edit by hand.",
-        f"//",
+        "//",
         f"// openssl-rs — Phase 2 ABI shell for {lib} ({LIBRARIES[lib]}).",
         "//",
         "// STATUS: SCAFFOLDED. Every symbol below is a scaffold, not an",
@@ -143,42 +248,61 @@ def generate_shell_rs(doc: dict, lib: str) -> str:
         "// A scaffold never returns a plausible value. Calling one aborts with a",
         "// diagnostic naming the symbol, so an unimplemented obligation fails",
         "// loudly rather than silently inventing output.",
-        "#![allow(non_snake_case)]",
+        "//",
+        "// Symbols the crate already implements are ABSENT by construction: this",
+        "// file is generated against forensics/atlas/implemented-surface.json.",
         "",
-        "use std::io::Write;",
-        "",
-        "#[cold]",
-        "#[inline(never)]",
-        "fn openssl_rs_scaffolded(name: &str) -> ! {",
-        "    let _ = writeln!(",
-        "        std::io::stderr(),",
-        '        "openssl-rs: SCAFFOLDED symbol {name} was called. This symbol is not"',
-        "    );",
-        "    let _ = writeln!(",
-        "        std::io::stderr(),",
-        '        "openssl-rs: implemented; the ABI shell exists only so distribution"',
-        "    );",
-        "    let _ = writeln!(",
-        "        std::io::stderr(),",
-        '        "openssl-rs: artifacts can be linked and loaded. See docs/RELEASE_GATES.md."',
-        "    );",
-        "    std::process::abort();",
-        "}",
-        "",
-        "/// Report that `name` is scaffolded. Never returns.",
-        "macro_rules! scaffolded {",
-        "    ($name:literal) => {",
-        "        openssl_rs_scaffolded($name)",
-        "    };",
-        "}",
-        "",
+        SCAFFOLD_PRELUDE_NOSTD if standalone else SCAFFOLD_PRELUDE_STD,
     ]
     for sym in symbols:
-        out.append(f'#[no_mangle]\npub extern "C" fn {sym}() -> core::ffi::c_int {{')
-        out.append(f'    scaffolded!("{sym}")')
+        out.append(f'#[no_mangle]\npub extern "C" fn {sym}() -> c_int {{')
+        if standalone:
+            out.append(f'    openssl_rs_scaffolded({scaffold_message_bytes(sym)})')
+        else:
+            out.append(f'    scaffolded!({json.dumps(scaffold_message(sym))})')
         out.append("}")
         out.append("")
     return "\n".join(out)
+
+
+def scaffold_message(sym: str) -> str:
+    return (
+        f"openssl-rs: SCAFFOLDED symbol {sym} was called. It is not implemented; "
+        "the ABI shell exists only so distribution artifacts can be linked and "
+        "loaded. See docs/RELEASE_GATES.md."
+    )
+
+
+def scaffold_message_bytes(sym: str) -> str:
+    """The message as a Rust byte-string literal (the `no_std` flavour)."""
+    return 'b"' + scaffold_message(sym) + '\\n"'
+
+
+def load_implemented(authority_id: str) -> dict[str, set[str]]:
+    """Read the candidate implemented-surface manifest for one authority.
+
+    The manifest is produced by `implemented_surface.py` from the *built crate
+    archive*, so the shell cannot scaffold a symbol the crate already defines.
+    A missing manifest is a hard error, not an empty default: defaulting would
+    silently emit a scaffold that collides with the implementation at link time,
+    and the cause (a stale or absent build) would be far from the symptom.
+    """
+    if not IMPLEMENTED_SURFACE.is_file():
+        raise SystemExit(
+            f"phase2_shell: {rel(IMPLEMENTED_SURFACE)} is missing.\n"
+            "  It is derived from the built crate. Run:\n"
+            "    cargo build --release\n"
+            "    python3 forensics/tools/implemented_surface.py\n"
+            "  (forensics/tools/build_phase2.sh does both.)"
+        )
+    doc = json.loads(IMPLEMENTED_SURFACE.read_text())
+    if doc.get("authority") != authority_id:
+        raise SystemExit(
+            f"phase2_shell: {rel(IMPLEMENTED_SURFACE)} was generated for "
+            f"{doc.get('authority')!r}, not {authority_id!r}; regenerate it."
+        )
+    libs = doc["body"]["libraries"]
+    return {lib: set(libs[lib]["implemented_symbols"]) for lib in LIBRARIES}
 
 
 def generate_pkgconfig(lib: str, version: str) -> str:
@@ -212,14 +336,15 @@ SCAFFOLD_HEADER = """// GENERATED by forensics/tools/phase2_shell.py — do not 
 
 use std::io::Write;
 
+#[allow(dead_code)] // the CLI shell routes through `main` instead
 #[cold]
 #[inline(never)]
-fn openssl_rs_scaffolded(name: &str) -> ! {{
+fn openssl_rs_scaffolded(name: &str) -> ! {
     let _ = writeln!(std::io::stderr(), "openssl-rs: SCAFFOLDED {name} invoked.");
     let _ = writeln!(std::io::stderr(), "openssl-rs: not implemented; the Phase 2 shell exists so the");
     let _ = writeln!(std::io::stderr(), "openssl-rs: distribution artifacts can be linked and loaded.");
     std::process::abort();
-}}
+}
 """
 
 
@@ -273,6 +398,7 @@ def generate(authority_id: str) -> None:
 
     docs = {lib: json.loads((adir / f"symbols-{lib}.json").read_text())
             for lib in LIBRARIES}
+    implemented = load_implemented(authority_id)
 
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "shell").mkdir(exist_ok=True)
@@ -288,14 +414,18 @@ def generate(authority_id: str) -> None:
         produced.append({"artifact": p.name, "role": "version-script",
                          "sha256": sha256_file(p)})
 
-        rs = generate_shell_rs(doc, lib)
+        standalone = STANDALONE[lib]
+        rs = generate_shell_rs(doc, lib, implemented[lib], standalone)
         p = OUT / "shell" / f"{lib}.shell.rs"
         write_text(p, rs)
+        exports = sum(1 for r in doc["body"]["records"]
+                      if (r.get("dso") or {}).get("present"))
         produced.append({"artifact": rel(p), "role": "scaffolded-symbols",
                          "sha256": sha256_file(p),
-                         "symbol_count": sum(
-                             1 for r in doc["body"]["records"]
-                             if (r.get("dso") or {}).get("present"))})
+                         "authority_exports": exports,
+                         "scaffolded": exports - len(implemented[lib]),
+                         "implemented_excluded": len(implemented[lib]),
+                         "runtime": "no_std" if standalone else "std"})
 
         pc = generate_pkgconfig(lib, auth.version)
         p = OUT / "pkgconfig" / f"{lib}.pc"
@@ -356,6 +486,15 @@ def generate(authority_id: str) -> None:
             "parity, and it aborts rather than returning a plausible value "
             "(docs/CUSTODIAN_CONTRACT.md §5)"
         ),
+        "scaffold_set_derivation": (
+            "the scaffold set is the authority's measured DSO exports minus the "
+            "symbols the built crate archive defines ("
+            "forensics/atlas/implemented-surface.json, derived by "
+            "forensics/tools/implemented_surface.py). No list is maintained here."
+        ),
+        "implemented_excluded": {
+            lib: len(implemented[lib]) for lib in LIBRARIES
+        },
         "artifacts": produced,
     }
     doc = envelope("phase2-shell", "forensics/tools/phase2_shell.py", [],
@@ -364,7 +503,7 @@ def generate(authority_id: str) -> None:
     write_json(OUT / "SHELL_MANIFEST.json", doc)
     print(f"  manifest: {rel(OUT / 'SHELL_MANIFEST.json')}")
     for a in produced:
-        extra = a.get("symbol_count") or a.get("file_count") or ""
+        extra = a.get("scaffolded") or a.get("file_count") or ""
         print(f"    {a['role']:<18} {a['artifact']} {extra}")
 
 

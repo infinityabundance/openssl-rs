@@ -58,6 +58,33 @@ Applied at `docker run` time, identically for both venues:
 `docker/openssl-rs-court.sh verify` and `docker/openssl-rs-frf-court.sh verify`
 assert the caps are in force.
 
+### 1.4 Host containment is enforced, not assumed
+
+The host has a complete toolchain (`clang`, `cargo`, `rustc`, `nm`, `readelf`,
+`ar`) and the repository is bind-mounted into the court at `/work`. So a command
+mistyped on the host would *look* like it worked, and the only thing preventing
+host execution would be care. Care is not a control.
+
+Every build and court entry point therefore sources
+`forensics/tools/require_court.sh`, which refuses to continue unless
+`/.dockerenv` exists, and exits `97` with instructions. There is deliberately no
+override: an escape hatch would be used.
+
+```
+bash docker/openssl-rs-court.sh exec bash forensics/tools/build_atlas.sh
+bash docker/openssl-rs-court.sh exec bash forensics/tools/build_phase2.sh
+bash docker/openssl-rs-court.sh exec python3 forensics/tools/phase3_courts.py
+bash docker/openssl-rs-frf-court.sh exec bash forensics/frf/run_courts.sh
+```
+
+Note the distinction the guard encodes: files written inside the court appear on
+the host through the bind mount, and that is intended -- it is how evidence
+persists. It is **execution** on the host that is forbidden.
+
+Because the bind mount is shared, court scratch output must be confined to
+`/court` (container only) or to the git-ignored `court/` directory in the
+repository, so that raw court material never enters the tracked history.
+
 ## 2. Determinism
 
 Derived evidence (the atlas) must be reproducible byte-for-byte from

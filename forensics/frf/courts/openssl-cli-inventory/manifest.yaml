@@ -1,0 +1,46 @@
+# openssl-rs court: CLI inventory membership (FIXTURE-DRIVEN).
+#
+# REPLACES `openssl-cli-list-disabled` and `openssl-cli-list-cipher`, whose
+# sensitivity evidence was unobtainable: their arguments did not reference
+# {fixture}, so the challenge mutant could not locate the reference object and
+# the court could not demonstrate axis isolation (docs/DECISIONS.md D13).
+#
+# Here the fixture is the QUERY LIST: each side reports, for every name in it,
+# whether its own binary reports that name as a disabled feature, as a symmetric
+# cipher, or absent. Both sides are real OpenSSL binaries (3.6.3 historical
+# authority vs 3.6.4 production authority), so this remains the
+# oracle-vs-oracle trajectory court required by
+# docs/SECURITY_DIVERGENCE_POLICY.md §1 -- now in a form that can be challenged.
+#
+# The observed surface is unchanged (build configuration and cipher inventory);
+# only the framing changed, so the court's sensitivity evidence becomes
+# obtainable rather than blocked.
+
+court:
+  id: openssl-cli-inventory
+  question: >-
+    For the CLI inventory surface in fixture family cli-inventory, does the
+    candidate report the same disabled-feature and cipher-algorithm membership
+    for every queried name as the admitted historical authority?
+  falsifier: >-
+    Any queried name is classified differently (DISABLED / CIPHER / ABSENT), or
+    the exit class diverges.
+  authority: openssl-cli-3.6.3
+  candidate:
+    name: openssl
+    version_or_commit: "3.6.4"
+    build_profile: linux-x86_64-default-shared-legacy-notests
+    path: forensics/frf/refs/candidate-cli-inventory.sh
+  fixture:
+    id: cli-inventory-names.txt
+    path: forensics/frf/courts/openssl-cli-inventory/fixtures/cli-inventory-names.txt
+    arguments: ["{fixture}"]
+  admissibility_envelope:
+    fixture_family: cli-inventory
+    platforms: ["x86_64-linux"]
+    observables: [stdout, exit]
+    normalizers: []
+    replay_scope: single-run
+  environment:
+    LC_ALL: C
+    TZ: UTC

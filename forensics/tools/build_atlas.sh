@@ -12,6 +12,9 @@
 # come last so it covers everything, including the rendered projections.
 set -euo pipefail
 
+# Nothing runs on the host (docs/REPRODUCIBILITY.md §1). Enforced, not assumed.
+. "$(dirname "$0")/require_court.sh"
+
 cd /work
 
 echo "=== [1/10] admit authorities (verify checksums + content-address sources) ==="

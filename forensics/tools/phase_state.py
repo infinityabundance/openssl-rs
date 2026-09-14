@@ -130,7 +130,29 @@ def evidence_for(phase: int) -> tuple[list[str], list[str], str]:
                 blocking = f"courts not passing: {failed}"
         return present, absent, blocking
 
+    if phase == 3:
+        for d in PHASE3_MODULES:
+            (present if exists(d) else absent).append(d)
+        if not absent:
+            blocking = PHASE3_OUTSTANDING
+        return present, absent, blocking
+
     return present, absent, "not started"
+
+
+# Phase 3 evidence: the core-runtime modules and the courts that exercise them.
+PHASE3_MODULES = [
+    "src/runtime/mod.rs",
+    "src/runtime/mem.rs",
+    "src/runtime/err.rs",
+    "src/runtime/stack.rs",
+]
+PHASE3_OUTSTANDING = (
+    "the runtime substrate is under construction: implemented so far are memory, "
+    "the ERR queue and the stack. Outstanding: ex_data, lhash, the OBJ/NID "
+    "database, secure memory, CRYPTO_THREAD_*, initialisation/cleanup, and the "
+    "remaining reference-counting surface."
+)
 
 
 def seal_identity(doc: str) -> str | None:

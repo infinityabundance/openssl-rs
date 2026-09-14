@@ -13,7 +13,13 @@
 //!      them to the crate as `OPENSSL_RS_AUTHORITY_*` compile-time environment
 //!      variables, so evidence can always name the authority it was produced
 //!      against;
-//!   3. re-runs when the registry or the constitution changes.
+//!   3. re-runs when the registry or the constitution changes;
+//!   4. compiles the C-variadic ABI adapters (`src/runtime/err_variadic.c`) into
+//!      the crate, because Rust cannot define a C-variadic function on stable
+//!      and those three entry points therefore have to be built from C. The
+//!      compiled archive is a *crate artifact*, not a link-time afterthought: a
+//!      Rust consumer of this crate gets the same symbol set the distribution
+//!      artifacts get.
 //!
 //! It deliberately does NOT embed wall-clock time or host paths.
 //!
@@ -24,8 +30,8 @@
 
 use std::env;
 use std::fs;
-use std::path::PathBuf;
-use std::process::ExitCode;
+use std::path::{Path, PathBuf};
+use std::process::{Command, ExitCode};
 
 /// Documents that must exist before any product code is built.
 ///
@@ -121,6 +127,72 @@ fn run() -> Result<(), String> {
     println!("cargo:rustc-env=OPENSSL_RS_AUTHORITY_ARCHIVE_SHA256={archive_sha256}");
     println!("cargo:rustc-env=OPENSSL_RS_AUTHORITY_SOURCE_ROOT_HASH={source_root_hash}");
 
+    build_variadic_adapters(&manifest_dir)?;
+
+    Ok(())
+}
+
+/// Compile the C-variadic ABI adapters and make them part of this crate.
+///
+/// `ERR_set_error`, `ERR_add_error_data` and `ERR_add_error_vdata` are
+/// printf-style C-variadic functions, which stable Rust cannot define. They are
+/// therefore implemented as argument-marshalling shims in C that call back into
+/// the Rust core (`src/runtime/err.rs`); no behaviour lives in the C. The same
+/// constraint is already documented in `docs/UNSAFE.md` and the module docs.
+///
+/// The archive is linked as a *static* library so that the archive-form crate
+/// output (`staticlib`) contains those symbols, and so that `cargo test` links
+/// them too. `build_phase2.sh` then only has to compile the scaffolds.
+fn build_variadic_adapters(manifest_dir: &Path) -> Result<(), String> {
+    let src = manifest_dir.join("src/runtime/err_variadic.c");
+    println!("cargo:rerun-if-changed={}", src.display());
+
+    let out_dir = PathBuf::from(env::var("OUT_DIR").map_err(|_| "OUT_DIR is not set")?);
+    let obj = out_dir.join("openssl_rs_err_variadic.o");
+    let archive = out_dir.join("libopenssl_rs_err_variadic.a");
+
+    // `CC`/`AR` are honoured so a cross build can point at its own toolchain;
+    // the defaults match every platform this project admits so far.
+    let cc = env::var("CC").unwrap_or_else(|_| "cc".to_string());
+    let ar = env::var("AR").unwrap_or_else(|_| "ar".to_string());
+
+    run_tool(
+        &cc,
+        &[
+            "-c",
+            "-O2",
+            "-fPIC",
+            "-fno-strict-aliasing",
+            "-o",
+            &obj.to_string_lossy(),
+            &src.to_string_lossy(),
+        ],
+    )
+    .map_err(|e| format!("compiling {} failed: {e}", src.display()))?;
+
+    run_tool(
+        &ar,
+        &["crs", &archive.to_string_lossy(), &obj.to_string_lossy()],
+    )
+    .map_err(|e| format!("archiving {} failed: {e}", archive.display()))?;
+
+    println!("cargo:rustc-link-search=native={}", out_dir.display());
+    println!("cargo:rustc-link-lib=static=openssl_rs_err_variadic");
+    Ok(())
+}
+
+fn run_tool(program: &str, args: &[&str]) -> Result<(), String> {
+    let out = Command::new(program)
+        .args(args)
+        .output()
+        .map_err(|e| format!("cannot execute {program}: {e}"))?;
+    if !out.status.success() {
+        return Err(format!(
+            "{program} exited with {}: {}",
+            out.status,
+            String::from_utf8_lossy(&out.stderr).trim()
+        ));
+    }
     Ok(())
 }
 

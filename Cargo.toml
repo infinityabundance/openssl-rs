@@ -78,6 +78,10 @@ exclude = [
     "forensics/authorities/SOURCE_MANIFEST.*.json",
     "docker/**",
     "courts/**",
+    # Scratch space written by courts and probes inside the container. It is
+    # bind-mounted, so it lands on host disk, but it is neither evidence nor
+    # product and must never reach a published package.
+    "court/**",
     "artifacts/**",
     ".gemel/**",
     ".github/**",
@@ -85,10 +89,15 @@ exclude = [
 
 # Phase 0/1 skeleton: library only. Distribution artifacts arrive in Phase 2
 # together with the export/version-script machinery that makes them honest.
+# The crate emits BOTH an rlib (for Rust consumers and tests) and a staticlib.
+# The static archive is what forensics/tools/build_phase2.sh links, together with
+# the generated scaffolds, into libcrypto.so.3 / libssl.so.3. The IMPLEMENTED set
+# is derived from this crate's own source, so the shell generator never keeps a
+# second list of what is implemented that could drift.
 [lib]
 name = "openssl_rs"
 path = "src/lib.rs"
-crate-type = ["rlib"]
+crate-type = ["rlib", "staticlib"]
 
 # No dependencies. Everything the product does must be implemented here.
 [dependencies]

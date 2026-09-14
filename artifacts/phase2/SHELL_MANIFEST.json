@@ -9,9 +9,12 @@
       },
       {
         "artifact": "artifacts/phase2/shell/libcrypto.shell.rs",
+        "authority_exports": 5896,
+        "implemented_excluded": 189,
         "role": "scaffolded-symbols",
-        "sha256": "874ea85fac6bd1a3d286f8f1d96f9a6e8fd43e7abc80fe99302707a845c9a0c1",
-        "symbol_count": 5896
+        "runtime": "std",
+        "scaffolded": 5707,
+        "sha256": "796f5f36875d2c813f180df21a59ebec49461e9dd1f84687c42a7e80b73fbcbc"
       },
       {
         "artifact": "artifacts/phase2/pkgconfig/libcrypto.pc",
@@ -25,9 +28,12 @@
       },
       {
         "artifact": "artifacts/phase2/shell/libssl.shell.rs",
+        "authority_exports": 603,
+        "implemented_excluded": 0,
         "role": "scaffolded-symbols",
-        "sha256": "0cc3ef6e7831b78b32a1c7c44221ea8f3a1cd09e56b21f0deff0701991cbefca",
-        "symbol_count": 603
+        "runtime": "no_std",
+        "scaffolded": 603,
+        "sha256": "c0e98e8ef8a61d2746fc0c72e077047f2f919600595b24570970167744c93a2f"
       },
       {
         "artifact": "artifacts/phase2/pkgconfig/libssl.pc",
@@ -37,12 +43,12 @@
       {
         "artifact": "artifacts/phase2/shell/legacy.shell.rs",
         "role": "scaffold-source",
-        "sha256": "367895f6c5ff98725c3776f64fa1803a867cea1583b55d662f83741d5e3b13fd"
+        "sha256": "b193de7e169a14831e96bff987d3d64bbf5091a66cb92352cc3a535b9a56a81a"
       },
       {
         "artifact": "artifacts/phase2/shell/openssl.shell.rs",
         "role": "scaffold-source",
-        "sha256": "843038d6ecf4c8339bbced3a40903d45ca100689a3a4035eef4416b338e54756"
+        "sha256": "a2026b42ca563788e7d2212c0b45ec3e36dc4b60c7b6bb20dd71a5eb73838c3c"
       },
       {
         "artifact": "artifacts/phase2/shell/c_rehash.sh",
@@ -68,13 +74,18 @@
     ],
     "authority": "openssl-3.6.4-production",
     "authority_version": "3.6.4",
+    "implemented_excluded": {
+      "libcrypto": 189,
+      "libssl": 0
+    },
     "scaffold_policy": "every generated symbol definition is SCAFFOLDED; it cannot count as parity, and it aborts rather than returning a plausible value (docs/CUSTODIAN_CONTRACT.md §5)",
+    "scaffold_set_derivation": "the scaffold set is the authority's measured DSO exports minus the symbols the built crate archive defines (forensics/atlas/implemented-surface.json, derived by forensics/tools/implemented_surface.py). No list is maintained here.",
     "sonames": {
       "libcrypto": "libcrypto.so.3",
       "libssl": "libssl.so.3"
     }
   },
-  "body_hash": "287afc6f5d8ea9a210d7da1d99858b755db4ba8b4ac3f00d8f7b506ee929227b",
+  "body_hash": "7829e66dbbf99e43bf32dc4c8b3a5101239dfc5fce4bbc844f4e79328ebecd1f",
   "generator": "forensics/tools/phase2_shell.py",
   "inputs": [],
   "kind": "phase2-shell",

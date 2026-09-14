@@ -55,4 +55,5 @@
 #![deny(missing_docs)]
 
 pub mod ffi;
+pub mod runtime;
 pub mod status;

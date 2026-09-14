@@ -26,14 +26,19 @@
 # observation.
 set -euo pipefail
 
+# Nothing runs on the host (docs/REPRODUCIBILITY.md §1). Enforced, not assumed.
+. "$(dirname "$0")/../tools/require_court.sh"
+
 cd /work
 ROOT="${FRF_ROOT:-.frf}"
-COURTS="openssl-cli-version openssl-cli-dgst openssl-cli-list-disabled openssl-cli-list-cipher"
+COURTS="openssl-cli-version openssl-cli-dgst openssl-cli-inventory"
 
 echo "=== [1/3] admit authorities ==="
 rm -rf "$ROOT"
 frf --root "$ROOT" authority admit forensics/frf/refs/openssl-3.6.3.sh --name openssl --version 3.6.3
 frf --root "$ROOT" authority admit forensics/frf/refs/openssl-3.6.4.sh --name openssl --version 3.6.4
+frf --root "$ROOT" authority admit forensics/frf/refs/authority-cli-inventory.sh --name openssl-cli --version 3.6.3
+frf --root "$ROOT" authority admit forensics/frf/refs/authority-abi-report.sh --name openssl-abi --version 3.6.4
 
 echo
 echo "=== [2/3] run the 3.6.3 -> 3.6.4 trajectory courts ==="
