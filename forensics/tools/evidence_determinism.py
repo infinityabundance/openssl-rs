@@ -87,6 +87,21 @@ NORMALISED_COUNT = "<build-product-count-normalised>"
 # `inputs[]` entries whose `sha256` is a build product, by entry name.
 BUILD_PRODUCT_INPUT_NAMES = frozenset({"crate-archive", "extra-object"})
 
+# A compared artefact may itself be an input of another compared artefact --
+# `ownership-audit.json` records the hash of `implemented-surface.json`, which it
+# reads. That recorded hash cannot be compared exactly on any machine whose
+# toolchain produces a different crate archive, because the *artefact* being
+# hashed contains the declared build-product fields. Measured: the CI runner's
+# `ownership-audit.json` input hash for `implemented-surface.json` differed while
+# `implemented-surface.json` itself compared equal modulo normalisation.
+#
+# The binding is redundant rather than lost: the inner artefact is compared
+# directly, so a substantive change to it fails on its own account before the
+# outer artefact's input hash is even reached. What is blanked is a hash that
+# could only ever match modulo a normalisation the inner artefact already
+# declares.
+COMPARED_INPUT_PATHS = frozenset(COMPARED)
+
 # `body.internal_symbols.<field>` values that are build products, by field name.
 BUILD_PRODUCT_SYMBOL_FIELDS = ("compiler_emitted_count",)
 
@@ -116,6 +131,9 @@ def normalise(doc: object, fired: set[str]) -> object:
             for entry in v:
                 if isinstance(entry, dict) and entry.get("name") in BUILD_PRODUCT_INPUT_NAMES:
                     fired.add(f"inputs[name={entry.get('name')}].sha256")
+                    entry = {**entry, "sha256": NORMALISED_DIGEST}
+                elif isinstance(entry, dict) and entry.get("path") in COMPARED_INPUT_PATHS:
+                    fired.add(f"inputs[path={entry.get('path')}].sha256")
                     entry = {**entry, "sha256": NORMALISED_DIGEST}
                 new_inputs.append(normalise(entry, fired))
             out[k] = new_inputs

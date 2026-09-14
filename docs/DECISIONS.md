@@ -2289,3 +2289,40 @@ court transcripts and staged binaries are deliberately outside its compared set,
 because they are produced by the court venue rather than by the generators it
 re-runs. That boundary is right — but it means a court's own output is only checked
 by re-running the court, which is how both of these were found.
+
+## D63 — A compared artefact's own hash is compared modulo its declared normalisation
+
+**Decision.** When a compared artefact records the `sha256` of an input that is
+*itself* a compared artefact, that recorded hash is normalised on both sides.
+`evidence_determinism.py` gains the rule; `check_evidence_portability.py` shares it
+because it imports the same `normalise`.
+
+**Why.** CI failed on the first push of the Phase 4 seal, at `Evidence determinism`,
+with:
+
+```
+STALE: forensics/atlas/ownership-audit.json: .inputs[0].sha256:
+  committed '6ce78192…' vs regenerated '04ede079…'
+```
+
+`implemented-surface.json` is an input of `ownership-audit.json`, which records the
+hash of the file it read. On the CI runner the crate archive is not byte-identical
+to the court's, so `implemented-surface.json` is regenerated with a different
+`crate-archive` sha256 and a different `internal_symbols.compiler_emitted_count` —
+both of which the tool normalises *when comparing that artefact* — and therefore a
+different file hash, which `ownership-audit.json` recorded and the tool compared
+exactly. The gate was reporting a stale artefact for a reason that had nothing to do
+with staleness: the inner artefact compared **equal** in the same run.
+
+The rule is not a blanket exemption. The inner artefact is compared directly, so a
+substantive change to it fails on its own account before any outer artefact's input
+hash is reached; what is blanked is a binding that could only ever hold modulo a
+normalisation the inner artefact already declares. Three inputs are affected today:
+`implemented-surface.json` (read by `ownership_audit.py`) and the Phase 3 and Phase 4
+obligation ledgers (read by `phase_state.py` and `ownership_audit.py`).
+
+**Why it appeared now.** The latent defect needed a run in which the two environments
+disagreed about the archive. The court and the runner had agreed until this push.
+That is the second time in this stratum that a gate failed only because an
+environment changed underneath it (D62 is the first), and both were found by CI
+rather than by the court — which is the point of running the same gates in both.
