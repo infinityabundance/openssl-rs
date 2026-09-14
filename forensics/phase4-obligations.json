@@ -4,9 +4,9 @@
     "complete": false,
     "counts": {
       "deferred_to_later_phase": 16,
-      "implemented": 196,
+      "implemented": 201,
       "open_in_this_stratum": 44,
-      "owned": 256
+      "owned": 261
     },
     "deferred": [
       {
@@ -118,7 +118,8 @@
         "module": "src/runtime/conf/",
         "prefixes": [
           "CONF_",
-          "NCONF_"
+          "NCONF_",
+          "OPENSSL_INIT_"
         ]
       },
       {
@@ -334,6 +335,11 @@
       "ERR_print_errors_cb",
       "ERR_print_errors_fp",
       "OBJ_create_objects",
+      "OPENSSL_INIT_free",
+      "OPENSSL_INIT_new",
+      "OPENSSL_INIT_set_config_appname",
+      "OPENSSL_INIT_set_config_file_flags",
+      "OPENSSL_INIT_set_config_filename",
       "OPENSSL_LH_node_stats",
       "OPENSSL_LH_node_stats_bio",
       "OPENSSL_LH_node_usage_stats",
@@ -531,7 +537,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "1a06991692e0338a38578a0babe5f75fe80e6e3b4224d68b38200b7111a3de4e"
+      "sha256": "c5a6214d14e9778531c9bd20b5cfd2e7c133dac622fd59d9bc076cd97e25af96"
     }
   ],
   "kind": "phase4-obligations",

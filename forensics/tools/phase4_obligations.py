@@ -52,11 +52,18 @@ GENERATOR = "forensics/tools/phase4_obligations.py"
 # The symbol families this stratum owns. `phase3_obligations.py` hands the
 # BIO-coupled members of the Phase 3 families to this phase, so several entries
 # below exist solely to receive those hand-offs.
+#
+# `OPENSSL_INIT_` is here because it was in *no* phase's family before: the
+# `OPENSSL_INIT_SETTINGS` object is defined in `crypto/conf/conf_lib.c`, while
+# Phase 3's `init.rs` family matches the lower-case prefix `OPENSSL_init`, which
+# does not match `OPENSSL_INIT_new`. Five exported symbols were therefore invisible
+# to every ledger and silently scaffolded. Naming them here is what puts them under
+# accounting; see `src/runtime/conf/mod.rs`.
 FAMILIES = [
     ("src/runtime/bio/", (
         "BIO_", "BUF_MEM_",
     )),
-    ("src/runtime/conf/", ("CONF_", "NCONF_")),
+    ("src/runtime/conf/", ("CONF_", "NCONF_", "OPENSSL_INIT_")),
     ("src/runtime/obj.rs", ("OBJ_create_objects",)),
     ("src/runtime/lhash.rs", ("OPENSSL_LH_stats", "OPENSSL_LH_node_stats",
                               "OPENSSL_LH_node_usage_stats")),

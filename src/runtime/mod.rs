@@ -25,6 +25,7 @@
 
 pub mod bio;
 pub mod buffer;
+pub mod conf;
 pub mod err;
 pub mod ex_data;
 pub mod init;

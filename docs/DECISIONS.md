@@ -1723,3 +1723,60 @@ subsystem, which is the last stratum of this phase:
 
 33 courts pass over 6,743 observations. Phase 0–3 remain `complete` and Phase 4
 remains `in-progress`.
+
+## D49 — Five exported symbols no phase owned, and the CONF stratum's floor
+
+**Decision.** The `OPENSSL_INIT_SETTINGS` object — `OPENSSL_INIT_new`,
+`OPENSSL_INIT_free`, `OPENSSL_INIT_set_config_filename`,
+`OPENSSL_INIT_set_config_file_flags`, `OPENSSL_INIT_set_config_appname` — is
+implemented in `src/runtime/conf/init_settings.rs`. Phase 4 now owns 261 exports
+and stands at **201 implemented, 16 deferred and 44 open**;
+`implemented` `libcrypto` exports move from 408 to 413.
+
+**The gap this closes is in the obligation model, not the code.** The five symbols
+were owned by *no* phase. They are defined in `crypto/conf/conf_lib.c`, while
+Phase 3's `init.rs` family matches the prefix `OPENSSL_init` — lower case — which
+does not match `OPENSSL_INIT_new`. The ledgers are prefix-driven, so those five
+exports appeared in no `implemented` list, no `deferred` list and no `open` list:
+they were silently scaffolded, and every phase could report itself complete with
+them outstanding.
+
+That is a worse failure mode than an over-broad deferral, because nothing in the
+repository could observe it. The family list in
+`forensics/tools/phase4_obligations.py` now carries `OPENSSL_INIT_`, which puts
+them under accounting, and `src/runtime/conf/mod.rs` records why they belong to
+this stratum rather than to `init.rs` (they are `conf_lib.c` exports, and they are
+what carries a configuration filename and application name into
+`OPENSSL_init_crypto`).
+
+The lesson generalises: a phase-completeness claim is only as strong as the
+*coverage* of its families, and nothing yet checks that every authority export is
+owned by some phase. That check belongs with the phase-family tables and is
+recorded here as the next thing the ledger tooling should grow.
+
+**The CONF stratum's remaining floor.** The 44 open obligations are the
+configuration reader. The data model (`conf_api.c`), the default method — parser,
+dumper and the two character-class tables (`conf_def.c`) — and the public
+accessor layer (`conf_lib.c`) are *unstarted*, and the module registry plus the
+automatic loader are additionally **blocked**: `CONF_modules_load` begins with
+`conf_diagnostics`, which reads and writes the `OSSL_LIB_CTX` diagnostics flag,
+and `OSSL_LIB_CTX` is Phase 6. That part of the stratum cannot be reconstructed
+faithfully before the provider core exists, so it is a genuine structural
+dependency rather than a matter of effort, and the module docstring for
+`src/runtime/conf/` records it.
+
+Nothing in this batch is scaffolded into looking present: the shell still aborts
+loudly on every one of the 44, and the ledger reports them.
+
+**Recorded divergence.** `OPENSSL_INIT_new` and the two `set_config_*` routines
+allocate with the C library's `malloc`/`strdup` and free with `free`, **not** with
+`CRYPTO_malloc`/`CRYPTO_free`. That is the authority's own choice, made so a
+settings object created before the library initialises is not allocated by a
+function the caller later replaces with `CRYPTO_set_mem_functions`. It is
+reproduced exactly, and it means these five are deliberately invisible to
+`CRYPTO_set_mem_functions`. A unit test asserts the layout
+(`filename`, `appname`, `flags`, 24 bytes) and the default flag word `0x32`,
+because `OPENSSL_config` builds the object by value and passes its address on.
+
+33 courts still pass over 6,743 observations. Phase 0–3 remain `complete` and
+Phase 4 remains `in-progress`.

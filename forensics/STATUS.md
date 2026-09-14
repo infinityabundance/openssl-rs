@@ -79,9 +79,9 @@ that name is defined, nothing more.
 
 | library | exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 408 | 5488 |
+| libcrypto | 5896 | 413 | 5483 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **408** | **6091** |
+| **total** | **6499** | **413** | **6086** |
 
 ### Phase 3 obligation ledger
 
