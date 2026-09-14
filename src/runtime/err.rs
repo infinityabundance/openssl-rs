@@ -499,6 +499,27 @@ pub(crate) unsafe fn raise_site(site: &err_sites::ErrSite) {
     });
 }
 
+/// `ERR_raise(lib, reason)` at a recorded authority site whose *reason* the
+/// authority computes at run time.
+///
+/// Several authority sites raise `ERR_LIB_SYS` with the current `errno` (or a
+/// negated return value) instead of a header constant. The file, line and
+/// function are still the authority's own, so they come from the recorded site;
+/// only the reason is supplied by the caller. `gen_err_raise_sites.py` marks
+/// those sites with `dynamic_reason` so this function is used for exactly them.
+///
+/// # Safety
+/// The `ErrSite` is a compile-time constant whose pointers are static.
+pub(crate) unsafe fn raise_site_dynamic(site: &err_sites::ErrSite, reason: c_int) {
+    with_state(|s| {
+        s.get_slot();
+        let t = s.top as usize;
+        s.clear(t, false);
+        s.set_debug(t, site.file.as_ptr(), site.line, site.func.as_ptr());
+        s.set_error(t, site.lib, reason);
+    });
+}
+
 /// `ERR_raise_data(lib, reason, "...")` at a recorded authority site.
 ///
 /// The authority's `ERR_vset_error` formats the message into an allocated

@@ -24,8 +24,9 @@ renderer does not know any phase status.
 | 1 | Complete archaeology / API / ABI atlas | `complete` |  |
 | 2 | Distribution / ABI shell | `complete` |  |
 | 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `complete` |  |
+| 4 | BIO + CONF + object database | `in-progress` | 119 open obligation(s) of this stratum recorded in forensics/phase4-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
 
-Remaining strata 4-21 are `not-started` (18 total).
+Remaining strata 4-21 are `not-started` (17 total).
 
 ## Atlas census
 
@@ -78,9 +79,9 @@ that name is defined, nothing more.
 
 | library | exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 211 | 5685 |
+| libcrypto | 5896 | 335 | 5561 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **211** | **6288** |
+| **total** | **6499** | **335** | **6164** |
 
 ### Phase 3 obligation ledger
 
@@ -131,7 +132,7 @@ Deferred to phase 4: `ERR_add_error_mem_bio`, `ERR_print_errors`, `ERR_print_err
 
 ## Evidence receipts
 
-- Atlas aggregate hash: `47017eb9db3a95be2507f8041de1701a2779ce54ea9972eabf6466678bf38258` over 51 files
+- Atlas aggregate hash: `29accda9a8ec56ac78f979dd77bbfecd252cd968dd310b11203c51f83cba500b` over 51 files
 
 | receipt | kind | deterministic | aggregate hash |
 |---|---|---|---|
@@ -147,6 +148,7 @@ Deferred to phase 4: `ERR_add_error_mem_bio`, `ERR_print_errors`, `ERR_print_err
 | `EVIDENCE_RECEIPT.0010.json` | phase1-atlas | True | `f93a42f7992e6212…` |
 | `EVIDENCE_RECEIPT.0011.json` | phase1-atlas | False | `47017eb9db3a95be…` |
 | `EVIDENCE_RECEIPT.0012.json` | phase1-atlas | True | `47017eb9db3a95be…` |
+| `EVIDENCE_RECEIPT.0013.json` | phase1-atlas | False | `29accda9a8ec56ac…` |
 
 ## Non-claims
 

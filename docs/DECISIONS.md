@@ -489,3 +489,63 @@ structurally cannot.
 arity check is recorded as an open obligation for the phase that owns the header
 generator. Until then the seal states the gap rather than letting "symbols match
 exactly" be read as "signatures match exactly".
+
+---
+
+## D23 — Phase 4's ledger separates hand-offs from open work, and the phase stays `in-progress`
+
+**Decision.** `forensics/tools/phase4_obligations.py` enumerates the Phase 4
+families (`BIO_`, `BUF_MEM_`, `CONF_`, `NCONF_`, `OBJ_create_objects`, the
+`OPENSSL_LH_*stats*` family, `ERR_print_errors*`, `ERR_add_error_mem_bio`) and
+sorts every export it cannot find implemented into exactly one of two lists:
+
+* **deferred** — a subsystem a later stratum owns, with the owning phase and the
+  reason (`BIO_f_md` → Phase 7, `BIO_f_asn1` → Phase 5, `BIO_s_core` → Phase 6, …);
+* **open** — a symbol of *this* stratum that is not built yet.
+
+`complete` is true only when both lists are empty, and `phase_state.py` treats
+`open_in_this_stratum > 0` as a blocker.
+
+**Why.** Phase 3's ledger could defer its handful of BIO-coupled symbols and still
+be complete, because the stratum that owned them existed. Phase 4 owns BIO, CONF
+and the buffer object — a 256-symbol surface — and inherits fourteen hand-offs from
+Phase 3. Collapsing "not built yet" into "deferred" would let a partial stratum
+report as finished, which is the exact failure mode the constitution forbids.
+
+**Consequence.** Phase 4 is recorded `in-progress` with its real count: 123 of 256
+family exports implemented, 14 handed to later strata, 119 open. None of the 123 is
+a parity claim; every one is at most `IMPLEMENTED`, and no Phase 4 court has been
+run yet, which `phase_state.py` also reports. The alternative — a hand-written
+summary in a seal document — was rejected for the same reason D21 rejected it for
+Phase 3.
+
+---
+
+## D24 — BIO archaeology used the pinned source, and the Rust is reasoned from behaviour
+
+**Decision.** The BIO core (`src/runtime/bio/`) reproduces the authority's
+observable behaviour by reading the pinned authority source in
+`forensics/authorities/src/openssl-3.6.4/` for *archaeology* — the dispatch
+classes, the callback translation between the modern and deprecated forms, the
+`init` gate, the two read/write contracts, the chain-walk shapes — and then writing
+Rust reasoned from those behavioural obligations. It is not a transliteration: the
+internal object graph differs deliberately (the reference count is a real atomic,
+the method table is a Rust struct with the legacy and modern slots in the order the
+*behaviour* requires, and the chain is raw pointers only because the C API hands
+them out).
+
+**Why.** `docs/CUSTODIAN_CONTRACT.md` §3 permits authority source for archaeology
+with provenance, and requires implementation to follow from behaviour. Reading the
+source is what turned up three otherwise-unguessable facts that a from-memory
+implementation would have got wrong: `BIO_new_ex` sets `init = 1` when a method has
+no `create`; `BIO_meth_set_read` stores the legacy pointer and installs a
+conversion shim in the dispatch slot, so `BIO_meth_get_read` and
+`BIO_meth_get_read_ex` return different things; and `BIO_free_all` **stops** when it
+meets a shared BIO rather than freeing the rest of the chain.
+
+**Consequence.** The generated raise-site table was extended to cover the Phase 4
+source files so that BIO/CONF error records carry the authority's own
+`file`/`line`/`function`, and it now distinguishes sites whose *reason* is computed
+at run time (`ERR_LIB_SYS` with `errno`) from sites with a header constant. Those
+dynamic sites are emitted with a `dynamic_reason` flag and raised through
+`raise_site_dynamic`, so the coordinates stay exact without inventing a reason.

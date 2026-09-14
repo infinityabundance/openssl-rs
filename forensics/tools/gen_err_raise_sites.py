@@ -80,6 +80,46 @@ COVERED_FILES = [
     ("crypto/stack/stack.c", "STACK"),
     ("crypto/ex_data.c", "EX_DATA"),
     ("crypto/init.c", "INIT"),
+    # Phase 4: BIO, CONF and the object database. Every authority file in these
+    # subsystems that raises an error belongs to the obligation set; the list is
+    # the subsystem set of the phase, not a selection of convenient files.
+    ("crypto/bio/bio_lib.c", "BIO_LIB"),
+    ("crypto/bio/bio_meth.c", "BIO_METH"),
+    ("crypto/bio/bio_addr.c", "BIO_ADDR"),
+    ("crypto/bio/bio_cb.c", "BIO_CB"),
+    ("crypto/bio/bio_dump.c", "BIO_DUMP"),
+    ("crypto/bio/bio_print.c", "BIO_PRINT"),
+    ("crypto/bio/bio_sock.c", "BIO_SOCK"),
+    ("crypto/bio/bio_sock2.c", "BIO_SOCK2"),
+    ("crypto/bio/bss_acpt.c", "BSS_ACPT"),
+    ("crypto/bio/bss_bio.c", "BSS_BIO"),
+    ("crypto/bio/bss_conn.c", "BSS_CONN"),
+    ("crypto/bio/bss_core.c", "BSS_CORE"),
+    ("crypto/bio/bss_dgram.c", "BSS_DGRAM"),
+    ("crypto/bio/bss_dgram_pair.c", "BSS_DGRAM_PAIR"),
+    ("crypto/bio/bss_fd.c", "BSS_FD"),
+    ("crypto/bio/bss_file.c", "BSS_FILE"),
+    ("crypto/bio/bss_log.c", "BSS_LOG"),
+    ("crypto/bio/bss_mem.c", "BSS_MEM"),
+    ("crypto/bio/bss_null.c", "BSS_NULL"),
+    ("crypto/bio/bss_sock.c", "BSS_SOCK"),
+    ("crypto/bio/bf_buff.c", "BF_BUFF"),
+    ("crypto/bio/bf_lbuf.c", "BF_LBUF"),
+    ("crypto/bio/bf_nbio.c", "BF_NBIO"),
+    ("crypto/bio/bf_null.c", "BF_NULL"),
+    ("crypto/bio/bf_prefix.c", "BF_PREFIX"),
+    ("crypto/bio/bf_readbuff.c", "BF_READBUFF"),
+    ("crypto/bio/ossl_core_bio.c", "OSSL_CORE_BIO"),
+    ("crypto/conf/conf_api.c", "CONF_API"),
+    ("crypto/conf/conf_def.c", "CONF_DEF"),
+    ("crypto/conf/conf_lib.c", "CONF_LIB"),
+    ("crypto/conf/conf_mod.c", "CONF_MOD"),
+    ("crypto/conf/conf_sap.c", "CONF_SAP"),
+    # The object database's one Phase 4 obligation (`OBJ_create_objects`) reads a
+    # BIO, so its raise sites are part of this stratum.
+    ("crypto/objects/obj_dat.c", "OBJ_DAT"),
+    # The buffer object the memory BIO is built from is part of this stratum.
+    ("crypto/buffer/buffer.c", "BUFFER"),
 ]
 
 # Raise macros, in the forms the authority actually spells them. `ERR_raise`
@@ -88,6 +128,11 @@ COVERED_FILES = [
 RAISE_RE = re.compile(
     r"(?P<macro>ERR_raise_data|ERR_raise|[A-Z][A-Za-z0-9_]*err)\s*\("
 )
+# A resolvable library symbol must be an `ERR_LIB_*` constant, and a resolvable
+# reason must be an upper-case constant. Anything else means the match is not a
+# plain raise site and is recorded as unattributed instead of guessed.
+LIB_CONST_RE = re.compile(r"^ERR_LIB_[A-Z0-9_]+$")
+REASON_CONST_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
 # A function definition: a line starting at column 0 with an identifier-ish
 # token, reaching an opening paren. Continuation lines of a multi-line
 # signature start with whitespace, so anchoring at column 0 is enough.
@@ -183,13 +228,92 @@ def split_args(call: str) -> list[str]:
     return out
 
 
-def scan(path: Path) -> list[dict]:
+def mask_comments_and_strings(text: str) -> str:
+    """Blank out C comments and string/char literals, preserving line structure.
+
+    A raise macro mentioned inside a comment or a string is not a raise site --
+    `bio_lib.c` carries an example spelling of `ERR_raise(...)` in a comment --
+    and scanning the raw text would register it as one. Masking preserves every
+    byte offset and every newline, so line numbers and column indices computed
+    against the masked text address the same places in the raw text.
+    """
+    out: list[str] = []
+    i = 0
+    n = len(text)
+    state = "code"
+    while i < n:
+        c = text[i]
+        nxt = text[i + 1] if i + 1 < n else ""
+        if state == "code":
+            if c == "/" and nxt == "*":
+                out.append("  ")
+                i += 2
+                state = "block"
+                continue
+            if c == "/" and nxt == "/":
+                out.append("  ")
+                i += 2
+                state = "line"
+                continue
+            if c == '"':
+                out.append(" ")
+                i += 1
+                state = "string"
+                continue
+            if c == "'":
+                out.append(" ")
+                i += 1
+                state = "char"
+                continue
+            out.append(c)
+            i += 1
+        elif state == "block":
+            if c == "*" and nxt == "/":
+                out.append("  ")
+                i += 2
+                state = "code"
+                continue
+            out.append("\n" if c == "\n" else " ")
+            i += 1
+        elif state == "line":
+            if c == "\n":
+                out.append("\n")
+                state = "code"
+            else:
+                out.append(" ")
+            i += 1
+        else:  # string or char
+            if c == "\\":
+                out.append(" ")
+                if i + 1 < n:
+                    out.append("\n" if nxt == "\n" else " ")
+                i += 2
+                continue
+            if (state == "string" and c == '"') or (state == "char" and c == "'"):
+                out.append(" ")
+                i += 1
+                state = "code"
+                continue
+            out.append("\n" if c == "\n" else " ")
+            i += 1
+    return "".join(out)
+
+
+def scan(path: Path) -> tuple[list[dict], list[dict]]:
     text = path.read_text(encoding="utf-8", errors="replace")
     lines = text.splitlines()
+    masked = mask_comments_and_strings(text).splitlines()
+    if len(masked) != len(lines):
+        raise SystemExit(f"{path}: masking changed the line count")
     sites: list[dict] = []
+    unattributed: list[dict] = []
     i = 0
     while i < len(lines):
-        m = RAISE_RE.search(lines[i])
+        # A raise behind a preprocessor definition is a macro body, not a call.
+        if masked[i].lstrip().startswith("#"):
+            i += 1
+            continue
+        m = RAISE_RE.search(masked[i])
         if not m:
             i += 1
             continue
@@ -207,6 +331,28 @@ def scan(path: Path) -> list[dict]:
         else:
             lib_sym = "ERR_LIB_" + macro[: -len("err")]
             reason_sym = args[0]
+        # A raise whose *library* is not a plain `ERR_LIB_*` constant is not a
+        # site this tool can attribute; it is a call spelled inside a macro body
+        # or an expression. Such a match is recorded as *unattributed* rather
+        # than emitted with a guessed constant. A raise whose *reason* is a
+        # runtime expression (`get_last_socket_error()`, `errno`, `(int)-l`) is a
+        # real site: the file/line/function are still the authority's, and only
+        # the reason is supplied at run time, so it is emitted with
+        # `dynamic_reason` set and resolved by the caller.
+        if not LIB_CONST_RE.match(lib_sym):
+            unattributed.append(
+                {
+                    "file": rel(path),
+                    "line": i + 1,
+                    "macro": macro,
+                    "lib_symbol": lib_sym,
+                    "reason_symbol": reason_sym,
+                    "call": call.strip(),
+                }
+            )
+            i += 1
+            continue
+        dynamic_reason = not REASON_CONST_RE.match(reason_sym)
         sites.append(
             {
                 "file": rel(path),
@@ -214,18 +360,29 @@ def scan(path: Path) -> list[dict]:
                 "function": enclosing_function(lines, i + 1),
                 "macro": macro,
                 "lib_symbol": lib_sym,
-                "reason_symbol": reason_sym,
+                "reason_symbol": None if dynamic_reason else reason_sym,
+                "dynamic_reason": dynamic_reason,
                 "data_format": args[2] if len(args) > 2 and "NULL" not in args[2] else None,
             }
         )
         i += 1
-    return sites
+    return sites, unattributed
 
 
 def resolve_symbols(authority, symbols: list[str], work: Path) -> dict[str, int]:
     """Ask the authority's own headers what each symbol evaluates to."""
     src = work / "resolve_err_symbols.c"
-    body = ["#include <openssl/err.h>", "#include <openssl/cryptoerr.h>", "#include <stdio.h>", ""]
+    body = [
+        "#include <openssl/err.h>",
+        "#include <openssl/cryptoerr.h>",
+        "#include <openssl/bioerr.h>",
+        "#include <openssl/conferr.h>",
+        "#include <openssl/objectserr.h>",
+        "#include <openssl/x509err.h>",
+        "#include <openssl/sslerr.h>",
+        "#include <stdio.h>",
+        "",
+    ]
     body.append("int main(void) {")
     seen = []
     for s in symbols:
@@ -271,7 +428,6 @@ def resolve_symbols(authority, symbols: list[str], work: Path) -> dict[str, int]
 def const_name(stem: str, line: int) -> str:
     return f"{stem}_{line}"
 
-
 def c_literal(s: str) -> str:
     return 'c"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
@@ -304,18 +460,24 @@ def render_rust(doc: dict, prefix: str) -> str:
         "    pub lib: c_int,",
         "    /// The raised reason, including any `ERR_RFLAG_*` bits.",
         "    pub reason: c_int,",
+        "    /// True when the authority supplies the reason at run time (a syscall",
+        "    /// error or a computed value) rather than from a header constant; the",
+        "    /// `reason` field is then 0 and the caller passes the real value to",
+        "    /// `raise_site_dynamic`.",
+        "    pub dynamic_reason: bool,",
         "}",
         "",
     ]
     for s in sites:
+        label = s["reason_symbol"] or s["macro"] + " dynamic reason"
         out.append(
-            f"/// `{s['function']}` at `{s['rel_source']}:{s['line']}` "
-            f"({s['reason_symbol']})."
+            f"/// `{s['function']}` at `{s['rel_source']}:{s['line']}` ({label})."
         )
         out.append(f"pub(crate) const {s['const_name']}: ErrSite = ErrSite {{")
         out.append(f"    file: {c_literal(s['file'])}, line: {s['line']},")
         out.append(f"    func: {c_literal(s['function'])},")
         out.append(f"    lib: {s['lib']}, reason: {s['reason']},")
+        out.append(f"    dynamic_reason: {str(bool(s['dynamic_reason'])).lower()},")
         out.append("};")
         out.append("")
 
@@ -348,19 +510,25 @@ def main(argv: list[str]) -> int:
     prefix = relpath_prefix(auth.source, build_dir)
 
     all_sites: list[dict] = []
+    unattributed: list[dict] = []
     for rel_source, stem in COVERED_FILES:
         path = auth.source / rel_source
         if not path.is_file():
             raise SystemExit(f"authority file missing: {path}")
-        for s in scan(path):
+        found, skipped = scan(path)
+        for s in found:
             s["rel_source"] = rel_source
             s["const_name"] = const_name(stem, s["line"])
             all_sites.append(s)
+        for s in skipped:
+            s["rel_source"] = rel_source
+            unattributed.append(s)
 
     symbols: list[str] = []
     for s in all_sites:
         symbols.append(s["lib_symbol"])
-        symbols.append(s["reason_symbol"])
+        if s["reason_symbol"] is not None:
+            symbols.append(s["reason_symbol"])
     symbols.append("ERR_LIB_SYS")
 
     work = REPO_ROOT / "court" / "err-sites"
@@ -369,7 +537,7 @@ def main(argv: list[str]) -> int:
 
     for s in all_sites:
         s["lib"] = values[s["lib_symbol"]]
-        s["reason"] = values[s["reason_symbol"]]
+        s["reason"] = values[s["reason_symbol"]] if s["reason_symbol"] else 0
         # The `__FILE__` the authority's compiler saw.
         s["file"] = prefix + s["rel_source"]
 
@@ -377,7 +545,8 @@ def main(argv: list[str]) -> int:
         "prefix": prefix,
         "covered_files": [f for f, _ in COVERED_FILES],
         "sites": all_sites,
-        "counts": {"sites": len(all_sites)},
+        "unattributed": unattributed,
+        "counts": {"sites": len(all_sites), "unattributed": len(unattributed)},
         "note": (
             "`file` is the authority's `__FILE__` string, derived from "
             "relpath(source_tree, build_dir) of the admitted build record. It is "
@@ -406,9 +575,11 @@ def main(argv: list[str]) -> int:
 
     print(f"[err-raise-sites] authority={auth.id} prefix={prefix}")
     print(f"  sites: {len(all_sites)}")
-    for s in all_sites:
-        print(f"    {s['rel_source']}:{s['line']:<5} {s['function']} "
-              f"({s['lib_symbol']}, {s['reason_symbol']} = {s['lib']}, {s['reason']})")
+    if unattributed:
+        print(f"  unattributed (recorded, not emitted): {len(unattributed)}")
+        for s in unattributed:
+            print(f"    {s['rel_source']}:{s['line']:<5} {s['macro']}("
+                  f"{s['lib_symbol']}, {s['reason_symbol']})")
     print(f"  wrote {rel(OUT_JSON)}")
     print(f"  wrote {rel(OUT_RS)}")
     return 0

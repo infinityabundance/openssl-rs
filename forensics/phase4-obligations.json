@@ -1,0 +1,754 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "complete": false,
+    "counts": {
+      "deferred_to_later_phase": 14,
+      "implemented": 123,
+      "open_in_this_stratum": 119,
+      "owned": 256
+    },
+    "deferred": [
+      {
+        "module": "src/runtime/bio/",
+        "owning_phase": 5,
+        "reason": "ASN.1 prefix/suffix compiler hooks; ASN.1 is Phase 5",
+        "symbol": "BIO_asn1_get_prefix"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "owning_phase": 5,
+        "reason": "ASN.1 prefix/suffix compiler hooks; ASN.1 is Phase 5",
+        "symbol": "BIO_asn1_get_suffix"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "owning_phase": 5,
+        "reason": "ASN.1 prefix/suffix compiler hooks; ASN.1 is Phase 5",
+        "symbol": "BIO_asn1_set_prefix"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "owning_phase": 5,
+        "reason": "ASN.1 prefix/suffix compiler hooks; ASN.1 is Phase 5",
+        "symbol": "BIO_asn1_set_suffix"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "owning_phase": 5,
+        "reason": "its only controls are ASN.1 prefix/suffix functions; ASN.1 is Phase 5",
+        "symbol": "BIO_f_asn1"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "owning_phase": 7,
+        "reason": "wraps an EVP_CIPHER_CTX; EVP is Phase 7",
+        "symbol": "BIO_f_cipher"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "owning_phase": 7,
+        "reason": "wraps an EVP_MD_CTX; EVP is Phase 7",
+        "symbol": "BIO_f_md"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "owning_phase": 7,
+        "reason": "wraps EVP_AES_256_CBC message authentication; EVP is Phase 7",
+        "symbol": "BIO_f_reliable"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "owning_phase": 12,
+        "reason": "binds a CMS_ContentInfo to a BIO; CMS is Phase 12",
+        "symbol": "BIO_new_CMS"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "owning_phase": 5,
+        "reason": "constructs an ASN.1 NDEF BIO chain; ASN.1 is Phase 5",
+        "symbol": "BIO_new_NDEF"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "owning_phase": 12,
+        "reason": "binds a PKCS7 to a BIO; PKCS#7 is Phase 12",
+        "symbol": "BIO_new_PKCS7"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "owning_phase": 6,
+        "reason": "wraps an OSSL_CORE_BIO; OSSL_LIB_CTX is Phase 6",
+        "symbol": "BIO_new_from_core_bio"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "owning_phase": 6,
+        "reason": "the provider core-to-BIO method; OSSL_LIB_CTX is Phase 6",
+        "symbol": "BIO_s_core"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "owning_phase": 7,
+        "reason": "sets the EVP_CIPHER of a BIO_f_cipher; EVP is Phase 7",
+        "symbol": "BIO_set_cipher"
+      }
+    ],
+    "families": [
+      {
+        "module": "src/runtime/bio/",
+        "prefixes": [
+          "BIO_",
+          "BUF_MEM_"
+        ]
+      },
+      {
+        "module": "src/runtime/conf/",
+        "prefixes": [
+          "CONF_",
+          "NCONF_"
+        ]
+      },
+      {
+        "module": "src/runtime/obj.rs",
+        "prefixes": [
+          "OBJ_create_objects"
+        ]
+      },
+      {
+        "module": "src/runtime/lhash.rs",
+        "prefixes": [
+          "OPENSSL_LH_stats",
+          "OPENSSL_LH_node_stats",
+          "OPENSSL_LH_node_usage_stats"
+        ]
+      },
+      {
+        "module": "src/runtime/err.rs",
+        "prefixes": [
+          "ERR_print_errors",
+          "ERR_add_error_mem_bio"
+        ]
+      }
+    ],
+    "implemented": [
+      "BIO_callback_ctrl",
+      "BIO_clear_flags",
+      "BIO_closesocket",
+      "BIO_copy_next_retry",
+      "BIO_ctrl",
+      "BIO_ctrl_get_read_request",
+      "BIO_ctrl_get_write_guarantee",
+      "BIO_ctrl_pending",
+      "BIO_ctrl_reset_read_request",
+      "BIO_ctrl_wpending",
+      "BIO_do_connect_retry",
+      "BIO_dump",
+      "BIO_dump_cb",
+      "BIO_dump_fp",
+      "BIO_dump_indent",
+      "BIO_dump_indent_cb",
+      "BIO_dump_indent_fp",
+      "BIO_dup_chain",
+      "BIO_err_is_non_fatal",
+      "BIO_f_null",
+      "BIO_find_type",
+      "BIO_free",
+      "BIO_free_all",
+      "BIO_get_callback",
+      "BIO_get_callback_arg",
+      "BIO_get_callback_ex",
+      "BIO_get_data",
+      "BIO_get_ex_data",
+      "BIO_get_init",
+      "BIO_get_line",
+      "BIO_get_new_index",
+      "BIO_get_retry_BIO",
+      "BIO_get_retry_reason",
+      "BIO_get_rpoll_descriptor",
+      "BIO_get_shutdown",
+      "BIO_get_wpoll_descriptor",
+      "BIO_gets",
+      "BIO_hex_string",
+      "BIO_indent",
+      "BIO_int_ctrl",
+      "BIO_meth_free",
+      "BIO_meth_get_callback_ctrl",
+      "BIO_meth_get_create",
+      "BIO_meth_get_ctrl",
+      "BIO_meth_get_destroy",
+      "BIO_meth_get_gets",
+      "BIO_meth_get_puts",
+      "BIO_meth_get_read",
+      "BIO_meth_get_read_ex",
+      "BIO_meth_get_recvmmsg",
+      "BIO_meth_get_sendmmsg",
+      "BIO_meth_get_write",
+      "BIO_meth_get_write_ex",
+      "BIO_meth_new",
+      "BIO_meth_set_callback_ctrl",
+      "BIO_meth_set_create",
+      "BIO_meth_set_ctrl",
+      "BIO_meth_set_destroy",
+      "BIO_meth_set_gets",
+      "BIO_meth_set_puts",
+      "BIO_meth_set_read",
+      "BIO_meth_set_read_ex",
+      "BIO_meth_set_recvmmsg",
+      "BIO_meth_set_sendmmsg",
+      "BIO_meth_set_write",
+      "BIO_meth_set_write_ex",
+      "BIO_method_name",
+      "BIO_method_type",
+      "BIO_new",
+      "BIO_new_ex",
+      "BIO_new_mem_buf",
+      "BIO_new_socket",
+      "BIO_next",
+      "BIO_nread",
+      "BIO_nread0",
+      "BIO_number_read",
+      "BIO_number_written",
+      "BIO_nwrite",
+      "BIO_nwrite0",
+      "BIO_pop",
+      "BIO_printf",
+      "BIO_ptr_ctrl",
+      "BIO_push",
+      "BIO_puts",
+      "BIO_read",
+      "BIO_read_ex",
+      "BIO_recvmmsg",
+      "BIO_s_mem",
+      "BIO_s_null",
+      "BIO_s_secmem",
+      "BIO_s_socket",
+      "BIO_sendmmsg",
+      "BIO_set_callback",
+      "BIO_set_callback_arg",
+      "BIO_set_callback_ex",
+      "BIO_set_data",
+      "BIO_set_ex_data",
+      "BIO_set_flags",
+      "BIO_set_init",
+      "BIO_set_next",
+      "BIO_set_retry_reason",
+      "BIO_set_shutdown",
+      "BIO_snprintf",
+      "BIO_sock_error",
+      "BIO_sock_init",
+      "BIO_sock_non_fatal_error",
+      "BIO_sock_should_retry",
+      "BIO_socket_ioctl",
+      "BIO_socket_nbio",
+      "BIO_socket_wait",
+      "BIO_test_flags",
+      "BIO_up_ref",
+      "BIO_vfree",
+      "BIO_vprintf",
+      "BIO_vsnprintf",
+      "BIO_wait",
+      "BIO_write",
+      "BIO_write_ex",
+      "BUF_MEM_free",
+      "BUF_MEM_grow",
+      "BUF_MEM_grow_clean",
+      "BUF_MEM_new",
+      "BUF_MEM_new_ex"
+    ],
+    "note": "`complete` is true only when every export in these families is either implemented or handed to a later stratum. `open` entries belong to this stratum and are recorded gaps, not deferrals; while any exist Phase 4 cannot be called complete. Nothing here is a parity claim.",
+    "open": [
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_ADDRINFO_address"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_ADDRINFO_family"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_ADDRINFO_free"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_ADDRINFO_next"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_ADDRINFO_protocol"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_ADDRINFO_socktype"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_ADDR_clear"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_ADDR_copy"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_ADDR_dup"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_ADDR_family"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_ADDR_free"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_ADDR_hostname_string"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_ADDR_new"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_ADDR_path_string"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_ADDR_rawaddress"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_ADDR_rawmake"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_ADDR_rawport"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_ADDR_service_string"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_accept"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_accept_ex"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_bind"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_connect"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_debug_callback"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_debug_callback_ex"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_dgram_non_fatal_error"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_f_base64"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_f_brotli"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_f_buffer"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_f_linebuffer"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_f_nbio_test"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_f_prefix"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_f_readbuffer"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_f_zlib"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_f_zstd"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_fd_non_fatal_error"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_fd_should_retry"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_get_accept_socket"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_get_host_ip"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_get_port"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_gethostbyname"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_listen"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_lookup"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_lookup_ex"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_new_accept"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_new_bio_dgram_pair"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_new_bio_pair"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_new_connect"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_new_dgram"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_new_fd"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_new_file"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_new_fp"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_parse_hostserv"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_s_accept"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_s_bio"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_s_connect"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_s_datagram"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_s_dgram_mem"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_s_dgram_pair"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_s_fd"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_s_file"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_s_log"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_set_tcp_ndelay"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_sock_info"
+      },
+      {
+        "module": "src/runtime/bio/",
+        "symbol": "BIO_socket"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "CONF_dump_bio"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "CONF_dump_fp"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "CONF_free"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "CONF_get1_default_config_file"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "CONF_get_number"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "CONF_get_section"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "CONF_get_string"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "CONF_imodule_get_flags"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "CONF_imodule_get_module"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "CONF_imodule_get_name"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "CONF_imodule_get_usr_data"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "CONF_imodule_get_value"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "CONF_imodule_set_flags"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "CONF_imodule_set_usr_data"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "CONF_load"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "CONF_load_bio"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "CONF_load_fp"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "CONF_module_add"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "CONF_module_get_usr_data"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "CONF_module_set_usr_data"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "CONF_modules_finish"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "CONF_modules_load"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "CONF_modules_load_file"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "CONF_modules_load_file_ex"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "CONF_modules_unload"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "CONF_parse_list"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "CONF_set_default_method"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "CONF_set_nconf"
+      },
+      {
+        "module": "src/runtime/err.rs",
+        "symbol": "ERR_add_error_mem_bio"
+      },
+      {
+        "module": "src/runtime/err.rs",
+        "symbol": "ERR_print_errors"
+      },
+      {
+        "module": "src/runtime/err.rs",
+        "symbol": "ERR_print_errors_cb"
+      },
+      {
+        "module": "src/runtime/err.rs",
+        "symbol": "ERR_print_errors_fp"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "NCONF_WIN32"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "NCONF_default"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "NCONF_dump_bio"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "NCONF_dump_fp"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "NCONF_free"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "NCONF_free_data"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "NCONF_get0_libctx"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "NCONF_get_number_e"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "NCONF_get_section"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "NCONF_get_section_names"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "NCONF_get_string"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "NCONF_load"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "NCONF_load_bio"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "NCONF_load_fp"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "NCONF_new"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "symbol": "NCONF_new_ex"
+      },
+      {
+        "module": "src/runtime/obj.rs",
+        "symbol": "OBJ_create_objects"
+      },
+      {
+        "module": "src/runtime/lhash.rs",
+        "symbol": "OPENSSL_LH_node_stats"
+      },
+      {
+        "module": "src/runtime/lhash.rs",
+        "symbol": "OPENSSL_LH_node_stats_bio"
+      },
+      {
+        "module": "src/runtime/lhash.rs",
+        "symbol": "OPENSSL_LH_node_usage_stats"
+      },
+      {
+        "module": "src/runtime/lhash.rs",
+        "symbol": "OPENSSL_LH_node_usage_stats_bio"
+      },
+      {
+        "module": "src/runtime/lhash.rs",
+        "symbol": "OPENSSL_LH_stats"
+      },
+      {
+        "module": "src/runtime/lhash.rs",
+        "symbol": "OPENSSL_LH_stats_bio"
+      }
+    ]
+  },
+  "generator": "forensics/tools/phase4_obligations.py",
+  "inputs": [
+    {
+      "name": "authority-symbols",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+      "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
+    },
+    {
+      "name": "implemented-surface",
+      "path": "forensics/atlas/implemented-surface.json",
+      "sha256": "d48f75cb0824cb96a5af7744c9fc5ab914e21299d889c54bf9ba716c25d47083"
+    }
+  ],
+  "kind": "phase4-obligations",
+  "schema": "openssl-rs/atlas/phase4-obligations/v1"
+}

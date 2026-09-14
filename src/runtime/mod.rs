@@ -23,6 +23,8 @@
 //! else, and `docs/PARITY_MODEL.md` for what a symbol must prove before it stops
 //! being `SCAFFOLDED`.
 
+pub mod bio;
+pub mod buffer;
 pub mod err;
 pub mod ex_data;
 pub mod init;

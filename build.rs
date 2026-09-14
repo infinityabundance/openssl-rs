@@ -144,40 +144,54 @@ fn run() -> Result<(), String> {
 /// output (`staticlib`) contains those symbols, and so that `cargo test` links
 /// them too. `build_phase2.sh` then only has to compile the scaffolds.
 fn build_variadic_adapters(manifest_dir: &Path) -> Result<(), String> {
-    let src = manifest_dir.join("src/runtime/err_variadic.c");
-    println!("cargo:rerun-if-changed={}", src.display());
+    // Each entry is (source, object stem). All of them exist for the same
+    // reason: a C-variadic function of the public ABI cannot be defined in
+    // stable Rust, so only the argument marshalling is written in C and every
+    // behavioural decision is made by the Rust core it calls back into.
+    let sources = [
+        ("src/runtime/err_variadic.c", "openssl_rs_err_variadic"),
+        ("src/runtime/bio/bio_variadic.c", "openssl_rs_bio_variadic"),
+    ];
 
     let out_dir = PathBuf::from(env::var("OUT_DIR").map_err(|_| "OUT_DIR is not set")?);
-    let obj = out_dir.join("openssl_rs_err_variadic.o");
-    let archive = out_dir.join("libopenssl_rs_err_variadic.a");
-
     // `CC`/`AR` are honoured so a cross build can point at its own toolchain;
     // the defaults match every platform this project admits so far.
     let cc = env::var("CC").unwrap_or_else(|_| "cc".to_string());
     let ar = env::var("AR").unwrap_or_else(|_| "ar".to_string());
 
-    run_tool(
-        &cc,
-        &[
-            "-c",
-            "-O2",
-            "-fPIC",
-            "-fno-strict-aliasing",
-            "-o",
-            &obj.to_string_lossy(),
-            &src.to_string_lossy(),
-        ],
-    )
-    .map_err(|e| format!("compiling {} failed: {e}", src.display()))?;
+    let archive = out_dir.join("libopenssl_rs_variadic.a");
+    let mut objects: Vec<PathBuf> = Vec::new();
+    for (rel, stem) in sources {
+        let src = manifest_dir.join(rel);
+        println!("cargo:rerun-if-changed={}", src.display());
+        let obj = out_dir.join(format!("{stem}.o"));
+        run_tool(
+            &cc,
+            &[
+                "-c",
+                "-O2",
+                "-fPIC",
+                "-fno-strict-aliasing",
+                "-o",
+                &obj.to_string_lossy(),
+                &src.to_string_lossy(),
+            ],
+        )
+        .map_err(|e| format!("compiling {} failed: {e}", src.display()))?;
+        objects.push(obj);
+    }
 
-    run_tool(
-        &ar,
-        &["crs", &archive.to_string_lossy(), &obj.to_string_lossy()],
-    )
-    .map_err(|e| format!("archiving {} failed: {e}", archive.display()))?;
+    // One archive with every adapter: the archive-form crate output must contain
+    // the same symbol set the distribution artifacts get.
+    let mut ar_args: Vec<String> = vec!["crs".into(), archive.to_string_lossy().into_owned()];
+    for obj in &objects {
+        ar_args.push(obj.to_string_lossy().into_owned());
+    }
+    run_tool(&ar, &ar_args.iter().map(String::as_str).collect::<Vec<_>>())
+        .map_err(|e| format!("archiving {} failed: {e}", archive.display()))?;
 
     println!("cargo:rustc-link-search=native={}", out_dir.display());
-    println!("cargo:rustc-link-lib=static=openssl_rs_err_variadic");
+    println!("cargo:rustc-link-lib=static=openssl_rs_variadic");
     Ok(())
 }
 

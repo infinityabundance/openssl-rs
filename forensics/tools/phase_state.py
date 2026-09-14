@@ -149,6 +149,38 @@ def evidence_for(phase: int) -> tuple[list[str], list[str], str]:
             absent.append(PHASE3_OBLIGATIONS)
         return present, absent, blocking
 
+    if phase == 4:
+        for d in PHASE4_MODULES:
+            (present if exists(d) else absent).append(d)
+        ledger = read_json(PHASE4_OBLIGATIONS)
+        if ledger:
+            present.append(PHASE4_OBLIGATIONS)
+            body4 = ledger["body"]
+            open_count = body4["counts"]["open_in_this_stratum"]
+            if open_count:
+                blocking = (
+                    f"{open_count} open obligation(s) of this stratum recorded in "
+                    f"{PHASE4_OBLIGATIONS}; a stratum cannot be complete while any "
+                    f"export it owns is neither implemented nor handed to a later "
+                    f"phase"
+                )
+        else:
+            absent.append(PHASE4_OBLIGATIONS)
+        courts = read_json(PHASE4_COURTS)
+        if courts:
+            present.append(PHASE4_COURTS)
+            failed = [c["court"] for c in courts["body"]["courts"]
+                      if c["verdict"] != "pass"]
+            if failed:
+                blocking = f"Phase 4 courts not passing: {failed}"
+        else:
+            # Missing courts are a blocker, not evidence of a phase that has not
+            # begun: the modules exist, so the stratum is under way and the gap is
+            # what must be closed. Listing it as absent would report `not-started`
+            # and understate the recorded work.
+            blocking = blocking or f"no Phase 4 courts yet ({PHASE4_COURTS} absent)"
+        return present, absent, blocking
+
     return present, absent, "not started"
 
 
@@ -184,6 +216,30 @@ PHASE3_MODULES = [
 ]
 # Whether anything in the Phase 3 families is unaccounted for is decided by the
 # ledger (`phase3_obligations.py` fails closed), not by a string here.
+
+
+# Phase 4 evidence: the BIO/CONF/buffer modules, the differential courts that
+# exercise them, and the seal that records what they establish. The obligation
+# ledger is what decides whether anything in the phase's families is
+# unaccounted for: `phase4_obligations.py` separates hand-offs to later strata
+# from open work, and `open_in_this_stratum > 0` keeps the phase `in-progress`.
+PHASE4_COURTS = "artifacts/phase4/COURTS.json"
+PHASE4_OBLIGATIONS = "forensics/phase4-obligations.json"
+PHASE4_MODULES = [
+    "src/runtime/bio/mod.rs",
+    "src/runtime/bio/iolib.rs",
+    "src/runtime/bio/method.rs",
+    "src/runtime/bio/sys.rs",
+    "src/runtime/bio/print.rs",
+    "src/runtime/bio/dump.rs",
+    "src/runtime/bio/bss_mem.rs",
+    "src/runtime/bio/bss_null.rs",
+    "src/runtime/bio/bf_null.rs",
+    "src/runtime/bio/bss_sock.rs",
+    "src/runtime/bio/bio_variadic.c",
+    "src/runtime/buffer.rs",
+    "forensics/tools/phase4_obligations.py",
+]
 
 
 def seal_identity(doc: str) -> str | None:
