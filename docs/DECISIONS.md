@@ -549,3 +549,36 @@ source files so that BIO/CONF error records carry the authority's own
 at run time (`ERR_LIB_SYS` with `errno`) from sites with a header constant. Those
 dynamic sites are emitted with a `dynamic_reason` flag and raised through
 `raise_site_dynamic`, so the coordinates stay exact without inventing a reason.
+
+---
+
+## D25 — Regression is enforced by a committed baseline, on every push
+
+**Decision.** `forensics/tools/regression_guard.py` compares the current derived
+evidence against `forensics/regression-baseline.json` and fails on any movement in
+the wrong direction: implemented symbols must not decrease, open obligations must
+not increase, a court that passed must not fail or disappear, a court's
+observation count must not shrink, and a phase state must not go backwards.
+`.github/workflows/ci.yml` runs it on every push to every branch.
+
+**Why.** The project's claims are cumulative, and the failure mode that CI
+normally misses is *subtraction*: a deleted implementation, a narrowed probe, or a
+reopened obligation produces no failing test. The observation-count rule is the
+one that earns its keep: a probe quietly narrowed to dodge a difficult case still
+passes, and nothing else in the pipeline would notice.
+
+**Consequence.** Two jobs are required. `static` needs no authority and, crucially,
+re-derives every generated artefact and asserts the tree is byte-identical — stale
+evidence is a hard failure, because a claim built on a stale artefact is
+unverifiable. `courts` re-runs all 19 courts from scratch against a freshly built
+authority and then runs the guard over the *re-derived* results, so the committed
+numbers are reproduced rather than trusted. `--update` rewrites the baseline as a
+reviewable diff.
+
+The clippy job is present but not yet required: the Phase 4 BIO modules carry 201
+`docs/UNSAFE.md` documentation diagnostics. It runs with `continue-on-error` so it
+is visible rather than omitted, and removing that one line is the change that
+makes it a hard gate. Suppressing the lint with an `allow` was rejected.
+
+**Not tied to publishing.** The guard exists so that every pushed commit is not a
+step backwards; releasing is a separate, deliberate act.

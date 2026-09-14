@@ -1,0 +1,101 @@
+# CI and the regression gate
+
+`.github/workflows/ci.yml` runs on **every push to every branch** and on every
+pull request. The rule it enforces is cumulative:
+
+> **A commit may not undo an earlier commit's evidence.**
+
+A green "build + unit tests" check does not enforce that. If a commit deletes an
+implementation, weakens a probe, or reopens an obligation, nothing *fails* — there
+is simply less evidence than before. So the gate is not a test suite; it is a
+comparison against a committed baseline.
+
+## The regression guard
+
+`forensics/tools/regression_guard.py` reads the derived evidence and the committed
+baseline (`forensics/regression-baseline.json`) and fails on any movement in the
+wrong direction:
+
+| signal | direction | why it is a regression |
+|---|---|---|
+| implemented symbols per library | non-decreasing | dropping one is a lost implementation |
+| open obligations per ledger | non-increasing | a newly unbuilt symbol is lost ground |
+| court verdict | `pass` must stay `pass` | a passing court is the strongest claim held |
+| observations per court | non-decreasing | a weakened probe silently loses coverage |
+| phase state | non-decreasing | `complete` may not become `in-progress` |
+
+A **deferred** count is recorded and reported but is not directional: a symbol may
+legitimately move from *open* to *deferred* when the stratum owning its dependency
+is identified. The guard prints such movement so it is visible rather than silent.
+
+The observation-count rule is the one that is easy to miss and worth the most: a
+probe that is narrowed to avoid a difficult case still passes, and without this
+rule the loss would be invisible.
+
+`--update` rewrites the baseline. That is a deliberate, reviewable act: the diff of
+`forensics/regression-baseline.json` is the statement "the evidence moved, and here
+is where", and it is reviewed like any other change.
+
+Current baseline: 335 implemented `libcrypto` symbols, 119 open Phase 4
+obligations, 19 courts all passing, 4,461 observations.
+
+## The jobs
+
+### `lint` — not yet a required gate
+
+`cargo clippy --all-targets -- -D warnings`. The pre-Phase-4 code satisfies it;
+the Phase 4 BIO modules do not yet (201 diagnostics, all of the form "`unsafe`
+function's docs are missing a `# Safety` section" or "`unsafe` block missing a
+safety comment").
+
+This job is present and visible but runs with `continue-on-error: true`, so the
+workflow does not pretend the lint passes while still gating every push on the
+checks that do. **Removing that one line is the change that makes it a hard
+gate**, and that is the remedy recorded in `docs/PHASE-4-BIO-CONF-SEAL.md`.
+Suppressing the lint with an `allow` was rejected: the `docs/UNSAFE.md` policy is
+real and the debt should stay visible until it is paid.
+
+### `static` — no authority required
+
+Formatting, build, unit tests, the forbidden-dependency gate, a check that the
+crate still declares no dependencies, **evidence determinism**, and the regression
+guard over the committed court results.
+
+Evidence determinism is the load-bearing step: every generated artefact
+(`implemented-surface.json`, the two obligation ledgers, `phase-state.json`,
+`STATUS.md`) is regenerated and `git diff --exit-code` is asserted. If a committed
+artefact is stale relative to its generator, every claim built on it is
+unverifiable, so staleness is a hard failure rather than a warning.
+
+### `courts` — the authority-backed behavioural gate
+
+Builds the court image, starts the container with its resource caps, verifies it
+has no `openssl` CLI, then acquires and builds the pinned authority **inside the
+container** (hash-checked against `forensics/authorities/AUTHORITIES.json`), and
+re-runs every court from scratch:
+
+1. `build_phase2.sh` — builds the crate, re-derives the implemented surface,
+   regenerates the ABI shell, links `libcrypto.so.3`, `libssl.so.3`, both static
+   archives, the provider module and the CLI, and runs all **11 ABI courts**
+   (symbol type/binding/version, layout, dynamic contract, link, load, constants,
+   the four-way header×library matrix, binary substitution, install layout and
+   contamination).
+2. `phase3_courts.py` — the 7 runtime differential courts.
+3. `phase4_courts.py` — the BIO differential court.
+4. `regression_guard.py` — run again over the **freshly derived** results.
+
+Step 4 is what makes the gate behavioural rather than a claim about a file: the
+committed numbers are not trusted, they are reproduced. If a court passes on a
+developer's machine and fails in CI, CI is right and the commit is not.
+
+## What this gate does not prove
+
+- It does not prove parity. A court that passes means the candidate matched the
+  authority for the observations that probe makes, and nothing else
+  (`docs/PARITY_MODEL.md`).
+- It does not run the FRF courts or produce new FRF receipts and claims. Those
+  remain separate, explicitly invoked steps.
+- It covers one platform (Linux x86-64) and one build profile. A green CI run says
+  nothing about any other.
+- It does not gate publishing. Publishing is a deliberate, manual act; this gate
+  exists so that every pushed commit is at least not a step backwards.

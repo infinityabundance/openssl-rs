@@ -1,0 +1,187 @@
+# openssl-rs — continuous integration
+#
+# The rule this workflow enforces is cumulative: **a commit may not undo an
+# earlier commit's evidence**. A green "build + unit tests" check does not
+# enforce that, because a *removed* implementation or a *weakened* probe has no
+# failing test. The enforcement is `forensics/tools/regression_guard.py`, which
+# compares the current derived evidence against the committed baseline
+# (`forensics/regression-baseline.json`) and fails on any movement in the wrong
+# direction:
+#
+#   * implemented symbols per library must not decrease;
+#   * open obligations must not increase;
+#   * a court that passed must not start failing or disappear;
+#   * a court's observation count must not shrink (a weakened probe is a silent
+#     loss of coverage);
+#   * a phase state must not go backwards.
+#
+# It runs on every push to every branch and on every pull request. It is
+# deliberately NOT tied to publishing: the regression gate is about not losing
+# ground, and a release is a separate, deliberate act.
+#
+# Two jobs
+# --------
+#   static  — needs no authority. Builds, tests, and re-derives every generated
+#             evidence artefact, then asserts the tree is byte-identical (so
+#             generated evidence cannot drift from its generator), and runs the
+#             regression guard over the committed court results.
+#   courts  — needs the authority, so it builds the court image, provisions
+#             OpenSSL 3.6.4 inside it, and **re-runs every court from scratch**:
+#             the 11 ABI courts, the Phase 3 runtime courts and the Phase 4 BIO
+#             court. The regression guard then runs again over the freshly
+#             derived results, which is the strongest form of the check: the
+#             committed numbers are not trusted, they are reproduced.
+#
+# Both are required. See docs/CI.md.
+
+name: ci
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+# Cancel an in-flight run for the same ref: the newest commit is what matters,
+# and the courts job is expensive.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    # NOT a required gate yet, and deliberately visible rather than omitted.
+    #
+    # docs/UNSAFE.md requires a `# Safety` section on every `unsafe fn` and a
+    # `SAFETY:` comment on every `unsafe` block, and clippy enforces both. The
+    # pre-Phase-4 code satisfies them; the Phase 4 BIO modules do not yet (201
+    # diagnostics). Clearing that debt is the outstanding item recorded in
+    # docs/PHASE-4-BIO-CONF-SEAL.md; suppressing it with an `allow` was rejected
+    # because the policy is real.
+    #
+    # `continue-on-error` keeps the workflow's verdict honest -- it does not
+    # pretend the lint passes -- while letting the required gates below gate
+    # every push in the meantime. Remove `continue-on-error` the moment the debt
+    # is cleared; that removal is the change that makes this a hard gate.
+    name: lints (clippy, currently carrying recorded Phase 4 debt)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+  static:
+    name: static gates (build, tests, evidence determinism, regression guard)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # The toolchain is pinned by rust-toolchain.toml; rustup installs it.
+      - name: Toolchain
+        run: |
+          rustup show
+          rustc --version
+          cargo --version
+
+      - name: Formatting
+        run: cargo fmt --all -- --check
+
+      - name: Build
+        run: cargo build --release
+
+      # Unit tests run on the host runner, not in the court: they exercise pure
+      # Rust and need no authority. Everything that needs the authority is in the
+      # `courts` job.
+      - name: Unit tests
+        run: cargo test --lib -- --test-threads=1
+
+      - name: Forbidden implementation backends
+        run: python3 forensics/tools/check_forbidden_dependencies.py
+
+      # The dependency surface is a contract; a stray dependency is a supply-chain
+      # decision, so it is asserted separately from the build.
+      - name: No dependencies
+        run: |
+          python3 - <<'PY'
+          import tomllib, sys
+          with open("Cargo.toml", "rb") as f:
+              doc = tomllib.load(f)
+          deps = doc.get("dependencies") or {}
+          build = doc.get("build-dependencies") or {}
+          if deps or build:
+              print("unexpected dependencies:", deps, build)
+              sys.exit(1)
+          print("no dependencies declared (ok)")
+          PY
+
+      # Generated evidence must be reproducible from its generator: regenerate it
+      # and assert the tree did not change. If this fails, a committed artefact is
+      # stale relative to its source, which would make every downstream claim
+      # unverifiable.
+      - name: Evidence determinism
+        run: |
+          python3 forensics/tools/implemented_surface.py
+          python3 forensics/tools/phase3_obligations.py
+          python3 forensics/tools/phase4_obligations.py
+          python3 forensics/tools/phase_state.py
+          python3 forensics/tools/render_status.py
+          git diff --exit-code -- forensics/ artifacts/
+
+      - name: Regression guard (committed evidence)
+        run: python3 forensics/tools/regression_guard.py
+
+  courts:
+    name: authority courts (ABI, runtime, BIO) and re-derived regression guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      # The court image is the ONLY place anything is executed: it is capped and
+      # it deliberately has no openssl CLI, so a court cannot accidentally test
+      # the distribution OpenSSL instead of the authority.
+      - name: Build court image
+        run: bash docker/openssl-rs-court.sh build
+
+      - name: Start court container
+        run: bash docker/openssl-rs-court.sh up
+
+      - name: Court preconditions
+        run: bash docker/openssl-rs-court.sh verify
+
+      # The authority is acquired from the upstream release and verified against
+      # the hash in forensics/authorities/AUTHORITIES.json; a mismatch is fatal.
+      - name: Acquire authority (OpenSSL 3.6.4)
+        run: bash docker/openssl-rs-court.sh exec python3 forensics/tools/authority_acquire.py --all
+
+      - name: Build authority
+        run: bash docker/openssl-rs-court.sh exec python3 forensics/tools/authority_build.py --all
+
+      # This builds the crate, re-derives the implemented surface, regenerates the
+      # ABI shell, links libcrypto.so.3 / libssl.so.3 / the static archives / the
+      # provider module / the CLI, and runs all 11 ABI courts. A symbol that
+      # regresses its type, binding, version, layout, link behaviour or dynamic
+      # contract fails here.
+      - name: Phase 2 shell and 11 ABI courts
+        run: bash docker/openssl-rs-court.sh exec bash forensics/tools/build_phase2.sh
+
+      - name: Phase 3 runtime courts
+        run: bash docker/openssl-rs-court.sh exec python3 forensics/tools/phase3_courts.py
+
+      - name: Phase 4 BIO court
+        run: bash docker/openssl-rs-court.sh exec python3 forensics/tools/phase4_courts.py
+
+      # Run against the freshly derived results, not the committed ones: this is
+      # what makes the gate behavioural rather than a claim about a file.
+      - name: Regression guard (re-derived evidence)
+        run: bash docker/openssl-rs-court.sh exec python3 forensics/tools/regression_guard.py
+
+      - name: Stop court container
+        if: always()
+        run: bash docker/openssl-rs-court.sh down

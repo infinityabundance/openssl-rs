@@ -1,0 +1,116 @@
+{
+  "courts": {
+    "ABI-CONSTANTS": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "ABI-DYNAMIC": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "ABI-INSTALL-LAYOUT": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "ABI-LAYOUT": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "ABI-LINK": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "ABI-LOAD": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "ABI-MATRIX": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "ABI-SUBSTITUTION": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "ABI-SYMBOL": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "ABI-VERSION": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-BIO": {
+      "observations": 212,
+      "verdict": "pass"
+    },
+    "RT-ERR": {
+      "observations": 3857,
+      "verdict": "pass"
+    },
+    "RT-EXDATA": {
+      "observations": 38,
+      "verdict": "pass"
+    },
+    "RT-LHASH": {
+      "observations": 45,
+      "verdict": "pass"
+    },
+    "RT-MEM": {
+      "observations": 82,
+      "verdict": "pass"
+    },
+    "RT-SECURE": {
+      "observations": 32,
+      "verdict": "pass"
+    },
+    "RT-STACK": {
+      "observations": 159,
+      "verdict": "pass"
+    },
+    "RT-THREAD": {
+      "observations": 36,
+      "verdict": "pass"
+    },
+    "libcrypto-contamination": {
+      "observations": 0,
+      "verdict": "pass"
+    }
+  },
+  "deferred": {
+    "phase3": 11,
+    "phase4": 14
+  },
+  "implemented": {
+    "libcrypto": 335,
+    "libssl": 0
+  },
+  "open_obligations": {
+    "phase3": 0,
+    "phase4": 119
+  },
+  "phases": {
+    "0": "complete",
+    "1": "complete",
+    "10": "not-started",
+    "11": "not-started",
+    "12": "not-started",
+    "13": "not-started",
+    "14": "not-started",
+    "15": "not-started",
+    "16": "not-started",
+    "17": "not-started",
+    "18": "not-started",
+    "19": "not-started",
+    "2": "complete",
+    "20": "not-started",
+    "21": "not-started",
+    "3": "complete",
+    "4": "in-progress",
+    "5": "not-started",
+    "6": "not-started",
+    "7": "not-started",
+    "8": "not-started",
+    "9": "not-started"
+  }
+}
