@@ -14,7 +14,7 @@ explicitly stated authority, build profile and platform.
 
 ## Status
 
-Read **[`forensics/STATUS.md`](forensics/STATUS.md)**. It is generated from the
+Read **[`forensics/STATUS.md`](https://github.com/infinityabundance/openssl-rs/blob/main/forensics/STATUS.md)**. It is generated from the
 atlas and receipts, never hand-edited.
 
 At a glance, and *only* for
@@ -39,25 +39,25 @@ implementation must still emit the multiple runtime artifacts the distribution
 contract requires — `libcrypto.so.3`, `libssl.so.3`, static archives, provider
 modules, public headers, pkg-config metadata, the `openssl` executable — with
 their own symbol namespaces, SONAMEs and version nodes preserved. See
-[`docs/CUSTODIAN_CONTRACT.md`](docs/CUSTODIAN_CONTRACT.md).
+[`docs/CUSTODIAN_CONTRACT.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/CUSTODIAN_CONTRACT.md).
 
 ## Constitution (Phase 0)
 
 | document | governs |
 |---|---|
-| [`docs/CUSTODIAN_CONTRACT.md`](docs/CUSTODIAN_CONTRACT.md) | mission, single-crate rule, definition of "custodian compatible" |
-| [`docs/PARITY_MODEL.md`](docs/PARITY_MODEL.md) | obligation states, evidence planes, promotion rules, residuals |
-| [`docs/AUTHORITY_POLICY.md`](docs/AUTHORITY_POLICY.md) | admitted authorities, build profiles, court container |
-| [`docs/SECURITY_DIVERGENCE_POLICY.md`](docs/SECURITY_DIVERGENCE_POLICY.md) | 3.6.3 → 3.6.4 trajectory; no vulnerability reintroduction |
-| [`docs/OWNERSHIP_MODEL.md`](docs/OWNERSHIP_MODEL.md) | `get0`/`get1`/`set0`/`set1` and lifetime contracts |
-| [`docs/ABI_POLICY.md`](docs/ABI_POLICY.md) | source vs binary compatibility, symbol versioning |
-| [`docs/PROVIDER_MODEL.md`](docs/PROVIDER_MODEL.md) | provider architecture; third-party provider court |
-| [`docs/FIPS_CLAIMS.md`](docs/FIPS_CLAIMS.md) | FIPS behavioural parity ≠ FIPS validation |
-| [`docs/CONCURRENCY_MODEL.md`](docs/CONCURRENCY_MODEL.md) | thread-local state, error queue, model checking |
-| [`docs/RELEASE_GATES.md`](docs/RELEASE_GATES.md) | phase order, maturity levels, court taxonomy |
-| [`docs/NON_CLAIMS.md`](docs/NON_CLAIMS.md) | what is explicitly **not** claimed |
-| [`docs/REPRODUCIBILITY.md`](docs/REPRODUCIBILITY.md) | receipts, determinism, court venue |
-| [`docs/UNSAFE.md`](docs/UNSAFE.md) | where `unsafe` is permitted and how it is tested |
+| [`docs/CUSTODIAN_CONTRACT.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/CUSTODIAN_CONTRACT.md) | mission, single-crate rule, definition of "custodian compatible" |
+| [`docs/PARITY_MODEL.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/PARITY_MODEL.md) | obligation states, evidence planes, promotion rules, residuals |
+| [`docs/AUTHORITY_POLICY.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/AUTHORITY_POLICY.md) | admitted authorities, build profiles, court container |
+| [`docs/SECURITY_DIVERGENCE_POLICY.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/SECURITY_DIVERGENCE_POLICY.md) | 3.6.3 → 3.6.4 trajectory; no vulnerability reintroduction |
+| [`docs/OWNERSHIP_MODEL.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/OWNERSHIP_MODEL.md) | `get0`/`get1`/`set0`/`set1` and lifetime contracts |
+| [`docs/ABI_POLICY.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/ABI_POLICY.md) | source vs binary compatibility, symbol versioning |
+| [`docs/PROVIDER_MODEL.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/PROVIDER_MODEL.md) | provider architecture; third-party provider court |
+| [`docs/FIPS_CLAIMS.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/FIPS_CLAIMS.md) | FIPS behavioural parity ≠ FIPS validation |
+| [`docs/CONCURRENCY_MODEL.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/CONCURRENCY_MODEL.md) | thread-local state, error queue, model checking |
+| [`docs/RELEASE_GATES.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/RELEASE_GATES.md) | phase order, maturity levels, court taxonomy |
+| [`docs/NON_CLAIMS.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/NON_CLAIMS.md) | what is explicitly **not** claimed |
+| [`docs/REPRODUCIBILITY.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/REPRODUCIBILITY.md) | receipts, determinism, court venue |
+| [`docs/UNSAFE.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/UNSAFE.md) | where `unsafe` is permitted and how it is tested |
 
 ## Running things
 
@@ -87,7 +87,7 @@ bash docker/openssl-rs-frf-court.sh exec bash forensics/frf/run_courts.sh
 The court applies hard resource caps (`--memory=8g --memory-swap=8g`,
 `--pids-limit=2048`, `--cpus=8`, `--restart=no`) so that a runaway or
 memory-hungry court OOM-kills **inside the container** rather than pressuring the
-host. See [`docs/REPRODUCIBILITY.md`](docs/REPRODUCIBILITY.md) §1.
+host. See [`docs/REPRODUCIBILITY.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/REPRODUCIBILITY.md) §1.
 
 ## Phase 1 evidence
 
@@ -155,9 +155,9 @@ Authorities admitted and content-addressed:
 - **Unknown is a research result.** `UNKNOWN` is reported, not traded for
   confidence.
 
-See [`docs/NON_CLAIMS.md`](docs/NON_CLAIMS.md).
+See [`docs/NON_CLAIMS.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/NON_CLAIMS.md).
 
 ## Licence
 
 Apache-2.0 OR MIT. Provenance for any OpenSSL interface material used for
-archaeology is recorded in [`NOTICE`](NOTICE).
+archaeology is recorded in [`NOTICE`](https://github.com/infinityabundance/openssl-rs/blob/main/NOTICE).
