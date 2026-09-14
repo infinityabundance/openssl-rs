@@ -601,13 +601,32 @@ pub struct BioMmsgCbArgs {
     pub msgs_processed: *mut usize,
 }
 
+/// The union inside the C `BIO_POLL_DESCRIPTOR`.
+///
+/// `repr(C)` union, matching the header's `union { int fd; void *custom;
+/// uintptr_t custom_ui; SSL *ssl; }`.
+#[repr(C)]
+pub union BioPollValue {
+    /// A socket descriptor.
+    pub fd: c_int,
+    /// A custom descriptor.
+    pub custom: *mut c_void,
+    /// A custom descriptor as an integer.
+    pub custom_ui: usize,
+    /// An `SSL *`, for the SSL BIO.
+    pub ssl: *mut c_void,
+}
+
 /// The C `BIO_POLL_DESCRIPTOR` structure (`bio.h`).
+///
+/// The `value` union is 8-byte aligned in C, so it sits at offset 8 rather than
+/// 4; that is why this is a real union and not a byte array.
 #[repr(C)]
 pub struct BioPollDescriptor {
     /// One of the `BIO_POLL_DESCRIPTOR_TYPE_*` values.
     pub r#type: u32,
-    /// Union payload (`int fd`, `void *custom`, `uintptr_t custom_ui`, `SSL *ssl`).
-    pub value: [u8; 8],
+    /// The descriptor.
+    pub value: BioPollValue,
 }
 
 /// `BIO_POLL_DESCRIPTOR_TYPE_NONE`.

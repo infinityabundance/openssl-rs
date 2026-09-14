@@ -75,11 +75,11 @@ int BIO_printf(BIO *bio, const char *format, ...)
 /*
  * int BIO_vsnprintf(char *buf, size_t n, const char *format, va_list args)
  *
- * The authority formats into the caller's buffer with a bounded implementation.
- * vsnprintf(3) has the same observable contract for the conversions the public
- * documentation guarantees, and the RT-BIO probe compares both implementations
- * over the conversions it exercises, so a divergence would be a residual rather
- * than a silent difference.
+ * The authority formats with its own bounded implementation, which reports
+ * truncation the way traditional snprintf does *not*: it returns -1. That is
+ * measured, not assumed -- `RT-BIO` compares it directly -- and it matters,
+ * because a caller that treats the result as a length would otherwise read a
+ * short buffer as a complete one.
  */
 int BIO_vsnprintf(char *buf, size_t n, const char *format, va_list args)
 {
@@ -90,6 +90,8 @@ int BIO_vsnprintf(char *buf, size_t n, const char *format, va_list args)
 
     ret = vsnprintf(buf, n, format, args);
     if (ret < 0)
+        return -1;
+    if ((size_t)ret >= n)
         return -1;
     return ret;
 }

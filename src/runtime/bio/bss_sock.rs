@@ -26,11 +26,9 @@ use core::ffi::{c_char, c_int, c_long, c_void};
 use core::ptr;
 
 use crate::ffi::guard_ffi;
-use crate::runtime::err::err_sites::{
-    BIO_LIB_1002, BIO_SOCK_152, BIO_SOCK_154, BIO_SOCK_248, BIO_SOCK_303, BIO_SOCK_368,
-    BIO_SOCK_387,
-};
-use crate::runtime::err::{raise_site, raise_site_dynamic};
+use crate::runtime::err::err_sites::{BIO_LIB_1002, BIO_SOCK_248};
+use crate::runtime::err::raise_site_dynamic;
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 
 use super::method::{bread_conv, bwrite_conv};
 use super::sys;
@@ -64,6 +62,11 @@ pub extern "C" fn BIO_s_socket() -> *const BioMethod {
 }
 
 /// `BIO *BIO_new_socket(int sock, int close_flag)`
+///
+/// The authority is a `BIO_new` followed by `BIO_set_fd`, and that matters: the
+/// control is what sets `init`, closes any previous descriptor and clears the
+/// TCP-fast-open state. Writing the fields directly would leave `init` at the
+/// value `sock_new` chose (`0`) and the BIO would behave as uninitialised.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_new_socket(sock: c_int, close_flag: c_int) -> *mut Bio {
     guard_ffi(ptr::null_mut(), || {
@@ -72,11 +75,10 @@ pub unsafe extern "C" fn BIO_new_socket(sock: c_int, close_flag: c_int) -> *mut 
         if bio.is_null() {
             return ptr::null_mut();
         }
-        // SAFETY: `bio` is a fresh socket BIO.
-        unsafe {
-            (*bio).num = sock;
-            (*bio).shutdown = close_flag;
-        }
+        // `BIO_set_fd(b, fd, c)` is `BIO_int_ctrl(b, BIO_C_SET_FD, c, fd)`.
+        // SAFETY: `bio` is a fresh socket BIO; `BIO_int_ctrl` passes the `int` by
+        // address as the control requires.
+        unsafe { super::BIO_int_ctrl(bio, super::BIO_C_SET_FD, close_flag as c_long, sock) };
         bio
     })
 }
@@ -87,17 +89,14 @@ pub unsafe extern "C" fn BIO_new_socket(sock: c_int, close_flag: c_int) -> *mut 
 /// authority's non-Windows path returns 1 without raising.
 #[no_mangle]
 pub extern "C" fn BIO_sock_init() -> c_int {
-    guard_ffi(1, || {
-        let _ = (&BIO_SOCK_152, &BIO_SOCK_154);
-        1
-    })
+    guard_ffi(1, || 1)
 }
 
 /// `int BIO_sock_error(int sock)`
 ///
-/// Folds a failed `getsockopt` into the same `1` the authority uses for "a
-/// pending socket error", so a caller cannot distinguish the two through this
-/// function — an intentional authority behaviour, not an omission.
+/// On a failed `getsockopt` the authority returns the *current socket error*, not
+/// a generic 1 — measured: `BIO_sock_error(-1)` is `9` (`EBADF`), not `1`. A
+/// caller that branches on this value sees the difference, so it is reproduced.
 #[no_mangle]
 pub extern "C" fn BIO_sock_error(sock: c_int) -> c_int {
     guard_ffi(1, || {
@@ -114,7 +113,8 @@ pub extern "C" fn BIO_sock_error(sock: c_int) -> c_int {
             )
         };
         if rc < 0 {
-            return 1;
+            // SAFETY: `errno` is thread-local and always readable.
+            return unsafe { sys::errno() };
         }
         err
     })
@@ -138,32 +138,22 @@ pub unsafe extern "C" fn BIO_socket_ioctl(fd: c_int, type_: c_long, arg: *mut c_
 
 /// `int BIO_socket_nbio(int fd, int mode)`
 ///
-/// Returns 1 on success and 0 when either `fcntl` fails; the authority raises
-/// nothing on the failure path, so the return value is the only signal.
+/// On this platform `FIONBIO` is available, so the authority takes the `ioctl`
+/// path rather than the `fcntl` one, and returns `ioctl(...) == 0` — i.e. success
+/// is *zero from the syscall*, which is why the comparison is written the way the
+/// authority writes it rather than as a truthiness test.
 #[no_mangle]
 pub extern "C" fn BIO_socket_nbio(fd: c_int, mode: c_int) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: `fd` is the caller's descriptor.
-        let l = unsafe { sys::fcntl(fd, sys::F_GETFL, 0) };
-        if l == -1 {
-            // SAFETY: the site is a compile-time constant.
-            unsafe { raise_site_dynamic(&BIO_SOCK_368, sys::errno()) };
-            return 0;
-        }
-        let l = if mode != 0 {
-            l | sys::O_NONBLOCK
-        } else {
-            l & !sys::O_NONBLOCK
-        };
-        // SAFETY: as above.
-        if unsafe { sys::fcntl(fd, sys::F_SETFL, l) } == -1 {
-            // SAFETY: the site is a compile-time constant.
-            unsafe { raise_site_dynamic(&BIO_SOCK_387, sys::errno()) };
-            return 0;
-        }
-        1
+        let mut l = mode;
+        // SAFETY: `fd` is the caller's descriptor and `l` is a live local.
+        let ret = unsafe { BIO_socket_ioctl(fd, FIONBIO, (&mut l as *mut c_int).cast()) };
+        (ret == 0) as c_int
     })
 }
+
+/// `FIONBIO` on Linux (`asm-generic/ioctls.h`).
+const FIONBIO: c_long = 0x5421;
 
 /// `int BIO_sock_non_fatal_error(int err)`
 #[no_mangle]
@@ -347,25 +337,51 @@ unsafe extern "C" fn sock_puts(b: *mut Bio, str_: *const c_char) -> c_int {
     unsafe { sock_write(b, str_, n as c_int) }
 }
 
+/// The socket BIO's private state.
+///
+/// The authority's `struct bss_sock_st` carries the TCP-fast-open fields. Its
+/// layout is ours (the structure is private), but the *allocation* is observable:
+/// a bare `BIO_new(BIO_s_socket())` either has a non-NULL private block or fails
+/// creation, and its `init` stays `0` until `BIO_C_SET_FD` is used.
+#[repr(C)]
+struct BssSockData {
+    /// Set once a peer address has been supplied for TFO.
+    tfo_first: c_int,
+    /// The TFO peer address (`BIO_ADDR` is a Phase 4 open obligation, so this is
+    /// storage only).
+    tfo_peer: [u8; 28],
+}
+
 /// `static int sock_new(BIO *bi)`
+///
+/// Measured: the created BIO has `init == 0`. That is not an oversight in the
+/// authority — it is why `BIO_ctrl(b, BIO_C_GET_FD, …)` answers `-1` and why a
+/// bare socket BIO's destructor does not close descriptor 0.
 ///
 /// # Safety
 /// `bi` must be a live BIO.
 unsafe extern "C" fn sock_new(bi: *mut Bio) -> c_int {
     // SAFETY: `bi` is live.
     unsafe {
-        (*bi).init = 1;
+        (*bi).init = 0;
         (*bi).num = 0;
-        (*bi).ptr = ptr::null_mut();
+        (*bi).flags = 0;
+        // SAFETY: a plain zeroed allocation request.
+        let data = CRYPTO_zalloc(core::mem::size_of::<BssSockData>(), ptr::null(), 0)
+            .cast::<BssSockData>();
+        if data.is_null() {
+            return 0;
+        }
+        (*bi).ptr = data.cast();
     }
     1
 }
 
 /// `static int sock_free(BIO *a)`
 ///
-/// The descriptor is closed only when `shutdown` is set and the BIO was
-/// initialised with a real descriptor, so a `BIO_set_fp`-style takeover does not
-/// close a descriptor the caller still owns.
+/// The descriptor is closed only when `shutdown` is set **and** the BIO was
+/// initialised — a BIO created but never given a descriptor must not close a
+/// descriptor it does not own. The private block is released unconditionally.
 ///
 /// # Safety
 /// `a` must be a live socket BIO being destroyed.
@@ -375,10 +391,15 @@ unsafe extern "C" fn sock_free(a: *mut Bio) -> c_int {
     }
     // SAFETY: `a` is live.
     unsafe {
-        if (*a).shutdown != 0 && (*a).init != 0 && (*a).num != -1 {
-            BIO_closesocket((*a).num);
+        if (*a).shutdown != 0 {
+            if (*a).init != 0 {
+                BIO_closesocket((*a).num);
+            }
+            (*a).init = 0;
+            (*a).flags = 0;
         }
-        (*a).init = 0;
+        CRYPTO_free((*a).ptr, ptr::null(), 0);
+        (*a).ptr = ptr::null_mut();
     }
     1
 }
@@ -388,60 +409,84 @@ unsafe extern "C" fn sock_free(a: *mut Bio) -> c_int {
 /// # Safety
 /// `b` must be a live socket BIO; `arg` must be as the command requires.
 unsafe extern "C" fn sock_ctrl(b: *mut Bio, cmd: c_int, num: c_long, arg: *mut c_void) -> c_long {
+    // The authority initialises `ret` to 1 and only a few cases change it, so the
+    // "handled" cases that fall through report success.
+    let mut ret: c_long = 1;
     match cmd {
         super::BIO_C_SET_FD => {
-            if arg.is_null() {
-                return -1;
-            }
-            // SAFETY: `b` is live and the caller passes `int *`.
+            // The old descriptor is closed only when the BIO owned it, and the
+            // flag word is cleared as part of the same minimal teardown. The TFO
+            // state is reset because the new descriptor has no TFO peer yet.
+            // SAFETY: `b` is live; the caller passes `int *`.
             unsafe {
                 if (*b).shutdown != 0 {
-                    BIO_closesocket((*b).num);
+                    if (*b).init != 0 {
+                        BIO_closesocket((*b).num);
+                    }
+                    (*b).flags = 0;
                 }
-                (*b).init = 0;
-                (*b).shutdown = num as c_int;
                 (*b).num = *arg.cast::<c_int>();
+                (*b).shutdown = num as c_int;
                 (*b).init = 1;
+                let data = (*b).ptr.cast::<BssSockData>();
+                if !data.is_null() {
+                    (*data).tfo_first = 0;
+                    (*data).tfo_peer = [0u8; 28];
+                }
             }
-            1
         }
         super::BIO_C_GET_FD => {
-            if arg.is_null() {
-                return -1;
+            // The descriptor is *returned*, not turned into a success flag, and an
+            // uninitialised BIO reports -1. Measured: `BIO_ctrl(s, BIO_C_GET_FD,
+            // 0, &i)` is `3` for a socket whose descriptor is 3.
+            // SAFETY: `b` is live.
+            let init = unsafe { (*b).init };
+            if init != 0 {
+                // SAFETY: `b` is live and the caller passes `int *`.
+                unsafe {
+                    let num_ = (*b).num;
+                    if !arg.is_null() {
+                        *arg.cast::<c_int>() = num_;
+                    }
+                    ret = num_ as c_long;
+                }
+            } else {
+                ret = -1;
             }
-            // SAFETY: `b` is live; the caller passes `int *`.
-            unsafe { *arg.cast::<c_int>() = (*b).num };
-            1
         }
         super::BIO_CTRL_GET_CLOSE => {
             // SAFETY: `b` is live.
-            unsafe { (*b).shutdown as c_long }
+            ret = unsafe { (*b).shutdown as c_long };
         }
         super::BIO_CTRL_SET_CLOSE => {
             // SAFETY: `b` is live.
             unsafe { (*b).shutdown = num as c_int };
-            1
         }
-        super::BIO_CTRL_DUP | super::BIO_CTRL_FLUSH => 1,
-        super::BIO_CTRL_EOF => {
-            // SAFETY: `b` is live; a one-byte peek decides EOF.
-            let mut c: [c_char; 1] = [0];
+        super::BIO_CTRL_DUP | super::BIO_CTRL_FLUSH => ret = 1,
+        super::BIO_CTRL_GET_RPOLL_DESCRIPTOR | super::BIO_CTRL_GET_WPOLL_DESCRIPTOR => {
+            // SAFETY: `b` is live; the caller passes a `BIO_POLL_DESCRIPTOR *`.
             unsafe {
-                let ret = sys::recv((*b).num, c.as_mut_ptr().cast(), 1, sys::MSG_PEEK);
-                (ret == 0) as c_long
+                if (*b).init == 0 {
+                    return 0;
+                }
+                let pd = arg.cast::<super::BioPollDescriptor>();
+                if !pd.is_null() {
+                    (*pd).r#type = super::BIO_POLL_DESCRIPTOR_TYPE_SOCK_FD;
+                    (*pd).value.fd = (*b).num;
+                }
             }
         }
-        super::BIO_C_SET_NBIO => {
+        // A socket BIO's EOF is a *flag*, set by `BIO_CTRL_EOF`'s own peers; it is
+        // not a read-ahead probe. Measured against the authority, which reports
+        // the flag rather than peeking at the descriptor.
+        super::BIO_CTRL_EOF => {
             // SAFETY: `b` is live.
-            let sock = unsafe { (*b).num };
-            BIO_socket_nbio(sock, num as c_int) as c_long
+            ret = unsafe { ((*b).flags & super::BIO_FLAGS_IN_EOF != 0) as c_long };
         }
-        // `BIO_socket_nbio` reports its own failures through the error queue,
-        // which the control call would otherwise duplicate; the raise site is
-        // retained here only so the obligation is visible.
-        _ => {
-            let _ = &BIO_SOCK_303;
-            0
-        }
+        // `BIO_C_SET_NBIO` is deliberately absent: the authority's socket method
+        // has no case for it, so it reaches `default` and reports 0. Applications
+        // use `BIO_socket_nbio` for a socket BIO instead.
+        _ => ret = 0,
     }
+    ret
 }

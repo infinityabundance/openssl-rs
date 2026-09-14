@@ -34,7 +34,7 @@
       "_RINvNtNtNtCsgxBkk5gSRhY_4core5slice4sort6stable14driftsort_mainPNtNtB8_3ffi6c_voidNCINvMNtCs6i54tJFfzR_5alloc5sliceSBZ_7sort_byNCNCNvNtNtCs7ytH8uBYkNU_10openssl_rs7runtime5stack15OPENSSL_sk_sort00E0INtNtB1q_3vec3VecBZ_EEB2b_",
       "_RINvNtNtNtNtCsgxBkk5gSRhY_4core5slice4sort6shared5pivot11median3_recNtNtNtCs7ytH8uBYkNU_10openssl_rs7runtime3obj7NameRecNCINvMNtCs6i54tJFfzR_5alloc5sliceSB14_7sort_byNCNCNvB16_22OBJ_NAME_do_all_sorted0s_0E0EB1a_",
       "_RINvNtNtNtNtCsgxBkk5gSRhY_4core5slice4sort6shared5pivot11median3_recPNtNtBa_3ffi6c_voidNCINvMNtCs6i54tJFfzR_5alloc5sliceSB14_7sort_byNCNCNvNtNtCs7ytH8uBYkNU_10openssl_rs7runtime5stack15OPENSSL_sk_sort00E0EB2h_",
-      "_RINvNtNtNtNtCsgxBkk5gSRhY_4core5slice4sort6shared9smallsort11insert_tailNtNtNtCs7ytH8uBYkNU_10openssl_rs7runtime3obj7NameRecNCINvMNtCs6i54tJFfzR_5alloc5sliceSB18_7sort_byNCNCNvB1a_22OBJ_NAME_do_all_sorted0s_0E0EB1e_.llvm.4470975423538344439",
+      "_RINvNtNtNtNtCsgxBkk5gSRhY_4core5slice4sort6shared9smallsort11insert_tailNtNtNtCs7ytH8uBYkNU_10openssl_rs7runtime3obj7NameRecNCINvMNtCs6i54tJFfzR_5alloc5sliceSB18_7sort_byNCNCNvB1a_22OBJ_NAME_do_all_sorted0s_0E0EB1e_.llvm.10966430707888210122",
       "_RINvNtNtNtNtCsgxBkk5gSRhY_4core5slice4sort6shared9smallsort25insertion_sort_shift_leftNtNtNtCs7ytH8uBYkNU_10openssl_rs7runtime3obj7NameRecNCINvMNtCs6i54tJFfzR_5alloc5sliceSB1m_7sort_byNCNCNvB1o_22OBJ_NAME_do_all_sorted0s_0E0EB1s_",
       "_RINvNtNtNtNtCsgxBkk5gSRhY_4core5slice4sort6shared9smallsort25insertion_sort_shift_leftPNtNtBa_3ffi6c_voidNCINvMNtCs6i54tJFfzR_5alloc5sliceSB1m_7sort_byNCNCNvNtNtCs7ytH8uBYkNU_10openssl_rs7runtime5stack15OPENSSL_sk_sort00E0EB2z_",
       "_RINvNtNtNtNtCsgxBkk5gSRhY_4core5slice4sort6shared9smallsort31small_sort_general_with_scratchNtNtNtCs7ytH8uBYkNU_10openssl_rs7runtime3obj7NameRecNCINvMNtCs6i54tJFfzR_5alloc5sliceSB1s_7sort_byNCNCNvB1u_22OBJ_NAME_do_all_sorted0s_0E0EB1y_",
@@ -4496,13 +4496,13 @@
       "scaffolded": 6164
     }
   },
-  "body_hash": "297f03888e62243591bc5f98b59ed80ded0ff6d74407455bca55e6e65cf744eb",
+  "body_hash": "60ba1c597289479fe9fd3cd462636b7898e2bf6c561e5ae0d40998bf555158ad",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "17f28de91f4ede3cc19432322ad1d8fd979b15eccadca6b6bab7a5e07fe49844"
+      "sha256": "216fe8d30a53c15e4977b3e3fd3f2076780d186c73740d748f4ea4ef89faee9e"
     },
     {
       "name": "authority-exports",
