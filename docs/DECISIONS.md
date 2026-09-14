@@ -2705,3 +2705,93 @@ when RAND exists.
 `src/pem/` exports, and nothing else. `phase-state.json` keeps Phase 5 `in-progress` on
 exactly that number, and the seal's open count is derived from the ledger rather than
 typed anywhere.
+
+## D71 — The ASN.1 raise-site set, and the twenty-nine exports no ledger could see
+
+**Decision.** The Phase 5 raise-site cover set is extended from `crypto/bn` to the
+`crypto/asn1` substrate, and the files that belong to *later* strata are listed in
+the generator with the phase that owns each, so the exclusion is visible rather
+than implied. `gen_err_raise_sites.py` gains thirty-one `crypto/asn1` entries
+(`a_bitstr.c` … `x_long.c`) and a comment block naming the eleven files left out
+and why. The reconstructed site count goes from **391 to 594** authority raise
+sites: `crypto/asn1` joins the set that already covers `crypto/stack`,
+`crypto/ex_data.c`, `crypto/init.c`, the BIO and CONF subsystems, the object
+database, the buffer object and `crypto/o_str.c`, with no unattributed site in
+any of them.
+
+**What that exposed, and it is the D49/D51 defect class a third time.** Selecting
+`crypto/asn1` as the next stratum's subsystem made the *ledger's* coverage
+question unavoidable, and `phase5_obligations.py`'s candidate rule is a prefix
+test:
+
+```python
+prefix = re.compile(r"^(BN_|ASN1_|d2i_|i2d_|PEM_)")
+```
+
+Twenty-nine exports that the declaring-header rule this tool documents as its
+actual rule hands to Phase 5 match **none** of those prefixes, so they are
+invisible to the Phase 5 ledger, to every other ledger, and to
+`ownership_audit.py`'s invariant (which only requires that an *implemented* export
+be claimed by someone). They are:
+
+```text
+BIGNUM_it  CBIGNUM_it                       crypto/asn1/x_bignum.c
+INT32_it INT64_it UINT32_it UINT64_it       crypto/asn1/x_int64.c
+ZINT32_it ZINT64_it ZUINT32_it ZUINT64_it   crypto/asn1/x_int64.c
+LONG_it ZLONG_it                            crypto/asn1/x_long.c
+DIRECTORYSTRING_new/_free/_it               crypto/asn1/tasn_typ.c
+DISPLAYTEXT_new/_free/_it                   crypto/asn1/tasn_typ.c
+UTF8_getc UTF8_putc                         crypto/asn1/a_utf8.c
+a2d_ASN1_OBJECT  i2t_ASN1_OBJECT            crypto/asn1/a_object.c
+i2a_ASN1_OBJECT i2a_ASN1_STRING             crypto/asn1/a_object.c, f_string.c
+i2a_ASN1_INTEGER i2a_ASN1_ENUMERATED        crypto/asn1/a_int.c
+a2i_ASN1_STRING  a2i_ASN1_INTEGER  a2i_ASN1_ENUMERATED
+                                            crypto/asn1/f_string.c, f_int.c
+```
+
+`i2a_ASN1_OBJECT` is not a convenience: `ASN1_parse` calls it, so the stratum
+cannot be completed without it however the ledger counts it. The correction was
+written and validated — each entry checked to be exported by this build profile
+*and* declared in a header `HEADER_PHASE` maps to Phase 5, with the sixteen
+symbols the header rule would over-claim (`SMIME_*` → 12, `b2i_*`/`i2b_*` → 10)
+recorded as explicit exclusions — and it moves the ledger from 1,093 candidates
+and 318 open to 1,122 and 345.
+
+**Why it is not landed in this commit.** The regression guard's invariant is that
+`open_obligations` never increases, and an honest scope correction *does* increase
+it: `owned` rises by the same twenty-nine, and `implemented` does not change at
+all. The guard has no way to express that distinction, so landing the correction
+would require either weakening the invariant (unacceptable) or teaching the guard
+to accept an increase that is exactly accounted for by growth in `owned` for the
+same ledger, with the newly-owned symbols and their reason recorded. That
+mechanism is checkable and is the right fix; it is not written yet, and a
+correction that cannot be landed green is not landed.
+
+**No product code ships for ASN.1 in this change, deliberately.** The modules
+begun for the substrate (`layout`, `utl`, `string`, `der`, `integer`, `obj`) were
+not wired into `lib.rs` and have been withdrawn rather than committed unwired:
+source that no build compiles and no CI checks is invisible to every gate, which
+is the same failure this entry is about. The stratum still reports 280 open ASN.1
+obligations, and the next change to touch it starts with the guard mechanism and
+the ledger correction above, then the implementation.
+
+**What is unchanged and re-verified.** The full chain was re-run: `cargo fmt`,
+`cargo build --release`, `cargo test --lib` (146 passed), `cargo clippy
+--all-targets -- -D warnings`, all 34 courts (7,481 observations), the Phase 5 and
+Phase 3/4 ledgers, `ownership_audit.py`, `prototype_court.py`, `phase_state.py`,
+`render_status.py`, `evidence_determinism.py`, `check_evidence_portability.py`,
+`gen_frf_courts.py --check` and `regression_guard.py --baseline-ref HEAD
+--require-current`. Phase 5 remains `in-progress` on 318 open obligations, and no
+claim moves.
+
+**A second, smaller defect found on the way, and fixed rather than worked
+around.** `src/runtime/err_sites.rs` is generated, but the generator emitted two
+fields per line and `rustfmt` wants one, so the committed file was only
+`cargo fmt --all -- --check`-clean because whoever generated it last had run
+`cargo fmt` afterwards. Nothing enforced that step: `err_sites.rs` is **not** in
+`evidence_determinism.py`'s compared set (it is a `.rs` product, not a JSON
+artefact), so regenerating it drifted from the committed file silently and only
+`cargo fmt` in CI would have caught it. The generator now emits the formatted
+shape, which removes the manual step rather than documenting it. The same class of
+gap applies to the other `.rs` generator, `gen_bn_primes.py`, and is recorded here
+rather than assumed away.

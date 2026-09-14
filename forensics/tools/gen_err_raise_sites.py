@@ -160,6 +160,52 @@ COVERED_FILES = [
     ("crypto/bn/bn_rsa_fips186_4.c", "BN_RSA_FIPS186_4"),
     ("crypto/bn/bn_shift.c", "BN_SHIFT"),
     ("crypto/bn/bn_sqrt.c", "BN_SQRT"),
+    # Phase 5: the `crypto/asn1` substrate. The same rule as `crypto/bn` applies —
+    # every authority file in the subsystem that raises an error belongs to the
+    # obligation set, because the stratum owns the *surface* those coordinates
+    # belong to. The files that implement another stratum's surface are excluded
+    # and are listed at the end of this block with the phase that owns them, so
+    # the exclusion is visible rather than implied. (`a_object.c` is already
+    # covered: Phase 4's `OBJ_create` reaches it through `a2d_ASN1_OBJECT`.)
+    ("crypto/asn1/a_bitstr.c", "A_BITSTR"),
+    ("crypto/asn1/a_d2i_fp.c", "A_D2I_FP"),
+    ("crypto/asn1/a_dup.c", "A_DUP"),
+    ("crypto/asn1/a_gentm.c", "A_GENTM"),
+    ("crypto/asn1/a_i2d_fp.c", "A_I2D_FP"),
+    ("crypto/asn1/a_int.c", "A_INT"),
+    ("crypto/asn1/a_mbstr.c", "A_MBSTR"),
+    ("crypto/asn1/a_octet.c", "A_OCTET"),
+    ("crypto/asn1/a_print.c", "A_PRINT"),
+    ("crypto/asn1/a_strnid.c", "A_STRNID"),
+    ("crypto/asn1/a_strex.c", "A_STREX"),
+    ("crypto/asn1/a_time.c", "A_TIME"),
+    ("crypto/asn1/a_type.c", "A_TYPE"),
+    ("crypto/asn1/a_utf8.c", "A_UTF8"),
+    ("crypto/asn1/a_utctm.c", "A_UTCTM"),
+    ("crypto/asn1/asn1_gen.c", "ASN1_GEN"),
+    ("crypto/asn1/asn1_item_list.c", "ASN1_ITEM_LIST"),
+    ("crypto/asn1/asn1_lib.c", "ASN1_LIB"),
+    ("crypto/asn1/asn1_parse.c", "ASN1_PARSE"),
+    ("crypto/asn1/asn_moid.c", "ASN_MOID"),
+    ("crypto/asn1/asn_mstbl.c", "ASN_MSTBL"),
+    ("crypto/asn1/asn_pack.c", "ASN_PACK"),
+    ("crypto/asn1/bio_asn1.c", "BIO_ASN1"),
+    ("crypto/asn1/bio_ndef.c", "BIO_NDEF"),
+    ("crypto/asn1/f_int.c", "F_INT"),
+    ("crypto/asn1/f_string.c", "F_STRING"),
+    ("crypto/asn1/tasn_dec.c", "TASN_DEC"),
+    ("crypto/asn1/tasn_enc.c", "TASN_ENC"),
+    ("crypto/asn1/tasn_new.c", "TASN_NEW"),
+    ("crypto/asn1/tasn_utl.c", "TASN_UTL"),
+    ("crypto/asn1/x_int64.c", "X_INT64"),
+    ("crypto/asn1/x_long.c", "X_LONG"),
+    # Deliberately *not* covered, with the stratum that owns each: `a_digest.c`,
+    # `ameth_lib.c`, `evp_asn1.c` (Phase 7); `d2i_param.c`, `d2i_pr.c`,
+    # `d2i_pu.c`, `i2d_evp.c`, `n_pkey.c`, `p5_pbe.c`, `p5_pbev2.c`,
+    # `p5_scrypt.c` (Phase 10); `a_sign.c`, `a_verify.c` (Phase 11);
+    # `asn_mime.c` (Phase 12); `nsseq.c` (Phase 13); `x_algor.c`, `x_long.c`,
+    # `x_pkey.c` (Phase 11). Their raises are visible as uncovered sites in
+    # `forensics/atlas/err-raise-sites.json` until those phases land.
 ]
 
 # Raise macros, in the forms the authority actually spells them. `ERR_raise`
@@ -572,9 +618,17 @@ def render_rust(doc: dict, prefix: str) -> str:
             f"/// `{s['function']}` at `{s['rel_source']}:{s['line']}` ({label})."
         )
         out.append(f"pub(crate) const {s['const_name']}: ErrSite = ErrSite {{")
-        out.append(f"    file: {c_literal(s['file'])}, line: {s['line']},")
-        out.append(f"    func: {c_literal(s['function'])},")
-        out.append(f"    lib: {s['lib']}, reason: {s['reason']},")
+        # One field per line, which is what `rustfmt` produces for a literal whose
+        # fields do not fit its 18-column single-line budget. Packing two fields
+        # per line made the generated file fail `cargo fmt --all -- --check`, and
+        # `err_sites.rs` is *not* in `evidence_determinism.py`'s compared set, so
+        # nothing caught it until CI did. Emitting the formatted shape removes the
+        # manual `cargo fmt` step the pipeline silently depended on.
+        out.append(f"    file: {c_literal(s['file'])},")
+        out.append(f"    line: {s['line']},")
+        out.append('    func: ' + c_literal(s['function']) + ',')
+        out.append(f"    lib: {s['lib']},")
+        out.append(f"    reason: {s['reason']},")
         out.append(f"    dynamic_reason: {str(bool(s['dynamic_reason'])).lower()},")
         out.append("};")
         out.append("")
