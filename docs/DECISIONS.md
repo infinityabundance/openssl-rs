@@ -2326,3 +2326,68 @@ disagreed about the archive. The court and the runner had agreed until this push
 That is the second time in this stratum that a gate failed only because an
 environment changed underneath it (D62 is the first), and both were found by CI
 rather than by the court — which is the point of running the same gates in both.
+
+## D64 — Phase 5's scope is derived from the atlas, and its families cannot be typed
+
+**Decision.** Phase 5's symbol families are **generated** by
+`forensics/tools/phase5_obligations.py` from the Phase 1 atlas, not written out as
+`(module, prefixes)` pairs the way Phases 3 and 4 do. The rule is one sentence:
+
+> A symbol belongs to the stratum that owns the header declaring it.
+
+with one exception the header alone cannot express — `pem.h` declares both the
+generic PEM machinery and the typed readers and writers for types owned elsewhere
+(`PEM_read_bio_X509` is Phase 11's even though `pem.h` declares it), so those are
+resolved by the type in the name, looked up in the atlas.
+
+**Why the families cannot be typed.** Phase 5's candidate surface is 1,093 exports
+spanning **270 distinct ASN.1 type names**. `d2i_X509` and `d2i_ASN1_INTEGER` look
+alike and belong to different strata, and no prefix list can separate them. Prefix
+lists are also how the D49/D51 defect class arose twice — an export matching no
+listed prefix is invisible to every ledger at once — and a hand-maintained list of
+1,093 names would be that defect with a larger blast radius.
+
+**The measured scope.** Of the 1,093 candidates, **513 are Phase 5's** — 201
+declared in `bn.h`, 274 in `asn1.h`/`asn1t.h`, and 38 generic PEM entry points —
+and **580 are handed to later strata**, each with its declaring header recorded as
+the reason: 23 to Phase 7 (`evp.h`), 58 to Phase 8 (`dsa.h`, `dh.h`, `rsa.h`,
+`ec.h`), 12 to Phase 10 (`pkcs12.h`), 346 to Phase 11 (`x509.h`, `x509v3.h`,
+`x509_acert.h`) and 141 to Phase 12 (`cms.h`, `ocsp.h`, `ts.h`, `pkcs7.h`,
+`crmf.h`, `cmp.h`, `ess.h`, `ct.h`). The ledger fails closed: a header with no
+entry in its `HEADER_PHASE` table, or a PEM type that will not resolve, stops the
+run rather than defaulting to "probably Phase 5".
+
+**A consequence worth stating.** Type → header resolution needs weighting, because
+`types.h` forward-declares *every* type and `pem.h` declares a reader for most of
+them; a naive lookup answers `pem.h` for `X509` and would assign 346 X.509 codecs
+to Phase 5. The resolver therefore prefers the struct definition, then the
+functions that take or return the type, then the typedef, and treats `types.h` and
+`pem.h` as "no opinion".
+
+**Not yet done, and how the ledger says so.** The ledger reports 0 implemented and
+513 open, and `complete: false`. `phase_state.py` continues to report Phase 5 as
+`not-started` because Phase 5 has no required-evidence list or courts yet; that
+change lands when the stratum has something to gate.
+
+**Where the work stands.** The `BN` substrate exists in the working tree —
+`src/bn/limbs.rs` (Knuth algorithm D division, schoolbook multiplication, binary
+GCD, extended-Euclid inverse, shifts and bit operations, with twelve unit tests
+whose expectations were checked against an independent bignum), `src/bn/bignum.rs`
+(the object, its lifetime, predicates, byte/MPI/hex/dec conversions and the
+`BN_CTX` pool) and `src/bn/arith.rs` (the arithmetic entry points). It is **not
+committed and not wired into the crate**, for two reasons that are both evidence
+reasons rather than tidiness: it does not yet pass the crate's lint gate — making
+the entry points `unsafe extern "C"` per `docs/UNSAFE.md` cascades into roughly
+sixty internal calls that each need their own `SAFETY` comment — and it has **no
+differential court**, so committing it would put symbols into the ABI shell as
+"implemented" on the strength of unit tests alone. `docs/PARITY_MODEL.md` does not
+allow that, and Phase 4's own history is the argument: the courts found defects in
+code that already looked finished, five times in one stratum.
+
+**Three expectations, not implementations, were wrong.** The first version of the
+BN unit tests asserted three hex values that the implementation disagreed with;
+all three were the test author's arithmetic, confirmed against an independent
+bignum, and the implementation was right. The `mod_inverse` test then asserted an
+inverse for operands sharing the factor 147, which correctly does not exist. This
+is the same failure mode the courts guard against, and it is recorded because the
+lesson generalises: in this project the expectation is the suspect, every time.

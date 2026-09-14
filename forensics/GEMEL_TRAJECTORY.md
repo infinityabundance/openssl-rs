@@ -10,6 +10,8 @@ in Git. See `docs/DECISIONS.md` D17.
 ## `gemel log`
 
 ```
+C19  Phase 5 archaeology and the BN substrate. The stratum owns 513 of the authority exports, measured rather than typed: 201 in bn.h, 274 in asn1.h/asn1t.h and 38 generic PEM entry points, with 580 handed to later strata by declaring header (23 to phase 7, 58 to 8, 12 to 10, 346 to 11, 141 to 12). The families had to be derived because the candidate surface spans 270 distinct ASN.1 type names and prefix lists cannot separate d2i_X509 from d2i_ASN1_INTEGER; typed families are also how the D49/D51 defect class arose twice. The ledger fails closed on an unknown header. The BN substrate is written but not committed and not wired in: making the entry points unsafe extern C cascades into about sixty internal SAFETY comments, and there is no differential court yet, so committing would put symbols in the ABI shell as implemented on unit-test evidence alone. Twelve limb unit tests pass, and three of their expectations were wrong while the implementation was right.
+    state state.e0c7044436a5db04f8a67931be2e8532bae6af04741d0789a736157bd367f2ab -> state.3b639aa874b366dd8e46bfd6d8f395c89cfa35c9b813f0f5c3ac260c43531c51
 C18  Phase 4 evidence reproducibility: the RT-BIO-DEBUG probe leaked an ASLR-dependent subject address to stderr through the NULL-destination fallback of BIO_debug_callback_ex. The court declares stdout and exit as its axes, and its stdout was already stable and scrubbed, so the claim was never affected; but the capture includes stderr, so every run produced a different evidence identity, and that one court was enough to make the aggregate runtime claim identity unstable. Measured: three re-runs of the court in one store produced three different run ids. setarch -R is refused in both court containers, so ASLR cannot be disabled. The probe now redirects descriptor 2 to a temporary file for that one call, restores it, and reports the scrubbed text as two further observations. Three re-runs now return the identical run id and FRF refuses to re-capture, which is the falsifiable test that it is fixed.
     state state.6362a83c6c38c4083b7e282c2c06129d5e2c180c6f75f473b2f79f8cba98f7a5 -> state.e0c7044436a5db04f8a67931be2e8532bae6af04741d0789a736157bd367f2ab
 C17  Record correction: the Phase 4 ledger hands thirty-one exports to later strata, in five groups, each with a named owning phase and a stated reason. Six to Phase 5 (the ASN.1 prefix and suffix hooks plus BIO_f_asn1 and BIO_new_NDEF), seventeen to Phase 6 (BIO_s_core, BIO_new_from_core_bio and the fifteen CONF module-registry entry points), five to Phase 7 (the digest, cipher, reliable and base64 filters and BIO_set_cipher), one to Phase 9 (BIO_f_nbio_test, whose read and write call RAND_priv_bytes), and two to Phase 12 (BIO_new_CMS and BIO_new_PKCS7). The eleven symbols Phase 3 handed to Phase 4 are recorded on the Phase 3 side as discharged, not as Phase 4 deferrals. No file content changed.
@@ -44,8 +46,9 @@ C1  Phase 0 constitution and Phase 1 archaeology atlas, evidence-bound
 * `K6` — `checkpoint.8958092650197b473c5b00d9c0de22e075c4765efc2e8a4ab9d452ffae97cf61`
 * `K7` — `checkpoint.0c5d62d5f78d2c4ebdc7174affd4464f04d1315708e5a87962cded63439818d3`
 * `K8` — `checkpoint.7eb3dba97cbf20f2b34d14cce7e93bc2171ebd0d7ee66d1f7508cc6e199567de`
+* `K9` — `checkpoint.60105b4c8189d2668c48e173fe2c92c0ddf76160caae24efecc707bd576f506f`
 
-current: `checkpoint.7eb3dba97cbf20f2b34d14cce7e93bc2171ebd0d7ee66d1f7508cc6e199567de`
+current: `checkpoint.60105b4c8189d2668c48e173fe2c92c0ddf76160caae24efecc707bd576f506f`
 
 ## Note: derived names are not identities
 
@@ -65,6 +68,15 @@ changed with it; the Git commit is the authoritative record of the diff.
 ## Open residuals at this boundary
 
 ```
+open [low] BN_rand, BN_generate_prime and the other RNG consumers in bn.h are owned by phase 5 but cannot be built before the RAND stratum exists; deferring them to phase 9 on the precedent of BIO_f_nbio_test is the decision still to take
+    class: expected_mismatch
+    persistence: 0 descendant change(s)
+open [medium] the BN entry points need an unsafe extern C conversion plus about sixty SAFETY comments before the crate lint gate passes
+    class: expected_mismatch
+    persistence: 0 descendant change(s)
+open [high] the BN substrate is written but unwired and uncourted, so no BN symbol is implemented in the ABI shell and the ledger reports 513 open
+    class: verification_gap
+    persistence: 0 descendant change(s)
 open [low] the RT-BIO-DEBUG transcript gains two observations, so its receipt identity differs from the one recorded before this fix
     class: expected_mismatch
     persistence: 0 descendant change(s)

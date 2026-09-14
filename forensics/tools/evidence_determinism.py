@@ -60,6 +60,7 @@ GENERATORS = [
     "forensics/tools/ownership_audit.py",
     "forensics/tools/phase3_obligations.py",
     "forensics/tools/phase4_obligations.py",
+    "forensics/tools/phase5_obligations.py",
     "forensics/tools/phase_state.py",
     "forensics/tools/render_status.py",
 ]
@@ -72,6 +73,7 @@ COMPARED = [
     "forensics/atlas/ownership-audit.json",
     "forensics/phase3-obligations.json",
     "forensics/phase4-obligations.json",
+    "forensics/phase5-obligations.json",
     "forensics/phase-state.json",
     "forensics/phase-state.md",
     "forensics/STATUS.md",
