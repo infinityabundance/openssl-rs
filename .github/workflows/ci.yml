@@ -131,6 +131,13 @@ jobs:
       - name: Symbol ownership
         run: python3 forensics/tools/ownership_audit.py
 
+      # The atlas records every authority prototype and nothing compared it with the
+      # crate's declarations, which is how `BN_signed_lebin2bn` came to be declared
+      # `-> c_int` while the authority declares `BIGNUM *` (D65). This compares
+      # return class and arity for every implemented export.
+      - name: Export prototypes
+        run: python3 forensics/tools/prototype_court.py
+
       # A court declaration is written by `gen_frf_courts.py` from one table, so a
       # hand-edit to a single manifest cannot survive: the table and the
       # declarations must agree. This is also what keeps every court's

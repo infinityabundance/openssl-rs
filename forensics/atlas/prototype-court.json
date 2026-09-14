@@ -1,0 +1,99 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "counts": {
+      "checked": 508,
+      "declaration_is_generated": 42,
+      "implementation_is_c": 8,
+      "implemented": 560,
+      "mismatches": 0,
+      "no_prototype_in_atlas": 2,
+      "not_found": 0,
+      "unclassified": 0
+    },
+    "declaration_is_generated": [
+      "ERR_get_error",
+      "ERR_get_error_line",
+      "ERR_get_error_line_data",
+      "ERR_load_ASN1_strings",
+      "ERR_load_ASYNC_strings",
+      "ERR_load_BIO_strings",
+      "ERR_load_BN_strings",
+      "ERR_load_BUF_strings",
+      "ERR_load_CMS_strings",
+      "ERR_load_COMP_strings",
+      "ERR_load_CONF_strings",
+      "ERR_load_CRYPTO_strings",
+      "ERR_load_CT_strings",
+      "ERR_load_DH_strings",
+      "ERR_load_DSA_strings",
+      "ERR_load_EC_strings",
+      "ERR_load_ENGINE_strings",
+      "ERR_load_ERR_strings",
+      "ERR_load_EVP_strings",
+      "ERR_load_KDF_strings",
+      "ERR_load_OBJ_strings",
+      "ERR_load_OCSP_strings",
+      "ERR_load_OSSL_STORE_strings",
+      "ERR_load_PEM_strings",
+      "ERR_load_PKCS12_strings",
+      "ERR_load_PKCS7_strings",
+      "ERR_load_RAND_strings",
+      "ERR_load_RSA_strings",
+      "ERR_load_TS_strings",
+      "ERR_load_UI_strings",
+      "ERR_load_X509V3_strings",
+      "ERR_load_X509_strings",
+      "ERR_peek_error",
+      "ERR_peek_error_data",
+      "ERR_peek_error_func",
+      "ERR_peek_error_line",
+      "ERR_peek_error_line_data",
+      "ERR_peek_last_error",
+      "ERR_peek_last_error_data",
+      "ERR_peek_last_error_func",
+      "ERR_peek_last_error_line",
+      "ERR_peek_last_error_line_data"
+    ],
+    "implementation_is_c": [
+      "BIO_printf",
+      "BIO_snprintf",
+      "BIO_vprintf",
+      "BIO_vsnprintf",
+      "ERR_add_error_data",
+      "ERR_add_error_vdata",
+      "ERR_set_error",
+      "ERR_vset_error"
+    ],
+    "mismatches": [],
+    "no_prototype_in_atlas": [
+      "OPENSSL_DIR_end",
+      "OPENSSL_DIR_read"
+    ],
+    "not_found": [],
+    "note": "Return class and arity only. Parameter *types* are not compared: the atlas gives C types and the source gives Rust types, and a mapping between them would be a transcription rather than a check. A symbol this court cannot classify -- including one the crate declares from a `macro_rules!` -- is reported under its own heading and never counted as a pass, so `mismatches == 0` must be read together with `checked`, not instead of it.",
+    "unclassified": [],
+    "what": "every implemented libcrypto export's Rust declaration agrees with the authority's recorded prototype on return class and arity",
+    "why": "the atlas records the prototype and nothing compared it: a wrong return class or arity is a wrong call convention, which no value-level probe finds cheaply (docs/DECISIONS.md D65)"
+  },
+  "generator": "forensics/tools/prototype_court.py",
+  "inputs": [
+    {
+      "name": "authority-functions",
+      "path": "forensics/atlas/openssl-3.6.4-production/functions.json",
+      "sha256": "0add7610e574dc030773b0f76a6cc80215d73cfbca411392bd6b64f3f8de80d0"
+    },
+    {
+      "name": "authority-typedefs",
+      "path": "forensics/atlas/openssl-3.6.4-production/typedefs.json",
+      "sha256": "af99118d026274d21e18b3c499ec6853eaf463f7491d56e05e934124d1458d83"
+    },
+    {
+      "name": "implemented-surface",
+      "path": "forensics/atlas/implemented-surface.json",
+      "sha256": "ae2ce5b72ae4fb47309649ef900213f13016fc70a18ab3be4d74c965f5a98b58"
+    }
+  ],
+  "kind": "prototype-court",
+  "schema": "openssl-rs/atlas/prototype-court/v1"
+}

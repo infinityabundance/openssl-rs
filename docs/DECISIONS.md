@@ -2509,3 +2509,55 @@ BIO-to-ASN.1 symbols to Phase 5 (`BIO_f_asn1`, `BIO_new_NDEF`, the four
 as discharged; `ownership_audit.py` reports `phase 4 -> 5: 6 discharged` and
 `0 mismatched hand-off edge(s)`. Before that, the edge was recorded in one ledger only —
 which is the failure mode the reconciliation exists to catch, and it caught it.
+
+## D67 — The prototype court, and the two parameters the authority never had
+
+**Decision.** `forensics/tools/prototype_court.py` compares every implemented
+`libcrypto` export's Rust declaration against the prototype the Phase 1 atlas recorded
+for it — **return class and arity** — and fails on a mismatch. It is registered in
+`evidence_determinism.py`'s generator set (so its document is reproduced from committed
+inputs on every run) and in CI's static gates, where it needs no authority venue
+because the atlas already carries the prototypes.
+
+**Why the class, and not the types.** The atlas gives C types and the source gives Rust
+types, and a per-parameter mapping between them would be a transcription that ages
+badly. Return class and arity are what a caller's compiler bakes into the call, and
+they are exactly what D65's defect got wrong. Both sides are resolved through their own
+typedef chains first — `CRYPTO_THREAD_ID` is `unsigned long`, `BIO_callback_fn` is a
+function pointer, `BioRecvmmsgFn` is an alias of `BioSendmmsgFn` — so a difference in
+*spelling* is never reported as a difference in *shape*.
+
+**A symbol it cannot check is never a pass.** The report separates
+`declaration_is_generated` (the crate declares 42 exports from a `macro_rules!`, so
+there is no declaration to parse), `implementation_is_c` (the eight variadic and
+syscall shims that stable Rust cannot express), `no_prototype_in_atlas` (the
+`ABI_ONLY_EXPORTED` class from Phase 1 — `OPENSSL_DIR_read` and `OPENSSL_DIR_end` are
+in the DSO and in no installed header), and `unclassified`. `mismatches == 0` is
+therefore stated alongside `checked`, never instead of it: today 508 of 560 are
+checked, and the remaining 52 are named by class.
+
+**What it found on its first real run.** Two declarations, both in Phase 5's own new
+code, and both a *phantom parameter*:
+
+```
+BN_CTX_new_ex        authority: BN_CTX *(OSSL_LIB_CTX *)          crate: 2 parameters
+BN_CTX_secure_new_ex authority: BN_CTX *(OSSL_LIB_CTX *)          crate: 2 parameters
+```
+
+An earlier understanding had given them a `const char *propq` second argument that
+OpenSSL's `BN_CTX_new_ex` does not have — that pattern belongs to the `EVP_*`
+constructors. On this ABI the extra parameter is harmless at every call site: x86-64
+SysV passes it in a register the callee never reads, and the crate's argument was
+`_propq`. That is precisely why nothing else found it, and why a prototype comparison
+is worth having: it is the only gate that reads the declaration *as a caller's compiler
+would*. Both are now one-parameter, and the doc comments say so with the reason.
+
+**The court's own first run was mostly its own bug, and that is recorded too.** The
+first version reported seven mismatches and sixteen unclassifiable returns. Six of the
+seven were its parser reading the `>` of `->` as closing a `<`, which truncated every
+declaration whose parameter list contains a function-pointer type; the sixteen were
+one wrong assumption about which parenthesised group in
+`int (*(const BIO_METHOD *))(BIO *, char *, int)` is the outer function's parameter
+list. A court that reports its own traversal order, or its own reading of C declarator
+syntax, as a property of the code is worse than no court — it manufactures work — and
+both are now handled explicitly and commented where the trap is.

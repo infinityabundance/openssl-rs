@@ -67,18 +67,23 @@ pub unsafe extern "C" fn BN_CTX_new() -> *mut BnCtx {
     guard_ffi(core::ptr::null_mut(), new_ctx)
 }
 
-/// `BN_CTX *BN_CTX_new_ex(OSSL_LIB_CTX *libctx, const char *propq)`
+/// `BN_CTX *BN_CTX_new_ex(OSSL_LIB_CTX *libctx)`
 ///
-/// The library context and property query select a provider for the operations the
-/// context performs. Those belong to Phase 6, so this creates a context that uses
-/// this implementation directly. Recorded as
-/// `OBL-BN-CTX-LIBCTX-SELECTION` rather than claimed as parity.
+/// The library context selects a provider for the operations the context performs.
+/// That belongs to Phase 6, so this creates a context that uses this implementation
+/// directly. Recorded as `OBL-BN-CTX-LIBCTX-SELECTION` rather than claimed as parity.
+///
+/// The signature is the authority's: **one** parameter. An earlier version of this
+/// declaration carried a second `propq` argument the authority does not have, and the
+/// prototype court caught it (`forensics/atlas/prototype-court.json`, D65) — an extra
+/// unused parameter is harmless at the call site on this ABI, which is exactly why
+/// only a prototype comparison finds it.
 ///
 /// # Safety
 ///
-/// `libctx` and `propq` are accepted and unused; a caller may pass null for either.
+/// `libctx` is accepted and unused; a caller may pass null.
 #[no_mangle]
-pub unsafe extern "C" fn BN_CTX_new_ex(_libctx: *mut c_void, _propq: *const i8) -> *mut BnCtx {
+pub unsafe extern "C" fn BN_CTX_new_ex(_libctx: *mut c_void) -> *mut BnCtx {
     guard_ffi(core::ptr::null_mut(), new_ctx)
 }
 
@@ -98,16 +103,16 @@ pub unsafe extern "C" fn BN_CTX_secure_new() -> *mut BnCtx {
     guard_ffi(core::ptr::null_mut(), new_ctx)
 }
 
-/// `BN_CTX *BN_CTX_secure_new_ex(OSSL_LIB_CTX *libctx, const char *propq)`
+/// `BN_CTX *BN_CTX_secure_new_ex(OSSL_LIB_CTX *libctx)`
+///
+/// As `BN_CTX_new_ex`, and with the same one-parameter signature the authority
+/// declares rather than the two-parameter one an earlier version carried.
 ///
 /// # Safety
 ///
 /// As `BN_CTX_new_ex`.
 #[no_mangle]
-pub unsafe extern "C" fn BN_CTX_secure_new_ex(
-    _libctx: *mut c_void,
-    _propq: *const i8,
-) -> *mut BnCtx {
+pub unsafe extern "C" fn BN_CTX_secure_new_ex(_libctx: *mut c_void) -> *mut BnCtx {
     guard_ffi(core::ptr::null_mut(), new_ctx)
 }
 
