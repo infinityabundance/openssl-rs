@@ -27,13 +27,29 @@
 /artifacts/phase2/include/
 /artifacts/phase2/shell/
 
-# Gemel's local evidence-native working store. It is ~95 MB (it snapshots the
-# derived atlas) and is a local working memory, not a deliverable: it is
-# recreated with `gemel init` + the recorded change/checkpoint in
-# forensics/STATUS.md and docs/DECISIONS.md. FRF's store IS committed (below),
-# because its receipts and claims are the claim-bearing evidence.
-/.gemel/
+# Gemel's evidence-native store. It IS committed: docs/RELEASE_GATES.md §2
+# requires a Gemel checkpoint at every phase boundary, and a checkpoint that
+# lives only on the machine that made it is prose, not evidence. The store is
+# ~95 MB because Gemel snapshots the derived atlas; that is the cost of the
+# trajectory being real and inspectable (`gemel log`, `gemel show`,
+# `gemel why`). A human-readable projection is also committed at
+# forensics/GEMEL_TRAJECTORY.md so the trajectory is legible without the store.
+
+# FRF's portable OpenReceipt bundles are DERIVED exports of the committed .frf
+# store (each ~20 MB: the closure includes the snapshotted authority DSOs).
+# They are reproducible from the documented command, so they are not duplicated
+# in git; the store they export from is committed.
+/forensics/frf/bundles/
 
 # Editor / OS noise
 *.swp
 .DS_Store
+
+# Python bytecode. Generated interpreter state must never sit beside forensic
+# tooling: it is not evidence, it is not reproducible, and in a project whose
+# whole claim is reproducibility it is actively misleading.
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

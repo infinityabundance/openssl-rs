@@ -38,19 +38,27 @@ echo "=== [6/10] ABI layout probes + ownership obligations ==="
 python3 forensics/tools/atlas_abi.py --all
 
 echo
-echo "=== [7/10] reconciliation, coverage and parity obligations ==="
+echo "=== [7/12] reconciliation, coverage and parity obligations ==="
 python3 forensics/tools/atlas_parity.py --all
 
 echo
-echo "=== [8/10] Markdown projections ==="
+echo "=== [8/12] oracle-vs-oracle differential atlas ==="
+python3 forensics/tools/atlas_differential.py
+
+echo
+echo "=== [9/12] Phase 1 completeness inventory ==="
+python3 forensics/tools/atlas_phase1_completeness.py
+
+echo
+echo "=== [10/12] Markdown projections ==="
 python3 forensics/tools/render_atlas.py --all
 
 echo
-echo "=== [9/10] atlas index and evidence receipt ==="
+echo "=== [11/12] atlas index and evidence receipt ==="
 python3 forensics/tools/atlas_receipt.py
 
 echo
-echo "=== [10/10] status projection (after the receipt, so it is current) ==="
+echo "=== [12/12] status projection (after the receipt, so it is current) ==="
 python3 forensics/tools/render_status.py
 
 echo

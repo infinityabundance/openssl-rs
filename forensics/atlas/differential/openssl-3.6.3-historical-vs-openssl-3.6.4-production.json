@@ -1,0 +1,151 @@
+{
+  "body": {
+    "direction": "added means present in 'to', absent in 'from'",
+    "from_authority": "openssl-3.6.3-historical",
+    "interpretation": "A narrow trajectory is the useful kind of negative result: it means a later divergence reported by a consumer can be localised quickly, and it corroborates (or contradicts) the FRF oracle-vs-oracle courts, which observe behaviour rather than surface.",
+    "movement": {
+      "abi_layout_movement": 0,
+      "cli_movement": 0,
+      "declared_declaration_movement": 2,
+      "provider_algorithm_movement": 0,
+      "symbol_movement": 0,
+      "total": 2
+    },
+    "planes": {
+      "abi_layout": {
+        "added_count": 0,
+        "added_in_to": [],
+        "common": 158,
+        "layout_changed": [],
+        "layout_changed_count": 0,
+        "opaque_from": 307,
+        "opaque_to": 307,
+        "removed_count": 0,
+        "removed_in_to": []
+      },
+      "cli": {
+        "added_count": 0,
+        "added_in_to": [],
+        "common": 55,
+        "from_count": 55,
+        "option_changes": {},
+        "option_changes_count": 0,
+        "removed_count": 0,
+        "removed_in_to": [],
+        "to_count": 55
+      },
+      "corpus": {
+        "fuzz": {
+          "added_count": 0,
+          "from_root_hash": "89472a79248addb72c7cc496b286f3078d016f88cff29e334f9bc51c42c11f0f",
+          "identical": false,
+          "removed_count": 0,
+          "to_root_hash": "627ee891982d5d8ebfa7951ec664a6501b7828bca8fe568542f318f9ac5a5f33"
+        },
+        "providers": {
+          "added_count": 0,
+          "from_root_hash": "a932a709c18988e2c8905b46655134729cb7f22a8e0aac3e57689a6589d749c2",
+          "identical": false,
+          "removed_count": 0,
+          "to_root_hash": "207ac0970182dbb7c1c79dd142ec1a569c08391b68abe3f4cdbb780c2086cdd9"
+        },
+        "test": {
+          "added_count": 16,
+          "from_root_hash": "cca01403fbf90c6d2e99c425af3986433cc490a167c8c5f642e1f9a2d19c367a",
+          "identical": false,
+          "removed_count": 0,
+          "to_root_hash": "7c2c6d294c3bec5077711423b41311a22112021028a6fef3bd75c2dbd640353b"
+        }
+      },
+      "enums": {
+        "added_count": 0,
+        "added_in_to": [],
+        "common": 4,
+        "removed_count": 0,
+        "removed_in_to": []
+      },
+      "functions": {
+        "added_count": 0,
+        "added_in_to": [],
+        "common": 7485,
+        "removed_count": 0,
+        "removed_in_to": []
+      },
+      "headers": {
+        "added_headers": [],
+        "edge_changes": {},
+        "edge_changes_count": 0,
+        "removed_headers": []
+      },
+      "macros": {
+        "added_count": 2,
+        "added_in_to": [
+          "SSL_VALUE_QUIC_MAX_PENDING_CONNS",
+          "X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH"
+        ],
+        "common": 16803,
+        "removed_count": 0,
+        "removed_in_to": []
+      },
+      "provider_algorithms": {},
+      "structs": {
+        "added_count": 0,
+        "added_in_to": [],
+        "common": 465,
+        "removed_count": 0,
+        "removed_in_to": []
+      },
+      "symbols": {
+        "libcrypto": {
+          "added_count": 0,
+          "added_in_to": [],
+          "common": 5949,
+          "kind_changed": [],
+          "removed_count": 0,
+          "removed_in_to": [],
+          "version_changed": [],
+          "version_changed_count": 0
+        },
+        "libssl": {
+          "added_count": 0,
+          "added_in_to": [],
+          "common": 608,
+          "kind_changed": [],
+          "removed_count": 0,
+          "removed_in_to": [],
+          "version_changed": [],
+          "version_changed_count": 0
+        }
+      },
+      "typedefs": {
+        "added_count": 0,
+        "added_in_to": [],
+        "common": 1162,
+        "removed_count": 0,
+        "removed_in_to": []
+      },
+      "variables": {
+        "added_count": 0,
+        "added_in_to": [],
+        "common": 2,
+        "removed_count": 0,
+        "removed_in_to": []
+      }
+    },
+    "to_authority": "openssl-3.6.4-production"
+  },
+  "body_hash": "c67ffb42e29c95100fa3db94df920136c32a33fb3bb12397b28cc2cc5e2fb28a",
+  "generator": "forensics/tools/atlas_differential.py",
+  "inputs": [
+    {
+      "name": "from_authority",
+      "note": "openssl-3.6.3-historical"
+    },
+    {
+      "name": "to_authority",
+      "note": "openssl-3.6.4-production"
+    }
+  ],
+  "kind": "differential",
+  "schema": "openssl-rs/atlas/differential/v1"
+}

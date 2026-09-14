@@ -3,6 +3,12 @@
 Status: append-only. Each entry records a decision that changes the contract or
 the evidence machinery, and why. Superseding an entry requires a new entry.
 
+**Decisions never assert current status.** Where an entry quotes a count, a
+census or an observation, that is a record of what was observed *at the time the
+decision was made* — evidence of the reasoning, not a claim about the present.
+Current counts are derived exclusively from `forensics/STATUS.md` and the atlas,
+never from this file. See D15 for the worked example of why this matters.
+
 ---
 
 ## D1 — Authorities: 3.6.4 production, 3.6.3 historical
@@ -241,3 +247,72 @@ sensitivity evidence to a claim.
 
 ---
 
+
+---
+
+## D15 — Supersedes D7's *observed census*; D7's methodological decision stands
+
+**Decision.** D7's methodological decision is not changed and remains in force:
+
+> the generated version script (`libcrypto.ld` / `libssl.ld`) is the
+> build-profile-specific exclusion plane, and `num \ version_script` is exactly
+> the set of exclusions this build made.
+
+**What is superseded.** D7's *quoted counts* (`generated .ld = 5896`,
+`DSO exports = 5896`, `53 absences`) were libcrypto-only figures captured at an
+earlier point in the archaeology, and they are not current status. The generated
+reconciliation reports per-plane totals across **both** libraries (5896 + 603 =
+6499), so a reader comparing D7 against `forensics/STATUS.md` sees two different
+numbers for what sounds like the same thing.
+
+D7 is deliberately **not rewritten**: it records the reasoning and the state of
+knowledge at the time, and that record is itself evidence. Instead:
+
+* this entry marks the census as superseded;
+* the file header now states that this file never asserts current status;
+* current counts are derived from `forensics/STATUS.md` and the atlas only.
+
+**Why this is recorded rather than fixed silently.** It is the epistemology the
+project is built on, made visible:
+
+```
+decision  -> remains true (a choice, defended on its reasons)
+observation -> evolves (a measurement, true at its time)
+```
+
+A decision log that quietly edits its own numbers to match the present destroys
+the ability to tell which reasoning was based on which observation. The rule is
+therefore: **decision remains true; observation evolves; neither is restated as
+the other.**
+
+---
+
+## D16 — The FFI unwind boundary is unconditional
+
+**Decision.** `guard_ffi` always catches a panic and never resumes it. Its
+behaviour does not vary with `debug_assertions`, build profile, environment, or
+whether a test is running.
+
+**Supersedes** the earlier behaviour, described in the same file at D10-adjacent
+prose, in which debug builds re-raised the panic so that a defect on the FFI path
+would fail tests loudly.
+
+**Why the earlier design was wrong.** The *want* was correct — a panic on the FFI
+path should never pass unnoticed — but the *mechanism* was not: it meant the
+control-flow edge "unwind into C" existed in exactly one configuration, so the
+invariant `no Rust panic may unwind through a C ABI boundary` held only where the
+stakes were lowest. A boundary whose unwind behaviour varies by configuration is
+not a boundary.
+
+**What replaces it.** The boundary always catches, increments a process-wide
+counter (`openssl_rs::ffi::panics_caught`), writes a fixed diagnostic to `stderr`,
+and returns the documented failure value. Tests assert that the counter moved and
+that the call *returned* rather than unwound. A `#[cfg(test)]`-only
+`propagate_for_test` helper preserves payload-level assertions for pure-Rust call
+paths.
+
+**Residual (recorded, not hidden).** The panic payload is dropped, because
+`PanicHookInfo` payloads are not ABI-stable and cannot cross into C. Phase 3 will
+surface the condition through the thread-local `ERR` queue, which is what an
+OpenSSL caller expects to find after a failure. This is tracked as an open
+obligation in `forensics/atlas/phase1-completeness.json`.

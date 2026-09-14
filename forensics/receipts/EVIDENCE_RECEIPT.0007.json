@@ -1,6 +1,17 @@
 {
   "aggregate_hash": "b80119729b7a57dc9a6eba952f579db8427422f8bfb2f444dd7552d59293dde4",
-  "aggregate_hash_algorithm": "sha256(<file-sha256>  <path>\\n, lexicographic)",
+  "court": {
+    "container": "openssl-rs-court",
+    "image": "openssl-rs-court:1",
+    "note": "generated inside the court container; never on the host"
+  },
+  "deterministic": false,
+  "drift_from_previous": [
+    "forensics/atlas/differential/openssl-3.6.3-historical-vs-openssl-3.6.4-production.json",
+    "forensics/atlas/differential/openssl-3.6.3-historical-vs-openssl-3.6.4-production.md",
+    "forensics/atlas/phase1-completeness.json",
+    "forensics/atlas/phase1-completeness.md"
+  ],
   "file_count": 48,
   "files": [
     {
@@ -197,5 +208,12 @@
     }
   ],
   "generator": "forensics/tools/atlas_receipt.py",
-  "schema": "openssl-rs/atlas-index/v1"
+  "kind": "phase1-atlas",
+  "non_claims": [
+    "does not claim cryptographic security",
+    "does not claim FIPS validation",
+    "does not claim cryptographic-correctness from OpenSSL parity"
+  ],
+  "receipt_number": 7,
+  "schema": "openssl-rs/evidence-receipt/v1"
 }

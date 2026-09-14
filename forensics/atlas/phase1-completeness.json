@@ -1,0 +1,266 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "authority": "openssl-3.6.4-production",
+    "complete_count": 22,
+    "deferred": [
+      {
+        "owning_phase": "2",
+        "plane": "abi-cross-compile-matrix",
+        "reason": "the four oracle/candidate header x DSO combinations; Phase 2 has landed ABI-LINK and ABI-LAYOUT, the remaining combinations are Phase 2 work",
+        "status": "deferred"
+      },
+      {
+        "owning_phase": "2",
+        "plane": "binary-substitution-skeleton",
+        "reason": "build once against OpenSSL, run against candidate DSOs; Phase 2",
+        "status": "deferred"
+      },
+      {
+        "owning_phase": "2",
+        "plane": "static-archives-provider-modules-cli",
+        "reason": "libcrypto.a/libssl.a, legacy.so, the `openssl` executable and a real install layout",
+        "status": "deferred"
+      },
+      {
+        "owning_phase": "3",
+        "plane": "ownership-behavioural-probes",
+        "reason": "canary-allocator and refcount probes in an oracle process; requires the core runtime",
+        "status": "deferred"
+      },
+      {
+        "owning_phase": "2",
+        "plane": "enum-constant-values",
+        "reason": "enum constant integers are captured in the declaration atlas as AST values, but a compiled constant-value court belongs with the ABI shell",
+        "status": "deferred"
+      },
+      {
+        "owning_phase": "1-closure",
+        "plane": "frf-receipts-for-the-atlas",
+        "reason": "FRF receipts covering the archaeology itself, compiled into a phase claim",
+        "status": "deferred"
+      }
+    ],
+    "deferred_count": 6,
+    "missing": [],
+    "missing_count": 0,
+    "note": "Phase 1 is archaeology only: no candidate parity is claimed anywhere in this inventory, and no obligation is PARITY_VERIFIED.",
+    "open_unknown_count": 4,
+    "open_unknowns": [
+      {
+        "count": 11,
+        "sample": [
+          "OSSL_provider_init",
+          "_CONF_add_string",
+          "_CONF_free_data",
+          "_CONF_get_number",
+          "_CONF_get_section",
+          "_CONF_get_section_values",
+          "_CONF_get_string",
+          "_CONF_new_data",
+          "_CONF_new_section",
+          "_openssl_ascii2ebcdic"
+        ],
+        "unknown": "declared-but-not-in-ABI-inventory symbols",
+        "why": "declared in a public header, not exported by the DSO, and not listed in .num. Not a defect and not yet explained; each needs a per-symbol disposition."
+      },
+      {
+        "count": 26,
+        "sample": [
+          "DSO_METHOD_openssl",
+          "DSO_bind_func",
+          "DSO_convert_filename",
+          "DSO_ctrl",
+          "DSO_dsobyaddr",
+          "DSO_flags",
+          "DSO_free",
+          "DSO_get_filename",
+          "DSO_global_lookup",
+          "DSO_load",
+          "DSO_merge",
+          "DSO_new"
+        ],
+        "unknown": "exported symbols with no installed declaration",
+        "why": "the DSO exports them and no installed header declares them (the DSO_* family belongs to dso.h, which the authority does not install). A consumer can link these but cannot see a declaration; whether the candidate must export them is an open contract question."
+      },
+      {
+        "count": 2,
+        "sample": [
+          "openssl-cli-list-disabled",
+          "openssl-cli-list-cipher"
+        ],
+        "unknown": "FRF sensitivity coverage for the non-fixture-driven courts",
+        "why": "docs/DECISIONS.md D13: the challenge mutant cannot locate the reference when the court's arguments do not reference {fixture}, so axis isolation cannot be demonstrated. Remedy: make the courts fixture-driven. Blocks a sensitivity-backed claim, not a baseline one."
+      },
+      {
+        "count": 1,
+        "sample": [
+          "src/ffi/mod.rs"
+        ],
+        "unknown": "panic payload not surfaced at the FFI boundary",
+        "why": "docs/DECISIONS.md D16: the payload is dropped because it is not ABI-stable. Phase 3 surfaces the condition through the thread-local ERR queue, which is what an OpenSSL caller expects after a failure."
+      }
+    ],
+    "planes": [
+      {
+        "artifact": "forensics/authorities/AUTHORITIES.json",
+        "description": "admitted authorities with verified archive hashes and source-tree root hashes",
+        "plane": "authority-registry",
+        "sha256": "8885e8ecfe27c308d97ded8db8b197ff1b46177a1b8932535824d8a7d2b18944",
+        "status": "complete"
+      },
+      {
+        "artifact": "forensics/atlas/BUILD_RECORDS.json",
+        "description": "configure argv, toolchain, platform and produced artifacts per authority",
+        "plane": "build-records",
+        "sha256": "921ce360ba59cb4e0c39e3adf27c35c0e8256e37a039b50a7f51b953560232b0",
+        "status": "complete"
+      },
+      {
+        "artifact": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+        "description": "four-plane reconciliation: .num vs generated .ld vs DSO exports vs ELF version nodes",
+        "plane": "symbols-libcrypto",
+        "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6",
+        "status": "complete"
+      },
+      {
+        "artifact": "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json",
+        "description": "the same reconciliation for libssl",
+        "plane": "symbols-libssl",
+        "sha256": "3e4ff935edc852001e0c7d26d0ba318fab10ac15147c9fff99b7fa6a0d55e634",
+        "status": "complete"
+      },
+      {
+        "artifact": "forensics/atlas/openssl-3.6.4-production/symbol-versions.json",
+        "description": "version definition nodes and the ABS version markers in .dynsym",
+        "plane": "symbol-versions",
+        "sha256": "4beed2bbcb3fa967c626f208197d3dd8565651e1dcdb08379e4a3a49415b3550",
+        "status": "complete"
+      },
+      {
+        "artifact": "forensics/atlas/openssl-3.6.4-production/functions.json",
+        "description": "public function declarations from the Clang AST, with header and line",
+        "plane": "declarations",
+        "sha256": "0add7610e574dc030773b0f76a6cc80215d73cfbca411392bd6b64f3f8de80d0",
+        "status": "complete"
+      },
+      {
+        "artifact": "forensics/atlas/openssl-3.6.4-production/typedefs.json",
+        "description": "public typedefs",
+        "plane": "typedefs",
+        "sha256": "af99118d026274d21e18b3c499ec6853eaf463f7491d56e05e934124d1458d83",
+        "status": "complete"
+      },
+      {
+        "artifact": "forensics/atlas/openssl-3.6.4-production/structs.json",
+        "description": "public struct and union definitions (complete and opaque)",
+        "plane": "structs",
+        "sha256": "07ee82cd0f3a78402a77267f99f69c9d00f56508cb76509d1b1ba1a95cb94893",
+        "status": "complete"
+      },
+      {
+        "artifact": "forensics/atlas/openssl-3.6.4-production/enums.json",
+        "description": "named enums and their constants",
+        "plane": "enums",
+        "sha256": "a95111482a96ab687db8abe9c9ef485f3bee26ef6cb87089dea80c0c4c7574a1",
+        "status": "complete"
+      },
+      {
+        "artifact": "forensics/atlas/openssl-3.6.4-production/variables.json",
+        "description": "exported data objects (extern declarations)",
+        "plane": "variables",
+        "sha256": "5133de801f35c4825ef7a03a06fa1decf5203061df9456abe2046b2b8c45dd2c",
+        "status": "complete"
+      },
+      {
+        "artifact": "forensics/atlas/openssl-3.6.4-production/macros.json",
+        "description": "macro inventory attributed to defining headers",
+        "plane": "macros",
+        "sha256": "99e595fad544d1cff98c5495519db7abe68a34b32e6e97fd29735f9686c846da",
+        "status": "complete"
+      },
+      {
+        "artifact": "forensics/atlas/openssl-3.6.4-production/header-graph.json",
+        "description": "include topology and per-header macro definitions",
+        "plane": "header-graph",
+        "sha256": "f33d7ec7a0f4f1a23cdfa831a07dce64cde40f66dd25119312a4a18190049272",
+        "status": "complete"
+      },
+      {
+        "artifact": "forensics/atlas/openssl-3.6.4-production/abi-layout.json",
+        "description": "measured sizeof/alignof/offsetof from probes compiled against installed headers",
+        "plane": "abi-layout",
+        "sha256": "e90413dab871f2cd71cc33215d60f032ba6e3d02f7b54a40fb77190a7996fc09",
+        "status": "complete"
+      },
+      {
+        "artifact": "forensics/atlas/openssl-3.6.4-production/ownership-obligations.json",
+        "description": "get0/get1/set0/set1/up_ref/free/dup/constructor obligations (declaration-derived)",
+        "plane": "ownership-obligations",
+        "sha256": "ca100c09c7a29673aeeca036402465923a9e90dc7d311630af763081f87d673e",
+        "status": "complete"
+      },
+      {
+        "artifact": "forensics/atlas/openssl-3.6.4-production/provider-inventory.json",
+        "description": "providers and the full algorithm-class inventory, from the authority's own binary",
+        "plane": "provider-inventory",
+        "sha256": "62763c6bd86ed55cb509ac3bb3675fff5b26bfd78f4dc9a3c75f7d29abb0c522",
+        "status": "complete"
+      },
+      {
+        "artifact": "forensics/atlas/openssl-3.6.4-production/cli-commands.json",
+        "description": "every command with its option list",
+        "plane": "cli-commands",
+        "sha256": "ea3c4c5566be9ea9631723bae2db35bd20b37e3c57b44077a780ae19d5f06ffc",
+        "status": "complete"
+      },
+      {
+        "artifact": "forensics/atlas/openssl-3.6.4-production/configs.json",
+        "description": "configuration file inventory",
+        "plane": "configs",
+        "sha256": "d111158e5bf80d41f382886e429776c7642fc6b468cf86c6f093d824fb2a51ae",
+        "status": "complete"
+      },
+      {
+        "artifact": "forensics/atlas/openssl-3.6.4-production/corpus-inventory.json",
+        "description": "per-file content-addressed census of the upstream test/fuzz/provider corpora",
+        "plane": "corpus-inventory",
+        "sha256": "bbc7cc704e1cdaebd77e0356401a7a0312ba758c27701bce58c760739d79a8cf",
+        "status": "complete"
+      },
+      {
+        "artifact": "forensics/atlas/openssl-3.6.4-production/surface-reconciliation.json",
+        "description": "cross-plane agreement and classified residuals",
+        "plane": "surface-reconciliation",
+        "sha256": "43bf1b33f3dd6f9bf503bfc084bf46dd5bf1048523c693650bccc0d4df037b18",
+        "status": "complete"
+      },
+      {
+        "artifact": "forensics/atlas/openssl-3.6.4-production/coverage.json",
+        "description": "inventory census",
+        "plane": "coverage",
+        "sha256": "3acf06eaa7d5c92b86c471dde39b3673518000ed91b8aeeeb86e057771fdca05",
+        "status": "complete"
+      },
+      {
+        "artifact": "forensics/atlas/openssl-3.6.4-production/parity-obligations.json",
+        "description": "one generated obligation per externally relevant contract item",
+        "plane": "parity-obligations",
+        "sha256": "564f4683e1c2b7399f68feb9d58b7ed969d9986835b7cf749002c140d6383bf1",
+        "status": "complete"
+      },
+      {
+        "artifact": "forensics/atlas/openssl-3.6.4-production/ATLAS.md",
+        "description": "Markdown projection of every atlas document",
+        "plane": "rendered-atlas",
+        "sha256": "00da160f2df41d5077205e5c56df0b4688416390735387b69c6ccef305eedb9f",
+        "status": "complete"
+      }
+    ]
+  },
+  "body_hash": "194ba8d075b77151096f7afb911b26939c6f7c663beb8d4e02e3d9194511bbb4",
+  "generator": "forensics/tools/atlas_phase1_completeness.py",
+  "inputs": [],
+  "kind": "phase1-completeness",
+  "schema": "openssl-rs/atlas/phase1-completeness/v1"
+}
