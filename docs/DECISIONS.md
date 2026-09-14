@@ -3189,3 +3189,40 @@ under their own headings, never counted as passes. `RT-BN` is `650` observations
 across `35` courts and `8,131` in total. Phase 5 is still `in-progress` with `362`
 open obligations, `314` of them ASN.1, and the next change to touch the stratum wires
 `src/asn1/` in behind `pub mod asn1;` in the same commit that adds its court.
+
+## D75 — Phase 5's remaining work is a sequence of courted sections, written down
+
+D73 established the boundary of the ASN.1 primitive section and withdrew the modules
+rather than commit uncounted source. That left the rest of the stratum — 314 ASN.1 and
+48 PEM exports — planned in review messages rather than in the repository.
+
+`docs/PHASE-5-SUBPHASES.md` now records it: ten subphases, each with the exports it owns,
+what it depends on, the court that will observe it, and the criterion that closes it. The
+rule that makes the list worth having is the one D73 paid for: **a subphase closes in the
+commit that adds its court**, so `pub mod asn1;` and `courts/phase5/rt_asn1_probe.c`
+land together or not at all.
+
+Two orderings in it are deliberate and are the ones a reader would most likely get
+wrong:
+
+* **5.4 (the item machinery) before 5.3 (the `d2i_*`/`i2d_*` wrappers).** The wrappers
+  are the familiar names and look like the natural starting point, but each is
+  `ASN1_item_d2i` over the matching `_it`, and `asn1_d2i_ex_primitive` — whose branches
+  are observable — is what actually runs. Implementing the wrappers directly would mean
+  writing that path by hand, twice, and drifting. 5.3 depends on 5.4.
+* **Not AES, not SHA, not TLS** — the same reason phase 5 does not start with them: the
+  algorithms have nowhere faithful to live until the object and template machinery is
+  right.
+
+The document also carries the authority facts each subphase must honour, in one place,
+with the file each was read from: the integer family's magnitude/`V_ASN1_NEG` split and
+its `i2c_ibuf`/`c2i_ibuf` padding rules, the two integer quirks (`ASN1_ENUMERATED_get`'s
+`0xffffffffL`, `bn_to_asn1_string`'s deliberate `V_ASN1_NEG_INTEGER`), the bit string's
+`BITS_LEFT` flag and its `0xff << bits` masking on both sides, the object decoder's
+static-table answer and its X.690 8.19.2 check, and the primitive decode path's
+constructed/indefinite/`TYPE_NOT_PRIMITIVE` branches. Those were being re-read from the
+authority source each time a section started; they are contract, and they belong in the
+repository.
+
+No claim in the document is a parity claim. It is a plan, and the ledger still reports
+Phase 5 `in-progress` with 362 open obligations.
