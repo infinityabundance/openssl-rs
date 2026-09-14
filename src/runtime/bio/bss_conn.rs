@@ -151,8 +151,10 @@ struct BioConnect {
     addr_first: *mut BioAddrInfo,
     /// The element of that list currently being tried.
     addr_iter: *const BioAddrInfo,
-    /// The state-transition callback, borrowed from the caller.
-    info_callback: *mut BioInfoCb,
+    /// The state-transition callback, borrowed from the caller. `BIO_info_cb *` in
+    /// the authority's prototype is a pointer to a function *type*, which in C is
+    /// the function pointer itself -- so this is one level, not two.
+    info_callback: Option<BioInfoCb>,
     /// A datagram BIO over the connected socket, owned, for `SOCK_DGRAM`.
     dgram_bio: *mut Bio,
 }
@@ -641,16 +643,7 @@ unsafe fn conn_state(b: *mut Bio, c: *mut BioConnect) -> c_int {
             }
         }
 
-        if !cb.is_null() {
-            // `BIO_info_cb *` in C is the function pointer itself, not the address
-            // of one, so the stored value is a code address and calling through it
-            // must not dereference the pointer. Transmuting is how that is spelled
-            // on this side of the ABI.
-            // SAFETY: `cb` is either NULL (checked) or a `BIO_info_cb` the caller
-            // installed through `BIO_callback_ctrl`. `transmute_copy` reinterprets
-            // the pointer-sized code address `cb` holds as the function pointer; it
-            // must not dereference `cb`, which would read the function's own bytes.
-            let f: BioInfoCb = unsafe { core::mem::transmute_copy(&cb) };
+        if let Some(f) = cb {
             // SAFETY: `b` and `c` are live; `f` is the caller's callback.
             let r = unsafe { f(b, (*c).state, ret) };
             if r == 0 {
@@ -660,10 +653,7 @@ unsafe fn conn_state(b: *mut Bio, c: *mut BioConnect) -> c_int {
         }
     }
 
-    if !cb.is_null() {
-        // SAFETY: as above; `cb` holds the callback's code address, and
-        // `transmute_copy` reinterprets those bits without dereferencing it.
-        let f: BioInfoCb = unsafe { core::mem::transmute_copy(&cb) };
+    if let Some(f) = cb {
         // SAFETY: `b` and `c` are live.
         ret = unsafe { f(b, (*c).state, ret) };
     }
@@ -1177,7 +1167,7 @@ unsafe extern "C" fn conn_ctrl(b: *mut Bio, cmd: c_int, num: c_long, ptr: *mut c
         }
         super::BIO_CTRL_GET_CALLBACK => {
             // SAFETY: the caller passes a `BIO_info_cb **`.
-            unsafe { *ptr.cast::<*mut BioInfoCb>() = (*data).info_callback };
+            unsafe { *ptr.cast::<Option<BioInfoCb>>() = (*data).info_callback };
         }
         super::BIO_CTRL_EOF => {
             // SAFETY: `b` is live.
@@ -1197,7 +1187,7 @@ unsafe extern "C" fn conn_ctrl(b: *mut Bio, cmd: c_int, num: c_long, ptr: *mut c
 ///
 /// # Safety
 /// `b` must be a live connect BIO; `fp` is the callback the command carries.
-unsafe extern "C" fn conn_callback_ctrl(b: *mut Bio, cmd: c_int, fp: *mut BioInfoCb) -> c_long {
+unsafe extern "C" fn conn_callback_ctrl(b: *mut Bio, cmd: c_int, fp: Option<BioInfoCb>) -> c_long {
     let mut ret: c_long = 1;
     // SAFETY: `b` is a live connect BIO per the caller's contract, so `create`
     // succeeded and stored a `BioConnect` in `ptr`.

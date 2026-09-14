@@ -759,8 +759,10 @@ pub type BioCtrlFn = unsafe extern "C" fn(*mut Bio, c_int, c_long, *mut c_void) 
 pub type BioCreateFn = unsafe extern "C" fn(*mut Bio) -> c_int;
 /// `int (*)(BIO *)` — `BIO_meth_set_destroy`.
 pub type BioDestroyFn = unsafe extern "C" fn(*mut Bio) -> c_int;
-/// `long (*)(BIO *, int, BIO_info_cb *)` — `BIO_meth_set_callback_ctrl`.
-pub type BioCallbackCtrlFn = unsafe extern "C" fn(*mut Bio, c_int, *mut BioInfoCb) -> c_long;
+/// `long (*)(BIO *, int, BIO_info_cb *)` — `BIO_meth_set_callback_ctrl`. The
+/// `BIO_info_cb *` argument is a pointer to a function *type*, which in C is the
+/// function pointer itself, so it is one level here rather than two.
+pub type BioCallbackCtrlFn = unsafe extern "C" fn(*mut Bio, c_int, Option<BioInfoCb>) -> c_long;
 /// `int (*)(BIO *, BIO_MSG *, size_t, size_t, uint64_t, size_t *)` — `BIO_meth_set_sendmmsg`.
 #[allow(clippy::type_complexity)]
 pub type BioSendmmsgFn =

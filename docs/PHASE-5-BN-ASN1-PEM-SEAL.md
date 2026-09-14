@@ -12,7 +12,7 @@ and 5,271 `libcrypto` exports are still `SCAFFOLDED` and abort when called.
 
 - Authority: `openssl-3.6.4-production` (with `openssl-3.6.3-historical` admitted for
   the oracle-versus-oracle trajectory in `docs/SECURITY_DIVERGENCE_POLICY.md`)
-- Court results: `artifacts/phase5/COURTS.json` (1 court, 633 observations, 0 residuals)
+- Court results: `artifacts/phase5/COURTS.json` (1 court, 650 observations, 0 residuals)
 - Obligation ledger: `forensics/phase5-obligations.json` (1,099 exports covered by the
   stratum's families: 170 implemented, 611 handed to later strata by declaring header
   or by dependency, **318 open**)
@@ -70,7 +70,7 @@ produces exactly one residual instead of shifting every following line.
 
 | court | observations | what it compares |
 |---|---|---|
-| `RT-BN` | 633 | the observable surface of the opaque `BIGNUM`: the values read back through the conversions, the sign, the bit length, the predicate answers, the return classes, the error queue after a failure, and the division identity `a == b*q + r` checked in the probe itself so both sides are held to the same property. Also the Montgomery round trip and its even-modulus refusals, reciprocal division against `BN_div`, the thirteen named primes in full, the five NIST reducers and the value-based selector, the Kronecker symbol over sign combinations, and the blinding context's ownership and failing paths. Also all fifteen `BN_GF2m_*` entry points, whose `_arr` and non-`_arr` routes are compared with each other, whose results are checked against the field identities (`a * a^-1 == 1`, `(a/b) * b == a`) and whose invalid-modulus failures are compared with their error coordinates. |
+| `RT-BN` | 650 | the observable surface of the opaque `BIGNUM`: the values read back through the conversions, the sign, the bit length, the predicate answers, the return classes, the error queue after a failure, and the division identity `a == b*q + r` checked in the probe itself so both sides are held to the same property. Also the Montgomery round trip and its even-modulus refusals, reciprocal division against `BN_div`, the thirteen named primes in full, the five NIST reducers and the value-based selector, the Kronecker symbol over sign combinations, and the blinding context's ownership and failing paths. Also all fifteen `BN_GF2m_*` entry points, whose `_arr` and non-`_arr` routes are compared with each other, whose results are checked against the field identities (`a * a^-1 == 1`, `(a/b) * b == a`) and whose invalid-modulus failures are compared with their error coordinates. Also `BN_GENCB`: registration through both the new-style and the deprecated function, which of them `BN_GENCB_call` reaches, the answer it gives in each state, the arguments the callback is handed, and `BN_GENCB_get_arg` across a replacement (D74). |
 
 The probe drives *shapes* rather than one example each: zero, one, a single limb, a
 limb boundary, two limbs, a value with the top bit set, and negatives of those, plus
@@ -199,18 +199,33 @@ counted as parity, and is rejected by the release gates; `implemented_surface.py
 enforces the separation mechanically and `forensics/REGISTRY` records the classification.
 
 The prototype court is the mechanical answer to the `BN_signed_lebin2bn` class of
-defect, and it now exists: `forensics/tools/prototype_court.py` compares every
-implemented export's Rust declaration against the prototype the Phase 1 atlas recorded
-for it — **return class and arity** — resolving both sides through their own typedef
-chains so a difference in spelling is never reported as a difference in shape. It is
+defect. `forensics/tools/prototype_court.py` compares every implemented export's Rust
+declaration against the prototype the Phase 1 atlas recorded for it, on **two planes**:
+the return class and the arity, and — since D74 — the **canonical type of the return and
+of every parameter**. Both sides are resolved through their own typedef chains and
+reduced to one grammar (`void`, `int:<bytes>:<s|u>`, `float:<bytes>`, `ptr(...)`,
+`const(...)`, `fn(...)` for a function type, `fptr(...)` for a function pointer,
+`opaque`), so a difference in spelling is never reported as a difference in shape and a
+struct pointee's *name* is deliberately discarded while pointer depth, pointee
+constness, integer width and function-pointer argument shape are kept. A type the
+table cannot canonicalise is a third heading beside pass and mismatch, and fails. It is
 in `evidence_determinism.py`'s generator set and in CI's static gates.
+
+The type plane landed before this stratum's ASN.1 surface moved, and found twelve wrong
+declarations in code that every Phase 3 and Phase 4 court had already passed — three
+extra pointer levels on `BIO_info_cb *`, a callback return type, a return's constness
+on six `OPENSSL_sk_*` functions, and two more (D74). Two of the twelve were behavioural
+rather than declarative, and correcting them required `RT-BN` to gain a `BN_GENCB`
+section, whose first run found a thirteenth defect the signature change had not:
+`BN_GENCB_call` answers `0`, not `1`, for a freshly allocated object.
 
 A symbol it cannot check is never a pass. Its report separates the 50 exports the crate
 declares from a `macro_rules!` (no declaration to parse), the 8 whose implementation is
 a C shim (the variadic and syscall surface stable Rust cannot express), the 2
 `ABI_ONLY_EXPORTED` symbols the atlas has no prototype for, and anything unclassifiable.
-So `checked` is quoted alongside `mismatches`, never replaced by it: 550 of 610 checked,
-0 mismatches, 0 unclassified, 0 not-found (`forensics/atlas/prototype-court.json`).
+So `checked` is quoted alongside `mismatches`, never replaced by it: **565 of 625
+checked, 0 mismatches**, 0 unclassified, 0 not-found, and — on the type plane — 565
+checked, 0 mismatches, 0 unmapped (`forensics/atlas/prototype-court.json`).
 
 ## 8. What is explicitly NOT claimed
 

@@ -213,12 +213,25 @@ pub unsafe extern "C" fn BN_CTX_get(ctx: *mut BnCtx) -> *mut BigNum {
 }
 
 /// The authority's `BN_GENCB`: a callback for the prime-generation loops.
+///
+/// Opaque in the installed headers, so this layout is ours, but the *discriminator*
+/// is the authority's and is observable. `struct bn_gencb_st` carries a `ver` word
+/// -- 0 for a freshly allocated object, 1 after `BN_GENCB_set_old`, 2 after
+/// `BN_GENCB_set` -- and `BN_GENCB_call` branches on it rather than on which
+/// function pointer happens to be set. That distinction is the whole of
+/// `gencb.call_without_callback`: a *fresh* object answers `0`, while an object whose
+/// old-style registration carried a NULL callback answers `1`, and a candidate that
+/// models only "is a callback present" cannot tell those apart.
 #[repr(C)]
 pub struct BnGencb {
-    /// The modern callback, `int (*)(int event, int n, BN_GENCB *cb)`.
+    /// `ver`: 0 unset, 1 old-style, 2 new-style.
+    ver: core::ffi::c_uint,
+    /// The modern callback, `int (*)(int event, int n, BN_GENCB *cb)` (the union's
+    /// `cb_2`, live when `ver == 2`).
     cb: Option<unsafe extern "C" fn(c_int, c_int, *mut BnGencb) -> c_int>,
-    /// The deprecated callback, `int (*)(int event, int n, void *arg)`.
-    cb_old: Option<unsafe extern "C" fn(c_int, c_int, *mut c_void) -> c_int>,
+    /// The deprecated callback, `void (*)(int event, int n, void *arg)` (the
+    /// union's `cb_1`, live when `ver == 1`).
+    cb_old: Option<unsafe extern "C" fn(c_int, c_int, *mut c_void)>,
     /// The caller's argument.
     arg: *mut c_void,
 }
@@ -247,6 +260,7 @@ pub(crate) unsafe fn as_mut_gencb<'a>(p: *mut BnGencb) -> Option<&'a mut BnGencb
 pub unsafe extern "C" fn BN_GENCB_new() -> *mut BnGencb {
     guard_ffi(core::ptr::null_mut(), || {
         Box::into_raw(Box::new(BnGencb {
+            ver: 0,
             cb: None,
             cb_old: None,
             arg: core::ptr::null_mut(),
@@ -286,6 +300,7 @@ pub unsafe extern "C" fn BN_GENCB_set(
     guard_ffi((), || {
         // SAFETY: null-or-live per this function's `# Safety` section.
         if let Some(c) = unsafe { as_mut_gencb(gencb) } {
+            c.ver = 2;
             c.cb = callback;
             c.cb_old = None;
             c.arg = arg;
@@ -301,12 +316,13 @@ pub unsafe extern "C" fn BN_GENCB_set(
 #[no_mangle]
 pub unsafe extern "C" fn BN_GENCB_set_old(
     gencb: *mut BnGencb,
-    callback: Option<unsafe extern "C" fn(c_int, c_int, *mut c_void) -> c_int>,
+    callback: Option<unsafe extern "C" fn(c_int, c_int, *mut c_void)>,
     arg: *mut c_void,
 ) {
     guard_ffi((), || {
         // SAFETY: null-or-live per this function's `# Safety` section.
         if let Some(c) = unsafe { as_mut_gencb(gencb) } {
+            c.ver = 1;
             c.cb = None;
             c.cb_old = callback;
             c.arg = arg;
@@ -316,8 +332,14 @@ pub unsafe extern "C" fn BN_GENCB_set_old(
 
 /// `int BN_GENCB_call(BN_GENCB *cb, int a, int b)`
 ///
-/// Answers `1` when there is no callback to consult, which is what the authority
-/// does and what lets the generation loops run without one.
+/// The answer is the authority's own branch on `ver`, not a convenience:
+///
+/// * NULL `cb` answers `1` -- "no callback means continue".
+/// * `ver == 1` (old-style) answers `1`, whether or not a callback is installed;
+///   the callback returns void and is invoked for its side effect only.
+/// * `ver == 2` (new-style) answers whatever the callback returns.
+/// * anything else -- a freshly allocated object, whose `ver` is `0` -- answers
+///   `0`. That is what stops a generation loop rather than continuing it.
 ///
 /// # Safety
 ///
@@ -331,13 +353,29 @@ pub unsafe extern "C" fn BN_GENCB_call(cb: *mut BnGencb, a: c_int, b: c_int) -> 
             Some(c) => c,
             None => return 1,
         };
-        match (c.cb, c.cb_old) {
-            // SAFETY: the caller guarantees the stored callback is safe to call
-            // with these arguments, and `cb` is live.
-            (Some(f), _) => unsafe { f(a, b, cb) },
-            // SAFETY: as above, with the deprecated signature.
-            (None, Some(f)) => unsafe { f(a, b, c.arg) },
-            (None, None) => 1,
+        match c.ver {
+            1 => {
+                if let Some(f) = c.cb_old {
+                    // The deprecated callback returns void; the authority ignores
+                    // its result and answers 1.
+                    // SAFETY: the caller guarantees the stored callback is safe to
+                    // call with these arguments.
+                    unsafe { f(a, b, c.arg) };
+                }
+                1
+            }
+            2 => match c.cb {
+                // SAFETY: as above, with the modern signature.
+                Some(f) => unsafe { f(a, b, cb) },
+                // The authority calls `cb->cb.cb_2` with no NULL check, so a
+                // `BN_GENCB_set(cb, NULL, arg)` makes `BN_GENCB_call` call through
+                // a null pointer. Recorded as a safety divergence and not
+                // reproduced (docs/SECURITY_DIVERGENCE_POLICY.md); `0` is the
+                // answer for "no callback was recognised".
+                None => 0,
+            },
+            // `ver == 0`: freshly allocated, no callback registered at all.
+            _ => 0,
         }
     })
 }

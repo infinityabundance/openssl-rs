@@ -1,6 +1,7 @@
 {
   "authority": "openssl-3.6.4-production",
   "body": {
+    "canonical_form": "both sides are reduced to one grammar: `void`; `int:<bytes>:<s|u>`; `float:<bytes>`; `ptr(<inner>)`; `const(<inner>)`; `fn(<ret>; <args>)`; `opaque`. A struct pointee's *name* is deliberately discarded -- `*mut Asn1String` and `*mut c_void` are the same to a caller -- while pointer depth, pointee constness, integer width and signedness, and function-pointer argument shape are kept. A type the table cannot canonicalise is reported under `type_unmapped` and never counted as a pass",
     "counts": {
       "checked": 565,
       "declaration_is_generated": 50,
@@ -9,6 +10,9 @@
       "mismatches": 0,
       "no_prototype_in_atlas": 2,
       "not_found": 0,
+      "type_checked": 565,
+      "type_mismatches": 0,
+      "type_unmapped": 0,
       "unclassified": 0
     },
     "declaration_is_generated": [
@@ -79,10 +83,12 @@
       "OPENSSL_DIR_read"
     ],
     "not_found": [],
-    "note": "Return class and arity only. Parameter *types* are not compared: the atlas gives C types and the source gives Rust types, and a mapping between them would be a transcription rather than a check. A symbol this court cannot classify -- including one the crate declares from a `macro_rules!` -- is reported under its own heading and never counted as a pass, so `mismatches == 0` must be read together with `checked`, not instead of it.",
+    "note": "A symbol this court cannot classify -- including one the crate declares from a `macro_rules!` -- is reported under its own heading and never counted as a pass, so `mismatches == 0` must be read together with `checked`, and `type_mismatches == 0` together with `type_checked`. The type plane's canonical form is what the court can defend; it does not claim two declarations are textually identical.",
+    "type_mismatches": [],
+    "type_unmapped": [],
     "unclassified": [],
-    "what": "every implemented libcrypto export's Rust declaration agrees with the authority's recorded prototype on return class and arity",
-    "why": "the atlas records the prototype and nothing compared it: a wrong return class or arity is a wrong call convention, which no value-level probe finds cheaply (docs/DECISIONS.md D65)"
+    "what": "every implemented libcrypto export's Rust declaration agrees with the authority's recorded prototype on return class and arity, and -- in the type plane -- on the canonical shape of its return and every parameter",
+    "why": "the atlas records the prototype and nothing compared it: a wrong return class or arity is a wrong call convention, which no value-level probe finds cheaply (docs/DECISIONS.md D65). Class and arity alone left the parameter list unchecked, so a `const` dropped, an extra pointer level, or an `int` widened to `long` was invisible until a probe happened to call that one function; the type plane closes that"
   },
   "generator": "forensics/tools/prototype_court.py",
   "inputs": [
@@ -99,7 +105,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "e3c0c070e2d272e29f926e8a37f8eeb4ad8bd3720ea2f321fca5eb4ede0cbcd8"
+      "sha256": "5a459b09c7eeb116dfb9eb5d2bc70afc02df737cc8aaa8e3dc81623c32f72a21"
     }
   ],
   "kind": "prototype-court",

@@ -127,7 +127,7 @@ unsafe extern "C" fn nullf_ctrl(b: *mut Bio, cmd: c_int, num: c_long, arg: *mut 
 ///
 /// # Safety
 /// `b` must be a live filter BIO.
-unsafe extern "C" fn nullf_callback_ctrl(b: *mut Bio, cmd: c_int, fp: *mut BioInfoCb) -> c_long {
+unsafe extern "C" fn nullf_callback_ctrl(b: *mut Bio, cmd: c_int, fp: Option<BioInfoCb>) -> c_long {
     // SAFETY: `b` is live.
     let next = unsafe { (*b).next_bio };
     if next.is_null() {

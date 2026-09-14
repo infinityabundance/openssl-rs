@@ -110,11 +110,11 @@ mod obj_table;
 use obj_table::*;
 
 /// `ASN1_OBJECT_FLAG_DYNAMIC` — the object itself is heap-allocated.
-const ASN1_OBJECT_FLAG_DYNAMIC: c_int = 0x01;
+pub(crate) const ASN1_OBJECT_FLAG_DYNAMIC: c_int = 0x01;
 /// `ASN1_OBJECT_FLAG_DYNAMIC_STRINGS` — `sn`/`ln` are heap-allocated.
-const ASN1_OBJECT_FLAG_DYNAMIC_STRINGS: c_int = 0x04;
+pub(crate) const ASN1_OBJECT_FLAG_DYNAMIC_STRINGS: c_int = 0x04;
 /// `ASN1_OBJECT_FLAG_DYNAMIC_DATA` — `data` is heap-allocated.
-const ASN1_OBJECT_FLAG_DYNAMIC_DATA: c_int = 0x08;
+pub(crate) const ASN1_OBJECT_FLAG_DYNAMIC_DATA: c_int = 0x08;
 
 /// `OBJ_BSEARCH_VALUE_ON_NOMATCH` — return the last probed slot on a miss.
 const OBJ_BSEARCH_VALUE_ON_NOMATCH: c_int = 0x01;
@@ -673,7 +673,7 @@ unsafe fn dup_cstr(src: *const c_char) -> *mut c_char {
 /// # Safety
 /// `p` must be NULL or a pointer returned by [`dup_object`] / the dynamic
 /// allocation in [`OBJ_txt2obj`], and must not be used again.
-unsafe fn free_object(p: *mut Asn1Object) {
+pub(crate) unsafe fn object_free(p: *mut Asn1Object) {
     if p.is_null() {
         return;
     }
@@ -710,7 +710,7 @@ unsafe fn free_object(p: *mut Asn1Object) {
 ///
 /// # Safety
 /// `o` must be NULL or a valid object pointer.
-unsafe fn dup_object(o: *const Asn1Object) -> *mut Asn1Object {
+pub(crate) unsafe fn object_dup(o: *const Asn1Object) -> *mut Asn1Object {
     if o.is_null() {
         return core::ptr::null_mut();
     }
@@ -756,7 +756,7 @@ unsafe fn dup_object(o: *const Asn1Object) -> *mut Asn1Object {
         let l = unsafe { dup_cstr(src.ln) };
         if l.is_null() {
             // SAFETY: `r` is live and owned here.
-            unsafe { free_object(r) };
+            unsafe { object_free(r) };
             return core::ptr::null_mut();
         }
         // SAFETY: `r` is live.
@@ -767,7 +767,7 @@ unsafe fn dup_object(o: *const Asn1Object) -> *mut Asn1Object {
         let s = unsafe { dup_cstr(src.sn) };
         if s.is_null() {
             // SAFETY: `r` is live and owned here.
-            unsafe { free_object(r) };
+            unsafe { object_free(r) };
             return core::ptr::null_mut();
         }
         // SAFETY: `r` is live.
@@ -776,9 +776,75 @@ unsafe fn dup_object(o: *const Asn1Object) -> *mut Asn1Object {
     r
 }
 
+// ---------------------------------------------------------------------------
+// The ASN.1 stratum's object constructors
+// ---------------------------------------------------------------------------
+
+/// `ASN1_OBJECT *ASN1_OBJECT_new(void)` — a zeroed object flagged dynamic.
+///
+/// The ASN.1 stratum's object layer is the caller; it is the `ASN1_OBJECT_new`
+/// export. Kept here beside the object's allocator so an object is always built by
+/// the module that owns `Asn1Object`'s layout.
+#[allow(dead_code)] // the caller lands with Phase 5's ASN.1 surface
+pub(crate) fn object_new() -> *mut Asn1Object {
+    // SAFETY: `malloc` answers NULL or a live, aligned block of one object.
+    let r = unsafe { malloc(core::mem::size_of::<Asn1Object>()) } as *mut Asn1Object;
+    if r.is_null() {
+        return core::ptr::null_mut();
+    }
+    // SAFETY: `r` is an uninitialised block of exactly one `Asn1Object`, written
+    // in full before it is returned.
+    unsafe {
+        core::ptr::write(
+            r,
+            Asn1Object {
+                sn: core::ptr::null(),
+                ln: core::ptr::null(),
+                nid: NID_undef,
+                length: 0,
+                data: core::ptr::null(),
+                flags: ASN1_OBJECT_FLAG_DYNAMIC,
+            },
+        );
+    }
+    r
+}
+
+/// `ASN1_OBJECT *ASN1_OBJECT_create(int nid, unsigned char *data, int len,
+/// const char *sn, const char *ln)`.
+///
+/// The authority builds this on the stack and hands it to `OBJ_dup`, so the
+/// result is a fresh deep copy and the caller keeps ownership of every argument.
+///
+/// # Safety
+/// `data` must be readable for `len` bytes; `sn` and `ln` must be NULL or
+/// NUL-terminated strings. All three are copied, never retained.
+#[allow(dead_code)] // the caller lands with Phase 5's ASN.1 object surface
+pub(crate) unsafe fn object_create(
+    nid: c_int,
+    data: *mut u8,
+    len: c_int,
+    sn: *const c_char,
+    ln: *const c_char,
+) -> *mut Asn1Object {
+    let o = Asn1Object {
+        sn,
+        ln,
+        nid,
+        length: len,
+        data,
+        flags: ASN1_OBJECT_FLAG_DYNAMIC
+            | ASN1_OBJECT_FLAG_DYNAMIC_STRINGS
+            | ASN1_OBJECT_FLAG_DYNAMIC_DATA,
+    };
+    // SAFETY: `o` is a complete, valid object; `object_dup` reads it and copies
+    // every field it owns, so the temporary never outlives this call.
+    unsafe { object_dup(&o) }
+}
+
 /// Allocate a dynamic `ASN1_OBJECT` holding a copy of `data`, exactly as
 /// `d2i_ASN1_OBJECT` builds one for an OID it does not know.
-fn alloc_oid_object(data: &[u8]) -> *mut Asn1Object {
+pub(crate) fn alloc_oid_object(data: &[u8]) -> *mut Asn1Object {
     // SAFETY: `malloc` returns NULL or a live, aligned block.
     let obj = unsafe { malloc(core::mem::size_of::<Asn1Object>()) } as *mut Asn1Object;
     if obj.is_null() {
@@ -1356,7 +1422,7 @@ pub unsafe extern "C" fn OBJ_txt2nid(s: *const c_char) -> c_int {
         // The authority frees the temporary; a static object carries no DYNAMIC
         // bit, so this is a no-op for the shared case.
         // SAFETY: `obj` came from `OBJ_txt2obj` and is not used afterwards.
-        unsafe { free_object(obj) };
+        unsafe { object_free(obj) };
         nid
     })
 }
@@ -1453,7 +1519,7 @@ pub unsafe extern "C" fn OBJ_cmp(a: *const Asn1Object, b: *const Asn1Object) -> 
 pub unsafe extern "C" fn OBJ_dup(o: *const Asn1Object) -> *mut Asn1Object {
     guard_ffi(core::ptr::null_mut(), || {
         // SAFETY: forwarded to `dup_object`, which handles NULL.
-        unsafe { dup_object(o) }
+        unsafe { object_dup(o) }
     })
 }
 
@@ -2533,7 +2599,7 @@ mod tests {
             assert_eq!(got.as_deref(), Some(text), "render {text}");
             assert_eq!(n as usize, text.len());
             // SAFETY: dynamic object allocated by `OBJ_txt2obj`; not used again.
-            unsafe { free_object(ob) };
+            unsafe { object_free(ob) };
         }
     }
 

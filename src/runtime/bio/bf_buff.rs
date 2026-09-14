@@ -653,7 +653,7 @@ unsafe extern "C" fn buffer_ctrl(
 unsafe extern "C" fn buffer_callback_ctrl(
     b: *mut Bio,
     cmd: c_int,
-    fp: *mut super::BioInfoCb,
+    fp: Option<super::BioInfoCb>,
 ) -> c_long {
     // SAFETY: `b` is live.
     let next = unsafe { (*b).next_bio };

@@ -3054,3 +3054,138 @@ The next change to touch this section starts from the boundary and the facts abo
 wires the modules in behind `pub mod asn1;` in the same commit that adds the court,
 and closes the section as `open in src/asn1/ == 199 - 4 - 6 - 2` with the hand-offs
 recorded. `ABI-PROTOTYPE` (D72) is still the change that should land before it.
+
+## D74 — `ABI-PROTOTYPE`: the prototype court now compares *types*, not just shape
+
+D65 landed `prototype_court.py` to catch a wrong call convention — `BN_signed_lebin2bn`
+declared `-> c_int` where the authority declares `BIGNUM *`. It compared the return
+*class* and the *arity*, and its own docstring said so: "It does not compare parameter
+types." D72 recorded `ABI-PROTOTYPE` as still outstanding.
+
+That gap was real, and it sat exactly where Phase 5 is about to work. A `const` dropped,
+an extra pointer level, an `int` widened to `long`, or a callback's return type changed
+is invisible to a shape check and invisible to most probes — a probe has to call that
+one function with an argument that exposes the difference. The ASN.1 surface is 314
+functions of pointer-to-pointer mutation, `const`, `ASN1_ITEM *` and callback typedefs.
+The court had to be able to see it before that surface moved, so this landed first.
+
+### What the court now compares
+
+Both sides are reduced to one grammar, and compared as strings:
+
+```
+void | int:<bytes>:<s|u> | float:<bytes>
+ptr(<inner>) | const(<inner>) | fn(<ret>; <args>) | fptr(<ret>; <args>) | opaque
+```
+
+The authority's side is built from the atlas's own `params` records — the C is never
+re-parsed, only classified. The crate's side is read from the declaration in `src/`.
+
+Four decisions in that grammar are worth stating, because each is a line drawn on
+purpose:
+
+* **A struct pointee's name is discarded.** `*mut Asn1String` and `*mut c_void` are the
+  same type to the ABI and the same to a caller passing its own pointer, so keeping the
+  name would report a spelling difference as a defect. What is *kept* is the pointer
+  **depth**, because `BIO **` is not `BIO *`, and the **integer width**, because
+  `int *` is not `long *`. Those are the differences a caller can observe.
+* **A top-level `const` on a value is dropped.** `const BN_ULONG w` and `BN_ULONG w`
+  declare the same function in C. `const` survives only on a pointee, where a caller
+  can observe it.
+* **`fn(...)` is a function *type*; `fptr(...)` is a function pointer.** The atlas
+  records `BIO_info_cb` as `int (BIO *, int, int)` — the authority's own header says
+  `typedef int BIO_info_cb(BIO *, int, int);` — so `BIO_info_cb *` is a pointer to a
+  function type, which in C is the function pointer itself. Collapsing
+  `ptr(fn(...)) -> fptr(...)` exactly once is what makes `CRYPTO_malloc_fn **`
+  distinguishable from `CRYPTO_malloc_fn *`; collapsing blindly lost a level and
+  reported the authority's own `CRYPTO_get_mem_functions` as a mismatch.
+* **A type the table cannot canonicalise is a failure, never a pass.** `type_unmapped`
+  is a third heading beside `pass` and `mismatch`, and it fails the court.
+
+### Two defects in the court itself, found by running it
+
+The first run reported 497 of 565 symbols `unmapped`, then 340 `mismatch`. Both were
+the court's fault, and both are recorded here because the pattern is the one this
+project keeps meeting: **the instrument is the suspect before the code is.**
+
+* The canonicaliser tried `uint64_t` against the platform table, but an earlier edit of
+  mine had deleted the `intN_t`/`uintN_t` entries from `C_SYSTEM_TYPEDEFS`, so every
+  fixed-width type became `opaque`. An edit that silently shrinks a declaration table
+  is invisible until something compares against it.
+* `const` was dropped at the hand-off from a typedef name to its underlying type:
+  `const BIO_ADDRINFO` reaches `struct bio_addrinfo_st` only through the atlas's
+  typedef record, and the qualifier was lost in between. That produced 340 false
+  mismatches, every one of them the crate being *more* faithful than the court.
+
+A third defect was in how aliases were resolved. `type FreeFn` is declared twice in
+this crate — `src/runtime/stack.rs` has the one-argument `OPENSSL_sk_freefunc`,
+`src/runtime/mem.rs` has the three-argument `CRYPTO_free_fn` — and a single global
+table returned whichever file sorted first. That made `OPENSSL_sk_pop_free` look like
+it took a three-argument destructor when the file it lives in says otherwise. Each
+declaration is now resolved against its own file's aliases first, with a name defined
+in exactly one file usable as a fallback; a name defined in more than one file and
+absent from the declaring file is left unresolved so it is *reported*, not guessed.
+
+### What the type plane found in the crate
+
+Twelve declarations disagreed with the authority. All twelve are fixed here:
+
+* `BIO_callback_ctrl`, `BIO_meth_get_callback_ctrl`, `BIO_meth_set_callback_ctrl`
+  declared `BIO_info_cb *` as a pointer to a function *pointer*. It is one level, not
+  two: the authority's `BIO_info_cb` is a function type. `bss_conn.c`'s
+  `BIO_CONNECT.info_callback` was stored that way too and called through
+  `transmute_copy`, reinterpreting a pointer-sized code address as a function pointer
+  because dereferencing it would have read the function's own bytes. Both the extra
+  level and both transmutes are gone; the callback is an `Option<BioInfoCb>` and is
+  called directly.
+* `BN_GENCB_set_old` declared its deprecated callback `int (*)(int, int, void *)`. The
+  authority declares `void (*cb)(int, int, void *)`, and `BN_GENCB_call` answers `1`
+  after invoking it rather than the callback's result.
+* `BN_options` returned `const char *`; the authority returns `char *`.
+* `BN_are_coprime` took `const BIGNUM *a`; the authority takes `BIGNUM *a`.
+* `OPENSSL_sk_delete`, `sk_delete_ptr`, `sk_pop`, `sk_set`, `sk_shift` and `sk_value`
+  returned `const void *`. The authority declares `void *` and casts at the boundary —
+  `return (void *)st->data[i];` — because the stack stores `const void **data`. The
+  internal representation stays `const void *`; the exported boundary now casts, in one
+  place, in a function named `expose`.
+
+Ten of the twelve are declaration-only, and every Phase 3 and Phase 4 court still
+passes with the same residual set. The other two are **not** declaration-only.
+`BN_GENCB_set_old`'s callback returns `void` and `BN_GENCB_call` answers `1` after
+invoking it, so a candidate that returned the callback's result was answering a
+function that has no result.
+
+That correction could not be left to the prototype court, because no court called
+`BN_GENCB_call` at all: the fix would have been a behaviour change with nothing
+watching it. So `RT-BN` gained a `BN_GENCB` section in the same change — registration
+through both functions, the answer from `BN_GENCB_call`, the arguments the callback is
+handed, `BN_GENCB_get_arg` before and after, whether a later `set` replaces the other
+kind, and `BN_GENCB_call(NULL, …)`. It is `17` new observations, and the first run
+found a defect the signature change had not: **the authority answers `0`, not `1`, for
+`BN_GENCB_call` on a freshly allocated object.**
+
+That is the authority's `ver` word, and it is not inferable from the two function
+pointers. `struct bn_gencb_st` carries `unsigned int ver`, and `BN_GENCB_call`
+branches on it: `0` on a fresh object, `1` returned after an old-style callback (or
+when `ver == 1` holds no callback), and the new-style callback's result when
+`ver == 2`. A model that asks only "is a callback installed" cannot separate a fresh
+object from an old-style object whose callback is NULL. `BnGencb` now carries `ver`
+and branches on it. Two cases remain unreproducible and are recorded in
+`docs/SECURITY_DIVERGENCE_POLICY.md` as `D-GENCB-1` and `D-GENCB-2`: a `ver == 2`
+object whose callback is NULL, and `BN_GENCB_get_arg(NULL)`, both of which the
+authority reaches by calling through or dereferencing a null pointer.
+
+That is the point of the court — these are wrong *call conventions* and wrong
+*declarations*, the class D65 exists for, and only a signature comparison finds them.
+They are also, twice over, defects whose *behaviour* only a probe finds, which is why
+fixing a signature is not by itself evidence that the behaviour is right.
+
+### State
+
+`565` of `625` implemented exports are checkable and all `565` agree on the canonical
+signature; `0` mismatches, `0` unmapped. The remaining `60` are `2` with no prototype
+in the atlas, `50` declared from a `macro_rules!` and `8` defined in C — reported
+under their own headings, never counted as passes. `RT-BN` is `650` observations
+across `35` courts and `8,131` in total. Phase 5 is still `in-progress` with `362`
+open obligations, `314` of them ASN.1, and the next change to touch the stratum wires
+`src/asn1/` in behind `pub mod asn1;` in the same commit that adds its court.

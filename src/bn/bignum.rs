@@ -1569,8 +1569,10 @@ pub unsafe extern "C" fn BN_print_fp(
 /// using it to pick a code path must be told the truth about the build in front of
 /// it, not about the build it would have been linked against otherwise.
 #[no_mangle]
-pub unsafe extern "C" fn BN_options() -> *const c_char {
-    guard_ffi(core::ptr::null(), || c"bn(64,64)".as_ptr())
+pub unsafe extern "C" fn BN_options() -> *mut c_char {
+    guard_ffi(core::ptr::null_mut(), || {
+        c"bn(64,64)".as_ptr() as *mut c_char
+    })
 }
 
 /// `int BN_security_bits(int L, int N)` — the security strength the authority

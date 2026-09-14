@@ -947,7 +947,7 @@ pub unsafe extern "C" fn BIO_ctrl(
 pub unsafe extern "C" fn BIO_callback_ctrl(
     bio: *mut Bio,
     cmd: c_int,
-    fp: *mut BioInfoCb,
+    fp: Option<BioInfoCb>,
 ) -> c_long {
     guard_ffi(-2, || {
         if bio.is_null() {
@@ -975,7 +975,7 @@ pub unsafe extern "C" fn BIO_callback_ctrl(
                 bio_call_callback(
                     bio,
                     BIO_CB_CTRL,
-                    (&fp as *const *mut BioInfoCb).cast(),
+                    (&fp as *const Option<BioInfoCb>).cast(),
                     0,
                     cmd,
                     0,
@@ -996,7 +996,7 @@ pub unsafe extern "C" fn BIO_callback_ctrl(
                 bio_call_callback(
                     bio,
                     BIO_CB_CTRL | BIO_CB_RETURN,
-                    (&fp as *const *mut BioInfoCb).cast(),
+                    (&fp as *const Option<BioInfoCb>).cast(),
                     0,
                     cmd,
                     0,

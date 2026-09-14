@@ -380,3 +380,28 @@ observations that *can* be made around each boundary are compared normally.
   The values, return classes and error behaviour are compared by `RT-BN`, including
   that the `_arr` and non-`_arr` routes agree with each other and that
   `BN_GF2m_mod_inv`'s result satisfies `a * a^-1 == 1`.
+
+### D-GENCB-1 — `BN_GENCB_call` on a `ver == 2` object whose callback is NULL
+
+- **Obligation:** `BN_GENCB_set(cb, NULL, arg)` followed by `BN_GENCB_call(cb, a, b)`.
+- **Authority:** reaches `return cb->cb.cb_2(a, b, cb);` with `cb_2 == NULL` and calls
+  through a null pointer. `BN_GENCB_set` stores the NULL without checking it and sets
+  `ver = 2` unconditionally, so no earlier call rejects the object.
+- **Candidate:** answers `0`, the value the authority's own `default` arm returns for a
+  callback type it does not recognise.
+- **Reason:** a null call is a fault, not a behaviour a caller can depend on, and
+  reproducing it would be reproducing a crash. `0` is chosen rather than `1` because a
+  caller that reaches this state has no callback that ran, and `1` would tell a
+  generation loop to continue on the strength of nothing.
+- **Claim removed:** this one case is not claimed compatible. Every case where a
+  callback is actually installed is compared by `RT-BN` and matches, including
+  `ver == 1` with a NULL callback, which the authority answers `1` and the candidate
+  does too.
+
+### D-GENCB-2 — `BN_GENCB_get_arg` dereferences a NULL `BN_GENCB *`
+
+- **Obligation:** `BN_GENCB_get_arg(NULL)`.
+- **Authority:** `return cb->arg;` with no NULL check, so the call faults.
+- **Candidate:** answers NULL.
+- **Claim removed:** not claimed compatible. The probe does not exercise it, because a
+  probe cannot compare a crash.

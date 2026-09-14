@@ -406,7 +406,7 @@ pub unsafe extern "C" fn CRYPTO_get_ex_data(ad: *const CryptoExData, idx: c_int)
         }
         // SAFETY: `sk` is a live stack; `OPENSSL_sk_value` NULLs out-of-range
         // and negative indices itself.
-        unsafe { OPENSSL_sk_value(sk, idx) as *mut c_void }
+        unsafe { OPENSSL_sk_value(sk, idx) }
     })
 }
 

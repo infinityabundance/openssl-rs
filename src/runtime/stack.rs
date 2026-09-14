@@ -200,6 +200,17 @@ unsafe fn internal_delete(st: &mut Inner, loc: usize) -> *const c_void {
     st.items.remove(loc)
 }
 
+/// The authority's cast at the `void *` boundary.
+///
+/// `OPENSSL_STACK` stores `const void **data`, and every accessor that hands a
+/// slot back declares `void *` and casts: `return (void *)st->data[i];`. Dropping
+/// that cast would declare `const void *` where the authority declares `void *`,
+/// which a caller can observe and which the prototype court reports. The internal
+/// representation stays `const void *`; only the exported boundary casts.
+fn expose(p: *const c_void) -> *mut c_void {
+    p as *mut c_void
+}
+
 /// `ossl_bsearch` reduced to the stack's element type.
 ///
 /// Returns the index of the probed position, or -1 when the flags ask for NULL
@@ -503,17 +514,17 @@ pub unsafe extern "C" fn OPENSSL_sk_num(st: *const OpenSslStack) -> c_int {
 /// # Safety
 /// `st` must be NULL or a live stack from this module's constructors.
 #[no_mangle]
-pub unsafe extern "C" fn OPENSSL_sk_value(st: *const OpenSslStack, i: c_int) -> *const c_void {
-    guard_ffi(core::ptr::null(), || {
+pub unsafe extern "C" fn OPENSSL_sk_value(st: *const OpenSslStack, i: c_int) -> *mut c_void {
+    guard_ffi(core::ptr::null_mut(), || {
         // SAFETY: `st` is either NULL or live.
         unsafe {
             let Some(s) = inner(st as *mut OpenSslStack) else {
-                return core::ptr::null();
+                return core::ptr::null_mut();
             };
             if i < 0 || (i as usize) >= s.items.len() {
-                return core::ptr::null();
+                return core::ptr::null_mut();
             }
-            s.items[i as usize]
+            expose(s.items[i as usize])
         }
     })
 }
@@ -532,25 +543,25 @@ pub unsafe extern "C" fn OPENSSL_sk_set(
     st: *mut OpenSslStack,
     i: c_int,
     data: *const c_void,
-) -> *const c_void {
-    guard_ffi(core::ptr::null(), || {
+) -> *mut c_void {
+    guard_ffi(core::ptr::null_mut(), || {
         // SAFETY: `st` is live or NULL per the caller's contract.
         unsafe {
             let Some(s) = inner(st) else {
                 // SAFETY: the site is a compile-time constant.
                 raise_site(&err_sites::STACK_482);
-                return core::ptr::null();
+                return core::ptr::null_mut();
             };
             if i < 0 || (i as usize) >= s.items.len() {
                 let msg = format!("i={i}\0");
                 // SAFETY: `msg` is NUL-terminated and outlives the call; the
                 // site is a compile-time constant.
                 raise_site_data(&err_sites::STACK_486, msg.as_ptr().cast());
-                return core::ptr::null();
+                return core::ptr::null_mut();
             }
             s.items[i as usize] = data;
             s.sorted = false;
-            data
+            expose(data)
         }
     })
 }
@@ -617,17 +628,17 @@ pub unsafe extern "C" fn OPENSSL_sk_insert(
 /// # Safety
 /// `st` must be NULL or a live stack from this module's constructors.
 #[no_mangle]
-pub unsafe extern "C" fn OPENSSL_sk_pop(st: *mut OpenSslStack) -> *const c_void {
-    guard_ffi(core::ptr::null(), || {
+pub unsafe extern "C" fn OPENSSL_sk_pop(st: *mut OpenSslStack) -> *mut c_void {
+    guard_ffi(core::ptr::null_mut(), || {
         // SAFETY: `st` is live or NULL.
         unsafe {
             let Some(s) = inner(st) else {
-                return core::ptr::null();
+                return core::ptr::null_mut();
             };
             if s.items.is_empty() {
-                return core::ptr::null();
+                return core::ptr::null_mut();
             }
-            internal_delete(s, s.items.len() - 1)
+            expose(internal_delete(s, s.items.len() - 1))
         }
     })
 }
@@ -637,17 +648,17 @@ pub unsafe extern "C" fn OPENSSL_sk_pop(st: *mut OpenSslStack) -> *const c_void 
 /// # Safety
 /// `st` must be NULL or a live stack from this module's constructors.
 #[no_mangle]
-pub unsafe extern "C" fn OPENSSL_sk_shift(st: *mut OpenSslStack) -> *const c_void {
-    guard_ffi(core::ptr::null(), || {
+pub unsafe extern "C" fn OPENSSL_sk_shift(st: *mut OpenSslStack) -> *mut c_void {
+    guard_ffi(core::ptr::null_mut(), || {
         // SAFETY: `st` is live or NULL.
         unsafe {
             let Some(s) = inner(st) else {
-                return core::ptr::null();
+                return core::ptr::null_mut();
             };
             if s.items.is_empty() {
-                return core::ptr::null();
+                return core::ptr::null_mut();
             }
-            internal_delete(s, 0)
+            expose(internal_delete(s, 0))
         }
     })
 }
@@ -669,17 +680,17 @@ pub unsafe extern "C" fn OPENSSL_sk_unshift(st: *mut OpenSslStack, data: *const 
 /// # Safety
 /// `st` must be NULL or a live stack from this module's constructors.
 #[no_mangle]
-pub unsafe extern "C" fn OPENSSL_sk_delete(st: *mut OpenSslStack, loc: c_int) -> *const c_void {
-    guard_ffi(core::ptr::null(), || {
+pub unsafe extern "C" fn OPENSSL_sk_delete(st: *mut OpenSslStack, loc: c_int) -> *mut c_void {
+    guard_ffi(core::ptr::null_mut(), || {
         // SAFETY: `st` is live or NULL.
         unsafe {
             let Some(s) = inner(st) else {
-                return core::ptr::null();
+                return core::ptr::null_mut();
             };
             if loc < 0 || (loc as usize) >= s.items.len() {
-                return core::ptr::null();
+                return core::ptr::null_mut();
             }
-            internal_delete(s, loc as usize)
+            expose(internal_delete(s, loc as usize))
         }
     })
 }
@@ -692,16 +703,16 @@ pub unsafe extern "C" fn OPENSSL_sk_delete(st: *mut OpenSslStack, loc: c_int) ->
 pub unsafe extern "C" fn OPENSSL_sk_delete_ptr(
     st: *mut OpenSslStack,
     p: *const c_void,
-) -> *const c_void {
-    guard_ffi(core::ptr::null(), || {
+) -> *mut c_void {
+    guard_ffi(core::ptr::null_mut(), || {
         // SAFETY: `st` is live or NULL.
         unsafe {
             let Some(s) = inner(st) else {
-                return core::ptr::null();
+                return core::ptr::null_mut();
             };
             match s.items.iter().position(|&x| x == p) {
-                Some(i) => internal_delete(s, i),
-                None => core::ptr::null(),
+                Some(i) => expose(internal_delete(s, i)),
+                None => core::ptr::null_mut(),
             }
         }
     })

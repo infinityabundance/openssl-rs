@@ -7,9 +7,9 @@
     "courts": [
       {
         "authority_exit_code": 0,
-        "authority_observations": 633,
+        "authority_observations": 650,
         "candidate_exit_code": 0,
-        "candidate_observations": 633,
+        "candidate_observations": 650,
         "candidate_stderr_tail": [],
         "court": "RT-BN",
         "crashed": false,
@@ -39,7 +39,7 @@
     {
       "name": "probe",
       "path": "courts/phase5/rt_bn_probe.c",
-      "sha256": "98bc06166280281ad9a820ee5600a15ad629705b455325fd1a0ddc00bb3aaf5b"
+      "sha256": "58bc51b458117e8d3c0a11ce5f0a70b53ab513d85cb55b559a03fb0900a9efd9"
     }
   ],
   "kind": "phase5-courts",

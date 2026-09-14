@@ -1089,7 +1089,7 @@ pub unsafe extern "C" fn BN_gcd(
 /// `a` and `b` must each be null or live; `ctx` is unused.
 #[no_mangle]
 pub unsafe extern "C" fn BN_are_coprime(
-    a: *const BigNum,
+    a: *mut BigNum,
     b: *const BigNum,
     _ctx: *mut BnCtx,
 ) -> c_int {
