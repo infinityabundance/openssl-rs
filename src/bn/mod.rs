@@ -36,6 +36,7 @@ pub mod arith;
 pub mod bignum;
 pub mod blinding;
 pub mod ctx;
+pub mod gf2m;
 pub mod kron;
 pub mod limbs;
 pub mod mont;

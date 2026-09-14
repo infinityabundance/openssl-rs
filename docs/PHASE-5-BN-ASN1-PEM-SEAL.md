@@ -8,14 +8,14 @@ implemented or handed to a named later stratum — and its two other families ar
 ASN.1 (280 exports) and PEM (38) are entirely open.
 
 This is **not** a claim that openssl-rs is a usable OpenSSL. All 603 `libssl` exports
-and 5,286 `libcrypto` exports are still `SCAFFOLDED` and abort when called.
+and 5,271 `libcrypto` exports are still `SCAFFOLDED` and abort when called.
 
 - Authority: `openssl-3.6.4-production` (with `openssl-3.6.3-historical` admitted for
   the oracle-versus-oracle trajectory in `docs/SECURITY_DIVERGENCE_POLICY.md`)
-- Court results: `artifacts/phase5/COURTS.json` (1 court, 577 observations, 0 residuals)
+- Court results: `artifacts/phase5/COURTS.json` (1 court, 633 observations, 0 residuals)
 - Obligation ledger: `forensics/phase5-obligations.json` (1,099 exports covered by the
-  stratum's families: 155 implemented, 611 handed to later strata by declaring header
-  or by dependency, **333 open**)
+  stratum's families: 170 implemented, 611 handed to later strata by declaring header
+  or by dependency, **318 open**)
 - Derived state: `forensics/phase-state.json`
 
 ## 1. What this phase owns, and how that was decided
@@ -36,7 +36,7 @@ are hand-offs, not omissions, and they are subtracted rather than counted.
 
 | module | exported symbols | implemented | handed on |
 |---|---|---|---|
-| `src/bn/` | 201 (plus the six Phase 4 hand-offs counted under `src/asn1/`) | 155 | 31 |
+| `src/bn/` | 201 (plus the six Phase 4 hand-offs counted under `src/asn1/`) | 170 | 31 |
 | `src/asn1/` | 280 (274 declared in `asn1.h`/`asn1t.h`, plus six BIO-to-ASN.1 hand-offs) | 0 | 0 |
 | `src/pem/` | 38 | 0 | 0 |
 
@@ -58,6 +58,7 @@ Phase 11 (`x509.h`, `x509v3.h`, `x509_acert.h`) and 141 to Phase 12 (`cms.h`,
 | `nist` | `BN_nist_mod_*` and `BN_nist_mod_func`. |
 | `kron` | `BN_kronecker`. |
 | `blinding` | `BN_BLINDING`: `new`/`free`, the flag and thread surface, the lock, and `invert`/`invert_ex`. |
+| `gf2m` | the fifteen `BN_GF2m_*` entry points: addition, the two array conversions, and reduction, multiplication, squaring, exponentiation, inversion and division in `GF(2)[x]/(p)`, each in both its `_arr` and non-`_arr` spelling. |
 | `ctx` | `BN_CTX`, its bracket stack and its temporary pool, and the `BN_GENCB` callback object. |
 
 ## 3. The evidence
@@ -69,7 +70,7 @@ produces exactly one residual instead of shifting every following line.
 
 | court | observations | what it compares |
 |---|---|---|
-| `RT-BN` | 577 | the observable surface of the opaque `BIGNUM`: the values read back through the conversions, the sign, the bit length, the predicate answers, the return classes, the error queue after a failure, and the division identity `a == b*q + r` checked in the probe itself so both sides are held to the same property. Also the Montgomery round trip and its even-modulus refusals, reciprocal division against `BN_div`, the thirteen named primes in full, the five NIST reducers and the value-based selector, the Kronecker symbol over sign combinations, and the blinding context's ownership and failing paths. |
+| `RT-BN` | 633 | the observable surface of the opaque `BIGNUM`: the values read back through the conversions, the sign, the bit length, the predicate answers, the return classes, the error queue after a failure, and the division identity `a == b*q + r` checked in the probe itself so both sides are held to the same property. Also the Montgomery round trip and its even-modulus refusals, reciprocal division against `BN_div`, the thirteen named primes in full, the five NIST reducers and the value-based selector, the Kronecker symbol over sign combinations, and the blinding context's ownership and failing paths. Also all fifteen `BN_GF2m_*` entry points, whose `_arr` and non-`_arr` routes are compared with each other, whose results are checked against the field identities (`a * a^-1 == 1`, `(a/b) * b == a`) and whose invalid-modulus failures are compared with their error coordinates. |
 
 The probe drives *shapes* rather than one example each: zero, one, a single limb, a
 limb boundary, two limbs, a value with the top bit set, and negatives of those, plus
@@ -166,6 +167,24 @@ With a matching context, everything the extension compares agreed on the first r
   the shipped build takes the error path. The probe checks it, and checks that a
   context with no inverse reports `NOT_INITIALIZED`.
 
+The GF(2^m) family then added a **third** pass, and this one found two defects in the
+implementation rather than in the probe:
+
+- **The reduction loop tested the wrong bound.** `poly_rem` compared the value's bit
+  length against the modulus's, which skips the reduction of a value exactly one bit
+  longer than the field — and `0xa5 * 0x57` in the AES field is exactly that. The
+  comparison belongs against the *degree*: a bit at index `>= n` is above the field
+  whatever the modulus's own length happens to be.
+- **`BN_GF2m_mod_inv` did not raise.** The authority reaches an invalid modulus through
+  `BN_GF2m_mod_mul`, so that function's `INVALID_LENGTH` coordinate is what a caller
+  sees; the direct extended-Euclid route had no reason to notice. It now validates the
+  array first and raises at that same coordinate.
+
+Both were caught by the court, not by reading, and both are the kind of defect a
+"looks right" implementation keeps: the first produced a plausible field element that
+was simply not reduced, and the second produced the right return value with the wrong
+error queue.
+
 ## 6. Fault boundaries — recorded, not reproduced
 
 A probe cannot compare a crash. Where the authority faults, the probe does not call and
@@ -197,10 +216,12 @@ So `checked` is quoted alongside `mismatches`, never replaced by it: 550 of 610 
 
 - No ASN.1 and no PEM surface is implemented; both families are entirely open (280 and
   38 exports).
-- 15 `BN_*` exports remain open: the `BN_GF2m_*` family's arithmetic core
-  (`add`, `poly2arr`, `arr2poly`, `mod`, `mod_arr`, `mod_mul`, `mod_mul_arr`,
-  `mod_sqr`, `mod_sqr_arr`, `mod_exp`, `mod_exp_arr`, `mod_inv`, `mod_inv_arr`,
-  `mod_div`, `mod_div_arr`).
+- No `BN_*` export remains open. The `BN_GF2m_*` family was the last of it, and it is
+  implemented and courted.
+- The `BN_GF2m_*` arithmetic is **not** the authority's unrolled carry chains, and
+  `BN_GF2m_mod_inv` does **not** blind its inversion. Both are recorded as security
+  divergences (`D-GF2M-1`, `D-GF2M-2` in `docs/SECURITY_DIVERGENCE_POLICY.md`): the
+  values agree, the timing profiles are not claimed to.
 - 31 `BN_*` exports are handed to Phase 9 with the dependency as the reason: the RAND
   families, the prime generators, the Miller-Rabin primality tests, the X931
   generators, `BN_generate_dsa_nonce`, the GF2m square-root and quadratic-solver pair,
@@ -219,7 +240,8 @@ Phase 5 becomes `complete` when the ledger's `open_in_this_stratum` reaches zero
 every court in `artifacts/phase5/COURTS.json` passes. Both are derived, not asserted:
 `forensics/tools/phase_state.py` reads the ledger and the court results, and the
 dependency-order rule keeps a later stratum from claiming completion first. As of the
-current artefacts that is **333 open obligations** (280 ASN.1, 15 BN, 38 PEM).
+current artefacts that is **318 open obligations** (280 ASN.1, 38 PEM) — the
+stratum's `BN_*` surface is closed and the remainder is the two families not begun.
 
 ## 10. FRF and Gemel
 
@@ -228,20 +250,44 @@ current artefacts that is **333 open obligations** (280 ASN.1, 15 BN, 38 PEM).
 The court is admitted as `openssl-rs-rt-bn` and the chain has been run end to end in the
 FRF tooling container (`bash forensics/frf/run_courts.sh`). The identities:
 
-- court run — `run-openssl-rs-rt-bn-92c14e395079b876c00b21062faaff4d887ddb913419eb73ea6c1efd9e2e17c4`
-- OpenReceipt — `receipt-run-openssl-rs-rt-bn-92c14e395079b876c00b21062faaff4d887ddb913419eb73ea6c1efd9e2e17c4-bfc1b9169a88d2e60a682a69612465eb6b520e653097ba3f75719d6f07b8df82`
-- sensitivity challenge — `551ff830a4b500afa06a1c117f842434634e470122b35e0f5cb0c97cafc70301`
-  (the `operator exit-class` mutant: the challenge is that the court saw the seeded
-  defect on exit **and nothing else**, which is what makes the passing court evidence
-  about the difference class rather than about the probe's stability)
-- claim, `--policy sensitivity-backed`, over the 24 runtime receipts —
-  `62ccbb07477191b275df2601447473095452b7b409c94b0d56b8059bab507b43`
+- court run — `run-openssl-rs-rt-bn-33d75fee81d80354eda5b7f051aefa6dea3eb9084dc6f1fc00ac1ec0a4948f9b`
+- OpenReceipt — `receipt-run-openssl-rs-rt-bn-33d75fee81d80354eda5b7f051aefa6dea3eb9084dc6f1fc00ac1ec0a4948f9b-bbb16ce6b43b3246f0cc7983dc7f9c5b9c3d46ed212defbb6234bce8f286d2b6`
+- sensitivity challenges — the axes the harness could isolate on this court:
+  - `7894d4ef788712701fb9ce57e5573d93b065b8f0de3ee51e33e413e8576f2702`, the
+    `stdout-first-line` mutant on the `stdout` axis, whose challenged run is
+    `run-openssl-rs-rt-bn-11b4a581b8e4bcf838801476ef8190b743d7f578a59b70ee781f20e55a825ca8`;
+  - `3e8c880cb9f235f254a17298783daca09ba50dee1b005639a62094e6c91801de`, the
+    `exit-class` mutant on the `exit` axis, whose challenged run is
+    `run-openssl-rs-rt-bn-a56f887f455fbfbae780412629aebaea18903d42db9c2e6ef981e598ab6b11b8`.
 
-The declaration is generated from the table in `forensics/tools/gen_frf_courts.py`
-(never hand-written) and `gen_frf_courts.py --check` is what holds it there. The
-captures, residuals and tokens are published under
-`.frf/captures/run-openssl-rs-rt-bn-92c14e395079b876c00b21062faaff4d887ddb913419eb73ea6c1efd9e2e17c4`,
-and `.frf` is committed because FRF expects its receipts and claims to travel.
+  Each saw its seeded defect on its own axis and **nothing else** (`unaffected_axes`
+  names the axis it did not disturb, and `specificity_clean` is true on both), which is
+  what makes the passing court evidence about the difference class rather than about the
+  probe's stability. The court's `observables` are `[stdout, exit]`, so those two
+  mutation profiles are the whole of what can isolate on it: the harness reports the
+  rest as refused rather than passing them, and D13 records why an honestly refused
+  court is better than a falsely passing one.
+- claim, `--policy sensitivity-backed`, over the 24 runtime receipts —
+  `564889652b055cbffa62df560f376117dffda456ae674120b166a4c5a02a11c5`
+
+The court's declaration is generated from the table in `forensics/tools/gen_frf_courts.py`
+(never hand-written) and `gen_frf_courts.py --check` is what holds it there.
+
+When a receipt binds a court whose transcript changed, the store is recreated from
+clean rather than appended to (the header of `forensics/frf/run_courts.sh` records why:
+FRF's run identity is content-addressed and does not vary with the rebuilt candidate's
+hash, so a fresh observation requires a fresh store). The captures for this court are
+therefore the clean run above and the two challenged runs, all three committed:
+`.frf/captures/run-openssl-rs-rt-bn-33d75fee81d80354eda5b7f051aefa6dea3eb9084dc6f1fc00ac1ec0a4948f9b`,
+`.frf/captures/run-openssl-rs-rt-bn-11b4a581b8e4bcf838801476ef8190b743d7f578a59b70ee781f20e55a825ca8`
+and
+`.frf/captures/run-openssl-rs-rt-bn-a56f887f455fbfbae780412629aebaea18903d42db9c2e6ef981e598ab6b11b8`.
+`.frf` is committed because FRF expects its receipts and claims to travel.
+
+A stale capture identity is exactly the kind of thing this project treats as a defect:
+an earlier revision of this section named a run from a superseded store generation.
+The identity is now the one the claim's `requires` and the challenge records name, and
+the three capture directories above are the ones on disk.
 
 A passing court is still only a differential result. The claim above is exactly what
 it says it is — that the candidate's transcript matched the authority's for the
@@ -250,20 +296,20 @@ behaviours this probe exercises — and not a cryptographic or security claim
 
 ### Gemel
 
-Recorded at this boundary as change `C21`
-(`change.3215032a15ad7bd044c6a87153239e7a61f47e69b731f2143b007ed903e1a60e`),
-trajectory `T21`
-(`trajectory.fdf8ff91321b467c12be17ff7f0faa55b9bfe7918dbe9cba01c3460eb804f7ab`),
-state `S21` (`state.a5011f9ae7e414dd7ad7814c7bf30290fb1bc84ae250838d4d8683ad552b4db6`),
-and checkpoint `K11`
+Recorded at this boundary as change `C29`
+(`change.d6ee02e950158dab1667c3f72608aa47dacdde651b838e3461d25330e07989b4`),
+trajectory `T29`
+(`trajectory.a5c3dd8bba70039d5b4f5c99619aa8386595465b88de68fe622df0e0fc9ea6c4`),
+state `state.f48f703c3fc7896f18ac74e6848843bd301f48b25869f6d07598966c16e0b4b9`,
+and checkpoint `K12`
+(`checkpoint.3d4d0ddafc52a6635d9cf963b6fd27888133ca39ccc83243082477e7ddfaec45`).
+The previous boundary is change `C21`
+(`change.3215032a15ad7bd044c6a87153239e7a61f47e69b731f2143b007ed903e1a60e`) on
+trajectory `T21`, with checkpoint `K11`
 (`checkpoint.843b3f72da905eec1a0fc67a16ee8f1dc4811f86f51dfa75ae68a4d0c88ac4c6`).
-The previous boundary is change `C20`
-(`change.591bf7f9c7cc9cad0e0930d9bc82ce9379a9ee1245fed581a3d75195e656cf21`) on
-trajectory `T20`, with checkpoint `K10`
-(`checkpoint.51ac8d8e9e91d360fe1bb94630661f0fd4071dd844baa1cd42c82b4e1504ba08`).
-Gemel names changes by derived order, so `C21` is not a stable identity and the
+Gemel names changes by derived order, so `C29` is not a stable identity and the
 `change.` hash is; a name quoted elsewhere is resolved through
-`forensics/GEMEL_TRAJECTORY.md` or `gemel show C21`.
+`forensics/GEMEL_TRAJECTORY.md` or `gemel show C29`.
 The store is append-only, so a correction is another change rather than an edit; the
 Git commit remains the authoritative record of the diff.
 
@@ -275,6 +321,9 @@ the human-readable trajectory and the checkpoint identities.
 Residuals recorded in the store at this boundary rather than left to be rediscovered:
 the `BN_signed_*2bn` signature defect and the prototype gap that let it survive (D65,
 now closed by the prototype court); the RAND-dependent exports of this stratum, which
-are handed to Phase 9 and are therefore implementable by nobody in this phase; and the
+are handed to Phase 9 and are therefore implementable by nobody in this phase; the
 two `ABI_ONLY_EXPORTED` symbols the atlas has no prototype for, which the prototype
-court reports rather than skipping.
+court reports rather than skipping; and the two `GF(2^m)` divergences, `D-GF2M-1`
+(`BN_GF2m_mod_inv` is not blinded, recorded `verification_gap`) and `D-GF2M-2` (the
+arithmetic is not the authority's carry chains, recorded `performance_divergence`),
+whose obligation `OBL-GF2M-INV-BLINDING` is owned by Phase 9.

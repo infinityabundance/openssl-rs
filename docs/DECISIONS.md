@@ -2645,3 +2645,63 @@ implemented.
 `mod_div_arr` — and nothing else. The stratum's ledger reports `open_in_this_stratum`
 333: those fifteen, 280 ASN.1 and 38 PEM, and `phase-state.json` keeps the phase
 `in-progress` on exactly that number.
+
+## D70 — `GF(2^m)` closes `BN`, and the reduction loop bound the court caught
+
+**Decision.** The fifteen `BN_GF2m_*` exports are implemented in `src/bn/gf2m.rs`, and
+with them **every one of the 201 exports `bn.h` declares is implemented or handed to a
+named later stratum**. `RT-BN` goes from 577 observations to **633**, still with 0
+residuals, and the stratum's `open_in_this_stratum` falls from 333 to **318** — 280
+ASN.1 and 38 PEM, which is the whole of what Phase 5 has left.
+
+**The arithmetic is written as field arithmetic, not as the authority's carry chains.**
+`GF(2)[x]/(p)` has exactly one canonical representative per element, so a shift-and-xor
+reducer and the authority's unrolled chains must agree on every value; what they do not
+agree on is the machine code. `poly_rem` clears the top set bit of the working value one
+step at a time, `poly_divrem` is the polynomial long division, `poly_inv` is extended
+Euclid over `GF(2)[x]` that reports "the gcd is not one" as *no inverse* rather than as a
+wrong answer, and `poly_mul` is carry-less multiply. Recorded as divergence `D-GF2M-2`
+with **no timing claim in either direction**.
+
+**Two defects the court found, and this pass they were the implementation's.** Unlike
+the eleven earlier passes in this stratum where the probe was the suspect, both of
+`GF(2^m)`'s findings were real implementation errors that the probe surfaced:
+
+- **The reduction loop tested the wrong bound.** `poly_rem` compared the value's bit
+  length against the modulus's, which skips the reduction of a value exactly one bit
+  longer than the field — and `0xa5 * 0x57` in the AES field is exactly that. The
+  comparison belongs against the *degree*: a bit at index `>= n` is above the field
+  whatever the modulus's own length happens to be. The first draft produced a plausible
+  field element that was simply not reduced, which is the failure mode a
+  "looks right" reducer keeps.
+- **`BN_GF2m_mod_inv` did not raise.** The authority reaches an invalid modulus through
+  `BN_GF2m_mod_mul`, so that function's `INVALID_LENGTH` coordinate is what a caller
+  sees; the direct extended-Euclid route had no reason to notice. It now validates the
+  array first and raises at that same coordinate. The probe found it because it compares
+  the error queue after the failure, not only the return value.
+
+**A raise the candidate owed.** `BN_GF2m_mod_inv` reaches an invalid modulus through
+`BN_GF2m_mod_mul`, so a caller sees *that* function's `INVALID_LENGTH` coordinate, not
+its own. The first draft raised nothing on that path. The probe compares the error queue
+after the failure, not only the return value, which is what made the missing raise
+visible.
+
+**Both `_arr` and non-`_arr` spellings are implemented and compared to each other.** The
+non-`_arr` entry points convert the modulus through `BN_GF2m_poly2arr` and call the
+`_arr` one, so the two routes are not independent — but they are *separately observable*,
+and the court drives both and checks they agree, checks the field identities
+(`a * a^-1 == 1`, `(a / b) * b == a`), and checks the invalid-modulus failure coordinates
+of each. `BN_GF2m_poly2arr`'s `OPENSSL_ECC_MAX_FIELD_BITS` bound and the `arr[6]`
+smallest fixed-size wrapper are generated from the authority's own constants.
+
+**`BN_GF2m_mod_inv` blinds in the authority and this does not.** `BN_priv_rand_ex` is
+Phase 9, and a fixed "blinding" value is not blinding. The returned value is identical —
+the inverse in a field is unique — so the court compares values, return classes and error
+behaviour and **removes the timing claim**. Recorded as divergence `D-GF2M-1` with
+obligation `OBL-GF2M-INV-BLINDING`, owned by Phase 9, which closes by adding the blinding
+when RAND exists.
+
+**What is left in this stratum is ASN.1 and PEM.** The 280 `src/asn1/` exports and the 38
+`src/pem/` exports, and nothing else. `phase-state.json` keeps Phase 5 `in-progress` on
+exactly that number, and the seal's open count is derived from the ledger rather than
+typed anywhere.

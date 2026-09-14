@@ -2,10 +2,10 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "checked": 550,
+      "checked": 565,
       "declaration_is_generated": 50,
       "implementation_is_c": 8,
-      "implemented": 610,
+      "implemented": 625,
       "mismatches": 0,
       "no_prototype_in_atlas": 2,
       "not_found": 0,
@@ -99,7 +99,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "bd6d97b98b9128e046967905b4392a45d5bf322038ca9f3a4e7074eb95860f22"
+      "sha256": "e3c0c070e2d272e29f926e8a37f8eeb4ad8bd3720ea2f321fca5eb4ede0cbcd8"
     }
   ],
   "kind": "prototype-court",

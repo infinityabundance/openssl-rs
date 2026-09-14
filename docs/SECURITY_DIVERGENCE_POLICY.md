@@ -341,3 +341,42 @@ observations that *can* be made around each boundary are compared normally.
   branch is printed as
   `defaultcfg.unset=RECORDED_DIVERGENCE_OBL_CONF_DEFAULT_CONFIG_FILE` rather than as
   a value. The open obligation is `OBL-CONF-DEFAULT-CONFIG-FILE`, owned by Phase 16.
+
+### D-GF2M-1 — `BN_GF2m_mod_inv` returns the right value without the authority's blinding
+
+- **Obligation:** `BN_GF2m_mod_inv(r, a, p, ctx)` and, through it,
+  `BN_GF2m_mod_inv_arr` and the two `BN_GF2m_mod_div*` entry points.
+- **Authority:** blinds the inversion. It draws a random field element `b` with
+  `BN_priv_rand_ex(b, numbits - 1, …)` (retrying while `b` is zero), computes
+  `r := (a*b) * (a*b)^-1 * b = a^-1` through `BN_GF2m_mod_inv_vartime`, and the
+  blinding is there so the **timing** of the vartime inversion is not a function of
+  `a`.
+- **Candidate:** computes the same inverse by extended Euclid over `GF(2)[x]`, without
+  the blinding. The **returned value is identical** — the multiplicative inverse in a
+  field is unique — and `RT-BN` compares it, both directly and through the identity
+  `a * a^-1 == 1`, and against `BN_GF2m_mod_inv_arr`'s separate route.
+- **Why:** `BN_priv_rand_ex` is Phase 9 and does not exist. Substituting a non-random
+  factor would be worse than omitting it: a fixed "blinding" value is not blinding, and
+  a caller cannot tell the difference.
+- **Claim removed:** **the timing profile is not claimed to match.** What is claimed is
+  that the value, the return class and the error behaviour match, which the court
+  measures. A caller that relies on this inversion's timing being input-independent
+  under the authority must not rely on it here. The obligation is
+  `OBL-GF2M-INV-BLINDING`, owned by Phase 9, and it closes by adding the blinding when
+  RAND exists.
+
+### D-GF2M-2 — the `BN_GF2m_*` arithmetic is not the authority's carry chains
+
+- **Obligation:** the fifteen `BN_GF2m_*` entry points.
+- **Authority:** unrolled word-at-a-time carry chains written for speed.
+- **Candidate:** the same operations written as field arithmetic — carry-less
+  multiply, shift-and-xor reduction, extended Euclid — with no unrolling.
+- **Reason:** the value in `GF(2)[x]/(p)` has exactly one canonical representative, so
+  both routes reach it; what differs is the machine code and therefore the timing.
+  Reproducing the carry chains would reproduce a *performance* property, not a
+  behavioural one, and a mistranscribed carry chain is a wrong answer rather than a
+  slow one.
+- **Claim removed:** **no timing claim** about these functions, in either direction.
+  The values, return classes and error behaviour are compared by `RT-BN`, including
+  that the `_arr` and non-`_arr` routes agree with each other and that
+  `BN_GF2m_mod_inv`'s result satisfies `a * a^-1 == 1`.
