@@ -175,6 +175,41 @@ it properly: 1,001 of the 1,012 declared-but-not-exported functions are
 symbols (`DSO_*`) have no declaration in any *installed* header because `dso.h`
 is not installed.
 
+## D13 — Phase 1 sensitivity evidence is partial, and the gap is recorded, not hidden
+
+**Decision.** Phase 1's FRF courts are recorded as follows:
+
+- `openssl-cli-dgst` — challenge **PASSED** for both `stdout-first-line` and
+  `exit-class`: each seeded defect was observed on its declared axis and on no
+  other. This court has sensitivity evidence and may supply release evidence.
+- `openssl-cli-list-disabled`, `openssl-cli-list-cipher` — challenge **REFUSED**.
+  Cause established by inspection, not guessed: the FRF 0.1.86 challenge mutant
+  locates the reference object by scanning its own arguments for a path under
+  the object store, which only works when the court's declared arguments
+  reference `{fixture}`. For these courts the mutant cannot find the reference,
+  exits 2 with empty stdout, and therefore perturbs **both** the stdout and exit
+  axes at once. The court cannot demonstrate axis isolation, so FRF refuses.
+
+  The four resulting residuals are disposed `harness` with that reason.
+
+**Why not "fix" it by narrowing the declared observables.** Declaring only
+`stdout` for these courts would make the challenge *pass* on a mutant that never
+ran the reference — a false sensitivity result. A passing court that cannot see
+its own defect class is worse than an honestly refused one
+(`docs/PARITY_MODEL.md` §7).
+
+**Consequence.** Phase 1's exit rule requires sensitivity evidence, so Phase 1 is
+**not** marked complete. The concrete remedy is to make every trajectory court
+fixture-driven (arguments that reference `{fixture}`), which is also better
+forensic practice: a court should be a statement about a fixture family. Until
+then, the `list-*` courts are retained as *observations* but may not contribute
+sensitivity evidence to a claim.
+
+---
+
+
+---
+
 ## D14 — Exporting a versioned ABI from Rust requires a two-stage build
 
 **Decision.** The Phase 2 DSOs are built as `rustc --crate-type staticlib`
@@ -212,41 +247,6 @@ These are recorded because they are exactly the class of defect the Phase 2
 courts exist to catch: `ABI-SYMBOL` alone would have passed on the rust-lld
 artifact. Only `ABI-LOAD`, which resolves each symbol *at its declared version*
 with `dlvsym`, distinguishes the two.
-
----
-
-## D13 — Phase 1 sensitivity evidence is partial, and the gap is recorded, not hidden
-
-**Decision.** Phase 1's FRF courts are recorded as follows:
-
-- `openssl-cli-dgst` — challenge **PASSED** for both `stdout-first-line` and
-  `exit-class`: each seeded defect was observed on its declared axis and on no
-  other. This court has sensitivity evidence and may supply release evidence.
-- `openssl-cli-list-disabled`, `openssl-cli-list-cipher` — challenge **REFUSED**.
-  Cause established by inspection, not guessed: the FRF 0.1.86 challenge mutant
-  locates the reference object by scanning its own arguments for a path under
-  the object store, which only works when the court's declared arguments
-  reference `{fixture}`. For these courts the mutant cannot find the reference,
-  exits 2 with empty stdout, and therefore perturbs **both** the stdout and exit
-  axes at once. The court cannot demonstrate axis isolation, so FRF refuses.
-
-  The four resulting residuals are disposed `harness` with that reason.
-
-**Why not "fix" it by narrowing the declared observables.** Declaring only
-`stdout` for these courts would make the challenge *pass* on a mutant that never
-ran the reference — a false sensitivity result. A passing court that cannot see
-its own defect class is worse than an honestly refused one
-(`docs/PARITY_MODEL.md` §7).
-
-**Consequence.** Phase 1's exit rule requires sensitivity evidence, so Phase 1 is
-**not** marked complete. The concrete remedy is to make every trajectory court
-fixture-driven (arguments that reference `{fixture}`), which is also better
-forensic practice: a court should be a statement about a fixture family. Until
-then, the `list-*` courts are retained as *observations* but may not contribute
-sensitivity evidence to a claim.
-
----
-
 
 ---
 
@@ -316,3 +316,37 @@ paths.
 surface the condition through the thread-local `ERR` queue, which is what an
 OpenSSL caller expects to find after a failure. This is tracked as an open
 obligation in `forensics/atlas/phase1-completeness.json`.
+
+---
+
+## D17 — The Gemel store is not committed to git, by Gemel's own design
+
+**Decision.** `.gemel/` is left uncommitted. What is committed is the *projection*
+(`forensics/GEMEL_TRAJECTORY.md`, generated from `gemel log` / `gemel status`)
+plus the change, trajectory and checkpoint identities recorded in this file and
+in `docs/PHASE-1-ARCHAEOLOGY-SEAL.md`.
+
+**Why.** Gemel ships its own `.gemel/.gitignore` containing `*`. The store is
+therefore excluded from git *by design*, not by oversight: it is meant to travel
+through Gemel's own mechanisms (`gemel remote` / `push` / `exchange`) and to be
+projected into git deterministically with `gemel export-git` (Phase 4). Forcing
+it in with `git add -f` would mean committing ~95 MB of content-addressed blobs
+and fighting the tool's interop design.
+
+**Correction of the record.** The commit `d368245` message states that "the
+Gemel store is now committed". That statement is **false** and was written before
+the nested `.gemel/.gitignore` was discovered. It is corrected here rather than
+by rewriting pushed history: the project's own rule is that an observation
+evolves and the record of it stays.
+
+**Consequence.** `docs/RELEASE_GATES.md` §2's "Gemel checkpoint" requirement is
+satisfied by a checkpoint *existing* and being legible, not by the store being in
+git. Whether the sealed evidence should also include a deterministic
+`gemel export-git` projection is deferred to Phase 4, which owns that mechanism.
+
+**Contrast with FRF.** `.frf` **is** committed, because FRF's receipts and claims
+are the claim-bearing evidence and FRF expects them to travel. The two tools have
+opposite interop models; this file records both rather than assuming consistency
+between them.
+
+---

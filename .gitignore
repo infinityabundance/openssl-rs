@@ -27,13 +27,21 @@
 /artifacts/phase2/include/
 /artifacts/phase2/shell/
 
-# Gemel's evidence-native store. It IS committed: docs/RELEASE_GATES.md §2
-# requires a Gemel checkpoint at every phase boundary, and a checkpoint that
-# lives only on the machine that made it is prose, not evidence. The store is
-# ~95 MB because Gemel snapshots the derived atlas; that is the cost of the
-# trajectory being real and inspectable (`gemel log`, `gemel show`,
-# `gemel why`). A human-readable projection is also committed at
-# forensics/GEMEL_TRAJECTORY.md so the trajectory is legible without the store.
+# Gemel's evidence-native store. Gemel ships its OWN `.gemel/.gitignore`
+# containing `*`, so the store is excluded from git BY DESIGN: it is meant to be
+# synced through Gemel's own mechanisms (`gemel remote` / `push` / `exchange`)
+# and projected into git deterministically with `gemel export-git` (Phase 4),
+# not committed raw. This project respects that rather than fighting it with
+# `git add -f`.
+#
+# What IS committed is the legible projection at forensics/GEMEL_TRAJECTORY.md,
+# generated from `gemel log` / `gemel status`, plus the change, trajectory and
+# checkpoint identities recorded in docs/ and the seal. The store itself is
+# local working evidence; if a future phase wants it in git, the honest route is
+# `gemel export-git`, not a forced commit of 95 MB of content-addressed blobs.
+#
+# FRF is the opposite case and IS committed: `.frf` carries the claim-bearing
+# receipts and claims, and FRF expects them to travel.
 
 # FRF's portable OpenReceipt bundles are DERIVED exports of the committed .frf
 # store (each ~20 MB: the closure includes the snapshotted authority DSOs).
