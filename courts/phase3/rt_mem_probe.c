@@ -309,7 +309,16 @@ int main(int argc, char **argv)
     p = CRYPTO_aligned_alloc(64, 64, &freeptr, __FILE__, __LINE__);
     sayp("aligned_alloc.64", p);
     sayn("aligned_alloc.aligned", p != NULL && ((uintptr_t)p % 64) == 0);
-    sayn("aligned_alloc.freeptr_eq", freeptr == p);
+    /* NOT `freeptr == p`: whether the underlying allocation happens to be
+     * aligned is a property of the process's heap layout, which legitimately
+     * differs between the authority and a candidate that links a Rust runtime.
+     * Comparing it would turn a heap-layout coincidence into a false residual.
+     * What IS contractual is that `*freeptr` is the block base, that the returned
+     * pointer lies at or after it, and that the offset is smaller than `align`. */
+    sayn("aligned_alloc.freeptr_nonnull", freeptr != NULL);
+    sayn("aligned_alloc.offset_within_align",
+         p != NULL && freeptr != NULL && (uintptr_t)p >= (uintptr_t)freeptr
+             && ((uintptr_t)p - (uintptr_t)freeptr) < 64);
     sayp("aligned_alloc.freeptr", freeptr);
     if (freeptr != NULL)
         CRYPTO_free(freeptr, __FILE__, __LINE__);

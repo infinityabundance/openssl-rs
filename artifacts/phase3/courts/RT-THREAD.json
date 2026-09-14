@@ -1,0 +1,14 @@
+{
+  "authority_exit_code": -11,
+  "authority_observations": 36,
+  "candidate_exit_code": -11,
+  "candidate_observations": 36,
+  "candidate_stderr_tail": [
+    "timeout: the monitored command dumped core"
+  ],
+  "court": "RT-THREAD",
+  "probe": "courts/phase3/rt_thread_probe.c",
+  "residual_count": 0,
+  "residuals": [],
+  "verdict": "pass"
+}

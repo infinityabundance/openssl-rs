@@ -95,11 +95,18 @@ int main(void)
     printf("done.rc=%d\n", CRYPTO_secure_malloc_done());
     printf("done.initialized=%d\n", CRYPTO_secure_malloc_initialized());
     printf("done.again_rc=%d\n", CRYPTO_secure_malloc_done());
-    printf("done.used=%zu\n", CRYPTO_secure_used());
 
     /* ---- allocate after done: documented fallback ------------------------- */
+    /* Ordered before `done.used` on purpose: that call faults the authority, and
+     * a fault would truncate the transcript before these could be compared. */
     p("postdone.malloc", CRYPTO_secure_malloc(32, NULL, 0));
     printf("postdone.allocated=%d\n", CRYPTO_secure_allocated(b));
+
+    /* NOT MEASURED: `CRYPTO_secure_used()` after `CRYPTO_secure_malloc_done()`
+     * SEGFAULTS the authority, the same unchecked dereference of the (now NULL)
+     * secure-heap pointer as before init. The candidate reports 0; recorded as a
+     * safety divergence. */
+    printf("done.used=NOT_MEASURED_AUTHORITY_FAULTS\n");
 
     return 0;
 }

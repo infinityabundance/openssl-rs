@@ -1,0 +1,84 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "all_pass": true,
+    "authority": "openssl-3.6.4-production",
+    "claim": "A passing court means the candidate produced the same observable transcript as the authority for the behaviours this probe exercises. It is a differential-compatibility result, NOT cryptographic or security correctness, and NOT evidence for any behaviour the probe does not touch (docs/PARITY_MODEL.md).",
+    "courts": [
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 82,
+        "candidate_exit_code": 0,
+        "candidate_observations": 82,
+        "candidate_stderr_tail": [
+          "counts.malloc=31 realloc=1 free=17 live=14"
+        ],
+        "court": "RT-MEM",
+        "probe": "courts/phase3/rt_mem_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 38,
+        "candidate_exit_code": 0,
+        "candidate_observations": 38,
+        "candidate_stderr_tail": [],
+        "court": "RT-EXDATA",
+        "probe": "courts/phase3/rt_exdata_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": -11,
+        "authority_observations": 36,
+        "candidate_exit_code": -11,
+        "candidate_observations": 36,
+        "candidate_stderr_tail": [
+          "timeout: the monitored command dumped core"
+        ],
+        "court": "RT-THREAD",
+        "probe": "courts/phase3/rt_thread_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 32,
+        "candidate_exit_code": 0,
+        "candidate_observations": 32,
+        "candidate_stderr_tail": [],
+        "court": "RT-SECURE",
+        "probe": "courts/phase3/rt_secure_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 45,
+        "candidate_exit_code": 0,
+        "candidate_observations": 45,
+        "candidate_stderr_tail": [],
+        "court": "RT-LHASH",
+        "probe": "courts/phase3/rt_lhash_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "verdict": "pass"
+      }
+    ],
+    "summary": {
+      "fail": 0,
+      "pass": 5,
+      "total": 5
+    }
+  },
+  "body_hash": "e8682b3cb7e7376e533dcfd4aefbb01fc6234251c0ea191e161e2ccf4eb1eb4b",
+  "generator": "forensics/tools/phase3_courts.py",
+  "inputs": [],
+  "kind": "phase3-courts",
+  "schema": "openssl-rs/atlas/phase3-courts/v1"
+}

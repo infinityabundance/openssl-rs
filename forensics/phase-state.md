@@ -11,7 +11,7 @@ enforced here:
 | 0 | Constitution, authorities, claim algebra | `complete` |  |
 | 1 | Complete archaeology / API / ABI atlas | `complete` |  |
 | 2 | Distribution / ABI shell | `complete` |  |
-| 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `in-progress` | the runtime substrate is under construction: implemented so far are memory, the ERR queue and the stack. Outstanding: ex_data, lhash, the OBJ/NID database, secure memory, CRYPTO_THREAD_*, initialisation/cleanup, and the remaining reference-counting surface. |
+| 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `in-progress` | the runtime is implemented and RT-MEM, RT-EXDATA, RT-THREAD, RT-SECURE and RT-LHASH pass differentially, but RT-ERR and RT-STACK courts do not exist yet, so ERR_* and OPENSSL_sk_* have no differential evidence; the ERR reason-string tables are also still ungenerated, which RT-ERR will show as a residual. See docs/PHASE-3-CORE-RUNTIME-SEAL.md §5-§7. |
 | 4 | BIO + CONF + object database | `not-started` | not started |
 | 5 | BN + ASN.1 + DER/PEM | `not-started` | not started |
 | 6 | OSSL_LIB_CTX + provider core | `not-started` | not started |

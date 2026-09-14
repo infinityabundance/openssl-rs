@@ -133,25 +133,51 @@ def evidence_for(phase: int) -> tuple[list[str], list[str], str]:
     if phase == 3:
         for d in PHASE3_MODULES:
             (present if exists(d) else absent).append(d)
-        if not absent:
-            blocking = PHASE3_OUTSTANDING
+        courts = read_json(PHASE3_COURTS)
+        if courts:
+            present.append(PHASE3_COURTS)
+            failed = [c["court"] for c in courts["body"]["courts"]
+                      if c["verdict"] != "pass"]
+            if failed:
+                blocking = f"Phase 3 courts not passing: {failed}"
+            else:
+                blocking = PHASE3_OUTSTANDING
+        else:
+            absent.append(PHASE3_COURTS)
         return present, absent, blocking
 
     return present, absent, "not started"
 
 
-# Phase 3 evidence: the core-runtime modules and the courts that exercise them.
+# Phase 3 evidence: the core-runtime modules, the differential courts that
+# exercise them, and the seal that records what they establish.
+PHASE3_COURTS = "artifacts/phase3/COURTS.json"
 PHASE3_MODULES = [
+    "docs/PHASE-3-CORE-RUNTIME-SEAL.md",
     "src/runtime/mod.rs",
     "src/runtime/mem.rs",
     "src/runtime/err.rs",
     "src/runtime/stack.rs",
+    "src/runtime/ex_data.rs",
+    "src/runtime/lhash.rs",
+    "src/runtime/secure.rs",
+    "src/runtime/thread.rs",
+    "src/runtime/init.rs",
+    "src/runtime/obj.rs",
+    "src/runtime/obj_table.rs",
 ]
+# Phase 3 deliberately does NOT claim completion. The runtime is implemented and
+# five of its subsystems have differential courts, but the ERR queue and the
+# stack -- both implemented and unit-tested -- have no probe yet, and a dimension
+# without a court is not a proved dimension (docs/PARITY_MODEL.md). This string
+# is the reason the stratum stays `in-progress`; it is derived evidence, not a
+# placeholder.
 PHASE3_OUTSTANDING = (
-    "the runtime substrate is under construction: implemented so far are memory, "
-    "the ERR queue and the stack. Outstanding: ex_data, lhash, the OBJ/NID "
-    "database, secure memory, CRYPTO_THREAD_*, initialisation/cleanup, and the "
-    "remaining reference-counting surface."
+    "the runtime is implemented and RT-MEM, RT-EXDATA, RT-THREAD, RT-SECURE and "
+    "RT-LHASH pass differentially, but RT-ERR and RT-STACK courts do not exist "
+    "yet, so ERR_* and OPENSSL_sk_* have no differential evidence; the ERR "
+    "reason-string tables are also still ungenerated, which RT-ERR will show as "
+    "a residual. See docs/PHASE-3-CORE-RUNTIME-SEAL.md §5-§7."
 )
 
 

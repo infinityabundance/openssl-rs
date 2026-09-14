@@ -145,7 +145,10 @@ pub(crate) unsafe fn raise_with(lib: c_int, reason: c_int, file: *const c_char, 
             file: f,
             line,
             func: Some(Vec::new()),
-            data: None,
+            // Measured: the authority's overflow error carries an EMPTY,
+            // non-NULL data pointer with flags 0 -- not a NULL one. The
+            // difference is visible through `ERR_get_error_all`.
+            data: Some(Vec::new()),
             data_flags: 0,
             incomplete: false,
         })

@@ -36,6 +36,7 @@ static void doall_cb(void *p)
 static void doall_arg_cb(void *p, void *arg)
 {
     int *n = arg;
+    (void)p;
     (*n)++;
 }
 
@@ -91,14 +92,17 @@ int main(void)
     (void)OPENSSL_LH_insert(lh, (void *)"epsilon");
     (void)OPENSSL_LH_insert(lh, (void *)"zeta");
     printf("num_items.six=%lu\n", OPENSSL_LH_num_items(lh));
-    g_doall_calls = 0;
-    OPENSSL_LH_doall(lh, doall_cb);
-    printf("doall.calls=%d\n", g_doall_calls);
-    {
-        int n = 0;
-        OPENSSL_LH_doall_arg(lh, doall_arg_cb, &n);
-        printf("doall_arg.calls=%d\n", n);
-    }
+    /* NOT MEASURED: `OPENSSL_LH_doall`, `OPENSSL_LH_doall_arg` and
+     * `OPENSSL_LH_doall_arg_thunk` SEGFAULT the authority on a table created with
+     * the bare `OPENSSL_LH_new`. Every generated `lh_TYPE_new` installs thunks via
+     * `OPENSSL_LH_set_thunks`, and the iteration entry points dereference the
+     * (here NULL) thunk rather than falling back to direct iteration. That is a
+     * fault boundary, not a documented failure, so the candidate must not copy it:
+     * it iterates directly and is recorded as a safety divergence in
+     * docs/SECURITY_DIVERGENCE_POLICY.md. The line is kept as a visible marker so
+     * the boundary is not silently absent from the transcript. */
+    printf("doall.calls=NOT_MEASURED_AUTHORITY_FAULTS\n");
+    printf("doall_arg.calls=NOT_MEASURED_AUTHORITY_FAULTS\n");
 
     /* ---- delete ------------------------------------------------------------ */
     prev = OPENSSL_LH_delete(lh, "beta");

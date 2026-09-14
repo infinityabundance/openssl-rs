@@ -1,0 +1,12 @@
+{
+  "authority_exit_code": 0,
+  "authority_observations": 45,
+  "candidate_exit_code": 0,
+  "candidate_observations": 45,
+  "candidate_stderr_tail": [],
+  "court": "RT-LHASH",
+  "probe": "courts/phase3/rt_lhash_probe.c",
+  "residual_count": 0,
+  "residuals": [],
+  "verdict": "pass"
+}

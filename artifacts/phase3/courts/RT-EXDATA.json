@@ -1,0 +1,12 @@
+{
+  "authority_exit_code": 0,
+  "authority_observations": 38,
+  "candidate_exit_code": 0,
+  "candidate_observations": 38,
+  "candidate_stderr_tail": [],
+  "court": "RT-EXDATA",
+  "probe": "courts/phase3/rt_exdata_probe.c",
+  "residual_count": 0,
+  "residuals": [],
+  "verdict": "pass"
+}

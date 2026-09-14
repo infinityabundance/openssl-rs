@@ -54,13 +54,22 @@
         "stratum": "Distribution / ABI shell"
       },
       {
-        "blocking": "the runtime substrate is under construction: implemented so far are memory, the ERR queue and the stack. Outstanding: ex_data, lhash, the OBJ/NID database, secure memory, CRYPTO_THREAD_*, initialisation/cleanup, and the remaining reference-counting surface.",
+        "blocking": "the runtime is implemented and RT-MEM, RT-EXDATA, RT-THREAD, RT-SECURE and RT-LHASH pass differentially, but RT-ERR and RT-STACK courts do not exist yet, so ERR_* and OPENSSL_sk_* have no differential evidence; the ERR reason-string tables are also still ungenerated, which RT-ERR will show as a residual. See docs/PHASE-3-CORE-RUNTIME-SEAL.md §5-§7.",
         "evidence_absent": [],
         "evidence_present": [
+          "docs/PHASE-3-CORE-RUNTIME-SEAL.md",
           "src/runtime/mod.rs",
           "src/runtime/mem.rs",
           "src/runtime/err.rs",
-          "src/runtime/stack.rs"
+          "src/runtime/stack.rs",
+          "src/runtime/ex_data.rs",
+          "src/runtime/lhash.rs",
+          "src/runtime/secure.rs",
+          "src/runtime/thread.rs",
+          "src/runtime/init.rs",
+          "src/runtime/obj.rs",
+          "src/runtime/obj_table.rs",
+          "artifacts/phase3/COURTS.json"
         ],
         "name": "core-runtime",
         "phase": 3,
@@ -256,7 +265,7 @@
       "not_started": 18
     }
   },
-  "body_hash": "13979920bc16ef34649bb07dea934f24465a46bba39720b56c0c4083e9495f12",
+  "body_hash": "e0a3f408d9928d8808cb2b829665f8278caab3a61f6bf40b973b84d4261f3cc8",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

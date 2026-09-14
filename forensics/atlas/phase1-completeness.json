@@ -222,7 +222,7 @@
         "artifact": "artifacts/phase2/SHELL_MANIFEST.json",
         "description": "libcrypto.a/libssl.a, legacy.so provider module, openssl and c_rehash, install layout",
         "plane": "static-archives-provider-module-cli",
-        "sha256": "62ff77f9f2403ecd67bfb790ecdbc4e59760a6588d870f52a0b87cbe9edd03e8",
+        "sha256": "628a406ec4bb871d652d39b806c82fb80fc35c82c27702123bc3ace678adf523",
         "status": "complete"
       },
       {
@@ -334,7 +334,7 @@
       }
     ]
   },
-  "body_hash": "98f54a5382ed2c9f7f49c3d804882ebae39b10fbebfbb1d3bd3a107e0ad74cac",
+  "body_hash": "0c38c5d371723323412171a93518a42604e71b872b819e613b4895f80b07e317",
   "generator": "forensics/tools/atlas_phase1_completeness.py",
   "inputs": [],
   "kind": "phase1-completeness",
