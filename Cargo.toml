@@ -26,12 +26,56 @@
 
 [package]
 name = "openssl-rs"
-version = "0.0.0"
+# 0.0.0 is reserved by Cargo for unpublished path/workspace members and cannot
+# be published. 0.0.x is used deliberately: no product subsystem is implemented
+# yet, and the version must not imply otherwise (docs/NON_CLAIMS.md).
+version = "0.0.1"
 edition = "2021"
 rust-version = "1.98.1"
-publish = false
 description = "Custodian-level native-Rust reconstruction of the OpenSSL 3.x contract"
 license = "Apache-2.0 OR MIT"
+readme = "README.md"
+repository = "https://github.com/infinityabundance/openssl-rs"
+homepage = "https://github.com/infinityabundance/openssl-rs"
+documentation = "https://github.com/infinityabundance/openssl-rs/blob/main/forensics/STATUS.md"
+keywords = ["openssl", "crypto", "abi", "compatibility", "custodian"]
+categories = ["cryptography", "api-bindings"]
+
+# Only the implementation, its constitution and its tests ship. Everything
+# else is *excluded* explicitly rather than allow-listed, because allow-listing
+# proved to have surprising behaviour: an `include` list still pulled stray
+# `README.md` files out of the authority source tree, which would have
+# redistributed upstream files unnecessarily.
+#
+# Excluded and why:
+#   forensics/atlas          ~73 MB of generated evidence; reproducible from the
+#                            receipts in the repository, so shipping it would
+#                            bloat every downstream `cargo fetch`.
+#   forensics/authorities/*  ~628 MB of archives, source trees and build
+#                            products, all reproducible from AUTHORITIES.json.
+#   forensics/tools          evidence generators; they run in the court, not in
+#                            a consumer's build.
+#   docker/, courts/         court scaffolding, not product.
+# Included deliberately:
+#   forensics/authorities/AUTHORITIES.json   required by build.rs to bind the
+#                            binary to the authority it was built against.
+#   tests/**                 the crate's own evidence-binding tests.
+exclude = [
+    "forensics/atlas/**",
+    "forensics/tools/**",
+    "forensics/receipts/**",
+    "forensics/STATUS.md",
+    "forensics/authorities/downloads/**",
+    "forensics/authorities/src/**",
+    "forensics/authorities/build/**",
+    "forensics/authorities/prefix/**",
+    "forensics/authorities/captures/**",
+    "forensics/authorities/SOURCE_MANIFEST.*.json",
+    "docker/**",
+    "courts/**",
+    "artifacts/**",
+    ".github/**",
+]
 
 # Phase 0/1 skeleton: library only. Distribution artifacts arrive in Phase 2
 # together with the export/version-script machinery that makes them honest.
