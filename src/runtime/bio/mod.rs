@@ -64,6 +64,7 @@ pub mod bf_readbuff;
 pub mod bio_cb;
 pub mod bio_sock2;
 pub mod bss_bio;
+pub mod bss_dgram;
 pub mod bss_dgram_pair;
 pub mod bss_fd;
 pub mod bss_file;
@@ -1590,6 +1591,7 @@ pub use bio_sock2::{
     BIO_set_tcp_ndelay, BIO_sock_info, BIO_socket,
 };
 pub use bss_bio::{BIO_new_bio_pair, BIO_s_bio};
+pub use bss_dgram::{BIO_new_dgram, BIO_s_datagram};
 pub use bss_dgram_pair::{BIO_new_bio_dgram_pair, BIO_s_dgram_mem, BIO_s_dgram_pair};
 pub use bss_fd::{BIO_new_fd, BIO_s_fd};
 pub use bss_file::{BIO_new_file, BIO_new_fp, BIO_s_file};

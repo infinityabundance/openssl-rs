@@ -4,8 +4,8 @@
     "complete": false,
     "counts": {
       "deferred_to_later_phase": 16,
-      "implemented": 190,
-      "open_in_this_stratum": 50,
+      "implemented": 192,
+      "open_in_this_stratum": 48,
       "owned": 256
     },
     "deferred": [
@@ -256,6 +256,7 @@
       "BIO_new",
       "BIO_new_bio_dgram_pair",
       "BIO_new_bio_pair",
+      "BIO_new_dgram",
       "BIO_new_ex",
       "BIO_new_fd",
       "BIO_new_file",
@@ -279,6 +280,7 @@
       "BIO_read_ex",
       "BIO_recvmmsg",
       "BIO_s_bio",
+      "BIO_s_datagram",
       "BIO_s_dgram_mem",
       "BIO_s_dgram_pair",
       "BIO_s_fd",
@@ -347,19 +349,11 @@
       },
       {
         "module": "src/runtime/bio/",
-        "symbol": "BIO_new_dgram"
-      },
-      {
-        "module": "src/runtime/bio/",
         "symbol": "BIO_s_accept"
       },
       {
         "module": "src/runtime/bio/",
         "symbol": "BIO_s_connect"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_s_datagram"
       },
       {
         "module": "src/runtime/conf/",
@@ -549,7 +543,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "2df52e7a500a890e501f69839965e4a91aebf3d968994957627c6f44edd7df21"
+      "sha256": "1e0368ef40c9c34c922df0d947b60795f06967a43cf4f7a93dcde9a0a2e4c24b"
     }
   ],
   "kind": "phase4-obligations",

@@ -27,7 +27,7 @@ use core::ptr;
 
 use crate::ffi::guard_ffi;
 use crate::runtime::err::err_sites::{BIO_LIB_1002, BIO_SOCK_248};
-use crate::runtime::err::raise_site_dynamic;
+use crate::runtime::err::{raise_site_dynamic, raise_site_dynamic_data};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 
 use super::method::{bread_conv, bwrite_conv};
@@ -128,9 +128,19 @@ pub unsafe extern "C" fn BIO_socket_ioctl(fd: c_int, type_: c_long, arg: *mut c_
         // descriptor and a request-appropriate argument.
         let ret = unsafe { sys::ioctl(fd, type_ as core::ffi::c_ulong, arg) };
         if ret == -1 {
-            // SAFETY: the site is a compile-time constant and `errno` is
-            // thread-local.
-            unsafe { raise_site_dynamic(&BIO_SOCK_248, sys::errno()) };
+            // The authority raises this site with the text `"calling
+            // ioctlsocket()"` — the Windows spelling of the call, kept on every
+            // platform — so `ERR_get_error_line_data` reports that text and
+            // `ERR_TXT_MALLOCED | ERR_TXT_STRING` as the flags.
+            // SAFETY: the site and message are compile-time constants and `errno`
+            // is thread-local.
+            unsafe {
+                raise_site_dynamic_data(
+                    &BIO_SOCK_248,
+                    sys::errno(),
+                    c"calling ioctlsocket()".as_ptr(),
+                )
+            };
         }
         ret
     })

@@ -91,6 +91,20 @@ pub struct BioAddr {
 /// The `sin_addr`/`sin6_addr`/`sun_path` region starts after the family word.
 const ADDR_OFFSET: usize = 2;
 
+/// `sizeof(BIO_ADDR)` in the authority.
+///
+/// `BIO_ADDR` is `union bio_addr_st { struct sockaddr; struct sockaddr_in6;
+/// struct sockaddr_in; struct sockaddr_un; }`, so its size is the largest member
+/// (`sockaddr_un`, 110 bytes) rounded up to the union's 4-byte alignment.
+///
+/// This is *not* `size_of::<BioAddr>()`: our storage is deliberately larger (a
+/// whole `sockaddr_storage`, so a `getsockname`/`accept` that writes the
+/// platform's full storage cannot overflow it). The size is observable, because
+/// `BIO_ADDR_sockaddr_size` returns it for an address whose family is not one of
+/// the three it knows, and the datagram BIO's `BIO_CTRL_DGRAM_GET_PEER` reports
+/// that value and copies exactly that many bytes.
+pub(crate) const AUTHORITY_ADDR_SIZE: usize = 112;
+
 /// # Safety
 /// `ap` must be NULL or point at a live [`BioAddr`].
 unsafe fn family_of(ap: *const BioAddr) -> c_int {
@@ -110,7 +124,7 @@ pub(crate) unsafe fn sockaddr_size(ap: *const BioAddr) -> sys::SockLen {
         sys::AF_INET => core::mem::size_of::<sys::SockAddrIn>() as sys::SockLen,
         sys::AF_INET6 => core::mem::size_of::<sys::SockAddrIn6>() as sys::SockLen,
         sys::AF_UNIX => core::mem::size_of::<sys::SockAddrUn>() as sys::SockLen,
-        _ => core::mem::size_of::<BioAddr>() as sys::SockLen,
+        _ => AUTHORITY_ADDR_SIZE as sys::SockLen,
     }
 }
 
@@ -264,6 +278,67 @@ pub(crate) unsafe fn sockaddr(ap: *const BioAddr) -> *const sys::SockAddr {
     }
     // SAFETY: as above; the cast is a retype of a prefix starting with the family.
     unsafe { ptr::addr_of!((*ap).sa).cast::<sys::SockAddr>() }
+}
+
+/// A copy of the address as a `struct sockaddr_in`.
+///
+/// The authority reaches these members through `union bio_addr_st`, so it can
+/// name `s_in.sin_addr` directly. Our storage is a `sockaddr_storage` whose
+/// alignment is its first field's (`sa_family_t`, 2 bytes), so the typed view is
+/// read and written **unaligned** rather than by casting the pointer: the C union
+/// gets 4-byte alignment for free, and we do not.
+///
+/// Used by the datagram BIO, which reads and writes individual `sin_*` members of
+/// the BIO's stored peer and local addresses.
+///
+/// # Safety
+/// `ap` must point at a live [`BioAddr`] whose family is `AF_INET`.
+pub(crate) unsafe fn view_in(ap: *const BioAddr) -> sys::SockAddrIn {
+    // SAFETY: an unaligned read of 16 bytes from a 128-byte storage region.
+    unsafe {
+        ptr::addr_of!((*ap).sa)
+            .cast::<sys::SockAddrIn>()
+            .read_unaligned()
+    }
+}
+
+/// Write an `AF_INET` view back into the storage. See [`view_in`].
+///
+/// # Safety
+/// `ap` must point at a live, writable [`BioAddr`].
+pub(crate) unsafe fn store_in(ap: *mut BioAddr, val: sys::SockAddrIn) {
+    // SAFETY: an unaligned write of 16 bytes into a 128-byte storage region.
+    unsafe {
+        ptr::addr_of_mut!((*ap).sa)
+            .cast::<sys::SockAddrIn>()
+            .write_unaligned(val)
+    };
+}
+
+/// A copy of the address as a `struct sockaddr_in6`. See [`view_in`].
+///
+/// # Safety
+/// `ap` must point at a live [`BioAddr`] whose family is `AF_INET6`.
+pub(crate) unsafe fn view_in6(ap: *const BioAddr) -> sys::SockAddrIn6 {
+    // SAFETY: an unaligned read of 28 bytes from a 128-byte storage region.
+    unsafe {
+        ptr::addr_of!((*ap).sa)
+            .cast::<sys::SockAddrIn6>()
+            .read_unaligned()
+    }
+}
+
+/// Write an `AF_INET6` view back into the storage. See [`view_in`].
+///
+/// # Safety
+/// `ap` must point at a live, writable [`BioAddr`].
+pub(crate) unsafe fn store_in6(ap: *mut BioAddr, val: sys::SockAddrIn6) {
+    // SAFETY: an unaligned write of 28 bytes into a 128-byte storage region.
+    unsafe {
+        ptr::addr_of_mut!((*ap).sa)
+            .cast::<sys::SockAddrIn6>()
+            .write_unaligned(val)
+    };
 }
 
 /// `void BIO_ADDR_free(BIO_ADDR *ap)`

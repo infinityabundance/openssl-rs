@@ -56,6 +56,10 @@
       "observations": 55,
       "verdict": "pass"
     },
+    "RT-BIO-DGRAM": {
+      "observations": 294,
+      "verdict": "pass"
+    },
     "RT-BIO-DGRAM-PAIR": {
       "observations": 141,
       "verdict": "pass"
@@ -130,12 +134,12 @@
     "phase4": 16
   },
   "implemented": {
-    "libcrypto": 402,
+    "libcrypto": 404,
     "libssl": 0
   },
   "open_obligations": {
     "phase3": 0,
-    "phase4": 50
+    "phase4": 48
   },
   "phases": {
     "0": "complete",

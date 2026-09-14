@@ -332,6 +332,40 @@ pub const SO_SNDTIMEO: c_int = 21;
 pub const IPPROTO_TCP: c_int = 6;
 /// `IPPROTO_UDP`.
 pub const IPPROTO_UDP: c_int = 17;
+/// `IPPROTO_IP` — the level the IPv4 `IP_*` options are set at.
+pub const IPPROTO_IP: c_int = 0;
+/// `IP_PKTINFO` — receive the destination address and interface of a datagram.
+pub const IP_PKTINFO: c_int = 8;
+/// `IP_MTU` — the path MTU the kernel has discovered for a connected socket.
+pub const IP_MTU: c_int = 14;
+/// `IP_MTU_DISCOVER` — the IPv4 fragmentation policy option.
+pub const IP_MTU_DISCOVER: c_int = 10;
+/// `IP_PMTUDISC_DONT` — never set the DF bit.
+pub const IP_PMTUDISC_DONT: c_int = 0;
+/// `IP_PMTUDISC_DO` — always set the DF bit.
+pub const IP_PMTUDISC_DO: c_int = 2;
+/// `IP_PMTUDISC_PROBE` — set the DF bit without letting the kernel shrink the MTU.
+pub const IP_PMTUDISC_PROBE: c_int = 3;
+/// `IPV6_MTU_DISCOVER` — the IPv6 fragmentation policy option.
+pub const IPV6_MTU_DISCOVER: c_int = 23;
+/// `IPV6_MTU` — the path MTU for an IPv6 socket.
+pub const IPV6_MTU: c_int = 24;
+/// `IPV6_PMTUDISC_DONT`.
+pub const IPV6_PMTUDISC_DONT: c_int = 0;
+/// `IPV6_PMTUDISC_DO`.
+pub const IPV6_PMTUDISC_DO: c_int = 2;
+/// `IPV6_PMTUDISC_PROBE`.
+pub const IPV6_PMTUDISC_PROBE: c_int = 3;
+/// `IPV6_RECVPKTINFO` — the IPv6 analogue of `IP_PKTINFO`.
+pub const IPV6_RECVPKTINFO: c_int = 49;
+/// `IPV6_PKTINFO` — the ancillary record type `IPV6_RECVPKTINFO` produces.
+pub const IPV6_PKTINFO: c_int = 50;
+/// `IPV6_DONTFRAG` — the IPv6 "never fragment" option. Linux exposes it, so the
+/// authority's `BIO_CTRL_DGRAM_SET_DONT_FRAG` takes this branch for IPv6 rather
+/// than the `IPV6_MTU_DISCOVER` one.
+pub const IPV6_DONTFRAG: c_int = 62;
+/// `MSG_WAITFORONE` — with `recvmmsg`, return as soon as one message arrived.
+pub const MSG_WAITFORONE: c_int = 0x10000;
 /// `SOL_TCP` — the level `BIO_set_tcp_ndelay` sets `TCP_NODELAY` at.
 pub const SOL_TCP: c_int = 6;
 /// `SO_TYPE` — what `BIO_listen` reads to tell a datagram socket from a stream one.
@@ -376,6 +410,114 @@ pub struct PollFd {
     pub revents: c_short,
 }
 
+/// `CMSG_ALIGN(len)` — round a record length up to `struct cmsghdr`'s alignment.
+pub const fn cmsg_align(len: usize) -> usize {
+    (len + core::mem::align_of::<Cmsghdr>() - 1) & !(core::mem::align_of::<Cmsghdr>() - 1)
+}
+
+/// `CMSG_SPACE(len)` — how many bytes a record carrying `len` bytes of data
+/// occupies, including the padding after the data.
+pub const fn cmsg_space(len: usize) -> usize {
+    cmsg_align(core::mem::size_of::<Cmsghdr>()) + cmsg_align(len)
+}
+
+/// `CMSG_LEN(len)` — the value `cmsg_len` takes for a record carrying `len`
+/// bytes of data.
+pub const fn cmsg_len(len: usize) -> usize {
+    cmsg_align(core::mem::size_of::<Cmsghdr>()) + len
+}
+
+/// The byte offset of `CMSG_DATA(cmsg)` from the start of a record.
+pub const fn cmsg_data_offset() -> usize {
+    cmsg_align(core::mem::size_of::<Cmsghdr>())
+}
+
+/// `CMSG_FIRSTHDR(mhdr)` — the first ancillary record of a control buffer.
+///
+/// Returns a **byte** pointer rather than a `*mut Cmsghdr`: the kernel's control
+/// buffer is an `unsigned char` array with no promise of `struct cmsghdr`'s
+/// alignment, so every field is read with an unaligned load
+/// ([`cmsg_hdr`]). The C macros get away with the cast because x86 tolerates it.
+///
+/// # Safety
+/// `mh` must point at a live [`Msghdr`] whose `msg_control` is readable for
+/// `msg_controllen` bytes.
+pub unsafe fn cmsg_firsthdr(mh: *const Msghdr) -> *mut u8 {
+    let (ctl, len) = unsafe { control_of(mh) };
+    if len >= core::mem::size_of::<Cmsghdr>() {
+        ctl
+    } else {
+        core::ptr::null_mut()
+    }
+}
+
+/// `CMSG_NXTHDR(mhdr, cmsg)` — the record after `prev`, or NULL.
+///
+/// Reproduces glibc's inline form, including the two conditions it checks and
+/// the order it checks them in: a record whose own `cmsg_len` is too small ends
+/// the list, and the *next* header must fit entirely inside the buffer.
+///
+/// # Safety
+/// As for [`cmsg_firsthdr`]; `prev` must be a record returned by
+/// [`cmsg_firsthdr`] or [`cmsg_nxthdr`] for the same `mh`.
+pub unsafe fn cmsg_nxthdr(mh: *const Msghdr, prev: *mut u8) -> *mut u8 {
+    let (ctl, len) = unsafe { control_of(mh) };
+    // SAFETY: `prev` is a record inside this control buffer per the contract.
+    let prev_len = unsafe { cmsg_hdr(prev) }.cmsg_len;
+    if prev_len < core::mem::size_of::<Cmsghdr>() {
+        return core::ptr::null_mut();
+    }
+    // SAFETY: the addition stays within the buffer for a well-formed record.
+    let next = unsafe { prev.add(cmsg_align(prev_len)) };
+    let end = unsafe { ctl.add(len) };
+    // SAFETY: `next` is only dereferenced after the bounds test proves a whole
+    // header is inside the buffer.
+    if unsafe { next.add(core::mem::size_of::<Cmsghdr>()) } > end
+        || unsafe { cmsg_hdr(next) }.cmsg_len < core::mem::size_of::<Cmsghdr>()
+    {
+        return core::ptr::null_mut();
+    }
+    next
+}
+
+/// Read a record header. Unaligned, because the control buffer is a byte array.
+///
+/// # Safety
+/// `rec` must be a record inside a control buffer readable for
+/// `size_of::<Cmsghdr>()` bytes.
+pub unsafe fn cmsg_hdr(rec: *const u8) -> Cmsghdr {
+    // SAFETY: an unaligned read of a `repr(C)` struct from a readable region.
+    unsafe { rec.cast::<Cmsghdr>().read_unaligned() }
+}
+
+/// Write a record header. Unaligned, for the same reason as [`cmsg_hdr`].
+///
+/// # Safety
+/// `rec` must point at `size_of::<Cmsghdr>()` writable bytes inside a control
+/// buffer.
+pub unsafe fn cmsg_set_hdr(rec: *mut u8, hdr: Cmsghdr) {
+    // SAFETY: an unaligned write of a `repr(C)` struct to a writable region.
+    unsafe { rec.cast::<Cmsghdr>().write_unaligned(hdr) };
+}
+
+/// `CMSG_DATA(cmsg)` — the record's payload, as bytes.
+///
+/// # Safety
+/// `rec` must be a live record in a control buffer.
+pub unsafe fn cmsg_data(rec: *mut u8) -> *mut u8 {
+    // SAFETY: `CMSG_DATA` is defined as the record's start plus the aligned
+    // header size, which stays inside the record.
+    unsafe { rec.add(cmsg_data_offset()) }
+}
+
+/// # Safety
+/// `mh` must point at a live [`Msghdr`].
+unsafe fn control_of(mh: *const Msghdr) -> (*mut u8, usize) {
+    // SAFETY: `mh` is live per the caller's contract.
+    let m = unsafe { &*mh };
+    (m.msg_control.cast::<u8>(), m.msg_controllen)
+}
+
 /// `struct timeval`.
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -384,6 +526,93 @@ pub struct Timeval {
     pub tv_sec: c_long,
     /// Microseconds.
     pub tv_usec: c_long,
+}
+
+/// `struct timespec`.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct Timespec {
+    /// Seconds.
+    pub tv_sec: c_long,
+    /// Nanoseconds.
+    pub tv_nsec: c_long,
+}
+
+/// `struct iovec` — one buffer of a `readv`/`writev`-style operation.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct Iovec {
+    /// Start of the buffer.
+    pub iov_base: *mut c_void,
+    /// Bytes at the buffer.
+    pub iov_len: usize,
+}
+
+/// `struct msghdr` — the Linux layout, which is what the datagram BIO fills in.
+///
+/// `msg_iovlen` and `msg_controllen` are `size_t` here, not `int`; on Linux that
+/// is the ABI, and [`crate::runtime::bio::bss_dgram`]'s unit tests pin the
+/// resulting sizes and offsets.
+#[repr(C)]
+pub struct Msghdr {
+    /// Optional peer address.
+    pub msg_name: *mut c_void,
+    /// Length of `msg_name`.
+    pub msg_namelen: SockLen,
+    /// Scatter/gather array.
+    pub msg_iov: *mut Iovec,
+    /// Entries in `msg_iov`.
+    pub msg_iovlen: usize,
+    /// Ancillary data.
+    pub msg_control: *mut c_void,
+    /// Bytes of ancillary data.
+    pub msg_controllen: usize,
+    /// Received message flags.
+    pub msg_flags: c_int,
+}
+
+/// `struct mmsghdr` — a [`Msghdr`] plus the per-message result count used by
+/// `sendmmsg`/`recvmmsg`.
+#[repr(C)]
+pub struct Mmsghdr {
+    /// The message.
+    pub msg_hdr: Msghdr,
+    /// Bytes sent, or received, for this message.
+    pub msg_len: c_uint,
+}
+
+/// `struct cmsghdr` — the header of one ancillary-data record.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct Cmsghdr {
+    /// Length of the record, including this header.
+    pub cmsg_len: usize,
+    /// Protocol level.
+    pub cmsg_level: c_int,
+    /// Record type within the level.
+    pub cmsg_type: c_int,
+}
+
+/// `struct in_pktinfo` — the `IP_PKTINFO` ancillary record.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct InPktInfo {
+    /// Receiving interface index.
+    pub ipi_ifindex: c_int,
+    /// Destination address as specified by the sender.
+    pub ipi_spec_dst: InAddr,
+    /// Destination address of the packet.
+    pub ipi_addr: InAddr,
+}
+
+/// `struct in6_pktinfo` — the `IPV6_PKTINFO` ancillary record.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct In6PktInfo {
+    /// Destination address of the packet.
+    pub ipi6_addr: In6Addr,
+    /// Receiving interface index.
+    pub ipi6_ifindex: c_uint,
 }
 
 extern "C" {
@@ -419,6 +648,20 @@ extern "C" {
         addr: *mut SockAddr,
         len: *mut SockLen,
     ) -> isize;
+    /// `int sendmsg(int, const struct msghdr *, int)`.
+    pub fn sendmsg(fd: c_int, msg: *const Msghdr, flags: c_int) -> isize;
+    /// `ssize_t recvmsg(int, struct msghdr *, int)`.
+    pub fn recvmsg(fd: c_int, msg: *mut Msghdr, flags: c_int) -> isize;
+    /// `int sendmmsg(int, struct mmsghdr *, unsigned int, int)`.
+    pub fn sendmmsg(fd: c_int, msgvec: *mut Mmsghdr, vlen: c_uint, flags: c_int) -> c_int;
+    /// `int recvmmsg(int, struct mmsghdr *, unsigned int, int, struct timespec *)`.
+    pub fn recvmmsg(
+        fd: c_int,
+        msgvec: *mut Mmsghdr,
+        vlen: c_uint,
+        flags: c_int,
+        timeout: *mut Timespec,
+    ) -> c_int;
     /// `int setsockopt(int, int, int, const void *, socklen_t)`.
     pub fn setsockopt(
         fd: c_int,

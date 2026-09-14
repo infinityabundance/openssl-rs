@@ -75,6 +75,7 @@ COURTS = [
     ("RT-BIO-FILTER", "rt_bio_filter_probe.c"),
     ("RT-BIO-PAIR", "rt_bio_pair_probe.c"),
     ("RT-BIO-DGRAM-PAIR", "rt_bio_dgram_pair_probe.c"),
+    ("RT-BIO-DGRAM", "rt_bio_dgram_probe.c"),
     ("RT-OBJ-STREAM", "rt_obj_stream_probe.c"),
 ]
 

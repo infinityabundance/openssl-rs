@@ -1524,3 +1524,86 @@ Both remaining groups are subsystems rather than symbol sets, and both are taken
 with their courts. The count of implemented `libcrypto` exports is 402 of 6,499;
 31 courts pass over 6,146 observations. Phase 0–3 remain `complete` and Phase 4
 remains `in-progress`.
+
+## D47 — The kernel datagram BIO, and three defects its court found elsewhere
+
+**Decision.** `BIO_s_datagram` and `BIO_new_dgram` are implemented in
+`src/runtime/bio/bss_dgram.rs`, and `RT-BIO-DGRAM` (294 observations) compares
+them against the authority over six sections: a fresh BIO's controls, an invalid
+descriptor, the address controls against four peer families, a real loopback
+transfer, the receive-timeout bracket, and the message batches. Phase 4 moves
+from 50 to 48 open obligations; `implemented` `libcrypto` exports move from 402
+to 404.
+
+The SCTP half of `bss_dgram.c` is not part of this: `OPENSSL_NO_SCTP` is defined
+in this build profile and the atlas records `BIO_s_datagram_sctp`,
+`BIO_new_dgram_sctp`, `BIO_dgram_is_sctp` and the `BIO_dgram_sctp_*` family as
+`excluded_by_build_profile`. Nothing was implemented for symbols the authority
+does not export.
+
+**The court found three defects, one of them in Phase 3's socket layer.**
+
+1. `BIO_socket_ioctl` raised `BIO_SOCK_248` with `raise_site_dynamic`, i.e. with
+   no error data. The authority raises the same site as `ERR_raise_data` with the
+   text `"calling ioctlsocket()"` — the Windows spelling of the call, kept on
+   every platform. The difference is visible in `ERR_get_error_line_data`: the
+   data was empty and the flags were `1` (`ERR_TXT_MALLOCED`) instead of `3`
+   (`ERR_TXT_MALLOCED | ERR_TXT_STRING`). It was found by a *new* court observing
+   the queue after a `BIO_C_SET_NBIO` on a bad descriptor, and only because this
+   probe drains the queue after that control; no earlier court exercised the
+   failure path of `BIO_socket_ioctl`. Fixed in place.
+2. `BIO_CTRL_DGRAM_GET_RECV_TIMEOUT` and `..._GET_SEND_TIMEOUT` returned `1` on a
+   failed `getsockopt(2)` where the authority returns `-1`. The authority assigns
+   the syscall's result to the return value *before* testing it, so the failure
+   code survives to the end of the control and is then normalized to `-1`; the
+   first draft of these two arms left `ret` at its initialised `1`. Both now
+   assign the result first, as the source does.
+3. `BIO_CTRL_DGRAM_SET_DONT_FRAG` for an IPv6 peer used the
+   `IPV6_MTU_DISCOVER` branch. The authority guards that branch with
+   `#elif`, behind `IPV6_DONTFRAG`, and this platform *does* define
+   `IPV6_DONTFRAG`, so the authority takes the boolean-value branch
+   (`sockopt_val = num ? 1 : 0`) and raises from `bss_dgram.c:961` rather than
+   `:969`. The difference is a different socket option, a different value and a
+   different recorded raise site — all three observable, and all three found by
+   comparing the error queue rather than the return value alone.
+
+**A size that is only observable through one control.** `BIO_ADDR` is a union of
+`sockaddr`, `sockaddr_in`, `sockaddr_in6` and `sockaddr_un`, so
+`BIO_ADDR_sockaddr_size` answers `sizeof(BIO_ADDR)` == 112 for a family it does
+not know. Our storage is a whole `sockaddr_storage` (128 bytes) so a
+`getsockname(2)`/`accept(2)` that writes the platform's full storage cannot
+overflow it, and the first draft therefore reported 128 for `AF_UNSPEC`. That is
+invisible everywhere except `BIO_CTRL_DGRAM_GET_PEER` on an unconnected BIO,
+which reports the size and copies exactly that many bytes —
+`fresh.getpeer.ret` is the observation that pins it. `addr.rs` now has an
+explicit `AUTHORITY_ADDR_SIZE` constant for the reported value, with the
+storage kept deliberately larger.
+
+**Two internal layouts became evidence.** `dgram_hdr` was the first case (D46);
+here it is the `OSSL_TIME` pair. Both timers are *absolute* wall-clock deadlines
+rather than durations, because `ossl_time_now()` is the epoch clock, and the read
+bracket shortens `SO_RCVTIMEO` to the deadline and then restores the socket's own
+timeout. The probe measures the whole bracket on a real socket: it arms a
+deadline 400 ms away under a 10-second socket timeout, blocks a read, observes
+the read return before a much later bound, and reads `SO_RCVTIMEO` back to
+confirm the socket's own timeout — not the deadline — was restored.
+
+**Recorded divergence.** `BIO_CTRL_DGRAM_GET_LOCAL_ADDR_ENABLE` writes through
+its pointer without checking it, so a NULL argument faults in the authority. That
+is recorded under `docs/SECURITY_DIVERGENCE_POLICY.md` and is not reproduced: the
+arm is total, does not write, and reports the value it would have written through
+its return instead.
+
+**Non-claim.** `RT-BIO-DGRAM` passing means the candidate matched the authority
+for the controls, the syscalls, the error queues and the batch behaviour this
+probe drove. It is not a claim about the DTLS pairing that `libssl` performs over
+this BIO, nor about `BIO_s_connect`/`BIO_s_accept`, which remain open.
+
+**The inventory after this batch.** Phase 4 owns 256 exports and stands at **192
+implemented, 16 deferred to a named later phase, and 48 open**:
+
+    src/runtime/bio/   4   BIO_s_connect, BIO_new_connect, BIO_s_accept, BIO_new_accept
+    src/runtime/conf/ 44   the CONF_* and NCONF_* families
+
+32 courts pass over 6,440 observations. Phase 0–3 remain `complete` and Phase 4
+remains `in-progress`.
