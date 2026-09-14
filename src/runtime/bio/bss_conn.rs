@@ -221,6 +221,8 @@ fn connect_new() -> *mut BioConnect {
 /// # Safety
 /// `a` must be NULL or a block from [`connect_new`] that has not been freed.
 unsafe fn connect_free(a: *mut BioConnect) {
+    // SAFETY: `a` is NULL or a block from `connect_new` per the caller's contract;
+    // `as_mut` performs the null check that makes NULL total.
     let Some(c) = (unsafe { a.as_mut() }) else {
         return;
     };
@@ -270,7 +272,10 @@ unsafe extern "C" fn conn_new(bi: *mut Bio) -> c_int {
 /// # Safety
 /// `bio` must be a live connect BIO.
 unsafe fn conn_close_socket(bio: *mut Bio) {
+    // SAFETY: `bio` is a live connect BIO per the caller's contract, so `create`
+    // succeeded and stored a `BioConnect` in `ptr`.
     let data = unsafe { data_of(bio) };
+    // SAFETY: `bio` is live, so its `num` field is a readable descriptor slot.
     if unsafe { (*bio).num } != INVALID_SOCKET {
         // SAFETY: `data` is live.
         if unsafe { (*data).state } == BIO_CONN_S_OK {
@@ -380,13 +385,16 @@ unsafe fn conn_state(b: *mut Bio, c: *mut BioConnect) -> c_int {
                 BIO_CONN_S_BEFORE => {
                     // SAFETY: `c` is live.
                     if unsafe { (*c).param_hostname }.is_null()
+                        // SAFETY: `c` is live.
                         && unsafe { (*c).param_service }.is_null()
                     {
                         let msg = fmt_two(
                             "hostname=",
                             " service=",
                             "",
+                            // SAFETY: `c` is live, so its two string fields are readable.
                             unsafe { (*c).param_hostname },
+                            // SAFETY: as above.
                             unsafe { (*c).param_service },
                         );
                         // SAFETY: the site is a compile-time constant and `msg` is a
@@ -401,6 +409,8 @@ unsafe fn conn_state(b: *mut Bio, c: *mut BioConnect) -> c_int {
                     // The `BIO_FAMILY_IPV6` arm's sibling raise is not compiled on this
                     // platform: the authority writes it in the `else` of a `if (1)`, so
                     // with IPv6 available it cannot be reached.
+                    // SAFETY: `c` is live; `connect_family` is one of the
+                    // initialised integer fields.
                     let family = match unsafe { (*c).connect_family } {
                         BIO_FAMILY_IPV6 => sys::AF_INET6,
                         BIO_FAMILY_IPV4 => sys::AF_INET,
@@ -456,7 +466,9 @@ unsafe fn conn_state(b: *mut Bio, c: *mut BioConnect) -> c_int {
                             "calling socket(",
                             ", ",
                             ")",
+                            // SAFETY: `c` is live, so its two string fields are readable.
                             unsafe { (*c).param_hostname },
+                            // SAFETY: as above.
                             unsafe { (*c).param_service },
                         );
                         // SAFETY: the sites are compile-time constants and `msg` is
@@ -484,6 +496,8 @@ unsafe fn conn_state(b: *mut Bio, c: *mut BioConnect) -> c_int {
 
                     // SAFETY: `c` is live.
                     let mut opts = unsafe { (*c).connect_mode };
+                    // SAFETY: `c` is live and on this arm `addr_iter` points into the
+                    // chain the lookup just built.
                     let iter = unsafe { (*c).addr_iter };
                     // SAFETY: `iter` is a live node.
                     if unsafe { BIO_ADDRINFO_socktype(iter) } == sys::SOCK_STREAM {
@@ -532,7 +546,9 @@ unsafe fn conn_state(b: *mut Bio, c: *mut BioConnect) -> c_int {
                             "calling connect(",
                             ", ",
                             ")",
+                            // SAFETY: `c` is live, so its two string fields are readable.
                             unsafe { (*c).param_hostname },
+                            // SAFETY: as above.
                             unsafe { (*c).param_service },
                         );
                         // SAFETY: the site is a compile-time constant and `msg` is
@@ -570,6 +586,8 @@ unsafe fn conn_state(b: *mut Bio, c: *mut BioConnect) -> c_int {
                         let i = super::bss_sock::BIO_sock_error(unsafe { (*b).num });
                         if i != 0 {
                             clear_retry_flags(b);
+                            // SAFETY: `c` is live and `addr_iter` points at the node the
+                            // failed connect was attempted against.
                             let iter = unsafe { (*c).addr_iter };
                             // SAFETY: `iter` is a live node.
                             let next = unsafe { BIO_ADDRINFO_next(iter) };
@@ -586,7 +604,9 @@ unsafe fn conn_state(b: *mut Bio, c: *mut BioConnect) -> c_int {
                                 "calling connect(",
                                 ", ",
                                 ")",
+                                // SAFETY: `c` is live, so its two string fields are readable.
                                 unsafe { (*c).param_hostname },
+                                // SAFETY: as above.
                                 unsafe { (*c).param_service },
                             );
                             // SAFETY: the sites are compile-time constants and `msg`
@@ -627,8 +647,10 @@ unsafe fn conn_state(b: *mut Bio, c: *mut BioConnect) -> c_int {
             // must not dereference the pointer. Transmuting is how that is spelled
             // on this side of the ABI.
             // SAFETY: `cb` is either NULL (checked) or a `BIO_info_cb` the caller
-            // installed through `BIO_callback_ctrl`.
-            let f: BioInfoCb = unsafe { core::mem::transmute::<*mut BioInfoCb, BioInfoCb>(cb) };
+            // installed through `BIO_callback_ctrl`. `transmute_copy` reinterprets
+            // the pointer-sized code address `cb` holds as the function pointer; it
+            // must not dereference `cb`, which would read the function's own bytes.
+            let f: BioInfoCb = unsafe { core::mem::transmute_copy(&cb) };
             // SAFETY: `b` and `c` are live; `f` is the caller's callback.
             let r = unsafe { f(b, (*c).state, ret) };
             if r == 0 {
@@ -639,8 +661,9 @@ unsafe fn conn_state(b: *mut Bio, c: *mut BioConnect) -> c_int {
     }
 
     if !cb.is_null() {
-        // SAFETY: as above.
-        let f: BioInfoCb = unsafe { core::mem::transmute::<*mut BioInfoCb, BioInfoCb>(cb) };
+        // SAFETY: as above; `cb` holds the callback's code address, and
+        // `transmute_copy` reinterprets those bits without dereferencing it.
+        let f: BioInfoCb = unsafe { core::mem::transmute_copy(&cb) };
         // SAFETY: `b` and `c` are live.
         ret = unsafe { f(b, (*c).state, ret) };
     }
@@ -664,7 +687,10 @@ fn retry_flags(b: *mut Bio) -> c_int {
 /// bytes.
 unsafe extern "C" fn conn_read(b: *mut Bio, out: *mut c_char, outl: c_int) -> c_int {
     let mut ret: c_int = 0;
+    // SAFETY: `b` is a live connect BIO per the caller's contract, so `create`
+    // succeeded and stored a `BioConnect` in `ptr`.
     let data = unsafe { data_of(b) };
+    // SAFETY: `data` is live, from the `data_of` above.
     if unsafe { (*data).state } != BIO_CONN_S_OK {
         // SAFETY: `b` and `data` are live.
         ret = unsafe { conn_state(b, data) };
@@ -672,6 +698,7 @@ unsafe extern "C" fn conn_read(b: *mut Bio, out: *mut c_char, outl: c_int) -> c_
             return ret;
         }
     }
+    // SAFETY: `data` is live, from the `data_of` above.
     if !unsafe { (*data).dgram_bio }.is_null() {
         clear_retry_flags(b);
         // SAFETY: the inner BIO is live and `out` is writable per the caller's
@@ -709,7 +736,10 @@ unsafe extern "C" fn conn_read(b: *mut Bio, out: *mut c_char, outl: c_int) -> c_
 /// # Safety
 /// `b` must be a live connect BIO; `in_` must be valid for `inl` bytes.
 unsafe extern "C" fn conn_write(b: *mut Bio, in_: *const c_char, inl: c_int) -> c_int {
+    // SAFETY: `b` is a live connect BIO per the caller's contract, so `create`
+    // succeeded and stored a `BioConnect` in `ptr`.
     let data = unsafe { data_of(b) };
+    // SAFETY: `data` is live, from the `data_of` above.
     if unsafe { (*data).state } != BIO_CONN_S_OK {
         // SAFETY: `b` and `data` are live.
         let rc = unsafe { conn_state(b, data) };
@@ -717,6 +747,7 @@ unsafe extern "C" fn conn_write(b: *mut Bio, in_: *const c_char, inl: c_int) -> 
             return rc;
         }
     }
+    // SAFETY: `data` is live, from the `data_of` above.
     if !unsafe { (*data).dgram_bio }.is_null() {
         clear_retry_flags(b);
         // SAFETY: the inner BIO is live and `in_` is readable per the contract.
@@ -778,12 +809,15 @@ unsafe extern "C" fn conn_gets(bio: *mut Bio, buf: *mut c_char, size: c_int) -> 
     }
     // SAFETY: `buf` is writable for `size` bytes.
     unsafe { *buf = 0 };
+    // SAFETY: `bio` is non-NULL here (checked), so its `ptr` field is readable.
     if bio.is_null() || unsafe { (*bio).ptr }.is_null() {
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_site(&BSS_CONN_764) };
         return -1;
     }
+    // SAFETY: `bio` is a live connect BIO here: non-NULL with a non-NULL `ptr`.
     let data = unsafe { data_of(bio) };
+    // SAFETY: `data` is live, from the `data_of` above.
     if unsafe { (*data).state } != BIO_CONN_S_OK {
         // SAFETY: `bio` and `data` are live.
         let rc = unsafe { conn_state(bio, data) };
@@ -791,6 +825,7 @@ unsafe extern "C" fn conn_gets(bio: *mut Bio, buf: *mut c_char, size: c_int) -> 
             return rc;
         }
     }
+    // SAFETY: `data` is live, from the `data_of` above.
     if !unsafe { (*data).dgram_bio }.is_null() {
         // A datagram socket has no lines to read, and saying so is the contract.
         // SAFETY: the site is a compile-time constant.
@@ -821,6 +856,8 @@ unsafe extern "C" fn conn_gets(bio: *mut Bio, buf: *mut c_char, size: c_int) -> 
         }
         // SAFETY: `cursor` is writable and `left > 1` so the byte fits.
         let byte = unsafe { *cursor };
+        // SAFETY: `left > 1` means `cursor` is inside the caller's buffer, so
+        // advancing by one stays at or before the terminator slot.
         cursor = unsafe { cursor.add(1) };
         left -= 1;
         if byte == b'\n' as c_char {
@@ -830,6 +867,7 @@ unsafe extern "C" fn conn_gets(bio: *mut Bio, buf: *mut c_char, size: c_int) -> 
     // SAFETY: `cursor` is within the buffer.
     unsafe { *cursor = 0 };
     let produced = (cursor as usize).wrapping_sub(buf as usize) as c_int;
+    // SAFETY: `bio` is live: it was non-NULL with a non-NULL `ptr` above.
     if ret > 0 || unsafe { (*bio).flags } & BIO_FLAGS_IN_EOF != 0 {
         produced
     } else {
@@ -847,6 +885,8 @@ unsafe extern "C" fn conn_gets(bio: *mut Bio, buf: *mut c_char, size: c_int) -> 
 /// `b` must be a live connect BIO and `ptr` must be appropriate for `cmd`.
 unsafe extern "C" fn conn_ctrl(b: *mut Bio, cmd: c_int, num: c_long, ptr: *mut c_void) -> c_long {
     let mut ret: c_long = 1;
+    // SAFETY: `b` is a live connect BIO per the caller's contract, so `create`
+    // succeeded and stored a `BioConnect` in `ptr`.
     let data = unsafe { data_of(b) };
 
     match cmd {
@@ -895,6 +935,7 @@ unsafe extern "C" fn conn_ctrl(b: *mut Bio, cmd: c_int, num: c_long, ptr: *mut c
                 ret = match family {
                     sys::AF_INET6 => BIO_FAMILY_IPV6 as c_long,
                     sys::AF_INET => BIO_FAMILY_IPV4 as c_long,
+                    // SAFETY: `data` is live.
                     0 => (unsafe { (*data).connect_family }) as c_long,
                     _ => -1,
                 };
@@ -970,8 +1011,9 @@ unsafe extern "C" fn conn_ctrl(b: *mut Bio, cmd: c_int, num: c_long, ptr: *mut c
         }
         super::BIO_C_SET_SOCK_TYPE => {
             // SAFETY: `data` is live.
+            let past_binding = unsafe { (*data).state } >= BIO_CONN_S_GET_ADDR;
             if (num != sys::SOCK_STREAM as c_long && num != sys::SOCK_DGRAM as c_long)
-                || unsafe { (*data).state } >= BIO_CONN_S_GET_ADDR
+                || past_binding
             {
                 ret = 0;
             } else {
@@ -1157,6 +1199,8 @@ unsafe extern "C" fn conn_ctrl(b: *mut Bio, cmd: c_int, num: c_long, ptr: *mut c
 /// `b` must be a live connect BIO; `fp` is the callback the command carries.
 unsafe extern "C" fn conn_callback_ctrl(b: *mut Bio, cmd: c_int, fp: *mut BioInfoCb) -> c_long {
     let mut ret: c_long = 1;
+    // SAFETY: `b` is a live connect BIO per the caller's contract, so `create`
+    // succeeded and stored a `BioConnect` in `ptr`.
     let data = unsafe { data_of(b) };
     if cmd == super::BIO_CTRL_SET_CALLBACK {
         // SAFETY: `data` is live.
@@ -1192,7 +1236,9 @@ unsafe extern "C" fn conn_sendmmsg(
         unsafe { raise_site(&BSS_CONN_810) };
         return 0;
     }
+    // SAFETY: `bio` is a live connect BIO here: non-NULL per the check above.
     let data = unsafe { data_of(bio) };
+    // SAFETY: `data` is live, from the `data_of` above.
     if unsafe { (*data).state } != BIO_CONN_S_OK {
         // SAFETY: `bio` and `data` are live.
         let rc = unsafe { conn_state(bio, data) };
@@ -1200,6 +1246,7 @@ unsafe extern "C" fn conn_sendmmsg(
             return 0;
         }
     }
+    // SAFETY: `data` is live, from the `data_of` above.
     if unsafe { (*data).dgram_bio }.is_null() {
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_site(&BSS_CONN_825) };
@@ -1238,7 +1285,9 @@ unsafe extern "C" fn conn_recvmmsg(
         unsafe { raise_site(&BSS_CONN_841) };
         return 0;
     }
+    // SAFETY: `bio` is a live connect BIO here: non-NULL per the check above.
     let data = unsafe { data_of(bio) };
+    // SAFETY: `data` is live, from the `data_of` above.
     if unsafe { (*data).state } != BIO_CONN_S_OK {
         // SAFETY: `bio` and `data` are live.
         let rc = unsafe { conn_state(bio, data) };
@@ -1246,6 +1295,7 @@ unsafe extern "C" fn conn_recvmmsg(
             return 0;
         }
     }
+    // SAFETY: `data` is live, from the `data_of` above.
     if unsafe { (*data).dgram_bio }.is_null() {
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_site(&BSS_CONN_856) };

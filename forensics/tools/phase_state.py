@@ -209,10 +209,25 @@ PHASE3_MODULES = [
     "src/runtime/init.rs",
     "src/runtime/obj.rs",
     "src/runtime/obj_table.rs",
+    # `crypto/o_str.c` and `crypto/o_dir.c`, admitted to this stratum after the
+    # seal when the ownership audit found their thirteen exports unclaimed by any
+    # family; see docs/DECISIONS.md D51.
+    "src/runtime/str.rs",
+    "src/runtime/dir.rs",
+    "src/runtime/dir_posix.c",
+    # `ossl_safe_getenv`, used by the CONF reader's default-path logic; internal,
+    # so it claims no export, but it is core-runtime surface.
+    "src/runtime/getenv.rs",
     "forensics/tools/phase3_courts.py",
     "forensics/tools/phase3_obligations.py",
+    "courts/phase3/rt_mem_probe.c",
+    "courts/phase3/rt_exdata_probe.c",
     "courts/phase3/rt_err_probe.c",
+    "courts/phase3/rt_err_strings_cases.h",
     "courts/phase3/rt_stack_probe.c",
+    "courts/phase3/rt_thread_probe.c",
+    "courts/phase3/rt_secure_probe.c",
+    "courts/phase3/rt_lhash_probe.c",
 ]
 # Whether anything in the Phase 3 families is unaccounted for is decided by the
 # ledger (`phase3_obligations.py` fails closed), not by a string here.
@@ -227,18 +242,77 @@ PHASE4_COURTS = "artifacts/phase4/COURTS.json"
 PHASE4_OBLIGATIONS = "forensics/phase4-obligations.json"
 PHASE4_MODULES = [
     "docs/PHASE-4-BIO-CONF-SEAL.md",
+    # The BIO infrastructure: methods, chains, the I/O library, callbacks, retry
+    # state, addresses and the print family.
     "src/runtime/bio/mod.rs",
     "src/runtime/bio/iolib.rs",
     "src/runtime/bio/method.rs",
     "src/runtime/bio/sys.rs",
     "src/runtime/bio/print.rs",
     "src/runtime/bio/dump.rs",
+    "src/runtime/bio/retry.rs",
+    "src/runtime/bio/bio_cb.rs",
+    "src/runtime/bio/addr.rs",
+    "src/runtime/bio/addr_info.rs",
+    "src/runtime/bio/legacy_host.rs",
+    "src/runtime/bio/comp.rs",
+    "src/runtime/bio/print_engine.rs",
+    # The individual BIO methods.
     "src/runtime/bio/bss_mem.rs",
     "src/runtime/bio/bss_null.rs",
-    "src/runtime/bio/bf_null.rs",
     "src/runtime/bio/bss_sock.rs",
+    "src/runtime/bio/bss_fd.rs",
+    "src/runtime/bio/bss_file.rs",
+    "src/runtime/bio/bss_conn.rs",
+    "src/runtime/bio/bss_acpt.rs",
+    "src/runtime/bio/bss_dgram.rs",
+    "src/runtime/bio/bss_dgram_pair.rs",
+    "src/runtime/bio/bss_bio.rs",
+    "src/runtime/bio/bss_log.rs",
+    "src/runtime/bio/bio_sock2.rs",
+    "src/runtime/bio/bf_null.rs",
+    "src/runtime/bio/bf_buff.rs",
+    "src/runtime/bio/bf_lbuf.rs",
+    "src/runtime/bio/bf_readbuff.rs",
+    "src/runtime/bio/bf_prefix.rs",
+    "src/runtime/bio/bio_va.c",
     "src/runtime/bio/bio_variadic.c",
+    # The buffer object and the CONF reader.
     "src/runtime/buffer.rs",
+    "src/runtime/conf/mod.rs",
+    "src/runtime/conf/types.rs",
+    "src/runtime/conf/api.rs",
+    "src/runtime/conf/def.rs",
+    "src/runtime/conf/lib.rs",
+    "src/runtime/conf/modparse.rs",
+    "src/runtime/conf/init_settings.rs",
+    # The differential courts, and the discovery probes `docs/DECISIONS.md` and
+    # `docs/SECURITY_DIVERGENCE_POLICY.md` cite as the origin of recorded
+    # measurements. Both kinds are evidence: a decision that names a probe is only
+    # checkable while the probe exists.
+    "courts/phase4/rt_bio_probe.c",
+    "courts/phase4/rt_err_bio_probe.c",
+    "courts/phase4/rt_bio_addr_probe.c",
+    "courts/phase4/rt_bio_resolve_probe.c",
+    "courts/phase4/rt_bio_sock_probe.c",
+    "courts/phase4/rt_bio_comp_probe.c",
+    "courts/phase4/rt_bio_debug_probe.c",
+    "courts/phase4/rt_bio_print_probe.c",
+    "courts/phase4/rt_bio_file_probe.c",
+    "courts/phase4/rt_bio_filter_probe.c",
+    "courts/phase4/rt_bio_pair_probe.c",
+    "courts/phase4/rt_bio_dgram_pair_probe.c",
+    "courts/phase4/rt_bio_dgram_probe.c",
+    "courts/phase4/rt_bio_conn_probe.c",
+    "courts/phase4/rt_obj_stream_probe.c",
+    "courts/phase4/rt_conf_probe.c",
+    "courts/phase4/discover_bio_addr.c",
+    "courts/phase4/discover_bio_addr2.c",
+    "courts/phase4/discover_bio_lookup.c",
+    "courts/phase4/discover_bio_lookup_hints.c",
+    "courts/phase4/discover_bio_legacy_host.c",
+    "courts/phase4/bio_addr_null_calls.c",
+    "forensics/tools/phase4_courts.py",
     "forensics/tools/phase4_obligations.py",
 ]
 

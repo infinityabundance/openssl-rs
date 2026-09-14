@@ -109,12 +109,10 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 55,
+        "authority_observations": 57,
         "candidate_exit_code": 0,
-        "candidate_observations": 55,
-        "candidate_stderr_tail": [
-          "BIO[0x5568167ba3a0]: ctrl(0) - memory buffer"
-        ],
+        "candidate_observations": 57,
+        "candidate_stderr_tail": [],
         "court": "RT-BIO-DEBUG",
         "crashed": false,
         "probe": "courts/phase4/rt_bio_debug_probe.c",
@@ -261,15 +259,32 @@
           "candidate": "artifacts/phase4/probes/rt_obj_stream_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 736,
+        "candidate_exit_code": 0,
+        "candidate_observations": 736,
+        "candidate_stderr_tail": [],
+        "court": "RT-CONF",
+        "crashed": false,
+        "probe": "courts/phase4/rt_conf_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase4/probes/rt_conf_probe.authority",
+          "candidate": "artifacts/phase4/probes/rt_conf_probe.candidate"
+        },
+        "verdict": "pass"
       }
     ],
     "summary": {
       "fail": 0,
-      "pass": 15,
-      "total": 15
+      "pass": 16,
+      "total": 16
     }
   },
-  "body_hash": "cc63d905f3d8707d3c85e626220e9b5a8e66dc4b0082a4ca2562a42267d332a6",
+  "body_hash": "167211079b21975879ac0d00163a14dced4fb63521274e3a05c00f4eeb48cc77",
   "generator": "forensics/tools/phase4_courts.py",
   "inputs": [],
   "kind": "phase4-courts",

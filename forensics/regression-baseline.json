@@ -57,7 +57,7 @@
       "verdict": "pass"
     },
     "RT-BIO-DEBUG": {
-      "observations": 55,
+      "observations": 57,
       "verdict": "pass"
     },
     "RT-BIO-DGRAM": {
@@ -90,6 +90,10 @@
     },
     "RT-BIO-SOCK": {
       "observations": 157,
+      "verdict": "pass"
+    },
+    "RT-CONF": {
+      "observations": 736,
       "verdict": "pass"
     },
     "RT-ERR": {
@@ -134,16 +138,16 @@
     }
   },
   "deferred": {
-    "phase3": 0,
-    "phase4": 16
+    "phase3": 11,
+    "phase4": 31
   },
   "implemented": {
-    "libcrypto": 413,
+    "libcrypto": 455,
     "libssl": 0
   },
   "open_obligations": {
     "phase3": 0,
-    "phase4": 44
+    "phase4": 0
   },
   "phases": {
     "0": "complete",
@@ -162,7 +166,7 @@
     "20": "not-started",
     "21": "not-started",
     "3": "complete",
-    "4": "in-progress",
+    "4": "complete",
     "5": "not-started",
     "6": "not-started",
     "7": "not-started",

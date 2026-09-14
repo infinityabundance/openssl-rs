@@ -127,23 +127,28 @@ fn run() -> Result<(), String> {
     println!("cargo:rustc-env=OPENSSL_RS_AUTHORITY_ARCHIVE_SHA256={archive_sha256}");
     println!("cargo:rustc-env=OPENSSL_RS_AUTHORITY_SOURCE_ROOT_HASH={source_root_hash}");
 
-    build_variadic_adapters(&manifest_dir)?;
+    build_c_adapters(&manifest_dir)?;
 
     Ok(())
 }
 
-/// Compile the C-variadic ABI adapters and make them part of this crate.
+/// Compile the C-side ABI shims and make them part of this crate.
 ///
-/// `ERR_set_error`, `ERR_add_error_data` and `ERR_add_error_vdata` are
-/// printf-style C-variadic functions, which stable Rust cannot define. They are
-/// therefore implemented as argument-marshalling shims in C that call back into
-/// the Rust core (`src/runtime/err.rs`); no behaviour lives in the C. The same
-/// constraint is already documented in `docs/UNSAFE.md` and the module docs.
+/// Two unrelated needs put code here, and both are ABI constraints rather than
+/// behaviour:
+///
+/// * `ERR_set_error`, `ERR_add_error_data` and `ERR_add_error_vdata` are
+///   printf-style C-variadic functions, which stable Rust cannot define. They are
+///   argument-marshalling shims in C that call back into the Rust core
+///   (`src/runtime/err.rs`); no behaviour lives in the C. The same constraint is
+///   already documented in `docs/UNSAFE.md` and the module docs.
+/// * `struct dirent` and `struct stat` are read through the platform's own
+///   headers (`src/runtime/dir_posix.c`), so that no field offset is assumed.
 ///
 /// The archive is linked as a *static* library so that the archive-form crate
 /// output (`staticlib`) contains those symbols, and so that `cargo test` links
 /// them too. `build_phase2.sh` then only has to compile the scaffolds.
-fn build_variadic_adapters(manifest_dir: &Path) -> Result<(), String> {
+fn build_c_adapters(manifest_dir: &Path) -> Result<(), String> {
     // Each entry is (source, object stem). All of them exist for the same
     // reason: a C-variadic function of the public ABI cannot be defined in
     // stable Rust, so only the argument marshalling is written in C and every
@@ -152,6 +157,10 @@ fn build_variadic_adapters(manifest_dir: &Path) -> Result<(), String> {
         ("src/runtime/err_variadic.c", "openssl_rs_err_variadic"),
         ("src/runtime/bio/bio_variadic.c", "openssl_rs_bio_variadic"),
         ("src/runtime/bio/bio_va.c", "openssl_rs_bio_va"),
+        // Not a variadic adapter: `struct dirent` and `struct stat` are read on
+        // the C side of the ABI so that no field offset is assumed. See the
+        // file's own header.
+        ("src/runtime/dir_posix.c", "openssl_rs_dir_posix"),
     ];
 
     let out_dir = PathBuf::from(env::var("OUT_DIR").map_err(|_| "OUT_DIR is not set")?);
@@ -160,7 +169,7 @@ fn build_variadic_adapters(manifest_dir: &Path) -> Result<(), String> {
     let cc = env::var("CC").unwrap_or_else(|_| "cc".to_string());
     let ar = env::var("AR").unwrap_or_else(|_| "ar".to_string());
 
-    let archive = out_dir.join("libopenssl_rs_variadic.a");
+    let archive = out_dir.join("libopenssl_rs_c_adapters.a");
     let mut objects: Vec<PathBuf> = Vec::new();
     for (rel, stem) in sources {
         let src = manifest_dir.join(rel);
@@ -192,7 +201,7 @@ fn build_variadic_adapters(manifest_dir: &Path) -> Result<(), String> {
         .map_err(|e| format!("archiving {} failed: {e}", archive.display()))?;
 
     println!("cargo:rustc-link-search=native={}", out_dir.display());
-    println!("cargo:rustc-link-lib=static=openssl_rs_variadic");
+    println!("cargo:rustc-link-lib=static=openssl_rs_c_adapters");
     Ok(())
 }
 

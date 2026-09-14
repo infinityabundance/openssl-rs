@@ -33,6 +33,18 @@ NAME="${OPENSSL_RS_COURT_NAME:-openssl-rs-court}"
 MEM="${OPENSSL_RS_COURT_MEM:-8g}"
 MEMSWAP="${OPENSSL_RS_COURT_MEMSWAP:-8g}"
 PIDS="${OPENSSL_RS_COURT_PIDS:-2048}"
+# Per-process allocation cap applied to every `exec`, on top of the container's
+# cgroup memory cap. The cgroup limit is a *ceiling for the container*, so a
+# runaway court can still drive the whole container to it and leave the machine
+# thrashing; RLIMIT_DATA bounds each individual process, which is the granularity
+# a runaway probe or an accidental unbounded allocation actually has. The value is
+# deliberately generous (a release build of this crate peaks well under 1 GiB) so
+# that the linker's file-backed mappings, which do not count, and a multi-threaded
+# test harness, which does, both have room. It is in kibibytes because the POSIX
+# shell's `ulimit` takes a plain number and no suffix, and a silently rejected
+# suffix would leave the cap unset — which is why `do_exec` fails loudly rather
+# than continuing without it.
+DATA="${OPENSSL_RS_COURT_DATA:-4194304}"
 
 is_positive_int() {
   case "${1}" in
@@ -75,6 +87,11 @@ env overrides:
   OPENSSL_RS_COURT_MEMSWAP default ${MEMSWAP}
   OPENSSL_RS_COURT_PIDS    default ${PIDS}
   OPENSSL_RS_COURT_CPUS    default 8, clamped to the machine's CPU count
+  OPENSSL_RS_COURT_DATA    default ${DATA} KiB, the per-process RLIMIT_DATA for exec
+
+Every 'exec' runs under both caps: the container's cgroup memory limit and a
+per-process RLIMIT_DATA. Neither is optional, and neither depends on the caller
+remembering to ask for it.
 EOF
 }
 
@@ -110,7 +127,9 @@ do_status() {
 }
 
 do_exec() {
-  docker exec -i "${NAME}" "$@"
+  # `exec` is not needed here: the shell is the process under the limit and it
+  # waits for the command, so the limit covers the whole tree it spawns.
+  docker exec -i "${NAME}" sh -c 'ulimit -d "$1" 2>/dev/null || { echo "openssl-rs-court: cannot set RLIMIT_DATA to $1" >&2; exit 3; }; shift; exec "$@"' sh "${DATA}" "$@"
 }
 
 do_verify() {
@@ -119,6 +138,7 @@ do_verify() {
     echo "cgroup memory.max: $(cat /sys/fs/cgroup/memory.max 2>/dev/null || echo n/a)"
     echo "cgroup pids.max:   $(cat /sys/fs/cgroup/pids.max 2>/dev/null || echo n/a)"
     echo "nproc:             $(nproc)"
+    echo "RLIMIT_DATA:       $(ulimit -d)"
     if command -v openssl >/dev/null 2>&1; then
       echo "system openssl CLI: PRESENT (FAIL) at $(command -v openssl)"
       exit 1

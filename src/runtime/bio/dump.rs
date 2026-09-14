@@ -50,6 +50,10 @@ pub type DumpCb = unsafe extern "C" fn(*const c_void, usize, *mut c_void) -> c_i
 /// `ceil(len / dump_width)`; each row's bytes are written into a bounded buffer
 /// and handed to `cb`, whose negative result aborts and whose positive results
 /// accumulate into the return value.
+///
+/// # Safety
+/// `v` must be NULL or readable for `len` bytes (when `len > 0`); `cb` must be a
+/// valid callback and `u` is passed to it unchanged.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_dump_indent_cb(
     cb: Option<DumpCb>,
@@ -155,6 +159,10 @@ pub unsafe extern "C" fn BIO_dump_indent_cb(
 
 /// `int BIO_dump_cb(int (*cb)(const void *, size_t, void *), void *u,
 /// const void *s, int len)`
+///
+/// # Safety
+/// `s` must be NULL or readable for `len` bytes (when `len > 0`); `cb` must be a
+/// valid callback and `u` is passed to it unchanged.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_dump_cb(
     cb: Option<DumpCb>,
@@ -190,6 +198,10 @@ unsafe extern "C" fn write_fp(data: *const c_void, len: usize, fp: *mut c_void) 
 }
 
 /// `int BIO_dump(BIO *b, const void *bytes, int len)`
+///
+/// # Safety
+/// `bp` must be a live BIO; `s` must be NULL or readable for `len` bytes (when
+/// `len > 0`).
 #[no_mangle]
 pub unsafe extern "C" fn BIO_dump(bp: *mut super::Bio, s: *const c_void, len: c_int) -> c_int {
     guard_ffi(0, || {
@@ -199,6 +211,10 @@ pub unsafe extern "C" fn BIO_dump(bp: *mut super::Bio, s: *const c_void, len: c_
 }
 
 /// `int BIO_dump_indent(BIO *b, const void *bytes, int len, int indent)`
+///
+/// # Safety
+/// `bp` must be a live BIO; `s` must be NULL or readable for `len` bytes (when
+/// `len > 0`).
 #[no_mangle]
 pub unsafe extern "C" fn BIO_dump_indent(
     bp: *mut super::Bio,
@@ -213,6 +229,10 @@ pub unsafe extern "C" fn BIO_dump_indent(
 }
 
 /// `int BIO_dump_fp(FILE *fp, const void *s, int len)`
+///
+/// # Safety
+/// `fp` must be a live `FILE *`; `s` must be NULL or readable for `len` bytes
+/// (when `len > 0`).
 #[no_mangle]
 pub unsafe extern "C" fn BIO_dump_fp(fp: *mut FILE, s: *const c_void, len: c_int) -> c_int {
     guard_ffi(0, || {
@@ -222,6 +242,10 @@ pub unsafe extern "C" fn BIO_dump_fp(fp: *mut FILE, s: *const c_void, len: c_int
 }
 
 /// `int BIO_dump_indent_fp(FILE *fp, const void *s, int len, int indent)`
+///
+/// # Safety
+/// `fp` must be a live `FILE *`; `s` must be NULL or readable for `len` bytes
+/// (when `len > 0`).
 #[no_mangle]
 pub unsafe extern "C" fn BIO_dump_indent_fp(
     fp: *mut FILE,
@@ -241,6 +265,10 @@ pub unsafe extern "C" fn BIO_dump_indent_fp(
 /// Colon-separated upper-case hex, wrapped at `width` bytes per line with
 /// `indent` spaces. `datalen < 1` is success without output, and the final byte
 /// is emitted without a trailing colon — the two asymmetries the authority has.
+///
+/// # Safety
+/// `out` must be a live BIO; `data` must be NULL or readable for `datalen` bytes
+/// when `datalen > 0`.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_hex_string(
     out: *mut super::Bio,

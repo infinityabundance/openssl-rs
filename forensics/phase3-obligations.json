@@ -2,11 +2,89 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "deferred": 0,
-      "implemented": 220,
-      "owned": 220
+      "deferred": 11,
+      "implemented": 224,
+      "owned": 235
     },
-    "deferred": [],
+    "deferred": [
+      {
+        "implemented_by_owner": true,
+        "module": "src/runtime/err.rs",
+        "owning_phase": 4,
+        "reason": "writes to a BIO/FILE sink; BIO is Phase 4",
+        "symbol": "ERR_add_error_mem_bio"
+      },
+      {
+        "implemented_by_owner": true,
+        "module": "src/runtime/err.rs",
+        "owning_phase": 4,
+        "reason": "writes to a BIO/FILE sink; BIO is Phase 4",
+        "symbol": "ERR_print_errors"
+      },
+      {
+        "implemented_by_owner": true,
+        "module": "src/runtime/err.rs",
+        "owning_phase": 4,
+        "reason": "writes to a BIO/FILE sink; BIO is Phase 4",
+        "symbol": "ERR_print_errors_cb"
+      },
+      {
+        "implemented_by_owner": true,
+        "module": "src/runtime/err.rs",
+        "owning_phase": 4,
+        "reason": "writes to a BIO/FILE sink; BIO is Phase 4",
+        "symbol": "ERR_print_errors_fp"
+      },
+      {
+        "implemented_by_owner": true,
+        "module": "src/runtime/obj.rs",
+        "owning_phase": 4,
+        "reason": "reads an object description stream from a BIO; BIO is Phase 4",
+        "symbol": "OBJ_create_objects"
+      },
+      {
+        "implemented_by_owner": true,
+        "module": "src/runtime/lhash.rs",
+        "owning_phase": 4,
+        "reason": "writes to a BIO/FILE sink; BIO is Phase 4",
+        "symbol": "OPENSSL_LH_node_stats"
+      },
+      {
+        "implemented_by_owner": true,
+        "module": "src/runtime/lhash.rs",
+        "owning_phase": 4,
+        "reason": "writes to a BIO/FILE sink; BIO is Phase 4",
+        "symbol": "OPENSSL_LH_node_stats_bio"
+      },
+      {
+        "implemented_by_owner": true,
+        "module": "src/runtime/lhash.rs",
+        "owning_phase": 4,
+        "reason": "writes to a BIO/FILE sink; BIO is Phase 4",
+        "symbol": "OPENSSL_LH_node_usage_stats"
+      },
+      {
+        "implemented_by_owner": true,
+        "module": "src/runtime/lhash.rs",
+        "owning_phase": 4,
+        "reason": "writes to a BIO/FILE sink; BIO is Phase 4",
+        "symbol": "OPENSSL_LH_node_usage_stats_bio"
+      },
+      {
+        "implemented_by_owner": true,
+        "module": "src/runtime/lhash.rs",
+        "owning_phase": 4,
+        "reason": "writes to a BIO/FILE sink; BIO is Phase 4",
+        "symbol": "OPENSSL_LH_stats"
+      },
+      {
+        "implemented_by_owner": true,
+        "module": "src/runtime/lhash.rs",
+        "owning_phase": 4,
+        "reason": "writes to a BIO/FILE sink; BIO is Phase 4",
+        "symbol": "OPENSSL_LH_stats_bio"
+      }
+    ],
     "families": [
       {
         "module": "src/runtime/mem.rs",
@@ -27,7 +105,8 @@
           "CRYPTO_aligned_alloc",
           "CRYPTO_mem_ctrl",
           "CRYPTO_mem_leaks",
-          "CRYPTO_mem_debug"
+          "CRYPTO_mem_debug",
+          "OPENSSL_cleanse"
         ]
       },
       {
@@ -57,7 +136,8 @@
           "CRYPTO_dup_ex_data",
           "CRYPTO_free_ex_data",
           "CRYPTO_get_ex_data",
-          "CRYPTO_set_ex_data"
+          "CRYPTO_set_ex_data",
+          "CRYPTO_alloc_ex_data"
         ]
       },
       {
@@ -91,6 +171,26 @@
           "NID_",
           "OBJ_NAME_"
         ]
+      },
+      {
+        "module": "src/runtime/str.rs",
+        "prefixes": [
+          "OPENSSL_strnlen",
+          "OPENSSL_strlcpy",
+          "OPENSSL_strlcat",
+          "OPENSSL_strtoul",
+          "OPENSSL_hexchar2int",
+          "OPENSSL_hexstr2buf",
+          "OPENSSL_buf2hexstr",
+          "OPENSSL_strcasecmp",
+          "OPENSSL_strncasecmp"
+        ]
+      },
+      {
+        "module": "src/runtime/dir.rs",
+        "prefixes": [
+          "OPENSSL_DIR_"
+        ]
       }
     ],
     "implemented": [
@@ -108,6 +208,7 @@
       "CRYPTO_THREAD_write_lock",
       "CRYPTO_aligned_alloc",
       "CRYPTO_aligned_alloc_array",
+      "CRYPTO_alloc_ex_data",
       "CRYPTO_atomic_add",
       "CRYPTO_atomic_add64",
       "CRYPTO_atomic_and",
@@ -151,7 +252,6 @@
       "CRYPTO_strndup",
       "CRYPTO_zalloc",
       "ERR_add_error_data",
-      "ERR_add_error_mem_bio",
       "ERR_add_error_txt",
       "ERR_add_error_vdata",
       "ERR_clear_error",
@@ -213,9 +313,6 @@
       "ERR_peek_last_error_line_data",
       "ERR_pop",
       "ERR_pop_to_mark",
-      "ERR_print_errors",
-      "ERR_print_errors_cb",
-      "ERR_print_errors_fp",
       "ERR_reason_error_string",
       "ERR_remove_state",
       "ERR_remove_thread_state",
@@ -239,7 +336,6 @@
       "OBJ_bsearch_ex_",
       "OBJ_cmp",
       "OBJ_create",
-      "OBJ_create_objects",
       "OBJ_dup",
       "OBJ_find_sigid_algs",
       "OBJ_find_sigid_by_algs",
@@ -256,6 +352,8 @@
       "OBJ_sn2nid",
       "OBJ_txt2nid",
       "OBJ_txt2obj",
+      "OPENSSL_DIR_end",
+      "OPENSSL_DIR_read",
       "OPENSSL_LH_delete",
       "OPENSSL_LH_doall",
       "OPENSSL_LH_doall_arg",
@@ -266,18 +364,18 @@
       "OPENSSL_LH_get_down_load",
       "OPENSSL_LH_insert",
       "OPENSSL_LH_new",
-      "OPENSSL_LH_node_stats",
-      "OPENSSL_LH_node_stats_bio",
-      "OPENSSL_LH_node_usage_stats",
-      "OPENSSL_LH_node_usage_stats_bio",
       "OPENSSL_LH_num_items",
       "OPENSSL_LH_retrieve",
       "OPENSSL_LH_set_down_load",
       "OPENSSL_LH_set_thunks",
-      "OPENSSL_LH_stats",
-      "OPENSSL_LH_stats_bio",
       "OPENSSL_LH_strhash",
+      "OPENSSL_buf2hexstr",
+      "OPENSSL_buf2hexstr_ex",
+      "OPENSSL_cleanse",
       "OPENSSL_cleanup",
+      "OPENSSL_hexchar2int",
+      "OPENSSL_hexstr2buf",
+      "OPENSSL_hexstr2buf_ex",
       "OPENSSL_info",
       "OPENSSL_init",
       "OPENSSL_init_crypto",
@@ -307,6 +405,12 @@
       "OPENSSL_sk_unshift",
       "OPENSSL_sk_value",
       "OPENSSL_sk_zero",
+      "OPENSSL_strcasecmp",
+      "OPENSSL_strlcat",
+      "OPENSSL_strlcpy",
+      "OPENSSL_strncasecmp",
+      "OPENSSL_strnlen",
+      "OPENSSL_strtoul",
       "OPENSSL_version_build_metadata",
       "OPENSSL_version_major",
       "OPENSSL_version_minor",
@@ -315,7 +419,7 @@
       "OpenSSL_version",
       "OpenSSL_version_num"
     ],
-    "note": "A deferred symbol is a recorded hand-off to the phase that owns the subsystem it needs, not a parity claim. `phase_state.py` treats Phase 3 as complete only when every symbol in these families is either implemented or deferred to a later phase."
+    "note": "A deferred symbol is a recorded hand-off to the phase that owns the subsystem it needs, not a parity claim, and the hand-off is sticky: the owning stratum implementing it later does not move the obligation back here (`implemented_by_owner` records that the hand-off has been discharged). `phase_state.py` treats Phase 3 as complete only when every symbol in these families is either implemented here or handed to a later phase, and `forensics/tools/ownership_audit.py` fails if two ledgers both count a symbol as implemented by them."
   },
   "generator": "forensics/tools/phase3_obligations.py",
   "inputs": [
@@ -327,7 +431,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "c5a6214d14e9778531c9bd20b5cfd2e7c133dac622fd59d9bc076cd97e25af96"
+      "sha256": "ebeccba59da6e871755b547905a738e6e4754b0ff88182f4c9993e421731a2b7"
     }
   ],
   "kind": "phase3-obligations",

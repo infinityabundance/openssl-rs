@@ -57,6 +57,7 @@ from atlas_common import REPO_ROOT, rel  # noqa: E402
 # and the caller runs it first.
 GENERATORS = [
     "forensics/tools/implemented_surface.py",
+    "forensics/tools/ownership_audit.py",
     "forensics/tools/phase3_obligations.py",
     "forensics/tools/phase4_obligations.py",
     "forensics/tools/phase_state.py",
@@ -68,6 +69,7 @@ GENERATORS = [
 # produced by the court venue, not by these generators).
 COMPARED = [
     "forensics/atlas/implemented-surface.json",
+    "forensics/atlas/ownership-audit.json",
     "forensics/phase3-obligations.json",
     "forensics/phase4-obligations.json",
     "forensics/phase-state.json",

@@ -1,0 +1,17 @@
+{
+  "authority_exit_code": 0,
+  "authority_observations": 736,
+  "candidate_exit_code": 0,
+  "candidate_observations": 736,
+  "candidate_stderr_tail": [],
+  "court": "RT-CONF",
+  "crashed": false,
+  "probe": "courts/phase4/rt_conf_probe.c",
+  "residual_count": 0,
+  "residuals": [],
+  "staged_binaries": {
+    "authority": "artifacts/phase4/probes/rt_conf_probe.authority",
+    "candidate": "artifacts/phase4/probes/rt_conf_probe.candidate"
+  },
+  "verdict": "pass"
+}

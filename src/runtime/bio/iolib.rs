@@ -129,6 +129,8 @@ pub(crate) unsafe fn bio_call_callback(
 /// # Safety
 /// `bio` must be NULL or a live BIO.
 unsafe fn has_callback(bio: *mut Bio) -> bool {
+    // SAFETY: `bio` is NULL or a live BIO; the shared borrow is confined to this
+    // expression.
     match unsafe { bio.as_ref() } {
         Some(b) => b.callback_ex.is_some() || b.callback.is_some(),
         None => false,
@@ -153,6 +155,7 @@ unsafe fn bio_read_intern(
     }
     // SAFETY: `bio` is non-NULL and live.
     let b = unsafe { &mut *bio };
+    // SAFETY: `b.method` is NULL or a live method table, per the BIO contract.
     let Some(m) = (unsafe { b.method.as_ref() }) else {
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_site(&BIO_LIB_271) };
@@ -163,6 +166,7 @@ unsafe fn bio_read_intern(
         unsafe { raise_site(&BIO_LIB_271) };
         return -2;
     };
+    // SAFETY: `bio` was checked non-NULL above and is live for this call.
     if unsafe { has_callback(bio) } {
         // SAFETY: the callback contract for `BIO_CB_READ` allows `processed` to
         // be NULL, which is what the pre-call passes.
@@ -194,6 +198,7 @@ unsafe fn bio_read_intern(
         // SAFETY: `readbytes` is a writable out-parameter owned by this call.
         b.num_read += unsafe { *readbytes } as u64;
     }
+    // SAFETY: `bio` is still live and non-NULL on this path.
     if unsafe { has_callback(bio) } {
         // SAFETY: on the return leg `processed` receives the byte count.
         ret = unsafe {
@@ -209,6 +214,8 @@ unsafe fn bio_read_intern(
             )
         } as c_int;
     }
+    // SAFETY: `readbytes` was passed to the method as its out-parameter and is a
+    // valid, initialised `usize` on this path.
     if ret > 0 && unsafe { *readbytes } > dlen {
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_site(&BIO_LIB_294) };
@@ -221,6 +228,10 @@ unsafe fn bio_read_intern(
 ///
 /// Returns the number of bytes read, or a negative failure class. A negative
 /// `dlen` is `0`, not an error.
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO; `data` must be valid for `dlen` writable
+/// bytes when `dlen > 0`, per the method's read contract.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_read(bio: *mut Bio, data: *mut c_void, dlen: c_int) -> c_int {
     guard_ffi(0, || {
@@ -241,6 +252,11 @@ pub unsafe extern "C" fn BIO_read(bio: *mut Bio, data: *mut c_void, dlen: c_int)
 ///
 /// Returns **1** on success (with `*readbytes` set) and 0 on failure — the
 /// success-flag form, not a byte count.
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO; `data` must be valid for `dlen` writable
+/// bytes when `dlen > 0`; `readbytes` must point at a writable `usize` that the
+/// method may store through.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_read_ex(
     bio: *mut Bio,
@@ -278,11 +294,13 @@ unsafe fn bio_write_intern(
     }
     // SAFETY: `bio` is non-NULL and live.
     let b = unsafe { &mut *bio };
+    // SAFETY: `b.method` is NULL or a live method table, per the BIO contract.
     let Some(bwrite) = (unsafe { b.method.as_ref() }).and_then(|m| m.bwrite) else {
         // SAFETY: the site is a compile-time constant.
         unsafe { raise_site(&BIO_LIB_340) };
         return -2;
     };
+    // SAFETY: `bio` was checked non-NULL above and is live for this call.
     if unsafe { has_callback(bio) } {
         // SAFETY: the callback contract for `BIO_CB_WRITE` allows `processed` to
         // be NULL on the pre-call.
@@ -314,6 +332,7 @@ unsafe fn bio_write_intern(
     if ret > 0 {
         b.num_write += local_written as u64;
     }
+    // SAFETY: `bio` is still live and non-NULL on this path.
     if unsafe { has_callback(bio) } {
         // SAFETY: on the return leg `processed` receives the byte count.
         ret = unsafe {
@@ -339,6 +358,10 @@ unsafe fn bio_write_intern(
 /// `int BIO_write(BIO *b, const void *data, int dlen)`
 ///
 /// A non-positive `dlen` is `0` — including zero, which never reaches the method.
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO; `data` must be valid for `dlen` readable
+/// bytes when `dlen > 0`, per the method's write contract.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_write(bio: *mut Bio, data: *const c_void, dlen: c_int) -> c_int {
     guard_ffi(0, || {
@@ -360,6 +383,10 @@ pub unsafe extern "C" fn BIO_write(bio: *mut Bio, data: *const c_void, dlen: c_i
 /// Returns 1 on success. A NULL `b` combined with `dlen == 0` is *success*, and
 /// the order of the two tests is deliberate: `*written` must still be zeroed even
 /// when `b` is NULL.
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO; `data` must be valid for `dlen` readable
+/// bytes when `dlen > 0`; `written` must be NULL or point at a writable `usize`.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_write_ex(
     bio: *mut Bio,
@@ -377,6 +404,11 @@ pub unsafe extern "C" fn BIO_write_ex(
 
 /// `int BIO_sendmmsg(BIO *b, BIO_MSG *msg, size_t stride, size_t num_msg,
 /// uint64_t flags, size_t *msgs_processed)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO with a `sendmmsg` method; `msg` must be
+/// valid for `num_msg` records spaced `stride` bytes apart (the method decides
+/// the exact layout), and `msgs_processed` must point at a writable `size_t`.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_sendmmsg(
     bio: *mut Bio,
@@ -390,6 +422,8 @@ pub unsafe extern "C" fn BIO_sendmmsg(
         // SAFETY: `msgs_processed` is a caller-supplied out-parameter; the
         // authority writes it unconditionally on the early exits.
         if !msgs_processed.is_null() {
+            // SAFETY: the null check above proves `msgs_processed` is a writable
+            // caller-owned `size_t`.
             unsafe { *msgs_processed = 0 };
         } else {
             return 0;
@@ -401,6 +435,7 @@ pub unsafe extern "C" fn BIO_sendmmsg(
         }
         // SAFETY: `bio` is non-NULL and live.
         let b = unsafe { &mut *bio };
+        // SAFETY: `b.method` is NULL or a live method table, per the BIO contract.
         let Some(m) = (unsafe { b.method.as_ref() }) else {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_site(&BIO_LIB_405) };
@@ -418,6 +453,7 @@ pub unsafe extern "C" fn BIO_sendmmsg(
             flags,
             msgs_processed,
         };
+        // SAFETY: `bio` is still live on this path.
         if unsafe { has_callback(bio) } {
             // SAFETY: the message-array callback contract passes `args` as the
             // opaque `argp`.
@@ -445,6 +481,7 @@ pub unsafe extern "C" fn BIO_sendmmsg(
         // SAFETY: the method's mmsg contract is to process at most `num_msg`
         // entries and report how many through `msgs_processed`.
         let mut ret = unsafe { send(bio, msg, stride, num_msg, flags, msgs_processed) };
+        // SAFETY: `bio` is still live on this path.
         if unsafe { has_callback(bio) } {
             // SAFETY: on the return leg `processed` is an in/out byte count; the
             // mmsg callback uses the message count in `ret` instead.
@@ -467,6 +504,11 @@ pub unsafe extern "C" fn BIO_sendmmsg(
 
 /// `int BIO_recvmmsg(BIO *b, BIO_MSG *msg, size_t stride, size_t num_msg,
 /// uint64_t flags, size_t *msgs_processed)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO with a `recvmmsg` method; `msg` must be
+/// valid for `num_msg` records spaced `stride` bytes apart, and `msgs_processed`
+/// must point at a writable `size_t`.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_recvmmsg(
     bio: *mut Bio,
@@ -479,6 +521,7 @@ pub unsafe extern "C" fn BIO_recvmmsg(
     guard_ffi(0, || {
         // SAFETY: `msgs_processed` is a caller-supplied out-parameter.
         if !msgs_processed.is_null() {
+            // SAFETY: the null check above proves `msgs_processed` is writable.
             unsafe { *msgs_processed = 0 };
         } else {
             return 0;
@@ -490,6 +533,7 @@ pub unsafe extern "C" fn BIO_recvmmsg(
         }
         // SAFETY: `bio` is non-NULL and live.
         let b = unsafe { &mut *bio };
+        // SAFETY: `b.method` is NULL or a live method table, per the BIO contract.
         let Some(recv) = (unsafe { b.method.as_ref() }).and_then(|m| m.recvmmsg) else {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_site(&BIO_LIB_452) };
@@ -502,6 +546,7 @@ pub unsafe extern "C" fn BIO_recvmmsg(
             flags,
             msgs_processed,
         };
+        // SAFETY: `bio` is still live on this path.
         if unsafe { has_callback(bio) } {
             // SAFETY: as for `BIO_sendmmsg`.
             let ret = unsafe {
@@ -527,6 +572,7 @@ pub unsafe extern "C" fn BIO_recvmmsg(
         }
         // SAFETY: the method's mmsg contract, as for `BIO_sendmmsg`.
         let mut ret = unsafe { recv(bio, msg, stride, num_msg, flags, msgs_processed) };
+        // SAFETY: `bio` is still live on this path.
         if unsafe { has_callback(bio) } {
             // SAFETY: as for `BIO_sendmmsg`.
             ret = unsafe {
@@ -550,6 +596,10 @@ pub unsafe extern "C" fn BIO_recvmmsg(
 ///
 /// Returns the number of bytes written (not a flag) so that `BIO_puts` and
 /// `BIO_write` are interchangeable at a call site.
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO with a `puts` method; `buf` must point at a
+/// NUL-terminated string that the method may read.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_puts(bio: *mut Bio, buf: *const c_char) -> c_int {
     guard_ffi(-1, || {
@@ -560,11 +610,13 @@ pub unsafe extern "C" fn BIO_puts(bio: *mut Bio, buf: *const c_char) -> c_int {
         }
         // SAFETY: `bio` is non-NULL and live.
         let b = unsafe { &mut *bio };
+        // SAFETY: `b.method` is NULL or a live method table, per the BIO contract.
         let Some(bputs) = (unsafe { b.method.as_ref() }).and_then(|m| m.bputs) else {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_site(&BIO_LIB_504) };
             return -2;
         };
+        // SAFETY: `bio` is still live and non-NULL on this path.
         if unsafe { has_callback(bio) } {
             // SAFETY: `BIO_CB_PUTS` carries no processed byte count.
             let ret =
@@ -586,6 +638,7 @@ pub unsafe extern "C" fn BIO_puts(bio: *mut Bio, buf: *const c_char) -> c_int {
             written = ret as usize;
             ret = 1;
         }
+        // SAFETY: `bio` is still live on this path.
         if unsafe { has_callback(bio) } {
             // SAFETY: the return leg receives the byte count through `written`.
             ret = unsafe {
@@ -614,6 +667,10 @@ pub unsafe extern "C" fn BIO_puts(bio: *mut Bio, buf: *const c_char) -> c_int {
 }
 
 /// `int BIO_gets(BIO *b, char *buf, int size)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO with a `gets` method; `buf` must be valid
+/// for `size` writable bytes when `size >= 0`.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_gets(bio: *mut Bio, buf: *mut c_char, size: c_int) -> c_int {
     guard_ffi(-1, || {
@@ -624,6 +681,7 @@ pub unsafe extern "C" fn BIO_gets(bio: *mut Bio, buf: *mut c_char, size: c_int) 
         }
         // SAFETY: `bio` is non-NULL and live.
         let b = unsafe { &mut *bio };
+        // SAFETY: `b.method` is NULL or a live method table, per the BIO contract.
         let Some(bgets) = (unsafe { b.method.as_ref() }).and_then(|m| m.bgets) else {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_site(&BIO_LIB_553) };
@@ -634,6 +692,7 @@ pub unsafe extern "C" fn BIO_gets(bio: *mut Bio, buf: *mut c_char, size: c_int) 
             unsafe { raise_site(&BIO_LIB_558) };
             return -1;
         }
+        // SAFETY: `bio` is still live and non-NULL on this path.
         if unsafe { has_callback(bio) } {
             // SAFETY: `BIO_CB_GETS` carries the buffer length in `len`.
             let ret = unsafe {
@@ -664,6 +723,7 @@ pub unsafe extern "C" fn BIO_gets(bio: *mut Bio, buf: *mut c_char, size: c_int) 
             readbytes = ret as usize;
             ret = 1;
         }
+        // SAFETY: `bio` is still live on this path.
         if unsafe { has_callback(bio) } {
             // SAFETY: the return leg receives the byte count through `readbytes`.
             ret = unsafe {
@@ -695,6 +755,10 @@ pub unsafe extern "C" fn BIO_gets(bio: *mut Bio, buf: *mut c_char, size: c_int) 
 /// any BIO — including one whose method has no `gets`. On EOF it returns the
 /// bytes accumulated so far rather than the negative class, which is what makes
 /// it usable as a line reader.
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO; `buf` must be valid for `size` writable
+/// bytes when `size > 0`.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_get_line(bio: *mut Bio, buf: *mut c_char, size: c_int) -> c_int {
     guard_ffi(-1, || {
@@ -736,6 +800,8 @@ pub unsafe extern "C" fn BIO_get_line(bio: *mut Bio, buf: *mut c_char, size: c_i
             }
             // SAFETY: `ptr` is within the caller's buffer.
             let c = unsafe { *ptr };
+            // SAFETY: `ptr` still points inside the caller's buffer, so advancing
+            // it by one byte stays within the allocation.
             ptr = unsafe { ptr.add(1) };
             if c == b'\n' as c_char {
                 break;
@@ -760,6 +826,10 @@ pub unsafe extern "C" fn BIO_get_line(bio: *mut Bio, buf: *mut c_char, size: c_i
 ///
 /// Passes the `int` argument by address, which is how file-descriptor and
 /// buffer-size controls receive it.
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO; `cmd` must select a control that interprets
+/// `parg` as an `int *` when `larg` is zero.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_int_ctrl(
     bio: *mut Bio,
@@ -778,6 +848,10 @@ pub unsafe extern "C" fn BIO_int_ctrl(
 ///
 /// Returns the pointer the control produced, or NULL when the control reported
 /// failure.
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO; `cmd` must select a control that stores a
+/// pointer through `parg`.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_ptr_ctrl(bio: *mut Bio, cmd: c_int, larg: c_long) -> *mut c_void {
     guard_ffi(ptr::null_mut(), || {
@@ -796,6 +870,10 @@ pub unsafe extern "C" fn BIO_ptr_ctrl(bio: *mut Bio, cmd: c_int, larg: c_long) -
 /// A NULL BIO is `-1`; a method without a `ctrl` is `-2` with an `ERR`. Those
 /// differ from each other and from a control that legitimately returns 0, so the
 /// classes are reproduced rather than collapsed.
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO; `parg` must be valid for the interpretation
+/// the selected `cmd` requires (which may be NULL for controls that take none).
 #[no_mangle]
 pub unsafe extern "C" fn BIO_ctrl(
     bio: *mut Bio,
@@ -809,11 +887,13 @@ pub unsafe extern "C" fn BIO_ctrl(
         }
         // SAFETY: `bio` is non-NULL and live.
         let b = unsafe { &mut *bio };
+        // SAFETY: `b.method` is NULL or a live method table, per the BIO contract.
         let Some(ctrl) = (unsafe { b.method.as_ref() }).and_then(|m| m.ctrl) else {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_site(&BIO_LIB_663) };
             return -2;
         };
+        // SAFETY: `bio` is still live and non-NULL on this path.
         if unsafe { has_callback(bio) } {
             // SAFETY: `BIO_CB_CTRL` passes the control argument and the command
             // in `argi`.
@@ -835,6 +915,7 @@ pub unsafe extern "C" fn BIO_ctrl(
         }
         // SAFETY: the method's control contract; `parg` is as the command says.
         let ret = unsafe { ctrl(bio, cmd, larg, parg) };
+        // SAFETY: `bio` is still live on this path.
         if unsafe { has_callback(bio) } {
             // SAFETY: the return leg, as above.
             return unsafe {
@@ -858,6 +939,10 @@ pub unsafe extern "C" fn BIO_ctrl(
 ///
 /// Only `BIO_CTRL_SET_CALLBACK` is meaningful; every other command is reported
 /// as unsupported, matching the authority's guard.
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO with a `callback_ctrl` method; `fp` must be
+/// valid for the selected `cmd` (the control stores the function pointer).
 #[no_mangle]
 pub unsafe extern "C" fn BIO_callback_ctrl(
     bio: *mut Bio,
@@ -870,6 +955,7 @@ pub unsafe extern "C" fn BIO_callback_ctrl(
         }
         // SAFETY: `bio` is non-NULL and live.
         let b = unsafe { &mut *bio };
+        // SAFETY: `b.method` is NULL or a live method table, per the BIO contract.
         let Some(callback_ctrl) = (unsafe { b.method.as_ref() }).and_then(|m| m.callback_ctrl)
         else {
             // SAFETY: the site is a compile-time constant.
@@ -881,6 +967,7 @@ pub unsafe extern "C" fn BIO_callback_ctrl(
             unsafe { raise_site(&BIO_LIB_690) };
             return -2;
         }
+        // SAFETY: `bio` is still live and non-NULL on this path.
         if unsafe { has_callback(bio) } {
             // SAFETY: the control callback receives the address of the function
             // pointer, as the authority passes it.
@@ -902,6 +989,7 @@ pub unsafe extern "C" fn BIO_callback_ctrl(
         }
         // SAFETY: the method's callback-control contract.
         let ret = unsafe { callback_ctrl(bio, cmd, fp) };
+        // SAFETY: `bio` is still live on this path.
         if unsafe { has_callback(bio) } {
             // SAFETY: the return leg, as above.
             return unsafe {
@@ -926,6 +1014,9 @@ pub unsafe extern "C" fn BIO_callback_ctrl(
 /// Clamps a negative control result to zero, which is why a caller cannot use it
 /// to detect "unsupported": that information lives in the return type of
 /// [`BIO_ctrl`], not here.
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_ctrl_pending(bio: *mut Bio) -> usize {
     guard_ffi(0, || {
@@ -940,6 +1031,9 @@ pub unsafe extern "C" fn BIO_ctrl_pending(bio: *mut Bio) -> usize {
 }
 
 /// `size_t BIO_ctrl_wpending(BIO *bio)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_ctrl_wpending(bio: *mut Bio) -> usize {
     guard_ffi(0, || {
@@ -957,6 +1051,9 @@ pub unsafe extern "C" fn BIO_ctrl_wpending(bio: *mut Bio) -> usize {
 ///
 /// The BIO-pair and datagram-pair controls report how much can be written without
 /// blocking; the value is clamped at zero for the same reason as `pending`.
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_ctrl_get_write_guarantee(bio: *mut Bio) -> usize {
     guard_ffi(0, || {
@@ -971,6 +1068,9 @@ pub unsafe extern "C" fn BIO_ctrl_get_write_guarantee(bio: *mut Bio) -> usize {
 }
 
 /// `size_t BIO_ctrl_get_read_request(BIO *b)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_ctrl_get_read_request(bio: *mut Bio) -> usize {
     guard_ffi(0, || {
@@ -985,6 +1085,9 @@ pub unsafe extern "C" fn BIO_ctrl_get_read_request(bio: *mut Bio) -> usize {
 }
 
 /// `int BIO_ctrl_reset_read_request(BIO *b)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_ctrl_reset_read_request(bio: *mut Bio) -> c_int {
     guard_ffi(0, || {
@@ -994,6 +1097,10 @@ pub unsafe extern "C" fn BIO_ctrl_reset_read_request(bio: *mut Bio) -> c_int {
 }
 
 /// `int BIO_nread0(BIO *bio, char **buf)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO; `buf` must be NULL or point at a writable
+/// `char *` out-parameter that the `BIO_C_NREAD0` control may store through.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_nread0(bio: *mut Bio, buf: *mut *mut c_char) -> c_int {
     guard_ffi(0, || {
@@ -1003,6 +1110,10 @@ pub unsafe extern "C" fn BIO_nread0(bio: *mut Bio, buf: *mut *mut c_char) -> c_i
 }
 
 /// `int BIO_nread(BIO *bio, char **buf, int num)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO; `buf` must be NULL or point at a writable
+/// `char *` out-parameter that the `BIO_C_NREAD` control may store through.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_nread(bio: *mut Bio, buf: *mut *mut c_char, num: c_int) -> c_int {
     guard_ffi(0, || {
@@ -1012,6 +1123,10 @@ pub unsafe extern "C" fn BIO_nread(bio: *mut Bio, buf: *mut *mut c_char, num: c_
 }
 
 /// `int BIO_nwrite0(BIO *bio, char **buf)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO; `buf` must be NULL or point at a writable
+/// `char *` out-parameter that the `BIO_C_NWRITE0` control may store through.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_nwrite0(bio: *mut Bio, buf: *mut *mut c_char) -> c_int {
     guard_ffi(0, || {
@@ -1021,6 +1136,10 @@ pub unsafe extern "C" fn BIO_nwrite0(bio: *mut Bio, buf: *mut *mut c_char) -> c_
 }
 
 /// `int BIO_nwrite(BIO *bio, char **buf, int num)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO; `buf` must be NULL or point at a writable
+/// `char *` out-parameter that the `BIO_C_NWRITE` control may store through.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_nwrite(bio: *mut Bio, buf: *mut *mut c_char, num: c_int) -> c_int {
     guard_ffi(0, || {
@@ -1030,6 +1149,10 @@ pub unsafe extern "C" fn BIO_nwrite(bio: *mut Bio, buf: *mut *mut c_char, num: c
 }
 
 /// `int BIO_get_rpoll_descriptor(BIO *b, BIO_POLL_DESCRIPTOR *desc)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO; `desc` must be NULL or point at a writable
+/// [`BioPollDescriptor`](super::BioPollDescriptor) that the control may fill.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_get_rpoll_descriptor(
     bio: *mut Bio,
@@ -1042,6 +1165,10 @@ pub unsafe extern "C" fn BIO_get_rpoll_descriptor(
 }
 
 /// `int BIO_get_wpoll_descriptor(BIO *b, BIO_POLL_DESCRIPTOR *desc)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO; `desc` must be NULL or point at a writable
+/// [`BioPollDescriptor`](super::BioPollDescriptor) that the control may fill.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_get_wpoll_descriptor(
     bio: *mut Bio,
@@ -1058,9 +1185,15 @@ pub unsafe extern "C" fn BIO_get_wpoll_descriptor(
 /// Returns 1 immediately when `max_time` is 0 (no timeout). Otherwise it waits on
 /// the BIO's descriptor when it has one, and otherwise naps, reporting `-1`/`0`
 /// with an `ERR` for error and timeout respectively.
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO; `max_time` is interpreted as a `time_t`
+/// absolute deadline, matching `BIO_wait`'s C signature.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_wait(bio: *mut Bio, max_time: c_long, nap_milliseconds: u32) -> c_int {
     guard_ffi(-1, || {
+        // SAFETY: `bio` is NULL or a live BIO, which is exactly `bio_wait`'s
+        // documented precondition.
         let rv = unsafe { bio_wait(bio, max_time, nap_milliseconds) };
         if rv <= 0 {
             // The authority raises one of two constants depending on whether the
@@ -1122,6 +1255,10 @@ unsafe fn bio_wait(bio: *mut Bio, max_time: c_long, nap_milliseconds: u32) -> c_
 /// `timeout == 0` means "blocking, no retry loop"; a negative `timeout` means
 /// "one attempt only". The two cases differ in whether `BIO_set_nbio` is applied
 /// and whether `bio_wait` is entered, so they are distinguished explicitly.
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO whose method implements the connect state
+/// machine; the chain it heads must be valid for the duration of the retry loop.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_do_connect_retry(
     bio: *mut Bio,
@@ -1130,8 +1267,8 @@ pub unsafe extern "C" fn BIO_do_connect_retry(
 ) -> c_int {
     guard_ffi(-1, || {
         let blocking = timeout <= 0;
-        // SAFETY: `time` takes a `time_t *`; NULL asks for the current time.
         let max_time = if timeout > 0 {
+            // SAFETY: `time` takes a `time_t *`; NULL asks for the current time.
             (unsafe { super::sys::time(ptr::null_mut()) }) + timeout as c_long
         } else {
             0

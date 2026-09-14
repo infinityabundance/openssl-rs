@@ -195,6 +195,11 @@ pub const EPROTO: c_int = 71;
 pub const ENOENT: c_int = 2;
 /// `ENXIO` — `BIO_new_file` maps it to `BIO_R_NO_SUCH_FILE` alongside `ENOENT`.
 pub const ENXIO: c_int = 6;
+/// `EINVAL` — `OPENSSL_DIR_read` and `OPENSSL_DIR_end` set it for a NULL
+/// argument, and `process_include` reaches it through a failed `stat`.
+pub const EINVAL: c_int = 22;
+/// `ENOTDIR` — `opendir` on a path that exists but is not a directory.
+pub const ENOTDIR: c_int = 20;
 
 // ---------------------------------------------------------------------------
 // Sockets
@@ -444,6 +449,8 @@ pub const fn cmsg_data_offset() -> usize {
 /// `mh` must point at a live [`Msghdr`] whose `msg_control` is readable for
 /// `msg_controllen` bytes.
 pub unsafe fn cmsg_firsthdr(mh: *const Msghdr) -> *mut u8 {
+    // SAFETY: `mh` is a live `Msghdr` per the caller's contract, which
+    // `control_of` requires.
     let (ctl, len) = unsafe { control_of(mh) };
     if len >= core::mem::size_of::<Cmsghdr>() {
         ctl
@@ -462,6 +469,8 @@ pub unsafe fn cmsg_firsthdr(mh: *const Msghdr) -> *mut u8 {
 /// As for [`cmsg_firsthdr`]; `prev` must be a record returned by
 /// [`cmsg_firsthdr`] or [`cmsg_nxthdr`] for the same `mh`.
 pub unsafe fn cmsg_nxthdr(mh: *const Msghdr, prev: *mut u8) -> *mut u8 {
+    // SAFETY: `mh` is a live `Msghdr` per the caller's contract, which
+    // `control_of` requires.
     let (ctl, len) = unsafe { control_of(mh) };
     // SAFETY: `prev` is a record inside this control buffer per the contract.
     let prev_len = unsafe { cmsg_hdr(prev) }.cmsg_len;
@@ -470,10 +479,13 @@ pub unsafe fn cmsg_nxthdr(mh: *const Msghdr, prev: *mut u8) -> *mut u8 {
     }
     // SAFETY: the addition stays within the buffer for a well-formed record.
     let next = unsafe { prev.add(cmsg_align(prev_len)) };
+    // SAFETY: `ctl` is the start of the buffer and `len` its length, so `ctl + len`
+    // is the one-past-the-end address, which may be formed legally.
     let end = unsafe { ctl.add(len) };
     // SAFETY: `next` is only dereferenced after the bounds test proves a whole
     // header is inside the buffer.
     if unsafe { next.add(core::mem::size_of::<Cmsghdr>()) } > end
+        // SAFETY: the test above established that a full header lies before `end`.
         || unsafe { cmsg_hdr(next) }.cmsg_len < core::mem::size_of::<Cmsghdr>()
     {
         return core::ptr::null_mut();
@@ -865,4 +877,19 @@ extern "C" {
     pub fn isdigit(c: c_int) -> c_int;
     /// `int isspace(int)`.
     pub fn isspace(c: c_int) -> c_int;
+    /// `int strcmp(const char *, const char *)`.
+    pub fn strcmp(a: *const c_char, b: *const c_char) -> c_int;
+    /// `char *strchr(const char *, int)`.
+    pub fn strchr(s: *const c_char, c: c_int) -> *mut c_char;
+    /// `char *strrchr(const char *, int)`.
+    pub fn strrchr(s: *const c_char, c: c_int) -> *mut c_char;
+    /// `unsigned long strtoul(const char *, char **, int)`.
+    pub fn strtoul(s: *const c_char, end: *mut *mut c_char, base: c_int) -> c_ulong;
+    /// `char *secure_getenv(const char *)` — glibc's `ossl_safe_getenv`.
+    ///
+    /// The non-`secure_` `getenv` is deliberately *not* declared: the authority
+    /// reaches for `getenv` only when `secure_getenv` is unavailable, and on the
+    /// admitted glibc profile it is available, so a plain `getenv` here would be
+    /// a different (setuid-divergent) function than the one observed.
+    pub fn secure_getenv(name: *const c_char) -> *mut c_char;
 }

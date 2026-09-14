@@ -120,6 +120,10 @@ pub extern "C" fn BIO_s_secmem() -> *const BioMethod {
 /// A negative `len` means "the buffer is NUL-terminated, measure it"; the result
 /// is a read-only memory BIO whose `num` (the empty-read return value) is 0, so a
 /// read past the end reports EOF rather than a retryable failure.
+///
+/// # Safety
+/// `buf` must be NULL or readable: for `len >= 0`, for `len` bytes; for a
+/// negative `len`, as a NUL-terminated string. A NULL `buf` is rejected.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_new_mem_buf(buf: *const c_void, len: c_int) -> *mut Bio {
     guard_ffi(ptr::null_mut(), || {
@@ -262,6 +266,8 @@ unsafe extern "C" fn mem_free(a: *mut Bio) -> c_int {
 /// # Safety
 /// `b` must be NULL or a live memory BIO.
 unsafe fn mem_buf_sync(b: *mut Bio) -> c_int {
+    // SAFETY: `b` is NULL or a live memory BIO per the caller's contract; `as_ref`
+    // makes a NULL argument a no-op rather than a dereference.
     if let Some(b) = unsafe { b.as_ref() } {
         if b.init != 0 && !b.ptr.is_null() {
             // SAFETY: `ptr` is a `BioBufMem` for this method.
@@ -291,8 +297,10 @@ unsafe extern "C" fn mem_read(b: *mut Bio, out: *mut c_char, outl: c_int) -> c_i
     let (bbm, flags) = unsafe { ((*b).ptr.cast::<BioBufMem>(), (*b).flags) };
     // SAFETY: `bbm` is this method's data.
     let bm = if flags & BIO_FLAGS_MEM_RDONLY != 0 {
+        // SAFETY: `bbm` is live and `buf` is its owned header.
         unsafe { (*bbm).buf }
     } else {
+        // SAFETY: `bbm` is live and `readp` is its read-cursor header.
         unsafe { (*bbm).readp }
     };
     // SAFETY: `b` is live.
@@ -441,7 +449,7 @@ unsafe extern "C" fn mem_ctrl(b: *mut Bio, cmd: c_int, num: c_long, arg: *mut c_
             };
         }
         BIO_C_FILE_TELL => {
-            ret = if (off as i64) > c_long::MAX as i64 {
+            ret = if (off as i64) > c_long::MAX {
                 -1
             } else {
                 off as c_long
@@ -544,6 +552,8 @@ unsafe extern "C" fn mem_gets(bp: *mut Bio, buf: *mut c_char, size: c_int) -> c_
     }
     // SAFETY: `bm` is live and `j` bytes are readable from `data`.
     let mut i = 0;
+    // SAFETY: `bm` is live and `j` bounds the scan, so each `data.add(i)` is within
+    // the readable region while `i < j`.
     unsafe {
         while i < j {
             if *(*bm).data.add(i as usize) == b'\n' as c_char {

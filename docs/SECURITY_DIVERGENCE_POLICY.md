@@ -275,3 +275,69 @@ observations that *can* be made around each boundary are compared normally.
 - **Claim removed:** the behaviour of these entry points with a NULL table is not
   claimed compatible; it is claimed *safe*. The NULL-*destination* forms **are**
   matched and compared, and `RT-LHASH` asserts them.
+
+### D-CONF-1 — `CONF_parse_list` calls a NULL callback
+
+- **Obligation:** `CONF_parse_list(list, sep, nospc, NULL, arg)`.
+- **Authority:** faults. The walk delivers each element by calling `list_cb`, and
+  there is no NULL test, so the first delivery is a call through a NULL function
+  pointer. `RT-CONF` measured it: the probe died on the first element, with the
+  transcript stopping immediately after `parselist.stop`.
+- **Candidate:** total. A NULL callback means "nothing to deliver to", and the
+  function returns 0 without walking.
+- **Reason:** calling a NULL function pointer is not a contract to reproduce; it is
+  the same class as `D-LHASH-1` and `D-STACK-2`.
+- **Claim removed:** the behaviour of `CONF_parse_list` with a NULL callback is not
+  claimed compatible. `RT-CONF` prints
+  `parselist.nocb.value=NOT_MEASURED_AUTHORITY_FAULTS` rather than comparing a
+  value, and every other `CONF_parse_list` behaviour — including the empty-element,
+  trailing-separator and callback-abort cases — **is** compared.
+
+### D-CONF-2 — `_CONF_new_section` frees an uninitialised field on its error path
+
+- **Obligation:** `_CONF_new_section(conf, section)` when the allocation of
+  `v->section` fails.
+- **Authority:** the error path is
+  ```c
+  err:
+      sk_CONF_VALUE_free(sk);
+      if (v != NULL)
+          OPENSSL_free(v->section);
+      OPENSSL_free(v);
+      return NULL;
+  ```
+  and `v->section` is only assigned *after* the allocation that just failed, so the
+  free is handed the previous contents of freshly `OPENSSL_malloc`ed memory. The
+  fault needs an allocation failure to reach, so no court can measure it.
+- **Candidate:** frees only what it allocated — the stack if it was created, and the
+  entry if it was created.
+- **Reason:** freeing uninitialised memory is a defect, and the case is only
+  reachable under memory exhaustion, where the authority's behaviour is undefined
+  anyway.
+- **Claim removed:** the error path of `_CONF_new_section` under allocation failure
+  is not claimed compatible. The success path, and the "section already exists"
+  path that shares the same error block, **are** compared by `RT-CONF` — the latter
+  through `[s1]` appearing twice in the `sections` fixture.
+
+### D-CONF-3 — `CONF_get1_default_config_file` does not claim the forensic `OPENSSLDIR`
+
+- **Obligation:** `CONF_get1_default_config_file()` with `OPENSSL_CONF` unset.
+- **Authority:** `OPENSSL_strdup(X509_get_default_cert_area() "/" "openssl.cnf")`,
+  where `X509_get_default_cert_area()` is `X509_CERT_AREA` = the build's
+  `OPENSSLDIR` = `/work/forensics/authorities/prefix/openssl-3.6.4-production/ssl`
+  for the admitted authority.
+- **Candidate:** an empty string.
+- **Reason:** that path is the *forensic build's installation directory*. This
+  implementation is not installed there, and no machine it ships to has that
+  directory. `src/runtime/init.rs` already made and recorded this decision for the
+  same constant: `OpenSSL_version(OPENSSL_DIR)` answers `OPENSSLDIR: N/A`
+  (`OBL-INIT-VERSION-DIRS`) for exactly this reason. The empty string is the
+  authority's own idiom for "no such path" — its
+  `X509_get_default_cert_area() == NULL` arm returns `OPENSSL_strdup("")` — and
+  `CONF_modules_load_file_ex` treats an empty name as "do not load a file" without
+  erroring. A unit test asserts the answer is *not* the authority's directory.
+- **Claim removed:** the no-`OPENSSL_CONF` branch is not claimed compatible. The
+  environment branch **is** compared byte for byte by `RT-CONF`, and the unset
+  branch is printed as
+  `defaultcfg.unset=RECORDED_DIVERGENCE_OBL_CONF_DEFAULT_CONFIG_FILE` rather than as
+  a value. The open obligation is `OBL-CONF-DEFAULT-CONFIG-FILE`, owned by Phase 16.

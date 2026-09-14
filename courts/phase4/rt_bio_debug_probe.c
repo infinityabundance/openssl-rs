@@ -45,6 +45,20 @@
  * message occupies one `key=value` line and the court's line-wise comparison
  * produces one residual per field rather than shifting every following line.
  *
+ * ## The NULL-destination fallback writes to stderr, so the probe captures it
+ *
+ * `BIO_debug_callback_ex` with a NULL `bio` argument writes to the process's
+ * stderr. That is the behaviour under test, but leaving the bytes there made the
+ * court's own *capture* irreproducible: the message begins with the subject's
+ * address, which is ASLR-dependent, so every run recorded a different stderr and
+ * therefore a different evidence identity — while the court's declared axis
+ * (`stdout`, `exit`) was stable. Disabling ASLR is not available here (measured:
+ * `setarch -R` is refused in both court containers). The probe therefore
+ * redirects descriptor 2 to a temporary file for the duration of that one call,
+ * restores it, and reports the scrubbed text as an observation. Nothing is
+ * discarded — the address is the only token masked, by the same `build_esc` the
+ * other cases use — and the raw bytes stay re-derivable from the staged binaries.
+ *
  * SPDX-License-Identifier: Apache-2.0
  */
 #include <openssl/bio.h>
@@ -52,6 +66,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 /* The destination for the debug text, recreated for each case. */
 static BIO *dst;
@@ -259,17 +274,51 @@ int main(void)
         case_end("unknown");
     }
 
-    /* --- a NULL destination falls back to stderr, which is not part of the
-     *     transcript; observe only that it does not fault and that the return
-     *     value and error queue are unchanged. ---------------------------- */
+    /* --- a NULL destination falls back to stderr. Observe the message itself,
+     *     with the address masked, rather than letting a live address reach the
+     *     capture and make this court's evidence identity irreproducible. ----- */
     {
         long r;
+        int saved, capfd;
+        FILE *cap;
+        char raw[512];
+        char esc[sizeof(raw) * 2];
+        size_t got = 0;
 
         ERR_clear_error();
         subject = BIO_new(BIO_s_mem());
         BIO_set_callback_ex(subject, NULL);
         BIO_set_callback_arg(subject, NULL);
-        r = BIO_debug_callback_ex(subject, BIO_CB_CTRL, NULL, 0, 0, 0L, 7, NULL);
+
+        cap = tmpfile();
+        saved = dup(STDERR_FILENO);
+        capfd = (cap != NULL) ? fileno(cap) : -1;
+        if (saved >= 0 && capfd >= 0 && dup2(capfd, STDERR_FILENO) >= 0) {
+            r = BIO_debug_callback_ex(subject, BIO_CB_CTRL, NULL, 0, 0, 0L, 7,
+                                      NULL);
+            fflush(stderr);
+            dup2(saved, STDERR_FILENO);
+        } else {
+            /* No capture available: still drive the call. */
+            r = BIO_debug_callback_ex(subject, BIO_CB_CTRL, NULL, 0, 0, 0L, 7,
+                                      NULL);
+            if (saved >= 0)
+                dup2(saved, STDERR_FILENO);
+        }
+        if (saved >= 0)
+            close(saved);
+        if (cap != NULL) {
+            rewind(cap);
+            got = fread(raw, 1, sizeof(raw), cap);
+            fclose(cap);
+        }
+        if (got > 0) {
+            build_esc(raw, (long)got, esc, (long)sizeof(esc));
+            printf("stderr.ctrl.text=%s\n", esc);
+        } else {
+            printf("stderr.ctrl.text=\n");
+        }
+        printf("stderr.ctrl.textlen=%lu\n", (unsigned long)got);
         printf("stderr.ctrl.ret=%ld\n", r);
         printf("stderr.ctrl.err0=%lu\n", ERR_peek_error());
         ERR_clear_error();

@@ -105,8 +105,14 @@ fn alloc_node() -> *mut BioAddrInfo {
 }
 
 /// `const BIO_ADDRINFO *BIO_ADDRINFO_next(const BIO_ADDRINFO *bai)`
+///
+/// # Safety
+/// `bai` must be NULL or point at a live [`BioAddrInfo`] (or the tail of such a
+/// chain). The returned pointer borrows the next node's ownership from the chain.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_ADDRINFO_next(bai: *const BioAddrInfo) -> *const BioAddrInfo {
+    // SAFETY: `bai` is NULL or a live node per the caller's contract; `as_ref`
+    // makes NULL total instead of dereferencing it.
     guard_ffi(ptr::null(), || match unsafe { bai.as_ref() } {
         Some(b) => b.next,
         None => ptr::null(),
@@ -114,14 +120,24 @@ pub unsafe extern "C" fn BIO_ADDRINFO_next(bai: *const BioAddrInfo) -> *const Bi
 }
 
 /// `int BIO_ADDRINFO_family(const BIO_ADDRINFO *bai)`
+///
+/// # Safety
+/// `bai` must be NULL or point at a live, readable [`BioAddrInfo`].
 #[no_mangle]
 pub unsafe extern "C" fn BIO_ADDRINFO_family(bai: *const BioAddrInfo) -> c_int {
+    // SAFETY: `bai` is NULL or a live node per the caller's contract; `as_ref`
+    // makes NULL total.
     guard_ffi(0, || unsafe { bai.as_ref().map_or(0, |b| b.family) })
 }
 
 /// `int BIO_ADDRINFO_socktype(const BIO_ADDRINFO *bai)`
+///
+/// # Safety
+/// `bai` must be NULL or point at a live, readable [`BioAddrInfo`].
 #[no_mangle]
 pub unsafe extern "C" fn BIO_ADDRINFO_socktype(bai: *const BioAddrInfo) -> c_int {
+    // SAFETY: `bai` is NULL or a live node per the caller's contract; `as_ref`
+    // makes NULL total.
     guard_ffi(0, || unsafe { bai.as_ref().map_or(0, |b| b.socktype) })
 }
 
@@ -130,9 +146,14 @@ pub unsafe extern "C" fn BIO_ADDRINFO_socktype(bai: *const BioAddrInfo) -> c_int
 /// Not a plain field read: a stored protocol of 0 is *derived* from the socket
 /// type, except for `AF_UNIX` where it stays 0. The authority's resolver path
 /// usually fills the field, so the derivation is easy to overlook.
+///
+/// # Safety
+/// `bai` must be NULL or point at a live, readable [`BioAddrInfo`].
 #[no_mangle]
 pub unsafe extern "C" fn BIO_ADDRINFO_protocol(bai: *const BioAddrInfo) -> c_int {
     guard_ffi(0, || {
+        // SAFETY: `bai` is NULL or a live node per the caller's contract; `as_ref`
+        // makes NULL total.
         let Some(b) = (unsafe { bai.as_ref() }) else {
             return 0;
         };
@@ -153,8 +174,14 @@ pub unsafe extern "C" fn BIO_ADDRINFO_protocol(bai: *const BioAddrInfo) -> c_int
 /// `const BIO_ADDR *BIO_ADDRINFO_address(const BIO_ADDRINFO *bai)`
 ///
 /// Borrowed: the address belongs to the node and must not be freed by the caller.
+///
+/// # Safety
+/// `bai` must be NULL or point at a live, readable [`BioAddrInfo`]. The returned
+/// pointer is borrowed from the node and stays valid only while the chain does.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_ADDRINFO_address(bai: *const BioAddrInfo) -> *const BioAddr {
+    // SAFETY: `bai` is NULL or a live node per the caller's contract; `as_ref`
+    // makes NULL total.
     guard_ffi(ptr::null(), || match unsafe { bai.as_ref() } {
         Some(b) => b.addr,
         None => ptr::null(),
@@ -168,6 +195,11 @@ pub unsafe extern "C" fn BIO_ADDRINFO_address(bai: *const BioAddrInfo) -> *const
 /// walk for one built by `addrinfo_wrap` — because its resolver chain *is* glibc's
 /// list. Ours is always our own, so the walk is unconditional; the observable
 /// (everything is released, nothing is returned) is the same.
+///
+/// # Safety
+/// `bai` must be NULL or the head of an owned [`BioAddrInfo`] chain built by this
+/// module, not already freed. Every node's address and the node itself are
+/// released; the caller must not use them afterwards.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_ADDRINFO_free(bai: *mut BioAddrInfo) {
     guard_ffi((), || {
@@ -175,6 +207,7 @@ pub unsafe extern "C" fn BIO_ADDRINFO_free(bai: *mut BioAddrInfo) {
         while !cur.is_null() {
             // SAFETY: `cur` is a live node allocated by `alloc_node`.
             let next = unsafe { (*cur).next };
+            // SAFETY: `cur` is a live node allocated by `alloc_node`.
             let addr = unsafe { (*cur).addr };
             if !addr.is_null() {
                 // SAFETY: `addr` is owned by this node.
@@ -445,6 +478,8 @@ unsafe fn find_char(s: *const c_char, needle: c_char) -> *const c_char {
         if c == 0 {
             return ptr::null();
         }
+        // SAFETY: the scan has not yet reached the terminator, so `p` points at
+        // an in-bounds byte and `p + 1` is at or before the terminator.
         p = unsafe { p.add(1) };
     }
 }
@@ -465,6 +500,8 @@ unsafe fn find_last_char(s: *const c_char, needle: c_char) -> *const c_char {
         if c == 0 {
             return last;
         }
+        // SAFETY: the scan has not yet reached the terminator, so `p` points at
+        // an in-bounds byte and `p + 1` is at or before the terminator.
         p = unsafe { p.add(1) };
     }
 }
@@ -499,20 +536,29 @@ pub unsafe extern "C" fn BIO_parse_hostserv(
 
         // SAFETY: `hostserv` is NUL-terminated.
         if unsafe { *hostserv } == b'[' as c_char {
+            // SAFETY: `hostserv` is a NUL-terminated string per the caller's
+            // contract, which is `find_char`'s precondition.
             let close = unsafe { find_char(hostserv, b']' as c_char) };
             if close.is_null() {
                 // SAFETY: the site is a compile-time constant.
                 unsafe { raise_site(&BIO_ADDR_593) };
                 return 0;
             }
-            // SAFETY: `close` points at the `]` inside `hostserv`.
+            // SAFETY: `close` points at the `]` and `h` is `hostserv + 1`, so
+            // `h` precedes or equals `close` within the same allocation.
             h = unsafe { hostserv.add(1) };
+            // SAFETY: both pointers are derived from `hostserv` and ordered, so
+            // the signed distance is in bounds.
             hl = unsafe { close.offset_from(h) } as usize;
+            // SAFETY: `close` points at the non-NUL `]`, so `close + 1` is at or
+            // before the terminator.
             let after = unsafe { close.add(1) };
             // SAFETY: `after` is at or before the terminator.
             match unsafe { *after } {
                 0 => p = ptr::null(),
                 c if c == b':' as c_char => {
+                    // SAFETY: `after` points at the non-NUL `:`, so `after + 1`
+                    // is at or before the terminator.
                     p = unsafe { after.add(1) };
                     // SAFETY: `p` is a NUL-terminated suffix of `hostserv`.
                     pl = unsafe { sys::strlen(p) };
@@ -524,7 +570,10 @@ pub unsafe extern "C" fn BIO_parse_hostserv(
                 }
             }
         } else {
+            // SAFETY: `hostserv` is a NUL-terminated string per the caller's
+            // contract, which is the precondition of both scan helpers.
             let last = unsafe { find_last_char(hostserv, b':' as c_char) };
+            // SAFETY: as above.
             let first = unsafe { find_char(hostserv, b':' as c_char) };
             if first != last {
                 // SAFETY: the site is a compile-time constant.
@@ -533,7 +582,11 @@ pub unsafe extern "C" fn BIO_parse_hostserv(
             }
             if !first.is_null() {
                 h = hostserv;
+                // SAFETY: `first` points at the `:` and `hostserv` is the start of
+                // the same allocation, so `hostserv` precedes or equals it.
                 hl = unsafe { first.offset_from(hostserv) } as usize;
+                // SAFETY: `first` points at the non-NUL `:`, so `first + 1` is at
+                // or before the terminator.
                 p = unsafe { first.add(1) };
                 // SAFETY: `p` is a NUL-terminated suffix of `hostserv`.
                 pl = unsafe { sys::strlen(p) };
@@ -548,6 +601,8 @@ pub unsafe extern "C" fn BIO_parse_hostserv(
             }
         }
 
+        // SAFETY: `p` is a non-NULL NUL-terminated suffix of `hostserv`, which is
+        // `find_char`'s precondition.
         if !p.is_null() && !unsafe { find_char(p, b':' as c_char) }.is_null() {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_site(&BIO_ADDR_593) };
@@ -555,6 +610,8 @@ pub unsafe extern "C" fn BIO_parse_hostserv(
         }
 
         if !h.is_null() && !host.is_null() {
+            // SAFETY: `h` is non-NULL here and `hl == 1` asserts one readable byte,
+            // so the `*h` read is in bounds.
             let empty = hl == 0 || (hl == 1 && unsafe { *h } == b'*' as c_char);
             if empty {
                 // SAFETY: `host` is writable per the caller's contract.
@@ -571,6 +628,8 @@ pub unsafe extern "C" fn BIO_parse_hostserv(
         }
 
         if !p.is_null() && !service.is_null() {
+            // SAFETY: `p` is non-NULL here and `pl == 1` asserts one readable byte,
+            // so the `*p` read is in bounds.
             let empty = pl == 0 || (pl == 1 && unsafe { *p } == b'*' as c_char);
             if empty {
                 // SAFETY: `service` is writable per the caller's contract.
@@ -593,6 +652,8 @@ pub unsafe extern "C" fn BIO_parse_hostserv(
                                     ALLOC_LINE,
                                 )
                             };
+                            // SAFETY: `host` is writable per the caller's contract;
+                            // clearing it prevents the caller double-freeing.
                             unsafe { *host = ptr::null_mut() };
                         }
                     }

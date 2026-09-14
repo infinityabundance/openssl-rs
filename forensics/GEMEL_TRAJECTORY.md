@@ -10,6 +10,14 @@ in Git. See `docs/DECISIONS.md` D17.
 ## `gemel log`
 
 ```
+C18  Phase 4 evidence reproducibility: the RT-BIO-DEBUG probe leaked an ASLR-dependent subject address to stderr through the NULL-destination fallback of BIO_debug_callback_ex. The court declares stdout and exit as its axes, and its stdout was already stable and scrubbed, so the claim was never affected; but the capture includes stderr, so every run produced a different evidence identity, and that one court was enough to make the aggregate runtime claim identity unstable. Measured: three re-runs of the court in one store produced three different run ids. setarch -R is refused in both court containers, so ASLR cannot be disabled. The probe now redirects descriptor 2 to a temporary file for that one call, restores it, and reports the scrubbed text as two further observations. Three re-runs now return the identical run id and FRF refuses to re-capture, which is the falsifiable test that it is fixed.
+    state state.6362a83c6c38c4083b7e282c2c06129d5e2c180c6f75f473b2f79f8cba98f7a5 -> state.e0c7044436a5db04f8a67931be2e8532bae6af04741d0789a736157bd367f2ab
+C17  Record correction: the Phase 4 ledger hands thirty-one exports to later strata, in five groups, each with a named owning phase and a stated reason. Six to Phase 5 (the ASN.1 prefix and suffix hooks plus BIO_f_asn1 and BIO_new_NDEF), seventeen to Phase 6 (BIO_s_core, BIO_new_from_core_bio and the fifteen CONF module-registry entry points), five to Phase 7 (the digest, cipher, reliable and base64 filters and BIO_set_cipher), one to Phase 9 (BIO_f_nbio_test, whose read and write call RAND_priv_bytes), and two to Phase 12 (BIO_new_CMS and BIO_new_PKCS7). The eleven symbols Phase 3 handed to Phase 4 are recorded on the Phase 3 side as discharged, not as Phase 4 deferrals. No file content changed.
+    state state.6362a83c6c38c4083b7e282c2c06129d5e2c180c6f75f473b2f79f8cba98f7a5 -> state.6362a83c6c38c4083b7e282c2c06129d5e2c180c6f75f473b2f79f8cba98f7a5
+C16  Record correction: the Phase 4 closure change C15 says the ledger hands twenty-two symbols to later strata. The ledger hands thirty-one, and two of the thirty-one are the ASN.1 prefix hooks and CMS/PKCS#7 BIO bindings; the eleven discharged Phase 3 hand-offs are counted on the Phase 3 side, not as Phase 4 deferrals. No file content changed with this correction; the Git commit remains the authoritative record of the diff.
+    state state.6362a83c6c38c4083b7e282c2c06129d5e2c180c6f75f473b2f79f8cba98f7a5 -> state.6362a83c6c38c4083b7e282c2c06129d5e2c180c6f75f473b2f79f8cba98f7a5
+C15  Phase 4 complete: sixteen differential BIO, BIO-adjacent, OBJ and CONF courts with no residual over 3215 observations; the whole CONF reader including both character-class tables; the lhash insertion-order defect the dump text exposed; the ERR data formatting the authority does through BIO_vsnprintf; and a ledger that hands twenty-two symbols to named later strata. The FRF runtime claim is now sensitivity-backed over twenty-three courts.
+    state state.6fe2d6a4caa8fde4a5aed8933bcac4e4a7e403eb92165dfc85b56f54dfce9c5a -> state.6362a83c6c38c4083b7e282c2c06129d5e2c180c6f75f473b2f79f8cba98f7a5
 C13  Record correction: Gemel names changes by derived order, so the name C9 that Phase 3 closure (change.0321160b...) quotes in its summary is not stable. The placeholder change it means is change.e58167ada98b43af520cd6b8c39c103a30560c406cfd91e6004019fd0b75f326, currently named C11, and it is the change that carries the Phase 3 working-tree operations because it was created first. No content changed; this change exists so the durable identity is recorded in the store rather than only in prose.
     state state.fad064947e65109210abd9e4d2e1a79a9945c6dc6604c8d6c74501c1d5f1045c -> state.6fe2d6a4caa8fde4a5aed8933bcac4e4a7e403eb92165dfc85b56f54dfce9c5a
 C10  Phase 3 complete: seven differential runtime courts with no residual, generated ERR reason tables and raise-site coordinates, load-gated string visibility, fail-closed obligation ledger. Supersedes C9, which was created accidentally by a command-line probe of the claim-kind enum and carries only a placeholder claim.
@@ -34,8 +42,10 @@ C1  Phase 0 constitution and Phase 1 archaeology atlas, evidence-bound
 * `K4` — `checkpoint.1bde75b37e1ca3972037c29cbd3ba5291079544436db9176a82f097a6bf832fe`
 * `K5` — `checkpoint.6b0d12f1ecf380c0808bc95675222fbed7256f99bc8e9f475a0ec2693f804a0a`
 * `K6` — `checkpoint.8958092650197b473c5b00d9c0de22e075c4765efc2e8a4ab9d452ffae97cf61`
+* `K7` — `checkpoint.0c5d62d5f78d2c4ebdc7174affd4464f04d1315708e5a87962cded63439818d3`
+* `K8` — `checkpoint.7eb3dba97cbf20f2b34d14cce7e93bc2171ebd0d7ee66d1f7508cc6e199567de`
 
-current: `checkpoint.8958092650197b473c5b00d9c0de22e075c4765efc2e8a4ab9d452ffae97cf61`
+current: `checkpoint.7eb3dba97cbf20f2b34d14cce7e93bc2171ebd0d7ee66d1f7508cc6e199567de`
 
 ## Note: derived names are not identities
 
@@ -55,6 +65,24 @@ changed with it; the Git commit is the authoritative record of the diff.
 ## Open residuals at this boundary
 
 ```
+open [low] the RT-BIO-DEBUG transcript gains two observations, so its receipt identity differs from the one recorded before this fix
+    class: expected_mismatch
+    persistence: 0 descendant change(s)
+open [low] thirty-one Phase 4 family exports are handed to a named later stratum and remain SCAFFOLDED until it lands
+    class: expected_mismatch
+    persistence: 0 descendant change(s)
+open [low] the ABI-SYMBOL court compares name, version, ELF type, binding and visibility but never C prototypes; a declaration/definition arity mismatch is invisible to it
+    class: verification_gap
+    persistence: 0 descendant change(s)
+open [low] CONF_get1_default_config_file answers the empty string rather than the forensic build OPENSSLDIR; OBL-CONF-DEFAULT-CONFIG-FILE is owned by Phase 16
+    class: expected_mismatch
+    persistence: 0 descendant change(s)
+open [low] the FRF runtime claim covers the first stdout line, which is a digest of the whole transcript, plus exit class; stderr is not claimed because both sides write none
+    class: verification_gap
+    persistence: 0 descendant change(s)
+open [low] the CONF court cannot compare parselist.nocb or the recursive-directory include, because the authority faults on both
+    class: expected_mismatch
+    persistence: 0 descendant change(s)
 open [low] Gemel C9 was created accidentally while probing the claim-kind enum, and Gemel is append-only so it carries a placeholder claim; C10 is the substantive record
     class: expected_mismatch
     persistence: 0 descendant change(s)

@@ -12,7 +12,7 @@ enforced here:
 | 1 | Complete archaeology / API / ABI atlas | `complete` |  |
 | 2 | Distribution / ABI shell | `complete` |  |
 | 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `complete` |  |
-| 4 | BIO + CONF + object database | `in-progress` | 44 open obligation(s) of this stratum recorded in forensics/phase4-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
+| 4 | BIO + CONF + object database | `complete` |  |
 | 5 | BN + ASN.1 + DER/PEM | `not-started` | not started |
 | 6 | OSSL_LIB_CTX + provider core | `not-started` | not started |
 | 7 | EVP framework | `not-started` | not started |
@@ -30,3 +30,18 @@ enforced here:
 | 19 | Performance / CPU dispatch | `not-started` | not started |
 | 20 | 3.6.4 custodian seal | `not-started` | not started |
 | 21 | Maintenance delta machinery | `not-started` | not started |
+
+Deferred out of phase 3 (recorded hand-offs, not parity
+claims):
+
+* ERR_add_error_mem_bio -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)
+* ERR_print_errors -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)
+* ERR_print_errors_cb -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)
+* ERR_print_errors_fp -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)
+* OBJ_create_objects -> phase 4 (reads an object description stream from a BIO; BIO is Phase 4)
+* OPENSSL_LH_node_stats -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)
+* OPENSSL_LH_node_stats_bio -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)
+* OPENSSL_LH_node_usage_stats -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)
+* OPENSSL_LH_node_usage_stats_bio -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)
+* OPENSSL_LH_stats -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)
+* OPENSSL_LH_stats_bio -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)

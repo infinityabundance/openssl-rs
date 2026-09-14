@@ -99,6 +99,9 @@ pub unsafe extern "C" fn OPENSSL_INIT_set_config_filename(
     filename: *const c_char,
 ) -> c_int {
     guard_ffi(0, || {
+        // SAFETY: `settings` is NULL or a live `OpenSslInitSettings` per this
+        // function's contract; `as_mut` yields `None` for NULL and otherwise
+        // borrows that live object for the closure's lifetime.
         let Some(s) = (unsafe { settings.as_mut() }) else {
             return 0;
         };
@@ -149,6 +152,9 @@ pub unsafe extern "C" fn OPENSSL_INIT_set_config_appname(
     appname: *const c_char,
 ) -> c_int {
     guard_ffi(0, || {
+        // SAFETY: `settings` is NULL or a live `OpenSslInitSettings` per this
+        // function's contract; `as_mut` yields `None` for NULL and otherwise
+        // borrows that live object for the closure's lifetime.
         let Some(s) = (unsafe { settings.as_mut() }) else {
             return 0;
         };
@@ -180,6 +186,9 @@ pub unsafe extern "C" fn OPENSSL_INIT_set_config_appname(
 #[no_mangle]
 pub unsafe extern "C" fn OPENSSL_INIT_free(settings: *mut OpenSslInitSettings) {
     guard_ffi((), || {
+        // SAFETY: `settings` is NULL or a live, not-yet-freed
+        // `OpenSslInitSettings` per this function's contract; `as_mut` yields
+        // `None` for NULL and otherwise borrows that live object.
         let Some(s) = (unsafe { settings.as_mut() }) else {
             return;
         };
@@ -222,7 +231,7 @@ mod tests {
             assert!((*s).filename.is_null());
             assert!((*s).appname.is_null());
             assert_eq!((*s).flags, DEFAULT_CONF_MFLAGS);
-            assert_eq!(OPENSSL_INIT_set_config_flags_probe(s), 1);
+            assert_eq!(set_config_flags_probe(s), 1);
             assert_eq!(OPENSSL_INIT_set_config_filename(s, c"a.cnf".as_ptr()), 1);
             assert_eq!(strlen_probe((*s).filename), 5);
             assert_eq!(OPENSSL_INIT_set_config_filename(s, ptr::null()), 1);
@@ -233,7 +242,7 @@ mod tests {
 
     /// # Safety
     /// `s` must be live.
-    unsafe fn OPENSSL_INIT_set_config_flags_probe(s: *mut OpenSslInitSettings) -> c_int {
+    unsafe fn set_config_flags_probe(s: *mut OpenSslInitSettings) -> c_int {
         // SAFETY: the caller guarantees `s` is live.
         unsafe { OPENSSL_INIT_set_config_file_flags(s, 7) };
         // SAFETY: as above.

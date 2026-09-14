@@ -61,7 +61,7 @@ GENERATOR = "forensics/tools/phase4_obligations.py"
 # accounting; see `src/runtime/conf/mod.rs`.
 FAMILIES = [
     ("src/runtime/bio/", (
-        "BIO_", "BUF_MEM_",
+        "BIO_", "BUF_",
     )),
     ("src/runtime/conf/", ("CONF_", "NCONF_", "OPENSSL_INIT_")),
     ("src/runtime/obj.rs", ("OBJ_create_objects",)),
@@ -95,6 +95,33 @@ DEFERRED: dict[str, tuple[int, str]] = {
     # The provider core owns OSSL_LIB_CTX and the core dispatch table.
     "BIO_s_core": (6, "the provider core-to-BIO method; OSSL_LIB_CTX is Phase 6"),
     "BIO_new_from_core_bio": (6, "wraps an OSSL_CORE_BIO; OSSL_LIB_CTX is Phase 6"),
+    # The CONF module registry. `CONF_modules_load` begins with
+    # `conf_diagnostics()`, which reads and writes the `OSSL_LIB_CTX`
+    # configuration-diagnostics flag, and that flag is not cosmetic: it masks the
+    # `CONF_MFLAGS_IGNORE_ERRORS`, `IGNORE_RETURN_CODES`, `SILENT` and
+    # `IGNORE_MISSING_FILE` bits of the flags argument, which changes what
+    # `CONF_modules_load` and `CONF_modules_load_file*` return. A registry that
+    # cannot read the flag reports the wrong result for a real configuration, so
+    # the whole family is handed to the stratum that owns `OSSL_LIB_CTX` rather
+    # than approximated. `crypto/conf/conf_mod.c` also reaches `DSO_load`,
+    # `OPENSSL_load_builtin_modules` and `ENGINE_load_builtin_engines`, all of
+    # which are later strata. See docs/DECISIONS.md D50 for the call chain.
+    "CONF_modules_load": (6, "calls conf_diagnostics -> OSSL_LIB_CTX_get/set_conf_diagnostics; OSSL_LIB_CTX is Phase 6"),
+    "CONF_modules_load_file": (6, "forwards to CONF_modules_load_file_ex; OSSL_LIB_CTX is Phase 6"),
+    "CONF_modules_load_file_ex": (6, "reads and preserves OSSL_LIB_CTX diagnostics, and calls CONF_modules_load; OSSL_LIB_CTX is Phase 6"),
+    "CONF_modules_finish": (6, "finishes the initialized-module list, which only CONF_modules_load populates; Phase 6"),
+    "CONF_modules_unload": (6, "unloads entries of the module list and calls DSO_free; DSO is a later stratum and OSSL_LIB_CTX is Phase 6"),
+    "CONF_module_add": (6, "adds to the supported-module list guarded by the RCU lock that the module registry owns; Phase 6"),
+    "CONF_imodule_get_flags": (6, "reads a CONF_IMODULE, which only the module registry creates; Phase 6"),
+    "CONF_imodule_get_module": (6, "reads a CONF_IMODULE, which only the module registry creates; Phase 6"),
+    "CONF_imodule_get_name": (6, "reads a CONF_IMODULE, which only the module registry creates; Phase 6"),
+    "CONF_imodule_get_usr_data": (6, "reads a CONF_IMODULE, which only the module registry creates; Phase 6"),
+    "CONF_imodule_get_value": (6, "reads a CONF_IMODULE, which only the module registry creates; Phase 6"),
+    "CONF_imodule_set_flags": (6, "writes a CONF_IMODULE, which only the module registry creates; Phase 6"),
+    "CONF_imodule_set_usr_data": (6, "writes a CONF_IMODULE, which only the module registry creates; Phase 6"),
+    "CONF_module_get_usr_data": (6, "reads a CONF_MODULE, which only the module registry creates; Phase 6"),
+    "CONF_module_set_usr_data": (6, "writes a CONF_MODULE, which only the module registry creates; Phase 6"),
+
     # The non-blocking test filter is a RAND consumer: its read and write paths
     # both call RAND_priv_bytes to decide whether to report a retry, so its
     # observable behaviour cannot be reproduced without the RAND subsystem. The
@@ -103,6 +130,29 @@ DEFERRED: dict[str, tuple[int, str]] = {
     # scaffold, not an implementation.
     "BIO_f_nbio_test": (9, "its read and write call RAND_priv_bytes; RAND is Phase 9"),
 }
+
+
+# Symbols the Phase 3 ledger hands to this stratum (`forensics/phase3-obligations.json`,
+# `deferred` rows whose `owning_phase` is 4). Every one of them lives in a Phase 3
+# module, because that is where the code that needed the sink already was, but the
+# obligation is this stratum's: each needs a `BIO *` or a `FILE *`, and BIO is
+# Phase 4. Declaring them here is what lets `ownership_audit.py` prove that the two
+# ledgers agree -- Phase 3 must list exactly these as deferred to Phase 4, and this
+# stratum must list exactly these as the hand-offs it discharged, so no symbol can
+# be counted as implemented by two strata at once. See docs/DECISIONS.md D57.
+HANDED_OFF_FROM_PHASE3 = (
+    "ERR_add_error_mem_bio",
+    "ERR_print_errors",
+    "ERR_print_errors_cb",
+    "ERR_print_errors_fp",
+    "OBJ_create_objects",
+    "OPENSSL_LH_node_stats",
+    "OPENSSL_LH_node_stats_bio",
+    "OPENSSL_LH_node_usage_stats",
+    "OPENSSL_LH_node_usage_stats_bio",
+    "OPENSSL_LH_stats",
+    "OPENSSL_LH_stats_bio",
+)
 
 
 def authority_exports(authority: Path) -> list[str]:
@@ -138,6 +188,25 @@ def main(argv: list[str]) -> int:
     implemented_here = sorted(s for s in owned if s in done)
     remaining = sorted(s for s in owned if s not in done)
 
+    # The hand-offs Phase 3 handed this stratum must be accounted for here: a
+    # symbol Phase 3 deferred to this phase that this phase does not even claim is
+    # an obligation that fell between the two ledgers.
+    undeclared = sorted(s for s in HANDED_OFF_FROM_PHASE3 if s not in owned)
+    if undeclared:
+        raise SystemExit(
+            "phase4-obligations: these symbols are handed from Phase 3 but no "
+            "Phase 4 family claims them, so the hand-off is unaccounted for:\n  "
+            + "\n  ".join(undeclared)
+        )
+    unbuilt = sorted(s for s in HANDED_OFF_FROM_PHASE3 if s not in done)
+    if unbuilt:
+        raise SystemExit(
+            "phase4-obligations: these symbols were handed from Phase 3 and are "
+            "still not implemented, so they belong in DEFERRED with a later "
+            "phase rather than in the discharged hand-off list:\n  "
+            + "\n  ".join(unbuilt)
+        )
+
     deferred_rows = []
     open_rows = []
     for sym in remaining:
@@ -165,7 +234,15 @@ def main(argv: list[str]) -> int:
         "implemented": implemented_here,
         "deferred": deferred_rows,
         "open": open_rows,
-        "complete": not open_rows and not deferred_rows,
+        "handoffs_discharged": {"3": sorted(HANDED_OFF_FROM_PHASE3)},
+        # A hand-off is not a gap. `open` is the only list that blocks the
+        # stratum: a deferred symbol names the phase that owns the subsystem it
+        # needs, and the phase-state rule is that nothing is *unaccounted for*.
+        # The expression here previously required both lists to be empty, which
+        # made the field describe something other than what the note beside it
+        # says and made `complete` permanently false for a stratum that
+        # legitimately hands anything forward.
+        "complete": not open_rows,
         "note": (
             "`complete` is true only when every export in these families is either "
             "implemented or handed to a later stratum. `open` entries belong to "

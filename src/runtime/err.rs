@@ -679,6 +679,68 @@ pub unsafe extern "C" fn openssl_rs_err_set_error(lib: c_int, reason: c_int, msg
     })
 }
 
+/// Detaches the current slot's error data, for the variadic formatter.
+///
+/// This is the step `ERR_vset_error` performs directly in the authority: the
+/// slot's `err_data` and `err_data_size` are handed to the caller and the slot is
+/// left with a NULL pointer and no flags, so that the formatter may `realloc` the
+/// buffer without anything else freeing it in the meantime.
+///
+/// Returns the buffer (which the caller now owns) and writes its size through
+/// `size`.
+///
+/// # Safety
+/// `size` must be writable for a `usize`.
+#[no_mangle]
+pub unsafe extern "C" fn openssl_rs_err_take_data(size: *mut usize) -> *mut c_char {
+    guard_ffi(core::ptr::null_mut(), || {
+        with_state(|s| {
+            let t = s.top as usize;
+            let p = s.err_data[t];
+            if !size.is_null() {
+                // SAFETY: writable per the caller's contract.
+                unsafe { *size = s.err_data_size[t] };
+            }
+            s.err_data[t] = core::ptr::null_mut();
+            s.err_data_flags[t] = 0;
+            p
+        })
+        .unwrap_or(core::ptr::null_mut())
+    })
+}
+
+/// Installs the result of the variadic formatter.
+///
+/// The authority's `ERR_vset_error` ends with `err_clear_data(es, top, 0)`, an
+/// `err_set_error`, and — only when there was a format string — an
+/// `err_set_data(es, top, buf, buf_size, flags)`. Splitting it this way lets the
+/// formatting itself happen in C, where `va_list` exists, while the queue's state
+/// stays in Rust.
+///
+/// # Safety
+/// `data` must be NULL or a `CRYPTO_malloc` block this call takes ownership of.
+#[no_mangle]
+pub unsafe extern "C" fn openssl_rs_err_finish_data(
+    lib: c_int,
+    reason: c_int,
+    data: *mut c_char,
+    size: usize,
+    flags: c_int,
+) {
+    guard_ffi((), || {
+        with_state(|s| {
+            let t = s.top as usize;
+            s.clear_data(t, false);
+            s.set_error(t, lib, reason);
+            // A NULL buffer is the `fmt == NULL` case: the slot keeps no data at
+            // all, which is different from keeping an empty string.
+            if !data.is_null() {
+                s.set_data(t, data, size, flags);
+            }
+        });
+    })
+}
+
 /// Appends textual data to the current slot. Called by the variadic C adapter,
 /// which has already concatenated the arguments.
 ///
@@ -1816,8 +1878,8 @@ pub unsafe extern "C" fn ERR_add_error_mem_bio(
             return;
         }
         // `BIO_get_mem_data(bio, &str)` is `BIO_ctrl(bio, BIO_CTRL_INFO, 0, &str)`.
-        // SAFETY: `bio` is live and `str_ptr` is a live local the control writes.
         let mut str_ptr: *mut c_char = ptr::null_mut();
+        // SAFETY: `bio` is live and `str_ptr` is a live local the control writes.
         let mut len = unsafe {
             crate::runtime::bio::BIO_ctrl(
                 bio,

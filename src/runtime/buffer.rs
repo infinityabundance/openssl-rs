@@ -88,9 +88,17 @@ pub extern "C" fn BUF_MEM_new_ex(flags: c_ulong) -> *mut BufMem {
 /// The data block is *cleansed* before release, through the secure variant when
 /// the buffer was flagged secure, because a `BUF_MEM` routinely holds key
 /// material.
+///
+/// # Safety
+/// `a` must be NULL or a pointer returned by `BUF_MEM_new`/`BUF_MEM_new_ex`
+/// that the caller owns and has not already freed; ownership transfers to this
+/// call.
 #[no_mangle]
 pub unsafe extern "C" fn BUF_MEM_free(a: *mut BufMem) {
     guard_ffi((), || {
+        // SAFETY: `a` is NULL or a live `BUF_MEM` owned by the caller for the
+        // duration of this call; `as_mut` gives an exclusive borrow for the
+        // non-NULL case and `None` for NULL.
         let Some(m) = (unsafe { a.as_mut() }) else {
             return;
         };
@@ -115,15 +123,15 @@ pub unsafe extern "C" fn BUF_MEM_free(a: *mut BufMem) {
 unsafe fn sec_alloc_realloc(m: *mut BufMem, len: usize) -> *mut c_char {
     // SAFETY: a secure allocation request of `len` bytes.
     let ret: *mut c_char = unsafe { CRYPTO_secure_malloc(len, ptr::null(), 0).cast() };
-    if !unsafe { (*m).data }.is_null() {
-        if !ret.is_null() {
-            // SAFETY: the new block is `len` bytes, the old holds `length` valid
-            // bytes, and `length <= len` at every call site.
-            unsafe {
-                ptr::copy_nonoverlapping((*m).data, ret, (*m).length);
-                CRYPTO_secure_clear_free((*m).data.cast(), (*m).length, ptr::null(), 0);
-                (*m).data = ptr::null_mut();
-            }
+    // SAFETY: `m` is a live `BUF_MEM` per this function's contract, so its
+    // `data` field is readable; it is NULL until the first allocation.
+    if !unsafe { (*m).data }.is_null() && !ret.is_null() {
+        // SAFETY: the new block is `len` bytes, the old holds `length` valid
+        // bytes, and `length <= len` at every call site.
+        unsafe {
+            ptr::copy_nonoverlapping((*m).data, ret, (*m).length);
+            CRYPTO_secure_clear_free((*m).data.cast(), (*m).length, ptr::null(), 0);
+            (*m).data = ptr::null_mut();
         }
     }
     ret
@@ -134,9 +142,15 @@ unsafe fn sec_alloc_realloc(m: *mut BufMem, len: usize) -> *mut c_char {
 /// Returns `len` on success and 0 on failure. Shrinking within the existing
 /// allocation is free; growth reallocates to `(len + 3) / 3 * 4` and zeroes the
 /// newly exposed region.
+///
+/// # Safety
+/// `m` must be NULL or a live `BUF_MEM`. When non-NULL, `data` must be NULL or
+/// the block most recently allocated for this object, with capacity `max`.
 #[no_mangle]
 pub unsafe extern "C" fn BUF_MEM_grow(m: *mut BufMem, len: usize) -> usize {
     guard_ffi(0, || {
+        // SAFETY: `m` is NULL or a live `BUF_MEM` per the caller's contract; a
+        // NULL yields `None` and the documented 0 return.
         let Some(str_) = (unsafe { m.as_mut() }) else {
             return 0;
         };
@@ -188,9 +202,15 @@ pub unsafe extern "C" fn BUF_MEM_grow(m: *mut BufMem, len: usize) -> usize {
 /// As [`BUF_MEM_grow`], but the release of the old block is a *cleansing* one and
 /// the growth uses `CRYPTO_clear_realloc`, so a shrink does not leave the
 /// discarded tail readable in memory.
+///
+/// # Safety
+/// `m` must be NULL or a live `BUF_MEM`. When non-NULL, `data` must be NULL or
+/// the block most recently allocated for this object, with capacity `max`.
 #[no_mangle]
 pub unsafe extern "C" fn BUF_MEM_grow_clean(m: *mut BufMem, len: usize) -> usize {
     guard_ffi(0, || {
+        // SAFETY: `m` is NULL or a live `BUF_MEM` per the caller's contract; a
+        // NULL yields `None` and the documented 0 return.
         let Some(str_) = (unsafe { m.as_mut() }) else {
             return 0;
         };
@@ -244,6 +264,10 @@ pub unsafe extern "C" fn BUF_MEM_grow_clean(m: *mut BufMem, len: usize) -> usize
 /// In-place when `in` is NULL. A zero `size` with a NULL `in` is a no-op; with a
 /// non-NULL `in` the authority computes `out + size - 1`, so `size == 0` is still
 /// well defined only because no byte is then written.
+///
+/// # Safety
+/// `out` must be NULL or point to `size` writable bytes. `input`, when non-NULL,
+/// must point to `size` readable bytes and must not overlap `out`.
 #[no_mangle]
 pub unsafe extern "C" fn BUF_reverse(out: *mut u8, input: *const u8, size: usize) {
     guard_ffi((), || {
@@ -251,6 +275,10 @@ pub unsafe extern "C" fn BUF_reverse(out: *mut u8, input: *const u8, size: usize
             return;
         }
         if !input.is_null() {
+            // SAFETY: `out` is writable for `size` bytes per the caller's
+            // contract, so `out + size - 1` addresses its last byte; for
+            // `size == 0` the loop body does not run and the pointer is never
+            // dereferenced.
             let mut o = unsafe { out.add(size.wrapping_sub(1)) };
             let mut i = input;
             for _ in 0..size {
@@ -263,13 +291,15 @@ pub unsafe extern "C" fn BUF_reverse(out: *mut u8, input: *const u8, size: usize
             }
         } else {
             let mut lo = out;
+            // SAFETY: `out` is writable for `size` bytes per the caller's
+            // contract; `size == 0` leaves this pointer unused because the loop
+            // below runs zero times.
             let mut hi = unsafe { out.add(size.wrapping_sub(1)) };
             for _ in 0..size / 2 {
-                // SAFETY: `lo < hi` throughout, both within `out`.
+                // SAFETY: `lo < hi` throughout, so the two references are
+                // disjoint, and both lie within `out`.
                 unsafe {
-                    let c = *hi;
-                    *hi = *lo;
-                    *lo = c;
+                    core::ptr::swap(hi, lo);
                     hi = hi.sub(1);
                     lo = lo.add(1);
                 }

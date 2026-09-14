@@ -1,12 +1,12 @@
 {
   "authority": "openssl-3.6.4-production",
   "body": {
-    "complete": false,
+    "complete": true,
     "counts": {
-      "deferred_to_later_phase": 16,
-      "implemented": 201,
-      "open_in_this_stratum": 44,
-      "owned": 261
+      "deferred_to_later_phase": 31,
+      "implemented": 231,
+      "open_in_this_stratum": 0,
+      "owned": 262
     },
     "deferred": [
       {
@@ -104,6 +104,96 @@
         "owning_phase": 7,
         "reason": "sets the EVP_CIPHER of a BIO_f_cipher; EVP is Phase 7",
         "symbol": "BIO_set_cipher"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "owning_phase": 6,
+        "reason": "reads a CONF_IMODULE, which only the module registry creates; Phase 6",
+        "symbol": "CONF_imodule_get_flags"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "owning_phase": 6,
+        "reason": "reads a CONF_IMODULE, which only the module registry creates; Phase 6",
+        "symbol": "CONF_imodule_get_module"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "owning_phase": 6,
+        "reason": "reads a CONF_IMODULE, which only the module registry creates; Phase 6",
+        "symbol": "CONF_imodule_get_name"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "owning_phase": 6,
+        "reason": "reads a CONF_IMODULE, which only the module registry creates; Phase 6",
+        "symbol": "CONF_imodule_get_usr_data"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "owning_phase": 6,
+        "reason": "reads a CONF_IMODULE, which only the module registry creates; Phase 6",
+        "symbol": "CONF_imodule_get_value"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "owning_phase": 6,
+        "reason": "writes a CONF_IMODULE, which only the module registry creates; Phase 6",
+        "symbol": "CONF_imodule_set_flags"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "owning_phase": 6,
+        "reason": "writes a CONF_IMODULE, which only the module registry creates; Phase 6",
+        "symbol": "CONF_imodule_set_usr_data"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "owning_phase": 6,
+        "reason": "adds to the supported-module list guarded by the RCU lock that the module registry owns; Phase 6",
+        "symbol": "CONF_module_add"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "owning_phase": 6,
+        "reason": "reads a CONF_MODULE, which only the module registry creates; Phase 6",
+        "symbol": "CONF_module_get_usr_data"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "owning_phase": 6,
+        "reason": "writes a CONF_MODULE, which only the module registry creates; Phase 6",
+        "symbol": "CONF_module_set_usr_data"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "owning_phase": 6,
+        "reason": "finishes the initialized-module list, which only CONF_modules_load populates; Phase 6",
+        "symbol": "CONF_modules_finish"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "owning_phase": 6,
+        "reason": "calls conf_diagnostics -> OSSL_LIB_CTX_get/set_conf_diagnostics; OSSL_LIB_CTX is Phase 6",
+        "symbol": "CONF_modules_load"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "owning_phase": 6,
+        "reason": "forwards to CONF_modules_load_file_ex; OSSL_LIB_CTX is Phase 6",
+        "symbol": "CONF_modules_load_file"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "owning_phase": 6,
+        "reason": "reads and preserves OSSL_LIB_CTX diagnostics, and calls CONF_modules_load; OSSL_LIB_CTX is Phase 6",
+        "symbol": "CONF_modules_load_file_ex"
+      },
+      {
+        "module": "src/runtime/conf/",
+        "owning_phase": 6,
+        "reason": "unloads entries of the module list and calls DSO_free; DSO is a later stratum and OSSL_LIB_CTX is Phase 6",
+        "symbol": "CONF_modules_unload"
       }
     ],
     "families": [
@@ -111,7 +201,7 @@
         "module": "src/runtime/bio/",
         "prefixes": [
           "BIO_",
-          "BUF_MEM_"
+          "BUF_"
         ]
       },
       {
@@ -144,6 +234,21 @@
         ]
       }
     ],
+    "handoffs_discharged": {
+      "3": [
+        "ERR_add_error_mem_bio",
+        "ERR_print_errors",
+        "ERR_print_errors_cb",
+        "ERR_print_errors_fp",
+        "OBJ_create_objects",
+        "OPENSSL_LH_node_stats",
+        "OPENSSL_LH_node_stats_bio",
+        "OPENSSL_LH_node_usage_stats",
+        "OPENSSL_LH_node_usage_stats_bio",
+        "OPENSSL_LH_stats",
+        "OPENSSL_LH_stats_bio"
+      ]
+    },
     "implemented": [
       "BIO_ADDRINFO_address",
       "BIO_ADDRINFO_family",
@@ -330,10 +435,40 @@
       "BUF_MEM_grow_clean",
       "BUF_MEM_new",
       "BUF_MEM_new_ex",
+      "BUF_reverse",
+      "CONF_dump_bio",
+      "CONF_dump_fp",
+      "CONF_free",
+      "CONF_get1_default_config_file",
+      "CONF_get_number",
+      "CONF_get_section",
+      "CONF_get_string",
+      "CONF_load",
+      "CONF_load_bio",
+      "CONF_load_fp",
+      "CONF_parse_list",
+      "CONF_set_default_method",
+      "CONF_set_nconf",
       "ERR_add_error_mem_bio",
       "ERR_print_errors",
       "ERR_print_errors_cb",
       "ERR_print_errors_fp",
+      "NCONF_WIN32",
+      "NCONF_default",
+      "NCONF_dump_bio",
+      "NCONF_dump_fp",
+      "NCONF_free",
+      "NCONF_free_data",
+      "NCONF_get0_libctx",
+      "NCONF_get_number_e",
+      "NCONF_get_section",
+      "NCONF_get_section_names",
+      "NCONF_get_string",
+      "NCONF_load",
+      "NCONF_load_bio",
+      "NCONF_load_fp",
+      "NCONF_new",
+      "NCONF_new_ex",
       "OBJ_create_objects",
       "OPENSSL_INIT_free",
       "OPENSSL_INIT_new",
@@ -348,184 +483,7 @@
       "OPENSSL_LH_stats_bio"
     ],
     "note": "`complete` is true only when every export in these families is either implemented or handed to a later stratum. `open` entries belong to this stratum and are recorded gaps, not deferrals; while any exist Phase 4 cannot be called complete. Nothing here is a parity claim.",
-    "open": [
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "CONF_dump_bio"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "CONF_dump_fp"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "CONF_free"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "CONF_get1_default_config_file"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "CONF_get_number"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "CONF_get_section"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "CONF_get_string"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "CONF_imodule_get_flags"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "CONF_imodule_get_module"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "CONF_imodule_get_name"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "CONF_imodule_get_usr_data"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "CONF_imodule_get_value"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "CONF_imodule_set_flags"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "CONF_imodule_set_usr_data"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "CONF_load"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "CONF_load_bio"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "CONF_load_fp"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "CONF_module_add"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "CONF_module_get_usr_data"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "CONF_module_set_usr_data"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "CONF_modules_finish"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "CONF_modules_load"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "CONF_modules_load_file"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "CONF_modules_load_file_ex"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "CONF_modules_unload"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "CONF_parse_list"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "CONF_set_default_method"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "CONF_set_nconf"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "NCONF_WIN32"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "NCONF_default"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "NCONF_dump_bio"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "NCONF_dump_fp"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "NCONF_free"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "NCONF_free_data"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "NCONF_get0_libctx"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "NCONF_get_number_e"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "NCONF_get_section"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "NCONF_get_section_names"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "NCONF_get_string"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "NCONF_load"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "NCONF_load_bio"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "NCONF_load_fp"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "NCONF_new"
-      },
-      {
-        "module": "src/runtime/conf/",
-        "symbol": "NCONF_new_ex"
-      }
-    ]
+    "open": []
   },
   "generator": "forensics/tools/phase4_obligations.py",
   "inputs": [
@@ -537,7 +495,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "c5a6214d14e9778531c9bd20b5cfd2e7c133dac622fd59d9bc076cd97e25af96"
+      "sha256": "ebeccba59da6e871755b547905a738e6e4754b0ff88182f4c9993e421731a2b7"
     }
   ],
   "kind": "phase4-obligations",

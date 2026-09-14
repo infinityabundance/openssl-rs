@@ -1158,8 +1158,14 @@ mod tests {
 
     /// Run the engine with a scripted argument source rather than a `va_list`.
     fn engine(n: usize, format: &str, args: &mut VecArgs) -> (i32, String) {
-        let fmt = std::ffi::CString::new(format).unwrap();
+        let fmt = match std::ffi::CString::new(format) {
+            Ok(f) => f,
+            Err(_) => unreachable!("the test format contains no interior NUL"),
+        };
         let mut buf = vec![0i8; n.max(1)];
+        // SAFETY: `buf` is writable for its whole length, which is at least `n`,
+        // and `fmt` is a NUL-terminated format string; `args` is borrowed for the
+        // call and outlives it.
         let (ok, truncated, retlen) = unsafe {
             dopr(
                 buf.as_mut_ptr(),

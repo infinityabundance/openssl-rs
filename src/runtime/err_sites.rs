@@ -680,11 +680,11 @@ pub(crate) const BIO_ADDR_956: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
-/// `dopr` at `crypto/bio/bio_print.c:369` (ERR_R_UNSUPPORTED).
+/// `_dopr` at `crypto/bio/bio_print.c:369` (ERR_R_UNSUPPORTED).
 pub(crate) const BIO_PRINT_369: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/bio/bio_print.c",
     line: 369,
-    func: c"dopr",
+    func: c"_dopr",
     lib: 32,
     reason: 524556,
     dynamic_reason: false,
@@ -2700,21 +2700,21 @@ pub(crate) const CONF_DEF_813: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
-/// `HASH_OF` at `crypto/conf/conf_lib.c:58` (ERR_R_SYS_LIB).
+/// `CONF_load` at `crypto/conf/conf_lib.c:58` (ERR_R_SYS_LIB).
 pub(crate) const CONF_LIB_58: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/conf/conf_lib.c",
     line: 58,
-    func: c"HASH_OF",
+    func: c"CONF_load",
     lib: 14,
     reason: 524290,
     dynamic_reason: false,
 };
 
-/// `HASH_OF` at `crypto/conf/conf_lib.c:75` (ERR_R_BUF_LIB).
+/// `CONF_load_fp` at `crypto/conf/conf_lib.c:75` (ERR_R_BUF_LIB).
 pub(crate) const CONF_LIB_75: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/conf/conf_lib.c",
     line: 75,
-    func: c"HASH_OF",
+    func: c"CONF_load_fp",
     lib: 14,
     reason: 524295,
     dynamic_reason: false,
@@ -2770,21 +2770,21 @@ pub(crate) const CONF_LIB_279: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
-/// `TACK_OF` at `crypto/conf/conf_lib.c:289` (CONF_R_NO_CONF).
+/// `NCONF_get_section` at `crypto/conf/conf_lib.c:289` (CONF_R_NO_CONF).
 pub(crate) const CONF_LIB_289: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/conf/conf_lib.c",
     line: 289,
-    func: c"TACK_OF",
+    func: c"NCONF_get_section",
     lib: 14,
     reason: 105,
     dynamic_reason: false,
 };
 
-/// `TACK_OF` at `crypto/conf/conf_lib.c:294` (CONF_R_NO_SECTION).
+/// `NCONF_get_section` at `crypto/conf/conf_lib.c:294` (CONF_R_NO_SECTION).
 pub(crate) const CONF_LIB_294: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/conf/conf_lib.c",
     line: 294,
-    func: c"TACK_OF",
+    func: c"NCONF_get_section",
     lib: 14,
     reason: 107,
     dynamic_reason: false,
@@ -2850,11 +2850,11 @@ pub(crate) const CONF_LIB_399: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
-/// `EFINE_RUN_ONCE_STATIC` at `crypto/conf/conf_mod.c:104` (ERR_R_CRYPTO_LIB).
+/// `do_init_module_list_lock` at `crypto/conf/conf_mod.c:104` (ERR_R_CRYPTO_LIB).
 pub(crate) const CONF_MOD_104: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/conf/conf_mod.c",
     line: 104,
-    func: c"EFINE_RUN_ONCE_STATIC",
+    func: c"do_init_module_list_lock",
     lib: 14,
     reason: 524303,
     dynamic_reason: false,
@@ -3190,6 +3190,76 @@ pub(crate) const BUFFER_125: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `hexstr2buf_sep` at `crypto/o_str.c:229` (CRYPTO_R_ODD_NUMBER_OF_DIGITS).
+pub(crate) const O_STR_229: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/o_str.c",
+    line: 229,
+    func: c"hexstr2buf_sep",
+    lib: 15,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `hexstr2buf_sep` at `crypto/o_str.c:235` (CRYPTO_R_ILLEGAL_HEX_DIGIT).
+pub(crate) const O_STR_235: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/o_str.c",
+    line: 235,
+    func: c"hexstr2buf_sep",
+    lib: 15,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `hexstr2buf_sep` at `crypto/o_str.c:241` (CRYPTO_R_TOO_SMALL_BUFFER).
+pub(crate) const O_STR_241: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/o_str.c",
+    line: 241,
+    func: c"hexstr2buf_sep",
+    lib: 15,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `ossl_hexstr2buf_sep` at `crypto/o_str.c:270` (CRYPTO_R_HEX_STRING_TOO_SHORT).
+pub(crate) const O_STR_270: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/o_str.c",
+    line: 270,
+    func: c"ossl_hexstr2buf_sep",
+    lib: 15,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `buf2hexstr_sep` at `crypto/o_str.c:303` (CRYPTO_R_TOO_MANY_BYTES).
+pub(crate) const O_STR_303: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/o_str.c",
+    line: 303,
+    func: c"buf2hexstr_sep",
+    lib: 15,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `buf2hexstr_sep` at `crypto/o_str.c:315` (CRYPTO_R_TOO_SMALL_BUFFER).
+pub(crate) const O_STR_315: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/o_str.c",
+    line: 315,
+    func: c"buf2hexstr_sep",
+    lib: 15,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `ossl_buf2hexstr_sep` at `crypto/o_str.c:352` (CRYPTO_R_TOO_MANY_BYTES).
+pub(crate) const O_STR_352: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/o_str.c",
+    line: 352,
+    func: c"ossl_buf2hexstr_sep",
+    lib: 15,
+    reason: 113,
+    dynamic_reason: false,
+};
+
 /// Every recorded raise site, in authority source order.
 ///
 /// This is the complete inventory for the covered files, including the
@@ -3517,4 +3587,11 @@ pub(crate) static ALL: &[ErrSite] = &[
     A_OBJECT_334,
     BUFFER_88,
     BUFFER_125,
+    O_STR_229,
+    O_STR_235,
+    O_STR_241,
+    O_STR_270,
+    O_STR_303,
+    O_STR_315,
+    O_STR_352,
 ];

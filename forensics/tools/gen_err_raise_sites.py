@@ -126,6 +126,14 @@ COVERED_FILES = [
     ("crypto/asn1/a_object.c", "A_OBJECT"),
     # The buffer object the memory BIO is built from is part of this stratum.
     ("crypto/buffer/buffer.c", "BUFFER"),
+    # `crypto/o_str.c`'s string and hex codecs. The module was in *no* phase's
+    # symbol family until it was found by the ownership audit
+    # (`forensics/tools/ownership_audit.py`): its eleven exports matched no
+    # prefix any ledger listed, so they were invisible to every obligation
+    # table. CONF's reader needs three of them (`OPENSSL_strlcpy`,
+    # `OPENSSL_strlcat`, `OPENSSL_strcasecmp`), which is how the gap surfaced;
+    # see docs/DECISIONS.md D51.
+    ("crypto/o_str.c", "O_STR"),
 ]
 
 # Raise macros, in the forms the authority actually spells them. `ERR_raise`
@@ -139,10 +147,66 @@ RAISE_RE = re.compile(
 # plain raise site and is recorded as unattributed instead of guessed.
 LIB_CONST_RE = re.compile(r"^ERR_LIB_[A-Z0-9_]+$")
 REASON_CONST_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
-# A function definition: a line starting at column 0 with an identifier-ish
-# token, reaching an opening paren. Continuation lines of a multi-line
-# signature start with whitespace, so anchoring at column 0 is enough.
-FUNC_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_ \t*]*?([A-Za-z_][A-Za-z0-9_]*)\s*\(")
+# A function definition: a line starting at column 0 that introduces a
+# parameter list. The name is the identifier immediately before the parenthesis
+# group that *encloses* what follows, because a return type may itself contain a
+# parenthesised macro invocation — `LHASH_OF(CONF_VALUE) *CONF_load(` — and a
+# lazy-match regex would then report the macro's name (`HASH_OF`) instead of the
+# function's, and `_dopr` as `dopr`. Six sites were mis-attributed that way; the
+# coordinates are readable through `ERR_get_error_all`, so they are contract.
+IDENT_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+
+
+def definition_name(line: str) -> str | None:
+    """The function a column-0 definition line introduces, or None.
+
+    Rejects preprocessor lines, comment continuations, declarations and macro
+    invocations that stand alone. A definition macro that wraps a single
+    identifier (`DEFINE_RUN_ONCE_STATIC(do_init_module_list_lock)`) reports the
+    identifier, because that is what `__func__` expands to inside the body it
+    generates.
+    """
+    if not line or line[0] in " \t#{}*/":
+        return None
+    stripped = line.rstrip()
+    if stripped.endswith(";"):
+        return None
+    candidates: list[tuple[str, int]] = []
+    for i, ch in enumerate(stripped):
+        if ch != "(":
+            continue
+        j = i - 1
+        while j >= 0 and stripped[j] in " \t":
+            j -= 1
+        k = j
+        while k >= 0 and (stripped[k].isalnum() or stripped[k] == "_"):
+            k -= 1
+        name = stripped[k + 1 : j + 1]
+        if name and (name[0].isalpha() or name[0] == "_"):
+            candidates.append((name, i))
+    for name, open_idx in candidates:
+        depth = 0
+        j = open_idx
+        while j < len(stripped):
+            if stripped[j] == "(":
+                depth += 1
+            elif stripped[j] == ")":
+                depth -= 1
+                if depth == 0:
+                    break
+            j += 1
+        closed = j < len(stripped)
+        tail = stripped[j + 1 :].lstrip() if closed else ""
+        # Either the group closes the line (a one-line signature), is followed
+        # only by a body, or is still open (a wrapped signature). Anything else
+        # is a call nested in a return type or an argument list.
+        if not closed or j == len(stripped) - 1 or tail.startswith("{"):
+            if closed and name.upper() == name and any(c.isalpha() for c in name):
+                inner = stripped[open_idx + 1 : j].strip()
+                if IDENT_RE.fullmatch(inner):
+                    return inner
+            return name
+    return None
 
 
 def relpath_prefix(source: Path, build_dir: Path) -> str:
@@ -154,9 +218,9 @@ def enclosing_function(lines: list[str], lineno: int) -> str:
     """Name of the function whose body contains `lineno` (1-based)."""
     best = None
     for i in range(lineno - 1):
-        m = FUNC_RE.match(lines[i])
-        if m:
-            best = m.group(1)
+        got = definition_name(lines[i])
+        if got:
+            best = got
     if best is None:
         raise SystemExit(f"no enclosing function found for line {lineno}")
     # `if`/`while`/`for` at column 0 are not function definitions; the authority

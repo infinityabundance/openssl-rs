@@ -1780,3 +1780,467 @@ because `OPENSSL_config` builds the object by value and passes its address on.
 
 33 courts still pass over 6,743 observations. Phase 0–3 remain `complete` and
 Phase 4 remains `in-progress`.
+
+---
+
+## D50 — The CONF reader: the stratum is closed but for a recorded hand-off
+
+**Decision.** Implement the whole configuration reader — `crypto/conf/conf_api.c`,
+`conf_def.c`, `conf_lib.c`, and the two `conf_mod.c` exports that do not need an
+`OSSL_LIB_CTX` (`CONF_parse_list`, `CONF_get1_default_config_file`) — and hand the
+fifteen **module-registry** symbols to Phase 6 as a recorded deferral rather than
+approximating them.
+
+**Why the registry cannot be built here.** `CONF_modules_load` begins with
+`conf_diagnostics(cnf)`, which is:
+
+```c
+static int conf_diagnostics(const CONF *cnf)
+{
+    ERR_set_mark();
+    status = NCONF_get_number_e(cnf, NULL, "config_diagnostics", &result);
+    ERR_pop_to_mark();
+    if (status > 0) {
+        OSSL_LIB_CTX_set_conf_diagnostics(cnf->libctx, result > 0);
+        return result > 0;
+    }
+    return OSSL_LIB_CTX_get_conf_diagnostics(cnf->libctx);
+}
+```
+
+and its return value then masks the caller's flags:
+
+```c
+if (conf_diagnostics(cnf))
+    flags &= ~(CONF_MFLAGS_IGNORE_ERRORS | CONF_MFLAGS_IGNORE_RETURN_CODES
+               | CONF_MFLAGS_SILENT | CONF_MFLAGS_IGNORE_MISSING_FILE);
+```
+
+So the `OSSL_LIB_CTX` diagnostics flag is not a diagnostic detail: it changes which
+failures `CONF_modules_load` and `CONF_modules_load_file*` propagate, and therefore
+what they *return*. `OSSL_LIB_CTX` is Phase 6. The registry also reaches
+`DSO_load`, `OPENSSL_load_builtin_modules` and `ENGINE_load_builtin_engines`, all
+later strata. A registry that cannot read the flag would answer a real
+configuration's question wrongly, which is worse than not answering it.
+
+The hand-off is machine-checked, not silent: the fifteen symbols are in the
+`DEFERRED` table of `forensics/tools/phase4_obligations.py` with `owning_phase = 6`
+and a reason, and that tool refuses to run if any export of this stratum's families
+is neither implemented nor listed. `docs/RELEASE_GATES.md`'s rule — a deferral
+names the phase that owns the subsystem, a gap does not — is what keeps this from
+being a way of not doing the work.
+
+**What the reader is.** `src/runtime/conf/` now holds `types.rs` (`CONF`,
+`CONF_VALUE`, `CONF_METHOD`), `api.rs` (`conf_api.c`: the model, its hash and
+comparison functions, the lookups, the two-phase free walk), `def.rs`
+(`conf_def.c`: both character-class tables, the parser, the dumper, the two method
+tables), `lib.rs` (`conf_lib.c`: the classic-hash bridge, the `NCONF` accessors,
+`NCONF_get_number_e`) and `modparse.rs` (`CONF_parse_list` and the default-config
+path).
+
+**The court is `RT-CONF`, 736 observations, zero residuals.** It drove a new
+kind of requirement for this project: the grammar is *input that people write*, so
+almost every rule has a plausible-but-wrong implementation, and the authority's own
+source contains the traps — the BOM strip only on the first read, the `key > 127`
+rejection in `is_keytype`, the "second last char is not `\`" continuation
+condition, `;` being punctuation in the *default* table and a full-line comment in
+the *WIN32* one, `#` being a comment in the default table and *nothing at all* in
+the WIN32 one, and `buf->length` rather than the content length in the expansion
+cap. Every one of those is observed on both sides rather than assumed.
+
+**Correction to D18's and D49's method.** The module-registry deferral was first
+described as a *blocked* stratum in prose. That is not enough on its own: prose
+about a blocker cannot fail, so it cannot distinguish "blocked" from "forgotten".
+The machine-checked part is the ledger entry, and that is what the release gates
+read.
+
+---
+
+## D51 — Thirteen exports no phase owned, and the audit that finds the next ones
+
+**Decision.** Add `src/runtime/str.rs` (`crypto/o_str.c`) and `src/runtime/dir.rs`
+(`crypto/o_dir.c`) to the Phase 3 runtime stratum, and add
+`forensics/tools/ownership_audit.py` — which fails the build if any *implemented*
+export is claimed by no phase family at all.
+
+**Why.** D49 recorded that five `OPENSSL_INIT_*` exports were invisible to every
+ledger because no family's prefixes matched them, and closed with the observation
+that "nothing yet checks that every authority export is owned by some phase" and
+that the check "belongs with the phase-family tables". This is that check, and it
+found the same defect a second time — larger, and in files the CONF reader needed.
+
+`crypto/o_str.c` exports eleven symbols: `OPENSSL_strnlen`, `OPENSSL_strlcpy`,
+`OPENSSL_strlcat`, `OPENSSL_strtoul`, `OPENSSL_hexchar2int`,
+`OPENSSL_hexstr2buf[_ex]`, `OPENSSL_buf2hexstr[_ex]`, `OPENSSL_strcasecmp`,
+`OPENSSL_strncasecmp`. `crypto/o_dir.c` exports two: `OPENSSL_DIR_read`,
+`OPENSSL_DIR_end`. None matched any prefix any ledger listed. All thirteen are now
+implemented and owned; the CONF reader is what forced the issue, because
+`conf_def.c`'s `.include` handling uses `OPENSSL_strlcpy`, `OPENSSL_strlcat`,
+`OPENSSL_strcasecmp`, `OPENSSL_DIR_read` and `OPENSSL_DIR_end`, and a private
+duplicate of those would have been a hidden implementation of an exported ABI
+surface — the thing the constraint list forbids.
+
+**The invariant the audit enforces, and why it is scoped.** The full invariant
+("every authority export is owned") cannot hold while phases 5-21 have no families;
+5,410 of libcrypto's 5,896 exports are legitimately unclaimed today. What must
+never be true is an export being *implemented* while owned by nobody, because that
+is the state in which work is invisible to the accounting it is supposed to appear
+in. So the audit:
+
+* **fails** on an implemented-but-unowned export;
+* **reports**, in full and with per-class counts, the unowned remainder — the
+  scope no stratum has claimed, as a visible fact rather than an implied one;
+* **reports** `handoffs` (a symbol two phases claim, which is the deliberate
+  Phase 3 → Phase 4 mechanism) and `overlaps` (a symbol two prefixes of one family
+  list both match, which is how an accident looks).
+
+It is a CI gate and an entry in the determinism/portability artefact set, so its
+output is reproducible evidence rather than a one-off report.
+
+**Consequence for a closed phase.** Phase 3's family list grew after its seal, so
+its ledger now reports 235 owned rather than 220. That is not a rewrite of the
+seal: D13 established that a decision stays true while the *observation* it quotes
+evolves, and current counts are derived from the ledgers and `STATUS.md`, never
+from `DECISIONS.md`. The seal's prose is a census at seal time; the ledger is the
+present tense.
+
+**Also fixed by this audit.** Three implemented exports were unowned for the same
+reason: `BUF_reverse` (Phase 4's family said `BUF_MEM_`, and `BUF_reverse` is not a
+`BUF_MEM_` name), `CRYPTO_alloc_ex_data` and `OPENSSL_cleanse` (Phase 3's families
+listed their neighbours explicitly rather than by prefix).
+
+---
+
+## D52 — `OPENSSL_LH_insert` appends at the tail, and the dump order proves it
+
+**Decision.** `OPENSSL_LH_insert` links a new node at the **end** of its bucket's
+chain, not the beginning. The comment in `src/runtime/lhash.rs` claiming the
+opposite was wrong, and is replaced with the reason.
+
+**Why.** The authority's `getrn` walks the whole chain and returns a pointer to the
+*last* node's `next` slot on a miss:
+
+```c
+for (n1 = *ret; n1 != NULL; n1 = n1->next) {
+    if (n1->hash != hash) { ret = &(n1->next); continue; }
+    if (lh->compw(...) == 0) break;
+    ret = &(n1->next);
+}
+return ret;
+```
+
+so `*rn = nn` appends. A bucket's head is therefore its **oldest** entry, and
+`doall` — which walks head to tail — visits a bucket in *insertion* order.
+
+**How it was found, and why nothing else could find it.** No existing court could:
+`RT-LHASH` cannot measure the `doall` family at all, because the authority faults
+at the NULL thunk on a table built by a bare `OPENSSL_LH_new` (D-LHASH-1). The
+CONF court could, for a reason specific to this stratum: `def_dump` is
+`lh_CONF_VALUE_doall_BIO`, so `NCONF_dump_bio` *is* a walk, and two keys that collide
+in one bucket come out in chain order. `RT-CONF` reported nine
+`dump.text` residuals, all permutations, which is what a wrong chain direction looks
+like. Prepending was a plausible assumption, not a measurement, and it survived
+three phases of courts because none of them could see it.
+
+Fixed and pinned by a unit test that hashes every key into one bucket and asserts
+the walk yields insertion order. Phase 4's courts are otherwise unchanged by it,
+which is itself the point: the defect was invisible to every court that existed.
+
+---
+
+## D53 — `ERR_raise_data` is formatted by `BIO_vsnprintf`, not by libc
+
+**Decision.** `ERR_vset_error` in `src/runtime/err_variadic.c` formats with this
+crate's own `BIO_vsnprintf` (`_dopr`), over a buffer it grows to `ERR_MAX_DATA_SIZE`
+and shrinks to the printed length, exactly as `crypto/err/err_blocks.c` does. The
+queue's state stays in Rust; only the `va_list` and the buffer moves.
+
+**Why.** The authority's implementation is:
+
+```c
+buf = es->err_data[i]; buf_size = es->err_data_size[i];
+es->err_data[i] = NULL; es->err_data_flags[i] = 0;          /* reserve it */
+if (buf_size < ERR_MAX_DATA_SIZE && (rbuf = OPENSSL_realloc(buf, ERR_MAX_DATA_SIZE)))
+    { buf = rbuf; buf_size = ERR_MAX_DATA_SIZE; }
+printed_len = BIO_vsnprintf(buf, buf_size, fmt, args);
+if (printed_len < 0) printed_len = 0;                        /* truncation -> empty */
+buf[printed_len] = '\0';
+if ((rbuf = OPENSSL_realloc(buf, printed_len + 1))) { ... }
+```
+
+The engine matters for the bytes a caller reads back through `ERR_get_error_all`:
+`_dopr` renders `%s` of NULL as `<NULL>` and `%p` of NULL as `0`, and libc's
+`vsnprintf` renders neither. The step that matters most is the third: `_dopr`
+reports *truncation* as failure, so a message longer than `ERR_MAX_DATA_SIZE`
+becomes an **empty** string rather than a truncated one — a distinction a
+caller cannot see from the length, only from the bytes.
+
+**What was wrong.** The previous implementation used a 1024-byte stack buffer and
+libc's `vsnprintf`, then handed the result to `openssl_rs_err_set_error`. That is
+observably different in three ways: the `%s`-of-NULL rendering, the `%p` and `%e`
+renderings, and the truncation case. It survived Phase 3's `RT-ERR` court because
+that court's raise-site section exercises sites whose messages have no
+substitutions and are short.
+
+**How it was found.** Writing `NCONF_get_number_e` required knowing what
+`ERR_raise_data(ERR_LIB_CONF, CONF_R_NO_VALUE, "group=%s name=%s", group ?: "",
+name)` puts in the queue when `name` is NULL — a reachable call, since
+`NCONF_get_number_e(conf, group, NULL, &res)` is one. The answer is
+`name=<NULL>`, which libc's `vsnprintf` does not produce.
+
+**New Rust surface.** `openssl_rs_err_take_data` and
+`openssl_rs_err_finish_data`, which are the two points where the buffer crosses
+between the formatter and the queue. They exist so that the *formatting* can happen
+where `va_list` exists without moving the queue's state out of Rust.
+
+---
+
+## D54 — `get_next_file` clears its own out-parameter, and the CONF court crashed
+
+**Decision.** After `OPENSSL_DIR_end(dirctx)` at the end of `get_next_file`, the
+function sets `*dirctx = NULL`. `OPENSSL_DIR_end` itself continues to leave the
+caller's pointer dangling, as the authority's does.
+
+**Why the two are different.** The authority's `LP_find_file_end` frees the context
+and does not clear the caller's pointer — `src/runtime/dir.rs` reproduces that
+faithfully, and a unit test asserts it, because a caller who reuses the context
+without resetting it gets whatever the authority gives it. But
+`get_next_file` is the *owner* of that out-parameter, and it does clear it:
+
+```c
+if ((next = get_next_file(dirpath, &dirctx)) != NULL) { ... }
+else { OPENSSL_free(dirpath); dirpath = NULL; }
+...
+OPENSSL_DIR_end(dirctx);
+*dirctx = NULL;          /* <-- the line that was missing */
+return NULL;
+```
+
+Without it, the parser's "am I still walking a directory?" test — the pointer
+itself — stays true after the directory is exhausted, so the next end-of-file calls
+back in with a `dirpath` that has already been freed. The candidate segfaulted;
+the authority does not. Found by bisecting the CONF court's first crash with
+temporary `eprintln!` instrumentation, which is also how its location was
+established: the third `get_next_file` completed and then the process died on the
+*fourth* entry into the same branch.
+
+**Lesson.** A faithful copy of a destructor's *own* contract is not a faithful copy
+of its *caller's* obligations. The authority's `get_next_file` had two statements
+where the port had one, and the missing one was the difference between a working
+directory include and a double-free.
+
+---
+
+## D55 — Phase 4 ledger: a hand-off is not a gap
+
+**Decision.** `forensics/tools/phase4_obligations.py` computes `complete` as
+`not open_rows`, rather than requiring the deferred list to be empty as well.
+
+**Why.** The field's own note, and the phase-state rule, both say what completion
+means: every export in the stratum's families is either implemented or *handed to a
+later phase whose subsystem it needs*, with `open` being the list of recorded gaps.
+The expression required both lists to be empty, which made `complete` permanently
+false for any stratum that legitimately hands anything forward — and Phase 4 now
+does, fifteen times. The field is advisory (phase-state derives the state from
+`counts.open_in_this_stratum`), but a field in a committed evidence file that
+contradicts the note beside it is exactly the kind of drift this project treats as a
+defect.
+
+---
+
+## D56 — Two more recorded divergences, and the CONFIG default path
+
+**Decision.** Record two safety divergences and one deliberate compatibility
+divergence introduced by this stratum, in
+`docs/SECURITY_DIVERGENCE_POLICY.md`:
+
+1. **`CONF_parse_list` with a NULL callback.** The authority calls it and faults;
+   the candidate treats a NULL callback as "nothing to deliver to" and returns 0.
+   Same class as D-LHASH-1, and `RT-CONF` prints a label rather than the value.
+2. **`_CONF_new_section`'s error path.** The authority frees `v->section` even when
+   the allocation that would have initialised it failed. Reachable only under
+   allocation failure; the candidate frees only what it allocated.
+3. **`CONF_get1_default_config_file` with `OPENSSL_CONF` unset.** The authority
+   answers with `X509_get_default_cert_area() + "/openssl.cnf"`, where the cert area
+   is the build's `OPENSSLDIR` — for the admitted authority,
+   `/work/forensics/authorities/prefix/openssl-3.6.4-production/ssl`. That path
+   describes *the forensic build's installation directory*, and this implementation
+   is not installed there. `src/runtime/init.rs` already made and recorded the same
+   decision for the same constant (`OBL-INIT-VERSION-DIRS`, which answers
+   `OPENSSLDIR: N/A`), so the candidate answers with the empty string — the
+   authority's own idiom for "no such path", which `CONF_modules_load_file_ex`
+   short-circuits as "do not load a file" without erroring. The open obligation is
+   `OBL-CONF-DEFAULT-CONFIG-FILE`, owned by Phase 16, which fixes the
+   distribution's install layout.
+
+**Why the third is a divergence and not a bug.** Reproducing the authority's answer
+byte for byte is what `ERR_get_error_all`'s `file` and `line` do (D41), and the
+difference is that those coordinates are *provenance* — there is no other truthful
+value — while this is a *functional path* a caller will try to open. Pointing a
+caller at a directory that exists on no machine this crate ships to is a worse
+answer than "there is none configured yet", and the divergence is recorded, named
+and owned rather than silently smoothed over. The environment branch is implemented
+exactly, and it is what `RT-CONF` compares.
+
+## D57 — A hand-off is sticky, and the two ledgers are reconciled against each other
+
+**Decision.** A symbol a stratum has handed to a later stratum stays that stratum's
+to own, and the deferring ledger keeps recording it as `deferred` even after the
+owning stratum implements it. The receiving stratum declares which hand-offs it
+discharged, and `forensics/tools/ownership_audit.py` fails if the two lists differ
+or if any symbol is counted as implemented by two strata at once.
+
+**Why this was wrong before.** Phase 3 deferred eleven exports to Phase 4 —
+`ERR_print_errors`, `ERR_print_errors_cb`, `ERR_print_errors_fp`,
+`ERR_add_error_mem_bio`, the six `OPENSSL_LH_*stats*` and `OBJ_create_objects` —
+because each needs a `BIO *` or a `FILE *` sink and BIO is Phase 4. The sealed
+Phase 3 document records exactly that, and says they stay `SCAFFOLDED` and abort.
+Once Phase 4 implemented them, `phase3_obligations.py`'s deferral table stopped
+applying (it only consulted the table for symbols that were *not* implemented), so
+Phase 3 silently reclaimed them: its ledger moved from `deferred: 11` to
+`implemented: 235, deferred: 0` while `docs/PHASE-3-CORE-RUNTIME-SEAL.md` still
+said the opposite. Both ledgers then counted the same eleven symbols as their own
+implemented work, and their `owned` totals summed to eleven more than the number
+of exports actually owned by any family (497 against 486).
+
+Two strata coordinating on one symbol is the intended device — it is how Phase 4
+itself hands `BIO_f_md` to Phase 7 — so the fix is not to forbid the overlap but to
+define it: exactly one stratum *implements*, and the other *records the hand-off*.
+The audit now proves that mechanically, which is the only reason a reader can trust
+`STATUS.md`'s per-stratum figures.
+
+**Consequence.** Phase 3 stands at 235 owned, 224 implemented, 11 deferred (all
+marked `implemented_by_owner`, so the discharged hand-offs are visible rather than
+inferred). Phase 4 stands at 262 owned, 231 implemented, 31 deferred, 0 open. The
+distinct owned total is 486, which is what the audit reports.
+
+**Also in this decision.** `phase_state.py`'s Phase 3 and Phase 4 evidence lists
+named only a subset of the modules each stratum actually added — the Phase 4 list
+stopped at the modules the stratum had when its seal was drafted, and neither list
+named the discovery probes that `docs/DECISIONS.md` and
+`docs/SECURITY_DIVERGENCE_POLICY.md` cite as the origin of recorded measurements. A
+required-evidence list that omits the evidence is a weakened gate, so both lists are
+now complete, and `ownership-audit.json` gained the two cross-ledger invariants.
+
+## D58 — The FRF court declarations are generated from one table
+
+**Decision.** `forensics/tools/gen_frf_courts.py` owns the runtime courts' manifests
+and fixtures. `--check` re-derives every declaration and fails on any drift, and CI
+runs it.
+
+**Why.** A runtime court is nine-tenths boilerplate: nineteen manifests differed
+only in the court id, the one-line description of the subsystem, the staging phase
+of the probe binaries and the paths those imply. With the table spread across the
+files, "which runtime surfaces have an FRF court?" had to be answered by `ls`, and
+the `version_or_commit` the courts name had to be bumped by hand in each file at
+every release — the kind of step that gets done for the files somebody remembered.
+Phases 5-21 will add hundreds of courts.
+
+**What changed in the sealed Phase 3 courts.** Regenerating them was not cosmetic
+and is recorded here rather than glossed: each court's `fixture.arguments` gained an
+explicit staging-phase argument (`["{fixture}", "phase3"]`), so one harness serves
+every runtime stratum and the directory the probes are read from is a declared court
+input instead of a constant inside the two reference wrappers. The wrappers now
+validate that argument and refuse a staging directory that is absent, because a
+missing directory would otherwise make a court "pass" by comparing two empty
+transcripts. The Phase 3 wording was also made consistent with the id
+(`the Phase 3 \`rt-mem\` runtime surface`), and `version_or_commit` moved to `0.0.7`
+for every court at once. No court's question, falsifier, authority, fixture list or
+observed axis changed.
+
+## D59 — The lint gate is a hard gate now
+
+**Decision.** `continue-on-error: true` is deleted from the `lints` job in
+`.github/workflows/ci.yml`. `cargo clippy --all-targets -- -D warnings` must pass on
+every pushed commit, like the other gates.
+
+**What it took.** D45 recorded 251 diagnostics of pre-existing debt in the Phase 4
+BIO modules and deferred the decision; by the time the CONF stratum landed the count
+was 522, almost all of them the two unsafe-documentation lints
+(`undocumented_unsafe_blocks`, `missing_safety_doc`). They were cleared by writing
+the actual invariant at each site — the caller contract for the `extern "C"` entry
+point, the validity and lifetime of the `BIO *` or `CONF *` being dereferenced, the
+ownership of a descriptor or method table — and not by adding an `allow`, which
+`docs/UNSAFE.md` forbids and which would have hidden precisely the unsafe code a
+reader most needs annotated. The count is now zero crate-wide.
+
+Two of the clearances changed code rather than comments: `bss_conn.rs`'s
+`crosspointer_transmute` sites became `core::mem::transmute_copy(&cb)`, which copies
+the same bits without the dereference clippy's suggestion would have introduced (the
+stored value *is* the callback's code address, not the address of a function
+pointer), and `lhash.rs`'s `checked_div`/`checked_rem` fallbacks are unreachable
+under the enclosing `n_used != 0` guard. Everything else was comments, plus a
+handful of provably equivalent style rewrites. All 34 differential courts were
+re-run afterwards and none moved, which is the evidence that the equivalence claims
+hold rather than a reason to believe them.
+
+## D60 — The `doall` dispatch, and six ERR coordinates read from the wrong function
+
+Two defects fixed with the CONF stratum that D52-D56 did not cover.
+
+**`OPENSSL_LH_doall_arg_thunk`'s `thunk` argument is a per-node wrapper, not an
+iteration entry point.** Its signature is
+`void (*)(void *node, void *arg, OPENSSL_LH_DOALL_FUNCARG func)`: it is called once
+per node with *that node* and dispatches to `func`. The implementation called
+`t(lh, arg, func)` — handing the callback the table pointer and invoking the thunk
+once for the whole table. Nothing failed loudly, because the only callback in reach
+was `def_dump`, whose `lh_CONF_VALUE_doall_BIO` would have printed the table's
+address as if it were a `CONF_VALUE` pointer. `doall` and `doall_arg` now dispatch
+through `lh->daw`/`lh->daaw` per node, and `visit()` snapshots the item pointers
+before walking so a callback may delete its own node — which `_CONF_free_data`
+does, and which a live-walk would turn into a use-after-free. D52 is what exposed
+this: it needed `doall` order to be correct, and a thunk that fired once could not
+produce an order at all.
+
+**`gen_err_raise_sites.py`'s `enclosing_function` mis-parsed six of 316 raise
+sites.** These coordinates are not internal: `ERR_get_error_all` returns the `file`,
+`line` and `func` of the raising site, so a wrong function name is observable
+through a public API. The naive scan matched the first identifier that looked like a
+definition, which produced `HASH_OF` for `CONF_load`, `TACK_OF` for
+`NCONF_get_section`, `EFINE_RUN_ONCE_STATIC` for `do_init_module_list_lock` and
+`dopr` for `_dopr` — the last four characters of `PEM_ASN1_write_bio`-style macros
+and of the `DEFINE_*`/`IMPLEMENT_*` families. It is replaced with a paren-balancing
+`definition_name()` that returns the parenthesis group **enclosing** what follows,
+which is the only reading that does not depend on an identifier's first character.
+
+**Also.** `COVERED_FILES` gains `crypto/o_str.c` (stem `O_STR`), adding seven raise
+sites that the CONF reader had been pulling in through `OPENSSL_strlcpy` and friends
+without any of them being in the coordinate table.
+
+## D61 — One court's capture leaked an ASLR address, and the fix is measured by re-running it
+
+**Decision.** The `RT-BIO-DEBUG` probe redirects descriptor 2 to a temporary file
+for the duration of the single `BIO_debug_callback_ex` call whose destination is
+NULL, then restores it and reports the scrubbed text as two further observations
+(`stderr.ctrl.text`, `stderr.ctrl.textlen`). The court's transcript grows from 55
+observations to 57.
+
+**Why.** That call's documented behaviour is to fall back to stderr, and its message
+begins with the subject's address. The court declares `stdout` and `exit` as its
+axes, and its stdout was already correct — every address in the text it captures
+from a destination BIO is masked to `<addr>` before printing, precisely because the
+address is an allocator artefact rather than contract. But FRF's *capture* includes
+stderr, and the run identity is derived from the capture, so the live address made
+this one court's evidence identity differ on every run. Measured: three re-runs of
+the court against one store produced three different run ids. Nothing else did — the
+other twenty-two runtime courts produced identical run ids across three full
+re-runs of `forensics/frf/run_courts.sh`, including after the candidate library was
+rebuilt, which independently confirms the note in `forensics/frf/README.md` that the
+run identity does not vary with `execution_context` artifact hashes. One court was
+enough to make the *aggregate* runtime claim's identity unstable, which is what
+first made this visible: the claim id changed between two runs whose sources were
+identical.
+
+**Why ASLR was not simply disabled.** `setarch -R` is refused in both court
+containers — `failed to set personality to (null): Operation not permitted` — so
+there is no container-level fix. Redirecting the whole harness's stderr, or
+discarding it, was rejected: `phase4_courts.py` records the candidate's stderr tail
+as evidence, and a genuine diagnostic on stderr is exactly what a reader needs when
+a court fails. Capturing the bytes at the point of the call and masking only the
+address keeps every byte and makes the identity reproducible.
+
+**How it was checked.** Re-running the court against the same store now returns the
+identical run id, and FRF *refuses to re-capture*: `already exists and verifies
+(identical evidence was already captured)`. That refusal is the acceptance test, and
+it is falsifiable in one command. The claim ids recorded in
+`docs/PHASE-4-BIO-CONF-SEAL.md` §8 are the ones this fix produced.

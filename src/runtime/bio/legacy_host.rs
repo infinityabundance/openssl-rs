@@ -101,6 +101,7 @@ pub unsafe extern "C" fn BIO_get_host_ip(str_: *const c_char, ip: *mut u8) -> c_
             )
         };
         if found != 0 {
+            // SAFETY: `res` is the chain `BIO_lookup` just built.
             if unsafe { BIO_ADDRINFO_family(res) } != sys::AF_INET {
                 // Unreachable on this authority: the lookup asks for AF_INET. The
                 // site is the authority's own, so the branch is reproduced rather
@@ -108,6 +109,7 @@ pub unsafe extern "C" fn BIO_get_host_ip(str_: *const c_char, ip: *mut u8) -> c_
                 // SAFETY: the site is a compile-time constant.
                 unsafe { raise_site(&BIO_SOCK_57) };
             } else {
+                // SAFETY: `res` is a live node of the chain.
                 let addr = unsafe { BIO_ADDRINFO_address(res) };
                 let mut len = 0usize;
                 // SAFETY: `addr` is borrowed from `res` and `len` is writable.
@@ -160,10 +162,12 @@ pub unsafe extern "C" fn BIO_get_port(str_: *const c_char, port_ptr: *mut u16) -
             )
         };
         if found != 0 {
+            // SAFETY: `res` is the chain `BIO_lookup` just built.
             if unsafe { BIO_ADDRINFO_family(res) } != sys::AF_INET {
                 // SAFETY: the site is a compile-time constant.
                 unsafe { raise_site(&BIO_SOCK_89) };
             } else {
+                // SAFETY: `res` is a live node of the chain.
                 let raw = unsafe { BIO_ADDR_rawport(BIO_ADDRINFO_address(res)) };
                 if !port_ptr.is_null() {
                     // SAFETY: `port_ptr` is writable per the caller's contract.
@@ -225,10 +229,8 @@ mod tests {
         assert_eq!(unsafe { BIO_get_port(ptr::null(), ptr::null_mut()) }, 0);
         let mut port: u16 = 7;
         // SAFETY: the literal is NUL-terminated and `port` is writable.
-        assert_eq!(
-            unsafe { BIO_get_port(c"no-such-service-xyz".as_ptr(), &mut port) },
-            0
-        );
+        let rc = unsafe { BIO_get_port(c"no-such-service-xyz".as_ptr(), &mut port) };
+        assert_eq!(rc, 0);
         assert_eq!(port, 7, "a failed lookup leaves the out-parameter alone");
     }
 

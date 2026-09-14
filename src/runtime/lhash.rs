@@ -16,16 +16,25 @@
 //! * `num_items`, `error`, `flush` (empties without releasing the items) and
 //!   `free`.
 //!
-//! Not measured, and therefore not claimed: the `doall` family. On a table
-//! created with the bare `OPENSSL_LH_new`, the authority **segfaults** in
-//! `OPENSSL_LH_doall`, `OPENSSL_LH_doall_arg` and `OPENSSL_LH_doall_arg_thunk`:
-//! every generated `lh_TYPE_new` installs thunks through
-//! `OPENSSL_LH_set_thunks`, and the iteration entry points dereference the (NULL)
-//! thunk instead of falling back to direct iteration. That is a fault boundary,
-//! so the candidate iterates directly instead of reproducing the fault; see
-//! `docs/SECURITY_DIVERGENCE_POLICY.md`. Because the authority's iteration order
-//! could not be observed, this module makes **no order claim** and the probe
-//! records the boundary rather than comparing it.
+//! Not measured *by the court*, and therefore not claimed on its authority: the
+//! `doall` family. On a table created with the bare `OPENSSL_LH_new`, the
+//! authority **segfaults** in `OPENSSL_LH_doall`, `OPENSSL_LH_doall_arg` and
+//! `OPENSSL_LH_doall_arg_thunk`: every generated `lh_TYPE_new` installs thunks
+//! through `OPENSSL_LH_set_thunks`, and the iteration entry points dereference
+//! the (NULL) thunk instead of falling back to direct iteration. That is a fault
+//! boundary, so the candidate iterates directly instead of reproducing the
+//! fault; see `docs/SECURITY_DIVERGENCE_POLICY.md`.
+//!
+//! The *working* path is the one a caller actually reaches: a table built by
+//! `lh_TYPE_new`, carrying thunks, which is what `_CONF_free_data` and `def_dump`
+//! iterate. There the authority walks the buckets itself and calls the thunk
+//! **once per node** — the thunk's signature is
+//! `void (*)(void *node, void *arg, OPENSSL_LH_DOALL_FUNCARG func)`, not an
+//! iteration entry point. The earlier revision of this module treated it as the
+//! latter, which would have handed `def_dump` the table pointer instead of each
+//! `CONF_VALUE`. That shape, and the walk's survival of a callback that deletes
+//! the node it was given (again: `_CONF_free_data`), are pinned by the unit tests
+//! below, because the court cannot reach them.
 //!
 //! The `OPENSSL_LH_*stats*` family takes a `BIO *`, which is why it is implemented
 //! here rather than in Phase 3: the report is emitted through the BIO printf
@@ -264,12 +273,27 @@ impl Inner {
 
     /// Every entry, in the order the authority's `doall_util_fn` visits them:
     /// buckets from `num_nodes - 1` down to `0`, and within a bucket from the
-    /// head of the chain (most recently inserted) to the tail.
+    /// head of the chain to the tail. Because `insert` appends, the head is the
+    /// **oldest** entry, so a bucket is visited in insertion order.
+    ///
+    /// The item pointers are captured **before** the first callback runs. The
+    /// authority's `doall_util_fn` reads each node's successor into a local
+    /// before it calls back, precisely so a callback that *deletes the node it
+    /// was handed* cannot disturb the walk — which is what
+    /// `_CONF_free_data`'s `value_free_hash` does. Snapshotting the pointer list
+    /// gives the same guarantee for this table's vector-of-chains storage, and
+    /// it is additionally what keeps the walk sound in Rust: a callback that
+    /// mutates the table through its `*mut` must not run while a `&Vec` into
+    /// that table is still borrowed by the loop.
     fn visit<F: FnMut(*mut c_void)>(&self, mut f: F) {
+        let mut order: Vec<*mut c_void> = Vec::with_capacity(self.num_items);
         for i in (0..self.num_nodes).rev() {
             for &(_, item) in &self.b[i] {
-                f(item);
+                order.push(item);
             }
+        }
+        for item in order {
+            f(item);
         }
     }
 }
@@ -477,9 +501,16 @@ pub unsafe extern "C" fn OPENSSL_LH_insert(
                 old
             }
             None => {
-                // Prepended, because the authority links a new node at the head
-                // of its chain and `doall` observes the resulting order.
-                s.b[bin].insert(0, (hash, data));
+                // **Appended**, not prepended: the authority's `getrn` returns
+                // `&(last->next)` on a miss — it walks the whole chain to the end
+                // and hands back the tail's `next` slot — so `*rn = nn` links the
+                // new node *behind* the existing ones. That makes a bucket's head
+                // the **oldest** entry, and `doall` therefore visits a bucket in
+                // insertion order. The opposite choice was made here originally,
+                // from a plausible assumption rather than from the source, and it
+                // produced a different `NCONF_dump_bio` order for every
+                // configuration with two keys in one bucket; `RT-CONF` found it.
+                s.b[bin].push((hash, data));
                 s.num_items += 1;
                 core::ptr::null_mut()
             }
@@ -619,9 +650,15 @@ pub unsafe extern "C" fn OPENSSL_LH_set_down_load(lh: *mut OpenSslLhash, down_lo
 /// `void OPENSSL_LH_doall(OPENSSL_LHASH *lh, OPENSSL_LH_DOALL_FUNC func)`
 ///
 /// Iterates every item in the authority's order: buckets from the last in use
-/// down to the first, and within a bucket from the head of the chain (most
-/// recently inserted) to the tail. That order is observable by a typed table,
-/// whose `doall` thunk is installed by `OPENSSL_LH_set_thunks`.
+/// down to the first, and within a bucket from the head of the chain to the
+/// tail — which, because `insert` appends, is insertion order.
+///
+/// The authority dispatches each node through `lh->daw`, the per-type thunk
+/// installed by `lh_TYPE_new`; the thunk's only job is to cast the node and call
+/// `func`. A table built by a bare `OPENSSL_LH_new` has no thunk, and the
+/// authority dereferences the NULL function pointer there; iterating directly is
+/// the recorded safer divergence (`forensics/D-LHASH-1`), and it is observably
+/// identical to what the thunk would have done.
 ///
 /// # Safety
 /// `lh` must be NULL or a live table; `func` must accept every stored item.
@@ -635,14 +672,22 @@ pub unsafe extern "C" fn OPENSSL_LH_doall(lh: *mut OpenSslLhash, func: Option<Do
         let Some(s) = (unsafe { inner(lh) }) else {
             return;
         };
-        s.visit(|item| {
+        // Copied out because the closure below must not hold a borrow of `s`
+        // across `visit`, which already borrows it.
+        let thunk = s.doall_thunk;
+        s.visit(|item| match thunk {
+            // SAFETY: `thunk` is the caller's per-node wrapper for `func`.
+            Some(t) => unsafe { t(item, func) },
             // SAFETY: `func` is the caller's callback over the caller's items.
-            unsafe { func(item) };
+            None => unsafe { func(item) },
         });
     })
 }
 
 /// `void OPENSSL_LH_doall_arg(OPENSSL_LHASH *lh, OPENSSL_LH_DOALL_FUNCARG func, void *arg)`
+///
+/// As [`OPENSSL_LH_doall`], dispatching each node through the table's
+/// `lh->daaw` thunk when one is installed.
 ///
 /// # Safety
 /// `lh` must be NULL or a live table; `func` must accept every stored item.
@@ -660,19 +705,27 @@ pub unsafe extern "C" fn OPENSSL_LH_doall_arg(
         let Some(s) = (unsafe { inner(lh) }) else {
             return;
         };
-        s.visit(|item| {
+        let thunk = s.doall_arg_thunk;
+        s.visit(|item| match thunk {
+            // SAFETY: `thunk` is the caller's per-node wrapper for `func`.
+            Some(t) => unsafe { t(item, arg, func) },
             // SAFETY: `func` is the caller's callback over the caller's items.
-            unsafe { func(item, arg) };
+            None => unsafe { func(item, arg) },
         });
     })
 }
 
 /// `void OPENSSL_LH_doall_arg_thunk(OPENSSL_LHASH *lh, OPENSSL_LH_DOALL_FUNCARG_THUNK thunk, OPENSSL_LH_DOALL_FUNCARG func, void *arg)`
 ///
-/// The authority exposes this as the entry point generated accessors go through.
-/// When a thunk has been installed it is preferred, because that is the per-type
-/// wrapper the caller wants applied; otherwise the candidate iterates directly,
-/// where the authority would call the NULL thunk and fault.
+/// The entry point the generated `lh_TYPE_doall_ARGTYPE` accessors go through.
+/// The `thunk` argument is a **per-node** wrapper — its signature is
+/// `void (*)(void *node, void *arg, OPENSSL_LH_DOALL_FUNCARG func)` — not an
+/// iteration entry point, and the authority's `doall_util_fn` walks the table
+/// itself and calls it once per item. The explicitly supplied thunk takes
+/// precedence over the table's stored one, as in the authority. When neither is
+/// supplied the candidate iterates directly, where the authority would call a
+/// NULL function pointer; that is the recorded safer divergence
+/// (`forensics/D-LHASH-1`).
 ///
 /// # Safety
 /// `lh` must be NULL or a live table; `func` must accept every stored item.
@@ -692,14 +745,11 @@ pub unsafe extern "C" fn OPENSSL_LH_doall_arg_thunk(
             return;
         };
         let installed = thunk.or(s.doall_arg_thunk);
-        if let Some(t) = installed {
-            // SAFETY: the thunk is the caller's wrapper for `func`.
-            unsafe { t(lh.cast::<c_void>(), arg, func) };
-            return;
-        }
-        s.visit(|item| {
+        s.visit(|item| match installed {
+            // SAFETY: `installed` is the caller's per-node wrapper for `func`.
+            Some(t) => unsafe { t(item, arg, func) },
             // SAFETY: `func` is the caller's callback over the caller's items.
-            unsafe { func(item, arg) };
+            None => unsafe { func(item, arg) },
         });
     })
 }
@@ -934,12 +984,19 @@ pub unsafe extern "C" fn OPENSSL_LH_node_usage_stats(lh: *const OpenSslLhash, fp
             n_used, s.num_nodes, total
         );
         if n_used != 0 {
+            // `n_used != 0` makes both `checked_*` calls below `Some`; the
+            // fallbacks are therefore unreachable. They exist so the division
+            // and remainder are spelled as checked operations.
+            let actual_load = total.checked_div(n_used).unwrap_or(0);
+            let actual_frac = (total.checked_rem(n_used).unwrap_or(0) * 100)
+                .checked_div(n_used)
+                .unwrap_or(0);
             text.push_str(&format!(
                 "load {}.{:02}  actual load {}.{:02}\n",
                 total / s.num_nodes,
                 (total % s.num_nodes) * 100 / s.num_nodes,
-                total / n_used,
-                (total % n_used) * 100 / n_used
+                actual_load,
+                actual_frac
             ));
         }
         // SAFETY: `fp` is the caller's stream.
@@ -951,6 +1008,7 @@ pub unsafe extern "C" fn OPENSSL_LH_node_usage_stats(lh: *const OpenSslLhash, fp
 #[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 mod tests {
     use super::*;
+    use core::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
     use std::ffi::CString;
 
     /// The values measured from the authority by
@@ -1108,6 +1166,201 @@ mod tests {
             let mut n = 0usize;
             OPENSSL_LH_doall_arg(lh, Some(argcb), (&mut n) as *mut usize as *mut c_void);
             assert_eq!(n, 64);
+            OPENSSL_LH_free(lh);
+        }
+    }
+
+    /* The `doall` family's two remaining obligations cannot be measured by
+     * `RT-LHASH`: the court's table comes from a bare `OPENSSL_LH_new` and the
+     * authority faults at the NULL thunk before any order is emitted. The
+     * *working* path — a table carrying the thunks every `lh_TYPE_new` installs,
+     * which is exactly what `_CONF_free_data` and `def_dump` use — is therefore
+     * pinned here instead, with the same installed-thunk shape the generated
+     * accessors have. See `docs/SECURITY_DIVERGENCE_POLICY.md` for the fault. */
+
+    static DOALL_THUNK_CALLS: AtomicUsize = AtomicUsize::new(0);
+    static DOALL_ARG_THUNK_CALLS: AtomicUsize = AtomicUsize::new(0);
+    static DELETE_WALK_TABLE: AtomicPtr<OpenSslLhash> = AtomicPtr::new(core::ptr::null_mut());
+    static DELETE_WALK_VISITS: AtomicUsize = AtomicUsize::new(0);
+
+    // SAFETY: `data` is the caller's key and `hfn` its hash function.
+    unsafe extern "C" fn hash_thunk(data: *const c_void, hfn: HashFunc) -> c_ulong {
+        // SAFETY: forwarded to the caller's hash function.
+        unsafe { hfn(data) }
+    }
+
+    // SAFETY: both arguments are the caller's keys and `cfn` its comparator.
+    unsafe extern "C" fn comp_thunk(a: *const c_void, b: *const c_void, cfn: CompFunc) -> c_int {
+        // SAFETY: forwarded to the caller's comparator.
+        unsafe { cfn(a, b) }
+    }
+
+    // SAFETY: `node` is a stored item and `doall` the caller's callback for it.
+    unsafe extern "C" fn doall_thunk(node: *mut c_void, doall: DoallFunc) {
+        DOALL_THUNK_CALLS.fetch_add(1, Ordering::Relaxed);
+        // SAFETY: forwarded to the caller's callback.
+        unsafe { doall(node) };
+    }
+
+    // SAFETY: as `doall_thunk`, with the caller's argument threaded through.
+    unsafe extern "C" fn doall_arg_thunk(node: *mut c_void, arg: *mut c_void, doall: DoallArgFunc) {
+        DOALL_ARG_THUNK_CALLS.fetch_add(1, Ordering::Relaxed);
+        // SAFETY: forwarded to the caller's callback.
+        unsafe { doall(node, arg) };
+    }
+
+    // SAFETY: the caller guarantees `node` is an item in `DELETE_WALK_TABLE`.
+    unsafe extern "C" fn delete_the_node_handed_over(node: *mut c_void, _arg: *mut c_void) {
+        DELETE_WALK_VISITS.fetch_add(1, Ordering::Relaxed);
+        let lh = DELETE_WALK_TABLE.load(Ordering::Relaxed);
+        // SAFETY: `lh` is the live table the walk is running over, and `node` is
+        // an item in it — the same call `_CONF_free_data`'s `value_free_hash`
+        // makes, and the reason the authority captures each node's successor
+        // before calling back.
+        unsafe { OPENSSL_LH_delete(lh, node) };
+    }
+
+    /// A `doall` on a table that carries thunks must dispatch **through** them.
+    /// The generated accessors' thunks only cast and forward, so the observable
+    /// calls are the same either way — but a table with thunks is the common
+    /// case, and the earlier revision of this module treated the thunk as an
+    /// iteration entry point, which called the caller's callback with the table
+    /// pointer instead of the item. Counting the thunk invocations pins the
+    /// dispatch itself, which no forwarding thunk could distinguish from a
+    /// direct call.
+    #[test]
+    fn doall_dispatches_through_the_installed_thunks() {
+        use core::sync::atomic::Ordering;
+        static CALLBACKS: AtomicUsize = AtomicUsize::new(0);
+        // SAFETY: the counter is only touched by this callback.
+        unsafe extern "C" fn cb(_p: *mut c_void) {
+            CALLBACKS.fetch_add(1, Ordering::Relaxed);
+        }
+        // SAFETY: `arg` is the caller's counter.
+        unsafe extern "C" fn argcb(_p: *mut c_void, arg: *mut c_void) {
+            // SAFETY: `arg` is the caller's counter.
+            unsafe { *(arg as *mut usize) += 1 };
+        }
+
+        let lh = OPENSSL_LH_new(Some(h), Some(cmp));
+        // SAFETY: `lh` is live and the thunks have the signatures
+        // `lh_TYPE_new` installs.
+        unsafe {
+            OPENSSL_LH_set_thunks(
+                lh,
+                Some(hash_thunk),
+                Some(comp_thunk),
+                Some(doall_thunk),
+                Some(doall_arg_thunk),
+            );
+        }
+        let keys: Vec<CString> = (0..32)
+            .map(|i| CString::new(format!("thunk-{i}")).expect("no interior NUL"))
+            .collect();
+        // SAFETY: `lh` is live and every key outlives the table.
+        unsafe {
+            for k in &keys {
+                OPENSSL_LH_insert(lh, k.as_ptr() as *mut c_void);
+            }
+            assert_eq!(OPENSSL_LH_num_items(lh), 32);
+
+            DOALL_THUNK_CALLS.store(0, Ordering::Relaxed);
+            CALLBACKS.store(0, Ordering::Relaxed);
+            OPENSSL_LH_doall(lh, Some(cb));
+            assert_eq!(DOALL_THUNK_CALLS.load(Ordering::Relaxed), 32);
+            assert_eq!(CALLBACKS.load(Ordering::Relaxed), 32);
+
+            DOALL_ARG_THUNK_CALLS.store(0, Ordering::Relaxed);
+            let mut n = 0usize;
+            OPENSSL_LH_doall_arg(lh, Some(argcb), (&mut n) as *mut usize as *mut c_void);
+            assert_eq!(DOALL_ARG_THUNK_CALLS.load(Ordering::Relaxed), 32);
+            assert_eq!(n, 32);
+
+            /* `lh_TYPE_doall_ARGTYPE` goes through the thunk-taking entry point
+             * with an explicitly supplied per-node thunk. */
+            DOALL_ARG_THUNK_CALLS.store(0, Ordering::Relaxed);
+            let mut m = 0usize;
+            OPENSSL_LH_doall_arg_thunk(
+                lh,
+                Some(doall_arg_thunk),
+                Some(argcb),
+                (&mut m) as *mut usize as *mut c_void,
+            );
+            assert_eq!(DOALL_ARG_THUNK_CALLS.load(Ordering::Relaxed), 32);
+            assert_eq!(m, 32);
+
+            OPENSSL_LH_free(lh);
+        }
+    }
+
+    /// A bucket is visited in **insertion** order, because `insert` appends at the
+    /// tail of the chain rather than prepending at the head. The opposite choice
+    /// is the plausible one, and it was the one this module made until `RT-CONF`
+    /// compared `NCONF_dump_bio` output for a configuration with two entries in
+    /// one bucket: the dump is a walk, so a wrong chain direction reorders it.
+    ///
+    /// The hash is a constant here, so every key lands in bucket 0 and the walk
+    /// order is exactly the chain order.
+    #[test]
+    fn doall_visits_a_bucket_in_insertion_order() {
+        // SAFETY: every key is a live NUL-terminated string; the hash deliberately
+        // ignores it so all keys collide.
+        unsafe extern "C" fn collide(_p: *const c_void) -> c_ulong {
+            0
+        }
+
+        static SEEN: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(Vec::new());
+
+        // SAFETY: `p` is one of the `CString`s inserted below, all still alive.
+        unsafe extern "C" fn record(p: *mut c_void) {
+            // SAFETY: as above.
+            let s = unsafe { std::ffi::CStr::from_ptr(p.cast::<c_char>()) };
+            SEEN.lock()
+                .expect("no poison")
+                .push(s.to_string_lossy().into_owned());
+        }
+
+        let lh = OPENSSL_LH_new(Some(collide), Some(cmp));
+        let keys: Vec<CString> = ["first", "second", "third"]
+            .iter()
+            .map(|s| CString::new(*s).expect("no interior NUL"))
+            .collect();
+        // SAFETY: `lh` is live and every key outlives the table.
+        unsafe {
+            for k in &keys {
+                OPENSSL_LH_insert(lh, k.as_ptr() as *mut c_void);
+            }
+            SEEN.lock().expect("no poison").clear();
+            OPENSSL_LH_doall(lh, Some(record));
+            OPENSSL_LH_free(lh);
+        }
+        let got = SEEN.lock().expect("no poison").clone();
+        assert_eq!(got, vec!["first", "second", "third"]);
+    }
+
+    /// A walk must survive a callback that deletes the node it was handed. This
+    /// is `_CONF_free_data`'s first phase verbatim, and the reason the authority
+    /// reads each node's successor before calling back.
+    #[test]
+    fn doall_survives_a_callback_that_deletes_its_own_node() {
+        use core::sync::atomic::Ordering;
+
+        let lh = table();
+        let keys: Vec<CString> = (0..48)
+            .map(|i| CString::new(format!("del-{i}")).expect("no interior NUL"))
+            .collect();
+        // SAFETY: `lh` is live and every key outlives the table.
+        unsafe {
+            for k in &keys {
+                OPENSSL_LH_insert(lh, k.as_ptr() as *mut c_void);
+            }
+            assert_eq!(OPENSSL_LH_num_items(lh), 48);
+            DELETE_WALK_VISITS.store(0, Ordering::Relaxed);
+            DELETE_WALK_TABLE.store(lh, Ordering::Relaxed);
+            OPENSSL_LH_doall_arg(lh, Some(delete_the_node_handed_over), core::ptr::null_mut());
+            DELETE_WALK_TABLE.store(core::ptr::null_mut(), Ordering::Relaxed);
+            assert_eq!(DELETE_WALK_VISITS.load(Ordering::Relaxed), 48);
+            assert_eq!(OPENSSL_LH_num_items(lh), 0);
             OPENSSL_LH_free(lh);
         }
     }

@@ -115,6 +115,12 @@ pub(crate) unsafe extern "C" fn bread_conv(
 ///
 /// The name is **copied**, so `BIO_meth_free` owns it. A NULL `name` is a
 /// failure (the authority's `OPENSSL_strdup(NULL)` returns NULL).
+///
+/// # Safety
+/// `name` must be NULL or point at a NUL-terminated C string that stays valid
+/// for the duration of the call; it is copied with `strdup` before returning.
+/// The returned table must be released with `BIO_meth_free`, and must outlive
+/// every BIO created against it.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_meth_new(type_: c_int, name: *const c_char) -> *mut BioMethod {
     guard_ffi(core::ptr::null_mut(), || {
@@ -134,6 +140,11 @@ pub unsafe extern "C" fn BIO_meth_new(type_: c_int, name: *const c_char) -> *mut
 }
 
 /// `void BIO_meth_free(BIO_METHOD *biom)`
+///
+/// # Safety
+/// `biom` must be NULL or a table returned by `BIO_meth_new` (or an equivalent
+/// heap allocation) that no live BIO still references; it is reclaimed here and
+/// its copied `name` is freed.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_meth_free(biom: *mut BioMethod) {
     guard_ffi((), || {
@@ -151,9 +162,15 @@ pub unsafe extern "C" fn BIO_meth_free(biom: *mut BioMethod) {
 }
 
 /// `int BIO_meth_set_write(BIO_METHOD *biom, int (*write)(BIO *, const char *, int))`
+///
+/// # Safety
+/// `biom` must be NULL or point at a live [`BioMethod`] that this call has
+/// exclusive access to; `f`, when non-NULL, must be a valid function pointer of
+/// the documented signature that remains callable while the table is installed.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_meth_set_write(biom: *mut BioMethod, f: Option<BioWriteFn>) -> c_int {
     guard_ffi(0, || {
+        // SAFETY: `biom` is NULL or a live method table with no other live borrow.
         let Some(m) = (unsafe { biom.as_mut() }) else {
             return 0;
         };
@@ -164,12 +181,18 @@ pub unsafe extern "C" fn BIO_meth_set_write(biom: *mut BioMethod, f: Option<BioW
 }
 
 /// `int BIO_meth_set_write_ex(BIO_METHOD *biom, int (*bwrite)(BIO *, const char *, size_t, size_t *))`
+///
+/// # Safety
+/// `biom` must be NULL or point at a live [`BioMethod`] that this call has
+/// exclusive access to; `f`, when non-NULL, must be a valid function pointer of
+/// the documented signature that remains callable while the table is installed.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_meth_set_write_ex(
     biom: *mut BioMethod,
     f: Option<BioWriteExFn>,
 ) -> c_int {
     guard_ffi(0, || {
+        // SAFETY: `biom` is NULL or a live method table with no other live borrow.
         let Some(m) = (unsafe { biom.as_mut() }) else {
             return 0;
         };
@@ -180,9 +203,15 @@ pub unsafe extern "C" fn BIO_meth_set_write_ex(
 }
 
 /// `int BIO_meth_set_read(BIO_METHOD *biom, int (*read)(BIO *, char *, int))`
+///
+/// # Safety
+/// `biom` must be NULL or point at a live [`BioMethod`] that this call has
+/// exclusive access to; `f`, when non-NULL, must be a valid function pointer of
+/// the documented signature that remains callable while the table is installed.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_meth_set_read(biom: *mut BioMethod, f: Option<BioReadFn>) -> c_int {
     guard_ffi(0, || {
+        // SAFETY: `biom` is NULL or a live method table with no other live borrow.
         let Some(m) = (unsafe { biom.as_mut() }) else {
             return 0;
         };
@@ -193,12 +222,18 @@ pub unsafe extern "C" fn BIO_meth_set_read(biom: *mut BioMethod, f: Option<BioRe
 }
 
 /// `int BIO_meth_set_read_ex(BIO_METHOD *biom, int (*bread)(BIO *, char *, size_t, size_t *))`
+///
+/// # Safety
+/// `biom` must be NULL or point at a live [`BioMethod`] that this call has
+/// exclusive access to; `f`, when non-NULL, must be a valid function pointer of
+/// the documented signature that remains callable while the table is installed.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_meth_set_read_ex(
     biom: *mut BioMethod,
     f: Option<BioReadExFn>,
 ) -> c_int {
     guard_ffi(0, || {
+        // SAFETY: `biom` is NULL or a live method table with no other live borrow.
         let Some(m) = (unsafe { biom.as_mut() }) else {
             return 0;
         };
@@ -209,9 +244,15 @@ pub unsafe extern "C" fn BIO_meth_set_read_ex(
 }
 
 /// `int BIO_meth_set_puts(BIO_METHOD *biom, int (*puts)(BIO *, const char *))`
+///
+/// # Safety
+/// `biom` must be NULL or point at a live [`BioMethod`] that this call has
+/// exclusive access to; `f`, when non-NULL, must be a valid function pointer of
+/// the documented signature that remains callable while the table is installed.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_meth_set_puts(biom: *mut BioMethod, f: Option<BioPutsFn>) -> c_int {
     guard_ffi(0, || {
+        // SAFETY: `biom` is NULL or a live method table with no other live borrow.
         let Some(m) = (unsafe { biom.as_mut() }) else {
             return 0;
         };
@@ -221,9 +262,15 @@ pub unsafe extern "C" fn BIO_meth_set_puts(biom: *mut BioMethod, f: Option<BioPu
 }
 
 /// `int BIO_meth_set_gets(BIO_METHOD *biom, int (*gets)(BIO *, char *, int))`
+///
+/// # Safety
+/// `biom` must be NULL or point at a live [`BioMethod`] that this call has
+/// exclusive access to; `f`, when non-NULL, must be a valid function pointer of
+/// the documented signature that remains callable while the table is installed.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_meth_set_gets(biom: *mut BioMethod, f: Option<BioGetsFn>) -> c_int {
     guard_ffi(0, || {
+        // SAFETY: `biom` is NULL or a live method table with no other live borrow.
         let Some(m) = (unsafe { biom.as_mut() }) else {
             return 0;
         };
@@ -233,9 +280,15 @@ pub unsafe extern "C" fn BIO_meth_set_gets(biom: *mut BioMethod, f: Option<BioGe
 }
 
 /// `int BIO_meth_set_ctrl(BIO_METHOD *biom, long (*ctrl)(BIO *, int, long, void *))`
+///
+/// # Safety
+/// `biom` must be NULL or point at a live [`BioMethod`] that this call has
+/// exclusive access to; `f`, when non-NULL, must be a valid function pointer of
+/// the documented signature that remains callable while the table is installed.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_meth_set_ctrl(biom: *mut BioMethod, f: Option<BioCtrlFn>) -> c_int {
     guard_ffi(0, || {
+        // SAFETY: `biom` is NULL or a live method table with no other live borrow.
         let Some(m) = (unsafe { biom.as_mut() }) else {
             return 0;
         };
@@ -245,12 +298,18 @@ pub unsafe extern "C" fn BIO_meth_set_ctrl(biom: *mut BioMethod, f: Option<BioCt
 }
 
 /// `int BIO_meth_set_create(BIO_METHOD *biom, int (*create)(BIO *))`
+///
+/// # Safety
+/// `biom` must be NULL or point at a live [`BioMethod`] that this call has
+/// exclusive access to; `f`, when non-NULL, must be a valid function pointer of
+/// the documented signature that remains callable while the table is installed.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_meth_set_create(
     biom: *mut BioMethod,
     f: Option<BioCreateFn>,
 ) -> c_int {
     guard_ffi(0, || {
+        // SAFETY: `biom` is NULL or a live method table with no other live borrow.
         let Some(m) = (unsafe { biom.as_mut() }) else {
             return 0;
         };
@@ -260,12 +319,18 @@ pub unsafe extern "C" fn BIO_meth_set_create(
 }
 
 /// `int BIO_meth_set_destroy(BIO_METHOD *biom, int (*destroy)(BIO *))`
+///
+/// # Safety
+/// `biom` must be NULL or point at a live [`BioMethod`] that this call has
+/// exclusive access to; `f`, when non-NULL, must be a valid function pointer of
+/// the documented signature that remains callable while the table is installed.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_meth_set_destroy(
     biom: *mut BioMethod,
     f: Option<BioDestroyFn>,
 ) -> c_int {
     guard_ffi(0, || {
+        // SAFETY: `biom` is NULL or a live method table with no other live borrow.
         let Some(m) = (unsafe { biom.as_mut() }) else {
             return 0;
         };
@@ -275,12 +340,18 @@ pub unsafe extern "C" fn BIO_meth_set_destroy(
 }
 
 /// `int BIO_meth_set_callback_ctrl(BIO_METHOD *biom, long (*callback_ctrl)(BIO *, int, BIO_info_cb *))`
+///
+/// # Safety
+/// `biom` must be NULL or point at a live [`BioMethod`] that this call has
+/// exclusive access to; `f`, when non-NULL, must be a valid function pointer of
+/// the documented signature that remains callable while the table is installed.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_meth_set_callback_ctrl(
     biom: *mut BioMethod,
     f: Option<BioCallbackCtrlFn>,
 ) -> c_int {
     guard_ffi(0, || {
+        // SAFETY: `biom` is NULL or a live method table with no other live borrow.
         let Some(m) = (unsafe { biom.as_mut() }) else {
             return 0;
         };
@@ -290,12 +361,18 @@ pub unsafe extern "C" fn BIO_meth_set_callback_ctrl(
 }
 
 /// `int BIO_meth_set_sendmmsg(BIO_METHOD *biom, int (*f)(BIO *, BIO_MSG *, size_t, size_t, uint64_t, size_t *))`
+///
+/// # Safety
+/// `biom` must be NULL or point at a live [`BioMethod`] that this call has
+/// exclusive access to; `f`, when non-NULL, must be a valid function pointer of
+/// the documented signature that remains callable while the table is installed.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_meth_set_sendmmsg(
     biom: *mut BioMethod,
     f: Option<BioSendmmsgFn>,
 ) -> c_int {
     guard_ffi(0, || {
+        // SAFETY: `biom` is NULL or a live method table with no other live borrow.
         let Some(m) = (unsafe { biom.as_mut() }) else {
             return 0;
         };
@@ -305,12 +382,18 @@ pub unsafe extern "C" fn BIO_meth_set_sendmmsg(
 }
 
 /// `int BIO_meth_set_recvmmsg(BIO_METHOD *biom, int (*f)(BIO *, BIO_MSG *, size_t, size_t, uint64_t, size_t *))`
+///
+/// # Safety
+/// `biom` must be NULL or point at a live [`BioMethod`] that this call has
+/// exclusive access to; `f`, when non-NULL, must be a valid function pointer of
+/// the documented signature that remains callable while the table is installed.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_meth_set_recvmmsg(
     biom: *mut BioMethod,
     f: Option<BioRecvmmsgFn>,
 ) -> c_int {
     guard_ffi(0, || {
+        // SAFETY: `biom` is NULL or a live method table with no other live borrow.
         let Some(m) = (unsafe { biom.as_mut() }) else {
             return 0;
         };
@@ -322,77 +405,149 @@ pub unsafe extern "C" fn BIO_meth_set_recvmmsg(
 /// `int (*BIO_meth_get_write(const BIO_METHOD *biom))(BIO *, const char *, int)`
 ///
 /// Returns the **legacy** pointer, which is NULL when only `_ex` was set.
+///
+/// # Safety
+/// `biom` must be NULL or point at a live [`BioMethod`]; the returned function
+/// pointer is callable only while that table remains alive and unmodified.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_meth_get_write(biom: *const BioMethod) -> Option<BioWriteFn> {
+    // SAFETY: `biom` is NULL or a live method table; the shared borrow is
+    // confined to this expression.
     guard_ffi(None, || unsafe { biom.as_ref() }.and_then(|m| m.bwrite_old))
 }
 
 /// `int (*BIO_meth_get_write_ex(const BIO_METHOD *biom))(BIO *, const char *, size_t, size_t *)`
+///
+/// # Safety
+/// `biom` must be NULL or point at a live [`BioMethod`]; the returned function
+/// pointer is callable only while that table remains alive and unmodified.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_meth_get_write_ex(biom: *const BioMethod) -> Option<BioWriteExFn> {
+    // SAFETY: `biom` is NULL or a live method table; the shared borrow is
+    // confined to this expression.
     guard_ffi(None, || unsafe { biom.as_ref() }.and_then(|m| m.bwrite))
 }
 
 /// `int (*BIO_meth_get_read(const BIO_METHOD *biom))(BIO *, char *, int)`
+///
+/// # Safety
+/// `biom` must be NULL or point at a live [`BioMethod`]; the returned function
+/// pointer is callable only while that table remains alive and unmodified.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_meth_get_read(biom: *const BioMethod) -> Option<BioReadFn> {
+    // SAFETY: `biom` is NULL or a live method table; the shared borrow is
+    // confined to this expression.
     guard_ffi(None, || unsafe { biom.as_ref() }.and_then(|m| m.bread_old))
 }
 
 /// `int (*BIO_meth_get_read_ex(const BIO_METHOD *biom))(BIO *, char *, size_t, size_t *)`
+///
+/// # Safety
+/// `biom` must be NULL or point at a live [`BioMethod`]; the returned function
+/// pointer is callable only while that table remains alive and unmodified.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_meth_get_read_ex(biom: *const BioMethod) -> Option<BioReadExFn> {
+    // SAFETY: `biom` is NULL or a live method table; the shared borrow is
+    // confined to this expression.
     guard_ffi(None, || unsafe { biom.as_ref() }.and_then(|m| m.bread))
 }
 
 /// `int (*BIO_meth_get_puts(const BIO_METHOD *biom))(BIO *, const char *)`
+///
+/// # Safety
+/// `biom` must be NULL or point at a live [`BioMethod`]; the returned function
+/// pointer is callable only while that table remains alive and unmodified.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_meth_get_puts(biom: *const BioMethod) -> Option<BioPutsFn> {
+    // SAFETY: `biom` is NULL or a live method table; the shared borrow is
+    // confined to this expression.
     guard_ffi(None, || unsafe { biom.as_ref() }.and_then(|m| m.bputs))
 }
 
 /// `int (*BIO_meth_get_gets(const BIO_METHOD *biom))(BIO *, char *, int)`
+///
+/// # Safety
+/// `biom` must be NULL or point at a live [`BioMethod`]; the returned function
+/// pointer is callable only while that table remains alive and unmodified.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_meth_get_gets(biom: *const BioMethod) -> Option<BioGetsFn> {
+    // SAFETY: `biom` is NULL or a live method table; the shared borrow is
+    // confined to this expression.
     guard_ffi(None, || unsafe { biom.as_ref() }.and_then(|m| m.bgets))
 }
 
 /// `long (*BIO_meth_get_ctrl(const BIO_METHOD *biom))(BIO *, int, long, void *)`
+///
+/// # Safety
+/// `biom` must be NULL or point at a live [`BioMethod`]; the returned function
+/// pointer is callable only while that table remains alive and unmodified.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_meth_get_ctrl(biom: *const BioMethod) -> Option<BioCtrlFn> {
+    // SAFETY: `biom` is NULL or a live method table; the shared borrow is
+    // confined to this expression.
     guard_ffi(None, || unsafe { biom.as_ref() }.and_then(|m| m.ctrl))
 }
 
 /// `int (*BIO_meth_get_create(const BIO_METHOD *biom))(BIO *)`
+///
+/// # Safety
+/// `biom` must be NULL or point at a live [`BioMethod`]; the returned function
+/// pointer is callable only while that table remains alive and unmodified.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_meth_get_create(biom: *const BioMethod) -> Option<BioCreateFn> {
+    // SAFETY: `biom` is NULL or a live method table; the shared borrow is
+    // confined to this expression.
     guard_ffi(None, || unsafe { biom.as_ref() }.and_then(|m| m.create))
 }
 
 /// `int (*BIO_meth_get_destroy(const BIO_METHOD *biom))(BIO *)`
+///
+/// # Safety
+/// `biom` must be NULL or point at a live [`BioMethod`]; the returned function
+/// pointer is callable only while that table remains alive and unmodified.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_meth_get_destroy(biom: *const BioMethod) -> Option<BioDestroyFn> {
+    // SAFETY: `biom` is NULL or a live method table; the shared borrow is
+    // confined to this expression.
     guard_ffi(None, || unsafe { biom.as_ref() }.and_then(|m| m.destroy))
 }
 
 /// `long (*BIO_meth_get_callback_ctrl(const BIO_METHOD *biom))(BIO *, int, BIO_info_cb *)`
+///
+/// # Safety
+/// `biom` must be NULL or point at a live [`BioMethod`]; the returned function
+/// pointer is callable only while that table remains alive and unmodified.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_meth_get_callback_ctrl(
     biom: *const BioMethod,
 ) -> Option<BioCallbackCtrlFn> {
     guard_ffi(None, || {
+        // SAFETY: `biom` is NULL or a live method table; the shared borrow is
+        // confined to this expression.
         unsafe { biom.as_ref() }.and_then(|m| m.callback_ctrl)
     })
 }
 
 /// `int (*BIO_meth_get_sendmmsg(const BIO_METHOD *biom))(BIO *, BIO_MSG *, size_t, size_t, uint64_t, size_t *)`
+///
+/// # Safety
+/// `biom` must be NULL or point at a live [`BioMethod`]; the returned function
+/// pointer is callable only while that table remains alive and unmodified.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_meth_get_sendmmsg(biom: *const BioMethod) -> Option<BioSendmmsgFn> {
+    // SAFETY: `biom` is NULL or a live method table; the shared borrow is
+    // confined to this expression.
     guard_ffi(None, || unsafe { biom.as_ref() }.and_then(|m| m.sendmmsg))
 }
 
 /// `int (*BIO_meth_get_recvmmsg(const BIO_METHOD *biom))(BIO *, BIO_MSG *, size_t, size_t, uint64_t, size_t *)`
+///
+/// # Safety
+/// `biom` must be NULL or point at a live [`BioMethod`]; the returned function
+/// pointer is callable only while that table remains alive and unmodified.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_meth_get_recvmmsg(biom: *const BioMethod) -> Option<BioRecvmmsgFn> {
+    // SAFETY: `biom` is NULL or a live method table; the shared borrow is
+    // confined to this expression.
     guard_ffi(None, || unsafe { biom.as_ref() }.and_then(|m| m.recvmmsg))
 }

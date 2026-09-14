@@ -67,6 +67,11 @@ pub extern "C" fn BIO_s_socket() -> *const BioMethod {
 /// control is what sets `init`, closes any previous descriptor and clears the
 /// TCP-fast-open state. Writing the fields directly would leave `init` at the
 /// value `sock_new` chose (`0`) and the BIO would behave as uninitialised.
+///
+/// # Safety
+/// `sock` must be a live socket descriptor, or the platform's invalid-socket
+/// sentinel. When `close_flag` is non-zero the BIO takes ownership and closes it
+/// exactly once; otherwise the caller keeps ownership.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_new_socket(sock: c_int, close_flag: c_int) -> *mut Bio {
     guard_ffi(ptr::null_mut(), || {
@@ -121,6 +126,10 @@ pub extern "C" fn BIO_sock_error(sock: c_int) -> c_int {
 }
 
 /// `int BIO_socket_ioctl(int fd, long type, void *arg)`
+///
+/// # Safety
+/// `fd` must be a live descriptor and `arg` must be a pointer appropriate for
+/// `type_`: `ioctl(2)` reads or writes through it according to the request.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_socket_ioctl(fd: c_int, type_: c_long, arg: *mut c_void) -> c_int {
     guard_ffi(-1, || {

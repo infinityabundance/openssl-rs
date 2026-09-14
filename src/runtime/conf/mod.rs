@@ -13,19 +13,25 @@
 //! * [`init_settings`] — the `OPENSSL_INIT_SETTINGS` object that carries a
 //!   configuration filename, application name and flag word into
 //!   `OPENSSL_init_crypto`. Present.
-//! * the data model (`conf_api.c`), the default method — parser, dumper, the two
-//!   character-class tables (`conf_def.c`) — and the public accessor layer
-//!   (`conf_lib.c`). **Not yet written.**
+//! * [`types`] — `CONF`, `CONF_VALUE` and `CONF_METHOD`, transcribed from
+//!   `openssl/conftypes.h` and `openssl/conf.h`.
+//! * [`api`] — `conf_api.c`: the model, its hash and comparison functions, the
+//!   lookups, and the two-phase free walk.
+//! * [`def`] — `conf_def.c`: the parser, the dumper and the two character-class
+//!   tables, plus `NCONF_default`/`NCONF_WIN32`.
+//! * [`lib`] — `conf_lib.c`: the classic API's bridge onto `NCONF`, the `NCONF`
+//!   accessors, and `NCONF_get_number_e`.
+//! * [`modparse`] — `CONF_parse_list` and `CONF_get1_default_config_file`.
 //! * the module registry (`CONF_modules_*`, `CONF_imodule_*`, `CONF_module_add`)
-//!   and the automatic loader (`conf_sap.c`). **Not yet written**, and
-//!   structurally blocked rather than merely unstarted: `CONF_modules_load`
-//!   begins with `conf_diagnostics`, which reads and writes the `OSSL_LIB_CTX`
-//!   diagnostics flag, and `OSSL_LIB_CTX` is Phase 6. The registry cannot be
-//!   reconstructed faithfully before it exists.
+//!   and the automatic loader (`conf_sap.c`). **Structurally blocked**, not merely
+//!   unstarted: `CONF_modules_load` begins with `conf_diagnostics`, which reads
+//!   and writes the `OSSL_LIB_CTX` diagnostics flag, and `OSSL_LIB_CTX` is
+//!   Phase 6. Those symbols are a recorded hand-off to Phase 6 in
+//!   `forensics/phase4-obligations.json`; see [`modparse`] and
+//!   `docs/DECISIONS.md` D50.
 //!
-//! Every symbol in the stratum is therefore *unimplemented and recorded as such*
-//! in `forensics/phase4-obligations.json`; none of it is scaffolded into looking
-//! present, and the shell continues to abort loudly on any of them.
+//! The shell still aborts loudly on any deferred symbol; none of it is scaffolded
+//! into looking present.
 //!
 //! ## Why `OPENSSL_INIT_*` lives in this module
 //!
@@ -36,4 +42,9 @@
 //! scaffolded. The family list in `forensics/tools/phase4_obligations.py` now
 //! carries `OPENSSL_INIT_`, which puts them under this stratum's accounting.
 
+pub mod api;
+pub mod def;
 pub mod init_settings;
+pub mod lib;
+pub mod modparse;
+pub mod types;

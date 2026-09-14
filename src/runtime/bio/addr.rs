@@ -108,6 +108,8 @@ pub(crate) const AUTHORITY_ADDR_SIZE: usize = 112;
 /// # Safety
 /// `ap` must be NULL or point at a live [`BioAddr`].
 unsafe fn family_of(ap: *const BioAddr) -> c_int {
+    // SAFETY: `ap` is NULL or points at a live `BioAddr` per the caller's
+    // contract; `as_ref` is what makes a NULL argument total rather than fatal.
     match unsafe { ap.as_ref() } {
         // The authority dereferences here; this entry point is total by policy.
         None => sys::AF_UNSPEC,
@@ -120,6 +122,8 @@ unsafe fn family_of(ap: *const BioAddr) -> c_int {
 /// # Safety
 /// `ap` must point at a live [`BioAddr`].
 pub(crate) unsafe fn sockaddr_size(ap: *const BioAddr) -> sys::SockLen {
+    // SAFETY: `ap` points at a live `BioAddr` per the caller's contract, which is
+    // exactly `family_of`'s precondition.
     match unsafe { family_of(ap) } {
         sys::AF_INET => core::mem::size_of::<sys::SockAddrIn>() as sys::SockLen,
         sys::AF_INET6 => core::mem::size_of::<sys::SockAddrIn6>() as sys::SockLen,
@@ -155,6 +159,10 @@ unsafe fn free_addr(p: *mut BioAddr) {
 /// `void BIO_ADDR_clear(BIO_ADDR *ap)`
 ///
 /// The authority faults on NULL; this is total by policy.
+///
+/// # Safety
+/// `ap` must be NULL or a pointer to a live, writable [`BioAddr`]. A NULL
+/// argument is accepted and does nothing.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_ADDR_clear(ap: *mut BioAddr) {
     guard_ffi((), || {
@@ -166,6 +174,8 @@ pub unsafe extern "C" fn BIO_ADDR_clear(ap: *mut BioAddr) {
 /// # Safety
 /// `ap` must be NULL or point at a live, writable [`BioAddr`].
 pub(crate) unsafe fn clear_addr(ap: *mut BioAddr) {
+    // SAFETY: `ap` is NULL or points at a live, writable `BioAddr` per the
+    // caller's contract; `as_mut` performs the null check that makes NULL total.
     let Some(a) = (unsafe { ap.as_mut() }) else {
         return;
     };
@@ -344,6 +354,11 @@ pub(crate) unsafe fn store_in6(ap: *mut BioAddr, val: sys::SockAddrIn6) {
 /// `void BIO_ADDR_free(BIO_ADDR *ap)`
 ///
 /// A NULL argument is a no-op in the authority; matched.
+///
+/// # Safety
+/// `ap` must be NULL or a pointer previously returned by [`BIO_ADDR_new`] or
+/// [`BIO_ADDR_dup`] that has not already been freed. Ownership of the address
+/// passes to this function.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_ADDR_free(ap: *mut BioAddr) {
     guard_ffi((), || {
@@ -355,6 +370,11 @@ pub unsafe extern "C" fn BIO_ADDR_free(ap: *mut BioAddr) {
 /// `BIO_ADDR *BIO_ADDR_dup(const BIO_ADDR *ap)`
 ///
 /// A NULL argument yields NULL; matched.
+///
+/// # Safety
+/// `ap` must be NULL or point at a live, readable [`BioAddr`]. The returned
+/// address is freshly allocated and owned by the caller, which frees it with
+/// [`BIO_ADDR_free`].
 #[no_mangle]
 pub unsafe extern "C" fn BIO_ADDR_dup(ap: *const BioAddr) -> *mut BioAddr {
     guard_ffi(ptr::null_mut(), || {
@@ -382,6 +402,11 @@ pub unsafe extern "C" fn BIO_ADDR_dup(ap: *const BioAddr) -> *mut BioAddr {
 /// Either argument being NULL fails; an `AF_UNSPEC` source clears the
 /// destination rather than copying; any other family copies that family's
 /// sockaddr. Matched against the authority.
+///
+/// # Safety
+/// `src` must be NULL or point at a live, readable [`BioAddr`]; `dst` must be
+/// NULL or point at a live, writable [`BioAddr`]. Either NULL is handled and
+/// fails.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_ADDR_copy(dst: *mut BioAddr, src: *const BioAddr) -> c_int {
     guard_ffi(0, || {
@@ -399,6 +424,8 @@ pub unsafe extern "C" fn BIO_ADDR_copy(dst: *mut BioAddr, src: *const BioAddr) -
 /// # Safety
 /// `dst` must be live and writable and `src` live and readable.
 unsafe fn copy_addr(dst: *mut BioAddr, src: *const BioAddr) -> c_int {
+    // SAFETY: `src` is live and readable per this function's contract; `sa` is
+    // its first field, so reading `ss_family` is in bounds.
     if unsafe { (*src).sa.ss_family } == sys::AF_UNSPEC as sys::SaFamily {
         // SAFETY: `dst` is live and writable.
         unsafe { clear_addr(dst) };
@@ -412,6 +439,9 @@ unsafe fn copy_addr(dst: *mut BioAddr, src: *const BioAddr) -> c_int {
 /// `int BIO_ADDR_family(const BIO_ADDR *ap)`
 ///
 /// The authority faults on NULL; this returns `AF_UNSPEC` by policy.
+///
+/// # Safety
+/// `ap` must be NULL or point at a live, readable [`BioAddr`].
 #[no_mangle]
 pub unsafe extern "C" fn BIO_ADDR_family(ap: *const BioAddr) -> c_int {
     guard_ffi(sys::AF_UNSPEC, || {
@@ -438,6 +468,8 @@ pub unsafe extern "C" fn BIO_ADDR_rawmake(
     port: u16,
 ) -> c_int {
     guard_ffi(0, || {
+        // SAFETY: `ap` is NULL or a live, writable `BioAddr` per the caller's
+        // contract; a NULL argument is rejected rather than dereferenced.
         let Some(a) = (unsafe { ap.as_mut() }) else {
             return 0;
         };
@@ -553,10 +585,15 @@ pub unsafe extern "C" fn BIO_ADDR_rawaddress(
                 let sin = base.cast::<sys::SockAddrIn>();
                 (4usize, ptr::from_ref(&(*sin).sin_addr).cast::<c_void>())
             },
+            // SAFETY: as for `AF_INET`; the family word implies a 16-byte
+            // `sin6_addr` was written by `rawmake` or `make_from_sockaddr`.
             sys::AF_INET6 => unsafe {
                 let sin6 = base.cast::<sys::SockAddrIn6>();
                 (16usize, ptr::from_ref(&(*sin6).sin6_addr).cast::<c_void>())
             },
+            // SAFETY: as for `AF_INET`; the family word implies a zeroed
+            // `sun_path` holding a NUL-terminated copy, so `strlen` is in bounds
+            // and the resulting length covers initialised bytes only.
             sys::AF_UNIX => unsafe {
                 let sun = base.cast::<sys::SockAddrUn>();
                 // The stored path is NUL-terminated and the family's sockaddr was
@@ -586,6 +623,9 @@ pub unsafe extern "C" fn BIO_ADDR_rawaddress(
 /// Returns the stored field **as stored**, which for a `rawmake` address is the
 /// value the caller passed and for a resolver address is in network order. See
 /// the module comment. The authority faults on NULL; this returns 0 by policy.
+///
+/// # Safety
+/// `ap` must be NULL or point at a live, readable [`BioAddr`].
 #[no_mangle]
 pub unsafe extern "C" fn BIO_ADDR_rawport(ap: *const BioAddr) -> u16 {
     guard_ffi(0, || {
@@ -601,6 +641,8 @@ pub unsafe extern "C" fn BIO_ADDR_rawport(ap: *const BioAddr) -> u16 {
                     .as_ref()
                     .map_or(0, |s| s.sin_port)
             },
+            // SAFETY: as for `AF_INET`; the family word was set by a function
+            // that also initialised `sin6_port`, so reading it is in bounds.
             sys::AF_INET6 => unsafe {
                 base.cast::<sys::SockAddrIn6>()
                     .as_ref()
@@ -659,7 +701,11 @@ unsafe fn addr_strings(
         return (false, ptr::null_mut(), ptr::null_mut());
     }
 
+    // SAFETY: `ap` is live per this function's contract, so its first field can
+    // be addressed; the cast retypes only a prefix beginning with the family
+    // word.
     let base = unsafe { ptr::addr_of!((*ap).sa) }.cast::<sys::SockAddr>();
+    // SAFETY: `ap` is live, which is `sockaddr_size`'s precondition.
     let addrlen = unsafe { sockaddr_size(ap) };
     let flags = if numeric != 0 {
         sys::NI_NUMERICHOST | sys::NI_NUMERICSERV
@@ -746,6 +792,9 @@ unsafe fn addr_strings(
 ///
 /// The authority faults on NULL; this returns NULL by policy. The result is
 /// `OPENSSL_strdup`-allocated, so the caller frees it with `OPENSSL_free`.
+///
+/// # Safety
+/// `ap` must be NULL or point at a live, readable [`BioAddr`].
 #[no_mangle]
 pub unsafe extern "C" fn BIO_ADDR_hostname_string(
     ap: *const BioAddr,
@@ -770,6 +819,9 @@ pub unsafe extern "C" fn BIO_ADDR_hostname_string(
 /// Reports whatever `getnameinfo` makes of the stored port, so a `rawmake`
 /// address reports a byte-swapped service while a resolver address does not; both
 /// are reproduced. The authority faults on NULL; this returns NULL by policy.
+///
+/// # Safety
+/// `ap` must be NULL or point at a live, readable [`BioAddr`].
 #[no_mangle]
 pub unsafe extern "C" fn BIO_ADDR_service_string(
     ap: *const BioAddr,
@@ -793,6 +845,10 @@ pub unsafe extern "C" fn BIO_ADDR_service_string(
 ///
 /// NULL for every family except `AF_UNIX`. The authority faults on NULL; this
 /// returns NULL by policy.
+///
+/// # Safety
+/// `ap` must be NULL or point at a live, readable [`BioAddr`] whose `sun_path`,
+/// when the family is `AF_UNIX`, is a NUL-terminated string.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_ADDR_path_string(ap: *const BioAddr) -> *mut c_char {
     guard_ffi(ptr::null_mut(), || {
@@ -1015,7 +1071,10 @@ mod tests {
                 BIO_ADDR_rawmake(a, sys::AF_UNIX, long.as_ptr().cast(), 4, 0),
                 1
             );
-            let path = take(BIO_ADDR_path_string(a)).expect("a path");
+            let path = match take(BIO_ADDR_path_string(a)) {
+                Some(p) => p,
+                None => unreachable!("rawmake of a Unix path must yield a path string"),
+            };
             assert_eq!(path.len(), 107, "copied to the destination's capacity");
 
             // The bound itself is `wherelen + 1 > sizeof(sun_path)`, so 107 is

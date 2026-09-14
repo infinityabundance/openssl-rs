@@ -210,6 +210,8 @@ fn accept_new() -> *mut BioAccept {
 /// # Safety
 /// `a` must be NULL or a block from [`accept_new`] that has not been freed.
 unsafe fn accept_free(a: *mut BioAccept) {
+    // SAFETY: `a` is NULL or a block from `accept_new` per the caller's contract;
+    // `as_mut` performs the null check that makes NULL total.
     let Some(c) = (unsafe { a.as_mut() }) else {
         return;
     };
@@ -268,6 +270,8 @@ unsafe extern "C" fn acpt_new(bi: *mut Bio) -> c_int {
 /// # Safety
 /// `bio` must be a live accept BIO.
 unsafe fn acpt_close_socket(bio: *mut Bio) {
+    // SAFETY: `bio` is a live accept BIO per the caller's contract, so `create`
+    // has succeeded and stored a `BioAccept` in `ptr`.
     let c = unsafe { data_of(bio) };
     // SAFETY: `c` is live.
     if unsafe { (*c).accept_sock } != INVALID_SOCKET {
@@ -337,7 +341,9 @@ unsafe fn acpt_state(b: *mut Bio, c: *mut BioAccept) -> c_int {
                         "hostname=",
                         ", service=",
                         "",
+                        // SAFETY: `c` is live, so its two string fields are readable.
                         unsafe { (*c).param_addr },
+                        // SAFETY: as above.
                         unsafe { (*c).param_serv },
                     );
                     // SAFETY: the site is a compile-time constant and `msg` is
@@ -363,6 +369,8 @@ unsafe fn acpt_state(b: *mut Bio, c: *mut BioAccept) -> c_int {
             ACPT_S_GET_ADDR => {
                 // The `BIO_FAMILY_IPV6` arm's sibling raise is not compiled on this
                 // platform; see the connect method's note.
+                // SAFETY: `c` is live; `accept_family` is one of the initialised
+                // integer fields.
                 let family = match unsafe { (*c).accept_family } {
                     BIO_FAMILY_IPV6 => sys::AF_INET6,
                     BIO_FAMILY_IPV4 => sys::AF_INET,
@@ -404,6 +412,8 @@ unsafe fn acpt_state(b: *mut Bio, c: *mut BioAccept) -> c_int {
             ACPT_S_CREATE_SOCKET => {
                 // SAFETY: `ERR_set_mark` manipulates the queue.
                 crate::runtime::err::ERR_set_mark();
+                // SAFETY: `c` is live and on this arm `addr_iter` points into the
+                // chain `BIO_lookup` just built.
                 let iter = unsafe { (*c).addr_iter };
                 // SAFETY: `iter` is a live node.
                 s = super::bio_sock2::BIO_socket(
@@ -428,7 +438,9 @@ unsafe fn acpt_state(b: *mut Bio, c: *mut BioAccept) -> c_int {
                         "calling socket(",
                         ", ",
                         ")",
+                        // SAFETY: `c` is live, so its two string fields are readable.
                         unsafe { (*c).param_addr },
+                        // SAFETY: as above.
                         unsafe { (*c).param_serv },
                     );
                     // SAFETY: the sites are compile-time constants and `msg` is
@@ -448,6 +460,8 @@ unsafe fn acpt_state(b: *mut Bio, c: *mut BioAccept) -> c_int {
                 s = -1;
             }
             ACPT_S_LISTEN => {
+                // SAFETY: `c` is live and `addr_iter` still points at the node the
+                // socket was created for.
                 let iter = unsafe { (*c).addr_iter };
                 // SAFETY: `c` is live; `BIO_listen` reads the address and the
                 // bind mode.
@@ -649,6 +663,8 @@ fn clear_retry_flags(b: *mut Bio) {
 /// bytes.
 unsafe extern "C" fn acpt_read(b: *mut Bio, out: *mut c_char, outl: c_int) -> c_int {
     clear_retry_flags(b);
+    // SAFETY: `b` is a live accept BIO per the caller's contract, so `create` has
+    // succeeded and stored a `BioAccept` in `ptr`.
     let data = unsafe { data_of(b) };
     loop {
         // SAFETY: `b` is live.
@@ -674,6 +690,8 @@ unsafe extern "C" fn acpt_read(b: *mut Bio, out: *mut c_char, outl: c_int) -> c_
 /// `b` must be a live accept BIO; `in_` must be valid for `inl` bytes.
 unsafe extern "C" fn acpt_write(b: *mut Bio, in_: *const c_char, inl: c_int) -> c_int {
     clear_retry_flags(b);
+    // SAFETY: `b` is a live accept BIO per the caller's contract, so `create` has
+    // succeeded and stored a `BioAccept` in `ptr`.
     let data = unsafe { data_of(b) };
     loop {
         // SAFETY: `b` is live.
@@ -717,6 +735,8 @@ unsafe extern "C" fn acpt_puts(bp: *mut Bio, str_: *const c_char) -> c_int {
 /// `b` must be a live accept BIO and `ptr` must be appropriate for `cmd`.
 unsafe extern "C" fn acpt_ctrl(b: *mut Bio, cmd: c_int, num: c_long, ptr: *mut c_void) -> c_long {
     let mut ret: c_long = 1;
+    // SAFETY: `b` is a live accept BIO per the caller's contract, so `create` has
+    // succeeded and stored a `BioAccept` in `ptr`.
     let data = unsafe { data_of(b) };
 
     match cmd {

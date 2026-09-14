@@ -806,9 +806,11 @@ pub struct BioMethod {
     pub recvmmsg: Option<BioRecvmmsgFn>,
 }
 
-// The method table is immutable after construction and its contents are either
-// integers, static strings or function pointers, all of which may be shared
-// across threads.
+// SAFETY: a `BioMethod` is fully initialised before it is published through a
+// `*const BioMethod` and is never mutated afterwards; its fields are an integer,
+// a pointer to a `'static` name, and function pointers, all of which are
+// `Send + Sync`. Sharing `&BioMethod` across threads therefore introduces no
+// data race.
 unsafe impl Sync for BioMethod {}
 
 impl BioMethod {
@@ -899,6 +901,13 @@ impl Bio {
 /// `libctx` selects a per-context registry in the authority; this crate has no
 /// `OSSL_LIB_CTX` yet (Phase 6), so it is accepted and ignored, which is
 /// recorded as a Phase 6 obligation rather than silently dropped.
+///
+/// # Safety
+/// `method` must be NULL or point at a live [`BioMethod`] whose function
+/// pointers remain callable for as long as any BIO created from it exists. A
+/// table built by `BIO_meth_new` must therefore not be `BIO_meth_free`d while a
+/// BIO references it; the built-in tables are `'static`. `_libctx` is unused and
+/// may be any value, including NULL.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_new_ex(_libctx: *mut c_void, method: *const BioMethod) -> *mut Bio {
     guard_ffi(ptr::null_mut(), || {
@@ -978,6 +987,11 @@ pub unsafe extern "C" fn BIO_new_ex(_libctx: *mut c_void, method: *const BioMeth
 /// `BIO *BIO_new(const BIO_METHOD *type)`
 ///
 /// `BIO_new` is `BIO_new_ex(NULL, type)`.
+///
+/// # Safety
+/// `method` must be NULL or point at a live [`BioMethod`] whose function
+/// pointers remain callable for as long as the returned BIO exists; the table's
+/// `create` is invoked on the fresh object during this call.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_new(method: *const BioMethod) -> *mut Bio {
     guard_ffi(ptr::null_mut(), || {
@@ -990,6 +1004,11 @@ pub unsafe extern "C" fn BIO_new(method: *const BioMethod) -> *mut Bio {
 ///
 /// Increments the reference count. Returns 1 on success and 0 for a NULL BIO,
 /// which is the authority's behaviour (it does not raise).
+///
+/// # Safety
+/// `bio` must be NULL or point at a live, initialised BIO for which the caller
+/// holds an outstanding reference. On success the caller gains one more
+/// reference, which must later be released with `BIO_free`.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_up_ref(bio: *mut Bio) -> c_int {
     guard_ffi(0, || {
@@ -1013,6 +1032,13 @@ pub unsafe extern "C" fn BIO_up_ref(bio: *mut Bio) -> c_int {
 /// `ex_data` is torn down, the method's `destroy` runs, and the object is
 /// released. A failing (`<= 0`) free callback suppresses destruction and returns
 /// 0, which is the authority's contract for using the callback as a veto.
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO for which the caller owns exactly one
+/// reference to release. When the count reaches zero the method's `destroy` and
+/// the `ex_data` teardown run and the object is freed, so `bio` must not be used
+/// again — unless the free callback vetoes destruction, leaving ownership
+/// unchanged.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_free(bio: *mut Bio) -> c_int {
     guard_ffi(0, || {
@@ -1064,6 +1090,10 @@ pub unsafe extern "C" fn BIO_free(bio: *mut Bio) -> c_int {
 }
 
 /// `void BIO_vfree(BIO *a)`
+///
+/// # Safety
+/// As for [`BIO_free`]: `bio` must be NULL or a live BIO with one caller-owned
+/// reference, and must not be used afterwards.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_vfree(bio: *mut Bio) {
     guard_ffi((), || {
@@ -1078,6 +1108,12 @@ pub unsafe extern "C" fn BIO_vfree(bio: *mut Bio) {
 /// reference count is above one the walk **stops**: the authority treats a shared
 /// BIO as evidence that the rest of the chain belongs to someone else, which is
 /// why this is not simply "BIO_free each".
+///
+/// # Safety
+/// `bio` must be NULL or the head of a live BIO chain on which the caller owns a
+/// reference per element it expects to free. A NULL or invalid link, or a
+/// shared element whose count is above one, causes the walk to leave the
+/// remainder untouched rather than dereference anything invalid.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_free_all(bio: *mut Bio) {
     guard_ffi((), || {
@@ -1103,9 +1139,16 @@ pub unsafe extern "C" fn BIO_free_all(bio: *mut Bio) {
 // ---------------------------------------------------------------------------
 
 /// `void BIO_set_data(BIO *a, void *ptr)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO. `val` is stored verbatim as the method's
+/// private data; its ownership and lifetime are the method's contract and are
+/// not checked here.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_set_data(bio: *mut Bio, val: *mut c_void) {
     guard_ffi((), || {
+        // SAFETY: `bio` is NULL or a live BIO; the exclusive borrow lasts only for
+        // the store below.
         if let Some(b) = unsafe { bio.as_mut() } {
             b.ptr = val;
         }
@@ -1113,8 +1156,14 @@ pub unsafe extern "C" fn BIO_set_data(bio: *mut Bio, val: *mut c_void) {
 }
 
 /// `void *BIO_get_data(BIO *a)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO. The returned pointer is the stored method
+/// data and carries no lifetime guarantee from this call.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_get_data(bio: *mut Bio) -> *mut c_void {
+    // SAFETY: `bio` is NULL or a live BIO; the shared borrow is confined to this
+    // expression.
     guard_ffi(ptr::null_mut(), || match unsafe { bio.as_ref() } {
         Some(b) => b.ptr,
         None => ptr::null_mut(),
@@ -1122,9 +1171,14 @@ pub unsafe extern "C" fn BIO_get_data(bio: *mut Bio) -> *mut c_void {
 }
 
 /// `void BIO_set_init(BIO *a, int init)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_set_init(bio: *mut Bio, init: c_int) {
     guard_ffi((), || {
+        // SAFETY: `bio` is NULL or a live BIO; the exclusive borrow lasts only for
+        // the store below.
         if let Some(b) = unsafe { bio.as_mut() } {
             b.init = init;
         }
@@ -1132,8 +1186,13 @@ pub unsafe extern "C" fn BIO_set_init(bio: *mut Bio, init: c_int) {
 }
 
 /// `int BIO_get_init(BIO *a)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_get_init(bio: *mut Bio) -> c_int {
+    // SAFETY: `bio` is NULL or a live BIO; the shared borrow is confined to this
+    // expression.
     guard_ffi(0, || match unsafe { bio.as_ref() } {
         Some(b) => b.init,
         None => 0,
@@ -1141,9 +1200,14 @@ pub unsafe extern "C" fn BIO_get_init(bio: *mut Bio) -> c_int {
 }
 
 /// `void BIO_set_shutdown(BIO *a, int shut)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_set_shutdown(bio: *mut Bio, shut: c_int) {
     guard_ffi((), || {
+        // SAFETY: `bio` is NULL or a live BIO; the exclusive borrow lasts only for
+        // the store below.
         if let Some(b) = unsafe { bio.as_mut() } {
             b.shutdown = shut;
         }
@@ -1151,8 +1215,13 @@ pub unsafe extern "C" fn BIO_set_shutdown(bio: *mut Bio, shut: c_int) {
 }
 
 /// `int BIO_get_shutdown(BIO *a)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_get_shutdown(bio: *mut Bio) -> c_int {
+    // SAFETY: `bio` is NULL or a live BIO; the shared borrow is confined to this
+    // expression.
     guard_ffi(0, || match unsafe { bio.as_ref() } {
         Some(b) => b.shutdown,
         None => 0,
@@ -1160,9 +1229,14 @@ pub unsafe extern "C" fn BIO_get_shutdown(bio: *mut Bio) -> c_int {
 }
 
 /// `void BIO_set_flags(BIO *b, int flags)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_set_flags(bio: *mut Bio, flags: c_int) {
     guard_ffi((), || {
+        // SAFETY: `bio` is NULL or a live BIO; the exclusive borrow lasts only for
+        // the read-modify-write below.
         if let Some(b) = unsafe { bio.as_mut() } {
             b.flags |= flags;
         }
@@ -1170,8 +1244,13 @@ pub unsafe extern "C" fn BIO_set_flags(bio: *mut Bio, flags: c_int) {
 }
 
 /// `int BIO_test_flags(const BIO *b, int flags)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_test_flags(bio: *const Bio, flags: c_int) -> c_int {
+    // SAFETY: `bio` is NULL or a live BIO; the shared borrow is confined to this
+    // expression.
     guard_ffi(0, || match unsafe { bio.as_ref() } {
         Some(b) => b.flags & flags,
         None => 0,
@@ -1179,9 +1258,14 @@ pub unsafe extern "C" fn BIO_test_flags(bio: *const Bio, flags: c_int) -> c_int 
 }
 
 /// `void BIO_clear_flags(BIO *b, int flags)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_clear_flags(bio: *mut Bio, flags: c_int) {
     guard_ffi((), || {
+        // SAFETY: `bio` is NULL or a live BIO; the exclusive borrow lasts only for
+        // the read-modify-write below.
         if let Some(b) = unsafe { bio.as_mut() } {
             b.flags &= !flags;
         }
@@ -1189,8 +1273,13 @@ pub unsafe extern "C" fn BIO_clear_flags(bio: *mut Bio, flags: c_int) {
 }
 
 /// `int BIO_get_retry_reason(BIO *bio)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_get_retry_reason(bio: *mut Bio) -> c_int {
+    // SAFETY: `bio` is NULL or a live BIO; the shared borrow is confined to this
+    // expression.
     guard_ffi(0, || match unsafe { bio.as_ref() } {
         Some(b) => b.retry_reason,
         None => 0,
@@ -1198,9 +1287,14 @@ pub unsafe extern "C" fn BIO_get_retry_reason(bio: *mut Bio) -> c_int {
 }
 
 /// `void BIO_set_retry_reason(BIO *bio, int reason)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_set_retry_reason(bio: *mut Bio, reason: c_int) {
     guard_ffi((), || {
+        // SAFETY: `bio` is NULL or a live BIO; the exclusive borrow lasts only for
+        // the store below.
         if let Some(b) = unsafe { bio.as_mut() } {
             b.retry_reason = reason;
         }
@@ -1212,6 +1306,10 @@ pub unsafe extern "C" fn BIO_set_retry_reason(bio: *mut Bio, reason: c_int) {
 /// Walks while each BIO reports `BIO_should_retry`, and returns the **last** one
 /// that did, reporting its retry reason. `last` starts as `bio`, so a chain whose
 /// head does not want a retry returns the head rather than NULL.
+///
+/// # Safety
+/// `bio` must be NULL or the head of a live BIO chain; `reason` must be NULL or
+/// point at a writable `int`.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_get_retry_BIO(bio: *mut Bio, reason: *mut c_int) -> *mut Bio {
     guard_ffi(ptr::null_mut(), || {
@@ -1234,12 +1332,14 @@ pub unsafe extern "C" fn BIO_get_retry_BIO(bio: *mut Bio, reason: *mut c_int) ->
             }
         }
         if !reason.is_null() {
-            // SAFETY: `reason` is non-NULL and writable per the C prototype; a
-            // NULL `last` cannot occur because `last` is `bio`, and `bio` was
-            // non-NULL when it became `last`... except when `bio` itself is NULL.
+            // SAFETY: `reason` is non-NULL (checked above) and writable per the C
+            // prototype, so both stores below are in bounds.
             if !last.is_null() {
+                // SAFETY: `last` is non-NULL here, so it points at a live BIO in
+                // the chain and its `retry_reason` may be read.
                 unsafe { *reason = (*last).retry_reason };
             } else {
+                // SAFETY: `reason` is still the checked non-NULL out-parameter.
                 unsafe { *reason = 0 };
             }
         }
@@ -1254,9 +1354,15 @@ pub unsafe extern "C" fn BIO_get_retry_BIO(bio: *mut Bio, reason: *mut c_int) ->
 /// next BIO; the authority dereferences it unconditionally, so a NULL `next_bio`
 /// is a caller defect. This implementation returns without raising rather than
 /// faulting, which is recorded as a safety divergence.
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO. When it has a `next_bio`, that link must
+/// point at another live BIO in the same chain.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_copy_next_retry(bio: *mut Bio) {
     guard_ffi((), || {
+        // SAFETY: `bio` is NULL or a live BIO; the exclusive borrow is confined to
+        // this closure.
         let Some(b) = (unsafe { bio.as_mut() }) else {
             return;
         };
@@ -1278,6 +1384,12 @@ pub unsafe extern "C" fn BIO_copy_next_retry(bio: *mut Bio) {
 ///
 /// Appends `append` after `b` and returns the head of the resulting chain.
 /// A NULL `b` makes `append` the head.
+///
+/// # Safety
+/// `bio` and `append` must each be NULL or a live BIO, or the head of a live
+/// chain (for `append`, ownership of that chain is transferred into the
+/// result). The links must stay acyclic and `append` must not already be part of
+/// `bio`'s chain.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_push(bio: *mut Bio, append: *mut Bio) -> *mut Bio {
     guard_ffi(ptr::null_mut(), || {
@@ -1286,8 +1398,12 @@ pub unsafe extern "C" fn BIO_push(bio: *mut Bio, append: *mut Bio) -> *mut Bio {
         }
         // SAFETY: `bio` is non-NULL; walk to the tail of its chain.
         let mut tail = bio;
-        while unsafe { (*tail).next_bio } != ptr::null_mut() {
-            // SAFETY: `tail` is a live BIO whose `next_bio` is non-NULL.
+        // SAFETY: `tail` starts as the non-NULL `bio` and only advances to a
+        // `next_bio` link the condition proved non-NULL, so every read of
+        // `(*tail).next_bio` is of a live BIO in the chain.
+        while !unsafe { (*tail).next_bio }.is_null() {
+            // SAFETY: `tail` is a live BIO whose `next_bio` is non-NULL, so it
+            // points at the next live element of the chain.
             tail = unsafe { (*tail).next_bio };
         }
         if !append.is_null() {
@@ -1311,9 +1427,15 @@ pub unsafe extern "C" fn BIO_push(bio: *mut Bio, append: *mut Bio) -> *mut Bio {
 /// told it is being removed, both directions of the link are repaired, and `b`'s
 /// own links are cleared — including when it was the tail, in which case the
 /// return value is NULL but the control still runs.
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO in a chain whose `next_bio`/`prev_bio` links,
+/// when non-NULL, each point at a live BIO.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_pop(bio: *mut Bio) -> *mut Bio {
     guard_ffi(ptr::null_mut(), || {
+        // SAFETY: `bio` is NULL or a live BIO; the exclusive borrow is confined to
+        // this closure.
         let Some(b) = (unsafe { bio.as_mut() }) else {
             return ptr::null_mut();
         };
@@ -1335,8 +1457,14 @@ pub unsafe extern "C" fn BIO_pop(bio: *mut Bio) -> *mut Bio {
 }
 
 /// `BIO *BIO_next(BIO *b)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO. The returned pointer is its `next_bio`
+/// link and is NULL when the BIO is the tail of its chain.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_next(bio: *mut Bio) -> *mut Bio {
+    // SAFETY: `bio` is NULL or a live BIO; the shared borrow is confined to this
+    // expression.
     guard_ffi(ptr::null_mut(), || match unsafe { bio.as_ref() } {
         Some(b) => b.next_bio,
         None => ptr::null_mut(),
@@ -1347,9 +1475,16 @@ pub unsafe extern "C" fn BIO_next(bio: *mut Bio) -> *mut Bio {
 ///
 /// Replaces only the forward link, leaving `next`'s backward link alone. That is
 /// the authority's behaviour and is why this is not `BIO_push`.
+///
+/// # Safety
+/// `bio` and `next` must each be NULL or a live BIO, and the caller must ensure
+/// the resulting chain remains acyclic and that `next` is not already linked
+/// elsewhere.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_set_next(bio: *mut Bio, next: *mut Bio) {
     guard_ffi((), || {
+        // SAFETY: `bio` is NULL or a live BIO; the exclusive borrow lasts only for
+        // the store below.
         if let Some(b) = unsafe { bio.as_mut() } {
             b.next_bio = next;
         }
@@ -1362,6 +1497,10 @@ pub unsafe extern "C" fn BIO_set_next(bio: *mut Bio, next: *mut Bio) {
 /// shared class bit (`method_type & bio_type`); otherwise it requires an exact
 /// equality of the whole type word. A NULL BIO raises
 /// `ERR_R_PASSED_NULL_PARAMETER` rather than returning quietly.
+///
+/// # Safety
+/// `bio` must be NULL or the head of a live BIO chain; every `next_bio` link
+/// followed must point at a live BIO.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_find_type(bio: *mut Bio, bio_type: c_int) -> *mut Bio {
     guard_ffi(ptr::null_mut(), || {
@@ -1402,6 +1541,10 @@ pub unsafe extern "C" fn BIO_find_type(bio: *mut Bio, bio_type: c_int) -> *mut B
 /// own state through `BIO_CTRL_DUP` with the *new* object as the argument, and
 /// finally `ex_data` is duplicated through the `CRYPTO_EX_INDEX_BIO` dup
 /// callbacks. Any failure releases the partial copy and returns NULL.
+///
+/// # Safety
+/// `bio` must be NULL or the head of a live BIO chain whose elements each carry a
+/// valid `method`; the `next` links followed must point at live BIOs.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_dup_chain(bio: *mut Bio) -> *mut Bio {
     guard_ffi(ptr::null_mut(), || {
@@ -1481,9 +1624,15 @@ pub unsafe extern "C" fn BIO_dup_chain(bio: *mut Bio) -> *mut Bio {
 type ExData = CryptoExData;
 
 /// `int BIO_set_ex_data(BIO *bio, int idx, void *data)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO. `data` is stored in the BIO's ex_data slot
+/// and its ownership follows the registered ex_data free callback.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_set_ex_data(bio: *mut Bio, idx: c_int, data: *mut c_void) -> c_int {
     guard_ffi(0, || {
+        // SAFETY: `bio` is NULL or a live BIO; the exclusive borrow lasts only for
+        // this ex_data update.
         let Some(b) = (unsafe { bio.as_mut() }) else {
             return 0;
         };
@@ -1494,9 +1643,15 @@ pub unsafe extern "C" fn BIO_set_ex_data(bio: *mut Bio, idx: c_int, data: *mut c
 }
 
 /// `void *BIO_get_ex_data(const BIO *bio, int idx)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO; the returned pointer is the stored ex_data
+/// and carries no lifetime guarantee.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_get_ex_data(bio: *const Bio, idx: c_int) -> *mut c_void {
     guard_ffi(ptr::null_mut(), || {
+        // SAFETY: `bio` is NULL or a live BIO; the shared borrow lasts only for
+        // this ex_data read.
         let Some(b) = (unsafe { bio.as_ref() }) else {
             return ptr::null_mut();
         };
@@ -1511,8 +1666,13 @@ pub unsafe extern "C" fn BIO_get_ex_data(bio: *const Bio, idx: c_int) -> *mut c_
 // ---------------------------------------------------------------------------
 
 /// `uint64_t BIO_number_read(BIO *bio)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_number_read(bio: *mut Bio) -> u64 {
+    // SAFETY: `bio` is NULL or a live BIO; the shared borrow is confined to this
+    // expression.
     guard_ffi(0, || match unsafe { bio.as_ref() } {
         Some(b) => b.num_read,
         None => 0,
@@ -1520,8 +1680,13 @@ pub unsafe extern "C" fn BIO_number_read(bio: *mut Bio) -> u64 {
 }
 
 /// `uint64_t BIO_number_written(BIO *bio)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_number_written(bio: *mut Bio) -> u64 {
+    // SAFETY: `bio` is NULL or a live BIO; the shared borrow is confined to this
+    // expression.
     guard_ffi(0, || match unsafe { bio.as_ref() } {
         Some(b) => b.num_write,
         None => 0,
@@ -1529,9 +1694,15 @@ pub unsafe extern "C" fn BIO_number_written(bio: *mut Bio) -> u64 {
 }
 
 /// `const char *BIO_method_name(const BIO *b)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO whose `method` pointer, when non-NULL, points
+/// at a live table with a valid `name`.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_method_name(bio: *const Bio) -> *const c_char {
     guard_ffi(ptr::null(), || {
+        // SAFETY: `bio` is NULL or a live BIO; the shared borrow is confined to
+        // this expression.
         let Some(b) = (unsafe { bio.as_ref() }) else {
             return ptr::null();
         };
@@ -1541,9 +1712,15 @@ pub unsafe extern "C" fn BIO_method_name(bio: *const Bio) -> *const c_char {
 }
 
 /// `int BIO_method_type(const BIO *b)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO whose `method` pointer, when non-NULL, points
+/// at a live table.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_method_type(bio: *const Bio) -> c_int {
     guard_ffi(0, || {
+        // SAFETY: `bio` is NULL or a live BIO; the shared borrow is confined to
+        // this expression.
         let Some(b) = (unsafe { bio.as_ref() }) else {
             return 0;
         };
@@ -1553,15 +1730,27 @@ pub unsafe extern "C" fn BIO_method_type(bio: *const Bio) -> c_int {
 }
 
 /// `BIO_callback_fn_ex BIO_get_callback_ex(const BIO *b)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO. The returned function pointer, when
+/// non-NULL, was installed by the caller via `BIO_set_callback_ex`.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_get_callback_ex(bio: *const Bio) -> Option<BioCallbackExFn> {
+    // SAFETY: `bio` is NULL or a live BIO; the shared borrow is confined to this
+    // expression.
     guard_ffi(None, || unsafe { bio.as_ref() }.and_then(|b| b.callback_ex))
 }
 
 /// `void BIO_set_callback_ex(BIO *b, BIO_callback_fn_ex callback)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO; `callback`, when non-NULL, must be a valid
+/// function pointer callable with the documented `BIO_callback_fn_ex` signature.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_set_callback_ex(bio: *mut Bio, callback: Option<BioCallbackExFn>) {
     guard_ffi((), || {
+        // SAFETY: `bio` is NULL or a live BIO; the exclusive borrow lasts only for
+        // the store below.
         if let Some(b) = unsafe { bio.as_mut() } {
             b.callback_ex = callback;
         }
@@ -1569,15 +1758,27 @@ pub unsafe extern "C" fn BIO_set_callback_ex(bio: *mut Bio, callback: Option<Bio
 }
 
 /// `BIO_callback_fn BIO_get_callback(const BIO *b)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO. The returned function pointer, when
+/// non-NULL, was installed by the caller via `BIO_set_callback`.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_get_callback(bio: *const Bio) -> Option<BioCallbackFn> {
+    // SAFETY: `bio` is NULL or a live BIO; the shared borrow is confined to this
+    // expression.
     guard_ffi(None, || unsafe { bio.as_ref() }.and_then(|b| b.callback))
 }
 
 /// `void BIO_set_callback(BIO *b, BIO_callback_fn callback)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO; `callback`, when non-NULL, must be a valid
+/// function pointer callable with the deprecated `BIO_callback_fn` signature.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_set_callback(bio: *mut Bio, callback: Option<BioCallbackFn>) {
     guard_ffi((), || {
+        // SAFETY: `bio` is NULL or a live BIO; the exclusive borrow lasts only for
+        // the store below.
         if let Some(b) = unsafe { bio.as_mut() } {
             b.callback = callback;
         }
@@ -1585,8 +1786,14 @@ pub unsafe extern "C" fn BIO_set_callback(bio: *mut Bio, callback: Option<BioCal
 }
 
 /// `char *BIO_get_callback_arg(const BIO *b)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO. The returned pointer is the stored callback
+/// argument and carries no lifetime guarantee.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_get_callback_arg(bio: *const Bio) -> *mut c_char {
+    // SAFETY: `bio` is NULL or a live BIO; the shared borrow is confined to this
+    // expression.
     guard_ffi(ptr::null_mut(), || match unsafe { bio.as_ref() } {
         Some(b) => b.cb_arg,
         None => ptr::null_mut(),
@@ -1594,9 +1801,15 @@ pub unsafe extern "C" fn BIO_get_callback_arg(bio: *const Bio) -> *mut c_char {
 }
 
 /// `void BIO_set_callback_arg(BIO *b, char *arg)`
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO. `arg` is stored verbatim as the callback
+/// argument; its lifetime is the caller's responsibility.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_set_callback_arg(bio: *mut Bio, arg: *mut c_char) {
     guard_ffi((), || {
+        // SAFETY: `bio` is NULL or a live BIO; the exclusive borrow lasts only for
+        // the store below.
         if let Some(b) = unsafe { bio.as_mut() } {
             b.cb_arg = arg;
         }

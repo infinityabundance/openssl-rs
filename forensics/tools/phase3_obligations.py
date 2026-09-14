@@ -50,14 +50,18 @@ FAMILIES = [
                             "CRYPTO_strndup", "CRYPTO_memdup", "CRYPTO_memcmp",
                             "CRYPTO_clear_", "CRYPTO_secure_", "CRYPTO_set_mem_",
                             "CRYPTO_get_mem_", "CRYPTO_aligned_alloc",
-                            "CRYPTO_mem_ctrl", "CRYPTO_mem_leaks", "CRYPTO_mem_debug")),
+                            "CRYPTO_mem_ctrl", "CRYPTO_mem_leaks", "CRYPTO_mem_debug",
+                            # `OPENSSL_cleanse` is `crypto/mem.c`'s, and was in no
+                            # family until the ownership audit looked for the
+                            # implemented exports nobody claimed (D51).
+                            "OPENSSL_cleanse")),
     ("src/runtime/err.rs", ("ERR_",)),
     ("src/runtime/lhash.rs", ("OPENSSL_LH_",)),
     ("src/runtime/stack.rs", ("OPENSSL_sk_",)),
     ("src/runtime/ex_data.rs", ("CRYPTO_get_ex_new_index", "CRYPTO_free_ex_index",
                                 "CRYPTO_new_ex_data", "CRYPTO_dup_ex_data",
                                 "CRYPTO_free_ex_data", "CRYPTO_get_ex_data",
-                                "CRYPTO_set_ex_data")),
+                                "CRYPTO_set_ex_data", "CRYPTO_alloc_ex_data")),
     ("src/runtime/thread.rs", ("CRYPTO_THREAD_", "CRYPTO_atomic_", "CRYPTO_ONCE",
                                "CRYPTO_THREAD_run_once")),
     ("src/runtime/init.rs", ("OPENSSL_init", "OPENSSL_cleanup", "OpenSSL_version",
@@ -66,6 +70,19 @@ FAMILIES = [
                              "OPENSSL_version_patch", "OPENSSL_version_pre_release",
                              "OPENSSL_version_build_metadata")),
     ("src/runtime/obj.rs", ("OBJ_", "NID_", "OBJ_NAME_")),
+    # `crypto/o_str.c` and `crypto/o_dir.c` were in **no** phase's family: none of
+    # the prefixes any ledger listed matched their thirteen exports, so the whole
+    # of both files was invisible to every obligation table — the defect class
+    # D49 recorded for `OPENSSL_INIT_*`, found this time by
+    # `forensics/tools/ownership_audit.py`. The CONF reader is what needed them
+    # (`OPENSSL_strlcpy`, `OPENSSL_strlcat`, `OPENSSL_strcasecmp`,
+    # `OPENSSL_DIR_read`, `OPENSSL_DIR_end`); they are core runtime surface, so
+    # they are owned here. See docs/DECISIONS.md D51.
+    ("src/runtime/str.rs", ("OPENSSL_strnlen", "OPENSSL_strlcpy", "OPENSSL_strlcat",
+                            "OPENSSL_strtoul", "OPENSSL_hexchar2int",
+                            "OPENSSL_hexstr2buf", "OPENSSL_buf2hexstr",
+                            "OPENSSL_strcasecmp", "OPENSSL_strncasecmp")),
+    ("src/runtime/dir.rs", ("OPENSSL_DIR_",)),
 ]
 
 # Every symbol in the Phase 3 families that the crate does not define, with the
@@ -141,18 +158,37 @@ def main(argv: list[str]) -> int:
             if any(sym == p or sym.startswith(p) for p in prefixes):
                 owned.setdefault(sym, module)
 
-    implemented_here = sorted(s for s in owned if s in done)
-    remaining = sorted(s for s in owned if s not in done)
-    unassigned = [s for s in remaining if s not in table]
+    # A hand-off is **sticky**: once this stratum has declared that a symbol
+    # cannot be built here, the owning stratum's later implementation of it does
+    # not transfer the obligation back. Phase 4 implemented the eleven symbols
+    # Phase 3 handed it -- `ERR_print_errors*`, `ERR_add_error_mem_bio`, the six
+    # `OPENSSL_LH_*stats*` entry points and `OBJ_create_objects`. The sealed Phase
+    # 3 document (`docs/PHASE-3-CORE-RUNTIME-SEAL.md` section 5) records them as
+    # deferred, so counting them here as Phase 3's would both contradict a sealed
+    # document and report work this stratum did not do. They stay `deferred`,
+    # with `implemented_by_owner` recording that the hand-off has been discharged.
+    # `ownership_audit.py` reconciles the two ledgers, so a symbol cannot sit in
+    # both strata's `implemented` lists. See docs/DECISIONS.md D57.
+    missing_from_families = sorted(s for s in table if s not in owned)
+    if missing_from_families:
+        raise SystemExit(
+            "phase3-obligations: these symbols are in the hand-off table but no "
+            "Phase 3 family matches them, so the deferral is stale -- remove it or "
+            "restore the family prefix:\n  " + "\n  ".join(missing_from_families)
+        )
+
+    handed_off = sorted(s for s in owned if s in table)
+    implemented_here = sorted(s for s in owned if s in done and s not in table)
+    unassigned = [s for s in owned if s not in done and s not in table]
     if unassigned:
         raise SystemExit(
             "phase3-obligations: these Phase 3 family exports are neither "
-            "implemented nor deferred; add them to DEFERRED with the owning "
-            "phase and a reason:\n  " + "\n  ".join(unassigned)
+            "implemented nor deferred; add them to the hand-off table with the "
+            "owning phase and a reason:\n  " + "\n  ".join(unassigned)
         )
 
     deferred_rows = []
-    for sym in remaining:
+    for sym in handed_off:
         phase, reason = table[sym]
         if phase <= 3:
             raise SystemExit(f"phase3-obligations: {sym} is deferred to phase {phase}, not later")
@@ -161,7 +197,15 @@ def main(argv: list[str]) -> int:
             "owning_phase": phase,
             "reason": reason,
             "module": owned[sym],
+            "implemented_by_owner": sym in done,
         })
+
+    if len(owned) != len(implemented_here) + len(deferred_rows):
+        raise SystemExit(
+            "phase3-obligations: the ledger does not account for exactly its own "
+            f"family exports: owned={len(owned)} implemented={len(implemented_here)} "
+            f"deferred={len(deferred_rows)}"
+        )
 
     body = {
         "families": [{"module": m, "prefixes": list(p)} for m, p in FAMILIES],
@@ -174,9 +218,13 @@ def main(argv: list[str]) -> int:
         "deferred": deferred_rows,
         "note": (
             "A deferred symbol is a recorded hand-off to the phase that owns the "
-            "subsystem it needs, not a parity claim. `phase_state.py` treats Phase "
-            "3 as complete only when every symbol in these families is either "
-            "implemented or deferred to a later phase."
+            "subsystem it needs, not a parity claim, and the hand-off is sticky: "
+            "the owning stratum implementing it later does not move the obligation "
+            "back here (`implemented_by_owner` records that the hand-off has been "
+            "discharged). `phase_state.py` treats Phase 3 as complete only when "
+            "every symbol in these families is either implemented here or handed "
+            "to a later phase, and `forensics/tools/ownership_audit.py` fails if "
+            "two ledgers both count a symbol as implemented by them."
         ),
     }
 

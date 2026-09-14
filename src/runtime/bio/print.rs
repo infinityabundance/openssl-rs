@@ -33,6 +33,9 @@ extern "C" {
 /// whose result must be exactly 1. A sink that returns a short count therefore
 /// truncates the indentation and makes this return 0, which is the authority's
 /// behaviour and is measured by the RT-BIO probe through a custom method.
+///
+/// # Safety
+/// `bio` must be a live BIO.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_indent(bio: *mut Bio, indent: c_int, max: c_int) -> c_int {
     guard_ffi(0, || {

@@ -198,7 +198,7 @@ impl OsslTime {
     /// never become a zero `timeval`; on overflow it becomes
     /// `ossl_time_infinite()`, as the authority's `safe_add_time` does.
     fn to_timeval(self) -> sys::Timeval {
-        let rounded = self.0.checked_add(OSSL_TIME_US - 1).unwrap_or(u64::MAX);
+        let rounded = self.0.saturating_add(OSSL_TIME_US - 1);
         sys::Timeval {
             tv_sec: (rounded / OSSL_TIME_SECOND) as c_long,
             tv_usec: ((rounded % OSSL_TIME_SECOND) / OSSL_TIME_US) as c_long,
@@ -292,6 +292,11 @@ pub extern "C" fn BIO_s_datagram() -> *const BioMethod {
 /// assigning the fields, and that is what sets `init`, closes any previous
 /// descriptor, refreshes the local address and detects whether the socket is
 /// already connected. Assigning directly would leave an uninitialised BIO.
+///
+/// # Safety
+/// `fd` must be a live socket descriptor, or the platform's invalid-socket
+/// sentinel. When `close_flag` is non-zero the BIO takes ownership and closes it
+/// exactly once; otherwise the caller keeps ownership.
 #[no_mangle]
 pub unsafe extern "C" fn BIO_new_dgram(fd: c_int, close_flag: c_int) -> *mut Bio {
     guard_ffi(ptr::null_mut(), || {
@@ -330,6 +335,8 @@ unsafe extern "C" fn dgram_new(bi: *mut Bio) -> c_int {
 /// # Safety
 /// `a` must be NULL or a live datagram BIO.
 unsafe extern "C" fn dgram_free(a: *mut Bio) -> c_int {
+    // SAFETY: `a` is NULL or a live datagram BIO per the caller's contract; the
+    // `as_mut` null check makes NULL total.
     let Some(b) = (unsafe { a.as_mut() }) else {
         return 0;
     };
@@ -353,6 +360,8 @@ unsafe extern "C" fn dgram_free(a: *mut Bio) -> c_int {
 /// # Safety
 /// `a` must be NULL or a live datagram BIO.
 unsafe extern "C" fn dgram_clear(a: *mut Bio) -> c_int {
+    // SAFETY: `a` is NULL or a live datagram BIO per the caller's contract; the
+    // `as_mut` null check makes NULL total.
     let Some(b) = (unsafe { a.as_mut() }) else {
         return 0;
     };
@@ -382,10 +391,14 @@ unsafe extern "C" fn dgram_clear(a: *mut Bio) -> c_int {
 /// # Safety
 /// `b` must be a live datagram BIO.
 unsafe fn dgram_adjust_rcv_timeout(b: *mut Bio) {
+    // SAFETY: `b` is a live datagram BIO per the caller's contract, so `create`
+    // succeeded and stored a `BioDgramData` in `ptr`.
     let data = unsafe { data_of(b) };
+    // SAFETY: `data` is live, from the `data_of` above.
     if unsafe { (*data).next_timeout }.is_zero() {
         return;
     }
+    // SAFETY: `b` is live, so its `num` field is a readable descriptor slot.
     let sock = unsafe { (*b).num };
     let mut tv = sys::Timeval {
         tv_sec: 0,
@@ -416,12 +429,14 @@ unsafe fn dgram_adjust_rcv_timeout(b: *mut Bio) {
         unsafe { (*data).socket_timeout = OsslTime::from_timeval(tv) };
     }
 
+    // SAFETY: `data` is live, from the `data_of` above.
     let next = unsafe { (*data).next_timeout };
     let mut timeleft = next.subtract(ossl_time_now());
     if timeleft.compare(OsslTime::ticks(OSSL_TIME_US)) == core::cmp::Ordering::Less {
         timeleft = OsslTime::ticks(OSSL_TIME_US);
     }
 
+    // SAFETY: `data` is live, from the `data_of` above.
     let socket_timeout = unsafe { (*data).socket_timeout };
     if socket_timeout.is_zero() || socket_timeout.compare(timeleft) != core::cmp::Ordering::Less {
         let short = timeleft.to_timeval();
@@ -458,10 +473,14 @@ unsafe fn dgram_adjust_rcv_timeout(b: *mut Bio) {
 /// # Safety
 /// `b` must be a live datagram BIO.
 unsafe fn dgram_reset_rcv_timeout(b: *mut Bio) {
+    // SAFETY: `b` is a live datagram BIO per the caller's contract, so `create`
+    // succeeded and stored a `BioDgramData` in `ptr`.
     let data = unsafe { data_of(b) };
+    // SAFETY: `data` is live, from the `data_of` above.
     if unsafe { (*data).next_timeout }.is_zero() {
         return;
     }
+    // SAFETY: `data` is live, from the `data_of` above.
     let tv = unsafe { (*data).socket_timeout }.to_timeval();
     // SAFETY: `b.num` is live; `tv` is a live local.
     if unsafe {
@@ -495,6 +514,8 @@ unsafe fn dgram_reset_rcv_timeout(b: *mut Bio) {
 /// # Safety
 /// `b` must be a live datagram BIO.
 unsafe fn dgram_update_local_addr(b: *mut Bio) {
+    // SAFETY: `b` is a live datagram BIO per the caller's contract, so `create`
+    // succeeded and stored a `BioDgramData` in `ptr`.
     let data = unsafe { data_of(b) };
     // SAFETY: `data` is live.
     let target = unsafe { ptr::addr_of_mut!((*data).local_addr) };
@@ -516,7 +537,11 @@ unsafe fn dgram_update_local_addr(b: *mut Bio) {
 /// # Safety
 /// `b` must be a live datagram BIO.
 unsafe fn dgram_get_sock_family(b: *mut Bio) -> c_int {
+    // SAFETY: `b` is a live datagram BIO per the caller's contract, so `create`
+    // succeeded and stored a `BioDgramData` in `ptr`.
     let data = unsafe { data_of(b) };
+    // SAFETY: `data` is live, from the `data_of` above; `view_in` reads the
+    // stored family-preserving `sockaddr_in` prefix.
     let own = unsafe { addr::view_in(ptr::addr_of!((*data).local_addr)) };
     c_int::from(own.sin_family)
 }
@@ -531,7 +556,9 @@ unsafe fn dgram_get_sock_family(b: *mut Bio) -> c_int {
 /// # Safety
 /// `b` must be a live datagram BIO.
 unsafe fn enable_local_addr(b: *mut Bio, enable: c_int) -> c_int {
+    // SAFETY: `b` is a live datagram BIO, which is the helper's precondition.
     let af = unsafe { dgram_get_sock_family(b) };
+    // SAFETY: `b` is live, so its `num` field is a readable descriptor slot.
     let sock = unsafe { (*b).num };
     let len = core::mem::size_of::<c_int>() as sys::SockLen;
     if af == sys::AF_INET {
@@ -582,6 +609,8 @@ unsafe extern "C" fn dgram_read(b: *mut Bio, out: *mut c_char, outl: c_int) -> c
     if out.is_null() {
         return 0;
     }
+    // SAFETY: `b` is a live datagram BIO per the caller's contract, so `create`
+    // succeeded and stored a `BioDgramData` in `ptr`.
     let data = unsafe { data_of(b) };
     // SAFETY: `errno` is thread-local and always writable.
     unsafe { sys::set_errno(0) };
@@ -590,6 +619,7 @@ unsafe extern "C" fn dgram_read(b: *mut Bio, out: *mut c_char, outl: c_int) -> c
     let mut len = addr::AUTHORITY_ADDR_SIZE as sys::SockLen;
     // SAFETY: `b` is a live datagram BIO.
     unsafe { dgram_adjust_rcv_timeout(b) };
+    // SAFETY: `data` is live, from the `data_of` above.
     let flags = if unsafe { (*data).peekmode } != 0 {
         sys::MSG_PEEK
     } else {
@@ -609,6 +639,7 @@ unsafe extern "C" fn dgram_read(b: *mut Bio, out: *mut c_char, outl: c_int) -> c
     };
     let ret = raw as c_int;
 
+    // SAFETY: `data` is live, from the `data_of` above.
     if unsafe { (*data).connected } == 0 && ret >= 0 {
         // `BIO_ctrl(b, BIO_CTRL_DGRAM_SET_PEER, 0, &peer)` — through the control
         // entry point, exactly as the authority calls it.
@@ -641,9 +672,12 @@ unsafe extern "C" fn dgram_read(b: *mut Bio, out: *mut c_char, outl: c_int) -> c
 /// # Safety
 /// `b` must be a live datagram BIO; `in_` must be valid for `inl` bytes.
 unsafe extern "C" fn dgram_write(b: *mut Bio, in_: *const c_char, inl: c_int) -> c_int {
+    // SAFETY: `b` is a live datagram BIO per the caller's contract, so `create`
+    // succeeded and stored a `BioDgramData` in `ptr`.
     let data = unsafe { data_of(b) };
     // SAFETY: `errno` is thread-local and always writable.
     unsafe { sys::set_errno(0) };
+    // SAFETY: `data` is live, from the `data_of` above.
     let connected = unsafe { (*data).connected };
     // SAFETY: the descriptor and the buffer are live per the caller's contract.
     let raw = unsafe {
@@ -713,6 +747,7 @@ fn dgram_should_retry(i: c_int) -> c_int {
 /// # Safety
 /// `addr_` must be a live [`BioAddr`].
 unsafe fn dgram_get_mtu_overhead(addr_: *const BioAddr) -> c_long {
+    // SAFETY: `addr_` is a live `BioAddr` per the caller's contract.
     match unsafe { addr::BIO_ADDR_family(addr_) } {
         sys::AF_INET => 28,
         sys::AF_INET6 => {
@@ -753,6 +788,8 @@ fn is_v4_mapped(a: &sys::In6Addr) -> bool {
 /// `b` must be a live datagram BIO, and `ptr` must be appropriate for `cmd`.
 unsafe extern "C" fn dgram_ctrl(b: *mut Bio, cmd: c_int, num: c_long, ptr: *mut c_void) -> c_long {
     let mut ret: c_long = 1;
+    // SAFETY: `b` is a live datagram BIO per the caller's contract, so `create`
+    // succeeded and stored a `BioDgramData` in `ptr`.
     let data = unsafe { data_of(b) };
 
     match cmd {
@@ -798,6 +835,7 @@ unsafe extern "C" fn dgram_ctrl(b: *mut Bio, cmd: c_int, num: c_long, ptr: *mut 
             }
             // A previously enabled destination-address option is re-applied to the
             // new descriptor, and dropped when the new socket refuses it.
+            // SAFETY: `data` is live, from the `data_of` above.
             if unsafe { (*data).local_addr_enabled } != 0 {
                 // SAFETY: `b` is a live datagram BIO.
                 if unsafe { enable_local_addr(b, 1) } < 1 {
@@ -859,7 +897,10 @@ unsafe extern "C" fn dgram_ctrl(b: *mut Bio, cmd: c_int, num: c_long, ptr: *mut 
             {
                 ret = 0;
             } else {
+                // SAFETY: `a` is a live local and its family word was written by
+                // the `getsockname` above.
                 let family = c_int::from(unsafe { addr::view_in(&a) }.sin_family);
+                // SAFETY: `b` is live, so its `num` field is a readable descriptor slot.
                 let sock = unsafe { (*b).num };
                 let len = core::mem::size_of::<c_int>() as sys::SockLen;
                 match family {
@@ -929,7 +970,10 @@ unsafe extern "C" fn dgram_ctrl(b: *mut Bio, cmd: c_int, num: c_long, ptr: *mut 
             {
                 ret = 0;
             } else {
+                // SAFETY: `a` is a live local and its family word was written by
+                // the `getsockname` above.
                 let family = c_int::from(unsafe { addr::view_in(&a) }.sin_family);
+                // SAFETY: `b` is live, so its `num` field is a readable descriptor slot.
                 let sock = unsafe { (*b).num };
                 let mut val: c_int = 0;
                 let mut sockopt_len = core::mem::size_of::<c_int>() as sys::SockLen;
@@ -963,9 +1007,7 @@ unsafe extern "C" fn dgram_ctrl(b: *mut Bio, cmd: c_int, num: c_long, ptr: *mut 
                     }
                     _ => {}
                 }
-                if family != sys::AF_INET && family != sys::AF_INET6 {
-                    ret = 0;
-                } else if !queried {
+                if (family != sys::AF_INET && family != sys::AF_INET6) || !queried {
                     ret = 0;
                 } else {
                     // SAFETY: `data` is live; `a` is a live address.
@@ -1233,7 +1275,9 @@ unsafe extern "C" fn dgram_ctrl(b: *mut Bio, cmd: c_int, num: c_long, ptr: *mut 
             // SAFETY: `data` is live.
             let peer = unsafe { ptr::addr_of!((*data).peer) };
             // SAFETY: `peer` is live.
+            // SAFETY: `peer` is live, so its family is readable.
             let family = unsafe { addr::BIO_ADDR_family(peer) };
+            // SAFETY: `b` is live, so its `num` field is a readable descriptor slot.
             let sock = unsafe { (*b).num };
             let len = core::mem::size_of::<c_int>() as sys::SockLen;
             match family {
@@ -1396,8 +1440,12 @@ unsafe fn translate_msg(
         (*iov).iov_base = (*msg).data;
         (*iov).iov_len = (*msg).data_len;
     }
+    // SAFETY: `b` is a live datagram BIO per the caller's contract, so `create`
+    // succeeded and stored a `BioDgramData` in `ptr`.
     let data = unsafe { data_of(b) };
+    // SAFETY: `data` is live, from the `data_of` above.
     let connected = unsafe { (*data).connected };
+    // SAFETY: `b` is a live datagram BIO, which is the helper's precondition.
     let family = unsafe { dgram_get_sock_family(b) };
     // SAFETY: `mh`, `iov` and `msg` are live and distinct.
     unsafe {
@@ -1517,6 +1565,7 @@ unsafe fn extract_local(b: *mut Bio, mh: *mut sys::Msghdr, local: *mut BioAddr) 
 /// `b` must be a live datagram BIO; `mh` must be live with a writable control
 /// buffer of at least `BIO_CMSG_ALLOC_LEN` bytes; `local` must be live.
 unsafe fn pack_local(b: *mut Bio, mh: *mut sys::Msghdr, local: *const BioAddr) -> c_int {
+    // SAFETY: `b` is a live datagram BIO, which is the helper's precondition.
     let af = unsafe { dgram_get_sock_family(b) };
     if af == sys::AF_INET {
         // SAFETY: `mh` is live and its control buffer is writable per the
