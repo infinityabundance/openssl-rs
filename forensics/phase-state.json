@@ -93,7 +93,7 @@
         "stratum": "Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects"
       },
       {
-        "blocking": "109 open obligation(s) of this stratum recorded in forensics/phase4-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase",
+        "blocking": "97 open obligation(s) of this stratum recorded in forensics/phase4-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -315,7 +315,7 @@
       "not_started": 17
     }
   },
-  "body_hash": "293a6e93e6a6a037cb262e47baf48bcb90813f2197adadd4dfcf2084b33788eb",
+  "body_hash": "5c1afb29a505e17c694b348d32cd81cb6f57d1960f101b892bf58e6c8d427854",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

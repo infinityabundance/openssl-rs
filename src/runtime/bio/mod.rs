@@ -54,6 +54,7 @@ use crate::runtime::ex_data::{
     CRYPTO_EX_INDEX_BIO,
 };
 
+pub mod addr;
 pub mod bf_null;
 pub mod bss_mem;
 pub mod bss_null;
@@ -1537,8 +1538,14 @@ pub extern "C" fn BIO_get_new_index() -> c_int {
 }
 
 // The `BIO_ctrl` family and the read/write/gets/puts entry points live in
-// `iolib.rs`; the method-table API lives in `method.rs`. Both are re-exported
-// from this module so a reader sees one entry point.
+// `iolib.rs`; the method-table API lives in `method.rs`; the opaque address value
+// type lives in `addr.rs`. All are re-exported from this module so a reader sees
+// one entry point.
+pub use addr::{
+    BIO_ADDR_clear, BIO_ADDR_copy, BIO_ADDR_dup, BIO_ADDR_family, BIO_ADDR_free,
+    BIO_ADDR_hostname_string, BIO_ADDR_new, BIO_ADDR_path_string, BIO_ADDR_rawaddress,
+    BIO_ADDR_rawmake, BIO_ADDR_rawport, BIO_ADDR_service_string,
+};
 pub use dump::{
     BIO_dump, BIO_dump_cb, BIO_dump_fp, BIO_dump_indent, BIO_dump_indent_cb, BIO_dump_indent_fp,
     BIO_hex_string,

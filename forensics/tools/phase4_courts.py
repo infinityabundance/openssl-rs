@@ -65,6 +65,7 @@ RUN_TIMEOUT_S = 60
 COURTS = [
     ("RT-BIO", "rt_bio_probe.c"),
     ("RT-ERR-BIO", "rt_err_bio_probe.c"),
+    ("RT-BIO-ADDR", "rt_bio_addr_probe.c"),
 ]
 
 

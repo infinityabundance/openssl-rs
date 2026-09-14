@@ -181,3 +181,36 @@ observations that *can* be made around each boundary are compared normally.
   the destination, so a NULL there is a caller error either way.
 - **Claim removed:** not claimed compatible. `ERR_error_string_n(e, NULL, 0)` is a
   documented no-op in both and *is* compared (the probe calls it).
+
+### D-BIO-ADDR-1 — the `BIO_ADDR` accessors dereference a NULL address
+
+- **Obligation:** `BIO_ADDR_family`, `BIO_ADDR_rawaddress`, `BIO_ADDR_rawport`,
+  `BIO_ADDR_clear`, `BIO_ADDR_hostname_string`, `BIO_ADDR_service_string` and
+  `BIO_ADDR_path_string` called with `ap == NULL`.
+- **Authority:** faults. Each case was measured in **its own process** by
+  `courts/phase4/bio_addr_null_calls.c` (a probe cannot compare a crash, and a
+  crash in a shared process would hide every later observation), all seven
+  exiting 139 = `SIGSEGV`.
+- **Candidate:** returns the harmless value — `AF_UNSPEC` for the family, `0` for
+  the lengths and the port, no-op for the clear, NULL for the three strings.
+- **Reason:** the contract is that `ap` is a live address; the authority does not
+  check, and a parity-motivated dereference of NULL would be importing an
+  exploitable fault.
+- **Claim removed:** not claimed compatible. The **defined** null behaviours
+  *are* compared: `BIO_ADDR_free(NULL)` (no-op), `BIO_ADDR_dup(NULL)` (NULL) and
+  `BIO_ADDR_copy(NULL, ...)` (`0`) all survive in the authority and are probed by
+  `RT-BIO-ADDR`.
+
+### D-BIO-ADDR-2 — `BIO_ADDR_rawmake` dereferences a NULL `where`
+
+- **Obligation:** `BIO_ADDR_rawmake(ap, AF_INET, NULL, 4, 0)`.
+- **Authority:** validates the length, then copies from `where`, so it faults.
+  Found by `RT-BIO-ADDR`: the authority transcript stopped at the observation just
+  before this call, which is how a fault in a shared probe is detected — the
+  candidate's later observations appear as `authority=None`.
+- **Candidate:** returns `0` without touching `ap`.
+- **Reason:** as above; the address and the length are the caller's contract.
+- **Claim removed:** not claimed compatible. The *rejection* cases are compared,
+  because those are defined: a wrong `wherelen`, `AF_UNSPEC`, an unknown family,
+  and an `AF_UNIX` path longer than `sun_path` all return `0` and leave the
+  previous address intact in both.

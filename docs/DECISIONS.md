@@ -841,3 +841,56 @@ on the CI runner for a legitimate reason — the runner's look of the crate arch
 has a different digest from the court's — which is precisely the difference those
 declarations exist to absorb, and precisely why a second, drifting comparison
 policy is a place for a claim to hide.
+
+---
+
+## D34 — `BIO_ADDR` is implemented from measurement, because the documentation is wrong about it
+
+**Decision.** `BIO_ADDR` (12 exports) is implemented in `src/runtime/bio/addr.rs`
+and courted by a new differential court `RT-BIO-ADDR` (82 observations, passing).
+The contract was established by two discovery probes and one fault probe, all
+committed under `courts/phase4/`, **before** the Rust was written:
+
+* `discover_bio_addr.c` — the value API, the string conversions, the rejection
+  cases, and the null-argument cases the authority defines;
+* `discover_bio_addr2.c` — two behaviours that needed pinning down separately;
+* `bio_addr_null_calls.c` — one null-argument call per process, because a probe
+  cannot compare a crash.
+
+**Why measurement rather than the documentation.** Several measured behaviours
+contradict what a reader would assume, and each one would have been a parity defect
+if it had been implemented from the man page:
+
+1. `BIO_ADDR_rawaddress(ap, p, &n)` treats `n` as an **out** parameter. A caller
+   passing `n = 1` gets back `n = 4` and a 4-byte copy, not the documented
+   length-check failure.
+2. `BIO_ADDR_service_string()` reports the **byte-swapped** port: 80 prints as
+   `20480`, 443 as `47873`, 1 as `256`. The model that reproduces every measured
+   case — and also the `AF_UNIX` result, where glibc's `getnameinfo` returns
+   `"localhost"` for the host and the path for the service — is that the address is
+   rebuilt for `getnameinfo` with the **host-order** port in the port field, with no
+   `htons`. Implemented that way, not corrected.
+3. `BIO_ADDR_rawmake()` validates *before* clearing, so a rejected call leaves the
+   previous address intact. Measured: after a successful `AF_INET` make and a
+   rejected `AF_UNSPEC` make, the family is still `AF_INET` and the port still the
+   earlier value. The candidate reproduces this, and the court asserts it.
+4. `BIO_ADDR_path_string()` returns NULL for every family except `AF_UNIX`.
+5. `BIO_ADDR_rawport()` returns a **host-order** port, which is the opposite
+   convention to (2) and is what makes the pair so easy to get wrong.
+
+**Divergences.** `BIO_ADDR_rawmake` with a NULL `where` and seven accessors with a
+NULL `ap` fault in the authority; the candidate is total there. Both are recorded
+as `D-BIO-ADDR-1` and `D-BIO-ADDR-2` in
+`docs/SECURITY_DIVERGENCE_POLICY.md`, with the per-process SIGSEGV evidence.
+
+**A method note worth keeping.** `RT-BIO-ADDR` failed on its first run with 25
+residuals whose authority side was `None` — every observation from the NULL `where`
+call onward. That signature is how a *fault* in a shared probe presents itself, and
+it is indistinguishable from a candidate that emits extra lines unless the probe is
+read in order. The fix is to not probe undefined behaviour, not to relax the
+comparison.
+
+**Non-claim.** `RT-BIO-ADDR` passing means the candidate matched the authority for
+the behaviours this probe exercises: the value round-trips, the string conversions,
+and the rejection cases. It is not a claim about `BIO_ADDRINFO`, `BIO_lookup` or the
+connect/accept BIOs, which remain open Phase 4 obligations.

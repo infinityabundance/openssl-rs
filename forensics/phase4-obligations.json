@@ -4,8 +4,8 @@
     "complete": false,
     "counts": {
       "deferred_to_later_phase": 14,
-      "implemented": 133,
-      "open_in_this_stratum": 109,
+      "implemented": 145,
+      "open_in_this_stratum": 97,
       "owned": 256
     },
     "deferred": [
@@ -132,6 +132,18 @@
       }
     ],
     "implemented": [
+      "BIO_ADDR_clear",
+      "BIO_ADDR_copy",
+      "BIO_ADDR_dup",
+      "BIO_ADDR_family",
+      "BIO_ADDR_free",
+      "BIO_ADDR_hostname_string",
+      "BIO_ADDR_new",
+      "BIO_ADDR_path_string",
+      "BIO_ADDR_rawaddress",
+      "BIO_ADDR_rawmake",
+      "BIO_ADDR_rawport",
+      "BIO_ADDR_service_string",
       "BIO_callback_ctrl",
       "BIO_clear_flags",
       "BIO_closesocket",
@@ -291,54 +303,6 @@
       {
         "module": "src/runtime/bio/",
         "symbol": "BIO_ADDRINFO_socktype"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_ADDR_clear"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_ADDR_copy"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_ADDR_dup"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_ADDR_family"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_ADDR_free"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_ADDR_hostname_string"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_ADDR_new"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_ADDR_path_string"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_ADDR_rawaddress"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_ADDR_rawmake"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_ADDR_rawport"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_ADDR_service_string"
       },
       {
         "module": "src/runtime/bio/",
@@ -716,7 +680,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "f769de8ab8944d6252d0b51585df303f73b435182232934215b9db209f53d4cf"
+      "sha256": "57874d0ffe7ca6a242d00fd60b71757a65169e7c6af481d733be51474bd87526"
     }
   ],
   "kind": "phase4-obligations",

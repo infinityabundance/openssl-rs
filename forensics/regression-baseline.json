@@ -44,6 +44,10 @@
       "observations": 212,
       "verdict": "pass"
     },
+    "RT-BIO-ADDR": {
+      "observations": 82,
+      "verdict": "pass"
+    },
     "RT-ERR": {
       "observations": 3857,
       "verdict": "pass"
@@ -86,12 +90,12 @@
     "phase4": 14
   },
   "implemented": {
-    "libcrypto": 345,
+    "libcrypto": 357,
     "libssl": 0
   },
   "open_obligations": {
     "phase3": 0,
-    "phase4": 109
+    "phase4": 97
   },
   "phases": {
     "0": "complete",
