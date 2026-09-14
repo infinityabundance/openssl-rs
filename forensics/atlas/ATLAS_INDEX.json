@@ -1,15 +1,23 @@
 {
-  "aggregate_hash": "e3537593e29933f4400a93799fa42ef19818808e3c0a38b44a590dcce97ae0d1",
+  "aggregate_hash": "137637007b1d865e1570adf2f678d114c348e44147f625430471c5cad4f8fac6",
   "aggregate_hash_algorithm": "sha256(<file-sha256>  <path>\\n, lexicographic)",
-  "file_count": 38,
+  "file_count": 44,
   "files": [
     {
       "path": "forensics/atlas/BUILD_RECORDS.json",
       "sha256": "921ce360ba59cb4e0c39e3adf27c35c0e8256e37a039b50a7f51b953560232b0"
     },
     {
+      "path": "forensics/atlas/openssl-3.6.3-historical/ATLAS.md",
+      "sha256": "8247f640985e91219141218dc34cf1d15df20f97bc460a7aeeb0ea460ea0a8cd"
+    },
+    {
       "path": "forensics/atlas/openssl-3.6.3-historical/PARITY_MATRIX.md",
       "sha256": "3cb91e4ef2afb813e0b5ecc7be403b36a64b22b968e3e5a04e9b4c1cb7a1c5ab"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.3-historical/abi-layout.json",
+      "sha256": "4fafba1bdf0dae658e2ce8b96ae128e284f9acb45b83aa5dfea5a33f115aacf8"
     },
     {
       "path": "forensics/atlas/openssl-3.6.3-historical/cli-commands.json",
@@ -21,7 +29,7 @@
     },
     {
       "path": "forensics/atlas/openssl-3.6.3-historical/corpus-inventory.json",
-      "sha256": "4884ef868ec623eb346e48025e9c45e3a67b326f84b5b8f222a1a817d221be12"
+      "sha256": "9e6e84ab4feaca54894c45f4a8270c1525007f782012d598030bee96f0e268aa"
     },
     {
       "path": "forensics/atlas/openssl-3.6.3-historical/coverage.json",
@@ -42,6 +50,10 @@
     {
       "path": "forensics/atlas/openssl-3.6.3-historical/macros.json",
       "sha256": "e300e9b5bcc783b0d5385090bd5bb0a7062cf368bc2d3f7cc192efe6f9a54e70"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.3-historical/ownership-obligations.json",
+      "sha256": "eb51614abe1a3e81ea0be22991b32d1feb195cecb72ebce0a8795b0fb3696fe6"
     },
     {
       "path": "forensics/atlas/openssl-3.6.3-historical/parity-obligations.json",
@@ -80,8 +92,16 @@
       "sha256": "00d480cfffdd667d475184e8f765a14fa65d59676727a3da7b953c269e55021a"
     },
     {
+      "path": "forensics/atlas/openssl-3.6.4-production/ATLAS.md",
+      "sha256": "00da160f2df41d5077205e5c56df0b4688416390735387b69c6ccef305eedb9f"
+    },
+    {
       "path": "forensics/atlas/openssl-3.6.4-production/PARITY_MATRIX.md",
       "sha256": "82b65e9298174688e42479bb16078a212b914a22b481686321d88b86951f9000"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.4-production/abi-layout.json",
+      "sha256": "e90413dab871f2cd71cc33215d60f032ba6e3d02f7b54a40fb77190a7996fc09"
     },
     {
       "path": "forensics/atlas/openssl-3.6.4-production/cli-commands.json",
@@ -93,7 +113,7 @@
     },
     {
       "path": "forensics/atlas/openssl-3.6.4-production/corpus-inventory.json",
-      "sha256": "10b3cbc98df30e7bda8c0a945eab5e65e4c8edb0efb4a968a667e1e2501e402d"
+      "sha256": "bbc7cc704e1cdaebd77e0356401a7a0312ba758c27701bce58c760739d79a8cf"
     },
     {
       "path": "forensics/atlas/openssl-3.6.4-production/coverage.json",
@@ -114,6 +134,10 @@
     {
       "path": "forensics/atlas/openssl-3.6.4-production/macros.json",
       "sha256": "99e595fad544d1cff98c5495519db7abe68a34b32e6e97fd29735f9686c846da"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.4-production/ownership-obligations.json",
+      "sha256": "ca100c09c7a29673aeeca036402465923a9e90dc7d311630af763081f87d673e"
     },
     {
       "path": "forensics/atlas/openssl-3.6.4-production/parity-obligations.json",

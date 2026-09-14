@@ -1,0 +1,5 @@
+openssl-rs forensic digest fixture v1
+This exact byte sequence is the court's input. It is stable, committed, and
+hashed into the observation identity: any change to it is a new experiment,
+not a silent edit of an old one.
+0123456789abcdefghijklmnopqrstuvwxyz

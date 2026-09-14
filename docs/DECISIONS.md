@@ -168,3 +168,36 @@ it properly: 1,001 of the 1,012 declared-but-not-exported functions are
 `static ossl_inline` header helpers (correctly not exported), and 26 exported
 symbols (`DSO_*`) have no declaration in any *installed* header because `dso.h`
 is not installed.
+
+## D13 — Phase 1 sensitivity evidence is partial, and the gap is recorded, not hidden
+
+**Decision.** Phase 1's FRF courts are recorded as follows:
+
+- `openssl-cli-dgst` — challenge **PASSED** for both `stdout-first-line` and
+  `exit-class`: each seeded defect was observed on its declared axis and on no
+  other. This court has sensitivity evidence and may supply release evidence.
+- `openssl-cli-list-disabled`, `openssl-cli-list-cipher` — challenge **REFUSED**.
+  Cause established by inspection, not guessed: the FRF 0.1.86 challenge mutant
+  locates the reference object by scanning its own arguments for a path under
+  the object store, which only works when the court's declared arguments
+  reference `{fixture}`. For these courts the mutant cannot find the reference,
+  exits 2 with empty stdout, and therefore perturbs **both** the stdout and exit
+  axes at once. The court cannot demonstrate axis isolation, so FRF refuses.
+
+  The four resulting residuals are disposed `harness` with that reason.
+
+**Why not "fix" it by narrowing the declared observables.** Declaring only
+`stdout` for these courts would make the challenge *pass* on a mutant that never
+ran the reference — a false sensitivity result. A passing court that cannot see
+its own defect class is worse than an honestly refused one
+(`docs/PARITY_MODEL.md` §7).
+
+**Consequence.** Phase 1's exit rule requires sensitivity evidence, so Phase 1 is
+**not** marked complete. The concrete remedy is to make every trajectory court
+fixture-driven (arguments that reference `{fixture}`), which is also better
+forensic practice: a court should be a statement about a fixture family. Until
+then, the `list-*` courts are retained as *observations* but may not contribute
+sensitivity evidence to a claim.
+
+---
+

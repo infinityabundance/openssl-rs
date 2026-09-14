@@ -1,0 +1,3386 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "aggregates_failed": 0,
+    "aggregates_ok": 158,
+    "aggregates_probed": 158,
+    "opaque": [
+      {
+        "aggregate": "struct ASN1_VALUE_st",
+        "header": "asn1.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct AdmissionSyntax_st",
+        "header": "x509v3.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct Admissions_st",
+        "header": "x509v3.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct CMAC_CTX_st",
+        "header": "cmac.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct CMS_CertificateChoices",
+        "header": "cms.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct CMS_ContentInfo_st",
+        "header": "cms.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct CMS_EnvelopedData_st",
+        "header": "cms.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct CMS_OtherKeyAttribute_st",
+        "header": "cms.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct CMS_ReceiptRequest_st",
+        "header": "cms.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct CMS_Receipt_st",
+        "header": "cms.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct CMS_RecipientEncryptedKey_st",
+        "header": "cms.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct CMS_RecipientInfo_st",
+        "header": "cms.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct CMS_RevocationInfoChoice_st",
+        "header": "cms.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct CMS_SignedData_st",
+        "header": "cms.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct CMS_SignerInfo_st",
+        "header": "cms.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct DSA_SIG_st",
+        "header": "dsa.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ECDSA_SIG_st",
+        "header": "ec.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ESS_cert_id",
+        "header": "ess.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ESS_cert_id_v2_st",
+        "header": "ess.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ESS_issuer_serial",
+        "header": "ess.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ESS_signing_cert",
+        "header": "ess.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ESS_signing_cert_v2_st",
+        "header": "ess.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct NamingAuthority_st",
+        "header": "x509v3.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct OSSL_IETF_ATTR_SYNTAX_VALUE_st",
+        "header": "x509_acert.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct OSSL_IETF_ATTR_SYNTAX_st",
+        "header": "x509_acert.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct PKCS12_MAC_DATA_st",
+        "header": "pkcs12.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct PKCS12_SAFEBAG_st",
+        "header": "pkcs12.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct PKCS12_st",
+        "header": "pkcs12.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ProfessionInfo_st",
+        "header": "x509v3.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct TS_accuracy_st",
+        "header": "ts.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct TS_msg_imprint_st",
+        "header": "ts.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct TS_req_st",
+        "header": "ts.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct TS_resp_ctx",
+        "header": "ts.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct TS_resp_st",
+        "header": "ts.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct TS_status_info_st",
+        "header": "ts.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct TS_tst_info_st",
+        "header": "ts.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct TS_verify_ctx",
+        "header": "ts.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct X509_POLICY_CACHE_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct X509_POLICY_LEVEL_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct X509_POLICY_NODE_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct X509_POLICY_TREE_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct X509_VERIFY_PARAM_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct X509_acert_info_st",
+        "header": "x509_acert.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct X509_acert_issuer_v2form_st",
+        "header": "x509_acert.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct X509_acert_st",
+        "header": "x509_acert.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct X509_crl_info_st",
+        "header": "x509.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct X509_crl_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct X509_extension_st",
+        "header": "x509.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct X509_name_entry_st",
+        "header": "x509.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct X509_name_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct X509_pubkey_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct X509_req_info_st",
+        "header": "x509.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct X509_req_st",
+        "header": "x509.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct X509_sig_st",
+        "header": "x509.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct asn1_object_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct asn1_pctx_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct asn1_sctx_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct async_job_st",
+        "header": "async.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct async_wait_ctx_st",
+        "header": "async.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct bignum_ctx",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct bignum_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct bio_addrinfo_st",
+        "header": "bio.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct bio_method_st",
+        "header": "bio.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct bio_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct bn_blinding_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct bn_gencb_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct bn_mont_ctx_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct bn_recp_ctx_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ccm128_context",
+        "header": "modes.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct comp_ctx_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct comp_method_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct conf_imodule_st",
+        "header": "conf.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct conf_module_st",
+        "header": "conf.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ct_policy_eval_ctx_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ctlog_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ctlog_store_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct dh_method",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct dh_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct dsa_method",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct dsa_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ec_group_st",
+        "header": "ec.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ec_key_method_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ec_key_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ec_method_st",
+        "header": "ec.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ec_parameters_st",
+        "header": "ec.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ec_point_st",
+        "header": "ec.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ecpk_parameters_st",
+        "header": "ec.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct engine_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct evp_Encode_Ctx_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct evp_asym_cipher_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct evp_cipher_ctx_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct evp_cipher_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct evp_kdf_ctx_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct evp_kdf_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct evp_kem_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct evp_keyexch_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct evp_keymgmt_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct evp_mac_ctx_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct evp_mac_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct evp_md_ctx_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct evp_md_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct evp_pkey_asn1_method_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct evp_pkey_ctx_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct evp_pkey_method_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct evp_pkey_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct evp_rand_ctx_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct evp_rand_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct evp_signature_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct evp_skey_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct evp_skeymgmt_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct gcm128_context",
+        "header": "modes.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct hmac_ctx_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct hostent",
+        "header": "bio.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct lhash_node_st",
+        "header": "lhash.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct lhash_st",
+        "header": "lhash.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct lhash_st_SSL_SESSION",
+        "header": "ssl.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ocb128_context",
+        "header": "modes.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ocsp_basic_response_st",
+        "header": "ocsp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ocsp_cert_id_st",
+        "header": "ocsp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ocsp_cert_status_st",
+        "header": "ocsp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ocsp_crl_id_st",
+        "header": "ocsp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ocsp_one_request_st",
+        "header": "ocsp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ocsp_req_info_st",
+        "header": "ocsp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ocsp_request_st",
+        "header": "ocsp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ocsp_resp_bytes_st",
+        "header": "ocsp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ocsp_responder_id_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ocsp_response_data_st",
+        "header": "ocsp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ocsp_response_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ocsp_revoked_info_st",
+        "header": "ocsp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ocsp_service_locator_st",
+        "header": "ocsp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ocsp_signature_st",
+        "header": "ocsp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ocsp_single_response_st",
+        "header": "ocsp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct openssl_core_ctx_st",
+        "header": "core.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_cmp_certrepmessage_st",
+        "header": "cmp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_cmp_certresponse_st",
+        "header": "cmp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_cmp_certstatus_st",
+        "header": "cmp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_cmp_crlstatus_st",
+        "header": "cmp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_cmp_ctx_st",
+        "header": "cmp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_cmp_itav_st",
+        "header": "cmp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_cmp_msg_st",
+        "header": "cmp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_cmp_pkiheader_st",
+        "header": "cmp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_cmp_pkisi_st",
+        "header": "cmp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_cmp_pollrep_st",
+        "header": "cmp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_cmp_revrepcontent_st",
+        "header": "cmp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_cmp_srv_ctx_st",
+        "header": "cmp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_core_bio_st",
+        "header": "core.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_core_handle_st",
+        "header": "core.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_crmf_attributetypeandvalue_st",
+        "header": "crmf.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_crmf_certid_st",
+        "header": "crmf.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_crmf_certrequest_st",
+        "header": "crmf.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_crmf_certtemplate_st",
+        "header": "crmf.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_crmf_encryptedkey_st",
+        "header": "crmf.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_crmf_encryptedvalue_st",
+        "header": "crmf.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_crmf_msg_st",
+        "header": "crmf.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_crmf_optionalvalidity_st",
+        "header": "crmf.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_crmf_pbmparameter_st",
+        "header": "crmf.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_crmf_pkipublicationinfo_st",
+        "header": "crmf.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_crmf_poposigningkey_st",
+        "header": "crmf.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_crmf_singlepubinfo_st",
+        "header": "crmf.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_decoder_ctx_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_decoder_instance_st",
+        "header": "decoder.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_decoder_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_encoder_ctx_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_encoder_instance_st",
+        "header": "encoder.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_encoder_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_hpke_ctx_st",
+        "header": "hpke.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_http_req_ctx_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_init_settings_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_issuer_serial_st",
+        "header": "x509_acert.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_lib_ctx_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_object_digest_info_st",
+        "header": "x509_acert.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_param_bld_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_provider_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_self_test_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_store_ctx_st",
+        "header": "store.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_store_info_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_store_loader_ctx_st",
+        "header": "store.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_store_loader_st",
+        "header": "store.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ossl_store_search_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct pkcs12_bag_st",
+        "header": "pkcs12.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct pkcs8_priv_key_info_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct rand_drbg_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct rsa_meth_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct rsa_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct sct_ctx_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct sct_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ssl_cipher_st",
+        "header": "ssl.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ssl_comp_st",
+        "header": "comp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ssl_conf_ctx_st",
+        "header": "ssl.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ssl_ctx_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ssl_dane_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ssl_method_st",
+        "header": "ssl.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ssl_session_st",
+        "header": "ssl.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ssl_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st",
+        "header": "stack.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_ACCESS_DESCRIPTION",
+        "header": "x509v3.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_ADMISSIONS",
+        "header": "x509v3.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_ASIdOrRange",
+        "header": "x509v3.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_ASN1_GENERALSTRING",
+        "header": "asn1.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_ASN1_INTEGER",
+        "header": "asn1.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_ASN1_OBJECT",
+        "header": "asn1.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_ASN1_STRING",
+        "header": "x509v3.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_ASN1_STRING_TABLE",
+        "header": "asn1.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_ASN1_TYPE",
+        "header": "asn1.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_ASN1_UTF8STRING",
+        "header": "asn1.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_ASN1_VALUE",
+        "header": "asn1t.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_BIGNUM",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_BIGNUM_const",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_BIO",
+        "header": "bio.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_CMS_RecipientEncryptedKey",
+        "header": "cms.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_CMS_RecipientInfo",
+        "header": "cms.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_CMS_RevocationInfoChoice",
+        "header": "cms.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_CMS_SignerInfo",
+        "header": "cms.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_CONF_IMODULE",
+        "header": "conf.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_CONF_MODULE",
+        "header": "conf.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_CONF_VALUE",
+        "header": "conf.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_CTLOG",
+        "header": "ct.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_DIST_POINT",
+        "header": "x509v3.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_ESS_CERT_ID",
+        "header": "ess.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_ESS_CERT_ID_V2",
+        "header": "ess.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_GENERAL_NAME",
+        "header": "x509v3.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_GENERAL_NAMES",
+        "header": "x509v3.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_GENERAL_SUBTREE",
+        "header": "x509v3.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_IPAddressFamily",
+        "header": "x509v3.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_IPAddressOrRange",
+        "header": "x509v3.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_OCSP_CERTID",
+        "header": "ocsp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_OCSP_ONEREQ",
+        "header": "ocsp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_OCSP_RESPID",
+        "header": "ocsp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_OCSP_RESPONSE",
+        "header": "x509_vfy.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_OCSP_SINGLERESP",
+        "header": "ocsp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_OPENSSL_BLOCK",
+        "header": "safestack.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_OPENSSL_CSTRING",
+        "header": "safestack.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_OPENSSL_PSTRING",
+        "header": "txt_db.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_OPENSSL_STRING",
+        "header": "safestack.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_OSSL_ALLOWED_ATTRIBUTES_CHOICE",
+        "header": "x509v3.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_OSSL_ALLOWED_ATTRIBUTES_ITEM",
+        "header": "x509v3.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_OSSL_ATTRIBUTE_MAPPING",
+        "header": "x509v3.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_OSSL_CMP_CERTREPMESSAGE",
+        "header": "cmp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_OSSL_CMP_CERTRESPONSE",
+        "header": "cmp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_OSSL_CMP_CERTSTATUS",
+        "header": "cmp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_OSSL_CMP_CRLSTATUS",
+        "header": "cmp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_OSSL_CMP_ITAV",
+        "header": "cmp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_OSSL_CMP_PKISI",
+        "header": "cmp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_OSSL_CMP_POLLREP",
+        "header": "cmp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_OSSL_CRMF_ATTRIBUTETYPEANDVALUE",
+        "header": "crmf.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_OSSL_CRMF_CERTID",
+        "header": "crmf.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_OSSL_CRMF_MSG",
+        "header": "crmf.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_OSSL_DAY_TIME_BAND",
+        "header": "x509v3.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_OSSL_IETF_ATTR_SYNTAX_VALUE",
+        "header": "x509_acert.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_OSSL_ISSUER_SERIAL",
+        "header": "x509_acert.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_OSSL_ROLE_SPEC_CERT_ID",
+        "header": "x509v3.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_OSSL_TARGET",
+        "header": "x509_acert.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_OSSL_TARGETS",
+        "header": "x509_acert.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_OSSL_TIME_PERIOD",
+        "header": "x509v3.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_PKCS12_SAFEBAG",
+        "header": "pkcs12.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_PKCS7",
+        "header": "pkcs7.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_PKCS7_RECIP_INFO",
+        "header": "pkcs7.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_PKCS7_SIGNER_INFO",
+        "header": "pkcs7.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_POLICYINFO",
+        "header": "x509v3.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_POLICYQUALINFO",
+        "header": "x509_vfy.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_POLICY_MAPPING",
+        "header": "x509v3.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_PROFESSION_INFO",
+        "header": "x509v3.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_SCT",
+        "header": "ct.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_SRP_gN",
+        "header": "srp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_SRP_gN_cache",
+        "header": "srp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_SRP_user_pwd",
+        "header": "srp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_SRTP_PROTECTION_PROFILE",
+        "header": "ssl.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_SSL_CIPHER",
+        "header": "ssl.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_SSL_COMP",
+        "header": "comp.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_SXNETID",
+        "header": "x509v3.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_UI_STRING",
+        "header": "ui.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_USERNOTICE",
+        "header": "x509v3.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_X509",
+        "header": "x509.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_X509V3_EXT_METHOD",
+        "header": "x509v3.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_X509_ALGOR",
+        "header": "asn1.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_X509_ATTRIBUTE",
+        "header": "x509.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_X509_CRL",
+        "header": "x509.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_X509_EXTENSION",
+        "header": "x509.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_X509_INFO",
+        "header": "x509.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_X509_LOOKUP",
+        "header": "x509_vfy.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_X509_NAME",
+        "header": "x509.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_X509_NAME_ENTRY",
+        "header": "x509.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_X509_OBJECT",
+        "header": "x509_vfy.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_X509_POLICY_NODE",
+        "header": "x509_vfy.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_X509_PURPOSE",
+        "header": "x509v3.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_X509_REVOKED",
+        "header": "x509.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_X509_TRUST",
+        "header": "x509_vfy.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_X509_VERIFY_PARAM",
+        "header": "x509_vfy.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct stack_st_void",
+        "header": "crypto.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct tls_sigalgs_st",
+        "header": "ssl.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ui_method_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ui_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct ui_string_st",
+        "header": "ui.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct x509_attributes_st",
+        "header": "x509.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct x509_cert_aux_st",
+        "header": "x509.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct x509_cinf_st",
+        "header": "x509.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct x509_crl_method_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct x509_lookup_method_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct x509_lookup_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct x509_object_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct x509_revoked_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct x509_sig_info_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct x509_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct x509_store_ctx_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct x509_store_st",
+        "header": "types.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "struct xts128_context",
+        "header": "modes.h",
+        "note": "incomplete/opaque type"
+      },
+      {
+        "aggregate": "union bio_addr_st",
+        "header": "bio.h",
+        "note": "incomplete/opaque type"
+      }
+    ],
+    "opaque_aggregates": 307,
+    "overflow_check": {
+      "note": "sizeof/alignof/offsetof are recorded as measured, not inferred; a probe failure is preserved with its diagnostic"
+    },
+    "records": [
+      {
+        "aggregate": "struct AA_DIST_POINT_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "containsAACerts": 28,
+          "containsSOAPublicKeyCerts": 32,
+          "containsUserAttributeCerts": 24,
+          "distpoint": 0,
+          "dp_reasons": 16,
+          "indirectCRL": 20,
+          "reasons": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 40
+      },
+      {
+        "aggregate": "struct ACCESS_DESCRIPTION_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "location": 8,
+          "method": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct ALLOWED_ATTRIBUTES_CHOICE_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "choice": 8,
+          "type": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct ALLOWED_ATTRIBUTES_ITEM_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "attributes": 0,
+          "holderDomain": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct ASIdOrRange_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "type": 0,
+          "u": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct ASIdentifierChoice_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "type": 0,
+          "u": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct ASIdentifiers_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "asnum": 0,
+          "rdi": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct ASN1_ADB_TABLE_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "tt": 8,
+          "value": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 48
+      },
+      {
+        "aggregate": "struct ASN1_ADB_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "adb_cb": 16,
+          "default_tt": 40,
+          "flags": 0,
+          "null_tt": 48,
+          "offset": 8,
+          "tbl": 24,
+          "tblcount": 32
+        },
+        "probe_status": "ok",
+        "sizeof": 56
+      },
+      {
+        "aggregate": "struct ASN1_AUX_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "app_data": 0,
+          "asn1_cb": 24,
+          "asn1_const_cb": 40,
+          "enc_offset": 32,
+          "flags": 8,
+          "ref_lock": 16,
+          "ref_offset": 12
+        },
+        "probe_status": "ok",
+        "sizeof": 48
+      },
+      {
+        "aggregate": "struct ASN1_ENCODING_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "enc": 0,
+          "len": 8,
+          "modified": 16
+        },
+        "probe_status": "ok",
+        "sizeof": 24
+      },
+      {
+        "aggregate": "struct ASN1_EXTERN_FUNCS_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "app_data": 0,
+          "asn1_ex_clear": 24,
+          "asn1_ex_d2i": 32,
+          "asn1_ex_d2i_ex": 64,
+          "asn1_ex_free": 16,
+          "asn1_ex_i2d": 40,
+          "asn1_ex_new": 8,
+          "asn1_ex_new_ex": 56,
+          "asn1_ex_print": 48
+        },
+        "probe_status": "ok",
+        "sizeof": 72
+      },
+      {
+        "aggregate": "struct ASN1_ITEM_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "funcs": 32,
+          "itype": 0,
+          "size": 40,
+          "sname": 48,
+          "tcount": 24,
+          "templates": 16,
+          "utype": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 56
+      },
+      {
+        "aggregate": "struct ASN1_PRIMITIVE_FUNCS_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "app_data": 0,
+          "flags": 8,
+          "prim_c2i": 40,
+          "prim_clear": 32,
+          "prim_free": 24,
+          "prim_i2c": 48,
+          "prim_new": 16,
+          "prim_print": 56
+        },
+        "probe_status": "ok",
+        "sizeof": 64
+      },
+      {
+        "aggregate": "struct ASN1_PRINT_ARG_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "indent": 8,
+          "out": 0,
+          "pctx": 16
+        },
+        "probe_status": "ok",
+        "sizeof": 24
+      },
+      {
+        "aggregate": "struct ASN1_STREAM_ARG_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "boundary": 16,
+          "ndef_bio": 8,
+          "out": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 24
+      },
+      {
+        "aggregate": "struct ASN1_TEMPLATE_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "field_name": 24,
+          "flags": 0,
+          "item": 32,
+          "offset": 16,
+          "tag": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 40
+      },
+      {
+        "aggregate": "struct ASN1_TLC_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "hdrlen": 24,
+          "pclass": 20,
+          "plen": 8,
+          "ptag": 16,
+          "ret": 4,
+          "valid": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 32
+      },
+      {
+        "aggregate": "struct ASRange_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "max": 8,
+          "min": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct ATTRIBUTE_MAPPING_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "choice": 8,
+          "type": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct ATTRIBUTE_TYPE_MAPPING_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "local": 0,
+          "remote": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct ATTRIBUTE_VALUE_MAPPING_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "local": 0,
+          "remote": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct AUTHORITY_KEYID_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "issuer": 8,
+          "keyid": 0,
+          "serial": 16
+        },
+        "probe_status": "ok",
+        "sizeof": 24
+      },
+      {
+        "aggregate": "struct BASIC_CONSTRAINTS_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "ca": 0,
+          "pathlen": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct BIT_STRING_BITNAME_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "bitnum": 0,
+          "lname": 8,
+          "sname": 16
+        },
+        "probe_status": "ok",
+        "sizeof": 24
+      },
+      {
+        "aggregate": "struct DES_ks",
+        "alignof": 4,
+        "field_offsetof": {
+          "ks": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 128
+      },
+      {
+        "aggregate": "struct DIST_POINT_NAME_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "dpname": 16,
+          "name": 8,
+          "type": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 24
+      },
+      {
+        "aggregate": "struct DIST_POINT_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "CRLissuer": 16,
+          "distpoint": 0,
+          "dp_reasons": 24,
+          "reasons": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 32
+      },
+      {
+        "aggregate": "struct EDIPartyName_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "nameAssigner": 0,
+          "partyName": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct ENGINE_CMD_DEFN_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "cmd_desc": 16,
+          "cmd_flags": 24,
+          "cmd_name": 8,
+          "cmd_num": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 32
+      },
+      {
+        "aggregate": "struct ERR_string_data_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "error": 0,
+          "string": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct GENERAL_NAME_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "d": 8,
+          "type": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct GENERAL_SUBTREE_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "base": 0,
+          "maximum": 16,
+          "minimum": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 24
+      },
+      {
+        "aggregate": "struct IPAddressChoice_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "type": 0,
+          "u": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct IPAddressFamily_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "addressFamily": 0,
+          "ipAddressChoice": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct IPAddressOrRange_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "type": 0,
+          "u": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct IPAddressRange_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "max": 8,
+          "min": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct ISSUER_SIGN_TOOL_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "cATool": 8,
+          "cAToolCert": 24,
+          "signTool": 0,
+          "signToolCert": 16
+        },
+        "probe_status": "ok",
+        "sizeof": 32
+      },
+      {
+        "aggregate": "struct ISSUING_DIST_POINT_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "distpoint": 0,
+          "indirectCRL": 24,
+          "onlyCA": 12,
+          "onlyattr": 28,
+          "onlysomereasons": 16,
+          "onlyuser": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 32
+      },
+      {
+        "aggregate": "struct MD4state_st",
+        "alignof": 4,
+        "field_offsetof": {
+          "A": 0,
+          "B": 4,
+          "C": 8,
+          "D": 12,
+          "Nh": 20,
+          "Nl": 16,
+          "data": 24,
+          "num": 88
+        },
+        "probe_status": "ok",
+        "sizeof": 92
+      },
+      {
+        "aggregate": "struct MD5state_st",
+        "alignof": 4,
+        "field_offsetof": {
+          "A": 0,
+          "B": 4,
+          "C": 8,
+          "D": 12,
+          "Nh": 20,
+          "Nl": 16,
+          "data": 24,
+          "num": 88
+        },
+        "probe_status": "ok",
+        "sizeof": 92
+      },
+      {
+        "aggregate": "struct NAME_CONSTRAINTS_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "excludedSubtrees": 8,
+          "permittedSubtrees": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct NOTICEREF_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "noticenos": 8,
+          "organization": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct Netscape_certificate_sequence",
+        "alignof": 8,
+        "field_offsetof": {
+          "certs": 8,
+          "type": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct Netscape_spkac_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "challenge": 8,
+          "pubkey": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct Netscape_spki_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "sig_algor": 8,
+          "signature": 24,
+          "spkac": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 32
+      },
+      {
+        "aggregate": "struct OSSL_ATTRIBUTE_DESCRIPTOR_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "attributeSyntax": 8,
+          "description": 24,
+          "dominationRule": 32,
+          "identifier": 0,
+          "name": 16
+        },
+        "probe_status": "ok",
+        "sizeof": 40
+      },
+      {
+        "aggregate": "struct OSSL_BASIC_ATTR_CONSTRAINTS_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "authority": 0,
+          "pathlen": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct OSSL_DAY_TIME_BAND_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "endDayTime": 8,
+          "startDayTime": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct OSSL_DAY_TIME_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "hour": 0,
+          "minute": 8,
+          "second": 16
+        },
+        "probe_status": "ok",
+        "sizeof": 24
+      },
+      {
+        "aggregate": "struct OSSL_HASH_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "algorithmIdentifier": 0,
+          "hashValue": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct OSSL_INFO_SYNTAX_POINTER_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "hash": 8,
+          "name": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct OSSL_INFO_SYNTAX_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "choice": 8,
+          "type": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct OSSL_NAMED_DAY_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "choice": 8,
+          "type": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct OSSL_PRIVILEGE_POLICY_ID_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "privPolSyntax": 8,
+          "privilegePolicy": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct OSSL_ROLE_SPEC_CERT_ID_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "roleCertIssuer": 8,
+          "roleCertLocator": 24,
+          "roleCertSerialNumber": 16,
+          "roleName": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 32
+      },
+      {
+        "aggregate": "struct OSSL_TIME_PERIOD_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "days": 8,
+          "months": 24,
+          "timesOfDay": 0,
+          "weeks": 16,
+          "years": 32
+        },
+        "probe_status": "ok",
+        "sizeof": 40
+      },
+      {
+        "aggregate": "struct OSSL_TIME_SPEC_ABSOLUTE_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "endTime": 8,
+          "startTime": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct OSSL_TIME_SPEC_DAY_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "choice": 8,
+          "type": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct OSSL_TIME_SPEC_MONTH_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "choice": 8,
+          "type": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct OSSL_TIME_SPEC_TIME_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "choice": 8,
+          "type": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct OSSL_TIME_SPEC_WEEKS_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "choice": 8,
+          "type": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct OSSL_TIME_SPEC_X_DAY_OF_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "choice": 8,
+          "type": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct OSSL_TIME_SPEC_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "notThisTime": 8,
+          "time": 0,
+          "timeZone": 16
+        },
+        "probe_status": "ok",
+        "sizeof": 24
+      },
+      {
+        "aggregate": "struct PBE2PARAM_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "encryption": 8,
+          "keyfunc": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct PBEPARAM_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "iter": 8,
+          "salt": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct PBKDF2PARAM_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "iter": 8,
+          "keylength": 16,
+          "prf": 24,
+          "salt": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 32
+      },
+      {
+        "aggregate": "struct PKCS7_CTX_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "libctx": 0,
+          "propq": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct PKEY_USAGE_PERIOD_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "notAfter": 8,
+          "notBefore": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct POLICYINFO_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "policyid": 0,
+          "qualifiers": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct POLICYQUALINFO_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "d": 8,
+          "pqualid": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct POLICY_CONSTRAINTS_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "inhibitPolicyMapping": 8,
+          "requireExplicitPolicy": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct POLICY_MAPPING_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "issuerDomainPolicy": 0,
+          "subjectDomainPolicy": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct PROXY_CERT_INFO_EXTENSION_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "pcPathLengthConstraint": 0,
+          "proxyPolicy": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct PROXY_POLICY_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "policy": 8,
+          "policyLanguage": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct RIPEMD160state_st",
+        "alignof": 4,
+        "field_offsetof": {
+          "A": 0,
+          "B": 4,
+          "C": 8,
+          "D": 12,
+          "E": 16,
+          "Nh": 24,
+          "Nl": 20,
+          "data": 28,
+          "num": 92
+        },
+        "probe_status": "ok",
+        "sizeof": 96
+      },
+      {
+        "aggregate": "struct SCRYPT_PARAMS_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "blockSize": 16,
+          "costParameter": 8,
+          "keyLength": 32,
+          "parallelizationParameter": 24,
+          "salt": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 40
+      },
+      {
+        "aggregate": "struct SHA256state_st",
+        "alignof": 4,
+        "field_offsetof": {
+          "Nh": 36,
+          "Nl": 32,
+          "data": 40,
+          "h": 0,
+          "md_len": 108,
+          "num": 104
+        },
+        "probe_status": "ok",
+        "sizeof": 112
+      },
+      {
+        "aggregate": "struct SHA512state_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "Nh": 72,
+          "Nl": 64,
+          "h": 0,
+          "md_len": 212,
+          "num": 208,
+          "u": 80
+        },
+        "probe_status": "ok",
+        "sizeof": 216
+      },
+      {
+        "aggregate": "struct SHAstate_st",
+        "alignof": 4,
+        "field_offsetof": {
+          "Nh": 24,
+          "Nl": 20,
+          "data": 28,
+          "h0": 0,
+          "h1": 4,
+          "h2": 8,
+          "h3": 12,
+          "h4": 16,
+          "num": 92
+        },
+        "probe_status": "ok",
+        "sizeof": 96
+      },
+      {
+        "aggregate": "struct SRP_VBASE_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "default_N": 32,
+          "default_g": 24,
+          "gN_cache": 8,
+          "seed_key": 16,
+          "users_pwd": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 40
+      },
+      {
+        "aggregate": "struct SRP_gN_cache_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "b64_bn": 0,
+          "bn": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct SRP_gN_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "N": 16,
+          "g": 8,
+          "id": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 24
+      },
+      {
+        "aggregate": "struct SRP_user_pwd_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "N": 32,
+          "g": 24,
+          "id": 0,
+          "info": 40,
+          "s": 8,
+          "v": 16
+        },
+        "probe_status": "ok",
+        "sizeof": 48
+      },
+      {
+        "aggregate": "struct SXNET_ID_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "user": 8,
+          "zone": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct SXNET_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "ids": 8,
+          "version": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct TARGET_CERT_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "certDigestInfo": 16,
+          "targetCertificate": 0,
+          "targetName": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 24
+      },
+      {
+        "aggregate": "struct TARGET_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "choice": 8,
+          "type": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct USERNOTICE_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "exptext": 8,
+          "noticeref": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct X509V3_CONF_METHOD_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "free_section": 24,
+          "free_string": 16,
+          "get_section": 8,
+          "get_string": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 32
+      },
+      {
+        "aggregate": "struct X509_algor_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "algorithm": 0,
+          "parameter": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct X509_info_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "crl": 8,
+          "enc_cipher": 24,
+          "enc_data": 56,
+          "enc_len": 48,
+          "x509": 0,
+          "x_pkey": 16
+        },
+        "probe_status": "ok",
+        "sizeof": 64
+      },
+      {
+        "aggregate": "struct X509_val_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "notAfter": 8,
+          "notBefore": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct aes_key_st",
+        "alignof": 4,
+        "field_offsetof": {
+          "rd_key": 0,
+          "rounds": 240
+        },
+        "probe_status": "ok",
+        "sizeof": 244
+      },
+      {
+        "aggregate": "struct asn1_string_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "data": 8,
+          "flags": 16,
+          "length": 0,
+          "type": 4
+        },
+        "probe_status": "ok",
+        "sizeof": 24
+      },
+      {
+        "aggregate": "struct asn1_string_table_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "flags": 32,
+          "mask": 24,
+          "maxsize": 16,
+          "minsize": 8,
+          "nid": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 40
+      },
+      {
+        "aggregate": "struct asn1_type_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "type": 0,
+          "value": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct atav_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "type": 0,
+          "value": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct bf_key_st",
+        "alignof": 4,
+        "field_offsetof": {
+          "P": 0,
+          "S": 72
+        },
+        "probe_status": "ok",
+        "sizeof": 4168
+      },
+      {
+        "aggregate": "struct bio_mmsg_cb_args_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "flags": 24,
+          "msg": 0,
+          "msgs_processed": 32,
+          "num_msg": 16,
+          "stride": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 40
+      },
+      {
+        "aggregate": "struct bio_msg_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "data": 0,
+          "data_len": 8,
+          "flags": 32,
+          "local": 24,
+          "peer": 16
+        },
+        "probe_status": "ok",
+        "sizeof": 40
+      },
+      {
+        "aggregate": "struct bio_poll_descriptor_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "type": 0,
+          "value": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct buf_mem_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "data": 8,
+          "flags": 24,
+          "length": 0,
+          "max": 16
+        },
+        "probe_status": "ok",
+        "sizeof": 32
+      },
+      {
+        "aggregate": "struct camellia_key_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "grand_rounds": 272,
+          "u": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 280
+      },
+      {
+        "aggregate": "struct cast_key_st",
+        "alignof": 4,
+        "field_offsetof": {
+          "data": 0,
+          "short_key": 128
+        },
+        "probe_status": "ok",
+        "sizeof": 132
+      },
+      {
+        "aggregate": "struct conf_method_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "create": 8,
+          "destroy": 24,
+          "destroy_data": 32,
+          "dump": 48,
+          "init": 16,
+          "is_number": 56,
+          "load": 72,
+          "load_bio": 40,
+          "name": 0,
+          "to_int": 64
+        },
+        "probe_status": "ok",
+        "sizeof": 80
+      },
+      {
+        "aggregate": "struct conf_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "data": 16,
+          "flag_abspath": 28,
+          "flag_dollarid": 24,
+          "includedir": 32,
+          "libctx": 40,
+          "meth": 0,
+          "meth_data": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 48
+      },
+      {
+        "aggregate": "struct crypto_ex_data_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "ctx": 0,
+          "sk": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct crypto_threadid_st",
+        "alignof": 4,
+        "field_offsetof": {
+          "dummy": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 4
+      },
+      {
+        "aggregate": "struct err_state_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "bottom": 900,
+          "err_buffer": 128,
+          "err_data": 256,
+          "err_data_flags": 512,
+          "err_data_size": 384,
+          "err_file": 576,
+          "err_flags": 0,
+          "err_func": 768,
+          "err_line": 704,
+          "err_marks": 64,
+          "top": 896
+        },
+        "probe_status": "ok",
+        "sizeof": 904
+      },
+      {
+        "aggregate": "struct evp_cipher_info_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "cipher": 0,
+          "iv": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 24
+      },
+      {
+        "aggregate": "struct idea_key_st",
+        "alignof": 4,
+        "field_offsetof": {
+          "data": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 216
+      },
+      {
+        "aggregate": "struct lhash_st_CONF_VALUE",
+        "alignof": 8,
+        "field_offsetof": {
+          "dummy": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 8
+      },
+      {
+        "aggregate": "struct lhash_st_ERR_STRING_DATA",
+        "alignof": 8,
+        "field_offsetof": {
+          "dummy": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 8
+      },
+      {
+        "aggregate": "struct lhash_st_OPENSSL_CSTRING",
+        "alignof": 8,
+        "field_offsetof": {
+          "dummy": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 8
+      },
+      {
+        "aggregate": "struct lhash_st_OPENSSL_STRING",
+        "alignof": 8,
+        "field_offsetof": {
+          "dummy": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 8
+      },
+      {
+        "aggregate": "struct mdc2_ctx_st",
+        "alignof": 4,
+        "field_offsetof": {
+          "data": 4,
+          "h": 12,
+          "hh": 20,
+          "num": 0,
+          "pad_type": 28
+        },
+        "probe_status": "ok",
+        "sizeof": 32
+      },
+      {
+        "aggregate": "struct obj_name_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "alias": 4,
+          "data": 16,
+          "name": 8,
+          "type": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 24
+      },
+      {
+        "aggregate": "struct ossl_algorithm_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "algorithm_description": 24,
+          "algorithm_names": 0,
+          "implementation": 16,
+          "property_definition": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 32
+      },
+      {
+        "aggregate": "struct ossl_dispatch_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "function": 8,
+          "function_id": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct ossl_item_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "id": 0,
+          "ptr": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct ossl_param_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "data": 16,
+          "data_size": 24,
+          "data_type": 8,
+          "key": 0,
+          "return_size": 32
+        },
+        "probe_status": "ok",
+        "sizeof": 40
+      },
+      {
+        "aggregate": "struct otherName_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "type_id": 0,
+          "value": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct pkcs7_digest_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "contents": 16,
+          "digest": 24,
+          "md": 8,
+          "version": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 32
+      },
+      {
+        "aggregate": "struct pkcs7_enc_content_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "algorithm": 8,
+          "cipher": 24,
+          "content_type": 0,
+          "ctx": 32,
+          "enc_data": 16
+        },
+        "probe_status": "ok",
+        "sizeof": 40
+      },
+      {
+        "aggregate": "struct pkcs7_encrypted_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "enc_data": 8,
+          "version": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct pkcs7_enveloped_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "enc_data": 16,
+          "recipientinfo": 8,
+          "version": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 24
+      },
+      {
+        "aggregate": "struct pkcs7_issuer_and_serial_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "issuer": 0,
+          "serial": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct pkcs7_recip_info_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "cert": 32,
+          "ctx": 40,
+          "enc_key": 24,
+          "issuer_and_serial": 8,
+          "key_enc_algor": 16,
+          "version": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 48
+      },
+      {
+        "aggregate": "struct pkcs7_signed_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "cert": 16,
+          "contents": 40,
+          "crl": 24,
+          "md_algs": 8,
+          "signer_info": 32,
+          "version": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 48
+      },
+      {
+        "aggregate": "struct pkcs7_signedandenveloped_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "cert": 16,
+          "crl": 24,
+          "enc_data": 40,
+          "md_algs": 8,
+          "recipientinfo": 48,
+          "signer_info": 32,
+          "version": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 56
+      },
+      {
+        "aggregate": "struct pkcs7_signer_info_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "auth_attr": 24,
+          "ctx": 64,
+          "digest_alg": 16,
+          "digest_enc_alg": 32,
+          "enc_digest": 40,
+          "issuer_and_serial": 8,
+          "pkey": 56,
+          "unauth_attr": 48,
+          "version": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 72
+      },
+      {
+        "aggregate": "struct pkcs7_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "asn1": 0,
+          "ctx": 40,
+          "d": 32,
+          "detached": 20,
+          "length": 8,
+          "state": 16,
+          "type": 24
+        },
+        "probe_status": "ok",
+        "sizeof": 56
+      },
+      {
+        "aggregate": "struct private_key_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "cipher": 56,
+          "dec_pkey": 24,
+          "enc_algor": 8,
+          "enc_pkey": 16,
+          "key_data": 40,
+          "key_free": 48,
+          "key_length": 32,
+          "version": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 80
+      },
+      {
+        "aggregate": "struct rand_meth_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "add": 24,
+          "bytes": 8,
+          "cleanup": 16,
+          "pseudorand": 32,
+          "seed": 0,
+          "status": 40
+        },
+        "probe_status": "ok",
+        "sizeof": 48
+      },
+      {
+        "aggregate": "struct rc2_key_st",
+        "alignof": 4,
+        "field_offsetof": {
+          "data": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 256
+      },
+      {
+        "aggregate": "struct rc4_key_st",
+        "alignof": 4,
+        "field_offsetof": {
+          "data": 8,
+          "x": 0,
+          "y": 4
+        },
+        "probe_status": "ok",
+        "sizeof": 1032
+      },
+      {
+        "aggregate": "struct rsa_oaep_params_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "hashFunc": 0,
+          "maskGenFunc": 8,
+          "maskHash": 24,
+          "pSourceFunc": 16
+        },
+        "probe_status": "ok",
+        "sizeof": 32
+      },
+      {
+        "aggregate": "struct rsa_pss_params_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "hashAlgorithm": 0,
+          "maskGenAlgorithm": 8,
+          "maskHash": 32,
+          "saltLength": 16,
+          "trailerField": 24
+        },
+        "probe_status": "ok",
+        "sizeof": 40
+      },
+      {
+        "aggregate": "struct seed_key_st",
+        "alignof": 4,
+        "field_offsetof": {
+          "data": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 128
+      },
+      {
+        "aggregate": "struct srtp_protection_profile_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "id": 8,
+          "name": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct ssl_conn_close_info_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "error_code": 0,
+          "flags": 32,
+          "frame_type": 8,
+          "reason": 16,
+          "reason_len": 24
+        },
+        "probe_status": "ok",
+        "sizeof": 40
+      },
+      {
+        "aggregate": "struct ssl_poll_item_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "desc": 0,
+          "events": 16,
+          "revents": 24
+        },
+        "probe_status": "ok",
+        "sizeof": 32
+      },
+      {
+        "aggregate": "struct ssl_shutdown_ex_args_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "quic_error_code": 0,
+          "quic_reason": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct ssl_stream_reset_args_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "quic_error_code": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 8
+      },
+      {
+        "aggregate": "struct st_dynamic_MEM_fns",
+        "alignof": 8,
+        "field_offsetof": {
+          "free_fn": 16,
+          "malloc_fn": 0,
+          "realloc_fn": 8
+        },
+        "probe_status": "ok",
+        "sizeof": 24
+      },
+      {
+        "aggregate": "struct st_dynamic_fns",
+        "alignof": 8,
+        "field_offsetof": {
+          "mem_fns": 8,
+          "static_state": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 32
+      },
+      {
+        "aggregate": "struct tls_session_ticket_ext_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "data": 8,
+          "length": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 16
+      },
+      {
+        "aggregate": "struct txt_db_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "arg1": 40,
+          "arg2": 48,
+          "arg_row": 56,
+          "data": 8,
+          "error": 32,
+          "index": 16,
+          "num_fields": 0,
+          "qual": 24
+        },
+        "probe_status": "ok",
+        "sizeof": 64
+      },
+      {
+        "aggregate": "struct v3_ext_ctx",
+        "alignof": 8,
+        "field_offsetof": {
+          "crl": 32,
+          "db": 48,
+          "db_meth": 40,
+          "flags": 0,
+          "issuer_cert": 8,
+          "issuer_pkey": 56,
+          "subject_cert": 16,
+          "subject_req": 24
+        },
+        "probe_status": "ok",
+        "sizeof": 64
+      },
+      {
+        "aggregate": "struct v3_ext_method",
+        "alignof": 8,
+        "field_offsetof": {
+          "d2i": 32,
+          "ext_flags": 4,
+          "ext_free": 24,
+          "ext_new": 16,
+          "ext_nid": 0,
+          "i2d": 40,
+          "i2r": 80,
+          "i2s": 48,
+          "i2v": 64,
+          "it": 8,
+          "r2i": 88,
+          "s2i": 56,
+          "usr_data": 96,
+          "v2i": 72
+        },
+        "probe_status": "ok",
+        "sizeof": 104
+      },
+      {
+        "aggregate": "struct x509_purpose_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "check_purpose": 16,
+          "flags": 8,
+          "name": 24,
+          "purpose": 0,
+          "sname": 32,
+          "trust": 4,
+          "usr_data": 40
+        },
+        "probe_status": "ok",
+        "sizeof": 48
+      },
+      {
+        "aggregate": "struct x509_trust_st",
+        "alignof": 8,
+        "field_offsetof": {
+          "arg1": 24,
+          "arg2": 32,
+          "check_trust": 8,
+          "flags": 4,
+          "name": 16,
+          "trust": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 40
+      },
+      {
+        "aggregate": "union BIO_sock_info_u",
+        "alignof": 8,
+        "field_offsetof": {
+          "addr": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 8
+      },
+      {
+        "aggregate": "union lh_CONF_VALUE_dummy",
+        "alignof": 8,
+        "field_offsetof": {
+          "d1": 0,
+          "d2": 0,
+          "d3": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 8
+      },
+      {
+        "aggregate": "union lh_ERR_STRING_DATA_dummy",
+        "alignof": 8,
+        "field_offsetof": {
+          "d1": 0,
+          "d2": 0,
+          "d3": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 8
+      },
+      {
+        "aggregate": "union lh_OPENSSL_CSTRING_dummy",
+        "alignof": 8,
+        "field_offsetof": {
+          "d1": 0,
+          "d2": 0,
+          "d3": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 8
+      },
+      {
+        "aggregate": "union lh_OPENSSL_STRING_dummy",
+        "alignof": 8,
+        "field_offsetof": {
+          "d1": 0,
+          "d2": 0,
+          "d3": 0
+        },
+        "probe_status": "ok",
+        "sizeof": 8
+      }
+    ]
+  },
+  "body_hash": "727bd7ad244d8ba232daaa8f319e440f1d2db7f9d568bc5eaa12a2ba78b5e828",
+  "generator": "forensics/tools/atlas_abi.py",
+  "inputs": [
+    {
+      "name": "headers",
+      "note": "authority installed public headers under include/openssl; the probe is compiled against exactly these bytes"
+    }
+  ],
+  "kind": "abi-layout",
+  "schema": "openssl-rs/atlas/abi-layout/v1"
+}

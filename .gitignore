@@ -18,6 +18,13 @@
 # Court scratch material produced inside the container.
 /court/
 
+# Gemel's local evidence-native working store. It is ~95 MB (it snapshots the
+# derived atlas) and is a local working memory, not a deliverable: it is
+# recreated with `gemel init` + the recorded change/checkpoint in
+# forensics/STATUS.md and docs/DECISIONS.md. FRF's store IS committed (below),
+# because its receipts and claims are the claim-bearing evidence.
+/.gemel/
+
 # Editor / OS noise
 *.swp
 .DS_Store

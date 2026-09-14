@@ -1,0 +1,51 @@
+# openssl-rs court: `openssl list -cipher-algorithms -1`
+#
+# Oracle-versus-oracle trajectory court over the full symmetric-cipher
+# algorithm inventory, one entry per line. This is the largest single
+# deterministic enumeration surface in the distribution and the one most
+# sensitive to a provider/dispatch change: it exercises provider registration,
+# property resolution and algorithm ordering all at once.
+
+court:
+  id: openssl-cli-list-cipher
+  question: >-
+    For the cipher-inventory surface in fixture family cli-list-cipher, does
+    the candidate OpenSSL 3.6.4 enumerate the same symmetric-cipher algorithms,
+    in the same order and with the same provider attribution, as the admitted
+    historical authority OpenSSL 3.6.3?
+  falsifier: >-
+    The candidate's cipher-algorithm listing or exit class diverges from the
+    admitted authority's.
+  authority: openssl-3.6.3
+  candidate:
+    name: openssl
+    version_or_commit: "3.6.4"
+    build_profile: linux-x86_64-default-shared-legacy-notests
+    path: forensics/frf/refs/openssl-3.6.4.sh
+  fixture:
+    id: noop.conf
+    path: forensics/frf/courts/openssl-cli-list-cipher/fixtures/noop.conf
+    arguments: ["list", "-cipher-algorithms", "-1"]
+  admissibility_envelope:
+    fixture_family: cli-list-cipher
+    platforms: ["x86_64-linux"]
+    observables: [stdout, exit]
+    normalizers: []
+    replay_scope: single-run
+  execution_context:
+    artifacts:
+      - path: forensics/authorities/prefix/openssl-3.6.3-historical/bin/openssl
+        role: child-executable
+      - path: forensics/authorities/prefix/openssl-3.6.3-historical/lib/libcrypto.so.3
+        role: runtime-library
+      - path: forensics/authorities/prefix/openssl-3.6.3-historical/lib/libssl.so.3
+        role: runtime-library
+      - path: forensics/authorities/prefix/openssl-3.6.4-production/bin/openssl
+        role: child-executable
+      - path: forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+        role: runtime-library
+      - path: forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3
+        role: runtime-library
+  environment:
+    LC_ALL: C
+    TZ: UTC

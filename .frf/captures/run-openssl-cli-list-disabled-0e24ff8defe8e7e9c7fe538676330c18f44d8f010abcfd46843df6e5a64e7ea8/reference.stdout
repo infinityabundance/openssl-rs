@@ -1,0 +1,8 @@
+Disabled algorithms:
+MD2
+RC5
+SCTP
+SSL3
+ZLIB
+BROTLI
+ZSTD

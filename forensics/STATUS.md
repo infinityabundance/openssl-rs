@@ -99,7 +99,7 @@ Total generated parity obligations: **33823**.
 
 ## Evidence receipts
 
-- Atlas aggregate hash: `e3537593e29933f4400a93799fa42ef19818808e3c0a38b44a590dcce97ae0d1` over 38 files
+- Atlas aggregate hash: `137637007b1d865e1570adf2f678d114c348e44147f625430471c5cad4f8fac6` over 44 files
 
 | receipt | kind | deterministic | aggregate hash |
 |---|---|---|---|
@@ -107,6 +107,8 @@ Total generated parity obligations: **33823**.
 | `EVIDENCE_RECEIPT.0002.json` | phase1-atlas | True | `e3537593e29933f4…` |
 | `EVIDENCE_RECEIPT.0003.json` | phase1-atlas | True | `e3537593e29933f4…` |
 | `EVIDENCE_RECEIPT.0004.json` | phase1-atlas | True | `e3537593e29933f4…` |
+| `EVIDENCE_RECEIPT.0005.json` | phase1-atlas | False | `137637007b1d865e…` |
+| `EVIDENCE_RECEIPT.0006.json` | phase1-atlas | True | `137637007b1d865e…` |
 
 ## Non-claims
 

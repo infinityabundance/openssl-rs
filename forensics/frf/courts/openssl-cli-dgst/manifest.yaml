@@ -1,0 +1,51 @@
+# openssl-rs court: `openssl dgst -sha256 <fixture>`
+#
+# Oracle-versus-oracle trajectory court. A digest is the most sharply
+# deterministic observable in the distribution: either 3.6.4 computes the same
+# SHA-256 of the same bytes as 3.6.3, or the trajectory contains a real change.
+# If this court diverged, every downstream SHA-256 consumer would be affected,
+# so it is the first thing the trajectory should establish.
+
+court:
+  id: openssl-cli-dgst
+  question: >-
+    For the digest surface in fixture family cli-dgst, does the candidate
+    OpenSSL 3.6.4 compute the same SHA-256 digest of the fixture bytes, with the
+    same stdout and exit class, as the admitted historical authority OpenSSL
+    3.6.3?
+  falsifier: >-
+    The candidate's digest stdout or exit class diverges from the admitted
+    authority's.
+  authority: openssl-3.6.3
+  candidate:
+    name: openssl
+    version_or_commit: "3.6.4"
+    build_profile: linux-x86_64-default-shared-legacy-notests
+    path: forensics/frf/refs/openssl-3.6.4.sh
+  fixture:
+    id: dgst-input.txt
+    path: forensics/frf/courts/openssl-cli-dgst/fixtures/dgst-input.txt
+    arguments: ["dgst", "-sha256", "{fixture}"]
+  admissibility_envelope:
+    fixture_family: cli-dgst
+    platforms: ["x86_64-linux"]
+    observables: [stdout, exit]
+    normalizers: []
+    replay_scope: single-run
+  execution_context:
+    artifacts:
+      - path: forensics/authorities/prefix/openssl-3.6.3-historical/bin/openssl
+        role: child-executable
+      - path: forensics/authorities/prefix/openssl-3.6.3-historical/lib/libcrypto.so.3
+        role: runtime-library
+      - path: forensics/authorities/prefix/openssl-3.6.3-historical/lib/libssl.so.3
+        role: runtime-library
+      - path: forensics/authorities/prefix/openssl-3.6.4-production/bin/openssl
+        role: child-executable
+      - path: forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+        role: runtime-library
+      - path: forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3
+        role: runtime-library
+  environment:
+    LC_ALL: C
+    TZ: UTC

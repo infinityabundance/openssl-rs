@@ -77,6 +77,11 @@ bash docker/openssl-rs-court.sh exec python3 forensics/tools/atlas_receipt.py --
 
 # build and test the implementation crate (fmt + clippy + tests)
 bash docker/openssl-rs-court.sh exec sh -c 'cd /work && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test'
+
+# FRF trajectory courts + Gemel checkpoints run in a SECOND, separately pinned
+# tooling container (see docs/REPRODUCIBILITY.md §1.2 for why)
+bash docker/openssl-rs-frf-court.sh up
+bash docker/openssl-rs-frf-court.sh exec bash forensics/frf/run_courts.sh
 ```
 
 The court applies hard resource caps (`--memory=8g --memory-swap=8g`,
@@ -94,23 +99,41 @@ forensics/
 ├── receipts/EVIDENCE_RECEIPT.*.json    immutable run receipts
 ├── STATUS.md                           generated status projection
 ├── tools/                              atlas generators, all run in the court
+├── frf/                                FRF court declarations + reference wrappers
 └── atlas/
     ├── BUILD_RECORDS.json
     ├── ATLAS_INDEX.json                per-file hashes + aggregate root hash
     └── openssl-3.6.4-production/
+        ├── ATLAS.md                    rendered projection of every document below
         ├── symbols-libcrypto.json      .num vs version script vs DSO exports
         ├── symbols-libssl.json
         ├── symbol-versions.json        version namespaces and ABS markers
         ├── functions.json  typedefs.json  structs.json  enums.json
         ├── variables.json  macros.json    header-graph.json
+        ├── abi-layout.json             measured sizeof/alignof/offsetof probes
+        ├── ownership-obligations.json   get0/get1/set0/set1/up_ref/free/dup
         ├── provider-inventory.json     providers + algorithm classes
         ├── cli-commands.json           every command and its options
-        ├── configs.json  corpus-inventory.json
+        ├── configs.json  corpus-inventory.json   (per-file, content-addressed)
         ├── surface-reconciliation.json cross-plane agreement + residuals
         ├── coverage.json
         ├── parity-obligations.json     one obligation per contract item
         └── PARITY_MATRIX.md            presentation projection
 ```
+
+FRF claims and Gemel memory:
+
+```
+.frf/                     FRF store: authorities, captures, residuals, receipts, claims
+forensics/frf/courts/     four 3.6.3 -> 3.6.4 oracle-vs-oracle trajectory courts
+forensics/frf/refs/       authority/candidate reference wrappers
+```
+
+The trajectory courts measured the 3.6.3 → 3.6.4 movement directly, and the
+result is narrow: the **version banner diverged** (disposed `oracle_version`),
+while **digest output, the disabled-feature set and the cipher inventory did
+not** — independently corroborating the atlas, which found identical symbol and
+algorithm inventories. See `forensics/frf/README.md`.
 
 Authorities admitted and content-addressed:
 

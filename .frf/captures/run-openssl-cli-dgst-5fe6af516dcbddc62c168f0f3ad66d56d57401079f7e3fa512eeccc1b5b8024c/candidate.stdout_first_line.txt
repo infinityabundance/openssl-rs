@@ -1,0 +1,1 @@
+FRF-MUTANT:stdout-first-line:SHA2-256(.frf/objects/sha256/fdbac7e548be1c0631c38ea388c597064c5d87c52b6dacea71e873af293ffa24)= fdbac7e548be1c0631c38ea388c597064c5d87c52b6dacea71e873af293ffa24

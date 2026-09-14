@@ -1,0 +1,4 @@
+# openssl-rs — no-op fixture (see the version court's fixture note).
+
+fixture: noop
+content: unused by this court's arguments

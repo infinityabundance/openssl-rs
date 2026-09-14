@@ -55,6 +55,7 @@ from atlas_common import (  # noqa: E402
     rel,
     resolve_authority,
     run,
+    sha256_bytes,
     sha256_file,
     write_json,
     write_text,
@@ -281,6 +282,14 @@ def build_config_catalog(auth) -> dict:
 # --- corpora -----------------------------------------------------------------
 
 def build_corpus_inventory(auth) -> dict:
+    """Per-file, content-addressed inventory of the upstream corpora.
+
+    Counts alone are not evidence: a fixture count cannot substitute for
+    surface coverage (`docs/PARITY_MODEL.md`), and a corpus that silently
+    gained or lost a file would be invisible. Every file is therefore listed
+    with its size and SHA-256, sorted, so the corpus has a reproducible
+    identity and a future authority's corpus delta is a diff.
+    """
     out = {}
     for label, sub in (("test", "test"), ("fuzz", "fuzz"), ("providers", "providers")):
         root = auth.source / sub
@@ -288,13 +297,24 @@ def build_corpus_inventory(auth) -> dict:
             out[label] = {"present": False}
             continue
         files = [p for p in sorted(root.rglob("*")) if p.is_file()]
+        entries = [
+            {
+                "path": p.relative_to(auth.source).as_posix(),
+                "size_bytes": p.stat().st_size,
+                "sha256": sha256_file(p),
+            }
+            for p in files
+        ]
+        lines = [f"{e['sha256']}  {e['path']}\n" for e in entries]
         out[label] = {
             "present": True,
             "file_count": len(files),
-            "total_bytes": sum(p.stat().st_size for p in files),
+            "total_bytes": sum(e["size_bytes"] for e in entries),
+            "root_hash_algorithm": "sha256(<sha256>  <path>\\n, lexicographic)",
+            "root_hash": sha256_bytes("".join(lines).encode("utf-8")),
             "by_extension": _ext_histogram(files),
+            "files": entries,
         }
-    # Upstream fuzz corpora seeds live under fuzz/corpora in the release tree.
     seeds = auth.source / "fuzz" / "corpora"
     out["fuzz_seed_corpora"] = {
         "present": seeds.is_dir(),

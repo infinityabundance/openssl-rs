@@ -1,0 +1,9 @@
+# openssl-rs — no-op fixture.
+#
+# Some courts observe a command that takes no input (`openssl version`,
+# `openssl list ...`). FRF's FixtureSpec requires a fixture path, and the
+# fixture is part of the observation identity: a court is a statement about a
+# (authority, candidate, fixture) triple. Using one genuinely unused, stable
+# fixture makes that explicit rather than silently varying the input.
+fixture: noop
+content: unused by this court's arguments

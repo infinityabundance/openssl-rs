@@ -1,0 +1,1 @@
+{"executable_sha256":"2a9a288d4cc3e5b8cdcf36911b4d9be185647b1bcab5a129af4932946c55edb3","id":"openssl-3.6.3","kind":"executable_reference","name":"openssl","path":"forensics/frf/refs/openssl-3.6.3.sh","platform":"x86_64-linux","schema_version":"frf-authority-v1","version":"3.6.3"}

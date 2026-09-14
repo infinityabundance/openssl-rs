@@ -1,0 +1,60 @@
+# openssl-rs court: `openssl version`
+#
+# Oracle-versus-oracle trajectory court (docs/SECURITY_DIVERGENCE_POLICY.md §1):
+# the admitted HISTORICAL authority is OpenSSL 3.6.3 and the candidate is
+# OpenSSL 3.6.4, the production target. This court is expected to DIVERGE on
+# the version banner, and that divergence must be recorded, typed and disposed
+# as an oracle-version trajectory -- never silently normalised away, and never
+# treated as a candidate defect.
+#
+# It exists precisely so the machinery *learns what legitimate upstream
+# evolution looks like* before any candidate code exists.
+
+court:
+  id: openssl-cli-version
+  question: >-
+    For the version-banner surface in fixture family cli-version, does the
+    candidate OpenSSL 3.6.4 preserve the admitted historical authority OpenSSL
+    3.6.3's stdout and exit class?
+  falsifier: >-
+    The candidate's `openssl version` stdout or exit class diverges from the
+    admitted authority's.
+  authority: openssl-3.6.3
+  candidate:
+    name: openssl
+    version_or_commit: "3.6.4"
+    build_profile: linux-x86_64-default-shared-legacy-notests
+    path: forensics/frf/refs/openssl-3.6.4.sh
+  fixture:
+    id: noop.conf
+    path: forensics/frf/courts/openssl-cli-version/fixtures/noop.conf
+    arguments: ["version"]
+  admissibility_envelope:
+    fixture_family: cli-version
+    platforms: ["x86_64-linux"]
+    observables: [stdout, exit]
+    normalizers: []
+    replay_scope: single-run
+  # The declared runtime closure of BOTH sides. A side is a wrapper script
+  # binding LD_LIBRARY_PATH to its own prefix, so the real ELF binary and the
+  # libraries it resolves are the things that actually determine the
+  # observation; declaring them means they are snapshotted and
+  # content-addressed at observation time rather than assumed.
+  execution_context:
+    artifacts:
+      - path: forensics/authorities/prefix/openssl-3.6.3-historical/bin/openssl
+        role: child-executable
+      - path: forensics/authorities/prefix/openssl-3.6.3-historical/lib/libcrypto.so.3
+        role: runtime-library
+      - path: forensics/authorities/prefix/openssl-3.6.3-historical/lib/libssl.so.3
+        role: runtime-library
+      - path: forensics/authorities/prefix/openssl-3.6.4-production/bin/openssl
+        role: child-executable
+      - path: forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+        role: runtime-library
+      - path: forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3
+        role: runtime-library
+  # Built from scratch; the ambient environment is never inherited.
+  environment:
+    LC_ALL: C
+    TZ: UTC

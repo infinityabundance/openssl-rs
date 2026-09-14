@@ -1,0 +1,51 @@
+# openssl-rs court: `openssl list -disabled`
+#
+# Oracle-versus-oracle trajectory court over the build configuration surface.
+# This is the authority's own statement of which features were compiled out, and
+# it is what explains algorithm/symbol absences elsewhere (see
+# forensics/atlas/*/surface-reconciliation.json). A change here is a change in
+# the distribution contract, not merely a version-string detail.
+
+court:
+  id: openssl-cli-list-disabled
+  question: >-
+    For the build-configuration surface in fixture family cli-list-disabled,
+    does the candidate OpenSSL 3.6.4 report the same disabled-feature set, with
+    the same stdout and exit class, as the admitted historical authority OpenSSL
+    3.6.3?
+  falsifier: >-
+    The candidate's disabled-feature stdout or exit class diverges from the
+    admitted authority's.
+  authority: openssl-3.6.3
+  candidate:
+    name: openssl
+    version_or_commit: "3.6.4"
+    build_profile: linux-x86_64-default-shared-legacy-notests
+    path: forensics/frf/refs/openssl-3.6.4.sh
+  fixture:
+    id: noop.conf
+    path: forensics/frf/courts/openssl-cli-list-disabled/fixtures/noop.conf
+    arguments: ["list", "-disabled"]
+  admissibility_envelope:
+    fixture_family: cli-list-disabled
+    platforms: ["x86_64-linux"]
+    observables: [stdout, exit]
+    normalizers: []
+    replay_scope: single-run
+  execution_context:
+    artifacts:
+      - path: forensics/authorities/prefix/openssl-3.6.3-historical/bin/openssl
+        role: child-executable
+      - path: forensics/authorities/prefix/openssl-3.6.3-historical/lib/libcrypto.so.3
+        role: runtime-library
+      - path: forensics/authorities/prefix/openssl-3.6.3-historical/lib/libssl.so.3
+        role: runtime-library
+      - path: forensics/authorities/prefix/openssl-3.6.4-production/bin/openssl
+        role: child-executable
+      - path: forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+        role: runtime-library
+      - path: forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3
+        role: runtime-library
+  environment:
+    LC_ALL: C
+    TZ: UTC
