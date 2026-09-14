@@ -53,21 +53,19 @@ permissions:
 
 jobs:
   lint:
-    # NOT a required gate yet, and deliberately visible rather than omitted.
+    # A hard gate. `docs/UNSAFE.md` requires a `# Safety` section on every
+    # `unsafe fn` and a `SAFETY:` comment on every `unsafe` block, and clippy
+    # enforces both (`undocumented_unsafe_blocks`, `missing_safety_doc` = deny).
     #
-    # docs/UNSAFE.md requires a `# Safety` section on every `unsafe fn` and a
-    # `SAFETY:` comment on every `unsafe` block, and clippy enforces both. The
-    # pre-Phase-4 code satisfies them; the Phase 4 BIO modules do not yet.
-    # Clearing that debt is recorded in docs/PHASE-4-BIO-CONF-SEAL.md;
-    # suppressing it with an `allow` was rejected because the policy is real.
-    #
-    # `continue-on-error` keeps the workflow's verdict honest -- it does not
-    # pretend the lint passes -- while the required gates below gate every push.
-    # Deleting that one line is the change that makes this a hard gate.
-    name: lints (clippy, carrying recorded Phase 4 debt)
+    # This job carried `continue-on-error: true` while the Phase 4 BIO and CONF
+    # modules still owed that documentation: ~520 diagnostics, all of them the
+    # missing-invariant kind. They were cleared rather than suppressed, because
+    # the policy is real and an `allow` would have hidden exactly the unsafe code
+    # a reader most needs annotated. The one line was deleted when the count
+    # reached zero, and it is now a required gate like the others.
+    name: lints (clippy)
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - name: Clippy
@@ -125,6 +123,21 @@ jobs:
       # and reported; everything else is compared exactly.
       - name: Evidence determinism
         run: python3 forensics/tools/evidence_determinism.py
+
+      # An export that matches no phase family is invisible to every ledger at
+      # once, so the shell scaffolds it and no obligation records it. That has
+      # happened twice (D49, D51) and was found by reading both times. This makes
+      # the invariant mechanical: no implemented export may be unowned.
+      - name: Symbol ownership
+        run: python3 forensics/tools/ownership_audit.py
+
+      # A court declaration is written by `gen_frf_courts.py` from one table, so a
+      # hand-edit to a single manifest cannot survive: the table and the
+      # declarations must agree. This is also what keeps every court's
+      # `version_or_commit` moving together at a release instead of the ones
+      # somebody remembered.
+      - name: FRF court declarations match their table
+        run: python3 forensics/tools/gen_frf_courts.py --check
 
       # Determinism alone cannot catch a generator that depends on the host's
       # binutils: on any single machine both sides use the same tools and agree.
