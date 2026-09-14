@@ -1,0 +1,31 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "config_file_count": 3,
+    "config_files": [
+      {
+        "path": "forensics/authorities/src/openssl-3.6.4/apps/ct_log_list.cnf",
+        "sha256": "f1c1803d13d1d0b755b13b23c28bd4e20e07baf9f2b744c9337ba5866aa0ec3b",
+        "size_bytes": 412,
+        "template": false
+      },
+      {
+        "path": "forensics/authorities/src/openssl-3.6.4/apps/openssl-vms.cnf",
+        "sha256": "889af378bce04e7a21e9fe8708f229535b469221aa9edd395c460972cd6612c9",
+        "size_bytes": 12438,
+        "template": false
+      },
+      {
+        "path": "forensics/authorities/src/openssl-3.6.4/apps/openssl.cnf",
+        "sha256": "a65a2cb9f4ee8ffdc7ef4f0ac600c0bdafb95b7b1ab457188ac610a62f5ad6b3",
+        "size_bytes": 12411,
+        "template": false
+      }
+    ]
+  },
+  "body_hash": "d4e00d9dee607334fe439be561971da07932c5947ef83dc1658c42f946e44d2f",
+  "generator": "forensics/tools/atlas_runtime.py",
+  "inputs": [],
+  "kind": "configs",
+  "schema": "openssl-rs/atlas/configs/v1"
+}

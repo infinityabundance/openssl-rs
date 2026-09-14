@@ -1,0 +1,405 @@
+{
+  "authority": "openssl-3.6.3-historical",
+  "body": {
+    "binary": "forensics/authorities/prefix/openssl-3.6.3-historical/bin/openssl",
+    "command_count": 55,
+    "commands": [
+      {
+        "name": "asn1parse",
+        "option_count": 0,
+        "option_listing": "help -\noid <\ninform A\nin <\nout >\nnoout -\noffset p\nlength p\nstrparse p\ngenstr s\ngenconf s\nstrictpem -\nitem s\ni -\ndump -\ndlimit p\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "ca",
+        "option_count": 0,
+        "option_listing": "help -\nverbose -\nquiet -\noutdir /\nin <\ninform F\ninfiles -\nout >\ndateopt s\nnotext -\nbatch -\nmsie_hack -\nss_cert <\nspkac <\nengine s\nconfig s\nname s\nsection s\npolicy s\nsubj s\nutf8 -\ncreate_serial -\nrand_serial -\nmultivalue-rdn -\nstartdate s\nnot_before s\nenddate s\nnot_after s\ndays p\nextensions s\nextfile <\npreserveDN -\nnoemailDN -\nmd s\nkeyfile s\nkeyform f\npassin s\nkey s\ncert <\ncertform F\nselfsign -\nsigopt s\nvfyopt s\ngencrl -\nvalid s\nstatus s\nupdatedb -\ncrlexts s\ncrl_reason s\ncrl_hold s\ncrl_compromise s\ncrl_CA_compromise s\ncrl_lastupdate s\ncrl_nextupdate s\ncrldays p\ncrlhours p\ncrlsec p\nrevoke <\nrand s\nwriterand >\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "ciphers",
+        "option_count": 0,
+        "option_listing": "help -\nv -\nV -\nstdname -\nconvert s\ns -\ntls1 -\ntls1_1 -\ntls1_2 -\ntls1_3 -\npsk -\nsrp -\nciphersuites s\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "cmp",
+        "option_count": 0,
+        "option_listing": "help -\nconfig s\nsection s\nverbosity N\ncmd s\ninfotype s\nprofile s\ngeninfo s\ntemplate s\nkeyspec s\nnewkey s\nnewkeypass s\ncentralkeygen -\nnewkeyout s\nsubject s\ndays N\nreqexts s\nsans s\nsan_nodefault -\npolicies s\npolicy_oids s\npolicy_oids_critical -\npopo n\ncsr s\nout_trusted s\nimplicit_confirm -\ndisable_confirm -\ncertout s\nchainout s\noldcert s\nissuer s\nserial s\nrevreason n\nserver s\nproxy s\nno_proxy s\nrecipient s\npath s\nkeep_alive N\nmsg_timeout N\ntotal_timeout N\ntrusted s\nuntrusted s\nsrvcert s\nexpect_sender s\nignore_keyusage -\nunprotected_errors -\nno_cache_extracerts -\nsrvcertout s\nextracertsout s\ncacertsout s\noldwithold s\nnewwithnew s\nnewwithold s\noldwithnew s\ncrlcert s\noldcrl s\ncrlout s\nref s\nsecret s\ncert s\nown_trusted s\nkey s\nkeypass s\ndigest s\nmac s\nextracerts s\nunprotected_requests -\ncertform s\ncrlform s\nkeyform s\notherpass s\nengine s\nprovider-path s\nprovider s\nprovparam s\npropquery s\nrand s\nwriterand >\ntls_used -\ntls_cert s\ntls_key s\ntls_keypass s\ntls_extra s\ntls_trusted s\ntls_host s\nbatch -\nrepeat p\nreqin s\nreqin_new_tid -\nreqout s\nreqout_only s\nrspin s\nrspout s\nuse_mock_srv -\nport s\nmax_msgs N\nsrv_ref s\nsrv_secret s\nsrv_cert s\nsrv_key s\nsrv_keypass s\nsrv_trusted s\nsrv_untrusted s\nref_cert s\nrsp_cert s\nrsp_key s\nrsp_keypass s\nrsp_crl s\nrsp_extracerts s\nrsp_capubs s\nrsp_newwithnew s\nrsp_newwithold s\nrsp_oldwithnew s\npoll_count N\ncheck_after N\ngrant_implicitconf -\npkistatus N\nfailure N\nfailurebits N\nstatusstring s\nsend_error -\nsend_unprotected -\nsend_unprot_err -\naccept_unprotected -\naccept_unprot_err -\naccept_raverified -\npolicy s\npurpose s\nverify_name s\nverify_depth n\nauth_level n\nattime M\nverify_hostname s\nverify_email s\nverify_ip s\nignore_critical -\nissuer_checks -\ncrl_check -\ncrl_check_all -\npolicy_check -\nexplicit_policy -\ninhibit_any -\ninhibit_map -\nx509_strict -\nextended_crl -\nuse_deltas -\npolicy_print -\ncheck_ss_sig -\ntrusted_first -\nsuiteB_128_only -\nsuiteB_128 -\nsuiteB_192 -\npartial_chain -\nno_alt_chains -\nno_check_time -\nallow_proxy_certs -\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "cms",
+        "option_count": 0,
+        "option_listing": "help -\nin <\nout >\nconfig <\nencrypt -\ndecrypt -\nsign -\nverify -\nresign -\nsign_receipt -\nverify_receipt <\ndigest s\ndigest_create -\ndigest_verify -\ncompress -\nuncompress -\nEncryptedData_encrypt -\nEncryptedData_decrypt -\ndata_create -\ndata_out -\ncmsout -\ninform c\noutform c\nrctform F\nstream -\nindef -\nnoindef -\nbinary -\ncrlfeol -\nasciicrlf -\npwri_password s\nsecretkey s\nsecretkeyid s\ninkey s\npassin s\nkeyopt s\nkeyform f\nengine s\nprovider-path s\nprovider s\nprovparam s\npropquery s\nrand s\nwriterand >\noriginator s\nrecip <\ncert... .\nkekcipher s\nwrap s\naes128-wrap -\naes192-wrap -\naes256-wrap -\ndes3-wrap -\ndebug_decrypt -\nrecip_kdf s\nrecip_ukm s\nmd s\nsigner s\ncertfile <\ncades -\nnodetach -\nnocerts -\nnoattr -\nnosmimecap -\nno_signing_time -\nreceipt_request_all -\nreceipt_request_first -\nreceipt_request_from s\nreceipt_request_to s\nsigner s\ncontent <\nno_content_verify -\nno_attr_verify -\nnosigs -\nnoverify -\nnointern -\ncades -\nverify_retcode -\nCAfile <\nCApath /\nCAstore :\nno-CAfile -\nno-CApath -\nno-CAstore -\nkeyid -\necontent_type s\ntext -\ncertsout >\nto s\nfrom s\nsubject s\nnoout -\nprint -\nnameopt s\nreceipt_request_print -\npolicy s\npurpose s\nverify_name s\nverify_depth n\nauth_level n\nattime M\nverify_hostname s\nverify_email s\nverify_ip s\nignore_critical -\nissuer_checks -\ncrl_check -\ncrl_check_all -\npolicy_check -\nexplicit_policy -\ninhibit_any -\ninhibit_map -\nx509_strict -\nextended_crl -\nuse_deltas -\npolicy_print -\ncheck_ss_sig -\ntrusted_first -\nsuiteB_128_only -\nsuiteB_128 -\nsuiteB_192 -\npartial_chain -\nno_alt_chains -\nno_check_time -\nallow_proxy_certs -\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "configutl",
+        "option_count": 0,
+        "option_listing": "help -\nconfig s\nout >\nnoheader -\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "crl",
+        "option_count": 0,
+        "option_listing": "help -\nverify -\nin <\ninform F\nkey <\nkeyform F\nout >\noutform F\ndateopt s\ntext -\nhash -\nhash_old -\nnameopt s\nissuer -\nlastupdate -\nnextupdate -\nnoout -\nfingerprint -\ncrlnumber -\nbadsig -\ngendelta <\nCApath /\nCAfile <\nCAstore :\nno-CAfile -\nno-CApath -\nno-CAstore -\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "crl2pkcs7",
+        "option_count": 0,
+        "option_listing": "help -\nin <\ninform F\nnocrl -\ncertfile <\nout >\noutform F\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "dgst",
+        "option_count": 0,
+        "option_listing": "help -\nlist -\nengine s\nengine_impl -\npassin s\nc -\nr -\nout >\nkeyform f\nhex -\nbinary -\nxoflen p\nd -\ndebug -\nsign s\nverify s\nprverify s\nsigopt s\nsignature <\nhmac s\nmac s\nmacopt s\nfips-fingerprint -\nrand s\nwriterand >\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "dhparam",
+        "option_count": 0,
+        "option_listing": "help -\ncheck -\ndsaparam -\nengine s\nin <\ninform F\nout >\noutform F\ntext -\nnoout -\n2 -\n3 -\n5 -\nverbose -\nquiet -\nrand s\nwriterand >\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "dsa",
+        "option_count": 0,
+        "option_listing": "help -\npvk-strong -\npvk-weak -\npvk-none -\nengine s\nin s\ninform f\npubin -\npassin s\nout >\noutform f\nnoout -\ntext -\nmodulus -\npubout -\npassout s\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "dsaparam",
+        "option_count": 0,
+        "option_listing": "help -\nengine s\nin <\ninform F\nout >\noutform F\ntext -\nnoout -\nverbose -\nquiet -\ngenkey -\nrand s\nwriterand >\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "ec",
+        "option_count": 0,
+        "option_listing": "help -\nengine s\nin s\ninform f\npubin -\npassin s\ncheck -\nparam_enc s\nconv_form s\nout >\noutform F\nnoout -\ntext -\nparam_out -\npubout -\nno_public -\npassout s\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "ecparam",
+        "option_count": 0,
+        "option_listing": "help -\nlist_curves -\nengine s\ngenkey -\nin <\ninform F\nout >\noutform F\ntext -\nnoout -\nparam_enc s\ncheck -\ncheck_named -\nno_seed -\nname s\nconv_form s\nrand s\nwriterand >\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "enc",
+        "option_count": 0,
+        "option_listing": "help -\nlist -\nciphers -\ne -\nd -\np -\nP -\nengine s\nin <\nk s\nkfile <\nout >\npass s\nv -\na -\nbase64 -\nA -\nnopad -\nsalt -\nnosalt -\ndebug -\nbufsize s\nK s\nS s\niv s\nmd s\niter p\npbkdf2 -\nnone -\nsaltlen p\nskeyopt s\nskeymgmt s\nrand s\nwriterand >\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "engine",
+        "option_count": 0,
+        "option_listing": "help -\nt -\npre s\npost s\nv -\nvv -\nvvv -\nvvvv -\nc -\ntt -\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "errstr",
+        "option_count": 0,
+        "option_listing": "help -\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "fipsinstall",
+        "option_count": 0,
+        "option_listing": "help -\npedantic -\nverify -\nmodule <\nprovider_name s\nsection_name s\nno_conditional_errors -\nno_security_checks -\nself_test_onload -\nself_test_oninstall -\nems_check -\nno_short_mac -\nno_drbg_truncated_digests -\nsignature_digest_check -\nhmac_key_check -\nkmac_key_check -\nhkdf_digest_check -\ntls13_kdf_digest_check -\ntls1_prf_digest_check -\nsshkdf_digest_check -\nsskdf_digest_check -\nx963kdf_digest_check -\ndsa_sign_disabled -\ntdes_encrypt_disabled -\nrsa_pkcs15_padding_disabled -\nrsa_pss_saltlen_check -\nrsa_sign_x931_disabled -\nhkdf_key_check -\nkbkdf_key_check -\ntls13_kdf_key_check -\ntls1_prf_key_check -\nsshkdf_key_check -\nsskdf_key_check -\nx963kdf_key_check -\nx942kdf_key_check -\nno_pbkdf2_lower_bound_check -\necdh_cofactor_check -\nin <\nout >\nmac_name s\nmacopt s\nnoout -\ncorrupt_desc s\ncorrupt_type s\nconfig <\nquiet -\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "gendsa",
+        "option_count": 0,
+        "option_listing": "help -\nengine s\nout >\npassout s\nrand s\nwriterand >\nprovider-path s\nprovider s\nprovparam s\npropquery s\nverbose -\nquiet -\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "genpkey",
+        "option_count": 0,
+        "option_listing": "help -\nengine s\nparamfile <\nalgorithm s\nverbose -\nquiet -\npkeyopt s\nconfig <\nout >\noutpubkey >\noutform F\npass s\ngenparam -\ntext -\nprovider-path s\nprovider s\nprovparam s\npropquery s\nrand s\nwriterand >\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "genrsa",
+        "option_count": 0,
+        "option_listing": "help -\nengine s\n3 -\nF4 -\nf4 -\nout >\npassout s\nprimes p\nverbose -\nquiet -\ntraditional -\nrand s\nwriterand >\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "help",
+        "option_count": 0,
+        "option_listing": "help -\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "info",
+        "option_count": 0,
+        "option_listing": "help -\nconfigdir -\nenginesdir -\nmodulesdir -\ndsoext -\ndirnamesep -\nlistsep -\nseeds -\ncpusettings -\nwindowscontext -\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "kdf",
+        "option_count": 0,
+        "option_listing": "help -\nkdfopt s\ncipher s\ndigest s\nmac s\nkeylen s\nout >\nbinary -\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "list",
+        "option_count": 0,
+        "option_listing": "help -\n1 -\nverbose -\nselect s\ncommands -\nstandard-commands -\nall-algorithms -\ndigest-commands -\ndigest-algorithms -\nkdf-algorithms -\nrandom-instances -\nrandom-generators -\nmac-algorithms -\ncipher-commands -\ncipher-algorithms -\nencoders -\ndecoders -\nkey-managers -\nskey-managers -\nkey-exchange-algorithms -\nkem-algorithms -\nsignature-algorithms -\ntls-signature-algorithms -\nasymcipher-algorithms -\npublic-key-algorithms -\npublic-key-methods -\nstore-loaders -\ntls-groups -\nall-tls-groups -\ntls1_2 -\ntls1_3 -\nproviders -\nengines -\ndisabled -\noptions s\nobjects -\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "mac",
+        "option_count": 0,
+        "option_listing": "help -\nmacopt s\ncipher s\ndigest s\nin <\nout >\nbinary -\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "nseq",
+        "option_count": 0,
+        "option_listing": "help -\nin <\ntoseq -\nout >\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "ocsp",
+        "option_count": 0,
+        "option_listing": "help -\nignore_err -\nCAfile <\nCApath <\nCAstore :\nno-CAfile -\nno-CApath -\nno-CAstore -\ntimeout p\nresp_no_certs -\nmulti p\nno_certs -\nbadsig -\nCA <\nnmin p\nnrequest p\nreqin s\nsigner <\nsign_other <\nindex <\nndays p\nrsigner <\nrkey <\npassin s\nrother <\nrmd s\nrsigopt s\nheader s\nrcid s\nurl s\nhost s\nport N\npath s\nproxy s\nno_proxy s\nout >\nnoverify -\nnonce -\nno_nonce -\nno_signature_verify -\nresp_key_id -\nno_cert_verify -\ntext -\nreq_text -\nresp_text -\nno_chain -\nno_cert_checks -\nno_explicit -\ntrust_other -\nno_intern -\nrespin s\nVAfile <\nverify_other <\ncert <\nserial s\nvalidity_period u\nsignkey s\nreqout s\nrespout s\nissuer <\nstatus_age p\npolicy s\npurpose s\nverify_name s\nverify_depth n\nauth_level n\nattime M\nverify_hostname s\nverify_email s\nverify_ip s\nignore_critical -\nissuer_checks -\ncrl_check -\ncrl_check_all -\npolicy_check -\nexplicit_policy -\ninhibit_any -\ninhibit_map -\nx509_strict -\nextended_crl -\nuse_deltas -\npolicy_print -\ncheck_ss_sig -\ntrusted_first -\nsuiteB_128_only -\nsuiteB_128 -\nsuiteB_192 -\npartial_chain -\nno_alt_chains -\nno_check_time -\nallow_proxy_certs -\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "passwd",
+        "option_count": 0,
+        "option_listing": "help -\nin <\nnoverify -\nstdin -\nquiet -\ntable -\nreverse -\nsalt s\n6 -\n5 -\napr1 -\n1 -\naixmd5 -\nrand s\nwriterand >\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "pkcs12",
+        "option_count": 0,
+        "option_listing": "help -\nin <\nout >\npassin s\npassout s\npassword s\ntwopass -\nnokeys -\nnocerts -\nnoout -\nlegacy -\nengine s\nprovider-path s\nprovider s\nprovparam s\npropquery s\nrand s\nwriterand >\ninfo -\nnomacver -\nclcerts -\ncacerts -\nnoenc -\nnodes -\nexport -\ninkey s\ncertfile <\npasscerts s\nchain -\nuntrusted <\nCAfile <\nCApath /\nCAstore :\nno-CAfile -\nno-CApath -\nno-CAstore -\nname s\ncaname s\nCSP s\nLMK -\nkeyex -\nkeysig -\nkeypbe s\ncertpbe s\ndescert -\nmacalg s\npbmac1_pbkdf2 -\npbmac1_pbkdf2_md s\niter p\nnoiter -\nnomaciter -\nmaciter -\nmacsaltlen p\nnomac -\njdktrust s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "pkcs7",
+        "option_count": 0,
+        "option_listing": "help -\nengine s\nin <\ninform F\noutform F\nout >\nnoout -\ntext -\nprint -\nprint_certs -\nquiet -\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "pkcs8",
+        "option_count": 0,
+        "option_listing": "help -\nengine s\nv1 s\nv2 s\nv2prf s\nin <\ninform F\npassin s\nnocrypt -\nout >\noutform F\ntopk8 -\npassout s\ntraditional -\niter p\nnoiter -\nsaltlen p\nscrypt -\nscrypt_N s\nscrypt_r s\nscrypt_p s\nrand s\nwriterand >\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "pkey",
+        "option_count": 0,
+        "option_listing": "help -\nengine s\nprovider-path s\nprovider s\nprovparam s\npropquery s\ncheck -\npubcheck -\nin s\ninform f\npassin s\npubin -\nout >\noutform F\npassout s\ntraditional -\npubout -\nnoout -\ntext -\ntext_pub -\nec_conv_form s\nec_param_enc s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "pkeyparam",
+        "option_count": 0,
+        "option_listing": "help -\nengine s\ncheck -\nin <\nout >\ntext -\nnoout -\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "pkeyutl",
+        "option_count": 0,
+        "option_listing": "help -\nengine s\nengine_impl -\nsign -\nverify -\nencrypt -\ndecrypt -\nderive -\ndecap -\nencap -\nconfig <\nin <\ninkey s\npubin -\npassin s\npeerkey s\npeerform E\ncertin -\nrev -\nsigfile <\nkeyform E\nout >\nsecret >\nasn1parse -\nhexdump -\nverifyrecover -\nrawin -\ndigest s\npkeyopt s\npkeyopt_passin s\nkdf s\nkdflen p\nkemop s\nrand s\nwriterand >\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "prime",
+        "option_count": 0,
+        "option_listing": "help -\nbits p\nchecks p\nhex -\nin -\ngenerate -\nsafe -\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "rand",
+        "option_count": 0,
+        "option_listing": "help -\nengine s\nout >\nbase64 -\nhex -\nrand s\nwriterand >\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "rehash",
+        "option_count": 0,
+        "option_listing": "help -\nh -\ncompat -\nold -\nn -\nv -\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "req",
+        "option_count": 0,
+        "option_listing": "help -\ncipher s\nengine s\nkeygen_engine s\nin <\ninform F\nverify -\nnew -\nconfig <\nsection s\nutf8 -\nnameopt s\nreqopt s\ntext -\nx509 -\nx509v1 -\nCA <\nCAkey s\nsubj s\nsubject -\nmultivalue-rdn -\nnot_before s\nnot_after s\ndays p\nset_serial s\ncopy_extensions s\nextensions s\nreqexts s\naddext s\nprecert -\nkey s\nkeyform f\npubkey -\nkeyout >\npassin s\npassout s\nnewkey s\npkeyopt s\nsigopt s\nvfyopt s\nout >\noutform F\nbatch -\nverbose -\nquiet -\nnoenc -\nnodes -\nnoout -\nnewhdr -\nmodulus -\nrand s\nwriterand >\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "rsa",
+        "option_count": 0,
+        "option_listing": "help -\ncheck -\nengine s\nin s\ninform f\npubin -\nRSAPublicKey_in -\npassin s\nout >\noutform f\npubout -\nRSAPublicKey_out -\npassout s\nnoout -\ntext -\nmodulus -\ntraditional -\npvk-strong -\npvk-weak -\npvk-none -\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "rsautl",
+        "option_count": 0,
+        "option_listing": "help -\nsign -\nverify -\nencrypt -\ndecrypt -\nengine s\nin <\ninkey s\nkeyform E\npubin -\ncertin -\nrev -\npassin s\nout >\nraw -\npkcs -\nx931 -\noaep -\nasn1parse -\nhexdump -\nrand s\nwriterand >\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "s_client",
+        "option_count": 0,
+        "option_listing": "help -\nengine s\nssl_client_engine s\nssl_config s\nct -\nnoct -\nctlogfile <\nhost s\nport p\nconnect s\nbind s\nproxy s\nproxy_user s\nproxy_pass s\nunix s\n4 -\n6 -\nmaxfraglen p\nmax_send_frag p\nsplit_send_frag p\nmax_pipelines p\nread_buf p\nfallback_scsv -\ncert <\ncertform F\ncert_chain <\nbuild_chain -\nkey s\nkeyform E\npass s\nverify p\nnameopt s\nCApath /\nCAfile <\nCAstore :\nno-CAfile -\nno-CApath -\nno-CAstore -\nrequestCAfile <\ndane_tlsa_domain s\ndane_tlsa_rrdata s\ndane_ee_no_namechecks -\npsk_identity s\npsk s\npsk_session <\nname s\nreconnect -\nsess_out >\nsess_in <\ncrlf -\nquiet -\nign_eof -\nno_ign_eof -\nstarttls s\nxmpphost s\nbrief -\nprexit -\nno-interactive -\nstatus -\nocsp_check_leaf -\nocsp_check_all -\nshowcerts -\ndebug -\nmsg -\nmsgfile >\nnbio_test -\nstate -\nkeymatexport s\nkeymatexportlen p\nsecurity_debug -\nsecurity_debug_verbose -\ntrace -\nkeylogfile >\nnocommands -\nadv -\nservername s\nnoservername -\ntlsextdebug -\nignore_unexpected_eof -\nserverinfo s\nalpn s\nasync -\nnbio -\ntls1 -\ntls1_1 -\ntls1_2 -\ntls1_3 -\ndtls -\nquic -\ntimeout -\nmtu p\ndtls1 -\ndtls1_2 -\nnextprotoneg s\nearly_data <\nenable_pha -\nenable_server_rpk -\nenable_client_rpk -\nuse_srtp s\nsrpuser s\nsrppass s\nsrp_lateuser -\nsrp_moregroups -\nsrp_strength p\nrand s\nwriterand >\nno_ssl3 -\nno_tls1 -\nno_tls1_1 -\nno_tls1_2 -\nno_tls1_3 -\nbugs -\nno_comp -\ncomp -\nno_tx_cert_comp -\nno_rx_cert_comp -\nno_ticket -\nserverpref -\nlegacy_renegotiation -\nclient_renegotiation -\nno_renegotiation -\nlegacy_server_connect -\nno_resumption_on_reneg -\nno_legacy_server_connect -\nallow_no_dhe_kex -\nprefer_no_dhe_kex -\nprioritize_chacha -\nstrict -\nsigalgs s\nclient_sigalgs s\ngroups s\ncurves s\nnamed_curve s\ncipher s\nciphersuites s\nmin_protocol s\nmax_protocol s\nrecord_padding s\ndebug_broken_protocol -\nno_middlebox -\nno_etm -\nno_ems -\npolicy s\npurpose s\nverify_name s\nverify_depth n\nauth_level n\nattime M\nverify_hostname s\nverify_email s\nverify_ip s\nignore_critical -\nissuer_checks -\ncrl_check -\ncrl_check_all -\npolicy_check -\nexplicit_policy -\ninhibit_any -\ninhibit_map -\nx509_strict -\nextended_crl -\nuse_deltas -\npolicy_print -\ncheck_ss_sig -\ntrusted_first -\nsuiteB_128_only -\nsuiteB_128 -\nsuiteB_192 -\npartial_chain -\nno_alt_chains -\nno_check_time -\nallow_proxy_certs -\nCRL <\ncrl_download -\nCRLform F\nverify_return_error -\nverify_quiet -\nchainCAfile <\nchainCApath /\nchainCAstore :\nverifyCAfile <\nverifyCApath /\nverifyCAstore :\nxkey <\nxcert <\nxchain <\nxchain_build -\nxcertform F\nxkeyform F\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "s_server",
+        "option_count": 0,
+        "option_listing": "help -\nssl_config s\ntrace -\nengine s\nport p\naccept s\nunix s\nunlink -\n4 -\n6 -\ncontext s\nCAfile <\nCApath /\nCAstore :\nno-CAfile -\nno-CApath -\nno-CAstore -\nnocert -\nverify n\nVerify n\nnameopt s\ncert <\ncert2 <\ncertform F\ncert_chain <\nbuild_chain -\nserverinfo s\nkey s\nkey2 <\nkeyform f\npass s\ndcert <\ndcertform F\ndcert_chain <\ndkey <\ndkeyform f\ndpass s\ndhparam <\nservername s\nservername_fatal -\nnbio_test -\ncrlf -\nquiet -\nno_resume_ephemeral -\nwww -\nWWW -\nignore_unexpected_eof -\ntlsextdebug -\nHTTP -\nid_prefix s\nkeymatexport s\nkeymatexportlen p\nCRL <\nCRLform F\ncrl_download -\nchainCAfile <\nchainCApath /\nchainCAstore :\nverifyCAfile <\nverifyCApath /\nverifyCAstore :\nno_cache -\next_cache -\nverify_return_error -\nverify_quiet -\nign_eof -\nno_ign_eof -\nstatus -\nstatus_all -\nstatus_verbose -\nstatus_timeout n\nstatus_url s\nproxy s\nno_proxy s\nstatus_file <\nsecurity_debug -\nsecurity_debug_verbose -\nbrief -\nrev -\ndebug -\nmsg -\nmsgfile >\nstate -\nasync -\nmax_pipelines p\nnaccept p\nkeylogfile >\nnbio -\ntimeout -\nmtu p\nread_buf p\nsplit_send_frag p\nmax_send_frag p\npsk_identity s\npsk_hint s\npsk s\npsk_session <\nsrpvfile <\nsrpuserseed s\nmax_early_data n\nrecv_max_early_data n\nearly_data -\nnum_tickets n\nanti_replay -\nno_anti_replay -\nhttp_server_binmode -\nno_ca_names -\nstateless -\ntls1 -\ntls1_1 -\ntls1_2 -\ntls1_3 -\ndtls -\nlisten -\ndtls1 -\ndtls1_2 -\nuse_srtp s\nno_dhe -\nnextprotoneg s\nalpn s\nenable_server_rpk -\nenable_client_rpk -\nrand s\nwriterand >\nno_ssl3 -\nno_tls1 -\nno_tls1_1 -\nno_tls1_2 -\nno_tls1_3 -\nbugs -\nno_comp -\ncomp -\nno_tx_cert_comp -\nno_rx_cert_comp -\nno_ticket -\nserverpref -\nlegacy_renegotiation -\nclient_renegotiation -\nno_renegotiation -\nlegacy_server_connect -\nno_resumption_on_reneg -\nno_legacy_server_connect -\nallow_no_dhe_kex -\nprefer_no_dhe_kex -\nprioritize_chacha -\nstrict -\nsigalgs s\nclient_sigalgs s\ngroups s\ncurves s\nnamed_curve s\ncipher s\nciphersuites s\nmin_protocol s\nmax_protocol s\nrecord_padding s\ndebug_broken_protocol -\nno_middlebox -\nno_etm -\nno_ems -\npolicy s\npurpose s\nverify_name s\nverify_depth n\nauth_level n\nattime M\nverify_hostname s\nverify_email s\nverify_ip s\nignore_critical -\nissuer_checks -\ncrl_check -\ncrl_check_all -\npolicy_check -\nexplicit_policy -\ninhibit_any -\ninhibit_map -\nx509_strict -\nextended_crl -\nuse_deltas -\npolicy_print -\ncheck_ss_sig -\ntrusted_first -\nsuiteB_128_only -\nsuiteB_128 -\nsuiteB_192 -\npartial_chain -\nno_alt_chains -\nno_check_time -\nallow_proxy_certs -\nxkey <\nxcert <\nxchain <\nxchain_build -\nxcertform F\nxkeyform F\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "s_time",
+        "option_count": 0,
+        "option_listing": "help -\nconnect s\nnew -\nreuse -\nbugs -\ncipher s\nciphersuites s\ntls1 -\ntls1_1 -\ntls1_2 -\ntls1_3 -\nverify p\ntime p\nwww s\nnameopt s\ncert <\nkey <\ncafile <\nCAfile <\nCApath /\nCAstore :\nno-CAfile -\nno-CApath -\nno-CAstore -\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "sess_id",
+        "option_count": 0,
+        "option_listing": "help -\ncontext s\nin s\ninform F\nout >\noutform f\ntext -\ncert -\nnoout -\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "skeyutl",
+        "option_count": 0,
+        "option_listing": "help -\nskeyopt s\nskeymgmt s\ngenkey -\ncipher s\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "smime",
+        "option_count": 0,
+        "option_listing": "help -\nin <\ninform c\nout >\noutform c\ninkey s\nkeyform f\nengine s\nstream -\nindef -\nnoindef -\nconfig <\nencrypt -\ndecrypt -\nsign -\nresign -\nverify -\npk7out -\npassin s\nmd s\nnointern -\nnodetach -\nnoattr -\nbinary -\nsigner s\ncontent <\nnocerts -\nnosigs -\nnoverify -\ncertfile <\nrecip <\nto s\nfrom s\nsubject s\ntext -\nnosmimecap -\nCApath /\nCAfile <\nCAstore :\nno-CAfile -\nno-CApath -\nno-CAstore -\nnochain -\ncrlfeol -\nrand s\nwriterand >\npolicy s\npurpose s\nverify_name s\nverify_depth n\nauth_level n\nattime M\nverify_hostname s\nverify_email s\nverify_ip s\nignore_critical -\nissuer_checks -\ncrl_check -\ncrl_check_all -\npolicy_check -\nexplicit_policy -\ninhibit_any -\ninhibit_map -\nx509_strict -\nextended_crl -\nuse_deltas -\npolicy_print -\ncheck_ss_sig -\ntrusted_first -\nsuiteB_128_only -\nsuiteB_128 -\nsuiteB_192 -\npartial_chain -\nno_alt_chains -\nno_check_time -\nallow_proxy_certs -\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "speed",
+        "option_count": 0,
+        "option_listing": "help -\nmb -\nmr -\nmulti p\nasync_jobs p\nengine s\nprimes p\nmlock -\ntestmode -\nconfig <\nevp s\nhmac s\ncmac s\ndecrypt -\naead -\nkem-algorithms -\nsignature-algorithms -\nelapsed -\nseconds p\nbytes p\nmisalign p\nrand s\nwriterand >\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "spkac",
+        "option_count": 0,
+        "option_listing": "help -\nspksect s\nengine s\nin <\nkey <\nkeyform f\npassin s\nchallenge s\nspkac s\ndigest s\nout >\nnoout -\npubkey -\nverify -\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "srp",
+        "option_count": 0,
+        "option_listing": "help -\nverbose -\nconfig <\nname s\nengine s\nadd -\nmodify -\ndelete -\nlist -\nsrpvfile <\ngn s\nuserinfo s\npassin s\npassout s\nrand s\nwriterand >\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "storeutl",
+        "option_count": 0,
+        "option_listing": "help -\nengine s\ncerts -\nkeys -\ncrls -\nsubject s\nissuer s\nserial s\nfingerprint s\nalias s\nr -\npassin s\nout >\ntext -\nnoout -\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "ts",
+        "option_count": 0,
+        "option_listing": "help -\nconfig <\nsection s\nengine s\ninkey s\nsigner s\nchain <\nCAfile <\nCApath /\nCAstore :\nuntrusted <\ntoken_in -\ntoken_out -\npassin s\nquery -\ndata <\ndigest s\nqueryfile <\ncert -\nin <\nverify -\nreply -\ntspolicy s\nno_nonce -\nout >\ntext -\nrand s\nwriterand >\npolicy s\npurpose s\nverify_name s\nverify_depth n\nauth_level n\nattime M\nverify_hostname s\nverify_email s\nverify_ip s\nignore_critical -\nissuer_checks -\ncrl_check -\ncrl_check_all -\npolicy_check -\nexplicit_policy -\ninhibit_any -\ninhibit_map -\nx509_strict -\nextended_crl -\nuse_deltas -\npolicy_print -\ncheck_ss_sig -\ntrusted_first -\nsuiteB_128_only -\nsuiteB_128 -\nsuiteB_192 -\npartial_chain -\nno_alt_chains -\nno_check_time -\nallow_proxy_certs -\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "verify",
+        "option_count": 0,
+        "option_listing": "help -\nengine s\nverbose -\nnameopt s\ntrusted <\nCAfile <\nCApath /\nCAstore :\nno-CAfile -\nno-CApath -\nno-CAstore -\nuntrusted <\nCRLfile <\ncrl_download -\nshow_chain -\npolicy s\npurpose s\nverify_name s\nverify_depth n\nauth_level n\nattime M\nverify_hostname s\nverify_email s\nverify_ip s\nignore_critical -\nissuer_checks -\ncrl_check -\ncrl_check_all -\npolicy_check -\nexplicit_policy -\ninhibit_any -\ninhibit_map -\nx509_strict -\nextended_crl -\nuse_deltas -\npolicy_print -\ncheck_ss_sig -\ntrusted_first -\nsuiteB_128_only -\nsuiteB_128 -\nsuiteB_192 -\npartial_chain -\nno_alt_chains -\nno_check_time -\nallow_proxy_certs -\nvfyopt s\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "version",
+        "option_count": 0,
+        "option_listing": "help -\na -\nb -\nd -\ne -\nm -\nf -\no -\np -\nr -\nv -\nc -\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      },
+      {
+        "name": "x509",
+        "option_count": 0,
+        "option_listing": "help -\nin <\npassin s\nnew -\nx509toreq -\nreq -\ncopy_extensions s\ninform f\nvfyopt s\nkey s\nsignkey s\nkeyform E\nout >\noutform f\nnocert -\nnoout -\ntext -\ndateopt s\ncertopt s\nfingerprint -\nalias -\nserial -\nstartdate -\nenddate -\ndates -\nsubject -\nissuer -\nnameopt s\nemail -\nhash -\nsubject_hash -\nsubject_hash_old -\nissuer_hash -\nissuer_hash_old -\next s\nocspid -\nocsp_uri -\npurpose -\npubkey -\nmodulus -\nmulti -\ncheckend M\ncheckhost s\ncheckemail s\ncheckip s\nset_serial s\nnext_serial -\nnot_before s\nnot_after s\ndays n\npreserve_dates -\nset_issuer s\nset_subject s\nsubj s\nforce_pubkey <\nclrext -\nextfile <\nextensions s\nsigopt s\nbadsig -\nCA <\nCAform F\nCAkey s\nCAkeyform E\nCAserial s\nCAcreateserial -\ntrustout -\nsetalias s\nclrtrust -\naddtrust s\nclrreject -\naddreject s\nrand s\nwriterand >\nengine s\nprovider-path s\nprovider s\nprovparam s\npropquery s\n- -\n",
+        "options": [],
+        "options_exit_status": 0
+      }
+    ]
+  },
+  "body_hash": "7e5d09407a2fd5425abe21934036b791a64158c450026cc7a0d2830393346bb3",
+  "generator": "forensics/tools/atlas_runtime.py",
+  "inputs": [
+    {
+      "name": "openssl_binary",
+      "path": "forensics/authorities/prefix/openssl-3.6.3-historical/bin/openssl",
+      "sha256": "f705f4fc148c112a402bee10f60a61dd92c334b07488eb23fc6efd8ddd4cedf2"
+    }
+  ],
+  "kind": "cli-commands",
+  "schema": "openssl-rs/atlas/cli-commands/v1"
+}

@@ -1,0 +1,99 @@
+{
+  "builds": [
+    {
+      "artifacts": {
+        "libcrypto.so.3": {
+          "path": "forensics/authorities/prefix/openssl-3.6.3-historical/lib/libcrypto.so.3",
+          "size_bytes": 7291552
+        },
+        "libssl.so.3": {
+          "path": "forensics/authorities/prefix/openssl-3.6.3-historical/lib/libssl.so.3",
+          "size_bytes": 1266952
+        }
+      },
+      "build_dir": "forensics/authorities/build/openssl-3.6.3-historical",
+      "build_platform": {
+        "machine": "x86_64",
+        "release": "7.2.4-1-cachyos",
+        "system": "Linux"
+      },
+      "build_toolchain": {
+        "cc": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+        "clang": "Debian clang version 14.0.6",
+        "ld": "GNU ld (GNU Binutils for Debian) 2.40",
+        "make": "GNU Make 4.3",
+        "perl": "",
+        "python": "3.11.2"
+      },
+      "captures": "forensics/authorities/captures/openssl-3.6.3-historical",
+      "configure_argv": [
+        "perl",
+        "/work/forensics/authorities/src/openssl-3.6.3/Configure",
+        "linux-x86_64",
+        "--prefix=/work/forensics/authorities/prefix/openssl-3.6.3-historical",
+        "--openssldir=/work/forensics/authorities/prefix/openssl-3.6.3-historical/ssl",
+        "--libdir=lib",
+        "shared",
+        "enable-legacy",
+        "no-tests"
+      ],
+      "id": "openssl-3.6.3-historical",
+      "prefix": "forensics/authorities/prefix/openssl-3.6.3-historical",
+      "profile": "linux-x86_64-default-shared-legacy-notests",
+      "profile_args": [
+        "shared",
+        "enable-legacy",
+        "no-tests"
+      ],
+      "version": "3.6.3"
+    },
+    {
+      "artifacts": {
+        "libcrypto.so.3": {
+          "path": "forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+          "size_bytes": 7295816
+        },
+        "libssl.so.3": {
+          "path": "forensics/authorities/prefix/openssl-3.6.4-production/lib/libssl.so.3",
+          "size_bytes": 1267144
+        }
+      },
+      "build_dir": "forensics/authorities/build/openssl-3.6.4-production",
+      "build_platform": {
+        "machine": "x86_64",
+        "release": "7.2.4-1-cachyos",
+        "system": "Linux"
+      },
+      "build_toolchain": {
+        "cc": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+        "clang": "Debian clang version 14.0.6",
+        "ld": "GNU ld (GNU Binutils for Debian) 2.40",
+        "make": "GNU Make 4.3",
+        "perl": "",
+        "python": "3.11.2"
+      },
+      "captures": "forensics/authorities/captures/openssl-3.6.4-production",
+      "configure_argv": [
+        "perl",
+        "/work/forensics/authorities/src/openssl-3.6.4/Configure",
+        "linux-x86_64",
+        "--prefix=/work/forensics/authorities/prefix/openssl-3.6.4-production",
+        "--openssldir=/work/forensics/authorities/prefix/openssl-3.6.4-production/ssl",
+        "--libdir=lib",
+        "shared",
+        "enable-legacy",
+        "no-tests"
+      ],
+      "id": "openssl-3.6.4-production",
+      "prefix": "forensics/authorities/prefix/openssl-3.6.4-production",
+      "profile": "linux-x86_64-default-shared-legacy-notests",
+      "profile_args": [
+        "shared",
+        "enable-legacy",
+        "no-tests"
+      ],
+      "version": "3.6.4"
+    }
+  ],
+  "schema": "openssl-rs/build-records/v1"
+}

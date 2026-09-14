@@ -1,0 +1,73 @@
+# openssl-rs — one Cargo package, one first-party implementation crate.
+#
+# Architectural constraints (see docs/CUSTODIAN_CONTRACT.md §2 and §3):
+#
+#   * This is the ONLY implementation crate. There is no workspace, and no
+#     component crates (no openssl-core / openssl-provider / openssl-ssl / ...).
+#     Internal modules may be arbitrarily numerous.
+#
+#   * The distribution artifacts OpenSSL consumers expect
+#     (libcrypto.so.3, libssl.so.3, static archives, provider modules, the
+#     `openssl` executable, public headers, pkg-config metadata) are emitted from
+#     this single implementation via custom link/export machinery in Phase 2.
+#     They are deliberately NOT claimed yet: crate-type is `rlib` only until the
+#     export/link machinery and its ABI courts exist. See docs/ABI_POLICY.md.
+#
+#   * No forbidden implementation backend may ever appear in [dependencies].
+#     The list is enforced by forensics/tools/check_forbidden_dependencies.py and
+#     is reproduced here for visibility:
+#
+#         openssl, openssl-sys, rustls, rustls-ffi, aws-lc-rs, aws-lc,
+#         boringssl, libressl, ring
+#
+#     Independent implementations may be used as *test authorities* in the
+#     court container, never as the hidden product. See
+#     docs/CUSTODIAN_CONTRACT.md §3.
+
+[package]
+name = "openssl-rs"
+version = "0.0.0"
+edition = "2021"
+rust-version = "1.98.1"
+publish = false
+description = "Custodian-level native-Rust reconstruction of the OpenSSL 3.x contract"
+license = "Apache-2.0 OR MIT"
+
+# Phase 0/1 skeleton: library only. Distribution artifacts arrive in Phase 2
+# together with the export/version-script machinery that makes them honest.
+[lib]
+name = "openssl_rs"
+path = "src/lib.rs"
+crate-type = ["rlib"]
+
+# No dependencies. Everything the product does must be implemented here.
+[dependencies]
+
+[build-dependencies]
+
+# Lints are part of the contract, not decoration (docs/UNSAFE.md,
+# docs/RELEASE_GATES.md §6): no panic may unwind across the C ABI, and unsafe
+# is confined and documented.
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+missing_docs = "deny"
+unreachable_pub = "warn"
+
+[lints.clippy]
+undocumented_unsafe_blocks = "deny"
+missing_safety_doc = "deny"
+panic = "warn"
+unwrap_used = "warn"
+expect_used = "warn"
+
+[profile.release]
+# Courts must be able to reason about overflow.
+overflow-checks = true
+
+# NOTE: panic strategy is deliberately the default (`unwind`), NOT `abort`.
+# An OpenSSL replacement is a *library*: aborting the caller's process on an
+# internal defect is worse than returning the function's documented failure
+# value. The unwind boundary in src/ffi/mod.rs converts a panic into that
+# failure value, which is what `docs/UNSAFE.md` §3 requires. With `abort`, the
+# boundary could not catch anything and the failure value would be unreachable.
+# Set `panic = "abort"` only for the *court* binaries, never for the product.

@@ -1,0 +1,4709 @@
+{
+  "authority": "openssl-3.6.3-historical",
+  "body": {
+    "algorithm_classes": {
+      "asymcipher-algorithms": {
+        "count": 2,
+        "entries": [
+          {
+            "name": "{ 1.2.156.10197.1.301, SM2 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.1, 2.5.8.1.1, RSA, rsaEncryption }",
+            "provider": "default"
+          }
+        ]
+      },
+      "cipher-algorithms": {
+        "count": 304,
+        "entries": [
+          {
+            "name": "AES-128-CBC",
+            "provider": null
+          },
+          {
+            "name": "AES-128-CBC-CTS",
+            "provider": "default"
+          },
+          {
+            "name": "AES-128-CBC-HMAC-SHA1",
+            "provider": null
+          },
+          {
+            "name": "AES-128-CBC-HMAC-SHA1",
+            "provider": "default"
+          },
+          {
+            "name": "AES-128-CBC-HMAC-SHA256",
+            "provider": null
+          },
+          {
+            "name": "AES-128-CBC-HMAC-SHA256",
+            "provider": "default"
+          },
+          {
+            "name": "AES-128-CFB",
+            "provider": null
+          },
+          {
+            "name": "AES-128-CFB1",
+            "provider": null
+          },
+          {
+            "name": "AES-128-CFB1",
+            "provider": "default"
+          },
+          {
+            "name": "AES-128-CFB8",
+            "provider": null
+          },
+          {
+            "name": "AES-128-CFB8",
+            "provider": "default"
+          },
+          {
+            "name": "AES-128-CTR",
+            "provider": null
+          },
+          {
+            "name": "AES-128-CTR",
+            "provider": "default"
+          },
+          {
+            "name": "AES-128-ECB",
+            "provider": null
+          },
+          {
+            "name": "AES-128-GCM-SIV",
+            "provider": "default"
+          },
+          {
+            "name": "AES-128-OCB",
+            "provider": null
+          },
+          {
+            "name": "AES-128-OCB",
+            "provider": "default"
+          },
+          {
+            "name": "AES-128-OFB",
+            "provider": null
+          },
+          {
+            "name": "AES-128-SIV",
+            "provider": "default"
+          },
+          {
+            "name": "AES-128-XTS",
+            "provider": null
+          },
+          {
+            "name": "AES-192-CBC",
+            "provider": null
+          },
+          {
+            "name": "AES-192-CBC-CTS",
+            "provider": "default"
+          },
+          {
+            "name": "AES-192-CFB",
+            "provider": null
+          },
+          {
+            "name": "AES-192-CFB1",
+            "provider": null
+          },
+          {
+            "name": "AES-192-CFB1",
+            "provider": "default"
+          },
+          {
+            "name": "AES-192-CFB8",
+            "provider": null
+          },
+          {
+            "name": "AES-192-CFB8",
+            "provider": "default"
+          },
+          {
+            "name": "AES-192-CTR",
+            "provider": null
+          },
+          {
+            "name": "AES-192-CTR",
+            "provider": "default"
+          },
+          {
+            "name": "AES-192-ECB",
+            "provider": null
+          },
+          {
+            "name": "AES-192-GCM-SIV",
+            "provider": "default"
+          },
+          {
+            "name": "AES-192-OCB",
+            "provider": null
+          },
+          {
+            "name": "AES-192-OCB",
+            "provider": "default"
+          },
+          {
+            "name": "AES-192-OFB",
+            "provider": null
+          },
+          {
+            "name": "AES-192-SIV",
+            "provider": "default"
+          },
+          {
+            "name": "AES-256-CBC",
+            "provider": null
+          },
+          {
+            "name": "AES-256-CBC-CTS",
+            "provider": "default"
+          },
+          {
+            "name": "AES-256-CBC-HMAC-SHA1",
+            "provider": null
+          },
+          {
+            "name": "AES-256-CBC-HMAC-SHA1",
+            "provider": "default"
+          },
+          {
+            "name": "AES-256-CBC-HMAC-SHA256",
+            "provider": null
+          },
+          {
+            "name": "AES-256-CBC-HMAC-SHA256",
+            "provider": "default"
+          },
+          {
+            "name": "AES-256-CFB",
+            "provider": null
+          },
+          {
+            "name": "AES-256-CFB1",
+            "provider": null
+          },
+          {
+            "name": "AES-256-CFB1",
+            "provider": "default"
+          },
+          {
+            "name": "AES-256-CFB8",
+            "provider": null
+          },
+          {
+            "name": "AES-256-CFB8",
+            "provider": "default"
+          },
+          {
+            "name": "AES-256-CTR",
+            "provider": null
+          },
+          {
+            "name": "AES-256-CTR",
+            "provider": "default"
+          },
+          {
+            "name": "AES-256-ECB",
+            "provider": null
+          },
+          {
+            "name": "AES-256-GCM-SIV",
+            "provider": "default"
+          },
+          {
+            "name": "AES-256-OCB",
+            "provider": null
+          },
+          {
+            "name": "AES-256-OCB",
+            "provider": "default"
+          },
+          {
+            "name": "AES-256-OFB",
+            "provider": null
+          },
+          {
+            "name": "AES-256-SIV",
+            "provider": "default"
+          },
+          {
+            "name": "AES-256-XTS",
+            "provider": null
+          },
+          {
+            "name": "ARIA-128-CBC",
+            "provider": null
+          },
+          {
+            "name": "ARIA-128-CCM",
+            "provider": null
+          },
+          {
+            "name": "ARIA-128-CFB",
+            "provider": null
+          },
+          {
+            "name": "ARIA-128-CFB1",
+            "provider": null
+          },
+          {
+            "name": "ARIA-128-CFB1",
+            "provider": "default"
+          },
+          {
+            "name": "ARIA-128-CFB8",
+            "provider": null
+          },
+          {
+            "name": "ARIA-128-CFB8",
+            "provider": "default"
+          },
+          {
+            "name": "ARIA-128-CTR",
+            "provider": null
+          },
+          {
+            "name": "ARIA-128-ECB",
+            "provider": null
+          },
+          {
+            "name": "ARIA-128-GCM",
+            "provider": null
+          },
+          {
+            "name": "ARIA-128-OFB",
+            "provider": null
+          },
+          {
+            "name": "ARIA-192-CBC",
+            "provider": null
+          },
+          {
+            "name": "ARIA-192-CCM",
+            "provider": null
+          },
+          {
+            "name": "ARIA-192-CFB",
+            "provider": null
+          },
+          {
+            "name": "ARIA-192-CFB1",
+            "provider": null
+          },
+          {
+            "name": "ARIA-192-CFB1",
+            "provider": "default"
+          },
+          {
+            "name": "ARIA-192-CFB8",
+            "provider": null
+          },
+          {
+            "name": "ARIA-192-CFB8",
+            "provider": "default"
+          },
+          {
+            "name": "ARIA-192-CTR",
+            "provider": null
+          },
+          {
+            "name": "ARIA-192-ECB",
+            "provider": null
+          },
+          {
+            "name": "ARIA-192-GCM",
+            "provider": null
+          },
+          {
+            "name": "ARIA-192-OFB",
+            "provider": null
+          },
+          {
+            "name": "ARIA-256-CBC",
+            "provider": null
+          },
+          {
+            "name": "ARIA-256-CCM",
+            "provider": null
+          },
+          {
+            "name": "ARIA-256-CFB",
+            "provider": null
+          },
+          {
+            "name": "ARIA-256-CFB1",
+            "provider": null
+          },
+          {
+            "name": "ARIA-256-CFB1",
+            "provider": "default"
+          },
+          {
+            "name": "ARIA-256-CFB8",
+            "provider": null
+          },
+          {
+            "name": "ARIA-256-CFB8",
+            "provider": "default"
+          },
+          {
+            "name": "ARIA-256-CTR",
+            "provider": null
+          },
+          {
+            "name": "ARIA-256-ECB",
+            "provider": null
+          },
+          {
+            "name": "ARIA-256-GCM",
+            "provider": null
+          },
+          {
+            "name": "ARIA-256-OFB",
+            "provider": null
+          },
+          {
+            "name": "BF-CBC",
+            "provider": null
+          },
+          {
+            "name": "BF-CFB",
+            "provider": null
+          },
+          {
+            "name": "BF-ECB",
+            "provider": null
+          },
+          {
+            "name": "BF-OFB",
+            "provider": null
+          },
+          {
+            "name": "CAMELLIA-128-CBC",
+            "provider": null
+          },
+          {
+            "name": "CAMELLIA-128-CBC-CTS",
+            "provider": "default"
+          },
+          {
+            "name": "CAMELLIA-128-CFB",
+            "provider": null
+          },
+          {
+            "name": "CAMELLIA-128-CFB1",
+            "provider": null
+          },
+          {
+            "name": "CAMELLIA-128-CFB1",
+            "provider": "default"
+          },
+          {
+            "name": "CAMELLIA-128-CFB8",
+            "provider": null
+          },
+          {
+            "name": "CAMELLIA-128-CFB8",
+            "provider": "default"
+          },
+          {
+            "name": "CAMELLIA-128-CTR",
+            "provider": null
+          },
+          {
+            "name": "CAMELLIA-128-ECB",
+            "provider": null
+          },
+          {
+            "name": "CAMELLIA-128-OFB",
+            "provider": null
+          },
+          {
+            "name": "CAMELLIA-192-CBC",
+            "provider": null
+          },
+          {
+            "name": "CAMELLIA-192-CBC-CTS",
+            "provider": "default"
+          },
+          {
+            "name": "CAMELLIA-192-CFB",
+            "provider": null
+          },
+          {
+            "name": "CAMELLIA-192-CFB1",
+            "provider": null
+          },
+          {
+            "name": "CAMELLIA-192-CFB1",
+            "provider": "default"
+          },
+          {
+            "name": "CAMELLIA-192-CFB8",
+            "provider": null
+          },
+          {
+            "name": "CAMELLIA-192-CFB8",
+            "provider": "default"
+          },
+          {
+            "name": "CAMELLIA-192-CTR",
+            "provider": null
+          },
+          {
+            "name": "CAMELLIA-192-ECB",
+            "provider": null
+          },
+          {
+            "name": "CAMELLIA-192-OFB",
+            "provider": null
+          },
+          {
+            "name": "CAMELLIA-256-CBC",
+            "provider": null
+          },
+          {
+            "name": "CAMELLIA-256-CBC-CTS",
+            "provider": "default"
+          },
+          {
+            "name": "CAMELLIA-256-CFB",
+            "provider": null
+          },
+          {
+            "name": "CAMELLIA-256-CFB1",
+            "provider": null
+          },
+          {
+            "name": "CAMELLIA-256-CFB1",
+            "provider": "default"
+          },
+          {
+            "name": "CAMELLIA-256-CFB8",
+            "provider": null
+          },
+          {
+            "name": "CAMELLIA-256-CFB8",
+            "provider": "default"
+          },
+          {
+            "name": "CAMELLIA-256-CTR",
+            "provider": null
+          },
+          {
+            "name": "CAMELLIA-256-ECB",
+            "provider": null
+          },
+          {
+            "name": "CAMELLIA-256-OFB",
+            "provider": null
+          },
+          {
+            "name": "CAST5-CBC",
+            "provider": null
+          },
+          {
+            "name": "CAST5-CFB",
+            "provider": null
+          },
+          {
+            "name": "CAST5-ECB",
+            "provider": null
+          },
+          {
+            "name": "CAST5-OFB",
+            "provider": null
+          },
+          {
+            "name": "ChaCha20",
+            "provider": null
+          },
+          {
+            "name": "ChaCha20",
+            "provider": "default"
+          },
+          {
+            "name": "ChaCha20-Poly1305",
+            "provider": null
+          },
+          {
+            "name": "ChaCha20-Poly1305",
+            "provider": "default"
+          },
+          {
+            "name": "DES-CBC",
+            "provider": null
+          },
+          {
+            "name": "DES-CFB",
+            "provider": null
+          },
+          {
+            "name": "DES-CFB1",
+            "provider": null
+          },
+          {
+            "name": "DES-CFB8",
+            "provider": null
+          },
+          {
+            "name": "DES-ECB",
+            "provider": null
+          },
+          {
+            "name": "DES-EDE",
+            "provider": null
+          },
+          {
+            "name": "DES-EDE-CBC",
+            "provider": null
+          },
+          {
+            "name": "DES-EDE-CBC",
+            "provider": "default"
+          },
+          {
+            "name": "DES-EDE-CFB",
+            "provider": null
+          },
+          {
+            "name": "DES-EDE-CFB",
+            "provider": "default"
+          },
+          {
+            "name": "DES-EDE-OFB",
+            "provider": null
+          },
+          {
+            "name": "DES-EDE-OFB",
+            "provider": "default"
+          },
+          {
+            "name": "DES-EDE3",
+            "provider": null
+          },
+          {
+            "name": "DES-EDE3-CBC",
+            "provider": null
+          },
+          {
+            "name": "DES-EDE3-CFB",
+            "provider": null
+          },
+          {
+            "name": "DES-EDE3-CFB",
+            "provider": "default"
+          },
+          {
+            "name": "DES-EDE3-CFB1",
+            "provider": null
+          },
+          {
+            "name": "DES-EDE3-CFB1",
+            "provider": "default"
+          },
+          {
+            "name": "DES-EDE3-CFB8",
+            "provider": null
+          },
+          {
+            "name": "DES-EDE3-CFB8",
+            "provider": "default"
+          },
+          {
+            "name": "DES-EDE3-OFB",
+            "provider": null
+          },
+          {
+            "name": "DES-EDE3-OFB",
+            "provider": "default"
+          },
+          {
+            "name": "DES-OFB",
+            "provider": null
+          },
+          {
+            "name": "DESX-CBC",
+            "provider": null
+          },
+          {
+            "name": "IDEA-CBC",
+            "provider": null
+          },
+          {
+            "name": "IDEA-CFB",
+            "provider": null
+          },
+          {
+            "name": "IDEA-ECB",
+            "provider": null
+          },
+          {
+            "name": "IDEA-OFB",
+            "provider": null
+          },
+          {
+            "name": "Legacy:",
+            "provider": null
+          },
+          {
+            "name": "NULL",
+            "provider": "default"
+          },
+          {
+            "name": "Provided:",
+            "provider": null
+          },
+          {
+            "name": "RC2-40-CBC",
+            "provider": null
+          },
+          {
+            "name": "RC2-64-CBC",
+            "provider": null
+          },
+          {
+            "name": "RC2-CBC",
+            "provider": null
+          },
+          {
+            "name": "RC2-CFB",
+            "provider": null
+          },
+          {
+            "name": "RC2-ECB",
+            "provider": null
+          },
+          {
+            "name": "RC2-OFB",
+            "provider": null
+          },
+          {
+            "name": "RC4",
+            "provider": null
+          },
+          {
+            "name": "RC4-40",
+            "provider": null
+          },
+          {
+            "name": "RC4-HMAC-MD5",
+            "provider": null
+          },
+          {
+            "name": "SEED-CBC",
+            "provider": null
+          },
+          {
+            "name": "SEED-CFB",
+            "provider": null
+          },
+          {
+            "name": "SEED-ECB",
+            "provider": null
+          },
+          {
+            "name": "SEED-OFB",
+            "provider": null
+          },
+          {
+            "name": "SM4-CBC",
+            "provider": null
+          },
+          {
+            "name": "SM4-CFB",
+            "provider": null
+          },
+          {
+            "name": "SM4-CTR",
+            "provider": null
+          },
+          {
+            "name": "SM4-ECB",
+            "provider": null
+          },
+          {
+            "name": "SM4-OFB",
+            "provider": null
+          },
+          {
+            "name": "aes128 => AES-128-CBC",
+            "provider": null
+          },
+          {
+            "name": "aes128-wrap => id-aes128-wrap",
+            "provider": null
+          },
+          {
+            "name": "aes128-wrap-pad => id-aes128-wrap-pad",
+            "provider": null
+          },
+          {
+            "name": "aes192 => AES-192-CBC",
+            "provider": null
+          },
+          {
+            "name": "aes192-wrap => id-aes192-wrap",
+            "provider": null
+          },
+          {
+            "name": "aes192-wrap-pad => id-aes192-wrap-pad",
+            "provider": null
+          },
+          {
+            "name": "aes256 => AES-256-CBC",
+            "provider": null
+          },
+          {
+            "name": "aes256-wrap => id-aes256-wrap",
+            "provider": null
+          },
+          {
+            "name": "aes256-wrap-pad => id-aes256-wrap-pad",
+            "provider": null
+          },
+          {
+            "name": "aria128 => ARIA-128-CBC",
+            "provider": null
+          },
+          {
+            "name": "aria192 => ARIA-192-CBC",
+            "provider": null
+          },
+          {
+            "name": "aria256 => ARIA-256-CBC",
+            "provider": null
+          },
+          {
+            "name": "bf => BF-CBC",
+            "provider": null
+          },
+          {
+            "name": "blowfish => BF-CBC",
+            "provider": null
+          },
+          {
+            "name": "camellia128 => CAMELLIA-128-CBC",
+            "provider": null
+          },
+          {
+            "name": "camellia192 => CAMELLIA-192-CBC",
+            "provider": null
+          },
+          {
+            "name": "camellia256 => CAMELLIA-256-CBC",
+            "provider": null
+          },
+          {
+            "name": "cast => CAST5-CBC",
+            "provider": null
+          },
+          {
+            "name": "cast-cbc => CAST5-CBC",
+            "provider": null
+          },
+          {
+            "name": "des => DES-CBC",
+            "provider": null
+          },
+          {
+            "name": "des-ede-ecb => DES-EDE",
+            "provider": null
+          },
+          {
+            "name": "des-ede3-ecb => DES-EDE3",
+            "provider": null
+          },
+          {
+            "name": "des3 => DES-EDE3-CBC",
+            "provider": null
+          },
+          {
+            "name": "des3-wrap => id-smime-alg-CMS3DESwrap",
+            "provider": null
+          },
+          {
+            "name": "desx => DESX-CBC",
+            "provider": null
+          },
+          {
+            "name": "id-aes128-CCM",
+            "provider": null
+          },
+          {
+            "name": "id-aes128-GCM",
+            "provider": null
+          },
+          {
+            "name": "id-aes128-wrap",
+            "provider": null
+          },
+          {
+            "name": "id-aes128-wrap-pad",
+            "provider": null
+          },
+          {
+            "name": "id-aes192-CCM",
+            "provider": null
+          },
+          {
+            "name": "id-aes192-GCM",
+            "provider": null
+          },
+          {
+            "name": "id-aes192-wrap",
+            "provider": null
+          },
+          {
+            "name": "id-aes192-wrap-pad",
+            "provider": null
+          },
+          {
+            "name": "id-aes256-CCM",
+            "provider": null
+          },
+          {
+            "name": "id-aes256-GCM",
+            "provider": null
+          },
+          {
+            "name": "id-aes256-wrap",
+            "provider": null
+          },
+          {
+            "name": "id-aes256-wrap-pad",
+            "provider": null
+          },
+          {
+            "name": "id-smime-alg-CMS3DESwrap",
+            "provider": null
+          },
+          {
+            "name": "idea => IDEA-CBC",
+            "provider": null
+          },
+          {
+            "name": "rc2 => RC2-CBC",
+            "provider": null
+          },
+          {
+            "name": "rc2-128 => RC2-CBC",
+            "provider": null
+          },
+          {
+            "name": "rc2-40 => RC2-40-CBC",
+            "provider": null
+          },
+          {
+            "name": "rc2-64 => RC2-64-CBC",
+            "provider": null
+          },
+          {
+            "name": "seed => SEED-CBC",
+            "provider": null
+          },
+          {
+            "name": "sm4 => SM4-CBC",
+            "provider": null
+          },
+          {
+            "name": "{ 0.3.4401.5.3.1.9.1, CAMELLIA-128-ECB }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 0.3.4401.5.3.1.9.21, CAMELLIA-192-ECB }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 0.3.4401.5.3.1.9.23, CAMELLIA-192-OFB }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 0.3.4401.5.3.1.9.24, CAMELLIA-192-CFB }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 0.3.4401.5.3.1.9.29, CAMELLIA-192-CTR }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 0.3.4401.5.3.1.9.3, CAMELLIA-128-OFB }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 0.3.4401.5.3.1.9.4, CAMELLIA-128-CFB }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 0.3.4401.5.3.1.9.41, CAMELLIA-256-ECB }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 0.3.4401.5.3.1.9.43, CAMELLIA-256-OFB }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 0.3.4401.5.3.1.9.44, CAMELLIA-256-CFB }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 0.3.4401.5.3.1.9.49, CAMELLIA-256-CTR }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 0.3.4401.5.3.1.9.9, CAMELLIA-128-CTR }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.156.10197.1.104.1, SM4-ECB }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.156.10197.1.104.10, SM4-XTS }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.156.10197.1.104.2, SM4, SM4-CBC }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.156.10197.1.104.3, SM4-OFB, SM4-OFB128 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.156.10197.1.104.4, SM4-CFB, SM4-CFB128 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.156.10197.1.104.7, SM4-CTR }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.156.10197.1.104.8, SM4-GCM }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.156.10197.1.104.9, SM4-CCM }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.392.200011.61.1.1.1.2, CAMELLIA-128-CBC, CAMELLIA128 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.392.200011.61.1.1.1.3, CAMELLIA-192-CBC, CAMELLIA192 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.392.200011.61.1.1.1.4, CAMELLIA-256-CBC, CAMELLIA256 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.410.200046.1.1.1, ARIA-128-ECB }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.410.200046.1.1.10, ARIA-192-CTR }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.410.200046.1.1.11, ARIA-256-ECB }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.410.200046.1.1.12, ARIA-256-CBC, ARIA256 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.410.200046.1.1.13, ARIA-256-CFB }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.410.200046.1.1.14, ARIA-256-OFB }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.410.200046.1.1.15, ARIA-256-CTR }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.410.200046.1.1.2, ARIA-128-CBC, ARIA128 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.410.200046.1.1.3, ARIA-128-CFB }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.410.200046.1.1.34, ARIA-128-GCM }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.410.200046.1.1.35, ARIA-192-GCM }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.410.200046.1.1.36, ARIA-256-GCM }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.410.200046.1.1.37, ARIA-128-CCM }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.410.200046.1.1.38, ARIA-192-CCM }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.410.200046.1.1.39, ARIA-256-CCM }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.410.200046.1.1.4, ARIA-128-OFB }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.410.200046.1.1.5, ARIA-128-CTR }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.410.200046.1.1.6, ARIA-192-ECB }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.410.200046.1.1.7, ARIA-192-CBC, ARIA192 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.410.200046.1.1.8, ARIA-192-CFB }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.410.200046.1.1.9, ARIA-192-OFB }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.9.16.3.6, DES3-WRAP, id-smime-alg-CMS3DESwrap }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.113549.3.7, DES-EDE3-CBC, DES3 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.3.111.2.1619.0.1.1, AES-128-XTS }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.3.111.2.1619.0.1.2, AES-256-XTS }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.3.14.3.2.17, DES-EDE, DES-EDE-ECB }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.1.1, AES-128-ECB }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.1.2, AES-128-CBC, AES128 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.1.21, AES-192-ECB }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.1.22, AES-192-CBC, AES192 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.1.23, AES-192-OFB }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.1.24, AES-192-CFB }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.1.25, AES-192-WRAP, AES192-WRAP, id-aes192-wrap }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.1.26, aes-192-gcm, id-aes192-GCM }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.1.27, aes-192-ccm, id-aes192-CCM }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.1.28, AES-192-WRAP-PAD, AES192-WRAP-PAD, id-aes192-wrap-pad }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.1.3, AES-128-OFB }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.1.4, AES-128-CFB }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.1.41, AES-256-ECB }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.1.42, AES-256-CBC, AES256 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.1.43, AES-256-OFB }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.1.44, AES-256-CFB }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.1.45, AES-256-WRAP, AES256-WRAP, id-aes256-wrap }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.1.46, aes-256-gcm, id-aes256-GCM }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.1.47, aes-256-ccm, id-aes256-CCM }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.1.48, AES-256-WRAP-PAD, AES256-WRAP-PAD, id-aes256-wrap-pad }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.1.5, AES-128-WRAP, AES128-WRAP, id-aes128-wrap }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.1.6, aes-128-gcm, id-aes128-GCM }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.1.7, aes-128-ccm, id-aes128-CCM }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.1.8, AES-128-WRAP-PAD, AES128-WRAP-PAD, id-aes128-wrap-pad }",
+            "provider": "default"
+          },
+          {
+            "name": "{ AES-128-WRAP-INV, AES128-WRAP-INV }",
+            "provider": "default"
+          },
+          {
+            "name": "{ AES-128-WRAP-PAD-INV, AES128-WRAP-PAD-INV }",
+            "provider": "default"
+          },
+          {
+            "name": "{ AES-192-WRAP-INV, AES192-WRAP-INV }",
+            "provider": "default"
+          },
+          {
+            "name": "{ AES-192-WRAP-PAD-INV, AES192-WRAP-PAD-INV }",
+            "provider": "default"
+          },
+          {
+            "name": "{ AES-256-WRAP-INV, AES256-WRAP-INV }",
+            "provider": "default"
+          },
+          {
+            "name": "{ AES-256-WRAP-PAD-INV, AES256-WRAP-PAD-INV }",
+            "provider": "default"
+          },
+          {
+            "name": "{ DES-EDE3, DES-EDE3-ECB }",
+            "provider": "default"
+          }
+        ]
+      },
+      "decoders": {
+        "count": 77,
+        "entries": [
+          {
+            "name": "DER",
+            "provider": "default (provider=default,fips=yes,input=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "DER",
+            "provider": "default (provider=default,fips=yes,input=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "DER",
+            "provider": "default (provider=default,fips=yes,input=pem)"
+          },
+          {
+            "name": "ML-DSA-44",
+            "provider": "default (provider=default,fips=yes,input=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "ML-DSA-44",
+            "provider": "default (provider=default,fips=yes,input=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "ML-DSA-65",
+            "provider": "default (provider=default,fips=yes,input=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "ML-DSA-65",
+            "provider": "default (provider=default,fips=yes,input=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "ML-DSA-87",
+            "provider": "default (provider=default,fips=yes,input=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "ML-DSA-87",
+            "provider": "default (provider=default,fips=yes,input=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "ML-KEM-1024",
+            "provider": "default (provider=default,fips=yes,input=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "ML-KEM-1024",
+            "provider": "default (provider=default,fips=yes,input=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "ML-KEM-512",
+            "provider": "default (provider=default,fips=yes,input=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "ML-KEM-512",
+            "provider": "default (provider=default,fips=yes,input=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "ML-KEM-768",
+            "provider": "default (provider=default,fips=yes,input=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "ML-KEM-768",
+            "provider": "default (provider=default,fips=yes,input=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "Provided DECODERs:",
+            "provider": null
+          },
+          {
+            "name": "SLH-DSA-SHA2-128f",
+            "provider": "default (provider=default,fips=yes,input=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-128f",
+            "provider": "default (provider=default,fips=yes,input=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-128s",
+            "provider": "default (provider=default,fips=yes,input=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-128s",
+            "provider": "default (provider=default,fips=yes,input=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-192f",
+            "provider": "default (provider=default,fips=yes,input=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-192f",
+            "provider": "default (provider=default,fips=yes,input=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-192s",
+            "provider": "default (provider=default,fips=yes,input=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-192s",
+            "provider": "default (provider=default,fips=yes,input=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-256f",
+            "provider": "default (provider=default,fips=yes,input=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-256f",
+            "provider": "default (provider=default,fips=yes,input=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-256s",
+            "provider": "default (provider=default,fips=yes,input=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-256s",
+            "provider": "default (provider=default,fips=yes,input=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-128f",
+            "provider": "default (provider=default,fips=yes,input=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-128f",
+            "provider": "default (provider=default,fips=yes,input=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-128s",
+            "provider": "default (provider=default,fips=yes,input=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-128s",
+            "provider": "default (provider=default,fips=yes,input=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-192f",
+            "provider": "default (provider=default,fips=yes,input=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-192f",
+            "provider": "default (provider=default,fips=yes,input=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-192s",
+            "provider": "default (provider=default,fips=yes,input=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-192s",
+            "provider": "default (provider=default,fips=yes,input=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-256f",
+            "provider": "default (provider=default,fips=yes,input=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-256f",
+            "provider": "default (provider=default,fips=yes,input=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-256s",
+            "provider": "default (provider=default,fips=yes,input=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-256s",
+            "provider": "default (provider=default,fips=yes,input=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.156.10197.1.301, SM2 }",
+            "provider": "default (provider=default,fips=no,input=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.156.10197.1.301, SM2 }",
+            "provider": "default (provider=default,fips=no,input=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.156.10197.1.301, SM2 }",
+            "provider": "default (provider=default,fips=no,input=der,structure=type-specific)"
+          },
+          {
+            "name": "{ 1.2.840.10040.4.1, 1.3.14.3.2.12, DSA, DSA-old, dsaEncryption, dsaEncryption-old }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.10040.4.1, 1.3.14.3.2.12, DSA, DSA-old, dsaEncryption, dsaEncryption-old }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.10040.4.1, 1.3.14.3.2.12, DSA, DSA-old, dsaEncryption, dsaEncryption-old }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=dsa)"
+          },
+          {
+            "name": "{ 1.2.840.10040.4.1, 1.3.14.3.2.12, DSA, DSA-old, dsaEncryption, dsaEncryption-old }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=type-specific)"
+          },
+          {
+            "name": "{ 1.2.840.10040.4.1, 1.3.14.3.2.12, DSA, DSA-old, dsaEncryption, dsaEncryption-old }",
+            "provider": "default (provider=default,fips=yes,input=msblob)"
+          },
+          {
+            "name": "{ 1.2.840.10040.4.1, 1.3.14.3.2.12, DSA, DSA-old, dsaEncryption, dsaEncryption-old }",
+            "provider": "default (provider=default,fips=yes,input=pvk)"
+          },
+          {
+            "name": "{ 1.2.840.10045.2.1, EC, id-ecPublicKey }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.10045.2.1, EC, id-ecPublicKey }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.10045.2.1, EC, id-ecPublicKey }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=ec)"
+          },
+          {
+            "name": "{ 1.2.840.10045.2.1, EC, id-ecPublicKey }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=type-specific)"
+          },
+          {
+            "name": "{ 1.2.840.10046.2.1, dhpublicnumber, DHX, X9.42 DH }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.10046.2.1, dhpublicnumber, DHX, X9.42 DH }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.10046.2.1, dhpublicnumber, DHX, X9.42 DH }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=dhx)"
+          },
+          {
+            "name": "{ 1.2.840.10046.2.1, dhpublicnumber, DHX, X9.42 DH }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=type-specific)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.1, 2.5.8.1.1, RSA, rsaEncryption }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.1, 2.5.8.1.1, RSA, rsaEncryption }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.1, 2.5.8.1.1, RSA, rsaEncryption }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=rsa)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.1, 2.5.8.1.1, RSA, rsaEncryption }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=type-specific)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.1, 2.5.8.1.1, RSA, rsaEncryption }",
+            "provider": "default (provider=default,fips=yes,input=msblob)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.1, 2.5.8.1.1, RSA, rsaEncryption }",
+            "provider": "default (provider=default,fips=yes,input=pvk)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.10, RSA-PSS, RSASSA-PSS, rsassaPss }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.10, RSA-PSS, RSASSA-PSS, rsassaPss }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.3.1, DH, dhKeyAgreement }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.3.1, DH, dhKeyAgreement }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.3.1, DH, dhKeyAgreement }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=dh)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.3.1, DH, dhKeyAgreement }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=type-specific)"
+          },
+          {
+            "name": "{ 1.3.101.110, X25519 }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.110, X25519 }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.111, X448 }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.111, X448 }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.112, ED25519 }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.112, ED25519 }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.113, ED448 }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.113, ED448 }",
+            "provider": "default (provider=default,fips=yes,input=der,structure=SubjectPublicKeyInfo)"
+          }
+        ]
+      },
+      "digest-algorithms": {
+        "count": 88,
+        "entries": [
+          {
+            "name": "BLAKE2b512",
+            "provider": null
+          },
+          {
+            "name": "BLAKE2s256",
+            "provider": null
+          },
+          {
+            "name": "KECCAK-224",
+            "provider": "default"
+          },
+          {
+            "name": "KECCAK-256",
+            "provider": "default"
+          },
+          {
+            "name": "KECCAK-384",
+            "provider": "default"
+          },
+          {
+            "name": "KECCAK-512",
+            "provider": "default"
+          },
+          {
+            "name": "Legacy:",
+            "provider": null
+          },
+          {
+            "name": "MD4",
+            "provider": null
+          },
+          {
+            "name": "MD5",
+            "provider": null
+          },
+          {
+            "name": "MD5-SHA1",
+            "provider": null
+          },
+          {
+            "name": "MD5-SHA1",
+            "provider": "default"
+          },
+          {
+            "name": "MDC2",
+            "provider": null
+          },
+          {
+            "name": "NULL",
+            "provider": "default"
+          },
+          {
+            "name": "Provided:",
+            "provider": null
+          },
+          {
+            "name": "RIPEMD160",
+            "provider": null
+          },
+          {
+            "name": "RSA-MD4 => MD4",
+            "provider": null
+          },
+          {
+            "name": "RSA-MD5 => MD5",
+            "provider": null
+          },
+          {
+            "name": "RSA-MDC2 => MDC2",
+            "provider": null
+          },
+          {
+            "name": "RSA-RIPEMD160 => RIPEMD160",
+            "provider": null
+          },
+          {
+            "name": "RSA-SHA1 => SHA1",
+            "provider": null
+          },
+          {
+            "name": "RSA-SHA1-2 => RSA-SHA1",
+            "provider": null
+          },
+          {
+            "name": "RSA-SHA224 => SHA224",
+            "provider": null
+          },
+          {
+            "name": "RSA-SHA256 => SHA256",
+            "provider": null
+          },
+          {
+            "name": "RSA-SHA3-224 => SHA3-224",
+            "provider": null
+          },
+          {
+            "name": "RSA-SHA3-256 => SHA3-256",
+            "provider": null
+          },
+          {
+            "name": "RSA-SHA3-384 => SHA3-384",
+            "provider": null
+          },
+          {
+            "name": "RSA-SHA3-512 => SHA3-512",
+            "provider": null
+          },
+          {
+            "name": "RSA-SHA384 => SHA384",
+            "provider": null
+          },
+          {
+            "name": "RSA-SHA512 => SHA512",
+            "provider": null
+          },
+          {
+            "name": "RSA-SHA512/224 => SHA512-224",
+            "provider": null
+          },
+          {
+            "name": "RSA-SHA512/256 => SHA512-256",
+            "provider": null
+          },
+          {
+            "name": "RSA-SM3 => SM3",
+            "provider": null
+          },
+          {
+            "name": "SHA1",
+            "provider": null
+          },
+          {
+            "name": "SHA224",
+            "provider": null
+          },
+          {
+            "name": "SHA256",
+            "provider": null
+          },
+          {
+            "name": "SHA3-224",
+            "provider": null
+          },
+          {
+            "name": "SHA3-256",
+            "provider": null
+          },
+          {
+            "name": "SHA3-384",
+            "provider": null
+          },
+          {
+            "name": "SHA3-512",
+            "provider": null
+          },
+          {
+            "name": "SHA384",
+            "provider": null
+          },
+          {
+            "name": "SHA512",
+            "provider": null
+          },
+          {
+            "name": "SHA512-224",
+            "provider": null
+          },
+          {
+            "name": "SHA512-256",
+            "provider": null
+          },
+          {
+            "name": "SHAKE128",
+            "provider": null
+          },
+          {
+            "name": "SHAKE256",
+            "provider": null
+          },
+          {
+            "name": "SM3",
+            "provider": null
+          },
+          {
+            "name": "id-rsassa-pkcs1-v1_5-with-sha3-224 => SHA3-224",
+            "provider": null
+          },
+          {
+            "name": "id-rsassa-pkcs1-v1_5-with-sha3-256 => SHA3-256",
+            "provider": null
+          },
+          {
+            "name": "id-rsassa-pkcs1-v1_5-with-sha3-384 => SHA3-384",
+            "provider": null
+          },
+          {
+            "name": "id-rsassa-pkcs1-v1_5-with-sha3-512 => SHA3-512",
+            "provider": null
+          },
+          {
+            "name": "md4WithRSAEncryption => MD4",
+            "provider": null
+          },
+          {
+            "name": "md5WithRSAEncryption => MD5",
+            "provider": null
+          },
+          {
+            "name": "mdc2WithRSA => MDC2",
+            "provider": null
+          },
+          {
+            "name": "ripemd => RIPEMD160",
+            "provider": null
+          },
+          {
+            "name": "ripemd160WithRSA => RIPEMD160",
+            "provider": null
+          },
+          {
+            "name": "rmd160 => RIPEMD160",
+            "provider": null
+          },
+          {
+            "name": "sha1WithRSAEncryption => SHA1",
+            "provider": null
+          },
+          {
+            "name": "sha224WithRSAEncryption => SHA224",
+            "provider": null
+          },
+          {
+            "name": "sha256WithRSAEncryption => SHA256",
+            "provider": null
+          },
+          {
+            "name": "sha384WithRSAEncryption => SHA384",
+            "provider": null
+          },
+          {
+            "name": "sha512-224WithRSAEncryption => SHA512-224",
+            "provider": null
+          },
+          {
+            "name": "sha512-256WithRSAEncryption => SHA512-256",
+            "provider": null
+          },
+          {
+            "name": "sha512WithRSAEncryption => SHA512",
+            "provider": null
+          },
+          {
+            "name": "sm3WithRSAEncryption => SM3",
+            "provider": null
+          },
+          {
+            "name": "ssl3-md5 => MD5",
+            "provider": null
+          },
+          {
+            "name": "ssl3-sha1 => SHA1",
+            "provider": null
+          },
+          {
+            "name": "whirlpool",
+            "provider": null
+          },
+          {
+            "name": "{ 1.2.156.10197.1.401, SM3 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.113549.2.5, MD5, SSL3-MD5 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.3.14.3.2.26, SHA-1, SHA1, SSL3-SHA1 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.3.36.3.2.1, RIPEMD, RIPEMD-160, RIPEMD160, RMD160 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.3.6.1.4.1.1722.12.2.1.16, BLAKE2B-512, BLAKE2b512 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.3.6.1.4.1.1722.12.2.2.8, BLAKE2S-256, BLAKE2s256 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.2.1, SHA-256, SHA2-256, SHA256 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.2.10, SHA3-512 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.2.11, SHAKE-128, SHAKE128 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.2.12, SHAKE-256, SHAKE256 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.2.2, SHA-384, SHA2-384, SHA384 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.2.3, SHA-512, SHA2-512, SHA512 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.2.4, SHA-224, SHA2-224, SHA224 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.2.5, SHA-512/224, SHA2-512/224, SHA512-224 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.2.6, SHA-512/256, SHA2-512/256, SHA512-256 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.2.7, SHA3-224 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.2.8, SHA3-256 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.2.9, SHA3-384 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ KECCAK-KMAC-128, KECCAK-KMAC128 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ KECCAK-KMAC-256, KECCAK-KMAC256 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ SHA-256/192, SHA2-256/192, SHA256-192 }",
+            "provider": "default"
+          }
+        ]
+      },
+      "disabled": {
+        "count": 8,
+        "entries": [
+          "Disabled algorithms:",
+          "MD2",
+          "RC5",
+          "SCTP",
+          "SSL3",
+          "ZLIB",
+          "BROTLI",
+          "ZSTD"
+        ]
+      },
+      "encoders": {
+        "count": 242,
+        "entries": [
+          {
+            "name": "ML-DSA-44",
+            "provider": "default (provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "ML-DSA-44",
+            "provider": "default (provider=default,fips=yes,output=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "ML-DSA-44",
+            "provider": "default (provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "ML-DSA-44",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "ML-DSA-44",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "ML-DSA-44",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "ML-DSA-44",
+            "provider": "default (provider=default,fips=yes,output=text)"
+          },
+          {
+            "name": "ML-DSA-65",
+            "provider": "default (provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "ML-DSA-65",
+            "provider": "default (provider=default,fips=yes,output=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "ML-DSA-65",
+            "provider": "default (provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "ML-DSA-65",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "ML-DSA-65",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "ML-DSA-65",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "ML-DSA-65",
+            "provider": "default (provider=default,fips=yes,output=text)"
+          },
+          {
+            "name": "ML-DSA-87",
+            "provider": "default (provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "ML-DSA-87",
+            "provider": "default (provider=default,fips=yes,output=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "ML-DSA-87",
+            "provider": "default (provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "ML-DSA-87",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "ML-DSA-87",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "ML-DSA-87",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "ML-DSA-87",
+            "provider": "default (provider=default,fips=yes,output=text)"
+          },
+          {
+            "name": "ML-KEM-1024",
+            "provider": "default (provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "ML-KEM-1024",
+            "provider": "default (provider=default,fips=yes,output=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "ML-KEM-1024",
+            "provider": "default (provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "ML-KEM-1024",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "ML-KEM-1024",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "ML-KEM-1024",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "ML-KEM-1024",
+            "provider": "default (provider=default,fips=yes,output=text)"
+          },
+          {
+            "name": "ML-KEM-512",
+            "provider": "default (provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "ML-KEM-512",
+            "provider": "default (provider=default,fips=yes,output=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "ML-KEM-512",
+            "provider": "default (provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "ML-KEM-512",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "ML-KEM-512",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "ML-KEM-512",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "ML-KEM-512",
+            "provider": "default (provider=default,fips=yes,output=text)"
+          },
+          {
+            "name": "ML-KEM-768",
+            "provider": "default (provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "ML-KEM-768",
+            "provider": "default (provider=default,fips=yes,output=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "ML-KEM-768",
+            "provider": "default (provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "ML-KEM-768",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "ML-KEM-768",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "ML-KEM-768",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "ML-KEM-768",
+            "provider": "default (provider=default,fips=yes,output=text)"
+          },
+          {
+            "name": "Provided ENCODERs:",
+            "provider": null
+          },
+          {
+            "name": "SLH-DSA-SHA2-128f",
+            "provider": "default (provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-128f",
+            "provider": "default (provider=default,fips=yes,output=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-128f",
+            "provider": "default (provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-128f",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-128f",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-128f",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-128f",
+            "provider": "default (provider=default,fips=yes,output=text)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-128s",
+            "provider": "default (provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-128s",
+            "provider": "default (provider=default,fips=yes,output=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-128s",
+            "provider": "default (provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-128s",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-128s",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-128s",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-128s",
+            "provider": "default (provider=default,fips=yes,output=text)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-192f",
+            "provider": "default (provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-192f",
+            "provider": "default (provider=default,fips=yes,output=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-192f",
+            "provider": "default (provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-192f",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-192f",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-192f",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-192f",
+            "provider": "default (provider=default,fips=yes,output=text)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-192s",
+            "provider": "default (provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-192s",
+            "provider": "default (provider=default,fips=yes,output=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-192s",
+            "provider": "default (provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-192s",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-192s",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-192s",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-192s",
+            "provider": "default (provider=default,fips=yes,output=text)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-256f",
+            "provider": "default (provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-256f",
+            "provider": "default (provider=default,fips=yes,output=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-256f",
+            "provider": "default (provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-256f",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-256f",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-256f",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-256f",
+            "provider": "default (provider=default,fips=yes,output=text)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-256s",
+            "provider": "default (provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-256s",
+            "provider": "default (provider=default,fips=yes,output=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-256s",
+            "provider": "default (provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-256s",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-256s",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-256s",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHA2-256s",
+            "provider": "default (provider=default,fips=yes,output=text)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-128f",
+            "provider": "default (provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-128f",
+            "provider": "default (provider=default,fips=yes,output=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-128f",
+            "provider": "default (provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-128f",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-128f",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-128f",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-128f",
+            "provider": "default (provider=default,fips=yes,output=text)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-128s",
+            "provider": "default (provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-128s",
+            "provider": "default (provider=default,fips=yes,output=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-128s",
+            "provider": "default (provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-128s",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-128s",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-128s",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-128s",
+            "provider": "default (provider=default,fips=yes,output=text)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-192f",
+            "provider": "default (provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-192f",
+            "provider": "default (provider=default,fips=yes,output=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-192f",
+            "provider": "default (provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-192f",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-192f",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-192f",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-192f",
+            "provider": "default (provider=default,fips=yes,output=text)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-192s",
+            "provider": "default (provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-192s",
+            "provider": "default (provider=default,fips=yes,output=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-192s",
+            "provider": "default (provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-192s",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-192s",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-192s",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-192s",
+            "provider": "default (provider=default,fips=yes,output=text)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-256f",
+            "provider": "default (provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-256f",
+            "provider": "default (provider=default,fips=yes,output=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-256f",
+            "provider": "default (provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-256f",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-256f",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-256f",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-256f",
+            "provider": "default (provider=default,fips=yes,output=text)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-256s",
+            "provider": "default (provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-256s",
+            "provider": "default (provider=default,fips=yes,output=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-256s",
+            "provider": "default (provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-256s",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-256s",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-256s",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "SLH-DSA-SHAKE-256s",
+            "provider": "default (provider=default,fips=yes,output=text)"
+          },
+          {
+            "name": "{ 1.2.156.10197.1.301, SM2 }",
+            "provider": "default (provider=default,fips=no,output=blob)"
+          },
+          {
+            "name": "{ 1.2.156.10197.1.301, SM2 }",
+            "provider": "default (provider=default,fips=no,output=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.156.10197.1.301, SM2 }",
+            "provider": "default (provider=default,fips=no,output=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.156.10197.1.301, SM2 }",
+            "provider": "default (provider=default,fips=no,output=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.156.10197.1.301, SM2 }",
+            "provider": "default (provider=default,fips=no,output=der,structure=type-specific)"
+          },
+          {
+            "name": "{ 1.2.156.10197.1.301, SM2 }",
+            "provider": "default (provider=default,fips=no,output=pem,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.156.10197.1.301, SM2 }",
+            "provider": "default (provider=default,fips=no,output=pem,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.156.10197.1.301, SM2 }",
+            "provider": "default (provider=default,fips=no,output=pem,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.156.10197.1.301, SM2 }",
+            "provider": "default (provider=default,fips=no,output=pem,structure=type-specific)"
+          },
+          {
+            "name": "{ 1.2.156.10197.1.301, SM2 }",
+            "provider": "default (provider=default,fips=no,output=text)"
+          },
+          {
+            "name": "{ 1.2.840.10040.4.1, 1.3.14.3.2.12, DSA, DSA-old, dsaEncryption, dsaEncryption-old }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.10040.4.1, 1.3.14.3.2.12, DSA, DSA-old, dsaEncryption, dsaEncryption-old }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.10040.4.1, 1.3.14.3.2.12, DSA, DSA-old, dsaEncryption, dsaEncryption-old }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.10040.4.1, 1.3.14.3.2.12, DSA, DSA-old, dsaEncryption, dsaEncryption-old }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=dsa)"
+          },
+          {
+            "name": "{ 1.2.840.10040.4.1, 1.3.14.3.2.12, DSA, DSA-old, dsaEncryption, dsaEncryption-old }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=type-specific)"
+          },
+          {
+            "name": "{ 1.2.840.10040.4.1, 1.3.14.3.2.12, DSA, DSA-old, dsaEncryption, dsaEncryption-old }",
+            "provider": "default (provider=default,fips=yes,output=msblob)"
+          },
+          {
+            "name": "{ 1.2.840.10040.4.1, 1.3.14.3.2.12, DSA, DSA-old, dsaEncryption, dsaEncryption-old }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.10040.4.1, 1.3.14.3.2.12, DSA, DSA-old, dsaEncryption, dsaEncryption-old }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.10040.4.1, 1.3.14.3.2.12, DSA, DSA-old, dsaEncryption, dsaEncryption-old }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.10040.4.1, 1.3.14.3.2.12, DSA, DSA-old, dsaEncryption, dsaEncryption-old }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=dsa)"
+          },
+          {
+            "name": "{ 1.2.840.10040.4.1, 1.3.14.3.2.12, DSA, DSA-old, dsaEncryption, dsaEncryption-old }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=type-specific)"
+          },
+          {
+            "name": "{ 1.2.840.10040.4.1, 1.3.14.3.2.12, DSA, DSA-old, dsaEncryption, dsaEncryption-old }",
+            "provider": "default (provider=default,fips=yes,output=pvk)"
+          },
+          {
+            "name": "{ 1.2.840.10040.4.1, 1.3.14.3.2.12, DSA, DSA-old, dsaEncryption, dsaEncryption-old }",
+            "provider": "default (provider=default,fips=yes,output=text)"
+          },
+          {
+            "name": "{ 1.2.840.10045.2.1, EC, id-ecPublicKey }",
+            "provider": "default (provider=default,fips=yes,output=blob)"
+          },
+          {
+            "name": "{ 1.2.840.10045.2.1, EC, id-ecPublicKey }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.10045.2.1, EC, id-ecPublicKey }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.10045.2.1, EC, id-ecPublicKey }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.10045.2.1, EC, id-ecPublicKey }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=X9.62)"
+          },
+          {
+            "name": "{ 1.2.840.10045.2.1, EC, id-ecPublicKey }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=ec)"
+          },
+          {
+            "name": "{ 1.2.840.10045.2.1, EC, id-ecPublicKey }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=type-specific)"
+          },
+          {
+            "name": "{ 1.2.840.10045.2.1, EC, id-ecPublicKey }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.10045.2.1, EC, id-ecPublicKey }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.10045.2.1, EC, id-ecPublicKey }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.10045.2.1, EC, id-ecPublicKey }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=X9.62)"
+          },
+          {
+            "name": "{ 1.2.840.10045.2.1, EC, id-ecPublicKey }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=ec)"
+          },
+          {
+            "name": "{ 1.2.840.10045.2.1, EC, id-ecPublicKey }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=type-specific)"
+          },
+          {
+            "name": "{ 1.2.840.10045.2.1, EC, id-ecPublicKey }",
+            "provider": "default (provider=default,fips=yes,output=text)"
+          },
+          {
+            "name": "{ 1.2.840.10046.2.1, dhpublicnumber, DHX, X9.42 DH }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.10046.2.1, dhpublicnumber, DHX, X9.42 DH }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.10046.2.1, dhpublicnumber, DHX, X9.42 DH }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.10046.2.1, dhpublicnumber, DHX, X9.42 DH }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=X9.42)"
+          },
+          {
+            "name": "{ 1.2.840.10046.2.1, dhpublicnumber, DHX, X9.42 DH }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=dhx)"
+          },
+          {
+            "name": "{ 1.2.840.10046.2.1, dhpublicnumber, DHX, X9.42 DH }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=type-specific)"
+          },
+          {
+            "name": "{ 1.2.840.10046.2.1, dhpublicnumber, DHX, X9.42 DH }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.10046.2.1, dhpublicnumber, DHX, X9.42 DH }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.10046.2.1, dhpublicnumber, DHX, X9.42 DH }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.10046.2.1, dhpublicnumber, DHX, X9.42 DH }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=X9.42)"
+          },
+          {
+            "name": "{ 1.2.840.10046.2.1, dhpublicnumber, DHX, X9.42 DH }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=dhx)"
+          },
+          {
+            "name": "{ 1.2.840.10046.2.1, dhpublicnumber, DHX, X9.42 DH }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=type-specific)"
+          },
+          {
+            "name": "{ 1.2.840.10046.2.1, dhpublicnumber, DHX, X9.42 DH }",
+            "provider": "default (provider=default,fips=yes,output=text)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.1, 2.5.8.1.1, RSA, rsaEncryption }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.1, 2.5.8.1.1, RSA, rsaEncryption }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.1, 2.5.8.1.1, RSA, rsaEncryption }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.1, 2.5.8.1.1, RSA, rsaEncryption }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=pkcs1)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.1, 2.5.8.1.1, RSA, rsaEncryption }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=rsa)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.1, 2.5.8.1.1, RSA, rsaEncryption }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=type-specific)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.1, 2.5.8.1.1, RSA, rsaEncryption }",
+            "provider": "default (provider=default,fips=yes,output=msblob)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.1, 2.5.8.1.1, RSA, rsaEncryption }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.1, 2.5.8.1.1, RSA, rsaEncryption }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.1, 2.5.8.1.1, RSA, rsaEncryption }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.1, 2.5.8.1.1, RSA, rsaEncryption }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=pkcs1)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.1, 2.5.8.1.1, RSA, rsaEncryption }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=rsa)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.1, 2.5.8.1.1, RSA, rsaEncryption }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=type-specific)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.1, 2.5.8.1.1, RSA, rsaEncryption }",
+            "provider": "default (provider=default,fips=yes,output=pvk)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.1, 2.5.8.1.1, RSA, rsaEncryption }",
+            "provider": "default (provider=default,fips=yes,output=text)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.10, RSA-PSS, RSASSA-PSS, rsassaPss }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.10, RSA-PSS, RSASSA-PSS, rsassaPss }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.10, RSA-PSS, RSASSA-PSS, rsassaPss }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.10, RSA-PSS, RSASSA-PSS, rsassaPss }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=pkcs1)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.10, RSA-PSS, RSASSA-PSS, rsassaPss }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.10, RSA-PSS, RSASSA-PSS, rsassaPss }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.10, RSA-PSS, RSASSA-PSS, rsassaPss }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.10, RSA-PSS, RSASSA-PSS, rsassaPss }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=pkcs1)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.10, RSA-PSS, RSASSA-PSS, rsassaPss }",
+            "provider": "default (provider=default,fips=yes,output=text)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.3.1, DH, dhKeyAgreement }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.3.1, DH, dhKeyAgreement }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.3.1, DH, dhKeyAgreement }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.3.1, DH, dhKeyAgreement }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=dh)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.3.1, DH, dhKeyAgreement }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=pkcs3)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.3.1, DH, dhKeyAgreement }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=type-specific)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.3.1, DH, dhKeyAgreement }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.3.1, DH, dhKeyAgreement }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.3.1, DH, dhKeyAgreement }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.3.1, DH, dhKeyAgreement }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=dh)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.3.1, DH, dhKeyAgreement }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=pkcs3)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.3.1, DH, dhKeyAgreement }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=type-specific)"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.3.1, DH, dhKeyAgreement }",
+            "provider": "default (provider=default,fips=yes,output=text)"
+          },
+          {
+            "name": "{ 1.3.101.110, X25519 }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.110, X25519 }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.110, X25519 }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.110, X25519 }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.110, X25519 }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.110, X25519 }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.110, X25519 }",
+            "provider": "default (provider=default,fips=yes,output=text)"
+          },
+          {
+            "name": "{ 1.3.101.111, X448 }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.111, X448 }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.111, X448 }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.111, X448 }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.111, X448 }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.111, X448 }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.111, X448 }",
+            "provider": "default (provider=default,fips=yes,output=text)"
+          },
+          {
+            "name": "{ 1.3.101.112, ED25519 }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.112, ED25519 }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.112, ED25519 }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.112, ED25519 }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.112, ED25519 }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.112, ED25519 }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.112, ED25519 }",
+            "provider": "default (provider=default,fips=yes,output=text)"
+          },
+          {
+            "name": "{ 1.3.101.113, ED448 }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.113, ED448 }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.113, ED448 }",
+            "provider": "default (provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.113, ED448 }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.113, ED448 }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=PrivateKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.113, ED448 }",
+            "provider": "default (provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo)"
+          },
+          {
+            "name": "{ 1.3.101.113, ED448 }",
+            "provider": "default (provider=default,fips=yes,output=text)"
+          }
+        ]
+      },
+      "engines": {
+        "count": 3,
+        "entries": [
+          {
+            "name": "Engines:",
+            "provider": null
+          },
+          {
+            "name": "dynamic",
+            "provider": null
+          },
+          {
+            "name": "rdrand",
+            "provider": null
+          }
+        ]
+      },
+      "kdf-algorithms": {
+        "count": 20,
+        "entries": [
+          {
+            "name": "ARGON2D",
+            "provider": "default"
+          },
+          {
+            "name": "ARGON2I",
+            "provider": "default"
+          },
+          {
+            "name": "ARGON2ID",
+            "provider": "default"
+          },
+          {
+            "name": "HKDF",
+            "provider": "default"
+          },
+          {
+            "name": "HMAC-DRBG-KDF",
+            "provider": "default"
+          },
+          {
+            "name": "KBKDF",
+            "provider": "default"
+          },
+          {
+            "name": "KRB5KDF",
+            "provider": "default"
+          },
+          {
+            "name": "PKCS12KDF",
+            "provider": "default"
+          },
+          {
+            "name": "Provided KDFs and PDFs:",
+            "provider": null
+          },
+          {
+            "name": "SSHKDF",
+            "provider": "default"
+          },
+          {
+            "name": "SSKDF",
+            "provider": "default"
+          },
+          {
+            "name": "TLS1-PRF",
+            "provider": "default"
+          },
+          {
+            "name": "TLS13-KDF",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.5.12, PBKDF2 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.9.16.3.28, HKDF-SHA256, id-alg-hkdf-with-sha256 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.9.16.3.29, HKDF-SHA384, id-alg-hkdf-with-sha384 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.9.16.3.30, HKDF-SHA512, id-alg-hkdf-with-sha512 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.3.6.1.4.1.11591.4.11, id-scrypt, SCRYPT }",
+            "provider": "default"
+          },
+          {
+            "name": "{ X942KDF, X942KDF-ASN1 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ X942KDF-CONCAT, X963KDF }",
+            "provider": "default"
+          }
+        ]
+      },
+      "kem-algorithms": {
+        "count": 11,
+        "entries": [
+          {
+            "name": "SecP256r1MLKEM768",
+            "provider": "default"
+          },
+          {
+            "name": "SecP384r1MLKEM1024",
+            "provider": "default"
+          },
+          {
+            "name": "X25519MLKEM768",
+            "provider": "default"
+          },
+          {
+            "name": "X448MLKEM1024",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.10045.2.1, EC, id-ecPublicKey }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.1, 2.5.8.1.1, RSA, rsaEncryption }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.3.101.110, X25519 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.3.101.111, X448 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.4.1, id-alg-ml-kem-512, ML-KEM-512, MLKEM512 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.4.2, id-alg-ml-kem-768, ML-KEM-768, MLKEM768 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.4.3, id-alg-ml-kem-1024, ML-KEM-1024, MLKEM1024 }",
+            "provider": "default"
+          }
+        ]
+      },
+      "key-exchange-algorithms": {
+        "count": 7,
+        "entries": [
+          {
+            "name": "ECDH",
+            "provider": "default"
+          },
+          {
+            "name": "HKDF",
+            "provider": "default"
+          },
+          {
+            "name": "TLS1-PRF",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.3.1, DH, dhKeyAgreement }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.3.101.110, X25519 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.3.101.111, X448 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.3.6.1.4.1.11591.4.11, id-scrypt, SCRYPT }",
+            "provider": "default"
+          }
+        ]
+      },
+      "key-managers": {
+        "count": 81,
+        "entries": [
+          {
+            "name": "IDs: CMAC",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: HKDF",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: HMAC",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: POLY1305",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: SIPHASH",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: SecP256r1MLKEM768",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: SecP384r1MLKEM1024",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: TLS1-PRF",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: X25519MLKEM768",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: X448MLKEM1024",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 1.2.156.10197.1.301, SM2 }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 1.2.840.10040.4.1, 1.3.14.3.2.12, DSA, DSA-old, dsaEncryption, dsaEncryption-old }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 1.2.840.10045.2.1, EC, id-ecPublicKey }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 1.2.840.10046.2.1, dhpublicnumber, DHX, X9.42 DH }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 1.2.840.113549.1.1.1, 2.5.8.1.1, RSA, rsaEncryption }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 1.2.840.113549.1.1.10, RSA-PSS, RSASSA-PSS, rsassaPss }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 1.2.840.113549.1.3.1, DH, dhKeyAgreement }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 1.3.101.110, X25519 }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 1.3.101.111, X448 }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 1.3.101.112, ED25519 }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 1.3.101.113, ED448 }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 1.3.6.1.4.1.11591.4.11, id-scrypt, SCRYPT }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.17, id-ml-dsa-44, ML-DSA-44, MLDSA44 }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.18, id-ml-dsa-65, ML-DSA-65, MLDSA65 }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.19, id-ml-dsa-87, ML-DSA-87, MLDSA87 }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.20, id-slh-dsa-sha2-128s, SLH-DSA-SHA2-128s }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.21, id-slh-dsa-sha2-128f, SLH-DSA-SHA2-128f }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.22, id-slh-dsa-sha2-192s, SLH-DSA-SHA2-192s }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.23, id-slh-dsa-sha2-192f, SLH-DSA-SHA2-192f }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.24, id-slh-dsa-sha2-256s, SLH-DSA-SHA2-256s }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.25, id-slh-dsa-sha2-256f, SLH-DSA-SHA2-256f }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.26, id-slh-dsa-shake-128s, SLH-DSA-SHAKE-128s }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.27, id-slh-dsa-shake-128f, SLH-DSA-SHAKE-128f }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.28, id-slh-dsa-shake-192s, SLH-DSA-SHAKE-192s }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.29, id-slh-dsa-shake-192f, SLH-DSA-SHAKE-192f }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.30, id-slh-dsa-shake-256s, SLH-DSA-SHAKE-256s }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.31, id-slh-dsa-shake-256f, SLH-DSA-SHAKE-256f }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.4.1, id-alg-ml-kem-512, ML-KEM-512, MLKEM512 }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.4.2, id-alg-ml-kem-768, ML-KEM-768, MLKEM768 }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.4.3, id-alg-ml-kem-1024, ML-KEM-1024, MLKEM1024 }",
+            "provider": "default"
+          },
+          {
+            "name": "Name: OpenSSL CMAC via EVP_PKEY implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL DSA implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL EC implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL ED25519 implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL ED448 implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL HKDF via EVP_PKEY implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL HMAC via EVP_PKEY implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL ML-DSA-44 implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL ML-DSA-65 implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL ML-DSA-87 implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL ML-KEM-1024 implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL ML-KEM-512 implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL ML-KEM-768 implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL PKCS#3 DH implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL POLY1305 via EVP_PKEY implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL RSA implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL RSA-PSS implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SCRYPT via EVP_PKEY implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SIPHASH via EVP_PKEY implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SLH-DSA-SHA2-128f implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SLH-DSA-SHA2-128s implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SLH-DSA-SHA2-192f implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SLH-DSA-SHA2-192s implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SLH-DSA-SHA2-256f implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SLH-DSA-SHA2-256s implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SLH-DSA-SHAKE-128f implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SLH-DSA-SHAKE-128s implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SLH-DSA-SHAKE-192f implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SLH-DSA-SHAKE-192s implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SLH-DSA-SHAKE-256f implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SLH-DSA-SHAKE-256s implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SM2 implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL TLS1_PRF via EVP_PKEY implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL X25519 implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL X448 implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL X9.42 DH implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: P-256+ML-KEM-768 TLS hybrid implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: P-384+ML-KEM-1024 TLS hybrid implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: X25519+ML-KEM-768 TLS hybrid implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: X448+ML-KEM-1024 TLS hybrid implementation",
+            "provider": null
+          },
+          {
+            "name": "Type: Provider Algorithm",
+            "provider": null
+          }
+        ]
+      },
+      "mac-algorithms": {
+        "count": 10,
+        "entries": [
+          {
+            "name": "CMAC",
+            "provider": "default"
+          },
+          {
+            "name": "HMAC",
+            "provider": "default"
+          },
+          {
+            "name": "POLY1305",
+            "provider": "default"
+          },
+          {
+            "name": "Provided MACs:",
+            "provider": null
+          },
+          {
+            "name": "SIPHASH",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.0.9797.3.4, GMAC }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.3.6.1.4.1.1722.12.2.1, BLAKE2BMAC }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.3.6.1.4.1.1722.12.2.2, BLAKE2SMAC }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.2.19, KMAC-128, KMAC128 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.2.20, KMAC-256, KMAC256 }",
+            "provider": "default"
+          }
+        ]
+      },
+      "public-key-algorithms": {
+        "count": 124,
+        "entries": [
+          {
+            "name": "Alias for: dsaEncryption",
+            "provider": null
+          },
+          {
+            "name": "Alias for: dsaWithSHA",
+            "provider": null
+          },
+          {
+            "name": "Alias for: id-ecPublicKey",
+            "provider": null
+          },
+          {
+            "name": "Alias for: rsaEncryption",
+            "provider": null
+          },
+          {
+            "name": "IDs: CMAC",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: HKDF",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: HMAC",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: POLY1305",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: SIPHASH",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: SecP256r1MLKEM768",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: SecP384r1MLKEM1024",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: TLS1-PRF",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: X25519MLKEM768",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: X448MLKEM1024",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 1.2.156.10197.1.301, SM2 }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 1.2.840.10040.4.1, 1.3.14.3.2.12, DSA, DSA-old, dsaEncryption, dsaEncryption-old }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 1.2.840.10045.2.1, EC, id-ecPublicKey }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 1.2.840.10046.2.1, dhpublicnumber, DHX, X9.42 DH }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 1.2.840.113549.1.1.1, 2.5.8.1.1, RSA, rsaEncryption }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 1.2.840.113549.1.1.10, RSA-PSS, RSASSA-PSS, rsassaPss }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 1.2.840.113549.1.3.1, DH, dhKeyAgreement }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 1.3.101.110, X25519 }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 1.3.101.111, X448 }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 1.3.101.112, ED25519 }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 1.3.101.113, ED448 }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 1.3.6.1.4.1.11591.4.11, id-scrypt, SCRYPT }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.17, id-ml-dsa-44, ML-DSA-44, MLDSA44 }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.18, id-ml-dsa-65, ML-DSA-65, MLDSA65 }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.19, id-ml-dsa-87, ML-DSA-87, MLDSA87 }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.20, id-slh-dsa-sha2-128s, SLH-DSA-SHA2-128s }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.21, id-slh-dsa-sha2-128f, SLH-DSA-SHA2-128f }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.22, id-slh-dsa-sha2-192s, SLH-DSA-SHA2-192s }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.23, id-slh-dsa-sha2-192f, SLH-DSA-SHA2-192f }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.24, id-slh-dsa-sha2-256s, SLH-DSA-SHA2-256s }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.25, id-slh-dsa-sha2-256f, SLH-DSA-SHA2-256f }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.26, id-slh-dsa-shake-128s, SLH-DSA-SHAKE-128s }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.27, id-slh-dsa-shake-128f, SLH-DSA-SHAKE-128f }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.28, id-slh-dsa-shake-192s, SLH-DSA-SHAKE-192s }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.29, id-slh-dsa-shake-192f, SLH-DSA-SHAKE-192f }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.30, id-slh-dsa-shake-256s, SLH-DSA-SHAKE-256s }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.3.31, id-slh-dsa-shake-256f, SLH-DSA-SHAKE-256f }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.4.1, id-alg-ml-kem-512, ML-KEM-512, MLKEM512 }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.4.2, id-alg-ml-kem-768, ML-KEM-768, MLKEM768 }",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.4.3, id-alg-ml-kem-1024, ML-KEM-1024, MLKEM1024 }",
+            "provider": "default"
+          },
+          {
+            "name": "Key Managers:",
+            "provider": null
+          },
+          {
+            "name": "Legacy:",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL CMAC via EVP_PKEY implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL DSA implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL DSA method",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL EC algorithm",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL EC implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL ED25519 algorithm",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL ED25519 implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL ED448 algorithm",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL ED448 implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL HKDF via EVP_PKEY implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL HMAC via EVP_PKEY implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL ML-DSA-44 implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL ML-DSA-65 implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL ML-DSA-87 implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL ML-KEM-1024 implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL ML-KEM-512 implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL ML-KEM-768 implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL PKCS#3 DH implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL PKCS#3 DH method",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL POLY1305 via EVP_PKEY implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL RSA implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL RSA method",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL RSA-PSS implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL RSA-PSS method",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SCRYPT via EVP_PKEY implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SIPHASH via EVP_PKEY implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SLH-DSA-SHA2-128f implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SLH-DSA-SHA2-128s implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SLH-DSA-SHA2-192f implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SLH-DSA-SHA2-192s implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SLH-DSA-SHA2-256f implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SLH-DSA-SHA2-256s implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SLH-DSA-SHAKE-128f implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SLH-DSA-SHAKE-128s implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SLH-DSA-SHAKE-192f implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SLH-DSA-SHAKE-192s implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SLH-DSA-SHAKE-256f implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SLH-DSA-SHAKE-256s implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL SM2 implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL TLS1_PRF via EVP_PKEY implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL X25519 algorithm",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL X25519 implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL X448 algorithm",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL X448 implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL X9.42 DH implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL X9.42 DH method",
+            "provider": null
+          },
+          {
+            "name": "Name: P-256+ML-KEM-768 TLS hybrid implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: P-384+ML-KEM-1024 TLS hybrid implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: X25519+ML-KEM-768 TLS hybrid implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: X448+ML-KEM-1024 TLS hybrid implementation",
+            "provider": null
+          },
+          {
+            "name": "Name: dsaEncryption-old",
+            "provider": null
+          },
+          {
+            "name": "Name: dsaWithSHA1",
+            "provider": null
+          },
+          {
+            "name": "Name: dsaWithSHA1-old",
+            "provider": null
+          },
+          {
+            "name": "Name: rsa",
+            "provider": null
+          },
+          {
+            "name": "Name: sm2",
+            "provider": null
+          },
+          {
+            "name": "OID: ED25519",
+            "provider": null
+          },
+          {
+            "name": "OID: ED448",
+            "provider": null
+          },
+          {
+            "name": "OID: X25519",
+            "provider": null
+          },
+          {
+            "name": "OID: X448",
+            "provider": null
+          },
+          {
+            "name": "OID: X9.42 DH",
+            "provider": null
+          },
+          {
+            "name": "OID: dhKeyAgreement",
+            "provider": null
+          },
+          {
+            "name": "OID: dsaEncryption",
+            "provider": null
+          },
+          {
+            "name": "OID: id-ecPublicKey",
+            "provider": null
+          },
+          {
+            "name": "OID: rsaEncryption",
+            "provider": null
+          },
+          {
+            "name": "OID: rsassaPss",
+            "provider": null
+          },
+          {
+            "name": "PEM string: DH",
+            "provider": null
+          },
+          {
+            "name": "PEM string: DSA",
+            "provider": null
+          },
+          {
+            "name": "PEM string: EC",
+            "provider": null
+          },
+          {
+            "name": "PEM string: ED25519",
+            "provider": null
+          },
+          {
+            "name": "PEM string: ED448",
+            "provider": null
+          },
+          {
+            "name": "PEM string: RSA",
+            "provider": null
+          },
+          {
+            "name": "PEM string: RSA-PSS",
+            "provider": null
+          },
+          {
+            "name": "PEM string: X25519",
+            "provider": null
+          },
+          {
+            "name": "PEM string: X448",
+            "provider": null
+          },
+          {
+            "name": "PEM string: X9.42 DH",
+            "provider": null
+          },
+          {
+            "name": "Provided:",
+            "provider": null
+          },
+          {
+            "name": "Type: Builtin Algorithm",
+            "provider": null
+          },
+          {
+            "name": "Type: Provider Algorithm",
+            "provider": null
+          }
+        ]
+      },
+      "public-key-methods": {
+        "count": 92,
+        "entries": [
+          {
+            "name": "CMAC",
+            "provider": "default"
+          },
+          {
+            "name": "ECDH",
+            "provider": "default"
+          },
+          {
+            "name": "ECDSA",
+            "provider": "default"
+          },
+          {
+            "name": "ED25519",
+            "provider": null
+          },
+          {
+            "name": "ED25519ctx",
+            "provider": "default"
+          },
+          {
+            "name": "ED25519ph",
+            "provider": "default"
+          },
+          {
+            "name": "ED448",
+            "provider": null
+          },
+          {
+            "name": "ED448ph",
+            "provider": "default"
+          },
+          {
+            "name": "Encryption:",
+            "provider": null
+          },
+          {
+            "name": "HKDF",
+            "provider": "default"
+          },
+          {
+            "name": "HMAC",
+            "provider": "default"
+          },
+          {
+            "name": "Key Exchange:",
+            "provider": null
+          },
+          {
+            "name": "Key encapsulation:",
+            "provider": null
+          },
+          {
+            "name": "Legacy:",
+            "provider": null
+          },
+          {
+            "name": "POLY1305",
+            "provider": "default"
+          },
+          {
+            "name": "Provided:",
+            "provider": null
+          },
+          {
+            "name": "SIPHASH",
+            "provider": "default"
+          },
+          {
+            "name": "SecP256r1MLKEM768",
+            "provider": "default"
+          },
+          {
+            "name": "SecP384r1MLKEM1024",
+            "provider": "default"
+          },
+          {
+            "name": "Signatures:",
+            "provider": null
+          },
+          {
+            "name": "TLS1-PRF",
+            "provider": "default"
+          },
+          {
+            "name": "Type: Builtin Algorithm",
+            "provider": null
+          },
+          {
+            "name": "Type: External Algorithm",
+            "provider": null
+          },
+          {
+            "name": "X25519",
+            "provider": null
+          },
+          {
+            "name": "X25519MLKEM768",
+            "provider": "default"
+          },
+          {
+            "name": "X448",
+            "provider": null
+          },
+          {
+            "name": "X448MLKEM1024",
+            "provider": "default"
+          },
+          {
+            "name": "X9.42 DH",
+            "provider": null
+          },
+          {
+            "name": "dhKeyAgreement",
+            "provider": null
+          },
+          {
+            "name": "dsaEncryption",
+            "provider": null
+          },
+          {
+            "name": "id-ecPublicKey",
+            "provider": null
+          },
+          {
+            "name": "rsaEncryption",
+            "provider": null
+          },
+          {
+            "name": "rsassaPss",
+            "provider": null
+          },
+          {
+            "name": "{ 1.2.156.10197.1.301, SM2 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.156.10197.1.504, RSA-SM3, sm3WithRSAEncryption }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.1.101.3.4.3.3, DSA-SHA2-384, DSA-SHA384, dsa_with_SHA384, id-dsa-with-sha384 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.1.101.3.4.3.4, DSA-SHA2-512, DSA-SHA512, dsa_with_SHA512, id-dsa-with-sha512 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.10040.4.1, 1.3.14.3.2.12, DSA, DSA-old, dsaEncryption, dsaEncryption-old }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.10040.4.3, 1.3.14.3.2.27, DSA-SHA, DSA-SHA-1, DSA-SHA1, DSA-SHA1-old, dsaWithSHA, dsaWithSHA1, dsaWithSHA1-old }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.10045.2.1, EC, id-ecPublicKey }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.10045.4.1, ECDSA-SHA-1, ECDSA-SHA1, ecdsa-with-SHA1 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.10045.4.3.1, ECDSA-SHA2-224, ECDSA-SHA224, ecdsa-with-SHA224 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.10045.4.3.2, ECDSA-SHA2-256, ECDSA-SHA256, ecdsa-with-SHA256 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.10045.4.3.3, ECDSA-SHA2-384, ECDSA-SHA384, ecdsa-with-SHA384 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.10045.4.3.4, ECDSA-SHA2-512, ECDSA-SHA512, ecdsa-with-SHA512 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.1, 2.5.8.1.1, RSA, rsaEncryption }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.11, RSA-SHA2-256, RSA-SHA256, sha256WithRSAEncryption }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.12, RSA-SHA2-384, RSA-SHA384, sha384WithRSAEncryption }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.13, RSA-SHA2-512, RSA-SHA512, sha512WithRSAEncryption }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.14, RSA-SHA2-224, RSA-SHA224, sha224WithRSAEncryption }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.15, RSA-SHA2-512/224, RSA-SHA512-224, sha512-224WithRSAEncryption }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.16, RSA-SHA2-512/256, RSA-SHA512-256, sha512-256WithRSAEncryption }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.5, RSA-SHA-1, RSA-SHA1, sha1WithRSAEncryption }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.3.1, DH, dhKeyAgreement }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.3.101.110, X25519 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.3.101.111, X448 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.3.101.112, ED25519 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.3.101.113, ED448 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.3.36.3.3.1.2, ripemd160WithRSA, RSA-RIPEMD160 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.3.6.1.4.1.11591.4.11, id-scrypt, SCRYPT }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.1, DSA-SHA2-224, DSA-SHA224, dsa_with_SHA224 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.10, ECDSA-SHA3-256, ecdsa_with_SHA3-256, id-ecdsa-with-sha3-256 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.11, ECDSA-SHA3-384, ecdsa_with_SHA3-384, id-ecdsa-with-sha3-384 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.12, ECDSA-SHA3-512, ecdsa_with_SHA3-512, id-ecdsa-with-sha3-512 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.13, id-rsassa-pkcs1-v1_5-with-sha3-224, RSA-SHA3-224 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.14, id-rsassa-pkcs1-v1_5-with-sha3-256, RSA-SHA3-256 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.15, id-rsassa-pkcs1-v1_5-with-sha3-384, RSA-SHA3-384 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.16, id-rsassa-pkcs1-v1_5-with-sha3-512, RSA-SHA3-512 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.17, id-ml-dsa-44, ML-DSA-44, MLDSA44 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.18, id-ml-dsa-65, ML-DSA-65, MLDSA65 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.19, id-ml-dsa-87, ML-DSA-87, MLDSA87 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.2, DSA-SHA2-256, DSA-SHA256, dsa_with_SHA256 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.20, id-slh-dsa-sha2-128s, SLH-DSA-SHA2-128s }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.21, id-slh-dsa-sha2-128f, SLH-DSA-SHA2-128f }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.22, id-slh-dsa-sha2-192s, SLH-DSA-SHA2-192s }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.23, id-slh-dsa-sha2-192f, SLH-DSA-SHA2-192f }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.24, id-slh-dsa-sha2-256s, SLH-DSA-SHA2-256s }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.25, id-slh-dsa-sha2-256f, SLH-DSA-SHA2-256f }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.26, id-slh-dsa-shake-128s, SLH-DSA-SHAKE-128s }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.27, id-slh-dsa-shake-128f, SLH-DSA-SHAKE-128f }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.28, id-slh-dsa-shake-192s, SLH-DSA-SHAKE-192s }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.29, id-slh-dsa-shake-192f, SLH-DSA-SHAKE-192f }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.30, id-slh-dsa-shake-256s, SLH-DSA-SHAKE-256s }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.31, id-slh-dsa-shake-256f, SLH-DSA-SHAKE-256f }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.5, DSA-SHA3-224, dsa_with_SHA3-224, id-dsa-with-sha3-224 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.6, DSA-SHA3-256, dsa_with_SHA3-256, id-dsa-with-sha3-256 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.7, DSA-SHA3-384, dsa_with_SHA3-384, id-dsa-with-sha3-384 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.8, DSA-SHA3-512, dsa_with_SHA3-512, id-dsa-with-sha3-512 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.9, ECDSA-SHA3-224, ecdsa_with_SHA3-224, id-ecdsa-with-sha3-224 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.4.1, id-alg-ml-kem-512, ML-KEM-512, MLKEM512 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.4.2, id-alg-ml-kem-768, ML-KEM-768, MLKEM768 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.4.3, id-alg-ml-kem-1024, ML-KEM-1024, MLKEM1024 }",
+            "provider": "default"
+          }
+        ]
+      },
+      "random-generators": {
+        "count": 6,
+        "entries": [
+          {
+            "name": "CTR-DRBG",
+            "provider": "default"
+          },
+          {
+            "name": "HASH-DRBG",
+            "provider": "default"
+          },
+          {
+            "name": "HMAC-DRBG",
+            "provider": "default"
+          },
+          {
+            "name": "Provided RNGs and seed sources:",
+            "provider": null
+          },
+          {
+            "name": "SEED-SRC",
+            "provider": "default"
+          },
+          {
+            "name": "TEST-RAND",
+            "provider": "default"
+          }
+        ]
+      },
+      "random-instances": {
+        "count": 6,
+        "entries": [
+          {
+            "name": "CTR-DRBG",
+            "provider": "default"
+          },
+          {
+            "name": "cipher: 'AES-256-CTR'",
+            "provider": null
+          },
+          {
+            "name": "primary:",
+            "provider": null
+          },
+          {
+            "name": "private:",
+            "provider": null
+          },
+          {
+            "name": "public:",
+            "provider": null
+          },
+          {
+            "name": "state = ready",
+            "provider": null
+          }
+        ]
+      },
+      "signature-algorithms": {
+        "count": 59,
+        "entries": [
+          {
+            "name": "CMAC",
+            "provider": "default"
+          },
+          {
+            "name": "ECDSA",
+            "provider": "default"
+          },
+          {
+            "name": "ED25519ctx",
+            "provider": "default"
+          },
+          {
+            "name": "ED25519ph",
+            "provider": "default"
+          },
+          {
+            "name": "ED448ph",
+            "provider": "default"
+          },
+          {
+            "name": "HMAC",
+            "provider": "default"
+          },
+          {
+            "name": "POLY1305",
+            "provider": "default"
+          },
+          {
+            "name": "SIPHASH",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.156.10197.1.301, SM2 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.156.10197.1.504, RSA-SM3, sm3WithRSAEncryption }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.1.101.3.4.3.3, DSA-SHA2-384, DSA-SHA384, dsa_with_SHA384, id-dsa-with-sha384 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.1.101.3.4.3.4, DSA-SHA2-512, DSA-SHA512, dsa_with_SHA512, id-dsa-with-sha512 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.10040.4.1, 1.3.14.3.2.12, DSA, DSA-old, dsaEncryption, dsaEncryption-old }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.10040.4.3, 1.3.14.3.2.27, DSA-SHA, DSA-SHA-1, DSA-SHA1, DSA-SHA1-old, dsaWithSHA, dsaWithSHA1, dsaWithSHA1-old }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.10045.4.1, ECDSA-SHA-1, ECDSA-SHA1, ecdsa-with-SHA1 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.10045.4.3.1, ECDSA-SHA2-224, ECDSA-SHA224, ecdsa-with-SHA224 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.10045.4.3.2, ECDSA-SHA2-256, ECDSA-SHA256, ecdsa-with-SHA256 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.10045.4.3.3, ECDSA-SHA2-384, ECDSA-SHA384, ecdsa-with-SHA384 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.10045.4.3.4, ECDSA-SHA2-512, ECDSA-SHA512, ecdsa-with-SHA512 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.1, 2.5.8.1.1, RSA, rsaEncryption }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.11, RSA-SHA2-256, RSA-SHA256, sha256WithRSAEncryption }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.12, RSA-SHA2-384, RSA-SHA384, sha384WithRSAEncryption }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.13, RSA-SHA2-512, RSA-SHA512, sha512WithRSAEncryption }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.14, RSA-SHA2-224, RSA-SHA224, sha224WithRSAEncryption }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.15, RSA-SHA2-512/224, RSA-SHA512-224, sha512-224WithRSAEncryption }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.16, RSA-SHA2-512/256, RSA-SHA512-256, sha512-256WithRSAEncryption }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.2.840.113549.1.1.5, RSA-SHA-1, RSA-SHA1, sha1WithRSAEncryption }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.3.101.112, ED25519 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.3.101.113, ED448 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 1.3.36.3.3.1.2, ripemd160WithRSA, RSA-RIPEMD160 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.1, DSA-SHA2-224, DSA-SHA224, dsa_with_SHA224 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.10, ECDSA-SHA3-256, ecdsa_with_SHA3-256, id-ecdsa-with-sha3-256 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.11, ECDSA-SHA3-384, ecdsa_with_SHA3-384, id-ecdsa-with-sha3-384 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.12, ECDSA-SHA3-512, ecdsa_with_SHA3-512, id-ecdsa-with-sha3-512 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.13, id-rsassa-pkcs1-v1_5-with-sha3-224, RSA-SHA3-224 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.14, id-rsassa-pkcs1-v1_5-with-sha3-256, RSA-SHA3-256 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.15, id-rsassa-pkcs1-v1_5-with-sha3-384, RSA-SHA3-384 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.16, id-rsassa-pkcs1-v1_5-with-sha3-512, RSA-SHA3-512 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.17, id-ml-dsa-44, ML-DSA-44, MLDSA44 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.18, id-ml-dsa-65, ML-DSA-65, MLDSA65 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.19, id-ml-dsa-87, ML-DSA-87, MLDSA87 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.2, DSA-SHA2-256, DSA-SHA256, dsa_with_SHA256 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.20, id-slh-dsa-sha2-128s, SLH-DSA-SHA2-128s }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.21, id-slh-dsa-sha2-128f, SLH-DSA-SHA2-128f }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.22, id-slh-dsa-sha2-192s, SLH-DSA-SHA2-192s }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.23, id-slh-dsa-sha2-192f, SLH-DSA-SHA2-192f }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.24, id-slh-dsa-sha2-256s, SLH-DSA-SHA2-256s }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.25, id-slh-dsa-sha2-256f, SLH-DSA-SHA2-256f }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.26, id-slh-dsa-shake-128s, SLH-DSA-SHAKE-128s }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.27, id-slh-dsa-shake-128f, SLH-DSA-SHAKE-128f }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.28, id-slh-dsa-shake-192s, SLH-DSA-SHAKE-192s }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.29, id-slh-dsa-shake-192f, SLH-DSA-SHAKE-192f }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.30, id-slh-dsa-shake-256s, SLH-DSA-SHAKE-256s }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.31, id-slh-dsa-shake-256f, SLH-DSA-SHAKE-256f }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.5, DSA-SHA3-224, dsa_with_SHA3-224, id-dsa-with-sha3-224 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.6, DSA-SHA3-256, dsa_with_SHA3-256, id-dsa-with-sha3-256 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.7, DSA-SHA3-384, dsa_with_SHA3-384, id-dsa-with-sha3-384 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.8, DSA-SHA3-512, dsa_with_SHA3-512, id-dsa-with-sha3-512 }",
+            "provider": "default"
+          },
+          {
+            "name": "{ 2.16.840.1.101.3.4.3.9, ECDSA-SHA3-224, ecdsa_with_SHA3-224, id-ecdsa-with-sha3-224 }",
+            "provider": "default"
+          }
+        ]
+      },
+      "skey-managers": {
+        "count": 5,
+        "entries": [
+          {
+            "name": "IDs: GENERIC-SECRET",
+            "provider": "default"
+          },
+          {
+            "name": "IDs: { 2.16.840.1.101.3.4.1, AES }",
+            "provider": "default"
+          },
+          {
+            "name": "Name: OpenSSL AES opaque secret key",
+            "provider": null
+          },
+          {
+            "name": "Name: OpenSSL generic opaque secret key",
+            "provider": null
+          },
+          {
+            "name": "Type: Provider Algorithm",
+            "provider": null
+          }
+        ]
+      },
+      "store-loaders": {
+        "count": 2,
+        "entries": [
+          {
+            "name": "Provided STORE LOADERs:",
+            "provider": null
+          },
+          {
+            "name": "file",
+            "provider": "default"
+          }
+        ]
+      },
+      "tls-groups": {
+        "count": 1,
+        "entries": [
+          {
+            "name": "secp256r1:secp384r1:secp521r1:x25519:x448:brainpoolP256r1tls13:brainpoolP384r1tls13:brainpoolP512r1tls13:ffdhe2048:ffdhe3072:ffdhe4096:ffdhe6144:ffdhe8192:MLKEM512:MLKEM768:MLKEM1024:SecP256r1MLKEM768:X25519MLKEM768:SecP384r1MLKEM1024",
+            "provider": null
+          }
+        ]
+      },
+      "tls-signature-algorithms": {
+        "count": 1,
+        "entries": [
+          {
+            "name": "ecdsa_secp256r1_sha256:ecdsa_secp384r1_sha384:ecdsa_secp521r1_sha512:ed25519:ed448:ecdsa_sha224:ecdsa_sha1:ecdsa_brainpoolP256r1tls13_sha256:ecdsa_brainpoolP384r1tls13_sha384:ecdsa_brainpoolP512r1tls13_sha512:rsa_pss_rsae_sha256:rsa_pss_rsae_sha384:rsa_pss_rsae_sha512:rsa_pss_pss_sha256:rsa_pss_pss_sha384:rsa_pss_pss_sha512:rsa_pkcs1_sha256:rsa_pkcs1_sha384:rsa_pkcs1_sha512:rsa_pkcs1_sha224:rsa_pkcs1_sha1:dsa_sha256:dsa_sha384:dsa_sha512:dsa_sha224:dsa_sha1:mldsa44:mldsa65:mldsa87",
+            "provider": null
+          }
+        ]
+      }
+    },
+    "binary": "forensics/authorities/prefix/openssl-3.6.3-historical/bin/openssl",
+    "providers": [
+      {
+        "fields": {
+          "build info": "3.6.3",
+          "buildinfo": "pointer to a UTF8 encoded string (arbitrary size)",
+          "gettable provider parameters": "",
+          "name": "pointer to a UTF8 encoded string (arbitrary size)",
+          "status": "integer (arbitrary size)",
+          "version": "pointer to a UTF8 encoded string (arbitrary size)"
+        },
+        "name": "default"
+      }
+    ]
+  },
+  "body_hash": "bf5eeed47c73ffcce730de309900aae064e2ebe43840f58045ed9f2f53e4c57f",
+  "generator": "forensics/tools/atlas_runtime.py",
+  "inputs": [
+    {
+      "name": "openssl_binary",
+      "path": "forensics/authorities/prefix/openssl-3.6.3-historical/bin/openssl",
+      "sha256": "f705f4fc148c112a402bee10f60a61dd92c334b07488eb23fc6efd8ddd4cedf2"
+    }
+  ],
+  "kind": "provider-inventory",
+  "schema": "openssl-rs/atlas/provider-inventory/v1"
+}

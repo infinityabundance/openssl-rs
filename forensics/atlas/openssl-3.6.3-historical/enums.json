@@ -1,0 +1,91 @@
+{
+  "authority": "openssl-3.6.3-historical",
+  "body": {
+    "count": 4,
+    "records": [
+      {
+        "constants": [
+          {
+            "name": "BIO_PARSE_PRIO_HOST",
+            "value": null
+          },
+          {
+            "name": "BIO_PARSE_PRIO_SERV",
+            "value": null
+          }
+        ],
+        "header": "bio.h",
+        "line": 863,
+        "name": "BIO_hostserv_priorities"
+      },
+      {
+        "constants": [
+          {
+            "name": "BIO_LOOKUP_CLIENT",
+            "value": null
+          },
+          {
+            "name": "BIO_LOOKUP_SERVER",
+            "value": null
+          }
+        ],
+        "header": "bio.h",
+        "line": 869,
+        "name": "BIO_lookup_type"
+      },
+      {
+        "constants": [
+          {
+            "name": "BIO_SOCK_INFO_ADDRESS",
+            "value": null
+          }
+        ],
+        "header": "bio.h",
+        "line": 900,
+        "name": "BIO_sock_info_type"
+      },
+      {
+        "constants": [
+          {
+            "name": "UIT_NONE",
+            "value": "0"
+          },
+          {
+            "name": "UIT_PROMPT",
+            "value": null
+          },
+          {
+            "name": "UIT_VERIFY",
+            "value": null
+          },
+          {
+            "name": "UIT_BOOLEAN",
+            "value": null
+          },
+          {
+            "name": "UIT_INFO",
+            "value": null
+          },
+          {
+            "name": "UIT_ERROR",
+            "value": null
+          }
+        ],
+        "header": "ui.h",
+        "line": 329,
+        "name": "UI_string_types"
+      }
+    ]
+  },
+  "body_hash": "80abee7bb3b4a929bbc056e275ba25da7a57712ee48ec74b5b40e493d1691718",
+  "generator": "forensics/tools/atlas_api.py",
+  "inputs": [
+    {
+      "name": "translation_unit",
+      "path": "forensics/authorities/captures/openssl-3.6.3-historical/api-tu.c",
+      "sha256": "8762d55f45a9b02b80ac0a3452e890ab4552f70223f0751783d455b16e8ebf0f"
+    }
+  ],
+  "kind": "api-enums",
+  "schema": "openssl-rs/atlas/api-enums/v1"
+}

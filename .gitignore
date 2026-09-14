@@ -1,0 +1,23 @@
+# Rust
+/target
+**/*.rs.bk
+
+# Authority material is large and content-addressed. The registry
+# (forensics/authorities/AUTHORITIES.json) IS checked in, because it is the
+# evidence that binds claims to hashes. The per-file SOURCE_MANIFEST.*.json is
+# also checked in: it is tamper-evidence for the extracted source tree, so that
+# the recorded root hash is verifiable without re-downloading. Only the
+# archives, extracted trees, build directories and installed prefixes are
+# reproducible-and-ignored.
+/forensics/authorities/downloads/
+/forensics/authorities/src/
+/forensics/authorities/build/
+/forensics/authorities/prefix/
+/forensics/authorities/captures/
+
+# Court scratch material produced inside the container.
+/court/
+
+# Editor / OS noise
+*.swp
+.DS_Store

@@ -1,0 +1,33 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "count": 2,
+    "records": [
+      {
+        "header": "ebcdic.h",
+        "line": 31,
+        "name": "_openssl_os_toascii",
+        "storage_class": "extern",
+        "type": "const unsigned char[256]"
+      },
+      {
+        "header": "ebcdic.h",
+        "line": 32,
+        "name": "_openssl_os_toebcdic",
+        "storage_class": "extern",
+        "type": "const unsigned char[256]"
+      }
+    ]
+  },
+  "body_hash": "dbd23e16213ad66e865e6b5ec0829d1dafa0b4bb5d5cb920af15548ded63934d",
+  "generator": "forensics/tools/atlas_api.py",
+  "inputs": [
+    {
+      "name": "translation_unit",
+      "path": "forensics/authorities/captures/openssl-3.6.4-production/api-tu.c",
+      "sha256": "8762d55f45a9b02b80ac0a3452e890ab4552f70223f0751783d455b16e8ebf0f"
+    }
+  ],
+  "kind": "api-variables",
+  "schema": "openssl-rs/atlas/api-variables/v1"
+}

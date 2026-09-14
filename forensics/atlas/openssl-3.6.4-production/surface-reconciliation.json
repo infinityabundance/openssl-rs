@@ -1,0 +1,109 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "explained_absences": {
+      "libcrypto": {
+        "declared_nonexistent": 8,
+        "excluded_by_build_profile": 40,
+        "platform_scoped": 5
+      },
+      "libssl": {
+        "declared_nonexistent": 1,
+        "excluded_by_build_profile": 4,
+        "platform_scoped": 0
+      }
+    },
+    "function_vs_symbol": {
+      "declared_and_exported": 6473,
+      "declared_not_exported": 1012,
+      "declared_not_exported_by_class": {
+        "declared_but_not_in_abi_inventory": 11,
+        "static_inline_header_helper": 1001
+      },
+      "declared_not_exported_sample": {
+        "declared_but_not_in_abi_inventory": [
+          "OSSL_provider_init",
+          "_CONF_add_string",
+          "_CONF_free_data",
+          "_CONF_get_number",
+          "_CONF_get_section",
+          "_CONF_get_section_values",
+          "_CONF_get_string",
+          "_CONF_new_data",
+          "_CONF_new_section",
+          "_openssl_ascii2ebcdic"
+        ],
+        "static_inline_header_helper": [
+          "ERR_COMMON_ERROR",
+          "ERR_FATAL_ERROR",
+          "ERR_GET_LIB",
+          "ERR_GET_REASON",
+          "ERR_GET_RFLAGS",
+          "OPENSSL_load_u16_be",
+          "OPENSSL_load_u16_le",
+          "OPENSSL_load_u32_be",
+          "OPENSSL_load_u32_le",
+          "OPENSSL_load_u64_be"
+        ]
+      },
+      "exported_not_declared": 26,
+      "exported_not_declared_note": "Symbols the built DSO exports that no *installed* public header declares. Verified for authority 3.6.4: the DSO_* family belongs to dso.h, which the authority does not install, so an application can link these but cannot see a declaration.",
+      "exported_not_declared_sample": [
+        "DSO_METHOD_openssl",
+        "DSO_bind_func",
+        "DSO_convert_filename",
+        "DSO_ctrl",
+        "DSO_dsobyaddr",
+        "DSO_flags",
+        "DSO_free",
+        "DSO_get_filename",
+        "DSO_global_lookup",
+        "DSO_load",
+        "DSO_merge",
+        "DSO_new",
+        "DSO_pathbyaddr",
+        "DSO_set_filename",
+        "DSO_up_ref",
+        "OPENSSL_DIR_end",
+        "OPENSSL_DIR_read",
+        "PEM_read_CMS",
+        "PEM_read_bio_CMS",
+        "PEM_write_CMS",
+        "PEM_write_bio_CMS",
+        "asn1_d2i_read_bio",
+        "conf_ssl_get",
+        "conf_ssl_get_cmd",
+        "conf_ssl_name_find"
+      ]
+    },
+    "planes": {
+      "declared_functions": 7485,
+      "declared_headers": 142,
+      "declared_macros": 16805,
+      "dso_exported_symbols": 6499,
+      "num_declared_symbols": 6557,
+      "version_script_symbols": 6499
+    },
+    "symbol_hard_residuals": {
+      "libcrypto": {
+        "dso_only_unlisted": [],
+        "exported_undeclared": [],
+        "kind_mismatch": [],
+        "unexplained_absent": [],
+        "version_mismatch": []
+      },
+      "libssl": {
+        "dso_only_unlisted": [],
+        "exported_undeclared": [],
+        "kind_mismatch": [],
+        "unexplained_absent": [],
+        "version_mismatch": []
+      }
+    }
+  },
+  "body_hash": "238db77caf2304a5e612d7ae4b28ea83ad4b3bddd65e8fa91d339db51568814c",
+  "generator": "forensics/tools/atlas_parity.py",
+  "inputs": [],
+  "kind": "surface-reconciliation",
+  "schema": "openssl-rs/atlas/surface-reconciliation/v1"
+}

@@ -1,0 +1,52 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "authority": "openssl-3.6.4-production",
+    "corpora": {
+      "fuzz": 40,
+      "providers": 388,
+      "test": 2070
+    },
+    "counts": {
+      "cli_commands": 55,
+      "config_files": 3,
+      "enums_named": 4,
+      "functions_declared": 7485,
+      "headers": 142,
+      "macros": 16805,
+      "structs_unions": 465,
+      "symbols_exported": 6499,
+      "typedefs": 1162,
+      "variables": 2
+    },
+    "provider_algorithm_classes": {
+      "asymcipher-algorithms": 2,
+      "cipher-algorithms": 304,
+      "decoders": 77,
+      "digest-algorithms": 88,
+      "disabled": 8,
+      "encoders": 242,
+      "engines": 3,
+      "kdf-algorithms": 20,
+      "kem-algorithms": 11,
+      "key-exchange-algorithms": 7,
+      "key-managers": 81,
+      "mac-algorithms": 10,
+      "public-key-algorithms": 124,
+      "public-key-methods": 92,
+      "random-generators": 6,
+      "random-instances": 6,
+      "signature-algorithms": 59,
+      "skey-managers": 5,
+      "store-loaders": 2,
+      "tls-groups": 1,
+      "tls-signature-algorithms": 1
+    },
+    "version": "3.6.4"
+  },
+  "body_hash": "d9cfac711613d855296fda1044a61d273bbcbe9bb08322367035c8a595ee91fb",
+  "generator": "forensics/tools/atlas_parity.py",
+  "inputs": [],
+  "kind": "coverage",
+  "schema": "openssl-rs/atlas/coverage/v1"
+}

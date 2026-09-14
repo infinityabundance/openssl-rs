@@ -1,0 +1,174 @@
+{
+  "aggregate_hash": "e3537593e29933f4400a93799fa42ef19818808e3c0a38b44a590dcce97ae0d1",
+  "court": {
+    "container": "openssl-rs-court",
+    "image": "openssl-rs-court:1",
+    "note": "generated inside the court container; never on the host"
+  },
+  "deterministic": true,
+  "drift_from_previous": [],
+  "file_count": 38,
+  "files": [
+    {
+      "path": "forensics/atlas/BUILD_RECORDS.json",
+      "sha256": "921ce360ba59cb4e0c39e3adf27c35c0e8256e37a039b50a7f51b953560232b0"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.3-historical/PARITY_MATRIX.md",
+      "sha256": "3cb91e4ef2afb813e0b5ecc7be403b36a64b22b968e3e5a04e9b4c1cb7a1c5ab"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.3-historical/cli-commands.json",
+      "sha256": "72930ef6228256d62a5bc66c6a8882c74fe0499669666276cc0cfbfcbb1a8591"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.3-historical/configs.json",
+      "sha256": "231aef9b1b3afa5e0fc6444aa8d24368699a15cc7ad41e49993ad3867c182131"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.3-historical/corpus-inventory.json",
+      "sha256": "4884ef868ec623eb346e48025e9c45e3a67b326f84b5b8f222a1a817d221be12"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.3-historical/coverage.json",
+      "sha256": "5db7642bf2e85962e366d3779dd9a3739e774af2a38b23de5ed055b8c95f9a50"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.3-historical/enums.json",
+      "sha256": "1ae4bab8dd4a3619d92a5b98f26f19f93f57fc5af0a9a1b83fde04ea905982b7"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.3-historical/functions.json",
+      "sha256": "c4c31aa8889527b1e934224070f8a12855885397dfdef414c9dcb92224f006a8"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.3-historical/header-graph.json",
+      "sha256": "c94b826e23f4680a45ca8335fb56e4c63820dac3a6549a9172debac5fa699c55"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.3-historical/macros.json",
+      "sha256": "e300e9b5bcc783b0d5385090bd5bb0a7062cf368bc2d3f7cc192efe6f9a54e70"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.3-historical/parity-obligations.json",
+      "sha256": "d51769e4a9797b45495343849f8d407dd2bf016a46fd55842f783a55a99c1c4f"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.3-historical/provider-inventory.json",
+      "sha256": "0ea1e0bbbd34713c4a3a1cf8678061b3ece0790da4ca737939bf7dcfbfc9d127"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.3-historical/structs.json",
+      "sha256": "fdbb2546bb1701fece94a3c4114d44df175d3d72ef7157761ab1c816d8c9f1cd"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.3-historical/surface-reconciliation.json",
+      "sha256": "490ebc4e40854eee3ef56b12a0381a7bce61c33923bdf31681909b7eb70bc431"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.3-historical/symbol-versions.json",
+      "sha256": "11baedd0203f7ee45d1e4b0b8a3092a8f48590339199f4c25134cbb6bf594e8e"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libcrypto.json",
+      "sha256": "90b26794aec32c50bd4475d8e066b0dd5c64d0f37718e1f984c3f13597dd34c6"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.3-historical/symbols-libssl.json",
+      "sha256": "921731b64a16b85e0238a3d5dff2d54da623224ebf915ec8caf8ac16b6bc898b"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.3-historical/typedefs.json",
+      "sha256": "b41eff262261c146a056a2ab265cdaba482381cabe29f1f15cad8422379f1497"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.3-historical/variables.json",
+      "sha256": "00d480cfffdd667d475184e8f765a14fa65d59676727a3da7b953c269e55021a"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.4-production/PARITY_MATRIX.md",
+      "sha256": "82b65e9298174688e42479bb16078a212b914a22b481686321d88b86951f9000"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.4-production/cli-commands.json",
+      "sha256": "ea3c4c5566be9ea9631723bae2db35bd20b37e3c57b44077a780ae19d5f06ffc"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.4-production/configs.json",
+      "sha256": "d111158e5bf80d41f382886e429776c7642fc6b468cf86c6f093d824fb2a51ae"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.4-production/corpus-inventory.json",
+      "sha256": "10b3cbc98df30e7bda8c0a945eab5e65e4c8edb0efb4a968a667e1e2501e402d"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.4-production/coverage.json",
+      "sha256": "3acf06eaa7d5c92b86c471dde39b3673518000ed91b8aeeeb86e057771fdca05"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.4-production/enums.json",
+      "sha256": "a95111482a96ab687db8abe9c9ef485f3bee26ef6cb87089dea80c0c4c7574a1"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.4-production/functions.json",
+      "sha256": "0add7610e574dc030773b0f76a6cc80215d73cfbca411392bd6b64f3f8de80d0"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.4-production/header-graph.json",
+      "sha256": "f33d7ec7a0f4f1a23cdfa831a07dce64cde40f66dd25119312a4a18190049272"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.4-production/macros.json",
+      "sha256": "99e595fad544d1cff98c5495519db7abe68a34b32e6e97fd29735f9686c846da"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.4-production/parity-obligations.json",
+      "sha256": "564f4683e1c2b7399f68feb9d58b7ed969d9986835b7cf749002c140d6383bf1"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.4-production/provider-inventory.json",
+      "sha256": "62763c6bd86ed55cb509ac3bb3675fff5b26bfd78f4dc9a3c75f7d29abb0c522"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.4-production/structs.json",
+      "sha256": "07ee82cd0f3a78402a77267f99f69c9d00f56508cb76509d1b1ba1a95cb94893"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.4-production/surface-reconciliation.json",
+      "sha256": "43bf1b33f3dd6f9bf503bfc084bf46dd5bf1048523c693650bccc0d4df037b18"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.4-production/symbol-versions.json",
+      "sha256": "4beed2bbcb3fa967c626f208197d3dd8565651e1dcdb08379e4a3a49415b3550"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+      "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json",
+      "sha256": "3e4ff935edc852001e0c7d26d0ba318fab10ac15147c9fff99b7fa6a0d55e634"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.4-production/typedefs.json",
+      "sha256": "af99118d026274d21e18b3c499ec6853eaf463f7491d56e05e934124d1458d83"
+    },
+    {
+      "path": "forensics/atlas/openssl-3.6.4-production/variables.json",
+      "sha256": "5133de801f35c4825ef7a03a06fa1decf5203061df9456abe2046b2b8c45dd2c"
+    },
+    {
+      "path": "forensics/authorities/AUTHORITIES.json",
+      "sha256": "8885e8ecfe27c308d97ded8db8b197ff1b46177a1b8932535824d8a7d2b18944"
+    }
+  ],
+  "generator": "forensics/tools/atlas_receipt.py",
+  "kind": "phase1-atlas",
+  "non_claims": [
+    "does not claim cryptographic security",
+    "does not claim FIPS validation",
+    "does not claim cryptographic-correctness from OpenSSL parity"
+  ],
+  "receipt_number": 1,
+  "schema": "openssl-rs/evidence-receipt/v1"
+}

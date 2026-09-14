@@ -1,0 +1,98 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "fuzz": {
+      "by_extension": {
+        ".c": 33,
+        ".config": 1,
+        ".h": 1,
+        ".info": 1,
+        ".md": 1,
+        ".pl": 1,
+        ".py": 1,
+        ".txt": 1
+      },
+      "file_count": 40,
+      "present": true,
+      "total_bytes": 358073
+    },
+    "fuzz_seed_corpora": {
+      "present": true,
+      "targets": []
+    },
+    "providers": {
+      "by_extension": {
+        ".H": 4,
+        ".asn1": 11,
+        ".c": 152,
+        ".checksum": 1,
+        ".checksums": 1,
+        ".h": 69,
+        ".in": 89,
+        ".inc": 40,
+        ".info": 19,
+        ".pm": 1,
+        ".sources": 1
+      },
+      "file_count": 388,
+      "present": true,
+      "total_bytes": 3109271
+    },
+    "test": {
+      "by_extension": {
+        "(none)": 4,
+        ".0": 1,
+        ".ascii": 1,
+        ".attr": 1,
+        ".bak": 1,
+        ".bin": 7,
+        ".c": 296,
+        ".cms": 5,
+        ".cnf": 92,
+        ".conf": 1,
+        ".crt": 29,
+        ".csr": 3,
+        ".csv": 5,
+        ".dat": 9,
+        ".der": 51,
+        ".eml": 2,
+        ".h": 19,
+        ".in": 36,
+        ".inc": 6,
+        ".info": 3,
+        ".key": 20,
+        ".md": 6,
+        ".msb": 3,
+        ".noncnf": 1,
+        ".ors": 36,
+        ".out": 7,
+        ".p12": 24,
+        ".pem": 818,
+        ".pfx": 1,
+        ".pkcs7": 1,
+        ".pl": 10,
+        ".pm": 2,
+        ".pvk": 1,
+        ".py": 7,
+        ".sct": 3,
+        ".sh": 17,
+        ".t": 356,
+        ".text": 1,
+        ".tlssct": 1,
+        ".tmpl": 1,
+        ".tsq": 1,
+        ".tsr": 1,
+        ".txt": 176,
+        ".utf8": 4
+      },
+      "file_count": 2070,
+      "present": true,
+      "total_bytes": 91516106
+    }
+  },
+  "body_hash": "ccf5b200660945766e9e871128f4e3e61a77d5ac26c62c78c85b7f02efcaecf2",
+  "generator": "forensics/tools/atlas_runtime.py",
+  "inputs": [],
+  "kind": "corpus-inventory",
+  "schema": "openssl-rs/atlas/corpus-inventory/v1"
+}

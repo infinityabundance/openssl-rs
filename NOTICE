@@ -1,0 +1,51 @@
+openssl-rs — provenance notice
+==============================
+
+This project reconstructs the externally observable contract of OpenSSL in
+native Rust. It does not link against, wrap, or embed OpenSSL.
+
+Archaeological material
+-----------------------
+
+Upstream OpenSSL source releases are used strictly as *archaeological
+authority material*: to enumerate the public contract (headers, symbol
+inventories, provider and CLI surface) against which the candidate is
+compared. The admitted authorities are recorded, with verified SHA-256
+checksums and content-addressed source manifests, in:
+
+    forensics/authorities/AUTHORITIES.json
+
+The upstream project and its licence:
+
+    OpenSSL
+    https://www.openssl.org/
+    Apache License 2.0 (OpenSSL 3.x)
+
+OpenSSL source is not redistributed as part of the candidate implementation,
+and implementation is reasoned from behavioural obligations rather than
+mechanically transliterated from C. See docs/CUSTODIAN_CONTRACT.md §3
+("Provenance rule").
+
+Generated compatibility surface
+-------------------------------
+
+Public headers, symbol version scripts and related declarations for the
+candidate will be *generated* from the authority atlas. Where any interface
+material derived from OpenSSL is emitted, the applicable OpenSSL licence and
+attribution will be carried with it.
+
+Third-party components
+----------------------
+
+The candidate crate has no dependencies (see Cargo.toml). This is a contract,
+not an accident: the dependency surface is enforced by
+forensics/tools/check_forbidden_dependencies.py.
+
+Court tooling
+-------------
+
+Evidence tooling (Python, shell, C probes) exercises independent
+implementations only as *test authorities* and interoperability peers inside
+the court container. No such implementation is ever a hidden product backend.
+
+This project's own licence: Apache-2.0 OR MIT.

@@ -1,0 +1,6141 @@
+{
+  "authority": "openssl-3.6.3-historical",
+  "body": {
+    "count": 465,
+    "records": [
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "distpoint",
+            "type": "DIST_POINT_NAME *"
+          },
+          {
+            "name": "reasons",
+            "type": "ASN1_BIT_STRING *"
+          },
+          {
+            "name": "dp_reasons",
+            "type": "int"
+          },
+          {
+            "name": "indirectCRL",
+            "type": "ASN1_BOOLEAN"
+          },
+          {
+            "name": "containsUserAttributeCerts",
+            "type": "ASN1_BOOLEAN"
+          },
+          {
+            "name": "containsAACerts",
+            "type": "ASN1_BOOLEAN"
+          },
+          {
+            "name": "containsSOAPublicKeyCerts",
+            "type": "ASN1_BOOLEAN"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1998,
+        "name": "AA_DIST_POINT_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "method",
+            "type": "ASN1_OBJECT *"
+          },
+          {
+            "name": "location",
+            "type": "GENERAL_NAME *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 207,
+        "name": "ACCESS_DESCRIPTION_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "type",
+            "type": "int"
+          },
+          {
+            "name": "choice",
+            "type": "union (unnamed union at /work/forensics/authorities/prefix/openssl-3.6.3-historical/include/openssl/x509v3.h:1921:5)"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1919,
+        "name": "ALLOWED_ATTRIBUTES_CHOICE_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "attributes",
+            "type": "struct stack_st_OSSL_ALLOWED_ATTRIBUTES_CHOICE *"
+          },
+          {
+            "name": "holderDomain",
+            "type": "GENERAL_NAME *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1927,
+        "name": "ALLOWED_ATTRIBUTES_ITEM_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "type",
+            "type": "int"
+          },
+          {
+            "name": "u",
+            "type": "union (unnamed union at /work/forensics/authorities/prefix/openssl-3.6.3-historical/include/openssl/x509v3.h:1126:5)"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1124,
+        "name": "ASIdOrRange_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "type",
+            "type": "int"
+          },
+          {
+            "name": "u",
+            "type": "union (unnamed union at /work/forensics/authorities/prefix/openssl-3.6.3-historical/include/openssl/x509v3.h:1169:5)"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1167,
+        "name": "ASIdentifierChoice_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "asnum",
+            "type": "ASIdentifierChoice *"
+          },
+          {
+            "name": "rdi",
+            "type": "ASIdentifierChoice *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1175,
+        "name": "ASIdentifiers_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "value",
+            "type": "long"
+          },
+          {
+            "name": "tt",
+            "type": "const ASN1_TEMPLATE"
+          }
+        ],
+        "header": "asn1t.h",
+        "line": 504,
+        "name": "ASN1_ADB_TABLE_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "flags",
+            "type": "unsigned long"
+          },
+          {
+            "name": "offset",
+            "type": "unsigned long"
+          },
+          {
+            "name": "adb_cb",
+            "type": "int (*)(long *)"
+          },
+          {
+            "name": "tbl",
+            "type": "const ASN1_ADB_TABLE *"
+          },
+          {
+            "name": "tblcount",
+            "type": "long"
+          },
+          {
+            "name": "default_tt",
+            "type": "const ASN1_TEMPLATE *"
+          },
+          {
+            "name": "null_tt",
+            "type": "const ASN1_TEMPLATE *"
+          }
+        ],
+        "header": "asn1t.h",
+        "line": 494,
+        "name": "ASN1_ADB_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "app_data",
+            "type": "void *"
+          },
+          {
+            "name": "flags",
+            "type": "int"
+          },
+          {
+            "name": "ref_offset",
+            "type": "int"
+          },
+          {
+            "name": "ref_lock",
+            "type": "int"
+          },
+          {
+            "name": "asn1_cb",
+            "type": "ASN1_aux_cb *"
+          },
+          {
+            "name": "enc_offset",
+            "type": "int"
+          },
+          {
+            "name": "asn1_const_cb",
+            "type": "ASN1_aux_const_cb *"
+          }
+        ],
+        "header": "asn1t.h",
+        "line": 691,
+        "name": "ASN1_AUX_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "enc",
+            "type": "unsigned char *"
+          },
+          {
+            "name": "len",
+            "type": "long"
+          },
+          {
+            "name": "modified",
+            "type": "int"
+          }
+        ],
+        "header": "asn1.h",
+        "line": 207,
+        "name": "ASN1_ENCODING_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "app_data",
+            "type": "void *"
+          },
+          {
+            "name": "asn1_ex_new",
+            "type": "ASN1_ex_new_func *"
+          },
+          {
+            "name": "asn1_ex_free",
+            "type": "ASN1_ex_free_func *"
+          },
+          {
+            "name": "asn1_ex_clear",
+            "type": "ASN1_ex_free_func *"
+          },
+          {
+            "name": "asn1_ex_d2i",
+            "type": "ASN1_ex_d2i *"
+          },
+          {
+            "name": "asn1_ex_i2d",
+            "type": "ASN1_ex_i2d *"
+          },
+          {
+            "name": "asn1_ex_print",
+            "type": "ASN1_ex_print_func *"
+          },
+          {
+            "name": "asn1_ex_new_ex",
+            "type": "ASN1_ex_new_ex_func *"
+          },
+          {
+            "name": "asn1_ex_d2i_ex",
+            "type": "ASN1_ex_d2i_ex *"
+          }
+        ],
+        "header": "asn1t.h",
+        "line": 646,
+        "name": "ASN1_EXTERN_FUNCS_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "itype",
+            "type": "char"
+          },
+          {
+            "name": "utype",
+            "type": "long"
+          },
+          {
+            "name": "templates",
+            "type": "const ASN1_TEMPLATE *"
+          },
+          {
+            "name": "tcount",
+            "type": "long"
+          },
+          {
+            "name": "funcs",
+            "type": "const void *"
+          },
+          {
+            "name": "size",
+            "type": "long"
+          },
+          {
+            "name": "sname",
+            "type": "const char *"
+          }
+        ],
+        "header": "asn1t.h",
+        "line": 590,
+        "name": "ASN1_ITEM_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "app_data",
+            "type": "void *"
+          },
+          {
+            "name": "flags",
+            "type": "unsigned long"
+          },
+          {
+            "name": "prim_new",
+            "type": "ASN1_ex_new_func *"
+          },
+          {
+            "name": "prim_free",
+            "type": "ASN1_ex_free_func *"
+          },
+          {
+            "name": "prim_clear",
+            "type": "ASN1_ex_free_func *"
+          },
+          {
+            "name": "prim_c2i",
+            "type": "ASN1_primitive_c2i *"
+          },
+          {
+            "name": "prim_i2c",
+            "type": "ASN1_primitive_i2c *"
+          },
+          {
+            "name": "prim_print",
+            "type": "ASN1_primitive_print *"
+          }
+        ],
+        "header": "asn1t.h",
+        "line": 658,
+        "name": "ASN1_PRIMITIVE_FUNCS_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "out",
+            "type": "BIO *"
+          },
+          {
+            "name": "indent",
+            "type": "int"
+          },
+          {
+            "name": "pctx",
+            "type": "const ASN1_PCTX *"
+          }
+        ],
+        "header": "asn1t.h",
+        "line": 702,
+        "name": "ASN1_PRINT_ARG_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "out",
+            "type": "BIO *"
+          },
+          {
+            "name": "ndef_bio",
+            "type": "BIO *"
+          },
+          {
+            "name": "boundary",
+            "type": "unsigned char **"
+          }
+        ],
+        "header": "asn1t.h",
+        "line": 709,
+        "name": "ASN1_STREAM_ARG_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "flags",
+            "type": "unsigned long"
+          },
+          {
+            "name": "tag",
+            "type": "long"
+          },
+          {
+            "name": "offset",
+            "type": "unsigned long"
+          },
+          {
+            "name": "field_name",
+            "type": "const char *"
+          },
+          {
+            "name": "item",
+            "type": "ASN1_ITEM_EXP *"
+          }
+        ],
+        "header": "asn1t.h",
+        "line": 478,
+        "name": "ASN1_TEMPLATE_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "valid",
+            "type": "char"
+          },
+          {
+            "name": "ret",
+            "type": "int"
+          },
+          {
+            "name": "plen",
+            "type": "long"
+          },
+          {
+            "name": "ptag",
+            "type": "int"
+          },
+          {
+            "name": "pclass",
+            "type": "int"
+          },
+          {
+            "name": "hdrlen",
+            "type": "int"
+          }
+        ],
+        "header": "asn1t.h",
+        "line": 608,
+        "name": "ASN1_TLC_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "asn1.h",
+        "line": 284,
+        "name": "ASN1_VALUE_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "min",
+            "type": "ASN1_INTEGER *"
+          },
+          {
+            "name": "max",
+            "type": "ASN1_INTEGER *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1117,
+        "name": "ASRange_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "type",
+            "type": "int"
+          },
+          {
+            "name": "choice",
+            "type": "union (unnamed union at /work/forensics/authorities/prefix/openssl-3.6.3-historical/include/openssl/x509v3.h:1873:5)"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1871,
+        "name": "ATTRIBUTE_MAPPING_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "local",
+            "type": "ASN1_OBJECT *"
+          },
+          {
+            "name": "remote",
+            "type": "ASN1_OBJECT *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1858,
+        "name": "ATTRIBUTE_TYPE_MAPPING_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "local",
+            "type": "OSSL_ATAV *"
+          },
+          {
+            "name": "remote",
+            "type": "OSSL_ATAV *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1863,
+        "name": "ATTRIBUTE_VALUE_MAPPING_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "keyid",
+            "type": "ASN1_OCTET_STRING *"
+          },
+          {
+            "name": "issuer",
+            "type": "GENERAL_NAMES *"
+          },
+          {
+            "name": "serial",
+            "type": "ASN1_INTEGER *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 369,
+        "name": "AUTHORITY_KEYID_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509v3.h",
+        "line": 1385,
+        "name": "AdmissionSyntax_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509v3.h",
+        "line": 1384,
+        "name": "Admissions_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "ca",
+            "type": "int"
+          },
+          {
+            "name": "pathlen",
+            "type": "ASN1_INTEGER *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 150,
+        "name": "BASIC_CONSTRAINTS_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "bitnum",
+            "type": "int"
+          },
+          {
+            "name": "lname",
+            "type": "const char *"
+          },
+          {
+            "name": "sname",
+            "type": "const char *"
+          }
+        ],
+        "header": "asn1.h",
+        "line": 591,
+        "name": "BIT_STRING_BITNAME_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cmac.h",
+        "line": 29,
+        "name": "CMAC_CTX_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cms.h",
+        "line": 40,
+        "name": "CMS_CertificateChoices",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cms.h",
+        "line": 37,
+        "name": "CMS_ContentInfo_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cms.h",
+        "line": 36,
+        "name": "CMS_EnvelopedData_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cms.h",
+        "line": 46,
+        "name": "CMS_OtherKeyAttribute_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cms.h",
+        "line": 43,
+        "name": "CMS_ReceiptRequest_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cms.h",
+        "line": 44,
+        "name": "CMS_Receipt_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cms.h",
+        "line": 45,
+        "name": "CMS_RecipientEncryptedKey_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cms.h",
+        "line": 42,
+        "name": "CMS_RecipientInfo_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cms.h",
+        "line": 41,
+        "name": "CMS_RevocationInfoChoice_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cms.h",
+        "line": 39,
+        "name": "CMS_SignedData_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cms.h",
+        "line": 38,
+        "name": "CMS_SignerInfo_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "ks",
+            "type": "union (unnamed union at /work/forensics/authorities/prefix/openssl-3.6.3-historical/include/openssl/des.h:43:5)[16]"
+          }
+        ],
+        "header": "des.h",
+        "line": 42,
+        "name": "DES_ks",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "type",
+            "type": "int"
+          },
+          {
+            "name": "name",
+            "type": "union (unnamed union at /work/forensics/authorities/prefix/openssl-3.6.3-historical/include/openssl/x509v3.h:307:5)"
+          },
+          {
+            "name": "dpname",
+            "type": "X509_NAME *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 305,
+        "name": "DIST_POINT_NAME_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "distpoint",
+            "type": "DIST_POINT_NAME *"
+          },
+          {
+            "name": "reasons",
+            "type": "ASN1_BIT_STRING *"
+          },
+          {
+            "name": "CRLissuer",
+            "type": "GENERAL_NAMES *"
+          },
+          {
+            "name": "dp_reasons",
+            "type": "int"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 330,
+        "name": "DIST_POINT_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "dsa.h",
+        "line": 66,
+        "name": "DSA_SIG_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ec.h",
+        "line": 1315,
+        "name": "ECDSA_SIG_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "nameAssigner",
+            "type": "ASN1_STRING *"
+          },
+          {
+            "name": "partyName",
+            "type": "ASN1_STRING *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 170,
+        "name": "EDIPartyName_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "cmd_num",
+            "type": "unsigned int"
+          },
+          {
+            "name": "cmd_name",
+            "type": "const char *"
+          },
+          {
+            "name": "cmd_desc",
+            "type": "const char *"
+          },
+          {
+            "name": "cmd_flags",
+            "type": "unsigned int"
+          }
+        ],
+        "header": "engine.h",
+        "line": 257,
+        "name": "ENGINE_CMD_DEFN_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "error",
+            "type": "unsigned long"
+          },
+          {
+            "name": "string",
+            "type": "const char *"
+          }
+        ],
+        "header": "err.h",
+        "line": 370,
+        "name": "ERR_string_data_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ess.h",
+        "line": 32,
+        "name": "ESS_cert_id",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ess.h",
+        "line": 66,
+        "name": "ESS_cert_id_v2_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ess.h",
+        "line": 31,
+        "name": "ESS_issuer_serial",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ess.h",
+        "line": 33,
+        "name": "ESS_signing_cert",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ess.h",
+        "line": 65,
+        "name": "ESS_signing_cert_v2_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "type",
+            "type": "int"
+          },
+          {
+            "name": "d",
+            "type": "union (unnamed union at /work/forensics/authorities/prefix/openssl-3.6.3-historical/include/openssl/x509v3.h:186:5)"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 175,
+        "name": "GENERAL_NAME_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "base",
+            "type": "GENERAL_NAME *"
+          },
+          {
+            "name": "minimum",
+            "type": "ASN1_INTEGER *"
+          },
+          {
+            "name": "maximum",
+            "type": "ASN1_INTEGER *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 547,
+        "name": "GENERAL_SUBTREE_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "type",
+            "type": "int"
+          },
+          {
+            "name": "u",
+            "type": "union (unnamed union at /work/forensics/authorities/prefix/openssl-3.6.3-historical/include/openssl/x509v3.h:1236:5)"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1234,
+        "name": "IPAddressChoice_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "addressFamily",
+            "type": "ASN1_OCTET_STRING *"
+          },
+          {
+            "name": "ipAddressChoice",
+            "type": "IPAddressChoice *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1242,
+        "name": "IPAddressFamily_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "type",
+            "type": "int"
+          },
+          {
+            "name": "u",
+            "type": "union (unnamed union at /work/forensics/authorities/prefix/openssl-3.6.3-historical/include/openssl/x509v3.h:1193:5)"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1191,
+        "name": "IPAddressOrRange_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "min",
+            "type": "ASN1_BIT_STRING *"
+          },
+          {
+            "name": "max",
+            "type": "ASN1_BIT_STRING *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1184,
+        "name": "IPAddressRange_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "signTool",
+            "type": "ASN1_UTF8STRING *"
+          },
+          {
+            "name": "cATool",
+            "type": "ASN1_UTF8STRING *"
+          },
+          {
+            "name": "signToolCert",
+            "type": "ASN1_UTF8STRING *"
+          },
+          {
+            "name": "cAToolCert",
+            "type": "ASN1_UTF8STRING *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 417,
+        "name": "ISSUER_SIGN_TOOL_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "distpoint",
+            "type": "DIST_POINT_NAME *"
+          },
+          {
+            "name": "onlyuser",
+            "type": "int"
+          },
+          {
+            "name": "onlyCA",
+            "type": "int"
+          },
+          {
+            "name": "onlysomereasons",
+            "type": "ASN1_BIT_STRING *"
+          },
+          {
+            "name": "indirectCRL",
+            "type": "int"
+          },
+          {
+            "name": "onlyattr",
+            "type": "int"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 607,
+        "name": "ISSUING_DIST_POINT_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "A",
+            "type": "unsigned int"
+          },
+          {
+            "name": "B",
+            "type": "unsigned int"
+          },
+          {
+            "name": "C",
+            "type": "unsigned int"
+          },
+          {
+            "name": "D",
+            "type": "unsigned int"
+          },
+          {
+            "name": "Nl",
+            "type": "unsigned int"
+          },
+          {
+            "name": "Nh",
+            "type": "unsigned int"
+          },
+          {
+            "name": "data",
+            "type": "unsigned int[16]"
+          },
+          {
+            "name": "num",
+            "type": "unsigned int"
+          }
+        ],
+        "header": "md4.h",
+        "line": 42,
+        "name": "MD4state_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "A",
+            "type": "unsigned int"
+          },
+          {
+            "name": "B",
+            "type": "unsigned int"
+          },
+          {
+            "name": "C",
+            "type": "unsigned int"
+          },
+          {
+            "name": "D",
+            "type": "unsigned int"
+          },
+          {
+            "name": "Nl",
+            "type": "unsigned int"
+          },
+          {
+            "name": "Nh",
+            "type": "unsigned int"
+          },
+          {
+            "name": "data",
+            "type": "unsigned int[16]"
+          },
+          {
+            "name": "num",
+            "type": "unsigned int"
+          }
+        ],
+        "header": "md5.h",
+        "line": 41,
+        "name": "MD5state_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "permittedSubtrees",
+            "type": "struct stack_st_GENERAL_SUBTREE *"
+          },
+          {
+            "name": "excludedSubtrees",
+            "type": "struct stack_st_GENERAL_SUBTREE *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 583,
+        "name": "NAME_CONSTRAINTS_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "organization",
+            "type": "ASN1_STRING *"
+          },
+          {
+            "name": "noticenos",
+            "type": "struct stack_st_ASN1_INTEGER *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 424,
+        "name": "NOTICEREF_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509v3.h",
+        "line": 1382,
+        "name": "NamingAuthority_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "type",
+            "type": "ASN1_OBJECT *"
+          },
+          {
+            "name": "certs",
+            "type": "struct stack_st_X509 *"
+          }
+        ],
+        "header": "x509.h",
+        "line": 441,
+        "name": "Netscape_certificate_sequence",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "pubkey",
+            "type": "X509_PUBKEY *"
+          },
+          {
+            "name": "challenge",
+            "type": "ASN1_IA5STRING *"
+          }
+        ],
+        "header": "x509.h",
+        "line": 429,
+        "name": "Netscape_spkac_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "spkac",
+            "type": "NETSCAPE_SPKAC *"
+          },
+          {
+            "name": "sig_algor",
+            "type": "X509_ALGOR"
+          },
+          {
+            "name": "signature",
+            "type": "ASN1_BIT_STRING *"
+          }
+        ],
+        "header": "x509.h",
+        "line": 434,
+        "name": "Netscape_spki_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "identifier",
+            "type": "ASN1_OBJECT *"
+          },
+          {
+            "name": "attributeSyntax",
+            "type": "ASN1_STRING *"
+          },
+          {
+            "name": "name",
+            "type": "ASN1_UTF8STRING *"
+          },
+          {
+            "name": "description",
+            "type": "ASN1_UTF8STRING *"
+          },
+          {
+            "name": "dominationRule",
+            "type": "OSSL_PRIVILEGE_POLICY_ID *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1601,
+        "name": "OSSL_ATTRIBUTE_DESCRIPTOR_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "authority",
+            "type": "int"
+          },
+          {
+            "name": "pathlen",
+            "type": "ASN1_INTEGER *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 155,
+        "name": "OSSL_BASIC_ATTR_CONSTRAINTS_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "startDayTime",
+            "type": "OSSL_DAY_TIME *"
+          },
+          {
+            "name": "endDayTime",
+            "type": "OSSL_DAY_TIME *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1626,
+        "name": "OSSL_DAY_TIME_BAND_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "hour",
+            "type": "ASN1_INTEGER *"
+          },
+          {
+            "name": "minute",
+            "type": "ASN1_INTEGER *"
+          },
+          {
+            "name": "second",
+            "type": "ASN1_INTEGER *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1620,
+        "name": "OSSL_DAY_TIME_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "algorithmIdentifier",
+            "type": "X509_ALGOR *"
+          },
+          {
+            "name": "hashValue",
+            "type": "ASN1_BIT_STRING *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1575,
+        "name": "OSSL_HASH_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509_acert.h",
+        "line": 139,
+        "name": "OSSL_IETF_ATTR_SYNTAX_VALUE_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509_acert.h",
+        "line": 140,
+        "name": "OSSL_IETF_ATTR_SYNTAX_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "name",
+            "type": "GENERAL_NAMES *"
+          },
+          {
+            "name": "hash",
+            "type": "OSSL_HASH *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1580,
+        "name": "OSSL_INFO_SYNTAX_POINTER_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "type",
+            "type": "int"
+          },
+          {
+            "name": "choice",
+            "type": "union (unnamed union at /work/forensics/authorities/prefix/openssl-3.6.3-historical/include/openssl/x509v3.h:1590:5)"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1588,
+        "name": "OSSL_INFO_SYNTAX_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "type",
+            "type": "int"
+          },
+          {
+            "name": "choice",
+            "type": "union (unnamed union at /work/forensics/authorities/prefix/openssl-3.6.3-historical/include/openssl/x509v3.h:1650:5)"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1648,
+        "name": "OSSL_NAMED_DAY_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "privilegePolicy",
+            "type": "ASN1_OBJECT *"
+          },
+          {
+            "name": "privPolSyntax",
+            "type": "OSSL_INFO_SYNTAX *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1596,
+        "name": "OSSL_PRIVILEGE_POLICY_ID_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "roleName",
+            "type": "GENERAL_NAME *"
+          },
+          {
+            "name": "roleCertIssuer",
+            "type": "GENERAL_NAME *"
+          },
+          {
+            "name": "roleCertSerialNumber",
+            "type": "ASN1_INTEGER *"
+          },
+          {
+            "name": "roleCertLocator",
+            "type": "GENERAL_NAMES *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1533,
+        "name": "OSSL_ROLE_SPEC_CERT_ID_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "timesOfDay",
+            "type": "struct stack_st_OSSL_DAY_TIME_BAND *"
+          },
+          {
+            "name": "days",
+            "type": "OSSL_TIME_SPEC_DAY *"
+          },
+          {
+            "name": "weeks",
+            "type": "OSSL_TIME_SPEC_WEEKS *"
+          },
+          {
+            "name": "months",
+            "type": "OSSL_TIME_SPEC_MONTH *"
+          },
+          {
+            "name": "years",
+            "type": "struct stack_st_ASN1_INTEGER *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1755,
+        "name": "OSSL_TIME_PERIOD_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "startTime",
+            "type": "ASN1_GENERALIZEDTIME *"
+          },
+          {
+            "name": "endTime",
+            "type": "ASN1_GENERALIZEDTIME *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1615,
+        "name": "OSSL_TIME_SPEC_ABSOLUTE_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "type",
+            "type": "int"
+          },
+          {
+            "name": "choice",
+            "type": "union (unnamed union at /work/forensics/authorities/prefix/openssl-3.6.3-historical/include/openssl/x509v3.h:1693:5)"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1691,
+        "name": "OSSL_TIME_SPEC_DAY_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "type",
+            "type": "int"
+          },
+          {
+            "name": "choice",
+            "type": "union (unnamed union at /work/forensics/authorities/prefix/openssl-3.6.3-historical/include/openssl/x509v3.h:1748:5)"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1746,
+        "name": "OSSL_TIME_SPEC_MONTH_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "type",
+            "type": "int"
+          },
+          {
+            "name": "choice",
+            "type": "union (unnamed union at /work/forensics/authorities/prefix/openssl-3.6.3-historical/include/openssl/x509v3.h:1768:5)"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1766,
+        "name": "OSSL_TIME_SPEC_TIME_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "type",
+            "type": "int"
+          },
+          {
+            "name": "choice",
+            "type": "union (unnamed union at /work/forensics/authorities/prefix/openssl-3.6.3-historical/include/openssl/x509v3.h:1711:5)"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1709,
+        "name": "OSSL_TIME_SPEC_WEEKS_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "type",
+            "type": "int"
+          },
+          {
+            "name": "choice",
+            "type": "union (unnamed union at /work/forensics/authorities/prefix/openssl-3.6.3-historical/include/openssl/x509v3.h:1664:5)"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1662,
+        "name": "OSSL_TIME_SPEC_X_DAY_OF_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "time",
+            "type": "OSSL_TIME_SPEC_TIME *"
+          },
+          {
+            "name": "notThisTime",
+            "type": "ASN1_BOOLEAN"
+          },
+          {
+            "name": "timeZone",
+            "type": "ASN1_INTEGER *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1774,
+        "name": "OSSL_TIME_SPEC_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "keyfunc",
+            "type": "X509_ALGOR *"
+          },
+          {
+            "name": "encryption",
+            "type": "X509_ALGOR *"
+          }
+        ],
+        "header": "x509.h",
+        "line": 462,
+        "name": "PBE2PARAM_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "salt",
+            "type": "ASN1_OCTET_STRING *"
+          },
+          {
+            "name": "iter",
+            "type": "ASN1_INTEGER *"
+          }
+        ],
+        "header": "x509.h",
+        "line": 455,
+        "name": "PBEPARAM_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "salt",
+            "type": "ASN1_TYPE *"
+          },
+          {
+            "name": "iter",
+            "type": "ASN1_INTEGER *"
+          },
+          {
+            "name": "keylength",
+            "type": "ASN1_INTEGER *"
+          },
+          {
+            "name": "prf",
+            "type": "X509_ALGOR *"
+          }
+        ],
+        "header": "x509.h",
+        "line": 467,
+        "name": "PBKDF2PARAM_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "pkcs12.h",
+        "line": 67,
+        "name": "PKCS12_MAC_DATA_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "pkcs12.h",
+        "line": 71,
+        "name": "PKCS12_SAFEBAG_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "pkcs12.h",
+        "line": 69,
+        "name": "PKCS12_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "libctx",
+            "type": "OSSL_LIB_CTX *"
+          },
+          {
+            "name": "propq",
+            "type": "char *"
+          }
+        ],
+        "header": "pkcs7.h",
+        "line": 48,
+        "name": "PKCS7_CTX_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "notBefore",
+            "type": "ASN1_GENERALIZEDTIME *"
+          },
+          {
+            "name": "notAfter",
+            "type": "ASN1_GENERALIZEDTIME *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 160,
+        "name": "PKEY_USAGE_PERIOD_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "policyid",
+            "type": "ASN1_OBJECT *"
+          },
+          {
+            "name": "qualifiers",
+            "type": "struct stack_st_POLICYQUALINFO *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 473,
+        "name": "POLICYINFO_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "pqualid",
+            "type": "ASN1_OBJECT *"
+          },
+          {
+            "name": "d",
+            "type": "union (unnamed union at /work/forensics/authorities/prefix/openssl-3.6.3-historical/include/openssl/x509v3.h:436:5)"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 434,
+        "name": "POLICYQUALINFO_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "requireExplicitPolicy",
+            "type": "ASN1_INTEGER *"
+          },
+          {
+            "name": "inhibitPolicyMapping",
+            "type": "ASN1_INTEGER *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 588,
+        "name": "POLICY_CONSTRAINTS_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "issuerDomainPolicy",
+            "type": "ASN1_OBJECT *"
+          },
+          {
+            "name": "subjectDomainPolicy",
+            "type": "ASN1_OBJECT *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 510,
+        "name": "POLICY_MAPPING_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "pcPathLengthConstraint",
+            "type": "ASN1_INTEGER *"
+          },
+          {
+            "name": "proxyPolicy",
+            "type": "PROXY_POLICY *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 599,
+        "name": "PROXY_CERT_INFO_EXTENSION_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "policyLanguage",
+            "type": "ASN1_OBJECT *"
+          },
+          {
+            "name": "policy",
+            "type": "ASN1_OCTET_STRING *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 594,
+        "name": "PROXY_POLICY_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509v3.h",
+        "line": 1383,
+        "name": "ProfessionInfo_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "A",
+            "type": "unsigned int"
+          },
+          {
+            "name": "B",
+            "type": "unsigned int"
+          },
+          {
+            "name": "C",
+            "type": "unsigned int"
+          },
+          {
+            "name": "D",
+            "type": "unsigned int"
+          },
+          {
+            "name": "E",
+            "type": "unsigned int"
+          },
+          {
+            "name": "Nl",
+            "type": "unsigned int"
+          },
+          {
+            "name": "Nh",
+            "type": "unsigned int"
+          },
+          {
+            "name": "data",
+            "type": "unsigned int[16]"
+          },
+          {
+            "name": "num",
+            "type": "unsigned int"
+          }
+        ],
+        "header": "ripemd.h",
+        "line": 37,
+        "name": "RIPEMD160state_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "salt",
+            "type": "ASN1_OCTET_STRING *"
+          },
+          {
+            "name": "costParameter",
+            "type": "ASN1_INTEGER *"
+          },
+          {
+            "name": "blockSize",
+            "type": "ASN1_INTEGER *"
+          },
+          {
+            "name": "parallelizationParameter",
+            "type": "ASN1_INTEGER *"
+          },
+          {
+            "name": "keyLength",
+            "type": "ASN1_INTEGER *"
+          }
+        ],
+        "header": "x509.h",
+        "line": 481,
+        "name": "SCRYPT_PARAMS_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "h",
+            "type": "unsigned int[8]"
+          },
+          {
+            "name": "Nl",
+            "type": "unsigned int"
+          },
+          {
+            "name": "Nh",
+            "type": "unsigned int"
+          },
+          {
+            "name": "data",
+            "type": "unsigned int[16]"
+          },
+          {
+            "name": "num",
+            "type": "unsigned int"
+          },
+          {
+            "name": "md_len",
+            "type": "unsigned int"
+          }
+        ],
+        "header": "sha.h",
+        "line": 62,
+        "name": "SHA256state_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "h",
+            "type": "unsigned long long[8]"
+          },
+          {
+            "name": "Nl",
+            "type": "unsigned long long"
+          },
+          {
+            "name": "Nh",
+            "type": "unsigned long long"
+          },
+          {
+            "name": "u",
+            "type": "union (unnamed union at /work/forensics/authorities/prefix/openssl-3.6.3-historical/include/openssl/sha.h:113:5)"
+          },
+          {
+            "name": "num",
+            "type": "unsigned int"
+          },
+          {
+            "name": "md_len",
+            "type": "unsigned int"
+          }
+        ],
+        "header": "sha.h",
+        "line": 110,
+        "name": "SHA512state_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "h0",
+            "type": "unsigned int"
+          },
+          {
+            "name": "h1",
+            "type": "unsigned int"
+          },
+          {
+            "name": "h2",
+            "type": "unsigned int"
+          },
+          {
+            "name": "h3",
+            "type": "unsigned int"
+          },
+          {
+            "name": "h4",
+            "type": "unsigned int"
+          },
+          {
+            "name": "Nl",
+            "type": "unsigned int"
+          },
+          {
+            "name": "Nh",
+            "type": "unsigned int"
+          },
+          {
+            "name": "data",
+            "type": "unsigned int[16]"
+          },
+          {
+            "name": "num",
+            "type": "unsigned int"
+          }
+        ],
+        "header": "sha.h",
+        "line": 42,
+        "name": "SHAstate_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "users_pwd",
+            "type": "struct stack_st_SRP_user_pwd *"
+          },
+          {
+            "name": "gN_cache",
+            "type": "struct stack_st_SRP_gN_cache *"
+          },
+          {
+            "name": "seed_key",
+            "type": "char *"
+          },
+          {
+            "name": "default_g",
+            "type": "const BIGNUM *"
+          },
+          {
+            "name": "default_N",
+            "type": "const BIGNUM *"
+          }
+        ],
+        "header": "srp.h",
+        "line": 134,
+        "name": "SRP_VBASE_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "b64_bn",
+            "type": "char *"
+          },
+          {
+            "name": "bn",
+            "type": "BIGNUM *"
+          }
+        ],
+        "header": "srp.h",
+        "line": 45,
+        "name": "SRP_gN_cache_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "id",
+            "type": "char *"
+          },
+          {
+            "name": "g",
+            "type": "const BIGNUM *"
+          },
+          {
+            "name": "N",
+            "type": "const BIGNUM *"
+          }
+        ],
+        "header": "srp.h",
+        "line": 146,
+        "name": "SRP_gN_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "id",
+            "type": "char *"
+          },
+          {
+            "name": "s",
+            "type": "BIGNUM *"
+          },
+          {
+            "name": "v",
+            "type": "BIGNUM *"
+          },
+          {
+            "name": "g",
+            "type": "const BIGNUM *"
+          },
+          {
+            "name": "N",
+            "type": "const BIGNUM *"
+          },
+          {
+            "name": "info",
+            "type": "char *"
+          }
+        ],
+        "header": "srp.h",
+        "line": 79,
+        "name": "SRP_user_pwd_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "zone",
+            "type": "ASN1_INTEGER *"
+          },
+          {
+            "name": "user",
+            "type": "ASN1_OCTET_STRING *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 377,
+        "name": "SXNET_ID_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "version",
+            "type": "ASN1_INTEGER *"
+          },
+          {
+            "name": "ids",
+            "type": "struct stack_st_SXNETID *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 412,
+        "name": "SXNET_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "targetCertificate",
+            "type": "OSSL_ISSUER_SERIAL *"
+          },
+          {
+            "name": "targetName",
+            "type": "GENERAL_NAME *"
+          },
+          {
+            "name": "certDigestInfo",
+            "type": "OSSL_OBJECT_DIGEST_INFO *"
+          }
+        ],
+        "header": "x509_acert.h",
+        "line": 187,
+        "name": "TARGET_CERT_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "type",
+            "type": "int"
+          },
+          {
+            "name": "choice",
+            "type": "union (unnamed union at /work/forensics/authorities/prefix/openssl-3.6.3-historical/include/openssl/x509_acert.h:201:5)"
+          }
+        ],
+        "header": "x509_acert.h",
+        "line": 199,
+        "name": "TARGET_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ts.h",
+        "line": 44,
+        "name": "TS_accuracy_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ts.h",
+        "line": 42,
+        "name": "TS_msg_imprint_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ts.h",
+        "line": 43,
+        "name": "TS_req_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ts.h",
+        "line": 245,
+        "name": "TS_resp_ctx",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ts.h",
+        "line": 67,
+        "name": "TS_resp_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ts.h",
+        "line": 65,
+        "name": "TS_status_info_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ts.h",
+        "line": 45,
+        "name": "TS_tst_info_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ts.h",
+        "line": 406,
+        "name": "TS_verify_ctx",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "noticeref",
+            "type": "NOTICEREF *"
+          },
+          {
+            "name": "exptext",
+            "type": "ASN1_STRING *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 429,
+        "name": "USERNOTICE_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "get_string",
+            "type": "char *(*)(void *, const char *, const char *)"
+          },
+          {
+            "name": "get_section",
+            "type": "struct stack_st_CONF_VALUE *(*)(void *, const char *)"
+          },
+          {
+            "name": "free_string",
+            "type": "void (*)(void *, char *)"
+          },
+          {
+            "name": "free_section",
+            "type": "void (*)(void *, struct stack_st_CONF_VALUE *)"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 86,
+        "name": "X509V3_CONF_METHOD_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 207,
+        "name": "X509_POLICY_CACHE_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 205,
+        "name": "X509_POLICY_LEVEL_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 204,
+        "name": "X509_POLICY_NODE_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 206,
+        "name": "X509_POLICY_TREE_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 184,
+        "name": "X509_VERIFY_PARAM_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509_acert.h",
+        "line": 30,
+        "name": "X509_acert_info_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509_acert.h",
+        "line": 33,
+        "name": "X509_acert_issuer_v2form_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509_acert.h",
+        "line": 29,
+        "name": "X509_acert_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "algorithm",
+            "type": "ASN1_OBJECT *"
+          },
+          {
+            "name": "parameter",
+            "type": "ASN1_TYPE *"
+          }
+        ],
+        "header": "x509.h",
+        "line": 191,
+        "name": "X509_algor_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509.h",
+        "line": 370,
+        "name": "X509_crl_info_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 173,
+        "name": "X509_crl_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509.h",
+        "line": 239,
+        "name": "X509_extension_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "x509",
+            "type": "X509 *"
+          },
+          {
+            "name": "crl",
+            "type": "X509_CRL *"
+          },
+          {
+            "name": "x_pkey",
+            "type": "X509_PKEY *"
+          },
+          {
+            "name": "enc_cipher",
+            "type": "EVP_CIPHER_INFO"
+          },
+          {
+            "name": "enc_len",
+            "type": "int"
+          },
+          {
+            "name": "enc_data",
+            "type": "char *"
+          }
+        ],
+        "header": "x509.h",
+        "line": 387,
+        "name": "X509_info_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509.h",
+        "line": 205,
+        "name": "X509_name_entry_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 176,
+        "name": "X509_name_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 177,
+        "name": "X509_pubkey_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509.h",
+        "line": 300,
+        "name": "X509_req_info_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509.h",
+        "line": 301,
+        "name": "X509_req_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509.h",
+        "line": 203,
+        "name": "X509_sig_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "notBefore",
+            "type": "ASN1_TIME *"
+          },
+          {
+            "name": "notAfter",
+            "type": "ASN1_TIME *"
+          }
+        ],
+        "header": "x509.h",
+        "line": 198,
+        "name": "X509_val_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "rd_key",
+            "type": "unsigned int[60]"
+          },
+          {
+            "name": "rounds",
+            "type": "int"
+          }
+        ],
+        "header": "aes.h",
+        "line": 36,
+        "name": "aes_key_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 84,
+        "name": "asn1_object_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 88,
+        "name": "asn1_pctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 89,
+        "name": "asn1_sctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "length",
+            "type": "int"
+          },
+          {
+            "name": "type",
+            "type": "int"
+          },
+          {
+            "name": "data",
+            "type": "unsigned char *"
+          },
+          {
+            "name": "flags",
+            "type": "long"
+          }
+        ],
+        "header": "asn1.h",
+        "line": 189,
+        "name": "asn1_string_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "nid",
+            "type": "int"
+          },
+          {
+            "name": "minsize",
+            "type": "long"
+          },
+          {
+            "name": "maxsize",
+            "type": "long"
+          },
+          {
+            "name": "mask",
+            "type": "unsigned long"
+          },
+          {
+            "name": "flags",
+            "type": "unsigned long"
+          }
+        ],
+        "header": "asn1.h",
+        "line": 229,
+        "name": "asn1_string_table_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "type",
+            "type": "int"
+          },
+          {
+            "name": "value",
+            "type": "union (unnamed union at /work/forensics/authorities/prefix/openssl-3.6.3-historical/include/openssl/asn1.h:526:5)"
+          }
+        ],
+        "header": "asn1.h",
+        "line": 524,
+        "name": "asn1_type_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "async.h",
+        "line": 37,
+        "name": "async_job_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "async.h",
+        "line": 38,
+        "name": "async_wait_ctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "type",
+            "type": "ASN1_OBJECT *"
+          },
+          {
+            "name": "value",
+            "type": "ASN1_TYPE *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 1853,
+        "name": "atav_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "P",
+            "type": "unsigned int[18]"
+          },
+          {
+            "name": "S",
+            "type": "unsigned int[1024]"
+          }
+        ],
+        "header": "blowfish.h",
+        "line": 43,
+        "name": "bf_key_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 97,
+        "name": "bignum_ctx",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 96,
+        "name": "bignum_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "bio.h",
+        "line": 246,
+        "name": "bio_addrinfo_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "bio.h",
+        "line": 330,
+        "name": "bio_method_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "msg",
+            "type": "BIO_MSG *"
+          },
+          {
+            "name": "stride",
+            "type": "size_t"
+          },
+          {
+            "name": "num_msg",
+            "type": "size_t"
+          },
+          {
+            "name": "flags",
+            "type": "uint64_t"
+          },
+          {
+            "name": "msgs_processed",
+            "type": "size_t *"
+          }
+        ],
+        "header": "bio.h",
+        "line": 408,
+        "name": "bio_mmsg_cb_args_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "data",
+            "type": "void *"
+          },
+          {
+            "name": "data_len",
+            "type": "size_t"
+          },
+          {
+            "name": "peer",
+            "type": "BIO_ADDR *"
+          },
+          {
+            "name": "local",
+            "type": "BIO_ADDR *"
+          },
+          {
+            "name": "flags",
+            "type": "uint64_t"
+          }
+        ],
+        "header": "bio.h",
+        "line": 401,
+        "name": "bio_msg_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "type",
+            "type": "uint32_t"
+          },
+          {
+            "name": "value",
+            "type": "union (unnamed union at /work/forensics/authorities/prefix/openssl-3.6.3-historical/include/openssl/bio.h:422:5)"
+          }
+        ],
+        "header": "bio.h",
+        "line": 420,
+        "name": "bio_poll_descriptor_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 95,
+        "name": "bio_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 98,
+        "name": "bn_blinding_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 101,
+        "name": "bn_gencb_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 99,
+        "name": "bn_mont_ctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 100,
+        "name": "bn_recp_ctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "length",
+            "type": "size_t"
+          },
+          {
+            "name": "data",
+            "type": "char *"
+          },
+          {
+            "name": "max",
+            "type": "size_t"
+          },
+          {
+            "name": "flags",
+            "type": "unsigned long"
+          }
+        ],
+        "header": "buffer.h",
+        "line": 41,
+        "name": "buf_mem_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "u",
+            "type": "union (unnamed union at /work/forensics/authorities/prefix/openssl-3.6.3-historical/include/openssl/camellia.h:48:5)"
+          },
+          {
+            "name": "grand_rounds",
+            "type": "int"
+          }
+        ],
+        "header": "camellia.h",
+        "line": 47,
+        "name": "camellia_key_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "data",
+            "type": "unsigned int[32]"
+          },
+          {
+            "name": "short_key",
+            "type": "int"
+          }
+        ],
+        "header": "cast.h",
+        "line": 36,
+        "name": "cast_key_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "modes.h",
+        "line": 139,
+        "name": "ccm128_context",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 201,
+        "name": "comp_ctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 202,
+        "name": "comp_method_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "conf.h",
+        "line": 100,
+        "name": "conf_imodule_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "name",
+            "type": "const char *"
+          },
+          {
+            "name": "create",
+            "type": "CONF *(*)(CONF_METHOD *)"
+          },
+          {
+            "name": "init",
+            "type": "int (*)(CONF *)"
+          },
+          {
+            "name": "destroy",
+            "type": "int (*)(CONF *)"
+          },
+          {
+            "name": "destroy_data",
+            "type": "int (*)(CONF *)"
+          },
+          {
+            "name": "load_bio",
+            "type": "int (*)(CONF *, BIO *, long *)"
+          },
+          {
+            "name": "dump",
+            "type": "int (*)(const CONF *, BIO *)"
+          },
+          {
+            "name": "is_number",
+            "type": "int (*)(const CONF *, char)"
+          },
+          {
+            "name": "to_int",
+            "type": "int (*)(const CONF *, char)"
+          },
+          {
+            "name": "load",
+            "type": "int (*)(CONF *, const char *, long *)"
+          }
+        ],
+        "header": "conftypes.h",
+        "line": 21,
+        "name": "conf_method_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "conf.h",
+        "line": 101,
+        "name": "conf_module_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "meth",
+            "type": "CONF_METHOD *"
+          },
+          {
+            "name": "meth_data",
+            "type": "void *"
+          },
+          {
+            "name": "data",
+            "type": "struct lhash_st_CONF_VALUE *"
+          },
+          {
+            "name": "flag_dollarid",
+            "type": "int"
+          },
+          {
+            "name": "flag_abspath",
+            "type": "int"
+          },
+          {
+            "name": "includedir",
+            "type": "char *"
+          },
+          {
+            "name": "libctx",
+            "type": "OSSL_LIB_CTX *"
+          }
+        ],
+        "header": "conftypes.h",
+        "line": 34,
+        "name": "conf_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "ctx",
+            "type": "OSSL_LIB_CTX *"
+          },
+          {
+            "name": "sk",
+            "type": "struct stack_st_void *"
+          }
+        ],
+        "header": "crypto.h",
+        "line": 212,
+        "name": "crypto_ex_data_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "dummy",
+            "type": "int"
+          }
+        ],
+        "header": "crypto.h",
+        "line": 341,
+        "name": "crypto_threadid_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 224,
+        "name": "ct_policy_eval_ctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 222,
+        "name": "ctlog_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 223,
+        "name": "ctlog_store_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 147,
+        "name": "dh_method",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 146,
+        "name": "dh_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 151,
+        "name": "dsa_method",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 150,
+        "name": "dsa_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ec.h",
+        "line": 110,
+        "name": "ec_group_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 164,
+        "name": "ec_key_method_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 163,
+        "name": "ec_key_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ec.h",
+        "line": 108,
+        "name": "ec_method_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ec.h",
+        "line": 113,
+        "name": "ec_parameters_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ec.h",
+        "line": 111,
+        "name": "ec_point_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ec.h",
+        "line": 112,
+        "name": "ecpk_parameters_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 197,
+        "name": "engine_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "err_flags",
+            "type": "int[16]"
+          },
+          {
+            "name": "err_marks",
+            "type": "int[16]"
+          },
+          {
+            "name": "err_buffer",
+            "type": "unsigned long[16]"
+          },
+          {
+            "name": "err_data",
+            "type": "char *[16]"
+          },
+          {
+            "name": "err_data_size",
+            "type": "size_t[16]"
+          },
+          {
+            "name": "err_data_flags",
+            "type": "int[16]"
+          },
+          {
+            "name": "err_file",
+            "type": "char *[16]"
+          },
+          {
+            "name": "err_line",
+            "type": "int[16]"
+          },
+          {
+            "name": "err_func",
+            "type": "char *[16]"
+          },
+          {
+            "name": "top",
+            "type": "int"
+          },
+          {
+            "name": "bottom",
+            "type": "int"
+          }
+        ],
+        "header": "err.h",
+        "line": 58,
+        "name": "err_state_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 142,
+        "name": "evp_Encode_Ctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 138,
+        "name": "evp_asym_cipher_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 111,
+        "name": "evp_cipher_ctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "cipher",
+            "type": "const EVP_CIPHER *"
+          },
+          {
+            "name": "iv",
+            "type": "unsigned char[16]"
+          }
+        ],
+        "header": "evp.h",
+        "line": 493,
+        "name": "evp_cipher_info_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 110,
+        "name": "evp_cipher_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 127,
+        "name": "evp_kdf_ctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 126,
+        "name": "evp_kdf_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 140,
+        "name": "evp_kem_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 132,
+        "name": "evp_keyexch_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 124,
+        "name": "evp_keymgmt_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 115,
+        "name": "evp_mac_ctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 114,
+        "name": "evp_mac_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 113,
+        "name": "evp_md_ctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 112,
+        "name": "evp_md_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 119,
+        "name": "evp_pkey_asn1_method_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 122,
+        "name": "evp_pkey_ctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 121,
+        "name": "evp_pkey_method_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 116,
+        "name": "evp_pkey_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 130,
+        "name": "evp_rand_ctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 129,
+        "name": "evp_rand_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 134,
+        "name": "evp_signature_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 117,
+        "name": "evp_skey_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 136,
+        "name": "evp_skeymgmt_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "modes.h",
+        "line": 114,
+        "name": "gcm128_context",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 144,
+        "name": "hmac_ctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "bio.h",
+        "line": 890,
+        "name": "hostent",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "data",
+            "type": "IDEA_INT[9][6]"
+          }
+        ],
+        "header": "idea.h",
+        "line": 36,
+        "name": "idea_key_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "lhash.h",
+        "line": 37,
+        "name": "lhash_node_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "lhash.h",
+        "line": 46,
+        "name": "lhash_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "dummy",
+            "type": "union lh_CONF_VALUE_dummy"
+          }
+        ],
+        "header": "conf.h",
+        "line": 73,
+        "name": "lhash_st_CONF_VALUE",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "dummy",
+            "type": "union lh_ERR_STRING_DATA_dummy"
+          }
+        ],
+        "header": "err.h",
+        "line": 376,
+        "name": "lhash_st_ERR_STRING_DATA",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "dummy",
+            "type": "union lh_OPENSSL_CSTRING_dummy"
+          }
+        ],
+        "header": "lhash.h",
+        "line": 395,
+        "name": "lhash_st_OPENSSL_CSTRING",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "dummy",
+            "type": "union lh_OPENSSL_STRING_dummy"
+          }
+        ],
+        "header": "lhash.h",
+        "line": 380,
+        "name": "lhash_st_OPENSSL_STRING",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ssl.h",
+        "line": 723,
+        "name": "lhash_st_SSL_SESSION",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "num",
+            "type": "unsigned int"
+          },
+          {
+            "name": "data",
+            "type": "unsigned char[8]"
+          },
+          {
+            "name": "h",
+            "type": "DES_cblock"
+          },
+          {
+            "name": "hh",
+            "type": "DES_cblock"
+          },
+          {
+            "name": "pad_type",
+            "type": "unsigned int"
+          }
+        ],
+        "header": "mdc2.h",
+        "line": 34,
+        "name": "mdc2_ctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "type",
+            "type": "int"
+          },
+          {
+            "name": "alias",
+            "type": "int"
+          },
+          {
+            "name": "name",
+            "type": "const char *"
+          },
+          {
+            "name": "data",
+            "type": "const char *"
+          }
+        ],
+        "header": "objects.h",
+        "line": 42,
+        "name": "obj_name_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "modes.h",
+        "line": 184,
+        "name": "ocb128_context",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ocsp.h",
+        "line": 235,
+        "name": "ocsp_basic_response_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ocsp.h",
+        "line": 90,
+        "name": "ocsp_cert_id_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ocsp.h",
+        "line": 200,
+        "name": "ocsp_cert_status_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ocsp.h",
+        "line": 237,
+        "name": "ocsp_crl_id_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ocsp.h",
+        "line": 91,
+        "name": "ocsp_one_request_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ocsp.h",
+        "line": 92,
+        "name": "ocsp_req_info_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ocsp.h",
+        "line": 94,
+        "name": "ocsp_request_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ocsp.h",
+        "line": 159,
+        "name": "ocsp_resp_bytes_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 218,
+        "name": "ocsp_responder_id_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ocsp.h",
+        "line": 233,
+        "name": "ocsp_response_data_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 217,
+        "name": "ocsp_response_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ocsp.h",
+        "line": 194,
+        "name": "ocsp_revoked_info_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ocsp.h",
+        "line": 238,
+        "name": "ocsp_service_locator_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ocsp.h",
+        "line": 93,
+        "name": "ocsp_signature_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ocsp.h",
+        "line": 201,
+        "name": "ocsp_single_response_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "core.h",
+        "line": 31,
+        "name": "openssl_core_ctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "algorithm_names",
+            "type": "const char *"
+          },
+          {
+            "name": "property_definition",
+            "type": "const char *"
+          },
+          {
+            "name": "implementation",
+            "type": "const OSSL_DISPATCH *"
+          },
+          {
+            "name": "algorithm_description",
+            "type": "const char *"
+          }
+        ],
+        "header": "core.h",
+        "line": 72,
+        "name": "ossl_algorithm_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cmp.h",
+        "line": 361,
+        "name": "ossl_cmp_certrepmessage_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cmp.h",
+        "line": 393,
+        "name": "ossl_cmp_certresponse_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cmp.h",
+        "line": 225,
+        "name": "ossl_cmp_certstatus_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cmp.h",
+        "line": 287,
+        "name": "ossl_cmp_crlstatus_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cmp.h",
+        "line": 219,
+        "name": "ossl_cmp_ctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cmp.h",
+        "line": 255,
+        "name": "ossl_cmp_itav_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cmp.h",
+        "line": 222,
+        "name": "ossl_cmp_msg_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cmp.h",
+        "line": 220,
+        "name": "ossl_cmp_pkiheader_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cmp.h",
+        "line": 329,
+        "name": "ossl_cmp_pkisi_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cmp.h",
+        "line": 391,
+        "name": "ossl_cmp_pollrep_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cmp.h",
+        "line": 328,
+        "name": "ossl_cmp_revrepcontent_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cmp.h",
+        "line": 648,
+        "name": "ossl_cmp_srv_ctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "core.h",
+        "line": 32,
+        "name": "ossl_core_bio_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "core.h",
+        "line": 30,
+        "name": "ossl_core_handle_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "crmf.h",
+        "line": 87,
+        "name": "ossl_crmf_attributetypeandvalue_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "crmf.h",
+        "line": 124,
+        "name": "ossl_crmf_certid_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "crmf.h",
+        "line": 123,
+        "name": "ossl_crmf_certrequest_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "crmf.h",
+        "line": 161,
+        "name": "ossl_crmf_certtemplate_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "crmf.h",
+        "line": 52,
+        "name": "ossl_crmf_encryptedkey_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "crmf.h",
+        "line": 49,
+        "name": "ossl_crmf_encryptedvalue_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "crmf.h",
+        "line": 55,
+        "name": "ossl_crmf_msg_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "crmf.h",
+        "line": 167,
+        "name": "ossl_crmf_optionalvalidity_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "crmf.h",
+        "line": 120,
+        "name": "ossl_crmf_pbmparameter_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "crmf.h",
+        "line": 157,
+        "name": "ossl_crmf_pkipublicationinfo_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "crmf.h",
+        "line": 122,
+        "name": "ossl_crmf_poposigningkey_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "crmf.h",
+        "line": 159,
+        "name": "ossl_crmf_singlepubinfo_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 242,
+        "name": "ossl_decoder_ctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "decoder.h",
+        "line": 82,
+        "name": "ossl_decoder_instance_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 241,
+        "name": "ossl_decoder_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "function_id",
+            "type": "int"
+          },
+          {
+            "name": "function",
+            "type": "void (*)(void)"
+          }
+        ],
+        "header": "core.h",
+        "line": 40,
+        "name": "ossl_dispatch_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 240,
+        "name": "ossl_encoder_ctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "encoder.h",
+        "line": 81,
+        "name": "ossl_encoder_instance_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 239,
+        "name": "ossl_encoder_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "hpke.h",
+        "line": 106,
+        "name": "ossl_hpke_ctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 216,
+        "name": "ossl_http_req_ctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 192,
+        "name": "ossl_init_settings_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509_acert.h",
+        "line": 32,
+        "name": "ossl_issuer_serial_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "id",
+            "type": "unsigned int"
+          },
+          {
+            "name": "ptr",
+            "type": "void *"
+          }
+        ],
+        "header": "core.h",
+        "line": 61,
+        "name": "ossl_item_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 229,
+        "name": "ossl_lib_ctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509_acert.h",
+        "line": 31,
+        "name": "ossl_object_digest_info_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 235,
+        "name": "ossl_param_bld_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "key",
+            "type": "const char *"
+          },
+          {
+            "name": "data_type",
+            "type": "unsigned int"
+          },
+          {
+            "name": "data",
+            "type": "void *"
+          },
+          {
+            "name": "data_size",
+            "type": "size_t"
+          },
+          {
+            "name": "return_size",
+            "type": "size_t"
+          }
+        ],
+        "header": "core.h",
+        "line": 85,
+        "name": "ossl_param_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 42,
+        "name": "ossl_provider_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 244,
+        "name": "ossl_self_test_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "store.h",
+        "line": 37,
+        "name": "ossl_store_ctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 226,
+        "name": "ossl_store_info_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "store.h",
+        "line": 296,
+        "name": "ossl_store_loader_ctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "store.h",
+        "line": 262,
+        "name": "ossl_store_loader_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 227,
+        "name": "ossl_store_search_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "type_id",
+            "type": "ASN1_OBJECT *"
+          },
+          {
+            "name": "value",
+            "type": "ASN1_TYPE *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 165,
+        "name": "otherName_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "pkcs12.h",
+        "line": 103,
+        "name": "pkcs12_bag_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "version",
+            "type": "ASN1_INTEGER *"
+          },
+          {
+            "name": "md",
+            "type": "X509_ALGOR *"
+          },
+          {
+            "name": "contents",
+            "type": "struct pkcs7_st *"
+          },
+          {
+            "name": "digest",
+            "type": "ASN1_OCTET_STRING *"
+          }
+        ],
+        "header": "pkcs7.h",
+        "line": 175,
+        "name": "pkcs7_digest_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "content_type",
+            "type": "ASN1_OBJECT *"
+          },
+          {
+            "name": "algorithm",
+            "type": "X509_ALGOR *"
+          },
+          {
+            "name": "enc_data",
+            "type": "ASN1_OCTET_STRING *"
+          },
+          {
+            "name": "cipher",
+            "type": "const EVP_CIPHER *"
+          },
+          {
+            "name": "ctx",
+            "type": "const PKCS7_CTX *"
+          }
+        ],
+        "header": "pkcs7.h",
+        "line": 151,
+        "name": "pkcs7_enc_content_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "version",
+            "type": "ASN1_INTEGER *"
+          },
+          {
+            "name": "enc_data",
+            "type": "PKCS7_ENC_CONTENT *"
+          }
+        ],
+        "header": "pkcs7.h",
+        "line": 182,
+        "name": "pkcs7_encrypted_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "version",
+            "type": "ASN1_INTEGER *"
+          },
+          {
+            "name": "recipientinfo",
+            "type": "struct stack_st_PKCS7_RECIP_INFO *"
+          },
+          {
+            "name": "enc_data",
+            "type": "PKCS7_ENC_CONTENT *"
+          }
+        ],
+        "header": "pkcs7.h",
+        "line": 159,
+        "name": "pkcs7_enveloped_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "issuer",
+            "type": "X509_NAME *"
+          },
+          {
+            "name": "serial",
+            "type": "ASN1_INTEGER *"
+          }
+        ],
+        "header": "pkcs7.h",
+        "line": 53,
+        "name": "pkcs7_issuer_and_serial_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "version",
+            "type": "ASN1_INTEGER *"
+          },
+          {
+            "name": "issuer_and_serial",
+            "type": "PKCS7_ISSUER_AND_SERIAL *"
+          },
+          {
+            "name": "key_enc_algor",
+            "type": "X509_ALGOR *"
+          },
+          {
+            "name": "enc_key",
+            "type": "ASN1_OCTET_STRING *"
+          },
+          {
+            "name": "cert",
+            "type": "X509 *"
+          },
+          {
+            "name": "ctx",
+            "type": "const PKCS7_CTX *"
+          }
+        ],
+        "header": "pkcs7.h",
+        "line": 100,
+        "name": "pkcs7_recip_info_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "version",
+            "type": "ASN1_INTEGER *"
+          },
+          {
+            "name": "md_algs",
+            "type": "struct stack_st_X509_ALGOR *"
+          },
+          {
+            "name": "cert",
+            "type": "struct stack_st_X509 *"
+          },
+          {
+            "name": "crl",
+            "type": "struct stack_st_X509_CRL *"
+          },
+          {
+            "name": "signer_info",
+            "type": "struct stack_st_PKCS7_SIGNER_INFO *"
+          },
+          {
+            "name": "contents",
+            "type": "struct pkcs7_st *"
+          }
+        ],
+        "header": "pkcs7.h",
+        "line": 138,
+        "name": "pkcs7_signed_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "version",
+            "type": "ASN1_INTEGER *"
+          },
+          {
+            "name": "md_algs",
+            "type": "struct stack_st_X509_ALGOR *"
+          },
+          {
+            "name": "cert",
+            "type": "struct stack_st_X509 *"
+          },
+          {
+            "name": "crl",
+            "type": "struct stack_st_X509_CRL *"
+          },
+          {
+            "name": "signer_info",
+            "type": "struct stack_st_PKCS7_SIGNER_INFO *"
+          },
+          {
+            "name": "enc_data",
+            "type": "PKCS7_ENC_CONTENT *"
+          },
+          {
+            "name": "recipientinfo",
+            "type": "struct stack_st_PKCS7_RECIP_INFO *"
+          }
+        ],
+        "header": "pkcs7.h",
+        "line": 165,
+        "name": "pkcs7_signedandenveloped_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "version",
+            "type": "ASN1_INTEGER *"
+          },
+          {
+            "name": "issuer_and_serial",
+            "type": "PKCS7_ISSUER_AND_SERIAL *"
+          },
+          {
+            "name": "digest_alg",
+            "type": "X509_ALGOR *"
+          },
+          {
+            "name": "auth_attr",
+            "type": "struct stack_st_X509_ATTRIBUTE *"
+          },
+          {
+            "name": "digest_enc_alg",
+            "type": "X509_ALGOR *"
+          },
+          {
+            "name": "enc_digest",
+            "type": "ASN1_OCTET_STRING *"
+          },
+          {
+            "name": "unauth_attr",
+            "type": "struct stack_st_X509_ATTRIBUTE *"
+          },
+          {
+            "name": "pkey",
+            "type": "EVP_PKEY *"
+          },
+          {
+            "name": "ctx",
+            "type": "const PKCS7_CTX *"
+          }
+        ],
+        "header": "pkcs7.h",
+        "line": 58,
+        "name": "pkcs7_signer_info_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "asn1",
+            "type": "unsigned char *"
+          },
+          {
+            "name": "length",
+            "type": "long"
+          },
+          {
+            "name": "state",
+            "type": "int"
+          },
+          {
+            "name": "detached",
+            "type": "int"
+          },
+          {
+            "name": "type",
+            "type": "ASN1_OBJECT *"
+          },
+          {
+            "name": "d",
+            "type": "union (unnamed union at /work/forensics/authorities/prefix/openssl-3.6.3-historical/include/openssl/pkcs7.h:205:5)"
+          },
+          {
+            "name": "ctx",
+            "type": "PKCS7_CTX"
+          }
+        ],
+        "header": "pkcs7.h",
+        "line": 187,
+        "name": "pkcs7_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 188,
+        "name": "pkcs8_priv_key_info_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "version",
+            "type": "int"
+          },
+          {
+            "name": "enc_algor",
+            "type": "X509_ALGOR *"
+          },
+          {
+            "name": "enc_pkey",
+            "type": "ASN1_OCTET_STRING *"
+          },
+          {
+            "name": "dec_pkey",
+            "type": "EVP_PKEY *"
+          },
+          {
+            "name": "key_length",
+            "type": "int"
+          },
+          {
+            "name": "key_data",
+            "type": "char *"
+          },
+          {
+            "name": "key_free",
+            "type": "int"
+          },
+          {
+            "name": "cipher",
+            "type": "EVP_CIPHER_INFO"
+          }
+        ],
+        "header": "x509.h",
+        "line": 372,
+        "name": "private_key_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 168,
+        "name": "rand_drbg_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "seed",
+            "type": "int (*)(const void *, int)"
+          },
+          {
+            "name": "bytes",
+            "type": "int (*)(unsigned char *, int)"
+          },
+          {
+            "name": "cleanup",
+            "type": "void (*)(void)"
+          },
+          {
+            "name": "add",
+            "type": "int (*)(const void *, int, double)"
+          },
+          {
+            "name": "pseudorand",
+            "type": "int (*)(unsigned char *, int)"
+          },
+          {
+            "name": "status",
+            "type": "int (*)(void)"
+          }
+        ],
+        "header": "rand.h",
+        "line": 40,
+        "name": "rand_meth_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "data",
+            "type": "RC2_INT[64]"
+          }
+        ],
+        "header": "rc2.h",
+        "line": 35,
+        "name": "rc2_key_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "x",
+            "type": "unsigned int"
+          },
+          {
+            "name": "y",
+            "type": "unsigned int"
+          },
+          {
+            "name": "data",
+            "type": "unsigned int[256]"
+          }
+        ],
+        "header": "rc4.h",
+        "line": 28,
+        "name": "rc4_key_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 156,
+        "name": "rsa_meth_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "hashFunc",
+            "type": "X509_ALGOR *"
+          },
+          {
+            "name": "maskGenFunc",
+            "type": "X509_ALGOR *"
+          },
+          {
+            "name": "pSourceFunc",
+            "type": "X509_ALGOR *"
+          },
+          {
+            "name": "maskHash",
+            "type": "X509_ALGOR *"
+          }
+        ],
+        "header": "rsa.h",
+        "line": 337,
+        "name": "rsa_oaep_params_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "hashAlgorithm",
+            "type": "X509_ALGOR *"
+          },
+          {
+            "name": "maskGenAlgorithm",
+            "type": "X509_ALGOR *"
+          },
+          {
+            "name": "saltLength",
+            "type": "ASN1_INTEGER *"
+          },
+          {
+            "name": "trailerField",
+            "type": "ASN1_INTEGER *"
+          },
+          {
+            "name": "maskHash",
+            "type": "X509_ALGOR *"
+          }
+        ],
+        "header": "rsa.h",
+        "line": 325,
+        "name": "rsa_pss_params_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 155,
+        "name": "rsa_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 221,
+        "name": "sct_ctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 220,
+        "name": "sct_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "data",
+            "type": "unsigned int[32]"
+          }
+        ],
+        "header": "seed.h",
+        "line": 66,
+        "name": "seed_key_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "name",
+            "type": "const char *"
+          },
+          {
+            "name": "id",
+            "type": "unsigned long"
+          }
+        ],
+        "header": "ssl.h",
+        "line": 244,
+        "name": "srtp_protection_profile_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ssl.h",
+        "line": 236,
+        "name": "ssl_cipher_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "comp.h",
+        "line": 66,
+        "name": "ssl_comp_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ssl.h",
+        "line": 239,
+        "name": "ssl_conf_ctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "error_code",
+            "type": "uint64_t"
+          },
+          {
+            "name": "frame_type",
+            "type": "uint64_t"
+          },
+          {
+            "name": "reason",
+            "type": "const char *"
+          },
+          {
+            "name": "reason_len",
+            "type": "size_t"
+          },
+          {
+            "name": "flags",
+            "type": "uint32_t"
+          }
+        ],
+        "header": "ssl.h",
+        "line": 2472,
+        "name": "ssl_conn_close_info_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 199,
+        "name": "ssl_ctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 170,
+        "name": "ssl_dane_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ssl.h",
+        "line": 235,
+        "name": "ssl_method_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "desc",
+            "type": "BIO_POLL_DESCRIPTOR"
+          },
+          {
+            "name": "events",
+            "type": "uint64_t"
+          },
+          {
+            "name": "revents",
+            "type": "uint64_t"
+          }
+        ],
+        "header": "ssl.h",
+        "line": 2577,
+        "name": "ssl_poll_item_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ssl.h",
+        "line": 237,
+        "name": "ssl_session_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "quic_error_code",
+            "type": "uint64_t"
+          },
+          {
+            "name": "quic_reason",
+            "type": "const char *"
+          }
+        ],
+        "header": "ssl.h",
+        "line": 2432,
+        "name": "ssl_shutdown_ex_args_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 198,
+        "name": "ssl_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "quic_error_code",
+            "type": "uint64_t"
+          }
+        ],
+        "header": "ssl.h",
+        "line": 2448,
+        "name": "ssl_stream_reset_args_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "malloc_fn",
+            "type": "dyn_MEM_malloc_fn"
+          },
+          {
+            "name": "realloc_fn",
+            "type": "dyn_MEM_realloc_fn"
+          },
+          {
+            "name": "free_fn",
+            "type": "dyn_MEM_free_fn"
+          }
+        ],
+        "header": "engine.h",
+        "line": 743,
+        "name": "st_dynamic_MEM_fns",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "static_state",
+            "type": "void *"
+          },
+          {
+            "name": "mem_fns",
+            "type": "dynamic_MEM_fns"
+          }
+        ],
+        "header": "engine.h",
+        "line": 753,
+        "name": "st_dynamic_fns",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "stack.h",
+        "line": 23,
+        "name": "stack_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509v3.h",
+        "line": 215,
+        "name": "stack_st_ACCESS_DESCRIPTION",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509v3.h",
+        "line": 1417,
+        "name": "stack_st_ADMISSIONS",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509v3.h",
+        "line": 1133,
+        "name": "stack_st_ASIdOrRange",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "asn1.h",
+        "line": 791,
+        "name": "stack_st_ASN1_GENERALSTRING",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "asn1.h",
+        "line": 689,
+        "name": "stack_st_ASN1_INTEGER",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "asn1.h",
+        "line": 621,
+        "name": "stack_st_ASN1_OBJECT",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509v3.h",
+        "line": 1350,
+        "name": "stack_st_ASN1_STRING",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "asn1.h",
+        "line": 238,
+        "name": "stack_st_ASN1_STRING_TABLE",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "asn1.h",
+        "line": 556,
+        "name": "stack_st_ASN1_TYPE",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "asn1.h",
+        "line": 752,
+        "name": "stack_st_ASN1_UTF8STRING",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "asn1t.h",
+        "line": 886,
+        "name": "stack_st_ASN1_VALUE",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 105,
+        "name": "stack_st_BIGNUM",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 106,
+        "name": "stack_st_BIGNUM_const",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "bio.h",
+        "line": 339,
+        "name": "stack_st_BIO",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cms.h",
+        "line": 75,
+        "name": "stack_st_CMS_RecipientEncryptedKey",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cms.h",
+        "line": 101,
+        "name": "stack_st_CMS_RecipientInfo",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cms.h",
+        "line": 127,
+        "name": "stack_st_CMS_RevocationInfoChoice",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cms.h",
+        "line": 49,
+        "name": "stack_st_CMS_SignerInfo",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "conf.h",
+        "line": 104,
+        "name": "stack_st_CONF_IMODULE",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "conf.h",
+        "line": 103,
+        "name": "stack_st_CONF_MODULE",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "conf.h",
+        "line": 47,
+        "name": "stack_st_CONF_VALUE",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ct.h",
+        "line": 70,
+        "name": "stack_st_CTLOG",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509v3.h",
+        "line": 338,
+        "name": "stack_st_DIST_POINT",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ess.h",
+        "line": 36,
+        "name": "stack_st_ESS_CERT_ID",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ess.h",
+        "line": 69,
+        "name": "stack_st_ESS_CERT_ID_V2",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509v3.h",
+        "line": 241,
+        "name": "stack_st_GENERAL_NAME",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509v3.h",
+        "line": 276,
+        "name": "stack_st_GENERAL_NAMES",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509v3.h",
+        "line": 554,
+        "name": "stack_st_GENERAL_SUBTREE",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509v3.h",
+        "line": 1248,
+        "name": "stack_st_IPAddressFamily",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509v3.h",
+        "line": 1200,
+        "name": "stack_st_IPAddressOrRange",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ocsp.h",
+        "line": 97,
+        "name": "stack_st_OCSP_CERTID",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ocsp.h",
+        "line": 123,
+        "name": "stack_st_OCSP_ONEREQ",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ocsp.h",
+        "line": 165,
+        "name": "stack_st_OCSP_RESPID",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509_vfy.h",
+        "line": 43,
+        "name": "stack_st_OCSP_RESPONSE",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ocsp.h",
+        "line": 204,
+        "name": "stack_st_OCSP_SINGLERESP",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "safestack.h",
+        "line": 293,
+        "name": "stack_st_OPENSSL_BLOCK",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "safestack.h",
+        "line": 257,
+        "name": "stack_st_OPENSSL_CSTRING",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "txt_db.h",
+        "line": 37,
+        "name": "stack_st_OPENSSL_PSTRING",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "safestack.h",
+        "line": 231,
+        "name": "stack_st_OPENSSL_STRING",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509v3.h",
+        "line": 1928,
+        "name": "stack_st_OSSL_ALLOWED_ATTRIBUTES_CHOICE",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509v3.h",
+        "line": 1932,
+        "name": "stack_st_OSSL_ALLOWED_ATTRIBUTES_ITEM",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509v3.h",
+        "line": 1879,
+        "name": "stack_st_OSSL_ATTRIBUTE_MAPPING",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cmp.h",
+        "line": 363,
+        "name": "stack_st_OSSL_CMP_CERTREPMESSAGE",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cmp.h",
+        "line": 395,
+        "name": "stack_st_OSSL_CMP_CERTRESPONSE",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cmp.h",
+        "line": 227,
+        "name": "stack_st_OSSL_CMP_CERTSTATUS",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cmp.h",
+        "line": 289,
+        "name": "stack_st_OSSL_CMP_CRLSTATUS",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cmp.h",
+        "line": 258,
+        "name": "stack_st_OSSL_CMP_ITAV",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cmp.h",
+        "line": 333,
+        "name": "stack_st_OSSL_CMP_PKISI",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "cmp.h",
+        "line": 392,
+        "name": "stack_st_OSSL_CMP_POLLREP",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "crmf.h",
+        "line": 91,
+        "name": "stack_st_OSSL_CRMF_ATTRIBUTETYPEANDVALUE",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "crmf.h",
+        "line": 128,
+        "name": "stack_st_OSSL_CRMF_CERTID",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "crmf.h",
+        "line": 59,
+        "name": "stack_st_OSSL_CRMF_MSG",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509v3.h",
+        "line": 1756,
+        "name": "stack_st_OSSL_DAY_TIME_BAND",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509_acert.h",
+        "line": 142,
+        "name": "stack_st_OSSL_IETF_ATTR_SYNTAX_VALUE",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509_acert.h",
+        "line": 275,
+        "name": "stack_st_OSSL_ISSUER_SERIAL",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509v3.h",
+        "line": 1543,
+        "name": "stack_st_OSSL_ROLE_SPEC_CERT_ID",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509_acert.h",
+        "line": 208,
+        "name": "stack_st_OSSL_TARGET",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509_acert.h",
+        "line": 209,
+        "name": "stack_st_OSSL_TARGETS",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509v3.h",
+        "line": 1770,
+        "name": "stack_st_OSSL_TIME_PERIOD",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "pkcs12.h",
+        "line": 74,
+        "name": "stack_st_PKCS12_SAFEBAG",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "pkcs7.h",
+        "line": 225,
+        "name": "stack_st_PKCS7",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "pkcs7.h",
+        "line": 109,
+        "name": "stack_st_PKCS7_RECIP_INFO",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "pkcs7.h",
+        "line": 71,
+        "name": "stack_st_PKCS7_SIGNER_INFO",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509v3.h",
+        "line": 479,
+        "name": "stack_st_POLICYINFO",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509_vfy.h",
+        "line": 915,
+        "name": "stack_st_POLICYQUALINFO",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509v3.h",
+        "line": 516,
+        "name": "stack_st_POLICY_MAPPING",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509v3.h",
+        "line": 1391,
+        "name": "stack_st_PROFESSION_INFO",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ct.h",
+        "line": 44,
+        "name": "stack_st_SCT",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "srp.h",
+        "line": 152,
+        "name": "stack_st_SRP_gN",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "srp.h",
+        "line": 50,
+        "name": "stack_st_SRP_gN_cache",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "srp.h",
+        "line": 91,
+        "name": "stack_st_SRP_user_pwd",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ssl.h",
+        "line": 249,
+        "name": "stack_st_SRTP_PROTECTION_PROFILE",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ssl.h",
+        "line": 241,
+        "name": "stack_st_SSL_CIPHER",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "comp.h",
+        "line": 69,
+        "name": "stack_st_SSL_COMP",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509v3.h",
+        "line": 383,
+        "name": "stack_st_SXNETID",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ui.h",
+        "line": 296,
+        "name": "stack_st_UI_STRING",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509v3.h",
+        "line": 1500,
+        "name": "stack_st_USERNOTICE",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509.h",
+        "line": 81,
+        "name": "stack_st_X509",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509v3.h",
+        "line": 114,
+        "name": "stack_st_X509V3_EXT_METHOD",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "asn1.h",
+        "line": 135,
+        "name": "stack_st_X509_ALGOR",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509.h",
+        "line": 272,
+        "name": "stack_st_X509_ATTRIBUTE",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509.h",
+        "line": 133,
+        "name": "stack_st_X509_CRL",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509.h",
+        "line": 241,
+        "name": "stack_st_X509_EXTENSION",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509.h",
+        "line": 396,
+        "name": "stack_st_X509_INFO",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509_vfy.h",
+        "line": 74,
+        "name": "stack_st_X509_LOOKUP",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509.h",
+        "line": 55,
+        "name": "stack_st_X509_NAME",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509.h",
+        "line": 208,
+        "name": "stack_st_X509_NAME_ENTRY",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509_vfy.h",
+        "line": 100,
+        "name": "stack_st_X509_OBJECT",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509_vfy.h",
+        "line": 902,
+        "name": "stack_st_X509_POLICY_NODE",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509v3.h",
+        "line": 736,
+        "name": "stack_st_X509_PURPOSE",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509.h",
+        "line": 107,
+        "name": "stack_st_X509_REVOKED",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509_vfy.h",
+        "line": 165,
+        "name": "stack_st_X509_TRUST",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509_vfy.h",
+        "line": 126,
+        "name": "stack_st_X509_VERIFY_PARAM",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "crypto.h",
+        "line": 214,
+        "name": "stack_st_void",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "length",
+            "type": "unsigned short"
+          },
+          {
+            "name": "data",
+            "type": "void *"
+          }
+        ],
+        "header": "tls1.h",
+        "line": 1214,
+        "name": "tls_session_ticket_ext_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ssl.h",
+        "line": 238,
+        "name": "tls_sigalgs_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "num_fields",
+            "type": "int"
+          },
+          {
+            "name": "data",
+            "type": "struct stack_st_OPENSSL_PSTRING *"
+          },
+          {
+            "name": "index",
+            "type": "struct lhash_st_OPENSSL_STRING **"
+          },
+          {
+            "name": "qual",
+            "type": "int (**)(OPENSSL_STRING *)"
+          },
+          {
+            "name": "error",
+            "type": "long"
+          },
+          {
+            "name": "arg1",
+            "type": "long"
+          },
+          {
+            "name": "arg2",
+            "type": "long"
+          },
+          {
+            "name": "arg_row",
+            "type": "OPENSSL_STRING *"
+          }
+        ],
+        "header": "txt_db.h",
+        "line": 39,
+        "name": "txt_db_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 195,
+        "name": "ui_method_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 194,
+        "name": "ui_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "ui.h",
+        "line": 293,
+        "name": "ui_string_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "flags",
+            "type": "int"
+          },
+          {
+            "name": "issuer_cert",
+            "type": "X509 *"
+          },
+          {
+            "name": "subject_cert",
+            "type": "X509 *"
+          },
+          {
+            "name": "subject_req",
+            "type": "X509_REQ *"
+          },
+          {
+            "name": "crl",
+            "type": "X509_CRL *"
+          },
+          {
+            "name": "db_meth",
+            "type": "X509V3_CONF_METHOD *"
+          },
+          {
+            "name": "db",
+            "type": "void *"
+          },
+          {
+            "name": "issuer_pkey",
+            "type": "EVP_PKEY *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 94,
+        "name": "v3_ext_ctx",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "ext_nid",
+            "type": "int"
+          },
+          {
+            "name": "ext_flags",
+            "type": "int"
+          },
+          {
+            "name": "it",
+            "type": "ASN1_ITEM_EXP *"
+          },
+          {
+            "name": "ext_new",
+            "type": "X509V3_EXT_NEW"
+          },
+          {
+            "name": "ext_free",
+            "type": "X509V3_EXT_FREE"
+          },
+          {
+            "name": "d2i",
+            "type": "X509V3_EXT_D2I"
+          },
+          {
+            "name": "i2d",
+            "type": "X509V3_EXT_I2D"
+          },
+          {
+            "name": "i2s",
+            "type": "X509V3_EXT_I2S"
+          },
+          {
+            "name": "s2i",
+            "type": "X509V3_EXT_S2I"
+          },
+          {
+            "name": "i2v",
+            "type": "X509V3_EXT_I2V"
+          },
+          {
+            "name": "v2i",
+            "type": "X509V3_EXT_V2I"
+          },
+          {
+            "name": "i2r",
+            "type": "X509V3_EXT_I2R"
+          },
+          {
+            "name": "r2i",
+            "type": "X509V3_EXT_R2I"
+          },
+          {
+            "name": "usr_data",
+            "type": "void *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 64,
+        "name": "v3_ext_method",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509.h",
+        "line": 270,
+        "name": "x509_attributes_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509.h",
+        "line": 302,
+        "name": "x509_cert_aux_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "x509.h",
+        "line": 303,
+        "name": "x509_cinf_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 174,
+        "name": "x509_crl_method_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 183,
+        "name": "x509_lookup_method_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 182,
+        "name": "x509_lookup_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 181,
+        "name": "x509_object_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "purpose",
+            "type": "int"
+          },
+          {
+            "name": "trust",
+            "type": "int"
+          },
+          {
+            "name": "flags",
+            "type": "int"
+          },
+          {
+            "name": "check_purpose",
+            "type": "int (*)(const struct x509_purpose_st *, const X509 *, int)"
+          },
+          {
+            "name": "name",
+            "type": "char *"
+          },
+          {
+            "name": "sname",
+            "type": "char *"
+          },
+          {
+            "name": "usr_data",
+            "type": "void *"
+          }
+        ],
+        "header": "x509v3.h",
+        "line": 725,
+        "name": "x509_purpose_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 175,
+        "name": "x509_revoked_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 186,
+        "name": "x509_sig_info_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 171,
+        "name": "x509_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 179,
+        "name": "x509_store_ctx_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "types.h",
+        "line": 178,
+        "name": "x509_store_st",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "trust",
+            "type": "int"
+          },
+          {
+            "name": "flags",
+            "type": "int"
+          },
+          {
+            "name": "check_trust",
+            "type": "int (*)(struct x509_trust_st *, X509 *, int)"
+          },
+          {
+            "name": "name",
+            "type": "char *"
+          },
+          {
+            "name": "arg1",
+            "type": "int"
+          },
+          {
+            "name": "arg2",
+            "type": "void *"
+          }
+        ],
+        "header": "x509_vfy.h",
+        "line": 156,
+        "name": "x509_trust_st",
+        "tag": "struct"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "modes.h",
+        "line": 160,
+        "name": "xts128_context",
+        "tag": "struct"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "addr",
+            "type": "BIO_ADDR *"
+          }
+        ],
+        "header": "bio.h",
+        "line": 897,
+        "name": "BIO_sock_info_u",
+        "tag": "union"
+      },
+      {
+        "complete": false,
+        "fields": [],
+        "header": "bio.h",
+        "line": 245,
+        "name": "bio_addr_st",
+        "tag": "union"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "d1",
+            "type": "void *"
+          },
+          {
+            "name": "d2",
+            "type": "unsigned long"
+          },
+          {
+            "name": "d3",
+            "type": "int"
+          }
+        ],
+        "header": "conf.h",
+        "line": 73,
+        "name": "lh_CONF_VALUE_dummy",
+        "tag": "union"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "d1",
+            "type": "void *"
+          },
+          {
+            "name": "d2",
+            "type": "unsigned long"
+          },
+          {
+            "name": "d3",
+            "type": "int"
+          }
+        ],
+        "header": "err.h",
+        "line": 376,
+        "name": "lh_ERR_STRING_DATA_dummy",
+        "tag": "union"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "d1",
+            "type": "void *"
+          },
+          {
+            "name": "d2",
+            "type": "unsigned long"
+          },
+          {
+            "name": "d3",
+            "type": "int"
+          }
+        ],
+        "header": "lhash.h",
+        "line": 395,
+        "name": "lh_OPENSSL_CSTRING_dummy",
+        "tag": "union"
+      },
+      {
+        "complete": true,
+        "fields": [
+          {
+            "name": "d1",
+            "type": "void *"
+          },
+          {
+            "name": "d2",
+            "type": "unsigned long"
+          },
+          {
+            "name": "d3",
+            "type": "int"
+          }
+        ],
+        "header": "lhash.h",
+        "line": 380,
+        "name": "lh_OPENSSL_STRING_dummy",
+        "tag": "union"
+      }
+    ]
+  },
+  "body_hash": "32fc537350da78ab3853883213bbbe540d3ec7b6c58983c12964c53815b26461",
+  "generator": "forensics/tools/atlas_api.py",
+  "inputs": [
+    {
+      "name": "translation_unit",
+      "path": "forensics/authorities/captures/openssl-3.6.3-historical/api-tu.c",
+      "sha256": "8762d55f45a9b02b80ac0a3452e890ab4552f70223f0751783d455b16e8ebf0f"
+    }
+  ],
+  "kind": "api-structs",
+  "schema": "openssl-rs/atlas/api-structs/v1"
+}

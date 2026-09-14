@@ -1,0 +1,90 @@
+{
+  "authority": "openssl-3.6.3-historical",
+  "body": {
+    "libraries": {
+      "libcrypto": {
+        "path": "forensics/authorities/prefix/openssl-3.6.3-historical/lib/libcrypto.so.3",
+        "sha256": "920e74fd774c57e8bfbcfb5d3714f226df1e73ccb984ea842fcbf1c3f655c175",
+        "soname": "libcrypto.so.3",
+        "symbol_count_by_version": {
+          "OPENSSL_3.0.0": 5374,
+          "OPENSSL_3.0.3": 2,
+          "OPENSSL_3.0.8": 1,
+          "OPENSSL_3.0.9": 1,
+          "OPENSSL_3.1.0": 4,
+          "OPENSSL_3.2.0": 103,
+          "OPENSSL_3.3.0": 12,
+          "OPENSSL_3.4.0": 186,
+          "OPENSSL_3.5.0": 190,
+          "OPENSSL_3.6.0": 23
+        },
+        "version_definitions": [
+          "OPENSSL_3.0.0",
+          "OPENSSL_3.0.3",
+          "OPENSSL_3.0.8",
+          "OPENSSL_3.0.9",
+          "OPENSSL_3.1.0",
+          "OPENSSL_3.2.0",
+          "OPENSSL_3.3.0",
+          "OPENSSL_3.4.0",
+          "OPENSSL_3.5.0",
+          "OPENSSL_3.6.0"
+        ],
+        "version_markers_in_dynsym": [
+          "OPENSSL_3.0.0",
+          "OPENSSL_3.0.3",
+          "OPENSSL_3.0.8",
+          "OPENSSL_3.0.9",
+          "OPENSSL_3.1.0",
+          "OPENSSL_3.2.0",
+          "OPENSSL_3.3.0",
+          "OPENSSL_3.4.0",
+          "OPENSSL_3.5.0",
+          "OPENSSL_3.6.0"
+        ]
+      },
+      "libssl": {
+        "path": "forensics/authorities/prefix/openssl-3.6.3-historical/lib/libssl.so.3",
+        "sha256": "58097b11018364422b5bf8c7548c5a04b82b7123e48a704d96ecf397673d4097",
+        "soname": "libssl.so.3",
+        "symbol_count_by_version": {
+          "OPENSSL_3.0.0": 517,
+          "OPENSSL_3.2.0": 57,
+          "OPENSSL_3.3.0": 6,
+          "OPENSSL_3.4.0": 4,
+          "OPENSSL_3.5.0": 19
+        },
+        "version_definitions": [
+          "OPENSSL_3.0.0",
+          "OPENSSL_3.2.0",
+          "OPENSSL_3.3.0",
+          "OPENSSL_3.4.0",
+          "OPENSSL_3.5.0"
+        ],
+        "version_markers_in_dynsym": [
+          "OPENSSL_3.0.0",
+          "OPENSSL_3.2.0",
+          "OPENSSL_3.3.0",
+          "OPENSSL_3.4.0",
+          "OPENSSL_3.5.0"
+        ]
+      }
+    }
+  },
+  "body_hash": "e2028248ab05c002efbfaee942362eb113498bbfdb9d5069a9a585588eb6b095",
+  "generator": "forensics/tools/atlas_symbols.py",
+  "inputs": [
+    {
+      "name": "libcrypto_dso",
+      "path": "forensics/authorities/prefix/openssl-3.6.3-historical/lib/libcrypto.so.3",
+      "sha256": "920e74fd774c57e8bfbcfb5d3714f226df1e73ccb984ea842fcbf1c3f655c175"
+    },
+    {
+      "name": "libssl_dso",
+      "path": "forensics/authorities/prefix/openssl-3.6.3-historical/lib/libssl.so.3",
+      "sha256": "58097b11018364422b5bf8c7548c5a04b82b7123e48a704d96ecf397673d4097"
+    }
+  ],
+  "kind": "symbol-versions",
+  "schema": "openssl-rs/atlas/symbol-versions/v1"
+}

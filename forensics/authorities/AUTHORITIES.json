@@ -1,0 +1,61 @@
+{
+  "authorities": [
+    {
+      "artifact": {
+        "checksum_verified": true,
+        "filename": "openssl-3.6.3.tar.gz",
+        "published_sha256": "243a86649cf6f23eeb6a2ff2456e09e5d77dd9018a54d3d96b0c6bdd6ba6c7f1",
+        "sha256": "243a86649cf6f23eeb6a2ff2456e09e5d77dd9018a54d3d96b0c6bdd6ba6c7f1",
+        "size_bytes": 54953005
+      },
+      "id": "openssl-3.6.3-historical",
+      "notes": "Historical authority retained because downstream archaeology (bind9-rs) observed OpenSSL 3.6.3. Used for the oracle-vs-oracle 3.6.3 -> 3.6.4 trajectory court (docs/SECURITY_DIVERGENCE_POLICY.md). Behaviour unique to 3.6.3 must not be reintroduced into production when it corresponds to an upstream security fix.",
+      "released": null,
+      "role": "historical",
+      "series": "3.6",
+      "source_tree": {
+        "file_count": 5856,
+        "manifest": "SOURCE_MANIFEST.3.6.3.json",
+        "path": "forensics/authorities/src/openssl-3.6.3",
+        "root_hash": "b996e7f0e239da1cafc8fd40c94e15032cc07dc5259303e0e5969e325b16d72d",
+        "total_bytes": 134876056
+      },
+      "upstream": {
+        "checksum_kind": "sha256",
+        "checksum_url": "https://github.com/openssl/openssl/releases/download/openssl-3.6.3/openssl-3.6.3.tar.gz.sha256",
+        "product": "openssl",
+        "source_url": "https://github.com/openssl/openssl/releases/download/openssl-3.6.3/openssl-3.6.3.tar.gz"
+      },
+      "version": "3.6.3"
+    },
+    {
+      "artifact": {
+        "checksum_verified": true,
+        "filename": "openssl-3.6.4.tar.gz",
+        "published_sha256": "9bffaa1ad1e07b354c21bd3324ec02fa15579f45a7d0494b3e74bc449b7333ef",
+        "sha256": "9bffaa1ad1e07b354c21bd3324ec02fa15579f45a7d0494b3e74bc449b7333ef",
+        "size_bytes": 55003802
+      },
+      "id": "openssl-3.6.4-production",
+      "notes": "Production authority. OpenSSL 3.6.4 is a security-fix release in the 3.6 series; the candidate targets this behaviour.",
+      "released": "2026-08-25",
+      "role": "production",
+      "series": "3.6",
+      "source_tree": {
+        "file_count": 5873,
+        "manifest": "SOURCE_MANIFEST.3.6.4.json",
+        "path": "forensics/authorities/src/openssl-3.6.4",
+        "root_hash": "27d9917bd7c63d9bb056e674cc08c809b44cde50f9e474cd30041b8b66385432",
+        "total_bytes": 135093194
+      },
+      "upstream": {
+        "checksum_kind": "sha256",
+        "checksum_url": "https://github.com/openssl/openssl/releases/download/openssl-3.6.4/openssl-3.6.4.tar.gz.sha256",
+        "product": "openssl",
+        "source_url": "https://github.com/openssl/openssl/releases/download/openssl-3.6.4/openssl-3.6.4.tar.gz"
+      },
+      "version": "3.6.4"
+    }
+  ],
+  "schema": "openssl-rs/authorities/v1"
+}
