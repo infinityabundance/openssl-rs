@@ -2908,3 +2908,149 @@ change, before the ASN.1 surface starts moving.
 included), `check_evidence_portability.py`, `gen_frf_courts.py --check`,
 `regression_guard.py --update` and `regression_guard.py --baseline-ref HEAD
 --require-current` — all green. Phase 5 remains `in-progress`, and no claim moves.
+
+## D73 — The ASN.1 primitive section: its boundary, and what reading it established
+
+**Decision, and the honest state.** The Phase 5 surface is 362 open obligations:
+314 ASN.1 and 48 PEM. It decomposes into three sections that can each be finished
+and courted on their own, and this entry records the first one's *boundary* and the
+authority facts that reading it established. The implementation of that section was
+begun and is **not landed**: see "why not landed" below, which is the same reason
+D71 withdrew the raise-site slice and D72 withdrew the substrate modules.
+
+### The boundary of the first section
+
+The 314 ASN.1 obligations split cleanly by *what they need*, not by prefix:
+
+| | count | needs |
+|---|---|---|
+| the primitive types, the DER header codec and the text conversions | **199** | nothing but BIO and CONF, both Phase 4's |
+| the template codec: `ASN1_item_*`, the 24 `d2i_` and 24 `i2d_` wrappers, the `_it` accessors | **115** | the template interpreter |
+
+The second is the harder and structurally larger piece, and the first does not
+depend on it *except* in four places, which is what makes the split real rather
+than convenient. Those four are `ASN1_dup` (i2d then d2i), `ASN1_TYPE_pack_sequence`
+and `ASN1_TYPE_unpack_sequence` (both `ASN1_item_i2d`), and `BIO_new_NDEF`
+(`ASN1_item_ndef_i2d`). They stay open with the codec rather than being implemented
+twice.
+
+So the first section is **199 exports minus those four**, and it is completable and
+court-able without the interpreter.
+
+### What reading the authority established
+
+These are the facts that cost the reading, recorded so the next attempt does not pay
+for them again. Each is checkable against `crypto/asn1` and each is a place an
+implementation written from the header would be wrong.
+
+**The `_it` accessors are functions.** `asn1t.h` defines
+`DECLARE_ASN1_ITEM_attr(attr, name)` as `attr const ASN1_ITEM *name##_it(void);`,
+and `ASN1_ITEM_rptr(ref)` as `(ref##_it())`. So `ASN1_ANY_it` is a **function with
+no arguments returning a pointer to a function-local static** — which is why the
+authority exports it as `FUNC` with `size == 8` and not as an `OBJECT`. Two calls
+compare equal, and the fields of the returned `ASN1_ITEM` are readable through it.
+That makes the descriptors court-able: walk `itype`, `utype`, `tcount`, `size`,
+`sname`, and each template's `flags`/`tag`/`offset`/`field_name`, recursing through
+`ASN1_ITEM_ptr(t->item)`. An exported *data* symbol here would be an `ABI-SYMBOL`
+failure, and a court that compared pointers across implementations would be
+comparing nothing.
+
+**`asn1_primitive_new`'s three sentinels** (`tasn_new.c:259`):
+
+```text
+V_ASN1_NULL     *pval = (ASN1_VALUE *)1;          /* not a heap pointer */
+V_ASN1_OBJECT   *pval = OBJ_nid2obj(NID_undef);   /* the *static* object  */
+V_ASN1_BOOLEAN  *(ASN1_BOOLEAN *)pval = it->size; /* 1 for TBOOLEAN, 0 for FBOOLEAN */
+```
+
+and the matching free path (`tasn_fre.c:150`) does nothing for `V_ASN1_NULL` and
+calls `ASN1_OBJECT_free` for `V_ASN1_OBJECT`, which is a no-op for a static entry
+because it carries no `ASN1_OBJECT_FLAG_DYNAMIC` bit. `ASN1_TYPE`'s union is eight
+bytes of pointer with `ASN1_BOOLEAN` in the *first four*, so a `boolean` must be
+written and read through the same memory a pointer occupies.
+
+**`ASN1_INTEGER` stores a magnitude, and the DER encoding is not it.** `data` is
+big-endian magnitude and `type & V_ASN1_NEG` is the sign. `i2c_ibuf` pads with
+`00` for a positive value whose top bit is set, with `FF` for a negative one whose
+magnitude is `> 0x80…`, and for a magnitude whose first octet is exactly `0x80`
+pads **only if some later octet is non-zero** — so `-0x8000…00` gains no `FF` while
+`-0x8000…01` does. `c2i_ibuf` is the inverse and rejects content whose first two
+octets have matching sign bits as `ILLEGAL_PADDING`, with a distinct
+`ILLEGAL_ZERO_CONTENT` for an empty content. `ossl_i2c_ASN1_INTEGER` returns 0 for a
+null argument.
+
+Two quirks worth courting directly: `bn_to_asn1_string` sets
+`ret->type |= V_ASN1_NEG_INTEGER` *regardless of `atype`*, which is not a bug —
+`V_ASN1_ENUMERATED | V_ASN1_NEG_INTEGER == V_ASN1_NEG_ENUMERATED` — and
+`ASN1_ENUMERATED_get` answers `0xffffffffL` rather than `-1` when the content is
+longer than a `long`, while `ASN1_INTEGER_get` answers `-1` for every failure.
+
+**A bit string's unused-bit count lives in the low three flag bits.** `flags &
+ASN1_STRING_FLAG_BITS_LEFT` says the count in `flags & 0x07` is authoritative;
+clearing the flag says "recompute from the content", which is exactly what
+`ASN1_BIT_STRING_set_bit` does first (`a->flags &= ~(ASN1_STRING_FLAG_BITS_LEFT |
+0x07)`). `ossl_i2c_ASN1_BIT_STRING` recomputes by scanning back over trailing zero
+octets and then `p[-1] &= (0xff << bits)` — the masking is what makes the encoding
+canonical and is the difference a value-comparing court would see.
+`ossl_c2i_ASN1_BIT_STRING` rejects a leading count above 7 and masks the last octet
+the same way. `ASN1_BIT_STRING_set_asc` returns the **inverse** of what a caller
+expects: `num_asc`'s `-1` becomes `1`, and a found bit answers
+`set_bit`'s result.
+
+**An OID decode answers the static table entry when it can.** `ossl_c2i_ASN1_OBJECT`
+looks the content up through `OBJ_obj2nid` and, on a hit, returns
+`OBJ_nid2obj(nid)` — the shared registered object — without allocating. Only an
+unregistered OID becomes a dynamic object, and then the subidentifier check runs:
+a `0x80` octet may not lead unless the previous octet also continued
+(X.690 8.19.2). The last octet's top bit must be clear. `i2a_ASN1_OBJECT` writes the
+four bytes `"NULL"` for an object with null `data` — **4, not 0** — and for an OID
+whose text is empty writes `"<INVALID>"` followed by a `BIO_dump` of the content.
+
+**`ASN1_STRING_set` allocates `length + 1` and writes a NUL at `data[length]`**,
+one byte past the content the caller asked for; it grows only when
+`(size_t)str->length <= len` or `data` is null, and on a failed realloc it restores
+the original pointer so the string stays valid. `ASN1_STRING_cmp` compares length,
+then content, then type. `ASN1_STRING_copy` preserves the *destination's* embed bit
+and copies every other flag.
+
+**`B_ASN1_PRINTABLE` contains bits that are not string types.**
+`B_ASN1_BIT_STRING`, `B_ASN1_SEQUENCE` and `B_ASN1_UNKNOWN` are in the authority's
+definition, which is what makes `ASN1_STRING_set_by_NID` accept a bit string or a
+sequence for a NID whose mask is that. `B_ASN1_DIRECTORYSTRING` and
+`B_ASN1_DISPLAYTEXT` both gained `B_ASN1_UTF8STRING` relative to the older
+definitions a reader may remember.
+
+### The hand-offs this section forces
+
+Named with their phase and reason, because a section cannot be called complete
+while these are merely unmentioned:
+
+* `SMIME_crlf_copy`, `SMIME_read_ASN1`, `SMIME_read_ASN1_ex`, `SMIME_text`,
+  `SMIME_write_ASN1`, `SMIME_write_ASN1_ex` → **Phase 12**. `asn1.h` declares them,
+  so the atlas gives them to Phase 5; `asm_mime.c` implements them over CMS and
+  PKCS#7, which is Phase 12's.
+* `ASN1_item_sign_ex`, `ASN1_item_verify_ex` → **Phase 7**. They digest and sign
+  through `EVP_PKEY`/`EVP_MD`, and the algorithm identifier is `X509_ALGOR`
+  (Phase 11).
+* `b2i_PVK_bio`, `b2i_PVK_bio_ex`, `b2i_PrivateKey`, `b2i_PrivateKey_bio`,
+  `b2i_PublicKey`, `b2i_PublicKey_bio`, `i2b_PVK_bio`, `i2b_PVK_bio_ex`,
+  `i2b_PrivateKey_bio`, `i2b_PublicKey_bio`, the typed `PEM_read_bio_PrivateKey`
+  family and `d2i_PKCS8PrivateKey`/`i2d_PKCS8PrivateKey` → **Phase 7 and Phase 10**.
+  Their names resolve to `pem.h`'s generic machinery because their type word is
+  weak, but they read and write `EVP_PKEY`s and the PKCS#8 container.
+
+### Why it is not landed
+
+The modules for the first section were written — the layouts and their constants,
+`ASN1_STRING` and its fifteen types, the integer family, the bit string, the object,
+the two opaque context objects — and they are withdrawn rather than committed,
+because they were not declared in `lib.rs` and the section is not courted. Source
+that no build compiles and no CI checks is invisible to every gate, which is the
+failure D71 and D72 are about; committing it would make this stratum's evidence
+worse while looking like progress. Phase 5 still reports 362 open obligations and
+314 of them are ASN.1.
+
+The next change to touch this section starts from the boundary and the facts above,
+wires the modules in behind `pub mod asn1;` in the same commit that adds the court,
+and closes the section as `open in src/asn1/ == 199 - 4 - 6 - 2` with the hand-offs
+recorded. `ABI-PROTOTYPE` (D72) is still the change that should land before it.
