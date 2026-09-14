@@ -23,6 +23,12 @@ run through the same mechanism and the gate fails unless that is reported as a
 failure. The self-test runs on every invocation rather than being asserted in
 prose.
 
+Comparison reuses `evidence_determinism.artefact_differences`, so the fields that
+tool declares as build products are excluded here too. That is not a weakening: the
+question this gate asks is whether the *evidence* changes when the host tools
+vanish, and a build-product field is by definition not evidence. Sharing the policy
+is also what stops the two tools from drifting apart.
+
 Usage
 -----
     python3 forensics/tools/check_evidence_portability.py
@@ -56,12 +62,21 @@ echo "$(basename "$0"): stubbed out by check_evidence_portability.py" >&2
 exit 1
 """
 
-# A generator that is *supposed* to fail: it asks a stubbed tool for a fact. Used
-# as the gate's own sensitivity control.
-SEEDED_GENERATOR = """\
+# A generator that is *supposed* to fail: it asks a stubbed tool for a fact.
+SEEDED_TOOL_USER = """\
 import subprocess
 out = subprocess.run(["nm", "--version"], capture_output=True, text=True, check=True)
 print(out.stdout.splitlines()[0])
+"""
+
+# A generator that is *supposed* to be reported: it changes an evidence field.
+# The change is semantic rather than textual, because the comparison is semantic.
+SEEDED_DRIFTER = """\
+import json, pathlib
+p = pathlib.Path("forensics/phase-state.json")
+doc = json.loads(p.read_text(encoding="utf-8"))
+doc["body"]["seeded_drift"] = True
+p.write_text(json.dumps(doc, sort_keys=True, indent=2) + "\\n", encoding="utf-8")
 """
 
 
@@ -85,17 +100,23 @@ class StubEnvironment:
 
 
 def generators_need_no_stubbed_tool(generators: list[str], stub: StubEnvironment):
-    """Run `generators` with the stubs in `PATH`; report what drifted or failed."""
-    committed: dict[str, bytes] = {}
+    """Run `generators` with the stubs in `PATH`; report what drifted or failed.
+
+    Comparison reuses `evidence_determinism.artefact_differences`, so the fields
+    declared there as build products are excluded here too. That is not a
+    weakening: the question this gate asks is whether the *evidence* changes when
+    the host tools vanish, and a build-product field is by definition not evidence.
+    """
+    committed: dict[str, str] = {}
     for artefact in ed.COMPARED:
         path = REPO_ROOT / artefact
         if not path.is_file():
             raise SystemExit(f"[evidence-portability] missing artefact: {artefact}")
-        committed[artefact] = path.read_bytes()
+        committed[artefact] = path.read_text(encoding="utf-8")
 
     def restore() -> None:
-        for artefact, blob in committed.items():
-            (REPO_ROOT / artefact).write_bytes(blob)
+        for artefact, text in committed.items():
+            (REPO_ROOT / artefact).write_text(text, encoding="utf-8")
 
     for generator in generators:
         res = subprocess.run(
@@ -113,12 +134,15 @@ def generators_need_no_stubbed_tool(generators: list[str], stub: StubEnvironment
             return False, (f"{generator} needs a stubbed tool ({stub_named}); "
                            f"exit {res.returncode}")
 
-    drifted = [a for a, blob in committed.items()
-               if (REPO_ROOT / a).read_bytes() != blob]
+    fired: set[str] = set()
+    drifted: list[str] = []
+    for artefact in ed.COMPARED:
+        now = (REPO_ROOT / artefact).read_text(encoding="utf-8")
+        drifted += ed.artefact_differences(artefact, committed[artefact], now, fired)
     restore()
     if drifted:
-        return False, ("derived evidence changed when the stubs were in PATH: "
-                       + ", ".join(drifted))
+        return False, "derived evidence changed when the stubs were in PATH: " \
+                      + "; ".join(drifted)
     return True, ""
 
 
@@ -136,23 +160,37 @@ def main() -> int:
                   "in-repository readers (docs/DECISIONS.md D33).")
             return 1
 
-        # Sensitivity control: the same mechanism must report a generator that
-        # does depend on a stubbed tool.
-        seeded = Path(stub.dir) / "seeded_generator.py"
-        seeded.write_text(SEEDED_GENERATOR, encoding="utf-8")
-        caught, _ = generators_need_no_stubbed_tool([str(seeded)], stub)
-        if caught:
+        # Sensitivity controls: the same mechanism must report both ways this gate
+        # can fail -- a generator that needs a stubbed tool, and a generator that
+        # changes the evidence. A check that cannot detect its own defect classes
+        # is not evidence.
+        caught_tool = run_seeded("seeded_tool_user.py", SEEDED_TOOL_USER, stub)
+        if caught_tool:
             print("[evidence-portability] FAIL: the gate did not detect a "
                   "generator that calls `nm`; its verdict means nothing")
+            return 1
+        caught_drift = run_seeded("seeded_drifter.py", SEEDED_DRIFTER, stub)
+        if caught_drift:
+            print("[evidence-portability] FAIL: the gate did not detect a "
+                  "generator that changed an evidence field; its verdict means "
+                  "nothing")
             return 1
     finally:
         stub.close()
 
     print(f"[evidence-portability] ok: {len(ed.COMPARED)} artefact(s) reproduce "
           f"with {', '.join(STUBBED_TOOLS)} unavailable")
-    print("[evidence-portability] sensitivity control: a generator that calls `nm` "
-          "is detected")
+    print("[evidence-portability] sensitivity controls: a generator that calls `nm`, "
+          "and one that edits the evidence, are both detected")
     return 0
+
+
+def run_seeded(name: str, source: str, stub: StubEnvironment) -> bool:
+    """True when the gate *fails* to report the seeded generator as a failure."""
+    seeded = Path(stub.dir) / name
+    seeded.write_text(source, encoding="utf-8")
+    caught, _ = generators_need_no_stubbed_tool([str(seeded)], stub)
+    return caught
 
 
 if __name__ == "__main__":

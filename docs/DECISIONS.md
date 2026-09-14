@@ -829,8 +829,15 @@ archive rather than of the machine that inspects it.
 machine the generator and the committed artefact both use that machine's `nm` and
 agree. So `forensics/tools/check_evidence_portability.py` stubs `nm`, `objdump`,
 `readelf`, `ar` and `file` out of `PATH`, re-runs the whole generator chain, and
-requires all six compared artefacts to be byte-identical anyway. It then runs a
-seeded generator that *does* call `nm` through the same mechanism and fails unless
-that is reported as a failure, so the gate carries its own sensitivity control on
-every invocation rather than asserting one in prose. It is wired into the `static`
-CI job.
+requires all six compared artefacts to reproduce anyway. It then seeds two failing
+cases and requires both to be reported: a generator that calls `nm`, and a
+generator that edits an evidence field. The controls run on every invocation
+rather than being asserted in prose. It is wired into the `static` CI job.
+
+The gate's comparison shares `evidence_determinism.artefact_differences` rather
+than re-implementing it, so the declared build-product fields are excluded
+symmetrically in both tools. The first version compared bytes and therefore failed
+on the CI runner for a legitimate reason — the runner's look of the crate archive
+has a different digest from the court's — which is precisely the difference those
+declarations exist to absorb, and precisely why a second, drifting comparison
+policy is a place for a claim to hide.

@@ -99,9 +99,18 @@ one machine both sides use whatever `nm` that machine has and agree. So
 out of `PATH`, re-runs the whole generator chain, and requires all six compared
 artefacts to be byte-identical anyway.
 
-The gate then tests itself: it runs a seeded generator that *does* call `nm`
-through the same mechanism and fails unless that is reported as a failure. A check
-that cannot detect the defect class it claims to cover is not evidence.
+The gate then tests itself, along both axes on which it can fail: it runs a seeded
+generator that *does* call `nm`, and a seeded generator that *does* edit an
+evidence field, and fails unless both are reported. A check that cannot detect the
+defect class it claims to cover is not evidence.
+
+Comparison reuses `evidence_determinism.artefact_differences`, so the fields that
+tool declares as build products are excluded here too. That is not a weakening:
+the question this gate asks is whether the *evidence* changes when the host tools
+vanish, and a build-product field is by definition not evidence. It is also what
+lets the gate run on a CI runner, whose look of the crate archive legitimately
+differs from the court's — the exact difference that made the first version of
+this gate fail on the runner.
 
 ### `courts` — the authority-backed behavioural gate
 

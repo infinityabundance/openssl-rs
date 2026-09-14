@@ -184,6 +184,25 @@ def differences(a: object, b: object, path: str = "",
     return found
 
 
+def artefact_differences(relpath: str, committed_text: str, now_text: str,
+                         fired: set[str]) -> list[str]:
+    """Differences between a committed and a regenerated artefact, normalised.
+
+    Shared with `check_evidence_portability.py` so that the normalisation policy is
+    applied *symmetrically*: a field declared as a build product is not evidence in
+    either tool, and every field that **is** evidence must be identical in both. A
+    second, drifting comparison policy would be a place for a claim to hide.
+    """
+    if not relpath.endswith(".json"):
+        if committed_text == now_text:
+            return []
+        return [f"{relpath}: content differs (first line: "
+                f"{now_text.splitlines()[:1]})"]
+    a = normalise(json.loads(committed_text), fired)
+    b = normalise(json.loads(now_text), fired)
+    return [f"{relpath}: {d}" for d in differences(a, b)]
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--keep", action="store_true",
@@ -210,14 +229,7 @@ def main(argv: list[str]) -> int:
     fired: set[str] = set()
     for relpath in COMPARED:
         now = (REPO_ROOT / relpath).read_text(encoding="utf-8")
-        if relpath.endswith(".json"):
-            a = normalise(json.loads(committed[relpath]), fired)
-            b = normalise(json.loads(now), fired)
-            problems += [f"{relpath}: {d}" for d in differences(a, b)]
-        else:
-            if committed[relpath] != now:
-                problems.append(f"{relpath}: content differs (first line: "
-                                f"{now.splitlines()[:1]})")
+        problems += artefact_differences(relpath, committed[relpath], now, fired)
 
         if not args.keep:
             (REPO_ROOT / relpath).write_text(committed[relpath], encoding="utf-8")
