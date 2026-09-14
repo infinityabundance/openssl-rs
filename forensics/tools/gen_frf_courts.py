@@ -112,6 +112,11 @@ COURTS: list[tuple[str, int, str, str]] = [
      "OBJ_create_objects and the object description stream behind it"),
     ("rt-conf", 4, "rt_conf_probe",
      "the CONF reader, the classic hash bridge and the NCONF_* accessors"),
+    # Phase 5 — the arithmetic and encoding substrate.
+    ("rt-bn", 5, "rt_bn_probe",
+     "the observable surface of the opaque BIGNUM: the values read back through the\n"
+     "conversions, the sign, the bit length, the predicate answers, the return\n"
+     "classes, the error queue after a failure and the division identity a == b*q + r"),
 ]
 
 

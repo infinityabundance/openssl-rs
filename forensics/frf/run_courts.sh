@@ -52,7 +52,7 @@ openssl-rs-rt-bio-resolve openssl-rs-rt-bio-sock openssl-rs-rt-bio-comp \
 openssl-rs-rt-bio-debug openssl-rs-rt-bio-print openssl-rs-rt-bio-file \
 openssl-rs-rt-bio-filter openssl-rs-rt-bio-pair openssl-rs-rt-bio-dgram-pair \
 openssl-rs-rt-bio-dgram openssl-rs-rt-bio-conn openssl-rs-rt-obj-stream \
-openssl-rs-rt-conf"
+openssl-rs-rt-conf openssl-rs-rt-bn"
 ALL_COURTS="$TRAJECTORY_COURTS $ABI_COURTS $RUNTIME_COURTS"
 
 RUNS=/tmp/openssl-rs-frf-runs.txt

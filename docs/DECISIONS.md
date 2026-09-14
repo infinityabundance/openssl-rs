@@ -2561,3 +2561,33 @@ one wrong assumption about which parenthesised group in
 list. A court that reports its own traversal order, or its own reading of C declarator
 syntax, as a property of the code is worse than no court — it manufactures work — and
 both are now handled explicitly and commented where the trap is.
+
+## D68 — Twenty-three exports `bn.h` declares belong to Phase 9, and saying so is not deferring them
+
+**Decision.** Twenty-three of the 201 `BN_*` exports are recorded as hand-offs to
+Phase 9 in `phase5_obligations.py`'s `HANDED_ON` table, each with the dependency as its
+reason: the `BN_rand*`/`BN_priv_rand*`/`BN_pseudo_rand*` family and `BN_bntest_rand`
+(eleven), `BN_generate_prime{,_ex,_ex2}`, `BN_generate_dsa_nonce`,
+`BN_BLINDING_create_param`, the three `BN_X931_*` generators, and
+`BN_GF2m_mod_sqrt{,_arr}`/`BN_GF2m_mod_solve_quad{,_arr}`.
+
+**Why a dependency and not a judgement.** D64's rule makes these Phase 5's: `bn.h`
+declares them, so the stratum owns them and the ledger counts them as *covered*. What
+they need is `RAND_bytes_ex`, which is Phase 9, and no RAND surface exists in this
+crate. Each reason names that call, so each row is checkable against
+`crypto/bn/bn_rand.c` and its callers rather than being a claim about difficulty —
+which is the difference between a hand-off and a thing quietly moved out of view.
+
+**The rule this keeps.** Phase 4 already established that a hand-off is not a gap
+(`forensics/phase4-obligations.json`'s `complete` field says so, and D57 records why).
+The complement matters just as much: **a hand-off is not parity either.** The Phase 5
+seal states the count, the targets and the reason, and the ledger's
+`deferred_by_phase` reports `9: 23`, so a reader can see exactly which stratum is
+expected to absorb them. Nothing in this change moves a symbol from `open` to
+"implemented".
+
+**What it changed in the ledger's arithmetic.** `owned` stays 1,099 (the exports the
+families cover) and `open` falls from 414 to 391 — 280 ASN.1, 73 BN, 38 PEM. The 23 are
+now `deferred` with `owning_phase: 9`, which satisfies
+`implemented + deferred + open == owned` and is reported by `ownership_audit.py` as a
+forward hand-off ("no ledger yet"), informational rather than a mismatch.

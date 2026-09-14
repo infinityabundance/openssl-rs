@@ -140,6 +140,52 @@ HANDED_OFF_FROM_PHASE4 = (
     "BIO_new_NDEF",
 )
 
+# Exports of this stratum's families that a *later* stratum owns outright, with the
+# reason. `bn.h` declares every one of them, so they are this stratum's by D64's rule;
+# what they need is the RAND/DRBG subsystem, which is Phase 9 and which does not exist
+# yet. The reason is therefore a dependency rather than a judgement about difficulty,
+# which is what makes each row checkable: `crypto/bn/bn_rand.c` and its callers reach
+# `RAND_bytes_ex`, and the RAND stratum is where that lands.
+#
+# A hand-off is not a gap -- `open` is the only list that blocks the stratum -- but it
+# is also not parity, so the seal states the count and the reason rather than quietly
+# moving them out of view.
+HANDED_ON: dict[str, tuple[int, str]] = {
+    **{
+        sym: (9, "draws from the RAND subsystem; RAND/DRBG is Phase 9")
+        for sym in (
+            "BN_rand", "BN_rand_ex", "BN_rand_range", "BN_rand_range_ex",
+            "BN_priv_rand", "BN_priv_rand_ex", "BN_priv_rand_range",
+            "BN_priv_rand_range_ex", "BN_pseudo_rand", "BN_pseudo_rand_range",
+            "BN_bntest_rand",
+        )
+    },
+    **{
+        sym: (9, "draws prime candidates with BN_priv_rand; RAND is Phase 9")
+        for sym in ("BN_generate_prime", "BN_generate_prime_ex", "BN_generate_prime_ex2")
+    },
+    "BN_generate_dsa_nonce": (
+        9, "derives a nonce from the digest and entropy; RAND is Phase 9",
+    ),
+    "BN_BLINDING_create_param": (
+        9, "chooses the blinding factor with BN_rand_range; RAND is Phase 9",
+    ),
+    **{
+        sym: (9, "draws candidates with BN_priv_rand; RAND is Phase 9")
+        for sym in (
+            "BN_X931_derive_prime_ex", "BN_X931_generate_Xpq",
+            "BN_X931_generate_prime_ex",
+        )
+    },
+    **{
+        sym: (9, "searches with a random field element; RAND is Phase 9")
+        for sym in (
+            "BN_GF2m_mod_sqrt", "BN_GF2m_mod_sqrt_arr",
+            "BN_GF2m_mod_solve_quad", "BN_GF2m_mod_solve_quad_arr",
+        )
+    },
+}
+
 # The type in a PEM name is the last `_`-separated token group, after any of the
 # call-shape suffixes. `PEM_read_bio_X509` -> `X509`; `PEM_write_bio_PKCS7` ->
 # `PKCS7`; `PEM_def_callback` has no type and is generic.
@@ -247,6 +293,21 @@ def main(argv: list[str]) -> int:
 
     for sym in candidates:
         header = headers.get(sym)
+        handed = HANDED_ON.get(sym)
+        if handed is not None:
+            # `bn.h` declares these, so the stratum owns them and the ledger counts
+            # them as covered -- and then hands them on, because what they need is a
+            # subsystem that does not exist yet. The reason is a *dependency*, not a
+            # difficulty, which is what makes the hand-off checkable: RAND is Phase 9,
+            # and no RAND surface exists in this crate yet.
+            phase, reason = handed
+            claim(sym, f"(phase {phase})", header or "bn.h")
+            deferred.append({
+                "symbol": sym, "owning_phase": phase,
+                "declaring_header": header or "bn.h",
+                "reason": reason,
+            })
+            continue
         if header is not None and header in HEADER_PHASE:
             phase = HEADER_PHASE[header]
             if phase == 5:

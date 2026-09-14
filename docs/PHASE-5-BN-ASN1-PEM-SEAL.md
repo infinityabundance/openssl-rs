@@ -172,8 +172,55 @@ current artefacts that is **414 open obligations** (280 ASN.1, 96 BN, 38 PEM).
 
 ## 9. FRF and Gemel
 
-The court is admitted into FRF as `openssl-rs-rt-bn`, with the raw transcripts of both
-sides as captures, the residual set (45 at first run, 0 at closure), the sensitivity
-challenge and the compiled claim, and a Gemel change and checkpoint at the phase
-boundary. The identities are recorded in the sections above as they are created; this
-document is updated rather than replaced.
+### FRF
+
+The court is admitted as `openssl-rs-rt-bn` and the chain has been run end to end in the
+FRF tooling container (`bash forensics/frf/run_courts.sh`). The identities:
+
+- court run — `run-openssl-rs-rt-bn-5580515d5fb3a457d26b65acfbb5b448e525df3a596f248f74418b3f55d3fdef`
+- OpenReceipt — `receipt-run-openssl-rs-rt-bn-5580515d5fb3a457d26b65acfbb5b448e525df3a596f248f74418b3f55d3fdef-f58c3b404fe7832043ddeca4fa58ad8dbec69b3beed1071a5502e4be7e9350bf`
+- sensitivity challenge — `37815ebd91f5a0fc28e7417539a4706bb0fef1e577fa256c495dfcd5d4d112e9`
+  (the `operator exit-class` mutant: the challenge is that the court saw the seeded
+  defect on exit **and nothing else**, which is what makes the passing court evidence
+  about the difference class rather than about the probe's stability)
+- claim, `--policy sensitivity-backed`, over the 24 runtime receipts —
+  `7648b6178e10d5b50f9dae13fcc0335283737f5abe7ec259d5ea18973c17f69c`
+
+The declaration is generated from the table in `forensics/tools/gen_frf_courts.py`
+(never hand-written) and `gen_frf_courts.py --check` is what holds it there. The
+captures, residuals and tokens are published under
+`.frf/captures/run-openssl-rs-rt-bn-5580515d5fb3a457d26b65acfbb5b448e525df3a596f248f74418b3f55d3fdef`,
+and `.frf` is committed because FRF expects its receipts and claims to travel.
+
+A passing court is still only a differential result. The claim above is exactly what
+it says it is — that the candidate's transcript matched the authority's for the
+behaviours this probe exercises — and not a cryptographic or security claim
+(`docs/PARITY_MODEL.md`).
+
+### Gemel
+
+Recorded at this boundary as change `C20`
+(`change.591bf7f9c7cc9cad0e0930d9bc82ce9379a9ee1245fed581a3d75195e656cf21`),
+trajectory `T20`
+(`trajectory.b5fcf20630627432bbf933ae30cfbe82c296a974fb8716fa9a0512bbd0ab1216`),
+state `S20` (`state.ebcc96f517c951fc5431bb54f9e43b20a390d8f6c6d8645b10598f83edcf4c1e`),
+and checkpoint `K10`
+(`checkpoint.51ac8d8e9e91d360fe1bb94630661f0fd4071dd844baa1cd42c82b4e1504ba08`),
+whose `gemel log` line names the `next: verify` items the store derives for this
+boundary. Gemel names changes by derived order, so `C20` is not a stable identity and
+the `change.` hash is; a name quoted elsewhere is resolved through
+`forensics/GEMEL_TRAJECTORY.md` or `gemel show C20`.
+The store is append-only, so a correction is another change rather than an edit; the
+Git commit remains the authoritative record of the diff.
+
+Projection in `forensics/GEMEL_TRAJECTORY.md`, rendered by
+`forensics/tools/render_gemel_trajectory.sh`. The native store is not Git-tracked
+(D17); only its `exchange/` namespace and this projection travel in Git, together with
+the human-readable trajectory and the checkpoint identities.
+
+Residuals recorded in the store at this boundary rather than left to be rediscovered:
+the `BN_signed_*2bn` signature defect and the prototype gap that let it survive (D65,
+now closed by the prototype court); the RAND-dependent exports of this stratum, which
+are handed to Phase 9 and are therefore implementable by nobody in this phase; and the
+two `ABI_ONLY_EXPORTED` symbols the atlas has no prototype for, which the prototype
+court reports rather than skipping.

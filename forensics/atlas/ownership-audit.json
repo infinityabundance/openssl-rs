@@ -181,6 +181,35 @@
         {
           "from_phase": 5,
           "symbols": [
+            "BN_BLINDING_create_param",
+            "BN_GF2m_mod_solve_quad",
+            "BN_GF2m_mod_solve_quad_arr",
+            "BN_GF2m_mod_sqrt",
+            "BN_GF2m_mod_sqrt_arr",
+            "BN_X931_derive_prime_ex",
+            "BN_X931_generate_Xpq",
+            "BN_X931_generate_prime_ex",
+            "BN_bntest_rand",
+            "BN_generate_dsa_nonce",
+            "BN_generate_prime",
+            "BN_generate_prime_ex",
+            "BN_generate_prime_ex2",
+            "BN_priv_rand",
+            "BN_priv_rand_ex",
+            "BN_priv_rand_range",
+            "BN_priv_rand_range_ex",
+            "BN_pseudo_rand",
+            "BN_pseudo_rand_range",
+            "BN_rand",
+            "BN_rand_ex",
+            "BN_rand_range",
+            "BN_rand_range_ex"
+          ],
+          "to_phase": 9
+        },
+        {
+          "from_phase": 5,
+          "symbols": [
             "d2i_PKCS12",
             "d2i_PKCS12_BAGS",
             "d2i_PKCS12_MAC_DATA",
@@ -868,6 +897,35 @@
             "i2d_RSA_PSS_PARAMS"
           ],
           "to_phase": 8
+        },
+        {
+          "from_phase": 5,
+          "symbols": [
+            "BN_BLINDING_create_param",
+            "BN_GF2m_mod_solve_quad",
+            "BN_GF2m_mod_solve_quad_arr",
+            "BN_GF2m_mod_sqrt",
+            "BN_GF2m_mod_sqrt_arr",
+            "BN_X931_derive_prime_ex",
+            "BN_X931_generate_Xpq",
+            "BN_X931_generate_prime_ex",
+            "BN_bntest_rand",
+            "BN_generate_dsa_nonce",
+            "BN_generate_prime",
+            "BN_generate_prime_ex",
+            "BN_generate_prime_ex2",
+            "BN_priv_rand",
+            "BN_priv_rand_ex",
+            "BN_priv_rand_range",
+            "BN_priv_rand_range_ex",
+            "BN_pseudo_rand",
+            "BN_pseudo_rand_range",
+            "BN_rand",
+            "BN_rand_ex",
+            "BN_rand_range",
+            "BN_rand_range_ex"
+          ],
+          "to_phase": 9
         },
         {
           "from_phase": 5,
@@ -6809,7 +6867,7 @@
     {
       "name": "ledger",
       "path": "forensics/tools/phase5_obligations.py",
-      "sha256": "27a6c7dfbe37a6f7000131afd20c9e011b750daaaed079fd0fac8b086e1ae31f"
+      "sha256": "c1ad9c10c248f4d293c83e1c6db56227f38a6f35a548fdb0ae78d6aa25b53f38"
     },
     {
       "name": "ledger-result",
@@ -6824,7 +6882,7 @@
     {
       "name": "ledger-result",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "7e6269a47f2f916994b0e0754f9c548da4e06605512a1b0e436fa8fed6abe063"
+      "sha256": "2308d640375f79ab1004c856b81a6b9bbdf451d0a3224d297bc777bfa77afa4c"
     }
   ],
   "kind": "ownership-audit",

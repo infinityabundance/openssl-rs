@@ -4,9 +4,9 @@
     "complete": false,
     "counts": {
       "candidates": 1093,
-      "deferred_to_later_phase": 580,
+      "deferred_to_later_phase": 603,
       "implemented": 105,
-      "open_in_this_stratum": 414,
+      "open_in_this_stratum": 391,
       "owned": 1099
     },
     "deferred": [
@@ -57,6 +57,144 @@
         "owning_phase": 11,
         "reason": "declared in x509.h; that subsystem is phase 11",
         "symbol": "ASN1_verify"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "chooses the blinding factor with BN_rand_range; RAND is Phase 9",
+        "symbol": "BN_BLINDING_create_param"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "searches with a random field element; RAND is Phase 9",
+        "symbol": "BN_GF2m_mod_solve_quad"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "searches with a random field element; RAND is Phase 9",
+        "symbol": "BN_GF2m_mod_solve_quad_arr"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "searches with a random field element; RAND is Phase 9",
+        "symbol": "BN_GF2m_mod_sqrt"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "searches with a random field element; RAND is Phase 9",
+        "symbol": "BN_GF2m_mod_sqrt_arr"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "draws candidates with BN_priv_rand; RAND is Phase 9",
+        "symbol": "BN_X931_derive_prime_ex"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "draws candidates with BN_priv_rand; RAND is Phase 9",
+        "symbol": "BN_X931_generate_Xpq"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "draws candidates with BN_priv_rand; RAND is Phase 9",
+        "symbol": "BN_X931_generate_prime_ex"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+        "symbol": "BN_bntest_rand"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "derives a nonce from the digest and entropy; RAND is Phase 9",
+        "symbol": "BN_generate_dsa_nonce"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "draws prime candidates with BN_priv_rand; RAND is Phase 9",
+        "symbol": "BN_generate_prime"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "draws prime candidates with BN_priv_rand; RAND is Phase 9",
+        "symbol": "BN_generate_prime_ex"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "draws prime candidates with BN_priv_rand; RAND is Phase 9",
+        "symbol": "BN_generate_prime_ex2"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+        "symbol": "BN_priv_rand"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+        "symbol": "BN_priv_rand_ex"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+        "symbol": "BN_priv_rand_range"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+        "symbol": "BN_priv_rand_range_ex"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+        "symbol": "BN_pseudo_rand"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+        "symbol": "BN_pseudo_rand_range"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+        "symbol": "BN_rand"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+        "symbol": "BN_rand_ex"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+        "symbol": "BN_rand_range"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
+        "symbol": "BN_rand_range_ex"
       },
       {
         "declaring_header": "evp.h",
@@ -3494,6 +3632,7 @@
     "deferred_by_phase": {
       "7": 23,
       "8": 58,
+      "9": 23,
       "10": 12,
       "11": 346,
       "12": 141
@@ -4811,11 +4950,6 @@
       {
         "declaring_header": "bn.h",
         "module": "src/bn/",
-        "symbol": "BN_BLINDING_create_param"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
         "symbol": "BN_BLINDING_free"
       },
       {
@@ -4931,32 +5065,12 @@
       {
         "declaring_header": "bn.h",
         "module": "src/bn/",
-        "symbol": "BN_GF2m_mod_solve_quad"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_GF2m_mod_solve_quad_arr"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
         "symbol": "BN_GF2m_mod_sqr"
       },
       {
         "declaring_header": "bn.h",
         "module": "src/bn/",
         "symbol": "BN_GF2m_mod_sqr_arr"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_GF2m_mod_sqrt"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_GF2m_mod_sqrt_arr"
       },
       {
         "declaring_header": "bn.h",
@@ -5006,26 +5120,6 @@
       {
         "declaring_header": "bn.h",
         "module": "src/bn/",
-        "symbol": "BN_X931_derive_prime_ex"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_X931_generate_Xpq"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_X931_generate_prime_ex"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_bntest_rand"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
         "symbol": "BN_check_prime"
       },
       {
@@ -5037,26 +5131,6 @@
         "declaring_header": "bn.h",
         "module": "src/bn/",
         "symbol": "BN_from_montgomery"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_generate_dsa_nonce"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_generate_prime"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_generate_prime_ex"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_generate_prime_ex2"
       },
       {
         "declaring_header": "bn.h",
@@ -5217,56 +5291,6 @@
         "declaring_header": "bn.h",
         "module": "src/bn/",
         "symbol": "BN_nist_mod_func"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_priv_rand"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_priv_rand_ex"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_priv_rand_range"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_priv_rand_range_ex"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_pseudo_rand"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_pseudo_rand_range"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_rand"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_rand_ex"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_rand_range"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_rand_range_ex"
       },
       {
         "declaring_header": "bn.h",
@@ -5726,7 +5750,7 @@
     ],
     "owned_by_module": {
       "src/asn1/": 280,
-      "src/bn/": 201,
+      "src/bn/": 178,
       "src/pem/": 38
     },
     "rule": "a symbol belongs to the stratum that owns the header declaring it; `pem.h` is the one header that declares surface owned elsewhere, so its typed readers and writers are resolved by the type in the name"
