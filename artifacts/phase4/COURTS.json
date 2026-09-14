@@ -107,7 +107,7 @@
         "candidate_exit_code": 0,
         "candidate_observations": 55,
         "candidate_stderr_tail": [
-          "BIO[0x55a5d89463a0]: ctrl(0) - memory buffer"
+          "BIO[0x55efd191b3a0]: ctrl(0) - memory buffer"
         ],
         "court": "RT-BIO-DEBUG",
         "probe": "courts/phase4/rt_bio_debug_probe.c",
@@ -206,7 +206,7 @@
       "total": 12
     }
   },
-  "body_hash": "18b7bc12cdf7c9434a6c292ae3d591de3166ce8c9a3decd8f7f8d074da09adf0",
+  "body_hash": "faa7cf02b5fe5ab95ce4fdd49e99025fa7052dc61af7cc015141776f10f36ab1",
   "generator": "forensics/tools/phase4_courts.py",
   "inputs": [],
   "kind": "phase4-courts",

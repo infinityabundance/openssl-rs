@@ -200,11 +200,15 @@ unsafe extern "C" fn linebuffer_write(b: *mut Bio, in_: *const c_char, inl: c_in
 
         // While there is retained text and either a newline was found or the
         // segment no longer fits, concatenate and flush.
+        // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
         while (found_nl || pdist > unsafe { (*c).obuf_size } - unsafe { (*c).obuf_len })
+            // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
             && unsafe { (*c).obuf_len } > 0
         {
+            // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
             let orig_olen = unsafe { (*c).obuf_len };
             let llen = pdist;
+            // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
             let i = unsafe { (*c).obuf_size - (*c).obuf_len };
             if llen > 0 {
                 if i >= llen {
@@ -265,6 +269,7 @@ unsafe extern "C" fn linebuffer_write(b: *mut Bio, in_: *const c_char, inl: c_in
 
         // With nothing retained, write the segment straight through when a
         // newline was found or it exceeds one buffer.
+        // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
         if (found_nl || pdist > unsafe { (*c).obuf_size }) && pdist > 0 {
             // SAFETY: `next` is live and `in_` is readable for `pdist` bytes.
             let w = unsafe { super::BIO_write(next, in_.cast(), pdist) };
@@ -379,6 +384,7 @@ unsafe extern "C" fn linebuffer_ctrl(
             // SAFETY: `c` is live.
             let current = unsafe { (*c).obuf };
             let mut p = current;
+            // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
             if obs > DEFAULT_LINEBUFFER_SIZE && obs != unsafe { (*c).obuf_size } {
                 p = CRYPTO_malloc(obs as usize, ptr::null(), 0).cast();
                 if p.is_null() {
@@ -413,6 +419,7 @@ unsafe extern "C" fn linebuffer_ctrl(
             if next.is_null() {
                 return 0;
             }
+            // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
             if unsafe { (*c).obuf_len } <= 0 {
                 // SAFETY: `next` is live.
                 ret = unsafe { super::BIO_ctrl(next, cmd, num, ptr_) };
@@ -423,6 +430,7 @@ unsafe extern "C" fn linebuffer_ctrl(
             loop {
                 // SAFETY: `b` is live.
                 unsafe { super::BIO_clear_flags(b, BIO_FLAGS_RWS | BIO_FLAGS_SHOULD_RETRY) };
+                // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
                 if unsafe { (*c).obuf_len } > 0 {
                     // SAFETY: `next` is live and the buffer holds `obuf_len` bytes.
                     let r = unsafe { super::BIO_write(next, (*c).obuf.cast(), (*c).obuf_len) };

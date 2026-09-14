@@ -329,6 +329,8 @@ pub unsafe extern "C" fn BIO_listen(sock: c_int, addr: *const BioAddr, options: 
         }
         // Linux sets `IPV6_V6ONLY` explicitly because its default differs from
         // Windows'.
+        // SAFETY: `addr` is NULL or a live address, which `BIO_ADDR_family`
+        // handles.
         if unsafe { BIO_ADDR_family(addr) } == sys::AF_INET6 {
             on = c_int::from((options & sys::BIO_SOCK_V6_ONLY) != 0);
             // SAFETY: `on` is readable for its own size.
@@ -355,6 +357,7 @@ pub unsafe extern "C" fn BIO_listen(sock: c_int, addr: *const BioAddr, options: 
         }
         // `BIO_bind` is called with the *same* options, so `BIO_SOCK_REUSEADDR`
         // reaches it from here.
+        // SAFETY: `addr` is NULL or a live address, as for the family read above.
         if unsafe { BIO_bind(sock, addr, options) } == 0 {
             return 0;
         }

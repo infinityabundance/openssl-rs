@@ -181,6 +181,7 @@ unsafe extern "C" fn bio_read(bio: *mut Bio, out: *mut c_char, size_: c_int) -> 
     let mut size = size_ as usize;
     // SAFETY: `bio` is live and paired.
     let b = unsafe { ctx(bio) };
+    // SAFETY: `b` is a live paired context and `peer_ctx` tolerates a NULL peer.
     let pb = unsafe { peer_ctx(b) };
     // SAFETY: `pb` is live.
     unsafe { (*pb).request = 0 };
@@ -206,6 +207,7 @@ unsafe extern "C" fn bio_read(bio: *mut Bio, out: *mut c_char, size_: c_int) -> 
 
     // SAFETY: `pb` is live.
     if unsafe { (*pb).len } < size {
+        // SAFETY: `pb` is the peer's context, non-NULL for a paired endpoint.
         size = unsafe { (*pb).len };
     }
 
@@ -323,6 +325,7 @@ unsafe fn bio_nread0(bio: *mut Bio, buf: *mut *mut c_char) -> isize {
     }
     // SAFETY: `bio` is live and paired.
     let b = unsafe { ctx(bio) };
+    // SAFETY: `b` is a live paired context and `peer_ctx` tolerates a NULL peer.
     let pb = unsafe { peer_ctx(b) };
     // SAFETY: `pb` is live.
     unsafe { (*pb).request = 0 };
@@ -339,6 +342,7 @@ unsafe fn bio_nread0(bio: *mut Bio, buf: *mut *mut c_char) -> isize {
     let mut num = unsafe { (*pb).len };
     // SAFETY: as above. The non-copying interface never wraps.
     if unsafe { (*pb).size < (*pb).offset + num } {
+        // SAFETY: `pb` is the peer's context, non-NULL for a paired endpoint.
         num = unsafe { (*pb).size - (*pb).offset };
     }
     if !buf.is_null() {
@@ -368,6 +372,7 @@ unsafe fn bio_nread(bio: *mut Bio, buf: *mut *mut c_char, num_: usize) -> isize 
     }
     // SAFETY: `bio` is live and paired.
     let b = unsafe { ctx(bio) };
+    // SAFETY: `b` is a live paired context and `peer_ctx` tolerates a NULL peer.
     let pb = unsafe { peer_ctx(b) };
     // SAFETY: `pb` is live.
     unsafe {
@@ -422,9 +427,11 @@ unsafe fn bio_nwrite0(bio: *mut Bio, buf: *mut *mut c_char) -> isize {
         }
         wo
     };
+    // SAFETY: `b` is this endpoint's live context.
     if write_offset + num > unsafe { (*b).size } {
         // The non-copying interface must never wrap, so that the guarantee
         // `BIO_ctrl_get_write_guarantee` makes is honest.
+        // SAFETY: `b` is this endpoint's live context.
         num = unsafe { (*b).size } - write_offset;
     }
     if !buf.is_null() {
@@ -739,7 +746,7 @@ pub unsafe extern "C" fn BIO_new_bio_pair(
         let mut bio2: *mut Bio = ptr::null_mut();
         let mut ret = 0;
 
-        'build: loop {
+        'build: {
             if writebuf1 > c_long::MAX as usize || writebuf2 > c_long::MAX as usize {
                 break 'build;
             }

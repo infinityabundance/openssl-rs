@@ -131,6 +131,7 @@ unsafe fn readbuffer_resize(c: *mut BioBufferCtx, sz: c_int) -> bool {
     // SAFETY: `c` is live.
     let mut sz = unsafe { (*c).ibuf_off } + DEFAULT_BUFFER_SIZE - 1 + sz;
     sz = DEFAULT_BUFFER_SIZE * (sz / DEFAULT_BUFFER_SIZE);
+    // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
     if sz > unsafe { (*c).ibuf_size } {
         // SAFETY: `ibuf` is owned here and `sz > 0`.
         let tmp = unsafe { CRYPTO_realloc((*c).ibuf.cast(), sz as usize, ptr::null(), 0) }
@@ -168,6 +169,7 @@ unsafe extern "C" fn readbuffer_read(b: *mut Bio, out: *mut c_char, outl: c_int)
 
     loop {
         // Drain what is already cached.
+        // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
         let mut i = unsafe { (*c).ibuf_len };
         if i != 0 {
             if i > outl {
@@ -329,15 +331,19 @@ unsafe extern "C" fn readbuffer_gets(b: *mut Bio, buf: *mut c_char, size: c_int)
     let mut size = size;
     let mut out = buf;
 
+    // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
     if unsafe { (*c).ibuf_len } > 0 {
+        // SAFETY: `ibuf` holds `ibuf_off + ibuf_len` valid bytes, so this stays inside the allocation.
         let p = unsafe { (*c).ibuf.add((*c).ibuf_off as usize) };
         let mut found_newline = false;
         let mut num_chars = 0i32;
+        // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
         while num_chars < unsafe { (*c).ibuf_len } && num_chars < size {
             // SAFETY: `p` holds `ibuf_len` bytes.
             let ch = unsafe { *p.add(num_chars as usize) };
             // SAFETY: `out` is writable.
             unsafe { *out = ch };
+            // SAFETY: `out` advances within the caller's `size + 1` byte buffer.
             out = unsafe { out.add(1) };
             num_chars += 1;
             if ch == b'\n' as c_char {
@@ -389,6 +395,7 @@ unsafe extern "C" fn readbuffer_gets(b: *mut Bio, buf: *mut c_char, size: c_int)
         if ch == b'\n' as c_char {
             break;
         }
+        // SAFETY: `p` advances within the cache, which was resized for this loop.
         p = unsafe { p.add(1) };
     }
     // SAFETY: `out` is inside the caller's buffer.

@@ -42,7 +42,7 @@ use super::BioMethod;
 /// authority's body is exactly `return NULL`.
 #[no_mangle]
 pub extern "C" fn BIO_f_zlib() -> *const BioMethod {
-    guard_ffi(ptr::null(), || ptr::null())
+    guard_ffi(ptr::null(), ptr::null)
 }
 
 /// `const BIO_METHOD *BIO_f_zstd(void)`
@@ -50,7 +50,7 @@ pub extern "C" fn BIO_f_zlib() -> *const BioMethod {
 /// `NULL` in this build profile (`OPENSSL_NO_ZSTD`).
 #[no_mangle]
 pub extern "C" fn BIO_f_zstd() -> *const BioMethod {
-    guard_ffi(ptr::null(), || ptr::null())
+    guard_ffi(ptr::null(), ptr::null)
 }
 
 /// `const BIO_METHOD *BIO_f_brotli(void)`
@@ -58,5 +58,5 @@ pub extern "C" fn BIO_f_zstd() -> *const BioMethod {
 /// `NULL` in this build profile (`OPENSSL_NO_BROTLI`).
 #[no_mangle]
 pub extern "C" fn BIO_f_brotli() -> *const BioMethod {
-    guard_ffi(ptr::null(), || ptr::null())
+    guard_ffi(ptr::null(), ptr::null)
 }

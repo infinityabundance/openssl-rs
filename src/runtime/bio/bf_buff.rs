@@ -185,6 +185,7 @@ unsafe extern "C" fn buffer_read(b: *mut Bio, out: *mut c_char, outl: c_int) -> 
 
     loop {
         // If there is stuff left over, grab it.
+        // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
         let mut i = unsafe { (*c).ibuf_len };
         if i != 0 {
             if i > outl {
@@ -206,6 +207,7 @@ unsafe extern "C" fn buffer_read(b: *mut Bio, out: *mut c_char, outl: c_int) -> 
             outl -= i;
         }
 
+        // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
         if outl > unsafe { (*c).ibuf_size } {
             // Read straight through to the caller's buffer.
             loop {
@@ -284,6 +286,7 @@ unsafe extern "C" fn buffer_write(b: *mut Bio, in_: *const c_char, inl: c_int) -
             return num + inl;
         }
 
+        // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
         if unsafe { (*c).obuf_len } != 0 {
             if i > 0 {
                 // SAFETY: as above, for `i` bytes.
@@ -322,6 +325,7 @@ unsafe extern "C" fn buffer_write(b: *mut Bio, in_: *const c_char, inl: c_int) -
                     (*c).obuf_off += w;
                     (*c).obuf_len -= w;
                 }
+                // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
                 if unsafe { (*c).obuf_len } == 0 {
                     break;
                 }
@@ -331,6 +335,7 @@ unsafe extern "C" fn buffer_write(b: *mut Bio, in_: *const c_char, inl: c_int) -
         unsafe { (*c).obuf_off = 0 };
 
         // Write whole buffers directly while several remain.
+        // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
         while inl >= unsafe { (*c).obuf_size } {
             // SAFETY: `in_` is readable for `inl` bytes.
             let w = unsafe { super::BIO_write(next, in_.cast(), inl) };
@@ -460,6 +465,7 @@ unsafe extern "C" fn buffer_ctrl(
         BIO_C_SET_BUFF_SIZE => {
             // SAFETY: `c` is a live context.
             let ctx_ibuf_size = unsafe { (*c).ibuf_size };
+            // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
             let ctx_obuf_size = unsafe { (*c).obuf_size };
             let (ibs, obs) = if !ptr_.is_null() {
                 // SAFETY: the control's contract says `ptr_` is an `int *`.
@@ -472,7 +478,9 @@ unsafe extern "C" fn buffer_ctrl(
             } else {
                 (num as c_int, num as c_int)
             };
+            // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
             let mut p1 = unsafe { (*c).ibuf };
+            // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
             let mut p2 = unsafe { (*c).obuf };
             if ibs > DEFAULT_BUFFER_SIZE && ibs != ctx_ibuf_size {
                 if num <= 0 {
@@ -529,6 +537,7 @@ unsafe extern "C" fn buffer_ctrl(
             if next.is_null() {
                 return 0;
             }
+            // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
             if unsafe { (*c).obuf_len } <= 0 {
                 // SAFETY: `next` is live.
                 ret = unsafe { super::BIO_ctrl(next, cmd, num, ptr_) };
@@ -539,6 +548,7 @@ unsafe extern "C" fn buffer_ctrl(
             loop {
                 // SAFETY: `b` is live.
                 unsafe { super::BIO_clear_flags(b, BIO_FLAGS_RWS | BIO_FLAGS_SHOULD_RETRY) };
+                // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
                 if unsafe { (*c).obuf_len } > 0 {
                     // SAFETY: `next` is live and the buffer holds `obuf_len` bytes.
                     let r = unsafe {
@@ -609,7 +619,9 @@ unsafe extern "C" fn buffer_ctrl(
             unsafe { buffer_read(b, fake_buf.as_ptr().cast_mut(), 0) };
             // SAFETY: `c` is a live context.
             let mut n = num;
+            // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
             if n > unsafe { (*c).ibuf_len } as c_long {
+                // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
                 n = unsafe { (*c).ibuf_len } as c_long;
             }
             // SAFETY: `ptr_` is writable for `n` bytes and the buffer holds
@@ -669,15 +681,19 @@ unsafe extern "C" fn buffer_gets(b: *mut Bio, buf: *mut c_char, size: c_int) -> 
     unsafe { super::BIO_clear_flags(b, BIO_FLAGS_RWS | BIO_FLAGS_SHOULD_RETRY) };
 
     loop {
+        // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
         if unsafe { (*c).ibuf_len } > 0 {
+            // SAFETY: `ibuf` holds `ibuf_off + ibuf_len` valid bytes, so this stays inside the allocation.
             let p = unsafe { (*c).ibuf.add((*c).ibuf_off as usize) };
             let mut flag = false;
             let mut i = 0i32;
+            // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
             while i < unsafe { (*c).ibuf_len } && i < size {
                 // SAFETY: `p` holds `ibuf_len` bytes.
                 let ch = unsafe { *p.add(i as usize) };
                 // SAFETY: `out` is writable for `size + 1` bytes overall.
                 unsafe { *out = ch };
+                // SAFETY: `out` advances within the caller's `size + 1` byte buffer.
                 out = unsafe { out.add(1) };
                 i += 1;
                 if ch == b'\n' as c_char {

@@ -1418,3 +1418,51 @@ newline loses its last character — `nl.at.eof.truncated.nid.ge0=1` with
 for the streams driven, the accepted objects and the error queue. It is not a
 claim about object-database behaviour outside `OBJ_create_objects`, nor about the
 ASN.1 parser beyond the `a2d_ASN1_OBJECT` rejections it exercises.
+
+## D45 — The clippy debt this stratum added, and the remaining inventory
+
+**Decision.** The new Phase 4 modules are clean under the crate's own lint
+configuration (`undocumented_unsafe_blocks = "deny"`, `missing_safety_doc =
+"deny"`), and the two sites the previous batch left in `bio_sock2.rs` are fixed
+too. The number of clippy diagnostics in the crate falls from 298 to 251; the
+remainder is pre-existing debt in the Phase 4 BIO modules written before this
+session, which `docs/DECISIONS.md` already records as the reason the `lints` CI
+job is still `continue-on-error`.
+
+Three of the fixes were more than comments: `abs_val`'s two zero assignments
+became one `is_nan()` test, the `G`-format style decision became a named
+`e_style` predicate, and `BIO_new_bio_pair`'s one-shot `loop` became a labelled
+block. Each is equivalent to what it replaced, and the court covers all three.
+
+**The inventory at the end of this batch.** Phase 4 owns 256 exports and stands
+at 187 implemented, 16 deferred to a named later phase, and 53 open:
+
+    src/runtime/bio/   9   BIO_s_dgram_pair, BIO_s_dgram_mem, BIO_new_bio_dgram_pair,
+                           BIO_s_datagram, BIO_new_dgram,
+                           BIO_s_connect, BIO_new_connect, BIO_s_accept, BIO_new_accept
+    src/runtime/conf/ 44   the CONF_* and NCONF_* families
+
+The 44 CONF/NCONF symbols are one subsystem (`crypto/conf/`), not a scattering of
+independent functions: `NCONF_new`/`NCONF_load`/`NCONF_get_*` are the parser and
+its accessors, and the `CONF_modules_*`/`CONF_imodule_*` families are the
+module-configuration layer above it. They should be taken as one piece with one
+court, for the reason Phase 3 was: the observable contract is the parse, the
+include and variable-expansion rules, the section and duplicate-key behaviour and
+the error coordinates, none of which survives being split.
+
+**What is verified as of this commit.** 30 courts pass, covering 6,005
+observations; the last three batches alone added `RT-BIO-SOCK` (157),
+`RT-BIO-COMP` (45), `RT-BIO-DEBUG` (55), `RT-BIO-PRINT` (213), `RT-BIO-FILE`
+(134), `RT-BIO-FILTER` (114), `RT-BIO-PAIR` (111) and `RT-OBJ-STREAM` (91).
+`implemented` `libcrypto` exports are 399 of 6,499. Phase 0-3 remain `complete`
+and Phase 4 remains `in-progress`, which is what the derived phase state says and
+what the seals say; nothing here claims otherwise.
+
+**The four defects the courts found, three of them in code already recorded as
+implemented.** `BIO_snprintf`'s engine was the C library's rather than `_dopr`
+(D41); two `ERR_add_error_vdata` behaviours were wrong (D38, an earlier batch);
+`OBJ_create` and `OBJ_txt2obj` were silent where the authority raises (D44); and
+`ERR_add_error_vdata` aside, every one of these was found because a *new* court
+observed a surface no existing court could see. That is the pattern this stratum
+is built on, and it is the reason the remaining 53 symbols should not be
+implemented without their courts.

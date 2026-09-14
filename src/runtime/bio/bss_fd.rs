@@ -127,6 +127,7 @@ unsafe extern "C" fn fd_read(b: *mut Bio, out: *mut c_char, outl: c_int) -> c_in
         unsafe { sys::set_errno(0) };
         // SAFETY: `b` is live; `out` is writable for `outl` bytes.
         let num = unsafe { (*b).num };
+        // SAFETY: the descriptor and buffer follow this method's contract; `out` is writable for `outl`.
         ret = unsafe { sys::read(num, out.cast(), outl as usize) as c_int };
         // `BIO_clear_retry_flags(b)`.
         // SAFETY: `b` is live.
@@ -155,6 +156,7 @@ unsafe extern "C" fn fd_write(b: *mut Bio, in_: *const c_char, inl: c_int) -> c_
     unsafe { sys::set_errno(0) };
     // SAFETY: `b` is live; `in_` is readable for `inl` bytes.
     let num = unsafe { (*b).num };
+    // SAFETY: the descriptor and buffer follow this method's contract; `in_` is readable for `inl`.
     let ret = unsafe { sys::write(num, in_.cast(), inl as usize) as c_int };
     // SAFETY: `b` is live.
     unsafe { super::BIO_clear_flags(b, BIO_FLAGS_RWS | BIO_FLAGS_SHOULD_RETRY) };
@@ -266,6 +268,7 @@ unsafe extern "C" fn fd_gets(bp: *mut Bio, buf: *mut c_char, size: c_int) -> c_i
         return 0;
     }
     let mut ptr = buf;
+    // SAFETY: `size > 0` was checked, so `size - 1` is inside the caller's buffer.
     let end = unsafe { buf.add((size - 1) as usize) };
     while ptr < end {
         // SAFETY: `ptr` is writable and inside `buf`.
@@ -275,6 +278,7 @@ unsafe extern "C" fn fd_gets(bp: *mut Bio, buf: *mut c_char, size: c_int) -> c_i
         }
         // SAFETY: `fd_read` wrote one byte.
         let c = unsafe { *ptr } as u8;
+        // SAFETY: `ptr` is at most `end`, which is inside the caller's buffer.
         ptr = unsafe { ptr.add(1) };
         if c == b'\n' {
             break;

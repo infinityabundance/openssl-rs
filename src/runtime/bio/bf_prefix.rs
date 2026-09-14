@@ -162,6 +162,7 @@ unsafe extern "C" fn prefix_write(
     // line-start flag is still maintained for a prefix set later.
     // SAFETY: `c` is live.
     let no_prefix = unsafe { (*c).prefix.is_null() || *(*c).prefix == 0 };
+    // SAFETY: `c` is this BIO's context, allocated by its `create` and freed only by its `destroy`.
     if no_prefix && unsafe { (*c).indent } == 0 {
         if outl > 0 {
             // SAFETY: `out` is readable for `outl` bytes.

@@ -146,7 +146,7 @@ impl Dopr<'_> {
             self.cur += 1;
         }
         if self.pos < i64::MAX {
-            self.pos += 1;
+            self.pos = self.pos.saturating_add(1);
         }
         true
     }
@@ -402,16 +402,15 @@ unsafe fn fmtstr(d: &mut Dopr, value: *const c_char, flags: i32, min: i32, max: 
 // fmtfp
 // ---------------------------------------------------------------------------
 
-/// `abs_val` — including the two sentinel cases: an infinity becomes zero and a
-/// NaN becomes zero, with the `?` sign applied by the caller.
+/// `abs_val` — including the two sentinel cases: an infinity doubles to itself
+/// (and is non-zero) and a NaN is not equal to itself, and both collapse to zero
+/// with the `?` sign applied by the caller.
 fn abs_val(value: f64) -> f64 {
     let mut result = value;
     if value < 0.0 {
         result = -value;
     }
-    if result > 0.0 && result / 2.0 == result {
-        result = 0.0;
-    } else if result != result {
+    if (result > 0.0 && result / 2.0 == result) || result.is_nan() {
         result = 0.0;
     }
     result
@@ -466,12 +465,15 @@ fn fmtfp(d: &mut Dopr, fvalue: f64, min: i32, max: i32, flags: i32, style: i32) 
     }
 
     // G sometimes prints like E and sometimes like F, depending on the value.
+    // The authority tests `ufvalue == 0.0` first and its two remaining tests
+    // separately; the three E conditions are folded here because a zero mantissa
+    // is the only case that must not take the E branch.
+    let e_style = ufvalue != 0.0
+        && (ufvalue < 0.0001
+            || (max == 0 && ufvalue >= 10.0)
+            || (max > 0 && ufvalue >= pow_10(max)));
     let realstyle = if style == G_FORMAT {
-        if ufvalue == 0.0 {
-            F_FORMAT
-        } else if ufvalue < 0.0001 {
-            E_FORMAT
-        } else if (max == 0 && ufvalue >= 10.0) || (max > 0 && ufvalue >= pow_10(max)) {
+        if e_style {
             E_FORMAT
         } else {
             F_FORMAT
@@ -556,7 +558,7 @@ fn fmtfp(d: &mut Dopr, fvalue: f64, min: i32, max: i32, flags: i32, style: i32) 
     // Fractional part, again least-significant first. In G the trailing zeros are
     // stripped by shrinking `max`.
     while fplace < max as usize {
-        if style == G_FORMAT && fplace == 0 && fracpart % 10 == 0 {
+        if style == G_FORMAT && fplace == 0 && fracpart.is_multiple_of(10) {
             max -= 1;
             fracpart /= 10;
             if fplace < max as usize {
