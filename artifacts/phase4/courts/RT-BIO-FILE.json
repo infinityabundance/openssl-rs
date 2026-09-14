@@ -1,0 +1,16 @@
+{
+  "authority_exit_code": 0,
+  "authority_observations": 134,
+  "candidate_exit_code": 0,
+  "candidate_observations": 134,
+  "candidate_stderr_tail": [],
+  "court": "RT-BIO-FILE",
+  "probe": "courts/phase4/rt_bio_file_probe.c",
+  "residual_count": 0,
+  "residuals": [],
+  "staged_binaries": {
+    "authority": "artifacts/phase4/probes/rt_bio_file_probe.authority",
+    "candidate": "artifacts/phase4/probes/rt_bio_file_probe.candidate"
+  },
+  "verdict": "pass"
+}

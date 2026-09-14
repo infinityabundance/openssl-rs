@@ -151,6 +151,7 @@ fn build_variadic_adapters(manifest_dir: &Path) -> Result<(), String> {
     let sources = [
         ("src/runtime/err_variadic.c", "openssl_rs_err_variadic"),
         ("src/runtime/bio/bio_variadic.c", "openssl_rs_bio_variadic"),
+        ("src/runtime/bio/bio_va.c", "openssl_rs_bio_va"),
     ];
 
     let out_dir = PathBuf::from(env::var("OUT_DIR").map_err(|_| "OUT_DIR is not set")?);

@@ -70,6 +70,8 @@ COURTS = [
     ("RT-BIO-SOCK", "rt_bio_sock_probe.c"),
     ("RT-BIO-COMP", "rt_bio_comp_probe.c"),
     ("RT-BIO-DEBUG", "rt_bio_debug_probe.c"),
+    ("RT-BIO-PRINT", "rt_bio_print_probe.c"),
+    ("RT-BIO-FILE", "rt_bio_file_probe.c"),
 ]
 
 

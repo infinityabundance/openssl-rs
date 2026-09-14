@@ -59,6 +59,9 @@ pub mod addr_info;
 pub mod bf_null;
 pub mod bio_cb;
 pub mod bio_sock2;
+pub mod bss_fd;
+pub mod bss_file;
+pub mod bss_log;
 pub mod bss_mem;
 pub mod bss_null;
 pub mod bss_sock;
@@ -68,6 +71,7 @@ pub mod iolib;
 pub mod legacy_host;
 pub mod method;
 pub mod print;
+pub mod print_engine;
 pub mod retry;
 pub mod sys;
 
@@ -137,6 +141,16 @@ pub const BIO_TYPE_DGRAM_MEM: c_int = 27 | BIO_TYPE_SOURCE_SINK;
 pub const BIO_NOCLOSE: c_int = 0x00;
 /// `BIO_CLOSE`.
 pub const BIO_CLOSE: c_int = 0x01;
+
+/// `BIO_FLAGS_UPLINK_INTERNAL` — the internal flag that marks a BIO whose stdio
+/// goes through a userland shim.
+///
+/// It is **0** in this build (`internal/cryptlib.h`, the `#else` of
+/// `OPENSSL_USE_APPLINK`), which is why the authority's `bss_file.c` UPLINK
+/// branches are all constant-false and not implemented
+/// (`docs/BUILD_MATRIX.md`). The constant exists so the assignments the authority
+/// still performs are reproduced rather than silently dropped.
+pub const BIO_FLAGS_UPLINK_INTERNAL: c_int = 0;
 
 /// `BIO_FLAGS_READ`.
 pub const BIO_FLAGS_READ: c_int = 0x01;
@@ -1561,6 +1575,9 @@ pub use bio_sock2::{
     BIO_accept, BIO_accept_ex, BIO_bind, BIO_connect, BIO_get_accept_socket, BIO_listen,
     BIO_set_tcp_ndelay, BIO_sock_info, BIO_socket,
 };
+pub use bss_fd::{BIO_new_fd, BIO_s_fd};
+pub use bss_file::{BIO_new_file, BIO_new_fp, BIO_s_file};
+pub use bss_log::BIO_s_log;
 pub use comp::{BIO_f_brotli, BIO_f_zlib, BIO_f_zstd};
 pub use dump::{
     BIO_dump, BIO_dump_cb, BIO_dump_fp, BIO_dump_indent, BIO_dump_indent_cb, BIO_dump_indent_fp,

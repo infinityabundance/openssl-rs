@@ -1184,3 +1184,81 @@ residuals.
 return values and error queue as the authority for the commands the probe drives.
 It is not a claim about the callbacks of the filter and method BIOs still open in
 this stratum. `RT-BIO-COMP` passing is scoped to the admitted build profile.
+
+## D41 — The BIO printf engine is not the C library's, and it was wrong
+
+**Decision.** Eight further exports are implemented and courted — `BIO_s_file`,
+`BIO_new_file`, `BIO_new_fp` (`bss_file.rs`), `BIO_s_fd`, `BIO_new_fd`
+(`bss_fd.rs`) and `BIO_s_log` (`bss_log.rs`) — and, far more importantly, the
+`BIO_snprintf`/`BIO_vsnprintf`/`BIO_printf`/`BIO_vprintf` engine was replaced.
+Phase 4 is now implemented 180 / deferred 14 / open 62 of 256 owned; the baseline
+is 27 courts and 5,689 observations; `implemented` `libcrypto` exports move
+386 -> 392.
+
+**The defect this fixes, and why it was not a corner case.** The previous
+implementation of the printf surface called `vsnprintf`. The authority does not:
+it carries its own engine, `_dopr` (`crypto/bio/bio_print.c`), and the dialects
+differ in ways a caller can see. Measured directly against the authority's DSO
+before the fix:
+
+    BIO_snprintf(b, n, "[%s]", (char *)NULL)   authority "[<NULL>]"  vsnprintf "[(null)]"
+    BIO_snprintf(b, n, "[%p]", (void *)NULL)   authority "[0]"       vsnprintf "[(nil)]"
+    BIO_snprintf(b, n, "%q", 1)                authority 0, ""       vsnprintf -1, ""
+    BIO_snprintf(b, n, "%e", 10.0)             authority "10.000000e+00"
+                                               vsnprintf "1.000000e+01"
+
+The last one is not a rounding difference: `_dopr`'s exponent loop steps only
+while the mantissa is **strictly** greater than ten, so a mantissa of exactly ten
+is never normalised. `BIO_snprintf` is a Phase 4 export that was already recorded
+as implemented, so this was an incorrect obligation rather than an open one, and
+leaving it would have closed the stratum with a knowingly wrong surface. It was
+found while reading `bss_file.c`, whose `"calling fopen(%s, %s)"` error data is
+formatted by this engine and therefore contains `<NULL>` where the C library
+would write `(null)`.
+
+**The engine.** `src/runtime/bio/print_engine.rs` implements the format state
+machine, `fmtint`, `fmtstr` and `fmtfp` — including the strict exponent loop, the
+nine-digit fraction clamp (`if (max > 9) max = 9`), the `?` sign that an infinity
+or NaN acquires, the `<NULL>` substitution, the "unknown conversion is skipped"
+rule, `%n`, and the truncation verdict. `LDOUBLE` is `double` in this build
+(`HAVE_LONG_DOUBLE` is undefined), which is why there is no third argument class
+and why `%Lf` was measured to behave exactly like `%f`.
+
+**Argument extraction stays in C, and only that.** A C-variadic function cannot
+be defined in stable Rust and `va_arg` needs the un-erased list, so
+`src/runtime/bio/bio_va.c` exposes exactly two primitives — next
+general-purpose argument, next floating-point argument — and nothing else.
+The Rust engine drives the parse and decides which class to pull, so there is a
+single format parser and no second one that could desynchronise the argument
+stream. On x86-64 SysV the two argument classes advance independent `va_list`
+cursors, which is exactly the model these two accessors express.
+
+**Two surprises the engine had to reproduce.** `q` and `j` are *length
+modifiers*, so `"<%q>"` renders as `<` and nothing else: `q` is consumed as a
+modifier and `>` becomes the (unknown) conversion, which is then skipped.
+`"%wX"` is worse — `w` skips the **following character** and produces nothing.
+Both were measured, and both are in `RT-BIO-PRINT`.
+
+**Three probe defects, found before the implementation was questioned.** The
+first `RT-BIO-FILE` run crashed the *authority* because the probe passed a
+`BIO_METHOD *` to `BIO_method_name`, which takes a `BIO *`. The second printed
+`int`-returning macros (`BIO_tell`, `BIO_seek`, `BIO_flush`, `BIO_eof`) with
+`%ld`, which reads undefined register contents. The third ordered the `%n` test's
+arguments wrongly and wrote through address 7. In every case the implementation
+was correct and the probe was not — the fourth, fifth and sixth time in Phase 4
+that has been true.
+
+**A process note.** `forensics/tools/build_phase2.sh` is not executable; it must
+be invoked as `bash forensics/tools/build_phase2.sh`. Invoking it directly fails
+with `Permission denied`, and because the shell in question is often run with its
+output redirected, that failure is silent and the *previous* shell is then used
+for the courts — which presents as "the candidate still scaffolds the new
+symbols". This cost one diagnostic cycle and is recorded so it costs no more.
+
+**Non-claim.** `RT-BIO-PRINT` passing means the candidate matched the authority
+for the format/argument combinations the probe drives, on this platform's
+argument-passing ABI. It is not a claim about a platform whose `long double` is
+not `double`, nor about format strings outside the probe's matrix.
+`RT-BIO-FILE` passing means the candidate matched the authority for the FILE,
+descriptor and syslog state machines and error shapes the probe exercises; the
+syslog text leaves the process and is deliberately not compared.

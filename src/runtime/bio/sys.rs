@@ -151,6 +151,20 @@ pub unsafe fn errno() -> c_int {
     unsafe { *errno_location() }
 }
 
+/// Assign the calling thread's `errno`.
+///
+/// The authority's `clear_sys_error()` is `errno = 0` on this platform, and
+/// `fd_read`/`fd_write` call it *before* the syscall. A probe that observes
+/// `errno` after an operation that did not set it therefore sees `0` rather than
+/// a stale value, so the clear is contract rather than housekeeping.
+///
+/// # Safety
+/// `errno_location` returns a valid thread-local pointer.
+pub unsafe fn set_errno(v: c_int) {
+    // SAFETY: `__errno_location` returns a valid pointer to this thread's errno.
+    unsafe { *errno_location() = v };
+}
+
 // `errno` values this stratum branches on, from `<errno.h>` on Linux.
 /// `EINTR`.
 pub const EINTR: c_int = 4;
@@ -177,6 +191,10 @@ pub const ENOMEM: c_int = 12;
 /// `EPROTO` — `BIO_fd_non_fatal_error` and `BIO_dgram_non_fatal_error` treat it as
 /// retryable on Linux.
 pub const EPROTO: c_int = 71;
+/// `ENOENT`.
+pub const ENOENT: c_int = 2;
+/// `ENXIO` — `BIO_new_file` maps it to `BIO_R_NO_SUCH_FILE` alongside `ENOENT`.
+pub const ENXIO: c_int = 6;
 
 // ---------------------------------------------------------------------------
 // Sockets
@@ -572,6 +590,8 @@ extern "C" {
     pub fn strlen(s: *const c_char) -> size_t;
     /// `int memcmp(const void *, const void *, size_t)`.
     pub fn memcmp(a: *const c_void, b: *const c_void, n: size_t) -> c_int;
+    /// `int strncmp(const char *, const char *, size_t)`.
+    pub fn strncmp(a: *const c_char, b: *const c_char, n: size_t) -> c_int;
     /// `char *strdup(const char *)`.
     pub fn strdup(s: *const c_char) -> *mut c_char;
     /// `char *strndup(const char *, size_t)`.
@@ -584,7 +604,11 @@ extern "C" {
     /// `int vsnprintf(char *, size_t, const char *, va_list)`.
     pub fn vsnprintf(buf: *mut c_char, n: size_t, fmt: *const c_char, ap: *mut c_void) -> c_int;
     /// `void syslog(int, const char *, ...)`.
-    pub fn syslog(priority: c_int, fmt: *const c_char, ...);
+    pub fn syslog(priority: c_int, format: *const c_char, ...);
+    /// `void openlog(const char *, int, int)`.
+    pub fn openlog(ident: *const c_char, option: c_int, facility: c_int);
+    /// `void closelog(void)`.
+    pub fn closelog();
     /// `int usleep(useconds_t)`.
     pub fn usleep(usec: c_uint) -> c_int;
     /// `time_t time(time_t *)`.

@@ -4,8 +4,8 @@
     "complete": false,
     "counts": {
       "deferred_to_later_phase": 14,
-      "implemented": 174,
-      "open_in_this_stratum": 68,
+      "implemented": 180,
+      "open_in_this_stratum": 62,
       "owned": 256
     },
     "deferred": [
@@ -239,6 +239,9 @@
       "BIO_method_type",
       "BIO_new",
       "BIO_new_ex",
+      "BIO_new_fd",
+      "BIO_new_file",
+      "BIO_new_fp",
       "BIO_new_mem_buf",
       "BIO_new_socket",
       "BIO_next",
@@ -257,6 +260,9 @@
       "BIO_read",
       "BIO_read_ex",
       "BIO_recvmmsg",
+      "BIO_s_fd",
+      "BIO_s_file",
+      "BIO_s_log",
       "BIO_s_mem",
       "BIO_s_null",
       "BIO_s_secmem",
@@ -355,18 +361,6 @@
       },
       {
         "module": "src/runtime/bio/",
-        "symbol": "BIO_new_fd"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_new_file"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_new_fp"
-      },
-      {
-        "module": "src/runtime/bio/",
         "symbol": "BIO_s_accept"
       },
       {
@@ -388,18 +382,6 @@
       {
         "module": "src/runtime/bio/",
         "symbol": "BIO_s_dgram_pair"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_s_fd"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_s_file"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_s_log"
       },
       {
         "module": "src/runtime/conf/",
@@ -593,7 +575,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "e7f032f9d85f520256a7053e6826ae6e7896ec62c92333b904e6649cef6ce92e"
+      "sha256": "cf3c94c2b6f4944de304fc0cd8cfe48ece8482464e21db3ca040b938afec051c"
     }
   ],
   "kind": "phase4-obligations",
