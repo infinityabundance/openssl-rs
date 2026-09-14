@@ -57,6 +57,7 @@ use crate::runtime::ex_data::{
 pub mod addr;
 pub mod addr_info;
 pub mod bf_null;
+pub mod bio_sock2;
 pub mod bss_mem;
 pub mod bss_null;
 pub mod bss_sock;
@@ -1551,6 +1552,10 @@ pub use addr::{
 pub use addr_info::{
     BIO_ADDRINFO_address, BIO_ADDRINFO_family, BIO_ADDRINFO_free, BIO_ADDRINFO_next,
     BIO_ADDRINFO_protocol, BIO_ADDRINFO_socktype, BIO_lookup, BIO_lookup_ex, BIO_parse_hostserv,
+};
+pub use bio_sock2::{
+    BIO_accept, BIO_accept_ex, BIO_bind, BIO_connect, BIO_get_accept_socket, BIO_listen,
+    BIO_set_tcp_ndelay, BIO_sock_info, BIO_socket,
 };
 pub use dump::{
     BIO_dump, BIO_dump_cb, BIO_dump_fp, BIO_dump_indent, BIO_dump_indent_cb, BIO_dump_indent_fp,

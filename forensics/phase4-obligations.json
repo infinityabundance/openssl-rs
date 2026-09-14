@@ -4,8 +4,8 @@
     "complete": false,
     "counts": {
       "deferred_to_later_phase": 14,
-      "implemented": 157,
-      "open_in_this_stratum": 85,
+      "implemented": 166,
+      "open_in_this_stratum": 76,
       "owned": 256
     },
     "deferred": [
@@ -150,9 +150,13 @@
       "BIO_ADDR_rawmake",
       "BIO_ADDR_rawport",
       "BIO_ADDR_service_string",
+      "BIO_accept",
+      "BIO_accept_ex",
+      "BIO_bind",
       "BIO_callback_ctrl",
       "BIO_clear_flags",
       "BIO_closesocket",
+      "BIO_connect",
       "BIO_copy_next_retry",
       "BIO_ctrl",
       "BIO_ctrl_get_read_request",
@@ -173,6 +177,7 @@
       "BIO_find_type",
       "BIO_free",
       "BIO_free_all",
+      "BIO_get_accept_socket",
       "BIO_get_callback",
       "BIO_get_callback_arg",
       "BIO_get_callback_ex",
@@ -193,6 +198,7 @@
       "BIO_hex_string",
       "BIO_indent",
       "BIO_int_ctrl",
+      "BIO_listen",
       "BIO_lookup",
       "BIO_lookup_ex",
       "BIO_meth_free",
@@ -258,11 +264,14 @@
       "BIO_set_next",
       "BIO_set_retry_reason",
       "BIO_set_shutdown",
+      "BIO_set_tcp_ndelay",
       "BIO_snprintf",
       "BIO_sock_error",
+      "BIO_sock_info",
       "BIO_sock_init",
       "BIO_sock_non_fatal_error",
       "BIO_sock_should_retry",
+      "BIO_socket",
       "BIO_socket_ioctl",
       "BIO_socket_nbio",
       "BIO_socket_wait",
@@ -292,22 +301,6 @@
     ],
     "note": "`complete` is true only when every export in these families is either implemented or handed to a later stratum. `open` entries belong to this stratum and are recorded gaps, not deferrals; while any exist Phase 4 cannot be called complete. Nothing here is a parity claim.",
     "open": [
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_accept"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_accept_ex"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_bind"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_connect"
-      },
       {
         "module": "src/runtime/bio/",
         "symbol": "BIO_debug_callback"
@@ -363,14 +356,6 @@
       {
         "module": "src/runtime/bio/",
         "symbol": "BIO_fd_should_retry"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_get_accept_socket"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_listen"
       },
       {
         "module": "src/runtime/bio/",
@@ -439,18 +424,6 @@
       {
         "module": "src/runtime/bio/",
         "symbol": "BIO_s_log"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_set_tcp_ndelay"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_sock_info"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_socket"
       },
       {
         "module": "src/runtime/conf/",
@@ -644,7 +617,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "1fe43a8ac2e73959e37f9fd2f7028db72f36458839d6c5e9fe267b333770bc59"
+      "sha256": "ba0e883bd7127ffbb0a411fd3a59b5251f52480269542aa85ffd27651feb53bc"
     }
   ],
   "kind": "phase4-obligations",

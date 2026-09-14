@@ -105,7 +105,7 @@ unsafe fn family_of(ap: *const BioAddr) -> c_int {
 ///
 /// # Safety
 /// `ap` must point at a live [`BioAddr`].
-unsafe fn sockaddr_size(ap: *const BioAddr) -> sys::SockLen {
+pub(crate) unsafe fn sockaddr_size(ap: *const BioAddr) -> sys::SockLen {
     match unsafe { family_of(ap) } {
         sys::AF_INET => core::mem::size_of::<sys::SockAddrIn>() as sys::SockLen,
         sys::AF_INET6 => core::mem::size_of::<sys::SockAddrIn6>() as sys::SockLen,
@@ -219,6 +219,51 @@ pub(crate) unsafe fn make_from_sockaddr(dst: *mut BioAddr, sa: *const sys::SockA
 #[no_mangle]
 pub extern "C" fn BIO_ADDR_new() -> *mut BioAddr {
     guard_ffi(ptr::null_mut(), alloc_zeroed)
+}
+
+/// A zeroed address, for the places the authority keeps one on the stack.
+///
+/// The authority leaves those *uninitialised*; zeroing is observationally the same
+/// here because every accessor reads only the bytes its family implies, and the
+/// one caller (`BIO_accept`) either overwrites the whole family's sockaddr or never
+/// reads the value at all.
+pub(crate) fn zeroed() -> BioAddr {
+    BioAddr {
+        sa: sys::SockAddrStorage {
+            ss_family: sys::AF_UNSPEC as sys::SaFamily,
+            __pad: [0; 126],
+        },
+    }
+}
+
+/// `BIO_ADDR_sockaddr_noconst` — the stored space as a `struct sockaddr`.
+///
+/// # Safety
+/// `ap` must point at a live [`BioAddr`].
+///
+/// # Safety note for callers
+/// The returned pointer aliases the address's storage, and the authority's
+/// non-public name is a warning: a callee that writes through it (as `accept(2)`
+/// does) changes the address.
+pub(crate) unsafe fn sockaddr_noconst(ap: *mut BioAddr) -> *mut sys::SockAddr {
+    if ap.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `ap` is live and `sa` is its first field, so the cast only retypes a
+    // prefix that starts with the family word.
+    unsafe { ptr::addr_of_mut!((*ap).sa).cast::<sys::SockAddr>() }
+}
+
+/// `BIO_ADDR_sockaddr` — the stored space as a `const struct sockaddr`.
+///
+/// # Safety
+/// `ap` must point at a live [`BioAddr`].
+pub(crate) unsafe fn sockaddr(ap: *const BioAddr) -> *const sys::SockAddr {
+    if ap.is_null() {
+        return ptr::null();
+    }
+    // SAFETY: as above; the cast is a retype of a prefix starting with the family.
+    unsafe { ptr::addr_of!((*ap).sa).cast::<sys::SockAddr>() }
 }
 
 /// `void BIO_ADDR_free(BIO_ADDR *ap)`

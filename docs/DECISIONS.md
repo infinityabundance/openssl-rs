@@ -1036,3 +1036,76 @@ the lookups, failure modes, error coordinates and helper behaviours the probe
 exercises, in this container's resolver environment. It says nothing about a
 container with different `/etc/hosts`, `/etc/services` or NSS configuration, and it
 is not a claim about the socket layer, which is a separate court.
+
+## D39 — The socket entry points are implemented, and RT-BIO-SOCK is the court that can see the port convention
+
+**Decision.** `BIO_socket`, `BIO_bind`, `BIO_connect`, `BIO_listen`, `BIO_accept_ex`,
+`BIO_accept`, `BIO_get_accept_socket`, `BIO_set_tcp_ndelay` and `BIO_sock_info` are
+implemented (`src/runtime/bio/bio_sock2.rs`) and courted by a new `RT-BIO-SOCK`
+(157 observations, passing, zero residuals). Phase 4 is now implemented 166 /
+deferred 14 / open 76 of 256 owned; the baseline is 23 courts and 5,242
+observations; `implemented` `libcrypto` exports move 369 -> 378.
+
+**Why this court exists, and what it adds over `RT-BIO-ADDR`.** `BIO_ADDR` stores
+its port *verbatim* (D37), so a single accessor cannot reveal the convention: an
+implementation that stored `htons(port)` agrees with the authority on every
+`BIO_ADDR_*` accessor. What separates the two models is a *syscall*. The probe binds
+port 8080 through `BIO_ADDR_rawmake` and reads the address back with
+`BIO_sock_info` (which is `getsockname`). The authority reports
+
+    describe.rawmake8080.rawport   = 8080
+    describe.rawmake8080.service   = 36895
+    sock.bind8080.readback.rawport = 8080
+    sock.bind8080.readback.service = 36895
+
+which is exactly the verbatim-model signature: the kernel bound 36895 (the byte
+pattern `8080` read as network order), wrote it back in network order, the verbatim
+read yields 8080 and `service_string` yields its `bswap16`. A `htons`-storing
+implementation produces `(36895, "8080")` on both lines and fails the court. This is
+the observation D34/D36 could only describe, and D37's correction needed a court of
+this shape to be *verifiable* rather than merely argued.
+
+**Behaviours the source confirmed and the probe pinned.**
+
+* A syscall failure raises **two** errors, and `BIO_accept` raises **four**: it calls
+  `BIO_accept_ex` (which raises `ERR_LIB_SYS`/`get_last_socket_error` + `"calling
+  accept()"`, then `BIO_LIB`/`BIO_R_ACCEPT_ERROR`) and then raises the same pair
+  again at its own coordinates. `accept.badfd.count = 4` in the authority and 4 in
+  the candidate; the probe compares the whole queue, which is why it can see this.
+* The **invalid-descriptor guard raises one error and no syscall error**: `BIO_bind,
+  BIO_connect, BIO_listen` with `-1` each produce exactly one `ERR_LIB_BIO` entry
+  (count 1), because the `sock == INVALID_SOCKET` check precedes any syscall. An
+  implementation that let the syscall fail would produce count 2 with a different
+  reason.
+* A **retryable** `connect`/`accept` **raises nothing** (`BIO_sock_should_retry` is
+  consulted before any raise), and `BIO_accept` reports it as `-2`, not `-1`.
+* `BIO_set_tcp_ndelay` **raises nothing on either path** — success and a bad
+  descriptor both leave the queue empty; the return value is the only report.
+* `BIO_sock_info` with an unknown `type` raises one `ERR_LIB_BIO`; with a bad
+  descriptor it raises the `getsockname` pair.
+* `BIO_get_accept_socket` parses with `BIO_PARSE_PRIO_SERV` (so `"127.0.0.1:0"`
+  reads the host as `127.0.0.1`), and a bad service surfaces the resolver's own
+  `gai_strerror` text (`"Servname not supported for ai_socktype"`) as one BIO
+  error.
+* `BIO_listen` reads `SO_TYPE` first, sets `IPV6_V6ONLY` only for `AF_INET6`, calls
+  `BIO_bind` with the **same** options, then `listen(sock, SOMAXCONN)`. `SOMAXCONN`
+  is **4096** in this container, not the 128 a reader assumes; the constant was read
+  from the image's headers rather than assumed.
+* The authority's TCP-Fast-Open branch and the `getaddrinfo` fallback in
+  `BIO_socket` are FreeBSD/macOS-only and compiled out here, so neither is
+  implemented.
+
+**A probe defect, found first.** The initial probe declared `BIO_ADDR peer;` on the
+stack and failed to compile against the *authority* headers, because `BIO_ADDR` is
+an opaque type to every external caller. That is itself a finding: the authority's
+`BIO_accept` is one of the few places a `BIO_ADDR` lives on the stack (in
+`bio_sock.c`), and the candidate's `BIO_accept` matches it with a zeroed stack
+`BioAddr`. The probe was corrected to allocate with `BIO_ADDR_new()`. The
+implementation was not changed — the probe was wrong, as it has been before.
+
+**Non-claim.** `RT-BIO-SOCK` passing means the candidate matched the authority for
+the socket construction, bind/listen/accept/connect flows, error coordinates and
+return classes the probe exercises, on the loopback interface of this container.
+It is not a claim about datagram or memory-pair BIOs, about `BIO_s_connect`/
+`BIO_s_accept`, or about behaviour under a non-loopback network. Those are separate
+obligations in the Phase 4 ledger.

@@ -266,6 +266,21 @@ pub const SOCK_STREAM: c_int = 1;
 /// `SOCK_DGRAM`.
 pub const SOCK_DGRAM: c_int = 2;
 
+// The `BIO_SOCK_*` option flags `bio.h` defines. They are a public compile-time
+// contract, so the values are the header's, not ours.
+/// `BIO_SOCK_REUSEADDR`.
+pub const BIO_SOCK_REUSEADDR: c_int = 0x01;
+/// `BIO_SOCK_V6_ONLY`.
+pub const BIO_SOCK_V6_ONLY: c_int = 0x02;
+/// `BIO_SOCK_KEEPALIVE`.
+pub const BIO_SOCK_KEEPALIVE: c_int = 0x04;
+/// `BIO_SOCK_NONBLOCK`.
+pub const BIO_SOCK_NONBLOCK: c_int = 0x08;
+/// `BIO_SOCK_NODELAY`.
+pub const BIO_SOCK_NODELAY: c_int = 0x10;
+/// `BIO_SOCK_TFO`.
+pub const BIO_SOCK_TFO: c_int = 0x20;
+
 /// `SOL_SOCKET`.
 pub const SOL_SOCKET: c_int = 1;
 /// `SO_ERROR`.
@@ -286,6 +301,15 @@ pub const SO_SNDTIMEO: c_int = 21;
 pub const IPPROTO_TCP: c_int = 6;
 /// `IPPROTO_UDP`.
 pub const IPPROTO_UDP: c_int = 17;
+/// `SOL_TCP` — the level `BIO_set_tcp_ndelay` sets `TCP_NODELAY` at.
+pub const SOL_TCP: c_int = 6;
+/// `SO_TYPE` — what `BIO_listen` reads to tell a datagram socket from a stream one.
+pub const SO_TYPE: c_int = 3;
+/// `SOMAXCONN` — the backlog `BIO_listen` passes to `listen(2)`.
+///
+/// Taken from the container's own headers rather than assumed: glibc reports 4096
+/// here, and the authority was built against them.
+pub const SOMAXCONN: c_int = 4096;
 /// `IPPROTO_IPV6`.
 pub const IPPROTO_IPV6: c_int = 41;
 /// `IPV6_V6ONLY`.
