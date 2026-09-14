@@ -1,0 +1,33 @@
+{
+  "court": "ABI-INSTALL-LAYOUT",
+  "optional_absent_vs_authority": {
+    "lib/cmake": true,
+    "lib/engines-3": true
+  },
+  "provider_declares_libcrypto": true,
+  "provider_module_needed": [
+    "ld-linux-x86-64.so.2",
+    "libc.so.6",
+    "libcrypto.so.3",
+    "libgcc_s.so.1",
+    "libm.so.6"
+  ],
+  "required_missing": [],
+  "required_present": [
+    "bin/openssl",
+    "bin/c_rehash",
+    "include/openssl/opensslv.h",
+    "include/openssl/evp.h",
+    "include/openssl/ssl.h",
+    "lib/libcrypto.so.3",
+    "lib/libssl.so.3",
+    "lib/libcrypto.so",
+    "lib/libssl.so",
+    "lib/libcrypto.a",
+    "lib/libssl.a",
+    "lib/ossl-modules/legacy.so",
+    "lib/pkgconfig/libcrypto.pc",
+    "lib/pkgconfig/libssl.pc"
+  ],
+  "verdict": "pass"
+}

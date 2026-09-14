@@ -25,13 +25,29 @@
         "verdict": "pass"
       },
       {
+        "court": "ABI-CONSTANTS",
+        "verdict": "pass"
+      },
+      {
+        "court": "ABI-MATRIX",
+        "verdict": "pass"
+      },
+      {
+        "court": "ABI-SUBSTITUTION",
+        "verdict": "pass"
+      },
+      {
+        "court": "ABI-INSTALL-LAYOUT",
+        "verdict": "pass"
+      },
+      {
         "court": "libcrypto-contamination",
         "verdict": "pass"
       }
     ],
     "scaffold_warning": "PASSING THESE COURTS IS NOT PARITY. Every symbol in the shell is SCAFFOLDED and aborts when called; these courts establish the structural distribution shell only (docs/CUSTODIAN_CONTRACT.md §5)."
   },
-  "body_hash": "834efbcf4f6235a48a9150e2ab8edf0f12093dd0b8402ee435196d4407a460c6",
+  "body_hash": "49165926ee1f8c768e2c511711475a10cb5f49eb425252c68e52f24b922d12cd",
   "generator": "forensics/tools/phase2_courts.py",
   "inputs": [],
   "kind": "phase2-courts",

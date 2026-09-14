@@ -1,0 +1,38 @@
+{
+  "combinations": {
+    "authority-headers+authority-libs": {
+      "exit": 0,
+      "output": [
+        "link-probe: 6/6 versioned symbols resolved by the dynamic linker"
+      ],
+      "stage": "run",
+      "verdict": "pass"
+    },
+    "authority-headers+candidate-libs": {
+      "exit": 0,
+      "output": [
+        "link-probe: 6/6 versioned symbols resolved by the dynamic linker"
+      ],
+      "stage": "run",
+      "verdict": "pass"
+    },
+    "candidate-headers+authority-libs": {
+      "exit": 0,
+      "output": [
+        "link-probe: 6/6 versioned symbols resolved by the dynamic linker"
+      ],
+      "stage": "run",
+      "verdict": "pass"
+    },
+    "candidate-headers+candidate-libs": {
+      "exit": 0,
+      "output": [
+        "link-probe: 6/6 versioned symbols resolved by the dynamic linker"
+      ],
+      "stage": "run",
+      "verdict": "pass"
+    }
+  },
+  "court": "ABI-MATRIX",
+  "verdict": "pass"
+}

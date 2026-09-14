@@ -35,6 +35,21 @@
         "sha256": "736b3f97d34faeace5d53228bbeb66f7f647ea47f6827eb8a457e796925dc93f"
       },
       {
+        "artifact": "artifacts/phase2/shell/legacy.shell.rs",
+        "role": "scaffold-source",
+        "sha256": "367895f6c5ff98725c3776f64fa1803a867cea1583b55d662f83741d5e3b13fd"
+      },
+      {
+        "artifact": "artifacts/phase2/shell/openssl.shell.rs",
+        "role": "scaffold-source",
+        "sha256": "843038d6ecf4c8339bbced3a40903d45ca100689a3a4035eef4416b338e54756"
+      },
+      {
+        "artifact": "artifacts/phase2/shell/c_rehash.sh",
+        "role": "scaffold-source",
+        "sha256": "858c9d7d7ca481ab93242dfc11a0aa3d746b8247c94adb25bb6684ab76223c6e"
+      },
+      {
         "artifact": "artifacts/phase2/include",
         "file_count": 143,
         "role": "header-shell",
@@ -59,7 +74,7 @@
       "libssl": "libssl.so.3"
     }
   },
-  "body_hash": "16a6480824e8a832aa8a2a377c53227088c6065a8321f971a6e3f62a20d17ce5",
+  "body_hash": "287afc6f5d8ea9a210d7da1d99858b755db4ba8b4ac3f00d8f7b506ee929227b",
   "generator": "forensics/tools/phase2_shell.py",
   "inputs": [],
   "kind": "phase2-shell",

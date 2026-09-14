@@ -46,6 +46,41 @@ for lib in libcrypto libssl; do
     -lpthread -ldl -lm -lrt -lutil
   echo "  built $(stat -c %s "$lib.so.3") bytes"
 done
+
+# --- provider module (legacy.so) ---------------------------------------------
+# The authority's module exports exactly OSSL_provider_init and declares
+# NEEDED libcrypto.so.3. --no-as-needed plus -lcrypto is what actually creates
+# that dependency: without it the linker drops the library (nothing is
+# referenced) and the module would load WITHOUT the dependency the authority
+# declares, which a provider-loading court would catch.
+echo "--- legacy.so ---"
+rustc --edition 2021 --crate-type staticlib -O --crate-name legacy_shell \
+  -o legacy.shell.a shell/legacy.shell.rs
+cc -shared -o legacy.so -Wl,--whole-archive legacy.shell.a -Wl,--no-whole-archive \
+  -Wl,--no-as-needed -L"$PWD" -lcrypto -lpthread -ldl -lm -lrt -lutil
+
+# --- executables --------------------------------------------------------------
+echo "--- openssl executable ---"
+rustc --edition 2021 -O --crate-name openssl_shell -o openssl shell/openssl.shell.rs
+cp shell/c_rehash.sh c_rehash && chmod +x c_rehash
+
+# --- install layout -----------------------------------------------------------
+# Mirrors the authority's install tree: bin/, include/openssl/, lib/ with the
+# SOs, their development symlinks, the static archives, the provider module and
+# pkg-config metadata. The layout is itself an observable contract (a consumer's
+# build system, pkg-config and `dlopen("legacy")` all depend on it).
+echo "--- install layout ---"
+rm -rf install
+mkdir -p install/bin install/lib/ossl-modules install/lib/pkgconfig install/include
+cp -a include/. install/include/
+cp libcrypto.so.3 libssl.so.3 legacy.so install/lib/
+cp libcrypto.so libssl.so install/lib/
+cp libcrypto.shell.a install/lib/libcrypto.a
+cp libssl.shell.a install/lib/libssl.a
+mv install/lib/legacy.so install/lib/ossl-modules/legacy.so
+cp pkgconfig/libcrypto.pc pkgconfig/libssl.pc install/lib/pkgconfig/
+cp openssl c_rehash install/bin/
+chmod +x install/bin/openssl install/bin/c_rehash
 cd /work
 
 echo

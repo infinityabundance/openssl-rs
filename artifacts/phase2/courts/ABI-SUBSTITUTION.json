@@ -1,0 +1,17 @@
+{
+  "authority_run_exit": 0,
+  "authority_run_output": [
+    "link-probe: 6/6 versioned symbols resolved by the dynamic linker"
+  ],
+  "candidate_run_exit": 0,
+  "candidate_run_output": [
+    "link-probe: 6/6 versioned symbols resolved by the dynamic linker"
+  ],
+  "court": "ABI-SUBSTITUTION",
+  "dynamic_closure_under_substitution": [
+    "libssl.so.3 => /work/artifacts/phase2/install/lib/libssl.so.3 (0x00007fc615796000)",
+    "libcrypto.so.3 => /work/artifacts/phase2/install/lib/libcrypto.so.3 (0x00007fc6155a8000)"
+  ],
+  "substitution_took_effect": true,
+  "verdict": "pass"
+}

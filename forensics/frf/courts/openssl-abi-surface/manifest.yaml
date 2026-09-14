@@ -1,0 +1,37 @@
+# openssl-rs court: the ABI symbol/version surface.
+#
+# Both sides report, for a fixture list of symbols, what their own libcrypto
+# binds each symbol to. The fixture is load-bearing (not decorative): it is the
+# query list, which also means the court can be challenged (docs/DECISIONS.md
+# D13 records why that matters).
+#
+# This is the FRF counterpart of the atlas ABI-SYMBOL / ABI-VERSION courts.
+
+court:
+  id: openssl-abi-surface
+  question: >-
+    For the ABI symbol surface in fixture family abi-symbol-surface, does the
+    candidate bind every queried symbol to the same ELF version node as the
+    admitted authority?
+  falsifier: >-
+    The candidate reports a different version, or UNRESOLVED, for any queried
+    symbol.
+  authority: openssl-abi-3.6.4
+  candidate:
+    name: openssl-rs
+    version_or_commit: "0.0.2"
+    build_profile: linux-x86_64-default-shared-legacy-notests
+    path: forensics/frf/refs/candidate-abi-report.sh
+  fixture:
+    id: abi-symbols.txt
+    path: forensics/frf/courts/openssl-abi-surface/fixtures/abi-symbols.txt
+    arguments: ["{fixture}"]
+  admissibility_envelope:
+    fixture_family: abi-symbol-surface
+    platforms: ["x86_64-linux"]
+    observables: [stdout, exit]
+    normalizers: []
+    replay_scope: single-run
+  environment:
+    LC_ALL: C
+    TZ: UTC

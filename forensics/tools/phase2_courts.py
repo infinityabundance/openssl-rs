@@ -30,6 +30,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -322,6 +324,201 @@ def court_contamination(auth) -> dict:
 
 
 
+def _compile_consumer(include_dir: Path, lib_dir: Path, out: Path,
+                      src: Path, rpath: Path) -> tuple[bool, str]:
+    res = run(["clang", "-std=c11", "-I", str(include_dir), "-o", str(out), str(src),
+               "-L", str(lib_dir), "-lssl", "-lcrypto", f"-Wl,-rpath,{rpath}"])
+    return res.ok, res.stderr.strip()
+
+
+def court_abi_matrix(auth) -> dict:
+    """The four oracle/candidate combinations.
+
+    `docs/ABI_POLICY.md` §1 requires all four, because the cross combinations are
+    what separate SOURCE compatibility from BINARY compatibility:
+
+        authority headers + authority libs   (baseline)
+        candidate headers + candidate libs   (self-consistent)
+        authority headers + candidate libs   <- binary compatibility
+        candidate headers + authority libs   <- reverse direction
+    """
+    src = COURT_DIR / "matrix_probe.c"
+    write_text(src, LINK_PROBE)
+    combos = [
+        ("authority-headers+authority-libs", auth.prefix / "include", auth.prefix / "lib"),
+        ("candidate-headers+candidate-libs", PHASE2 / "install" / "include",
+         PHASE2 / "install" / "lib"),
+        ("authority-headers+candidate-libs", auth.prefix / "include",
+         PHASE2 / "install" / "lib"),
+        ("candidate-headers+authority-libs", PHASE2 / "install" / "include",
+         auth.prefix / "lib"),
+    ]
+    results = {}
+    for name, inc, lib in combos:
+        out = COURT_DIR / f"matrix_{name.replace('+', '_').replace('-', '_')}"
+        ok, err = _compile_consumer(inc, lib, out, src, lib)
+        if not ok:
+            results[name] = {"verdict": "fail", "stage": "compile_or_link",
+                             "diagnostic": err.splitlines()[:5]}
+            continue
+        ex = run([str(out)])
+        results[name] = {"verdict": "pass" if ex.ok else "fail", "stage": "run",
+                         "output": ex.stdout.strip().splitlines()[:2],
+                         "exit": ex.returncode}
+    return {"court": "ABI-MATRIX", "combinations": results,
+            "verdict": "pass" if all(v["verdict"] == "pass" for v in results.values()) else "fail"}
+
+
+def court_abi_substitution(auth) -> dict:
+    """Binary substitution: one executable, two library providers.
+
+    Build ONCE against the authority's headers and libraries, run it against the
+    authority, then run the SAME binary with `LD_LIBRARY_PATH` pointing at the
+    candidate install -- no recompilation. This is the strongest structural ABI
+    proof available while the implementation is still a scaffold, because nothing
+    about the executable changes between the two runs.
+
+    `-Wl,-rpath` emits `DT_RUNPATH`, which `LD_LIBRARY_PATH` legitimately
+    overrides; that is the mechanism, and it is asserted rather than assumed.
+    """
+    src = COURT_DIR / "subst_probe.c"
+    write_text(src, LINK_PROBE)
+    out = COURT_DIR / "subst_probe"
+    ok, err = _compile_consumer(auth.prefix / "include", auth.prefix / "lib", out, src,
+                                auth.prefix / "lib")
+    if not ok:
+        return {"court": "ABI-SUBSTITUTION", "verdict": "fail",
+                "detail": {"build_failed": err.splitlines()[:5]}}
+    # run 1: against the authority it was built against
+    ex1 = run([str(out)])
+    # run 2: the SAME binary, candidate libraries injected
+    env = dict(os.environ)
+    env["LD_LIBRARY_PATH"] = str(PHASE2 / "install" / "lib")
+    p2 = subprocess.run([str(out)], capture_output=True, text=True, env=env, check=False)
+    p2 = subprocess.run([str(out)], capture_output=True, text=True, env=env, check=False)
+    ldd = subprocess.run(
+        ["sh", "-c", f"LD_LIBRARY_PATH={PHASE2 / 'install' / 'lib'} ldd {out}"],
+        capture_output=True, text=True, check=False,
+    )
+    lines = [l.strip() for l in ldd.stdout.splitlines() if "libcrypto" in l or "libssl" in l]
+    substituted = all(str(PHASE2 / "install" / "lib") in l for l in lines) and bool(lines)
+    return {
+        "court": "ABI-SUBSTITUTION",
+        "authority_run_exit": ex1.returncode,
+        "authority_run_output": ex1.stdout.strip().splitlines()[:2],
+        "candidate_run_exit": p2.returncode,
+        "candidate_run_output": p2.stdout.strip().splitlines()[:2],
+        "dynamic_closure_under_substitution": lines,
+        "substitution_took_effect": substituted,
+        "verdict": "pass" if (ex1.returncode == 0 and p2.returncode == 0 and substituted)
+                   else "fail",
+    }
+
+
+CONSTANTS_PROBE = r"""
+#include <stdio.h>
+#include <openssl/aes.h>
+#include <openssl/evp.h>
+#include <openssl/md5.h>
+#include <openssl/objects.h>
+#include <openssl/opensslv.h>
+#include <openssl/sha.h>
+#include <openssl/ssl.h>
+#include <openssl/x509_vfy.h>
+
+#define P(x) printf("%s\t%lld\n", #x, (long long)(x))
+
+int main(void) {
+    P(OPENSSL_VERSION_NUMBER);
+    P(OPENSSL_VERSION_MAJOR); P(OPENSSL_VERSION_MINOR); P(OPENSSL_VERSION_PATCH);
+    P(EVP_MAX_MD_SIZE); P(EVP_MAX_KEY_LENGTH); P(EVP_MAX_IV_LENGTH);
+    P(EVP_MAX_BLOCK_LENGTH);
+    P(SHA256_DIGEST_LENGTH); P(SHA512_DIGEST_LENGTH); P(MD5_DIGEST_LENGTH);
+    P(AES_BLOCK_SIZE);
+    P(TLS1_2_VERSION); P(TLS1_3_VERSION); P(DTLS1_2_VERSION);
+    P(X509_V_OK); P(X509_V_ERR_CERT_HAS_EXPIRED);
+    P(NID_sha256); P(NID_sha512); P(NID_X9_62_prime256v1);
+    P(EVP_PKEY_RSA); P(EVP_PKEY_EC); P(EVP_PKEY_ED25519); P(EVP_PKEY_X25519);
+    P(SSL_VERIFY_NONE); P(SSL_VERIFY_PEER); P(SSL_VERIFY_FAIL_IF_NO_PEER_CERT);
+    return 0;
+}
+"""
+
+
+def court_abi_constants(auth) -> dict:
+    """Compile the SAME constants probe against both header sets and compare.
+
+    Constants are part of source compatibility: a consumer branches on
+    `TLS1_3_VERSION` or `EVP_MAX_MD_SIZE` at compile time, so a value that differs
+    is a silent behavioural divergence with no runtime symptom.
+    """
+    src = COURT_DIR / "constants_probe.c"
+    write_text(src, CONSTANTS_PROBE)
+    outs = {}
+    for label, inc in (("authority", auth.prefix / "include"),
+                       ("candidate", PHASE2 / "install" / "include")):
+        binp = COURT_DIR / f"constants_{label}"
+        res = run(["clang", "-std=c11", "-I", str(inc), "-o", str(binp), str(src)])
+        if not res.ok:
+            return {"court": "ABI-CONSTANTS", "verdict": "fail",
+                    "detail": {f"{label}_compile_failed": res.stderr.strip().splitlines()[:6]}}
+        ex = run([str(binp)])
+        outs[label] = {l.split("\t")[0]: l.split("\t")[1]
+                       for l in ex.stdout.splitlines() if "\t" in l}
+    keys = sorted(set(outs["authority"]) | set(outs["candidate"]))
+    differing = [{"constant": k, "authority": outs["authority"].get(k),
+                  "candidate": outs["candidate"].get(k)}
+                 for k in keys if outs["authority"].get(k) != outs["candidate"].get(k)]
+    return {"court": "ABI-CONSTANTS", "constants_compared": len(keys),
+            "differing_count": len(differing), "differing": differing[:20],
+            "values": {k: outs["authority"].get(k) for k in keys},
+            "verdict": "pass" if not differing else "fail"}
+
+
+# Required install-layout entries: what a consumer's build system, pkg-config
+# and the provider loader actually need. Anything else the authority installs
+# (cmake config, engines-3) is reported as an optional difference, not a failure.
+REQUIRED_INSTALL = [
+    "bin/openssl", "bin/c_rehash",
+    "include/openssl/opensslv.h", "include/openssl/evp.h", "include/openssl/ssl.h",
+    "lib/libcrypto.so.3", "lib/libssl.so.3",
+    "lib/libcrypto.so", "lib/libssl.so",
+    "lib/libcrypto.a", "lib/libssl.a",
+    "lib/ossl-modules/legacy.so",
+    "lib/pkgconfig/libcrypto.pc", "lib/pkgconfig/libssl.pc",
+]
+
+
+def court_install_layout(auth) -> dict:
+    """The install layout is an observable contract.
+
+    Also asserts the provider module carries `NEEDED libcrypto.so.3`, because a
+    module that loads without the dependency the authority declares is a
+    different contract even if it loads successfully.
+    """
+    root = PHASE2 / "install"
+    present, missing = [], []
+    for relp in REQUIRED_INSTALL:
+        p = root / relp
+        (present if (p.exists() or p.is_symlink()) else missing).append(relp)
+    # the provider module's declared dependency
+    res = run(["readelf", "-d", "--wide", str(root / "lib/ossl-modules/legacy.so")])
+    needed = [l.split("[")[-1].rstrip("]") for l in res.stdout.splitlines() if "(NEEDED)" in l]
+    provider_ok = "libcrypto.so.3" in needed
+    # optional differences vs the authority
+    optional = {}
+    for relp in ("lib/cmake", "lib/engines-3"):
+        optional[relp] = (auth.prefix / relp).exists() and not (root / relp).exists()
+    return {
+        "court": "ABI-INSTALL-LAYOUT",
+        "required_present": present, "required_missing": missing,
+        "provider_module_needed": sorted(needed),
+        "provider_declares_libcrypto": provider_ok,
+        "optional_absent_vs_authority": {k: v for k, v in optional.items() if v},
+        "verdict": "pass" if (not missing and provider_ok) else "fail",
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description="Run the Phase 2 ABI shell courts.")
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -336,6 +533,10 @@ def main(argv: list[str]) -> int:
         court_abi_layout(auth),
         court_abi_link(auth),
         court_abi_load(auth),
+        court_abi_constants(auth),
+        court_abi_matrix(auth),
+        court_abi_substitution(auth),
+        court_install_layout(auth),
         court_contamination(auth),
     ]
 

@@ -1,0 +1,1 @@
+{"executable_sha256":"04684023360eb7c341d5a7d09643b9b8ab2133870edaccd31193fb938d8542af","id":"openssl-abi-3.6.4","kind":"executable_reference","name":"openssl-abi","path":"forensics/frf/refs/authority-abi-report.sh","platform":"x86_64-linux","schema_version":"frf-authority-v1","version":"3.6.4"}

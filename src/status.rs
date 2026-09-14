@@ -60,12 +60,18 @@ pub const PHASES: &[Phase] = &[
         id: 2,
         name: "distribution-shell",
         stratum: "Distribution / ABI shell",
-        // The shell artifacts, courts and evidence exist (artifacts/phase2,
-        // forensics/tools/build_phase2.sh): all six Phase 2 courts pass. This
-        // stays InProgress because the phase exit rule also requires FRF
-        // receipts and a Gemel checkpoint for the ABI courts, which are not yet
-        // emitted -- the Phase 2 courts currently report in the atlas evidence
-        // format.
+        // Phase 2's WORK and its exit criteria are satisfied: ten ABI courts pass
+        // (symbols, versions, layout, link, load, constants, four-combination
+        // matrix, binary substitution, install layout, contamination), an FRF
+        // receipt and a sensitivity-backed claim exist for the ABI surface, and
+        // Gemel carries the checkpoint. See docs/PHASE-2-DISTRIBUTION-SEAL.md.
+        //
+        // It is deliberately NOT marked Complete, and the reason is the
+        // dependency-order invariant itself: Phase 1 is still open (its FRF
+        // sensitivity gap for the two non-fixture-driven courts is recorded, not
+        // papered over), and a later stratum may not claim completion while an
+        // earlier one is open. That invariant is a feature, not an obstruction --
+        // it is what stops a tidy-looking Phase 2 from hiding an open Phase 1.
         state: PhaseState::InProgress,
     },
     Phase {
