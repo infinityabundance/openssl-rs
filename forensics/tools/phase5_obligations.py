@@ -150,41 +150,52 @@ HANDED_OFF_FROM_PHASE4 = (
 # A hand-off is not a gap -- `open` is the only list that blocks the stratum -- but it
 # is also not parity, so the seal states the count and the reason rather than quietly
 # moving them out of view.
-HANDED_ON: dict[str, tuple[int, str]] = {
-    **{
-        sym: (9, "draws from the RAND subsystem; RAND/DRBG is Phase 9")
-        for sym in (
-            "BN_rand", "BN_rand_ex", "BN_rand_range", "BN_rand_range_ex",
-            "BN_priv_rand", "BN_priv_rand_ex", "BN_priv_rand_range",
-            "BN_priv_rand_range_ex", "BN_pseudo_rand", "BN_pseudo_rand_range",
-            "BN_bntest_rand",
-        )
-    },
-    **{
-        sym: (9, "draws prime candidates with BN_priv_rand; RAND is Phase 9")
-        for sym in ("BN_generate_prime", "BN_generate_prime_ex", "BN_generate_prime_ex2")
-    },
-    "BN_generate_dsa_nonce": (
-        9, "derives a nonce from the digest and entropy; RAND is Phase 9",
-    ),
-    "BN_BLINDING_create_param": (
-        9, "chooses the blinding factor with BN_rand_range; RAND is Phase 9",
-    ),
-    **{
-        sym: (9, "draws candidates with BN_priv_rand; RAND is Phase 9")
-        for sym in (
-            "BN_X931_derive_prime_ex", "BN_X931_generate_Xpq",
-            "BN_X931_generate_prime_ex",
-        )
-    },
-    **{
-        sym: (9, "searches with a random field element; RAND is Phase 9")
-        for sym in (
-            "BN_GF2m_mod_sqrt", "BN_GF2m_mod_sqrt_arr",
-            "BN_GF2m_mod_solve_quad", "BN_GF2m_mod_solve_quad_arr",
-        )
-    },
-}
+HANDED_ON: dict[str, tuple[int, str]] = {}
+HANDED_ON.update({
+    sym: (9, "draws from the RAND subsystem; RAND/DRBG is Phase 9")
+    for sym in (
+        "BN_rand", "BN_rand_ex", "BN_rand_range", "BN_rand_range_ex",
+        "BN_priv_rand", "BN_priv_rand_ex", "BN_priv_rand_range",
+        "BN_priv_rand_range_ex", "BN_pseudo_rand", "BN_pseudo_rand_range",
+        "BN_bntest_rand",
+    )
+})
+HANDED_ON.update({
+    sym: (9, "draws prime candidates with BN_priv_rand; RAND is Phase 9")
+    for sym in ("BN_generate_prime", "BN_generate_prime_ex", "BN_generate_prime_ex2")
+})
+HANDED_ON.update({
+    sym: (9, "picks Miller-Rabin bases with BN_priv_rand_range; RAND is Phase 9")
+    for sym in (
+        "BN_check_prime", "BN_is_prime", "BN_is_prime_ex",
+        "BN_is_prime_fasttest", "BN_is_prime_fasttest_ex",
+    )
+})
+HANDED_ON.update({
+    sym: (9, "draws candidates with BN_priv_rand; RAND is Phase 9")
+    for sym in (
+        "BN_X931_derive_prime_ex", "BN_X931_generate_Xpq",
+        "BN_X931_generate_prime_ex",
+    )
+})
+HANDED_ON.update({
+    sym: (9, "searches with a random field element; RAND is Phase 9")
+    for sym in (
+        "BN_GF2m_mod_sqrt", "BN_GF2m_mod_sqrt_arr",
+        "BN_GF2m_mod_solve_quad", "BN_GF2m_mod_solve_quad_arr",
+    )
+})
+HANDED_ON.update({
+    sym: (9, "re-creates the blinding factor through BN_BLINDING_create_param, "
+              "which draws it from RAND; RAND is Phase 9")
+    for sym in (
+        "BN_BLINDING_create_param", "BN_BLINDING_update",
+        "BN_BLINDING_convert", "BN_BLINDING_convert_ex",
+    )
+})
+HANDED_ON["BN_generate_dsa_nonce"] = (
+    9, "derives a nonce from the digest and entropy; RAND is Phase 9",
+)
 
 # The type in a PEM name is the last `_`-separated token group, after any of the
 # call-shape suffixes. `PEM_read_bio_X509` -> `X509`; `PEM_write_bio_PKCS7` ->

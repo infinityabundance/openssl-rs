@@ -2591,3 +2591,57 @@ families cover) and `open` falls from 414 to 391 — 280 ASN.1, 73 BN, 38 PEM. T
 now `deferred` with `owning_phase: 9`, which satisfies
 `implemented + deferred + open == owned` and is reported by `ownership_audit.py` as a
 forward hand-off ("no ledger yet"), informational rather than a mismatch.
+
+## D69 — The rest of `BN`, and two claims the source only suggested until the court measured them
+
+**Decision.** The remaining implementable `BN_*` surface is implemented, and the
+stratum's court is extended over it rather than left to unit evidence. Six modules:
+`mont`, `recp`, `primes`, `nist`, `kron` and `blinding`. The court goes from 475
+observations to **577**, still with 0 residuals.
+
+**The probe was the suspect again — the eleventh time.** The extended probe handed
+`BN_mod_exp_mont` a `BN_MONT_CTX` that had been re-set to a *different* modulus, and
+the authority answered 0 for every one of those calls. A context is bound to one
+modulus; passing a mismatched one is out of contract, and reproducing the authority's
+refusal to honour it would be reproducing undefined behaviour. With a matching context
+every observation agreed on the first run.
+
+**Two things the source implied and the court now measures.**
+
+- **`BN_nist_mod_*` is `BN_nnmod` against a fixed prime.** The first line inside each
+  reducer is `field = &ossl_bignum_nist_p_192; /* just to make sure */`: the caller's
+  `field` argument is overwritten before it is used, and the small and negative cases
+  are dispatched straight to `BN_nnmod` against that same static object. Implementing
+  it as `BN_nnmod(r, a, <the generated prime>, ctx)` is therefore exact rather than
+  approximate, and it is the version that cannot silently disagree with a carry chain
+  somebody mistranscribed. The probe checks both halves — that `field` is ignored, and
+  that the result equals the `BN_nnmod` the authority itself calls.
+- **`BN_nist_mod_func` selects by value, not identity.** It compares `BN_ucmp` against
+  each static prime, so any `BIGNUM` equal to one of the five selects its reducer and
+  anything else selects nothing. That is a `BIGNUM` comparison, not a pointer
+  comparison, and a caller passing its own copy of P-256 gets the reducer.
+
+**Values are generated, not transcribed.** `forensics/tools/gen_bn_primes.py` compiles
+a probe against the admitted prefix, calls each of the thirteen `BN_get0_nist_prime_*`
+and `BN_get_rfc*_prime_*` entry points, and emits `src/bn/prime_data.rs` with each
+value's SHA-256. A transcription error in an 8192-bit prime is invisible to everything
+except a comparison with the authority itself, and `BN_get0_nist_prime_*` feeds
+`BN_nist_mod_*`, so a wrong value would silently change every result downstream. The
+probe prints the full hex of all thirteen, so the court compares the values
+themselves.
+
+**Thirty-one exports are Phase 9's, and the count is stated.** The RAND families, the
+prime generators, the five Miller-Rabin primality tests (their witnesses come from
+`BN_priv_rand_range`), the X931 generators, `BN_generate_dsa_nonce`, the GF2m
+square-root and quadratic-solver pair, and the four blinding entry points that
+re-create the blinding factor through `BN_BLINDING_create_param`. Each is a
+*dependency*, and the ledger's `deferred_by_phase` reports `9: 31` so a reader can see
+which stratum is expected to absorb them. Nothing here moves a symbol from `open` to
+implemented.
+
+**What is left in this stratum is GF(2^m).** Fifteen exports — `BN_GF2m_add`,
+`arr2poly`, `poly2arr`, `mod`, `mod_arr`, `mod_mul`, `mod_mul_arr`, `mod_sqr`,
+`mod_sqr_arr`, `mod_exp`, `mod_exp_arr`, `mod_inv`, `mod_inv_arr`, `mod_div`,
+`mod_div_arr` — and nothing else. The stratum's ledger reports `open_in_this_stratum`
+333: those fifteen, 280 ASN.1 and 38 PEM, and `phase-state.json` keeps the phase
+`in-progress` on exactly that number.

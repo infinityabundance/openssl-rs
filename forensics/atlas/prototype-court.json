@@ -2,16 +2,24 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "checked": 508,
-      "declaration_is_generated": 42,
+      "checked": 550,
+      "declaration_is_generated": 50,
       "implementation_is_c": 8,
-      "implemented": 560,
+      "implemented": 610,
       "mismatches": 0,
       "no_prototype_in_atlas": 2,
       "not_found": 0,
       "unclassified": 0
     },
     "declaration_is_generated": [
+      "BN_get_rfc2409_prime_1024",
+      "BN_get_rfc2409_prime_768",
+      "BN_get_rfc3526_prime_1536",
+      "BN_get_rfc3526_prime_2048",
+      "BN_get_rfc3526_prime_3072",
+      "BN_get_rfc3526_prime_4096",
+      "BN_get_rfc3526_prime_6144",
+      "BN_get_rfc3526_prime_8192",
       "ERR_get_error",
       "ERR_get_error_line",
       "ERR_get_error_line_data",
@@ -91,7 +99,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "ae2ce5b72ae4fb47309649ef900213f13016fc70a18ab3be4d74c965f5a98b58"
+      "sha256": "bd6d97b98b9128e046967905b4392a45d5bf322038ca9f3a4e7074eb95860f22"
     }
   ],
   "kind": "prototype-court",

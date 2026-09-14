@@ -4,9 +4,9 @@
     "complete": false,
     "counts": {
       "candidates": 1093,
-      "deferred_to_later_phase": 603,
-      "implemented": 105,
-      "open_in_this_stratum": 391,
+      "deferred_to_later_phase": 611,
+      "implemented": 155,
+      "open_in_this_stratum": 333,
       "owned": 1099
     },
     "deferred": [
@@ -61,8 +61,26 @@
       {
         "declaring_header": "bn.h",
         "owning_phase": 9,
-        "reason": "chooses the blinding factor with BN_rand_range; RAND is Phase 9",
+        "reason": "re-creates the blinding factor through BN_BLINDING_create_param, which draws it from RAND; RAND is Phase 9",
+        "symbol": "BN_BLINDING_convert"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "re-creates the blinding factor through BN_BLINDING_create_param, which draws it from RAND; RAND is Phase 9",
+        "symbol": "BN_BLINDING_convert_ex"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "re-creates the blinding factor through BN_BLINDING_create_param, which draws it from RAND; RAND is Phase 9",
         "symbol": "BN_BLINDING_create_param"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "re-creates the blinding factor through BN_BLINDING_create_param, which draws it from RAND; RAND is Phase 9",
+        "symbol": "BN_BLINDING_update"
       },
       {
         "declaring_header": "bn.h",
@@ -115,6 +133,12 @@
       {
         "declaring_header": "bn.h",
         "owning_phase": 9,
+        "reason": "picks Miller-Rabin bases with BN_priv_rand_range; RAND is Phase 9",
+        "symbol": "BN_check_prime"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
         "reason": "derives a nonce from the digest and entropy; RAND is Phase 9",
         "symbol": "BN_generate_dsa_nonce"
       },
@@ -135,6 +159,30 @@
         "owning_phase": 9,
         "reason": "draws prime candidates with BN_priv_rand; RAND is Phase 9",
         "symbol": "BN_generate_prime_ex2"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "picks Miller-Rabin bases with BN_priv_rand_range; RAND is Phase 9",
+        "symbol": "BN_is_prime"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "picks Miller-Rabin bases with BN_priv_rand_range; RAND is Phase 9",
+        "symbol": "BN_is_prime_ex"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "picks Miller-Rabin bases with BN_priv_rand_range; RAND is Phase 9",
+        "symbol": "BN_is_prime_fasttest"
+      },
+      {
+        "declaring_header": "bn.h",
+        "owning_phase": 9,
+        "reason": "picks Miller-Rabin bases with BN_priv_rand_range; RAND is Phase 9",
+        "symbol": "BN_is_prime_fasttest_ex"
       },
       {
         "declaring_header": "bn.h",
@@ -3632,7 +3680,7 @@
     "deferred_by_phase": {
       "7": 23,
       "8": 58,
-      "9": 23,
+      "9": 31,
       "10": 12,
       "11": 346,
       "12": 141
@@ -3678,6 +3726,16 @@
       "x509v3.h": 11
     },
     "implemented": [
+      "BN_BLINDING_free",
+      "BN_BLINDING_get_flags",
+      "BN_BLINDING_invert",
+      "BN_BLINDING_invert_ex",
+      "BN_BLINDING_is_current_thread",
+      "BN_BLINDING_lock",
+      "BN_BLINDING_new",
+      "BN_BLINDING_set_current_thread",
+      "BN_BLINDING_set_flags",
+      "BN_BLINDING_unlock",
       "BN_CTX_end",
       "BN_CTX_free",
       "BN_CTX_get",
@@ -3692,6 +3750,14 @@
       "BN_GENCB_new",
       "BN_GENCB_set",
       "BN_GENCB_set_old",
+      "BN_MONT_CTX_copy",
+      "BN_MONT_CTX_free",
+      "BN_MONT_CTX_new",
+      "BN_MONT_CTX_set",
+      "BN_MONT_CTX_set_locked",
+      "BN_RECP_CTX_free",
+      "BN_RECP_CTX_new",
+      "BN_RECP_CTX_set",
       "BN_abs_is_word",
       "BN_add",
       "BN_add_word",
@@ -3713,13 +3779,28 @@
       "BN_copy",
       "BN_dec2bn",
       "BN_div",
+      "BN_div_recp",
       "BN_div_word",
       "BN_dup",
       "BN_exp",
       "BN_free",
+      "BN_from_montgomery",
       "BN_gcd",
+      "BN_get0_nist_prime_192",
+      "BN_get0_nist_prime_224",
+      "BN_get0_nist_prime_256",
+      "BN_get0_nist_prime_384",
+      "BN_get0_nist_prime_521",
       "BN_get_flags",
       "BN_get_params",
+      "BN_get_rfc2409_prime_1024",
+      "BN_get_rfc2409_prime_768",
+      "BN_get_rfc3526_prime_1536",
+      "BN_get_rfc3526_prime_2048",
+      "BN_get_rfc3526_prime_3072",
+      "BN_get_rfc3526_prime_4096",
+      "BN_get_rfc3526_prime_6144",
+      "BN_get_rfc3526_prime_8192",
       "BN_get_word",
       "BN_hex2bn",
       "BN_is_bit_set",
@@ -3728,6 +3809,7 @@
       "BN_is_one",
       "BN_is_word",
       "BN_is_zero",
+      "BN_kronecker",
       "BN_lebin2bn",
       "BN_lshift",
       "BN_lshift1",
@@ -3735,6 +3817,12 @@
       "BN_mod_add",
       "BN_mod_add_quick",
       "BN_mod_exp",
+      "BN_mod_exp2_mont",
+      "BN_mod_exp_mont",
+      "BN_mod_exp_mont_consttime",
+      "BN_mod_exp_mont_consttime_x2",
+      "BN_mod_exp_mont_word",
+      "BN_mod_exp_recp",
       "BN_mod_exp_simple",
       "BN_mod_inverse",
       "BN_mod_lshift",
@@ -3742,6 +3830,8 @@
       "BN_mod_lshift1_quick",
       "BN_mod_lshift_quick",
       "BN_mod_mul",
+      "BN_mod_mul_montgomery",
+      "BN_mod_mul_reciprocal",
       "BN_mod_sqr",
       "BN_mod_sqrt",
       "BN_mod_sub",
@@ -3752,12 +3842,19 @@
       "BN_mul_word",
       "BN_native2bn",
       "BN_new",
+      "BN_nist_mod_192",
+      "BN_nist_mod_224",
+      "BN_nist_mod_256",
+      "BN_nist_mod_384",
+      "BN_nist_mod_521",
+      "BN_nist_mod_func",
       "BN_nnmod",
       "BN_num_bits",
       "BN_num_bits_word",
       "BN_options",
       "BN_print",
       "BN_print_fp",
+      "BN_reciprocal",
       "BN_rshift",
       "BN_rshift1",
       "BN_secure_new",
@@ -3777,6 +3874,7 @@
       "BN_sub",
       "BN_sub_word",
       "BN_swap",
+      "BN_to_montgomery",
       "BN_uadd",
       "BN_ucmp",
       "BN_usub",
@@ -4940,71 +5038,6 @@
       {
         "declaring_header": "bn.h",
         "module": "src/bn/",
-        "symbol": "BN_BLINDING_convert"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_BLINDING_convert_ex"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_BLINDING_free"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_BLINDING_get_flags"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_BLINDING_invert"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_BLINDING_invert_ex"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_BLINDING_is_current_thread"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_BLINDING_lock"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_BLINDING_new"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_BLINDING_set_current_thread"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_BLINDING_set_flags"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_BLINDING_unlock"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_BLINDING_update"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
         "symbol": "BN_GF2m_add"
       },
       {
@@ -5078,226 +5111,6 @@
         "symbol": "BN_GF2m_poly2arr"
       },
       {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_MONT_CTX_copy"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_MONT_CTX_free"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_MONT_CTX_new"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_MONT_CTX_set"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_MONT_CTX_set_locked"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_RECP_CTX_free"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_RECP_CTX_new"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_RECP_CTX_set"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_check_prime"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_div_recp"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_from_montgomery"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_get0_nist_prime_192"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_get0_nist_prime_224"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_get0_nist_prime_256"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_get0_nist_prime_384"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_get0_nist_prime_521"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_get_rfc2409_prime_1024"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_get_rfc2409_prime_768"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_get_rfc3526_prime_1536"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_get_rfc3526_prime_2048"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_get_rfc3526_prime_3072"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_get_rfc3526_prime_4096"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_get_rfc3526_prime_6144"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_get_rfc3526_prime_8192"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_is_prime"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_is_prime_ex"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_is_prime_fasttest"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_is_prime_fasttest_ex"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_kronecker"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_mod_exp2_mont"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_mod_exp_mont"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_mod_exp_mont_consttime"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_mod_exp_mont_consttime_x2"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_mod_exp_mont_word"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_mod_exp_recp"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_mod_mul_montgomery"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_mod_mul_reciprocal"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_nist_mod_192"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_nist_mod_224"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_nist_mod_256"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_nist_mod_384"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_nist_mod_521"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_nist_mod_func"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_reciprocal"
-      },
-      {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
         "symbol": "BN_to_ASN1_ENUMERATED"
@@ -5306,11 +5119,6 @@
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
         "symbol": "BN_to_ASN1_INTEGER"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/",
-        "symbol": "BN_to_montgomery"
       },
       {
         "declaring_header": "pem.h",
@@ -5750,7 +5558,7 @@
     ],
     "owned_by_module": {
       "src/asn1/": 280,
-      "src/bn/": 178,
+      "src/bn/": 170,
       "src/pem/": 38
     },
     "rule": "a symbol belongs to the stratum that owns the header declaring it; `pem.h` is the one header that declares surface owned elsewhere, so its typed readers and writers are resolved by the type in the name"
@@ -5780,7 +5588,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "fe60db5e95dc803786891e037898c69a58452e83be0bdb793f00e64290b91493"
+      "sha256": "2ae4d14680213e4fed7f76a58dc06e8b2dcffc336122201bede0330247c9d7ea"
     }
   ],
   "kind": "phase5-obligations",

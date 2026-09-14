@@ -1002,7 +1002,7 @@ pub unsafe extern "C" fn BN_mod_exp(
 ///
 /// `None` for a zero modulus; the caller reports that at the coordinate the
 /// authority's own ladder would.
-fn mod_exp_core(ad: &[Limb], pd: &[Limb], md: &[Limb]) -> Option<Vec<Limb>> {
+pub(crate) fn mod_exp_core(ad: &[Limb], pd: &[Limb], md: &[Limb]) -> Option<Vec<Limb>> {
     if md.is_empty() {
         return None;
     }

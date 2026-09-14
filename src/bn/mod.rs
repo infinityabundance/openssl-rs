@@ -34,5 +34,12 @@
 
 pub mod arith;
 pub mod bignum;
+pub mod blinding;
 pub mod ctx;
+pub mod kron;
 pub mod limbs;
+pub mod mont;
+pub mod nist;
+pub(crate) mod prime_data;
+pub mod primes;
+pub mod recp;

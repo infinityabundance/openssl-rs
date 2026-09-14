@@ -181,7 +181,10 @@
         {
           "from_phase": 5,
           "symbols": [
+            "BN_BLINDING_convert",
+            "BN_BLINDING_convert_ex",
             "BN_BLINDING_create_param",
+            "BN_BLINDING_update",
             "BN_GF2m_mod_solve_quad",
             "BN_GF2m_mod_solve_quad_arr",
             "BN_GF2m_mod_sqrt",
@@ -190,10 +193,15 @@
             "BN_X931_generate_Xpq",
             "BN_X931_generate_prime_ex",
             "BN_bntest_rand",
+            "BN_check_prime",
             "BN_generate_dsa_nonce",
             "BN_generate_prime",
             "BN_generate_prime_ex",
             "BN_generate_prime_ex2",
+            "BN_is_prime",
+            "BN_is_prime_ex",
+            "BN_is_prime_fasttest",
+            "BN_is_prime_fasttest_ex",
             "BN_priv_rand",
             "BN_priv_rand_ex",
             "BN_priv_rand_range",
@@ -901,7 +909,10 @@
         {
           "from_phase": 5,
           "symbols": [
+            "BN_BLINDING_convert",
+            "BN_BLINDING_convert_ex",
             "BN_BLINDING_create_param",
+            "BN_BLINDING_update",
             "BN_GF2m_mod_solve_quad",
             "BN_GF2m_mod_solve_quad_arr",
             "BN_GF2m_mod_sqrt",
@@ -910,10 +921,15 @@
             "BN_X931_generate_Xpq",
             "BN_X931_generate_prime_ex",
             "BN_bntest_rand",
+            "BN_check_prime",
             "BN_generate_dsa_nonce",
             "BN_generate_prime",
             "BN_generate_prime_ex",
             "BN_generate_prime_ex2",
+            "BN_is_prime",
+            "BN_is_prime_ex",
+            "BN_is_prime_fasttest",
+            "BN_is_prime_fasttest_ex",
             "BN_priv_rand",
             "BN_priv_rand_ex",
             "BN_priv_rand_range",
@@ -1587,7 +1603,7 @@
     ],
     "implemented_by_two_strata": [],
     "implemented_exports": {
-      "libcrypto": 560,
+      "libcrypto": 610,
       "libssl": 0
     },
     "invariant": "every implemented export is claimed by at least one phase family",
@@ -6847,7 +6863,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "ae2ce5b72ae4fb47309649ef900213f13016fc70a18ab3be4d74c965f5a98b58"
+      "sha256": "bd6d97b98b9128e046967905b4392a45d5bf322038ca9f3a4e7074eb95860f22"
     },
     {
       "name": "authority-symbols",
@@ -6867,7 +6883,7 @@
     {
       "name": "ledger",
       "path": "forensics/tools/phase5_obligations.py",
-      "sha256": "c1ad9c10c248f4d293c83e1c6db56227f38a6f35a548fdb0ae78d6aa25b53f38"
+      "sha256": "250633ec8e6f6879306c53daab63d8598a70673c567293135ab11c1ac8ae764d"
     },
     {
       "name": "ledger-result",
@@ -6882,7 +6898,7 @@
     {
       "name": "ledger-result",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "2308d640375f79ab1004c856b81a6b9bbdf451d0a3224d297bc777bfa77afa4c"
+      "sha256": "19064943f3f2b2669be7e8acfa9ab4f46d700b66c3c3b48dad18050771556dce"
     }
   ],
   "kind": "ownership-audit",

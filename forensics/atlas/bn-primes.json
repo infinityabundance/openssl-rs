@@ -1,0 +1,99 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "counts": {
+      "bytes": 3558,
+      "primes": 13
+    },
+    "primes": [
+      {
+        "bits": 768,
+        "bytes": 96,
+        "sha256": "b52ba6a3026520a6c49d37e4587601801bee500123b3259b6bf03e7cecc3e63d",
+        "symbol": "BN_get_rfc2409_prime_768"
+      },
+      {
+        "bits": 1024,
+        "bytes": 128,
+        "sha256": "3f35a3f5f6c4376a744acad409bb22f8d897f949d2311d885adaa890981b67a0",
+        "symbol": "BN_get_rfc2409_prime_1024"
+      },
+      {
+        "bits": 1536,
+        "bytes": 192,
+        "sha256": "64fcc83ec403930bf18393dbc883ccaa1fbb08ac876f77f7aa99748ca945019b",
+        "symbol": "BN_get_rfc3526_prime_1536"
+      },
+      {
+        "bits": 2048,
+        "bytes": 256,
+        "sha256": "d66436f79bbd6b2e38c0ffbd079be904d2641415e2e67140e09448be9a60890e",
+        "symbol": "BN_get_rfc3526_prime_2048"
+      },
+      {
+        "bits": 3072,
+        "bytes": 384,
+        "sha256": "48cf8b092fbce4359d9871abf74f98e25b6163379eaa15cd9087e800c6d1c55c",
+        "symbol": "BN_get_rfc3526_prime_3072"
+      },
+      {
+        "bits": 4096,
+        "bytes": 512,
+        "sha256": "4ee95187682bcb230ad26a95205f6920e84708f6251b3894329b09ec23919e33",
+        "symbol": "BN_get_rfc3526_prime_4096"
+      },
+      {
+        "bits": 6144,
+        "bytes": 768,
+        "sha256": "d1bfe6d0925ce7e4da262b62861514a7755e35831e429f343e7b864848657efd",
+        "symbol": "BN_get_rfc3526_prime_6144"
+      },
+      {
+        "bits": 8192,
+        "bytes": 1024,
+        "sha256": "39ab4feab950a3128fb71accb9fc3965d857012e081998a85996e3ea8b3c3bcf",
+        "symbol": "BN_get_rfc3526_prime_8192"
+      },
+      {
+        "bits": 192,
+        "bytes": 24,
+        "sha256": "56b111be0cbc9b1ad8869511648ffeba713757e7a06ec990723b7d6e981d414e",
+        "symbol": "BN_get0_nist_prime_192"
+      },
+      {
+        "bits": 224,
+        "bytes": 28,
+        "sha256": "ce53292c8d84f83d8984ae7405784261ef50d234f2f4e63d997351c0872c62d3",
+        "symbol": "BN_get0_nist_prime_224"
+      },
+      {
+        "bits": 256,
+        "bytes": 32,
+        "sha256": "bd942c11c8c490aa0d9986d342ce5454672197de88c64a511640b9615944243d",
+        "symbol": "BN_get0_nist_prime_256"
+      },
+      {
+        "bits": 384,
+        "bytes": 48,
+        "sha256": "0c7143483aef9dee8e6a4ec90c98e3b1f57220a77bef257dc4538b59f319eb49",
+        "symbol": "BN_get0_nist_prime_384"
+      },
+      {
+        "bits": 528,
+        "bytes": 66,
+        "sha256": "696effcdd00b6f382635d43bdb8e438a83ac399c377a29c7a1331041f130e67e",
+        "symbol": "BN_get0_nist_prime_521"
+      }
+    ]
+  },
+  "generator": "forensics/tools/gen_bn_primes.py",
+  "inputs": [
+    {
+      "name": "authority-symbols",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+      "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
+    }
+  ],
+  "kind": "bn-primes",
+  "schema": "openssl-rs/atlas/bn-primes/v1"
+}
