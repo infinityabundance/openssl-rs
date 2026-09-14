@@ -1364,3 +1364,57 @@ contract is the retry protocol rather than the bytes:
 the buffer arithmetic, retry flags, request recording, control refusals and error
 queue the probe exercises. It is not a claim about a pair used as an SSL channel,
 nor about `BIO_nread`/`BIO_nwrite` beyond the sequences driven here.
+
+## D44 — `OBJ_create_objects`, and two OBJ defects its court found
+
+**Decision.** `OBJ_create_objects` is implemented and courted by a new
+`RT-OBJ-STREAM` (91 observations, passing). Phase 4 is now implemented 187 /
+deferred 16 / open 53 of 256 owned; the baseline is 30 courts and 6,005
+observations; `implemented` `libcrypto` exports move 398 -> 399. The 53 open
+obligations are the nine remaining BIO methods and the 44 CONF/NCONF symbols.
+
+**The court found two real defects in already-implemented OBJ exports.** The
+first `RT-OBJ-STREAM` run produced exactly one residual:
+
+    name.collision.err0: authority='67108966' candidate='0'
+
+`OBJ_create` was refusing a duplicate short or long name, and refusing an OID
+that was already registered, **without raising**. The authority raises
+`OBJ_R_OID_EXISTS` at `obj_dat.c:713` and `:734` respectively, and
+`ERR_R_PASSED_INVALID_ARGUMENT` at `:706` for the all-NULL call. All three were
+missing, and so was the follow-up: driving the malformed-OID cases showed that
+`OBJ_txt2obj("no-such-name", 0)` must raise `OBJ_R_UNKNOWN_OBJECT_NAME`
+(`obj_dat.c:362`), and that a malformed *numeric* OID raises an **ASN.1** error
+because `OBJ_create` parses through `OBJ_txt2obj` and hence `a2d_ASN1_OBJECT`.
+
+`parse_oid_text` returned `Option`: it modelled "rejected" as one state when the
+authority has two. A rejection either raises — a first number outside `0..2`
+(`ASN1_R_FIRST_NUM_TOO_LARGE`), a missing second number, a bad separator, a
+non-digit component, a too-large second number — or is **silent**, when `a2d`
+returns a length of zero and the caller's `i <= 0` test rejects it. The type is
+now a three-way `OidParse`, and all six rejections plus the silent case are
+courted.
+
+**Why one ASN.1 file is now in the raise-site generator.** The malformed-OID
+error's coordinate is `crypto/asn1/a_object.c`, which is Phase 5 — but it is
+observable through the Phase 4 export `OBJ_create`, so the generator covers that
+one file (and the reason-symbol header it needs) rather than deferring the
+observation. Only the *error site* is taken from it; the ASN.1 parser itself
+remains a Phase 5 obligation. This is the same reasoning that already put
+`crypto/objects/obj_dat.c` in the covered list.
+
+**What the stream reader itself established.** `OBJ_create_objects` parses
+`OID [short [long]]` per line and stops at the first unusable line **without
+raising**, returning the count. The stopping rules are all in the probe: a read
+of zero or fewer bytes; a first character that is not alphanumeric (`#`, a
+space, or a dot); a first field with no digits or dots at all; a blank line; and
+an `OBJ_create` refusal. Two details are easy to get wrong and are pinned: a
+short-but-no-long line creates an object whose *short* name is what was given,
+and the reader clears the byte **before** the terminator, so a final line with no
+newline loses its last character — `nl.at.eof.truncated.nid.ge0=1` with
+`nl.at.eof.as.written.nid.ge0=0`.
+
+**Non-claim.** `RT-OBJ-STREAM` passing means the candidate matched the authority
+for the streams driven, the accepted objects and the error queue. It is not a
+claim about object-database behaviour outside `OBJ_create_objects`, nor about the
+ASN.1 parser beyond the `a2d_ASN1_OBJECT` rejections it exercises.

@@ -118,6 +118,12 @@ COVERED_FILES = [
     # The object database's one Phase 4 obligation (`OBJ_create_objects`) reads a
     # BIO, so its raise sites are part of this stratum.
     ("crypto/objects/obj_dat.c", "OBJ_DAT"),
+    # `OBJ_create` parses its numeric-OID argument through `OBJ_txt2obj` and hence
+    # `a2d_ASN1_OBJECT`, so a *malformed* OID raises an ASN.1 error from that file.
+    # The coordinate is observable through a Phase 4 export even though the
+    # surrounding ASN.1 parser is Phase 5, which is why this one file is covered
+    # here rather than deferred with the rest of `crypto/asn1`.
+    ("crypto/asn1/a_object.c", "A_OBJECT"),
     # The buffer object the memory BIO is built from is part of this stratum.
     ("crypto/buffer/buffer.c", "BUFFER"),
 ]
@@ -375,6 +381,7 @@ def resolve_symbols(authority, symbols: list[str], work: Path) -> dict[str, int]
     body = [
         "#include <openssl/err.h>",
         "#include <openssl/cryptoerr.h>",
+        "#include <openssl/asn1err.h>",
         "#include <openssl/bioerr.h>",
         "#include <openssl/conferr.h>",
         "#include <openssl/objectserr.h>",

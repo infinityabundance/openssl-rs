@@ -12,7 +12,7 @@ enforced here:
 | 1 | Complete archaeology / API / ABI atlas | `complete` |  |
 | 2 | Distribution / ABI shell | `complete` |  |
 | 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `complete` |  |
-| 4 | BIO + CONF + object database | `in-progress` | 54 open obligation(s) of this stratum recorded in forensics/phase4-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
+| 4 | BIO + CONF + object database | `in-progress` | 53 open obligation(s) of this stratum recorded in forensics/phase4-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
 | 5 | BN + ASN.1 + DER/PEM | `not-started` | not started |
 | 6 | OSSL_LIB_CTX + provider core | `not-started` | not started |
 | 7 | EVP framework | `not-started` | not started |
@@ -30,8 +30,3 @@ enforced here:
 | 19 | Performance / CPU dispatch | `not-started` | not started |
 | 20 | 3.6.4 custodian seal | `not-started` | not started |
 | 21 | Maintenance delta machinery | `not-started` | not started |
-
-Deferred out of phase 3 (recorded hand-offs, not parity
-claims):
-
-* OBJ_create_objects -> phase 4 (reads an object description stream from a BIO; BIO is Phase 4)

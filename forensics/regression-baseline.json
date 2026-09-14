@@ -100,6 +100,10 @@
       "observations": 82,
       "verdict": "pass"
     },
+    "RT-OBJ-STREAM": {
+      "observations": 91,
+      "verdict": "pass"
+    },
     "RT-SECURE": {
       "observations": 32,
       "verdict": "pass"
@@ -118,16 +122,16 @@
     }
   },
   "deferred": {
-    "phase3": 1,
+    "phase3": 0,
     "phase4": 16
   },
   "implemented": {
-    "libcrypto": 398,
+    "libcrypto": 399,
     "libssl": 0
   },
   "open_obligations": {
     "phase3": 0,
-    "phase4": 54
+    "phase4": 53
   },
   "phases": {
     "0": "complete",

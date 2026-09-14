@@ -2,18 +2,11 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "deferred": 1,
-      "implemented": 219,
+      "deferred": 0,
+      "implemented": 220,
       "owned": 220
     },
-    "deferred": [
-      {
-        "module": "src/runtime/obj.rs",
-        "owning_phase": 4,
-        "reason": "reads an object description stream from a BIO; BIO is Phase 4",
-        "symbol": "OBJ_create_objects"
-      }
-    ],
+    "deferred": [],
     "families": [
       {
         "module": "src/runtime/mem.rs",
@@ -246,6 +239,7 @@
       "OBJ_bsearch_ex_",
       "OBJ_cmp",
       "OBJ_create",
+      "OBJ_create_objects",
       "OBJ_dup",
       "OBJ_find_sigid_algs",
       "OBJ_find_sigid_by_algs",
@@ -333,7 +327,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "bc2a321bbd321067a0e9e592040eea42ecaa82738b6350460886801170a9f2c6"
+      "sha256": "bc7e4c8d36ed077097977d9f9374b0ed43dd4d6455df8064063434ab5d9f580b"
     }
   ],
   "kind": "phase3-obligations",

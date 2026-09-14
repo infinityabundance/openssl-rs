@@ -4,8 +4,8 @@
     "complete": false,
     "counts": {
       "deferred_to_later_phase": 16,
-      "implemented": 186,
-      "open_in_this_stratum": 54,
+      "implemented": 187,
+      "open_in_this_stratum": 53,
       "owned": 256
     },
     "deferred": [
@@ -324,6 +324,7 @@
       "ERR_print_errors",
       "ERR_print_errors_cb",
       "ERR_print_errors_fp",
+      "OBJ_create_objects",
       "OPENSSL_LH_node_stats",
       "OPENSSL_LH_node_stats_bio",
       "OPENSSL_LH_node_usage_stats",
@@ -544,10 +545,6 @@
       {
         "module": "src/runtime/conf/",
         "symbol": "NCONF_new_ex"
-      },
-      {
-        "module": "src/runtime/obj.rs",
-        "symbol": "OBJ_create_objects"
       }
     ]
   },
@@ -561,7 +558,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "bc2a321bbd321067a0e9e592040eea42ecaa82738b6350460886801170a9f2c6"
+      "sha256": "bc7e4c8d36ed077097977d9f9374b0ed43dd4d6455df8064063434ab5d9f580b"
     }
   ],
   "kind": "phase4-obligations",

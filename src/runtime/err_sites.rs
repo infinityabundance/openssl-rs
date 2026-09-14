@@ -3050,6 +3050,126 @@ pub(crate) const OBJ_DAT_844: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `a2d_ASN1_OBJECT` at `crypto/asn1/a_object.c:66` (ASN1_R_LENGTH_TOO_LONG).
+pub(crate) const A_OBJECT_66: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_object.c",
+    line: 66,
+    func: c"a2d_ASN1_OBJECT",
+    lib: 13,
+    reason: 231,
+    dynamic_reason: false,
+};
+
+/// `a2d_ASN1_OBJECT` at `crypto/asn1/a_object.c:78` (ASN1_R_FIRST_NUM_TOO_LARGE).
+pub(crate) const A_OBJECT_78: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_object.c",
+    line: 78,
+    func: c"a2d_ASN1_OBJECT",
+    lib: 13,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `a2d_ASN1_OBJECT` at `crypto/asn1/a_object.c:83` (ASN1_R_MISSING_SECOND_NUMBER).
+pub(crate) const A_OBJECT_83: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_object.c",
+    line: 83,
+    func: c"a2d_ASN1_OBJECT",
+    lib: 13,
+    reason: 138,
+    dynamic_reason: false,
+};
+
+/// `a2d_ASN1_OBJECT` at `crypto/asn1/a_object.c:92` (ASN1_R_INVALID_SEPARATOR).
+pub(crate) const A_OBJECT_92: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_object.c",
+    line: 92,
+    func: c"a2d_ASN1_OBJECT",
+    lib: 13,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `a2d_ASN1_OBJECT` at `crypto/asn1/a_object.c:105` (ASN1_R_INVALID_DIGIT).
+pub(crate) const A_OBJECT_105: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_object.c",
+    line: 105,
+    func: c"a2d_ASN1_OBJECT",
+    lib: 13,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `a2d_ASN1_OBJECT` at `crypto/asn1/a_object.c:124` (ASN1_R_SECOND_NUMBER_TOO_LARGE).
+pub(crate) const A_OBJECT_124: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_object.c",
+    line: 124,
+    func: c"a2d_ASN1_OBJECT",
+    lib: 13,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `a2d_ASN1_OBJECT` at `crypto/asn1/a_object.c:163` (ASN1_R_BUFFER_TOO_SMALL).
+pub(crate) const A_OBJECT_163: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_object.c",
+    line: 163,
+    func: c"a2d_ASN1_OBJECT",
+    lib: 13,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `i2a_ASN1_OBJECT` at `crypto/asn1/a_object.c:198` (ASN1_R_LENGTH_TOO_LONG).
+pub(crate) const A_OBJECT_198: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_object.c",
+    line: 198,
+    func: c"i2a_ASN1_OBJECT",
+    lib: 13,
+    reason: 231,
+    dynamic_reason: false,
+};
+
+/// `d2i_ASN1_OBJECT` at `crypto/asn1/a_object.c:241` (ERR_raise dynamic reason).
+pub(crate) const A_OBJECT_241: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_object.c",
+    line: 241,
+    func: c"d2i_ASN1_OBJECT",
+    lib: 13,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `ossl_c2i_ASN1_OBJECT` at `crypto/asn1/a_object.c:259` (ASN1_R_INVALID_OBJECT_ENCODING).
+pub(crate) const A_OBJECT_259: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_object.c",
+    line: 259,
+    func: c"ossl_c2i_ASN1_OBJECT",
+    lib: 13,
+    reason: 216,
+    dynamic_reason: false,
+};
+
+/// `ossl_c2i_ASN1_OBJECT` at `crypto/asn1/a_object.c:289` (ASN1_R_INVALID_OBJECT_ENCODING).
+pub(crate) const A_OBJECT_289: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_object.c",
+    line: 289,
+    func: c"ossl_c2i_ASN1_OBJECT",
+    lib: 13,
+    reason: 216,
+    dynamic_reason: false,
+};
+
+/// `ossl_c2i_ASN1_OBJECT` at `crypto/asn1/a_object.c:334` (ERR_raise dynamic reason).
+pub(crate) const A_OBJECT_334: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_object.c",
+    line: 334,
+    func: c"ossl_c2i_ASN1_OBJECT",
+    lib: 13,
+    reason: 0,
+    dynamic_reason: true,
+};
+
 /// `BUF_MEM_grow` at `crypto/buffer/buffer.c:88` (ERR_R_PASSED_INVALID_ARGUMENT).
 pub(crate) const BUFFER_88: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/buffer/buffer.c",
@@ -3383,6 +3503,18 @@ pub(crate) static ALL: &[ErrSite] = &[
     OBJ_DAT_734,
     OBJ_DAT_806,
     OBJ_DAT_844,
+    A_OBJECT_66,
+    A_OBJECT_78,
+    A_OBJECT_83,
+    A_OBJECT_92,
+    A_OBJECT_105,
+    A_OBJECT_124,
+    A_OBJECT_163,
+    A_OBJECT_198,
+    A_OBJECT_241,
+    A_OBJECT_259,
+    A_OBJECT_289,
+    A_OBJECT_334,
     BUFFER_88,
     BUFFER_125,
 ];

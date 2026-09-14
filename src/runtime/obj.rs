@@ -942,19 +942,43 @@ impl Big {
     }
 }
 
-/// `a2d_ASN1_OBJECT`: dotted-decimal text to DER content octets, or `None` on
-/// the authority's error conditions.
-fn parse_oid_text(s: &[u8]) -> Option<Vec<u8>> {
-    if s.is_empty() {
-        return None;
-    }
-    let first = match s[0] {
-        c @ b'0'..=b'2' => (c - b'0') as u32,
-        _ => return None,
+/// The outcome of `a2d_ASN1_OBJECT`.
+///
+/// The three cases are not two: a rejection either **raises** an ASN.1 error or
+/// is silent, and which one depends on where the parser gave up. A first number
+/// outside `0..2`, a missing second number, a bad separator, a non-digit
+/// component and a too-large second number all raise; a stream that yields no
+/// content octets at all (a two-character OID such as `"12"`) returns a length of
+/// zero and raises nothing, because `a2d` itself did not fail — the caller's
+/// `i <= 0` test is what rejects it. Collapsing the two into one `None` would make
+/// the error queue wrong for the silent case.
+enum OidParse {
+    /// The DER content octets.
+    Ok(Vec<u8>),
+    /// Rejected, and the authority raises at this site.
+    Raise(&'static crate::runtime::err::err_sites::ErrSite),
+    /// Rejected without raising.
+    Silent,
+}
+
+/// `a2d_ASN1_OBJECT`: dotted-decimal text to DER content octets.
+///
+/// The structure is the authority's, including the two-character lookahead and
+/// the fact that a component separator may be a **space** as well as a dot.
+fn parse_oid_text(s: &[u8]) -> OidParse {
+    use crate::runtime::err::err_sites::{
+        A_OBJECT_105, A_OBJECT_124, A_OBJECT_78, A_OBJECT_83, A_OBJECT_92,
+    };
+
+    // An empty string still has a first character as far as `a2d` is concerned:
+    // it reads the NUL terminator, which is not in `0..2`, and raises.
+    let first = match s.first() {
+        Some(c @ b'0'..=b'2') => (*c - b'0') as u32,
+        _ => return OidParse::Raise(&A_OBJECT_78),
     };
     let mut idx = 1usize;
     if idx >= s.len() {
-        return None;
+        return OidParse::Raise(&A_OBJECT_83);
     }
     let mut c = s[idx];
     idx += 1;
@@ -965,7 +989,7 @@ fn parse_oid_text(s: &[u8]) -> Option<Vec<u8>> {
             break;
         }
         if c != b'.' && c != b' ' {
-            return None;
+            return OidParse::Raise(&A_OBJECT_92);
         }
         let mut big = Big::zero();
         loop {
@@ -978,22 +1002,24 @@ fn parse_oid_text(s: &[u8]) -> Option<Vec<u8>> {
                 break;
             }
             if !c.is_ascii_digit() {
-                return None;
+                return OidParse::Raise(&A_OBJECT_105);
             }
             big.mul_add_small(10, (c - b'0') as u64);
         }
         if out.is_empty() {
             if first < 2 && big.cmp_small(40) != core::cmp::Ordering::Less {
-                return None;
+                return OidParse::Raise(&A_OBJECT_124);
             }
             big.mul_add_small(1, (first * 40) as u64);
         }
         out.extend_from_slice(&big.encode_base128());
     }
     if out.is_empty() {
-        None
+        // `a2d` answered a length of zero; the caller's `i <= 0` test rejects it
+        // without the parser having raised.
+        OidParse::Silent
     } else {
-        Some(out)
+        OidParse::Ok(out)
     }
 }
 
@@ -1285,13 +1311,22 @@ pub unsafe extern "C" fn OBJ_txt2obj(s: *const c_char, no_name: c_int) -> *mut A
                 return OBJ_nid2obj(nid);
             }
             if !text.first().is_some_and(u8::is_ascii_digit) {
+                // SAFETY: the site is a compile-time constant.
+                unsafe {
+                    crate::runtime::err::raise_site(&crate::runtime::err::err_sites::OBJ_DAT_362)
+                };
                 return core::ptr::null_mut();
             }
         }
 
         let content = match parse_oid_text(text) {
-            Some(c) => c,
-            None => return core::ptr::null_mut(),
+            OidParse::Ok(c) => c,
+            OidParse::Raise(site) => {
+                // SAFETY: the site is a compile-time constant.
+                unsafe { crate::runtime::err::raise_site(site) };
+                return core::ptr::null_mut();
+            }
+            OidParse::Silent => return core::ptr::null_mut(),
         };
         let known = content_to_nid(&content);
         if known != NID_undef {
@@ -1467,17 +1502,29 @@ pub unsafe extern "C" fn OBJ_create(
 ) -> c_int {
     guard_ffi(NID_undef, || {
         if oid.is_null() && sn.is_null() && ln.is_null() {
+            // SAFETY: the site is a compile-time constant.
+            unsafe {
+                crate::runtime::err::raise_site(&crate::runtime::err::err_sites::OBJ_DAT_706)
+            };
             return NID_undef;
         }
         if !sn.is_null() {
             // SAFETY: `sn` is a NUL-terminated string.
             if unsafe { OBJ_sn2nid(sn) } != NID_undef {
+                // SAFETY: the site is a compile-time constant.
+                unsafe {
+                    crate::runtime::err::raise_site(&crate::runtime::err::err_sites::OBJ_DAT_713)
+                };
                 return NID_undef;
             }
         }
         if !ln.is_null() {
             // SAFETY: `ln` is a NUL-terminated string.
             if unsafe { OBJ_ln2nid(ln) } != NID_undef {
+                // SAFETY: the site is a compile-time constant.
+                unsafe {
+                    crate::runtime::err::raise_site(&crate::runtime::err::err_sites::OBJ_DAT_713)
+                };
                 return NID_undef;
             }
         }
@@ -1488,10 +1535,19 @@ pub unsafe extern "C" fn OBJ_create(
             // SAFETY: `oid` is a NUL-terminated string.
             let text = unsafe { core::slice::from_raw_parts(oid as *const u8, c_strlen(oid)) };
             let content = match parse_oid_text(text) {
-                Some(c) => c,
-                None => return NID_undef,
+                OidParse::Ok(c) => c,
+                OidParse::Raise(site) => {
+                    // SAFETY: the site is a compile-time constant.
+                    unsafe { crate::runtime::err::raise_site(site) };
+                    return NID_undef;
+                }
+                OidParse::Silent => return NID_undef,
             };
             if content_to_nid(&content) != NID_undef {
+                // SAFETY: the site is a compile-time constant.
+                unsafe {
+                    crate::runtime::err::raise_site(&crate::runtime::err::err_sites::OBJ_DAT_734)
+                };
                 return NID_undef;
             }
             Some(content)
@@ -2164,6 +2220,110 @@ pub extern "C" fn OBJ_NAME_cleanup(type_: c_int) {
                 }
             }
             db.entries = kept;
+        }
+    })
+}
+
+// ---------------------------------------------------------------------------
+// The description-stream helper
+// ---------------------------------------------------------------------------
+
+/// The ASCII character classes `OBJ_create_objects` uses.
+///
+/// The authority's `ossl_isalnum` is **not** the C library's: `crypto/ctype.c`
+/// carries a 128-entry table and answers false for any byte outside seven-bit
+/// ASCII. Using `isalnum` here would be locale-dependent and would accept bytes
+/// the authority rejects, so the classes are computed directly.
+fn is_ascii_alnum(c: u8) -> bool {
+    c.is_ascii_alphanumeric()
+}
+
+fn is_ascii_digit(c: u8) -> bool {
+    c.is_ascii_digit()
+}
+
+fn is_ascii_space(c: u8) -> bool {
+    matches!(c, b' ' | b'\t' | b'\n' | 0x0b | 0x0c | b'\r')
+}
+
+/// `int OBJ_create_objects(BIO *in)`
+///
+/// Reads one object description per line — `OID shortname longname`, with the
+/// short and long names optional — until the stream ends or a line appears that
+/// the parser rejects, and returns how many objects it created. A rejection is
+/// **not** an error: the count is returned and nothing is raised, which is what
+/// makes this usable on a file that carries trailing commentary.
+///
+/// The rejections are: a read of zero or fewer bytes; a first character that is
+/// not alphanumeric; an empty OID field; and `OBJ_create` itself refusing (for
+/// instance because the names already exist). Each ends the scan.
+///
+/// # Safety
+/// `in_` must be NULL or a live BIO that supports `BIO_gets`.
+#[no_mangle]
+pub unsafe extern "C" fn OBJ_create_objects(in_: *mut super::bio::Bio) -> c_int {
+    guard_ffi(0, || {
+        let mut num = 0;
+        let mut buf = [0 as c_char; 512];
+        loop {
+            // SAFETY: `in_` is NULL or live, and `buf` is writable for 512 bytes.
+            let i = unsafe { super::bio::BIO_gets(in_, buf.as_mut_ptr(), 512) };
+            if i <= 0 {
+                return num;
+            }
+            // The authority overwrites the byte *before* the terminator with a
+            // NUL, so a line without its newline loses its last character.
+            buf[(i - 1) as usize] = 0;
+            // SAFETY: `buf` is NUL-terminated by the line above.
+            let bytes = unsafe { core::ffi::CStr::from_ptr(buf.as_ptr()) }.to_bytes();
+            if bytes.is_empty() || !is_ascii_alnum(bytes[0]) {
+                return num;
+            }
+            // The OID field is the leading run of digits and dots.
+            let mut k = 0usize;
+            while k < bytes.len() && (is_ascii_digit(bytes[k]) || bytes[k] == b'.') {
+                k += 1;
+            }
+            let (oid, rest) = bytes.split_at(k);
+            if oid.is_empty() {
+                return num;
+            }
+            // The remaining fields are whitespace-separated tokens.
+            let mut fields = rest.split(|&b| is_ascii_space(b)).filter(|t| !t.is_empty());
+            let short = fields.next();
+            let long = fields.next();
+
+            // SAFETY: each buffer is NUL-terminated before use, and NULL means
+            // "not supplied" as in the authority.
+            let mut oid_buf = [0 as c_char; 512];
+            let mut sn_buf = [0 as c_char; 512];
+            let mut ln_buf = [0 as c_char; 512];
+            let copy_into = |dst: &mut [c_char; 512], src: &[u8]| {
+                for (d, s) in dst.iter_mut().zip(src.iter()) {
+                    *d = *s as c_char;
+                }
+            };
+            copy_into(&mut oid_buf, oid);
+            let sn_ptr = match short {
+                Some(t) => {
+                    copy_into(&mut sn_buf, t);
+                    sn_buf.as_ptr()
+                }
+                None => core::ptr::null(),
+            };
+            let ln_ptr = match long {
+                Some(t) => {
+                    copy_into(&mut ln_buf, t);
+                    ln_buf.as_ptr()
+                }
+                None => core::ptr::null(),
+            };
+            // SAFETY: the three pointers are NULL or NUL-terminated.
+            let created = unsafe { OBJ_create(oid_buf.as_ptr(), sn_ptr, ln_ptr) };
+            if created == NID_undef {
+                return num;
+            }
+            num += 1;
         }
     })
 }

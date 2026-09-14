@@ -107,7 +107,7 @@
         "candidate_exit_code": 0,
         "candidate_observations": 55,
         "candidate_stderr_tail": [
-          "BIO[0x56415a9533a0]: ctrl(0) - memory buffer"
+          "BIO[0x55a5d89463a0]: ctrl(0) - memory buffer"
         ],
         "court": "RT-BIO-DEBUG",
         "probe": "courts/phase4/rt_bio_debug_probe.c",
@@ -182,15 +182,31 @@
           "candidate": "artifacts/phase4/probes/rt_bio_pair_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 91,
+        "candidate_exit_code": 0,
+        "candidate_observations": 91,
+        "candidate_stderr_tail": [],
+        "court": "RT-OBJ-STREAM",
+        "probe": "courts/phase4/rt_obj_stream_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase4/probes/rt_obj_stream_probe.authority",
+          "candidate": "artifacts/phase4/probes/rt_obj_stream_probe.candidate"
+        },
+        "verdict": "pass"
       }
     ],
     "summary": {
       "fail": 0,
-      "pass": 11,
-      "total": 11
+      "pass": 12,
+      "total": 12
     }
   },
-  "body_hash": "06e15f717519d149c02ff0a97f4eb64a1dedfe0da3369d93f44e3db7e3240441",
+  "body_hash": "18b7bc12cdf7c9434a6c292ae3d591de3166ce8c9a3decd8f7f8d074da09adf0",
   "generator": "forensics/tools/phase4_courts.py",
   "inputs": [],
   "kind": "phase4-courts",

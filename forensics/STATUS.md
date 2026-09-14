@@ -24,7 +24,7 @@ renderer does not know any phase status.
 | 1 | Complete archaeology / API / ABI atlas | `complete` |  |
 | 2 | Distribution / ABI shell | `complete` |  |
 | 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `complete` |  |
-| 4 | BIO + CONF + object database | `in-progress` | 54 open obligation(s) of this stratum recorded in forensics/phase4-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
+| 4 | BIO + CONF + object database | `in-progress` | 53 open obligation(s) of this stratum recorded in forensics/phase4-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
 
 Not started: strata 5-21 (17 total).
 
@@ -79,9 +79,9 @@ that name is defined, nothing more.
 
 | library | exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 398 | 5498 |
+| libcrypto | 5896 | 399 | 5497 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **398** | **6101** |
+| **total** | **6499** | **399** | **6100** |
 
 ### Phase 3 obligation ledger
 
@@ -91,10 +91,8 @@ implemented nor deferred to a named later phase is an error, not a
 warning. See `docs/DECISIONS.md` D21.
 
 * authority exports in the Phase 3 symbol families: 220
-* implemented: 219
-* deferred to a later phase with a stated reason: 1
-
-Deferred to phase 4: `OBJ_create_objects`
+* implemented: 220
+* deferred to a later phase with a stated reason: 0
 
 ## Symbol reconciliation
 
