@@ -169,6 +169,46 @@ it properly: 1,001 of the 1,012 declared-but-not-exported functions are
 symbols (`DSO_*`) have no declaration in any *installed* header because `dso.h`
 is not installed.
 
+## D14 — Exporting a versioned ABI from Rust requires a two-stage build
+
+**Decision.** The Phase 2 DSOs are built as `rustc --crate-type staticlib`
+followed by a `cc -shared` link with `--whole-archive` and the generated version
+script — never as a `rustc --crate-type cdylib` in one step.
+
+**Why (two separate linker traps, both of which produce a DSO that looks right
+and resolves wrongly).**
+
+1. rustc's default bundled linker is **rust-lld**. Given a version script it
+does not fail; it warns:
+
+   ```
+   rust-lld: attempt to reassign symbol 'EVP_DigestInit_ex' of VER_NDX_GLOBAL
+             to version 'OPENSSL_3.0.0'
+   ```
+
+   and emits an **unversioned** library that still exports all 5,896 names. A
+   symbol-count check passes; only versioned resolution fails.
+
+2. Switching to GNU ld via `-C linker=cc` exposes the second trap: for
+   `--crate-type cdylib`, rustc injects its **own anonymous version script**, and
+   GNU ld refuses to combine an anonymous tag with named ones:
+
+   ```
+   /usr/bin/ld.bfd: anonymous version tag cannot be combined with other version tags
+   ```
+
+**Consequence.** The build is two stages, and `local: *;` must be emitted into
+the version script's final node. The authority's own script carries it; omitting
+it leaks the Rust runtime's symbols, because a `--whole-archive` link pulls them
+in.
+
+These are recorded because they are exactly the class of defect the Phase 2
+courts exist to catch: `ABI-SYMBOL` alone would have passed on the rust-lld
+artifact. Only `ABI-LOAD`, which resolves each symbol *at its declared version*
+with `dlvsym`, distinguishes the two.
+
+---
+
 ## D13 — Phase 1 sensitivity evidence is partial, and the gap is recorded, not hidden
 
 **Decision.** Phase 1's FRF courts are recorded as follows:

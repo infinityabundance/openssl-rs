@@ -1,0 +1,22 @@
+{
+  "court": "ABI-SYMBOL",
+  "libraries": {
+    "libcrypto": {
+      "authority_exported": 5896,
+      "candidate_exported": 5896,
+      "extra": [],
+      "missing": [],
+      "verdict": "pass",
+      "version_mismatch": []
+    },
+    "libssl": {
+      "authority_exported": 603,
+      "candidate_exported": 603,
+      "extra": [],
+      "missing": [],
+      "verdict": "pass",
+      "version_mismatch": []
+    }
+  },
+  "verdict": "pass"
+}

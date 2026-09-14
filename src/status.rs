@@ -60,7 +60,13 @@ pub const PHASES: &[Phase] = &[
         id: 2,
         name: "distribution-shell",
         stratum: "Distribution / ABI shell",
-        state: PhaseState::NotStarted,
+        // The shell artifacts, courts and evidence exist (artifacts/phase2,
+        // forensics/tools/build_phase2.sh): all six Phase 2 courts pass. This
+        // stays InProgress because the phase exit rule also requires FRF
+        // receipts and a Gemel checkpoint for the ABI courts, which are not yet
+        // emitted -- the Phase 2 courts currently report in the atlas evidence
+        // format.
+        state: PhaseState::InProgress,
     },
     Phase {
         id: 3,

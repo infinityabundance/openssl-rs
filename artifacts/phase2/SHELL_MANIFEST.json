@@ -1,0 +1,67 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "artifacts": [
+      {
+        "artifact": "libcrypto.ld",
+        "role": "version-script",
+        "sha256": "75fb6eff05e5cf7677f46f03fb8ed6e7bbaa24a96f1e20702f74c524e1b51275"
+      },
+      {
+        "artifact": "artifacts/phase2/shell/libcrypto.shell.rs",
+        "role": "scaffolded-symbols",
+        "sha256": "874ea85fac6bd1a3d286f8f1d96f9a6e8fd43e7abc80fe99302707a845c9a0c1",
+        "symbol_count": 5896
+      },
+      {
+        "artifact": "artifacts/phase2/pkgconfig/libcrypto.pc",
+        "role": "pkg-config",
+        "sha256": "e8cc113396cad994778cb73539e8283fb128c3c2026e4948d8801e4e4f257159"
+      },
+      {
+        "artifact": "libssl.ld",
+        "role": "version-script",
+        "sha256": "aa776c13532893a179cfa8c5609d082d8604771ae8bfc9587e673b972712df1b"
+      },
+      {
+        "artifact": "artifacts/phase2/shell/libssl.shell.rs",
+        "role": "scaffolded-symbols",
+        "sha256": "0cc3ef6e7831b78b32a1c7c44221ea8f3a1cd09e56b21f0deff0701991cbefca",
+        "symbol_count": 603
+      },
+      {
+        "artifact": "artifacts/phase2/pkgconfig/libssl.pc",
+        "role": "pkg-config",
+        "sha256": "736b3f97d34faeace5d53228bbeb66f7f647ea47f6827eb8a457e796925dc93f"
+      },
+      {
+        "artifact": "artifacts/phase2/include",
+        "file_count": 143,
+        "role": "header-shell",
+        "root_hash": "4c9de296bcb925f1101a53c67e208fb3dfc955e83af3302ecd190e9fbb839b6c"
+      },
+      {
+        "artifact": "libcrypto.so",
+        "role": "development-symlink",
+        "target": "libcrypto.so.3"
+      },
+      {
+        "artifact": "libssl.so",
+        "role": "development-symlink",
+        "target": "libssl.so.3"
+      }
+    ],
+    "authority": "openssl-3.6.4-production",
+    "authority_version": "3.6.4",
+    "scaffold_policy": "every generated symbol definition is SCAFFOLDED; it cannot count as parity, and it aborts rather than returning a plausible value (docs/CUSTODIAN_CONTRACT.md §5)",
+    "sonames": {
+      "libcrypto": "libcrypto.so.3",
+      "libssl": "libssl.so.3"
+    }
+  },
+  "body_hash": "16a6480824e8a832aa8a2a377c53227088c6065a8321f971a6e3f62a20d17ce5",
+  "generator": "forensics/tools/phase2_shell.py",
+  "inputs": [],
+  "kind": "phase2-shell",
+  "schema": "openssl-rs/atlas/phase2-shell/v1"
+}

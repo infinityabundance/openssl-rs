@@ -18,6 +18,15 @@
 # Court scratch material produced inside the container.
 /court/
 
+# Phase 2 distribution shell: the bulky artifacts are generated and reproducible
+# from forensics/tools/build_phase2.sh (the version scripts, pkg-config metadata,
+# shell manifest and court results ARE committed as evidence).
+/artifacts/phase2/*.so
+/artifacts/phase2/*.so.*
+/artifacts/phase2/*.a
+/artifacts/phase2/include/
+/artifacts/phase2/shell/
+
 # Gemel's local evidence-native working store. It is ~95 MB (it snapshots the
 # derived atlas) and is a local working memory, not a deliverable: it is
 # recreated with `gemel init` + the recorded change/checkpoint in

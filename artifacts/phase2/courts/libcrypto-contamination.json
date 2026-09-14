@@ -1,0 +1,24 @@
+{
+  "court": "libcrypto-contamination",
+  "libraries": {
+    "libcrypto": {
+      "contaminating": [],
+      "needed": [
+        "ld-linux-x86-64.so.2",
+        "libc.so.6",
+        "libgcc_s.so.1"
+      ],
+      "note": "libssl.so.3 in the authority has NEEDED libcrypto.so.3; the shell's stubs never call libcrypto, so it does not. That is a recorded ABI difference, not a contamination finding."
+    },
+    "libssl": {
+      "contaminating": [],
+      "needed": [
+        "ld-linux-x86-64.so.2",
+        "libc.so.6",
+        "libgcc_s.so.1"
+      ],
+      "note": "libssl.so.3 in the authority has NEEDED libcrypto.so.3; the shell's stubs never call libcrypto, so it does not. That is a recorded ABI difference, not a contamination finding."
+    }
+  },
+  "verdict": "pass"
+}

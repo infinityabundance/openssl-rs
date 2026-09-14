@@ -1,0 +1,39 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "all_pass": true,
+    "authority": "openssl-3.6.4-production",
+    "courts": [
+      {
+        "court": "ABI-SYMBOL",
+        "verdict": "pass"
+      },
+      {
+        "court": "ABI-VERSION",
+        "verdict": "pass"
+      },
+      {
+        "court": "ABI-LAYOUT",
+        "verdict": "pass"
+      },
+      {
+        "court": "ABI-LINK",
+        "verdict": "pass"
+      },
+      {
+        "court": "ABI-LOAD",
+        "verdict": "pass"
+      },
+      {
+        "court": "libcrypto-contamination",
+        "verdict": "pass"
+      }
+    ],
+    "scaffold_warning": "PASSING THESE COURTS IS NOT PARITY. Every symbol in the shell is SCAFFOLDED and aborts when called; these courts establish the structural distribution shell only (docs/CUSTODIAN_CONTRACT.md §5)."
+  },
+  "body_hash": "834efbcf4f6235a48a9150e2ab8edf0f12093dd0b8402ee435196d4407a460c6",
+  "generator": "forensics/tools/phase2_courts.py",
+  "inputs": [],
+  "kind": "phase2-courts",
+  "schema": "openssl-rs/atlas/phase2-courts/v1"
+}

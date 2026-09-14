@@ -1,0 +1,11 @@
+{
+  "aggregates": 158,
+  "court": "ABI-LAYOUT",
+  "differing": [],
+  "differing_count": 0,
+  "expected_measurements": 877,
+  "measurements": 877,
+  "missing": [],
+  "missing_count": 0,
+  "verdict": "pass"
+}

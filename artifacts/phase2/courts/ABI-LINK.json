@@ -1,0 +1,10 @@
+{
+  "court": "ABI-LINK",
+  "detail": {
+    "exit": 0,
+    "output": [
+      "link-probe: 6/6 versioned symbols resolved by the dynamic linker"
+    ]
+  },
+  "verdict": "pass"
+}
