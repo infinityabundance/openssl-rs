@@ -29,7 +29,7 @@ name = "openssl-rs"
 # 0.0.0 is reserved by Cargo for unpublished path/workspace members and cannot
 # be published. 0.0.x is used deliberately: no product subsystem is implemented
 # yet, and the version must not imply otherwise (docs/NON_CLAIMS.md).
-version = "0.0.3"
+version = "0.0.4"
 edition = "2021"
 rust-version = "1.98.1"
 description = "Custodian-level native-Rust reconstruction of the OpenSSL 3.x contract"
