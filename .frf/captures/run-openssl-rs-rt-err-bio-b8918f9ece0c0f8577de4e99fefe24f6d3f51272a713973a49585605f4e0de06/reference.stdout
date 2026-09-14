@@ -1,0 +1,20 @@
+transcript.sha256=6a1ee74c145468326740a6a92a6036aa7adf04d0cb603af146725d79afe3bd35
+probe.rt-err-bio=1
+empty.pending=0
+print.errors=[tid_hex_len=16:error:078C0103:common libcrypto routines:probe_raise:internal error:/probe/err-bio.c:42:|tid_hex_len=16:error:078C0103:common libcrypto routines:probe_raise:internal error:/probe/err-bio.c:42:detail-text|]
+print.errors.queue_empty=1
+cb.calls=2
+cb.output=[tid_hex_len=16:error:078C0103:common libcrypto routines:probe_raise:internal error:/probe/err-bio.c:42:detail-text|tid_hex_len=16:error:078C0103:common libcrypto routines:probe_raise:internal error:/probe/err-bio.c:42:detail-text|]
+cb.queue_empty=1
+cb.abort.calls=1
+cb.abort.still_queued=1
+cb.null_survived=1
+print.fp=[tid_hex_len=16:error:078C0103:common libcrypto routines:probe_raise:internal error:/probe/err-bio.c:42:detail-text|]
+print.fp.queue_empty=1
+add_mem_bio.case0=ab
+add_mem_bio.case1=x
+add_mem_bio.case2=tail-no-nul
+add_mem_bio.case3=
+add_mem_bio.null_bio=1
+
+# end

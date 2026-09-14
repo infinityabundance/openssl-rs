@@ -39,10 +39,20 @@ ROOT="${FRF_ROOT:-.frf}"
 # Phase 1 trajectory courts: oracle-versus-oracle, 3.6.3 against 3.6.4.
 TRAJECTORY_COURTS="openssl-cli-version openssl-cli-dgst openssl-cli-inventory"
 # Phase 2 ABI court: both sides report what their own libcrypto binds.
+#
+# The runtime courts below span two strata, and each court's own manifest declares
+# which staging directory its probes live in (the second `fixture.arguments`
+# entry), so this runner does not need to know which phase a court belongs to.
 ABI_COURTS="openssl-abi-surface"
-# Phase 3 runtime courts: the authority against openssl-rs itself.
+# Phase 3 and Phase 4 runtime courts: the authority against openssl-rs itself.
 RUNTIME_COURTS="openssl-rs-rt-mem openssl-rs-rt-exdata openssl-rs-rt-err \
-openssl-rs-rt-stack openssl-rs-rt-thread openssl-rs-rt-secure openssl-rs-rt-lhash"
+openssl-rs-rt-stack openssl-rs-rt-thread openssl-rs-rt-secure openssl-rs-rt-lhash \
+openssl-rs-rt-bio openssl-rs-rt-err-bio openssl-rs-rt-bio-addr \
+openssl-rs-rt-bio-resolve openssl-rs-rt-bio-sock openssl-rs-rt-bio-comp \
+openssl-rs-rt-bio-debug openssl-rs-rt-bio-print openssl-rs-rt-bio-file \
+openssl-rs-rt-bio-filter openssl-rs-rt-bio-pair openssl-rs-rt-bio-dgram-pair \
+openssl-rs-rt-bio-dgram openssl-rs-rt-bio-conn openssl-rs-rt-obj-stream \
+openssl-rs-rt-conf"
 ALL_COURTS="$TRAJECTORY_COURTS $ABI_COURTS $RUNTIME_COURTS"
 
 RUNS=/tmp/openssl-rs-frf-runs.txt

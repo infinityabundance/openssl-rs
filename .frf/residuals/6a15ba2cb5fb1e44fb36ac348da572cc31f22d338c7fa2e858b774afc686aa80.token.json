@@ -1,0 +1,1 @@
+{"authority":"openssl-rt-3.6.4-r2","blocks_claims":["rt-lhash exit parity"],"disposition":"open","kind":"exit","magnitude":"class-change","next_court":"cli-exit-minimize","residual_id":"6a15ba2cb5fb1e44fb36ac348da572cc31f22d338c7fa2e858b774afc686aa80","schema_version":"frf-token-v1","scope":"rt-lhash","surface":"exit-class","token":"exit/exit-class/class-change/open"}

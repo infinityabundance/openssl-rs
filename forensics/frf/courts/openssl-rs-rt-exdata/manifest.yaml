@@ -1,4 +1,4 @@
-# openssl-rs court: the Phase 3 `exdata` runtime surface.
+# openssl-rs court: the Phase 3 `rt-exdata` runtime surface.
 #
 # The subject is the transcript of a differential probe: one C program that
 # prints one `key=value` line per observation while exercising
@@ -15,22 +15,23 @@
 court:
   id: openssl-rs-rt-exdata
   question: >-
-    For the exdata runtime surface in fixture family rt-exdata, does the candidate
-    produce the same observable transcript as the admitted authority OpenSSL
-    3.6.4 when both run the same probe over the same fixture?
+    For the rt-exdata runtime surface in fixture family rt-exdata, does
+    the candidate produce the same observable transcript as the admitted
+    authority OpenSSL 3.6.4 when both run the same probe over the same
+    fixture?
   falsifier: >-
-    Any observation line differs between the two transcripts, or either side's
-    exit class differs.
+    Any observation line differs between the two transcripts, or either
+    side's exit class differs.
   authority: openssl-rt-3.6.4-r2
   candidate:
     name: openssl-rs
-    version_or_commit: "0.0.6"
+    version_or_commit: "0.0.7"
     build_profile: linux-x86_64-default-shared-legacy-notests
     path: forensics/frf/refs/candidate-runtime-probe.sh
   fixture:
     id: probe-list.txt
     path: forensics/frf/courts/openssl-rs-rt-exdata/fixtures/probe-list.txt
-    arguments: ["{fixture}"]
+    arguments: ["{fixture}", "phase3"]
   admissibility_envelope:
     fixture_family: rt-exdata
     platforms: ["x86_64-linux"]

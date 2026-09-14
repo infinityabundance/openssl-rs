@@ -1,6 +1,0 @@
-# Fixture for the thread runtime court.
-#
-# The probe list is the query: it selects which staged probe binaries each side
-# runs. It is required rather than decorative because a court whose arguments do
-# not reference {fixture} cannot be challenged (docs/DECISIONS.md D13).
-rt_thread_probe
