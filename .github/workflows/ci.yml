@@ -3,36 +3,38 @@
 # The rule this workflow enforces is cumulative: **a commit may not undo an
 # earlier commit's evidence**. A green "build + unit tests" check does not
 # enforce that, because a *removed* implementation or a *weakened* probe has no
-# failing test. The enforcement is `forensics/tools/regression_guard.py`, which
-# compares the current derived evidence against the committed baseline
-# (`forensics/regression-baseline.json`) and fails on any movement in the wrong
-# direction:
+# failing test. The enforcement is `forensics/tools/regression_guard.py`.
 #
-#   * implemented symbols per library must not decrease;
-#   * open obligations must not increase;
-#   * a court that passed must not start failing or disappear;
-#   * a court's observation count must not shrink (a weakened probe is a silent
-#     loss of coverage);
-#   * a phase state must not go backwards.
+# The baseline trust boundary
+# ---------------------------
+# The guard is given `--baseline-ref` pointing at the commit that *was* the
+# branch tip before this push (or the merge base with the target branch for a
+# pull request), and reads the baseline there **through git**. The candidate's own
+# copy of `forensics/regression-baseline.json` is treated as a *proposed* baseline
+# and is separately required to equal the observed evidence.
 #
-# It runs on every push to every branch and on every pull request. It is
-# deliberately NOT tied to publishing: the regression gate is about not losing
-# ground, and a release is a separate, deliberate act.
+# That two-part check is what closes the loop. Without it a commit could delete
+# implementations, run `regression_guard.py --update`, commit the lower baseline,
+# and pass its own comparison. Now:
 #
-# Two jobs
-# --------
-#   static  — needs no authority. Builds, tests, and re-derives every generated
-#             evidence artefact, then asserts the tree is byte-identical (so
-#             generated evidence cannot drift from its generator), and runs the
-#             regression guard over the committed court results.
-#   courts  — needs the authority, so it builds the court image, provisions
-#             OpenSSL 3.6.4 inside it, and **re-runs every court from scratch**:
-#             the 11 ABI courts, the Phase 3 runtime courts and the Phase 4 BIO
-#             court. The regression guard then runs again over the freshly
-#             derived results, which is the strongest form of the check: the
-#             committed numbers are not trusted, they are reproduced.
+#   * lowering the baseline cannot help, because the authority is read from the
+#     ref the candidate cannot edit;
+#   * a stale proposed baseline fails, so the committed baseline always describes
+#     the current evidence.
 #
-# Both are required. See docs/CI.md.
+# Absence is never zero: if the authority recorded evidence for a plane and the
+# candidate cannot produce that plane at all, the guard reports a regression
+# rather than reading the gap as zero.
+#
+# Venues
+# ------
+# `static` runs only what needs no authority: build, pure unit tests, static
+# checks, evidence determinism over committed inputs, and the regression guard.
+# Per docs/CUSTODIAN_CONTRACT.md §11 none of that is forensic parity evidence.
+# `courts` is the venue that produces evidence: it builds the pinned authority and
+# re-runs every court from scratch.
+#
+# See docs/CI.md.
 
 name: ci
 
@@ -42,8 +44,6 @@ on:
   pull_request:
   workflow_dispatch:
 
-# Cancel an in-flight run for the same ref: the newest commit is what matters,
-# and the courts job is expensive.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -57,16 +57,14 @@ jobs:
     #
     # docs/UNSAFE.md requires a `# Safety` section on every `unsafe fn` and a
     # `SAFETY:` comment on every `unsafe` block, and clippy enforces both. The
-    # pre-Phase-4 code satisfies them; the Phase 4 BIO modules do not yet (201
-    # diagnostics). Clearing that debt is the outstanding item recorded in
-    # docs/PHASE-4-BIO-CONF-SEAL.md; suppressing it with an `allow` was rejected
-    # because the policy is real.
+    # pre-Phase-4 code satisfies them; the Phase 4 BIO modules do not yet.
+    # Clearing that debt is recorded in docs/PHASE-4-BIO-CONF-SEAL.md;
+    # suppressing it with an `allow` was rejected because the policy is real.
     #
     # `continue-on-error` keeps the workflow's verdict honest -- it does not
-    # pretend the lint passes -- while letting the required gates below gate
-    # every push in the meantime. Remove `continue-on-error` the moment the debt
-    # is cleared; that removal is the change that makes this a hard gate.
-    name: lints (clippy, currently carrying recorded Phase 4 debt)
+    # pretend the lint passes -- while the required gates below gate every push.
+    # Deleting that one line is the change that makes this a hard gate.
+    name: lints (clippy, carrying recorded Phase 4 debt)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     continue-on-error: true
@@ -76,13 +74,16 @@ jobs:
         run: cargo clippy --all-targets -- -D warnings
 
   static:
-    name: static gates (build, tests, evidence determinism, regression guard)
+    name: static gates (build, tests, determinism, no-regression)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The trusted baseline is read through git, so the history has to be
+          # present. 0 fetches everything the default branch needs.
+          fetch-depth: 0
 
-      # The toolchain is pinned by rust-toolchain.toml; rustup installs it.
       - name: Toolchain
         run: |
           rustup show
@@ -95,9 +96,8 @@ jobs:
       - name: Build
         run: cargo build --release
 
-      # Unit tests run on the host runner, not in the court: they exercise pure
-      # Rust and need no authority. Everything that needs the authority is in the
-      # `courts` job.
+      # Pure Rust tests: no authority, and per docs/CUSTODIAN_CONTRACT.md §11 they
+      # are not forensic evidence. Everything authority-bearing is in `courts`.
       - name: Unit tests
         run: cargo test --lib -- --test-threads=1
 
@@ -105,7 +105,7 @@ jobs:
         run: python3 forensics/tools/check_forbidden_dependencies.py
 
       # The dependency surface is a contract; a stray dependency is a supply-chain
-      # decision, so it is asserted separately from the build.
+      # decision, so it is asserted rather than merely absent.
       - name: No dependencies
         run: |
           python3 - <<'PY'
@@ -120,32 +120,54 @@ jobs:
           print("no dependencies declared (ok)")
           PY
 
-      # Generated evidence must be reproducible from its generator: regenerate it
-      # and assert the tree did not change. If this fails, a committed artefact is
-      # stale relative to its source, which would make every downstream claim
-      # unverifiable.
+      # Every generated artefact is a function of committed inputs, so
+      # regenerating it must reproduce it. Build-product digests are normalised
+      # and reported; everything else is compared exactly.
       - name: Evidence determinism
-        run: |
-          python3 forensics/tools/implemented_surface.py
-          python3 forensics/tools/phase3_obligations.py
-          python3 forensics/tools/phase4_obligations.py
-          python3 forensics/tools/phase_state.py
-          python3 forensics/tools/render_status.py
-          git diff --exit-code -- forensics/ artifacts/
+        run: python3 forensics/tools/evidence_determinism.py
 
-      - name: Regression guard (committed evidence)
-        run: python3 forensics/tools/regression_guard.py
+      - name: Resolve trusted baseline ref
+        id: baseline
+        run: |
+          set -eu
+          if [ -n "${GITHUB_BASE_REF:-}" ]; then
+            git fetch --no-tags origin "${GITHUB_BASE_REF}"
+            REF="$(git merge-base HEAD FETCH_HEAD)"
+          else
+            BEFORE="${{ github.event.before }}"
+            if [ -n "$BEFORE" ] && \
+               [ "$BEFORE" != "0000000000000000000000000000000000000000" ] && \
+               git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+              REF="$BEFORE"
+            else
+              git fetch --no-tags origin "${GITHUB_REF_NAME}"
+              REF="$(git merge-base HEAD FETCH_HEAD)"
+            fi
+          fi
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "trusted baseline ref: $REF"
+          git --no-pager log -1 --oneline "$REF"
+
+      # Two checks in one invocation:
+      #   1. no regression against the baseline at the trusted ref;
+      #   2. the proposed baseline in the working tree equals the observed
+      #      evidence, so the committed baseline cannot go stale.
+      - name: Regression guard
+        run: |
+          python3 forensics/tools/regression_guard.py \
+            --baseline-ref "${{ steps.baseline.outputs.ref }}" \
+            --require-current \
+            --allow-missing-baseline
 
   courts:
-    name: authority courts (ABI, runtime, BIO) and re-derived regression guard
+    name: authority courts (ABI, runtime, BIO) and re-derived guard
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      # The court image is the ONLY place anything is executed: it is capped and
-      # it deliberately has no openssl CLI, so a court cannot accidentally test
-      # the distribution OpenSSL instead of the authority.
       - name: Build court image
         run: bash docker/openssl-rs-court.sh build
 
@@ -157,17 +179,14 @@ jobs:
 
       # The authority is acquired from the upstream release and verified against
       # the hash in forensics/authorities/AUTHORITIES.json; a mismatch is fatal.
-      - name: Acquire authority (OpenSSL 3.6.4)
+      - name: Acquire authority
         run: bash docker/openssl-rs-court.sh exec python3 forensics/tools/authority_acquire.py --all
 
       - name: Build authority
         run: bash docker/openssl-rs-court.sh exec python3 forensics/tools/authority_build.py --all
 
-      # This builds the crate, re-derives the implemented surface, regenerates the
-      # ABI shell, links libcrypto.so.3 / libssl.so.3 / the static archives / the
-      # provider module / the CLI, and runs all 11 ABI courts. A symbol that
-      # regresses its type, binding, version, layout, link behaviour or dynamic
-      # contract fails here.
+      # Builds the crate, re-derives the implemented surface, regenerates the ABI
+      # shell, links every distribution artefact and runs all 11 ABI courts.
       - name: Phase 2 shell and 11 ABI courts
         run: bash docker/openssl-rs-court.sh exec bash forensics/tools/build_phase2.sh
 
@@ -177,10 +196,47 @@ jobs:
       - name: Phase 4 BIO court
         run: bash docker/openssl-rs-court.sh exec python3 forensics/tools/phase4_courts.py
 
+      - name: Resolve trusted baseline ref
+        id: baseline
+        run: |
+          set -eu
+          if [ -n "${GITHUB_BASE_REF:-}" ]; then
+            git fetch --no-tags origin "${GITHUB_BASE_REF}"
+            REF="$(git merge-base HEAD FETCH_HEAD)"
+          else
+            BEFORE="${{ github.event.before }}"
+            if [ -n "$BEFORE" ] && \
+               [ "$BEFORE" != "0000000000000000000000000000000000000000" ] && \
+               git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+              REF="$BEFORE"
+            else
+              git fetch --no-tags origin "${GITHUB_REF_NAME}"
+              REF="$(git merge-base HEAD FETCH_HEAD)"
+            fi
+          fi
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "trusted baseline ref: $REF"
+
+      # The authority baseline is extracted on the runner and handed to the
+      # container through the bind-mounted `court/` scratch directory, because the
+      # container does not own the repository it is given as a bind mount and git
+      # therefore refuses to read it. Extraction here, on the runner, is what keeps
+      # the authority out of the candidate's reach.
+      - name: Extract the trusted baseline
+        run: |
+          mkdir -p court
+          git show "${{ steps.baseline.outputs.ref }}:forensics/regression-baseline.json" \
+            > court/trusted-baseline.json
+          echo "authority baseline:"
+          head -c 200 court/trusted-baseline.json; echo
+
       # Run against the freshly derived results, not the committed ones: this is
       # what makes the gate behavioural rather than a claim about a file.
       - name: Regression guard (re-derived evidence)
-        run: bash docker/openssl-rs-court.sh exec python3 forensics/tools/regression_guard.py
+        run: |
+          bash docker/openssl-rs-court.sh exec python3 \
+            forensics/tools/regression_guard.py \
+            --baseline-file /work/court/trusted-baseline.json
 
       - name: Stop court container
         if: always()

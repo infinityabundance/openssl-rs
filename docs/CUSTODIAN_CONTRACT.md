@@ -149,10 +149,28 @@ Authority admission, build profiles and contamination policy are defined in
 `docs/AUTHORITY_POLICY.md`. A candidate must never be pinned to known-vulnerable
 historical behaviour; see `docs/SECURITY_DIVERGENCE_POLICY.md`.
 
-## 11. The court is the only execution venue
+## 11. The court is the only **authority-bearing** execution venue
 
-No test, court, fuzz campaign, benchmark or authority build runs on the host.
-Everything executes inside the isolated, resource-capped court container defined
-by `docker/openssl-rs-court.Dockerfile` and driven by
-`docker/openssl-rs-court.sh`. The host is not a test venue; see
-`docs/REPRODUCIBILITY.md`.
+No **authority-bearing** execution runs on the host. That means every
+differential court, forensic probe, fuzz campaign, benchmark and authority build
+executes inside the isolated, resource-capped court container defined by
+`docker/openssl-rs-court.Dockerfile` and driven by `docker/openssl-rs-court.sh`.
+The host is not a forensic venue; those runs need the pinned authority, the
+pinned toolchain and the resource caps, and their results are what become
+parity evidence. See `docs/REPRODUCIBILITY.md`.
+
+The distinction matters because the earlier, blanket wording ("nothing runs on
+the host") was not true of continuous integration and could not be made true
+without forbidding cheap, useful checks. What CI may run in a non-authority
+environment is precisely:
+
+* **pure implementation-unit tests** that exercise this crate's own Rust with no
+  authority present (`cargo test --lib`);
+* **static checks** — formatting, compilation, linting, and the dependency gate;
+* **derivation of evidence from already-committed inputs**, such as regenerating
+  the obligation ledgers or the phase state.
+
+None of those may contribute **forensic parity evidence**. A unit test passing on
+a CI runner says nothing about the authority and is never cited as a court. Only
+the court venue produces evidence, and every claim in `docs/` and `forensics/`
+names the court that produced it.

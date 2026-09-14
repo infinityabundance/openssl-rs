@@ -2,8 +2,8 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "deferred": 11,
-      "implemented": 209,
+      "deferred": 5,
+      "implemented": 215,
       "owned": 220
     },
     "deferred": [
@@ -36,42 +36,6 @@
         "owning_phase": 4,
         "reason": "reads an object description stream from a BIO; BIO is Phase 4",
         "symbol": "OBJ_create_objects"
-      },
-      {
-        "module": "src/runtime/lhash.rs",
-        "owning_phase": 4,
-        "reason": "writes to a BIO/FILE sink; BIO is Phase 4",
-        "symbol": "OPENSSL_LH_node_stats"
-      },
-      {
-        "module": "src/runtime/lhash.rs",
-        "owning_phase": 4,
-        "reason": "writes to a BIO/FILE sink; BIO is Phase 4",
-        "symbol": "OPENSSL_LH_node_stats_bio"
-      },
-      {
-        "module": "src/runtime/lhash.rs",
-        "owning_phase": 4,
-        "reason": "writes to a BIO/FILE sink; BIO is Phase 4",
-        "symbol": "OPENSSL_LH_node_usage_stats"
-      },
-      {
-        "module": "src/runtime/lhash.rs",
-        "owning_phase": 4,
-        "reason": "writes to a BIO/FILE sink; BIO is Phase 4",
-        "symbol": "OPENSSL_LH_node_usage_stats_bio"
-      },
-      {
-        "module": "src/runtime/lhash.rs",
-        "owning_phase": 4,
-        "reason": "writes to a BIO/FILE sink; BIO is Phase 4",
-        "symbol": "OPENSSL_LH_stats"
-      },
-      {
-        "module": "src/runtime/lhash.rs",
-        "owning_phase": 4,
-        "reason": "writes to a BIO/FILE sink; BIO is Phase 4",
-        "symbol": "OPENSSL_LH_stats_bio"
       }
     ],
     "families": [
@@ -328,10 +292,16 @@
       "OPENSSL_LH_get_down_load",
       "OPENSSL_LH_insert",
       "OPENSSL_LH_new",
+      "OPENSSL_LH_node_stats",
+      "OPENSSL_LH_node_stats_bio",
+      "OPENSSL_LH_node_usage_stats",
+      "OPENSSL_LH_node_usage_stats_bio",
       "OPENSSL_LH_num_items",
       "OPENSSL_LH_retrieve",
       "OPENSSL_LH_set_down_load",
       "OPENSSL_LH_set_thunks",
+      "OPENSSL_LH_stats",
+      "OPENSSL_LH_stats_bio",
       "OPENSSL_LH_strhash",
       "OPENSSL_cleanup",
       "OPENSSL_info",
@@ -383,7 +353,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "3b21c17911256f95456e5e815a60aafff24245d1a0bf4d8c96beabaf6185e7d3"
+      "sha256": "08c6412ae7cdb223cc6bc96362ab8917245026e61ad6c00915f0c26621b2e0ac"
     }
   ],
   "kind": "phase3-obligations",

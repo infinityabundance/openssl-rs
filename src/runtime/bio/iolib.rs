@@ -42,16 +42,14 @@ use crate::runtime::err::err_sites::{
     BIO_LIB_294, BIO_LIB_340, BIO_LIB_348, BIO_LIB_399, BIO_LIB_405, BIO_LIB_424, BIO_LIB_446,
     BIO_LIB_452, BIO_LIB_471, BIO_LIB_500, BIO_LIB_504, BIO_LIB_515, BIO_LIB_533, BIO_LIB_549,
     BIO_LIB_553, BIO_LIB_558, BIO_LIB_569, BIO_LIB_601, BIO_LIB_605, BIO_LIB_611, BIO_LIB_615,
-    BIO_LIB_663, BIO_LIB_690, BIO_LIB_813,
+    BIO_LIB_663, BIO_LIB_690,
 };
 use crate::runtime::err::{raise_site, raise_site_dynamic};
 
 use super::{
     Bio, BioInfoCb, BioMsg, BIO_CB_CTRL, BIO_CB_GETS, BIO_CB_PUTS, BIO_CB_READ, BIO_CB_RECVMMSG,
-    BIO_CB_RETURN, BIO_CB_SENDMMSG, BIO_CB_WRITE, BIO_CTRL_DGRAM_GET_RECV_TIMEOUT,
-    BIO_CTRL_DGRAM_GET_SEND_TIMEOUT, BIO_CTRL_EOF, BIO_CTRL_GET_RPOLL_DESCRIPTOR,
-    BIO_CTRL_GET_WPOLL_DESCRIPTOR, BIO_CTRL_PENDING, BIO_CTRL_POP, BIO_CTRL_PUSH,
-    BIO_CTRL_WPENDING, BIO_FLAGS_RWS, BIO_FLAGS_SHOULD_RETRY, BIO_TYPE_MASK,
+    BIO_CB_RETURN, BIO_CB_SENDMMSG, BIO_CB_WRITE, BIO_CTRL_EOF, BIO_CTRL_GET_RPOLL_DESCRIPTOR,
+    BIO_CTRL_GET_WPOLL_DESCRIPTOR, BIO_CTRL_PENDING, BIO_CTRL_WPENDING, BIO_FLAGS_SHOULD_RETRY,
 };
 
 /// `BIO_CB_READ`, `BIO_CB_WRITE` and `BIO_CB_GETS` are the operations whose
@@ -1095,7 +1093,7 @@ unsafe fn bio_wait(bio: *mut Bio, max_time: c_long, nap_milliseconds: u32) -> c_
         // SAFETY: `BIO_should_read` is a flag test on a live BIO.
         let for_read = unsafe { super::BIO_test_flags(bio, super::BIO_FLAGS_READ) };
         // SAFETY: `fd` is a descriptor obtained from this BIO.
-        let ret = unsafe { super::bss_sock::BIO_socket_wait(fd, for_read, max_time) };
+        let ret = super::bss_sock::BIO_socket_wait(fd, for_read, max_time);
         if ret != -1 {
             return ret;
         }
@@ -1160,14 +1158,14 @@ pub unsafe extern "C" fn BIO_do_connect_retry(
         };
         loop {
             // SAFETY: mark/peek/pop are the ERR queue's own interfaces.
-            unsafe { crate::runtime::err::ERR_set_mark() };
+            crate::runtime::err::ERR_set_mark();
             // `BIO_do_connect(bio)` is `BIO_ctrl(bio, BIO_C_DO_STATE_MACHINE, 0, NULL)`.
             // SAFETY: `bio` is live.
             let mut rv = unsafe { BIO_ctrl(bio, super::BIO_C_DO_STATE_MACHINE, 0, ptr::null_mut()) }
                 as c_int;
             if rv <= 0 {
                 // SAFETY: the ERR queue is thread-local and initialised here.
-                let err = unsafe { crate::runtime::err::ERR_peek_last_error() };
+                let err = crate::runtime::err::ERR_peek_last_error();
                 let reason = (err & 0x00ff_ffff) as c_int;
                 // SAFETY: `BIO_should_retry` is a flag test.
                 let mut do_retry =
@@ -1188,7 +1186,7 @@ pub unsafe extern "C" fn BIO_do_connect_retry(
                 }
                 if timeout >= 0 && do_retry {
                     // SAFETY: the mark was set above on this thread.
-                    unsafe { crate::runtime::err::ERR_pop_to_mark() };
+                    crate::runtime::err::ERR_pop_to_mark();
                     // SAFETY: `bio` is live.
                     rv = unsafe { bio_wait(bio, max_time, nap as u32) };
                     if rv > 0 {
@@ -1204,7 +1202,7 @@ pub unsafe extern "C" fn BIO_do_connect_retry(
                     return rv;
                 }
                 // SAFETY: the mark was set above on this thread.
-                unsafe { crate::runtime::err::ERR_clear_last_mark() };
+                crate::runtime::err::ERR_clear_last_mark();
                 rv = -1;
                 if err == 0 {
                     // SAFETY: the site is a compile-time constant.
@@ -1213,7 +1211,7 @@ pub unsafe extern "C" fn BIO_do_connect_retry(
                 return rv;
             }
             // SAFETY: the mark was set above on this thread.
-            unsafe { crate::runtime::err::ERR_clear_last_mark() };
+            crate::runtime::err::ERR_clear_last_mark();
             return rv;
         }
     })

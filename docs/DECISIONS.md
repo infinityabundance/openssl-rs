@@ -582,3 +582,87 @@ makes it a hard gate. Suppressing the lint with an `allow` was rejected.
 
 **Not tied to publishing.** The guard exists so that every pushed commit is not a
 step backwards; releasing is a separate, deliberate act.
+
+---
+
+## D26 — The regression baseline is read through git, and absence is never completion
+
+**Decision.** `regression_guard.py` takes the baseline it judges against from
+`--baseline-ref` (the pre-push tip, or the merge base for a pull request), read
+**through git**; the copy in the working tree is a *proposed* baseline and is
+separately required (`--require-current`) to equal the observed evidence. In the
+court container, which does not own its bind-mounted checkout, the runner extracts
+the authority to `court/trusted-baseline.json` and passes `--baseline-file`.
+
+**Why.** An earlier version compared the working tree against the working tree.
+That is self-certifying: delete forty implementations, run `--update`, commit the
+lower baseline, and the comparison passes while being arithmetically true. The
+two-part check closes it — the authority is read from a ref the candidate cannot
+edit, and the proposed baseline must stay current, so lowering it does not help and
+letting it go stale does not either.
+
+**Absence is never zero.** Every check is fail-closed. If the authority recorded an
+obligation ledger and the candidate cannot produce it, that is a regression, not
+zero open obligations. A *trimmed* authority — one whose `implemented`, `courts` or
+`phases` maps have been emptied — is rejected as unfit to certify anything, because
+a comparison that checks nothing always passes. A plane present now but absent from
+the authority is reported as **UNCERTIFIED** rather than silently skipped, so a
+legitimately new ledger is visible as a gap the authority cannot speak to.
+
+**Verified by negative controls**, not by inspection: a baseline claiming more
+implementations, a court with a larger observation count, and a phase that
+regressed are all reported; a deleted ledger is reported as
+"absence is not completion"; a baseline with its `courts` map removed is rejected.
+
+---
+
+## D27 — Determinism is checked on semantics, not on a build product's digest
+
+**Decision.** `forensics/tools/evidence_determinism.py` regenerates every derived
+artefact and compares it against the committed one, normalising exactly the digests
+of build-product inputs (`crate-archive`, `extra-object`) and *reporting* what it
+normalised. Everything else — every count, symbol name, phase state and obligation
+— is compared exactly.
+
+**Why.** `implemented-surface.json` records the digest of
+`target/release/libopenssl_rs.a`, and every ledger that binds that manifest records
+its digest in turn. A Rust static archive is not byte-reproducible across build
+environments, so a plain `git diff` after regeneration failed on CI for a reason
+that had nothing to do with staleness. A check that cries wolf is a check nobody
+trusts, and the first CI run proved it. The fix is to compare what must be
+reproducible and to name, in the output, the one field that need not be.
+
+**Consequence.** The determinism step is portable, so it runs in the fast static
+job rather than only in the court. It immediately caught a genuinely stale
+`STATUS.md` and a stale `phase3-obligations.json`, which is the class of rot it
+exists to find.
+
+---
+
+## D28 — "Nothing runs on the host" is refined to "nothing authority-bearing does"
+
+**Decision.** `docs/CUSTODIAN_CONTRACT.md` §11 now scopes the venue rule to
+**authority-bearing** execution: differential courts, forensic probes, fuzz
+campaigns, benchmarks and authority builds run only in the court container.
+Non-authority environments — including CI runners — may run pure implementation
+unit tests, static analysis and formatting, and re-derivation of evidence from
+already-committed inputs. None of it may contribute forensic parity evidence.
+
+**Why.** The blanket wording was not true of continuous integration and could not be
+made true without forbidding cheap, useful checks. The property that actually
+matters is that no *claim* rests on a run that lacked the authority, and that is
+what the refined wording preserves. A unit test passing on a runner says nothing
+about the authority and is never cited as a court.
+
+---
+
+## D29 — The generated status derives its ranges instead of asserting them
+
+**Decision.** `render_status.py` computes the unstarted strata from the phase-state
+document and prints their actual range, detecting whether they are contiguous.
+
+**Why.** The renderer hardcoded "Remaining strata 4-21 are `not-started`" while the
+JSON beside it said Phase 4 was in progress and phases 5–21 were unstarted. The
+derived state was right and the prose contradicted it — in a project whose premise
+is that status must never lie. A renderer must not know any phase status, and that
+includes the range of the unstarted ones.

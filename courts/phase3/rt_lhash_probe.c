@@ -10,14 +10,40 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+#include <openssl/bio.h>
 #include <openssl/lhash.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static unsigned long hash_str(const void *p)
 {
     return OPENSSL_LH_strhash(p);
+}
+
+/*
+ * Both helpers emit a multi-line report as ONE observation, so the transcript
+ * stays one `key=value` record per line. `emit_mem` drains a memory BIO;
+ * `emit_lines` escapes a string captured from a `FILE *`.
+ */
+static void emit_lines(const char *key, const char *s)
+{
+    printf("%s=", key);
+    for (; *s != '\0'; s++)
+        putchar(*s == '\n' ? '|' : *s);
+    putchar('\n');
+}
+
+static void emit_mem(const char *key, BIO *b)
+{
+    char buf[4096];
+    int n = BIO_read(b, buf, (int)sizeof(buf) - 1);
+
+    if (n < 0)
+        n = 0;
+    buf[n] = '\0';
+    emit_lines(key, buf);
 }
 
 static int cmp_str(const void *a, const void *b)
@@ -125,6 +151,91 @@ int main(void)
     printf("free.survived=1\n");
     OPENSSL_LH_free(NULL);
     printf("free.null_survived=1\n");
+
+    /*
+     * ---- the statistics report ---------------------------------------------
+     *
+     * `OPENSSL_LH_stats_bio` makes `num_nodes` and `num_alloc_nodes` observable,
+     * and they are deliberately different numbers: the table is a linear-hashing
+     * one, so only `num_nodes` buckets are in use while `num_alloc_nodes` are
+     * allocated. The report is captured through a memory BIO and through an
+     * in-memory `FILE *`, so both entry points are compared, and each line is
+     * emitted with newlines escaped to keep the transcript one observation per
+     * record.
+     */
+    {
+        BIO *b = BIO_new(BIO_s_mem());
+        char *filebuf = NULL;
+        size_t filelen = 0;
+        FILE *f;
+        /*
+         * One buffer per stored key: the table keeps the *pointer* it was given,
+         * so reusing a buffer would silently change the contents of an entry
+         * already in the table and make the bucket distribution a measurement of
+         * the aliasing rather than of the hash.
+         */
+        static char k6[6][16];
+        static char k64[64][16];
+        int i;
+
+        lh = OPENSSL_LH_new(NULL, NULL);
+
+        /* Empty table: 8 nodes in use out of 16 allocated. */
+        OPENSSL_LH_stats_bio(lh, b);
+        emit_mem("stats.empty", b);
+
+        for (i = 0; i < 6; i++) {
+            snprintf(k6[i], sizeof(k6[i]), "stat-%02d", i);
+            OPENSSL_LH_insert(lh, k6[i]);
+        }
+        OPENSSL_LH_stats_bio(lh, b);
+        emit_mem("stats.six", b);
+        OPENSSL_LH_node_stats_bio(lh, b);
+        emit_mem("node_stats.six", b);
+        OPENSSL_LH_node_usage_stats_bio(lh, b);
+        emit_mem("node_usage.six", b);
+
+        /*
+         * Enough inserts to split buckets: 64 items take the table past several
+         * expansions, so both counts move and the split path is exercised.
+         */
+        for (i = 0; i < 64; i++) {
+            snprintf(k64[i], sizeof(k64[i]), "grown-%02d", i);
+            OPENSSL_LH_insert(lh, k64[i]);
+        }
+        OPENSSL_LH_stats_bio(lh, b);
+        emit_mem("stats.grown", b);
+        OPENSSL_LH_node_usage_stats_bio(lh, b);
+        emit_mem("node_usage.grown", b);
+
+        /* Deleting back down exercises the merge path. */
+        for (i = 63; i >= 0; i--)
+            OPENSSL_LH_delete(lh, k64[i]);
+        OPENSSL_LH_stats_bio(lh, b);
+        emit_mem("stats.shrunk", b);
+
+        /* Flush empties the buckets without changing the table's shape. */
+        OPENSSL_LH_flush(lh);
+        OPENSSL_LH_stats_bio(lh, b);
+        emit_mem("stats.flushed", b);
+
+        /* The `FILE *` entry points, captured with open_memstream. */
+        f = open_memstream(&filebuf, &filelen);
+        OPENSSL_LH_stats(lh, f);
+        OPENSSL_LH_node_usage_stats(lh, f);
+        fclose(f);
+        emit_lines("stats.file", filebuf);
+        free(filebuf);
+
+        /* A NULL table and a NULL destination must not crash. */
+        OPENSSL_LH_stats_bio(NULL, b);
+        printf("stats.null_table=1\n");
+        OPENSSL_LH_stats_bio(lh, NULL);
+        printf("stats.null_bio=1\n");
+
+        BIO_free(b);
+        OPENSSL_LH_free(lh);
+    }
 
     return 0;
 }

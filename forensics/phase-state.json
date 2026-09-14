@@ -63,13 +63,7 @@
           "ERR_print_errors -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)",
           "ERR_print_errors_cb -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)",
           "ERR_print_errors_fp -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)",
-          "OBJ_create_objects -> phase 4 (reads an object description stream from a BIO; BIO is Phase 4)",
-          "OPENSSL_LH_node_stats -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)",
-          "OPENSSL_LH_node_stats_bio -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)",
-          "OPENSSL_LH_node_usage_stats -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)",
-          "OPENSSL_LH_node_usage_stats_bio -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)",
-          "OPENSSL_LH_stats -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)",
-          "OPENSSL_LH_stats_bio -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)"
+          "OBJ_create_objects -> phase 4 (reads an object description stream from a BIO; BIO is Phase 4)"
         ],
         "evidence_absent": [],
         "evidence_present": [
@@ -103,7 +97,7 @@
         "stratum": "Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects"
       },
       {
-        "blocking": "119 open obligation(s) of this stratum recorded in forensics/phase4-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase",
+        "blocking": "113 open obligation(s) of this stratum recorded in forensics/phase4-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -325,7 +319,7 @@
       "not_started": 17
     }
   },
-  "body_hash": "c8bc8ea6d0bb7a7b1bbeb3746e0bd4067aefddd7f5c624f6c93b37efc9282763",
+  "body_hash": "ac3d2df79d43ed9c7e24af83dfe327f8f4a1258a458efc110a478319e31ed623",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

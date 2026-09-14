@@ -159,10 +159,12 @@ const FIONBIO: c_long = 0x5421;
 #[no_mangle]
 pub extern "C" fn BIO_sock_non_fatal_error(err: c_int) -> c_int {
     guard_ffi(0, || {
+        // `EWOULDBLOCK` is the same value as `EAGAIN` on this platform, so naming
+        // both would be an unreachable alternative. The authority's list names both
+        // because on other systems they differ; here only one can match.
         if matches!(
             err,
             sys::EAGAIN
-                | sys::EWOULDBLOCK
                 | sys::EINTR
                 | sys::EINPROGRESS
                 | sys::EALREADY

@@ -28,8 +28,8 @@ use core::ffi::{c_char, c_int, c_long};
 use crate::ffi::guard_ffi;
 
 use super::{
-    Bio, BioCallbackCtrlFn, BioCreateFn, BioCtrlFn, BioDestroyFn, BioGetsFn, BioInfoCb, BioMethod,
-    BioPutsFn, BioReadExFn, BioReadFn, BioRecvmmsgFn, BioSendmmsgFn, BioWriteExFn, BioWriteFn,
+    Bio, BioCallbackCtrlFn, BioCreateFn, BioCtrlFn, BioDestroyFn, BioGetsFn, BioMethod, BioPutsFn,
+    BioReadExFn, BioReadFn, BioRecvmmsgFn, BioSendmmsgFn, BioWriteExFn, BioWriteFn,
 };
 
 /// The legacy write adapter the authority installs for `BIO_meth_set_write`.

@@ -1,9 +1,11 @@
 {
-  "authority_exit_code": 0,
-  "authority_observations": 45,
-  "candidate_exit_code": 0,
-  "candidate_observations": 45,
-  "candidate_stderr_tail": [],
+  "authority_exit_code": -11,
+  "authority_observations": 53,
+  "candidate_exit_code": -11,
+  "candidate_observations": 53,
+  "candidate_stderr_tail": [
+    "timeout: the monitored command dumped core"
+  ],
   "court": "RT-LHASH",
   "probe": "court/phase3/rt_lhash_probe.candidate",
   "residual_count": 0,

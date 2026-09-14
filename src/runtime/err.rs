@@ -511,6 +511,14 @@ pub(crate) unsafe fn raise_site(site: &err_sites::ErrSite) {
 /// # Safety
 /// The `ErrSite` is a compile-time constant whose pointers are static.
 pub(crate) unsafe fn raise_site_dynamic(site: &err_sites::ErrSite, reason: c_int) {
+    // The generated table marks which sites compute their reason at run time. This
+    // assertion is the only reader of that flag, and it exists so the distinction
+    // cannot rot: if a future edit routes a constant-reason site through here, the
+    // mistake shows up in tests rather than as a wrong reason code in production.
+    debug_assert!(
+        site.dynamic_reason,
+        "raise_site_dynamic used with a constant-reason site"
+    );
     with_state(|s| {
         s.get_slot();
         let t = s.top as usize;

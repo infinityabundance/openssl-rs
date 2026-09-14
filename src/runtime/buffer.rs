@@ -63,9 +63,7 @@ pub struct BufMem {
 #[no_mangle]
 pub extern "C" fn BUF_MEM_new() -> *mut BufMem {
     guard_ffi(ptr::null_mut(), || {
-        // SAFETY: a plain allocation request; the pointer is NULL or 32 writable,
-        // zeroed bytes.
-        unsafe { CRYPTO_zalloc(core::mem::size_of::<BufMem>(), ptr::null(), 0) }.cast()
+        CRYPTO_zalloc(core::mem::size_of::<BufMem>(), ptr::null(), 0).cast()
     })
 }
 

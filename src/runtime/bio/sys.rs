@@ -23,8 +23,15 @@
 //! (`socklen_t`, `sa_family_t`, `in_port_t` are all `u16`/`u32` on this target,
 //! and `struct sockaddr_storage` must be large enough for every family).
 
-#![allow(dead_code)] // Declarations are shared by the method modules; not every
-                     // one is referenced from every build profile.
+#![allow(dead_code)]
+// Declarations are shared by the method modules; not every
+// one is referenced from every build profile.
+
+// The aliases below deliberately mirror the C spellings (`size_t`, `c_ulong`)
+// because they appear in transcribed prototypes, where matching the header is the
+// point. Renaming them to Rust case would make the declarations harder to check
+// against the source they were taken from.
+#![allow(non_camel_case_types)]
 
 use core::ffi::{c_char, c_int, c_long, c_short, c_uint, c_void};
 

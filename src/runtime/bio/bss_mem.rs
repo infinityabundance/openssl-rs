@@ -38,7 +38,6 @@ use super::{
     BIO_CTRL_PENDING, BIO_CTRL_POP, BIO_CTRL_PUSH, BIO_CTRL_RESET, BIO_CTRL_SET_CLOSE,
     BIO_CTRL_WPENDING, BIO_C_FILE_SEEK, BIO_C_FILE_TELL, BIO_C_GET_BUF_MEM_PTR, BIO_C_SET_BUF_MEM,
     BIO_C_SET_BUF_MEM_EOF_RETURN, BIO_FLAGS_MEM_RDONLY, BIO_FLAGS_NONCLEAR_RST, BIO_TYPE_MEM,
-    BIO_TYPE_SOURCE_SINK,
 };
 
 /// The authority's `BIO_BUF_MEM`: two `BUF_MEM` headers over one allocation.
@@ -162,22 +161,20 @@ pub unsafe extern "C" fn BIO_new_mem_buf(buf: *const c_void, len: c_int) -> *mut
 /// # Safety
 /// `bi` must be a live BIO whose `ptr` is not yet used by this method.
 unsafe fn mem_init(bi: *mut Bio, flags: core::ffi::c_ulong) -> c_int {
-    // SAFETY: a plain allocation request.
-    let bb = unsafe { CRYPTO_zalloc(core::mem::size_of::<BioBufMem>(), ptr::null(), 0) }
-        .cast::<BioBufMem>();
+    // `CRYPTO_zalloc` and `BUF_MEM_new_ex` are safe entry points; no `unsafe`
+    // block is needed to call them, and the previous `unsafe` markers here were
+    // noise that the lints correctly flagged.
+    let bb = CRYPTO_zalloc(core::mem::size_of::<BioBufMem>(), ptr::null(), 0).cast::<BioBufMem>();
     if bb.is_null() {
         return 0;
     }
-    // SAFETY: `bb` is freshly allocated and zeroed.
-    let buf = unsafe { crate::runtime::buffer::BUF_MEM_new_ex(flags) };
+    let buf = crate::runtime::buffer::BUF_MEM_new_ex(flags);
     if buf.is_null() {
         // SAFETY: `bb` is owned here and not yet published.
         unsafe { CRYPTO_free(bb.cast(), ptr::null(), 0) };
         return 0;
     }
-    // SAFETY: `bb` is live; `readp` is a zeroed header that gets a copy below.
-    let readp =
-        unsafe { CRYPTO_zalloc(core::mem::size_of::<BufMem>(), ptr::null(), 0).cast::<BufMem>() };
+    let readp = CRYPTO_zalloc(core::mem::size_of::<BufMem>(), ptr::null(), 0).cast::<BufMem>();
     if readp.is_null() {
         // SAFETY: neither allocation is published yet.
         unsafe {
@@ -293,7 +290,7 @@ unsafe extern "C" fn mem_read(b: *mut Bio, out: *mut c_char, outl: c_int) -> c_i
     // SAFETY: the dispatch layer only calls this with a live BIO of this method.
     let (bbm, flags) = unsafe { ((*b).ptr.cast::<BioBufMem>(), (*b).flags) };
     // SAFETY: `bbm` is this method's data.
-    let mut bm = if flags & BIO_FLAGS_MEM_RDONLY != 0 {
+    let bm = if flags & BIO_FLAGS_MEM_RDONLY != 0 {
         unsafe { (*bbm).buf }
     } else {
         unsafe { (*bbm).readp }
@@ -398,7 +395,7 @@ unsafe extern "C" fn mem_ctrl(b: *mut Bio, cmd: c_int, num: c_long, arg: *mut c_
         }
     };
     // SAFETY: `bm` is live.
-    let mut remain: isize = unsafe { (*bm).length as isize };
+    let remain: isize = unsafe { (*bm).length as isize };
 
     match cmd {
         BIO_CTRL_RESET => {
@@ -422,7 +419,7 @@ unsafe extern "C" fn mem_ctrl(b: *mut Bio, cmd: c_int, num: c_long, arg: *mut c_
         BIO_C_FILE_SEEK => {
             // SAFETY: `bm` and `bo` are live; the bounds check keeps the pointer
             // arithmetic inside the allocation.
-            let ok = unsafe { num >= 0 && (num as isize) <= off + remain };
+            let ok = num >= 0 && (num as isize) <= off + remain;
             if !ok {
                 return -1;
             }

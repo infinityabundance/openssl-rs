@@ -53,7 +53,7 @@
       "verdict": "pass"
     },
     "RT-LHASH": {
-      "observations": 45,
+      "observations": 53,
       "verdict": "pass"
     },
     "RT-MEM": {
@@ -78,16 +78,16 @@
     }
   },
   "deferred": {
-    "phase3": 11,
+    "phase3": 5,
     "phase4": 14
   },
   "implemented": {
-    "libcrypto": 335,
+    "libcrypto": 341,
     "libssl": 0
   },
   "open_obligations": {
     "phase3": 0,
-    "phase4": 119
+    "phase4": 113
   },
   "phases": {
     "0": "complete",

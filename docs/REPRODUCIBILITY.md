@@ -7,9 +7,14 @@ cannot be re-derived is not evidence.
 
 ## 1. Venue
 
-**Nothing runs on the host.** Every test, court, fuzz campaign, benchmark and
-authority build executes inside an isolated container. There are **two** venues,
-kept separate on purpose:
+**No authority-bearing execution runs on the host.** Every differential court,
+forensic probe, fuzz campaign, benchmark and authority build executes inside an
+isolated container. There are **two** venues, kept separate on purpose:
+
+Non-authority environments (including CI runners) may additionally perform pure
+implementation-unit tests, static analysis and formatting, and re-derivation of
+evidence from already-committed inputs. Those may never contribute forensic
+parity evidence — see `docs/CUSTODIAN_CONTRACT.md` §11.
 
 ### 1.1 The forensic court — `openssl-rs-court`
 

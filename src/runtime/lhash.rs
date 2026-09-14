@@ -27,13 +27,43 @@
 //! could not be observed, this module makes **no order claim** and the probe
 //! records the boundary rather than comparing it.
 //!
-//! `OPENSSL_LH_stats`, `OPENSSL_LH_node_stats` and their relatives take a
-//! `BIO *` and are deferred to Phase 4 with BIO. They are not defined here, so
-//! they remain `SCAFFOLDED` in the ABI shell.
+//! The `OPENSSL_LH_*stats*` family takes a `BIO *`, which is why it is implemented
+//! here rather than in Phase 3: the report is emitted through the BIO printf
+//! surface. It is also what forced this module to model the table faithfully —
+//! `num_nodes` and `num_alloc_nodes` are *observable* through the report, and they
+//! are not the same number, so the linear-hashing layout had to be reproduced
+//! rather than approximated.
 
-use core::ffi::{c_char, c_int, c_ulong, c_void};
+use core::ffi::{c_char, c_int, c_uint, c_ulong, c_void};
 
 use crate::ffi::guard_ffi;
+use crate::runtime::bio::print::BIO_printf;
+use crate::runtime::bio::sys::{self, FILE};
+use crate::runtime::bio::Bio;
+
+extern "C" {
+    /// `int strcmp(const char *, const char *)`.
+    fn strcmp(a: *const c_char, b: *const c_char) -> c_int;
+}
+
+/// The hash the authority installs when `OPENSSL_LH_new` is given NULL.
+///
+/// # Safety
+/// `p` must be NULL or a NUL-terminated C string.
+unsafe extern "C" fn default_hash(p: *const c_void) -> c_ulong {
+    // SAFETY: forwarded; `OPENSSL_LH_strhash` accepts NULL and stops at the
+    // terminator.
+    unsafe { OPENSSL_LH_strhash(p.cast()) }
+}
+
+/// The comparison the authority installs when `OPENSSL_LH_new` is given NULL.
+///
+/// # Safety
+/// Both arguments must be NULL or NUL-terminated C strings.
+unsafe extern "C" fn default_comp(a: *const c_void, b: *const c_void) -> c_int {
+    // SAFETY: forwarded; `strcmp` requires NUL-terminated strings.
+    unsafe { strcmp(a.cast(), b.cast()) }
+}
 
 /// `unsigned long (*)(const void *)` — `OPENSSL_LH_HASHFUNC`.
 type HashFunc = unsafe extern "C" fn(*const c_void) -> c_ulong;
@@ -52,9 +82,17 @@ type DoallThunk = unsafe extern "C" fn(*mut c_void, DoallFunc);
 /// `void (*)(void *, void *, OPENSSL_LH_DOALL_FUNCARG)`.
 type DoallArgThunk = unsafe extern "C" fn(*mut c_void, *mut c_void, DoallArgFunc);
 
-/// `LH_LOAD_MULT`. The authority's default and only load-factor multiplier;
-/// `OPENSSL_LH_get_down_load` reports `256 * this` by default.
+/// `LH_LOAD_MULT`.
 const LH_LOAD_MULT: usize = 256;
+/// `MIN_NODES`: the initial bucket allocation, and the floor the table will not
+/// contract below.
+const MIN_NODES: usize = 16;
+/// `UP_LOAD`: `2 * LH_LOAD_MULT`. The table expands before an insert that would
+/// take it past this load.
+const UP_LOAD: usize = 2 * LH_LOAD_MULT;
+/// `DOWN_LOAD`: `LH_LOAD_MULT`. The table contracts after a delete that leaves it
+/// below this load, but only while it is above `MIN_NODES` buckets.
+const DOWN_LOAD: usize = LH_LOAD_MULT;
 
 /// Opaque handle matching the C `OPENSSL_LHASH *`.
 #[repr(C)]
@@ -62,13 +100,52 @@ pub struct OpenSslLhash {
     _private: [u8; 0],
 }
 
+/// One table entry: the stored hash and the caller's pointer.
+///
+/// The authority keeps the hash in the node so that lookup can skip the
+/// comparison for entries whose hash differs. That is *observable*, because a
+/// caller's comparator may have side effects: the authority calls it fewer times
+/// than a naive scan would, so the hash is stored here rather than recomputed.
+type Node = (usize, *mut c_void);
+
+/// The hash table.
+///
+/// ## The layout is observable, so it is reproduced
+///
+/// OpenSSL's `lh` is a *linear-hashing* table, not a simple doubling one. The
+/// bucket array has `num_alloc_nodes` entries while only `num_nodes` of them are
+/// in use, and `expand` splits **one** bucket per call (`p`, moving entries whose
+/// `hash % num_alloc_nodes != p` into bucket `p + pmax`), advancing `p` until the
+/// allocation doubles and `p` resets. Lookup selects a bucket with
+///
+/// ```text
+/// nn = hash % pmax;  if (nn < p) nn = hash % num_alloc_nodes;
+/// ```
+///
+/// so the two counts and the two cursors are all load-bearing. They used to be
+/// unobservable from the candidate's side because nothing exposed them; the
+/// `OPENSSL_LH_*stats*` functions do, which is why this model exists rather than
+/// the simpler one this module started with.
 struct Inner {
-    /// One chain per node, in node order. OpenSSL's table is a chained hash; the
-    /// node count is a power of two and grows when the load factor is exceeded.
-    nodes: Vec<Vec<*mut c_void>>,
+    /// The bucket array (the authority's `b`), always `num_alloc_nodes` long.
+    b: Vec<Vec<Node>>,
+    /// `num_nodes`: buckets in use. Starts at `MIN_NODES / 2` and moves by one per
+    /// split or merge, so it is deliberately **not** the allocation size.
+    num_nodes: usize,
+    /// `num_alloc_nodes`: the allocation size.
+    num_alloc_nodes: usize,
+    /// `p`: the bucket the next split acts on.
+    p: usize,
+    /// `pmax`: the split boundary — the distance between a bucket and the one it
+    /// splits into.
+    pmax: usize,
     num_items: usize,
+    up_load: usize,
     down_load: usize,
-    error: bool,
+    /// `error`. The authority's field is an `int` that is incremented on an
+    /// allocation failure and cleared on the next insert/delete/retrieve, and
+    /// `OPENSSL_LH_error` reports whether it is non-zero.
+    error: usize,
     hash_fn: Option<HashFunc>,
     comp_fn: Option<CompFunc>,
     hash_thunk: Option<HashThunk>,
@@ -107,26 +184,93 @@ impl Inner {
         }
     }
 
-    /// Whether the load factor has been exceeded, mirroring the authority's
-    /// `num_items > down_load * num_nodes / LH_LOAD_MULT`.
-    fn needs_grow(&self) -> bool {
-        self.num_items * LH_LOAD_MULT > self.down_load * self.nodes.len()
+    /// The authority's `getrn` bucket selection.
+    fn bin_for(&self, hash: usize) -> usize {
+        let nn = hash % self.pmax;
+        if nn < self.p {
+            hash % self.num_alloc_nodes
+        } else {
+            nn
+        }
     }
 
-    fn grow(&mut self) {
-        let new_len = (self.nodes.len() * 2).max(2);
-        // Take the chains out first: rehashing needs `&self` while the nodes are
-        // being re-bucketed, so the two borrows cannot overlap.
-        let old = core::mem::take(&mut self.nodes);
-        let mut nodes: Vec<Vec<*mut c_void>> =
-            core::iter::repeat_with(Vec::new).take(new_len).collect();
-        for chain in old {
-            for item in chain {
-                let i = self.hash(item as *const c_void) % new_len;
-                nodes[i].push(item);
+    /// The authority's `static int expand(OPENSSL_LHASH *lh)`.
+    ///
+    /// Returns false only when the reallocation fails, which cannot be reproduced
+    /// here: Rust's allocator aborts rather than returning NULL. The authority's
+    /// `lh->error++` arm is therefore unreachable in this crate and is recorded in
+    /// `forensics/phase4-obligations.json` rather than approximated.
+    fn expand(&mut self) -> bool {
+        // `nni`, `p` and `pmax` are captured **before** the branch, because the
+        // split below acts on the old cursor and boundary. That is what makes the
+        // new bucket always the highest one now in use (index `num_nodes - 1`),
+        // which is why `doall` can iterate `0..num_nodes` and see everything.
+        let nni = self.num_alloc_nodes;
+        let p = self.p;
+        let pmax = self.pmax;
+        if p + 1 >= pmax {
+            // Everything at the current boundary has been split: double the
+            // allocation and start again from bucket 0.
+            self.b.resize(nni * 2, Vec::new());
+            self.pmax = nni;
+            self.num_alloc_nodes = nni * 2;
+            self.p = 0;
+        } else {
+            self.p += 1;
+        }
+        self.num_nodes += 1;
+        // Split bucket `p`: entries whose hash no longer selects it move to
+        // `p + pmax`. The authority *prepends* each moved entry to the new bucket,
+        // reversing their relative order, and that order is observable through
+        // `doall`, so it is reproduced rather than tidied.
+        let chain = core::mem::take(&mut self.b[p]);
+        let mut stay: Vec<Node> = Vec::new();
+        let mut moved: Vec<Node> = Vec::new();
+        for node in chain {
+            if node.0 % nni != p {
+                moved.push(node);
+            } else {
+                stay.push(node);
             }
         }
-        self.nodes = nodes;
+        moved.reverse();
+        self.b[p] = stay;
+        self.b[p + pmax] = moved;
+        true
+    }
+
+    /// The authority's `static void contract(OPENSSL_LHASH *lh)`.
+    fn contract(&mut self) {
+        let idx = self.p + self.pmax - 1;
+        let np = core::mem::take(&mut self.b[idx]);
+        if self.p == 0 {
+            let old_pmax = self.pmax;
+            self.b.truncate(old_pmax);
+            self.num_alloc_nodes /= 2;
+            self.pmax /= 2;
+            self.p = self.pmax - 1;
+        } else {
+            self.p -= 1;
+        }
+        self.num_nodes -= 1;
+        // The absorbed chain is appended *after* the surviving entries.
+        let target = self.p;
+        if self.b[target].is_empty() {
+            self.b[target] = np;
+        } else {
+            self.b[target].extend(np);
+        }
+    }
+
+    /// Every entry, in the order the authority's `doall_util_fn` visits them:
+    /// buckets from `num_nodes - 1` down to `0`, and within a bucket from the
+    /// head of the chain (most recently inserted) to the tail.
+    fn visit<F: FnMut(*mut c_void)>(&self, mut f: F) {
+        for i in (0..self.num_nodes).rev() {
+            for &(_, item) in &self.b[i] {
+                f(item);
+            }
+        }
     }
 }
 
@@ -144,12 +288,23 @@ unsafe fn inner<'a>(p: *mut OpenSslLhash) -> Option<&'a mut Inner> {
 
 fn boxed(hash_fn: Option<HashFunc>, comp_fn: Option<CompFunc>) -> *mut OpenSslLhash {
     Box::into_raw(Box::new(Inner {
-        nodes: vec![Vec::new(), Vec::new()],
+        // `OPENSSL_LH_new` allocates `MIN_NODES` buckets but marks only half of
+        // them in use, and that asymmetry is what the stats functions report.
+        b: core::iter::repeat_with(Vec::new).take(MIN_NODES).collect(),
+        num_nodes: MIN_NODES / 2,
+        num_alloc_nodes: MIN_NODES,
+        p: 0,
+        pmax: MIN_NODES / 2,
         num_items: 0,
-        down_load: LH_LOAD_MULT,
-        error: false,
-        hash_fn,
-        comp_fn,
+        up_load: UP_LOAD,
+        down_load: DOWN_LOAD,
+        error: 0,
+        // NULL is not "no hashing": the authority substitutes `strhash` and
+        // `strcmp`. Defaulting to a zero hash made every key land in one bucket
+        // and defaulting to pointer comparison changed what "equal key" means,
+        // which the stats report exposed as a bucket distribution of one.
+        hash_fn: Some(hash_fn.unwrap_or(default_hash)),
+        comp_fn: Some(comp_fn.unwrap_or(default_comp)),
         hash_thunk: None,
         comp_thunk: None,
         doall_thunk: None,
@@ -255,8 +410,12 @@ pub unsafe extern "C" fn OPENSSL_LH_free(lh: *mut OpenSslLhash) {
 
 /// `void OPENSSL_LH_flush(OPENSSL_LHASH *lh)`
 ///
-/// Empties every node without releasing the items, then collapses back to the
-/// initial node count. The probe confirms both effects.
+/// Empties the buckets that are in use and resets the item count. It does **not**
+/// shrink the table: the authority leaves `num_nodes` and the allocation where
+/// they were, so a flushed table keeps its shape. (An earlier version of this
+/// module collapsed the table to its initial size and said the probe confirmed
+/// it; it could not have, because nothing exposed the node count until the stats
+/// functions existed. The claim was unsupported and is corrected here.)
 ///
 /// # Safety
 /// `lh` must be NULL or a live table.
@@ -264,19 +423,21 @@ pub unsafe extern "C" fn OPENSSL_LH_free(lh: *mut OpenSslLhash) {
 pub unsafe extern "C" fn OPENSSL_LH_flush(lh: *mut OpenSslLhash) {
     guard_ffi((), || {
         // SAFETY: `lh` is live per the caller's contract.
-        if let Some(s) = unsafe { inner(lh) } {
-            s.nodes = vec![Vec::new(), Vec::new()];
-            s.num_items = 0;
-            s.error = false;
+        let Some(s) = (unsafe { inner(lh) }) else {
+            return;
+        };
+        for chain in s.b.iter_mut().take(s.num_nodes) {
+            chain.clear();
         }
+        s.num_items = 0;
     })
 }
 
 /// `void *OPENSSL_LH_insert(OPENSSL_LHASH *lh, void *data)`
 ///
 /// Returns the item previously stored under an equal key, or NULL. The new item
-/// replaces the old one — the probe measures both the return value and that
-/// `num_items` does not grow on a replacement.
+/// replaces the old one *in place*, so a replacement does not change `num_items`
+/// and does not move the entry within its chain.
 ///
 /// # Safety
 /// `lh` must be NULL or a live table; `data` is the caller's item.
@@ -290,26 +451,36 @@ pub unsafe extern "C" fn OPENSSL_LH_insert(
         let Some(s) = (unsafe { inner(lh) }) else {
             return core::ptr::null_mut();
         };
+        s.error = 0;
         if data.is_null() {
-            s.error = true;
+            // The authority has no guard here and would call the caller's hash and
+            // comparison functions on NULL. Returning early is a deliberate, safer
+            // divergence (docs/SECURITY_DIVERGENCE_POLICY.md); it is unobservable in
+            // the courts because no probe stores a NULL item.
             return core::ptr::null_mut();
         }
-        let i = s.hash(data) % s.nodes.len();
-        let existing = s.nodes[i]
+        // The growth test runs *before* the lookup, as in the authority, so the
+        // table can gain a bucket even when the insert turns out to be a
+        // replacement of an existing key.
+        if s.up_load <= s.num_items * LH_LOAD_MULT / s.num_nodes && !s.expand() {
+            return core::ptr::null_mut();
+        }
+        let hash = s.hash(data);
+        let bin = s.bin_for(hash);
+        let found = s.b[bin]
             .iter()
-            .position(|&x| s.eq(x as *const c_void, data as *const c_void));
-        match existing {
+            .position(|node| node.0 == hash && s.eq(node.1, data));
+        match found {
             Some(pos) => {
-                let old = s.nodes[i][pos];
-                s.nodes[i][pos] = data;
+                let old = s.b[bin][pos].1;
+                s.b[bin][pos].1 = data;
                 old
             }
             None => {
-                s.nodes[i].push(data);
+                // Prepended, because the authority links a new node at the head
+                // of its chain and `doall` observes the resulting order.
+                s.b[bin].insert(0, (hash, data));
                 s.num_items += 1;
-                if s.needs_grow() {
-                    s.grow();
-                }
                 core::ptr::null_mut()
             }
         }
@@ -330,19 +501,27 @@ pub unsafe extern "C" fn OPENSSL_LH_delete(
         let Some(s) = (unsafe { inner(lh) }) else {
             return core::ptr::null_mut();
         };
+        s.error = 0;
         if data.is_null() {
+            // As in `insert`: the authority would call the caller's functions on
+            // NULL; returning early is the recorded safer divergence.
             return core::ptr::null_mut();
         }
-        let i = s.hash(data) % s.nodes.len();
-        let found = s.nodes[i].iter().position(|&x| s.eq(x, data));
-        match found {
-            Some(pos) => {
-                let item = s.nodes[i].remove(pos);
-                s.num_items -= 1;
-                item
-            }
-            None => core::ptr::null_mut(),
+        let hash = s.hash(data);
+        let bin = s.bin_for(hash);
+        let found = s.b[bin]
+            .iter()
+            .position(|node| node.0 == hash && s.eq(node.1, data));
+        let Some(pos) = found else {
+            return core::ptr::null_mut();
+        };
+        let item = s.b[bin].remove(pos).1;
+        s.num_items -= 1;
+        // The table merges a bucket back only while it is above `MIN_NODES`.
+        if s.num_nodes > MIN_NODES && s.down_load >= s.num_items * LH_LOAD_MULT / s.num_nodes {
+            s.contract();
         }
+        item
     })
 }
 
@@ -360,15 +539,21 @@ pub unsafe extern "C" fn OPENSSL_LH_retrieve(
         let Some(s) = (unsafe { inner(lh) }) else {
             return core::ptr::null_mut();
         };
+        // A lookup clears a pending error rather than reporting it, which the
+        // authority does so that a failed allocation does not poison every
+        // subsequent call.
+        if s.error != 0 {
+            s.error = 0;
+        }
         if data.is_null() {
             return core::ptr::null_mut();
         }
-        let i = s.hash(data) % s.nodes.len();
-        s.nodes[i]
+        let hash = s.hash(data);
+        let bin = s.bin_for(hash);
+        s.b[bin]
             .iter()
-            .find(|&&x| s.eq(x, data))
-            .copied()
-            .unwrap_or(core::ptr::null_mut())
+            .find(|node| node.0 == hash && s.eq(node.1, data))
+            .map_or(core::ptr::null_mut(), |node| node.1)
     })
 }
 
@@ -396,7 +581,7 @@ pub unsafe extern "C" fn OPENSSL_LH_error(lh: *mut OpenSslLhash) -> c_int {
     guard_ffi(0, || {
         // SAFETY: `lh` is live per the caller's contract.
         match unsafe { inner(lh) } {
-            Some(s) => c_int::from(s.error),
+            Some(s) => c_int::from(s.error != 0),
             None => 0,
         }
     })
@@ -433,10 +618,10 @@ pub unsafe extern "C" fn OPENSSL_LH_set_down_load(lh: *mut OpenSslLhash, down_lo
 
 /// `void OPENSSL_LH_doall(OPENSSL_LHASH *lh, OPENSSL_LH_DOALL_FUNC func)`
 ///
-/// Iterates every item. **No order claim**: the authority's iteration order on
-/// an un-thunked table could not be observed, because calling this there faults
-/// (see the module note). The candidate visits nodes in index order and, within a
-/// node, in insertion order.
+/// Iterates every item in the authority's order: buckets from the last in use
+/// down to the first, and within a bucket from the head of the chain (most
+/// recently inserted) to the tail. That order is observable by a typed table,
+/// whose `doall` thunk is installed by `OPENSSL_LH_set_thunks`.
 ///
 /// # Safety
 /// `lh` must be NULL or a live table; `func` must accept every stored item.
@@ -450,12 +635,10 @@ pub unsafe extern "C" fn OPENSSL_LH_doall(lh: *mut OpenSslLhash, func: Option<Do
         let Some(s) = (unsafe { inner(lh) }) else {
             return;
         };
-        for chain in &s.nodes {
-            for &item in chain {
-                // SAFETY: `func` is the caller's callback over the caller's items.
-                unsafe { func(item) };
-            }
-        }
+        s.visit(|item| {
+            // SAFETY: `func` is the caller's callback over the caller's items.
+            unsafe { func(item) };
+        });
     })
 }
 
@@ -477,21 +660,19 @@ pub unsafe extern "C" fn OPENSSL_LH_doall_arg(
         let Some(s) = (unsafe { inner(lh) }) else {
             return;
         };
-        for chain in &s.nodes {
-            for &item in chain {
-                // SAFETY: `func` is the caller's callback over the caller's items.
-                unsafe { func(item, arg) };
-            }
-        }
+        s.visit(|item| {
+            // SAFETY: `func` is the caller's callback over the caller's items.
+            unsafe { func(item, arg) };
+        });
     })
 }
 
 /// `void OPENSSL_LH_doall_arg_thunk(OPENSSL_LHASH *lh, OPENSSL_LH_DOALL_FUNCARG_THUNK thunk, OPENSSL_LH_DOALL_FUNCARG func, void *arg)`
 ///
 /// The authority exposes this as the entry point generated accessors go through.
-/// When a thunk has been installed it is preferred, because that is the
-/// per-type wrapper the caller wants applied; otherwise the candidate iterates
-/// directly, where the authority would fault on the NULL thunk.
+/// When a thunk has been installed it is preferred, because that is the per-type
+/// wrapper the caller wants applied; otherwise the candidate iterates directly,
+/// where the authority would call the NULL thunk and fault.
 ///
 /// # Safety
 /// `lh` must be NULL or a live table; `func` must accept every stored item.
@@ -516,12 +697,253 @@ pub unsafe extern "C" fn OPENSSL_LH_doall_arg_thunk(
             unsafe { t(lh.cast::<c_void>(), arg, func) };
             return;
         }
-        for chain in &s.nodes {
-            for &item in chain {
-                // SAFETY: `func` is the caller's callback over the caller's items.
-                unsafe { func(item, arg) };
+        s.visit(|item| {
+            // SAFETY: `func` is the caller's callback over the caller's items.
+            unsafe { func(item, arg) };
+        });
+    })
+}
+
+/* ------------------------------------------------------------------------- */
+/* Statistics.                                                               */
+/* ------------------------------------------------------------------------- */
+
+/// The thirteen counters the authority prints as literal zeroes.
+///
+/// OpenSSL 3 removed the per-table counters from the structure but kept the
+/// report's shape, so these lines are constants in the authority's own source.
+/// Reproducing them as constants is therefore exact, not an approximation.
+const STAT_ZERO_LINES: [&core::ffi::CStr; 13] = [
+    c"num_expands           = 0\n",
+    c"num_expand_reallocs   = 0\n",
+    c"num_contracts         = 0\n",
+    c"num_contract_reallocs = 0\n",
+    c"num_hash_calls        = 0\n",
+    c"num_comp_calls        = 0\n",
+    c"num_insert            = 0\n",
+    c"num_replace           = 0\n",
+    c"num_delete            = 0\n",
+    c"num_no_delete         = 0\n",
+    c"num_retrieve          = 0\n",
+    c"num_retrieve_miss     = 0\n",
+    c"num_hash_comps        = 0\n",
+];
+
+/// `void OPENSSL_LH_stats_bio(const OPENSSL_LHASH *lh, BIO *out)`
+///
+/// # Safety
+/// `lh` must be NULL or a live table; `out` must be NULL or a live BIO.
+#[no_mangle]
+pub unsafe extern "C" fn OPENSSL_LH_stats_bio(lh: *const OpenSslLhash, out: *mut Bio) {
+    guard_ffi((), || {
+        // SAFETY: `lh` is live per the caller's contract.
+        let Some(s) = (unsafe { inner(lh as *mut OpenSslLhash) }) else {
+            return;
+        };
+        // SAFETY: `out` is the caller's BIO; `BIO_printf` is the implemented BIO
+        // surface and the format specifiers match the argument types.
+        unsafe {
+            BIO_printf(
+                out,
+                c"num_items             = %lu\n".as_ptr(),
+                s.num_items as c_ulong,
+            );
+            BIO_printf(
+                out,
+                c"num_nodes             = %u\n".as_ptr(),
+                s.num_nodes as c_uint,
+            );
+            BIO_printf(
+                out,
+                c"num_alloc_nodes       = %u\n".as_ptr(),
+                s.num_alloc_nodes as c_uint,
+            );
+            for line in STAT_ZERO_LINES {
+                BIO_printf(out, line.as_ptr());
             }
         }
+    })
+}
+
+/// `void OPENSSL_LH_node_stats_bio(const OPENSSL_LHASH *lh, BIO *out)`
+///
+/// One line per bucket that is *in use* — that is, the first `num_nodes`, not the
+/// whole allocation.
+///
+/// # Safety
+/// `lh` must be NULL or a live table; `out` must be NULL or a live BIO.
+#[no_mangle]
+pub unsafe extern "C" fn OPENSSL_LH_node_stats_bio(lh: *const OpenSslLhash, out: *mut Bio) {
+    guard_ffi((), || {
+        // SAFETY: `lh` is live per the caller's contract.
+        let Some(s) = (unsafe { inner(lh as *mut OpenSslLhash) }) else {
+            return;
+        };
+        for i in 0..s.num_nodes {
+            let num = s.b[i].len();
+            // SAFETY: `out` is the caller's BIO.
+            unsafe {
+                BIO_printf(
+                    out,
+                    c"node %6u -> %3u\n".as_ptr(),
+                    i as c_uint,
+                    num as c_uint,
+                );
+            }
+        }
+    })
+}
+
+/// `void OPENSSL_LH_node_usage_stats_bio(const OPENSSL_LHASH *lh, BIO *out)`
+///
+/// The load line mixes integer division and remainders, so it is computed exactly
+/// as the authority computes it rather than re-derived.
+///
+/// # Safety
+/// `lh` must be NULL or a live table; `out` must be NULL or a live BIO.
+#[no_mangle]
+pub unsafe extern "C" fn OPENSSL_LH_node_usage_stats_bio(lh: *const OpenSslLhash, out: *mut Bio) {
+    guard_ffi((), || {
+        // SAFETY: `lh` is live per the caller's contract.
+        let Some(s) = (unsafe { inner(lh as *mut OpenSslLhash) }) else {
+            return;
+        };
+        let mut total: usize = 0;
+        let mut n_used: usize = 0;
+        for i in 0..s.num_nodes {
+            let num = s.b[i].len();
+            if num != 0 {
+                n_used += 1;
+                total += num;
+            }
+        }
+        // SAFETY: `out` is the caller's BIO.
+        unsafe {
+            BIO_printf(
+                out,
+                c"%lu nodes used out of %u\n".as_ptr(),
+                n_used as c_ulong,
+                s.num_nodes as c_uint,
+            );
+            BIO_printf(out, c"%lu items\n".as_ptr(), total as c_ulong);
+        }
+        if n_used == 0 {
+            return;
+        }
+        let load_whole = total / s.num_nodes;
+        let load_frac = (total % s.num_nodes) * 100 / s.num_nodes;
+        let actual_whole = total / n_used;
+        let actual_frac = (total % n_used) * 100 / n_used;
+        // SAFETY: `out` is the caller's BIO.
+        unsafe {
+            BIO_printf(
+                out,
+                c"load %d.%02d  actual load %d.%02d\n".as_ptr(),
+                load_whole as c_int,
+                load_frac as c_int,
+                actual_whole as c_int,
+                actual_frac as c_int,
+            );
+        }
+    })
+}
+
+/// Write an already-formatted report line to a `FILE *`.
+///
+/// # Safety
+/// `fp` must be NULL or a live `FILE *`.
+unsafe fn fp_write(fp: *mut FILE, text: &str) {
+    if fp.is_null() {
+        return;
+    }
+    // SAFETY: `fp` is the caller's stream and `text` is a live slice.
+    unsafe { sys::fwrite(text.as_ptr().cast(), 1, text.len(), fp) };
+}
+
+/// The authority's `OPENSSL_LH_stats` builds a `BIO_s_file` and calls the `_bio`
+/// variant. `BIO_s_file` is an open obligation of this stratum, so this writes the
+/// same bytes to the stream directly — identical output, because a file BIO's only
+/// effect on a write is `fwrite` to that stream. The mechanism difference is
+/// recorded rather than hidden.
+///
+/// # Safety
+/// `lh` must be NULL or a live table; `fp` must be NULL or a live `FILE *`.
+#[no_mangle]
+pub unsafe extern "C" fn OPENSSL_LH_stats(lh: *const OpenSslLhash, fp: *mut FILE) {
+    guard_ffi((), || {
+        // SAFETY: `lh` is live per the caller's contract.
+        let Some(s) = (unsafe { inner(lh as *mut OpenSslLhash) }) else {
+            return;
+        };
+        let mut text = format!(
+            "num_items             = {}\nnum_nodes             = {}\nnum_alloc_nodes       = {}\n",
+            s.num_items, s.num_nodes, s.num_alloc_nodes
+        );
+        for line in STAT_ZERO_LINES {
+            text.push_str(&line.to_string_lossy());
+        }
+        // SAFETY: `fp` is the caller's stream.
+        unsafe { fp_write(fp, &text) };
+    })
+}
+
+/// The `FILE *` form of [`OPENSSL_LH_node_stats_bio`]; see that function's note on
+/// the mechanism difference.
+///
+/// # Safety
+/// `lh` must be NULL or a live table; `fp` must be NULL or a live `FILE *`.
+#[no_mangle]
+pub unsafe extern "C" fn OPENSSL_LH_node_stats(lh: *const OpenSslLhash, fp: *mut FILE) {
+    guard_ffi((), || {
+        // SAFETY: `lh` is live per the caller's contract.
+        let Some(s) = (unsafe { inner(lh as *mut OpenSslLhash) }) else {
+            return;
+        };
+        let mut text = String::new();
+        for i in 0..s.num_nodes {
+            text.push_str(&format!("node {:>6} -> {:>3}\n", i, s.b[i].len()));
+        }
+        // SAFETY: `fp` is the caller's stream.
+        unsafe { fp_write(fp, &text) };
+    })
+}
+
+/// The `FILE *` form of [`OPENSSL_LH_node_usage_stats_bio`]; see that function's
+/// note on the mechanism difference.
+///
+/// # Safety
+/// `lh` must be NULL or a live table; `fp` must be NULL or a live `FILE *`.
+#[no_mangle]
+pub unsafe extern "C" fn OPENSSL_LH_node_usage_stats(lh: *const OpenSslLhash, fp: *mut FILE) {
+    guard_ffi((), || {
+        // SAFETY: `lh` is live per the caller's contract.
+        let Some(s) = (unsafe { inner(lh as *mut OpenSslLhash) }) else {
+            return;
+        };
+        let mut total: usize = 0;
+        let mut n_used: usize = 0;
+        for i in 0..s.num_nodes {
+            let num = s.b[i].len();
+            if num != 0 {
+                n_used += 1;
+                total += num;
+            }
+        }
+        let mut text = format!(
+            "{} nodes used out of {}\n{} items\n",
+            n_used, s.num_nodes, total
+        );
+        if n_used != 0 {
+            text.push_str(&format!(
+                "load {}.{:02}  actual load {}.{:02}\n",
+                total / s.num_nodes,
+                (total % s.num_nodes) * 100 / s.num_nodes,
+                total / n_used,
+                (total % n_used) * 100 / n_used
+            ));
+        }
+        // SAFETY: `fp` is the caller's stream.
+        unsafe { fp_write(fp, &text) };
     })
 }
 

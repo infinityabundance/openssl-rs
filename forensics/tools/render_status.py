@@ -85,14 +85,28 @@ def main() -> int:
         L.append("")
         L.append("| phase | stratum | state | blocking |")
         L.append("|---|---|---|---|")
-        for row in phase_state["body"]["phases"]:
-            if row["state"] == "not-started" and row["phase"] > 3:
+        rows = phase_state["body"]["phases"]
+        # The table lists every started stratum; the unstarted remainder is
+        # summarised below. Both the membership of that remainder and its range are
+        # derived -- hardcoding "4-21" made the status text contradict the JSON as
+        # soon as Phase 4 started, which is exactly the kind of lie this project
+        # exists to avoid.
+        unstarted = [row["phase"] for row in rows if row["state"] == "not-started"]
+        for row in rows:
+            if row["state"] == "not-started":
                 continue
             L.append(f"| {row['phase']} | {row['stratum']} | `{row['state']}` | "
                      f"{row['blocking'] or ''} |")
         L.append("")
-        L.append(f"Remaining strata 4-21 are `not-started` "
-                 f"({phase_state['body']['summary']['not_started']} total).")
+        if unstarted:
+            first, last = min(unstarted), max(unstarted)
+            contiguous = unstarted == list(range(first, last + 1))
+            scope = (f"strata {first}-{last}" if contiguous else
+                     "strata " + ", ".join(str(p) for p in unstarted))
+            L.append(f"Not started: {scope} "
+                     f"({phase_state['body']['summary']['not_started']} total).")
+        else:
+            L.append("No stratum is `not-started`.")
     else:
         L.append("`forensics/phase-state.json` is absent; run "
                  "`forensics/tools/phase_state.py`.")

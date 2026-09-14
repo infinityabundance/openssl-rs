@@ -4,8 +4,8 @@
     "complete": false,
     "counts": {
       "deferred_to_later_phase": 14,
-      "implemented": 123,
-      "open_in_this_stratum": 119,
+      "implemented": 129,
+      "open_in_this_stratum": 113,
       "owned": 256
     },
     "deferred": [
@@ -254,7 +254,13 @@
       "BUF_MEM_grow",
       "BUF_MEM_grow_clean",
       "BUF_MEM_new",
-      "BUF_MEM_new_ex"
+      "BUF_MEM_new_ex",
+      "OPENSSL_LH_node_stats",
+      "OPENSSL_LH_node_stats_bio",
+      "OPENSSL_LH_node_usage_stats",
+      "OPENSSL_LH_node_usage_stats_bio",
+      "OPENSSL_LH_stats",
+      "OPENSSL_LH_stats_bio"
     ],
     "note": "`complete` is true only when every export in these families is either implemented or handed to a later stratum. `open` entries belong to this stratum and are recorded gaps, not deferrals; while any exist Phase 4 cannot be called complete. Nothing here is a parity claim.",
     "open": [
@@ -709,30 +715,6 @@
       {
         "module": "src/runtime/obj.rs",
         "symbol": "OBJ_create_objects"
-      },
-      {
-        "module": "src/runtime/lhash.rs",
-        "symbol": "OPENSSL_LH_node_stats"
-      },
-      {
-        "module": "src/runtime/lhash.rs",
-        "symbol": "OPENSSL_LH_node_stats_bio"
-      },
-      {
-        "module": "src/runtime/lhash.rs",
-        "symbol": "OPENSSL_LH_node_usage_stats"
-      },
-      {
-        "module": "src/runtime/lhash.rs",
-        "symbol": "OPENSSL_LH_node_usage_stats_bio"
-      },
-      {
-        "module": "src/runtime/lhash.rs",
-        "symbol": "OPENSSL_LH_stats"
-      },
-      {
-        "module": "src/runtime/lhash.rs",
-        "symbol": "OPENSSL_LH_stats_bio"
       }
     ]
   },
@@ -746,7 +728,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "3b21c17911256f95456e5e815a60aafff24245d1a0bf4d8c96beabaf6185e7d3"
+      "sha256": "08c6412ae7cdb223cc6bc96362ab8917245026e61ad6c00915f0c26621b2e0ac"
     }
   ],
   "kind": "phase4-obligations",

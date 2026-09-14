@@ -106,11 +106,13 @@
         "verdict": "pass"
       },
       {
-        "authority_exit_code": 0,
-        "authority_observations": 45,
-        "candidate_exit_code": 0,
-        "candidate_observations": 45,
-        "candidate_stderr_tail": [],
+        "authority_exit_code": -11,
+        "authority_observations": 53,
+        "candidate_exit_code": -11,
+        "candidate_observations": 53,
+        "candidate_stderr_tail": [
+          "timeout: the monitored command dumped core"
+        ],
         "court": "RT-LHASH",
         "probe": "court/phase3/rt_lhash_probe.candidate",
         "residual_count": 0,
@@ -128,7 +130,7 @@
       "total": 7
     }
   },
-  "body_hash": "88d04dbbb6f2b245a87545939d3aaa22b7b6b140de292295f8e1cc737447bb20",
+  "body_hash": "22adfe2cf84772faf65c4b47c64fbe774423b374dfda67566479d954d8234c72",
   "generator": "forensics/tools/phase3_courts.py",
   "inputs": [],
   "kind": "phase3-courts",
