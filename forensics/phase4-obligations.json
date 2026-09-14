@@ -4,8 +4,8 @@
     "complete": false,
     "counts": {
       "deferred_to_later_phase": 14,
-      "implemented": 166,
-      "open_in_this_stratum": 76,
+      "implemented": 174,
+      "open_in_this_stratum": 68,
       "owned": 256
     },
     "deferred": [
@@ -164,6 +164,9 @@
       "BIO_ctrl_pending",
       "BIO_ctrl_reset_read_request",
       "BIO_ctrl_wpending",
+      "BIO_debug_callback",
+      "BIO_debug_callback_ex",
+      "BIO_dgram_non_fatal_error",
       "BIO_do_connect_retry",
       "BIO_dump",
       "BIO_dump_cb",
@@ -173,7 +176,12 @@
       "BIO_dump_indent_fp",
       "BIO_dup_chain",
       "BIO_err_is_non_fatal",
+      "BIO_f_brotli",
       "BIO_f_null",
+      "BIO_f_zlib",
+      "BIO_f_zstd",
+      "BIO_fd_non_fatal_error",
+      "BIO_fd_should_retry",
       "BIO_find_type",
       "BIO_free",
       "BIO_free_all",
@@ -303,23 +311,7 @@
     "open": [
       {
         "module": "src/runtime/bio/",
-        "symbol": "BIO_debug_callback"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_debug_callback_ex"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_dgram_non_fatal_error"
-      },
-      {
-        "module": "src/runtime/bio/",
         "symbol": "BIO_f_base64"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_f_brotli"
       },
       {
         "module": "src/runtime/bio/",
@@ -340,22 +332,6 @@
       {
         "module": "src/runtime/bio/",
         "symbol": "BIO_f_readbuffer"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_f_zlib"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_f_zstd"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_fd_non_fatal_error"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "symbol": "BIO_fd_should_retry"
       },
       {
         "module": "src/runtime/bio/",
@@ -617,7 +593,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "ba0e883bd7127ffbb0a411fd3a59b5251f52480269542aa85ffd27651feb53bc"
+      "sha256": "e7f032f9d85f520256a7053e6826ae6e7896ec62c92333b904e6649cef6ce92e"
     }
   ],
   "kind": "phase4-obligations",

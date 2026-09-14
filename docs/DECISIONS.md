@@ -1109,3 +1109,78 @@ return classes the probe exercises, on the loopback interface of this container.
 It is not a claim about datagram or memory-pair BIOs, about `BIO_s_connect`/
 `BIO_s_accept`, or about behaviour under a non-loopback network. Those are separate
 obligations in the Phase 4 ledger.
+
+## D40 — The debug callback, the retry classifiers and the compression methods
+
+**Decision.** Seven more exports are implemented and courted:
+`BIO_debug_callback`, `BIO_debug_callback_ex`, `BIO_fd_non_fatal_error`,
+`BIO_fd_should_retry`, `BIO_dgram_non_fatal_error`, `BIO_f_zlib`, `BIO_f_zstd`
+and `BIO_f_brotli` — eight symbols across three new modules (`bio_cb.rs`,
+`retry.rs`, `comp.rs`) and two new courts, `RT-BIO-DEBUG` (55 observations) and
+`RT-BIO-COMP` (45 observations), both passing with zero residuals on their first
+run. Phase 4 is now implemented 174 / deferred 14 / open 68 of 256 owned; the
+baseline is 25 courts and 5,342 observations; `implemented` `libcrypto` exports
+move 378 -> 386.
+
+**The three compression methods are a build-profile result, not a stub.**
+`OPENSSL_NO_ZLIB`, `OPENSSL_NO_ZSTD` and `OPENSSL_NO_BROTLI` are all defined in
+the admitted authority's `configuration.h`, so each body reduces to `return NULL`
+with its `RUN_ONCE` compiled out. `RT-BIO-COMP` observes the NULL *and* that the
+error queue stayed empty. This is scoped to the profile: a zlib-enabled build
+exposes a real filter BIO with its own controls and error strings, so these are
+recorded as implemented *for `openssl-3.6.4-production`* rather than universally,
+and the obligation is expected to reopen as three implementations if a
+compression-enabled profile is ever admitted (`docs/BUILD_MATRIX.md`). A
+`SCAFFOLDED` abstention would abort; returning the authority's value does not.
+
+**The retry classifiers differ by exactly one errno.** `BIO_fd_non_fatal_error`
+accepts `ENOTCONN` and `BIO_dgram_non_fatal_error` does not — measured over the
+whole Linux set, not sampled: `fd_nonfatal.e107=1` with `dgram_nonfatal.e107=0`.
+`BIO_fd_should_retry` consults `errno` **only** for `0` and `-1`; every other
+input answers 0 without reading it, which the probe pins by setting a retryable
+`errno` first (`fd_retry.eagain.1=0`, `..2=0`, `..m2=0`, `..m5=0`) so an
+implementation that read `errno` unconditionally would answer 1 and fail.
+
+**The debug callback's text is the contract, and two quirks are in it.**
+
+* `BIO_debug_callback` forwards a **coerced** return to `_ex`
+  (`ret > 0 ? 1 : (int)ret`) and then **discards** what `_ex` returns, answering
+  its own `ret`. So the same command through the two entry points gives
+  `wrapper.recvmmsg.ret=123` and `ex.recvmmsg.ret=4` — `_ex` rewrites its answer
+  to `(long)len` in the two `sendmmsg`/`recvmmsg` completion arms and nowhere
+  else.
+* The completion ret is coerced to 1 for a positive result before the callback
+  sees it, which is why `write.ret=5` is accompanied by `write return 1
+  processed: 5`. That coercion lives in `bio_call_callback` and was already
+  reproduced by `iolib.rs`; the new court observes it from the other side.
+* A zero-length `BIO_write` fires **no callback at all** (`write0` shows only the
+  `Free` line), because the length check precedes `bio_call_callback`.
+* The descriptor branch (`… - socket fd=0`) is exercised **without doing I/O**, by
+  calling the callback directly on a `BIO_s_socket` BIO whose `sock_new` leaves
+  `num` at 0 and `init` at 0. Provoking it through `BIO_read` would have made the
+  transcript depend on a real descriptor number, and would have read from
+  descriptor 0.
+
+**One normalisation, and why it is legitimate.** Every message begins
+`BIO[0x…]: ` with the subject's address. The probe rewrites each `0x`-prefixed
+hex run to the literal `<addr>` before printing, symmetrically on both sides and
+confined to that token — no other field in any message is a hex run, so the
+substitution cannot mask a divergence. The raw text remains re-derivable by
+re-running the staged binaries in `artifacts/phase4/probes/`, which is what makes
+this a comparison-surface transform rather than a loss of evidence
+(`docs/PARITY_MODEL.md`).
+
+**A court that would have passed blind, caught during review.** The first version
+of the descriptor case passed because the text was being written to `stderr`, not
+to the destination BIO: the debug callback writes to *its own* BIO's `cb_arg`,
+and the probe had set the argument on the wrong BIO. The observation count did
+not change, so the pass looked identical. The probe now sets the argument on the
+socket BIO, and `desc.dstlen=190` with a populated `desc.text` is the evidence
+that the branch is genuinely compared. This is the second time in Phase 4 that a
+*differential* court needed checking for blindness rather than just for
+residuals.
+
+**Non-claim.** `RT-BIO-DEBUG` passing means the candidate emitted the same text,
+return values and error queue as the authority for the commands the probe drives.
+It is not a claim about the callbacks of the filter and method BIOs still open in
+this stratum. `RT-BIO-COMP` passing is scoped to the admitted build profile.

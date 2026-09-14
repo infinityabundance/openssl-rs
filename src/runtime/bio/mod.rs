@@ -57,15 +57,18 @@ use crate::runtime::ex_data::{
 pub mod addr;
 pub mod addr_info;
 pub mod bf_null;
+pub mod bio_cb;
 pub mod bio_sock2;
 pub mod bss_mem;
 pub mod bss_null;
 pub mod bss_sock;
+pub mod comp;
 pub mod dump;
 pub mod iolib;
 pub mod legacy_host;
 pub mod method;
 pub mod print;
+pub mod retry;
 pub mod sys;
 
 // ---------------------------------------------------------------------------
@@ -1553,10 +1556,12 @@ pub use addr_info::{
     BIO_ADDRINFO_address, BIO_ADDRINFO_family, BIO_ADDRINFO_free, BIO_ADDRINFO_next,
     BIO_ADDRINFO_protocol, BIO_ADDRINFO_socktype, BIO_lookup, BIO_lookup_ex, BIO_parse_hostserv,
 };
+pub use bio_cb::{BIO_debug_callback, BIO_debug_callback_ex};
 pub use bio_sock2::{
     BIO_accept, BIO_accept_ex, BIO_bind, BIO_connect, BIO_get_accept_socket, BIO_listen,
     BIO_set_tcp_ndelay, BIO_sock_info, BIO_socket,
 };
+pub use comp::{BIO_f_brotli, BIO_f_zlib, BIO_f_zstd};
 pub use dump::{
     BIO_dump, BIO_dump_cb, BIO_dump_fp, BIO_dump_indent, BIO_dump_indent_cb, BIO_dump_indent_fp,
     BIO_hex_string,
@@ -1577,3 +1582,4 @@ pub use method::{
     BIO_meth_set_recvmmsg, BIO_meth_set_sendmmsg, BIO_meth_set_write, BIO_meth_set_write_ex,
 };
 pub use print::BIO_indent;
+pub use retry::{BIO_dgram_non_fatal_error, BIO_fd_non_fatal_error, BIO_fd_should_retry};

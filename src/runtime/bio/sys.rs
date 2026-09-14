@@ -49,6 +49,16 @@ pub struct FILE {
 }
 
 extern "C" {
+    /// `stderr` — the C library's standard error `FILE *`.
+    ///
+    /// Declared as a `static mut` because on glibc `stderr` is a variable of
+    /// type `FILE *`, not a macro. `BIO_debug_callback_ex` falls back to it when
+    /// the BIO has no callback argument BIO. Reading it through a shared
+    /// reference would be incorrect: another thread may reassign it.
+    pub static mut stderr: *mut FILE;
+}
+
+extern "C" {
     /// `FILE *fopen(const char *, const char *)`.
     pub fn fopen(path: *const c_char, mode: *const c_char) -> *mut FILE;
     /// `int fclose(FILE *)`.
@@ -164,6 +174,9 @@ pub const ENOBUFS: c_int = 105;
 pub const EMSGSIZE: c_int = 90;
 /// `ENOMEM`.
 pub const ENOMEM: c_int = 12;
+/// `EPROTO` — `BIO_fd_non_fatal_error` and `BIO_dgram_non_fatal_error` treat it as
+/// retryable on Linux.
+pub const EPROTO: c_int = 71;
 
 // ---------------------------------------------------------------------------
 // Sockets

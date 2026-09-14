@@ -68,6 +68,8 @@ COURTS = [
     ("RT-BIO-ADDR", "rt_bio_addr_probe.c"),
     ("RT-BIO-RESOLVE", "rt_bio_resolve_probe.c"),
     ("RT-BIO-SOCK", "rt_bio_sock_probe.c"),
+    ("RT-BIO-COMP", "rt_bio_comp_probe.c"),
+    ("RT-BIO-DEBUG", "rt_bio_debug_probe.c"),
 ]
 
 

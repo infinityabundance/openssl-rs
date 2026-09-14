@@ -48,6 +48,14 @@
       "observations": 98,
       "verdict": "pass"
     },
+    "RT-BIO-COMP": {
+      "observations": 45,
+      "verdict": "pass"
+    },
+    "RT-BIO-DEBUG": {
+      "observations": 55,
+      "verdict": "pass"
+    },
     "RT-BIO-RESOLVE": {
       "observations": 501,
       "verdict": "pass"
@@ -98,12 +106,12 @@
     "phase4": 14
   },
   "implemented": {
-    "libcrypto": 378,
+    "libcrypto": 386,
     "libssl": 0
   },
   "open_obligations": {
     "phase3": 0,
-    "phase4": 76
+    "phase4": 68
   },
   "phases": {
     "0": "complete",
