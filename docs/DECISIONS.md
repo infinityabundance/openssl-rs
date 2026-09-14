@@ -922,3 +922,38 @@ runtime courts, the 3 BIO courts, and the baseline extraction. `static` passes
 independently. The remaining red job is `lint`, which is `continue-on-error` by
 D-something recorded in `docs/PHASE-4-BIO-CONF-SEAL.md` and still carrying the
 Phase 4 `# Safety` documentation debt.
+
+---
+
+## D36 — `BIO_ADDR`'s two port conventions are inverted, and `BIO_lookup` is where that becomes visible
+
+**Finding, measured.** `BIO_ADDR` stores its port two different ways depending on
+how it was built, and the two accessors therefore disagree in opposite directions:
+
+| built by | stored port field | `BIO_ADDR_rawport()` | `BIO_ADDR_service_string()` |
+|---|---|---|---|
+| `BIO_ADDR_rawmake(…, 8080)` | `htons(8080)` | `8080` (correct) | `"36895"` (swapped) |
+| `BIO_lookup(…, "8080")` | `8080` (host-order value) | `36895` (swapped) | `"8080"` (correct) |
+
+Measured with `courts/phase4/discover_bio_lookup.c` against the authority, for port
+8080 on IPv4, port 80 on IPv4, and port 443 on IPv6 — all three consistent. So the
+lookup path hands `BIO_ADDR_rawmake` the *network-order field value* as though it
+were a host-order port, and `rawmake` then `htons`es it, which un-swaps it. That is
+an upstream inconsistency, not a documentation gap, and it is reproducible.
+
+**Why this is recorded rather than implemented.** `BIO_ADDRINFO` and `BIO_lookup`
+are *not* implemented; they remain open Phase 4 obligations. The finding is
+recorded now because it is the kind of detail that is expensive to rediscover: it
+is invisible from the headers, invisible from a single accessor, and it would
+otherwise be "fixed" into a parity defect by anyone implementing `BIO_lookup` from
+the `BIO_ADDR` code that already exists. `BIO_ADDR` itself is unaffected — D34's
+implementation reproduces the `rawmake` column exactly, and `RT-BIO-ADDR` asserts
+it.
+
+**Consequence for the next step.** An implementation of `BIO_lookup_ex` must
+convert each `getaddrinfo` result into a `BIO_ADDR` whose port field is set the way
+the second row describes, then build the `BIO_ADDRINFO` chain around it. The probe
+that established the table is committed so the conversion can be courted the same
+way, and `discover_bio_lookup.c` also records the entry count and ordering for
+those lookups (one entry each for the numeric cases probed, with `socktype` 1 and
+`protocol` 6 filled in by the resolver).
