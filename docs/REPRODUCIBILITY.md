@@ -57,7 +57,7 @@ Applied at `docker run` time, identically for both venues:
 | `--memory` | `8g` | hard cgroup memory cap |
 | `--memory-swap` | `8g` | pinned equal to memory: no growth via swap; overrun OOM-kills inside the container |
 | `--pids-limit` | `2048` | fork-bomb containment |
-| `--cpus` | `8` | runaway-court CPU containment |
+| `--cpus` | `8`, clamped to `nproc` | runaway-court CPU containment. Docker rejects a cap above the machine's count, so a smaller machine lowers the cap and the clamp is printed; an explicit `OPENSSL_RS_COURT_CPUS` is clamped the same way, and a non-integer is rejected |
 | `--restart` | `no` | a killed court stays dead |
 
 `docker/openssl-rs-court.sh verify` and `docker/openssl-rs-frf-court.sh verify`

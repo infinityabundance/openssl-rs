@@ -4,8 +4,8 @@
     "complete": false,
     "counts": {
       "deferred_to_later_phase": 14,
-      "implemented": 129,
-      "open_in_this_stratum": 113,
+      "implemented": 133,
+      "open_in_this_stratum": 109,
       "owned": 256
     },
     "deferred": [
@@ -255,6 +255,10 @@
       "BUF_MEM_grow_clean",
       "BUF_MEM_new",
       "BUF_MEM_new_ex",
+      "ERR_add_error_mem_bio",
+      "ERR_print_errors",
+      "ERR_print_errors_cb",
+      "ERR_print_errors_fp",
       "OPENSSL_LH_node_stats",
       "OPENSSL_LH_node_stats_bio",
       "OPENSSL_LH_node_usage_stats",
@@ -633,22 +637,6 @@
         "symbol": "CONF_set_nconf"
       },
       {
-        "module": "src/runtime/err.rs",
-        "symbol": "ERR_add_error_mem_bio"
-      },
-      {
-        "module": "src/runtime/err.rs",
-        "symbol": "ERR_print_errors"
-      },
-      {
-        "module": "src/runtime/err.rs",
-        "symbol": "ERR_print_errors_cb"
-      },
-      {
-        "module": "src/runtime/err.rs",
-        "symbol": "ERR_print_errors_fp"
-      },
-      {
         "module": "src/runtime/conf/",
         "symbol": "NCONF_WIN32"
       },
@@ -727,8 +715,8 @@
     },
     {
       "name": "implemented-surface",
-      "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "08c6412ae7cdb223cc6bc96362ab8917245026e61ad6c00915f0c26621b2e0ac"
+      "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
+      "sha256": "f769de8ab8944d6252d0b51585df303f73b435182232934215b9db209f53d4cf"
     }
   ],
   "kind": "phase4-obligations",

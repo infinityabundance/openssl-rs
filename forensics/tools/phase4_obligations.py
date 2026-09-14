@@ -40,6 +40,7 @@ from atlas_common import (  # noqa: E402
     REPO_ROOT,
     InputRef,
     envelope,
+    implemented_surface_input,
     rel,
     resolve_authority,
     write_json,
@@ -159,8 +160,7 @@ def main(argv: list[str]) -> int:
     inputs = [
         InputRef(name="authority-symbols",
                  path=REPO_ROOT / "forensics" / "atlas" / auth.id / "symbols-libcrypto.json"),
-        InputRef(name="implemented-surface",
-                 path=REPO_ROOT / "forensics" / "atlas" / "implemented-surface.json"),
+        implemented_surface_input(),
     ]
     doc = envelope(kind="phase4-obligations", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)

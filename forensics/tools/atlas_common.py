@@ -60,6 +60,31 @@ def sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
+IMPLEMENTED_SURFACE = FORENSICS / "atlas" / "implemented-surface.json"
+
+
+def implemented_surface_input() -> InputRef:
+    """The implemented surface as an *evidence* input, for the obligation ledgers.
+
+    Bound by `body_hash`, not by the file digest. The artefact also records
+    build-product observations (the archive digest, the compiler-emitted symbol
+    count), so its file digest is not reproducible across machines; binding it
+    would push a build product into every ledger that consumes the surface.
+    `body_hash` is computed over the evidence subset of the body, so it is a
+    function of committed inputs only. See docs/DECISIONS.md D30.
+    """
+    doc = json.loads(IMPLEMENTED_SURFACE.read_text(encoding="utf-8"))
+    return InputRef(
+        name="implemented-surface",
+        sha256=doc["body_hash"],
+        note=(
+            "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; "
+            "the artefact's file digest is deliberately not used because the file "
+            "also records build-product observations"
+        ),
+    )
+
+
 def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 

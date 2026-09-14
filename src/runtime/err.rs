@@ -74,6 +74,7 @@
 
 use core::cell::{Cell, UnsafeCell};
 use core::ffi::{c_char, c_int, c_ulong, c_void};
+use core::ptr;
 use core::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 use crate::ffi::guard_ffi;
@@ -711,9 +712,21 @@ pub unsafe extern "C" fn ERR_set_error_data(data: *mut c_char, flags: c_int) {
 
 /// `void ERR_add_error_txt(const char *sepr, const char *txt)`
 ///
-/// Not variadic, so it lives in Rust. The authority routes it through
-/// `ERR_add_error_data`, which means the separator is prepended whenever it is
-/// non-empty and the result is appended to whatever data already exists.
+/// The authority routes this through `ERR_add_error_data`, but with one rule that
+/// is easy to miss and is directly observable through `ERR_get_error_all`: the
+/// **separator is dropped when the current slot carries no string data**. A slot
+/// raised with `ERR_set_error(lib, reason, NULL)` has no `ERR_TXT_STRING`, so
+/// appending `"ab"` with separator `" | "` yields `ab`, not `" | ab"`. The
+/// separator only separates existing text from new text.
+///
+/// ## Open obligation: the length-bounded split is not implemented
+///
+/// The authority also splits `txt` when the combined data would exceed
+/// `ERR_PRINT_BUF_SIZE - 100`, emitting several queue entries so that
+/// `ERR_print_errors_cb`'s fixed buffer cannot truncate the report. That path is
+/// not implemented here: it only manifests for error data of roughly four
+/// kilobytes or more, no court probes it, and no claim is made about it. It is
+/// recorded rather than left implicit, and a court for it is the obligation.
 ///
 /// # Safety
 /// `sepr` and `txt` must each be NULL or a NUL-terminated C string.
@@ -723,7 +736,7 @@ pub unsafe extern "C" fn ERR_add_error_txt(sepr: *const c_char, txt: *const c_ch
         if txt.is_null() {
             return;
         }
-        let has_sepr = if sepr.is_null() {
+        let sepr_nonempty = if sepr.is_null() {
             false
         } else {
             // SAFETY: `sepr` is NUL-terminated.
@@ -731,6 +744,9 @@ pub unsafe extern "C" fn ERR_add_error_txt(sepr: *const c_char, txt: *const c_ch
         };
         with_state(|s| {
             let t = s.top as usize;
+            // The separator is suppressed when there is no existing *string* data
+            // to separate from, which is the authority's `leading_separator = ""`.
+            let has_sepr = sepr_nonempty && (s.err_data_flags[t] & ERR_TXT_STRING) != 0;
             // SAFETY: `txt` is NUL-terminated.
             let txt_len = unsafe { c_strlen(txt) };
             let sep_len = if has_sepr {
@@ -1311,6 +1327,23 @@ unsafe fn strerror_into(errnum: c_int, buf: *mut c_char, buflen: usize) -> bool 
 /// # Safety
 /// `buf` must be writable for `len` bytes when `len` is non-zero.
 unsafe fn error_string_body(e: c_ulong, buf: *mut c_char, len: usize) {
+    // SAFETY: forwarded; the authority passes the empty string for the function
+    // name when formatting a standalone error string.
+    unsafe { error_string_body_func(e, EMPTY_C, buf, len) }
+}
+
+/// `ossl_err_string_int(e, func, buf, len)`.
+///
+/// The `func` is carried through because `ERR_print_errors_cb` prints the
+/// *recorded* function name from the error's debug information, not an empty
+/// field, so the same formatter produces
+/// `error:<code>:<lib>:<func>:<reason>` for it and
+/// `error:<code>:<lib>::<reason>` for `ERR_error_string`.
+///
+/// # Safety
+/// `buf` must be writable for `len` bytes when `len` is non-zero; `func` must be
+/// NULL or a NUL-terminated C string.
+unsafe fn error_string_body_func(e: c_ulong, func: *const c_char, buf: *mut c_char, len: usize) {
     if len == 0 || buf.is_null() {
         return;
     }
@@ -1376,7 +1409,11 @@ unsafe fn error_string_body(e: c_ulong, buf: *mut c_char, len: usize) {
     v.extend_from_slice(format!("error:{e:08X}:").as_bytes());
     v.extend_from_slice(ls);
     v.push(b':');
-    v.extend_from_slice(b""); // `func` is always the empty string
+    if !func.is_null() {
+        // SAFETY: `func` is NUL-terminated per this function's contract.
+        let f = unsafe { core::slice::from_raw_parts(func.cast::<u8>(), c_strlen(func)) };
+        v.extend_from_slice(f);
+    }
     v.push(b':');
     v.extend_from_slice(rs);
     // The authority substitutes a compact form when the pretty one exactly fills
@@ -1565,6 +1602,215 @@ pub extern "C" fn ERR_remove_state(_pid: c_ulong) {}
 /// tables plus that library, which `ERR_reason_error_string` makes observable.
 /// The authority's own versions do the same through `ERR_load_strings_const`
 /// and `ossl_err_load_ERR_strings`.
+/// `int (*)(const char *str, size_t len, void *u)` — the `ERR_print_errors_cb`
+/// callback.
+pub type ErrPrintCb = unsafe extern "C" fn(*const c_char, usize, *mut c_void) -> c_int;
+
+/// `ossl_buf2hexstr_sep(buf, buflen, 0)` — upper-case hex, no separator.
+///
+/// The separator argument of the authority's helper is `CH_ZERO` here, which means
+/// "no separator" rather than "NUL-separated", and it is why the thread id renders
+/// as one unbroken hex run.
+fn buf2hexstr_plain(buf: &[u8]) -> Vec<u8> {
+    const HEX: &[u8; 16] = b"0123456789ABCDEF";
+    let mut v = Vec::with_capacity(buf.len() * 2);
+    for &b in buf {
+        v.push(HEX[(b >> 4) as usize]);
+        v.push(HEX[(b & 0x0f) as usize]);
+    }
+    v
+}
+
+/// `void ERR_print_errors_cb(int (*cb)(const char *, size_t, void *), void *u)`
+///
+/// Drains the whole thread-local queue, oldest first, printing one line per error:
+///
+/// ```text
+/// <thread-id-as-hex>:<error string>:<file>:<line>:<data>
+/// ```
+///
+/// A callback that returns `<= 0` stops the report **and leaves the remaining
+/// errors on the queue**, which is the authority's behaviour and is why an
+/// aborting callback is not the same as clearing the queue.
+///
+/// # Safety
+/// `cb` must be the caller's printing callback; `u` is passed through untouched.
+#[no_mangle]
+pub unsafe extern "C" fn ERR_print_errors_cb(cb: Option<ErrPrintCb>, u: *mut c_void) {
+    guard_ffi((), || {
+        let Some(cb) = cb else {
+            return;
+        };
+        loop {
+            let mut file: *const c_char = ptr::null();
+            let mut line: c_int = 0;
+            let mut func: *const c_char = ptr::null();
+            let mut data: *const c_char = ptr::null();
+            let mut flags: c_int = 0;
+            // SAFETY: all five are live locals of the types the function writes.
+            let l = unsafe {
+                ERR_get_error_all(&mut file, &mut line, &mut func, &mut data, &mut flags)
+            };
+            if l == 0 {
+                break;
+            }
+            // A slot with no string data prints an empty field rather than whatever
+            // the pointer happens to hold.
+            let data = if flags & ERR_TXT_STRING == 0 {
+                EMPTY_C
+            } else {
+                data
+            };
+
+            let mut out: Vec<u8> = Vec::with_capacity(256);
+            // SAFETY: `pthread_self` takes no arguments and always succeeds.
+            let tid = crate::runtime::thread::CRYPTO_THREAD_get_current_id();
+            out.extend_from_slice(&buf2hexstr_plain(&tid.to_ne_bytes()));
+            out.push(b':');
+
+            let mut tmp = [0u8; 4096];
+            // SAFETY: `tmp` is 4096 writable bytes; `func` is NUL-terminated or
+            // NULL, per the error's own recorded debug information.
+            unsafe {
+                error_string_body_func(l, func, tmp.as_mut_ptr().cast(), tmp.len());
+                let n = c_strlen(tmp.as_ptr().cast());
+                out.extend_from_slice(&tmp[..n]);
+            }
+            out.push(b':');
+            // SAFETY: `file` and `data` are each NULL or NUL-terminated strings.
+            unsafe {
+                if !file.is_null() {
+                    let n = c_strlen(file);
+                    out.extend_from_slice(core::slice::from_raw_parts(file.cast::<u8>(), n));
+                }
+                out.push(b':');
+                out.extend_from_slice(format!("{line}").as_bytes());
+                out.push(b':');
+                if !data.is_null() {
+                    let n = c_strlen(data);
+                    out.extend_from_slice(core::slice::from_raw_parts(data.cast::<u8>(), n));
+                }
+                out.push(b'\n');
+            }
+            // SAFETY: `cb` is the caller's callback; `out` is a live slice and `u`
+            // is the caller's opaque pointer.
+            if unsafe { cb(out.as_ptr().cast(), out.len(), u) } <= 0 {
+                break;
+            }
+        }
+    })
+}
+
+/// `static int print_bio(const char *str, size_t len, void *bp)`
+///
+/// # Safety
+/// `bp` must be a live BIO.
+unsafe extern "C" fn print_bio(str_: *const c_char, len: usize, bp: *mut c_void) -> c_int {
+    if len > c_int::MAX as usize {
+        return -1;
+    }
+    // SAFETY: `bp` is a live BIO and `str_` is valid for `len` bytes.
+    unsafe { crate::runtime::bio::BIO_write(bp.cast(), str_.cast(), len as c_int) }
+}
+
+/// `void ERR_print_errors(BIO *bp)`
+///
+/// # Safety
+/// `bp` must be NULL or a live BIO.
+#[no_mangle]
+pub unsafe extern "C" fn ERR_print_errors(bp: *mut crate::runtime::bio::Bio) {
+    guard_ffi((), || {
+        // SAFETY: forwarded; `ERR_print_errors_cb` accepts a NULL callback and the
+        // BIO belongs to the caller.
+        unsafe { ERR_print_errors_cb(Some(print_bio), bp.cast()) };
+    })
+}
+
+/// `void ERR_print_errors_fp(FILE *fp)`
+///
+/// The authority builds a `BIO_new_fp(fp, BIO_NOCLOSE)` and prints into that.
+/// `BIO_s_file` is an open obligation of this stratum, so this writes the same
+/// bytes to the stream directly — a file BIO's only effect on a write is `fwrite`
+/// to that stream. The mechanism difference is recorded rather than hidden.
+///
+/// # Safety
+/// `fp` must be NULL or a live `FILE *`.
+#[no_mangle]
+pub unsafe extern "C" fn ERR_print_errors_fp(fp: *mut crate::runtime::bio::sys::FILE) {
+    guard_ffi((), || {
+        /// Writes an already-formatted report line to the caller's stream.
+        ///
+        /// # Safety
+        /// `fp` must be NULL or a live `FILE *`.
+        unsafe extern "C" fn print_fp(str_: *const c_char, len: usize, fp: *mut c_void) -> c_int {
+            if fp.is_null() {
+                return -1;
+            }
+            // SAFETY: `fp` is the caller's stream and `str_` is valid for `len`
+            // bytes.
+            unsafe { crate::runtime::bio::sys::fwrite(str_.cast(), 1, len, fp.cast()) as c_int }
+        }
+        // SAFETY: forwarded; `print_fp` writes to the caller's stream.
+        unsafe { ERR_print_errors_cb(Some(print_fp), fp.cast()) };
+    })
+}
+
+/// `void ERR_add_error_mem_bio(const char *separator, BIO *bio)`
+///
+/// Appends the contents of a memory BIO to the current error's data, separated by
+/// `separator`. Two details are deliberate: a non-empty buffer whose last byte is
+/// not NUL gets one written first, so the text is a C string; and a buffer of
+/// exactly one byte is treated as empty because the guard is `len > 1`. Both are
+/// the authority's, and both are observable through `ERR_get_error_all`.
+///
+/// # Safety
+/// `bio` must be NULL or a live BIO; `separator` must be NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn ERR_add_error_mem_bio(
+    separator: *const c_char,
+    bio: *mut crate::runtime::bio::Bio,
+) {
+    guard_ffi((), || {
+        if bio.is_null() {
+            return;
+        }
+        // `BIO_get_mem_data(bio, &str)` is `BIO_ctrl(bio, BIO_CTRL_INFO, 0, &str)`.
+        // SAFETY: `bio` is live and `str_ptr` is a live local the control writes.
+        let mut str_ptr: *mut c_char = ptr::null_mut();
+        let mut len = unsafe {
+            crate::runtime::bio::BIO_ctrl(
+                bio,
+                crate::runtime::bio::BIO_CTRL_INFO,
+                0,
+                (&mut str_ptr as *mut *mut c_char).cast(),
+            )
+        };
+        if len <= 0 {
+            return;
+        }
+        // SAFETY: `str_ptr` addresses the BIO's buffer and `len` bytes are valid.
+        unsafe {
+            if *str_ptr.add((len - 1) as usize) != 0 {
+                // SAFETY: writing one NUL byte through a live BIO.
+                if crate::runtime::bio::BIO_write(bio, c"".as_ptr().cast(), 1) <= 0 {
+                    return;
+                }
+                let mut p2: *mut c_char = ptr::null_mut();
+                len = crate::runtime::bio::BIO_ctrl(
+                    bio,
+                    crate::runtime::bio::BIO_CTRL_INFO,
+                    0,
+                    (&mut p2 as *mut *mut c_char).cast(),
+                );
+                str_ptr = p2;
+            }
+            if len > 1 {
+                ERR_add_error_txt(separator, str_ptr);
+            }
+        }
+    })
+}
+
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 mod tests {

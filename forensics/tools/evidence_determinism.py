@@ -4,17 +4,28 @@
 Why this is not a plain `git diff`
 ---------------------------------
 Most derived artefacts are a pure function of committed inputs and must be
-byte-identical when regenerated. One field is not: the **crate archive digest**
-recorded in `forensics/atlas/implemented-surface.json`'s `inputs`, and therefore
-in every ledger that binds that manifest. A Rust static archive is not guaranteed
-byte-reproducible across build environments, so a byte comparison would fail for a
-reason that has nothing to do with staleness — and a check that cries wolf is a
-check nobody trusts.
+byte-identical when regenerated. A few *fields* are not, because they record the
+**build product** — the compiler's output — rather than a committed input:
 
-So this tool compares the committed artefacts against freshly generated ones after
-**normalising exactly those archive digests**, and it reports what it normalised so
-the exception is visible rather than silent. Everything else — every count, every
-symbol name, every phase state, every obligation — is compared exactly.
+  * `inputs[name=crate-archive|extra-object].sha256` in
+    `forensics/atlas/implemented-surface.json`. A Rust static archive is not
+    guaranteed byte-reproducible across build environments.
+  * `internal_symbols.compiler_emitted_count` and
+    `internal_symbols.nm_diagnostic_lines` in the same artefact. Which global
+    symbols a toolchain emits, and how many diagnostics its object reader
+    prints, are properties of that toolchain: most of the archive's symbol
+    population is LLVM-internalised anonymous data named
+    `anon.<hash>.<n>.llvm.<hash>`, and those hashes change from build to build.
+    The *names* are not recorded at all for this reason; the stable C-identifier
+    subset is (`internal_symbols.c_style`) and **is** compared exactly.
+  * `body_hash` is computed over the evidence subset of `body`, so the build
+    product cannot propagate into it, and the obligation ledgers bind that
+    digest rather than the artefact's file digest.
+
+So this tool compares the committed artefacts against freshly generated ones
+after **normalising exactly those declared fields**, and it reports which fields
+it normalised and why. Everything else — every count, every symbol name, every
+phase state, every obligation — is compared exactly.
 
 What it catches
 ---------------
@@ -66,20 +77,36 @@ COMPARED = [
     "forensics/STATUS.md",
 ]
 
-# Input names whose digest is a build product rather than a committed input.
-BUILD_PRODUCT_INPUTS = {"crate-archive", "extra-object"}
+# ---------------------------------------------------------------------------
+# The declared build-product surface. Nothing outside this set is normalised.
+# ---------------------------------------------------------------------------
+
+NORMALISED_DIGEST = "<build-product-digest-normalised>"
+NORMALISED_COUNT = "<build-product-count-normalised>"
+
+# `inputs[]` entries whose `sha256` is a build product, by entry name.
+BUILD_PRODUCT_INPUT_NAMES = frozenset({"crate-archive", "extra-object"})
+
+# `body.internal_symbols.<field>` values that are build products, by field name.
+BUILD_PRODUCT_SYMBOL_FIELDS = ("compiler_emitted_count", "nm_diagnostic_lines")
+
+# How many differences to print before truncating. Enough to diagnose, bounded
+# so a wholesale drift does not produce an unreadable wall of text.
+MAX_REPORTED_DIFFERENCES = 12
 
 
-def normalise(doc: object) -> object:
-    """Blank the digests of build-product inputs, recursively.
+def normalise(doc: object, fired: set[str]) -> object:
+    """Blank the declared build-product fields, recursively.
 
     Returns a copy, so the caller's document is untouched. A JSON string is
-    returned unchanged (used for the Markdown artefacts).
+    returned unchanged (used for the Markdown artefacts). `fired` accumulates the
+    names of the normalisations that actually applied, so the exception is
+    reported rather than silent.
     """
     if isinstance(doc, str):
         return doc
     if isinstance(doc, list):
-        return [normalise(x) for x in doc]
+        return [normalise(x, fired) for x in doc]
     if not isinstance(doc, dict):
         return doc
     out: dict = {}
@@ -87,12 +114,20 @@ def normalise(doc: object) -> object:
         if k == "inputs" and isinstance(v, list):
             new_inputs = []
             for entry in v:
-                if isinstance(entry, dict) and entry.get("name") in BUILD_PRODUCT_INPUTS:
-                    entry = {**entry, "sha256": "<build-product-digest-normalised>"}
-                new_inputs.append(normalise(entry))
+                if isinstance(entry, dict) and entry.get("name") in BUILD_PRODUCT_INPUT_NAMES:
+                    fired.add(f"inputs[name={entry.get('name')}].sha256")
+                    entry = {**entry, "sha256": NORMALISED_DIGEST}
+                new_inputs.append(normalise(entry, fired))
             out[k] = new_inputs
+        elif k == "internal_symbols" and isinstance(v, dict):
+            sub = dict(v)
+            for field in BUILD_PRODUCT_SYMBOL_FIELDS:
+                if field in sub:
+                    fired.add(f"internal_symbols.{field}")
+                    sub[field] = NORMALISED_COUNT
+            out[k] = normalise(sub, fired)
         else:
-            out[k] = normalise(v)
+            out[k] = normalise(v, fired)
     return out
 
 
@@ -100,36 +135,55 @@ def load_json(path: Path) -> object:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def first_difference(a: object, b: object, path: str = "") -> str | None:
-    """A readable description of the first structural difference, or None."""
+def differences(a: object, b: object, path: str = "",
+                found: list[str] | None = None) -> list[str]:
+    """Every structural difference, as readable `path: detail` strings.
+
+    Reporting *all* of them, not just the first, is deliberate: a gate that names
+    only the first divergence costs its reader a regeneration cycle per hidden
+    one.
+    """
+    if found is None:
+        found = []
+    if len(found) >= MAX_REPORTED_DIFFERENCES:
+        return found
     if type(a) is not type(b):
-        return f"{path or '<root>'}: {type(a).__name__} vs {type(b).__name__}"
+        found.append(f"{path or '<root>'}: {type(a).__name__} vs {type(b).__name__}")
+        return found
     if isinstance(a, dict):
         for k in sorted(set(a) | set(b)):
             if k not in a:
-                return f"{path}.{k}: only in regenerated"
-            if k not in b:
-                return f"{path}.{k}: only in committed"
-            diff = first_difference(a[k], b[k], f"{path}.{k}")
-            if diff:
-                return diff
-        return None
+                found.append(f"{path}.{k}: only in regenerated")
+            elif k not in b:
+                found.append(f"{path}.{k}: only in committed")
+            else:
+                differences(a[k], b[k], f"{path}.{k}", found)
+            if len(found) >= MAX_REPORTED_DIFFERENCES:
+                break
+        return found
     if isinstance(a, list):
         if len(a) != len(b):
-            return f"{path}: {len(a)} entries vs {len(b)}"
+            found.append(f"{path}: {len(a)} entries vs {len(b)}")
+            only_a = [x for x in a if x not in b][:3]
+            only_b = [x for x in b if x not in a][:3]
+            if only_a:
+                found.append(f"{path}: only in committed, e.g. {only_a}")
+            if only_b:
+                found.append(f"{path}: only in regenerated, e.g. {only_b}")
+            return found
         for i, (x, y) in enumerate(zip(a, b)):
-            diff = first_difference(x, y, f"{path}[{i}]")
-            if diff:
-                return diff
-        return None
+            differences(x, y, f"{path}[{i}]", found)
+            if len(found) >= MAX_REPORTED_DIFFERENCES:
+                break
+        return found
     if a != b:
         ra, rb = repr(a), repr(b)
         if len(ra) > 80:
             ra = ra[:77] + "..."
         if len(rb) > 80:
             rb = rb[:77] + "..."
-        return f"{path}: committed {ra} vs regenerated {rb}"
-    return None
+        found.append(f"{path}: committed {ra} vs regenerated {rb}")
+    return found
 
 
 def main(argv: list[str]) -> int:
@@ -155,16 +209,13 @@ def main(argv: list[str]) -> int:
                 f"{res.stdout}\n{res.stderr}")
 
     problems: list[str] = []
-    normalised: list[str] = []
+    fired: set[str] = set()
     for relpath in COMPARED:
         now = (REPO_ROOT / relpath).read_text(encoding="utf-8")
         if relpath.endswith(".json"):
-            a = normalise(json.loads(committed[relpath]))
-            b = normalise(json.loads(now))
-            if a != b:
-                problems.append(f"{relpath}: {first_difference(a, b)}")
-            if normalise(json.loads(committed[relpath])) != json.loads(committed[relpath]):
-                normalised.append(relpath)
+            a = normalise(json.loads(committed[relpath]), fired)
+            b = normalise(json.loads(now), fired)
+            problems += [f"{relpath}: {d}" for d in differences(a, b)]
         else:
             if committed[relpath] != now:
                 problems.append(f"{relpath}: content differs (first line: "
@@ -173,11 +224,14 @@ def main(argv: list[str]) -> int:
         if not args.keep:
             (REPO_ROOT / relpath).write_text(committed[relpath], encoding="utf-8")
 
-    if normalised:
-        print("[evidence-determinism] normalised build-product input digests in: "
-              + ", ".join(normalised))
-        print("  (a Rust static archive is not byte-reproducible across build "
-              "environments; every other field is compared exactly)")
+    if fired:
+        print("[evidence-determinism] normalised declared build-product fields: "
+              + ", ".join(sorted(fired)))
+        print("  a Rust static archive is not byte-reproducible across build "
+              "environments, and the archive's compiler-emitted symbol population "
+              "is a property of the toolchain;")
+        print("  every other field is compared exactly "
+              "(docs/DECISIONS.md D30).")
 
     if problems:
         print(f"[evidence-determinism] FAIL: {len(problems)} stale artefact(s)")

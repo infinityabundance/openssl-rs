@@ -17,7 +17,7 @@
         "libcrypto.so.3"
       ],
       "resolved_openssl_closure": [
-        "libcrypto.so.3 => /work/artifacts/phase2/install/lib/libcrypto.so.3 (0x00007f406bc00000)"
+        "libcrypto.so.3 => /work/artifacts/phase2/install/lib/libcrypto.so.3 (0x00007f0b5cc00000)"
       ],
       "resolved_outside_candidate": [],
       "verdict": "pass"

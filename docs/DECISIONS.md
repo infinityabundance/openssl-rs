@@ -666,3 +666,114 @@ JSON beside it said Phase 4 was in progress and phases 5–21 were unstarted. Th
 derived state was right and the prose contradicted it — in a project whose premise
 is that status must never lie. A renderer must not know any phase status, and that
 includes the range of the unstarted ones.
+
+---
+
+## D30 — The implemented surface stops recording the toolchain's symbol soup
+
+**Decision.** `implemented_surface.py` reads `nm` in POSIX format and accepts a line
+as a symbol only when it has the POSIX record *shape* (3–4 fields, a one-character
+symbol type, a hexadecimal value). A line of any other shape must be a known
+diagnostic class — an archive-member announcement ending `]:`, or a `bfd plugin:`,
+`plugin:` or `nm:` message — or the generator fails with `NmParseError`.
+
+The artefact's `internal_symbols` is now a structured observation. The stable,
+collision-relevant part — plain C identifiers that are not Rust manglings — is
+recorded as `c_style` and **compared exactly** (39 names: the legacy error-string
+loaders, the two `openssl_rs_err_*` adapters, and `compiler_builtins` intrinsics).
+The compiler-emitted population is recorded only as `compiler_emitted_count`, and
+`nm`'s diagnostic-line count as `nm_diagnostic_lines`; both are declared build
+products which `evidence_determinism.py` normalises and reports. `body_hash` is
+computed over the evidence subset of the body, and the obligation ledgers bind
+that digest through a single shared `implemented_surface_input()` helper instead of
+the artefact's file digest.
+
+**Why.** CI reported three stale artefacts. The cause was not staleness.
+
+1. **`nm` writes diagnostics to the symbol stream.** The old parse took the third
+   whitespace-separated field of any line with three or more fields. `nm` emits
+   `bfd plugin: LLVM gold plugin has failed to create LTO module: ...` on stdout,
+   whose third field is the word `LLVM`, so a compiler diagnostic was recorded as a
+   defined symbol. How many such lines appear depends on the host's binutils and
+   its LTO plugin — this is why the court (Debian binutils 2.40) and CI (Ubuntu)
+   disagreed about a crate that had not changed.
+
+2. **Most of the recorded names were never names.** 3,942 of 4,493 entries were
+   `anon.<hash>.<n>.llvm.<hash>`, LLVM-internalised anonymous data. Those hashes
+   changed between two builds of the *same* source in the *same* container
+   (`...llvm.14066615883699384174` became `...llvm.18337626635650182727` against the
+   committed artefact at HEAD), so the field was not a function of committed inputs
+   at all. Treating it as evidence was the design error.
+
+3. **One build product propagated into three artefacts.** `body_hash` covered the
+   volatile list, and both obligation ledgers bound the artefact's file digest, so
+   the archive's non-reproducibility surfaced as `phase3-obligations.json` and
+   `phase4-obligations.json` both "stale".
+
+**Consequence.** The determinism step still compares everything that must be
+reproducible and now names the three fields it does not, so the exception is
+visible. `implemented` stayed at 345 across the change, which is the evidence that
+the strict parser dropped no real symbol; had it dropped one, the shell would have
+scaffolded a *defined* symbol and the link would have failed loudly rather than
+silently.
+
+**Rejected.** Normalising the whole `internal_symbols` list. That would have hidden
+the parser defect in (1) — a difference normalised because it was inconvenient, not
+because it was a build product. Separating the stable subset from the
+toolchain-dependent remainder keeps the difference visible and still compares the
+part a consumer could collide with.
+
+**Non-claim.** Nothing here changes any parity claim. This is a defect in the
+evidence plane's own reproducibility, and it affected `IMPLEMENTED` bookkeeping, not
+any court.
+
+---
+
+## D31 — The court's CPU cap is clamped to the machine, not asserted
+
+**Decision.** `docker/openssl-rs-court.sh` requests 8 CPUs and, when the machine has
+fewer, clamps `--cpus` to `nproc` and prints the clamp. An explicit
+`OPENSSL_RS_COURT_CPUS` is clamped identically; a non-integer is rejected with exit
+code 2.
+
+**Why.** The `courts` CI job failed at `Start court container` with
+`docker: Error response from daemon: range of CPUs is from 0.01 to 4.00, as there
+are only 4 CPUs available`: GitHub's `ubuntu-latest` has 4 CPUs and the cap was
+hardcoded at 8. A resource cap is a *bound* on a runaway court, and a bound that
+prevents the court from starting at all is the opposite of containment. The value
+is therefore machine-derived rather than asserted.
+
+**Consequence.** Verified, not assumed: with an `nproc` shim reporting 4 CPUs, the
+container now starts and reports `nanocpus=4000000000` (4 CPUs); an explicit
+request of 999 on a 16-CPU machine starts and reports 16; `OPENSSL_RS_COURT_CPUS=abc`
+is rejected. `docs/REPRODUCIBILITY.md` §1.3 records the clamping in the cap table.
+
+**Note.** D4's recorded cap of `--cpus=8` remains the intent; this decision makes
+the *effective* value fit the machine. D4 is not rewritten.
+
+---
+
+## D32 — The Phase 2 install tree ships build products in git (observed, deferred)
+
+**Observation.** `artifacts/phase2/install/` is Git-tracked in full, including the
+non-reproducible build products `lib/libcrypto.so.3`, `lib/libcrypto.so`,
+`lib/libcrypto.a`, `lib/libssl.a` and `lib/ossl-modules/legacy.so` (54 MB). They
+change on every `build_phase2.sh` run, so every commit made after a rebuild carries
+tens of megabytes of binary churn that no court reads: the courts regenerate the
+tree themselves, and `ABI-INSTALL-LAYOUT` asserts *entry presence*, while
+`SHELL_MANIFEST.json` records the layout. `.gitignore` already tries to exclude
+`/artifacts/phase2/*.so` and `/artifacts/phase2/*.a`, but the patterns are shallow
+and do not match the nested `install/lib/` paths.
+
+**Decision.** Recorded, not acted on in this change. Fixing it means either making
+those ignore patterns recursive and `git rm --cached`-ing the build products, or
+keeping the tree as a demonstrable distribution and accepting the churn. Which is
+correct depends on whether the committed bytes were intended as the Phase 2
+distribution artifact or as an accident of a shallow ignore pattern, and that is
+the project owner's call rather than an inference from the evidence plane.
+
+**Why it is recorded anyway.** It is the same defect class as D30 — a build product
+treated as though it were evidence — and D30's own remedy (normalise, report, and
+compare only what must be reproducible) would apply here as "do not track it". Not
+recording the observation would lose the finding; acting on it unasked would change
+what the Phase 2 seal's `install/` row means.

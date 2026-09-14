@@ -2,35 +2,11 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "deferred": 5,
-      "implemented": 215,
+      "deferred": 1,
+      "implemented": 219,
       "owned": 220
     },
     "deferred": [
-      {
-        "module": "src/runtime/err.rs",
-        "owning_phase": 4,
-        "reason": "writes to a BIO/FILE sink; BIO is Phase 4",
-        "symbol": "ERR_add_error_mem_bio"
-      },
-      {
-        "module": "src/runtime/err.rs",
-        "owning_phase": 4,
-        "reason": "writes to a BIO/FILE sink; BIO is Phase 4",
-        "symbol": "ERR_print_errors"
-      },
-      {
-        "module": "src/runtime/err.rs",
-        "owning_phase": 4,
-        "reason": "writes to a BIO/FILE sink; BIO is Phase 4",
-        "symbol": "ERR_print_errors_cb"
-      },
-      {
-        "module": "src/runtime/err.rs",
-        "owning_phase": 4,
-        "reason": "writes to a BIO/FILE sink; BIO is Phase 4",
-        "symbol": "ERR_print_errors_fp"
-      },
       {
         "module": "src/runtime/obj.rs",
         "owning_phase": 4,
@@ -182,6 +158,7 @@
       "CRYPTO_strndup",
       "CRYPTO_zalloc",
       "ERR_add_error_data",
+      "ERR_add_error_mem_bio",
       "ERR_add_error_txt",
       "ERR_add_error_vdata",
       "ERR_clear_error",
@@ -243,6 +220,9 @@
       "ERR_peek_last_error_line_data",
       "ERR_pop",
       "ERR_pop_to_mark",
+      "ERR_print_errors",
+      "ERR_print_errors_cb",
+      "ERR_print_errors_fp",
       "ERR_reason_error_string",
       "ERR_remove_state",
       "ERR_remove_thread_state",
@@ -352,8 +332,8 @@
     },
     {
       "name": "implemented-surface",
-      "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "08c6412ae7cdb223cc6bc96362ab8917245026e61ad6c00915f0c26621b2e0ac"
+      "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
+      "sha256": "f769de8ab8944d6252d0b51585df303f73b435182232934215b9db209f53d4cf"
     }
   ],
   "kind": "phase3-obligations",

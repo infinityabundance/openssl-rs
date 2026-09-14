@@ -13,7 +13,12 @@
 #                          memory pressure.
 #   --memory-swappiness=0  bias the kernel away from swapping court pages
 #   --pids-limit=2048      fork-bomb containment
-#   --cpus=8               bound CPU so a runaway court cannot starve the host
+#   --cpus=<min(8, nproc)> bound CPU so a runaway court cannot starve the host.
+#                          The cap is clamped to the machine's CPU count because
+#                          docker refuses a `--cpus` greater than that ("range of
+#                          CPUs is from 0.01 to N"), which is how a 4-CPU CI
+#                          runner failed to start the court at all. A clamp is
+#                          announced, never silent.
 #   --restart=no           a killed court stays dead; it never silently restarts
 #
 # The container is disposable: `down` removes it and its /court scratch space.
@@ -28,7 +33,28 @@ NAME="${OPENSSL_RS_COURT_NAME:-openssl-rs-court}"
 MEM="${OPENSSL_RS_COURT_MEM:-8g}"
 MEMSWAP="${OPENSSL_RS_COURT_MEMSWAP:-8g}"
 PIDS="${OPENSSL_RS_COURT_PIDS:-2048}"
-CPUS="${OPENSSL_RS_COURT_CPUS:-8}"
+
+is_positive_int() {
+  case "${1}" in
+    '' | *[!0-9]*) return 1 ;;
+  esac
+  [ "${1}" -gt 0 ]
+}
+
+# The cap exists to stop a runaway court starving the host. Docker rejects a
+# `--cpus` above the machine's CPU count, so the requested value is clamped to
+# what is actually available. See the header note.
+CPUS_REQUEST="${OPENSSL_RS_COURT_CPUS:-8}"
+if ! is_positive_int "${CPUS_REQUEST}"; then
+  echo "openssl-rs-court: OPENSSL_RS_COURT_CPUS must be a positive integer (got '${CPUS_REQUEST}')" >&2
+  exit 2
+fi
+CPUS="${CPUS_REQUEST}"
+HOST_CPUS="$(nproc 2>/dev/null || echo '')"
+if is_positive_int "${HOST_CPUS}" && [ "${CPUS}" -gt "${HOST_CPUS}" ]; then
+  echo "openssl-rs-court: note: --cpus=${CPUS} requested, but this machine has ${HOST_CPUS} CPUs; clamping to ${HOST_CPUS}" >&2
+  CPUS="${HOST_CPUS}"
+fi
 
 usage() {
   cat <<EOF
@@ -48,7 +74,7 @@ env overrides:
   OPENSSL_RS_COURT_MEM     default ${MEM}
   OPENSSL_RS_COURT_MEMSWAP default ${MEMSWAP}
   OPENSSL_RS_COURT_PIDS    default ${PIDS}
-  OPENSSL_RS_COURT_CPUS    default ${CPUS}
+  OPENSSL_RS_COURT_CPUS    default 8, clamped to the machine's CPU count
 EOF
 }
 

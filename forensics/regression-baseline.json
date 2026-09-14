@@ -48,6 +48,10 @@
       "observations": 3857,
       "verdict": "pass"
     },
+    "RT-ERR-BIO": {
+      "observations": 17,
+      "verdict": "pass"
+    },
     "RT-EXDATA": {
       "observations": 38,
       "verdict": "pass"
@@ -78,16 +82,16 @@
     }
   },
   "deferred": {
-    "phase3": 5,
+    "phase3": 1,
     "phase4": 14
   },
   "implemented": {
-    "libcrypto": 341,
+    "libcrypto": 345,
     "libssl": 0
   },
   "open_obligations": {
     "phase3": 0,
-    "phase4": 113
+    "phase4": 109
   },
   "phases": {
     "0": "complete",
