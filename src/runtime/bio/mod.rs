@@ -64,6 +64,7 @@ pub mod bf_readbuff;
 pub mod bio_cb;
 pub mod bio_sock2;
 pub mod bss_bio;
+pub mod bss_dgram_pair;
 pub mod bss_fd;
 pub mod bss_file;
 pub mod bss_log;
@@ -552,6 +553,10 @@ pub const BIO_R_CONNECT_TIMEOUT: c_int = 147;
 pub const BIO_R_PORT_MISMATCH: c_int = 150;
 /// `BIO_R_PEER_ADDR_NOT_AVAILABLE`.
 pub const BIO_R_PEER_ADDR_NOT_AVAILABLE: c_int = 151;
+/// `BIO_R_LOCAL_ADDR_NOT_AVAILABLE` — returned by the datagram-pair read and
+/// write paths when the caller asks for the local address without having enabled
+/// it.
+pub const BIO_R_LOCAL_ADDR_NOT_AVAILABLE: c_int = 111;
 
 /// `BIO_SOCK_REUSEADDR`.
 pub const BIO_SOCK_REUSEADDR: c_int = 0x01;
@@ -1585,6 +1590,7 @@ pub use bio_sock2::{
     BIO_set_tcp_ndelay, BIO_sock_info, BIO_socket,
 };
 pub use bss_bio::{BIO_new_bio_pair, BIO_s_bio};
+pub use bss_dgram_pair::{BIO_new_bio_dgram_pair, BIO_s_dgram_mem, BIO_s_dgram_pair};
 pub use bss_fd::{BIO_new_fd, BIO_s_fd};
 pub use bss_file::{BIO_new_file, BIO_new_fp, BIO_s_file};
 pub use bss_log::BIO_s_log;

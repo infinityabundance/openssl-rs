@@ -1466,3 +1466,61 @@ implemented.** `BIO_snprintf`'s engine was the C library's rather than `_dopr`
 observed a surface no existing court could see. That is the pattern this stratum
 is built on, and it is the reason the remaining 53 symbols should not be
 implemented without their courts.
+
+## D46 — The in-memory datagram pair, and why its header size is evidence
+
+**Decision.** `BIO_s_dgram_pair`, `BIO_s_dgram_mem` and `BIO_new_bio_dgram_pair`
+are implemented in `src/runtime/bio/bss_dgram_pair.rs`, and `RT-BIO-DGRAM-PAIR`
+(141 observations) compares them against the authority. Phase 4 moves from 53 to
+50 open obligations; `implemented` `libcrypto` exports move from 399 to 402.
+
+The authority's datagram pair is not a byte stream with framing on top. It is a
+ring buffer of `sizeof(hdr) + payload` records plus a header that carries the
+`BIO_ADDR` pair, and nearly every surprising observable follows from that shape:
+`BIO_CTRL_PENDING` on a **pair** reports the length of the *next datagram's
+header* (0 when empty) rather than the length of the next datagram, because the
+control peeks the header instead of counting bytes; a read with a short buffer
+discards the remainder unless `BIO_CTRL_DGRAM_SET_NO_TRUNC` is set, in which case
+the ring cursor is restored and nothing is consumed; and a write that cannot fit
+header plus whole payload rolls the ring back, so a reader never sees a fragment.
+
+**The header size is derived, not guessed.** `dgram_hdr` is internal, but two
+public controls expose it: `BIO_CTRL_GET_WRITE_BUF_SIZE` on a fresh BIO reports
+`9 * (sizeof(hdr) + mtu)`, and `BIO_CTRL_DGRAM_GET_WRITE_GUARANTEE` reports
+`size - count - sizeof(hdr)`. Measured against the authority those are **15336**
+and **15104** with the default 1472-byte MTU, which fixes `sizeof(hdr)` at
+**232** — a `size_t` length plus two 112-byte address slots. The module stores
+the addresses as raw 112-byte slots rather than as `BioAddr` values precisely so
+the size cannot drift with ours. This is the same discipline as D41's `sizeof`
+derivations: an internal layout becomes a compatibility obligation the moment a
+public control reports it.
+
+**The distinctions the court had to be built to see.** `GET_EFFECTIVE_CAPS` is
+intercepted by `dgram_pair_ctrl`, so on a pair it answers the *peer's*
+capabilities while `dgram_mem_ctrl`'s combined arm answers its own. A fresh pair
+reports `init=0`, `eof=1`, `guarantee=0`, `locaddr_cap=0`, where a fresh
+`dgram_mem` reports `init=1`, `eof=0`, `guarantee=15104`. `dgram_pair_write`
+raises on the non-fatal path where the reads do not.
+`BIO_CTRL_DGRAM_GET_LOCAL_ADDR_ENABLE` reports through its pointer and still
+returns 1 — passing NULL **segfaults the authority**, so the probe was corrected
+and the fault recorded as a divergence rather than reproduced. `BIO_sendmmsg` and
+`BIO_recvmmsg` agree on `stride`, on `num_msg == 0` (return 1, `*num_processed =
+0`) and on partial success (return 1 with the count), and they raise only when
+the *first* message fails.
+
+**Non-claim.** `RT-BIO-DGRAM-PAIR` passing means the candidate matched the
+authority for the controls, transfers, rollback and message-batch behaviour it
+drove. It is not a claim about the kernel socket datagram BIO (`BIO_s_datagram`,
+`BIO_new_dgram`), which is still open, nor about any other Phase 4 surface.
+
+**The inventory after this batch.** Phase 4 owns 256 exports and stands at **190
+implemented, 16 deferred to a named later phase, and 50 open**:
+
+    src/runtime/bio/   6   BIO_s_datagram, BIO_new_dgram, BIO_s_connect,
+                           BIO_new_connect, BIO_s_accept, BIO_new_accept
+    src/runtime/conf/ 44   the CONF_* and NCONF_* families
+
+Both remaining groups are subsystems rather than symbol sets, and both are taken
+with their courts. The count of implemented `libcrypto` exports is 402 of 6,499;
+31 courts pass over 6,146 observations. Phase 0–3 remain `complete` and Phase 4
+remains `in-progress`.
