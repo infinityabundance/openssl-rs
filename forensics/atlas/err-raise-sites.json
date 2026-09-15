@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 767,
+      "sites": 772,
       "unattributed": 0
     },
     "covered_files": [
@@ -102,7 +102,8 @@
       "crypto/params.c",
       "crypto/params_dup.c",
       "crypto/params_from_text.c",
-      "crypto/param_build.c"
+      "crypto/param_build.c",
+      "crypto/core_namemap.c"
     ],
     "note": "`file` is the authority's `__FILE__` string, derived from relpath(source_tree, build_dir) of the admitted build record. It is a build artifact of the forensic build, reproduced exactly rather than normalized away, so the candidate's ERR records compare byte-for-byte with the authority's.",
     "prefix": "../../src/openssl-3.6.4/",
@@ -10943,6 +10944,76 @@
         "reason": 111,
         "reason_symbol": "CRYPTO_R_SECURE_MALLOC_FAILURE",
         "rel_source": "crypto/param_build.c"
+      },
+      {
+        "const_name": "CORE_NAMEMAP_288",
+        "data_format": null,
+        "dynamic_reason": true,
+        "file": "../../src/openssl-3.6.4/crypto/core_namemap.c",
+        "function": "namemap_add_name",
+        "lib": 15,
+        "lib_symbol": "ERR_LIB_CRYPTO",
+        "line": 288,
+        "macro": "ERR_raise",
+        "reason": 0,
+        "reason_symbol": null,
+        "rel_source": "crypto/core_namemap.c"
+      },
+      {
+        "const_name": "CORE_NAMEMAP_321",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/core_namemap.c",
+        "function": "ossl_namemap_add_names",
+        "lib": 15,
+        "lib_symbol": "ERR_LIB_CRYPTO",
+        "line": 321,
+        "macro": "ERR_raise",
+        "reason": 786690,
+        "reason_symbol": "ERR_R_PASSED_NULL_PARAMETER",
+        "rel_source": "crypto/core_namemap.c"
+      },
+      {
+        "const_name": "CORE_NAMEMAP_349",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/core_namemap.c",
+        "function": "ossl_namemap_add_names",
+        "lib": 15,
+        "lib_symbol": "ERR_LIB_CRYPTO",
+        "line": 349,
+        "macro": "ERR_raise",
+        "reason": 117,
+        "reason_symbol": "CRYPTO_R_BAD_ALGORITHM_NAME",
+        "rel_source": "crypto/core_namemap.c"
+      },
+      {
+        "const_name": "CORE_NAMEMAP_359",
+        "data_format": "\"\\\"%s\\\" has an existing different identity %d (from \\\"%s\\\")\"",
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/core_namemap.c",
+        "function": "ossl_namemap_add_names",
+        "lib": 15,
+        "lib_symbol": "ERR_LIB_CRYPTO",
+        "line": 359,
+        "macro": "ERR_raise_data",
+        "reason": 118,
+        "reason_symbol": "CRYPTO_R_CONFLICTING_NAMES",
+        "rel_source": "crypto/core_namemap.c"
+      },
+      {
+        "const_name": "CORE_NAMEMAP_378",
+        "data_format": "\"Got number %d when expecting %d\"",
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/core_namemap.c",
+        "function": "ossl_namemap_add_names",
+        "lib": 15,
+        "lib_symbol": "ERR_LIB_CRYPTO",
+        "line": 378,
+        "macro": "ERR_raise_data",
+        "reason": 786691,
+        "reason_symbol": "ERR_R_INTERNAL_ERROR",
+        "rel_source": "crypto/core_namemap.c"
       }
     ],
     "unattributed": [],
@@ -11434,6 +11505,11 @@
       "name": "authority:crypto/param_build.c",
       "path": "forensics/authorities/src/openssl-3.6.4/crypto/param_build.c",
       "sha256": "d0d56cad5de599d41173c87e2efa346574a02573b02dcb022993366d59f74309"
+    },
+    {
+      "name": "authority:crypto/core_namemap.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/core_namemap.c",
+      "sha256": "43104eeb849b52ead6b30ddbf98c58ab98ca56447cc7b1aec39192e9d1f41f38"
     }
   ],
   "kind": "err-raise-sites",

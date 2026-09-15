@@ -117,7 +117,13 @@ use crate::runtime::thread::{
     CRYPTO_THREAD_write_lock, CryptoOnce, CryptoRwlock, CryptoThreadLocal,
 };
 
+pub mod namemap;
 pub mod thread_data;
+
+/// `OSSL_LIB_CTX_NAMEMAP_INDEX`, from `include/internal/cryptlib.h`. Slot 4,
+/// filled by 6.6b.
+#[allow(dead_code)] // unreachable until the stratum that calls it lands
+pub(crate) const OSSL_LIB_CTX_NAMEMAP_INDEX: c_int = 4;
 
 /// `OSSL_LIB_CTX_SELF_TEST_CB_INDEX`, from `include/internal/cryptlib.h`. Slot 12,
 /// filled by 6.11.
@@ -339,6 +345,18 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
     // SAFETY: as above; the slot is published once, here.
     unsafe { (*ctx).threads = threads.cast::<c_void>() };
 
+    // The namemap. The authority builds it after `property_string_data` and
+    // before `property_defns`; of those three this stratum builds only the one, and
+    // its position relative to the two callback holders and the thread slot below
+    // is the authority's.
+    let namemap = crate::context::namemap::ossl_stored_namemap_new(ctx.cast::<c_void>());
+    if namemap.is_null() {
+        context_deinit(ctx);
+        return false;
+    }
+    // SAFETY: as above.
+    unsafe { (*ctx).namemap = namemap.cast::<c_void>() };
+
     // The two callback holders. The authority builds them after `drbg_nonce` and
     // before the thread slot, and each is a plain `OPENSSL_zalloc`ed pair.
     let self_test_cb = crate::selftest::ossl_self_test_set_callback_new(ctx.cast::<c_void>());
@@ -367,12 +385,29 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
 /// with respect to the provider store). Only slot 21 has no release: it is an
 /// interior address, not an allocation.
 fn context_deinit_objs(ctx: *mut OsslLibCtx) {
-    // The two callback holders, in the authority's order: `indicator_cb` first,
-    // then `self_test_cb`, both after `drbg_nonce` and before the thread slot.
+    // The namemap, in the authority's position: after `property_string_data`, which
+    // this stratum does not build, and before `property_defns`, which it does not
+    // either. The context owns it, so the release goes through
+    // `ossl_stored_namemap_free`, which clears the flag that makes the
+    // free-standing releaser decline.
     // SAFETY: `ctx` is a live context being torn down by `context_deinit`, and no
     // other thread holds a reference to it -- `OSSL_LIB_CTX_free` is the only
     // caller and the caller contract is that the object is no longer in use. Each
     // slot is released exactly once and re-NULLed.
+    unsafe {
+        if !(*ctx).namemap.is_null() {
+            crate::context::namemap::ossl_stored_namemap_free(
+                (*ctx)
+                    .namemap
+                    .cast::<crate::context::namemap::OsslNamemap>(),
+            );
+            (*ctx).namemap = ptr::null_mut();
+        }
+    }
+
+    // The two callback holders, in the authority's order: `indicator_cb` first,
+    // then `self_test_cb`, both after `drbg_nonce` and before the thread slot.
+    // SAFETY: as above.
     unsafe {
         if !(*ctx).indicator_cb.is_null() {
             crate::selftest::indicator::ossl_indicator_set_callback_free(
