@@ -58,6 +58,17 @@
           "to_phase": 4
         },
         {
+          "from_phase": 3,
+          "symbols": [
+            "OPENSSL_atexit",
+            "OPENSSL_thread_stop",
+            "OPENSSL_thread_stop_ex",
+            "OSSL_get_max_threads",
+            "OSSL_set_max_threads"
+          ],
+          "to_phase": 6
+        },
+        {
           "from_phase": 4,
           "symbols": [
             "BIO_asn1_get_prefix",
@@ -283,6 +294,17 @@
         {
           "from_phase": 3,
           "symbols": [
+            "OPENSSL_atexit",
+            "OPENSSL_thread_stop",
+            "OPENSSL_thread_stop_ex",
+            "OSSL_get_max_threads",
+            "OSSL_set_max_threads"
+          ],
+          "to_phase": 6
+        },
+        {
+          "from_phase": 3,
+          "symbols": [
             "ASYNC_WAIT_CTX_clear_fd",
             "ASYNC_WAIT_CTX_free",
             "ASYNC_WAIT_CTX_get_all_fds",
@@ -481,21 +503,21 @@
     },
     "implemented_by_two_strata": [],
     "implemented_exports": {
-      "libcrypto": 932,
+      "libcrypto": 956,
       "libssl": 0
     },
     "invariant": "every authority export has exactly one declared owner in forensics/atlas/symbol-ownership.json; every export the atlas gives a stratum appears in that stratum's ledger; every row a stratum's ledger carries for another stratum's export is a hand-off that stratum recorded",
     "ledger_agreement": [
       {
         "atlas": 294,
-        "deferred": 38,
-        "implemented": 227,
+        "deferred": 43,
+        "implemented": 251,
         "ledger": 294,
         "only_in_atlas": 0,
         "only_in_atlas_examples": [],
         "only_in_ledger": 0,
         "only_in_ledger_examples": [],
-        "open": 29,
+        "open": 0,
         "phase": 3
       },
       {
@@ -542,10 +564,10 @@
         "atlas": 137,
         "deferred": 0,
         "implemented": 0,
-        "ledger": 156,
+        "ledger": 161,
         "only_in_atlas": 0,
         "only_in_atlas_examples": [],
-        "only_in_ledger": 19,
+        "only_in_ledger": 24,
         "only_in_ledger_examples": [
           "ASN1_add_oid_module",
           "BIO_new_from_core_bio",
@@ -558,7 +580,7 @@
           "CONF_imodule_set_flags",
           "CONF_imodule_set_usr_data"
         ],
-        "open": 156,
+        "open": 161,
         "phase": 6
       }
     ],
@@ -6019,7 +6041,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "8806a410177671d5ed3d1af7bca473321cea0b59a2e90c95d5e86980aa94596c"
+      "sha256": "86a2029392fad4df52414096f7054ddc69a42bd17e31a688bd41446aec384db8"
     },
     {
       "name": "authority-symbols",
@@ -6034,22 +6056,22 @@
     {
       "name": "ledger-3",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "ffbfd4d97e0c355e6531b08d70ef1c2cd7cfa4886ece2a6ed72f81e089c2be86"
+      "sha256": "01ad47d0b7be9b120d79d287f2e10d680e710ea17b9147aedd249a8ceec0ebe8"
     },
     {
       "name": "ledger-4",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "0e74ed48516baf8c74558b09e3c73405041c3bd05a146158036d9bbd8e18fbdd"
+      "sha256": "2493c681d8243a1a9f86fc24ae23917eecda64a5fc9c24844e5a2e84d69e22a3"
     },
     {
       "name": "ledger-5",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "9e708daac7a712d107d1f9194d242ac154d2591c74d366bd845784b6e2e04c42"
+      "sha256": "4d19343802295afd681474ce6bd9ff42aa9e963a67d17bd3662fa3baa93e4e30"
     },
     {
       "name": "ledger-6",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "ac6f48f95d75db031b834d5eba367f831040fddc287f27c91250344747c4a9af"
+      "sha256": "e3c6a97a806a2d68eaabaf7ea16430fb908c878dbec0f73acc78a7ba5a8b6bbd"
     }
   ],
   "kind": "ownership-audit",

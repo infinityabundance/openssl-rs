@@ -6,13 +6,20 @@
       "atlas_owned": 137,
       "deferred_to_later_phase": 0,
       "implemented": 0,
-      "open_in_this_stratum": 156,
-      "owned": 156,
-      "received_by_handoff": 19
+      "open_in_this_stratum": 161,
+      "owned": 161,
+      "received_by_handoff": 24
     },
     "deferred": [],
     "deferred_by_phase": {},
     "handoffs_discharged": {
+      "3": [
+        "OPENSSL_atexit",
+        "OPENSSL_thread_stop",
+        "OPENSSL_thread_stop_ex",
+        "OSSL_get_max_threads",
+        "OSSL_set_max_threads"
+      ],
       "4": [
         "BIO_new_from_core_bio",
         "BIO_s_core",
@@ -99,6 +106,21 @@
         "prefixes": [
           "BIO_s_core",
           "BIO_new_from_core_bio"
+        ]
+      },
+      {
+        "module": "src/context/thread_data.rs",
+        "prefixes": [
+          "OSSL_get_max_threads",
+          "OSSL_set_max_threads",
+          "OPENSSL_thread_stop",
+          "OPENSSL_thread_stop_ex"
+        ]
+      },
+      {
+        "module": "src/dso/mod.rs",
+        "prefixes": [
+          "OPENSSL_atexit"
         ]
       }
     ],
@@ -270,9 +292,24 @@
         "symbol": "DSO_up_ref"
       },
       {
+        "declaring_header": "crypto.h",
+        "module": "src/dso/mod.rs",
+        "symbol": "OPENSSL_atexit"
+      },
+      {
         "declaring_header": "conf.h",
         "module": "src/confmod/mod.rs",
         "symbol": "OPENSSL_load_builtin_modules"
+      },
+      {
+        "declaring_header": "crypto.h",
+        "module": "src/context/thread_data.rs",
+        "symbol": "OPENSSL_thread_stop"
+      },
+      {
+        "declaring_header": "crypto.h",
+        "module": "src/context/thread_data.rs",
+        "symbol": "OPENSSL_thread_stop_ex"
       },
       {
         "declaring_header": "indicator.h",
@@ -883,6 +920,16 @@
         "declaring_header": "self_test.h",
         "module": "src/selftest/mod.rs",
         "symbol": "OSSL_SELF_TEST_set_callback"
+      },
+      {
+        "declaring_header": "thread.h",
+        "module": "src/context/thread_data.rs",
+        "symbol": "OSSL_get_max_threads"
+      },
+      {
+        "declaring_header": "thread.h",
+        "module": "src/context/thread_data.rs",
+        "symbol": "OSSL_set_max_threads"
       }
     ],
     "owned_by_module": {
@@ -890,7 +937,8 @@
       "src/confmod/mod.rs": 16,
       "src/context/core_bio.rs": 2,
       "src/context/mod.rs": 10,
-      "src/dso/mod.rs": 15,
+      "src/context/thread_data.rs": 4,
+      "src/dso/mod.rs": 16,
       "src/params/build.rs": 20,
       "src/params/mod.rs": 61,
       "src/provider/mod.rs": 22,
@@ -919,7 +967,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "e88230fccb56990c9c5e1631d71f60a5b98b867435869c5b4e7d183f985c323d"
+      "sha256": "2dd236aca5c3c94e4c1ee464b1845e5edda1c47cc75c5f261ed5ab2841855c26"
     }
   ],
   "kind": "phase6-obligations",

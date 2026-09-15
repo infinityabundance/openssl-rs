@@ -475,3 +475,30 @@ exports has no ledger row for them, in whichever direction the disagreement runs
 The general lesson is the one D49, D51, D72 and D94 each record from a different
 angle: a second list that has to be remembered does not stay correct, and nothing
 fails when it goes stale. `docs/DECISIONS.md` D97 has the full account.
+
+## 11. The reopened obligations, discharged (D99)
+
+§10 recorded the correction and the twenty-nine obligations it exposed. This section
+records what happened to them; `docs/SEAL-CENSUS.md` carries the arithmetic.
+
+Twenty-four are implemented and observed by a new differential court,
+`RT-RUNTIME-EXT` (94 observations), which is the ninth court of this stratum. They
+landed in three modules of this stratum — `src/runtime/trace.rs`,
+`src/runtime/err_state.rs` and `src/runtime/uid.rs` — plus additions to `init.rs`,
+`err.rs` and `thread.rs`. Two of the three modules are the ones whose exports the
+prefix lists had hidden, which is why nothing named them before.
+
+Five are handed to **Phase 6** with the dependency named rather than an amount of
+work: the two `OSSL_LIB_CTX` thread-count accessors, the thread-stop pair, and
+`OPENSSL_atexit`, whose DSO pinning this profile compiles in. Both the reason and the
+`phase6-obligations.json` receipt for each are in the ledger; that ledger declares
+them discharged in `handoffs_discharged`, and `ownership_audit.py` reconciles the two
+readings in both directions.
+
+The court found two defects on its first run, both in this section's code and neither
+reachable by inspection: `OSSL_ERR_STATE_save` kept both owners of an attached data
+buffer instead of moving ownership, and `ossl_iscntrl` treated bytes at or above
+`0x80` as control characters where the authority's table does not. D99 has the
+account. `phase_state.py` derives this stratum `complete` again, on its own ledger's
+`open == 0` rather than on a typed string.
+

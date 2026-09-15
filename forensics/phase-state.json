@@ -57,7 +57,7 @@
         "stratum": "Distribution / ABI shell"
       },
       {
-        "blocking": "29 open obligation(s) of this stratum recorded in forensics/phase3-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. The ledger reads its universe from the ownership atlas, so this is no longer a question of which prefixes its families happened to list (docs/DECISIONS.md D97)",
+        "blocking": "",
         "deferred": [
           "ASYNC_WAIT_CTX_clear_fd -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)",
           "ASYNC_WAIT_CTX_free -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)",
@@ -96,7 +96,12 @@
           "OPENSSL_LH_node_usage_stats -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)",
           "OPENSSL_LH_node_usage_stats_bio -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)",
           "OPENSSL_LH_stats -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)",
-          "OPENSSL_LH_stats_bio -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)"
+          "OPENSSL_LH_stats_bio -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)",
+          "OPENSSL_atexit -> phase 6 (pins the handler's shared object with DSO_dsobyaddr/DSO_free, which the profile compiles in; DSO is Phase 6.8)",
+          "OPENSSL_thread_stop -> phase 6 (runs the thread's event handlers for a library context; OPENSSL_thread_stop_ex calls ossl_lib_ctx_get_concrete, and OPENSSL_cleanup's OPENSSL_thread_stop call runs the handler list OPENSSL_atexit builds; the library context is Phase 6)",
+          "OPENSSL_thread_stop_ex -> phase 6 (runs the thread's event handlers for a library context; OPENSSL_thread_stop_ex calls ossl_lib_ctx_get_concrete, and OPENSSL_cleanup's OPENSSL_thread_stop call runs the handler list OPENSSL_atexit builds; the library context is Phase 6)",
+          "OSSL_get_max_threads -> phase 6 (reads and writes the thread-tracking ex-data slot of an OSSL_LIB_CTX (OSSL_LIB_CTX_GET_THREADS -> ossl_lib_ctx_get_data(CTX, OSSL_LIB_CTX_THREAD_INDEX)); the library context is Phase 6)",
+          "OSSL_set_max_threads -> phase 6 (reads and writes the thread-tracking ex-data slot of an OSSL_LIB_CTX (OSSL_LIB_CTX_GET_THREADS -> ossl_lib_ctx_get_data(CTX, OSSL_LIB_CTX_THREAD_INDEX)); the library context is Phase 6)"
         ],
         "evidence_absent": [],
         "evidence_present": [
@@ -120,6 +125,9 @@
           "src/runtime/dir.rs",
           "src/runtime/dir_posix.c",
           "src/runtime/time.rs",
+          "src/runtime/trace.rs",
+          "src/runtime/err_state.rs",
+          "src/runtime/uid.rs",
           "src/runtime/getenv.rs",
           "forensics/tools/phase3_courts.py",
           "forensics/tools/phase3_obligations.py",
@@ -131,13 +139,14 @@
           "courts/phase3/rt_thread_probe.c",
           "courts/phase3/rt_secure_probe.c",
           "courts/phase3/rt_lhash_probe.c",
+          "courts/phase3/rt_runtime_ext_probe.c",
           "forensics/phase3-obligations.json",
           "artifacts/phase3/COURTS.json"
         ],
         "name": "core-runtime",
         "phase": 3,
         "seal_sha256": null,
-        "state": "in-progress",
+        "state": "complete",
         "stratum": "Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects"
       },
       {
@@ -221,7 +230,7 @@
         "stratum": "BIO + CONF + object database"
       },
       {
-        "blocking": "blocked by the dependency-order invariant: phase 3 is not complete",
+        "blocking": "blocked by the dependency-order invariant: phase 4 is not complete",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -422,12 +431,12 @@
     ],
     "rule": "a phase may be complete only if every earlier phase is complete",
     "summary": {
-      "complete": 3,
-      "in_progress": 3,
+      "complete": 4,
+      "in_progress": 2,
       "not_started": 16
     }
   },
-  "body_hash": "b028a651828e2ec3cac2d4a731f5386635626f3e3b052344fc4d00bd8ee2ad35",
+  "body_hash": "6391575fbcf122296ac939f2ccbf741e8b6b668122f17e369893955c8d83d685",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

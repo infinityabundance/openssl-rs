@@ -77,6 +77,7 @@ COURTS = [
     ("RT-THREAD", "rt_thread_probe.c"),
     ("RT-SECURE", "rt_secure_probe.c"),
     ("RT-LHASH", "rt_lhash_probe.c"),
+    ("RT-RUNTIME-EXT", "rt_runtime_ext_probe.c"),
 ]
 
 

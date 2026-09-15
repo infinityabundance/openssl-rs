@@ -23,9 +23,9 @@ renderer does not know any phase status.
 | 0 | Constitution, authorities, claim algebra | `complete` |  |
 | 1 | Complete archaeology / API / ABI atlas | `complete` |  |
 | 2 | Distribution / ABI shell | `complete` |  |
-| 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `in-progress` | 29 open obligation(s) of this stratum recorded in forensics/phase3-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. The ledger reads its universe from the ownership atlas, so this is no longer a question of which prefixes its families happened to list (docs/DECISIONS.md D97) |
+| 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `complete` |  |
 | 4 | BIO + CONF + object database | `in-progress` | 18 open obligation(s) of this stratum recorded in forensics/phase4-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
-| 5 | BN + ASN.1 + DER/PEM | `in-progress` | blocked by the dependency-order invariant: phase 3 is not complete |
+| 5 | BN + ASN.1 + DER/PEM | `in-progress` | blocked by the dependency-order invariant: phase 4 is not complete |
 
 Not started: strata 6-21 (16 total).
 
@@ -80,9 +80,9 @@ that name is defined, nothing more.
 
 | library | exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 932 | 4964 |
+| libcrypto | 5896 | 956 | 4940 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **932** | **5567** |
+| **total** | **6499** | **956** | **5543** |
 
 ### Phase 3 obligation ledger
 
@@ -92,13 +92,15 @@ handed it, that is neither implemented, deferred to a named later
 phase, nor recorded as open in the stratum is an error, not a warning.
 
 * authority exports in the Phase 3 working set: 294
-* implemented: 227
-* deferred to a later phase with a stated reason: 38
-* open in this stratum: 29
+* implemented: 251
+* deferred to a later phase with a stated reason: 43
+* open in this stratum: 0
 
 Deferred to phase 4: `ERR_add_error_mem_bio`, `ERR_print_errors`, `ERR_print_errors_cb`, `ERR_print_errors_fp`, `OBJ_create_objects`, `OPENSSL_INIT_free`, `OPENSSL_INIT_new`, `OPENSSL_INIT_set_config_appname`, `OPENSSL_INIT_set_config_file_flags`, `OPENSSL_INIT_set_config_filename`, `OPENSSL_LH_node_stats`, `OPENSSL_LH_node_stats_bio`, `OPENSSL_LH_node_usage_stats`, `OPENSSL_LH_node_usage_stats_bio`, `OPENSSL_LH_stats`, `OPENSSL_LH_stats_bio`
 
 Of those, 16 have since been implemented by phase 4, which is where the obligation sits, so phase 3 does not count them as its own work: `ERR_add_error_mem_bio`, `ERR_print_errors`, `ERR_print_errors_cb`, `ERR_print_errors_fp`, `OBJ_create_objects`, `OPENSSL_INIT_free`, `OPENSSL_INIT_new`, `OPENSSL_INIT_set_config_appname`, `OPENSSL_INIT_set_config_file_flags`, `OPENSSL_INIT_set_config_filename`, `OPENSSL_LH_node_stats`, `OPENSSL_LH_node_stats_bio`, `OPENSSL_LH_node_usage_stats`, `OPENSSL_LH_node_usage_stats_bio`, `OPENSSL_LH_stats`, `OPENSSL_LH_stats_bio`
+
+Deferred to phase 6: `OPENSSL_atexit`, `OPENSSL_thread_stop`, `OPENSSL_thread_stop_ex`, `OSSL_get_max_threads`, `OSSL_set_max_threads`
 
 Deferred to phase 13: `ASYNC_WAIT_CTX_clear_fd`, `ASYNC_WAIT_CTX_free`, `ASYNC_WAIT_CTX_get_all_fds`, `ASYNC_WAIT_CTX_get_callback`, `ASYNC_WAIT_CTX_get_changed_fds`, `ASYNC_WAIT_CTX_get_fd`, `ASYNC_WAIT_CTX_get_status`, `ASYNC_WAIT_CTX_new`, `ASYNC_WAIT_CTX_set_callback`, `ASYNC_WAIT_CTX_set_status`, `ASYNC_WAIT_CTX_set_wait_fd`, `ASYNC_block_pause`, `ASYNC_cleanup_thread`, `ASYNC_get_current_job`, `ASYNC_get_mem_functions`, `ASYNC_get_wait_ctx`, `ASYNC_init_thread`, `ASYNC_is_capable`, `ASYNC_pause_job`, `ASYNC_set_mem_functions`, `ASYNC_start_job`, `ASYNC_unblock_pause`
 
@@ -157,10 +159,12 @@ ownership atlas assigns Phase 6, or that an earlier stratum
 handed it, that is neither implemented, deferred to a named later
 phase, nor recorded as open in the stratum is an error, not a warning.
 
-* authority exports in the Phase 6 working set: 156
+* authority exports in the Phase 6 working set: 161
 * implemented: 0
 * deferred to a later phase with a stated reason: 0
-* open in this stratum: 156
+* open in this stratum: 161
+
+Hand-offs from phase 3 discharged by this stratum: `OPENSSL_atexit`, `OPENSSL_thread_stop`, `OPENSSL_thread_stop_ex`, `OSSL_get_max_threads`, `OSSL_set_max_threads`
 
 Hand-offs from phase 4 discharged by this stratum: `BIO_new_from_core_bio`, `BIO_s_core`, `CONF_imodule_get_flags`, `CONF_imodule_get_module`, `CONF_imodule_get_name`, `CONF_imodule_get_usr_data`, `CONF_imodule_get_value`, `CONF_imodule_set_flags`, `CONF_imodule_set_usr_data`, `CONF_module_add`, `CONF_module_get_usr_data`, `CONF_module_set_usr_data`, `CONF_modules_finish`, `CONF_modules_load`, `CONF_modules_load_file`, `CONF_modules_load_file_ex`, `CONF_modules_unload`, `OPENSSL_load_builtin_modules`
 

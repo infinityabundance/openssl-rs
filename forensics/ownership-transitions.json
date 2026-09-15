@@ -37,6 +37,18 @@
       "implemented_after": 231,
       "authority_artifact": "forensics/atlas/symbol-ownership.json",
       "recorded_by": "docs/DECISIONS.md D97"
+    },
+    {
+      "phase": 6,
+      "reason": "Phase 6's working set grew by the five exports Phase 3 deferred to it (docs/DECISIONS.md D97's own disposition, implemented in 6.2's reconnaissance): the two libctx thread-count accessors, the thread-stop pair, and OPENSSL_atexit, whose DSO pinning the profile compiles in. The obligation moved from Phase 3's open list to Phase 6's, so `open` rises here and falls to zero there; nothing was undone and no implementation was lost.",
+      "open_before": 156,
+      "open_after": 161,
+      "owned_before": 156,
+      "owned_after": 161,
+      "implemented_before": 0,
+      "implemented_after": 0,
+      "authority_artifact": "forensics/phase3-obligations.json",
+      "recorded_by": "docs/DECISIONS.md D97, D98"
     }
   ],
   "phase_state_transitions": [

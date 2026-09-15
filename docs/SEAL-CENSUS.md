@@ -17,9 +17,9 @@ name is defined; `open` means the stratum owns it and has not built it;
 
 | library | authority exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 932 | 4964 |
+| libcrypto | 5896 | 956 | 4940 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **932** | **5567** |
+| **total** | **6499** | **956** | **5543** |
 
 ## Ownership atlas, by stratum
 
@@ -28,10 +28,10 @@ declared owner; this is that assignment.
 
 | phase | stratum | state | atlas-owned | ledger owned | implemented | deferred | open |
 |---|---|---|---|---|---|---|---|
-| 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `in-progress` | 294 | 294 | 227 | 38 | 29 |
+| 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `complete` | 294 | 294 | 251 | 43 | 0 |
 | 4 | BIO + CONF + object database | `in-progress` | 256 | 272 | 231 | 23 | 18 |
 | 5 | BN + ASN.1 + DER/PEM | `in-progress` | 561 | 565 | 474 | 91 | 0 |
-| 6 | OSSL_LIB_CTX + provider core | `not-started` | 137 | 156 | 0 | 0 | 156 |
+| 6 | OSSL_LIB_CTX + provider core | `not-started` | 137 | 161 | 0 | 0 | 161 |
 | 7 | EVP framework | `not-started` | 924 | — | — | — | — |
 | 8 | Native cryptographic primitives | `not-started` | 759 | — | — | — | — |
 | 9 | RAND / DRBG + entropy | `not-started` | 25 | — | — | — | — |
@@ -50,24 +50,25 @@ declared owner; this is that assignment.
 
 ## Phase 3 — Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects
 
-* state: `in-progress`
-* blocking: 29 open obligation(s) of this stratum recorded in forensics/phase3-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. The ledger reads its universe from the ownership atlas, so this is no longer a question of which prefixes its families happened to list (docs/DECISIONS.md D97)
+* state: `complete`
 * seal: `docs/PHASE-3-CORE-RUNTIME-SEAL.md`
 * ledger: `forensics/phase3-obligations.json`
 * atlas-owned: 294
 * owned working set: 294
-* implemented: 227
-* deferred to a later stratum with a stated reason: 38
-* **open in this stratum: 29**
+* implemented: 251
+* deferred to a later stratum with a stated reason: 43
+* **open in this stratum: 0**
 
 Deferred out, by receiving stratum:
 
 * to phase 4: 16 symbol(s), 16 already discharged by that stratum
   `ERR_add_error_mem_bio`, `ERR_print_errors`, `ERR_print_errors_cb`, `ERR_print_errors_fp`, `OBJ_create_objects`, `OPENSSL_INIT_free`, `OPENSSL_INIT_new`, `OPENSSL_INIT_set_config_appname`, `OPENSSL_INIT_set_config_file_flags`, `OPENSSL_INIT_set_config_filename`, `OPENSSL_LH_node_stats`, `OPENSSL_LH_node_stats_bio`, `OPENSSL_LH_node_usage_stats`, `OPENSSL_LH_node_usage_stats_bio`, `OPENSSL_LH_stats`, `OPENSSL_LH_stats_bio`
+* to phase 6: 5 symbol(s)
+  `OPENSSL_atexit`, `OPENSSL_thread_stop`, `OPENSSL_thread_stop_ex`, `OSSL_get_max_threads`, `OSSL_set_max_threads`
 * to phase 13: 22 symbol(s)
   `ASYNC_WAIT_CTX_clear_fd`, `ASYNC_WAIT_CTX_free`, `ASYNC_WAIT_CTX_get_all_fds`, `ASYNC_WAIT_CTX_get_callback`, `ASYNC_WAIT_CTX_get_changed_fds`, `ASYNC_WAIT_CTX_get_fd`, `ASYNC_WAIT_CTX_get_status`, `ASYNC_WAIT_CTX_new`, `ASYNC_WAIT_CTX_set_callback`, `ASYNC_WAIT_CTX_set_status`, `ASYNC_WAIT_CTX_set_wait_fd`, `ASYNC_block_pause`, `ASYNC_cleanup_thread`, `ASYNC_get_current_job`, `ASYNC_get_mem_functions`, `ASYNC_get_wait_ctx`, `ASYNC_init_thread`, `ASYNC_is_capable`, `ASYNC_pause_job`, `ASYNC_set_mem_functions`, `ASYNC_start_job`, `ASYNC_unblock_pause`
 
-Courts: `all pass`, 7 court(s), 0 authority observation(s).
+Courts: `all pass`, 8 court(s), 0 authority observation(s).
 
 | court | verdict | observations |
 |---|---|---|
@@ -78,6 +79,7 @@ Courts: `all pass`, 7 court(s), 0 authority observation(s).
 | RT-THREAD | `pass` | 0 |
 | RT-SECURE | `pass` | 0 |
 | RT-LHASH | `pass` | 0 |
+| RT-RUNTIME-EXT | `pass` | 0 |
 
 ## Phase 4 — BIO + CONF + object database
 
@@ -128,7 +130,7 @@ Courts: `all pass`, 16 court(s), 0 authority observation(s).
 ## Phase 5 — BN + ASN.1 + DER/PEM
 
 * state: `in-progress`
-* blocking: blocked by the dependency-order invariant: phase 3 is not complete
+* blocking: blocked by the dependency-order invariant: phase 4 is not complete
 * seal: `docs/PHASE-5-BN-ASN1-PEM-SEAL.md`
 * ledger: `forensics/phase5-obligations.json`
 * atlas-owned: 561
@@ -177,13 +179,14 @@ Courts: `all pass`, 9 court(s), 0 authority observation(s).
 * seal: none written yet (`docs/PHASE-6-PROVIDER-SEAL.md`)
 * ledger: `forensics/phase6-obligations.json`
 * atlas-owned: 137
-* owned working set: 156
+* owned working set: 161
 * implemented: 0
 * deferred to a later stratum with a stated reason: 0
-* **open in this stratum: 156**
+* **open in this stratum: 161**
 
 Hand-offs received and discharged:
 
+* from phase 3: 5 symbol(s) — `OPENSSL_atexit`, `OPENSSL_thread_stop`, `OPENSSL_thread_stop_ex`, `OSSL_get_max_threads`, `OSSL_set_max_threads`
 * from phase 4: 18 symbol(s) — `BIO_new_from_core_bio`, `BIO_s_core`, `CONF_imodule_get_flags`, `CONF_imodule_get_module`, `CONF_imodule_get_name`, `CONF_imodule_get_usr_data`, `CONF_imodule_get_value`, `CONF_imodule_set_flags`, `CONF_imodule_set_usr_data`, `CONF_module_add`, `CONF_module_get_usr_data`, `CONF_module_set_usr_data`, `CONF_modules_finish`, `CONF_modules_load`, `CONF_modules_load_file`, `CONF_modules_load_file_ex`, `CONF_modules_unload`, `OPENSSL_load_builtin_modules`
 * from phase 5: 1 symbol(s) — `ASN1_add_oid_module`
 
@@ -198,6 +201,6 @@ row for another stratum's export is a hand-off that stratum recorded.
 | 3 | 294 | 294 | 0 | 0 |
 | 4 | 256 | 272 | 0 | 16 |
 | 5 | 561 | 565 | 0 | 4 |
-| 6 | 137 | 156 | 0 | 19 |
+| 6 | 137 | 161 | 0 | 24 |
 
 Problems recorded by the audit: 0.
