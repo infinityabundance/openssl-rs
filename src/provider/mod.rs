@@ -918,7 +918,6 @@ pub(crate) unsafe fn ossl_provider_find(
             OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, ptr::null());
         }
     }
-    // The search key: a stack-local template whose only live field is `name`.
     let mut tmpl = blank_provider();
     tmpl.name = name.cast_mut();
     // SAFETY: `tmpl` outlives the search and is not mutated while the lock is held.
@@ -940,6 +939,117 @@ pub(crate) unsafe fn ossl_provider_find(
         }
         prov
     }
+}
+
+/// `int ossl_provider_add_to_store(OSSL_PROVIDER *prov, OSSL_PROVIDER **actualprov,
+/// int retain_fallbacks)`.
+///
+/// The losing side of a race is handled rather than reported: two threads may each
+/// construct a provider with the same name and race to insert it, and the thread that loses
+/// **deactivates and frees its own object** and leaves the winner's in the store. The caller
+/// that asked for `actualprov` therefore has to be told which object is now authoritative,
+/// and this function hands back a *reference* to it.
+///
+/// Three details are load-bearing:
+///
+/// * `*actualprov` is NULLed **first**, before any failure path can return, so a caller
+///   cannot be left with an uninitialised output on a refusal.
+/// * the insertion and `create_provider_children` are inside the lock and the up-ref of the
+///   winner is **outside** it — the up-ref can make an upcall, and no lock may be held across
+///   one.
+/// * `use_fallbacks` is cleared only on a successful *insertion* and only when
+///   `retain_fallbacks` is zero, so a losing thread cannot disable the fallback chain.
+///
+/// Two tails belong to later work and are named rather than approximated: the losing
+/// branch calls `ossl_provider_deactivate(prov, 0)` (**6.8c**), and the winning branch ends
+/// with `ossl_decoder_cache_flush(prov->libctx)` (**Phase 7**). `create_provider_children`
+/// is **6.8e** and is likewise named where it would go; it walks a callback stack only
+/// 6.8e can push into, and returning 1 without calling it is correct precisely because that
+/// stack is empty.
+///
+/// # Safety
+/// `prov` must be live with a non-NULL `libctx`; `actualprov` NULL or writable.
+#[allow(dead_code)] // unreachable until 6.8b calls it
+pub(crate) unsafe fn ossl_provider_add_to_store(
+    prov: *mut OsslProvider,
+    actualprov: *mut *mut OsslProvider,
+    retain_fallbacks: c_int,
+) -> c_int {
+    if !actualprov.is_null() {
+        // SAFETY: `actualprov` is writable per the contract.
+        unsafe { *actualprov = ptr::null_mut() };
+    }
+    // SAFETY: `prov` is live.
+    let libctx = unsafe { (*prov).libctx };
+    // SAFETY: `prov` is live, so `libctx` is the context it was built against.
+    let store = unsafe { get_provider_store(libctx) };
+    if store.is_null() {
+        return 0;
+    }
+    // SAFETY: `prov` is live, so its name is NUL-terminated.
+    let name = unsafe { (*prov).name };
+    let mut tmpl = blank_provider();
+    tmpl.name = name;
+    // SAFETY: `tmpl` outlives the search and is not mutated while the lock is held.
+    let key: *const c_void = ptr::addr_of!(tmpl).cast::<c_void>();
+
+    // SAFETY: `store` is live, so `lock` was created by `ossl_provider_store_new` and
+    // `providers` is a live stack; `key` points at `tmpl`, which outlives the search.
+    let (idx, actualtmp) = unsafe {
+        if CRYPTO_THREAD_write_lock((*store).lock) == 0 {
+            return 0;
+        }
+        let idx = OPENSSL_sk_find((*store).providers, key);
+        // The object that will be authoritative: the caller's on a free slot, the store's on
+        // an occupied one.
+        let actualtmp = if idx == -1 {
+            prov
+        } else {
+            OPENSSL_sk_value((*store).providers, idx).cast::<OsslProvider>()
+        };
+        if idx == -1 {
+            if OPENSSL_sk_push((*store).providers, prov.cast::<c_void>()) == 0 {
+                CRYPTO_THREAD_unlock((*store).lock);
+                return 0;
+            }
+            (*prov).store = store;
+            // 6.8e: `if (!create_provider_children(prov)) { ... }` goes here, with
+            // `OPENSSL_sk_delete_ptr((*store).providers, prov.cast())` and the `err:` label's
+            // unlock as its failure arm. It cannot fail today: `store->child_cbs` is empty
+            // until 6.8e registers one, and the authority's own loop over an empty stack
+            // returns 1.
+            if retain_fallbacks == 0 {
+                (*store).use_fallbacks = 0;
+            }
+        }
+        CRYPTO_THREAD_unlock((*store).lock);
+        (idx, actualtmp)
+    };
+
+    if !actualprov.is_null() {
+        // The up-ref is outside the lock: it can make an upcall.
+        // SAFETY: `actualtmp` is a live provider, either the caller's or the store's.
+        if unsafe { ossl_provider_up_ref(actualtmp) } == 0 {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::PROVIDER_CORE_694) };
+            return 0;
+        }
+        // SAFETY: `actualprov` is writable per the contract.
+        unsafe { *actualprov = actualtmp };
+    }
+
+    if idx >= 0 {
+        // 6.8c: `ossl_provider_deactivate(prov, 0)` — the losing thread's object is
+        // deactivated and then freed. `ossl_provider_free` also has no `flag_initialized`
+        // arm yet, for the same reason.
+        // SAFETY: `prov` is the caller's object, which the store did not take.
+        unsafe { ossl_provider_free(prov) };
+    } else {
+        // Phase 7: `ossl_decoder_cache_flush(prov->libctx)`. It is deliberately *outside*
+        // the lock, and the authority's own comment says other threads tolerate getting the
+        // wrong result briefly while creating `OSSL_DECODER_CTX`s.
+    }
+    1
 }
 
 /// `static OSSL_PROVIDER *provider_new(const char *name, OSSL_provider_init_fn *init_function,
