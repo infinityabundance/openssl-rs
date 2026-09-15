@@ -27,8 +27,8 @@ use core::ffi::{c_char, c_int, c_long, c_uchar, c_void};
 
 use crate::asn1::layout::*;
 use crate::ffi::guard_ffi;
+use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::err_sites;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_realloc, CRYPTO_zalloc};
 
 /// The authority translation unit for the string primitives.
@@ -90,9 +90,8 @@ pub(crate) unsafe fn bytes<'a>(p: *const Asn1String) -> &'a [u8] {
 /// `ASN1_STRING_type_new` — a fresh string of a given type.
 pub(crate) fn string_type_new(type_: c_int) -> *mut Asn1String {
     // SAFETY: `CRYPTO_zalloc` answers null or `sizeof(ASN1_STRING)` zeroed bytes.
-    let ret = unsafe {
-        CRYPTO_zalloc(core::mem::size_of::<Asn1String>(), FILE.as_ptr(), LINE).cast::<Asn1String>()
-    };
+    let ret =
+        CRYPTO_zalloc(core::mem::size_of::<Asn1String>(), FILE.as_ptr(), LINE).cast::<Asn1String>();
     if ret.is_null() {
         return core::ptr::null_mut();
     }

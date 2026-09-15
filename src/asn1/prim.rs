@@ -46,15 +46,15 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void};
+use core::ffi::{c_char, c_int, c_long, c_uchar, c_ulong, c_void};
 
 use crate::asn1::layout::*;
 use crate::asn1::string::{
     as_str, as_str_mut, string_embed_free, string_set_body, string_type_new,
 };
 use crate::ffi::guard_ffi;
+use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_dynamic};
-use crate::runtime::err_sites;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
 use crate::runtime::obj::{
     object_create, object_free, object_new, Asn1Object, OBJ_nid2obj, OBJ_obj2nid,
@@ -62,6 +62,11 @@ use crate::runtime::obj::{
 };
 
 /// The authority translation unit for the integer family.
+///
+/// Used by the `i2d_ASN1_INTEGER` family, which is subphase 5.3 of this stratum
+/// (`docs/PHASE-5-SUBPHASES.md`); `i2c_ibuf` and `ossl_i2c_ASN1_INTEGER` below are
+/// its two halves and are likewise unreferenced until it lands.
+#[allow(dead_code)]
 pub(crate) const INT_FILE: &core::ffi::CStr = c"crypto/asn1/a_int.c";
 /// The authority translation unit for the object type.
 pub(crate) const OBJECT_FILE: &core::ffi::CStr = c"crypto/asn1/a_object.c";
@@ -96,6 +101,7 @@ unsafe fn twos_complement(dst: *mut u8, src: *const u8, len: usize, pad: u8) {
     if len != 0 {
         // SAFETY: the caller guarantees `len` readable/writable bytes.
         d = unsafe { dst.add(len) };
+        // SAFETY: `src` has `len` readable bytes, per the caller.
         s = unsafe { src.add(len) };
     }
     let mut n = len;
@@ -104,6 +110,7 @@ unsafe fn twos_complement(dst: *mut u8, src: *const u8, len: usize, pad: u8) {
         // SAFETY: `n` counts down from `len`, so both pointers stay inside the
         // caller's buffers.
         let (v, dd) = unsafe { (s.sub(1).read(), d.sub(1)) };
+        // SAFETY: as above; `n` counts down so the read stays in range.
         s = unsafe { s.sub(1) };
         d = dd;
         carry += (v ^ pad) as u32;
@@ -121,6 +128,7 @@ unsafe fn twos_complement(dst: *mut u8, src: *const u8, len: usize, pad: u8) {
 ///
 /// `b` must be readable for `blen` bytes. `pp` must be null or point to a slot
 /// holding null or a pointer with room for the encoded length.
+#[allow(dead_code)] // the `i2d` half, subphase 5.3
 unsafe fn i2c_ibuf(b: *const u8, blen_in: usize, neg: bool, pp: *mut *mut c_uchar) -> usize {
     let mut pad: usize = 0;
     let mut pb: u8 = 0;
@@ -242,9 +250,14 @@ unsafe fn c2i_ibuf(b: *mut u8, pneg: *mut c_int, p: *const u8, plen_in: usize) -
 ///
 /// `a` must be null or a live `ASN1_STRING` in the integer family. `pp` must be
 /// null or point to a slot holding null or a pointer with room for the content.
+// The name is the authority's, and `ABI-PROTOTYPE` resolves implemented
+// exports by it, so it is kept verbatim rather than snake-cased.
+#[allow(non_snake_case)]
+#[allow(dead_code)] // the `i2d` half, subphase 5.3
 pub(crate) unsafe fn ossl_i2c_ASN1_INTEGER(a: *mut Asn1String, pp: *mut *mut c_uchar) -> c_int {
     // The authority reads `a->data` here with no NULL check; answering 0 instead of
     // faulting is the documented divergence (docs/SECURITY_DIVERGENCE_POLICY.md).
+    // SAFETY: null-or-live per this function's `# Safety` section.
     let Some(s) = (unsafe { as_str(a) }) else {
         return 0;
     };
@@ -282,6 +295,9 @@ pub(crate) unsafe fn ossl_i2c_ASN1_INTEGER(a: *mut Asn1String, pp: *mut *mut c_u
 ///
 /// `pp` must point to a slot holding a readable pointer to `len` bytes. `a` must be
 /// null or point to a slot holding null or a live `ASN1_INTEGER`.
+// The name is the authority's, and `ABI-PROTOTYPE` resolves implemented
+// exports by it, so it is kept verbatim rather than snake-cased.
+#[allow(non_snake_case)]
 pub(crate) unsafe fn ossl_c2i_ASN1_INTEGER(
     a: *mut *mut Asn1String,
     pp: *mut *const c_uchar,
@@ -331,6 +347,8 @@ pub(crate) unsafe fn ossl_c2i_ASN1_INTEGER(
         unsafe { raise_site(&err_sites::A_INT_320) };
         // The authority's `goto err` frees only when the object is not the
         // caller's; the same rule is applied here.
+        // SAFETY: the caller's slot is readable.
+        // SAFETY: the caller's slot is readable.
         if a.is_null() || unsafe { *a } != ret {
             // SAFETY: `ret` is ours.
             unsafe { string_embed_free(ret, 0) };
@@ -342,6 +360,7 @@ pub(crate) unsafe fn ossl_c2i_ASN1_INTEGER(
     if unsafe { string_set_body(ret, core::ptr::null(), r as c_int) } == 0 {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::A_INT_320) };
+        // SAFETY: the caller's slot is readable.
         if a.is_null() || unsafe { *a } != ret {
             // SAFETY: `ret` is ours.
             unsafe { string_embed_free(ret, 0) };
@@ -381,6 +400,9 @@ pub(crate) unsafe fn ossl_c2i_ASN1_INTEGER(
 ///
 /// `pp` must point to a slot holding a readable pointer to `len` bytes. `a` must be
 /// null or point to a slot holding null or a live `ASN1_OBJECT`.
+// The name is the authority's, and `ABI-PROTOTYPE` resolves implemented
+// exports by it, so it is kept verbatim rather than snake-cased.
+#[allow(non_snake_case)]
 pub(crate) unsafe fn ossl_c2i_ASN1_OBJECT(
     a: *mut *mut Asn1Object,
     pp: *mut *const c_uchar,
@@ -409,7 +431,7 @@ pub(crate) unsafe fn ossl_c2i_ASN1_OBJECT(
     }
     // Ask the database about a non-owning view of the encoding. A match means the
     // encoding is one the authority ships, so it is valid and need not be checked.
-    let mut probe = Asn1Object {
+    let probe = Asn1Object {
         sn: core::ptr::null(),
         ln: core::ptr::null(),
         nid: NID_UNDEF,
@@ -418,10 +440,10 @@ pub(crate) unsafe fn ossl_c2i_ASN1_OBJECT(
         flags: 0,
     };
     // SAFETY: `probe` is a complete object; `OBJ_obj2nid` only reads it.
-    let nid = unsafe { OBJ_obj2nid(&mut probe) };
+    let nid = unsafe { OBJ_obj2nid(&probe) };
     if nid != NID_UNDEF {
-        // SAFETY: the registry hands out a live static entry for a known nid.
-        let ret = unsafe { OBJ_nid2obj(nid) };
+        // The registry hands out a live static entry for a known nid.
+        let ret = OBJ_nid2obj(nid);
         if !a.is_null() {
             // SAFETY: the caller's slot holds a live object or null.
             let old = unsafe { *a };
@@ -443,6 +465,7 @@ pub(crate) unsafe fn ossl_c2i_ASN1_OBJECT(
     while i < length {
         // SAFETY: `i < length`.
         let octet = unsafe { *p.add(i) };
+        // SAFETY: `i > 0` on the arm that reads it.
         if octet == 0x80 && (i == 0 || unsafe { *p.add(i - 1) } & 0x80 == 0) {
             // SAFETY: a compile-time-constant site.
             unsafe { raise_site(&err_sites::A_OBJECT_289) };
@@ -484,13 +507,14 @@ pub(crate) unsafe fn ossl_c2i_ASN1_OBJECT(
         // SAFETY: `ret` is live and owned here.
         unsafe { (*ret).length = 0 };
         // SAFETY: `CRYPTO_malloc` answers null or `length` writable bytes.
-        let fresh = unsafe { CRYPTO_malloc(length, OBJECT_FILE.as_ptr(), LINE) } as *mut u8;
+        let fresh = CRYPTO_malloc(length, OBJECT_FILE.as_ptr(), LINE) as *mut u8;
         if fresh.is_null() {
             // The authority raises with `i` still holding the loop counter, which
             // is `length` at this point. That is the authority's own behaviour and
             // is reproduced rather than corrected.
             // SAFETY: `A_OBJECT_334` is a dynamic-reason site.
             unsafe { raise_site_dynamic(&err_sites::A_OBJECT_334, length as c_int) };
+            // SAFETY: the caller's slot is readable.
             if a.is_null() || unsafe { *a } != ret {
                 // SAFETY: `ret` is ours.
                 unsafe { object_free(ret) };
@@ -587,9 +611,10 @@ pub unsafe extern "C" fn d2i_ASN1_OBJECT(
     guard_ffi(core::ptr::null_mut(), || {
         // SAFETY: null-or-valid per this function's `# Safety` section.
         unsafe {
-            let Some(mut p) = as_ptr_slot(pp) else {
+            let Some(slot) = as_ptr_slot(pp) else {
                 return core::ptr::null_mut();
             };
+            let mut p = *slot;
             let mut len: c_long = 0;
             let mut tag: c_int = 0;
             let mut xclass: c_int = 0;
@@ -607,7 +632,7 @@ pub unsafe extern "C" fn d2i_ASN1_OBJECT(
             }
             let ret = ossl_c2i_ASN1_OBJECT(a, &mut p, len);
             if !ret.is_null() {
-                *pp = p;
+                *slot = p;
             }
             ret
         }
@@ -638,8 +663,7 @@ pub unsafe extern "C" fn i2d_ASN1_OBJECT(a: *const Asn1Object, pp: *mut *mut c_u
         let slot = unsafe { *pp };
         let (p, allocated) = if slot.is_null() {
             // SAFETY: `CRYPTO_malloc` answers null or `objsize` writable bytes.
-            let fresh =
-                unsafe { CRYPTO_malloc(objsize as usize, OBJECT_FILE.as_ptr(), LINE) } as *mut u8;
+            let fresh = CRYPTO_malloc(objsize as usize, OBJECT_FILE.as_ptr(), LINE) as *mut u8;
             if fresh.is_null() {
                 return 0;
             }
@@ -790,6 +814,7 @@ unsafe fn asn1_get_int64(pr: *mut i64, b: *const u8, blen: usize, neg: bool) -> 
 ///
 /// `a` must be null or a live string in the integer family, and `pr` writable.
 unsafe fn asn1_string_get_int64(pr: *mut i64, a: *const Asn1String, itype: c_int) -> c_int {
+    // SAFETY: null-or-live per this function's `# Safety` section.
     let Some(s) = (unsafe { as_str(a) }) else {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::A_INT_344) };
@@ -817,6 +842,7 @@ unsafe fn asn1_string_get_int64(pr: *mut i64, a: *const Asn1String, itype: c_int
 ///
 /// `a` must be null or a live string in the integer family, and `pr` writable.
 unsafe fn asn1_string_get_uint64(pr: *mut u64, a: *const Asn1String, itype: c_int) -> c_int {
+    // SAFETY: null-or-live per this function's `# Safety` section.
     let Some(s) = (unsafe { as_str(a) }) else {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::A_INT_381) };
@@ -845,6 +871,7 @@ unsafe fn asn1_string_get_uint64(pr: *mut u64, a: *const Asn1String, itype: c_in
 unsafe fn asn1_string_set_int64(a: *mut Asn1String, r: i64, itype: c_int) -> c_int {
     // The authority writes `a->type` with no NULL check; answering 0 is the
     // documented divergence.
+    // SAFETY: null-or-live-and-uniquely-owned per `# Safety`.
     let Some(s) = (unsafe { as_str_mut(a) }) else {
         return 0;
     };
@@ -872,6 +899,7 @@ unsafe fn asn1_string_set_int64(a: *mut Asn1String, r: i64, itype: c_int) -> c_i
 ///
 /// `a` must be null or a live, uniquely-owned string in the integer family.
 unsafe fn asn1_string_set_uint64(a: *mut Asn1String, r: u64, itype: c_int) -> c_int {
+    // SAFETY: null-or-live-and-uniquely-owned per `# Safety`.
     let Some(s) = (unsafe { as_str_mut(a) }) else {
         return 0;
     };
@@ -886,44 +914,11 @@ unsafe fn asn1_string_set_uint64(a: *mut Asn1String, r: u64, itype: c_int) -> c_
 // The exported integer accessors
 // ---------------------------------------------------------------------------
 
-/// `ASN1_INTEGER *ASN1_INTEGER_new(void)`
-#[no_mangle]
-pub extern "C" fn ASN1_INTEGER_new() -> *mut Asn1String {
-    guard_ffi(core::ptr::null_mut(), || string_type_new(V_ASN1_INTEGER))
-}
-
-/// `ASN1_INTEGER *ASN1_ENUMERATED_new(void)`
-#[no_mangle]
-pub extern "C" fn ASN1_ENUMERATED_new() -> *mut Asn1String {
-    guard_ffi(core::ptr::null_mut(), || string_type_new(V_ASN1_ENUMERATED))
-}
-
-/// `void ASN1_INTEGER_free(ASN1_INTEGER *a)`
+/// `ASN1_INTEGER *ASN1_INTEGER_new(void)` and `void ASN1_INTEGER_free(...)` are
+/// generated in [`crate::asn1::string`] alongside every other plain string type,
+/// because the authority generates them the same way: the only thing that differs
+/// between them is the `type` their constructor stores.
 ///
-/// # Safety
-///
-/// `a` must be null or a live integer from this layer that is not used again.
-#[no_mangle]
-pub unsafe extern "C" fn ASN1_INTEGER_free(a: *mut Asn1String) {
-    guard_ffi((), || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        unsafe { string_embed_free(a, 0) }
-    });
-}
-
-/// `void ASN1_ENUMERATED_free(ASN1_ENUMERATED *a)`
-///
-/// # Safety
-///
-/// `a` must be null or a live enumerated from this layer that is not used again.
-#[no_mangle]
-pub unsafe extern "C" fn ASN1_ENUMERATED_free(a: *mut Asn1String) {
-    guard_ffi((), || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        unsafe { string_embed_free(a, 0) }
-    });
-}
-
 /// `ASN1_INTEGER *ASN1_INTEGER_dup(const ASN1_INTEGER *x)`
 ///
 /// # Safety
@@ -963,6 +958,7 @@ pub unsafe extern "C" fn ASN1_INTEGER_cmp(x: *const Asn1String, y: *const Asn1St
     guard_ffi(0, || {
         // The authority reads `x->type` with no NULL check; a null operand answers
         // 0 here, which is the documented divergence.
+        // SAFETY: both operands are null-or-live per `# Safety`.
         let (Some(a), Some(b)) = (unsafe { as_str(x) }, unsafe { as_str(y) }) else {
             return 0;
         };
@@ -1029,7 +1025,7 @@ pub unsafe extern "C" fn ASN1_INTEGER_set_uint64(a: *mut Asn1String, r: u64) -> 
 pub unsafe extern "C" fn ASN1_INTEGER_set(a: *mut Asn1String, v: c_long) -> c_int {
     guard_ffi(0, || {
         // SAFETY: null-or-live per this function's `# Safety` section.
-        unsafe { asn1_string_set_int64(a, v as i64, V_ASN1_INTEGER) }
+        unsafe { asn1_string_set_int64(a, v, V_ASN1_INTEGER) }
     })
 }
 
@@ -1042,7 +1038,7 @@ pub unsafe extern "C" fn ASN1_INTEGER_set(a: *mut Asn1String, v: c_long) -> c_in
 pub unsafe extern "C" fn ASN1_ENUMERATED_set(a: *mut Asn1String, v: c_long) -> c_int {
     guard_ffi(0, || {
         // SAFETY: null-or-live per this function's `# Safety` section.
-        unsafe { asn1_string_set_int64(a, v as i64, V_ASN1_ENUMERATED) }
+        unsafe { asn1_string_set_int64(a, v, V_ASN1_ENUMERATED) }
     })
 }
 
@@ -1105,7 +1101,10 @@ pub unsafe extern "C" fn ASN1_INTEGER_get(a: *const Asn1String) -> c_long {
         if unsafe { asn1_string_get_int64(&mut r, a, V_ASN1_INTEGER) } == 0 {
             return -1;
         }
-        if r > c_long::MAX as i64 || r < c_long::MIN as i64 {
+        // The authority's `r > LONG_MAX || r < LONG_MIN`. On this profile `long`
+        // is 64 bits, so the test cannot fire; it is kept rather than deleted
+        // because it is contract on a target where `long` is narrower.
+        if !(c_long::MIN..=c_long::MAX).contains(&r) {
             return -1;
         }
         r as c_long
@@ -1141,7 +1140,10 @@ pub unsafe extern "C" fn ASN1_ENUMERATED_get(a: *const Asn1String) -> c_long {
         if unsafe { asn1_string_get_int64(&mut r, a, V_ASN1_ENUMERATED) } == 0 {
             return -1;
         }
-        if r > c_long::MAX as i64 || r < c_long::MIN as i64 {
+        // The authority's `r > LONG_MAX || r < LONG_MIN`. On this profile `long`
+        // is 64 bits, so the test cannot fire; it is kept rather than deleted
+        // because it is contract on a target where `long` is narrower.
+        if !(c_long::MIN..=c_long::MAX).contains(&r) {
             return -1;
         }
         r as c_long
@@ -1223,6 +1225,7 @@ unsafe fn asn1_string_to_bn(
 ) -> *mut crate::bn::bignum::BigNum {
     // The authority reads `ai->type` with no NULL check; answering NULL is the
     // documented divergence.
+    // SAFETY: null-or-live per this function's `# Safety` section.
     let Some(s) = (unsafe { as_str(ai) }) else {
         return core::ptr::null_mut();
     };
@@ -1322,10 +1325,8 @@ pub extern "C" fn ASN1_PCTX_new() -> *mut Asn1Pctx {
     guard_ffi(core::ptr::null_mut(), || {
         // SAFETY: `CRYPTO_zalloc` answers null or `sizeof(ASN1_PCTX)` zeroed
         // bytes.
-        unsafe {
-            CRYPTO_zalloc(core::mem::size_of::<Asn1Pctx>(), OBJECT_FILE.as_ptr(), LINE)
-                .cast::<Asn1Pctx>()
-        }
+        CRYPTO_zalloc(core::mem::size_of::<Asn1Pctx>(), OBJECT_FILE.as_ptr(), LINE)
+            .cast::<Asn1Pctx>()
     })
 }
 
@@ -1340,10 +1341,8 @@ pub extern "C" fn ASN1_SCTX_new(
     guard_ffi(core::ptr::null_mut(), || {
         // SAFETY: `CRYPTO_zalloc` answers null or `sizeof(ASN1_SCTX)` zeroed
         // bytes.
-        let ret = unsafe {
-            CRYPTO_zalloc(core::mem::size_of::<Asn1Sctx>(), OBJECT_FILE.as_ptr(), LINE)
-                .cast::<Asn1Sctx>()
-        };
+        let ret = CRYPTO_zalloc(core::mem::size_of::<Asn1Sctx>(), OBJECT_FILE.as_ptr(), LINE)
+            .cast::<Asn1Sctx>();
         if ret.is_null() {
             return core::ptr::null_mut();
         }
@@ -1376,6 +1375,7 @@ pub unsafe extern "C" fn ASN1_SCTX_free(p: *mut Asn1Sctx) {
 /// `p` must be null or a live `ASN1_SCTX`.
 #[no_mangle]
 pub unsafe extern "C" fn ASN1_SCTX_get_item(p: *mut Asn1Sctx) -> *const Asn1Item {
+    // SAFETY: `p` is null or a live `ASN1_SCTX`.
     guard_ffi(core::ptr::null(), || unsafe {
         match p.as_ref() {
             Some(x) => x.it,
@@ -1391,6 +1391,7 @@ pub unsafe extern "C" fn ASN1_SCTX_get_item(p: *mut Asn1Sctx) -> *const Asn1Item
 /// `p` must be null or a live `ASN1_SCTX`.
 #[no_mangle]
 pub unsafe extern "C" fn ASN1_SCTX_get_template(p: *mut Asn1Sctx) -> *const Asn1Template {
+    // SAFETY: `p` is null or a live `ASN1_SCTX`.
     guard_ffi(core::ptr::null(), || unsafe {
         match p.as_ref() {
             Some(x) => x.template,
@@ -1406,6 +1407,7 @@ pub unsafe extern "C" fn ASN1_SCTX_get_template(p: *mut Asn1Sctx) -> *const Asn1
 /// `p` must be null or a live `ASN1_SCTX`.
 #[no_mangle]
 pub unsafe extern "C" fn ASN1_SCTX_get_flags(p: *mut Asn1Sctx) -> c_ulong {
+    // SAFETY: null-or-live per this function's `# Safety` section.
     guard_ffi(0, || unsafe {
         match p.as_ref() {
             Some(x) => x.flags,
@@ -1421,6 +1423,7 @@ pub unsafe extern "C" fn ASN1_SCTX_get_flags(p: *mut Asn1Sctx) -> c_ulong {
 /// `p` must be null or a live `ASN1_SCTX`.
 #[no_mangle]
 pub unsafe extern "C" fn ASN1_SCTX_get_app_data(p: *mut Asn1Sctx) -> *mut c_void {
+    // SAFETY: `p` is null or a live `ASN1_SCTX`.
     guard_ffi(core::ptr::null_mut(), || unsafe {
         match p.as_ref() {
             Some(x) => x.app_data,
@@ -1436,6 +1439,7 @@ pub unsafe extern "C" fn ASN1_SCTX_get_app_data(p: *mut Asn1Sctx) -> *mut c_void
 /// `p` must be null or a live, uniquely-owned `ASN1_SCTX`.
 #[no_mangle]
 pub unsafe extern "C" fn ASN1_SCTX_set_app_data(p: *mut Asn1Sctx, data: *mut c_void) {
+    // SAFETY: null-or-live per this function's `# Safety` section.
     guard_ffi((), || unsafe {
         if let Some(x) = p.as_mut() {
             x.app_data = data;
@@ -1466,6 +1470,7 @@ pub unsafe extern "C" fn ASN1_PCTX_free(p: *mut Asn1Pctx) {
 /// `p` must be null or a live `ASN1_PCTX`.
 #[no_mangle]
 pub unsafe extern "C" fn ASN1_PCTX_get_flags(p: *const Asn1Pctx) -> c_ulong {
+    // SAFETY: null-or-live per this function's `# Safety` section.
     guard_ffi(0, || unsafe { pctx_flags(p).0 })
 }
 
@@ -1476,6 +1481,7 @@ pub unsafe extern "C" fn ASN1_PCTX_get_flags(p: *const Asn1Pctx) -> c_ulong {
 /// `p` must be null or a live, uniquely-owned `ASN1_PCTX`.
 #[no_mangle]
 pub unsafe extern "C" fn ASN1_PCTX_set_flags(p: *mut Asn1Pctx, flags: c_ulong) {
+    // SAFETY: null-or-live per this function's `# Safety` section.
     guard_ffi((), || unsafe {
         if let Some(x) = p.as_mut() {
             x.flags = flags;
@@ -1490,6 +1496,7 @@ pub unsafe extern "C" fn ASN1_PCTX_set_flags(p: *mut Asn1Pctx, flags: c_ulong) {
 /// `p` must be null or a live `ASN1_PCTX`.
 #[no_mangle]
 pub unsafe extern "C" fn ASN1_PCTX_get_nm_flags(p: *const Asn1Pctx) -> c_ulong {
+    // SAFETY: null-or-live per this function's `# Safety` section.
     guard_ffi(0, || unsafe { pctx_flags(p).1 })
 }
 
@@ -1500,6 +1507,7 @@ pub unsafe extern "C" fn ASN1_PCTX_get_nm_flags(p: *const Asn1Pctx) -> c_ulong {
 /// `p` must be null or a live, uniquely-owned `ASN1_PCTX`.
 #[no_mangle]
 pub unsafe extern "C" fn ASN1_PCTX_set_nm_flags(p: *mut Asn1Pctx, flags: c_ulong) {
+    // SAFETY: null-or-live per this function's `# Safety` section.
     guard_ffi((), || unsafe {
         if let Some(x) = p.as_mut() {
             x.nm_flags = flags;
@@ -1514,6 +1522,7 @@ pub unsafe extern "C" fn ASN1_PCTX_set_nm_flags(p: *mut Asn1Pctx, flags: c_ulong
 /// `p` must be null or a live `ASN1_PCTX`.
 #[no_mangle]
 pub unsafe extern "C" fn ASN1_PCTX_get_cert_flags(p: *const Asn1Pctx) -> c_ulong {
+    // SAFETY: null-or-live per this function's `# Safety` section.
     guard_ffi(0, || unsafe { pctx_flags(p).2 })
 }
 
@@ -1524,6 +1533,7 @@ pub unsafe extern "C" fn ASN1_PCTX_get_cert_flags(p: *const Asn1Pctx) -> c_ulong
 /// `p` must be null or a live, uniquely-owned `ASN1_PCTX`.
 #[no_mangle]
 pub unsafe extern "C" fn ASN1_PCTX_set_cert_flags(p: *mut Asn1Pctx, flags: c_ulong) {
+    // SAFETY: null-or-live per this function's `# Safety` section.
     guard_ffi((), || unsafe {
         if let Some(x) = p.as_mut() {
             x.cert_flags = flags;
@@ -1538,6 +1548,7 @@ pub unsafe extern "C" fn ASN1_PCTX_set_cert_flags(p: *mut Asn1Pctx, flags: c_ulo
 /// `p` must be null or a live `ASN1_PCTX`.
 #[no_mangle]
 pub unsafe extern "C" fn ASN1_PCTX_get_oid_flags(p: *const Asn1Pctx) -> c_ulong {
+    // SAFETY: null-or-live per this function's `# Safety` section.
     guard_ffi(0, || unsafe { pctx_flags(p).3 })
 }
 
@@ -1548,6 +1559,7 @@ pub unsafe extern "C" fn ASN1_PCTX_get_oid_flags(p: *const Asn1Pctx) -> c_ulong 
 /// `p` must be null or a live, uniquely-owned `ASN1_PCTX`.
 #[no_mangle]
 pub unsafe extern "C" fn ASN1_PCTX_set_oid_flags(p: *mut Asn1Pctx, flags: c_ulong) {
+    // SAFETY: null-or-live per this function's `# Safety` section.
     guard_ffi((), || unsafe {
         if let Some(x) = p.as_mut() {
             x.oid_flags = flags;
@@ -1562,6 +1574,7 @@ pub unsafe extern "C" fn ASN1_PCTX_set_oid_flags(p: *mut Asn1Pctx, flags: c_ulon
 /// `p` must be null or a live `ASN1_PCTX`.
 #[no_mangle]
 pub unsafe extern "C" fn ASN1_PCTX_get_str_flags(p: *const Asn1Pctx) -> c_ulong {
+    // SAFETY: null-or-live per this function's `# Safety` section.
     guard_ffi(0, || unsafe { pctx_flags(p).4 })
 }
 
@@ -1572,6 +1585,7 @@ pub unsafe extern "C" fn ASN1_PCTX_get_str_flags(p: *const Asn1Pctx) -> c_ulong 
 /// `p` must be null or a live, uniquely-owned `ASN1_PCTX`.
 #[no_mangle]
 pub unsafe extern "C" fn ASN1_PCTX_set_str_flags(p: *mut Asn1Pctx, flags: c_ulong) {
+    // SAFETY: null-or-live per this function's `# Safety` section.
     guard_ffi((), || unsafe {
         if let Some(x) = p.as_mut() {
             x.str_flags = flags;

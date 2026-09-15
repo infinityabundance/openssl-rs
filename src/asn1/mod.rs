@@ -26,6 +26,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
+pub mod d2i;
 pub mod der;
 pub mod layout;
 pub mod prim;

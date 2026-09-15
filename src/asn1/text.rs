@@ -34,8 +34,8 @@ use core::ffi::{c_char, c_int, c_void};
 use crate::asn1::layout::*;
 use crate::ffi::guard_ffi;
 use crate::runtime::bio::{BIO_dump, BIO_write};
+use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::err_sites;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
 use crate::runtime::obj::{Asn1Object, OBJ_obj2txt};
 
@@ -103,7 +103,8 @@ pub unsafe extern "C" fn i2a_ASN1_OBJECT(
         }
         let mut buf = [0 as c_char; OBJ_BUF];
         // SAFETY: `buf` is `OBJ_BUF` writable bytes.
-        let mut i = unsafe { i2t_ASN1_OBJECT(buf.as_mut_ptr(), OBJ_BUF as c_int, a) };
+        // SAFETY: `buf` is `OBJ_BUF` writable bytes; `a` is live.
+        let i = unsafe { i2t_ASN1_OBJECT(buf.as_mut_ptr(), OBJ_BUF as c_int, a) };
         let mut heap: *mut c_char = core::ptr::null_mut();
         if i > (OBJ_BUF - 1) as c_int {
             if i > c_int::MAX - 1 {
@@ -112,8 +113,7 @@ pub unsafe extern "C" fn i2a_ASN1_OBJECT(
                 return -1;
             }
             // SAFETY: `CRYPTO_malloc` answers null or `i + 1` writable bytes.
-            let p =
-                unsafe { CRYPTO_malloc(i as usize + 1, OBJECT_FILE.as_ptr(), LINE) } as *mut c_char;
+            let p = CRYPTO_malloc(i as usize + 1, OBJECT_FILE.as_ptr(), LINE) as *mut c_char;
             if p.is_null() {
                 return -1;
             }

@@ -62,6 +62,7 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 #![deny(missing_docs)]
 
+pub mod asn1;
 pub mod bn;
 pub mod ffi;
 pub mod runtime;

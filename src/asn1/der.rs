@@ -28,8 +28,8 @@ use core::ffi::{c_char, c_int, c_long, c_uchar};
 use crate::asn1::layout::*;
 use crate::ffi::guard_ffi;
 use crate::runtime::bio::{Bio, BIO_CTRL_GET_INDENT, BIO_CTRL_SET_INDENT, BIO_CTRL_SET_PREFIX};
+use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::err_sites;
 
 /// `ASN1_PARSE_MAXDEPTH` — the depth `ASN1_parse_dump` refuses to exceed.
 const ASN1_PARSE_MAXDEPTH: c_int = 128;
@@ -541,6 +541,7 @@ pub extern "C" fn ASN1_tag2str(tag: c_int) -> *const c_char {
 /// # Safety
 ///
 /// `bp` must be null or a live BIO.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's own `asn1_parse2`
 unsafe fn print_info(
     bp: *mut Bio,
     offset: c_long,
@@ -561,7 +562,7 @@ unsafe fn print_info(
     // SAFETY: `buf` is a 128-byte buffer and the formats are `bio_variadic.c`'s.
     let ok = unsafe {
         if constructed != V_ASN1_CONSTRUCTED | 1 {
-            crate::runtime::bio::BIO_snprintf(
+            crate::runtime::bio::print::BIO_snprintf(
                 buf.as_mut_ptr(),
                 buf.len(),
                 c"%5ld:d=%-2d hl=%ld l=%4ld %s".as_ptr(),
@@ -572,7 +573,7 @@ unsafe fn print_info(
                 prim,
             )
         } else {
-            crate::runtime::bio::BIO_snprintf(
+            crate::runtime::bio::print::BIO_snprintf(
                 buf.as_mut_ptr(),
                 buf.len(),
                 c"%5ld:d=%-2d hl=%ld l=inf  %s".as_ptr(),
@@ -592,10 +593,10 @@ unsafe fn print_info(
     // SAFETY: `bp` is a live BIO and `buf` is NUL-terminated.
     let mut bp = bp;
     let mut pop_f_prefix = false;
-    let mut saved_indent: c_long = -1;
     // SAFETY: as above.
-    if unsafe { crate::runtime::bio::BIO_ctrl(bp, BIO_CTRL_SET_PREFIX, 0, buf.as_ptr().cast()) }
-        <= 0
+    if unsafe {
+        crate::runtime::bio::BIO_ctrl(bp, BIO_CTRL_SET_PREFIX, 0, buf.as_ptr().cast_mut().cast())
+    } <= 0
     {
         // The sink has no prefix filter, so push one; the authority does this so a
         // nested structure is indented by its parent.
@@ -616,14 +617,21 @@ unsafe fn print_info(
         pop_f_prefix = true;
     }
     // SAFETY: `bp` is live.
-    saved_indent =
+    let saved_indent =
         unsafe { crate::runtime::bio::BIO_ctrl(bp, BIO_CTRL_GET_INDENT, 0, core::ptr::null_mut()) }
             as c_long;
     // SAFETY: as above.
-    if unsafe { crate::runtime::bio::BIO_ctrl(bp, BIO_CTRL_SET_PREFIX, 0, buf.as_ptr().cast()) }
-        <= 0
+    if unsafe {
+        crate::runtime::bio::BIO_ctrl(bp, BIO_CTRL_SET_PREFIX, 0, buf.as_ptr().cast_mut().cast())
+    } <= 0
+        // SAFETY: `bp` is live on this path.
         || unsafe {
-            crate::runtime::bio::BIO_ctrl(bp, BIO_CTRL_SET_INDENT, indent, core::ptr::null_mut())
+            crate::runtime::bio::BIO_ctrl(
+                bp,
+                BIO_CTRL_SET_INDENT,
+                indent as c_long,
+                core::ptr::null_mut(),
+            )
         } <= 0
     {
         if saved_indent >= 0 {
@@ -632,7 +640,7 @@ unsafe fn print_info(
                 crate::runtime::bio::BIO_ctrl(
                     bp,
                     BIO_CTRL_SET_INDENT,
-                    saved_indent as c_int,
+                    saved_indent as c_long,
                     core::ptr::null_mut(),
                 )
             };
@@ -644,9 +652,10 @@ unsafe fn print_info(
         return 0;
     }
     // `BIO_set_prefix` copied the string, so `buf` can be reused for the tag.
+    // SAFETY: `buf` is writable and `bp` is live.
     let name: *const c_char = unsafe {
         if (xclass & V_ASN1_PRIVATE) == V_ASN1_PRIVATE {
-            crate::runtime::bio::BIO_snprintf(
+            crate::runtime::bio::print::BIO_snprintf(
                 buf.as_mut_ptr(),
                 buf.len(),
                 c"priv [ %d ] ".as_ptr(),
@@ -654,7 +663,7 @@ unsafe fn print_info(
             );
             buf.as_ptr()
         } else if (xclass & V_ASN1_CONTEXT_SPECIFIC) == V_ASN1_CONTEXT_SPECIFIC {
-            crate::runtime::bio::BIO_snprintf(
+            crate::runtime::bio::print::BIO_snprintf(
                 buf.as_mut_ptr(),
                 buf.len(),
                 c"cont [ %d ]".as_ptr(),
@@ -662,7 +671,7 @@ unsafe fn print_info(
             );
             buf.as_ptr()
         } else if (xclass & V_ASN1_APPLICATION) == V_ASN1_APPLICATION {
-            crate::runtime::bio::BIO_snprintf(
+            crate::runtime::bio::print::BIO_snprintf(
                 buf.as_mut_ptr(),
                 buf.len(),
                 c"appl [ %d ]".as_ptr(),
@@ -670,7 +679,7 @@ unsafe fn print_info(
             );
             buf.as_ptr()
         } else if tag > 30 {
-            crate::runtime::bio::BIO_snprintf(
+            crate::runtime::bio::print::BIO_snprintf(
                 buf.as_mut_ptr(),
                 buf.len(),
                 c"<ASN1 %d>".as_ptr(),
@@ -682,14 +691,15 @@ unsafe fn print_info(
         }
     };
     // SAFETY: `bp` is a live BIO and `name` is NUL-terminated.
-    let i = (unsafe { crate::runtime::bio::BIO_printf(bp, c"%-18s".as_ptr(), name) } > 0) as c_int;
+    let i = (unsafe { crate::runtime::bio::print::BIO_printf(bp, c"%-18s".as_ptr(), name) } > 0)
+        as c_int;
     if saved_indent >= 0 {
         // SAFETY: `bp` is live.
         unsafe {
             crate::runtime::bio::BIO_ctrl(
                 bp,
                 BIO_CTRL_SET_INDENT,
-                saved_indent as c_int,
+                saved_indent as c_long,
                 core::ptr::null_mut(),
             )
         };
@@ -821,7 +831,7 @@ unsafe fn parse2(
             if len > remaining {
                 // SAFETY: `bp` is a live BIO.
                 unsafe {
-                    crate::runtime::bio::BIO_printf(
+                    crate::runtime::bio::print::BIO_printf(
                         bp,
                         c"length is greater than %ld\n".as_ptr(),
                         remaining,
@@ -904,6 +914,7 @@ unsafe fn parse2(
                 }
                 // SAFETY: `bp` is a live BIO.
                 if !content.is_empty()
+                    // SAFETY: `bp` is a live BIO.
                     && unsafe {
                         crate::runtime::bio::BIO_write(
                             bp,
@@ -952,7 +963,9 @@ unsafe fn parse2(
                 }
                 if len > 0 {
                     // SAFETY: `bp` is a live BIO and `p` holds at least one byte.
-                    unsafe { crate::runtime::bio::BIO_printf(bp, c":%u".as_ptr(), *p as u32) };
+                    unsafe {
+                        crate::runtime::bio::print::BIO_printf(bp, c":%u".as_ptr(), *p as u32)
+                    };
                 }
             } else if tag == V_ASN1_BMPSTRING {
                 // The authority prints nothing for a BMPString.
@@ -1010,7 +1023,7 @@ unsafe fn parse2(
                             for &byte in ob {
                                 // SAFETY: `bp` is a live BIO.
                                 if unsafe {
-                                    crate::runtime::bio::BIO_printf(
+                                    crate::runtime::bio::print::BIO_printf(
                                         bp,
                                         c"%02X".as_ptr(),
                                         byte as u32,
@@ -1081,6 +1094,7 @@ unsafe fn parse2(
                     }
                     // SAFETY: `bp` is a live BIO.
                     if atype == neg_type
+                        // SAFETY: `bp` is a live BIO.
                         && unsafe { crate::runtime::bio::BIO_write(bp, c"-".as_ptr().cast(), 1) }
                             <= 0
                     {
@@ -1093,7 +1107,11 @@ unsafe fn parse2(
                     for &byte in ab {
                         // SAFETY: `bp` is a live BIO.
                         if unsafe {
-                            crate::runtime::bio::BIO_printf(bp, c"%02X".as_ptr(), byte as u32)
+                            crate::runtime::bio::print::BIO_printf(
+                                bp,
+                                c"%02X".as_ptr(),
+                                byte as u32,
+                            )
                         } <= 0
                         {
                             break;
@@ -1125,7 +1143,11 @@ unsafe fn parse2(
                     // SAFETY: `bp` is a live BIO.
                     unsafe { crate::runtime::bio::BIO_write(bp, c"\n".as_ptr().cast(), 1) };
                 }
-                let n = if dump == -1 || dump > len { len } else { dump };
+                let n = if dump == -1 || dump as c_long > len {
+                    len
+                } else {
+                    dump as c_long
+                };
                 // SAFETY: `bp` is a live BIO and `p` holds `len` bytes.
                 unsafe {
                     crate::runtime::bio::BIO_dump_indent(bp, p.cast(), n as c_int, dump_indent)
@@ -1143,8 +1165,9 @@ unsafe fn parse2(
                     // SAFETY: `i < len` keeps `tmp` readable.
                     let b = unsafe { *tmp.add(i as usize) };
                     // SAFETY: `bp` is a live BIO.
-                    if unsafe { crate::runtime::bio::BIO_printf(bp, c"%02X".as_ptr(), b as u32) }
-                        <= 0
+                    if unsafe {
+                        crate::runtime::bio::print::BIO_printf(bp, c"%02X".as_ptr(), b as u32)
+                    } <= 0
                     {
                         break;
                     }

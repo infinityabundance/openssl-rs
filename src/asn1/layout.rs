@@ -20,6 +20,17 @@
 //! Every constant here is materialised: `ABI-CONSTANTS` compiles the authority's
 //! header expression and this one and compares the values, so a transcription
 //! error fails a court rather than silently reinterpreting a caller's structure.
+//!
+//! **Why the dead-code lint is off for this module.** It is a projection, so the
+//! members it does not yet use are not dead code — they are the part of the
+//! contract the later subphases read (`docs/PHASE-5-SUBPHASES.md`). The
+//! `ASN1_ITYPE_*`, `ASN1_TFLG_*`, `ASN1_AFLG_*` and `ASN1_OP_*` sets exist for the
+//! template machinery in 5.4 and the printer in 5.6. Deleting them to satisfy the
+//! lint would delete the record that they were read from the authority, and
+//! re-adding them one subphase at a time would churn the file repeatedly.
+//!
+//! SPDX-License-Identifier: Apache-2.0
+#![allow(dead_code)]
 
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_ulong, c_void};
 
