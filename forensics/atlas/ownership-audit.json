@@ -198,7 +198,9 @@
         {
           "from_phase": 5,
           "symbols": [
-            "ASN1_add_stable_module"
+            "ASN1_add_stable_module",
+            "ASN1_generate_nconf",
+            "ASN1_generate_v3"
           ],
           "to_phase": 11
         },
@@ -379,7 +381,9 @@
         {
           "from_phase": 5,
           "symbols": [
-            "ASN1_add_stable_module"
+            "ASN1_add_stable_module",
+            "ASN1_generate_nconf",
+            "ASN1_generate_v3"
           ],
           "to_phase": 11
         },
@@ -540,7 +544,7 @@
     ],
     "implemented_by_two_strata": [],
     "implemented_exports": {
-      "libcrypto": 920,
+      "libcrypto": 921,
       "libssl": 0
     },
     "invariant": "every authority export has exactly one declared owner in forensics/atlas/symbol-ownership.json, and every implemented export's owner is therefore declared before any implementation exists",
@@ -598,19 +602,19 @@
       },
       {
         "atlas": 561,
-        "ledger": 501,
-        "only_in_atlas": 64,
+        "ledger": 499,
+        "only_in_atlas": 66,
         "only_in_atlas_examples": [
           "ASN1_ITEM_get",
           "ASN1_ITEM_lookup",
           "ASN1_add_oid_module",
           "ASN1_add_stable_module",
+          "ASN1_generate_nconf",
+          "ASN1_generate_v3",
           "ASN1_item_sign_ex",
           "ASN1_item_verify_ex",
           "BN_BLINDING_convert",
-          "BN_BLINDING_convert_ex",
-          "BN_BLINDING_create_param",
-          "BN_BLINDING_update"
+          "BN_BLINDING_convert_ex"
         ],
         "only_in_ledger": 4,
         "only_in_ledger_examples": [
@@ -5879,7 +5883,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "563f53ea13f432e1f21dfda853f7b3b9a0ea34ad434644205b295cbbff6046b3"
+      "sha256": "d411c6d7c245d59b39bfd4fdbceaf6e2f29eebd3b1954ac82264b9e74837f222"
     },
     {
       "name": "authority-symbols",
@@ -5899,22 +5903,22 @@
     {
       "name": "ledger",
       "path": "forensics/tools/phase5_obligations.py",
-      "sha256": "2730e41448f72b49c929bb72fbb9bc1437cbe1af558f0cd04c1f5f94e2932305"
+      "sha256": "fc2617897940bbd6768834483ad5d38a57b73eacd64e8dfdd68861c347101d3f"
     },
     {
       "name": "ledger-result",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "a362bb4ae2ae69b2985ff23644e7126797a43c8b8200eeb895aa6547fba889fb"
+      "sha256": "6084616f184dc8df093c5e0748c3038b517a2b529ec7bc4955a5134e8550027d"
     },
     {
       "name": "ledger-result",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "e97d2df962f67fd3d844528283574cff15cad87ffb017f506e87d2a1fa1e968d"
+      "sha256": "fe20bcc403716307a03a84fc8da535bb3560ac70206cf5dd7948648320b6f470"
     },
     {
       "name": "ledger-result",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "b5c4f0a470a71803733de82894821ae9145f82007c9a338fc684a2c51c711edd"
+      "sha256": "366a55317a8b42d89b210cd448b4971eeca8774d9dd7258af419456ae9663bee"
     }
   ],
   "kind": "ownership-audit",

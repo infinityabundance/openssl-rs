@@ -47,6 +47,7 @@ pub mod a_strex;
 pub mod a_strnid;
 pub mod a_type;
 pub mod a_utf8;
+pub mod asn1_gen;
 pub mod asn_pack;
 pub mod bitstr;
 pub mod d2i;

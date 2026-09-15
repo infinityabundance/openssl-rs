@@ -4,9 +4,9 @@
     "complete": false,
     "counts": {
       "atlas_owned": 561,
-      "deferred_to_later_phase": 64,
-      "implemented": 462,
-      "open_in_this_stratum": 39,
+      "deferred_to_later_phase": 66,
+      "implemented": 463,
+      "open_in_this_stratum": 36,
       "owned": 565
     },
     "deferred": [
@@ -33,6 +33,18 @@
         "owning_phase": 11,
         "reason": "registers a CONF module with CONF_module_add (Phase 6, the module registry) and its handler parses a section value with X509V3_parse_list (Phase 11); the later of the two dependencies is the binding one",
         "symbol": "ASN1_add_stable_module"
+      },
+      {
+        "declaring_header": "asn1.h",
+        "owning_phase": 11,
+        "reason": "reads an X509V3_CTX through X509V3_get_string/X509V3_get_section for the MULTI form and constructs one with X509V3_set_nconf; X509V3_CTX is x509v3.h's and is Phase 11",
+        "symbol": "ASN1_generate_nconf"
+      },
+      {
+        "declaring_header": "asn1.h",
+        "owning_phase": 11,
+        "reason": "reads an X509V3_CTX through X509V3_get_string/X509V3_get_section for the MULTI form and constructs one with X509V3_set_nconf; X509V3_CTX is x509v3.h's and is Phase 11",
+        "symbol": "ASN1_generate_v3"
       },
       {
         "declaring_header": "asn1.h",
@@ -400,7 +412,7 @@
       "7": 7,
       "9": 31,
       "10": 16,
-      "11": 1,
+      "11": 3,
       "12": 8
     },
     "handoffs_discharged": {
@@ -655,6 +667,7 @@
       "ASN1_parse_dump",
       "ASN1_put_eoc",
       "ASN1_put_object",
+      "ASN1_str2mask",
       "ASN1_tag2bit",
       "ASN1_tag2str",
       "BIGNUM_it",
@@ -918,22 +931,7 @@
       {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
-        "symbol": "ASN1_generate_nconf"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_generate_v3"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
         "symbol": "ASN1_item_print"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_str2mask"
       },
       {
         "declaring_header": "bio.h",
@@ -1112,7 +1110,7 @@
       }
     ],
     "owned_by_module": {
-      "src/asn1/": 304,
+      "src/asn1/": 302,
       "src/bn/": 170,
       "src/pem/": 27
     },
@@ -1143,7 +1141,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "f860d312a571846b5c824dd68ac737ef1e2c44e710e99cd860e0d0df5bcc26de"
+      "sha256": "4032150215e41e618ad79d6dcef722b24dd1285def0ae761917ecc46cf379bed"
     }
   ],
   "kind": "phase5-obligations",
