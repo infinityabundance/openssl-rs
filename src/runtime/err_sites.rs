@@ -8330,6 +8330,206 @@ pub(crate) const DSO_DLFCN_260: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `OSSL_PROVIDER_add_builtin` at `crypto/provider.c:132` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PROVIDER_132: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/provider.c",
+    line: 132,
+    func: c"OSSL_PROVIDER_add_builtin",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `get_provider_store` at `crypto/provider_core.c:335` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROVIDER_CORE_335: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/provider_core.c",
+    line: 335,
+    func: c"get_provider_store",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_provider_info_add_to_store` at `crypto/provider_core.c:362` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PROVIDER_CORE_362: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/provider_core.c",
+    line: 362,
+    func: c"ossl_provider_info_add_to_store",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_provider_info_add_to_store` at `crypto/provider_core.c:367` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROVIDER_CORE_367: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/provider_core.c",
+    line: 367,
+    func: c"ossl_provider_info_add_to_store",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `provider_new` at `crypto/provider_core.c:455` (ERR_R_CRYPTO_LIB).
+pub(crate) const PROVIDER_CORE_455: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/provider_core.c",
+    line: 455,
+    func: c"provider_new",
+    lib: 15,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `provider_new` at `crypto/provider_core.c:466` (ERR_R_CRYPTO_LIB).
+pub(crate) const PROVIDER_CORE_466: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/provider_core.c",
+    line: 466,
+    func: c"provider_new",
+    lib: 15,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ossl_provider_add_to_store` at `crypto/provider_core.c:694` (ERR_R_CRYPTO_LIB).
+pub(crate) const PROVIDER_CORE_694: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/provider_core.c",
+    line: 694,
+    func: c"ossl_provider_add_to_store",
+    lib: 15,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `infopair_add` at `crypto/provider_core.c:816` (ERR_R_CRYPTO_LIB).
+pub(crate) const PROVIDER_CORE_816: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/provider_core.c",
+    line: 816,
+    func: c"infopair_add",
+    lib: 15,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `provider_init` at `crypto/provider_core.c:959` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROVIDER_CORE_959: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/provider_core.c",
+    line: 959,
+    func: c"provider_init",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `provider_init` at `crypto/provider_core.c:1026` (ERR_R_DSO_LIB).
+pub(crate) const PROVIDER_CORE_1026: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/provider_core.c",
+    line: 1026,
+    func: c"provider_init",
+    lib: 15,
+    reason: 524325,
+    dynamic_reason: false,
+};
+
+/// `provider_init` at `crypto/provider_core.c:1038` (ERR_R_UNSUPPORTED).
+pub(crate) const PROVIDER_CORE_1038: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/provider_core.c",
+    line: 1038,
+    func: c"provider_init",
+    lib: 15,
+    reason: 524556,
+    dynamic_reason: false,
+};
+
+/// `provider_init` at `crypto/provider_core.c:1054` (ERR_R_INIT_FAIL).
+pub(crate) const PROVIDER_CORE_1054: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/provider_core.c",
+    line: 1054,
+    func: c"provider_init",
+    lib: 15,
+    reason: 786693,
+    dynamic_reason: false,
+};
+
+/// `ossl_provider_test_operation_bit` at `crypto/provider_core.c:2059` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PROVIDER_CORE_2059: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/provider_core.c",
+    line: 2059,
+    func: c"ossl_provider_test_operation_bit",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `provider_conf_params_internal` at `crypto/provider_conf.c:100` (CONF_R_RECURSIVE_SECTION_REFERENCE).
+pub(crate) const PROVIDER_CONF_100: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/provider_conf.c",
+    line: 100,
+    func: c"provider_conf_params_internal",
+    lib: 14,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `provider_conf_activate` at `crypto/provider_conf.c:211` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROVIDER_CONF_211: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/provider_conf.c",
+    line: 211,
+    func: c"provider_conf_activate",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `provider_conf_activate` at `crypto/provider_conf.c:224` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROVIDER_CONF_224: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/provider_conf.c",
+    line: 224,
+    func: c"provider_conf_activate",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `provider_conf_parse_bool_setting` at `crypto/provider_conf.c:280` (CRYPTO_R_PROVIDER_SECTION_ERROR).
+pub(crate) const PROVIDER_CONF_280: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/provider_conf.c",
+    line: 280,
+    func: c"provider_conf_parse_bool_setting",
+    lib: 15,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `provider_conf_parse_bool_setting` at `crypto/provider_conf.c:302` (CRYPTO_R_PROVIDER_SECTION_ERROR).
+pub(crate) const PROVIDER_CONF_302: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/provider_conf.c",
+    line: 302,
+    func: c"provider_conf_parse_bool_setting",
+    lib: 15,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `provider_conf_load` at `crypto/provider_conf.c:328` (CRYPTO_R_PROVIDER_SECTION_ERROR).
+pub(crate) const PROVIDER_CONF_328: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/provider_conf.c",
+    line: 328,
+    func: c"provider_conf_load",
+    lib: 15,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `provider_conf_init` at `crypto/provider_conf.c:412` (CRYPTO_R_PROVIDER_SECTION_ERROR).
+pub(crate) const PROVIDER_CONF_412: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/provider_conf.c",
+    line: 412,
+    func: c"provider_conf_init",
+    lib: 15,
+    reason: 105,
+    dynamic_reason: false,
+};
+
 /// Every recorded raise site, in authority source order.
 ///
 /// This is the complete inventory for the covered files, including the
@@ -9171,4 +9371,24 @@ pub(crate) static ALL: &[ErrSite] = &[
     DSO_DLFCN_185,
     DSO_DLFCN_198,
     DSO_DLFCN_260,
+    PROVIDER_132,
+    PROVIDER_CORE_335,
+    PROVIDER_CORE_362,
+    PROVIDER_CORE_367,
+    PROVIDER_CORE_455,
+    PROVIDER_CORE_466,
+    PROVIDER_CORE_694,
+    PROVIDER_CORE_816,
+    PROVIDER_CORE_959,
+    PROVIDER_CORE_1026,
+    PROVIDER_CORE_1038,
+    PROVIDER_CORE_1054,
+    PROVIDER_CORE_2059,
+    PROVIDER_CONF_100,
+    PROVIDER_CONF_211,
+    PROVIDER_CONF_224,
+    PROVIDER_CONF_280,
+    PROVIDER_CONF_302,
+    PROVIDER_CONF_328,
+    PROVIDER_CONF_412,
 ];
