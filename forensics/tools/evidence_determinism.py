@@ -76,6 +76,12 @@ from atlas_common import REPO_ROOT, rel  # noqa: E402
 GENERATORS_BEFORE_LEDGERS = [
     "forensics/tools/symbol_ownership.py",
     "forensics/tools/implemented_surface.py",
+    # Phase 6.7b: the character-class table, derived from the authority's own
+    # `crypto/ctype.c`. It is listed so that a stale committed copy is a failure
+    # rather than a silent divergence: the whole point of generating it was to stop
+    # 128 masks being recalled, and a generator nothing re-runs would reintroduce
+    # exactly that.
+    "forensics/tools/gen_ctype_table.py",
 ]
 GENERATORS_AFTER_LEDGERS = [
     "forensics/tools/ownership_audit.py",
@@ -117,11 +123,17 @@ COMPARED = [
     "forensics/atlas/implemented-surface.json",
     "forensics/atlas/ownership-audit.json",
     "forensics/atlas/prototype-court.json",
+    "forensics/atlas/ctype-table.json",
     *[a for _g, a in LEDGERS],
     "forensics/phase-state.json",
     "forensics/phase-state.md",
     "docs/SEAL-CENSUS.md",
     "forensics/STATUS.md",
+    # Not a JSON artefact and not written by a generator that reads the atlas: it is
+    # emitted by `gen_ctype_table.py` above, so it is compared in the same pass. It
+    # is listed here rather than in the atlas because a `cargo`-visible source file
+    # being stale is the failure this catches.
+    "src/runtime/ctype_table.rs",
 ]
 
 # ---------------------------------------------------------------------------

@@ -24,9 +24,11 @@
 //! being `SCAFFOLDED`.
 
 pub mod bio;
+pub mod bsearch;
 pub mod buffer;
 pub mod conf;
 pub mod ctype;
+pub mod ctype_table;
 pub mod dir;
 pub mod err;
 pub mod err_state;
