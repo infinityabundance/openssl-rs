@@ -434,3 +434,19 @@ observations that *can* be made around each boundary are compared normally.
   `overflow-checks = true`, so without the wrapping operations a caller could abort the
   process with a panic — which is a strictly worse outcome than an arbitrary value.
 - **Claim removed:** no probe compares this region, and no answer there is claimed to match.
+
+### D-PRINT-1 — `ASN1_item_print` dereferences a NULL `ASN1_ITEM`
+
+- **Obligation:** `ASN1_item_print(out, val, indent, NULL, pctx)` and any interior call
+  reached with a NULL item, which a caller can produce by passing a template array whose
+  `item` slot is null.
+- **Authority:** `ASN1_item_print` reads `it->sname` before any check, and
+  `asn1_item_print_ctx` reads `it->funcs`, `it->itype` and `it->utype` immediately, so
+  every one of these faults.
+- **Candidate:** takes the item as a non-null caller contract, documented in the
+  function's `# Safety` section, and dereferences it through a `&Asn1Item`. A null item is
+  therefore the caller's error rather than a reproduced fault. A *malformed* item — a
+  `templates` pointer that does not describe `tcount` entries, or an `item` slot that is not
+  an `ASN1_ITEM_EXP` — is the same class and is equally unreproduced.
+- **Claim removed:** not claimed compatible. The probe does not exercise these, because a
+  probe cannot compare a crash.

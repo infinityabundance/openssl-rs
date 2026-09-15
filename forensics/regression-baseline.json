@@ -50,6 +50,10 @@
       "observations": 1403,
       "verdict": "pass"
     },
+    "RT-ASN1-PRINT": {
+      "observations": 275,
+      "verdict": "pass"
+    },
     "RT-ASN1-STR": {
       "observations": 5831,
       "verdict": "pass"
@@ -169,17 +173,17 @@
   },
   "deferred": {
     "phase3": 11,
-    "phase4": 25,
+    "phase4": 31,
     "phase5": 66
   },
   "implemented": {
-    "libcrypto": 927,
+    "libcrypto": 928,
     "libssl": 0
   },
   "open_obligations": {
     "phase3": 0,
     "phase4": 0,
-    "phase5": 30
+    "phase5": 29
   },
   "owned_obligations": {
     "phase3": 235,

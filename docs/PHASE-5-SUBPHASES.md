@@ -2,9 +2,9 @@
 
 Phase 5 is **BN + ASN.1 + DER/PEM**. `BN` is closed: every one of the 201 exports
 `bn.h` declares is implemented or handed to a named stratum, and `RT-BN` covers them.
-What remains is **3 ASN.1 exports and 27 PEM exports** — the ledger's totals, taken
-from `forensics/phase5-obligations.json`, after 5.1 through 5.5 and the first half of
-5.6 landed (D76, D77, D85, D86).
+What remains is **2 ASN.1 exports and 27 PEM exports** — the ledger's totals, taken
+from `forensics/phase5-obligations.json`, after 5.1 through 5.8 landed (D76, D77, D85,
+D86, D87, D88, D89, D90).
 
 `BN` is closed but this document exists because the rest of the stratum is large, and
 D73 established that a section is not closed by writing code for it. A subphase closes
@@ -19,7 +19,7 @@ same commit. Source that no build compiles and no CI checks is invisible to ever
 | 5.1 | Leaf primitives + DER codec | the `ASN1_STRING` family, the integer family, the object layer, `ASN1_PCTX`, `ASN1_SCTX`, and `ASN1_get_object`/`put_object`/`object_size`/`tag2bit`/`tag2str`/`parse`/`parse_dump`/`check_infinite_end`/`put_eoc` | Phase 4 (BIO, for the print/parse paths) | `RT-ASN1` | **COMPLETE** (D76) |
 | 5.2 | Text conversions | `i2a_*`, `i2t_*` | 5.1 | `RT-ASN1` extension | **COMPLETE** (D76) |
 | 5.3 | Codec wrappers | the shared decoder and encoder (`asn1_d2i_ex_primitive`, `asn1_ex_c2i`, `asn1_i2d_ex_primitive`, `asn1_ex_i2c`), the free path, the 26 primitive and multi-string item descriptors, the 36 `d2i_*`/`i2d_*` wrappers of `tasn_typ.c`, `ASN1_BIT_STRING`, `ASN1_NULL`, `d2i_ASN1_UINTEGER`, `a2d_ASN1_OBJECT` | 5.1 | `RT-ASN1` extension | **COMPLETE** (D77) |
-| 5.4 | Item machinery | the remaining 14 `*_it` accessors (the two `*_ANY` and the twelve numeric ones), `ASN1_ITEM_lookup`/`get`, `ASN1_item_*`, `ASN1_item_ex_*`, `asn1_d2i_read_bio`, NDEF, `ASN1_item_pack`/`unpack`, `ASN1_dup`, `ASN1_item_print`, `d2i_/i2d_ASN1_SEQUENCE_ANY`/`SET_ANY`, `ASN1_generate_v3`/`nconf`, `ASN1_add_oid_module`/`add_stable_module`, `ASN1_STRING_TABLE_*`, `ASN1_item_i2d_mem_bio` | 5.1, 5.3 | `RT-ASN1-TEMPLATE` | a caller-built template of the authority's shape round-trips, with the templates' `flags`/`tag`/`offset`/`field_name` compared |
+| 5.4 | Item machinery | the remaining 14 `*_it` accessors (the two `*_ANY` and the twelve numeric ones), `ASN1_ITEM_lookup`/`get`, `ASN1_item_*`, `ASN1_item_ex_*`, `asn1_d2i_read_bio`, NDEF, `ASN1_item_pack`/`unpack`, `ASN1_dup`, `ASN1_item_print`, `d2i_/i2d_ASN1_SEQUENCE_ANY`/`SET_ANY`, `ASN1_generate_v3`/`nconf`, `ASN1_add_oid_module`/`add_stable_module`, `ASN1_STRING_TABLE_*`, `ASN1_item_i2d_mem_bio` | 5.1, 5.3 | `RT-ASN1-TEMPLATE`, `RT-ASN1-PRINT` | **COMPLETE** (D90) for the machinery and the printer; the two `d2i_`/`i2d_ASN1_bio_stream` members of `asn_mime.c` are checked for Phase 12 entanglement before they are written |
 | 5.5 | Time | `ASN1_TIME`, `ASN1_UTCTIME`, `ASN1_GENERALIZEDTIME` accessors, and the three `crypto/o_time.c` calendar symbols they stand on | 5.1, 5.4 | `RT-ASN1-TIME` | **COMPLETE** (D85) |
 | 5.6 | Strings, masks, printing | `ASN1_STRING_print*`, `set_by_NID`, the string masks, `ASN1_mbstring_*`, `UTF8_getc`/`putc`, `ASN1_str2mask`, `ASN1_PRINTABLE_type`, `ASN1_STRING_to_UTF8`, `ASN1_UNIVERSALSTRING_to_string`, `ASN1_bn_print`, `ASN1_buf_print` | 5.1 | `RT-ASN1-STR` | **COMPLETE** (D86, D87, D88): 18 written, `ASN1_str2mask` with them, and two handed to Phase 6 and Phase 11 |
 | 5.7 | `ASN1_TYPE` (ANY) | `ASN1_TYPE_*`, `d2i_/i2d_ASN1_TYPE` | 5.4 | `RT-ASN1-TYPE` | as above |

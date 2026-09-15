@@ -208,6 +208,13 @@ COVERED_FILES = [
     ("crypto/asn1/tasn_utl.c", "TASN_UTL"),
     ("crypto/asn1/x_int64.c", "X_INT64"),
     ("crypto/asn1/x_long.c", "X_LONG"),
+    # `ASN1_item_print` is Phase 5's, but its integer leaf calls
+    # `i2s_ASN1_INTEGER`, whose definition and two `ERR_raise` sites are in this
+    # Phase 11 translation unit. The coordinates are observable through a Phase 5
+    # export, so this file is covered here rather than deferred with the rest of
+    # `crypto/x509` — the same per-symbol-not-per-file reasoning as `a_object.c`
+    # above and D49.
+    ("crypto/x509/v3_utl.c", "V3_UTL"),
     # Deliberately *not* covered, with the stratum that owns each: `a_digest.c`,
     # `ameth_lib.c` (Phase 7); `d2i_param.c`, `d2i_pr.c`, `d2i_pu.c`, `i2d_evp.c`,
     # `n_pkey.c`, `p5_pbe.c`, `p5_pbev2.c`, `p5_scrypt.c` (Phase 10); `a_sign.c`,
@@ -537,6 +544,9 @@ def resolve_symbols(authority, symbols: list[str], work: Path) -> dict[str, int]
         "#include <openssl/conferr.h>",
         "#include <openssl/objectserr.h>",
         "#include <openssl/x509err.h>",
+        # `X509V3_R_*` lives in its own header, not in `x509err.h`; the
+        # `crypto/x509` translation units raise from that library.
+        "#include <openssl/x509v3err.h>",
         "#include <openssl/sslerr.h>",
         "#include <stdio.h>",
         "",

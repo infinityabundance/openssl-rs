@@ -10,6 +10,8 @@ in Git. See `docs/DECISIONS.md` D17.
 ## `gemel log`
 
 ```
+C41  ASN1_item_print implemented and courth; the EMBED stack-slot defect the court found; the v3_utl.c raise coordinates and the phase 4 to phase 5 hand-off reconciliation
+    state state.06d7e5252a13d7ebf03db77fe2b9f15e1776e93adb37cc181713b660e8df098b -> state.967494a4aa380bf6a345ea55e84fb1e9901f4b0fc94df3a9048bd9a777d4d786
 C40  Subphase 5.8 half landed: crypto/asn1/bio_asn1.c (BIO_f_asn1, the four BIO_asn1_ prefix/suffix controls) and the BIO_new_NDEF half of bio_ndef.c, with its two prefix and two suffix callbacks. The filter is a state machine, not a wrapper: seven states because each write may have to emit a prefix, a header, some content and then more content on the next call, with a partial-write cursor for the header and a declared length that bounds how much content passes through before a fresh header. Added RT-BIO-ASN1 with 114 observations, and it found one defect, which crashed the candidate. The authority tests the three setup calls as ; I wrote them as , which multiplies by zero on SUCCESS, so BIO_new_NDEF took the error path on every call and freed the support block a second time - the state machine had already handed it to the BIO, whose destroy callback releases it. glibc reported a double free in tcache and the probe dumped core. The lesson is the one this stratum keeps teaching from the other direction: a faithful transcription of three lines would have been right, and the tidy-looking rewrite was wrong. Fixed to the authority shape. Implemented libcrypto exports 921 -> 927; Phase 5 open obligations 37 -> 30.
     state state.5ef38880d6673996c7801ac89d7043d9e6423aac626fa6098879d1e59c8d4458 -> state.06d7e5252a13d7ebf03db77fe2b9f15e1776e93adb37cc181713b660e8df098b
 C39  ASN1_str2mask lands with the asn1_str2tag table it depends on. The two other exports of asn1_gen.c, ASN1_generate_v3 and ASN1_generate_nconf, are handed to Phase 11: both take an X509V3_CTX pointer, and ASN1_generate_nconf constructs one through the X509V3_set_nconf macro even on its null-CONF path, so neither can be written without a structure this stratum does not own. The fifty-four-name table lives in this module rather than beside the generator because ASN1_str2mask needs it now and Phase 11 will need the same table; a second copy is a duplicated registry. RT-ASN1-STR grew to 5831 observations with thirty-eight str2mask cases covering accepted names, the DIR special case that shadows the table, the lowercase and mixed-case forms, the two separators, empty and separator-only lists, unknown names before and after an accepted one, the six modifier names that the ASN1_GEN_FLAG range test rejects, and the partial mask a refusal leaves behind. All pass on the first run, which is the first time in this stratum that a module written from a reading of the source needed no correction. Implemented libcrypto exports 920 -> 921; Phase 5 open obligations 39 -> 37.
@@ -74,6 +76,9 @@ C1  Phase 0 constitution and Phase 1 archaeology atlas, evidence-bound
 * `K2` — `checkpoint.67a75f9a16d008e6e5aec0984c93dfc7549bd7a33708b909fbf6424b04fcb4a6`
 * `K20` — `checkpoint.528dbaef805d3e05304fbc9ae6e8bee5c1a5bb2e75486f2998933b875732bed5`
 * `K21` — `checkpoint.6933308364494b57c6c48ab9e4246d741e27a9e013ea2bfac9ce0dfda8fe2f48`
+* `K22` — `checkpoint.5c49d38a618be5dfb2a1d350b73a7f13b5dc9b4f2629a36ce4bf882ad814752f`
+* `K23` — `checkpoint.4d121775b53e8369dd0457ad230f82a3b375db10e9df7077ad4d564dcdc756fd`
+* `K24` — `checkpoint.1a2e3a5565633ce851d7dadbcbc9c5cd2be4cf8d61b6463f45b54cc7fa39ec8a`
 * `K3` — `checkpoint.b1516eb6364ad075785911cb204a75a6e1b83b08c1a7ca39a2de6e3983dc9aed`
 * `K4` — `checkpoint.1bde75b37e1ca3972037c29cbd3ba5291079544436db9176a82f097a6bf832fe`
 * `K5` — `checkpoint.6b0d12f1ecf380c0808bc95675222fbed7256f99bc8e9f475a0ec2693f804a0a`
@@ -82,7 +87,7 @@ C1  Phase 0 constitution and Phase 1 archaeology atlas, evidence-bound
 * `K8` — `checkpoint.7eb3dba97cbf20f2b34d14cce7e93bc2171ebd0d7ee66d1f7508cc6e199567de`
 * `K9` — `checkpoint.60105b4c8189d2668c48e173fe2c92c0ddf76160caae24efecc707bd576f506f`
 
-current: `checkpoint.6933308364494b57c6c48ab9e4246d741e27a9e013ea2bfac9ce0dfda8fe2f48`
+current: `checkpoint.1a2e3a5565633ce851d7dadbcbc9c5cd2be4cf8d61b6463f45b54cc7fa39ec8a`
 
 ## Note: derived names are not identities
 
@@ -102,6 +107,9 @@ changed with it; the Git commit is the authoritative record of the diff.
 ## Open residuals at this boundary
 
 ```
+open [low] the 27 pem.h exports and PEM_write_bio_ASN1_stream and i2d_ASN1_bio_stream remain unimplemented
+    class: verification_gap
+    persistence: 0 descendant change(s)
 open [low] i2d_ASN1_bio_stream in asn_mime.c remains open pending a check for Phase 12 entanglement
     class: verification_gap
     persistence: 0 descendant change(s)
