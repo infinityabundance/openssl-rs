@@ -5686,3 +5686,94 @@ non-`create` miss answers 0, with index 0 naming nothing on both tables; and two
 have their own tables and their own counters. That is the same reasoning D109 applied to
 the namemap's order-dependent refusal — when a behaviour is real and nothing observable
 reaches it, the assertion has to live where it can be made, and the residual says so.
+
+## D112 — the ctype table is generated, and a range test that was only ever asserted
+
+**What landed (6.7b, in progress).** Four things, of which two are compiled and tested
+and two are committed but deliberately not yet in the module tree:
+
+| artefact | state |
+|---|---|
+| `src/runtime/bsearch.rs` — `crypto/bsearch.c` mirrored | in the tree, 4 unit tests |
+| `forensics/tools/gen_ctype_table.py` + `src/runtime/ctype_table.rs` | in the tree, registered with `evidence_determinism.py` |
+| `src/runtime/ctype.rs` — five more classes | in the tree, 3 more unit tests |
+| `src/property/list.rs` — the list and definition types | committed, **not declared** |
+| `src/property/query.rs` — `property_query.c` | committed, **not declared** |
+
+`list.rs` and `query.rs` are held out of the module tree on purpose. Their only caller is
+the grammar `property_parse.c`, which is the next step; declaring them today would mean
+nine `allow(dead_code)` markers on interfaces rather than on obligations, and an interface
+that nothing calls is a placeholder wearing a different hat. Committing the files while
+leaving them undeclared keeps them from being lost and keeps the crate honest — the
+compiler does not see them, so nothing about them is claimed.
+
+**No Gemel checkpoint accompanies this commit, and that is deliberate.** The constitution
+requires a checkpoint at a *phase boundary*. This is a mid-subphase commit on a staging
+branch, made so that the work survives; the 6.7b checkpoint comes when the grammar is
+complete and courted.
+
+**The instrument was wrong again, and the way it was wrong is worth recording.** The first
+version of `gen_ctype_table.py` read **one source line per table entry**. The authority's
+entries span two lines — the sum is wrapped — so every mask after the first line was
+dropped, and the generator reported:
+
+```text
+digit      10 byte(s)
+xdigit      0 byte(s)      <-- the authority has 22
+```
+
+`xdigit` appearing empty is a *plausible authority finding* — "the table has no xdigit
+bits" — and it is exactly the shape of a real one. It was not: `/* 30  0  */` begins the
+entry and `| CTYPE_MASK_xdigit | CTYPE_MASK_base64 | CTYPE_MASK_asn1print,` continues it.
+The parser now accumulates until the next comment and checks each comment against its
+position, and the corrected counts are 10 / 22 / 6 / 52 / 62 / 95. This is the failure
+mode the project has now recorded more times than any other: **the probe, the generator and
+the note are suspects before the authority is.**
+
+**The more useful result: a Phase 5 claim was an assertion, and is now a check.**
+`src/runtime/ctype.rs` implemented five predicates as ASCII *range tests* and recorded in
+its header that the sets "were read back out of the authority's own table rather than
+recalled". That equivalence lived in a doc comment. Nothing compared the two. With the
+table now generated, one test walks every value a signed `char` can produce — `-256..512`,
+so the values either side of the 128-byte boundary are included — and asserts that
+`ossl_isdigit`, `ossl_isxdigit`, `ossl_isspace`, `ossl_isalpha`, `ossl_isalnum`,
+`ossl_isprint` and `ossl_isasn1print` each agree with the table. They do. The claim is
+retired into evidence, at the cost of one test.
+
+That also settles *why* the table is generated rather than written. Phase 5's header says
+transcribing 128 masks by hand would be "exactly the kind of hand-copied constant D33
+forbids: a transcription that nothing regenerates and that nothing would notice going
+stale". A generated table is the opposite of that, and it gives every class at once instead
+of five more reasoned-out range tests.
+
+**`CTYPE_MASK_ascii` is `(~0)` and must be truncated, not negated.** The masks are
+`unsigned int`, so `~0` is `0xFFFFFFFF`. The generator's first resolution left it as `-1`,
+which produced `pub(crate) const MASK_ASCII: u32 = -0x1;` and a compile error. The
+constants are now masked to 32 bits at resolution. The table itself stores `unsigned
+short`, and the entry check rejects anything that does not fit — which is what caught the
+class of mistake rather than the instance.
+
+**`ossl_tolower` XORs `c`, not the ascii image.** `return ASCII_IS_UPPER(a) ? c ^
+case_change : c;` with `case_change` `0x20` in this profile and `0x40` only under a real
+EBCDIC build. `ossl_toascii` is the identity here so the two coincide, and the distinction
+is kept because the authority keeps it. The test covers `-256..512` and asserts that an
+out-of-range value comes back unchanged.
+
+**One determinism gap closed, one left open on purpose.** `gen_ctype_table.py` and its two
+outputs are in `evidence_determinism.py`'s generator and comparison lists, so a stale
+committed table is now a failure rather than a silent divergence — the artefact count goes
+from 12 to 14. The gap D109 recorded, that `gen_err_raise_sites.py` and
+`err-raise-sites.json` are in neither list, is **still open**: fixing it means adding the
+same tool to `check_evidence_portability.py`'s exercised set as well, so that the two agree
+about which generators need the authority's source tree. Doing half of that now would
+replace one silent gap with two.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 102 / 59 | 102 / 59 (no export) |
+| index slots filled | 9 | 9 (unchanged) |
+| courts / observations | 52 / 19,655 | 52 / 19,655 (no behaviour change) |
+| determinism-checked artefacts | 12 | 14 |
+| unit tests | 196 | 203 |
