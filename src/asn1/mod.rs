@@ -38,6 +38,8 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
+pub mod a_type;
+pub mod asn_pack;
 pub mod bitstr;
 pub mod d2i;
 pub mod der;

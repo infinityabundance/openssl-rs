@@ -25,13 +25,12 @@
 //! item layer is about to call this module anyway. Writing the null first is what
 //! stops this module freeing the same string twice.
 //!
-//! ## What is here, and what is 5.7's
+//! ## What is here
 //!
-//! Every arm of `ossl_asn1_item_embed_free` and `ossl_asn1_primitive_free` except the
-//! one that reads an `ASN1_TYPE`'s union: `PRIMITIVE` with and without a template,
-//! `MSTRING`, `CHOICE`, `EXTERN` and `SEQUENCE`. The `ASN1_TYPE` arm is asserted
-//! rather than guessed at, because it needs the type/value union to be understood and
-//! that is subphase 5.7's work.
+//! Every arm of `ossl_asn1_item_embed_free` and `ossl_asn1_primitive_free`, including
+//! the one that reads an `ASN1_TYPE`'s union when the item is null: `PRIMITIVE` with
+//! and without a template, `MSTRING`, `CHOICE`, `EXTERN`, `SEQUENCE` and the bare
+//! `ASN1_TYPE`.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -66,7 +65,7 @@ pub(crate) const LINE: c_int = 0;
 /// # Safety
 ///
 /// `pval` must be a live slot. `it` must be null or a live item. When `it` is null
-/// the value must be a live `ASN1_TYPE`, whose reachable arm is subphase 5.7.
+/// the slot must hold a live `ASN1_TYPE`.
 pub(crate) unsafe fn primitive_free(pval: *mut *mut c_void, it: *const Asn1Item, embed: c_int) {
     // A caller's hooks own the whole release, including leaving the slot alone.
     if !it.is_null() {
@@ -91,35 +90,47 @@ pub(crate) unsafe fn primitive_free(pval: *mut *mut c_void, it: *const Asn1Item,
         }
     }
 
-    if it.is_null() {
-        // The `ASN1_TYPE` arm reads the selector out of the type and then reaches
-        // through the union: subphase 5.7, where `ASN1_TYPE` is implemented.
-        debug_assert!(
-            false,
-            "the ASN1_TYPE arm of ossl_asn1_primitive_free is subphase 5.7"
-        );
-        return;
-    }
-    // SAFETY: `it` is non-null.
-    let item = unsafe { &*it };
-    // SAFETY: `pval` is a live slot.
-    let value = unsafe { *pval };
-
+    // A null item means the value is an `ASN1_TYPE`: the selector is a field of the
+    // structure and the payload the union beside it, so both are re-read from the
+    // value itself rather than from an item. `pval` is rebound to the union member,
+    // which is what makes every arm below — including the `BOOLEAN` one, which writes
+    // into the slot — operate on the right storage.
+    let mut pval = pval;
     let utype: c_int;
-    if item.itype == ASN1_ITYPE_MSTRING {
-        // A multi-string's value is an `ASN1_STRING` whatever its type, and the
-        // authority encodes that as `utype = -1`, which the match below sends to
-        // the string arm.
-        utype = V_ASN1_UNDEF;
+    let value: *mut c_void;
+    if it.is_null() {
+        // SAFETY: the caller passes the address of an `ASN1_TYPE *` slot.
+        let typ = unsafe { *pval }.cast::<Asn1Type>();
+        // SAFETY: `typ` is the caller's live `ASN1_TYPE`.
+        utype = unsafe { (*typ).type_ };
+        // SAFETY: `typ` is live; the union's `ptr` member is the value slot.
+        pval = unsafe { core::ptr::addr_of_mut!((*typ).value.ptr) };
+        // SAFETY: `pval` is a live slot.
+        value = unsafe { *pval };
         if value.is_null() {
             return;
         }
     } else {
-        utype = item.utype as c_int;
-        // The `BOOLEAN` exception again: its value is in the slot, so a null slot
-        // is a legal value rather than an empty one.
-        if utype != V_ASN1_BOOLEAN && value.is_null() {
-            return;
+        // SAFETY: `it` is non-null.
+        let item = unsafe { &*it };
+        // SAFETY: `pval` is a live slot.
+        value = unsafe { *pval };
+
+        if item.itype == ASN1_ITYPE_MSTRING {
+            // A multi-string's value is an `ASN1_STRING` whatever its type, and the
+            // authority encodes that as `utype = -1`, which the match below sends to
+            // the string arm.
+            utype = V_ASN1_UNDEF;
+            if value.is_null() {
+                return;
+            }
+        } else {
+            utype = item.utype as c_int;
+            // The `BOOLEAN` exception again: its value is in the slot, so a null slot
+            // is a legal value rather than an empty one.
+            if utype != V_ASN1_BOOLEAN && value.is_null() {
+                return;
+            }
         }
     }
 
@@ -130,9 +141,18 @@ pub(crate) unsafe fn primitive_free(pval: *mut *mut c_void, it: *const Asn1Item,
             unsafe { ASN1_OBJECT_free(value.cast::<Asn1Object>()) };
         }
         V_ASN1_BOOLEAN => {
-            // SAFETY: `pval` is at least `size_of::<c_int>()` bytes wide, because
-            // it holds a pointer. The truncation from `long` is the authority's.
-            unsafe { *(pval as *mut c_int) = item.size as c_int };
+            // A freed item's BOOLEAN reads back as the item's own `size`, which is its
+            // default; a freed bare `ASN1_TYPE` reads back as `-1`, because there is no
+            // item to ask. SAFETY: `pval` is at least `size_of::<c_int>()` bytes wide,
+            // because it holds a pointer. The truncation from `long` is the authority's.
+            let fill = if it.is_null() {
+                -1
+            } else {
+                // SAFETY: `it` is non-null in this arm.
+                unsafe { (*it).size as c_int }
+            };
+            // SAFETY: as above.
+            unsafe { *(pval as *mut c_int) = fill };
             return;
         }
         V_ASN1_NULL => {
@@ -140,9 +160,14 @@ pub(crate) unsafe fn primitive_free(pval: *mut *mut c_void, it: *const Asn1Item,
             // the slot is still cleared below.
         }
         V_ASN1_ANY => {
-            // Needs the `ASN1_TYPE` union arm: subphase 5.7.
-            debug_assert!(false, "the V_ASN1_ANY arm of the free path is subphase 5.7");
-            return;
+            // An ANY *inside* an ANY is another `ASN1_TYPE`, released the same way; the
+            // authority then frees the inner structure itself. The inner call leaves the
+            // slot null on every path that reaches its bottom, so the free below is the
+            // no-op it looks like — and it is written out because the authority writes it.
+            // SAFETY: `pval` holds a live `ASN1_TYPE` in this arm.
+            unsafe { primitive_free(pval, core::ptr::null(), 0) };
+            // SAFETY: `pval` holds a pointer this crate allocated, or null.
+            unsafe { CRYPTO_free(*pval, FILE.as_ptr(), LINE) };
         }
         _ => {
             // Everything else is `ASN1_STRING`-based: the string types, the
@@ -404,16 +429,4 @@ pub unsafe extern "C" fn ASN1_item_free(val: *mut c_void, it: *const Asn1Item) {
 pub unsafe extern "C" fn ASN1_item_ex_free(pval: *mut *mut c_void, it: *const Asn1Item) {
     // SAFETY: the caller's contract.
     unsafe { item_embed_free(pval, it, 0) }
-}
-
-/// `ASN1_item_ex_free` through the string-typed slot the `d2i_*` wrappers hold.
-///
-/// # Safety
-///
-/// `pval` must be a live slot holding null or a live value of the item's type; `it`
-/// must be a live item.
-pub(crate) unsafe fn item_ex_free(pval: *mut *mut Asn1String, it: *const Asn1Item) {
-    // SAFETY: an `ASN1_VALUE **` and a string slot have the same representation,
-    // and the caller's contract covers both readings.
-    unsafe { item_embed_free(pval.cast::<*mut c_void>(), it, 0) };
 }
