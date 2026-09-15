@@ -3630,3 +3630,53 @@ This is the fourth instrument defect this stratum has found — after the ERR so
 coordinates, the evidence-regeneration ordering and the parameter-splitter comment — and
 it was found the same way: by noticing that a *pass* and a *fail* shared a shape that the
 declarations did not explain.
+
+## D83 — `RT-ASN1-TEMPLATE` exists, and it found two defects the ledger could not have
+
+The template interpreter landed in D81 with a stated hole: nothing drove `CHOICE`,
+`SEQUENCE`, the `SEQUENCE OF`/`SET OF` content writer, the `EMBED` indirection or the
+`OPTIONAL` absent answer through a **caller-built** descriptor, because no built-in item
+has those shapes — a built-in item's shape *is* the thing under test. The court now exists
+and closes the hole. It is 100 observations over an item the probe declares itself.
+
+### Two real defects, and neither was reachable from a unit test
+
+**`uint32_i2c` negated at the wrong width.** The authority's hook reads a `uint32_t`,
+negates it **as a `uint32_t`**, and only then widens. This crate widened first and negated
+in 64 bits, so `-5` became `0xffffffff00000005` and encoded as nine octets
+(`02 09 ff 00 00 00 00 ff ff ff fb`) where the authority writes one (`02 01 fb`). The
+decode of the candidate's own encoding then failed, so a value written by this crate could
+not be read back by it. The court caught both halves in one observation.
+
+**The `SEQUENCE` arm raised `FIELD_MISSING` on a field error.** The authority's
+`if (!ret) { errtt = seqtt; goto err; }` is a jump to the tail that *names the field*: it
+raises nothing further, because the field's own decode already raised. This crate treated
+the same condition as "the field was missing" and raised `ASN1_R_FIELD_MISSING` on top, so
+a decode that fails left five entries on the queue where the authority leaves four. The
+`field_error` flag is gone: every case that set it was a `goto err`, and both are now
+`return err_tail(...)`.
+
+The second is the more interesting one, because the *count* of queue entries is not
+something a reader of the code would think to check, and the first four entries were
+identical on both sides. It was visible only because the probe prints the whole queue.
+
+### Three instrument and probe defects on the way in
+
+* The probe's own "wrong inner tag" case rewrote index 2 with the value already there — the
+  tag byte it meant to corrupt is at index 8 — so that case tested an undisturbed decode and
+  both sides agreed on nothing. A probe is the suspect before the crate.
+* `drain` printed only the reason code. `ERR_GET_REASON` masks the library out, so a bare
+  `121` cannot be told from `BIO_R_UNSUPPORTED_METHOD` or `DH_R_UNABLE_TO_CHECK_GENERATOR`.
+  It now prints the library and the reason string as well, which is what made the extra
+  queue entry legible.
+* `run_courts.sh` listed its runtime courts **by name**. `RT-ASN1-TEMPLATE` was generated,
+  its manifest was written, and the runner ran the previous set — so the court existed and
+  produced no receipt. The list is now derived from `forensics/frf/courts/`, because a
+  registry that has to be remembered is the failure mode this project keeps finding.
+
+### What is claimed, and what is not
+
+`RT-ASN1-TEMPLATE` passes with 100 observations, appears in its claim's receipt set, and
+has challenge mutants on both of its declared axes — so the court is sensitivity-backed
+rather than merely green. The stratum's open list is 93; nothing in it is
+`PARITY_VERIFIED`; Phase 5 remains `in-progress`.

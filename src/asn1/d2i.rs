@@ -1222,7 +1222,6 @@ unsafe fn embed_d2i(
     libctx: *mut c_void,
     propq: *const c_char,
 ) -> c_int {
-    let mut errtt: *const Asn1Template = core::ptr::null();
     if pval.is_null() || it.is_null() {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::TASN_DEC_208) };
@@ -1404,10 +1403,9 @@ unsafe fn embed_d2i(
                 // A real parse error: release the partial alternative and report it.
                 // SAFETY: the field's own template governs it.
                 unsafe { crate::asn1::fre::template_free(field, tt) };
-                errtt = tt;
                 // SAFETY: a compile-time-constant site.
                 unsafe { raise_site(&err_sites::TASN_DEC_338) };
-                return err_tail(errtt, item);
+                return err_tail(tt, item);
             }
             if i == item.tcount {
                 // Nothing matched. For an OPTIONAL field that is not an error, and the
@@ -1535,13 +1533,13 @@ unsafe fn embed_d2i(
 
             i = 0;
             tt = item.templates;
-            let mut field_error = false;
             while i < item.tcount {
                 // SAFETY: `*pval` is a live value of the item's type.
                 let seqtt = unsafe { utl::do_adb(*pval, tt, 1) };
                 if seqtt.is_null() {
-                    field_error = true;
-                    break;
+                    // The authority's `goto err`: the failure was raised by `do_adb`, and
+                    // the tail only adds the item's name.
+                    return err_tail(core::ptr::null(), item);
                 }
                 // SAFETY: `seqtt` is live and `*pval` is the enclosing value.
                 let field = unsafe { utl::get_field_ptr(pval, &*seqtt) };
@@ -1574,9 +1572,12 @@ unsafe fn embed_d2i(
                     template_ex_d2i(field, &mut p, len, seqtt, isopt, ctx, depth, libctx, propq)
                 };
                 if ret == 0 {
-                    errtt = seqtt;
-                    field_error = true;
-                    break;
+                    // A real parse error in the field. The authority's `goto err` names
+                    // the field and the item and raises nothing further — the failure was
+                    // already raised by the field's own decode. Raising `FIELD_MISSING`
+                    // here put a fifth entry on the queue where the authority leaves four,
+                    // which `RT-ASN1-TEMPLATE` is what caught.
+                    return err_tail(seqtt, item);
                 } else if ret == -1 {
                     // OPTIONAL and absent: free and zero the field and move on.
                     // SAFETY: the field's own template governs it.
@@ -1591,12 +1592,6 @@ unsafe fn embed_d2i(
                 tt = unsafe { tt.add(1) };
                 i += 1;
             }
-            if field_error {
-                // SAFETY: a compile-time-constant site.
-                unsafe { raise_site(&err_sites::TASN_DEC_491) };
-                return err_tail(errtt, item);
-            }
-
             // SAFETY: `p` is readable for `len` bytes and the slot is writable.
             if seq_eoc != 0 && !unsafe { check_eoc(&mut p, len) } {
                 // SAFETY: a compile-time-constant site.
@@ -1625,10 +1620,9 @@ unsafe fn embed_d2i(
                     // SAFETY: the field's own template governs it.
                     unsafe { crate::asn1::fre::template_free(field, seqtt) };
                 } else {
-                    errtt = seqtt;
                     // SAFETY: a compile-time-constant site.
                     unsafe { raise_site(&err_sites::TASN_DEC_491) };
-                    return err_tail(errtt, item);
+                    return err_tail(seqtt, item);
                 }
                 // SAFETY: still inside the item's template array.
                 tt = unsafe { tt.add(1) };

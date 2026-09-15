@@ -50,6 +50,10 @@
       "observations": 1306,
       "verdict": "pass"
     },
+    "RT-ASN1-TEMPLATE": {
+      "observations": 100,
+      "verdict": "pass"
+    },
     "RT-BIO": {
       "observations": 212,
       "verdict": "pass"

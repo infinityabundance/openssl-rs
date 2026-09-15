@@ -123,6 +123,13 @@ COURTS: list[tuple[str, int, str, str]] = [
      "a declared length past the buffer and the end-of-contents marker -- together\n"
      "with the two's-complement content codec, the string layer, the object layer,\n"
      "the text writers and the two parsers"),
+    ("rt-asn1-template", 5, "rt_asn1_template_probe",
+     "the template interpreter over a *caller-built* descriptor, which no built-in\n"
+     "item can reach: a SEQUENCE with an EMBED field and an OPTIONAL one, a CHOICE,\n"
+     "the SEQUENCE OF and SET OF content writers including the canonical ordering\n"
+     "that only the SET one applies, the twelve primitive-hook items where the value\n"
+     "is behind the slot for some and *in* the slot for LONG/ZLONG, and the two\n"
+     "ASN1_TYPE octet-string pairs whose int form goes through a private template"),
 ]
 
 

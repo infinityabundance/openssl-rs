@@ -263,7 +263,7 @@ unsafe extern "C" fn uint32_i2c(
     it: *const Asn1Item,
 ) -> c_int {
     // SAFETY: the caller's contract.
-    let mut utmp = u64::from(unsafe { core::ptr::read_unaligned((*pval).cast::<u32>()) });
+    let mut utmp = unsafe { core::ptr::read_unaligned((*pval).cast::<u32>()) };
     let mut neg = 0;
     // SAFETY: `it` is a live item.
     let flags = unsafe { (*it).size };
@@ -271,13 +271,18 @@ unsafe extern "C" fn uint32_i2c(
     if flags & INTXX_FLAG_ZERO_DEFAULT == INTXX_FLAG_ZERO_DEFAULT && utmp == 0 {
         return -1;
     }
-    if flags & INTXX_FLAG_SIGNED == INTXX_FLAG_SIGNED && (utmp as u32 as i32) < 0 {
-        utmp = 0u64.wrapping_sub(utmp);
+    if flags & INTXX_FLAG_SIGNED == INTXX_FLAG_SIGNED && (utmp as i32) < 0 {
+        // The negation is at **32-bit** width, which is the whole point of this hook
+        // existing beside the 64-bit one: `0 - 0xfffffffb` is 5 in a `uint32_t` and
+        // 0xffffffff00000005 in a `uint64_t`. Widening first and negating second produced
+        // the second, which encoded `-5` as nine octets instead of one. `RT-ASN1-TEMPLATE`
+        // is what found it.
+        utmp = 0u32.wrapping_sub(utmp);
         neg = 1;
     }
 
     // SAFETY: `cont` is null or the caller's destination.
-    unsafe { ossl_i2c_uint64_int(cont, utmp, neg) }
+    unsafe { ossl_i2c_uint64_int(cont, u64::from(utmp), neg) }
 }
 
 /// `int uint32_c2i(ASN1_VALUE **pval, const unsigned char *cont, int len, int utype,

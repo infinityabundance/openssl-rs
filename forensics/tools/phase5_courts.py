@@ -67,6 +67,7 @@ RUN_TIMEOUT_S = "60"
 COURTS = [
     ("RT-BN", "rt_bn_probe.c"),
     ("RT-ASN1", "rt_asn1_probe.c"),
+    ("RT-ASN1-TEMPLATE", "rt_asn1_template_probe.c"),
 ]
 
 
