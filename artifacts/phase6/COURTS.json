@@ -7,9 +7,9 @@
     "courts": [
       {
         "authority_exit_code": 0,
-        "authority_observations": 83,
+        "authority_observations": 89,
         "candidate_exit_code": 0,
-        "candidate_observations": 83,
+        "candidate_observations": 89,
         "candidate_stderr_tail": [],
         "court": "RT-LIBCTX",
         "crashed": false,
@@ -107,7 +107,7 @@
     {
       "name": "probe",
       "path": "courts/phase6/rt_libctx_probe.c",
-      "sha256": "b72f936e3bd908815fd34bd429206798c362b2e9cbfc6666f947193efd9d66bd"
+      "sha256": "30d40be2291df4bd9084fa92382ab002b281e920d4c19e84f079a26bf3b5eda2"
     },
     {
       "name": "probe",

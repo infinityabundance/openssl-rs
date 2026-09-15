@@ -122,6 +122,18 @@ pub mod dispatch;
 pub mod namemap;
 pub mod thread_data;
 
+/// `OSSL_LIB_CTX_PROPERTY_STRING_INDEX`, from `include/internal/cryptlib.h`. Slot 3,
+/// filled by 6.7a: the property name/value string tables.
+pub(crate) const OSSL_LIB_CTX_PROPERTY_STRING_INDEX: c_int = 3;
+
+/// `OSSL_LIB_CTX_PROPERTY_DEFN_INDEX`, from `include/internal/cryptlib.h`. Slot 2,
+/// filled by 6.7a: the per-context property definition cache.
+pub(crate) const OSSL_LIB_CTX_PROPERTY_DEFN_INDEX: c_int = 2;
+
+/// `OSSL_LIB_CTX_GLOBAL_PROPERTIES`, from `include/internal/cryptlib.h`. Slot 14,
+/// filled by 6.7a: the per-context global properties holder.
+pub(crate) const OSSL_LIB_CTX_GLOBAL_PROPERTIES_INDEX: c_int = 14;
+
 /// `OSSL_LIB_CTX_BIO_CORE_INDEX`, from `include/internal/cryptlib.h`. Slot 17,
 /// filled by 6.6c.
 pub(crate) const OSSL_LIB_CTX_BIO_CORE_INDEX: c_int = 17;
@@ -351,6 +363,18 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
     // SAFETY: as above; the slot is published once, here.
     unsafe { (*ctx).threads = threads.cast::<c_void>() };
 
+    // The property string table. The authority builds it **first** among the
+    // slot objects this crate builds, before the namemap; and `property_parse_init`
+    // below is what fills it. Its position relative to the namemap and the core BIO
+    // globals is the authority's.
+    let property_string_data = crate::property::ossl_property_string_data_new(ctx.cast::<c_void>());
+    if property_string_data.is_null() {
+        context_deinit(ctx);
+        return false;
+    }
+    // SAFETY: as above; the slot is published once, here.
+    unsafe { (*ctx).property_string_data = property_string_data.cast::<c_void>() };
+
     // The namemap. The authority builds it after `property_string_data` and
     // before `property_defns`; of those three this stratum builds only the one, and
     // its position relative to the two callback holders and the thread slot below
@@ -362,6 +386,28 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
     }
     // SAFETY: as above.
     unsafe { (*ctx).namemap = namemap.cast::<c_void>() };
+
+    // The property definition cache. The authority builds it immediately after the
+    // namemap and before `global_properties`.
+    let property_defns = crate::property::ossl_property_defns_new(ctx.cast::<c_void>());
+    if property_defns.is_null() {
+        context_deinit(ctx);
+        return false;
+    }
+    // SAFETY: as above.
+    unsafe { (*ctx).property_defns = property_defns.cast::<c_void>() };
+
+    // The global properties holder. The authority builds it after `property_defns`
+    // and before the core BIO globals. It is a zeroed block with a NULL `list`, which
+    // is a valid empty holder rather than an uninitialised slot: the grammar that
+    // could fill it is 6.7b's.
+    let global_properties = crate::property::ossl_ctx_global_properties_new(ctx.cast::<c_void>());
+    if global_properties.is_null() {
+        context_deinit(ctx);
+        return false;
+    }
+    // SAFETY: as above.
+    unsafe { (*ctx).global_properties = global_properties.cast::<c_void>() };
 
     // The core BIO globals. The authority builds them after `global_properties`
     // (not this stratum's) and before `drbg_nonce`; their position relative to
@@ -392,6 +438,21 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
     }
     // SAFETY: as above.
     unsafe { (*ctx).indicator_cb = indicator_cb.cast::<c_void>() };
+
+    // The property engine's pre-initialisation. The authority calls it last among
+    // the objects it builds -- after the child-provider context, which is 6.8's, and
+    // before the builtin compression methods, which are Phase 13's -- so it is the
+    // last step here too. It needs only slot 3, filled above.
+    //
+    // This is where "yes" and "no" receive OSSL_PROPERTY_TRUE (1) and
+    // OSSL_PROPERTY_FALSE (2). It is a start-up check, not an optimisation: a value
+    // table numbered in another order makes every boolean property answer wrongly,
+    // and the authority asserts the order here.
+    // SAFETY: `ctx` is live and its slot 3 was built above.
+    if unsafe { crate::property::ossl_property_parse_init(ctx.cast::<c_void>()) } == 0 {
+        context_deinit(ctx);
+        return false;
+    }
     true
 }
 
@@ -402,15 +463,20 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
 /// with respect to the provider store). Only slot 21 has no release: it is an
 /// interior address, not an allocation.
 fn context_deinit_objs(ctx: *mut OsslLibCtx) {
-    // The namemap, in the authority's position: after `property_string_data`, which
-    // this stratum does not build, and before `property_defns`, which it does not
-    // either. The context owns it, so the release goes through
-    // `ossl_stored_namemap_free`, which clears the flag that makes the
-    // free-standing releaser decline.
+    // The property string table, released first among the slot objects, as the
+    // authority releases them (before the namemap).
     // SAFETY: `ctx` is a live context being torn down by `context_deinit`, and no
     // other thread holds a reference to it -- `OSSL_LIB_CTX_free` is the only
     // caller and the caller contract is that the object is no longer in use. Each
     // slot is released exactly once and re-NULLed.
+    unsafe {
+        if !(*ctx).property_string_data.is_null() {
+            crate::property::ossl_property_string_data_free((*ctx).property_string_data);
+            (*ctx).property_string_data = ptr::null_mut();
+        }
+    }
+
+    // SAFETY: as above.
     unsafe {
         if !(*ctx).namemap.is_null() {
             crate::context::namemap::ossl_stored_namemap_free(
@@ -419,6 +485,22 @@ fn context_deinit_objs(ctx: *mut OsslLibCtx) {
                     .cast::<crate::context::namemap::OsslNamemap>(),
             );
             (*ctx).namemap = ptr::null_mut();
+        }
+    }
+
+    // The property definition cache and the global properties holder, released
+    // after the namemap and before the core BIO globals -- the authority's order
+    // exactly: `property_string_data`, `namemap`, `property_defns`,
+    // `global_properties`, `bio_core`.
+    // SAFETY: as above.
+    unsafe {
+        if !(*ctx).property_defns.is_null() {
+            crate::property::ossl_property_defns_free((*ctx).property_defns);
+            (*ctx).property_defns = ptr::null_mut();
+        }
+        if !(*ctx).global_properties.is_null() {
+            crate::property::ossl_ctx_global_properties_free((*ctx).global_properties);
+            (*ctx).global_properties = ptr::null_mut();
         }
     }
 
@@ -814,7 +896,7 @@ pub unsafe extern "C" fn OSSL_LIB_CTX_get_data(ctx: *mut c_void, index: c_int) -
             match index {
                 0 => (*ctx).evp_method_store,
                 1 => (*ctx).provider_store,
-                2 => (*ctx).property_defns,
+                OSSL_LIB_CTX_PROPERTY_DEFN_INDEX => (*ctx).property_defns,
                 3 => (*ctx).property_string_data,
                 4 => (*ctx).namemap,
                 5 => (*ctx).drbg,
@@ -822,7 +904,7 @@ pub unsafe extern "C" fn OSSL_LIB_CTX_get_data(ctx: *mut c_void, index: c_int) -
                 10 => (*ctx).encoder_store,
                 11 => (*ctx).decoder_store,
                 12 => (*ctx).self_test_cb,
-                14 => (*ctx).global_properties,
+                OSSL_LIB_CTX_GLOBAL_PROPERTIES_INDEX => (*ctx).global_properties,
                 15 => (*ctx).store_loader_store,
                 16 => (*ctx).provider_conf,
                 17 => (*ctx).bio_core,

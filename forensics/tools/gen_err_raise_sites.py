@@ -259,6 +259,14 @@ COVERED_FILES = [
     # `crypto/threads_common.c` are the rest of this stratum's files and raise nothing,
     # so they are absent rather than listed with an empty contribution.
     ("crypto/core_namemap.c", "CORE_NAMEMAP"),
+    # Phase 6.7: the property engine. Two of its six files raise anything —
+    # `property.c`, `property_query.c`, `defn_cache.c` and `property_err.c` raise
+    # nothing. `property_string.c` is 6.7a's; `property_parse.c`'s grammar is 6.7b's,
+    # and its coordinates are taken with the file because the rule is the *subsystem*
+    # set rather than the implemented subset, exactly as Phase 4 and Phase 5 took
+    # their own. A site nobody calls yet is a coordinate, not a claim.
+    ("crypto/property/property_string.c", "PROPERTY_STRING"),
+    ("crypto/property/property_parse.c", "PROPERTY_PARSE"),
 ]
 
 # Raise macros, in the forms the authority actually spells them. `ERR_raise`
@@ -687,6 +695,14 @@ def resolve_symbols(authority, symbols: list[str], work: Path) -> dict[str, int]
         # `crypto/x509` translation units raise from that library.
         "#include <openssl/x509v3err.h>",
         "#include <openssl/sslerr.h>",
+        # `PROP_R_*` is the first reason family this table needs that lives in an
+        # *internal* header rather than an installed one: `internal/propertyerr.h`,
+        # which the property grammar raises from. It is resolveable because the
+        # authority's source tree is committed; the source include directory is added
+        # **after** the installed one below, so every `openssl/...` header still comes
+        # from the built prefix and only `internal/...` falls through to the tree the
+        # build was made from.
+        "#include <internal/propertyerr.h>",
         "#include <stdio.h>",
         "",
     ]
@@ -710,6 +726,11 @@ def resolve_symbols(authority, symbols: list[str], work: Path) -> dict[str, int]
             "-std=c11",
             "-I",
             str(include),
+            # Second, so it only supplies what the prefix does not have: the
+            # `internal/` headers, which are not installed but are the source the
+            # authority's own objects were compiled against.
+            "-I",
+            str(authority.source / "include"),
             "-o",
             str(binp),
             str(src),

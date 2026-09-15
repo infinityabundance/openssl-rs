@@ -127,6 +127,9 @@ static void says(const char *key, const char *s)
 #define IDX_THREAD 19
 #define IDX_INDICATOR_CB 22
 #define IDX_BIO_CORE 17
+#define IDX_PROPERTY_DEFNS 2
+#define IDX_PROPERTY_STRING 3
+#define IDX_GLOBAL_PROPERTIES 14
 
 /* The eighteen indices the authority answers a pointer for. */
 #define LIVE_SLOTS 18
@@ -134,11 +137,15 @@ static void says(const char *key, const char *s)
 /* The slots this stratum fills. 21 answers `&ctx->comp_methods`, so it is exact as
  * soon as the field exists; 4 is the namemap (6.6b), 19 the thread slot (6.6e),
  * 17 the core BIO globals (6.6c, filled eagerly by `context_init`), and 12 and 22
- * the two callback holders (6.11). Each later subphase appends its slot here when
- * it lands. */
+ * the two callback holders (6.11). 2, 3 and 14 are the property engine (6.7a): the
+ * definition cache, the name/value string tables and the global properties holder,
+ * all three built eagerly by `context_init` and none of them reachable through any
+ * other exported function, which is why the slot table is this subsystem's court.
+ * Each later subphase appends its slot here when it lands. */
 static const int filled_slots[] = { IDX_COMP_METHODS, IDX_NAMEMAP, IDX_THREAD,
                                     IDX_BIO_CORE, IDX_SELF_TEST_CB,
-                                    IDX_INDICATOR_CB };
+                                    IDX_INDICATOR_CB, IDX_PROPERTY_DEFNS,
+                                    IDX_PROPERTY_STRING, IDX_GLOBAL_PROPERTIES };
 #define FILLED_COUNT ((int) (sizeof filled_slots / sizeof filled_slots[0]))
 
 /* The indices the authority answers NULL for, and why: 7 and 8 are slots it reuses

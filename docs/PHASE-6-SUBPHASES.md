@@ -85,7 +85,10 @@ received by hand-off. Both numbers are in the ledger's `counts` block, and
 | 6.6e-ii | the thread-stop pair and `OPENSSL_atexit` | `crypto/initthread.c` — the per-thread event-handler table, `OSS_get_avail_threads`, `ossl_ctx_thread_stop`; and `crypto/init.c`'s `OPENSSL_atexit` | 6.6e, 6.9 | `RT-THREADDATA` | `OPENSSL_thread_stop` and `OPENSSL_thread_stop_ex`, which need the handler table that `ossl_init_thread_deregister` walks; and `OPENSSL_atexit`, which pins the handler's object with `DSO_dsobyaddr` and so waits for the loader. These three are the remainder of the five Phase 3 hand-offs, and 6.6a's `context_deinit` names the `ossl_ctx_thread_stop` line it is waiting for |
 | 6.6f | the algorithm dispatch walk | `crypto/core_algorithm.c` | 6.6b, 6.8 | `RT-LIBCTX` | `ossl_algorithm_do_all` — the walk over a provider's algorithms that the legacy method enumerations are built on |
 | 6.6g | `OSSL_LIB_CTX_load_config` | the tenth export | 6.10 | `RT-LIBCTX` | a one-line forward to `CONF_modules_load_file_ex`, which is why it waits for the module registry rather than being written against a stub |
-| 6.7 | Property engine | `crypto/property/property.c`, `property_parse.c`, `property_string.c`, `property_query.c`, `defn_cache.c`, `property_err.c`; fills slots 2, 3 and 14 | 6.6b | `RT-PROPERTY` | definition, parse, string round-trip, matching, query parse **and negative selection** — a query that must *exclude* a definition is as much an observation as one that includes it |
+| 6.7 | Property engine | `crypto/property/property.c`, `property_parse.c`, `property_string.c`, `property_query.c`, `defn_cache.c`, `property_err.c`; fills slots 2, 3 and 14 | 6.6b | `RT-LIBCTX` | **split into 6.7a–6.7c, and its stated exit criterion is corrected here.** The subsystem is **entirely internal** — every entry point is `ossl_property_*`, `ossl_ctx_global_properties*` or `ossl_prop_defn_*`, and nothing in `libcrypto.so.3`'s export list names it — so a probe compiled against *installed headers* cannot reach one function of the grammar. The criterion this row previously carried ("definition, parse, string round-trip, matching, query parse and negative selection") was therefore **not observable through any export**, and `RT-PROPERTY` cannot be a differential court. What a consumer reaches is `OSSL_LIB_CTX_get_data`, so the three slots are observed where slot 4 and slot 17 were, by `RT-LIBCTX`; the *behaviour* the old criterion named is real and required, and it becomes observable at 6.8 (a provider fetch, which is `docs/PROVIDER_MODEL.md` §5's gate item 4) and at 6.12. Claiming it was courted here would be claiming an observation no probe can make |
+| 6.7a | the string table and the three slots | `crypto/property/property_string.c`; `defn_cache.c`'s constructor and releaser; `property.c`'s two global-property functions — `src/property/` | 6.6b | `RT-LIBCTX` | **COMPLETE** (D111): slots 2, 3 and 14 filled eagerly by `context_init`, `ossl_property_parse_init` called as its last step, and the name/value indices assigned in the authority's order — which the authority itself asserts at every context construction, since `OSS_PROPERTY_TRUE` is 1 and `OSSL_PROPERTY_FALSE` is 2 and the two counters are separate. `RT-LIBCTX` goes 83 → 89. The definition cache and the global-properties holder are filled **and empty**, which is what their own constructors produce; nothing is asserted about a list nobody can yet parse |
+| 6.7b | the grammars | `crypto/property/property_parse.c` (763), `property_query.c` (80), and the cache's `get`/`set` | 6.7a | the fetch at 6.8 | `ossl_parse_property`, `ossl_parse_query`, `ossl_property_match_count`, `ossl_property_merge`, `ossl_property_list_to_string` and the negative-selection rule. It adds no export, so its evidence can only be the provider fetch and 6.12's third-party provider |
+| 6.7c | the store and the fetch | `property.c`'s remainder (949 lines) | 6.8 | `RT-PROVIDER` | `ossl_method_store_*` and the fetch cache, which take an `OSSL_PROVIDER *` and therefore cannot precede providers |
 | 6.8 | Provider registry and dispatch | `crypto/provider.c`, `provider_core.c` (2,679 lines), `provider_child.c`, `provider_predefined.c`, `provider_conf.c` | 6.6, 6.7 | `RT-PROVIDER` | load/unload/try_load, reference ownership, builtin and dynamic providers, `OSSL_DISPATCH` walking, core→provider and provider→core upcalls, algorithm registration, name map, gettable params, capabilities, `do_all`, operation query, fetch and the fetch cache |
 | 6.9 | DSO | the fifteen abi-only `DSO_*` — `dso_lib.c`, `dso_dlfcn.c`, `dso_dl.c`, `dso_openssl.c` | 6.8 | `RT-DSO` | the dynamic loader that `DSO_load` needs to make a provider module a module |
 | 6.10 | CONF module registry | the 18 hand-offs from Phase 4 and Phase 5 — `crypto/conf/conf_mod.c` | 6.8, 6.9 | `RT-CONF-MOD` | module activation through configuration, `CONF_modules_load*`, the imodule/module accessors, and the diagnostics flag interaction D50 recorded |
@@ -110,15 +113,15 @@ symbol ledgers can see a *field* that was never filled. The table is the record.
 |---|---|---|
 | 0 | `evp_method_store` | Phase 7 |
 | 1 | `provider_store` | 6.8 |
-| 2 | `property_defns` | 6.7 |
-| 3 | `property_string_data` | 6.7 |
+| 2 | `property_defns` | **filled by 6.7a** |
+| 3 | `property_string_data` | **filled by 6.7a** |
 | 4 | `namemap` | **filled by 6.6b** |
 | 5 | `drbg` | Phase 9 |
 | 6 | `drbg_nonce` | Phase 9 |
 | 10 | `encoder_store` | Phase 7 |
 | 11 | `decoder_store` | Phase 7 |
 | 12 | `self_test_cb` | **filled by 6.11** |
-| 14 | `global_properties` | 6.7 |
+| 14 | `global_properties` | **filled by 6.7a** |
 | 15 | `store_loader_store` | Phase 10 |
 | 16 | `provider_conf` | 6.8 |
 | 17 | `bio_core` | **filled by 6.6c** |
@@ -149,8 +152,10 @@ must answer NULL here for the same reason), plus the slots this stratum has fill
 prints `libctx.slots.live`, `.filled` and `.deferred` so the transcript states the scope
 of its own table rather than leaving it to be inferred. The three counts are derived from
 the probe's own `filled_slots` array and the authority's index space, never typed, so a
-subphase that lands adds its slot there and the counts move with it. The rows above carry
-the running total so that the *document* cannot drift either.
+subphase that lands adds its slot there and the counts move with it. The table above
+carries the same state in the other direction — a row is `**filled by <subphase>**` or it
+names the stratum still owed — so the document cannot drift from the probe without one of
+the two being wrong in a way a reader can see.
 
 ### Why 6.0 comes before any implementation
 

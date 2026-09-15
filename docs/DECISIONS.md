@@ -5583,3 +5583,106 @@ them does not count — and it rejects `panic!` in a `#[cfg(test)]` module too.
 | `err_sites.rs` coordinates | 772 | 772 |
 | FRF courts | 40 | 41 |
 | unit tests | 189 | 193 |
+
+## D111 — the property engine has no export, so its court is the slot table
+
+**What landed.** Phase 6.7a: `crypto/property/property_string.c` as
+`src/property/strings.rs`, plus `defn_cache.c`'s constructor and releaser, plus the two
+global-property functions from `property.c`, plus `ossl_property_parse_init` from
+`property_parse.c`. **Index slots 2, 3 and 14 are filled**, so nine of the eighteen are
+live, and `context_init` now ends with the property pre-initialisation the authority
+puts there. No export changes: the Phase 6 ledger stays at 102 implemented and 59 open.
+
+**The correction, and it is to the plan rather than to the code.**
+`docs/PHASE-6-SUBPHASES.md` recorded 6.7's exit criterion as "definition, parse, string
+round-trip, matching, query parse and negative selection", with `RT-PROPERTY` as its
+court. Measured against the authority, **the property engine has no exported symbol at
+all**: all thirty-odd entry points are `ossl_property_*`, `ossl_ctx_global_properties*`
+and `ossl_prop_defn_*`. A probe is compiled against *installed headers* and linked
+against the library, so it cannot call one function of the grammar, and a court that
+claimed to compare the parse would be claiming an observation no probe can make — which
+is the failure mode this project has now recorded four times in other forms
+(`a2d_ASN1_OBJECT`, the prefix-derived discovery of D49 and D51, the unread ledger of
+D94). The criterion and the court are corrected in place, and the *behaviour* it named
+is not dropped: it becomes observable at 6.8, where a provider fetch applies a query to
+a candidate set, and is corroborated at 6.12 by an independently written provider. That
+is exactly `docs/PROVIDER_MODEL.md` §5's gate item 4, "property-based fetch selection
+matches, including negative selection", and it was always 6.8's, not 6.7's.
+
+**What the three slots can witness, and the one thing that is a start-up contract.**
+`RT-LIBCTX` gains slots 2, 3 and 14 and moves 83 → 89 observations: presence, stability,
+per-context distinctness and difference from the object's own address, for each of the
+three, on two independent contexts. The engine's *ordering* contract is not visible
+through a slot, but it is asserted by the authority at every context construction and is
+reproduced here for the same reason:
+
+```c
+if ((ossl_property_value(ctx, "yes", 1) != OSSL_PROPERTY_TRUE)
+    || (ossl_property_value(ctx, "no", 1) != OSSL_PROPERTY_FALSE))
+    goto err;
+```
+
+`OSSL_PROPERTY_TRUE` is 1 and `OSSL_PROPERTY_FALSE` is 2, and the value table's counter
+is **separate** from the name table's, so the six predefined names take 1..6 in their own
+space while "yes" and "no" are the *first two values*. One shared counter, or interning
+the names as values, fails the authority's own check. The two `if`s are written as two
+`if`s rather than one tuple comparison because the authority's `||` short-circuits: a
+table that numbers "yes" wrongly also leaves "no" uninterned, and that state is part of
+what is reproduced.
+
+**Two slots are filled and empty, and that is the authority's own state.**
+`ossl_property_defns_new` is one empty lhash and `ossl_ctx_global_properties_new` is one
+`OPENSSL_zalloc`ed block with a NULL `list`. A zeroed holder is a *valid empty* holder,
+not an uninitialised slot: the authority's own constructor produces exactly this, and
+the reader that would distinguish them is `ossl_ctx_global_properties`, which returns
+`&globp->list`. So filling these two asserts nothing about property behaviour, and the
+releasers are written to handle a non-empty state because that is the state 6.7b will
+create — a releaser that ignored the list would leak, so it does not.
+
+**The element layout is reproduced, not approximated.** `PROPERTY_STRING` is
+`{ const char *s; OSSL_PROPERTY_IDX idx; char body[1]; }` with `s` pointing at its own
+`body`, so one allocation holds the header and the string and `property_free` is a bare
+`OPENSSL_free`. On x86-64 that is `size_of` 16 with `body` at offset 12, and
+`new_property_string` allocates `16 + l`. A Rust `#[repr(C)]` type with a trailing
+`[c_char; 1]` gives the same offsets and the same `size_of`, so the arithmetic is the
+authority's down to the slack byte. `defn_cache.c`'s element has the same shape and the
+same treatment.
+
+**`PROP_R_*` is the first reason family in this table that is not in an installed
+header.** The error-coordinate resolver compiles a C probe against the authority's
+headers and prints what each symbol evaluates to, and it had only ever needed the
+installed ones — `ERR_R_*`, `CRYPTO_R_*`, `BIO_R_*`, `ASN1_R_*`. The property grammar
+raises `PROP_R_*`, which lives in `include/internal/propertyerr.h`, present in the
+committed source tree and **not installed**. The resolver therefore gained
+`-I <authority source>/include` as a *second* include directory, after the built prefix,
+so every `openssl/...` header still comes from the prefix the courts link against and
+only `internal/...` falls through to the tree the build was made from. 23 coordinates
+were added — `property_string.c`'s 3 and `property_parse.c`'s 20 — taking the table from
+772 to 795. `property_parse.c`'s are 6.7b's implementation, and they are taken now
+because the rule Phase 4 and Phase 5 established is the *subsystem* set rather than the
+implemented subset: a site nobody calls yet is a coordinate, not a claim.
+
+**A naming correction.** The file mirroring `property.c` was first written as
+`src/property/property.rs`, which clippy refuses (`module_inception`) and which would
+have needed an `#[allow]` — a suppression rather than a correction. It is
+`src/property/globals.rs`, named for the object, and says in its header that everything
+in it is `property.c`'s.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 102 / 59 | 102 / 59 (no export) |
+| index slots filled | 6 | 9 |
+| `RT-LIBCTX` observations | 83 | 89 |
+| all courts / observations | 52 / 19,649 | 52 / 19,655 |
+| `err_sites.rs` coordinates | 772 | 795 |
+| unit tests | 193 | 196 |
+
+**The ordering contract has a unit test because no court can see it.** Three tests were
+added to `src/property/strings.rs`: the two Boolean values are 1 and 2 *and* the six
+predefined names occupy their own 1..6; a repeat intern answers the same index and a
+non-`create` miss answers 0, with index 0 naming nothing on both tables; and two contexts
+have their own tables and their own counters. That is the same reasoning D109 applied to
+the namemap's order-dependent refusal — when a behaviour is real and nothing observable
+reaches it, the assertion has to live where it can be made, and the residual says so.
