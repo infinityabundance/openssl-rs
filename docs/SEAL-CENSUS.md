@@ -17,9 +17,9 @@ name is defined; `open` means the stratum owns it and has not built it;
 
 | library | authority exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 956 | 4940 |
+| libcrypto | 5896 | 974 | 4922 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **956** | **5543** |
+| **total** | **6499** | **974** | **5525** |
 
 ## Ownership atlas, by stratum
 
@@ -29,8 +29,8 @@ declared owner; this is that assignment.
 | phase | stratum | state | atlas-owned | ledger owned | implemented | deferred | open |
 |---|---|---|---|---|---|---|---|
 | 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `complete` | 294 | 294 | 251 | 43 | 0 |
-| 4 | BIO + CONF + object database | `in-progress` | 256 | 272 | 231 | 23 | 18 |
-| 5 | BN + ASN.1 + DER/PEM | `in-progress` | 561 | 565 | 474 | 91 | 0 |
+| 4 | BIO + CONF + object database | `complete` | 256 | 272 | 249 | 23 | 0 |
+| 5 | BN + ASN.1 + DER/PEM | `complete` | 561 | 565 | 474 | 91 | 0 |
 | 6 | OSSL_LIB_CTX + provider core | `not-started` | 137 | 161 | 0 | 0 | 161 |
 | 7 | EVP framework | `not-started` | 924 | — | — | — | — |
 | 8 | Native cryptographic primitives | `not-started` | 759 | — | — | — | — |
@@ -83,15 +83,14 @@ Courts: `all pass`, 8 court(s), 0 authority observation(s).
 
 ## Phase 4 — BIO + CONF + object database
 
-* state: `in-progress`
-* blocking: 18 open obligation(s) of this stratum recorded in forensics/phase4-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase
+* state: `complete`
 * seal: `docs/PHASE-4-BIO-CONF-SEAL.md`
 * ledger: `forensics/phase4-obligations.json`
 * atlas-owned: 256
 * owned working set: 272
-* implemented: 231
+* implemented: 249
 * deferred to a later stratum with a stated reason: 23
-* **open in this stratum: 18**
+* **open in this stratum: 0**
 
 Deferred out, by receiving stratum:
 
@@ -106,7 +105,7 @@ Hand-offs received and discharged:
 
 * from phase 3: 16 symbol(s) — `ERR_add_error_mem_bio`, `ERR_print_errors`, `ERR_print_errors_cb`, `ERR_print_errors_fp`, `OBJ_create_objects`, `OPENSSL_INIT_free`, `OPENSSL_INIT_new`, `OPENSSL_INIT_set_config_appname`, `OPENSSL_INIT_set_config_file_flags`, `OPENSSL_INIT_set_config_filename`, `OPENSSL_LH_node_stats`, `OPENSSL_LH_node_stats_bio`, `OPENSSL_LH_node_usage_stats`, `OPENSSL_LH_node_usage_stats_bio`, `OPENSSL_LH_stats`, `OPENSSL_LH_stats_bio`
 
-Courts: `all pass`, 16 court(s), 0 authority observation(s).
+Courts: `all pass`, 17 court(s), 0 authority observation(s).
 
 | court | verdict | observations |
 |---|---|---|
@@ -126,11 +125,11 @@ Courts: `all pass`, 16 court(s), 0 authority observation(s).
 | RT-BIO-CONN | `pass` | 0 |
 | RT-OBJ-STREAM | `pass` | 0 |
 | RT-CONF | `pass` | 0 |
+| RT-COMP | `pass` | 0 |
 
 ## Phase 5 — BN + ASN.1 + DER/PEM
 
-* state: `in-progress`
-* blocking: blocked by the dependency-order invariant: phase 4 is not complete
+* state: `complete`
 * seal: `docs/PHASE-5-BN-ASN1-PEM-SEAL.md`
 * ledger: `forensics/phase5-obligations.json`
 * atlas-owned: 561

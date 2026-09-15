@@ -342,6 +342,11 @@ PHASE4_MODULES = [
     "src/runtime/conf/lib.rs",
     "src/runtime/conf/modparse.rs",
     "src/runtime/conf/init_settings.rs",
+    # The D97 reconciliation's own finding, then 6.3's work. `conf_ssl.rs` and
+    # `sap.rs` are the two CONF translation units whose exports no ledger and no
+    # evidence list mentioned until 6.0 read the ownership atlas against them.
+    "src/runtime/conf/conf_ssl.rs",
+    "src/runtime/conf/sap.rs",
     # The differential courts, and the discovery probes `docs/DECISIONS.md` and
     # `docs/SECURITY_DIVERGENCE_POLICY.md` cite as the origin of recorded
     # measurements. Both kinds are evidence: a decision that names a probe is only
@@ -362,6 +367,7 @@ PHASE4_MODULES = [
     "courts/phase4/rt_bio_conn_probe.c",
     "courts/phase4/rt_obj_stream_probe.c",
     "courts/phase4/rt_conf_probe.c",
+    "courts/phase4/rt_comp_probe.c",
     "courts/phase4/discover_bio_addr.c",
     "courts/phase4/discover_bio_addr2.c",
     "courts/phase4/discover_bio_lookup.c",

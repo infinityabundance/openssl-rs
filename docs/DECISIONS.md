@@ -4621,3 +4621,37 @@ Phase 3's ledger is at zero open again and `forensics/phase-state.json` derives 
 `complete`; its seal gains an appended §11 rather than an edit. `implemented` for
 `libcrypto` moves 932 → 956 and `libcrypto`'s scaffolds fall to 4,940.
 
+## D100 — `OPENSSL_info` answers NULL for the build-dependent codes, and that was unrecorded
+
+Found by `RT-COMP`, whose subject is the eighteen exports 6.3 implemented and which
+reaches `OPENSSL_info` only because `OPENSSL_config` is one of them and
+`crypto/conf/conf_sap.c`'s loader is what the probe touches next.
+
+`crypto/info.c` is a translation unit of its own, and `OPENSSL_info` splits its codes
+into two kinds. The **build-independent** ones are compile-time platform facts —
+`OPENSSL_INFO_DSO_EXTENSION` (`.so`), `OPENSSL_INFO_DIR_FILENAME_SEPARATOR` (`/`),
+`OPENSSL_INFO_LIST_SEPARATOR` (`:`) — and both sides agree on all three; `RT-COMP`
+now compares them. The **build-dependent** ones answer the authority's own
+`--openssldir`, `--enginesdir` and `--modulesdir`, which are paths inside the
+forensic build tree that no shipped library should reproduce.
+
+`src/runtime/init.rs` answers NULL for the build-dependent codes. That is the *same*
+divergence Phase 4's seal already records for `CONF_get1_default_config_file` under
+`OBL-CONF-DEFAULT-CONFIG-FILE` (Phase 16) — the same underlying fact, reached by a
+second route — and the reason it is worth a decision entry rather than a probe
+comment is that **nothing had recorded that the second route existed**. `RT-CONF`
+recorded one accessor; `OPENSSL_info` is a public entry point into the same fact, and
+a consumer that asks it gets NULL instead of a path.
+
+`RT-COMP` now prints the `RECORDED_DIVERGENCE_OBL_CONF_DEFAULT_CONFIG_FILE` label for
+all three build-dependent codes, on both sides, which is the idiom `RT-CONF` and
+`RT-LHASH` already use for a boundary they cannot compare. The divergence stays open
+with Phase 16, and it is now recorded at two entry points rather than one.
+
+This is the third time in two subphases that adding a court to a surface produced a
+finding about a *different* surface: `RT-RUNTIME-EXT` found the `OSSL_ERR_STATE_save`
+ownership defect (D99), and `RT-COMP` found this. Both were in code that had already
+passed its own stratum's ledger arithmetic, which is the argument for courts over
+ledgers rather than an argument against ledgers.
+
+

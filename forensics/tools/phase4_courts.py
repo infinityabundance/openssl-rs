@@ -79,6 +79,7 @@ COURTS = [
     ("RT-BIO-CONN", "rt_bio_conn_probe.c"),
     ("RT-OBJ-STREAM", "rt_obj_stream_probe.c"),
     ("RT-CONF", "rt_conf_probe.c"),
+    ("RT-COMP", "rt_comp_probe.c"),
 ]
 
 
