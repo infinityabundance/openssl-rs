@@ -41,7 +41,7 @@
 
 use core::ffi::{c_char, c_int, c_void};
 
-use crate::property::parse::OsslPropertyList;
+use crate::property::list::OsslPropertyList;
 use crate::runtime::lhash::{
     OPENSSL_LH_doall, OPENSSL_LH_free, OPENSSL_LH_new, OPENSSL_LH_strhash, OpenSslLhash,
 };

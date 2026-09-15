@@ -59,7 +59,7 @@ const LINE_ZALLOC_GLOBP: c_int = 126;
 /// `struct ossl_global_properties_st`, minus the FIPS-blocked `no_mirrored` bit.
 #[repr(C)]
 pub(crate) struct OsslGlobalProperties {
-    list: *mut crate::property::parse::OsslPropertyList,
+    list: *mut crate::property::list::OsslPropertyList,
 }
 
 /// `void ossl_ctx_global_properties_free(void *vglobp)`

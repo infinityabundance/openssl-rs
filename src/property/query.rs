@@ -47,7 +47,7 @@ use core::ffi::{c_char, c_int, c_void};
 
 use crate::property::list::{
     num_properties, properties, properties_ptr, OsslPropertyDefinition, OsslPropertyIdx,
-    OsslPropertyList, OSSL_PROPERTY_OPER_EQ, OSSL_PROPERTY_OPER_NE, OSSL_PROPERTY_OPER_OVERRIDE,
+    OsslPropertyList, OSSL_PROPERTY_OPER_EQ, OSSL_PROPERTY_OPER_NE, OSSL_PROPERTY_OVERRIDE,
     OSSL_PROPERTY_TRUE, OSSL_PROPERTY_TYPE_NUMBER, OSSL_PROPERTY_TYPE_STRING,
 };
 use crate::property::strings::{ossl_property_name, ossl_property_value_str};
@@ -77,6 +77,9 @@ unsafe extern "C" fn property_idx_cmp(keyp: *const c_void, compare: *const c_voi
 /// # Safety
 /// `list` must be NULL or a live list; `libctx` must be NULL or a live context;
 /// `name` must be NULL or NUL-terminated.
+#[allow(dead_code)]
+// unreachable until 6.8's fetch calls it; this whole module is the interface the
+// provider registry is written against, and the seal of no earlier phase named it
 pub(crate) unsafe fn ossl_property_find_property(
     list: *const OsslPropertyList,
     libctx: *mut c_void,
@@ -101,14 +104,12 @@ pub(crate) unsafe fn ossl_property_find_property(
         let props = properties(list, n);
         let key = name_idx;
         let found = ossl_bsearch(n, 0, &mut |i| {
-            // SAFETY: `i < n` by the search's own bounds, so `props[i]` is an
-            // element of the tail, and `key` is live for the whole call.
-            unsafe {
-                property_idx_cmp(
-                    core::ptr::addr_of!(key).cast::<c_void>(),
-                    core::ptr::addr_of!(props[i]).cast::<c_void>(),
-                )
-            }
+            // SAFETY: `i < n` by the search's own bounds, so `props[i]` is an element
+            // of the tail, and `key` is live for the whole call.
+            property_idx_cmp(
+                core::ptr::addr_of!(key).cast::<c_void>(),
+                core::ptr::addr_of!(props[i]).cast::<c_void>(),
+            )
         });
         match found {
             Some(i) => properties_ptr(list).add(i),
@@ -121,6 +122,9 @@ pub(crate) unsafe fn ossl_property_find_property(
 ///
 /// # Safety
 /// `prop` must be live.
+#[allow(dead_code)]
+// unreachable until 6.8's fetch calls it; this whole module is the interface the
+// provider registry is written against, and the seal of no earlier phase named it
 pub(crate) unsafe fn ossl_property_get_type(prop: *const OsslPropertyDefinition) -> c_int {
     // SAFETY: the caller's contract.
     unsafe { (*prop).type_ }
@@ -134,6 +138,9 @@ pub(crate) unsafe fn ossl_property_get_type(prop: *const OsslPropertyDefinition)
 ///
 /// # Safety
 /// `prop` must be NULL or live; `libctx` must be NULL or a live context.
+#[allow(dead_code)]
+// unreachable until 6.8's fetch calls it; this whole module is the interface the
+// provider registry is written against, and the seal of no earlier phase named it
 pub(crate) unsafe fn ossl_property_get_string_value(
     libctx: *mut c_void,
     prop: *const OsslPropertyDefinition,
@@ -159,6 +166,9 @@ pub(crate) unsafe fn ossl_property_get_string_value(
 ///
 /// # Safety
 /// `prop` must be live.
+#[allow(dead_code)]
+// unreachable until 6.8's fetch calls it; this whole module is the interface the
+// provider registry is written against, and the seal of no earlier phase named it
 pub(crate) unsafe fn ossl_property_get_number_value(prop: *const OsslPropertyDefinition) -> i64 {
     // SAFETY: `prop` is live.
     unsafe {
@@ -176,6 +186,9 @@ pub(crate) unsafe fn ossl_property_get_number_value(prop: *const OsslPropertyDef
 ///
 /// # Safety
 /// `query` must be live.
+#[allow(dead_code)]
+// unreachable until 6.8's fetch calls it; this whole module is the interface the
+// provider registry is written against, and the seal of no earlier phase named it
 pub(crate) unsafe fn ossl_property_has_optional(query: *const OsslPropertyList) -> c_int {
     // SAFETY: the caller's contract. The field is a one-bit bitfield in the
     // authority, so only 0 or 1 is ever stored.
@@ -194,6 +207,9 @@ pub(crate) unsafe fn ossl_property_has_optional(query: *const OsslPropertyList) 
 /// # Safety
 /// `prop_list` must be NULL or live; `ctx` must be NULL or a live context;
 /// `property_name` must be NULL or NUL-terminated.
+#[allow(dead_code)]
+// unreachable until 6.8's fetch calls it; this whole module is the interface the
+// provider registry is written against, and the seal of no earlier phase named it
 pub(crate) unsafe fn ossl_property_is_enabled(
     ctx: *mut c_void,
     property_name: *const c_char,
@@ -286,30 +302,43 @@ mod tests {
     }
 
     #[test]
-    fn the_unions_upper_half_is_compared_and_is_zeroed_by_the_parsers() {
-        // `memcmp(&q[i].v, &d[j].v, 8)` covers the whole eight-byte union, so the
-        // bytes above a four-byte `str_val` are part of equality. The parsers
-        // `memset` the union before filling it, and this asserts why that matters:
-        // two definitions that differ only in those bytes are *not* equal.
-        let a = PropertyValue { str_val: 1 };
-        let b = PropertyValue { int_val: 1 };
-        // SAFETY: reading the raw bytes of a live, `Copy`, all-bits-valid union.
-        let (ab, bb) = unsafe {
-            (
-                core::slice::from_raw_parts(
-                    core::ptr::addr_of!(a).cast::<u8>(),
-                    PROPERTY_VALUE_BYTES,
-                ),
-                core::slice::from_raw_parts(
-                    core::ptr::addr_of!(b).cast::<u8>(),
-                    PROPERTY_VALUE_BYTES,
-                ),
-            )
-        };
-        assert_eq!(ab.len(), 8);
-        assert_ne!(
-            ab, bb,
-            "a str_val of 1 and an int_val of 1 differ above the low four bytes"
-        );
+    fn the_parsers_zero_the_whole_union_which_is_what_the_match_comparison_covers() {
+        // `ossl_property_match_count` compares two definitions with
+        // `memcmp(&q[i].v, &d[j].v, sizeof(q[i].v))` — **eight** bytes — so the four
+        // bytes above a four-byte `str_val` take part in equality. Both parsers
+        // therefore zero the union before filling it (`memset(&prop->v, 0,
+        // sizeof(prop->v))`), and this asserts the contract from the candidate's side:
+        // a definition whose value is a string has zeroes above it, and then the
+        // index.
+        //
+        // This is deliberately **not** written as a comparison of two bare union
+        // literals. A Rust `PropertyValue { str_val: 1 }` leaves the upper four bytes
+        // uninitialised, so such a test would assert something the language does not
+        // promise — measured: it happened to pass for the wrong reason, and failed
+        // once the initialisation was made explicit. What the authority guarantees is
+        // that its *parser* writes all eight bytes, and that is what is checked.
+        let c = crate::context::OSSL_LIB_CTX_new();
+        assert!(!c.is_null());
+        // SAFETY: `c` is live and its slot 3 was built by `context_init`.
+        assert_eq!(unsafe { crate::property::ossl_property_parse_init(c) }, 1);
+        // SAFETY: `c` is live and the literal is NUL-terminated.
+        unsafe {
+            let l = crate::property::parse::ossl_parse_property(c, c"fips=yes".as_ptr());
+            assert!(!l.is_null());
+            let p = &*properties_ptr(l);
+            assert_eq!(p.type_, OSSL_PROPERTY_TYPE_STRING);
+            let bytes: [u8; PROPERTY_VALUE_BYTES] = core::mem::transmute_copy(&p.v);
+            assert_eq!(
+                &bytes[4..],
+                &[0u8; PROPERTY_VALUE_BYTES - 4],
+                "the parser zeroes the union above the string index"
+            );
+            assert_ne!(
+                bytes, [0u8; PROPERTY_VALUE_BYTES],
+                "and then writes the index into it"
+            );
+            crate::property::parse::ossl_property_free(l);
+            crate::context::OSSL_LIB_CTX_free(c);
+        }
     }
 }
