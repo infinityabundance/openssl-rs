@@ -26,8 +26,9 @@ renderer does not know any phase status.
 | 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `complete` |  |
 | 4 | BIO + CONF + object database | `complete` |  |
 | 5 | BN + ASN.1 + DER/PEM | `complete` |  |
+| 6 | OSSL_LIB_CTX + provider core | `in-progress` | 80 open obligation(s) of this stratum recorded in forensics/phase6-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
 
-Not started: strata 6-21 (16 total).
+Not started: strata 7-21 (15 total).
 
 ## Atlas census
 

@@ -226,6 +226,16 @@ COURTS: list[tuple[str, int, str, str]] = [
      "counts and the 0xff mask that keeps a negative char two digits wide, the two\n"
      "appending to one buffer in the order PEM_ASN1_write_bio_internal uses them, and\n"
      "the conditional newline as the header buffer fills up"),
+    # Phase 6 — the parameter surface and the provider core.
+    ("rt-param", 6, "rt_param_probe",
+     "the OSSL_PARAM descriptor as a matrix rather than a scenario list: every "
+     "accessor against every source width, signedness and data type, with the "
+     "return code, the error queue and the value or bytes produced; the setters "
+     "against every destination shape including the NULL-buffer size queries that "
+     "answer success; the string and pointer forms and the two readers that accept "
+     "either; BIGNUM in and out with the sign and width rules; dup, merge and "
+     "free; text allocation with the hex prefix; and the builder's one-block "
+     "layout and reuse"),
 ]
 
 

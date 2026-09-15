@@ -3,7 +3,8 @@
     "phase2",
     "phase3",
     "phase4",
-    "phase5"
+    "phase5",
+    "phase6"
   ],
   "courts": {
     "ABI-CONSTANTS": {
@@ -127,7 +128,7 @@
       "verdict": "pass"
     },
     "RT-BN": {
-      "observations": 650,
+      "observations": 1510,
       "verdict": "pass"
     },
     "RT-COMP": {
@@ -168,6 +169,10 @@
     },
     "RT-OBJ-STREAM": {
       "observations": 91,
+      "verdict": "pass"
+    },
+    "RT-PARAM": {
+      "observations": 1161,
       "verdict": "pass"
     },
     "RT-PEM": {
@@ -236,7 +241,7 @@
     "3": "complete",
     "4": "complete",
     "5": "complete",
-    "6": "not-started",
+    "6": "in-progress",
     "7": "not-started",
     "8": "not-started",
     "9": "not-started"

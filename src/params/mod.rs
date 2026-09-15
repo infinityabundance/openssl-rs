@@ -1859,6 +1859,39 @@ pub unsafe extern "C" fn OSSL_PARAM_get_double(p: *const OsslParam, val: *mut f6
     })
 }
 
+/// The conversion the authority's `(int64_t)val` performs, for the comparison
+/// `val != (int64_t)val`.
+///
+/// `set_double`'s exactness test is a round trip through a C cast, and a `double` outside
+/// `int64`'s range makes that cast undefined in C. What the *comparison* observes is the
+/// platform's conversion, which on the admitted x86-64 target is `INT64_MIN` for every
+/// out-of-range and NaN input. Rust's `as` saturates instead, so it reports such a value
+/// as exact and falls through to the range check — a different error reason for the same
+/// caller. This reproduces the conversion rather than the undefined behaviour: the result
+/// is specified here, and it is the value the authority's own comparison compares
+/// against. `RT-PARAM` measures both sides.
+fn to_i64_as_c(d: f64) -> i64 {
+    if d.is_nan() || d < -9223372036854775808.0 || d >= 9223372036854775808.0 {
+        i64::MIN
+    } else {
+        d as i64
+    }
+}
+
+/// As [`to_i64_as_c`], for `(uint64_t)val`. An x86-64 conversion of a negative or
+/// out-of-range `double` to `uint64_t` is not `INT64_MIN`; the comparison is against the
+/// value the authority's own `uint64_t` round trip produces, which for a negative input
+/// is a value that cannot equal a non-negative `val`.
+fn to_u64_as_c(d: f64) -> u64 {
+    if d.is_nan() || d < 0.0 || d >= 18446744073709551616.0 {
+        // `val >= 0` is tested first by the caller for the unsigned arm, so this arm is
+        // reached only for a value at or above 2^64, where the comparison must fail.
+        u64::MAX
+    } else {
+        d as u64
+    }
+}
+
 /// `int OSSL_PARAM_set_double(OSSL_PARAM *p, double val)`
 ///
 /// The bounds are the authority's, and they are deliberately *half-open*: an unsigned
@@ -1912,7 +1945,7 @@ pub unsafe extern "C" fn OSSL_PARAM_set_double(p: *mut OsslParam, val: f64) -> c
                     q.return_size = core::mem::size_of::<f64>();
                     return 1;
                 }
-                if val != (val as u64) as f64 {
+                if val != to_u64_as_c(val) as f64 {
                     // SAFETY: a compile-time-constant site.
                     unsafe { raise_site(&err_sites::PARAMS_1267) };
                     return 0;
@@ -1954,7 +1987,7 @@ pub unsafe extern "C" fn OSSL_PARAM_set_double(p: *mut OsslParam, val: f64) -> c
                     q.return_size = core::mem::size_of::<f64>();
                     return 1;
                 }
-                if val != (val as i64) as f64 {
+                if val != to_i64_as_c(val) as f64 {
                     // SAFETY: a compile-time-constant site.
                     unsafe { raise_site(&err_sites::PARAMS_1298) };
                     return 0;
@@ -2483,9 +2516,15 @@ pub unsafe extern "C" fn OSSL_PARAM_get_utf8_string(
             return 0;
         }
         if !val.is_null() {
-            // SAFETY: `*val` is non-NULL by now — `get_string_internal` allocated it —
-            // and `data_length < cap <= its allocation`.
-            unsafe { **val.add(data_length) = 0 };
+            // `**val.add(n)` would be `*(*(val.add(n)))`: pointer arithmetic on
+            // `char **`, scaled by eight and dereferenced twice. The terminator belongs
+            // in the *buffer*, at index `data_length`.
+            // SAFETY: `val` is non-NULL; `*val` is the buffer `get_string_internal`
+            // allocated or was handed, and `data_length < cap <= its allocation`.
+            unsafe {
+                let buf = *val;
+                *buf.add(data_length) = 0;
+            }
         }
         1
     })

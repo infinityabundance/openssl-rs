@@ -254,3 +254,50 @@ earlier phase is. The stratum's own exit criteria in §7 stand unchanged.
 
 Both corrections are recorded in `docs/DECISIONS.md` D97, and the arithmetic a reader
 should cite is in `docs/SEAL-CENSUS.md`, which regenerates.
+
+## 10. Correction: the signed encoders' fit rule (D104)
+
+`BN_signed_bn2native`, `BN_signed_bn2bin` and `BN_signed_bn2lebin` take a destination
+length, and this stratum's court exercised them with destinations that were obviously
+large enough — which is exactly the case where the fit rule cannot be observed. Found by
+Phase 6's `RT-PARAM`, whose builder path reaches `BN_signed_bn2native` with a *tight*
+destination and whose output disagreed with the authority's.
+
+The rule is in `crypto/bn/bn_lib.c`'s `bn2binpad`:
+
+```c
+n8 = BN_num_bits(a);
+n  = (n8 + 7) / 8;                      /* BN_num_bytes */
+ext = (n * 8 == n8) ? !a->neg : a->neg; /* the MSbit would be misread as a sign */
+if (tolen == -1) tolen = n + ext;
+else if (tolen < n + ext) { … if (tolen < n + ext) return -1; }
+```
+
+So a signed representation needs `n + ext` bytes, not `n`: one extra byte when the
+magnitude fills its top byte exactly and the value is non-negative (`0x80` cannot be held
+in one byte, because `0x80` there is `-128`), or when the magnitude does *not* fill its top
+byte and the value is negative (`-1` needs two bytes — `0xff` is refused, `0xffff`
+accepted). This module refused only when `BN_num_bytes(a) > tolen`.
+
+Five destinations the authority refuses were accepted, and one it refuses was accepted as
+a success with no write:
+
+| value | `tolen` | authority | was |
+|---|---|---|---|
+| `-1` | 1 | refuse | wrote `ff` |
+| `0x80` | 1 | refuse | wrote `80` |
+| `-0x0102` | 2 | refuse | wrote `fefe` |
+| `0xffff` | 2 | refuse | wrote `ffff` |
+| `0` | 0 | refuse | returned 0 |
+
+`RT-BN` now sweeps nineteen values — including `0`, `1`, `-1`, `0x7f`, `0x80`, `-0x80`,
+`0xff`, `-0xff`, `0x0102`, `-0x0102`, `0x7fff`, `0x8000`, `-0x8000`, `0xffff`, `-0xffff`,
+`0x010000`, `-0x010000` and three multi-limb shapes — against every `tolen` from 0 to 5,
+for all three entry points, plus a negative `tolen` and the `BN_signed_native2bn` inverse.
+That is 860 further observations and it is what makes the rule checkable rather than
+asserted. Its first run after the fix is byte-identical to the authority's.
+
+The stratum gains no export and its ledger is unchanged at zero open, so it remains
+`complete`; this section is the correction, not a reopening. The lesson is the one §9 and
+`docs/DECISIONS.md` D96 record from other angles: **a court's coverage is a property of
+the inputs it chooses**, and "obviously large enough" is a choice.
