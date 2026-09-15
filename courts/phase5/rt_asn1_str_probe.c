@@ -1019,6 +1019,64 @@ static void part_to_utf8(void)
     utf8_of("type_minus_one", -1, (const unsigned char *)"ab", 2);
 }
 
+
+/* ------------------------------------------------------------ ASN1_str2mask */
+
+static void str2mask(const char *key, const char *s)
+{
+    unsigned long mask = 0xdeadbeefUL;
+    int rv;
+
+    ERR_clear_error();
+    rv = ASN1_str2mask(s, &mask);
+    printf("mask.%s.rv=%d\n", key, rv);
+    printf("mask.%s.mask=%lu\n", key, mask);
+    drain("mask.err");
+}
+
+static void part_str2mask(void)
+{
+    str2mask("printable", "PRINTABLE");
+    str2mask("printable_lower", "printable");
+    str2mask("mixed_case", "PrInTaBlE");
+    str2mask("dir", "DIR");
+    str2mask("dir_lower", "dir");
+    str2mask("dir_extra", "DIRX");
+    str2mask("two", "PRINTABLE|IA5");
+    str2mask("three", "PRINTABLE|IA5|T61");
+    str2mask("spaces", "PRINTABLE, IA5");
+    str2mask("leading_sep", "|PRINTABLE");
+    str2mask("trailing_sep", "PRINTABLE|");
+    str2mask("empty", "");
+    str2mask("only_sep", "|");
+    str2mask("unknown", "NOPE");
+    str2mask("unknown_first", "NOPE|PRINTABLE");
+    str2mask("unknown_second", "PRINTABLE|NOPE");
+    str2mask("modifier_exp", "EXP");
+    str2mask("modifier_imp", "IMP");
+    str2mask("modifier_wrap", "SEQWRAP");
+    str2mask("sequence", "SEQUENCE");
+    str2mask("set", "SET");
+    str2mask("null", "NULL");
+    str2mask("bool", "BOOL");
+    str2mask("integer", "INTEGER");
+    str2mask("object", "OID");
+    str2mask("all_strings", "UTF8|BMP|UNIV|T61|IA5|PRINTABLE|NUMERIC");
+    str2mask("dup", "PRINTABLE|PRINTABLE");
+    str2mask("utctime", "UTCTIME");
+    str2mask("gentime", "GENERALIZEDTIME");
+    str2mask("bitstring", "BITSTRING");
+    str2mask("octetstring", "OCTETSTRING");
+    str2mask("teletex", "TELETEXSTRING");
+    str2mask("genstr", "GENSTR");
+    str2mask("visible", "VISIBLE");
+    str2mask("long_name", "PRINTABLESTRING");
+    str2mask("too_long", "PRINTABLESTRINGS");
+    str2mask("lower_dir_prefix", "dir");
+    str2mask("star", "*");
+    str2mask("nbsp", "PTR");
+}
+
 int main(void)
 {
     /*
@@ -1038,6 +1096,7 @@ int main(void)
     part_printers();
     part_strex();
     part_to_utf8();
+    part_str2mask();
     printf("done=1\n");
     return 0;
 }

@@ -208,6 +208,18 @@ HANDED_ON["ASN1_add_oid_module"] = (
     6, "registers a CONF module with CONF_module_add, which Phase 4 handed to "
        "Phase 6 because only the module registry constructs a CONF_MODULE",
 )
+# The two string generators in `asn1_gen.c`. Both take an `X509V3_CTX *` --
+# `x509v3.h`'s structure, Phase 11 -- and `ASN1_generate_nconf` *constructs* one
+# through the `X509V3_set_nconf` macro even on its null-`CONF` path, so neither can
+# be written without that structure. `ASN1_str2mask`, in the same translation unit,
+# depends on nothing outside this stratum and Phase 4, so it is written here.
+HANDED_ON.update({
+    sym: (11, "reads an X509V3_CTX through X509V3_get_string/X509V3_get_section for "
+              "the MULTI form and constructs one with X509V3_set_nconf; X509V3_CTX "
+              "is x509v3.h's and is Phase 11")
+    for sym in ("ASN1_generate_v3", "ASN1_generate_nconf")
+})
+
 HANDED_ON["ASN1_add_stable_module"] = (
     11, "registers a CONF module with CONF_module_add (Phase 6, the module "
         "registry) and its handler parses a section value with "

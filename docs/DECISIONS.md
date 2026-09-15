@@ -3949,3 +3949,68 @@ nothing else, and an address is not.
 `X509_NAME_print_ex` and `X509_NAME_print_ex_fp` are the other half of the same
 translation unit — `do_name_ex` and its field-name handling — and are declared in
 `x509.h`, so they belong to Phase 11. Nothing here is parsed as a name.
+
+## D88 — `ASN1_str2mask` lands, and the two generators are handed on for one structure
+
+`ASN1_str2mask` and the fifty-four-name `asn1_str2tag` table beneath it are in.
+`implemented[libcrypto]` moved 920 → 921 and the stratum's open list 39 → 37.
+Subphase 5.6 is closed.
+
+### Why two of the three exports are handed to Phase 11
+
+`asn1_gen.c` declares three exports and they look alike. They are not:
+
+```c
+ASN1_TYPE *ASN1_generate_nconf(const char *str, CONF *nconf);
+ASN1_TYPE *ASN1_generate_v3(const char *str, X509V3_CTX *cnf);
+int ASN1_str2mask(const char *str, unsigned long *pmask);
+```
+
+The first two take or build an `X509V3_CTX`, which is `x509v3.h`'s and belongs to
+Phase 11. `ASN1_generate_nconf`'s null-`CONF` path looks like the escape — it calls
+`ASN1_generate_v3(str, NULL)` — but the non-null path calls `X509V3_set_nconf`,
+which is a *macro that writes six fields* of the structure, so even reaching the
+function body requires the layout. That is the same shape as `CONF_module_add` in
+D86 and it gets the same treatment: named, with the stratum that owns it, rather
+than half-written.
+
+`ASN1_str2mask` shares nothing with them but the file. Its dependencies are the
+table, `ASN1_tag2bit` (5.1) and `CONF_parse_list` (Phase 4), all of which exist.
+
+### One table, one module
+
+`asn1_str2tag` is used by `ASN1_str2mask` now and by the two generators later, so
+it lives in `src/asn1/asn1_gen.rs` rather than in a private helper beside the
+generator. Fifty-four names is small enough to duplicate and large enough for a
+duplicate to drift, and this project has already had one registry that had to be
+remembered rather than derived.
+
+The table's shape carries one piece of meaning worth naming: the six *modifier*
+names — `EXP`, `IMP`, `OCTWRAP`, `SEQWRAP`, `SETWRAP`, `BITWRAP`, `FORMAT` — do not
+have `V_ASN1_*` values but values at or above `ASN1_GEN_FLAG` (0x10000), and
+`ASN1_str2mask` rejects a name whose tag is in that range with one test. So a mask
+naming `EXP` is refused *by a range test on the shared table*, not by a second list
+of names that must be kept in step with the first.
+
+### The first module in this stratum to need no correction
+
+`RT-ASN1-STR` grew to 5831 observations with thirty-eight `str2mask` cases, and
+they all matched on the first run. Ten of the previous eleven translation units in
+this stratum needed a correction after their court ran; this one did not, and the
+difference is not care — it is that the whole behaviour fits on one screen and can
+be read rather than reconstructed. `ASN1_PRINT_MAX_INDENT` (D86) was a number in a
+file I did not open; `ASN1_str2mask` is six lines.
+
+Worth noting as a caution rather than a virtue: the probe cases were written *from*
+the source, so they encode its branches. Passing on the first run means the
+branches were transcribed correctly, not that a branch is absent. What makes the
+pass meaningful is that the same cases ran against the authority, which is the
+whole point of the method.
+
+### The partial mask, which is the authority's behaviour
+
+`ASN1_str2mask` writes `*pmask = 0` once and then ORs each accepted name in place.
+A refused name returns 0 from the callback and stops the parse *without* clearing
+what the earlier names accumulated, so `"PRINTABLE|NOPE"` answers 0 with a mask
+that still has the printable bit set. The probe checks the mask on both sides of
+that failure, so the residual is measured rather than read.
