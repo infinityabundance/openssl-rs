@@ -61,3 +61,10 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+
+# Scratch material used to splice source in place. Two of these were committed by
+# accident in the Phase 5.3 merge (`forensics/.d2i_head.rs`, `forensics/.d2i_tail.rs`)
+# because they were in the working tree at `git add -A` time. A dot-prefixed file
+# under `forensics/` is never evidence, so the whole shape is excluded rather than
+# the two names.
+/forensics/.*.rs
