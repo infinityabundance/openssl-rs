@@ -540,7 +540,7 @@
     ],
     "implemented_by_two_strata": [],
     "implemented_exports": {
-      "libcrypto": 917,
+      "libcrypto": 920,
       "libssl": 0
     },
     "invariant": "every authority export has exactly one declared owner in forensics/atlas/symbol-ownership.json, and every implemented export's owner is therefore declared before any implementation exists",
@@ -5879,7 +5879,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "1a00021800bc43181a47f76ca202b6462735dee50064216603df077225561857"
+      "sha256": "563f53ea13f432e1f21dfda853f7b3b9a0ea34ad434644205b295cbbff6046b3"
     },
     {
       "name": "authority-symbols",
@@ -5904,17 +5904,17 @@
     {
       "name": "ledger-result",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "e9247382f3a77121e49947dba4858b4fe5615c11cb2e4c4c38eb4dfcf3dc6e03"
+      "sha256": "a362bb4ae2ae69b2985ff23644e7126797a43c8b8200eeb895aa6547fba889fb"
     },
     {
       "name": "ledger-result",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "8f85d5f56be045a30e216a3f1f83806978c1a29867013fa19b25198831efff30"
+      "sha256": "e97d2df962f67fd3d844528283574cff15cad87ffb017f506e87d2a1fa1e968d"
     },
     {
       "name": "ledger-result",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "fc525c6aa3053bebfe9d2ee8d46f88c91f73cd44bc899eee23857c3a64fb9d2f"
+      "sha256": "b5c4f0a470a71803733de82894821ae9145f82007c9a338fc684a2c51c711edd"
     }
   ],
   "kind": "ownership-audit",

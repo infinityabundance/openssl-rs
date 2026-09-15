@@ -742,6 +742,283 @@ static void part_printers(void)
     }
 }
 
+
+/* ------------------------------------------- ASN1_STRING_print_ex and UTF-8 */
+
+static unsigned long flag_cases[] = {
+    0,
+    ASN1_STRFLGS_ESC_2253,
+    ASN1_STRFLGS_ESC_CTRL,
+    ASN1_STRFLGS_ESC_MSB,
+    ASN1_STRFLGS_ESC_QUOTE,
+    ASN1_STRFLGS_ESC_2254,
+    ASN1_STRFLGS_UTF8_CONVERT,
+    ASN1_STRFLGS_IGNORE_TYPE,
+    ASN1_STRFLGS_SHOW_TYPE,
+    ASN1_STRFLGS_DUMP_ALL,
+    ASN1_STRFLGS_DUMP_UNKNOWN,
+    ASN1_STRFLGS_DUMP_DER,
+    ASN1_STRFLGS_DUMP_ALL | ASN1_STRFLGS_DUMP_DER,
+    ASN1_STRFLGS_DUMP_UNKNOWN | ASN1_STRFLGS_DUMP_DER,
+    ASN1_STRFLGS_ESC_2253 | ASN1_STRFLGS_ESC_CTRL,
+    ASN1_STRFLGS_ESC_2253 | ASN1_STRFLGS_ESC_QUOTE,
+    ASN1_STRFLGS_ESC_2253 | ASN1_STRFLGS_ESC_CTRL | ASN1_STRFLGS_ESC_QUOTE,
+    ASN1_STRFLGS_ESC_CTRL | ASN1_STRFLGS_ESC_MSB,
+    ASN1_STRFLGS_ESC_2253 | ASN1_STRFLGS_ESC_MSB,
+    ASN1_STRFLGS_ESC_2254 | ASN1_STRFLGS_ESC_CTRL,
+    ASN1_STRFLGS_RFC2253,
+    ASN1_STRFLGS_RFC2253 | ASN1_STRFLGS_SHOW_TYPE,
+    ASN1_STRFLGS_RFC2253 | ASN1_STRFLGS_IGNORE_TYPE,
+};
+
+/*
+ * `do_dump` builds a stack `ASN1_TYPE` whose `value.ptr` is the `ASN1_STRING`
+ * itself, so with `DUMP_DER` the encoder reinterprets that pointer according to
+ * the string's `type`. For a character type the union member really is the string
+ * and the encoding is the string's own DER. For a type whose content the encoder
+ * reads as a scalar — `BOOLEAN` above all — the "content" is the low bits of a
+ * heap address, so the output differs between two processes running the same code
+ * and cannot be compared. This probe therefore only asks for `DUMP_DER` on the
+ * types where the union member is the string.
+ */
+static int der_comparable(int type)
+{
+    switch (type) {
+    case V_ASN1_UTF8STRING:
+    case V_ASN1_NUMERICSTRING:
+    case V_ASN1_PRINTABLESTRING:
+    case V_ASN1_T61STRING:
+    case V_ASN1_IA5STRING:
+    case V_ASN1_UTCTIME:
+    case V_ASN1_GENERALIZEDTIME:
+    case V_ASN1_ISO64STRING:
+    case V_ASN1_UNIVERSALSTRING:
+    case V_ASN1_BMPSTRING:
+    case V_ASN1_OCTET_STRING:
+        return 1;
+    default:
+        return 0;
+    }
+}
+
+/*
+ * Render `data` as a string of `type` under every flag case, once for the length
+ * (a null sink) and once for the bytes.
+ */
+static void strex(const char *key, int type, const unsigned char *data, int len)
+{
+    size_t i;
+
+    for (i = 0; i < sizeof(flag_cases) / sizeof(flag_cases[0]); i++) {
+        ASN1_STRING *s;
+        BIO *b = BIO_new(BIO_s_mem());
+        char k[160];
+        int measured, rv;
+
+        if ((flag_cases[i] & ASN1_STRFLGS_DUMP_DER) && !der_comparable(type))
+            continue;
+        s = ASN1_STRING_type_new(type);
+        if (len >= 0)
+            ASN1_STRING_set(s, data, len);
+        ERR_clear_error();
+        measured = ASN1_STRING_print_ex(NULL, s, flag_cases[i]);
+        snprintf(k, sizeof(k), "strex.%s.f%zu", key, i);
+        printf("%s.measure=%d\n", k, measured);
+        rv = ASN1_STRING_print_ex(b, s, flag_cases[i]);
+        printf("%s.rv=%d\n", k, rv);
+        printf("%s.same=%d\n", k, rv == measured ? 1 : 0);
+        show_bio(k, b);
+        drain("strex.err");
+        BIO_free(b);
+        ASN1_STRING_free(s);
+    }
+}
+
+static void part_strex(void)
+{
+    static const unsigned char plain[] = "hello";
+    static const unsigned char specials[] = "a b,c+d\"e\\f<g>h;i#j(k)l*m\x00n";
+    static const unsigned char leading_space[] = " x";
+    static const unsigned char trailing_space[] = "x ";
+    static const unsigned char high_bit[] = { 'a', 0x80, 0xe9, 0xff, 'b' };
+    static const unsigned char utf8_euro[] = { 'a', 0xe2, 0x82, 0xac, 'b' };
+    static const unsigned char four_byte[] = { 0xf0, 0x9f, 0x98, 0x80 };
+    static const unsigned char bmp_pair[] = { 0x00, 'A', 0x20, 0xac };
+    static const unsigned char univ_pair[] = { 0, 0, 0, 'A', 0, 0, 0x20, 0xac };
+    static const unsigned char bad_utf8[] = { 0xff, 0x41 };
+    static const unsigned char empty[] = "";
+
+    strex("printable", V_ASN1_PRINTABLESTRING, plain, 5);
+    strex("ia5_specials", V_ASN1_IA5STRING, specials, (int)sizeof(specials) - 1);
+    strex("ia5_leading_space", V_ASN1_IA5STRING, leading_space, 2);
+    strex("ia5_trailing_space", V_ASN1_IA5STRING, trailing_space, 2);
+    strex("empty", V_ASN1_IA5STRING, empty, 0);
+    strex("high_bit", V_ASN1_IA5STRING, high_bit, (int)sizeof(high_bit));
+    strex("numeric", V_ASN1_NUMERICSTRING, (const unsigned char *)"12 34", 5);
+    strex("t61", V_ASN1_T61STRING, high_bit, (int)sizeof(high_bit));
+    strex("utctime", V_ASN1_UTCTIME, (const unsigned char *)"200101000000Z", 13);
+    strex("utf8", V_ASN1_UTF8STRING, utf8_euro, (int)sizeof(utf8_euro));
+    strex("utf8_four_byte", V_ASN1_UTF8STRING, four_byte, (int)sizeof(four_byte));
+    strex("utf8_bad", V_ASN1_UTF8STRING, bad_utf8, (int)sizeof(bad_utf8));
+    strex("utf8_empty", V_ASN1_UTF8STRING, empty, 0);
+    strex("bmp", V_ASN1_BMPSTRING, bmp_pair, (int)sizeof(bmp_pair));
+    strex("bmp_odd", V_ASN1_BMPSTRING, (const unsigned char *)"\x00", 1);
+    strex("univ", V_ASN1_UNIVERSALSTRING, univ_pair, (int)sizeof(univ_pair));
+    strex("univ_bad_len", V_ASN1_UNIVERSALSTRING, (const unsigned char *)"\x00\x00\x00", 3);
+    /* Types that are not character strings at all, and the boundaries of the
+     * table: -1, 0, 1, 4, 21, 25, 27, 29, 30 and 31. */
+    strex("octet", V_ASN1_OCTET_STRING, (const unsigned char *)"\x01\x02\x03", 3);
+    strex("boolean", V_ASN1_BOOLEAN, (const unsigned char *)"\x01", 1);
+    strex("type_minus_one", -1, (const unsigned char *)"ab", 2);
+    strex("type_zero", 0, (const unsigned char *)"ab", 2);
+    strex("type_one", 1, (const unsigned char *)"ab", 2);
+    strex("type_21", 21, (const unsigned char *)"ab", 2);
+    strex("type_25", 25, (const unsigned char *)"ab", 2);
+    strex("type_27", 27, (const unsigned char *)"ab", 2);
+    strex("type_29", 29, (const unsigned char *)"ab", 2);
+    strex("type_30", 30, (const unsigned char *)"ab", 2);
+    strex("type_31", 31, (const unsigned char *)"ab", 2);
+
+    /* Every byte, as a one-byte IA5String, under RFC2253 and under ESC_MSB
+     * alone: this is the observation that pins `char_type[]` and the high-bit
+     * branch together. */
+    {
+        unsigned char one[2];
+        char key[32];
+        int c;
+
+        for (c = 0; c < 256; c++) {
+            ASN1_STRING *s;
+            BIO *b = BIO_new(BIO_s_mem());
+            char buf[64];
+            int rv, n;
+
+            one[0] = (unsigned char)c;
+            one[1] = 0;
+            s = ASN1_STRING_type_new(V_ASN1_IA5STRING);
+            ASN1_STRING_set(s, one, 1);
+            ERR_clear_error();
+            rv = ASN1_STRING_print_ex(b, s, ASN1_STRFLGS_RFC2253);
+            n = BIO_read(b, buf, (int)sizeof(buf) - 1);
+            if (n < 0)
+                n = 0;
+            buf[n] = '\0';
+            snprintf(key, sizeof(key), "byte.%02x", c);
+            printf("%s.rv=%d\n", key, rv);
+            text(key, (const unsigned char *)buf, n);
+            BIO_free(b);
+
+            b = BIO_new(BIO_s_mem());
+            rv = ASN1_STRING_print_ex(b, s, ASN1_STRFLGS_ESC_MSB);
+            printf("%s.msb=%d\n", key, rv);
+            n = BIO_read(b, buf, (int)sizeof(buf) - 1);
+            if (n < 0)
+                n = 0;
+            text(key, (const unsigned char *)buf, n);
+            BIO_free(b);
+
+            b = BIO_new(BIO_s_mem());
+            rv = ASN1_STRING_print_ex(b, s, ASN1_STRFLGS_ESC_QUOTE);
+            printf("%s.quote=%d\n", key, rv);
+            n = BIO_read(b, buf, (int)sizeof(buf) - 1);
+            if (n < 0)
+                n = 0;
+            text(key, (const unsigned char *)buf, n);
+            BIO_free(b);
+
+            ASN1_STRING_free(s);
+            ERR_clear_error();
+        }
+    }
+
+    /* The FILE sink, which is a separate callback over the same core. */
+    {
+        ASN1_STRING *s = ASN1_STRING_type_new(V_ASN1_IA5STRING);
+        FILE *fp = tmpfile();
+        char buf[64];
+        int n, rv;
+
+        ASN1_STRING_set(s, "a b,c", 5);
+        rv = ASN1_STRING_print_ex_fp(fp, s, ASN1_STRFLGS_RFC2253);
+        printf("fp.rv=%d\n", rv);
+        fflush(fp);
+        rewind(fp);
+        n = (int)fread(buf, 1, sizeof(buf) - 1, fp);
+        if (n < 0)
+            n = 0;
+        buf[n] = '\0';
+        printf("fp.len=%d\n", n);
+        text("fp", (const unsigned char *)buf, n);
+        fclose(fp);
+
+        /* A null FILE is the counting form, like a null BIO. */
+        printf("fp.null=%d\n",
+               ASN1_STRING_print_ex_fp(NULL, s, ASN1_STRFLGS_RFC2253));
+        ASN1_STRING_free(s);
+        ERR_clear_error();
+    }
+}
+
+static void utf8_of(const char *key, int type, const unsigned char *data, int len)
+{
+    ASN1_STRING *s = ASN1_STRING_type_new(type);
+    unsigned char *out = NULL;
+    int rv;
+
+    if (len >= 0)
+        ASN1_STRING_set(s, data, len);
+    ERR_clear_error();
+    rv = ASN1_STRING_to_UTF8(&out, s);
+    printf("toutf8.%s.rv=%d\n", key, rv);
+    hex(key, out, rv > 0 ? rv : 0);
+    drain("toutf8.err");
+    OPENSSL_free(out);
+    ASN1_STRING_free(s);
+}
+
+static void part_to_utf8(void)
+{
+    static const unsigned char ascii[] = "hello";
+    static const unsigned char high_bit[] = { 'a', 0xe9, 'b' };
+    static const unsigned char utf8_euro[] = { 'a', 0xe2, 0x82, 0xac, 'b' };
+    static const unsigned char utf8_four[] = { 0xf0, 0x9f, 0x98, 0x80 };
+    static const unsigned char bmp_pair[] = { 0x00, 'A', 0x20, 0xac };
+    static const unsigned char univ_pair[] = { 0, 0, 0, 'A', 0, 0, 0x20, 0xac };
+    static const unsigned char bad_utf8[] = { 0xff };
+
+    utf8_of("printable", V_ASN1_PRINTABLESTRING, ascii, 5);
+    utf8_of("ia5", V_ASN1_IA5STRING, ascii, 5);
+    utf8_of("t61_high", V_ASN1_T61STRING, high_bit, 3);
+    utf8_of("numeric", V_ASN1_NUMERICSTRING, (const unsigned char *)"12 34", 5);
+    utf8_of("utctime", V_ASN1_UTCTIME, (const unsigned char *)"200101000000Z", 13);
+    utf8_of("generic_time", V_ASN1_GENERALIZEDTIME,
+            (const unsigned char *)"20200101000000Z", 15);
+    utf8_of("utf8_euro", V_ASN1_UTF8STRING, utf8_euro, 5);
+    utf8_of("utf8_four", V_ASN1_UTF8STRING, utf8_four, 4);
+    utf8_of("utf8_bad", V_ASN1_UTF8STRING, bad_utf8, 1);
+    utf8_of("bmp", V_ASN1_BMPSTRING, bmp_pair, 4);
+    utf8_of("univ", V_ASN1_UNIVERSALSTRING, univ_pair, 8);
+    utf8_of("empty", V_ASN1_IA5STRING, (const unsigned char *)"", 0);
+    utf8_of("octet", V_ASN1_OCTET_STRING, (const unsigned char *)"\x01", 1);
+    utf8_of("boolean", V_ASN1_BOOLEAN, (const unsigned char *)"\x01", 1);
+    utf8_of("null_in", V_ASN1_IA5STRING, NULL, -1);
+
+    /* The null input, and the two type boundaries. */
+    {
+        unsigned char *out = NULL;
+        ASN1_STRING *s = ASN1_STRING_type_new(V_ASN1_IA5STRING);
+        char *p = (char *)"x";
+
+        printf("toutf8.null_in=%d\n", ASN1_STRING_to_UTF8(&out, NULL));
+        printf("toutf8.null_out_ptr=%d\n", out == NULL ? 1 : 0);
+        (void)p;
+        ASN1_STRING_free(s);
+        ERR_clear_error();
+    }
+    utf8_of("type_31", 31, (const unsigned char *)"ab", 2);
+    utf8_of("type_minus_one", -1, (const unsigned char *)"ab", 2);
+}
+
 int main(void)
 {
     /*
@@ -759,6 +1036,8 @@ int main(void)
     part_mbstring();
     part_string_table();
     part_printers();
+    part_strex();
+    part_to_utf8();
     printf("done=1\n");
     return 0;
 }

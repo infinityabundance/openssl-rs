@@ -10,7 +10,9 @@
 #     over its four input and four output encodings with its two size limits, the
 #     28-row per-NID string table with the runtime stack that shadows it and the
 #     global mask's STABLE_NO_MASK exemption, the five spellings of
-#     ASN1_STRING_set_default_mask_asc, and the two number printers
+#     ASN1_STRING_set_default_mask_asc, the two number printers, and the escaping
+#     printer ASN1_STRING_print_ex over twenty-three flag sets and every one of the
+#     256 byte values, with ASN1_STRING_to_UTF8 over each character type
 #
 # The same source is compiled against the admitted authority and against the
 # candidate, each side executes its own binary, and FRF compares the

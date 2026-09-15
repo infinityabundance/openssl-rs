@@ -146,7 +146,9 @@ COURTS: list[tuple[str, int, str, str]] = [
      "over its four input and four output encodings with its two size limits, the\n"
      "28-row per-NID string table with the runtime stack that shadows it and the\n"
      "global mask's STABLE_NO_MASK exemption, the five spellings of\n"
-     "ASN1_STRING_set_default_mask_asc, and the two number printers"),
+     "ASN1_STRING_set_default_mask_asc, the two number printers, and the escaping\n"
+     "printer ASN1_STRING_print_ex over twenty-three flag sets and every one of the\n"
+     "256 byte values, with ASN1_STRING_to_UTF8 over each character type"),
 ]
 
 

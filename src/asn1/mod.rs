@@ -43,6 +43,7 @@ pub mod a_dup;
 pub mod a_i2d_fp;
 pub mod a_mbstr;
 pub mod a_print;
+pub mod a_strex;
 pub mod a_strnid;
 pub mod a_type;
 pub mod a_utf8;

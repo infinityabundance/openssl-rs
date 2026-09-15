@@ -57,7 +57,9 @@ const OBJ_BUF: usize = 80;
 
 /// Write one octet as two uppercase hex digits. Returns 2, the count the callers
 /// add to their own.
-fn to_hex(out: &mut [u8; 2], n: u8) {
+/// `ossl_to_hex`'s digit table. Uppercase, as the authority's is.
+#[inline]
+pub(crate) fn to_hex(out: &mut [u8; 2], n: u8) {
     out[0] = HEX_DIGITS[(n >> 4) as usize];
     out[1] = HEX_DIGITS[(n & 0x0f) as usize];
 }
