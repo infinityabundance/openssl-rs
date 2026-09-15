@@ -200,6 +200,21 @@ HANDED_ON.update({
     for sym in ("ASN1_item_sign_ex", "ASN1_item_verify_ex")
 })
 
+# Two CONF modules that `asn1.h` declares. They are registered with
+# `CONF_module_add`, which Phase 4 handed to Phase 6 because only the module
+# registry constructs a `CONF_MODULE` -- so neither can be written before that
+# registry exists, whatever the ASN.1 stratum owns.
+HANDED_ON["ASN1_add_oid_module"] = (
+    6, "registers a CONF module with CONF_module_add, which Phase 4 handed to "
+       "Phase 6 because only the module registry constructs a CONF_MODULE",
+)
+HANDED_ON["ASN1_add_stable_module"] = (
+    11, "registers a CONF module with CONF_module_add (Phase 6, the module "
+        "registry) and its handler parses a section value with "
+        "X509V3_parse_list (Phase 11); the later of the two dependencies is the "
+        "binding one",
+)
+
 # D73's hand-offs, which are dispositions by *behaviour* rather than by declaring
 # header. `asn1.h` and `pem.h` declare all of these, which is the rule the ownership
 # atlas applies, so the atlas gives them to this stratum; what they need is a

@@ -3806,3 +3806,86 @@ caller can drive into overflow, which is undefined upstream. The crate builds wi
 the overflow boundary is *a* value rather than a panic that would abort the caller's process.
 D-TIME-2 in `docs/SECURITY_DIVERGENCE_POLICY.md` records that, and the four calls that fault
 upstream on a null argument (D-TIME-1) answer the documented failure value instead.
+
+## D86 — The string surface lands, and a Phase-3 refusal turns out to be wrong
+
+Subphase 5.6 is 14 exports in: `a_print.c` (3), `a_mbstr.c` (2), `a_strnid.c` (7) and
+`t_pkey.c` (2). `implemented[libcrypto]` moved 903 → 917 and the stratum's open list
+58 → 42. `RT-ASN1-STR` is new: 581 observations, and it found three things.
+
+### The constant I recalled instead of reading
+
+`ASN1_PRINT_MAX_INDENT` is **128**. I wrote `80`, taken from the ASCII line width
+rather than from `t_pkey.c`, and the court found it on the first run: with an indent of
+81 the authority writes 81 spaces where the candidate wrote 80, two octets short over a
+two-line buffer. This is the transcription defect class D33 names, in its purest form —
+a number that looked plausible, was never regenerated from anything, and had nothing to
+notice it going stale. The constant now quotes the file it came from, and the probe
+carries indent values on both sides of the clamp (80, 81) so the boundary is measured
+rather than assumed.
+
+### `MASK:` with nothing after it
+
+`ASN1_STRING_set_default_mask_asc("MASK:")` is an argument error in the authority, and
+the test is `if (*p == '\0') return 0;` immediately after the prefix is consumed. I
+accepted it, reasoning that `strtoul("")` answers 0 and `*end` is then the NUL. Both of
+those are true and neither is the point: the authority rejects the *empty remainder*
+before `strtoul` runs. The general shape is worth recording — a check that exists to
+exclude an input the subsequent parse would accept anyway looks redundant while you are
+reading it and is invisible when you skip it.
+
+### A Phase-3 decision, superseded
+
+`OPENSSL_INIT_LOAD_CONFIG` was on the Phase-3 `INIT_UNSUPPORTED` list: "reads
+`openssl.cnf` and applies it", which is not a no-op, so refusing it with
+`ERR_R_INIT_FAIL` was the honest choice while nothing called it.
+
+`ASN1_STRING_TABLE_get` calls it. Its first line after the NID check is
+`OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, NULL)`, guarded by
+`#ifndef OPENSSL_NO_AUTOLOAD_CONFIG`, which is not defined on this profile — so the
+call is made on *every* lookup. The court showed the whole string table raising
+`init fail` on the candidate where the authority raises nothing.
+
+The refusal's premise was incomplete rather than wrong. The authority's config step is
+
+```c
+ossl_config_int(NULL)  ->  CONF_modules_load_file_ex(global_default, NULL, NULL,
+                                                     DEFAULT_CONF_MFLAGS)
+```
+
+and `DEFAULT_CONF_MFLAGS` is `CONF_MFLAGS_DEFAULT_SECTION | CONF_MFLAGS_IGNORE_MISSING_FILE`.
+A missing config file is therefore **not** an error upstream; the step succeeds having
+loaded nothing. That is the observable answer on any profile with no default config
+file, and it is the answer the court measured. So the flag is now accepted and the step
+is a no-op that succeeds, and the part that genuinely needs a subsystem that does not
+exist — applying a config file that *does* exist, which needs `OSSL_LIB_CTX` and the
+module registry, both Phase 6 — is recorded rather than pretended.
+
+Two things about that are worth keeping:
+
+* Refusal and silence are not the only two options. The third — accept, do the part that
+  is provable, and record the remainder — is the one that matches the authority on the
+  profiles actually observed, and it is the one this decision takes.
+* The Phase-3 unit test that enumerated the refused options has been narrowed by exactly
+  one case. It is the same shape as D7's supersession: the *decision* was sound for what
+  it knew, an observation moved, and the observation lives in the derived evidence rather
+  than in this file.
+
+### Two exports handed on rather than written
+
+`ASN1_add_oid_module` and `ASN1_add_stable_module` are each four lines that register a
+CONF module. `CONF_module_add` is Phase 6 — Phase 4 handed it there on the ground that
+only the module registry constructs a `CONF_MODULE` — so neither can be written before
+that registry exists. They are handed to Phase 6 and Phase 11 respectively, by the same
+mechanism as the eleven RAND-dependent `BN_*` exports: a *dependency*, named, with the
+stratum that owns it.
+
+### Where the stack lives
+
+`stable` is an `AtomicPtr`, not the authority's bare `static` pointer. The authority's
+own comment on the sort it performs is "Ideally, this would be done under lock", so its
+thread-safety is not a property being reproduced either way; an `AtomicPtr` keeps the
+observable contract (one process-global stack, sorted before each search) while avoiding
+a mutable static. The comparator is the *typed-stack* form — its arguments are the
+addresses of the slots, so it dereferences twice — which is why the standard table's
+`bsearch` comparator is a separate function: it receives element addresses instead.

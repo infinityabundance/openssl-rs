@@ -138,6 +138,15 @@ COURTS: list[tuple[str, int, str, str]] = [
      "`YYYY`->`YY` shortening, the four constructors and their year-window choice,\n"
      "the Julian-day diff and compare answers, the three printer formats, the\n"
      "duplicates and the two in-place converters"),
+    ("rt-asn1-str", 5, "rt_asn1_str_probe",
+     "the string classification, table and printing surface: which of\n"
+     "PrintableString/IA5String/T61String a buffer fits in, the four-byte-per-\n"
+     "character narrowing, the raw printer's 80-octet blocking measured through a\n"
+     "write callback that records the chunk lengths, the mask-narrowing classifier\n"
+     "over its four input and four output encodings with its two size limits, the\n"
+     "28-row per-NID string table with the runtime stack that shadows it and the\n"
+     "global mask's STABLE_NO_MASK exemption, the five spellings of\n"
+     "ASN1_STRING_set_default_mask_asc, and the two number printers"),
 ]
 
 
