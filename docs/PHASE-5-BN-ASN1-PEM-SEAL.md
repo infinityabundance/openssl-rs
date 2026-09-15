@@ -1,389 +1,234 @@
 # Phase 5 — `BIGNUM`, ASN.1 and PEM: seal
 
-**STATUS: IN PROGRESS.** This document is opened while the stratum is under way, and
-its status line is the only place in the repository that says so: the derived state
-in `forensics/phase-state.json` is computed from the artefacts named below and never
-typed. Phase 5's `BN_*` surface is closed — every one of its 201 exports is either
-implemented or handed to a named later stratum — and its two other families are not:
-ASN.1 (280 exports) and PEM (38) are entirely open.
+**STATUS: COMPLETE.** Every export this stratum owns is either implemented and
+observed by a differential court, or handed to a named later stratum with the
+dependency it is waiting on. The claim is derived, not typed: `open_in_this_stratum`
+in `forensics/phase5-obligations.json` is zero, `forensics/phase-state.json` reads
+`complete`, and both are produced by the generators in `forensics/tools/`.
 
-This is **not** a claim that openssl-rs is a usable OpenSSL. All 603 `libssl` exports
-and 5,271 `libcrypto` exports are still `SCAFFOLDED` and abort when called.
+This is **not** a claim that openssl-rs is a usable OpenSSL. 932 `libcrypto` exports
+are implemented; the remaining 4,964 `libcrypto` exports and all 603 `libssl` exports
+are still `SCAFFOLDED` and abort when called.
 
 - Authority: `openssl-3.6.4-production` (with `openssl-3.6.3-historical` admitted for
   the oracle-versus-oracle trajectory in `docs/SECURITY_DIVERGENCE_POLICY.md`)
-- Court results: `artifacts/phase5/COURTS.json` (1 court, 650 observations, 0 residuals)
-- Obligation ledger: `forensics/phase5-obligations.json` (1,099 exports covered by the
-  stratum's families: 170 implemented, 611 handed to later strata by declaring header
-  or by dependency, **318 open**)
+- Court results: `artifacts/phase5/COURTS.json` — 9 courts, 9,669 observations, 0
+  residuals, `all_pass` true
+- Obligation ledger: `forensics/phase5-obligations.json` — 565 exports owned,
+  **474 implemented**, 91 handed on, **0 open**
 - Derived state: `forensics/phase-state.json`
 
 ## 1. What this phase owns, and how that was decided
 
-Phase 5 owns 513 of the authority's exports. That number is not typed. It is derived
-by `forensics/tools/phase5_obligations.py` from the Phase 1 atlas under one stated
-rule: **a symbol belongs to the stratum that owns the header that declares it**.
-`d2i_X509` and `d2i_ASN1_INTEGER` look alike and belong to different strata, and the
-name cannot separate them; the declaring header can. `pem.h` is the one header whose
-exports are not a module, so the tool resolves those by the type in the symbol's name
-and fails closed on a name it cannot resolve.
+Phase 5's scope is derived by `forensics/tools/phase5_obligations.py` from the Phase 1
+atlas under one stated rule: **a symbol belongs to the stratum that owns the header
+that declares it**. `d2i_X509` and `d2i_ASN1_INTEGER` look alike and belong to
+different strata, and the name cannot separate them; the declaring header can.
+`pem.h` is the one header whose exports are not a module, so the tool resolves those
+by the type in the symbol's name.
 
-The same tool hands 580 further candidates to the strata that own their headers
-(Phase 7: 23 `evp.h`; Phase 8: 58 `dsa.h`/`dh.h`/`rsa.h`/`ec.h`; Phase 10: 12
-`pkcs12.h`; Phase 11: 346 `x509*.h`; Phase 12: 141 `cms.h`/`ocsp.h`/`ts.h`/`pkcs7.h`/
-`crmf.h`/`cmp.h`/`ess.h`/`ct.h`), each with that header recorded as the reason. Those
-are hand-offs, not omissions, and they are subtracted rather than counted.
+The rule has now been applied in both directions, and both directions have caught a
+real loss. D49 and D51 record the first: `a2d_ASN1_OBJECT` and the eleven `crypto/o_str.c`
+exports matched no stratum's prefixes, so they were invisible to every obligation
+table at once. D92 records the second, which is the same error one level further out:
+`SMIME_crlf_copy` and `i2d_ASN1_bio_stream` were handed to Phase 12 on the reason
+"operates over CMS and PKCS#7; asn_mime.c" — a statement about a *file*. The
+declaring-header rule always gave them to this stratum, and their only dependencies
+(`BIO_f_buffer`, `strip_eol`) were present. A hand-off whose reason is a file name
+cannot be checked; one whose reason is a subsystem can.
 
-| module | exported symbols | implemented | handed on |
+| module | owned | implemented | handed on |
 |---|---|---|---|
-| `src/bn/` | 201 (plus the six Phase 4 hand-offs counted under `src/asn1/`) | 170 | 31 |
-| `src/asn1/` | 280 (274 declared in `asn1.h`/`asn1t.h`, plus six BIO-to-ASN.1 hand-offs) | 0 | 0 |
-| `src/pem/` | 38 | 0 | 0 |
+| `src/asn1/` | 393 | 302 | 91 |
+| `src/bn/` | 170 | 170 | 0 |
+| `src/pem/` | 2 | 2 | 0 |
+| **total** | **565** | **474** | **91** |
 
-The other 580 hand-offs are decided by the declaring header: 23 to Phase 7 (`evp.h`),
-58 to Phase 8 (`dsa.h`, `dh.h`, `rsa.h`, `ec.h`), 12 to Phase 10 (`pkcs12.h`), 346 to
-Phase 11 (`x509.h`, `x509v3.h`, `x509_acert.h`) and 141 to Phase 12 (`cms.h`,
-`ocsp.h`, `ts.h`, `pkcs7.h`, `crmf.h`, `cmp.h`, `ess.h`, `ct.h`).
+The 91 hand-offs name the subsystem each is waiting on rather than the file it lives
+in: 1 to Phase 6 (`OSSL_LIB_CTX`), 26 to Phase 7 (the EVP codec — `EVP_ENCODE_CTX`,
+`EVP_CIPHER`, `EVP_MD_CTX`, `EVP_PKEY`, `BIO_f_base64`), 31 to Phase 9 (`RAND`),
+16 to Phase 10 (PKCS#8 and the `b2i_*`/`i2b_*` readers), 10 to Phase 11 (`X509_REQ`,
+`X509_INFO`, the `X509_ALGOR` set), 7 to Phase 12 (`asn_mime.c`'s MIME reader and
+writer, and the `asn1_item_list.h` enumeration). `ownership_audit.py` reconciles each
+edge against the deferring stratum, so nothing is counted twice and nothing falls
+between two strata.
 
 ## 2. What has been built
 
-| subsystem | what it is |
+| module | what it is |
 |---|---|
-| `limbs` | pure limb arithmetic — add, subtract, compare, multiply, shift, divide, remainder, GCD, modular inverse — with no FFI and no OpenSSL types. The part that must be provably right, and the only part testable without an authority. |
-| `bignum` | the opaque `BIGNUM`: lifetime, predicates, flags, the constant-time flag surface, and the byte/string conversions (`BN_bin2bn` and its signed, little-endian and native relatives; `BN_bn2bin`, `_binpad`, `_lebinpad`, `_mpi`, `_hex`, `_dec`; the five parsers). |
-| `arith` | the `BN_*` arithmetic entry points: add/subtract/multiply/square in both signed and unsigned forms, the word family, division and remainder with the authority's sign rules, the `mod` family including the `_quick` variants, shifts, masking, exponentiation (plain, modular, simple), GCD/coprimality, modular inverse and Tonelli–Shanks `BN_mod_sqrt`. |
-| `mont` | `BN_MONT_CTX` and the Montgomery arithmetic over it: `set`/`copy`/`set_locked`, the two conversions, the multiply, and the five exponentiation entry points with their odd-modulus requirement. |
-| `recp` | `BN_RECP_CTX` and reciprocal division: `set`, `BN_reciprocal`, `BN_div_recp`, `BN_mod_mul_reciprocal`, `BN_mod_exp_recp`. |
-| `primes` | the thirteen named primes: the five `BN_get0_nist_prime_*` static objects (cached so two calls answer the same pointer) and the eight `BN_get_rfc*_prime_*` duplicating forms. The values are in `prime_data.rs`, generated from the authority. |
-| `nist` | `BN_nist_mod_*` and `BN_nist_mod_func`. |
-| `kron` | `BN_kronecker`. |
-| `blinding` | `BN_BLINDING`: `new`/`free`, the flag and thread surface, the lock, and `invert`/`invert_ex`. |
-| `gf2m` | the fifteen `BN_GF2m_*` entry points: addition, the two array conversions, and reduction, multiplication, squaring, exponentiation, inversion and division in `GF(2)[x]/(p)`, each in both its `_arr` and non-`_arr` spelling. |
-| `ctx` | `BN_CTX`, its bracket stack and its temporary pool, and the `BN_GENCB` callback object. |
+| `bn/limbs` | pure limb arithmetic — add, subtract, compare, multiply, shift, divide, remainder, GCD, modular inverse — with no FFI and no OpenSSL types. |
+| `bn/bignum` | the opaque `BIGNUM`: lifetime, predicates, flags, the constant-time surface, and every byte and string conversion. |
+| `bn/arith`, `mont`, `recp`, `nist`, `kron`, `blinding`, `gf2m`, `ctx` | the `BN_*` entry points: arithmetic, Montgomery, reciprocal division, the NIST reductions, Kronecker, blinding, `GF(2)[x]`, `BN_CTX` and `BN_GENCB`. |
+| `asn1/der` | the DER header codec: `ASN1_get_object`, `ASN1_put_object`, `ASN1_object_size`, `ASN1_tag2bit`, `ASN1_tag2str` and the two parsers. |
+| `asn1/string`, `prim`, `bitstr`, `typ`, `items` | `ASN1_STRING` and its fifteen types, the `ASN1_INTEGER`/`ASN1_ENUMERATED` family with its two's-complement codec, `ASN1_BIT_STRING`, `ASN1_OBJECT`, `ASN1_NULL`, `ASN1_PCTX`/`ASN1_SCTX`, and the 40 `*_it()` descriptors. |
+| `asn1/d2i`, `i2d`, `fre`, `new`, `utl` | the shared decoder, encoder, free path, allocator and template support: the four `itype` arms, `CHOICE`, `ANY DEFINED BY`, `EMBED`, the `SET OF`/`SEQUENCE OF` writers, the `ASN1_ENCODING` cache and the reference count. |
+| `asn1/text`, `time`, `a_print`, `a_mbstr`, `a_strex`, `a_strnid`, `a_utf8`, `t_pkey` | the text writers, the time family and the three `crypto/o_time.c` calendar symbols, the string classifiers, the mask-narrowing converter, the escaping printer, the per-NID string table, the UTF-8 codec and the two number printers. |
+| `asn1/a_d2i_fp`, `a_i2d_fp`, `a_dup`, `asn_pack`, `a_type`, `evp_asn1`, `x_long`, `x_int64`, `x_bignum`, `asn1_gen`, `bio_asn1`, `asn_mime`, `tasn_prn` | the FILE/BIO bridges, `ASN1_dup`, `ASN1_item_pack`, the `ASN1_TYPE` operations, the four `ASN1_TYPE` octet-string pairs, the twelve primitive-hook items, `ASN1_generate_v3`, the ASN.1 filter BIO and the NDEF bridge, `asn_mime.c`'s copying half, and the structural printer. |
+| `pem/pem_lib` | the two `pem.h` exports that need nothing but `BIO_snprintf`: `PEM_proc_type` and `PEM_dek_info`. |
+| `runtime/err_sites` | 632 generated authority `ERR_raise` coordinates, including the `crypto/x509/v3_utl.c` and `crypto/asn1/asn_mime.c` sites a Phase 5 export can reach. |
 
 ## 3. The evidence
 
-The court is a C probe compiled twice — once against the admitted authority's headers
+Each court is a C probe compiled twice — once against the admitted authority's headers
 and library, once against the candidate's generated headers and `artifacts/phase2` —
 run on the same machine, and diffed line by line on `key=value` so one divergence
 produces exactly one residual instead of shifting every following line.
 
-| court | observations | what it compares |
+| court | observations | what it covers |
 |---|---|---|
-| `RT-BN` | 650 | the observable surface of the opaque `BIGNUM`: the values read back through the conversions, the sign, the bit length, the predicate answers, the return classes, the error queue after a failure, and the division identity `a == b*q + r` checked in the probe itself so both sides are held to the same property. Also the Montgomery round trip and its even-modulus refusals, reciprocal division against `BN_div`, the thirteen named primes in full, the five NIST reducers and the value-based selector, the Kronecker symbol over sign combinations, and the blinding context's ownership and failing paths. Also all fifteen `BN_GF2m_*` entry points, whose `_arr` and non-`_arr` routes are compared with each other, whose results are checked against the field identities (`a * a^-1 == 1`, `(a/b) * b == a`) and whose invalid-modulus failures are compared with their error coordinates. Also `BN_GENCB`: registration through both the new-style and the deprecated function, which of them `BN_GENCB_call` reaches, the answer it gives in each state, the arguments the callback is handed, and `BN_GENCB_get_arg` across a replacement (D74). |
+| `RT-BN` | 650 | the observable `BIGNUM`: values through the conversions, sign, bit length, predicates, return classes, the error queue after a failure, and the division identity `a == b*q + r`. |
+| `RT-ASN1` | 1,403 | the DER header decoder over every boundary, the two's-complement codec, the string layer, the object layer, the text writers and the two parsers. |
+| `RT-ASN1-TEMPLATE` | 100 | the template interpreter over a caller-built descriptor: `EMBED`, `OPTIONAL`, `CHOICE`, the `SET OF` canonical ordering, the twelve primitive-hook items, and the two `ASN1_TYPE` octet-string pairs. |
+| `RT-ASN1-TIME` | 1,071 | the time family: both RFC 5280 syntaxes, the two type guards, the offset, the RFC 5280 profile, the four constructors, the calendar arithmetic, the diff-and-compare answers and the three printer formats. |
+| `RT-ASN1-STR` | 5,831 | the string classification, the four-byte-per-character narrowing, the raw printer's 80-octet blocking, the mask-narrowing converter, the per-NID string table, the mask spellings and `ASN1_STRING_print_ex` over 23 flag sets and all 256 byte values. |
+| `RT-ASN1-PRINT` | 275 | `ASN1_item_print` over every arm of its `itype` switch, including the `EMBED` re-addressing pinned at three values and the twenty-space indent blocks measured through a short-count sink. |
+| `RT-BIO-ASN1` | 114 | the ASN.1 filter BIO as a write state machine, its prefix/suffix runs and callbacks, the four prefix/suffix controls, and `BIO_new_NDEF` over a caller-declared streaming item. |
+| `RT-ASN1-MIME` | 188 | `SMIME_crlf_copy` under every flag combination, the buffering filter measured by logging each sink write, and `i2d_ASN1_bio_stream` with and without `SMIME_STREAM`. |
+| `RT-PEM` | 37 | the two `pem.h` header formatters, including the conditional newline as the `PEM_BUFSIZE` buffer fills. |
 
-The probe drives *shapes* rather than one example each: zero, one, a single limb, a
-limb boundary, two limbs, a value with the top bit set, and negatives of those, plus
-every division sign combination.
+## 4. What the courts found
 
-## 4. What the first court found
+Every section of this stratum was corrected by its own court, and the corrections are
+the reason the courts exist rather than a by-product of them.
 
-The probe's first run failed on `stage=authority-run` with a segmentation fault. That
-was the probe, not the implementation, and the tenth time in this project that the
-probe has been the suspect: `BN_free` does not clear the caller's pointer, and the
-probe reused a freed `BIGNUM` slot through `BN_asc2bn(&a, ...)`. Clearing the slot
-turned a crash into 45 residuals.
+| decision | what the court found |
+|---|---|
+| D76 | A pre-decrement where the authority writes `if (max-- < 1)`, which rejected every object whose length was the last readable byte; two raise reasons that had been **typed rather than read** (`102`/`116`, not `101`/`127`); and `asn1_parse2` answering `1` for a failed parse. |
+| D77 | Two defects in what D76 had landed — an unconditional free the authority makes conditional, and an `ASN1_R_TOO_SMALL` check that was absent — plus an ownership contract: a failed decode **frees the caller's value and nulls the caller's slot**. |
+| D78 | `ASN1_ANY_it` and its siblings are exported but declared by no installed header, so the ownership atlas had to resolve them by name rather than by declaration. |
+| D85 | `ASN1_TIME_print` calling the internal three-valued printer answered `-1` where the authority answers `0`, and only the public entry point could show it. |
+| D86 | `ASN1_PRINT_MAX_INDENT` is **128**, not the 80 a plausible reading suggests — a constant recalled instead of read (the D33 class). |
+| D87 | A `DUMP_DER` comparison of a non-character `ASN1_TYPE` contains a heap address and is not comparable; the probe was restricted to comparable types. |
+| D88 | `ASN1_STRING_set_default_mask_asc("MASK:")` is refused by the authority before `strtoul` sees the empty remainder. |
+| D89 | The three-call setup test of `BIO_new_NDEF`, rewritten as `setup * (cond <= 0)`, inverted the answer and produced a double free. Six lines transcribed would have been right. |
+| D90 | `asn1_template_print_ctx` re-addresses an `EMBED` field through a local; the authority declares that local at function scope and the first version declared it inside the branch that fills it, so the pointer outlived its slot and the field printed a constant that was independent of its value. |
+| D92 | `i2d_ASN1_bio_stream`'s unwind loop does not terminate in the authority when the streaming callback answers a BIO outside the chain back to `out`; the first version of the probe hung and the authority run had to be killed by the harness timeout. |
 
-Those 45 residuals were real, and they are the reason this court exists. Every one was
-a behaviour that a plausible reading of the API would have got wrong:
+Three of those are worth generalising, because they are not about the code they
+corrected. D86 is a constant recalled instead of read. D89 is the authority's own
+lines rewritten into something tidier. D90 is a C idiom — a function-scope local whose
+address is handed to a recursive call — translated into Rust with a narrower scope,
+which compiles, reads plausibly, and points at a slot the compiler is entitled to
+reuse. The first two are caught by reading more carefully; the third is caught only by
+running both sides and noticing that a value does not depend on its input.
 
-- **`BN_bn2hex` is byte-oriented.** The authority suppresses leading zero *bytes* and
-  then writes both digits of every byte it keeps, so `2` is `"02"` and
-  `0x30000000000000000` is `"030000000000000000"`. Thirty-two of the residuals were
-  one nibble wide and all of them were this.
-- **`BN_cmp` orders by sign before magnitude.** The implementation negated the
-  magnitude comparison whenever `a` was negative, which is right for two negatives and
-  wrong whenever `a` is negative and `b` is not — it inverted exactly that case.
-- **`BN_asc2bn` answers 1 or 0**, not the digit count its two radix-specific relatives
-  return.
-- **`BN_usub` reports only a limb-count shortfall.** When `a` and `b` are the same
-  width and `a < b`, the authority lets the final borrow escape and returns the wrapped
-  value; `BN_add(3)` calls it undefined, but a precompiled caller sees the wrap.
-- **`BN_mask_bits` refuses a width the value does not have.** `ossl_bn_mask_bits_fixed_top`
-  answers 0 when the requested width starts at or past the top limb, so masking a
-  value to a width beyond its own is reported rather than accepted as a no-op.
-- **The `mod` family reduces last, not first.** `BN_mod_add`, `_sub` and `_mul` are the
-  true signed operation followed by one `BN_nnmod`; reducing the operands first is
-  equivalent only for inputs already in `[0, m)` and differs by exactly the modulus
-  otherwise. The probe's `a = -0x100`, `b = 7`, `m = 0x13` separates the two.
-- **The `_quick` variants are their own algorithms.** `BN_mod_lshift_quick` reports
-  `BN_R_INPUT_NOT_REDUCED` for an operand outside `[0, |m|)` rather than reducing it,
-  and `BN_mod_sub_quick` and `BN_mod_add_quick` have their own guards; sharing one
-  implementation with the general forms would be a divergence, not a simplification.
-- **A negative exponent is not rejected.** `BN_exp` and `BN_mod_exp` are driven by
-  `BN_num_bits` and `BN_is_bit_set`, which read the exponent's magnitude: the
-  authority computes `a^|p|`.
-- **`BN_signed_lebin2bn` and its relatives return `BIGNUM *`** and allocate when their
-  `ret` argument is null. The implementation returned `int` and required a non-null
-  `ret`, so every caller passing null got a failure where the authority returns a fresh
-  object. This one was found by the probe, and it is the defect that motivated the
-  prototype court described in section 6.
-- **The error queue is part of the answer.** `BN_div` with a zero divisor raises
-  `BN_R_DIV_BY_ZERO` at its own coordinate in `bn_div.c`; `BN_mod_inverse` raises
-  `BN_R_NO_INVERSE` after its internal helper reports through a flag; `BN_mod_sqrt`
-  raises `BN_R_NOT_A_SQUARE` at its verification step and `BN_R_P_IS_NOT_PRIME` before
-  doing any work when `p` is even and not two. `forensics/tools/gen_err_raise_sites.py`
-  now covers all nineteen `crypto/bn` translation units that raise, so the coordinates
-  are generated from the authority rather than transcribed.
+## 5. Fault boundaries — recorded, not reproduced
 
-One residual was a panic rather than a wrong value: `BN_mod_inverse(a, 0)` reached
-`limbs::rem`'s division-by-zero assertion, which `guard_ffi` caught and turned into a
-null return — with no error raised, because the raise happens after the arithmetic.
-The fix is at the root: `limbs::mod_inverse` answers `None` for a zero modulus rather
-than letting the assertion fire, which is both the mathematically right answer and what
-keeps a misuse of a public entry point a reported failure instead of a panic at the ABI
-boundary.
+The stratum's divergences are in `docs/SECURITY_DIVERGENCE_POLICY.md` under their own
+identifiers: `D-GF2M-1` and `D-GF2M-2` (the `BN_GF2m_*` blinding and carry chains),
+`D-GENCB-1`/`D-GENCB-2` (the `BN_GENCB` null dereferences), `D-TIME-1`/`D-TIME-2` (the
+time family's null dereferences and its wrapping calendar arithmetic), `D-PRINT-1`
+(`ASN1_item_print` dereferences a null item and a malformed item), `D-MIME-1` (the
+unbounded unwind loop), and `D-PEM-1` (`PEM_dek_info` calling `BIO_snprintf` with a
+negative length converted to `size_t`).
 
-## 5. What the second pass over the stratum found
+The rule is the one the contract states and has not changed: an observable defined
+behaviour is a compatibility target, and an authority memory fault, undefined
+behaviour or non-termination is recorded instead of imported. No compatibility claim
+covers any of them, and no probe reaches them, because a probe cannot compare a crash
+or a hang.
 
-The `BN_*` remainder was implemented after the first court passed, and the court was
-extended over it rather than leaving it to unit evidence. The extension found one
-defect, and it was the probe's: the first version handed `BN_mod_exp_mont` a
-`BN_MONT_CTX` that had been re-set to a *different* modulus, and the authority answered
-0 for it — a context is bound to one modulus, and passing a mismatched one is out of
-contract. That is the eleventh time in this project that the probe was the suspect
-before the implementation was.
+## 6. What is explicitly NOT claimed
 
-With a matching context, everything the extension compares agreed on the first run:
+- Nothing about the 91 exports handed on. They are unimplemented, no probe calls them,
+  and each names the dependency it waits for.
+- Nothing cryptographic. `RT-BN` compares answers with the authority's; it does not
+  establish that the arithmetic is sound, constant-time or side-channel resistant.
+  `docs/PARITY_MODEL.md` records why OpenSSL differential evidence and cryptographic
+  correctness are separate evidence planes, and the second one has not been run.
+- Nothing about `libssl`, or about the 4,964 `libcrypto` exports still scaffolded.
+- Nothing about a build profile other than the admitted one. `no-deprecated`, the
+  legacy provider and FIPS-capable configurations are separate authorities that have
+  not been built.
+- Nothing about a platform other than Linux x86-64.
+- Nothing about performance. `D-GF2M-2` is a recorded performance divergence, not a
+  measured one.
 
-- **`BN_nist_mod_*` is `BN_nnmod` against a fixed prime.** The authority's first line
-  inside each reducer is `field = &ossl_bignum_nist_p_192; /* just to make sure */` —
-  the caller's `field` argument is overwritten before use, and the small and negative
-  cases are dispatched straight to `BN_nnmod`. The probe checks both halves of that:
-  that the reducers ignore the `field` they are handed, and that each one's result
-  equals the `BN_nnmod` the authority itself calls.
-- **`BN_nist_mod_func` selects by value**, so any `BIGNUM` equal to one of the five
-  primes selects its reducer and anything else selects nothing.
-- **The Montgomery conversions are `a*R` and `a*R^-1`** with `R = 2^ceil(bits/64)*64`,
-  so the round trip is the identity and the even-modulus refusal is raised at the
-  authority's own coordinates without contradicting `BN_mod_exp`, which *does* accept
-  an even modulus (through its reciprocal path).
-- **`BN_div_recp` is the same division `BN_div` computes**; the probe checks the
-  quotient and remainder against `BN_div` directly rather than against a definition.
-- **The static NIST primes are one object**, so two calls compare equal — which is what
-  makes the cached allocation observable rather than an implementation detail.
-- **`BN_BLINDING_new` with a null modulus returns `NULL`** rather than crashing: the
-  authority's `bn_check_top` is a debug-only assertion, and `BN_dup(NULL)` is NULL, so
-  the shipped build takes the error path. The probe checks it, and checks that a
-  context with no inverse reports `NOT_INITIALIZED`.
+## 7. Exit criteria
 
-The GF(2^m) family then added a **third** pass, and this one found two defects in the
-implementation rather than in the probe:
+`docs/PHASE-5-SUBPHASES.md` defines closure as `open == 0`, the seal rewritten from
+the ledgers, FRF `sensitivity-backed`, and a Gemel checkpoint. Each is now satisfied:
 
-- **The reduction loop tested the wrong bound.** `poly_rem` compared the value's bit
-  length against the modulus's, which skips the reduction of a value exactly one bit
-  longer than the field — and `0xa5 * 0x57` in the AES field is exactly that. The
-  comparison belongs against the *degree*: a bit at index `>= n` is above the field
-  whatever the modulus's own length happens to be.
-- **`BN_GF2m_mod_inv` did not raise.** The authority reaches an invalid modulus through
-  `BN_GF2m_mod_mul`, so that function's `INVALID_LENGTH` coordinate is what a caller
-  sees; the direct extended-Euclid route had no reason to notice. It now validates the
-  array first and raises at that same coordinate.
+- `forensics/phase5-obligations.json` — `open_in_this_stratum: 0` and
+  `implemented + deferred + open == owned`, asserted by the generator and reconciled
+  by `ownership_audit.py`;
+- `artifacts/phase5/COURTS.json` — `all_pass` true over 9 courts and 9,669
+  observations;
+- `forensics/phase-state.json` — phase 5 `complete`, with phases 0–4 already complete
+  and no later stratum claiming completion first;
+- this document, rewritten from those artefacts rather than from memory;
+- the FRF claim and the Gemel checkpoint named in section 8.
 
-Both were caught by the court, not by reading, and both are the kind of defect a
-"looks right" implementation keeps: the first produced a plausible field element that
-was simply not reduced, and the second produced the right return value with the wrong
-error queue.
-
-## 6. Fault boundaries — recorded, not reproduced
-
-A probe cannot compare a crash. Where the authority faults, the probe does not call and
-the candidate's safer behaviour is recorded in `docs/SECURITY_DIVERGENCE_POLICY.md`.
-For this stratum that is `BN_is_zero(NULL)` and its relatives, which the authority
-dereferences.
-
-## 7. Deliberate scaffolding, and what it means
-
-The `scaffold` symbols abort. A scaffold never returns a plausible value, is never
-counted as parity, and is rejected by the release gates; `implemented_surface.py`
-enforces the separation mechanically and `forensics/REGISTRY` records the classification.
-
-The prototype court is the mechanical answer to the `BN_signed_lebin2bn` class of
-defect. `forensics/tools/prototype_court.py` compares every implemented export's Rust
-declaration against the prototype the Phase 1 atlas recorded for it, on **two planes**:
-the return class and the arity, and — since D74 — the **canonical type of the return and
-of every parameter**. Both sides are resolved through their own typedef chains and
-reduced to one grammar (`void`, `int:<bytes>:<s|u>`, `float:<bytes>`, `ptr(...)`,
-`const(...)`, `fn(...)` for a function type, `fptr(...)` for a function pointer,
-`opaque`), so a difference in spelling is never reported as a difference in shape and a
-struct pointee's *name* is deliberately discarded while pointer depth, pointee
-constness, integer width and function-pointer argument shape are kept. A type the
-table cannot canonicalise is a third heading beside pass and mismatch, and fails. It is
-in `evidence_determinism.py`'s generator set and in CI's static gates.
-
-The type plane landed before this stratum's ASN.1 surface moved, and found twelve wrong
-declarations in code that every Phase 3 and Phase 4 court had already passed — three
-extra pointer levels on `BIO_info_cb *`, a callback return type, a return's constness
-on six `OPENSSL_sk_*` functions, and two more (D74). Two of the twelve were behavioural
-rather than declarative, and correcting them required `RT-BN` to gain a `BN_GENCB`
-section, whose first run found a thirteenth defect the signature change had not:
-`BN_GENCB_call` answers `0`, not `1`, for a freshly allocated object.
-
-A symbol it cannot check is never a pass. Its report separates the 50 exports the crate
-declares from a `macro_rules!` (no declaration to parse), the 8 whose implementation is
-a C shim (the variadic and syscall surface stable Rust cannot express), the 2
-`ABI_ONLY_EXPORTED` symbols the atlas has no prototype for, and anything unclassifiable.
-So `checked` is quoted alongside `mismatches`, never replaced by it: **565 of 625
-checked, 0 mismatches**, 0 unclassified, 0 not-found, and — on the type plane — 565
-checked, 0 mismatches, 0 unmapped (`forensics/atlas/prototype-court.json`).
-
-## 8. What is explicitly NOT claimed
-
-- No ASN.1 and no PEM surface is implemented; both families are entirely open (280 and
-  38 exports).
-- No `BN_*` export remains open. The `BN_GF2m_*` family was the last of it, and it is
-  implemented and courted.
-- The `BN_GF2m_*` arithmetic is **not** the authority's unrolled carry chains, and
-  `BN_GF2m_mod_inv` does **not** blind its inversion. Both are recorded as security
-  divergences (`D-GF2M-1`, `D-GF2M-2` in `docs/SECURITY_DIVERGENCE_POLICY.md`): the
-  values agree, the timing profiles are not claimed to.
-- 31 `BN_*` exports are handed to Phase 9 with the dependency as the reason: the RAND
-  families, the prime generators, the Miller-Rabin primality tests, the X931
-  generators, `BN_generate_dsa_nonce`, the GF2m square-root and quadratic-solver pair,
-  and the four blinding entry points that re-create the blinding factor through
-  `BN_BLINDING_create_param`.
-- The court is a differential-compatibility result for the behaviours it exercises, on
-  one platform, for one build profile (D2). It is **not** cryptographic or security
-  correctness, and it is **not** evidence about any symbol the probe does not call
-  (`docs/PARITY_MODEL.md`). The constant-time property of the Miller-Rabin and
-  Montgomery paths is not claimed at all — those paths are the authority's, and the
-  RAND-dependent ones are not implemented here.
-
-## 9. Exit criteria
-
-Phase 5 becomes `complete` when the ledger's `open_in_this_stratum` reaches zero and
-every court in `artifacts/phase5/COURTS.json` passes. Both are derived, not asserted:
-`forensics/tools/phase_state.py` reads the ledger and the court results, and the
-dependency-order rule keeps a later stratum from claiming completion first. As of the
-current artefacts that is **155 open obligations** (128 ASN.1, 27 PEM), after the
-`BN_*` surface closed and the ASN.1 leaf surface and the shared DER codec landed (D76,
-D77). The hand-offs D73 recorded are applied in `HANDED_ON` rather than stated in prose,
-which moved `SMIME_*` to Phase 12, the PKCS#8 and `b2i_*`/`i2b_*` readers to Phase 10 and
-the `EVP_PKEY`-shaped `PEM_read_bio_PrivateKey` family to Phase 7.
-
-## 9a. The ASN.1 leaf surface and the shared DER codec
-
-The stratum's first ASN.1 section landed with its court, and the court corrected it
-three times on the way in (D76): a pre-decrement where the authority writes
-`if (max-- < 1)`, which rejected every object whose length was the last readable byte;
-two raise reasons that had been typed rather than read (`102`/`116`, not `101`/`127`);
-and `asn1_parse2` returning `1` for a failed parse, so a caller that checked the return
-alone believed a truncated parse had succeeded.
-
-The second section landed the shared decoder and encoder in both halves, the free path,
-the 26 primitive and multi-string item descriptors, the 36 `d2i_*`/`i2d_*` wrappers of
-`tasn_typ.c`, `ASN1_BIT_STRING`, `ASN1_NULL` and `d2i_ASN1_UINTEGER` (D77). Restructuring
-the decoder found two defects in what D76 had landed — an unconditional free the old code
-made conditional, and a `ASN1_R_TOO_SMALL` check the old code did not make at all — and
-the court found a third thing that is an ownership contract rather than a defect: a failed
-decode **frees the caller's value and nulls the caller's slot**, which is now
-`src/asn1/fre.rs`.
-
-What is claimed: the DER header codec, `ASN1_STRING` and its fifteen types, the
-`ASN1_INTEGER`/`ASN1_ENUMERATED` family with its two's-complement content codec,
-`ASN1_BIT_STRING` with its bit operations and its two content codecs, `ASN1_NULL`, the
-`ASN1_OBJECT` layer, the `BIGNUM` bridges, `ASN1_PCTX`/`ASN1_SCTX`, the text writers, the
-36 `d2i_*`/`i2d_*` wrappers, `d2i_ASN1_UINTEGER`, and the 26 `*_it()` descriptors — the
-last compared field by field rather than through an encoding — agree with the authority on
-the 1,306 observations `RT-ASN1` takes, on one platform and for one build profile.
-
-What is *not* claimed: anything about the 155 exports the stratum still owns. The
-template interpreter, the 14 remaining `*_it` descriptors, the time accessors, the string
-masks and printing, `ASN1_TYPE`, the NDEF BIO bridge, `asn1_d2i_read_bio` and all 27 PEM
-exports are unimplemented, and no probe calls them.
-
-## 10. FRF and Gemel
+## 8. FRF and Gemel
 
 ### FRF
 
-Two courts carry this stratum's FRF evidence — `openssl-rs-rt-bn`, which closed the BN
-surface, and `openssl-rs-rt-asn1`, which this section's claim rests on — and the chain
-has been run end to end in the FRF tooling container
-(`bash forensics/frf/run_courts.sh`). The identities, as of this seal:
+The store was recreated from clean and the whole chain run end to end in the FRF
+tooling container (`bash forensics/frf/run_courts.sh`) after the last commit of this
+stratum. It holds 301 objects across 6 namespaces: 5 authorities, 108 captures, 72
+challenges, 5 claims, 36 receipts and 75 residuals, with `graph_verified`,
+`object_closure` and `stream_closure` all complete and `replay_ready` true. The
+sensitivity-backed claim compiled over the runtime, ABI, CLI and inventory receipts is
+`76a7f1e49a6548fe378d6bddf47ac21081b62dbd27731643b78f1abd9e831626`.
 
-- court run — `run-openssl-rs-rt-asn1-2053f9dbaa2d8e2fe0ce0fb78259b91735264d11405d6e227cf82d0efff062bf`
-- OpenReceipt — `receipt-run-openssl-rs-rt-asn1-2053f9dbaa2d8e2fe0ce0fb78259b91735264d11405d6e227cf82d0efff062bf-3ce41207fbca8cd851ed8818e2a250452cd9ee16fe63ad06705f7cc977a29f70`
-- sensitivity challenges — the axes the harness could isolate on this court:
-  - `3c70b564a201f55de682d7d9409f542dfeece2dab705faa18b8d895f60d1b2b4`, the
-    `stdout-first-line` mutant on the `stdout` axis, whose challenged run is
-    `run-openssl-rs-rt-asn1-1dd26307d2d1c062b49e17abf1376ffa00466235f7dfd7a218fd1b52d842359c`;
-  - `6229f4ca6cc3b646872d56976633d9434ef813307bdc52018b9196faff74e40d`, the
-    `exit-class` mutant on the `exit` axis, whose challenged run is
-    `run-openssl-rs-rt-asn1-42c513dfef6c34a3bedfc3a9d1faa299b0ace878e45e698631012d80fcb0a732`.
+This stratum's receipts, one per court:
 
-  Each saw its seeded defect on its own axis and **nothing else** (`unaffected_axes`
-  names the axis it did not disturb, and `specificity_clean` is true on both), which is
-  what makes the passing court evidence about the difference class rather than about the
-  probe's stability. The court's `observables` are `[stdout, exit]`, so those two
-  mutation profiles are the whole of what can isolate on it: the harness reports the
-  rest as refused rather than passing them, and D13 records why an honestly refused
-  court is better than a falsely passing one.
+| court | receipt |
+|---|---|
+| `openssl-rs-rt-bn` | `receipt-run-openssl-rs-rt-bn-7738b53551f52ad95cb5a66e0a677032164d656e8cfdd7be3119e8c2906390fa-3d14a8e6f7e928c10dd5ea7e8d93807a90604d3d0c3c5fefbfd6948c5710aaf7` |
+| `openssl-rs-rt-asn1` | `receipt-run-openssl-rs-rt-asn1-829d7d93dbac60a0f90172b8a25f23c733e1906bbddf75781843b6199fe9855f-c833ca84a130a3844ce4970eae38d53e2e2dddf842bdf091873719c9f75cd23a` |
+| `openssl-rs-rt-asn1-template` | `receipt-run-openssl-rs-rt-asn1-template-5f7e8eb7b7fb11a7d20ed40354e0f5c7a23e8dc8a2c991073d06745e5213c54c-ab48f3b79e9c52a0050c4ea9d3caf6f71edc7960f8459e9abd01802a2eeb7489` |
+| `openssl-rs-rt-asn1-time` | `receipt-run-openssl-rs-rt-asn1-time-c012ee85fe929f6fa313bd3260d2e37486faa33794b79b5129c4cd71157ddcdd-d6262fa757551fd687a519fac2e82f1cd599acc3433a001fddfda28b4d7001f3` |
+| `openssl-rs-rt-asn1-str` | `receipt-run-openssl-rs-rt-asn1-str-e0bee3502b9313f7cfde27b46b529259cbbb92b34ef41acc5b85b073b7b1020f-9f75a3ffac035b987e19a46ff8d0a33f1ba2c608871eead3276d4fa6c47e84c8` |
+| `openssl-rs-rt-asn1-print` | `receipt-run-openssl-rs-rt-asn1-print-b0192636051915caf8b1aa13e9b3fbd4994516f50384e2d65913258e3b536a5d-066585b1301afabf71f8479e0e9ac4294e142db3f02aa6de474182f00de85b03` |
+| `openssl-rs-rt-bio-asn1` | `receipt-run-openssl-rs-rt-bio-asn1-7c12b79e8fe384bd8df3801a2b08cbba8c347c9ab90c8c79b8a8dac57a129397-34447e78597401f5cc47a1040a113324fb5907f261dc17b88674f096512bf379` |
+| `openssl-rs-rt-asn1-mime` | `receipt-run-openssl-rs-rt-asn1-mime-87605f6f7dc55c375394555fdfe669c76a489e7328db7681f5334ceb67b72d75-bf973b39abf7a56008c4424c1317f66a348973a4b2a714b8bf4aadab02083721` |
+| `openssl-rs-rt-pem` | `receipt-run-openssl-rs-rt-pem-8c5a3be9ac9adc32f0420deb3f5c09dba920c1fc2ce0d8a21ca779216ccec3a4-3a7bccd8246101bdc23b7e8881d02bdaa1aca012e6bb7c96dba600347ebe1fd0` |
 
-  The BN court's identities move with the same store generation
-  (`run-openssl-rs-rt-bn-7738b53551f52ad95cb5a66e0a677032164d656e8cfdd7be3119e8c2906390fa`,
-  receipt
-  `receipt-run-openssl-rs-rt-bn-7738b53551f52ad95cb5a66e0a677032164d656e8cfdd7be3119e8c2906390fa-18cdf1c9c5566da92f303cceb146de289659e748db827013856a6e21eac13609`,
-  challenges `c563316e4779b3116da89fed26edafb7dac39048e90f2972b8b3a50cf32f0883` and
-  `e64fba864e916618a71bd93ab97b0d7f909e2399ed7354599b82d8ded4643b6f`), because the
-  store is recreated from clean as a whole.
-- claim, `--policy sensitivity-backed`, over the 25 runtime receipts plus the ABI, dgst
-  and inventory courts — `414204ce21684e41a0352d4d33a303244ff2fedbe0c6abd6acd52e598b729617`
+The store is recreated from clean rather than appended to, because FRF's run identity
+is content-addressed and does not vary with the rebuilt candidate's hash, so a fresh
+observation requires a fresh store. **Every identity above moves with the store
+generation**, which is why the identities are the ones on disk at this revision and
+why a later revision of this section must re-read them rather than carry them
+forward: an earlier revision of this seal quoted a superseded generation and that was
+a defect. The `by-receipt` and `by-court` trees under `.frf/claims/` are the durable
+form — they are keyed by receipt, not by claim hash.
 
-The court's declaration is generated from the table in `forensics/tools/gen_frf_courts.py`
-(never hand-written) and `gen_frf_courts.py --check` is what holds it there.
+`RT-ASN1-MIME`'s captures include **three** runs, not two: the passing run, plus the
+two from the first version of the probe, one of which the harness killed at the
+timeout. The killed run is the evidence for `D-MIME-1` and is committed rather than
+discarded, because a hang that leaves a transcript and no exit is exactly the
+observation that makes the divergence checkable.
 
-When a receipt binds a court whose transcript changed, the store is recreated from
-clean rather than appended to (the header of `forensics/frf/run_courts.sh` records why:
-FRF's run identity is content-addressed and does not vary with the rebuilt candidate's
-hash, so a fresh observation requires a fresh store). The captures for this court are
-therefore the clean run above and the two challenged runs, all three committed:
-`.frf/captures/run-openssl-rs-rt-asn1-2053f9dbaa2d8e2fe0ce0fb78259b91735264d11405d6e227cf82d0efff062bf`,
-`.frf/captures/run-openssl-rs-rt-asn1-1dd26307d2d1c062b49e17abf1376ffa00466235f7dfd7a218fd1b52d842359c`
-and
-`.frf/captures/run-openssl-rs-rt-asn1-42c513dfef6c34a3bedfc3a9d1faa299b0ace878e45e698631012d80fcb0a732`.
-`.frf` is committed because FRF expects its receipts and claims to travel.
-
-A stale capture identity is exactly the kind of thing this project treats as a defect:
-an earlier revision of this section named a run from a superseded store generation, and
-the BN identities it quoted were from the generation before this one until this
-revision replaced them with the ones the current claim's `requires` and the challenge
-records name. Every identity above is the one on disk.
-
-A passing court is still only a differential result. The claim above is exactly what
-it says it is — that the candidate's transcript matched the authority's for the
-behaviours this probe exercises — and not a cryptographic or security claim
-(`docs/PARITY_MODEL.md`).
+A passing court is a differential result and nothing more. The claim above says the
+candidate's transcript matched the authority's for the behaviours these probes
+exercise, on one platform and for one build profile.
 
 ### Gemel
 
-Recorded at this boundary as change `C35`
-(`change.1a89cc37dd0cdd020f0532a555920afa59b9f26c95c1fabdda8e959ec67cc011`),
-trajectory `T35`
-(`trajectory.357d62dca76a45d8abba543b33564ffbf0fe8074f0d079014f90ee7ad23ca605`),
-state `state.6218370ade549f6470b9b1a5c822d6d70ac101fd24a1937aed4462dc979d53d0`,
-and checkpoint `K16`
-(`checkpoint.6efde8d368887ea3895c564c33f8cc2ea84b211d56971fb3055ae89c576c10e2`).
-The previous boundary is change `C31`
-(`change.1f8cb379980083d218d37e7b224d1191300a5023e555f8038539e64b8af3ad78`), the
-ASN.1 leaf-surface landing, on trajectory `T31`, with checkpoint `K15`
-(`checkpoint.be15113912c9856c707bdd4c9317edc7c750663fd96e76e1a5b5e2b9a4420c3d`).
-Gemel names changes by derived order, so `C35` is not a stable identity and the
+Recorded at this boundary as change `C43`
+(`change.fc287d51e75a3f8bd782b9af4ae0ee2dc425b2693d30904554d7e5eb3fa1a0df`),
+trajectory `T43`
+(`trajectory.015d8e8f564c2ce730567dbc9bb1fadef0f39eecd04ef3662595f2d146dd8e2a`),
+state `state.e37e2612ce18778003bd493480dcb5338c3f108bf61f91ee0ef5bad6f970e415`, and
+checkpoint `K26`
+(`checkpoint.4e8675a95b17554b5113e18653828e79c7c859cc37f7c3a2183a9c4864041d34`).
+The previous boundary is change `C42`
+(`change.cfe0615e499ed32f7eb925ca82d39a6c500b0d3de35530c6a22c5e6dfc431d07`) with
+checkpoint `K25`
+(`checkpoint.72f7fa3b2028e181c38bcb2d904f665cad991c15dfbe446629b3aee4147edc15`), the
+`asn_mime.c` copying half, on trajectory `T42`.
+Gemel names changes by derived order, so `C43` is not a stable identity and the
 `change.` hash is; a name quoted elsewhere is resolved through
-`forensics/GEMEL_TRAJECTORY.md` or `gemel show C35`.
-The store is append-only, so a correction is another change rather than an edit; the
-Git commit remains the authoritative record of the diff.
-
-Projection in `forensics/GEMEL_TRAJECTORY.md`, rendered by
-`forensics/tools/render_gemel_trajectory.sh`. The native store is not Git-tracked
-(D17); only its `exchange/` namespace and this projection travel in Git, together with
-the human-readable trajectory and the checkpoint identities.
+`forensics/GEMEL_TRAJECTORY.md` or `gemel show C43`. Each identity above was read back
+from the store rather than carried forward. The store is append-only, so a correction
+is another change rather than an edit, and the Git commit remains the authoritative
+record of the diff.
 
 Residuals recorded in the store at this boundary rather than left to be rediscovered:
-the `BN_signed_*2bn` signature defect and the prototype gap that let it survive (D65,
-now closed by the prototype court); the RAND-dependent exports of this stratum, which
-are handed to Phase 9 and are therefore implementable by nobody in this phase; the
-two `ABI_ONLY_EXPORTED` symbols the atlas has no prototype for, which the prototype
-court reports rather than skipping; and the two `GF(2^m)` divergences, `D-GF2M-1`
-(`BN_GF2m_mod_inv` is not blinded, recorded `verification_gap`) and `D-GF2M-2` (the
-arithmetic is not the authority's carry chains, recorded `performance_divergence`),
-whose obligation `OBL-GF2M-INV-BLINDING` is owned by Phase 9.
+the six `asn_mime.c` exports handed to Phases 7 and 12; the 31 RAND-dependent
+`BN_*`/`ASN1_*` exports handed to Phase 9; the four `GF(2^m)` and `BN_GENCB`
+divergences; the two `ABI_ONLY_EXPORTED` symbols the prototype court reports rather
+than skipping; and `D-MIME-1`, whose reachability was established by measurement and
+not by argument.

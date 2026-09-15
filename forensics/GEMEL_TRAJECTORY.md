@@ -10,6 +10,8 @@ in Git. See `docs/DECISIONS.md` D17.
 ## `gemel log`
 
 ```
+C43  PEM_proc_type and PEM_dek_info implemented and courted; the 25 remaining pem.h exports handed on with the dependency each waits for; open obligations reach zero and the phase-5 seal is rewritten from the ledgers
+    state state.a2d15e14bf47e8737740783806df1b10919f4749b3013836b191ee6a80c109cf -> state.e37e2612ce18778003bd493480dcb5338c3f108bf61f91ee0ef5bad6f970e415
 C42  SMIME_crlf_copy and i2d_ASN1_bio_stream implemented and courted; SMIME_crlf_copy removed from the Phase 12 hand-off set because its reason was a file rather than a dependency; PEM_write_bio_ASN1_stream handed to Phase 7 for its base64 BIO; the authority unbounded unwind loop recorded as D-MIME-1
     state state.967494a4aa380bf6a345ea55e84fb1e9901f4b0fc94df3a9048bd9a777d4d786 -> state.a2d15e14bf47e8737740783806df1b10919f4749b3013836b191ee6a80c109cf
 C41  ASN1_item_print implemented and courth; the EMBED stack-slot defect the court found; the v3_utl.c raise coordinates and the phase 4 to phase 5 hand-off reconciliation
@@ -82,6 +84,7 @@ C1  Phase 0 constitution and Phase 1 archaeology atlas, evidence-bound
 * `K23` — `checkpoint.4d121775b53e8369dd0457ad230f82a3b375db10e9df7077ad4d564dcdc756fd`
 * `K24` — `checkpoint.1a2e3a5565633ce851d7dadbcbc9c5cd2be4cf8d61b6463f45b54cc7fa39ec8a`
 * `K25` — `checkpoint.72f7fa3b2028e181c38bcb2d904f665cad991c15dfbe446629b3aee4147edc15`
+* `K26` — `checkpoint.4e8675a95b17554b5113e18653828e79c7c859cc37f7c3a2183a9c4864041d34`
 * `K3` — `checkpoint.b1516eb6364ad075785911cb204a75a6e1b83b08c1a7ca39a2de6e3983dc9aed`
 * `K4` — `checkpoint.1bde75b37e1ca3972037c29cbd3ba5291079544436db9176a82f097a6bf832fe`
 * `K5` — `checkpoint.6b0d12f1ecf380c0808bc95675222fbed7256f99bc8e9f475a0ec2693f804a0a`
@@ -90,7 +93,7 @@ C1  Phase 0 constitution and Phase 1 archaeology atlas, evidence-bound
 * `K8` — `checkpoint.7eb3dba97cbf20f2b34d14cce7e93bc2171ebd0d7ee66d1f7508cc6e199567de`
 * `K9` — `checkpoint.60105b4c8189d2668c48e173fe2c92c0ddf76160caae24efecc707bd576f506f`
 
-current: `checkpoint.72f7fa3b2028e181c38bcb2d904f665cad991c15dfbe446629b3aee4147edc15`
+current: `checkpoint.4e8675a95b17554b5113e18653828e79c7c859cc37f7c3a2183a9c4864041d34`
 
 ## Note: derived names are not identities
 
@@ -110,6 +113,9 @@ changed with it; the Git commit is the authoritative record of the diff.
 ## Open residuals at this boundary
 
 ```
+open [low] the 25 pem.h exports handed to phases 7 and 11 remain unimplemented
+    class: verification_gap
+    persistence: 0 descendant change(s)
 open [low] the authority i2d_ASN1_bio_stream unwind loop does not terminate for a callback returning a detached BIO, and the candidate stops
     class: semantic_divergence
     persistence: 0 descendant change(s)

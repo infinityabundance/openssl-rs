@@ -250,6 +250,65 @@ HANDED_ON.update({
               "deferred to Phase 7")
     for sym in ("PEM_write_bio_ASN1_stream",)
 })
+
+# `pem.h`'s remaining exports, each with the dependency it is waiting on rather than
+# the file it lives in. `crypto/pem/pem_lib.c` is not one subsystem: its reader and
+# writer are a base64 codec over `EVP_ENCODE_CTX`, its encrypted writer and reader are
+# an `EVP_CIPHER` pass over `EVP_BytesToKey` and `RAND_bytes`, its password callback
+# reads a pass phrase through `EVP_read_pw_string_min`, and its signing pair is an
+# `EVP_MD_CTX`. Two of its exports need none of that and are implemented in
+# `src/pem/pem_lib.rs`; these are the ones that do.
+HANDED_ON.update({
+    sym: (7, "the PEM block codec is EVP_ENCODE_CTX, which Phase 7 owns (evp.h)")
+    for sym in (
+        # The reader and the writer of a whole `-----BEGIN ...-----` block.
+        "PEM_read", "PEM_read_bio", "PEM_read_bio_ex",
+        "PEM_write", "PEM_write_bio",
+        # Both are wrappers over the reader above.
+        "PEM_bytes_read_bio", "PEM_bytes_read_bio_secmem",
+    )
+})
+HANDED_ON.update({
+    sym: (7, "tests the PEM name against EVP_PKEY_asn1_find_str, which Phase 7 owns")
+    for sym in ("PEM_ASN1_read", "PEM_ASN1_read_bio")
+})
+HANDED_ON.update({
+    sym: (7, "takes an EVP_CIPHER and derives its key with EVP_BytesToKey and a "
+              "RAND_bytes IV, all Phase 7")
+    for sym in (
+        "PEM_ASN1_write", "PEM_ASN1_write_bio", "PEM_ASN1_write_bio_ctx",
+    )
+})
+HANDED_ON.update({
+    sym: (7, "decrypts through EVP_CIPHER_CTX with EVP_BytesToKey, which Phase 7 owns")
+    for sym in ("PEM_do_header",)
+})
+HANDED_ON.update({
+    sym: (7, "reads a pass phrase through EVP_read_pw_string_min, which Phase 7 owns")
+    for sym in ("PEM_def_callback",)
+})
+HANDED_ON.update({
+    sym: (7, "digests through an EVP_MD_CTX and signs with an EVP_PKEY, which Phase 7 "
+              "owns")
+    for sym in ("PEM_SignInit", "PEM_SignUpdate", "PEM_SignFinal")
+})
+HANDED_ON.update({
+    sym: (7, "writes an EVP_PKEY's parameters, which Phase 7 owns")
+    for sym in ("PEM_write_bio_Parameters",)
+})
+HANDED_ON.update({
+    sym: (11, "encodes through i2d_X509_REQ_NEW, which the X509 stratum owns")
+    for sym in ("PEM_write_X509_REQ_NEW", "PEM_write_bio_X509_REQ_NEW")
+})
+HANDED_ON.update({
+    sym: (11, "reads or writes X509_INFO, and every arm of it is an X509, X509_CRL or "
+              "X509_PUBKEY decode, all Phase 11")
+    for sym in (
+        "PEM_X509_INFO_read", "PEM_X509_INFO_read_bio",
+        "PEM_X509_INFO_read_ex", "PEM_X509_INFO_read_bio_ex",
+        "PEM_X509_INFO_write_bio",
+    )
+})
 HANDED_ON.update({
     sym: (10, "reads and writes the PKCS#8 container, which is Phase 10")
     for sym in (

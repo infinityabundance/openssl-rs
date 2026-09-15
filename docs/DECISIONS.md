@@ -4168,3 +4168,45 @@ Phase-5 open obligations: 29 -> 27, all of them `pem.h`'s.
 libcrypto implemented exports: 928 -> 930.
 
 Divergence: D-MIME-1.
+
+## D93 — Phase 5 closes, and the last two exports are the ones with no dependency
+
+`PEM_proc_type` and `PEM_dek_info` are implemented in `src/pem/pem_lib.rs` and
+observed by `RT-PEM` (37 observations, no residual). They are the only two exports of
+`crypto/pem/pem_lib.c` that need nothing beyond `BIO_snprintf`, which is why they are
+the ones this stratum can hold, and the court was written to reach the parts of them
+that a hand-written expectation would not: the appended cursor (each *appends* at
+`buf + strlen(buf)`), the `BAD-TYPE` fallback for every value including
+`PEM_TYPE_CLEAR` which has no arm of its own, the `0xff &` mask that keeps a negative
+`char` two digits wide, and the newline which is written only while more than one byte
+of room remains.
+
+The other 25 are handed on, and the reason each carries is a *dependency*: 26 of this
+stratum's 91 hand-offs wait on `EVP_ENCODE_CTX` or another EVP codec, 31 on `RAND`, 10
+on `X509`, 7 on `asn_mime.c`'s MIME reader and writer, and 1 on `OSSL_LIB_CTX`. That
+the PEM reader and writer are an `EVP_ENCODE_CTX` pair is the fact that decides the
+whole subphase, and it is visible in the source rather than inferred: `PEM_write_bio`
+allocates one on its second line and `PEM_read_bio_ex` on its twelfth.
+
+`open_in_this_stratum` is now zero, `forensics/phase-state.json` reads phase 5
+`complete`, and the seal was rewritten from the ledgers rather than from the previous
+seal. The seal's FRF section is the one place this project has repeatedly gone stale,
+and the mechanism is now explicit rather than a note: the identities are read back
+from the store at the revision that writes them, the receipt table is generated from
+`.frf/receipts` instead of transcribed, and the section says that every identity in it
+moves with the store generation. The store was recreated from clean and the whole
+chain re-run after the last commit of the stratum, so the 301 objects, 36 receipts and
+9 phase-5 court receipts quoted there are the ones on disk.
+
+Two things are worth carrying into Phase 6. The first is that this stratum's most
+expensive defects were not arithmetic: they were a constant recalled instead of read
+(D86), an authority conditional rewritten into something tidier (D89), and a
+function-scope local translated into Rust with a narrower scope (D90). All three are
+reading failures, and only the third needed a court to find. The second is that the
+ownership model has now paid for itself twice — once when `a2d_ASN1_OBJECT` and the
+`crypto/o_str.c` exports were invisible to every prefix list (D49, D51), and once when
+`SMIME_crlf_copy` was handed to a later phase on the strength of the file it lives in
+(D92). Both were found by a rule that is checkable rather than by reading harder.
+
+Phase-5 open obligations: 27 -> 0. libcrypto implemented exports: 930 -> 932.
+Divergence: D-PEM-1.

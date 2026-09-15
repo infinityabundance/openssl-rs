@@ -158,6 +158,10 @@
       "observations": 91,
       "verdict": "pass"
     },
+    "RT-PEM": {
+      "observations": 37,
+      "verdict": "pass"
+    },
     "RT-SECURE": {
       "observations": 32,
       "verdict": "pass"
@@ -178,16 +182,16 @@
   "deferred": {
     "phase3": 11,
     "phase4": 31,
-    "phase5": 66
+    "phase5": 91
   },
   "implemented": {
-    "libcrypto": 930,
+    "libcrypto": 932,
     "libssl": 0
   },
   "open_obligations": {
     "phase3": 0,
     "phase4": 0,
-    "phase5": 27
+    "phase5": 0
   },
   "owned_obligations": {
     "phase3": 235,
@@ -212,7 +216,7 @@
     "21": "not-started",
     "3": "complete",
     "4": "complete",
-    "5": "in-progress",
+    "5": "complete",
     "6": "not-started",
     "7": "not-started",
     "8": "not-started",

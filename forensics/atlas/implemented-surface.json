@@ -289,7 +289,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 930,
+        "implemented": 932,
         "implemented_symbols": [
           "ASN1_ANY_it",
           "ASN1_BIT_STRING_check",
@@ -1153,6 +1153,8 @@
           "OPENSSL_version_pre_release",
           "OpenSSL_version",
           "OpenSSL_version_num",
+          "PEM_dek_info",
+          "PEM_proc_type",
           "SMIME_crlf_copy",
           "UINT32_it",
           "UINT64_it",
@@ -1222,7 +1224,7 @@
           "i2d_DISPLAYTEXT",
           "i2t_ASN1_OBJECT"
         ],
-        "scaffolded": 4966
+        "scaffolded": 4964
       },
       "libssl": {
         "authority_exports": 603,
@@ -1233,18 +1235,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 930,
-      "scaffolded": 5569
+      "implemented": 932,
+      "scaffolded": 5567
     }
   },
-  "body_hash": "14821380598718f3c01858cf3235f45e1b16b2fd9edbc4e7785568c0fd3dbbb2",
+  "body_hash": "e88230fccb56990c9c5e1631d71f60a5b98b867435869c5b4e7d183f985c323d",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "ca1d99703f2c9596a248e770ff8cb236cd356ff5ef942cfea7cb2a131a5be9eb"
+      "sha256": "e5f2803d58b59664a0cc1a2bb019a9fca12b738f1e3833d05f5d73e2bd35f2a0"
     },
     {
       "name": "authority-exports",
