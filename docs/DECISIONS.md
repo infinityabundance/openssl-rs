@@ -5302,3 +5302,89 @@ unblocks.
 | all observations | 19,420 | 19,461 |
 | `RT-LIBCTX` observations | 73 | 75 |
 | runtime courts in the FRF store | 38 | 39 |
+
+---
+
+## D108 — the self-test object aliases its own fields, and the prototype court earned its keep
+
+**What landed.** Phase 6.11: all nine exports of `self_test.h` (seven) and
+`indicator.h` (two), in `src/selftest/{mod,indicator}.rs`, from
+`crypto/self_test_core.c` (160 lines) and `crypto/indicator_core.c` (54).
+`RT-SELFTEST` observes them in 71 observations with zero residuals, first run, and
+slots 12 and 22 join `RT-LIBCTX`'s `filled_slots` list, taking that court from 75
+to 79 observations. Four slots of the eighteen are filled now; the other fourteen
+are owed and named in `docs/PHASE-6-SUBPHASES.md`.
+
+**The probe is the callback, because there is nothing else to be.** Both surfaces
+are callback plumbing, so the only way to observe them is to register a callback
+and record what the library passes it. Four things came out of that, and each is
+somewhere a plausible transcription differs:
+
+  * **the array's entries alias the object's own fields.**
+    `self_test_setparams` builds `st-phase`, `st-type` and `st-desc` with
+    `OSSL_PARAM_construct_utf8_string(key, st->field, 0)`, which stores the
+    *address* of the field rather than a copy of the string.
+    `OSSL_SELF_TEST_onend` reassigns all three fields to `"None"` **after** calling
+    the callback and does **not** rebuild the array — so the same array reports
+    `Pass` inside the callback and `None` afterwards, and there is no rebuild that
+    could be observed either way. The probe stashes the array pointer inside the
+    callback and reads through it again after the call; that is the only way a C
+    caller can see the aliasing at all, and it is the reason this court is worth
+    writing rather than unit-testing.
+  * **`onend` treats anything other than 1 as a failure**, including 0 and
+    negative values. "Failed" and "did not answer 1" are the same thing to the
+    authority.
+  * **`oncorrupt_byte`'s answer is the callback's, inverted**: the callback
+    answering 0 flips the first byte and the call answers 1; answering 1 leaves the
+    byte alone and answers 0.
+  * **the object's callback is the one passed to `OSSL_SELF_TEST_new`, not the
+    context's.** The context's pair is what other code invokes; an implementation
+    that read the context's callback from inside `onbegin` would pass a probe that
+    only ever set both to the same function, so the probe sets them to different
+    things and checks which one ran.
+
+**The prototype court found a real defect that the runtime court could not.** An
+earlier revision of this landing declared
+
+```rust
+pub unsafe extern "C" fn OSSL_SELF_TEST_get_callback(
+    libctx: *mut c_void, cb: *mut *mut c_void, cbarg: *mut *mut c_void)
+```
+
+The authority's second parameter is `OSSL_CALLBACK **` — a pointer to a **function
+pointer**, not a `void **`. Both spellings work at run time for any caller that
+passes correctly sized storage, so `RT-SELFTEST` passed 71 observations against the
+wrong prototype; `ABI-PROTOTYPE` reported it as one of two type mismatches and
+named the canonical form. The same was true of `OSSL_INDICATOR_get_callback`. That
+is exactly the blind spot D98 and D103 each recorded from the other direction: a
+runtime court compares *answers*, and a prototype that is wrong only in the
+*shape* of an output parameter has no answer to compare.
+
+**Two safety divergences, both recorded rather than reproduced.**
+
+  * `OSSL_SELF_TEST_oncorrupt_byte` dereferences `bytes` only when its callback
+    refuses the corruption. The authority faults on a NULL `bytes` in that case;
+    this answers 0, because nothing was corrupted.
+  * both setters store nothing and both getters answer NULL when the context's slot
+    cannot be read, which the authority's own NULL guards already do.
+
+**The indicator half is storage without a caller, and that is stated rather than
+implied.** `OSSL_INDICATOR_set_callback`/`get_callback` are implemented and
+courted; nothing invokes the callback, because the code that reports an indicator —
+an operation with an approved or non-approved state — is provider-side. A subphase
+that "implemented the indicator" by inventing a call site would be claiming
+behaviour no consumer can reach.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented | 90 | 99 |
+| Phase 6 open | 71 | 62 |
+| `implemented[libcrypto]` | 1,064 | 1,073 |
+| Phase 6 courts | 3 | 4 |
+| all courts | 50 | 51 |
+| all observations | 19,461 | 19,536 |
+| `RT-LIBCTX` observations | 75 | 79 |
+| index slots filled | 2 | 4 |
+| runtime courts in the FRF store | 39 | 40 |

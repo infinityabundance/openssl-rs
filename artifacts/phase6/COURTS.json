@@ -7,9 +7,9 @@
     "courts": [
       {
         "authority_exit_code": 0,
-        "authority_observations": 75,
+        "authority_observations": 79,
         "candidate_exit_code": 0,
-        "candidate_observations": 75,
+        "candidate_observations": 79,
         "candidate_stderr_tail": [],
         "court": "RT-LIBCTX",
         "crashed": false,
@@ -41,6 +41,23 @@
       },
       {
         "authority_exit_code": 0,
+        "authority_observations": 71,
+        "candidate_exit_code": 0,
+        "candidate_observations": 71,
+        "candidate_stderr_tail": [],
+        "court": "RT-SELFTEST",
+        "crashed": false,
+        "probe": "courts/phase6/rt_selftest_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase6/probes/rt_selftest_probe.authority",
+          "candidate": "artifacts/phase6/probes/rt_selftest_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
         "authority_observations": 39,
         "candidate_exit_code": 0,
         "candidate_observations": 39,
@@ -59,8 +76,8 @@
     ],
     "summary": {
       "fail": 0,
-      "pass": 3,
-      "total": 3
+      "pass": 4,
+      "total": 4
     }
   },
   "generator": "forensics/tools/phase6_courts.py",
@@ -73,12 +90,17 @@
     {
       "name": "probe",
       "path": "courts/phase6/rt_libctx_probe.c",
-      "sha256": "10f93ac314a207c9c6f0f1599f73edb7a54246980f7052c108d1b1f154ed1eed"
+      "sha256": "007342993578200e780d7ac76b33229ce74768a6f9cb6d9eb3a2e7eaf73f23df"
     },
     {
       "name": "probe",
       "path": "courts/phase6/rt_param_probe.c",
       "sha256": "c2bcb07b21923942e7cb74db868c5a71e7cf8ae34075818dd2d9cc528547fc83"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase6/rt_selftest_probe.c",
+      "sha256": "95794b7cc1d81d4b5f91f2529cf82511c988b620f0bbed3e0c540d247aa3501b"
     },
     {
       "name": "probe",
