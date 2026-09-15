@@ -47,7 +47,7 @@
       "verdict": "pass"
     },
     "RT-ASN1": {
-      "observations": 1306,
+      "observations": 1366,
       "verdict": "pass"
     },
     "RT-ASN1-TEMPLATE": {
@@ -161,13 +161,13 @@
     "phase5": 62
   },
   "implemented": {
-    "libcrypto": 865,
+    "libcrypto": 869,
     "libssl": 0
   },
   "open_obligations": {
     "phase3": 0,
     "phase4": 0,
-    "phase5": 93
+    "phase5": 89
   },
   "owned_obligations": {
     "phase3": 235,

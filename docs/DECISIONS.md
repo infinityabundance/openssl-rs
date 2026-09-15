@@ -3680,3 +3680,61 @@ identical on both sides. It was visible only because the probe prints the whole 
 has challenge mutants on both of its declared axes — so the court is sensitivity-backed
 rather than merely green. The stratum's open list is 93; nothing in it is
 `PARITY_VERIFIED`; Phase 5 remains `in-progress`.
+
+## D84 — The ASCII-form parsers land, and one of them found a defect that was my own invention
+
+`a2d_ASN1_OBJECT` (`a_object.c`) and `a2i_ASN1_INTEGER` / `a2i_ASN1_ENUMERATED`
+(`f_int.c`) and `a2i_ASN1_STRING` (`f_string.c`) are implemented, with
+`crypto/ctype.c`'s two class predicates they need. `implemented[libcrypto]` moved
+865 → 869, the stratum's open list 93 → 89, and `RT-ASN1` grew 1306 → 1366
+observations.
+
+### `crypto/ctype.c` is not a table here, and that is a decision
+
+`ossl_ctype_check`, `ossl_isdigit` and `ossl_isxdigit` are in **no** `.num` file and the
+ownership atlas has no record of them, so they are internal helpers with no ABI
+obligation. The authority implements them over a 128-entry mask table. Transcribing that
+table is what D33 forbids — a hand-copied constant nothing regenerates. The two classes
+the parsers use are each an exact union of ASCII ranges (`xdigit` was read back out of the
+authority's own table: `0x30`-`0x39`, `0x41`-`0x46`, `0x61`-`0x66`, 22 entries and no
+more), so they are written as range tests with the equivalence stated and a test that
+checks all 256 byte values against both.
+
+The one subtlety kept deliberately is that `ossl_isdigit` is a bare range test while
+`ossl_isxdigit` carries the authority's `0 <= c < 128` bounds check. A byte with the high
+bit set arrives as a negative `int` from a signed `char` and fails both, but by different
+routes, and collapsing them would lose that.
+
+### The defect was a claim I made about the authority rather than read from it
+
+`a2i_ASN1_STRING` writes each output octet as
+
+```c
+s[num + j] <<= 4;
+s[num + j] |= m;
+```
+
+I wrote an assignment instead, and — worse — invented a reason: a comment asserting that
+this reader "assigns each octet rather than shifting into it", which I then used to justify
+why it can use plain `OPENSSL_realloc` where the INTEGER reader uses the clearing one. The
+first digit was therefore overwritten by the second, and `414243` decoded as `010203`.
+`RT-ASN1` caught it on the first run.
+
+The shift-and-or is not incidental. Each octet is written twice, and the first pass reads
+whatever the allocation held, shifts it into the high nibble, and the second pass shifts it
+out of the byte entirely — so the result is the two digits and nothing else, and the
+clearing-versus-plain `realloc` difference between the two readers is **not** observable.
+That is now written down as the reason the two readers may differ, instead of the invented
+one. The line the authority actually writes is quoted in the comment.
+
+This is the fourth time this stratum has found a *note about the authority* that was the
+suspect before the authority was, and the first where the note was one I had just written.
+
+### What the round trip measured
+
+I expected the `i2a` → `a2i` round trip to fail for values long enough to be broken across
+lines, on the reasoning that the `00` prefix strip and the backslash removal would leave an
+odd hex count. Rather than reason further, the probe now measures it: a 40-octet INTEGER is
+written with `i2a_ASN1_INTEGER` into a memory BIO and read back with `a2i_ASN1_INTEGER`, and
+the return, the length and the queue are compared. It round-trips on both sides. The
+reasoning was wrong and the measurement is what settled it.

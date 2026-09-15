@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 561,
       "deferred_to_later_phase": 62,
-      "implemented": 410,
-      "open_in_this_stratum": 93,
+      "implemented": 414,
+      "open_in_this_stratum": 89,
       "owned": 565
     },
     "deferred": [
@@ -787,6 +787,10 @@
       "ZLONG_it",
       "ZUINT32_it",
       "ZUINT64_it",
+      "a2d_ASN1_OBJECT",
+      "a2i_ASN1_ENUMERATED",
+      "a2i_ASN1_INTEGER",
+      "a2i_ASN1_STRING",
       "asn1_d2i_read_bio",
       "d2i_ASN1_BIT_STRING",
       "d2i_ASN1_BMPSTRING",
@@ -1292,26 +1296,6 @@
       {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
-        "symbol": "a2d_ASN1_OBJECT"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "a2i_ASN1_ENUMERATED"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "a2i_ASN1_INTEGER"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "a2i_ASN1_STRING"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
         "symbol": "i2d_ASN1_bio_stream"
       }
     ],
@@ -1347,7 +1331,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "b73d61ce41b6a74be9f5f57850ebd5c253ddf0e3101007ee6030524f542c8e7c"
+      "sha256": "5fbabe7572eae92141d60ab6308b4ba930219ee5c21682478288b3081b57d8e0"
     }
   ],
   "kind": "phase5-obligations",
