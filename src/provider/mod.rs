@@ -83,9 +83,11 @@ use core::sync::atomic::{AtomicI32, Ordering};
 use crate::context::dispatch::OsslDispatch;
 use crate::context::{lib_ctx_get_data, lib_ctx_is_default_symbol};
 use crate::dso::{DSO_free, DSO_get_filename, Dso};
-use crate::params::{OsslParam, OSSL_PARAM_UNMODIFIED, OSSL_PARAM_UTF8_PTR};
+use crate::params::{
+    OsslParam, OSSL_PARAM_UNMODIFIED, OSSL_PARAM_UTF8_PTR, OSSL_PARAM_UTF8_STRING,
+};
 use crate::runtime::err::err_sites;
-use crate::runtime::err::raise_site;
+use crate::runtime::err::{raise_site, ERR_get_next_error_library};
 use crate::runtime::init::{OPENSSL_init_crypto, OPENSSL_INIT_LOAD_CONFIG};
 use crate::runtime::mem::{
     CRYPTO_calloc, CRYPTO_free, CRYPTO_realloc_array, CRYPTO_strdup, CRYPTO_zalloc,
@@ -105,6 +107,14 @@ pub(crate) const PROVIDER_STORE_INDEX: c_int = 1;
 
 /// The authority's translation unit, for the allocation-tracking `file` argument.
 pub(crate) const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/provider_core.c".as_ptr();
+
+/// `crypto/provider.c`, for the one allocation that lives there.
+///
+/// The allocation-tracking `file` is part of what Phase 3's memory-debug court reads back,
+/// so `OSSL_PROVIDER_add_builtin`'s dup must name *its* file and not `provider_core.c`'s.
+#[allow(dead_code)] // unreachable until 6.8b's export wraps `ossl_provider_add_builtin`
+pub(crate) const FILE_PROVIDER: *const c_char =
+    c"../../src/openssl-3.6.4/crypto/provider.c".as_ptr();
 
 /// `BUILTINS_BLOCK_SIZE` — the store's provider-info array grows by ten entries.
 const BUILTINS_BLOCK_SIZE: usize = 10;
@@ -177,6 +187,7 @@ mod lines {
     pub(super) const L_PAIR_ADD_ERR_VALUE: c_int = 825;
     /// `infopair_add`'s `OPENSSL_free(pair)`.
     pub(super) const L_PAIR_ADD_ERR: c_int = 826;
+    pub(super) const L_ADD_BUILTIN_DUP: c_int = 136;
     /// `ossl_provider_child_cb_free`'s `OPENSSL_free(cb)` — 6.8e's allocation site.
     pub(super) const L_CHILD_CB_FREE: c_int = 246;
     /// `OSSL_PROVIDER_set_default_search_path`'s `OPENSSL_strdup(path)`.
@@ -886,6 +897,308 @@ pub(crate) fn blank_provider() -> OsslProvider {
         provctx: ptr::null_mut(),
         dispatch: ptr::null(),
     }
+}
+
+/// A zeroed `OSSL_PROVIDER_INFO`, which is what both `ossl_provider_new`'s template and
+/// `OSSL_PROVIDER_add_builtin`'s entry start as — the authority writes `memset(&entry, 0,
+/// sizeof(entry))` in both places.
+pub(crate) fn blank_info() -> OsslProviderInfo {
+    OsslProviderInfo {
+        name: ptr::null_mut(),
+        path: ptr::null_mut(),
+        init: None,
+        parameters: ptr::null_mut(),
+        is_fallback: 0,
+    }
+}
+
+/// One row of [`PREDEFINED_PROVIDERS`], with the name as a `CStr` so the table carries
+/// nothing that needs freeing and a reader can see every row at a glance.
+///
+/// The authority's row also carries `path` (NULL for all of them) and `parameters` (NULL for
+/// all of them), which are absent rather than spelled as NULL fields because the C comment
+/// says *"These compile-time templates always have NULL parameters"*.
+pub(crate) struct PredefinedProvider {
+    /// The provider's name as a literal; the terminator row's is empty.
+    pub(crate) name: &'static core::ffi::CStr,
+    /// The authority's `is_fallback : 1`.
+    pub(crate) is_fallback: c_uint,
+}
+
+/// `const OSSL_PROVIDER_INFO ossl_predefined_providers[]` — `crypto/provider_predefined.c`.
+///
+/// **This profile's table has three rows, not four**, and that is a build fact rather than
+/// a reading of the source's `#ifdef`s: `configdata.pm` records `enable-shared
+/// enable-legacy`, so `STATIC_LEGACY` is *not* defined and the `legacy` row is compiled out.
+/// Legacy is a module this build loads by name, which is why `DSO` had to land before the
+/// registry could drive it.
+///
+/// `is_fallback` is 1 for `default` and 0 for `base` and `null`. That one bit is what
+/// `provider_activate_fallbacks` uses to decide what to load when nothing has been asked for
+/// (6.8c), so `default` is what an operation with no explicit `OSSL_PROVIDER_load` gets --
+/// and `base`, which declares no algorithms of its own, is not.
+///
+/// **The three `init` pointers are NULL here and are 7/8's.** They name
+/// `ossl_default_provider_init` (807 lines), `ossl_base_provider_init` (183) and
+/// `ossl_null_provider_init` (80) in `providers/`, which are the provider-side entry points
+/// that publish the algorithm tables. Referencing them from here would make the registry
+/// depend on every algorithm in the library, in the wrong direction. The consequence is
+/// recorded rather than hidden: until they land, `ossl_provider_new` resolves these three
+/// names as *builtins with no init function*, which 6.8c's `provider_init` would take down
+/// the `DSO` branch. That is a real divergence, it becomes observable at 6.8c, and it is a
+/// `residual` on this subphase rather than a silent gap.
+pub(crate) static PREDEFINED_PROVIDERS: [PredefinedProvider; 4] = [
+    PredefinedProvider {
+        name: c"default",
+        is_fallback: 1,
+    },
+    PredefinedProvider {
+        name: c"base",
+        is_fallback: 0,
+    },
+    PredefinedProvider {
+        name: c"null",
+        is_fallback: 0,
+    },
+    // The authority's terminator: `{ NULL, NULL, NULL, NULL, 0 }`.
+    PredefinedProvider {
+        name: c"",
+        is_fallback: 0,
+    },
+];
+
+/// The row whose name matches, or `None` at the terminator.
+///
+/// A linear scan, as the authority's loop is, stopping at the first match: two rows sharing a
+/// name would leave the second unreachable, which is the authority's behaviour as well.
+fn predefined_row(name: *const c_char) -> Option<&'static PredefinedProvider> {
+    for row in PREDEFINED_PROVIDERS.iter() {
+        if row.name.to_bytes().is_empty() {
+            return None;
+        }
+        // SAFETY: `name` is NUL-terminated per every caller's contract, and `row.name` is a
+        // literal with a terminator.
+        if unsafe { c_strcmp(name, row.name.as_ptr()) } == 0 {
+            return Some(row);
+        }
+    }
+    None
+}
+
+/// `int OSSL_PROVIDER_add_builtin(OSSL_LIB_CTX *libctx, const char *name,
+/// OSSL_provider_init_fn *init_fn)`.
+///
+/// Two NULL checks, both `ERR_R_PASSED_NULL_PARAMETER` **before** anything is allocated, so a
+/// refusal costs nothing. The name is dup'd into the *entry*, and the entry is then moved into
+/// the store by [`ossl_provider_info_add_to_store`] — so the failure arm has to clear the
+/// entry itself, which is what releases that dup.
+///
+/// This is the only way a caller registers a provider without a shared object, and it is
+/// therefore the surface `RT-PROVIDER` can exercise before any provider module exists on
+/// either side: the probe declares its own `init` function, registers it, and the registry
+/// mechanics become observable without a single built-in provider.
+///
+/// # Safety
+/// `libctx` NULL or live; `name` NUL-terminated; `init_fn` non-NULL.
+#[allow(dead_code)] // unreachable until 6.8b's export wraps it
+pub(crate) unsafe fn ossl_provider_add_builtin(
+    libctx: *mut c_void,
+    name: *const c_char,
+    init_fn: Option<ProviderInitFn>,
+) -> c_int {
+    if name.is_null() || init_fn.is_none() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::PROVIDER_132) };
+        return 0;
+    }
+    let mut entry = blank_info();
+    // SAFETY: `name` is NUL-terminated per the contract.
+    entry.name = unsafe { CRYPTO_strdup(name, FILE_PROVIDER, lines::L_ADD_BUILTIN_DUP) };
+    if entry.name.is_null() {
+        return 0;
+    }
+    entry.init = init_fn;
+    // SAFETY: `entry` is a live local, so its address is valid for the call; the store takes
+    // ownership of its owned fields on success.
+    let added = unsafe { ossl_provider_info_add_to_store(libctx, ptr::addr_of_mut!(entry)) };
+    if added == 0 {
+        // SAFETY: the store did not take the entry, so its name is still ours.
+        unsafe { ossl_provider_info_clear(ptr::addr_of_mut!(entry)) };
+        return 0;
+    }
+    1
+}
+
+/// `OSSL_PROVIDER *ossl_provider_new(OSSL_LIB_CTX *libctx, const char *name,
+/// OSSL_provider_init_fn *init_function, OSSL_PARAM *params, int noconfig)`.
+///
+/// The constructor callers actually use, and the merge rule is the whole of it. With a NULL
+/// `init_function` it resolves `name` twice — once against the compiled-in predefined table
+/// and once against the store's registered builtins — and the two resolutions do different
+/// things:
+///
+/// * a **predefined** match supplies the name, path and init, and the store entry may then
+///   contribute only *parameters*;
+/// * a **store** match contributes all of them.
+///
+/// The parameter rule inside the store loop is the one that is easy to soften:
+///
+/// ```c
+/// if (params != NULL || p->parameters == NULL) { template.parameters = NULL; break; }
+/// ```
+///
+/// An **empty** parameter set is not the same as no parameter set. A caller passing a
+/// non-NULL `params` array suppresses the config-file defaults entirely; a caller passing NULL
+/// inherits them, unless the entry has none, in which case the template keeps NULL either way.
+/// The `break` is unconditional in each arm, so the loop never looks past the first match.
+///
+/// `params`, when given, is walked and only `OSSL_PARAM_UTF8_STRING` entries are taken — a
+/// parameter of any other type is **skipped rather than refused**, which is why a caller may
+/// pass a mixed array. The caller's `data` pointer is copied into an `INFOPAIR` as a string
+/// and not aliased.
+///
+/// # Safety
+/// `libctx` NULL or live; `name` NUL-terminated; `params` NULL or a terminated `OSSL_PARAM`
+/// array.
+#[allow(dead_code)] // unreachable until 6.8c calls it
+pub(crate) unsafe fn ossl_provider_new(
+    libctx: *mut c_void,
+    name: *const c_char,
+    init_function: Option<ProviderInitFn>,
+    params: *mut OsslParam,
+    noconfig: c_int,
+) -> *mut OsslProvider {
+    // `noconfig` is accepted and unused, exactly as in the authority: the parameter exists for
+    // `ossl_provider_find`, which this function does not call.
+    let _ = noconfig;
+    // SAFETY: `libctx` is NULL or live.
+    let store = unsafe { get_provider_store(libctx) };
+    if store.is_null() {
+        return ptr::null_mut();
+    }
+
+    let mut template = blank_info();
+    let mut chosen = false;
+    if init_function.is_none() {
+        if let Some(row) = predefined_row(name) {
+            // SAFETY: the row is a literal with a terminator, so its pointer is valid for the
+            // program's life; the template does not own it, and `provider_new` dup's it.
+            template.name = row.name.as_ptr().cast_mut();
+            template.is_fallback = row.is_fallback;
+            // 7/8: `template.init = <the provider's init function>`. See
+            // `PREDEFINED_PROVIDERS`.
+            chosen = true;
+        }
+        // SAFETY: `store` is live.
+        unsafe {
+            if CRYPTO_THREAD_read_lock((*store).lock) == 0 {
+                return ptr::null_mut();
+            }
+            let mut i = 0usize;
+            while i < (*store).numprovinfo {
+                let p = (*store).provinfo.add(i);
+                // SAFETY: `p` is a live entry and both names are NUL-terminated.
+                if c_strcmp((*p).name, name) != 0 {
+                    i += 1;
+                    continue;
+                }
+                // A predefined provider takes only its *parameters* from the store entry; a
+                // registered one takes the whole entry, whose name and path the store owns.
+                if !chosen {
+                    template.name = (*p).name;
+                    template.path = (*p).path;
+                    template.init = (*p).init;
+                    template.is_fallback = (*p).is_fallback;
+                }
+                if !params.is_null() || (*p).parameters.is_null() {
+                    break;
+                }
+                // Always copied, never shared: the entry may be mutated later.
+                let copied = OPENSSL_sk_deep_copy(
+                    (*p).parameters,
+                    Some(infopair_copy as SkCopyFn),
+                    Some(infopair_free as SkFreeFn),
+                );
+                if copied.is_null() {
+                    CRYPTO_THREAD_unlock((*store).lock);
+                    return ptr::null_mut();
+                }
+                template.parameters = copied;
+                break;
+            }
+            CRYPTO_THREAD_unlock((*store).lock);
+        }
+    } else {
+        template.init = init_function;
+    }
+
+    if !params.is_null() {
+        // The caller's array replaces whatever the template had, so the template's list -- if
+        // any was copied -- is released first. The authority reaches the same state by
+        // assigning NULL over it without freeing, which leaks; that is a defect in the
+        // authority and is not reproduced.
+        if !template.parameters.is_null() {
+            // SAFETY: the list was copied for the template and is owned here.
+            unsafe { OPENSSL_sk_pop_free(template.parameters, Some(infopair_free)) };
+            template.parameters = ptr::null_mut();
+        }
+        template.parameters = OPENSSL_sk_new_null();
+        if template.parameters.is_null() {
+            return ptr::null_mut();
+        }
+        let mut i = 0isize;
+        loop {
+            // SAFETY: `params` is a terminated array per the contract and `i` walks it.
+            let entry = unsafe { &*params.offset(i) };
+            if entry.key.is_null() {
+                break;
+            }
+            // Only UTF8 strings are taken; every other type is skipped, not refused.
+            if entry.data_type == OSSL_PARAM_UTF8_STRING {
+                // SAFETY: the descriptor declares a NUL-terminated string at `data`.
+                let ok = unsafe {
+                    ossl_provider_info_add_parameter(
+                        ptr::addr_of_mut!(template),
+                        entry.key,
+                        entry.data.cast::<c_char>(),
+                    )
+                };
+                if ok <= 0 {
+                    // SAFETY: the list is the one just built and is ours to release.
+                    unsafe { OPENSSL_sk_pop_free(template.parameters, Some(infopair_free)) };
+                    return ptr::null_mut();
+                }
+            }
+            i += 1;
+        }
+    }
+
+    // `provider_new` raises its own errors, so nothing is added on failure.
+    // SAFETY: `name` is NUL-terminated and `template.parameters` is NULL or a live stack.
+    let prov = unsafe { provider_new(name, template.init, template.parameters) };
+
+    if !template.parameters.is_null() {
+        // SAFETY: the parameters were copied for the template, so they are ours to release;
+        // `provider_new` deep-copied them again.
+        unsafe { OPENSSL_sk_pop_free(template.parameters, Some(infopair_free)) };
+    }
+    if prov.is_null() {
+        return ptr::null_mut();
+    }
+
+    // SAFETY: `prov` is live and `template.path` is NULL or NUL-terminated.
+    if unsafe { ossl_provider_set_module_path(prov, template.path) } == 0 {
+        // SAFETY: `prov` is live and holds the only reference to itself.
+        unsafe { ossl_provider_free(prov) };
+        return ptr::null_mut();
+    }
+
+    // SAFETY: `prov` is live and exclusively owned.
+    unsafe {
+        (*prov).libctx = libctx;
+        (*prov).error_lib = ERR_get_next_error_library();
+    }
+    prov
 }
 
 /// `OSSL_PROVIDER *ossl_provider_find(OSSL_LIB_CTX *libctx, const char *name, int noconfig)`.
@@ -1863,6 +2176,62 @@ mod tests {
             assert!(!conf_bool_false(c"".as_ptr()));
             // `"1"` is *not* case-folded to match `"YES"`, and neither is `"0"`.
             assert!(!conf_bool_true(c"YES ".as_ptr()));
+        }
+    }
+
+    #[test]
+    fn the_predefined_table_is_default_base_null_and_default_is_the_fallback() {
+        // This profile's table has three rows because `configdata.pm` records
+        // `enable-shared enable-legacy`, so `STATIC_LEGACY` is not defined and the `legacy`
+        // row is compiled out. Asserting the rows is what keeps a future build change from
+        // silently adding one this file would then resolve.
+        let rows: &[&core::ffi::CStr] = &[c"default", c"base", c"null"];
+        for (i, name) in rows.iter().enumerate() {
+            assert_eq!(
+                PREDEFINED_PROVIDERS[i].name.to_bytes(),
+                name.to_bytes(),
+                "row {i} is named as the authority names it"
+            );
+        }
+        // The terminator is the empty name, which is how the scan stops.
+        assert!(PREDEFINED_PROVIDERS[3].name.to_bytes().is_empty());
+        // `default` is the only fallback: it is what an operation with no explicit load gets,
+        // and `base` -- which declares no algorithms of its own -- is not.
+        assert_eq!(
+            PREDEFINED_PROVIDERS[0].is_fallback, 1,
+            "default is a fallback"
+        );
+        assert_eq!(PREDEFINED_PROVIDERS[1].is_fallback, 0, "base is not");
+        assert_eq!(PREDEFINED_PROVIDERS[2].is_fallback, 0, "null is not");
+        assert!(predefined_row(c"default".as_ptr()).is_some());
+        assert!(predefined_row(c"base".as_ptr()).is_some());
+        assert!(predefined_row(c"null".as_ptr()).is_some());
+        // `legacy` is a *module* in this profile and must not be found here: it is loaded by
+        // name through the DSO layer, which is why 6.9 had to precede this registry.
+        assert!(predefined_row(c"legacy".as_ptr()).is_none());
+        assert!(predefined_row(c"fips".as_ptr()).is_none());
+        assert!(
+            predefined_row(c"".as_ptr()).is_none(),
+            "the terminator matches nothing"
+        );
+        assert!(
+            predefined_row(c"DEFAULT".as_ptr()).is_none(),
+            "the comparison is exact"
+        );
+    }
+
+    #[test]
+    fn a_blank_info_entry_is_all_zero_because_both_constructors_start_that_way() {
+        let info = blank_info();
+        assert!(info.name.is_null());
+        assert!(info.path.is_null());
+        assert!(info.init.is_none());
+        assert!(info.parameters.is_null());
+        assert_eq!(info.is_fallback, 0);
+        // Every predefined row's `is_fallback` is one bit, matching the authority's
+        // `unsigned int is_fallback : 1`.
+        for row in PREDEFINED_PROVIDERS.iter() {
+            assert!(row.is_fallback <= 1, "is_fallback is one bit");
         }
     }
 }
