@@ -123,14 +123,15 @@ static void says(const char *key, const char *s)
  */
 #define IDX_COMP_METHODS 21
 #define IDX_NAMEMAP 4
+#define IDX_THREAD 19
 
 /* The eighteen indices the authority answers a pointer for. */
 #define LIVE_SLOTS 18
 
-/* The slots this stratum fills. One entry so far: 21, whose answer is
- * `&ctx->comp_methods`, so it is exact as soon as the field exists. Each later
+/* The slots this stratum fills. 21 answers `&ctx->comp_methods`, so it is exact as
+ * soon as the field exists; 19 is the thread slot, filled by 6.6e. Each later
  * subphase appends its slot here when it lands. */
-static const int filled_slots[] = { IDX_COMP_METHODS };
+static const int filled_slots[] = { IDX_COMP_METHODS, IDX_THREAD };
 #define FILLED_COUNT ((int) (sizeof filled_slots / sizeof filled_slots[0]))
 
 /* The indices the authority answers NULL for, and why: 7 and 8 are slots it reuses

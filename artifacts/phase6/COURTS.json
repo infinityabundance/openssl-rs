@@ -7,6 +7,23 @@
     "courts": [
       {
         "authority_exit_code": 0,
+        "authority_observations": 75,
+        "candidate_exit_code": 0,
+        "candidate_observations": 75,
+        "candidate_stderr_tail": [],
+        "court": "RT-LIBCTX",
+        "crashed": false,
+        "probe": "courts/phase6/rt_libctx_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase6/probes/rt_libctx_probe.authority",
+          "candidate": "artifacts/phase6/probes/rt_libctx_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
         "authority_observations": 1162,
         "candidate_exit_code": 0,
         "candidate_observations": 1162,
@@ -24,26 +41,26 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 73,
+        "authority_observations": 39,
         "candidate_exit_code": 0,
-        "candidate_observations": 73,
+        "candidate_observations": 39,
         "candidate_stderr_tail": [],
-        "court": "RT-LIBCTX",
+        "court": "RT-THREADDATA",
         "crashed": false,
-        "probe": "courts/phase6/rt_libctx_probe.c",
+        "probe": "courts/phase6/rt_threaddata_probe.c",
         "residual_count": 0,
         "residuals": [],
         "staged_binaries": {
-          "authority": "artifacts/phase6/probes/rt_libctx_probe.authority",
-          "candidate": "artifacts/phase6/probes/rt_libctx_probe.candidate"
+          "authority": "artifacts/phase6/probes/rt_threaddata_probe.authority",
+          "candidate": "artifacts/phase6/probes/rt_threaddata_probe.candidate"
         },
         "verdict": "pass"
       }
     ],
     "summary": {
       "fail": 0,
-      "pass": 2,
-      "total": 2
+      "pass": 3,
+      "total": 3
     }
   },
   "generator": "forensics/tools/phase6_courts.py",
@@ -55,13 +72,18 @@
     },
     {
       "name": "probe",
+      "path": "courts/phase6/rt_libctx_probe.c",
+      "sha256": "10f93ac314a207c9c6f0f1599f73edb7a54246980f7052c108d1b1f154ed1eed"
+    },
+    {
+      "name": "probe",
       "path": "courts/phase6/rt_param_probe.c",
       "sha256": "c2bcb07b21923942e7cb74db868c5a71e7cf8ae34075818dd2d9cc528547fc83"
     },
     {
       "name": "probe",
-      "path": "courts/phase6/rt_libctx_probe.c",
-      "sha256": "657f7a869b66382461a8e120104a235b5ac689253fcac8f5e42f354cd6b6a3d4"
+      "path": "courts/phase6/rt_threaddata_probe.c",
+      "sha256": "ecff1dfa3781f5284d140a42296ed1c6889cba0e78186386f60cbaf82c644838"
     }
   ],
   "kind": "phase6-courts",

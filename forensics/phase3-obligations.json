@@ -340,7 +340,7 @@
       },
       {
         "declaring_header": "thread.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/thread.rs",
         "owning_phase": 6,
         "reason": "reads and writes the thread-tracking ex-data slot of an OSSL_LIB_CTX (OSSL_LIB_CTX_GET_THREADS -> ossl_lib_ctx_get_data(CTX, OSSL_LIB_CTX_THREAD_INDEX)); the library context is Phase 6",
@@ -348,7 +348,7 @@
       },
       {
         "declaring_header": "thread.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/thread.rs",
         "owning_phase": 6,
         "reason": "reads and writes the thread-tracking ex-data slot of an OSSL_LIB_CTX (OSSL_LIB_CTX_GET_THREADS -> ossl_lib_ctx_get_data(CTX, OSSL_LIB_CTX_THREAD_INDEX)); the library context is Phase 6",
@@ -769,7 +769,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "d718955d409596556ca2252f7e647203282508cae2f14b440be5d53520dc3338"
+      "sha256": "6bc5164e210e2f2a033297e162f6d52144d60ac2ec78c017762e00409d47eba6"
     }
   ],
   "kind": "phase3-obligations",

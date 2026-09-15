@@ -157,11 +157,12 @@ requires each mutation to be seen on its targeted axis **and on no other**.
 | `openssl-cli-dgst` | seen on stdout only | seen on exit only | **has** sensitivity evidence |
 | `openssl-cli-inventory` | seen on stdout only | seen on exit only | **has** sensitivity evidence |
 | `openssl-cli-version` | refused | refused | observations only |
-| `openssl-rs-rt-*` (all 38 runtime courts) | seen on stdout only | seen on exit only | **have** sensitivity evidence |
+| `openssl-rs-rt-*` (all 39 runtime courts) | seen on stdout only | seen on exit only | **have** sensitivity evidence |
 
-The runtime count is 38 as of the Phase 6.6a boundary: ten Phase 3 courts, seventeen
-Phase 4, nine Phase 5, and two Phase 6 (`openssl-rs-rt-param` and
-`openssl-rs-rt-libctx`). The number is not asserted from memory — `python3
+The runtime count is 39 as of the Phase 6.6e boundary: ten Phase 3 courts, seventeen
+Phase 4, nine Phase 5, and three Phase 6 (`openssl-rs-rt-param`,
+`openssl-rs-rt-libctx` and `openssl-rs-rt-threaddata`). The number is not asserted from
+memory — `python3
 forensics/tools/gen_frf_courts.py --check` prints that breakdown, and that is where this
 line's arithmetic comes from. It is the count of manifests
 `forensics/frf/courts/openssl-rs-rt-*` holds, which is also what

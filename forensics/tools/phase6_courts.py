@@ -78,8 +78,9 @@ STAGED = REPO_ROOT / "artifacts" / "phase6" / "probes"
 RUN_TIMEOUT_S = "60"
 
 COURTS = [
-    ("RT-PARAM", "rt_param_probe.c"),
     ("RT-LIBCTX", "rt_libctx_probe.c"),
+    ("RT-PARAM", "rt_param_probe.c"),
+    ("RT-THREADDATA", "rt_threaddata_probe.c"),
 ]
 
 

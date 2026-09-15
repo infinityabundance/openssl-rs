@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 137,
       "deferred_to_later_phase": 0,
-      "implemented": 88,
-      "open_in_this_stratum": 73,
+      "implemented": 90,
+      "open_in_this_stratum": 71,
       "owned": 161,
       "received_by_handoff": 24
     },
@@ -132,7 +132,9 @@
       "OSSL_PARAM_set_uint64",
       "OSSL_PARAM_set_ulong",
       "OSSL_PARAM_set_utf8_ptr",
-      "OSSL_PARAM_set_utf8_string"
+      "OSSL_PARAM_set_utf8_string",
+      "OSSL_get_max_threads",
+      "OSSL_set_max_threads"
     ],
     "module_prefixes": [
       {
@@ -569,16 +571,6 @@
         "declaring_header": "self_test.h",
         "module": "src/selftest/mod.rs",
         "symbol": "OSSL_SELF_TEST_set_callback"
-      },
-      {
-        "declaring_header": "thread.h",
-        "module": "src/context/thread_data.rs",
-        "symbol": "OSSL_get_max_threads"
-      },
-      {
-        "declaring_header": "thread.h",
-        "module": "src/context/thread_data.rs",
-        "symbol": "OSSL_set_max_threads"
       }
     ],
     "owned_by_module": {
@@ -616,7 +608,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "d718955d409596556ca2252f7e647203282508cae2f14b440be5d53520dc3338"
+      "sha256": "6bc5164e210e2f2a033297e162f6d52144d60ac2ec78c017762e00409d47eba6"
     }
   ],
   "kind": "phase6-obligations",

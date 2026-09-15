@@ -247,6 +247,13 @@ COURTS: list[tuple[str, int, str, str]] = [
      "past the end of the switch answer NULL, while the slot whose answer is the "
      "address of a field answers a pointer for every context including an empty "
      "one"),
+    ("rt-threaddata", 6, "rt_threaddata_probe",
+     "the per-context thread slot's two accessors: the counter is per context "
+     "rather than per process, so setting it on one must not move another; a "
+     "NULL context resolves through the library context default chain, so "
+     "installing a thread default changes what the same call answers; and the "
+     "value is stored verbatim, with no range check, so UINT64_MAX is legal to "
+     "set and to read back and zero is a value rather than 'unset'"),
 ]
 
 
