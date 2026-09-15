@@ -414,7 +414,13 @@ def classify_rust(text: str, aliases: dict[str, str], depth: int = 0) -> str:
     if R_INTEGER.match(t):
         return "integer"
     if depth < 8 and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_:]*", t):
-        target = aliases.get(t) or aliases.get(t.split("::")[-1])
+        leaf = t.split("::")[-1]
+        # A qualified path to a scalar (``core::ffi::c_ulong``) is the scalar. The
+        # type plane already narrowed this; the class plane did not, and reported
+        # `ASN1_tag2bit` as unclassified for that reason alone.
+        if leaf != t and R_INTEGER.match(leaf):
+            return "integer"
+        target = aliases.get(t) or aliases.get(leaf)
         if target is not None:
             return classify_rust(target, aliases, depth + 1)
     if re.search(r"\bfn\b", t):

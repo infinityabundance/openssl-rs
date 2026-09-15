@@ -430,7 +430,7 @@
     ],
     "implemented_by_two_strata": [],
     "implemented_exports": {
-      "libcrypto": 625,
+      "libcrypto": 734,
       "libssl": 0
     },
     "invariant": "every authority export has exactly one declared owner in forensics/atlas/symbol-ownership.json, and every implemented export's owner is therefore declared before any implementation exists",
@@ -5769,7 +5769,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "5a459b09c7eeb116dfb9eb5d2bc70afc02df737cc8aaa8e3dc81623c32f72a21"
+      "sha256": "1a1e83560e128945e6513e4f3b95b70654ed715f3d9faf3612f74cd7be44fba1"
     },
     {
       "name": "authority-symbols",
