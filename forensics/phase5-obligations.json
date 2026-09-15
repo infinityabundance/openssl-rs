@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 561,
       "deferred_to_later_phase": 62,
-      "implemented": 350,
-      "open_in_this_stratum": 153,
+      "implemented": 355,
+      "open_in_this_stratum": 148,
       "owned": 565
     },
     "deferred": [
@@ -549,6 +549,11 @@
       "ASN1_check_infinite_end",
       "ASN1_const_check_infinite_end",
       "ASN1_get_object",
+      "ASN1_item_ex_free",
+      "ASN1_item_ex_new",
+      "ASN1_item_free",
+      "ASN1_item_new",
+      "ASN1_item_new_ex",
       "ASN1_object_size",
       "ASN1_parse",
       "ASN1_parse_dump",
@@ -1167,22 +1172,7 @@
       {
         "declaring_header": "asn1t.h",
         "module": "src/asn1/",
-        "symbol": "ASN1_item_ex_free"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
         "symbol": "ASN1_item_ex_i2d"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_ex_new"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_free"
       },
       {
         "declaring_header": "asn1.h",
@@ -1208,16 +1198,6 @@
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
         "symbol": "ASN1_item_ndef_i2d"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_new"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_new_ex"
       },
       {
         "declaring_header": "asn1.h",
@@ -1587,7 +1567,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "1f4a149b208b17c02d9449a99dac1ec1b7c74f6cea6dc4a8e7824e6fb707cf21"
+      "sha256": "ff5dde965af45883ae7f11cd073b56d7148989e2b7586c8edc5ef89147e8b57b"
     }
   ],
   "kind": "phase5-obligations",
