@@ -156,7 +156,7 @@
       "verdict": "pass"
     },
     "RT-LIBCTX": {
-      "observations": 75,
+      "observations": 79,
       "verdict": "pass"
     },
     "RT-MEM": {
@@ -191,6 +191,10 @@
       "observations": 32,
       "verdict": "pass"
     },
+    "RT-SELFTEST": {
+      "observations": 71,
+      "verdict": "pass"
+    },
     "RT-STACK": {
       "observations": 159,
       "verdict": "pass"
@@ -215,14 +219,14 @@
     "phase6": 0
   },
   "implemented": {
-    "libcrypto": 1064,
+    "libcrypto": 1073,
     "libssl": 0
   },
   "open_obligations": {
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,
-    "phase6": 71
+    "phase6": 62
   },
   "owned_obligations": {
     "phase3": 294,

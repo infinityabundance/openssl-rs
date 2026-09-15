@@ -89,7 +89,7 @@ received by hand-off. Both numbers are in the ledger's `counts` block, and
 | 6.8 | Provider registry and dispatch | `crypto/provider.c`, `provider_core.c` (2,679 lines), `provider_child.c`, `provider_predefined.c`, `provider_conf.c` | 6.6, 6.7 | `RT-PROVIDER` | load/unload/try_load, reference ownership, builtin and dynamic providers, `OSSL_DISPATCH` walking, core→provider and provider→core upcalls, algorithm registration, name map, gettable params, capabilities, `do_all`, operation query, fetch and the fetch cache |
 | 6.9 | DSO | the fifteen abi-only `DSO_*` — `dso_lib.c`, `dso_dlfcn.c`, `dso_dl.c`, `dso_openssl.c` | 6.8 | `RT-DSO` | the dynamic loader that `DSO_load` needs to make a provider module a module |
 | 6.10 | CONF module registry | the 18 hand-offs from Phase 4 and Phase 5 — `crypto/conf/conf_mod.c` | 6.8, 6.9 | `RT-CONF-MOD` | module activation through configuration, `CONF_modules_load*`, the imodule/module accessors, and the diagnostics flag interaction D50 recorded |
-| 6.11 | Self-test and indicator | `self_test.h` 7, `indicator.h` 2 — `crypto/self_test_core.c`, `crypto/indicator_core.c` | 6.8 | `RT-SELFTEST` | the callback plumbing and the corrupt/begin/end transitions, which the FIPS provider's *behavioural* parity will later stand on |
+| 6.11 | Self-test and indicator | `self_test.h` 7, `indicator.h` 2 — `crypto/self_test_core.c`, `crypto/indicator_core.c`; `src/selftest/{mod,indicator}.rs`; fills slots 12 and 22 | 6.6a | `RT-SELFTEST` | **COMPLETE** (D108): all nine exports, 71 observations, zero residuals, first run. The probe *is* the callback, so what it observes is what the library passes it: the array's entries alias the object's own fields (the same array reports `Pass` inside `onend`'s callback and `None` afterwards), `onend` treats anything but 1 as failure, and `oncorrupt_byte`'s answer is the callback's inverted. The indicator callback is stored and read back; nothing invokes it in this stratum, because the code that reports an indicator is provider-side |
 | 6.12 | **Third-party provider court** | nothing new — the crown-jewel test | 6.5–6.11 | `RT-PROVIDER-3P` | an **independently written C provider**, compiled separately from this project and loaded **unchanged** into both the authority and the candidate, yields matching init dispatch, core upcalls, parameter flow, algorithm enumeration, property selection, operation calls, teardown and failure behaviour |
 | 6.13 | Inventory generation and closure | nothing — evidence | all | — | the provider/algorithm/property inventory is generated from the authority rather than handwritten; every court passes; FRF receipts compile into a claim; the seal is written from the ledgers; a Gemel checkpoint closes the stratum |
 
@@ -117,7 +117,7 @@ symbol ledgers can see a *field* that was never filled. The table is the record.
 | 6 | `drbg_nonce` | Phase 9 |
 | 10 | `encoder_store` | Phase 7 |
 | 11 | `decoder_store` | Phase 7 |
-| 12 | `self_test_cb` | 6.11 |
+| 12 | `self_test_cb` | **filled by 6.11** |
 | 14 | `global_properties` | 6.7 |
 | 15 | `store_loader_store` | Phase 10 |
 | 16 | `provider_conf` | 6.8 |
@@ -126,7 +126,7 @@ symbol ledgers can see a *field* that was never filled. The table is the record.
 | 19 | `threads` | **filled by 6.6e** |
 | 20 | `decoder_cache` | Phase 7 |
 | 21 | `comp_methods` | **filled by 6.6a** |
-| 22 | `indicator_cb` | 6.11 |
+| 22 | `indicator_cb` | **filled by 6.11** |
 
 **Phase 6 cannot be called complete while any row above is unfilled.** The slot's owner
 is the subphase named, not this stratum, and the same rule applies to those: a subphase

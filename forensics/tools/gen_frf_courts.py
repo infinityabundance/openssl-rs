@@ -254,6 +254,15 @@ COURTS: list[tuple[str, int, str, str]] = [
      "installing a thread default changes what the same call answers; and the "
      "value is stored verbatim, with no range check, so UINT64_MAX is legal to "
      "set and to read back and zero is a value rather than 'unset'"),
+    ("rt-selftest", 6, "rt_selftest_probe",
+     "the two callback surfaces, observed by being the callback: the array's "
+     "entries alias the object's own phase/type/desc fields, so the same array "
+     "reports Pass inside onend's callback and None when read afterwards; onend "
+     "treats anything other than 1 as failure, so 0 and -1 both report Fail; "
+     "oncorrupt_byte's answer is the callback's inverted, flipping the first "
+     "byte only when the callback refuses; and both per-context callback pairs, "
+     "including that the object's callback is the one passed to "
+     "OSSL_SELF_TEST_new rather than the context's"),
 ]
 
 

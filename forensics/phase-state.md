@@ -14,7 +14,7 @@ enforced here:
 | 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `complete` |  |
 | 4 | BIO + CONF + object database | `complete` |  |
 | 5 | BN + ASN.1 + DER/PEM | `complete` |  |
-| 6 | OSSL_LIB_CTX + provider core | `in-progress` | 71 open obligation(s) of this stratum recorded in forensics/phase6-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
+| 6 | OSSL_LIB_CTX + provider core | `in-progress` | 62 open obligation(s) of this stratum recorded in forensics/phase6-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
 | 7 | EVP framework | `not-started` | not started |
 | 8 | Native cryptographic primitives | `not-started` | not started |
 | 9 | RAND / DRBG + entropy | `not-started` | not started |

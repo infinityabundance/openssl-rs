@@ -256,7 +256,7 @@
         "stratum": "BN + ASN.1 + DER/PEM"
       },
       {
-        "blocking": "71 open obligation(s) of this stratum recorded in forensics/phase6-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase",
+        "blocking": "62 open obligation(s) of this stratum recorded in forensics/phase6-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -449,7 +449,7 @@
       "not_started": 15
     }
   },
-  "body_hash": "d13422cf31c42137b1226e0e7512b74baf2e2b6792ab2bebfaee90aa1a515747",
+  "body_hash": "bff8717529f8a49efb0679447ebda4fe18b4f593c8a16020002068c053cf11cc",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

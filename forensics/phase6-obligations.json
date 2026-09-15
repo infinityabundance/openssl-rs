@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 137,
       "deferred_to_later_phase": 0,
-      "implemented": 90,
-      "open_in_this_stratum": 71,
+      "implemented": 99,
+      "open_in_this_stratum": 62,
       "owned": 161,
       "received_by_handoff": 24
     },
@@ -45,6 +45,8 @@
       ]
     },
     "implemented": [
+      "OSSL_INDICATOR_get_callback",
+      "OSSL_INDICATOR_set_callback",
       "OSSL_LIB_CTX_free",
       "OSSL_LIB_CTX_get0_global_default",
       "OSSL_LIB_CTX_get_conf_diagnostics",
@@ -133,6 +135,13 @@
       "OSSL_PARAM_set_ulong",
       "OSSL_PARAM_set_utf8_ptr",
       "OSSL_PARAM_set_utf8_string",
+      "OSSL_SELF_TEST_free",
+      "OSSL_SELF_TEST_get_callback",
+      "OSSL_SELF_TEST_new",
+      "OSSL_SELF_TEST_onbegin",
+      "OSSL_SELF_TEST_oncorrupt_byte",
+      "OSSL_SELF_TEST_onend",
+      "OSSL_SELF_TEST_set_callback",
       "OSSL_get_max_threads",
       "OSSL_set_max_threads"
     ],
@@ -403,16 +412,6 @@
         "symbol": "OPENSSL_thread_stop_ex"
       },
       {
-        "declaring_header": "indicator.h",
-        "module": "src/selftest/indicator.rs",
-        "symbol": "OSSL_INDICATOR_get_callback"
-      },
-      {
-        "declaring_header": "indicator.h",
-        "module": "src/selftest/indicator.rs",
-        "symbol": "OSSL_INDICATOR_set_callback"
-      },
-      {
         "declaring_header": "crypto.h",
         "module": "src/context/mod.rs",
         "symbol": "OSSL_LIB_CTX_load_config"
@@ -536,41 +535,6 @@
         "declaring_header": "provider.h",
         "module": "src/provider/mod.rs",
         "symbol": "OSSL_PROVIDER_unquery_operation"
-      },
-      {
-        "declaring_header": "self_test.h",
-        "module": "src/selftest/mod.rs",
-        "symbol": "OSSL_SELF_TEST_free"
-      },
-      {
-        "declaring_header": "self_test.h",
-        "module": "src/selftest/mod.rs",
-        "symbol": "OSSL_SELF_TEST_get_callback"
-      },
-      {
-        "declaring_header": "self_test.h",
-        "module": "src/selftest/mod.rs",
-        "symbol": "OSSL_SELF_TEST_new"
-      },
-      {
-        "declaring_header": "self_test.h",
-        "module": "src/selftest/mod.rs",
-        "symbol": "OSSL_SELF_TEST_onbegin"
-      },
-      {
-        "declaring_header": "self_test.h",
-        "module": "src/selftest/mod.rs",
-        "symbol": "OSSL_SELF_TEST_oncorrupt_byte"
-      },
-      {
-        "declaring_header": "self_test.h",
-        "module": "src/selftest/mod.rs",
-        "symbol": "OSSL_SELF_TEST_onend"
-      },
-      {
-        "declaring_header": "self_test.h",
-        "module": "src/selftest/mod.rs",
-        "symbol": "OSSL_SELF_TEST_set_callback"
       }
     ],
     "owned_by_module": {
@@ -608,7 +572,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "6bc5164e210e2f2a033297e162f6d52144d60ac2ec78c017762e00409d47eba6"
+      "sha256": "64956ccc123e27096e3f0f5f7884b73fecb7af8408d5e69f3f8bd40202bc8718"
     }
   ],
   "kind": "phase6-obligations",

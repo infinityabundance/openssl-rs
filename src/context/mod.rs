@@ -119,6 +119,13 @@ use crate::runtime::thread::{
 
 pub mod thread_data;
 
+/// `OSSL_LIB_CTX_SELF_TEST_CB_INDEX`, from `include/internal/cryptlib.h`. Slot 12,
+/// filled by 6.11.
+pub(crate) const OSSL_LIB_CTX_SELF_TEST_CB_INDEX: c_int = 12;
+
+/// `OSSL_LIB_CTX_INDICATOR_CB_INDEX`. Slot 22, filled by 6.11.
+pub(crate) const OSSL_LIB_CTX_INDICATOR_CB_INDEX: c_int = 22;
+
 /// `OSSL_LIB_CTX_THREAD_INDEX`, from `include/internal/cryptlib.h`. Slot 19,
 /// filled by 6.6e.
 pub(crate) const OSSL_LIB_CTX_THREAD_INDEX: c_int = 19;
@@ -331,6 +338,25 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
     }
     // SAFETY: as above; the slot is published once, here.
     unsafe { (*ctx).threads = threads.cast::<c_void>() };
+
+    // The two callback holders. The authority builds them after `drbg_nonce` and
+    // before the thread slot, and each is a plain `OPENSSL_zalloc`ed pair.
+    let self_test_cb = crate::selftest::ossl_self_test_set_callback_new(ctx.cast::<c_void>());
+    if self_test_cb.is_null() {
+        context_deinit(ctx);
+        return false;
+    }
+    // SAFETY: as above.
+    unsafe { (*ctx).self_test_cb = self_test_cb.cast::<c_void>() };
+
+    let indicator_cb =
+        crate::selftest::indicator::ossl_indicator_set_callback_new(ctx.cast::<c_void>());
+    if indicator_cb.is_null() {
+        context_deinit(ctx);
+        return false;
+    }
+    // SAFETY: as above.
+    unsafe { (*ctx).indicator_cb = indicator_cb.cast::<c_void>() };
     true
 }
 
@@ -341,12 +367,32 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
 /// with respect to the provider store). Only slot 21 has no release: it is an
 /// interior address, not an allocation.
 fn context_deinit_objs(ctx: *mut OsslLibCtx) {
+    // The two callback holders, in the authority's order: `indicator_cb` first,
+    // then `self_test_cb`, both after `drbg_nonce` and before the thread slot.
+    // SAFETY: `ctx` is a live context being torn down by `context_deinit`, and no
+    // other thread holds a reference to it -- `OSSL_LIB_CTX_free` is the only
+    // caller and the caller contract is that the object is no longer in use. Each
+    // slot is released exactly once and re-NULLed.
+    unsafe {
+        if !(*ctx).indicator_cb.is_null() {
+            crate::selftest::indicator::ossl_indicator_set_callback_free(
+                (*ctx)
+                    .indicator_cb
+                    .cast::<crate::selftest::indicator::IndicatorCb>(),
+            );
+            (*ctx).indicator_cb = ptr::null_mut();
+        }
+        if !(*ctx).self_test_cb.is_null() {
+            crate::selftest::ossl_self_test_set_callback_free(
+                (*ctx).self_test_cb.cast::<crate::selftest::SelfTestCb>(),
+            );
+            (*ctx).self_test_cb = ptr::null_mut();
+        }
+    }
+
     // `#ifndef OPENSSL_NO_THREAD_POOL` in the authority, released after the two
     // callback slots and before `child_provider` and `comp_methods`.
-    // SAFETY: `ctx` is a live context being torn down by `context_deinit`, and
-    // no other thread holds a reference to it -- `OSSL_LIB_CTX_free` is the only
-    // caller and the caller contract is that the object is no longer in use. The
-    // slot is released exactly once and re-NULLed.
+    // SAFETY: as above.
     unsafe {
         if !(*ctx).threads.is_null() {
             crate::context::thread_data::ossl_threads_ctx_free(
