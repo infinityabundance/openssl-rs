@@ -42,13 +42,41 @@ from __future__ import annotations
 
 import argparse
 import sys
+import tomllib
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
-# The candidate version the courts name. One place, so a release bumps every
-# court rather than the ones somebody remembered.
-CANDIDATE_VERSION = "0.0.7"
+
+def candidate_version() -> str:
+    """The candidate version the courts name, read from `Cargo.toml`.
+
+    This used to be a literal in this file, with the comment "one place, so a
+    release bumps every court rather than the ones somebody remembered". One place
+    is right; a *second* place relative to `Cargo.toml` is not, because nothing
+    held the two together and the manifests would have gone on naming a version the
+    crate no longer was -- the same class as the stale phase registry D94 records.
+    `--check` now fails if a declaration names a version the manifest does not, so a
+    release edits `Cargo.toml` alone.
+    """
+    manifest = REPO_ROOT / "Cargo.toml"
+    if not manifest.is_file():
+        raise SystemExit(
+            "gen-frf-courts: Cargo.toml is absent, so the candidate version the "
+            "court declarations name cannot be derived"
+        )
+    with manifest.open("rb") as fh:
+        doc = tomllib.load(fh)
+    try:
+        return str(doc["package"]["version"])
+    except KeyError as exc:
+        raise SystemExit(
+            f"gen-frf-courts: Cargo.toml has no [package] {exc} to name as the "
+            "candidate version"
+        ) from exc
+
+
+CANDIDATE_VERSION = candidate_version()
 AUTHORITY = "openssl-rt-3.6.4-r2"
 BUILD_PROFILE = "linux-x86_64-default-shared-legacy-notests"
 AUTHORITY_LIB = "forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3"
