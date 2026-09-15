@@ -6150,6 +6150,206 @@ pub(crate) const V3_UTL_388: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `i2d_ASN1_bio_stream` at `crypto/asn1/asn_mime.c:79` (ERR_R_BUF_LIB).
+pub(crate) const ASN_MIME_79: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/asn_mime.c",
+    line: 79,
+    func: c"i2d_ASN1_bio_stream",
+    lib: 13,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
+/// `B64_write_ASN1` at `crypto/asn1/asn_mime.c:112` (ERR_R_BIO_LIB).
+pub(crate) const ASN_MIME_112: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/asn_mime.c",
+    line: 112,
+    func: c"B64_write_ASN1",
+    lib: 13,
+    reason: 524320,
+    dynamic_reason: false,
+};
+
+/// `b64_read_asn1` at `crypto/asn1/asn_mime.c:143` (ERR_R_BIO_LIB).
+pub(crate) const ASN_MIME_143: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/asn_mime.c",
+    line: 143,
+    func: c"b64_read_asn1",
+    lib: 13,
+    reason: 524320,
+    dynamic_reason: false,
+};
+
+/// `b64_read_asn1` at `crypto/asn1/asn_mime.c:149` (ASN1_R_DECODE_ERROR).
+pub(crate) const ASN_MIME_149: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/asn_mime.c",
+    line: 149,
+    func: c"b64_read_asn1",
+    lib: 13,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `asn1_output_data` at `crypto/asn1/asn_mime.c:394` (ASN1_R_STREAMING_NOT_SUPPORTED).
+pub(crate) const ASN_MIME_394: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/asn_mime.c",
+    line: 394,
+    func: c"asn1_output_data",
+    lib: 13,
+    reason: 202,
+    dynamic_reason: false,
+};
+
+/// `SMIME_read_ASN1_ex` at `crypto/asn1/asn_mime.c:448` (ASN1_R_MIME_PARSE_ERROR).
+pub(crate) const ASN_MIME_448: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/asn_mime.c",
+    line: 448,
+    func: c"SMIME_read_ASN1_ex",
+    lib: 13,
+    reason: 207,
+    dynamic_reason: false,
+};
+
+/// `SMIME_read_ASN1_ex` at `crypto/asn1/asn_mime.c:455` (ASN1_R_NO_CONTENT_TYPE).
+pub(crate) const ASN_MIME_455: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/asn_mime.c",
+    line: 455,
+    func: c"SMIME_read_ASN1_ex",
+    lib: 13,
+    reason: 209,
+    dynamic_reason: false,
+};
+
+/// `SMIME_read_ASN1_ex` at `crypto/asn1/asn_mime.c:466` (ASN1_R_NO_MULTIPART_BOUNDARY).
+pub(crate) const ASN_MIME_466: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/asn_mime.c",
+    line: 466,
+    func: c"SMIME_read_ASN1_ex",
+    lib: 13,
+    reason: 211,
+    dynamic_reason: false,
+};
+
+/// `SMIME_read_ASN1_ex` at `crypto/asn1/asn_mime.c:472` (ASN1_R_NO_MULTIPART_BODY_FAILURE).
+pub(crate) const ASN_MIME_472: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/asn_mime.c",
+    line: 472,
+    func: c"SMIME_read_ASN1_ex",
+    lib: 13,
+    reason: 210,
+    dynamic_reason: false,
+};
+
+/// `SMIME_read_ASN1_ex` at `crypto/asn1/asn_mime.c:481` (ASN1_R_MIME_SIG_PARSE_ERROR).
+pub(crate) const ASN_MIME_481: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/asn_mime.c",
+    line: 481,
+    func: c"SMIME_read_ASN1_ex",
+    lib: 13,
+    reason: 208,
+    dynamic_reason: false,
+};
+
+/// `SMIME_read_ASN1_ex` at `crypto/asn1/asn_mime.c:491` (ASN1_R_NO_SIG_CONTENT_TYPE).
+pub(crate) const ASN_MIME_491: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/asn_mime.c",
+    line: 491,
+    func: c"SMIME_read_ASN1_ex",
+    lib: 13,
+    reason: 212,
+    dynamic_reason: false,
+};
+
+/// `SMIME_read_ASN1_ex` at `crypto/asn1/asn_mime.c:497` (ASN1_R_SIG_INVALID_MIME_TYPE).
+pub(crate) const ASN_MIME_497: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/asn_mime.c",
+    line: 497,
+    func: c"SMIME_read_ASN1_ex",
+    lib: 13,
+    reason: 213,
+    dynamic_reason: false,
+};
+
+/// `SMIME_read_ASN1_ex` at `crypto/asn1/asn_mime.c:506` (ASN1_R_ASN1_SIG_PARSE_ERROR).
+pub(crate) const ASN_MIME_506: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/asn_mime.c",
+    line: 506,
+    func: c"SMIME_read_ASN1_ex",
+    lib: 13,
+    reason: 204,
+    dynamic_reason: false,
+};
+
+/// `SMIME_read_ASN1_ex` at `crypto/asn1/asn_mime.c:524` (ASN1_R_INVALID_MIME_TYPE).
+pub(crate) const ASN_MIME_524: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/asn_mime.c",
+    line: 524,
+    func: c"SMIME_read_ASN1_ex",
+    lib: 13,
+    reason: 205,
+    dynamic_reason: false,
+};
+
+/// `SMIME_read_ASN1_ex` at `crypto/asn1/asn_mime.c:533` (ASN1_R_ASN1_PARSE_ERROR).
+pub(crate) const ASN_MIME_533: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/asn_mime.c",
+    line: 533,
+    func: c"SMIME_read_ASN1_ex",
+    lib: 13,
+    reason: 203,
+    dynamic_reason: false,
+};
+
+/// `SMIME_crlf_copy` at `crypto/asn1/asn_mime.c:554` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ASN_MIME_554: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/asn_mime.c",
+    line: 554,
+    func: c"SMIME_crlf_copy",
+    lib: 13,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `SMIME_crlf_copy` at `crypto/asn1/asn_mime.c:564` (ERR_R_BIO_LIB).
+pub(crate) const ASN_MIME_564: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/asn_mime.c",
+    line: 564,
+    func: c"SMIME_crlf_copy",
+    lib: 13,
+    reason: 524320,
+    dynamic_reason: false,
+};
+
+/// `SMIME_text` at `crypto/asn1/asn_mime.c:620` (ASN1_R_MIME_PARSE_ERROR).
+pub(crate) const ASN_MIME_620: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/asn_mime.c",
+    line: 620,
+    func: c"SMIME_text",
+    lib: 13,
+    reason: 207,
+    dynamic_reason: false,
+};
+
+/// `SMIME_text` at `crypto/asn1/asn_mime.c:625` (ASN1_R_MIME_NO_CONTENT_TYPE).
+pub(crate) const ASN_MIME_625: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/asn_mime.c",
+    line: 625,
+    func: c"SMIME_text",
+    lib: 13,
+    reason: 206,
+    dynamic_reason: false,
+};
+
+/// `SMIME_text` at `crypto/asn1/asn_mime.c:630` (ASN1_R_INVALID_MIME_TYPE).
+pub(crate) const ASN_MIME_630: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/asn_mime.c",
+    line: 630,
+    func: c"SMIME_text",
+    lib: 13,
+    reason: 205,
+    dynamic_reason: false,
+};
+
 /// Every recorded raise site, in authority source order.
 ///
 /// This is the complete inventory for the covered files, including the
@@ -6773,4 +6973,24 @@ pub(crate) static ALL: &[ErrSite] = &[
     V3_UTL_364,
     V3_UTL_379,
     V3_UTL_388,
+    ASN_MIME_79,
+    ASN_MIME_112,
+    ASN_MIME_143,
+    ASN_MIME_149,
+    ASN_MIME_394,
+    ASN_MIME_448,
+    ASN_MIME_455,
+    ASN_MIME_466,
+    ASN_MIME_472,
+    ASN_MIME_481,
+    ASN_MIME_491,
+    ASN_MIME_497,
+    ASN_MIME_506,
+    ASN_MIME_524,
+    ASN_MIME_533,
+    ASN_MIME_554,
+    ASN_MIME_564,
+    ASN_MIME_620,
+    ASN_MIME_625,
+    ASN_MIME_630,
 ];

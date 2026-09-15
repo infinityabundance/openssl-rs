@@ -215,10 +215,18 @@ COVERED_FILES = [
     # `crypto/x509` — the same per-symbol-not-per-file reasoning as `a_object.c`
     # above and D49.
     ("crypto/x509/v3_utl.c", "V3_UTL"),
+    # `SMIME_crlf_copy` and `i2d_ASN1_bio_stream` are Phase 5's, and
+    # `SMIME_crlf_copy`'s two refusals come from this file. The rest of the
+    # translation unit is the MIME reader and writer, which is Phase 12's; the file
+    # is covered for the coordinates a Phase 5 export can raise, exactly as
+    # `a_object.c` is covered by Phase 4 for `a2d_ASN1_OBJECT` (D49).
+    ("crypto/asn1/asn_mime.c", "ASN_MIME"),
     # Deliberately *not* covered, with the stratum that owns each: `a_digest.c`,
     # `ameth_lib.c` (Phase 7); `d2i_param.c`, `d2i_pr.c`, `d2i_pu.c`, `i2d_evp.c`,
     # `n_pkey.c`, `p5_pbe.c`, `p5_pbev2.c`, `p5_scrypt.c` (Phase 10); `a_sign.c`,
-    # `a_verify.c`, `x_algor.c`, `x_pkey.c` (Phase 11); `asn_mime.c` (Phase 12);
+    # `a_verify.c`, `x_algor.c`, `x_pkey.c` (Phase 11); the rest of `asn_mime.c`
+    # (Phase 12; the file is covered above for the two coordinates a Phase 5 export
+    # raises);
     # `nsseq.c` (Phase 13). Their raises are visible as uncovered sites in
     # `forensics/atlas/err-raise-sites.json` until those phases land.
     #

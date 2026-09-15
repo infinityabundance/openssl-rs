@@ -231,12 +231,24 @@ HANDED_ON["ASN1_add_stable_module"] = (
 # header. `asn1.h` and `pem.h` declare all of these, which is the rule the ownership
 # atlas applies, so the atlas gives them to this stratum; what they need is a
 # subsystem the stratum above owns.
+#
+# `SMIME_crlf_copy` is deliberately **not** in this set. It was, on the reason that
+# `asn_mime.c` is the CMS/PKCS#7 translation unit -- which is a *file* argument, not a
+# dependency, and so the error D49 recorded, committed in the other direction. Its
+# only needs are `BIO_f_buffer` and the translation unit's own `strip_eol`, both
+# present, so it is implemented here; `SMIME_text` stays because the MIME header
+# parser it reads is `asn_mime.c`'s reader, which lands with `SMIME_read_ASN1_ex`.
 HANDED_ON.update({
-    sym: (12, "operates over CMS and PKCS#7, which is Phase 12; asm_mime.c")
+    sym: (12, "operates over CMS and PKCS#7, which is Phase 12; asn_mime.c")
     for sym in (
-        "SMIME_crlf_copy", "SMIME_read_ASN1", "SMIME_read_ASN1_ex", "SMIME_text",
+        "SMIME_read_ASN1", "SMIME_read_ASN1_ex", "SMIME_text",
         "SMIME_write_ASN1", "SMIME_write_ASN1_ex",
     )
+})
+HANDED_ON.update({
+    sym: (7, "writes through BIO_f_base64, the EVP base64 filter BIO that Phase 4 "
+              "deferred to Phase 7")
+    for sym in ("PEM_write_bio_ASN1_stream",)
 })
 HANDED_ON.update({
     sym: (10, "reads and writes the PKCS#8 container, which is Phase 10")

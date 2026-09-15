@@ -2,7 +2,7 @@
 
 Phase 5 is **BN + ASN.1 + DER/PEM**. `BN` is closed: every one of the 201 exports
 `bn.h` declares is implemented or handed to a named stratum, and `RT-BN` covers them.
-What remains is **2 ASN.1 exports and 27 PEM exports** — the ledger's totals, taken
+What remains is **27 PEM exports** — the ledger's totals, taken
 from `forensics/phase5-obligations.json`, after 5.1 through 5.8 landed (D76, D77, D85,
 D86, D87, D88, D89, D90).
 
@@ -23,7 +23,7 @@ same commit. Source that no build compiles and no CI checks is invisible to ever
 | 5.5 | Time | `ASN1_TIME`, `ASN1_UTCTIME`, `ASN1_GENERALIZEDTIME` accessors, and the three `crypto/o_time.c` calendar symbols they stand on | 5.1, 5.4 | `RT-ASN1-TIME` | **COMPLETE** (D85) |
 | 5.6 | Strings, masks, printing | `ASN1_STRING_print*`, `set_by_NID`, the string masks, `ASN1_mbstring_*`, `UTF8_getc`/`putc`, `ASN1_str2mask`, `ASN1_PRINTABLE_type`, `ASN1_STRING_to_UTF8`, `ASN1_UNIVERSALSTRING_to_string`, `ASN1_bn_print`, `ASN1_buf_print` | 5.1 | `RT-ASN1-STR` | **COMPLETE** (D86, D87, D88): 18 written, `ASN1_str2mask` with them, and two handed to Phase 6 and Phase 11 |
 | 5.7 | `ASN1_TYPE` (ANY) | `ASN1_TYPE_*`, `d2i_/i2d_ASN1_TYPE` | 5.4 | `RT-ASN1-TYPE` | as above |
-| 5.8 | NDEF BIO bridge | `BIO_f_asn1`, `BIO_new_NDEF`, `BIO_asn1_get/set_prefix/suffix` (the Phase 4 → 5 hand-offs) | 5.4 | `RT-BIO-ASN1` | **COMPLETE** (D89) for the filter and the bridge; `i2d_ASN1_bio_stream` and `PEM_write_bio_ASN1_stream` are `asn_mime.c`'s and are checked for Phase 12 entanglement before they are written |
+| 5.8 | NDEF BIO bridge, and `asn_mime.c`'s copying half | `BIO_f_asn1`, `BIO_new_NDEF`, `BIO_asn1_get/set_prefix/suffix` (the Phase 4 → 5 hand-offs), `SMIME_crlf_copy`, `i2d_ASN1_bio_stream` | 5.4 | `RT-BIO-ASN1`, `RT-ASN1-MIME` | **COMPLETE** (D89, D92). `PEM_write_bio_ASN1_stream` is handed to Phase 7 for `BIO_f_base64`; the four `SMIME_*` reader/writer exports to Phase 12; `SMIME_text` to Phase 12 with the MIME header reader it needs |
 | 5.9 | PEM | the 27 `pem.h` exports the stratum still owns, plus the 21 it handed to Phases 7 and 10 | 5.1, 5.4, 5.6 | `RT-PEM` | as above |
 | 5.10 | Closure | nothing — evidence | all | — | `open == 0`; seal rewritten from the ledgers; FRF `sensitivity-backed`; Gemel checkpoint |
 

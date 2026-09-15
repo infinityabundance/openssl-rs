@@ -48,6 +48,7 @@ pub mod a_strnid;
 pub mod a_type;
 pub mod a_utf8;
 pub mod asn1_gen;
+pub mod asn_mime;
 pub mod asn_pack;
 pub mod bio_asn1;
 pub mod bitstr;

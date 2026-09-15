@@ -435,6 +435,27 @@ observations that *can* be made around each boundary are compared normally.
   process with a panic — which is a strictly worse outcome than an arbitrary value.
 - **Claim removed:** no probe compares this region, and no answer there is claimed to match.
 
+### D-MIME-1 — `i2d_ASN1_bio_stream`'s unwind loop does not terminate on a detached stream BIO
+
+- **Obligation:** `i2d_ASN1_bio_stream(out, val, in, SMIME_STREAM, it)` over an item
+  whose `ASN1_OP_STREAM_PRE` callback answers a BIO that is *not* in the chain leading
+  back to the caller's `out` — for example a freshly allocated `BIO_s_mem()`.
+- **Authority:** the unwind is `do { tbio = BIO_pop(bio); BIO_free(bio); bio = tbio; }
+  while (bio != out);`. `BIO_pop` answers NULL once the chain ends, and
+  `BIO_pop(NULL)`/`BIO_free(NULL)` both return quietly, so `bio` stays NULL and the
+  comparison against `out` is never satisfied. The call never returns and consumes
+  no memory. Measured: the RT-ASN1-MIME probe was written with exactly such a callback
+  first, and the authority run had to be killed by the harness timeout.
+- **Candidate:** the loop also stops when `BIO_pop` answers NULL, so the call returns
+  the value the copy produced.
+- **Claim removed:** not claimed compatible. The divergence is deliberately *not*
+  observable through any correct caller, because `BIO_new_NDEF` pushes the filter onto
+  `out` before invoking the callback, making `sarg->out` the natural answer for
+  `ndef_bio`; the probe's item answers `sarg->out` and the two sides agree byte for
+  byte. The record exists because the two implementations differ in the region where
+  the authority does not terminate, and an unbounded loop is treated as a fault rather
+  than as behaviour to reproduce, exactly as the crashes in this document are.
+
 ### D-PRINT-1 — `ASN1_item_print` dereferences a NULL `ASN1_ITEM`
 
 - **Obligation:** `ASN1_item_print(out, val, indent, NULL, pctx)` and any interior call

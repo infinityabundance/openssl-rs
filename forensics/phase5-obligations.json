@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 561,
       "deferred_to_later_phase": 66,
-      "implemented": 470,
-      "open_in_this_stratum": 29,
+      "implemented": 472,
+      "open_in_this_stratum": 27,
       "owned": 565
     },
     "deferred": [
@@ -263,6 +263,12 @@
         "symbol": "PEM_write_PKCS8PrivateKey_nid"
       },
       {
+        "declaring_header": "asn1.h",
+        "owning_phase": 7,
+        "reason": "writes through BIO_f_base64, the EVP base64 filter BIO that Phase 4 deferred to Phase 7",
+        "symbol": "PEM_write_bio_ASN1_stream"
+      },
+      {
         "declaring_header": "pem.h",
         "owning_phase": 7,
         "reason": "reads or writes an EVP_PKEY, which is Phase 7",
@@ -277,37 +283,31 @@
       {
         "declaring_header": "asn1.h",
         "owning_phase": 12,
-        "reason": "operates over CMS and PKCS#7, which is Phase 12; asm_mime.c",
-        "symbol": "SMIME_crlf_copy"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "owning_phase": 12,
-        "reason": "operates over CMS and PKCS#7, which is Phase 12; asm_mime.c",
+        "reason": "operates over CMS and PKCS#7, which is Phase 12; asn_mime.c",
         "symbol": "SMIME_read_ASN1"
       },
       {
         "declaring_header": "asn1.h",
         "owning_phase": 12,
-        "reason": "operates over CMS and PKCS#7, which is Phase 12; asm_mime.c",
+        "reason": "operates over CMS and PKCS#7, which is Phase 12; asn_mime.c",
         "symbol": "SMIME_read_ASN1_ex"
       },
       {
         "declaring_header": "asn1.h",
         "owning_phase": 12,
-        "reason": "operates over CMS and PKCS#7, which is Phase 12; asm_mime.c",
+        "reason": "operates over CMS and PKCS#7, which is Phase 12; asn_mime.c",
         "symbol": "SMIME_text"
       },
       {
         "declaring_header": "asn1.h",
         "owning_phase": 12,
-        "reason": "operates over CMS and PKCS#7, which is Phase 12; asm_mime.c",
+        "reason": "operates over CMS and PKCS#7, which is Phase 12; asn_mime.c",
         "symbol": "SMIME_write_ASN1"
       },
       {
         "declaring_header": "asn1.h",
         "owning_phase": 12,
-        "reason": "operates over CMS and PKCS#7, which is Phase 12; asm_mime.c",
+        "reason": "operates over CMS and PKCS#7, which is Phase 12; asn_mime.c",
         "symbol": "SMIME_write_ASN1_ex"
       },
       {
@@ -409,11 +409,11 @@
     ],
     "deferred_by_phase": {
       "6": 1,
-      "7": 7,
+      "7": 8,
       "9": 31,
       "10": 16,
       "11": 3,
-      "12": 8
+      "12": 7
     },
     "handoffs_discharged": {
       "4": [
@@ -860,6 +860,7 @@
       "INT32_it",
       "INT64_it",
       "LONG_it",
+      "SMIME_crlf_copy",
       "UINT32_it",
       "UINT64_it",
       "UTF8_getc",
@@ -923,6 +924,7 @@
       "i2d_ASN1_UTCTIME",
       "i2d_ASN1_UTF8STRING",
       "i2d_ASN1_VISIBLESTRING",
+      "i2d_ASN1_bio_stream",
       "i2d_DIRECTORYSTRING",
       "i2d_DISPLAYTEXT",
       "i2t_ASN1_OBJECT"
@@ -1061,11 +1063,6 @@
         "symbol": "PEM_write_bio"
       },
       {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "PEM_write_bio_ASN1_stream"
-      },
-      {
         "declaring_header": "pem.h",
         "module": "src/pem/",
         "symbol": "PEM_write_bio_Parameters"
@@ -1074,11 +1071,6 @@
         "declaring_header": "pem.h",
         "module": "src/pem/",
         "symbol": "PEM_write_bio_X509_REQ_NEW"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "i2d_ASN1_bio_stream"
       }
     ],
     "owned_by_module": {
@@ -1113,7 +1105,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "73dd3260a49b0e46436f4a4712cf9634594c2e798cdb257089dafe0312c2b7f5"
+      "sha256": "14821380598718f3c01858cf3235f45e1b16b2fd9edbc4e7785568c0fd3dbbb2"
     }
   ],
   "kind": "phase5-obligations",

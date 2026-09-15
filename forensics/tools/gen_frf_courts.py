@@ -164,6 +164,13 @@ COURTS: list[tuple[str, int, str, str]] = [
      "with an out-of-range selector, the SEQUENCE OF and SET OF empty/absent cases,\n"
      "the twenty-space indent blocks measured through a short-count sink, and the\n"
      "negative indent that fails the whole call"),
+    ("rt-asn1-mime", 5, "rt_asn1_mime_probe",
+     "asn_mime.c's copying half: the two null refusals, the verbatim binary and\n"
+     "CMS_BINARY modes, the CRLF policy under every combination of SMIME_TEXT,\n"
+     "SMIME_CRLFEOL and SMIME_ASCIICRLF including the held-back blank lines and the\n"
+     "trailing-space rule, the buffering filter measured through a sink that logs each\n"
+     "write length, the short-write and failing-flush failures with the flush\n"
+     "combination, and i2d_ASN1_bio_stream with and without SMIME_STREAM"),
 ]
 
 
