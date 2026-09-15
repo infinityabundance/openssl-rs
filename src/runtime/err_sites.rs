@@ -5060,6 +5060,36 @@ pub(crate) const BIO_NDEF_67: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ASN1_TYPE_get_octetstring` at `crypto/asn1/evp_asn1.c:40` (ASN1_R_DATA_IS_WRONG).
+pub(crate) const EVP_ASN1_40: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/evp_asn1.c",
+    line: 40,
+    func: c"ASN1_TYPE_get_octetstring",
+    lib: 13,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `ASN1_TYPE_get_int_octetstring` at `crypto/asn1/evp_asn1.c:141` (ASN1_R_DATA_IS_WRONG).
+pub(crate) const EVP_ASN1_141: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/evp_asn1.c",
+    line: 141,
+    func: c"ASN1_TYPE_get_int_octetstring",
+    lib: 13,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `ossl_asn1_type_get_octetstring_int` at `crypto/asn1/evp_asn1.c:203` (ASN1_R_DATA_IS_WRONG).
+pub(crate) const EVP_ASN1_203: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/evp_asn1.c",
+    line: 203,
+    func: c"ossl_asn1_type_get_octetstring_int",
+    lib: 13,
+    reason: 109,
+    dynamic_reason: false,
+};
+
 /// `a2i_ASN1_INTEGER` at `crypto/asn1/f_int.c:100` (ASN1_R_ODD_NUMBER_OF_CHARS).
 pub(crate) const F_INT_100: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/asn1/f_int.c",
@@ -6484,6 +6514,9 @@ pub(crate) static ALL: &[ErrSite] = &[
     ASN_PACK_73,
     BIO_ASN1_118,
     BIO_NDEF_67,
+    EVP_ASN1_40,
+    EVP_ASN1_141,
+    EVP_ASN1_203,
     F_INT_100,
     F_INT_118,
     F_INT_135,

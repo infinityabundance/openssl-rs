@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 594,
+      "sites": 597,
       "unattributed": 0
     },
     "covered_files": [
@@ -88,6 +88,7 @@
       "crypto/asn1/asn_pack.c",
       "crypto/asn1/bio_asn1.c",
       "crypto/asn1/bio_ndef.c",
+      "crypto/asn1/evp_asn1.c",
       "crypto/asn1/f_int.c",
       "crypto/asn1/f_string.c",
       "crypto/asn1/tasn_dec.c",
@@ -7143,6 +7144,48 @@
         "rel_source": "crypto/asn1/bio_ndef.c"
       },
       {
+        "const_name": "EVP_ASN1_40",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/asn1/evp_asn1.c",
+        "function": "ASN1_TYPE_get_octetstring",
+        "lib": 13,
+        "lib_symbol": "ERR_LIB_ASN1",
+        "line": 40,
+        "macro": "ERR_raise",
+        "reason": 109,
+        "reason_symbol": "ASN1_R_DATA_IS_WRONG",
+        "rel_source": "crypto/asn1/evp_asn1.c"
+      },
+      {
+        "const_name": "EVP_ASN1_141",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/asn1/evp_asn1.c",
+        "function": "ASN1_TYPE_get_int_octetstring",
+        "lib": 13,
+        "lib_symbol": "ERR_LIB_ASN1",
+        "line": 141,
+        "macro": "ERR_raise",
+        "reason": 109,
+        "reason_symbol": "ASN1_R_DATA_IS_WRONG",
+        "rel_source": "crypto/asn1/evp_asn1.c"
+      },
+      {
+        "const_name": "EVP_ASN1_203",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/asn1/evp_asn1.c",
+        "function": "ossl_asn1_type_get_octetstring_int",
+        "lib": 13,
+        "lib_symbol": "ERR_LIB_ASN1",
+        "line": 203,
+        "macro": "ERR_raise",
+        "reason": 109,
+        "reason_symbol": "ASN1_R_DATA_IS_WRONG",
+        "rel_source": "crypto/asn1/evp_asn1.c"
+      },
+      {
         "const_name": "F_INT_100",
         "data_format": null,
         "dynamic_reason": false,
@@ -8830,6 +8873,11 @@
       "name": "authority:crypto/asn1/bio_ndef.c",
       "path": "forensics/authorities/src/openssl-3.6.4/crypto/asn1/bio_ndef.c",
       "sha256": "5712e9eebbaebbdc4679ce07abb007b08eceae92a780296ccbbd339a60916717"
+    },
+    {
+      "name": "authority:crypto/asn1/evp_asn1.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/asn1/evp_asn1.c",
+      "sha256": "d63363e091b69d67ec8167b1c460d049163a22b98ad264449a9c173d18ebcaf5"
     },
     {
       "name": "authority:crypto/asn1/f_int.c",

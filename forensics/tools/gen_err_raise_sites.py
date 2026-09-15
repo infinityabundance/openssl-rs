@@ -191,6 +191,15 @@ COVERED_FILES = [
     ("crypto/asn1/asn_pack.c", "ASN_PACK"),
     ("crypto/asn1/bio_asn1.c", "BIO_ASN1"),
     ("crypto/asn1/bio_ndef.c", "BIO_NDEF"),
+    # Covered although most of its *symbols* belong to later strata. The exclusion
+    # rule is per-symbol and by declaring header, so a translation unit is not the
+    # unit of classification: `evp_asn1.c` declares `ASN1_TYPE_set_octetstring`,
+    # `ASN1_TYPE_get_octetstring`, `ASN1_TYPE_set_int_octetstring` and
+    # `ASN1_TYPE_get_int_octetstring` in `asn1.h` — Phase 5's header — and each of
+    # them raises `ASN1_R_DATA_IS_WRONG` from this file. Leaving the TU out because
+    # the rest of it is Phase 7's surface lost a coordinate that Phase 5 needs, which
+    # is the same file-versus-symbol error D49 recorded for `a2d_ASN1_OBJECT`.
+    ("crypto/asn1/evp_asn1.c", "EVP_ASN1"),
     ("crypto/asn1/f_int.c", "F_INT"),
     ("crypto/asn1/f_string.c", "F_STRING"),
     ("crypto/asn1/tasn_dec.c", "TASN_DEC"),
@@ -200,12 +209,17 @@ COVERED_FILES = [
     ("crypto/asn1/x_int64.c", "X_INT64"),
     ("crypto/asn1/x_long.c", "X_LONG"),
     # Deliberately *not* covered, with the stratum that owns each: `a_digest.c`,
-    # `ameth_lib.c`, `evp_asn1.c` (Phase 7); `d2i_param.c`, `d2i_pr.c`,
-    # `d2i_pu.c`, `i2d_evp.c`, `n_pkey.c`, `p5_pbe.c`, `p5_pbev2.c`,
-    # `p5_scrypt.c` (Phase 10); `a_sign.c`, `a_verify.c` (Phase 11);
-    # `asn_mime.c` (Phase 12); `nsseq.c` (Phase 13); `x_algor.c`, `x_long.c`,
-    # `x_pkey.c` (Phase 11). Their raises are visible as uncovered sites in
+    # `ameth_lib.c` (Phase 7); `d2i_param.c`, `d2i_pr.c`, `d2i_pu.c`, `i2d_evp.c`,
+    # `n_pkey.c`, `p5_pbe.c`, `p5_pbev2.c`, `p5_scrypt.c` (Phase 10); `a_sign.c`,
+    # `a_verify.c`, `x_algor.c`, `x_pkey.c` (Phase 11); `asn_mime.c` (Phase 12);
+    # `nsseq.c` (Phase 13). Their raises are visible as uncovered sites in
     # `forensics/atlas/err-raise-sites.json` until those phases land.
+    #
+    # `evp_asn1.c` was on this list and is not any more: see the comment where it is
+    # covered. Two names that were on it are also worth correcting because they were
+    # never excluded — `x_long.c` is covered above, and `n_pkey.c` does not exist in
+    # the authority. A list of exclusions is a claim about the tree, and this one had
+    # two false entries and one wrong reason.
 ]
 
 # Raise macros, in the forms the authority actually spells them. `ERR_raise`

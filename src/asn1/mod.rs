@@ -46,6 +46,7 @@ pub mod asn_pack;
 pub mod bitstr;
 pub mod d2i;
 pub mod der;
+pub mod evp_asn1;
 pub mod fre;
 pub mod i2d;
 pub mod items;
