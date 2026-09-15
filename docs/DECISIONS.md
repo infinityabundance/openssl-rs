@@ -4468,3 +4468,79 @@ and `implemented` is unchanged at 932: not one implementation was removed and no
 observation was invalidated. This is a correction to a completeness claim, which is
 the cheapest kind of correction there is — and the only reason it was cheap is that
 the evidence and the accounting were kept apart.
+
+## D98 — the prototype gap was three instrument gaps, and every implemented export is now judged
+
+D96 recorded a measured gap rather than building a mechanism for it: 162 exports whose
+Rust declaration `prototype_court.py` could not read because it was produced by a
+`macro_rules!`, 8 implemented in C, and 3 with no prototype in the atlas. Two designs
+were considered and rejected as too large for the change that found them — a generated
+module of compile-time `const _: fn(...) = item;` assertions, and macro-*
+expanded*source from `cargo rustc -Zunpretty=expanded`, which needs a nightly
+toolchain against a crate pinned to a release one.
+
+The third option is the one that was taken, and it is smaller than either: **read the
+macro, not its expansion.** The crate cannot build a `#[no_mangle]` symbol name from
+another token, so every macro that exports a symbol writes both identifiers at every
+use and its *body* holds a literal signature with `$param` where the name goes. The
+signature was always readable; only the substitution was missing.
+`macro_defs` parses a `macro_rules!` declared parameter list and the literal signature
+inside its body, `expand_macro_invocations` substitutes each invocation's arguments
+positionally, and the result goes through the same `rust_signature_canon` /
+`c_signature_canon` pair as every other declaration. One parser, one canonical form,
+one comparison policy — the property D96's rejected designs would each have broken in
+a different way.
+
+It is robust in the direction that matters because it refuses rather than guesses. A
+macro whose body puts a `$param` in a *type* position is reported as unreadable instead
+of being read as `opaque` (which would make every such symbol compare equal to
+something); a repetition that is not the last matcher element is reported rather than
+having its extent assumed; a macro with no `fn $param(` in its body (`bail!`, the
+`conf/def.rs` helper) is skipped without needing to understand arbitrary macro syntax.
+
+Reading the sources to build that mechanism then found that **two of the three gap
+classes were the instrument, not the code**:
+
+  * `DECL_RE` required `pub` and did not match `pub(crate)`. `src/runtime/err_loaders.rs`
+    declares all twenty-six `ERR_load_<LIB>_strings` entry points as
+    `pub(crate) extern "C" fn` with `#[no_mangle]` — the symbol must be exported while
+    the Rust item stays crate-private — so twenty-six *plainly written* declarations
+    were reported as "the symbol appears in src but not as a declaration this court can
+    parse". One alternation.
+  * `c_signature_canon` built the authority's parameter list from the atlas's `params`
+    array, which records Clang's `ParmVarDecl`s and therefore **omits the varargs**:
+    `int (BIO *, const char *, ...)` has two entries. So the eight C implementations
+    compared a three-parameter definition against a two-parameter prototype and failed.
+    The authority's own `type` string carries the `...`, and the record carries
+    `variadic: true`; the canonical form now appends it. A third bug in the same code
+    path read the definition's return type by removing its *prefix* where the name is a
+    *suffix*, which is why all eight reported `opaque`.
+
+That is the sixth time in this stratum's line of work that the instrument was the first
+suspect, and the second time in this court alone. The pattern is worth naming: a
+measurement mechanism is written once against a shape the author has in mind, and every
+input that does not have that shape is silently miscounted rather than reported. The
+fix each time is the same — make the tool refuse when it cannot read, and add a control
+that proves it can read the defect it claims to cover.
+
+So the court gained a **sensitivity block**: three controls over deliberately defective
+synthetic inputs, parsed by the same functions as the real pass, each asserting both
+that the defective input is detected and that the corrected one is not, and each
+`all_detected` a failure condition. The first draft of the macro control was itself
+wrong — it asserted an empty parameter list where the parser correctly returns the
+parameters *with their names*, as the crate writes them — which is a fair illustration
+of why a control that asserts only "a mismatch was found" would have been worthless.
+
+Result, and it is the whole point of the change: of 932 implemented `libcrypto`
+exports, **921 are checked as Rust declarations, 8 as C definitions, 0 are unreadable,
+0 are ungenerated, 0 are not found, and every one of the 929 has zero mismatches on
+both the class/arity plane and the full canonical type plane**. The remaining 3 are
+documented as unjudgeable by *this* court for a reason that is not a gap in it:
+`OPENSSL_DIR_read`, `OPENSSL_DIR_end` and `asn1_d2i_read_bio` are declared in
+`crypto/o_dir.h` and `crypto/asn1/asn1_local.h`, which the authority does not install,
+so the Phase 1 atlas has no prototype for them. The Phase 2 loader court still proves
+their ABI, resolving each at its declared ELF version.
+
+`declaration_is_generated` is now a **defect** rather than a gap, and the court fails
+on it along with `not_found`, `unreadable_macros`, the C-plane mismatches and a
+sensitivity control that does not fire.
