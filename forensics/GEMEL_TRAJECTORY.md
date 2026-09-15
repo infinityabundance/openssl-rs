@@ -10,6 +10,8 @@ in Git. See `docs/DECISIONS.md` D17.
 ## `gemel log`
 
 ```
+C35  Phase 5.3: the shared DER codec lands in both halves, the 26 primitive item descriptors, the 36 tasn_typ.c wrappers, ASN1_BIT_STRING, ASN1_NULL and d2i_ASN1_UINTEGER. RT-ASN1 goes 644 -> 1306 observations over 0 residuals, phase 5 open obligations 226 -> 155 and implemented[libcrypto] 734 -> 805, moving together as they must. Restructuring the decoder found two defects in the file D76 had landed and neither was reachable from the three wrappers it shipped: asn1_ex_c2i frees the value unconditionally and nulls the callers slot on an allocation failure, where the old code freed only what it had allocated, so a d2i_* into an existing string would have handed back a slot pointing at a half-filled object the authority had destroyed; and asn1_item_embed_d2i raises ASN1_R_TOO_SMALL for len <= 0 before any header is read, where the old code reported a different reason for the same failure. The court then found an ownership contract rather than a bug: asn1_item_ex_d2i_intern ends with if (rv <= 0) ASN1_item_ex_free(pval, it), so a failed decode frees the callers value and nulls the callers slot. RT-ASN1 bsd.keepstate, authority=0 candidate=1, is what produced src/asn1/fre.rs, and it also explains why asn1_ex_c2i nulls the slot after freeing: that null is what stops the item layer freeing the same string twice. The 26 descriptors are compared field by field because ASN1_ITEM fields are readable in asn1t.h, and that found IMPLEMENT_ASN1_TYPE passes 0 and not -1 as the items size, which is the field that decides whether a BOOLEAN is omitted. Reason codes are generated now: gen_err_reasons.py reads 1839 LIB_R_NAME defines over 541 authority headers and cross-checks itself against gen_err_strings.parse_reason_codes before writing, so the two codes D76 had typed wrong become references and that class of mistake is gone rather than fixed once. The subphase plan had 5.4 before 5.3 and reading the file showed the dependency points the other way: ASN1_item_d2i reaches the primitive arms with no template involved, so the wrappers need the primitive path, which is the work 5.3 owns. FRF: run run-openssl-rs-rt-asn1-2053f9dbaa2d8e2fe0ce0fb78259b91735264d11405d6e227cf82d0efff062bf, receipt receipt-run-openssl-rs-rt-asn1-2053f9dbaa2d8e2fe0ce0fb78259b91735264d11405d6e227cf82d0efff062bf-3ce41207fbca8cd851ed8818e2a250452cd9ee16fe63ad06705f7cc977a29f70, challenges 3c70b564a201f55de682d7d9409f542dfeece2dab705faa18b8d895f60d1b2b4 (stdout-first-line on the stdout axis) and 6229f4ca6cc3b646872d56976633d9434ef813307bdc52018b9196faff74e40d (exit-class on the exit axis), claim 414204ce21684e41a0352d4d33a303244ff2fedbe0c6abd6acd52e598b729617 over the 25 runtime receipts plus the ABI, dgst and inventory courts. D77 records it and docs/PHASE-5-SUBPHASES.md corrects the ordering and gains the authority facts this section established.
+    state state.ffc65cf51aaa8caf989a94c1cfa21fb53ab84cd2fdea8b7259d5891c31ddbebf -> state.6218370ade549f6470b9b1a5c822d6d70ac101fd24a1937aed4462dc979d53d0
 C31  The ASN.1 leaf surface is implemented, wired in and courted: 109 exports, RT-ASN1 at 644 observations with no residuals, phase 5 open obligations 362 -> 226 after D73 hand-offs
     state state.cae66a95a90b21ac673e9b4d9041094b4d051acd5af8496a783b5f067becb2cc -> state.ffc65cf51aaa8caf989a94c1cfa21fb53ab84cd2fdea8b7259d5891c31ddbebf
 C30  The prototype court compares the canonical type of every implemented export return and parameter, not only return class and arity; twelve wrong declarations found and fixed; the RT-BN BN_GENCB section added and a thirteenth behavioural defect found
@@ -55,6 +57,7 @@ C1  Phase 0 constitution and Phase 1 archaeology atlas, evidence-bound
 * `K13` — `checkpoint.f8f1061c5592c5dc801b31439f949ed21470126cd32b0f320fea3bf561acba55`
 * `K14` — `checkpoint.c3c9dd019cd987d9753cda5e521b8993decd99c01b97fcebeef888727f56512e`
 * `K15` — `checkpoint.be15113912c9856c707bdd4c9317edc7c750663fd96e76e1a5b5e2b9a4420c3d`
+* `K16` — `checkpoint.6efde8d368887ea3895c564c33f8cc2ea84b211d56971fb3055ae89c576c10e2`
 * `K2` — `checkpoint.67a75f9a16d008e6e5aec0984c93dfc7549bd7a33708b909fbf6424b04fcb4a6`
 * `K3` — `checkpoint.b1516eb6364ad075785911cb204a75a6e1b83b08c1a7ca39a2de6e3983dc9aed`
 * `K4` — `checkpoint.1bde75b37e1ca3972037c29cbd3ba5291079544436db9176a82f097a6bf832fe`
@@ -64,7 +67,7 @@ C1  Phase 0 constitution and Phase 1 archaeology atlas, evidence-bound
 * `K8` — `checkpoint.7eb3dba97cbf20f2b34d14cce7e93bc2171ebd0d7ee66d1f7508cc6e199567de`
 * `K9` — `checkpoint.60105b4c8189d2668c48e173fe2c92c0ddf76160caae24efecc707bd576f506f`
 
-current: `checkpoint.be15113912c9856c707bdd4c9317edc7c750663fd96e76e1a5b5e2b9a4420c3d`
+current: `checkpoint.6efde8d368887ea3895c564c33f8cc2ea84b211d56971fb3055ae89c576c10e2`
 
 ## Note: derived names are not identities
 
@@ -84,6 +87,15 @@ changed with it; the Git commit is the authoritative record of the diff.
 ## Open residuals at this boundary
 
 ```
+open [low] the item descriptors size fields are compared through the probe rather than through a generated ABI constant court, because struct ASN1_ITEM_st is not in the ABI-LAYOUT aggregate set the phase 2 probe measures
+    class: verification_gap
+    persistence: 0 descendant change(s)
+open [low] ABI-PROTOTYPE cannot check the 36 tasn_typ.c wrappers or the 26 *_it accessors: DECLARE_ASN1_FUNCTIONS generates their declarations, so the atlas header extraction does not see them and the prototype court counts them as generated rather than checked
+    class: verification_gap
+    persistence: 0 descendant change(s)
+open [low] the 155 remaining phase 5 obligations are unimplemented: 128 ASN.1 (the template interpreter, 14 *_it descriptors, the time accessors, the string masks and printing, ASN1_TYPE, the NDEF BIO bridge, asn1_d2i_read_bio) and 27 PEM
+    class: verification_gap
+    persistence: 0 descendant change(s)
 open [medium] RT-ASN1 is evidence about the symbols it calls and no others
     class: other
     persistence: 0 descendant change(s)

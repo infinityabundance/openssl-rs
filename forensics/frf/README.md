@@ -104,6 +104,29 @@ oracle-version trajectory, the claim covers only *exit class* for that court and
 explicitly states that it "does not establish byte-identical stderr, full CLI
 compatibility, or a drop-in replacement claim."
 
+## Finishing a change: the controlled vocabularies
+
+`gemel change finish` takes `--claim subject|predicate|kind`,
+`--evidence subject|outcome|kind` and `--residual summary|severity|classification`, and
+the last field of each is an **enum**, not free text. Gemel rejects a whole string there
+with `invalid enum value`, which does not list what it wanted; the vocabularies below
+were read out of the binary's own string tables
+(`strings /usr/local/bin/gemel | grep -A2 ENUM_EVIDENCE_KIND`) and are recorded here so
+the next change does not have to rediscover them.
+
+| field | values |
+|---|---|
+| claim kind | `compatibility`, `correctness`, `performance`, `safety`, `invariant`, `other` |
+| evidence kind | `court_receipt`, `oracle_comparison`, `runtime_trace`, `binary_comparison`, `test_result`, `compiler_result`, `fuzz_result`, `benchmark`, `static_analysis`, `formal_proof`, `replay`, `environment_manifest`, `artifact_hash`, `external_attestation`, `reproduction`, `harness`, `tool_identities` |
+| evidence outcome | `pass`, `fail`, `inconclusive`, `unknown` |
+| residual severity | `low`, `medium` |
+| residual classification | `verification_gap`, `semantic_divergence`, `expected_mismatch`, `platform_divergence`, `performance_divergence`, `unexplained_divergence`, `contract_mismatch` |
+| producer kind | `human`, `agent`, `automation`, `fuzzer`, `external_oracle`, `git_import` |
+
+An evidence *outcome* is one word: `pass`, never `pass, 1306 observations`. The
+measurement belongs in the summary, and putting it in the outcome is how the first
+attempt at a change was rejected.
+
 ## Sensitivity (challenge) results
 
 A court that cannot detect its own declared defect class may not supply release
@@ -116,7 +139,12 @@ requires each mutation to be seen on its targeted axis **and on no other**.
 | `openssl-cli-dgst` | seen on stdout only | seen on exit only | **has** sensitivity evidence |
 | `openssl-cli-inventory` | seen on stdout only | seen on exit only | **has** sensitivity evidence |
 | `openssl-cli-version` | refused | refused | observations only |
-| `openssl-rs-rt-*` (all seven) | seen on stdout only | seen on exit only | **have** sensitivity evidence |
+| `openssl-rs-rt-*` (all 25 runtime courts) | seen on stdout only | seen on exit only | **have** sensitivity evidence |
+
+The runtime count is 25 as of the Phase 5.3 boundary: the seven Phase 3 courts, the
+sixteen Phase 4 ones, and `openssl-rs-rt-bn` and `openssl-rs-rt-asn1`. That is the number
+of courts `forensics/frf/run_courts.sh` compiles; it is stated here rather than generated,
+so a court added without this line updated would leave the line behind.
 
 ### The cause of the refusals, and the remedy that was applied
 
@@ -223,21 +251,22 @@ the previous release's tree is the previous commit. Anyone asking "what did the
 store say before this release" reads it out of Git history, which is why the
 store is committed at all.
 
-### Phase 3 sensitivity (challenge) results
+### Sensitivity (challenge) results
 
-Unlike the Phase 1 `list-*` courts, every runtime court is fixture-driven, so
-FRF's mutant wrapper can locate its reference object and every challenge is
-adjudicated rather than refused:
+Every runtime court is fixture-driven, so FRF's mutant wrapper can locate its reference
+object and every challenge is adjudicated rather than refused. The full table is in the
+court declarations and the `evidence status` output; the two courts this stratum rests on
+are:
 
 | court | `stdout-first-line` | `exit-class` |
 |---|---|---|
-| `openssl-rs-rt-mem` | seen on stdout only | seen on exit only |
-| `openssl-rs-rt-exdata` | seen on stdout only | seen on exit only |
-| `openssl-rs-rt-err` | seen on stdout only | seen on exit only |
-| `openssl-rs-rt-stack` | seen on stdout only | seen on exit only |
-| `openssl-rs-rt-thread` | seen on stdout only | seen on exit only |
-| `openssl-rs-rt-secure` | seen on stdout only | seen on exit only |
-| `openssl-rs-rt-lhash` | seen on stdout only | seen on exit only |
+| `openssl-rs-rt-bn` | seen on stdout only | seen on exit only |
+| `openssl-rs-rt-asn1` | seen on stdout only | seen on exit only |
+
+Both were re-taken at this release's store generation, so their identities in
+`docs/PHASE-5-BN-ASN1-PEM-SEAL.md` §10 supersede the ones an earlier revision quoted.
+The `local-*`/`list-*` trajectory courts are still refused rather than passed, because
+FRF cannot isolate an axis on them (D13).
 
 ### Phase 3 claim
 
