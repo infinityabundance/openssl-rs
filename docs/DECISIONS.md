@@ -4121,3 +4121,50 @@ of reproducing the fault, in the same way and for the same reason the time famil
 (D-TIME-1). It is recorded as `D-PRINT-1` in `docs/SECURITY_DIVERGENCE_POLICY.md`
 alongside the malformed-item class, and no compatibility claim covers it: a probe cannot
 compare a crash, so the probe does not reach it.
+
+## D92 — `asn_mime.c`'s copying half lands, and a hand-off reason turns out to be a file
+
+`SMIME_crlf_copy` and `i2d_ASN1_bio_stream` are implemented in
+`src/asn1/asn_mime.rs` and observed by `RT-ASN1-MIME` (188 observations, no
+residual). Both are `asn1.h`'s, so the declaring-header rule always gave them to
+this stratum; what was wrong was the *reason* they were handed to Phase 12.
+
+That reason was "operates over CMS and PKCS#7, which is Phase 12; asm_mime.c" — a
+statement about a translation unit. `SMIME_crlf_copy`'s dependencies are
+`BIO_f_buffer`, which Phase 4 implemented, and `strip_eol`, which is seventeen lines
+of the same translation unit. Nothing is missing. So the hand-off was not a
+dependency at all, it was an inference from the file a function lives in, which is
+exactly what D49 recorded as the error class that lets an obligation disappear:
+`a2d_ASN1_OBJECT` was lost the same way, by being classified by prefix rather than
+by declaring header, one level further out. The rule the ledger documents for
+itself — "the reason is a *dependency*, not a difficulty, which is what makes the
+hand-off checkable" — is what caught it, because a file name cannot be checked and
+`BIO_f_buffer` can.
+
+`SMIME_text` stays deferred, and for a reason that is now written down rather than
+implied: it reads through `mime_parse_hdr`, `mime_hdr_find` and `mime_hdr_free`,
+which are `asn_mime.c`'s MIME header reader and land with `SMIME_read_ASN1_ex`.
+`SMIME_read_ASN1`, `SMIME_read_ASN1_ex`, `SMIME_write_ASN1` and `SMIME_write_ASN1_ex`
+stay for the reason that *is* a dependency: the base64 filter `BIO_f_base64` is
+Phase 4's deferral to Phase 7, and `asn1_write_micalg` reads the `X509_ALGOR` set
+that Phase 11 owns.
+
+`PEM_write_bio_ASN1_stream` is the third `asn1.h` export in this file and it is
+separately dispositioned. `B64_write_ASN1` wraps its sink in
+`BIO_new(BIO_f_base64())`, so the export needs the EVP base64 codec and is handed to
+Phase 7 with that named as the dependency.
+
+The court also found the authority's own liveness defect. `i2d_ASN1_bio_stream`
+unwinds with `do { tbio = BIO_pop(bio); BIO_free(bio); bio = tbio; } while (bio !=
+out);`, and an item whose `ASN1_OP_STREAM_PRE` answers a BIO that is not in the chain
+back to `out` makes `bio` settle at NULL and the loop spin forever. The first version
+of the probe did exactly that and the authority run had to be killed by the harness
+timeout — which is how the defect was found rather than argued about. The candidate
+stops at NULL and the divergence is recorded as `D-MIME-1`: an unbounded loop is a
+fault, not behaviour to reproduce. The probe's item now answers `sarg->out`, which is
+what `BIO_new_NDEF`'s contract invites, and the two sides agree byte for byte.
+
+Phase-5 open obligations: 29 -> 27, all of them `pem.h`'s.
+libcrypto implemented exports: 928 -> 930.
+
+Divergence: D-MIME-1.

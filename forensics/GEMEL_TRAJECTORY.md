@@ -10,6 +10,8 @@ in Git. See `docs/DECISIONS.md` D17.
 ## `gemel log`
 
 ```
+C42  SMIME_crlf_copy and i2d_ASN1_bio_stream implemented and courted; SMIME_crlf_copy removed from the Phase 12 hand-off set because its reason was a file rather than a dependency; PEM_write_bio_ASN1_stream handed to Phase 7 for its base64 BIO; the authority unbounded unwind loop recorded as D-MIME-1
+    state state.967494a4aa380bf6a345ea55e84fb1e9901f4b0fc94df3a9048bd9a777d4d786 -> state.a2d15e14bf47e8737740783806df1b10919f4749b3013836b191ee6a80c109cf
 C41  ASN1_item_print implemented and courth; the EMBED stack-slot defect the court found; the v3_utl.c raise coordinates and the phase 4 to phase 5 hand-off reconciliation
     state state.06d7e5252a13d7ebf03db77fe2b9f15e1776e93adb37cc181713b660e8df098b -> state.967494a4aa380bf6a345ea55e84fb1e9901f4b0fc94df3a9048bd9a777d4d786
 C40  Subphase 5.8 half landed: crypto/asn1/bio_asn1.c (BIO_f_asn1, the four BIO_asn1_ prefix/suffix controls) and the BIO_new_NDEF half of bio_ndef.c, with its two prefix and two suffix callbacks. The filter is a state machine, not a wrapper: seven states because each write may have to emit a prefix, a header, some content and then more content on the next call, with a partial-write cursor for the header and a declared length that bounds how much content passes through before a fresh header. Added RT-BIO-ASN1 with 114 observations, and it found one defect, which crashed the candidate. The authority tests the three setup calls as ; I wrote them as , which multiplies by zero on SUCCESS, so BIO_new_NDEF took the error path on every call and freed the support block a second time - the state machine had already handed it to the BIO, whose destroy callback releases it. glibc reported a double free in tcache and the probe dumped core. The lesson is the one this stratum keeps teaching from the other direction: a faithful transcription of three lines would have been right, and the tidy-looking rewrite was wrong. Fixed to the authority shape. Implemented libcrypto exports 921 -> 927; Phase 5 open obligations 37 -> 30.
@@ -79,6 +81,7 @@ C1  Phase 0 constitution and Phase 1 archaeology atlas, evidence-bound
 * `K22` — `checkpoint.5c49d38a618be5dfb2a1d350b73a7f13b5dc9b4f2629a36ce4bf882ad814752f`
 * `K23` — `checkpoint.4d121775b53e8369dd0457ad230f82a3b375db10e9df7077ad4d564dcdc756fd`
 * `K24` — `checkpoint.1a2e3a5565633ce851d7dadbcbc9c5cd2be4cf8d61b6463f45b54cc7fa39ec8a`
+* `K25` — `checkpoint.72f7fa3b2028e181c38bcb2d904f665cad991c15dfbe446629b3aee4147edc15`
 * `K3` — `checkpoint.b1516eb6364ad075785911cb204a75a6e1b83b08c1a7ca39a2de6e3983dc9aed`
 * `K4` — `checkpoint.1bde75b37e1ca3972037c29cbd3ba5291079544436db9176a82f097a6bf832fe`
 * `K5` — `checkpoint.6b0d12f1ecf380c0808bc95675222fbed7256f99bc8e9f475a0ec2693f804a0a`
@@ -87,7 +90,7 @@ C1  Phase 0 constitution and Phase 1 archaeology atlas, evidence-bound
 * `K8` — `checkpoint.7eb3dba97cbf20f2b34d14cce7e93bc2171ebd0d7ee66d1f7508cc6e199567de`
 * `K9` — `checkpoint.60105b4c8189d2668c48e173fe2c92c0ddf76160caae24efecc707bd576f506f`
 
-current: `checkpoint.1a2e3a5565633ce851d7dadbcbc9c5cd2be4cf8d61b6463f45b54cc7fa39ec8a`
+current: `checkpoint.72f7fa3b2028e181c38bcb2d904f665cad991c15dfbe446629b3aee4147edc15`
 
 ## Note: derived names are not identities
 
@@ -107,6 +110,9 @@ changed with it; the Git commit is the authoritative record of the diff.
 ## Open residuals at this boundary
 
 ```
+open [low] the authority i2d_ASN1_bio_stream unwind loop does not terminate for a callback returning a detached BIO, and the candidate stops
+    class: semantic_divergence
+    persistence: 0 descendant change(s)
 open [low] the 27 pem.h exports and PEM_write_bio_ASN1_stream and i2d_ASN1_bio_stream remain unimplemented
     class: verification_gap
     persistence: 0 descendant change(s)
