@@ -5022,3 +5022,113 @@ strata from `phase-state.json`, and Phase 6 was `not-started` there only because
 had told the registry about its modules. It is `in-progress` now, on its ledger's 80 open
 obligations, and `run_courts.py` refuses to run a runner for a `not-started` phase — which
 is the check that caught this.
+
+---
+
+## D105 — a probe read past its own buffer, and every probe is now held to a level-differential gate
+
+**The observation that was wrong.** `courts/phase6/rt_param_probe.c` declared
+`char buf[16]`, filled all sixteen bytes with `0xaa`, and handed the buffer to
+`OSSL_PARAM_construct_utf8_string("k", buf, 0)`. A zero `bsize` with a non-NULL
+buffer means "measure it", and the authority measures it with `strlen` — so the
+terminator was left to whatever happened to follow the array on the stack. It was
+reading past the array, and the court recorded the result:
+
+| build of the *same* source | authority | candidate |
+|---|---|---|
+| the revision the capture `run-openssl-rs-rt-param-ccb0bc0e…` was taken from | 24 | 22 |
+| the committed revision, `-O0` | 22 | 22 |
+| the committed revision, `-O1`, `-O2`, `-O3` | 16 | 16 |
+
+Those are three different answers from one probe. The residual
+`a0eaeb5b2946497400a7b63f1d0d78efe4f90ae91ee24ef1e910c7ce19551a7` was therefore
+**not a candidate divergence at all**: it was the optimizer's stack layout being
+compared against itself. The `-O0` reading is what makes that unambiguous — the same
+source, both sides, 22 — and the two sides differing at `-O1` while the *authority*
+moves to 16 is only possible if at least one side is reading beyond its own object.
+
+**Why it cost more than one line.** The probe was edited after the court had run, and
+the FRF store was not recreated, so the store held transcripts from a probe source
+that no longer existed. The visible symptom was `frf court challenge` refusing this
+court's `stdout-first-line` mutant with
+
+```
+run 'run-openssl-rs-rt-param-…' already exists and verifies
+(identical evidence was already captured); raw captures are immutable
+```
+
+which reads like an FRF limitation and is nothing of the kind: the mutant's run
+identity is a function of the court's declared inputs, the store already held a run
+for it, and re-capturing would have produced a *different* transcript. The rule this
+stratum now applies is the one the README already states for a rebuilt candidate:
+
+> a change to any probe source invalidates the whole store; `run_courts.sh` recreates
+> it from clean, because a store that mixes revisions cannot be compared to itself.
+
+**And it means D104's "three residuals remained" was two residuals.** The third was
+this read. The decision D104 records — that `RT-PARAM` is the first Phase 6 court and
+that the fit rule it found belongs to Phase 5 — is unaffected.
+
+**Remedy, part one: the probe terminates its own buffer.** The observation now sets
+the terminator itself and is taken at two declared lengths, so the court compares the
+*rule* (`strlen` of the declared buffer, plus one) rather than one number that a frame
+happened to produce:
+
+```c
+memset(buf, 0xaa, sizeof buf);
+buf[12] = '\0';
+p = OSSL_PARAM_construct_utf8_string("k", buf, 0);
+sayn("str.utf8.size0_construct.is_measured", (long long) p.data_size);
+buf[15] = '\0';
+p = OSSL_PARAM_construct_utf8_string("k", buf, 0);
+sayn("str.utf8.size0_construct.is_measured_long", (long long) p.data_size);
+```
+
+**Remedy, part two: `forensics/tools/probe_hygiene.py`.** A differential court compares
+two transcripts, and that is only meaningful if the transcript is a function of the
+library under test. The gate compiles every `courts/phase<N>/*_probe.c` against each
+side at `-O0`, `-O1` and `-O2`, runs each twice, and fails on either signature:
+
+* **level drift** — the answers differ between optimization levels, which is what a
+  read of uninitialised or out-of-bounds memory looks like;
+* **run drift** — two runs at the *same* level differ, which is nondeterminism no court
+  can compare either.
+
+It was falsified against the pre-fix probe text before being trusted, and it reports
+both signatures on it — including a run-drift reading of `22` then `17` at `-O0`, from
+two executions of the *same binary*.
+
+**Why not a sanitizer.** `-fsanitize=address` is the natural tool and cannot be used
+here: ASan reserves a terabyte-scale shadow mapping and aborts with
+`AddressSanitizer failed to allocate 0xdfff0001000 bytes` under the court's own
+`RLIMIT_DATA` cap. The cap stays — it is what keeps a runaway court off the host — so
+the level-differential method is the substitute: it needs no runtime support, it uses
+the compiler that is already there, and it detects precisely the class that bit.
+`gcc-12`'s `libasan` is present in the image and is refused for the same reason.
+
+**Also in this commit.** `forensics/tools/phase6_courts.py` declared
+`GENERATOR = "forensics/tools/phase5_courts.py"`, so every
+`artifacts/phase6/COURTS.json` this stratum produced named the wrong generator in its
+envelope. A copy-paste, and exactly the kind of provenance error the envelope exists to
+prevent; `evidence_determinism.py` does not compare `generator`, which is why it
+survived a green CI run.
+
+**The store, recreated.** `run_courts.sh` from clean: 41 receipts, 82 challenges, 5
+claims, `graph_verified: yes`, `object_closure: complete`, `replay_ready: yes`. Every
+runtime court's `stdout-first-line` and `exit-class` mutants are adjudicated on their
+own axis and no other, including the three that could not adjudicate before
+(`rt-param`, `rt-mem-default`, `rt-mem-install`). `openssl-cli-version` remains the one
+honest refusal D13 records and is compiled at `--policy baseline` with `openssl-cli-dgst`.
+
+**Supersedes D104's counts; D104's decision stands.** D104 recorded Phase 6 at 1,161
+observations and all courts at 19,346. Both were that generation's readings, and this
+project never asserts a current count from `DECISIONS.md` — it derives them. Current:
+
+| | D104's reading | now |
+|---|---|---|
+| Phase 6 observations (`RT-PARAM`) | 1,161 | 1,162 |
+| all courts | 48 | 48 |
+| all observations | 19,346 | 19,347 |
+| runtime courts in the FRF store | 25 (stated in prose; already stale, actually 37) | 37 |
+| probes under a hygiene gate | 0 | 37 |
+| FRF store objects | 333 | 341 |

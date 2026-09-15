@@ -7,9 +7,9 @@
     "courts": [
       {
         "authority_exit_code": 0,
-        "authority_observations": 1161,
+        "authority_observations": 1162,
         "candidate_exit_code": 0,
-        "candidate_observations": 1161,
+        "candidate_observations": 1162,
         "candidate_stderr_tail": [],
         "court": "RT-PARAM",
         "crashed": false,
@@ -29,7 +29,7 @@
       "total": 1
     }
   },
-  "generator": "forensics/tools/phase5_courts.py",
+  "generator": "forensics/tools/phase6_courts.py",
   "inputs": [
     {
       "name": "authority-symbols",
@@ -39,7 +39,7 @@
     {
       "name": "probe",
       "path": "courts/phase6/rt_param_probe.c",
-      "sha256": "e1edfefd8ecc9c9eb47d3d19952c0433bbfe74068a9147453620cc4f44245691"
+      "sha256": "c2bcb07b21923942e7cb74db868c5a71e7cf8ae34075818dd2d9cc528547fc83"
     }
   ],
   "kind": "phase6-courts",

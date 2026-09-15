@@ -117,7 +117,7 @@ the next change does not have to rediscover them.
 | field | values |
 |---|---|
 | claim kind | `compatibility`, `correctness`, `performance`, `safety`, `invariant`, `other` |
-| evidence kind | `court_receipt`, `oracle_comparison`, `runtime_trace`, `binary_comparison`, `test_result`, `compiler_result`, `fuzz_result`, `benchmark`, `static_analysis`, `formal_proof`, `replay`, `environment_manifest`, `artifact_hash`, `external_attestation`, `reproduction`, `harness`, `tool_identities` |
+| evidence kind | `court_receipt`, `oracle_comparison`, `runtime_trace`, `binary_comparison`, `test_result`, `compiler_result`, `fuzz_result`, `benchmark`, `static_analysis`, `formal_proof`, `replay`, `environment_manifest`, `artifact_hash`, `external_attestation` |
 | evidence outcome | `pass`, `fail`, `inconclusive`, `unknown` |
 | residual severity | `low`, `medium` |
 | residual classification | `verification_gap`, `semantic_divergence`, `expected_mismatch`, `platform_divergence`, `performance_divergence`, `unexplained_divergence`, `contract_mismatch` |
@@ -126,6 +126,24 @@ the next change does not have to rediscover them.
 An evidence *outcome* is one word: `pass`, never `pass, 1306 observations`. The
 measurement belongs in the summary, and putting it in the outcome is how the first
 attempt at a change was rejected.
+
+A second such rejection is the reason this paragraph exists. An earlier revision of the
+table above listed `harness`, `reproduction` and `tool_identities` among the evidence
+kinds, taken from the binary's own string blob rather than from an accepted invocation —
+the blob holds them, but adjacent to this vocabulary rather than inside it. Gemel
+refuses two of them in the `--evidence` kind position:
+
+```
+error: object error: invalid enum value "harness" for enum
+error: object error: invalid enum value "reproduction" for enum
+```
+
+`tool_identities` was **not** measured — it is dropped from the row because it sits in the
+same blob region as the two refusals, and a table that lists a value nobody has tried is
+how this paragraph came to be written. The row above is the set that has either been
+accepted in a committed change or read from the contiguous `ENUM_EVIDENCE_KIND` run in
+the blob; nothing in it is guesswork. Anyone adding a kind should try it first, and a
+refusal is a nine-word error rather than a lost change.
 
 ## Sensitivity (challenge) results
 
@@ -139,12 +157,16 @@ requires each mutation to be seen on its targeted axis **and on no other**.
 | `openssl-cli-dgst` | seen on stdout only | seen on exit only | **has** sensitivity evidence |
 | `openssl-cli-inventory` | seen on stdout only | seen on exit only | **has** sensitivity evidence |
 | `openssl-cli-version` | refused | refused | observations only |
-| `openssl-rs-rt-*` (all 25 runtime courts) | seen on stdout only | seen on exit only | **have** sensitivity evidence |
+| `openssl-rs-rt-*` (all 37 runtime courts) | seen on stdout only | seen on exit only | **have** sensitivity evidence |
 
-The runtime count is 25 as of the Phase 5.3 boundary: the seven Phase 3 courts, the
-sixteen Phase 4 ones, and `openssl-rs-rt-bn` and `openssl-rs-rt-asn1`. That is the number
-of courts `forensics/frf/run_courts.sh` compiles; it is stated here rather than generated,
-so a court added without this line updated would leave the line behind.
+The runtime count is 37 as of the Phase 6.5 boundary: the ten Phase 3 courts, the sixteen
+Phase 4 ones, the nine Phase 5 ones, and `openssl-rs-rt-param`. It is the number of
+manifests `forensics/frf/courts/openssl-rs-rt-*` holds, which is also what
+`forensics/frf/run_courts.sh` derives its court list from — so the *runner* cannot fall
+behind a new court. This line can: it is prose rather than a projection, and it was wrong
+before this revision (it said 25 while the store held 37). The authoritative counts are
+`frf --root .frf evidence status` and `forensics/STATUS.md`; a discrepancy here is a
+stale sentence, not a missing court.
 
 ### The cause of the refusals, and the remedy that was applied
 
