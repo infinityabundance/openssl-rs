@@ -5872,17 +5872,17 @@
     {
       "name": "ledger-result",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "447b6f380d153eba702a401dacb57705b4ebcd7661206744df8dfbfa0dbd8496"
+      "sha256": "a81332ef6474d1a0c8e04114ce51a5329b2574c9e4d71873afa477bdce748d5f"
     },
     {
       "name": "ledger-result",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "4ee99ba48a5fef077fb5db7dc4a0d9fb5b81743d2305c6e849a66e7e6f8ffbc7"
+      "sha256": "269b46b0eb5ddd31573908af0a1453cc9f5f02a74c40dd08569c99e57cef951e"
     },
     {
       "name": "ledger-result",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "a8646120cf3785cdfcc4dc74a9bab91d0603cc032147f46f8b6de2b0f8a4fdcc"
+      "sha256": "293e26e5c7bfb7ca9dff7c67eb1d5a5720e289d2719eb37068c37540886b81f9"
     }
   ],
   "kind": "ownership-audit",

@@ -3387,3 +3387,27 @@ frequently so that a long stretch does not have to be re-derived if a session en
 yet courted are staged there, and a section reaches `main` only with the court that
 observes it (D73's rule). This section's court is `RT-ASN1` at 1,306 observations with no
 residuals, so the branch merges with this decision rather than after it.
+
+
+## D78 — The ownership audit must run after the ledgers, and the check that missed it
+
+`evidence_determinism.py` regenerates every derived artefact and requires the committed
+bytes back. Its generator list had `ownership_audit.py` **before** the three obligation
+generators, and `ownership_audit.json` records each ledger's sha256 as an input. So the
+audit was recording the hashes of the *previous* generation's ledgers, and the fixed
+point the tool verified was not the one the pipeline produced.
+
+The check could not see it, by construction: `COMPARED_INPUT_PATHS` normalises
+`inputs[].sha256` for any path that is itself compared, and `forensics/phase3-obligations.json`
+is compared — so a wrong recorded hash was blanked before the comparison. The ledger's
+*content* is compared directly, which is why the normalisation is right for the case it
+was written for (D30/D33: a hash that can only ever match modulo a normalisation the inner
+artefact already declares); it is wrong for a hash that is simply computed from the wrong
+generation.
+
+It was found by running the audit alone, after the ledgers, and watching the recorded
+hashes move — not by any gate. The fix is the order, recorded in the generator list's own
+comment so the next person to add a generator has the reason in front of them. The
+residual is that no gate covers "this artefact's recorded input hashes are the current
+ones"; a court for it would have to distinguish "normalised because redundant" from
+"stale", and nothing yet does.
