@@ -92,6 +92,16 @@ COURTS: list[tuple[str, int, str, str]] = [
     # Phase 3 — the core runtime.
     ("rt-mem", 3, "rt_mem_probe",
      "allocation, sizing, cleansing and the installable allocator"),
+    ("rt-mem-default", 3, "rt_mem_default_probe",
+     "the allocation family in the branch a consumer who never installs an "
+     "allocator is in: the zero-length arms of malloc, zalloc, calloc, the array "
+     "forms, the secure heap and the duplication family; CRYPTO_memdup's INT_MAX "
+     "refusal; the CRYPTO_realloc(addr, 0) release observed through a libc "
+     "interposer because the return value hides it; and the allow_customize latch"),
+    ("rt-mem-install", 3, "rt_mem_install_probe",
+     "the allocator dispatch itself: the identity of the reported default, partial "
+     "installation of one slot at a time, reinstallation, installing the default "
+     "back, and the installed branch's answer to a zero-length request"),
     ("rt-exdata", 3, "rt_exdata_probe",
      "per-object extension data (CRYPTO_*_ex_data)"),
     ("rt-err", 3, "rt_err_probe",

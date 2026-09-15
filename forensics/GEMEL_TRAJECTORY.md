@@ -10,6 +10,8 @@ in Git. See `docs/DECISIONS.md` D17.
 ## `gemel log`
 
 ```
+C45  Two new Phase 3 courts measure the branch a consumer who never embeds is in. Thirteen zero-length divergences, a CRYPTO_realloc(addr,0) release hidden behind its own NULL return, a candidate-only out-of-bounds read in CRYPTO_memdup, two CRYPTO_set/get_mem_functions dispatch gaps, one invented constant name, and the params.c raise-site macro plane in the generator.
+    state state.bfb0e5c1af845a49043f8ce28ad5c6dbfcec3f15833292a131788ef6254e6ea1 -> state.2c91cb79897ee2f92df8e2f0b3ccc6f03266c6a5a8fa4305132bcec6924d4e4c
 C44  The ownership atlas is reconciled against the ledgers in both directions, the prototype court judges every implemented export, and the 47 obligations that reconciliation exposed are discharged or handed on
     state state.e37e2612ce18778003bd493480dcb5338c3f108bf61f91ee0ef5bad6f970e415 -> state.bfb0e5c1af845a49043f8ce28ad5c6dbfcec3f15833292a131788ef6254e6ea1
 C43  PEM_proc_type and PEM_dek_info implemented and courted; the 25 remaining pem.h exports handed on with the dependency each waits for; open obligations reach zero and the phase-5 seal is rewritten from the ledgers
@@ -88,6 +90,7 @@ C1  Phase 0 constitution and Phase 1 archaeology atlas, evidence-bound
 * `K25` — `checkpoint.72f7fa3b2028e181c38bcb2d904f665cad991c15dfbe446629b3aee4147edc15`
 * `K26` — `checkpoint.4e8675a95b17554b5113e18653828e79c7c859cc37f7c3a2183a9c4864041d34`
 * `K27` — `checkpoint.cd670f06b0cd5409439a863fffb94c388c24bf3617eafdbf012d833da79a7e13`
+* `K28` — `checkpoint.5f82da003df177c43703c768867caf5616b5bcb1a85f3376494d2730c74abdb9`
 * `K3` — `checkpoint.b1516eb6364ad075785911cb204a75a6e1b83b08c1a7ca39a2de6e3983dc9aed`
 * `K4` — `checkpoint.1bde75b37e1ca3972037c29cbd3ba5291079544436db9176a82f097a6bf832fe`
 * `K5` — `checkpoint.6b0d12f1ecf380c0808bc95675222fbed7256f99bc8e9f475a0ec2693f804a0a`
@@ -96,7 +99,7 @@ C1  Phase 0 constitution and Phase 1 archaeology atlas, evidence-bound
 * `K8` — `checkpoint.7eb3dba97cbf20f2b34d14cce7e93bc2171ebd0d7ee66d1f7508cc6e199567de`
 * `K9` — `checkpoint.60105b4c8189d2668c48e173fe2c92c0ddf76160caae24efecc707bd576f506f`
 
-current: `checkpoint.cd670f06b0cd5409439a863fffb94c388c24bf3617eafdbf012d833da79a7e13`
+current: `checkpoint.5f82da003df177c43703c768867caf5616b5bcb1a85f3376494d2730c74abdb9`
 
 ## Note: derived names are not identities
 
@@ -116,6 +119,15 @@ changed with it; the Git commit is the authoritative record of the diff.
 ## Open residuals at this boundary
 
 ```
+open [low] the zero-length and realloc-zero unit tests were deleted rather than repaired: the test harness shares one process and the allocator branch is chosen once
+    class: expected_mismatch
+    persistence: 0 descendant change(s)
+open [low] CRYPTO_malloc allocation failure raises ERR_R_MALLOC_FAILURE and cannot be exercised in the venue without inducing OOM, which the court forbids
+    class: verification_gap
+    persistence: 0 descendant change(s)
+open [low] the authority faults writing through a NULL freeptr in CRYPTO_aligned_alloc and its _array sibling; the candidate answers NULL and the boundary is recorded rather than compared
+    class: semantic_divergence
+    persistence: 0 descendant change(s)
 open [low] seven implemented exports are declared in headers the authority does not install, so the Phase 1 atlas has no prototype for them; their ABI is still proved by the Phase 2 loader court
     class: verification_gap
     persistence: 0 descendant change(s)

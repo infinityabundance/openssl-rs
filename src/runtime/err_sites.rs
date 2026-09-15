@@ -6350,6 +6350,1356 @@ pub(crate) const ASN_MIME_630: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `copy_integer` at `crypto/params.c:138` (CRYPTO_R_PARAM_VALUE_TOO_LARGE_FOR_DESTINATION).
+pub(crate) const PARAMS_138: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 138,
+    func: c"copy_integer",
+    lib: 15,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `copy_integer` at `crypto/params.c:156` (CRYPTO_R_PARAM_VALUE_TOO_LARGE_FOR_DESTINATION).
+pub(crate) const PARAMS_156: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 156,
+    func: c"copy_integer",
+    lib: 15,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `unsigned_from_signed` at `crypto/params.c:185` (CRYPTO_R_PARAM_UNSIGNED_INTEGER_NEGATIVE_VALUE_UNSUPPORTED).
+pub(crate) const PARAMS_185: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 185,
+    func: c"unsigned_from_signed",
+    lib: 15,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `general_get_int` at `crypto/params.c:202` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_202: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 202,
+    func: c"general_get_int",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `general_get_int` at `crypto/params.c:209` (CRYPTO_R_PARAM_NOT_INTEGER_TYPE).
+pub(crate) const PARAMS_209: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 209,
+    func: c"general_get_int",
+    lib: 15,
+    reason: 124,
+    dynamic_reason: false,
+};
+
+/// `general_set_int` at `crypto/params.c:227` (CRYPTO_R_PARAM_NOT_INTEGER_TYPE).
+pub(crate) const PARAMS_227: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 227,
+    func: c"general_set_int",
+    lib: 15,
+    reason: 124,
+    dynamic_reason: false,
+};
+
+/// `general_get_uint` at `crypto/params.c:237` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_237: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 237,
+    func: c"general_get_uint",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `general_get_uint` at `crypto/params.c:244` (CRYPTO_R_PARAM_NOT_INTEGER_TYPE).
+pub(crate) const PARAMS_244: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 244,
+    func: c"general_get_uint",
+    lib: 15,
+    reason: 124,
+    dynamic_reason: false,
+};
+
+/// `general_set_uint` at `crypto/params.c:262` (CRYPTO_R_PARAM_NOT_INTEGER_TYPE).
+pub(crate) const PARAMS_262: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 262,
+    func: c"general_set_uint",
+    lib: 15,
+    reason: 124,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_int32` at `crypto/params.c:396` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_396: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 396,
+    func: c"OSSL_PARAM_get_int32",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_int32` at `crypto/params.c:401` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_401: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 401,
+    func: c"OSSL_PARAM_get_int32",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_int32` at `crypto/params.c:419` (CRYPTO_R_PARAM_VALUE_TOO_LARGE_FOR_DESTINATION).
+pub(crate) const PARAMS_419: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 419,
+    func: c"OSSL_PARAM_get_int32",
+    lib: 15,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_int32` at `crypto/params.c:437` (CRYPTO_R_PARAM_VALUE_TOO_LARGE_FOR_DESTINATION).
+pub(crate) const PARAMS_437: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 437,
+    func: c"OSSL_PARAM_get_int32",
+    lib: 15,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_int32` at `crypto/params.c:445` (CRYPTO_R_PARAM_VALUE_TOO_LARGE_FOR_DESTINATION).
+pub(crate) const PARAMS_445: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 445,
+    func: c"OSSL_PARAM_get_int32",
+    lib: 15,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_int32` at `crypto/params.c:462` (CRYPTO_R_PARAM_VALUE_TOO_LARGE_FOR_DESTINATION).
+pub(crate) const PARAMS_462: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 462,
+    func: c"OSSL_PARAM_get_int32",
+    lib: 15,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_int32` at `crypto/params.c:465` (CRYPTO_R_PARAM_UNSUPPORTED_FLOATING_POINT_FORMAT).
+pub(crate) const PARAMS_465: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 465,
+    func: c"OSSL_PARAM_get_int32",
+    lib: 15,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_int32` at `crypto/params.c:469` (CRYPTO_R_PARAM_OF_INCOMPATIBLE_TYPE).
+pub(crate) const PARAMS_469: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 469,
+    func: c"OSSL_PARAM_get_int32",
+    lib: 15,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_int32` at `crypto/params.c:476` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_476: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 476,
+    func: c"OSSL_PARAM_set_int32",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_int32` at `crypto/params.c:526` (CRYPTO_R_PARAM_CANNOT_BE_REPRESENTED_EXACTLY).
+pub(crate) const PARAMS_526: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 526,
+    func: c"OSSL_PARAM_set_int32",
+    lib: 15,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_int32` at `crypto/params.c:533` (CRYPTO_R_PARAM_UNSUPPORTED_FLOATING_POINT_FORMAT).
+pub(crate) const PARAMS_533: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 533,
+    func: c"OSSL_PARAM_set_int32",
+    lib: 15,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_int32` at `crypto/params.c:537` (CRYPTO_R_PARAM_OF_INCOMPATIBLE_TYPE).
+pub(crate) const PARAMS_537: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 537,
+    func: c"OSSL_PARAM_set_int32",
+    lib: 15,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_uint32` at `crypto/params.c:550` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_550: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 550,
+    func: c"OSSL_PARAM_get_uint32",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_uint32` at `crypto/params.c:555` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_555: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 555,
+    func: c"OSSL_PARAM_get_uint32",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_uint32` at `crypto/params.c:573` (CRYPTO_R_PARAM_VALUE_TOO_LARGE_FOR_DESTINATION).
+pub(crate) const PARAMS_573: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 573,
+    func: c"OSSL_PARAM_get_uint32",
+    lib: 15,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_uint32` at `crypto/params.c:590` (CRYPTO_R_PARAM_UNSIGNED_INTEGER_NEGATIVE_VALUE_UNSUPPORTED).
+pub(crate) const PARAMS_590: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 590,
+    func: c"OSSL_PARAM_get_uint32",
+    lib: 15,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_uint32` at `crypto/params.c:599` (CRYPTO_R_PARAM_UNSIGNED_INTEGER_NEGATIVE_VALUE_UNSUPPORTED).
+pub(crate) const PARAMS_599: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 599,
+    func: c"OSSL_PARAM_get_uint32",
+    lib: 15,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_uint32` at `crypto/params.c:601` (CRYPTO_R_PARAM_VALUE_TOO_LARGE_FOR_DESTINATION).
+pub(crate) const PARAMS_601: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 601,
+    func: c"OSSL_PARAM_get_uint32",
+    lib: 15,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_uint32` at `crypto/params.c:617` (CRYPTO_R_PARAM_CANNOT_BE_REPRESENTED_EXACTLY).
+pub(crate) const PARAMS_617: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 617,
+    func: c"OSSL_PARAM_get_uint32",
+    lib: 15,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_uint32` at `crypto/params.c:620` (CRYPTO_R_PARAM_UNSUPPORTED_FLOATING_POINT_FORMAT).
+pub(crate) const PARAMS_620: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 620,
+    func: c"OSSL_PARAM_get_uint32",
+    lib: 15,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_uint32` at `crypto/params.c:624` (CRYPTO_R_PARAM_OF_INCOMPATIBLE_TYPE).
+pub(crate) const PARAMS_624: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 624,
+    func: c"OSSL_PARAM_get_uint32",
+    lib: 15,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_uint32` at `crypto/params.c:631` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_631: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 631,
+    func: c"OSSL_PARAM_set_uint32",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_uint32` at `crypto/params.c:663` (CRYPTO_R_PARAM_VALUE_TOO_LARGE_FOR_DESTINATION).
+pub(crate) const PARAMS_663: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 663,
+    func: c"OSSL_PARAM_set_uint32",
+    lib: 15,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_uint32` at `crypto/params.c:684` (CRYPTO_R_PARAM_CANNOT_BE_REPRESENTED_EXACTLY).
+pub(crate) const PARAMS_684: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 684,
+    func: c"OSSL_PARAM_set_uint32",
+    lib: 15,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_uint32` at `crypto/params.c:691` (CRYPTO_R_PARAM_UNSUPPORTED_FLOATING_POINT_FORMAT).
+pub(crate) const PARAMS_691: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 691,
+    func: c"OSSL_PARAM_set_uint32",
+    lib: 15,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_uint32` at `crypto/params.c:695` (CRYPTO_R_PARAM_OF_INCOMPATIBLE_TYPE).
+pub(crate) const PARAMS_695: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 695,
+    func: c"OSSL_PARAM_set_uint32",
+    lib: 15,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_int64` at `crypto/params.c:708` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_708: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 708,
+    func: c"OSSL_PARAM_get_int64",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_int64` at `crypto/params.c:713` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_713: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 713,
+    func: c"OSSL_PARAM_get_int64",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_int64` at `crypto/params.c:743` (CRYPTO_R_PARAM_VALUE_TOO_LARGE_FOR_DESTINATION).
+pub(crate) const PARAMS_743: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 743,
+    func: c"OSSL_PARAM_get_int64",
+    lib: 15,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_int64` at `crypto/params.c:766` (CRYPTO_R_PARAM_CANNOT_BE_REPRESENTED_EXACTLY).
+pub(crate) const PARAMS_766: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 766,
+    func: c"OSSL_PARAM_get_int64",
+    lib: 15,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_int64` at `crypto/params.c:769` (CRYPTO_R_PARAM_UNSUPPORTED_FLOATING_POINT_FORMAT).
+pub(crate) const PARAMS_769: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 769,
+    func: c"OSSL_PARAM_get_int64",
+    lib: 15,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_int64` at `crypto/params.c:773` (CRYPTO_R_PARAM_OF_INCOMPATIBLE_TYPE).
+pub(crate) const PARAMS_773: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 773,
+    func: c"OSSL_PARAM_get_int64",
+    lib: 15,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_int64` at `crypto/params.c:780` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_780: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 780,
+    func: c"OSSL_PARAM_set_int64",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_int64` at `crypto/params.c:797` (CRYPTO_R_PARAM_VALUE_TOO_LARGE_FOR_DESTINATION).
+pub(crate) const PARAMS_797: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 797,
+    func: c"OSSL_PARAM_set_int64",
+    lib: 15,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_int64` at `crypto/params.c:819` (CRYPTO_R_PARAM_VALUE_TOO_LARGE_FOR_DESTINATION).
+pub(crate) const PARAMS_819: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 819,
+    func: c"OSSL_PARAM_set_int64",
+    lib: 15,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_int64` at `crypto/params.c:844` (CRYPTO_R_PARAM_CANNOT_BE_REPRESENTED_EXACTLY).
+pub(crate) const PARAMS_844: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 844,
+    func: c"OSSL_PARAM_set_int64",
+    lib: 15,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_int64` at `crypto/params.c:847` (CRYPTO_R_PARAM_UNSUPPORTED_FLOATING_POINT_FORMAT).
+pub(crate) const PARAMS_847: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 847,
+    func: c"OSSL_PARAM_set_int64",
+    lib: 15,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_int64` at `crypto/params.c:851` (CRYPTO_R_PARAM_OF_INCOMPATIBLE_TYPE).
+pub(crate) const PARAMS_851: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 851,
+    func: c"OSSL_PARAM_set_int64",
+    lib: 15,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_uint64` at `crypto/params.c:863` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_863: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 863,
+    func: c"OSSL_PARAM_get_uint64",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_uint64` at `crypto/params.c:868` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_868: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 868,
+    func: c"OSSL_PARAM_get_uint64",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_uint64` at `crypto/params.c:896` (CRYPTO_R_PARAM_UNSIGNED_INTEGER_NEGATIVE_VALUE_UNSUPPORTED).
+pub(crate) const PARAMS_896: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 896,
+    func: c"OSSL_PARAM_get_uint64",
+    lib: 15,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_uint64` at `crypto/params.c:904` (CRYPTO_R_PARAM_UNSIGNED_INTEGER_NEGATIVE_VALUE_UNSUPPORTED).
+pub(crate) const PARAMS_904: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 904,
+    func: c"OSSL_PARAM_get_uint64",
+    lib: 15,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_uint64` at `crypto/params.c:927` (CRYPTO_R_PARAM_CANNOT_BE_REPRESENTED_EXACTLY).
+pub(crate) const PARAMS_927: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 927,
+    func: c"OSSL_PARAM_get_uint64",
+    lib: 15,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_uint64` at `crypto/params.c:930` (CRYPTO_R_PARAM_UNSUPPORTED_FLOATING_POINT_FORMAT).
+pub(crate) const PARAMS_930: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 930,
+    func: c"OSSL_PARAM_get_uint64",
+    lib: 15,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_uint64` at `crypto/params.c:934` (CRYPTO_R_PARAM_OF_INCOMPATIBLE_TYPE).
+pub(crate) const PARAMS_934: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 934,
+    func: c"OSSL_PARAM_get_uint64",
+    lib: 15,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_uint64` at `crypto/params.c:941` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_941: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 941,
+    func: c"OSSL_PARAM_set_uint64",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_uint64` at `crypto/params.c:959` (CRYPTO_R_PARAM_VALUE_TOO_LARGE_FOR_DESTINATION).
+pub(crate) const PARAMS_959: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 959,
+    func: c"OSSL_PARAM_set_uint64",
+    lib: 15,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_uint64` at `crypto/params.c:981` (CRYPTO_R_PARAM_VALUE_TOO_LARGE_FOR_DESTINATION).
+pub(crate) const PARAMS_981: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 981,
+    func: c"OSSL_PARAM_set_uint64",
+    lib: 15,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_uint64` at `crypto/params.c:989` (CRYPTO_R_PARAM_VALUE_TOO_LARGE_FOR_DESTINATION).
+pub(crate) const PARAMS_989: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 989,
+    func: c"OSSL_PARAM_set_uint64",
+    lib: 15,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_uint64` at `crypto/params.c:1003` (CRYPTO_R_PARAM_CANNOT_BE_REPRESENTED_EXACTLY).
+pub(crate) const PARAMS_1003: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1003,
+    func: c"OSSL_PARAM_set_uint64",
+    lib: 15,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_uint64` at `crypto/params.c:1006` (CRYPTO_R_PARAM_UNSUPPORTED_FLOATING_POINT_FORMAT).
+pub(crate) const PARAMS_1006: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1006,
+    func: c"OSSL_PARAM_set_uint64",
+    lib: 15,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_uint64` at `crypto/params.c:1010` (CRYPTO_R_PARAM_OF_INCOMPATIBLE_TYPE).
+pub(crate) const PARAMS_1010: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1010,
+    func: c"OSSL_PARAM_set_uint64",
+    lib: 15,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_BN` at `crypto/params.c:1088` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_1088: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1088,
+    func: c"OSSL_PARAM_get_BN",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_BN` at `crypto/params.c:1100` (CRYPTO_R_PARAM_OF_INCOMPATIBLE_TYPE).
+pub(crate) const PARAMS_1100: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1100,
+    func: c"OSSL_PARAM_get_BN",
+    lib: 15,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_BN` at `crypto/params.c:1105` (ERR_R_BN_LIB).
+pub(crate) const PARAMS_1105: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1105,
+    func: c"OSSL_PARAM_get_BN",
+    lib: 15,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_BN` at `crypto/params.c:1118` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_1118: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1118,
+    func: c"OSSL_PARAM_set_BN",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_BN` at `crypto/params.c:1123` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_1123: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1123,
+    func: c"OSSL_PARAM_set_BN",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_BN` at `crypto/params.c:1127` (CRYPTO_R_PARAM_OF_INCOMPATIBLE_TYPE).
+pub(crate) const PARAMS_1127: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1127,
+    func: c"OSSL_PARAM_set_BN",
+    lib: 15,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_BN` at `crypto/params.c:1148` (CRYPTO_R_INTEGER_OVERFLOW).
+pub(crate) const PARAMS_1148: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1148,
+    func: c"OSSL_PARAM_set_BN",
+    lib: 15,
+    reason: 127,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_BN` at `crypto/params.c:1154` (CRYPTO_R_INTEGER_OVERFLOW).
+pub(crate) const PARAMS_1154: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1154,
+    func: c"OSSL_PARAM_set_BN",
+    lib: 15,
+    reason: 127,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_BN` at `crypto/params.c:1159` (CRYPTO_R_PARAM_OF_INCOMPATIBLE_TYPE).
+pub(crate) const PARAMS_1159: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1159,
+    func: c"OSSL_PARAM_set_BN",
+    lib: 15,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_BN` at `crypto/params.c:1166` (CRYPTO_R_TOO_SMALL_BUFFER).
+pub(crate) const PARAMS_1166: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1166,
+    func: c"OSSL_PARAM_set_BN",
+    lib: 15,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_double` at `crypto/params.c:1184` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_1184: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1184,
+    func: c"OSSL_PARAM_get_double",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_double` at `crypto/params.c:1194` (CRYPTO_R_PARAM_UNSUPPORTED_FLOATING_POINT_FORMAT).
+pub(crate) const PARAMS_1194: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1194,
+    func: c"OSSL_PARAM_get_double",
+    lib: 15,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_double` at `crypto/params.c:1207` (CRYPTO_R_PARAM_CANNOT_BE_REPRESENTED_EXACTLY).
+pub(crate) const PARAMS_1207: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1207,
+    func: c"OSSL_PARAM_get_double",
+    lib: 15,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_double` at `crypto/params.c:1222` (CRYPTO_R_PARAM_CANNOT_BE_REPRESENTED_EXACTLY).
+pub(crate) const PARAMS_1222: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1222,
+    func: c"OSSL_PARAM_get_double",
+    lib: 15,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_double` at `crypto/params.c:1226` (CRYPTO_R_PARAM_OF_INCOMPATIBLE_TYPE).
+pub(crate) const PARAMS_1226: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1226,
+    func: c"OSSL_PARAM_get_double",
+    lib: 15,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_double` at `crypto/params.c:1239` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_1239: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1239,
+    func: c"OSSL_PARAM_set_double",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_double` at `crypto/params.c:1255` (CRYPTO_R_PARAM_UNSUPPORTED_FLOATING_POINT_FORMAT).
+pub(crate) const PARAMS_1255: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1255,
+    func: c"OSSL_PARAM_set_double",
+    lib: 15,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_double` at `crypto/params.c:1267` (CRYPTO_R_PARAM_CANNOT_BE_REPRESENTED_EXACTLY).
+pub(crate) const PARAMS_1267: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1267,
+    func: c"OSSL_PARAM_set_double",
+    lib: 15,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_double` at `crypto/params.c:1277` (CRYPTO_R_PARAM_VALUE_TOO_LARGE_FOR_DESTINATION).
+pub(crate) const PARAMS_1277: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1277,
+    func: c"OSSL_PARAM_set_double",
+    lib: 15,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_double` at `crypto/params.c:1285` (CRYPTO_R_PARAM_VALUE_TOO_LARGE_FOR_DESTINATION).
+pub(crate) const PARAMS_1285: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1285,
+    func: c"OSSL_PARAM_set_double",
+    lib: 15,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_double` at `crypto/params.c:1298` (CRYPTO_R_PARAM_CANNOT_BE_REPRESENTED_EXACTLY).
+pub(crate) const PARAMS_1298: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1298,
+    func: c"OSSL_PARAM_set_double",
+    lib: 15,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_double` at `crypto/params.c:1308` (CRYPTO_R_PARAM_VALUE_TOO_LARGE_FOR_DESTINATION).
+pub(crate) const PARAMS_1308: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1308,
+    func: c"OSSL_PARAM_set_double",
+    lib: 15,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_double` at `crypto/params.c:1316` (CRYPTO_R_PARAM_VALUE_TOO_LARGE_FOR_DESTINATION).
+pub(crate) const PARAMS_1316: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1316,
+    func: c"OSSL_PARAM_set_double",
+    lib: 15,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_double` at `crypto/params.c:1320` (CRYPTO_R_PARAM_OF_INCOMPATIBLE_TYPE).
+pub(crate) const PARAMS_1320: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1320,
+    func: c"OSSL_PARAM_set_double",
+    lib: 15,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `get_string_internal` at `crypto/params.c:1337` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_1337: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1337,
+    func: c"get_string_internal",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `get_string_internal` at `crypto/params.c:1341` (CRYPTO_R_PARAM_OF_INCOMPATIBLE_TYPE).
+pub(crate) const PARAMS_1341: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1341,
+    func: c"get_string_internal",
+    lib: 15,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `get_string_internal` at `crypto/params.c:1356` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_1356: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1356,
+    func: c"get_string_internal",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `get_string_internal` at `crypto/params.c:1373` (CRYPTO_R_TOO_SMALL_BUFFER).
+pub(crate) const PARAMS_1373: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1373,
+    func: c"get_string_internal",
+    lib: 15,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_get_utf8_string` at `crypto/params.c:1403` (CRYPTO_R_NO_SPACE_FOR_TERMINATING_NULL).
+pub(crate) const PARAMS_1403: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1403,
+    func: c"OSSL_PARAM_get_utf8_string",
+    lib: 15,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `set_string_internal` at `crypto/params.c:1422` (CRYPTO_R_PARAM_OF_INCOMPATIBLE_TYPE).
+pub(crate) const PARAMS_1422: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1422,
+    func: c"set_string_internal",
+    lib: 15,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `set_string_internal` at `crypto/params.c:1429` (CRYPTO_R_TOO_SMALL_BUFFER).
+pub(crate) const PARAMS_1429: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1429,
+    func: c"set_string_internal",
+    lib: 15,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_utf8_string` at `crypto/params.c:1443` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_1443: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1443,
+    func: c"OSSL_PARAM_set_utf8_string",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_octet_string` at `crypto/params.c:1454` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_1454: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1454,
+    func: c"OSSL_PARAM_set_octet_string",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `get_ptr_internal` at `crypto/params.c:1488` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_1488: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1488,
+    func: c"get_ptr_internal",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `get_ptr_internal` at `crypto/params.c:1492` (CRYPTO_R_PARAM_OF_INCOMPATIBLE_TYPE).
+pub(crate) const PARAMS_1492: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1492,
+    func: c"get_ptr_internal",
+    lib: 15,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `set_ptr_internal` at `crypto/params.c:1513` (CRYPTO_R_PARAM_OF_INCOMPATIBLE_TYPE).
+pub(crate) const PARAMS_1513: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1513,
+    func: c"set_ptr_internal",
+    lib: 15,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_utf8_ptr` at `crypto/params.c:1525` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_1525: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1525,
+    func: c"OSSL_PARAM_set_utf8_ptr",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_octet_ptr` at `crypto/params.c:1537` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_1537: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1537,
+    func: c"OSSL_PARAM_set_octet_ptr",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `get_string_ptr_internal` at `crypto/params.c:1676` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_1676: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1676,
+    func: c"get_string_ptr_internal",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `get_string_ptr_internal` at `crypto/params.c:1684` (CRYPTO_R_PARAM_OF_INCOMPATIBLE_TYPE).
+pub(crate) const PARAMS_1684: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1684,
+    func: c"get_string_ptr_internal",
+    lib: 15,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_octet_string_or_ptr` at `crypto/params.c:1712` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_1712: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1712,
+    func: c"OSSL_PARAM_set_octet_string_or_ptr",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_set_octet_string_or_ptr` at `crypto/params.c:1721` (CRYPTO_R_PARAM_OF_INCOMPATIBLE_TYPE).
+pub(crate) const PARAMS_1721: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params.c",
+    line: 1721,
+    func: c"OSSL_PARAM_set_octet_string_or_ptr",
+    lib: 15,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_dup` at `crypto/params_dup.c:113` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_DUP_113: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params_dup.c",
+    line: 113,
+    func: c"OSSL_PARAM_dup",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_merge` at `crypto/params_dup.c:164` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAMS_DUP_164: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params_dup.c",
+    line: 164,
+    func: c"OSSL_PARAM_merge",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_merge` at `crypto/params_dup.c:182` (CRYPTO_R_NO_PARAMS_TO_MERGE).
+pub(crate) const PARAMS_DUP_182: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params_dup.c",
+    line: 182,
+    func: c"OSSL_PARAM_merge",
+    lib: 15,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `prepare_from_text` at `crypto/params_from_text.c:60` (CRYPTO_R_INVALID_NEGATIVE_VALUE).
+pub(crate) const PARAMS_FROM_TEXT_60: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params_from_text.c",
+    line: 60,
+    func: c"prepare_from_text",
+    lib: 15,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `prepare_from_text` at `crypto/params_from_text.c:102` (CRYPTO_R_TOO_SMALL_BUFFER).
+pub(crate) const PARAMS_FROM_TEXT_102: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params_from_text.c",
+    line: 102,
+    func: c"prepare_from_text",
+    lib: 15,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `prepare_from_text` at `crypto/params_from_text.c:112` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PARAMS_FROM_TEXT_112: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params_from_text.c",
+    line: 112,
+    func: c"prepare_from_text",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `prepare_from_text` at `crypto/params_from_text.c:122` (CRYPTO_R_ODD_NUMBER_OF_DIGITS).
+pub(crate) const PARAMS_FROM_TEXT_122: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/params_from_text.c",
+    line: 122,
+    func: c"prepare_from_text",
+    lib: 15,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `param_push_num` at `crypto/param_build.c:80` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAM_BUILD_80: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/param_build.c",
+    line: 80,
+    func: c"param_push_num",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `param_push_num` at `crypto/param_build.c:84` (CRYPTO_R_TOO_MANY_BYTES).
+pub(crate) const PARAM_BUILD_84: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/param_build.c",
+    line: 84,
+    func: c"param_push_num",
+    lib: 15,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_BLD_push_int` at `crypto/param_build.c:125` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAM_BUILD_125: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/param_build.c",
+    line: 125,
+    func: c"OSSL_PARAM_BLD_push_int",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_BLD_push_uint` at `crypto/param_build.c:136` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAM_BUILD_136: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/param_build.c",
+    line: 136,
+    func: c"OSSL_PARAM_BLD_push_uint",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_BLD_push_long` at `crypto/param_build.c:148` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAM_BUILD_148: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/param_build.c",
+    line: 148,
+    func: c"OSSL_PARAM_BLD_push_long",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_BLD_push_ulong` at `crypto/param_build.c:159` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAM_BUILD_159: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/param_build.c",
+    line: 159,
+    func: c"OSSL_PARAM_BLD_push_ulong",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_BLD_push_int32` at `crypto/param_build.c:171` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAM_BUILD_171: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/param_build.c",
+    line: 171,
+    func: c"OSSL_PARAM_BLD_push_int32",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_BLD_push_uint32` at `crypto/param_build.c:182` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAM_BUILD_182: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/param_build.c",
+    line: 182,
+    func: c"OSSL_PARAM_BLD_push_uint32",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_BLD_push_int64` at `crypto/param_build.c:194` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAM_BUILD_194: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/param_build.c",
+    line: 194,
+    func: c"OSSL_PARAM_BLD_push_int64",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_BLD_push_uint64` at `crypto/param_build.c:205` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAM_BUILD_205: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/param_build.c",
+    line: 205,
+    func: c"OSSL_PARAM_BLD_push_uint64",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_BLD_push_size_t` at `crypto/param_build.c:217` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAM_BUILD_217: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/param_build.c",
+    line: 217,
+    func: c"OSSL_PARAM_BLD_push_size_t",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_BLD_push_time_t` at `crypto/param_build.c:229` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAM_BUILD_229: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/param_build.c",
+    line: 229,
+    func: c"OSSL_PARAM_BLD_push_time_t",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_BLD_push_double` at `crypto/param_build.c:241` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAM_BUILD_241: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/param_build.c",
+    line: 241,
+    func: c"OSSL_PARAM_BLD_push_double",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `push_BN` at `crypto/param_build.c:255` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAM_BUILD_255: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/param_build.c",
+    line: 255,
+    func: c"push_BN",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `push_BN` at `crypto/param_build.c:265` (ERR_R_UNSUPPORTED).
+pub(crate) const PARAM_BUILD_265: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/param_build.c",
+    line: 265,
+    func: c"push_BN",
+    lib: 15,
+    reason: 524556,
+    dynamic_reason: false,
+};
+
+/// `push_BN` at `crypto/param_build.c:272` (CRYPTO_R_ZERO_LENGTH_NUMBER).
+pub(crate) const PARAM_BUILD_272: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/param_build.c",
+    line: 272,
+    func: c"push_BN",
+    lib: 15,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `push_BN` at `crypto/param_build.c:276` (CRYPTO_R_TOO_SMALL_BUFFER).
+pub(crate) const PARAM_BUILD_276: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/param_build.c",
+    line: 276,
+    func: c"push_BN",
+    lib: 15,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_BLD_push_BN` at `crypto/param_build.c:297` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAM_BUILD_297: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/param_build.c",
+    line: 297,
+    func: c"OSSL_PARAM_BLD_push_BN",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_BLD_push_BN_pad` at `crypto/param_build.c:312` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAM_BUILD_312: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/param_build.c",
+    line: 312,
+    func: c"OSSL_PARAM_BLD_push_BN_pad",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_BLD_push_utf8_string` at `crypto/param_build.c:329` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAM_BUILD_329: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/param_build.c",
+    line: 329,
+    func: c"OSSL_PARAM_BLD_push_utf8_string",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_BLD_push_utf8_ptr` at `crypto/param_build.c:349` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAM_BUILD_349: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/param_build.c",
+    line: 349,
+    func: c"OSSL_PARAM_BLD_push_utf8_ptr",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_BLD_push_octet_string` at `crypto/param_build.c:369` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAM_BUILD_369: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/param_build.c",
+    line: 369,
+    func: c"OSSL_PARAM_BLD_push_octet_string",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_BLD_push_octet_ptr` at `crypto/param_build.c:387` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAM_BUILD_387: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/param_build.c",
+    line: 387,
+    func: c"OSSL_PARAM_BLD_push_octet_ptr",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_BLD_to_param` at `crypto/param_build.c:459` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PARAM_BUILD_459: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/param_build.c",
+    line: 459,
+    func: c"OSSL_PARAM_BLD_to_param",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_PARAM_BLD_to_param` at `crypto/param_build.c:471` (CRYPTO_R_SECURE_MALLOC_FAILURE).
+pub(crate) const PARAM_BUILD_471: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/param_build.c",
+    line: 471,
+    func: c"OSSL_PARAM_BLD_to_param",
+    lib: 15,
+    reason: 111,
+    dynamic_reason: false,
+};
+
 /// Every recorded raise site, in authority source order.
 ///
 /// This is the complete inventory for the covered files, including the
@@ -6993,4 +8343,139 @@ pub(crate) static ALL: &[ErrSite] = &[
     ASN_MIME_620,
     ASN_MIME_625,
     ASN_MIME_630,
+    PARAMS_138,
+    PARAMS_156,
+    PARAMS_185,
+    PARAMS_202,
+    PARAMS_209,
+    PARAMS_227,
+    PARAMS_237,
+    PARAMS_244,
+    PARAMS_262,
+    PARAMS_396,
+    PARAMS_401,
+    PARAMS_419,
+    PARAMS_437,
+    PARAMS_445,
+    PARAMS_462,
+    PARAMS_465,
+    PARAMS_469,
+    PARAMS_476,
+    PARAMS_526,
+    PARAMS_533,
+    PARAMS_537,
+    PARAMS_550,
+    PARAMS_555,
+    PARAMS_573,
+    PARAMS_590,
+    PARAMS_599,
+    PARAMS_601,
+    PARAMS_617,
+    PARAMS_620,
+    PARAMS_624,
+    PARAMS_631,
+    PARAMS_663,
+    PARAMS_684,
+    PARAMS_691,
+    PARAMS_695,
+    PARAMS_708,
+    PARAMS_713,
+    PARAMS_743,
+    PARAMS_766,
+    PARAMS_769,
+    PARAMS_773,
+    PARAMS_780,
+    PARAMS_797,
+    PARAMS_819,
+    PARAMS_844,
+    PARAMS_847,
+    PARAMS_851,
+    PARAMS_863,
+    PARAMS_868,
+    PARAMS_896,
+    PARAMS_904,
+    PARAMS_927,
+    PARAMS_930,
+    PARAMS_934,
+    PARAMS_941,
+    PARAMS_959,
+    PARAMS_981,
+    PARAMS_989,
+    PARAMS_1003,
+    PARAMS_1006,
+    PARAMS_1010,
+    PARAMS_1088,
+    PARAMS_1100,
+    PARAMS_1105,
+    PARAMS_1118,
+    PARAMS_1123,
+    PARAMS_1127,
+    PARAMS_1148,
+    PARAMS_1154,
+    PARAMS_1159,
+    PARAMS_1166,
+    PARAMS_1184,
+    PARAMS_1194,
+    PARAMS_1207,
+    PARAMS_1222,
+    PARAMS_1226,
+    PARAMS_1239,
+    PARAMS_1255,
+    PARAMS_1267,
+    PARAMS_1277,
+    PARAMS_1285,
+    PARAMS_1298,
+    PARAMS_1308,
+    PARAMS_1316,
+    PARAMS_1320,
+    PARAMS_1337,
+    PARAMS_1341,
+    PARAMS_1356,
+    PARAMS_1373,
+    PARAMS_1403,
+    PARAMS_1422,
+    PARAMS_1429,
+    PARAMS_1443,
+    PARAMS_1454,
+    PARAMS_1488,
+    PARAMS_1492,
+    PARAMS_1513,
+    PARAMS_1525,
+    PARAMS_1537,
+    PARAMS_1676,
+    PARAMS_1684,
+    PARAMS_1712,
+    PARAMS_1721,
+    PARAMS_DUP_113,
+    PARAMS_DUP_164,
+    PARAMS_DUP_182,
+    PARAMS_FROM_TEXT_60,
+    PARAMS_FROM_TEXT_102,
+    PARAMS_FROM_TEXT_112,
+    PARAMS_FROM_TEXT_122,
+    PARAM_BUILD_80,
+    PARAM_BUILD_84,
+    PARAM_BUILD_125,
+    PARAM_BUILD_136,
+    PARAM_BUILD_148,
+    PARAM_BUILD_159,
+    PARAM_BUILD_171,
+    PARAM_BUILD_182,
+    PARAM_BUILD_194,
+    PARAM_BUILD_205,
+    PARAM_BUILD_217,
+    PARAM_BUILD_229,
+    PARAM_BUILD_241,
+    PARAM_BUILD_255,
+    PARAM_BUILD_265,
+    PARAM_BUILD_272,
+    PARAM_BUILD_276,
+    PARAM_BUILD_297,
+    PARAM_BUILD_312,
+    PARAM_BUILD_329,
+    PARAM_BUILD_349,
+    PARAM_BUILD_369,
+    PARAM_BUILD_387,
+    PARAM_BUILD_459,
+    PARAM_BUILD_471,
 ];

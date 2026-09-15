@@ -33,31 +33,38 @@ one of the authority's **6,499** DSO exports to exactly one stratum. Phase 6's s
 | `self_test.h` | declaring-header | 7 |
 | `indicator.h` | declaring-header | 2 |
 | — (no installed header) | abi-only | 15 |
-| **total** | | **127** |
+| `crypto.h` | reassigned by 6.0 | 10 |
+| **total** | | **137** |
+
+The `crypto.h` row is the one place in the atlas where a declaring header is too
+coarse to decide: `crypto.h` declares both the core runtime and the library context,
+so 6.0 reassigned the ten `OSSL_LIB_CTX_*` exports to this stratum explicitly (D97).
+The first draft of this table listed 127 and then added the ten a second time in the
+prose, which made the total read as 156; the derived count is **137**
+atlas-owned, and the table is now read from
+`forensics/atlas/symbol-ownership.json` rather than summed by hand.
 
 Three further sets arrive as recorded hand-offs and are Phase 6's obligations even
 though their declaring headers belong to other strata:
 
-* **17 from Phase 4** (`forensics/phase4-obligations.json`, `deferred` rows with
+* **18 from Phase 4** (`forensics/phase4-obligations.json`, `deferred` rows with
   `owning_phase == 6`): `BIO_s_core`, `BIO_new_from_core_bio`,
   `CONF_module_add`, `CONF_module_get_usr_data`, `CONF_module_set_usr_data`,
   `CONF_imodule_get_flags`, `CONF_imodule_get_module`, `CONF_imodule_get_name`,
   `CONF_imodule_get_usr_data`, `CONF_imodule_get_value`,
   `CONF_imodule_set_flags`, `CONF_imodule_set_usr_data`, `CONF_modules_finish`,
   `CONF_modules_load`, `CONF_modules_load_file`, `CONF_modules_load_file_ex`,
-  `CONF_modules_unload`.
+  `CONF_modules_unload`, and `OPENSSL_load_builtin_modules`, which is
+  `crypto/conf/conf_mall.c`'s registration loop over the built-in `CONF_MODULE`s and
+  therefore cannot exist before the module registry does. The first draft listed the
+  last of those separately, which is how the same 18 came to be counted as 19.
 * **1 from Phase 5**: `ASN1_add_oid_module`.
-* **1 from Phase 4** recorded by 6.0: `OPENSSL_load_builtin_modules`, which is
-  `crypto/conf/conf_mall.c`'s registration loop over the built-in `CONF_MODULE`s
-  and therefore cannot exist before the module registry does.
+* **5 from Phase 3**, deferred by 6.0: `OPENSSL_atexit`, `OPENSSL_thread_stop`,
+  `OPENSSL_thread_stop_ex`, `OSSL_get_max_threads`, `OSSL_set_max_threads`.
 
-And **10 reassigned** from Phase 3 by 6.0: `OSSL_LIB_CTX_*`. `crypto.h` declares both
-the core runtime and the library context, so the declaring-header rule alone cannot
-separate them; the library context is Phase 6's subject matter and is the one place
-in the atlas where a header is genuinely too coarse to decide. See D97.
-
-Phase 6's working set is therefore **156** exports: 127 owned by the atlas, 28
-received by hand-off, 10 reassigned into it.
+Phase 6's working set is therefore **161** exports: 137 the atlas assigns it and 24
+received by hand-off. Both numbers are in the ledger's `counts` block, and
+`ownership_audit.py` reconciles the hand-off edges in both directions.
 
 ## 2. The subphases
 
@@ -65,17 +72,18 @@ received by hand-off, 10 reassigned into it.
 |---|---|---|---|---|---|
 | 6.0 | Ledger reconciliation | nothing — evidence | — | — | **COMPLETE**: `ownership_audit.py` fails when a stratum's ledger has no row for a symbol the atlas gives it; the four atlas overrides and the forty-odd ledger rows are recorded; phases 3, 4 and 5 re-derive without a single unaccounted export (D97) |
 | 6.1 | Prototype gap closure (item 4 of the review) | nothing — evidence | — | `ABI-PROTOTYPE`, generated declaration plane | **COMPLETE** (D98): of 932 implemented exports, 921 are checked as Rust declarations, 8 as C definitions, 0 unreadable, 0 unfound, 0 mismatches on either plane; the 3 remaining are declared in headers the authority does not install and say so; three sensitivity controls prove the court can fail |
-| 6.2 | Core-runtime addendum | 24 of the 29 Phase 3 exports 6.0 recorded `open`: `OSSL_trace_*` (10), `OSSL_ERR_STATE_*` (5), `OPENSSL_die`, `OPENSSL_fork_prepare/_parent/_child`, `OPENSSL_isservice`, `OPENSSL_issetugid`, `err_free_strings_int`, `OSSL_sleep`, `OSSL_get_thread_support_flags` | 6.0 | `RT-RUNTIME-EXT` | **COMPLETE** (D99): Phase 3's ledger is at zero open, its seal gains an appended §11, and the court observes all 24 in 94 observations. The other 5 — `OSSL_get/set_max_threads`, `OPENSSL_thread_stop(_ex)`, `OPENSSL_atexit` — are handed to Phase 6 with the dependency named, because each reads an `OSSL_LIB_CTX` or needs `DSO_dsobyaddr`, so 6.5 and 6.8 discharge them |
+| 6.2 | Core-runtime addendum | 24 of the 29 Phase 3 exports 6.0 recorded `open`: `OSSL_trace_*` (10), `OSSL_ERR_STATE_*` (5), `OPENSSL_die`, `OPENSSL_fork_prepare/_parent/_child`, `OPENSSL_isservice`, `OPENSSL_issetugid`, `err_free_strings_int`, `OSSL_sleep`, `OSSL_get_thread_support_flags` | 6.0 | `RT-RUNTIME-EXT` | **COMPLETE** (D99): Phase 3's ledger is at zero open, its seal gains an appended §11, and the court observes all 24 in 94 observations. The other 5 — `OSSL_get/set_max_threads`, `OPENSSL_thread_stop(_ex)`, `OPENSSL_atexit` — are handed to Phase 6 with the dependency named, because each reads an `OSSL_LIB_CTX` or needs `DSO_dsobyaddr`, so 6.6 and 6.9 discharge them |
 | 6.3 | BIO/CONF addendum | the 18 Phase 4 exports 6.0 recorded `open` (`COMP_*` fourteen, `conf_ssl_*` three, `OPENSSL_config`) | 6.0 | `RT-COMP` | **COMPLETE** (D99, D100): the reopened Phase 4 ledger is at zero open, the stratum re-closes, and `RT-COMP` observes 27. Six of the fourteen `COMP_*` and one of the three `conf_ssl_*` are unreachable by any consumer in this profile and the seal says so rather than implying coverage; the court also found an unrecorded `OPENSSL_info` divergence (D100) |
-| 6.4 | `OSSL_PARAM` | `params.c` 61 and `param_build.c` 20 — the descriptor substrate every provider call is made of | 6.3 | `RT-PARAM` | all 81 exports implemented; the court covers construct/get/set/locate/merge/dup/free/print, `OSSL_PARAM_BLD_*`, and the `modified` bitmap |
-| 6.5 | `OSSL_LIB_CTX` + the core dispatch table | `crypto/context.c` (658 lines), `crypto/core_algorithm.c`, `crypto/core_namemap.c`, the ten reassigned `OSSL_LIB_CTX_*` | 6.4 | `RT-LIBCTX` | default and child contexts, `OSSL_LIB_CTX_new_child`/`_new_from_dispatch`, `get_data`/`set0_default`/`load_config`, diagnostics flags |
-| 6.6 | Property engine | `crypto/property/property.c`, `property_parse.c`, `property_string.c`, `property_query.c`, `defn_cache.c`, `property_err.c` | 6.5 | `RT-PROPERTY` | definition, parse, string round-trip, matching, query parse **and negative selection** — a query that must *exclude* a definition is as much an observation as one that includes it |
-| 6.7 | Provider registry and dispatch | `crypto/provider.c`, `provider_core.c` (2,679 lines), `provider_child.c`, `provider_predefined.c`, `provider_conf.c` | 6.5, 6.6 | `RT-PROVIDER` | load/unload/try_load, reference ownership, builtin and dynamic providers, `OSSL_DISPATCH` walking, core→provider and provider→core upcalls, algorithm registration, name map, gettable params, capabilities, `do_all`, operation query, fetch and the fetch cache |
-| 6.8 | DSO | the fifteen abi-only `DSO_*` — `dso_lib.c`, `dso_dlfcn.c`, `dso_dl.c`, `dso_openssl.c` | 6.7 | `RT-DSO` | the dynamic loader that `DSO_load` needs to make a provider module a module |
-| 6.9 | CONF module registry | the 18 hand-offs from Phase 4 and Phase 5 — `crypto/conf/conf_mod.c` | 6.7, 6.8 | `RT-CONF-MOD` | module activation through configuration, `CONF_modules_load*`, the imodule/module accessors, and the diagnostics flag interaction D50 recorded |
-| 6.10 | Self-test and indicator | `self_test.h` 7, `indicator.h` 2 — `crypto/self_test_core.c`, `crypto/indicator_core.c` | 6.7 | `RT-SELFTEST` | the callback plumbing and the corrupt/begin/end transitions, which the FIPS provider's *behavioural* parity will later stand on |
-| 6.11 | **Third-party provider court** | nothing new — the crown-jewel test | 6.4–6.10 | `RT-PROVIDER-3P` | an **independently written C provider**, compiled separately from this project and loaded **unchanged** into both the authority and the candidate, yields matching init dispatch, core upcalls, parameter flow, algorithm enumeration, property selection, operation calls, teardown and failure behaviour |
-| 6.12 | Inventory generation and closure | nothing — evidence | all | — | the provider/algorithm/property inventory is generated from the authority rather than handwritten; every court passes; FRF receipts compile into a claim; the seal is written from the ledgers; a Gemel checkpoint closes the stratum |
+| 6.4 | Core-runtime addendum II — the allocator dispatch | nothing owed; this addendum adds no export. It corrects `src/runtime/mem.rs`, which Phase 3 owns | 6.3 | `RT-MEM-DEFAULT`, `RT-MEM-INSTALL` | **COMPLETE** (D102): the *default* branch of the allocation family is measured for the first time. Thirteen zero-length divergences, a release `CRYPTO_realloc(addr, 0)` was hiding behind its own NULL return, a candidate-only out-of-bounds read in `CRYPTO_memdup`, two `CRYPTO_set/get_mem_functions` dispatch gaps, one invented constant name, and one divergence recorded rather than fixed. Phase 3's seal gains §12; its courts go 8 → 10 and its observations 4,358 → 4,410 |
+| 6.5 | `OSSL_PARAM` | `params.c` 61 and `param_build.c` 20 — the descriptor substrate every provider call is made of | 6.3, 6.4 | `RT-PARAM` | all 81 exports implemented; the court covers construct/get/set/locate/merge/dup/free/print, `OSSL_PARAM_BLD_*`, and the `modified` bitmap |
+| 6.6 | `OSSL_LIB_CTX` + the core dispatch table | `crypto/context.c` (658 lines), `crypto/core_algorithm.c`, `crypto/core_namemap.c`, the ten reassigned `OSSL_LIB_CTX_*` | 6.5 | `RT-LIBCTX` | default and child contexts, `OSSL_LIB_CTX_new_child`/`_new_from_dispatch`, `get_data`/`set0_default`/`load_config`, diagnostics flags |
+| 6.7 | Property engine | `crypto/property/property.c`, `property_parse.c`, `property_string.c`, `property_query.c`, `defn_cache.c`, `property_err.c` | 6.6 | `RT-PROPERTY` | definition, parse, string round-trip, matching, query parse **and negative selection** — a query that must *exclude* a definition is as much an observation as one that includes it |
+| 6.8 | Provider registry and dispatch | `crypto/provider.c`, `provider_core.c` (2,679 lines), `provider_child.c`, `provider_predefined.c`, `provider_conf.c` | 6.6, 6.7 | `RT-PROVIDER` | load/unload/try_load, reference ownership, builtin and dynamic providers, `OSSL_DISPATCH` walking, core→provider and provider→core upcalls, algorithm registration, name map, gettable params, capabilities, `do_all`, operation query, fetch and the fetch cache |
+| 6.9 | DSO | the fifteen abi-only `DSO_*` — `dso_lib.c`, `dso_dlfcn.c`, `dso_dl.c`, `dso_openssl.c` | 6.8 | `RT-DSO` | the dynamic loader that `DSO_load` needs to make a provider module a module |
+| 6.10 | CONF module registry | the 18 hand-offs from Phase 4 and Phase 5 — `crypto/conf/conf_mod.c` | 6.8, 6.9 | `RT-CONF-MOD` | module activation through configuration, `CONF_modules_load*`, the imodule/module accessors, and the diagnostics flag interaction D50 recorded |
+| 6.11 | Self-test and indicator | `self_test.h` 7, `indicator.h` 2 — `crypto/self_test_core.c`, `crypto/indicator_core.c` | 6.8 | `RT-SELFTEST` | the callback plumbing and the corrupt/begin/end transitions, which the FIPS provider's *behavioural* parity will later stand on |
+| 6.12 | **Third-party provider court** | nothing new — the crown-jewel test | 6.5–6.11 | `RT-PROVIDER-3P` | an **independently written C provider**, compiled separately from this project and loaded **unchanged** into both the authority and the candidate, yields matching init dispatch, core upcalls, parameter flow, algorithm enumeration, property selection, operation calls, teardown and failure behaviour |
+| 6.13 | Inventory generation and closure | nothing — evidence | all | — | the provider/algorithm/property inventory is generated from the authority rather than handwritten; every court passes; FRF receipts compile into a claim; the seal is written from the ledgers; a Gemel checkpoint closes the stratum |
 
 ### Why 6.0 comes before any implementation
 
@@ -186,7 +194,7 @@ not a plan: the plan is the inventory, and the inventory is generated.
 
 1. the provider/algorithm/property inventory is generated from the authority;
 2. built-in and dynamic providers load, dispatch and tear down compatibly;
-3. **the third-party provider court passes** (6.11);
+3. **the third-party provider court passes** (6.12);
 4. property-based fetch selection matches, **including negative selection**;
 5. the FRF receipts for the above compile into a claim.
 
@@ -205,17 +213,25 @@ not a plan: the plan is the inventory, and the inventory is generated.
    at 2,000.
 3. **6.2 and 6.3** discharge the reopened obligations before Phase 6 proper begins,
    so the dependency-order invariant is satisfied by work rather than by a waiver.
-4. **6.4 then 6.5 then 6.6**, because that is the dependency order of the substrate:
+   **6.4** is the same kind of item found one stratum later: while preparing to build
+   the descriptor substrate, reading `crypto/params.c`'s `OSSL_PARAM_set_int` against
+   `src/runtime/mem.rs` exposed that the allocation family's *default* branch had
+   never been measured, and a defect in the substrate every later subphase allocates
+   through is not something to carry forward. It adds no export, so it is a
+   correction to a sealed stratum rather than work in this one — but it is ordered
+   here because it had to be, and because 6.0's rule is that an earlier stratum's
+   gap is closed before a later stratum depends on it.
+4. **6.5 then 6.6 then 6.7**, because that is the dependency order of the substrate:
    a descriptor is what a dispatch function is called with, a library context owns
    the property definitions, and a fetch is a property query against a registered
    algorithm.
-5. **6.7, 6.8, 6.9, 6.10** in that order, for the same reason: the registry needs
+5. **6.8, 6.9, 6.10, 6.11** in that order, for the same reason: the registry needs
    property selection, the loader is what a dynamic provider is loaded through, the
    module registry is what activates a provider from configuration, and self-test is
    the provider/context callback plumbing.
-6. **6.11 only after 6.4–6.10 pass**, because a third-party provider exercises all of
+6. **6.12 only after 6.5–6.11 pass**, because a third-party provider exercises all of
    them at once. Its first green run is the stratum's real beginning.
-7. **6.12 last**, and it is the only subphase allowed to say anything about the
+7. **6.13 last**, and it is the only subphase allowed to say anything about the
    stratum as a whole.
 
 ### What 6.0 discovered about generator sequencing
