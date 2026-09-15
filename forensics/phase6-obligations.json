@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 137,
       "deferred_to_later_phase": 0,
-      "implemented": 81,
-      "open_in_this_stratum": 80,
+      "implemented": 88,
+      "open_in_this_stratum": 73,
       "owned": 161,
       "received_by_handoff": 24
     },
@@ -45,6 +45,13 @@
       ]
     },
     "implemented": [
+      "OSSL_LIB_CTX_free",
+      "OSSL_LIB_CTX_get0_global_default",
+      "OSSL_LIB_CTX_get_conf_diagnostics",
+      "OSSL_LIB_CTX_get_data",
+      "OSSL_LIB_CTX_new",
+      "OSSL_LIB_CTX_set0_default",
+      "OSSL_LIB_CTX_set_conf_diagnostics",
       "OSSL_PARAM_BLD_free",
       "OSSL_PARAM_BLD_new",
       "OSSL_PARAM_BLD_push_BN",
@@ -406,32 +413,7 @@
       {
         "declaring_header": "crypto.h",
         "module": "src/context/mod.rs",
-        "symbol": "OSSL_LIB_CTX_free"
-      },
-      {
-        "declaring_header": "crypto.h",
-        "module": "src/context/mod.rs",
-        "symbol": "OSSL_LIB_CTX_get0_global_default"
-      },
-      {
-        "declaring_header": "crypto.h",
-        "module": "src/context/mod.rs",
-        "symbol": "OSSL_LIB_CTX_get_conf_diagnostics"
-      },
-      {
-        "declaring_header": "crypto.h",
-        "module": "src/context/mod.rs",
-        "symbol": "OSSL_LIB_CTX_get_data"
-      },
-      {
-        "declaring_header": "crypto.h",
-        "module": "src/context/mod.rs",
         "symbol": "OSSL_LIB_CTX_load_config"
-      },
-      {
-        "declaring_header": "crypto.h",
-        "module": "src/context/mod.rs",
-        "symbol": "OSSL_LIB_CTX_new"
       },
       {
         "declaring_header": "crypto.h",
@@ -442,16 +424,6 @@
         "declaring_header": "crypto.h",
         "module": "src/context/mod.rs",
         "symbol": "OSSL_LIB_CTX_new_from_dispatch"
-      },
-      {
-        "declaring_header": "crypto.h",
-        "module": "src/context/mod.rs",
-        "symbol": "OSSL_LIB_CTX_set0_default"
-      },
-      {
-        "declaring_header": "crypto.h",
-        "module": "src/context/mod.rs",
-        "symbol": "OSSL_LIB_CTX_set_conf_diagnostics"
       },
       {
         "declaring_header": "provider.h",
@@ -644,7 +616,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "197aa1edd6687715cc74a1d0194c758ac7ff086f1c32a1236de6a6ff0b9b3b02"
+      "sha256": "d718955d409596556ca2252f7e647203282508cae2f14b440be5d53520dc3338"
     }
   ],
   "kind": "phase6-obligations",

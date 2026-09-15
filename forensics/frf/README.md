@@ -157,11 +157,14 @@ requires each mutation to be seen on its targeted axis **and on no other**.
 | `openssl-cli-dgst` | seen on stdout only | seen on exit only | **has** sensitivity evidence |
 | `openssl-cli-inventory` | seen on stdout only | seen on exit only | **has** sensitivity evidence |
 | `openssl-cli-version` | refused | refused | observations only |
-| `openssl-rs-rt-*` (all 37 runtime courts) | seen on stdout only | seen on exit only | **have** sensitivity evidence |
+| `openssl-rs-rt-*` (all 38 runtime courts) | seen on stdout only | seen on exit only | **have** sensitivity evidence |
 
-The runtime count is 37 as of the Phase 6.5 boundary: the ten Phase 3 courts, the sixteen
-Phase 4 ones, the nine Phase 5 ones, and `openssl-rs-rt-param`. It is the number of
-manifests `forensics/frf/courts/openssl-rs-rt-*` holds, which is also what
+The runtime count is 38 as of the Phase 6.6a boundary: ten Phase 3 courts, seventeen
+Phase 4, nine Phase 5, and two Phase 6 (`openssl-rs-rt-param` and
+`openssl-rs-rt-libctx`). The number is not asserted from memory — `python3
+forensics/tools/gen_frf_courts.py --check` prints that breakdown, and that is where this
+line's arithmetic comes from. It is the count of manifests
+`forensics/frf/courts/openssl-rs-rt-*` holds, which is also what
 `forensics/frf/run_courts.sh` derives its court list from — so the *runner* cannot fall
 behind a new court. This line can: it is prose rather than a projection, and it was wrong
 before this revision (it said 25 while the store held 37). The authoritative counts are

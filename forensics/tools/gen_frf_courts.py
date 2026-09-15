@@ -236,6 +236,17 @@ COURTS: list[tuple[str, int, str, str]] = [
      "either; BIGNUM in and out with the sign and width rules; dup, merge and "
      "free; text allocation with the hex prefix; and the builder's one-block "
      "layout and reuse"),
+    ("rt-libctx", 6, "rt_libctx_probe",
+     "the OSSL_LIB_CTX identity contract: a fresh context distinct from every other, "
+     "the global default handing back one stable address that freeing does not "
+     "release, the thread-default chain including the clear-not-store that passing "
+     "the global default performs, the two of three `free` arguments that are "
+     "no-ops -- NULL and a context this thread has made its default -- "
+     "conf_diagnostics as per-context state read and written through a NULL "
+     "context, and the index registry's boundary: the dead indices and everything "
+     "past the end of the switch answer NULL, while the slot whose answer is the "
+     "address of a field answers a pointer for every context including an empty "
+     "one"),
 ]
 
 
