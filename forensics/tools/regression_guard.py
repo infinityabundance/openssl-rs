@@ -243,6 +243,37 @@ def transition_for(phase: str, was: int, now: int, owned_now: int) -> dict | Non
     return None
 
 
+def phase_transition_for(phase: str, was: str, now: str) -> dict | None:
+    """An approved *downward* phase-state correction covering a state change.
+
+    A stratum's state is derived from its ledger, so when the ledger's universe is
+    corrected the derived state can move **down**. That is exactly what D97 does:
+    Phases 3 and 4 were called `complete` because their ledgers were prefix lists
+    that matched nothing for sixty-nine and nineteen of the exports the ownership
+    atlas assigns them, so the state was derived from an incomplete premise. The
+    correction lowers it.
+
+    A state *downgrade* is a regression by default, and it must stay that way: the
+    whole value of a cumulative invariant is that you cannot quietly undo it. So the
+    same shape is used as for an ownership transition -- a row here that matches the
+    phase and both states **exactly**, naming the decision and the artifact that is
+    the authority for the new state. A different pair of states is not blessed, and
+    removing the row makes the same change fail again.
+
+    Only a *downward* move is ever routed through this file. An upward move is
+    reported as a movement by `compare`, which needs no approval: it is the work.
+    """
+    doc = read_json(TRANSITIONS)
+    if not doc:
+        return None
+    for t in doc.get("phase_state_transitions", []):
+        if (str(t.get("phase")) == str(phase).removeprefix("phase")
+                and t.get("state_before") == was
+                and t.get("state_after") == now):
+            return t
+    return None
+
+
 def inventory_problems(current: dict) -> list[str]:
     """The phase inventory must be complete in both directions.
 
@@ -350,7 +381,15 @@ def compare(baseline: dict, current: dict) -> tuple[list[str], list[str]]:
         if now is None:
             regressions.append(f"phase[{phase}]: was {was}, but the phase state is absent")
         elif STATE_RANK.get(now, -1) < STATE_RANK.get(was, -1):
-            regressions.append(f"phase[{phase}]: {was} -> {now}")
+            t = phase_transition_for(phase, was, now)
+            if t is None:
+                regressions.append(f"phase[{phase}]: {was} -> {now}")
+            else:
+                movements.append(
+                    f"phase[{phase}]: {was} -> {now}, an approved state correction "
+                    f"({t.get('reason', 'no reason recorded in ' + TRANSITIONS)})")
+        elif STATE_RANK.get(now, -1) > STATE_RANK.get(was, -1):
+            movements.append(f"phase[{phase}]: {was} -> {now}")
 
     return regressions, movements
 

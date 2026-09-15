@@ -1,9 +1,24 @@
 # Phase 3 — Core runtime: seal
 
-Status: **complete for the surfaces listed below. Not parity.** Completion here
-means every obligation in the stratum's symbol families is either proved by a
-differential court or recorded as a hand-off to a later phase; it does not mean
-any symbol has reached `PARITY_VERIFIED`.
+Status: **reopened, `in-progress` (docs/DECISIONS.md D97). Not parity.** This
+stratum was sealed as `complete` on the premise that its obligation ledger's symbol
+families were its universe. They were prefix lists, and a prefix that matches nothing
+reports nothing: sixty-nine exports the global ownership atlas assigns this stratum
+were in no ledger at all. Twenty-nine of them are now recorded `open`, so the
+stratum is genuinely unfinished and `forensics/phase-state.json` derives it as
+`in-progress`. See §10 for the correction, which is appended rather than folded into
+the sections above it.
+
+Completion here means every obligation in the stratum's universe is either proved by
+a differential court or recorded as a hand-off to a later phase; it does not mean any
+symbol has reached `PARITY_VERIFIED`.
+
+**For every count in this document, read `docs/SEAL-CENSUS.md`.** That document is
+generated from the ledgers and the court results by
+`forensics/tools/render_seal_census.py`, so it cannot go stale, and no number in this
+seal is an authority for anything. Where the prose below states a figure it was
+typed at seal time and is retained for the historical record only; §10 records where
+it is now wrong.
 
 Authority: `openssl-3.6.4-production`
 Platform: Linux x86-64, profile `linux-x86_64-default-shared-legacy-notests`
@@ -37,7 +52,8 @@ content-addressed in the headers they emit.
 Census at seal time: **209 of the 220 libcrypto exports in the Phase 3 families
 are IMPLEMENTED**; the other 11 are recorded hand-offs (§5). Both numbers are
 derived by `implemented_surface.py` and `phase3_obligations.py`; neither is
-typed.
+typed. **That census was measured against a universe this document no longer
+uses** — see §10. The current figures are in `docs/SEAL-CENSUS.md`.
 
 ## 2. The evidence
 
@@ -254,6 +270,10 @@ narrowing is stated in the module that owns the symbol.
 
 ## 5. Deliberate scaffolding, and what it means
 
+**Superseded by §10 in one respect**: this section describes the eleven symbols whose
+hand-off the ledger recorded at seal time. The ledger now records thirty-eight, for
+the reason §10 gives. The *policy* below is unchanged and still holds.
+
 - Eleven symbols in the Phase 3 families are **deferred to Phase 4** because they
   need a `BIO *` or a `FILE *`: `ERR_print_errors`, `ERR_print_errors_cb`,
   `ERR_print_errors_fp`, `ERR_add_error_mem_bio`, the six
@@ -299,14 +319,15 @@ narrowing is stated in the module that owns the symbol.
 | runtime subsystems implemented | met; the generated ERR tables, coordinates and loaders are part of the implementation |
 | differential courts exist and pass | met: RT-MEM, RT-EXDATA, RT-ERR, RT-STACK, RT-THREAD, RT-SECURE, RT-LHASH — 4,249 observations, no residual |
 | `RT-ERR`, `RT-STACK` courts | met |
-| every export in the phase's symbol families accounted for | met, by `forensics/phase3-obligations.json` (220 owned: 209 implemented, 11 deferred to Phase 4 with reasons) |
+| every export in the phase's symbol families accounted for | met at seal time against the Phase 3 *families* (220 owned: 209 implemented, 11 deferred to Phase 4 with reasons). **Not met against the stratum's universe: D97 found sixty-nine atlas-owned exports with no row at all**, so the criterion is now unmet and the state is `in-progress`. See §10 |
 | authority faults recorded, not reproduced | met |
 | no scaffold claims parity | met (`SHELL_MANIFEST.json` classifies every scaffold) |
 | distribution shell still passes with the implementation linked | met |
 | earlier strata complete | met: phases 0, 1 and 2 are `complete` in the derived state |
 
-`forensics/phase-state.json` therefore derives phase 3 as **complete**, with the
-eleven deferrals listed beside it rather than folded into a status word. The seal
+`forensics/phase-state.json` derived phase 3 as **complete** at seal time. After
+D97 it derives **`in-progress`**, with the twenty-nine open obligations named in
+`docs/SEAL-CENSUS.md` beside it rather than folded into a status word. The seal
 records what is established; it does not promote any symbol to parity.
 
 ## 8. FRF evidence
@@ -354,3 +375,103 @@ probing Gemel's own claim-kind enum carries the Phase 3 working-tree operations
 because it was created first, and the correction change that records its durable
 identity — because Gemel renumbers derived names, which is how the mistake became
 visible at all.
+
+## 10. Correction: the stratum's universe was incomplete (D97)
+
+Appended, not folded in. Everything above it stands as the record of what was
+true when this document was sealed; this section records what was found to be
+missing from the premise.
+
+### What was wrong
+
+The obligation ledger decided its own universe. It did so with fourteen
+`(module, prefixes)` entries, and it *failed closed* within them: an export
+matching a prefix that was neither implemented nor deferred stopped the run. But
+membership in the universe was decided by the same prefixes, so an export matching
+none was not deferred and not open -- it was **absent**. Sixty-nine exports the
+global ownership atlas (`forensics/atlas/symbol-ownership.json`, D72) assigns this
+stratum were in that state, and `ownership_audit.py` did not look for it.
+
+They were not obscure. Every `ASYNC_*` (twenty-two), every `OSSL_ERR_STATE_*`
+(five), every `OSSL_trace_*` (ten), `OSSL_get_max_threads`, `OSSL_set_max_threads`,
+`OSSL_get_thread_support_flags`, `OSSL_sleep`, `OPENSSL_atexit`, `OPENSSL_die`,
+`OPENSSL_fork_prepare`/`_parent`/`_child`, `OPENSSL_isservice`,
+`OPENSSL_issetugid`, `OPENSSL_thread_stop`, `OPENSSL_thread_stop_ex`,
+`err_free_strings_int`, the five `OPENSSL_INIT_*` handle constructors, and
+`OPENSSL_gmtime` with its two neighbours.
+
+Three of those classes had a second, independent cause worth recording:
+
+* `OPENSSL_gmtime`, `OPENSSL_gmtime_adj` and `OPENSSL_gmtime_diff` were
+  **implemented**, in `src/runtime/time.rs`. That module was in no `FAMILIES` entry
+  and in no `PHASE3_MODULES` evidence list either, so an implemented export belonged
+  to no ledger and to no evidence set at once. It is now in both.
+* `OPENSSL_INIT_new` and its four neighbours were matched by the prefix
+  `OPENSSL_init` only in the lower-case form; the authority spells the exported
+  names in upper case. A case difference is enough to hide five exports.
+* `OPENSSL_version_major`, `_minor`, `_patch`, `_pre_release` and
+  `_build_metadata` were hidden by the same case difference against `OpenSSL_version`.
+
+### What was done
+
+The ledger is now a **projection**: it selects the rows
+`forensics/atlas/symbol-ownership.json` assigns Phase 3 and reports them as
+implemented / open / deferred. There is no prefix in the universe decision. The
+prefixes survive only as a *label* naming the module expected to hold a symbol,
+and an unlabelled symbol is a hard failure rather than a row filed under "other".
+
+Twenty-nine of the sixty-nine are recorded **`open`**. They are real,
+unimplemented public surface:
+
+```
+OPENSSL_atexit  OPENSSL_die  OPENSSL_fork_prepare  OPENSSL_fork_parent
+OPENSSL_fork_child  OPENSSL_isservice  OPENSSL_issetugid  OPENSSL_thread_stop
+OPENSSL_thread_stop_ex  OSSL_ERR_STATE_new  OSSL_ERR_STATE_free
+OSSL_ERR_STATE_save  OSSL_ERR_STATE_restore  OSSL_ERR_STATE_save_to_mark
+OSSL_get_max_threads  OSSL_set_max_threads  OSSL_get_thread_support_flags
+OSSL_sleep  OSSL_trace_begin  OSSL_trace_enabled  OSSL_trace_end
+OSSL_trace_get_category_name  OSSL_trace_get_category_num
+OSSL_trace_set_callback  OSSL_trace_set_channel  OSSL_trace_set_prefix
+OSSL_trace_set_suffix  OSSL_trace_string  err_free_strings_int
+```
+
+They are Phase 6.2's (`docs/PHASE-6-SUBPHASES.md`), and until they are built this
+stratum is not complete.
+
+Twenty-two are handed to **Phase 13** with the dependency named: `crypto/async/`'s
+job framework is not deferred for difficulty (`OPENSSL_NO_ASYNC` is *not* defined in
+the pinned profile, so it is real functionality), and the authority's own tree shows
+every in-tree caller is either an asynchronous engine (`engines/e_dasync.c`,
+`engines/e_afalg.c`) or the SSL async API (`ssl/ssl_lib.c`). Phase 13 is the
+earliest stratum whose own obligations require it.
+
+Sixteen are deferred to Phase 4, which had **already implemented all sixteen** --
+the eleven BIO-coupled error and hash-table entry points, plus the five
+`OPENSSL_INIT_*` handle constructors. Phase 4 built them without this ledger ever
+recording the edge, so `phase4-obligations.json` and this ledger now declare the
+same sixteen symbols and `ownership_audit.py` checks that they agree in both
+directions.
+
+Three -- the `crypto/o_time.c` calendar primitives -- turn out to be implemented
+here, in `src/runtime/time.rs`.
+
+### What this does not change
+
+Nothing in §2 through §9 is withdrawn. Every court, every observation, every
+recorded authority fault and every generated table stands exactly as it was
+measured. No implementation was removed and no evidence was invalidated: this is a
+correction to the *completeness* claim, not to the evidence. That distinction is
+the whole reason the correction could be made cheaply.
+
+### Why it was not caught earlier
+
+Because three separate registries had to agree and only one was checked. The
+ledger's prefixes, the `PHASE3_MODULES` evidence list and the ownership atlas are
+three statements of the same scope, and the tooling compared none of them. D72 made
+*assignment* one rule applied globally; D97 makes *accounting* one rule applied
+against it, and `ownership_audit.py` now **fails** when a stratum the atlas assigns
+exports has no ledger row for them, in whichever direction the disagreement runs.
+
+The general lesson is the one D49, D51, D72 and D94 each record from a different
+angle: a second list that has to be remembered does not stay correct, and nothing
+fails when it goes stale. `docs/DECISIONS.md` D97 has the full account.

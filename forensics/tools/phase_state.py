@@ -133,6 +133,22 @@ def evidence_for(phase: int) -> tuple[list[str], list[str], str]:
     if phase == 3:
         for d in PHASE3_MODULES:
             (present if exists(d) else absent).append(d)
+        ledger = read_json(PHASE3_OBLIGATIONS)
+        if ledger:
+            present.append(PHASE3_OBLIGATIONS)
+            body3 = ledger["body"]
+            open_count = body3["counts"]["open_in_this_stratum"]
+            if open_count:
+                blocking = (
+                    f"{open_count} open obligation(s) of this stratum recorded in "
+                    f"{PHASE3_OBLIGATIONS}; a stratum cannot be complete while any "
+                    f"export it owns is neither implemented nor handed to a later "
+                    f"phase. The ledger reads its universe from the ownership "
+                    f"atlas, so this is no longer a question of which prefixes its "
+                    f"families happened to list (docs/DECISIONS.md D97)"
+                )
+        else:
+            absent.append(PHASE3_OBLIGATIONS)
         courts = read_json(PHASE3_COURTS)
         if courts:
             present.append(PHASE3_COURTS)
@@ -142,11 +158,6 @@ def evidence_for(phase: int) -> tuple[list[str], list[str], str]:
                 blocking = f"Phase 3 courts not passing: {failed}"
         else:
             absent.append(PHASE3_COURTS)
-        ledger = read_json(PHASE3_OBLIGATIONS)
-        if ledger:
-            present.append(PHASE3_OBLIGATIONS)
-        else:
-            absent.append(PHASE3_OBLIGATIONS)
         return present, absent, blocking
 
     if phase == 4:
@@ -219,10 +230,11 @@ def evidence_for(phase: int) -> tuple[list[str], list[str], str]:
 # Phase 3 evidence: the core-runtime modules, the differential courts that
 # exercise them, and the seal that records what they establish.
 PHASE3_COURTS = "artifacts/phase3/COURTS.json"
-# Every symbol in the Phase 3 families is either implemented or deferred to a
-# later phase with a stated reason. `phase3_obligations.py` fails closed if any
-# export in those families is neither, so the ledger -- not this file -- decides
-# whether anything is unaccounted for.
+# Every symbol in the Phase 3 projection is either implemented, handed to a later
+# phase with a stated reason, or recorded `open`. The ledger reads its universe from
+# the global ownership atlas and fails closed if any export it assigns this stratum
+# is unaccounted for, so the ledger -- not this file -- decides whether anything is
+# outstanding. `open_in_this_stratum > 0` keeps the phase `in-progress`.
 PHASE3_OBLIGATIONS = "forensics/phase3-obligations.json"
 PHASE3_MODULES = [
     "docs/PHASE-3-CORE-RUNTIME-SEAL.md",
@@ -247,6 +259,11 @@ PHASE3_MODULES = [
     "src/runtime/str.rs",
     "src/runtime/dir.rs",
     "src/runtime/dir_posix.c",
+    # `crypto/o_time.c`, the three calendar primitives the ASN.1 time family in
+    # Phase 5 stands on. The file is this stratum's by placement and by its own
+    # header comment; it was in no `FAMILIES` prefix list, so neither this list nor
+    # the ledger mentioned it until D97.
+    "src/runtime/time.rs",
     # `ossl_safe_getenv`, used by the CONF reader's default-path logic; internal,
     # so it claims no export, but it is core-runtime surface.
     "src/runtime/getenv.rs",
@@ -344,6 +361,11 @@ PHASE4_MODULES = [
     "courts/phase4/discover_bio_lookup_hints.c",
     "courts/phase4/discover_bio_legacy_host.c",
     "courts/phase4/bio_addr_null_calls.c",
+    # The discovery probe D97's `COMP_*` finding is recorded against: the profile's
+    # `no-zlib`/`no-zstd`/`no-brotli` guards, the six NULL factories and the
+    # `COMP_CTX_get_type(NULL)` fault are all read off its transcript. A decision that
+    # names a probe is only checkable while the probe exists.
+    "courts/phase4/discover_comp.c",
     "forensics/tools/phase4_courts.py",
     "forensics/tools/phase4_obligations.py",
 ]

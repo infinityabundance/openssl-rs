@@ -24,6 +24,12 @@ What a rule is
 `owner_phase()` answers `(phase, rule)` for a symbol. The rules, in the order they
 are tried:
 
+0. `symbol-override` — the declaring header is genuinely too coarse: `crypto.h`
+   declares both the core runtime and the library context, so `SYMBOL_PHASE` names
+   the exceptions and the header is recorded alongside them as the header that was
+   overridden. This is the third and last such exception, after `pem-typed-object`
+   and `abi-only`, and it is a *name* exception rather than a header one because the
+   header does not actually decide.
 1. `abi-only` — the DSO exports it and **no installed header declares it**. The
    authority has 26 of these. They are part of the binary contract (a precompiled
    binary resolves them) but not the source contract, so they need a disposition
@@ -169,6 +175,51 @@ HEADER_PHASE: dict[str, int] = {
 # exactly the class of defect this table exists to remove.
 
 # ---------------------------------------------------------------------------
+# Exports whose declaring header is genuinely too coarse to decide.
+#
+# A header normally names one stratum, and `HEADER_PHASE` is a total function from
+# headers to phases. Three headers are not like that, and each is handled where its
+# difficulty lives rather than by widening the rule:
+#
+#   * `pem.h` declares the generic machinery *and* typed readers for types owned
+#     elsewhere -- handled by `pem-typed-object`, which resolves the type.
+#   * no installed header declares the 26 ABI-only exports -- handled by
+#     `ABI_ONLY_OWNER`, which names each one.
+#   * `crypto.h` declares the core runtime *and* the library context. Nothing in
+#     the declaration distinguishes them: `OSSL_LIB_CTX_new` sits nine lines from
+#     `CRYPTO_malloc` and both are `crypto.h`'s. The context is Phase 6's subject
+#     matter -- `crypto/context.c`, and every provider, property and fetch hangs
+#     off it -- while `crypto.h`'s other 294 exports are Phase 3's. So this is the
+#     third and last place the rule needs a name-level exception, and it is a
+#     *name* exception rather than a header one because the header does not
+#     actually decide.
+#
+# See docs/DECISIONS.md D97. Each entry carries its reason, because an override
+# without a stated reason is indistinguishable from a rule that was widened until
+# it stopped failing.
+# ---------------------------------------------------------------------------
+
+SYMBOL_PHASE: dict[str, tuple[int, str]] = {
+    # `crypto/context.c` (658 lines). The default library context, its child and
+    # dispatch-derived constructors, its ex-data slot, and the configuration
+    # diagnostics flag that `CONF_modules_load` reads -- see
+    # `phase4_obligations.DEFERRED`, which hands the module registry to Phase 6 for
+    # exactly that flag. Phase 3 has no library context and never will: it is the
+    # stratum *inside* a context.
+    **{
+        sym: (6, "crypto/context.c; the library context is Phase 6's subject "
+                  "matter and crypto.h declares both it and the core runtime")
+        for sym in (
+            "OSSL_LIB_CTX_new", "OSSL_LIB_CTX_free", "OSSL_LIB_CTX_new_child",
+            "OSSL_LIB_CTX_new_from_dispatch", "OSSL_LIB_CTX_get0_global_default",
+            "OSSL_LIB_CTX_set0_default", "OSSL_LIB_CTX_load_config",
+            "OSSL_LIB_CTX_get_data", "OSSL_LIB_CTX_get_conf_diagnostics",
+            "OSSL_LIB_CTX_set_conf_diagnostics",
+        )
+    },
+}
+
+# ---------------------------------------------------------------------------
 # The 26 exports the DSO exports and no installed header declares.
 #
 # The Phase 1 completeness work classified these `ABI_ONLY_EXPORTED`:
@@ -265,6 +316,9 @@ def owner_phase(
     (see `type_headers` in `phase5_obligations.py`, whose logic this module now
     shares).
     """
+    override = SYMBOL_PHASE.get(symbol)
+    if override is not None:
+        return override[0], "symbol-override", header
     if header is None:
         found = ABI_ONLY_OWNER.get(symbol)
         if found is None:

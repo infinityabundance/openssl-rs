@@ -1,23 +1,34 @@
 #!/usr/bin/env python3
-"""openssl-rs — the Phase 4 obligation ledger.
+"""openssl-rs — the Phase 4 obligation ledger, and it is a *projection*.
 
 What this tool is for
 ---------------------
 `forensics/phase-state.json` may only call a stratum `complete` when nothing in it
-is unaccounted for. For Phase 3 the ledger (`phase3_obligations.py`) could achieve
-that by *deferring* a handful of BIO-coupled symbols to Phase 4. Phase 4 is the
-stratum that then owns BIO, CONF and the buffer object, and it is a much larger
-surface, so "accounted for" has to distinguish two very different situations:
+is unaccounted for. Phase 4 is the stratum that owns BIO, CONF and the buffer
+object, and "accounted for" has to keep four very different situations apart:
 
-  * **deferred** — the symbol needs a subsystem that a later stratum owns
-    (the provider core, EVP, ASN.1). A recorded, machine-checked hand-off.
-  * **open** — the symbol belongs to *this* stratum and is not built yet. An
-    honest, recorded gap.
+  * **implemented** -- the crate defines the symbol.
+  * **open** -- the symbol belongs to *this* stratum and is not built yet. An
+    honest, recorded gap, and the only list that blocks the stratum.
+  * **deferred** -- the symbol needs a subsystem a later stratum owns. A recorded,
+    machine-checked hand-off with the dependency named.
+  * **handoffs_discharged** -- the reverse edge: symbols an earlier stratum handed
+    to this one, which this stratum then built. Phase 3 handed over sixteen.
 
-Conflating those would let scaffolding look like progress, so they are separate
-lists and `complete` is true only when both are empty. Nothing here is a parity
-claim: a symbol in the `implemented` list is at most `IMPLEMENTED`
-(`docs/PARITY_MODEL.md`), and the courts decide everything beyond that.
+Conflating any two of those would let scaffolding look like progress.
+
+This ledger does not decide its own universe
+--------------------------------------------
+It used to, with a `(module, prefixes)` family list, and that is how nineteen Phase 4
+exports -- every `COMP_*`, the three `conf_ssl_*` helpers, `OPENSSL_config` and
+`OPENSSL_load_builtin_modules` -- were in no family and therefore in no ledger, while
+the stratum's seal called it complete (docs/DECISIONS.md D97). A prefix that matches
+nothing reports nothing.
+
+The universe comes from `forensics/atlas/symbol-ownership.json`, which assigns every
+one of the authority's 6,499 exports to exactly one stratum by one stated rule (D72).
+The prefixes survive only as a *label* -- which module is expected to hold a symbol --
+and an unlabelled symbol is reported rather than filed under "other".
 
 Outputs
 -------
@@ -31,6 +42,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -49,50 +61,42 @@ from atlas_common import (  # noqa: E402
 OUT = REPO_ROOT / "forensics" / "phase4-obligations.json"
 GENERATOR = "forensics/tools/phase4_obligations.py"
 
-# The symbol families this stratum owns. `phase3_obligations.py` hands the
-# BIO-coupled members of the Phase 3 families to this phase, so several entries
-# below exist solely to receive those hand-offs.
-#
-# `OPENSSL_INIT_` is here because it was in *no* phase's family before: the
-# `OPENSSL_INIT_SETTINGS` object is defined in `crypto/conf/conf_lib.c`, while
-# Phase 3's `init.rs` family matches the lower-case prefix `OPENSSL_init`, which
-# does not match `OPENSSL_INIT_new`. Five exported symbols were therefore invisible
-# to every ledger and silently scaffolded. Naming them here is what puts them under
-# accounting; see `src/runtime/conf/mod.rs`.
-FAMILIES = [
-    ("src/runtime/bio/", (
-        "BIO_", "BUF_",
-    )),
-    ("src/runtime/conf/", ("CONF_", "NCONF_", "OPENSSL_INIT_")),
+ATLAS_OWNERSHIP = "forensics/atlas/symbol-ownership.json"
+
+# Which module of the stratum is expected to hold a symbol. A **label**, not a
+# discovery mechanism: the universe comes from the atlas, and `main` fails when any
+# symbol the atlas gives this stratum fits no entry here.
+MODULE_PREFIXES: list[tuple[str, tuple[str, ...]]] = [
+    ("src/runtime/bio/", ("BIO_", "BIO_s_", "BIO_f_", "BIO_new_", "BIO_set_")),
+    ("src/runtime/buffer.rs", ("BUF_",)),
+    ("src/runtime/bio/comp.rs", ("COMP_",)),
+    ("src/runtime/conf/", ("CONF_", "NCONF_", "OPENSSL_INIT_", "OPENSSL_config",
+                           "OPENSSL_load_builtin_modules", "conf_ssl_")),
     ("src/runtime/obj.rs", ("OBJ_create_objects",)),
-    ("src/runtime/lhash.rs", ("OPENSSL_LH_stats", "OPENSSL_LH_node_stats",
-                              "OPENSSL_LH_node_usage_stats")),
-    ("src/runtime/err.rs", ("ERR_print_errors", "ERR_add_error_mem_bio")),
+    ("src/runtime/lhash.rs", ("OPENSSL_LH_",)),
+    ("src/runtime/err.rs", ("ERR_",)),
 ]
 
-# Symbols of the Phase 4 families that a later stratum owns outright, with the
-# reason. These are hand-offs of the same kind Phase 3 used, and each names the
-# stratum that can actually build it.
-DEFERRED: dict[str, tuple[int, str]] = {
-    # EVP owns the digest/cipher machinery these filters are thin wrappers over.
-    "BIO_f_md": (7, "wraps an EVP_MD_CTX; EVP is Phase 7"),
-    "BIO_f_cipher": (7, "wraps an EVP_CIPHER_CTX; EVP is Phase 7"),
-    "BIO_f_reliable": (7, "wraps EVP_AES_256_CBC message authentication; EVP is Phase 7"),
-    "BIO_set_cipher": (7, "sets the EVP_CIPHER of a BIO_f_cipher; EVP is Phase 7"),
-    # The base64 filter is a wrapper over EVP_ENCODE_CTX and the EVP_ENCODE_*
-    # codec, both of which are EVP surface.
-    "BIO_f_base64": (7, "wraps an EVP_ENCODE_CTX; the codec is EVP, Phase 7"),
-    # ASN.1 owns the prefix/suffix compiler feature the ASN.1 BIO exists for.
-    "BIO_f_asn1": (5, "its only controls are ASN.1 prefix/suffix functions; ASN.1 is Phase 5"),
-    "BIO_asn1_set_prefix": (5, "ASN.1 prefix/suffix compiler hooks; ASN.1 is Phase 5"),
-    "BIO_asn1_get_prefix": (5, "ASN.1 prefix/suffix compiler hooks; ASN.1 is Phase 5"),
-    "BIO_asn1_set_suffix": (5, "ASN.1 prefix/suffix compiler hooks; ASN.1 is Phase 5"),
-    "BIO_asn1_get_suffix": (5, "ASN.1 prefix/suffix compiler hooks; ASN.1 is Phase 5"),
-    "BIO_new_NDEF": (5, "constructs an ASN.1 NDEF BIO chain; ASN.1 is Phase 5"),
-    # CMS / PKCS#7 own the object they serialise.
-    "BIO_new_CMS": (12, "binds a CMS_ContentInfo to a BIO; CMS is Phase 12"),
-    "BIO_new_PKCS7": (12, "binds a PKCS7 to a BIO; PKCS#7 is Phase 12"),
-    # The provider core owns OSSL_LIB_CTX and the core dispatch table.
+# Symbols of the projection that a later stratum owns outright, with the dependency
+# that places them there. Each reason names a *dependency*, not a difficulty.
+HANDED_ON: dict[str, tuple[int, str]] = {
+    # The four ASN.1 filter controls. All four are declared in `bio.h` -- this
+    # stratum's header -- so the ownership atlas gives them to Phase 4, but each is a
+    # control over the streaming encoder the ASN.1 template machinery implements, so
+    # the obligation is Phase 5's. Phase 5 built them and declares them discharged in
+    # its `handoffs_discharged`; they stay `deferred` here, because a hand-off is
+    # sticky and counting Phase 5's work as this stratum's would make this ledger
+    # claim work it did not do. See docs/DECISIONS.md D57 and D91.
+    **{
+        sym: (5, "a control over the streaming encoder the ASN.1 template machinery "
+                  "implements; the template machinery is Phase 5")
+        for sym in (
+            "BIO_asn1_get_prefix", "BIO_asn1_get_suffix",
+            "BIO_asn1_set_prefix", "BIO_asn1_set_suffix",
+        )
+    },
+    # The provider core owns `OSSL_LIB_CTX` and the core dispatch table. These two
+    # are the provider core's own BIO surface.
     "BIO_s_core": (6, "the provider core-to-BIO method; OSSL_LIB_CTX is Phase 6"),
     "BIO_new_from_core_bio": (6, "wraps an OSSL_CORE_BIO; OSSL_LIB_CTX is Phase 6"),
     # The CONF module registry. `CONF_modules_load` begins with
@@ -103,9 +107,8 @@ DEFERRED: dict[str, tuple[int, str]] = {
     # `CONF_modules_load` and `CONF_modules_load_file*` return. A registry that
     # cannot read the flag reports the wrong result for a real configuration, so
     # the whole family is handed to the stratum that owns `OSSL_LIB_CTX` rather
-    # than approximated. `crypto/conf/conf_mod.c` also reaches `DSO_load`,
-    # `OPENSSL_load_builtin_modules` and `ENGINE_load_builtin_engines`, all of
-    # which are later strata. See docs/DECISIONS.md D50 for the call chain.
+    # than approximated. `crypto/conf/conf_mod.c` also reaches `DSO_load` and
+    # `OPENSSL_load_builtin_modules`, both later strata. See docs/DECISIONS.md D50.
     "CONF_modules_load": (6, "calls conf_diagnostics -> OSSL_LIB_CTX_get/set_conf_diagnostics; OSSL_LIB_CTX is Phase 6"),
     "CONF_modules_load_file": (6, "forwards to CONF_modules_load_file_ex; OSSL_LIB_CTX is Phase 6"),
     "CONF_modules_load_file_ex": (6, "reads and preserves OSSL_LIB_CTX diagnostics, and calls CONF_modules_load; OSSL_LIB_CTX is Phase 6"),
@@ -121,16 +124,18 @@ DEFERRED: dict[str, tuple[int, str]] = {
     "CONF_imodule_set_usr_data": (6, "writes a CONF_IMODULE, which only the module registry creates; Phase 6"),
     "CONF_module_get_usr_data": (6, "reads a CONF_MODULE, which only the module registry creates; Phase 6"),
     "CONF_module_set_usr_data": (6, "writes a CONF_MODULE, which only the module registry creates; Phase 6"),
-
-    # The non-blocking test filter is a RAND consumer: its read and write paths
-    # both call RAND_priv_bytes to decide whether to report a retry, so its
-    # observable behaviour cannot be reproduced without the RAND subsystem. The
-    # factory, create, destroy, gets, puts and ctrl are independent of RAND, but
-    # the obligation is per symbol and a method whose read/write abort would be a
+    # `crypto/conf/conf_mall.c`. Its whole body is a loop of `CONF_module_add`
+    # calls over the built-in modules, so it cannot exist before the registry does.
+    # This one was in no ledger at all until D97.
+    "OPENSSL_load_builtin_modules": (6, "registers every built-in CONF_MODULE through CONF_module_add, which Phase 6 owns"),
+    # The non-blocking test filter is a RAND consumer: its read and write paths both
+    # call RAND_priv_bytes to decide whether to report a retry, so its observable
+    # behaviour cannot be reproduced without the RAND subsystem. The factory,
+    # create, destroy, gets, puts and ctrl are independent of RAND, but the
+    # obligation is per symbol and a method whose read/write abort would be a
     # scaffold, not an implementation.
     "BIO_f_nbio_test": (9, "its read and write call RAND_priv_bytes; RAND is Phase 9"),
 }
-
 
 # Symbols the Phase 3 ledger hands to this stratum (`forensics/phase3-obligations.json`,
 # `deferred` rows whose `owning_phase` is 4). Every one of them lives in a Phase 3
@@ -146,6 +151,11 @@ HANDED_OFF_FROM_PHASE3 = (
     "ERR_print_errors_cb",
     "ERR_print_errors_fp",
     "OBJ_create_objects",
+    "OPENSSL_INIT_free",
+    "OPENSSL_INIT_new",
+    "OPENSSL_INIT_set_config_appname",
+    "OPENSSL_INIT_set_config_file_flags",
+    "OPENSSL_INIT_set_config_filename",
     "OPENSSL_LH_node_stats",
     "OPENSSL_LH_node_stats_bio",
     "OPENSSL_LH_node_usage_stats",
@@ -155,50 +165,8 @@ HANDED_OFF_FROM_PHASE3 = (
 )
 
 
-# Symbols *this* stratum hands to Phase 5. All six are declared by `bio.h`, so the
-# declaring-header rule makes them Phase 4's, but each is a binding between a BIO and
-# an `ASN1_ITEM` template: `BIO_f_asn1` is the ASN.1 filter, `BIO_new_NDEF` builds a
-# streaming encoder around one, and the four `BIO_asn1_*` controls write and read that
-# encoder's prefix and suffix callbacks. None of them can be built without the template
-# machinery, which is Phase 5's, so the obligation is deferred there and Phase 5 lists
-# them in its `handoffs_discharged`. A hand-off is sticky in the same way Phase 3's
-# were: Phase 5 implementing them does not transfer the obligation back, so they leave
-# this stratum's `implemented` list and stay `deferred` with `implemented_by_owner`
-# recording that the hand-off has been discharged. `ownership_audit.py` reconciles the
-# two ledgers, so the same six cannot be counted as implemented by both strata.
-# See docs/DECISIONS.md D57 and D91.
-HANDED_OFF_TO_PHASE5: dict[str, tuple[int, str]] = {
-    "BIO_f_asn1": (
-        5,
-        "the ASN.1 filter needs the template machinery to frame an ASN1_ITEM; Phase 5",
-    ),
-    "BIO_new_NDEF": (
-        5,
-        "builds a streaming encoder around an ASN1_ITEM, which Phase 5 owns",
-    ),
-    "BIO_asn1_get_prefix": (
-        5,
-        "reads the streaming callbacks of the ASN.1 filter, which Phase 5 owns",
-    ),
-    "BIO_asn1_get_suffix": (
-        5,
-        "reads the streaming callbacks of the ASN.1 filter, which Phase 5 owns",
-    ),
-    "BIO_asn1_set_prefix": (
-        5,
-        "writes the streaming callbacks of the ASN.1 filter, which Phase 5 owns",
-    ),
-    "BIO_asn1_set_suffix": (
-        5,
-        "writes the streaming callbacks of the ASN.1 filter, which Phase 5 owns",
-    ),
-}
-
-
-def authority_exports(authority: Path) -> list[str]:
-    """The symbols the authority actually exports from libcrypto."""
-    doc = json.loads((authority / "symbols-libcrypto.json").read_text(encoding="utf-8"))
-    return sorted(r["symbol"] for r in doc["body"]["records"] if r["dso"]["present"])
+def load(atlas: Path, name: str) -> dict:
+    return json.loads((atlas / name).read_text(encoding="utf-8"))["body"]
 
 
 def implemented() -> set[str]:
@@ -210,115 +178,166 @@ def implemented() -> set[str]:
     return set(doc["body"]["libraries"]["libcrypto"]["implemented_symbols"])
 
 
+def module_of(symbol: str) -> str | None:
+    for module, prefixes in MODULE_PREFIXES:
+        for pre in prefixes:
+            if symbol == pre or symbol.startswith(pre):
+                return module
+    return None
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
     args = ap.parse_args(argv)
 
     auth = resolve_authority(args.authority)
-    exports = authority_exports(REPO_ROOT / "forensics" / "atlas" / auth.id)
+    atlas = REPO_ROOT / "forensics" / "atlas" / auth.id
     done = implemented()
 
-    owned: dict[str, str] = {}
-    for module, prefixes in FAMILIES:
-        for sym in exports:
-            if any(sym == p or sym.startswith(p) for p in prefixes):
-                owned.setdefault(sym, module)
+    ownership = json.loads(
+        (REPO_ROOT / ATLAS_OWNERSHIP).read_text(encoding="utf-8")
+    )["body"]
+    mine = [r for r in ownership["records"]
+            if r["owner_phase"] == 4 and r["library"] == "libcrypto"]
+    if not mine:
+        raise SystemExit(
+            "phase4-obligations: the ownership atlas assigns this stratum no "
+            "exports, which means the atlas or this tool is wrong"
+        )
 
-    implemented_here = sorted(s for s in owned if s in done and s not in HANDED_OFF_TO_PHASE5)
-    remaining = sorted(s for s in owned if s not in done or s in HANDED_OFF_TO_PHASE5)
+    unlabelled: list[str] = []
+    owned: dict[str, dict] = {}
+    deferred: list[dict] = []
 
-    # The hand-offs Phase 3 handed this stratum must be accounted for here: a
-    # symbol Phase 3 deferred to this phase that this phase does not even claim is
-    # an obligation that fell between the two ledgers.
-    undeclared = sorted(s for s in HANDED_OFF_FROM_PHASE3 if s not in owned)
+    def claim(sym: str, header: str | None) -> None:
+        module = module_of(sym)
+        owned[sym] = {"module": module, "declaring_header": header}
+
+    for row in mine:
+        sym = row["symbol"]
+        if module_of(sym) is None:
+            unlabelled.append(sym)
+            continue
+        claim(sym, row.get("declaring_header"))
+
+    # The hand-offs Phase 3 handed this stratum are part of the working set even
+    # though the atlas gives their declaring header to Phase 3: they are symbols
+    # this stratum implemented, and a stratum's ledger has to contain the work it
+    # did as well as the work it owes.
+    for sym in HANDED_OFF_FROM_PHASE3:
+        if sym not in owned:
+            claim(sym, None)
+
+    if unlabelled:
+        raise SystemExit(
+            "phase4-obligations: the ownership atlas gives this stratum exports "
+            "that no entry in MODULE_PREFIXES labels, so the ledger cannot say "
+            "which module is expected to hold them -- add a label:\n  "
+            + "\n  ".join(sorted(unlabelled))
+        )
+
+    undeclared = sorted(s for s in HANDED_OFF_FROM_PHASE3 if s not in done)
     if undeclared:
         raise SystemExit(
-            "phase4-obligations: these symbols are handed from Phase 3 but no "
-            "Phase 4 family claims them, so the hand-off is unaccounted for:\n  "
+            "phase4-obligations: these symbols were handed from Phase 3 and are "
+            "still not implemented, so they belong in HANDED_ON with a later phase "
+            "rather than in the discharged hand-off list:\n  "
             + "\n  ".join(undeclared)
         )
-    unbuilt = sorted(s for s in HANDED_OFF_FROM_PHASE3 if s not in done)
-    if unbuilt:
+
+    for sym in sorted(owned):
+        handed = HANDED_ON.get(sym)
+        if handed is None:
+            continue
+        phase, reason = handed
+        if phase <= 4:
+            raise SystemExit(
+                f"phase4-obligations: {sym} is deferred to phase {phase}, "
+                "not later"
+            )
+        deferred.append({
+            "symbol": sym, "owning_phase": phase, "reason": reason,
+            "module": owned[sym]["module"],
+            "declaring_header": owned[sym]["declaring_header"],
+            "implemented_by_owner": sym in done,
+        })
+
+    handed_on = {r["symbol"] for r in deferred}
+    implemented_here = sorted(s for s in owned if s in done and s not in handed_on)
+    open_rows = [
+        {"symbol": s, "module": owned[s]["module"],
+         "declaring_header": owned[s]["declaring_header"]}
+        for s in sorted(owned) if s not in done and s not in handed_on
+    ]
+
+    if len(owned) != len(implemented_here) + len(handed_on) + len(open_rows):
         raise SystemExit(
-            "phase4-obligations: these symbols were handed from Phase 3 and are "
-            "still not implemented, so they belong in DEFERRED with a later "
-            "phase rather than in the discharged hand-off list:\n  "
-            + "\n  ".join(unbuilt)
+            "phase4-obligations: the ledger does not account for exactly its own "
+            f"working set: owned={len(owned)} implemented={len(implemented_here)} "
+            f"deferred={len(handed_on)} open={len(open_rows)}"
         )
 
-    deferred_rows = []
-    open_rows = []
-    for sym in remaining:
-        if sym in HANDED_OFF_TO_PHASE5:
-            phase, reason = HANDED_OFF_TO_PHASE5[sym]
-            if phase <= 4:
-                raise SystemExit(
-                    f"phase4-obligations: {sym} is deferred to phase {phase}, not later"
-                )
-            deferred_rows.append({
-                "symbol": sym, "owning_phase": phase, "reason": reason,
-                "module": owned[sym], "implemented_by_owner": sym in done,
-            })
-        elif sym in DEFERRED:
-            phase, reason = DEFERRED[sym]
-            if phase <= 4:
-                raise SystemExit(
-                    f"phase4-obligations: {sym} is deferred to phase {phase}, not later"
-                )
-            deferred_rows.append({
-                "symbol": sym, "owning_phase": phase, "reason": reason,
-                "module": owned[sym],
-            })
-        else:
-            open_rows.append({"symbol": sym, "module": owned[sym]})
-
     body = {
-        "families": [{"module": m, "prefixes": list(p)} for m, p in FAMILIES],
+        "rule": (
+            "the stratum's working set is the projection of forensics/atlas/"
+            "symbol-ownership.json for phase 4, plus the symbols Phase 3 handed it: "
+            "a symbol belongs to the stratum that owns the header declaring it, and "
+            "a discharged hand-off belongs to the stratum that built it"
+        ),
+        "module_prefixes": [{"module": m, "prefixes": list(p)}
+                            for m, p in MODULE_PREFIXES],
         "counts": {
+            "atlas_owned": len(mine),
+            "received_by_handoff": len(HANDED_OFF_FROM_PHASE3),
             "owned": len(owned),
             "implemented": len(implemented_here),
-            "deferred_to_later_phase": len(deferred_rows),
+            "deferred_to_later_phase": len(deferred),
             "open_in_this_stratum": len(open_rows),
         },
         "implemented": implemented_here,
-        "deferred": deferred_rows,
+        "deferred": sorted(deferred, key=lambda r: r["symbol"]),
         "open": open_rows,
         "handoffs_discharged": {"3": sorted(HANDED_OFF_FROM_PHASE3)},
-        # A hand-off is not a gap. `open` is the only list that blocks the
-        # stratum: a deferred symbol names the phase that owns the subsystem it
-        # needs, and the phase-state rule is that nothing is *unaccounted for*.
-        # The expression here previously required both lists to be empty, which
-        # made the field describe something other than what the note beside it
-        # says and made `complete` permanently false for a stratum that
-        # legitimately hands anything forward.
+        "owned_by_module": dict(
+            sorted(Counter(v["module"] for v in owned.values()).items())
+        ),
+        "deferred_by_phase": dict(
+            sorted(Counter(r["owning_phase"] for r in deferred).items())
+        ),
+        # A hand-off is not a gap. `open` is the only list that blocks the stratum.
         "complete": not open_rows,
         "note": (
-            "`complete` is true only when every export in these families is either "
-            "implemented or handed to a later stratum. `open` entries belong to "
-            "this stratum and are recorded gaps, not deferrals; while any exist "
-            "Phase 4 cannot be called complete. Nothing here is a parity claim."
+            "`complete` is true only when every export in the working set is either "
+            "implemented or handed to a later stratum. `open` entries belong to this "
+            "stratum and are recorded gaps, not deferrals; while any exist Phase 4 "
+            "cannot be called complete, and it is what returned the stratum to "
+            "`in-progress` after D97. `implemented_by_owner` on a deferred row records "
+            "that the receiving stratum has since discharged the hand-off. Nothing "
+            "here is a parity claim."
         ),
     }
 
     inputs = [
         InputRef(name="authority-symbols",
-                 path=REPO_ROOT / "forensics" / "atlas" / auth.id / "symbols-libcrypto.json"),
+                 path=atlas / "symbols-libcrypto.json"),
+        InputRef(name="symbol-ownership", path=REPO_ROOT / ATLAS_OWNERSHIP),
         implemented_surface_input(),
     ]
     doc = envelope(kind="phase4-obligations", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
     write_json(OUT, doc)
 
-    print(f"[phase4-obligations] owned={len(owned)} implemented={len(implemented_here)} "
-          f"deferred={len(deferred_rows)} open={len(open_rows)}")
+    c = body["counts"]
+    print(f"[phase4-obligations] atlas={c['atlas_owned']} "
+          f"received={c['received_by_handoff']} owned={c['owned']} "
+          f"implemented={c['implemented']} deferred={c['deferred_to_later_phase']} "
+          f"open={c['open_in_this_stratum']}")
     print(f"  complete={body['complete']}")
-    for row in deferred_rows:
-        print(f"  deferred -> phase {row['owning_phase']:<2} {row['symbol']}: {row['reason']}")
-    for row in open_rows[:20]:
-        print(f"  OPEN (phase 4) {row['symbol']} [{row['module']}]")
-    if len(open_rows) > 20:
-        print(f"  ... and {len(open_rows) - 20} more open obligations")
+    print(f"  owned by module: {body['owned_by_module']}")
+    print(f"  deferred by phase: {body['deferred_by_phase']}")
+    for row in open_rows:
+        print(f"  OPEN {row['symbol']} [{row['module']}]")
     print(f"  -> {rel(OUT)}")
     return 0
 

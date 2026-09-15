@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -56,25 +57,57 @@ from atlas_common import REPO_ROOT, rel  # noqa: E402
 # `implemented_surface.py` needs a built archive, so the build is a precondition
 # and the caller runs it first.
 #
-# `ownership_audit.py` sits **after** the three obligation generators, not before
-# them: it reconciles the ledgers and records each one's sha256 as an input, so
-# running it first makes it record the *previous* generation's hashes. That
-# mistake is invisible to this tool, because `inputs[].sha256` for a path that is
-# itself compared is normalised away (COMPARED_INPUT_PATHS below) -- the ledger's
-# content is compared directly, so a wrong recorded hash changes nothing this
-# check can see. It was found by running the audit alone, after the ledgers, and
-# watching the recorded hashes move. Measured on the Phase 5.3 landing.
-GENERATORS = [
+# The per-stratum obligation generators are **discovered**, not listed. Listing them
+# meant every new stratum had to remember to add its generator here as well as to the
+# court runner, the ownership audit and the regression guard -- four registries for
+# one fact, which is the failure mode `run_courts.py` removed for the courts and
+# D94 records in full. The glob is checked in both directions below: a
+# `phase<N>_obligations.py` with no ledger, and a ledger with no generator, are both
+# failures rather than silent omissions.
+#
+# `ownership_audit.py` sits **after** the obligation generators, not before them: it
+# reconciles the ledgers and records each one's sha256 as an input, so running it
+# first makes it record the *previous* generation's hashes. That mistake is invisible
+# to this tool, because `inputs[].sha256` for a path that is itself compared is
+# normalised away (COMPARED_INPUT_PATHS below) -- the ledger's content is compared
+# directly, so a wrong recorded hash changes nothing this check can see. It was found
+# by running the audit alone, after the ledgers, and watching the recorded hashes
+# move. Measured on the Phase 5.3 landing.
+GENERATORS_BEFORE_LEDGERS = [
     "forensics/tools/symbol_ownership.py",
     "forensics/tools/implemented_surface.py",
-    "forensics/tools/phase3_obligations.py",
-    "forensics/tools/phase4_obligations.py",
-    "forensics/tools/phase5_obligations.py",
+]
+GENERATORS_AFTER_LEDGERS = [
     "forensics/tools/ownership_audit.py",
     "forensics/tools/prototype_court.py",
     "forensics/tools/phase_state.py",
+    "forensics/tools/render_seal_census.py",
     "forensics/tools/render_status.py",
 ]
+
+
+def phase_ledgers() -> list[tuple[str, str]]:
+    """`(generator, artefact)` for every stratum's obligation ledger on disk."""
+    out: list[tuple[str, str]] = []
+    for path in sorted((REPO_ROOT / "forensics" / "tools").glob("phase*_obligations.py")):
+        m = re.fullmatch(r"phase(\d+)_obligations\.py", path.name)
+        if m is None:
+            continue
+        out.append((rel(path), f"forensics/phase{m.group(1)}-obligations.json"))
+    if not out:
+        raise SystemExit(
+            "[evidence-determinism] no forensics/tools/phase<N>_obligations.py found, "
+            "which cannot be right"
+        )
+    return out
+
+
+LEDGERS = phase_ledgers()
+GENERATORS = (
+    GENERATORS_BEFORE_LEDGERS
+    + [g for g, _a in LEDGERS]
+    + GENERATORS_AFTER_LEDGERS
+)
 
 # Derived artefacts that are compared. Anything not listed is not this tool's
 # business (court transcripts, staged probe binaries and the ABI shell are
@@ -84,11 +117,10 @@ COMPARED = [
     "forensics/atlas/implemented-surface.json",
     "forensics/atlas/ownership-audit.json",
     "forensics/atlas/prototype-court.json",
-    "forensics/phase3-obligations.json",
-    "forensics/phase4-obligations.json",
-    "forensics/phase5-obligations.json",
+    *[a for _g, a in LEDGERS],
     "forensics/phase-state.json",
     "forensics/phase-state.md",
+    "docs/SEAL-CENSUS.md",
     "forensics/STATUS.md",
 ]
 

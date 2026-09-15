@@ -570,9 +570,7 @@
         "BIO_asn1_get_prefix",
         "BIO_asn1_get_suffix",
         "BIO_asn1_set_prefix",
-        "BIO_asn1_set_suffix",
-        "BIO_f_asn1",
-        "BIO_new_NDEF"
+        "BIO_asn1_set_suffix"
       ]
     },
     "header_phase": {
