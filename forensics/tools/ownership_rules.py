@@ -179,24 +179,38 @@ HEADER_PHASE: dict[str, int] = {
 
 ABI_ONLY_OWNER: dict[str, tuple[int, str]] = {
     # The dynamic-loader abstraction. It is the runtime half of what Phase 2's
-    # distribution shell describes but does not implement, and it has no header
+    # distribution shell *describes* but does not implement, and it has no header
     # because nothing is meant to call it from a header: the exports exist for
     # `DSO_load`'s users inside the library.
-    "DSO_bind_func": (2, "crypto/dso; the loader Phase 2's distribution contract describes"),
-    "DSO_convert_filename": (2, "crypto/dso"),
-    "DSO_ctrl": (2, "crypto/dso"),
-    "DSO_dsobyaddr": (2, "crypto/dso"),
-    "DSO_flags": (2, "crypto/dso"),
-    "DSO_free": (2, "crypto/dso"),
-    "DSO_get_filename": (2, "crypto/dso"),
-    "DSO_global_lookup": (2, "crypto/dso"),
-    "DSO_load": (2, "crypto/dso"),
-    "DSO_merge": (2, "crypto/dso"),
-    "DSO_new": (2, "crypto/dso"),
-    "DSO_pathbyaddr": (2, "crypto/dso"),
-    "DSO_set_filename": (2, "crypto/dso"),
-    "DSO_up_ref": (2, "crypto/dso"),
-    "DSO_METHOD_openssl": (2, "crypto/dso/dso_dlfcn.c"),
+    #
+    # These fifteen were assigned to Phase 2 by the first version of this table, on
+    # the reasoning that the loader is what Phase 2's distribution contract is
+    # about. That was wrong in the same way the whole table exists to prevent: it
+    # made Phase 2 own *semantic* exports while Phase 2's own closure rule is
+    # structural -- the distribution seal, the build machinery and the eleven ABI
+    # courts, with no semantic obligation ledger at all. So the global model said
+    # one thing and the phase's definition said another, and neither was a lie about
+    # work that had been done.
+    #
+    # They belong to the earliest semantic stratum that actually needs them, which
+    # is Phase 6: provider and module loading is where the dynamic-loader machinery
+    # stops being a description and starts being operational, and `DSO_load` is what
+    # an engine and a provider module are both loaded through. Phase 2 stays strictly
+    # distribution and ELF structure, which is what its seal already claims.
+    #
+    # See docs/DECISIONS.md D95. The reason string is deliberately the same for all
+    # fifteen: they are one surface with one owner, and fifteen differently-worded
+    # reasons would suggest fifteen judgements.
+    **{
+        sym: (6, "crypto/dso; the loader becomes operational when provider and "
+                  "module loading needs it, which is Phase 6")
+        for sym in (
+            "DSO_bind_func", "DSO_convert_filename", "DSO_ctrl", "DSO_dsobyaddr",
+            "DSO_flags", "DSO_free", "DSO_get_filename", "DSO_global_lookup",
+            "DSO_load", "DSO_merge", "DSO_new", "DSO_pathbyaddr",
+            "DSO_set_filename", "DSO_up_ref", "DSO_METHOD_openssl",
+        )
+    },
     # The directory reader Phase 3 implements; declared in `crypto/o_dir.h`,
     # which is not installed.
     "OPENSSL_DIR_read": (3, "crypto/o_dir.c; installed headers declare no o_dir.h"),

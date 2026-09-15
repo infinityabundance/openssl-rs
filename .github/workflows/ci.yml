@@ -187,7 +187,7 @@ jobs:
             --allow-missing-baseline
 
   courts:
-    name: authority courts (ABI, runtime, BIO) and re-derived guard
+    name: every active stratum's courts, and the re-derived guard
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -222,16 +222,16 @@ jobs:
       - name: Build authority
         run: bash docker/openssl-rs-court.sh exec python3 forensics/tools/authority_build.py --all
 
-      # Builds the crate, re-derives the implemented surface, regenerates the ABI
-      # shell, links every distribution artefact and runs all 11 ABI courts.
-      - name: Phase 2 shell and 11 ABI courts
-        run: bash docker/openssl-rs-court.sh exec bash forensics/tools/build_phase2.sh
-
-      - name: Phase 3 runtime courts
-        run: bash docker/openssl-rs-court.sh exec python3 forensics/tools/phase3_courts.py
-
-      - name: Phase 4 BIO court
-        run: bash docker/openssl-rs-court.sh exec python3 forensics/tools/phase4_courts.py
+      # Every active stratum's courts, in numeric order: the Phase 2 shell first,
+      # because every later court links against it. This step used to enumerate the
+      # runners by name and named three of the four, so Phase 5's nine courts -- RT-BN,
+      # the six ASN.1 courts, RT-BIO-ASN1 and RT-PEM -- were never reproduced here and
+      # their committed JSON was read as evidence instead. The list now comes from
+      # `forensics/phase-state.json`, and `run_courts.py` deletes each phase's committed
+      # `COURTS.json` before regenerating it, then fails if the committed file claimed a
+      # result this run does not reproduce. See docs/DECISIONS.md D94.
+      - name: Every active stratum's courts, derived from the phase registry
+        run: bash docker/openssl-rs-court.sh exec python3 forensics/tools/run_courts.py
 
       - name: Resolve trusted baseline ref
         id: baseline

@@ -10,11 +10,10 @@
         "13": 189,
         "14": 600,
         "15": 3,
-        "2": 15,
         "3": 304,
         "4": 256,
         "5": 561,
-        "6": 112,
+        "6": 127,
         "7": 924,
         "8": 759,
         "9": 25
@@ -5958,12 +5957,12 @@
     {
       "name": "ledger-result",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "72605227fc7e613c71a01d7b3923d6ea8503b8a5fef9e90444c1e05b9cf9a3ab"
+      "sha256": "73576420f98bdb6bfc3cc48d7d289624102342de42e79fa715fff2c563313212"
     },
     {
       "name": "ledger-result",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "cc9f8a2cb796f636c4343d421a8c00b1541832d16626b192eb2a96fdbd1486e1"
+      "sha256": "9e70da70502b3c02fc7f7e45aaeb01a08723cbedaec3820634d55bbb3928addd"
     },
     {
       "name": "ledger-result",
