@@ -68,11 +68,13 @@ Deferred out, by receiving stratum:
 * to phase 13: 22 symbol(s)
   `ASYNC_WAIT_CTX_clear_fd`, `ASYNC_WAIT_CTX_free`, `ASYNC_WAIT_CTX_get_all_fds`, `ASYNC_WAIT_CTX_get_callback`, `ASYNC_WAIT_CTX_get_changed_fds`, `ASYNC_WAIT_CTX_get_fd`, `ASYNC_WAIT_CTX_get_status`, `ASYNC_WAIT_CTX_new`, `ASYNC_WAIT_CTX_set_callback`, `ASYNC_WAIT_CTX_set_status`, `ASYNC_WAIT_CTX_set_wait_fd`, `ASYNC_block_pause`, `ASYNC_cleanup_thread`, `ASYNC_get_current_job`, `ASYNC_get_mem_functions`, `ASYNC_get_wait_ctx`, `ASYNC_init_thread`, `ASYNC_is_capable`, `ASYNC_pause_job`, `ASYNC_set_mem_functions`, `ASYNC_start_job`, `ASYNC_unblock_pause`
 
-Courts: `all pass`, 8 court(s), 0 authority observation(s).
+Courts: `all pass`, 10 court(s), 0 authority observation(s).
 
 | court | verdict | observations |
 |---|---|---|
 | RT-MEM | `pass` | 0 |
+| RT-MEM-DEFAULT | `pass` | 0 |
+| RT-MEM-INSTALL | `pass` | 0 |
 | RT-EXDATA | `pass` | 0 |
 | RT-ERR | `pass` | 0 |
 | RT-STACK | `pass` | 0 |

@@ -502,3 +502,112 @@ buffer instead of moving ownership, and `ossl_iscntrl` treated bytes at or above
 account. `phase_state.py` derives this stratum `complete` again, on its own ledger's
 `open == 0` rather than on a typed string.
 
+
+## 12. Correction: the allocation family was measured in one branch (D102)
+
+§4 and §8 describe `RT-MEM` as the court that measures the allocation family. It
+does, and it stepped over one of the two branches of the authority's allocator
+dispatch every time.
+
+`CRYPTO_malloc` is two functions wearing one name. `crypto/mem.c`:
+
+```c
+if (malloc_impl != CRYPTO_malloc) {          /* a caller installed one */
+    ptr = malloc_impl(num, file, line);
+    if (ptr != NULL || num == 0) return ptr;
+    goto err;
+}
+if (ossl_unlikely(num == 0)) return NULL;    /* <-- no error raised */
+...
+ptr = malloc(num);
+if (ossl_likely(ptr != NULL)) return ptr;
+err: ossl_report_alloc_err(file, line); return NULL;
+```
+
+`RT-MEM` installs its counting allocator before it makes any size observation,
+because the counts are how it observes ownership and cleansing. Installing an
+allocator selects the **first** branch. So both sides of every size observation were
+the installed branch — they agreed, and `src/runtime/mem.rs` recorded the agreement
+as the authority's answer in a doc comment that read "matching the authority". The
+default branch, which is where every consumer who does not embed OpenSSL is, was
+measured by nothing at all.
+
+### The two new courts
+
+`RT-MEM-DEFAULT` (37 observations) installs nothing. `RT-MEM-INSTALL` (15) measures
+the installation state machine. They are two courts rather than one because the
+branch a process is in is chosen once and is permanent: the first non-zero request
+through the default path clears `allow_customize`, and nothing installs the default
+back. `RT-MEM-DEFAULT` therefore closes with the latch observation — the only order
+in which `CRYPTO_set_mem_functions` answers 0 — and `RT-MEM-INSTALL` measures the
+accepted order, before any default-path allocation has happened.
+
+`RT-MEM` is unchanged and still reproduces its 82 committed observations: the
+finding is entirely about the branch no probe had entered.
+
+### What the default branch turned out to be
+
+**Thirteen divergences, one shape.** The authority answers NULL to a zero-length
+request and the candidate answered a live allocation: `malloc(0)`, `zalloc(0)`,
+`calloc(0,16)`, `calloc(16,0)`, `malloc_array(0,4)`, `malloc_array(4,0)`,
+`realloc(NULL,0)`, `realloc_array(NULL,0,4)`, `clear_realloc(NULL,0,0)`,
+`clear_realloc_array(NULL,0,4,0)`, and the four secure-heap forms, which arrive at
+the same place because `CRYPTO_secure_malloc` forwards to `CRYPTO_malloc` while the
+heap is uninitialised. None of them raises an error, so the return value is the only
+witness.
+
+**A leak a NULL return value hides.** The default branch of `CRYPTO_realloc` is
+`CRYPTO_free(str, file, line); return NULL;` for `num == 0`, and the crate returned
+NULL without releasing. `RT-MEM` could not see it *because* of the same branch
+error — under an installed allocator the authority delegates the decision to the
+caller's `realloc_fn`, so the authority does not free there either and the two sides
+agreed. `RT-MEM-DEFAULT` observes the release through a libc interposer, reporting
+the *change* in `free` calls across one operation, with a control that certainly
+releases and a sibling that already agreed.
+
+**A crash.** `CRYPTO_memdup` refuses `siz >= INT_MAX` before allocating; the crate
+omitted the check, so copying two gigabytes out of a 32-byte buffer was a
+candidate-only out-of-bounds read. The probe's exit code and truncated transcript
+were the evidence.
+
+**Two dispatch gaps.** `CRYPTO_set_mem_functions` replaced all three allocator slots
+or none, and answered 1 unconditionally; the authority replaces each slot whose
+argument is non-NULL, and refuses once `allow_customize` is clear.
+`CRYPTO_get_mem_functions` reported private shims where the authority reports the
+address of its own exported `CRYPTO_malloc`/`CRYPTO_realloc`/`CRYPTO_free`, which a
+caller may compare against or hand straight back.
+
+**One constant renamed.** The `*_array` overflow constant here was called
+`ERR_R_OVERFLOW`; the authority has no such symbol and the code it raises is
+`CRYPTO_R_INTEGER_OVERFLOW`. The value was right and the name was invented. That is
+D33's class, and the check is that `ERR_R_OVERFLOW` does not compile against the
+authority's own headers.
+
+**One divergence recorded rather than fixed.** Both `CRYPTO_aligned_alloc` and its
+`_array` sibling write through `*freeptr` with no NULL test, so the authority
+segfaults and the candidate answers NULL. `docs/SECURITY_DIVERGENCE_POLICY.md`
+D-MEM-ALIGNED-1; both cases print `NOT_MEASURED_AUTHORITY_FAULTS` in the new probe
+so the boundary is in the transcript.
+
+### Why the unit tests moved out
+
+The unit tests for the zero-length arms and for `CRYPTO_realloc(addr, 0)` were
+deleted rather than repaired. Both depend on which branch the process is in; the
+branch is chosen once per process; and Rust's test harness runs every test in one
+process. An assertion there is a claim about test ordering, not about the contract.
+Each court measures one branch in a process that chose it. The allocator
+installation test was rewritten to assert *which* outcome it got and that the outcome
+is self-consistent — it had been passing by accident, because the model could not
+tell the two branches apart.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 3 courts | 8 | 10 |
+| Phase 3 observations | 4,358 | 4,410 |
+
+Nothing in this stratum's ledger changes: no export is added or removed, and
+`forensics/phase3-obligations.json` still derives `open == 0`. Both new courts are
+registered in `forensics/tools/gen_frf_courts.py`, so the FRF runtime court set
+follows them.

@@ -71,6 +71,8 @@ RUN_TIMEOUT_S = 60
 # maps to `courts/phase3/<slug>.c`.
 COURTS = [
     ("RT-MEM", "rt_mem_probe.c"),
+    ("RT-MEM-DEFAULT", "rt_mem_default_probe.c"),
+    ("RT-MEM-INSTALL", "rt_mem_install_probe.c"),
     ("RT-EXDATA", "rt_exdata_probe.c"),
     ("RT-ERR", "rt_err_probe.c"),
     ("RT-STACK", "rt_stack_probe.c"),
@@ -79,6 +81,21 @@ COURTS = [
     ("RT-LHASH", "rt_lhash_probe.c"),
     ("RT-RUNTIME-EXT", "rt_runtime_ext_probe.c"),
 ]
+
+# Per-probe compile flags. An entry is a decision with a reason, never a
+# convenience:
+#
+#   * `rt_mem_default_probe.c` interposes the four libc allocator entry points so
+#     that it can observe whether `CRYPTO_realloc(p, 0)` released `p`, an effect
+#     its return value hides. `-rdynamic` is what puts the executable's
+#     definitions in `.dynsym`, so that `libcrypto.so.3`'s own `malloc`/`free`
+#     calls resolve to them; without it the interposition silently does nothing
+#     and the witness reports zero changes on both sides, which reads as
+#     agreement. See the probe's header for why `__libc_*` rather than
+#     `dlsym(RTLD_NEXT, ...)`.
+EXTRA_CFLAGS: dict[str, list[str]] = {
+    "rt_mem_default_probe.c": ["-rdynamic"],
+}
 
 
 def compile_probe(src: Path, out: Path, include: Path, libdir: Path) -> tuple[bool, str]:
@@ -91,6 +108,7 @@ def compile_probe(src: Path, out: Path, include: Path, libdir: Path) -> tuple[bo
         # agreement until the exit code was checked. The Phase 4 court already
         # passed it.
         "clang", "-std=c11", "-Wall", "-O1", "-D_GNU_SOURCE",
+        *EXTRA_CFLAGS.get(src.name, ()),
         "-I", str(include),
         "-o", str(out), str(src),
         "-L", str(libdir), "-lcrypto",

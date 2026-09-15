@@ -4655,3 +4655,177 @@ passed its own stratum's ledger arithmetic, which is the argument for courts ove
 ledgers rather than an argument against ledgers.
 
 
+
+## D101 — `crypto/params.c` spells its refusals as macros, and the raise-site generator could not see a call site
+
+Adding Phase 6's four parameter translation units to
+`gen_err_raise_sites.py`'s covered set produced a number that could not be right:
+`crypto/params.c` is 1,723 lines with forty-odd refusals in it, and the scanner
+found none of them.
+
+It found the *definitions*. `params.c` opens with
+
+```c
+#define err_out_of_range      \
+    ERR_raise(ERR_LIB_CRYPTO, \
+        CRYPTO_R_PARAM_VALUE_TOO_LARGE_FOR_DESTINATION)
+```
+
+and then invokes the macro bare — `err_out_of_range;` — at every site. The scanner
+matches `ERR_raise`, `ERR_raise_data` and `<LIB>err`, so it matched the eight
+definitions and none of the invocations. The eight definitions were worse than
+useless as output: `ERR_raise_data` expands `OPENSSL_FILE`/`OPENSSL_LINE`/
+`OPENSSL_FUNC` at the point of *expansion*, so the coordinates a caller reads back
+through `ERR_get_error_all` are the invocation line and the enclosing function, and
+the definition would have recorded `crypto/params.c:26` attributed to whatever
+ename happened to precede the `#define`. `enclosing_function` refuses a line with no
+preceding definition, so in fact the generator did not produce that answer; it
+produced no answer, and the file looked as though it raised nothing at all.
+
+The fix is in two parts, and the second is the one that needed care.
+
+`local_raise_macros` reads the file's own `#define`s, joins backslash
+continuations, parses the raise call out of the body and records the `lib`/`reason`
+pair under the macro's name. The main scan then attributes each bare invocation to
+the invocation's line and enclosing function. That is the whole mechanism.
+
+The part that needed care is that the *definition's own body* is a line containing
+`ERR_raise(` that does not start with `#`. The scanner's existing guard — "a raise
+behind a preprocessor definition is a macro body, not a call" — skipped only the
+`#define` line itself, so the continuation lines became candidates with no enclosing
+function, which is an `SystemExit` rather than a wrong site. `local_raise_macros`
+therefore also returns **every line the preprocessor owns**, each directive
+together with its backslash continuations, and the main scan skips that set. That is
+stronger than the original guard and it is what makes the macro plane safe to add at
+all.
+
+`via_macro` is written to the atlas **only** when a site came through a macro, and
+the body carries a `via_macro_note` saying so. The first attempt wrote
+`"via_macro": null` on all 632 existing sites, which turned a pure addition into a
+632-record rewrite: the evidence diff said every previously recorded coordinate had
+changed, when none had. Evidence diffs are read by humans under time pressure, and
+"every record changed" is the worst possible false signal. The field is now absent
+rather than null, and the check is part of the review: adding the four files changed
+`added 135, removed 0, changed 0`.
+
+Only 4 of the 135 are in `param_build.c`'s *definition* functions; the rest are the
+invocations `params.c` had been hiding. `RT-PARAM` is what makes them evidence
+rather than a table.
+
+## D102 — the allocation family's default branch, which every existing court had stepped over
+
+`src/runtime/mem.rs` documented three behaviours as *measured*, and one of them was
+measured in the wrong branch of a dispatch.
+
+`CRYPTO_malloc` is two functions wearing one name:
+
+```c
+if (malloc_impl != CRYPTO_malloc) {          /* a caller installed one */
+    ptr = malloc_impl(num, file, line);
+    if (ptr != NULL || num == 0) return ptr;
+    goto err;
+}
+if (ossl_unlikely(num == 0)) return NULL;    /* <-- no error raised */
+...
+ptr = malloc(num);
+if (ossl_likely(ptr != NULL)) return ptr;
+err: ossl_report_alloc_err(file, line); return NULL;
+```
+
+`RT-MEM` measures the allocation family, and **every one of its size observations is
+taken after it has installed its counting allocator**, because the counts are how it
+observes the free/realloc asymmetry. Installing an allocator is not a neutral act:
+it selects the first branch. So `RT-MEM` measured the installed branch on both sides,
+agreed, and the file recorded that agreement as the authority's answer, in a doc
+comment that read "matching the authority". The default branch — the one a consumer
+who never calls `CRYPTO_set_mem_functions` is in, which is every consumer that does
+not embed — was measured by nothing.
+
+A new court, `RT-MEM-DEFAULT`, never installs anything. Its first run produced
+**thirteen** divergences, all the same shape: the authority answers NULL to a
+zero-length request and the candidate answered a live allocation. `malloc(0)`,
+`zalloc(0)`, `calloc(0,16)`, `calloc(16,0)`, `malloc_array(0,4)`,
+`malloc_array(4,0)`, `realloc(NULL,0)`, `realloc_array(NULL,0,4)`,
+`clear_realloc(NULL,0,0)`, `clear_realloc_array(NULL,0,4,0)`, and the four
+secure-heap forms, which reach the same place because `CRYPTO_secure_malloc`
+forwards to `CRYPTO_malloc` while the heap is uninitialised. No error is raised on
+any of them, so the return value is the only witness, and it was wrong in thirteen
+places at once.
+
+The same branch holds two more defects, and they needed instruments that did not
+exist.
+
+**A leak that a NULL return value hides.** The default branch of `CRYPTO_realloc`
+is
+```c
+if (num == 0) {
+    CRYPTO_free(str, file, line);
+    return NULL;
+}
+```
+and the crate returned NULL without releasing. `RT-MEM` could not see it for the
+same reason it could not see the zero-length arms — under an installed allocator the
+authority delegates the decision to the caller's `realloc_fn`, so the *authority*
+does not free there either, and both sides agreed. The new probe interposes the four
+libc allocator entry points and reports the **change** in the number of `free` calls
+across the single operation, with a control (`CRYPTO_free`) that certainly releases
+and a sibling (`CRYPTO_clear_realloc`) that already agreed. Forwarding goes to
+glibc's `__libc_*` rather than through `dlsym(RTLD_NEXT, ...)`, because `dlsym`
+itself allocates and would recurse before the real symbols are resolved. The
+observation is a *delta*, not a total: the crate's own runtime allocations are not
+part of it, and `phase3_courts.py`'s rule that internal allocation counts are not
+diffed is unaffected.
+
+**A crash.** `CRYPTO_memdup` refuses `siz >= INT_MAX` before allocating. The crate
+omitted the check, so `RT-MEM-DEFAULT`'s `CRYPTO_memdup(buf, INT_MAX)` — a request
+to copy two gigabytes out of a 32-byte buffer — returned a live pointer in the
+candidate and read out of bounds; the candidate segfaulted, and the truncated
+transcript was the evidence. The authority's refusal is not an optimisation: `siz`
+is an `int` at the allocator boundary.
+
+Two further gaps in the *dispatch* are recorded by a second new court,
+`RT-MEM-INSTALL`, which measures the installation state machine instead of any one
+allocation. `CRYPTO_set_mem_functions` accepted only an all-or-nothing install and
+answered 1 unconditionally, where the authority replaces each slot whose argument is
+non-NULL, leaves the rest alone, and **refuses with 0** once `allow_customize` is
+clear — which the default branch of `CRYPTO_malloc` clears on the first non-zero
+request. And `CRYPTO_get_mem_functions` reported private shims where the authority
+reports the address of its own exported `CRYPTO_malloc`, `CRYPTO_realloc` and
+`CRYPTO_free`; a caller may compare the returned pointer against `&CRYPTO_malloc` or
+hand it straight back, so the crate now stores that identity as "not installed" and
+reports it back. The latch is the reason the two new courts are two: the branch a
+process is in is chosen once and is permanent, so no single probe can measure both,
+and `RT-MEM-DEFAULT` closes with the latch observation — the only order in which
+the 0 is reachable — while `RT-MEM-INSTALL` measures the accepted order.
+
+One constant was renamed. The `*_array` helpers' overflow constant was called
+`ERR_R_OVERFLOW` in this file, and OpenSSL has no such symbol: the packed code they
+raise is `CRYPTO_R_INTEGER_OVERFLOW`. The value 127 was right and the name was an
+invention, which is D33's class — recalled rather than read — and the check is that
+compiling `ERR_R_OVERFLOW` against the authority's own headers fails to compile.
+
+The unit tests for the zero-length arms and for `CRYPTO_realloc(addr, 0)` were
+removed rather than repaired. Both depend on which branch the process is in, the
+branch is chosen once per process, and Rust's test harness runs every test in one
+process; an assertion there would be a claim about test ordering rather than about
+the contract. The two courts measure each branch in a process that chose it, which is
+the division of labour `phase3_courts.py` already describes. The allocator
+installation test was rewritten to assert *which* outcome it got and that the
+outcome is self-consistent, instead of assuming the state it starts in — it had been
+passing by accident, because the old model could not tell the two branches apart.
+
+One more divergence was found while building the instrument and is a *recorded*
+divergence rather than a fix: both `CRYPTO_aligned_alloc` and
+`CRYPTO_aligned_alloc_array` write through `*freeptr` with no NULL test, so the
+authority segfaults and the candidate answers NULL. The candidate's doc comment had
+described NULL as an accepted argument, which is where the guard came from; the code
+was right and the documentation was wrong. It is now
+`docs/SECURITY_DIVERGENCE_POLICY.md` D-MEM-ALIGNED-1, and both cases print the
+`NOT_MEASURED_AUTHORITY_FAULTS` marker in the new probe so the boundary is visible
+in the transcript.
+
+Two courts were added to Phase 3, its observation count moves 4,358 → 4,410, and
+`src/runtime/mem.rs` gains the two-branch model. Nothing about the *installed*
+branch changed, which is why `RT-MEM` still reproduces its 82 committed
+observations byte for byte: the finding is entirely about the branch no probe had
+entered.

@@ -158,6 +158,14 @@
       "observations": 82,
       "verdict": "pass"
     },
+    "RT-MEM-DEFAULT": {
+      "observations": 39,
+      "verdict": "pass"
+    },
+    "RT-MEM-INSTALL": {
+      "observations": 15,
+      "verdict": "pass"
+    },
     "RT-OBJ-STREAM": {
       "observations": 91,
       "verdict": "pass"

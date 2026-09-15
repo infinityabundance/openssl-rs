@@ -235,6 +235,22 @@ COVERED_FILES = [
     # never excluded — `x_long.c` is covered above, and `n_pkey.c` does not exist in
     # the authority. A list of exclusions is a claim about the tree, and this one had
     # two false entries and one wrong reason.
+    #
+    # Phase 6: the parameter surface and the provider core it belongs to. Every
+    # authority file in the subsystem that raises an error belongs to the obligation
+    # set, by the same rule as `crypto/bn` and `crypto/asn1` above.
+    #
+    # `crypto/params.c` is also the file that forced `local_raise_macros` into this
+    # generator. It spells its eight refusals as file-local macros (`err_out_of_range`
+    # and friends) and then invokes them bare, so a scan for `ERR_raise*` found the
+    # eight definitions and none of the fifty-odd call sites. The coordinates a caller
+    # reads back are the *invocation* line, so the definitions are not merely
+    # redundant — they are the wrong answer, and attributing them was impossible
+    # anyway (`enclosing_function` refuses a line with no preceding definition).
+    ("crypto/params.c", "PARAMS"),
+    ("crypto/params_dup.c", "PARAMS_DUP"),
+    ("crypto/params_from_text.c", "PARAMS_FROM_TEXT"),
+    ("crypto/param_build.c", "PARAM_BUILD"),
 ]
 
 # Raise macros, in the forms the authority actually spells them. `ERR_raise`
@@ -256,6 +272,8 @@ REASON_CONST_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
 # function's, and `_dopr` as `dopr`. Six sites were mis-attributed that way; the
 # coordinates are readable through `ERR_get_error_all`, so they are contract.
 IDENT_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+# A file-local object-like or function-like `#define`.
+DEFINE_RE = re.compile(r"^#\s*define\s+(?P<name>[A-Za-z_][A-Za-z0-9_]*)\b(?P<body>.*)$")
 
 
 def definition_name(line: str) -> str | None:
@@ -470,20 +488,125 @@ def mask_comments_and_strings(text: str) -> str:
     return "".join(out)
 
 
+def local_raise_macros(masked: list[str]) -> tuple[dict[str, dict], set[int]]:
+    """The file's own `#define`s whose body *is* a raise, and the lines they own.
+
+    `crypto/params.c` spells its eight refusals as macros:
+
+        #define err_out_of_range      \\
+            ERR_raise(ERR_LIB_CRYPTO, \\
+                CRYPTO_R_PARAM_VALUE_TOO_LARGE_FOR_DESTINATION)
+
+    and uses them bare -- `err_out_of_range;` -- at forty-odd call sites. The
+    raise those sites *record* is not at the definition: `ERR_raise_data` expands
+    `OPENSSL_FILE`/`OPENSSL_LINE`/`OPENSSL_FUNC` at the point of expansion, so the
+    coordinates a caller reads back through `ERR_get_error_all` are the
+    **invocation** line and the enclosing function, with the macro's own
+    `lib`/`reason`. Scanning only for the macro names `ERR_raise`,
+    `ERR_raise_data` and `<LIB>err` therefore finds the definition and none of
+    the invocations, and the whole file appears to raise nothing.
+
+    This reads the definition to learn the `lib`/`reason` pair and returns it, so
+    the main scan can attribute each bare invocation. A macro whose body is not a
+    resolvable raise is not returned: it is not this tool's business.
+
+    The second return value is every line the preprocessor owns -- each `#`
+    directive together with its backslash continuations. Those lines must be
+    skipped by the main scan, because a raise *inside* a macro body is not a call
+    site: its `ERR_raise(` line carries no `__LINE__` of its own, and attributing
+    a site to it would invent a coordinate the authority never records and would
+    attribute it to whatever function name happened to precede the `#define`.
+    """
+    out: dict[str, dict] = {}
+    preproc: set[int] = set()
+    i = 0
+    while i < len(masked):
+        if masked[i].lstrip().startswith("#"):
+            j = i
+            body = masked[i]
+            while body.rstrip().endswith("\\") and j + 1 < len(masked):
+                j += 1
+                body = body.rstrip()[:-1] + " " + masked[j]
+            preproc.update(range(i, j + 1))
+        m = DEFINE_RE.match(masked[i])
+        if not m:
+            i += 1
+            continue
+        name = m.group("name")
+        # A backslash-continued definition is one logical line. Join it so the
+        # raise call inside the body can be parsed as a whole call.
+        body = m.group("body")
+        j = i
+        while body.rstrip().endswith("\\") and j + 1 < len(masked):
+            j += 1
+            body = body.rstrip()[:-1] + " " + masked[j]
+        i = j + 1
+        rm = RAISE_RE.search(body)
+        if rm is None:
+            continue
+        call = body[rm.start():]
+        args = split_args(call)
+        if len(args) < 2:
+            continue
+        macro = rm.group("macro")
+        if macro in ("ERR_raise", "ERR_raise_data"):
+            lib_sym, reason_sym = args[0], args[1]
+        else:
+            lib_sym, reason_sym = "ERR_LIB_" + macro[: -len("err")], args[0]
+        if not LIB_CONST_RE.match(lib_sym):
+            continue
+        out[name] = {
+            "macro": macro,
+            "lib_symbol": lib_sym,
+            "reason_symbol": reason_sym,
+            "dynamic_reason": not REASON_CONST_RE.match(reason_sym),
+        }
+    return out, preproc
+
+
 def scan(path: Path) -> tuple[list[dict], list[dict]]:
     text = path.read_text(encoding="utf-8", errors="replace")
     lines = text.splitlines()
     masked = mask_comments_and_strings(text).splitlines()
     if len(masked) != len(lines):
         raise SystemExit(f"{path}: masking changed the line count")
+    file_macros, preproc = local_raise_macros(masked)
+    macro_re = (
+        re.compile(r"\b(" + "|".join(re.escape(n) for n in file_macros) + r")\b")
+        if file_macros
+        else None
+    )
     sites: list[dict] = []
     unattributed: list[dict] = []
     i = 0
     while i < len(lines):
         # A raise behind a preprocessor definition is a macro body, not a call.
-        if masked[i].lstrip().startswith("#"):
+        if i in preproc:
             i += 1
             continue
+        # A bare invocation of one of this file's own raise macros is a site at
+        # *this* line: see `local_raise_macros`.
+        if macro_re is not None:
+            mm = macro_re.search(masked[i])
+            if mm is not None:
+                spec = file_macros[mm.group(1)]
+                sites.append(
+                    {
+                        "file": rel(path),
+                        "line": i + 1,
+                        "function": enclosing_function(lines, i + 1),
+                        "macro": spec["macro"],
+                        "lib_symbol": spec["lib_symbol"],
+                        "reason_symbol": (
+                            None if spec["dynamic_reason"] else spec["reason_symbol"]
+                        ),
+                        "dynamic_reason": spec["dynamic_reason"],
+                        "data_format": None,
+                        "via_macro": mm.group(1),
+                    }
+                )
+                i += 1
+                continue
         m = RAISE_RE.search(masked[i])
         if not m:
             i += 1
@@ -737,6 +860,17 @@ def main(argv: list[str]) -> int:
             "a build artifact of the forensic build, reproduced exactly rather "
             "than normalized away, so the candidate's ERR records compare "
             "byte-for-byte with the authority's."
+        ),
+        "via_macro_note": (
+            "A site carries `via_macro` **only** when the raise was spelled as a "
+            "call to a macro the same file defines (`crypto/params.c`'s "
+            "`err_out_of_range` and its seven siblings), in which case the value "
+            "names that macro. The `line`/`function` are then the *invocation*, "
+            "because `ERR_raise_data` expands `OPENSSL_LINE`/`OPENSSL_FUNC` where "
+            "it is used; `lib_symbol`/`reason_symbol` come from the definition. "
+            "Sites without the key were spelled as a direct `ERR_raise*` call. "
+            "The key is absent rather than null so that adding the macro form "
+            "left every previously recorded site byte-identical."
         ),
     }
 

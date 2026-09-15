@@ -1,0 +1,38 @@
+FRF-MUTANT:stdout-first-line:transcript.sha256=f653abdd5ae9e70ecf58342dbd4dbc269e26f379f915ad20b1bcf555e66d3faf
+malloc.0=NULL err=0
+malloc.1=nonnull err=0
+zalloc.0=NULL err=0
+zalloc.1=nonnull err=0
+calloc.0x16=NULL err=0
+calloc.16x0=NULL err=0
+calloc.1x16=nonnull err=0
+malloc_array.0x4=NULL err=0
+malloc_array.4x0=NULL err=0
+malloc_array.1x4=nonnull err=0
+realloc.null.0=NULL err=0
+realloc.null.8=nonnull err=0
+realloc_array.null.0x4=NULL err=0
+clear_realloc.null.0_0=NULL err=0
+clear_realloc.null.0_8=nonnull err=0
+clear_realloc_array.null.0x4_0x4=NULL err=0
+secure_malloc.0=NULL err=0
+secure_malloc.1=nonnull err=0
+secure_zalloc.0=NULL err=0
+secure_malloc_array.0x4=NULL err=0
+secure_calloc.0x16=NULL err=0
+secure_initialized=0 err=0
+realloc.live_to_zero=NULL frees=1 err=0
+clear_realloc.live_to_zero=NULL frees=1 err=0
+free.live=NULL frees=1 err=0
+memdup.null.0=NULL err=0
+memdup.16=nonnull err=0
+memdup.intmax=NULL err=0
+memdup.sizemax=NULL err=0
+strdup.null=NULL err=0
+strdup.abc=abc err=0
+strndup.null=NULL err=0
+strndup.abc_0= err=0
+strndup.abc_2=ab err=0
+strndup.abc_99=abc err=0
+set_mem_functions_after_default_allocations=0
+done=1

@@ -74,6 +74,27 @@ each case the probe prints a `NOT_MEASURED_AUTHORITY_FAULTS` marker: the boundar
 is visible in the transcript rather than silently absent from it. The
 observations that *can* be made around each boundary are compared normally.
 
+### D-MEM-ALIGNED-1 — the `CRYPTO_aligned_alloc` family writes through a NULL `freeptr`
+
+- **Obligation:** `CRYPTO_aligned_alloc(num, align, NULL, file, line)` and
+  `CRYPTO_aligned_alloc_array(num, size, align, NULL, file, line)`.
+- **Authority:** segfaults on both. The first statement of each is `*freeptr =
+  NULL;` with no test, and the `_array` form reaches it through the overflow arm
+  as well. Measured: exit 139 for both, each in a process of its own, so the
+  measurement is the fault and there is nothing to compare past it
+  (`courts/phase3/rt_mem_default_probe.c` prints the marker).
+- **Candidate:** returns NULL. Its own doc comment had said `freeptr` "must be
+  NULL or writable for one pointer", which read as though NULL were an accepted
+  argument while the authority's code makes it a fault; the code was already safe
+  and the *documentation* was the defect.
+- **Reason:** a NULL store is not a contract to reproduce. The distinction matters
+  more here than for the other entries in this section because the guard is the
+  difference between a returned error and a crash in a function whose whole purpose
+  is to hand the caller a pointer to release.
+- **Claim removed:** NULL-`freeptr` behaviour is *not* claimed compatible; it is
+  claimed *safe*. For a writable `freeptr` the value and the block identity are
+  compared normally and match.
+
 ### D-MEM-ATOMIC-1 — atomics dereference a NULL `ret`
 
 - **Obligation:** `CRYPTO_atomic_or` / `CRYPTO_atomic_and` / `CRYPTO_atomic_load`
