@@ -180,23 +180,26 @@
     }
   },
   "deferred": {
-    "phase3": 11,
-    "phase4": 31,
-    "phase5": 91
+    "phase3": 38,
+    "phase4": 23,
+    "phase5": 91,
+    "phase6": 0
   },
   "implemented": {
     "libcrypto": 932,
     "libssl": 0
   },
   "open_obligations": {
-    "phase3": 0,
-    "phase4": 0,
-    "phase5": 0
+    "phase3": 29,
+    "phase4": 18,
+    "phase5": 0,
+    "phase6": 156
   },
   "owned_obligations": {
-    "phase3": 235,
-    "phase4": 262,
-    "phase5": 565
+    "phase3": 294,
+    "phase4": 272,
+    "phase5": 565,
+    "phase6": 156
   },
   "phases": {
     "0": "complete",
@@ -214,9 +217,9 @@
     "2": "complete",
     "20": "not-started",
     "21": "not-started",
-    "3": "complete",
-    "4": "complete",
-    "5": "complete",
+    "3": "in-progress",
+    "4": "in-progress",
+    "5": "in-progress",
     "6": "not-started",
     "7": "not-started",
     "8": "not-started",

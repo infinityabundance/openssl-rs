@@ -124,10 +124,11 @@ jobs:
       - name: Evidence determinism
         run: python3 forensics/tools/evidence_determinism.py
 
-      # An export that matches no phase family is invisible to every ledger at
-      # once, so the shell scaffolds it and no obligation records it. That has
-      # happened twice (D49, D51) and was found by reading both times. This makes
-      # the invariant mechanical: no implemented export may be unowned.
+      # An export the ownership atlas assigns a stratum must appear in that stratum's
+      # ledger, and a row a ledger carries for another stratum's export must be a
+      # hand-off that stratum recorded. Both were unchecked: D49, D51 and D72 record
+      # an export being invisible to every ledger at once, and D97 records sixty-nine
+      # and nineteen such exports in two strata that had already sealed as complete.
       - name: Symbol ownership
         run: python3 forensics/tools/ownership_audit.py
 

@@ -4349,3 +4349,122 @@ owns the court ordering that used to be a property of the workflow's step list �
 the general mechanism is not built, and for the same reason: it is a change to how
 every generator is invoked, and it should not be bolted on at the end of a change
 about something else.
+
+## D97 — the atlas was reconciled in one direction, and the ledgers were wrong in the other
+
+D72 built `forensics/atlas/symbol-ownership.json` and made each phase ledger a
+*projection* of it, which fixed the defect class D49, D51 and D52 had each recorded in
+a different guise: a symbol matching no prefix was invisible to every ledger at once.
+Phase 5 was rewritten to project, and `ownership_audit.py` gained the invariant that
+an export the atlas assigns a stratum where that stratum's ledger has no row is an
+error.
+
+That invariant was written for Phase 5 and **not applied to the strata that had
+already sealed**. Phases 3 and 4 still chose their own universes with
+`(module, prefixes)` family lists, and they failed closed *within* those lists — which
+is not the same thing at all. A prefix that matches nothing reports nothing, so sixty-
+nine Phase 3 exports and nineteen Phase 4 exports that the atlas assigns them were in
+no ledger, in no evidence list and in no audit, while both seals called their strata
+complete.
+
+The Phase 3 sixty-nine were not obscure: every `ASYNC_*` (22), every
+`OSSL_ERR_STATE_*` (5), every `OSSL_trace_*` (10), `OSSL_get_max_threads`,
+`OSSL_set_max_threads`, `OSSL_get_thread_support_flags`, `OSSL_sleep`, `OPENSSL_atexit`,
+`OPENSSL_die`, `OPENSSL_fork_prepare`/`_parent`/`_child`, `OPENSSL_isservice`,
+`OPENSSL_issetugid`, `OPENSSL_thread_stop`, `OPENSSL_thread_stop_ex`,
+`err_free_strings_int`, the five `OPENSSL_INIT_*` handle constructors, and
+`OPENSSL_gmtime` with its two neighbours. The Phase 4 nineteen were the fourteen
+`COMP_*` functions, the three ABI-only `conf_ssl_*` helpers, `OPENSSL_config` and
+`OPENSSL_load_builtin_modules`.
+
+Three of those classes had a second cause worth naming, because each is a different
+way for a list to be wrong:
+
+  * `src/runtime/time.rs` **was in neither list**. It is implemented
+    (`OPENSSL_gmtime`, `OPENSSL_gmtime_adj`, `OPENSSL_gmtime_diff`), it lives in the
+    Phase 3 directory, and its own module comment says it is Phase 3's — but it was in
+    no `FAMILIES` entry and no `PHASE3_MODULES` entry, so three implemented exports
+    belonged to no ledger and to no evidence set simultaneously. An implementation can
+    be invisible in exactly the same way an obligation can.
+  * a **case difference** hid ten exports. Phase 3's families listed
+    `OPENSSL_init` and `OpenSSL_version`; the authority exports `OPENSSL_INIT_new` and
+    `OPENSSL_version_major`. Prefix matching is case-sensitive, so `OPENSSL_INIT_*` and
+    the five `OPENSSL_version_*` accessors matched nothing.
+  * the ledger was **over-claiming** as well as under-claiming. Phase 4's list matched
+    every `BIO_` name, so it carried nine deferral rows — `BIO_f_base64`, `BIO_f_md`,
+    `BIO_f_cipher`, `BIO_f_reliable`, `BIO_set_cipher`, `BIO_new_CMS`, `BIO_new_PKCS7`,
+    `BIO_f_asn1`, `BIO_new_NDEF` — for symbols declared in `evp.h`, `cms.h`, `pkcs7.h`
+    and `asn1.h`. The atlas never gave Phase 4 any of them.
+
+The audit was wrong in the same direction. `ownership_audit.py` read a ledger's row set
+as `implemented | open` and **ignored `deferred`**, so Phase 5's 91 deferred rows read
+as a 91-symbol ownership gap that did not exist. Reading a field that is absent as if
+it were empty, and not reading a field that is there, are the same defect: an absence
+of evidence resembling a satisfied plane.
+
+### What changed
+
+  * `ownership_audit.py` was rewritten. It now reads `implemented | open | deferred`,
+    and enforces **both** directions, as hard failures: every export the atlas assigns
+    a stratum must have a row in that stratum's ledger, and every row a ledger carries
+    for another stratum's export must be a hand-off that stratum recorded. It also
+    checks each ledger's own arithmetic (every row in exactly one list, and the three
+    summing to `owned`), the cross-ledger `implemented` double-count, and the hand-off
+    edges in both readings — the deferring stratum's `deferred` rows against the
+    receiving stratum's `handoffs_discharged`.
+  * `phase3_obligations.py` and `phase4_obligations.py` were rewritten as atlas
+    projections, in the shape Phase 5 already had. The prefix tables survive only as
+    *labels* naming the module expected to hold a symbol, and an unlabelled symbol is
+    now a hard failure rather than a row filed under "other".
+  * `ownership_rules.py` gained `SYMBOL_PHASE`, the third and last name-level
+    exception, because `crypto.h` genuinely declares two strata: `OSSL_LIB_CTX_new`
+    sits nine lines from `CRYPTO_malloc`, and nothing in the header separates them. The
+    ten `OSSL_LIB_CTX_*` exports move to Phase 6, whose subject matter the library
+    context is. The atlas now records a `symbol-override` rule with the reason, and
+    `by_phase` moves from `{3: 304, 6: 127}` to `{3: 294, 6: 137}`.
+  * `phase_state.py` now derives Phase 3's state from its ledger's `open` count, as it
+    already did for Phases 4 and 5. Before this, adding honest `open` rows to Phase 3's
+    ledger would not have moved its state at all.
+  * `regression_guard.py` gained `phase_state_transitions`, because a state *downgrade*
+    is a regression by default — and must stay one. A correction that lowers a derived
+    state is now the same shape as an ownership transition: a row in
+    `forensics/ownership-transitions.json` matching the phase and both states exactly,
+    naming the decision and the artifact that is the authority for the new state.
+  * `docs/SEAL-CENSUS.md` is new, and is generated by
+    `forensics/tools/render_seal_census.py`. Seals were restating their arithmetic in
+    prose, and the prose did not regenerate: the Phase 5 seal's census once disagreed
+    with the generated status and with another section of itself. The arithmetic now
+    lives in one generated document that the seals cite. Phase 3's and Phase 4's seals,
+    and Phase 5's, gained appended correction sections rather than edits — the
+    append-only rule applies to seals as much as to this file.
+  * `render_status.py` now **discovers** the ledgers instead of naming Phases 3 and 4.
+    Phase 5's ledger had never been rendered in `STATUS.md` at all, and no reader could
+    tell whether that was a decision. `evidence_determinism.py` discovers the phase
+    generators the same way, so a new stratum no longer has to be remembered in four
+    registries.
+
+### What was deliberately not done
+
+The sixty-nine and nineteen are **not** deferred to make the states green again. Two
+dispositions were refused for that reason:
+
+  * `OSSL_LIB_CTX_*` are not "deferred to Phase 6"; they are **Phase 6's**, and moving
+    them in the atlas is the correct statement rather than a deferral a reader would
+    have to trust.
+  * the twenty-nine open Phase 3 exports are not handed to a later stratum in a lump.
+    They are recorded `open`, they block the stratum, and `docs/PHASE-6-SUBPHASES.md`
+    6.2 names them as work. `OSSL_trace_*` and `OSSL_ERR_STATE_*` are core-runtime
+    facilities with no later stratum to defer to; inventing one would be the same
+    defect one level up.
+
+`ASYNC_*` **is** deferred, to Phase 13, and the reason is a dependency rather than a
+distance: `OPENSSL_NO_ASYNC` is not defined in the pinned profile, and the authority's
+own tree shows every in-tree caller is either an asynchronous engine
+(`engines/e_dasync.c`, `engines/e_afalg.c`) or the SSL async API (`ssl/ssl_lib.c`).
+Phase 13 is the earliest stratum whose own obligations require the job framework.
+
+Phases 3, 4 and 5 are `in-progress`, Phase 6 has its own ledger at 156 open exports,
+and `implemented` is unchanged at 932: not one implementation was removed and not one
+observation was invalidated. This is a correction to a completeness claim, which is
+the cheapest kind of correction there is — and the only reason it was cheap is that
+the evidence and the accounting were kept apart.

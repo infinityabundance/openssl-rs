@@ -1,15 +1,26 @@
 # Phase 4 — BIO, CONF and the buffer object: seal
 
-**STATUS: COMPLETE as a stratum.** Phase 4's own surface is closed: nothing in its
-symbol families is unaccounted for, and all sixteen courts pass with no residual.
-This is **not** a claim that openssl-rs is a usable OpenSSL. 5,441 `libcrypto`
-exports and all 603 `libssl` exports are still `SCAFFOLDED` and abort when called.
+**STATUS: reopened, `in-progress` (docs/DECISIONS.md D97).** Phase 4's own surface
+was sealed as closed, and all sixteen courts pass with no residual — that is
+unchanged. What D97 found is that the ledger's *universe* was a prefix list, and a
+prefix that matches nothing reports nothing: nineteen exports the global ownership
+atlas assigns this stratum were in no ledger at all, eighteen of which are now
+recorded `open`. `forensics/phase-state.json` therefore derives `in-progress`. See §10.
+
+**For every count in this document, read `docs/SEAL-CENSUS.md`**, which is generated
+from the ledgers and the court results and cannot go stale.
+
+This is **not** a claim that openssl-rs is a usable OpenSSL. 932 of 5,896 `libcrypto`
+exports are implemented and all 603 `libssl` exports are still `SCAFFOLDED` and abort
+when called.
 
 - Authority: `openssl-3.6.4-production`
 - Court results: `artifacts/phase4/COURTS.json` (16 courts, 3,217 observations, 0 residuals)
-- Obligation ledger: `forensics/phase4-obligations.json` (262 owned: 231 implemented,
-  31 handed to named later strata, **0 open**)
-- Derived state: `forensics/phase-state.json` (phases 0-4 `complete`, 5-21 `not-started`)
+- Obligation ledger: `forensics/phase4-obligations.json` — figures in
+  `docs/SEAL-CENSUS.md`. At seal time it read 262 owned: 231 implemented, 31 handed to
+  named later strata, 0 open; D97 changed the universe to 272 owned: 231 implemented,
+  23 handed on, 18 open
+- Derived state: `forensics/phase-state.json` (`in-progress`)
 
 ## 1. What this phase built
 
@@ -155,6 +166,10 @@ this crate ships to is a worse answer than "there is none configured yet".
 
 ## 5. Deliberate scaffolding, and what it means
 
+**Superseded by §10 in its arithmetic**: this section describes the hand-offs as they
+stood at seal time — 31 exports to five later strata, and eleven received from
+Phase 3. D97 changed both sides of that ledger (§10). The *policy* below is unchanged.
+
 - **31 Phase 4 family exports are handed to five later strata**, each with a named
   owning phase and a stated reason, all in `forensics/phase4-obligations.json`:
   six to Phase 5 (the ASN.1 prefix/suffix hooks, `BIO_f_asn1`, `BIO_new_NDEF`),
@@ -204,7 +219,7 @@ this crate ships to is a worse answer than "there is none configured yet".
 |---|---|
 | BIO, CONF, buffer-object and object-stream subsystems implemented | met, except the 31 recorded hand-offs |
 | differential courts exist and pass | met: 16 courts, 3,217 observations, no residual |
-| no export in the stratum's families is unaccounted for | met: 231 + 31 + 0 = 262, enforced by `phase4_obligations.py` |
+| no export in the stratum's families is unaccounted for | met at seal time against the Phase 4 *families* (231 + 31 + 0 = 262). **Not met against the stratum's universe: D97 found nineteen atlas-owned exports with no row at all**, eighteen of which are now `open`, so the criterion is unmet and the state is `in-progress`. See §10 |
 | every implemented export is owned by exactly one stratum | met, enforced by `ownership_audit.py` (D57) |
 | faults recorded rather than reproduced | met: three divergences, each with a class and a narrowed claim |
 | lint gate clean | met: `cargo clippy --all-targets -- -D warnings` passes crate-wide (D59) |
@@ -300,3 +315,82 @@ rediscovered: the two authority faults `RT-CONF` cannot compare, the
 blindness to C prototypes, the fact that 31 exports of this stratum remain
 scaffolded until later strata land, and the `RT-BIO-DEBUG` identity change that its
 own reproducibility fix caused.
+
+## 10. Correction: the stratum's universe was incomplete (D97)
+
+Appended, not folded in. Everything above stands as the record of what was true when
+this document was sealed; this section records what was missing from the premise.
+
+### What was wrong
+
+Like Phase 3's, this ledger chose its universe with `(module, prefixes)` entries and
+failed closed *within* them. Five prefixes — `BIO_`, `BUF_`, `CONF_`, `NCONF_`,
+`OPENSSL_INIT_` — plus four names. Nineteen exports the global ownership atlas
+(`forensics/atlas/symbol-ownership.json`, D72) assigns this stratum matched no entry:
+
+* the **fourteen `COMP_*` functions** of `crypto/comp/comp_lib.c` — `COMP_CTX_new`,
+  `_free`, `_get_method`, `_get_type`, `COMP_get_type`, `COMP_get_name`,
+  `COMP_compress_block`, `COMP_expand_block`, and the six factories
+  `COMP_zlib`, `COMP_zlib_oneshot`, `COMP_zstd`, `COMP_zstd_oneshot`,
+  `COMP_brotli`, `COMP_brotli_oneshot`;
+* the three **`conf_ssl_*` helpers** of `crypto/conf/conf_ssl.c`, which are
+  ABI-only — the DSO exports them and no installed header declares them;
+* **`OPENSSL_config`**, `crypto/conf/conf_sap.c`;
+* **`OPENSSL_load_builtin_modules`**, `crypto/conf/conf_mall.c`, whose whole body is
+  a loop of `CONF_module_add` calls.
+
+`src/runtime/bio/comp.rs` was in this phase's own evidence list the whole time, so
+the BIO *compression filter* existed while the `COMP_*` public API it sits beside did
+not. The file was evidence; the symbols had no ledger row; nothing compared them.
+
+The atlas reconciliation also showed the ledger **over**-claiming nine rows: the
+seven EVP/CMS/PKCS#7 filter names (`BIO_f_base64`, `BIO_f_md`, `BIO_f_cipher`,
+`BIO_f_reliable`, `BIO_set_cipher`, `BIO_new_CMS`, `BIO_new_PKCS7`, declared in
+`evp.h`, `cms.h` and `pkcs7.h`) plus `BIO_f_asn1` and `BIO_new_NDEF`, which are
+declared in `asn1.h`. The old prefix list matched all of them on `BIO_` and deferred
+them; the atlas never gave them to this stratum at all.
+
+### What the authority actually does with `COMP_*` in this profile
+
+The fourteen are implementable here with **no compression library**, and that was
+measured rather than assumed. The pinned profile's configure options record
+`no-zlib no-zstd no-brotli`; `OPENSSL_NO_ZLIB`, `OPENSSL_NO_ZSTD` and
+`OPENSSL_NO_BROTLI` are all defined, and `courts/phase4/discover_comp.c` confirms
+from the binary that all six factories answer `NULL`:
+
+```
+macro OPENSSL_NO_ZLIB=1   macro OPENSSL_NO_ZSTD=1   macro OPENSSL_NO_BROTLI=1
+COMP_zlib=(nil)  COMP_zlib_oneshot=(nil)  COMP_zstd=(nil)  COMP_zstd_oneshot=(nil)
+COMP_brotli=(nil)  COMP_brotli_oneshot=(nil)
+COMP_get_type(NULL)=0 (NID_undef=0)   COMP_get_name(NULL)=<NULL>
+COMP_CTX_new(NULL)=(nil)
+```
+
+The same probe found an authority **memory fault**: `COMP_CTX_get_type(NULL)`
+dereferences `comp->meth` with no NULL check and dies with SIGSEGV. It is recorded in
+`docs/SECURITY_DIVERGENCE_POLICY.md` and deliberately not reproduced.
+
+### What was done
+
+The ledger is now a projection of the ownership atlas plus the sixteen symbols Phase 3
+hands it. Eighteen of the nineteen are recorded **`open`** and are Phase 6.3's
+(`docs/PHASE-6-SUBPHASES.md`); the nineteenth, `OPENSSL_load_builtin_modules`, is
+deferred to Phase 6 with its dependency named — the module registry. The four
+`BIO_asn1_*` controls stay this stratum's by `bio.h` and stay deferred to Phase 5,
+which had already built them, so both ledgers now record that edge and
+`ownership_audit.py` checks the two readings against each other.
+
+### What this does not change
+
+Nothing in §2 through §9 is withdrawn. All sixteen courts still pass, all 3,217
+observations stand, and every recorded authority fault is unchanged. No implementation
+was removed and no evidence was invalidated: this corrects the *completeness* claim,
+not the evidence.
+
+### Why it was not caught earlier
+
+The same reason as Phase 3's: the ledger's prefix list, the `PHASE4_MODULES` evidence
+list and the ownership atlas are three statements of one scope, and nothing compared
+them. `ownership_audit.py` now fails when a stratum the atlas assigns exports has no
+ledger row for them, and when a ledger carries a row another stratum does not defer to
+it. `docs/DECISIONS.md` D97 has the full account.

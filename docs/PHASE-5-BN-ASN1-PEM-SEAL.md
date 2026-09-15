@@ -1,21 +1,20 @@
 # Phase 5 — `BIGNUM`, ASN.1 and PEM: seal
 
-**STATUS: COMPLETE.** Every export this stratum owns is either implemented and
-observed by a differential court, or handed to a named later stratum with the
-dependency it is waiting on. The claim is derived, not typed: `open_in_this_stratum`
-in `forensics/phase5-obligations.json` is zero, `forensics/phase-state.json` reads
-`complete`, and both are produced by the generators in `forensics/tools/`.
+**STATUS: closed within itself, derived `in-progress` (docs/DECISIONS.md D97).** Every export this stratum owns is either implemented and observed by a differential court, or handed to a named later stratum with the dependency it is waiting on: `open_in_this_stratum` in `forensics/phase5-obligations.json` is zero. The stratum nonetheless derives `in-progress`, and not because of anything it did: `forensics/tools/phase_state.py` enforces that a phase may be complete only if every earlier phase is, and D97 reopened Phases 3 and 4. That is the rule doing what it was written for.
 
-This is **not** a claim that openssl-rs is a usable OpenSSL. 932 `libcrypto` exports
-are implemented; the remaining 4,964 `libcrypto` exports and all 603 `libssl` exports
-are still `SCAFFOLDED` and abort when called.
+**For every count in this document, read `docs/SEAL-CENSUS.md`**, which is generated from the ledgers and the court results by `forensics/tools/render_seal_census.py`.
+
+This is **not** a claim that openssl-rs is a usable OpenSSL. `docs/SEAL-CENSUS.md` carries the current figures: 932 of 5,896 `libcrypto` exports are implemented, and all 603 `libssl` exports remain `SCAFFOLDED` and abort when called.
 
 - Authority: `openssl-3.6.4-production` (with `openssl-3.6.3-historical` admitted for
   the oracle-versus-oracle trajectory in `docs/SECURITY_DIVERGENCE_POLICY.md`)
 - Court results: `artifacts/phase5/COURTS.json` — 9 courts, 9,669 observations, 0
   residuals, `all_pass` true
 - Obligation ledger: `forensics/phase5-obligations.json` — 565 exports owned,
-  **474 implemented**, 91 handed on, **0 open**
+  **474 implemented**, 91 handed on, **0 open in this stratum**. The figures are in
+  `docs/SEAL-CENSUS.md`; D97 removed one disputed row from the hand-off list
+  (`BIO_f_asn1` and `BIO_new_NDEF` are declared in `asn1.h` and were always this
+  stratum's outright, so listing them as a discharged hand-off was a prefix artifact)
 - Derived state: `forensics/phase-state.json`
 
 ## 1. What this phase owns, and how that was decided
@@ -230,5 +229,28 @@ Residuals recorded in the store at this boundary rather than left to be rediscov
 the six `asn_mime.c` exports handed to Phases 7 and 12; the 31 RAND-dependent
 `BN_*`/`ASN1_*` exports handed to Phase 9; the four `GF(2^m)` and `BN_GENCB`
 divergences; the two `ABI_ONLY_EXPORTED` symbols the prototype court reports rather
-than skipping; and `D-MIME-1`, whose reachability was established by measurement and
-not by argument.
+rather than skipping; and `D-MIME-1`, whose reachability was established by measurement
+and not by argument.
+
+## 9. Correction from the ownership reconciliation (D97)
+
+Appended, not folded in. This stratum's own evidence did not change, but two things
+touching it did.
+
+**One row left the hand-off list.** `BIO_f_asn1` and `BIO_new_NDEF` were recorded here
+as discharged hand-offs from Phase 4. Both are declared in `asn1.h`, so the ownership
+atlas gives them to this stratum **outright** -- they appear here as `implemented`
+and always did. Listing them a second time as a received hand-off was an artifact of
+the old Phase 4 ledger matching every `BIO_` name with a prefix. The four
+`BIO_asn1_*` controls, which are declared in `bio.h`, are genuinely Phase 4's and
+remain a real edge; both ledgers now record it and `ownership_audit.py` reconciles the
+two readings in both directions.
+
+**The derived state changed to `in-progress`.** Not on this stratum's evidence: its
+ledger is at zero open and always was. D97 reopened Phases 3 and 4 after finding that
+sixty-nine and nineteen of the exports the atlas assigns them had no ledger row at
+all, and the dependency-order invariant says a phase may be complete only if every
+earlier phase is. The stratum's own exit criteria in §7 stand unchanged.
+
+Both corrections are recorded in `docs/DECISIONS.md` D97, and the arithmetic a reader
+should cite is in `docs/SEAL-CENSUS.md`, which regenerates.

@@ -9,10 +9,10 @@
       "13": 189,
       "14": 600,
       "15": 3,
-      "3": 304,
+      "3": 294,
       "4": 256,
       "5": 561,
-      "6": 127,
+      "6": 137,
       "7": 924,
       "8": 759,
       "9": 25
@@ -2599,96 +2599,6 @@
         "resolved_header": "err.h",
         "rule": "declaring-header",
         "symbol": "OSSL_ERR_STATE_save_to_mark"
-      },
-      {
-        "declaring_header": "crypto.h",
-        "ledger": "phase-ledger",
-        "library": "libcrypto",
-        "owner_phase": 3,
-        "resolved_header": "crypto.h",
-        "rule": "declaring-header",
-        "symbol": "OSSL_LIB_CTX_free"
-      },
-      {
-        "declaring_header": "crypto.h",
-        "ledger": "phase-ledger",
-        "library": "libcrypto",
-        "owner_phase": 3,
-        "resolved_header": "crypto.h",
-        "rule": "declaring-header",
-        "symbol": "OSSL_LIB_CTX_get0_global_default"
-      },
-      {
-        "declaring_header": "crypto.h",
-        "ledger": "phase-ledger",
-        "library": "libcrypto",
-        "owner_phase": 3,
-        "resolved_header": "crypto.h",
-        "rule": "declaring-header",
-        "symbol": "OSSL_LIB_CTX_get_conf_diagnostics"
-      },
-      {
-        "declaring_header": "crypto.h",
-        "ledger": "phase-ledger",
-        "library": "libcrypto",
-        "owner_phase": 3,
-        "resolved_header": "crypto.h",
-        "rule": "declaring-header",
-        "symbol": "OSSL_LIB_CTX_get_data"
-      },
-      {
-        "declaring_header": "crypto.h",
-        "ledger": "phase-ledger",
-        "library": "libcrypto",
-        "owner_phase": 3,
-        "resolved_header": "crypto.h",
-        "rule": "declaring-header",
-        "symbol": "OSSL_LIB_CTX_load_config"
-      },
-      {
-        "declaring_header": "crypto.h",
-        "ledger": "phase-ledger",
-        "library": "libcrypto",
-        "owner_phase": 3,
-        "resolved_header": "crypto.h",
-        "rule": "declaring-header",
-        "symbol": "OSSL_LIB_CTX_new"
-      },
-      {
-        "declaring_header": "crypto.h",
-        "ledger": "phase-ledger",
-        "library": "libcrypto",
-        "owner_phase": 3,
-        "resolved_header": "crypto.h",
-        "rule": "declaring-header",
-        "symbol": "OSSL_LIB_CTX_new_child"
-      },
-      {
-        "declaring_header": "crypto.h",
-        "ledger": "phase-ledger",
-        "library": "libcrypto",
-        "owner_phase": 3,
-        "resolved_header": "crypto.h",
-        "rule": "declaring-header",
-        "symbol": "OSSL_LIB_CTX_new_from_dispatch"
-      },
-      {
-        "declaring_header": "crypto.h",
-        "ledger": "phase-ledger",
-        "library": "libcrypto",
-        "owner_phase": 3,
-        "resolved_header": "crypto.h",
-        "rule": "declaring-header",
-        "symbol": "OSSL_LIB_CTX_set0_default"
-      },
-      {
-        "declaring_header": "crypto.h",
-        "ledger": "phase-ledger",
-        "library": "libcrypto",
-        "owner_phase": 3,
-        "resolved_header": "crypto.h",
-        "rule": "declaring-header",
-        "symbol": "OSSL_LIB_CTX_set_conf_diagnostics"
       },
       {
         "declaring_header": "thread.h",
@@ -10348,6 +10258,96 @@
         "resolved_header": "indicator.h",
         "rule": "declaring-header",
         "symbol": "OSSL_INDICATOR_set_callback"
+      },
+      {
+        "declaring_header": "crypto.h",
+        "ledger": "not-yet-written",
+        "library": "libcrypto",
+        "owner_phase": 6,
+        "resolved_header": "crypto.h",
+        "rule": "symbol-override",
+        "symbol": "OSSL_LIB_CTX_free"
+      },
+      {
+        "declaring_header": "crypto.h",
+        "ledger": "not-yet-written",
+        "library": "libcrypto",
+        "owner_phase": 6,
+        "resolved_header": "crypto.h",
+        "rule": "symbol-override",
+        "symbol": "OSSL_LIB_CTX_get0_global_default"
+      },
+      {
+        "declaring_header": "crypto.h",
+        "ledger": "not-yet-written",
+        "library": "libcrypto",
+        "owner_phase": 6,
+        "resolved_header": "crypto.h",
+        "rule": "symbol-override",
+        "symbol": "OSSL_LIB_CTX_get_conf_diagnostics"
+      },
+      {
+        "declaring_header": "crypto.h",
+        "ledger": "not-yet-written",
+        "library": "libcrypto",
+        "owner_phase": 6,
+        "resolved_header": "crypto.h",
+        "rule": "symbol-override",
+        "symbol": "OSSL_LIB_CTX_get_data"
+      },
+      {
+        "declaring_header": "crypto.h",
+        "ledger": "not-yet-written",
+        "library": "libcrypto",
+        "owner_phase": 6,
+        "resolved_header": "crypto.h",
+        "rule": "symbol-override",
+        "symbol": "OSSL_LIB_CTX_load_config"
+      },
+      {
+        "declaring_header": "crypto.h",
+        "ledger": "not-yet-written",
+        "library": "libcrypto",
+        "owner_phase": 6,
+        "resolved_header": "crypto.h",
+        "rule": "symbol-override",
+        "symbol": "OSSL_LIB_CTX_new"
+      },
+      {
+        "declaring_header": "crypto.h",
+        "ledger": "not-yet-written",
+        "library": "libcrypto",
+        "owner_phase": 6,
+        "resolved_header": "crypto.h",
+        "rule": "symbol-override",
+        "symbol": "OSSL_LIB_CTX_new_child"
+      },
+      {
+        "declaring_header": "crypto.h",
+        "ledger": "not-yet-written",
+        "library": "libcrypto",
+        "owner_phase": 6,
+        "resolved_header": "crypto.h",
+        "rule": "symbol-override",
+        "symbol": "OSSL_LIB_CTX_new_from_dispatch"
+      },
+      {
+        "declaring_header": "crypto.h",
+        "ledger": "not-yet-written",
+        "library": "libcrypto",
+        "owner_phase": 6,
+        "resolved_header": "crypto.h",
+        "rule": "symbol-override",
+        "symbol": "OSSL_LIB_CTX_set0_default"
+      },
+      {
+        "declaring_header": "crypto.h",
+        "ledger": "not-yet-written",
+        "library": "libcrypto",
+        "owner_phase": 6,
+        "resolved_header": "crypto.h",
+        "rule": "symbol-override",
+        "symbol": "OSSL_LIB_CTX_set_conf_diagnostics"
       },
       {
         "declaring_header": "param_build.h",
@@ -58602,8 +58602,9 @@
     "rule": "one rule decides discovery and assignment together: an export's declaring header names its stratum, `pem.h`'s typed names resolve through the type's header, and the exports no installed header declares are dispositioned in ABI_ONLY_OWNER",
     "rules": {
       "abi-only": 26,
-      "declaring-header": 6376,
-      "pem-typed-object": 97
+      "declaring-header": 6366,
+      "pem-typed-object": 97,
+      "symbol-override": 10
     },
     "universe": {
       "definition": "every DSO-exported symbol of libcrypto.so.3 and libssl.so.3",
@@ -58644,7 +58645,7 @@
     {
       "name": "ownership-rules",
       "path": "forensics/tools/ownership_rules.py",
-      "sha256": "cb020564d6cbfe99d926ec6135cc7cf791ac544385e5f0b4599c2040adac0124"
+      "sha256": "e9c04d969716dc7229901fa054e2eb98e84b15601fdde308599c6e9242256aa4"
     }
   ],
   "kind": "symbol-ownership",

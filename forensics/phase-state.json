@@ -57,13 +57,40 @@
         "stratum": "Distribution / ABI shell"
       },
       {
-        "blocking": "",
+        "blocking": "29 open obligation(s) of this stratum recorded in forensics/phase3-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. The ledger reads its universe from the ownership atlas, so this is no longer a question of which prefixes its families happened to list (docs/DECISIONS.md D97)",
         "deferred": [
+          "ASYNC_WAIT_CTX_clear_fd -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)",
+          "ASYNC_WAIT_CTX_free -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)",
+          "ASYNC_WAIT_CTX_get_all_fds -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)",
+          "ASYNC_WAIT_CTX_get_callback -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)",
+          "ASYNC_WAIT_CTX_get_changed_fds -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)",
+          "ASYNC_WAIT_CTX_get_fd -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)",
+          "ASYNC_WAIT_CTX_get_status -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)",
+          "ASYNC_WAIT_CTX_new -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)",
+          "ASYNC_WAIT_CTX_set_callback -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)",
+          "ASYNC_WAIT_CTX_set_status -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)",
+          "ASYNC_WAIT_CTX_set_wait_fd -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)",
+          "ASYNC_block_pause -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)",
+          "ASYNC_cleanup_thread -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)",
+          "ASYNC_get_current_job -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)",
+          "ASYNC_get_mem_functions -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)",
+          "ASYNC_get_wait_ctx -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)",
+          "ASYNC_init_thread -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)",
+          "ASYNC_is_capable -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)",
+          "ASYNC_pause_job -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)",
+          "ASYNC_set_mem_functions -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)",
+          "ASYNC_start_job -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)",
+          "ASYNC_unblock_pause -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)",
           "ERR_add_error_mem_bio -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)",
           "ERR_print_errors -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)",
           "ERR_print_errors_cb -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)",
           "ERR_print_errors_fp -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)",
           "OBJ_create_objects -> phase 4 (reads an object description stream from a BIO; BIO is Phase 4)",
+          "OPENSSL_INIT_free -> phase 4 (constructs and fills the OPENSSL_INIT_SETTINGS handle that crypto/conf/conf_lib.c defines; CONF is Phase 4)",
+          "OPENSSL_INIT_new -> phase 4 (constructs and fills the OPENSSL_INIT_SETTINGS handle that crypto/conf/conf_lib.c defines; CONF is Phase 4)",
+          "OPENSSL_INIT_set_config_appname -> phase 4 (constructs and fills the OPENSSL_INIT_SETTINGS handle that crypto/conf/conf_lib.c defines; CONF is Phase 4)",
+          "OPENSSL_INIT_set_config_file_flags -> phase 4 (constructs and fills the OPENSSL_INIT_SETTINGS handle that crypto/conf/conf_lib.c defines; CONF is Phase 4)",
+          "OPENSSL_INIT_set_config_filename -> phase 4 (constructs and fills the OPENSSL_INIT_SETTINGS handle that crypto/conf/conf_lib.c defines; CONF is Phase 4)",
           "OPENSSL_LH_node_stats -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)",
           "OPENSSL_LH_node_stats_bio -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)",
           "OPENSSL_LH_node_usage_stats -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)",
@@ -92,6 +119,7 @@
           "src/runtime/str.rs",
           "src/runtime/dir.rs",
           "src/runtime/dir_posix.c",
+          "src/runtime/time.rs",
           "src/runtime/getenv.rs",
           "forensics/tools/phase3_courts.py",
           "forensics/tools/phase3_obligations.py",
@@ -103,17 +131,17 @@
           "courts/phase3/rt_thread_probe.c",
           "courts/phase3/rt_secure_probe.c",
           "courts/phase3/rt_lhash_probe.c",
-          "artifacts/phase3/COURTS.json",
-          "forensics/phase3-obligations.json"
+          "forensics/phase3-obligations.json",
+          "artifacts/phase3/COURTS.json"
         ],
         "name": "core-runtime",
         "phase": 3,
         "seal_sha256": null,
-        "state": "complete",
+        "state": "in-progress",
         "stratum": "Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects"
       },
       {
-        "blocking": "",
+        "blocking": "18 open obligation(s) of this stratum recorded in forensics/phase4-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -180,6 +208,7 @@
           "courts/phase4/discover_bio_lookup_hints.c",
           "courts/phase4/discover_bio_legacy_host.c",
           "courts/phase4/bio_addr_null_calls.c",
+          "courts/phase4/discover_comp.c",
           "forensics/tools/phase4_courts.py",
           "forensics/tools/phase4_obligations.py",
           "forensics/phase4-obligations.json",
@@ -188,11 +217,11 @@
         "name": "bio-conf-objects",
         "phase": 4,
         "seal_sha256": null,
-        "state": "complete",
+        "state": "in-progress",
         "stratum": "BIO + CONF + object database"
       },
       {
-        "blocking": "",
+        "blocking": "blocked by the dependency-order invariant: phase 3 is not complete",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -211,7 +240,7 @@
         "name": "bn-asn1-der-pem",
         "phase": 5,
         "seal_sha256": null,
-        "state": "complete",
+        "state": "in-progress",
         "stratum": "BN + ASN.1 + DER/PEM"
       },
       {
@@ -393,12 +422,12 @@
     ],
     "rule": "a phase may be complete only if every earlier phase is complete",
     "summary": {
-      "complete": 6,
-      "in_progress": 0,
+      "complete": 3,
+      "in_progress": 3,
       "not_started": 16
     }
   },
-  "body_hash": "5dd5098a8de89090ee3ea6c9d254f05d968d259a35b526e6de52297ae2ae8d4f",
+  "body_hash": "b028a651828e2ec3cac2d4a731f5386635626f3e3b052344fc4d00bd8ee2ad35",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",
