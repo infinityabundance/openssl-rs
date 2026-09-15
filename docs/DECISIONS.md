@@ -3226,3 +3226,90 @@ repository.
 
 No claim in the document is a parity claim. It is a plan, and the ledger still reports
 Phase 5 `in-progress` with 362 open obligations.
+
+## D76 — The ASN.1 leaf surface lands, and the court corrects three things on the way in
+
+D73 withdrew the ASN.1 modules rather than commit source no build compiled. This
+lands them, and the rule D73 set is what made the landing honest: `pub mod asn1;` and
+`courts/phase5/rt_asn1_probe.c` arrive in the same change, and the second of them
+immediately corrected the first.
+
+**What is implemented.** 109 exports: the DER header codec (`ASN1_get_object`,
+`ASN1_put_object`, `ASN1_object_size`, `ASN1_tag2bit`, `ASN1_tag2str`, `ASN1_put_eoc`,
+`ASN1_check_infinite_end` and its const form, `ASN1_parse`, `ASN1_parse_dump`),
+`ASN1_STRING` and its fifteen types, the `ASN1_INTEGER`/`ASN1_ENUMERATED` family with
+the two's-complement content codec, `ASN1_OBJECT` with its decoder and encoder, the
+four `BIGNUM` bridges, `ASN1_PCTX` and `ASN1_SCTX`, the text writers
+(`i2t_`/`i2a_ASN1_OBJECT`, `i2a_ASN1_STRING` and the two integer writers), and three
+`d2i` readers.
+
+`d2i.rs` is worth a note on its own. Each of those readers is, in the authority, one
+call to `ASN1_item_d2i` over the matching item, and the template machinery is 5.4. So
+`asn1_d2i_ex_primitive` is reproduced directly, restricted to what an
+`ASN1_ITYPE_PRIMITIVE` item with a null `templates` and no `funcs` can reach — which
+is a restriction that can be *stated*, not guessed: no selector, no optional field, no
+`ANY`, no `MSTRING`, no `prim_c2i`. Everything a malformed encoding can reach is
+still there, including the constructed-form collection into a `CRYPTO_*` buffer that
+`ASN1_STRING_set0` then takes ownership of.
+
+**The court found three defects.**
+
+1. `get_length` tested its bound with a *pre*-decrement where the authority writes
+   `if (max-- < 1)`. The authority's post-decrement tests the old value, so a length
+   that is the last readable byte is legal. Every short-form object with `omax == 2`
+   was rejected: `30 00`, `04 00` and the end-of-contents marker all failed, and the
+   `ILLEGAL_ZERO_CONTENT` raise that follows from `02 00` was wrong as a consequence.
+   A single character in the wrong place, invisible to every test that used a buffer
+   longer than the object.
+
+2. Two raise reasons had been **typed rather than read**.
+   `ASN1_R_BAD_OBJECT_HEADER` is `102` and `ASN1_R_EXPECTING_AN_OBJECT` is `116`;
+   `101` and `127` were used. The generated `err_sites` table could not have supplied
+   them, because the site is *dynamic* — the authority accumulates the reason in a
+   local before raising — so the table carries no reason for it. The court checks them
+   behaviourally instead: `o.not_oid.err` and `o.bad_last.err` compare the packed
+   reason an actual call produces. That is weaker than deriving them, and deriving
+   them from `asn1err.h` is named in the source as the next change to that file.
+
+3. `asn1_parse2` returned `1` for a *failed* parse. The authority reaches `ret = 1`
+   only when its `while` loop ends by itself; every failure leaves through `goto end`
+   carrying whatever `ret` already held, which is `0` unless an end-of-contents was
+   seen. This crate set `ret = 1` at the end of each *iteration*, so a failure after
+   one successful object answered `1`. The recursive caller in the constructed branch
+   then believed the child had parsed its bytes, advanced past them, and parsed the
+   same input again — which is why `ASN1_parse_dump` printed its diagnostic twice for
+   a `SEQUENCE` whose last child overran the declared length. The loop is now a
+   labelled loop whose normal exit carries `1`, whose end-of-contents exit carries
+   `2`, and whose 22 failure exits carry `0`.
+
+That third one had a **doc comment asserting the opposite** — "a failure later answers
+1 — which is what the authority does" — and the comment is why the bug existed. It was
+taken from a summary of the authority rather than from the authority, and the summary
+was wrong. The lesson is the one this project keeps re-learning in both directions:
+the probe is the suspect before the implementation, and a note about the authority is
+the suspect before the authority.
+
+**A fourth finding was about the court, not the crate.** With stdout redirected, a
+fault loses the tail of the buffer, so the last visible line is a lie and a crashing
+candidate produces a *nondeterministic* transcript. That is how the probe's own
+use-after-free — freeing a `BIO` and then writing to it — presented as two "missing"
+observations rather than as a crash. `RT-ASN1` now calls
+`setvbuf(stdout, NULL, _IONBF, 0)`, and every court that can fault should.
+
+**A fifth was in the prototype court.** Its *class* plane did not narrow a qualified
+path to a scalar, so `core::ffi::c_ulong` fell through to `unclassified` and
+`ASN1_tag2bit` was reported as unclassifiable. The type plane had already been
+narrowed for exactly that; now both are.
+
+**Where the stratum stands.** `implemented[libcrypto]` is `625 -> 734` and
+`open_obligations[phase5]` is `362 -> 226`, the two moving together as they must. The
+`226` is `199` ASN.1 and `27` PEM: D73's hand-offs are now in `HANDED_ON` rather than
+only in prose, which moved `SMIME_*` to Phase 12, the PKCS#8 and `b2i_*`/`i2b_*`
+readers to Phase 10 and the `EVP_PKEY`-shaped `PEM_read_bio_PrivateKey` family to
+Phase 7. `RT-ASN1` is 644 observations with no residuals; 36 courts and 8,775
+observations in total; phases 0–4 are complete and phase 5 is in progress.
+
+**What is not done.** The remaining 226. The template machinery (`ASN1_item_*`, the
+42 `*_it` accessors), the rest of the codec wrappers, `ASN1_BIT_STRING`, `ASN1_NULL`,
+the time types, the string masks and printing, `ASN1_TYPE`, the NDEF BIO bridge and
+all 48 PEM exports are unimplemented. No claim here covers them.

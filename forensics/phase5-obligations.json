@@ -4,9 +4,9 @@
     "complete": false,
     "counts": {
       "atlas_owned": 561,
-      "deferred_to_later_phase": 33,
+      "deferred_to_later_phase": 60,
       "implemented": 279,
-      "open_in_this_stratum": 253,
+      "open_in_this_stratum": 226,
       "owned": 565
     },
     "deferred": [
@@ -207,11 +207,175 @@
         "owning_phase": 9,
         "reason": "draws from the RAND subsystem; RAND/DRBG is Phase 9",
         "symbol": "BN_rand_range_ex"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "reads or writes an EVP_PKEY, which is Phase 7",
+        "symbol": "PEM_read_bio_Parameters"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "reads or writes an EVP_PKEY, which is Phase 7",
+        "symbol": "PEM_read_bio_Parameters_ex"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "reads or writes an EVP_PKEY, which is Phase 7",
+        "symbol": "PEM_write_PKCS8PrivateKey_nid"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "reads or writes an EVP_PKEY, which is Phase 7",
+        "symbol": "PEM_write_bio_PKCS8PrivateKey_nid"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "reads or writes an EVP_PKEY, which is Phase 7",
+        "symbol": "PEM_write_bio_PrivateKey_traditional"
+      },
+      {
+        "declaring_header": "asn1.h",
+        "owning_phase": 12,
+        "reason": "operates over CMS and PKCS#7, which is Phase 12; asm_mime.c",
+        "symbol": "SMIME_crlf_copy"
+      },
+      {
+        "declaring_header": "asn1.h",
+        "owning_phase": 12,
+        "reason": "operates over CMS and PKCS#7, which is Phase 12; asm_mime.c",
+        "symbol": "SMIME_read_ASN1"
+      },
+      {
+        "declaring_header": "asn1.h",
+        "owning_phase": 12,
+        "reason": "operates over CMS and PKCS#7, which is Phase 12; asm_mime.c",
+        "symbol": "SMIME_read_ASN1_ex"
+      },
+      {
+        "declaring_header": "asn1.h",
+        "owning_phase": 12,
+        "reason": "operates over CMS and PKCS#7, which is Phase 12; asm_mime.c",
+        "symbol": "SMIME_text"
+      },
+      {
+        "declaring_header": "asn1.h",
+        "owning_phase": 12,
+        "reason": "operates over CMS and PKCS#7, which is Phase 12; asm_mime.c",
+        "symbol": "SMIME_write_ASN1"
+      },
+      {
+        "declaring_header": "asn1.h",
+        "owning_phase": 12,
+        "reason": "operates over CMS and PKCS#7, which is Phase 12; asm_mime.c",
+        "symbol": "SMIME_write_ASN1_ex"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 10,
+        "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+        "symbol": "b2i_PVK_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 10,
+        "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+        "symbol": "b2i_PVK_bio_ex"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 10,
+        "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+        "symbol": "b2i_PrivateKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 10,
+        "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+        "symbol": "b2i_PrivateKey_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 10,
+        "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+        "symbol": "b2i_PublicKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 10,
+        "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+        "symbol": "b2i_PublicKey_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 10,
+        "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+        "symbol": "d2i_PKCS8PrivateKey_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 10,
+        "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+        "symbol": "d2i_PKCS8PrivateKey_fp"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 10,
+        "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+        "symbol": "i2b_PVK_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 10,
+        "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+        "symbol": "i2b_PVK_bio_ex"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 10,
+        "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+        "symbol": "i2b_PrivateKey_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 10,
+        "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+        "symbol": "i2b_PublicKey_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 10,
+        "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+        "symbol": "i2d_PKCS8PrivateKey_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 10,
+        "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+        "symbol": "i2d_PKCS8PrivateKey_fp"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 10,
+        "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+        "symbol": "i2d_PKCS8PrivateKey_nid_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 10,
+        "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+        "symbol": "i2d_PKCS8PrivateKey_nid_fp"
       }
     ],
     "deferred_by_phase": {
-      "7": 2,
-      "9": 31
+      "7": 7,
+      "9": 31,
+      "10": 16,
+      "12": 6
     },
     "handoffs_discharged": {
       "4": [
@@ -1355,27 +1519,12 @@
       {
         "declaring_header": "pem.h",
         "module": "src/pem/",
-        "symbol": "PEM_read_bio_Parameters"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_read_bio_Parameters_ex"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
         "symbol": "PEM_read_bio_ex"
       },
       {
         "declaring_header": "pem.h",
         "module": "src/pem/",
         "symbol": "PEM_write"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_write_PKCS8PrivateKey_nid"
       },
       {
         "declaring_header": "pem.h",
@@ -1395,52 +1544,12 @@
       {
         "declaring_header": "pem.h",
         "module": "src/pem/",
-        "symbol": "PEM_write_bio_PKCS8PrivateKey_nid"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
         "symbol": "PEM_write_bio_Parameters"
       },
       {
         "declaring_header": "pem.h",
         "module": "src/pem/",
-        "symbol": "PEM_write_bio_PrivateKey_traditional"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
         "symbol": "PEM_write_bio_X509_REQ_NEW"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "SMIME_crlf_copy"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "SMIME_read_ASN1"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "SMIME_read_ASN1_ex"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "SMIME_text"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "SMIME_write_ASN1"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "SMIME_write_ASN1_ex"
       },
       {
         "declaring_header": "asn1t.h",
@@ -1511,36 +1620,6 @@
         "declaring_header": "(no installed header)",
         "module": "src/asn1/",
         "symbol": "asn1_d2i_read_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "b2i_PVK_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "b2i_PVK_bio_ex"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "b2i_PrivateKey"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "b2i_PrivateKey_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "b2i_PublicKey"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "b2i_PublicKey_bio"
       },
       {
         "declaring_header": "asn1.h",
@@ -1641,36 +1720,6 @@
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
         "symbol": "d2i_DISPLAYTEXT"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "d2i_PKCS8PrivateKey_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "d2i_PKCS8PrivateKey_fp"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "i2b_PVK_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "i2b_PVK_bio_ex"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "i2b_PrivateKey_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "i2b_PublicKey_bio"
       },
       {
         "declaring_header": "asn1.h",
@@ -1786,32 +1835,12 @@
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
         "symbol": "i2d_DISPLAYTEXT"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "i2d_PKCS8PrivateKey_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "i2d_PKCS8PrivateKey_fp"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "i2d_PKCS8PrivateKey_nid_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "i2d_PKCS8PrivateKey_nid_fp"
       }
     ],
     "owned_by_module": {
-      "src/asn1/": 314,
+      "src/asn1/": 308,
       "src/bn/": 170,
-      "src/pem/": 48
+      "src/pem/": 27
     },
     "rule": "the stratum's scope is the projection of forensics/atlas/symbol-ownership.json for phase 5: a symbol belongs to the stratum that owns the header declaring it, `pem.h`'s typed names resolve through the type's header, and the exports no installed header declares are dispositioned in ownership_rules.ABI_ONLY_OWNER"
   },

@@ -200,6 +200,38 @@ HANDED_ON.update({
     for sym in ("ASN1_item_sign_ex", "ASN1_item_verify_ex")
 })
 
+# D73's hand-offs, which are dispositions by *behaviour* rather than by declaring
+# header. `asn1.h` and `pem.h` declare all of these, which is the rule the ownership
+# atlas applies, so the atlas gives them to this stratum; what they need is a
+# subsystem the stratum above owns.
+HANDED_ON.update({
+    sym: (12, "operates over CMS and PKCS#7, which is Phase 12; asm_mime.c")
+    for sym in (
+        "SMIME_crlf_copy", "SMIME_read_ASN1", "SMIME_read_ASN1_ex", "SMIME_text",
+        "SMIME_write_ASN1", "SMIME_write_ASN1_ex",
+    )
+})
+HANDED_ON.update({
+    sym: (10, "reads and writes the PKCS#8 container, which is Phase 10")
+    for sym in (
+        "b2i_PrivateKey", "b2i_PrivateKey_bio", "b2i_PublicKey", "b2i_PublicKey_bio",
+        "i2b_PrivateKey_bio", "i2b_PublicKey_bio", "b2i_PVK_bio", "b2i_PVK_bio_ex",
+        "i2b_PVK_bio", "i2b_PVK_bio_ex",
+        "d2i_PKCS8PrivateKey_bio", "d2i_PKCS8PrivateKey_fp",
+        "i2d_PKCS8PrivateKey_bio", "i2d_PKCS8PrivateKey_fp",
+        "i2d_PKCS8PrivateKey_nid_bio", "i2d_PKCS8PrivateKey_nid_fp",
+    )
+})
+HANDED_ON.update({
+    sym: (7, "reads or writes an EVP_PKEY, which is Phase 7")
+    for sym in (
+        "PEM_read_bio_PrivateKey", "PEM_read_bio_PrivateKey_ex",
+        "PEM_read_bio_Parameters", "PEM_read_bio_Parameters_ex",
+        "PEM_write_bio_PrivateKey_traditional",
+        "PEM_write_bio_PKCS8PrivateKey_nid", "PEM_write_PKCS8PrivateKey_nid",
+    )
+})
+
 def load(atlas: Path, name: str) -> dict:
     return json.loads((atlas / name).read_text(encoding="utf-8"))["body"]
 

@@ -10,6 +10,8 @@ in Git. See `docs/DECISIONS.md` D17.
 ## `gemel log`
 
 ```
+C31  The ASN.1 leaf surface is implemented, wired in and courted: 109 exports, RT-ASN1 at 644 observations with no residuals, phase 5 open obligations 362 -> 226 after D73 hand-offs
+    state state.cae66a95a90b21ac673e9b4d9041094b4d051acd5af8496a783b5f067becb2cc -> state.ffc65cf51aaa8caf989a94c1cfa21fb53ab84cd2fdea8b7259d5891c31ddbebf
 C30  The prototype court compares the canonical type of every implemented export return and parameter, not only return class and arity; twelve wrong declarations found and fixed; the RT-BN BN_GENCB section added and a thirteenth behavioural defect found
     state state.f48f703c3fc7896f18ac74e6848843bd301f48b25869f6d07598966c16e0b4b9 -> state.cae66a95a90b21ac673e9b4d9041094b4d051acd5af8496a783b5f067becb2cc
 C29  GF(2^m) closes BN. src/bn/gf2m.rs implements all fifteen BN_GF2m_* exports — add, poly2arr, arr2poly, mod, mod_arr, mod_mul, mod_mul_arr, mod_sqr, mod_sqr_arr, mod_exp, mod_exp_arr, mod_inv, mod_inv_arr, mod_div, mod_div_arr — as field arithmetic rather than as the authority carry chains: carry-less multiply, shift-and-xor reduction, polynomial long division, and extended Euclid over GF(2)[x] that reports a non-unit gcd as no-inverse rather than as a wrong answer. RT-BN goes 577 -> 633 observations over 0 residuals, and unlike the eleven earlier passes in this stratum both findings were the implementation and not the probe: poly_rem compared the value bit length against the modulus rather than against the field degree, so 0xa5 * 0x57 in the AES field, exactly one bit longer than the field, came back unreduced but plausible; and BN_GF2m_mod_inv raised nothing on an invalid modulus, when the authority reaches that case through BN_GF2m_mod_mul and a caller therefore sees that function INVALID_LENGTH coordinate. Both are recorded with the coordinate, and the probe now compares the error queue after those failures and not only the return value. The non-_arr entry points convert through BN_GF2m_poly2arr and call the _arr ones, so the two spellings are not independent but they are separately observable, and the court drives both, cross-checks them against each other, and checks the field identities a * a^-1 == 1 and (a/b) * b == a. Two divergences are recorded rather than reproduced: D-GF2M-1, the authority blinds BN_GF2m_mod_inv with BN_priv_rand_ex and this does not because BN_priv_rand_ex is Phase 9 and a fixed blinding value is not blinding, so the returned value is identical and the TIMING claim is removed; and D-GF2M-2, the arithmetic is not the authority unrolled carry chains, so no timing claim is made in either direction. Obligation OBL-GF2M-INV-BLINDING is owned by Phase 9 and closes by adding the blinding when RAND exists. Every one of the 201 exports bn.h declares is now implemented or handed to a named later stratum, so Phase 5 open_in_this_stratum falls from 333 to 318: 280 ASN.1 and 38 PEM, which is the whole of what remains. FRF: run 33d75fee81d80354eda5b7f051aefa6dea3eb9084dc6f1fc00ac1ec0a4948f9b, receipt receipt-run-openssl-rs-rt-bn-33d75fee81d80354eda5b7f051aefa6dea3eb9084dc6f1fc00ac1ec0a4948f9b-bbb16ce6b43b3246f0cc7983dc7f9c5b9c3d46ed212defbb6234bce8f286d2b6, challenges 7894d4ef788712701fb9ce57e5573d93b065b8f0de3ee51e33e413e8576f2702 (stdout-first-line on the stdout axis) and 3e8c880cb9f235f254a17298783daca09ba50dee1b005639a62094e6c91801de (exit-class on the exit axis), claim 564889652b055cbffa62df560f376117dffda456ae674120b166a4c5a02a11c5 over the 24 runtime receipts. The seal FRF section was corrected in this change: it named a capture identity from a superseded store generation, and the identity it names now is the clean run above plus the two challenged runs, which are the three capture directories on disk.
@@ -52,6 +54,7 @@ C1  Phase 0 constitution and Phase 1 archaeology atlas, evidence-bound
 * `K12` — `checkpoint.3d4d0ddafc52a6635d9cf963b6fd27888133ca39ccc83243082477e7ddfaec45`
 * `K13` — `checkpoint.f8f1061c5592c5dc801b31439f949ed21470126cd32b0f320fea3bf561acba55`
 * `K14` — `checkpoint.c3c9dd019cd987d9753cda5e521b8993decd99c01b97fcebeef888727f56512e`
+* `K15` — `checkpoint.be15113912c9856c707bdd4c9317edc7c750663fd96e76e1a5b5e2b9a4420c3d`
 * `K2` — `checkpoint.67a75f9a16d008e6e5aec0984c93dfc7549bd7a33708b909fbf6424b04fcb4a6`
 * `K3` — `checkpoint.b1516eb6364ad075785911cb204a75a6e1b83b08c1a7ca39a2de6e3983dc9aed`
 * `K4` — `checkpoint.1bde75b37e1ca3972037c29cbd3ba5291079544436db9176a82f097a6bf832fe`
@@ -61,7 +64,7 @@ C1  Phase 0 constitution and Phase 1 archaeology atlas, evidence-bound
 * `K8` — `checkpoint.7eb3dba97cbf20f2b34d14cce7e93bc2171ebd0d7ee66d1f7508cc6e199567de`
 * `K9` — `checkpoint.60105b4c8189d2668c48e173fe2c92c0ddf76160caae24efecc707bd576f506f`
 
-current: `checkpoint.c3c9dd019cd987d9753cda5e521b8993decd99c01b97fcebeef888727f56512e`
+current: `checkpoint.be15113912c9856c707bdd4c9317edc7c750663fd96e76e1a5b5e2b9a4420c3d`
 
 ## Note: derived names are not identities
 
@@ -81,6 +84,18 @@ changed with it; the Git commit is the authoritative record of the diff.
 ## Open residuals at this boundary
 
 ```
+open [medium] RT-ASN1 is evidence about the symbols it calls and no others
+    class: other
+    persistence: 0 descendant change(s)
+open [medium] ASN1_parse_dump cannot be compared against a crash, so no probe exercises the paths where the authority dereferences a null pointer
+    class: other
+    persistence: 0 descendant change(s)
+open [low] two dynamic raise reasons in d2i_ASN1_OBJECT are read from asn1err.h and checked behaviourally by RT-ASN1 rather than derived from a generator
+    class: verification_gap
+    persistence: 0 descendant change(s)
+open [medium] the ASN.1 surface is 199 exports short of closed; the template machinery, the remaining codec wrappers, the time types, the string masks and printing, ASN1_TYPE and PEM are unimplemented
+    class: verification_gap
+    persistence: 0 descendant change(s)
 open [low] BN_GENCB_get_arg(NULL) is answered NULL where the authority dereferences the pointer
     class: semantic_divergence
     persistence: 0 descendant change(s)
