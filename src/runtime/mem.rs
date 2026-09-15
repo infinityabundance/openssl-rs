@@ -98,7 +98,7 @@ extern "C" {
 }
 
 /// `ERR_LIB_CRYPTO`.
-const ERR_LIB_CRYPTO: c_int = 15;
+pub(crate) const ERR_LIB_CRYPTO: c_int = 15;
 /// `CRYPTO_R_INTEGER_OVERFLOW` — `include/openssl/cryptoerr.h`, value 127,
 /// measured by compiling against the authority's own headers rather than
 /// transcribed.

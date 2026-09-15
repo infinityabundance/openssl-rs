@@ -80,9 +80,9 @@ that name is defined, nothing more.
 
 | library | exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 974 | 4922 |
+| libcrypto | 5896 | 1055 | 4841 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **974** | **5525** |
+| **total** | **6499** | **1055** | **5444** |
 
 ### Phase 3 obligation ledger
 
@@ -160,9 +160,9 @@ handed it, that is neither implemented, deferred to a named later
 phase, nor recorded as open in the stratum is an error, not a warning.
 
 * authority exports in the Phase 6 working set: 161
-* implemented: 0
+* implemented: 81
 * deferred to a later phase with a stated reason: 0
-* open in this stratum: 161
+* open in this stratum: 80
 
 Hand-offs from phase 3 discharged by this stratum: `OPENSSL_atexit`, `OPENSSL_thread_stop`, `OPENSSL_thread_stop_ex`, `OSSL_get_max_threads`, `OSSL_set_max_threads`
 

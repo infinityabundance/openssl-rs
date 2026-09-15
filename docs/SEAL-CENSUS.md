@@ -17,9 +17,9 @@ name is defined; `open` means the stratum owns it and has not built it;
 
 | library | authority exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 974 | 4922 |
+| libcrypto | 5896 | 1055 | 4841 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **974** | **5525** |
+| **total** | **6499** | **1055** | **5444** |
 
 ## Ownership atlas, by stratum
 
@@ -31,7 +31,7 @@ declared owner; this is that assignment.
 | 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `complete` | 294 | 294 | 251 | 43 | 0 |
 | 4 | BIO + CONF + object database | `complete` | 256 | 272 | 249 | 23 | 0 |
 | 5 | BN + ASN.1 + DER/PEM | `complete` | 561 | 565 | 474 | 91 | 0 |
-| 6 | OSSL_LIB_CTX + provider core | `not-started` | 137 | 161 | 0 | 0 | 161 |
+| 6 | OSSL_LIB_CTX + provider core | `not-started` | 137 | 161 | 81 | 0 | 80 |
 | 7 | EVP framework | `not-started` | 924 | — | — | — | — |
 | 8 | Native cryptographic primitives | `not-started` | 759 | — | — | — | — |
 | 9 | RAND / DRBG + entropy | `not-started` | 25 | — | — | — | — |
@@ -181,9 +181,9 @@ Courts: `all pass`, 9 court(s), 0 authority observation(s).
 * ledger: `forensics/phase6-obligations.json`
 * atlas-owned: 137
 * owned working set: 161
-* implemented: 0
+* implemented: 81
 * deferred to a later stratum with a stated reason: 0
-* **open in this stratum: 161**
+* **open in this stratum: 80**
 
 Hand-offs received and discharged:
 

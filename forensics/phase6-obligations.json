@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 137,
       "deferred_to_later_phase": 0,
-      "implemented": 0,
-      "open_in_this_stratum": 161,
+      "implemented": 81,
+      "open_in_this_stratum": 80,
       "owned": 161,
       "received_by_handoff": 24
     },
@@ -44,7 +44,89 @@
         "ASN1_add_oid_module"
       ]
     },
-    "implemented": [],
+    "implemented": [
+      "OSSL_PARAM_BLD_free",
+      "OSSL_PARAM_BLD_new",
+      "OSSL_PARAM_BLD_push_BN",
+      "OSSL_PARAM_BLD_push_BN_pad",
+      "OSSL_PARAM_BLD_push_double",
+      "OSSL_PARAM_BLD_push_int",
+      "OSSL_PARAM_BLD_push_int32",
+      "OSSL_PARAM_BLD_push_int64",
+      "OSSL_PARAM_BLD_push_long",
+      "OSSL_PARAM_BLD_push_octet_ptr",
+      "OSSL_PARAM_BLD_push_octet_string",
+      "OSSL_PARAM_BLD_push_size_t",
+      "OSSL_PARAM_BLD_push_time_t",
+      "OSSL_PARAM_BLD_push_uint",
+      "OSSL_PARAM_BLD_push_uint32",
+      "OSSL_PARAM_BLD_push_uint64",
+      "OSSL_PARAM_BLD_push_ulong",
+      "OSSL_PARAM_BLD_push_utf8_ptr",
+      "OSSL_PARAM_BLD_push_utf8_string",
+      "OSSL_PARAM_BLD_to_param",
+      "OSSL_PARAM_allocate_from_text",
+      "OSSL_PARAM_construct_BN",
+      "OSSL_PARAM_construct_double",
+      "OSSL_PARAM_construct_end",
+      "OSSL_PARAM_construct_int",
+      "OSSL_PARAM_construct_int32",
+      "OSSL_PARAM_construct_int64",
+      "OSSL_PARAM_construct_long",
+      "OSSL_PARAM_construct_octet_ptr",
+      "OSSL_PARAM_construct_octet_string",
+      "OSSL_PARAM_construct_size_t",
+      "OSSL_PARAM_construct_time_t",
+      "OSSL_PARAM_construct_uint",
+      "OSSL_PARAM_construct_uint32",
+      "OSSL_PARAM_construct_uint64",
+      "OSSL_PARAM_construct_ulong",
+      "OSSL_PARAM_construct_utf8_ptr",
+      "OSSL_PARAM_construct_utf8_string",
+      "OSSL_PARAM_dup",
+      "OSSL_PARAM_free",
+      "OSSL_PARAM_get_BN",
+      "OSSL_PARAM_get_double",
+      "OSSL_PARAM_get_int",
+      "OSSL_PARAM_get_int32",
+      "OSSL_PARAM_get_int64",
+      "OSSL_PARAM_get_long",
+      "OSSL_PARAM_get_octet_ptr",
+      "OSSL_PARAM_get_octet_string",
+      "OSSL_PARAM_get_octet_string_ptr",
+      "OSSL_PARAM_get_size_t",
+      "OSSL_PARAM_get_time_t",
+      "OSSL_PARAM_get_uint",
+      "OSSL_PARAM_get_uint32",
+      "OSSL_PARAM_get_uint64",
+      "OSSL_PARAM_get_ulong",
+      "OSSL_PARAM_get_utf8_ptr",
+      "OSSL_PARAM_get_utf8_string",
+      "OSSL_PARAM_get_utf8_string_ptr",
+      "OSSL_PARAM_locate",
+      "OSSL_PARAM_locate_const",
+      "OSSL_PARAM_merge",
+      "OSSL_PARAM_modified",
+      "OSSL_PARAM_print_to_bio",
+      "OSSL_PARAM_set_BN",
+      "OSSL_PARAM_set_all_unmodified",
+      "OSSL_PARAM_set_double",
+      "OSSL_PARAM_set_int",
+      "OSSL_PARAM_set_int32",
+      "OSSL_PARAM_set_int64",
+      "OSSL_PARAM_set_long",
+      "OSSL_PARAM_set_octet_ptr",
+      "OSSL_PARAM_set_octet_string",
+      "OSSL_PARAM_set_octet_string_or_ptr",
+      "OSSL_PARAM_set_size_t",
+      "OSSL_PARAM_set_time_t",
+      "OSSL_PARAM_set_uint",
+      "OSSL_PARAM_set_uint32",
+      "OSSL_PARAM_set_uint64",
+      "OSSL_PARAM_set_ulong",
+      "OSSL_PARAM_set_utf8_ptr",
+      "OSSL_PARAM_set_utf8_string"
+    ],
     "module_prefixes": [
       {
         "module": "src/context/mod.rs",
@@ -372,411 +454,6 @@
         "symbol": "OSSL_LIB_CTX_set_conf_diagnostics"
       },
       {
-        "declaring_header": "param_build.h",
-        "module": "src/params/build.rs",
-        "symbol": "OSSL_PARAM_BLD_free"
-      },
-      {
-        "declaring_header": "param_build.h",
-        "module": "src/params/build.rs",
-        "symbol": "OSSL_PARAM_BLD_new"
-      },
-      {
-        "declaring_header": "param_build.h",
-        "module": "src/params/build.rs",
-        "symbol": "OSSL_PARAM_BLD_push_BN"
-      },
-      {
-        "declaring_header": "param_build.h",
-        "module": "src/params/build.rs",
-        "symbol": "OSSL_PARAM_BLD_push_BN_pad"
-      },
-      {
-        "declaring_header": "param_build.h",
-        "module": "src/params/build.rs",
-        "symbol": "OSSL_PARAM_BLD_push_double"
-      },
-      {
-        "declaring_header": "param_build.h",
-        "module": "src/params/build.rs",
-        "symbol": "OSSL_PARAM_BLD_push_int"
-      },
-      {
-        "declaring_header": "param_build.h",
-        "module": "src/params/build.rs",
-        "symbol": "OSSL_PARAM_BLD_push_int32"
-      },
-      {
-        "declaring_header": "param_build.h",
-        "module": "src/params/build.rs",
-        "symbol": "OSSL_PARAM_BLD_push_int64"
-      },
-      {
-        "declaring_header": "param_build.h",
-        "module": "src/params/build.rs",
-        "symbol": "OSSL_PARAM_BLD_push_long"
-      },
-      {
-        "declaring_header": "param_build.h",
-        "module": "src/params/build.rs",
-        "symbol": "OSSL_PARAM_BLD_push_octet_ptr"
-      },
-      {
-        "declaring_header": "param_build.h",
-        "module": "src/params/build.rs",
-        "symbol": "OSSL_PARAM_BLD_push_octet_string"
-      },
-      {
-        "declaring_header": "param_build.h",
-        "module": "src/params/build.rs",
-        "symbol": "OSSL_PARAM_BLD_push_size_t"
-      },
-      {
-        "declaring_header": "param_build.h",
-        "module": "src/params/build.rs",
-        "symbol": "OSSL_PARAM_BLD_push_time_t"
-      },
-      {
-        "declaring_header": "param_build.h",
-        "module": "src/params/build.rs",
-        "symbol": "OSSL_PARAM_BLD_push_uint"
-      },
-      {
-        "declaring_header": "param_build.h",
-        "module": "src/params/build.rs",
-        "symbol": "OSSL_PARAM_BLD_push_uint32"
-      },
-      {
-        "declaring_header": "param_build.h",
-        "module": "src/params/build.rs",
-        "symbol": "OSSL_PARAM_BLD_push_uint64"
-      },
-      {
-        "declaring_header": "param_build.h",
-        "module": "src/params/build.rs",
-        "symbol": "OSSL_PARAM_BLD_push_ulong"
-      },
-      {
-        "declaring_header": "param_build.h",
-        "module": "src/params/build.rs",
-        "symbol": "OSSL_PARAM_BLD_push_utf8_ptr"
-      },
-      {
-        "declaring_header": "param_build.h",
-        "module": "src/params/build.rs",
-        "symbol": "OSSL_PARAM_BLD_push_utf8_string"
-      },
-      {
-        "declaring_header": "param_build.h",
-        "module": "src/params/build.rs",
-        "symbol": "OSSL_PARAM_BLD_to_param"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_allocate_from_text"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_construct_BN"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_construct_double"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_construct_end"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_construct_int"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_construct_int32"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_construct_int64"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_construct_long"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_construct_octet_ptr"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_construct_octet_string"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_construct_size_t"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_construct_time_t"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_construct_uint"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_construct_uint32"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_construct_uint64"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_construct_ulong"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_construct_utf8_ptr"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_construct_utf8_string"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_dup"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_free"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_get_BN"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_get_double"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_get_int"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_get_int32"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_get_int64"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_get_long"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_get_octet_ptr"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_get_octet_string"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_get_octet_string_ptr"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_get_size_t"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_get_time_t"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_get_uint"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_get_uint32"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_get_uint64"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_get_ulong"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_get_utf8_ptr"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_get_utf8_string"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_get_utf8_string_ptr"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_locate"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_locate_const"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_merge"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_modified"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_print_to_bio"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_set_BN"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_set_all_unmodified"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_set_double"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_set_int"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_set_int32"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_set_int64"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_set_long"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_set_octet_ptr"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_set_octet_string"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_set_octet_string_or_ptr"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_set_size_t"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_set_time_t"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_set_uint"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_set_uint32"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_set_uint64"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_set_ulong"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_set_utf8_ptr"
-      },
-      {
-        "declaring_header": "params.h",
-        "module": "src/params/mod.rs",
-        "symbol": "OSSL_PARAM_set_utf8_string"
-      },
-      {
         "declaring_header": "provider.h",
         "module": "src/provider/mod.rs",
         "symbol": "OSSL_PROVIDER_add_builtin"
@@ -967,7 +644,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "1f899ddf34812ef7e41604fa43bedf8ff2f82c17bedf958f8e248d2111c8df6c"
+      "sha256": "197aa1edd6687715cc74a1d0194c758ac7ff086f1c32a1236de6a6ff0b9b3b02"
     }
   ],
   "kind": "phase6-obligations",
