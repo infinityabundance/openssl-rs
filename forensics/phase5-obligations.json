@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 561,
       "deferred_to_later_phase": 62,
-      "implemented": 388,
-      "open_in_this_stratum": 115,
+      "implemented": 394,
+      "open_in_this_stratum": 109,
       "owned": 565
     },
     "deferred": [
@@ -514,7 +514,9 @@
       "ASN1_SCTX_get_template",
       "ASN1_SCTX_new",
       "ASN1_SCTX_set_app_data",
+      "ASN1_SEQUENCE_ANY_it",
       "ASN1_SEQUENCE_it",
+      "ASN1_SET_ANY_it",
       "ASN1_STRING_clear_free",
       "ASN1_STRING_cmp",
       "ASN1_STRING_copy",
@@ -782,6 +784,8 @@
       "d2i_ASN1_OCTET_STRING",
       "d2i_ASN1_PRINTABLE",
       "d2i_ASN1_PRINTABLESTRING",
+      "d2i_ASN1_SEQUENCE_ANY",
+      "d2i_ASN1_SET_ANY",
       "d2i_ASN1_T61STRING",
       "d2i_ASN1_TIME",
       "d2i_ASN1_TYPE",
@@ -808,6 +812,8 @@
       "i2d_ASN1_OCTET_STRING",
       "i2d_ASN1_PRINTABLE",
       "i2d_ASN1_PRINTABLESTRING",
+      "i2d_ASN1_SEQUENCE_ANY",
+      "i2d_ASN1_SET_ANY",
       "i2d_ASN1_T61STRING",
       "i2d_ASN1_TIME",
       "i2d_ASN1_TYPE",
@@ -861,16 +867,6 @@
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
         "symbol": "ASN1_PRINTABLE_type"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_SEQUENCE_ANY_it"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_SET_ANY_it"
       },
       {
         "declaring_header": "asn1.h",
@@ -1380,26 +1376,6 @@
       {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
-        "symbol": "d2i_ASN1_SEQUENCE_ANY"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "d2i_ASN1_SET_ANY"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "i2d_ASN1_SEQUENCE_ANY"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "i2d_ASN1_SET_ANY"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
         "symbol": "i2d_ASN1_bio_stream"
       }
     ],
@@ -1435,7 +1411,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "d56e699bd95f65c70179679c42cb774dc6cd6d1efaada77cdf57b1f11d579388"
+      "sha256": "0959aaa29244ed2a3a76f60563be91d80fda9ff3fa42c38633714e4d90a49c3e"
     }
   ],
   "kind": "phase5-obligations",

@@ -192,7 +192,7 @@
         "stratum": "BIO + CONF + object database"
       },
       {
-        "blocking": "115 open obligation(s) of this stratum recorded in forensics/phase5-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase",
+        "blocking": "109 open obligation(s) of this stratum recorded in forensics/phase5-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -398,7 +398,7 @@
       "not_started": 16
     }
   },
-  "body_hash": "14d005aa7ea0cfa51f0ea7beb9a11cd4165c01c8da4ea95c39670a76195bdc49",
+  "body_hash": "aaea74d7b911a6ed14d2389798e19e236f8fff6368205726b2d1c64bbc915b37",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

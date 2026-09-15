@@ -254,6 +254,14 @@ pub struct Asn1Item {
 // value is the caller's to synchronise, exactly as it is in C.
 unsafe impl Sync for Asn1Item {}
 
+// SAFETY: as `Asn1Item` above. An `Asn1Template` the crate builds is a `static` compiled
+// from constants, its fields are scalars and raw pointers, and no interior mutability is
+// reachable through a shared reference. It is declared separately because the two are
+// distinct types rather than one containing the other: an item points at a *function*
+// that answers a template, so the template has to be shareable on its own for the item's
+// `static` initialiser to be valid.
+unsafe impl Sync for Asn1Template {}
+
 /// `ASN1_AUX` — the optional behaviour block an `ASN1_ITEM` may carry.
 #[repr(C)]
 pub struct Asn1Aux {
