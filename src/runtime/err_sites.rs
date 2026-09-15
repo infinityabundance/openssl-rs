@@ -7750,6 +7750,236 @@ pub(crate) const CORE_NAMEMAP_378: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ossl_property_string` at `crypto/property/property_string.c:158` (ERR_R_UNABLE_TO_GET_READ_LOCK).
+pub(crate) const PROPERTY_STRING_158: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/property/property_string.c",
+    line: 158,
+    func: c"ossl_property_string",
+    lib: 15,
+    reason: 786703,
+    dynamic_reason: false,
+};
+
+/// `ossl_property_string` at `crypto/property/property_string.c:165` (ERR_R_UNABLE_TO_GET_WRITE_LOCK).
+pub(crate) const PROPERTY_STRING_165: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/property/property_string.c",
+    line: 165,
+    func: c"ossl_property_string",
+    lib: 15,
+    reason: 786704,
+    dynamic_reason: false,
+};
+
+/// `ossl_property_str` at `crypto/property/property_string.c:228` (ERR_R_UNABLE_TO_GET_READ_LOCK).
+pub(crate) const PROPERTY_STRING_228: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/property/property_string.c",
+    line: 228,
+    func: c"ossl_property_str",
+    lib: 15,
+    reason: 786703,
+    dynamic_reason: false,
+};
+
+/// `parse_name` at `crypto/property/property_parse.c:67` (PROP_R_NOT_AN_IDENTIFIER).
+pub(crate) const PROPERTY_PARSE_67: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/property/property_parse.c",
+    line: 67,
+    func: c"parse_name",
+    lib: 55,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `parse_name` at `crypto/property/property_parse.c:88` (PROP_R_NAME_TOO_LONG).
+pub(crate) const PROPERTY_PARSE_88: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/property/property_parse.c",
+    line: 88,
+    func: c"parse_name",
+    lib: 55,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `parse_number` at `crypto/property/property_parse.c:103` (PROP_R_NOT_A_DECIMAL_DIGIT).
+pub(crate) const PROPERTY_PARSE_103: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/property/property_parse.c",
+    line: 103,
+    func: c"parse_number",
+    lib: 55,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `parse_number` at `crypto/property/property_parse.c:109` (PROP_R_PARSE_FAILED).
+pub(crate) const PROPERTY_PARSE_109: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/property/property_parse.c",
+    line: 109,
+    func: c"parse_number",
+    lib: 55,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `parse_number` at `crypto/property/property_parse.c:116` (PROP_R_NOT_A_DECIMAL_DIGIT).
+pub(crate) const PROPERTY_PARSE_116: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/property/property_parse.c",
+    line: 116,
+    func: c"parse_number",
+    lib: 55,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `parse_hex` at `crypto/property/property_parse.c:138` (PROP_R_NOT_AN_HEXADECIMAL_DIGIT).
+pub(crate) const PROPERTY_PARSE_138: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/property/property_parse.c",
+    line: 138,
+    func: c"parse_hex",
+    lib: 55,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `parse_hex` at `crypto/property/property_parse.c:144` (PROP_R_PARSE_FAILED).
+pub(crate) const PROPERTY_PARSE_144: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/property/property_parse.c",
+    line: 144,
+    func: c"parse_hex",
+    lib: 55,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `parse_hex` at `crypto/property/property_parse.c:153` (PROP_R_NOT_AN_HEXADECIMAL_DIGIT).
+pub(crate) const PROPERTY_PARSE_153: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/property/property_parse.c",
+    line: 153,
+    func: c"parse_hex",
+    lib: 55,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `parse_oct` at `crypto/property/property_parse.c:170` (PROP_R_NOT_AN_OCTAL_DIGIT).
+pub(crate) const PROPERTY_PARSE_170: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/property/property_parse.c",
+    line: 170,
+    func: c"parse_oct",
+    lib: 55,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `parse_oct` at `crypto/property/property_parse.c:175` (PROP_R_PARSE_FAILED).
+pub(crate) const PROPERTY_PARSE_175: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/property/property_parse.c",
+    line: 175,
+    func: c"parse_oct",
+    lib: 55,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `parse_oct` at `crypto/property/property_parse.c:183` (PROP_R_NOT_AN_OCTAL_DIGIT).
+pub(crate) const PROPERTY_PARSE_183: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/property/property_parse.c",
+    line: 183,
+    func: c"parse_oct",
+    lib: 55,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `parse_string` at `crypto/property/property_parse.c:209` (PROP_R_NO_MATCHING_STRING_DELIMITER).
+pub(crate) const PROPERTY_PARSE_209: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/property/property_parse.c",
+    line: 209,
+    func: c"parse_string",
+    lib: 55,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `parse_string` at `crypto/property/property_parse.c:215` (PROP_R_STRING_TOO_LONG).
+pub(crate) const PROPERTY_PARSE_215: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/property/property_parse.c",
+    line: 215,
+    func: c"parse_string",
+    lib: 55,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `parse_unquoted` at `crypto/property/property_parse.c:242` (PROP_R_NOT_AN_ASCII_CHARACTER).
+pub(crate) const PROPERTY_PARSE_242: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/property/property_parse.c",
+    line: 242,
+    func: c"parse_unquoted",
+    lib: 55,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `parse_unquoted` at `crypto/property/property_parse.c:248` (PROP_R_STRING_TOO_LONG).
+pub(crate) const PROPERTY_PARSE_248: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/property/property_parse.c",
+    line: 248,
+    func: c"parse_unquoted",
+    lib: 55,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `stack_to_property_list` at `crypto/property/property_parse.c:333` (PROP_R_PARSE_FAILED).
+pub(crate) const PROPERTY_PARSE_333: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/property/property_parse.c",
+    line: 333,
+    func: c"stack_to_property_list",
+    lib: 55,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `ossl_parse_property` at `crypto/property/property_parse.c:370` (PROP_R_PARSE_FAILED).
+pub(crate) const PROPERTY_PARSE_370: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/property/property_parse.c",
+    line: 370,
+    func: c"ossl_parse_property",
+    lib: 55,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `ossl_parse_property` at `crypto/property/property_parse.c:376` (PROP_R_NO_VALUE).
+pub(crate) const PROPERTY_PARSE_376: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/property/property_parse.c",
+    line: 376,
+    func: c"ossl_parse_property",
+    lib: 55,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `ossl_parse_property` at `crypto/property/property_parse.c:392` (PROP_R_TRAILING_CHARACTERS).
+pub(crate) const PROPERTY_PARSE_392: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/property/property_parse.c",
+    line: 392,
+    func: c"ossl_parse_property",
+    lib: 55,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `ossl_parse_query` at `crypto/property/property_parse.c:455` (PROP_R_TRAILING_CHARACTERS).
+pub(crate) const PROPERTY_PARSE_455: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/property/property_parse.c",
+    line: 455,
+    func: c"ossl_parse_query",
+    lib: 55,
+    reason: 110,
+    dynamic_reason: false,
+};
+
 /// Every recorded raise site, in authority source order.
 ///
 /// This is the complete inventory for the covered files, including the
@@ -8533,4 +8763,27 @@ pub(crate) static ALL: &[ErrSite] = &[
     CORE_NAMEMAP_349,
     CORE_NAMEMAP_359,
     CORE_NAMEMAP_378,
+    PROPERTY_STRING_158,
+    PROPERTY_STRING_165,
+    PROPERTY_STRING_228,
+    PROPERTY_PARSE_67,
+    PROPERTY_PARSE_88,
+    PROPERTY_PARSE_103,
+    PROPERTY_PARSE_109,
+    PROPERTY_PARSE_116,
+    PROPERTY_PARSE_138,
+    PROPERTY_PARSE_144,
+    PROPERTY_PARSE_153,
+    PROPERTY_PARSE_170,
+    PROPERTY_PARSE_175,
+    PROPERTY_PARSE_183,
+    PROPERTY_PARSE_209,
+    PROPERTY_PARSE_215,
+    PROPERTY_PARSE_242,
+    PROPERTY_PARSE_248,
+    PROPERTY_PARSE_333,
+    PROPERTY_PARSE_370,
+    PROPERTY_PARSE_376,
+    PROPERTY_PARSE_392,
+    PROPERTY_PARSE_455,
 ];

@@ -68,6 +68,7 @@ pub mod context;
 pub mod ffi;
 pub mod params;
 pub mod pem;
+pub mod property;
 pub mod runtime;
 pub mod selftest;
 pub mod status;
