@@ -5847,3 +5847,76 @@ the printed transcript into the failure message.
 | courts / observations | 52 / 19,655 | 52 / 19,655 (no behaviour change) |
 | determinism-checked artefacts | 14 | 14 |
 | unit tests | 203 | 216 |
+
+## D114 — 6.8 and 6.9 swap, and the DSO contract that made the swap obvious
+
+**The dependency only runs one way, and the plan had it backwards.**
+`docs/PHASE-6-SUBPHASES.md` recorded 6.8 (provider) before 6.9 (DSO), with 6.9 depending on
+6.8. But `OSSL_PROVIDER_load`'s dynamic branch **is** a `DSO_load` call, and DSO depends on
+nothing in the provider stack — so landing the provider registry first would mean writing
+`load` against a loader that does not exist, or writing it without its dynamic branch and
+then reopening it. The rows now record **6.9 before 6.8**: an order correction of exactly
+the kind the 6.6 split made when reconnaissance found `new_from_dispatch` could not precede
+the core BIO.
+
+While correcting that, a second error in the same row: 6.9's dependency was written as
+`6.6g`, which is itself downstream — `6.6g` is `OSSL_LIB_CTX_load_config`, which waits for
+6.10, which waits for 6.8, which waits for 6.9. A cycle. DSO's only Phase 6 dependency is
+the context, so the row now says `6.6a`. This is worth recording rather than quietly
+fixing: a dependency column nobody re-derives is exactly where a cycle can hide, and the
+`phase_state.py` rule ("a phase cannot be complete while an earlier one is not") would
+never have caught it because it orders *phases*, not subphases.
+
+**Four facts the reconnaissance established, which fix the shape of the work.**
+
+1. **All fifteen `DSO_*` symbols are exported, and `openssl/dso.h` is not installed.**
+   `forensics/authorities/prefix/.../include/openssl/dso.h` does not exist, so these are in
+   the atlas's `abi-only` class: a consumer can link them but cannot *declare* them from an
+   installed header. That is why `RT-DSO` must take its prototypes from the authority's
+   committed source tree, exactly as the error-coordinate resolver takes
+   `internal/propertyerr.h` — and it means this court's subject is the ABI and the
+   behaviour, not a source-level contract. It also means the property engine's situation
+   and DSO's are **not** the same: the property engine has no exported symbol at all, while
+   DSO has fifteen that no header declares.
+2. **The method is `dlfcn`, and the file that supplies it is chosen by configuration.**
+   `dso_openssl.c` compiles to a null method under `DSO_NONE`; this profile's
+   `build/.../include/crypto/dso_conf.h` defines `DSO_DLFCN`, `HAVE_DLFCN_H` and
+   `DSO_EXTENSION ".so"`, and `configdata.pm` lists `dso_dlfcn.o` — so `DSO_METHOD_openssl`
+   returns the `dlfcn` method and `DSO_DLFCN` is the branch to reproduce. `dso_dl.c`,
+   `dso_vms.c` and `dso_win32.c` are not this profile.
+3. **The method struct is eleven fields and its order is load-bearing.** From
+   `dso_local.h`: `name`, `dso_load`, `dso_unload`, `dso_bind_func`, `dso_ctrl`,
+   `dso_name_converter`, `dso_merger`, `init`, `finish`, `pathbyaddr`, `globallookup`.
+   The `dlfcn` initialiser fills `ctrl`, `init` and `finish` with NULL, so those three
+   paths in the generic layer are reachable only through the *method* being NULL — which is
+   the `DSO_R_UNSUPPORTED` arm.
+4. **`DSO_new_method` does not initialise `ex_data`.** It zeroes the struct and never calls
+   `CRYPTO_new_ex_data`, and `DSO_free` never calls `CRYPTO_free_ex_data`. So the field is
+   present for layout and is dead in both directions — reproduced as a field, not
+   implemented as a subsystem.
+
+**Three behaviours that will need care in the court, written down before the code.**
+
+* `DSO_convert_filename` translates `"foo"` to `"libfoo.so"` and `"libfoo.so"` to
+  **`"liblibfoo.so"`** — the transform is "no `/` in the name", not "not already
+  translated". With `DSO_FLAG_NAME_TRANSLATION_EXT_ONLY` it is `"foo.so"`, and with
+  `DSO_FLAG_NO_NAME_TRANSLATION` the name is returned **unchanged by a `strdup`**, not by
+  the converter.
+* `DSO_merge` has four shapes: a rooted first spec wins, a missing first spec yields the
+  second, a missing second yields the first, and otherwise the two are joined with one `/`
+  — with a trailing `/` on the second **removed first**, so `"/d/", "f"` is `/d/f` and not
+  `/d//f`.
+* `DSO_pathbyaddr` and `DSO_dsobyaddr` return the path of the library the *function* lives
+  in, which is necessarily different on the two sides of a differential court. The
+  comparable observations are therefore the **contract** and not the text: `sz <= 0`
+  answers `len + 1`, otherwise `min(len, sz - 1) + 1`, so `sz` in `{1, 2, 4}` answers
+  `{1, 2, 4}` on both sides and the buffer's terminator is at `sz - 1`. That the paths
+  differ is a *platform* divergence to record, not a residual to chase.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 102 / 59 | 102 / 59 (documentation only) |
+| subphase order | 6.8 then 6.9 | **6.9 then 6.8** |
+| unit tests | 216 | 216 |
