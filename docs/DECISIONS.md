@@ -5228,3 +5228,77 @@ deferral; this module does not quietly change that.
 | all courts | 48 | 49 |
 | all observations | 19,347 | 19,420 |
 | runtime courts in the FRF store | 37 | 38 |
+
+---
+
+## D107 — the thread slot, and a counter that is per context rather than per process
+
+**What landed.** Phase 6.6e: slot 19 of the library context, `OSSL_get_max_threads`
+and `OSSL_set_max_threads`. The slot is `crypto/thread/internal.c`'s
+`ossl_threads_ctx_new`/`_free` — two counters, a mutex and a condition variable —
+and `src/context/mod.rs` now creates it in `context_init` (failing the context if
+it cannot be built) and releases it in `context_deinit_objs`, in the authority's
+`#ifndef OPENSSL_NO_THREAD_POOL` position between the two callback slots and
+`child_provider`. `RT-THREADDATA` observes all of it in 39 observations with zero
+residuals, first run; `RT-LIBCTX` grows from 73 to 75 as slot 19 joins its
+`filled_slots` list, which is the mechanism 6.6a described.
+
+**The two accessors look trivial and are not.** Everything about them is in the
+plural, and all three are in the court:
+
+  * the counter is per **context**, so `OSSL_set_max_threads(a, 7)` must not move
+    `OSSL_get_max_threads(b)`, and the default context is one of the contexts
+    rather than a special case;
+  * a NULL context resolves through the library context default chain, so the same
+    call answers differently once this thread installs a default — the probe
+    installs one, reads through NULL, restores, and reads again;
+  * the value is stored **verbatim**: no range check, so `UINT64_MAX` is legal to
+    set and to read back, and zero is a value rather than "unset". A `uint64_t`
+    that was clipped, or a setter that refused a large value, would be a plausible
+    reading and a wrong one.
+
+**Why the pool's primitives are in this commit.** `ossl_threads_ctx_new` allocates
+a mutex and a condition variable and **fails** if either cannot be built, so they
+are part of the slot's constructor and cannot be deferred with it.
+`src/runtime/thread.rs` gains the authority's `ossl_crypto_mutex_*` and
+`ossl_crypto_condvar_*` over the same primitives (`crypto/threads_pthread.c` uses
+`pthread_mutex_t`/`pthread_cond_t` directly). Two design points are recorded
+because both are places a shim is usually wrong:
+
+  * the mutex is **not** recursive. `PTHREAD_MUTEX_DEFAULT` deadlocks on re-lock by
+    the same thread, and `std::sync::Mutex` would instead error or panic, so this
+    cannot be a thin wrapper over it; it parks on a flag and deadlocks as the
+    authority does.
+  * a condition variable is paired with one mutex and the pairing is made
+    **explicit**. The C API creates the two independently and pairs them at each
+    `wait` on the promise that release-and-wait is atomic; Rust's
+    `Condvar::wait` needs the guard of the mutex it waits on, so the pairing is
+    bound on first `wait` and a mismatched pair is reported rather than becoming a
+    lost wakeup. Every use in the authority pairs one condvar with one mutex for
+    its lifetime.
+
+Nothing waits on the condition variable yet: it is created and released here
+because the constructor creates and releases it, and the pool that signals it is
+not a Phase 6 subsystem.
+
+**6.6e is split, and the reason is a file rather than a distance.** The subphase
+was to carry `OSSL_get/set_max_threads` *and* `OPENSSL_thread_stop`/`_ex`. The
+counter pair needs only the slot, which is why it landed here; the stop pair needs
+`crypto/initthread.c`'s per-thread event-handler table, and `OPENSSL_atexit` (the
+fifth Phase 3 hand-off) needs `DSO_dsobyaddr` to pin the handler's object, so it
+waits for 6.9. Those three are now 6.6e-ii with both dependencies named, and
+`context_deinit`'s missing `ossl_ctx_thread_stop` call is the line 6.6e-ii
+unblocks.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented | 88 | 90 |
+| Phase 6 open | 73 | 71 |
+| `implemented[libcrypto]` | 1,062 | 1,064 |
+| Phase 6 courts | 2 | 3 |
+| all courts | 49 | 50 |
+| all observations | 19,420 | 19,461 |
+| `RT-LIBCTX` observations | 73 | 75 |
+| runtime courts in the FRF store | 38 | 39 |

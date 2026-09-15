@@ -117,6 +117,12 @@ use crate::runtime::thread::{
     CRYPTO_THREAD_write_lock, CryptoOnce, CryptoRwlock, CryptoThreadLocal,
 };
 
+pub mod thread_data;
+
+/// `OSSL_LIB_CTX_THREAD_INDEX`, from `include/internal/cryptlib.h`. Slot 19,
+/// filled by 6.6e.
+pub(crate) const OSSL_LIB_CTX_THREAD_INDEX: c_int = 19;
+
 /// The authority's translation unit, as its compiler spelled it, so a failing
 /// allocation records the coordinates a consumer would see from the authority.
 /// Derived from the admitted build record (`forensics/authorities/`), never
@@ -308,6 +314,23 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
     // own `RUN_ONCE` — in both cases a live object no other thread can observe
     // yet, and this is the only write that publishes the lock.
     unsafe { (*ctx).lock = lock };
+
+    // The thread slot. `context_init` guards this with `#ifndef
+    // OPENSSL_NO_THREAD_POOL`, and this profile has the pool compiled in -- which
+    // is not something any installed header says. It was **measured**: index 19
+    // answers a pointer from `OSSL_LIB_CTX_get_data`, and
+    // `OSSL_get_thread_support_flags` answers the thread-pool flag. Both are
+    // observations of the same build fact, and `RT-LIBCTX` re-measures the first
+    // on every run.
+    let threads = crate::context::thread_data::ossl_threads_ctx_new(ctx.cast::<c_void>());
+    if threads.is_null() {
+        // The authority's `err:` arm: release what was built, then report
+        // failure. `OSSL_LIB_CTX_new` frees the block itself.
+        context_deinit(ctx);
+        return false;
+    }
+    // SAFETY: as above; the slot is published once, here.
+    unsafe { (*ctx).threads = threads.cast::<c_void>() };
     true
 }
 
@@ -318,9 +341,24 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
 /// with respect to the provider store). Only slot 21 has no release: it is an
 /// interior address, not an allocation.
 fn context_deinit_objs(ctx: *mut OsslLibCtx) {
+    // `#ifndef OPENSSL_NO_THREAD_POOL` in the authority, released after the two
+    // callback slots and before `child_provider` and `comp_methods`.
     // SAFETY: `ctx` is a live context being torn down by `context_deinit`, and
-    // no other thread holds a reference to it — `OSSL_LIB_CTX_free` is the only
-    // caller and the caller contract is that the object is no longer in use.
+    // no other thread holds a reference to it -- `OSSL_LIB_CTX_free` is the only
+    // caller and the caller contract is that the object is no longer in use. The
+    // slot is released exactly once and re-NULLed.
+    unsafe {
+        if !(*ctx).threads.is_null() {
+            crate::context::thread_data::ossl_threads_ctx_free(
+                (*ctx)
+                    .threads
+                    .cast::<crate::context::thread_data::OsslLibCtxThreads>(),
+            );
+            (*ctx).threads = ptr::null_mut();
+        }
+    }
+
+    // SAFETY: as above.
     unsafe {
         (*ctx).comp_methods = ptr::null_mut();
     }

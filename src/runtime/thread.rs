@@ -86,7 +86,7 @@
 //! operations, `Acquire` for loads, `Release` for stores.
 
 use core::ffi::{c_int, c_long, c_uint, c_ulong, c_void};
-use core::sync::atomic::{AtomicI32, AtomicU64, Ordering};
+use core::sync::atomic::{AtomicI32, AtomicPtr, AtomicU64, Ordering};
 use std::sync::{Condvar, Mutex, MutexGuard};
 
 use crate::ffi::guard_ffi;
@@ -983,6 +983,273 @@ mod tests {
         assert_eq!(unsafe { CRYPTO_THREAD_unlock(lock) }, 1);
         // SAFETY: no user remains.
         unsafe { CRYPTO_THREAD_lock_free(lock) };
+    }
+}
+
+// ---------------------------------------------------------------------------
+// The thread pool's primitives
+//
+// `crypto/threads_pthread.c` provides `ossl_crypto_mutex_*` and
+// `ossl_crypto_condvar_*` over `pthread_mutex_t`/`pthread_cond_t`, and
+// `crypto/thread/internal.c` builds the per-context thread slot out of them.
+// They are internal: `internal/thread_arch.h` declares the types as opaque
+// typedefs, so no consumer can name them, and their contract is the ordinary
+// mutual-exclusion and signalling contract rather than an OpenSSL-specific one.
+//
+// Two design points are worth stating, because both are places a shim is
+// usually wrong.
+//
+// **The mutex is not recursive, and a second lock by the same thread must
+// block.** The authority's `pthread_mutex_t` is `PTHREAD_MUTEX_DEFAULT`, which
+// deadlocks on re-lock; `std::sync::Mutex` would instead return an error on
+// lock or panic on unlock, so this cannot be a thin wrapper over it. The
+// implementation below parks until the flag is clear, which deadlocks exactly
+// as `PTHREAD_MUTEX_DEFAULT` does.
+//
+// **A condition variable is paired with one mutex, and the pairing is made
+// explicit.** The authority's C API creates the two independently
+// (`ossl_crypto_condvar_new` takes no mutex) and pairs them at each `wait`, on
+// the promise that release-and-wait is atomic. Rust's `Condvar::wait` requires
+// the guard of the mutex it is waiting on, so the pairing is bound on the first
+// `wait` and kept. Every use in the authority pairs one condvar with one mutex
+// for its lifetime -- `OSSL_LIB_CTX_THREADS` is `lock`+`cond_finished`, the
+// thread queue is `alloc_lock`+`alloc_signal`, `prior_lock`+`prior_signal` -- so
+// binding it makes an invariant the authority relies on explicit, and a
+// mismatched pair is reported rather than becoming a lost wakeup.
+// ---------------------------------------------------------------------------
+
+/// `struct crypto_mutex_st`, opaque in `internal/thread_arch.h`.
+pub struct CryptoMutex {
+    /// `true` while a thread holds it. This is the parking mutex *and* the flag,
+    /// so releasing it and waiting on a condition variable is one atomic step.
+    held: Mutex<bool>,
+    /// Signalled when the flag is cleared, to wake a thread waiting in
+    /// [`ossl_crypto_mutex_lock`]. Distinct from a [`CryptoCondvar`]'s own
+    /// condvar even when the two share `held`, because the two wait for
+    /// different things.
+    released: Condvar,
+}
+
+/// `struct crypto_condvar_st`, opaque in `internal/thread_arch.h`.
+pub struct CryptoCondvar {
+    /// The mutex this condition variable was first waited on with. NULL until
+    /// then; one condvar is used with one mutex for its whole life.
+    bound: AtomicPtr<CryptoMutex>,
+    cond: Condvar,
+}
+
+/// `CRYPTO_MUTEX *ossl_crypto_mutex_new(void)` — NULL when allocation fails.
+pub(crate) fn ossl_crypto_mutex_new() -> *mut CryptoMutex {
+    let m = CryptoMutex {
+        held: Mutex::new(false),
+        released: Condvar::new(),
+    };
+    Box::into_raw(Box::new(m))
+}
+
+/// `void ossl_crypto_mutex_lock(CRYPTO_MUTEX *mutex)`
+///
+/// # Safety
+/// `mutex` must be non-NULL and live, and not already held by this thread (the
+/// authority's non-recursive mutex deadlocks on that, and so does this).
+unsafe fn mutex_held(m: *mut CryptoMutex) -> &'static Mutex<bool> {
+    // SAFETY: `mutex` is a live object produced by `ossl_crypto_mutex_new` per
+    // the caller's contract; the returned reference borrows one of its fields
+    // for the duration of one C call.
+    unsafe { &(*m).held }
+}
+
+pub(crate) unsafe fn ossl_crypto_mutex_lock(m: *mut CryptoMutex) {
+    if m.is_null() {
+        return;
+    }
+    // SAFETY: `m` is live per the caller's contract.
+    let held = unsafe { mutex_held(m) };
+    let mut flag = lock_state_poisoned(held);
+    while *flag {
+        // SAFETY: `m` is live per the caller's contract.
+        flag = match unsafe { &(*m).released }.wait(flag) {
+            Ok(g) => g,
+            Err(p) => p.into_inner(),
+        };
+    }
+    *flag = true;
+}
+
+/// Locks, recovering from poisoning, as the rwlock helpers above do.
+fn lock_state_poisoned(held: &Mutex<bool>) -> MutexGuard<'_, bool> {
+    match held.lock() {
+        Ok(g) => g,
+        Err(p) => p.into_inner(),
+    }
+}
+
+/// `int ossl_crypto_mutex_try_lock(CRYPTO_MUTEX *mutex)` — 1 on success.
+///
+/// # Safety
+/// `mutex` must be non-NULL and live.
+#[allow(dead_code)] // unreachable until the thread pool tries one
+pub(crate) unsafe fn ossl_crypto_mutex_try_lock(m: *mut CryptoMutex) -> c_int {
+    if m.is_null() {
+        return 0;
+    }
+    // SAFETY: `m` is live per the caller's contract.
+    let mut flag = lock_state_poisoned(unsafe { mutex_held(m) });
+    if *flag {
+        return 0;
+    }
+    *flag = true;
+    1
+}
+
+/// `void ossl_crypto_mutex_unlock(CRYPTO_MUTEX *mutex)`
+///
+/// # Safety
+/// `mutex` must be non-NULL, live, and held by this thread.
+pub(crate) unsafe fn ossl_crypto_mutex_unlock(m: *mut CryptoMutex) {
+    if m.is_null() {
+        return;
+    }
+    // SAFETY: `m` is live per the caller's contract.
+    let mut flag = lock_state_poisoned(unsafe { mutex_held(m) });
+    *flag = false;
+    drop(flag);
+    // SAFETY: `m` is live per the caller's contract.
+    unsafe { &(*m).released }.notify_one();
+}
+
+/// `void ossl_crypto_mutex_free(CRYPTO_MUTEX **mutex)` — frees and NULLs.
+///
+/// # Safety
+/// `mutex` must be NULL or a live `*mut *mut CryptoMutex` whose target came
+/// from [`ossl_crypto_mutex_new`] and is not held.
+pub(crate) unsafe fn ossl_crypto_mutex_free(m: *mut *mut CryptoMutex) {
+    if m.is_null() {
+        return;
+    }
+    // SAFETY: `m` is a live caller pointer per the contract.
+    let obj = unsafe { *m };
+    if !obj.is_null() {
+        // SAFETY: the pointer came from `Box::into_raw` in
+        // `ossl_crypto_mutex_new` and is freed exactly once here.
+        drop(unsafe { Box::from_raw(obj) });
+        // SAFETY: as above; the caller's slot is NULLed, which is what the
+        // authority's `CRYPTO_MUTEX **` signature is for.
+        unsafe { *m = core::ptr::null_mut() };
+    }
+}
+
+/// `CRYPTO_CONDVAR *ossl_crypto_condvar_new(void)` — NULL when allocation fails.
+pub(crate) fn ossl_crypto_condvar_new() -> *mut CryptoCondvar {
+    let cv = CryptoCondvar {
+        bound: AtomicPtr::new(core::ptr::null_mut()),
+        cond: Condvar::new(),
+    };
+    Box::into_raw(Box::new(cv))
+}
+
+/// `void ossl_crypto_condvar_wait(CRYPTO_CONDVAR *cv, CRYPTO_MUTEX *mutex)`
+///
+/// Releases `mutex`, waits for a signal, and re-acquires it — the release and
+/// the wait are one step with respect to the flag, because both use the mutex's
+/// own parking mutex.
+///
+/// # Safety
+/// `cv` and `mutex` must be live, and `mutex` must be held by this thread. A
+/// `cv` already bound to a different mutex is a caller error: the authority's
+/// `pthread_cond_wait` has no defined answer for it either, and this reports it
+/// by returning without waiting rather than by becoming a lost wakeup.
+#[allow(dead_code)] // unreachable until the thread pool waits on one
+pub(crate) unsafe fn ossl_crypto_condvar_wait(cv: *mut CryptoCondvar, m: *mut CryptoMutex) {
+    if cv.is_null() || m.is_null() {
+        return;
+    }
+    // SAFETY: `cv` is live per the caller's contract.
+    let bound = unsafe { &(*cv).bound };
+    // Bind on first use, and accept only this mutex afterwards.
+    let existing = bound.load(Ordering::Acquire);
+    if existing.is_null() {
+        let _ = bound.compare_exchange(
+            core::ptr::null_mut(),
+            m,
+            Ordering::AcqRel,
+            Ordering::Acquire,
+        );
+    } else if existing != m {
+        return;
+    }
+    // SAFETY: `m` is live and held by this thread per the caller's contract.
+    let held = unsafe { mutex_held(m) };
+    let mut flag = lock_state_poisoned(held);
+    if !*flag {
+        // The caller did not hold it. `pthread_cond_wait` is undefined there too,
+        // so this returns rather than waiting on a mutex it does not own.
+        return;
+    }
+    *flag = false;
+    drop(flag);
+    // Wake one `ossl_crypto_mutex_lock` waiter, now that the flag is clear.
+    // SAFETY: `m` is live.
+    unsafe { &(*m).released }.notify_one();
+    // Re-acquire before waiting, so that a signaller -- which every caller in
+    // the authority is, under this mutex -- cannot slip between the release
+    // above and the wait below. The wait then releases it atomically.
+    // SAFETY: `m` is live.
+    let g = lock_state_poisoned(unsafe { mutex_held(m) });
+    // SAFETY: `cv` is live; the guard belongs to this mutex, which is what makes
+    // release-and-wait one step.
+    let mut g = match unsafe { &(*cv).cond }.wait(g) {
+        Ok(g) => g,
+        Err(p) => p.into_inner(),
+    };
+    // The wait returns with the mutex re-locked: restore the flag so the next
+    // `unlock` releases it rather than corrupting the state.
+    *g = true;
+}
+
+/// `void ossl_crypto_condvar_signal(CRYPTO_CONDVAR *cv)` — wakes one waiter.
+///
+/// # Safety
+/// `cv` must be NULL or live.
+#[allow(dead_code)] // unreachable until the thread pool signals one
+pub(crate) unsafe fn ossl_crypto_condvar_signal(cv: *mut CryptoCondvar) {
+    if cv.is_null() {
+        return;
+    }
+    // SAFETY: `cv` is live per the caller's contract.
+    unsafe { &(*cv).cond }.notify_one();
+}
+
+/// `void ossl_crypto_condvar_broadcast(CRYPTO_CONDVAR *cv)` — wakes all waiters.
+///
+/// # Safety
+/// `cv` must be NULL or live.
+#[allow(dead_code)] // unreachable until the thread pool broadcasts to them
+pub(crate) unsafe fn ossl_crypto_condvar_broadcast(cv: *mut CryptoCondvar) {
+    if cv.is_null() {
+        return;
+    }
+    // SAFETY: `cv` is live per the caller's contract.
+    unsafe { &(*cv).cond }.notify_all();
+}
+
+/// `void ossl_crypto_condvar_free(CRYPTO_CONDVAR **cv)` — frees and NULLs.
+///
+/// # Safety
+/// `cv` must be NULL or a live `*mut *mut CryptoCondvar` whose target came from
+/// [`ossl_crypto_condvar_new`] and has no waiters.
+pub(crate) unsafe fn ossl_crypto_condvar_free(cv: *mut *mut CryptoCondvar) {
+    if cv.is_null() {
+        return;
+    }
+    // SAFETY: `cv` is a live caller pointer per the contract.
+    let obj = unsafe { *cv };
+    if !obj.is_null() {
+        // SAFETY: the pointer came from `Box::into_raw` in
+        // `ossl_crypto_condvar_new` and is freed exactly once here.
+        drop(unsafe { Box::from_raw(obj) });
+        // SAFETY: as above; the caller's slot is NULLed.
+        unsafe { *cv = core::ptr::null_mut() };
     }
 }
 
