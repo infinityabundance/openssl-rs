@@ -192,6 +192,38 @@ def evidence_for(phase: int) -> tuple[list[str], list[str], str]:
             blocking = blocking or f"no Phase 4 courts yet ({PHASE4_COURTS} absent)"
         return present, absent, blocking
 
+    if phase == 6:
+        for d in PHASE6_MODULES:
+            (present if exists(d) else absent).append(d)
+        ledger = read_json(PHASE6_OBLIGATIONS)
+        if ledger:
+            present.append(PHASE6_OBLIGATIONS)
+            body6 = ledger["body"]
+            open_count = body6["counts"]["open_in_this_stratum"]
+            if open_count:
+                blocking = (
+                    f"{open_count} open obligation(s) of this stratum recorded in "
+                    f"{PHASE6_OBLIGATIONS}; a stratum cannot be complete while any "
+                    f"export it owns is neither implemented nor handed to a later "
+                    f"phase"
+                )
+        else:
+            absent.append(PHASE6_OBLIGATIONS)
+        courts = read_json(PHASE6_COURTS)
+        if courts:
+            present.append(PHASE6_COURTS)
+            failed = [c["court"] for c in courts["body"]["courts"]
+                      if c["verdict"] != "pass"]
+            if failed:
+                blocking = f"Phase 6 courts not passing: {failed}"
+        else:
+            # As for Phase 4 and 5: a missing court file is a blocker once the
+            # modules exist, not evidence that the stratum has not begun. Phase 6's
+            # modules landed before `RT-PARAM` did, and reporting `not-started` then
+            # would have understated a stratum with 81 implemented exports in it.
+            blocking = blocking or f"no Phase 6 courts yet ({PHASE6_COURTS} absent)"
+        return present, absent, blocking
+
     if phase == 5:
         for d in PHASE5_MODULES:
             (present if exists(d) else absent).append(d)
@@ -405,6 +437,25 @@ PHASE5_MODULES = [
     "courts/phase5/rt_bn_probe.c",
     "forensics/tools/phase5_courts.py",
     "forensics/tools/phase5_obligations.py",
+]
+
+# Phase 6 evidence: the parameter surface and the provider core, the differential
+# court that exercises it, and the ledger that decides the stratum's arithmetic.
+#
+# `docs/PHASE-6-PROVIDER-SEAL.md` is deliberately **not** listed yet: the seal does not
+# exist, and listing a document that is absent would put it in `evidence_absent` and
+# understate a stratum whose modules are written. It is added to this list in the commit
+# that writes it, which is what 6.13 is for.
+PHASE6_COURTS = "artifacts/phase6/COURTS.json"
+PHASE6_OBLIGATIONS = "forensics/phase6-obligations.json"
+PHASE6_MODULES = [
+    "src/params/mod.rs",
+    "src/params/dup.rs",
+    "src/params/from_text.rs",
+    "src/params/build.rs",
+    "courts/phase6/rt_param_probe.c",
+    "forensics/tools/phase6_courts.py",
+    "forensics/tools/phase6_obligations.py",
 ]
 
 

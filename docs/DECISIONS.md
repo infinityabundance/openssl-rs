@@ -4920,3 +4920,105 @@ parameter surface is **implemented and uncourted**, `forensics/phase6-obligation
 moves from 161 open to 80 open (81 implemented), and 6.5 stays `IN PROGRESS`. The court is the next
 commit, not this one, and this paragraph exists so that the ledger's arithmetic is not
 mistaken for an exit criterion met.
+
+## D104 — `RT-PARAM`, the first Phase 6 court, and the fit rule it found in Phase 5
+
+Phase 6.5's parameter surface is 81 exports across four modules, and `RT-PARAM` is the
+court that closes it. It is 1,161 observations on each side, zero residuals.
+
+### The court is a matrix, because the surface is a data type
+
+An `OSSL_PARAM` has no behaviour of its own: it is a descriptor whose answer is a
+function of three independent axes a caller sets — the parameter's `data_type` (seven of
+them), the width and signedness the *caller's* accessor uses (which need not match the
+parameter's, and which for four types selects a fast path that is not the general
+conversion path), and whether `data` is NULL (which turns a setter into a size query that
+answers **success**).
+
+So the probe is a matrix rather than a scenario list. Every accessor against every
+source width, signedness and type; every setter against every destination shape,
+recording the return code, the error queue, `return_size` and the bytes produced. The
+reason is that the *refusals* are where a plausible implementation and the authority
+differ, and the two refusals are not interchangeable: reading a negative
+`UNSIGNED_INTEGER` and reading one that is merely too large are
+`CRYPTO_R_PARAM_UNSIGNED_INTEGER_NEGATIVE_VALUE_UNSUPPORTED` and
+`CRYPTO_R_PARAM_VALUE_TOO_LARGE_FOR_DESTINATION`, and a caller that exercises only the
+happy path cannot tell the two implementations apart.
+
+Three behaviours are reproduced rather than tidied, because the court compares answers
+and there is no way from outside to tell which internal path produced one. `get_int32`
+reads a four-byte `INTEGER` directly where the general path would reject the same bytes
+if their sign disagreed with the destination. `set_double`'s bounds are half-open, so
+`2^31` is *rejected* for an `int32` destination — one off from a "fits in an int32"
+reading. And `OSSL_PARAM_print_to_bio` answers 0 for an **empty** array, because `ok`
+starts at `-1` and the loop never runs.
+
+### Three findings, and two of them were mine
+
+The first run had 226 residuals and the candidate crashed at observation 939. Both
+defects were in the crate, and both were the kind a unit test would not have found.
+
+**`OSSL_PARAM_get_utf8_string` wrote its terminator through the wrong pointer.**
+`**val.add(data_length) = 0` parses as `*(*(val.add(n)))`: pointer arithmetic on
+`char **`, scaled by eight and dereferenced twice. The terminator belongs in the buffer
+at index `data_length`. The observable was a segfault on the first call that reached it
+with a caller-supplied `char **`.
+
+**`set_double`'s exactness test used Rust's saturating cast where the authority uses the
+platform's.** The authority's test is a round trip through a C cast — `val !=
+(int64_t)val` — and a `double` outside `int64`'s range makes that cast undefined in C.
+What the *comparison* observes is the conversion, which on x86-64 is `INT64_MIN` for
+every out-of-range and NaN input. Rust's `as` saturates, so it reported such a value as
+**exact** and fell through to the range check: a different error reason for a caller that
+did nothing wrong. Reproduced as `to_i64_as_c`/`to_u64_as_c`, which specify the
+conversion rather than the undefined behaviour, and document that the value is the one
+the authority's own comparison compares against.
+
+### The finding that belongs to another stratum
+
+After those two, three residuals remained. Two were the probe's fault: the builder's
+`_PTR` parameters hold a *pointer*, and `dump_params` printed the first `data_size` bytes
+of that pointer — part of an address, differing between two runs of the same binary. It
+prints the pointer's *target* now. The third was real.
+
+`OSSL_PARAM_BLD_push_BN_pad` with a negative `BIGNUM` records `BN_num_bytes(bn)` bytes —
+`sz` is ignored for a negative value, because the encoding must be exactly two's
+complement — and `BN_signed_bn2native` **refuses** that width: it needs `n + ext`, with
+`ext` 1 for a negative value whose magnitude does not fill its top byte. The authority's
+buffer then held zeros only because a fresh mapping is zero-filled on first touch; that is
+not a contract, and comparing it would have been comparing uninitialised memory. So the
+probe records `NOT_COMPARABLE_AUTHORITY_UNINITIALISED` for that one parameter and keeps
+the *push* result, which is deterministic.
+
+The refusal itself is `bn.h`'s, and `bn.h` is **Phase 5's**. A sweep of nineteen values
+against every `tolen` from 0 to 5 found **five** destinations the authority refuses and
+this crate accepted — `-1` and `0x80` into one byte, `-0x0102` and `0xffff` into two, and
+`0` into a zero-length destination, which was answered as a success. `signed_bytes` had
+the fit rule as `BN_num_bytes(a) > tolen` and the authority's is `n + ext > tolen`.
+Phase 5's seal gains §10 and `RT-BN` gains 860 observations; the stride is unchanged at
+zero open, so the stratum stays `complete` and the section is a correction, not a
+reopening. See D104's table in `docs/PHASE-5-BN-ASN1-PEM-SEAL.md`.
+
+That is the third time a court has found a defect in a stratum other than the one it was
+written for, and the first time the *input choice* was the whole of the gap: Phase 5's
+court called these three functions with destinations that were obviously large enough,
+which is exactly the case where the fit rule cannot be observed. A court's coverage is a
+property of the inputs it chooses.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 courts | 0 | 1 |
+| Phase 6 observations | 0 | 1,161 |
+| `RT-BN` observations | 650 | 1,510 |
+| Phase 6 ledger | 81 implemented / 80 open | unchanged |
+| all courts | 47 | 48 |
+| all observations | 17,325 | 19,346 |
+
+`forensics/tools/phase_state.py` gains a Phase 6 evidence registry, which is what makes
+`run_courts.py` run this stratum's runner at all: the workflow derives the list of active
+strata from `phase-state.json`, and Phase 6 was `not-started` there only because nothing
+had told the registry about its modules. It is `in-progress` now, on its ledger's 80 open
+obligations, and `run_courts.py` refuses to run a runner for a `not-started` phase — which
+is the check that caught this.

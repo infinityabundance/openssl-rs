@@ -10,6 +10,8 @@ in Git. See `docs/DECISIONS.md` D17.
 ## `gemel log`
 
 ```
+C47  RT-PARAM is 1161 observations on each side with zero residuals: the descriptor as a matrix of accessor x width x signedness x type, the setters' NULL-buffer size queries, the string and pointer forms, BIGNUM, dup/merge/free, text allocation and the builder. It found two defects in the new code and one in Phase 5, whose signed encoders accepted five destinations the authority refuses. Phase 5's seal gains a correction section, RT-BN gains 860 observations, and phase_state.py gains the Phase 6 evidence registry that makes run_courts.py run this stratum at all.
+    state state.d13b7eabc061c85276030b14eb654fbef4f46fa0686967a514af9befb195a54b -> state.cac3350896083fe525a9e628021df2eb3d42b7eb670dec564a2c8194a6c208dc
 C46  56 + 3 + 2 + 20 exports across src/params/mod.rs, dup.rs, from_text.rs and build.rs. Both prototype planes now read every one, after two instrument fixes: fifteen exports returning a struct by value were checked by neither plane, because an unclassified class plane skipped the type plane as well, and a macro_rules scalar push put a metavariable in a type position, which the court refuses by design. RT-PARAM does not exist yet, so the surface is implemented and uncourted and 6.5 stays in progress.
     state state.2c91cb79897ee2f92df8e2f0b3ccc6f03266c6a5a8fa4305132bcec6924d4e4c -> state.d13b7eabc061c85276030b14eb654fbef4f46fa0686967a514af9befb195a54b
 C45  Two new Phase 3 courts measure the branch a consumer who never embeds is in. Thirteen zero-length divergences, a CRYPTO_realloc(addr,0) release hidden behind its own NULL return, a candidate-only out-of-bounds read in CRYPTO_memdup, two CRYPTO_set/get_mem_functions dispatch gaps, one invented constant name, and the params.c raise-site macro plane in the generator.
@@ -95,6 +97,7 @@ C1  Phase 0 constitution and Phase 1 archaeology atlas, evidence-bound
 * `K28` — `checkpoint.5f82da003df177c43703c768867caf5616b5bcb1a85f3376494d2730c74abdb9`
 * `K29` — `checkpoint.a3713ea56466fccba028c053d2e9f17756e5067eec4a78fb90347aed6d8aad10`
 * `K3` — `checkpoint.b1516eb6364ad075785911cb204a75a6e1b83b08c1a7ca39a2de6e3983dc9aed`
+* `K30` — `checkpoint.76a96561abab60000acae0b6e28920a3bb935d6b9439dcc8625d6088e944f7dc`
 * `K4` — `checkpoint.1bde75b37e1ca3972037c29cbd3ba5291079544436db9176a82f097a6bf832fe`
 * `K5` — `checkpoint.6b0d12f1ecf380c0808bc95675222fbed7256f99bc8e9f475a0ec2693f804a0a`
 * `K6` — `checkpoint.8958092650197b473c5b00d9c0de22e075c4765efc2e8a4ab9d452ffae97cf61`
@@ -102,7 +105,7 @@ C1  Phase 0 constitution and Phase 1 archaeology atlas, evidence-bound
 * `K8` — `checkpoint.7eb3dba97cbf20f2b34d14cce7e93bc2171ebd0d7ee66d1f7508cc6e199567de`
 * `K9` — `checkpoint.60105b4c8189d2668c48e173fe2c92c0ddf76160caae24efecc707bd576f506f`
 
-current: `checkpoint.a3713ea56466fccba028c053d2e9f17756e5067eec4a78fb90347aed6d8aad10`
+current: `checkpoint.76a96561abab60000acae0b6e28920a3bb935d6b9439dcc8625d6088e944f7dc`
 
 ## Note: derived names are not identities
 
@@ -122,6 +125,18 @@ changed with it; the Git commit is the authoritative record of the diff.
 ## Open residuals at this boundary
 
 ```
+open [low] OSSL_PARAM_BLD_push_BN_pad with a negative BIGNUM leaves the value bytes uninitialised because BN_signed_bn2native refuses the recorded width; the refusal is compared, the bytes are not
+    class: verification_gap
+    persistence: 0 descendant change(s)
+open [low] OSSL_PARAM_print_to_bio answers 0 for a NULL array where the authority dereferences it, and the probe records the boundary rather than the behaviour
+    class: semantic_divergence
+    persistence: 0 descendant change(s)
+open [low] OSSL_PARAM_merge sorts stably where the authority's qsort is unspecified among equal keys within one list
+    class: semantic_divergence
+    persistence: 0 descendant change(s)
+open [low] setbuf_fromparams is reproduced from the two WPACKET operations it uses rather than from crypto/packet.c, which belongs to Phase 7
+    class: semantic_divergence
+    persistence: 0 descendant change(s)
 open [low] OSSL_PARAM_print_to_bio answers 0 for a NULL array where the authority dereferences it
     class: semantic_divergence
     persistence: 0 descendant change(s)
