@@ -641,10 +641,21 @@ static void string_plane(void)
     OSSL_PARAM p;
     char hex[40];
 
-    /* A UTF-8 set with room for a terminator appends one that is not counted. */
+    /* A zero `bsize` with a non-NULL buffer means "measure it", and the answer is
+     * the buffer's `strlen` plus one. The terminator is therefore the *probe's*
+     * obligation: an earlier revision of this probe filled all sixteen bytes with
+     * 0xaa and left the terminator to whatever followed the array on the stack,
+     * so the same source answered 24 for the authority and 22 for the candidate in
+     * one build, and 16 for both at -O1 in the next. That out-of-bounds read was
+     * reported as a candidate divergence and cost a session to diagnose. Two
+     * declared lengths are observed so the court compares the rule, not a number. */
     memset(buf, 0xaa, sizeof buf);
+    buf[12] = '\0';
     p = OSSL_PARAM_construct_utf8_string("k", buf, 0);
     sayn("str.utf8.size0_construct.is_measured", (long long) p.data_size);
+    buf[15] = '\0';
+    p = OSSL_PARAM_construct_utf8_string("k", buf, 0);
+    sayn("str.utf8.size0_construct.is_measured_long", (long long) p.data_size);
     SAY("str.utf8.set.abc", OSSL_PARAM_set_utf8_string(&p, "abc"));
     sayn("str.utf8.return_size", (long long) p.return_size);
     hexcat(hex, (const unsigned char *) buf, 5);

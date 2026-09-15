@@ -10,6 +10,8 @@ in Git. See `docs/DECISIONS.md` D17.
 ## `gemel log`
 
 ```
+C61  The divergence RT-PARAM reported was not a divergence. courts/phase6/rt_param_probe.c filled a sixteen-byte buffer with 0xaa and handed it to OSSL_PARAM_construct_utf8_string(..., buf, 0), which measures the buffer with strlen, so the terminator was whatever followed the array on the stack. Measured on the committed source: -O0 answers 22 for both sides, -O1/-O2/-O3 answer 16 for both, and the capture the receipt was bound to recorded 24 against 22. The residual a0eaeb5b2946497400a7b63f1d0d78efe4f90ae91ee24ef1e910c7ce19551a7 was the optimizer's frame compared against itself. The probe now terminates its own buffer and observes two declared lengths, so the court compares strlen+1 of a declared object rather than a number a frame produced. Added forensics/tools/probe_hygiene.py: it compiles every courts/phase<N>/*_probe.c against each side at -O0/-O1/-O2, runs each twice, and fails on level drift (uninitialised or out-of-bounds reads) or run drift (nondeterminism no court can compare). It was falsified against the pre-fix text before being trusted and reports both signatures on it, including 22 then 17 from two executions of the same -O0 binary. A sanitizer cannot be used: ASan reserves a terabyte-scale shadow and aborts under the court's own RLIMIT_DATA cap, which stays. The store was recreated from clean, which is what the README already requires for a rebuilt candidate and what a probe edit also requires: the previous store held transcripts from a probe source that no longer existed, and that is why this court's stdout-first-line mutant could not adjudicate. 41 receipts, 82 challenges, 5 claims, all 37 runtime courts isolated on both axes. Also fixed phase6_courts.py declaring GENERATOR as phase5_courts.py, which no gate compared.
+    state state.cac3350896083fe525a9e628021df2eb3d42b7eb670dec564a2c8194a6c208dc -> state.d277ea2db6f2934071fc81ed3dae9d99e821742661da2c8855dbe43b70eb37be
 C47  RT-PARAM is 1161 observations on each side with zero residuals: the descriptor as a matrix of accessor x width x signedness x type, the setters' NULL-buffer size queries, the string and pointer forms, BIGNUM, dup/merge/free, text allocation and the builder. It found two defects in the new code and one in Phase 5, whose signed encoders accepted five destinations the authority refuses. Phase 5's seal gains a correction section, RT-BN gains 860 observations, and phase_state.py gains the Phase 6 evidence registry that makes run_courts.py run this stratum at all.
     state state.d13b7eabc061c85276030b14eb654fbef4f46fa0686967a514af9befb195a54b -> state.cac3350896083fe525a9e628021df2eb3d42b7eb670dec564a2c8194a6c208dc
 C46  56 + 3 + 2 + 20 exports across src/params/mod.rs, dup.rs, from_text.rs and build.rs. Both prototype planes now read every one, after two instrument fixes: fifteen exports returning a struct by value were checked by neither plane, because an unclassified class plane skipped the type plane as well, and a macro_rules scalar push put a metavariable in a type position, which the court refuses by design. RT-PARAM does not exist yet, so the surface is implemented and uncourted and 6.5 stays in progress.
@@ -98,6 +100,8 @@ C1  Phase 0 constitution and Phase 1 archaeology atlas, evidence-bound
 * `K29` — `checkpoint.a3713ea56466fccba028c053d2e9f17756e5067eec4a78fb90347aed6d8aad10`
 * `K3` — `checkpoint.b1516eb6364ad075785911cb204a75a6e1b83b08c1a7ca39a2de6e3983dc9aed`
 * `K30` — `checkpoint.76a96561abab60000acae0b6e28920a3bb935d6b9439dcc8625d6088e944f7dc`
+* `K31` — `checkpoint.2cd5a115653b46223c9f08a5fde8e27816bca65403178271723fed449cc83585`
+* `K32` — `checkpoint.762086a51a9fb6a0560b5334da2fe6afc6742b9b378e090fe0b5ba2f998812d3`
 * `K4` — `checkpoint.1bde75b37e1ca3972037c29cbd3ba5291079544436db9176a82f097a6bf832fe`
 * `K5` — `checkpoint.6b0d12f1ecf380c0808bc95675222fbed7256f99bc8e9f475a0ec2693f804a0a`
 * `K6` — `checkpoint.8958092650197b473c5b00d9c0de22e075c4765efc2e8a4ab9d452ffae97cf61`
@@ -105,7 +109,7 @@ C1  Phase 0 constitution and Phase 1 archaeology atlas, evidence-bound
 * `K8` — `checkpoint.7eb3dba97cbf20f2b34d14cce7e93bc2171ebd0d7ee66d1f7508cc6e199567de`
 * `K9` — `checkpoint.60105b4c8189d2668c48e173fe2c92c0ddf76160caae24efecc707bd576f506f`
 
-current: `checkpoint.76a96561abab60000acae0b6e28920a3bb935d6b9439dcc8625d6088e944f7dc`
+current: `checkpoint.762086a51a9fb6a0560b5334da2fe6afc6742b9b378e090fe0b5ba2f998812d3`
 
 ## Note: derived names are not identities
 
@@ -125,6 +129,15 @@ changed with it; the Git commit is the authoritative record of the diff.
 ## Open residuals at this boundary
 
 ```
+open [low] the runtime-court count in forensics/frf/README.md is prose rather than a projection and said 25 while the store held 37; it is corrected, not derived
+    class: verification_gap
+    persistence: 0 descendant change(s)
+open [low] ASan is refused by the court's OOM protection, so the level-differential method is a substitute for a sanitizer rather than equivalent to one
+    class: verification_gap
+    persistence: 0 descendant change(s)
+open [low] probe_hygiene.py detects frame dependence, not out-of-bounds reads that land deterministically; a probe can read a fixed wrong location and still agree at every level
+    class: verification_gap
+    persistence: 0 descendant change(s)
 open [low] OSSL_PARAM_BLD_push_BN_pad with a negative BIGNUM leaves the value bytes uninitialised because BN_signed_bn2native refuses the recorded width; the refusal is compared, the bytes are not
     class: verification_gap
     persistence: 0 descendant change(s)

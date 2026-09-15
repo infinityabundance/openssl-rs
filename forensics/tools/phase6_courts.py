@@ -63,7 +63,7 @@ from atlas_common import (  # noqa: E402
 )
 
 OUT = REPO_ROOT / "artifacts" / "phase6" / "COURTS.json"
-GENERATOR = "forensics/tools/phase5_courts.py"
+GENERATOR = "forensics/tools/phase6_courts.py"
 PROBE_DIR = REPO_ROOT / "courts" / "phase6"
 PHASE2 = REPO_ROOT / "artifacts" / "phase2"
 STAGED = REPO_ROOT / "artifacts" / "phase6" / "probes"

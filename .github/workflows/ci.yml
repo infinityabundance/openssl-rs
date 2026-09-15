@@ -234,6 +234,28 @@ jobs:
       - name: Every active stratum's courts, derived from the phase registry
         run: bash docker/openssl-rs-court.sh exec python3 forensics/tools/run_courts.py
 
+      # A court compares two transcripts, which only means something if the
+      # transcript is a property of the library under test. A probe that reads
+      # memory it did not initialise makes the transcript a property of its own
+      # stack frame, and the difference then looks exactly like a candidate
+      # defect: `RT-PARAM` reported 24 against 22 for an out-of-bounds read in the
+      # probe that cost a session to diagnose. This gate recompiles every probe at
+      # three optimisation levels and fails if the answers differ, which is the
+      # signature of that class. It needs no sanitizer runtime, which is fortunate
+      # because ASan's terabyte shadow reservation is refused by the court's own
+      # OOM protection. See docs/DECISIONS.md D105.
+      - name: Probe hygiene (each probe must answer the same at every -O level)
+        run: |
+          bash docker/openssl-rs-court.sh exec python3 forensics/tools/probe_hygiene.py
+          # The committed record is compared, not merely regenerated. A gate that
+          # passes while its own evidence file has gone stale is the failure mode
+          # `run_courts.py` exists to prevent for the courts, and the artefact is
+          # byte-deterministic (measured), so an exact comparison is available.
+          git diff --exit-code -- artifacts/probe-hygiene.json || {
+            echo "::error::artifacts/probe-hygiene.json changed; regenerate and commit it";
+            exit 1;
+          }
+
       - name: Resolve trusted baseline ref
         id: baseline
         run: |
