@@ -4210,3 +4210,142 @@ ownership model has now paid for itself twice — once when `a2d_ASN1_OBJECT` an
 
 Phase-5 open obligations: 27 -> 0. libcrypto implemented exports: 930 -> 932.
 Divergence: D-PEM-1.
+
+## D94 — the court runner list was a registry nobody owned
+
+CI's authority-court job is described in its own comments as re-running "every court
+from scratch". It re-ran three of the four strata that had courts, because the
+workflow named them:
+
+    Phase 2 shell and 11 ABI courts   -> build_phase2.sh
+    Phase 3 runtime courts            -> phase3_courts.py
+    Phase 4 BIO court                 -> phase4_courts.py
+
+`forensics/tools/phase5_courts.py` existed on disk and was never called. Nine courts
+— `RT-BN`, `RT-ASN1`, `RT-ASN1-TEMPLATE`, `RT-ASN1-TIME`, `RT-ASN1-STR`,
+`RT-ASN1-PRINT`, `RT-BIO-ASN1`, `RT-ASN1-MIME` and `RT-PEM` — were therefore never
+reproduced by CI, and `artifacts/phase5/COURTS.json` was read as evidence by the
+regression guard instead. The job was green throughout, and its greenness said
+nothing whatever about the stratum that was being implemented.
+
+This is the same defect as D49, D51 and D92 seen from a different angle. Those were
+about a *symbol* being classified by a name instead of by a declaration; this is
+about a *court* being enumerated by hand instead of by a registry. In each case the
+mechanism is a second list that has to be remembered, and in each case the reason it
+is dangerous is that nothing fails when it goes stale.
+
+So the fix is not "add a Phase 5 step". It is `forensics/tools/run_courts.py`, which
+derives the list from `forensics/phase-state.json` — the same derived registry
+`forensics/STATUS.md` is rendered from — finds each runner by convention (the shell
+builder if the phase has one, because it also produces the artefact the later courts
+link against; otherwise `phase<N>_courts.py`), and *fails* when a phase that is not
+`not-started` has no runner and is not exempted in `COURTLESS` with a reason. The
+check is two-directional: a `phase<N>_courts.py` whose phase is `not-started` is
+reported too. Phase 6 cannot repeat this mistake; it will either be run or be a
+loud failure.
+
+Two further properties were needed to make the rerun actually mean something, and
+both came out of asking what a green job would be able to claim:
+
+  * the committed `COURTS.json` is **deleted before regenerating**, so a file that is
+    present but not reproduced cannot be read as evidence by whatever runs next;
+  * the regenerated file's **verdicts must equal** the committed file's, in either
+    direction. A committed file that claims a pass the run does not reproduce is the
+    trust problem; one that claims a failure the run does not reproduce is a record
+    nobody regenerated. An observation-count *increase* is allowed and reported,
+    because recording more is what a commit is for, and shrinkage is the regression
+    guard's business.
+
+Both were verified rather than asserted. `run_courts.py` in the court reports "4
+phase(s) re-derived from the authority" and regenerates
+`artifacts/phase5/COURTS.json` byte-identical to the committed file. Tampering
+RT-PEM's committed verdict to `fail` makes the run fail with `verdicts that moved:
+['RT-PEM: fail -> pass']`. A stray `phase9_courts.py` fails with "phase 9 is
+`not-started` but has a runner on disk", and a `phase 6` temporarily marked
+`in-progress` fails with "phase 6 (in-progress) is `not-started` and has no runner".
+And in CI, against an authority rebuilt from scratch, the run reports all four phases
+re-derived with `RT-BN` at 650 observations and `RT-PEM` at 37 — which is the
+observation that would have been absent before.
+
+Two smaller things fell out of the same reading. `gen_frf_courts.py` carried
+`CANDIDATE_VERSION = "0.0.7"` as a literal with the comment "one place, so a release
+bumps every court rather than the ones somebody remembered" — one place is right, a
+second place relative to `Cargo.toml` is not, and nothing held them together, so the
+32 declarations would have gone on naming a version the crate no longer was. It now
+reads `[package] version`. And a version bump was assumed to force a full FRF store
+regeneration; it does not. `frf court run` on a runtime court reports the run already
+exists and verifies, and `receipt emit` reports an identical evidence state, because
+a run identity is content-addressed over the *captures* — the transcripts of the
+candidate binary and the fixture — while `version_or_commit` is provenance metadata
+in the declaration. What moves the store is a change to the candidate's *behaviour*,
+which is the right sensitivity for it to have.
+
+`docs/CI.md` and the workflow's job name were updated with the change, and
+`.gitignore` gained `.*.tmp`: `git add -A` swept a commit-message scratch file into
+the D94 commit itself, which is the accident the `.rs` splice-file rule already
+records one directory down, so the shape is excluded rather than the name.
+
+## D95 — the DSO surface belonged to a phase whose definition was structural
+
+`forensics/tools/ownership_rules.py` assigned the fifteen ABI-only `DSO_*` exports to
+Phase 2, on the reasoning that the dynamic-loader abstraction is what Phase 2's
+distribution contract is about. Phase 2 does not have a semantic obligation ledger
+and its seal does not mention `DSO` at all: it closed on the distribution seal, the
+build machinery and the eleven ABI courts. So the global ownership model — the one
+D93 and the review that prompted it were built on — was asserting that Phase 2 owned
+semantic exports, while Phase 2's own definition said it had closed on structure.
+Neither statement was false about work that had been done, and that is exactly what
+made it worth correcting rather than explaining: a model whose purpose is to make
+ownership checkable cannot contain a claim that its own other half contradicts.
+
+They move to Phase 6, the earliest semantic stratum that needs them. Provider and
+module loading is where the dynamic loader stops being a description and starts being
+operational, and `DSO_load` is what an engine and a provider module are both loaded
+through. Phase 2 is unchanged and needs no reopening. `by_phase[6]` moves 112 → 127,
+and the atlas invariants hold: `unknown = 0`, `multiply_owned = 0`,
+`unassigned_headers = 0`.
+
+## D96 — the prototype gap for macro-generated exports, recorded rather than half-built
+
+`prototype_court.py` checks every implemented export's Rust declaration against the
+authority's recorded prototype, and reports three classes it cannot judge: 162
+`declaration_is_generated` (the symbol appears in `src/**/*.rs` but its signature is
+produced by a `macro_rules!`, so the source parser cannot read it), 8
+`implementation_is_c`, and 3 with no prototype in the atlas. The 162 are
+disproportionately ASN.1: the `d2i_*`/`i2d_*`/`*_it`/`*_new`/`*_free` families are
+macro-generated in this crate for exactly the reason they are macro-generated in the
+authority, so the gap grows with the stratum that is being worked on.
+
+The way to close it is a generated compile-time assertion per symbol, sourced from the
+Clang prototype atlas, which type-checks the *item* rather than its source text:
+
+    const _: unsafe extern "C" fn(...) -> ... = <the item>;
+
+The obstacle is that this needs the item's Rust *path*, which is what the parser
+cannot produce. Two ways out were considered and neither is small:
+
+  * generate a module that glob-imports every crate module (`use crate::asn1::typ::*;`
+    …) and asserts each export by its **bare** name. Name resolution replaces the path,
+    so the generator needs no knowledge of the macro; the cost is a generated file that
+    glob-imports the whole crate, and a compile-error iteration cycle to settle
+    ambiguities in a crate with 932 exports;
+  * feed the existing parser macro-*expanded* source via `cargo rustc --
+    -Zunpretty=expanded`, which keeps one parser and one canonical form, at the cost of
+    a nightly toolchain in the court image, against a crate pinned to a release
+    toolchain by `rust-version`.
+
+Both are real work and both were judged too likely to leave the tree red within the
+budget of the change that found them, so nothing was attempted: a half-built assertion
+mechanism is worse than a measured gap, because the gap is reported by the tool and
+would be reported by nothing once a broken mechanism stopped compiling. The gap stays
+at 162, `prototype_court.py` keeps reporting it under its own heading and counting it
+as neither a pass nor a failure, and this entry is the durable record of the design
+and of why it was not done here. It is the next thing to do in the ASN.1 line.
+
+The review that found this also suggested turning generator *sequencing* into an
+explicit dependency graph, or running generation to a fixed point and requiring the
+second pass to produce nothing. The specific instance is fixed — `run_courts.py` now
+owns the court ordering that used to be a property of the workflow's step list — but
+the general mechanism is not built, and for the same reason: it is a change to how
+every generator is invoked, and it should not be bolted on at the end of a change
+about something else.
