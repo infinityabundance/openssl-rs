@@ -53,6 +53,7 @@ use crate::asn1::string::{
     as_str, as_str_mut, string_embed_free, string_set_body, string_type_new,
 };
 use crate::ffi::guard_ffi;
+use crate::runtime::err::err_reasons;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_dynamic};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
@@ -623,11 +624,17 @@ pub unsafe extern "C" fn d2i_ASN1_OBJECT(
             if inf & 0x80 != 0 {
                 // The authority's `i` is left holding the header code, so the
                 // reason is the value it accumulated rather than a constant.
-                raise_site_dynamic(&err_sites::A_OBJECT_241, ASN1_R_BAD_OBJECT_HEADER);
+                raise_site_dynamic(
+                    &err_sites::A_OBJECT_241,
+                    err_reasons::ASN1_R_BAD_OBJECT_HEADER,
+                );
                 return core::ptr::null_mut();
             }
             if tag != V_ASN1_OBJECT {
-                raise_site_dynamic(&err_sites::A_OBJECT_241, ASN1_R_EXPECTING_AN_OBJECT);
+                raise_site_dynamic(
+                    &err_sites::A_OBJECT_241,
+                    err_reasons::ASN1_R_EXPECTING_AN_OBJECT,
+                );
                 return core::ptr::null_mut();
             }
             let ret = ossl_c2i_ASN1_OBJECT(a, &mut p, len);
@@ -689,17 +696,14 @@ pub unsafe extern "C" fn i2d_ASN1_OBJECT(a: *const Asn1Object, pp: *mut *mut c_u
 }
 
 // The two reason constants `d2i_ASN1_OBJECT` raises. They are the values behind
-// `ASN1_R_BAD_OBJECT_HEADER` and `ASN1_R_EXPECTING_AN_OBJECT`, read from the
-// authority's `openssl/asn1err.h`. The raise site itself is *dynamic* -- the
-// authority accumulates the reason in a local before raising -- so the generated
-// `err_sites` table carries no reason for it and these two cannot be referenced
-// from there. They are checked behaviourally instead: `o.not_oid.err` and
-// `o.bad_last.err` in `RT-ASN1` compare the packed reason an actual call produces,
-// so a wrong value here fails the court rather than passing silently. That is
-// weaker than deriving them, and deriving them from `asn1err.h` is the next change
-// to this file.
-const ASN1_R_BAD_OBJECT_HEADER: c_int = 102;
-const ASN1_R_EXPECTING_AN_OBJECT: c_int = 116;
+// `ASN1_R_BAD_OBJECT_HEADER` and `ASN1_R_EXPECTING_AN_OBJECT`, and they now come
+// from the generated `err_reasons` table rather than being written here: both
+// were transcribed wrongly the first time, so the header is *read* now. The
+// raise site itself is *dynamic* -- the authority accumulates the reason in a
+// local before raising -- so the generated `err_sites` table carries no reason
+// for it and the code has to be supplied. `RT-ASN1`'s `o.not_oid.err` and
+// `o.bad_last.err` compare the packed reason an actual call produces, so the
+// value is checked behaviourally as well as derivationally.
 
 /// Read a `const unsigned char **` argument as a value.
 ///
