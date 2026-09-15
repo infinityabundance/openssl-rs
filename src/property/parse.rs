@@ -66,7 +66,9 @@ use crate::property::list::{
     PropertyValue, OSSL_PROPERTY_OPER_EQ, OSSL_PROPERTY_OPER_NE, OSSL_PROPERTY_OVERRIDE,
     OSSL_PROPERTY_TYPE_NUMBER, OSSL_PROPERTY_TYPE_STRING, OSSL_PROPERTY_TYPE_VALUE_UNDEFINED,
 };
-use crate::property::strings::{ossl_property_name, ossl_property_name_str, ossl_property_value};
+use crate::property::strings::{
+    ossl_property_name, ossl_property_name_str, ossl_property_value, ossl_property_value_str,
+};
 use crate::runtime::ctype::{
     ossl_isalnum, ossl_isalpha, ossl_isdigit, ossl_isprint, ossl_isspace, ossl_isxdigit,
     ossl_tolower,
@@ -1209,6 +1211,270 @@ pub(crate) unsafe fn ossl_property_merge(
     r
 }
 
+// ---------------------------------------------------------------------------
+// The reverse printer
+// ---------------------------------------------------------------------------
+//
+// Three writers and one walk. They write into a caller-supplied buffer and, in the
+// same pass, count what a large enough buffer would need — so a caller can ask for
+// the size first and then the string. That is why `needed` counts even after the
+// buffer is full: `put_char` increments it whether or not it wrote.
+
+/// `static void put_char(char ch, char **buf, size_t *remain, size_t *needed)`
+///
+/// The `remain == 1` arm writes a **NUL instead of the character** and still
+/// advances, so a buffer with exactly one byte left is terminated rather than
+/// truncated mid-flight. That is the authority's and it is reproduced.
+///
+/// # Safety
+/// `*buf` must have `*remain` writable bytes.
+#[allow(dead_code)] // unreachable until 6.8's fetch calls it
+unsafe fn put_char(ch: u8, buf: &mut *mut c_char, remain: &mut usize, needed: &mut usize) {
+    if *remain == 0 {
+        *needed += 1;
+        return;
+    }
+    // SAFETY: the caller guarantees `*remain` writable bytes at `*buf`.
+    let at = (*buf).cast::<u8>();
+    if *remain == 1 {
+        // SAFETY: the single byte is writable.
+        unsafe { *at = 0 };
+    } else {
+        // SAFETY: at least two bytes are writable.
+        unsafe { *at = ch };
+    }
+    // SAFETY: advancing within the caller's buffer.
+    *buf = unsafe { (*buf).add(1) };
+    *needed += 1;
+    *remain -= 1;
+}
+
+/// `static void put_str(const char *str, char **buf, size_t *remain, size_t *needed)`
+///
+/// A property name or value is quoted **only if it needs it**: every character that
+/// is not alphanumeric, `.` or `_` forces quotes, a single quote is preferred and a
+/// double quote is used instead when the string contains one. The scan and the write
+/// are two passes over the same string, and the first pass only decides *which* quote
+/// — never whether the value is truncated, which the `remain`-based logic below
+/// decides.
+///
+/// # Safety
+/// `str` must be NUL-terminated and `*buf` must have `*remain` writable bytes.
+#[allow(dead_code)] // unreachable until 6.8's fetch calls it
+unsafe fn put_str(
+    str_: *const c_char,
+    buf: &mut *mut c_char,
+    remain: &mut usize,
+    needed: &mut usize,
+) {
+    // SAFETY: `str_` is NUL-terminated per the contract.
+    let bytes = unsafe { c_bytes(str_) };
+    let len = bytes.len();
+    let olen = len;
+
+    let mut quote: u8 = 0;
+    for &b in bytes {
+        if !ossl_isalnum(c_int::from(b)) && b != b'.' && b != b'_' {
+            if quote == 0 {
+                quote = b'\'';
+            }
+            if b == b'\'' {
+                quote = b'"';
+            }
+        }
+    }
+    let quotes = usize::from(quote != 0);
+    *needed += len;
+    if *remain <= quotes {
+        *needed += 2 * quotes;
+        return;
+    }
+    if quotes != 0 {
+        // SAFETY: the caller guarantees `*remain` writable bytes.
+        unsafe { put_char(quote, buf, remain, needed) };
+    }
+    // The copy is bounded by what is left after the opening quote and the NUL the
+    // authority always reserves.
+    let mut copied = len;
+    if *remain < len + 1 + quotes {
+        copied = *remain - 1;
+    }
+    if copied > 0 {
+        // SAFETY: `copied <= len` and `copied < *remain`, so both ranges are valid
+        // and they do not overlap.
+        unsafe {
+            ptr::copy_nonoverlapping(bytes.as_ptr(), (*buf).cast::<u8>(), copied);
+            *buf = (*buf).add(copied);
+            *remain -= copied;
+        }
+    }
+    if quotes != 0 {
+        // SAFETY: as above.
+        unsafe { put_char(quote, buf, remain, needed) };
+    }
+    if copied < olen && *remain == 1 {
+        // SAFETY: the single remaining byte is writable.
+        unsafe {
+            *(*buf).cast::<u8>() = 0;
+            *buf = (*buf).add(1);
+            *remain -= 1;
+        }
+    }
+}
+
+/// `static void put_num(int64_t val, char **buf, size_t *remain, size_t *needed)`
+///
+/// The authority writes the digits with `BIO_snprintf` and then advances the cursor by
+/// a length it computed **itself**, which is not the same number: the digits it wrote
+/// may have been truncated to `remain - 1`, while the advance is `min(len, remain)`.
+/// So a truncated number leaves the cursor past the NUL that terminated it, and the
+/// next writer overwrites that NUL. Reproduced by making the same two calculations
+/// rather than by measuring what was written.
+///
+/// `len` is computed from `-val`, so `INT64_MIN` — whose negation wraps — reports a
+/// length of 2 and advances by 2 regardless of its twenty digits. Unreachable through
+/// the parsers, which refuse a magnitude above `INT64_MAX`, and reproduced anyway.
+///
+/// # Safety
+/// `*buf` must have `*remain` writable bytes.
+#[allow(dead_code)] // unreachable until 6.8's fetch calls it
+unsafe fn put_num(val: i64, buf: &mut *mut c_char, remain: &mut usize, needed: &mut usize) {
+    let mut tmpval = val;
+    let mut len: usize = 1;
+    if tmpval < 0 {
+        len += 1;
+        tmpval = tmpval.wrapping_neg();
+    }
+    while tmpval > 9 {
+        len += 1;
+        tmpval /= 10;
+    }
+    *needed += len;
+    if *remain == 0 {
+        return;
+    }
+    let digits = format!("{val}");
+    let bytes = digits.as_bytes();
+    let written = core::cmp::min(len, *remain - 1);
+    // SAFETY: `written <= len`, `written < *remain`, and the source is a live
+    // `String`; the ranges do not overlap.
+    unsafe {
+        ptr::copy_nonoverlapping(bytes.as_ptr(), (*buf).cast::<u8>(), written);
+        *(*buf).add(written) = 0;
+        if *remain < len {
+            *buf = (*buf).add(*remain);
+            *remain = 0;
+        } else {
+            *buf = (*buf).add(len);
+            *remain -= len;
+        }
+    }
+}
+
+/// `size_t ossl_property_list_to_string(OSSL_LIB_CTX *ctx,
+/// const OSSL_PROPERTY_LIST *list, char *buf, size_t bufsize)`
+///
+/// Answers the number of bytes a large enough buffer would need, or 0 on a failure
+/// that cannot be a size (a name or value the table cannot stringify). A NULL list
+/// answers **1** and writes just a NUL, which is why a caller can pass NULL and get a
+/// valid empty string.
+///
+/// **The walk is backwards.** `prop` starts at the *last* definition and decrements,
+/// while the cursor advances forwards, so the string it produces lists the
+/// properties in descending `name_idx` order even though the array it reads is sorted
+/// ascending. That looks like a defect and is reproduced: it is observable, and
+/// re-parsing the output yields the same sorted list either way.
+///
+/// A definition whose `name_idx` is 0 is skipped **before** the separator logic, so it
+/// contributes neither a comma nor a clause.
+///
+/// # Safety
+/// `ctx` must be NULL or live; `list` NULL or live; `buf` must have `bufsize`
+/// writable bytes, or `bufsize` must be 0.
+#[allow(dead_code)] // unreachable until 6.8's fetch calls it
+pub(crate) unsafe fn ossl_property_list_to_string(
+    ctx: *mut c_void,
+    list: *const OsslPropertyList,
+    buf: *mut c_char,
+    bufsize: usize,
+) -> usize {
+    if list.is_null() {
+        if bufsize > 0 {
+            // SAFETY: `bufsize > 0` writable bytes at `buf`.
+            unsafe { *buf = 0 };
+        }
+        return 1;
+    }
+    let mut buf = buf;
+    let mut remain = bufsize;
+    let mut needed: usize = 0;
+    // SAFETY: the list is live, so its tail has `num_properties` definitions.
+    let n = unsafe { num_properties(list) } as usize;
+
+    for i in 0..n {
+        // The backwards walk: element `n - 1 - i`.
+        // SAFETY: `n - 1 - i` is in range for `i < n`.
+        let prop = unsafe { &*properties_ptr(list).add(n - 1 - i) };
+        if prop.name_idx == 0 {
+            continue;
+        }
+        if needed > 0 {
+            // SAFETY: the caller's buffer contract, carried through `remain`.
+            unsafe { put_char(b',', &mut buf, &mut remain, &mut needed) };
+        }
+        if prop.optional != 0 {
+            // SAFETY: as above.
+            unsafe { put_char(b'?', &mut buf, &mut remain, &mut needed) };
+        } else if prop.oper == OSSL_PROPERTY_OVERRIDE {
+            // SAFETY: as above.
+            unsafe { put_char(b'-', &mut buf, &mut remain, &mut needed) };
+        }
+        // SAFETY: `ctx` is NULL or live.
+        let val = unsafe { ossl_property_name_str(ctx, prop.name_idx) };
+        if val.is_null() {
+            return 0;
+        }
+        // SAFETY: the caller's buffer contract; `val` is NUL-terminated.
+        unsafe { put_str(val, &mut buf, &mut remain, &mut needed) };
+
+        match prop.oper {
+            OSSL_PROPERTY_OPER_NE | OSSL_PROPERTY_OPER_EQ => {
+                if prop.oper == OSSL_PROPERTY_OPER_NE {
+                    // The `!` goes before the `=`, which is the `!=` the parser reads.
+                    // SAFETY: as above.
+                    unsafe { put_char(b'!', &mut buf, &mut remain, &mut needed) };
+                }
+                // SAFETY: as above.
+                unsafe { put_char(b'=', &mut buf, &mut remain, &mut needed) };
+                if prop.type_ == OSSL_PROPERTY_TYPE_STRING {
+                    // SAFETY: the type says the string arm is the live one, and `ctx`
+                    // is NULL or live.
+                    let v = unsafe { ossl_property_value_str(ctx, prop.v.str_val) };
+                    if v.is_null() {
+                        return 0;
+                    }
+                    // SAFETY: as above.
+                    unsafe { put_str(v, &mut buf, &mut remain, &mut needed) };
+                } else if prop.type_ == OSSL_PROPERTY_TYPE_NUMBER {
+                    // SAFETY: the type says the number arm is the live one.
+                    unsafe { put_num(prop.v.int_val, &mut buf, &mut remain, &mut needed) };
+                } else {
+                    // A `VALUE_UNDEFINED` clause has no printable form.
+                    return 0;
+                }
+            }
+            // `OVERRIDE` already wrote its `-` and has no value; anything else is the
+            // authority's `default:` arm, which writes nothing.
+            _ => {}
+        }
+    }
+
+    // SAFETY: as above. The terminator is written unconditionally, and its write is
+    // what makes the answer a C string whenever the buffer was large enough.
+    unsafe { put_char(0, &mut buf, &mut remain, &mut needed) };
+    needed
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1385,6 +1651,87 @@ mod tests {
             ossl_property_free(m);
             ossl_property_free(a);
             ossl_property_free(b);
+            OSSL_LIB_CTX_free(c);
+        }
+    }
+
+    /// **The reverse printer walks the sorted array backwards, and the size query
+    /// agrees with the write.** `input` is interned after `output` by
+    /// `ossl_property_parse_init` (the order is provider, version, fips, output,
+    /// input, structure), so `input` has the *higher* `name_idx` and the sorted array
+    /// holds `output` first. The printed string must therefore hold `input` first —
+    /// which is what makes this a test of the walk rather than of formatting.
+    #[test]
+    fn list_to_string_walks_backwards_and_round_trips() {
+        let c = ctx();
+        // SAFETY: `c` is live and the literals are NUL-terminated.
+        unsafe {
+            let l = ossl_parse_property(c, c"input=certificate,output=certificate".as_ptr());
+            assert!(!l.is_null());
+            assert_eq!(num_properties(l), 2);
+            let hi = (*properties_ptr(l)).name_idx;
+            let lo = (*properties_ptr(l).add(1)).name_idx;
+            assert!(hi <= lo, "the array is sorted ascending");
+
+            // The size query: a NULL buffer with zero room still counts.
+            let needed = ossl_property_list_to_string(c, l, core::ptr::null_mut(), 0);
+            assert!(needed > 1, "a two-clause list needs more than a terminator");
+
+            let mut buf = vec![0u8; needed];
+            let again =
+                ossl_property_list_to_string(c, l, buf.as_mut_ptr().cast::<c_char>(), needed);
+            assert_eq!(again, needed, "the count does not depend on the buffer");
+            assert_eq!(buf[needed - 1], 0, "the last byte is the terminator");
+            let text = core::ffi::CStr::from_ptr(buf.as_ptr().cast::<c_char>());
+            // `expect` is denied crate-wide, so a miss becomes an empty transcript and
+            // the assertion below carries the string into the failure message.
+            let text = text.to_str().unwrap_or_default();
+            assert!(!text.is_empty(), "the printed form is ascii");
+
+            // Backwards: the higher `name_idx` prints first.
+            const MISSING: usize = usize::MAX;
+            let i_in = text.find("input").unwrap_or(MISSING);
+            let i_out = text.find("output").unwrap_or(MISSING);
+            assert_ne!(i_in, MISSING, "`input` is printed: {text}");
+            assert_ne!(i_out, MISSING, "`output` is printed: {text}");
+            assert!(
+                i_in < i_out,
+                "the descending walk prints the higher index first: {text}"
+            );
+
+            // Round trip: re-parsing yields the same clauses, in whatever order the
+            // sort puts them.
+            let back = ossl_parse_property(c, buf.as_ptr().cast::<c_char>());
+            assert!(!back.is_null(), "the printed form re-parses");
+            assert_eq!(num_properties(back), num_properties(l));
+            for i in 0..num_properties(l) as usize {
+                let a = &*properties_ptr(l).add(i);
+                let b = &*properties_ptr(back).add(i);
+                assert_eq!(a.name_idx, b.name_idx, "clause {i} name");
+                assert_eq!(a.type_, b.type_, "clause {i} type");
+                assert_eq!(a.oper, b.oper, "clause {i} oper");
+                assert_eq!(
+                    union_bytes(&a.v),
+                    union_bytes(&b.v),
+                    "clause {i} value, byte for byte"
+                );
+            }
+
+            // A buffer of exactly one byte holds the terminator and nothing else,
+            // because `put_char` writes a NUL when one byte remains.
+            let mut one = [0xffu8; 1];
+            let n = ossl_property_list_to_string(c, l, one.as_mut_ptr().cast::<c_char>(), 1);
+            assert_eq!(n, needed);
+            assert_eq!(one[0], 0, "one byte of room becomes a terminator");
+
+            // A NULL list is an empty string, not a failure.
+            assert_eq!(
+                ossl_property_list_to_string(c, core::ptr::null(), core::ptr::null_mut(), 0),
+                1
+            );
+
+            ossl_property_free(back);
+            ossl_property_free(l);
             OSSL_LIB_CTX_free(c);
         }
     }

@@ -5777,3 +5777,73 @@ replace one silent gap with two.
 | courts / observations | 52 / 19,655 | 52 / 19,655 (no behaviour change) |
 | determinism-checked artefacts | 12 | 14 |
 | unit tests | 196 | 203 |
+
+## D113 — 6.7b closes: a backwards printer, a four-shape cache, and a clippy verdict on `unsafe fn` bodies
+
+**What landed.** The rest of the property engine's grammar, so **6.7b is complete**:
+`ossl_property_list_to_string` with its `put_char`/`put_str`/`put_num` helpers, and all
+of `defn_cache.c` — `ossl_prop_defn_get` and `ossl_prop_defn_set`. With D112's half, the
+whole of `property_parse.c`, `property_query.c` and `defn_cache.c` is reconstructed. Unit
+tests go 203 → **216**.
+
+**The reverse printer walks the sorted array backwards, and that is a test rather than a
+comment.** `ossl_property_list_to_string` starts at `properties[num_properties - 1]` and
+decrements while the output cursor advances, so the string lists the clauses in
+*descending* `name_idx` order even though the array it reads is sorted ascending. It looks
+like a defect and is reproduced, because it is observable. The test does not assert the
+oddity in the abstract — it uses `input=certificate,output=certificate`, where
+`ossl_property_parse_init` interns `output` before `input`, so the *higher* index is
+`input` and the printed string must therefore contain `input` first. A forward walk would
+put `output` first and fail.
+
+The same test covers the printer's other two obligations: `put_num` advances the cursor by
+a length it computed itself, not by what it wrote, so a truncated number leaves the cursor
+*past* the NUL that terminated it; and a buffer with exactly one byte of room becomes a
+terminator rather than a character, which is the `*remain == 1` arm of `put_char`. A NULL
+list answers **1** and writes a bare terminator, so a caller can pass NULL and get a valid
+empty string rather than a failure.
+
+**`put_str` reads its input twice.** The first pass decides only *which* quote — single,
+or double when the string contains a single — and never whether the value will be
+truncated; that is the second pass and the `remain` arithmetic. A restructured version that
+decided both in one pass would agree on every short value and differ on a value that
+contains an apostrophe *and* overflows the buffer.
+
+**The definition cache has four shapes, not two.** `prop == NULL` answers **1** without
+touching anything; `pl == NULL` **deletes** the entry and answers 1; an already-cached text
+frees the caller's list and **overwrites `*pl` with the cache's own**, so both sides then
+share one object; and otherwise the text and the list are copied into a single
+self-referential block whose key lives inside it. Three tests cover all four plus the
+per-context isolation. The third shape is the one with teeth: nothing may free a list it
+obtained that way twice, and the test asserts the pointer identity that makes that true.
+
+**`ossl_assert` is non-fatal here too.** `NDEBUG` is defined in the admitted build, so the
+two asserts in `ossl_prop_defn_get` are `(x) != 0` and a NULL table answers NULL rather
+than aborting. That is the same build fact D109 read from `configdata.pm`, applied to a
+third file.
+
+**A clippy verdict worth recording, because it corrects an assumption.** The crate's
+convention — every pointer operation in its own `unsafe` block with a `SAFETY` line
+directly above — does not mean every *call* in an `unsafe fn` needs one. `lib_ctx_get_data`,
+`lib_ctx_read_lock`, `lib_ctx_write_lock`, `lib_ctx_unlock` and `CRYPTO_malloc` are all
+**safe** functions in this crate, so wrapping them is an `unused_unsafe` error under
+`-D warnings`. Eight such blocks were removed from `defn_cache.rs`, and one in
+`parse.rs`'s `put_char` (a pointer *cast* needs no block either). The distinction is worth
+having in the record because the opposite assumption is the natural one to make from the
+handoff's summary of the convention.
+
+Two smaller corrections of my own work, both caught by clippy rather than by a court:
+`items_after_test_module` — the printer was appended after the `#[cfg(test)]` module, so
+the module moved to the end of the file; and `expect_used` is denied crate-wide, so a
+test's three `expect`s became `unwrap_or_default`/`unwrap_or` with assertions that carry
+the printed transcript into the failure message.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 102 / 59 | 102 / 59 (no export) |
+| index slots filled | 9 | 9 (unchanged) |
+| courts / observations | 52 / 19,655 | 52 / 19,655 (no behaviour change) |
+| determinism-checked artefacts | 14 | 14 |
+| unit tests | 203 | 216 |
