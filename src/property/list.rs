@@ -60,21 +60,44 @@ pub(crate) type OsslPropertyIdx = c_int;
 
 /// `typedef enum { OSSL_PROPERTY_TYPE_STRING, OSSL_PROPERTY_TYPE_NUMBER,
 /// OSSL_PROPERTY_TYPE_VALUE_UNDEFINED } OSSL_PROPERTY_TYPE` — `internal/property.h`.
+#[allow(dead_code)]
+// unreachable until 6.8's fetch calls it; this whole module is the interface the
+// provider registry is written against, and the seal of no earlier phase named it
 pub(crate) const OSSL_PROPERTY_TYPE_STRING: c_int = 0;
+#[allow(dead_code)]
+// unreachable until 6.8's fetch calls it; this whole module is the interface the
+// provider registry is written against, and the seal of no earlier phase named it
 pub(crate) const OSSL_PROPERTY_TYPE_NUMBER: c_int = 1;
+#[allow(dead_code)]
+// unreachable until 6.8's fetch calls it; this whole module is the interface the
+// provider registry is written against, and the seal of no earlier phase named it
 pub(crate) const OSSL_PROPERTY_TYPE_VALUE_UNDEFINED: c_int = 2;
 
 /// `typedef enum { OSSL_PROPERTY_OPER_EQ, OSSL_PROPERTY_OPER_NE,
 /// OSSL_PROPERTY_OVERRIDE } OSSL_PROPERTY_OPER`.
+#[allow(dead_code)]
+// unreachable until 6.8's fetch calls it; this whole module is the interface the
+// provider registry is written against, and the seal of no earlier phase named it
 pub(crate) const OSSL_PROPERTY_OPER_EQ: c_int = 0;
+#[allow(dead_code)]
+// unreachable until 6.8's fetch calls it; this whole module is the interface the
+// provider registry is written against, and the seal of no earlier phase named it
 pub(crate) const OSSL_PROPERTY_OPER_NE: c_int = 1;
+/// `OSSL_PROPERTY_OVERRIDE` — the third enumerator of `OSSL_PROPERTY_OPER`, whose
+/// name drops the `OPER_` infix. It is what a query's `-name` clause sets, and it is
+/// set **without** setting `type`, which is why every reader tests for it before
+/// touching the value union.
+#[allow(dead_code)]
+// unreachable until 6.8's fetch calls it; this whole module is the interface the
+// provider registry is written against, and the seal of no earlier phase named it
 pub(crate) const OSSL_PROPERTY_OVERRIDE: c_int = 2;
 
 /// `#define OSSL_PROPERTY_TRUE 1` and `OSSL_PROPERTY_FALSE 2` — `property_local.h`.
 ///
 /// They live in `parse.rs` with the initialiser that assigns them; re-exported here
-/// because every reader of a definition compares against them.
-pub(crate) use crate::property::parse::{OSSL_PROPERTY_FALSE, OSSL_PROPERTY_TRUE};
+/// because every reader of a definition compares against them. `OSSL_PROPERTY_FALSE`
+/// is re-exported for the same reason even though this module does not read it.
+pub(crate) use crate::property::parse::OSSL_PROPERTY_TRUE;
 
 /// The `v` union of `struct ossl_property_definition_st`.
 ///
@@ -109,6 +132,9 @@ pub(crate) struct OsslPropertyDefinition {
 
 /// The byte width of the `v` union, which is what `ossl_property_match_count`'s
 /// `memcmp` covers.
+#[allow(dead_code)]
+// unreachable until 6.8's fetch calls it; this whole module is the interface the
+// provider registry is written against, and the seal of no earlier phase named it
 pub(crate) const PROPERTY_VALUE_BYTES: usize = core::mem::size_of::<PropertyValue>();
 
 /// A **view** of an `OSSL_PROPERTY_LIST`: a run of definitions.
@@ -134,6 +160,9 @@ pub(crate) struct OsslPropertyList {
 /// # Safety
 /// `list` must be a live list from `ossl_parse_property`, `ossl_parse_query` or
 /// `ossl_property_merge`, so the tail really has `num_properties` elements.
+#[allow(dead_code)]
+// unreachable until 6.8's fetch calls it; this whole module is the interface the
+// provider registry is written against, and the seal of no earlier phase named it
 pub(crate) unsafe fn properties_ptr(
     list: *const OsslPropertyList,
 ) -> *const OsslPropertyDefinition {
@@ -146,6 +175,9 @@ pub(crate) unsafe fn properties_ptr(
 ///
 /// # Safety
 /// `list` must be NULL or a live list.
+#[allow(dead_code)]
+// unreachable until 6.8's fetch calls it; this whole module is the interface the
+// provider registry is written against, and the seal of no earlier phase named it
 pub(crate) unsafe fn num_properties(list: *const OsslPropertyList) -> c_int {
     if list.is_null() {
         0
@@ -155,6 +187,9 @@ pub(crate) unsafe fn num_properties(list: *const OsslPropertyList) -> c_int {
     }
 }
 
+#[allow(dead_code)]
+// unreachable until 6.8's fetch calls it; this whole module is the interface the
+// provider registry is written against, and the seal of no earlier phase named it
 pub(crate) unsafe fn properties<'len>(
     list: *const OsslPropertyList,
     len: usize,
