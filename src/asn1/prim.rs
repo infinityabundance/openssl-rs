@@ -689,11 +689,17 @@ pub unsafe extern "C" fn i2d_ASN1_OBJECT(a: *const Asn1Object, pp: *mut *mut c_u
 }
 
 // The two reason constants `d2i_ASN1_OBJECT` raises. They are the values behind
-// `ASN1_R_BAD_OBJECT_HEADER` and `ASN1_R_EXPECTING_AN_OBJECT`, which the generated
-// raise-site table records as a *dynamic* site because the authority accumulates
-// them in a local before raising.
-const ASN1_R_BAD_OBJECT_HEADER: c_int = 101;
-const ASN1_R_EXPECTING_AN_OBJECT: c_int = 127;
+// `ASN1_R_BAD_OBJECT_HEADER` and `ASN1_R_EXPECTING_AN_OBJECT`, read from the
+// authority's `openssl/asn1err.h`. The raise site itself is *dynamic* -- the
+// authority accumulates the reason in a local before raising -- so the generated
+// `err_sites` table carries no reason for it and these two cannot be referenced
+// from there. They are checked behaviourally instead: `o.not_oid.err` and
+// `o.bad_last.err` in `RT-ASN1` compare the packed reason an actual call produces,
+// so a wrong value here fails the court rather than passing silently. That is
+// weaker than deriving them, and deriving them from `asn1err.h` is the next change
+// to this file.
+const ASN1_R_BAD_OBJECT_HEADER: c_int = 102;
+const ASN1_R_EXPECTING_AN_OBJECT: c_int = 116;
 
 /// Read a `const unsigned char **` argument as a value.
 ///

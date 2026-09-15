@@ -101,10 +101,16 @@ unsafe fn get_length(
     // SAFETY: the caller guarantees `pp` is readable.
     let mut p = unsafe { *pp };
     let mut ret: u64 = 0;
-    max -= 1;
+    // The authority writes this as `if (max-- < 1) return 0;` — a *post*-decrement,
+    // so the test sees the old value and `max` is decremented on the way through.
+    // Writing it as a pre-decrement rejects every object whose length is the last
+    // readable byte, which is every short-form object with `omax == 2`: `30 00`,
+    // `04 00` and the end-of-contents marker all failed here until the court's
+    // zero-length cases were added.
     if max < 1 {
         return 0;
     }
+    max -= 1;
     // SAFETY: `max >= 1` means one readable byte at `p`.
     if unsafe { *p } == 0x80 {
         // SAFETY: the caller's slot is writable.

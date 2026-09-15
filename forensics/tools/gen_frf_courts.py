@@ -117,6 +117,12 @@ COURTS: list[tuple[str, int, str, str]] = [
      "the observable surface of the opaque BIGNUM: the values read back through the\n"
      "conversions, the sign, the bit length, the predicate answers, the return\n"
      "classes, the error queue after a failure and the division identity a == b*q + r"),
+    ("rt-asn1", 5, "rt_asn1_probe",
+     "the DER header decoder over every boundary it has -- short and long form, the\n"
+     "length-length boundaries, indefinite and constructed forms, the high-tag form,\n"
+     "a declared length past the buffer and the end-of-contents marker -- together\n"
+     "with the two's-complement content codec, the string layer, the object layer,\n"
+     "the text writers and the two parsers"),
 ]
 
 

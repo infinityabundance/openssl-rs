@@ -1,7 +1,7 @@
 {
   "authority": "openssl-3.6.4-production",
   "body": {
-    "all_pass": true,
+    "all_pass": false,
     "authority": "openssl-3.6.4-production",
     "claim": "A passing court means the candidate produced the same observable transcript as the authority for the behaviours this probe exercises. It is a differential-compatibility result, NOT cryptographic or security correctness, and NOT evidence for any behaviour the probe does not touch (docs/PARITY_MODEL.md).",
     "courts": [
@@ -21,12 +21,42 @@
           "candidate": "artifacts/phase5/probes/rt_bn_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 644,
+        "candidate_exit_code": 0,
+        "candidate_observations": 644,
+        "candidate_stderr_tail": [],
+        "court": "RT-ASN1",
+        "crashed": false,
+        "probe": "courts/phase5/rt_asn1_probe.c",
+        "residual_count": 2,
+        "residuals": [
+          {
+            "authority": "171",
+            "candidate": "189",
+            "class": "value",
+            "observation": "parse.nested_text.len"
+          },
+          {
+            "authority": "    0:d=0  hl=2 l=  12 cons: SEQUENCE          \\x0A    2:d=1  hl=2 l=   3 prim: OCTET STRING      :ABC\\x0A    7:d=1  hl=2 l=   2 prim: INTEGER           :0100\\x0AError in encoding\\x0A",
+            "candidate": "    0:d=0  hl=2 l=  12 cons: SEQUENCE          \\x0A    2:d=1  hl=2 l=   3 prim: OCTET STRING      :ABC\\x0A    7:d=1  hl=2 l=   2 prim: INTEGER           :0100\\x0AError in encoding\\x0AError in encoding\\x0A",
+            "class": "value",
+            "observation": "parse.nested_text.text"
+          }
+        ],
+        "staged_binaries": {
+          "authority": "artifacts/phase5/probes/rt_asn1_probe.authority",
+          "candidate": "artifacts/phase5/probes/rt_asn1_probe.candidate"
+        },
+        "verdict": "fail"
       }
     ],
     "summary": {
-      "fail": 0,
+      "fail": 1,
       "pass": 1,
-      "total": 1
+      "total": 2
     }
   },
   "generator": "forensics/tools/phase5_courts.py",
@@ -40,6 +70,11 @@
       "name": "probe",
       "path": "courts/phase5/rt_bn_probe.c",
       "sha256": "58bc51b458117e8d3c0a11ce5f0a70b53ab513d85cb55b559a03fb0900a9efd9"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase5/rt_asn1_probe.c",
+      "sha256": "1ec69413ea51ef3737cffe99ddbf54d26d15d231c44816c9ee0251c5ddefa504"
     }
   ],
   "kind": "phase5-courts",
