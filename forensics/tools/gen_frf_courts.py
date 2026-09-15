@@ -155,6 +155,15 @@ COURTS: list[tuple[str, int, str, str]] = [
      "and suffix runs with their cleanup callbacks counted, the four prefix/suffix\n"
      "controls and the two EX_ARG controls, the flush-before-any-write case, the\n"
      "pass-through paths, and BIO_new_NDEF over a caller-declared streaming item"),
+    ("rt-asn1-print", 5, "rt_asn1_print_probe",
+     "the structural printer over every arm of its itype switch: the <ABSENT> rule\n"
+     "and the boolean that lives in its slot, the primitive leaves including the\n"
+     "128-bit decimal/hex threshold and the object's long name, the MSTRING that\n"
+     "reads its type from the value, the ANY that repoints at its own union, a\n"
+     "caller-declared SEQUENCE with an EMBED field and an OPTIONAL one, a CHOICE\n"
+     "with an out-of-range selector, the SEQUENCE OF and SET OF empty/absent cases,\n"
+     "the twenty-space indent blocks measured through a short-count sink, and the\n"
+     "negative indent that fails the whole call"),
 ]
 
 

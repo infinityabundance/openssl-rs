@@ -71,6 +71,7 @@ COURTS = [
     ("RT-ASN1-TIME", "rt_asn1_time_probe.c"),
     ("RT-ASN1-STR", "rt_asn1_str_probe.c"),
     ("RT-BIO-ASN1", "rt_bio_asn1_probe.c"),
+    ("RT-ASN1-PRINT", "rt_asn1_print_probe.c"),
 ]
 
 

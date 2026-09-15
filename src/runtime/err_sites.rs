@@ -6000,6 +6000,156 @@ pub(crate) const X_LONG_181: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `x509v3_add_len_value` at `crypto/x509/v3_utl.c:60` (ERR_R_CRYPTO_LIB).
+pub(crate) const V3_UTL_60: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_utl.c",
+    line: 60,
+    func: c"x509v3_add_len_value",
+    lib: 34,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `i2s_ASN1_ENUMERATED` at `crypto/x509/v3_utl.c:174` (ERR_R_ASN1_LIB).
+pub(crate) const V3_UTL_174: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_utl.c",
+    line: 174,
+    func: c"i2s_ASN1_ENUMERATED",
+    lib: 34,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `i2s_ASN1_ENUMERATED` at `crypto/x509/v3_utl.c:176` (ERR_R_X509V3_LIB).
+pub(crate) const V3_UTL_176: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_utl.c",
+    line: 176,
+    func: c"i2s_ASN1_ENUMERATED",
+    lib: 34,
+    reason: 524322,
+    dynamic_reason: false,
+};
+
+/// `i2s_ASN1_INTEGER` at `crypto/x509/v3_utl.c:189` (ERR_R_ASN1_LIB).
+pub(crate) const V3_UTL_189: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_utl.c",
+    line: 189,
+    func: c"i2s_ASN1_INTEGER",
+    lib: 34,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `i2s_ASN1_INTEGER` at `crypto/x509/v3_utl.c:191` (ERR_R_X509V3_LIB).
+pub(crate) const V3_UTL_191: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_utl.c",
+    line: 191,
+    func: c"i2s_ASN1_INTEGER",
+    lib: 34,
+    reason: 524322,
+    dynamic_reason: false,
+};
+
+/// `s2i_ASN1_INTEGER` at `crypto/x509/v3_utl.c:204` (X509V3_R_INVALID_NULL_VALUE).
+pub(crate) const V3_UTL_204: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_utl.c",
+    line: 204,
+    func: c"s2i_ASN1_INTEGER",
+    lib: 34,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `s2i_ASN1_INTEGER` at `crypto/x509/v3_utl.c:209` (ERR_R_BN_LIB).
+pub(crate) const V3_UTL_209: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_utl.c",
+    line: 209,
+    func: c"s2i_ASN1_INTEGER",
+    lib: 34,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `s2i_ASN1_INTEGER` at `crypto/x509/v3_utl.c:233` (X509V3_R_BN_DEC2BN_ERROR).
+pub(crate) const V3_UTL_233: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_utl.c",
+    line: 233,
+    func: c"s2i_ASN1_INTEGER",
+    lib: 34,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `s2i_ASN1_INTEGER` at `crypto/x509/v3_utl.c:243` (X509V3_R_BN_TO_ASN1_INTEGER_ERROR).
+pub(crate) const V3_UTL_243: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_utl.c",
+    line: 243,
+    func: c"s2i_ASN1_INTEGER",
+    lib: 34,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `X509V3_get_value_bool` at `crypto/x509/v3_utl.c:291` (X509V3_R_INVALID_BOOLEAN_STRING).
+pub(crate) const V3_UTL_291: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_utl.c",
+    line: 291,
+    func: c"X509V3_get_value_bool",
+    lib: 34,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `X509V3_parse_list` at `crypto/x509/v3_utl.c:340` (X509V3_R_INVALID_EMPTY_NAME).
+pub(crate) const V3_UTL_340: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_utl.c",
+    line: 340,
+    func: c"X509V3_parse_list",
+    lib: 34,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `X509V3_parse_list` at `crypto/x509/v3_utl.c:349` (X509V3_R_INVALID_EMPTY_NAME).
+pub(crate) const V3_UTL_349: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_utl.c",
+    line: 349,
+    func: c"X509V3_parse_list",
+    lib: 34,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `X509V3_parse_list` at `crypto/x509/v3_utl.c:364` (X509V3_R_INVALID_NULL_VALUE).
+pub(crate) const V3_UTL_364: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_utl.c",
+    line: 364,
+    func: c"X509V3_parse_list",
+    lib: 34,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `X509V3_parse_list` at `crypto/x509/v3_utl.c:379` (X509V3_R_INVALID_NULL_VALUE).
+pub(crate) const V3_UTL_379: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_utl.c",
+    line: 379,
+    func: c"X509V3_parse_list",
+    lib: 34,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `X509V3_parse_list` at `crypto/x509/v3_utl.c:388` (X509V3_R_INVALID_EMPTY_NAME).
+pub(crate) const V3_UTL_388: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_utl.c",
+    line: 388,
+    func: c"X509V3_parse_list",
+    lib: 34,
+    reason: 108,
+    dynamic_reason: false,
+};
+
 /// Every recorded raise site, in authority source order.
 ///
 /// This is the complete inventory for the covered files, including the
@@ -6608,4 +6758,19 @@ pub(crate) static ALL: &[ErrSite] = &[
     X_LONG_165,
     X_LONG_175,
     X_LONG_181,
+    V3_UTL_60,
+    V3_UTL_174,
+    V3_UTL_176,
+    V3_UTL_189,
+    V3_UTL_191,
+    V3_UTL_204,
+    V3_UTL_209,
+    V3_UTL_233,
+    V3_UTL_243,
+    V3_UTL_291,
+    V3_UTL_340,
+    V3_UTL_349,
+    V3_UTL_364,
+    V3_UTL_379,
+    V3_UTL_388,
 ];

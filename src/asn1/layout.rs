@@ -491,6 +491,29 @@ pub struct Asn1Sctx {
     pub(crate) name: *const c_char,
 }
 
+/// `ASN1_PRINT_ARG` — what an `ASN1_AUX` callback's `exarg` points at during a
+/// print.
+///
+/// ```text
+/// typedef struct ASN1_PRINT_ARG_st {
+///     BIO *out;
+///     int indent;
+///     const ASN1_PCTX *pctx;
+/// } ASN1_PRINT_ARG;
+/// ```
+///
+/// Declared in the installed `asn1t.h`, so a caller's informational callback may
+/// read it; `ASN1_item_print` is the only operation that fills it in.
+#[repr(C)]
+pub struct Asn1PrintArg {
+    /// The BIO the print is writing to.
+    pub(crate) out: *mut Bio,
+    /// The current indentation, in spaces.
+    pub(crate) indent: c_int,
+    /// The printing options in force.
+    pub(crate) pctx: *const Asn1Pctx,
+}
+
 // ---------------------------------------------------------------------------
 // `ASN1_ITYPE_*` — how an `ASN1_ITEM` is interpreted.
 // ---------------------------------------------------------------------------

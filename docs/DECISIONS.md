@@ -4063,3 +4063,61 @@ C39's summary cannot be rewritten; this entry is the authoritative record of wha
 was meant to say. The lesson is operational rather than architectural — a summary
 that contains shell metacharacters must be quoted for the shell that carries it —
 and it is recorded rather than quietly retried because the trajectory is evidence.
+
+## D90 — `ASN1_item_print` lands, and the court finds a defect no unit test could
+
+`ASN1_item_print` (`crypto/asn1/tasn_prn.c`) is the derivation counterpart of the
+template decoder: the same `itype` switch over the same `tt->offset` arithmetic,
+walking a decoded value instead of bytes. It is implemented in `src/asn1/tasn_prn.rs`
+and observed by `RT-ASN1-PRINT`, 275 observations, no residual.
+
+Three things about it are worth keeping.
+
+The first is the one the court caught, and it is the kind of defect this project exists
+to find. `asn1_template_print_ctx` re-addresses an `EMBED` field before printing it:
+the field's own storage *is* the value, so the printer builds a pointer to a local
+holding the field's address and passes *that* down. The authority declares that local
+at function scope. My first version declared it inside the `if` block that fills it in,
+which compiles, which reads plausibly, and which points at a stack slot Rust is entitled
+to reuse the moment the block ends. The struct's first field printed as a stable
+constant that was independent of its value — 1651470960 for 0, for 1 and for 0x1234567
+alike — and no unit test could have noticed, because nothing in the crate's own items
+is `EMBED` with a primitive-hook field. The probe now pins that property on purpose:
+`d.caller_num1` and `d.caller_num0` print the same field at two values that cannot be
+mistaken for an address, so a printer reading the wrong storage cannot pass by
+coincidence, and `d2.simple_int` prints a *non*-embedded `INT32` so an `EMBED`-only
+defect is distinguishable from a hook defect. The fix mirrors `i2d.rs`'s `tval`, which
+had the pattern right from the start.
+
+The second is `i2s_ASN1_INTEGER`. `asn1_print_integer` calls it, its definition is in
+`crypto/x509/v3_utl.c` and its declaration is in `x509v3.h` — a Phase 11 symbol. Phase 5
+needs the behaviour and does not own the export, so it is reproduced as
+`pub(crate) i2s_asn1_integer` with no `#[no_mangle]`: exporting a second definition would
+double-define the symbol and claim an obligation this stratum does not own. Its two
+`ERR_raise` coordinates are a different question, and the answer follows `a_object.c`'s
+precedent from Phase 4 (D49) — the coordinate is observable through a Phase 5 export, so
+`crypto/x509/v3_utl.c` is added to `gen_err_raise_sites.py`'s covered files rather than
+deferred with the rest of `crypto/x509`. That needed one generator fix of its own: the
+reason resolver's include list had `x509err.h` but not `x509v3err.h`, so `X509V3_R_*` did
+not resolve.
+
+The third is the ownership reconciliation, which was **already failing at the previous
+HEAD** and had been missed. `bio_asn1.c`'s six exports are declared by `bio.h`, so the
+declaring-header rule makes them Phase 4's, but 5.8 implemented them here — and both
+ledgers counted them, which `ownership_audit.py` fails on. The mechanism for this already
+existed: a hand-off is *sticky*, Phase 3 established that (D57), and a deferred row may
+carry `implemented_by_owner: true`. So Phase 4 now declares `HANDED_OFF_TO_PHASE5` and
+excludes those six from its `implemented` list, Phase 5 keeps them, and the audit
+reconciles the two. The lesson is not about these six symbols: it is that a green
+pipeline is only green for the steps it runs, and an evidence tool that fails silently
+because nobody looked at it is indistinguishable from one that passes.
+
+## D91 — `ASN1_item_print`'s null-item contract is recorded, not reproduced
+
+`ASN1_item_print` reads `it->sname` before any check and `asn1_item_print_ctx` reads
+`it->funcs`, `it->itype` and `it->utype` immediately, so a null item faults in the
+authority. The candidate takes the item as a documented non-null caller contract instead
+of reproducing the fault, in the same way and for the same reason the time family does
+(D-TIME-1). It is recorded as `D-PRINT-1` in `docs/SECURITY_DIVERGENCE_POLICY.md`
+alongside the malformed-item class, and no compatibility claim covers it: a probe cannot
+compare a crash, so the probe does not reach it.
