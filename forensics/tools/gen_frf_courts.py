@@ -277,6 +277,26 @@ COURTS: list[tuple[str, int, str, str]] = [
      "refuses, which releases the wrapper with a NULL handle and never the "
      "caller's handle; and a BIO built with a NULL context, whose libctx is "
      "stored as given and resolved against the thread default at use time"),
+    ("rt-dso", 6, "rt_dso_probe",
+     "the generic dynamic-object layer, compared through relations because a DSO's "
+     "subject is a shared library and its filename is necessarily a different path on "
+     "each side: the non-uniform NULL contract (free and flags answer, up_ref, ctrl, "
+     "get_filename, set_filename, merge, convert_filename and bind_func all raise); "
+     "DSO_ctrl's three generic commands intercepted before the NULL method, and the "
+     "unrecognised command that does reach it, plus a negative flag word stored and "
+     "read back as -1 with a clean queue; the name translator's rule being 'contains "
+     "no slash' rather than 'has not been translated', so 'libfoo.so' becomes "
+     "'liblibfoo.so.so'; the extension-only and no-translation flags, the latter "
+     "copying rather than refusing where DSO_merge answers NULL for the same flag; "
+     "DSO_merge's four shapes and its one-trailing-slash strip, with a NULL first spec "
+     "refused by the layer before the merger is reached; DSO_pathbyaddr's size "
+     "arithmetic -- the query, the truncation of min(len, sz - 1) + 1, and the "
+     "dladdr miss that answers -1 with an empty error queue because the site appends "
+     "without raising; DSO_dsobyaddr's two-pass query; the globallookup through the "
+     "whole process; DSO_load's ordered refusals, its translation on the load path, a "
+     "real load of the library under test, binding through it, the already-loaded "
+     "refusal that leaves the caller's object alive, and a reference count observed "
+     "through two frees that both answer 1"),
 ]
 
 

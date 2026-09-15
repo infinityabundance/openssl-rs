@@ -5920,3 +5920,130 @@ never have caught it because it orders *phases*, not subphases.
 | Phase 6 implemented / open | 102 / 59 | 102 / 59 (documentation only) |
 | subphase order | 6.8 then 6.9 | **6.9 then 6.8** |
 | unit tests | 216 | 216 |
+
+## D115 — 6.9 closes: the DSO layer, one corrected error site, and a probe bug that looked like agreement
+
+**All fifteen exports land and the court is a real one.** `crypto/dso/dso_lib.c` (329
+lines) becomes `src/dso/mod.rs` (983) and `crypto/dso/dso_dlfcn.c` (445) becomes
+`src/dso/dlfcn.rs` (616). `dso_err.c`'s reason table joins the generated
+error-coordinate plane (`err_sites.rs` 795 → **830** coordinates) and `dso_openssl.c` is
+the one-line accessor that the `DSO_DLFCN` profile resolves to. Phase 6 moves from 102
+implemented / 59 open to **117 / 44**, and `libcrypto` from 1076 to **1091** of 5896.
+`RT-DSO` is the 53rd court and adds **145 observations** with **no residuals**; the five
+phase court sets now total **53 courts and 19,800 observations**, every one re-derived
+from the authority in this run. The FRF store is recreated around it: 373 → **381**
+objects, 90 → **92** challenges, 45 → **46** receipts, 5 claims, `graph_verified`.
+
+**A number in this entry was mis-summed on first writing, and the correction is
+recorded rather than applied quietly.** The first draft of the Gemel change for this
+subphase stated the five-phase total as 19,796 and the pre-6.9 total as 19,651. Both
+were hand arithmetic over the court artefacts; the derived sum is **19,800** before and
+**19,655** after, and `regression_guard` prints the same 19,800 from
+`forensics/regression-baseline.json`. Nothing about the evidence changed — only my
+addition. It is mentioned here because an evidence record that silently acquires the
+right number is indistinguishable from one that was right all along, and this project
+has already decided which of those it wants to be (D33). The four-observation
+difference is not attributable to a court; it is simply a bad sum.
+
+**The court's first failure was the probe's, not the library's — the same lesson as the
+ctype table, in a different guise.** The first `RT-DSO` run failed on three keys:
+`path.query`, `path.full` and `path.negative` differed by exactly the difference between
+the two libraries' path lengths (79 against 38). That is not a divergence; it is the one
+dimension a `DSO` court *cannot* compare, because a `DSO`'s subject is a shared library
+and the two sides are different libraries at different paths. The probe was rewritten to
+compare the **arithmetic** instead: that the size query is positive, that it agrees with
+the full-size answer, that `sz` in `{1, 2, 4}` answers `{1, 2, 4}`, that a size one below
+the length truncates to `len - 1` by the `min(len, sz - 1) + 1` rule, and that the
+buffer is terminated at each size. `q` and `full` are now used only inside relations and
+never printed. D114 predicted this divergence; the probe had to be built to not *measure*
+it rather than merely to tolerate it.
+
+**`ERR_add_error_data` appends. It does not replace, and the comment in the code said it
+did.** `dlfcn_pathbyaddr`'s failure path was reproduced through `ERR_add_error_txt` with
+two calls and a note claiming that the authority's `ERR_add_error_data` "*replaces* rather
+than appends", which was written down as the reason for a recorded divergence
+(`D-DSO-1`). Reading `crypto/err/err.c` settles it the other way: `ERR_add_error_vdata`
+reuses the slot's existing `MALLOCED|STRING` buffer, `realloc`s it to fit and `strlcat`s
+into it. So the two are *both* append, and the divergence did not exist. What did exist
+is the next paragraph. A recalled constant presented as a measured one is D33's defect
+class, and this is its second instance in this stratum.
+
+**The `<NULL>` substitution is reachable at exactly one site in this subsystem, and it
+was missing.** `ERR_add_error_vdata` does `if (arg == NULL) arg = "<NULL>";`, so a NULL
+argument to `ERR_add_error_data` becomes the literal `"<NULL>"`. The candidate's
+`c_str_bytes` answers an empty slice for NULL — invisible at the load and bind sites,
+because those fail immediately after a `dlopen`/`dlsym` that just set `dlerror`'s state,
+but **wrong at `pathbyaddr`**, which fails because `dladdr` did — and `dladdr` does not
+touch `dlerror`. So a caller who drained the error queue gets
+`dlfcn_pathbyaddr(): <NULL>` from the authority. `c_str_or_null_literal` now makes all
+three sites match, and `RT-DSO` observes the text itself rather than asserting it:
+`ERR_raise(ERR_LIB_USER, 1)` puts a code on the queue with *no data*, the failing
+`DSO_pathbyaddr` appends to that slot, and `ERR_get_error_all` reads back
+`dlfcn_pathbyaddr(): <NULL>` — identical on both sides. A mutation that removes the
+substitution makes the court **fail** (`court/dso-sensitivity.py`), so this is a
+sensitivity-backed observation rather than a claim.
+
+**`DSO_merge` refuses a NULL first spec before it reads the flag, so the merger's own
+both-NULL arm is unreachable.** The layer's test is
+`if (dso == NULL || filespec1 == NULL)` and it comes first; the
+`DSO_FLAG_NO_NAME_TRANSLATION` test comes second and can only suppress the *call*. The
+merger therefore cannot be entered with a NULL first spec, so its
+`filespec1 == NULL && filespec2 == NULL` branch is dead code in the authority — and dead
+here by the same construction. The probe records it as two observations rather than one:
+`merge.both.null` and `merge.notranslate.null.first` carry the *layer's* reason and not
+the merger's, which is also why a NULL-first refusal is unaffected by the flag.
+
+**`DSO_bind_func` asked the method twice.** The authority assigns and then tests
+(`if ((ret = dso->meth->dso_bind_func(dso, symname)) == NULL)`), so the method is asked
+**once**. The candidate called it in the test and again in the return. That is invisible
+through the ABI — `dlsym` is idempotent and raises nothing OpenSSL-owned — so no court
+could have found it; it was found by reading the authority's function beside the
+candidate's, which is the reason that reading is part of the method. Fixed.
+
+**`probe_hygiene` had to learn a probe's build definitions, and learned them by asking
+the runner.** `RT-DSO` is the first probe that cannot be compiled without per-side
+input: it needs the path of the library under test, because the only `DSO_load` both
+sides can be expected to succeed at is a load of the library each is itself built as,
+and that path differs per side. The hygiene tool compiles every probe independently at
+three optimisation levels and reported `UNSTABLE` — correctly, via the probe's own
+`#error`. The fix is not a definition table in the hygiene tool: it imports each
+`phaseN_courts.py`, finds the one that lists this probe, and calls its `extra_defs`.
+That follows `discover_probes`'s reasoning, and it means adding a Phase 7 court with a
+definition does not require remembering a second place. The definition itself is never
+printed by the probe: the observations around it are NULL-ness and `strcmp` against the
+input, which are equal on both sides by construction.
+
+**A probe bug that looked like agreement, and would have looked like a divergence next
+time.** The first version of the `<NULL>` observation printed `data` through a helper
+that ends with `ERR_clear_error()` — and `data` **aliases the slot's own buffer**, which
+that clear releases. Both sides printed an empty string, which reads as "the two sides
+agree" while actually being "the probe never observed anything". The text is copied
+before any helper runs. This is the failure mode the project's whole evidence model
+exists to prevent, and it happened *inside* the instrument: worth recording because the
+symptom — identical on both sides — is the symptom of success.
+
+**Two behaviours the code reproduces because they look like mistakes, and one that would
+have been.** `DSO_ctrl` with `DSO_CTRL_SET_FLAGS` and `larg = -1` answers `0` and then
+reads back `-1` with a **clean error queue**, so the authority's own "a negative answer
+means an error" comment does not hold for the value a caller may have stored; the probe
+records the write, the read-back and the empty queue separately. `DSO_convert_filename`
+translates `"libfoo.so"` to **`"liblibfoo.so.so"`** (D114 predicted
+`"liblibfoo.so"`; the extension is appended to what is already there), which the probe
+observes directly. And `DSO_load`'s refusals are *ordered*: the already-loaded test comes
+before the filename is even looked at, so a second load on a live object is
+`DSO_R_DSO_ALREADY_LOADED` and leaves the caller's object untouched — observed by
+binding through the object after the refusal and by reading its filename back.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 102 / 59 | **117 / 44** |
+| `libcrypto` implemented / 5896 | 1076 | **1091** |
+| phase courts | 52 | **53** |
+| court observations | 19,655 | **19,800** |
+| Phase 6 courts | 5 | **6** |
+| `err_sites.rs` coordinates | 795 | **830** |
+| unit tests | 216 | **226** |
+| `probe_hygiene` | clean (41 probes) | clean (**42 probes**) |
+| FRF objects / challenges / receipts | 373 / 90 / 45 | **381 / 92 / 46** |

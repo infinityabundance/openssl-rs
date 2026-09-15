@@ -7,9 +7,9 @@
       "declaration_is_generated": 0,
       "implementation_is_c": 8,
       "implementation_is_c_mismatches": 0,
-      "implemented": 1076,
+      "implemented": 1091,
       "mismatches": 0,
-      "no_prototype_in_atlas": 7,
+      "no_prototype_in_atlas": 22,
       "not_found": 0,
       "type_checked": 1061,
       "type_mismatches": 0,
@@ -31,6 +31,21 @@
     "implementation_is_c_mismatches": [],
     "mismatches": [],
     "no_prototype_in_atlas": [
+      "DSO_METHOD_openssl",
+      "DSO_bind_func",
+      "DSO_convert_filename",
+      "DSO_ctrl",
+      "DSO_dsobyaddr",
+      "DSO_flags",
+      "DSO_free",
+      "DSO_get_filename",
+      "DSO_global_lookup",
+      "DSO_load",
+      "DSO_merge",
+      "DSO_new",
+      "DSO_pathbyaddr",
+      "DSO_set_filename",
+      "DSO_up_ref",
       "OPENSSL_DIR_end",
       "OPENSSL_DIR_read",
       "asn1_d2i_read_bio",
@@ -94,7 +109,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "012da15d340ae753ff5ebb54fe51ea8247a4e7dda4269cb1179dd5dc93ee5414"
+      "sha256": "184baed5b34bc58175c9a08bd8e14ba5a38d67d54f9a03f507c19e849b8f7c5b"
     }
   ],
   "kind": "prototype-court",

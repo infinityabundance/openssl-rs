@@ -267,6 +267,11 @@ COVERED_FILES = [
     # their own. A site nobody calls yet is a coordinate, not a claim.
     ("crypto/property/property_string.c", "PROPERTY_STRING"),
     ("crypto/property/property_parse.c", "PROPERTY_PARSE"),
+    # Phase 6.9: DSO. Two of its files raise; `dso_err.c` is the string table,
+    # `dso_openssl.c` is the null method of a different configuration, and
+    # `dso_dl.c` is a method this profile does not build.
+    ("crypto/dso/dso_lib.c", "DSO_LIB"),
+    ("crypto/dso/dso_dlfcn.c", "DSO_DLFCN"),
 ]
 
 # Raise macros, in the forms the authority actually spells them. `ERR_raise`
@@ -703,6 +708,8 @@ def resolve_symbols(authority, symbols: list[str], work: Path) -> dict[str, int]
         # from the built prefix and only `internal/...` falls through to the tree the
         # build was made from.
         "#include <internal/propertyerr.h>",
+        # `DSO_R_*` likewise, from `internal/dsoerr.h`.
+        "#include <internal/dsoerr.h>",
         "#include <stdio.h>",
         "",
     ]

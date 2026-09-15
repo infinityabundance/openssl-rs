@@ -7980,6 +7980,356 @@ pub(crate) const PROPERTY_PARSE_455: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `DSO_new_method` at `crypto/dso/dso_lib.c:23` (ERR_R_CRYPTO_LIB).
+pub(crate) const DSO_LIB_23: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_lib.c",
+    line: 23,
+    func: c"DSO_new_method",
+    lib: 37,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `DSO_free` at `crypto/dso/dso_lib.c:64` (DSO_R_UNLOAD_FAILED).
+pub(crate) const DSO_LIB_64: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_lib.c",
+    line: 64,
+    func: c"DSO_free",
+    lib: 37,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `DSO_free` at `crypto/dso/dso_lib.c:70` (DSO_R_FINISH_FAILED).
+pub(crate) const DSO_LIB_70: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_lib.c",
+    line: 70,
+    func: c"DSO_free",
+    lib: 37,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `DSO_up_ref` at `crypto/dso/dso_lib.c:92` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DSO_LIB_92: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_lib.c",
+    line: 92,
+    func: c"DSO_up_ref",
+    lib: 37,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `DSO_load` at `crypto/dso/dso_lib.c:112` (ERR_R_DSO_LIB).
+pub(crate) const DSO_LIB_112: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_lib.c",
+    line: 112,
+    func: c"DSO_load",
+    lib: 37,
+    reason: 524325,
+    dynamic_reason: false,
+};
+
+/// `DSO_load` at `crypto/dso/dso_lib.c:118` (DSO_R_CTRL_FAILED).
+pub(crate) const DSO_LIB_118: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_lib.c",
+    line: 118,
+    func: c"DSO_load",
+    lib: 37,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `DSO_load` at `crypto/dso/dso_lib.c:125` (DSO_R_DSO_ALREADY_LOADED).
+pub(crate) const DSO_LIB_125: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_lib.c",
+    line: 125,
+    func: c"DSO_load",
+    lib: 37,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `DSO_load` at `crypto/dso/dso_lib.c:134` (DSO_R_SET_FILENAME_FAILED).
+pub(crate) const DSO_LIB_134: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_lib.c",
+    line: 134,
+    func: c"DSO_load",
+    lib: 37,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `DSO_load` at `crypto/dso/dso_lib.c:139` (DSO_R_NO_FILENAME).
+pub(crate) const DSO_LIB_139: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_lib.c",
+    line: 139,
+    func: c"DSO_load",
+    lib: 37,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `DSO_load` at `crypto/dso/dso_lib.c:143` (DSO_R_UNSUPPORTED).
+pub(crate) const DSO_LIB_143: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_lib.c",
+    line: 143,
+    func: c"DSO_load",
+    lib: 37,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `DSO_load` at `crypto/dso/dso_lib.c:147` (DSO_R_LOAD_FAILED).
+pub(crate) const DSO_LIB_147: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_lib.c",
+    line: 147,
+    func: c"DSO_load",
+    lib: 37,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `DSO_bind_func` at `crypto/dso/dso_lib.c:163` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DSO_LIB_163: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_lib.c",
+    line: 163,
+    func: c"DSO_bind_func",
+    lib: 37,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `DSO_bind_func` at `crypto/dso/dso_lib.c:167` (DSO_R_UNSUPPORTED).
+pub(crate) const DSO_LIB_167: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_lib.c",
+    line: 167,
+    func: c"DSO_bind_func",
+    lib: 37,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `DSO_bind_func` at `crypto/dso/dso_lib.c:171` (DSO_R_SYM_FAILURE).
+pub(crate) const DSO_LIB_171: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_lib.c",
+    line: 171,
+    func: c"DSO_bind_func",
+    lib: 37,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `DSO_ctrl` at `crypto/dso/dso_lib.c:190` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DSO_LIB_190: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_lib.c",
+    line: 190,
+    func: c"DSO_ctrl",
+    lib: 37,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `DSO_ctrl` at `crypto/dso/dso_lib.c:210` (DSO_R_UNSUPPORTED).
+pub(crate) const DSO_LIB_210: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_lib.c",
+    line: 210,
+    func: c"DSO_ctrl",
+    lib: 37,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `DSO_get_filename` at `crypto/dso/dso_lib.c:219` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DSO_LIB_219: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_lib.c",
+    line: 219,
+    func: c"DSO_get_filename",
+    lib: 37,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `DSO_set_filename` at `crypto/dso/dso_lib.c:230` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DSO_LIB_230: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_lib.c",
+    line: 230,
+    func: c"DSO_set_filename",
+    lib: 37,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `DSO_set_filename` at `crypto/dso/dso_lib.c:234` (DSO_R_DSO_ALREADY_LOADED).
+pub(crate) const DSO_LIB_234: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_lib.c",
+    line: 234,
+    func: c"DSO_set_filename",
+    lib: 37,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `DSO_merge` at `crypto/dso/dso_lib.c:251` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DSO_LIB_251: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_lib.c",
+    line: 251,
+    func: c"DSO_merge",
+    lib: 37,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `DSO_convert_filename` at `crypto/dso/dso_lib.c:268` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DSO_LIB_268: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_lib.c",
+    line: 268,
+    func: c"DSO_convert_filename",
+    lib: 37,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `DSO_convert_filename` at `crypto/dso/dso_lib.c:274` (DSO_R_NO_FILENAME).
+pub(crate) const DSO_LIB_274: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_lib.c",
+    line: 274,
+    func: c"DSO_convert_filename",
+    lib: 37,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `DSO_pathbyaddr` at `crypto/dso/dso_lib.c:296` (DSO_R_UNSUPPORTED).
+pub(crate) const DSO_LIB_296: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_lib.c",
+    line: 296,
+    func: c"DSO_pathbyaddr",
+    lib: 37,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `DSO_global_lookup` at `crypto/dso/dso_lib.c:325` (DSO_R_UNSUPPORTED).
+pub(crate) const DSO_LIB_325: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_lib.c",
+    line: 325,
+    func: c"DSO_global_lookup",
+    lib: 37,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `dlfcn_load` at `crypto/dso/dso_dlfcn.c:102` (DSO_R_NO_FILENAME).
+pub(crate) const DSO_DLFCN_102: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_dlfcn.c",
+    line: 102,
+    func: c"dlfcn_load",
+    lib: 37,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `dlfcn_load` at `crypto/dso/dso_dlfcn.c:115` (DSO_R_LOAD_FAILED).
+pub(crate) const DSO_DLFCN_115: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_dlfcn.c",
+    line: 115,
+    func: c"dlfcn_load",
+    lib: 37,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `dlfcn_load` at `crypto/dso/dso_dlfcn.c:125` (DSO_R_STACK_ERROR).
+pub(crate) const DSO_DLFCN_125: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_dlfcn.c",
+    line: 125,
+    func: c"dlfcn_load",
+    lib: 37,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `dlfcn_unload` at `crypto/dso/dso_dlfcn.c:143` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DSO_DLFCN_143: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_dlfcn.c",
+    line: 143,
+    func: c"dlfcn_unload",
+    lib: 37,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `dlfcn_unload` at `crypto/dso/dso_dlfcn.c:150` (DSO_R_NULL_HANDLE).
+pub(crate) const DSO_DLFCN_150: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_dlfcn.c",
+    line: 150,
+    func: c"dlfcn_unload",
+    lib: 37,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `dlfcn_bind_func` at `crypto/dso/dso_dlfcn.c:171` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DSO_DLFCN_171: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_dlfcn.c",
+    line: 171,
+    func: c"dlfcn_bind_func",
+    lib: 37,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `dlfcn_bind_func` at `crypto/dso/dso_dlfcn.c:175` (DSO_R_STACK_ERROR).
+pub(crate) const DSO_DLFCN_175: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_dlfcn.c",
+    line: 175,
+    func: c"dlfcn_bind_func",
+    lib: 37,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `dlfcn_bind_func` at `crypto/dso/dso_dlfcn.c:180` (DSO_R_NULL_HANDLE).
+pub(crate) const DSO_DLFCN_180: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_dlfcn.c",
+    line: 180,
+    func: c"dlfcn_bind_func",
+    lib: 37,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `dlfcn_bind_func` at `crypto/dso/dso_dlfcn.c:185` (DSO_R_SYM_FAILURE).
+pub(crate) const DSO_DLFCN_185: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_dlfcn.c",
+    line: 185,
+    func: c"dlfcn_bind_func",
+    lib: 37,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `dlfcn_merger` at `crypto/dso/dso_dlfcn.c:198` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DSO_DLFCN_198: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_dlfcn.c",
+    line: 198,
+    func: c"dlfcn_merger",
+    lib: 37,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `dlfcn_name_converter` at `crypto/dso/dso_dlfcn.c:260` (DSO_R_NAME_TRANSLATION_FAILED).
+pub(crate) const DSO_DLFCN_260: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/dso/dso_dlfcn.c",
+    line: 260,
+    func: c"dlfcn_name_converter",
+    lib: 37,
+    reason: 109,
+    dynamic_reason: false,
+};
+
 /// Every recorded raise site, in authority source order.
 ///
 /// This is the complete inventory for the covered files, including the
@@ -8786,4 +9136,39 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROPERTY_PARSE_376,
     PROPERTY_PARSE_392,
     PROPERTY_PARSE_455,
+    DSO_LIB_23,
+    DSO_LIB_64,
+    DSO_LIB_70,
+    DSO_LIB_92,
+    DSO_LIB_112,
+    DSO_LIB_118,
+    DSO_LIB_125,
+    DSO_LIB_134,
+    DSO_LIB_139,
+    DSO_LIB_143,
+    DSO_LIB_147,
+    DSO_LIB_163,
+    DSO_LIB_167,
+    DSO_LIB_171,
+    DSO_LIB_190,
+    DSO_LIB_210,
+    DSO_LIB_219,
+    DSO_LIB_230,
+    DSO_LIB_234,
+    DSO_LIB_251,
+    DSO_LIB_268,
+    DSO_LIB_274,
+    DSO_LIB_296,
+    DSO_LIB_325,
+    DSO_DLFCN_102,
+    DSO_DLFCN_115,
+    DSO_DLFCN_125,
+    DSO_DLFCN_143,
+    DSO_DLFCN_150,
+    DSO_DLFCN_171,
+    DSO_DLFCN_175,
+    DSO_DLFCN_180,
+    DSO_DLFCN_185,
+    DSO_DLFCN_198,
+    DSO_DLFCN_260,
 ];
