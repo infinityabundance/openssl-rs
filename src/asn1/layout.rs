@@ -774,6 +774,15 @@ pub(crate) const B_ASN1_PRINTABLE: c_ulong = B_ASN1_NUMERICSTRING
 /// The two time types.
 pub(crate) const B_ASN1_TIME: c_ulong = B_ASN1_UTCTIME | B_ASN1_GENERALIZEDTIME;
 
+/// `DIRSTRING_TYPE` — the four string types a directory name component may be
+/// written in, and the default mask `ASN1_mbstring_*` falls back to for a zero
+/// mask. Note that it does *not* include `B_ASN1_IA5STRING`.
+pub(crate) const DIRSTRING_TYPE: c_ulong =
+    B_ASN1_PRINTABLESTRING | B_ASN1_T61STRING | B_ASN1_BMPSTRING | B_ASN1_UTF8STRING;
+/// `PKCS9STRING_TYPE` — a directory string that may also be an `IA5String`, which
+/// is what PKCS#9's own attributes allow.
+pub(crate) const PKCS9STRING_TYPE: c_ulong = DIRSTRING_TYPE | B_ASN1_IA5STRING;
+
 // ---------------------------------------------------------------------------
 // `MBSTRING_*` — the arguments of `ASN1_mbstring_*`.
 // ---------------------------------------------------------------------------
@@ -797,6 +806,14 @@ pub(crate) const MBSTRING_ENC_MASK: c_int = 0x0f;
 
 /// The row was allocated by `ASN1_STRING_TABLE_add` and must be freed with it.
 pub(crate) const STABLE_FLAGS_MALLOC: c_ulong = 0x01;
+/// `STABLE_FLAGS_CLEAR` — an alias for `STABLE_FLAGS_MALLOC`. The authority's own
+/// comment explains the alias: only when the existing value carries
+/// `STABLE_FLAGS_MALLOC` may `ASN1_STRING_TABLE_add` clear it, so a caller asks
+/// for that by naming the *same* bit through its other name.
+pub(crate) const STABLE_FLAGS_CLEAR: c_ulong = STABLE_FLAGS_MALLOC;
+/// `STABLE_NO_MASK` — this row's mask is not to be intersected with the global
+/// mask, so a caller can pin a type the global mask would otherwise exclude.
+pub(crate) const STABLE_NO_MASK: c_ulong = 0x02;
 
 // ---------------------------------------------------------------------------
 // `ASN1_PCTX_FLAGS_*` — the printing-option bits.

@@ -69,6 +69,55 @@ pub(crate) fn ossl_isxdigit(c: core::ffi::c_int) -> bool {
     }
 }
 
+/// `ossl_isascii(c)` — the non-EBCDIC arm, `(((c) & ~127) == 0)`.
+///
+/// It is a *mask* test rather than a range test, and that is observable: a negative `c`
+/// fails it by having bits outside the low seven set, exactly as a value above 127 does.
+/// The two agree on every input, but the authority writes the mask and this reproduces it
+/// rather than replacing it with `(0..128).contains(&c)`.
+pub(crate) fn ossl_isascii(c: core::ffi::c_int) -> bool {
+    (c & !127) == 0
+}
+
+/// `ossl_isspace(c)` — `ossl_ctype_check(c, CTYPE_MASK_space)`.
+///
+/// The space class is `{ 0x09 .. 0x0D, 0x20 }`, which is *not* the same as C's `isspace`
+/// on any locale that adds to it, nor the same as the ASN.1 printable set.
+///
+/// The only caller is `crypto/asn1/asn_moid.c`'s `do_create`, which lands with that
+/// module; the class is kept here because this file is where the authority's classes
+/// live and because the derivation above is what makes it checkable.
+#[allow(dead_code)]
+pub(crate) fn ossl_isspace(c: core::ffi::c_int) -> bool {
+    match ascii(c) {
+        None => false,
+        Some(a) => (0x09..=0x0D).contains(&a) || a == 0x20,
+    }
+}
+
+/// `ossl_isasn1print(c)` — `ossl_ctype_check(c, CTYPE_MASK_asn1print)`.
+///
+/// The `asn1print` class is the PrintableString alphabet of X.680: space, apostrophe,
+/// the three brackets, `+ , - . /`, the ten digits, colon, equals, question mark, and both
+/// letter ranges. Read out of the authority's own table and written as the ranges it is:
+///
+/// ```text
+/// asn1print = { 0x20 } | [ 0x27 .. 0x29 ] | [ 0x2B .. 0x3A ]
+///           | { 0x3D } | { 0x3F } | [ 0x41 .. 0x5A ] | [ 0x61 .. 0x7A ]
+/// ```
+///
+/// `;` (0x3B) and `<` (0x3C) fall inside no range, which is why the second range stops at
+/// `:` — they are the reason this cannot be written as one interval.
+pub(crate) fn ossl_isasn1print(c: core::ffi::c_int) -> bool {
+    match ascii(c) {
+        None => false,
+        Some(a) => matches!(
+            a,
+            0x20 | 0x27..=0x29 | 0x2B..=0x3A | 0x3D | 0x3F | 0x41..=0x5A | 0x61..=0x7A
+        ),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -101,5 +150,37 @@ mod tests {
         assert!(!ossl_isxdigit(-1));
         assert!(!ossl_isdigit(b'\x80' as i8 as core::ffi::c_int));
         assert!(!ossl_isxdigit(b'\x80' as i8 as core::ffi::c_int));
+        assert!(!ossl_isasn1print(b'\x80' as i8 as core::ffi::c_int));
+    }
+
+    /// The PrintableString alphabet, checked against the characters the authority's own
+    /// table marks and the two it famously does not.
+    #[test]
+    fn asn1print_is_the_printable_alphabet() {
+        let accepted = " '()+,-./0123456789:=?ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+        for b in 0u8..=127 {
+            let want = accepted.as_bytes().contains(&b);
+            assert_eq!(
+                ossl_isasn1print(core::ffi::c_int::from(b)),
+                want,
+                "{b:#04x}"
+            );
+        }
+        // The two characters inside the alphabet's range that are not in it.
+        assert!(!ossl_isasn1print(core::ffi::c_int::from(b';')));
+        assert!(!ossl_isasn1print(core::ffi::c_int::from(b'<')));
+        assert!(!ossl_isasn1print(core::ffi::c_int::from(b'|')));
+        assert!(!ossl_isasn1print(core::ffi::c_int::from(b'~')));
+    }
+
+    /// The space class and the three range tests, over every one-byte value.
+    #[test]
+    fn space_ascii_and_the_boundary_are_exact() {
+        for c in -256..512 {
+            let in_ascii = (0..128).contains(&c);
+            assert_eq!(ossl_isascii(c), in_ascii, "ossl_isascii({c})");
+            let want_space = (0x09..=0x0D).contains(&c) || c == 0x20;
+            assert_eq!(ossl_isspace(c), want_space, "ossl_isspace({c})");
+        }
     }
 }

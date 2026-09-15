@@ -281,7 +281,7 @@
         "truncf128",
         "truncf16"
       ],
-      "compiler_emitted_count": 6574,
+      "compiler_emitted_count": 6578,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -289,7 +289,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 903,
+        "implemented": 917,
         "implemented_symbols": [
           "ASN1_ANY_it",
           "ASN1_BIT_STRING_check",
@@ -374,6 +374,7 @@
           "ASN1_PRINTABLE_free",
           "ASN1_PRINTABLE_it",
           "ASN1_PRINTABLE_new",
+          "ASN1_PRINTABLE_type",
           "ASN1_SCTX_free",
           "ASN1_SCTX_get_app_data",
           "ASN1_SCTX_get_flags",
@@ -384,6 +385,9 @@
           "ASN1_SEQUENCE_ANY_it",
           "ASN1_SEQUENCE_it",
           "ASN1_SET_ANY_it",
+          "ASN1_STRING_TABLE_add",
+          "ASN1_STRING_TABLE_cleanup",
+          "ASN1_STRING_TABLE_get",
           "ASN1_STRING_clear_free",
           "ASN1_STRING_cmp",
           "ASN1_STRING_copy",
@@ -391,11 +395,16 @@
           "ASN1_STRING_dup",
           "ASN1_STRING_free",
           "ASN1_STRING_get0_data",
+          "ASN1_STRING_get_default_mask",
           "ASN1_STRING_length",
           "ASN1_STRING_length_set",
           "ASN1_STRING_new",
+          "ASN1_STRING_print",
           "ASN1_STRING_set",
           "ASN1_STRING_set0",
+          "ASN1_STRING_set_by_NID",
+          "ASN1_STRING_set_default_mask",
+          "ASN1_STRING_set_default_mask_asc",
           "ASN1_STRING_type",
           "ASN1_STRING_type_new",
           "ASN1_T61STRING_free",
@@ -434,6 +443,7 @@
           "ASN1_UNIVERSALSTRING_free",
           "ASN1_UNIVERSALSTRING_it",
           "ASN1_UNIVERSALSTRING_new",
+          "ASN1_UNIVERSALSTRING_to_string",
           "ASN1_UTCTIME_adj",
           "ASN1_UTCTIME_check",
           "ASN1_UTCTIME_cmp_time_t",
@@ -450,6 +460,8 @@
           "ASN1_VISIBLESTRING_free",
           "ASN1_VISIBLESTRING_it",
           "ASN1_VISIBLESTRING_new",
+          "ASN1_bn_print",
+          "ASN1_buf_print",
           "ASN1_check_infinite_end",
           "ASN1_const_check_infinite_end",
           "ASN1_d2i_bio",
@@ -480,6 +492,8 @@
           "ASN1_item_pack",
           "ASN1_item_unpack",
           "ASN1_item_unpack_ex",
+          "ASN1_mbstring_copy",
+          "ASN1_mbstring_ncopy",
           "ASN1_object_size",
           "ASN1_parse",
           "ASN1_parse_dump",
@@ -1195,7 +1209,7 @@
           "i2d_DISPLAYTEXT",
           "i2t_ASN1_OBJECT"
         ],
-        "scaffolded": 4993
+        "scaffolded": 4979
       },
       "libssl": {
         "authority_exports": 603,
@@ -1206,18 +1220,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 903,
-      "scaffolded": 5596
+      "implemented": 917,
+      "scaffolded": 5582
     }
   },
-  "body_hash": "e697dafd7b3d93fdfb6756237f93fd1522cf73e0cb4e0e3744b8de3b06a19ef2",
+  "body_hash": "c823b2afd99e9eb60900d5897d59e1dc5b1ca3317de23592677e9b12353c5f6d",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "f381673716cd6c5f0d0fcc92cd7355631f97dd5da9b5a47fc3ab7eeb85f3775d"
+      "sha256": "a9ca1ae864991c754bcf2e6e6694e27c55d7c318c4296e2943b536cf00016e03"
     },
     {
       "name": "authority-exports",

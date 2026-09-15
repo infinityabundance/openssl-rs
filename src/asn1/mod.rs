@@ -41,6 +41,9 @@
 pub mod a_d2i_fp;
 pub mod a_dup;
 pub mod a_i2d_fp;
+pub mod a_mbstr;
+pub mod a_print;
+pub mod a_strnid;
 pub mod a_type;
 pub mod a_utf8;
 pub mod asn_pack;
@@ -55,6 +58,7 @@ pub mod layout;
 pub mod new;
 pub mod prim;
 pub mod string;
+pub mod t_pkey;
 pub mod text;
 pub mod time;
 pub mod typ;

@@ -4,9 +4,9 @@
     "complete": false,
     "counts": {
       "atlas_owned": 561,
-      "deferred_to_later_phase": 62,
-      "implemented": 445,
-      "open_in_this_stratum": 58,
+      "deferred_to_later_phase": 64,
+      "implemented": 459,
+      "open_in_this_stratum": 42,
       "owned": 565
     },
     "deferred": [
@@ -21,6 +21,18 @@
         "owning_phase": 12,
         "reason": "enumerates the authority's generated asn1_item_list.h, whose 147 entries include 107 items owned by Phases 8, 10, 11 and 12 (7/6/64/30); both functions' behaviour is the whole list",
         "symbol": "ASN1_ITEM_lookup"
+      },
+      {
+        "declaring_header": "asn1.h",
+        "owning_phase": 6,
+        "reason": "registers a CONF module with CONF_module_add, which Phase 4 handed to Phase 6 because only the module registry constructs a CONF_MODULE",
+        "symbol": "ASN1_add_oid_module"
+      },
+      {
+        "declaring_header": "asn1.h",
+        "owning_phase": 11,
+        "reason": "registers a CONF module with CONF_module_add (Phase 6, the module registry) and its handler parses a section value with X509V3_parse_list (Phase 11); the later of the two dependencies is the binding one",
+        "symbol": "ASN1_add_stable_module"
       },
       {
         "declaring_header": "asn1.h",
@@ -384,9 +396,11 @@
       }
     ],
     "deferred_by_phase": {
+      "6": 1,
       "7": 7,
       "9": 31,
       "10": 16,
+      "11": 1,
       "12": 8
     },
     "handoffs_discharged": {
@@ -513,6 +527,7 @@
       "ASN1_PRINTABLE_free",
       "ASN1_PRINTABLE_it",
       "ASN1_PRINTABLE_new",
+      "ASN1_PRINTABLE_type",
       "ASN1_SCTX_free",
       "ASN1_SCTX_get_app_data",
       "ASN1_SCTX_get_flags",
@@ -523,6 +538,9 @@
       "ASN1_SEQUENCE_ANY_it",
       "ASN1_SEQUENCE_it",
       "ASN1_SET_ANY_it",
+      "ASN1_STRING_TABLE_add",
+      "ASN1_STRING_TABLE_cleanup",
+      "ASN1_STRING_TABLE_get",
       "ASN1_STRING_clear_free",
       "ASN1_STRING_cmp",
       "ASN1_STRING_copy",
@@ -530,11 +548,16 @@
       "ASN1_STRING_dup",
       "ASN1_STRING_free",
       "ASN1_STRING_get0_data",
+      "ASN1_STRING_get_default_mask",
       "ASN1_STRING_length",
       "ASN1_STRING_length_set",
       "ASN1_STRING_new",
+      "ASN1_STRING_print",
       "ASN1_STRING_set",
       "ASN1_STRING_set0",
+      "ASN1_STRING_set_by_NID",
+      "ASN1_STRING_set_default_mask",
+      "ASN1_STRING_set_default_mask_asc",
       "ASN1_STRING_type",
       "ASN1_STRING_type_new",
       "ASN1_T61STRING_free",
@@ -573,6 +596,7 @@
       "ASN1_UNIVERSALSTRING_free",
       "ASN1_UNIVERSALSTRING_it",
       "ASN1_UNIVERSALSTRING_new",
+      "ASN1_UNIVERSALSTRING_to_string",
       "ASN1_UTCTIME_adj",
       "ASN1_UTCTIME_check",
       "ASN1_UTCTIME_cmp_time_t",
@@ -589,6 +613,8 @@
       "ASN1_VISIBLESTRING_free",
       "ASN1_VISIBLESTRING_it",
       "ASN1_VISIBLESTRING_new",
+      "ASN1_bn_print",
+      "ASN1_buf_print",
       "ASN1_check_infinite_end",
       "ASN1_const_check_infinite_end",
       "ASN1_d2i_bio",
@@ -619,6 +645,8 @@
       "ASN1_item_pack",
       "ASN1_item_unpack",
       "ASN1_item_unpack_ex",
+      "ASN1_mbstring_copy",
+      "ASN1_mbstring_ncopy",
       "ASN1_object_size",
       "ASN1_parse",
       "ASN1_parse_dump",
@@ -887,36 +915,6 @@
       {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
-        "symbol": "ASN1_PRINTABLE_type"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_STRING_TABLE_add"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_STRING_TABLE_cleanup"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_STRING_TABLE_get"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_STRING_get_default_mask"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_STRING_print"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
         "symbol": "ASN1_STRING_print_ex"
       },
       {
@@ -927,47 +925,7 @@
       {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
-        "symbol": "ASN1_STRING_set_by_NID"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_STRING_set_default_mask"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_STRING_set_default_mask_asc"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
         "symbol": "ASN1_STRING_to_UTF8"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_UNIVERSALSTRING_to_string"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_add_oid_module"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_add_stable_module"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_bn_print"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_buf_print"
       },
       {
         "declaring_header": "asn1.h",
@@ -983,16 +941,6 @@
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
         "symbol": "ASN1_item_print"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_mbstring_copy"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_mbstring_ncopy"
       },
       {
         "declaring_header": "asn1.h",
@@ -1176,7 +1124,7 @@
       }
     ],
     "owned_by_module": {
-      "src/asn1/": 306,
+      "src/asn1/": 304,
       "src/bn/": 170,
       "src/pem/": 27
     },
@@ -1207,7 +1155,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "e697dafd7b3d93fdfb6756237f93fd1522cf73e0cb4e0e3744b8de3b06a19ef2"
+      "sha256": "c823b2afd99e9eb60900d5897d59e1dc5b1ca3317de23592677e9b12353c5f6d"
     }
   ],
   "kind": "phase5-obligations",
