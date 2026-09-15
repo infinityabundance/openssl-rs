@@ -155,6 +155,46 @@ HANDED_OFF_FROM_PHASE3 = (
 )
 
 
+# Symbols *this* stratum hands to Phase 5. All six are declared by `bio.h`, so the
+# declaring-header rule makes them Phase 4's, but each is a binding between a BIO and
+# an `ASN1_ITEM` template: `BIO_f_asn1` is the ASN.1 filter, `BIO_new_NDEF` builds a
+# streaming encoder around one, and the four `BIO_asn1_*` controls write and read that
+# encoder's prefix and suffix callbacks. None of them can be built without the template
+# machinery, which is Phase 5's, so the obligation is deferred there and Phase 5 lists
+# them in its `handoffs_discharged`. A hand-off is sticky in the same way Phase 3's
+# were: Phase 5 implementing them does not transfer the obligation back, so they leave
+# this stratum's `implemented` list and stay `deferred` with `implemented_by_owner`
+# recording that the hand-off has been discharged. `ownership_audit.py` reconciles the
+# two ledgers, so the same six cannot be counted as implemented by both strata.
+# See docs/DECISIONS.md D57 and D91.
+HANDED_OFF_TO_PHASE5: dict[str, tuple[int, str]] = {
+    "BIO_f_asn1": (
+        5,
+        "the ASN.1 filter needs the template machinery to frame an ASN1_ITEM; Phase 5",
+    ),
+    "BIO_new_NDEF": (
+        5,
+        "builds a streaming encoder around an ASN1_ITEM, which Phase 5 owns",
+    ),
+    "BIO_asn1_get_prefix": (
+        5,
+        "reads the streaming callbacks of the ASN.1 filter, which Phase 5 owns",
+    ),
+    "BIO_asn1_get_suffix": (
+        5,
+        "reads the streaming callbacks of the ASN.1 filter, which Phase 5 owns",
+    ),
+    "BIO_asn1_set_prefix": (
+        5,
+        "writes the streaming callbacks of the ASN.1 filter, which Phase 5 owns",
+    ),
+    "BIO_asn1_set_suffix": (
+        5,
+        "writes the streaming callbacks of the ASN.1 filter, which Phase 5 owns",
+    ),
+}
+
+
 def authority_exports(authority: Path) -> list[str]:
     """The symbols the authority actually exports from libcrypto."""
     doc = json.loads((authority / "symbols-libcrypto.json").read_text(encoding="utf-8"))
@@ -185,8 +225,8 @@ def main(argv: list[str]) -> int:
             if any(sym == p or sym.startswith(p) for p in prefixes):
                 owned.setdefault(sym, module)
 
-    implemented_here = sorted(s for s in owned if s in done)
-    remaining = sorted(s for s in owned if s not in done)
+    implemented_here = sorted(s for s in owned if s in done and s not in HANDED_OFF_TO_PHASE5)
+    remaining = sorted(s for s in owned if s not in done or s in HANDED_OFF_TO_PHASE5)
 
     # The hand-offs Phase 3 handed this stratum must be accounted for here: a
     # symbol Phase 3 deferred to this phase that this phase does not even claim is
@@ -210,7 +250,17 @@ def main(argv: list[str]) -> int:
     deferred_rows = []
     open_rows = []
     for sym in remaining:
-        if sym in DEFERRED:
+        if sym in HANDED_OFF_TO_PHASE5:
+            phase, reason = HANDED_OFF_TO_PHASE5[sym]
+            if phase <= 4:
+                raise SystemExit(
+                    f"phase4-obligations: {sym} is deferred to phase {phase}, not later"
+                )
+            deferred_rows.append({
+                "symbol": sym, "owning_phase": phase, "reason": reason,
+                "module": owned[sym], "implemented_by_owner": sym in done,
+            })
+        elif sym in DEFERRED:
             phase, reason = DEFERRED[sym]
             if phase <= 4:
                 raise SystemExit(

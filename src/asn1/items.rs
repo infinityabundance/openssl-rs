@@ -42,19 +42,15 @@
 //!
 //! ## What is deliberately absent
 //!
-//! The item descriptors built from a template or from primitive hooks —
-//! `ASN1_SEQUENCE_ANY_it`, `ASN1_SET_ANY_it` and the twelve numeric items
-//! (`BIGNUM_it`, `INT32_it`, `ZLONG_it`, …) — are not here. Each needs machinery
-//! this subphase does not have yet: the two `*_ANY` items point at an
-//! `ASN1_TEMPLATE`, and the numeric items carry `ASN1_PRIMITIVE_FUNCS` whose
-//! `prim_c2i`/`prim_i2c` hooks are what make them work. Defining the struct
-//! without the hooks would produce an item that answers a pointer and then
-//! decodes nothing, which is the failure mode this project calls a
-//! fake-success stub. They land in subphase 5.4, where the hooks do.
+//! The twelve numeric items (`BIGNUM_it`, `INT32_it`, `ZLONG_it`, …) are not here.
+//! Each carries an `ASN1_PRIMITIVE_FUNCS` whose `prim_new`/`prim_free`/`prim_clear`/
+//! `prim_c2i`/`prim_i2c`/`prim_print` hooks are what make it work, and they live with
+//! their hooks in [`crate::asn1::x_int64`], [`crate::asn1::x_long`] and
+//! [`crate::asn1::x_bignum`] because a hook is a function rather than a constant.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::c_long;
+use core::ffi::{c_long, c_void};
 
 use crate::asn1::layout::*;
 
@@ -394,3 +390,134 @@ mstring_item!(
      `IMPLEMENT_ASN1_MSTRING(ASN1_TIME, B_ASN1_TIME)`, which this module groups \
      with the others because it is the same shape."
 );
+
+// ---------------------------------------------------------------------------
+// The two `*_ANY` items — `ASN1_ITEM_TEMPLATE` in `tasn_typ.c`
+// ---------------------------------------------------------------------------
+
+/// Declare one `ASN1_ITEM_TEMPLATE`-shaped item: an item whose *value* is described by
+/// a single `ASN1_TEMPLATE` of its own.
+///
+/// The shape is unusual and worth stating, because two of its fields are what the
+/// interpreter keys on:
+///
+/// * `utype` is `V_ASN1_UNDEF`, not a tag. The item has no type of its own — the template
+///   does — and the authority passes the literal `-1` here.
+/// * `tcount` is 0 while `templates` is non-null. For a `PRIMITIVE` item with a template,
+///   the machine reads `it->templates` directly; `tcount` describes a *field* array, which
+///   this item does not have.
+///
+/// A template's `item` field is an `ASN1_ITEM_EXP` — in C, `&ASN1_ANY_it`, the address of
+/// the accessor **function**, not of the item it answers. That is what
+/// `ASN1_ITEM_ref(type)` expands to and what [`crate::asn1::utl::call_item_exp`] calls.
+///
+/// Both identifiers are written out at each use for the reason the other macros here
+/// record: a macro cannot build a `#[no_mangle]` symbol from another token.
+macro_rules! template_item {
+    ($item:ident, $tt:ident, $getter:ident, $flags:expr, $sname:literal, $sub:path, $doc:expr) => {
+        #[doc = $doc]
+        ///
+        /// The item's single template. `tag` and `offset` are 0 because a `SEQUENCE OF`
+        /// takes its tag from the flags and has no field to be offset to.
+        static $tt: Asn1Template = Asn1Template {
+            flags: $flags,
+            tag: 0,
+            offset: 0,
+            field_name: $sname.as_ptr(),
+            item: $sub as *mut c_void,
+        };
+
+        #[doc = $doc]
+        ///
+        /// The authority's `ASN1_ITEM_start` answers `&local_it`, a function-local
+        /// `static`, so two calls answer the same address and the fields are readable
+        /// through it.
+        static $item: Asn1Item = Asn1Item {
+            itype: ASN1_ITYPE_PRIMITIVE,
+            utype: V_ASN1_UNDEF as c_long,
+            templates: &$tt,
+            tcount: 0,
+            funcs: core::ptr::null_mut(),
+            size: 0,
+            sname: $sname.as_ptr(),
+        };
+
+        #[doc = $doc]
+        #[no_mangle]
+        pub extern "C" fn $getter() -> *const Asn1Item {
+            &$item
+        }
+    };
+}
+
+template_item!(
+    ASN1_SEQUENCE_ANY_ITEM,
+    ASN1_SEQUENCE_ANY_TT,
+    ASN1_SEQUENCE_ANY_it,
+    ASN1_TFLG_SEQUENCE_OF,
+    c"ASN1_SEQUENCE_ANY",
+    ASN1_ANY_it,
+    "`const ASN1_ITEM *ASN1_SEQUENCE_ANY_it(void)` — `tasn_typ.c`'s \
+     `ASN1_ITEM_TEMPLATE(ASN1_SEQUENCE_ANY)`, whose template is \
+     `ASN1_EX_TEMPLATE_TYPE(ASN1_TFLG_SEQUENCE_OF, 0, ASN1_SEQUENCE_ANY, ASN1_ANY)`. \
+     The value is therefore a `STACK_OF(ASN1_TYPE)`, and each element is decoded by \
+     `ASN1_ANY_it` rather than by this item."
+);
+
+template_item!(
+    ASN1_SET_ANY_ITEM,
+    ASN1_SET_ANY_TT,
+    ASN1_SET_ANY_it,
+    ASN1_TFLG_SET_OF,
+    c"ASN1_SET_ANY",
+    ASN1_ANY_it,
+    "`const ASN1_ITEM *ASN1_SET_ANY_it(void)` — `tasn_typ.c`'s \
+     `ASN1_ITEM_TEMPLATE(ASN1_SET_ANY)`, the same shape as `ASN1_SEQUENCE_ANY` with \
+     `ASN1_TFLG_SET_OF`. The flag is what makes the encoder sort the elements into \
+     canonical order, so the two items produce different bytes for the same stack."
+);
+
+// ---------------------------------------------------------------------------
+// The primitive-hook items — `ASN1_ITEM_start` over `ASN1_PRIMITIVE_FUNCS`
+// ---------------------------------------------------------------------------
+
+/// Declare one `ASN1_PRIMITIVE_FUNCS`-carrying item and its accessor.
+///
+/// These are the items whose codec is a *function* rather than the generic content codec:
+/// `x_int64.c`'s eight, `x_long.c`'s two and `x_bignum.c`'s two. The decoder and encoder
+/// reach them through `it->funcs` before any type dispatch, which is why the hook, not
+/// `utype`, is what makes them work.
+///
+/// `size` is **not** a size here. All twelve of those items overwrite the field with flags
+/// — `INTxx_FLAG_*` for the integers, the `ASN1_LONG_UNDEF` sentinel for `LONG`, the
+/// sensitivity bit for `CBIGNUM` — and the hooks read it back. That abuse is the
+/// authority's, and the decoder's `V_ASN1_BOOLEAN` arm is the only place in the generic
+/// machinery that also treats `size` as a value rather than a layout fact, so it is worth
+/// naming here rather than discovering later.
+///
+/// `funcs` is a `&'static Asn1PrimitiveFuncs` at each use and is stored as a raw pointer
+/// because that is what the item holds.
+macro_rules! funcs_item {
+    ($item:ident, $getter:ident, $funcs:expr, $size:expr, $sname:literal, $doc:expr) => {
+        #[doc = $doc]
+        ///
+        /// `size` is the authority's flags word, not a `sizeof`: see [`funcs_item`].
+        static $item: Asn1Item = Asn1Item {
+            itype: ASN1_ITYPE_PRIMITIVE,
+            utype: V_ASN1_INTEGER as c_long,
+            templates: core::ptr::null(),
+            tcount: 0,
+            funcs: (&$funcs as *const Asn1PrimitiveFuncs).cast::<c_void>(),
+            size: $size,
+            sname: $sname.as_ptr(),
+        };
+
+        #[doc = $doc]
+        #[no_mangle]
+        pub extern "C" fn $getter() -> *const Asn1Item {
+            &$item
+        }
+    };
+}
+
+pub(crate) use funcs_item;

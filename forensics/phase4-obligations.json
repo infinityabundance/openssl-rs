@@ -10,33 +10,38 @@
     },
     "deferred": [
       {
+        "implemented_by_owner": true,
         "module": "src/runtime/bio/",
         "owning_phase": 5,
-        "reason": "ASN.1 prefix/suffix compiler hooks; ASN.1 is Phase 5",
+        "reason": "reads the streaming callbacks of the ASN.1 filter, which Phase 5 owns",
         "symbol": "BIO_asn1_get_prefix"
       },
       {
+        "implemented_by_owner": true,
         "module": "src/runtime/bio/",
         "owning_phase": 5,
-        "reason": "ASN.1 prefix/suffix compiler hooks; ASN.1 is Phase 5",
+        "reason": "reads the streaming callbacks of the ASN.1 filter, which Phase 5 owns",
         "symbol": "BIO_asn1_get_suffix"
       },
       {
+        "implemented_by_owner": true,
         "module": "src/runtime/bio/",
         "owning_phase": 5,
-        "reason": "ASN.1 prefix/suffix compiler hooks; ASN.1 is Phase 5",
+        "reason": "writes the streaming callbacks of the ASN.1 filter, which Phase 5 owns",
         "symbol": "BIO_asn1_set_prefix"
       },
       {
+        "implemented_by_owner": true,
         "module": "src/runtime/bio/",
         "owning_phase": 5,
-        "reason": "ASN.1 prefix/suffix compiler hooks; ASN.1 is Phase 5",
+        "reason": "writes the streaming callbacks of the ASN.1 filter, which Phase 5 owns",
         "symbol": "BIO_asn1_set_suffix"
       },
       {
+        "implemented_by_owner": true,
         "module": "src/runtime/bio/",
         "owning_phase": 5,
-        "reason": "its only controls are ASN.1 prefix/suffix functions; ASN.1 is Phase 5",
+        "reason": "the ASN.1 filter needs the template machinery to frame an ASN1_ITEM; Phase 5",
         "symbol": "BIO_f_asn1"
       },
       {
@@ -76,9 +81,10 @@
         "symbol": "BIO_new_CMS"
       },
       {
+        "implemented_by_owner": true,
         "module": "src/runtime/bio/",
         "owning_phase": 5,
-        "reason": "constructs an ASN.1 NDEF BIO chain; ASN.1 is Phase 5",
+        "reason": "builds a streaming encoder around an ASN1_ITEM, which Phase 5 owns",
         "symbol": "BIO_new_NDEF"
       },
       {
@@ -495,7 +501,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "1f4a149b208b17c02d9449a99dac1ec1b7c74f6cea6dc4a8e7824e6fb707cf21"
+      "sha256": "e88230fccb56990c9c5e1631d71f60a5b98b867435869c5b4e7d183f985c323d"
     }
   ],
   "kind": "phase4-obligations",

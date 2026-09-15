@@ -405,3 +405,90 @@ observations that *can* be made around each boundary are compared normally.
 - **Candidate:** answers NULL.
 - **Claim removed:** not claimed compatible. The probe does not exercise it, because a
   probe cannot compare a crash.
+
+### D-TIME-1 — the time family dereferences its string and its `struct tm` without a test
+
+- **Obligation:** `ossl_asn1_time_to_tm`, the two `_check` functions, the four printers and
+  the four constructors, given a NULL time string; `ossl_asn1_time_from_tm` given a NULL
+  `struct tm *`; `ASN1_TIME_to_tm(NULL, NULL)`; `OPENSSL_gmtime_diff` given a NULL `from`
+  or `to`.
+- **Authority:** the ASN.1 string argument is dereferenced through `d->type` and `t->length`
+  before any check, the output `struct tm` is dereferenced by `memset` and then by the
+  field writes, and `OPENSSL_gmtime_diff`'s `julian_adj` dereferences both inputs. Each call
+  faults.
+- **Candidate:** answers the function's documented failure value — `0` for the parsers, the
+  printers and the comparisons, NULL for the constructors.
+- **Claim removed:** not claimed compatible. The probe does not exercise these, because a
+  probe cannot compare a crash.
+
+### D-TIME-2 — the calendar arithmetic wraps instead of being undefined on overflow
+
+- **Obligation:** `OPENSSL_gmtime_adj(tm, off_day, offset_sec)` with an `offset_sec` at or
+  near `LONG_MIN`/`LONG_MAX`, and `OPENSSL_gmtime_diff` on a `struct tm` whose `tm_year`
+  is far outside the range a parsed time can produce.
+- **Authority:** `julian_adj`'s `long` arithmetic and `date_to_julian`'s `int` intermediates
+  overflow, which is undefined behaviour; the emitted code wraps, but nothing requires it
+  to.
+- **Candidate:** every operation in `src/runtime/time.rs` is a `wrapping_*` operation, so the
+  answer for such an input is *a* value rather than a panic. The crate builds with
+  `overflow-checks = true`, so without the wrapping operations a caller could abort the
+  process with a panic — which is a strictly worse outcome than an arbitrary value.
+- **Claim removed:** no probe compares this region, and no answer there is claimed to match.
+
+### D-MIME-1 — `i2d_ASN1_bio_stream`'s unwind loop does not terminate on a detached stream BIO
+
+- **Obligation:** `i2d_ASN1_bio_stream(out, val, in, SMIME_STREAM, it)` over an item
+  whose `ASN1_OP_STREAM_PRE` callback answers a BIO that is *not* in the chain leading
+  back to the caller's `out` — for example a freshly allocated `BIO_s_mem()`.
+- **Authority:** the unwind is `do { tbio = BIO_pop(bio); BIO_free(bio); bio = tbio; }
+  while (bio != out);`. `BIO_pop` answers NULL once the chain ends, and
+  `BIO_pop(NULL)`/`BIO_free(NULL)` both return quietly, so `bio` stays NULL and the
+  comparison against `out` is never satisfied. The call never returns and consumes
+  no memory. Measured: the RT-ASN1-MIME probe was written with exactly such a callback
+  first, and the authority run had to be killed by the harness timeout.
+- **Candidate:** the loop also stops when `BIO_pop` answers NULL, so the call returns
+  the value the copy produced.
+- **Claim removed:** not claimed compatible. The divergence is deliberately *not*
+  observable through any correct caller, because `BIO_new_NDEF` pushes the filter onto
+  `out` before invoking the callback, making `sarg->out` the natural answer for
+  `ndef_bio`; the probe's item answers `sarg->out` and the two sides agree byte for
+  byte. The record exists because the two implementations differ in the region where
+  the authority does not terminate, and an unbounded loop is treated as a fault rather
+  than as behaviour to reproduce, exactly as the crashes in this document are.
+
+### D-PEM-1 — `PEM_dek_info` converts a negative remainder to `size_t`
+
+- **Obligation:** `PEM_dek_info(buf, type, len, str)` and `PEM_proc_type(buf, type)`
+  over a `buf` whose existing content leaves less room than the text still to be
+  written, and `type` longer than the room left.
+- **Authority:** the remaining room is an `int` and is converted to `size_t` at each
+  `BIO_snprintf` with no test for a negative remainder. `PEM_proc_type` reaches it
+  when the caller's prefix already exceeds `PEM_BUFSIZE`. `PEM_dek_info` reaches it
+  one step later: `%02X` answers `2` whether or not two bytes were written, so with
+  exactly one byte of room left it writes the terminating NUL alone, leaves `j` at
+  `-1`, and the *next* iteration calls `BIO_snprintf` with a length of
+  `(size_t)-1` and writes the encoding of every remaining byte past the end of the
+  caller's buffer.
+- **Candidate:** clamps the length to zero at every call and stops the per-byte loop
+  when no room remains. Everything inside the buffer is identical — the truncated NULs
+  land in the same places, which `RT-PEM`'s near-full-buffer cases measure — so the
+  divergence is only in the region the authority writes illegally.
+- **Claim removed:** the region is not claimed. The probe deliberately stops one
+  arrangement short of it — one byte of room with a second byte still to encode —
+  because asking the authority for that answer would smash its own stack frame.
+
+### D-PRINT-1 — `ASN1_item_print` dereferences a NULL `ASN1_ITEM`
+
+- **Obligation:** `ASN1_item_print(out, val, indent, NULL, pctx)` and any interior call
+  reached with a NULL item, which a caller can produce by passing a template array whose
+  `item` slot is null.
+- **Authority:** `ASN1_item_print` reads `it->sname` before any check, and
+  `asn1_item_print_ctx` reads `it->funcs`, `it->itype` and `it->utype` immediately, so
+  every one of these faults.
+- **Candidate:** takes the item as a non-null caller contract, documented in the
+  function's `# Safety` section, and dereferences it through a `&Asn1Item`. A null item is
+  therefore the caller's error rather than a reproduced fault. A *malformed* item — a
+  `templates` pointer that does not describe `tcount` entries, or an `item` slot that is not
+  an `ASN1_ITEM_EXP` — is the same class and is equally unreproduced.
+- **Claim removed:** not claimed compatible. The probe does not exercise these, because a
+  probe cannot compare a crash.

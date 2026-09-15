@@ -3442,3 +3442,771 @@ Two documentation defects were found beside it and fixed in the same change:
   two obligation ledgers", `phase-state.json` and `STATUS.md`. There are three ledgers,
   and `symbol-ownership.json`, `ownership-audit.json` and `prototype-court.json` are
   compared too. The list is now the rule rather than a subset.
+
+
+## D80 — `ASN1_ITEM_lookup` and `ASN1_ITEM_get` are a cross-phase dependency, measured
+
+Both are declared in `asn1.h`, so the ownership atlas gives them to Phase 5 and both sat
+in the stratum's `open` list as if implementing them were a matter of reading
+`crypto/asn1/asn1_item_list.c` — which is 46 lines, two loops, and trivial. It is not.
+The file's real content is the header it includes: the authority's **generated**
+`asn1_item_list.h`, a 147-entry array of item accessors, and both functions' observable
+behaviour is that array as a whole. `ASN1_ITEM_lookup("X509")` answering `NULL` is a
+wrong function, and it is exactly the answer an implementation over the items that exist
+today would give.
+
+Measured against `forensics/atlas/symbol-ownership.json`: the `_it` accessors of those 147
+names are owned by this stratum for **40** of them, by Phase 8 for 7, Phase 10 for 6,
+Phase 11 for 64 and Phase 12 for 30. So **107 of 147** are items no stratum before Phase 12
+will have. Both symbols are therefore handed to Phase 12 with that measurement as the
+reason, which is the same shape as D73's hand-offs: a disposition by *behaviour*, recorded
+with the evidence that makes it checkable rather than a judgement about difficulty.
+
+The trap this closes is specific and would have been silent. An implementation over today's
+40 items would pass any court that asked it about `ASN1_OCTET_STRING` and would fail on the
+107 names whose codecs are later phases' — so a partially-correct `ASN1_ITEM_lookup` is
+worse than an honest hand-off, because the ledger would have called it done.
+
+Recording it also wrote down what reading `tasn_utl.c` whole established — the choice
+selector being an `utype`-offset, `ossl_asn1_do_lock`'s three operations and its -1, the
+`ASN1_ENCODING` save/restore rules including `inlen <= 0` being a *failure*, the
+`ASN1_BOOLEAN` field pointer being the value, `ossl_asn1_do_adb`'s selector rewrite and
+linear search — and the `CHOICE` and `SEQUENCE` arms of `asn1_item_embed_d2i`, which is
+what the template interpreter is written against. That is in
+`docs/PHASE-5-SUBPHASES.md`, so the next session starts from it rather than from the
+source.
+
+## D81 — The item dispatch lands, and three kinds of instrument were the suspect first
+
+`src/asn1/d2i.rs` now carries the whole of `asn1_item_embed_d2i` — `PRIMITIVE` with and
+without a template, `MSTRING`, `EXTERN`, `CHOICE`, `SEQUENCE` and `NDEF_SEQUENCE` — plus
+`asn1_template_ex_d2i`, `asn1_template_noexp_d2i` and `asn1_find_end`; `src/asn1/i2d.rs`
+carries the matching `ASN1_item_ex_i2d` dispatch, `asn1_template_ex_i2d`,
+`asn1_set_seq_out` and the three public encode entry points; and two new modules hold the
+`ASN1_TYPE` family (`src/asn1/a_type.rs`) and the pack/unpack pair
+(`src/asn1/asn_pack.rs`). `implemented[libcrypto]` moved 805 → 829 and the stratum's open
+list 155 → 129.
+
+### A note about the authority is the suspect before the authority
+
+The hand-off this session started from asserted three things about `crypto/asn1/tasn_dec.c`
+that are not so, and each would have produced a wrong implementation:
+
+* that `asn1_d2i_ex_primitive` and `asn1_ex_c2i` take `OSSL_LIB_CTX *libctx, const char
+  *propq`. They take neither. `libctx`/`propq` stop at `asn1_item_embed_d2i` and reach the
+  `EXTERN` hooks and the allocator; the primitive decoder's own argument list ends at
+  `ASN1_TLC *ctx`. Adding two ignored parameters would have made an internal function's
+  signature differ from the authority's for no observable reason.
+* that `asn1_d2i_ex_primitive` should **drop** its `MSTRING` arm because it "moved to
+  `embed_d2i`". The authority keeps `if (it->itype == ASN1_ITYPE_MSTRING) { utype = tag;
+  tag = -1; }` in the decoder, and the `MSTRING` arm of the dispatch *relies* on it: the
+  dispatch reads the tag from the encoding and passes it as `tag`, and the decoder is what
+  turns it back into a `utype`. Dropping it would have decoded every `ASN1_PRINTABLE` and
+  `ASN1_TIME` with `utype = 0`.
+* that the `err:` tail of `asn1_ex_c2i` "reduces to a plain return" outside the `ANY` arm,
+  which is what let a multi-exit `return 0` stand in for it. The tail frees the `ASN1_TYPE`
+  this frame allocated **and** nulls the caller's slot on every failure path, so it is a
+  labelled block with one exit, not a comment.
+
+All three were checked against `forensics/authorities/src/openssl-3.6.4` before any code
+was written, and the file's own prose now records the measurement rather than the claim.
+
+### `ABI-PROTOTYPE` found two defects in the new code, which is what it is for
+
+The court reported two type-plane mismatches, both in symbols this session added:
+
+* `ASN1_item_ex_d2i` was declared `opt: c_int`. The installed header declares that
+  parameter `char`. A caller compiled against the header passes one byte and leaves the
+  upper bits of the register undefined, so a callee that reads four is reading
+  unspecified bits — the defect class D76 recorded for the legacy `ERR` getters, caught
+  this time before the court could have found it at runtime.
+* `ASN1_item_ex_i2d` was declared `pval: *const *const c_void`. The header declares
+  `const ASN1_VALUE **` — the slot is writable and it is the *pointee* that is const —
+  so `*mut *const c_void` is the matching spelling. The stricter form would have compiled
+  every internal caller and broken every external one.
+
+Both are fixed and both planes are now clean: 673 declarations checked, 0 mismatches, 0
+unmapped.
+
+### The instrument was the suspect too, again
+
+After those two fixes the arity plane reported `ASN1_item_ex_d2i` as having **ten**
+parameters against the authority's eight. The declaration has eight. The court's Rust
+parameter splitter splits on top-level commas, and the two-line comment that explains the
+`char` sits *inside* the parameter list, so its comma was counted as a parameter
+separator. The same naive scan would have mis-read any parenthesis inside a comment.
+
+The fix is in the instrument, not in the comment: `blank_comments` replaces each comment's
+body with spaces **in place**, preserving length and line breaks so that every offset and
+line number derived from the text still means the same thing, and it skips string literals
+so that a `//` inside one — and this crate writes `c"..."` literals throughout — is not
+taken for a comment. The comment stays where it is; it is now a standing regression test
+that the court reads declarations rather than text.
+
+### One deliberate residual, recorded rather than smoothed
+
+`asn1_set_seq_out` sorts a `SET OF` with `qsort` in the authority. `qsort` is not
+specified to be stable, so for two elements whose encodings are byte-identical the emitted
+bytes are the same under any ordering but the resulting *stack* order — which only the
+`do_sort == 2` case (`ASN1_TFLG_SET_ORDER`) exposes to the caller — is tied to the
+original order here. The implementation uses a stable sort and says so, because that
+matches the authority's common path and because the alternative is an unprovable claim
+about libc's internals. It is an evidence question for `RT-ASN1-TEMPLATE`, not a
+normalisation applied to make a difference go away.
+
+### `item_ex_free` is gone
+
+`src/asn1/fre.rs` had a crate-internal `item_ex_free` — `ASN1_item_ex_free` through a
+string-typed slot — whose only caller was the previous `item_d2i`. The new dispatch calls
+the exported `ASN1_item_ex_free` directly, exactly as the authority's
+`asn1_item_ex_d2i_intern` does, so the wrapper became dead code and the compiler said so.
+It is deleted rather than kept behind an `allow`: a function with no caller is a function
+whose contract cannot be checked.
+
+### What this does and does not claim
+
+`RT-ASN1-TEMPLATE` does not exist yet. That court is what drives a **caller-built**
+`ASN1_SEQUENCE` and `ASN1_CHOICE` template through the decode/encode pair, and without it
+the template interpreter is exercised only insofar as the items this stratum defines reach
+it — which, for a template-bearing item, is not at all. Nothing in this session is
+`PARITY_VERIFIED`; the stratum stays `in-progress`, and this is a staging commit.
+
+## D82 — The stream layer lands, and the prototype court's C type parser was the last instrument at fault
+
+`ASN1_dup`/`ASN1_item_dup` (`a_dup.c`), the encode-to-stream family
+(`a_i2d_fp.c`: `ASN1_i2d_fp`, `ASN1_i2d_bio`, `ASN1_item_i2d_fp`,
+`ASN1_item_i2d_bio`, `ASN1_item_i2d_mem_bio`) and the decode-from-stream family
+(`a_d2i_fp.c`: `ASN1_d2i_fp`, `ASN1_d2i_bio`, `ASN1_item_d2i_bio_ex`,
+`ASN1_item_d2i_bio`, `ASN1_item_d2i_fp_ex`, `ASN1_item_d2i_fp`,
+`asn1_d2i_read_bio`) are implemented. `implemented[libcrypto]` moved 829 → 843 and the
+stratum's open list 129 → 115.
+
+### `ASN1_d2i_fp`'s `xnew` is dead, and stays
+
+`xnew` is taken and **never called** — not by `ASN1_d2i_fp`, not by `ASN1_d2i_bio`, and
+not by the authority either. It is in the signature because the 0.9.6-era API had one. It
+is kept, bound to `_`, because a caller passing a function pointer is part of the
+observable interface even when the pointer is ignored, and because dropping it would
+change the symbol's arity.
+
+### The two decisions `asn1_d2i_read_bio` actually consists of
+
+Everything else in that function is buffer bookkeeping. Two things are not:
+
+* **`ASN1_R_TOO_LONG` from `ASN1_get_object` is recoverable.** It means the buffer does
+  not yet hold the bytes the declared length needs. The reason is popped with
+  `ERR_pop_to_mark` and a fresh mark taken, so a stream arriving in pieces does not
+  accumulate one error per read. Any *other* reason from that call is fatal.
+* **A clean EOF at a top-level boundary is the normal end of input and raises nothing.**
+  A read failure, an EOF with bytes already buffered, and an EOF still owing an
+  end-of-contents marker are all `ASN1_R_NOT_ENOUGH_DATA`. The authority's own comment
+  names the consumers that depend on the quiet case — callers looping over concatenated
+  DER values, including CPython's `ssl` module — so getting this wrong is observable as a
+  spurious error rather than as a missing one.
+
+The multi-byte tag scan is transcribed as the authority writes it, including the detail
+that `while (diff > 0 && *(q++) & 0x80)` consumes a byte only when `diff > 0`, which is
+why the `diff == 0` branch afterwards reads a byte the loop did not consume. And `off`
+advances by `slen`, **not** by the mutated `want` — the two diverge in the chunked-read
+path, and conflating them would have made a short read advance the offset by too little.
+
+### The instrument was the suspect once more, and twice over
+
+`ABI-PROTOTYPE` reported `ASN1_dup` and `ASN1_d2i_fp` as `TYPE-UNMAPPED` on the
+*authority* side. The declarations were fine. `canon_c_type` decided
+function-pointer-versus-function-type with `"(*" in t`, and both `int (*)(BIO *, int)`
+(a pointer to a function) and `void *(void **, long)` (a function returning `void *`)
+contain that substring. `d2i_of_void` has the second shape, so it resolved to `None`;
+`i2d_of_void` has the same shape with an `int` return, so it resolved — which is the
+signature of an instrument defect rather than a declaration defect.
+
+The test is now structural: the `*` must be the *declarator*, inside the first top-level
+group. `int (*)(...)` has a group whose content begins with `*`; `void *(...)` has one
+that does not, and its return type is what precedes the group. The regex branch below
+could not have caught it either, because its return-type group admits only letters, digits
+and spaces. Both planes are now clean over 686 checked declarations.
+
+This is the fourth instrument defect this stratum has found — after the ERR source
+coordinates, the evidence-regeneration ordering and the parameter-splitter comment — and
+it was found the same way: by noticing that a *pass* and a *fail* shared a shape that the
+declarations did not explain.
+
+## D83 — `RT-ASN1-TEMPLATE` exists, and it found two defects the ledger could not have
+
+The template interpreter landed in D81 with a stated hole: nothing drove `CHOICE`,
+`SEQUENCE`, the `SEQUENCE OF`/`SET OF` content writer, the `EMBED` indirection or the
+`OPTIONAL` absent answer through a **caller-built** descriptor, because no built-in item
+has those shapes — a built-in item's shape *is* the thing under test. The court now exists
+and closes the hole. It is 100 observations over an item the probe declares itself.
+
+### Two real defects, and neither was reachable from a unit test
+
+**`uint32_i2c` negated at the wrong width.** The authority's hook reads a `uint32_t`,
+negates it **as a `uint32_t`**, and only then widens. This crate widened first and negated
+in 64 bits, so `-5` became `0xffffffff00000005` and encoded as nine octets
+(`02 09 ff 00 00 00 00 ff ff ff fb`) where the authority writes one (`02 01 fb`). The
+decode of the candidate's own encoding then failed, so a value written by this crate could
+not be read back by it. The court caught both halves in one observation.
+
+**The `SEQUENCE` arm raised `FIELD_MISSING` on a field error.** The authority's
+`if (!ret) { errtt = seqtt; goto err; }` is a jump to the tail that *names the field*: it
+raises nothing further, because the field's own decode already raised. This crate treated
+the same condition as "the field was missing" and raised `ASN1_R_FIELD_MISSING` on top, so
+a decode that fails left five entries on the queue where the authority leaves four. The
+`field_error` flag is gone: every case that set it was a `goto err`, and both are now
+`return err_tail(...)`.
+
+The second is the more interesting one, because the *count* of queue entries is not
+something a reader of the code would think to check, and the first four entries were
+identical on both sides. It was visible only because the probe prints the whole queue.
+
+### Three instrument and probe defects on the way in
+
+* The probe's own "wrong inner tag" case rewrote index 2 with the value already there — the
+  tag byte it meant to corrupt is at index 8 — so that case tested an undisturbed decode and
+  both sides agreed on nothing. A probe is the suspect before the crate.
+* `drain` printed only the reason code. `ERR_GET_REASON` masks the library out, so a bare
+  `121` cannot be told from `BIO_R_UNSUPPORTED_METHOD` or `DH_R_UNABLE_TO_CHECK_GENERATOR`.
+  It now prints the library and the reason string as well, which is what made the extra
+  queue entry legible.
+* `run_courts.sh` listed its runtime courts **by name**. `RT-ASN1-TEMPLATE` was generated,
+  its manifest was written, and the runner ran the previous set — so the court existed and
+  produced no receipt. The list is now derived from `forensics/frf/courts/`, because a
+  registry that has to be remembered is the failure mode this project keeps finding.
+
+### What is claimed, and what is not
+
+`RT-ASN1-TEMPLATE` passes with 100 observations, appears in its claim's receipt set, and
+has challenge mutants on both of its declared axes — so the court is sensitivity-backed
+rather than merely green. The stratum's open list is 93; nothing in it is
+`PARITY_VERIFIED`; Phase 5 remains `in-progress`.
+
+## D84 — The ASCII-form parsers land, and one of them found a defect that was my own invention
+
+`a2d_ASN1_OBJECT` (`a_object.c`) and `a2i_ASN1_INTEGER` / `a2i_ASN1_ENUMERATED`
+(`f_int.c`) and `a2i_ASN1_STRING` (`f_string.c`) are implemented, with
+`crypto/ctype.c`'s two class predicates they need. `implemented[libcrypto]` moved
+865 → 869, the stratum's open list 93 → 89, and `RT-ASN1` grew 1306 → 1366
+observations.
+
+### `crypto/ctype.c` is not a table here, and that is a decision
+
+`ossl_ctype_check`, `ossl_isdigit` and `ossl_isxdigit` are in **no** `.num` file and the
+ownership atlas has no record of them, so they are internal helpers with no ABI
+obligation. The authority implements them over a 128-entry mask table. Transcribing that
+table is what D33 forbids — a hand-copied constant nothing regenerates. The two classes
+the parsers use are each an exact union of ASCII ranges (`xdigit` was read back out of the
+authority's own table: `0x30`-`0x39`, `0x41`-`0x46`, `0x61`-`0x66`, 22 entries and no
+more), so they are written as range tests with the equivalence stated and a test that
+checks all 256 byte values against both.
+
+The one subtlety kept deliberately is that `ossl_isdigit` is a bare range test while
+`ossl_isxdigit` carries the authority's `0 <= c < 128` bounds check. A byte with the high
+bit set arrives as a negative `int` from a signed `char` and fails both, but by different
+routes, and collapsing them would lose that.
+
+### The defect was a claim I made about the authority rather than read from it
+
+`a2i_ASN1_STRING` writes each output octet as
+
+```c
+s[num + j] <<= 4;
+s[num + j] |= m;
+```
+
+I wrote an assignment instead, and — worse — invented a reason: a comment asserting that
+this reader "assigns each octet rather than shifting into it", which I then used to justify
+why it can use plain `OPENSSL_realloc` where the INTEGER reader uses the clearing one. The
+first digit was therefore overwritten by the second, and `414243` decoded as `010203`.
+`RT-ASN1` caught it on the first run.
+
+The shift-and-or is not incidental. Each octet is written twice, and the first pass reads
+whatever the allocation held, shifts it into the high nibble, and the second pass shifts it
+out of the byte entirely — so the result is the two digits and nothing else, and the
+clearing-versus-plain `realloc` difference between the two readers is **not** observable.
+That is now written down as the reason the two readers may differ, instead of the invented
+one. The line the authority actually writes is quoted in the comment.
+
+This is the fourth time this stratum has found a *note about the authority* that was the
+suspect before the authority was, and the first where the note was one I had just written.
+
+### What the round trip measured
+
+I expected the `i2a` → `a2i` round trip to fail for values long enough to be broken across
+lines, on the reasoning that the `00` prefix strip and the backslash removal would leave an
+odd hex count. Rather than reason further, the probe now measures it: a 40-octet INTEGER is
+written with `i2a_ASN1_INTEGER` into a memory BIO and read back with `a2i_ASN1_INTEGER`, and
+the return, the length and the queue are compared. It round-trips on both sides. The
+reasoning was wrong and the measurement is what settled it.
+
+## D85 — The time family lands, and the printer defect only the public entry point could show
+
+The 29 exports of `crypto/asn1/a_time.c`, `a_utctm.c` and `a_gentm.c` are implemented, with
+the three `crypto/o_time.c` calendar symbols they stand on (`OPENSSL_gmtime`,
+`OPENSSL_gmtime_adj`, `OPENSSL_gmtime_diff`, all Phase 3 by declaring header). A new
+`src/runtime/time.rs` carries the glibc `struct tm` projection and the Fliegel & Van Flandern
+Julian-day arithmetic; `src/asn1/time.rs` carries the family. `implemented[libcrypto]` moved
+871 → 903 and the stratum's open list 87 → 58.
+
+### The one defect, and why no unit test could have found it
+
+`ASN1_TIME_print` in the authority is
+
+```c
+int ASN1_TIME_print(BIO *bp, const ASN1_TIME *tm)
+{
+    return ASN1_TIME_print_ex(bp, tm, ASN1_DTFLGS_RFC822);
+}
+```
+
+— it goes through the *public* `ASN1_TIME_print_ex`, which is
+`ossl_asn1_time_print_ex(...) > 0`. There are three internal answers (`1` success, `-1`
+unparseable, `0` BIO write failure) and the public pair collapses them to two. I wrote
+`ASN1_TIME_print` as a direct call to the internal printer, so an unparseable value returned
+`-1` where the authority returns `0`.
+
+The instrument was right and the reading was wrong: the two functions are four lines apart in
+`a_time.c` and I read the second and skipped the indirection in the first. What makes it
+worth recording is *why nothing else caught it*. A unit test on the internal printer would
+confirm the three-valued behaviour I had already reasoned about. The difference exists only
+at the public entry point, and only for an input the value-level tests do not use. `RT-ASN1-TIME`
+found it on its first run, as one line of a 1071-line transcript — which is the strongest
+argument this project has for measuring the *entry point* rather than the helper.
+
+### Two asymmetries that are the authority's, not defects
+
+Both are reproduced and courted rather than corrected:
+
+- The `±hhmm` offset is applied with `OPENSSL_gmtime_adj` **only when the destination is
+  non-null**. `ASN1_UTCTIME_set_string(NULL, "…+hhmm")` therefore validates a value that
+  `ASN1_UTCTIME_check` also accepts and that a fill does not merely normalise but can
+  *reject*, if the offset moves the Julian day number below zero. `ASN1_TIME_check` answers
+  1 for a value `ASN1_TIME_to_tm` then refuses.
+- `ASN1_UTCTIME_set` *requires* the 1950-2049 window — `ossl_asn1_time_from_tm` is reached
+  with `V_ASN1_UTCTIME`, and a year outside it is a failure rather than a widening to
+  GeneralizedTime. Only `ASN1_TIME_set`/`ASN1_TIME_adj`, which pass `V_ASN1_UNDEF`, choose
+  the syntax from the year. 2050-01-01 therefore gives NULL from the first and a
+  GeneralizedTime from the second.
+
+### `struct tm` is declared here, and its layout is measured
+
+`Tm` in `src/runtime/time.rs` is the crate's projection of a *platform* structure, not of an
+OpenSSL one: four exported signatures take a `struct tm *`. The probe therefore prints
+`sizeof` and all eleven `offsetof` values and the court compares them, rather than the crate
+asserting a layout in a unit test that the same source defines. `tm_gmtoff` and `tm_zone` are
+part of the comparison because `ossl_asn1_time_to_tm` zeroes its local copy and then copies
+the whole structure out, and because `ASN1_TIME_to_tm(NULL, …)` leaves whatever `gmtime_r`
+wrote there.
+
+### Where the arithmetic was allowed to differ from the authority
+
+`OPENSSL_gmtime_adj` and the two Julian helpers perform `long` and `int` arithmetic that a
+caller can drive into overflow, which is undefined upstream. The crate builds with
+`overflow-checks = true`, so the modules use `wrapping_*` operations throughout: a value at
+the overflow boundary is *a* value rather than a panic that would abort the caller's process.
+D-TIME-2 in `docs/SECURITY_DIVERGENCE_POLICY.md` records that, and the four calls that fault
+upstream on a null argument (D-TIME-1) answer the documented failure value instead.
+
+## D86 — The string surface lands, and a Phase-3 refusal turns out to be wrong
+
+Subphase 5.6 is 14 exports in: `a_print.c` (3), `a_mbstr.c` (2), `a_strnid.c` (7) and
+`t_pkey.c` (2). `implemented[libcrypto]` moved 903 → 917 and the stratum's open list
+58 → 42. `RT-ASN1-STR` is new: 581 observations, and it found three things.
+
+### The constant I recalled instead of reading
+
+`ASN1_PRINT_MAX_INDENT` is **128**. I wrote `80`, taken from the ASCII line width
+rather than from `t_pkey.c`, and the court found it on the first run: with an indent of
+81 the authority writes 81 spaces where the candidate wrote 80, two octets short over a
+two-line buffer. This is the transcription defect class D33 names, in its purest form —
+a number that looked plausible, was never regenerated from anything, and had nothing to
+notice it going stale. The constant now quotes the file it came from, and the probe
+carries indent values on both sides of the clamp (80, 81) so the boundary is measured
+rather than assumed.
+
+### `MASK:` with nothing after it
+
+`ASN1_STRING_set_default_mask_asc("MASK:")` is an argument error in the authority, and
+the test is `if (*p == '\0') return 0;` immediately after the prefix is consumed. I
+accepted it, reasoning that `strtoul("")` answers 0 and `*end` is then the NUL. Both of
+those are true and neither is the point: the authority rejects the *empty remainder*
+before `strtoul` runs. The general shape is worth recording — a check that exists to
+exclude an input the subsequent parse would accept anyway looks redundant while you are
+reading it and is invisible when you skip it.
+
+### A Phase-3 decision, superseded
+
+`OPENSSL_INIT_LOAD_CONFIG` was on the Phase-3 `INIT_UNSUPPORTED` list: "reads
+`openssl.cnf` and applies it", which is not a no-op, so refusing it with
+`ERR_R_INIT_FAIL` was the honest choice while nothing called it.
+
+`ASN1_STRING_TABLE_get` calls it. Its first line after the NID check is
+`OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, NULL)`, guarded by
+`#ifndef OPENSSL_NO_AUTOLOAD_CONFIG`, which is not defined on this profile — so the
+call is made on *every* lookup. The court showed the whole string table raising
+`init fail` on the candidate where the authority raises nothing.
+
+The refusal's premise was incomplete rather than wrong. The authority's config step is
+
+```c
+ossl_config_int(NULL)  ->  CONF_modules_load_file_ex(global_default, NULL, NULL,
+                                                     DEFAULT_CONF_MFLAGS)
+```
+
+and `DEFAULT_CONF_MFLAGS` is `CONF_MFLAGS_DEFAULT_SECTION | CONF_MFLAGS_IGNORE_MISSING_FILE`.
+A missing config file is therefore **not** an error upstream; the step succeeds having
+loaded nothing. That is the observable answer on any profile with no default config
+file, and it is the answer the court measured. So the flag is now accepted and the step
+is a no-op that succeeds, and the part that genuinely needs a subsystem that does not
+exist — applying a config file that *does* exist, which needs `OSSL_LIB_CTX` and the
+module registry, both Phase 6 — is recorded rather than pretended.
+
+Two things about that are worth keeping:
+
+* Refusal and silence are not the only two options. The third — accept, do the part that
+  is provable, and record the remainder — is the one that matches the authority on the
+  profiles actually observed, and it is the one this decision takes.
+* The Phase-3 unit test that enumerated the refused options has been narrowed by exactly
+  one case. It is the same shape as D7's supersession: the *decision* was sound for what
+  it knew, an observation moved, and the observation lives in the derived evidence rather
+  than in this file.
+
+### Two exports handed on rather than written
+
+`ASN1_add_oid_module` and `ASN1_add_stable_module` are each four lines that register a
+CONF module. `CONF_module_add` is Phase 6 — Phase 4 handed it there on the ground that
+only the module registry constructs a `CONF_MODULE` — so neither can be written before
+that registry exists. They are handed to Phase 6 and Phase 11 respectively, by the same
+mechanism as the eleven RAND-dependent `BN_*` exports: a *dependency*, named, with the
+stratum that owns it.
+
+### Where the stack lives
+
+`stable` is an `AtomicPtr`, not the authority's bare `static` pointer. The authority's
+own comment on the sort it performs is "Ideally, this would be done under lock", so its
+thread-safety is not a property being reproduced either way; an `AtomicPtr` keeps the
+observable contract (one process-global stack, sorted before each search) while avoiding
+a mutable static. The comparator is the *typed-stack* form — its arguments are the
+addresses of the slots, so it dereferences twice — which is why the standard table's
+`bsearch` comparator is a separate function: it receives element addresses instead.
+
+## D87 — The escaping printer lands, and a comparison that was invalid rather than failing
+
+`a_strex.c`'s three exports are in: `ASN1_STRING_print_ex`,
+`ASN1_STRING_print_ex_fp` and `ASN1_STRING_to_UTF8`. Subphase 5.6 is closed.
+`implemented[libcrypto]` moved 917 → 920 and the stratum's open list 42 → 39 —
+the remaining twelve `asn1.h` exports are `ASN1_str2mask` and `asn1_gen.c`,
+`ASN1_item_print`, the six NDEF/filter BIO exports and the two streaming writers.
+
+### One implementation, two sinks, and why the length is trustworthy
+
+`do_print_ex` renders everything **twice**: once with a null sink, which makes
+`do_buf` count, and once for real. The two passes are the same code, so the length
+cannot disagree with the bytes — and a caller can get the length on its own by
+passing a null BIO, which is not a documented feature but is what
+`send_bio_chars` does with a null argument. The probe measures both and records
+`same=1`, which is a property rather than an example.
+
+### The generated table, and how it was checked
+
+`char_type[]` is 128 numbers generated by `crypto/asn1/charmap.pl` into
+`crypto/asn1/charmap.h`. It is reproduced as the *generated artifact*, not
+re-derived from the generator's rules: re-deriving it would be a second
+implementation of a generator, which is the D33 class with an extra step. What
+makes that acceptable is that the probe pins the table behaviourally — every one of
+the 256 byte values is printed under `RFC2253`, under `ESC_MSB` alone and under
+`ESC_QUOTE`, so the table is observed through the only interface that uses it
+rather than compared against a copy of itself.
+
+`ESC_MSB` alone is the case worth having: a byte above `0x7f` is tested against
+that bit **without consulting the table at all**, so `ESC_MSB` escapes high bytes
+and `ESC_CTRL` does not, and the two look interchangeable until the table is
+removed from one path.
+
+### The residual is about the instrument, not the crate
+
+`do_dump` builds a stack `ASN1_TYPE` whose `value.ptr` is the `ASN1_STRING` being
+printed, and sets `type` from the string. With `ASN1_STRFLGS_DUMP_DER` the encoder
+then reinterprets that pointer *as the type* — correctly for every character type,
+where the union member really is the string, and not for `BOOLEAN`, where it reads
+an `int`. The authority printed `#010150` and the candidate `#0101B0`: two low
+bytes of two heap addresses.
+
+The court reported that as a value residual, which is the right thing for it to do
+and the wrong thing to have asked. There is nothing to fix in the crate; the
+observation was never comparable, because the value it compares contains an
+address. The probe now asks for `DUMP_DER` only on types where the union member is
+the string, and the restriction is written where it is applied rather than applied
+silently.
+
+The general point is worth keeping: a *passing* court is not evidence that the
+comparison was meaningful, and a failing one is not evidence that the crate is
+wrong. Both readings need the observation to be a function of the contract and
+nothing else, and an address is not.
+
+### What this does not claim
+
+`X509_NAME_print_ex` and `X509_NAME_print_ex_fp` are the other half of the same
+translation unit — `do_name_ex` and its field-name handling — and are declared in
+`x509.h`, so they belong to Phase 11. Nothing here is parsed as a name.
+
+## D88 — `ASN1_str2mask` lands, and the two generators are handed on for one structure
+
+`ASN1_str2mask` and the fifty-four-name `asn1_str2tag` table beneath it are in.
+`implemented[libcrypto]` moved 920 → 921 and the stratum's open list 39 → 37.
+Subphase 5.6 is closed.
+
+### Why two of the three exports are handed to Phase 11
+
+`asn1_gen.c` declares three exports and they look alike. They are not:
+
+```c
+ASN1_TYPE *ASN1_generate_nconf(const char *str, CONF *nconf);
+ASN1_TYPE *ASN1_generate_v3(const char *str, X509V3_CTX *cnf);
+int ASN1_str2mask(const char *str, unsigned long *pmask);
+```
+
+The first two take or build an `X509V3_CTX`, which is `x509v3.h`'s and belongs to
+Phase 11. `ASN1_generate_nconf`'s null-`CONF` path looks like the escape — it calls
+`ASN1_generate_v3(str, NULL)` — but the non-null path calls `X509V3_set_nconf`,
+which is a *macro that writes six fields* of the structure, so even reaching the
+function body requires the layout. That is the same shape as `CONF_module_add` in
+D86 and it gets the same treatment: named, with the stratum that owns it, rather
+than half-written.
+
+`ASN1_str2mask` shares nothing with them but the file. Its dependencies are the
+table, `ASN1_tag2bit` (5.1) and `CONF_parse_list` (Phase 4), all of which exist.
+
+### One table, one module
+
+`asn1_str2tag` is used by `ASN1_str2mask` now and by the two generators later, so
+it lives in `src/asn1/asn1_gen.rs` rather than in a private helper beside the
+generator. Fifty-four names is small enough to duplicate and large enough for a
+duplicate to drift, and this project has already had one registry that had to be
+remembered rather than derived.
+
+The table's shape carries one piece of meaning worth naming: the six *modifier*
+names — `EXP`, `IMP`, `OCTWRAP`, `SEQWRAP`, `SETWRAP`, `BITWRAP`, `FORMAT` — do not
+have `V_ASN1_*` values but values at or above `ASN1_GEN_FLAG` (0x10000), and
+`ASN1_str2mask` rejects a name whose tag is in that range with one test. So a mask
+naming `EXP` is refused *by a range test on the shared table*, not by a second list
+of names that must be kept in step with the first.
+
+### The first module in this stratum to need no correction
+
+`RT-ASN1-STR` grew to 5831 observations with thirty-eight `str2mask` cases, and
+they all matched on the first run. Ten of the previous eleven translation units in
+this stratum needed a correction after their court ran; this one did not, and the
+difference is not care — it is that the whole behaviour fits on one screen and can
+be read rather than reconstructed. `ASN1_PRINT_MAX_INDENT` (D86) was a number in a
+file I did not open; `ASN1_str2mask` is six lines.
+
+Worth noting as a caution rather than a virtue: the probe cases were written *from*
+the source, so they encode its branches. Passing on the first run means the
+branches were transcribed correctly, not that a branch is absent. What makes the
+pass meaningful is that the same cases ran against the authority, which is the
+whole point of the method.
+
+### The partial mask, which is the authority's behaviour
+
+`ASN1_str2mask` writes `*pmask = 0` once and then ORs each accepted name in place.
+A refused name returns 0 from the callback and stops the parse *without* clearing
+what the earlier names accumulated, so `"PRINTABLE|NOPE"` answers 0 with a mask
+that still has the printable bit set. The probe checks the mask on both sides of
+that failure, so the residual is measured rather than read.
+
+## D89 — The ASN.1 filter BIO lands, and the three-call setup test I wrote as arithmetic
+
+`bio_asn1.c` and the `BIO_new_NDEF` half of `bio_ndef.c` are in: six exports.
+`implemented[libcrypto]` moved 921 → 927 and the stratum's open list 37 → 30 — the
+remainder is `ASN1_item_print`, `PEM_write_bio_ASN1_stream`, `i2d_ASN1_bio_stream`
+and the 27 `pem.h` exports.
+
+### The defect, which crashed rather than diverged
+
+The authority tests its three setup calls as
+
+```c
+if (BIO_asn1_set_prefix(...) <= 0
+    || BIO_asn1_set_suffix(...) <= 0
+    || BIO_ctrl(asn_bio, BIO_C_SET_EX_ARG, 0, ndef_aux) <= 0)
+    goto err;
+```
+
+I wrote it as a product:
+
+```rust
+let setup = setup * (unsafe { BIO_ctrl(...) } <= 0) as c_int;
+```
+
+which multiplies by **zero on success**, so `BIO_new_NDEF` took its error path on
+every call. That path releases the support block; but the setup had already handed
+the block to the BIO with `BIO_C_SET_EX_ARG`, and the BIO's destroy callback
+releases it too. glibc reported a double free in a tcache bin and the probe dumped
+core before printing a single NDEF observation.
+
+Two things about it are worth keeping. The first is that this is the *opposite* of
+D86's defect: there a constant was recalled instead of read, here three lines were
+read and then rewritten into something tidier, and the rewrite inverted the answer.
+Six lines transcribed would have been right. The second is that the failure mode was
+a crash, not a divergence, and only because the probe had been made line-buffered in
+D86 could it say *where* — the transcript stopped between `ndef.mem_nonnull=1` and
+the first `ndef.*` observation, which named the callee. An instrument that loses its
+transcript to a crash cannot localise the crash that lost it.
+
+### Gemel C39's summary is incomplete, and that is recorded here
+
+The `gemel change finish` summary for this work quoted two fragments of C in
+backticks. The command was run through a shell, so the backticked spans were
+executed as commands and dropped from the recorded text. Gemel is append-only, so
+C39's summary cannot be rewritten; this entry is the authoritative record of what it
+was meant to say. The lesson is operational rather than architectural — a summary
+that contains shell metacharacters must be quoted for the shell that carries it —
+and it is recorded rather than quietly retried because the trajectory is evidence.
+
+## D90 — `ASN1_item_print` lands, and the court finds a defect no unit test could
+
+`ASN1_item_print` (`crypto/asn1/tasn_prn.c`) is the derivation counterpart of the
+template decoder: the same `itype` switch over the same `tt->offset` arithmetic,
+walking a decoded value instead of bytes. It is implemented in `src/asn1/tasn_prn.rs`
+and observed by `RT-ASN1-PRINT`, 275 observations, no residual.
+
+Three things about it are worth keeping.
+
+The first is the one the court caught, and it is the kind of defect this project exists
+to find. `asn1_template_print_ctx` re-addresses an `EMBED` field before printing it:
+the field's own storage *is* the value, so the printer builds a pointer to a local
+holding the field's address and passes *that* down. The authority declares that local
+at function scope. My first version declared it inside the `if` block that fills it in,
+which compiles, which reads plausibly, and which points at a stack slot Rust is entitled
+to reuse the moment the block ends. The struct's first field printed as a stable
+constant that was independent of its value — 1651470960 for 0, for 1 and for 0x1234567
+alike — and no unit test could have noticed, because nothing in the crate's own items
+is `EMBED` with a primitive-hook field. The probe now pins that property on purpose:
+`d.caller_num1` and `d.caller_num0` print the same field at two values that cannot be
+mistaken for an address, so a printer reading the wrong storage cannot pass by
+coincidence, and `d2.simple_int` prints a *non*-embedded `INT32` so an `EMBED`-only
+defect is distinguishable from a hook defect. The fix mirrors `i2d.rs`'s `tval`, which
+had the pattern right from the start.
+
+The second is `i2s_ASN1_INTEGER`. `asn1_print_integer` calls it, its definition is in
+`crypto/x509/v3_utl.c` and its declaration is in `x509v3.h` — a Phase 11 symbol. Phase 5
+needs the behaviour and does not own the export, so it is reproduced as
+`pub(crate) i2s_asn1_integer` with no `#[no_mangle]`: exporting a second definition would
+double-define the symbol and claim an obligation this stratum does not own. Its two
+`ERR_raise` coordinates are a different question, and the answer follows `a_object.c`'s
+precedent from Phase 4 (D49) — the coordinate is observable through a Phase 5 export, so
+`crypto/x509/v3_utl.c` is added to `gen_err_raise_sites.py`'s covered files rather than
+deferred with the rest of `crypto/x509`. That needed one generator fix of its own: the
+reason resolver's include list had `x509err.h` but not `x509v3err.h`, so `X509V3_R_*` did
+not resolve.
+
+The third is the ownership reconciliation, which was **already failing at the previous
+HEAD** and had been missed. `bio_asn1.c`'s six exports are declared by `bio.h`, so the
+declaring-header rule makes them Phase 4's, but 5.8 implemented them here — and both
+ledgers counted them, which `ownership_audit.py` fails on. The mechanism for this already
+existed: a hand-off is *sticky*, Phase 3 established that (D57), and a deferred row may
+carry `implemented_by_owner: true`. So Phase 4 now declares `HANDED_OFF_TO_PHASE5` and
+excludes those six from its `implemented` list, Phase 5 keeps them, and the audit
+reconciles the two. The lesson is not about these six symbols: it is that a green
+pipeline is only green for the steps it runs, and an evidence tool that fails silently
+because nobody looked at it is indistinguishable from one that passes.
+
+## D91 — `ASN1_item_print`'s null-item contract is recorded, not reproduced
+
+`ASN1_item_print` reads `it->sname` before any check and `asn1_item_print_ctx` reads
+`it->funcs`, `it->itype` and `it->utype` immediately, so a null item faults in the
+authority. The candidate takes the item as a documented non-null caller contract instead
+of reproducing the fault, in the same way and for the same reason the time family does
+(D-TIME-1). It is recorded as `D-PRINT-1` in `docs/SECURITY_DIVERGENCE_POLICY.md`
+alongside the malformed-item class, and no compatibility claim covers it: a probe cannot
+compare a crash, so the probe does not reach it.
+
+## D92 — `asn_mime.c`'s copying half lands, and a hand-off reason turns out to be a file
+
+`SMIME_crlf_copy` and `i2d_ASN1_bio_stream` are implemented in
+`src/asn1/asn_mime.rs` and observed by `RT-ASN1-MIME` (188 observations, no
+residual). Both are `asn1.h`'s, so the declaring-header rule always gave them to
+this stratum; what was wrong was the *reason* they were handed to Phase 12.
+
+That reason was "operates over CMS and PKCS#7, which is Phase 12; asm_mime.c" — a
+statement about a translation unit. `SMIME_crlf_copy`'s dependencies are
+`BIO_f_buffer`, which Phase 4 implemented, and `strip_eol`, which is seventeen lines
+of the same translation unit. Nothing is missing. So the hand-off was not a
+dependency at all, it was an inference from the file a function lives in, which is
+exactly what D49 recorded as the error class that lets an obligation disappear:
+`a2d_ASN1_OBJECT` was lost the same way, by being classified by prefix rather than
+by declaring header, one level further out. The rule the ledger documents for
+itself — "the reason is a *dependency*, not a difficulty, which is what makes the
+hand-off checkable" — is what caught it, because a file name cannot be checked and
+`BIO_f_buffer` can.
+
+`SMIME_text` stays deferred, and for a reason that is now written down rather than
+implied: it reads through `mime_parse_hdr`, `mime_hdr_find` and `mime_hdr_free`,
+which are `asn_mime.c`'s MIME header reader and land with `SMIME_read_ASN1_ex`.
+`SMIME_read_ASN1`, `SMIME_read_ASN1_ex`, `SMIME_write_ASN1` and `SMIME_write_ASN1_ex`
+stay for the reason that *is* a dependency: the base64 filter `BIO_f_base64` is
+Phase 4's deferral to Phase 7, and `asn1_write_micalg` reads the `X509_ALGOR` set
+that Phase 11 owns.
+
+`PEM_write_bio_ASN1_stream` is the third `asn1.h` export in this file and it is
+separately dispositioned. `B64_write_ASN1` wraps its sink in
+`BIO_new(BIO_f_base64())`, so the export needs the EVP base64 codec and is handed to
+Phase 7 with that named as the dependency.
+
+The court also found the authority's own liveness defect. `i2d_ASN1_bio_stream`
+unwinds with `do { tbio = BIO_pop(bio); BIO_free(bio); bio = tbio; } while (bio !=
+out);`, and an item whose `ASN1_OP_STREAM_PRE` answers a BIO that is not in the chain
+back to `out` makes `bio` settle at NULL and the loop spin forever. The first version
+of the probe did exactly that and the authority run had to be killed by the harness
+timeout — which is how the defect was found rather than argued about. The candidate
+stops at NULL and the divergence is recorded as `D-MIME-1`: an unbounded loop is a
+fault, not behaviour to reproduce. The probe's item now answers `sarg->out`, which is
+what `BIO_new_NDEF`'s contract invites, and the two sides agree byte for byte.
+
+Phase-5 open obligations: 29 -> 27, all of them `pem.h`'s.
+libcrypto implemented exports: 928 -> 930.
+
+Divergence: D-MIME-1.
+
+## D93 — Phase 5 closes, and the last two exports are the ones with no dependency
+
+`PEM_proc_type` and `PEM_dek_info` are implemented in `src/pem/pem_lib.rs` and
+observed by `RT-PEM` (37 observations, no residual). They are the only two exports of
+`crypto/pem/pem_lib.c` that need nothing beyond `BIO_snprintf`, which is why they are
+the ones this stratum can hold, and the court was written to reach the parts of them
+that a hand-written expectation would not: the appended cursor (each *appends* at
+`buf + strlen(buf)`), the `BAD-TYPE` fallback for every value including
+`PEM_TYPE_CLEAR` which has no arm of its own, the `0xff &` mask that keeps a negative
+`char` two digits wide, and the newline which is written only while more than one byte
+of room remains.
+
+The other 25 are handed on, and the reason each carries is a *dependency*: 26 of this
+stratum's 91 hand-offs wait on `EVP_ENCODE_CTX` or another EVP codec, 31 on `RAND`, 10
+on `X509`, 7 on `asn_mime.c`'s MIME reader and writer, and 1 on `OSSL_LIB_CTX`. That
+the PEM reader and writer are an `EVP_ENCODE_CTX` pair is the fact that decides the
+whole subphase, and it is visible in the source rather than inferred: `PEM_write_bio`
+allocates one on its second line and `PEM_read_bio_ex` on its twelfth.
+
+`open_in_this_stratum` is now zero, `forensics/phase-state.json` reads phase 5
+`complete`, and the seal was rewritten from the ledgers rather than from the previous
+seal. The seal's FRF section is the one place this project has repeatedly gone stale,
+and the mechanism is now explicit rather than a note: the identities are read back
+from the store at the revision that writes them, the receipt table is generated from
+`.frf/receipts` instead of transcribed, and the section says that every identity in it
+moves with the store generation. The store was recreated from clean and the whole
+chain re-run after the last commit of the stratum, so the 301 objects, 36 receipts and
+9 phase-5 court receipts quoted there are the ones on disk.
+
+Two things are worth carrying into Phase 6. The first is that this stratum's most
+expensive defects were not arithmetic: they were a constant recalled instead of read
+(D86), an authority conditional rewritten into something tidier (D89), and a
+function-scope local translated into Rust with a narrower scope (D90). All three are
+reading failures, and only the third needed a court to find. The second is that the
+ownership model has now paid for itself twice — once when `a2d_ASN1_OBJECT` and the
+`crypto/o_str.c` exports were invisible to every prefix list (D49, D51), and once when
+`SMIME_crlf_copy` was handed to a later phase on the strength of the file it lives in
+(D92). Both were found by a rule that is checkable rather than by reading harder.
+
+Phase-5 open obligations: 27 -> 0. libcrypto implemented exports: 930 -> 932.
+Divergence: D-PEM-1.

@@ -200,15 +200,113 @@ HANDED_ON.update({
     for sym in ("ASN1_item_sign_ex", "ASN1_item_verify_ex")
 })
 
+# Two CONF modules that `asn1.h` declares. They are registered with
+# `CONF_module_add`, which Phase 4 handed to Phase 6 because only the module
+# registry constructs a `CONF_MODULE` -- so neither can be written before that
+# registry exists, whatever the ASN.1 stratum owns.
+HANDED_ON["ASN1_add_oid_module"] = (
+    6, "registers a CONF module with CONF_module_add, which Phase 4 handed to "
+       "Phase 6 because only the module registry constructs a CONF_MODULE",
+)
+# The two string generators in `asn1_gen.c`. Both take an `X509V3_CTX *` --
+# `x509v3.h`'s structure, Phase 11 -- and `ASN1_generate_nconf` *constructs* one
+# through the `X509V3_set_nconf` macro even on its null-`CONF` path, so neither can
+# be written without that structure. `ASN1_str2mask`, in the same translation unit,
+# depends on nothing outside this stratum and Phase 4, so it is written here.
+HANDED_ON.update({
+    sym: (11, "reads an X509V3_CTX through X509V3_get_string/X509V3_get_section for "
+              "the MULTI form and constructs one with X509V3_set_nconf; X509V3_CTX "
+              "is x509v3.h's and is Phase 11")
+    for sym in ("ASN1_generate_v3", "ASN1_generate_nconf")
+})
+
+HANDED_ON["ASN1_add_stable_module"] = (
+    11, "registers a CONF module with CONF_module_add (Phase 6, the module "
+        "registry) and its handler parses a section value with "
+        "X509V3_parse_list (Phase 11); the later of the two dependencies is the "
+        "binding one",
+)
+
 # D73's hand-offs, which are dispositions by *behaviour* rather than by declaring
 # header. `asn1.h` and `pem.h` declare all of these, which is the rule the ownership
 # atlas applies, so the atlas gives them to this stratum; what they need is a
 # subsystem the stratum above owns.
+#
+# `SMIME_crlf_copy` is deliberately **not** in this set. It was, on the reason that
+# `asn_mime.c` is the CMS/PKCS#7 translation unit -- which is a *file* argument, not a
+# dependency, and so the error D49 recorded, committed in the other direction. Its
+# only needs are `BIO_f_buffer` and the translation unit's own `strip_eol`, both
+# present, so it is implemented here; `SMIME_text` stays because the MIME header
+# parser it reads is `asn_mime.c`'s reader, which lands with `SMIME_read_ASN1_ex`.
 HANDED_ON.update({
-    sym: (12, "operates over CMS and PKCS#7, which is Phase 12; asm_mime.c")
+    sym: (12, "operates over CMS and PKCS#7, which is Phase 12; asn_mime.c")
     for sym in (
-        "SMIME_crlf_copy", "SMIME_read_ASN1", "SMIME_read_ASN1_ex", "SMIME_text",
+        "SMIME_read_ASN1", "SMIME_read_ASN1_ex", "SMIME_text",
         "SMIME_write_ASN1", "SMIME_write_ASN1_ex",
+    )
+})
+HANDED_ON.update({
+    sym: (7, "writes through BIO_f_base64, the EVP base64 filter BIO that Phase 4 "
+              "deferred to Phase 7")
+    for sym in ("PEM_write_bio_ASN1_stream",)
+})
+
+# `pem.h`'s remaining exports, each with the dependency it is waiting on rather than
+# the file it lives in. `crypto/pem/pem_lib.c` is not one subsystem: its reader and
+# writer are a base64 codec over `EVP_ENCODE_CTX`, its encrypted writer and reader are
+# an `EVP_CIPHER` pass over `EVP_BytesToKey` and `RAND_bytes`, its password callback
+# reads a pass phrase through `EVP_read_pw_string_min`, and its signing pair is an
+# `EVP_MD_CTX`. Two of its exports need none of that and are implemented in
+# `src/pem/pem_lib.rs`; these are the ones that do.
+HANDED_ON.update({
+    sym: (7, "the PEM block codec is EVP_ENCODE_CTX, which Phase 7 owns (evp.h)")
+    for sym in (
+        # The reader and the writer of a whole `-----BEGIN ...-----` block.
+        "PEM_read", "PEM_read_bio", "PEM_read_bio_ex",
+        "PEM_write", "PEM_write_bio",
+        # Both are wrappers over the reader above.
+        "PEM_bytes_read_bio", "PEM_bytes_read_bio_secmem",
+    )
+})
+HANDED_ON.update({
+    sym: (7, "tests the PEM name against EVP_PKEY_asn1_find_str, which Phase 7 owns")
+    for sym in ("PEM_ASN1_read", "PEM_ASN1_read_bio")
+})
+HANDED_ON.update({
+    sym: (7, "takes an EVP_CIPHER and derives its key with EVP_BytesToKey and a "
+              "RAND_bytes IV, all Phase 7")
+    for sym in (
+        "PEM_ASN1_write", "PEM_ASN1_write_bio", "PEM_ASN1_write_bio_ctx",
+    )
+})
+HANDED_ON.update({
+    sym: (7, "decrypts through EVP_CIPHER_CTX with EVP_BytesToKey, which Phase 7 owns")
+    for sym in ("PEM_do_header",)
+})
+HANDED_ON.update({
+    sym: (7, "reads a pass phrase through EVP_read_pw_string_min, which Phase 7 owns")
+    for sym in ("PEM_def_callback",)
+})
+HANDED_ON.update({
+    sym: (7, "digests through an EVP_MD_CTX and signs with an EVP_PKEY, which Phase 7 "
+              "owns")
+    for sym in ("PEM_SignInit", "PEM_SignUpdate", "PEM_SignFinal")
+})
+HANDED_ON.update({
+    sym: (7, "writes an EVP_PKEY's parameters, which Phase 7 owns")
+    for sym in ("PEM_write_bio_Parameters",)
+})
+HANDED_ON.update({
+    sym: (11, "encodes through i2d_X509_REQ_NEW, which the X509 stratum owns")
+    for sym in ("PEM_write_X509_REQ_NEW", "PEM_write_bio_X509_REQ_NEW")
+})
+HANDED_ON.update({
+    sym: (11, "reads or writes X509_INFO, and every arm of it is an X509, X509_CRL or "
+              "X509_PUBKEY decode, all Phase 11")
+    for sym in (
+        "PEM_X509_INFO_read", "PEM_X509_INFO_read_bio",
+        "PEM_X509_INFO_read_ex", "PEM_X509_INFO_read_bio_ex",
+        "PEM_X509_INFO_write_bio",
     )
 })
 HANDED_ON.update({
@@ -230,6 +328,29 @@ HANDED_ON.update({
         "PEM_write_bio_PrivateKey_traditional",
         "PEM_write_bio_PKCS8PrivateKey_nid", "PEM_write_PKCS8PrivateKey_nid",
     )
+})
+
+# The two item-list interrogators. `asn1.h` declares them, so the ownership atlas
+# gives them to this stratum, but their behaviour is a property of the authority's
+# *generated* `asn1_item_list.h` as a whole: which names resolve, and the index
+# order `ASN1_ITEM_get` answers in.
+#
+# Measured against the ownership atlas: that list has **147** entries, and their
+# `<name>_it` accessors are owned by this stratum for 40 of them and by Phase 8 for
+# 7, Phase 10 for 6, Phase 11 for 64 and Phase 12 for 30. So 107 of the 147 are
+# items no stratum before Phase 12 will have, and an implementation over the 40
+# that exist today would answer NULL for `X509` — a wrong function that no court
+# could catch, because the names it gets wrong are exactly the ones whose codecs
+# are later phases'. The dependency is the list, not the difficulty.
+#
+# Phase 12 is named rather than Phase 11 because the list is only whole once the
+# last of its phases has landed, and an item list that is missing its CMS and
+# PKCS#7 entries is not a shorter list, it is a different one.
+HANDED_ON.update({
+    sym: (12, "enumerates the authority's generated asn1_item_list.h, whose 147 "
+              "entries include 107 items owned by Phases 8, 10, 11 and 12 "
+              "(7/6/64/30); both functions' behaviour is the whole list")
+    for sym in ("ASN1_ITEM_lookup", "ASN1_ITEM_get")
 })
 
 def load(atlas: Path, name: str) -> dict:

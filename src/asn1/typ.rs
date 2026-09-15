@@ -48,6 +48,7 @@ use crate::asn1::i2d::item_i2d;
 use crate::asn1::items::*;
 use crate::asn1::layout::Asn1String;
 use crate::ffi::guard_ffi;
+use crate::runtime::stack::OpenSslStack;
 
 /// Declare one `d2i_*`/`i2d_*` pair over a named item.
 ///
@@ -247,6 +248,85 @@ item_functions!(
 // ---------------------------------------------------------------------------
 // `ASN1_NULL` — the sentinel the authority stores and never dereferences
 // ---------------------------------------------------------------------------
+
+/// `ASN1_SEQUENCE_ANY` and `ASN1_SET_ANY` — the two stack-valued plain types.
+///
+/// Declared `asn1.h`'s `DECLARE_ASN1_ENCODE_FUNCTIONS_name(ASN1_SEQUENCE_ANY, X)` over
+/// `typedef STACK_OF(ASN1_TYPE) ASN1_SEQUENCE_ANY`, so the C types are the same for both
+/// pairs and only the *item* differs: `ASN1_SET_ANY` is `ASN1_SEQUENCE_ANY` encoded as a
+/// `SET OF`, which is why `d2i_ASN1_SET_ANY` takes an `ASN1_SEQUENCE_ANY **` rather than
+/// an `ASN1_SET_ANY **`.
+///
+/// Written out rather than built from [`item_functions!`] because that macro's value type
+/// is `ASN1_STRING *`; the ABI form is identical, but the declaration should name the
+/// type a caller actually writes.
+///
+/// # Safety
+///
+/// `pp` must point to a slot holding a readable pointer to `len` bytes; `a` must be null
+/// or point to a slot holding null or a live stack.
+#[no_mangle]
+pub unsafe extern "C" fn d2i_ASN1_SEQUENCE_ANY(
+    a: *mut *mut OpenSslStack,
+    pp: *mut *const c_uchar,
+    len: c_long,
+) -> *mut OpenSslStack {
+    guard_ffi(core::ptr::null_mut(), || {
+        // SAFETY: the caller's contract; a stack slot and a value slot are the same
+        // representation and `ASN1_ANY_it()` is a static item.
+        unsafe { item_d2i(a.cast::<*mut Asn1String>(), pp, len, ASN1_SEQUENCE_ANY_it()) }
+            .cast::<OpenSslStack>()
+    })
+}
+
+/// `int i2d_ASN1_SEQUENCE_ANY(const ASN1_SEQUENCE_ANY *a, unsigned char **out)`
+///
+/// # Safety
+///
+/// `a` must be null or a live stack of `ASN1_TYPE`. `out` must be null or point to a
+/// slot holding null or a pointer with room for the encoding.
+#[no_mangle]
+pub unsafe extern "C" fn i2d_ASN1_SEQUENCE_ANY(
+    a: *const OpenSslStack,
+    out: *mut *mut c_uchar,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: as the decode above, read in the other direction.
+        unsafe { item_i2d(a.cast::<Asn1String>(), out, ASN1_SEQUENCE_ANY_it()) }
+    })
+}
+
+/// `ASN1_SEQUENCE_ANY *d2i_ASN1_SET_ANY(ASN1_SEQUENCE_ANY **a,
+/// const unsigned char **pp, long len)`
+///
+/// # Safety
+///
+/// As [`d2i_ASN1_SEQUENCE_ANY`].
+#[no_mangle]
+pub unsafe extern "C" fn d2i_ASN1_SET_ANY(
+    a: *mut *mut OpenSslStack,
+    pp: *mut *const c_uchar,
+    len: c_long,
+) -> *mut OpenSslStack {
+    guard_ffi(core::ptr::null_mut(), || {
+        // SAFETY: the caller's contract; `ASN1_SET_ANY_it()` is a static item.
+        unsafe { item_d2i(a.cast::<*mut Asn1String>(), pp, len, ASN1_SET_ANY_it()) }
+            .cast::<OpenSslStack>()
+    })
+}
+
+/// `int i2d_ASN1_SET_ANY(const ASN1_SEQUENCE_ANY *a, unsigned char **out)`
+///
+/// # Safety
+///
+/// As [`i2d_ASN1_SEQUENCE_ANY`].
+#[no_mangle]
+pub unsafe extern "C" fn i2d_ASN1_SET_ANY(a: *const OpenSslStack, out: *mut *mut c_uchar) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: as the decode above, read in the other direction.
+        unsafe { item_i2d(a.cast::<Asn1String>(), out, ASN1_SET_ANY_it()) }
+    })
+}
 
 /// `ASN1_NULL *ASN1_NULL_new(void)`
 ///

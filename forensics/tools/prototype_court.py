@@ -202,8 +202,37 @@ def canon_c_type(
     t = " ".join(text.replace("volatile ", "").split())
     if t in ("void", ""):
         return "void"
-    if "(*" in t:
-        return canon_c_fnptr(t, typedefs, depth)
+    # A function *pointer* and a function *type with a pointer return* both spell `*(`, so
+    # a substring test cannot tell `int (*)(BIO *, int)` from `void *(void **, long)`.
+    # What separates them is where the `*` sits: in the first it is the declarator inside
+    # the outermost group, and in the second it belongs to the return type in front of it.
+    #
+    # This was found by `d2i_of_void`, whose return is `void *`: it went down the
+    # function-pointer path and failed, so every prototype mentioning it was reported
+    # unmapped, while `i2d_of_void` — the same shape with an `int` return — mapped. The
+    # instrument was the suspect before the declarations were, again.
+    groups = top_level_groups(t)
+    if groups:
+        g0 = groups[0]
+        inner = t[g0[0] + 1:g0[1]].strip()
+        if inner.startswith("*"):
+            return canon_c_fnptr(t, typedefs, depth)
+        if "*" in t[:g0[0]] and not t[g0[1] + 1:].strip():
+            # `RET *(...)`: a function type whose return is a pointer. The regex branch
+            # below cannot match it, because its return-type group allows only letters,
+            # digits and spaces.
+            ret = canon_c_type(t[:g0[0]], typedefs, depth + 1)
+            if ret is None:
+                return None
+            args: list[str] = []
+            for a in split_top_level(inner):
+                if a.strip() in ("", "void"):
+                    continue
+                c = canon_c_type(a, typedefs, depth + 1)
+                if c is None:
+                    return None
+                args.append(c)
+            return f"fn({ret}; {', '.join(args)})"
     if t.endswith("*"):
         inner = canon_c_type(t[:-1].strip(), typedefs, depth + 1, pointee=True)
         if inner is None:
@@ -619,6 +648,62 @@ def parse_rust_declaration(
     return classify_rust(ret, aliases), len(args)
 
 
+def blank_comments(text: str) -> str:
+    """Replace every comment's body with spaces, preserving length and line breaks.
+
+    Length and line breaks are preserved so that every offset and line number derived
+    from the original text still means the same thing.
+
+    This exists because a Rust parameter list may legitimately contain a comment, and a
+    comment may contain a comma or a parenthesis. Without blanking, ``split_top_level``
+    counted the comment's comma as a parameter and ``_scan_balanced`` read the comment's
+    parenthesis as structure. Both were observed, on ``ASN1_item_ex_d2i``: a two-line
+    comment inside its parameter list made the class/arity plane report ten parameters
+    for a declaration that has eight. The instrument was the suspect before the
+    declaration was, as usual.
+
+    String literals are skipped so a ``//`` inside one is not taken for a comment; that
+    matters here because this crate writes C-string literals (``c"..."``) throughout.
+    """
+    out = list(text)
+    n = len(text)
+    i = 0
+    while i < n:
+        ch = text[i]
+        if ch == "/" and text[i + 1:i + 2] == "/":
+            while i < n and text[i] != "\n":
+                out[i] = " "
+                i += 1
+        elif ch == "/" and text[i + 1:i + 2] == "*":
+            depth = 0
+            while i < n:
+                if text[i] == "/" and text[i + 1:i + 2] == "*":
+                    depth += 1
+                    out[i] = out[i + 1] = " "
+                    i += 2
+                    continue
+                if text[i] == "*" and text[i + 1:i + 2] == "/":
+                    depth -= 1
+                    out[i] = out[i + 1] = " "
+                    i += 2
+                    if depth == 0:
+                        break
+                    continue
+                if text[i] != "\n":
+                    out[i] = " "
+                i += 1
+        elif ch == '"':
+            i += 1
+            while i < n and text[i] != '"':
+                if text[i] == "\\":
+                    i += 1
+                i += 1
+            i += 1
+        else:
+            i += 1
+    return "".join(out)
+
+
 def read_sources() -> tuple[
     dict[str, tuple[str, int]],
     dict[str, tuple[str, list[str]]],
@@ -655,10 +740,11 @@ aliases, all Rust text, all C text.
     for path in sorted(SRC.rglob("*")):
         if path.suffix == ".rs":
             try:
-                text = path.read_text(encoding="utf-8")
+                raw = path.read_text(encoding="utf-8")
             except UnicodeDecodeError:
                 continue
             key = str(path)
+            text = blank_comments(raw)
             rust_files.append((key, text))
             file_aliases: dict[str, str] = {}
             for m in RUST_ALIAS_RE.finditer(text):

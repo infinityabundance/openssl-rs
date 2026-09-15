@@ -24,6 +24,7 @@
 //! | `LOAD_SSL_STRINGS` | **implemented**: loads library 20's reason table, which `err_all.c` deliberately excludes from the crypto set |
 //! | `NO_ADD_ALL_CIPHERS`, `NO_ADD_ALL_DIGESTS` | the authority's alternative initialisers are empty |
 //! | `NO_LOAD_CONFIG` | requests exactly this build's behaviour: no config is loaded |
+//! | `LOAD_CONFIG` | **accepted**: the config step succeeds having loaded nothing, which is the authority's own answer when no config file exists. Applying a config file that *does* exist is Phase 6 (D86) |
 //! | `OPENSSL_INIT_ATFORK` | the authority's `openssl_init_fork_handlers()` is `return 1`, i.e. a no-op on the admitted pthread profile (verified in the 3.6.4 source) |
 //! | `OPENSSL_INIT_NO_ATEXIT` | fully honoured: it suppresses the `atexit` registration |
 //! | `OPENSSL_INIT_BASE_ONLY` | internal flag; base init is all this build has |
@@ -38,7 +39,6 @@
 //! |---|---|---|
 //! | `ADD_ALL_CIPHERS` | EVP/OBJ (4, 7) | registers the legacy cipher methods in the `OBJ_NAME` database |
 //! | `ADD_ALL_DIGESTS` | EVP/OBJ (4, 7) | registers the legacy digest methods |
-//! | `LOAD_CONFIG` | CONF / `OSSL_LIB_CTX` (4, 6, 16) | reads `openssl.cnf` and applies it |
 //! | `ASYNC` | ASYNC (7) | initialises the async job framework |
 //! | `ENGINE_*` | ENGINE (13) | loads/registers engines |
 //!
@@ -162,7 +162,7 @@ const OPENSSL_INIT_NO_ADD_ALL_CIPHERS: u64 = 0x0000_0010;
 #[allow(dead_code)]
 const OPENSSL_INIT_NO_ADD_ALL_DIGESTS: u64 = 0x0000_0020;
 /// `OPENSSL_INIT_LOAD_CONFIG`
-const OPENSSL_INIT_LOAD_CONFIG: u64 = 0x0000_0040;
+pub(crate) const OPENSSL_INIT_LOAD_CONFIG: u64 = 0x0000_0040;
 /// `OPENSSL_INIT_NO_LOAD_CONFIG` — accepted: no config is loaded either way.
 #[allow(dead_code)]
 const OPENSSL_INIT_NO_LOAD_CONFIG: u64 = 0x0000_0080;
@@ -202,9 +202,16 @@ const OPENSSL_INIT_NO_ATEXIT: u64 = 0x0008_0000;
 ///
 /// Do not add to this list without reading the module note: refusal is the
 /// honest choice *because* these are not no-ops in the authority.
+///
+/// `OPENSSL_INIT_LOAD_CONFIG` was on this list until Phase 5 needed it: the
+/// authority's config step is
+/// `CONF_modules_load_file_ex(global_default, NULL, NULL, DEFAULT_CONF_MFLAGS)`,
+/// and `DEFAULT_CONF_MFLAGS` includes `CONF_MFLAGS_IGNORE_MISSING_FILE`, so a
+/// profile with no default config file gets a *successful* no-op — which is what
+/// `ASN1_STRING_TABLE_get` observes first and what the RT-ASN1-STR court measured.
+/// See `docs/DECISIONS.md` D86.
 const INIT_UNSUPPORTED: u64 = OPENSSL_INIT_ADD_ALL_CIPHERS
     | OPENSSL_INIT_ADD_ALL_DIGESTS
-    | OPENSSL_INIT_LOAD_CONFIG
     | OPENSSL_INIT_ASYNC
     | OPENSSL_INIT_ENGINE_RDRAND
     | OPENSSL_INIT_ENGINE_DYNAMIC
@@ -350,9 +357,10 @@ extern "C" {
 
 /// Opaque handle matching the C `OPENSSL_INIT_SETTINGS`.
 ///
-/// Only meaningful together with `OPENSSL_INIT_LOAD_CONFIG`, which is refused in
-/// this phase, so the setting is accepted and unread — the same treatment the
-/// authority gives it when the option is absent.
+/// Only meaningful together with `OPENSSL_INIT_LOAD_CONFIG`, whose settings form
+/// is not implemented: the non-null form is accepted and unread, and the null form
+/// — the one `ASN1_STRING_TABLE_get` uses — loads nothing and succeeds. See
+/// `docs/DECISIONS.md` D86.
 #[repr(C)]
 pub struct OpenSslInitSettings {
     _private: [u8; 0],
@@ -470,6 +478,29 @@ pub extern "C" fn OPENSSL_init_crypto(opts: u64, _settings: *const OpenSslInitSe
         // authority, so a refused call still registers cleanup.
         if !register_atexit(opts & OPENSSL_INIT_NO_ATEXIT != 0) {
             return 0;
+        }
+
+        // The config step. The authority's structure is two independent tests:
+        // `NO_LOAD_CONFIG` runs the alternative initialiser (which only marks the
+        // configuration as done) and `LOAD_CONFIG` runs the real one, which is
+        // `ossl_config_int` -> `CONF_modules_load_file_ex(global_default, NULL,
+        // NULL, DEFAULT_CONF_MFLAGS)`. That call needs `OSSL_LIB_CTX` and the
+        // module registry, both Phase 6.
+        //
+        // What this crate can honour is the *outcome* on a profile with no
+        // configuration source: `DEFAULT_CONF_MFLAGS` carries
+        // `CONF_MFLAGS_IGNORE_MISSING_FILE`, so a missing file is not an error and
+        // the step succeeds having loaded nothing. It succeeds that way here for
+        // every profile, which is the divergence recorded as D86: a config file
+        // that *does* exist is not applied until Phase 6 lands the loader.
+        //
+        // The authority's re-entrancy guard (`in_init_config_local`) protects
+        // against `OBJ_` calls made from inside config parsing; nothing here
+        // parses config, so there is nothing to re-enter.
+        if opts & OPENSSL_INIT_NO_LOAD_CONFIG != 0 {
+            // The alternative initialiser ran; it does nothing.
+        } else if opts & OPENSSL_INIT_LOAD_CONFIG != 0 {
+            // Nothing to load yet; see above.
         }
 
         if opts & INIT_UNSUPPORTED != 0 {
@@ -794,7 +825,6 @@ mod tests {
             let cases = [
                 OPENSSL_INIT_ADD_ALL_CIPHERS,
                 OPENSSL_INIT_ADD_ALL_DIGESTS,
-                OPENSSL_INIT_LOAD_CONFIG,
                 OPENSSL_INIT_ASYNC,
                 OPENSSL_INIT_ENGINE_RDRAND,
                 OPENSSL_INIT_ENGINE_DYNAMIC,

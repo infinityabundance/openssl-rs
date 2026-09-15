@@ -1650,6 +1650,325 @@ int main(void)
         }
     }
 
+
+    /* ------------------------------------------------------------------ */
+    /* The ASCII-form parsers: a2d_ASN1_OBJECT and the a2i_ASN1_* readers. */
+    /* ------------------------------------------------------------------ */
+    {
+        unsigned char obuf[64];
+        char line[128];
+        int n;
+
+        /* a2d_ASN1_OBJECT: a valid OID, the arc boundary, each malformed shape, and a
+         * component too wide for an unsigned long so the BIGNUM path runs. */
+        {
+            static const char *const texts[] = {
+                "1.2.840.113549",
+                "2.999.1",
+                "0.0",
+                "1.39",
+                "1.40",
+                "3.1",
+                "1",
+                "1.",
+                "1..2",
+                "1.2x.3",
+                "2.18446744073709551615",
+                "0.0.0.0",
+                "1. 2",
+            };
+            int k;
+
+            for (k = 0; k < (int)(sizeof(texts) / sizeof(texts[0])); k++) {
+                unsigned long e;
+                int f = 1, b;
+
+                memset(obuf, 0xAA, sizeof(obuf));
+                n = a2d_ASN1_OBJECT(obuf, (int)sizeof(obuf), texts[k], -1);
+                printf("obj.%d.n=%d\n", k, n);
+                if (n > 0) {
+                    printf("obj.%d.hex=", k);
+                    for (b = 0; b < n; b++)
+                        printf("%02x", obuf[b]);
+                    printf("\n");
+                }
+                printf("obj.%d.err=", k);
+                while ((e = ERR_get_error()) != 0) {
+                    printf("%s%d", f ? "" : ",", (int)ERR_GET_REASON(e));
+                    f = 0;
+                }
+                printf("\n");
+            }
+
+            /* The buffer check is per component, so it fires mid-loop. */
+            memset(obuf, 0xAA, sizeof(obuf));
+            n = a2d_ASN1_OBJECT(obuf, 2, "1.2.840.113549", -1);
+            printf("obj.small.n=%d\n", n);
+            printf("obj.small.err=");
+            {
+                unsigned long e;
+                int f = 1;
+
+                while ((e = ERR_get_error()) != 0) {
+                    printf("%s%d", f ? "" : ",", (int)ERR_GET_REASON(e));
+                    f = 0;
+                }
+                printf("\n");
+            }
+
+            /* Measuring with a null destination, and a zero num. */
+            printf("obj.measure.n=%d\n", a2d_ASN1_OBJECT(NULL, 0, "1.2.3", -1));
+            printf("obj.zero_num.n=%d\n", a2d_ASN1_OBJECT(NULL, 0, "1.2.3", 0));
+            printf("obj.num_shorter.n=%d\n", a2d_ASN1_OBJECT(NULL, 0, "1.2.3", 3));
+        }
+
+        /* The i2a -> a2i round trip, at the length where the writer breaks the line. */
+        {
+            ASN1_INTEGER *v = ASN1_INTEGER_new();
+            BIO *b = BIO_new(BIO_s_mem());
+            int i;
+            unsigned char raw[40];
+
+            for (i = 0; i < 40; i++)
+                raw[i] = (unsigned char)(i + 1);
+            ASN1_STRING_set((ASN1_STRING *)v, raw, 40);
+            printf("rt.bytes=%d\n", ASN1_STRING_length(v));
+            i2a_ASN1_INTEGER(b, v);
+            n = a2i_ASN1_INTEGER(b, v, line, (int)sizeof(line));
+            printf("rt.n=%d\n", n);
+            printf("rt.len=%d\n", n == 1 ? ASN1_STRING_length(v) : -1);
+            printf("rt.first=%02x\n", n == 1 && ASN1_STRING_length(v) > 0
+                   ? ASN1_STRING_get0_data(v)[0] : 0);
+            printf("rt.err=");
+            {
+                unsigned long e;
+                int f = 1;
+
+                while ((e = ERR_get_error()) != 0) {
+                    printf("%s%d", f ? "" : ",", (int)ERR_GET_REASON(e));
+                    f = 0;
+                }
+                printf("\n");
+            }
+            BIO_free(b);
+            ASN1_INTEGER_free(v);
+        }
+
+        /* Hand-written single-line cases, where the parse path is unambiguous. */
+        {
+            static const char *const vals[] = {
+                "00\n",
+                "00DEADBEEF\n",
+                "0001\n",
+                "01\n",
+                "0100\n",
+                "0\n",
+                "01zz\n",
+                "DEAD\n",
+            };
+            int k;
+
+            for (k = 0; k < (int)(sizeof(vals) / sizeof(vals[0])); k++) {
+                ASN1_INTEGER *v = ASN1_INTEGER_new();
+                BIO *b = BIO_new(BIO_s_mem());
+                unsigned long e;
+                int f = 1, j;
+
+                BIO_puts(b, vals[k]);
+                n = a2i_ASN1_INTEGER(b, v, line, (int)sizeof(line));
+                printf("rd.%d.n=%d,len=%d,type=%d", k, n,
+                       n == 1 ? ASN1_STRING_length(v) : -1, v->type);
+                if (n == 1 && ASN1_STRING_length(v) > 0) {
+                    const unsigned char *d = ASN1_STRING_get0_data(v);
+
+                    printf(",hex=");
+                    for (j = 0; j < ASN1_STRING_length(v); j++)
+                        printf("%02x", d[j]);
+                }
+                printf(",err=");
+                while ((e = ERR_get_error()) != 0) {
+                    printf("%s%d", f ? "" : ",", (int)ERR_GET_REASON(e));
+                    f = 0;
+                }
+                printf("\n");
+                BIO_free(b);
+                ASN1_INTEGER_free(v);
+            }
+        }
+
+        /* The ENUMERATED reader stamps the type, keeping only the sign bit. */
+        {
+            ASN1_ENUMERATED *v = ASN1_ENUMERATED_new();
+            BIO *b = BIO_new(BIO_s_mem());
+
+            BIO_puts(b, "0042\n");
+            n = a2i_ASN1_ENUMERATED(b, v, line, (int)sizeof(line));
+            printf("en.n=%d,type=%d,len=%d\n", n, v->type, ASN1_STRING_length(v));
+            BIO_free(b);
+            ASN1_ENUMERATED_free(v);
+        }
+
+        /* The STRING reader: an empty BIO is a zero-length success, and the backward
+         * scan stops at the *last* non-hex character rather than the first. */
+        {
+            static const char *const vals[] = {
+                "414243\n",
+                "414243zz\n",
+                "414243zz44\n",
+                "zz4142\n",
+                "4\n",
+                "414\n",
+            };
+            int k;
+
+            for (k = 0; k < (int)(sizeof(vals) / sizeof(vals[0])); k++) {
+                ASN1_STRING *v = ASN1_STRING_new();
+                BIO *b = BIO_new(BIO_s_mem());
+                unsigned long e;
+                int f = 1, j;
+
+                BIO_puts(b, vals[k]);
+                n = a2i_ASN1_STRING(b, v, line, (int)sizeof(line));
+                printf("str.%d.n=%d,len=%d", k, n, n == 1 ? ASN1_STRING_length(v) : -1);
+                if (n == 1 && ASN1_STRING_length(v) > 0) {
+                    const unsigned char *d = ASN1_STRING_get0_data(v);
+
+                    printf(",hex=");
+                    for (j = 0; j < ASN1_STRING_length(v); j++)
+                        printf("%02x", d[j]);
+                }
+                printf(",err=");
+                while ((e = ERR_get_error()) != 0) {
+                    printf("%s%d", f ? "" : ",", (int)ERR_GET_REASON(e));
+                    f = 0;
+                }
+                printf("\n");
+                BIO_free(b);
+                ASN1_STRING_free(v);
+            }
+
+            /* An empty BIO. */
+            {
+                ASN1_STRING *v = ASN1_STRING_new();
+                BIO *b = BIO_new(BIO_s_mem());
+                unsigned long e;
+                int f = 1;
+
+                n = a2i_ASN1_STRING(b, v, line, (int)sizeof(line));
+                printf("str.empty.n=%d,len=%d,data_null=%d", n,
+                       n == 1 ? ASN1_STRING_length(v) : -1,
+                       n == 1 ? ASN1_STRING_get0_data(v) == NULL : -1);
+                printf(",err=");
+                while ((e = ERR_get_error()) != 0) {
+                    printf("%s%d", f ? "" : ",", (int)ERR_GET_REASON(e));
+                    f = 0;
+                }
+                printf("\n");
+                BIO_free(b);
+                ASN1_STRING_free(v);
+            }
+        }
+    }
+
+
+    /* ------------------------------------------------------------------ */
+    /* The UTF-8 primitives: every return code of each, and the round trip. */
+    /* ------------------------------------------------------------------ */
+    {
+        int n;
+
+        /* Leading byte, continuations, minimality, and a surrogate. */
+        static const struct {
+            const char *name;
+            int len;
+            unsigned char b[5];
+        } cases[] = {
+            { "ascii",        1, { 0x41 } },
+            { "ascii_nul",    1, { 0x00 } },
+            { "two_min",      2, { 0xc2, 0x80 } },
+            { "two_overlong", 2, { 0xc1, 0x81 } },
+            { "two_short",    1, { 0xc2 } },
+            { "two_badcont",  2, { 0xc2, 0x41 } },
+            { "three_min",    3, { 0xe0, 0xa0, 0x80 } },
+            { "three_over",   3, { 0xe0, 0x80, 0x80 } },
+            { "three_surr",   3, { 0xed, 0xa0, 0x80 } },
+            { "three_short",  2, { 0xe0, 0xa0 } },
+            { "four_min",     4, { 0xf0, 0x90, 0x80, 0x80 } },
+            { "four_over",    4, { 0xf0, 0x80, 0x80, 0x80 } },
+            { "four_short",   3, { 0xf0, 0x90, 0x80 } },
+            { "lead_bad",     1, { 0x80 } },
+            { "lead_f8",      1, { 0xf8 } },
+            { "len_zero",     0, { 0x41 } },
+        };
+        int k;
+
+        for (k = 0; k < (int)(sizeof(cases) / sizeof(cases[0])); k++) {
+            unsigned long v = 0xdeadbeefUL;
+            int r = UTF8_getc(cases[k].b, cases[k].len, &v);
+
+            printf("utf8.getc.%s=%d,val=%lx\n", cases[k].name, r, v);
+        }
+
+        /* The writer: each width, the sizing convention, a short buffer, and a
+         * surrogate against a buffer that is also too small. */
+        {
+            static const struct {
+                const char *name;
+                unsigned long v;
+            } vals[] = {
+                { "ascii",    0x41 },
+                { "two",      0x80 },
+                { "three",    0x800 },
+                { "four",     0x10000 },
+                { "max",      0x10ffff },
+                { "limit",    0x110000 },
+                { "surr",     0xd800 },
+                { "surr_hi",  0xdfff },
+            };
+            int j;
+
+            for (j = 0; j < (int)(sizeof(vals) / sizeof(vals[0])); j++) {
+                unsigned char out[8];
+                int i;
+
+                memset(out, 0xEE, sizeof(out));
+                n = UTF8_putc(out, (int)sizeof(out), vals[j].v);
+                printf("utf8.putc.%s=%d", vals[j].name, n);
+                if (n > 0) {
+                    printf(",hex=");
+                    for (i = 0; i < n; i++)
+                        printf("%02x", out[i]);
+                }
+                printf(",null_len=%d", UTF8_putc(NULL, 0, vals[j].v));
+                printf("\n");
+            }
+
+            /* A buffer one octet too small for each width. */
+            {
+                unsigned char out[8];
+
+                printf("utf8.putc.short2=%d\n", UTF8_putc(out, 1, 0x80));
+                printf("utf8.putc.short3=%d\n", UTF8_putc(out, 2, 0x800));
+                printf("utf8.putc.short4=%d\n", UTF8_putc(out, 3, 0x10000));
+                printf("utf8.putc.zero=%d\n", UTF8_putc(out, 0, 0x41));
+                /* The surrogate check precedes the length check. */
+                printf("utf8.putc.surr_short=%d\n", UTF8_putc(out, 1, 0xd800));
+            }
+
+            /* Round trip: write then read, for each width boundary. */
+            for (j = 0; j < (int)(sizeof(vals) / sizeof(vals[0])); j++) {
+                unsigned char out[8];
+                unsigned long back = 0;
+
+                n = UTF8_putc(out, (int)sizeof(out), vals[j].v);
+                if (n > 0 && UTF8_getc(out, n, &back) > 0)
+                    printf("utf8.rt.%s=%d,val=%lx\n", vals[j].name, n, back);
+                else
+                    printf("utf8.rt.%s=%d,failed\n", vals[j].name, n);
+            }
+        }
+    }
+
     printf("done=1\n");
     return 0;
 }

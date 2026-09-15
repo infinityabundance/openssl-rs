@@ -44,15 +44,14 @@ TRAJECTORY_COURTS="openssl-cli-version openssl-cli-dgst openssl-cli-inventory"
 # which staging directory its probes live in (the second `fixture.arguments`
 # entry), so this runner does not need to know which phase a court belongs to.
 ABI_COURTS="openssl-abi-surface"
-# Phase 3 and Phase 4 runtime courts: the authority against openssl-rs itself.
-RUNTIME_COURTS="openssl-rs-rt-mem openssl-rs-rt-exdata openssl-rs-rt-err \
-openssl-rs-rt-stack openssl-rs-rt-thread openssl-rs-rt-secure openssl-rs-rt-lhash \
-openssl-rs-rt-bio openssl-rs-rt-err-bio openssl-rs-rt-bio-addr \
-openssl-rs-rt-bio-resolve openssl-rs-rt-bio-sock openssl-rs-rt-bio-comp \
-openssl-rs-rt-bio-debug openssl-rs-rt-bio-print openssl-rs-rt-bio-file \
-openssl-rs-rt-bio-filter openssl-rs-rt-bio-pair openssl-rs-rt-bio-dgram-pair \
-openssl-rs-rt-bio-dgram openssl-rs-rt-bio-conn openssl-rs-rt-obj-stream \
-openssl-rs-rt-conf openssl-rs-rt-bn openssl-rs-rt-asn1"
+# The runtime courts are *derived* from the court directory rather than listed. A list is
+# a registry that has to be remembered, and this one was not: `RT-ASN1-TEMPLATE` was
+# generated, its manifest was written, and the runner ran the previous set — so the court
+# existed and produced no receipt, which is the failure mode this project calls a claim
+# that cannot be checked. Anything whose manifest is in `forensics/frf/courts/` and is not
+# one of the named trajectory or ABI courts is a runtime court.
+RUNTIME_COURTS="$(ls -d forensics/frf/courts/openssl-rs-rt-* 2>/dev/null \
+    | sed 's|forensics/frf/courts/||' | sort | tr '\n' ' ')"
 ALL_COURTS="$TRAJECTORY_COURTS $ABI_COURTS $RUNTIME_COURTS"
 
 RUNS=/tmp/openssl-rs-frf-runs.txt

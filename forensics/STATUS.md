@@ -25,7 +25,7 @@ renderer does not know any phase status.
 | 2 | Distribution / ABI shell | `complete` |  |
 | 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `complete` |  |
 | 4 | BIO + CONF + object database | `complete` |  |
-| 5 | BN + ASN.1 + DER/PEM | `in-progress` | 155 open obligation(s) of this stratum recorded in forensics/phase5-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
+| 5 | BN + ASN.1 + DER/PEM | `complete` |  |
 
 Not started: strata 6-21 (16 total).
 
@@ -80,9 +80,9 @@ that name is defined, nothing more.
 
 | library | exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 805 | 5091 |
+| libcrypto | 5896 | 932 | 4964 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **805** | **5694** |
+| **total** | **6499** | **932** | **5567** |
 
 ### Phase 3 obligation ledger
 
@@ -112,6 +112,8 @@ error, not a warning.
 * open in this stratum: 0
 
 Deferred to phase 5: `BIO_asn1_get_prefix`, `BIO_asn1_get_suffix`, `BIO_asn1_set_prefix`, `BIO_asn1_set_suffix`, `BIO_f_asn1`, `BIO_new_NDEF`
+
+Of those, 6 have since been implemented by phase 5, which is where the obligation sits, so phase 4 does not count them as its own work: `BIO_asn1_get_prefix`, `BIO_asn1_get_suffix`, `BIO_asn1_set_prefix`, `BIO_asn1_set_suffix`, `BIO_f_asn1`, `BIO_new_NDEF`
 
 Deferred to phase 6: `BIO_new_from_core_bio`, `BIO_s_core`, `CONF_imodule_get_flags`, `CONF_imodule_get_module`, `CONF_imodule_get_name`, `CONF_imodule_get_usr_data`, `CONF_imodule_get_value`, `CONF_imodule_set_flags`, `CONF_imodule_set_usr_data`, `CONF_module_add`, `CONF_module_get_usr_data`, `CONF_module_set_usr_data`, `CONF_modules_finish`, `CONF_modules_load`, `CONF_modules_load_file`, `CONF_modules_load_file_ex`, `CONF_modules_unload`
 

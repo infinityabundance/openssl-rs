@@ -24,9 +24,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 1306,
+        "authority_observations": 1403,
         "candidate_exit_code": 0,
-        "candidate_observations": 1306,
+        "candidate_observations": 1403,
         "candidate_stderr_tail": [],
         "court": "RT-ASN1",
         "crashed": false,
@@ -38,12 +38,131 @@
           "candidate": "artifacts/phase5/probes/rt_asn1_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 100,
+        "candidate_exit_code": 0,
+        "candidate_observations": 100,
+        "candidate_stderr_tail": [],
+        "court": "RT-ASN1-TEMPLATE",
+        "crashed": false,
+        "probe": "courts/phase5/rt_asn1_template_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase5/probes/rt_asn1_template_probe.authority",
+          "candidate": "artifacts/phase5/probes/rt_asn1_template_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 1071,
+        "candidate_exit_code": 0,
+        "candidate_observations": 1071,
+        "candidate_stderr_tail": [],
+        "court": "RT-ASN1-TIME",
+        "crashed": false,
+        "probe": "courts/phase5/rt_asn1_time_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase5/probes/rt_asn1_time_probe.authority",
+          "candidate": "artifacts/phase5/probes/rt_asn1_time_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 5831,
+        "candidate_exit_code": 0,
+        "candidate_observations": 5831,
+        "candidate_stderr_tail": [],
+        "court": "RT-ASN1-STR",
+        "crashed": false,
+        "probe": "courts/phase5/rt_asn1_str_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase5/probes/rt_asn1_str_probe.authority",
+          "candidate": "artifacts/phase5/probes/rt_asn1_str_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 114,
+        "candidate_exit_code": 0,
+        "candidate_observations": 114,
+        "candidate_stderr_tail": [],
+        "court": "RT-BIO-ASN1",
+        "crashed": false,
+        "probe": "courts/phase5/rt_bio_asn1_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase5/probes/rt_bio_asn1_probe.authority",
+          "candidate": "artifacts/phase5/probes/rt_bio_asn1_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 275,
+        "candidate_exit_code": 0,
+        "candidate_observations": 275,
+        "candidate_stderr_tail": [],
+        "court": "RT-ASN1-PRINT",
+        "crashed": false,
+        "probe": "courts/phase5/rt_asn1_print_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase5/probes/rt_asn1_print_probe.authority",
+          "candidate": "artifacts/phase5/probes/rt_asn1_print_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 188,
+        "candidate_exit_code": 0,
+        "candidate_observations": 188,
+        "candidate_stderr_tail": [],
+        "court": "RT-ASN1-MIME",
+        "crashed": false,
+        "probe": "courts/phase5/rt_asn1_mime_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase5/probes/rt_asn1_mime_probe.authority",
+          "candidate": "artifacts/phase5/probes/rt_asn1_mime_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 37,
+        "candidate_exit_code": 0,
+        "candidate_observations": 37,
+        "candidate_stderr_tail": [],
+        "court": "RT-PEM",
+        "crashed": false,
+        "probe": "courts/phase5/rt_pem_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase5/probes/rt_pem_probe.authority",
+          "candidate": "artifacts/phase5/probes/rt_pem_probe.candidate"
+        },
+        "verdict": "pass"
       }
     ],
     "summary": {
       "fail": 0,
-      "pass": 2,
-      "total": 2
+      "pass": 9,
+      "total": 9
     }
   },
   "generator": "forensics/tools/phase5_courts.py",
@@ -61,7 +180,42 @@
     {
       "name": "probe",
       "path": "courts/phase5/rt_asn1_probe.c",
-      "sha256": "271505b4b5cb3f134e535d9012747fad67d968d9bfd9309214e7b97bd3c67e94"
+      "sha256": "8c528e1886151364d184bc3c52ea4316e95fce6d88ef4c88c77a90cb14484b22"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase5/rt_asn1_template_probe.c",
+      "sha256": "a8af30214fd79f40c20606dc335d3b2de174141aed9d790d6b7c854d57ae2e95"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase5/rt_asn1_time_probe.c",
+      "sha256": "c31c39205fc1e7b6083a11229ffe05ff5cc184ba0d6c3c1ee717fe30525fedd0"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase5/rt_asn1_str_probe.c",
+      "sha256": "c2ef2618a8528a4652189fbdbf1537003a78ae9bb5723d89c374f7120999723e"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase5/rt_bio_asn1_probe.c",
+      "sha256": "ab31083fcb21e7a8a6ec11ac29ab2c5c7ab23f5cc19b951d5d348caaf894eede"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase5/rt_asn1_print_probe.c",
+      "sha256": "2cb4b3d2f53c8144204b87dd7be52df290934cd0019720608cec7422ca3b961b"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase5/rt_asn1_mime_probe.c",
+      "sha256": "6f6c68b98bc6495df2b4537b0b6aabe7524d176c0ca4ef5d9bdd217b6dbea9b8"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase5/rt_pem_probe.c",
+      "sha256": "e9d71d79c2a62d387bcb32fe7c6d8146619ac2e19dfeb1d08978b31dfb72e7cf"
     }
   ],
   "kind": "phase5-courts",
