@@ -130,6 +130,14 @@ COURTS: list[tuple[str, int, str, str]] = [
      "that only the SET one applies, the twelve primitive-hook items where the value\n"
      "is behind the slot for some and *in* the slot for LONG/ZLONG, and the two\n"
      "ASN1_TYPE octet-string pairs whose int form goes through a private template"),
+    ("rt-asn1-time", 5, "rt_asn1_time_probe",
+     "the time family: the two RFC 5280 syntaxes read by their only parser (the\n"
+     "field-bounds tables, the leap-year calendar, the shortest legal spelling and\n"
+     "the fraction field), the two type guards, the offset `+hhmm` that is validated\n"
+     "without a destination and applied only with one, the RFC 5280 profile and the\n"
+     "`YYYY`->`YY` shortening, the four constructors and their year-window choice,\n"
+     "the Julian-day diff and compare answers, the three printer formats, the\n"
+     "duplicates and the two in-place converters"),
 ]
 
 

@@ -405,3 +405,32 @@ observations that *can* be made around each boundary are compared normally.
 - **Candidate:** answers NULL.
 - **Claim removed:** not claimed compatible. The probe does not exercise it, because a
   probe cannot compare a crash.
+
+### D-TIME-1 — the time family dereferences its string and its `struct tm` without a test
+
+- **Obligation:** `ossl_asn1_time_to_tm`, the two `_check` functions, the four printers and
+  the four constructors, given a NULL time string; `ossl_asn1_time_from_tm` given a NULL
+  `struct tm *`; `ASN1_TIME_to_tm(NULL, NULL)`; `OPENSSL_gmtime_diff` given a NULL `from`
+  or `to`.
+- **Authority:** the ASN.1 string argument is dereferenced through `d->type` and `t->length`
+  before any check, the output `struct tm` is dereferenced by `memset` and then by the
+  field writes, and `OPENSSL_gmtime_diff`'s `julian_adj` dereferences both inputs. Each call
+  faults.
+- **Candidate:** answers the function's documented failure value — `0` for the parsers, the
+  printers and the comparisons, NULL for the constructors.
+- **Claim removed:** not claimed compatible. The probe does not exercise these, because a
+  probe cannot compare a crash.
+
+### D-TIME-2 — the calendar arithmetic wraps instead of being undefined on overflow
+
+- **Obligation:** `OPENSSL_gmtime_adj(tm, off_day, offset_sec)` with an `offset_sec` at or
+  near `LONG_MIN`/`LONG_MAX`, and `OPENSSL_gmtime_diff` on a `struct tm` whose `tm_year`
+  is far outside the range a parsed time can produce.
+- **Authority:** `julian_adj`'s `long` arithmetic and `date_to_julian`'s `int` intermediates
+  overflow, which is undefined behaviour; the emitted code wraps, but nothing requires it
+  to.
+- **Candidate:** every operation in `src/runtime/time.rs` is a `wrapping_*` operation, so the
+  answer for such an input is *a* value rather than a panic. The crate builds with
+  `overflow-checks = true`, so without the wrapping operations a caller could abort the
+  process with a panic — which is a strictly worse outcome than an arbitrary value.
+- **Claim removed:** no probe compares this region, and no answer there is claimed to match.

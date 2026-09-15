@@ -3738,3 +3738,71 @@ odd hex count. Rather than reason further, the probe now measures it: a 40-octet
 written with `i2a_ASN1_INTEGER` into a memory BIO and read back with `a2i_ASN1_INTEGER`, and
 the return, the length and the queue are compared. It round-trips on both sides. The
 reasoning was wrong and the measurement is what settled it.
+
+## D85 — The time family lands, and the printer defect only the public entry point could show
+
+The 29 exports of `crypto/asn1/a_time.c`, `a_utctm.c` and `a_gentm.c` are implemented, with
+the three `crypto/o_time.c` calendar symbols they stand on (`OPENSSL_gmtime`,
+`OPENSSL_gmtime_adj`, `OPENSSL_gmtime_diff`, all Phase 3 by declaring header). A new
+`src/runtime/time.rs` carries the glibc `struct tm` projection and the Fliegel & Van Flandern
+Julian-day arithmetic; `src/asn1/time.rs` carries the family. `implemented[libcrypto]` moved
+871 → 903 and the stratum's open list 87 → 58.
+
+### The one defect, and why no unit test could have found it
+
+`ASN1_TIME_print` in the authority is
+
+```c
+int ASN1_TIME_print(BIO *bp, const ASN1_TIME *tm)
+{
+    return ASN1_TIME_print_ex(bp, tm, ASN1_DTFLGS_RFC822);
+}
+```
+
+— it goes through the *public* `ASN1_TIME_print_ex`, which is
+`ossl_asn1_time_print_ex(...) > 0`. There are three internal answers (`1` success, `-1`
+unparseable, `0` BIO write failure) and the public pair collapses them to two. I wrote
+`ASN1_TIME_print` as a direct call to the internal printer, so an unparseable value returned
+`-1` where the authority returns `0`.
+
+The instrument was right and the reading was wrong: the two functions are four lines apart in
+`a_time.c` and I read the second and skipped the indirection in the first. What makes it
+worth recording is *why nothing else caught it*. A unit test on the internal printer would
+confirm the three-valued behaviour I had already reasoned about. The difference exists only
+at the public entry point, and only for an input the value-level tests do not use. `RT-ASN1-TIME`
+found it on its first run, as one line of a 1071-line transcript — which is the strongest
+argument this project has for measuring the *entry point* rather than the helper.
+
+### Two asymmetries that are the authority's, not defects
+
+Both are reproduced and courted rather than corrected:
+
+- The `±hhmm` offset is applied with `OPENSSL_gmtime_adj` **only when the destination is
+  non-null**. `ASN1_UTCTIME_set_string(NULL, "…+hhmm")` therefore validates a value that
+  `ASN1_UTCTIME_check` also accepts and that a fill does not merely normalise but can
+  *reject*, if the offset moves the Julian day number below zero. `ASN1_TIME_check` answers
+  1 for a value `ASN1_TIME_to_tm` then refuses.
+- `ASN1_UTCTIME_set` *requires* the 1950-2049 window — `ossl_asn1_time_from_tm` is reached
+  with `V_ASN1_UTCTIME`, and a year outside it is a failure rather than a widening to
+  GeneralizedTime. Only `ASN1_TIME_set`/`ASN1_TIME_adj`, which pass `V_ASN1_UNDEF`, choose
+  the syntax from the year. 2050-01-01 therefore gives NULL from the first and a
+  GeneralizedTime from the second.
+
+### `struct tm` is declared here, and its layout is measured
+
+`Tm` in `src/runtime/time.rs` is the crate's projection of a *platform* structure, not of an
+OpenSSL one: four exported signatures take a `struct tm *`. The probe therefore prints
+`sizeof` and all eleven `offsetof` values and the court compares them, rather than the crate
+asserting a layout in a unit test that the same source defines. `tm_gmtoff` and `tm_zone` are
+part of the comparison because `ossl_asn1_time_to_tm` zeroes its local copy and then copies
+the whole structure out, and because `ASN1_TIME_to_tm(NULL, …)` leaves whatever `gmtime_r`
+wrote there.
+
+### Where the arithmetic was allowed to differ from the authority
+
+`OPENSSL_gmtime_adj` and the two Julian helpers perform `long` and `int` arithmetic that a
+caller can drive into overflow, which is undefined upstream. The crate builds with
+`overflow-checks = true`, so the modules use `wrapping_*` operations throughout: a value at
+the overflow boundary is *a* value rather than a panic that would abort the caller's process.
+D-TIME-2 in `docs/SECURITY_DIVERGENCE_POLICY.md` records that, and the four calls that fault
+upstream on a null argument (D-TIME-1) answer the documented failure value instead.

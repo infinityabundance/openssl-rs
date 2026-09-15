@@ -10,6 +10,8 @@ in Git. See `docs/DECISIONS.md` D17.
 ## `gemel log`
 
 ```
+C36  Implemented the 29 exports of the ASN.1 time family (crypto/asn1/a_time.c, a_utctm.c, a_gentm.c) and the three crypto/o_time.c calendar symbols they stand on. The parser is one function, ossl_asn1_time_to_tm, with everything else a wrapper: the four constructors and their year-window choice, the two type guards, the three cmp_time_t answers, the four printers over a memory BIO, the duplicates and the two in-place converters. Added RT-ASN1-TIME: 1071 observations, all matching, on the first run after one defect was fixed. The defect is the reason the court exists: ASN1_TIME_print called the internal three-valued printer directly instead of going through the public ASN1_TIME_print_ex that collapses its -1 to 0, so an unparseable value returned -1 where the authority returns 0. No unit test would have found it - the difference is only observable through the public entry point. Also added src/runtime/time.rs: the glibc struct tm projection the exported signatures are written against, OPENSSL_gmtime over gmtime_r, and the Fliegel and Van Flandern Julian-day arithmetic of OPENSSL_gmtime_adj and OPENSSL_gmtime_diff, with the Julian-day unit tests and the struct layout assertion. Implemented libcrypto exports 871 -> 903; Phase 5 open obligations 87 -> 58.
+    state state.6218370ade549f6470b9b1a5c822d6d70ac101fd24a1937aed4462dc979d53d0 -> state.59eeed712ec296d8be516d1dc49380b12eda93547de1db3fd169b9725f17355d
 C35  Phase 5.3: the shared DER codec lands in both halves, the 26 primitive item descriptors, the 36 tasn_typ.c wrappers, ASN1_BIT_STRING, ASN1_NULL and d2i_ASN1_UINTEGER. RT-ASN1 goes 644 -> 1306 observations over 0 residuals, phase 5 open obligations 226 -> 155 and implemented[libcrypto] 734 -> 805, moving together as they must. Restructuring the decoder found two defects in the file D76 had landed and neither was reachable from the three wrappers it shipped: asn1_ex_c2i frees the value unconditionally and nulls the callers slot on an allocation failure, where the old code freed only what it had allocated, so a d2i_* into an existing string would have handed back a slot pointing at a half-filled object the authority had destroyed; and asn1_item_embed_d2i raises ASN1_R_TOO_SMALL for len <= 0 before any header is read, where the old code reported a different reason for the same failure. The court then found an ownership contract rather than a bug: asn1_item_ex_d2i_intern ends with if (rv <= 0) ASN1_item_ex_free(pval, it), so a failed decode frees the callers value and nulls the callers slot. RT-ASN1 bsd.keepstate, authority=0 candidate=1, is what produced src/asn1/fre.rs, and it also explains why asn1_ex_c2i nulls the slot after freeing: that null is what stops the item layer freeing the same string twice. The 26 descriptors are compared field by field because ASN1_ITEM fields are readable in asn1t.h, and that found IMPLEMENT_ASN1_TYPE passes 0 and not -1 as the items size, which is the field that decides whether a BOOLEAN is omitted. Reason codes are generated now: gen_err_reasons.py reads 1839 LIB_R_NAME defines over 541 authority headers and cross-checks itself against gen_err_strings.parse_reason_codes before writing, so the two codes D76 had typed wrong become references and that class of mistake is gone rather than fixed once. The subphase plan had 5.4 before 5.3 and reading the file showed the dependency points the other way: ASN1_item_d2i reaches the primitive arms with no template involved, so the wrappers need the primitive path, which is the work 5.3 owns. FRF: run run-openssl-rs-rt-asn1-2053f9dbaa2d8e2fe0ce0fb78259b91735264d11405d6e227cf82d0efff062bf, receipt receipt-run-openssl-rs-rt-asn1-2053f9dbaa2d8e2fe0ce0fb78259b91735264d11405d6e227cf82d0efff062bf-3ce41207fbca8cd851ed8818e2a250452cd9ee16fe63ad06705f7cc977a29f70, challenges 3c70b564a201f55de682d7d9409f542dfeece2dab705faa18b8d895f60d1b2b4 (stdout-first-line on the stdout axis) and 6229f4ca6cc3b646872d56976633d9434ef813307bdc52018b9196faff74e40d (exit-class on the exit axis), claim 414204ce21684e41a0352d4d33a303244ff2fedbe0c6abd6acd52e598b729617 over the 25 runtime receipts plus the ABI, dgst and inventory courts. D77 records it and docs/PHASE-5-SUBPHASES.md corrects the ordering and gains the authority facts this section established.
     state state.ffc65cf51aaa8caf989a94c1cfa21fb53ab84cd2fdea8b7259d5891c31ddbebf -> state.6218370ade549f6470b9b1a5c822d6d70ac101fd24a1937aed4462dc979d53d0
 C31  The ASN.1 leaf surface is implemented, wired in and courted: 109 exports, RT-ASN1 at 644 observations with no residuals, phase 5 open obligations 362 -> 226 after D73 hand-offs
@@ -58,6 +60,7 @@ C1  Phase 0 constitution and Phase 1 archaeology atlas, evidence-bound
 * `K14` — `checkpoint.c3c9dd019cd987d9753cda5e521b8993decd99c01b97fcebeef888727f56512e`
 * `K15` — `checkpoint.be15113912c9856c707bdd4c9317edc7c750663fd96e76e1a5b5e2b9a4420c3d`
 * `K16` — `checkpoint.6efde8d368887ea3895c564c33f8cc2ea84b211d56971fb3055ae89c576c10e2`
+* `K17` — `checkpoint.5fd6e1426ad1bf8934578ecdb7020b8bf72c4ca401136e0884da0b7c0f4b22c6`
 * `K2` — `checkpoint.67a75f9a16d008e6e5aec0984c93dfc7549bd7a33708b909fbf6424b04fcb4a6`
 * `K3` — `checkpoint.b1516eb6364ad075785911cb204a75a6e1b83b08c1a7ca39a2de6e3983dc9aed`
 * `K4` — `checkpoint.1bde75b37e1ca3972037c29cbd3ba5291079544436db9176a82f097a6bf832fe`
@@ -67,7 +70,7 @@ C1  Phase 0 constitution and Phase 1 archaeology atlas, evidence-bound
 * `K8` — `checkpoint.7eb3dba97cbf20f2b34d14cce7e93bc2171ebd0d7ee66d1f7508cc6e199567de`
 * `K9` — `checkpoint.60105b4c8189d2668c48e173fe2c92c0ddf76160caae24efecc707bd576f506f`
 
-current: `checkpoint.6efde8d368887ea3895c564c33f8cc2ea84b211d56971fb3055ae89c576c10e2`
+current: `checkpoint.5fd6e1426ad1bf8934578ecdb7020b8bf72c4ca401136e0884da0b7c0f4b22c6`
 
 ## Note: derived names are not identities
 
@@ -87,6 +90,15 @@ changed with it; the Git commit is the authoritative record of the diff.
 ## Open residuals at this boundary
 
 ```
+open [low] the crate answers a null struct tm destination or a null from/to in OPENSSL_gmtime_diff with the failure value where the authority faults; recorded in SECURITY_DIVERGENCE_POLICY
+    class: semantic_divergence
+    persistence: 0 descendant change(s)
+open [low] the time family raises nothing on a parse failure, so ASN1_TIME_adj raising ASN1_R_ERROR_GETTING_TIME is the one raise site and it needs a libc gmtime_r failure to reach; recorded but not courted
+    class: verification_gap
+    persistence: 0 descendant change(s)
+open [low] the offset branch applies OPENSSL_gmtime_adj only when the destination is non-null, so a value whose offset would move the Julian day below zero is accepted by the checker and refused by a fill; reproduced and courted, not a defect
+    class: expected_mismatch
+    persistence: 0 descendant change(s)
 open [low] the item descriptors size fields are compared through the probe rather than through a generated ABI constant court, because struct ASN1_ITEM_st is not in the ABI-LAYOUT aggregate set the phase 2 probe measures
     class: verification_gap
     persistence: 0 descendant change(s)

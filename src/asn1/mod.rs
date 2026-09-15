@@ -56,6 +56,7 @@ pub mod new;
 pub mod prim;
 pub mod string;
 pub mod text;
+pub mod time;
 pub mod typ;
 pub mod utl;
 pub mod x_bignum;

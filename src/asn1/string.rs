@@ -602,6 +602,16 @@ define_mstring!(
     "`ASN1_STRING *DISPLAYTEXT_new(void)`",
     "`void DISPLAYTEXT_free(ASN1_STRING *x)`"
 );
+// `ASN1_TIME` is the fourth MSTRING, from `a_time.c` rather than `tasn_typ.c`. Its
+// `ASN1_ITYPE_MSTRING` item is declared in `crate::asn1::items`, and the constructor
+// it generates is the same `utype == -1` branch as the three above — the `B_ASN1_TIME`
+// mask is the item's, not the constructor's.
+define_mstring!(
+    ASN1_TIME_new,
+    ASN1_TIME_free,
+    "`ASN1_TIME *ASN1_TIME_new(void)`",
+    "`void ASN1_TIME_free(ASN1_TIME *x)`"
+);
 
 /// `int ASN1_OCTET_STRING_cmp(const ASN1_OCTET_STRING *a, const ASN1_OCTET_STRING
 /// *b)`

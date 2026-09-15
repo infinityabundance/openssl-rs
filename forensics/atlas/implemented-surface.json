@@ -281,7 +281,7 @@
         "truncf128",
         "truncf16"
       ],
-      "compiler_emitted_count": 6569,
+      "compiler_emitted_count": 6574,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -289,7 +289,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 871,
+        "implemented": 903,
         "implemented_symbols": [
           "ASN1_ANY_it",
           "ASN1_BIT_STRING_check",
@@ -315,9 +315,15 @@
           "ASN1_ENUMERATED_set_int64",
           "ASN1_ENUMERATED_to_BN",
           "ASN1_FBOOLEAN_it",
+          "ASN1_GENERALIZEDTIME_adj",
+          "ASN1_GENERALIZEDTIME_check",
+          "ASN1_GENERALIZEDTIME_dup",
           "ASN1_GENERALIZEDTIME_free",
           "ASN1_GENERALIZEDTIME_it",
           "ASN1_GENERALIZEDTIME_new",
+          "ASN1_GENERALIZEDTIME_print",
+          "ASN1_GENERALIZEDTIME_set",
+          "ASN1_GENERALIZEDTIME_set_string",
           "ASN1_GENERALSTRING_free",
           "ASN1_GENERALSTRING_it",
           "ASN1_GENERALSTRING_new",
@@ -396,7 +402,23 @@
           "ASN1_T61STRING_it",
           "ASN1_T61STRING_new",
           "ASN1_TBOOLEAN_it",
+          "ASN1_TIME_adj",
+          "ASN1_TIME_check",
+          "ASN1_TIME_cmp_time_t",
+          "ASN1_TIME_compare",
+          "ASN1_TIME_diff",
+          "ASN1_TIME_dup",
+          "ASN1_TIME_free",
           "ASN1_TIME_it",
+          "ASN1_TIME_new",
+          "ASN1_TIME_normalize",
+          "ASN1_TIME_print",
+          "ASN1_TIME_print_ex",
+          "ASN1_TIME_set",
+          "ASN1_TIME_set_string",
+          "ASN1_TIME_set_string_X509",
+          "ASN1_TIME_to_generalizedtime",
+          "ASN1_TIME_to_tm",
           "ASN1_TYPE_cmp",
           "ASN1_TYPE_free",
           "ASN1_TYPE_get",
@@ -412,9 +434,16 @@
           "ASN1_UNIVERSALSTRING_free",
           "ASN1_UNIVERSALSTRING_it",
           "ASN1_UNIVERSALSTRING_new",
+          "ASN1_UTCTIME_adj",
+          "ASN1_UTCTIME_check",
+          "ASN1_UTCTIME_cmp_time_t",
+          "ASN1_UTCTIME_dup",
           "ASN1_UTCTIME_free",
           "ASN1_UTCTIME_it",
           "ASN1_UTCTIME_new",
+          "ASN1_UTCTIME_print",
+          "ASN1_UTCTIME_set",
+          "ASN1_UTCTIME_set_string",
           "ASN1_UTF8STRING_free",
           "ASN1_UTF8STRING_it",
           "ASN1_UTF8STRING_new",
@@ -1051,6 +1080,9 @@
           "OPENSSL_buf2hexstr_ex",
           "OPENSSL_cleanse",
           "OPENSSL_cleanup",
+          "OPENSSL_gmtime",
+          "OPENSSL_gmtime_adj",
+          "OPENSSL_gmtime_diff",
           "OPENSSL_hexchar2int",
           "OPENSSL_hexstr2buf",
           "OPENSSL_hexstr2buf_ex",
@@ -1163,7 +1195,7 @@
           "i2d_DISPLAYTEXT",
           "i2t_ASN1_OBJECT"
         ],
-        "scaffolded": 5025
+        "scaffolded": 4993
       },
       "libssl": {
         "authority_exports": 603,
@@ -1174,18 +1206,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 871,
-      "scaffolded": 5628
+      "implemented": 903,
+      "scaffolded": 5596
     }
   },
-  "body_hash": "1d46cac4450a05d5f293c3bff00e39f6d6416e8dc48ac9710144114c4f4eb380",
+  "body_hash": "e697dafd7b3d93fdfb6756237f93fd1522cf73e0cb4e0e3744b8de3b06a19ef2",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "fe135b01cc788fcf7acdd2f90796d3fc199db6d96a9405ef2cd889c3923e1b41"
+      "sha256": "f381673716cd6c5f0d0fcc92cd7355631f97dd5da9b5a47fc3ab7eeb85f3775d"
     },
     {
       "name": "authority-exports",

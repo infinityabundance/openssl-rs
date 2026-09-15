@@ -39,3 +39,4 @@ pub mod secure;
 pub mod stack;
 pub mod str;
 pub mod thread;
+pub mod time;
