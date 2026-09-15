@@ -42,6 +42,7 @@ pub mod a_d2i_fp;
 pub mod a_dup;
 pub mod a_i2d_fp;
 pub mod a_type;
+pub mod a_utf8;
 pub mod asn_pack;
 pub mod bitstr;
 pub mod d2i;
