@@ -43,8 +43,10 @@
 //! carries `OPENSSL_INIT_`, which puts them under this stratum's accounting.
 
 pub mod api;
+pub mod conf_ssl;
 pub mod def;
 pub mod init_settings;
 pub mod lib;
 pub mod modparse;
+pub mod sap;
 pub mod types;

@@ -46,6 +46,27 @@ pub struct OpenSslInitSettings {
     flags: c_ulong,
 }
 
+/// An `OPENSSL_INIT_SETTINGS` built on the stack, the way `OPENSSL_config` builds
+/// one.
+///
+/// The struct is opaque in the installed headers, so only this module can construct
+/// it; `crypto/conf/conf_sap.c` builds it with `memset(&settings, 0, ...)` plus two
+/// assignments, and the values it installs are exactly `DEFAULT_CONF_MFLAGS` and
+/// the caller's duplicated application name. This constructor exists so that
+/// `OPENSSL_config` can hand over the same three fields without a second definition
+/// of what "the default settings" means, and so that the `appname` the caller
+/// releases is the one this module's `strdup` produced.
+///
+/// `filename` is NULL, which is the authority's `memset` result and therefore means
+/// "the default configuration file".
+pub(crate) fn stack_settings(appname: *mut c_char) -> OpenSslInitSettings {
+    OpenSslInitSettings {
+        filename: ptr::null_mut(),
+        appname,
+        flags: DEFAULT_CONF_MFLAGS,
+    }
+}
+
 /// `DEFAULT_CONF_MFLAGS` — the flag word `OPENSSL_INIT_new` installs.
 ///
 /// `CONF_MFLAGS_DEFAULT_SECTION | CONF_MFLAGS_IGNORE_MISSING_FILE |

@@ -361,10 +361,24 @@ extern "C" {
 /// is not implemented: the non-null form is accepted and unread, and the null form
 /// — the one `ASN1_STRING_TABLE_get` uses — loads nothing and succeeds. See
 /// `docs/DECISIONS.md` D86.
-#[repr(C)]
-pub struct OpenSslInitSettings {
-    _private: [u8; 0],
-}
+///
+/// **There is one definition of this type, and it lives with the code that fills
+/// it.** It used to be a zero-sized opaque placeholder here, because this module
+/// never reads the settings: `OPENSSL_INIT_LOAD_CONFIG` is *accepted* having loaded
+/// nothing, which is the authority's answer when no configuration file exists, so
+/// the pointer its callers pass was never dereferenced. That was fine while nothing
+/// produced a real one, and it stopped being fine the moment `OPENSSL_config` did:
+/// two `#[repr(C)]` types with the same name and different definitions is a
+/// placeholder that will silently accept a wrong pointer when Phase 6.9 teaches
+/// this function to read the settings.
+///
+/// So the definition is re-exported from `crypto/conf/conf_lib.c`'s Rust home,
+/// which is where `OPENSSL_INIT_new` and the setters already are. A module cycle is
+/// the price, and it is not a real one: Rust modules are not compilation units, and
+/// the authority has the same shape — `crypto.h` declares
+/// `OPENSSL_init_crypto` and `types.h` declares the settings struct, neither
+/// owning the other.
+pub use crate::runtime::conf::init_settings::OpenSslInitSettings;
 
 /// Raises `ERR_LIB_CRYPTO`/`ERR_R_INIT_FAIL`, the authority's error for a failed
 /// initialisation, **at the authority's own raise site**.

@@ -394,3 +394,47 @@ list and the ownership atlas are three statements of one scope, and nothing comp
 them. `ownership_audit.py` now fails when a stratum the atlas assigns exports has no
 ledger row for them, and when a ledger carries a row another stratum does not defer to
 it. `docs/DECISIONS.md` D97 has the full account.
+
+## 11. The reopened obligations, discharged (D97, D99)
+
+§10 recorded the correction and the eighteen obligations it exposed; this section
+records what happened to them. `docs/SEAL-CENSUS.md` carries the arithmetic.
+
+All eighteen are implemented, and the new differential court `RT-COMP` observes them
+in 27 observations — the seventeenth court of this stratum. The families and what a
+consumer in this profile can actually reach:
+
+* **`COMP_*` (14)**, in `src/runtime/bio/comp.rs`. The profile is configured
+  `no-zlib no-zstd no-brotli`, so all six factories answer `NULL` — measured, not
+  read off the configure line (`courts/phase4/discover_comp.c`). Six exports are
+  therefore *fully* courted (`COMP_zlib`, `COMP_zlib_oneshot`, `COMP_zstd`,
+  `COMP_zstd_oneshot`, `COMP_brotli`, `COMP_brotli_oneshot`), as are the four
+  NULL-tolerant ones (`COMP_get_type`, `COMP_get_name`, `COMP_CTX_new`,
+  `COMP_CTX_free`). The remaining four — `COMP_CTX_get_method`, `COMP_CTX_get_type`,
+  `COMP_compress_block`, `COMP_expand_block` — take a live `COMP_CTX` and **no
+  consumer in this profile can obtain one**: every factory answers NULL and the only
+  other public source, libssl's `SSL_COMP_get_compression_methods`, returns entries
+  whose method is NULL because TLS compression was removed in 3.0. Their bodies are
+  transcribed and unit-tested against a method built to `comp_local.h`'s layout,
+  and they are **not** claimed to be courted. `COMP_CTX_get_type(NULL)` faults in the
+  authority; recorded, not reproduced.
+* **`conf_ssl_*` (3)**, in `src/runtime/conf/conf_ssl.rs`. `conf_ssl_name_find` is
+  fully observable and is courted, including its NULL and empty-store answers and its
+  case sensitivity. `conf_ssl_get` and `conf_ssl_get_cmd` index into a store that
+  nothing populates until the `ssl_conf` CONF module runs, and registering that module
+  needs `CONF_module_add` — Phase 6.9's — so they are transcribed, unit-tested
+  against a store the test installs, and not claimed to be courted. The module's own
+  reader and free hook are here, with the free hook waiting for the registry.
+* **`OPENSSL_config` (1)**, in `src/runtime/conf/sap.rs`: the same settings object
+  and the same call into `OPENSSL_init_crypto` the authority makes, including libc
+  `strdup`/`free` rather than the OpenSSL allocator, because that is the pairing the
+  authority uses and an installable allocator would notice the difference.
+
+The court also found a divergence in an *adjacent* surface — `OPENSSL_info` answers
+NULL for the build-dependent codes where the authority answers a path. That is the
+same fact `RT-CONF` already records for `CONF_get1_default_config_file` under
+`OBL-CONF-DEFAULT-CONFIG-FILE` (Phase 16), reached by a second route that nothing had
+recorded. `RT-COMP` now courts the build-independent half of `OPENSSL_info` and
+prints the recorded-divergence label for the build-dependent half. See
+`docs/DECISIONS.md` D100.
+

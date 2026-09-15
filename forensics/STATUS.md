@@ -24,8 +24,8 @@ renderer does not know any phase status.
 | 1 | Complete archaeology / API / ABI atlas | `complete` |  |
 | 2 | Distribution / ABI shell | `complete` |  |
 | 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `complete` |  |
-| 4 | BIO + CONF + object database | `in-progress` | 18 open obligation(s) of this stratum recorded in forensics/phase4-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
-| 5 | BN + ASN.1 + DER/PEM | `in-progress` | blocked by the dependency-order invariant: phase 4 is not complete |
+| 4 | BIO + CONF + object database | `complete` |  |
+| 5 | BN + ASN.1 + DER/PEM | `complete` |  |
 
 Not started: strata 6-21 (16 total).
 
@@ -80,9 +80,9 @@ that name is defined, nothing more.
 
 | library | exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 956 | 4940 |
+| libcrypto | 5896 | 974 | 4922 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **956** | **5543** |
+| **total** | **6499** | **974** | **5525** |
 
 ### Phase 3 obligation ledger
 
@@ -112,9 +112,9 @@ handed it, that is neither implemented, deferred to a named later
 phase, nor recorded as open in the stratum is an error, not a warning.
 
 * authority exports in the Phase 4 working set: 272
-* implemented: 231
+* implemented: 249
 * deferred to a later phase with a stated reason: 23
-* open in this stratum: 18
+* open in this stratum: 0
 
 Deferred to phase 5: `BIO_asn1_get_prefix`, `BIO_asn1_get_suffix`, `BIO_asn1_set_prefix`, `BIO_asn1_set_suffix`
 

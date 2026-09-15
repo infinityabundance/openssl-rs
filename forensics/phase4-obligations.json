@@ -1,12 +1,12 @@
 {
   "authority": "openssl-3.6.4-production",
   "body": {
-    "complete": false,
+    "complete": true,
     "counts": {
       "atlas_owned": 256,
       "deferred_to_later_phase": 23,
-      "implemented": 231,
-      "open_in_this_stratum": 18,
+      "implemented": 249,
+      "open_in_this_stratum": 0,
       "owned": 272,
       "received_by_handoff": 16
     },
@@ -408,6 +408,20 @@
       "BUF_MEM_new",
       "BUF_MEM_new_ex",
       "BUF_reverse",
+      "COMP_CTX_free",
+      "COMP_CTX_get_method",
+      "COMP_CTX_get_type",
+      "COMP_CTX_new",
+      "COMP_brotli",
+      "COMP_brotli_oneshot",
+      "COMP_compress_block",
+      "COMP_expand_block",
+      "COMP_get_name",
+      "COMP_get_type",
+      "COMP_zlib",
+      "COMP_zlib_oneshot",
+      "COMP_zstd",
+      "COMP_zstd_oneshot",
       "CONF_dump_bio",
       "CONF_dump_fp",
       "CONF_free",
@@ -452,7 +466,11 @@
       "OPENSSL_LH_node_usage_stats",
       "OPENSSL_LH_node_usage_stats_bio",
       "OPENSSL_LH_stats",
-      "OPENSSL_LH_stats_bio"
+      "OPENSSL_LH_stats_bio",
+      "OPENSSL_config",
+      "conf_ssl_get",
+      "conf_ssl_get_cmd",
+      "conf_ssl_name_find"
     ],
     "module_prefixes": [
       {
@@ -508,98 +526,7 @@
       }
     ],
     "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` entries belong to this stratum and are recorded gaps, not deferrals; while any exist Phase 4 cannot be called complete, and it is what returned the stratum to `in-progress` after D97. `implemented_by_owner` on a deferred row records that the receiving stratum has since discharged the hand-off. Nothing here is a parity claim.",
-    "open": [
-      {
-        "declaring_header": "comp.h",
-        "module": "src/runtime/bio/comp.rs",
-        "symbol": "COMP_CTX_free"
-      },
-      {
-        "declaring_header": "comp.h",
-        "module": "src/runtime/bio/comp.rs",
-        "symbol": "COMP_CTX_get_method"
-      },
-      {
-        "declaring_header": "comp.h",
-        "module": "src/runtime/bio/comp.rs",
-        "symbol": "COMP_CTX_get_type"
-      },
-      {
-        "declaring_header": "comp.h",
-        "module": "src/runtime/bio/comp.rs",
-        "symbol": "COMP_CTX_new"
-      },
-      {
-        "declaring_header": "comp.h",
-        "module": "src/runtime/bio/comp.rs",
-        "symbol": "COMP_brotli"
-      },
-      {
-        "declaring_header": "comp.h",
-        "module": "src/runtime/bio/comp.rs",
-        "symbol": "COMP_brotli_oneshot"
-      },
-      {
-        "declaring_header": "comp.h",
-        "module": "src/runtime/bio/comp.rs",
-        "symbol": "COMP_compress_block"
-      },
-      {
-        "declaring_header": "comp.h",
-        "module": "src/runtime/bio/comp.rs",
-        "symbol": "COMP_expand_block"
-      },
-      {
-        "declaring_header": "comp.h",
-        "module": "src/runtime/bio/comp.rs",
-        "symbol": "COMP_get_name"
-      },
-      {
-        "declaring_header": "comp.h",
-        "module": "src/runtime/bio/comp.rs",
-        "symbol": "COMP_get_type"
-      },
-      {
-        "declaring_header": "comp.h",
-        "module": "src/runtime/bio/comp.rs",
-        "symbol": "COMP_zlib"
-      },
-      {
-        "declaring_header": "comp.h",
-        "module": "src/runtime/bio/comp.rs",
-        "symbol": "COMP_zlib_oneshot"
-      },
-      {
-        "declaring_header": "comp.h",
-        "module": "src/runtime/bio/comp.rs",
-        "symbol": "COMP_zstd"
-      },
-      {
-        "declaring_header": "comp.h",
-        "module": "src/runtime/bio/comp.rs",
-        "symbol": "COMP_zstd_oneshot"
-      },
-      {
-        "declaring_header": "conf.h",
-        "module": "src/runtime/conf/",
-        "symbol": "OPENSSL_config"
-      },
-      {
-        "declaring_header": null,
-        "module": "src/runtime/conf/",
-        "symbol": "conf_ssl_get"
-      },
-      {
-        "declaring_header": null,
-        "module": "src/runtime/conf/",
-        "symbol": "conf_ssl_get_cmd"
-      },
-      {
-        "declaring_header": null,
-        "module": "src/runtime/conf/",
-        "symbol": "conf_ssl_name_find"
-      }
-    ],
+    "open": [],
     "owned_by_module": {
       "src/runtime/bio/": 187,
       "src/runtime/bio/comp.rs": 14,
@@ -626,7 +553,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "2dd236aca5c3c94e4c1ee464b1845e5edda1c47cc75c5f261ed5ab2841855c26"
+      "sha256": "1f899ddf34812ef7e41604fa43bedf8ff2f82c17bedf958f8e248d2111c8df6c"
     }
   ],
   "kind": "phase4-obligations",

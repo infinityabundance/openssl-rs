@@ -281,7 +281,7 @@
         "truncf128",
         "truncf16"
       ],
-      "compiler_emitted_count": 4407,
+      "compiler_emitted_count": 6651,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -289,7 +289,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 956,
+        "implemented": 974,
         "implemented_symbols": [
           "ASN1_ANY_it",
           "ASN1_BIT_STRING_check",
@@ -872,6 +872,20 @@
           "BUF_MEM_new_ex",
           "BUF_reverse",
           "CBIGNUM_it",
+          "COMP_CTX_free",
+          "COMP_CTX_get_method",
+          "COMP_CTX_get_type",
+          "COMP_CTX_new",
+          "COMP_brotli",
+          "COMP_brotli_oneshot",
+          "COMP_compress_block",
+          "COMP_expand_block",
+          "COMP_get_name",
+          "COMP_get_type",
+          "COMP_zlib",
+          "COMP_zlib_oneshot",
+          "COMP_zstd",
+          "COMP_zstd_oneshot",
           "CONF_dump_bio",
           "CONF_dump_fp",
           "CONF_free",
@@ -1105,6 +1119,7 @@
           "OPENSSL_buf2hexstr_ex",
           "OPENSSL_cleanse",
           "OPENSSL_cleanup",
+          "OPENSSL_config",
           "OPENSSL_die",
           "OPENSSL_fork_child",
           "OPENSSL_fork_parent",
@@ -1193,6 +1208,9 @@
           "a2i_ASN1_INTEGER",
           "a2i_ASN1_STRING",
           "asn1_d2i_read_bio",
+          "conf_ssl_get",
+          "conf_ssl_get_cmd",
+          "conf_ssl_name_find",
           "d2i_ASN1_BIT_STRING",
           "d2i_ASN1_BMPSTRING",
           "d2i_ASN1_ENUMERATED",
@@ -1248,7 +1266,7 @@
           "i2d_DISPLAYTEXT",
           "i2t_ASN1_OBJECT"
         ],
-        "scaffolded": 4940
+        "scaffolded": 4922
       },
       "libssl": {
         "authority_exports": 603,
@@ -1259,18 +1277,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 956,
-      "scaffolded": 5543
+      "implemented": 974,
+      "scaffolded": 5525
     }
   },
-  "body_hash": "2dd236aca5c3c94e4c1ee464b1845e5edda1c47cc75c5f261ed5ab2841855c26",
+  "body_hash": "1f899ddf34812ef7e41604fa43bedf8ff2f82c17bedf958f8e248d2111c8df6c",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "31e0b5e756d8ccbb1bff30778429b35b316b0e0fded6053d7f58cd4209775d4e"
+      "sha256": "511387b75f780568157a257078753a04d8305b77be20f4ad19a94e671c72fc4a"
     },
     {
       "name": "authority-exports",
