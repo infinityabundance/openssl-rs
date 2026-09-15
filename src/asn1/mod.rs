@@ -14,21 +14,35 @@
 //!   (`asn1_lib.c`, `tasn_dec.c`'s `ASN1_tag2bit`).
 //! * [`prim`] — `ASN1_OBJECT` and the `ASN1_INTEGER`/`ASN1_ENUMERATED` family,
 //!   including the two's-complement content codecs (`a_object.c`, `a_int.c`).
+//! * [`bitstr`] — `ASN1_BIT_STRING`'s bit operations and its two content codecs
+//!   (`a_bitstr.c`, `t_bitst.c`).
+//! * [`i2d`] — the shared encoder (`tasn_enc.c`).
+//! * [`items`] — the `ASN1_ITEM` descriptors for the coded types and the
+//!   `*_it()` accessors that hand them out (`tasn_typ.c`, `a_time.c`). The
+//!   template machinery of subphase 5.4 reads these; so does every `d2i_*`/`i2d_*`
+//!   wrapper, because each wrapper is one call to `ASN1_item_*` with the matching
+//!   item.
+//! * [`typ`] — the `d2i_*`/`i2d_*` wrapper family those items name, and
+//!   `ASN1_NULL`'s allocator (`tasn_typ.c`).
 //! * [`text`] — the text conversions a BIO reads and writes (`f_int.c`,
 //!   `f_string.c`, and `i2a_ASN1_OBJECT` from `a_object.c`).
 //!
-//! What is *not* here yet is the template machinery (`ASN1_item_*`) and the
-//! `d2i_*`/`i2d_*` wrappers built on it. `docs/PHASE-5-SUBPHASES.md` orders those
-//! after the leaf types they are made of, and D73 explains why: the wrappers look
-//! like the natural starting point, but each is a thin layer over
-//! `asn1_d2i_ex_primitive`, and doing them first would mean writing that path by
-//! hand and drifting from it.
+//! What is *not* here yet is the template machinery (`ASN1_item_*`), the time
+//! accessors, the `ASN1_TYPE` operations, the NDEF BIO layer and PEM.
+//! `docs/PHASE-5-SUBPHASES.md` orders them, and D73 explains why the shared codec
+//! had to land before the wrappers that name it: each wrapper is a thin layer over
+//! `asn1_d2i_ex_primitive`, and doing the wrappers first would mean writing that
+//! path by hand and drifting from it.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
+pub mod bitstr;
 pub mod d2i;
 pub mod der;
+pub mod i2d;
+pub mod items;
 pub mod layout;
 pub mod prim;
 pub mod string;
 pub mod text;
+pub mod typ;
