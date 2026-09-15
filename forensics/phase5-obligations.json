@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 561,
       "deferred_to_later_phase": 62,
-      "implemented": 355,
-      "open_in_this_stratum": 148,
+      "implemented": 374,
+      "open_in_this_stratum": 129,
       "owned": 565
     },
     "deferred": [
@@ -534,6 +534,14 @@
       "ASN1_T61STRING_new",
       "ASN1_TBOOLEAN_it",
       "ASN1_TIME_it",
+      "ASN1_TYPE_cmp",
+      "ASN1_TYPE_free",
+      "ASN1_TYPE_get",
+      "ASN1_TYPE_new",
+      "ASN1_TYPE_pack_sequence",
+      "ASN1_TYPE_set",
+      "ASN1_TYPE_set1",
+      "ASN1_TYPE_unpack_sequence",
       "ASN1_UNIVERSALSTRING_free",
       "ASN1_UNIVERSALSTRING_it",
       "ASN1_UNIVERSALSTRING_new",
@@ -549,11 +557,20 @@
       "ASN1_check_infinite_end",
       "ASN1_const_check_infinite_end",
       "ASN1_get_object",
+      "ASN1_item_d2i",
+      "ASN1_item_d2i_ex",
+      "ASN1_item_ex_d2i",
       "ASN1_item_ex_free",
+      "ASN1_item_ex_i2d",
       "ASN1_item_ex_new",
       "ASN1_item_free",
+      "ASN1_item_i2d",
+      "ASN1_item_ndef_i2d",
       "ASN1_item_new",
       "ASN1_item_new_ex",
+      "ASN1_item_pack",
+      "ASN1_item_unpack",
+      "ASN1_item_unpack_ex",
       "ASN1_object_size",
       "ASN1_parse",
       "ASN1_parse_dump",
@@ -753,6 +770,7 @@
       "d2i_ASN1_PRINTABLESTRING",
       "d2i_ASN1_T61STRING",
       "d2i_ASN1_TIME",
+      "d2i_ASN1_TYPE",
       "d2i_ASN1_UINTEGER",
       "d2i_ASN1_UNIVERSALSTRING",
       "d2i_ASN1_UTCTIME",
@@ -778,6 +796,7 @@
       "i2d_ASN1_PRINTABLESTRING",
       "i2d_ASN1_T61STRING",
       "i2d_ASN1_TIME",
+      "i2d_ASN1_TYPE",
       "i2d_ASN1_UNIVERSALSTRING",
       "i2d_ASN1_UTCTIME",
       "i2d_ASN1_UTF8STRING",
@@ -977,21 +996,6 @@
       {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
-        "symbol": "ASN1_TYPE_cmp"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TYPE_free"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TYPE_get"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
         "symbol": "ASN1_TYPE_get_int_octetstring"
       },
       {
@@ -1002,37 +1006,12 @@
       {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
-        "symbol": "ASN1_TYPE_new"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TYPE_pack_sequence"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TYPE_set"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TYPE_set1"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
         "symbol": "ASN1_TYPE_set_int_octetstring"
       },
       {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
         "symbol": "ASN1_TYPE_set_octetstring"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TYPE_unpack_sequence"
       },
       {
         "declaring_header": "asn1.h",
@@ -1132,22 +1111,12 @@
       {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
-        "symbol": "ASN1_item_d2i"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
         "symbol": "ASN1_item_d2i_bio"
       },
       {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
         "symbol": "ASN1_item_d2i_bio_ex"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_d2i_ex"
       },
       {
         "declaring_header": "asn1.h",
@@ -1163,21 +1132,6 @@
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
         "symbol": "ASN1_item_dup"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_ex_d2i"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_ex_i2d"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_i2d"
       },
       {
         "declaring_header": "asn1.h",
@@ -1197,27 +1151,7 @@
       {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
-        "symbol": "ASN1_item_ndef_i2d"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_pack"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
         "symbol": "ASN1_item_print"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_unpack"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_unpack_ex"
       },
       {
         "declaring_header": "asn1.h",
@@ -1512,22 +1446,12 @@
       {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
-        "symbol": "d2i_ASN1_TYPE"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
         "symbol": "i2d_ASN1_SEQUENCE_ANY"
       },
       {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
         "symbol": "i2d_ASN1_SET_ANY"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "i2d_ASN1_TYPE"
       },
       {
         "declaring_header": "asn1.h",
@@ -1567,7 +1491,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "ff5dde965af45883ae7f11cd073b56d7148989e2b7586c8edc5ef89147e8b57b"
+      "sha256": "71d2654c2acc672f9aa9afb660a1cb1da15e522c6af576ca6d453be6fe49a4e8"
     }
   ],
   "kind": "phase5-obligations",

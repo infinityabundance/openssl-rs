@@ -161,7 +161,7 @@ pub unsafe extern "C" fn ASN1_item_ndef_i2d(
 /// As [`item_ex_i2d`].
 #[no_mangle]
 pub unsafe extern "C" fn ASN1_item_ex_i2d(
-    pval: *const *const c_void,
+    pval: *mut *const c_void,
     out: *mut *mut c_uchar,
     it: *const Asn1Item,
     tag: c_int,

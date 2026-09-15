@@ -3475,3 +3475,98 @@ linear search — and the `CHOICE` and `SEQUENCE` arms of `asn1_item_embed_d2i`,
 what the template interpreter is written against. That is in
 `docs/PHASE-5-SUBPHASES.md`, so the next session starts from it rather than from the
 source.
+
+## D81 — The item dispatch lands, and three kinds of instrument were the suspect first
+
+`src/asn1/d2i.rs` now carries the whole of `asn1_item_embed_d2i` — `PRIMITIVE` with and
+without a template, `MSTRING`, `EXTERN`, `CHOICE`, `SEQUENCE` and `NDEF_SEQUENCE` — plus
+`asn1_template_ex_d2i`, `asn1_template_noexp_d2i` and `asn1_find_end`; `src/asn1/i2d.rs`
+carries the matching `ASN1_item_ex_i2d` dispatch, `asn1_template_ex_i2d`,
+`asn1_set_seq_out` and the three public encode entry points; and two new modules hold the
+`ASN1_TYPE` family (`src/asn1/a_type.rs`) and the pack/unpack pair
+(`src/asn1/asn_pack.rs`). `implemented[libcrypto]` moved 805 → 829 and the stratum's open
+list 155 → 129.
+
+### A note about the authority is the suspect before the authority
+
+The hand-off this session started from asserted three things about `crypto/asn1/tasn_dec.c`
+that are not so, and each would have produced a wrong implementation:
+
+* that `asn1_d2i_ex_primitive` and `asn1_ex_c2i` take `OSSL_LIB_CTX *libctx, const char
+  *propq`. They take neither. `libctx`/`propq` stop at `asn1_item_embed_d2i` and reach the
+  `EXTERN` hooks and the allocator; the primitive decoder's own argument list ends at
+  `ASN1_TLC *ctx`. Adding two ignored parameters would have made an internal function's
+  signature differ from the authority's for no observable reason.
+* that `asn1_d2i_ex_primitive` should **drop** its `MSTRING` arm because it "moved to
+  `embed_d2i`". The authority keeps `if (it->itype == ASN1_ITYPE_MSTRING) { utype = tag;
+  tag = -1; }` in the decoder, and the `MSTRING` arm of the dispatch *relies* on it: the
+  dispatch reads the tag from the encoding and passes it as `tag`, and the decoder is what
+  turns it back into a `utype`. Dropping it would have decoded every `ASN1_PRINTABLE` and
+  `ASN1_TIME` with `utype = 0`.
+* that the `err:` tail of `asn1_ex_c2i` "reduces to a plain return" outside the `ANY` arm,
+  which is what let a multi-exit `return 0` stand in for it. The tail frees the `ASN1_TYPE`
+  this frame allocated **and** nulls the caller's slot on every failure path, so it is a
+  labelled block with one exit, not a comment.
+
+All three were checked against `forensics/authorities/src/openssl-3.6.4` before any code
+was written, and the file's own prose now records the measurement rather than the claim.
+
+### `ABI-PROTOTYPE` found two defects in the new code, which is what it is for
+
+The court reported two type-plane mismatches, both in symbols this session added:
+
+* `ASN1_item_ex_d2i` was declared `opt: c_int`. The installed header declares that
+  parameter `char`. A caller compiled against the header passes one byte and leaves the
+  upper bits of the register undefined, so a callee that reads four is reading
+  unspecified bits — the defect class D76 recorded for the legacy `ERR` getters, caught
+  this time before the court could have found it at runtime.
+* `ASN1_item_ex_i2d` was declared `pval: *const *const c_void`. The header declares
+  `const ASN1_VALUE **` — the slot is writable and it is the *pointee* that is const —
+  so `*mut *const c_void` is the matching spelling. The stricter form would have compiled
+  every internal caller and broken every external one.
+
+Both are fixed and both planes are now clean: 673 declarations checked, 0 mismatches, 0
+unmapped.
+
+### The instrument was the suspect too, again
+
+After those two fixes the arity plane reported `ASN1_item_ex_d2i` as having **ten**
+parameters against the authority's eight. The declaration has eight. The court's Rust
+parameter splitter splits on top-level commas, and the two-line comment that explains the
+`char` sits *inside* the parameter list, so its comma was counted as a parameter
+separator. The same naive scan would have mis-read any parenthesis inside a comment.
+
+The fix is in the instrument, not in the comment: `blank_comments` replaces each comment's
+body with spaces **in place**, preserving length and line breaks so that every offset and
+line number derived from the text still means the same thing, and it skips string literals
+so that a `//` inside one — and this crate writes `c"..."` literals throughout — is not
+taken for a comment. The comment stays where it is; it is now a standing regression test
+that the court reads declarations rather than text.
+
+### One deliberate residual, recorded rather than smoothed
+
+`asn1_set_seq_out` sorts a `SET OF` with `qsort` in the authority. `qsort` is not
+specified to be stable, so for two elements whose encodings are byte-identical the emitted
+bytes are the same under any ordering but the resulting *stack* order — which only the
+`do_sort == 2` case (`ASN1_TFLG_SET_ORDER`) exposes to the caller — is tied to the
+original order here. The implementation uses a stable sort and says so, because that
+matches the authority's common path and because the alternative is an unprovable claim
+about libc's internals. It is an evidence question for `RT-ASN1-TEMPLATE`, not a
+normalisation applied to make a difference go away.
+
+### `item_ex_free` is gone
+
+`src/asn1/fre.rs` had a crate-internal `item_ex_free` — `ASN1_item_ex_free` through a
+string-typed slot — whose only caller was the previous `item_d2i`. The new dispatch calls
+the exported `ASN1_item_ex_free` directly, exactly as the authority's
+`asn1_item_ex_d2i_intern` does, so the wrapper became dead code and the compiler said so.
+It is deleted rather than kept behind an `allow`: a function with no caller is a function
+whose contract cannot be checked.
+
+### What this does and does not claim
+
+`RT-ASN1-TEMPLATE` does not exist yet. That court is what drives a **caller-built**
+`ASN1_SEQUENCE` and `ASN1_CHOICE` template through the decode/encode pair, and without it
+the template interpreter is exercised only insofar as the items this stratum defines reach
+it — which, for a template-bearing item, is not at all. Nothing in this session is
+`PARITY_VERIFIED`; the stratum stays `in-progress`, and this is a staging commit.

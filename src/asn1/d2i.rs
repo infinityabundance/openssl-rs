@@ -1111,7 +1111,10 @@ pub unsafe extern "C" fn ASN1_item_ex_d2i(
     it: *const Asn1Item,
     tag: c_int,
     aclass: c_int,
-    opt: c_int,
+    // The installed header declares this `char`, not `int`: a caller compiled against
+    // it passes one byte and leaves the rest of the register undefined, so reading four
+    // would be reading unspecified bits.
+    opt: c_char,
     ctx: *mut Asn1Tlc,
 ) -> c_int {
     guard_ffi(0, || {
