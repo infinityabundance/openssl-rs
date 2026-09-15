@@ -9,11 +9,10 @@
       "13": 189,
       "14": 600,
       "15": 3,
-      "2": 15,
       "3": 304,
       "4": 256,
       "5": 561,
-      "6": 112,
+      "6": 127,
       "7": 924,
       "8": 759,
       "9": 25
@@ -108,141 +107,6 @@
       "unknown": 0
     },
     "records": [
-      {
-        "declaring_header": null,
-        "ledger": "not-yet-written",
-        "library": "libcrypto",
-        "owner_phase": 2,
-        "resolved_header": null,
-        "rule": "abi-only",
-        "symbol": "DSO_METHOD_openssl"
-      },
-      {
-        "declaring_header": null,
-        "ledger": "not-yet-written",
-        "library": "libcrypto",
-        "owner_phase": 2,
-        "resolved_header": null,
-        "rule": "abi-only",
-        "symbol": "DSO_bind_func"
-      },
-      {
-        "declaring_header": null,
-        "ledger": "not-yet-written",
-        "library": "libcrypto",
-        "owner_phase": 2,
-        "resolved_header": null,
-        "rule": "abi-only",
-        "symbol": "DSO_convert_filename"
-      },
-      {
-        "declaring_header": null,
-        "ledger": "not-yet-written",
-        "library": "libcrypto",
-        "owner_phase": 2,
-        "resolved_header": null,
-        "rule": "abi-only",
-        "symbol": "DSO_ctrl"
-      },
-      {
-        "declaring_header": null,
-        "ledger": "not-yet-written",
-        "library": "libcrypto",
-        "owner_phase": 2,
-        "resolved_header": null,
-        "rule": "abi-only",
-        "symbol": "DSO_dsobyaddr"
-      },
-      {
-        "declaring_header": null,
-        "ledger": "not-yet-written",
-        "library": "libcrypto",
-        "owner_phase": 2,
-        "resolved_header": null,
-        "rule": "abi-only",
-        "symbol": "DSO_flags"
-      },
-      {
-        "declaring_header": null,
-        "ledger": "not-yet-written",
-        "library": "libcrypto",
-        "owner_phase": 2,
-        "resolved_header": null,
-        "rule": "abi-only",
-        "symbol": "DSO_free"
-      },
-      {
-        "declaring_header": null,
-        "ledger": "not-yet-written",
-        "library": "libcrypto",
-        "owner_phase": 2,
-        "resolved_header": null,
-        "rule": "abi-only",
-        "symbol": "DSO_get_filename"
-      },
-      {
-        "declaring_header": null,
-        "ledger": "not-yet-written",
-        "library": "libcrypto",
-        "owner_phase": 2,
-        "resolved_header": null,
-        "rule": "abi-only",
-        "symbol": "DSO_global_lookup"
-      },
-      {
-        "declaring_header": null,
-        "ledger": "not-yet-written",
-        "library": "libcrypto",
-        "owner_phase": 2,
-        "resolved_header": null,
-        "rule": "abi-only",
-        "symbol": "DSO_load"
-      },
-      {
-        "declaring_header": null,
-        "ledger": "not-yet-written",
-        "library": "libcrypto",
-        "owner_phase": 2,
-        "resolved_header": null,
-        "rule": "abi-only",
-        "symbol": "DSO_merge"
-      },
-      {
-        "declaring_header": null,
-        "ledger": "not-yet-written",
-        "library": "libcrypto",
-        "owner_phase": 2,
-        "resolved_header": null,
-        "rule": "abi-only",
-        "symbol": "DSO_new"
-      },
-      {
-        "declaring_header": null,
-        "ledger": "not-yet-written",
-        "library": "libcrypto",
-        "owner_phase": 2,
-        "resolved_header": null,
-        "rule": "abi-only",
-        "symbol": "DSO_pathbyaddr"
-      },
-      {
-        "declaring_header": null,
-        "ledger": "not-yet-written",
-        "library": "libcrypto",
-        "owner_phase": 2,
-        "resolved_header": null,
-        "rule": "abi-only",
-        "symbol": "DSO_set_filename"
-      },
-      {
-        "declaring_header": null,
-        "ledger": "not-yet-written",
-        "library": "libcrypto",
-        "owner_phase": 2,
-        "resolved_header": null,
-        "rule": "abi-only",
-        "symbol": "DSO_up_ref"
-      },
       {
         "declaring_header": "async.h",
         "ledger": "phase-ledger",
@@ -10331,6 +10195,141 @@
         "resolved_header": "asn1.h",
         "rule": "declaring-header",
         "symbol": "i2t_ASN1_OBJECT"
+      },
+      {
+        "declaring_header": null,
+        "ledger": "not-yet-written",
+        "library": "libcrypto",
+        "owner_phase": 6,
+        "resolved_header": null,
+        "rule": "abi-only",
+        "symbol": "DSO_METHOD_openssl"
+      },
+      {
+        "declaring_header": null,
+        "ledger": "not-yet-written",
+        "library": "libcrypto",
+        "owner_phase": 6,
+        "resolved_header": null,
+        "rule": "abi-only",
+        "symbol": "DSO_bind_func"
+      },
+      {
+        "declaring_header": null,
+        "ledger": "not-yet-written",
+        "library": "libcrypto",
+        "owner_phase": 6,
+        "resolved_header": null,
+        "rule": "abi-only",
+        "symbol": "DSO_convert_filename"
+      },
+      {
+        "declaring_header": null,
+        "ledger": "not-yet-written",
+        "library": "libcrypto",
+        "owner_phase": 6,
+        "resolved_header": null,
+        "rule": "abi-only",
+        "symbol": "DSO_ctrl"
+      },
+      {
+        "declaring_header": null,
+        "ledger": "not-yet-written",
+        "library": "libcrypto",
+        "owner_phase": 6,
+        "resolved_header": null,
+        "rule": "abi-only",
+        "symbol": "DSO_dsobyaddr"
+      },
+      {
+        "declaring_header": null,
+        "ledger": "not-yet-written",
+        "library": "libcrypto",
+        "owner_phase": 6,
+        "resolved_header": null,
+        "rule": "abi-only",
+        "symbol": "DSO_flags"
+      },
+      {
+        "declaring_header": null,
+        "ledger": "not-yet-written",
+        "library": "libcrypto",
+        "owner_phase": 6,
+        "resolved_header": null,
+        "rule": "abi-only",
+        "symbol": "DSO_free"
+      },
+      {
+        "declaring_header": null,
+        "ledger": "not-yet-written",
+        "library": "libcrypto",
+        "owner_phase": 6,
+        "resolved_header": null,
+        "rule": "abi-only",
+        "symbol": "DSO_get_filename"
+      },
+      {
+        "declaring_header": null,
+        "ledger": "not-yet-written",
+        "library": "libcrypto",
+        "owner_phase": 6,
+        "resolved_header": null,
+        "rule": "abi-only",
+        "symbol": "DSO_global_lookup"
+      },
+      {
+        "declaring_header": null,
+        "ledger": "not-yet-written",
+        "library": "libcrypto",
+        "owner_phase": 6,
+        "resolved_header": null,
+        "rule": "abi-only",
+        "symbol": "DSO_load"
+      },
+      {
+        "declaring_header": null,
+        "ledger": "not-yet-written",
+        "library": "libcrypto",
+        "owner_phase": 6,
+        "resolved_header": null,
+        "rule": "abi-only",
+        "symbol": "DSO_merge"
+      },
+      {
+        "declaring_header": null,
+        "ledger": "not-yet-written",
+        "library": "libcrypto",
+        "owner_phase": 6,
+        "resolved_header": null,
+        "rule": "abi-only",
+        "symbol": "DSO_new"
+      },
+      {
+        "declaring_header": null,
+        "ledger": "not-yet-written",
+        "library": "libcrypto",
+        "owner_phase": 6,
+        "resolved_header": null,
+        "rule": "abi-only",
+        "symbol": "DSO_pathbyaddr"
+      },
+      {
+        "declaring_header": null,
+        "ledger": "not-yet-written",
+        "library": "libcrypto",
+        "owner_phase": 6,
+        "resolved_header": null,
+        "rule": "abi-only",
+        "symbol": "DSO_set_filename"
+      },
+      {
+        "declaring_header": null,
+        "ledger": "not-yet-written",
+        "library": "libcrypto",
+        "owner_phase": 6,
+        "resolved_header": null,
+        "rule": "abi-only",
+        "symbol": "DSO_up_ref"
       },
       {
         "declaring_header": "indicator.h",
@@ -58645,7 +58644,7 @@
     {
       "name": "ownership-rules",
       "path": "forensics/tools/ownership_rules.py",
-      "sha256": "77adf70d4679d973ae2c38820a2ded828b4b45369eed8b1cd0079224fb2a4a66"
+      "sha256": "cb020564d6cbfe99d926ec6135cc7cf791ac544385e5f0b4599c2040adac0124"
     }
   ],
   "kind": "symbol-ownership",
