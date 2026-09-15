@@ -1,0 +1,59 @@
+# openssl-rs court: the Phase 6 `rt-dso` runtime surface.
+#
+# The subject is the transcript of a differential probe: one C program that
+# prints one `key=value` line per observation while exercising
+#
+#     the generic dynamic-object layer, compared through relations because a DSO's subject is a shared library and its filename is necessarily a different path on each side: the non-uniform NULL contract (free and flags answer, up_ref, ctrl, get_filename, set_filename, merge, convert_filename and bind_func all raise); DSO_ctrl's three generic commands intercepted before the NULL method, and the unrecognised command that does reach it, plus a negative flag word stored and read back as -1 with a clean queue; the name translator's rule being 'contains no slash' rather than 'has not been translated', so 'libfoo.so' becomes 'liblibfoo.so.so'; the extension-only and no-translation flags, the latter copying rather than refusing where DSO_merge answers NULL for the same flag; DSO_merge's four shapes and its one-trailing-slash strip, with a NULL first spec refused by the layer before the merger is reached; DSO_pathbyaddr's size arithmetic -- the query, the truncation of min(len, sz - 1) + 1, and the dladdr miss that answers -1 with an empty error queue because the site appends without raising; DSO_dsobyaddr's two-pass query; the globallookup through the whole process; DSO_load's ordered refusals, its translation on the load path, a real load of the library under test, binding through it, the already-loaded refusal that leaves the caller's object alive, and a reference count observed through two frees that both answer 1
+#
+# The same source is compiled against the admitted authority and against the
+# candidate, each side executes its own binary, and FRF compares the
+# transcripts.
+#
+# Scope: the observations the probe makes. It is NOT a claim about surface the
+# probe does not touch, and not a cryptographic or security claim.
+
+court:
+  id: openssl-rs-rt-dso
+  question: >-
+    For the rt-dso runtime surface in fixture family rt-dso, does
+    the candidate produce the same observable transcript as the admitted
+    authority OpenSSL 3.6.4 when both run the same probe over the same
+    fixture?
+  falsifier: >-
+    Any observation line differs between the two transcripts, or either
+    side's exit class differs.
+  authority: openssl-rt-3.6.4-r2
+  candidate:
+    name: openssl-rs
+    version_or_commit: "0.0.9"
+    build_profile: linux-x86_64-default-shared-legacy-notests
+    path: forensics/frf/refs/candidate-runtime-probe.sh
+  fixture:
+    id: probe-list.txt
+    path: forensics/frf/courts/openssl-rs-rt-dso/fixtures/probe-list.txt
+    arguments: ["{fixture}", "phase6"]
+  admissibility_envelope:
+    fixture_family: rt-dso
+    platforms: ["x86_64-linux"]
+    observables: [stdout, exit]
+    normalizers: []
+    replay_scope: single-run
+  execution_context:
+    artifacts:
+      - path: forensics/frf/refs/authority-runtime-probe.sh
+        role: child-executable
+      - path: forensics/frf/refs/candidate-runtime-probe.sh
+        role: child-executable
+      - path: artifacts/phase6/probes/rt_dso_probe.authority
+        role: child-executable
+      - path: artifacts/phase6/probes/rt_dso_probe.candidate
+        role: child-executable
+      - path: courts/phase6/rt_dso_probe.c
+        role: data
+      - path: forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+        role: runtime-library
+      - path: artifacts/phase2/libcrypto.so.3
+        role: runtime-library
+  environment:
+    LC_ALL: C
+    TZ: UTC

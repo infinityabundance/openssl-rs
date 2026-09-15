@@ -143,6 +143,10 @@
       "observations": 736,
       "verdict": "pass"
     },
+    "RT-DSO": {
+      "observations": 145,
+      "verdict": "pass"
+    },
     "RT-ERR": {
       "observations": 3857,
       "verdict": "pass"
@@ -223,14 +227,14 @@
     "phase6": 0
   },
   "implemented": {
-    "libcrypto": 1076,
+    "libcrypto": 1091,
     "libssl": 0
   },
   "open_obligations": {
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,
-    "phase6": 59
+    "phase6": 44
   },
   "owned_obligations": {
     "phase3": 294,

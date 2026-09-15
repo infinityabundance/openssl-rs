@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 137,
       "deferred_to_later_phase": 0,
-      "implemented": 102,
-      "open_in_this_stratum": 59,
+      "implemented": 117,
+      "open_in_this_stratum": 44,
       "owned": 161,
       "received_by_handoff": 24
     },
@@ -47,6 +47,21 @@
     "implemented": [
       "BIO_new_from_core_bio",
       "BIO_s_core",
+      "DSO_METHOD_openssl",
+      "DSO_bind_func",
+      "DSO_convert_filename",
+      "DSO_ctrl",
+      "DSO_dsobyaddr",
+      "DSO_flags",
+      "DSO_free",
+      "DSO_get_filename",
+      "DSO_global_lookup",
+      "DSO_load",
+      "DSO_merge",
+      "DSO_new",
+      "DSO_pathbyaddr",
+      "DSO_set_filename",
+      "DSO_up_ref",
       "OSSL_INDICATOR_get_callback",
       "OSSL_INDICATOR_set_callback",
       "OSSL_LIB_CTX_free",
@@ -310,81 +325,6 @@
         "symbol": "CONF_modules_unload"
       },
       {
-        "declaring_header": null,
-        "module": "src/dso/mod.rs",
-        "symbol": "DSO_METHOD_openssl"
-      },
-      {
-        "declaring_header": null,
-        "module": "src/dso/mod.rs",
-        "symbol": "DSO_bind_func"
-      },
-      {
-        "declaring_header": null,
-        "module": "src/dso/mod.rs",
-        "symbol": "DSO_convert_filename"
-      },
-      {
-        "declaring_header": null,
-        "module": "src/dso/mod.rs",
-        "symbol": "DSO_ctrl"
-      },
-      {
-        "declaring_header": null,
-        "module": "src/dso/mod.rs",
-        "symbol": "DSO_dsobyaddr"
-      },
-      {
-        "declaring_header": null,
-        "module": "src/dso/mod.rs",
-        "symbol": "DSO_flags"
-      },
-      {
-        "declaring_header": null,
-        "module": "src/dso/mod.rs",
-        "symbol": "DSO_free"
-      },
-      {
-        "declaring_header": null,
-        "module": "src/dso/mod.rs",
-        "symbol": "DSO_get_filename"
-      },
-      {
-        "declaring_header": null,
-        "module": "src/dso/mod.rs",
-        "symbol": "DSO_global_lookup"
-      },
-      {
-        "declaring_header": null,
-        "module": "src/dso/mod.rs",
-        "symbol": "DSO_load"
-      },
-      {
-        "declaring_header": null,
-        "module": "src/dso/mod.rs",
-        "symbol": "DSO_merge"
-      },
-      {
-        "declaring_header": null,
-        "module": "src/dso/mod.rs",
-        "symbol": "DSO_new"
-      },
-      {
-        "declaring_header": null,
-        "module": "src/dso/mod.rs",
-        "symbol": "DSO_pathbyaddr"
-      },
-      {
-        "declaring_header": null,
-        "module": "src/dso/mod.rs",
-        "symbol": "DSO_set_filename"
-      },
-      {
-        "declaring_header": null,
-        "module": "src/dso/mod.rs",
-        "symbol": "DSO_up_ref"
-      },
-      {
         "declaring_header": "crypto.h",
         "module": "src/dso/mod.rs",
         "symbol": "OPENSSL_atexit"
@@ -560,7 +500,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "8b7f00dca8c66827ed90500b1426c6bd8ac793483813f770349374354fd33228"
+      "sha256": "aa418edd8c99da188dbb7061318024ff7d4669de71c64e6493f709ecdb5866e7"
     }
   ],
   "kind": "phase6-obligations",

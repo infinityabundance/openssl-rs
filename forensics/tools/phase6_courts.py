@@ -83,12 +83,33 @@ COURTS = [
     ("RT-SELFTEST", "rt_selftest_probe.c"),
     ("RT-THREADDATA", "rt_threaddata_probe.c"),
     ("RT-BIO-CORE", "rt_bio_core_probe.c"),
+    ("RT-DSO", "rt_dso_probe.c"),
 ]
 
 
-def compile_probe(src: Path, out: Path, include: Path, libdir: Path) -> tuple[bool, str]:
+def extra_defs(name: str, libdir: Path) -> list[str]:
+    """Per-side build definitions.
+
+    `RT-DSO` is the one court that needs to *name* the library under test: a `DSO` whose
+    subject is a shared library has no successful load to observe unless it is given one
+    that exists, and the only one both sides are guaranteed to have is the library each
+    is itself built as. So the probe is compiled with that side's path, and **never
+    prints it** -- the observations around it are `strcmp`-against-the-input and
+    NULL-ness, which are equal on both sides by construction.
+
+    Every other probe takes no definitions, so it is compiled identically on both sides.
+    """
+    if name == "RT-DSO":
+        return [f'-DDSO_COURT_LIB="{libdir / "libcrypto.so.3"}"']
+    return []
+
+
+def compile_probe(
+    src: Path, out: Path, include: Path, libdir: Path, defs: list[str] | None = None
+) -> tuple[bool, str]:
     res = run([
         "clang", "-std=c11", "-Wall", "-O1", "-D_GNU_SOURCE",
+        *(defs or []),
         "-I", str(include),
         "-o", str(out), str(src),
         "-L", str(libdir), "-lcrypto",
@@ -146,11 +167,13 @@ def court(name: str, src: Path, auth, work: Path) -> dict:
     auth_bin = work / f"{src.stem}.authority"
     cand_bin = work / f"{src.stem}.candidate"
 
-    ok, err = compile_probe(src, auth_bin, auth_inc, auth_lib)
+    ok, err = compile_probe(src, auth_bin, auth_inc, auth_lib,
+                            extra_defs(name, auth_lib))
     if not ok:
         return {"court": name, "verdict": "fail", "stage": "compile-authority",
                 "detail": err.splitlines()[:12]}
-    ok, err = compile_probe(src, cand_bin, PHASE2 / "include", PHASE2)
+    ok, err = compile_probe(src, cand_bin, PHASE2 / "include", PHASE2,
+                            extra_defs(name, PHASE2))
     if not ok:
         return {"court": name, "verdict": "fail", "stage": "compile-candidate",
                 "detail": err.splitlines()[:12]}

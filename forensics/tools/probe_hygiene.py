@@ -58,6 +58,7 @@ SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import sys
 from pathlib import Path
@@ -78,7 +79,14 @@ from atlas_common import (  # noqa: E402
 OUT = REPO_ROOT / "artifacts" / "probe-hygiene.json"
 GENERATOR = "forensics/tools/probe_hygiene.py"
 COURTS_DIR = REPO_ROOT / "courts"
+TOOLS_DIR = REPO_ROOT / "forensics" / "tools"
 PHASE2 = REPO_ROOT / "artifacts" / "phase2"
+
+# The phase runners, discovered rather than listed -- for the same reason
+# `discover_probes` exists. A runner is where a probe's build definitions live, and a
+# definition that has to be carried by a *second* registry is the failure mode this
+# project has already paid for three times (D49, D51, D94).
+RUNNER_GLOB = "phase[0-9]*_courts.py"
 
 # The phase runners compile at `-O1`. `-O0` is the control and `-O2` adds a
 # second, differently-shaped frame. Diffing a level against `-O1` is what
@@ -98,10 +106,42 @@ def discover_probes() -> list[Path]:
     return sorted(p for p in COURTS_DIR.glob("phase[0-9]*/*_probe.c") if p.is_file())
 
 
+def discover_court_defs(src: Path, libdir: Path) -> list[str]:
+    """The build definitions the probe's *own* runner compiles it with.
+
+    Every phase runner is imported and asked; the first one that lists this probe in
+    its `COURTS` and exposes an `extra_defs(name, libdir)` answers. A runner that
+    exposes neither is compiled with no extra definitions, which is the common case.
+
+    This exists because `RT-DSO` has to be told which library to load -- a `DSO`
+    whose subject is a shared library has no successful load to observe otherwise --
+    and that path is per side. Compiling it without the definition is a hard error
+    (`#error`), which is what the hygiene control reported, and is the right way to
+    fail: a probe that silently omitted its definition would compare a load failure
+    against a load failure and call it agreement.
+    """
+    for path in sorted(TOOLS_DIR.glob(RUNNER_GLOB)):
+        if path.name == Path(__file__).name:
+            continue
+        try:
+            mod = importlib.import_module(path.stem)
+        except Exception:  # a runner that needs an argument to import
+            continue
+        courts = getattr(mod, "COURTS", None)
+        extra = getattr(mod, "extra_defs", None)
+        if not courts or extra is None:
+            continue
+        for name, filename in courts:
+            if filename == src.name:
+                return list(extra(name, libdir))
+    return []
+
+
 def compile_probe(src: Path, out: Path, include: Path, libdir: Path,
-                  level: str) -> tuple[bool, str]:
+                  level: str, defs: list[str] | None = None) -> tuple[bool, str]:
     res = run([
         "clang", "-std=c11", "-Wall", level, "-D_GNU_SOURCE",
+        *(defs or []),
         "-I", str(include),
         "-o", str(out), str(src),
         "-L", str(libdir), "-lcrypto",
@@ -162,10 +202,11 @@ def first_difference(a: dict[str, str], b: dict[str, str]) -> list[dict]:
 
 def side_record(src: Path, include: Path, libdir: Path, work: Path,
                 side: str) -> dict:
+    defs = discover_court_defs(src, libdir)
     transcripts: dict[str, list[tuple[int | None, dict[str, str], str]]] = {}
     for level in LEVELS:
         binary = work / f"{src.stem}.{side}{level}"
-        ok, err = compile_probe(src, binary, include, libdir, level)
+        ok, err = compile_probe(src, binary, include, libdir, level, defs)
         if not ok:
             return {"side": side, "verdict": "compile-failed", "level": level,
                     "detail": err.splitlines()[:12]}
