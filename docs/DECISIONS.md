@@ -3411,3 +3411,34 @@ comment so the next person to add a generator has the reason in front of them. T
 residual is that no gate covers "this artefact's recorded input hashes are the current
 ones"; a court for it would have to distinguish "normalised because redundant" from
 "stale", and nothing yet does.
+
+
+## D79 — A staging commit must regenerate the derived evidence, and CI is what said so
+
+The staging branch `phase5-asn1` was created so a long stratum could be pushed in pieces
+without uncourted source reaching `main` (D73). Its first commit, `b1149f7`, was pushed
+mid-flight and **failed CI**, on exactly one step: `evidence-determinism`. The court job
+beside it passed, which is the useful part of the signal — the code was fine, the
+*record* was stale.
+
+`evidence-determinism` regenerates every derived artefact and requires the committed
+bytes back. The commit moved the implemented surface from 734 to 805 exports while
+`forensics/atlas/implemented-surface.json` still said 734, so the gate correctly refused
+it. The generators are cheap and need no authority container, so the rule is now: run
+them before **any** push, staging included. What a staging commit may legitimately leave
+stale is the court evidence — running the courts is the expensive part, and an uncourted
+transcript is honestly labelled by the ledger rather than hidden — not the derived counts,
+which the gate settles in seconds.
+
+Two documentation defects were found beside it and fixed in the same change:
+
+* `docs/CI.md` described the `lint` job as running with `continue-on-error: true` and
+  "not yet a required gate". The workflow had already dropped that line, so the document
+  was describing a gate that no longer existed — and a reader deciding whether a clippy
+  failure blocks a merge would have got the answer wrong. The doc now says it is a
+  required gate, and records why suppressing it was rejected rather than forgetting that
+  it was.
+* `docs/CI.md`'s list of what determinism compares named `implemented-surface.json`, "the
+  two obligation ledgers", `phase-state.json` and `STATUS.md`. There are three ledgers,
+  and `symbol-ownership.json`, `ownership-audit.json` and `prototype-court.json` are
+  compared too. The list is now the rule rather than a subset.
