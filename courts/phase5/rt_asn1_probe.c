@@ -44,11 +44,19 @@
  *
  * A probe also cannot compare a symbol the candidate has not implemented: calling a
  * scaffold aborts the candidate with a diagnostic. The probe therefore stays on the
- * implemented surface, which for this court is the DER codec, `ASN1_STRING`, the
- * integer family, the object layer and the two context objects. The `d2i_*`
- * wrappers for the other primitive types, `i2d_ASN1_*`, `ASN1_BIT_STRING`, the time
- * types and the template machinery are later subphases
- * (`docs/PHASE-5-SUBPHASES.md`).
+ * implemented surface. The `ASN1_item_*` template machinery, the time accessors,
+ * the `ASN1_TYPE` operations, the NDEF BIO layer and PEM are later subphases
+ * (`docs/PHASE-5-SUBPHASES.md`) and are not called here.
+ *
+ * The `*_it()` descriptors
+ * ------------------------
+ * The accessors that hand out an `ASN1_ITEM` are compared **field by field**
+ * rather than through an encoding. `ASN1_ITEM`'s fields are in `asn1t.h`, so a
+ * caller can read every one of them, and a descriptor that answered the right
+ * address with a wrong `size`, `utype` or `itype` would still link and still
+ * encode — just not to the authority's bytes. The `size` field is the one that
+ * looks like a detail and is not: it is `0` for the plain types and the item's
+ * *default* for the BOOLEANs, which is what decides whether a value is omitted.
  *
  * Scope
  * -----
@@ -59,10 +67,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 #include <openssl/asn1.h>
+#include <openssl/asn1t.h>
 #include <openssl/bio.h>
 #include <openssl/bn.h>
+#include <openssl/crypto.h>
 #include <openssl/err.h>
 #include <openssl/objects.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -174,6 +185,175 @@ static void drain(const char *key, BIO *b)
             printf("\\x%02X", c);
     }
     printf("\n");
+}
+
+
+/* One `ASN1_ITEM` descriptor, field by field.
+ *
+ * `ASN1_ITEM` is declared with its fields in `asn1t.h`, so a caller can read
+ * every one. That matters because a `*_it()` accessor that answered the right
+ * address with a wrong `size`, `utype` or `itype` would still link, still be
+ * called, and still encode something — just not the authority's bytes. These
+ * fields are the item's whole observable content, so they are compared directly
+ * rather than inferred from an encoding. */
+static void item_desc(const char *key, const ASN1_ITEM *it)
+{
+    printf("%s.present=%d\n", key, it != NULL);
+    if (it == NULL)
+        return;
+    printf("%s.itype=%d\n", key, (int)it->itype);
+    printf("%s.utype=%ld\n", key, (long)it->utype);
+    printf("%s.templates=%d\n", key, it->templates != NULL);
+    printf("%s.tcount=%ld\n", key, (long)it->tcount);
+    printf("%s.funcs=%d\n", key, it->funcs != NULL);
+    printf("%s.size=%ld\n", key, (long)it->size);
+    printf("%s.sname=%s\n", key, it->sname != NULL ? it->sname : "(null)");
+}
+
+/* A bit string's stored state: length, the raw flag word, and the content. */
+static void bit_state(const char *key, const ASN1_BIT_STRING *bs)
+{
+    int i;
+
+    printf("%s.present=%d\n", key, bs != NULL);
+    if (bs == NULL)
+        return;
+    printf("%s.length=%d\n", key, ASN1_STRING_length(bs));
+    printf("%s.flags=%ld\n", key, (long)bs->flags);
+    printf("%s.data=%s\n", key, bs->data != NULL ? "set" : "null");
+    printf("%s.bytes=", key);
+    for (i = 0; i < ASN1_STRING_length(bs); i++)
+        printf("%02X", ASN1_STRING_get0_data(bs)[i]);
+    printf("\n");
+}
+
+/* Encode a bit string under all three output conventions and report the result,
+ * the consumed pointer, and the bytes. */
+static void bit_encode(const char *key, const ASN1_BIT_STRING *bs)
+{
+    unsigned char buf[64];
+    unsigned char *p = NULL;
+    int len, i;
+
+    len = i2d_ASN1_BIT_STRING(bs, NULL);
+    printf("%s.len=%d\n", key, len);
+
+    i = i2d_ASN1_BIT_STRING(bs, &p);
+    printf("%s.alloc=%d\n", key, i);
+    printf("%s.alloc_bytes=", key);
+    if (p != NULL && i > 0) {
+        int k;
+        for (k = 0; k < i; k++)
+            printf("%02X", p[k]);
+    }
+    printf("\n");
+    /* `OPENSSL_free` is the release for an `i2d_*` allocation. */
+    if (p != NULL)
+        OPENSSL_free(p);
+
+    memset(buf, 0xCC, sizeof(buf));
+    p = buf;
+    i = i2d_ASN1_BIT_STRING(bs, &p);
+    printf("%s.stack=%d\n", key, i);
+    printf("%s.advanced=%ld\n", key, (long)(p - buf));
+    printf("%s.stack_bytes=", key);
+    if (i > 0) {
+        int k;
+        for (k = 0; k < i; k++)
+            printf("%02X", buf[k]);
+    }
+    printf("\n");
+    printf("%s.err=%lu\n", key, ERR_peek_error());
+    ERR_clear_error();
+}
+
+/* Decode a bit string and report what came out. */
+static void bit_decode(const char *key, const unsigned char *der, long len)
+{
+    const unsigned char *p = der;
+    ASN1_BIT_STRING *bs = d2i_ASN1_BIT_STRING(NULL, &p, len);
+
+    printf("%s.present=%d\n", key, bs != NULL);
+    printf("%s.adv=%ld\n", key, (long)(p - der));
+    printf("%s.err=%lu\n", key, ERR_peek_error());
+    ERR_clear_error();
+    bit_state(key, bs);
+    if (bs != NULL)
+        ASN1_BIT_STRING_free(bs);
+}
+
+/* Decode `der` as a named string type, reporting the type word and the content. */
+static void str_decode(const char *key, const unsigned char *der, long len,
+                       int which)
+{
+    const unsigned char *p = der;
+    ASN1_STRING *s = NULL;
+    int i;
+
+    switch (which) {
+    case 0: s = d2i_ASN1_UTF8STRING(NULL, &p, len); break;
+    case 1: s = d2i_ASN1_IA5STRING(NULL, &p, len); break;
+    case 2: s = d2i_ASN1_PRINTABLE(NULL, &p, len); break;
+    case 3: s = d2i_ASN1_TIME(NULL, &p, len); break;
+    case 4: s = d2i_ASN1_UTCTIME(NULL, &p, len); break;
+    case 5: s = d2i_ASN1_GENERALIZEDTIME(NULL, &p, len); break;
+    case 6: s = d2i_ASN1_BMPSTRING(NULL, &p, len); break;
+    case 7: s = d2i_ASN1_UNIVERSALSTRING(NULL, &p, len); break;
+    case 8: s = d2i_ASN1_T61STRING(NULL, &p, len); break;
+    case 9: s = d2i_ASN1_VISIBLESTRING(NULL, &p, len); break;
+    case 10: s = d2i_DIRECTORYSTRING(NULL, &p, len); break;
+    case 11: s = d2i_DISPLAYTEXT(NULL, &p, len); break;
+    default: s = d2i_ASN1_PRINTABLESTRING(NULL, &p, len); break;
+    }
+
+    printf("%s.present=%d\n", key, s != NULL);
+    printf("%s.adv=%ld\n", key, (long)(p - der));
+    printf("%s.err=%lu\n", key, ERR_peek_error());
+    ERR_clear_error();
+    if (s == NULL)
+        return;
+    printf("%s.type=%d\n", key, ASN1_STRING_type(s));
+    printf("%s.length=%d\n", key, ASN1_STRING_length(s));
+    printf("%s.bytes=", key);
+    for (i = 0; i < ASN1_STRING_length(s); i++)
+        printf("%02X", ASN1_STRING_get0_data(s)[i]);
+    printf("\n");
+    ASN1_STRING_free(s);
+}
+
+/* The three output conventions of an `i2d_*` over a string value. */
+static void str_encode(const char *key, const ASN1_STRING *s)
+{
+    unsigned char buf[64];
+    unsigned char *p;
+    int len, i;
+
+    len = i2d_ASN1_UTF8STRING(s, NULL);
+    printf("%s.null_out=%d\n", key, len);
+
+    p = NULL;
+    i = i2d_ASN1_UTF8STRING(s, &p);
+    printf("%s.alloc=%d\n", key, i);
+    if (p != NULL && i > 0) {
+        int k;
+        for (k = 0; k < i; k++)
+            printf("%s.alloc_bytes.%d=%02X\n", key, k, p[k]);
+    }
+    if (p != NULL)
+        OPENSSL_free(p);
+
+    memset(buf, 0xCC, sizeof(buf));
+    p = buf;
+    i = i2d_ASN1_UTF8STRING(s, &p);
+    printf("%s.stack=%d\n", key, i);
+    printf("%s.advanced=%ld\n", key, (long)(p - buf));
+    if (i > 0) {
+        int k;
+        for (k = 0; k < i; k++)
+            printf("%s.stack_bytes.%d=%02X\n", key, k, buf[k]);
+    }
+    printf("%s.err=%lu\n", key, ERR_peek_error());
+    ERR_clear_error();
 }
 
 int main(void)
@@ -949,6 +1129,524 @@ int main(void)
             printf("parse.bool=%d\n", ASN1_parse_dump(b, boolv, sizeof(boolv), 0, 0));
             drain("parse.bool_text", b);
             BIO_free(b);
+        }
+    }
+
+
+    /* ------------------------------------------------------------------ */
+    /* The item descriptors.                                              */
+    /*                                                                    */
+    /* Compared field by field, because these *are* the item's observable */
+    /* content: a `*_it()` accessor that answered the right address with a */
+    /* wrong `size` would still encode, just not to the authority's bytes. */
+    /* ------------------------------------------------------------------ */
+    {
+        item_desc("it.octet", ASN1_OCTET_STRING_it());
+        item_desc("it.integer", ASN1_INTEGER_it());
+        item_desc("it.enumerated", ASN1_ENUMERATED_it());
+        item_desc("it.bitstr", ASN1_BIT_STRING_it());
+        item_desc("it.utf8", ASN1_UTF8STRING_it());
+        item_desc("it.printable", ASN1_PRINTABLESTRING_it());
+        item_desc("it.t61", ASN1_T61STRING_it());
+        item_desc("it.ia5", ASN1_IA5STRING_it());
+        item_desc("it.general", ASN1_GENERALSTRING_it());
+        item_desc("it.utctime", ASN1_UTCTIME_it());
+        item_desc("it.gentime", ASN1_GENERALIZEDTIME_it());
+        item_desc("it.visible", ASN1_VISIBLESTRING_it());
+        item_desc("it.universal", ASN1_UNIVERSALSTRING_it());
+        item_desc("it.bmp", ASN1_BMPSTRING_it());
+        item_desc("it.null", ASN1_NULL_it());
+        item_desc("it.object", ASN1_OBJECT_it());
+        item_desc("it.any", ASN1_ANY_it());
+        item_desc("it.sequence", ASN1_SEQUENCE_it());
+        item_desc("it.boolean", ASN1_BOOLEAN_it());
+        item_desc("it.tboolean", ASN1_TBOOLEAN_it());
+        item_desc("it.fboolean", ASN1_FBOOLEAN_it());
+        item_desc("it.ndef", ASN1_OCTET_STRING_NDEF_it());
+        item_desc("it.mstring.printable", ASN1_PRINTABLE_it());
+        item_desc("it.mstring.display", DISPLAYTEXT_it());
+        item_desc("it.mstring.directory", DIRECTORYSTRING_it());
+        item_desc("it.mstring.time", ASN1_TIME_it());
+
+        /* Two calls answer the same address, because the accessor returns a
+         * pointer to a function-local static. */
+        printf("it.stable=%d\n",
+               ASN1_BIT_STRING_it() == ASN1_BIT_STRING_it());
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* ASN1_BIT_STRING: the bit operations.                               */
+    /* ------------------------------------------------------------------ */
+    {
+        unsigned char two[] = { 0xFF, 0xFF };
+        unsigned char trail[] = { 0x01, 0x00 };
+        unsigned char one[] = { 0x81 };
+        ASN1_BIT_STRING *bs = ASN1_BIT_STRING_new();
+
+        bit_state("bs.fresh", bs);
+
+        printf("bs.setbit0=%d\n", ASN1_BIT_STRING_set_bit(bs, 0, 1));
+        bit_state("bs.bit0", bs);
+        printf("bs.setbit7=%d\n", ASN1_BIT_STRING_set_bit(bs, 7, 1));
+        bit_state("bs.bit7", bs);
+        printf("bs.setbit8=%d\n", ASN1_BIT_STRING_set_bit(bs, 8, 1));
+        bit_state("bs.bit8", bs);
+        printf("bs.setbit9=%d\n", ASN1_BIT_STRING_set_bit(bs, 9, 1));
+        bit_state("bs.bit9", bs);
+        /* Clearing the top bit truncates: the trailing-zero octet goes. */
+        printf("bs.clear9=%d\n", ASN1_BIT_STRING_set_bit(bs, 9, 0));
+        bit_state("bs.cleared9", bs);
+        printf("bs.clear8=%d\n", ASN1_BIT_STRING_set_bit(bs, 8, 0));
+        bit_state("bs.cleared8", bs);
+        printf("bs.clear0=%d\n", ASN1_BIT_STRING_set_bit(bs, 0, 0));
+        bit_state("bs.cleared0", bs);
+        printf("bs.neg=%d\n", ASN1_BIT_STRING_set_bit(bs, -1, 1));
+        printf("bs.grow80=%d\n", ASN1_BIT_STRING_set_bit(bs, 80, 1));
+        bit_state("bs.bit80", bs);
+        ASN1_BIT_STRING_free(bs);
+
+        /* `get_bit` past the end, on a negative index, and on a null string. */
+        bs = ASN1_BIT_STRING_new();
+        ASN1_BIT_STRING_set(bs, one, 1);
+        printf("bs.get0=%d\n", ASN1_BIT_STRING_get_bit(bs, 0));
+        printf("bs.get6=%d\n", ASN1_BIT_STRING_get_bit(bs, 6));
+        printf("bs.get7=%d\n", ASN1_BIT_STRING_get_bit(bs, 7));
+        printf("bs.get8=%d\n", ASN1_BIT_STRING_get_bit(bs, 8));
+        printf("bs.getneg=%d\n", ASN1_BIT_STRING_get_bit(bs, -1));
+        printf("bs.getnull=%d\n", ASN1_BIT_STRING_get_bit(NULL, 0));
+        ASN1_BIT_STRING_free(bs);
+
+        /* `check`: a null string, a null flag vector, and vectors shorter and
+         * longer than the content. */
+        bs = ASN1_BIT_STRING_new();
+        ASN1_BIT_STRING_set(bs, one, 1);
+        {
+            static const unsigned char allow81[] = { 0x81 };
+            static const unsigned char allow80[] = { 0x80 };
+            static const unsigned char allow00[] = { 0x00 };
+            printf("bs.check.null=%d\n", ASN1_BIT_STRING_check(NULL, NULL, 0));
+            printf("bs.check.novlags=%d\n", ASN1_BIT_STRING_check(bs, NULL, 0));
+            printf("bs.check.allow81=%d\n", ASN1_BIT_STRING_check(bs, allow81, 1));
+            printf("bs.check.allow80=%d\n", ASN1_BIT_STRING_check(bs, allow80, 1));
+            printf("bs.check.allow00=%d\n", ASN1_BIT_STRING_check(bs, allow00, 1));
+            printf("bs.check.short=%d\n", ASN1_BIT_STRING_check(bs, allow80, 0));
+            printf("bs.check.zero=%d\n", ASN1_BIT_STRING_check(bs, allow81, 3));
+        }
+        ASN1_BIT_STRING_free(bs);
+
+        /* An empty bit string: `check` answers 1 because there is no unneeded
+         * bit in nothing. */
+        bs = ASN1_BIT_STRING_new();
+        printf("bs.check.empty=%d\n", ASN1_BIT_STRING_check(bs, NULL, 0));
+        ASN1_BIT_STRING_free(bs);
+
+        /* The explicit unused-bit count, and the mask it applies to the last
+         * octet. */
+        bs = ASN1_BIT_STRING_new();
+        ASN1_BIT_STRING_set(bs, two, 2);
+        bit_encode("bs.derived", bs);
+        bs->flags |= ASN1_STRING_FLAG_BITS_LEFT | 3;
+        bit_state("bs.flagged", bs);
+        bit_encode("bs.left3", bs);
+        bs->flags &= ~0x07;
+        bs->flags |= ASN1_STRING_FLAG_BITS_LEFT | 7;
+        bit_encode("bs.left7", bs);
+        ASN1_BIT_STRING_free(bs);
+
+        /* The trailing-zero scan: the derived count comes from the last non-zero
+         * octet, and the octets after it are dropped. */
+        bs = ASN1_BIT_STRING_new();
+        ASN1_BIT_STRING_set(bs, trail, 2);
+        bit_state("bs.trailing", bs);
+        bit_encode("bs.trailing", bs);
+        ASN1_BIT_STRING_free(bs);
+
+        /* A zero-length content still encodes as one count octet. */
+        bs = ASN1_BIT_STRING_new();
+        bit_encode("bs.empty", bs);
+        ASN1_BIT_STRING_free(bs);
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* ASN1_BIT_STRING: the name table.                                   */
+    /* ------------------------------------------------------------------ */
+    {
+        /* Bit 1 carries two names; `name_print` prints the first and skips the
+         * repeat, while `num_asc` accepts either spelling. */
+        static BIT_STRING_BITNAME tbl[] = {
+            { 0, "digitalSignature", "DS" },
+            { 1, "nonRepudiation", "NR" },
+            { 1, "contentCommitment", "CC" },
+            { 2, "keyEncipherment", "KE" },
+            { -1, NULL, NULL }
+        };
+        unsigned char e0[] = { 0xE0 };
+        ASN1_BIT_STRING *bs = ASN1_BIT_STRING_new();
+        BIO *b;
+
+        printf("asc.long=%d\n", ASN1_BIT_STRING_num_asc("digitalSignature", tbl));
+        printf("asc.short=%d\n", ASN1_BIT_STRING_num_asc("DS", tbl));
+        printf("asc.alias=%d\n", ASN1_BIT_STRING_num_asc("contentCommitment", tbl));
+        printf("asc.nr=%d\n", ASN1_BIT_STRING_num_asc("NR", tbl));
+        printf("asc.missing=%d\n", ASN1_BIT_STRING_num_asc("nope", tbl));
+
+        ASN1_BIT_STRING_set(bs, e0, 1);
+        b = BIO_new(BIO_s_mem());
+        printf("asc.print=%d\n", ASN1_BIT_STRING_name_print(b, bs, tbl, 4));
+        drain("asc.text", b);
+        BIO_free(b);
+
+        b = BIO_new(BIO_s_mem());
+        printf("asc.print0=%d\n", ASN1_BIT_STRING_name_print(b, bs, tbl, 0));
+        drain("asc.text0", b);
+        BIO_free(b);
+
+        /* A string with no named bit set still produces its indent and newline. */
+        ASN1_BIT_STRING_set_bit(bs, 0, 0);
+        ASN1_BIT_STRING_set_bit(bs, 1, 0);
+        ASN1_BIT_STRING_set_bit(bs, 2, 0);
+        b = BIO_new(BIO_s_mem());
+        printf("asc.printnone=%d\n", ASN1_BIT_STRING_name_print(b, bs, tbl, 2));
+        drain("asc.textnone", b);
+        BIO_free(b);
+
+        printf("asc.set1=%d\n", ASN1_BIT_STRING_set_asc(bs, "keyEncipherment", 1, tbl));
+        bit_state("asc.after", bs);
+        printf("asc.set0=%d\n", ASN1_BIT_STRING_set_asc(bs, "KE", 0, tbl));
+        bit_state("asc.cleared", bs);
+        printf("asc.setmissing=%d\n", ASN1_BIT_STRING_set_asc(bs, "nope", 1, tbl));
+        printf("asc.setnull=%d\n", ASN1_BIT_STRING_set_asc(NULL, "KE", 1, tbl));
+        ASN1_BIT_STRING_free(bs);
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* ASN1_BIT_STRING: decode and encode.                                */
+    /* ------------------------------------------------------------------ */
+    {
+        static const unsigned char ok[] = { 0x03, 0x02, 0x00, 0x41 };
+        static const unsigned char bits3[] = { 0x03, 0x03, 0x04, 0xFF, 0xFF };
+        static const unsigned char empty[] = { 0x03, 0x01, 0x00 };
+        static const unsigned char badcount[] = { 0x03, 0x02, 0x08, 0x41 };
+        static const unsigned char eightbits[] = { 0x03, 0x01, 0x08 };
+        static const unsigned char zerolen[] = { 0x03, 0x00 };
+        static const unsigned char built[] = { 0x23, 0x03, 0x03, 0x02, 0x00, 0x41 };
+        static const unsigned char wrongtag[] = { 0x04, 0x02, 0x00, 0x41 };
+
+        bit_decode("bsd.ok", ok, sizeof(ok));
+        bit_decode("bsd.bits3", bits3, sizeof(bits3));
+        bit_decode("bsd.empty", empty, sizeof(empty));
+        bit_decode("bsd.badcount", badcount, sizeof(badcount));
+        bit_decode("bsd.eightbits", eightbits, sizeof(eightbits));
+        bit_decode("bsd.zerolen", zerolen, sizeof(zerolen));
+        bit_decode("bsd.constructed", built, sizeof(built));
+        bit_decode("bsd.wrongtag", wrongtag, sizeof(wrongtag));
+
+        /* Reuse: decoding into an existing string keeps the caller's object. */
+        {
+            const unsigned char *p = ok;
+            ASN1_BIT_STRING *slot = ASN1_BIT_STRING_new();
+            ASN1_BIT_STRING *got = d2i_ASN1_BIT_STRING(&slot, &p, sizeof(ok));
+            printf("bsd.reuse.same=%d\n", got == slot);
+            printf("bsd.reuse.err=%lu\n", ERR_peek_error());
+            ERR_clear_error();
+            bit_state("bsd.reuse", slot);
+            ASN1_BIT_STRING_free(slot);
+        }
+
+        /* A failure must leave a caller-supplied string where it was. */
+        {
+            const unsigned char *p = badcount;
+            ASN1_BIT_STRING *slot = ASN1_BIT_STRING_new();
+            ASN1_BIT_STRING *got = d2i_ASN1_BIT_STRING(&slot, &p, sizeof(badcount));
+            printf("bsd.keepnull=%d\n", got == NULL);
+            printf("bsd.keepstate=%d\n", slot != NULL);
+            printf("bsd.keep.err=%lu\n", ERR_peek_error());
+            ERR_clear_error();
+            ASN1_BIT_STRING_free(slot);
+        }
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* ASN1_NULL.                                                         */
+    /* ------------------------------------------------------------------ */
+    {
+        static const unsigned char nul[] = { 0x05, 0x00 };
+        static const unsigned char nulbad[] = { 0x05, 0x01, 0x00 };
+        static const unsigned char trail[] = { 0x05, 0x00, 0x02, 0x01, 0x01 };
+        ASN1_NULL *nn = ASN1_NULL_new();
+        ASN1_NULL *slot = NULL;
+        const unsigned char *p;
+        unsigned char buf[8];
+        unsigned char *q;
+        int i;
+
+        printf("null.new=%ld\n", (long)(intptr_t)(void *)nn);
+
+        p = nul;
+        nn = d2i_ASN1_NULL(NULL, &p, sizeof(nul));
+        printf("null.present=%d\n", nn != NULL);
+        printf("null.adv=%ld\n", (long)(p - nul));
+        printf("null.value=%ld\n", (long)(intptr_t)(void *)nn);
+        printf("null.err=%lu\n", ERR_peek_error());
+        ERR_clear_error();
+        ASN1_NULL_free(nn);
+
+        p = nul;
+        printf("null.slotret=%d\n", d2i_ASN1_NULL(&slot, &p, sizeof(nul)) != NULL);
+        printf("null.slot=%ld\n", (long)(intptr_t)(void *)slot);
+        ASN1_NULL_free(slot);
+        slot = NULL;
+
+        p = nulbad;
+        printf("null.badret=%d\n", d2i_ASN1_NULL(NULL, &p, sizeof(nulbad)) == NULL);
+        printf("null.bad.err=%lu\n", ERR_peek_error());
+        ERR_clear_error();
+
+        p = trail;
+        nn = d2i_ASN1_NULL(NULL, &p, sizeof(trail));
+        printf("null.trail.adv=%ld\n", (long)(p - trail));
+        printf("null.trail.err=%lu\n", ERR_peek_error());
+        ERR_clear_error();
+        ASN1_NULL_free(nn);
+
+        nn = ASN1_NULL_new();
+        printf("null.i2d.null=%d\n", i2d_ASN1_NULL(nn, NULL));
+        memset(buf, 0xCC, sizeof(buf));
+        q = buf;
+        i = i2d_ASN1_NULL(nn, &q);
+        printf("null.i2d.stack=%d\n", i);
+        printf("null.i2d.advanced=%ld\n", (long)(q - buf));
+        if (i > 0) {
+            int k;
+            for (k = 0; k < i; k++)
+                printf("null.i2d.byte.%d=%02X\n", k, buf[k]);
+        }
+        printf("null.i2d.err=%lu\n", ERR_peek_error());
+        ERR_clear_error();
+        q = NULL;
+        printf("null.i2d.alloc=%d\n", i2d_ASN1_NULL(nn, &q));
+        if (q != NULL)
+            OPENSSL_free(q);
+
+        /* A null value is absent, not an empty NULL. */
+        printf("null.i2d.absent=%d\n", i2d_ASN1_NULL(NULL, NULL));
+        ASN1_NULL_free(nn);
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* d2i_ASN1_UINTEGER: the reader that ignores the sign bit.           */
+    /* ------------------------------------------------------------------ */
+    {
+        static const unsigned char msb[] = { 0x02, 0x01, 0x80 };
+        static const unsigned char padded[] = { 0x02, 0x02, 0x00, 0x80 };
+        static const unsigned char zero[] = { 0x02, 0x01, 0x00 };
+        static const unsigned char empty[] = { 0x02, 0x00 };
+        static const unsigned char seq3[] = { 0x02, 0x03, 0x00, 0x00, 0x01 };
+        static const unsigned char wrong[] = { 0x03, 0x02, 0x00, 0x41 };
+        const unsigned char *p;
+        ASN1_INTEGER *ai;
+        int i;
+
+        {
+            static const unsigned char *cases[] = { msb, padded, zero, empty,
+                                                    seq3, wrong };
+            static const long lens[] = { (long)sizeof(msb), (long)sizeof(padded),
+                                         (long)sizeof(zero), (long)sizeof(empty),
+                                         (long)sizeof(seq3), (long)sizeof(wrong) };
+            static const char *keys[] = { "uint.msb", "uint.padded", "uint.zero",
+                                          "uint.empty", "uint.seq3", "uint.wrong" };
+            for (i = 0; i < 6; i++) {
+                p = cases[i];
+                ai = d2i_ASN1_UINTEGER(NULL, &p, lens[i]);
+                printf("%s.present=%d\n", keys[i], ai != NULL);
+                printf("%s.adv=%ld\n", keys[i], (long)(p - cases[i]));
+                printf("%s.err=%lu\n", keys[i], ERR_peek_error());
+                ERR_clear_error();
+                if (ai != NULL) {
+                    int k;
+                    printf("%s.type=%d\n", keys[i], ASN1_STRING_type(ai));
+                    printf("%s.length=%d\n", keys[i], ASN1_STRING_length(ai));
+                    printf("%s.bytes=", keys[i]);
+                    for (k = 0; k < ASN1_STRING_length(ai); k++)
+                        printf("%02X", ASN1_STRING_get0_data(ai)[k]);
+                    printf("\n");
+                    printf("%s.get=%ld\n", keys[i], ASN1_INTEGER_get(ai));
+                    ASN1_INTEGER_free(ai);
+                }
+            }
+        }
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* The string wrapper family: tags, classes and the per-type lengths. */
+    /* ------------------------------------------------------------------ */
+    {
+        static const unsigned char utf8[] = { 0x0C, 0x03, 0x41, 0x42, 0x43 };
+        static const unsigned char utf8_mono[] = { 0x0C, 0x01, 0x41 };
+        static const unsigned char printab[] = { 0x13, 0x03, 0x41, 0x42, 0x43 };
+        static const unsigned char built_utf8[] = { 0x2C, 0x03, 0x0C, 0x01, 0x41 };
+        static const unsigned char indef_utf8[] = { 0x2C, 0x80, 0x0C, 0x01, 0x41,
+                                                    0x00, 0x00 };
+        static const unsigned char int_tag[] = { 0x02, 0x01, 0x01 };
+        static const unsigned char ctx_tag[] = { 0x80, 0x01, 0x41 };
+        static const unsigned char utc13[] = { 0x17, 0x0D, '2', '5', '0', '1',
+                                               '0', '1', '0', '0', '0', '0',
+                                               '0', '0', 'Z' };
+        static const unsigned char utc12[] = { 0x17, 0x0C, '2', '5', '0', '1',
+                                               '0', '1', '0', '0', '0', '0',
+                                               '0', '0' };
+        static const unsigned char gen15[] = { 0x18, 0x0F, '2', '0', '2', '5',
+                                               '0', '1', '0', '1', '0', '0',
+                                               '0', '0', '0', '0', 'Z' };
+        static const unsigned char gen14[] = { 0x18, 0x0E, '2', '0', '2', '5',
+                                               '0', '1', '0', '1', '0', '0',
+                                               '0', '0', '0', '0' };
+        static const unsigned char bmp_odd[] = { 0x1E, 0x03, 0x41, 0x42, 0x43 };
+        static const unsigned char bmp_ok[] = { 0x1E, 0x02, 0x00, 0x41 };
+        static const unsigned char uni_odd[] = { 0x1C, 0x03, 0x00, 0x00, 0x41 };
+        static const unsigned char uni_ok[] = { 0x1C, 0x04, 0x00, 0x00, 0x00, 0x41 };
+        static const unsigned char t61[] = { 0x14, 0x02, 0x41, 0x42 };
+        static const unsigned char vis[] = { 0x1A, 0x02, 0x41, 0x42 };
+        static const unsigned char octc[] = { 0x04, 0x02, 0x41, 0x42 };
+        static const unsigned char obj[] = { 0x06, 0x03, 0x55, 0x04, 0x03 };
+
+        str_decode("str.utf8", utf8, sizeof(utf8), 0);
+        str_decode("str.utf8mono", utf8_mono, sizeof(utf8_mono), 0);
+        str_decode("str.utf8.wrongtag", printab, sizeof(printab), 0);
+        str_decode("str.utf8.constructed", built_utf8, sizeof(built_utf8), 0);
+        str_decode("str.utf8.indef", indef_utf8, sizeof(indef_utf8), 0);
+        str_decode("str.utf8.object", obj, sizeof(obj), 0);
+        str_decode("str.ia5", utf8, sizeof(utf8), 1);
+        str_decode("str.ia5.ok", vis, sizeof(vis), 1);
+
+        /* The multi-string types take the type from the encoding. */
+        str_decode("str.printable", printab, sizeof(printab), 2);
+        str_decode("str.printable.utf8", utf8, sizeof(utf8), 2);
+        str_decode("str.printable.int", int_tag, sizeof(int_tag), 2);
+        str_decode("str.printable.ctx", ctx_tag, sizeof(ctx_tag), 2);
+        str_decode("str.printable.octet", octc, sizeof(octc), 2);
+        str_decode("str.directory", vis, sizeof(vis), 10);
+        str_decode("str.directory.bmp", bmp_ok, sizeof(bmp_ok), 10);
+        str_decode("str.directory.int", int_tag, sizeof(int_tag), 10);
+        str_decode("str.display", t61, sizeof(t61), 11);
+        str_decode("str.display.vis", vis, sizeof(vis), 11);
+        str_decode("str.display.int", int_tag, sizeof(int_tag), 11);
+
+        /* `ASN1_TIME` is a multi-string over the two time types. */
+        str_decode("str.time.utc", utc13, sizeof(utc13), 3);
+        str_decode("str.time.general", gen15, sizeof(gen15), 3);
+        str_decode("str.time.int", int_tag, sizeof(int_tag), 3);
+        str_decode("str.time.ctx", ctx_tag, sizeof(ctx_tag), 3);
+        str_decode("str.time.short", utc12, sizeof(utc12), 3);
+
+        str_decode("str.utc.ok", utc13, sizeof(utc13), 4);
+        str_decode("str.utc.short", utc12, sizeof(utc12), 4);
+        str_decode("str.gen.ok", gen15, sizeof(gen15), 5);
+        str_decode("str.gen.short", gen14, sizeof(gen14), 5);
+
+        str_decode("str.bmp.odd", bmp_odd, sizeof(bmp_odd), 6);
+        str_decode("str.bmp.ok", bmp_ok, sizeof(bmp_ok), 6);
+        str_decode("str.uni.odd", uni_odd, sizeof(uni_odd), 7);
+        str_decode("str.uni.ok", uni_ok, sizeof(uni_ok), 7);
+
+        str_decode("str.t61", t61, sizeof(t61), 8);
+        str_decode("str.visible", vis, sizeof(vis), 9);
+        str_decode("str.printabletag", printab, sizeof(printab), 12);
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* The zero and negative length boundary, which the item layer checks */
+    /* before any header is read.                                         */
+    /* ------------------------------------------------------------------ */
+    {
+        static const unsigned char oct[] = { 0x04, 0x02, 0x41, 0x42 };
+        const unsigned char *p = oct;
+
+        printf("len.zero.oct=%d\n", d2i_ASN1_OCTET_STRING(NULL, &p, 0) == NULL);
+        printf("len.zero.oct.err=%lu\n", ERR_peek_error());
+        ERR_clear_error();
+        p = oct;
+        printf("len.neg.oct=%d\n", d2i_ASN1_OCTET_STRING(NULL, &p, -1) == NULL);
+        printf("len.neg.oct.err=%lu\n", ERR_peek_error());
+        ERR_clear_error();
+        p = oct;
+        printf("len.zero.int=%d\n", d2i_ASN1_INTEGER(NULL, &p, 0) == NULL);
+        printf("len.zero.int.err=%lu\n", ERR_peek_error());
+        ERR_clear_error();
+        p = oct;
+        printf("len.zero.utf8=%d\n", d2i_ASN1_UTF8STRING(NULL, &p, 0) == NULL);
+        printf("len.zero.utf8.err=%lu\n", ERR_peek_error());
+        ERR_clear_error();
+        p = oct;
+        printf("len.zero.null=%d\n", d2i_ASN1_NULL(NULL, &p, 0) == NULL);
+        printf("len.zero.null.err=%lu\n", ERR_peek_error());
+        ERR_clear_error();
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* The encode conventions over the types that gained an `i2d`.        */
+    /* ------------------------------------------------------------------ */
+    {
+        static const unsigned char utf8[] = { 0x0C, 0x03, 0x41, 0x42, 0x43 };
+        static const unsigned char oct[] = { 0x04, 0x02, 0x41, 0x42 };
+        static const unsigned char intv[] = { 0x02, 0x01, 0x7F };
+        const unsigned char *p;
+        ASN1_STRING *s;
+        unsigned char buf[16];
+        unsigned char *q;
+        int i;
+
+        p = utf8;
+        s = d2i_ASN1_UTF8STRING(NULL, &p, sizeof(utf8));
+        str_encode("enc.utf8", s);
+        ASN1_STRING_free(s);
+
+        /* A null value is omitted rather than encoded as empty. */
+        printf("enc.null.utf8=%d\n", i2d_ASN1_UTF8STRING(NULL, NULL));
+
+        p = oct;
+        s = d2i_ASN1_OCTET_STRING(NULL, &p, sizeof(oct));
+        printf("enc.oct.len=%d\n", i2d_ASN1_OCTET_STRING(s, NULL));
+        memset(buf, 0xCC, sizeof(buf));
+        q = buf;
+        i = i2d_ASN1_OCTET_STRING(s, &q);
+        printf("enc.oct.stack=%d\n", i);
+        printf("enc.oct.advanced=%ld\n", (long)(q - buf));
+        if (i > 0) {
+            int k;
+            for (k = 0; k < i; k++)
+                printf("enc.oct.byte.%d=%02X\n", k, buf[k]);
+        }
+        ASN1_STRING_free(s);
+
+        p = intv;
+        s = d2i_ASN1_INTEGER(NULL, &p, sizeof(intv));
+        printf("enc.int.len=%d\n", i2d_ASN1_INTEGER(s, NULL));
+        memset(buf, 0xCC, sizeof(buf));
+        q = buf;
+        i = i2d_ASN1_INTEGER(s, &q);
+        printf("enc.int.stack=%d\n", i);
+        if (i > 0) {
+            int k;
+            for (k = 0; k < i; k++)
+                printf("enc.int.byte.%d=%02X\n", k, buf[k]);
+        }
+        ASN1_STRING_free(s);
+
+        /* An OBJECT with no content is omitted; one with content encodes. */
+        p = NULL;
+        {
+            ASN1_OBJECT *o = OBJ_nid2obj(NID_commonName);
+            printf("enc.obj.len=%d\n", i2d_ASN1_OBJECT(o, NULL));
+            memset(buf, 0xCC, sizeof(buf));
+            q = buf;
+            i = i2d_ASN1_OBJECT(o, &q);
+            printf("enc.obj.stack=%d\n", i);
+            if (i > 0) {
+                int k;
+                for (k = 0; k < i; k++)
+                    printf("enc.obj.byte.%d=%02X\n", k, buf[k]);
+            }
         }
     }
 

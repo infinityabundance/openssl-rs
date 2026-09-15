@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 561,
       "deferred_to_later_phase": 60,
-      "implemented": 279,
-      "open_in_this_stratum": 226,
+      "implemented": 350,
+      "open_in_this_stratum": 155,
       "owned": 565
     },
     "deferred": [
@@ -418,22 +418,38 @@
       "x509v3.h": 11
     },
     "implemented": [
+      "ASN1_ANY_it",
+      "ASN1_BIT_STRING_check",
       "ASN1_BIT_STRING_free",
+      "ASN1_BIT_STRING_get_bit",
+      "ASN1_BIT_STRING_it",
+      "ASN1_BIT_STRING_name_print",
       "ASN1_BIT_STRING_new",
+      "ASN1_BIT_STRING_num_asc",
+      "ASN1_BIT_STRING_set",
+      "ASN1_BIT_STRING_set_asc",
+      "ASN1_BIT_STRING_set_bit",
       "ASN1_BMPSTRING_free",
+      "ASN1_BMPSTRING_it",
       "ASN1_BMPSTRING_new",
+      "ASN1_BOOLEAN_it",
       "ASN1_ENUMERATED_free",
       "ASN1_ENUMERATED_get",
       "ASN1_ENUMERATED_get_int64",
+      "ASN1_ENUMERATED_it",
       "ASN1_ENUMERATED_new",
       "ASN1_ENUMERATED_set",
       "ASN1_ENUMERATED_set_int64",
       "ASN1_ENUMERATED_to_BN",
+      "ASN1_FBOOLEAN_it",
       "ASN1_GENERALIZEDTIME_free",
+      "ASN1_GENERALIZEDTIME_it",
       "ASN1_GENERALIZEDTIME_new",
       "ASN1_GENERALSTRING_free",
+      "ASN1_GENERALSTRING_it",
       "ASN1_GENERALSTRING_new",
       "ASN1_IA5STRING_free",
+      "ASN1_IA5STRING_it",
       "ASN1_IA5STRING_new",
       "ASN1_INTEGER_cmp",
       "ASN1_INTEGER_dup",
@@ -441,17 +457,24 @@
       "ASN1_INTEGER_get",
       "ASN1_INTEGER_get_int64",
       "ASN1_INTEGER_get_uint64",
+      "ASN1_INTEGER_it",
       "ASN1_INTEGER_new",
       "ASN1_INTEGER_set",
       "ASN1_INTEGER_set_int64",
       "ASN1_INTEGER_set_uint64",
       "ASN1_INTEGER_to_BN",
+      "ASN1_NULL_free",
+      "ASN1_NULL_it",
+      "ASN1_NULL_new",
       "ASN1_OBJECT_create",
       "ASN1_OBJECT_free",
+      "ASN1_OBJECT_it",
       "ASN1_OBJECT_new",
+      "ASN1_OCTET_STRING_NDEF_it",
       "ASN1_OCTET_STRING_cmp",
       "ASN1_OCTET_STRING_dup",
       "ASN1_OCTET_STRING_free",
+      "ASN1_OCTET_STRING_it",
       "ASN1_OCTET_STRING_new",
       "ASN1_OCTET_STRING_set",
       "ASN1_PCTX_free",
@@ -467,8 +490,10 @@
       "ASN1_PCTX_set_oid_flags",
       "ASN1_PCTX_set_str_flags",
       "ASN1_PRINTABLESTRING_free",
+      "ASN1_PRINTABLESTRING_it",
       "ASN1_PRINTABLESTRING_new",
       "ASN1_PRINTABLE_free",
+      "ASN1_PRINTABLE_it",
       "ASN1_PRINTABLE_new",
       "ASN1_SCTX_free",
       "ASN1_SCTX_get_app_data",
@@ -477,6 +502,7 @@
       "ASN1_SCTX_get_template",
       "ASN1_SCTX_new",
       "ASN1_SCTX_set_app_data",
+      "ASN1_SEQUENCE_it",
       "ASN1_STRING_clear_free",
       "ASN1_STRING_cmp",
       "ASN1_STRING_copy",
@@ -492,14 +518,21 @@
       "ASN1_STRING_type",
       "ASN1_STRING_type_new",
       "ASN1_T61STRING_free",
+      "ASN1_T61STRING_it",
       "ASN1_T61STRING_new",
+      "ASN1_TBOOLEAN_it",
+      "ASN1_TIME_it",
       "ASN1_UNIVERSALSTRING_free",
+      "ASN1_UNIVERSALSTRING_it",
       "ASN1_UNIVERSALSTRING_new",
       "ASN1_UTCTIME_free",
+      "ASN1_UTCTIME_it",
       "ASN1_UTCTIME_new",
       "ASN1_UTF8STRING_free",
+      "ASN1_UTF8STRING_it",
       "ASN1_UTF8STRING_new",
       "ASN1_VISIBLESTRING_free",
+      "ASN1_VISIBLESTRING_it",
       "ASN1_VISIBLESTRING_new",
       "ASN1_check_infinite_end",
       "ASN1_const_check_infinite_end",
@@ -684,18 +717,56 @@
       "BN_with_flags",
       "BN_zero_ex",
       "DIRECTORYSTRING_free",
+      "DIRECTORYSTRING_it",
       "DIRECTORYSTRING_new",
       "DISPLAYTEXT_free",
+      "DISPLAYTEXT_it",
       "DISPLAYTEXT_new",
+      "d2i_ASN1_BIT_STRING",
+      "d2i_ASN1_BMPSTRING",
       "d2i_ASN1_ENUMERATED",
+      "d2i_ASN1_GENERALIZEDTIME",
+      "d2i_ASN1_GENERALSTRING",
+      "d2i_ASN1_IA5STRING",
       "d2i_ASN1_INTEGER",
+      "d2i_ASN1_NULL",
       "d2i_ASN1_OBJECT",
       "d2i_ASN1_OCTET_STRING",
+      "d2i_ASN1_PRINTABLE",
+      "d2i_ASN1_PRINTABLESTRING",
+      "d2i_ASN1_T61STRING",
+      "d2i_ASN1_TIME",
+      "d2i_ASN1_UINTEGER",
+      "d2i_ASN1_UNIVERSALSTRING",
+      "d2i_ASN1_UTCTIME",
+      "d2i_ASN1_UTF8STRING",
+      "d2i_ASN1_VISIBLESTRING",
+      "d2i_DIRECTORYSTRING",
+      "d2i_DISPLAYTEXT",
       "i2a_ASN1_ENUMERATED",
       "i2a_ASN1_INTEGER",
       "i2a_ASN1_OBJECT",
       "i2a_ASN1_STRING",
+      "i2d_ASN1_BIT_STRING",
+      "i2d_ASN1_BMPSTRING",
+      "i2d_ASN1_ENUMERATED",
+      "i2d_ASN1_GENERALIZEDTIME",
+      "i2d_ASN1_GENERALSTRING",
+      "i2d_ASN1_IA5STRING",
+      "i2d_ASN1_INTEGER",
+      "i2d_ASN1_NULL",
       "i2d_ASN1_OBJECT",
+      "i2d_ASN1_OCTET_STRING",
+      "i2d_ASN1_PRINTABLE",
+      "i2d_ASN1_PRINTABLESTRING",
+      "i2d_ASN1_T61STRING",
+      "i2d_ASN1_TIME",
+      "i2d_ASN1_UNIVERSALSTRING",
+      "i2d_ASN1_UTCTIME",
+      "i2d_ASN1_UTF8STRING",
+      "i2d_ASN1_VISIBLESTRING",
+      "i2d_DIRECTORYSTRING",
+      "i2d_DISPLAYTEXT",
       "i2t_ASN1_OBJECT"
     ],
     "module_of_header": {
@@ -706,71 +777,6 @@
     },
     "note": "`owned` is every export the stratum's families cover, which includes the ones the declaring-header rule hands to a later phase: a deferred symbol is still matched by this stratum's prefixes, so counting it here is what makes `implemented + deferred + open == owned`. `open` is the only list that blocks the stratum. The families are derived from the atlas, not typed: see this generator's header for why, and note that a deferred symbol names the stratum that owns the header it is declared in, which is checkable without reading this file. Nothing here is a parity claim.",
     "open": [
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_ANY_it"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_BIT_STRING_check"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_BIT_STRING_get_bit"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_BIT_STRING_it"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_BIT_STRING_name_print"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_BIT_STRING_num_asc"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_BIT_STRING_set"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_BIT_STRING_set_asc"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_BIT_STRING_set_bit"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_BMPSTRING_it"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_BOOLEAN_it"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_ENUMERATED_it"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_FBOOLEAN_it"
-      },
       {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
@@ -785,11 +791,6 @@
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
         "symbol": "ASN1_GENERALIZEDTIME_dup"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_GENERALIZEDTIME_it"
       },
       {
         "declaring_header": "asn1.h",
@@ -809,21 +810,6 @@
       {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
-        "symbol": "ASN1_GENERALSTRING_it"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_IA5STRING_it"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_INTEGER_it"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
         "symbol": "ASN1_ITEM_get"
       },
       {
@@ -834,57 +820,12 @@
       {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
-        "symbol": "ASN1_NULL_free"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_NULL_it"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_NULL_new"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_OBJECT_it"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_OCTET_STRING_NDEF_it"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_OCTET_STRING_it"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_PRINTABLESTRING_it"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_PRINTABLE_it"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
         "symbol": "ASN1_PRINTABLE_type"
       },
       {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
         "symbol": "ASN1_SEQUENCE_ANY_it"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_SEQUENCE_it"
       },
       {
         "declaring_header": "asn1.h",
@@ -949,16 +890,6 @@
       {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
-        "symbol": "ASN1_T61STRING_it"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TBOOLEAN_it"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
         "symbol": "ASN1_TIME_adj"
       },
       {
@@ -990,11 +921,6 @@
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
         "symbol": "ASN1_TIME_free"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TIME_it"
       },
       {
         "declaring_header": "asn1.h",
@@ -1104,11 +1030,6 @@
       {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
-        "symbol": "ASN1_UNIVERSALSTRING_it"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
         "symbol": "ASN1_UNIVERSALSTRING_to_string"
       },
       {
@@ -1134,11 +1055,6 @@
       {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
-        "symbol": "ASN1_UTCTIME_it"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
         "symbol": "ASN1_UTCTIME_print"
       },
       {
@@ -1150,16 +1066,6 @@
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
         "symbol": "ASN1_UTCTIME_set_string"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_UTF8STRING_it"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_VISIBLESTRING_it"
       },
       {
         "declaring_header": "asn1.h",
@@ -1385,16 +1291,6 @@
         "declaring_header": "asn1t.h",
         "module": "src/asn1/",
         "symbol": "CBIGNUM_it"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "DIRECTORYSTRING_it"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "DISPLAYTEXT_it"
       },
       {
         "declaring_header": "asn1t.h",
@@ -1624,46 +1520,6 @@
       {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
-        "symbol": "d2i_ASN1_BIT_STRING"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "d2i_ASN1_BMPSTRING"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "d2i_ASN1_GENERALIZEDTIME"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "d2i_ASN1_GENERALSTRING"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "d2i_ASN1_IA5STRING"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "d2i_ASN1_NULL"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "d2i_ASN1_PRINTABLE"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "d2i_ASN1_PRINTABLESTRING"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
         "symbol": "d2i_ASN1_SEQUENCE_ANY"
       },
       {
@@ -1674,107 +1530,7 @@
       {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
-        "symbol": "d2i_ASN1_T61STRING"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "d2i_ASN1_TIME"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
         "symbol": "d2i_ASN1_TYPE"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "d2i_ASN1_UINTEGER"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "d2i_ASN1_UNIVERSALSTRING"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "d2i_ASN1_UTCTIME"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "d2i_ASN1_UTF8STRING"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "d2i_ASN1_VISIBLESTRING"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "d2i_DIRECTORYSTRING"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "d2i_DISPLAYTEXT"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "i2d_ASN1_BIT_STRING"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "i2d_ASN1_BMPSTRING"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "i2d_ASN1_ENUMERATED"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "i2d_ASN1_GENERALIZEDTIME"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "i2d_ASN1_GENERALSTRING"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "i2d_ASN1_IA5STRING"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "i2d_ASN1_INTEGER"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "i2d_ASN1_NULL"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "i2d_ASN1_OCTET_STRING"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "i2d_ASN1_PRINTABLE"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "i2d_ASN1_PRINTABLESTRING"
       },
       {
         "declaring_header": "asn1.h",
@@ -1789,52 +1545,12 @@
       {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
-        "symbol": "i2d_ASN1_T61STRING"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "i2d_ASN1_TIME"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
         "symbol": "i2d_ASN1_TYPE"
       },
       {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
-        "symbol": "i2d_ASN1_UNIVERSALSTRING"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "i2d_ASN1_UTCTIME"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "i2d_ASN1_UTF8STRING"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "i2d_ASN1_VISIBLESTRING"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
         "symbol": "i2d_ASN1_bio_stream"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "i2d_DIRECTORYSTRING"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "i2d_DISPLAYTEXT"
       }
     ],
     "owned_by_module": {
@@ -1869,7 +1585,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "c85cdf6b985be14fbb260f780d910fcd4432cb63fe1a26c9458f8cb2a87d751d"
+      "sha256": "1f4a149b208b17c02d9449a99dac1ec1b7c74f6cea6dc4a8e7824e6fb707cf21"
     }
   ],
   "kind": "phase5-obligations",

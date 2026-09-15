@@ -13,7 +13,7 @@ enforced here:
 | 2 | Distribution / ABI shell | `complete` |  |
 | 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `complete` |  |
 | 4 | BIO + CONF + object database | `complete` |  |
-| 5 | BN + ASN.1 + DER/PEM | `in-progress` | 226 open obligation(s) of this stratum recorded in forensics/phase5-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
+| 5 | BN + ASN.1 + DER/PEM | `in-progress` | 155 open obligation(s) of this stratum recorded in forensics/phase5-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
 | 6 | OSSL_LIB_CTX + provider core | `not-started` | not started |
 | 7 | EVP framework | `not-started` | not started |
 | 8 | Native cryptographic primitives | `not-started` | not started |

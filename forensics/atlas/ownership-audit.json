@@ -120,7 +120,12 @@
           "from_phase": 5,
           "symbols": [
             "ASN1_item_sign_ex",
-            "ASN1_item_verify_ex"
+            "ASN1_item_verify_ex",
+            "PEM_read_bio_Parameters",
+            "PEM_read_bio_Parameters_ex",
+            "PEM_write_PKCS8PrivateKey_nid",
+            "PEM_write_bio_PKCS8PrivateKey_nid",
+            "PEM_write_bio_PrivateKey_traditional"
           ],
           "to_phase": 7
         },
@@ -160,6 +165,40 @@
             "BN_rand_range_ex"
           ],
           "to_phase": 9
+        },
+        {
+          "from_phase": 5,
+          "symbols": [
+            "b2i_PVK_bio",
+            "b2i_PVK_bio_ex",
+            "b2i_PrivateKey",
+            "b2i_PrivateKey_bio",
+            "b2i_PublicKey",
+            "b2i_PublicKey_bio",
+            "d2i_PKCS8PrivateKey_bio",
+            "d2i_PKCS8PrivateKey_fp",
+            "i2b_PVK_bio",
+            "i2b_PVK_bio_ex",
+            "i2b_PrivateKey_bio",
+            "i2b_PublicKey_bio",
+            "i2d_PKCS8PrivateKey_bio",
+            "i2d_PKCS8PrivateKey_fp",
+            "i2d_PKCS8PrivateKey_nid_bio",
+            "i2d_PKCS8PrivateKey_nid_fp"
+          ],
+          "to_phase": 10
+        },
+        {
+          "from_phase": 5,
+          "symbols": [
+            "SMIME_crlf_copy",
+            "SMIME_read_ASN1",
+            "SMIME_read_ASN1_ex",
+            "SMIME_text",
+            "SMIME_write_ASN1",
+            "SMIME_write_ASN1_ex"
+          ],
+          "to_phase": 12
         }
       ],
       "mismatched": [],
@@ -246,7 +285,12 @@
           "from_phase": 5,
           "symbols": [
             "ASN1_item_sign_ex",
-            "ASN1_item_verify_ex"
+            "ASN1_item_verify_ex",
+            "PEM_read_bio_Parameters",
+            "PEM_read_bio_Parameters_ex",
+            "PEM_write_PKCS8PrivateKey_nid",
+            "PEM_write_bio_PKCS8PrivateKey_nid",
+            "PEM_write_bio_PrivateKey_traditional"
           ],
           "to_phase": 7
         },
@@ -286,6 +330,40 @@
             "BN_rand_range_ex"
           ],
           "to_phase": 9
+        },
+        {
+          "from_phase": 5,
+          "symbols": [
+            "b2i_PVK_bio",
+            "b2i_PVK_bio_ex",
+            "b2i_PrivateKey",
+            "b2i_PrivateKey_bio",
+            "b2i_PublicKey",
+            "b2i_PublicKey_bio",
+            "d2i_PKCS8PrivateKey_bio",
+            "d2i_PKCS8PrivateKey_fp",
+            "i2b_PVK_bio",
+            "i2b_PVK_bio_ex",
+            "i2b_PrivateKey_bio",
+            "i2b_PublicKey_bio",
+            "i2d_PKCS8PrivateKey_bio",
+            "i2d_PKCS8PrivateKey_fp",
+            "i2d_PKCS8PrivateKey_nid_bio",
+            "i2d_PKCS8PrivateKey_nid_fp"
+          ],
+          "to_phase": 10
+        },
+        {
+          "from_phase": 5,
+          "symbols": [
+            "SMIME_crlf_copy",
+            "SMIME_read_ASN1",
+            "SMIME_read_ASN1_ex",
+            "SMIME_text",
+            "SMIME_write_ASN1",
+            "SMIME_write_ASN1_ex"
+          ],
+          "to_phase": 12
         }
       ],
       "rule": "for every hand-off edge whose receiving stratum has a ledger, the set the deferring stratum hands over equals the set the receiving stratum declares it discharged"
@@ -430,7 +508,7 @@
     ],
     "implemented_by_two_strata": [],
     "implemented_exports": {
-      "libcrypto": 734,
+      "libcrypto": 805,
       "libssl": 0
     },
     "invariant": "every authority export has exactly one declared owner in forensics/atlas/symbol-ownership.json, and every implemented export's owner is therefore declared before any implementation exists",
@@ -488,8 +566,8 @@
       },
       {
         "atlas": 561,
-        "ledger": 532,
-        "only_in_atlas": 33,
+        "ledger": 505,
+        "only_in_atlas": 60,
         "only_in_atlas_examples": [
           "ASN1_item_sign_ex",
           "ASN1_item_verify_ex",
@@ -5769,7 +5847,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "1a1e83560e128945e6513e4f3b95b70654ed715f3d9faf3612f74cd7be44fba1"
+      "sha256": "ff4b80185a84f1ba625a5b12227fd78d1e3b91423b04653ea25ba208e4f0564b"
     },
     {
       "name": "authority-symbols",
@@ -5789,22 +5867,22 @@
     {
       "name": "ledger",
       "path": "forensics/tools/phase5_obligations.py",
-      "sha256": "c4ef03fa84c5665f5e030a37eeed78d456bb5138b789b8521c8b3414b36319c0"
+      "sha256": "22a895ec4a70f0d7eb231e041a0991008391a12774a9719ea490b70f50fc9268"
     },
     {
       "name": "ledger-result",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "edd8d50a0646c630a1a0a60a907a7575e79531e516ca7c65e59440e592b5685d"
+      "sha256": "447b6f380d153eba702a401dacb57705b4ebcd7661206744df8dfbfa0dbd8496"
     },
     {
       "name": "ledger-result",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "79e964f297a7260ed10c62b8ae619974534507fd11539ac9b1b0de38efee87ab"
+      "sha256": "4ee99ba48a5fef077fb5db7dc4a0d9fb5b81743d2305c6e849a66e7e6f8ffbc7"
     },
     {
       "name": "ledger-result",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "f47df15cb2401e06a6f8336b20b16a447c00ce6c1524ccbf962fe5e418dad9f5"
+      "sha256": "a8646120cf3785cdfcc4dc74a9bab91d0603cc032147f46f8b6de2b0f8a4fdcc"
     }
   ],
   "kind": "ownership-audit",

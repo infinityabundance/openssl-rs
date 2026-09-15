@@ -24,9 +24,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 644,
+        "authority_observations": 1306,
         "candidate_exit_code": 0,
-        "candidate_observations": 644,
+        "candidate_observations": 1306,
         "candidate_stderr_tail": [],
         "court": "RT-ASN1",
         "crashed": false,
@@ -61,7 +61,7 @@
     {
       "name": "probe",
       "path": "courts/phase5/rt_asn1_probe.c",
-      "sha256": "1ec69413ea51ef3737cffe99ddbf54d26d15d231c44816c9ee0251c5ddefa504"
+      "sha256": "271505b4b5cb3f134e535d9012747fad67d968d9bfd9309214e7b97bd3c67e94"
     }
   ],
   "kind": "phase5-courts",

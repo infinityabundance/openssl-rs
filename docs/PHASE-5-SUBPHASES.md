@@ -2,8 +2,8 @@
 
 Phase 5 is **BN + ASN.1 + DER/PEM**. `BN` is closed: every one of the 201 exports
 `bn.h` declares is implemented or handed to a named stratum, and `RT-BN` covers them.
-What remains is **314 ASN.1 exports and 48 PEM exports** — the ledger's totals, taken
-from `forensics/phase5-obligations.json`.
+What remains is **128 ASN.1 exports and 27 PEM exports** — the ledger's totals, taken
+from `forensics/phase5-obligations.json`, after 5.1, 5.2 and 5.3 landed (D76, D77).
 
 `BN` is closed but this document exists because the rest of the stratum is large, and
 D73 established that a section is not closed by writing code for it. A subphase closes
@@ -15,16 +15,34 @@ same commit. Source that no build compiles and no CI checks is invisible to ever
 | # | Subphase | Owns | Depends on | Court | Exit criterion |
 |---|---|---|---|---|---|
 | 5.0 | `ABI-PROTOTYPE` | nothing — evidence | — | prototype court, type plane | **COMPLETE** (D74) |
-| 5.1 | Leaf primitives + DER codec | the `ASN1_STRING` family, the integer family, bit string, object, `NULL`, `ASN1_PCTX`, `ASN1_SCTX`, and `ASN1_get_object`/`put_object`/`object_size`/`tag2bit`/`tag2str`/`parse`/`parse_dump`/`check_infinite_end`/`put_eoc` | Phase 4 (BIO, for the print/parse paths) | `RT-ASN1` | every export implemented or handed on; `RT-ASN1` 0 residuals |
-| 5.2 | Text conversions | `i2a_*`, `i2t_*`, `a2i_*`, `a2d_ASN1_OBJECT` | 5.1 | `RT-ASN1` extension | as above |
-| 5.3 | Codec wrappers | the 22 `d2i_*`/`i2d_*` primitive wrappers over 5.1's types, `d2i_ASN1_UINTEGER` | 5.4 (templates) | `RT-ASN1` extension | as above |
-| 5.4 | Item machinery | the 42 `*_it` accessors, `ASN1_ITEM_lookup`/`get`, `ASN1_item_*`, `ASN1_item_ex_*`, `asn1_d2i_read_bio`, NDEF, `ASN1_item_pack`/`unpack`, `ASN1_dup`, `ASN1_item_print`, `ASN1_generate_v3`/`nconf` | 5.1 | `RT-ASN1-TEMPLATE` | a caller-built template of the authority's shape round-trips, with the templates' `flags`/`tag`/`offset`/`field_name` compared |
-| 5.5 | Time | `ASN1_TIME`, `ASN1_UTCTIME`, `ASN1_GENERALIZEDTIME` | 5.1, 5.4 | `RT-ASN1-TIME` | as above |
-| 5.6 | Strings, masks, printing | `ASN1_STRING_print*`, `set_by_NID`, the string table, `ASN1_mbstring_*`, `UTF8_getc`/`putc`, `ASN1_str2mask`, `ASN1_PRINTABLE_type` | 5.1 | `RT-ASN1-STR` | as above |
-| 5.7 | `ASN1_TYPE` (ANY) | `ASN1_TYPE_*`, `d2i_/i2d_ASN1_TYPE`, `d2i_/i2d_ASN1_SEQUENCE_ANY`, `d2i_/i2d_ASN1_SET_ANY` | 5.4 | `RT-ASN1-TYPE` | as above |
-| 5.8 | NDEF BIO bridge | `BIO_f_asn1`, `BIO_new_NDEF`, `BIO_asn1_get/set_prefix/suffix` (the Phase 4 → 5 hand-offs) | 5.4 | `RT-BIO-ASN1` | as above |
-| 5.9 | PEM | the 48 `pem.h` exports: `PEM_read*`/`PEM_write*`, `PEM_bytes_read_bio`, `PEM_do_header`, `PEM_def_callback`, `PEM_dek_info`, `PEM_proc_type`, the `b2i_*`/`i2b_*` pair-code readers and writers, `PEM_X509_INFO_read*`, `PEM_Sign*` | 5.1, 5.4, 5.6 | `RT-PEM` | as above |
+| 5.1 | Leaf primitives + DER codec | the `ASN1_STRING` family, the integer family, the object layer, `ASN1_PCTX`, `ASN1_SCTX`, and `ASN1_get_object`/`put_object`/`object_size`/`tag2bit`/`tag2str`/`parse`/`parse_dump`/`check_infinite_end`/`put_eoc` | Phase 4 (BIO, for the print/parse paths) | `RT-ASN1` | **COMPLETE** (D76) |
+| 5.2 | Text conversions | `i2a_*`, `i2t_*` | 5.1 | `RT-ASN1` extension | **COMPLETE** (D76) |
+| 5.3 | Codec wrappers | the shared decoder and encoder (`asn1_d2i_ex_primitive`, `asn1_ex_c2i`, `asn1_i2d_ex_primitive`, `asn1_ex_i2c`), the free path, the 26 primitive and multi-string item descriptors, the 36 `d2i_*`/`i2d_*` wrappers of `tasn_typ.c`, `ASN1_BIT_STRING`, `ASN1_NULL`, `d2i_ASN1_UINTEGER`, `a2d_ASN1_OBJECT` | 5.1 | `RT-ASN1` extension | **COMPLETE** (D77) |
+| 5.4 | Item machinery | the remaining 14 `*_it` accessors (the two `*_ANY` and the twelve numeric ones), `ASN1_ITEM_lookup`/`get`, `ASN1_item_*`, `ASN1_item_ex_*`, `asn1_d2i_read_bio`, NDEF, `ASN1_item_pack`/`unpack`, `ASN1_dup`, `ASN1_item_print`, `d2i_/i2d_ASN1_SEQUENCE_ANY`/`SET_ANY`, `ASN1_generate_v3`/`nconf`, `ASN1_add_oid_module`/`add_stable_module`, `ASN1_STRING_TABLE_*`, `ASN1_item_i2d_mem_bio` | 5.1, 5.3 | `RT-ASN1-TEMPLATE` | a caller-built template of the authority's shape round-trips, with the templates' `flags`/`tag`/`offset`/`field_name` compared |
+| 5.5 | Time | `ASN1_TIME`, `ASN1_UTCTIME`, `ASN1_GENERALIZEDTIME` accessors | 5.1, 5.4 | `RT-ASN1-TIME` | as above |
+| 5.6 | Strings, masks, printing | `ASN1_STRING_print*`, `set_by_NID`, the string masks, `ASN1_mbstring_*`, `UTF8_getc`/`putc`, `ASN1_str2mask`, `ASN1_PRINTABLE_type`, `ASN1_STRING_to_UTF8`, `ASN1_UNIVERSALSTRING_to_string`, `ASN1_bn_print`, `ASN1_buf_print` | 5.1 | `RT-ASN1-STR` | as above |
+| 5.7 | `ASN1_TYPE` (ANY) | `ASN1_TYPE_*`, `d2i_/i2d_ASN1_TYPE` | 5.4 | `RT-ASN1-TYPE` | as above |
+| 5.8 | NDEF BIO bridge | `BIO_f_asn1`, `BIO_new_NDEF`, `BIO_asn1_get/set_prefix/suffix` (the Phase 4 → 5 hand-offs), `i2d_ASN1_bio_stream`, `PEM_write_bio_ASN1_stream` | 5.4 | `RT-BIO-ASN1` | as above |
+| 5.9 | PEM | the 27 `pem.h` exports the stratum still owns, plus the 21 it handed to Phases 7 and 10 | 5.1, 5.4, 5.6 | `RT-PEM` | as above |
 | 5.10 | Closure | nothing — evidence | all | — | `open == 0`; seal rewritten from the ledgers; FRF `sensitivity-backed`; Gemel checkpoint |
+
+### Why 5.3 landed before 5.4, when the plan said otherwise
+
+The table above used to say 5.3 depends on 5.4, and D73 used that dependency to justify
+landing the leaf types first. Reading `tasn_enc.c` and `tasn_dec.c` whole showed the
+dependency was stated the wrong way round: a wrapper is one call to `ASN1_item_d2i` /
+`ASN1_item_i2d`, and those two reach the *primitive* arms of the item machinery without
+any template being involved. So the wrappers needed the primitive path, which is 5.3's
+own work, and waiting for 5.4 would have meant writing that path twice — once here and
+once inside 5.4.
+
+The item descriptors that the primitive path needs are the 26 whose `itype` is
+`ASN1_ITYPE_PRIMITIVE` or `ASN1_ITYPE_MSTRING` from `tasn_typ.c` and `a_time.c`. They
+land in `src/asn1/items.rs` rather than in 5.4 because without them there is nothing for
+a wrapper to name. The 14 that remain are the two `*_ANY` templates (which need
+`ASN1_TEMPLATE`) and the twelve numeric items (which need `ASN1_PRIMITIVE_FUNCS`), and
+defining those without their hooks would produce descriptors that link, get called, and
+decode nothing.
 
 ### The hand-offs, which leave the stratum by disposition and not by implementation
 
@@ -71,16 +89,35 @@ is a behaviour a probe can compare.
 * `d2i_ASN1_UINTEGER` is the "broken software" reader: it ignores the sign bit and
   strips one leading `00` when the content is longer than one octet.
 
-### Bit strings (`crypto/asn1/a_bitstr.c`)
+### Bit strings (`crypto/asn1/a_bitstr.c`, `crypto/asn1/t_bitst.c`)
 
 * `flags & ASN1_STRING_FLAG_BITS_LEFT` says the unused-bit count in `flags & 0x07` is
   authoritative; clearing the flag says "recompute from the trailing zero octets".
   `ASN1_BIT_STRING_set_bit` clears the flag before writing.
 * `ossl_i2c_ASN1_BIT_STRING` writes the count byte, then the content, then
-  `p[-1] &= (0xff << bits)` — so the masked tail is observable.
+  `p[-1] &= (0xff << bits)` — so the masked tail is observable. Its length is
+  `1 + len` where `len` is what the **trailing-zero scan left**, not the string's
+  `length`; the scan decrements `len`, and every later use reads the decremented value.
 * `ossl_c2i_ASN1_BIT_STRING` rejects a content length below 1 or above `INT_MAX`, and a
   count above 7; it masks the final octet with `0xff << i` on the way in, and stores the
-  count through `ossl_asn1_string_set_bits_left`.
+  count through `ossl_asn1_string_set_bits_left` — which **always sets** the flag and
+  never clears it.
+* The declared length is one more than the stored length: the count byte is consumed
+  first, so a declared length of exactly 1 produces a **zero-length** string and no
+  allocation at all.
+* Its `err:` tail raises the *accumulator*, and on the allocation-failure arm that
+  accumulator still holds the **unused-bit count** — so a failed decode puts a reason of
+  `1..7` in the queue. Defined behaviour and observable, so reproduced.
+* `ASN1_BIT_STRING_set_bit` **truncates**: after writing it walks `length` down over
+  trailing zero octets, so setting then clearing a bit does not restore the length.
+* `ASN1_BIT_STRING_set` does *not* touch `flags`, so a stale count survives it until
+  something clears `BITS_LEFT`.
+* `ASN1_BIT_STRING_check`'s `flags` names the bits **permitted**: octets past
+  `flags_len` permit none (`mask = 0xff`), and a null or empty bit string answers 1.
+* `bnam->bitnum` repeats mark an alias pair; `name_print` prints the **first** spelling
+  and skips the repeat, while `num_asc`/`set_asc` accept either. The table is terminated
+  by a null `lname`, not a count. `name_print` writes its indent and its newline whether
+  or not anything matched.
 
 ### Objects (`crypto/asn1/a_object.c`)
 
@@ -100,11 +137,14 @@ is a behaviour a probe can compare.
 
 ### The primitive decode path (`crypto/asn1/tasn_dec.c`)
 
-`asn1_d2i_ex_primitive` is what every `d2i_ASN1_*` wrapper actually runs, and its
-branches are observable. It is the reason 5.3 depends on 5.4 rather than the reverse:
-a wrapper implemented directly, without the path, would have to reproduce all of this by
-hand and would drift.
+`asn1_d2i_ex_primitive` is what every `d2i_ASN1_*` wrapper actually runs. It was once
+recorded here as the reason 5.3 depends on 5.4; reading the file whole showed the two
+reachable arms of `asn1_item_embed_d2i` — `PRIMITIVE` without templates, and `MSTRING` —
+need no template at all, so the path is 5.3's own work and the plan was corrected.
 
+* **`len <= 0` is rejected before any header is read**, with `ASN1_R_TOO_SMALL`, and
+  `pval == NULL` with `ERR_R_PASSED_NULL_PARAMETER`. `ASN1_item_d2i` redirects a null
+  value slot to a local, so the second is only reachable through `ASN1_item_ex_d2i`.
 * A `SEQUENCE`, `SET` or `OTHER` is kept **in encoded form**, and `SEQUENCE`/`SET` must
   be constructed (`TYPE_NOT_CONSTRUCTED` otherwise).
 * A constructed string is **collected** with `asn1_collect` into a `BUF_MEM`, with a
@@ -116,20 +156,80 @@ hand and would drift.
 * A tag/class mismatch is reported as `NESTED_ASN1_ERROR` from the caller, not as the
   tag error itself.
 * Optional and absent fields return `-1` from the tag check, not `0`.
+* `MSTRING` is dispatched *before* the decoder: the actual tag is read, the class must be
+  `UNIVERSAL` (`MSTRING_NOT_UNIVERSAL`) and `ASN1_tag2bit(tag)` must intersect the item's
+  mask (`MSTRING_WRONG_TAG`), and the tag then becomes the decoder's starting `utype`.
+  Because `ASN1_tag2bit` is not a bijection, a tag outside the mask is rejected here
+  rather than reaching a codec that would have built the wrong type.
+* `asn1_ex_c2i`'s per-type length rules live in the **content codec**, not the collector:
+  a `BMPSTRING`'s odd length, a `UNIVERSALSTRING`'s non-multiple-of-four, a
+  `GENERALIZEDTIME` below 15 and a `UTCTIME` below 13 each raise their own reason.
+* A `NULL`'s value is the sentinel `1`, never an allocation; a `BOOLEAN`'s value is
+  stored **in the value slot's first four bytes**, not behind it; the string arm's
+  allocation-failure path frees the value *unconditionally* and nulls the caller's slot.
+
+### The item layer's ownership contract (`crypto/asn1/tasn_dec.c`, `tasn_fre.c`)
+
+* `asn1_item_ex_d2i_intern` ends with `if (rv <= 0) ASN1_item_ex_free(pval, it);` — so
+  **a failed decode frees the caller's value and nulls the caller's slot**. A failed
+  `d2i_ASN1_OCTET_STRING(&existing, ...)` destroys `existing`.
+* That is also why `asn1_ex_c2i`'s string arm writes `*pval = NULL` after freeing: the
+  null is what stops the item layer freeing the same string a second time.
+* `ossl_asn1_primitive_free`'s `BOOLEAN` arm writes the item's `size` — its **default** —
+  back into the slot and returns without clearing it, so a freed `ASN1_TBOOLEAN` reads as
+  `TRUE` and a freed `ASN1_FBOOLEAN` as `FALSE`.
+* `ossl_asn1_item_embed_free`'s first guard is asymmetric: a non-primitive item with a
+  null value returns immediately, a primitive one does not, because a primitive's value
+  may live in the slot.
+
+### The item descriptors (`crypto/asn1/tasn_typ.c`, `crypto/asn1/a_time.c`)
+
+* `IMPLEMENT_ASN1_TYPE(x)` is `IMPLEMENT_ASN1_TYPE_ex(x, x, 0)`, so a plain
+  `*_it()`'s `size` field is **`0`**, not `-1`.
+* `IMPLEMENT_ASN1_TYPE_ex(ASN1_BOOLEAN, ASN1_BOOLEAN, -1)` — size `-1`, "no default";
+  `ASN1_TBOOLEAN` — size `1`; `ASN1_FBOOLEAN` — size `0`. The boolean encoder reads
+  that field to decide whether to omit the value, so a wrong `size` changes the bytes.
+* `ASN1_OCTET_STRING_NDEF_it`'s `size` carries `ASN1_TFLG_NDEF` (`0x800`) rather than a
+  size, which is what `asn1_ex_i2c` tests for.
+* `IMPLEMENT_ASN1_MSTRING(x, mask)` gives `itype = MSTRING`, `utype = mask`,
+  `size = sizeof(ASN1_STRING)` and `sname` = the item's own symbol name.
+* `ASN1_NULL` is `typedef int`, so its `d2i`/`i2d`/`*_new` signatures take `int **` and
+  `const int *`, and `ASN1_NULL_new()`'s sentinel is literally address `1`.
+
+### The primitive encode path (`crypto/asn1/tasn_enc.c`)
+
+* `asn1_i2d_ex_primitive` calls the content codec **twice**: once with a null destination
+  to size it, once to fill. `len == -1` means **omit the type** and answers 0;
+  `len == -2` means **indefinite length**, which becomes `ndef = 2`, a content length of
+  0, and a two-byte end-of-contents marker.
+* The `usetag` decision is made **after** the sizing call, because the codec is what may
+  change `utype` — an `ASN1_TYPE` does exactly that, which is why `SEQUENCE`, `SET` and
+  `OTHER` must be tested on the post-call value.
+* For `SEQUENCE`, `SET` and `OTHER` no tag is written and the returned length is the
+  answer as-is, because the header is part of what the codec returned.
+* `i2d_*(val, NULL)` answers the length, `i2d_*(val, &held)` writes and advances,
+  `i2d_*(val, &null)` allocates. Only the third allocates, and a non-positive length is
+  passed straight through rather than being turned into an allocation of zero bytes.
+* An allocation failure answers `-1` **without raising**: a caller distinguishes it from
+  "would not fit" by the sign, not by the queue.
+* An `OBJECT` with null or empty content is **omitted** (`-1`); a `BOOLEAN` whose value
+  equals the item's default is omitted; a null value is omitted for every type except a
+  `BOOLEAN` item, whose value is the slot itself.
 
 ## Order of work, and why
 
 5.1 first, because everything else is written against `ASN1_STRING` and the primitive
-types and there is nothing to build them on otherwise. 5.4 before 5.3 even though the
-wrapper *names* are more familiar, because the wrappers are a thin layer over the
-template path and implementing them directly would mean writing that path twice. 5.5 and
-5.6 can proceed in parallel with 5.4's later stages — they need the primitive types, not
-the template interpreter, except for the `_it` accessors. 5.7 and 5.8 need 5.4. 5.9 needs
+types and there is nothing to build them on otherwise. 5.3 second, because the wrappers
+run the primitive path and the primitive path is 5.3's own work — the earlier plan had
+this the other way round and was corrected by reading the file (see above). 5.4 next,
+because it is what remains of the item machinery: the template interpreter, the two
+`*_ANY` items, the numeric items and their `ASN1_PRIMITIVE_FUNCS` hooks. 5.5 and 5.6 can
+proceed in parallel with 5.4's later stages — the time *accessors* and the string masks
+need the primitive types, not the template interpreter. 5.7 and 5.8 need 5.4. 5.9 needs
 5.1, 5.4 and 5.6. `SMIME_*` and the `EVP_PKEY`-shaped readers are not worked here.
 
-Nothing in this list is started before the one it depends on. `src/asn1/{layout,string,der}.rs`
-exist in the working tree and are **not committed**: they are 2,632 lines that no build
-compiles, and the commit that lands them is the one that adds `pub mod asn1;` *and* the
-court that observes them, per D73.
+Nothing in this list is started before the one it depends on. The staging branch
+`phase5-asn1` carries work that compiles and is fmt- and clippy-clean but has not yet
+been courted; a section reaches `main` only with the court that observes it, per D73.
 
 SPDX-License-Identifier: Apache-2.0

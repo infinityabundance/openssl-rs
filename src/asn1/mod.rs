@@ -16,6 +16,8 @@
 //!   including the two's-complement content codecs (`a_object.c`, `a_int.c`).
 //! * [`bitstr`] — `ASN1_BIT_STRING`'s bit operations and its two content codecs
 //!   (`a_bitstr.c`, `t_bitst.c`).
+//! * [`fre`] — the free path (`tasn_fre.c`), which is what makes a failed decode
+//!   destroy the caller's value rather than leave it half-filled.
 //! * [`i2d`] — the shared encoder (`tasn_enc.c`).
 //! * [`items`] — the `ASN1_ITEM` descriptors for the coded types and the
 //!   `*_it()` accessors that hand them out (`tasn_typ.c`, `a_time.c`). The
@@ -39,6 +41,7 @@
 pub mod bitstr;
 pub mod d2i;
 pub mod der;
+pub mod fre;
 pub mod i2d;
 pub mod items;
 pub mod layout;

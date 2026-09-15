@@ -255,13 +255,13 @@ Phase 5 becomes `complete` when the ledger's `open_in_this_stratum` reaches zero
 every court in `artifacts/phase5/COURTS.json` passes. Both are derived, not asserted:
 `forensics/tools/phase_state.py` reads the ledger and the court results, and the
 dependency-order rule keeps a later stratum from claiming completion first. As of the
-current artefacts that is **226 open obligations** (199 ASN.1, 27 PEM), after the
-`BN_*` surface closed and the ASN.1 leaf surface landed (D76). The hand-offs D73
-recorded are now applied in `HANDED_ON` rather than stated in prose, which moved
-`SMIME_*` to Phase 12, the PKCS#8 and `b2i_*`/`i2b_*` readers to Phase 10 and the
-`EVP_PKEY`-shaped `PEM_read_bio_PrivateKey` family to Phase 7.
+current artefacts that is **155 open obligations** (128 ASN.1, 27 PEM), after the
+`BN_*` surface closed and the ASN.1 leaf surface and the shared DER codec landed (D76,
+D77). The hand-offs D73 recorded are applied in `HANDED_ON` rather than stated in prose,
+which moved `SMIME_*` to Phase 12, the PKCS#8 and `b2i_*`/`i2b_*` readers to Phase 10 and
+the `EVP_PKEY`-shaped `PEM_read_bio_PrivateKey` family to Phase 7.
 
-## 9a. The ASN.1 leaf surface
+## 9a. The ASN.1 leaf surface and the shared DER codec
 
 The stratum's first ASN.1 section landed with its court, and the court corrected it
 three times on the way in (D76): a pre-decrement where the authority writes
@@ -270,17 +270,27 @@ two raise reasons that had been typed rather than read (`102`/`116`, not `101`/`
 and `asn1_parse2` returning `1` for a failed parse, so a caller that checked the return
 alone believed a truncated parse had succeeded.
 
+The second section landed the shared decoder and encoder in both halves, the free path,
+the 26 primitive and multi-string item descriptors, the 36 `d2i_*`/`i2d_*` wrappers of
+`tasn_typ.c`, `ASN1_BIT_STRING`, `ASN1_NULL` and `d2i_ASN1_UINTEGER` (D77). Restructuring
+the decoder found two defects in what D76 had landed — an unconditional free the old code
+made conditional, and a `ASN1_R_TOO_SMALL` check the old code did not make at all — and
+the court found a third thing that is an ownership contract rather than a defect: a failed
+decode **frees the caller's value and nulls the caller's slot**, which is now
+`src/asn1/fre.rs`.
+
 What is claimed: the DER header codec, `ASN1_STRING` and its fifteen types, the
 `ASN1_INTEGER`/`ASN1_ENUMERATED` family with its two's-complement content codec,
-the `ASN1_OBJECT` layer, the `BIGNUM` bridges, `ASN1_PCTX`/`ASN1_SCTX`, the text
-writers and three `d2i` readers agree with the authority on the 644 observations
-`RT-ASN1` takes, on one platform and for one build profile.
+`ASN1_BIT_STRING` with its bit operations and its two content codecs, `ASN1_NULL`, the
+`ASN1_OBJECT` layer, the `BIGNUM` bridges, `ASN1_PCTX`/`ASN1_SCTX`, the text writers, the
+36 `d2i_*`/`i2d_*` wrappers, `d2i_ASN1_UINTEGER`, and the 26 `*_it()` descriptors — the
+last compared field by field rather than through an encoding — agree with the authority on
+the 1,306 observations `RT-ASN1` takes, on one platform and for one build profile.
 
-What is *not* claimed: anything about the 226 exports the stratum still owns. The
-template machinery, the 42 `*_it` accessors, the remaining codec wrappers,
-`ASN1_BIT_STRING`, `ASN1_NULL`, the time types, the string masks and printing,
-`ASN1_TYPE`, the NDEF BIO bridge and all 48 PEM exports are unimplemented, and no
-probe calls them.
+What is *not* claimed: anything about the 155 exports the stratum still owns. The
+template interpreter, the 14 remaining `*_it` descriptors, the time accessors, the string
+masks and printing, `ASN1_TYPE`, the NDEF BIO bridge, `asn1_d2i_read_bio` and all 27 PEM
+exports are unimplemented, and no probe calls them.
 
 ## 10. FRF and Gemel
 

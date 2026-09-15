@@ -460,12 +460,19 @@ pub(crate) unsafe fn item_d2i(
         hdrlen: 0,
     };
     // SAFETY: `pval` is a live slot, and `pp`/`it` are the caller's.
-    if unsafe { embed_d2i(pval, pp, len, it, -1, 0, false, &mut ctx) } > 0 {
-        // SAFETY: `pval` is a live slot.
-        unsafe { *pval }
-    } else {
-        core::ptr::null_mut()
+    let rv = unsafe { embed_d2i(pval, pp, len, it, -1, 0, false, &mut ctx) };
+    if rv <= 0 {
+        // A failed decode **frees the caller's value and nulls the caller's
+        // slot**. That is the authority's `asn1_item_ex_d2i_intern`, and it is the
+        // ownership contract rather than a detail of the failure path: a caller
+        // that decodes into an existing object and fails does not keep it.
+        //
+        // SAFETY: `pval` is a live slot and `it` is the caller's item.
+        unsafe { crate::asn1::fre::item_ex_free(pval, it) };
+        return core::ptr::null_mut();
     }
+    // SAFETY: `pval` is a live slot.
+    unsafe { *pval }
 }
 
 /// `asn1_item_embed_d2i`, restricted to the `PRIMITIVE`-without-templates and

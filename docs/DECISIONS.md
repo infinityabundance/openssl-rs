@@ -3313,3 +3313,77 @@ observations in total; phases 0–4 are complete and phase 5 is in progress.
 42 `*_it` accessors), the rest of the codec wrappers, `ASN1_BIT_STRING`, `ASN1_NULL`,
 the time types, the string masks and printing, `ASN1_TYPE`, the NDEF BIO bridge and
 all 48 PEM exports are unimplemented. No claim here covers them.
+
+
+## D77 — The shared DER codec lands in both halves, and the court finds an ownership contract
+
+D76 recorded what the ASN.1 leaf surface claimed and what the 226 did not. This lands
+the next section: the shared decoder and encoder, the free path, the item descriptors the
+primitive path names, the wrapper family of `tasn_typ.c`, `ASN1_BIT_STRING`, `ASN1_NULL`
+and `d2i_ASN1_UINTEGER`. `open_obligations[phase5]` is `226 -> 155` and
+`implemented[libcrypto]` is `734 -> 805`, moving together as they must. `RT-ASN1` is
+`644 -> 1306` observations with no residuals; 36 courts and 9,437 observations in total.
+
+**The wrappers were landed before the template machinery, and the plan was wrong, not the
+work.** D73 and `docs/PHASE-5-SUBPHASES.md` both put 5.4 (templates) before 5.3 (the
+codec wrappers), on the reasoning that a wrapper is a thin layer over `ASN1_item_d2i` and
+implementing it directly would mean writing the item path twice. Reading `tasn_dec.c` and
+`tasn_enc.c` whole shows the dependency points the other way: `ASN1_item_d2i` reaches the
+*primitive* arms of the item machinery with no template involved, so the wrappers need
+`asn1_d2i_ex_primitive` — which is 5.3's own work — and waiting would have meant writing
+that path here and again inside 5.4. The subphase table is corrected rather than the
+observation being kept to.
+
+**Restructuring the decoder found two defects in the file D76 landed.** Neither was
+reachable from the three wrappers D76 shipped, which is why the court had not seen them:
+
+* `asn1_ex_c2i`'s string arm frees the value **unconditionally** and nulls the caller's
+  slot on an allocation failure. The old code freed only a value it had just allocated,
+  so a `d2i_*` into an existing string would have handed the caller back a slot pointing
+  at a half-filled object the authority had destroyed.
+* `asn1_item_embed_d2i` raises `ASN1_R_TOO_SMALL` for `len <= 0` **before any header is
+  read**. The old code went on to the header reader and reported a different reason for
+  the same failure — the same return value with the wrong queue entry, which is exactly
+  what this court compares.
+
+**The court found a third thing, and it is an ownership contract rather than a bug.**
+`asn1_item_ex_d2i_intern` ends with `if (rv <= 0) ASN1_item_ex_free(pval, it);`. So a
+failed decode **frees the caller's value and nulls the caller's slot**, and a caller that
+decodes into an existing object and fails does not keep it. The first probe case to reuse
+a string and fail showed `bsd.keepstate` as `authority=0 candidate=1`, and the reading
+that followed is what produced `src/asn1/fre.rs`. It also explains a shape that had looked
+redundant: `asn1_ex_c2i`'s string arm nulls the caller's slot after freeing, and that null
+is what stops the item layer freeing the same string a second time. Neither the return
+value nor the error code differs in that case — only the caller's pointer, which no
+single-call probe of one symbol would have caught.
+
+**The item descriptors are compared field by field, not through an encoding.** `ASN1_ITEM`
+is declared with its fields in `asn1t.h`, so the probe reads every one of them for all 26
+descriptors. That found the fact that `IMPLEMENT_ASN1_TYPE(x)` passes `0` — not `-1` — as
+the item's `size`, which a note written earlier had recorded the other way. `size` is the
+field that decides whether a `BOOLEAN` is omitted from its encoding, so the wrong value
+would have changed bytes rather than failing.
+
+**Reason codes are now generated, not typed.** `forensics/tools/gen_err_reasons.py` reads
+every `<LIB>_R_<NAME>` decimal `#define` under the production authority's `include/`,
+`crypto/`, `ssl/` and `providers/` trees and emits `src/runtime/err_reasons.rs`: 1,839
+constants over 541 headers, each citing the header that declares it. It reads the headers
+independently of `gen_err_strings.parse_reason_codes` and cross-checks against it, so two
+readers of the same fact must agree before the file is written. D76 recorded that
+`ASN1_R_BAD_OBJECT_HEADER` and `ASN1_R_EXPECTING_AN_OBJECT` had been typed as `101`/`127`
+when they are `102`/`116`; both are now references into that table, and the class of
+mistake is gone rather than fixed once.
+
+**What is not done.** The remaining 155: 128 ASN.1 and 27 PEM. The template interpreter
+(`ASN1_item_*`, `ASN1_item_ex_*`, `ASN1_ITEM_lookup`/`get`), the 14 remaining `*_it`
+descriptors (the two `*_ANY` items and the twelve numeric ones, which need
+`ASN1_PRIMITIVE_FUNCS` hooks), the time accessors, the string masks and printing,
+`ASN1_TYPE`, the NDEF BIO bridge, `d2i_ASN1_read_bio` and all 27 PEM exports are
+unimplemented. No claim here covers them, and the seal's §9a is rewritten to say so.
+
+**The staging branch.** The process instruction for this stratum is to push work
+frequently so that a long stretch does not have to be re-derived if a session ends.
+`phase5-asn1` carries it: commits that compile and are fmt- and clippy-clean but are not
+yet courted are staged there, and a section reaches `main` only with the court that
+observes it (D73's rule). This section's court is `RT-ASN1` at 1,306 observations with no
+residuals, so the branch merges with this decision rather than after it.
