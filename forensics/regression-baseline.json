@@ -156,7 +156,7 @@
       "verdict": "pass"
     },
     "RT-LIBCTX": {
-      "observations": 79,
+      "observations": 81,
       "verdict": "pass"
     },
     "RT-MEM": {

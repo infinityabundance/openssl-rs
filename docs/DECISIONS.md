@@ -5388,3 +5388,106 @@ behaviour no consumer can reach.
 | `RT-LIBCTX` observations | 75 | 79 |
 | index slots filled | 2 | 4 |
 | runtime courts in the FRF store | 39 | 40 |
+
+---
+
+## D109 — the namemap: a bit-5 mask, an order-dependent refusal, and a pre-population deferred whole
+
+**What landed.** Phase 6.6b: `crypto/core_namemap.c`, 584 lines, as
+`src/context/namemap.rs` — all ten internal functions
+(`ossl_namemap_new/free/empty/stored/name2num/name2num_n/num2name/doall_names/add_name/add_names`
+plus the two context-slot constructors). It adds **no export**, so what moves is
+slot 4: `RT-LIBCTX` goes from 79 to 81 observations, comparing the slot's presence,
+stability, per-context distinctness and difference from the object's own address
+against the authority. Five of the eighteen index slots are filled now.
+
+**The comparison is a bit mask, not a case fold.** `name2num` keys its lookup
+through `ossl_ht_strcase`, which is `tgt[i] = ~0x20 & src[i]`. For ASCII letters
+that is a case fold, which is the documented intent. For every other byte it is
+not: `'!'` (`0x21`) and `0x01` both map to `0x01`, so two names differing only by
+bit 5 in a non-letter position are the same name to this map. Reproduced rather
+than normalised, because a map that answered differently from the authority for
+such a name is exactly the kind of divergence this project exists not to have.
+The same macro caps the key at **63** bytes — two names sharing a 63-byte prefix
+are one name — which is also reproduced and unit-tested. The explicit-length form
+keys on a prefix instead, so `name2num_n(nm, "sha256", 3)` asks for `"sha"`.
+
+**`NDEBUG` is defined in the admitted build, and that decides a branch.** The two
+`ossl_assert`s in this file are `OPENSSL_die(...)` in a debug build and a plain
+`(x) != 0` under `NDEBUG`; the admitted profile's `configdata.pm` lists `NDEBUG`,
+so a NULL namemap **reaches the `ERR_R_PASSED_NULL_PARAMETER` raise** rather than
+aborting the process. Read from the authority's own build record, not assumed:
+the opposite assumption turns a raise into a process death, and the generator had
+already recorded that site as an active raise.
+
+**The conflict refusal is order-dependent, and the unit test found it.** The first
+run of the test asserted the intuitive thing — that
+`ossl_namemap_add_names(nm, 0, "fresh:known", ':')` is refused because `known`
+belongs to another number — and failed, because it is **accepted**. The number
+being built starts as the caller's (0 for "none") and a part only *sets* it when
+that part resolves to an existing number, so `fresh` resolves to 0 (changing
+nothing), `known` then resolves to its number, and no comparison against `fresh`
+ever happens. The conflict is reachable only between a part that comes *after* one
+that already resolved. Both halves are now asserted, and the behaviour is in the
+module documentation, because it is the sort of thing a later reader would
+otherwise "fix".
+
+Also reproduced and tested: `max_number` is stored on **every** successful
+addition, so appending an alias to an existing number can *lower* it — the only
+reader is `ossl_namemap_empty`, which asks whether it is zero, so the oddity is
+invisible and still reproduced; and `stored` makes `ossl_namemap_free` a no-op,
+with the context's destructor clearing the flag first.
+
+**The pre-population is deferred whole, and the reason is the guard.**
+`ossl_namemap_stored` pilfers the legacy `OBJ_NAME` database and the
+`EVP_PKEY_ASN1_METHOD` set on first use of an empty map, then adds four RSA-PSS
+aliases — all inside `if (ossl_namemap_empty(namemap))`. Every one of those names
+takes a number, so the numbering of everything registered later depends on them.
+That population cannot be built before the legacy method database and
+`OBJ_NAME_do_all` exist (Phase 13). Running the RSA-PSS block *alone* would be
+worse than running none of it: the map would no longer be empty, so a later phase
+adding the legacy load would find the guard false and skip it entirely, silently
+leaving the legacy names out of a map that had already been numbered wrongly.
+Deferring both together keeps the ordering decision in one place.
+
+**The container is not the authority's table.** The authority's `name -> number`
+map is `crypto/hashtable/hashtable.c`: open addressing over 512 neighbourhoods,
+FNV-1a, with `collision_check` turning an excessive conflict rate into
+`CRYPTO_R_TOO_MANY_NAMES`. This module uses a `HashMap` keyed on the transformed
+bytes, so the *lookup* behaviour is identical and the collision failure is
+unreachable. Recorded rather than papered over: the site constant
+`CORE_NAMEMAP_288` exists with `dynamic_reason: true` and one function beside it
+carries the `#[allow(dead_code)]` that says why a raise which cannot happen is
+not called. Reproducing it would mean reproducing the hash function too, and no
+observable depends on which of two names occupies which slot.
+
+**The error coordinates are generated, and `crypto/core_namemap.c` is now covered.**
+`gen_err_raise_sites.py` gained the file as part of this stratum's obligation set
+by the same rule Phase 4 and Phase 5 used — every authority file in the subsystem
+that raises belongs to it. Regeneration was **purely additive**: 767 sites to 772,
+nothing removed, nothing changed. One of the five is the first site in the table
+whose reason is chosen at run time; the generator classified it `dynamic_reason`
+rather than guessing which of its two constants the call site means.
+
+**A gap this exposed, recorded rather than fixed here.**
+`src/runtime/err_sites.rs` and `forensics/atlas/err-raise-sites.json` are
+generated but are **not** in `evidence_determinism.py`'s generator or comparison
+lists, so CI would not notice if a future edit to the generator — or to
+`COVERED_FILES` — left the committed coordinates stale. They are contract
+(`ERR_get_error_all` reports them), so this is a real incompleteness in the
+evidence machinery rather than a cosmetic one. The remedy is to add the generator
+and both outputs to that tool and to `check_evidence_portability.py`'s exercised
+set; the cost is that the tool would then need the authority source tree and
+`configdata.pm` on the host runner, which are both committed.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 99 / 62 | 99 / 62 (no export) |
+| `implemented[libcrypto]` | 1,073 | 1,073 |
+| Phase 6 courts / observations | 4 / 1,353 | 4 / 1,355 |
+| `RT-LIBCTX` observations | 79 | 81 |
+| index slots filled | 4 | 5 |
+| `err_sites.rs` coordinates | 767 | 772 |
+| unit tests | 183 | 189 |

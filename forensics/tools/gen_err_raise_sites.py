@@ -251,6 +251,14 @@ COVERED_FILES = [
     ("crypto/params_dup.c", "PARAMS_DUP"),
     ("crypto/params_from_text.c", "PARAMS_FROM_TEXT"),
     ("crypto/param_build.c", "PARAM_BUILD"),
+    # Phase 6.6b: the name map. Five raise sites, and one of them is the first in this
+    # table whose reason is chosen at run time — `core_namemap.c:288` raises
+    # `(ret < 0) ? CRYPTO_R_TOO_MANY_NAMES : ERR_R_INTERNAL_ERROR`, so the generator
+    # records it with `dynamic_reason` and the caller supplies which of the two it is.
+    # `crypto/context.c`, `crypto/core_algorithm.c`, `crypto/thread/internal.c` and
+    # `crypto/threads_common.c` are the rest of this stratum's files and raise nothing,
+    # so they are absent rather than listed with an empty contribution.
+    ("crypto/core_namemap.c", "CORE_NAMEMAP"),
 ]
 
 # Raise macros, in the forms the authority actually spells them. `ERR_raise`

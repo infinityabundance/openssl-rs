@@ -7700,6 +7700,56 @@ pub(crate) const PARAM_BUILD_471: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `namemap_add_name` at `crypto/core_namemap.c:288` (ERR_raise dynamic reason).
+pub(crate) const CORE_NAMEMAP_288: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/core_namemap.c",
+    line: 288,
+    func: c"namemap_add_name",
+    lib: 15,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `ossl_namemap_add_names` at `crypto/core_namemap.c:321` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const CORE_NAMEMAP_321: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/core_namemap.c",
+    line: 321,
+    func: c"ossl_namemap_add_names",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_namemap_add_names` at `crypto/core_namemap.c:349` (CRYPTO_R_BAD_ALGORITHM_NAME).
+pub(crate) const CORE_NAMEMAP_349: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/core_namemap.c",
+    line: 349,
+    func: c"ossl_namemap_add_names",
+    lib: 15,
+    reason: 117,
+    dynamic_reason: false,
+};
+
+/// `ossl_namemap_add_names` at `crypto/core_namemap.c:359` (CRYPTO_R_CONFLICTING_NAMES).
+pub(crate) const CORE_NAMEMAP_359: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/core_namemap.c",
+    line: 359,
+    func: c"ossl_namemap_add_names",
+    lib: 15,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `ossl_namemap_add_names` at `crypto/core_namemap.c:378` (ERR_R_INTERNAL_ERROR).
+pub(crate) const CORE_NAMEMAP_378: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/core_namemap.c",
+    line: 378,
+    func: c"ossl_namemap_add_names",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
 /// Every recorded raise site, in authority source order.
 ///
 /// This is the complete inventory for the covered files, including the
@@ -8478,4 +8528,9 @@ pub(crate) static ALL: &[ErrSite] = &[
     PARAM_BUILD_387,
     PARAM_BUILD_459,
     PARAM_BUILD_471,
+    CORE_NAMEMAP_288,
+    CORE_NAMEMAP_321,
+    CORE_NAMEMAP_349,
+    CORE_NAMEMAP_359,
+    CORE_NAMEMAP_378,
 ];
