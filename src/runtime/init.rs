@@ -557,6 +557,113 @@ pub(crate) fn stopped() -> bool {
 }
 
 // ---------------------------------------------------------------------------
+// Fatal reporting, and the fork hooks
+// ---------------------------------------------------------------------------
+
+/// `void OPENSSL_die(const char *message, const char *file, int line)`
+///
+/// The authority's fatal-error path: `OPENSSL_showfatal("%s:%d: OpenSSL internal
+/// error: %s\n", file, line, message)` and then, on every non-Windows platform,
+/// `abort()`.
+///
+/// Three details are contract rather than cosmetics, and each is reproduced:
+///
+/// * the text goes to **fd 2 directly**, so it is not interleaved with anything
+///   `stdio` has buffered — the authority's `vfprintf(stderr, ...)` is unbuffered
+///   for the same reason;
+/// * a NULL `file` renders as `(null)`, which is what glibc's `%s` does and what
+///   the authority therefore prints;
+/// * `abort()` follows unconditionally. A caller that reached here has decided the
+///   process cannot continue, so there is no fall-through to a return value.
+///
+/// A court can observe this exactly: run it in a child, and compare the exit
+/// status (SIGABRT) and the bytes on stderr. Nothing else in this module may be
+/// relied on afterwards, which is what `abort` means.
+///
+/// # Safety
+/// `message` and `file` must each be NULL or a NUL-terminated C string.
+#[no_mangle]
+pub unsafe extern "C" fn OPENSSL_die(message: *const c_char, file: *const c_char, line: c_int) {
+    let mut out: Vec<u8> = Vec::with_capacity(128);
+    // SAFETY: `file` and `message` are each NULL or NUL-terminated per the
+    // caller's contract, which `c_str_bytes` documents.
+    let (file_bytes, message_bytes) = unsafe { (c_str_bytes(file), c_str_bytes(message)) };
+    out.extend_from_slice(file_bytes.unwrap_or(b"(null)"));
+    out.push(b':');
+    out.extend_from_slice(line.to_string().as_bytes());
+    out.extend_from_slice(b": OpenSSL internal error: ");
+    out.extend_from_slice(message_bytes.unwrap_or(b"(null)"));
+    out.push(b'\n');
+    write_all_fd2(&out);
+    // SAFETY: `abort` has no preconditions and does not return, so nothing after
+    // this line runs. The declared return type is `void` because that is the
+    // authority's, and `ABI-PROTOTYPE` compares it; `!` here would be a different
+    // declaration of the same call.
+    unsafe { abort() }
+}
+
+/// The bytes of a NUL-terminated C string, or `None` for NULL.
+///
+/// # Safety
+/// `p` must be NULL or a NUL-terminated C string.
+unsafe fn c_str_bytes<'a>(p: *const c_char) -> Option<&'a [u8]> {
+    if p.is_null() {
+        return None;
+    }
+    // SAFETY: `p` is NUL-terminated per the caller's contract.
+    Some(unsafe { core::ffi::CStr::from_ptr(p) }.to_bytes())
+}
+
+/// Write to fd 2, ignoring the result exactly as `vfprintf(stderr, ...)`'s caller
+/// does: there is nothing useful to do if stderr is closed, and the authority
+/// continues to `abort()` regardless.
+fn write_all_fd2(bytes: &[u8]) {
+    let mut written = 0usize;
+    while written < bytes.len() {
+        // SAFETY: `bytes` is a live slice and the offsets stay inside it.
+        let n = unsafe {
+            crate::runtime::bio::sys::write(
+                2,
+                bytes[written..].as_ptr().cast(),
+                bytes.len() - written,
+            )
+        };
+        if n <= 0 {
+            return;
+        }
+        written += n as usize;
+    }
+}
+
+/// `void OPENSSL_fork_prepare(void)`
+///
+/// An empty function on this profile, and that is the authority's own body:
+/// `crypto/threads_lib.c` compiles the three hooks only for `OPENSSL_SYS_UNIX`
+/// and `!OPENSSL_NO_DEPRECATED_3_0`, and gives all three an empty body because
+/// glibc's `pthread_atfork` machinery already covers what they used to do. The
+/// profile defines neither exclusion, which was measured rather than assumed.
+///
+/// They remain real exports because a precompiled binary links against them, and
+/// the Phase 2 loader court resolves them at their declared ELF version.
+#[no_mangle]
+pub extern "C" fn OPENSSL_fork_prepare() {}
+
+/// `void OPENSSL_fork_parent(void)` — empty on this profile; see
+/// [`OPENSSL_fork_prepare`].
+#[no_mangle]
+pub extern "C" fn OPENSSL_fork_parent() {}
+
+/// `void OPENSSL_fork_child(void)` — empty on this profile; see
+/// [`OPENSSL_fork_prepare`].
+#[no_mangle]
+pub extern "C" fn OPENSSL_fork_child() {}
+
+unsafe extern "C" {
+    /// `void abort(void)`, from `<stdlib.h>`.
+    fn abort() -> !;
+}
+
+// ---------------------------------------------------------------------------
 // Runtime identity
 // ---------------------------------------------------------------------------
 

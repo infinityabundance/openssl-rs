@@ -4544,3 +4544,80 @@ their ABI, resolving each at its declared ELF version.
 `declaration_is_generated` is now a **defect** rather than a gap, and the court fails
 on it along with `not_found`, `unreadable_macros`, the C-plane mismatches and a
 sensitivity control that does not fire.
+
+## D99 — the 29 reopened obligations, 24 implemented and 5 handed on with a real dependency
+
+D97 left Phase 3's ledger with twenty-nine `open` exports. This is what happened to
+them, and the split is the interesting part: **five are not Phase 3's** once you read
+past the declaring header, and each of the five names a dependency that can be checked
+rather than an amount of work that cannot.
+
+**Twenty-four implemented** (`docs/PHASE-6-SUBPHASES.md` 6.2), in three new modules
+whose existence is itself the finding that Phase 3's prefix lists had hidden:
+
+  * `src/runtime/trace.rs` — the ten `OSSL_trace_*` exports. The pinned profile is
+    configured `no-trace`, so eight answer a constant; but the two category
+    interrogators and `OSSL_trace_string` are outside every `#ifndef` and are fully
+    live. `OSSL_TRACE_CATEGORY_NUM` is 21 and the name table is order-dependent, and
+    `OSSL_trace_string` is where the interesting behaviour is: `full == 0` with
+    `size > 80` writes a `[len N limited to 80]: ` prefix, `text == 0` masks control
+    characters while preserving newlines and appends one if the input lacked it, and
+    the output goes through `%.*s`, so an embedded NUL does not truncate it.
+  * `src/runtime/err_state.rs` — the five `OSSL_ERR_STATE_*` exports, split out of
+    `err.rs` the way `err_save.c` is split out of `err.c`, because they move whole
+    state structures and transfer ownership of the attached data buffers.
+  * `src/runtime/uid.rs` — `OPENSSL_isservice` and `OPENSSL_issetugid`. Both are
+    platform predicates whose answer is decided entirely by which `#if` arm is
+    selected, and `uid.c` has five. This profile takes the glibc one,
+    `getauxval(AT_SECURE) != 0`; the `getuid() != geteuid()` fallback beside it is
+    deliberately **not** transcribed, because a literal written from the source would
+    be an unmeasured claim about a libc this crate has not observed, and the two
+    disagree for a process that was merely given a group it did not ask for.
+
+plus `OPENSSL_die`, the three `OPENSSL_fork_*` hooks (empty bodies on this profile,
+which is the authority's own body), `err_free_strings_int` (the authority's body is
+the comment `/* obsolete */`), `OSSL_get_thread_support_flags` (a compile-time
+constant, `3` here) and `OSSL_sleep`.
+
+**Five deferred, with the dependency named.** `OSSL_get_max_threads` and
+`OSSL_set_max_threads` read and write the thread-tracking ex-data slot of an
+`OSSL_LIB_CTX`; `OPENSSL_thread_stop_ex` calls `ossl_lib_ctx_get_concrete`;
+`OPENSSL_thread_stop` is the other half of a pair whose first half is a later
+stratum's, and `OPENSSL_cleanup` runs the handler list that `OPENSSL_atexit` builds;
+and `OPENSSL_atexit` itself pins the handler's shared object with
+`DSO_dsobyaddr`/`DSO_free`, a block the profile compiles in — `OPENSSL_USE_NODELETE`,
+`OPENSSL_NO_PINSHARED` and `DSO_NONE` are all unset, which was measured in the court
+rather than read off the configure line. Faking that pin would be a silent
+behavioural substitution for a dependency that exists.
+
+### The court found two real defects, and both were mine
+
+`RT-RUNTIME-EXT` (94 observations) is the differential court for the
+twenty-four, and the first run failed on two things that no amount of re-reading had
+caught:
+
+  * **`OSSL_ERR_STATE_save` released nothing.** The authority memsets the thread's
+    state after copying it into the destination, so the ownership of the attached
+    data buffers **moves**. The implementation called `clear_all(false)` — the
+    authority's own *comment* says "just clear the thread state" — and that function's
+    documented behaviour for an owned buffer is to keep the pointer and truncate it in
+    place. So both states owned the same buffers, and a state reused across an
+    `ERR_clear_error` double-freed. `ErrState::zeroed` exists because the code is what
+    a caller observes and the comment is not.
+  * **`ossl_iscntrl` was wrong above 0x7f.** `ossl_ctype_check` is
+    `a >= 0 && a < max && (map[a] & mask) != 0` with `max == 128`, so a byte at or
+    above 128 is **not** a control character. The first version assumed a
+    `CTYPE_MASK_ascii` fallback and masked those bytes into spaces; the probe passes
+    `0x80` through `OSSL_trace_string`, where the authority passes it through
+    unchanged.
+
+Neither was reachable by inspection and neither would have been found by the unit
+tests, which is the same lesson D65, D76, D90 and D98 each record from a different
+angle. The first is worth naming precisely because the *docstring* of the function
+being misused described the correct behaviour, and the code that used it read
+plausibly.
+
+Phase 3's ledger is at zero open again and `forensics/phase-state.json` derives it
+`complete`; its seal gains an appended §11 rather than an edit. `implemented` for
+`libcrypto` moves 932 → 956 and `libcrypto`'s scaffolds fall to 4,940.
+

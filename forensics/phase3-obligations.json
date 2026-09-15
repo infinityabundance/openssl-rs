@@ -1,12 +1,12 @@
 {
   "authority": "openssl-3.6.4-production",
   "body": {
-    "complete": false,
+    "complete": true,
     "counts": {
       "atlas_owned": 294,
-      "deferred_to_later_phase": 38,
-      "implemented": 227,
-      "open_in_this_stratum": 29,
+      "deferred_to_later_phase": 43,
+      "implemented": 251,
+      "open_in_this_stratum": 0,
       "owned": 294
     },
     "deferred": [
@@ -313,10 +313,51 @@
         "owning_phase": 4,
         "reason": "writes to a BIO/FILE sink; BIO is Phase 4",
         "symbol": "OPENSSL_LH_stats_bio"
+      },
+      {
+        "declaring_header": "crypto.h",
+        "implemented_by_owner": false,
+        "module": "src/runtime/init.rs",
+        "owning_phase": 6,
+        "reason": "pins the handler's shared object with DSO_dsobyaddr/DSO_free, which the profile compiles in; DSO is Phase 6.8",
+        "symbol": "OPENSSL_atexit"
+      },
+      {
+        "declaring_header": "crypto.h",
+        "implemented_by_owner": false,
+        "module": "src/runtime/thread.rs",
+        "owning_phase": 6,
+        "reason": "runs the thread's event handlers for a library context; OPENSSL_thread_stop_ex calls ossl_lib_ctx_get_concrete, and OPENSSL_cleanup's OPENSSL_thread_stop call runs the handler list OPENSSL_atexit builds; the library context is Phase 6",
+        "symbol": "OPENSSL_thread_stop"
+      },
+      {
+        "declaring_header": "crypto.h",
+        "implemented_by_owner": false,
+        "module": "src/runtime/thread.rs",
+        "owning_phase": 6,
+        "reason": "runs the thread's event handlers for a library context; OPENSSL_thread_stop_ex calls ossl_lib_ctx_get_concrete, and OPENSSL_cleanup's OPENSSL_thread_stop call runs the handler list OPENSSL_atexit builds; the library context is Phase 6",
+        "symbol": "OPENSSL_thread_stop_ex"
+      },
+      {
+        "declaring_header": "thread.h",
+        "implemented_by_owner": false,
+        "module": "src/runtime/thread.rs",
+        "owning_phase": 6,
+        "reason": "reads and writes the thread-tracking ex-data slot of an OSSL_LIB_CTX (OSSL_LIB_CTX_GET_THREADS -> ossl_lib_ctx_get_data(CTX, OSSL_LIB_CTX_THREAD_INDEX)); the library context is Phase 6",
+        "symbol": "OSSL_get_max_threads"
+      },
+      {
+        "declaring_header": "thread.h",
+        "implemented_by_owner": false,
+        "module": "src/runtime/thread.rs",
+        "owning_phase": 6,
+        "reason": "reads and writes the thread-tracking ex-data slot of an OSSL_LIB_CTX (OSSL_LIB_CTX_GET_THREADS -> ossl_lib_ctx_get_data(CTX, OSSL_LIB_CTX_THREAD_INDEX)); the library context is Phase 6",
+        "symbol": "OSSL_set_max_threads"
       }
     ],
     "deferred_by_phase": {
       "4": 16,
+      "6": 5,
       "13": 22
     },
     "handoffs_discharged": {},
@@ -500,6 +541,10 @@
       "OPENSSL_buf2hexstr_ex",
       "OPENSSL_cleanse",
       "OPENSSL_cleanup",
+      "OPENSSL_die",
+      "OPENSSL_fork_child",
+      "OPENSSL_fork_parent",
+      "OPENSSL_fork_prepare",
       "OPENSSL_gmtime",
       "OPENSSL_gmtime_adj",
       "OPENSSL_gmtime_diff",
@@ -509,6 +554,8 @@
       "OPENSSL_info",
       "OPENSSL_init",
       "OPENSSL_init_crypto",
+      "OPENSSL_isservice",
+      "OPENSSL_issetugid",
       "OPENSSL_sk_deep_copy",
       "OPENSSL_sk_delete",
       "OPENSSL_sk_delete_ptr",
@@ -546,8 +593,26 @@
       "OPENSSL_version_minor",
       "OPENSSL_version_patch",
       "OPENSSL_version_pre_release",
+      "OSSL_ERR_STATE_free",
+      "OSSL_ERR_STATE_new",
+      "OSSL_ERR_STATE_restore",
+      "OSSL_ERR_STATE_save",
+      "OSSL_ERR_STATE_save_to_mark",
+      "OSSL_get_thread_support_flags",
+      "OSSL_sleep",
+      "OSSL_trace_begin",
+      "OSSL_trace_enabled",
+      "OSSL_trace_end",
+      "OSSL_trace_get_category_name",
+      "OSSL_trace_get_category_num",
+      "OSSL_trace_set_callback",
+      "OSSL_trace_set_channel",
+      "OSSL_trace_set_prefix",
+      "OSSL_trace_set_suffix",
+      "OSSL_trace_string",
       "OpenSSL_version",
-      "OpenSSL_version_num"
+      "OpenSSL_version_num",
+      "err_free_strings_int"
     ],
     "module_prefixes": [
       {
@@ -671,153 +736,7 @@
       }
     ],
     "note": "A deferred symbol is a recorded hand-off to the phase that owns the subsystem it needs, not a parity claim, and the hand-off is sticky: the owning stratum implementing it later does not move the obligation back here (`implemented_by_owner` records that the hand-off has been discharged). `open` is the only list that blocks the stratum, and it is the whole reason this stratum returns to `in-progress` after D97. Nothing here is a parity claim.",
-    "open": [
-      {
-        "declaring_header": "crypto.h",
-        "module": "src/runtime/init.rs",
-        "symbol": "OPENSSL_atexit"
-      },
-      {
-        "declaring_header": "crypto.h",
-        "module": "src/runtime/init.rs",
-        "symbol": "OPENSSL_die"
-      },
-      {
-        "declaring_header": "crypto.h",
-        "module": "src/runtime/init.rs",
-        "symbol": "OPENSSL_fork_child"
-      },
-      {
-        "declaring_header": "crypto.h",
-        "module": "src/runtime/init.rs",
-        "symbol": "OPENSSL_fork_parent"
-      },
-      {
-        "declaring_header": "crypto.h",
-        "module": "src/runtime/init.rs",
-        "symbol": "OPENSSL_fork_prepare"
-      },
-      {
-        "declaring_header": "crypto.h",
-        "module": "src/runtime/getenv.rs",
-        "symbol": "OPENSSL_isservice"
-      },
-      {
-        "declaring_header": "crypto.h",
-        "module": "src/runtime/getenv.rs",
-        "symbol": "OPENSSL_issetugid"
-      },
-      {
-        "declaring_header": "crypto.h",
-        "module": "src/runtime/thread.rs",
-        "symbol": "OPENSSL_thread_stop"
-      },
-      {
-        "declaring_header": "crypto.h",
-        "module": "src/runtime/thread.rs",
-        "symbol": "OPENSSL_thread_stop_ex"
-      },
-      {
-        "declaring_header": "err.h",
-        "module": "src/runtime/err.rs",
-        "symbol": "OSSL_ERR_STATE_free"
-      },
-      {
-        "declaring_header": "err.h",
-        "module": "src/runtime/err.rs",
-        "symbol": "OSSL_ERR_STATE_new"
-      },
-      {
-        "declaring_header": "err.h",
-        "module": "src/runtime/err.rs",
-        "symbol": "OSSL_ERR_STATE_restore"
-      },
-      {
-        "declaring_header": "err.h",
-        "module": "src/runtime/err.rs",
-        "symbol": "OSSL_ERR_STATE_save"
-      },
-      {
-        "declaring_header": "err.h",
-        "module": "src/runtime/err.rs",
-        "symbol": "OSSL_ERR_STATE_save_to_mark"
-      },
-      {
-        "declaring_header": "thread.h",
-        "module": "src/runtime/thread.rs",
-        "symbol": "OSSL_get_max_threads"
-      },
-      {
-        "declaring_header": "thread.h",
-        "module": "src/runtime/thread.rs",
-        "symbol": "OSSL_get_thread_support_flags"
-      },
-      {
-        "declaring_header": "thread.h",
-        "module": "src/runtime/thread.rs",
-        "symbol": "OSSL_set_max_threads"
-      },
-      {
-        "declaring_header": "crypto.h",
-        "module": "src/runtime/thread.rs",
-        "symbol": "OSSL_sleep"
-      },
-      {
-        "declaring_header": "trace.h",
-        "module": "src/runtime/trace.rs",
-        "symbol": "OSSL_trace_begin"
-      },
-      {
-        "declaring_header": "trace.h",
-        "module": "src/runtime/trace.rs",
-        "symbol": "OSSL_trace_enabled"
-      },
-      {
-        "declaring_header": "trace.h",
-        "module": "src/runtime/trace.rs",
-        "symbol": "OSSL_trace_end"
-      },
-      {
-        "declaring_header": "trace.h",
-        "module": "src/runtime/trace.rs",
-        "symbol": "OSSL_trace_get_category_name"
-      },
-      {
-        "declaring_header": "trace.h",
-        "module": "src/runtime/trace.rs",
-        "symbol": "OSSL_trace_get_category_num"
-      },
-      {
-        "declaring_header": "trace.h",
-        "module": "src/runtime/trace.rs",
-        "symbol": "OSSL_trace_set_callback"
-      },
-      {
-        "declaring_header": "trace.h",
-        "module": "src/runtime/trace.rs",
-        "symbol": "OSSL_trace_set_channel"
-      },
-      {
-        "declaring_header": "trace.h",
-        "module": "src/runtime/trace.rs",
-        "symbol": "OSSL_trace_set_prefix"
-      },
-      {
-        "declaring_header": "trace.h",
-        "module": "src/runtime/trace.rs",
-        "symbol": "OSSL_trace_set_suffix"
-      },
-      {
-        "declaring_header": "trace.h",
-        "module": "src/runtime/trace.rs",
-        "symbol": "OSSL_trace_string"
-      },
-      {
-        "declaring_header": null,
-        "module": "src/runtime/err.rs",
-        "symbol": "err_free_strings_int"
-      }
-    ],
+    "open": [],
     "owned_by_module": {
       "src/runtime/async/": 22,
       "src/runtime/dir.rs": 2,
@@ -850,7 +769,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "e88230fccb56990c9c5e1631d71f60a5b98b867435869c5b4e7d183f985c323d"
+      "sha256": "2dd236aca5c3c94e4c1ee464b1845e5edda1c47cc75c5f261ed5ab2841855c26"
     }
   ],
   "kind": "phase3-obligations",

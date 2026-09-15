@@ -154,6 +154,46 @@ HANDED_ON.update({
 # primitives (D85), it does not own them. They were in neither ledger until D97,
 # because the file was in no `FAMILIES` prefix list either.
 
+# Four exports that are declared in this stratum's headers but whose *behaviour*
+# is a property of an `OSSL_LIB_CTX`, which is Phase 6. Named as a dependency
+# rather than as a distance, and each verifiable from the authority's source:
+#
+#   * `OSSL_get_max_threads` / `OSSL_set_max_threads` read and write the
+#     thread-tracking ex-data slot: `OSSL_LIB_CTX_GET_THREADS(ctx)` expands to
+#     `ossl_lib_ctx_get_data(ctx, OSSL_LIB_CTX_THREAD_INDEX)`, and
+#     `crypto/context.c` answers that index from `ctx->threads`. There is no
+#     library context in this stratum, so there is nothing to read.
+#   * `OPENSSL_thread_stop` and `OPENSSL_thread_stop_ex` run the thread's
+#     registered event handlers. `OPENSSL_thread_stop` passes a NULL context and
+#     the non-FIPS arms of `get/set_thread_event_handler` ignore the context
+#     entirely -- but `_ex` calls `ossl_lib_ctx_get_concrete(ctx)` first, which is
+#     Phase 6's function, and `OPENSSL_cleanup` (which calls
+#     `OPENSSL_thread_stop`) also runs the stop-handler list that
+#     `OPENSSL_atexit` builds. Implementing half of a pair whose other half is a
+#     later stratum would produce two functions that disagree about the context.
+#   * `OPENSSL_atexit` needs `DSO_dsobyaddr` and `DSO_free`: the pinning block in
+#     `crypto/init.c` is compiled in this profile (`OPENSSL_USE_NODELETE`,
+#     `OPENSSL_NO_PINSHARED` and `DSO_NONE` are all unset, measured), and its whole
+#     purpose is to keep the handler's DSO loaded. DSO is Phase 6.8. Faking the pin
+#     would be a silent behavioural substitution for a dependency that exists.
+HANDED_ON.update({
+    sym: (6, "reads and writes the thread-tracking ex-data slot of an OSSL_LIB_CTX "
+             "(OSSL_LIB_CTX_GET_THREADS -> ossl_lib_ctx_get_data(CTX, "
+             "OSSL_LIB_CTX_THREAD_INDEX)); the library context is Phase 6")
+    for sym in ("OSSL_get_max_threads", "OSSL_set_max_threads")
+})
+HANDED_ON.update({
+    sym: (6, "runs the thread's event handlers for a library context; "
+             "OPENSSL_thread_stop_ex calls ossl_lib_ctx_get_concrete, and "
+             "OPENSSL_cleanup's OPENSSL_thread_stop call runs the handler list "
+             "OPENSSL_atexit builds; the library context is Phase 6")
+    for sym in ("OPENSSL_thread_stop", "OPENSSL_thread_stop_ex")
+})
+HANDED_ON["OPENSSL_atexit"] = (
+    6, "pins the handler's shared object with DSO_dsobyaddr/DSO_free, which the "
+       "profile compiles in; DSO is Phase 6.8",
+)
+
 # `crypto/async/`. The async job framework is core-runtime-shaped and is *not*
 # deferred for difficulty: `OPENSSL_NO_ASYNC` is not defined in the pinned profile,
 # so it is real functionality waiting for a real dependent. The authority's own tree

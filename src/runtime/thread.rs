@@ -85,11 +85,12 @@
 //! The orderings are the authority's: `AcqRel` for the read-modify-write
 //! operations, `Acquire` for loads, `Release` for stores.
 
-use core::ffi::{c_int, c_uint, c_ulong, c_void};
+use core::ffi::{c_int, c_long, c_uint, c_ulong, c_void};
 use core::sync::atomic::{AtomicI32, AtomicU64, Ordering};
 use std::sync::{Condvar, Mutex, MutexGuard};
 
 use crate::ffi::guard_ffi;
+use crate::runtime::bio::sys::{self, Timespec, Timeval};
 
 // ---------------------------------------------------------------------------
 // pthread bindings
@@ -982,5 +983,142 @@ mod tests {
         assert_eq!(unsafe { CRYPTO_THREAD_unlock(lock) }, 1);
         // SAFETY: no user remains.
         unsafe { CRYPTO_THREAD_lock_free(lock) };
+    }
+}
+
+// ---------------------------------------------------------------------------
+// The thread-count surface, and sleeping
+// ---------------------------------------------------------------------------
+
+/// `OSSL_THREAD_SUPPORT_FLAG_THREAD_POOL`, from `openssl/thread.h`.
+const OSSL_THREAD_SUPPORT_FLAG_THREAD_POOL: u32 = 1 << 0;
+/// `OSSL_THREAD_SUPPORT_FLAG_DEFAULT_SPAWN`, from `openssl/thread.h`.
+const OSSL_THREAD_SUPPORT_FLAG_DEFAULT_SPAWN: u32 = 1 << 1;
+
+/// `uint32_t OSSL_get_thread_support_flags(void)`
+///
+/// A compile-time constant of the build, not a runtime query:
+/// `crypto/thread/api.c` ORs a flag in for each of `OPENSSL_NO_THREAD_POOL` and
+/// `OPENSSL_NO_DEFAULT_THREAD_POOL` that is **not** defined. Neither is defined
+/// in the pinned profile — `crypto/thread/arch.c` is built and the option list
+/// contains no `no-thread-pool` — so the answer is `3`.
+///
+/// The two flags decide what `OSSL_get_max_threads`/`OSSL_set_max_threads` mean
+/// for their caller, and those two are **not** implemented here: they read and
+/// write the thread-tracking ex-data slot of an `OSSL_LIB_CTX`
+/// (`OSSL_LIB_CTX_GET_THREADS(ctx)` → `ossl_lib_ctx_get_data(ctx,
+/// OSSL_LIB_CTX_THREAD_INDEX)`), so they are Phase 6's obligation and are
+/// recorded as a hand-off in `forensics/phase3-obligations.json` with that
+/// dependency named.
+#[no_mangle]
+pub extern "C" fn OSSL_get_thread_support_flags() -> u32 {
+    OSSL_THREAD_SUPPORT_FLAG_THREAD_POOL | OSSL_THREAD_SUPPORT_FLAG_DEFAULT_SPAWN
+}
+
+/// `void OSSL_sleep(uint64_t millis)`
+///
+/// Sleeps for at least `millis` milliseconds and returns. The authority's body
+/// recomputes the remaining time after every sleep and loops until the clock has
+/// passed the deadline, so a sleep interrupted by a signal is *continued* rather
+/// than abandoned — which is observable, and is why this is not a bare
+/// `nanosleep` call.
+///
+/// The clock is `gettimeofday`, because that is what `ossl_time_now` uses on this
+/// platform (`crypto/time.c`'s non-Windows arm), and `OSSL_TIME` is microseconds.
+/// Using a monotonic clock here would be tidier and would answer differently if
+/// the wall clock steps backwards mid-sleep.
+///
+/// The `USE_SLEEP_SECS` outer loop in the authority is for platforms without
+/// `nanosleep`; the admitted profile has it, so only the `nanosleep` arm is
+/// present, and a literal for the other arm would be an unmeasured claim.
+// The authority's spelling, which `ABI-PROTOTYPE` resolves by name; renaming it
+// to `ossl_sleep` would make the export disappear.
+#[allow(non_snake_case)]
+#[no_mangle]
+pub extern "C" fn OSSL_sleep(millis: u64) {
+    let now = time_now_nanos();
+    let finish = now.wrapping_add(millis.wrapping_mul(1_000_000));
+    let mut left = millis;
+    loop {
+        sleep_millis(left);
+        let now = time_now_nanos();
+        if now >= finish {
+            return;
+        }
+        left = finish.wrapping_sub(now) / 1_000_000;
+    }
+}
+
+/// `ossl_time_now()` — nanoseconds since the epoch, or zero if `gettimeofday`
+/// fails, which is the authority's `ossl_time_zero()` fallback.
+///
+/// The unit is **nanoseconds**, not microseconds: `OSSL_TIME` counts
+/// `OSSL_TIME_SECOND == 1_000_000_000` ticks per second, and `crypto/time.c`'s
+/// non-Windows arm multiplies the `struct timeval` by `OSSL_TIME_US` (1000) to
+/// get there. Reading `OSSL_TIME` as microseconds made `ossl_ms2time` look like
+/// `ms * 1000`, which is the mistake this comment exists to stop being repeated:
+/// the first version of the test above asserted a microsecond bound against a
+/// nanosecond value and failed by a factor of a thousand.
+fn time_now_nanos() -> u64 {
+    let mut tv = Timeval {
+        tv_sec: 0,
+        tv_usec: 0,
+    };
+    // SAFETY: `tv` is a valid, aligned `Timeval` and the timezone argument is
+    // documented as ignored and may be NULL.
+    let r = unsafe { sys::gettimeofday(&mut tv, core::ptr::null_mut()) };
+    if r < 0 {
+        return 0;
+    }
+    if tv.tv_sec <= 0 {
+        return if tv.tv_usec <= 0 {
+            0
+        } else {
+            (tv.tv_usec as u64) * 1000
+        };
+    }
+    ((tv.tv_sec as u64) * 1_000_000 + tv.tv_usec as u64) * 1000
+}
+
+/// `ossl_sleep_millis` — `nanosleep` for the whole number of milliseconds.
+fn sleep_millis(millis: u64) {
+    let ts = Timespec {
+        tv_sec: (millis / 1000) as c_long,
+        tv_nsec: ((millis % 1000) * 1_000_000) as c_long,
+    };
+    // SAFETY: `ts` is a valid, aligned `Timespec` and the remainder argument is
+    // documented as optional.
+    unsafe { nanosleep(&ts, core::ptr::null_mut()) };
+}
+
+unsafe extern "C" {
+    /// `int nanosleep(const struct timespec *req, struct timespec *rem)`, from
+    /// `<time.h>`.
+    fn nanosleep(req: *const Timespec, rem: *mut Timespec) -> c_int;
+}
+
+#[cfg(test)]
+mod sleep_tests {
+    use super::*;
+
+    #[test]
+    fn the_support_flags_are_the_profiles_three() {
+        assert_eq!(OSSL_get_thread_support_flags(), 3);
+    }
+
+    #[test]
+    fn a_zero_sleep_returns_immediately_and_a_small_one_actually_waits() {
+        let start = time_now_nanos();
+        OSSL_sleep(0);
+        assert!(time_now_nanos().wrapping_sub(start) < 1_000_000);
+
+        let start = time_now_nanos();
+        OSSL_sleep(20);
+        let elapsed = time_now_nanos().wrapping_sub(start);
+        // At least the requested time -- the loop cannot return early -- and not
+        // wildly more: `nanosleep` for 20ms does not overshoot by an order of
+        // magnitude on an unloaded machine. The units are nanoseconds.
+        assert!(elapsed >= 20_000_000, "elapsed {elapsed}ns");
+        assert!(elapsed < 2_000_000_000, "elapsed {elapsed}ns");
     }
 }

@@ -281,7 +281,7 @@
         "truncf128",
         "truncf16"
       ],
-      "compiler_emitted_count": 6629,
+      "compiler_emitted_count": 4407,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -289,7 +289,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 932,
+        "implemented": 956,
         "implemented_symbols": [
           "ASN1_ANY_it",
           "ASN1_BIT_STRING_check",
@@ -1105,6 +1105,10 @@
           "OPENSSL_buf2hexstr_ex",
           "OPENSSL_cleanse",
           "OPENSSL_cleanup",
+          "OPENSSL_die",
+          "OPENSSL_fork_child",
+          "OPENSSL_fork_parent",
+          "OPENSSL_fork_prepare",
           "OPENSSL_gmtime",
           "OPENSSL_gmtime_adj",
           "OPENSSL_gmtime_diff",
@@ -1114,6 +1118,8 @@
           "OPENSSL_info",
           "OPENSSL_init",
           "OPENSSL_init_crypto",
+          "OPENSSL_isservice",
+          "OPENSSL_issetugid",
           "OPENSSL_sk_deep_copy",
           "OPENSSL_sk_delete",
           "OPENSSL_sk_delete_ptr",
@@ -1151,6 +1157,23 @@
           "OPENSSL_version_minor",
           "OPENSSL_version_patch",
           "OPENSSL_version_pre_release",
+          "OSSL_ERR_STATE_free",
+          "OSSL_ERR_STATE_new",
+          "OSSL_ERR_STATE_restore",
+          "OSSL_ERR_STATE_save",
+          "OSSL_ERR_STATE_save_to_mark",
+          "OSSL_get_thread_support_flags",
+          "OSSL_sleep",
+          "OSSL_trace_begin",
+          "OSSL_trace_enabled",
+          "OSSL_trace_end",
+          "OSSL_trace_get_category_name",
+          "OSSL_trace_get_category_num",
+          "OSSL_trace_set_callback",
+          "OSSL_trace_set_channel",
+          "OSSL_trace_set_prefix",
+          "OSSL_trace_set_suffix",
+          "OSSL_trace_string",
           "OpenSSL_version",
           "OpenSSL_version_num",
           "PEM_dek_info",
@@ -1194,6 +1217,7 @@
           "d2i_ASN1_VISIBLESTRING",
           "d2i_DIRECTORYSTRING",
           "d2i_DISPLAYTEXT",
+          "err_free_strings_int",
           "i2a_ASN1_ENUMERATED",
           "i2a_ASN1_INTEGER",
           "i2a_ASN1_OBJECT",
@@ -1224,7 +1248,7 @@
           "i2d_DISPLAYTEXT",
           "i2t_ASN1_OBJECT"
         ],
-        "scaffolded": 4964
+        "scaffolded": 4940
       },
       "libssl": {
         "authority_exports": 603,
@@ -1235,18 +1259,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 932,
-      "scaffolded": 5567
+      "implemented": 956,
+      "scaffolded": 5543
     }
   },
-  "body_hash": "e88230fccb56990c9c5e1631d71f60a5b98b867435869c5b4e7d183f985c323d",
+  "body_hash": "2dd236aca5c3c94e4c1ee464b1845e5edda1c47cc75c5f261ed5ab2841855c26",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "a47e45f7b7baa6d1d7f811e779b0b8b84ff8b1c0edfe869ff9797160a3b45d68"
+      "sha256": "31e0b5e756d8ccbb1bff30778429b35b316b0e0fded6053d7f58cd4209775d4e"
     },
     {
       "name": "authority-exports",

@@ -73,6 +73,12 @@ MODULE_PREFIXES: list[tuple[str, tuple[str, ...]]] = [
     ("src/confmod/mod.rs", ("CONF_", "OPENSSL_load_builtin_modules")),
     ("src/confmod/asn1.rs", ("ASN1_add_oid_module",)),
     ("src/context/core_bio.rs", ("BIO_s_core", "BIO_new_from_core_bio")),
+    # The five Phase 3 handed over. They are labels for rows this stratum *owes*,
+    # and they name where the machinery each one needs lives: the library context
+    # and its thread slot, and the loader `OPENSSL_atexit` pins through.
+    ("src/context/thread_data.rs", ("OSSL_get_max_threads", "OSSL_set_max_threads",
+                                    "OPENSSL_thread_stop", "OPENSSL_thread_stop_ex")),
+    ("src/dso/mod.rs", ("OPENSSL_atexit",)),
 ]
 
 # Symbols earlier strata hand to this one. Each edge is declared here as discharged
@@ -108,6 +114,19 @@ HANDED_OFF_IN: dict[int, tuple[str, ...]] = {
         "OPENSSL_load_builtin_modules",
     ),
     5: ("ASN1_add_oid_module",),
+    # Phase 3's five, deferred by 6.0 rather than by the stratum at seal time: the
+    # reconnaissance found them `open` in Phase 3's ledger, and the dependencies
+    # below are what moved them. Each was read from the authority's source rather
+    # than guessed -- `crypto/thread/api.c` for the two count accessors,
+    # `crypto/initthread.c` for the thread-stop pair, and `crypto/init.c`'s DSO
+    # pinning block for `OPENSSL_atexit`.
+    3: (
+        "OPENSSL_atexit",
+        "OPENSSL_thread_stop",
+        "OPENSSL_thread_stop_ex",
+        "OSSL_get_max_threads",
+        "OSSL_set_max_threads",
+    ),
 }
 
 # Symbols of the projection this stratum owns and hands to a later one, with the

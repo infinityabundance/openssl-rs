@@ -98,15 +98,30 @@ mod err_loaders;
 /// depth is one less.
 const ERR_NUM_ERRORS: usize = 16;
 
+/// `ERR_NUM_ERRORS` as the ring depth, for the sibling module that implements
+/// `OSSL_ERR_STATE_*` — `crypto/err/err_save.c`'s Rust home. The two are in
+/// different source files, as they are in the authority, so the constant is
+/// re-exported rather than duplicated.
+pub(crate) const ERR_STATE_SLOTS: usize = ERR_NUM_ERRORS;
+
 /// `ERR_FLAG_MARK` — historical; marks live in `err_marks` in 3.x.
 #[allow(dead_code)]
 const ERR_FLAG_MARK: c_int = 0x01;
-/// `ERR_FLAG_CLEAR` — a slot marked for lazy clearing by the next read.
-const ERR_FLAG_CLEAR: c_int = 0x02;
 /// `ERR_TXT_MALLOCED` — the data buffer is owned by this state.
 const ERR_TXT_MALLOCED: c_int = 0x01;
 /// `ERR_TXT_STRING` — the data is a C string.
 const ERR_TXT_STRING: c_int = 0x02;
+/// `ERR_FLAG_CLEAR` — a slot marked for lazy clearing by the next read.
+const ERR_FLAG_CLEAR: c_int = 0x02;
+
+/// `ERR_TXT_MALLOCED` as a re-export, and `ERR_FLAG_CLEAR` with it, for the
+/// sibling module that implements `OSSL_ERR_STATE_*` — `crypto/err/err_save.c`'s
+/// Rust home. It reads both: `ERR_FLAG_CLEAR` to decide whether to skip a
+/// lazily-cleared slot on `restore`, and `ERR_TXT_MALLOCED` to mark the copy it
+/// makes of an attached buffer as owned.
+pub(crate) const ERR_TXT_MALLOCED_FLAG: c_int = ERR_TXT_MALLOCED;
+/// See [`ERR_TXT_MALLOCED_FLAG`].
+pub(crate) const ERR_FLAG_CLEAR_FLAG: c_int = ERR_FLAG_CLEAR;
 
 /// `ERR_LIB_SYS`, the one library whose errors are packed as system codes.
 const ERR_LIB_SYS: c_int = 2;
@@ -173,9 +188,59 @@ impl ErrState {
         }
     }
 
+    /// `err_clear` over every slot. The opening move of `OSSL_ERR_STATE_free`
+    /// (with `deall`), of `OSSL_ERR_STATE_save` (with `deall`) and of
+    /// `OSSL_ERR_STATE_save_to_mark`'s no-thread-state arm (`crypto/err/err_save.c`).
+    pub(crate) fn clear_all(&mut self, deall: bool) {
+        for i in 0..ERR_NUM_ERRORS {
+            self.clear(i, deall);
+        }
+    }
+
+    /// A state with every field zero, the shape `memset(s, 0, sizeof(*s))` gives.
+    ///
+    /// Needed by `OSSL_ERR_STATE_save`, whose second step is exactly that `memset`
+    /// over the thread's state after the ownership of its buffers has moved into
+    /// the destination. `clear_all(false)` would **not** do: its documented
+    /// behaviour for an owned buffer is to keep the pointer and truncate in place,
+    /// which leaves the same buffer owned by two states — a double free, and one
+    /// the RT-RUNTIME-EXT court found on a state reused across a clear. The
+    /// authority's own comment says "just clear the thread state" while its code
+    /// zeroes it, and the code is what a caller observes.
+    ///
+    /// `err_line` is therefore 0 here rather than the `-1` a cleared slot carries,
+    /// which is also what the `memset` gives.
+    pub(crate) fn zeroed() -> ErrState {
+        ErrState::new()
+    }
+
+    /// The authority's `memcpy(es, thread_es, sizeof(*es))` in
+    /// `OSSL_ERR_STATE_save`, written structurally so that the ownership of the
+    /// attached data buffers moves with the slots instead of being duplicated.
+    ///
+    /// Written out field by field rather than derived, because a `Clone` would be
+    /// the wrong operation here: the source is about to be zeroed, so exactly one
+    /// state owns each buffer afterwards, and a derived `Clone` would make the
+    /// operation look like a copy of an owned value when it is a transfer.
+    pub(crate) fn copy_of(other: &ErrState) -> ErrState {
+        ErrState {
+            err_flags: other.err_flags,
+            err_marks: other.err_marks,
+            err_buffer: other.err_buffer,
+            err_data: other.err_data,
+            err_data_size: other.err_data_size,
+            err_data_flags: other.err_data_flags,
+            err_file: other.err_file,
+            err_line: other.err_line,
+            err_func: other.err_func,
+            top: other.top,
+            bottom: other.bottom,
+        }
+    }
+
     /// `err_get_slot`: advance `top`, and drag `bottom` forward once the ring is
     /// full. That one-slot gap is why fifteen errors survive, not sixteen.
-    fn get_slot(&mut self) {
+    pub(crate) fn get_slot(&mut self) {
         let n = ERR_NUM_ERRORS as c_int;
         self.top = (self.top + 1) % n;
         if self.top == self.bottom {
@@ -186,7 +251,7 @@ impl ErrState {
     /// `err_clear_data`. With `deall` the buffer is released; without it a
     /// malloced buffer is kept but truncated, which is how the authority reuses
     /// data buffers across clears.
-    fn clear_data(&mut self, i: usize, deall: bool) {
+    pub(crate) fn clear_data(&mut self, i: usize, deall: bool) {
         if (self.err_data_flags[i] & ERR_TXT_MALLOCED) != 0 {
             if deall {
                 // SAFETY: the MALLOCED flag says this state owns the pointer.
@@ -207,7 +272,7 @@ impl ErrState {
     }
 
     /// `err_clear`.
-    fn clear(&mut self, i: usize, deall: bool) {
+    pub(crate) fn clear(&mut self, i: usize, deall: bool) {
         self.clear_data(i, deall);
         self.err_marks[i] = 0;
         self.err_flags[i] = 0;
@@ -239,7 +304,13 @@ impl ErrState {
     /// "may be provider owned", and a provider can be unloaded while the error
     /// is still queued. A NULL or empty string is stored as NULL, and the read
     /// side turns NULL back into `""`.
-    fn set_debug(&mut self, i: usize, file: *const c_char, line: c_int, func: *const c_char) {
+    pub(crate) fn set_debug(
+        &mut self,
+        i: usize,
+        file: *const c_char,
+        line: c_int,
+        func: *const c_char,
+    ) {
         // SAFETY: ownership of these pointers is this state's.
         unsafe {
             CRYPTO_free(self.err_file[i].cast::<c_void>(), core::ptr::null(), 0);
@@ -251,7 +322,7 @@ impl ErrState {
     }
 
     /// `err_set_data`.
-    fn set_data(&mut self, i: usize, data: *mut c_char, size: usize, flags: c_int) {
+    pub(crate) fn set_data(&mut self, i: usize, data: *mut c_char, size: usize, flags: c_int) {
         if (self.err_data_flags[i] & ERR_TXT_MALLOCED) != 0 {
             // SAFETY: MALLOCED means this state owns the buffer.
             unsafe { CRYPTO_free(self.err_data[i].cast::<c_void>(), core::ptr::null(), 0) };
@@ -459,7 +530,27 @@ fn lib_loaded(lib: u32) -> bool {
 /// Run `f` with this thread's error state. `None` during thread teardown and
 /// after `OPENSSL_cleanup`, both of which the authority treats as "no state":
 /// `ossl_err_get_state_int` returns NULL once `OPENSSL_init_crypto` refuses.
-fn with_state<R>(f: impl FnOnce(&mut ErrState) -> R) -> Option<R> {
+/// `void err_free_strings_int(void)`
+///
+/// The authority's body is a comment:
+///
+/// ```c
+/// void err_free_strings_int(void)
+/// {
+///     /* obsolete */
+/// }
+/// ```
+///
+/// It is exported because a precompiled binary may resolve it, and its
+/// *behaviour* is that it does nothing — including doing nothing to the string
+/// registry, which `ERR_clear_error`-adjacent callers might otherwise expect it
+/// to release. Reproduced as an empty body rather than removed, because the
+/// symbol's presence is part of the ABI and its emptiness is part of the
+/// contract.
+#[no_mangle]
+pub extern "C" fn err_free_strings_int() {}
+
+pub(crate) fn with_state<R>(f: impl FnOnce(&mut ErrState) -> R) -> Option<R> {
     if init::stopped() {
         return None;
     }

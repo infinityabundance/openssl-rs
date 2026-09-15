@@ -264,6 +264,12 @@ PHASE3_MODULES = [
     # header comment; it was in no `FAMILIES` prefix list, so neither this list nor
     # the ledger mentioned it until D97.
     "src/runtime/time.rs",
+    # The D97 reconciliation's own finding, then its work. `trace.rs`, `err_state.rs`
+    # and `uid.rs` are the modules of the three export families that no ledger and
+    # no evidence list mentioned until 6.0 read the ownership atlas against them.
+    "src/runtime/trace.rs",
+    "src/runtime/err_state.rs",
+    "src/runtime/uid.rs",
     # `ossl_safe_getenv`, used by the CONF reader's default-path logic; internal,
     # so it claims no export, but it is core-runtime surface.
     "src/runtime/getenv.rs",
@@ -277,6 +283,7 @@ PHASE3_MODULES = [
     "courts/phase3/rt_thread_probe.c",
     "courts/phase3/rt_secure_probe.c",
     "courts/phase3/rt_lhash_probe.c",
+    "courts/phase3/rt_runtime_ext_probe.c",
 ]
 # Whether anything in the Phase 3 families is unaccounted for is decided by the
 # ledger (`phase3_obligations.py` fails closed), not by a string here.

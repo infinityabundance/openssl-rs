@@ -11,9 +11,9 @@ enforced here:
 | 0 | Constitution, authorities, claim algebra | `complete` |  |
 | 1 | Complete archaeology / API / ABI atlas | `complete` |  |
 | 2 | Distribution / ABI shell | `complete` |  |
-| 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `in-progress` | 29 open obligation(s) of this stratum recorded in forensics/phase3-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. The ledger reads its universe from the ownership atlas, so this is no longer a question of which prefixes its families happened to list (docs/DECISIONS.md D97) |
+| 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `complete` |  |
 | 4 | BIO + CONF + object database | `in-progress` | 18 open obligation(s) of this stratum recorded in forensics/phase4-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
-| 5 | BN + ASN.1 + DER/PEM | `in-progress` | blocked by the dependency-order invariant: phase 3 is not complete |
+| 5 | BN + ASN.1 + DER/PEM | `in-progress` | blocked by the dependency-order invariant: phase 4 is not complete |
 | 6 | OSSL_LIB_CTX + provider core | `not-started` | not started |
 | 7 | EVP framework | `not-started` | not started |
 | 8 | Native cryptographic primitives | `not-started` | not started |
@@ -72,3 +72,8 @@ claims):
 * OPENSSL_LH_node_usage_stats_bio -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)
 * OPENSSL_LH_stats -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)
 * OPENSSL_LH_stats_bio -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)
+* OPENSSL_atexit -> phase 6 (pins the handler's shared object with DSO_dsobyaddr/DSO_free, which the profile compiles in; DSO is Phase 6.8)
+* OPENSSL_thread_stop -> phase 6 (runs the thread's event handlers for a library context; OPENSSL_thread_stop_ex calls ossl_lib_ctx_get_concrete, and OPENSSL_cleanup's OPENSSL_thread_stop call runs the handler list OPENSSL_atexit builds; the library context is Phase 6)
+* OPENSSL_thread_stop_ex -> phase 6 (runs the thread's event handlers for a library context; OPENSSL_thread_stop_ex calls ossl_lib_ctx_get_concrete, and OPENSSL_cleanup's OPENSSL_thread_stop call runs the handler list OPENSSL_atexit builds; the library context is Phase 6)
+* OSSL_get_max_threads -> phase 6 (reads and writes the thread-tracking ex-data slot of an OSSL_LIB_CTX (OSSL_LIB_CTX_GET_THREADS -> ossl_lib_ctx_get_data(CTX, OSSL_LIB_CTX_THREAD_INDEX)); the library context is Phase 6)
+* OSSL_set_max_threads -> phase 6 (reads and writes the thread-tracking ex-data slot of an OSSL_LIB_CTX (OSSL_LIB_CTX_GET_THREADS -> ossl_lib_ctx_get_data(CTX, OSSL_LIB_CTX_THREAD_INDEX)); the library context is Phase 6)
