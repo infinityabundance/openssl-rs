@@ -76,14 +76,78 @@ received by hand-off. Both numbers are in the ledger's `counts` block, and
 | 6.3 | BIO/CONF addendum | the 18 Phase 4 exports 6.0 recorded `open` (`COMP_*` fourteen, `conf_ssl_*` three, `OPENSSL_config`) | 6.0 | `RT-COMP` | **COMPLETE** (D99, D100): the reopened Phase 4 ledger is at zero open, the stratum re-closes, and `RT-COMP` observes 27. Six of the fourteen `COMP_*` and one of the three `conf_ssl_*` are unreachable by any consumer in this profile and the seal says so rather than implying coverage; the court also found an unrecorded `OPENSSL_info` divergence (D100) |
 | 6.4 | Core-runtime addendum II — the allocator dispatch | nothing owed; this addendum adds no export. It corrects `src/runtime/mem.rs`, which Phase 3 owns | 6.3 | `RT-MEM-DEFAULT`, `RT-MEM-INSTALL` | **COMPLETE** (D102): the *default* branch of the allocation family is measured for the first time. Thirteen zero-length divergences, a release `CRYPTO_realloc(addr, 0)` was hiding behind its own NULL return, a candidate-only out-of-bounds read in `CRYPTO_memdup`, two `CRYPTO_set/get_mem_functions` dispatch gaps, one invented constant name, and one divergence recorded rather than fixed. Phase 3's seal gains §12; its courts go 8 → 10 and its observations 4,358 → 4,410 |
 | 6.5 | `OSSL_PARAM` | `params.c` 61 and `param_build.c` 20 — the descriptor substrate every provider call is made of | 6.3, 6.4 | `RT-PARAM` | **COMPLETE** (D103, D104): all 81 exports implemented across `src/params/{mod,dup,from_text,build}.rs`, and `RT-PARAM` observes 1,161 behaviours on each side with zero residuals — the descriptor matrix of accessor × width × signedness × type, the setters' NULL-buffer size queries, the string and pointer forms, `BN`, dup/merge/free, text allocation and the builder. The court found two defects in the new code (a terminator written through the wrong pointer, and an exactness test using Rust's saturating cast where the authority uses the platform's) and one in **Phase 5**, whose `BN_signed_bn2native` fit rule accepted five destinations the authority refuses; that stratum's seal gains §10 and `RT-BN` gains 860 observations. Every export is also checked by both prototype planes |
-| 6.6 | `OSSL_LIB_CTX` + the core dispatch table | `crypto/context.c` (658 lines), `crypto/core_algorithm.c`, `crypto/core_namemap.c`, the ten reassigned `OSSL_LIB_CTX_*` | 6.5 | `RT-LIBCTX` | default and child contexts, `OSSL_LIB_CTX_new_child`/`_new_from_dispatch`, `get_data`/`set0_default`/`load_config`, diagnostics flags |
-| 6.7 | Property engine | `crypto/property/property.c`, `property_parse.c`, `property_string.c`, `property_query.c`, `defn_cache.c`, `property_err.c` | 6.6 | `RT-PROPERTY` | definition, parse, string round-trip, matching, query parse **and negative selection** — a query that must *exclude* a definition is as much an observation as one that includes it |
+| 6.6 | `OSSL_LIB_CTX` + the core dispatch table | `crypto/context.c` (658 lines), `crypto/core_algorithm.c`, `crypto/core_namemap.c`, the ten reassigned `OSSL_LIB_CTX_*` | 6.5 | `RT-LIBCTX` | **split into 6.6a–6.6g** on the dependencies 6.6a's reconnaissance found: two of the ten exports cannot be written before the core BIO (`new_from_dispatch`), the provider-child path (`new_child`) and `CONF_modules_load_file_ex` (`load_config`) exist, and those belong to 6.6c, 6.6d and 6.10. The index-slot table below is part of this subphase's closure |
+| 6.6a | the context itself | the seven of the ten exports that need nothing else: `new`, `free`, `get0_global_default`, `set0_default`, `get_data`, `get_conf_diagnostics`, `set_conf_diagnostics`; `src/context/mod.rs` | 6.5 | `RT-LIBCTX` | **COMPLETE** (D106): the identity contract — the default chain, the three `free` cases of which two are no-ops, `conf_diagnostics` as per-context state, and the index registry's shape. 73 observations, zero residuals, first run. The three remaining exports are 6.6c/d/g, and the seventeen unfilled index slots are named below |
+| 6.6b | the namemap | `crypto/core_namemap.c` — `src/context/namemap.rs`; fills slot 4 | 6.6a | `RT-LIBCTX` | `ossl_namemap_*`: name→id and id→name, the per-name multiplicity limits, and the stored namemap's `OSS*` prefix reservation |
+| 6.6c | the core BIO | `crypto/bio/bio_core.c` — `src/context/core_bio.rs`; fills slot 17; adds `OSSL_LIB_CTX_new_from_dispatch` | 6.6a | `RT-LIBCTX`, `RT-BIO-CORE` | a BIO that a provider writes to the application's own BIO through, the `OSSL_DISPATCH` walk that finds the core's BIO callbacks, and the two exports `BIO_s_core` and `BIO_new_from_core_bio` |
+| 6.6d | the child context | `OSSL_LIB_CTX_new_child` and the `ischild` flag, which needs `ossl_provider_init_as_child` | 6.6c, 6.8 | `RT-LIBCTX` | a context whose default properties and provider set come from its parent, and the `free` child-provider deinit that 6.6a leaves a named line for |
+| 6.6e | the thread slot and the thread-stop API | the four Phase 3 hand-offs `OSSL_get_max_threads`, `OSSL_set_max_threads`, `OPENSSL_thread_stop`, `OPENSSL_thread_stop_ex`; `src/context/thread_data.rs`; fills slot 19 | 6.6a | `RT-THREADDATA` | the per-thread object a context owns, `ossl_ctx_thread_stop` (which 6.6a's `context_deinit` names as its missing call), and the max-threads counter |
+| 6.6f | the algorithm dispatch walk | `crypto/core_algorithm.c` | 6.6b, 6.8 | `RT-LIBCTX` | `ossl_algorithm_do_all` — the walk over a provider's algorithms that the legacy method enumerations are built on |
+| 6.6g | `OSSL_LIB_CTX_load_config` | the tenth export | 6.10 | `RT-LIBCTX` | a one-line forward to `CONF_modules_load_file_ex`, which is why it waits for the module registry rather than being written against a stub |
+| 6.7 | Property engine | `crypto/property/property.c`, `property_parse.c`, `property_string.c`, `property_query.c`, `defn_cache.c`, `property_err.c`; fills slots 2, 3 and 14 | 6.6b | `RT-PROPERTY` | definition, parse, string round-trip, matching, query parse **and negative selection** — a query that must *exclude* a definition is as much an observation as one that includes it |
 | 6.8 | Provider registry and dispatch | `crypto/provider.c`, `provider_core.c` (2,679 lines), `provider_child.c`, `provider_predefined.c`, `provider_conf.c` | 6.6, 6.7 | `RT-PROVIDER` | load/unload/try_load, reference ownership, builtin and dynamic providers, `OSSL_DISPATCH` walking, core→provider and provider→core upcalls, algorithm registration, name map, gettable params, capabilities, `do_all`, operation query, fetch and the fetch cache |
 | 6.9 | DSO | the fifteen abi-only `DSO_*` — `dso_lib.c`, `dso_dlfcn.c`, `dso_dl.c`, `dso_openssl.c` | 6.8 | `RT-DSO` | the dynamic loader that `DSO_load` needs to make a provider module a module |
 | 6.10 | CONF module registry | the 18 hand-offs from Phase 4 and Phase 5 — `crypto/conf/conf_mod.c` | 6.8, 6.9 | `RT-CONF-MOD` | module activation through configuration, `CONF_modules_load*`, the imodule/module accessors, and the diagnostics flag interaction D50 recorded |
 | 6.11 | Self-test and indicator | `self_test.h` 7, `indicator.h` 2 — `crypto/self_test_core.c`, `crypto/indicator_core.c` | 6.8 | `RT-SELFTEST` | the callback plumbing and the corrupt/begin/end transitions, which the FIPS provider's *behavioural* parity will later stand on |
 | 6.12 | **Third-party provider court** | nothing new — the crown-jewel test | 6.5–6.11 | `RT-PROVIDER-3P` | an **independently written C provider**, compiled separately from this project and loaded **unchanged** into both the authority and the candidate, yields matching init dispatch, core upcalls, parameter flow, algorithm enumeration, property selection, operation calls, teardown and failure behaviour |
 | 6.13 | Inventory generation and closure | nothing — evidence | all | — | the provider/algorithm/property inventory is generated from the authority rather than handwritten; every court passes; FRF receipts compile into a claim; the seal is written from the ledgers; a Gemel checkpoint closes the stratum |
+
+### The index-slot table, and why it is a closure criterion
+
+`OSSL_LIB_CTX_get_data(ctx, index)` answers a pointer for **eighteen** index numbers.
+Each number names a sub-object that a different stratum owns, and the index space is not
+in any installed header — it is `OSSL_LIB_CTX_*_INDEX` in
+`include/internal/cryptlib.h`. A caller therefore cannot *name* a slot, but it can pass
+an integer, so "which numbers answer a pointer" is observable through an exported
+function alone.
+
+That makes each slot an obligation of the same kind as an unimplemented export, and it
+is easy for one to disappear between layers just as `a2d_ASN1_OBJECT` did: nothing in the
+symbol ledgers can see a *field* that was never filled. The table is the record.
+
+| index | slot | filled by |
+|---|---|---|
+| 0 | `evp_method_store` | Phase 7 |
+| 1 | `provider_store` | 6.8 |
+| 2 | `property_defns` | 6.7 |
+| 3 | `property_string_data` | 6.7 |
+| 4 | `namemap` | 6.6b |
+| 5 | `drbg` | Phase 9 |
+| 6 | `drbg_nonce` | Phase 9 |
+| 10 | `encoder_store` | Phase 7 |
+| 11 | `decoder_store` | Phase 7 |
+| 12 | `self_test_cb` | 6.11 |
+| 14 | `global_properties` | 6.7 |
+| 15 | `store_loader_store` | Phase 10 |
+| 16 | `provider_conf` | 6.8 |
+| 17 | `bio_core` | 6.6c |
+| 18 | `child_provider` | 6.8 |
+| 19 | `threads` | 6.6e |
+| 20 | `decoder_cache` | Phase 7 |
+| 21 | `comp_methods` | **filled by 6.6a** |
+| 22 | `indicator_cb` | 6.11 |
+
+**Phase 6 cannot be called complete while any row above is unfilled.** The slot's owner
+is the subphase named, not this stratum, and the same rule applies to those: a subphase
+that closes with a slot it owns still set to NULL is not closed.
+
+Two things about the table are worth stating explicitly.
+
+**Why a slot is not filled with a placeholder.** The value is a live object of a type a
+later stratum owns — a method store, a property definition table, a DRBG. A one-byte
+allocation that merely makes the pointer non-NULL would satisfy the *observation* while
+saying something false about the object, which is what this project calls a fake-success
+stub. The arms in `src/context/mod.rs` answer NULL until their owner lands.
+
+**Why the probe does not simply observe all eighteen.** Zero of the seventeen unfilled
+slots can be observed without comparing a *missing subsystem* rather than a divergence,
+and that is the obligation ledger's business, not a court's — the same rule that keeps
+the phase-4 and phase-5 probes on the implemented surface. `RT-LIBCTX` therefore observes
+the **dead** indices (which answer NULL in the authority because its `switch` has no arm
+for them, and must answer NULL here for the same reason), plus the slots this stratum has
+filled, and it prints `libctx.slots.live`, `.filled` and `.deferred` so the transcript
+states the scope of its own table rather than leaving it to be inferred. When 6.6b lands,
+slot 4 is added to the probe's `filled_slots` array and the counts move with it.
 
 ### Why 6.0 comes before any implementation
 

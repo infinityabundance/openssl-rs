@@ -1,0 +1,59 @@
+# openssl-rs court: the Phase 6 `rt-libctx` runtime surface.
+#
+# The subject is the transcript of a differential probe: one C program that
+# prints one `key=value` line per observation while exercising
+#
+#     the OSSL_LIB_CTX identity contract: a fresh context distinct from every other, the global default handing back one stable address that freeing does not release, the thread-default chain including the clear-not-store that passing the global default performs, the two of three `free` arguments that are no-ops -- NULL and a context this thread has made its default -- conf_diagnostics as per-context state read and written through a NULL context, and the index registry's boundary: the dead indices and everything past the end of the switch answer NULL, while the slot whose answer is the address of a field answers a pointer for every context including an empty one
+#
+# The same source is compiled against the admitted authority and against the
+# candidate, each side executes its own binary, and FRF compares the
+# transcripts.
+#
+# Scope: the observations the probe makes. It is NOT a claim about surface the
+# probe does not touch, and not a cryptographic or security claim.
+
+court:
+  id: openssl-rs-rt-libctx
+  question: >-
+    For the rt-libctx runtime surface in fixture family rt-libctx, does
+    the candidate produce the same observable transcript as the admitted
+    authority OpenSSL 3.6.4 when both run the same probe over the same
+    fixture?
+  falsifier: >-
+    Any observation line differs between the two transcripts, or either
+    side's exit class differs.
+  authority: openssl-rt-3.6.4-r2
+  candidate:
+    name: openssl-rs
+    version_or_commit: "0.0.9"
+    build_profile: linux-x86_64-default-shared-legacy-notests
+    path: forensics/frf/refs/candidate-runtime-probe.sh
+  fixture:
+    id: probe-list.txt
+    path: forensics/frf/courts/openssl-rs-rt-libctx/fixtures/probe-list.txt
+    arguments: ["{fixture}", "phase6"]
+  admissibility_envelope:
+    fixture_family: rt-libctx
+    platforms: ["x86_64-linux"]
+    observables: [stdout, exit]
+    normalizers: []
+    replay_scope: single-run
+  execution_context:
+    artifacts:
+      - path: forensics/frf/refs/authority-runtime-probe.sh
+        role: child-executable
+      - path: forensics/frf/refs/candidate-runtime-probe.sh
+        role: child-executable
+      - path: artifacts/phase6/probes/rt_libctx_probe.authority
+        role: child-executable
+      - path: artifacts/phase6/probes/rt_libctx_probe.candidate
+        role: child-executable
+      - path: courts/phase6/rt_libctx_probe.c
+        role: data
+      - path: forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+        role: runtime-library
+      - path: artifacts/phase2/libcrypto.so.3
+        role: runtime-library
+  environment:
+    LC_ALL: C
+    TZ: UTC

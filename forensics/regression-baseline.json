@@ -155,6 +155,10 @@
       "observations": 56,
       "verdict": "pass"
     },
+    "RT-LIBCTX": {
+      "observations": 73,
+      "verdict": "pass"
+    },
     "RT-MEM": {
       "observations": 82,
       "verdict": "pass"
@@ -207,14 +211,14 @@
     "phase6": 0
   },
   "implemented": {
-    "libcrypto": 1055,
+    "libcrypto": 1062,
     "libssl": 0
   },
   "open_obligations": {
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,
-    "phase6": 80
+    "phase6": 73
   },
   "owned_obligations": {
     "phase3": 294,

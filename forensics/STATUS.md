@@ -26,7 +26,7 @@ renderer does not know any phase status.
 | 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `complete` |  |
 | 4 | BIO + CONF + object database | `complete` |  |
 | 5 | BN + ASN.1 + DER/PEM | `complete` |  |
-| 6 | OSSL_LIB_CTX + provider core | `in-progress` | 80 open obligation(s) of this stratum recorded in forensics/phase6-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
+| 6 | OSSL_LIB_CTX + provider core | `in-progress` | 73 open obligation(s) of this stratum recorded in forensics/phase6-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
 
 Not started: strata 7-21 (15 total).
 
@@ -81,9 +81,9 @@ that name is defined, nothing more.
 
 | library | exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 1055 | 4841 |
+| libcrypto | 5896 | 1062 | 4834 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **1055** | **5444** |
+| **total** | **6499** | **1062** | **5437** |
 
 ### Phase 3 obligation ledger
 
@@ -161,9 +161,9 @@ handed it, that is neither implemented, deferred to a named later
 phase, nor recorded as open in the stratum is an error, not a warning.
 
 * authority exports in the Phase 6 working set: 161
-* implemented: 81
+* implemented: 88
 * deferred to a later phase with a stated reason: 0
-* open in this stratum: 80
+* open in this stratum: 73
 
 Hand-offs from phase 3 discharged by this stratum: `OPENSSL_atexit`, `OPENSSL_thread_stop`, `OPENSSL_thread_stop_ex`, `OSSL_get_max_threads`, `OSSL_set_max_threads`
 

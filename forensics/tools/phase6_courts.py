@@ -38,6 +38,14 @@ scaffold aborts the candidate with a diagnostic. The obligation ledger
 the implemented surface so that a failure here means a behavioural divergence rather
 than a missing symbol.
 
+The same rule applies one level down, to `RT-LIBCTX`. `OSSL_LIB_CTX_get_data` answers a
+pointer for eighteen index slots, and each slot holds an object a different stratum owns.
+The probe therefore observes the *dead* indices -- which answer NULL in the authority
+because its `switch` has no arm for them -- and the slots this stratum has filled, and it
+prints the live/filled/deferred counts so the transcript states the scope of its own
+table. Calling a slot whose owner has not landed would compare a missing subsystem, not a
+divergence.
+
 SPDX-License-Identifier: Apache-2.0
 """
 
@@ -71,6 +79,7 @@ RUN_TIMEOUT_S = "60"
 
 COURTS = [
     ("RT-PARAM", "rt_param_probe.c"),
+    ("RT-LIBCTX", "rt_libctx_probe.c"),
 ]
 
 

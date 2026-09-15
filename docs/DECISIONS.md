@@ -5132,3 +5132,99 @@ project never asserts a current count from `DECISIONS.md` — it derives them. C
 | runtime courts in the FRF store | 25 (stated in prose; already stale, actually 37) | 37 |
 | probes under a hygiene gate | 0 | 37 |
 | FRF store objects | 333 | 341 |
+
+---
+
+## D106 — `OSSL_LIB_CTX`, and the index slots as an obligation of their own kind
+
+**What landed.** Phase 6.6a: seven of the ten `OSSL_LIB_CTX_*` exports —
+`new`, `free`, `get0_global_default`, `set0_default`, `get_data`,
+`get_conf_diagnostics`, `set_conf_diagnostics` — in `src/context/mod.rs`, from
+`crypto/context.c`. `RT-LIBCTX` observes all of it in 73 observations with zero
+residuals, on the first run.
+
+**The reconnaissance came first, and it changed the design.** The probe was run
+against the authority before any Rust was written, and it answered a question the
+source does not: the authority's `switch` in `ossl_lib_ctx_get_data` has arms for
+eighteen indices, and the three it does *not* answer for — 7 and 8, which the
+authority once used for other things; 9, which is `FIPS_PROV` in a build that is
+not FIPS; and 13, which was `BIO_PROV` — answer NULL. The measurement also settled
+one build question that no installed header answers: index 19 (`THREAD`) answers a
+pointer, so this profile has the thread pool compiled in, and index 21
+(`COMP_METHODS`) answers `&ctx->comp_methods`, the address of a field *inside* the
+object, so it is non-NULL for a context whose compression stack is empty.
+
+`COMP_METHODS` is the one slot this stratum fills, and it is filled by having the
+field rather than by allocating anything: the answer is an interior address and is
+therefore exact immediately. It is also the arm most likely to be "simplified" into
+returning the field's *value*, which would answer NULL for every context — so it
+has a unit test of its own, and `RT-LIBCTX` compares it against the authority.
+
+**Three of the ten exports are not writable yet, and the split is by dependency
+rather than by convenience.** `OSSL_LIB_CTX_new_from_dispatch` calls
+`ossl_bio_init_core` (6.6c, the core BIO); `OSSL_LIB_CTX_new_child` calls
+`ossl_provider_init_as_child` (6.8) and is what sets `ischild`;
+`OSSL_LIB_CTX_load_config` is a one-line forward to `CONF_modules_load_file_ex`
+(6.10). Writing any of them now would mean writing it against a stub, so 6.6 is
+now 6.6a–6.6g in `docs/PHASE-6-SUBPHASES.md` with each dependency named, and this
+commit is 6.6a.
+
+**The index slots are obligations of their own kind, and this is the decision.**
+Seventeen of the eighteen live slots belong to a later stratum, so the arms answer
+NULL until their owner lands. That gap is invisible to every symbol ledger — a
+*field* that was never filled is not a symbol — which is exactly the
+`a2d_ASN1_OBJECT` defect class one layer down. Three things make it visible
+instead of latent:
+
+  * the per-slot owner table is in `docs/PHASE-6-SUBPHASES.md` **and** in the
+    module documentation, with the closure rule stated in both: Phase 6 cannot be
+    called complete while any row is unfilled;
+  * the probe observes the dead indices and the filled slots, and prints
+    `libctx.slots.live` (18), `.filled` (1) and `.deferred` (17), so the
+    transcript states the scope of its own table rather than leaving a reader to
+    infer it from an absent line;
+  * nothing is filled with a placeholder. The value is a live object of a type a
+    later stratum owns; a one-byte allocation that only made the pointer non-NULL
+    would satisfy the observation while saying something false about the object.
+
+An unfilled slot may not be *observed* either, and that follows the rule the later
+probes already use: comparing a missing subsystem is the ledger's business, not a
+court's. The probe observes what a divergence can be seen in.
+
+**Two behaviours that a plausible reading gets wrong.** Both are in the probe and
+both are in the module documentation because neither is documented anywhere else:
+
+  * `OSSL_LIB_CTX_set0_default(OSSL_LIB_CTX_get0_global_default())` does not
+    install the global default, it **clears** the thread's slot
+    (`set_default_context` rewrites the global object to NULL). The NULL context
+    still resolves to the same object, but a following
+    `set0_default(NULL)` reports the global default rather than the pointer that
+    was passed in.
+  * `OSSL_LIB_CTX_free` is a no-op for two of the three values it accepts: NULL,
+    and whatever the calling thread's default resolves to — which includes the
+    global default in a thread that never changed its default, and includes a
+    context the thread installed itself. Only a non-default context is released.
+    The probe reads the context *after* that no-op free to tell the two apart, and
+    the hazard that creates (a candidate that really freed it is reading released
+    memory, which glibc does not fault on at this size) is stated in the probe
+    rather than avoided, because avoiding it would remove the only observation
+    that can see the behaviour.
+
+**Two deferrals are named in the code rather than left as absences.**
+`context_deinit` calls `ossl_ctx_thread_stop` in the authority; it cannot be
+called until 6.6e registers threads against a context, and the line it goes on
+says so. And `ossl_do_ex_data_init(ctx)` gives each context its own ex-data
+registry, which `src/runtime/ex_data.rs` records as a process-global Phase 3
+deferral; this module does not quietly change that.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented | 81 | 88 |
+| Phase 6 open | 80 | 73 |
+| `implemented[libcrypto]` | 1,055 | 1,062 |
+| Phase 6 courts | 1 | 2 |
+| all courts | 48 | 49 |
+| all observations | 19,347 | 19,420 |
+| runtime courts in the FRF store | 37 | 38 |
