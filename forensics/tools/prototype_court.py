@@ -17,15 +17,32 @@ See `docs/DECISIONS.md` D65.
 What this court compares, and what it deliberately does not
 ----------------------------------------------------------
 It compares the things a caller's compiler bakes into the call: the **return class**
-(`void`, pointer, function pointer, integer, floating) and the **arity**. It does not
-compare parameter *types*: the atlas gives C types and the source gives Rust types, and
-mapping between them needs a per-parameter table that would itself be a transcription.
-Class and arity catch the defect class above at every call site; parameter types remain
-the probes' business.
+(`void`, pointer, function pointer, integer, floating) and the **arity**, and -- in
+the type plane -- the canonical shape of the return type and of every parameter.
+A struct pointee's *name* is deliberately discarded, because `*mut Asn1String` and
+`*mut c_void` are the same to a caller; pointer depth, pointee constness, integer
+width and signedness, and function-pointer shape are kept, because those are not.
 
-Both sides are resolved through their typedef chains before classification —
-`CRYPTO_THREAD_ID` is `unsigned long` and `BIO_callback_fn` is a function pointer — so
-a difference in *spelling* is not reported as a difference in *shape*.
+Three declaration surfaces are read, and since D98 all three are *checked*:
+
+  * a plain `pub`/`pub(crate)` `extern "C" fn` in `src/**/*.rs`;
+  * a `macro_rules!` invocation, by reading the macro's declared parameter list and
+the literal signature inside its body and substituting at each use;
+  * a definition in `src/**/*.c`, for the variadic shims stable Rust cannot express.
+
+Only three of the 932 implemented exports remain unjudged, and the reason is not a
+gap in this court: they are declared in headers the authority does not install, so
+the Phase 1 atlas -- whose universe is the installed public surface -- has no
+prototype for them. Their ABI is proved by the Phase 2 loader court.
+
+Sensitivity
+-----------
+A court that has only ever been seen to pass has not been shown to be able to fail,
+so the artifact carries three **controls**: a macro body's return type perturbed, a
+C definition's parameter perturbed, and a macro body that fills a type position (which
+must be *refused* rather than read as `opaque`). Each asserts both halves -- that the
+defective input is detected and the corrected one is not -- using the same parser and
+the same canonical form as the real pass. `all_detected` is a failure condition.
 
 How a symbol is classified
 --------------------------
@@ -33,11 +50,19 @@ How a symbol is classified
   * `mismatch`           — a Rust declaration was parsed and disagrees. **Fails.**
   * `unclassified`       — parsed, but a class this court cannot name. Never a pass.
   * `declaration_is_generated` — the symbol appears in `src/**/*.rs` but not as a
-                          `pub extern "C" fn` this court can parse: the crate declares
-                          several of these from a `macro_rules!`. Not checkable here,
-                          and never counted as a pass.
+                          declaration this court can read directly. This is the
+                          `macro_rules!` surface, and since D98 it is **read** rather
+                          than reported: `macro_defs` parses each macro's declared
+                          parameter list and the literal signature inside its body, and
+                          `expand_macro_invocations` substitutes each invocation's
+                          arguments, so a macro-generated export is checked on the same
+                          canonical form as every other. The heading now survives only
+                          for a macro this court could not read, which is a hard failure.
   * `implementation_is_c` — a definition in `src/**/*.c` (the variadic and syscall
-                          shims, which stable Rust cannot express).
+                          shims, which stable Rust cannot express). Since D98 their
+                          **C** signature is read and canonicalised against the
+                          authority's prototype, so they are checked rather than merely
+                          counted.
   * `not_found`          — implemented, but no declaration found anywhere. **Fails**,
                           because an implemented export must be declared somewhere.
 
@@ -56,6 +81,7 @@ import argparse
 import json
 import re
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -116,13 +142,27 @@ R_INTEGER = re.compile(
 )
 
 DECL_RE = re.compile(
-    r"pub\s+(?:unsafe\s+)?extern\s+\"C\"\s+fn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\("
+    # `pub(crate)` was missing from this alternation until D98, and that single
+    # omission hid twenty-six exports: `src/runtime/err_loaders.rs` declares every
+    # `ERR_load_<LIB>_strings` as `pub(crate) extern "C" fn` with `#[no_mangle]`,
+    # because the symbol has to be exported while the *Rust item* stays crate-private.
+    # Twenty-six symbols were therefore reported as "the symbol appears in src but not
+    # as a declaration this court can parse" -- the court's own regex was the defect,
+    # not the declarations. The instrument is the suspect before the code, again.
+    r"pub(?:\s*\([^)]*\))?\s+(?:unsafe\s+)?extern\s+\"C\"\s+fn\s+"
+    r"([A-Za-z_][A-Za-z0-9_]*)\s*\("
 )
 RUST_ALIAS_RE = re.compile(
     r"^(?:pub(?:\s*\([a-z]+\s*\))?\s+)?type\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([^;]+);",
     re.MULTILINE,
 )
 C_DEF_RE_TEMPLATE = r"(?m)^[A-Za-z_][A-Za-z0-9_ \t*]*\b{name}\s*\("
+
+# A `macro_rules!` definition, and the `$param` names its body turns into exported
+# symbols. See `macro_defs` and `expand_macro_invocations`.
+MACRO_RULES_RE = re.compile(r"macro_rules!\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{")
+MACRO_FN_RE_TEMPLATE = r"\bfn\s+\${name}\s*\("
+MACRO_BINDING_RE = re.compile(r"\$([A-Za-z_][A-Za-z0-9_]*)")
 
 
 # C integer type -> (bytes, signed), after typedef resolution. `char` is signed on
@@ -704,6 +744,331 @@ def blank_comments(text: str) -> str:
     return "".join(out)
 
 
+def _scan_delimited(text: str, open_at: int) -> int:
+    """Index of the bracket closing the one at `open_at`, skipping literals.
+
+    `_scan_balanced` is the right scanner for a declaration, where nothing can hold
+    a bracket that is not structure. A *macro body* is different: `concat!("`BIGNUM *",
+    stringify!($name), "(BIGNUM *bn)`")` contains parentheses inside a string
+    literal, and `blank_comments` cannot blank them because they are not comments.
+    Counting them as structure would end a body early and quietly attribute the next
+    macro's declarations to this one, so string and char literals are skipped here.
+    """
+    pairs = {"(": ")", "{": "}", "[": "]"}
+    if open_at >= len(text) or text[open_at] not in pairs:
+        return -1
+    depth = 0
+    i = open_at
+    while i < len(text):
+        ch = text[i]
+        if ch == '"':
+            i += 1
+            while i < len(text):
+                if text[i] == "\\":
+                    i += 2
+                    continue
+                if text[i] == '"':
+                    break
+                i += 1
+            i += 1
+            continue
+        if ch == "'":
+            # A char literal closes within a few bytes; a lifetime never closes with
+            # a second `'` before the next identifier ends, so this is safe.
+            if text[i + 2:i + 3] == "'":
+                i += 3
+                continue
+            if text[i + 1:i + 2] == "\\":
+                j = text.find("'", i + 2)
+                if 0 <= j <= i + 6:
+                    i = j + 1
+                    continue
+            i += 1
+            continue
+        if ch in pairs:
+            depth += 1
+        elif ch in ")}]":
+            depth -= 1
+            if depth == 0:
+                return i
+        i += 1
+    return -1
+
+
+def _split_delimited(text: str, start: int, end: int) -> list[tuple[int, int]]:
+    """Top-level comma-separated spans of `text[start:end]`, as absolute offsets.
+
+    Split on commas that are not inside a bracket of any kind and not inside a
+    literal. Returns `[]` for an empty or whitespace-only region.
+    """
+    spans: list[tuple[int, int]] = []
+    depth = 0
+    i = start
+    piece = start
+    while i < end:
+        ch = text[i]
+        if ch == '"':
+            i += 1
+            while i < end:
+                if text[i] == "\\":
+                    i += 2
+                    continue
+                if text[i] == '"':
+                    break
+                i += 1
+            i += 1
+            continue
+        if ch in "({[":
+            depth += 1
+        elif ch in ")}]":
+            depth -= 1
+        elif ch == "," and depth == 0:
+            spans.append((piece, i))
+            piece = i + 1
+        i += 1
+    spans.append((piece, end))
+    return [s for s in spans if text[s[0]:s[1]].strip()]
+
+
+@dataclass(frozen=True)
+class MacroParam:
+    """One top-level element of a `macro_rules!` matcher.
+
+    `kind` is `simple` for `$name:kind` and `repeat` for `$( ... )sep*`. `binds`
+    names every `$name` the element binds; `symbols` names those of them that the
+    macro's body turns into an exported function, with that function's signature.
+    """
+    kind: str
+    binds: tuple[str, ...]
+    symbols: tuple[tuple[str, tuple[str, list[str]]], ...]
+
+
+@dataclass(frozen=True)
+class MacroDef:
+    """A `macro_rules!` whose body declares at least one exported function."""
+    name: str
+    file: str
+    params: tuple[MacroParam, ...]
+    span: tuple[int, int]  # offsets of the whole definition, for skipping it
+
+    @property
+    def symbols(self) -> tuple[tuple[str, tuple[str, list[str]]], ...]:
+        return tuple(s for p in self.params for s in p.symbols)
+
+
+def macro_defs(
+    text: str, source_key: str
+) -> tuple[list[MacroDef], list[str]]:
+    """Every `macro_rules!` in `text` that declares an exported function.
+
+    The crate cannot build a `#[no_mangle]` symbol name from another token, so each
+    of these macros writes both identifiers at every use and the *body* holds a
+    literal signature with a `$param` where the name goes. The signature is
+    therefore readable; only the substitution was missing.
+
+    A macro with no `fn $param(` in its body -- `bail!`, the `macro_rules!` helper
+    in `conf/def.rs` -- binds no symbol and is skipped, which is why this does not
+    need to understand arbitrary macro syntax: it only has to understand the macros
+    that produce symbols, and it fails loudly when one of those has a shape it cannot
+    read. Returns `(defs, unreadable)`.
+    """
+    defs: list[MacroDef] = []
+    unreadable: list[str] = []
+    for m in MACRO_RULES_RE.finditer(text):
+        name = m.group(1)
+        body_open = m.end() - 1
+        body_close = _scan_delimited(text, body_open)
+        if body_close < 0:
+            unreadable.append(f"{source_key}:{name}: the definition does not close")
+            continue
+        rule = text[body_open + 1:body_close]
+        # The first rule: `(matcher) => { expansion }`. A macro with several rules
+        # where more than one declares a symbol is not something this court can read
+        # without implementing macro dispatch, so it is reported rather than guessed.
+        paren = rule.find("(")
+        if paren < 0:
+            unreadable.append(f"{source_key}:{name}: no matcher")
+            continue
+        matcher_end = _scan_delimited(rule, paren)
+        if matcher_end < 0:
+            unreadable.append(f"{source_key}:{name}: the matcher does not close")
+            continue
+        matcher = rule[paren + 1:matcher_end]
+
+        # The expansion body: the first `{` after the matcher. Everything after it is
+        # where the `fn $param(` declarations live.
+        brace = rule.find("{", matcher_end)
+        if brace < 0:
+            unreadable.append(f"{source_key}:{name}: no expansion body")
+            continue
+        expansion_end = _scan_delimited(rule, brace)
+        if expansion_end < 0:
+            unreadable.append(f"{source_key}:{name}: the body does not close")
+            continue
+        expansion = rule[brace + 1:expansion_end]
+
+        params: list[MacroParam] = []
+        for lo, hi in _split_delimited(matcher, 0, len(matcher)):
+            element = matcher[lo:hi].strip()
+            if element.startswith("$("):
+                inner_end = _scan_delimited(element, 1)
+                if inner_end < 0:
+                    unreadable.append(
+                        f"{source_key}:{name}: a repetition pattern does not close")
+                    continue
+                inner = element[2:inner_end]
+                binds = tuple(dict.fromkeys(MACRO_BINDING_RE.findall(inner)))
+                params.append(_macro_param("repeat", binds, expansion))
+            elif element.startswith("$"):
+                bm = MACRO_BINDING_RE.match(element)
+                if bm is None:
+                    continue
+                params.append(_macro_param("simple", (bm.group(1),), expansion))
+            # Anything else is a literal token (`,`, `=>`, a qualifier) and binds
+            # nothing.
+        if any(p.symbols for p in params):
+            defs.append(MacroDef(name=name, file=source_key, params=tuple(params),
+                                 span=(m.start(), body_close + 1)))
+    return defs, unreadable
+
+
+def _macro_param(kind: str, binds: tuple[str, ...], expansion: str) -> MacroParam:
+    """The parameter, with the signature of every binding its body declares."""
+    symbols: list[tuple[str, tuple[str, list[str]]]] = []
+    for bind in binds:
+        fn_re = re.compile(MACRO_FN_RE_TEMPLATE.format(name=re.escape(bind)))
+        for m in fn_re.finditer(expansion):
+            parts = rust_signature_parts(expansion, m.end() - 1)
+            if parts is None:
+                continue
+            if "$" in parts[0] or any("$" in a for a in parts[1]):
+                # A type position the macro fills in. This court cannot substitute
+                # into a type, so it says so instead of reading half a signature.
+                symbols.append((bind, ("unclassified", [])))
+                continue
+            symbols.append((bind, parts))
+    return MacroParam(kind=kind, binds=binds, symbols=tuple(symbols))
+
+
+def expand_macro_invocations(
+    files: list[tuple[str, str]], defs: dict[str, MacroDef]
+) -> tuple[dict[str, tuple[tuple[str, list[str]], str]], list[str]]:
+    """Every exported symbol a `macro_rules!` invocation creates, by bare name.
+
+    Answers `name -> (signature, invoking_file)`. The invoking file is what an alias in
+    the macro body resolves against, since a macro body is expanded at its call site.
+
+    Positional, in the order the matcher declares. A repetition parameter consumes
+    every remaining comma-separated group, which is asserted rather than assumed: a
+    matcher with a repetition that is not last is reported, because guessing where
+    one ends is how a silent mis-substitution would start.
+    """
+    found: dict[str, tuple[tuple[str, list[str]], str]] = {}
+    problems: list[str] = []
+    for key, text in files:
+        for name, macro in defs.items():
+            skip = macro.span if macro.file == key else None
+            for m in re.finditer(rf"\b{re.escape(name)}\s*!", text):
+                if skip is not None and skip[0] <= m.start() < skip[1]:
+                    continue
+                opener = m.end()
+                while opener < len(text) and text[opener] in " \t\r\n":
+                    opener += 1
+                if opener >= len(text) or text[opener] not in "([{":
+                    continue
+                closer = _scan_delimited(text, opener)
+                if closer < 0:
+                    problems.append(f"{key}: `{name}!` invocation does not close")
+                    continue
+                groups = _split_delimited(text, opener + 1, closer)
+                cursor = 0
+                for index, param in enumerate(macro.params):
+                    if not param.binds:
+                        continue
+                    if param.kind == "repeat":
+                        if index != len(macro.params) - 1:
+                            problems.append(
+                                f"{key}: `{name}!` has a repetition that is not the "
+                                "last matcher element, which this court cannot read")
+                            cursor = len(groups)
+                            break
+                        take = groups[cursor:]
+                        cursor = len(groups)
+                    else:
+                        take = groups[cursor:cursor + 1]
+                        cursor += 1
+                    for span in take:
+                        if not param.symbols:
+                            # A binder the body does not turn into a function -- a
+                            # `$size`, a `$doc`, a `$flags`. Reading it as a name
+                            # would report the crate's own literal arguments as
+                            # unreadable invocations, which is how this check found
+                            # itself before D98.
+                            continue
+                        group = text[span[0]:span[1]]
+                        first = re.match(r"\s*([A-Za-z_][A-Za-z0-9_]*)", group)
+                        if first is None:
+                            problems.append(
+                                f"{key}: `{name}!` argument {group.strip()!r} does not "
+                                "begin with an identifier, so the symbol it declares "
+                                "cannot be named")
+                            continue
+                        for _bind, signature in param.symbols:
+                            found.setdefault(first.group(1), (signature, key))
+                if cursor < len(groups):
+                    problems.append(
+                        f"{key}: `{name}!` was given {len(groups)} argument group(s) "
+                        f"and its matcher consumes {cursor}")
+    return found, problems
+
+
+def c_definition_signature(
+    name: str, c_text: str, typedefs: dict[str, str]
+) -> tuple[str, list[str]] | None:
+    """The canonical signature of a C definition in `src/**/*.c`.
+
+    The variadic shims (`BIO_printf`, `ERR_add_error_data`, ...) cannot be declared in
+    stable Rust, so the crate implements them in C. Before D98 they were counted under
+    `implementation_is_c` and therefore *unjudged*; their C signature is a perfectly
+    readable comparison surface and is read here.
+
+    A parameter's name is removed by trying the type as written first and, only when
+    that does not canonicalise, stripping the trailing identifier. `int` keeps its
+    spelling because it canonicalises; `const char *format` does not, so the name goes.
+    """
+    m = re.search(C_DEF_RE_TEMPLATE.format(name=re.escape(name)), c_text)
+    if m is None:
+        return None
+    open_at = c_text.index("(", m.end() - 1)
+    close_at = _scan_delimited(c_text, open_at)
+    if close_at < 0:
+        return None
+    ret = c_text[m.start():open_at].strip()
+    # The definition spells the return type *then* the name: `int BIO_printf`. The
+    # name is a suffix, so it is the suffix that goes.
+    if ret.endswith(name):
+        ret = ret[:-len(name)].strip()
+    c_ret = canon_c_type(ret, typedefs)
+    if c_ret is None:
+        return None
+    args: list[str] = []
+    for lo, hi in _split_delimited(c_text, open_at + 1, close_at):
+        arg = c_text[lo:hi].strip()
+        if arg in ("", "void"):
+            continue
+        if arg == "...":
+            args.append("...")
+            continue
+        c = canon_c_type(arg, typedefs)
+        if c is None:
+            stripped = re.sub(r"[A-Za-z_][A-Za-z0-9_]*\s*$", "", arg).strip()
+            c = canon_c_type(stripped, typedefs) if stripped else None
+        if c is None:
+            return None
+        args.append(c)
+    return c_ret, args
+
+
 def read_sources() -> tuple[
     dict[str, tuple[str, int]],
     dict[str, tuple[str, list[str]]],
@@ -711,9 +1076,10 @@ def read_sources() -> tuple[
     dict[str, str],
     str,
     str,
+    list[str],
 ]:
     """Rust declarations, raw signatures, per-symbol alias scope, global unique
-aliases, all Rust text, all C text.
+aliases, all Rust text, all C text, and every macro the court could not read.
 
     Two passes over the Rust sources, not one. An alias is often defined in a file
     that sorts *after* the one that returns it (`method.rs` returns `BioReadFn`, which
@@ -776,6 +1142,34 @@ aliases, all Rust text, all C text.
             if parts is not None:
                 signatures.setdefault(sym, parts)
                 scopes.setdefault(sym, scope)
+
+    # --- the `macro_rules!` plane -------------------------------------------
+    # The crate cannot build a `#[no_mangle]` name from another token, so each macro
+    # that exports a symbol writes both identifiers at every use and its body holds a
+    # literal signature with `$param` where the name goes. That signature is readable;
+    # only the substitution was missing, which is why 136 exports were reported as
+    # unjudgeable rather than as wrong (docs/DECISIONS.md D96 recorded the gap and two
+    # designs that did not need this; D98 records why this one is better).
+    macro_table: dict[str, MacroDef] = {}
+    unreadable: list[str] = []
+    for key, text in rust_files:
+        found, bad = macro_defs(text, key)
+        unreadable.extend(bad)
+        for found_def in found:
+            macro_table.setdefault(found_def.name, found_def)
+    expanded, expansion_problems = expand_macro_invocations(rust_files, macro_table)
+    for sym, (signature, invoking_key) in expanded.items():
+        if signature[0] == "unclassified":
+            unreadable.append(
+                f"{sym}: its macro fills a type position in the signature")
+            continue
+        scope = dict(unique_aliases)
+        scope.update(aliases_by_file.get(invoking_key, {}))
+        declarations.setdefault(sym, (classify_rust(signature[0], scope),
+                                      len(signature[1])))
+        signatures.setdefault(sym, signature)
+        scopes.setdefault(sym, scope)
+
     return (
         declarations,
         signatures,
@@ -783,6 +1177,7 @@ aliases, all Rust text, all C text.
         unique_aliases,
         "\n".join(t for _, t in rust_files),
         "\n".join(c_text),
+        unreadable + expansion_problems,
     )
 
 
@@ -839,6 +1234,16 @@ def c_signature_canon(
         if c is None:
             return None
         args.append(c)
+    if rec.get("variadic"):
+        # The atlas's parameter *list* records only the named parameters -- Clang's
+        # `ParmVarDecl`s -- so `int (BIO *, const char *, ...)` has two entries. The
+        # varargs are as much a part of the call convention as the named arguments, and
+        # leaving them out made these eight symbols compare against a two-argument
+        # prototype and *fail*: the C definition was right and the court's reading of
+        # the authority was wrong. Recorded because the same shape -- the instrument
+        # dropping a detail rather than the code getting it wrong -- has now happened
+        # five times in this stratum alone (docs/DECISIONS.md D98).
+        args.append("...")
     return ret, tuple(args)
 
 
@@ -894,6 +1299,249 @@ def canon_render(sig: tuple[str, tuple[str, ...]]) -> str:
     return f"{sig[0]} ({', '.join(sig[1])})"
 
 
+SCALAR_PLANES = (
+    "checked", "mismatches", "unclassified", "declaration_is_generated",
+    "implementation_is_c", "implementation_is_c_mismatches", "not_found",
+    "no_prototype_in_atlas", "type_checked", "type_mismatches", "type_unmapped",
+    "unreadable_macros",
+)
+
+
+def compare_all(
+    implemented: list[str],
+    prototypes: dict[str, str],
+    records: dict[str, dict],
+    typedefs: dict[str, str],
+    parsed: tuple,
+) -> dict[str, list]:
+    """Every implemented export, judged against the authority's prototype.
+
+    Factored out of `main` so the **sensitivity control** can run the identical
+    comparison over deliberately corrupted sources. A court that has only ever been
+    seen to pass has not shown that it can fail, and this project treats a passing
+    comparison with no sensitivity evidence as weak evidence rather than as a result.
+    """
+    (declarations, signatures, scopes, unique_aliases, rust_text, c_text,
+     unreadable) = parsed
+    out: dict[str, list] = {name: [] for name in SCALAR_PLANES}
+
+    for sym in sorted(implemented):
+        proto = prototypes.get(sym)
+        if proto is None:
+            out["no_prototype_in_atlas"].append(sym)
+            continue
+        want = parse_c_prototype(proto, typedefs)
+        if want is None:
+            out["unclassified"].append({
+                "symbol": sym, "prototype": proto,
+                "why": "the authority's prototype did not parse"})
+            continue
+        rec = records.get(sym)
+        got = declarations.get(sym)
+        if got is None:
+            # Not a Rust declaration this court reads. Two cases, both now *checked*
+            # rather than counted: a C definition in `src/**/*.c` (the variadic shims
+            # stable Rust cannot express), and a symbol the crate declares from a
+            # `macro_rules!` the expansion plane could not reach.
+            c_sig = c_definition_signature(sym, c_text, typedefs)
+            if c_sig is not None:
+                out["implementation_is_c"].append(sym)
+                c_want = c_signature_canon(rec, typedefs) if rec is not None else None
+                if c_want is None:
+                    out["type_unmapped"].append({
+                        "symbol": sym, "prototype": proto,
+                        "c_signature": canon_render(c_sig), "rust_signature": None,
+                        "why": "the authority's own prototype did not canonicalise, "
+                               "so the C definition has nothing to be compared with",
+                    })
+                elif (c_want[0], list(c_want[1])) != (c_sig[0], list(c_sig[1])):
+                    out["implementation_is_c_mismatches"].append({
+                        "symbol": sym, "prototype": proto,
+                        "authority_signature": canon_render(c_want),
+                        "definition_signature": canon_render(c_sig),
+                    })
+                continue
+            if re.search(rf"\b{re.escape(sym)}\b", rust_text):
+                out["declaration_is_generated"].append(sym)
+            else:
+                out["not_found"].append(sym)
+            continue
+        row = {
+            "symbol": sym, "prototype": proto,
+            "c_return": want[0], "c_arity": want[1],
+            "rust_return": got[0], "rust_arity": got[1],
+        }
+        if want[0] == "unclassified" or got[0] == "unclassified":
+            row["why"] = "a return type this court cannot classify"
+            out["unclassified"].append(row)
+            continue
+        out["checked"].append(row)
+        if want != got:
+            row["class_mismatch"] = want[0] != got[0]
+            row["arity_mismatch"] = want[1] != got[1]
+            out["mismatches"].append(row)
+
+        # --- the type plane -------------------------------------------------
+        # Class and arity say a call goes through; the type plane says each
+        # argument is the right *kind* of thing. Both sides are canonicalised so
+        # that a typedef spelling difference is not reported, while pointer
+        # depth, pointee constness, integer width and function-pointer shape are.
+        c_sig = c_signature_canon(rec, typedefs) if rec is not None else None
+        r_sig = rust_signature_canon(signatures.get(sym),
+                                     scopes.get(sym, unique_aliases))
+        if c_sig is None or r_sig is None:
+            out["type_unmapped"].append({
+                "symbol": sym, "prototype": proto,
+                "c_signature": None if c_sig is None else canon_render(c_sig),
+                "rust_signature": None if r_sig is None else canon_render(r_sig),
+                "why": "a parameter or return type this court cannot canonicalise",
+            })
+            continue
+        type_row = {
+            "symbol": sym,
+            "c_signature": canon_render(c_sig),
+            "rust_signature": canon_render(r_sig),
+        }
+        out["type_checked"].append(type_row)
+        if (c_sig[0], list(c_sig[1])) != (r_sig[0], list(r_sig[1])):
+            type_row["return_mismatch"] = c_sig[0] != r_sig[0]
+            type_row["param_mismatches"] = [
+                i for i, (a, b) in enumerate(zip(c_sig[1], r_sig[1])) if a != b
+            ]
+            if len(c_sig[1]) != len(r_sig[1]):
+                type_row["arity_mismatch"] = True
+            out["type_mismatches"].append(type_row)
+
+    out["unreadable_macros"] = list(unreadable)
+    return out
+
+
+def sensitivity_report() -> dict:
+    """Demonstrate that this court can see the defect classes it claims to cover.
+
+    The synthetic inputs below are parsed by the *same* functions the real pass uses,
+    so a parser regression fails here first. Two of them are positive controls for the
+    two planes that D98 added or repaired:
+
+      * a `macro_rules!` body whose declared signature does not match the symbol's
+        invocation -- the court must read the signature, and must produce a canonical
+        form that differs from the authority's;
+      * a C definition whose parameter differs in pointer depth -- the court must
+        canonicalise both and see the difference.
+
+    Each control asserts *both* halves: that the defective version is detected, and
+    that the correct version is not. A control that only checks the first half would
+    pass for a court that reports every symbol as a mismatch.
+    """
+    report: dict = {"what": (
+        "the same comparison functions, run over deliberately defective inputs, must "
+        "notice; and over the corrected inputs, must not"), "controls": []}
+    aliases: dict[str, str] = {}
+
+    macro_src = (
+        "macro_rules! demo_fn {\n"
+        "    ($name:ident) => {\n"
+        "        #[no_mangle]\n"
+        "        pub unsafe extern \"C\" fn $name(a: *mut c_void) -> c_int {\n"
+        "            a as c_int\n"
+        "        }\n"
+        "    };\n"
+        "}\n"
+        "demo_fn!(demo_one);\n"
+        "demo_fn!(demo_two);\n"
+    )
+    broken_src = macro_src.replace("fn $name(a: *mut c_void) -> c_int",
+                                   "fn $name(a: *mut c_void) -> c_long")
+    # A macro whose body puts a `$param` in a *type* position cannot be read, and the
+    # court must say so rather than read half a signature. This is the control for the
+    # refusal path, and it exists because the refusal is easy to get wrong in the
+    # direction that matters: silently classifying the placeholder as `opaque` would
+    # make every such symbol compare equal to something.
+    type_placeholder_src = macro_src.replace("*mut c_void", "*mut $ty")
+
+    def expand(text: str) -> dict[str, tuple[tuple[str, list[str]], str]]:
+        defs: dict[str, MacroDef] = {}
+        found, _bad = macro_defs(text, "<sensitivity>")
+        for d in found:
+            defs[d.name] = d
+        out, _problems = expand_macro_invocations([("<sensitivity>", text)], defs)
+        return out
+
+    good = expand(macro_src)
+    bad = expand(broken_src)
+    refused = expand(type_placeholder_src)
+    # The macro plane's control: the same invocations, read from the same parser.
+    macro_ok = (
+        set(good) == {"demo_one", "demo_two"}
+        and good["demo_one"][0][0] == "c_int"
+        and set(bad) == set(good)
+        and bad["demo_one"][0][0] == "c_long"
+        and set(refused) == {"demo_one", "demo_two"}
+        and all(sig[0] == "unclassified" for sig, _key in refused.values())
+        # The parameter *names* are in the macro body's text (`a: *mut c_void`), and
+        # the same `canon_rust_param` the real pass uses must reduce both sides to
+        # one parameter of the same shape.
+        and rust_signature_canon(good["demo_one"][0], aliases)
+        == ("int:4:s", ("ptr(opaque)",))
+    )
+    # ... and the canonical form must separate them, because that is the plane the
+    # comparison actually uses.
+    macro_ok = macro_ok and (
+        canon_rust_type(good["demo_one"][0][0], aliases)
+        != canon_rust_type(bad["demo_one"][0][0], aliases)
+    )
+    report["controls"].append({
+        "control": "macro-plane",
+        "what": "a `macro_rules!` return type perturbed from `c_int` to `c_long`, "
+                "plus a body that fills a type position and must be refused rather "
+                "than read",
+        "detected": bool(macro_ok),
+        "observed": {
+            "correct": canon_rust_type(good["demo_one"][0][0], aliases),
+            "perturbed": canon_rust_type(bad["demo_one"][0][0], aliases),
+            "type_placeholder": refused["demo_one"][0][0],
+        },
+    })
+
+    # The C plane's control.
+    c_typedefs = dict(C_SYSTEM_TYPEDEFS)
+    c_good = "void demo_c(const char *fmt, int n)\n{\n}\n"
+    c_bad = "void demo_c(const char *fmt, long n)\n{\n}\n"
+    sig_good = c_definition_signature("demo_c", c_good, c_typedefs)
+    sig_bad = c_definition_signature("demo_c", c_bad, c_typedefs)
+    c_ok = (
+        sig_good is not None and sig_bad is not None
+        and (sig_good[0], list(sig_good[1])) != (sig_bad[0], list(sig_bad[1]))
+        and sig_good[1] == ["ptr(const(int:1:s))", "int:4:s"]
+        and sig_bad[1] == ["ptr(const(int:1:s))", "int:8:s"]
+    )
+    report["controls"].append({
+        "control": "c-definition-plane",
+        "what": "a C definition's parameter perturbed from `int` to `long`",
+        "detected": bool(c_ok),
+        "observed": {
+            "correct": None if sig_good is None else canon_render(sig_good),
+            "perturbed": None if sig_bad is None else canon_render(sig_bad),
+        },
+    })
+
+    # The variadic reading, which the C plane depends on and which the atlas's
+    # parameter list omits.
+    var_rec = {"type": "int (char *, ...)", "params": [{"type": "char *"}],
+               "variadic": True}
+    var_sig = c_signature_canon(var_rec, c_typedefs)
+    var_ok = var_sig is not None and var_sig[1] == ("ptr(int:1:s)", "...")
+    report["controls"].append({
+        "control": "variadic-reading",
+        "what": "`...` must be part of the authority's own canonical signature",
+        "detected": bool(var_ok),
+        "observed": None if var_sig is None else canon_render(var_sig),
+    })
+
+    report["all_detected"] = all(c["detected"] for c in report["controls"])
+    return report
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -918,83 +1566,20 @@ def main(argv: list[str]) -> int:
         )
     )["body"]["libraries"]["libcrypto"]
 
-    declarations, signatures, scopes, aliases, rust_text, c_text = read_sources()
-
-    checked: list[dict] = []
-    mismatches: list[dict] = []
-    unclassified: list[dict] = []
-    generated: list[str] = []
-    in_c: list[str] = []
-    not_found: list[str] = []
-    no_prototype: list[str] = []
-    type_checked: list[dict] = []
-    type_mismatches: list[dict] = []
-    type_unmapped: list[dict] = []
-
-    for sym in sorted(surface["implemented_symbols"]):
-        proto = prototypes.get(sym)
-        if proto is None:
-            no_prototype.append(sym)
-            continue
-        want = parse_c_prototype(proto, typedefs)
-        if want is None:
-            unclassified.append({"symbol": sym, "prototype": proto,
-                                 "why": "the authority's prototype did not parse"})
-            continue
-        got = declarations.get(sym)
-        if got is None:
-            if re.search(C_DEF_RE_TEMPLATE.format(name=re.escape(sym)), c_text):
-                in_c.append(sym)
-            elif re.search(rf"\b{re.escape(sym)}\b", rust_text):
-                generated.append(sym)
-            else:
-                not_found.append(sym)
-            continue
-        row = {
-            "symbol": sym, "prototype": proto,
-            "c_return": want[0], "c_arity": want[1],
-            "rust_return": got[0], "rust_arity": got[1],
-        }
-        if want[0] == "unclassified" or got[0] == "unclassified":
-            row["why"] = "a return type this court cannot classify"
-            unclassified.append(row)
-            continue
-        checked.append(row)
-        if want != got:
-            row["class_mismatch"] = want[0] != got[0]
-            row["arity_mismatch"] = want[1] != got[1]
-            mismatches.append(row)
-
-        # --- the type plane -------------------------------------------------
-        # Class and arity say a call goes through; the type plane says each
-        # argument is the right *kind* of thing. Both sides are canonicalised so
-        # that a typedef spelling difference is not reported, while pointer
-        # depth, pointee constness, integer width and function-pointer shape are.
-        rec = records.get(sym)
-        c_sig = c_signature_canon(rec, typedefs) if rec is not None else None
-        r_sig = rust_signature_canon(signatures.get(sym), scopes.get(sym, aliases))
-        if c_sig is None or r_sig is None:
-            type_unmapped.append({
-                "symbol": sym, "prototype": proto,
-                "c_signature": None if c_sig is None else canon_render(c_sig),
-                "rust_signature": None if r_sig is None else canon_render(r_sig),
-                "why": "a parameter or return type this court cannot canonicalise",
-            })
-            continue
-        type_row = {
-            "symbol": sym,
-            "c_signature": canon_render(c_sig),
-            "rust_signature": canon_render(r_sig),
-        }
-        type_checked.append(type_row)
-        if c_sig != r_sig:
-            type_row["return_mismatch"] = c_sig[0] != r_sig[0]
-            type_row["param_mismatches"] = [
-                i for i, (a, b) in enumerate(zip(c_sig[1], r_sig[1])) if a != b
-            ]
-            if len(c_sig[1]) != len(r_sig[1]):
-                type_row["arity_mismatch"] = True
-            type_mismatches.append(type_row)
+    result = compare_all(surface["implemented_symbols"], prototypes, records,
+                         typedefs, read_sources())
+    checked = result["checked"]
+    mismatches = result["mismatches"]
+    unclassified = result["unclassified"]
+    generated = result["declaration_is_generated"]
+    in_c = result["implementation_is_c"]
+    in_c_mismatches = result["implementation_is_c_mismatches"]
+    not_found = result["not_found"]
+    no_prototype = result["no_prototype_in_atlas"]
+    type_checked = result["type_checked"]
+    type_mismatches = result["type_mismatches"]
+    type_unmapped = result["type_unmapped"]
+    unreadable = result["unreadable_macros"]
 
     body = {
         "what": (
@@ -1027,27 +1612,41 @@ def main(argv: list[str]) -> int:
             "unclassified": len(unclassified),
             "declaration_is_generated": len(generated),
             "implementation_is_c": len(in_c),
+            "implementation_is_c_mismatches": len(in_c_mismatches),
             "not_found": len(not_found),
             "no_prototype_in_atlas": len(no_prototype),
             "type_checked": len(type_checked),
             "type_mismatches": len(type_mismatches),
             "type_unmapped": len(type_unmapped),
+            "unreadable_macros": len(unreadable),
         },
+        "sensitivity": sensitivity_report(),
         "mismatches": mismatches,
         "unclassified": unclassified,
         "declaration_is_generated": generated,
         "implementation_is_c": in_c,
+        "implementation_is_c_mismatches": in_c_mismatches,
         "not_found": not_found,
         "no_prototype_in_atlas": no_prototype,
         "type_mismatches": type_mismatches,
         "type_unmapped": type_unmapped,
+        "unreadable_macros": unreadable,
         "note": (
-            "A symbol this court cannot classify -- including one the crate declares "
-            "from a `macro_rules!` -- is reported under its own heading and never "
-            "counted as a pass, so `mismatches == 0` must be read together with "
+            "A symbol this court cannot classify is reported under its own heading and "
+            "never counted as a pass, so `mismatches == 0` must be read together with "
             "`checked`, and `type_mismatches == 0` together with `type_checked`. The "
             "type plane's canonical form is what the court can defend; it does not "
-            "claim two declarations are textually identical."
+            "claim two declarations are textually identical. Since D98 the "
+            "`macro_rules!` surface and the C implementations are read rather than "
+            "merely counted, and both are failures when they disagree: "
+            "`declaration_is_generated` is now a defect rather than a gap. "
+            "`no_prototype_in_atlas` is not a defect and cannot be closed here -- "
+            "those exports are declared in headers the authority does not install "
+            "(`crypto/o_dir.h`, `crypto/asn1/asn1_local.h`), so the Phase 1 atlas, "
+            "whose universe is the installed public surface, has no prototype for "
+            "them. Their ABI is still proved by the Phase 2 loader court, which "
+            "resolves every one of them at its declared ELF version; what is missing "
+            "is a *source* prototype to compare against."
         ),
     }
 
@@ -1065,13 +1664,28 @@ def main(argv: list[str]) -> int:
     print(f"  implemented={c['implemented']} checked={c['checked']} "
           f"mismatches={c['mismatches']} unclassified={c['unclassified']} "
           f"generated={c['declaration_is_generated']} in-c={c['implementation_is_c']} "
-          f"not-found={c['not_found']} no-prototype={c['no_prototype_in_atlas']}")
+          f"c-mismatches={c['implementation_is_c_mismatches']} "
+          f"not-found={c['not_found']} no-prototype={c['no_prototype_in_atlas']} "
+          f"unreadable={c['unreadable_macros']}")
     print(f"  type plane: checked={c['type_checked']} "
           f"mismatches={c['type_mismatches']} unmapped={c['type_unmapped']}")
+    print(f"  C implementations: checked={c['implementation_is_c']} "
+          f"mismatches={c['implementation_is_c_mismatches']}")
+    sens = body["sensitivity"]
+    print(f"  sensitivity: {len(sens['controls'])} control(s), "
+          f"all_detected={sens['all_detected']}")
+    for control in sens["controls"]:
+        print(f"    {control['control']}: "
+              f"{'detected' if control['detected'] else 'NOT DETECTED'} "
+              f"({control['what']})")
     for row in mismatches:
         print(f"  MISMATCH {row['symbol']}: authority returns {row['c_return']} with "
               f"{row['c_arity']} parameter(s); the crate returns {row['rust_return']} "
               f"with {row['rust_arity']}")
+    for row in in_c_mismatches:
+        print(f"  C-MISMATCH {row['symbol']}: authority "
+              f"{row['authority_signature']} != definition "
+              f"{row['definition_signature']}")
     for row in type_mismatches:
         print(f"  TYPE-MISMATCH {row['symbol']}: authority {row['c_signature']} != "
               f"crate {row['rust_signature']}")
@@ -1080,12 +1694,21 @@ def main(argv: list[str]) -> int:
     for row in unclassified:
         print(f"  unclassified {row['symbol']}: {row.get('why', '')} "
               f"({row.get('prototype', '')})")
+    for problem in unreadable:
+        print(f"  UNREADABLE {problem}")
+    if generated:
+        print(f"  UNREAD {len(generated)} symbol(s) appear in src/ but no declaration "
+              "or definition could be read: "
+              + ", ".join(generated[:10])
+              + (f" (+{len(generated) - 10} more)" if len(generated) > 10 else ""))
     if not_found:
         print(f"  not found anywhere in src/: {', '.join(not_found[:10])}"
               + (f" (+{len(not_found) - 10} more)" if len(not_found) > 10 else ""))
     print(f"  -> {rel(OUT)}")
 
-    return 1 if (mismatches or type_mismatches or type_unmapped or not_found) else 0
+    return 1 if (mismatches or type_mismatches or type_unmapped or not_found
+                 or in_c_mismatches or generated or unreadable
+                 or not body["sensitivity"]["all_detected"]) else 0
 
 
 if __name__ == "__main__":
