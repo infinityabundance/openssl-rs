@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 561,
       "deferred_to_later_phase": 62,
-      "implemented": 394,
-      "open_in_this_stratum": 109,
+      "implemented": 406,
+      "open_in_this_stratum": 97,
       "owned": 565
     },
     "deferred": [
@@ -593,6 +593,7 @@
       "ASN1_put_object",
       "ASN1_tag2bit",
       "ASN1_tag2str",
+      "BIGNUM_it",
       "BN_BLINDING_free",
       "BN_BLINDING_get_flags",
       "BN_BLINDING_invert",
@@ -765,12 +766,23 @@
       "BN_value_one",
       "BN_with_flags",
       "BN_zero_ex",
+      "CBIGNUM_it",
       "DIRECTORYSTRING_free",
       "DIRECTORYSTRING_it",
       "DIRECTORYSTRING_new",
       "DISPLAYTEXT_free",
       "DISPLAYTEXT_it",
       "DISPLAYTEXT_new",
+      "INT32_it",
+      "INT64_it",
+      "LONG_it",
+      "UINT32_it",
+      "UINT64_it",
+      "ZINT32_it",
+      "ZINT64_it",
+      "ZLONG_it",
+      "ZUINT32_it",
+      "ZUINT64_it",
       "asn1_d2i_read_bio",
       "d2i_ASN1_BIT_STRING",
       "d2i_ASN1_BMPSTRING",
@@ -1114,11 +1126,6 @@
         "symbol": "ASN1_str2mask"
       },
       {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "BIGNUM_it"
-      },
-      {
         "declaring_header": "bio.h",
         "module": "src/asn1/",
         "symbol": "BIO_asn1_get_prefix"
@@ -1147,26 +1154,6 @@
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
         "symbol": "BIO_new_NDEF"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "CBIGNUM_it"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "INT32_it"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "INT64_it"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "LONG_it"
       },
       {
         "declaring_header": "pem.h",
@@ -1309,16 +1296,6 @@
         "symbol": "PEM_write_bio_X509_REQ_NEW"
       },
       {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "UINT32_it"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "UINT64_it"
-      },
-      {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
         "symbol": "UTF8_getc"
@@ -1327,31 +1304,6 @@
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
         "symbol": "UTF8_putc"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "ZINT32_it"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "ZINT64_it"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "ZLONG_it"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "ZUINT32_it"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "ZUINT64_it"
       },
       {
         "declaring_header": "asn1.h",
@@ -1411,7 +1363,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "0959aaa29244ed2a3a76f60563be91d80fda9ff3fa42c38633714e4d90a49c3e"
+      "sha256": "7b793aaabd865900ee00f5f30c103c9543d6d68be3efd044e62744d0f6511ca6"
     }
   ],
   "kind": "phase5-obligations",

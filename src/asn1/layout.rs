@@ -262,6 +262,12 @@ unsafe impl Sync for Asn1Item {}
 // `static` initialiser to be valid.
 unsafe impl Sync for Asn1Template {}
 
+// SAFETY: as `Asn1Item` above. An `Asn1PrimitiveFuncs` the crate builds is a `static`
+// whose fields are scalars, raw pointers and function pointers, none of which is mutated
+// through a shared reference. The twelve items that carry one read it through `&*funcs`,
+// so the borrow is shared on every path.
+unsafe impl Sync for Asn1PrimitiveFuncs {}
+
 /// `ASN1_AUX` — the optional behaviour block an `ASN1_ITEM` may carry.
 #[repr(C)]
 pub struct Asn1Aux {

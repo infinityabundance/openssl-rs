@@ -1751,3 +1751,78 @@ unsafe fn pctx_flags(p: *const Asn1Pctx) -> (c_ulong, c_ulong, c_ulong, c_ulong,
     let x = unsafe { &*p };
     (x.flags, x.nm_flags, x.cert_flags, x.oid_flags, x.str_flags)
 }
+
+// ---------------------------------------------------------------------------
+// The `x_int64.c` hooks' codec — a_ int.c's two internal integer converters
+// ---------------------------------------------------------------------------
+
+/// `int ossl_c2i_uint64_int(uint64_t *ret, int *neg, const unsigned char **pp, long len)`
+///
+/// The magnitude and the sign of an `ASN1_INTEGER`'s content, as a `u64` and a flag. The
+/// `c2i_ibuf` pass runs **twice**: once with a null destination to learn how many
+/// significant octets there are, and once for real. That is the authority's shape rather
+/// than an inefficiency to remove — the first pass is also what rejects illegal padding
+/// and a zero-length content, so doing it once would mean sizing the buffer from a number
+/// that had not been validated yet.
+///
+/// A magnitude wider than the buffer is `ASN1_R_TOO_LARGE` rather than a truncation, which
+/// is what stops an over-wide `INTEGER` from silently decoding to a smaller number.
+///
+/// `pp` is read but **not advanced**; the caller owns the cursor.
+///
+/// # Safety
+///
+/// `ret` and `neg` must be live slots. `pp` must point to a slot holding a readable
+/// pointer to `len` bytes.
+pub(crate) unsafe fn ossl_c2i_uint64_int(
+    ret: *mut u64,
+    neg: *mut c_int,
+    pp: *mut *const c_uchar,
+    len: c_long,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    let p = unsafe { *pp };
+    // SAFETY: `p` is readable for `len` bytes per the caller's contract; a null
+    // destination asks only for the count.
+    let buflen = unsafe {
+        c2i_ibuf(
+            core::ptr::null_mut(),
+            core::ptr::null_mut(),
+            p,
+            len.max(0) as usize,
+        )
+    };
+    if buflen == 0 {
+        return 0;
+    }
+    if buflen > 8 {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::A_INT_641) };
+        return 0;
+    }
+    let mut buf = [0u8; 8];
+    // SAFETY: `buf` has room for `buflen <= 8` octets and `p` is readable.
+    unsafe { c2i_ibuf(buf.as_mut_ptr(), neg, p, len.max(0) as usize) };
+    // SAFETY: `buf` is readable for `buflen` and `ret` is a live slot.
+    unsafe { asn1_get_uint64(ret, buf.as_ptr(), buflen) }
+}
+
+/// `int ossl_i2c_uint64_int(unsigned char *p, uint64_t r, int neg)`
+///
+/// The inverse: `r` is written big-endian without leading zero octets, and the sign
+/// padding `i2c_ibuf` adds is what keeps a magnitude whose top bit is set from reading as
+/// negative.
+///
+/// A null `p` sizes only, which is why the return is the content length on both passes.
+///
+/// # Safety
+///
+/// `p` must be null or writable for the length this answers.
+pub(crate) unsafe fn ossl_i2c_uint64_int(p: *mut c_uchar, r: u64, neg: c_int) -> c_int {
+    let mut buf = [0u8; 8];
+    let off = asn1_put_uint64(&mut buf, r);
+    let mut slot = p;
+    // SAFETY: `buf + off` is readable for `8 - off` octets, and `slot` is the caller's
+    // destination or null.
+    unsafe { i2c_ibuf(buf.as_ptr().add(off), 8 - off, neg != 0, &mut slot) as c_int }
+}

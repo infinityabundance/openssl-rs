@@ -4,9 +4,9 @@
     "canonical_form": "both sides are reduced to one grammar: `void`; `int:<bytes>:<s|u>`; `float:<bytes>`; `ptr(<inner>)`; `const(<inner>)`; `fn(<ret>; <args>)`; `opaque`. A struct pointee's *name* is deliberately discarded -- `*mut Asn1String` and `*mut c_void` are the same to a caller -- while pointer depth, pointee constness, integer width and signedness, and function-pointer argument shape are kept. A type the table cannot canonicalise is reported under `type_unmapped` and never counted as a pass",
     "counts": {
       "checked": 690,
-      "declaration_is_generated": 148,
+      "declaration_is_generated": 160,
       "implementation_is_c": 8,
-      "implemented": 849,
+      "implemented": 861,
       "mismatches": 0,
       "no_prototype_in_atlas": 3,
       "not_found": 0,
@@ -72,6 +72,7 @@
       "ASN1_VISIBLESTRING_free",
       "ASN1_VISIBLESTRING_it",
       "ASN1_VISIBLESTRING_new",
+      "BIGNUM_it",
       "BN_get_rfc2409_prime_1024",
       "BN_get_rfc2409_prime_768",
       "BN_get_rfc3526_prime_1536",
@@ -80,6 +81,7 @@
       "BN_get_rfc3526_prime_4096",
       "BN_get_rfc3526_prime_6144",
       "BN_get_rfc3526_prime_8192",
+      "CBIGNUM_it",
       "DIRECTORYSTRING_free",
       "DIRECTORYSTRING_it",
       "DIRECTORYSTRING_new",
@@ -128,6 +130,16 @@
       "ERR_peek_last_error_func",
       "ERR_peek_last_error_line",
       "ERR_peek_last_error_line_data",
+      "INT32_it",
+      "INT64_it",
+      "LONG_it",
+      "UINT32_it",
+      "UINT64_it",
+      "ZINT32_it",
+      "ZINT64_it",
+      "ZLONG_it",
+      "ZUINT32_it",
+      "ZUINT64_it",
       "d2i_ASN1_BIT_STRING",
       "d2i_ASN1_BMPSTRING",
       "d2i_ASN1_ENUMERATED",
@@ -204,7 +216,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "bf012151c765bd8036cdf3b1e1ec735973cbdbbec771076416aaa3af431c77b7"
+      "sha256": "5e8a897e2b44b8de4bfb61682c4479da598581e127d89fb881992df221d66554"
     }
   ],
   "kind": "prototype-court",

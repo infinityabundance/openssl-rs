@@ -56,3 +56,6 @@ pub mod string;
 pub mod text;
 pub mod typ;
 pub mod utl;
+pub mod x_bignum;
+pub mod x_int64;
+pub mod x_long;

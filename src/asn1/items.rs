@@ -476,3 +476,48 @@ template_item!(
      `ASN1_TFLG_SET_OF`. The flag is what makes the encoder sort the elements into \
      canonical order, so the two items produce different bytes for the same stack."
 );
+
+// ---------------------------------------------------------------------------
+// The primitive-hook items — `ASN1_ITEM_start` over `ASN1_PRIMITIVE_FUNCS`
+// ---------------------------------------------------------------------------
+
+/// Declare one `ASN1_PRIMITIVE_FUNCS`-carrying item and its accessor.
+///
+/// These are the items whose codec is a *function* rather than the generic content codec:
+/// `x_int64.c`'s eight, `x_long.c`'s two and `x_bignum.c`'s two. The decoder and encoder
+/// reach them through `it->funcs` before any type dispatch, which is why the hook, not
+/// `utype`, is what makes them work.
+///
+/// `size` is **not** a size here. All twelve of those items overwrite the field with flags
+/// — `INTxx_FLAG_*` for the integers, the `ASN1_LONG_UNDEF` sentinel for `LONG`, the
+/// sensitivity bit for `CBIGNUM` — and the hooks read it back. That abuse is the
+/// authority's, and the decoder's `V_ASN1_BOOLEAN` arm is the only place in the generic
+/// machinery that also treats `size` as a value rather than a layout fact, so it is worth
+/// naming here rather than discovering later.
+///
+/// `funcs` is a `&'static Asn1PrimitiveFuncs` at each use and is stored as a raw pointer
+/// because that is what the item holds.
+macro_rules! funcs_item {
+    ($item:ident, $getter:ident, $funcs:expr, $size:expr, $sname:literal, $doc:expr) => {
+        #[doc = $doc]
+        ///
+        /// `size` is the authority's flags word, not a `sizeof`: see [`funcs_item`].
+        static $item: Asn1Item = Asn1Item {
+            itype: ASN1_ITYPE_PRIMITIVE,
+            utype: V_ASN1_INTEGER as c_long,
+            templates: core::ptr::null(),
+            tcount: 0,
+            funcs: (&$funcs as *const Asn1PrimitiveFuncs).cast::<c_void>(),
+            size: $size,
+            sname: $sname.as_ptr(),
+        };
+
+        #[doc = $doc]
+        #[no_mangle]
+        pub extern "C" fn $getter() -> *const Asn1Item {
+            &$item
+        }
+    };
+}
+
+pub(crate) use funcs_item;
