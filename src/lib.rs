@@ -65,6 +65,7 @@
 pub mod asn1;
 pub mod bn;
 pub mod ffi;
+pub mod params;
 pub mod pem;
 pub mod runtime;
 pub mod status;

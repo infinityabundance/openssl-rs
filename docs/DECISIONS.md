@@ -4829,3 +4829,94 @@ Two courts were added to Phase 3, its observation count moves 4,358 → 4,410, a
 branch changed, which is why `RT-MEM` still reproduces its 82 committed
 observations byte for byte: the finding is entirely about the branch no probe had
 entered.
+
+## D103 — the 81 parameter exports, and two more instrument gaps the prototype court had
+
+Phase 6.5 implements the parameter surface: the 56 exports of `crypto/params.c`, the
+three of `crypto/params_dup.c`, the two of `crypto/params_from_text.c` and the twenty
+of `crypto/param_build.c`, across `src/params/{mod,dup,from_text,build}.rs`. The module
+tree mirrors the authority's file boundaries, because those are what the ownership
+atlas and the raise-site coordinates are keyed on.
+
+Three things about this surface were worth writing down before the code, and each
+turned out to matter:
+
+* **`params.c` spells its eight refusals as file-local macros and invokes them bare.**
+  D101 fixed the generator; this is the first stratum to *use* the fix, and the
+  fifty-odd invocation coordinates are now carried as `err_sites::PARAMS_*`.
+* **`return_size` is a state, not a length.** Every setter has an early `data == NULL`
+  arm that records the size the caller would need and answers **success** — that is how
+  a provider asks "how big is this?" without a buffer. A reimplementation that treated
+  a NULL buffer as an error would break every size query in the library.
+* **"Native order" is little-endian here, and the code never says so.** The integer
+  buffers a parameter carries are in the host's byte order — the opposite of
+  `ASN1_INTEGER` one stratum below — so `copy_integer`'s `IS_BIG_ENDIAN` branch is taken
+  as the little-endian arm, and `is_negative` reads the last byte rather than the first.
+
+Two behaviours were reproduced rather than tidied, because a court compares answers and
+there is no way from outside to tell which internal path produced one:
+
+* `OSSL_PARAM_get_int32` reads a four-byte `INTEGER` *directly* while the general path
+  would reject the same bytes if their sign disagreed with the destination. Both paths
+  are in the module, in the authority's order.
+* `OSSL_PARAM_set_double`'s bounds are half-open — an unsigned destination accepts
+  `0 <= v < 2^32` and a signed one `-2^31 <= v < 2^31` — so `2^31` is *rejected* for an
+  `int32` destination, which is one off from a "fits in an int32" reading.
+
+The internal helpers `params.c` defines for later strata — `ossl_param_get1_octet_string`,
+`ossl_param_get1_octet_string_from_param`, `ossl_param_get1_concat_octet_string` and
+`setbuf_fromparams` — are implemented although no Phase 6 export reaches them, since
+they are part of the translation unit this module reconstructs. They carry an
+`allow(dead_code)` with the reason, as `err_reasons.rs` does. `setbuf_fromparams` drives
+`WPACKET` in the authority and `crypto/packet.c` is Phase 7's; it is reproduced as the
+two operations actually used (refuse a non-`OCTET_STRING` element, refuse a copy that
+does not fit), including `WPACKET_init_static_len`'s `len > 0` refusal by a direct test
+rather than by an assertion. It is to be re-based on the real `WPACKET` when that
+stratum lands, and that is a **residual**, not a claim.
+
+Three smaller divergences are recorded rather than hidden. `prepare_from_text`'s
+`switch` has no `default` in C, so an unhandled `data_type` leaves `buf_n` indeterminate;
+every type the atlas's headers define is handled, and the unreachable arm answers 0
+bytes rather than reading uninitialised memory. `param_build.c`'s `n < 0` arm cannot be
+reached because `BN_num_bits` is never negative for a live `BIGNUM`, so the generated
+site exists and is not called. `OSSL_PARAM_print_to_bio` dereferences a NULL array in
+the authority and answers 0 here. And `OSSL_PARAM_merge`'s `qsort` is unspecified among
+*equal* keys within one list, where this implementation is stable.
+
+### Two more instrument gaps, and they were the same gap twice
+
+The court reported `implemented=974 checked=... unclassified=15 unreadable=10`. Both
+numbers were the instrument, not the code.
+
+**`unclassified=15`: a struct returned by value.** `classify_c` does not follow
+typedefs, so `OSSL_PARAM` — a typedef of `struct ossl_param_st` — has no class, and
+`classify_c_return` answered `unclassified`. The class plane is a coarse filter (return
+kind and arity) and the *type* plane canonicalises `opaque` on both sides correctly, so
+the fix is not to teach `classify_c` about typedefs: it is that an `unclassified` symbol
+`continue`d **before** the type plane, so those fifteen exports were checked by
+**neither plane**. No export had ever returned a struct by value before, which is why
+nothing had noticed. The symbol is now dropped only when the type plane cannot
+canonicalise it either, and `unclassified` counts what genuinely could not be read by
+either. That is the D96/`a2d_ASN1_OBJECT` class a fourth time: an obligation that
+disappears between classification layers.
+
+**`unreadable=10`: my own macro.** The twelve scalar pushes were written as one
+`macro_rules!` so that the width and the `OSSL_PARAM_*` code could not drift apart. D98
+established that the court refuses a macro body that puts a metavariable in a *type*
+position — deliberately, because reading one would mean guessing what it expands to —
+and this macro did exactly that. The ten functions are now written out literally. The
+repetition is the price of being read, and it is the second time this phase has paid it.
+
+After both fixes: `implemented=1054 checked=1023 mismatches=0 unclassified=0 generated=0
+unreadable=0 not-found=0`, and `type plane: checked=1039 mismatches=0 unmapped=0`. The
+difference between 1023 and 1039 is the C-definition and macro planes, which the type
+plane covers separately.
+
+### What is NOT claimed yet
+
+`RT-PARAM` does not exist. By D73's rule a subphase closes only when its exports are
+implemented **and** a differential court observes them *in the same commit*, so the
+parameter surface is **implemented and uncourted**, `forensics/phase6-obligations.json`
+moves from 161 open to 80 open (81 implemented), and 6.5 stays `IN PROGRESS`. The court is the next
+commit, not this one, and this paragraph exists so that the ledger's arithmetic is not
+mistaken for an exit criterion met.

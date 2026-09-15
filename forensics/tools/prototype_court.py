@@ -1371,15 +1371,21 @@ def compare_all(
             "c_return": want[0], "c_arity": want[1],
             "rust_return": got[0], "rust_arity": got[1],
         }
-        if want[0] == "unclassified" or got[0] == "unclassified":
-            row["why"] = "a return type this court cannot classify"
-            out["unclassified"].append(row)
-            continue
-        out["checked"].append(row)
-        if want != got:
-            row["class_mismatch"] = want[0] != got[0]
-            row["arity_mismatch"] = want[1] != got[1]
-            out["mismatches"].append(row)
+        # The class plane is a coarse filter: return kind and arity. It has no notion of
+        # a struct returned *by value*, because until Phase 6's `OSSL_PARAM_construct_*`
+        # no export returned one -- `OSSL_PARAM` is a typedef of `struct ossl_param_st`,
+        # and `classify_c` does not follow typedefs. Dropping such a symbol here used to
+        # skip the type plane as well, which meant **fifteen exports whose return type is
+        # a struct were checked by neither plane** (the D96 class a fourth time; see
+        # docs/DECISIONS.md D103). The symbol is therefore only dropped when the type
+        # plane cannot canonicalise it either.
+        class_unknown = want[0] == "unclassified" or got[0] == "unclassified"
+        if not class_unknown:
+            out["checked"].append(row)
+            if want != got:
+                row["class_mismatch"] = want[0] != got[0]
+                row["arity_mismatch"] = want[1] != got[1]
+                out["mismatches"].append(row)
 
         # --- the type plane -------------------------------------------------
         # Class and arity say a call goes through; the type plane says each
@@ -1390,12 +1396,20 @@ def compare_all(
         r_sig = rust_signature_canon(signatures.get(sym),
                                      scopes.get(sym, unique_aliases))
         if c_sig is None or r_sig is None:
-            out["type_unmapped"].append({
-                "symbol": sym, "prototype": proto,
-                "c_signature": None if c_sig is None else canon_render(c_sig),
-                "rust_signature": None if r_sig is None else canon_render(r_sig),
-                "why": "a parameter or return type this court cannot canonicalise",
-            })
+            if class_unknown:
+                row["why"] = (
+                    "neither plane could read it: the class plane does not follow a "
+                    "typedef to a struct returned by value, and a parameter or return "
+                    "type did not canonicalise"
+                )
+                out["unclassified"].append(row)
+            else:
+                out["type_unmapped"].append({
+                    "symbol": sym, "prototype": proto,
+                    "c_signature": None if c_sig is None else canon_render(c_sig),
+                    "rust_signature": None if r_sig is None else canon_render(r_sig),
+                    "why": "a parameter or return type this court cannot canonicalise",
+                })
             continue
         type_row = {
             "symbol": sym,
