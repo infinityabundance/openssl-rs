@@ -792,10 +792,20 @@ unsafe fn parse2(
     // SAFETY: `length` bytes from `p` are readable.
     let tot = unsafe { p.add(length.max(0) as usize) };
     let mut remaining = length;
-    let mut ret: c_int = 0;
     let mut nl = 0;
 
-    'outer: while remaining > 0 {
+    // The authority reaches `ret = 1` only when this loop ends by itself, and
+    // every failure leaves with `goto end` and whatever `ret` already held -- which
+    // is `0` unless an end-of-contents was seen. Writing `ret = 1` at the end of
+    // each iteration instead makes a *later* failure answer 1, and a caller that
+    // checks the return alone then believes a truncated parse succeeded. `RT-ASN1`
+    // found that: `ASN1_parse_dump` on a SEQUENCE whose last child overruns the
+    // declared length printed its diagnostic twice, because the recursive call
+    // reported success and the parent went on to parse the same bytes again.
+    let ret = 'outer: loop {
+        if remaining <= 0 {
+            break 'outer 1;
+        }
         let op = p;
         let mut len: c_long = 0;
         let mut tag: c_int = 0;
@@ -805,7 +815,7 @@ unsafe fn parse2(
         if j & 0x80 != 0 {
             // SAFETY: `bp` is a live BIO.
             unsafe { crate::runtime::bio::BIO_puts(bp, c"Error in encoding\n".as_ptr()) };
-            break 'outer;
+            break 'outer 0;
         }
         let hl = (p as usize).wrapping_sub(op as usize) as c_int;
         remaining -= hl as c_long;
@@ -824,7 +834,7 @@ unsafe fn parse2(
             )
         } == 0
         {
-            break 'outer;
+            break 'outer 0;
         }
         if j & V_ASN1_CONSTRUCTED != 0 {
             let mut sp = p;
@@ -832,7 +842,7 @@ unsafe fn parse2(
             let ep = unsafe { p.add(len.max(0) as usize) };
             // SAFETY: `bp` is a live BIO.
             if unsafe { crate::runtime::bio::BIO_write(bp, c"\n".as_ptr().cast(), 1) } <= 0 {
-                break 'outer;
+                break 'outer 0;
             }
             if len > remaining {
                 // SAFETY: `bp` is a live BIO.
@@ -843,7 +853,7 @@ unsafe fn parse2(
                         remaining,
                     )
                 };
-                break 'outer;
+                break 'outer 0;
             }
             if j == 0x21 && len == 0 {
                 // Indefinite length: parse until the end-of-contents marker or the
@@ -863,7 +873,7 @@ unsafe fn parse2(
                         )
                     };
                     if r == 0 {
-                        break 'outer;
+                        break 'outer 0;
                     }
                     if r == 2 || p >= tot {
                         len = (p as usize).wrapping_sub(sp as usize) as c_long;
@@ -887,7 +897,7 @@ unsafe fn parse2(
                         )
                     };
                     if r == 0 {
-                        break 'outer;
+                        break 'outer 0;
                     }
                     tmp -= (p as usize).wrapping_sub(sp as usize) as c_long;
                 }
@@ -897,7 +907,7 @@ unsafe fn parse2(
             p = unsafe { p.add(len.max(0) as usize) };
             // SAFETY: `bp` is a live BIO.
             if unsafe { crate::runtime::bio::BIO_write(bp, c"\n".as_ptr().cast(), 1) } <= 0 {
-                break 'outer;
+                break 'outer 0;
             }
         } else {
             // SAFETY: `p` holds `len` bytes.
@@ -916,7 +926,7 @@ unsafe fn parse2(
             ) {
                 // SAFETY: `bp` is a live BIO.
                 if unsafe { crate::runtime::bio::BIO_write(bp, c":".as_ptr().cast(), 1) } <= 0 {
-                    break 'outer;
+                    break 'outer 0;
                 }
                 // SAFETY: `bp` is a live BIO.
                 if !content.is_empty()
@@ -929,7 +939,7 @@ unsafe fn parse2(
                         )
                     } != content.len() as c_int
                 {
-                    break 'outer;
+                    break 'outer 0;
                 }
             } else if tag == V_ASN1_OBJECT {
                 let mut opp = op;
@@ -946,7 +956,7 @@ unsafe fn parse2(
                     if unsafe { crate::runtime::bio::BIO_write(bp, c":".as_ptr().cast(), 1) } <= 0 {
                         // SAFETY: `o` is ours.
                         unsafe { crate::asn1::prim::ASN1_OBJECT_free(o) };
-                        break 'outer;
+                        break 'outer 0;
                     }
                     // SAFETY: `bp` is live and `o` is a live object.
                     unsafe { crate::asn1::text::i2a_ASN1_OBJECT(bp, o) };
@@ -955,7 +965,7 @@ unsafe fn parse2(
                 } else {
                     // SAFETY: `bp` is a live BIO.
                     if unsafe { crate::runtime::bio::BIO_puts(bp, c":BAD OBJECT".as_ptr()) } <= 0 {
-                        break 'outer;
+                        break 'outer 0;
                     }
                     dump_cont = true;
                 }
@@ -963,7 +973,7 @@ unsafe fn parse2(
                 if len != 1 {
                     // SAFETY: `bp` is a live BIO.
                     if unsafe { crate::runtime::bio::BIO_puts(bp, c":BAD BOOLEAN".as_ptr()) } <= 0 {
-                        break 'outer;
+                        break 'outer 0;
                     }
                     dump_cont = true;
                 }
@@ -1002,7 +1012,7 @@ unsafe fn parse2(
                             {
                                 // SAFETY: `os` is ours.
                                 unsafe { crate::asn1::string::ASN1_STRING_free(os) };
-                                break 'outer;
+                                break 'outer 0;
                             }
                             // SAFETY: as above.
                             if unsafe { crate::runtime::bio::BIO_write(bp, odata.cast(), olen) }
@@ -1010,7 +1020,7 @@ unsafe fn parse2(
                             {
                                 // SAFETY: `os` is ours.
                                 unsafe { crate::asn1::string::ASN1_STRING_free(os) };
-                                break 'outer;
+                                break 'outer 0;
                             }
                         } else if dump == 0 {
                             // SAFETY: `bp` is a live BIO.
@@ -1024,7 +1034,7 @@ unsafe fn parse2(
                             {
                                 // SAFETY: `os` is ours.
                                 unsafe { crate::asn1::string::ASN1_STRING_free(os) };
-                                break 'outer;
+                                break 'outer 0;
                             }
                             for &byte in ob {
                                 // SAFETY: `bp` is a live BIO.
@@ -1096,7 +1106,7 @@ unsafe fn parse2(
                     if unsafe { crate::runtime::bio::BIO_write(bp, c":".as_ptr().cast(), 1) } <= 0 {
                         // SAFETY: `ai` is ours.
                         unsafe { crate::asn1::string::ASN1_STRING_free(ai) };
-                        break 'outer;
+                        break 'outer 0;
                     }
                     // SAFETY: `bp` is a live BIO.
                     if atype == neg_type
@@ -1106,7 +1116,7 @@ unsafe fn parse2(
                     {
                         // SAFETY: `ai` is ours.
                         unsafe { crate::asn1::string::ASN1_STRING_free(ai) };
-                        break 'outer;
+                        break 'outer 0;
                     }
                     // SAFETY: `adata` holds `alen` bytes.
                     let ab = unsafe { core::slice::from_raw_parts(adata, alen.max(0) as usize) };
@@ -1130,7 +1140,7 @@ unsafe fn parse2(
                 } else if tag == V_ASN1_INTEGER {
                     // SAFETY: `bp` is a live BIO.
                     if unsafe { crate::runtime::bio::BIO_puts(bp, c":BAD INTEGER".as_ptr()) } <= 0 {
-                        break 'outer;
+                        break 'outer 0;
                     }
                     dump_cont = true;
                 } else {
@@ -1138,7 +1148,7 @@ unsafe fn parse2(
                     if unsafe { crate::runtime::bio::BIO_puts(bp, c":BAD ENUMERATED".as_ptr()) }
                         <= 0
                     {
-                        break 'outer;
+                        break 'outer 0;
                     }
                     dump_cont = true;
                 }
@@ -1165,7 +1175,7 @@ unsafe fn parse2(
                 let tmp = unsafe { op.add(hl as usize) };
                 // SAFETY: `bp` is a live BIO.
                 if unsafe { crate::runtime::bio::BIO_puts(bp, c":[".as_ptr()) } <= 0 {
-                    break 'outer;
+                    break 'outer 0;
                 }
                 for i in 0..len {
                     // SAFETY: `i < len` keeps `tmp` readable.
@@ -1180,25 +1190,23 @@ unsafe fn parse2(
                 }
                 // SAFETY: `bp` is a live BIO.
                 if unsafe { crate::runtime::bio::BIO_puts(bp, c"]".as_ptr()) } <= 0 {
-                    break 'outer;
+                    break 'outer 0;
                 }
             }
             if nl == 0 {
                 // SAFETY: `bp` is a live BIO.
                 if unsafe { crate::runtime::bio::BIO_write(bp, c"\n".as_ptr().cast(), 1) } <= 0 {
-                    break 'outer;
+                    break 'outer 0;
                 }
             }
             // SAFETY: `p` holds `len` bytes.
             p = unsafe { p.add(len.max(0) as usize) };
             if tag == V_ASN1_EOC && xclass == 0 {
-                ret = 2;
-                break 'outer;
+                break 'outer 2;
             }
         }
         remaining -= len;
-        ret = 1;
-    }
+    };
     // SAFETY: the caller's slot is writable.
     unsafe { *pp = p };
     ret

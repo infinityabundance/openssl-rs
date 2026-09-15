@@ -1,7 +1,7 @@
 {
   "authority": "openssl-3.6.4-production",
   "body": {
-    "all_pass": false,
+    "all_pass": true,
     "authority": "openssl-3.6.4-production",
     "claim": "A passing court means the candidate produced the same observable transcript as the authority for the behaviours this probe exercises. It is a differential-compatibility result, NOT cryptographic or security correctness, and NOT evidence for any behaviour the probe does not touch (docs/PARITY_MODEL.md).",
     "courts": [
@@ -31,31 +31,18 @@
         "court": "RT-ASN1",
         "crashed": false,
         "probe": "courts/phase5/rt_asn1_probe.c",
-        "residual_count": 2,
-        "residuals": [
-          {
-            "authority": "171",
-            "candidate": "189",
-            "class": "value",
-            "observation": "parse.nested_text.len"
-          },
-          {
-            "authority": "    0:d=0  hl=2 l=  12 cons: SEQUENCE          \\x0A    2:d=1  hl=2 l=   3 prim: OCTET STRING      :ABC\\x0A    7:d=1  hl=2 l=   2 prim: INTEGER           :0100\\x0AError in encoding\\x0A",
-            "candidate": "    0:d=0  hl=2 l=  12 cons: SEQUENCE          \\x0A    2:d=1  hl=2 l=   3 prim: OCTET STRING      :ABC\\x0A    7:d=1  hl=2 l=   2 prim: INTEGER           :0100\\x0AError in encoding\\x0AError in encoding\\x0A",
-            "class": "value",
-            "observation": "parse.nested_text.text"
-          }
-        ],
+        "residual_count": 0,
+        "residuals": [],
         "staged_binaries": {
           "authority": "artifacts/phase5/probes/rt_asn1_probe.authority",
           "candidate": "artifacts/phase5/probes/rt_asn1_probe.candidate"
         },
-        "verdict": "fail"
+        "verdict": "pass"
       }
     ],
     "summary": {
-      "fail": 1,
-      "pass": 1,
+      "fail": 0,
+      "pass": 2,
       "total": 2
     }
   },
