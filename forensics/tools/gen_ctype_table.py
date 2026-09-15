@@ -34,6 +34,7 @@ SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from pathlib import Path
@@ -219,14 +220,78 @@ def rust_source(masks: dict[str, int], entries: list[int]) -> str:
     return "\n".join(lines)
 
 
+def check_against_artefact(check_only: bool) -> int:
+    """The weak tier: verify the generated Rust against the committed artefact.
+
+    Used when the authority's source tree is absent, which is the case on every
+    runner that has only the repository. It catches a hand-edited `ctype_table.rs` and
+    a JSON that has drifted from it. It cannot catch the authority having changed —
+    the authority is pinned by archive hash elsewhere, and the court, which has the
+    tree, re-derives. Which tier ran is printed, because a check that silently weakens
+    is the thing this project exists not to have.
+    """
+    if not OUT_JSON.is_file():
+        print(
+            f"[{GENERATOR}] neither the authority's source tree nor "
+            f"{rel(OUT_JSON)} is present; nothing can be checked",
+            file=sys.stderr,
+        )
+        return 1
+    doc = json.loads(OUT_JSON.read_text(encoding="utf-8"))
+    body = doc["body"]
+    masks = {k: int(v) for k, v in body["mask_constants"].items()}
+    entries = [int(v) for v in body["table"]]
+    if len(entries) != ENTRY_COUNT:
+        print(f"[{GENERATOR}] the artefact records {len(entries)} entries", file=sys.stderr)
+        return 1
+    expected = rust_source(masks, entries)
+    actual = OUT_RS.read_text(encoding="utf-8") if OUT_RS.is_file() else ""
+    if actual != expected:
+        print(
+            f"[{GENERATOR}] {rel(OUT_RS)} does not match {rel(OUT_JSON)}; the "
+            "generated file was edited by hand or the artefact is stale",
+            file=sys.stderr,
+        )
+        return 1
+    if check_only:
+        print(
+            f"[ctype-table] ok (weak tier, authority source absent): {rel(OUT_RS)} "
+            f"matches {rel(OUT_JSON)}"
+        )
+    else:
+        print(
+            f"[ctype-table] weak tier: authority source absent, so "
+            f"{rel(OUT_RS)} was checked against {rel(OUT_JSON)} and not re-derived"
+        )
+    return 0
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
     ap.add_argument("--check", action="store_true", help="do not write; fail on drift")
     args = ap.parse_args(argv)
 
+    src = resolve_authority(args.authority).source / SOURCE_REL
+
+    # The authority's source tree is **not committed**, so a runner that has only the
+    # repository cannot re-derive the table. That is a fact about this project, not a
+    # defect: the tree is 100 MB and the courts, which do have it, are where
+    # re-derivation happens.
+    #
+    # So the check has two tiers, and which one ran is printed rather than implied:
+    #
+    #   * authority present  -> re-derive from `crypto/ctype.c` (the strong tier, and
+    #                           the one the court and the whole pipeline use);
+    #   * authority absent   -> check the generated Rust against the committed
+    #                           artefact, which still catches a hand-edit of
+    #                           `ctype_table.rs` or a JSON that drifted from it, but
+    #                           cannot catch the authority itself having changed (the
+    #                           authority is pinned by hash elsewhere).
+    if not src.is_file():
+        return check_against_artefact(args.check)
+
     auth = resolve_authority(args.authority)
-    src = auth.source / SOURCE_REL
     masks_src = auth.source / MASKS_REL
     for p in (src, masks_src):
         if not p.is_file():
@@ -262,6 +327,10 @@ def main(argv: list[str]) -> int:
             "entries": ENTRY_COUNT,
             "mask_constants": {k: v for k, v in sorted(masks.items())},
             "members": {k: v for k, v in sorted(by_class.items())},
+            # The 128 values themselves, so that a runner without the authority's
+            # source tree can still check the generated Rust against this artefact.
+            # See `check_against_artefact`.
+            "table": entries,
             "claim": (
                 "The table and the class memberships are read out of the authority's "
                 "committed source. They are a transcription aid, not a parity claim: "
