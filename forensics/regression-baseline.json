@@ -154,7 +154,7 @@
   "deferred": {
     "phase3": 11,
     "phase4": 31,
-    "phase5": 60
+    "phase5": 62
   },
   "implemented": {
     "libcrypto": 805,
@@ -163,7 +163,7 @@
   "open_obligations": {
     "phase3": 0,
     "phase4": 0,
-    "phase5": 155
+    "phase5": 153
   },
   "owned_obligations": {
     "phase3": 235,

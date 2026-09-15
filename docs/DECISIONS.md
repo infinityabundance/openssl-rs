@@ -3442,3 +3442,36 @@ Two documentation defects were found beside it and fixed in the same change:
   two obligation ledgers", `phase-state.json` and `STATUS.md`. There are three ledgers,
   and `symbol-ownership.json`, `ownership-audit.json` and `prototype-court.json` are
   compared too. The list is now the rule rather than a subset.
+
+
+## D80 — `ASN1_ITEM_lookup` and `ASN1_ITEM_get` are a cross-phase dependency, measured
+
+Both are declared in `asn1.h`, so the ownership atlas gives them to Phase 5 and both sat
+in the stratum's `open` list as if implementing them were a matter of reading
+`crypto/asn1/asn1_item_list.c` — which is 46 lines, two loops, and trivial. It is not.
+The file's real content is the header it includes: the authority's **generated**
+`asn1_item_list.h`, a 147-entry array of item accessors, and both functions' observable
+behaviour is that array as a whole. `ASN1_ITEM_lookup("X509")` answering `NULL` is a
+wrong function, and it is exactly the answer an implementation over the items that exist
+today would give.
+
+Measured against `forensics/atlas/symbol-ownership.json`: the `_it` accessors of those 147
+names are owned by this stratum for **40** of them, by Phase 8 for 7, Phase 10 for 6,
+Phase 11 for 64 and Phase 12 for 30. So **107 of 147** are items no stratum before Phase 12
+will have. Both symbols are therefore handed to Phase 12 with that measurement as the
+reason, which is the same shape as D73's hand-offs: a disposition by *behaviour*, recorded
+with the evidence that makes it checkable rather than a judgement about difficulty.
+
+The trap this closes is specific and would have been silent. An implementation over today's
+40 items would pass any court that asked it about `ASN1_OCTET_STRING` and would fail on the
+107 names whose codecs are later phases' — so a partially-correct `ASN1_ITEM_lookup` is
+worse than an honest hand-off, because the ledger would have called it done.
+
+Recording it also wrote down what reading `tasn_utl.c` whole established — the choice
+selector being an `utype`-offset, `ossl_asn1_do_lock`'s three operations and its -1, the
+`ASN1_ENCODING` save/restore rules including `inlen <= 0` being a *failure*, the
+`ASN1_BOOLEAN` field pointer being the value, `ossl_asn1_do_adb`'s selector rewrite and
+linear search — and the `CHOICE` and `SEQUENCE` arms of `asn1_item_embed_d2i`, which is
+what the template interpreter is written against. That is in
+`docs/PHASE-5-SUBPHASES.md`, so the next session starts from it rather than from the
+source.

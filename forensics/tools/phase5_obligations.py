@@ -232,6 +232,29 @@ HANDED_ON.update({
     )
 })
 
+# The two item-list interrogators. `asn1.h` declares them, so the ownership atlas
+# gives them to this stratum, but their behaviour is a property of the authority's
+# *generated* `asn1_item_list.h` as a whole: which names resolve, and the index
+# order `ASN1_ITEM_get` answers in.
+#
+# Measured against the ownership atlas: that list has **147** entries, and their
+# `<name>_it` accessors are owned by this stratum for 40 of them and by Phase 8 for
+# 7, Phase 10 for 6, Phase 11 for 64 and Phase 12 for 30. So 107 of the 147 are
+# items no stratum before Phase 12 will have, and an implementation over the 40
+# that exist today would answer NULL for `X509` — a wrong function that no court
+# could catch, because the names it gets wrong are exactly the ones whose codecs
+# are later phases'. The dependency is the list, not the difficulty.
+#
+# Phase 12 is named rather than Phase 11 because the list is only whole once the
+# last of its phases has landed, and an item list that is missing its CMS and
+# PKCS#7 entries is not a shorter list, it is a different one.
+HANDED_ON.update({
+    sym: (12, "enumerates the authority's generated asn1_item_list.h, whose 147 "
+              "entries include 107 items owned by Phases 8, 10, 11 and 12 "
+              "(7/6/64/30); both functions' behaviour is the whole list")
+    for sym in ("ASN1_ITEM_lookup", "ASN1_ITEM_get")
+})
+
 def load(atlas: Path, name: str) -> dict:
     return json.loads((atlas / name).read_text(encoding="utf-8"))["body"]
 

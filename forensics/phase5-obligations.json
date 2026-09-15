@@ -4,12 +4,24 @@
     "complete": false,
     "counts": {
       "atlas_owned": 561,
-      "deferred_to_later_phase": 60,
+      "deferred_to_later_phase": 62,
       "implemented": 350,
-      "open_in_this_stratum": 155,
+      "open_in_this_stratum": 153,
       "owned": 565
     },
     "deferred": [
+      {
+        "declaring_header": "asn1.h",
+        "owning_phase": 12,
+        "reason": "enumerates the authority's generated asn1_item_list.h, whose 147 entries include 107 items owned by Phases 8, 10, 11 and 12 (7/6/64/30); both functions' behaviour is the whole list",
+        "symbol": "ASN1_ITEM_get"
+      },
+      {
+        "declaring_header": "asn1.h",
+        "owning_phase": 12,
+        "reason": "enumerates the authority's generated asn1_item_list.h, whose 147 entries include 107 items owned by Phases 8, 10, 11 and 12 (7/6/64/30); both functions' behaviour is the whole list",
+        "symbol": "ASN1_ITEM_lookup"
+      },
       {
         "declaring_header": "asn1.h",
         "owning_phase": 7,
@@ -375,7 +387,7 @@
       "7": 7,
       "9": 31,
       "10": 16,
-      "12": 6
+      "12": 8
     },
     "handoffs_discharged": {
       "4": [
@@ -806,16 +818,6 @@
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
         "symbol": "ASN1_GENERALIZEDTIME_set_string"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_ITEM_get"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_ITEM_lookup"
       },
       {
         "declaring_header": "asn1.h",
@@ -1554,7 +1556,7 @@
       }
     ],
     "owned_by_module": {
-      "src/asn1/": 308,
+      "src/asn1/": 306,
       "src/bn/": 170,
       "src/pem/": 27
     },

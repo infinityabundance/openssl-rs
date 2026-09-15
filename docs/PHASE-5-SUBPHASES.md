@@ -216,6 +216,71 @@ need no template at all, so the path is 5.3's own work and the plan was correcte
   equals the item's default is omitted; a null value is omitted for every type except a
   `BOOLEAN` item, whose value is the slot itself.
 
+### The template support layer (`crypto/asn1/tasn_utl.c`, read whole for 5.4)
+
+Every function here is reached by the template interpreter and by nothing else, so it is
+recorded before it is written rather than re-derived per call site.
+
+* `ossl_asn1_get_choice_selector`/`_const`/`set_choice_selector` read and write an `int`
+  at `it->utype` — for a `CHOICE` item the `utype` field is the **offset of the
+  selector**, not a type.
+* `ossl_asn1_do_lock`: returns 0 immediately unless the item is a `SEQUENCE` or
+  `NDEF_SEQUENCE` *and* its `ASN1_AUX` carries `ASN1_AFLG_REFCOUNT`; `op == 0`
+  initialises (reference 1 plus a new lock, and a lock failure raises `ERR_R_CRYPTO_LIB`
+  after freeing the reference), `op == 1` increments, `op == -1` decrements and — only at
+  zero — frees the lock, nulls the lock field and frees the reference. It answers -1 on
+  any failure, so a caller must distinguish -1 from 0.
+* `asn1_get_enc_ptr` needs **both** `pval` and `*pval` non-null and `ASN1_AFLG_ENCODING`
+  set, and reads the `ASN1_ENCODING` at `aux->enc_offset`. `ossl_asn1_enc_init` sets
+  `modified = 1`; `ossl_asn1_enc_free` releases and re-arms the same way.
+* `ossl_asn1_enc_save` **frees the previous encoding first**, then treats `inlen <= 0` as
+  "no encoding" and answers **0** — so a zero-length save is a failure the caller reports
+  as `ASN1_R_AUX_ERROR`.
+* `ossl_asn1_enc_restore` answers 0 when the encoding is absent *or* `modified`, and only
+  then; a successful restore copies the stored bytes and advances `*out`.
+* `ossl_asn1_get_field_ptr` is `*pval + tt->offset` returned as an `ASN1_VALUE **` — and
+  for a `BOOLEAN` field that pointer *is* the value, not a pointer to it.
+* `ossl_asn1_do_adb` returns `tt` unchanged unless `tt->flags & ASN1_TFLG_ADB_MASK`; it
+  reads the selector through `adb->offset` (an `OBJ_obj2nid` for `ADB_OID`, an
+  `ASN1_INTEGER_get` for `ADB_INT`), consults `adb->null_tt` when the selector field is
+  null, lets `adb_cb` rewrite the selector and treats a 0 answer as
+  `ASN1_R_UNSUPPORTED_ANY_DEFINED_BY_TYPE`, then does a **linear** search of
+  `adb->tbl` and falls back to `default_tt`. A miss with `nullerr` set raises; the
+  `NID_undef` value is deliberately *not* special-cased because it can be a legitimate
+  table key.
+
+### The `CHOICE` and `SEQUENCE` arms of `asn1_item_embed_d2i` (for 5.4)
+
+* `CHOICE` frees the value the selector currently points at and resets the selector to
+  `-1` before re-decoding into an existing value, then tries each template with
+  `opt = 1` and takes the first that answers `> 0`; a template answering `-1` means "not
+  this alternative", and any other 0-answer frees that partial field and raises
+  `ERR_R_NESTED_ASN1_ERROR`. Falling off the end is `ASN1_R_NO_MATCHING_CHOICE_TYPE`
+  unless `opt`, in which case the whole item is freed and `-1` returned. The chosen index
+  is written back only *after* the loop.
+* `SEQUENCE` requires the constructed bit (`ASN1_R_SEQUENCE_NOT_CONSTRUCTED`), honours
+  `ASN1_AFLG_BROKEN` by ignoring the declared length, and clears any ADB-derived fields
+  **before** the per-field loop. In the loop the last field is decoded with `isopt = 0`
+  and every other field with its own `ASN1_TFLG_OPTIONAL`; a `-1` frees and zeroes that
+  field and continues; an EOC inside the loop is `ASN1_R_UNEXPECTED_EOC` unless the header
+  said indefinite. Afterwards: a missing expected EOC is `ASN1_R_MISSING_EOC`, leftover
+  data is `ASN1_R_SEQUENCE_LENGTH_MISMATCH`, and any remaining field that is not OPTIONAL
+  is `ASN1_R_FIELD_MISSING`. On success the received bytes are stored with
+  `ossl_asn1_enc_save` — which is why a re-encode can return the caller's original bytes
+  rather than a re-derivation.
+* The `err:` tail adds `"Field="`, the field name, `", Type="` and the item's `sname`
+  as **additional error data**, so the queue contents differ between a failure at a named
+  field and one at the item itself even when the reason matches.
+
+### The item list (`crypto/asn1/asn1_item_list.c`)
+
+`ASN1_ITEM_lookup` and `ASN1_ITEM_get` scan the authority's *generated*
+`asn1_item_list.h`: 147 items, compared by `strcmp` on `sname`, with `get` indexing the
+same order. Measured against the ownership atlas, their `_it` accessors are owned by this
+stratum for 40 entries, Phase 8 for 7, Phase 10 for 6, Phase 11 for 64 and Phase 12 for
+30 — so 107 of the 147 do not exist before Phase 12 and both functions are handed there
+with that measurement as the reason (D80).
+
 ## Order of work, and why
 
 5.1 first, because everything else is written against `ASN1_STRING` and the primitive

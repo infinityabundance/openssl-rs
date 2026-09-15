@@ -191,6 +191,8 @@
         {
           "from_phase": 5,
           "symbols": [
+            "ASN1_ITEM_get",
+            "ASN1_ITEM_lookup",
             "SMIME_crlf_copy",
             "SMIME_read_ASN1",
             "SMIME_read_ASN1_ex",
@@ -356,6 +358,8 @@
         {
           "from_phase": 5,
           "symbols": [
+            "ASN1_ITEM_get",
+            "ASN1_ITEM_lookup",
             "SMIME_crlf_copy",
             "SMIME_read_ASN1",
             "SMIME_read_ASN1_ex",
@@ -566,9 +570,11 @@
       },
       {
         "atlas": 561,
-        "ledger": 505,
-        "only_in_atlas": 60,
+        "ledger": 503,
+        "only_in_atlas": 62,
         "only_in_atlas_examples": [
+          "ASN1_ITEM_get",
+          "ASN1_ITEM_lookup",
           "ASN1_item_sign_ex",
           "ASN1_item_verify_ex",
           "BN_BLINDING_convert",
@@ -576,9 +582,7 @@
           "BN_BLINDING_create_param",
           "BN_BLINDING_update",
           "BN_GF2m_mod_solve_quad",
-          "BN_GF2m_mod_solve_quad_arr",
-          "BN_GF2m_mod_sqrt",
-          "BN_GF2m_mod_sqrt_arr"
+          "BN_GF2m_mod_solve_quad_arr"
         ],
         "only_in_ledger": 4,
         "only_in_ledger_examples": [
@@ -5867,7 +5871,7 @@
     {
       "name": "ledger",
       "path": "forensics/tools/phase5_obligations.py",
-      "sha256": "22a895ec4a70f0d7eb231e041a0991008391a12774a9719ea490b70f50fc9268"
+      "sha256": "4401f6af921a77a03e1f17aa950fe8b3318c445da6afecdfd60e541a0e59dc40"
     },
     {
       "name": "ledger-result",
@@ -5882,7 +5886,7 @@
     {
       "name": "ledger-result",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "293e26e5c7bfb7ca9dff7c67eb1d5a5720e289d2719eb37068c37540886b81f9"
+      "sha256": "5dcdc6dd949337717c2df17b34b1ee01b9a3016c5e76dd414cce25f164050611"
     }
   ],
   "kind": "ownership-audit",
