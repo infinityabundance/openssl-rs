@@ -263,6 +263,20 @@ COURTS: list[tuple[str, int, str, str]] = [
      "byte only when the callback refuses; and both per-context callback pairs, "
      "including that the object's callback is the one passed to "
      "OSSL_SELF_TEST_new rather than the context's"),
+    ("rt-bio-core", 6, "rt_bio_core_probe",
+     "the core BIO method, whose every operation is a forward to an "
+     "application-supplied dispatch entry: the method's identity and stable "
+     "address; BIO_CORE_INDEX filled eagerly by context_init rather than on "
+     "first use; the constructor's refusal without a table and its acceptance "
+     "when only one of read_ex/write_ex is present; the five-way answer to a "
+     "missing callback, where read_ex and write_ex answer 0 and ctrl, gets and "
+     "puts answer -1, observed by supplying deliberately incomplete tables; the "
+     "handle the callbacks receive, compared against the constructor's argument "
+     "and against NULL rather than printed; two contexts holding two different "
+     "tables, named by the answers their callbacks produce; an up-ref that "
+     "refuses, which releases the wrapper with a NULL handle and never the "
+     "caller's handle; and a BIO built with a NULL context, whose libctx is "
+     "stored as given and resolved against the thread default at use time"),
 ]
 
 

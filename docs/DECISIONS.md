@@ -5491,3 +5491,95 @@ set; the cost is that the tool would then need the authority source tree and
 | index slots filled | 4 | 5 |
 | `err_sites.rs` coordinates | 767 | 772 |
 | unit tests | 183 | 189 |
+
+## D110 — the core BIO: a slot filled eagerly, a `libctx` resolved at use time, and three faults registered rather than reproduced
+
+**What landed.** Phase 6.6c: `crypto/bio/bss_core.c` (188 lines) as
+`src/context/core_bio.rs`, plus `src/context/dispatch.rs` for the `OSSL_DISPATCH`
+walk, plus `OSSL_LIB_CTX_BIO_CORE_INDEX` (17) and the export it exists for. Three
+exports are implemented — `BIO_s_core`, `BIO_new_from_core_bio` and
+`OSSL_LIB_CTX_new_from_dispatch` — and **slot 17 is filled**, so six of the
+eighteen index slots are live. `docs/PHASE-6-SUBPHASES.md` carried this subphase as
+`crypto/bio/bio_core.c`; the authority's file is `bss_core.c`, corrected there.
+
+**Phase 4's accepted-and-ignored argument is now honoured, in Phase 4's code.**
+`BIO_new_ex` has always taken an `OSSL_LIB_CTX *` and discarded it, because nothing
+in Phase 4 could read it; Phase 4's seal named this subphase as the obligation that
+created. `src/runtime/bio/mod.rs`'s `Bio` therefore gains a `libctx` field here.
+That is a change to a **sealed** stratum's source by a later one, which the seal
+rules permit only when the earlier seal named the obligation and the later stratum
+discharges it — which is why the field is recorded here rather than left as an
+unexplained diff. The Phase 4 courts are unaffected (3,244 observations, unchanged),
+because no Phase 4 behaviour depends on the field.
+
+**The finding: slot 17 is filled eagerly, not on first use.** `context_init` calls
+`ossl_bio_core_globals_new(ctx)` for every context, so
+`OSSL_LIB_CTX_get_data(ctx, 17)` answers non-NULL for a context that has never seen a
+dispatch table. The consequence is not cosmetic: `get_globals()` **cannot return
+NULL through the public API**, so `BIO_new_from_core_bio`'s NULL answer comes from
+the absent `BIO_read_ex`/`BIO_write_ex` callbacks and never from an absent globals
+block, and the `if (bcgbl == NULL)` arms in all seven operations are unreachable from
+a consumer. A candidate that created the globals lazily would answer every
+constructor observation identically and still be wrong about the slot. `RT-LIBCTX`
+now carries index 17 in its `filled_slots` array — the same fact observed from the
+other end — and moves from 81 to 83 observations.
+
+**`bio->libctx` is stored as given and resolved at *use* time.** The authority's
+`BIO_new_ex` assigns the argument with no concretisation, and
+`ossl_lib_ctx_get_concrete(NULL)` answers the **thread** default. So a core BIO built
+with a NULL context reaches whatever this thread's default is *when the operation
+runs*. `RT-BIO-CORE` proves it rather than asserting it: it builds one such BIO
+before any default is installed and writes to it (`0`, no callbacks reachable), then
+installs a context that has them and writes to **the same BIO** again (`18`, that
+channel's answer). A candidate that resolved the context at construction would pass
+every other observation in this court and fail exactly that one. Two contexts holding
+two tables are named the same way — the callbacks answer `3 × channel`, so the
+transcript says which channel ran without trusting a counter.
+
+**The court is a matrix over deliberately incomplete tables.** `BIO_new_from_core_bio`
+accepts a table carrying only one of `read_ex`/`write_ex`, so the probe builds a
+write-only and a read-only table and observes the answer to each *missing* callback
+separately: `read_ex` and `write_ex` answer `0`, `ctrl`, `gets` and `puts` answer `-1`,
+and `destroy` answers `0`. A transcription that picked one of the two values and used
+it everywhere passes a happy-path test and fails this one. The handler the callbacks
+receive is compared against the constructor's argument and against NULL and only the
+booleans are printed — an address would make the transcript a property of the loader.
+108 observations, zero residuals, first run.
+
+**Three authority fault boundaries, registered rather than reproduced.** Each calls a
+stored function pointer with no NULL test. `D-BIOCORE-1`: a table with `read_ex` or
+`write_ex` but no `BIO_up_ref` — the guard passes and the *next line* jumps to zero.
+`D-BIOCORE-2`: `BIO_free` of a core BIO whose context has no `BIO_free` callback,
+which is every BIO built as `BIO_new(BIO_s_core())`. `D-BIOCORE-3`:
+`OSSL_LIB_CTX_new_from_dispatch(handle, NULL)`, which is **reachable from an export**
+because the export forwards its table straight into the walk whose own loop condition
+dereferences it. The candidate's slots are `Option<fn>` precisely so that absence is
+representable, and each such path answers the documented failure instead. No caller
+supplying a usable table can tell the two behaviours apart, because in the authority
+every path that reaches the unguarded call dies there.
+
+**The probe was the suspect twice before the crate was.** `BIO_method_type` and
+`BIO_method_name` take a `const BIO *`, not a `BIO_METHOD *`, so the first draft
+compiled against a type error it read as a warning and would have been comparing
+whatever those two functions do with a method pointer; and a channel's seven
+callbacks are defined whichever table it sits in, so the two deliberately incomplete
+tables left four and five functions unreferenced. Both were the instrument rather
+than the subject, which is the failure mode this project has recorded most often. The
+second also produced a unit-test trap worth naming: `clippy` rejects a `// SAFETY:`
+comment that is not **directly** above its `unsafe` block — an `assert_eq!` between
+them does not count — and it rejects `panic!` in a `#[cfg(test)]` module too.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 99 / 62 | 102 / 59 |
+| `implemented[libcrypto]` | 1,073 | 1,076 |
+| Phase 6 courts / observations | 4 / 1,353 | 5 / 1,463 |
+| `RT-LIBCTX` observations | 81 | 83 |
+| index slots filled | 5 | 6 |
+| all courts / observations | 51 / 19,538 | 52 / 19,648 |
+| prototype court, class / type plane | 1,041 / 1,058 | 1,044 / 1,061 |
+| `err_sites.rs` coordinates | 772 | 772 |
+| FRF courts | 40 | 41 |
+| unit tests | 189 | 193 |

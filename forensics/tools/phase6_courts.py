@@ -82,6 +82,7 @@ COURTS = [
     ("RT-PARAM", "rt_param_probe.c"),
     ("RT-SELFTEST", "rt_selftest_probe.c"),
     ("RT-THREADDATA", "rt_threaddata_probe.c"),
+    ("RT-BIO-CORE", "rt_bio_core_probe.c"),
 ]
 
 

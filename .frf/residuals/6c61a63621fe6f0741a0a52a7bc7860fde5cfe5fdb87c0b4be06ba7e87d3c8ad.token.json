@@ -1,1 +1,0 @@
-{"authority":"openssl-rt-3.6.4-r2","blocks_claims":["rt-libctx exit parity"],"disposition":"open","kind":"exit","magnitude":"class-change","next_court":"cli-exit-minimize","residual_id":"6c61a63621fe6f0741a0a52a7bc7860fde5cfe5fdb87c0b4be06ba7e87d3c8ad","schema_version":"frf-token-v1","scope":"rt-libctx","surface":"exit-class","token":"exit/exit-class/class-change/open"}

@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 137,
       "deferred_to_later_phase": 0,
-      "implemented": 99,
-      "open_in_this_stratum": 62,
+      "implemented": 102,
+      "open_in_this_stratum": 59,
       "owned": 161,
       "received_by_handoff": 24
     },
@@ -45,6 +45,8 @@
       ]
     },
     "implemented": [
+      "BIO_new_from_core_bio",
+      "BIO_s_core",
       "OSSL_INDICATOR_get_callback",
       "OSSL_INDICATOR_set_callback",
       "OSSL_LIB_CTX_free",
@@ -52,6 +54,7 @@
       "OSSL_LIB_CTX_get_conf_diagnostics",
       "OSSL_LIB_CTX_get_data",
       "OSSL_LIB_CTX_new",
+      "OSSL_LIB_CTX_new_from_dispatch",
       "OSSL_LIB_CTX_set0_default",
       "OSSL_LIB_CTX_set_conf_diagnostics",
       "OSSL_PARAM_BLD_free",
@@ -230,16 +233,6 @@
         "declaring_header": "asn1.h",
         "module": "src/confmod/asn1.rs",
         "symbol": "ASN1_add_oid_module"
-      },
-      {
-        "declaring_header": "bio.h",
-        "module": "src/context/core_bio.rs",
-        "symbol": "BIO_new_from_core_bio"
-      },
-      {
-        "declaring_header": "bio.h",
-        "module": "src/context/core_bio.rs",
-        "symbol": "BIO_s_core"
       },
       {
         "declaring_header": "conf.h",
@@ -422,11 +415,6 @@
         "symbol": "OSSL_LIB_CTX_new_child"
       },
       {
-        "declaring_header": "crypto.h",
-        "module": "src/context/mod.rs",
-        "symbol": "OSSL_LIB_CTX_new_from_dispatch"
-      },
-      {
         "declaring_header": "provider.h",
         "module": "src/provider/mod.rs",
         "symbol": "OSSL_PROVIDER_add_builtin"
@@ -572,7 +560,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "64956ccc123e27096e3f0f5f7884b73fecb7af8408d5e69f3f8bd40202bc8718"
+      "sha256": "8b7f00dca8c66827ed90500b1426c6bd8ac793483813f770349374354fd33228"
     }
   ],
   "kind": "phase6-obligations",

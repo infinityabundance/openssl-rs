@@ -847,6 +847,15 @@ impl BioMethod {
 pub struct Bio {
     /// The method this BIO dispatches to.
     pub method: *const BioMethod,
+    /// The library context this BIO was created on, or NULL for the default one.
+    ///
+    /// The authority sets it in `BIO_new_ex` and reads it in exactly one place:
+    /// `bss_core.c`'s `get_globals(bio->libctx)`, which is how a core BIO finds
+    /// the dispatch table its context was given. Phase 4 recorded the omission as
+    /// a Phase 6 obligation; 6.6c discharges it. Nothing else copies it —
+    /// `BIO_dup_chain` does **not**, so a duplicated core BIO falls back to the
+    /// default context's table, which is the authority's own behaviour.
+    pub libctx: *mut c_void,
     /// `BIO_set_callback_ex` handler.
     pub callback_ex: Option<BioCallbackExFn>,
     /// `BIO_set_callback` handler (deprecated).
@@ -899,25 +908,25 @@ impl Bio {
 /// `BIO *BIO_new_ex(OSSL_LIB_CTX *libctx, const BIO_METHOD *method)`
 ///
 /// Allocates a BIO, installs `method`, sets the reference count to 1 and
-/// `shutdown` to 1, initialises `ex_data`, and calls the method's `create`.
-/// `libctx` selects a per-context registry in the authority; this crate has no
-/// `OSSL_LIB_CTX` yet (Phase 6), so it is accepted and ignored, which is
-/// recorded as a Phase 6 obligation rather than silently dropped.
+/// `shutdown` to 1, initialises `ex_data`, records `libctx`, and calls the
+/// method's `create`. `libctx` is the context the BIO belongs to, which a core BIO
+/// reads to find its dispatch table; a NULL value means the default context.
 ///
 /// # Safety
 /// `method` must be NULL or point at a live [`BioMethod`] whose function
 /// pointers remain callable for as long as any BIO created from it exists. A
 /// table built by `BIO_meth_new` must therefore not be `BIO_meth_free`d while a
-/// BIO references it; the built-in tables are `'static`. `_libctx` is unused and
-/// may be any value, including NULL.
+/// BIO references it; the built-in tables are `'static`. `libctx` must be NULL or
+/// a live library context.
 #[no_mangle]
-pub unsafe extern "C" fn BIO_new_ex(_libctx: *mut c_void, method: *const BioMethod) -> *mut Bio {
+pub unsafe extern "C" fn BIO_new_ex(libctx: *mut c_void, method: *const BioMethod) -> *mut Bio {
     guard_ffi(ptr::null_mut(), || {
         if method.is_null() {
             return ptr::null_mut();
         }
         let mut bio = Box::new(Bio {
             method,
+            libctx,
             callback_ex: None,
             callback: None,
             cb_arg: ptr::null_mut(),
