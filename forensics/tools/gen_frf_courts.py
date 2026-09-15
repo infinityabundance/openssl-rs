@@ -104,6 +104,12 @@ COURTS: list[tuple[str, int, str, str]] = [
      "threads, atomics and thread-local storage"),
     ("rt-secure", 3, "rt_secure_probe",
      "the secure heap"),
+    ("rt-runtime-ext", 3, "rt_runtime_ext_probe",
+     "the OSSL_trace_* surface under OPENSSL_NO_TRACE (the two category interrogators\n"
+     "and OSSL_trace_string are fully live), the OSSL_ERR_STATE_* save/restore round\n"
+     "trip observed through the public ERR_* queue, OSSL_sleep, the thread-support\n"
+     "flags, the two privilege predicates, the three empty OPENSSL_fork_* hooks, and\n"
+     "OPENSSL_die through a forked child"),
     ("rt-lhash", 3, "rt_lhash_probe",
      "the OPENSSL_LH_* hash table"),
     # Phase 4 — BIO, CONF and the buffer object.
@@ -140,6 +146,11 @@ COURTS: list[tuple[str, int, str, str]] = [
      "OBJ_create_objects and the object description stream behind it"),
     ("rt-conf", 4, "rt_conf_probe",
      "the CONF reader, the classic hash bridge and the NCONF_* accessors"),
+    ("rt-comp", 4, "rt_comp_probe",
+     "the COMP_* object API as this profile builds it (all six factories answer NULL\n"
+     "under no-zlib/no-zstd/no-brotli), the NULL contracts of the four NULL-tolerant\n"
+     "accessors, OPENSSL_config, the reachable conf_ssl_name_find answers, and the two\n"
+     "halves of OPENSSL_info"),
     # Phase 5 — the arithmetic and encoding substrate.
     ("rt-bn", 5, "rt_bn_probe",
      "the observable surface of the opaque BIGNUM: the values read back through the\n"
