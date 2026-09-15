@@ -87,6 +87,9 @@ mod err_strings;
 #[path = "err_sites.rs"]
 pub(crate) mod err_sites;
 
+#[path = "err_reasons.rs"]
+pub(crate) mod err_reasons;
+
 #[path = "err_loaders.rs"]
 mod err_loaders;
 

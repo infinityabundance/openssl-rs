@@ -255,13 +255,13 @@ Phase 5 becomes `complete` when the ledger's `open_in_this_stratum` reaches zero
 every court in `artifacts/phase5/COURTS.json` passes. Both are derived, not asserted:
 `forensics/tools/phase_state.py` reads the ledger and the court results, and the
 dependency-order rule keeps a later stratum from claiming completion first. As of the
-current artefacts that is **226 open obligations** (199 ASN.1, 27 PEM), after the
-`BN_*` surface closed and the ASN.1 leaf surface landed (D76). The hand-offs D73
-recorded are now applied in `HANDED_ON` rather than stated in prose, which moved
-`SMIME_*` to Phase 12, the PKCS#8 and `b2i_*`/`i2b_*` readers to Phase 10 and the
-`EVP_PKEY`-shaped `PEM_read_bio_PrivateKey` family to Phase 7.
+current artefacts that is **155 open obligations** (128 ASN.1, 27 PEM), after the
+`BN_*` surface closed and the ASN.1 leaf surface and the shared DER codec landed (D76,
+D77). The hand-offs D73 recorded are applied in `HANDED_ON` rather than stated in prose,
+which moved `SMIME_*` to Phase 12, the PKCS#8 and `b2i_*`/`i2b_*` readers to Phase 10 and
+the `EVP_PKEY`-shaped `PEM_read_bio_PrivateKey` family to Phase 7.
 
-## 9a. The ASN.1 leaf surface
+## 9a. The ASN.1 leaf surface and the shared DER codec
 
 The stratum's first ASN.1 section landed with its court, and the court corrected it
 three times on the way in (D76): a pre-decrement where the authority writes
@@ -270,34 +270,46 @@ two raise reasons that had been typed rather than read (`102`/`116`, not `101`/`
 and `asn1_parse2` returning `1` for a failed parse, so a caller that checked the return
 alone believed a truncated parse had succeeded.
 
+The second section landed the shared decoder and encoder in both halves, the free path,
+the 26 primitive and multi-string item descriptors, the 36 `d2i_*`/`i2d_*` wrappers of
+`tasn_typ.c`, `ASN1_BIT_STRING`, `ASN1_NULL` and `d2i_ASN1_UINTEGER` (D77). Restructuring
+the decoder found two defects in what D76 had landed — an unconditional free the old code
+made conditional, and a `ASN1_R_TOO_SMALL` check the old code did not make at all — and
+the court found a third thing that is an ownership contract rather than a defect: a failed
+decode **frees the caller's value and nulls the caller's slot**, which is now
+`src/asn1/fre.rs`.
+
 What is claimed: the DER header codec, `ASN1_STRING` and its fifteen types, the
 `ASN1_INTEGER`/`ASN1_ENUMERATED` family with its two's-complement content codec,
-the `ASN1_OBJECT` layer, the `BIGNUM` bridges, `ASN1_PCTX`/`ASN1_SCTX`, the text
-writers and three `d2i` readers agree with the authority on the 644 observations
-`RT-ASN1` takes, on one platform and for one build profile.
+`ASN1_BIT_STRING` with its bit operations and its two content codecs, `ASN1_NULL`, the
+`ASN1_OBJECT` layer, the `BIGNUM` bridges, `ASN1_PCTX`/`ASN1_SCTX`, the text writers, the
+36 `d2i_*`/`i2d_*` wrappers, `d2i_ASN1_UINTEGER`, and the 26 `*_it()` descriptors — the
+last compared field by field rather than through an encoding — agree with the authority on
+the 1,306 observations `RT-ASN1` takes, on one platform and for one build profile.
 
-What is *not* claimed: anything about the 226 exports the stratum still owns. The
-template machinery, the 42 `*_it` accessors, the remaining codec wrappers,
-`ASN1_BIT_STRING`, `ASN1_NULL`, the time types, the string masks and printing,
-`ASN1_TYPE`, the NDEF BIO bridge and all 48 PEM exports are unimplemented, and no
-probe calls them.
+What is *not* claimed: anything about the 155 exports the stratum still owns. The
+template interpreter, the 14 remaining `*_it` descriptors, the time accessors, the string
+masks and printing, `ASN1_TYPE`, the NDEF BIO bridge, `asn1_d2i_read_bio` and all 27 PEM
+exports are unimplemented, and no probe calls them.
 
 ## 10. FRF and Gemel
 
 ### FRF
 
-The court is admitted as `openssl-rs-rt-bn` and the chain has been run end to end in the
-FRF tooling container (`bash forensics/frf/run_courts.sh`). The identities:
+Two courts carry this stratum's FRF evidence — `openssl-rs-rt-bn`, which closed the BN
+surface, and `openssl-rs-rt-asn1`, which this section's claim rests on — and the chain
+has been run end to end in the FRF tooling container
+(`bash forensics/frf/run_courts.sh`). The identities, as of this seal:
 
-- court run — `run-openssl-rs-rt-bn-33d75fee81d80354eda5b7f051aefa6dea3eb9084dc6f1fc00ac1ec0a4948f9b`
-- OpenReceipt — `receipt-run-openssl-rs-rt-bn-33d75fee81d80354eda5b7f051aefa6dea3eb9084dc6f1fc00ac1ec0a4948f9b-bbb16ce6b43b3246f0cc7983dc7f9c5b9c3d46ed212defbb6234bce8f286d2b6`
+- court run — `run-openssl-rs-rt-asn1-2053f9dbaa2d8e2fe0ce0fb78259b91735264d11405d6e227cf82d0efff062bf`
+- OpenReceipt — `receipt-run-openssl-rs-rt-asn1-2053f9dbaa2d8e2fe0ce0fb78259b91735264d11405d6e227cf82d0efff062bf-3ce41207fbca8cd851ed8818e2a250452cd9ee16fe63ad06705f7cc977a29f70`
 - sensitivity challenges — the axes the harness could isolate on this court:
-  - `7894d4ef788712701fb9ce57e5573d93b065b8f0de3ee51e33e413e8576f2702`, the
+  - `3c70b564a201f55de682d7d9409f542dfeece2dab705faa18b8d895f60d1b2b4`, the
     `stdout-first-line` mutant on the `stdout` axis, whose challenged run is
-    `run-openssl-rs-rt-bn-11b4a581b8e4bcf838801476ef8190b743d7f578a59b70ee781f20e55a825ca8`;
-  - `3e8c880cb9f235f254a17298783daca09ba50dee1b005639a62094e6c91801de`, the
+    `run-openssl-rs-rt-asn1-1dd26307d2d1c062b49e17abf1376ffa00466235f7dfd7a218fd1b52d842359c`;
+  - `6229f4ca6cc3b646872d56976633d9434ef813307bdc52018b9196faff74e40d`, the
     `exit-class` mutant on the `exit` axis, whose challenged run is
-    `run-openssl-rs-rt-bn-a56f887f455fbfbae780412629aebaea18903d42db9c2e6ef981e598ab6b11b8`.
+    `run-openssl-rs-rt-asn1-42c513dfef6c34a3bedfc3a9d1faa299b0ace878e45e698631012d80fcb0a732`.
 
   Each saw its seeded defect on its own axis and **nothing else** (`unaffected_axes`
   names the axis it did not disturb, and `specificity_clean` is true on both), which is
@@ -306,8 +318,16 @@ FRF tooling container (`bash forensics/frf/run_courts.sh`). The identities:
   mutation profiles are the whole of what can isolate on it: the harness reports the
   rest as refused rather than passing them, and D13 records why an honestly refused
   court is better than a falsely passing one.
-- claim, `--policy sensitivity-backed`, over the 24 runtime receipts —
-  `564889652b055cbffa62df560f376117dffda456ae674120b166a4c5a02a11c5`
+
+  The BN court's identities move with the same store generation
+  (`run-openssl-rs-rt-bn-7738b53551f52ad95cb5a66e0a677032164d656e8cfdd7be3119e8c2906390fa`,
+  receipt
+  `receipt-run-openssl-rs-rt-bn-7738b53551f52ad95cb5a66e0a677032164d656e8cfdd7be3119e8c2906390fa-18cdf1c9c5566da92f303cceb146de289659e748db827013856a6e21eac13609`,
+  challenges `c563316e4779b3116da89fed26edafb7dac39048e90f2972b8b3a50cf32f0883` and
+  `e64fba864e916618a71bd93ab97b0d7f909e2399ed7354599b82d8ded4643b6f`), because the
+  store is recreated from clean as a whole.
+- claim, `--policy sensitivity-backed`, over the 25 runtime receipts plus the ABI, dgst
+  and inventory courts — `414204ce21684e41a0352d4d33a303244ff2fedbe0c6abd6acd52e598b729617`
 
 The court's declaration is generated from the table in `forensics/tools/gen_frf_courts.py`
 (never hand-written) and `gen_frf_courts.py --check` is what holds it there.
@@ -317,16 +337,17 @@ clean rather than appended to (the header of `forensics/frf/run_courts.sh` recor
 FRF's run identity is content-addressed and does not vary with the rebuilt candidate's
 hash, so a fresh observation requires a fresh store). The captures for this court are
 therefore the clean run above and the two challenged runs, all three committed:
-`.frf/captures/run-openssl-rs-rt-bn-33d75fee81d80354eda5b7f051aefa6dea3eb9084dc6f1fc00ac1ec0a4948f9b`,
-`.frf/captures/run-openssl-rs-rt-bn-11b4a581b8e4bcf838801476ef8190b743d7f578a59b70ee781f20e55a825ca8`
+`.frf/captures/run-openssl-rs-rt-asn1-2053f9dbaa2d8e2fe0ce0fb78259b91735264d11405d6e227cf82d0efff062bf`,
+`.frf/captures/run-openssl-rs-rt-asn1-1dd26307d2d1c062b49e17abf1376ffa00466235f7dfd7a218fd1b52d842359c`
 and
-`.frf/captures/run-openssl-rs-rt-bn-a56f887f455fbfbae780412629aebaea18903d42db9c2e6ef981e598ab6b11b8`.
+`.frf/captures/run-openssl-rs-rt-asn1-42c513dfef6c34a3bedfc3a9d1faa299b0ace878e45e698631012d80fcb0a732`.
 `.frf` is committed because FRF expects its receipts and claims to travel.
 
 A stale capture identity is exactly the kind of thing this project treats as a defect:
-an earlier revision of this section named a run from a superseded store generation.
-The identity is now the one the claim's `requires` and the challenge records name, and
-the three capture directories above are the ones on disk.
+an earlier revision of this section named a run from a superseded store generation, and
+the BN identities it quoted were from the generation before this one until this
+revision replaced them with the ones the current claim's `requires` and the challenge
+records name. Every identity above is the one on disk.
 
 A passing court is still only a differential result. The claim above is exactly what
 it says it is — that the candidate's transcript matched the authority's for the
@@ -335,20 +356,20 @@ behaviours this probe exercises — and not a cryptographic or security claim
 
 ### Gemel
 
-Recorded at this boundary as change `C29`
-(`change.d6ee02e950158dab1667c3f72608aa47dacdde651b838e3461d25330e07989b4`),
-trajectory `T29`
-(`trajectory.a5c3dd8bba70039d5b4f5c99619aa8386595465b88de68fe622df0e0fc9ea6c4`),
-state `state.f48f703c3fc7896f18ac74e6848843bd301f48b25869f6d07598966c16e0b4b9`,
-and checkpoint `K12`
-(`checkpoint.3d4d0ddafc52a6635d9cf963b6fd27888133ca39ccc83243082477e7ddfaec45`).
-The previous boundary is change `C21`
-(`change.3215032a15ad7bd044c6a87153239e7a61f47e69b731f2143b007ed903e1a60e`) on
-trajectory `T21`, with checkpoint `K11`
-(`checkpoint.843b3f72da905eec1a0fc67a16ee8f1dc4811f86f51dfa75ae68a4d0c88ac4c6`).
-Gemel names changes by derived order, so `C29` is not a stable identity and the
+Recorded at this boundary as change `C35`
+(`change.1a89cc37dd0cdd020f0532a555920afa59b9f26c95c1fabdda8e959ec67cc011`),
+trajectory `T35`
+(`trajectory.357d62dca76a45d8abba543b33564ffbf0fe8074f0d079014f90ee7ad23ca605`),
+state `state.6218370ade549f6470b9b1a5c822d6d70ac101fd24a1937aed4462dc979d53d0`,
+and checkpoint `K16`
+(`checkpoint.6efde8d368887ea3895c564c33f8cc2ea84b211d56971fb3055ae89c576c10e2`).
+The previous boundary is change `C31`
+(`change.1f8cb379980083d218d37e7b224d1191300a5023e555f8038539e64b8af3ad78`), the
+ASN.1 leaf-surface landing, on trajectory `T31`, with checkpoint `K15`
+(`checkpoint.be15113912c9856c707bdd4c9317edc7c750663fd96e76e1a5b5e2b9a4420c3d`).
+Gemel names changes by derived order, so `C35` is not a stable identity and the
 `change.` hash is; a name quoted elsewhere is resolved through
-`forensics/GEMEL_TRAJECTORY.md` or `gemel show C29`.
+`forensics/GEMEL_TRAJECTORY.md` or `gemel show C35`.
 The store is append-only, so a correction is another change rather than an edit; the
 Git commit remains the authoritative record of the diff.
 

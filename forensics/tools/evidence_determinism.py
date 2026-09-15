@@ -55,14 +55,23 @@ from atlas_common import REPO_ROOT, rel  # noqa: E402
 # The generators, in dependency order: each may consume the previous artefact.
 # `implemented_surface.py` needs a built archive, so the build is a precondition
 # and the caller runs it first.
+#
+# `ownership_audit.py` sits **after** the three obligation generators, not before
+# them: it reconciles the ledgers and records each one's sha256 as an input, so
+# running it first makes it record the *previous* generation's hashes. That
+# mistake is invisible to this tool, because `inputs[].sha256` for a path that is
+# itself compared is normalised away (COMPARED_INPUT_PATHS below) -- the ledger's
+# content is compared directly, so a wrong recorded hash changes nothing this
+# check can see. It was found by running the audit alone, after the ledgers, and
+# watching the recorded hashes move. Measured on the Phase 5.3 landing.
 GENERATORS = [
     "forensics/tools/symbol_ownership.py",
     "forensics/tools/implemented_surface.py",
-    "forensics/tools/ownership_audit.py",
-    "forensics/tools/prototype_court.py",
     "forensics/tools/phase3_obligations.py",
     "forensics/tools/phase4_obligations.py",
     "forensics/tools/phase5_obligations.py",
+    "forensics/tools/ownership_audit.py",
+    "forensics/tools/prototype_court.py",
     "forensics/tools/phase_state.py",
     "forensics/tools/render_status.py",
 ]

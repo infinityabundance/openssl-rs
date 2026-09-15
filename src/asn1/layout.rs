@@ -135,6 +135,31 @@ pub struct Asn1StringTable {
     pub(crate) flags: c_ulong,
 }
 
+/// `BIT_STRING_BITNAME` — one named bit a caller can reference by name.
+///
+/// ```text
+/// typedef struct BIT_STRING_BITNAME_st {
+///     int bitnum;
+///     const char *lname;
+///     const char *sname;
+/// } BIT_STRING_BITNAME;
+/// ```
+///
+/// The array a caller passes to [`crate::asn1::bitstr::ASN1_BIT_STRING_name_print`]
+/// and its siblings is **terminated by a null `lname`**, not by a count, so the
+/// last row's `lname` being null is load-bearing rather than incidental. Two rows
+/// may share a `bitnum` to give a bit a long and a short spelling, and
+/// `name_print` prints only the first of them.
+#[repr(C)]
+pub struct BitStringBitname {
+    /// The bit this row names, counted from the first bit of the first octet.
+    pub(crate) bitnum: c_int,
+    /// The long name, or null to terminate the array.
+    pub(crate) lname: *const c_char,
+    /// The short name; `num_asc`/`set_asc` accept either.
+    pub(crate) sname: *const c_char,
+}
+
 /// `ASN1_TEMPLATE` — one field of a `SEQUENCE`/`CHOICE` template.
 ///
 /// `item` is declared as a pointer to `ASN1_ITEM_EXP`, which is
@@ -219,6 +244,15 @@ pub struct Asn1Item {
     /// The item's name, as the constructing macro spelled it.
     pub(crate) sname: *const c_char,
 }
+
+// SAFETY: an `Asn1Item` the crate builds is a `static` compiled from constants —
+// every field is written once by the loader and never again — so sharing
+// `&Asn1Item` across threads exposes no data race. The fields are scalars and raw
+// pointers, with no interior mutability reachable through the reference, which is
+// why the automatic impl is absent and why asserting it is sound. A caller can
+// build one on its own stack and hand it to the `ASN1_item_*` entry points; that
+// value is the caller's to synchronise, exactly as it is in C.
+unsafe impl Sync for Asn1Item {}
 
 /// `ASN1_AUX` — the optional behaviour block an `ASN1_ITEM` may carry.
 #[repr(C)]

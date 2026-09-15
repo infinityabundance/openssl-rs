@@ -50,9 +50,10 @@ use core::ffi::{c_char, c_int, c_long, c_uchar, c_ulong, c_void};
 
 use crate::asn1::layout::*;
 use crate::asn1::string::{
-    as_str, as_str_mut, string_embed_free, string_set_body, string_type_new,
+    as_str, as_str_mut, string_embed_free, string_set_body, string_type_new, ASN1_STRING_set0,
 };
 use crate::ffi::guard_ffi;
+use crate::runtime::err::err_reasons;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_dynamic};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
@@ -61,12 +62,8 @@ use crate::runtime::obj::{
     ASN1_OBJECT_FLAG_DYNAMIC, ASN1_OBJECT_FLAG_DYNAMIC_DATA, ASN1_OBJECT_FLAG_DYNAMIC_STRINGS,
 };
 
-/// The authority translation unit for the integer family.
-///
-/// Used by the `i2d_ASN1_INTEGER` family, which is subphase 5.3 of this stratum
-/// (`docs/PHASE-5-SUBPHASES.md`); `i2c_ibuf` and `ossl_i2c_ASN1_INTEGER` below are
-/// its two halves and are likewise unreferenced until it lands.
-#[allow(dead_code)]
+/// The authority translation unit for the integer family, and the file the
+/// `i2d_ASN1_INTEGER` family's raise sites live in.
 pub(crate) const INT_FILE: &core::ffi::CStr = c"crypto/asn1/a_int.c";
 /// The authority translation unit for the object type.
 pub(crate) const OBJECT_FILE: &core::ffi::CStr = c"crypto/asn1/a_object.c";
@@ -128,7 +125,6 @@ unsafe fn twos_complement(dst: *mut u8, src: *const u8, len: usize, pad: u8) {
 ///
 /// `b` must be readable for `blen` bytes. `pp` must be null or point to a slot
 /// holding null or a pointer with room for the encoded length.
-#[allow(dead_code)] // the `i2d` half, subphase 5.3
 unsafe fn i2c_ibuf(b: *const u8, blen_in: usize, neg: bool, pp: *mut *mut c_uchar) -> usize {
     let mut pad: usize = 0;
     let mut pb: u8 = 0;
@@ -253,7 +249,6 @@ unsafe fn c2i_ibuf(b: *mut u8, pneg: *mut c_int, p: *const u8, plen_in: usize) -
 // The name is the authority's, and `ABI-PROTOTYPE` resolves implemented
 // exports by it, so it is kept verbatim rather than snake-cased.
 #[allow(non_snake_case)]
-#[allow(dead_code)] // the `i2d` half, subphase 5.3
 pub(crate) unsafe fn ossl_i2c_ASN1_INTEGER(a: *mut Asn1String, pp: *mut *mut c_uchar) -> c_int {
     // The authority reads `a->data` here with no NULL check; answering 0 instead of
     // faulting is the documented divergence (docs/SECURITY_DIVERGENCE_POLICY.md).
@@ -623,11 +618,17 @@ pub unsafe extern "C" fn d2i_ASN1_OBJECT(
             if inf & 0x80 != 0 {
                 // The authority's `i` is left holding the header code, so the
                 // reason is the value it accumulated rather than a constant.
-                raise_site_dynamic(&err_sites::A_OBJECT_241, ASN1_R_BAD_OBJECT_HEADER);
+                raise_site_dynamic(
+                    &err_sites::A_OBJECT_241,
+                    err_reasons::ASN1_R_BAD_OBJECT_HEADER,
+                );
                 return core::ptr::null_mut();
             }
             if tag != V_ASN1_OBJECT {
-                raise_site_dynamic(&err_sites::A_OBJECT_241, ASN1_R_EXPECTING_AN_OBJECT);
+                raise_site_dynamic(
+                    &err_sites::A_OBJECT_241,
+                    err_reasons::ASN1_R_EXPECTING_AN_OBJECT,
+                );
                 return core::ptr::null_mut();
             }
             let ret = ossl_c2i_ASN1_OBJECT(a, &mut p, len);
@@ -689,17 +690,14 @@ pub unsafe extern "C" fn i2d_ASN1_OBJECT(a: *const Asn1Object, pp: *mut *mut c_u
 }
 
 // The two reason constants `d2i_ASN1_OBJECT` raises. They are the values behind
-// `ASN1_R_BAD_OBJECT_HEADER` and `ASN1_R_EXPECTING_AN_OBJECT`, read from the
-// authority's `openssl/asn1err.h`. The raise site itself is *dynamic* -- the
-// authority accumulates the reason in a local before raising -- so the generated
-// `err_sites` table carries no reason for it and these two cannot be referenced
-// from there. They are checked behaviourally instead: `o.not_oid.err` and
-// `o.bad_last.err` in `RT-ASN1` compare the packed reason an actual call produces,
-// so a wrong value here fails the court rather than passing silently. That is
-// weaker than deriving them, and deriving them from `asn1err.h` is the next change
-// to this file.
-const ASN1_R_BAD_OBJECT_HEADER: c_int = 102;
-const ASN1_R_EXPECTING_AN_OBJECT: c_int = 116;
+// `ASN1_R_BAD_OBJECT_HEADER` and `ASN1_R_EXPECTING_AN_OBJECT`, and they now come
+// from the generated `err_reasons` table rather than being written here: both
+// were transcribed wrongly the first time, so the header is *read* now. The
+// raise site itself is *dynamic* -- the authority accumulates the reason in a
+// local before raising -- so the generated `err_sites` table carries no reason
+// for it and the code has to be supplied. `RT-ASN1`'s `o.not_oid.err` and
+// `o.bad_last.err` compare the packed reason an actual call produces, so the
+// value is checked behaviourally as well as derivationally.
 
 /// Read a `const unsigned char **` argument as a value.
 ///
@@ -1318,6 +1316,146 @@ pub unsafe extern "C" fn ASN1_ENUMERATED_to_BN(
     guard_ffi(core::ptr::null_mut(), || {
         // SAFETY: null-or-live per this function's `# Safety` section.
         unsafe { asn1_string_to_bn(ai, bn, V_ASN1_ENUMERATED) }
+    })
+}
+
+// ---------------------------------------------------------------------------
+// `d2i_ASN1_UINTEGER` — the reader that ignores the sign bit
+// ---------------------------------------------------------------------------
+
+/// The `err:` tail of `d2i_ASN1_UINTEGER`: raise the accumulated reason, release
+/// the value unless the caller already owned it, and answer null.
+///
+/// # Safety
+///
+/// `a` must be null or a live slot holding null or a live integer. `ret` must be
+/// null or a live integer this call may release.
+unsafe fn uinteger_err(a: *mut *mut Asn1String, i: c_int, ret: *mut Asn1String) -> *mut Asn1String {
+    if i != 0 {
+        // SAFETY: a compile-time-constant site whose reason the authority computes
+        // at run time; the generated table marks it `dynamic_reason`.
+        unsafe { raise_site_dynamic(&err_sites::A_INT_468, i) };
+    }
+    // SAFETY: `a` is null or a live slot, per this caller's contract.
+    let caller_owns = !a.is_null() && unsafe { *a } == ret;
+    if !caller_owns {
+        // SAFETY: `ret` is null or an integer this call allocated.
+        unsafe { string_embed_free(ret, 0) };
+    }
+    core::ptr::null_mut()
+}
+
+/// `ASN1_INTEGER *d2i_ASN1_UINTEGER(ASN1_INTEGER **a, const unsigned char **pp,
+/// long length)`
+///
+/// The authority's own comment: "a version of `d2i_ASN1_INTEGER` that ignores the
+/// sign bit of ASN1 integers: some broken software can encode a positive INTEGER
+/// with its MSB set as negative (it doesn't add a padding zero)."
+///
+/// It therefore does **not** go through the item machinery at all — it is its own
+/// reader in `a_int.c`, with its own header handling and its own reasons. Three
+/// details differ from `d2i_ASN1_INTEGER` and each is observable:
+///
+/// * a leading `00` octet is stripped when the content is longer than one octet,
+///   which is the "broken software" accommodation and nothing more;
+/// * the sign is never recorded, so the resulting integer's `type` is always
+///   `V_ASN1_INTEGER` with no `V_ASN1_NEG`;
+/// * the allocation is always made, even for zero content octets — the authority's
+///   own comment says why: a null `data` would otherwise signify a missing
+///   parameter rather than an empty value.
+///
+/// # Safety
+///
+/// `pp` must point to a slot holding a readable pointer to `length` bytes. `a` must
+/// be null or point to a slot holding null or a live integer.
+#[no_mangle]
+pub unsafe extern "C" fn d2i_ASN1_UINTEGER(
+    a: *mut *mut Asn1String,
+    pp: *mut *const c_uchar,
+    length: c_long,
+) -> *mut Asn1String {
+    guard_ffi(core::ptr::null_mut(), || {
+        // `i` is the authority's accumulator: zero means "no raise", which is how
+        // the allocation-failure arm stays silent.
+        let mut i: c_int = 0;
+        // SAFETY: the caller's slot is readable.
+        let existing = if a.is_null() {
+            core::ptr::null_mut()
+        } else {
+            // SAFETY: the caller's slot is readable, and `a` is non-null here.
+            unsafe { *a }
+        };
+        let ret = if existing.is_null() {
+            let fresh = string_type_new(V_ASN1_INTEGER);
+            if fresh.is_null() {
+                return core::ptr::null_mut();
+            }
+            fresh
+        } else {
+            existing
+        };
+        // SAFETY: the caller's slot is readable.
+        let mut p = unsafe { *pp };
+        let mut len: c_long = 0;
+        let mut tag: c_int = 0;
+        let mut xclass: c_int = 0;
+        // SAFETY: `p` is readable for `length` bytes; the outputs are local slots.
+        let inf = unsafe {
+            crate::asn1::der::ASN1_get_object(&mut p, &mut len, &mut tag, &mut xclass, length)
+        };
+        if inf & 0x80 != 0 {
+            i = err_reasons::ASN1_R_BAD_OBJECT_HEADER;
+            // SAFETY: the caller's contract is `uinteger_err`'s.
+            return unsafe { uinteger_err(a, i, ret) };
+        }
+        if tag != V_ASN1_INTEGER {
+            i = err_reasons::ASN1_R_EXPECTING_AN_INTEGER;
+            // SAFETY: the caller's contract is `uinteger_err`'s.
+            return unsafe { uinteger_err(a, i, ret) };
+        }
+        if len < 0 {
+            i = err_reasons::ASN1_R_ILLEGAL_NEGATIVE_VALUE;
+            // SAFETY: the caller's contract is `uinteger_err`'s.
+            return unsafe { uinteger_err(a, i, ret) };
+        }
+        // `(int)len + 1`: the cast is the authority's, and a `len` that does not fit
+        // an `int` therefore asks for a size that cannot be satisfied, which fails
+        // here exactly as it fails there.
+        let want = (len as c_int).wrapping_add(1);
+        // SAFETY: `want` is the requested size, possibly unsatisfiable.
+        let s = CRYPTO_malloc(want as usize, INT_FILE.as_ptr(), LINE) as *mut u8;
+        if s.is_null() {
+            // `i` is still 0, so this arm raises nothing — the caller learns of it
+            // from the null return alone.
+            // SAFETY: the caller's contract is `uinteger_err`'s.
+            return unsafe { uinteger_err(a, i, ret) };
+        }
+        // SAFETY: `ret` is live.
+        unsafe { (*ret).type_ = V_ASN1_INTEGER };
+        if len != 0 {
+            // SAFETY: `p` is readable for `len` bytes by the header just read.
+            if unsafe { *p } == 0 && len != 1 {
+                // SAFETY: `p` holds `len >= 1` bytes.
+                unsafe { p = p.add(1) };
+                len -= 1;
+            }
+            // SAFETY: `s` holds `want >= 1` bytes and `p` is readable for `len`,
+            // which is at most `want - 1`.
+            unsafe {
+                core::ptr::copy_nonoverlapping(p, s, len as usize);
+                p = p.add(len as usize);
+            }
+        }
+        // SAFETY: `ret` is live and uniquely owned; `s` is a fresh allocation whose
+        // ownership this hands over.
+        unsafe { ASN1_STRING_set0(ret, s.cast::<c_void>(), len as c_int) };
+        if !a.is_null() {
+            // SAFETY: the caller's slot is writable.
+            unsafe { *a = ret };
+        }
+        // SAFETY: the caller's slot is writable.
+        unsafe { *pp = p };
+        ret
     })
 }
 

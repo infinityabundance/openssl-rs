@@ -989,7 +989,7 @@ unsafe fn parse2(
                 let mut opp = op;
                 // SAFETY: `op` heads `len + hl` readable bytes.
                 let os = unsafe {
-                    crate::asn1::d2i::d2i_ASN1_OCTET_STRING(
+                    crate::asn1::typ::d2i_ASN1_OCTET_STRING(
                         core::ptr::null_mut(),
                         &mut opp,
                         len + hl as c_long,
@@ -1081,13 +1081,13 @@ unsafe fn parse2(
                 // SAFETY: `op` heads `len + hl` readable bytes.
                 let ai = unsafe {
                     if tag == V_ASN1_INTEGER {
-                        crate::asn1::d2i::d2i_ASN1_INTEGER(
+                        crate::asn1::typ::d2i_ASN1_INTEGER(
                             core::ptr::null_mut(),
                             &mut opp,
                             len + hl as c_long,
                         )
                     } else {
-                        crate::asn1::d2i::d2i_ASN1_ENUMERATED(
+                        crate::asn1::typ::d2i_ASN1_ENUMERATED(
                             core::ptr::null_mut(),
                             &mut opp,
                             len + hl as c_long,
