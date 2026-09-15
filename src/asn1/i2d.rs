@@ -40,22 +40,26 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_int, c_long, c_uchar};
+use core::ffi::{c_int, c_long, c_uchar, c_void};
 
 use crate::asn1::bitstr::ossl_i2c_ASN1_BIT_STRING;
 use crate::asn1::layout::*;
 use crate::asn1::prim::ossl_i2c_ASN1_INTEGER;
+use crate::asn1::utl;
+use crate::ffi::guard_ffi;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
-use crate::runtime::mem::CRYPTO_malloc;
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
 use crate::runtime::obj::Asn1Object;
+use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_set, OPENSSL_sk_value, OpenSslStack};
 
 /// The authority translation unit for the encoder these functions reproduce.
 pub(crate) const FILE: &core::ffi::CStr = c"crypto/asn1/tasn_enc.c";
 /// The authority passes `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 pub(crate) const LINE: c_int = 0;
 
-/// `ASN1_item_i2d` — and only that.
+/// `asn1_item_flags_i2d` — the shared body of `ASN1_item_i2d` and
+/// `ASN1_item_ndef_i2d`.
 ///
 /// The three output conventions are handled here and nowhere else. Note that the
 /// allocation path runs the encoder twice: once to size it against a null
@@ -64,22 +68,26 @@ pub(crate) const LINE: c_int = 0;
 /// would overflow it — which is why the authority's codecs return the length
 /// rather than writing and reporting.
 ///
+/// `flags` is the only difference between the two public entry points: `NDEF` asks
+/// for indefinite-length constructed encoding wherever a template allows it.
+///
 /// # Safety
 ///
 /// `val` must be null or a live value of the item's type. `out` must be null or
 /// point to a slot holding null or a pointer with room for the encoding; `it` must
-/// be a live item of one of the shapes [`ex_i2d`] admits.
-pub(crate) unsafe fn item_i2d(
+/// be a live item.
+unsafe fn item_flags_i2d(
     val: *const Asn1String,
     out: *mut *mut c_uchar,
     it: *const Asn1Item,
+    flags: c_int,
 ) -> c_int {
     // SAFETY: the caller's slot is readable when `out` is non-null.
     if !out.is_null() && unsafe { *out }.is_null() {
         let v = val;
         // SAFETY: `v` is a live slot holding the caller's value; `it` is the
         // caller's item.
-        let len = unsafe { ex_i2d(&v, core::ptr::null_mut(), it, -1, 0) };
+        let len = unsafe { item_ex_i2d(&v, core::ptr::null_mut(), it, -1, flags) };
         if len <= 0 {
             return len;
         }
@@ -94,23 +102,102 @@ pub(crate) unsafe fn item_i2d(
         }
         let mut p = buf;
         // SAFETY: `p` has room for `len` bytes and `v` is a live slot.
-        unsafe { ex_i2d(&v, &mut p, it, -1, 0) };
+        unsafe { item_ex_i2d(&v, &mut p, it, -1, flags) };
         // SAFETY: the caller's slot is writable and now owns `buf`.
         unsafe { *out = buf };
         return len;
     }
     let v = val;
     // SAFETY: `v` is a live slot; `out` is the caller's, possibly null.
-    unsafe { ex_i2d(&v, out, it, -1, 0) }
+    unsafe { item_ex_i2d(&v, out, it, -1, flags) }
 }
 
-/// `ASN1_item_ex_i2d`, restricted to the `PRIMITIVE`-without-templates and
-/// `MSTRING` arms.
+/// `int ASN1_item_i2d(const ASN1_VALUE *val, unsigned char **out,
+/// const ASN1_ITEM *it)`
+///
+/// # Safety
+///
+/// As [`item_flags_i2d`].
+#[no_mangle]
+pub unsafe extern "C" fn ASN1_item_i2d(
+    val: *const c_void,
+    out: *mut *mut c_uchar,
+    it: *const Asn1Item,
+) -> c_int {
+    // `0` is the no-unwind answer, and it is the same value the item layer already
+    // returns for a value that is absent rather than malformed.
+    guard_ffi(0, || {
+        // SAFETY: the caller's contract.
+        unsafe { item_flags_i2d(val.cast::<Asn1String>(), out, it, 0) }
+    })
+}
+
+/// `int ASN1_item_ndef_i2d(const ASN1_VALUE *val, unsigned char **out,
+/// const ASN1_ITEM *it)`
+///
+/// The indefinite-length variant: a template that carries `ASN1_TFLG_NDEF` and is
+/// told to use it encodes with an end-of-contents marker instead of a length.
+///
+/// # Safety
+///
+/// As [`item_flags_i2d`].
+#[no_mangle]
+pub unsafe extern "C" fn ASN1_item_ndef_i2d(
+    val: *const c_void,
+    out: *mut *mut c_uchar,
+    it: *const Asn1Item,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: the caller's contract.
+        unsafe { item_flags_i2d(val.cast::<Asn1String>(), out, it, ASN1_TFLG_NDEF as c_int) }
+    })
+}
+
+/// `int ASN1_item_ex_i2d(const ASN1_VALUE **pval, unsigned char **out,
+/// const ASN1_ITEM *it, int tag, int aclass)`
+///
+/// # Safety
+///
+/// As [`item_ex_i2d`].
+#[no_mangle]
+pub unsafe extern "C" fn ASN1_item_ex_i2d(
+    pval: *mut *const c_void,
+    out: *mut *mut c_uchar,
+    it: *const Asn1Item,
+    tag: c_int,
+    aclass: c_int,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: the caller's contract.
+        unsafe { item_ex_i2d(pval.cast::<*const Asn1String>(), out, it, tag, aclass) }
+    })
+}
+
+/// `ASN1_item_i2d`'s internal form, for this crate's own callers.
+///
+/// # Safety
+///
+/// As [`item_flags_i2d`].
+pub(crate) unsafe fn item_i2d(
+    val: *const Asn1String,
+    out: *mut *mut c_uchar,
+    it: *const Asn1Item,
+) -> c_int {
+    // SAFETY: the caller's contract passes through unchanged.
+    unsafe { item_flags_i2d(val, out, it, 0) }
+}
+
+/// `ASN1_item_ex_i2d` — the encoder's item dispatch, in full.
 ///
 /// The `PRIMITIVE` guard runs *before* anything dereferences `*pval`, and it is not
 /// symmetric: it skips the check only for a primitive item, because a primitive's
 /// value lives in the slot rather than through it — a `BOOLEAN` item's value *is*
 /// the slot's low four bytes.
+///
+/// The `SEQUENCE` arm encodes in two passes over the templates, and the cached-encoding
+/// check comes first: a structure that was decoded and not touched answers the bytes it
+/// arrived with rather than a re-derivation, which is how a signature over a
+/// non-canonical encoding survives a round trip.
 ///
 /// # Safety
 ///
@@ -118,7 +205,7 @@ pub(crate) unsafe fn item_i2d(
 /// room; `it` must be a live item.
 #[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
 #[allow(clippy::not_unsafe_ptr_arg_deref)] // the authority's `pval` contract
-unsafe fn ex_i2d(
+unsafe fn item_ex_i2d(
     pval: *const *const Asn1String,
     out: *mut *mut c_uchar,
     it: *const Asn1Item,
@@ -135,28 +222,218 @@ unsafe fn ex_i2d(
     if it.itype != ASN1_ITYPE_PRIMITIVE && value_is_null {
         return 0;
     }
-    if it.itype == ASN1_ITYPE_MSTRING {
-        if tag != -1 {
-            // The authority's own comment: it never makes sense for a multi-string
-            // to be implicitly tagged, so this is a template error rather than a
-            // caller error.
-            // SAFETY: a compile-time-constant site.
-            unsafe { raise_site(&err_sites::TASN_ENC_112) };
-            return -1;
+    let aux = it.funcs.cast::<Asn1Aux>();
+    // The const view of the caller's slot, which is what every helper below and the
+    // caller's own hooks take.
+    let cv = pval.cast::<*const c_void>();
+
+    match it.itype {
+        ASN1_ITYPE_PRIMITIVE => {
+            if !it.templates.is_null() {
+                // A primitive *item* with a template is how an item-level tag is
+                // spelled; the flags travel in the template, which is why the
+                // decoder refuses tag and OPTIONAL here.
+                // SAFETY: the caller's contract.
+                return unsafe { template_ex_i2d(pval, out, it.templates, tag, aclass) };
+            }
+            // SAFETY: the caller's contract.
+            unsafe { i2d_ex_primitive(pval, out, it, tag, aclass) }
         }
-        // SAFETY: the caller's contract passes through unchanged.
-        return unsafe { i2d_ex_primitive(pval, out, it, -1, aclass) };
+
+        ASN1_ITYPE_MSTRING => {
+            if tag != -1 {
+                // The authority's own comment: it never makes sense for a multi-string
+                // to be implicitly tagged, so this is a template error rather than a
+                // caller error.
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::TASN_ENC_112) };
+                return -1;
+            }
+            // SAFETY: the caller's contract passes through unchanged.
+            unsafe { i2d_ex_primitive(pval, out, it, -1, aclass) }
+        }
+
+        ASN1_ITYPE_CHOICE => {
+            if tag != -1 {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::TASN_ENC_123) };
+                return -1;
+            }
+            let cb = aux_const_cb(aux);
+            if let Some(cb) = cb {
+                // SAFETY: the callback is the caller's, with the authority's signature.
+                if unsafe { cb(ASN1_OP_I2D_PRE, cv, it, core::ptr::null_mut()) } == 0 {
+                    return 0;
+                }
+            }
+            // SAFETY: `pval` is a live slot holding a `CHOICE` value.
+            let i = unsafe { utl::get_choice_selector_const(cv, it) };
+            if i >= 0 && c_long::from(i) < it.tcount {
+                // SAFETY: `i` indexes the item's own template array.
+                let chtt = unsafe { it.templates.add(i as usize) };
+                // SAFETY: `chtt` is live and `*pval` is the enclosing value.
+                let pchval = unsafe { utl::get_const_field_ptr(cv, &*chtt) };
+                // SAFETY: the field's own template governs it.
+                return unsafe {
+                    template_ex_i2d(pchval.cast::<*const Asn1String>(), out, chtt, -1, aclass)
+                };
+            }
+            // A selector outside the template array is not an error the authority
+            // reports: it falls through to the post callback and answers 0.
+            if let Some(cb) = cb {
+                // SAFETY: the callback is the caller's.
+                if unsafe { cb(ASN1_OP_I2D_POST, cv, it, core::ptr::null_mut()) } == 0 {
+                    return 0;
+                }
+            }
+            0
+        }
+
+        ASN1_ITYPE_EXTERN => {
+            let ef = it.funcs.cast::<Asn1ExternFuncs>();
+            if ef.is_null() {
+                return 0;
+            }
+            // SAFETY: for an `EXTERN` item `funcs` is its `ASN1_EXTERN_FUNCS`.
+            let ef = unsafe { &*ef };
+            match ef.asn1_ex_i2d {
+                // SAFETY: the hook is the caller's, with the authority's signature.
+                Some(f) => unsafe { f(cv, out, it, tag, aclass) },
+                None => 0,
+            }
+        }
+
+        ASN1_ITYPE_NDEF_SEQUENCE | ASN1_ITYPE_SEQUENCE => {
+            // Only the `NDEF` item type turns an `NDEF` request into an actual
+            // indefinite-length encoding.
+            let ndef =
+                if it.itype == ASN1_ITYPE_NDEF_SEQUENCE && aclass & ASN1_TFLG_NDEF as c_int != 0 {
+                    2
+                } else {
+                    1
+                };
+
+            let mut seqcontlen: c_int = 0;
+            // SAFETY: `cv` is a live slot holding a live value of the item's type.
+            let restored = unsafe { utl::enc_restore(&mut seqcontlen, out, cv, it) };
+            if restored < 0 {
+                return 0;
+            }
+            if restored > 0 {
+                return seqcontlen;
+            }
+            seqcontlen = 0;
+
+            let mut tag = tag;
+            let mut aclass = aclass;
+            if tag == -1 {
+                tag = V_ASN1_SEQUENCE;
+                // Any other flags in `aclass` are retained.
+                aclass = (aclass & !(ASN1_TFLG_TAG_CLASS as c_int)) | V_ASN1_UNIVERSAL;
+            }
+            let cb = aux_const_cb(aux);
+            if let Some(cb) = cb {
+                // SAFETY: the callback is the caller's.
+                if unsafe { cb(ASN1_OP_I2D_PRE, cv, it, core::ptr::null_mut()) } == 0 {
+                    return 0;
+                }
+            }
+
+            // First pass: the content length, with a null destination.
+            let mut i: c_long = 0;
+            let mut tt = it.templates;
+            while i < it.tcount {
+                // SAFETY: `*cv` is a live value of the item's type.
+                let seqtt = unsafe { utl::do_adb(*cv, tt, 1) };
+                if seqtt.is_null() {
+                    return 0;
+                }
+                // SAFETY: `seqtt` is live and `*cv` is the enclosing value.
+                let pseqval = unsafe { utl::get_const_field_ptr(cv, &*seqtt) };
+                // SAFETY: the field's own template governs it.
+                let tmplen = unsafe {
+                    template_ex_i2d(
+                        pseqval.cast::<*const Asn1String>(),
+                        core::ptr::null_mut(),
+                        seqtt,
+                        -1,
+                        aclass,
+                    )
+                };
+                if tmplen == -1 || tmplen > c_int::MAX - seqcontlen {
+                    return -1;
+                }
+                seqcontlen += tmplen;
+                // SAFETY: still inside the item's template array.
+                tt = unsafe { tt.add(1) };
+                i += 1;
+            }
+
+            let seqlen = crate::asn1::der::ASN1_object_size(ndef, seqcontlen, tag);
+            if out.is_null() || seqlen == -1 {
+                return seqlen;
+            }
+            // SAFETY: `out` is a live slot with room for the header.
+            unsafe { crate::asn1::der::ASN1_put_object(out, ndef, seqcontlen, tag, aclass) };
+
+            // Second pass: the fields themselves.
+            i = 0;
+            tt = it.templates;
+            while i < it.tcount {
+                // SAFETY: `*cv` is a live value of the item's type.
+                let seqtt = unsafe { utl::do_adb(*cv, tt, 1) };
+                if seqtt.is_null() {
+                    return 0;
+                }
+                // SAFETY: `seqtt` is live and `*cv` is the enclosing value.
+                let pseqval = unsafe { utl::get_const_field_ptr(cv, &*seqtt) };
+                // The authority's own `FIXME` sits here: this pass does not check for
+                // errors, because the sizing pass above has already established that the
+                // content fits.
+                // SAFETY: the field's own template governs it.
+                unsafe {
+                    template_ex_i2d(pseqval.cast::<*const Asn1String>(), out, seqtt, -1, aclass)
+                };
+                // SAFETY: still inside the item's template array.
+                tt = unsafe { tt.add(1) };
+                i += 1;
+            }
+            if ndef == 2 {
+                // SAFETY: `out` is a live slot with room for the two-byte marker.
+                unsafe { crate::asn1::der::ASN1_put_eoc(out) };
+            }
+            if let Some(cb) = cb {
+                // SAFETY: the callback is the caller's.
+                if unsafe { cb(ASN1_OP_I2D_POST, cv, it, core::ptr::null_mut()) } == 0 {
+                    return 0;
+                }
+            }
+            seqlen
+        }
+
+        _ => 0,
     }
-    debug_assert!(
-        it.itype == ASN1_ITYPE_PRIMITIVE && it.templates.is_null(),
-        "item dispatch beyond the primitive and MSTRING arms is subphase 5.4"
-    );
-    if it.itype != ASN1_ITYPE_PRIMITIVE || !it.templates.is_null() {
-        // Unreachable by construction; failing closed rather than answering.
-        return 0;
+}
+
+/// `ASN1_AUX`'s encoder callback, as the const-correct shape.
+///
+/// The two callback shapes differ only in the constness of the value pointer, which
+/// the authority casts away when `ASN1_AFLG_CONST_CB` is clear; the transmute below is
+/// that cast, spelled in the one place it is needed.
+fn aux_const_cb(aux: *const Asn1Aux) -> Option<Asn1AuxConstCb> {
+    if aux.is_null() {
+        return None;
     }
-    // SAFETY: the caller's contract passes through unchanged.
-    unsafe { i2d_ex_primitive(pval, out, it, tag, aclass) }
+    // SAFETY: the caller established `aux` is the item's own block or null.
+    let aux = unsafe { &*aux };
+    if aux.flags & ASN1_AFLG_CONST_CB != 0 {
+        aux.asn1_const_cb
+    } else {
+        // SAFETY: the two function-pointer types have the same representation, and the
+        // authority itself reinterprets one as the other.
+        aux.asn1_cb
+            .map(|f| unsafe { core::mem::transmute::<Asn1AuxCb, Asn1AuxConstCb>(f) })
+    }
 }
 
 /// `asn1_i2d_ex_primitive` — size the content, write the header, write the content.
@@ -239,6 +516,8 @@ unsafe fn ex_i2c(
     putype: *mut c_int,
     it: &Asn1Item,
 ) -> c_int {
+    // Rebound because the `ANY` arm below redirects it into the type's union.
+    let mut pval = pval;
     // A caller's primitive hooks own the whole conversion, including any change to
     // `*putype`. No item this stratum defines carries one — the numeric items and
     // `BIGNUM_it` are subphase 5.4 — but a caller can build such an item itself.
@@ -272,12 +551,17 @@ unsafe fn ex_i2c(
         // SAFETY: `putype` is the caller's live slot.
         unsafe { *putype = utype };
     } else if it.utype == c_long::from(V_ASN1_ANY) {
-        // `ASN1_ANY` takes its type from the `ASN1_TYPE` and re-points `pval` into
-        // the union: subphase 5.7, and unreachable from the items this stratum
-        // defines other than `ASN1_ANY_it`, whose only consumer is
-        // `ASN1_item_i2d`.
-        debug_assert!(false, "V_ASN1_ANY is subphase 5.7");
-        return 0;
+        // The `ASN1_TYPE` carries the type and the value is the union member beside
+        // it, so the selector is read from the structure and `pval` is redirected
+        // into the union. From here down the arm below sees only the payload.
+        // SAFETY: the value is non-null, checked above, and is an `ASN1_TYPE`.
+        let typ = unsafe { *pval }.cast::<Asn1Type>();
+        // SAFETY: `typ` is live.
+        utype = unsafe { (*typ).type_ };
+        // SAFETY: `putype` is the caller's live slot.
+        unsafe { *putype = utype };
+        // SAFETY: `typ` is live; the union's `ptr` member is the value slot.
+        pval = unsafe { core::ptr::addr_of!((*typ).value.ptr) }.cast::<*const Asn1String>();
     } else {
         // SAFETY: `putype` is the caller's live slot, seeded with the item's type.
         utype = unsafe { *putype };
@@ -429,4 +713,354 @@ unsafe fn ex_i2c(
         unsafe { core::ptr::copy_nonoverlapping(cont, cout, len as usize) };
     }
     len
+}
+
+/// `asn1_template_ex_i2d` — a field's tags, `SET OF`/`SEQUENCE OF`, and the
+/// embedded-field indirection.
+///
+/// The tag to use comes from the template **or** the arguments, never both: a template
+/// that asks for a tag and a caller that supplies one is a template error rather than a
+/// case to resolve, which is why the first branch answers `-1` instead of choosing.
+///
+/// # Safety
+///
+/// `pval` must be a live field slot; `out` must be null or point to a slot with room;
+/// `tt` must be a live template.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[allow(clippy::not_unsafe_ptr_arg_deref)] // the authority's `pval` contract
+unsafe fn template_ex_i2d(
+    pval: *const *const Asn1String,
+    out: *mut *mut c_uchar,
+    tt: *const Asn1Template,
+    tag: c_int,
+    iclass: c_int,
+) -> c_int {
+    if tt.is_null() {
+        return 0;
+    }
+    // SAFETY: `tt` is live.
+    let t = unsafe { &*tt };
+    let flags = t.flags;
+
+    // An embedded field's value *is* the field's storage, so the address of the caller's
+    // slot stands in for it: `tval` holds it and the encode reads through `&tval`.
+    let tval: *const c_void = pval as *const c_void;
+    let pval = if flags & ASN1_TFLG_EMBED != 0 {
+        &tval as *const *const c_void
+    } else {
+        pval.cast::<*const c_void>()
+    };
+
+    // The tag and class to use. A template tag and an argument tag cannot both be
+    // present: the template's flags cannot be reconciled with the caller's intent, and
+    // the authority answers -1 rather than guessing.
+    let (ttag, tclass) = if flags & ASN1_TFLG_TAG_MASK != 0 {
+        if tag != -1 {
+            return -1;
+        }
+        (t.tag as c_int, (flags & ASN1_TFLG_TAG_CLASS) as c_int)
+    } else if tag != -1 {
+        (tag, iclass & (ASN1_TFLG_TAG_CLASS as c_int))
+    } else {
+        (-1, 0)
+    };
+    let iclass = iclass & !(ASN1_TFLG_TAG_CLASS as c_int);
+
+    // Indefinite length needs *both* the template and the caller to ask for it, which is
+    // how `ASN1_item_ndef_i2d` reaches a template that was written to allow it.
+    let ndef = if flags & ASN1_TFLG_NDEF != 0 && iclass & ASN1_TFLG_NDEF as c_int != 0 {
+        2
+    } else {
+        1
+    };
+
+    // SAFETY: `t.item` is the field's `ASN1_ITEM_EXP`.
+    let sub = unsafe { utl::call_item_exp(t.item) } as *const Asn1Item;
+    if sub.is_null() {
+        return 0;
+    }
+
+    if flags & ASN1_TFLG_SK_MASK != 0 {
+        // `SET OF` and `SEQUENCE OF` are a constructed tag whose *content* is a
+        // repetition of one element.
+        // SAFETY: for a `SK_MASK` field the slot holds the stack.
+        let sk = unsafe { *pval } as *mut OpenSslStack;
+        if sk.is_null() {
+            return 0;
+        }
+        // `isset` is 1 for `SET OF`, 2 for `SET OF` with `SET_ORDER` — and 2 means the
+        // stack itself is reordered to match the emitted order, which is observable to
+        // the caller afterwards.
+        let isset = if flags & ASN1_TFLG_SET_OF != 0 {
+            if flags & ASN1_TFLG_SEQUENCE_OF != 0 {
+                2
+            } else {
+                1
+            }
+        } else {
+            0
+        };
+        // An explicit or absent tag means the inner tag is the underlying one.
+        let (sktag, skaclass) = if ttag != -1 && flags & ASN1_TFLG_EXPTAG == 0 {
+            (ttag, tclass)
+        } else if isset != 0 {
+            (V_ASN1_SET, V_ASN1_UNIVERSAL)
+        } else {
+            (V_ASN1_SEQUENCE, V_ASN1_UNIVERSAL)
+        };
+
+        // SAFETY: `sk` is the caller's live stack.
+        let n = unsafe { OPENSSL_sk_num(sk) };
+        let mut skcontlen: c_int = 0;
+        let mut i: c_int = 0;
+        while i < n {
+            // SAFETY: `i` indexes the caller's stack.
+            let skitem = unsafe { OPENSSL_sk_value(sk, i) } as *const Asn1String;
+            // SAFETY: the element's item is the template's own.
+            let len = unsafe { item_ex_i2d(&skitem, core::ptr::null_mut(), sub, -1, iclass) };
+            if len == -1 || skcontlen > c_int::MAX - len {
+                return -1;
+            }
+            if len == 0 && t.flags & ASN1_TFLG_OPTIONAL == 0 {
+                // An element that encodes to nothing would make the `OF` unreadable, so
+                // it is rejected unless the field was declared OPTIONAL.
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::TASN_ENC_309) };
+                return -1;
+            }
+            skcontlen += len;
+            i += 1;
+        }
+        let sklen = crate::asn1::der::ASN1_object_size(ndef, skcontlen, sktag);
+        if sklen == -1 {
+            return -1;
+        }
+        let ret = if flags & ASN1_TFLG_EXPTAG != 0 {
+            crate::asn1::der::ASN1_object_size(ndef, sklen, ttag)
+        } else {
+            sklen
+        };
+        if out.is_null() || ret == -1 {
+            return ret;
+        }
+
+        if flags & ASN1_TFLG_EXPTAG != 0 {
+            // SAFETY: `out` is a live slot with room for the header.
+            unsafe { crate::asn1::der::ASN1_put_object(out, ndef, sklen, ttag, tclass) };
+        }
+        // SAFETY: as above.
+        unsafe { crate::asn1::der::ASN1_put_object(out, ndef, skcontlen, sktag, skaclass) };
+        // SAFETY: `out` is a live slot with room for the content.
+        unsafe { set_seq_out(sk, out, skcontlen, sub, isset, iclass) };
+        if ndef == 2 {
+            // SAFETY: `out` is a live slot with room for each two-byte marker.
+            unsafe {
+                crate::asn1::der::ASN1_put_eoc(out);
+                if flags & ASN1_TFLG_EXPTAG != 0 {
+                    crate::asn1::der::ASN1_put_eoc(out);
+                }
+            }
+        }
+        return ret;
+    }
+
+    if flags & ASN1_TFLG_EXPTAG != 0 {
+        // An explicit tag wraps the field in a constructed value of its own, so the
+        // field is sized and written on its own before the wrapper's header is emitted.
+        // SAFETY: the caller's contract.
+        let i = unsafe {
+            item_ex_i2d(
+                pval.cast::<*const Asn1String>(),
+                core::ptr::null_mut(),
+                sub,
+                -1,
+                iclass,
+            )
+        };
+        if i == 0 {
+            if t.flags & ASN1_TFLG_OPTIONAL == 0 {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::TASN_ENC_350) };
+                return -1;
+            }
+            return 0;
+        }
+        let ret = crate::asn1::der::ASN1_object_size(ndef, i, ttag);
+        if !out.is_null() && ret != -1 {
+            // SAFETY: `out` is a live slot with room for a header and the field.
+            unsafe {
+                crate::asn1::der::ASN1_put_object(out, ndef, i, ttag, tclass);
+                item_ex_i2d(pval.cast::<*const Asn1String>(), out, sub, -1, iclass);
+                if ndef == 2 {
+                    crate::asn1::der::ASN1_put_eoc(out);
+                }
+            }
+        }
+        return ret;
+    }
+
+    // Either no tagging or IMPLICIT tagging: the class and the caller's flags combine
+    // into the `aclass` the item layer is handed.
+    // SAFETY: the caller's contract.
+    let len = unsafe {
+        item_ex_i2d(
+            pval.cast::<*const Asn1String>(),
+            out,
+            sub,
+            ttag,
+            tclass | iclass,
+        )
+    };
+    if len == 0 && t.flags & ASN1_TFLG_OPTIONAL == 0 {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::TASN_ENC_371) };
+        return -1;
+    }
+    len
+}
+
+/// One element's DER encoding, held while a `SET OF` is put in canonical order.
+struct DerEnc {
+    /// Where the encoding starts.
+    data: *mut c_uchar,
+    /// How long it is.
+    length: c_int,
+    /// The value it came from, so the stack can be reordered to match.
+    field: *const c_void,
+}
+
+/// `der_cmp` — the overlapping-prefix byte comparison, then shorter-first.
+///
+/// This is `memcmp` over the common prefix, then the length difference, which is the
+/// canonical `SET OF` order rather than a lexicographic one.
+fn der_cmp(a: &DerEnc, b: &DerEnc) -> core::cmp::Ordering {
+    let cmplen = if a.length < b.length {
+        a.length
+    } else {
+        b.length
+    };
+    let n = cmplen.max(0) as usize;
+    // SAFETY: both encodings are live for at least `cmplen` bytes, and a zero-length
+    // slice of a possibly-null pointer is allowed.
+    let ord = unsafe {
+        core::slice::from_raw_parts(a.data, n).cmp(core::slice::from_raw_parts(b.data, n))
+    };
+    if ord != core::cmp::Ordering::Equal {
+        return ord;
+    }
+    a.length.cmp(&b.length)
+}
+
+/// `asn1_set_seq_out` — the content octets of a `SET OF` or `SEQUENCE OF`.
+///
+/// The `do_sort` argument is three-valued: `0` writes the elements in stack order, `1`
+/// sorts the *encoding* and leaves the stack alone, and `2` sorts the encoding **and**
+/// reorders the stack, so a caller that keeps the stack sees the canonical order too.
+///
+/// The sort is a stable sort by the canonical comparator. `qsort` in the authority is not
+/// specified to be stable, so for two elements whose encodings are byte-identical the
+/// emitted bytes are the same either way but the resulting stack order — which only the
+/// `do_sort == 2` case exposes — is tied to the original order here. That is recorded as
+/// an evidence question rather than asserted as equal.
+///
+/// # Safety
+///
+/// `sk` must be a live stack of values of `item`'s type; `out` must be a live slot whose
+/// pointee has room for `skcontlen` bytes.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+unsafe fn set_seq_out(
+    sk: *mut OpenSslStack,
+    out: *mut *mut c_uchar,
+    skcontlen: c_int,
+    item: *const Asn1Item,
+    mut do_sort: c_int,
+    iclass: c_int,
+) -> c_int {
+    // SAFETY: `sk` is the caller's live stack.
+    let n = unsafe { OPENSSL_sk_num(sk) };
+    if do_sort != 0 && n < 2 {
+        // Nothing to reorder.
+        do_sort = 0;
+    }
+    if do_sort == 0 {
+        let mut i: c_int = 0;
+        while i < n {
+            // SAFETY: `i` indexes the caller's stack.
+            let skitem = unsafe { OPENSSL_sk_value(sk, i) } as *const Asn1String;
+            // SAFETY: the element's item is the caller's.
+            unsafe { item_ex_i2d(&skitem, out, item, -1, iclass) };
+            i += 1;
+        }
+        return 1;
+    }
+
+    // Each element is encoded to a scratch buffer, then the encodings are ordered and
+    // emitted. The scratch buffer is sized by the caller's own measurement of the total.
+    let count = n.max(0) as usize;
+    // SAFETY: the caller's measurement, non-negative because it was accumulated.
+    let buflen = skcontlen.max(0) as usize;
+    let derlst =
+        CRYPTO_malloc(count * core::mem::size_of::<DerEnc>(), FILE.as_ptr(), LINE) as *mut DerEnc;
+    if derlst.is_null() {
+        return 0;
+    }
+    let tmpdat = CRYPTO_malloc(buflen, FILE.as_ptr(), LINE) as *mut c_uchar;
+    if tmpdat.is_null() {
+        // SAFETY: `derlst` came from this allocator and is not owned elsewhere.
+        unsafe { CRYPTO_free(derlst.cast::<c_void>(), FILE.as_ptr(), LINE) };
+        return 0;
+    }
+
+    let mut p = tmpdat;
+    let mut i: c_int = 0;
+    while i < n {
+        // SAFETY: `i` indexes the caller's stack.
+        let skitem = unsafe { OPENSSL_sk_value(sk, i) } as *const Asn1String;
+        let start = p;
+        // SAFETY: `p` has room for the remaining elements per the caller's measurement.
+        let len = unsafe { item_ex_i2d(&skitem, &mut p, item, -1, iclass) };
+        // SAFETY: `i` is inside the list just allocated.
+        unsafe {
+            let e = derlst.add(i as usize);
+            (*e).data = start;
+            (*e).length = len;
+            (*e).field = skitem.cast::<c_void>();
+        }
+        i += 1;
+    }
+
+    // SAFETY: `derlst` holds `count` initialised entries.
+    let list = unsafe { core::slice::from_raw_parts_mut(derlst, count) };
+    list.sort_by(der_cmp);
+
+    // SAFETY: `out` is a live slot whose pointee has room for `skcontlen` bytes.
+    let mut w = unsafe { *out };
+    for e in list.iter() {
+        if e.length > 0 {
+            // SAFETY: the entry's encoding is live for `length` bytes, and the
+            // destination has room for the total the caller measured.
+            unsafe { core::ptr::copy_nonoverlapping(e.data, w, e.length as usize) };
+            // SAFETY: advanced within the destination's measured extent.
+            w = unsafe { w.add(e.length as usize) };
+        }
+    }
+    // SAFETY: the caller's slot is writable.
+    unsafe { *out = w };
+
+    if do_sort == 2 {
+        // The stack is reordered to match, which is why `field` is carried beside the
+        // encoding rather than the encoding alone deciding the output.
+        for (k, e) in list.iter().enumerate() {
+            // SAFETY: `k` indexes the caller's stack and `e.field` is the element that
+            // was read from it.
+            unsafe { OPENSSL_sk_set(sk, k as c_int, e.field.cast_mut().cast::<c_void>()) };
+        }
+    }
+
+    // SAFETY: both buffers came from this allocator and are not owned elsewhere.
+    unsafe {
+        CRYPTO_free(derlst.cast::<c_void>(), FILE.as_ptr(), LINE);
+        CRYPTO_free(tmpdat.cast::<c_void>(), FILE.as_ptr(), LINE);
+    }
+    1
 }

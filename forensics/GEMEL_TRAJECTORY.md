@@ -10,6 +10,22 @@ in Git. See `docs/DECISIONS.md` D17.
 ## `gemel log`
 
 ```
+C43  PEM_proc_type and PEM_dek_info implemented and courted; the 25 remaining pem.h exports handed on with the dependency each waits for; open obligations reach zero and the phase-5 seal is rewritten from the ledgers
+    state state.a2d15e14bf47e8737740783806df1b10919f4749b3013836b191ee6a80c109cf -> state.e37e2612ce18778003bd493480dcb5338c3f108bf61f91ee0ef5bad6f970e415
+C42  SMIME_crlf_copy and i2d_ASN1_bio_stream implemented and courted; SMIME_crlf_copy removed from the Phase 12 hand-off set because its reason was a file rather than a dependency; PEM_write_bio_ASN1_stream handed to Phase 7 for its base64 BIO; the authority unbounded unwind loop recorded as D-MIME-1
+    state state.967494a4aa380bf6a345ea55e84fb1e9901f4b0fc94df3a9048bd9a777d4d786 -> state.a2d15e14bf47e8737740783806df1b10919f4749b3013836b191ee6a80c109cf
+C41  ASN1_item_print implemented and courth; the EMBED stack-slot defect the court found; the v3_utl.c raise coordinates and the phase 4 to phase 5 hand-off reconciliation
+    state state.06d7e5252a13d7ebf03db77fe2b9f15e1776e93adb37cc181713b660e8df098b -> state.967494a4aa380bf6a345ea55e84fb1e9901f4b0fc94df3a9048bd9a777d4d786
+C40  Subphase 5.8 half landed: crypto/asn1/bio_asn1.c (BIO_f_asn1, the four BIO_asn1_ prefix/suffix controls) and the BIO_new_NDEF half of bio_ndef.c, with its two prefix and two suffix callbacks. The filter is a state machine, not a wrapper: seven states because each write may have to emit a prefix, a header, some content and then more content on the next call, with a partial-write cursor for the header and a declared length that bounds how much content passes through before a fresh header. Added RT-BIO-ASN1 with 114 observations, and it found one defect, which crashed the candidate. The authority tests the three setup calls as ; I wrote them as , which multiplies by zero on SUCCESS, so BIO_new_NDEF took the error path on every call and freed the support block a second time - the state machine had already handed it to the BIO, whose destroy callback releases it. glibc reported a double free in tcache and the probe dumped core. The lesson is the one this stratum keeps teaching from the other direction: a faithful transcription of three lines would have been right, and the tidy-looking rewrite was wrong. Fixed to the authority shape. Implemented libcrypto exports 921 -> 927; Phase 5 open obligations 37 -> 30.
+    state state.5ef38880d6673996c7801ac89d7043d9e6423aac626fa6098879d1e59c8d4458 -> state.06d7e5252a13d7ebf03db77fe2b9f15e1776e93adb37cc181713b660e8df098b
+C39  ASN1_str2mask lands with the asn1_str2tag table it depends on. The two other exports of asn1_gen.c, ASN1_generate_v3 and ASN1_generate_nconf, are handed to Phase 11: both take an X509V3_CTX pointer, and ASN1_generate_nconf constructs one through the X509V3_set_nconf macro even on its null-CONF path, so neither can be written without a structure this stratum does not own. The fifty-four-name table lives in this module rather than beside the generator because ASN1_str2mask needs it now and Phase 11 will need the same table; a second copy is a duplicated registry. RT-ASN1-STR grew to 5831 observations with thirty-eight str2mask cases covering accepted names, the DIR special case that shadows the table, the lowercase and mixed-case forms, the two separators, empty and separator-only lists, unknown names before and after an accepted one, the six modifier names that the ASN1_GEN_FLAG range test rejects, and the partial mask a refusal leaves behind. All pass on the first run, which is the first time in this stratum that a module written from a reading of the source needed no correction. Implemented libcrypto exports 920 -> 921; Phase 5 open obligations 39 -> 37.
+    state state.6b6aa057e39335f1cca6e8705e88fe15c60b8cf5b0db243627ded409f5e2585b -> state.5ef38880d6673996c7801ac89d7043d9e6423aac626fa6098879d1e59c8d4458
+C38  Completed subphase 5.6: a_strex.c lands, so the string surface has no open export left except ASN1_str2mask, which belongs to asn1_gen.c. ASN1_STRING_print_ex and ASN1_STRING_print_ex_fp are one implementation with two sinks, and ASN1_STRING_to_UTF8 is the same tag2nbyte table read for a different purpose. The char_type table is the authority generated charmap.h artifact rather than a re-derivation of charmap.pl, and RT-ASN1-STR is extended to pin it behaviourally: every one of the 256 byte values printed under RFC2253, under ESC_MSB alone and under ESC_QUOTE, plus twenty-three flag sets over thirty string types. RT-ASN1-STR is now 5714 observations and passes. One finding, and it is about the probe rather than the crate: do_dump builds a stack ASN1_TYPE whose value.ptr is the ASN1_STRING, so with DUMP_DER the encoder reinterprets that pointer according to the string type - for BOOLEAN that is the low byte of a heap address, so the authority and the candidate each printed their own address and the comparison was invalid rather than failing. The probe now restricts DUMP_DER to types where the union member really is the string, and the restriction is written down where it is applied. Also fixed two clippy findings on the way (collapsible match, and i2d_ASN1_TYPE taking a const pointer). Implemented libcrypto exports 917 -> 920; Phase 5 open obligations 42 -> 39.
+    state state.f0d8841f77ad4b4159c5a699b212bf169331d68da2827ed44291f170fac6935c -> state.6b6aa057e39335f1cca6e8705e88fe15c60b8cf5b0db243627ded409f5e2585b
+C37  Implemented 14 of the 20 exports of subphase 5.6: a_print.c (ASN1_PRINTABLE_type, ASN1_UNIVERSALSTRING_to_string, ASN1_STRING_print), a_mbstr.c (ASN1_mbstring_copy, ASN1_mbstring_ncopy), a_strnid.c (the 28-row standard table, the runtime stack that shadows it, ASN1_STRING_TABLE_add/get/cleanup, ASN1_STRING_set_by_NID, the three global-mask accessors) and t_pkey.c (ASN1_buf_print, ASN1_bn_print). Two exports are handed on rather than written: ASN1_add_oid_module to Phase 6 and ASN1_add_stable_module to Phase 11, because both register a CONF module through CONF_module_add, which Phase 4 handed to Phase 6 since only the module registry constructs a CONF_MODULE. Added RT-ASN1-STR: 581 observations, passing after three fixes it found. (1) ASN1_PRINT_MAX_INDENT is 128, not 80 - I wrote 80 from the ASCII line width instead of reading t_pkey.c, and with an indent of 81 the authority writes 81 spaces where the candidate truncated to 80. That is exactly the transcription class D33 forbids and the reason the constant now names its source. (2) ASN1_STRING_set_default_mask_asc must reject MASK: with an empty remainder; I accepted it because strtoul accepts it as zero. (3) The court exposed a Phase-3 decision rather than a Phase-5 defect: OPENSSL_INIT_LOAD_CONFIG was refused with ERR_R_INIT_FAIL because the authority action was said to be non-empty, but the authority reaches CONF_modules_load_file_ex with DEFAULT_CONF_MFLAGS, which carries CONF_MFLAGS_IGNORE_MISSING_FILE, so on a profile with no default config file the step succeeds having loaded nothing. ASN1_STRING_TABLE_get calls it on every lookup, so the refusal made the whole table raise. The flag is now accepted with the load a no-op, and applying a config file that does exist remains a Phase-6 obligation recorded as D86. Also added setvbuf line buffering to the probe, so a probe that dies part-way leaves the observations it did make rather than an empty transcript. Implemented libcrypto exports 903 -> 917; Phase 5 open obligations 58 -> 42.
+    state state.59eeed712ec296d8be516d1dc49380b12eda93547de1db3fd169b9725f17355d -> state.f0d8841f77ad4b4159c5a699b212bf169331d68da2827ed44291f170fac6935c
+C36  Implemented the 29 exports of the ASN.1 time family (crypto/asn1/a_time.c, a_utctm.c, a_gentm.c) and the three crypto/o_time.c calendar symbols they stand on. The parser is one function, ossl_asn1_time_to_tm, with everything else a wrapper: the four constructors and their year-window choice, the two type guards, the three cmp_time_t answers, the four printers over a memory BIO, the duplicates and the two in-place converters. Added RT-ASN1-TIME: 1071 observations, all matching, on the first run after one defect was fixed. The defect is the reason the court exists: ASN1_TIME_print called the internal three-valued printer directly instead of going through the public ASN1_TIME_print_ex that collapses its -1 to 0, so an unparseable value returned -1 where the authority returns 0. No unit test would have found it - the difference is only observable through the public entry point. Also added src/runtime/time.rs: the glibc struct tm projection the exported signatures are written against, OPENSSL_gmtime over gmtime_r, and the Fliegel and Van Flandern Julian-day arithmetic of OPENSSL_gmtime_adj and OPENSSL_gmtime_diff, with the Julian-day unit tests and the struct layout assertion. Implemented libcrypto exports 871 -> 903; Phase 5 open obligations 87 -> 58.
+    state state.6218370ade549f6470b9b1a5c822d6d70ac101fd24a1937aed4462dc979d53d0 -> state.59eeed712ec296d8be516d1dc49380b12eda93547de1db3fd169b9725f17355d
 C35  Phase 5.3: the shared DER codec lands in both halves, the 26 primitive item descriptors, the 36 tasn_typ.c wrappers, ASN1_BIT_STRING, ASN1_NULL and d2i_ASN1_UINTEGER. RT-ASN1 goes 644 -> 1306 observations over 0 residuals, phase 5 open obligations 226 -> 155 and implemented[libcrypto] 734 -> 805, moving together as they must. Restructuring the decoder found two defects in the file D76 had landed and neither was reachable from the three wrappers it shipped: asn1_ex_c2i frees the value unconditionally and nulls the callers slot on an allocation failure, where the old code freed only what it had allocated, so a d2i_* into an existing string would have handed back a slot pointing at a half-filled object the authority had destroyed; and asn1_item_embed_d2i raises ASN1_R_TOO_SMALL for len <= 0 before any header is read, where the old code reported a different reason for the same failure. The court then found an ownership contract rather than a bug: asn1_item_ex_d2i_intern ends with if (rv <= 0) ASN1_item_ex_free(pval, it), so a failed decode frees the callers value and nulls the callers slot. RT-ASN1 bsd.keepstate, authority=0 candidate=1, is what produced src/asn1/fre.rs, and it also explains why asn1_ex_c2i nulls the slot after freeing: that null is what stops the item layer freeing the same string twice. The 26 descriptors are compared field by field because ASN1_ITEM fields are readable in asn1t.h, and that found IMPLEMENT_ASN1_TYPE passes 0 and not -1 as the items size, which is the field that decides whether a BOOLEAN is omitted. Reason codes are generated now: gen_err_reasons.py reads 1839 LIB_R_NAME defines over 541 authority headers and cross-checks itself against gen_err_strings.parse_reason_codes before writing, so the two codes D76 had typed wrong become references and that class of mistake is gone rather than fixed once. The subphase plan had 5.4 before 5.3 and reading the file showed the dependency points the other way: ASN1_item_d2i reaches the primitive arms with no template involved, so the wrappers need the primitive path, which is the work 5.3 owns. FRF: run run-openssl-rs-rt-asn1-2053f9dbaa2d8e2fe0ce0fb78259b91735264d11405d6e227cf82d0efff062bf, receipt receipt-run-openssl-rs-rt-asn1-2053f9dbaa2d8e2fe0ce0fb78259b91735264d11405d6e227cf82d0efff062bf-3ce41207fbca8cd851ed8818e2a250452cd9ee16fe63ad06705f7cc977a29f70, challenges 3c70b564a201f55de682d7d9409f542dfeece2dab705faa18b8d895f60d1b2b4 (stdout-first-line on the stdout axis) and 6229f4ca6cc3b646872d56976633d9434ef813307bdc52018b9196faff74e40d (exit-class on the exit axis), claim 414204ce21684e41a0352d4d33a303244ff2fedbe0c6abd6acd52e598b729617 over the 25 runtime receipts plus the ABI, dgst and inventory courts. D77 records it and docs/PHASE-5-SUBPHASES.md corrects the ordering and gains the authority facts this section established.
     state state.ffc65cf51aaa8caf989a94c1cfa21fb53ab84cd2fdea8b7259d5891c31ddbebf -> state.6218370ade549f6470b9b1a5c822d6d70ac101fd24a1937aed4462dc979d53d0
 C31  The ASN.1 leaf surface is implemented, wired in and courted: 109 exports, RT-ASN1 at 644 observations with no residuals, phase 5 open obligations 362 -> 226 after D73 hand-offs
@@ -58,7 +74,17 @@ C1  Phase 0 constitution and Phase 1 archaeology atlas, evidence-bound
 * `K14` — `checkpoint.c3c9dd019cd987d9753cda5e521b8993decd99c01b97fcebeef888727f56512e`
 * `K15` — `checkpoint.be15113912c9856c707bdd4c9317edc7c750663fd96e76e1a5b5e2b9a4420c3d`
 * `K16` — `checkpoint.6efde8d368887ea3895c564c33f8cc2ea84b211d56971fb3055ae89c576c10e2`
+* `K17` — `checkpoint.5fd6e1426ad1bf8934578ecdb7020b8bf72c4ca401136e0884da0b7c0f4b22c6`
+* `K18` — `checkpoint.945a0214a4146448bc80b811fa2d65ffa531a1d49396b93cc0bbf715e26dba62`
+* `K19` — `checkpoint.73c21457ed3266796156fb1e55e8a60bc559a8d9398b610297c336bb30b956fd`
 * `K2` — `checkpoint.67a75f9a16d008e6e5aec0984c93dfc7549bd7a33708b909fbf6424b04fcb4a6`
+* `K20` — `checkpoint.528dbaef805d3e05304fbc9ae6e8bee5c1a5bb2e75486f2998933b875732bed5`
+* `K21` — `checkpoint.6933308364494b57c6c48ab9e4246d741e27a9e013ea2bfac9ce0dfda8fe2f48`
+* `K22` — `checkpoint.5c49d38a618be5dfb2a1d350b73a7f13b5dc9b4f2629a36ce4bf882ad814752f`
+* `K23` — `checkpoint.4d121775b53e8369dd0457ad230f82a3b375db10e9df7077ad4d564dcdc756fd`
+* `K24` — `checkpoint.1a2e3a5565633ce851d7dadbcbc9c5cd2be4cf8d61b6463f45b54cc7fa39ec8a`
+* `K25` — `checkpoint.72f7fa3b2028e181c38bcb2d904f665cad991c15dfbe446629b3aee4147edc15`
+* `K26` — `checkpoint.4e8675a95b17554b5113e18653828e79c7c859cc37f7c3a2183a9c4864041d34`
 * `K3` — `checkpoint.b1516eb6364ad075785911cb204a75a6e1b83b08c1a7ca39a2de6e3983dc9aed`
 * `K4` — `checkpoint.1bde75b37e1ca3972037c29cbd3ba5291079544436db9176a82f097a6bf832fe`
 * `K5` — `checkpoint.6b0d12f1ecf380c0808bc95675222fbed7256f99bc8e9f475a0ec2693f804a0a`
@@ -67,7 +93,7 @@ C1  Phase 0 constitution and Phase 1 archaeology atlas, evidence-bound
 * `K8` — `checkpoint.7eb3dba97cbf20f2b34d14cce7e93bc2171ebd0d7ee66d1f7508cc6e199567de`
 * `K9` — `checkpoint.60105b4c8189d2668c48e173fe2c92c0ddf76160caae24efecc707bd576f506f`
 
-current: `checkpoint.6efde8d368887ea3895c564c33f8cc2ea84b211d56971fb3055ae89c576c10e2`
+current: `checkpoint.4e8675a95b17554b5113e18653828e79c7c859cc37f7c3a2183a9c4864041d34`
 
 ## Note: derived names are not identities
 
@@ -87,6 +113,57 @@ changed with it; the Git commit is the authoritative record of the diff.
 ## Open residuals at this boundary
 
 ```
+open [low] the 25 pem.h exports handed to phases 7 and 11 remain unimplemented
+    class: verification_gap
+    persistence: 0 descendant change(s)
+open [low] the authority i2d_ASN1_bio_stream unwind loop does not terminate for a callback returning a detached BIO, and the candidate stops
+    class: semantic_divergence
+    persistence: 0 descendant change(s)
+open [low] the 27 pem.h exports and PEM_write_bio_ASN1_stream and i2d_ASN1_bio_stream remain unimplemented
+    class: verification_gap
+    persistence: 0 descendant change(s)
+open [low] i2d_ASN1_bio_stream in asn_mime.c remains open pending a check for Phase 12 entanglement
+    class: verification_gap
+    persistence: 0 descendant change(s)
+open [low] the NDEF streaming happy path needs a caller-declared item with an ASN1_AUX callback; the probe declares one, and the in-tree items that do this are CMS and PKCS7, which are Phase 12
+    class: verification_gap
+    persistence: 0 descendant change(s)
+open [low] a refused name in ASN1_str2mask leaves the mask accumulated by the earlier names; reproduced and courted, and it is the authority behaviour rather than a defect
+    class: expected_mismatch
+    persistence: 0 descendant change(s)
+open [medium] ASN1_generate_v3 and ASN1_generate_nconf are handed to Phase 11, so no caller can build an ASN1_TYPE from a string until then
+    class: expected_mismatch
+    persistence: 0 descendant change(s)
+open [low] X509_NAME_print_ex and X509_NAME_print_ex_fp are the other half of a_strex.c and belong to Phase 11, so do_name_ex is not written here
+    class: verification_gap
+    persistence: 0 descendant change(s)
+open [low] the char_type table is the generated artifact rather than a re-derivation of charmap.pl; the probe pins it through behaviour over all 256 byte values under three flag sets
+    class: expected_mismatch
+    persistence: 0 descendant change(s)
+open [low] ASN1_STRING_print_ex with DUMP_DER on a non-character type encodes the string pointer reinterpreted as that type value, so the output is address-dependent and no probe can compare it; the restriction to comparable types is stated in the probe
+    class: verification_gap
+    persistence: 0 descendant change(s)
+open [low] the string-table stack is reached through an AtomicPtr where the authority uses a bare pointer and documents that its own sort is unsynchronised; the observable contract is the same and the crate avoids a mutable static
+    class: expected_mismatch
+    persistence: 0 descendant change(s)
+open [low] ASN1_STRING_print_ex, ASN1_STRING_print_ex_fp, ASN1_STRING_to_UTF8 (a_strex.c) and ASN1_str2mask (asn1_gen.c) remain open in this subphase
+    class: verification_gap
+    persistence: 0 descendant change(s)
+open [low] ASN1_add_oid_module is handed to Phase 6 and ASN1_add_stable_module to Phase 11, so neither registers its CONF module until then
+    class: expected_mismatch
+    persistence: 0 descendant change(s)
+open [medium] OPENSSL_INIT_LOAD_CONFIG succeeds without loading a config file, so a config file that exists is not applied, and a stbl_section entry in it is not visible to ASN1_STRING_TABLE_get; the loader needs OSSL_LIB_CTX and the module registry, both Phase 6
+    class: contract_mismatch
+    persistence: 0 descendant change(s)
+open [low] the crate answers a null struct tm destination or a null from/to in OPENSSL_gmtime_diff with the failure value where the authority faults; recorded in SECURITY_DIVERGENCE_POLICY
+    class: semantic_divergence
+    persistence: 0 descendant change(s)
+open [low] the time family raises nothing on a parse failure, so ASN1_TIME_adj raising ASN1_R_ERROR_GETTING_TIME is the one raise site and it needs a libc gmtime_r failure to reach; recorded but not courted
+    class: verification_gap
+    persistence: 0 descendant change(s)
+open [low] the offset branch applies OPENSSL_gmtime_adj only when the destination is non-null, so a value whose offset would move the Julian day below zero is accepted by the checker and refused by a fill; reproduced and courted, not a defect
+    class: expected_mismatch
+    persistence: 0 descendant change(s)
 open [low] the item descriptors size fields are compared through the probe rather than through a generated ABI constant court, because struct ASN1_ITEM_st is not in the ABI-LAYOUT aggregate set the phase 2 probe measures
     class: verification_gap
     persistence: 0 descendant change(s)

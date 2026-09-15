@@ -2,8 +2,12 @@
 
 Phase 5 is **BN + ASN.1 + DER/PEM**. `BN` is closed: every one of the 201 exports
 `bn.h` declares is implemented or handed to a named stratum, and `RT-BN` covers them.
-What remains is **128 ASN.1 exports and 27 PEM exports** — the ledger's totals, taken
-from `forensics/phase5-obligations.json`, after 5.1, 5.2 and 5.3 landed (D76, D77).
+Phase 5 is now **closed**: `open` is zero, every one of the stratum's 565 owned
+exports is implemented and observed by a court or handed to a named later stratum with
+the dependency it waits on, and `forensics/phase-state.json` reads `complete`. The
+subphase table below is the record of how it got there. — the ledger's totals, taken
+from `forensics/phase5-obligations.json`, after 5.1 through 5.8 landed (D76, D77, D85,
+D86, D87, D88, D89, D90).
 
 `BN` is closed but this document exists because the rest of the stratum is large, and
 D73 established that a section is not closed by writing code for it. A subphase closes
@@ -18,13 +22,13 @@ same commit. Source that no build compiles and no CI checks is invisible to ever
 | 5.1 | Leaf primitives + DER codec | the `ASN1_STRING` family, the integer family, the object layer, `ASN1_PCTX`, `ASN1_SCTX`, and `ASN1_get_object`/`put_object`/`object_size`/`tag2bit`/`tag2str`/`parse`/`parse_dump`/`check_infinite_end`/`put_eoc` | Phase 4 (BIO, for the print/parse paths) | `RT-ASN1` | **COMPLETE** (D76) |
 | 5.2 | Text conversions | `i2a_*`, `i2t_*` | 5.1 | `RT-ASN1` extension | **COMPLETE** (D76) |
 | 5.3 | Codec wrappers | the shared decoder and encoder (`asn1_d2i_ex_primitive`, `asn1_ex_c2i`, `asn1_i2d_ex_primitive`, `asn1_ex_i2c`), the free path, the 26 primitive and multi-string item descriptors, the 36 `d2i_*`/`i2d_*` wrappers of `tasn_typ.c`, `ASN1_BIT_STRING`, `ASN1_NULL`, `d2i_ASN1_UINTEGER`, `a2d_ASN1_OBJECT` | 5.1 | `RT-ASN1` extension | **COMPLETE** (D77) |
-| 5.4 | Item machinery | the remaining 14 `*_it` accessors (the two `*_ANY` and the twelve numeric ones), `ASN1_ITEM_lookup`/`get`, `ASN1_item_*`, `ASN1_item_ex_*`, `asn1_d2i_read_bio`, NDEF, `ASN1_item_pack`/`unpack`, `ASN1_dup`, `ASN1_item_print`, `d2i_/i2d_ASN1_SEQUENCE_ANY`/`SET_ANY`, `ASN1_generate_v3`/`nconf`, `ASN1_add_oid_module`/`add_stable_module`, `ASN1_STRING_TABLE_*`, `ASN1_item_i2d_mem_bio` | 5.1, 5.3 | `RT-ASN1-TEMPLATE` | a caller-built template of the authority's shape round-trips, with the templates' `flags`/`tag`/`offset`/`field_name` compared |
-| 5.5 | Time | `ASN1_TIME`, `ASN1_UTCTIME`, `ASN1_GENERALIZEDTIME` accessors | 5.1, 5.4 | `RT-ASN1-TIME` | as above |
-| 5.6 | Strings, masks, printing | `ASN1_STRING_print*`, `set_by_NID`, the string masks, `ASN1_mbstring_*`, `UTF8_getc`/`putc`, `ASN1_str2mask`, `ASN1_PRINTABLE_type`, `ASN1_STRING_to_UTF8`, `ASN1_UNIVERSALSTRING_to_string`, `ASN1_bn_print`, `ASN1_buf_print` | 5.1 | `RT-ASN1-STR` | as above |
+| 5.4 | Item machinery | the remaining 14 `*_it` accessors (the two `*_ANY` and the twelve numeric ones), `ASN1_ITEM_lookup`/`get`, `ASN1_item_*`, `ASN1_item_ex_*`, `asn1_d2i_read_bio`, NDEF, `ASN1_item_pack`/`unpack`, `ASN1_dup`, `ASN1_item_print`, `d2i_/i2d_ASN1_SEQUENCE_ANY`/`SET_ANY`, `ASN1_generate_v3`/`nconf`, `ASN1_add_oid_module`/`add_stable_module`, `ASN1_STRING_TABLE_*`, `ASN1_item_i2d_mem_bio` | 5.1, 5.3 | `RT-ASN1-TEMPLATE`, `RT-ASN1-PRINT` | **COMPLETE** (D90) for the machinery and the printer; the two `d2i_`/`i2d_ASN1_bio_stream` members of `asn_mime.c` are checked for Phase 12 entanglement before they are written |
+| 5.5 | Time | `ASN1_TIME`, `ASN1_UTCTIME`, `ASN1_GENERALIZEDTIME` accessors, and the three `crypto/o_time.c` calendar symbols they stand on | 5.1, 5.4 | `RT-ASN1-TIME` | **COMPLETE** (D85) |
+| 5.6 | Strings, masks, printing | `ASN1_STRING_print*`, `set_by_NID`, the string masks, `ASN1_mbstring_*`, `UTF8_getc`/`putc`, `ASN1_str2mask`, `ASN1_PRINTABLE_type`, `ASN1_STRING_to_UTF8`, `ASN1_UNIVERSALSTRING_to_string`, `ASN1_bn_print`, `ASN1_buf_print` | 5.1 | `RT-ASN1-STR` | **COMPLETE** (D86, D87, D88): 18 written, `ASN1_str2mask` with them, and two handed to Phase 6 and Phase 11 |
 | 5.7 | `ASN1_TYPE` (ANY) | `ASN1_TYPE_*`, `d2i_/i2d_ASN1_TYPE` | 5.4 | `RT-ASN1-TYPE` | as above |
-| 5.8 | NDEF BIO bridge | `BIO_f_asn1`, `BIO_new_NDEF`, `BIO_asn1_get/set_prefix/suffix` (the Phase 4 → 5 hand-offs), `i2d_ASN1_bio_stream`, `PEM_write_bio_ASN1_stream` | 5.4 | `RT-BIO-ASN1` | as above |
-| 5.9 | PEM | the 27 `pem.h` exports the stratum still owns, plus the 21 it handed to Phases 7 and 10 | 5.1, 5.4, 5.6 | `RT-PEM` | as above |
-| 5.10 | Closure | nothing — evidence | all | — | `open == 0`; seal rewritten from the ledgers; FRF `sensitivity-backed`; Gemel checkpoint |
+| 5.8 | NDEF BIO bridge, and `asn_mime.c`'s copying half | `BIO_f_asn1`, `BIO_new_NDEF`, `BIO_asn1_get/set_prefix/suffix` (the Phase 4 → 5 hand-offs), `SMIME_crlf_copy`, `i2d_ASN1_bio_stream` | 5.4 | `RT-BIO-ASN1`, `RT-ASN1-MIME` | **COMPLETE** (D89, D92). `PEM_write_bio_ASN1_stream` is handed to Phase 7 for `BIO_f_base64`; the four `SMIME_*` reader/writer exports to Phase 12; `SMIME_text` to Phase 12 with the MIME header reader it needs |
+| 5.9 | PEM | the 27 `pem.h` exports the stratum still owned, plus the 21 it handed to Phases 7 and 10 | 5.1, 5.4, 5.6 | `RT-PEM` | **COMPLETE** (D93): 2 written (`PEM_proc_type`, `PEM_dek_info`, the two with no dependency) and 25 handed on, each with the subsystem it waits for named — 18 to Phase 7 (`EVP_ENCODE_CTX`, `EVP_CIPHER`, `EVP_MD_CTX`, `EVP_PKEY`, `BIO_f_base64`) and 7 to Phase 11 (`X509_REQ`, `X509_INFO`) |
+| 5.10 | Closure | nothing — evidence | all | — | **COMPLETE** (D93): `open == 0` over 565 owned exports, `artifacts/phase5/COURTS.json` `all_pass` over 9 courts and 9,669 observations, the seal rewritten from the ledgers, the FRF store recreated from clean and re-run, and a Gemel checkpoint |
 
 ### Why 5.3 landed before 5.4, when the plan said otherwise
 
@@ -216,6 +220,71 @@ need no template at all, so the path is 5.3's own work and the plan was correcte
   equals the item's default is omitted; a null value is omitted for every type except a
   `BOOLEAN` item, whose value is the slot itself.
 
+### The template support layer (`crypto/asn1/tasn_utl.c`, read whole for 5.4)
+
+Every function here is reached by the template interpreter and by nothing else, so it is
+recorded before it is written rather than re-derived per call site.
+
+* `ossl_asn1_get_choice_selector`/`_const`/`set_choice_selector` read and write an `int`
+  at `it->utype` — for a `CHOICE` item the `utype` field is the **offset of the
+  selector**, not a type.
+* `ossl_asn1_do_lock`: returns 0 immediately unless the item is a `SEQUENCE` or
+  `NDEF_SEQUENCE` *and* its `ASN1_AUX` carries `ASN1_AFLG_REFCOUNT`; `op == 0`
+  initialises (reference 1 plus a new lock, and a lock failure raises `ERR_R_CRYPTO_LIB`
+  after freeing the reference), `op == 1` increments, `op == -1` decrements and — only at
+  zero — frees the lock, nulls the lock field and frees the reference. It answers -1 on
+  any failure, so a caller must distinguish -1 from 0.
+* `asn1_get_enc_ptr` needs **both** `pval` and `*pval` non-null and `ASN1_AFLG_ENCODING`
+  set, and reads the `ASN1_ENCODING` at `aux->enc_offset`. `ossl_asn1_enc_init` sets
+  `modified = 1`; `ossl_asn1_enc_free` releases and re-arms the same way.
+* `ossl_asn1_enc_save` **frees the previous encoding first**, then treats `inlen <= 0` as
+  "no encoding" and answers **0** — so a zero-length save is a failure the caller reports
+  as `ASN1_R_AUX_ERROR`.
+* `ossl_asn1_enc_restore` answers 0 when the encoding is absent *or* `modified`, and only
+  then; a successful restore copies the stored bytes and advances `*out`.
+* `ossl_asn1_get_field_ptr` is `*pval + tt->offset` returned as an `ASN1_VALUE **` — and
+  for a `BOOLEAN` field that pointer *is* the value, not a pointer to it.
+* `ossl_asn1_do_adb` returns `tt` unchanged unless `tt->flags & ASN1_TFLG_ADB_MASK`; it
+  reads the selector through `adb->offset` (an `OBJ_obj2nid` for `ADB_OID`, an
+  `ASN1_INTEGER_get` for `ADB_INT`), consults `adb->null_tt` when the selector field is
+  null, lets `adb_cb` rewrite the selector and treats a 0 answer as
+  `ASN1_R_UNSUPPORTED_ANY_DEFINED_BY_TYPE`, then does a **linear** search of
+  `adb->tbl` and falls back to `default_tt`. A miss with `nullerr` set raises; the
+  `NID_undef` value is deliberately *not* special-cased because it can be a legitimate
+  table key.
+
+### The `CHOICE` and `SEQUENCE` arms of `asn1_item_embed_d2i` (for 5.4)
+
+* `CHOICE` frees the value the selector currently points at and resets the selector to
+  `-1` before re-decoding into an existing value, then tries each template with
+  `opt = 1` and takes the first that answers `> 0`; a template answering `-1` means "not
+  this alternative", and any other 0-answer frees that partial field and raises
+  `ERR_R_NESTED_ASN1_ERROR`. Falling off the end is `ASN1_R_NO_MATCHING_CHOICE_TYPE`
+  unless `opt`, in which case the whole item is freed and `-1` returned. The chosen index
+  is written back only *after* the loop.
+* `SEQUENCE` requires the constructed bit (`ASN1_R_SEQUENCE_NOT_CONSTRUCTED`), honours
+  `ASN1_AFLG_BROKEN` by ignoring the declared length, and clears any ADB-derived fields
+  **before** the per-field loop. In the loop the last field is decoded with `isopt = 0`
+  and every other field with its own `ASN1_TFLG_OPTIONAL`; a `-1` frees and zeroes that
+  field and continues; an EOC inside the loop is `ASN1_R_UNEXPECTED_EOC` unless the header
+  said indefinite. Afterwards: a missing expected EOC is `ASN1_R_MISSING_EOC`, leftover
+  data is `ASN1_R_SEQUENCE_LENGTH_MISMATCH`, and any remaining field that is not OPTIONAL
+  is `ASN1_R_FIELD_MISSING`. On success the received bytes are stored with
+  `ossl_asn1_enc_save` — which is why a re-encode can return the caller's original bytes
+  rather than a re-derivation.
+* The `err:` tail adds `"Field="`, the field name, `", Type="` and the item's `sname`
+  as **additional error data**, so the queue contents differ between a failure at a named
+  field and one at the item itself even when the reason matches.
+
+### The item list (`crypto/asn1/asn1_item_list.c`)
+
+`ASN1_ITEM_lookup` and `ASN1_ITEM_get` scan the authority's *generated*
+`asn1_item_list.h`: 147 items, compared by `strcmp` on `sname`, with `get` indexing the
+same order. Measured against the ownership atlas, their `_it` accessors are owned by this
+stratum for 40 entries, Phase 8 for 7, Phase 10 for 6, Phase 11 for 64 and Phase 12 for
+30 — so 107 of the 147 do not exist before Phase 12 and both functions are handed there
+with that measurement as the reason (D80).
+
 ## Order of work, and why
 
 5.1 first, because everything else is written against `ASN1_STRING` and the primitive
@@ -231,5 +300,51 @@ need the primitive types, not the template interpreter. 5.7 and 5.8 need 5.4. 5.
 Nothing in this list is started before the one it depends on. The staging branch
 `phase5-asn1` carries work that compiles and is fmt- and clippy-clean but has not yet
 been courted; a section reaches `main` only with the court that observes it, per D73.
+
+### What 5.5 turned out to rest on (D85)
+
+The family is 29 exports and one parser. Two things about it were not in the plan:
+
+* It needs three symbols that are **not** ASN.1 and not Phase 5. `OPENSSL_gmtime`,
+  `OPENSSL_gmtime_adj` and `OPENSSL_gmtime_diff` are declared in `crypto.h`, so the
+  ownership atlas assigns them to Phase 3; the family is written on top of them, so they
+  landed with it, in `src/runtime/time.rs`, phrased as Phase 3's own stratum. The same
+  file carries the `struct tm` projection the exported signatures are written against,
+  which is a projection of *libc* rather than of OpenSSL and so has no atlas entry — the
+  probe measures it instead.
+* The three translation units are one module. `a_time.c` is where the parser, the
+  constructors and the printers are; `a_utctm.c` and `a_gentm.c` are type guards over
+  them. Splitting them into three modules would have produced two modules whose whole
+  content is a four-line wrapper, and the ownership rule is keyed on the *declaring
+  header*, which is `asn1.h` for all three.
+
+The section closed with `RT-ASN1-TIME` at 1071 observations and one defect found —
+`ASN1_TIME_print` skipping the public indirection that collapses the printer's
+three-valued answer. That defect is recorded in D85 as the case for measuring entry
+points rather than helpers.
+
+### What the first half of 5.6 turned out to rest on (D86)
+
+The 20 exports of this subphase are four unrelated translation units, and the plan had
+them as one row because they are all "strings". They are not:
+
+* `a_print.c` and `a_mbstr.c` classify — which of three string types a buffer fits in,
+  and which of seven a character fits in. `a_mbstr.c` is the larger of the two by an
+  order of magnitude, because it decodes four input encodings to scalar values, narrows
+  a mask against them, picks a type and then re-encodes to a possibly different one.
+* `a_strnid.c` is policy, not strings: a 28-row compile-time table, a runtime stack that
+  shadows it, and a process-global mask whose `STABLE_NO_MASK` exemption exists so that a
+  per-NID type a caller pinned is not excluded by a process-wide preference.
+* `t_pkey.c` is where `ASN1_bn_print` lives, so a "string" subphase depends on `BN`.
+* Two of the row's exports are not implementable here at all: both register a CONF
+  module, and `CONF_module_add` is Phase 6. They are handed on, which is why the row's
+  own count is 18 rather than 20.
+
+The two defects the court found are both of the least interesting-looking kind, and
+both are recorded in D86: a constant recalled rather than read (`ASN1_PRINT_MAX_INDENT`
+is 128, not 80) and an early rejection that looks redundant next to the parse that
+follows it. The third finding was not in this stratum at all — it was a Phase-3 refusal
+of `OPENSSL_INIT_LOAD_CONFIG` that this stratum's first caller turned into an
+observable difference.
 
 SPDX-License-Identifier: Apache-2.0

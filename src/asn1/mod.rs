@@ -38,14 +38,36 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
+pub mod a_d2i_fp;
+pub mod a_dup;
+pub mod a_i2d_fp;
+pub mod a_mbstr;
+pub mod a_print;
+pub mod a_strex;
+pub mod a_strnid;
+pub mod a_type;
+pub mod a_utf8;
+pub mod asn1_gen;
+pub mod asn_mime;
+pub mod asn_pack;
+pub mod bio_asn1;
 pub mod bitstr;
 pub mod d2i;
 pub mod der;
+pub mod evp_asn1;
 pub mod fre;
 pub mod i2d;
 pub mod items;
 pub mod layout;
+pub mod new;
 pub mod prim;
 pub mod string;
+pub mod t_pkey;
+pub mod tasn_prn;
 pub mod text;
+pub mod time;
 pub mod typ;
+pub mod utl;
+pub mod x_bignum;
+pub mod x_int64;
+pub mod x_long;

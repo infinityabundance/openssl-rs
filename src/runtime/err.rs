@@ -326,6 +326,26 @@ fn get_reason(e: c_ulong) -> c_ulong {
     }
 }
 
+/// `ERR_GET_REASON(ERR_peek_last_error())` — the reason code of the queue's last entry.
+///
+/// Exists because one caller has to *branch* on a reason rather than report it:
+/// `asn1_d2i_read_bio` asks whether a header `ASN1_get_object` rejected was merely
+/// `ASN1_R_TOO_LONG` — recoverable, because the buffer has not received the whole length
+/// yet — or a genuinely malformed header.
+///
+/// # Safety
+///
+/// There is no precondition: the function takes no arguments and touches only the
+/// calling thread's own queue.
+pub(crate) fn peek_last_reason() -> c_ulong {
+    let e = ERR_peek_last_error();
+    if e == 0 {
+        0
+    } else {
+        get_reason(e)
+    }
+}
+
 /// Duplicate a C string for storage in the ring, or NULL for NULL/empty input.
 ///
 /// # Safety

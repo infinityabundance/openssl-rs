@@ -26,6 +26,7 @@
 pub mod bio;
 pub mod buffer;
 pub mod conf;
+pub mod ctype;
 pub mod dir;
 pub mod err;
 pub mod ex_data;
@@ -38,3 +39,4 @@ pub mod secure;
 pub mod stack;
 pub mod str;
 pub mod thread;
+pub mod time;

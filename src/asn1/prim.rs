@@ -52,6 +52,8 @@ use crate::asn1::layout::*;
 use crate::asn1::string::{
     as_str, as_str_mut, string_embed_free, string_set_body, string_type_new, ASN1_STRING_set0,
 };
+use crate::bn::arith::{BN_add_word, BN_div_word, BN_mul_word};
+use crate::bn::bignum::{BN_free, BN_new, BN_num_bits, BN_set_word, BigNum};
 use crate::ffi::guard_ffi;
 use crate::runtime::err::err_reasons;
 use crate::runtime::err::err_sites;
@@ -1750,4 +1752,329 @@ unsafe fn pctx_flags(p: *const Asn1Pctx) -> (c_ulong, c_ulong, c_ulong, c_ulong,
     // SAFETY: the caller's contract is exactly a live `ASN1_PCTX`.
     let x = unsafe { &*p };
     (x.flags, x.nm_flags, x.cert_flags, x.oid_flags, x.str_flags)
+}
+
+// ---------------------------------------------------------------------------
+// The `x_int64.c` hooks' codec — a_ int.c's two internal integer converters
+// ---------------------------------------------------------------------------
+
+/// `int ossl_c2i_uint64_int(uint64_t *ret, int *neg, const unsigned char **pp, long len)`
+///
+/// The magnitude and the sign of an `ASN1_INTEGER`'s content, as a `u64` and a flag. The
+/// `c2i_ibuf` pass runs **twice**: once with a null destination to learn how many
+/// significant octets there are, and once for real. That is the authority's shape rather
+/// than an inefficiency to remove — the first pass is also what rejects illegal padding
+/// and a zero-length content, so doing it once would mean sizing the buffer from a number
+/// that had not been validated yet.
+///
+/// A magnitude wider than the buffer is `ASN1_R_TOO_LARGE` rather than a truncation, which
+/// is what stops an over-wide `INTEGER` from silently decoding to a smaller number.
+///
+/// `pp` is read but **not advanced**; the caller owns the cursor.
+///
+/// # Safety
+///
+/// `ret` and `neg` must be live slots. `pp` must point to a slot holding a readable
+/// pointer to `len` bytes.
+pub(crate) unsafe fn ossl_c2i_uint64_int(
+    ret: *mut u64,
+    neg: *mut c_int,
+    pp: *mut *const c_uchar,
+    len: c_long,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    let p = unsafe { *pp };
+    // SAFETY: `p` is readable for `len` bytes per the caller's contract; a null
+    // destination asks only for the count.
+    let buflen = unsafe {
+        c2i_ibuf(
+            core::ptr::null_mut(),
+            core::ptr::null_mut(),
+            p,
+            len.max(0) as usize,
+        )
+    };
+    if buflen == 0 {
+        return 0;
+    }
+    if buflen > 8 {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::A_INT_641) };
+        return 0;
+    }
+    let mut buf = [0u8; 8];
+    // SAFETY: `buf` has room for `buflen <= 8` octets and `p` is readable.
+    unsafe { c2i_ibuf(buf.as_mut_ptr(), neg, p, len.max(0) as usize) };
+    // SAFETY: `buf` is readable for `buflen` and `ret` is a live slot.
+    unsafe { asn1_get_uint64(ret, buf.as_ptr(), buflen) }
+}
+
+/// `int ossl_i2c_uint64_int(unsigned char *p, uint64_t r, int neg)`
+///
+/// The inverse: `r` is written big-endian without leading zero octets, and the sign
+/// padding `i2c_ibuf` adds is what keeps a magnitude whose top bit is set from reading as
+/// negative.
+///
+/// A null `p` sizes only, which is why the return is the content length on both passes.
+///
+/// # Safety
+///
+/// `p` must be null or writable for the length this answers.
+pub(crate) unsafe fn ossl_i2c_uint64_int(p: *mut c_uchar, r: u64, neg: c_int) -> c_int {
+    let mut buf = [0u8; 8];
+    let off = asn1_put_uint64(&mut buf, r);
+    let mut slot = p;
+    // SAFETY: `buf + off` is readable for `8 - off` octets, and `slot` is the caller's
+    // destination or null.
+    unsafe { i2c_ibuf(buf.as_ptr().add(off), 8 - off, neg != 0, &mut slot) as c_int }
+}
+
+// ---------------------------------------------------------------------------
+// `a2d_ASN1_OBJECT` — a_object.c's textual-to-DER OID parser
+// ---------------------------------------------------------------------------
+
+/// `int a2d_ASN1_OBJECT(unsigned char *out, int olen, const char *buf, int num)`
+///
+/// Turns dotted-decimal text into an object identifier, and it is the one place in the
+/// stratum whose **output length is discovered as it goes**: a component's base-128
+/// digits are not known until the component has been read, so the buffer check happens
+/// per component rather than once up front. That is why `ASN1_R_BUFFER_TOO_SMALL` is
+/// raised mid-loop rather than before it.
+///
+/// Three details are load-bearing and each is reproduced rather than tidied:
+///
+/// * the first component must be `0`, `1` or `2`, and the second is folded into the first
+///   as `first * 40 + second`. A second value of 40 or more is only legal when the first
+///   component is 2 — which is the authority's `(first < 2) && (l >= 40)` test;
+/// * a component that does not fit an `unsigned long` continues in a `BIGNUM`, decided by
+///   `l >= (ULONG_MAX - 80) / 10` **before** the multiply, so the arithmetic cannot
+///   overflow; the base-128 digits then come out of the `BIGNUM` seven bits at a time;
+/// * the digit buffer is a 24-byte stack array that grows to `blsize + 32` on the heap,
+///   and the *whole* of the last digit is written without the continuation bit while every
+///   earlier one has it set. The order is least-significant-first in the buffer and
+///   most-significant-first on output, which is why the write loop runs backwards.
+///
+/// A negative `num` means "measure the string", and a string of `INT_MAX` characters or
+/// more is `ASN1_R_LENGTH_TOO_LONG` rather than a truncation.
+///
+/// # Safety
+///
+/// `out` must be null or writable for `olen` bytes. `buf` must be readable for `num` bytes
+/// when `num >= 0`, or NUL-terminated when `num == -1`.
+#[no_mangle]
+pub unsafe extern "C" fn a2d_ASN1_OBJECT(
+    out: *mut c_uchar,
+    olen: c_int,
+    buf: *const c_char,
+    num: c_int,
+) -> c_int {
+    guard_ffi(0, || {
+        let mut num = num;
+        // The authority's `char ftmp[24]` and its heap replacement, kept as one slot so
+        // the cleanup path does not have to know which is in use.
+        let mut ftmp = [0u8; 24];
+        let mut tmpsize: usize = 24;
+        let mut heap: *mut u8 = core::ptr::null_mut();
+        let mut bl: *mut BigNum = core::ptr::null_mut();
+        let mut len: c_int = 0;
+
+        let result = 'body: {
+            if num == 0 {
+                break 'body 0;
+            }
+            if num == -1 {
+                // SAFETY: `buf` is NUL-terminated per the caller's contract.
+                let n = unsafe { crate::runtime::str::OPENSSL_strnlen(buf, usize::MAX) };
+                if n >= c_int::MAX as usize {
+                    // SAFETY: a compile-time-constant site.
+                    unsafe { raise_site(&err_sites::A_OBJECT_66) };
+                    break 'body 0;
+                }
+                num = n as c_int;
+            }
+
+            // SAFETY: `buf` is readable for `num >= 1` bytes.
+            let mut p = buf;
+            // SAFETY: `num >= 1`, so the first byte is readable.
+            let mut c = c_int::from(unsafe { *p });
+            // SAFETY: as above.
+            p = unsafe { p.add(1) };
+            num -= 1;
+            let first: c_int = if (0x30..=0x32).contains(&c) {
+                c - 0x30
+            } else {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::A_OBJECT_78) };
+                break 'body 0;
+            };
+            if num <= 0 {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::A_OBJECT_83) };
+                break 'body 0;
+            }
+            // SAFETY: `num >= 1`, so one byte is readable.
+            c = c_int::from(unsafe { *p });
+            // SAFETY: as above.
+            p = unsafe { p.add(1) };
+            num -= 1;
+
+            loop {
+                if num <= 0 {
+                    break;
+                }
+                // Only a dot or a space may separate components.
+                if c != 0x2e && c != 0x20 {
+                    // SAFETY: a compile-time-constant site.
+                    unsafe { raise_site(&err_sites::A_OBJECT_92) };
+                    break 'body 0;
+                }
+                let mut l: c_ulong = 0;
+                let mut use_bn = false;
+                loop {
+                    if num <= 0 {
+                        break;
+                    }
+                    num -= 1;
+                    // SAFETY: `num > 0` before the decrement, so one byte is readable.
+                    c = c_int::from(unsafe { *p });
+                    // SAFETY: as above.
+                    p = unsafe { p.add(1) };
+                    if c == 0x20 || c == 0x2e {
+                        break;
+                    }
+                    if !crate::runtime::ctype::ossl_isdigit(c) {
+                        // SAFETY: a compile-time-constant site.
+                        unsafe { raise_site(&err_sites::A_OBJECT_105) };
+                        break 'body 0;
+                    }
+                    // The overflow test comes *before* the multiply, so `l * 10` cannot
+                    // wrap and the `BIGNUM` path takes over before it could.
+                    if !use_bn && l >= (c_ulong::MAX - 80) / 10 {
+                        use_bn = true;
+                        if bl.is_null() {
+                            // SAFETY: `BN_new` allocates a zeroed `BIGNUM`.
+                            bl = unsafe { BN_new() };
+                        }
+                        // SAFETY: `bl` is live and takes the accumulated value.
+                        if bl.is_null() || unsafe { BN_set_word(bl, l) } == 0 {
+                            break 'body 0;
+                        }
+                    }
+                    if use_bn {
+                        // SAFETY: `bl` is live.
+                        if unsafe { BN_mul_word(bl, 10) } == 0
+                            // SAFETY: as above.
+                            || unsafe { BN_add_word(bl, (c - 0x30) as c_ulong) } == 0
+                        {
+                            break 'body 0;
+                        }
+                    } else {
+                        l = l * 10 + (c - 0x30) as c_ulong;
+                    }
+                }
+                if len == 0 {
+                    // The first *component* carries the arc, so the 40 bound applies only
+                    // here.
+                    if first < 2 && l >= 40 {
+                        // SAFETY: a compile-time-constant site.
+                        unsafe { raise_site(&err_sites::A_OBJECT_124) };
+                        break 'body 0;
+                    }
+                    if use_bn {
+                        // SAFETY: `bl` is live.
+                        if unsafe { BN_add_word(bl, (first * 40) as c_ulong) } == 0 {
+                            break 'body 0;
+                        }
+                    } else {
+                        l += (first * 40) as c_ulong;
+                    }
+                }
+
+                let mut i: usize = 0;
+                if use_bn {
+                    // SAFETY: `bl` is live.
+                    let mut blsize = unsafe { BN_num_bits(bl) };
+                    blsize = (blsize + 6) / 7;
+                    if blsize as usize > tmpsize {
+                        if !heap.is_null() {
+                            // SAFETY: `heap` came from this allocator.
+                            unsafe {
+                                CRYPTO_free(heap.cast::<c_void>(), OBJECT_FILE.as_ptr(), LINE)
+                            };
+                        }
+                        tmpsize = blsize as usize + 32;
+                        heap = CRYPTO_malloc(tmpsize, OBJECT_FILE.as_ptr(), LINE) as *mut u8;
+                        if heap.is_null() {
+                            break 'body 0;
+                        }
+                    }
+                    let tmp: *mut u8 = if heap.is_null() {
+                        ftmp.as_mut_ptr()
+                    } else {
+                        heap
+                    };
+                    let mut left = blsize;
+                    while left > 0 {
+                        left -= 1;
+                        // SAFETY: `bl` is live; the seventh argument would be the modulus
+                        // exponent, which division does not use.
+                        let t = unsafe { BN_div_word(bl, 0x80) };
+                        if t == c_ulong::MAX {
+                            break 'body 0;
+                        }
+                        // SAFETY: `i < blsize <= tmpsize` in both buffers.
+                        unsafe { *tmp.add(i) = t as u8 };
+                        i += 1;
+                    }
+                } else {
+                    let tmp = ftmp.as_mut_ptr();
+                    let mut v = l;
+                    // At most ten base-128 digits fit a `u64`, and `ftmp` holds 24, so
+                    // this cannot overrun the stack buffer.
+                    loop {
+                        // SAFETY: `i < 24` as argued above.
+                        unsafe { *tmp.add(i) = (v & 0x7f) as u8 };
+                        i += 1;
+                        v >>= 7;
+                        if v == 0 {
+                            break;
+                        }
+                    }
+                }
+
+                let tmp: *const u8 = if heap.is_null() { ftmp.as_ptr() } else { heap };
+                if !out.is_null() {
+                    if len + i as c_int > olen {
+                        // SAFETY: a compile-time-constant site.
+                        unsafe { raise_site(&err_sites::A_OBJECT_163) };
+                        break 'body 0;
+                    }
+                    // Most significant first, with the continuation bit on all but the
+                    // last — which is the *least* significant digit in the buffer.
+                    while i > 1 {
+                        i -= 1;
+                        // SAFETY: `tmp` is readable for `i` and `out` for `len + i`.
+                        unsafe { *out.add(len as usize) = *tmp.add(i) | 0x80 };
+                        len += 1;
+                    }
+                    // SAFETY: as above.
+                    unsafe { *out.add(len as usize) = *tmp };
+                    len += 1;
+                } else {
+                    len += i as c_int;
+                }
+            }
+            len
+        };
+
+        if !heap.is_null() {
+            // SAFETY: `heap` came from this allocator and is not owned elsewhere.
+            unsafe { CRYPTO_free(heap.cast::<c_void>(), OBJECT_FILE.as_ptr(), LINE) };
+        }
+        if !bl.is_null() {
+            // SAFETY: `bl` is this call's `BIGNUM`.
+            unsafe { BN_free(bl) };
+        }
+        result
+    })
 }

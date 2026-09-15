@@ -1,15 +1,51 @@
 {
   "authority": "openssl-3.6.4-production",
   "body": {
-    "complete": false,
+    "complete": true,
     "counts": {
       "atlas_owned": 561,
-      "deferred_to_later_phase": 60,
-      "implemented": 350,
-      "open_in_this_stratum": 155,
+      "deferred_to_later_phase": 91,
+      "implemented": 474,
+      "open_in_this_stratum": 0,
       "owned": 565
     },
     "deferred": [
+      {
+        "declaring_header": "asn1.h",
+        "owning_phase": 12,
+        "reason": "enumerates the authority's generated asn1_item_list.h, whose 147 entries include 107 items owned by Phases 8, 10, 11 and 12 (7/6/64/30); both functions' behaviour is the whole list",
+        "symbol": "ASN1_ITEM_get"
+      },
+      {
+        "declaring_header": "asn1.h",
+        "owning_phase": 12,
+        "reason": "enumerates the authority's generated asn1_item_list.h, whose 147 entries include 107 items owned by Phases 8, 10, 11 and 12 (7/6/64/30); both functions' behaviour is the whole list",
+        "symbol": "ASN1_ITEM_lookup"
+      },
+      {
+        "declaring_header": "asn1.h",
+        "owning_phase": 6,
+        "reason": "registers a CONF module with CONF_module_add, which Phase 4 handed to Phase 6 because only the module registry constructs a CONF_MODULE",
+        "symbol": "ASN1_add_oid_module"
+      },
+      {
+        "declaring_header": "asn1.h",
+        "owning_phase": 11,
+        "reason": "registers a CONF module with CONF_module_add (Phase 6, the module registry) and its handler parses a section value with X509V3_parse_list (Phase 11); the later of the two dependencies is the binding one",
+        "symbol": "ASN1_add_stable_module"
+      },
+      {
+        "declaring_header": "asn1.h",
+        "owning_phase": 11,
+        "reason": "reads an X509V3_CTX through X509V3_get_string/X509V3_get_section for the MULTI form and constructs one with X509V3_set_nconf; X509V3_CTX is x509v3.h's and is Phase 11",
+        "symbol": "ASN1_generate_nconf"
+      },
+      {
+        "declaring_header": "asn1.h",
+        "owning_phase": 11,
+        "reason": "reads an X509V3_CTX through X509V3_get_string/X509V3_get_section for the MULTI form and constructs one with X509V3_set_nconf; X509V3_CTX is x509v3.h's and is Phase 11",
+        "symbol": "ASN1_generate_v3"
+      },
       {
         "declaring_header": "asn1.h",
         "owning_phase": 7,
@@ -211,6 +247,120 @@
       {
         "declaring_header": "pem.h",
         "owning_phase": 7,
+        "reason": "tests the PEM name against EVP_PKEY_asn1_find_str, which Phase 7 owns",
+        "symbol": "PEM_ASN1_read"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "tests the PEM name against EVP_PKEY_asn1_find_str, which Phase 7 owns",
+        "symbol": "PEM_ASN1_read_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "takes an EVP_CIPHER and derives its key with EVP_BytesToKey and a RAND_bytes IV, all Phase 7",
+        "symbol": "PEM_ASN1_write"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "takes an EVP_CIPHER and derives its key with EVP_BytesToKey and a RAND_bytes IV, all Phase 7",
+        "symbol": "PEM_ASN1_write_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "takes an EVP_CIPHER and derives its key with EVP_BytesToKey and a RAND_bytes IV, all Phase 7",
+        "symbol": "PEM_ASN1_write_bio_ctx"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "digests through an EVP_MD_CTX and signs with an EVP_PKEY, which Phase 7 owns",
+        "symbol": "PEM_SignFinal"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "digests through an EVP_MD_CTX and signs with an EVP_PKEY, which Phase 7 owns",
+        "symbol": "PEM_SignInit"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "digests through an EVP_MD_CTX and signs with an EVP_PKEY, which Phase 7 owns",
+        "symbol": "PEM_SignUpdate"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 11,
+        "reason": "reads or writes X509_INFO, and every arm of it is an X509, X509_CRL or X509_PUBKEY decode, all Phase 11",
+        "symbol": "PEM_X509_INFO_read"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 11,
+        "reason": "reads or writes X509_INFO, and every arm of it is an X509, X509_CRL or X509_PUBKEY decode, all Phase 11",
+        "symbol": "PEM_X509_INFO_read_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 11,
+        "reason": "reads or writes X509_INFO, and every arm of it is an X509, X509_CRL or X509_PUBKEY decode, all Phase 11",
+        "symbol": "PEM_X509_INFO_read_bio_ex"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 11,
+        "reason": "reads or writes X509_INFO, and every arm of it is an X509, X509_CRL or X509_PUBKEY decode, all Phase 11",
+        "symbol": "PEM_X509_INFO_read_ex"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 11,
+        "reason": "reads or writes X509_INFO, and every arm of it is an X509, X509_CRL or X509_PUBKEY decode, all Phase 11",
+        "symbol": "PEM_X509_INFO_write_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "the PEM block codec is EVP_ENCODE_CTX, which Phase 7 owns (evp.h)",
+        "symbol": "PEM_bytes_read_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "the PEM block codec is EVP_ENCODE_CTX, which Phase 7 owns (evp.h)",
+        "symbol": "PEM_bytes_read_bio_secmem"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "reads a pass phrase through EVP_read_pw_string_min, which Phase 7 owns",
+        "symbol": "PEM_def_callback"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "decrypts through EVP_CIPHER_CTX with EVP_BytesToKey, which Phase 7 owns",
+        "symbol": "PEM_do_header"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "the PEM block codec is EVP_ENCODE_CTX, which Phase 7 owns (evp.h)",
+        "symbol": "PEM_read"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "the PEM block codec is EVP_ENCODE_CTX, which Phase 7 owns (evp.h)",
+        "symbol": "PEM_read_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
         "reason": "reads or writes an EVP_PKEY, which is Phase 7",
         "symbol": "PEM_read_bio_Parameters"
       },
@@ -223,8 +373,38 @@
       {
         "declaring_header": "pem.h",
         "owning_phase": 7,
+        "reason": "the PEM block codec is EVP_ENCODE_CTX, which Phase 7 owns (evp.h)",
+        "symbol": "PEM_read_bio_ex"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "the PEM block codec is EVP_ENCODE_CTX, which Phase 7 owns (evp.h)",
+        "symbol": "PEM_write"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
         "reason": "reads or writes an EVP_PKEY, which is Phase 7",
         "symbol": "PEM_write_PKCS8PrivateKey_nid"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 11,
+        "reason": "encodes through i2d_X509_REQ_NEW, which the X509 stratum owns",
+        "symbol": "PEM_write_X509_REQ_NEW"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "the PEM block codec is EVP_ENCODE_CTX, which Phase 7 owns (evp.h)",
+        "symbol": "PEM_write_bio"
+      },
+      {
+        "declaring_header": "asn1.h",
+        "owning_phase": 7,
+        "reason": "writes through BIO_f_base64, the EVP base64 filter BIO that Phase 4 deferred to Phase 7",
+        "symbol": "PEM_write_bio_ASN1_stream"
       },
       {
         "declaring_header": "pem.h",
@@ -235,43 +415,49 @@
       {
         "declaring_header": "pem.h",
         "owning_phase": 7,
+        "reason": "writes an EVP_PKEY's parameters, which Phase 7 owns",
+        "symbol": "PEM_write_bio_Parameters"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
         "reason": "reads or writes an EVP_PKEY, which is Phase 7",
         "symbol": "PEM_write_bio_PrivateKey_traditional"
       },
       {
-        "declaring_header": "asn1.h",
-        "owning_phase": 12,
-        "reason": "operates over CMS and PKCS#7, which is Phase 12; asm_mime.c",
-        "symbol": "SMIME_crlf_copy"
+        "declaring_header": "pem.h",
+        "owning_phase": 11,
+        "reason": "encodes through i2d_X509_REQ_NEW, which the X509 stratum owns",
+        "symbol": "PEM_write_bio_X509_REQ_NEW"
       },
       {
         "declaring_header": "asn1.h",
         "owning_phase": 12,
-        "reason": "operates over CMS and PKCS#7, which is Phase 12; asm_mime.c",
+        "reason": "operates over CMS and PKCS#7, which is Phase 12; asn_mime.c",
         "symbol": "SMIME_read_ASN1"
       },
       {
         "declaring_header": "asn1.h",
         "owning_phase": 12,
-        "reason": "operates over CMS and PKCS#7, which is Phase 12; asm_mime.c",
+        "reason": "operates over CMS and PKCS#7, which is Phase 12; asn_mime.c",
         "symbol": "SMIME_read_ASN1_ex"
       },
       {
         "declaring_header": "asn1.h",
         "owning_phase": 12,
-        "reason": "operates over CMS and PKCS#7, which is Phase 12; asm_mime.c",
+        "reason": "operates over CMS and PKCS#7, which is Phase 12; asn_mime.c",
         "symbol": "SMIME_text"
       },
       {
         "declaring_header": "asn1.h",
         "owning_phase": 12,
-        "reason": "operates over CMS and PKCS#7, which is Phase 12; asm_mime.c",
+        "reason": "operates over CMS and PKCS#7, which is Phase 12; asn_mime.c",
         "symbol": "SMIME_write_ASN1"
       },
       {
         "declaring_header": "asn1.h",
         "owning_phase": 12,
-        "reason": "operates over CMS and PKCS#7, which is Phase 12; asm_mime.c",
+        "reason": "operates over CMS and PKCS#7, which is Phase 12; asn_mime.c",
         "symbol": "SMIME_write_ASN1_ex"
       },
       {
@@ -372,10 +558,12 @@
       }
     ],
     "deferred_by_phase": {
-      "7": 7,
+      "6": 1,
+      "7": 26,
       "9": 31,
       "10": 16,
-      "12": 6
+      "11": 10,
+      "12": 7
     },
     "handoffs_discharged": {
       "4": [
@@ -442,9 +630,15 @@
       "ASN1_ENUMERATED_set_int64",
       "ASN1_ENUMERATED_to_BN",
       "ASN1_FBOOLEAN_it",
+      "ASN1_GENERALIZEDTIME_adj",
+      "ASN1_GENERALIZEDTIME_check",
+      "ASN1_GENERALIZEDTIME_dup",
       "ASN1_GENERALIZEDTIME_free",
       "ASN1_GENERALIZEDTIME_it",
       "ASN1_GENERALIZEDTIME_new",
+      "ASN1_GENERALIZEDTIME_print",
+      "ASN1_GENERALIZEDTIME_set",
+      "ASN1_GENERALIZEDTIME_set_string",
       "ASN1_GENERALSTRING_free",
       "ASN1_GENERALSTRING_it",
       "ASN1_GENERALSTRING_new",
@@ -495,6 +689,7 @@
       "ASN1_PRINTABLE_free",
       "ASN1_PRINTABLE_it",
       "ASN1_PRINTABLE_new",
+      "ASN1_PRINTABLE_type",
       "ASN1_SCTX_free",
       "ASN1_SCTX_get_app_data",
       "ASN1_SCTX_get_flags",
@@ -502,7 +697,12 @@
       "ASN1_SCTX_get_template",
       "ASN1_SCTX_new",
       "ASN1_SCTX_set_app_data",
+      "ASN1_SEQUENCE_ANY_it",
       "ASN1_SEQUENCE_it",
+      "ASN1_SET_ANY_it",
+      "ASN1_STRING_TABLE_add",
+      "ASN1_STRING_TABLE_cleanup",
+      "ASN1_STRING_TABLE_get",
       "ASN1_STRING_clear_free",
       "ASN1_STRING_cmp",
       "ASN1_STRING_copy",
@@ -510,40 +710,124 @@
       "ASN1_STRING_dup",
       "ASN1_STRING_free",
       "ASN1_STRING_get0_data",
+      "ASN1_STRING_get_default_mask",
       "ASN1_STRING_length",
       "ASN1_STRING_length_set",
       "ASN1_STRING_new",
+      "ASN1_STRING_print",
+      "ASN1_STRING_print_ex",
+      "ASN1_STRING_print_ex_fp",
       "ASN1_STRING_set",
       "ASN1_STRING_set0",
+      "ASN1_STRING_set_by_NID",
+      "ASN1_STRING_set_default_mask",
+      "ASN1_STRING_set_default_mask_asc",
+      "ASN1_STRING_to_UTF8",
       "ASN1_STRING_type",
       "ASN1_STRING_type_new",
       "ASN1_T61STRING_free",
       "ASN1_T61STRING_it",
       "ASN1_T61STRING_new",
       "ASN1_TBOOLEAN_it",
+      "ASN1_TIME_adj",
+      "ASN1_TIME_check",
+      "ASN1_TIME_cmp_time_t",
+      "ASN1_TIME_compare",
+      "ASN1_TIME_diff",
+      "ASN1_TIME_dup",
+      "ASN1_TIME_free",
       "ASN1_TIME_it",
+      "ASN1_TIME_new",
+      "ASN1_TIME_normalize",
+      "ASN1_TIME_print",
+      "ASN1_TIME_print_ex",
+      "ASN1_TIME_set",
+      "ASN1_TIME_set_string",
+      "ASN1_TIME_set_string_X509",
+      "ASN1_TIME_to_generalizedtime",
+      "ASN1_TIME_to_tm",
+      "ASN1_TYPE_cmp",
+      "ASN1_TYPE_free",
+      "ASN1_TYPE_get",
+      "ASN1_TYPE_get_int_octetstring",
+      "ASN1_TYPE_get_octetstring",
+      "ASN1_TYPE_new",
+      "ASN1_TYPE_pack_sequence",
+      "ASN1_TYPE_set",
+      "ASN1_TYPE_set1",
+      "ASN1_TYPE_set_int_octetstring",
+      "ASN1_TYPE_set_octetstring",
+      "ASN1_TYPE_unpack_sequence",
       "ASN1_UNIVERSALSTRING_free",
       "ASN1_UNIVERSALSTRING_it",
       "ASN1_UNIVERSALSTRING_new",
+      "ASN1_UNIVERSALSTRING_to_string",
+      "ASN1_UTCTIME_adj",
+      "ASN1_UTCTIME_check",
+      "ASN1_UTCTIME_cmp_time_t",
+      "ASN1_UTCTIME_dup",
       "ASN1_UTCTIME_free",
       "ASN1_UTCTIME_it",
       "ASN1_UTCTIME_new",
+      "ASN1_UTCTIME_print",
+      "ASN1_UTCTIME_set",
+      "ASN1_UTCTIME_set_string",
       "ASN1_UTF8STRING_free",
       "ASN1_UTF8STRING_it",
       "ASN1_UTF8STRING_new",
       "ASN1_VISIBLESTRING_free",
       "ASN1_VISIBLESTRING_it",
       "ASN1_VISIBLESTRING_new",
+      "ASN1_bn_print",
+      "ASN1_buf_print",
       "ASN1_check_infinite_end",
       "ASN1_const_check_infinite_end",
+      "ASN1_d2i_bio",
+      "ASN1_d2i_fp",
+      "ASN1_dup",
       "ASN1_get_object",
+      "ASN1_i2d_bio",
+      "ASN1_i2d_fp",
+      "ASN1_item_d2i",
+      "ASN1_item_d2i_bio",
+      "ASN1_item_d2i_bio_ex",
+      "ASN1_item_d2i_ex",
+      "ASN1_item_d2i_fp",
+      "ASN1_item_d2i_fp_ex",
+      "ASN1_item_dup",
+      "ASN1_item_ex_d2i",
+      "ASN1_item_ex_free",
+      "ASN1_item_ex_i2d",
+      "ASN1_item_ex_new",
+      "ASN1_item_free",
+      "ASN1_item_i2d",
+      "ASN1_item_i2d_bio",
+      "ASN1_item_i2d_fp",
+      "ASN1_item_i2d_mem_bio",
+      "ASN1_item_ndef_i2d",
+      "ASN1_item_new",
+      "ASN1_item_new_ex",
+      "ASN1_item_pack",
+      "ASN1_item_print",
+      "ASN1_item_unpack",
+      "ASN1_item_unpack_ex",
+      "ASN1_mbstring_copy",
+      "ASN1_mbstring_ncopy",
       "ASN1_object_size",
       "ASN1_parse",
       "ASN1_parse_dump",
       "ASN1_put_eoc",
       "ASN1_put_object",
+      "ASN1_str2mask",
       "ASN1_tag2bit",
       "ASN1_tag2str",
+      "BIGNUM_it",
+      "BIO_asn1_get_prefix",
+      "BIO_asn1_get_suffix",
+      "BIO_asn1_set_prefix",
+      "BIO_asn1_set_suffix",
+      "BIO_f_asn1",
+      "BIO_new_NDEF",
       "BN_BLINDING_free",
       "BN_BLINDING_get_flags",
       "BN_BLINDING_invert",
@@ -716,12 +1000,33 @@
       "BN_value_one",
       "BN_with_flags",
       "BN_zero_ex",
+      "CBIGNUM_it",
       "DIRECTORYSTRING_free",
       "DIRECTORYSTRING_it",
       "DIRECTORYSTRING_new",
       "DISPLAYTEXT_free",
       "DISPLAYTEXT_it",
       "DISPLAYTEXT_new",
+      "INT32_it",
+      "INT64_it",
+      "LONG_it",
+      "PEM_dek_info",
+      "PEM_proc_type",
+      "SMIME_crlf_copy",
+      "UINT32_it",
+      "UINT64_it",
+      "UTF8_getc",
+      "UTF8_putc",
+      "ZINT32_it",
+      "ZINT64_it",
+      "ZLONG_it",
+      "ZUINT32_it",
+      "ZUINT64_it",
+      "a2d_ASN1_OBJECT",
+      "a2i_ASN1_ENUMERATED",
+      "a2i_ASN1_INTEGER",
+      "a2i_ASN1_STRING",
+      "asn1_d2i_read_bio",
       "d2i_ASN1_BIT_STRING",
       "d2i_ASN1_BMPSTRING",
       "d2i_ASN1_ENUMERATED",
@@ -734,8 +1039,11 @@
       "d2i_ASN1_OCTET_STRING",
       "d2i_ASN1_PRINTABLE",
       "d2i_ASN1_PRINTABLESTRING",
+      "d2i_ASN1_SEQUENCE_ANY",
+      "d2i_ASN1_SET_ANY",
       "d2i_ASN1_T61STRING",
       "d2i_ASN1_TIME",
+      "d2i_ASN1_TYPE",
       "d2i_ASN1_UINTEGER",
       "d2i_ASN1_UNIVERSALSTRING",
       "d2i_ASN1_UTCTIME",
@@ -759,12 +1067,16 @@
       "i2d_ASN1_OCTET_STRING",
       "i2d_ASN1_PRINTABLE",
       "i2d_ASN1_PRINTABLESTRING",
+      "i2d_ASN1_SEQUENCE_ANY",
+      "i2d_ASN1_SET_ANY",
       "i2d_ASN1_T61STRING",
       "i2d_ASN1_TIME",
+      "i2d_ASN1_TYPE",
       "i2d_ASN1_UNIVERSALSTRING",
       "i2d_ASN1_UTCTIME",
       "i2d_ASN1_UTF8STRING",
       "i2d_ASN1_VISIBLESTRING",
+      "i2d_ASN1_bio_stream",
       "i2d_DIRECTORYSTRING",
       "i2d_DISPLAYTEXT",
       "i2t_ASN1_OBJECT"
@@ -776,787 +1088,11 @@
       "pem.h": "src/pem/"
     },
     "note": "`owned` is every export the stratum's families cover, which includes the ones the declaring-header rule hands to a later phase: a deferred symbol is still matched by this stratum's prefixes, so counting it here is what makes `implemented + deferred + open == owned`. `open` is the only list that blocks the stratum. The families are derived from the atlas, not typed: see this generator's header for why, and note that a deferred symbol names the stratum that owns the header it is declared in, which is checkable without reading this file. Nothing here is a parity claim.",
-    "open": [
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_GENERALIZEDTIME_adj"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_GENERALIZEDTIME_check"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_GENERALIZEDTIME_dup"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_GENERALIZEDTIME_print"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_GENERALIZEDTIME_set"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_GENERALIZEDTIME_set_string"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_ITEM_get"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_ITEM_lookup"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_PRINTABLE_type"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_SEQUENCE_ANY_it"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_SET_ANY_it"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_STRING_TABLE_add"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_STRING_TABLE_cleanup"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_STRING_TABLE_get"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_STRING_get_default_mask"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_STRING_print"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_STRING_print_ex"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_STRING_print_ex_fp"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_STRING_set_by_NID"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_STRING_set_default_mask"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_STRING_set_default_mask_asc"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_STRING_to_UTF8"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TIME_adj"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TIME_check"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TIME_cmp_time_t"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TIME_compare"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TIME_diff"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TIME_dup"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TIME_free"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TIME_new"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TIME_normalize"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TIME_print"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TIME_print_ex"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TIME_set"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TIME_set_string"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TIME_set_string_X509"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TIME_to_generalizedtime"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TIME_to_tm"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TYPE_cmp"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TYPE_free"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TYPE_get"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TYPE_get_int_octetstring"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TYPE_get_octetstring"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TYPE_new"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TYPE_pack_sequence"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TYPE_set"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TYPE_set1"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TYPE_set_int_octetstring"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TYPE_set_octetstring"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_TYPE_unpack_sequence"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_UNIVERSALSTRING_to_string"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_UTCTIME_adj"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_UTCTIME_check"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_UTCTIME_cmp_time_t"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_UTCTIME_dup"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_UTCTIME_print"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_UTCTIME_set"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_UTCTIME_set_string"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_add_oid_module"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_add_stable_module"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_bn_print"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_buf_print"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_d2i_bio"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_d2i_fp"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_dup"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_generate_nconf"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_generate_v3"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_i2d_bio"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_i2d_fp"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_d2i"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_d2i_bio"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_d2i_bio_ex"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_d2i_ex"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_d2i_fp"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_d2i_fp_ex"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_dup"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_ex_d2i"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_ex_free"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_ex_i2d"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_ex_new"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_free"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_i2d"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_i2d_bio"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_i2d_fp"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_i2d_mem_bio"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_ndef_i2d"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_new"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_new_ex"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_pack"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_print"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_unpack"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_unpack_ex"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_mbstring_copy"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_mbstring_ncopy"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_str2mask"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "BIGNUM_it"
-      },
-      {
-        "declaring_header": "bio.h",
-        "module": "src/asn1/",
-        "symbol": "BIO_asn1_get_prefix"
-      },
-      {
-        "declaring_header": "bio.h",
-        "module": "src/asn1/",
-        "symbol": "BIO_asn1_get_suffix"
-      },
-      {
-        "declaring_header": "bio.h",
-        "module": "src/asn1/",
-        "symbol": "BIO_asn1_set_prefix"
-      },
-      {
-        "declaring_header": "bio.h",
-        "module": "src/asn1/",
-        "symbol": "BIO_asn1_set_suffix"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "BIO_f_asn1"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "BIO_new_NDEF"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "CBIGNUM_it"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "INT32_it"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "INT64_it"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "LONG_it"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_ASN1_read"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_ASN1_read_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_ASN1_write"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_ASN1_write_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_ASN1_write_bio_ctx"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_SignFinal"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_SignInit"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_SignUpdate"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_X509_INFO_read"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_X509_INFO_read_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_X509_INFO_read_bio_ex"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_X509_INFO_read_ex"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_X509_INFO_write_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_bytes_read_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_bytes_read_bio_secmem"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_def_callback"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_dek_info"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_do_header"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_proc_type"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_read"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_read_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_read_bio_ex"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_write"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_write_X509_REQ_NEW"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_write_bio"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "PEM_write_bio_ASN1_stream"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_write_bio_Parameters"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_write_bio_X509_REQ_NEW"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "UINT32_it"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "UINT64_it"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "UTF8_getc"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "UTF8_putc"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "ZINT32_it"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "ZINT64_it"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "ZLONG_it"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "ZUINT32_it"
-      },
-      {
-        "declaring_header": "asn1t.h",
-        "module": "src/asn1/",
-        "symbol": "ZUINT64_it"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "a2d_ASN1_OBJECT"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "a2i_ASN1_ENUMERATED"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "a2i_ASN1_INTEGER"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "a2i_ASN1_STRING"
-      },
-      {
-        "declaring_header": "(no installed header)",
-        "module": "src/asn1/",
-        "symbol": "asn1_d2i_read_bio"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "d2i_ASN1_SEQUENCE_ANY"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "d2i_ASN1_SET_ANY"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "d2i_ASN1_TYPE"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "i2d_ASN1_SEQUENCE_ANY"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "i2d_ASN1_SET_ANY"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "i2d_ASN1_TYPE"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "i2d_ASN1_bio_stream"
-      }
-    ],
+    "open": [],
     "owned_by_module": {
-      "src/asn1/": 308,
+      "src/asn1/": 302,
       "src/bn/": 170,
-      "src/pem/": 27
+      "src/pem/": 2
     },
     "rule": "the stratum's scope is the projection of forensics/atlas/symbol-ownership.json for phase 5: a symbol belongs to the stratum that owns the header declaring it, `pem.h`'s typed names resolve through the type's header, and the exports no installed header declares are dispositioned in ownership_rules.ABI_ONLY_OWNER"
   },
@@ -1585,7 +1121,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "1f4a149b208b17c02d9449a99dac1ec1b7c74f6cea6dc4a8e7824e6fb707cf21"
+      "sha256": "e88230fccb56990c9c5e1631d71f60a5b98b867435869c5b4e7d183f985c323d"
     }
   ],
   "kind": "phase5-obligations",

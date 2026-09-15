@@ -123,6 +123,60 @@ COURTS: list[tuple[str, int, str, str]] = [
      "a declared length past the buffer and the end-of-contents marker -- together\n"
      "with the two's-complement content codec, the string layer, the object layer,\n"
      "the text writers and the two parsers"),
+    ("rt-asn1-template", 5, "rt_asn1_template_probe",
+     "the template interpreter over a *caller-built* descriptor, which no built-in\n"
+     "item can reach: a SEQUENCE with an EMBED field and an OPTIONAL one, a CHOICE,\n"
+     "the SEQUENCE OF and SET OF content writers including the canonical ordering\n"
+     "that only the SET one applies, the twelve primitive-hook items where the value\n"
+     "is behind the slot for some and *in* the slot for LONG/ZLONG, and the two\n"
+     "ASN1_TYPE octet-string pairs whose int form goes through a private template"),
+    ("rt-asn1-time", 5, "rt_asn1_time_probe",
+     "the time family: the two RFC 5280 syntaxes read by their only parser (the\n"
+     "field-bounds tables, the leap-year calendar, the shortest legal spelling and\n"
+     "the fraction field), the two type guards, the offset `+hhmm` that is validated\n"
+     "without a destination and applied only with one, the RFC 5280 profile and the\n"
+     "`YYYY`->`YY` shortening, the four constructors and their year-window choice,\n"
+     "the Julian-day diff and compare answers, the three printer formats, the\n"
+     "duplicates and the two in-place converters"),
+    ("rt-asn1-str", 5, "rt_asn1_str_probe",
+     "the string classification, table and printing surface: which of\n"
+     "PrintableString/IA5String/T61String a buffer fits in, the four-byte-per-\n"
+     "character narrowing, the raw printer's 80-octet blocking measured through a\n"
+     "write callback that records the chunk lengths, the mask-narrowing classifier\n"
+     "over its four input and four output encodings with its two size limits, the\n"
+     "28-row per-NID string table with the runtime stack that shadows it and the\n"
+     "global mask's STABLE_NO_MASK exemption, the five spellings of\n"
+     "ASN1_STRING_set_default_mask_asc, the two number printers, and the escaping\n"
+     "printer ASN1_STRING_print_ex over twenty-three flag sets and every one of the\n"
+     "256 byte values, with ASN1_STRING_to_UTF8 over each character type"),
+    ("rt-bio-asn1", 5, "rt_bio_asn1_probe",
+     "the ASN.1 filter BIO and the NDEF bridge: the write path as a state machine\n"
+     "that re-emits its header when the declared content is exhausted, the prefix\n"
+     "and suffix runs with their cleanup callbacks counted, the four prefix/suffix\n"
+     "controls and the two EX_ARG controls, the flush-before-any-write case, the\n"
+     "pass-through paths, and BIO_new_NDEF over a caller-declared streaming item"),
+    ("rt-asn1-print", 5, "rt_asn1_print_probe",
+     "the structural printer over every arm of its itype switch: the <ABSENT> rule\n"
+     "and the boolean that lives in its slot, the primitive leaves including the\n"
+     "128-bit decimal/hex threshold and the object's long name, the MSTRING that\n"
+     "reads its type from the value, the ANY that repoints at its own union, a\n"
+     "caller-declared SEQUENCE with an EMBED field and an OPTIONAL one, a CHOICE\n"
+     "with an out-of-range selector, the SEQUENCE OF and SET OF empty/absent cases,\n"
+     "the twenty-space indent blocks measured through a short-count sink, and the\n"
+     "negative indent that fails the whole call"),
+    ("rt-asn1-mime", 5, "rt_asn1_mime_probe",
+     "asn_mime.c's copying half: the two null refusals, the verbatim binary and\n"
+     "CMS_BINARY modes, the CRLF policy under every combination of SMIME_TEXT,\n"
+     "SMIME_CRLFEOL and SMIME_ASCIICRLF including the held-back blank lines and the\n"
+     "trailing-space rule, the buffering filter measured through a sink that logs each\n"
+     "write length, the short-write and failing-flush failures with the flush\n"
+     "combination, and i2d_ASN1_bio_stream with and without SMIME_STREAM"),
+    ("rt-pem", 5, "rt_pem_probe",
+     "the two pem.h exports that need nothing but BIO_snprintf: PEM_proc_type over\n"
+     "its three named types and the BAD-TYPE fallback, PEM_dek_info over its byte\n"
+     "counts and the 0xff mask that keeps a negative char two digits wide, the two\n"
+     "appending to one buffer in the order PEM_ASN1_write_bio_internal uses them, and\n"
+     "the conditional newline as the header buffer fills up"),
 ]
 
 

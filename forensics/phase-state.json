@@ -192,7 +192,7 @@
         "stratum": "BIO + CONF + object database"
       },
       {
-        "blocking": "155 open obligation(s) of this stratum recorded in forensics/phase5-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase",
+        "blocking": "",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -211,7 +211,7 @@
         "name": "bn-asn1-der-pem",
         "phase": 5,
         "seal_sha256": null,
-        "state": "in-progress",
+        "state": "complete",
         "stratum": "BN + ASN.1 + DER/PEM"
       },
       {
@@ -393,12 +393,12 @@
     ],
     "rule": "a phase may be complete only if every earlier phase is complete",
     "summary": {
-      "complete": 5,
-      "in_progress": 1,
+      "complete": 6,
+      "in_progress": 0,
       "not_started": 16
     }
   },
-  "body_hash": "dba40e4b8e0ff585230741c9dbfc022e1e242ea0d08cdb413d09a019c1056808",
+  "body_hash": "5dd5098a8de89090ee3ea6c9d254f05d968d259a35b526e6de52297ae2ae8d4f",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

@@ -254,6 +254,20 @@ pub struct Asn1Item {
 // value is the caller's to synchronise, exactly as it is in C.
 unsafe impl Sync for Asn1Item {}
 
+// SAFETY: as `Asn1Item` above. An `Asn1Template` the crate builds is a `static` compiled
+// from constants, its fields are scalars and raw pointers, and no interior mutability is
+// reachable through a shared reference. It is declared separately because the two are
+// distinct types rather than one containing the other: an item points at a *function*
+// that answers a template, so the template has to be shareable on its own for the item's
+// `static` initialiser to be valid.
+unsafe impl Sync for Asn1Template {}
+
+// SAFETY: as `Asn1Item` above. An `Asn1PrimitiveFuncs` the crate builds is a `static`
+// whose fields are scalars, raw pointers and function pointers, none of which is mutated
+// through a shared reference. The twelve items that carry one read it through `&*funcs`,
+// so the borrow is shared on every path.
+unsafe impl Sync for Asn1PrimitiveFuncs {}
+
 /// `ASN1_AUX` — the optional behaviour block an `ASN1_ITEM` may carry.
 #[repr(C)]
 pub struct Asn1Aux {
@@ -280,6 +294,19 @@ pub type Asn1AuxCb =
 /// `ASN1_aux_const_cb` — the same, with a `const ASN1_VALUE **`.
 pub type Asn1AuxConstCb =
     unsafe extern "C" fn(c_int, *const *const c_void, *const Asn1Item, *mut c_void) -> c_int;
+
+/// `d2i_of_void` — `void *d2i_of_void(void **, const unsigned char **, long)`.
+///
+/// A *function type*, so a parameter spelled `d2i_of_void *` is a bare function
+/// pointer. The contract requires a non-null one: `ASN1_dup` and `ASN1_d2i_bio` call it
+/// without checking, exactly as the authority does.
+pub type D2iOfVoid =
+    unsafe extern "C" fn(*mut *mut c_void, *mut *const c_uchar, c_long) -> *mut c_void;
+
+/// `i2d_of_void` — `int i2d_of_void(const void *, unsigned char **)`.
+///
+/// As [`D2iOfVoid`]: a function type whose pointer a caller must supply.
+pub type I2dOfVoid = unsafe extern "C" fn(*const c_void, *mut *mut c_uchar) -> c_int;
 
 /// `ASN1_PRIMITIVE_FUNCS` — the hooks a primitive type may supply.
 ///
@@ -462,6 +489,29 @@ pub struct Asn1Sctx {
     pub(crate) app_data: *mut c_void,
     /// Diagnostic name of the field being processed.
     pub(crate) name: *const c_char,
+}
+
+/// `ASN1_PRINT_ARG` — what an `ASN1_AUX` callback's `exarg` points at during a
+/// print.
+///
+/// ```text
+/// typedef struct ASN1_PRINT_ARG_st {
+///     BIO *out;
+///     int indent;
+///     const ASN1_PCTX *pctx;
+/// } ASN1_PRINT_ARG;
+/// ```
+///
+/// Declared in the installed `asn1t.h`, so a caller's informational callback may
+/// read it; `ASN1_item_print` is the only operation that fills it in.
+#[repr(C)]
+pub struct Asn1PrintArg {
+    /// The BIO the print is writing to.
+    pub(crate) out: *mut Bio,
+    /// The current indentation, in spaces.
+    pub(crate) indent: c_int,
+    /// The printing options in force.
+    pub(crate) pctx: *const Asn1Pctx,
 }
 
 // ---------------------------------------------------------------------------
@@ -747,6 +797,15 @@ pub(crate) const B_ASN1_PRINTABLE: c_ulong = B_ASN1_NUMERICSTRING
 /// The two time types.
 pub(crate) const B_ASN1_TIME: c_ulong = B_ASN1_UTCTIME | B_ASN1_GENERALIZEDTIME;
 
+/// `DIRSTRING_TYPE` — the four string types a directory name component may be
+/// written in, and the default mask `ASN1_mbstring_*` falls back to for a zero
+/// mask. Note that it does *not* include `B_ASN1_IA5STRING`.
+pub(crate) const DIRSTRING_TYPE: c_ulong =
+    B_ASN1_PRINTABLESTRING | B_ASN1_T61STRING | B_ASN1_BMPSTRING | B_ASN1_UTF8STRING;
+/// `PKCS9STRING_TYPE` — a directory string that may also be an `IA5String`, which
+/// is what PKCS#9's own attributes allow.
+pub(crate) const PKCS9STRING_TYPE: c_ulong = DIRSTRING_TYPE | B_ASN1_IA5STRING;
+
 // ---------------------------------------------------------------------------
 // `MBSTRING_*` — the arguments of `ASN1_mbstring_*`.
 // ---------------------------------------------------------------------------
@@ -770,6 +829,14 @@ pub(crate) const MBSTRING_ENC_MASK: c_int = 0x0f;
 
 /// The row was allocated by `ASN1_STRING_TABLE_add` and must be freed with it.
 pub(crate) const STABLE_FLAGS_MALLOC: c_ulong = 0x01;
+/// `STABLE_FLAGS_CLEAR` — an alias for `STABLE_FLAGS_MALLOC`. The authority's own
+/// comment explains the alias: only when the existing value carries
+/// `STABLE_FLAGS_MALLOC` may `ASN1_STRING_TABLE_add` clear it, so a caller asks
+/// for that by naming the *same* bit through its other name.
+pub(crate) const STABLE_FLAGS_CLEAR: c_ulong = STABLE_FLAGS_MALLOC;
+/// `STABLE_NO_MASK` — this row's mask is not to be intersected with the global
+/// mask, so a caller can pin a type the global mask would otherwise exclude.
+pub(crate) const STABLE_NO_MASK: c_ulong = 0x02;
 
 // ---------------------------------------------------------------------------
 // `ASN1_PCTX_FLAGS_*` — the printing-option bits.
