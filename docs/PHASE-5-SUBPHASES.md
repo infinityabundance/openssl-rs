@@ -2,8 +2,8 @@
 
 Phase 5 is **BN + ASN.1 + DER/PEM**. `BN` is closed: every one of the 201 exports
 `bn.h` declares is implemented or handed to a named stratum, and `RT-BN` covers them.
-What remains is **128 ASN.1 exports and 27 PEM exports** — the ledger's totals, taken
-from `forensics/phase5-obligations.json`, after 5.1, 5.2 and 5.3 landed (D76, D77).
+What remains is **31 ASN.1 exports and 27 PEM exports** — the ledger's totals, taken
+from `forensics/phase5-obligations.json`, after 5.1 through 5.5 landed (D76, D77, D85).
 
 `BN` is closed but this document exists because the rest of the stratum is large, and
 D73 established that a section is not closed by writing code for it. A subphase closes
@@ -19,7 +19,7 @@ same commit. Source that no build compiles and no CI checks is invisible to ever
 | 5.2 | Text conversions | `i2a_*`, `i2t_*` | 5.1 | `RT-ASN1` extension | **COMPLETE** (D76) |
 | 5.3 | Codec wrappers | the shared decoder and encoder (`asn1_d2i_ex_primitive`, `asn1_ex_c2i`, `asn1_i2d_ex_primitive`, `asn1_ex_i2c`), the free path, the 26 primitive and multi-string item descriptors, the 36 `d2i_*`/`i2d_*` wrappers of `tasn_typ.c`, `ASN1_BIT_STRING`, `ASN1_NULL`, `d2i_ASN1_UINTEGER`, `a2d_ASN1_OBJECT` | 5.1 | `RT-ASN1` extension | **COMPLETE** (D77) |
 | 5.4 | Item machinery | the remaining 14 `*_it` accessors (the two `*_ANY` and the twelve numeric ones), `ASN1_ITEM_lookup`/`get`, `ASN1_item_*`, `ASN1_item_ex_*`, `asn1_d2i_read_bio`, NDEF, `ASN1_item_pack`/`unpack`, `ASN1_dup`, `ASN1_item_print`, `d2i_/i2d_ASN1_SEQUENCE_ANY`/`SET_ANY`, `ASN1_generate_v3`/`nconf`, `ASN1_add_oid_module`/`add_stable_module`, `ASN1_STRING_TABLE_*`, `ASN1_item_i2d_mem_bio` | 5.1, 5.3 | `RT-ASN1-TEMPLATE` | a caller-built template of the authority's shape round-trips, with the templates' `flags`/`tag`/`offset`/`field_name` compared |
-| 5.5 | Time | `ASN1_TIME`, `ASN1_UTCTIME`, `ASN1_GENERALIZEDTIME` accessors | 5.1, 5.4 | `RT-ASN1-TIME` | as above |
+| 5.5 | Time | `ASN1_TIME`, `ASN1_UTCTIME`, `ASN1_GENERALIZEDTIME` accessors, and the three `crypto/o_time.c` calendar symbols they stand on | 5.1, 5.4 | `RT-ASN1-TIME` | **COMPLETE** (D85) |
 | 5.6 | Strings, masks, printing | `ASN1_STRING_print*`, `set_by_NID`, the string masks, `ASN1_mbstring_*`, `UTF8_getc`/`putc`, `ASN1_str2mask`, `ASN1_PRINTABLE_type`, `ASN1_STRING_to_UTF8`, `ASN1_UNIVERSALSTRING_to_string`, `ASN1_bn_print`, `ASN1_buf_print` | 5.1 | `RT-ASN1-STR` | as above |
 | 5.7 | `ASN1_TYPE` (ANY) | `ASN1_TYPE_*`, `d2i_/i2d_ASN1_TYPE` | 5.4 | `RT-ASN1-TYPE` | as above |
 | 5.8 | NDEF BIO bridge | `BIO_f_asn1`, `BIO_new_NDEF`, `BIO_asn1_get/set_prefix/suffix` (the Phase 4 → 5 hand-offs), `i2d_ASN1_bio_stream`, `PEM_write_bio_ASN1_stream` | 5.4 | `RT-BIO-ASN1` | as above |
@@ -296,5 +296,27 @@ need the primitive types, not the template interpreter. 5.7 and 5.8 need 5.4. 5.
 Nothing in this list is started before the one it depends on. The staging branch
 `phase5-asn1` carries work that compiles and is fmt- and clippy-clean but has not yet
 been courted; a section reaches `main` only with the court that observes it, per D73.
+
+### What 5.5 turned out to rest on (D85)
+
+The family is 29 exports and one parser. Two things about it were not in the plan:
+
+* It needs three symbols that are **not** ASN.1 and not Phase 5. `OPENSSL_gmtime`,
+  `OPENSSL_gmtime_adj` and `OPENSSL_gmtime_diff` are declared in `crypto.h`, so the
+  ownership atlas assigns them to Phase 3; the family is written on top of them, so they
+  landed with it, in `src/runtime/time.rs`, phrased as Phase 3's own stratum. The same
+  file carries the `struct tm` projection the exported signatures are written against,
+  which is a projection of *libc* rather than of OpenSSL and so has no atlas entry — the
+  probe measures it instead.
+* The three translation units are one module. `a_time.c` is where the parser, the
+  constructors and the printers are; `a_utctm.c` and `a_gentm.c` are type guards over
+  them. Splitting them into three modules would have produced two modules whose whole
+  content is a four-line wrapper, and the ownership rule is keyed on the *declaring
+  header*, which is `asn1.h` for all three.
+
+The section closed with `RT-ASN1-TIME` at 1071 observations and one defect found —
+`ASN1_TIME_print` skipping the public indirection that collapses the printer's
+three-valued answer. That defect is recorded in D85 as the case for measuring entry
+points rather than helpers.
 
 SPDX-License-Identifier: Apache-2.0
