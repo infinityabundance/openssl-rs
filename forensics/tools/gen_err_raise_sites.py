@@ -272,6 +272,19 @@ COVERED_FILES = [
     # `dso_dl.c` is a method this profile does not build.
     ("crypto/dso/dso_lib.c", "DSO_LIB"),
     ("crypto/dso/dso_dlfcn.c", "DSO_DLFCN"),
+    # Phase 6.8: the provider registry. Registered now, with 6.8a, rather than in the
+    # subphase that first raises from each file, for 6.7's reason: the rule is the
+    # *subsystem* set and a site nobody calls yet is a coordinate, not a claim. All
+    # three files that raise use `ERR_LIB_CRYPTO` with `ERR_R_*` reasons -- there is no
+    # `PROV_R_*` family in this subsystem, so `cryptoerr.h` already covers every one and
+    # no internal header has to be added.
+    #
+    # `provider_child.c`, `provider_predefined.c` and `core_algorithm.c` raise nothing,
+    # so they are deliberately **not** listed: a covered file with no sites would be an
+    # entry that can never change and would read as coverage that does not exist.
+    ("crypto/provider.c", "PROVIDER"),
+    ("crypto/provider_core.c", "PROVIDER_CORE"),
+    ("crypto/provider_conf.c", "PROVIDER_CONF"),
 ]
 
 # Raise macros, in the forms the authority actually spells them. `ERR_raise`
