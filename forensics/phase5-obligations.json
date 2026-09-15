@@ -1,12 +1,12 @@
 {
   "authority": "openssl-3.6.4-production",
   "body": {
-    "complete": false,
+    "complete": true,
     "counts": {
       "atlas_owned": 561,
-      "deferred_to_later_phase": 66,
-      "implemented": 472,
-      "open_in_this_stratum": 27,
+      "deferred_to_later_phase": 91,
+      "implemented": 474,
+      "open_in_this_stratum": 0,
       "owned": 565
     },
     "deferred": [
@@ -247,6 +247,120 @@
       {
         "declaring_header": "pem.h",
         "owning_phase": 7,
+        "reason": "tests the PEM name against EVP_PKEY_asn1_find_str, which Phase 7 owns",
+        "symbol": "PEM_ASN1_read"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "tests the PEM name against EVP_PKEY_asn1_find_str, which Phase 7 owns",
+        "symbol": "PEM_ASN1_read_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "takes an EVP_CIPHER and derives its key with EVP_BytesToKey and a RAND_bytes IV, all Phase 7",
+        "symbol": "PEM_ASN1_write"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "takes an EVP_CIPHER and derives its key with EVP_BytesToKey and a RAND_bytes IV, all Phase 7",
+        "symbol": "PEM_ASN1_write_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "takes an EVP_CIPHER and derives its key with EVP_BytesToKey and a RAND_bytes IV, all Phase 7",
+        "symbol": "PEM_ASN1_write_bio_ctx"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "digests through an EVP_MD_CTX and signs with an EVP_PKEY, which Phase 7 owns",
+        "symbol": "PEM_SignFinal"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "digests through an EVP_MD_CTX and signs with an EVP_PKEY, which Phase 7 owns",
+        "symbol": "PEM_SignInit"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "digests through an EVP_MD_CTX and signs with an EVP_PKEY, which Phase 7 owns",
+        "symbol": "PEM_SignUpdate"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 11,
+        "reason": "reads or writes X509_INFO, and every arm of it is an X509, X509_CRL or X509_PUBKEY decode, all Phase 11",
+        "symbol": "PEM_X509_INFO_read"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 11,
+        "reason": "reads or writes X509_INFO, and every arm of it is an X509, X509_CRL or X509_PUBKEY decode, all Phase 11",
+        "symbol": "PEM_X509_INFO_read_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 11,
+        "reason": "reads or writes X509_INFO, and every arm of it is an X509, X509_CRL or X509_PUBKEY decode, all Phase 11",
+        "symbol": "PEM_X509_INFO_read_bio_ex"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 11,
+        "reason": "reads or writes X509_INFO, and every arm of it is an X509, X509_CRL or X509_PUBKEY decode, all Phase 11",
+        "symbol": "PEM_X509_INFO_read_ex"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 11,
+        "reason": "reads or writes X509_INFO, and every arm of it is an X509, X509_CRL or X509_PUBKEY decode, all Phase 11",
+        "symbol": "PEM_X509_INFO_write_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "the PEM block codec is EVP_ENCODE_CTX, which Phase 7 owns (evp.h)",
+        "symbol": "PEM_bytes_read_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "the PEM block codec is EVP_ENCODE_CTX, which Phase 7 owns (evp.h)",
+        "symbol": "PEM_bytes_read_bio_secmem"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "reads a pass phrase through EVP_read_pw_string_min, which Phase 7 owns",
+        "symbol": "PEM_def_callback"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "decrypts through EVP_CIPHER_CTX with EVP_BytesToKey, which Phase 7 owns",
+        "symbol": "PEM_do_header"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "the PEM block codec is EVP_ENCODE_CTX, which Phase 7 owns (evp.h)",
+        "symbol": "PEM_read"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "the PEM block codec is EVP_ENCODE_CTX, which Phase 7 owns (evp.h)",
+        "symbol": "PEM_read_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
         "reason": "reads or writes an EVP_PKEY, which is Phase 7",
         "symbol": "PEM_read_bio_Parameters"
       },
@@ -259,8 +373,32 @@
       {
         "declaring_header": "pem.h",
         "owning_phase": 7,
+        "reason": "the PEM block codec is EVP_ENCODE_CTX, which Phase 7 owns (evp.h)",
+        "symbol": "PEM_read_bio_ex"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "the PEM block codec is EVP_ENCODE_CTX, which Phase 7 owns (evp.h)",
+        "symbol": "PEM_write"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
         "reason": "reads or writes an EVP_PKEY, which is Phase 7",
         "symbol": "PEM_write_PKCS8PrivateKey_nid"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 11,
+        "reason": "encodes through i2d_X509_REQ_NEW, which the X509 stratum owns",
+        "symbol": "PEM_write_X509_REQ_NEW"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
+        "reason": "the PEM block codec is EVP_ENCODE_CTX, which Phase 7 owns (evp.h)",
+        "symbol": "PEM_write_bio"
       },
       {
         "declaring_header": "asn1.h",
@@ -277,8 +415,20 @@
       {
         "declaring_header": "pem.h",
         "owning_phase": 7,
+        "reason": "writes an EVP_PKEY's parameters, which Phase 7 owns",
+        "symbol": "PEM_write_bio_Parameters"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 7,
         "reason": "reads or writes an EVP_PKEY, which is Phase 7",
         "symbol": "PEM_write_bio_PrivateKey_traditional"
+      },
+      {
+        "declaring_header": "pem.h",
+        "owning_phase": 11,
+        "reason": "encodes through i2d_X509_REQ_NEW, which the X509 stratum owns",
+        "symbol": "PEM_write_bio_X509_REQ_NEW"
       },
       {
         "declaring_header": "asn1.h",
@@ -409,10 +559,10 @@
     ],
     "deferred_by_phase": {
       "6": 1,
-      "7": 8,
+      "7": 26,
       "9": 31,
       "10": 16,
-      "11": 3,
+      "11": 10,
       "12": 7
     },
     "handoffs_discharged": {
@@ -860,6 +1010,8 @@
       "INT32_it",
       "INT64_it",
       "LONG_it",
+      "PEM_dek_info",
+      "PEM_proc_type",
       "SMIME_crlf_copy",
       "UINT32_it",
       "UINT64_it",
@@ -936,147 +1088,11 @@
       "pem.h": "src/pem/"
     },
     "note": "`owned` is every export the stratum's families cover, which includes the ones the declaring-header rule hands to a later phase: a deferred symbol is still matched by this stratum's prefixes, so counting it here is what makes `implemented + deferred + open == owned`. `open` is the only list that blocks the stratum. The families are derived from the atlas, not typed: see this generator's header for why, and note that a deferred symbol names the stratum that owns the header it is declared in, which is checkable without reading this file. Nothing here is a parity claim.",
-    "open": [
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_ASN1_read"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_ASN1_read_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_ASN1_write"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_ASN1_write_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_ASN1_write_bio_ctx"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_SignFinal"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_SignInit"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_SignUpdate"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_X509_INFO_read"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_X509_INFO_read_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_X509_INFO_read_bio_ex"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_X509_INFO_read_ex"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_X509_INFO_write_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_bytes_read_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_bytes_read_bio_secmem"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_def_callback"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_dek_info"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_do_header"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_proc_type"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_read"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_read_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_read_bio_ex"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_write"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_write_X509_REQ_NEW"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_write_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_write_bio_Parameters"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/",
-        "symbol": "PEM_write_bio_X509_REQ_NEW"
-      }
-    ],
+    "open": [],
     "owned_by_module": {
       "src/asn1/": 302,
       "src/bn/": 170,
-      "src/pem/": 27
+      "src/pem/": 2
     },
     "rule": "the stratum's scope is the projection of forensics/atlas/symbol-ownership.json for phase 5: a symbol belongs to the stratum that owns the header declaring it, `pem.h`'s typed names resolve through the type's header, and the exports no installed header declares are dispositioned in ownership_rules.ABI_ONLY_OWNER"
   },
@@ -1105,7 +1121,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "14821380598718f3c01858cf3235f45e1b16b2fd9edbc4e7785568c0fd3dbbb2"
+      "sha256": "e88230fccb56990c9c5e1631d71f60a5b98b867435869c5b4e7d183f985c323d"
     }
   ],
   "kind": "phase5-obligations",

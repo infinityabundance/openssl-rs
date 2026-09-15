@@ -456,6 +456,27 @@ observations that *can* be made around each boundary are compared normally.
   the authority does not terminate, and an unbounded loop is treated as a fault rather
   than as behaviour to reproduce, exactly as the crashes in this document are.
 
+### D-PEM-1 — `PEM_dek_info` converts a negative remainder to `size_t`
+
+- **Obligation:** `PEM_dek_info(buf, type, len, str)` and `PEM_proc_type(buf, type)`
+  over a `buf` whose existing content leaves less room than the text still to be
+  written, and `type` longer than the room left.
+- **Authority:** the remaining room is an `int` and is converted to `size_t` at each
+  `BIO_snprintf` with no test for a negative remainder. `PEM_proc_type` reaches it
+  when the caller's prefix already exceeds `PEM_BUFSIZE`. `PEM_dek_info` reaches it
+  one step later: `%02X` answers `2` whether or not two bytes were written, so with
+  exactly one byte of room left it writes the terminating NUL alone, leaves `j` at
+  `-1`, and the *next* iteration calls `BIO_snprintf` with a length of
+  `(size_t)-1` and writes the encoding of every remaining byte past the end of the
+  caller's buffer.
+- **Candidate:** clamps the length to zero at every call and stops the per-byte loop
+  when no room remains. Everything inside the buffer is identical — the truncated NULs
+  land in the same places, which `RT-PEM`'s near-full-buffer cases measure — so the
+  divergence is only in the region the authority writes illegally.
+- **Claim removed:** the region is not claimed. The probe deliberately stops one
+  arrangement short of it — one byte of room with a second byte still to encode —
+  because asking the authority for that answer would smash its own stack frame.
+
 ### D-PRINT-1 — `ASN1_item_print` dereferences a NULL `ASN1_ITEM`
 
 - **Obligation:** `ASN1_item_print(out, val, indent, NULL, pctx)` and any interior call

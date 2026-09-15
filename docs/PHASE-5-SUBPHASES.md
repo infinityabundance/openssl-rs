@@ -2,7 +2,10 @@
 
 Phase 5 is **BN + ASN.1 + DER/PEM**. `BN` is closed: every one of the 201 exports
 `bn.h` declares is implemented or handed to a named stratum, and `RT-BN` covers them.
-What remains is **27 PEM exports** — the ledger's totals, taken
+Phase 5 is now **closed**: `open` is zero, every one of the stratum's 565 owned
+exports is implemented and observed by a court or handed to a named later stratum with
+the dependency it waits on, and `forensics/phase-state.json` reads `complete`. The
+subphase table below is the record of how it got there. — the ledger's totals, taken
 from `forensics/phase5-obligations.json`, after 5.1 through 5.8 landed (D76, D77, D85,
 D86, D87, D88, D89, D90).
 
@@ -24,8 +27,8 @@ same commit. Source that no build compiles and no CI checks is invisible to ever
 | 5.6 | Strings, masks, printing | `ASN1_STRING_print*`, `set_by_NID`, the string masks, `ASN1_mbstring_*`, `UTF8_getc`/`putc`, `ASN1_str2mask`, `ASN1_PRINTABLE_type`, `ASN1_STRING_to_UTF8`, `ASN1_UNIVERSALSTRING_to_string`, `ASN1_bn_print`, `ASN1_buf_print` | 5.1 | `RT-ASN1-STR` | **COMPLETE** (D86, D87, D88): 18 written, `ASN1_str2mask` with them, and two handed to Phase 6 and Phase 11 |
 | 5.7 | `ASN1_TYPE` (ANY) | `ASN1_TYPE_*`, `d2i_/i2d_ASN1_TYPE` | 5.4 | `RT-ASN1-TYPE` | as above |
 | 5.8 | NDEF BIO bridge, and `asn_mime.c`'s copying half | `BIO_f_asn1`, `BIO_new_NDEF`, `BIO_asn1_get/set_prefix/suffix` (the Phase 4 → 5 hand-offs), `SMIME_crlf_copy`, `i2d_ASN1_bio_stream` | 5.4 | `RT-BIO-ASN1`, `RT-ASN1-MIME` | **COMPLETE** (D89, D92). `PEM_write_bio_ASN1_stream` is handed to Phase 7 for `BIO_f_base64`; the four `SMIME_*` reader/writer exports to Phase 12; `SMIME_text` to Phase 12 with the MIME header reader it needs |
-| 5.9 | PEM | the 27 `pem.h` exports the stratum still owns, plus the 21 it handed to Phases 7 and 10 | 5.1, 5.4, 5.6 | `RT-PEM` | as above |
-| 5.10 | Closure | nothing — evidence | all | — | `open == 0`; seal rewritten from the ledgers; FRF `sensitivity-backed`; Gemel checkpoint |
+| 5.9 | PEM | the 27 `pem.h` exports the stratum still owned, plus the 21 it handed to Phases 7 and 10 | 5.1, 5.4, 5.6 | `RT-PEM` | **COMPLETE** (D93): 2 written (`PEM_proc_type`, `PEM_dek_info`, the two with no dependency) and 25 handed on, each with the subsystem it waits for named — 18 to Phase 7 (`EVP_ENCODE_CTX`, `EVP_CIPHER`, `EVP_MD_CTX`, `EVP_PKEY`, `BIO_f_base64`) and 7 to Phase 11 (`X509_REQ`, `X509_INFO`) |
+| 5.10 | Closure | nothing — evidence | all | — | **COMPLETE** (D93): `open == 0` over 565 owned exports, `artifacts/phase5/COURTS.json` `all_pass` over 9 courts and 9,669 observations, the seal rewritten from the ledgers, the FRF store recreated from clean and re-run, and a Gemel checkpoint |
 
 ### Why 5.3 landed before 5.4, when the plan said otherwise
 

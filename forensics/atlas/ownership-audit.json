@@ -128,11 +128,29 @@
           "symbols": [
             "ASN1_item_sign_ex",
             "ASN1_item_verify_ex",
+            "PEM_ASN1_read",
+            "PEM_ASN1_read_bio",
+            "PEM_ASN1_write",
+            "PEM_ASN1_write_bio",
+            "PEM_ASN1_write_bio_ctx",
+            "PEM_SignFinal",
+            "PEM_SignInit",
+            "PEM_SignUpdate",
+            "PEM_bytes_read_bio",
+            "PEM_bytes_read_bio_secmem",
+            "PEM_def_callback",
+            "PEM_do_header",
+            "PEM_read",
+            "PEM_read_bio",
             "PEM_read_bio_Parameters",
             "PEM_read_bio_Parameters_ex",
+            "PEM_read_bio_ex",
+            "PEM_write",
             "PEM_write_PKCS8PrivateKey_nid",
+            "PEM_write_bio",
             "PEM_write_bio_ASN1_stream",
             "PEM_write_bio_PKCS8PrivateKey_nid",
+            "PEM_write_bio_Parameters",
             "PEM_write_bio_PrivateKey_traditional"
           ],
           "to_phase": 7
@@ -201,7 +219,14 @@
           "symbols": [
             "ASN1_add_stable_module",
             "ASN1_generate_nconf",
-            "ASN1_generate_v3"
+            "ASN1_generate_v3",
+            "PEM_X509_INFO_read",
+            "PEM_X509_INFO_read_bio",
+            "PEM_X509_INFO_read_bio_ex",
+            "PEM_X509_INFO_read_ex",
+            "PEM_X509_INFO_write_bio",
+            "PEM_write_X509_REQ_NEW",
+            "PEM_write_bio_X509_REQ_NEW"
           ],
           "to_phase": 11
         },
@@ -311,11 +336,29 @@
           "symbols": [
             "ASN1_item_sign_ex",
             "ASN1_item_verify_ex",
+            "PEM_ASN1_read",
+            "PEM_ASN1_read_bio",
+            "PEM_ASN1_write",
+            "PEM_ASN1_write_bio",
+            "PEM_ASN1_write_bio_ctx",
+            "PEM_SignFinal",
+            "PEM_SignInit",
+            "PEM_SignUpdate",
+            "PEM_bytes_read_bio",
+            "PEM_bytes_read_bio_secmem",
+            "PEM_def_callback",
+            "PEM_do_header",
+            "PEM_read",
+            "PEM_read_bio",
             "PEM_read_bio_Parameters",
             "PEM_read_bio_Parameters_ex",
+            "PEM_read_bio_ex",
+            "PEM_write",
             "PEM_write_PKCS8PrivateKey_nid",
+            "PEM_write_bio",
             "PEM_write_bio_ASN1_stream",
             "PEM_write_bio_PKCS8PrivateKey_nid",
+            "PEM_write_bio_Parameters",
             "PEM_write_bio_PrivateKey_traditional"
           ],
           "to_phase": 7
@@ -384,7 +427,14 @@
           "symbols": [
             "ASN1_add_stable_module",
             "ASN1_generate_nconf",
-            "ASN1_generate_v3"
+            "ASN1_generate_v3",
+            "PEM_X509_INFO_read",
+            "PEM_X509_INFO_read_bio",
+            "PEM_X509_INFO_read_bio_ex",
+            "PEM_X509_INFO_read_ex",
+            "PEM_X509_INFO_write_bio",
+            "PEM_write_X509_REQ_NEW",
+            "PEM_write_bio_X509_REQ_NEW"
           ],
           "to_phase": 11
         },
@@ -544,7 +594,7 @@
     ],
     "implemented_by_two_strata": [],
     "implemented_exports": {
-      "libcrypto": 930,
+      "libcrypto": 932,
       "libssl": 0
     },
     "invariant": "every authority export has exactly one declared owner in forensics/atlas/symbol-ownership.json, and every implemented export's owner is therefore declared before any implementation exists",
@@ -602,8 +652,8 @@
       },
       {
         "atlas": 561,
-        "ledger": 499,
-        "only_in_atlas": 66,
+        "ledger": 474,
+        "only_in_atlas": 91,
         "only_in_atlas_examples": [
           "ASN1_ITEM_get",
           "ASN1_ITEM_lookup",
@@ -5883,7 +5933,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "4a96849aa11eae9c474db0eab2f442d776871832dce59a3915cdf3980f0215fb"
+      "sha256": "35de42f56a9e262378eee6a726353fe9b5a87680572357f9edcf93691e5bd3e3"
     },
     {
       "name": "authority-symbols",
@@ -5903,22 +5953,22 @@
     {
       "name": "ledger",
       "path": "forensics/tools/phase5_obligations.py",
-      "sha256": "53d8a590399704aefab47e0fd6f39b28c0d6bf39a15a2f7646576675e88c1f6c"
+      "sha256": "9485eca010c1d72d1be47f15ab962a3a1f945d02f1553ce477947f6747f5500f"
     },
     {
       "name": "ledger-result",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "56648b83444f8a83f602077c15bb7a8cacf136964df99c8aaa3440f874ad7c12"
+      "sha256": "72605227fc7e613c71a01d7b3923d6ea8503b8a5fef9e90444c1e05b9cf9a3ab"
     },
     {
       "name": "ledger-result",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "7ac667389c43e509937cefa7ebb0c3467d12d9237cc9c520125677dc8325c42b"
+      "sha256": "cc9f8a2cb796f636c4343d421a8c00b1541832d16626b192eb2a96fdbd1486e1"
     },
     {
       "name": "ledger-result",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "4f3f42e1ac81f891a546c81b6bacb9c34bf7f485dd5ae5d3d926234d7088d6b1"
+      "sha256": "8e764b046f0126c94bb80de752f214193bbd6e5dc83ff74469410f2051f642d6"
     }
   ],
   "kind": "ownership-audit",

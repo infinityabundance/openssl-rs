@@ -140,12 +140,29 @@
           "candidate": "artifacts/phase5/probes/rt_asn1_mime_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 37,
+        "candidate_exit_code": 0,
+        "candidate_observations": 37,
+        "candidate_stderr_tail": [],
+        "court": "RT-PEM",
+        "crashed": false,
+        "probe": "courts/phase5/rt_pem_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase5/probes/rt_pem_probe.authority",
+          "candidate": "artifacts/phase5/probes/rt_pem_probe.candidate"
+        },
+        "verdict": "pass"
       }
     ],
     "summary": {
       "fail": 0,
-      "pass": 8,
-      "total": 8
+      "pass": 9,
+      "total": 9
     }
   },
   "generator": "forensics/tools/phase5_courts.py",
@@ -194,6 +211,11 @@
       "name": "probe",
       "path": "courts/phase5/rt_asn1_mime_probe.c",
       "sha256": "6f6c68b98bc6495df2b4537b0b6aabe7524d176c0ca4ef5d9bdd217b6dbea9b8"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase5/rt_pem_probe.c",
+      "sha256": "e9d71d79c2a62d387bcb32fe7c6d8146619ac2e19dfeb1d08978b31dfb72e7cf"
     }
   ],
   "kind": "phase5-courts",

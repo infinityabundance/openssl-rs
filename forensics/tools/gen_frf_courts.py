@@ -171,6 +171,12 @@ COURTS: list[tuple[str, int, str, str]] = [
      "trailing-space rule, the buffering filter measured through a sink that logs each\n"
      "write length, the short-write and failing-flush failures with the flush\n"
      "combination, and i2d_ASN1_bio_stream with and without SMIME_STREAM"),
+    ("rt-pem", 5, "rt_pem_probe",
+     "the two pem.h exports that need nothing but BIO_snprintf: PEM_proc_type over\n"
+     "its three named types and the BAD-TYPE fallback, PEM_dek_info over its byte\n"
+     "counts and the 0xff mask that keeps a negative char two digits wide, the two\n"
+     "appending to one buffer in the order PEM_ASN1_write_bio_internal uses them, and\n"
+     "the conditional newline as the header buffer fills up"),
 ]
 
 
