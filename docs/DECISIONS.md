@@ -4014,3 +4014,52 @@ A refused name returns 0 from the callback and stops the parse *without* clearin
 what the earlier names accumulated, so `"PRINTABLE|NOPE"` answers 0 with a mask
 that still has the printable bit set. The probe checks the mask on both sides of
 that failure, so the residual is measured rather than read.
+
+## D89 — The ASN.1 filter BIO lands, and the three-call setup test I wrote as arithmetic
+
+`bio_asn1.c` and the `BIO_new_NDEF` half of `bio_ndef.c` are in: six exports.
+`implemented[libcrypto]` moved 921 → 927 and the stratum's open list 37 → 30 — the
+remainder is `ASN1_item_print`, `PEM_write_bio_ASN1_stream`, `i2d_ASN1_bio_stream`
+and the 27 `pem.h` exports.
+
+### The defect, which crashed rather than diverged
+
+The authority tests its three setup calls as
+
+```c
+if (BIO_asn1_set_prefix(...) <= 0
+    || BIO_asn1_set_suffix(...) <= 0
+    || BIO_ctrl(asn_bio, BIO_C_SET_EX_ARG, 0, ndef_aux) <= 0)
+    goto err;
+```
+
+I wrote it as a product:
+
+```rust
+let setup = setup * (unsafe { BIO_ctrl(...) } <= 0) as c_int;
+```
+
+which multiplies by **zero on success**, so `BIO_new_NDEF` took its error path on
+every call. That path releases the support block; but the setup had already handed
+the block to the BIO with `BIO_C_SET_EX_ARG`, and the BIO's destroy callback
+releases it too. glibc reported a double free in a tcache bin and the probe dumped
+core before printing a single NDEF observation.
+
+Two things about it are worth keeping. The first is that this is the *opposite* of
+D86's defect: there a constant was recalled instead of read, here three lines were
+read and then rewritten into something tidier, and the rewrite inverted the answer.
+Six lines transcribed would have been right. The second is that the failure mode was
+a crash, not a divergence, and only because the probe had been made line-buffered in
+D86 could it say *where* — the transcript stopped between `ndef.mem_nonnull=1` and
+the first `ndef.*` observation, which named the callee. An instrument that loses its
+transcript to a crash cannot localise the crash that lost it.
+
+### Gemel C39's summary is incomplete, and that is recorded here
+
+The `gemel change finish` summary for this work quoted two fragments of C in
+backticks. The command was run through a shell, so the backticked spans were
+executed as commands and dropped from the recorded text. Gemel is append-only, so
+C39's summary cannot be rewritten; this entry is the authoritative record of what it
+was meant to say. The lesson is operational rather than architectural — a summary
+that contains shell metacharacters must be quoted for the shell that carries it —
+and it is recorded rather than quietly retried because the trajectory is evidence.

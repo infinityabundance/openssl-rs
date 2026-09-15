@@ -3,42 +3,12 @@
   "body": {
     "complete": true,
     "counts": {
-      "deferred_to_later_phase": 31,
-      "implemented": 231,
+      "deferred_to_later_phase": 25,
+      "implemented": 237,
       "open_in_this_stratum": 0,
       "owned": 262
     },
     "deferred": [
-      {
-        "module": "src/runtime/bio/",
-        "owning_phase": 5,
-        "reason": "ASN.1 prefix/suffix compiler hooks; ASN.1 is Phase 5",
-        "symbol": "BIO_asn1_get_prefix"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "owning_phase": 5,
-        "reason": "ASN.1 prefix/suffix compiler hooks; ASN.1 is Phase 5",
-        "symbol": "BIO_asn1_get_suffix"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "owning_phase": 5,
-        "reason": "ASN.1 prefix/suffix compiler hooks; ASN.1 is Phase 5",
-        "symbol": "BIO_asn1_set_prefix"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "owning_phase": 5,
-        "reason": "ASN.1 prefix/suffix compiler hooks; ASN.1 is Phase 5",
-        "symbol": "BIO_asn1_set_suffix"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "owning_phase": 5,
-        "reason": "its only controls are ASN.1 prefix/suffix functions; ASN.1 is Phase 5",
-        "symbol": "BIO_f_asn1"
-      },
       {
         "module": "src/runtime/bio/",
         "owning_phase": 7,
@@ -74,12 +44,6 @@
         "owning_phase": 12,
         "reason": "binds a CMS_ContentInfo to a BIO; CMS is Phase 12",
         "symbol": "BIO_new_CMS"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "owning_phase": 5,
-        "reason": "constructs an ASN.1 NDEF BIO chain; ASN.1 is Phase 5",
-        "symbol": "BIO_new_NDEF"
       },
       {
         "module": "src/runtime/bio/",
@@ -270,6 +234,10 @@
       "BIO_ADDR_service_string",
       "BIO_accept",
       "BIO_accept_ex",
+      "BIO_asn1_get_prefix",
+      "BIO_asn1_get_suffix",
+      "BIO_asn1_set_prefix",
+      "BIO_asn1_set_suffix",
       "BIO_bind",
       "BIO_callback_ctrl",
       "BIO_clear_flags",
@@ -294,6 +262,7 @@
       "BIO_dump_indent_fp",
       "BIO_dup_chain",
       "BIO_err_is_non_fatal",
+      "BIO_f_asn1",
       "BIO_f_brotli",
       "BIO_f_buffer",
       "BIO_f_linebuffer",
@@ -360,6 +329,7 @@
       "BIO_method_name",
       "BIO_method_type",
       "BIO_new",
+      "BIO_new_NDEF",
       "BIO_new_accept",
       "BIO_new_bio_dgram_pair",
       "BIO_new_bio_pair",
@@ -495,7 +465,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "4032150215e41e618ad79d6dcef722b24dd1285def0ae761917ecc46cf379bed"
+      "sha256": "f01ce0b0b2ff626f5ec26ed8cb54e4e90f972f14fb269f13b8185fa6f6005b20"
     }
   ],
   "kind": "phase4-obligations",
