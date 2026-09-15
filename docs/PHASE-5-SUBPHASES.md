@@ -2,7 +2,7 @@
 
 Phase 5 is **BN + ASN.1 + DER/PEM**. `BN` is closed: every one of the 201 exports
 `bn.h` declares is implemented or handed to a named stratum, and `RT-BN` covers them.
-What remains is **15 ASN.1 exports and 27 PEM exports** — the ledger's totals, taken
+What remains is **12 ASN.1 exports and 27 PEM exports** — the ledger's totals, taken
 from `forensics/phase5-obligations.json`, after 5.1 through 5.5 and the first half of
 5.6 landed (D76, D77, D85, D86).
 
@@ -21,7 +21,7 @@ same commit. Source that no build compiles and no CI checks is invisible to ever
 | 5.3 | Codec wrappers | the shared decoder and encoder (`asn1_d2i_ex_primitive`, `asn1_ex_c2i`, `asn1_i2d_ex_primitive`, `asn1_ex_i2c`), the free path, the 26 primitive and multi-string item descriptors, the 36 `d2i_*`/`i2d_*` wrappers of `tasn_typ.c`, `ASN1_BIT_STRING`, `ASN1_NULL`, `d2i_ASN1_UINTEGER`, `a2d_ASN1_OBJECT` | 5.1 | `RT-ASN1` extension | **COMPLETE** (D77) |
 | 5.4 | Item machinery | the remaining 14 `*_it` accessors (the two `*_ANY` and the twelve numeric ones), `ASN1_ITEM_lookup`/`get`, `ASN1_item_*`, `ASN1_item_ex_*`, `asn1_d2i_read_bio`, NDEF, `ASN1_item_pack`/`unpack`, `ASN1_dup`, `ASN1_item_print`, `d2i_/i2d_ASN1_SEQUENCE_ANY`/`SET_ANY`, `ASN1_generate_v3`/`nconf`, `ASN1_add_oid_module`/`add_stable_module`, `ASN1_STRING_TABLE_*`, `ASN1_item_i2d_mem_bio` | 5.1, 5.3 | `RT-ASN1-TEMPLATE` | a caller-built template of the authority's shape round-trips, with the templates' `flags`/`tag`/`offset`/`field_name` compared |
 | 5.5 | Time | `ASN1_TIME`, `ASN1_UTCTIME`, `ASN1_GENERALIZEDTIME` accessors, and the three `crypto/o_time.c` calendar symbols they stand on | 5.1, 5.4 | `RT-ASN1-TIME` | **COMPLETE** (D85) |
-| 5.6 | Strings, masks, printing | `ASN1_STRING_print*`, `set_by_NID`, the string masks, `ASN1_mbstring_*`, `UTF8_getc`/`putc`, `ASN1_str2mask`, `ASN1_PRINTABLE_type`, `ASN1_STRING_to_UTF8`, `ASN1_UNIVERSALSTRING_to_string`, `ASN1_bn_print`, `ASN1_buf_print` | 5.1 | `RT-ASN1-STR` | in progress: 14 of the 20 landed in D86 (`a_print.c`, `a_mbstr.c`, the table half of `a_strnid.c`, `t_pkey.c`); `a_strex.c`'s four writers and `ASN1_str2mask` remain |
+| 5.6 | Strings, masks, printing | `ASN1_STRING_print*`, `set_by_NID`, the string masks, `ASN1_mbstring_*`, `UTF8_getc`/`putc`, `ASN1_str2mask`, `ASN1_PRINTABLE_type`, `ASN1_STRING_to_UTF8`, `ASN1_UNIVERSALSTRING_to_string`, `ASN1_bn_print`, `ASN1_buf_print` | 5.1 | `RT-ASN1-STR` | 18 of the 20 landed (D86, D87); two handed to Phase 6 and Phase 11, and `ASN1_str2mask` is `asn1_gen.c`'s and lands with 5.4 |
 | 5.7 | `ASN1_TYPE` (ANY) | `ASN1_TYPE_*`, `d2i_/i2d_ASN1_TYPE` | 5.4 | `RT-ASN1-TYPE` | as above |
 | 5.8 | NDEF BIO bridge | `BIO_f_asn1`, `BIO_new_NDEF`, `BIO_asn1_get/set_prefix/suffix` (the Phase 4 → 5 hand-offs), `i2d_ASN1_bio_stream`, `PEM_write_bio_ASN1_stream` | 5.4 | `RT-BIO-ASN1` | as above |
 | 5.9 | PEM | the 27 `pem.h` exports the stratum still owns, plus the 21 it handed to Phases 7 and 10 | 5.1, 5.4, 5.6 | `RT-PEM` | as above |

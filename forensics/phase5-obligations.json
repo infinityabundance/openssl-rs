@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 561,
       "deferred_to_later_phase": 64,
-      "implemented": 459,
-      "open_in_this_stratum": 42,
+      "implemented": 462,
+      "open_in_this_stratum": 39,
       "owned": 565
     },
     "deferred": [
@@ -553,11 +553,14 @@
       "ASN1_STRING_length_set",
       "ASN1_STRING_new",
       "ASN1_STRING_print",
+      "ASN1_STRING_print_ex",
+      "ASN1_STRING_print_ex_fp",
       "ASN1_STRING_set",
       "ASN1_STRING_set0",
       "ASN1_STRING_set_by_NID",
       "ASN1_STRING_set_default_mask",
       "ASN1_STRING_set_default_mask_asc",
+      "ASN1_STRING_to_UTF8",
       "ASN1_STRING_type",
       "ASN1_STRING_type_new",
       "ASN1_T61STRING_free",
@@ -915,21 +918,6 @@
       {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
-        "symbol": "ASN1_STRING_print_ex"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_STRING_print_ex_fp"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_STRING_to_UTF8"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
         "symbol": "ASN1_generate_nconf"
       },
       {
@@ -1155,7 +1143,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "c823b2afd99e9eb60900d5897d59e1dc5b1ca3317de23592677e9b12353c5f6d"
+      "sha256": "f860d312a571846b5c824dd68ac737ef1e2c44e710e99cd860e0d0df5bcc26de"
     }
   ],
   "kind": "phase5-obligations",

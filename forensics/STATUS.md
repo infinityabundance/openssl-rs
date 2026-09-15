@@ -25,7 +25,7 @@ renderer does not know any phase status.
 | 2 | Distribution / ABI shell | `complete` |  |
 | 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `complete` |  |
 | 4 | BIO + CONF + object database | `complete` |  |
-| 5 | BN + ASN.1 + DER/PEM | `in-progress` | 42 open obligation(s) of this stratum recorded in forensics/phase5-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
+| 5 | BN + ASN.1 + DER/PEM | `in-progress` | 39 open obligation(s) of this stratum recorded in forensics/phase5-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
 
 Not started: strata 6-21 (16 total).
 
@@ -80,9 +80,9 @@ that name is defined, nothing more.
 
 | library | exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 917 | 4979 |
+| libcrypto | 5896 | 920 | 4976 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **917** | **5582** |
+| **total** | **6499** | **920** | **5579** |
 
 ### Phase 3 obligation ledger
 
