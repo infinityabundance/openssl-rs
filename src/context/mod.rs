@@ -52,7 +52,7 @@
 //! | index | slot | owner |
 //! |---|---|---|
 //! | 0 | `evp_method_store` | Phase 7 (EVP) |
-//! | 1 | `provider_store` | 6.8 |
+//! | 1 | `provider_store` | **filled by 6.8b-slot** |
 //! | 2 | `property_defns` | 6.7 |
 //! | 3 | `property_string_data` | 6.7 |
 //! | 4 | `namemap` | **6.6b** |
@@ -189,7 +189,9 @@ struct OsslLibCtx {
 
     /// `OSSL_LIB_CTX_EVP_METHOD_STORE_INDEX` (0) — Phase 7.
     evp_method_store: *mut c_void,
-    /// `OSSL_LIB_CTX_PROVIDER_STORE_INDEX` (1) — 6.8.
+    /// `OSSL_LIB_CTX_PROVIDER_STORE_INDEX` (1) — filled by `context_init` in
+    /// 6.8b-slot, and **the first slot object the authority builds**. See
+    /// `context_init` for why its position is first and the thread slot's is last.
     provider_store: *mut c_void,
     /// `OSSL_LIB_CTX_PROPERTY_DEFN_INDEX` (2) — 6.7.
     property_defns: *mut c_void,
@@ -346,22 +348,30 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
     // yet, and this is the only write that publishes the lock.
     unsafe { (*ctx).lock = lock };
 
-    // The thread slot. `context_init` guards this with `#ifndef
-    // OPENSSL_NO_THREAD_POOL`, and this profile has the pool compiled in -- which
-    // is not something any installed header says. It was **measured**: index 19
-    // answers a pointer from `OSSL_LIB_CTX_get_data`, and
-    // `OSSL_get_thread_support_flags` answers the thread-pool flag. Both are
-    // observations of the same build fact, and `RT-LIBCTX` re-measures the first
-    // on every run.
-    let threads = crate::context::thread_data::ossl_threads_ctx_new(ctx.cast::<c_void>());
-    if threads.is_null() {
-        // The authority's `err:` arm: release what was built, then report
-        // failure. `OSSL_LIB_CTX_new` frees the block itself.
+    // The provider store. **This is the first slot object the authority builds** among
+    // those this crate has landed, and its position is not arbitrary: the authority's own
+    // comment marks it *P1 -- needs to be freed before the child provider data is freed*,
+    // while the seven slots it builds before this one are marked *P2 -- cleaned up before
+    // the provider store*. The P2 slots are Phases 7, 9 and 10's, so in this crate the
+    // provider store is simply first.
+    //
+    // Reading `context_init` to find this position is also what exposed that the *thread*
+    // slot was being built first here and is the authority's **ninth** among the landed
+    // set. Construction order is not directly observable -- a caller sees the finished
+    // table, and this profile disables the allocation-failure injection that would expose
+    // the cascade -- but `context_deinit`'s order is observable in principle, because a slot
+    // object's destructor has side effects. Both orders are now the authority's.
+    // SAFETY: `ctx` is the live context being initialised, and the store constructor only
+    // stores the pointer it is given.
+    let provider_store = unsafe { crate::provider::ossl_provider_store_new(ctx.cast::<c_void>()) };
+    if provider_store.is_null() {
+        // The authority's `err:` arm: release what was built, then report failure.
+        // `OSSL_LIB_CTX_new` frees the block itself.
         context_deinit(ctx);
         return false;
     }
     // SAFETY: as above; the slot is published once, here.
-    unsafe { (*ctx).threads = threads.cast::<c_void>() };
+    unsafe { (*ctx).provider_store = provider_store.cast::<c_void>() };
 
     // The property string table. The authority builds it **first** among the
     // slot objects this crate builds, before the namemap; and `property_parse_init`
@@ -439,6 +449,24 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
     // SAFETY: as above.
     unsafe { (*ctx).indicator_cb = indicator_cb.cast::<c_void>() };
 
+    // The thread slot, which is **last** among the slot objects this crate builds.
+    // `context_init` guards it with `#ifndef OPENSSL_NO_THREAD_POOL`, and this profile has
+    // the pool compiled in -- which is not something any installed header says. It was
+    // **measured**: index 19 answers a pointer from `OSSL_LIB_CTX_get_data`, and
+    // `OSSL_get_thread_support_flags` answers the thread-pool flag. Both are observations
+    // of the same build fact, and `RT-LIBCTX` re-measures the first on every run.
+    //
+    // In the authority this slot follows the FIPS-only pair and `indicator_cb`, and is
+    // followed only by the child-provider context (6.8e) and the compression methods
+    // (Phase 13) -- so among the objects that exist here it is correctly last.
+    let threads = crate::context::thread_data::ossl_threads_ctx_new(ctx.cast::<c_void>());
+    if threads.is_null() {
+        context_deinit(ctx);
+        return false;
+    }
+    // SAFETY: as above; the slot is published once, here.
+    unsafe { (*ctx).threads = threads.cast::<c_void>() };
+
     // The property engine's pre-initialisation. The authority calls it last among
     // the objects it builds -- after the child-provider context, which is 6.8's, and
     // before the builtin compression methods, which are Phase 13's -- so it is the
@@ -463,7 +491,22 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
 /// with respect to the provider store). Only slot 21 has no release: it is an
 /// interior address, not an allocation.
 fn context_deinit_objs(ctx: *mut OsslLibCtx) {
-    // The property string table, released first among the slot objects, as the
+    // The provider store, released **first** among the slot objects, because the authority
+    // marks it *P1*: the seven slots it builds ahead of this one are explicitly *"cleaned up
+    // before the provider store"*, and the child-provider data that 6.8e lands must be freed
+    // after it. Releasing it here is what makes the P1 relation hold once that arrives.
+    // SAFETY: `ctx` is a live context being torn down by `context_deinit`, and no other
+    // thread holds a reference to it -- `OSSL_LIB_CTX_free` is the only caller and the
+    // caller contract is that the object is no longer in use. Each slot is released exactly
+    // once and re-NULLed.
+    unsafe {
+        if !(*ctx).provider_store.is_null() {
+            crate::provider::ossl_provider_store_free((*ctx).provider_store);
+            (*ctx).provider_store = ptr::null_mut();
+        }
+    }
+
+    // The property string table, released next among the slot objects, as the
     // authority releases them (before the namemap).
     // SAFETY: `ctx` is a live context being torn down by `context_deinit`, and no
     // other thread holds a reference to it -- `OSSL_LIB_CTX_free` is the only
