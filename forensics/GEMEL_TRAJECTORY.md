@@ -10,6 +10,8 @@ in Git. See `docs/DECISIONS.md` D17.
 ## `gemel log`
 
 ```
+C40  Subphase 5.8 half landed: crypto/asn1/bio_asn1.c (BIO_f_asn1, the four BIO_asn1_ prefix/suffix controls) and the BIO_new_NDEF half of bio_ndef.c, with its two prefix and two suffix callbacks. The filter is a state machine, not a wrapper: seven states because each write may have to emit a prefix, a header, some content and then more content on the next call, with a partial-write cursor for the header and a declared length that bounds how much content passes through before a fresh header. Added RT-BIO-ASN1 with 114 observations, and it found one defect, which crashed the candidate. The authority tests the three setup calls as ; I wrote them as , which multiplies by zero on SUCCESS, so BIO_new_NDEF took the error path on every call and freed the support block a second time - the state machine had already handed it to the BIO, whose destroy callback releases it. glibc reported a double free in tcache and the probe dumped core. The lesson is the one this stratum keeps teaching from the other direction: a faithful transcription of three lines would have been right, and the tidy-looking rewrite was wrong. Fixed to the authority shape. Implemented libcrypto exports 921 -> 927; Phase 5 open obligations 37 -> 30.
+    state state.5ef38880d6673996c7801ac89d7043d9e6423aac626fa6098879d1e59c8d4458 -> state.06d7e5252a13d7ebf03db77fe2b9f15e1776e93adb37cc181713b660e8df098b
 C39  ASN1_str2mask lands with the asn1_str2tag table it depends on. The two other exports of asn1_gen.c, ASN1_generate_v3 and ASN1_generate_nconf, are handed to Phase 11: both take an X509V3_CTX pointer, and ASN1_generate_nconf constructs one through the X509V3_set_nconf macro even on its null-CONF path, so neither can be written without a structure this stratum does not own. The fifty-four-name table lives in this module rather than beside the generator because ASN1_str2mask needs it now and Phase 11 will need the same table; a second copy is a duplicated registry. RT-ASN1-STR grew to 5831 observations with thirty-eight str2mask cases covering accepted names, the DIR special case that shadows the table, the lowercase and mixed-case forms, the two separators, empty and separator-only lists, unknown names before and after an accepted one, the six modifier names that the ASN1_GEN_FLAG range test rejects, and the partial mask a refusal leaves behind. All pass on the first run, which is the first time in this stratum that a module written from a reading of the source needed no correction. Implemented libcrypto exports 920 -> 921; Phase 5 open obligations 39 -> 37.
     state state.6b6aa057e39335f1cca6e8705e88fe15c60b8cf5b0db243627ded409f5e2585b -> state.5ef38880d6673996c7801ac89d7043d9e6423aac626fa6098879d1e59c8d4458
 C38  Completed subphase 5.6: a_strex.c lands, so the string surface has no open export left except ASN1_str2mask, which belongs to asn1_gen.c. ASN1_STRING_print_ex and ASN1_STRING_print_ex_fp are one implementation with two sinks, and ASN1_STRING_to_UTF8 is the same tag2nbyte table read for a different purpose. The char_type table is the authority generated charmap.h artifact rather than a re-derivation of charmap.pl, and RT-ASN1-STR is extended to pin it behaviourally: every one of the 256 byte values printed under RFC2253, under ESC_MSB alone and under ESC_QUOTE, plus twenty-three flag sets over thirty string types. RT-ASN1-STR is now 5714 observations and passes. One finding, and it is about the probe rather than the crate: do_dump builds a stack ASN1_TYPE whose value.ptr is the ASN1_STRING, so with DUMP_DER the encoder reinterprets that pointer according to the string type - for BOOLEAN that is the low byte of a heap address, so the authority and the candidate each printed their own address and the comparison was invalid rather than failing. The probe now restricts DUMP_DER to types where the union member really is the string, and the restriction is written down where it is applied. Also fixed two clippy findings on the way (collapsible match, and i2d_ASN1_TYPE taking a const pointer). Implemented libcrypto exports 917 -> 920; Phase 5 open obligations 42 -> 39.
@@ -71,6 +73,7 @@ C1  Phase 0 constitution and Phase 1 archaeology atlas, evidence-bound
 * `K19` — `checkpoint.73c21457ed3266796156fb1e55e8a60bc559a8d9398b610297c336bb30b956fd`
 * `K2` — `checkpoint.67a75f9a16d008e6e5aec0984c93dfc7549bd7a33708b909fbf6424b04fcb4a6`
 * `K20` — `checkpoint.528dbaef805d3e05304fbc9ae6e8bee5c1a5bb2e75486f2998933b875732bed5`
+* `K21` — `checkpoint.6933308364494b57c6c48ab9e4246d741e27a9e013ea2bfac9ce0dfda8fe2f48`
 * `K3` — `checkpoint.b1516eb6364ad075785911cb204a75a6e1b83b08c1a7ca39a2de6e3983dc9aed`
 * `K4` — `checkpoint.1bde75b37e1ca3972037c29cbd3ba5291079544436db9176a82f097a6bf832fe`
 * `K5` — `checkpoint.6b0d12f1ecf380c0808bc95675222fbed7256f99bc8e9f475a0ec2693f804a0a`
@@ -79,7 +82,7 @@ C1  Phase 0 constitution and Phase 1 archaeology atlas, evidence-bound
 * `K8` — `checkpoint.7eb3dba97cbf20f2b34d14cce7e93bc2171ebd0d7ee66d1f7508cc6e199567de`
 * `K9` — `checkpoint.60105b4c8189d2668c48e173fe2c92c0ddf76160caae24efecc707bd576f506f`
 
-current: `checkpoint.528dbaef805d3e05304fbc9ae6e8bee5c1a5bb2e75486f2998933b875732bed5`
+current: `checkpoint.6933308364494b57c6c48ab9e4246d741e27a9e013ea2bfac9ce0dfda8fe2f48`
 
 ## Note: derived names are not identities
 
@@ -99,6 +102,12 @@ changed with it; the Git commit is the authoritative record of the diff.
 ## Open residuals at this boundary
 
 ```
+open [low] i2d_ASN1_bio_stream in asn_mime.c remains open pending a check for Phase 12 entanglement
+    class: verification_gap
+    persistence: 0 descendant change(s)
+open [low] the NDEF streaming happy path needs a caller-declared item with an ASN1_AUX callback; the probe declares one, and the in-tree items that do this are CMS and PKCS7, which are Phase 12
+    class: verification_gap
+    persistence: 0 descendant change(s)
 open [low] a refused name in ASN1_str2mask leaves the mask accumulated by the earlier names; reproduced and courted, and it is the authority behaviour rather than a defect
     class: expected_mismatch
     persistence: 0 descendant change(s)

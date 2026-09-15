@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 561,
       "deferred_to_later_phase": 66,
-      "implemented": 463,
-      "open_in_this_stratum": 36,
+      "implemented": 469,
+      "open_in_this_stratum": 30,
       "owned": 565
     },
     "deferred": [
@@ -671,6 +671,12 @@
       "ASN1_tag2bit",
       "ASN1_tag2str",
       "BIGNUM_it",
+      "BIO_asn1_get_prefix",
+      "BIO_asn1_get_suffix",
+      "BIO_asn1_set_prefix",
+      "BIO_asn1_set_suffix",
+      "BIO_f_asn1",
+      "BIO_new_NDEF",
       "BN_BLINDING_free",
       "BN_BLINDING_get_flags",
       "BN_BLINDING_invert",
@@ -934,36 +940,6 @@
         "symbol": "ASN1_item_print"
       },
       {
-        "declaring_header": "bio.h",
-        "module": "src/asn1/",
-        "symbol": "BIO_asn1_get_prefix"
-      },
-      {
-        "declaring_header": "bio.h",
-        "module": "src/asn1/",
-        "symbol": "BIO_asn1_get_suffix"
-      },
-      {
-        "declaring_header": "bio.h",
-        "module": "src/asn1/",
-        "symbol": "BIO_asn1_set_prefix"
-      },
-      {
-        "declaring_header": "bio.h",
-        "module": "src/asn1/",
-        "symbol": "BIO_asn1_set_suffix"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "BIO_f_asn1"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "BIO_new_NDEF"
-      },
-      {
         "declaring_header": "pem.h",
         "module": "src/pem/",
         "symbol": "PEM_ASN1_read"
@@ -1141,7 +1117,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "4032150215e41e618ad79d6dcef722b24dd1285def0ae761917ecc46cf379bed"
+      "sha256": "f01ce0b0b2ff626f5ec26ed8cb54e4e90f972f14fb269f13b8185fa6f6005b20"
     }
   ],
   "kind": "phase5-obligations",

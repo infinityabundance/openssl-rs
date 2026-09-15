@@ -70,6 +70,10 @@
       "observations": 98,
       "verdict": "pass"
     },
+    "RT-BIO-ASN1": {
+      "observations": 114,
+      "verdict": "pass"
+    },
     "RT-BIO-COMP": {
       "observations": 45,
       "verdict": "pass"
@@ -165,17 +169,17 @@
   },
   "deferred": {
     "phase3": 11,
-    "phase4": 31,
+    "phase4": 25,
     "phase5": 66
   },
   "implemented": {
-    "libcrypto": 921,
+    "libcrypto": 927,
     "libssl": 0
   },
   "open_obligations": {
     "phase3": 0,
     "phase4": 0,
-    "phase5": 36
+    "phase5": 30
   },
   "owned_obligations": {
     "phase3": 235,

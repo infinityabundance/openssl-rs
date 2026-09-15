@@ -49,6 +49,7 @@ pub mod a_type;
 pub mod a_utf8;
 pub mod asn1_gen;
 pub mod asn_pack;
+pub mod bio_asn1;
 pub mod bitstr;
 pub mod d2i;
 pub mod der;

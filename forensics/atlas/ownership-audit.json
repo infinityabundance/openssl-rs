@@ -241,18 +241,6 @@
         {
           "from_phase": 4,
           "symbols": [
-            "BIO_asn1_get_prefix",
-            "BIO_asn1_get_suffix",
-            "BIO_asn1_set_prefix",
-            "BIO_asn1_set_suffix",
-            "BIO_f_asn1",
-            "BIO_new_NDEF"
-          ],
-          "to_phase": 5
-        },
-        {
-          "from_phase": 4,
-          "symbols": [
             "BIO_new_from_core_bio",
             "BIO_s_core",
             "CONF_imodule_get_flags",
@@ -542,9 +530,52 @@
         "symbol": "OPENSSL_LH_stats_bio"
       }
     ],
-    "implemented_by_two_strata": [],
+    "implemented_by_two_strata": [
+      {
+        "phases": [
+          4,
+          5
+        ],
+        "symbol": "BIO_asn1_get_prefix"
+      },
+      {
+        "phases": [
+          4,
+          5
+        ],
+        "symbol": "BIO_asn1_get_suffix"
+      },
+      {
+        "phases": [
+          4,
+          5
+        ],
+        "symbol": "BIO_asn1_set_prefix"
+      },
+      {
+        "phases": [
+          4,
+          5
+        ],
+        "symbol": "BIO_asn1_set_suffix"
+      },
+      {
+        "phases": [
+          4,
+          5
+        ],
+        "symbol": "BIO_f_asn1"
+      },
+      {
+        "phases": [
+          4,
+          5
+        ],
+        "symbol": "BIO_new_NDEF"
+      }
+    ],
     "implemented_exports": {
-      "libcrypto": 921,
+      "libcrypto": 927,
       "libssl": 0
     },
     "invariant": "every authority export has exactly one declared owner in forensics/atlas/symbol-ownership.json, and every implemented export's owner is therefore declared before any implementation exists",
@@ -571,22 +602,24 @@
       },
       {
         "atlas": 256,
-        "ledger": 231,
-        "only_in_atlas": 41,
+        "ledger": 237,
+        "only_in_atlas": 37,
         "only_in_atlas_examples": [
-          "BIO_asn1_get_prefix",
-          "BIO_asn1_get_suffix",
-          "BIO_asn1_set_prefix",
-          "BIO_asn1_set_suffix",
           "BIO_f_nbio_test",
           "BIO_new_from_core_bio",
           "BIO_s_core",
           "COMP_CTX_free",
           "COMP_CTX_get_method",
-          "COMP_CTX_get_type"
+          "COMP_CTX_get_type",
+          "COMP_CTX_new",
+          "COMP_brotli",
+          "COMP_brotli_oneshot",
+          "COMP_compress_block"
         ],
-        "only_in_ledger": 16,
+        "only_in_ledger": 18,
         "only_in_ledger_examples": [
+          "BIO_f_asn1",
+          "BIO_new_NDEF",
           "ERR_add_error_mem_bio",
           "ERR_print_errors",
           "ERR_print_errors_cb",
@@ -594,9 +627,7 @@
           "OBJ_create_objects",
           "OPENSSL_INIT_free",
           "OPENSSL_INIT_new",
-          "OPENSSL_INIT_set_config_appname",
-          "OPENSSL_INIT_set_config_file_flags",
-          "OPENSSL_INIT_set_config_filename"
+          "OPENSSL_INIT_set_config_appname"
         ],
         "phase": 4
       },
@@ -748,7 +779,9 @@
       "libssl": 0
     },
     "previous_invariant": "every implemented export is claimed by at least one phase family",
-    "problems": [],
+    "problems": [
+      "these exports are counted as implemented by more than one stratum, so the work is double-counted and neither ledger's completeness claim is about the work it actually did:\n  BIO_asn1_get_prefix: phases [4, 5]\n  BIO_asn1_get_suffix: phases [4, 5]\n  BIO_asn1_set_prefix: phases [4, 5]\n  BIO_asn1_set_suffix: phases [4, 5]\n  BIO_f_asn1: phases [4, 5]\n  BIO_new_NDEF: phases [4, 5]"
+    ],
     "unowned_implemented": [],
     "unowned_remainder": {
       "libcrypto": {
@@ -5883,7 +5916,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "d411c6d7c245d59b39bfd4fdbceaf6e2f29eebd3b1954ac82264b9e74837f222"
+      "sha256": "9864d010f08c7c5a96d9d12c1d997d0ed764675f1b80c4bf38bcfbf986831150"
     },
     {
       "name": "authority-symbols",
@@ -5908,17 +5941,17 @@
     {
       "name": "ledger-result",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "6084616f184dc8df093c5e0748c3038b517a2b529ec7bc4955a5134e8550027d"
+      "sha256": "b731c8159b57c2f9e5d580cb3b324aca5089de166263a7b3ddf9cf20c50fbded"
     },
     {
       "name": "ledger-result",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "fe20bcc403716307a03a84fc8da535bb3560ac70206cf5dd7948648320b6f470"
+      "sha256": "385206b9f817d3afb973d7839f4473c1c0c7bf1dcd0afab925a5822bba7d6c6f"
     },
     {
       "name": "ledger-result",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "366a55317a8b42d89b210cd448b4971eeca8774d9dd7258af419456ae9663bee"
+      "sha256": "b19d761314dc7863cfeced728f6b231d8674611cd55d225b10c3f2637a3275f9"
     }
   ],
   "kind": "ownership-audit",

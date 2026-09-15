@@ -149,6 +149,12 @@ COURTS: list[tuple[str, int, str, str]] = [
      "ASN1_STRING_set_default_mask_asc, the two number printers, and the escaping\n"
      "printer ASN1_STRING_print_ex over twenty-three flag sets and every one of the\n"
      "256 byte values, with ASN1_STRING_to_UTF8 over each character type"),
+    ("rt-bio-asn1", 5, "rt_bio_asn1_probe",
+     "the ASN.1 filter BIO and the NDEF bridge: the write path as a state machine\n"
+     "that re-emits its header when the declared content is exhausted, the prefix\n"
+     "and suffix runs with their cleanup callbacks counted, the four prefix/suffix\n"
+     "controls and the two EX_ARG controls, the flush-before-any-write case, the\n"
+     "pass-through paths, and BIO_new_NDEF over a caller-declared streaming item"),
 ]
 
 
