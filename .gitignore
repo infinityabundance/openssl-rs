@@ -68,3 +68,9 @@ __pycache__/
 # under `forensics/` is never evidence, so the whole shape is excluded rather than
 # the two names.
 /forensics/.*.rs
+
+# Commit-message and scratch files edited to a dot-prefixed name so they sort first,
+# then swept in by `git add -A`. The same accident as the two `.rs` splice files
+# above, one directory up: a dot-prefixed file at the repository root is never
+# evidence, so the shape is excluded rather than the names.
+.*.tmp
