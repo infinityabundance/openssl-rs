@@ -202,8 +202,37 @@ def canon_c_type(
     t = " ".join(text.replace("volatile ", "").split())
     if t in ("void", ""):
         return "void"
-    if "(*" in t:
-        return canon_c_fnptr(t, typedefs, depth)
+    # A function *pointer* and a function *type with a pointer return* both spell `*(`, so
+    # a substring test cannot tell `int (*)(BIO *, int)` from `void *(void **, long)`.
+    # What separates them is where the `*` sits: in the first it is the declarator inside
+    # the outermost group, and in the second it belongs to the return type in front of it.
+    #
+    # This was found by `d2i_of_void`, whose return is `void *`: it went down the
+    # function-pointer path and failed, so every prototype mentioning it was reported
+    # unmapped, while `i2d_of_void` — the same shape with an `int` return — mapped. The
+    # instrument was the suspect before the declarations were, again.
+    groups = top_level_groups(t)
+    if groups:
+        g0 = groups[0]
+        inner = t[g0[0] + 1:g0[1]].strip()
+        if inner.startswith("*"):
+            return canon_c_fnptr(t, typedefs, depth)
+        if "*" in t[:g0[0]] and not t[g0[1] + 1:].strip():
+            # `RET *(...)`: a function type whose return is a pointer. The regex branch
+            # below cannot match it, because its return-type group allows only letters,
+            # digits and spaces.
+            ret = canon_c_type(t[:g0[0]], typedefs, depth + 1)
+            if ret is None:
+                return None
+            args: list[str] = []
+            for a in split_top_level(inner):
+                if a.strip() in ("", "void"):
+                    continue
+                c = canon_c_type(a, typedefs, depth + 1)
+                if c is None:
+                    return None
+                args.append(c)
+            return f"fn({ret}; {', '.join(args)})"
     if t.endswith("*"):
         inner = canon_c_type(t[:-1].strip(), typedefs, depth + 1, pointee=True)
         if inner is None:

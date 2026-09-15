@@ -281,6 +281,19 @@ pub type Asn1AuxCb =
 pub type Asn1AuxConstCb =
     unsafe extern "C" fn(c_int, *const *const c_void, *const Asn1Item, *mut c_void) -> c_int;
 
+/// `d2i_of_void` — `void *d2i_of_void(void **, const unsigned char **, long)`.
+///
+/// A *function type*, so a parameter spelled `d2i_of_void *` is a bare function
+/// pointer. The contract requires a non-null one: `ASN1_dup` and `ASN1_d2i_bio` call it
+/// without checking, exactly as the authority does.
+pub type D2iOfVoid =
+    unsafe extern "C" fn(*mut *mut c_void, *mut *const c_uchar, c_long) -> *mut c_void;
+
+/// `i2d_of_void` — `int i2d_of_void(const void *, unsigned char **)`.
+///
+/// As [`D2iOfVoid`]: a function type whose pointer a caller must supply.
+pub type I2dOfVoid = unsafe extern "C" fn(*const c_void, *mut *mut c_uchar) -> c_int;
+
 /// `ASN1_PRIMITIVE_FUNCS` — the hooks a primitive type may supply.
 ///
 /// A caller can supply its own, and an `ASN1_ITYPE_PRIMITIVE` item with non-null

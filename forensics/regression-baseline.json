@@ -157,13 +157,13 @@
     "phase5": 62
   },
   "implemented": {
-    "libcrypto": 829,
+    "libcrypto": 843,
     "libssl": 0
   },
   "open_obligations": {
     "phase3": 0,
     "phase4": 0,
-    "phase5": 129
+    "phase5": 115
   },
   "owned_obligations": {
     "phase3": 235,

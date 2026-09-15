@@ -3,14 +3,14 @@
   "body": {
     "canonical_form": "both sides are reduced to one grammar: `void`; `int:<bytes>:<s|u>`; `float:<bytes>`; `ptr(<inner>)`; `const(<inner>)`; `fn(<ret>; <args>)`; `opaque`. A struct pointee's *name* is deliberately discarded -- `*mut Asn1String` and `*mut c_void` are the same to a caller -- while pointer depth, pointee constness, integer width and signedness, and function-pointer argument shape are kept. A type the table cannot canonicalise is reported under `type_unmapped` and never counted as a pass",
     "counts": {
-      "checked": 673,
+      "checked": 686,
       "declaration_is_generated": 146,
       "implementation_is_c": 8,
-      "implemented": 829,
+      "implemented": 843,
       "mismatches": 0,
-      "no_prototype_in_atlas": 2,
+      "no_prototype_in_atlas": 3,
       "not_found": 0,
-      "type_checked": 673,
+      "type_checked": 686,
       "type_mismatches": 0,
       "type_unmapped": 0,
       "unclassified": 0
@@ -176,7 +176,8 @@
     "mismatches": [],
     "no_prototype_in_atlas": [
       "OPENSSL_DIR_end",
-      "OPENSSL_DIR_read"
+      "OPENSSL_DIR_read",
+      "asn1_d2i_read_bio"
     ],
     "not_found": [],
     "note": "A symbol this court cannot classify -- including one the crate declares from a `macro_rules!` -- is reported under its own heading and never counted as a pass, so `mismatches == 0` must be read together with `checked`, and `type_mismatches == 0` together with `type_checked`. The type plane's canonical form is what the court can defend; it does not claim two declarations are textually identical.",
@@ -201,7 +202,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "25071ccb4bc26580e4a075d97d0f4ceae8889582957fda72a61538a9d461d37b"
+      "sha256": "86175c907df4990f355adeb72523ff67842a61eeadf313da83c19f80298ca6b9"
     }
   ],
   "kind": "prototype-court",

@@ -3570,3 +3570,63 @@ whose contract cannot be checked.
 the template interpreter is exercised only insofar as the items this stratum defines reach
 it — which, for a template-bearing item, is not at all. Nothing in this session is
 `PARITY_VERIFIED`; the stratum stays `in-progress`, and this is a staging commit.
+
+## D82 — The stream layer lands, and the prototype court's C type parser was the last instrument at fault
+
+`ASN1_dup`/`ASN1_item_dup` (`a_dup.c`), the encode-to-stream family
+(`a_i2d_fp.c`: `ASN1_i2d_fp`, `ASN1_i2d_bio`, `ASN1_item_i2d_fp`,
+`ASN1_item_i2d_bio`, `ASN1_item_i2d_mem_bio`) and the decode-from-stream family
+(`a_d2i_fp.c`: `ASN1_d2i_fp`, `ASN1_d2i_bio`, `ASN1_item_d2i_bio_ex`,
+`ASN1_item_d2i_bio`, `ASN1_item_d2i_fp_ex`, `ASN1_item_d2i_fp`,
+`asn1_d2i_read_bio`) are implemented. `implemented[libcrypto]` moved 829 → 843 and the
+stratum's open list 129 → 115.
+
+### `ASN1_d2i_fp`'s `xnew` is dead, and stays
+
+`xnew` is taken and **never called** — not by `ASN1_d2i_fp`, not by `ASN1_d2i_bio`, and
+not by the authority either. It is in the signature because the 0.9.6-era API had one. It
+is kept, bound to `_`, because a caller passing a function pointer is part of the
+observable interface even when the pointer is ignored, and because dropping it would
+change the symbol's arity.
+
+### The two decisions `asn1_d2i_read_bio` actually consists of
+
+Everything else in that function is buffer bookkeeping. Two things are not:
+
+* **`ASN1_R_TOO_LONG` from `ASN1_get_object` is recoverable.** It means the buffer does
+  not yet hold the bytes the declared length needs. The reason is popped with
+  `ERR_pop_to_mark` and a fresh mark taken, so a stream arriving in pieces does not
+  accumulate one error per read. Any *other* reason from that call is fatal.
+* **A clean EOF at a top-level boundary is the normal end of input and raises nothing.**
+  A read failure, an EOF with bytes already buffered, and an EOF still owing an
+  end-of-contents marker are all `ASN1_R_NOT_ENOUGH_DATA`. The authority's own comment
+  names the consumers that depend on the quiet case — callers looping over concatenated
+  DER values, including CPython's `ssl` module — so getting this wrong is observable as a
+  spurious error rather than as a missing one.
+
+The multi-byte tag scan is transcribed as the authority writes it, including the detail
+that `while (diff > 0 && *(q++) & 0x80)` consumes a byte only when `diff > 0`, which is
+why the `diff == 0` branch afterwards reads a byte the loop did not consume. And `off`
+advances by `slen`, **not** by the mutated `want` — the two diverge in the chunked-read
+path, and conflating them would have made a short read advance the offset by too little.
+
+### The instrument was the suspect once more, and twice over
+
+`ABI-PROTOTYPE` reported `ASN1_dup` and `ASN1_d2i_fp` as `TYPE-UNMAPPED` on the
+*authority* side. The declarations were fine. `canon_c_type` decided
+function-pointer-versus-function-type with `"(*" in t`, and both `int (*)(BIO *, int)`
+(a pointer to a function) and `void *(void **, long)` (a function returning `void *`)
+contain that substring. `d2i_of_void` has the second shape, so it resolved to `None`;
+`i2d_of_void` has the same shape with an `int` return, so it resolved — which is the
+signature of an instrument defect rather than a declaration defect.
+
+The test is now structural: the `*` must be the *declarator*, inside the first top-level
+group. `int (*)(...)` has a group whose content begins with `*`; `void *(...)` has one
+that does not, and its return type is what precedes the group. The regex branch below
+could not have caught it either, because its return-type group admits only letters, digits
+and spaces. Both planes are now clean over 686 checked declarations.
+
+This is the fourth instrument defect this stratum has found — after the ERR source
+coordinates, the evidence-regeneration ordering and the parameter-splitter comment — and
+it was found the same way: by noticing that a *pass* and a *fail* shared a shape that the
+declarations did not explain.

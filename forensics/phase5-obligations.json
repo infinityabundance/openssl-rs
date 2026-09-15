@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 561,
       "deferred_to_later_phase": 62,
-      "implemented": 374,
-      "open_in_this_stratum": 129,
+      "implemented": 388,
+      "open_in_this_stratum": 115,
       "owned": 565
     },
     "deferred": [
@@ -556,15 +556,28 @@
       "ASN1_VISIBLESTRING_new",
       "ASN1_check_infinite_end",
       "ASN1_const_check_infinite_end",
+      "ASN1_d2i_bio",
+      "ASN1_d2i_fp",
+      "ASN1_dup",
       "ASN1_get_object",
+      "ASN1_i2d_bio",
+      "ASN1_i2d_fp",
       "ASN1_item_d2i",
+      "ASN1_item_d2i_bio",
+      "ASN1_item_d2i_bio_ex",
       "ASN1_item_d2i_ex",
+      "ASN1_item_d2i_fp",
+      "ASN1_item_d2i_fp_ex",
+      "ASN1_item_dup",
       "ASN1_item_ex_d2i",
       "ASN1_item_ex_free",
       "ASN1_item_ex_i2d",
       "ASN1_item_ex_new",
       "ASN1_item_free",
       "ASN1_item_i2d",
+      "ASN1_item_i2d_bio",
+      "ASN1_item_i2d_fp",
+      "ASN1_item_i2d_mem_bio",
       "ASN1_item_ndef_i2d",
       "ASN1_item_new",
       "ASN1_item_new_ex",
@@ -756,6 +769,7 @@
       "DISPLAYTEXT_free",
       "DISPLAYTEXT_it",
       "DISPLAYTEXT_new",
+      "asn1_d2i_read_bio",
       "d2i_ASN1_BIT_STRING",
       "d2i_ASN1_BMPSTRING",
       "d2i_ASN1_ENUMERATED",
@@ -1076,77 +1090,12 @@
       {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
-        "symbol": "ASN1_d2i_bio"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_d2i_fp"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_dup"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
         "symbol": "ASN1_generate_nconf"
       },
       {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
         "symbol": "ASN1_generate_v3"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_i2d_bio"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_i2d_fp"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_d2i_bio"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_d2i_bio_ex"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_d2i_fp"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_d2i_fp_ex"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_dup"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_i2d_bio"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_i2d_fp"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/",
-        "symbol": "ASN1_item_i2d_mem_bio"
       },
       {
         "declaring_header": "asn1.h",
@@ -1429,11 +1378,6 @@
         "symbol": "a2i_ASN1_STRING"
       },
       {
-        "declaring_header": "(no installed header)",
-        "module": "src/asn1/",
-        "symbol": "asn1_d2i_read_bio"
-      },
-      {
         "declaring_header": "asn1.h",
         "module": "src/asn1/",
         "symbol": "d2i_ASN1_SEQUENCE_ANY"
@@ -1491,7 +1435,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "71d2654c2acc672f9aa9afb660a1cb1da15e522c6af576ca6d453be6fe49a4e8"
+      "sha256": "d56e699bd95f65c70179679c42cb774dc6cd6d1efaada77cdf57b1f11d579388"
     }
   ],
   "kind": "phase5-obligations",
