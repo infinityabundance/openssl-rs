@@ -117,8 +117,14 @@ use crate::runtime::thread::{
     CRYPTO_THREAD_write_lock, CryptoOnce, CryptoRwlock, CryptoThreadLocal,
 };
 
+pub mod core_bio;
+pub mod dispatch;
 pub mod namemap;
 pub mod thread_data;
+
+/// `OSSL_LIB_CTX_BIO_CORE_INDEX`, from `include/internal/cryptlib.h`. Slot 17,
+/// filled by 6.6c.
+pub(crate) const OSSL_LIB_CTX_BIO_CORE_INDEX: c_int = 17;
 
 /// `OSSL_LIB_CTX_NAMEMAP_INDEX`, from `include/internal/cryptlib.h`. Slot 4,
 /// filled by 6.6b.
@@ -357,6 +363,17 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
     // SAFETY: as above.
     unsafe { (*ctx).namemap = namemap.cast::<c_void>() };
 
+    // The core BIO globals. The authority builds them after `global_properties`
+    // (not this stratum's) and before `drbg_nonce`; their position relative to
+    // the two callback holders and the thread slot below is the authority's.
+    let bio_core = crate::context::core_bio::ossl_bio_core_globals_new(ctx.cast::<c_void>());
+    if bio_core.is_null() {
+        context_deinit(ctx);
+        return false;
+    }
+    // SAFETY: as above.
+    unsafe { (*ctx).bio_core = bio_core.cast::<c_void>() };
+
     // The two callback holders. The authority builds them after `drbg_nonce` and
     // before the thread slot, and each is a plain `OPENSSL_zalloc`ed pair.
     let self_test_cb = crate::selftest::ossl_self_test_set_callback_new(ctx.cast::<c_void>());
@@ -402,6 +419,24 @@ fn context_deinit_objs(ctx: *mut OsslLibCtx) {
                     .cast::<crate::context::namemap::OsslNamemap>(),
             );
             (*ctx).namemap = ptr::null_mut();
+        }
+    }
+
+    // The core BIO globals, released before the two callback holders, as the
+    // authority releases them (`bio_core` follows `global_properties` and precedes
+    // `drbg_nonce` in its order too).
+    // SAFETY: `ctx` is a live context being torn down by `context_deinit`, and no
+    // other thread holds a reference to it -- `OSSL_LIB_CTX_free` is the only
+    // caller and the caller contract is that the object is no longer in use. Each
+    // slot is released exactly once and re-NULLed.
+    unsafe {
+        if !(*ctx).bio_core.is_null() {
+            crate::context::core_bio::ossl_bio_core_globals_free(
+                (*ctx)
+                    .bio_core
+                    .cast::<crate::context::core_bio::BioCoreGlobals>(),
+            );
+            (*ctx).bio_core = ptr::null_mut();
         }
     }
 
@@ -598,6 +633,44 @@ pub extern "C" fn OSSL_LIB_CTX_new() -> *mut c_void {
             return ptr::null_mut();
         }
         ctx.cast::<c_void>()
+    })
+}
+
+/// `OSSL_LIB_CTX *OSSL_LIB_CTX_new_from_dispatch(const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in)`
+///
+/// A context whose core BIO callbacks come from an application-supplied dispatch
+/// table. It is exactly [`OSSL_LIB_CTX_new`] followed by the table walk, and the
+/// context is released if the walk fails, so a caller never sees a half-built
+/// one.
+///
+/// `handle` is accepted and unused — the authority passes it to nothing in this
+/// path; a provider child context is `OSSL_LIB_CTX_new_child` (6.6d), which is
+/// what actually uses a core handle.
+///
+/// # Safety
+/// `disp` must be NULL or a `OSSL_DISPATCH_END`-terminated table whose function
+/// pointers remain callable for as long as the context may use them, and whose
+/// callbacks accept whatever handle [`crate::context::core_bio::BIO_new_from_core_bio`]
+/// is later given.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_LIB_CTX_new_from_dispatch(
+    handle: *const c_void,
+    disp: *const crate::context::dispatch::OsslDispatch,
+) -> *mut c_void {
+    guard_ffi(ptr::null_mut(), || {
+        let _ = handle;
+        let ctx = OSSL_LIB_CTX_new();
+        if ctx.is_null() {
+            return ptr::null_mut();
+        }
+        // SAFETY: `ctx` was just created and has not been published, so this
+        // thread is the only one that can observe the table walk's writes.
+        if unsafe { crate::context::core_bio::ossl_bio_init_core(ctx, disp) } == 0 {
+            // SAFETY: `ctx` is live and not the default, so this releases it.
+            unsafe { OSSL_LIB_CTX_free(ctx) };
+            return ptr::null_mut();
+        }
+        ctx
     })
 }
 

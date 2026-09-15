@@ -79,7 +79,7 @@ received by hand-off. Both numbers are in the ledger's `counts` block, and
 | 6.6 | `OSSL_LIB_CTX` + the core dispatch table | `crypto/context.c` (658 lines), `crypto/core_algorithm.c`, `crypto/core_namemap.c`, the ten reassigned `OSSL_LIB_CTX_*` | 6.5 | `RT-LIBCTX` | **split into 6.6a–6.6g** on the dependencies 6.6a's reconnaissance found: two of the ten exports cannot be written before the core BIO (`new_from_dispatch`), the provider-child path (`new_child`) and `CONF_modules_load_file_ex` (`load_config`) exist, and those belong to 6.6c, 6.6d and 6.10. The index-slot table below is part of this subphase's closure |
 | 6.6a | the context itself | the seven of the ten exports that need nothing else: `new`, `free`, `get0_global_default`, `set0_default`, `get_data`, `get_conf_diagnostics`, `set_conf_diagnostics`; `src/context/mod.rs` | 6.5 | `RT-LIBCTX` | **COMPLETE** (D106): the identity contract — the default chain, the three `free` cases of which two are no-ops, `conf_diagnostics` as per-context state, and the index registry's shape. 73 observations, zero residuals, first run. The three remaining exports are 6.6c/d/g, and the seventeen unfilled index slots are named below |
 | 6.6b | the namemap | `crypto/core_namemap.c` — `src/context/namemap.rs`; fills slot 4 | 6.6a | `RT-LIBCTX` | **COMPLETE** (D109): all ten internal functions over a real `STACK_OF(NAMES)`, the bit-5-mask key comparison at the authority's 63-byte bound, the two split refusals and their order-dependence, and the `stored` flag's effect on the releaser. It adds no export, so the slot is what the court can see (RT-LIBCTX 79 → 81). The legacy pre-population is deferred **whole** to Phase 13, with the reason — running the RSA-PSS block alone would make the emptiness guard false and hide a later phase's legacy load |
-| 6.6c | the core BIO | `crypto/bio/bio_core.c` — `src/context/core_bio.rs`; fills slot 17; adds `OSSL_LIB_CTX_new_from_dispatch` | 6.6a | `RT-LIBCTX`, `RT-BIO-CORE` | a BIO that a provider writes to the application's own BIO through, the `OSSL_DISPATCH` walk that finds the core's BIO callbacks, and the two exports `BIO_s_core` and `BIO_new_from_core_bio` |
+| 6.6c | the core BIO | `crypto/bio/bss_core.c` — `src/context/core_bio.rs`; `src/context/dispatch.rs`; fills slot 17; adds `OSSL_LIB_CTX_new_from_dispatch` | 6.6a | `RT-LIBCTX`, `RT-BIO-CORE` | **COMPLETE** (D110): `BIO_s_core`, `BIO_new_from_core_bio` and `OSSL_LIB_CTX_new_from_dispatch` implemented, and `RT-BIO-CORE` observes 108 behaviours on each side with zero residuals — the method's identity and stable address, the constructor's refusal without a table and its acceptance of a table carrying only one of `read_ex`/`write_ex`, the five-way answer to a missing callback (`read_ex`/`write_ex` answer 0, `ctrl`/`gets`/`puts` answer −1, `destroy` answers 0) over two deliberately incomplete tables, the handle compared against the constructor's argument and against NULL, two contexts holding two tables named by the answers their callbacks produce, an up-ref that refuses, and a BIO built with a NULL context whose `libctx` is stored as given and resolved at *use* time. The court found no defect; it found that slot 17 is filled **eagerly** by `context_init`, which is why the constructor's NULL answer comes from the absent callbacks rather than from an absent globals block |
 | 6.6d | the child context | `OSSL_LIB_CTX_new_child` and the `ischild` flag, which needs `ossl_provider_init_as_child` | 6.6c, 6.8 | `RT-LIBCTX` | a context whose default properties and provider set come from its parent, and the `free` child-provider deinit that 6.6a leaves a named line for |
 | 6.6e | the thread slot and the counter accessors | `crypto/thread/internal.c`'s `ossl_threads_ctx_new`/`_free` and `crypto/thread/api.c`'s `OSSL_get_max_threads`/`OSSL_set_max_threads`; `src/context/thread_data.rs`; fills slot 19 | 6.6a | `RT-THREADDATA` | **COMPLETE** (D107): the slot and the two accessors, 39 observations, zero residuals, first run. The counter is per **context**, a NULL context follows the thread default, and the value is stored verbatim with no range check. The condition variable the slot owns is created and released here because `ossl_threads_ctx_new` fails without it; nothing waits on it until the thread pool exists |
 | 6.6e-ii | the thread-stop pair and `OPENSSL_atexit` | `crypto/initthread.c` — the per-thread event-handler table, `OSS_get_avail_threads`, `ossl_ctx_thread_stop`; and `crypto/init.c`'s `OPENSSL_atexit` | 6.6e, 6.9 | `RT-THREADDATA` | `OPENSSL_thread_stop` and `OPENSSL_thread_stop_ex`, which need the handler table that `ossl_init_thread_deregister` walks; and `OPENSSL_atexit`, which pins the handler's object with `DSO_dsobyaddr` and so waits for the loader. These three are the remainder of the five Phase 3 hand-offs, and 6.6a's `context_deinit` names the `ossl_ctx_thread_stop` line it is waiting for |
@@ -121,7 +121,7 @@ symbol ledgers can see a *field* that was never filled. The table is the record.
 | 14 | `global_properties` | 6.7 |
 | 15 | `store_loader_store` | Phase 10 |
 | 16 | `provider_conf` | 6.8 |
-| 17 | `bio_core` | 6.6c |
+| 17 | `bio_core` | **filled by 6.6c** |
 | 18 | `child_provider` | 6.8 |
 | 19 | `threads` | **filled by 6.6e** |
 | 20 | `decoder_cache` | Phase 7 |
@@ -140,15 +140,17 @@ allocation that merely makes the pointer non-NULL would satisfy the *observation
 saying something false about the object, which is what this project calls a fake-success
 stub. The arms in `src/context/mod.rs` answer NULL until their owner lands.
 
-**Why the probe does not simply observe all eighteen.** Zero of the seventeen unfilled
-slots can be observed without comparing a *missing subsystem* rather than a divergence,
-and that is the obligation ledger's business, not a court's — the same rule that keeps
-the phase-4 and phase-5 probes on the implemented surface. `RT-LIBCTX` therefore observes
-the **dead** indices (which answer NULL in the authority because its `switch` has no arm
-for them, and must answer NULL here for the same reason), plus the slots this stratum has
-filled, and it prints `libctx.slots.live`, `.filled` and `.deferred` so the transcript
-states the scope of its own table rather than leaving it to be inferred. When 6.6b lands,
-slot 4 is added to the probe's `filled_slots` array and the counts move with it.
+**Why the probe does not simply observe all eighteen.** A slot whose owner has not landed
+can only be observed as a *missing subsystem* rather than as a divergence, and that is the
+obligation ledger's business, not a court's — the same rule that keeps the phase-4 and
+phase-5 probes on the implemented surface. `RT-LIBCTX` therefore observes the **dead**
+indices (which answer NULL in the authority because its `switch` has no arm for them, and
+must answer NULL here for the same reason), plus the slots this stratum has filled, and it
+prints `libctx.slots.live`, `.filled` and `.deferred` so the transcript states the scope
+of its own table rather than leaving it to be inferred. The three counts are derived from
+the probe's own `filled_slots` array and the authority's index space, never typed, so a
+subphase that lands adds its slot there and the counts move with it. The rows above carry
+the running total so that the *document* cannot drift either.
 
 ### Why 6.0 comes before any implementation
 

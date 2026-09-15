@@ -91,6 +91,10 @@
       "observations": 296,
       "verdict": "pass"
     },
+    "RT-BIO-CORE": {
+      "observations": 109,
+      "verdict": "pass"
+    },
     "RT-BIO-DEBUG": {
       "observations": 57,
       "verdict": "pass"
@@ -156,7 +160,7 @@
       "verdict": "pass"
     },
     "RT-LIBCTX": {
-      "observations": 81,
+      "observations": 83,
       "verdict": "pass"
     },
     "RT-MEM": {
@@ -219,14 +223,14 @@
     "phase6": 0
   },
   "implemented": {
-    "libcrypto": 1073,
+    "libcrypto": 1076,
     "libssl": 0
   },
   "open_obligations": {
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,
-    "phase6": 62
+    "phase6": 59
   },
   "owned_obligations": {
     "phase3": 294,

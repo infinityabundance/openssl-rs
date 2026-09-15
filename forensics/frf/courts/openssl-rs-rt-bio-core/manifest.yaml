@@ -1,0 +1,59 @@
+# openssl-rs court: the Phase 6 `rt-bio-core` runtime surface.
+#
+# The subject is the transcript of a differential probe: one C program that
+# prints one `key=value` line per observation while exercising
+#
+#     the core BIO method, whose every operation is a forward to an application-supplied dispatch entry: the method's identity and stable address; BIO_CORE_INDEX filled eagerly by context_init rather than on first use; the constructor's refusal without a table and its acceptance when only one of read_ex/write_ex is present; the five-way answer to a missing callback, where read_ex and write_ex answer 0 and ctrl, gets and puts answer -1, observed by supplying deliberately incomplete tables; the handle the callbacks receive, compared against the constructor's argument and against NULL rather than printed; two contexts holding two different tables, named by the answers their callbacks produce; an up-ref that refuses, which releases the wrapper with a NULL handle and never the caller's handle; and a BIO built with a NULL context, whose libctx is stored as given and resolved against the thread default at use time
+#
+# The same source is compiled against the admitted authority and against the
+# candidate, each side executes its own binary, and FRF compares the
+# transcripts.
+#
+# Scope: the observations the probe makes. It is NOT a claim about surface the
+# probe does not touch, and not a cryptographic or security claim.
+
+court:
+  id: openssl-rs-rt-bio-core
+  question: >-
+    For the rt-bio-core runtime surface in fixture family rt-bio-core, does
+    the candidate produce the same observable transcript as the admitted
+    authority OpenSSL 3.6.4 when both run the same probe over the same
+    fixture?
+  falsifier: >-
+    Any observation line differs between the two transcripts, or either
+    side's exit class differs.
+  authority: openssl-rt-3.6.4-r2
+  candidate:
+    name: openssl-rs
+    version_or_commit: "0.0.9"
+    build_profile: linux-x86_64-default-shared-legacy-notests
+    path: forensics/frf/refs/candidate-runtime-probe.sh
+  fixture:
+    id: probe-list.txt
+    path: forensics/frf/courts/openssl-rs-rt-bio-core/fixtures/probe-list.txt
+    arguments: ["{fixture}", "phase6"]
+  admissibility_envelope:
+    fixture_family: rt-bio-core
+    platforms: ["x86_64-linux"]
+    observables: [stdout, exit]
+    normalizers: []
+    replay_scope: single-run
+  execution_context:
+    artifacts:
+      - path: forensics/frf/refs/authority-runtime-probe.sh
+        role: child-executable
+      - path: forensics/frf/refs/candidate-runtime-probe.sh
+        role: child-executable
+      - path: artifacts/phase6/probes/rt_bio_core_probe.authority
+        role: child-executable
+      - path: artifacts/phase6/probes/rt_bio_core_probe.candidate
+        role: child-executable
+      - path: courts/phase6/rt_bio_core_probe.c
+        role: data
+      - path: forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+        role: runtime-library
+      - path: artifacts/phase2/libcrypto.so.3
+        role: runtime-library
+  environment:
+    LC_ALL: C
+    TZ: UTC

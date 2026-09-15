@@ -53,7 +53,7 @@
       },
       {
         "declaring_header": "bio.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/bio/",
         "owning_phase": 6,
         "reason": "wraps an OSSL_CORE_BIO; OSSL_LIB_CTX is Phase 6",
@@ -61,7 +61,7 @@
       },
       {
         "declaring_header": "bio.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/bio/",
         "owning_phase": 6,
         "reason": "the provider core-to-BIO method; OSSL_LIB_CTX is Phase 6",
@@ -553,7 +553,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "64956ccc123e27096e3f0f5f7884b73fecb7af8408d5e69f3f8bd40202bc8718"
+      "sha256": "8b7f00dca8c66827ed90500b1426c6bd8ac793483813f770349374354fd33228"
     }
   ],
   "kind": "phase4-obligations",

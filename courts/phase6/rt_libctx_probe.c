@@ -126,16 +126,19 @@ static void says(const char *key, const char *s)
 #define IDX_SELF_TEST_CB 12
 #define IDX_THREAD 19
 #define IDX_INDICATOR_CB 22
+#define IDX_BIO_CORE 17
 
 /* The eighteen indices the authority answers a pointer for. */
 #define LIVE_SLOTS 18
 
 /* The slots this stratum fills. 21 answers `&ctx->comp_methods`, so it is exact as
- * soon as the field exists; 4 is the namemap (6.6b), 19 the thread slot (6.6e), and
- * 12 and 22 the two callback holders (6.11). Each later subphase appends its slot
- * here when it lands. */
+ * soon as the field exists; 4 is the namemap (6.6b), 19 the thread slot (6.6e),
+ * 17 the core BIO globals (6.6c, filled eagerly by `context_init`), and 12 and 22
+ * the two callback holders (6.11). Each later subphase appends its slot here when
+ * it lands. */
 static const int filled_slots[] = { IDX_COMP_METHODS, IDX_NAMEMAP, IDX_THREAD,
-                                    IDX_SELF_TEST_CB, IDX_INDICATOR_CB };
+                                    IDX_BIO_CORE, IDX_SELF_TEST_CB,
+                                    IDX_INDICATOR_CB };
 #define FILLED_COUNT ((int) (sizeof filled_slots / sizeof filled_slots[0]))
 
 /* The indices the authority answers NULL for, and why: 7 and 8 are slots it reuses

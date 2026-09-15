@@ -513,3 +513,64 @@ observations that *can* be made around each boundary are compared normally.
   an `ASN1_ITEM_EXP` — is the same class and is equally unreproduced.
 - **Claim removed:** not claimed compatible. The probe does not exercise these, because a
   probe cannot compare a crash.
+
+### D-BIOCORE-1 — `BIO_new_from_core_bio` calls a NULL `BIO_up_ref`
+
+- **Obligation:** `BIO_new_from_core_bio(libctx, corebio)` where the context's dispatch
+  table supplies `BIO_read_ex` and/or `BIO_write_ex` but **no** `BIO_up_ref`.
+- **Authority:** the constructor's guard tests only the two I/O callbacks, and the next
+  statement is
+  ```c
+  if (!bcgbl->c_bio_up_ref(corebio)) { BIO_free(outbio); return NULL; }
+  ```
+  with no test for `c_bio_up_ref == NULL`. Measured: the guard passes, a BIO is created,
+  and the unguarded call jumps to address zero. A table with only one of `read_ex` and
+  `write_ex` is therefore accepted by the *guard* and fatal by the *next line*.
+- **Candidate:** answers the documented failure instead. The `up_ref` slot is an
+  `Option<fn>`, so absence is representable; a missing `up_ref` releases the wrapper BIO
+  it just created and returns NULL, exactly as an `up_ref` that answers 0 does. This is
+  the same reachable failure a caller who supplied a refusing `up_ref` sees, which is
+  why it can be answered rather than reproduced.
+- **Reason:** `docs/UNSAFE.md` §5 — a crash is not reproduced merely because an observed
+  run produced one. No caller that supplies a usable table can tell the two behaviours
+  apart, because every path that reaches the unguarded call in the authority dies there.
+- **Claim removed:** a table without `BIO_up_ref` is not claimed to produce a BIO.
+  `RT-BIO-CORE` stops one step short: it supplies a table that has `up_ref` and *refuses*
+  (`noup.bio=NULL`, and the wrapper's `BIO_free` callback runs with a NULL handle), which
+  the authority answers without faulting and which is compared.
+
+### D-BIOCORE-2 — `bio_core_free` calls a NULL `BIO_free`
+
+- **Obligation:** releasing any core BIO whose context has no `BIO_free` callback —
+  which includes every BIO built as `BIO_new(BIO_s_core())`, since no export installs a
+  table on the default context.
+- **Authority:** `bio_core_free` tests only the globals block, then calls
+  `bcgbl->c_bio_free(BIO_get_data(bio))` with no NULL test on the stored pointer. The
+  globals block is non-NULL for every context (`context_init` fills slot 17 eagerly), so
+  the first test never fires and the second call is unguarded.
+- **Candidate:** answers `0` from the destroy operation when the callback is absent, and
+  lets `BIO_free` proceed to release the wrapper. `0` from `destroy` is not observable
+  through `BIO_free`, whose return value reports the reference count rather than the
+  destroy result.
+- **Reason:** as D-BIOCORE-1.
+- **Claim removed:** `BIO_free` of a core BIO whose context supplied no `BIO_free`
+  callback is not claimed compatible. `RT-BIO-CORE` frees only BIOs whose tables supply
+  `free` (`full`, `wonly`, `ronly`, `noup`, `alpha`, `beta`), and deliberately does not
+  free the `plain.bio` it builds with `BIO_new(BIO_s_core())`.
+
+### D-BIOCORE-3 — `ossl_bio_init_core` dereferences a NULL dispatch table
+
+- **Obligation:** `OSSL_LIB_CTX_new_from_dispatch(handle, NULL)` — reachable from an
+  export, since the export forwards its `in` argument straight to `ossl_bio_init_core`.
+- **Authority:** the table walk's own loop condition is `fns->function_id != 0`, evaluated
+  before any NULL test (there is no NULL test anywhere in the function), so a NULL table
+  faults on the first iteration.
+- **Candidate:** treats NULL as the terminator-only table it is equivalent to and answers
+  `1`, so the caller receives an empty but usable context. A table consisting solely of
+  `OSSL_DISPATCH_END` reaches the same state in the authority without faulting, and the
+  candidate's two paths are indistinguishable from the caller's side.
+- **Reason:** `docs/UNSAFE.md` §5. The parameter is documented as a table; the authority's
+  own providers never pass NULL.
+- **Claim removed:** `OSSL_LIB_CTX_new_from_dispatch(handle, NULL)` is not claimed
+  compatible. `RT-BIO-CORE` passes a real table to that export and a NULL *handle*, which
+  the authority accepts and ignores.
