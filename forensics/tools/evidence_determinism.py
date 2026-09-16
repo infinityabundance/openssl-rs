@@ -93,6 +93,13 @@ GENERATORS_AFTER_LEDGERS = [
     # `transcription-edges.json`, which `gen_prerequisite_atlas.py` generates in the
     # court job and which is committed for exactly this reason (D123).
     "forensics/tools/prerequisite_gate.py",
+    # The plan-versus-crate reconciliation (D134). It sits beside the gate and for the same
+    # reason: it reads `phase-state.json` to decide which strata are claiming, so it must run
+    # after `phase_state.py`. The pair is deliberately adjacent in this list, because the two
+    # answer the two halves of one question -- the gate asks whether every name the crate
+    # *references* has an owner, and this asks whether every unit the plan *promises* is
+    # reached -- and D132 was the case that fell between them.
+    "forensics/tools/plan_reconciliation.py",
     "forensics/tools/render_seal_census.py",
     "forensics/tools/render_status.py",
 ]
@@ -131,6 +138,7 @@ COMPARED = [
     "forensics/atlas/prototype-court.json",
     "forensics/atlas/ctype-table.json",
     "forensics/atlas/prerequisite-gate.json",
+    "forensics/atlas/plan-reconciliation.json",
     *[a for _g, a in LEDGERS],
     "forensics/phase-state.json",
     "forensics/phase-state.md",

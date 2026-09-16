@@ -7431,7 +7431,7 @@ that neither a ledger nor a reference reaches — is the check that would catch 
 is named here as an open obligation rather than built, because building it is a change to the
 gate's own contract and belongs in its own commit with its own evidence.
 
-D133 — 6.12: the core hosting a real third-party provider, and the five defects it found
+## D133 — 6.12: the core hosting a real third-party provider, and the five defects it found
 
 6.12 is the court the plan calls the third-party-provider court, and it is the only probe in
 this stratum that can see the *provider-facing* half of the core. Every other court drives the
@@ -7517,5 +7517,101 @@ authority, so there is no answer to compare and the observation is a liveness wi
 `RT-PROVIDER-3P` is 40 observations with no residuals against the authority, registered in
 `forensics/tools/phase6_courts.py`'s `COURTS` and `forensics/tools/phase_state.py`'s
 `PHASE6_MODULES`, so a stratum's court runner and its completion rule both know it exists.
+
+SPDX-License-Identifier: Apache-2.0
+
+## D134 — the plan-versus-crate reconciliation, so a promise that reaches nothing fails a check
+
+D132 ended by naming its own open obligation rather than fixing it: `core_algorithm.c` was
+invisible because `prerequisite_gate.py`'s universe is the set of names a crate module
+*references*, and a name nothing references is invisible to a gate built that way. The
+disposition was a deferral with the owner named, and the mechanism was left for a later commit
+because building it changes the gate's own contract. This is that commit.
+
+`forensics/tools/plan_reconciliation.py` reads the subphase plans and asks the other half of the
+same question. Its universe is **what a stratum promises**, not what the crate mentions: every
+authority translation unit and every authority-internal function named by a subphase row of a
+stratum that is `complete` or `in-progress`. A `not-started` stratum's plan is not judged,
+because nothing has claimed to have done it yet; a stratum that has sealed *is* claiming, and
+that claim is what is reconciled.
+
+Three findings, and each is a class rather than an instance:
+
+* **P1 `plan_named_unit_not_reached`** — a unit a row names that no crate module transcribes,
+  that defines no internal function the crate builds, whose identifier list the crate never
+  references, and that no record names. This is the `core_algorithm.c` class exactly.
+* **P2 `plan_named_symbol_not_reached`** — an authority-internal function a row names that the
+  crate neither builds nor records nor covers by a divergence. The gate's direction A with the
+  reference set replaced by the plan's name set.
+* **P3 `plan_unit_record_is_stale`** — a record that names an authority unit no row mentions.
+  The reverse direction, which is what keeps the mechanism from quietly widening.
+
+Two smaller findings exist because the plan is prose and prose can be wrong: a row naming a
+`.c` file the authority does not have, and a row naming a bare basename the authority repeats.
+Neither is guessed at. `crypto/provider.c` is one of three `provider.c`s in the authority
+(`fuzz/`, `test/testutil/`), and the tool reports the candidates rather than picking one,
+because picking one is precisely the unexamined transcription this project exists to remove.
+Both rows that did it were written with the path instead, which is a one-word discipline and
+not a limitation.
+
+**The reach test needed four signals, and the reason is worth recording.** A unit is reached if
+a crate module's *dominant* unit is it; or if the crate builds one of the authority-internal
+functions it defines; or if the crate references one of the identifiers the unit's own row in
+`transcription-edges.json` lists; or if a record names it. The first signal alone is not enough
+because `transcription-edges.json` maps each module to one dominant unit **on purpose** — a
+module whose definitions are spread across units appears once — so `crypto/provider.c`, whose
+twenty-two exports are thin wrappers and which has no internal function of its own, is invisible
+to it while every one of its exports is implemented. That is not a gap in the crate; it is a gap
+in the vocabulary, and it is closed by a record that names the construct instead:
+
+**The `units` block.** `forensics/prerequisites.json` gains a third record kind, holding the
+units that no symbol can stand for. Each row carries a class from a fixed set, and the class
+names the fields the row must prove, so a row is a claim that can be **falsified** rather than a
+sentence that can be believed:
+
+| class | what it must prove |
+|---|---|
+| `reached_by_a_named_construct` | a `crate_module` that exists and a list of `names` every one of which the crate actually builds |
+| `deferred_to_later_stratum` | an `owner_phase` whose stratum has not already sealed |
+| `not_in_this_profile` | the `guard` that empties the file |
+| `does_not_exist_in_this_authority` | nothing — because the tool checks the absence against the committed manifest itself |
+
+Ten rows are recorded, and the triage found things a reader would not have. `crypto/dso/dso_openssl.c`
+is **entirely** inside `#ifdef DSO_NONE` and compiles to nothing in this profile, while
+`crypto/dso/build.info` lists it unconditionally — so the build file alone cannot settle it, and
+the guard is the evidence. `crypto/property/property_err.c` has no public loader at all: the
+authority's `err_all.c` calls `ossl_err_load_PROP_strings()` directly, and this crate models every
+one of those direct calls as one generated `load_lib(<lib>)`. `crypto/rcu.c` **does not exist**,
+and the plan names it only in order to say so — "there is no `crypto/rcu.c`" — so the row is
+recorded rather than the sentence reworded, because the sentence is worth keeping and the check
+must keep firing on any *other* row that invents a file.
+
+**Three symbols and two units were genuinely unreached**, and they are the point of the exercise.
+`ossl_method_construct` in `crypto/core_fetch.c` is the other half of D132 — rows 6.6f and 6.8f
+name it as the caller that makes `ossl_algorithm_do_all` Phase 7's prerequisite, and nothing
+recorded it. `ossl_random_add_conf_module` is one of the seven `OPENSSL_load_builtin_modules`
+registrations, Phase 9's, named by row 6.10 as a fan-out residual but present in no machine-
+readable record. `OSSL_provider_init` is `providers/legacy/legacyprov.c`'s, Phase 13's, and rows
+6.8d and 6.12 name it because a third-party provider declares one. All three are now deferrals
+with their authority units named; `crypto/core_fetch.c`, `crypto/rand/rand_lib.c` and
+`providers/legacy/legacyprov.c` are reached through them.
+
+**The counterfactual was measured, not asserted.** Removing the `authority_unit` field from
+D132's own `ossl_algorithm_do_all` deferral and re-running the tool reports
+`plan_named_unit_not_reached: crypto/core_algorithm.c (6.6, 6.6f, 6.8f)` — the file, and exactly
+the three rows that promised it. So the check catches the class it was built for, on the instance
+it was built from.
+
+The blocking-dependency count rises 12 → 15 because three names became **visible**, which is the
+same shape as D132's own 11 → 12 and D130's language census: an invariant that cannot tell a
+legitimate change from a hidden omission. The transition is recorded in
+`forensics/ownership-transitions.json` with its reason, and `regression_guard.py` reports it as
+an approved movement rather than failing.
+
+`plan_reconciliation.py` runs in `court/pipeline.sh` after `phase_state.py` (it reads the derived
+states to decide which strata are claiming), is listed in `evidence_determinism.py`'s
+`GENERATORS_AFTER_LEDGERS` and its `COMPARED` set, and is a step of the `static gates` job in
+`.github/workflows/ci.yml`. The Phase 6 seal's §6 and its exit-criteria table name it, because
+D132's obligation was Phase 6's and this is what discharges it.
 
 SPDX-License-Identifier: Apache-2.0
