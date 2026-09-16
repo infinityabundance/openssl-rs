@@ -8038,3 +8038,179 @@ store: `ossl_method_construct` and the store are 7.1's other half and remain ope
 
 SPDX-License-Identifier: Apache-2.0
 
+
+## D141 — 7.1's second half: the walk's six callbacks, Phase 7's whole error-coordinate surface, and a store that a sealed stratum still owed
+
+**What landed.** `src/evp/method_store.rs` is `crypto/core_fetch.c` transcribed whole:
+`ossl_method_construct` and the five callbacks it hands to `ossl_algorithm_do_all` —
+`reserve_store`, `unreserve_store`, `precondition`, `this` and `postcondition` — with
+`ConstructData`, the opaque `OSSL_METHOD_STORE` and `OSSL_METHOD_CONSTRUCT_METHOD`, and seven unit
+tests. The export is `#[no_mangle]`; the five callbacks are not, because the authority's are
+`static`. With it, **both deferrals Phase 6 handed forward (D132, D134) are discharged**:
+`ossl_algorithm_do_all` went in D140 and `ossl_method_construct` is this entry, so its row leaves
+`forensics/prerequisites.json` and the gate's blocking list drops 15 to 14.
+
+**The file is a callback host, and the shape follows from that rather than from taste.** The five
+`ossl_method_construct_*` functions are not a call graph — they are entry points the walk reaches in
+a fixed order (`reserve_store` → `precondition` → `this` → `postcondition` → `unreserve_store`), and
+the policy lives in that order. Two of the arms read like errors and are not, which is D140's
+lesson arriving one file later: a **refused precondition is success** (the authority negates the
+provider's operation bit to turn "methods have been constructed" into "construction should happen",
+and `algorithm_do_map` turns the resulting 0 into "skip this map, continue the walk"), and **a
+refused construction is silence** (a provider may publish an algorithm this build cannot
+instantiate). A transcription that "fixed" either one would fail in the direction that looks like a
+performance problem and is a correctness one.
+
+**The reference is dropped here and not by the store.** `this` constructs, puts and then calls
+`mcm->destruct` on the method it just built, because the authority's own comment says the `put`
+function is *expected* to increment the refcount: the sequence is construct (1) → put (2) →
+destruct (1), and the store's reference is what survives. Skipping the destruct leaks one reference
+per algorithm per fetch, and the memory courts would not catch it — nothing counts, because the
+store holds them forever. Both halves are asserted, per arm.
+
+## The transcription corrections, and one of them was mine
+
+**I had invented two NULL checks that the authority does not have.** The first draft of this file
+guarded `data->mcm` with `if (mcm.is_null()) return 0;` in three places. The authority dereferences
+it unconditionally, and the sibling `algorithm.rs` transcribes `algorithm_do_map`'s
+`reserve_store` call the same way with the contract stated in `# Safety`. The guards are gone: a
+NULL `mcm` is a caller error on both sides, and converting it into a silent refusal would have been
+a behaviour change in exactly the case the contract excludes. This is the same family as D140's
+four defects and it was found the same way — by reading the two files against each other rather
+than by running anything.
+
+**Two of `ConstructData`'s six fields are never assigned by the authority.** `ossl_method_construct`
+declares `struct construct_data_st cbdata;` as a stack local and sets four fields; `libctx` and
+`operation_id` are indeterminate and **nothing in the file reads either**, because the walk takes
+the operation from its own argument and the callbacks are never given the libctx at all. This
+transcription assigns both from its parameters, which is a divergence in the crate's favour — the
+struct is fully determined — and it is invisible because no reader exists on either side. Rust
+cannot spell an undetermined field, and inventing a read to justify a write would be worse than the
+write; the field docs now say so instead of claiming the authority sets them.
+
+**And a unit I had wrong in the plan.** `src/evp/method_store.rs`'s first draft said the store type
+"belongs to `evp_fetch.c`". Phase 7's own plan row said the same. Both are wrong:
+`crypto/evp/evp_fetch.c` *calls* `ossl_method_store_new` and its eleven siblings, and
+**`crypto/property/property.c` defines them** — alongside the three global-properties functions
+6.7a left behind (`ossl_ctx_global_properties`, `ossl_global_properties_no_mirrored`,
+`ossl_global_properties_stop_mirroring`). The plan row is corrected above the line, the module doc
+with it, and the deferral rows below.
+
+**D140 had exported two internal functions, and that is corrected here too.** `ossl_algorithm_do_all`
+and `ossl_algorithm_get1_first_name` were landed `#[no_mangle] pub`. Neither is an authority export:
+`forensics/atlas/symbol-ownership.json`'s universe is the 6,499 symbols the DSO *exports*, and both
+names are hidden from the authority's `.so` by libcrypto's version script. The crate's own rule says
+so — an `ossl_*` internal is `pub(crate)` with no `#[no_mangle]` — and the cost of getting it wrong
+is exactly the one `implemented-surface.json` tracks: a crate-global name a consumer's own function
+of the same name could collide with, for a symbol nothing outside the crate can call. Both are now
+`pub(crate)`, with a dead-code allowance where nothing calls them yet and the note naming the
+subphase that will (`ossl_algorithm_get1_first_name` is the eight `_meth.c` constructors' in 7.3 and
+7.4; `ossl_method_construct` is `inner_evp_generic_fetch`'s in 7.2). `ossl_method_construct` is
+`pub(crate)` from the start for the same reason.
+
+## Phase 7's error coordinates, registered as a subsystem set
+
+`crypto/core_fetch.c` raises from two sites, at lines 65 and 92 — the `ossl_assert(result != NULL)`
+in the pre- and the postcondition, each followed by `ERR_raise(ERR_LIB_CRYPTO,
+ERR_R_PASSED_NULL_PARAMETER)`. Registering only those two would have been the per-file habit that
+Phase 5 and Phase 6 both rejected in favour of the *subsystem* set, and the reason is worth
+restating: a site nobody calls yet is a coordinate, not a claim, and a file that lands later without
+its coordinates is a gap that only a careful reader notices. So `gen_err_raise_sites.py` gains
+**57 files and 767 sites** — every `crypto/evp/` translation unit that raises anything (49 of 84),
+`crypto/hpke/hpke.c` (7.6's, and not in `crypto/evp/` at all), `crypto/core_fetch.c`, and the eight
+per-symbol exceptions the plan's own 7.4 and 7.5 rows name (`crypto/asn1/ameth_lib.c`, `i2d_evp.c`,
+`d2i_pr.c`, `d2i_param.c`, `d2i_pu.c`, and `crypto/pem/pem_pkey.c`, `pem_pk8.c`).
+
+**The 37 that raise nothing are named rather than omitted.** `bio_enc.c`, `bio_md.c`, `bio_ok.c`,
+`encode.c`, the twelve `legacy_*` wrappers, the legacy cipher wrappers whose primitives are Phase
+13's, the five name/type helpers, the two algorithm tables, `cmeth_lib.c` and `evp_err.c` are all
+absent on purpose, and `evp_err.c` is the one worth naming: it is the error *string* table for the
+whole library and it raises nothing at all, so listing it would be an entry that can never change
+and would read as coverage that does not exist. `crypto/hmac/hmac.c` and `crypto/cmac/cmac.c` look
+as if they must raise and do not — both are façades over `EVP_MAC`, and every refusal a caller sees
+comes from the provider's implementation.
+
+**Seven authority sites pass a reason constant where the library argument belongs, and the
+generator now attributes them.** `ERR_raise(ERR_R_EVP_LIB, ...)` appears four times in
+`exchange.c` and once each in `kdf_lib.c` and twice in `mac_lib.c`. They were recorded as
+*unattributed*, which was right about the shape — a library argument that is not a library constant
+is usually a call spelled inside a macro body — and wrong about these seven, which are real,
+reachable, observable sites in this stratum's surface. Emitting them is a transcription and not an
+interpretation: `ERR_set_error` packs `(lib & ERR_LIB_MASK) << ERR_LIB_OFFSET` and the authority's
+`ERR_LIB_MASK` is **`0xFF`**, so `ERR_R_EVP_LIB` = `(4|ERR_RFLAG_COMMON)` = `0x80004` contributes
+exactly the `4` that `ERR_LIB_EVP` would. The resolved value is emitted rather than the low byte,
+because the table records what the authority's argument evaluates to and the masking belongs to the
+code that consumes it. Three reason families came with them and three headers are added to the
+resolver — `evperr.h`, `pemerr.h`, `rsaerr.h`, all installed, so no `internal/` fallthrough was
+needed for this stratum — and the atlas now reports **1,619 sites, 852 → 1,619, with zero
+unattributed**.
+
+## The tests, and one that was not testing what it said
+
+Seven tests. Five are about the policy arms an implementation is most likely to get plausibly
+wrong: the temporary-store predicate (`no_store && !force_store`, both halves), the store being
+obtained **once** however many maps the walk visits, a permanent store never being asked for a
+temporary one and being passed as NULL, the put/put-NULL split with the destruct on both arms, and
+the refused construction that puts and destructs nothing.
+
+Two are new and are about the coordinate rather than the refusal, because that is the observable:
+**a NULL `result` refuses at `CORE_FETCH_65` and `CORE_FETCH_92`**, asserted against the recorded
+file, line and function through `ERR_peek_last_error_all` rather than against the return code. The
+first version of that helper compared the *first* queued error and failed on the second assertion —
+which is the test doing its job.
+
+**One test was deleted for claiming coverage it did not have.** The draft ended with
+`the_lookup_prefers_the_temporary_store_and_then_the_global_one`, which called `mcm->get` twice by
+hand and never entered `ossl_method_construct` at all; it would have passed against a transcription
+with the two lookups in the wrong order. The two-lookup policy is *not* unit-testable: the branch
+between the lookups is chosen by `cbdata.store`, which only the walk fills, so reaching it needs a
+provider that can be queried — and a unit test that called `ossl_algorithm_do_all` for real would
+sweep the default context, activate the three predefined providers and read `openssl.cnf` as a side
+effect of `cargo test`. The sibling `algorithm.rs` draws the same line for the sweep. **`RT-FETCH`
+is the observation**, and the module doc says so where a reader will meet it rather than leaving the
+gap to be inferred.
+
+## The record defect this turned up, which is the entry's most useful part
+
+While reading where the store lives, the deferral rows for it turned out to be owned by **Phase 6**
+— with the reason "Phase 6.7c/6.8: the method store" — and Phase 6 is **complete**. Fifteen names
+(`ossl_method_store_new`, `_free`, `_add`, `_remove`, `_remove_all_provided`, `_fetch`, `_do_all`,
+`_cache_flush_all`, `_cache_get`, `_cache_set`, `ossl_method_lock_store`,
+`ossl_method_unlock_store`, `ossl_ctx_global_properties`, `ossl_global_properties_no_mirrored`,
+`ossl_global_properties_stop_mirroring`) were therefore **neither blocking the gate nor reported as
+stale**: `blocking` is computed from rows whose owner stratum is not complete, and `stale_deferral`
+from rows the crate has since built. A name owed to a sealed stratum fell between the two readings.
+
+Phase 6 knew. Its plan gives the work to subphase 6.7c (`docs/PHASE-6-SUBPHASES.md` row 6.7c), its
+seal records that the four method stores are Phase 7's and Phase 10's, and D-6.8c's own text says
+"`ossl_method_store_cache_flush_all` and `_remove_all_provided` are 6.7c's, which 6.7 deferred to 6.8
+and which has not landed". What did not happen is the *retargeting*: 6.7c is a subphase of a stratum
+that closed, and a row pointing at it is a row pointing backwards.
+
+The fix is a measurement and not a preference. The owner of a shared internal is the earliest
+stratum that calls it, and `crypto/evp/evp_fetch.c` is `ossl_method_store_new`'s first caller —
+ahead of `crypto/encode_decode/decoder_meth.c`, `encoder_meth.c` and `crypto/store/store_meth.c`,
+which share the same store object. All fifteen retarget to Phase 7, with the caller written into
+each row so a reader can check the claim. The gate's blocking list goes **14 → 28**, which is the
+*correct* direction and the reason this entry is not a quiet edit: fifteen obligations that were
+invisible are now counted.
+
+This is the `a2d_ASN1_OBJECT` failure class arriving through a third route. D49/D72 fixed discovery
+by header; D134 fixed plan-versus-crate reconciliation; this one is a *stale phase field* in a
+hand-maintained record, and the invariant that would have caught it — "a complete stratum has no
+unbuilt deferrals attributed to it" — is not one the gate computes. It is computed now, by the
+transition row in `forensics/ownership-transitions.json` and by a reason that has to be read.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 7 implemented / open | 0 / 950 | 0 / 950 (no export) |
+| discharged deferrals | 0 | 1 (`ossl_method_construct`) |
+| gate blocking dependencies | 14 | 28 |
+| recorded err sites / unattributed | 852 / 0 | 1,619 / 0 |
+| covered authority files | 106 | 164 |
+| crate-global non-authority symbols | 275 (D140) | 273, which is main's own count |
+| unit tests | 295 | 302 |
+
+SPDX-License-Identifier: Apache-2.0

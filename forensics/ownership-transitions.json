@@ -93,6 +93,14 @@
       "reason": "The plan-versus-crate reconciliation (docs/DECISIONS.md D134) named three authority symbols that a complete stratum's subphase rows promise and nothing builds or records: `ossl_method_construct` in `crypto/core_fetch.c` (the other half of D132 -- rows 6.6f and 6.8f name it as the caller that makes `ossl_algorithm_do_all` Phase 7's prerequisite), `ossl_random_add_conf_module` in `crypto/rand/rand_lib.c` (one of the seven `OPENSSL_load_builtin_modules` registrations, Phase 9's), and `OSSL_provider_init` in `providers/legacy/legacyprov.c` (Phase 13's, named by rows 6.8d and 6.12 because a third-party provider declares one). All three are owed to strata that have not started, so each is a blocking dependency by the gate's rule. The count rose because three names became *visible*, not because three new prerequisites appeared -- the same class as D132's 11 -> 12 and D130's language census: an invariant that cannot tell a legitimate change from a hidden omission.",
       "authority_artifact": "forensics/prerequisites.json",
       "recorded_by": "docs/DECISIONS.md D134"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 15,
+      "after": 28,
+      "reason": "D141 discharges ossl_method_construct's deferral (-1) and corrects fifteen deferral rows that named Phase 6 as the stratum that will build them, while Phase 6 is complete and they are not built (+15). The gate's blocking set is 'deferrals whose owner stratum is not complete' and its stale set is 'deferrals the crate has since built', so a name owed to a *sealed* stratum satisfied neither and was invisible to both -- the a2d_ASN1_OBJECT failure class arriving through the phase field rather than through a prefix (D49, D72, D134). The retarget is a measurement: the owner of a shared internal is the earliest stratum that calls it, and crypto/evp/evp_fetch.c is ossl_method_store_new's first caller, ahead of the decoder, encoder and store method modules that share the store object. The net movement against this baseline is 15 - 1 + 15 = 28; the -1 on its own (D139/D140) needed no row, because a decrease never does. The count rose because fifteen obligations became *countable*, not because fifteen prerequisites appeared -- the same class as D132's 11 -> 12, D134's 12 -> 15 and D130's language census: an invariant that cannot tell a legitimate change from a hidden omission.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D141"
     }
   ]
 }
