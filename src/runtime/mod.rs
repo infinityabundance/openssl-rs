@@ -45,6 +45,7 @@ pub mod stack;
 pub mod str;
 pub mod thread;
 pub mod thread_events;
+pub mod threads_common;
 pub mod time;
 pub mod trace;
 pub mod uid;
