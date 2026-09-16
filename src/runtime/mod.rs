@@ -29,6 +29,7 @@ pub mod buffer;
 pub mod conf;
 pub mod ctype;
 pub mod ctype_table;
+pub mod defaults;
 pub mod dir;
 pub mod err;
 pub mod err_state;

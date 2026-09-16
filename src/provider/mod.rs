@@ -77,6 +77,7 @@
 //! SPDX-License-Identifier: Apache-2.0
 
 pub(crate) mod core_dispatch;
+pub(crate) mod init;
 
 use core::ffi::{c_char, c_int, c_uint, c_void};
 use core::ptr;
@@ -1489,11 +1490,25 @@ pub(crate) unsafe fn ossl_provider_free(prov: *mut OsslProvider) {
     }
     // SAFETY: `prov` is live.
     let ref_ = unsafe { (*prov).refcnt.fetch_sub(1, Ordering::AcqRel) } - 1;
-    // 6.8c: the authority's `if (prov->flag_initialized) { ossl_provider_teardown(prov); ...
-    // }` runs here, before anything is released, and frees `error_strings` and
-    // `operation_bits`. `provider_init` is what sets the flag, so nothing in this subphase
-    // can reach it; when 6.8c lands it must be inserted at this point, because the flag is
-    // cleared there and the object is freed below.
+    // The authority's `if (prov->flag_initialized)` arm, before anything is released: the
+    // teardown is what tells the *provider* to release its own state, and it must happen
+    // while the provider's context and dispatch table are still readable.
+    // SAFETY: `prov` is live and this is its last reference.
+    unsafe {
+        if (*prov).flags & FLAG_INITIALIZED != 0 {
+            crate::provider::init::ossl_provider_teardown(prov);
+            if !(*prov).error_strings.is_null() {
+                CRYPTO_free((*prov).error_strings, FILE, 0);
+                (*prov).error_strings = ptr::null_mut();
+            }
+            if !(*prov).operation_bits.is_null() {
+                CRYPTO_free((*prov).operation_bits.cast::<c_void>(), FILE, 0);
+                (*prov).operation_bits = ptr::null_mut();
+            }
+            (*prov).operation_bits_sz = 0;
+            (*prov).flags &= !FLAG_INITIALIZED;
+        }
+    }
     if ref_ != 0 {
         // 6.8e: the authority's `else if (prov->ischild)` arm calls
         // `ossl_provider_free_parent(prov, 0)`.
