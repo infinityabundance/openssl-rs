@@ -16,8 +16,9 @@
 //! | id | function | owner |
 //! |---|---|---|
 //! | `OSSL_FUNC_CORE_THREAD_START` (3) | `ossl_init_thread_start` | **6.6e-ii** — the per-thread event-handler table |
-//! | `OSSL_FUNC_GET_ENTROPY` (104) … `CLEANUP_USER_NONCE` (112) | the nine `rand_*` callbacks | **Phase 9** — they wrap `ossl_rand_get_entropy` and friends |
-//! | `OSSL_FUNC_PROVIDER_REGISTER_CHILD_CB` (102), `DEREGISTER_CHILD_CB` (103) | the child callback pair | **6.8e** |
+//! | `OSSL_FUNC_PROVIDER_REGISTER_CHILD_CB` (105), `DEREGISTER_CHILD_CB` (106) | the child callback pair | **6.8e** |
+//! | `OSSL_FUNC_PROVIDER_UP_REF` (110), `PROVIDER_FREE` (111) | `provider_up_ref_intern`, `provider_free_intern` | **6.8c** — the `activate` arm is `ossl_provider_activate` |
+//! | `OSSL_FUNC_GET_ENTROPY` (101), `GET_USER_ENTROPY` (98), `CLEANUP_ENTROPY` (102), `CLEANUP_USER_ENTROPY` (96), `GET_NONCE` (103), `GET_USER_NONCE` (99), `CLEANUP_NONCE` (104), `CLEANUP_USER_NONCE` (97) | the eight `rand_*` callbacks | **Phase 9** — they wrap `ossl_rand_get_entropy` and friends |
 //! | `OSSL_FUNC_CORE_OBJ_ADD_SIGID` (121), `CORE_OBJ_CREATE` (122) | `core_obj_add_sigid`, `core_obj_create` | **landed** — `OBJ_txt2nid`, `OBJ_find_sigid_algs`, `OBJ_add_sigid` and `OBJ_create` are all in `src/runtime/obj.rs` |
 //!
 //! The first three groups are gaps; the fourth is not, and is included. The distinction is
@@ -44,12 +45,37 @@
 use core::ffi::{c_char, c_int, c_uint, c_void};
 use core::ptr;
 
+use crate::context::dispatch::OsslDispatch;
 use crate::params::{OsslParam, OSSL_PARAM_UNMODIFIED, OSSL_PARAM_UTF8_PTR};
-use crate::provider::{ossl_provider_get_conf_parameters, ossl_provider_name, OsslProvider};
+use crate::provider::{
+    ossl_provider_ctx, ossl_provider_get0_dispatch, ossl_provider_get_conf_parameters,
+    ossl_provider_name, OsslProvider,
+};
 use crate::runtime::err::{
     ERR_clear_last_mark, ERR_count_to_mark, ERR_new, ERR_pop_to_mark, ERR_set_debug, ERR_set_mark,
 };
 use crate::runtime::init::VERSION_STRING;
+use crate::runtime::mem::{
+    CRYPTO_clear_free, CRYPTO_clear_realloc, CRYPTO_free, CRYPTO_malloc, CRYPTO_realloc,
+    CRYPTO_zalloc, OPENSSL_cleanse,
+};
+use crate::runtime::obj::{OBJ_add_sigid, OBJ_create, OBJ_find_sigid_algs, OBJ_txt2nid};
+use crate::runtime::secure::{
+    CRYPTO_secure_allocated, CRYPTO_secure_clear_free, CRYPTO_secure_free, CRYPTO_secure_malloc,
+    CRYPTO_secure_zalloc,
+};
+
+extern "C" {
+    /// `int BIO_vsnprintf(char *buf, size_t n, const char *format, va_list ap)`.
+    ///
+    /// Defined in `src/runtime/bio/bio_variadic.c`. The dispatch table publishes it directly,
+    /// as the authority does, because a provider that writes a formatted message wants the
+    /// core's `_dopr` rather than the platform's `vsnprintf` — the two disagree on `%s` of a
+    /// NULL pointer and on the return value of a truncated write.
+    #[allow(dead_code)] // published by `CORE_DISPATCH`, which nothing reads until 6.8c
+    fn BIO_vsnprintf(buf: *mut c_char, n: usize, format: *const c_char, args: *mut c_void)
+        -> c_int;
+}
 
 /// `ERR_LIB_OFFSET` — the shift `ERR_GET_LIB` applies.
 const ERR_LIB_OFFSET: c_uint = 23;
@@ -180,6 +206,30 @@ pub(crate) const FUNC_CORE_OBJ_ADD_SIGID: c_int = 121;
 /// `OSSL_FUNC_CORE_OBJ_CREATE`.
 #[allow(dead_code)] // unreachable until 6.8b-iii publishes the dispatch table
 pub(crate) const FUNC_CORE_OBJ_CREATE: c_int = 122;
+/// `OSSL_FUNC_PROVIDER_NAME`.
+#[allow(dead_code)] // unreachable until 6.8b-iii publishes the dispatch table
+pub(crate) const FUNC_PROVIDER_NAME: c_int = 107;
+/// `OSSL_FUNC_PROVIDER_GET0_PROVIDER_CTX`.
+#[allow(dead_code)] // unreachable until 6.8b-iii publishes the dispatch table
+pub(crate) const FUNC_PROVIDER_GET0_PROVIDER_CTX: c_int = 108;
+/// `OSSL_FUNC_PROVIDER_GET0_DISPATCH`.
+#[allow(dead_code)] // unreachable until 6.8b-iii publishes the dispatch table
+pub(crate) const FUNC_PROVIDER_GET0_DISPATCH: c_int = 109;
+/// `OSSL_FUNC_CORE_THREAD_START`.
+#[allow(dead_code)] // unreachable until 6.8b-iii publishes the dispatch table
+pub(crate) const FUNC_CORE_THREAD_START: c_int = 3;
+/// `OSSL_FUNC_PROVIDER_REGISTER_CHILD_CB`.
+#[allow(dead_code)] // unreachable until 6.8b-iii publishes the dispatch table
+pub(crate) const FUNC_PROVIDER_REGISTER_CHILD_CB: c_int = 105;
+/// `OSSL_FUNC_PROVIDER_DEREGISTER_CHILD_CB`.
+#[allow(dead_code)] // unreachable until 6.8b-iii publishes the dispatch table
+pub(crate) const FUNC_PROVIDER_DEREGISTER_CHILD_CB: c_int = 106;
+/// `OSSL_FUNC_PROVIDER_UP_REF`.
+#[allow(dead_code)] // unreachable until 6.8b-iii publishes the dispatch table
+pub(crate) const FUNC_PROVIDER_UP_REF: c_int = 110;
+/// `OSSL_FUNC_PROVIDER_FREE`.
+#[allow(dead_code)] // unreachable until 6.8b-iii publishes the dispatch table
+pub(crate) const FUNC_PROVIDER_FREE: c_int = 111;
 
 /// `OSSL_PROV_PARAM_CORE_VERSION` — `"openssl-version"`.
 const PROV_PARAM_CORE_VERSION: *const c_char = c"openssl-version".as_ptr();
@@ -393,6 +443,159 @@ pub(crate) unsafe extern "C" fn core_count_to_mark(_handle: *const c_void) -> c_
     ERR_count_to_mark()
 }
 
+/// `static void core_indicator_get_callback(OPENSSL_CORE_CTX *libctx,
+/// OSSL_INDICATOR_CALLBACK **cb)`.
+///
+/// The first parameter is a **library context**, not a provider handle, which is the one
+/// callback in the table whose first argument is not the handle: the callback is per-context,
+/// and the provider is not part of the question.
+///
+/// # Safety
+/// `ctx` must be the `OSSL_LIB_CTX *` this provider belongs to; `cb` NULL or writable for a
+/// function pointer.
+#[allow(dead_code)] // unreachable until 6.8b-iii publishes the dispatch table
+pub(crate) unsafe extern "C" fn core_indicator_get_callback(
+    ctx: *mut c_void,
+    cb: *mut *mut c_void,
+) {
+    // SAFETY: the cast is between two pointer-to-function-pointer representations, which
+    // `OSSL_INDICATOR_get_callback` treats as opaque; `ctx` is the context per the contract.
+    unsafe {
+        crate::selftest::indicator::OSSL_INDICATOR_get_callback(
+            ctx,
+            cb.cast::<Option<crate::selftest::OsslIndicatorCallback>>(),
+        )
+    };
+}
+
+/// `static void core_self_test_get_callback(OPENSSL_CORE_CTX *libctx, OSSL_CALLBACK **cb,
+/// void **cbarg)`.
+///
+/// Two outputs, not one: the self-test callback carries an argument with it, and both are
+/// written from the same slot. A NULL `cb` or `cbarg` is skipped rather than refused.
+///
+/// # Safety
+/// `ctx` must be the `OSSL_LIB_CTX *` this provider belongs to; `cb`/`cbarg` NULL or writable.
+#[allow(dead_code)] // unreachable until 6.8b-iii publishes the dispatch table
+pub(crate) unsafe extern "C" fn core_self_test_get_callback(
+    ctx: *mut c_void,
+    cb: *mut *mut c_void,
+    cbarg: *mut *mut c_void,
+) {
+    // SAFETY: as `core_indicator_get_callback`; `cbarg` is already the right shape.
+    unsafe {
+        crate::selftest::OSSL_SELF_TEST_get_callback(
+            ctx,
+            cb.cast::<Option<crate::selftest::OsslCallback>>(),
+            cbarg,
+        )
+    };
+}
+
+/// `static int core_obj_add_sigid(const OSSL_CORE_HANDLE *prov, const char *sign_name,
+/// const char *digest_name, const char *pkey_name)`.
+///
+/// Three names in, NIDs resolved by `OBJ_txt2nid`, and the digest is optional: a NULL or
+/// **empty** digest name is allowed and becomes the undefined NID, but any *other*
+/// unresolvable digest is a refusal. An existing triple is a **success without doing
+/// anything**, which is why the presence check comes before the pkey check — the authority's
+/// comment says so, and it is the difference between "already there" and "cannot be added".
+///
+/// # Safety
+/// `prov` is accepted and unused; the three names must be NULL or NUL-terminated.
+#[allow(dead_code)] // unreachable until 6.8b-iii publishes the dispatch table
+pub(crate) unsafe extern "C" fn core_obj_add_sigid(
+    _prov: *const c_void,
+    sign_name: *const c_char,
+    digest_name: *const c_char,
+    pkey_name: *const c_char,
+) -> c_int {
+    const NID_UNDEF: c_int = 0;
+    // SAFETY: `sign_name`/`pkey_name` are NULL or NUL-terminated; `OBJ_txt2nid` answers the
+    // undefined NID for NULL.
+    unsafe {
+        let sign_nid = OBJ_txt2nid(sign_name);
+        let pkey_nid = OBJ_txt2nid(pkey_name);
+        let mut digest_nid = NID_UNDEF;
+        if !digest_name.is_null() && *digest_name != 0 {
+            digest_nid = OBJ_txt2nid(digest_name);
+            if digest_nid == NID_UNDEF {
+                return 0;
+            }
+        }
+        if sign_nid == NID_UNDEF {
+            return 0;
+        }
+        // Already present: a success, even though no NIDs were supplied for it.
+        if OBJ_find_sigid_algs(sign_nid, ptr::null_mut(), ptr::null_mut()) != 0 {
+            return 1;
+        }
+        if pkey_nid == NID_UNDEF {
+            return 0;
+        }
+        OBJ_add_sigid(sign_nid, digest_nid, pkey_nid)
+    }
+}
+
+/// `static int core_obj_create(const OSSL_CORE_HANDLE *prov, const char *oid,
+/// const char *sn, const char *ln)`.
+///
+/// Create-if-absent, in one expression: an OID that already resolves answers 1 without
+/// calling `OBJ_create`, and otherwise the answer is `OBJ_create`'s being not-undefined.
+///
+/// # Safety
+/// `prov` is accepted and unused; the three names must be NULL or NUL-terminated.
+#[allow(dead_code)] // unreachable until 6.8b-iii publishes the dispatch table
+pub(crate) unsafe extern "C" fn core_obj_create(
+    _prov: *const c_void,
+    oid: *const c_char,
+    sn: *const c_char,
+    ln: *const c_char,
+) -> c_int {
+    const NID_UNDEF: c_int = 0;
+    // SAFETY: all three names are NULL or NUL-terminated per the contract.
+    unsafe {
+        if OBJ_txt2nid(oid) != NID_UNDEF {
+            return 1;
+        }
+        c_int::from(OBJ_create(oid, sn, ln) != NID_UNDEF)
+    }
+}
+
+/// `static const char *core_provider_get0_name(const OSSL_CORE_HANDLE *prov)`.
+///
+/// # Safety
+/// `prov` must be the `OSSL_PROVIDER *` the handle names.
+#[allow(dead_code)] // unreachable until 6.8b-iii publishes the dispatch table
+pub(crate) unsafe extern "C" fn core_provider_get0_name(prov: *const c_void) -> *const c_char {
+    // SAFETY: `prov` is the live provider the handle names.
+    unsafe { ossl_provider_name(prov.cast::<OsslProvider>()) }
+}
+
+/// `static void *core_provider_get0_provider_ctx(const OSSL_CORE_HANDLE *prov)`.
+///
+/// # Safety
+/// `prov` must be the `OSSL_PROVIDER *` the handle names.
+#[allow(dead_code)] // unreachable until 6.8b-iii publishes the dispatch table
+pub(crate) unsafe extern "C" fn core_provider_get0_provider_ctx(
+    prov: *const c_void,
+) -> *mut c_void {
+    // SAFETY: `prov` is the live provider the handle names.
+    unsafe { ossl_provider_ctx(prov.cast::<OsslProvider>()) }
+}
+
+/// `static const OSSL_DISPATCH *core_provider_get0_dispatch(const OSSL_CORE_HANDLE *prov)`.
+///
+/// # Safety
+/// `prov` must be the `OSSL_PROVIDER *` the handle names.
+#[allow(dead_code)] // unreachable until 6.8b-iii publishes the dispatch table
+pub(crate) unsafe extern "C" fn core_provider_get0_dispatch(
+    prov: *const c_void,
+) -> *const crate::context::dispatch::OsslDispatch {
+    // SAFETY: `prov` is the live provider the handle names.
+    unsafe { ossl_provider_get0_dispatch(prov.cast::<OsslProvider>()) }
+}
+
 extern "C" {
     /// `void ERR_vset_error(int lib, int reason, const char *fmt, va_list args)`.
     ///
@@ -401,6 +604,162 @@ extern "C" {
     /// both directions, which is how every `va_list` boundary in this crate is declared.
     fn ERR_vset_error(lib: c_int, reason: c_int, fmt: *const c_char, args: *mut c_void);
 }
+
+/// The `OSSL_DISPATCH_END` terminator's `function_id`.
+#[allow(dead_code)] // unreachable until 6.8c publishes it through `get0_dispatch`
+const DISPATCH_END: c_int = 0;
+
+/// One entry of the core dispatch table.
+#[allow(dead_code)] // the table below is its only user, and nothing reads that until 6.8c
+const fn e(function_id: c_int, function: *mut c_void) -> OsslDispatch {
+    OsslDispatch {
+        function_id,
+        function,
+    }
+}
+
+/// `static const OSSL_DISPATCH core_dispatch_[]` — the core's half of the provider ABI.
+///
+/// Assembled **only from entries whose function exists**, in the authority's order, with the
+/// absent ids named in the module doc. A provider that asks for an absent id is answered NULL,
+/// which is the same answer it would get from an older build — so the gap is visible to a
+/// provider rather than hidden behind a stub.
+///
+/// Three groups are absent and each for its own reason: `CORE_THREAD_START` (6.6e-ii), the
+/// eight `rand_*` callbacks (Phase 9), and the two child-callback and two provider-accessor
+/// pairs (6.8e and 6.8c). The module doc's table is the record, and the test below asserts the
+/// published set so that adding an entry or dropping one cannot happen quietly.
+// SAFETY: every `function` here is a `'static` function item or a `'static` function in
+// another module of this crate, and every `function_id` is a compile-time constant. The array
+// is never mutated. Nothing is ever written through the pointers it publishes except by a
+// provider calling the function whose signature that entry declares.
+unsafe impl Sync for CoreDispatchTable {}
+
+/// A wrapper carrying the table's `Sync` claim.
+#[allow(dead_code)] // unreachable until 6.8c publishes it through `get0_dispatch`
+pub(crate) struct CoreDispatchTable(pub(crate) [OsslDispatch; 41]);
+
+/// The table itself.
+#[allow(dead_code)] // unreachable until 6.8c publishes it through `get0_dispatch`
+pub(crate) static CORE_DISPATCH: CoreDispatchTable = CoreDispatchTable([
+    e(
+        FUNC_CORE_GETTABLE_PARAMS,
+        core_gettable_params as *mut c_void,
+    ),
+    e(FUNC_CORE_GET_PARAMS, core_get_params as *mut c_void),
+    e(FUNC_CORE_GET_LIBCTX, core_get_libctx as *mut c_void),
+    // 3 `OSSL_FUNC_CORE_THREAD_START` — absent, 6.6e-ii.
+    e(FUNC_CORE_NEW_ERROR, core_new_error as *mut c_void),
+    e(
+        FUNC_CORE_SET_ERROR_DEBUG,
+        core_set_error_debug as *mut c_void,
+    ),
+    e(FUNC_CORE_VSET_ERROR, core_vset_error as *mut c_void),
+    e(FUNC_CORE_SET_ERROR_MARK, core_set_error_mark as *mut c_void),
+    e(
+        FUNC_CORE_CLEAR_LAST_ERROR_MARK,
+        core_clear_last_error_mark as *mut c_void,
+    ),
+    e(
+        FUNC_CORE_POP_ERROR_TO_MARK,
+        core_pop_error_to_mark as *mut c_void,
+    ),
+    e(FUNC_CORE_COUNT_TO_MARK, core_count_to_mark as *mut c_void),
+    e(
+        FUNC_BIO_NEW_FILE,
+        crate::runtime::bio::core_bio::ossl_core_bio_new_file as *mut c_void,
+    ),
+    e(
+        FUNC_BIO_NEW_MEMBUF,
+        crate::runtime::bio::core_bio::ossl_core_bio_new_mem_buf as *mut c_void,
+    ),
+    e(
+        FUNC_BIO_READ_EX,
+        crate::runtime::bio::core_bio::ossl_core_bio_read_ex as *mut c_void,
+    ),
+    e(
+        FUNC_BIO_WRITE_EX,
+        crate::runtime::bio::core_bio::ossl_core_bio_write_ex as *mut c_void,
+    ),
+    e(
+        FUNC_BIO_UP_REF,
+        crate::runtime::bio::core_bio::ossl_core_bio_up_ref as *mut c_void,
+    ),
+    e(
+        FUNC_BIO_FREE,
+        crate::runtime::bio::core_bio::ossl_core_bio_free as *mut c_void,
+    ),
+    e(
+        FUNC_BIO_VPRINTF,
+        crate::runtime::bio::core_bio::ossl_core_bio_vprintf as *mut c_void,
+    ),
+    e(FUNC_BIO_VSNPRINTF, BIO_vsnprintf as *mut c_void),
+    e(
+        FUNC_BIO_PUTS,
+        crate::runtime::bio::core_bio::ossl_core_bio_puts as *mut c_void,
+    ),
+    e(
+        FUNC_BIO_GETS,
+        crate::runtime::bio::core_bio::ossl_core_bio_gets as *mut c_void,
+    ),
+    e(
+        FUNC_BIO_CTRL,
+        crate::runtime::bio::core_bio::ossl_core_bio_ctrl as *mut c_void,
+    ),
+    e(
+        FUNC_INDICATOR_CB,
+        core_indicator_get_callback as *mut c_void,
+    ),
+    e(
+        FUNC_SELF_TEST_CB,
+        core_self_test_get_callback as *mut c_void,
+    ),
+    // 96-104: the eight `rand_*` callbacks — absent, Phase 9.
+    // 105, 106: the child-callback pair — absent, 6.8e.
+    e(FUNC_PROVIDER_NAME, core_provider_get0_name as *mut c_void),
+    e(
+        FUNC_PROVIDER_GET0_PROVIDER_CTX,
+        core_provider_get0_provider_ctx as *mut c_void,
+    ),
+    e(
+        FUNC_PROVIDER_GET0_DISPATCH,
+        core_provider_get0_dispatch as *mut c_void,
+    ),
+    // 110, 111: `PROVIDER_UP_REF` and `PROVIDER_FREE` — absent, 6.8c.
+    e(FUNC_CORE_OBJ_ADD_SIGID, core_obj_add_sigid as *mut c_void),
+    e(FUNC_CORE_OBJ_CREATE, core_obj_create as *mut c_void),
+    e(FUNC_CRYPTO_MALLOC, CRYPTO_malloc as *mut c_void),
+    e(FUNC_CRYPTO_ZALLOC, CRYPTO_zalloc as *mut c_void),
+    e(FUNC_CRYPTO_FREE, CRYPTO_free as *mut c_void),
+    e(FUNC_CRYPTO_CLEAR_FREE, CRYPTO_clear_free as *mut c_void),
+    e(FUNC_CRYPTO_REALLOC, CRYPTO_realloc as *mut c_void),
+    e(
+        FUNC_CRYPTO_CLEAR_REALLOC,
+        CRYPTO_clear_realloc as *mut c_void,
+    ),
+    e(
+        FUNC_CRYPTO_SECURE_MALLOC,
+        CRYPTO_secure_malloc as *mut c_void,
+    ),
+    e(
+        FUNC_CRYPTO_SECURE_ZALLOC,
+        CRYPTO_secure_zalloc as *mut c_void,
+    ),
+    e(FUNC_CRYPTO_SECURE_FREE, CRYPTO_secure_free as *mut c_void),
+    e(
+        FUNC_CRYPTO_SECURE_CLEAR_FREE,
+        CRYPTO_secure_clear_free as *mut c_void,
+    ),
+    e(
+        FUNC_CRYPTO_SECURE_ALLOCATED,
+        CRYPTO_secure_allocated as *mut c_void,
+    ),
+    e(FUNC_OPENSSL_CLEANSE, OPENSSL_cleanse as *mut c_void),
+    OsslDispatch {
+        function_id: DISPATCH_END,
+        function: ptr::null_mut(),
+    },
+]);
 
 #[cfg(test)]
 mod tests {
@@ -571,5 +930,111 @@ mod tests {
                 "CRYPTO id at offset {k}"
             );
         }
+    }
+    #[test]
+    fn the_table_publishes_exactly_the_ids_whose_functions_exist() {
+        // The published set, and the absent set, are both asserted. A provider compiled
+        // against another 3.x looks up the ids it knows and is answered NULL for the ones
+        // this build does not publish, so **which ids are absent is a compatibility fact**,
+        // not an internal detail -- and one that would otherwise be invisible, because a
+        // missing entry and a wrongly-typed entry both produce a provider that misbehaves
+        // rather than a build failure.
+        let published: &[c_int] = &[
+            1, 2, 4, 5, 6, 7, 8, 9, 10, 120, // the core, error and mark group
+            20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, // CRYPTO_* and OPENSSL_cleanse
+            40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, // the BIO group
+            95, 100, // the indicator and self-test callbacks
+            107, 108, 109, // the three provider accessors
+            121, 122, // the two object callbacks
+        ];
+        // The terminator is not an id; it ends the walk.
+        assert_eq!(CORE_DISPATCH.0.len(), published.len() + 1);
+        assert_eq!(CORE_DISPATCH.0[published.len()].function_id, DISPATCH_END);
+        assert!(
+            CORE_DISPATCH.0[published.len()].function.is_null(),
+            "the terminator publishes no function"
+        );
+        let mut seen = [0usize; 200];
+        for entry in CORE_DISPATCH.0.iter().take(published.len()) {
+            assert!(
+                !entry.function.is_null(),
+                "id {} publishes a function",
+                entry.function_id
+            );
+            assert!(
+                published.contains(&entry.function_id),
+                "id {} is published but not in the expected set",
+                entry.function_id
+            );
+            let idx = entry.function_id as usize;
+            assert!(idx < seen.len(), "id {idx} is outside the checked range");
+            seen[idx] += 1;
+            assert_eq!(seen[idx], 1, "id {idx} appears twice");
+        }
+        for id in published {
+            assert_eq!(
+                seen[*id as usize], 1,
+                "id {id} is expected but {} times present",
+                seen[*id as usize]
+            );
+        }
+        // Every other id below 200 must be absent, and these are the ones that are absent on
+        // purpose: 3 needs `ossl_init_thread_start`, 96-106 needs Phase 9 and 6.8e, and
+        // 110/111 need 6.8c's activate. A test that only listed the published set would let
+        // an id be *added* without anyone deciding it was ready.
+        for id in 0..200i32 {
+            if published.contains(&id) {
+                continue;
+            }
+            assert_eq!(
+                seen[id as usize], 0,
+                "id {id} is published but is not in the expected set"
+            );
+        }
+    }
+
+    #[test]
+    fn the_absent_ids_are_the_ones_the_module_doc_names() {
+        // The doc table and the code cannot drift: each named absence is checked against the
+        // table. `CORE_THREAD_START` is 6.6e-ii's, the eight `rand_*` ids are Phase 9's, the
+        // child-callback pair is 6.8e's and the two provider refcount entries are 6.8c's.
+        let absent: &[(c_int, &str)] = &[
+            (3, "CORE_THREAD_START -- 6.6e-ii"),
+            (96, "CLEANUP_USER_ENTROPY -- Phase 9"),
+            (97, "CLEANUP_USER_NONCE -- Phase 9"),
+            (98, "GET_USER_ENTROPY -- Phase 9"),
+            (99, "GET_USER_NONCE -- Phase 9"),
+            (101, "GET_ENTROPY -- Phase 9"),
+            (102, "CLEANUP_ENTROPY -- Phase 9"),
+            (103, "GET_NONCE -- Phase 9"),
+            (104, "CLEANUP_NONCE -- Phase 9"),
+            (105, "PROVIDER_REGISTER_CHILD_CB -- 6.8e"),
+            (106, "PROVIDER_DEREGISTER_CHILD_CB -- 6.8e"),
+            (110, "PROVIDER_UP_REF -- 6.8c"),
+            (111, "PROVIDER_FREE -- 6.8c"),
+        ];
+        for (id, why) in absent {
+            for entry in CORE_DISPATCH.0.iter() {
+                assert_ne!(
+                    entry.function_id, *id,
+                    "id {id} is recorded absent ({why}) but the table publishes it"
+                );
+            }
+        }
+        // And the named constants exist with the header's values, so the doc's numbers are
+        // checked rather than prose.
+        assert_eq!(FUNC_CORE_THREAD_START, 3);
+        assert_eq!(FUNC_PROVIDER_REGISTER_CHILD_CB, 105);
+        assert_eq!(FUNC_PROVIDER_DEREGISTER_CHILD_CB, 106);
+        assert_eq!(FUNC_PROVIDER_UP_REF, 110);
+        assert_eq!(FUNC_PROVIDER_FREE, 111);
+        assert_eq!(FUNC_PROVIDER_NAME, 107);
+        assert_eq!(FUNC_PROVIDER_GET0_PROVIDER_CTX, 108);
+        assert_eq!(FUNC_PROVIDER_GET0_DISPATCH, 109);
+        // The two ids the doc used to state wrongly: the "new seeding" series is 96-99 and
+        // the original series is 101-104, so the absent run is 96..106 with a hole at 100
+        // where `SELF_TEST_CB` sits -- which is published.
+        assert_eq!(FUNC_SELF_TEST_CB, 100);
+        assert_eq!(FUNC_INDICATOR_CB, 95);
     }
 }
