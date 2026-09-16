@@ -7730,3 +7730,40 @@ the artefact was stale is superseded here and is not rewritten there, because an
 wrong in a specific and instructive way is worth more as a record than as a correction.
 
 SPDX-License-Identifier: Apache-2.0
+
+## D137 — a release is a sequence, and the version is an input to generated evidence
+
+The 0.0.10 release was pushed three times and `main` went red once, and the way it went red is
+worth recording because it is D136's lesson arriving on a different artefact within the hour.
+
+`gen_frf_courts.py` writes each of the 43 FRF court declarations, and each declaration's
+`candidate.version_or_commit` is read from `Cargo.toml`. That is deliberate: the tool's own
+docstring says "a release edits `Cargo.toml` alone", and it replaced a literal in the generator
+precisely so that a release would not be "the ones somebody remembered". So bumping the version to
+0.0.10 without re-running the generator left every declaration naming 0.0.9, and the `static
+gates` job's `gen_frf_courts.py --check` step failed. **That is the gate working.** The
+regeneration is 43 files and one line each.
+
+Two smaller facts came out of the same sequence and both are in the release list now:
+
+* **`Cargo.lock` records the crate's own version**, so a bump is two files. `cargo publish
+  --dry-run` refuses a dirty working tree, which is how the second one was found — a gate, again,
+  rather than a memory.
+* **A red `main` is not a state this project keeps.** The merge commit and the two release commits
+  were pushed before each was known green; the third is. The order in §8 of `docs/RELEASE_GATES.md`
+  now puts the local `--check` runs before the push, so the release commit is green on its own
+  account rather than on the strength of CI.
+
+The disposition is not a new mechanism, because the guard already existed and fired. It is a
+**procedure written down**, in `docs/RELEASE_GATES.md` §8, with the reasoning and the command that
+lists the version's carriers. That is the right shape for this class: the failure was not a missing
+check but a step somebody had to remember, and the project's answer to "somebody has to remember"
+is to write the step down next to the gate that catches it and to say which gate catches it.
+
+Recorded rather than left implicit because D136 said the same thing one commit earlier about
+`src/bn/prime_data.rs` and `rustfmt`: a generated artefact whose generator and committed copy were
+never run against each other drifts, and the drift is found by the *other* gate — the one that
+checks formatting, or the one that checks a declaration's version — rather than by the determinism
+check, which can only report that the two disagree.
+
+SPDX-License-Identifier: Apache-2.0
