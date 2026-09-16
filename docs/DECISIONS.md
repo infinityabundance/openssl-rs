@@ -6269,3 +6269,62 @@ when it goes stale; three of them going stale at once is the mechanism, not a de
 | unit tests | 257 | **257** |
 | `err_sites.rs` coordinates | 830 | **830** |
 | FRF objects / receipts / challenges | 381 / 46 / 92 | **389 / 47 / 94** |
+
+## D118 — 6.10 cannot precede 6.6e-ii: RCU's read path registers a thread-exit handler
+
+**The documented order was 6.9, then 6.8a–6.8c, then 6.10. Re-deriving 6.10's dependency
+set instead of trusting the column shows that order is wrong, and the correction moves
+6.6e-ii onto the critical path ahead of it.** The measurement is a symbol sweep over the
+four translation units 6.10 is made of — `conf_mod.c` (764), `conf_api.c` (214),
+`conf_sap.c` (82), `conf_mall.c` (38) — against everything the crate defines. Of the 58
+names that appear to be missing, most are naming rather than absence: `OPENSSL_malloc` is
+`CRYPTO_malloc` here, `OPENSSL_free` is `CRYPTO_free`, and the fourteen `sk_CONF_*` /
+`sk_CONF_VALUE_*` are the untyped `OPENSSL_sk_*` the crate already has. What is really
+absent is three groups, and one of them is the finding.
+
+**`ossl_rcu_read_lock` calls `ossl_init_thread_start`.** That is the whole of it. The RCU
+implementation for this profile is `crypto/threads_pthread.c` — there is no `crypto/rcu.c` —
+and its read path is not a counter bump: it allocates a per-thread `rcu_thr_data`, stores it
+under `CRYPTO_THREAD_LOCAL_RCU_KEY` in the *lock's own context*, and then registers
+`ossl_rcu_free_local_data` as a **thread-exit handler** so that data is released when the
+thread stops. So RCU depends on the per-thread event-handler table, and the event-handler
+table is 6.6e-ii. Since `CONF_modules_load` creates `module_list_lock` through
+`ossl_rcu_lock_new(1, NULL)` and every `CONF_modules_*` entry point takes it, **6.10 cannot
+be written before 6.6e-ii**. The order in this document is corrected to 6.9, 6.8a–6.8c,
+**6.6e-ii**, 6.10, 6.8d–6.8f, 6.11, and 6.6e-ii's row no longer reads as an optional
+remainder of the 6.6 series.
+
+This is the third dependency cycle or inversion this planning pass has found in the same
+column, after D114's 6.9/6.6g cycle and D97's 6.6f/6.8 siting, and it is the same lesson
+each time: **a dependency column nobody re-derives is where they hide.** It is also worth
+naming why this one was invisible. `conf_mod.c` names `ossl_rcu_*` and never names
+`ossl_init_thread_start`; the dependency is one level down, inside `threads_pthread.c`. A
+reader checking `conf_mod.c`'s own includes would not see it, and neither would a grep of
+the file for thread-event machinery.
+
+**The second group is the builtin-module fan-out, and it is why `OPENSSL_load_builtin_modules`
+is not a list this stratum can complete.** `do_load_builtin_modules` runs once and calls
+`OPENSSL_load_builtin_modules`, which registers one module per subsystem —
+`ENGINE_add_conf_module`, `ASN1_add_oid_module`, the deprecated `EVP_add_alg_module`,
+`ossl_provider_add_conf_module` (6.8d), `ossl_random_add_conf_module` (Phase 9) and
+`ossl_config_add_ssl_module` (libssl). This profile has **ENGINE enabled** — `configdata.pm`
+carries `engine` in its options and `"engine" => "1"` — so `ENGINE_load_builtin_engines` is
+compiled in and called. Of the six, this stratum owns one (`ASN1_add_oid_module`), 6.8d owns
+one, and four belong to later strata. So 6.10's registry is implementable, but
+`OPENSSL_load_builtin_modules`'s *fan-out* is not, and a config file that names
+`openssl_init` will observe the difference. That is a residual of the same shape as 6.8c's
+predefined-provider one, and it is named rather than smoothed over: the honest construction
+is a registry that registers the modules which exist and a recorded divergence for the ones
+that do not, with a unit test that fails when each of them lands.
+
+**The third group is small and fully this stratum's**: `CONF_modules_unload`'s
+`sk_CONF_MODULE_pop_free(to_delete, module_free)` chain, `module_free`/`module_finish`'s
+`DSO_free` and `finish` calls, and `ossl_config_modules_free`. Nothing missing there.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 139 / 22 | **139 / 22** (no source changed) |
+| phase courts / observations | 54 / 19,869 | **54 / 19,869** |
+| subphase order corrected | — | **6.6e-ii before 6.10** |
