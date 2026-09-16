@@ -8499,3 +8499,47 @@ are the class methods of 7.3 and 7.4, which is one paragraph rather than twenty 
 | unit tests | 317 | 317 |
 
 SPDX-License-Identifier: Apache-2.0
+
+## D147 — 7.2 closes, and its exit criterion is corrected rather than claimed
+
+**7.2 is complete**: D145 landed the default-property half and D146 the fetch half, so every
+function `crypto/evp/evp_fetch.c` defines is transcribed and all five of this stratum's remaining
+deferrals are discharged. The gate's blocking list is **15 → 5**, and **no Phase-7 name blocks
+anything**: what remains is Phase 16's three `OPENSSL_info` strings, Phase 9's
+`ossl_random_add_conf_module` and Phase 13's `OSSL_provider_init`.
+
+**One of the row's two exit criteria cannot be met in 7.2, and the correction says so.** The row
+promised "a property query selects and rejects algorithms through the real fetch path, including
+negative selection". That needs a *class* to fetch through: `evp_generic_fetch` is internal,
+`libcrypto.ld` hides it, and a probe compiled against the installed headers reaches the fetch path
+only through `EVP_MD_fetch` and its siblings — which are 7.3's, because they need the `EVP_MD`
+object. So the resolver lands with 7.3's first slice, in the same commit that makes `EVP_MD_fetch`
+exist, rather than as a claim this subphase cannot support. The other criterion — the property
+*string* step that `D-CHILD-REGISTER-PROPS-1` and `D-CHILD-PROPS-CB-1` recorded as unreachable
+becoming writable — is met: `EVP_set_default_properties` and the merge path are implemented, four
+of them exports, and `RT-FETCH` observes the whole surface.
+
+**And 7.3's first slice is named in the plan so it is not discovered.** `7.3a` is
+`crypto/evp/digest.c`'s `evp_md_new`, `evp_md_from_algorithm` (the `OSSL_DISPATCH` walk,
+`set_legacy_nid` and `evp_md_cache_constants`), `evp_md_up_ref`/`_free`, `evp_lib.c`'s
+`evp_md_free_int`, `evp_utils.c`'s `evp_do_md_getparams`, the `EVP_MD` struct with its fifteen
+`OSSL_FUNC_digest_*` types, and the three exports `EVP_MD_fetch`, `EVP_MD_free`, `EVP_MD_up_ref`.
+It is the smallest slice that makes the generic fetch reachable.
+
+One contract fact the plan now carries because it is not a probe detail: **a digest whose
+`OSSL_FUNC_DIGEST_GET_PARAMS` does not answer `OSSL_DIGEST_PARAM_BLOCK_SIZE` and
+`OSSL_DIGEST_PARAM_SIZE` fails its fetch with `EVP_R_CACHE_CONSTANTS_FAILED`** — so the court's
+resolver provider must publish both, and a probe written without them would report the authority's
+own refusal as a candidate divergence.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 7 implemented / open | 4 / 946 | 4 / 946 |
+| recorded deferrals / blocking dependencies | 5 / 5 | 5 / 5 |
+| of which Phase 7 | 0 | 0 |
+| RT-FETCH observations | 38 | 38 |
+| unit tests | 317 | 317 |
+
+SPDX-License-Identifier: Apache-2.0

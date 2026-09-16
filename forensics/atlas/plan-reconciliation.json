@@ -5,13 +5,19 @@
       "in-progress"
     ],
     "census": {
-      "units_not_reached": 85
+      "symbols_not_reached": 3,
+      "units_not_reached": 86
     },
     "census_by_stratum": {
-      "7": 85
+      "7": 89
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
     "census_samples": {
+      "symbols_not_reached": [
+        "evp_do_md_getparams",
+        "evp_md_free_int",
+        "evp_md_new"
+      ],
       "units_not_reached": [
         "crypto/asn1/ameth_lib.c",
         "crypto/asn1/d2i_param.c",
@@ -60,6 +66,7 @@
         "crypto/evp/evp_pkey.c",
         "crypto/evp/evp_pkey_type.c",
         "crypto/evp/evp_rand.c",
+        "crypto/evp/evp_utils.c",
         "crypto/evp/exchange.c",
         "crypto/evp/kdf_lib.c",
         "crypto/evp/kdf_meth.c",
@@ -71,8 +78,7 @@
         "crypto/evp/legacy_md5.c",
         "crypto/evp/legacy_mdc2.c",
         "crypto/evp/legacy_ripemd.c",
-        "crypto/evp/legacy_sha.c",
-        "crypto/evp/legacy_wp.c"
+        "crypto/evp/legacy_sha.c"
       ]
     },
     "checked": {
@@ -82,11 +88,11 @@
         "docs/PHASE-7-SUBPHASES.md"
       ],
       "rows_judged": 49,
-      "symbols_named_by_a_row": 60,
-      "symbols_reached": 60,
+      "symbols_named_by_a_row": 64,
+      "symbols_reached": 61,
       "unit_records": 10,
       "units_named_by_a_record": 11,
-      "units_named_by_a_row": 128,
+      "units_named_by_a_row": 129,
       "units_reached": 43
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
@@ -803,6 +809,21 @@
           "evp_rand_clear_seed",
           "evp_rand_get_number",
           "evp_rand_get_seed"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/evp_utils.c": {
+        "defines": [
+          "evp_do_ciph_ctx_getparams",
+          "evp_do_ciph_ctx_setparams",
+          "evp_do_ciph_getparams",
+          "evp_do_md_ctx_getparams",
+          "evp_do_md_ctx_setparams",
+          "evp_do_md_getparams"
         ],
         "recorded_by": null,
         "subphases": [
@@ -1652,7 +1673,7 @@
       "transcribed_units": 114
     }
   },
-  "body_hash": "1e3ba3ff5b5ddc61c249cb1025cf3f2d4d9ef55038d7beedb441fcf472f96baf",
+  "body_hash": "a0b44b4c366ca0ea6b0e9f0884f1061ad6df2a6815eefe3579a94615e63cd508",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -1698,7 +1719,7 @@
     {
       "name": "plan-PHASE-7-SUBPHASES",
       "path": "docs/PHASE-7-SUBPHASES.md",
-      "sha256": "e50aeb0b9617da1128c9612317a9d1cd286afa8b73d6048391c166d91445cf9d"
+      "sha256": "503ef0bc96d3cfc9e96ac2f409e19722d490fa1bb31fa2faef1bb5729b096913"
     }
   ],
   "kind": "plan-reconciliation",
