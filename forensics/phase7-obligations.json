@@ -1,0 +1,6230 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "complete": false,
+    "counts": {
+      "atlas_owned": 924,
+      "deferred_to_later_phase": 0,
+      "implemented": 0,
+      "open_in_this_stratum": 950,
+      "owned": 950,
+      "received_by_handoff": 26
+    },
+    "deferred": [],
+    "deferred_by_phase": {},
+    "handoffs_discharged": {
+      "5": [
+        "ASN1_item_sign_ex",
+        "ASN1_item_verify_ex",
+        "PEM_ASN1_read",
+        "PEM_ASN1_read_bio",
+        "PEM_ASN1_write",
+        "PEM_ASN1_write_bio",
+        "PEM_ASN1_write_bio_ctx",
+        "PEM_SignFinal",
+        "PEM_SignInit",
+        "PEM_SignUpdate",
+        "PEM_bytes_read_bio",
+        "PEM_bytes_read_bio_secmem",
+        "PEM_def_callback",
+        "PEM_do_header",
+        "PEM_read",
+        "PEM_read_bio",
+        "PEM_read_bio_Parameters",
+        "PEM_read_bio_Parameters_ex",
+        "PEM_read_bio_ex",
+        "PEM_write",
+        "PEM_write_PKCS8PrivateKey_nid",
+        "PEM_write_bio",
+        "PEM_write_bio_ASN1_stream",
+        "PEM_write_bio_PKCS8PrivateKey_nid",
+        "PEM_write_bio_Parameters",
+        "PEM_write_bio_PrivateKey_traditional"
+      ]
+    },
+    "handoffs_discharged_with_reasons": {
+      "5": [
+        {
+          "declaring_header": "asn1.h",
+          "owning_phase": 7,
+          "reason": "digests and signs through EVP_PKEY/EVP_MD/X509_ALGOR; the EVP framework is Phase 7 and the algorithm identifier is Phase 11",
+          "symbol": "ASN1_item_sign_ex"
+        },
+        {
+          "declaring_header": "asn1.h",
+          "owning_phase": 7,
+          "reason": "digests and signs through EVP_PKEY/EVP_MD/X509_ALGOR; the EVP framework is Phase 7 and the algorithm identifier is Phase 11",
+          "symbol": "ASN1_item_verify_ex"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 7,
+          "reason": "tests the PEM name against EVP_PKEY_asn1_find_str, which Phase 7 owns",
+          "symbol": "PEM_ASN1_read"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 7,
+          "reason": "tests the PEM name against EVP_PKEY_asn1_find_str, which Phase 7 owns",
+          "symbol": "PEM_ASN1_read_bio"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 7,
+          "reason": "takes an EVP_CIPHER and derives its key with EVP_BytesToKey and a RAND_bytes IV, all Phase 7",
+          "symbol": "PEM_ASN1_write"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 7,
+          "reason": "takes an EVP_CIPHER and derives its key with EVP_BytesToKey and a RAND_bytes IV, all Phase 7",
+          "symbol": "PEM_ASN1_write_bio"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 7,
+          "reason": "takes an EVP_CIPHER and derives its key with EVP_BytesToKey and a RAND_bytes IV, all Phase 7",
+          "symbol": "PEM_ASN1_write_bio_ctx"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 7,
+          "reason": "digests through an EVP_MD_CTX and signs with an EVP_PKEY, which Phase 7 owns",
+          "symbol": "PEM_SignFinal"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 7,
+          "reason": "digests through an EVP_MD_CTX and signs with an EVP_PKEY, which Phase 7 owns",
+          "symbol": "PEM_SignInit"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 7,
+          "reason": "digests through an EVP_MD_CTX and signs with an EVP_PKEY, which Phase 7 owns",
+          "symbol": "PEM_SignUpdate"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 7,
+          "reason": "the PEM block codec is EVP_ENCODE_CTX, which Phase 7 owns (evp.h)",
+          "symbol": "PEM_bytes_read_bio"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 7,
+          "reason": "the PEM block codec is EVP_ENCODE_CTX, which Phase 7 owns (evp.h)",
+          "symbol": "PEM_bytes_read_bio_secmem"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 7,
+          "reason": "reads a pass phrase through EVP_read_pw_string_min, which Phase 7 owns",
+          "symbol": "PEM_def_callback"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 7,
+          "reason": "decrypts through EVP_CIPHER_CTX with EVP_BytesToKey, which Phase 7 owns",
+          "symbol": "PEM_do_header"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 7,
+          "reason": "the PEM block codec is EVP_ENCODE_CTX, which Phase 7 owns (evp.h)",
+          "symbol": "PEM_read"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 7,
+          "reason": "the PEM block codec is EVP_ENCODE_CTX, which Phase 7 owns (evp.h)",
+          "symbol": "PEM_read_bio"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 7,
+          "reason": "reads or writes an EVP_PKEY, which is Phase 7",
+          "symbol": "PEM_read_bio_Parameters"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 7,
+          "reason": "reads or writes an EVP_PKEY, which is Phase 7",
+          "symbol": "PEM_read_bio_Parameters_ex"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 7,
+          "reason": "the PEM block codec is EVP_ENCODE_CTX, which Phase 7 owns (evp.h)",
+          "symbol": "PEM_read_bio_ex"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 7,
+          "reason": "the PEM block codec is EVP_ENCODE_CTX, which Phase 7 owns (evp.h)",
+          "symbol": "PEM_write"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 7,
+          "reason": "reads or writes an EVP_PKEY, which is Phase 7",
+          "symbol": "PEM_write_PKCS8PrivateKey_nid"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 7,
+          "reason": "the PEM block codec is EVP_ENCODE_CTX, which Phase 7 owns (evp.h)",
+          "symbol": "PEM_write_bio"
+        },
+        {
+          "declaring_header": "asn1.h",
+          "owning_phase": 7,
+          "reason": "writes through BIO_f_base64, the EVP base64 filter BIO that Phase 4 deferred to Phase 7",
+          "symbol": "PEM_write_bio_ASN1_stream"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 7,
+          "reason": "reads or writes an EVP_PKEY, which is Phase 7",
+          "symbol": "PEM_write_bio_PKCS8PrivateKey_nid"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 7,
+          "reason": "writes an EVP_PKEY's parameters, which Phase 7 owns",
+          "symbol": "PEM_write_bio_Parameters"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 7,
+          "reason": "reads or writes an EVP_PKEY, which is Phase 7",
+          "symbol": "PEM_write_bio_PrivateKey_traditional"
+        }
+      ]
+    },
+    "implemented": [],
+    "module_prefixes": [
+      {
+        "module": "src/evp/fetch.rs",
+        "prefixes": [
+          "OSSL_METHOD_",
+          "EVP_default_properties_",
+          "EVP_get1_default_properties",
+          "EVP_set_default_properties"
+        ]
+      },
+      {
+        "module": "src/evp/namemap_names.rs",
+        "prefixes": [
+          "EVP_names",
+          "EVP_is_a",
+          "evp_names"
+        ]
+      },
+      {
+        "module": "src/evp/cipher.rs",
+        "prefixes": [
+          "EVP_CIPHER_",
+          "EVP_Encrypt",
+          "EVP_Decrypt",
+          "EVP_Cipher"
+        ]
+      },
+      {
+        "module": "src/evp/digest.rs",
+        "prefixes": [
+          "EVP_MD_",
+          "EVP_Digest",
+          "EVP_sha",
+          "EVP_md",
+          "EVP_Q_digest"
+        ]
+      },
+      {
+        "module": "src/evp/mac.rs",
+        "prefixes": [
+          "EVP_MAC_",
+          "EVP_MAC",
+          "EVP_Q_mac"
+        ]
+      },
+      {
+        "module": "src/evp/kdf.rs",
+        "prefixes": [
+          "EVP_KDF_",
+          "EVP_KDF"
+        ]
+      },
+      {
+        "module": "src/evp/pbe.rs",
+        "prefixes": [
+          "EVP_PBE_"
+        ]
+      },
+      {
+        "module": "src/evp/rand.rs",
+        "prefixes": [
+          "EVP_RAND_",
+          "EVP_RAND"
+        ]
+      },
+      {
+        "module": "src/evp/skeymgmt.rs",
+        "prefixes": [
+          "OSSL_SKEYMGMT_",
+          "EVP_SKEY"
+        ]
+      },
+      {
+        "module": "src/evp/legacy_cipher.rs",
+        "prefixes": [
+          "EVP_aes_",
+          "EVP_aria_",
+          "EVP_camellia_",
+          "EVP_des",
+          "EVP_rc2",
+          "EVP_rc4",
+          "EVP_idea",
+          "EVP_cast5",
+          "EVP_seed",
+          "EVP_bf_",
+          "EVP_sm4",
+          "EVP_chacha20",
+          "EVP_xcbc",
+          "EVP_null",
+          "EVP_enc_null",
+          "EVP_get_cipher"
+        ]
+      },
+      {
+        "module": "src/evp/legacy_digest.rs",
+        "prefixes": [
+          "EVP_md4",
+          "EVP_md5",
+          "EVP_sha1",
+          "EVP_sha224",
+          "EVP_sha256",
+          "EVP_sha384",
+          "EVP_sha512",
+          "EVP_sha3",
+          "EVP_shake",
+          "EVP_blake2",
+          "EVP_ripemd",
+          "EVP_whirlpool",
+          "EVP_mdc2",
+          "EVP_sm3",
+          "EVP_get_digest"
+        ]
+      },
+      {
+        "module": "src/evp/pkey_ctx.rs",
+        "prefixes": [
+          "EVP_PKEY_CTX",
+          "EVP_PKEY_ASN1_METHOD",
+          "EVP_PKEY_meth",
+          "EVP_PKEY_param_check",
+          "EVP_PKEY_paramgen",
+          "EVP_PKEY_keygen",
+          "EVP_PKEY_check",
+          "EVP_PKEY_get0_asn1",
+          "EVP_PKEY_get0_provider",
+          "EVP_PKEY_asn1_"
+        ]
+      },
+      {
+        "module": "src/evp/pkey_asn1.rs",
+        "prefixes": [
+          "ASN1_item_sign",
+          "ASN1_item_verify",
+          "d2i_",
+          "i2d_"
+        ]
+      },
+      {
+        "module": "src/evp/signature.rs",
+        "prefixes": [
+          "EVP_SIGNATURE_"
+        ]
+      },
+      {
+        "module": "src/evp/asymcipher.rs",
+        "prefixes": [
+          "EVP_ASYM_CIPHER_"
+        ]
+      },
+      {
+        "module": "src/evp/kem.rs",
+        "prefixes": [
+          "EVP_KEM_"
+        ]
+      },
+      {
+        "module": "src/evp/exchange.rs",
+        "prefixes": [
+          "EVP_KEYEXCH_"
+        ]
+      },
+      {
+        "module": "src/evp/keymgmt.rs",
+        "prefixes": [
+          "EVP_KEYMGMT_"
+        ]
+      },
+      {
+        "module": "src/evp/pkey.rs",
+        "prefixes": [
+          "EVP_PKEY_"
+        ]
+      },
+      {
+        "module": "src/evp/bio_enc.rs",
+        "prefixes": [
+          "BIO_f_base64",
+          "BIO_f_cipher",
+          "BIO_f_md",
+          "BIO_f_ok",
+          "BIO_f_reliable",
+          "BIO_set_cipher"
+        ]
+      },
+      {
+        "module": "src/evp/encode.rs",
+        "prefixes": [
+          "EVP_ENCODE_CTX_",
+          "EVP_Encode",
+          "EVP_Decode"
+        ]
+      },
+      {
+        "module": "src/evp/p_legacy.rs",
+        "prefixes": [
+          "EVP_Open",
+          "EVP_Seal",
+          "EVP_Sign",
+          "EVP_Verify",
+          "EVP_DecryptFinal",
+          "EVP_BytesToKey",
+          "EVP_get_pw_prompt",
+          "EVP_set_pw_prompt",
+          "EVP_read_pw_string"
+        ]
+      },
+      {
+        "module": "src/evp/pem_bridge.rs",
+        "prefixes": [
+          "PEM_",
+          "PKCS5_",
+          "PKCS8_"
+        ]
+      },
+      {
+        "module": "src/mac/hmac.rs",
+        "prefixes": [
+          "HMAC_"
+        ]
+      },
+      {
+        "module": "src/mac/cmac.rs",
+        "prefixes": [
+          "CMAC_"
+        ]
+      },
+      {
+        "module": "src/hpke/mod.rs",
+        "prefixes": [
+          "OSSL_HPKE_"
+        ]
+      },
+      {
+        "module": "src/evp/legacy_evp.rs",
+        "prefixes": [
+          "OpenSSL_add_all",
+          "OPENSSL_add_all",
+          "EVP_cleanup",
+          "EVP_add_cipher",
+          "EVP_add_digest",
+          "EVP_add_alg_module",
+          "SSLeay_add",
+          "OpenSSL_add_all_algorithms"
+        ]
+      },
+      {
+        "module": "src/mac/hmac.rs",
+        "prefixes": [
+          "HMAC"
+        ]
+      }
+    ],
+    "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum, and it starts at the whole working set, which is the honest starting state. Nothing here is a parity claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-7-SUBPHASES.md §4 decides when the stratum may be called complete.",
+    "open": [
+      {
+        "declaring_header": "asn1.h",
+        "module": "src/evp/pkey_asn1.rs",
+        "received_from_phase": 5,
+        "symbol": "ASN1_item_sign_ex"
+      },
+      {
+        "declaring_header": "asn1.h",
+        "module": "src/evp/pkey_asn1.rs",
+        "received_from_phase": 5,
+        "symbol": "ASN1_item_verify_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/bio_enc.rs",
+        "received_from_phase": null,
+        "symbol": "BIO_f_base64"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/bio_enc.rs",
+        "received_from_phase": null,
+        "symbol": "BIO_f_cipher"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/bio_enc.rs",
+        "received_from_phase": null,
+        "symbol": "BIO_f_md"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/bio_enc.rs",
+        "received_from_phase": null,
+        "symbol": "BIO_f_reliable"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/bio_enc.rs",
+        "received_from_phase": null,
+        "symbol": "BIO_set_cipher"
+      },
+      {
+        "declaring_header": "cmac.h",
+        "module": "src/mac/cmac.rs",
+        "received_from_phase": null,
+        "symbol": "CMAC_CTX_cleanup"
+      },
+      {
+        "declaring_header": "cmac.h",
+        "module": "src/mac/cmac.rs",
+        "received_from_phase": null,
+        "symbol": "CMAC_CTX_copy"
+      },
+      {
+        "declaring_header": "cmac.h",
+        "module": "src/mac/cmac.rs",
+        "received_from_phase": null,
+        "symbol": "CMAC_CTX_free"
+      },
+      {
+        "declaring_header": "cmac.h",
+        "module": "src/mac/cmac.rs",
+        "received_from_phase": null,
+        "symbol": "CMAC_CTX_get0_cipher_ctx"
+      },
+      {
+        "declaring_header": "cmac.h",
+        "module": "src/mac/cmac.rs",
+        "received_from_phase": null,
+        "symbol": "CMAC_CTX_new"
+      },
+      {
+        "declaring_header": "cmac.h",
+        "module": "src/mac/cmac.rs",
+        "received_from_phase": null,
+        "symbol": "CMAC_Final"
+      },
+      {
+        "declaring_header": "cmac.h",
+        "module": "src/mac/cmac.rs",
+        "received_from_phase": null,
+        "symbol": "CMAC_Init"
+      },
+      {
+        "declaring_header": "cmac.h",
+        "module": "src/mac/cmac.rs",
+        "received_from_phase": null,
+        "symbol": "CMAC_Update"
+      },
+      {
+        "declaring_header": "cmac.h",
+        "module": "src/mac/cmac.rs",
+        "received_from_phase": null,
+        "symbol": "CMAC_resume"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/asymcipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_ASYM_CIPHER_do_all_provided"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/asymcipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_ASYM_CIPHER_fetch"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/asymcipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_ASYM_CIPHER_free"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/asymcipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_ASYM_CIPHER_get0_description"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/asymcipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_ASYM_CIPHER_get0_name"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/asymcipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_ASYM_CIPHER_get0_provider"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/asymcipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_ASYM_CIPHER_gettable_ctx_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/asymcipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_ASYM_CIPHER_is_a"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/asymcipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_ASYM_CIPHER_names_do_all"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/asymcipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_ASYM_CIPHER_settable_ctx_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/asymcipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_ASYM_CIPHER_up_ref"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/p_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_BytesToKey"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_buf_noconst"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_cipher"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_clear_flags"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_copy"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_ctrl"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_dup"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_free"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_get0_cipher"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_get1_cipher"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_get_algor"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_get_algor_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_get_app_data"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_get_block_size"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_get_cipher_data"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_get_iv_length"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_get_key_length"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_get_nid"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_get_num"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_get_original_iv"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_get_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_get_tag_length"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_get_updated_iv"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_gettable_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_is_encrypting"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_iv"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_iv_noconst"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_new"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_original_iv"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_rand_key"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_reset"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_set_algor_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_set_app_data"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_set_cipher_data"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_set_flags"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_set_key_length"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_set_num"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_set_padding"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_set_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_settable_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_CTX_test_flags"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_asn1_to_param"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_can_pipeline"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_do_all"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_do_all_provided"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_do_all_sorted"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_fetch"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_free"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_get0_description"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_get0_name"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_get0_provider"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_get_asn1_iv"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_get_block_size"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_get_flags"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_get_iv_length"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_get_key_length"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_get_mode"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_get_nid"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_get_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_get_type"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_gettable_ctx_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_gettable_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_impl_ctx_size"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_is_a"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_meth_dup"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_meth_free"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_meth_get_cleanup"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_meth_get_ctrl"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_meth_get_do_cipher"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_meth_get_get_asn1_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_meth_get_init"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_meth_get_set_asn1_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_meth_new"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_meth_set_cleanup"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_meth_set_ctrl"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_meth_set_do_cipher"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_meth_set_flags"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_meth_set_get_asn1_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_meth_set_impl_ctx_size"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_meth_set_init"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_meth_set_iv_length"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_meth_set_set_asn1_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_names_do_all"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_param_to_asn1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_set_asn1_iv"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_settable_ctx_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CIPHER_up_ref"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_Cipher"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CipherFinal"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CipherFinal_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CipherInit"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CipherInit_SKEY"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CipherInit_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CipherInit_ex2"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CipherPipelineDecryptInit"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CipherPipelineEncryptInit"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CipherPipelineFinal"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CipherPipelineUpdate"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_CipherUpdate"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/encode.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_DecodeBlock"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/encode.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_DecodeFinal"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/encode.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_DecodeInit"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/encode.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_DecodeUpdate"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_DecryptFinal"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_DecryptFinal_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_DecryptInit"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_DecryptInit_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_DecryptInit_ex2"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_DecryptUpdate"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_Digest"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_DigestFinal"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_DigestFinalXOF"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_DigestFinal_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_DigestInit"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_DigestInit_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_DigestInit_ex2"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_DigestSign"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_DigestSignFinal"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_DigestSignInit"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_DigestSignInit_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_DigestSignUpdate"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_DigestSqueeze"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_DigestUpdate"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_DigestVerify"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_DigestVerifyFinal"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_DigestVerifyInit"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_DigestVerifyInit_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_DigestVerifyUpdate"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/encode.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_ENCODE_CTX_copy"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/encode.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_ENCODE_CTX_free"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/encode.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_ENCODE_CTX_new"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/encode.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_ENCODE_CTX_num"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/encode.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_EncodeBlock"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/encode.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_EncodeFinal"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/encode.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_EncodeInit"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/encode.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_EncodeUpdate"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_EncryptFinal"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_EncryptFinal_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_EncryptInit"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_EncryptInit_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_EncryptInit_ex2"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_EncryptUpdate"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/kdf.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KDF_CTX_dup"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/kdf.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KDF_CTX_free"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/kdf.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KDF_CTX_get_kdf_size"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/kdf.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KDF_CTX_get_params"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/kdf.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KDF_CTX_gettable_params"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/kdf.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KDF_CTX_kdf"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/kdf.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KDF_CTX_new"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/kdf.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KDF_CTX_reset"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/kdf.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KDF_CTX_set_SKEY"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/kdf.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KDF_CTX_set_params"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/kdf.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KDF_CTX_settable_params"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/kdf.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KDF_derive"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/kdf.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KDF_derive_SKEY"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/kdf.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KDF_do_all_provided"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/kdf.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KDF_fetch"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/kdf.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KDF_free"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/kdf.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KDF_get0_description"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/kdf.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KDF_get0_name"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/kdf.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KDF_get0_provider"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/kdf.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KDF_get_params"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/kdf.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KDF_gettable_ctx_params"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/kdf.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KDF_gettable_params"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/kdf.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KDF_is_a"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/kdf.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KDF_names_do_all"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/kdf.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KDF_settable_ctx_params"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/kdf.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KDF_up_ref"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/kem.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEM_do_all_provided"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/kem.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEM_fetch"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/kem.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEM_free"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/kem.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEM_get0_description"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/kem.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEM_get0_name"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/kem.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEM_get0_provider"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/kem.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEM_gettable_ctx_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/kem.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEM_is_a"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/kem.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEM_names_do_all"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/kem.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEM_settable_ctx_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/kem.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEM_up_ref"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/exchange.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEYEXCH_do_all_provided"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/exchange.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEYEXCH_fetch"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/exchange.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEYEXCH_free"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/exchange.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEYEXCH_get0_description"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/exchange.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEYEXCH_get0_name"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/exchange.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEYEXCH_get0_provider"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/exchange.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEYEXCH_gettable_ctx_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/exchange.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEYEXCH_is_a"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/exchange.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEYEXCH_names_do_all"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/exchange.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEYEXCH_settable_ctx_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/exchange.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEYEXCH_up_ref"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/keymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEYMGMT_do_all_provided"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/keymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEYMGMT_fetch"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/keymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEYMGMT_free"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/keymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEYMGMT_gen_gettable_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/keymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEYMGMT_gen_settable_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/keymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEYMGMT_get0_description"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/keymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEYMGMT_get0_name"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/keymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEYMGMT_get0_provider"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/keymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEYMGMT_gettable_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/keymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEYMGMT_is_a"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/keymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEYMGMT_names_do_all"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/keymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEYMGMT_settable_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/keymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_KEYMGMT_up_ref"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/mac.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MAC_CTX_dup"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/mac.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MAC_CTX_free"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/mac.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MAC_CTX_get0_mac"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/mac.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MAC_CTX_get_block_size"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/mac.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MAC_CTX_get_mac_size"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/mac.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MAC_CTX_get_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/mac.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MAC_CTX_gettable_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/mac.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MAC_CTX_new"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/mac.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MAC_CTX_set_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/mac.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MAC_CTX_settable_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/mac.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MAC_do_all_provided"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/mac.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MAC_fetch"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/mac.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MAC_final"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/mac.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MAC_finalXOF"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/mac.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MAC_free"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/mac.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MAC_get0_description"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/mac.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MAC_get0_name"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/mac.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MAC_get0_provider"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/mac.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MAC_get_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/mac.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MAC_gettable_ctx_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/mac.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MAC_gettable_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/mac.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MAC_init"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/mac.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MAC_init_SKEY"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/mac.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MAC_is_a"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/mac.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MAC_names_do_all"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/mac.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MAC_settable_ctx_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/mac.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MAC_up_ref"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/mac.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MAC_update"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_CTX_clear_flags"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_CTX_copy"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_CTX_copy_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_CTX_ctrl"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_CTX_dup"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_CTX_free"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_CTX_get0_md"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_CTX_get0_md_data"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_CTX_get1_md"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_CTX_get_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_CTX_get_pkey_ctx"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_CTX_get_size_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_CTX_gettable_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_CTX_md"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_CTX_new"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_CTX_reset"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_CTX_set_flags"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_CTX_set_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_CTX_set_pkey_ctx"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_CTX_set_update_fn"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_CTX_settable_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_CTX_test_flags"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_CTX_update_fn"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_do_all"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_do_all_provided"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_do_all_sorted"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_fetch"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_free"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_get0_description"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_get0_name"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_get0_provider"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_get_block_size"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_get_flags"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_get_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_get_pkey_type"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_get_size"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_get_type"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_gettable_ctx_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_gettable_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_is_a"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_meth_dup"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_meth_free"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_meth_get_app_datasize"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_meth_get_cleanup"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_meth_get_copy"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_meth_get_ctrl"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_meth_get_final"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_meth_get_flags"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_meth_get_init"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_meth_get_input_blocksize"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_meth_get_result_size"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_meth_get_update"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_meth_new"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_meth_set_app_datasize"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_meth_set_cleanup"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_meth_set_copy"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_meth_set_ctrl"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_meth_set_final"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_meth_set_flags"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_meth_set_init"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_meth_set_input_blocksize"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_meth_set_result_size"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_meth_set_update"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_names_do_all"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_settable_ctx_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_up_ref"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_MD_xof"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/p_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_OpenFinal"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/p_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_OpenInit"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pbe.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PBE_CipherInit"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pbe.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PBE_CipherInit_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pbe.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PBE_alg_add"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pbe.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PBE_alg_add_type"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pbe.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PBE_cleanup"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pbe.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PBE_find"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pbe.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PBE_find_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pbe.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PBE_get"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pbe.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PBE_scrypt"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pbe.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PBE_scrypt_ex"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_add1_hkdf_info"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_add1_tls1_prf_seed"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_ctrl"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_ctrl_str"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_ctrl_uint64"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_dup"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_free"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get0_libctx"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get0_peerkey"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get0_pkey"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get0_propq"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get0_provider"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get1_id"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get1_id_len"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get_algor"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get_algor_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get_app_data"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get_cb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get_data"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get_group_name"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get_keygen_info"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get_operation"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get_signature_md"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_gettable_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_hex2ctrl"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_is_a"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_md"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_new"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_new_from_name"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_new_from_pkey"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_new_id"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set0_keygen_info"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set1_hkdf_key"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set1_hkdf_salt"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set1_id"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set1_pbe_pass"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set1_scrypt_salt"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set1_tls1_prf_secret"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_algor_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_app_data"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_cb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_data"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_group_name"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_hkdf_md"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_hkdf_mode"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_kem_op"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_mac_key"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_params"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_scrypt_N"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_scrypt_maxmem_bytes"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_scrypt_p"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_scrypt_r"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_signature"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_signature_md"
+      },
+      {
+        "declaring_header": "kdf.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_tls1_prf_md"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_settable_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_str2ctrl"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_Q_keygen"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_asn1_add0"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_asn1_add_alias"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_asn1_copy"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_asn1_find"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_asn1_find_str"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_asn1_free"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_asn1_get0"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_asn1_get0_info"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_asn1_get_count"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_asn1_new"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_asn1_set_check"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_asn1_set_ctrl"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_asn1_set_free"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_asn1_set_get_priv_key"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_asn1_set_get_pub_key"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_asn1_set_item"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_asn1_set_param"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_asn1_set_param_check"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_asn1_set_private"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_asn1_set_public"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_asn1_set_public_check"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_asn1_set_security_bits"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_asn1_set_set_priv_key"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_asn1_set_set_pub_key"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_asn1_set_siginf"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_assign"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_auth_decapsulate_init"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_auth_encapsulate_init"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_can_sign"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_check"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_cmp"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_cmp_parameters"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_copy_parameters"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_decapsulate"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_decapsulate_init"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_decrypt"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_decrypt_init"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_decrypt_init_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_decrypt_old"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_derive"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_derive_SKEY"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_derive_init"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_derive_init_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_derive_set_peer"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_derive_set_peer_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_digestsign_supports_digest"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_dup"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_encapsulate"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_encapsulate_init"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_encrypt"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_encrypt_init"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_encrypt_init_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_encrypt_old"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_eq"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_export"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_free"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_fromdata"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_fromdata_init"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_fromdata_settable"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_generate"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get0"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get0_DH"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get0_DSA"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get0_EC_KEY"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get0_RSA"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get0_asn1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get0_description"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get0_engine"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get0_hmac"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get0_poly1305"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get0_provider"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get0_siphash"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get0_type_name"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get1_DH"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get1_DSA"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get1_EC_KEY"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get1_RSA"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get1_encoded_public_key"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get_base_id"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get_bits"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get_bn_param"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get_default_digest_name"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get_default_digest_nid"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get_ec_point_conv_form"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get_ex_data"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get_field_type"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get_group_name"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get_id"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get_int_param"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get_octet_string_param"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get_raw_private_key"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get_raw_public_key"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get_security_bits"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get_security_category"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get_size"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get_size_t_param"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_get_utf8_string_param"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_gettable_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_is_a"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_keygen"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_keygen_init"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_add0"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_copy"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_find"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_free"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_get0"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_get0_info"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_get_check"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_get_cleanup"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_get_copy"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_get_count"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_get_ctrl"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_get_decrypt"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_get_derive"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_get_digest_custom"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_get_digestsign"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_get_digestverify"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_get_encrypt"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_get_init"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_get_keygen"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_get_param_check"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_get_paramgen"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_get_public_check"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_get_sign"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_get_signctx"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_get_verify"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_get_verify_recover"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_get_verifyctx"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_new"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_remove"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_set_check"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_set_cleanup"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_set_copy"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_set_ctrl"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_set_decrypt"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_set_derive"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_set_digest_custom"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_set_digestsign"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_set_digestverify"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_set_encrypt"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_set_init"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_set_keygen"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_set_param_check"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_set_paramgen"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_set_public_check"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_set_sign"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_set_signctx"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_set_verify"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_set_verify_recover"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_meth_set_verifyctx"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_missing_parameters"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_new"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_new_CMAC_key"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_new_mac_key"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_new_raw_private_key"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_new_raw_private_key_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_new_raw_public_key"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_new_raw_public_key_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_pairwise_check"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_param_check"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_param_check_quick"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_parameters_eq"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_paramgen"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_ctx.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_paramgen_init"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_print_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_print_params_fp"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_print_private"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_print_private_fp"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_print_public"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_print_public_fp"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_private_check"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_public_check"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_public_check_quick"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_save_parameters"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_set1_DH"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_set1_DSA"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_set1_EC_KEY"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_set1_RSA"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_set1_encoded_public_key"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_set1_engine"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_set_bn_param"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_set_ex_data"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_set_int_param"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_set_octet_string_param"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_set_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_set_size_t_param"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_set_type"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_set_type_by_keymgmt"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_set_type_str"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_set_utf8_string_param"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_settable_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_sign"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_sign_init"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_sign_init_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_sign_init_ex2"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_sign_message_final"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_sign_message_init"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_sign_message_update"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_todata"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_type"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_type_names_do_all"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_up_ref"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_verify"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_verify_init"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_verify_init_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_verify_init_ex2"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_verify_message_final"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_verify_message_init"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_verify_message_update"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_verify_recover"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_verify_recover_init"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_verify_recover_init_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_verify_recover_init_ex2"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_Q_digest"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/mac.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_Q_mac"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_CTX_free"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_CTX_get0_rand"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_CTX_get_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_CTX_gettable_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_CTX_new"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_CTX_set_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_CTX_settable_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_CTX_up_ref"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_do_all_provided"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_enable_locking"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_fetch"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_free"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_generate"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_get0_description"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_get0_name"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_get0_provider"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_get_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_get_state"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_get_strength"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_gettable_ctx_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_gettable_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_instantiate"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_is_a"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_names_do_all"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_nonce"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_reseed"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_settable_ctx_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_uninstantiate"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_up_ref"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/rand.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_RAND_verify_zeroization"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/signature.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SIGNATURE_do_all_provided"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/signature.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SIGNATURE_fetch"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/signature.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SIGNATURE_free"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/signature.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SIGNATURE_get0_description"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/signature.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SIGNATURE_get0_name"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/signature.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SIGNATURE_get0_provider"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/signature.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SIGNATURE_gettable_ctx_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/signature.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SIGNATURE_is_a"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/signature.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SIGNATURE_names_do_all"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/signature.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SIGNATURE_settable_ctx_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/signature.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SIGNATURE_up_ref"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/skeymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SKEYMGMT_do_all_provided"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/skeymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SKEYMGMT_fetch"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/skeymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SKEYMGMT_free"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/skeymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SKEYMGMT_get0_description"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/skeymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SKEYMGMT_get0_gen_settable_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/skeymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SKEYMGMT_get0_imp_settable_params"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/skeymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SKEYMGMT_get0_name"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/skeymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SKEYMGMT_get0_provider"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/skeymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SKEYMGMT_is_a"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/skeymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SKEYMGMT_names_do_all"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/skeymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SKEYMGMT_up_ref"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/skeymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SKEY_export"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/skeymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SKEY_free"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/skeymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SKEY_generate"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/skeymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SKEY_get0_key_id"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/skeymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SKEY_get0_provider_name"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/skeymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SKEY_get0_raw_key"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/skeymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SKEY_get0_skeymgmt_name"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/skeymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SKEY_import"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/skeymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SKEY_import_SKEYMGMT"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/skeymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SKEY_import_raw_key"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/skeymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SKEY_is_a"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/skeymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SKEY_to_provider"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/skeymgmt.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SKEY_up_ref"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/p_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SealFinal"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/p_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SealInit"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/p_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SignFinal"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/p_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_SignFinal_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/p_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_VerifyFinal"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/p_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_VerifyFinal_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_evp.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_add_alg_module"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_evp.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_add_cipher"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_evp.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_add_digest"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_128_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_128_cbc_hmac_sha1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_128_cbc_hmac_sha256"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_128_ccm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_128_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_128_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_128_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_128_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_128_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_128_gcm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_128_ocb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_128_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_128_wrap"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_128_wrap_pad"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_128_xts"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_192_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_192_ccm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_192_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_192_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_192_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_192_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_192_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_192_gcm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_192_ocb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_192_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_192_wrap"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_192_wrap_pad"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_256_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_256_cbc_hmac_sha1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_256_cbc_hmac_sha256"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_256_ccm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_256_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_256_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_256_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_256_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_256_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_256_gcm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_256_ocb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_256_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_256_wrap"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_256_wrap_pad"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aes_256_xts"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aria_128_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aria_128_ccm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aria_128_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aria_128_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aria_128_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aria_128_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aria_128_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aria_128_gcm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aria_128_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aria_192_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aria_192_ccm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aria_192_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aria_192_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aria_192_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aria_192_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aria_192_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aria_192_gcm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aria_192_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aria_256_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aria_256_ccm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aria_256_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aria_256_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aria_256_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aria_256_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aria_256_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aria_256_gcm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_aria_256_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_bf_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_bf_cfb64"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_bf_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_bf_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_blake2b512"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_blake2s256"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_camellia_128_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_camellia_128_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_camellia_128_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_camellia_128_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_camellia_128_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_camellia_128_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_camellia_128_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_camellia_192_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_camellia_192_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_camellia_192_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_camellia_192_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_camellia_192_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_camellia_192_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_camellia_192_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_camellia_256_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_camellia_256_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_camellia_256_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_camellia_256_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_camellia_256_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_camellia_256_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_camellia_256_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_cast5_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_cast5_cfb64"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_cast5_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_cast5_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_chacha20"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_chacha20_poly1305"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/fetch.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_default_properties_enable_fips"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/fetch.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_default_properties_is_fips_enabled"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_des_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_des_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_des_cfb64"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_des_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_des_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_des_ede"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_des_ede3"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_des_ede3_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_des_ede3_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_des_ede3_cfb64"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_des_ede3_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_des_ede3_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_des_ede3_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_des_ede3_wrap"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_des_ede_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_des_ede_cfb64"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_des_ede_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_des_ede_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_des_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_desx_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_enc_null"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/fetch.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_get1_default_properties"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_get_cipherbyname"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_get_digestbyname"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/p_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_get_pw_prompt"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_idea_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_idea_cfb64"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_idea_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_idea_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_md4"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_md5"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_md5_sha1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_md_null"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_mdc2"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_rc2_40_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_rc2_64_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_rc2_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_rc2_cfb64"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_rc2_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_rc2_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_rc4"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_rc4_40"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_rc4_hmac_md5"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/p_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_read_pw_string"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/p_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_read_pw_string_min"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_ripemd160"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_seed_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_seed_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_seed_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_seed_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/fetch.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_set_default_properties"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/p_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_set_pw_prompt"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_sha1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_sha224"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_sha256"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_sha384"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_sha3_224"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_sha3_256"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_sha3_384"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_sha3_512"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_sha512"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_sha512_224"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_sha512_256"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_shake128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_shake256"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_sm3"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_sm4_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_sm4_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_sm4_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_sm4_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_sm4_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_digest.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_whirlpool"
+      },
+      {
+        "declaring_header": "hmac.h",
+        "module": "src/mac/hmac.rs",
+        "received_from_phase": null,
+        "symbol": "HMAC"
+      },
+      {
+        "declaring_header": "hmac.h",
+        "module": "src/mac/hmac.rs",
+        "received_from_phase": null,
+        "symbol": "HMAC_CTX_copy"
+      },
+      {
+        "declaring_header": "hmac.h",
+        "module": "src/mac/hmac.rs",
+        "received_from_phase": null,
+        "symbol": "HMAC_CTX_free"
+      },
+      {
+        "declaring_header": "hmac.h",
+        "module": "src/mac/hmac.rs",
+        "received_from_phase": null,
+        "symbol": "HMAC_CTX_get_md"
+      },
+      {
+        "declaring_header": "hmac.h",
+        "module": "src/mac/hmac.rs",
+        "received_from_phase": null,
+        "symbol": "HMAC_CTX_new"
+      },
+      {
+        "declaring_header": "hmac.h",
+        "module": "src/mac/hmac.rs",
+        "received_from_phase": null,
+        "symbol": "HMAC_CTX_reset"
+      },
+      {
+        "declaring_header": "hmac.h",
+        "module": "src/mac/hmac.rs",
+        "received_from_phase": null,
+        "symbol": "HMAC_CTX_set_flags"
+      },
+      {
+        "declaring_header": "hmac.h",
+        "module": "src/mac/hmac.rs",
+        "received_from_phase": null,
+        "symbol": "HMAC_Final"
+      },
+      {
+        "declaring_header": "hmac.h",
+        "module": "src/mac/hmac.rs",
+        "received_from_phase": null,
+        "symbol": "HMAC_Init"
+      },
+      {
+        "declaring_header": "hmac.h",
+        "module": "src/mac/hmac.rs",
+        "received_from_phase": null,
+        "symbol": "HMAC_Init_ex"
+      },
+      {
+        "declaring_header": "hmac.h",
+        "module": "src/mac/hmac.rs",
+        "received_from_phase": null,
+        "symbol": "HMAC_Update"
+      },
+      {
+        "declaring_header": "hmac.h",
+        "module": "src/mac/hmac.rs",
+        "received_from_phase": null,
+        "symbol": "HMAC_size"
+      },
+      {
+        "declaring_header": "hpke.h",
+        "module": "src/hpke/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_HPKE_CTX_free"
+      },
+      {
+        "declaring_header": "hpke.h",
+        "module": "src/hpke/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_HPKE_CTX_get_seq"
+      },
+      {
+        "declaring_header": "hpke.h",
+        "module": "src/hpke/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_HPKE_CTX_new"
+      },
+      {
+        "declaring_header": "hpke.h",
+        "module": "src/hpke/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_HPKE_CTX_set1_authpriv"
+      },
+      {
+        "declaring_header": "hpke.h",
+        "module": "src/hpke/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_HPKE_CTX_set1_authpub"
+      },
+      {
+        "declaring_header": "hpke.h",
+        "module": "src/hpke/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_HPKE_CTX_set1_ikme"
+      },
+      {
+        "declaring_header": "hpke.h",
+        "module": "src/hpke/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_HPKE_CTX_set1_psk"
+      },
+      {
+        "declaring_header": "hpke.h",
+        "module": "src/hpke/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_HPKE_CTX_set_seq"
+      },
+      {
+        "declaring_header": "hpke.h",
+        "module": "src/hpke/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_HPKE_decap"
+      },
+      {
+        "declaring_header": "hpke.h",
+        "module": "src/hpke/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_HPKE_encap"
+      },
+      {
+        "declaring_header": "hpke.h",
+        "module": "src/hpke/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_HPKE_export"
+      },
+      {
+        "declaring_header": "hpke.h",
+        "module": "src/hpke/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_HPKE_get_ciphertext_size"
+      },
+      {
+        "declaring_header": "hpke.h",
+        "module": "src/hpke/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_HPKE_get_grease_value"
+      },
+      {
+        "declaring_header": "hpke.h",
+        "module": "src/hpke/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_HPKE_get_public_encap_size"
+      },
+      {
+        "declaring_header": "hpke.h",
+        "module": "src/hpke/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_HPKE_get_recommended_ikmelen"
+      },
+      {
+        "declaring_header": "hpke.h",
+        "module": "src/hpke/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_HPKE_keygen"
+      },
+      {
+        "declaring_header": "hpke.h",
+        "module": "src/hpke/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_HPKE_open"
+      },
+      {
+        "declaring_header": "hpke.h",
+        "module": "src/hpke/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_HPKE_seal"
+      },
+      {
+        "declaring_header": "hpke.h",
+        "module": "src/hpke/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_HPKE_str2suite"
+      },
+      {
+        "declaring_header": "hpke.h",
+        "module": "src/hpke/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_HPKE_suite_check"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": 5,
+        "symbol": "PEM_ASN1_read"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": 5,
+        "symbol": "PEM_ASN1_read_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": 5,
+        "symbol": "PEM_ASN1_write"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": 5,
+        "symbol": "PEM_ASN1_write_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": 5,
+        "symbol": "PEM_ASN1_write_bio_ctx"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": 5,
+        "symbol": "PEM_SignFinal"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": 5,
+        "symbol": "PEM_SignInit"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": 5,
+        "symbol": "PEM_SignUpdate"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": 5,
+        "symbol": "PEM_bytes_read_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": 5,
+        "symbol": "PEM_bytes_read_bio_secmem"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": 5,
+        "symbol": "PEM_def_callback"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": 5,
+        "symbol": "PEM_do_header"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_get_EVP_CIPHER_INFO"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": 5,
+        "symbol": "PEM_read"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_read_PrivateKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_read_PrivateKey_ex"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": 5,
+        "symbol": "PEM_read_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": 5,
+        "symbol": "PEM_read_bio_Parameters"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": 5,
+        "symbol": "PEM_read_bio_Parameters_ex"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_read_bio_PrivateKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_read_bio_PrivateKey_ex"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": 5,
+        "symbol": "PEM_read_bio_ex"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": 5,
+        "symbol": "PEM_write"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_write_PKCS8PrivateKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": 5,
+        "symbol": "PEM_write_PKCS8PrivateKey_nid"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_write_PrivateKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_write_PrivateKey_ex"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": 5,
+        "symbol": "PEM_write_bio"
+      },
+      {
+        "declaring_header": "asn1.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": 5,
+        "symbol": "PEM_write_bio_ASN1_stream"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_write_bio_PKCS8PrivateKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": 5,
+        "symbol": "PEM_write_bio_PKCS8PrivateKey_nid"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": 5,
+        "symbol": "PEM_write_bio_Parameters"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_write_bio_PrivateKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_write_bio_PrivateKey_ex"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": 5,
+        "symbol": "PEM_write_bio_PrivateKey_traditional"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS5_PBE_add"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS5_PBE_keyivgen"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS5_PBE_keyivgen_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS5_PBKDF2_HMAC"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS5_PBKDF2_HMAC_SHA1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS5_v2_PBE_keyivgen"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS5_v2_PBE_keyivgen_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS5_v2_scrypt_keyivgen"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pem_bridge.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS5_v2_scrypt_keyivgen_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_asn1.rs",
+        "received_from_phase": null,
+        "symbol": "d2i_AutoPrivateKey"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_asn1.rs",
+        "received_from_phase": null,
+        "symbol": "d2i_AutoPrivateKey_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_asn1.rs",
+        "received_from_phase": null,
+        "symbol": "d2i_KeyParams"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_asn1.rs",
+        "received_from_phase": null,
+        "symbol": "d2i_KeyParams_bio"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_asn1.rs",
+        "received_from_phase": null,
+        "symbol": "d2i_PrivateKey"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_asn1.rs",
+        "received_from_phase": null,
+        "symbol": "d2i_PrivateKey_ex"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_asn1.rs",
+        "received_from_phase": null,
+        "symbol": "d2i_PublicKey"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_asn1.rs",
+        "received_from_phase": null,
+        "symbol": "i2d_KeyParams"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_asn1.rs",
+        "received_from_phase": null,
+        "symbol": "i2d_KeyParams_bio"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_asn1.rs",
+        "received_from_phase": null,
+        "symbol": "i2d_PKCS8PrivateKey"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_asn1.rs",
+        "received_from_phase": null,
+        "symbol": "i2d_PrivateKey"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/pkey_asn1.rs",
+        "received_from_phase": null,
+        "symbol": "i2d_PublicKey"
+      }
+    ],
+    "owned_by_header": {
+      "asn1.h": 3,
+      "cmac.h": 9,
+      "evp.h": 832,
+      "hmac.h": 12,
+      "hpke.h": 20,
+      "kdf.h": 40,
+      "pem.h": 34
+    },
+    "owned_by_module": {
+      "src/evp/asymcipher.rs": 11,
+      "src/evp/bio_enc.rs": 5,
+      "src/evp/cipher.rs": 110,
+      "src/evp/digest.rs": 105,
+      "src/evp/encode.rs": 12,
+      "src/evp/exchange.rs": 11,
+      "src/evp/fetch.rs": 4,
+      "src/evp/kdf.rs": 26,
+      "src/evp/kem.rs": 11,
+      "src/evp/keymgmt.rs": 13,
+      "src/evp/legacy_cipher.rs": 144,
+      "src/evp/legacy_digest.rs": 6,
+      "src/evp/legacy_evp.rs": 3,
+      "src/evp/mac.rs": 29,
+      "src/evp/p_legacy.rs": 13,
+      "src/evp/pbe.rs": 10,
+      "src/evp/pem_bridge.rs": 44,
+      "src/evp/pkey.rs": 132,
+      "src/evp/pkey_asn1.rs": 14,
+      "src/evp/pkey_ctx.rs": 141,
+      "src/evp/rand.rs": 30,
+      "src/evp/signature.rs": 11,
+      "src/evp/skeymgmt.rs": 24,
+      "src/hpke/mod.rs": 20,
+      "src/mac/cmac.rs": 9,
+      "src/mac/hmac.rs": 12
+    },
+    "rule": "the stratum's working set is the projection of forensics/atlas/symbol-ownership.json for phase 7, plus every symbol an earlier stratum's ledger records as handed to it: a symbol belongs to the stratum that owns the header declaring it, and a discharged hand-off belongs to the stratum that built it"
+  },
+  "generator": "forensics/tools/phase7_obligations.py",
+  "inputs": [
+    {
+      "name": "authority-symbols",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+      "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
+    },
+    {
+      "name": "authority-functions",
+      "path": "forensics/atlas/openssl-3.6.4-production/functions.json",
+      "sha256": "0add7610e574dc030773b0f76a6cc80215d73cfbca411392bd6b64f3f8de80d0"
+    },
+    {
+      "name": "symbol-ownership",
+      "path": "forensics/atlas/symbol-ownership.json",
+      "sha256": "d42d2ba4f459b729139149f7343cb36357959272a38fecce8f20e6e4aa29a137"
+    },
+    {
+      "name": "implemented-surface",
+      "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
+      "sha256": "b9e0e7fab60b9998c2644beb2a71d700ed40042476885d2a23c27d393498761d"
+    },
+    {
+      "name": "phase5-obligations",
+      "path": "forensics/phase5-obligations.json",
+      "sha256": "2df0899e9e795feb6e99eb33bfabd0686cd93bb61451f901824845ac696e035b"
+    }
+  ],
+  "kind": "phase7-obligations",
+  "schema": "openssl-rs/atlas/phase7-obligations/v1"
+}

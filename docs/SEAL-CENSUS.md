@@ -32,7 +32,7 @@ declared owner; this is that assignment.
 | 4 | BIO + CONF + object database | `complete` | 256 | 272 | 249 | 23 | 0 |
 | 5 | BN + ASN.1 + DER/PEM | `complete` | 561 | 565 | 474 | 91 | 0 |
 | 6 | OSSL_LIB_CTX + provider core | `complete` | 137 | 161 | 161 | 0 | 0 |
-| 7 | EVP framework | `not-started` | 924 | — | — | — | — |
+| 7 | EVP framework | `in-progress` | 924 | 950 | 0 | 0 | 950 |
 | 8 | Native cryptographic primitives | `not-started` | 759 | — | — | — | — |
 | 9 | RAND / DRBG + entropy | `not-started` | 25 | — | — | — | — |
 | 10 | Key formats + PKCS + STORE | `not-started` | 272 | — | — | — | — |
@@ -204,6 +204,22 @@ Courts: `all pass`, 9 court(s), 0 authority observation(s).
 | RT-PROVIDER-3P | `pass` | 0 |
 | RT-CONF-MOD | `pass` | 0 |
 
+## Phase 7 — EVP framework
+
+* state: `in-progress`
+* blocking: 950 open obligation(s) of this stratum recorded in forensics/phase7-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase
+* seal: none written yet (`unnamed`)
+* ledger: `forensics/phase7-obligations.json`
+* atlas-owned: 924
+* owned working set: 950
+* implemented: 0
+* deferred to a later stratum with a stated reason: 0
+* **open in this stratum: 950**
+
+Hand-offs received and discharged:
+
+* from phase 5: 26 symbol(s) — `ASN1_item_sign_ex`, `ASN1_item_verify_ex`, `PEM_ASN1_read`, `PEM_ASN1_read_bio`, `PEM_ASN1_write`, `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx`, `PEM_SignFinal`, `PEM_SignInit`, `PEM_SignUpdate`, `PEM_bytes_read_bio`, `PEM_bytes_read_bio_secmem`, `PEM_def_callback`, `PEM_do_header`, `PEM_read`, `PEM_read_bio`, `PEM_read_bio_Parameters`, `PEM_read_bio_Parameters_ex`, `PEM_read_bio_ex`, `PEM_write`, `PEM_write_PKCS8PrivateKey_nid`, `PEM_write_bio`, `PEM_write_bio_ASN1_stream`, `PEM_write_bio_PKCS8PrivateKey_nid`, `PEM_write_bio_Parameters`, `PEM_write_bio_PrivateKey_traditional`
+
 ## Atlas/ledger reconciliation
 
 From `forensics/atlas/ownership-audit.json`: every export the atlas
@@ -216,5 +232,6 @@ row for another stratum's export is a hand-off that stratum recorded.
 | 4 | 256 | 272 | 0 | 16 |
 | 5 | 561 | 565 | 0 | 4 |
 | 6 | 137 | 161 | 0 | 24 |
+| 7 | 924 | 950 | 0 | 26 |
 
 Problems recorded by the audit: 0.

@@ -1,27 +1,113 @@
 {
   "authority": "openssl-3.6.4-production",
   "body": {
+    "censed_states": [
+      "in-progress"
+    ],
+    "census": {
+      "symbols_not_reached": 1,
+      "units_not_reached": 85
+    },
+    "census_by_stratum": {
+      "7": 86
+    },
+    "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
+    "census_samples": {
+      "symbols_not_reached": [
+        "ossl_algorithm_get1_first_name"
+      ],
+      "units_not_reached": [
+        "crypto/asn1/ameth_lib.c",
+        "crypto/asn1/d2i_param.c",
+        "crypto/asn1/d2i_pr.c",
+        "crypto/asn1/d2i_pu.c",
+        "crypto/asn1/i2d_evp.c",
+        "crypto/cmac/cmac.c",
+        "crypto/evp/asymcipher.c",
+        "crypto/evp/bio_b64.c",
+        "crypto/evp/bio_enc.c",
+        "crypto/evp/bio_md.c",
+        "crypto/evp/bio_ok.c",
+        "crypto/evp/c_allc.c",
+        "crypto/evp/c_alld.c",
+        "crypto/evp/cmeth_lib.c",
+        "crypto/evp/ctrl_params_translate.c",
+        "crypto/evp/dh_support.c",
+        "crypto/evp/digest.c",
+        "crypto/evp/e_aes.c",
+        "crypto/evp/e_aes_cbc_hmac_sha1.c",
+        "crypto/evp/e_aes_cbc_hmac_sha256.c",
+        "crypto/evp/e_aria.c",
+        "crypto/evp/e_bf.c",
+        "crypto/evp/e_camellia.c",
+        "crypto/evp/e_cast.c",
+        "crypto/evp/e_chacha20_poly1305.c",
+        "crypto/evp/e_des.c",
+        "crypto/evp/e_des3.c",
+        "crypto/evp/e_idea.c",
+        "crypto/evp/e_null.c",
+        "crypto/evp/e_old.c",
+        "crypto/evp/e_rc2.c",
+        "crypto/evp/e_rc4.c",
+        "crypto/evp/e_rc4_hmac_md5.c",
+        "crypto/evp/e_seed.c",
+        "crypto/evp/e_sm4.c",
+        "crypto/evp/e_xcbc_d.c",
+        "crypto/evp/ec_support.c",
+        "crypto/evp/encode.c",
+        "crypto/evp/evp_cnf.c",
+        "crypto/evp/evp_enc.c",
+        "crypto/evp/evp_err.c",
+        "crypto/evp/evp_key.c",
+        "crypto/evp/evp_lib.c",
+        "crypto/evp/evp_pbe.c",
+        "crypto/evp/evp_pkey.c",
+        "crypto/evp/evp_pkey_type.c",
+        "crypto/evp/evp_rand.c",
+        "crypto/evp/exchange.c",
+        "crypto/evp/kdf_lib.c",
+        "crypto/evp/kdf_meth.c",
+        "crypto/evp/kem.c",
+        "crypto/evp/keymgmt_lib.c",
+        "crypto/evp/keymgmt_meth.c",
+        "crypto/evp/legacy_blake2.c",
+        "crypto/evp/legacy_md4.c",
+        "crypto/evp/legacy_md5.c",
+        "crypto/evp/legacy_mdc2.c",
+        "crypto/evp/legacy_ripemd.c",
+        "crypto/evp/legacy_sha.c",
+        "crypto/evp/legacy_wp.c"
+      ]
+    },
     "checked": {
       "plans_read": [
         "docs/PHASE-5-SUBPHASES.md",
-        "docs/PHASE-6-SUBPHASES.md"
+        "docs/PHASE-6-SUBPHASES.md",
+        "docs/PHASE-7-SUBPHASES.md"
       ],
-      "rows_judged": 41,
-      "symbols_named_by_a_row": 44,
-      "symbols_reached": 44,
+      "rows_judged": 49,
+      "symbols_named_by_a_row": 54,
+      "symbols_reached": 53,
       "unit_records": 10,
       "units_named_by_a_record": 13,
-      "units_named_by_a_row": 43,
+      "units_named_by_a_row": 128,
       "units_reached": 43
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
     "findings": [],
     "judged_states": [
-      "complete",
-      "in-progress"
+      "complete"
     ],
     "promised_units": {
+      "crypto/asn1/ameth_lib.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
       "crypto/asn1/asn_mime.c": {
         "defines": [],
         "recorded_by": null,
@@ -32,6 +118,40 @@
         "transcribed_by": [
           "src/asn1/asn_mime.rs"
         ]
+      },
+      "crypto/asn1/d2i_param.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/asn1/d2i_pr.c": {
+        "defines": [
+          "ossl_d2i_PrivateKey_legacy"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/asn1/d2i_pu.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/asn1/i2d_evp.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
       },
       "crypto/asn1/tasn_typ.c": {
         "defines": [],
@@ -69,6 +189,16 @@
         "transcribed_by": [
           "src/context/core_bio.rs"
         ]
+      },
+      "crypto/cmac/cmac.c": {
+        "defines": [
+          "ossl_cmac_init"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.6"
+        ],
+        "transcribed_by": []
       },
       "crypto/conf/conf_api.c": {
         "defines": [
@@ -166,7 +296,8 @@
         "subphases": [
           "6.6",
           "6.6f",
-          "6.8f"
+          "6.8f",
+          "7.1"
         ],
         "transcribed_by": []
       },
@@ -177,7 +308,8 @@
         "recorded_by": "deferral:ossl_method_construct",
         "subphases": [
           "6.6f",
-          "6.8f"
+          "6.8f",
+          "7.1"
         ],
         "transcribed_by": []
       },
@@ -261,6 +393,335 @@
           "src/runtime/err.rs"
         ]
       },
+      "crypto/evp/asymcipher.c": {
+        "defines": [
+          "evp_asym_cipher_fetch_from_prov",
+          "evp_asym_cipher_get_number",
+          "evp_pkey_decrypt_alloc"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/bio_b64.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.5"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/bio_enc.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.5"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/bio_md.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.5"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/bio_ok.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.5"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/c_allc.c": {
+        "defines": [
+          "openssl_add_all_ciphers_int"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/c_alld.c": {
+        "defines": [
+          "openssl_add_all_digests_int"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/cmeth_lib.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/ctrl_params_translate.c": {
+        "defines": [
+          "evp_pkey_ctx_ctrl_str_to_param",
+          "evp_pkey_ctx_ctrl_to_param",
+          "evp_pkey_ctx_get_params_to_ctrl",
+          "evp_pkey_ctx_set_params_to_ctrl",
+          "evp_pkey_get_params_to_ctrl"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/dh_support.c": {
+        "defines": [
+          "ossl_dh_gen_type_id2name",
+          "ossl_dh_gen_type_name2id"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/digest.c": {
+        "defines": [
+          "evp_digest_fetch_from_prov",
+          "evp_md_ctx_clear_digest",
+          "evp_md_ctx_free_algctx",
+          "evp_md_ctx_new_ex",
+          "evp_md_new",
+          "ossl_hmac2mdnid",
+          "ossl_md2hmacnid"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/e_aes.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/e_aes_cbc_hmac_sha1.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/e_aes_cbc_hmac_sha256.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/e_aria.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/e_bf.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/e_camellia.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/e_cast.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/e_chacha20_poly1305.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/e_des.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/e_des3.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/e_idea.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/e_null.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/e_old.c": {
+        "defines": [
+          "EVP_aes_128_cfb",
+          "EVP_aes_192_cfb",
+          "EVP_aes_256_cfb",
+          "EVP_bf_cfb",
+          "EVP_cast5_cfb",
+          "EVP_des_cfb",
+          "EVP_des_ede3_cfb",
+          "EVP_des_ede_cfb",
+          "EVP_idea_cfb",
+          "EVP_rc2_cfb"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/e_rc2.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/e_rc4.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/e_rc4_hmac_md5.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/e_seed.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/e_sm4.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/e_xcbc_d.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/ec_support.c": {
+        "defines": [
+          "ossl_ec_curve_name2nid",
+          "ossl_ec_curve_nid2nist_int",
+          "ossl_ec_curve_nist2nid_int"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/encode.c": {
+        "defines": [
+          "evp_encode_ctx_set_flags"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.5"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/evp_cnf.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/evp_enc.c": {
+        "defines": [
+          "evp_cipher_fetch_from_prov",
+          "evp_cipher_free_int",
+          "evp_cipher_new",
+          "ossl_is_partially_overlapping"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/evp_err.c": {
+        "defines": [
+          "ossl_err_load_EVP_strings"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
       "crypto/evp/evp_fetch.c": {
         "defines": [
           "evp_default_properties_enable_fips_int",
@@ -276,11 +737,459 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "6.8e"
+          "6.8e",
+          "7.1",
+          "7.2"
         ],
         "transcribed_by": [
           "src/provider/stores.rs"
         ]
+      },
+      "crypto/evp/evp_key.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/evp_lib.c": {
+        "defines": [
+          "evp_cipher_asn1_to_param_ex",
+          "evp_cipher_cache_constants",
+          "evp_cipher_get_asn1_aead_params",
+          "evp_cipher_get_number",
+          "evp_cipher_param_to_asn1_ex",
+          "evp_cipher_set_asn1_aead_params",
+          "evp_md_free_int",
+          "evp_md_get_number"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/evp_pbe.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/evp_pkey.c": {
+        "defines": [
+          "evp_pkcs82pkey_legacy"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/evp_pkey_type.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/evp_rand.c": {
+        "defines": [
+          "evp_rand_can_seed",
+          "evp_rand_clear_seed",
+          "evp_rand_get_number",
+          "evp_rand_get_seed"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/exchange.c": {
+        "defines": [
+          "evp_keyexch_fetch_from_prov",
+          "evp_keyexch_get_number"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/kdf_lib.c": {
+        "defines": [
+          "evp_kdf_get_number"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/kdf_meth.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/kem.c": {
+        "defines": [
+          "evp_kem_fetch_from_prov",
+          "evp_kem_get_number"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/keymgmt_lib.c": {
+        "defines": [
+          "evp_keymgmt_util_assign_pkey",
+          "evp_keymgmt_util_cache_keydata",
+          "evp_keymgmt_util_cache_keyinfo",
+          "evp_keymgmt_util_clear_operation_cache",
+          "evp_keymgmt_util_copy",
+          "evp_keymgmt_util_export",
+          "evp_keymgmt_util_export_to_provider",
+          "evp_keymgmt_util_find_operation_cache",
+          "evp_keymgmt_util_fromdata",
+          "evp_keymgmt_util_gen",
+          "evp_keymgmt_util_get_deflt_digest_name",
+          "evp_keymgmt_util_has",
+          "evp_keymgmt_util_make_pkey",
+          "evp_keymgmt_util_match",
+          "evp_keymgmt_util_query_operation_name",
+          "evp_keymgmt_util_try_import"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/keymgmt_meth.c": {
+        "defines": [
+          "evp_keymgmt_dup",
+          "evp_keymgmt_export",
+          "evp_keymgmt_export_types",
+          "evp_keymgmt_fetch_from_prov",
+          "evp_keymgmt_freedata",
+          "evp_keymgmt_gen",
+          "evp_keymgmt_gen_cleanup",
+          "evp_keymgmt_gen_get_params",
+          "evp_keymgmt_gen_init",
+          "evp_keymgmt_gen_set_params",
+          "evp_keymgmt_gen_set_template",
+          "evp_keymgmt_get_legacy_alg",
+          "evp_keymgmt_get_number",
+          "evp_keymgmt_get_params",
+          "evp_keymgmt_has",
+          "evp_keymgmt_has_load",
+          "evp_keymgmt_import",
+          "evp_keymgmt_import_types",
+          "evp_keymgmt_load",
+          "evp_keymgmt_match"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/legacy_blake2.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/legacy_md4.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/legacy_md5.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/legacy_mdc2.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/legacy_ripemd.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/legacy_sha.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/legacy_wp.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/m_sigver.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/mac_lib.c": {
+        "defines": [
+          "evp_mac_get_number"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/mac_meth.c": {
+        "defines": [
+          "evp_mac_fetch_from_prov"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/names.c": {
+        "defines": [
+          "evp_cleanup_int",
+          "evp_get_cipherbyname_ex",
+          "evp_get_digestbyname_ex"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.2",
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/p5_crpt.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/p5_crpt2.c": {
+        "defines": [
+          "PKCS5_v2_PBKDF2_keyivgen",
+          "PKCS5_v2_PBKDF2_keyivgen_ex",
+          "ossl_pkcs5_pbkdf2_hmac_ex"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/p_dec.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/p_enc.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/p_legacy.c": {
+        "defines": [
+          "evp_pkey_get0_EC_KEY_int",
+          "evp_pkey_get0_RSA_int"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/p_lib.c": {
+        "defines": [
+          "evp_pkey_copy_downgraded",
+          "evp_pkey_export_to_provider",
+          "evp_pkey_free_legacy",
+          "evp_pkey_get0_DH_int",
+          "evp_pkey_get_legacy",
+          "evp_pkey_name2type",
+          "evp_pkey_type2name",
+          "ossl_evp_pkey_get1_ED25519",
+          "ossl_evp_pkey_get1_ED448",
+          "ossl_evp_pkey_get1_X25519",
+          "ossl_evp_pkey_get1_X448"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/p_open.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/p_seal.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/p_sign.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/p_verify.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/pbe_scrypt.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/pmeth_check.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/pmeth_gn.c": {
+        "defines": [
+          "evp_pkey_set_cb_translate"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/pmeth_lib.c": {
+        "defines": [
+          "evp_app_cleanup_int",
+          "evp_pkey_ctx_free_old_ops",
+          "evp_pkey_ctx_get_params_strict",
+          "evp_pkey_ctx_set_params_strict",
+          "evp_pkey_ctx_state",
+          "evp_pkey_ctx_use_cached_data"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/s_lib.c": {
+        "defines": [
+          "evp_skey_alloc"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.5"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/signature.c": {
+        "defines": [
+          "evp_signature_fetch_from_prov",
+          "evp_signature_get_number"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/skeymgmt_meth.c": {
+        "defines": [
+          "evp_skeymgmt_export",
+          "evp_skeymgmt_fetch_from_prov",
+          "evp_skeymgmt_freedata",
+          "evp_skeymgmt_generate",
+          "evp_skeymgmt_import"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/hmac/hmac.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.6"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/hpke/hpke.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.6"
+        ],
+        "transcribed_by": []
       },
       "crypto/indicator_core.c": {
         "defines": [
@@ -328,6 +1237,22 @@
         "transcribed_by": [
           "src/params/mod.rs"
         ]
+      },
+      "crypto/pem/pem_pk8.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.5"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/pem/pem_pkey.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.5"
+        ],
+        "transcribed_by": []
       },
       "crypto/property/defn_cache.c": {
         "defines": [
@@ -665,7 +1590,7 @@
         ]
       }
     },
-    "rule": "every authority translation unit and every authority-internal function named by a subphase row of a complete or in-progress stratum must be transcribed by a crate module or named by an explicit record field; and an explicit record field naming an authority unit must have a subphase row behind it",
+    "rule": "every authority translation unit and every authority-internal function named by a subphase row of a **complete** stratum must be transcribed by a crate module or named by an explicit record field; and an explicit record field naming an authority unit must have a subphase row behind it. An `in-progress` stratum's unreached names are published as a census and are not a failure, because a plan names the work a stratum will do",
     "unit_records": {
       "crypto/async/async.c": {
         "class": "deferred_to_later_stratum",
@@ -724,7 +1649,7 @@
       "transcribed_units": 112
     }
   },
-  "body_hash": "b7274fe9851a5f42590e8846804ddc94e1daca18d7880aa9ffc96dc3ddafe0be",
+  "body_hash": "2b5df6cebe870b5eab4ee2ddd212380df4991d84708c410a5532db1ea675e55b",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -740,12 +1665,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "1d56f0f9fb37dcbf90b3d9a5bd1fca5198d22ecb66037982942f73e989754886"
+      "sha256": "7dce259d2b159b772c26a047e5a1a21744bcc01138f2df04242109b5bbcb1a5b"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "a130abb0ef2479be9cb07e2eb2ee89d1c19e97e2b81cf57fc177bd8510920d31"
+      "sha256": "b2a849f571e07132e5234e046551111c0cdd6e56c245c7f605ab5e87f68ed2d0"
     },
     {
       "name": "prerequisites",
@@ -766,6 +1691,11 @@
       "name": "plan-PHASE-6-SUBPHASES",
       "path": "docs/PHASE-6-SUBPHASES.md",
       "sha256": "749a8cd25cc37d3d043023af94fcc04e5d9d625b90a3067b722211969884b9b3"
+    },
+    {
+      "name": "plan-PHASE-7-SUBPHASES",
+      "path": "docs/PHASE-7-SUBPHASES.md",
+      "sha256": "dffc21da1b284c97787d27457d3acaee439aea456b44ce4b56aa2c1c3c7a6f40"
     }
   ],
   "kind": "plan-reconciliation",
