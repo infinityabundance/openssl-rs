@@ -3,11 +3,6 @@
   "body": {
     "blocking_dependencies": [
       "OSSL_provider_init -> phase 13 (providers/legacy/legacyprov.c's entry point, and the name a third-party provider's own entry point is declared with -- which is why subphase rows 6.8d and 6.12 name it, since the `providers` configuration module needs a module path and RT-PROVIDER-3P compiles its own. The authority symbol is the legacy provider's, so it is Phase 13's.)",
-      "evp_generic_do_all -> phase 7 (Phase 7 owns crypto/evp/evp_fetch.c)",
-      "evp_generic_fetch -> phase 7 (Phase 7 owns crypto/evp/evp_fetch.c; the registry's fetch path is written against it, not by it)",
-      "evp_generic_fetch_from_prov -> phase 7 (Phase 7 owns crypto/evp/evp_fetch.c)",
-      "evp_is_a -> phase 7 (Phase 7 owns crypto/evp/evp_fetch.c)",
-      "evp_names_do_all -> phase 7 (Phase 7 owns crypto/evp/evp_fetch.c)",
       "ossl_get_enginesdir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads)",
       "ossl_get_openssldir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads; so is its sibling)",
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)",
@@ -15,8 +10,8 @@
     ],
     "census": {
       "covered_by_a_divergence": 56,
-      "language_surface_not_modelled_by_name": 2094,
-      "planned_prerequisites": 10
+      "language_surface_not_modelled_by_name": 2091,
+      "planned_prerequisites": 5
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
@@ -132,10 +127,10 @@
         "crypto/defaults.c": 9,
         "crypto/dso/dso_dlfcn.c": 16,
         "crypto/dso/dso_lib.c": 15,
-        "crypto/err/err.c": 99,
+        "crypto/err/err.c": 98,
         "crypto/err/err_all_legacy.c": 11,
         "crypto/err/err_save.c": 2,
-        "crypto/evp/evp_fetch.c": 22,
+        "crypto/evp/evp_fetch.c": 20,
         "crypto/ex_data.c": 21,
         "crypto/getenv.c": 2,
         "crypto/indicator_core.c": 5,
@@ -169,11 +164,6 @@
         "crypto/trace.c": 25
       },
       "planned_prerequisites": {
-        "evp_generic_do_all": 1,
-        "evp_generic_fetch": 1,
-        "evp_generic_fetch_from_prov": 1,
-        "evp_is_a": 1,
-        "evp_names_do_all": 1,
         "ossl_get_enginesdir": 2,
         "ossl_get_openssldir": 2,
         "ossl_get_wininstallcontext": 1
@@ -266,11 +256,6 @@
         "crypto/asn1/a_i2d_fp.c:ERR_raise"
       ],
       "planned_prerequisites": [
-        "evp_generic_do_all",
-        "evp_generic_fetch",
-        "evp_generic_fetch_from_prov",
-        "evp_is_a",
-        "evp_names_do_all",
         "ossl_get_enginesdir",
         "ossl_get_enginesdir",
         "ossl_get_openssldir",
@@ -281,7 +266,7 @@
     "checked": {
       "authority_units": 114,
       "crate_modules": 158,
-      "deferrals_recorded": 10,
+      "deferrals_recorded": 5,
       "divergence_names_covered": 32,
       "divergence_rows": 5,
       "names_referenced_and_not_built": 17
@@ -405,7 +390,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "15f680a712dba34154a45e187a5a6905b2289cbc5969536aef166108fd0646ad",
+  "body_hash": "56994cb1b5aaebc88b734dea5b4a2eb35b3a4cd79cf1dfa24f1e8e039393eb1d",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -426,7 +411,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "8f1c8a3cd685d573a8e647831c8a6214e0e3cb42942f12c31be7ead485808d03"
+      "sha256": "8bc4fb3e36bcba585703a0e28a4223ff51547b60f9f42a28e69d00c8ebf3c8c2"
     },
     {
       "name": "symbol-ownership",
@@ -446,7 +431,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "a6ec02396c897cd61179348e62069ce5727f6d242ce7f6839adf4e3df6a12b53"
+      "sha256": "7332839bd9b4b7647c42848b76ba2346623390ef5449dff0ab4ef9178b498739"
     },
     {
       "name": "crate-source-tree",

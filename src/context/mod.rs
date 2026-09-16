@@ -1213,6 +1213,31 @@ pub(crate) fn lib_ctx_is_default_symbol(ctx: *mut c_void) -> c_int {
 /// same question as [`lib_ctx_is_default_symbol`]: a thread that installed the
 /// global default explicitly has it as its default and it is the global object.
 #[allow(dead_code)] // unreachable until the stratum that calls it lands
+/// `const char *ossl_lib_ctx_get_descriptor(OSSL_LIB_CTX *libctx)`.
+///
+/// **Landed with its first caller, which is 7.2.** Nothing in Phase 6 or in `src/evp/` before
+/// this needed it, and it is not an answer any court can reach directly — but it *is* reachable
+/// through the fetch path, because `inner_evp_generic_fetch` puts it in the data half of an
+/// `ERR_raise_data` and a caller reads that back through `ERR_get_error_all`. So the three
+/// strings are contract, and they are the authority's spellings exactly:
+/// `"Global default library context"`, `"Thread-local default library context"` and
+/// `"Non-default library context"`.
+///
+/// The FIPS arm is not built: `configdata.pm` lists `fips` among the disabled features, so
+/// `FIPS_MODULE` is not defined for any translation unit in this profile.
+///
+/// # Safety
+/// `libctx` must be NULL or live.
+pub(crate) fn lib_ctx_get_descriptor(libctx: *mut c_void) -> *const c_char {
+    if lib_ctx_is_global_default(libctx) != 0 {
+        c"Global default library context".as_ptr()
+    } else if lib_ctx_is_default_symbol(libctx) != 0 {
+        c"Thread-local default library context".as_ptr()
+    } else {
+        c"Non-default library context".as_ptr()
+    }
+}
+
 pub(crate) fn lib_ctx_is_global_default(ctx: *mut c_void) -> c_int {
     if concrete(ctx.cast::<OsslLibCtx>()) == global_default() {
         1

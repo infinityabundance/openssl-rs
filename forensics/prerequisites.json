@@ -11,36 +11,6 @@
     ],
     "deferrals": [
       {
-        "symbol": "evp_generic_do_all",
-        "owner_phase": 7,
-        "reason": "Phase 7 owns crypto/evp/evp_fetch.c",
-        "evidence": "docs/RELEASE_GATES.md phase order"
-      },
-      {
-        "symbol": "evp_generic_fetch",
-        "owner_phase": 7,
-        "reason": "Phase 7 owns crypto/evp/evp_fetch.c; the registry's fetch path is written against it, not by it",
-        "evidence": "docs/RELEASE_GATES.md phase order; docs/DECISIONS.md D121 (core_algorithm.c is 6.8f)"
-      },
-      {
-        "symbol": "evp_generic_fetch_from_prov",
-        "owner_phase": 7,
-        "reason": "Phase 7 owns crypto/evp/evp_fetch.c",
-        "evidence": "docs/RELEASE_GATES.md phase order"
-      },
-      {
-        "symbol": "evp_is_a",
-        "owner_phase": 7,
-        "reason": "Phase 7 owns crypto/evp/evp_fetch.c",
-        "evidence": "docs/RELEASE_GATES.md phase order"
-      },
-      {
-        "symbol": "evp_names_do_all",
-        "owner_phase": 7,
-        "reason": "Phase 7 owns crypto/evp/evp_fetch.c",
-        "evidence": "docs/RELEASE_GATES.md phase order"
-      },
-      {
         "symbol": "ossl_get_enginesdir",
         "owner_phase": 16,
         "reason": "The OPENSSL_info strings rather than anything the registry reads",

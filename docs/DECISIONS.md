@@ -8427,3 +8427,75 @@ failure instead of a mystery, and the probe's header records it.
 | unit tests | 313 | 317 |
 
 SPDX-License-Identifier: Apache-2.0
+
+## D146 — 7.2's fetch half: the `mcm` interface, and every Phase-7 blocker discharged
+
+**What landed.** `src/evp/fetch.rs` gains `crypto/evp/evp_fetch.c`'s other half: `NAME_SEPARATOR`
+and the four method-id masks with `evp_method_id`; `struct evp_method_data_st` and its three
+function-pointer types; the six `mcm` callbacks (`get_tmp_evp_method_store`,
+`dealloc_tmp_evp_method_store`, `reserve_evp_method_store`, `unreserve_evp_method_store`,
+`get_evp_method_from_store`, `put_evp_method_in_store`, `construct_evp_method`,
+`destruct_evp_method`); `inner_evp_generic_fetch`; `evp_generic_fetch` and
+`evp_generic_fetch_from_prov`; `filter_on_operation_id`, `evp_generic_do_all`, `evp_is_a` and
+`evp_names_do_all`. Plus `ossl_lib_ctx_get_descriptor` in `src/context/mod.rs`, which lands with
+its first caller because the fetch path's error *data* carries it.
+
+**All five remaining Phase-7 deferral rows are discharged** — recorded 10 → 5, and the gate's
+blocking list goes **15 → 5**: the only names left are Phase 16's three `OPENSSL_info` strings,
+Phase 9's `ossl_random_add_conf_module` and Phase 13's `OSSL_provider_init`. **No Phase-7
+deferral blocks anything.**
+
+Five things in this half are contract rather than detail:
+
+  * **the id is 31 bits on purpose.** The composite is `(name_id << 8) | operation_id`, limited so
+    bit 31 is never set: `filter_on_operation_id` masks the low byte back out of an `int`, and a
+    value with bit 31 set would sign-extend on the way there, so the operation a `do_all` filters
+    on would be wrong for exactly the names with the most aliases. The masks are the authority's
+    four macros, not a `(a << 8) | b` with the widths left to the reader;
+  * **the name is truncated at the first separator before a lookup**, but the whole alias list is
+    handed to `ossl_namemap_add_names` on construction — which is why `inner_evp_generic_fetch`
+    re-resolves the id **after** the walk. A fetch of `"sha256:sha2-256"` constructs a method and
+    then fails to cache it, because the combined string is not a name. The authority calls this a
+    corner case and the code keeps it;
+  * **`flag_construct_error_occurred` is set in exactly one place** — the class constructor's
+    refusal — and it is the whole of the difference between the two error reasons a failed fetch
+    reports: `ERR_R_FETCH_FAILED` when the algorithm is known but could not be built,
+    `ERR_R_UNSUPPORTED` when the name resolved to nothing. Setting it on the namemap failure too
+    would make every fetch of an unknown name report a construction error;
+  * **`properties` is used only in the error message.** The query the store is given is the
+    caller's properties or the empty string; the difference between the two arguments is visible
+    only in what `ERR_get_error_all` reports back — and both messages are `ERR_raise_data` with the
+    authority's format string verbatim, so both are contract. They are formatted into a
+    **1024-byte** buffer because that is `ERR_MAX_DATA_SIZE`, the size `ERR_vset_error` grows to
+    before formatting and therefore the size it truncates at;
+  * **`evp_generic_do_all` is a fetch with a NULL name first.** A `do_all` cannot enumerate what
+    was never fetched, so it constructs every algorithm of every activated provider and then walks
+    the temporary store (if one was made) before the context's own. The consequence is visible: a
+    provider whose constructor refuses for one algorithm leaves it out of the enumeration.
+
+**The site at `evp_fetch.c:376` is the one place this file raises a reason that is not its site's
+constant.** The authority computes `code = unsupported ? ERR_R_UNSUPPORTED : ERR_R_FETCH_FAILED`,
+and because that argument is an identifier the generator recorded the site with
+`dynamic_reason: true` and reason `0` rather than guessing one — so the transcription uses
+`raise_site_dynamic_data`, which keeps the *coordinates* (file, line, function are the authority's)
+and takes the reason from the caller. `ERR_R_FETCH_FAILED`'s numeric value is read from the
+generated `EVP_FETCH_352` site rather than typed.
+
+**Two compile-level facts worth recording.** `strchr` is already declared twice in this crate
+(`src/dso/dlfcn.rs`, `src/runtime/bio/sys.rs`) returning `*mut c_char`, so this module's
+declaration matches that spelling and casts — a third spelling would be a
+`clashing_extern_declarations` warning, which the deny-list turned into an error on the first
+build. And the fetch half is `#![allow(dead_code)]` for the same reason the store is: its callers
+are the class methods of 7.3 and 7.4, which is one paragraph rather than twenty allowances.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 7 implemented / open | 4 / 946 | 4 / 946 (the fetch half is internal) |
+| recorded deferrals | 10 | **5** |
+| gate blocking dependencies | 10 | **5** |
+| of which Phase 7 | 5 | **0** |
+| unit tests | 317 | 317 |
+
+SPDX-License-Identifier: Apache-2.0

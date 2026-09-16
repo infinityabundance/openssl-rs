@@ -47,10 +47,25 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
+// The fetch half of this file has no caller in this crate yet: `evp_generic_fetch` and
+// `evp_generic_fetch_from_prov` are the two functions every `EVP_<class>_fetch` is a macro
+// around, and the classes are 7.3's and 7.4's. The default-property half above is reached
+// through its four exports. One allowance rather than twenty per-item ones whose comments would
+// each restate this paragraph, and what retires it is 7.3.
+#![allow(dead_code)]
+
 use core::ffi::{c_char, c_int, c_void};
 
+use crate::context::namemap::{
+    ossl_namemap_add_names, ossl_namemap_doall_names, ossl_namemap_name2num,
+    ossl_namemap_name2num_n, ossl_namemap_num2name, ossl_namemap_stored,
+};
 use crate::context::{
     lib_ctx_get_data, lib_ctx_is_global_default, OSSL_LIB_CTX_EVP_METHOD_STORE_INDEX,
+};
+use crate::evp::method_store::{
+    ossl_method_construct, McmConstructFn, McmDestructFn, McmGetFn, McmGetTmpStoreFn,
+    McmLockStoreFn, McmPutFn, McmUnlockStoreFn, OsslMethodConstructMethod,
 };
 use crate::property::globals::{
     ossl_ctx_global_properties, ossl_global_properties_no_mirrored,
@@ -61,17 +76,30 @@ use crate::property::parse::{
     ossl_parse_query, ossl_property_free, ossl_property_list_to_string, ossl_property_merge,
 };
 use crate::property::query::ossl_property_is_enabled;
-use crate::property::store::OsslMethodStore;
+use crate::property::store::{MethodFreeFn, MethodUpRefFn, OsslMethodStore};
 use crate::provider::activate::ossl_provider_default_props_update;
+use crate::provider::activate::OsslAlgorithm;
 use crate::provider::stores::ossl_decoder_cache_flush;
+use crate::provider::{ossl_provider_libctx, OsslProvider};
+use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::{err_sites, raise_site};
+use crate::runtime::err::{raise_site_data, raise_site_dynamic_data};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup};
+use core::ptr;
 
 /// The authority's translation unit, so a failing allocation records its coordinates.
 pub(crate) const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/evp_fetch.c".as_ptr();
 
 /// `evp_set_parsed_default_properties`'s `OPENSSL_malloc(strsz)` (line 483).
 const LINE_MALLOC_PROPSTR: c_int = 483;
+
+/// `ERR_MAX_DATA_SIZE` — `include/openssl/err.h`.
+///
+/// The size `ERR_vset_error` grows its buffer to before formatting, and therefore the size the
+/// formatted message is truncated at. The fetch path's two messages carry a name, a property
+/// query and a context descriptor, so they can exceed this and are truncated **exactly here**;
+/// the constant is the authority's number rather than a comfortable one for that reason.
+const ERR_DATA_BUFFER: usize = 1024;
 /// `evp_get_global_properties_str`'s `OPENSSL_strdup("")` (line 592).
 ///
 /// The line is the *call's*, not the macro's, because `OPENSSL_strdup` expands to
@@ -397,6 +425,957 @@ pub unsafe extern "C" fn EVP_get1_default_properties(libctx: *mut c_void) -> *mu
     let loadconfig = lib_ctx_is_global_default(libctx);
     // SAFETY: the arguments are forwarded under this function's contract.
     unsafe { evp_get_global_properties_str(libctx, loadconfig) }
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * The fetch itself: `crypto/evp/evp_fetch.c`'s other half.
+ * -------------------------------------------------------------------------------------------*/
+
+/// `ERR_R_FETCH_FAILED`, as the reason site `EVP_FETCH_352` records it.
+///
+/// Taken from the generated site rather than typed: the value is the authority's own, resolved
+/// through its headers by `gen_err_raise_sites.py`, and this constant is the second place in the
+/// file that needs it.
+const ERR_R_FETCH_FAILED: c_int = err_sites::EVP_FETCH_352.reason;
+
+/// `#define NAME_SEPARATOR ':'` — `crypto/evp/evp_local.h`.
+///
+/// The separator an algorithm's alias list uses, and the reason a fetch of `"SHA2-256"` finds a
+/// method whose `algorithm_names` is `"SHA256:SHA2-256:sha256"`: the *first* name before the
+/// separator is the identity, and the namemap is told about all of them at once.
+const NAME_SEPARATOR: c_char = b':' as c_char;
+
+/// `#define METHOD_ID_OPERATION_MASK 0x000000FF`.
+const METHOD_ID_OPERATION_MASK: u32 = 0x0000_00FF;
+/// `#define METHOD_ID_OPERATION_MAX ((1 << 8) - 1)`.
+const METHOD_ID_OPERATION_MAX: u32 = (1 << 8) - 1;
+/// `#define METHOD_ID_NAME_MASK 0x7FFFFF00`.
+const METHOD_ID_NAME_MASK: u32 = 0x7FFF_FF00;
+/// `#define METHOD_ID_NAME_OFFSET 8`.
+const METHOD_ID_NAME_OFFSET: u32 = 8;
+/// `#define METHOD_ID_NAME_MAX ((1 << 23) - 1)`.
+const METHOD_ID_NAME_MAX: u32 = (1 << 23) - 1;
+
+/// `static uint32_t evp_method_id(int name_id, unsigned int operation_id)`.
+///
+/// The composite identity the whole EVP store is keyed by:
+///
+/// ```text
+/// +---------23 bits--------+-8 bits-+
+/// |      name identity     | op id  |
+/// +------------------------+--------+
+/// ```
+///
+/// and the width is not decoration. The composite is limited to **31** bits so the top bit of the
+/// `u32` is always zero — the authority's own comment says why: the value is passed as an `int` on
+/// its way to `ossl_method_store_cache_set` and from there into `filter_on_operation_id`, and a
+/// value with bit 31 set would sign-extend when shifted back down, so the operation id a `do_all`
+/// filters on would be wrong for exactly the names with the most aliases.
+///
+/// Both `ossl_assert`s are `(x) != 0` under `NDEBUG`, so an out-of-range id is a **refusal that
+/// answers 0** rather than an abort — and 0 is the value the callers test for, which is why
+/// "could not build an id" and "id is 0" are the same thing throughout this file.
+fn evp_method_id(name_id: c_int, operation_id: u32) -> u32 {
+    if name_id <= 0 || name_id as u32 > METHOD_ID_NAME_MAX {
+        return 0;
+    }
+    if operation_id == 0 || operation_id > METHOD_ID_OPERATION_MAX {
+        return 0;
+    }
+    (((name_id as u32) << METHOD_ID_NAME_OFFSET) & METHOD_ID_NAME_MASK)
+        | (operation_id & METHOD_ID_OPERATION_MASK)
+}
+
+/// `void *(*method_from_algorithm)(int name_id, const OSSL_ALGORITHM *, OSSL_PROVIDER *)`.
+pub(crate) type MethodFromAlgorithmFn =
+    unsafe extern "C" fn(c_int, *const OsslAlgorithm, *mut OsslProvider) -> *mut c_void;
+
+/// `void (*user_fn)(void *method, void *arg)` — the visitor `evp_generic_do_all` takes.
+pub(crate) type GenericDoAllFn = unsafe extern "C" fn(*mut c_void, *mut c_void);
+
+/// `struct evp_method_data_st` — the walk's state, and the only thing this half of the file
+/// passes to `ossl_method_construct` as its opaque `mcm_data`.
+///
+/// Three of its fields are **for one reader each**, which the authority's own comments say and
+/// which is why the names are kept: `operation_id`, `name_id` and `names` are read by
+/// `get_evp_method_from_store`, and `propquery` by the same function, while `tmp_store` is read
+/// and written by `get_tmp_evp_method_store`. The three function pointers are the *class's*
+/// constructors, handed in by whoever called `evp_generic_fetch` — which is what makes this file
+/// generic over MD, CIPHER, MAC, KDF and the rest without naming one of them.
+///
+/// `flag_construct_error_occurred` is a one-bit field in the authority, and it is the difference
+/// between two error reasons a caller reads back: a name that resolved but whose construction
+/// failed answers `ERR_R_FETCH_FAILED`, and a name that resolved to nothing answers
+/// `ERR_R_UNSUPPORTED`. It is a `u32` here with only 0 and 1 written, for the same reason
+/// `OsslProvider`'s flags are.
+#[repr(C)]
+pub(crate) struct EvpMethodData {
+    /// `OSSL_LIB_CTX *libctx`.
+    pub(crate) libctx: *mut c_void,
+    /// `int operation_id` — for `get_evp_method_from_store`.
+    pub(crate) operation_id: c_int,
+    /// `int name_id` — for `get_evp_method_from_store`.
+    pub(crate) name_id: c_int,
+    /// `const char *names` — for `get_evp_method_from_store`.
+    pub(crate) names: *const c_char,
+    /// `const char *propquery` — for `get_evp_method_from_store`.
+    pub(crate) propquery: *const c_char,
+    /// `OSSL_METHOD_STORE *tmp_store` — for `get_tmp_evp_method_store`.
+    pub(crate) tmp_store: *mut OsslMethodStore,
+    /// `unsigned int flag_construct_error_occurred : 1`.
+    pub(crate) flag_construct_error_occurred: u32,
+    /// `void *(*method_from_algorithm)(int, const OSSL_ALGORITHM *, OSSL_PROVIDER *)`.
+    pub(crate) method_from_algorithm: MethodFromAlgorithmFn,
+    /// `int (*refcnt_up_method)(void *)`.
+    pub(crate) refcnt_up_method: MethodUpRefFn,
+    /// `void (*destruct_method)(void *)`.
+    pub(crate) destruct_method: MethodFreeFn,
+}
+
+/// `static void *get_tmp_evp_method_store(void *data)`.
+///
+/// The temporary store, **created once per fetch** and returned again on every later call — which
+/// is what `ossl_method_construct`'s `reserve_store` relies on: it calls this once per map, and
+/// without the `tmp_store == NULL` test every operation the walk visits would get its own store
+/// and the methods constructed for the first would be invisible to the second.
+///
+/// # Safety
+/// `data` must be a live `EvpMethodData`.
+unsafe extern "C" fn get_tmp_evp_method_store(data: *mut c_void) -> *mut c_void {
+    let methdata = data.cast::<EvpMethodData>();
+    // SAFETY: `methdata` is live per the contract.
+    unsafe {
+        if (*methdata).tmp_store.is_null() {
+            (*methdata).tmp_store =
+                crate::property::store::ossl_method_store_new((*methdata).libctx);
+        }
+        (*methdata).tmp_store.cast::<c_void>()
+    }
+}
+
+/// `static void dealloc_tmp_evp_method_store(void *store)`.
+///
+/// Both callers run it **after** the walk and after the final lookup, so the temporary store's
+/// `mcm->get` has already answered from it. It is also what makes the temporary store's lifetime
+/// the caller's rather than the store's: a method that was put there and never taken keeps its
+/// reference, and this is where it is dropped.
+///
+/// A NULL store is a no-op, which is the common case — a fetch that found the method in the
+/// global store never makes one.
+///
+/// # Safety
+/// `store` must be NULL or a store this module's `get_tmp_evp_method_store` built.
+unsafe fn dealloc_tmp_evp_method_store(store: *mut OsslMethodStore) {
+    if !store.is_null() {
+        // SAFETY: `store` came from `ossl_method_store_new` and is released once, here.
+        unsafe { crate::property::store::ossl_method_store_free(store) };
+    }
+}
+
+/// `static int reserve_evp_method_store(void *store, void *data)`.
+///
+/// The `mcm->lock_store`, and the **reservation** lock: `ossl_method_lock_store` is `biglock`,
+/// not the store's array lock, because the walk is taking the whole store for the duration of a
+/// fetch of a set of algorithms.
+///
+/// The NULL-store branch is the interface's own spelling of "the global store, please": the store
+/// the walk hands in is the *temporary* one, and if there is none this resolves the context's.
+///
+/// # Safety
+/// `data` must be a live `EvpMethodData`; `store` NULL or live.
+unsafe extern "C" fn reserve_evp_method_store(store: *mut c_void, data: *mut c_void) -> c_int {
+    let methdata = data.cast::<EvpMethodData>();
+    // SAFETY: `methdata` is live per the contract.
+    let mut store = store.cast::<OsslMethodStore>();
+    if store.is_null() {
+        // SAFETY: as above, and `get_evp_method_store` only reads the slot.
+        store = unsafe { get_evp_method_store((*methdata).libctx) };
+        if store.is_null() {
+            return 0;
+        }
+    }
+    // SAFETY: `store` is live.
+    unsafe { crate::property::store::ossl_method_lock_store(store) }
+}
+
+/// `static int unreserve_evp_method_store(void *store, void *data)`.
+///
+/// `ossl_method_unlock_store`, with the same NULL-store resolution — and the same store must come
+/// back out, which it does because the walk passes back the value `reserve` left in
+/// `ConstructData`.
+///
+/// # Safety
+/// `data` must be a live `EvpMethodData`; `store` NULL or live and, if non-NULL, locked by this
+/// thread.
+unsafe extern "C" fn unreserve_evp_method_store(store: *mut c_void, data: *mut c_void) -> c_int {
+    let methdata = data.cast::<EvpMethodData>();
+    // SAFETY: `methdata` is live per the contract.
+    let mut store = store.cast::<OsslMethodStore>();
+    if store.is_null() {
+        // SAFETY: as above, and `get_evp_method_store` only reads the slot.
+        store = unsafe { get_evp_method_store((*methdata).libctx) };
+        if store.is_null() {
+            return 0;
+        }
+    }
+    // SAFETY: `store` is live and this thread holds its reservation.
+    unsafe { crate::property::store::ossl_method_unlock_store(store) }
+}
+
+/// `static void *get_evp_method_from_store(void *store, const OSSL_PROVIDER **prov, void *data)`.
+///
+/// The lookup, and the three ways it can fail are three different answers to the walk:
+///
+///   * no name id and no name to look up — NULL, and the walk goes on to construct;
+///   * an id that `evp_method_id` refuses — NULL for the same reason;
+///   * a store that is not there — NULL, because there is nowhere to look.
+///
+/// Two details the authority's comments make explicit and that a transcription could lose:
+/// **the name is truncated at the first separator before it is looked up**, because a name list
+/// is only a *list* for construction — a lookup treats the whole string as one name, which is the
+/// corner case `inner_evp_generic_fetch` names when it re-resolves the id after construction; and
+/// `prov` is an **out-parameter**, because the method that answers also names which provider it
+/// came from.
+///
+/// # Safety
+/// `data` must be a live `EvpMethodData` with `libctx` live; `store` NULL or live; `prov` NULL or
+/// writable for a provider pointer.
+unsafe extern "C" fn get_evp_method_from_store(
+    store: *mut c_void,
+    prov: *mut *const OsslProvider,
+    data: *mut c_void,
+) -> *mut c_void {
+    let methdata = data.cast::<EvpMethodData>();
+    let mut method: *mut c_void = ptr::null_mut();
+
+    // SAFETY: `methdata` is live per the contract.
+    let mut name_id = unsafe { (*methdata).name_id };
+    // SAFETY: as above.
+    let names = unsafe { (*methdata).names };
+    if name_id == 0 && !names.is_null() {
+        // SAFETY: as above, so `libctx` is live.
+        let namemap = ossl_namemap_stored(unsafe { (*methdata).libctx });
+        if namemap.is_null() {
+            return ptr::null_mut();
+        }
+        // The truncation at the first separator.
+        // SAFETY: `names` is NUL-terminated per the struct's contract.
+        let q = unsafe { c_strchr(names, NAME_SEPARATOR) };
+        let l = if q.is_null() {
+            // SAFETY: as above.
+            unsafe { c_strlen(names) }
+        } else {
+            (q as usize) - (names as usize)
+        };
+        // SAFETY: `namemap` is live, `names` is readable for `l` bytes.
+        name_id = unsafe { ossl_namemap_name2num_n(namemap, names, l) };
+    }
+
+    if name_id == 0 {
+        return ptr::null_mut();
+    }
+    // SAFETY: as above.
+    let operation_id = unsafe { (*methdata).operation_id };
+    let meth_id = evp_method_id(name_id, operation_id as u32);
+    if meth_id == 0 {
+        return ptr::null_mut();
+    }
+
+    let mut store = store.cast::<OsslMethodStore>();
+    if store.is_null() {
+        // SAFETY: `methdata` is live, so `libctx` is.
+        store = unsafe { get_evp_method_store((*methdata).libctx) };
+        if store.is_null() {
+            return ptr::null_mut();
+        }
+    }
+
+    // SAFETY: `store` is live; the query is the struct's own borrowed string; `prov` is the
+    // caller's out-parameter and `method` is this frame's writable slot.
+    let propquery = unsafe { (*methdata).propquery };
+    // SAFETY: as above.
+    if unsafe {
+        crate::property::store::ossl_method_store_fetch(
+            store,
+            meth_id as c_int,
+            propquery,
+            prov,
+            &mut method,
+        )
+    } == 0
+    {
+        return ptr::null_mut();
+    }
+    method
+}
+
+/// `static int put_evp_method_in_store(void *store, void *method, const OSSL_PROVIDER *prov,
+/// const char *names, const char *propdef, void *data)`.
+///
+/// The insert, and the reason it re-derives the name id rather than taking the one
+/// `construct_evp_method` already had: **the walk calls this with the names the *provider*
+/// published**, and the identity is defined by the namemap, so deriving it here is what makes
+/// "the method I constructed" and "the method I can look up" the same entry. The authority's own
+/// comment says the names are already in the namemap by this point, so the derivation cannot
+/// create a new one.
+///
+/// A NULL `names` is allowed and truncates to zero, which makes `name2num_n` answer 0 and the
+/// whole call a refusal — so an algorithm with no name is not stored rather than stored under an
+/// empty one.
+///
+/// # Safety
+/// `data` must be a live `EvpMethodData` with `libctx` live; `store` NULL or live; `prov` live;
+/// `names` and `propdef` NULL or NUL-terminated.
+unsafe extern "C" fn put_evp_method_in_store(
+    store: *mut c_void,
+    method: *mut c_void,
+    prov: *const OsslProvider,
+    names: *const c_char,
+    propdef: *const c_char,
+    data: *mut c_void,
+) -> c_int {
+    let methdata = data.cast::<EvpMethodData>();
+
+    let mut l: usize = 0;
+    if !names.is_null() {
+        // SAFETY: `names` is NUL-terminated per the contract.
+        let q = unsafe { c_strchr(names, NAME_SEPARATOR) };
+        l = if q.is_null() {
+            // SAFETY: as above.
+            unsafe { c_strlen(names) }
+        } else {
+            (q as usize) - (names as usize)
+        };
+    }
+
+    // SAFETY: `methdata` is live per the contract, so `libctx` is live.
+    let namemap = unsafe { ossl_namemap_stored((*methdata).libctx) };
+    if namemap.is_null() {
+        return 0;
+    }
+    // SAFETY: `namemap` is live and `names` is readable for `l` bytes.
+    let name_id = unsafe { ossl_namemap_name2num_n(namemap, names, l) };
+    // SAFETY: `methdata` is live.
+    let operation_id = unsafe { (*methdata).operation_id };
+    let meth_id = evp_method_id(name_id, operation_id as u32);
+    if name_id == 0 || meth_id == 0 {
+        return 0;
+    }
+
+    let mut store = store.cast::<OsslMethodStore>();
+    if store.is_null() {
+        // SAFETY: `methdata` is live, so `libctx` is.
+        store = unsafe { get_evp_method_store((*methdata).libctx) };
+        if store.is_null() {
+            return 0;
+        }
+    }
+
+    // SAFETY: `store` is live, `method` is the object just constructed, `prov` is live, `names`
+    // and `propdef` are the provider's own strings, and the two callbacks are the class's own.
+    unsafe {
+        crate::property::store::ossl_method_store_add(
+            store,
+            prov,
+            meth_id as c_int,
+            propdef,
+            method,
+            (*methdata).refcnt_up_method,
+            (*methdata).destruct_method,
+        )
+    }
+}
+
+/// `static void *construct_evp_method(const OSSL_ALGORITHM *algodef, OSSL_PROVIDER *prov,
+/// void *data)`.
+///
+/// The one place a new namemap entry can come from, as the authority's comment says — which is
+/// why `add_names` is called with the **whole** alias list and the separator, so `"SHA256:SHA2-256"`
+/// becomes one id with two names. If the name is already there, `add_names` answers its existing
+/// number, so this is idempotent by construction rather than by a lookup first.
+///
+/// **`flag_construct_error_occurred` is set here and only here**, and it is the whole of the
+/// distinction between the two error reasons a failed fetch reports: a class constructor that
+/// refused means "the algorithm is known but could not be built" (`ERR_R_FETCH_FAILED`), and a
+/// namemap that could not give an id means "this is not an algorithm I have"
+/// (`ERR_R_UNSUPPORTED`). Setting the flag on the *namemap* failure too would make every fetch of
+/// an unknown name report a construction error.
+///
+/// The libctx is the **provider's**, not the caller's: an algorithm belongs to the context its
+/// provider was loaded into, and the namemap a name is registered in is that one's.
+///
+/// # Safety
+/// `algodef` must be a live `OSSL_ALGORITHM` whose `algorithm_names` is NUL-terminated; `prov`
+/// live; `data` a live `EvpMethodData`.
+unsafe extern "C" fn construct_evp_method(
+    algodef: *const OsslAlgorithm,
+    prov: *mut OsslProvider,
+    data: *mut c_void,
+) -> *mut c_void {
+    let methdata = data.cast::<EvpMethodData>();
+    // SAFETY: `prov` is live per the contract.
+    let libctx = unsafe { ossl_provider_libctx(prov) };
+    // SAFETY: `libctx` is a live context.
+    let namemap = ossl_namemap_stored(libctx);
+    // SAFETY: `algodef` is live.
+    let names = unsafe { (*algodef).algorithm_names };
+    // SAFETY: `namemap` is live and `names` is NUL-terminated.
+    let name_id = unsafe { ossl_namemap_add_names(namemap, 0, names, NAME_SEPARATOR) };
+    if name_id == 0 {
+        return ptr::null_mut();
+    }
+
+    // SAFETY: `methdata` is live, so the class's constructor is the caller's own.
+    let method = unsafe { ((*methdata).method_from_algorithm)(name_id, algodef, prov) };
+    if method.is_null() {
+        // SAFETY: `methdata` is live.
+        unsafe { (*methdata).flag_construct_error_occurred = 1 };
+    }
+    method
+}
+
+/// `static void destruct_evp_method(void *method, void *data)`.
+///
+/// The class's destructor, through the pointer the caller supplied. This is the decrement that
+/// matches the reference `ossl_method_store_add` took, which is what
+/// `ossl_method_construct_this` calls it for.
+///
+/// # Safety
+/// `data` must be a live `EvpMethodData`; `method` live.
+unsafe extern "C" fn destruct_evp_method(method: *mut c_void, data: *mut c_void) {
+    let methdata = data.cast::<EvpMethodData>();
+    // SAFETY: `methdata` is live per the contract.
+    unsafe { ((*methdata).destruct_method)(method) };
+}
+
+/// `static void *inner_evp_generic_fetch(struct evp_method_data_st *methdata,
+/// OSSL_PROVIDER *prov, int operation_id, const char *name, const char *properties,
+/// void *(*new_method)(...), int (*up_ref_method)(void *), void (*free_method)(void *))`.
+///
+/// The generic fetch. Five things about it are worth holding on to:
+///
+///   * **the cache is tried first, and only then the walk.** `ossl_method_store_cache_get` is a
+///     *result* cache keyed by the composite id and the query, so a repeat fetch of the same name
+///     under the same query does not construct anything;
+///   * **`unsupported` starts as "the name resolved to nothing"** and is *replaced*, not
+///     refined, after a walk that completed without any constructor refusing: the flag means "a
+///     class constructor refused", and its absence means the algorithm genuinely is not there;
+///   * the walk's `provider_rw` is `&prov`, so a walk started with a named provider writes back
+///     the provider that answered, and a walk started with NULL accepts any;
+///   * **the id is re-resolved after construction**, because a name list may have registered
+///     names the initial `name2num` did not know — the authority's own comment calls this a
+///     corner case, and it is the case where a fetch of `"sha256:sha2-256"` constructs a method
+///     and then fails to cache it because the *combined* string is not a name;
+///   * `properties` is used **only in the error message**: the query the store is given is the
+///     caller's `properties` or the empty string, and the difference between them is only
+///     visible in what `ERR_get_error_all` reports back.
+///
+/// The error data is the authority's format string verbatim, including the context descriptor,
+/// because that text is readable through `ERR_get_error_all` and is therefore contract.
+///
+/// # Safety
+/// `methdata` must be a live `EvpMethodData` whose `libctx` is live and whose three function
+/// pointers are valid; `prov` NULL or live; `name` and `properties` NULL or NUL-terminated.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+unsafe fn inner_evp_generic_fetch(
+    methdata: *mut EvpMethodData,
+    prov: *mut OsslProvider,
+    operation_id: c_int,
+    name: *const c_char,
+    properties: *const c_char,
+    new_method: MethodFromAlgorithmFn,
+    up_ref_method: MethodUpRefFn,
+    free_method: MethodFreeFn,
+) -> *mut c_void {
+    // SAFETY: `methdata` is live per the contract.
+    let libctx = unsafe { (*methdata).libctx };
+    // SAFETY: `libctx` is live per the contract and this only reads the slot.
+    let store = unsafe { get_evp_method_store(libctx) };
+    // SAFETY: `libctx` is live, so this answers the namemap or NULL.
+    let namemap = ossl_namemap_stored(libctx);
+
+    if store.is_null() || namemap.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_FETCH_278) };
+        return ptr::null_mut();
+    }
+    // `ossl_assert(operation_id > 0)`: non-fatal, so an internal programming error is a refusal.
+    if operation_id <= 0 {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_FETCH_287) };
+        return ptr::null_mut();
+    }
+
+    // The `properties` default is the **empty string**, not NULL: it is the cache's key.
+    let propq: *const c_char = if properties.is_null() {
+        c"".as_ptr()
+    } else {
+        properties
+    };
+
+    // SAFETY: `namemap` is live and `name` is NULL or NUL-terminated.
+    let mut name_id = if name.is_null() {
+        0
+    } else {
+        // SAFETY: `namemap` is live and `name` is NUL-terminated per the contract.
+        unsafe { ossl_namemap_name2num(namemap, name) }
+    };
+
+    let mut meth_id: u32 = 0;
+    if name_id != 0 {
+        meth_id = evp_method_id(name_id, operation_id as u32);
+        if meth_id == 0 {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::EVP_FETCH_303) };
+            return ptr::null_mut();
+        }
+    }
+
+    let mut unsupported = name_id == 0;
+    let mut method: *mut c_void = ptr::null_mut();
+    let mut prov_rw = prov;
+
+    if meth_id == 0 {
+        // No id can be built, so there is nothing to look up: fall through to the walk.
+    } else {
+        // SAFETY: `store` is live, `prov_rw` may be written by the get, and `method` is this
+        // frame's own writable slot.
+        let hit = unsafe {
+            crate::property::store::ossl_method_store_cache_get(
+                store,
+                prov_rw,
+                meth_id as c_int,
+                propq,
+                &mut method,
+            )
+        };
+        if hit == 0 {
+            method = ptr::null_mut();
+        }
+    }
+
+    if meth_id == 0 || method.is_null() {
+        // The six callbacks are this module's own; each documents what it needs. No `unsafe`
+        // block is needed to build the interface itself -- only to call it.
+        let mcm = OsslMethodConstructMethod {
+            get_tmp_store: get_tmp_evp_method_store as McmGetTmpStoreFn,
+            lock_store: reserve_evp_method_store as McmLockStoreFn,
+            unlock_store: unreserve_evp_method_store as McmUnlockStoreFn,
+            get: get_evp_method_from_store as McmGetFn,
+            put: put_evp_method_in_store as McmPutFn,
+            construct: construct_evp_method as McmConstructFn,
+            destruct: destruct_evp_method as McmDestructFn,
+        };
+
+        // SAFETY: `methdata` is live; every field written is this file's own.
+        unsafe {
+            (*methdata).operation_id = operation_id;
+            (*methdata).name_id = name_id;
+            (*methdata).names = name;
+            (*methdata).propquery = propq;
+            (*methdata).method_from_algorithm = new_method;
+            (*methdata).refcnt_up_method = up_ref_method;
+            (*methdata).destruct_method = free_method;
+            (*methdata).flag_construct_error_occurred = 0;
+        }
+
+        // SAFETY: `libctx` is live, `prov_rw` is this frame's own provider slot and the walk may
+        // write it, `mcm` is this frame's own live interface, and `methdata` outlives the walk.
+        method = unsafe {
+            ossl_method_construct(
+                libctx,
+                operation_id,
+                &mut prov_rw,
+                0, /* !force_cache */
+                &mcm,
+                methdata.cast::<c_void>(),
+            )
+        };
+
+        if !method.is_null() {
+            // The re-resolution, for the name-list corner case the authority names.
+            if name_id == 0 {
+                // SAFETY: `namemap` is live and `name` is NUL-terminated.
+                name_id = unsafe { ossl_namemap_name2num(namemap, name) };
+            }
+            if name_id == 0 {
+                let mut msg = [0 as c_char; ERR_DATA_BUFFER];
+                // SAFETY: `msg` is a 1024-byte buffer, the format is the authority's, and `name`
+                // is NUL-terminated.
+                unsafe {
+                    BIO_snprintf(
+                        msg.as_mut_ptr(),
+                        msg.len(),
+                        c"Algorithm %s cannot be found".as_ptr(),
+                        name,
+                    )
+                };
+                // SAFETY: a compile-time-constant site; the message is NUL-terminated.
+                unsafe { raise_site_data(&err_sites::EVP_FETCH_352, msg.as_ptr()) };
+                // SAFETY: the construction left this reference for us and nobody took it.
+                unsafe { free_method(method) };
+                method = ptr::null_mut();
+            } else {
+                meth_id = evp_method_id(name_id, operation_id as u32);
+                if meth_id != 0 {
+                    // SAFETY: `store` is live, `prov_rw` is the provider that answered, and the
+                    // method is live with the class's own callbacks.
+                    unsafe {
+                        crate::property::store::ossl_method_store_cache_set(
+                            store,
+                            prov_rw,
+                            meth_id as c_int,
+                            propq,
+                            method,
+                            up_ref_method,
+                            free_method,
+                        );
+                    }
+                }
+            }
+        }
+
+        // "If we never were in the constructor, the algorithm to be fetched is unsupported."
+        // SAFETY: `methdata` is live.
+        unsupported = unsafe { (*methdata).flag_construct_error_occurred } == 0;
+    }
+
+    if (name_id != 0 || !name.is_null()) && method.is_null() {
+        // The two reasons the authority computes between, and the reason this site is recorded
+        // with `dynamic_reason`: `ERR_raise_data(ERR_LIB_EVP, code, ...)` passes an *identifier*,
+        // so the generator could not resolve a constant and refused to guess one.
+        let code = if unsupported {
+            err_sites::EVP_FETCH_352.reason
+        } else {
+            ERR_R_FETCH_FAILED
+        };
+        let mut msg = [0 as c_char; ERR_DATA_BUFFER];
+        // The name is resolved back to a string for the message when the caller gave an id
+        // rather than a name.
+        let shown = if name.is_null() {
+            // SAFETY: `namemap` is live and the id was derived from it.
+            unsafe { ossl_namemap_num2name(namemap, name_id, 0) }
+        } else {
+            name
+        };
+        // SAFETY: `msg` is a 1024-byte buffer, the format is the authority's, and every argument
+        // is a NUL-terminated string or a plain integer.
+        unsafe {
+            BIO_snprintf(
+                msg.as_mut_ptr(),
+                msg.len(),
+                c"%s, Algorithm (%s : %d), Properties (%s)".as_ptr(),
+                crate::context::lib_ctx_get_descriptor(libctx),
+                if shown.is_null() {
+                    c"<null>".as_ptr()
+                } else {
+                    shown
+                },
+                name_id,
+                if properties.is_null() {
+                    c"<null>".as_ptr()
+                } else {
+                    properties
+                },
+            );
+        }
+        // SAFETY: a compile-time-constant site with a run-time reason -- which is why this is
+        // the dynamic form: the *coordinates* stay this site's, and the reason is the `code`
+        // chosen above. The message is NUL-terminated.
+        unsafe { raise_site_dynamic_data(&err_sites::EVP_FETCH_376, code, msg.as_ptr()) };
+    }
+
+    method
+}
+
+/// `void *evp_generic_fetch(OSSL_LIB_CTX *libctx, int operation_id, const char *name,
+/// const char *properties, void *(*new_method)(...), int (*up_ref_method)(void),
+/// void (*free_method)(void))`.
+///
+/// The public-ish wrapper every `EVP_<class>_fetch` is a macro around: no provider is named, so
+/// any activated provider may answer, and the temporary store is released here — after
+/// `inner_evp_generic_fetch` has finished looking in it.
+///
+/// **`tmp_store` is initialised to NULL and the initialisation is load-bearing.** It is the
+/// `get_tmp_evp_method_store` sentinel: a non-NULL value there would make the walk reuse a store
+/// this call did not create.
+///
+/// # Safety
+/// `libctx` NULL or live; `name` and `properties` NULL or NUL-terminated; the three callbacks
+/// valid for the class being fetched.
+pub(crate) unsafe fn evp_generic_fetch(
+    libctx: *mut c_void,
+    operation_id: c_int,
+    name: *const c_char,
+    properties: *const c_char,
+    new_method: MethodFromAlgorithmFn,
+    up_ref_method: MethodUpRefFn,
+    free_method: MethodFreeFn,
+) -> *mut c_void {
+    let mut methdata = EvpMethodData {
+        libctx,
+        operation_id: 0,
+        name_id: 0,
+        names: ptr::null(),
+        propquery: ptr::null(),
+        tmp_store: ptr::null_mut(),
+        flag_construct_error_occurred: 0,
+        method_from_algorithm: new_method,
+        refcnt_up_method: up_ref_method,
+        destruct_method: free_method,
+    };
+    // SAFETY: `methdata` is this frame's own live object and the arguments are this function's.
+    let method = unsafe {
+        inner_evp_generic_fetch(
+            &mut methdata,
+            ptr::null_mut(),
+            operation_id,
+            name,
+            properties,
+            new_method,
+            up_ref_method,
+            free_method,
+        )
+    };
+    // SAFETY: the temporary store is NULL or one the walk made, and this call owns it.
+    unsafe { dealloc_tmp_evp_method_store(methdata.tmp_store) };
+    method
+}
+
+/// `void *evp_generic_fetch_from_prov(OSSL_PROVIDER *prov, int operation_id, const char *name,
+/// const char *properties, void *(*new_method)(...), int (*up_ref_method)(void),
+/// void (*free_method)(void))`.
+///
+/// **Special, and the authority says so**: it returns methods from the given provider *only*, and
+/// it exists for the case where one method has to fetch an associated one — an `EVP_PKEY`
+/// operation reaching for the digest its provider registered. The libctx is the **provider's**,
+/// so the store searched is the one that provider was loaded into rather than any caller's.
+///
+/// # Safety
+/// `prov` live; `name` and `properties` NULL or NUL-terminated; the three callbacks valid.
+pub(crate) unsafe fn evp_generic_fetch_from_prov(
+    prov: *mut OsslProvider,
+    operation_id: c_int,
+    name: *const c_char,
+    properties: *const c_char,
+    new_method: MethodFromAlgorithmFn,
+    up_ref_method: MethodUpRefFn,
+    free_method: MethodFreeFn,
+) -> *mut c_void {
+    // SAFETY: `prov` is live per the contract.
+    let mut methdata = EvpMethodData {
+        // SAFETY: `prov` is live per the contract, so its context is readable.
+        libctx: unsafe { ossl_provider_libctx(prov) },
+        operation_id: 0,
+        name_id: 0,
+        names: ptr::null(),
+        propquery: ptr::null(),
+        tmp_store: ptr::null_mut(),
+        flag_construct_error_occurred: 0,
+        method_from_algorithm: new_method,
+        refcnt_up_method: up_ref_method,
+        destruct_method: free_method,
+    };
+    // SAFETY: `methdata` is this frame's own live object, and `prov` is the caller's.
+    let method = unsafe {
+        inner_evp_generic_fetch(
+            &mut methdata,
+            prov,
+            operation_id,
+            name,
+            properties,
+            new_method,
+            up_ref_method,
+            free_method,
+        )
+    };
+    // SAFETY: as in `evp_generic_fetch`.
+    unsafe { dealloc_tmp_evp_method_store(methdata.tmp_store) };
+    method
+}
+
+/// `struct filter_data_st { int operation_id; void (*user_fn)(void *method, void *arg);
+/// void *user_arg; }`.
+#[repr(C)]
+struct FilterData {
+    /// `int operation_id`.
+    operation_id: c_int,
+    /// `void (*user_fn)(void *, void *)`.
+    user_fn: GenericDoAllFn,
+    /// `void *user_arg`.
+    user_arg: *mut c_void,
+}
+
+/// `static void filter_on_operation_id(int id, void *method, void *arg)`.
+///
+/// The store's `do_all` hands the **composite id**, and this masks the low byte back out — which
+/// is the reason `evp_method_id` limits the whole thing to 31 bits: a composite with bit 31 set
+/// would sign-extend when narrowed to `int` and the mask would then compare against the wrong
+/// operation. That is the one place the id's width is load-bearing rather than tidy.
+///
+/// # Safety
+/// `arg` must be a live `FilterData`; `method` is passed through to the caller's visitor.
+unsafe extern "C" fn filter_on_operation_id(id: c_int, method: *mut c_void, arg: *mut c_void) {
+    let data = arg.cast::<FilterData>();
+    // SAFETY: `data` is live per the contract.
+    // SAFETY: `data` is live per the contract, so `operation_id` is readable.
+    let wanted = unsafe { (*data).operation_id } as u32;
+    if ((id as u32) & METHOD_ID_OPERATION_MASK) == wanted {
+        // SAFETY: `data` is live, so the user's visitor is the caller's own.
+        unsafe { ((*data).user_fn)(method, (*data).user_arg) };
+    }
+}
+
+/// `void evp_generic_do_all(OSSL_LIB_CTX *libctx, int operation_id,
+/// void (*user_fn)(void *method, void *arg), void *user_arg, void *(*new_method)(...),
+/// int (*up_ref_method)(void), void (*free_method)(void))`.
+///
+/// **A fetch with a NULL name, and then two walks.** `inner_evp_generic_fetch` is called with no
+/// name precisely so that *every* algorithm is constructed and put into the store — a `do_all`
+/// cannot enumerate what was never fetched — and its answer is discarded. Then the temporary
+/// store, if the walk made one, is walked before the context's own.
+///
+/// That means a `do_all` constructs every method of every activated provider, which is the
+/// authority's own economics and has a visible consequence: a provider whose constructor refuses
+/// for one algorithm leaves that algorithm out of the enumeration, because nothing was stored for
+/// it.
+///
+/// # Safety
+/// `libctx` NULL or live; the three callbacks valid for the class; `user_fn` valid.
+pub(crate) unsafe fn evp_generic_do_all(
+    libctx: *mut c_void,
+    operation_id: c_int,
+    user_fn: GenericDoAllFn,
+    user_arg: *mut c_void,
+    new_method: MethodFromAlgorithmFn,
+    up_ref_method: MethodUpRefFn,
+    free_method: MethodFreeFn,
+) {
+    let mut methdata = EvpMethodData {
+        libctx,
+        operation_id: 0,
+        name_id: 0,
+        names: ptr::null(),
+        propquery: ptr::null(),
+        tmp_store: ptr::null_mut(),
+        flag_construct_error_occurred: 0,
+        method_from_algorithm: new_method,
+        refcnt_up_method: up_ref_method,
+        destruct_method: free_method,
+    };
+    // The fetch that is only for its side effect: NULL name, NULL properties, answer discarded.
+    // SAFETY: `methdata` is this frame's own live object.
+    let _ = unsafe {
+        inner_evp_generic_fetch(
+            &mut methdata,
+            ptr::null_mut(),
+            operation_id,
+            ptr::null(),
+            ptr::null(),
+            new_method,
+            up_ref_method,
+            free_method,
+        )
+    };
+
+    let mut data = FilterData {
+        operation_id,
+        user_fn,
+        user_arg,
+    };
+    let dp: *mut c_void = ptr::addr_of_mut!(data).cast::<c_void>();
+    // SAFETY: `methdata.tmp_store` is NULL or a live store this call owns; the visitor and its
+    // argument outlive both walks.
+    unsafe {
+        if !methdata.tmp_store.is_null() {
+            crate::property::store::ossl_method_store_do_all(
+                methdata.tmp_store,
+                Some(filter_on_operation_id),
+                dp,
+            );
+        }
+        // No block of its own: the enclosing `unsafe` is this statement's.
+        let store = get_evp_method_store(libctx);
+        crate::property::store::ossl_method_store_do_all(store, Some(filter_on_operation_id), dp);
+        dealloc_tmp_evp_method_store(methdata.tmp_store);
+    }
+}
+
+/// `int evp_is_a(OSSL_PROVIDER *prov, int number, const char *legacy_name, const char *name)`.
+///
+/// "Is this name the same algorithm as the one I already have a number for?" — and the two paths
+/// are not symmetric. With a provider, the number is the caller's and only `name` is resolved;
+/// **without** a provider the *legacy* name is resolved instead, because a caller with no
+/// provider is asking about a name the legacy table knows and the namemap is where the two are
+/// reconciled. The libctx is `ossl_provider_libctx(NULL)` in that case, which is the default
+/// context rather than a NULL context.
+///
+/// # Safety
+/// `prov` NULL or live; `legacy_name` and `name` NULL or NUL-terminated.
+pub(crate) unsafe fn evp_is_a(
+    prov: *mut OsslProvider,
+    mut number: c_int,
+    legacy_name: *const c_char,
+    name: *const c_char,
+) -> c_int {
+    // SAFETY: `prov` is NULL or live per the contract.
+    let libctx = unsafe { ossl_provider_libctx(prov) };
+    // SAFETY: `libctx` is NULL or live.
+    let namemap = ossl_namemap_stored(libctx);
+    if prov.is_null() {
+        // SAFETY: `namemap` is live and `legacy_name` is NUL-terminated.
+        number = unsafe { ossl_namemap_name2num(namemap, legacy_name) };
+    }
+    // SAFETY: `namemap` is live and `name` is NUL-terminated.
+    c_int::from(unsafe { ossl_namemap_name2num(namemap, name) } == number)
+}
+
+/// `int evp_names_do_all(OSSL_PROVIDER *prov, int number,
+/// void (*fn)(const char *name, void *data), void *data)`.
+///
+/// Every name an id is known by, in the namemap of the context the provider belongs to — which is
+/// the call that makes `"SHA2-256"` reachable from a method registered as `"SHA256"`.
+///
+/// # Safety
+/// `prov` NULL or live; `fn` valid.
+pub(crate) unsafe fn evp_names_do_all(
+    prov: *mut OsslProvider,
+    number: c_int,
+    fn_: Option<unsafe extern "C" fn(*const c_char, *mut c_void)>,
+    data: *mut c_void,
+) -> c_int {
+    // SAFETY: `prov` is NULL or live per the contract.
+    let libctx = unsafe { ossl_provider_libctx(prov) };
+    // SAFETY: `libctx` is NULL or live.
+    let namemap = ossl_namemap_stored(libctx);
+    // SAFETY: `namemap` is live and the visitor is the caller's.
+    unsafe { ossl_namemap_doall_names(namemap, number, fn_, data) }
+}
+
+/// `strchr`, behind a safe-to-call-from-`unsafe` name.
+///
+/// # Safety
+/// `s` must be NUL-terminated.
+unsafe fn c_strchr(s: *const c_char, c: c_char) -> *const c_char {
+    extern "C" {
+        // The signature is the crate's own spelling of this libc function, so the declaration
+        // does not clash with `src/dso/dlfcn.rs`'s and `src/runtime/bio/sys.rs`'s.
+        fn strchr(s: *const c_char, c: c_int) -> *mut c_char;
+    }
+    // SAFETY: the caller's contract.
+    unsafe { strchr(s, c as c_int) }.cast_const()
+}
+
+/// `strlen`, behind a safe-to-call-from-`unsafe` name.
+///
+/// # Safety
+/// `s` must be NUL-terminated.
+unsafe fn c_strlen(s: *const c_char) -> usize {
+    extern "C" {
+        fn strlen(s: *const c_char) -> usize;
+    }
+    // SAFETY: the caller's contract.
+    unsafe { strlen(s) }
 }
 
 #[cfg(test)]
