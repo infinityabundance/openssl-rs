@@ -6506,3 +6506,61 @@ config file naming `openssl_init` observes the difference. **`RT-CONF-MOD` is th
 |---|---|---|
 | Phase 6 implemented / open | 142 / 19 | **142 / 19** (no source changed) |
 | subphases named | 6.10 | **6.10a–6.10d** |
+
+## D122 — 6.10a is three units, not one: the `_ex` thread-local family and the sparse array underneath it
+
+**D121 said 6.10a was "a transcription rather than a design", and it was right about the
+nature of the work and wrong about its size, because it missed two units.** Following the RCU
+read path to its ends lands on `CRYPTO_THREAD_get_local_ex(CRYPTO_THREAD_LOCAL_RCU_KEY,
+lock->ctx)` — and that function is not in `crypto/threads_pthread.c`, which is where D121
+looked. It is `crypto/threads_common.c`, **414 lines**, added upstream in 2025 and used by
+`crypto/err/err.c`, `crypto/rand/rand_lib.c`, `crypto/rsa/rsa_ossl.c` and
+`crypto/async/async.c` as well as by RCU. It is the *per-context* thread-local family: one
+operating-system key per process, a fixed array indexed by an eight-value key id, and under
+each of those a **sparse array indexed by the libctx pointer cast to `uintptr_t`** — a lookup
+that is legitimate precisely because libctx pointers are unique. Its destructor is
+`clean_master_key`, which releases every table and the fixed array.
+
+The sparse array is `crypto/sparse_array.c`, **216 lines**, with `DEFINE_SPARSE_ARRAY_OF`
+generating `new`/`get`/`set`/`free` per element type. The crate has **no** sparse array at
+all, which is why this is a prerequisite rather than a detail: `threads_common.c` cannot be
+written without it.
+
+**So 6.10a splits three ways, and the order is forced:**
+
+* **6.10a-i — the sparse array**, `crypto/sparse_array.c`. 216 lines, no dependencies beyond
+  allocation, and the only thing in the chain that can be tested on its own.
+* **6.10a-ii — the `_ex` thread-local family**, `crypto/threads_common.c`: `master_key` as a
+  `CRYPTO_THREAD_LOCAL` with its own `RUN_ONCE`, `master_key_init` as the flag the destructor
+  reads, `MASTER_KEY_ENTRY` as a one-field wrapper over the sparse array, `clean_master_key_id`,
+  `clean_master_key`, `init_master_key`, `CRYPTO_THREAD_get_local_ex`,
+  `CRYPTO_THREAD_set_local_ex` and `CRYPTO_THREAD_clean_local`. Note the two subtleties the
+  file states in its own comments: `master_key_init` exists because an uninitialised key would
+  otherwise return garbage in the destructor, and `CRYPTO_THREAD_run_once` is used rather than
+  the `RUN_ONCE` macro because the same source is compiled into the FIPS provider, where
+  `RUN_ONCE` is suppressed. `CRYPTO_THREAD_NO_CONTEXT` is `(void *)1`, not NULL, and is folded
+  to NULL before the concrete-context resolution.
+* **6.10a-iii — RCU**, `crypto/threads_pthread.c`'s section, as D121 described it.
+
+**This is the fourth dependency the planning pass did not see, and the pattern is now
+established**: D114's 6.9/6.6g cycle, D97's 6.6f/6.8 siting, D118's RCU-to-`ossl_init_thread_start`
+edge, and this one — a chain that is invisible from the file that names its first link. Each
+was found by following the *call* rather than the *include*, which is the only method that has
+worked. It is also why the estimate for 6.10 has to be stated in units rather than in
+subphases: 6.10a alone is roughly a thousand lines of C across three files.
+
+**One thing this turns up that is not 6.10's business, and is worth naming so it is not
+forgotten.** `crypto/err/err.c` uses `CRYPTO_THREAD_LOCAL_ERR_KEY` from this same family, and
+Phase 3's ERR is complete — so either the crate's error queue keeps its thread-local a
+different way, or there is a 2025-era upstream change that Phase 3's archaeology did not see
+because it read `err.c` at a different moment. The Phase 3 seal's ERR section should be read
+against the current `err.c` before Phase 7 depends on the error queue further. Recorded as an
+open item rather than investigated here, because investigating it is not 6.10a-iii's job and
+guessing at the answer would be worse than leaving the question.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 142 / 19 | **142 / 19** (no source changed) |
+| 6.10a | one unit | **three units: `sparse_array.c` (216), `threads_common.c` (414), RCU (~380)** |
