@@ -55,7 +55,7 @@ and the **provider core** that lives inside it. The scope was not chosen; it was
 | 6.5 | `OSSL_PARAM` — all 81 exports, `RT-PARAM` |
 | 6.6a–g | the context itself, the namemap, the core BIO, the thread slot, the thread-stop pair and `OPENSSL_atexit`, the child context, and `OSSL_LIB_CTX_load_config` |
 | 6.7a–c | the property engine: the three slots, the two grammars, and the method store |
-| 6.8a–f | the provider object and its store, `add_builtin` and the predefined table, init/activate/deactivate and the operation tables, the CONF layer, the child provider, and the algorithm dispatch walk |
+| 6.8a–e | the provider object and its store, `add_builtin` and the predefined table, init/activate/deactivate and the operation tables, the CONF layer, and the child provider |
 | 6.9 | DSO — the fifteen `DSO_*` exports, reassigned from Phase 2 by D95 |
 | 6.10a–e | RCU, the per-context thread-local family, the sparse array, the CONF module registry, the automatic configuration loader, the OID module and the `ssl_conf` module |
 | 6.11 | the self-test and indicator callback pairs |
@@ -149,7 +149,16 @@ would make the authority's behaviour reachable.
 8. **The index-slot table is incomplete by design.** The slots Phase 7, 9 and 10 fill are named
    in `docs/PHASE-6-SUBPHASES.md` §3 with the subphase that fills each, and `RT-LIBCTX` prints
    its own scope so a reader of the transcript can see the gap without reading the probe.
-9. **Every count is `docs/SEAL-CENSUS.md`'s.** This document types none of them.
+9. **The algorithm dispatch walk (6.8f/6.6f) is not built, and is Phase 7's prerequisite
+   rather than this stratum's obligation.** `crypto/core_algorithm.c`'s `ossl_algorithm_do_all`
+   has exactly **one** authority caller — `crypto/core_fetch.c`'s `ossl_method_construct`, the
+   fetch path — and nothing in this crate references it, so it was invisible to the
+   prerequisite gate, whose rule is about names a crate module *references*. It is now a
+   recorded deferral owned by Phase 7 (`forensics/prerequisites.json`, D132), which is where a
+   name that nothing can yet call belongs. The alternative — leaving it unnamed because nothing
+   names it — is the `a2d_ASN1_OBJECT` failure class arriving from the other direction, and it
+   is the reason this seal says so instead of staying silent.
+10. **Every count is `docs/SEAL-CENSUS.md`'s.** This document types none of them.
 
 ## 7. Exit criteria
 
