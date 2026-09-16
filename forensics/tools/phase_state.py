@@ -500,6 +500,13 @@ PHASE6_MODULES = [
     "src/selftest/mod.rs",
     "src/selftest/indicator.rs",
     "courts/phase6/rt_selftest_probe.c",
+    # 6.10b/6.10c/6.10d: the CONF module registry and the automatic configuration
+    # loader. The court is `RT-CONF-MOD`, which is also what reaches the RCU layer,
+    # since `conf_mod.c` is its only consumer in this build.
+    "src/runtime/confmod/mod.rs",
+    "src/runtime/confmod/asn1.rs",
+    "src/runtime/conf/sap.rs",
+    "courts/phase6/rt_conf_mod_probe.c",
     "forensics/tools/phase6_courts.py",
     "forensics/tools/phase6_obligations.py",
 ]

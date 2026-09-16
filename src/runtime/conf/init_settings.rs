@@ -46,6 +46,27 @@ pub struct OpenSslInitSettings {
     flags: c_ulong,
 }
 
+// The three readers `crypto/conf/conf_sap.c`'s `ossl_config_int` needs. The authority's
+// function reads the fields directly because it is compiled into the same library; the
+// fields are private here, so the readers stand where the C's member access stands. Each
+// is called only on a non-NULL `settings`, which is the caller's contract.
+impl OpenSslInitSettings {
+    /// `settings->filename`.
+    pub(crate) fn filename(&self) -> *const c_char {
+        self.filename
+    }
+
+    /// `settings->appname`.
+    pub(crate) fn appname(&self) -> *const c_char {
+        self.appname
+    }
+
+    /// `settings->flags`.
+    pub(crate) fn flags(&self) -> c_ulong {
+        self.flags
+    }
+}
+
 /// An `OPENSSL_INIT_SETTINGS` built on the stack, the way `OPENSSL_config` builds
 /// one.
 ///
@@ -73,7 +94,13 @@ pub(crate) fn stack_settings(appname: *mut c_char) -> OpenSslInitSettings {
 /// CONF_MFLAGS_IGNORE_RETURN_CODES`, which is why a settings object that a caller
 /// never touches still tolerates a missing configuration file and a failing
 /// module.
-const DEFAULT_CONF_MFLAGS: c_ulong = 0x20 | 0x10 | 0x2;
+///
+/// `crypto/conf/conf_mod.c`'s Rust home composes the same value from the four
+/// individual `CONF_MFLAGS_*` bits it documents, because it needs those bits
+/// separately; both are the authority's single definition in
+/// `include/internal/conf.h`, and the two spellings are checked against each other
+/// by a unit test in that module rather than trusted.
+pub(crate) const DEFAULT_CONF_MFLAGS: c_ulong = 0x20 | 0x10 | 0x2;
 
 /// `OPENSSL_INIT_SETTINGS *OPENSSL_INIT_new(void)`
 ///

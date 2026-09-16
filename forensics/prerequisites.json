@@ -10,24 +10,6 @@
     ],
     "deferrals": [
       {
-        "symbol": "ossl_config_modules_free",
-        "owner_phase": 6,
-        "reason": "Phase 6.10b: crypto/conf/conf_mod.c's registry teardown",
-        "evidence": "docs/DECISIONS.md D121 (6.10b)"
-      },
-      {
-        "symbol": "ossl_config_int",
-        "owner_phase": 6,
-        "reason": "Phase 6.10c: crypto/conf/conf_sap.c's automatic loader",
-        "evidence": "docs/DECISIONS.md D121 (6.10c)"
-      },
-      {
-        "symbol": "ossl_no_config_int",
-        "owner_phase": 6,
-        "reason": "Phase 6.10c: crypto/conf/conf_sap.c's automatic loader",
-        "evidence": "docs/DECISIONS.md D121 (6.10c)"
-      },
-      {
         "symbol": "ossl_config_add_ssl_module",
         "owner_phase": 6,
         "reason": "Phase 6.10c: one of the six modules OPENSSL_load_builtin_modules registers",

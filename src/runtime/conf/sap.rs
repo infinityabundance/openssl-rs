@@ -40,18 +40,123 @@
 //!
 //! `ossl_config_int` and `ossl_no_config_int` are internal (declared in
 //! `internal/conf.h`, not installed) and are what `OPENSSL_init_crypto`'s
-//! `OPENSSL_INIT_LOAD_CONFIG` step calls. That step currently *accepts* having
-//! loaded nothing, which is the authority's answer when no config file exists;
-//! applying a config that does exist needs `CONF_modules_load_file_ex`, which is
-//! Phase 6.9's obligation because the module registry is. This file therefore
-//! routes through the same `OPENSSL_init_crypto` the authority uses and inherits
-//! exactly that state, rather than growing a second configuration path.
+//! `OPENSSL_INIT_LOAD_CONFIG` step calls. **They are here now** — 6.10c wrote them
+//! once `CONF_modules_load_file_ex` existed, which needed the module registry that
+//! 6.10b landed. The module doc that used to explain their absence was correct while
+//! it stood and is superseded here rather than left to contradict the file; the
+//! divergence it recorded, D86 (a config file that exists is not applied), is
+//! superseded by the same commit that made it false.
+//!
+//! ## The one piece of state, and why it is *file*-scoped
+//!
+//! `openssl_configured` is a `static int` in the authority and it is deliberately not
+//! per-context: a process configures itself once. It is read and written without a
+//! lock, which the authority's own comment on `OPENSSL_init_crypto` justifies by
+//! requiring that a call with non-NULL settings happen before any other thread uses the
+//! library. This crate stores it in an `AtomicI32` — the same value, one store and one
+//! load, with the data race the authority's plain `int` has removed rather than
+//! reproduced. That is a strengthening with no defined-program difference, which is why
+//! it is not a divergence record; the authority's own guarantee is what makes the
+//! authority's code correct, and it makes this code correct too.
+//!
+//! ## `ossl_config_int` fails without raising
+//!
+//! Every failure it can see is already on the error queue, put there by
+//! `CONF_modules_load_file_ex`. It returns that function's value and raises nothing of
+//! its own — so a caller that wants the reason calls `ERR_get_error` rather than
+//! `ERR_peek_last_error`.
 
-use core::ffi::{c_char, c_void};
+use core::ffi::{c_char, c_int, c_void};
+use core::ptr;
+use core::sync::atomic::{AtomicI32, Ordering};
 
+use crate::context::OSSL_LIB_CTX_get0_global_default;
 use crate::runtime::bio::sys;
-use crate::runtime::conf::init_settings::stack_settings;
+use crate::runtime::conf::init_settings::{stack_settings, OpenSslInitSettings};
+use crate::runtime::confmod::{CONF_modules_load_file_ex, DEFAULT_CONF_MFLAGS};
 use crate::runtime::init::{OPENSSL_init_crypto, OPENSSL_INIT_LOAD_CONFIG};
+
+/// `static int openssl_configured = 0` — `crypto/conf/conf_sap.c`.
+///
+/// The authority's `int`, in an atomic for the reason the module documentation gives. It is
+/// written by exactly two functions, [`ossl_config_int`] and [`ossl_no_config_int`], and read
+/// by the first.
+static OPENSSL_CONFIGURED: AtomicI32 = AtomicI32::new(0);
+
+/// `int ossl_config_int(const OPENSSL_INIT_SETTINGS *settings)` — `crypto/conf/conf_sap.c`.
+///
+/// The automatic configuration loader's body. Three details are the whole of it:
+///
+/// * **the first call wins.** A second call answers 1 immediately without touching a file, so
+///   a configuration file is read at most once per process even when several libraries
+///   initialise OpenSSL.
+/// * **a NULL `settings` means the default file and the default flag word**, which is the
+///   `DEFAULT_CONF_MFLAGS` path `OPENSSL_init_crypto`'s `LOAD_CONFIG` step takes when it was
+///   called without settings — the path `ASN1_STRING_TABLE_get` and every other consumer that
+///   never mentions configuration takes.
+/// * **the flag is set even when the load failed.** `openssl_configured = 1` is after the call
+///   and not conditioned on `ret`, which is what makes a failed configuration permanent for
+///   the process rather than retried by the next initialiser. A second `OPENSSL_init_crypto`
+///   with `LOAD_CONFIG` therefore answers 1 — the once has already run — while the error queue
+///   still holds the reason the first one produced.
+///
+/// The authority reads `settings->filename`, `->appname` and `->flags` **before** the call and
+/// uses those three values, which is not the same as passing the pointer through: a settings
+/// object a caller mutates from a module's initialiser would change what a re-entrant call
+/// saw. The three reads are taken here in the same order.
+///
+/// # Safety
+/// `settings` must be NULL or a live `OPENSSL_INIT_SETTINGS`; its `filename` and `appname`
+/// fields must each be NULL or NUL-terminated.
+pub(crate) unsafe fn ossl_config_int(settings: *const OpenSslInitSettings) -> c_int {
+    // `if (openssl_configured) return 1;`
+    if OPENSSL_CONFIGURED.load(Ordering::Acquire) != 0 {
+        return 1;
+    }
+
+    // `filename = settings ? settings->filename : NULL;` and the two beside it. The reads
+    // happen while the caller is inside the once, which is what makes following the pointer
+    // sound.
+    // SAFETY: `settings` is NULL or live per the caller's contract, and the three reads are
+    // of its three fields.
+    let (filename, appname, flags) = unsafe {
+        if settings.is_null() {
+            (ptr::null(), ptr::null(), DEFAULT_CONF_MFLAGS)
+        } else {
+            (
+                (*settings).filename(),
+                (*settings).appname(),
+                (*settings).flags(),
+            )
+        }
+    };
+
+    // `ret = CONF_modules_load_file_ex(OSSL_LIB_CTX_get0_global_default(), filename, appname,
+    // flags);` — the default context, never a caller's, because a process-wide configuration is
+    // process-wide.
+    let ctx = OSSL_LIB_CTX_get0_global_default();
+    // SAFETY: `ctx` is the process's global default context, which is never NULL and never
+    // released; `filename` and `appname` are NULL or NUL-terminated per the caller's contract,
+    // and `CONF_modules_load_file_ex`'s own contract accepts exactly those.
+    let ret = unsafe { CONF_modules_load_file_ex(ctx, filename, appname, flags) };
+
+    OPENSSL_CONFIGURED.store(1, Ordering::Release);
+    ret
+}
+
+/// `void ossl_no_config_int(void)` — `crypto/conf/conf_sap.c`.
+///
+/// One store. It exists so that `OPENSSL_INIT_NO_LOAD_CONFIG` claims the *same* once the real
+/// loader would, which is what makes `NO_LOAD_CONFIG | LOAD_CONFIG` behave as the authority
+/// does: the flag is set, and the loader that follows finds the configuration already done and
+/// loads nothing.
+///
+/// It is a `pub(crate) fn` and not an `extern "C"` one because it is internal (declared in
+/// `include/internal/conf.h` and not installed), and it takes no arguments and dereferences
+/// nothing, so it needs no `unsafe` block at its call sites.
+pub(crate) fn ossl_no_config_int() {
+    OPENSSL_CONFIGURED.store(1, Ordering::Release);
+}
 
 /// `void OPENSSL_config(const char *appname)`
 ///

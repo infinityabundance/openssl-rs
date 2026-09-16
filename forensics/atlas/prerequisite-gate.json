@@ -11,8 +11,6 @@
       "evp_names_do_all -> phase 7 (Phase 7 owns crypto/evp/evp_fetch.c)",
       "evp_set_default_properties_int -> phase 7 (Phase 7 owns crypto/evp/evp_fetch.c)",
       "ossl_config_add_ssl_module -> phase 6 (Phase 6.10c: one of the six modules OPENSSL_load_builtin_modules registers)",
-      "ossl_config_int -> phase 6 (Phase 6.10c: crypto/conf/conf_sap.c's automatic loader)",
-      "ossl_config_modules_free -> phase 6 (Phase 6.10b: crypto/conf/conf_mod.c's registry teardown)",
       "ossl_ctx_global_properties -> phase 6 (Phase 6.7c/6.8: the method store inside crypto/property/property.c, which cannot be written before providers exist)",
       "ossl_get_enginesdir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads)",
       "ossl_get_openssldir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads; so is its sibling)",
@@ -31,15 +29,14 @@
       "ossl_method_store_remove -> phase 6 (Phase 6.7c/6.8: the method store)",
       "ossl_method_store_remove_all_provided -> phase 6 (Phase 6.7c/6.8: the method store)",
       "ossl_method_unlock_store -> phase 6 (Phase 6.7c/6.8: the method store's lock discipline)",
-      "ossl_no_config_int -> phase 6 (Phase 6.10c: crypto/conf/conf_sap.c's automatic loader)",
       "ossl_provider_get_parent -> phase 6 (Phase 6.8e: the child-provider link, whose slot is index 18 of the context table)",
       "ossl_provider_is_child -> phase 6 (Phase 6.8e: the child-provider link)",
       "ossl_provider_set_child -> phase 6 (Phase 6.8e: the child-provider link)"
     ],
     "census": {
       "covered_by_a_divergence": 53,
-      "language_surface_not_modelled_by_name": 2066,
-      "planned_prerequisites": 52
+      "language_surface_not_modelled_by_name": 2050,
+      "planned_prerequisites": 49
     },
     "census_not_a_failure": "the C language surface is counted and listed, never failed: the crate models C types, macros and reason codes differently on purpose, and a lexical scan cannot tell a rename from a gap",
     "census_samples": {
@@ -138,8 +135,6 @@
         "evp_names_do_all",
         "evp_set_default_properties_int",
         "ossl_config_add_ssl_module",
-        "ossl_config_int",
-        "ossl_config_modules_free",
         "ossl_ctx_global_properties",
         "ossl_ctx_global_properties",
         "ossl_get_enginesdir",
@@ -167,13 +162,15 @@
         "ossl_method_store_fetch",
         "ossl_method_store_free",
         "ossl_method_store_free",
-        "ossl_method_store_free"
+        "ossl_method_store_free",
+        "ossl_method_store_new",
+        "ossl_method_store_new"
       ]
     },
     "checked": {
-      "authority_units": 109,
-      "crate_modules": 148,
-      "deferrals_recorded": 33,
+      "authority_units": 110,
+      "crate_modules": 150,
+      "deferrals_recorded": 30,
       "divergence_names_covered": 32,
       "divergence_rows": 5,
       "names_referenced_and_not_built": 17
@@ -297,13 +294,13 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "ced32074b9eacf38e30232e71e98de10178a1c41d9e566a18fc1aa478caf59e0",
+  "body_hash": "035770cdaf16fecbc31578328f06b437f15ee579c04aa550f33318f53a51e79c",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "69daa64cd6798dd3dfc91c45b3d1a65b3e41ab1408003708866bd2cd179ad10c"
+      "sha256": "600c6db3dfe1bbb4ed2c4a1eb9c685cc36054878fb39d3045599560d94f72a01"
     },
     {
       "name": "macro-owners",
@@ -318,7 +315,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "9e4d467d0a7593eba65cfd680576fb716e1108232760432d6ad63f609106b9d2"
+      "sha256": "989819d57876f260dca230826d94f37147b31c7e0741de74fe5f0577f9de9cdd"
     },
     {
       "name": "symbol-ownership",
@@ -328,17 +325,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "ee6bbd9d1a2557ee161e9767c3ec32f4985635ea0553ad038c83b46415beccb6"
+      "sha256": "62b849f876ccf1c8d6b0af521b94e6bc7a86d7139d0957fd399af64a4ca0ea8b"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "5d695a991d88809bed92fdebbd2e412ca9a797eaa9657cea286bcfb0c10aaab6"
+      "sha256": "c93a8f66d648c1e7619b568fcc9f832880b8a9d4880243f4aee38169d3a0f91f"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "74a706a3a0a93eefad1f82b1eec2f9e725fcae73901b5f341145795b040fa197"
+      "sha256": "821a75c2e042e1a6b1bd3db16891d9535dbdb4349e4524350fd0aec33f03ff55"
     },
     {
       "name": "crate-source-tree",

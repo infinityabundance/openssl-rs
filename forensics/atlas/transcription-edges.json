@@ -694,8 +694,22 @@
         "module": "src/runtime/conf/sap.rs",
         "phase": 4,
         "phase_source": "export-ownership",
-        "share": "1/1",
+        "share": "3/3",
         "translation_unit": "crypto/conf/conf_sap.c"
+      },
+      {
+        "module": "src/runtime/confmod/asn1.rs",
+        "phase": 6,
+        "phase_source": "module-declaration",
+        "share": "1/1",
+        "translation_unit": "crypto/asn1/asn_moid.c"
+      },
+      {
+        "module": "src/runtime/confmod/mod.rs",
+        "phase": 6,
+        "phase_source": "module-declaration",
+        "share": "16/17",
+        "translation_unit": "crypto/conf/conf_mod.c"
       },
       {
         "module": "src/runtime/ctype.rs",
@@ -2778,6 +2792,69 @@
           "src/asn1/asn_mime.rs"
         ],
         "tu": "crypto/asn1/asn_mime.c"
+      },
+      {
+        "identifiers": [
+          "ASN1_R_ADDING_OBJECT",
+          "ASN1_R_ERROR_LOADING_SECTION",
+          "ASN1_add_oid_module",
+          "CONF",
+          "CONF_IMODULE",
+          "CONF_VALUE",
+          "CONF_imodule_get_value",
+          "CONF_module_add",
+          "ERR_LIB_ASN1",
+          "ERR_raise",
+          "NCONF_get_section",
+          "NID_undef",
+          "NULL",
+          "OBJ_create",
+          "OPENSSL_free",
+          "OPENSSL_malloc",
+          "STACK_OF",
+          "char",
+          "cnf",
+          "conf",
+          "const",
+          "crypto",
+          "do_create",
+          "else",
+          "for",
+          "h",
+          "i",
+          "if",
+          "include",
+          "int",
+          "ln",
+          "lntmp",
+          "md",
+          "memcpy",
+          "name",
+          "nid",
+          "oid_module_finish",
+          "oid_module_init",
+          "oid_section",
+          "openssl",
+          "ossl_isspace",
+          "ostr",
+          "oval",
+          "p",
+          "return",
+          "sk_CONF_VALUE_num",
+          "sk_CONF_VALUE_value",
+          "sktmp",
+          "static",
+          "stdio",
+          "strrchr",
+          "value",
+          "void",
+          "while",
+          "x509"
+        ],
+        "modules": [
+          "src/runtime/confmod/asn1.rs"
+        ],
+        "tu": "crypto/asn1/asn_moid.c"
       },
       {
         "identifiers": [
@@ -10446,7 +10523,8 @@
           "x509"
         ],
         "modules": [
-          "src/runtime/conf/modparse.rs"
+          "src/runtime/conf/modparse.rs",
+          "src/runtime/confmod/mod.rs"
         ],
         "tu": "crypto/conf/conf_mod.c"
       },

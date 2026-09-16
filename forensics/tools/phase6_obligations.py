@@ -70,8 +70,14 @@ MODULE_PREFIXES: list[tuple[str, tuple[str, ...]]] = [
     ("src/selftest/indicator.rs", ("OSSL_INDICATOR_",)),
     ("src/selftest/mod.rs", ("OSSL_SELF_TEST_",)),
     ("src/dso/mod.rs", ("DSO_",)),
-    ("src/confmod/mod.rs", ("CONF_", "OPENSSL_load_builtin_modules")),
-    ("src/confmod/asn1.rs", ("ASN1_add_oid_module",)),
+    # 6.10b/6.10c/6.10d: the CONF module registry, the automatic configuration
+    # loader and the OID module. The registry is `crypto/conf/conf_mod.c` and the
+    # loader is `crypto/conf/conf_sap.c`, whose Rust homes are `src/runtime/confmod/`
+    # and `src/runtime/conf/sap.rs` respectively -- the module lives under
+    # `src/runtime/` rather than `src/conf/` because it is reached from
+    # `OPENSSL_cleanup`, which is `crypto/init.c`'s.
+    ("src/runtime/confmod/mod.rs", ("CONF_", "OPENSSL_load_builtin_modules")),
+    ("src/runtime/confmod/asn1.rs", ("ASN1_add_oid_module",)),
     ("src/context/core_bio.rs", ("BIO_s_core", "BIO_new_from_core_bio")),
     # The five Phase 3 handed over. They are labels for rows this stratum *owes*,
     # and until 6.6e-ii landed they named where the machinery each one *needed* lived:

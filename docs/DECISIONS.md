@@ -6989,3 +6989,180 @@ decided. The order is unchanged — **6.10b, then 6.10d, then 6.10c, then
 | Phase 6 implemented / open | 142 / 19 | **142 / 19** (nothing was committed) |
 | lines composed and discarded | — | **~1,000, whose ten guessed identifiers are the reason** |
 | identifiers that must be read rather than guessed | 10 | **2 left to check** (`conf_mod.c:331`'s site, and the `ERR_*` pair for the packed-error test) |
+## D127 — 6.10b/c/d land, and the first thing the finished pipeline found was a defect in 6.6e-ii
+
+6.10b (`conf_mod.c`'s registry, fifteen exports plus `ossl_config_modules_free`), 6.10c
+(`conf_sap.c`'s `ossl_config_int`/`ossl_no_config_int` and the config step in
+`OPENSSL_init_crypto`) and 6.10d (`asn_moid.c`'s `ASN1_add_oid_module`) are implemented, and
+`RT-CONF-MOD` observes them differentially in 161 observations with zero residuals. Phase 6
+goes from 19 open to **2**, `libcrypto` from 1116 to **1133** implemented exports, and the
+prerequisite gate's blocking-dependency list from 33 to 30.
+
+### The defect: `ossl_ctx_thread_stop` was written against the wrong helper
+
+`docs/SECURITY_DIVERGENCE_POLICY.md` carried `D-TEVENT-CTX-STOP-LEAK-1`, which claimed that
+the authority's `ossl_ctx_thread_stop` is
+
+```c
+hands = clear_thread_local(ctx); init_thread_stop(ctx, hands); OPENSSL_free(hands);
+```
+
+and that the head is therefore released while other contexts' handler nodes are still linked
+to it. **The authority is not that.** It is:
+
+```c
+void ossl_ctx_thread_stop(OSSL_LIB_CTX *ctx)
+{
+    if (destructor_key.sane != -1) {
+        THREAD_EVENT_HANDLER **hands = fetch_thread_local(ctx);
+        init_thread_stop(ctx, hands);
+    }
+}
+```
+
+`fetch_thread_local` is `manage_thread_local(ctx, 0, 1)`: fetch without allocating and
+**without clearing**. Nothing is freed, the head stays in the thread's slot, and the register
+keeps pointing at it. The source marks `fetch_thread_local` `ossl_unused` because the FIPS
+build does not call it; this profile is the non-FIPS build, which does — and that is exactly
+how the misreading was available to make.
+
+The crate had been written against `clear_thread_local` plus a `CRYPTO_free`, and the
+divergence entry had been written **from the test rather than from the authority**. That is
+the lesson: a divergence record derived from the candidate's own behaviour records nothing.
+
+**What made it visible.** Freeing the head left its address in
+`GLOBAL_TEVENT_REGISTER`'s `skhands`, so the walk in `init_thread_deregister(NULL, 1)` —
+which `OPENSSL_cleanup` runs — dereferenced released memory. Rust refuses that dereference
+instead of reading the corpse, so the observable was the unit-test binary **aborting at
+process exit**. It had never been reachable before, because until this commit nothing made the
+exit-time `OPENSSL_cleanup` actually run its teardown: `crate::runtime::init`'s test-only
+`reset_for_test` cleared `BASE_INITED`, and `OPENSSL_cleanup` therefore returned early at
+exit. Making `base_init` a faithful `RUN_ONCE` — which 6.10c needs, because the base step now
+creates the configuration re-entrancy key and can fail — is what closed that hole.
+
+Three corrections followed, and each is a correction rather than a patch:
+
+* `fetch_thread_local` exists as its own helper, with the authority's `ossl_unused` note
+  recorded and the reason it applies to a different build profile;
+* `ossl_ctx_thread_stop` is the authority's two statements;
+* `init::reset_for_test` restores `BASE_INITED` from a new `BASE_ONCE_RET` — the authority's
+  own `base_ossl_ret_`, which is **not** `base_inited`: `OPENSSL_cleanup` clears the latter and
+  a `CRYPTO_ONCE` cannot be un-run. Taking `base_init`'s answer from `base_inited` made a
+  post-cleanup call report a base-initialisation failure instead of the terminal refusal.
+
+`D-TEVENT-CTX-STOP-LEAK-1` is struck through in the policy document with the misreading, the
+truth and the reason it survived written out. The tests that encoded it are replaced by
+`the_context_stop_filters_on_the_argument` (a survivor is still reachable afterwards) and
+`a_second_context_stop_for_the_same_argument_runs_nothing`, and the module's `reset()` now
+drains with `OPENSSL_thread_stop` — a line that was only needed once the defect was gone,
+which is its own evidence that the tests had been leaning on it.
+
+### `D86` is superseded, and the refusal moved
+
+D86 recorded that a configuration file which exists is not applied, because the loader did not
+exist yet. It is applied now. Two consequences are worth naming:
+
+* the config step needed `settings`, which `OPENSSL_init_crypto` was ignoring. It reads it
+  now, through `OPENSSL_INIT_SET_*`'s three fields, and the `OSS_LIB_CTX`/module-registry
+  call that the old comment named as the blocker is made: `CONF_modules_load_file_ex` against
+  `OSSL_LIB_CTX_get0_global_default()`.
+* **the refusal for the unsupported options moved.** The authority tests `ADD_ALL_CIPHERS`,
+  `ADD_ALL_DIGESTS`, `ASYNC` and the `ENGINE_*` bits *before* its `LOAD_CONFIG` block, so a
+  caller who asks for `ADD_ALL_CIPHERS | LOAD_CONFIG` is refused **without a configuration
+  having been read**. The crate tested them after, which was unobservable while the config
+  step loaded nothing and is observable now. It is at the authority's position.
+
+Three details of the config step are transcribed and each is a test: the flag
+`openssl_configured` is set **unconditionally**, so a *failed* load is permanent for the
+process rather than retried; the re-entrancy thread-local is **set and never cleared**, so
+after a failed load a second call on the same thread takes the skip branch and answers 1
+while the same call on another thread answers the once's recorded 0; and
+`NO_LOAD_CONFIG | LOAD_CONFIG` marks the process configured and loads nothing, because
+`NO_LOAD_CONFIG` claims the *same* once. Those three are why `RT-CONF-MOD` re-executes itself
+with a mode argument: a process can only observe its own first configuration load once, so
+each scenario is a fresh process and the parent reports the child's exit code.
+
+### `RT-CONF-MOD`'s observations, and the two it deliberately does not make
+
+161 observations, zero residuals. The ones that carry the most weight:
+
+* **the error coordinates are the authority's own**, read through `ERR_peek_last_error_all`:
+  `../../src/openssl-3.6.4/crypto/conf/conf_mod.c:286`, function `module_run`, and the data
+  string `module=rt-cm-fail, value=fv retcode=-1      ` — including the six spaces of
+  `%-8d`'s left justification, which `format!` cannot express and which is therefore built
+  with the authority's own `BIO_snprintf`;
+* **`module_init` answers -1 on failure**, not the initialiser's own code: the module returns
+  0, `CONF_modules_load` answers -1, and the data field says `retcode=-1`;
+* **`module_add` pushes and never deduplicates**, so the first registration shadows the
+  second — observed with two counters;
+* **`module_find` truncates at the *last* dot**, which the probe exercises both ways:
+  `rt-cm-a.alpha` and `rt-cm-a.beta` find `rt-cm-a`, and `rt-cm-a.gamma.delta` **does not**
+  (it truncates to `rt-cm-a.gamma`), so a three-part name is an unknown module;
+* **a name whose last dot is its first character truncates to zero bytes**, and
+  `strncmp(x, y, 0)` is 0 for every `y` — so `.weird` lands on the **first entry in the
+  registry**, which is the built-in `oid_section`, and the OID module's initialiser is called
+  with `.weird`'s value and fails;
+* **`config_diagnostics` is per-context and sticky**, and turning it on clears four ignore
+  flags — so the same call that answered 1 answers -1 afterwards.
+
+It does **not** observe the fan-out of `OPENSSL_load_builtin_modules` (six of its seven
+registrations belong to later strata, which is D121's recorded divergence and would fail the
+court for a reason the court is not about), and it does not read `CONF_imodule_get_flags`
+before a module's initialiser has run, because the authority allocates `CONF_IMODULE` with
+`OPENSSL_malloc` and never initialises that field. Both are stated in the probe's header, and
+the second is recorded in the divergence policy.
+
+### Phase 5's generator had one predicate missing
+
+The pipeline's ownership audit caught `ASN1_add_oid_module` counted as implemented by **both**
+Phase 5 and Phase 6. Phase 5's generator was the outlier: `phase3`, `phase4` and `phase6`
+each compute `implemented_here = sorted(s for s in owned if s in done and s not in handed_on)`,
+and `phase5_obligations.py` — rewritten when Phase 5 abandoned `FAMILIES` — had dropped the
+`and s not in handed_on`. `implemented` means implemented **by this stratum**, and a hand-off
+the receiving stratum has built is not this stratum's work. The change is one predicate and
+one partition-identity assertion, the latter already present in the other three generators.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 142 / 19 | **159 / 2** |
+| `libcrypto` implemented | 1116 | **1133** |
+| courts / observations | 54 / 19,884 | **55 / 20,045** |
+| unit tests | 284 | **285** |
+| blocking dependencies | 33 | **30** |
+| language census | 2066 | **2050** |
+| the two that remain open | — | `OSSL_LIB_CTX_new_child` (6.6d), `OSSL_LIB_CTX_load_config` (6.6g) |
+
+## D128 — `ossl_config_add_ssl_module` is this stratum's, not libssl's: the plan and the ledger disagreed and the ledger is right
+
+`docs/PHASE-6-SUBPHASES.md`'s 6.10 row ends its fan-out paragraph by listing the six modules
+`OPENSSL_load_builtin_modules` registers that this stratum does not: `ENGINE_add_conf_module`
+and `ENGINE_load_builtin_engines` (ENGINE), `ossl_provider_add_conf_module` (6.8d),
+`ossl_random_add_conf_module` (Phase 9), `EVP_add_alg_module` (Phase 7) — and
+`ossl_config_add_ssl_module`, which the row calls **libssl's**. `forensics/prerequisites.json`
+has carried a row assigning the same symbol to **Phase 6.10c** since before 6.10 began, and
+`D123`'s gate checks that row on every run.
+
+Two records, two owners, and only one can be right. The ledger's is:
+
+* `ossl_config_add_ssl_module` is `crypto/conf/conf_ssl.c`'s, in the same translation unit as
+  `conf_ssl_get`/`conf_ssl_name_find`/`conf_ssl_get_cmd`, which Phase 4 built as part of 6.3;
+* its body is `CONF_module_add("ssl_conf", ssl_module_init, ssl_module_free)`, and its handler
+  reads the module's value with `CONF_imodule_get_value` and walks a section with
+  `NCONF_get_section` — `CONF_IMODULE` and `CONF_module_add` are both this stratum's, which is
+  the same dependency that put `ASN1_add_oid_module` (6.10d) and `ASN1_add_stable_module`
+  (Phase 11) where they are;
+* nothing in it needs libssl. It *registers* a store that libssl later reads through
+  `SSL_CONF`, and the store and the accessors are Phase 4's and Phase 6's.
+
+So the plan's sentence is wrong and the deferral row is right, which is D123's point arriving
+from the other direction: a prose assignment in a plan is an act of judgement that nothing
+checks, and a row in `prerequisites.json` is an act of judgement that every pipeline run
+checks. When they disagree, the checked one wins, and the unchecked one is corrected.
+
+**Nothing is implemented by this entry.** It records the correction, moves the unit to 6.10e
+in `docs/PHASE-6-SUBPHASES.md`, and leaves the work — `conf_ssl.c`'s `ssl_module_init`,
+`ssl_module_free` and the registration, plus the `RT-CONF-MOD` observations for
+`ssl_module_init`'s two raise sites — to be done as its own commit under the same
+`all_pass` discipline every other unit in this stratum has met.

@@ -176,6 +176,8 @@
       "src/provider/core_dispatch.rs: declared Phase 6, defines exports owned by phase 4",
       "src/runtime/bio/core_bio.rs: declared Phase 6, defines exports owned by phase 4",
       "src/runtime/conf/init_settings.rs: declared Phase 4, defines exports owned by phase 3",
+      "src/runtime/confmod/asn1.rs: declared Phase 6, defines exports owned by phase 5",
+      "src/runtime/confmod/mod.rs: declared Phase 6, defines exports owned by phase 4",
       "src/runtime/thread_events.rs: declared Phase 6, defines exports owned by phase 3"
     ],
     "definition": "every symbol the authority's library objects define that is not a DSO export, with the translation unit that defines it; the universe a prerequisite is drawn from, and invisible to every export-based atlas",

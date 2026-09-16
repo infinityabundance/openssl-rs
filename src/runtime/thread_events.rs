@@ -401,6 +401,20 @@ fn alloc_thread_local(ctx: *mut c_void) -> *mut *mut ThreadEventHandler {
     manage_thread_local(ctx, true, false)
 }
 
+/// `static ossl_inline ossl_unused THREAD_EVENT_HANDLER **fetch_thread_local(OSSL_LIB_CTX *ctx)`.
+///
+/// The third spelling, and the one that is easy to miss: **fetch without allocating and
+/// without clearing**. The authority marks it `ossl_unused` because the FIPS build's
+/// `ossl_ctx_thread_stop` does not use it — but the non-FIPS build's does, and this profile is
+/// the non-FIPS one. Leaving it out was a real defect rather than an omission: the caller that
+/// needed it was written against `clear_thread_local` instead, which clears the thread's local
+/// **and returns the head the caller then freed**, leaving the head's address in the global
+/// register and the register's walk at `OPENSSL_cleanup` dereferencing released memory. See
+/// [`ossl_ctx_thread_stop`] for the correction and `docs/DECISIONS.md` for the record.
+fn fetch_thread_local(ctx: *mut c_void) -> *mut *mut ThreadEventHandler {
+    manage_thread_local(ctx, false, true)
+}
+
 // ---------------------------------------------------------------------------
 // The register's two operations
 // ---------------------------------------------------------------------------
@@ -753,10 +767,29 @@ unsafe fn init_thread_stop(arg: *mut c_void, hands: *mut *mut ThreadEventHandler
 
 /// `void ossl_ctx_thread_stop(OSSL_LIB_CTX *ctx)`.
 ///
-/// Stops every handler registered for `ctx` and clears this thread's local, so the remaining
-/// handlers (for other contexts) stay registered. Unlike `OPENSSL_thread_stop` it does **not**
-/// remove the head from the global register, because the thread is still alive and may
-/// register more.
+/// Stops every handler registered for `ctx` and leaves **everything else alone**: the thread
+/// keeps its list head, the head stays registered in the global register, and the thread may
+/// register more handlers afterwards into the same head. The authority's body is two
+/// statements — `fetch_thread_local(ctx)` and `init_thread_stop(ctx, hands)` — and the verb is
+/// the whole of it.
+///
+/// ## `fetch`, not `clear`, and the abort that proved it
+///
+/// This function was first written against `clear_thread_local(ctx)` and then freed the head
+/// it had taken. Both halves were wrong, and the pair was invisible for as long as nothing
+/// walked the register afterwards:
+///
+/// * `clear_thread_local` clears this thread's slot, so the next `ossl_init_thread_start`
+///   allocates a **second** head and pushes a **second** entry — and the authority's caller
+///   for that path never intends it, because `ossl_ctx_thread_stop` is the per-*context*
+///   stop, not the per-thread one;
+/// * the `CRYPTO_free` released the head while its address was still in
+///   `gtr->skhands`, so `init_thread_deregister(NULL, 1)`'s walk dereferenced freed memory.
+///
+/// The Rust build refuses that dereference rather than reading the corpse, so what a
+/// consumer saw was `OPENSSL_cleanup` aborting — which is how it was found. The authority's
+/// answer is the one below, and it leaves nothing dangling because it never takes the head
+/// away.
 ///
 /// # Safety
 /// `ctx` must be NULL or live. NULL stops the handlers registered with a NULL argument, which
@@ -766,15 +799,11 @@ pub(crate) unsafe fn ossl_ctx_thread_stop(ctx: *mut c_void) {
     if !destructor_key_sane() {
         return;
     }
-    // SAFETY: the list is this thread's, per the guard.
-    let hands = clear_thread_local(ctx);
-    // SAFETY: `hands` is NULL or a live head.
-    unsafe {
-        init_thread_stop(ctx, hands);
-        if !hands.is_null() {
-            CRYPTO_free(hands.cast::<c_void>(), FILE, lines::L_CTX_STOP_FREE);
-        }
-    }
+    // SAFETY: the list is this thread's, per the guard, and `fetch_thread_local` answers it
+    // without clearing the slot and without taking ownership of the head.
+    let hands = fetch_thread_local(ctx);
+    // SAFETY: `hands` is NULL or a live head this module allocated and still owns.
+    unsafe { init_thread_stop(ctx, hands) };
 }
 
 /// `void OPENSSL_thread_stop_ex(OSSL_LIB_CTX *ctx)`.
@@ -870,6 +899,15 @@ mod tests {
             rearm_for_test();
         }
         assert_eq!(ossl_init_thread(), 1);
+        // Drain whatever a previous test left linked. A whole-thread stop runs every handler,
+        // removes this thread's head from the global register and releases it, which is the
+        // only way to reach a clean list. This line was **not** needed until
+        // `ossl_ctx_thread_stop` was corrected: it used to release the head and clear the
+        // thread local, so the list happened to be empty between tests. Once the authority's
+        // `fetch_thread_local` was used instead, the survivors became reachable again and the
+        // tests were no longer isolated from each other -- which is itself evidence that they
+        // had been relying on the defect.
+        OPENSSL_thread_stop();
         CALLS.store(0, Ordering::SeqCst);
         LAST_ARG.store(ptr::null_mut(), Ordering::SeqCst);
         FIRST_SAW.store(0, Ordering::SeqCst);
@@ -919,17 +957,21 @@ mod tests {
     }
 
     /// `ossl_ctx_thread_stop` filters on the handler's `arg`: only the handlers registered for
-    /// that context run, and the rest stay linked.
+    /// that context run, and **everything else about the thread's list is untouched**.
     ///
-    /// **It then releases the list head anyway, so the survivors are unreachable.** That is the
-    /// authority's shape and not an accident of this transcription: `clear_thread_local` clears
-    /// the thread local and hands back the head, `init_thread_stop(ctx, head)` runs the matching
-    /// handlers, and `OPENSSL_free(head)` releases the head block while nodes for *other*
-    /// contexts are still linked to it. The consequence is observable and pinned below: a
-    /// whole-thread stop afterwards runs **nothing**, because this thread no longer has a list to
-    /// walk, and the remaining nodes are leaked. Recorded as `D-TEVENT-CTX-STOP-LEAK-1` in
-    /// `docs/SECURITY_DIVERGENCE_POLICY.md`, which is where a defined but defective upstream
-    /// behaviour is recorded rather than quietly "fixed".
+    /// The authority's body is `hands = fetch_thread_local(ctx); init_thread_stop(ctx, hands);`,
+    /// and the verb is the whole of it. `fetch_thread_local` is `manage_thread_local(ctx, 0, 1)`
+    /// — fetch without allocating and without clearing — so the head stays in this thread's
+    /// slot, stays registered in the global register, and stays owned by the thread. The
+    /// handlers for other contexts are still linked and still reachable.
+    ///
+    /// This test previously asserted the opposite, and pinned it as
+    /// `D-TEVENT-CTX-STOP-LEAK-1` on the strength of a misreading: the crate had been written
+    /// against `clear_thread_local` plus a `CRYPTO_free` of the head, and the divergence entry
+    /// described that as the authority's behaviour. It is not — and the misreading was not
+    /// harmless, because it left the freed head's address in the global register and made
+    /// `OPENSSL_cleanup`'s walk dereference released memory. The correction is recorded in
+    /// `docs/SECURITY_DIVERGENCE_POLICY.md` under the same identifier.
     #[test]
     fn the_context_stop_filters_on_the_argument() {
         reset();
@@ -947,12 +989,41 @@ mod tests {
         }
         assert_eq!(CALLS.load(Ordering::SeqCst), 1, "only the A handler");
         assert_eq!(LAST_ARG.load(Ordering::SeqCst), arg_a());
+        // The B handler is still linked, so the whole-thread stop that follows runs it. That is
+        // the observable difference: the head was neither cleared nor released.
         OPENSSL_thread_stop();
         assert_eq!(
             CALLS.load(Ordering::SeqCst),
-            1,
-            "the surviving handler is unreachable: its list head was released"
+            2,
+            "the surviving handler is still reachable, because the head is still the thread's"
         );
+        assert_eq!(LAST_ARG.load(Ordering::SeqCst), arg_b());
+    }
+
+    /// A second `ossl_ctx_thread_stop` for the same context runs nothing, because the first one
+    /// unlinked the nodes it ran — and it does **not** touch the other contexts' nodes, which is
+    /// what the previous test observes from the other side.
+    #[test]
+    fn a_second_context_stop_for_the_same_argument_runs_nothing() {
+        reset();
+        // SAFETY: the handlers and arguments are this module's own.
+        unsafe {
+            assert_eq!(
+                ossl_init_thread_start(ptr::null(), arg_a(), Some(count_handler)),
+                1
+            );
+            assert_eq!(
+                ossl_init_thread_start(ptr::null(), arg_b(), Some(count_handler)),
+                1
+            );
+            ossl_ctx_thread_stop(arg_a());
+            assert_eq!(CALLS.load(Ordering::SeqCst), 1);
+            ossl_ctx_thread_stop(arg_a());
+        }
+        assert_eq!(CALLS.load(Ordering::SeqCst), 1, "the A node is gone");
+        // And B is still there for the whole-thread stop.
+        OPENSSL_thread_stop();
+        assert_eq!(CALLS.load(Ordering::SeqCst), 2);
     }
 
     /// Deregistration by `index` removes the named handler from every thread's list, and a

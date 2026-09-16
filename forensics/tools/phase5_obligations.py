@@ -498,13 +498,32 @@ def main(argv: list[str]) -> int:
             "moved to a header this stratum owns)"
         )
 
-    implemented_here = sorted(s for s in owned if s in implemented)
+    # `implemented` means implemented **by this stratum**, so a symbol this stratum handed
+    # on is excluded even once the receiving stratum has built it. Leaving it in counts the
+    # same export as done in two ledgers at once, which is what `ownership_audit.py` reports
+    # as double-counted work rather than as progress. `ASN1_add_oid_module` is the case that
+    # found this: Phase 5 owns it because `asn1.h` declares it, Phase 5 handed it to Phase 6
+    # because only the module registry constructs a `CONF_MODULE`, and 6.10d built it — at
+    # which point this line was the only thing standing between a true statement and a
+    # double-counted one. Phases 3, 4 and 6 already excluded it; Phase 5's generator was
+    # rewritten when it abandoned `FAMILIES` and this one predicate was left behind.
     handed_on = {r["symbol"] for r in deferred}
+    implemented_here = sorted(s for s in owned if s in implemented and s not in handed_on)
     open_rows = [
         {"symbol": s, "module": owned[s]["module"],
          "declaring_header": owned[s]["declaring_header"]}
         for s in sorted(owned) if s not in implemented and s not in handed_on
     ]
+
+    # The same partition identity the other three strata's generators assert: every owned
+    # export is implemented here, handed on, or open -- exactly one of the three. A generator
+    # that lost a symbol would otherwise report a smaller `open` as progress.
+    if len(owned) != len(implemented_here) + len(handed_on) + len(open_rows):
+        raise SystemExit(
+            "phase5-obligations: the projection does not partition: "
+            f"owned={len(owned)} implemented={len(implemented_here)} "
+            f"handed_on={len(handed_on)} open={len(open_rows)}"
+        )
 
     body = {
         "rule": (
