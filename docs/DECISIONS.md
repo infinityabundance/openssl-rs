@@ -7166,3 +7166,58 @@ in `docs/PHASE-6-SUBPHASES.md`, and leaves the work — `conf_ssl.c`'s `ssl_modu
 `ssl_module_free` and the registration, plus the `RT-CONF-MOD` observations for
 `ssl_module_init`'s two raise sites — to be done as its own commit under the same
 `all_pass` discipline every other unit in this stratum has met.
+
+## D129 — 6.6g: `OSSL_LIB_CTX_load_config`, and the three details one line does not show
+
+`int OSSL_LIB_CTX_load_config(OSSL_LIB_CTX *ctx, const char *config_file)` is
+`return CONF_modules_load_file_ex(ctx, config_file, NULL, 0) > 0;` in `crypto/context.c:479`.
+It was the last thing 6.6 was waiting for the CONF module registry to unlock, and it is
+written now that 6.10 has landed. Phase 6 goes from **2 open to 1**, and `libcrypto` from 1133
+to 1134 implemented exports.
+
+The body is one line; its **contract** is three details, each of which a transcription that
+copied the surrounding entry point would get wrong, and each of which `RT-LIBCTX` observes:
+
+1. **The flag word is a literal zero, not `DEFAULT_CONF_MFLAGS`.** The automatic loader
+   tolerates a missing file and a failing module; this call does not. Same file, two entry
+   points, two answers — and that is what makes it a *different* loader rather than a second
+   spelling of the same one.
+2. **The answer is `> 0`, not `!= 0`.** `CONF_modules_load_file_ex` answers **-1** when a
+   module fails, so a `!= 0` test would report success for exactly the failure a caller most
+   needs to see. The probe pins this by calling the *same* file through
+   `CONF_modules_load_file` (-1) and through this function (0), one line apart.
+3. **`config_diagnostics` in the file is set on the context it was loaded into**, because
+   `CONF_modules_load` writes `cnf->libctx`. The probe loads a diagnostics-bearing file into a
+   fresh context and observes its flag go to 1 while the process default's stays 0 — which is
+   also why the observation could be made at all without disturbing the default.
+
+Two more were worth the observations:
+
+* **`oid_section` is loadable once per process, and that is the OID database's rule rather than
+  the loader's.** `OBJ_create` refuses a short name that already exists, so a second load of a
+  file carrying an `oid_section` **fails** — with `OBJ_R_OID_EXISTS` underneath and
+  `CONF_R_MODULE_INITIALIZATION_ERROR` on top. It is observed, and it is why the repeatability
+  observations use a file naming `ssl_conf`, whose reader frees its store before rebuilding it
+  and is therefore idempotent.
+* **a NULL context resolves through the thread's default**, so a load with `ctx == NULL` lands
+  on the global default object; two loads of the same `ssl_conf` file into it both answer 1,
+  which shows the load is not tied to the context that made the call.
+
+**One observation is deliberately absent**, and the probe's header says so: a NULL `config_file`
+with `OPENSSL_CONF` unset reaches `CONF_get1_default_config_file`'s fallback, which is the
+authority's own `OPENSSLDIR` string and this crate's empty string — a recorded divergence, since
+claiming a path inside the authority's build tree would be a false statement about this build.
+Observing it would fail the court for a reason the court is not about, exactly as the
+`OPENSSL_load_builtin_modules` fan-out would in `RT-CONF-MOD`. The half that *is* in scope — a
+default file that exists — is observed, with `OPENSSL_CONF` pointed at a file the probe wrote.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 159 / 2 | **160 / 1** |
+| `libcrypto` implemented | 1133 | **1134** |
+| `RT-LIBCTX` observations | 91 | **110** |
+| courts / observations | 55 / 20,131 | **55 / 20,150** |
+| language census | 2050 | **2049** |
+| the one that remains open | — | `OSSL_LIB_CTX_new_child` (6.6d), which needs `ossl_provider_init_as_child` (6.8e) |

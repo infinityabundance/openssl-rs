@@ -59,6 +59,17 @@
  *
  * Fault boundaries
  * ----------------
+ * A divergence this probe deliberately does not observe
+ * ----------------------------------------------------
+ * `OSSL_LIB_CTX_load_config` with a NULL file name and `OPENSSL_CONF` unset reaches
+ * `CONF_get1_default_config_file`, whose fallback is the authority's own `OPENSSLDIR` and
+ * this crate's empty string -- a recorded divergence, because claiming a path inside the
+ * authority's build tree would be a false statement about this build. The observation is
+ * left out for the same reason `RT-CONF-MOD` leaves out the
+ * `OPENSSL_load_builtin_modules` fan-out: it would fail the court for a reason the court
+ * is not about. The half that *is* in scope -- a default file that exists -- is observed,
+ * with `OPENSSL_CONF` set to a file the probe wrote.
+ *
  * One observation deliberately reads a context *after* `OSSL_LIB_CTX_free` returned,
  * to distinguish "the no-op the authority performs" from "a free". That read is only
  * well-defined because the authority keeps the object alive; an implementation that
@@ -76,8 +87,20 @@
 #endif
 #include <openssl/crypto.h>
 #include <openssl/err.h>
+#include <openssl/objects.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+/*
+ * `OPENSSL_load_builtin_modules` and `CONF_modules_load_file` are installed; the
+ * `CONF_*` flag word is not needed here because `OSSL_LIB_CTX_load_config` passes a
+ * literal zero.
+ */
+extern void OPENSSL_load_builtin_modules(void);
+extern int CONF_modules_load_file(const char *filename, const char *appname,
+                                  unsigned long flags);
 
 /* ---------------------------------------------------------------- reporting */
 
@@ -310,6 +333,200 @@ int main(void)
          OSSL_LIB_CTX_get_data(b, IDX_COMP_METHODS) != NULL);
     sayn("free.threaddefault.still.default", OSSL_LIB_CTX_set0_default(NULL) == b);
     sayn("free.threaddefault.restore", OSSL_LIB_CTX_set0_default(gd) == b);
+
+    /* ------------------------------------------------- OSSL_LIB_CTX_load_config */
+
+    /*
+     * The tenth export of this stratum, and the one that waited for the CONF module
+     * registry to exist (6.10). Its body is one line and its *contract* is three
+     * details, each observed below:
+     *
+     *   * it passes an explicit **zero** flag word, not `DEFAULT_CONF_MFLAGS`, so a
+     *     missing file and a failing module are both errors here where the automatic
+     *     loader tolerates them;
+     *   * it answers `> 0`, and the inner call can answer **-1**, so the result is a
+     *     boolean rather than a pass-through -- which one observation below pins by
+     *     comparing the same file through both entry points;
+     *   * `config_diagnostics` in the file is set on **the context it was loaded into**,
+     *     which is why this section can use a fresh context and leave the default alone.
+     *
+     * A configuration file has to be written by the probe, because the alternative -- the
+     * installation directory -- differs between the two sides by construction.
+     */
+    {
+        static const char *DIR = "/tmp/rt-libctx";
+        char p_ok[128], p_plain[128], p_missing[128], p_badsec[128], p_diag[128], p_unknown[128];
+        static const char *OK =
+            "openssl_conf = lc_init\n"
+            "\n"
+            "[lc_init]\n"
+            "oid_section = lc_oids\n"
+            "\n"
+            "[lc_oids]\n"
+            "rt-libctx-oid = 1.2.3.4.5.6.7.8.123\n";
+        /*
+         * A second good file, and it exists because the first one is **only loadable
+         * once**: `oid_section`'s initialiser calls `OBJ_create`, which refuses a short
+         * name that already exists, so a second load of `ok.cnf` fails with
+         * `OBJ_R_OID_EXISTS` rather than succeeding. That is a real behaviour and is
+         * observed below -- but it cannot be the file the *repeatability* observations
+         * use. This one names `ssl_conf` instead, whose reader frees its store before it
+         * rebuilds it and is therefore idempotent.
+         */
+        static const char *PLAIN =
+            "openssl_conf = lc_init\n"
+            "\n"
+            "[lc_init]\n"
+            "ssl_conf = lc_ssl\n"
+            "\n"
+            "[lc_ssl]\n"
+            "system_default = lc_sds\n"
+            "\n"
+            "[lc_sds]\n"
+            "MinProtocol = TLSv1.2\n";
+        static const char *BADSEC = "openssl_conf = no_such_section\n";
+        static const char *DIAG =
+            "config_diagnostics = 1\n"
+            "openssl_conf = lc_init\n"
+            "\n"
+            "[lc_init]\n"
+            "ssl_conf = lc_ssl\n"
+            "\n"
+            "[lc_ssl]\n"
+            "system_default = lc_sds\n"
+            "\n"
+            "[lc_sds]\n"
+            "MinProtocol = TLSv1.2\n";
+        static const char *UNKNOWN =
+            "openssl_conf = lc_init\n"
+            "\n"
+            "[lc_init]\n"
+            "nosuchmodule = x\n";
+        FILE *f;
+        int r;
+        OSSL_LIB_CTX *lc;
+
+        mkdir(DIR, 0755);
+        snprintf(p_ok, sizeof p_ok, "%s/ok.cnf", DIR);
+        snprintf(p_plain, sizeof p_plain, "%s/plain.cnf", DIR);
+        snprintf(p_missing, sizeof p_missing, "%s/not-here.cnf", DIR);
+        snprintf(p_badsec, sizeof p_badsec, "%s/badsec.cnf", DIR);
+        snprintf(p_diag, sizeof p_diag, "%s/diag.cnf", DIR);
+        snprintf(p_unknown, sizeof p_unknown, "%s/unknown.cnf", DIR);
+#define WRITE(p, t)                                                            \
+    do {                                                                       \
+        f = fopen((p), "wb");                                                  \
+        if (f != NULL) {                                                       \
+            fputs((t), f);                                                     \
+            fclose(f);                                                         \
+        }                                                                      \
+    } while (0)
+        WRITE(p_ok, OK);
+        WRITE(p_plain, PLAIN);
+        WRITE(p_badsec, BADSEC);
+        WRITE(p_diag, DIAG);
+        WRITE(p_unknown, UNKNOWN);
+        unlink(p_missing);
+#undef WRITE
+
+        /* The built-ins must be registered before any of this can resolve a module
+         * name, and `module_run`'s own run-once is what does it -- called explicitly so
+         * that the observation is about the loader rather than about that once. */
+        OPENSSL_load_builtin_modules();
+        ERR_clear_error();
+
+        lc = OSSL_LIB_CTX_new();
+        sayp("ldcfg.newctx", lc);
+
+        /* A fresh context's diagnostics flag is zero, which is what the `diag.cnf`
+         * observation below needs as its starting point. */
+        sayn("ldcfg.diag.before", OSSL_LIB_CTX_get_conf_diagnostics(lc));
+
+        r = OSSL_LIB_CTX_load_config(lc, p_ok);
+        printf("ldcfg.ok=%d err=%lu\n", r, ERR_peek_last_error());
+        ERR_clear_error();
+        /* The module ran: the OID its section named exists. */
+        sayn("ldcfg.ok.oid.known", OBJ_txt2nid("rt-libctx-oid") != NID_undef);
+
+        /* The *same* file a second time, into the global default: the OID module's
+         * initialiser refuses a short name it already has, so the load fails and the
+         * `> 0` collapses the inner -1. This is the pair that shows the wrapper is not a
+         * pass-through, and it is also why every repeatable observation below uses
+         * `plain.cnf` instead. */
+        r = OSSL_LIB_CTX_load_config(NULL, p_ok);
+        printf("ldcfg.duplicate.oid=%d err=%lu\n", r, ERR_peek_last_error());
+        printf("ldcfg.duplicate.oid.reason=%d\n",
+               ERR_GET_REASON(ERR_peek_last_error()));
+        ERR_clear_error();
+
+        /* `ssl_conf`'s reader frees its store before rebuilding it, so the same file
+         * loads cleanly twice -- and it does so into the global default, which shows the
+         * load is not tied to the context that made the call. */
+        r = OSSL_LIB_CTX_load_config(NULL, p_plain);
+        printf("ldcfg.plain=%d err=%lu\n", r, ERR_peek_last_error());
+        ERR_clear_error();
+        r = OSSL_LIB_CTX_load_config(NULL, p_plain);
+        printf("ldcfg.plain.again=%d err=%lu\n", r, ERR_peek_last_error());
+        ERR_clear_error();
+
+        /* A missing file is an error here, where the automatic loader's flag word
+         * tolerates it. */
+        r = OSSL_LIB_CTX_load_config(lc, p_missing);
+        printf("ldcfg.missing=%d err=%lu\n", r, ERR_peek_last_error());
+        printf("ldcfg.missing.reason=%d\n",
+               ERR_GET_REASON(ERR_peek_last_error()));
+        ERR_clear_error();
+
+        /* A section the file names but does not define. */
+        r = OSSL_LIB_CTX_load_config(lc, p_badsec);
+        printf("ldcfg.badsec=%d err=%lu\n", r, ERR_peek_last_error());
+        ERR_clear_error();
+
+        /* The same file through the two entry points, which is what pins the `> 0`:
+         * the raw call answers -1 and the wrapper answers 0. */
+        r = CONF_modules_load_file(p_unknown, NULL, 0);
+        printf("ldcfg.raw.unknown=%d\n", r);
+        ERR_clear_error();
+        r = OSSL_LIB_CTX_load_config(lc, p_unknown);
+        printf("ldcfg.wrapped.unknown=%d\n", r);
+        ERR_clear_error();
+
+        /* A file that turns diagnostics on sets it on **this** context and not on the
+         * process default. */
+        sayn("ldcfg.diag.default.before", OSSL_LIB_CTX_get_conf_diagnostics(NULL));
+        r = OSSL_LIB_CTX_load_config(lc, p_diag);
+        printf("ldcfg.diag.ok=%d err=%lu\n", r, ERR_peek_last_error());
+        ERR_clear_error();
+        sayn("ldcfg.diag.thisctx.after", OSSL_LIB_CTX_get_conf_diagnostics(lc));
+        sayn("ldcfg.diag.default.after", OSSL_LIB_CTX_get_conf_diagnostics(NULL));
+
+        /* A NULL context resolves through the thread's default, so this load lands on
+         * the global default object -- and diagnostics on `lc` is what makes the two
+         * distinguishable, since the default's flag stays zero. */
+        sayn("ldcfg.default.after.diag.file",
+             OSSL_LIB_CTX_get_conf_diagnostics(NULL));
+
+        /* A NULL `config_file` asks for the default file, which is `$OPENSSL_CONF`
+         * when it is set -- the probe sets it so that both sides read the same bytes
+         * rather than their own installation directory. */
+        setenv("OPENSSL_CONF", p_plain, 1);
+        r = OSSL_LIB_CTX_load_config(lc, NULL);
+        printf("ldcfg.null.file=%d err=%lu\n", r, ERR_peek_last_error());
+        ERR_clear_error();
+
+        /* And a NULL file name with the environment variable cleared is **not**
+         * observed. `CONF_get1_default_config_file` falls back to
+         * `X509_get_default_cert_area()` when `OPENSSL_CONF` is unset, which answers the
+         * authority's own `OPENSSLDIR` string and this crate's empty string -- a recorded
+         * divergence, because claiming a path inside the authority's build tree would be
+         * a false statement about this build. Observing it here would fail the court for a
+         * reason the court is not about, exactly as the `OPENSSL_load_builtin_modules`
+         * fan-out would in `RT-CONF-MOD`. What the pair above establishes is the half
+         * that is in scope: with a default file that *exists*, both sides read it and
+         * answer 1. */
+
+        OSSL_LIB_CTX_free(lc);
+    }
 
     /* --------------------------------------------------------------- nothing raised */
 
