@@ -6047,3 +6047,128 @@ binding through the object after the refusal and by reading its filename back.
 | unit tests | 216 | **226** |
 | `probe_hygiene` | clean (41 probes) | clean (**42 probes**) |
 | FRF objects / challenges / receipts | 373 / 90 / 45 | **381 / 92 / 46** |
+
+## D116 — 6.8c's activation half: an arm on the wrong side of `if (ref == 0)`, five bridges that refuse to be stubs, and an activation order that is load-bearing
+
+**A defect that no court could have found, because nothing could reach it yet.**
+`ossl_provider_free`'s `flag_initialized` arm — the teardown, the error-string unload and
+the `operation_bits` release — had been written **before** the `if (ref == 0)` test rather
+than inside it, so a provider was torn down on *every* release instead of on the last
+one. The authority's own comment is the whole argument against that: *"there may be other
+structures hanging on to the provider after the last deactivation and may therefore need
+full access to the provider's services. Therefore, we deinit late."* The arm was
+unreachable when it was written (`ossl_provider_free` carried a dead-code allowance),
+which is exactly why the reading mattered and why no differential court could have caught
+it: 6.8c's exports are what make the function live, and the first thing 6.8c does is
+declare them. Its two allocation coordinates — `OPENSSL_free(prov->error_strings)` at
+**754** and `OPENSSL_free(prov->operation_bits)` at **759** — also replaced the
+placeholders `0`s that part 1 left, so a failing allocation records what a consumer would
+see from the authority and not a line that does not exist.
+
+**Five store bridges, and the decision not to stub them.** `provider_flush_store_cache`,
+`provider_remove_store_methods` and the two activation functions each end in a call into
+one of five libctx slots — the four method stores and the decoder cache — none of which
+this build has. Every one of those calls is guarded by a NULL test on the slot, and the
+NULL answers are **not uniform**: seven of the nine delegate functions answer 1, the
+decoder *cache* answers 0, and the two sums compare against `== 4`. So the part of each
+that decides behaviour in this build is the read and the NULL test, and that part is
+written verbatim in `src/provider/stores.rs`. The delegation body is not: the four stores
+are `ossl_method_store_new(…)`'s (Phase 7 and 10), and `ossl_method_store_cache_flush_all`
+and `_remove_all_provided` are 6.7c's, which 6.7 deferred to 6.8 and which has not landed.
+Writing a plausible body there would be a stub that reads as evidence, which is the one
+thing this project does not do; writing nothing would let a later stratum fill the slot
+and silently flush nothing. What is written instead is the authority's branch guarded by
+an `assert!` on the invariant, the same shape `create_provider_children` already uses, and
+`the_five_slots_are_unfilled` turns the invariant into a unit test so a slot that moves
+fails the test *before* the first activation reaches the assertion. `docs/PARITY_MODEL.md`
+does not have a name for "a branch that is correct because it cannot be taken"; this is
+the project's answer to it, and it is a *checked* construction rather than an assumed one.
+
+**The authority's construction order is load-bearing, and the first version of the test
+got it backwards.** `provider_init` runs from `provider_activate` **only while the
+provider has no store**. A second activation of a storeless provider re-enters
+`provider_init`, finds `flag_initialized` set, and is refused — non-fatally, because
+`NDEBUG` makes `ossl_assert` `(x) != 0`, so the answer is 0 and not an abort. That means
+`OSSL_PROVIDER_try_load_ex`'s order is not a detail: create storeless, activate **once**
+while storeless (which is when init happens), *then* `ossl_provider_add_to_store`. The
+test originally added the provider to the store first and then expected the count to
+advance; it does not, and the failure was the test's, not the library's. The helper now
+performs the authority's own sequence and says why, and the store is what makes a
+*second* activation possible at all — so the same test pins both halves: storeless
+activation counts once, and a stored provider's count runs 1, 2, 3.
+
+**`ossl_provider_deactivate` is a deactivation, not a report.** The two functions one
+wraps the other, and their conventions are **opposite and neither is `>= 1`**:
+`provider_deactivate` answers the *resulting* activation count — so from four activations
+the first call answers **3**, not 4 — and `-1` on failure, which is not a count and is why
+its callers test `< 0`; `ossl_provider_deactivate` answers `count == 0 ? provider_remove_store_methods(prov) : 1`,
+a boolean that on the transition to zero *is the store sweep's verdict*. The test asserted
+`2` where the wrapper had already consumed one deactivation, which is the same class of
+error as the load-order and address mistakes this project keeps finding: the instrument
+before the subject. Both conventions are now pinned, including the `-1` edge.
+
+**Three smaller things, each kept rather than tidied.** `assert(ref > 0)` in
+`ossl_provider_doall_activated` is **compiled out** under this profile's `NDEBUG` — the
+authority says so in a comment ("Not much we can do if this assert ever fails. So we don't
+use `ossl_assert` here") — so emitting a live assertion would have been a divergence and
+not a fidelity; the line is a comment where it would be. `provider_init`'s walk stores
+eight provider-side dispatch pointers and every one is read back through a
+`transmute::<*mut c_void, fn(…)>` whose signature is named beside it, which is the only
+way a `dlsym`-shaped pointer can be called at all. And `(1u8 << (bitnum % 8)) & 0xFF` is
+kept verbatim from the authority in both bitset functions with a `#[allow(clippy::identity_op)]`
+naming the lint: the mask is redundant in both languages, and it is the line a reader
+compares against `crypto/provider_core.c`.
+
+**D113's rule applied twice more, and the first draft was wrong both times.**
+`lib_ctx_get_data` is a **safe** function in this crate, so the nine `unsafe` blocks the
+bridge module was written with were unnecessary — `unused_unsafe` said so, once per
+bridge. And a raw-pointer *comparison* needs no block either: the eight
+`unsafe { ctx == provctx_addr() }` markers in the test's own callbacks became plain
+comparisons. The rule is not "unsafe functions are everywhere"; it is that a safe
+function called from an `unsafe fn` needs nothing, and the compiler is the authority on
+which is which.
+
+**D115's arithmetic was right when it was written, and the total has moved twice since.**
+D115's table records 19,800 observations at `1b850aa`. `RT-LIBCTX` moved 89 → 91 in
+`7e97ed5` (6.8b-ii, when the core dispatch table landed) and the committed baseline has
+read **19,802** from that commit onward. This commit does not move it: it adds no export,
+so no court gains an observation and none loses one. Recorded because a number that
+differs from the previous entry's table is otherwise indistinguishable from a regression,
+and this project has decided it would rather explain a difference than have one that looks
+like agreement (D33).
+
+### Residuals this subphase makes observable, rather than closes
+
+1. **The three predefined `init` pointers are NULL, so `default`, `base` and `null` cannot
+   activate.** `provider_new` receives `None`, so `provider_init` takes the module branch,
+   `DSO_load("libnull.so")` fails, and the activation fails. The consequence is measured
+   rather than guessed — `a_builtin_without_an_entry_point_cannot_activate` pins `-1`, `0`
+   and `0` for the three entry points — and it propagates: `ossl_provider_activate_fallbacks`
+   answers 0, so `ossl_provider_doall_activated` answers 0 and `OSSL_PROVIDER_available`
+   answers 0 for every name, where the authority answers 1 and 1. The test is written to
+   **fail when 7/8 lands the pointers**, so the residual is retired deliberately instead of
+   silently.
+2. **The `random_bytes` guard pair is Phase 9's and is skipped.** The authority's
+   `prov->random_bytes != NULL && !ossl_rand_check_random_provider_on_load(…)` is
+   reachable for any provider that publishes `OSSL_FUNC_PROVIDER_RANDOM_BYTES`; the check
+   is omitted in both activation functions and the omission is registered, not hidden.
+   `ossl_provider_random_bytes` itself *is* written, because the pointer and the call are
+   this stratum's — only its callers are Phase 9's.
+3. **`create_provider_children` asserts the child-callback stack is empty.** 6.8e owns both
+   the stack and the walk, so the authority's loop over an empty stack is what runs; the
+   assertion is what makes "empty" a checked fact rather than an assumption, and
+   `no_provider_child_callback_exists` checks it independently.
+4. **`osl_decoder_cache_flush`'s absent-cache answer is 0, and both activation callers
+   discard it.** That asymmetry with the other four bridges is deliberate and pinned by a
+   unit test, because "make them all return 1" is the plausible simplification.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 117 / 44 | **117 / 44** (unchanged: no export declared yet) |
+| `libcrypto` implemented / 5896 | 1091 | **1091** |
+| phase courts / observations | 53 / 19,802 | **53 / 19,802** |
+| unit tests | 250 | **257** |
+| `err_sites.rs` coordinates | 830 | **830** |
+| new internal modules | — | **`src/provider/activate.rs`, `src/provider/stores.rs`** |

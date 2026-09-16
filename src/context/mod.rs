@@ -154,6 +154,23 @@ pub(crate) const OSSL_LIB_CTX_INDICATOR_CB_INDEX: c_int = 22;
 /// filled by 6.6e.
 pub(crate) const OSSL_LIB_CTX_THREAD_INDEX: c_int = 19;
 
+// The four method-store slots, named here because 6.8c's store bridges read them
+// and a bridge that spelled its own `0` would be the one place the slot table's
+// numbering was duplicated. Each is a *read* by this stratum and a *fill* by the
+// stratum recorded beside it: `docs/PHASE-6-SUBPHASES.md` carries the same table.
+
+/// `OSSL_LIB_CTX_EVP_METHOD_STORE_INDEX`. Slot 0, filled by Phase 7.
+pub(crate) const OSSL_LIB_CTX_EVP_METHOD_STORE_INDEX: c_int = 0;
+
+/// `OSSL_LIB_CTX_ENCODER_STORE_INDEX`. Slot 10, filled by Phase 7.
+pub(crate) const OSSL_LIB_CTX_ENCODER_STORE_INDEX: c_int = 10;
+
+/// `OSSL_LIB_CTX_DECODER_STORE_INDEX`. Slot 11, filled by Phase 7.
+pub(crate) const OSSL_LIB_CTX_DECODER_STORE_INDEX: c_int = 11;
+
+/// `OSSL_LIB_CTX_STORE_LOADER_STORE_INDEX`. Slot 15, filled by Phase 10.
+pub(crate) const OSSL_LIB_CTX_STORE_LOADER_STORE_INDEX: c_int = 15;
+
 /// The authority's translation unit, as its compiler spelled it, so a failing
 /// allocation records the coordinates a consumer would see from the authority.
 /// Derived from the admitted build record (`forensics/authorities/`), never
