@@ -14,22 +14,43 @@ explicitly stated authority, build profile and platform.
 
 ## Status
 
-Read **[`forensics/STATUS.md`](https://github.com/infinityabundance/openssl-rs/blob/main/forensics/STATUS.md)**. It is generated from the
-atlas and receipts, never hand-edited.
+Read **[`forensics/STATUS.md`](https://github.com/infinityabundance/openssl-rs/blob/main/forensics/STATUS.md)** and
+**[`docs/SEAL-CENSUS.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/SEAL-CENSUS.md)**. Both are generated from the
+evidence — the phase states from artefact existence, the census from the ledgers and the court
+manifests — and neither is hand-edited.
 
-At a glance, and *only* for
-`openssl-3.6.4-production / linux-x86_64 / linux-x86_64-default-shared-legacy-notests`:
+**This section types no count.** It used to: it said "Phase 1 — in progress" and "no product
+subsystem is implemented" well past the point where six strata had sealed and a thousand exports
+were implemented, because a number written into prose has no generator to correct it. What is
+stated here is the *shape* of the work, which changes when the plan changes, and every quantity
+lives in the two generated files above.
 
-- **Phase 0 (constitution)** — complete.
-- **Phase 1 (archaeology / atlas)** — in progress.
-- **No product subsystem is implemented, and none is claimed.** The implementation
-  crate exists so the archaeology, the court machinery and the product share one
-  home, and so that the authority binding is a compile-time fact.
+For `openssl-3.6.4-production / linux-x86_64 / linux-x86_64-default-shared-legacy-notests`, the
+twenty-two strata are in `docs/RELEASE_GATES.md` §1, and their *derived* states are in
+`forensics/phase-state.json` — which is what `STATUS.md` renders. The subjects are:
 
-There is no compatibility percentage here. A headline percentage is a derived
-quantity that requires proved obligations; Phase 1 generates *what must be
-proved*, which is 33,823 obligations for the production authority — not one of
-which is `PARITY_VERIFIED`.
+| strata | subject |
+|---|---|
+| 0–2 | the constitution, the archaeology, and the distribution shell — the `libcrypto.so.3` / `libssl.so.3` / `libcrypto.a` / `libssl.a` / `legacy.so` / `openssl` artefacts, headers, pkg-config and install tree, with the ABI courts that prove a binary built against the authority runs against the candidate unmodified |
+| 3–5 | the runtime stratum (`memory`, `ERR`, stacks, `ex_data`, `lhash`, threads, objects), then BIO and CONF, then `BN` / `ASN.1` / DER / PEM |
+| 6 | `OSSL_LIB_CTX`, `OSSL_PARAM`, the property engine, the provider registry and dispatch, child providers, DSO and the CONF module registry — the substrate a provider-based OpenSSL is built on |
+| 7–19 | the EVP framework, then the algorithms, RAND, key formats, X.509, the protocol families, legacy, TLS/DTLS, QUIC, the CLI, the downstream consumers, hardening and performance |
+| 20–21 | the custodian seal, and the 3.6.x maintenance delta |
+
+The **implementation crate** is one Cargo package with no dependencies, and the substrate the
+later strata stand on is real code rather than scaffolding: `OSSL_LIB_CTX` and its index slots, the
+parameter descriptor, the property grammar, the method stores, the provider registry and its
+message-format table, the core dispatch table a third-party provider is handed, RCU, sparse arrays
+and per-context thread-local state. What is *not* implemented is the algorithms — AES, SHA, RSA,
+the KDFs, the MACs and the signature schemes are later strata's, and the EVP layer that will reach
+them is where the current work is.
+
+**Every symbol is `SCAFFOLDED` or `IMPLEMENTED`, and none is `PARITY_VERIFIED`.** That
+distinction is the whole point of the project's evidence model and it is not a formality:
+`IMPLEMENTED` means the crate's compiled output defines a symbol with that name, and `PARITY_VERIFIED`
+is promoted only by courts, dimension by dimension (`docs/PARITY_MODEL.md`). There is no
+compatibility percentage here, because a headline percentage is a derived quantity that requires
+proved obligations.
 
 ## Architecture in one paragraph
 

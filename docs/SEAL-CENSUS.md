@@ -68,20 +68,20 @@ Deferred out, by receiving stratum:
 * to phase 13: 22 symbol(s)
   `ASYNC_WAIT_CTX_clear_fd`, `ASYNC_WAIT_CTX_free`, `ASYNC_WAIT_CTX_get_all_fds`, `ASYNC_WAIT_CTX_get_callback`, `ASYNC_WAIT_CTX_get_changed_fds`, `ASYNC_WAIT_CTX_get_fd`, `ASYNC_WAIT_CTX_get_status`, `ASYNC_WAIT_CTX_new`, `ASYNC_WAIT_CTX_set_callback`, `ASYNC_WAIT_CTX_set_status`, `ASYNC_WAIT_CTX_set_wait_fd`, `ASYNC_block_pause`, `ASYNC_cleanup_thread`, `ASYNC_get_current_job`, `ASYNC_get_mem_functions`, `ASYNC_get_wait_ctx`, `ASYNC_init_thread`, `ASYNC_is_capable`, `ASYNC_pause_job`, `ASYNC_set_mem_functions`, `ASYNC_start_job`, `ASYNC_unblock_pause`
 
-Courts: `all pass`, 10 court(s), 0 authority observation(s).
+Courts: `all pass`, 10 court(s), **4412** authority observation(s) over 10 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
-| RT-MEM | `pass` | 0 |
-| RT-MEM-DEFAULT | `pass` | 0 |
-| RT-MEM-INSTALL | `pass` | 0 |
-| RT-EXDATA | `pass` | 0 |
-| RT-ERR | `pass` | 0 |
-| RT-STACK | `pass` | 0 |
-| RT-THREAD | `pass` | 0 |
-| RT-SECURE | `pass` | 0 |
-| RT-LHASH | `pass` | 0 |
-| RT-RUNTIME-EXT | `pass` | 0 |
+| RT-MEM | `pass` | 82 |
+| RT-MEM-DEFAULT | `pass` | 39 |
+| RT-MEM-INSTALL | `pass` | 15 |
+| RT-EXDATA | `pass` | 38 |
+| RT-ERR | `pass` | 3857 |
+| RT-STACK | `pass` | 159 |
+| RT-THREAD | `pass` | 40 |
+| RT-SECURE | `pass` | 32 |
+| RT-LHASH | `pass` | 56 |
+| RT-RUNTIME-EXT | `pass` | 94 |
 
 ## Phase 4 — BIO + CONF + object database
 
@@ -107,27 +107,27 @@ Hand-offs received and discharged:
 
 * from phase 3: 16 symbol(s) — `ERR_add_error_mem_bio`, `ERR_print_errors`, `ERR_print_errors_cb`, `ERR_print_errors_fp`, `OBJ_create_objects`, `OPENSSL_INIT_free`, `OPENSSL_INIT_new`, `OPENSSL_INIT_set_config_appname`, `OPENSSL_INIT_set_config_file_flags`, `OPENSSL_INIT_set_config_filename`, `OPENSSL_LH_node_stats`, `OPENSSL_LH_node_stats_bio`, `OPENSSL_LH_node_usage_stats`, `OPENSSL_LH_node_usage_stats_bio`, `OPENSSL_LH_stats`, `OPENSSL_LH_stats_bio`
 
-Courts: `all pass`, 17 court(s), 0 authority observation(s).
+Courts: `all pass`, 17 court(s), **3244** authority observation(s) over 17 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
-| RT-BIO | `pass` | 0 |
-| RT-ERR-BIO | `pass` | 0 |
-| RT-BIO-ADDR | `pass` | 0 |
-| RT-BIO-RESOLVE | `pass` | 0 |
-| RT-BIO-SOCK | `pass` | 0 |
-| RT-BIO-COMP | `pass` | 0 |
-| RT-BIO-DEBUG | `pass` | 0 |
-| RT-BIO-PRINT | `pass` | 0 |
-| RT-BIO-FILE | `pass` | 0 |
-| RT-BIO-FILTER | `pass` | 0 |
-| RT-BIO-PAIR | `pass` | 0 |
-| RT-BIO-DGRAM-PAIR | `pass` | 0 |
-| RT-BIO-DGRAM | `pass` | 0 |
-| RT-BIO-CONN | `pass` | 0 |
-| RT-OBJ-STREAM | `pass` | 0 |
-| RT-CONF | `pass` | 0 |
-| RT-COMP | `pass` | 0 |
+| RT-BIO | `pass` | 212 |
+| RT-ERR-BIO | `pass` | 17 |
+| RT-BIO-ADDR | `pass` | 98 |
+| RT-BIO-RESOLVE | `pass` | 501 |
+| RT-BIO-SOCK | `pass` | 157 |
+| RT-BIO-COMP | `pass` | 45 |
+| RT-BIO-DEBUG | `pass` | 57 |
+| RT-BIO-PRINT | `pass` | 213 |
+| RT-BIO-FILE | `pass` | 134 |
+| RT-BIO-FILTER | `pass` | 114 |
+| RT-BIO-PAIR | `pass` | 111 |
+| RT-BIO-DGRAM-PAIR | `pass` | 141 |
+| RT-BIO-DGRAM | `pass` | 294 |
+| RT-BIO-CONN | `pass` | 296 |
+| RT-OBJ-STREAM | `pass` | 91 |
+| RT-CONF | `pass` | 736 |
+| RT-COMP | `pass` | 27 |
 
 ## Phase 5 — BN + ASN.1 + DER/PEM
 
@@ -159,19 +159,19 @@ Hand-offs received and discharged:
 
 * from phase 4: 4 symbol(s) — `BIO_asn1_get_prefix`, `BIO_asn1_get_suffix`, `BIO_asn1_set_prefix`, `BIO_asn1_set_suffix`
 
-Courts: `all pass`, 9 court(s), 0 authority observation(s).
+Courts: `all pass`, 9 court(s), **10529** authority observation(s) over 9 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
-| RT-BN | `pass` | 0 |
-| RT-ASN1 | `pass` | 0 |
-| RT-ASN1-TEMPLATE | `pass` | 0 |
-| RT-ASN1-TIME | `pass` | 0 |
-| RT-ASN1-STR | `pass` | 0 |
-| RT-BIO-ASN1 | `pass` | 0 |
-| RT-ASN1-PRINT | `pass` | 0 |
-| RT-ASN1-MIME | `pass` | 0 |
-| RT-PEM | `pass` | 0 |
+| RT-BN | `pass` | 1510 |
+| RT-ASN1 | `pass` | 1403 |
+| RT-ASN1-TEMPLATE | `pass` | 100 |
+| RT-ASN1-TIME | `pass` | 1071 |
+| RT-ASN1-STR | `pass` | 5831 |
+| RT-BIO-ASN1 | `pass` | 114 |
+| RT-ASN1-PRINT | `pass` | 275 |
+| RT-ASN1-MIME | `pass` | 188 |
+| RT-PEM | `pass` | 37 |
 
 ## Phase 6 — OSSL_LIB_CTX + provider core
 
@@ -190,19 +190,19 @@ Hand-offs received and discharged:
 * from phase 4: 18 symbol(s) — `BIO_new_from_core_bio`, `BIO_s_core`, `CONF_imodule_get_flags`, `CONF_imodule_get_module`, `CONF_imodule_get_name`, `CONF_imodule_get_usr_data`, `CONF_imodule_get_value`, `CONF_imodule_set_flags`, `CONF_imodule_set_usr_data`, `CONF_module_add`, `CONF_module_get_usr_data`, `CONF_module_set_usr_data`, `CONF_modules_finish`, `CONF_modules_load`, `CONF_modules_load_file`, `CONF_modules_load_file_ex`, `CONF_modules_unload`, `OPENSSL_load_builtin_modules`
 * from phase 5: 1 symbol(s) — `ASN1_add_oid_module`
 
-Courts: `all pass`, 9 court(s), 0 authority observation(s).
+Courts: `all pass`, 9 court(s), **2032** authority observation(s) over 9 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
-| RT-LIBCTX | `pass` | 0 |
-| RT-PARAM | `pass` | 0 |
-| RT-SELFTEST | `pass` | 0 |
-| RT-THREADDATA | `pass` | 0 |
-| RT-BIO-CORE | `pass` | 0 |
-| RT-DSO | `pass` | 0 |
-| RT-PROVIDER | `pass` | 0 |
-| RT-PROVIDER-3P | `pass` | 0 |
-| RT-CONF-MOD | `pass` | 0 |
+| RT-LIBCTX | `pass` | 124 |
+| RT-PARAM | `pass` | 1162 |
+| RT-SELFTEST | `pass` | 71 |
+| RT-THREADDATA | `pass` | 54 |
+| RT-BIO-CORE | `pass` | 109 |
+| RT-DSO | `pass` | 145 |
+| RT-PROVIDER | `pass` | 80 |
+| RT-PROVIDER-3P | `pass` | 40 |
+| RT-CONF-MOD | `pass` | 247 |
 
 ## Phase 7 — EVP framework
 
