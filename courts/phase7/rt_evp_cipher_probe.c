@@ -307,6 +307,20 @@ static const OSSL_DISPATCH court_enc_fns[] = {
     { 0, NULL }
 };
 
+/* The one shape that publishes both: `EVP_Cipher` prefers `ccipher` over `cupdate`/`cfinal`
+ * when a method has one, and neither the one-shot nor the streaming shape above can show that
+ * preference because only one of the two is present in each. */
+static const OSSL_DISPATCH court_both_fns[] = {
+    { OSSL_FUNC_CIPHER_NEWCTX, (void (*)(void)) court_newctx },
+    { OSSL_FUNC_CIPHER_FREECTX, (void (*)(void)) court_freectx },
+    { OSSL_FUNC_CIPHER_ENCRYPT_INIT, (void (*)(void)) court_encrypt_init },
+    { OSSL_FUNC_CIPHER_UPDATE, (void (*)(void)) court_update },
+    { OSSL_FUNC_CIPHER_FINAL, (void (*)(void)) court_final },
+    { OSSL_FUNC_CIPHER_CIPHER, (void (*)(void)) court_cipher },
+    { OSSL_FUNC_CIPHER_GET_PARAMS, (void (*)(void)) court_get_params },
+    { 0, NULL }
+};
+
 static const OSSL_DISPATCH court_pipe_fns[] = {
     { OSSL_FUNC_CIPHER_NEWCTX, (void (*)(void)) court_newctx },
     { OSSL_FUNC_CIPHER_FREECTX, (void (*)(void)) court_freectx },
@@ -333,6 +347,8 @@ static const OSSL_ALGORITHM court_ciphers[] = {
       "court streaming cipher" },
     { "court-pipe:Court-Pipe:courtpipe", "provider=court", court_pipe_fns,
       "court pipeline cipher" },
+    { "court-both:Court-Both:courtboth", "provider=court", court_both_fns,
+      "court one-shot and streaming cipher" },
     { "court-bad:Court-Bad:courtbad", "provider=court", court_bad_fns,
       "court refused cipher" },
     { NULL, NULL, NULL, NULL }
@@ -822,6 +838,104 @@ int main(void)
         EVP_CIPHER_CTX_free(cctx);
     }
 
+    /*
+     * ---- 7.3c-ii: the data path, which is the only place a provider cipher is *used* ----
+     *
+     * `court-both` is the fifth algorithm and it exists for one arm of `EVP_Cipher`: its
+     * `ccipher` is preferred over `cupdate`/`cfinal` when the method publishes one, so a cipher
+     * without a one-shot could never observe that preference. It publishes the three-function
+     * encrypt path *and* the one-shot, which is the only shape that has both.
+     */
+    {
+        EVP_CIPHER_CTX *cctx = EVP_CIPHER_CTX_new();
+        EVP_CIPHER *stream = EVP_CIPHER_fetch(ctx, "court-enc", NULL);
+        EVP_CIPHER *both = EVP_CIPHER_fetch(ctx, "court-both", NULL);
+        unsigned char key[32], ivb[16], buf[64];
+        int outl = 0;
+        int i;
+
+        for (i = 0; i < 32; i++)
+            key[i] = (unsigned char) i;
+        for (i = 0; i < 16; i++)
+            ivb[i] = (unsigned char) (i + 1);
+        for (i = 0; i < 64; i++)
+            buf[i] = (unsigned char) (i + 1);
+
+        sayp("path.fetched.enc", stream);
+        sayp("path.fetched.both", both);
+
+        if (stream != NULL) {
+            /* The two direction refusals, which are what stops a caller encrypting through a
+             * decrypting context and the other way round. */
+            sayn("path.update.before_init",
+                 EVP_EncryptUpdate(cctx, buf, &outl, buf, 16));
+            sayn("path.update.before_init.err", (long long) ERR_peek_error());
+            ERR_clear_error();
+            sayn("path.update.null_outl", EVP_EncryptUpdate(cctx, buf, NULL, buf, 16));
+            ERR_clear_error();
+            sayn("path.update.negative_inl", EVP_EncryptUpdate(cctx, buf, &outl, buf, -1));
+            ERR_clear_error();
+
+            sayn("path.init.encrypt", EVP_EncryptInit_ex(cctx, stream, NULL, key, ivb));
+            /* The wrong direction: the context is encrypting and `EVP_DecryptUpdate` refuses. */
+            sayn("path.decrypt_update.while_encrypting",
+                 EVP_DecryptUpdate(cctx, buf, &outl, buf, 16));
+            sayn("path.decrypt_update.while_encrypting.err", (long long) ERR_peek_error());
+            ERR_clear_error();
+
+            /*
+             * The round trip. `court-enc`'s update answers the input length and its final
+             * answers zero, so the pair is observable as a *sum* rather than as bytes -- and the
+             * bytes are not printed, because a probe compares shapes rather than plaintext.
+             */
+            sayn("path.encrypt_update", EVP_EncryptUpdate(cctx, buf, &outl, buf, 16));
+            sayn("path.encrypt_update.outl", outl);
+            sayn("path.encrypt_final", EVP_EncryptFinal_ex(cctx, buf, &outl));
+            sayn("path.encrypt_final.outl", outl);
+            /* The `_ex`-less spelling is an alias, and it is called on the same armed context. */
+            sayn("path.encrypt_final_alias", EVP_EncryptFinal(cctx, buf, &outl));
+            sayn("path.cipher_final_ex", EVP_CipherFinal_ex(cctx, buf, &outl));
+            sayn("path.cipher_final", EVP_CipherFinal(cctx, buf, &outl));
+            sayn("path.cipher_update.while_encrypting",
+                 EVP_CipherUpdate(cctx, buf, &outl, buf, 16));
+
+            sayn("path.init.decrypt", EVP_DecryptInit_ex(cctx, NULL, NULL, key, ivb));
+            sayn("path.encrypt_update.while_decrypting",
+                 EVP_EncryptUpdate(cctx, buf, &outl, buf, 16));
+            ERR_clear_error();
+            sayn("path.decrypt_update", EVP_DecryptUpdate(cctx, buf, &outl, buf, 16));
+            sayn("path.decrypt_update.outl", outl);
+            sayn("path.cipher_update.while_decrypting",
+                 EVP_CipherUpdate(cctx, buf, &outl, buf, 16));
+            sayn("path.decrypt_final", EVP_DecryptFinal_ex(cctx, buf, &outl));
+            sayn("path.decrypt_final.outl", outl);
+            sayn("path.decrypt_final_alias", EVP_DecryptFinal(cctx, buf, &outl));
+
+            /* The pipeline calls on a context that was not armed for one. */
+            sayn("path.pipeline_update.not_a_pipeline",
+                 EVP_CipherPipelineUpdate(cctx, NULL, NULL, NULL, NULL, NULL));
+            ERR_clear_error();
+            sayn("path.pipeline_final.not_a_pipeline",
+                 EVP_CipherPipelineFinal(cctx, NULL, NULL, NULL));
+            ERR_clear_error();
+        }
+
+        if (both != NULL) {
+            /* The one-shot, and the mapping of its answer: a non-zero `ccipher` return becomes
+             * the *length*, which is why the two observations differ. */
+            sayn("path.init.both", EVP_EncryptInit_ex(cctx, both, NULL, key, ivb));
+            sayn("path.cipher.oneshot", EVP_Cipher(cctx, buf, buf, 16));
+            /* A NULL input is the final call's contract, and it is answered by `cfinal`. */
+            sayn("path.cipher.final", EVP_Cipher(cctx, buf, NULL, 0));
+        }
+
+        /* `EVP_Cipher` on an unarmed context is a zero rather than a refusal: no cipher. */
+        sayn("path.cipher.unarmed", EVP_Cipher(cctx, buf, buf, 16));
+
+        EVP_CIPHER_free(both);
+        EVP_CIPHER_free(stream);
+        EVP_CIPHER_CTX_free(cctx);
+    }
     /* The NULL arms, which every accessor with one has to answer for itself. */
     sayn("null.block_size", EVP_CIPHER_get_block_size(NULL));
     sayn("null.iv_length", EVP_CIPHER_get_iv_length(NULL));
