@@ -7767,3 +7767,112 @@ checks formatting, or the one that checks a declaration's version — rather tha
 check, which can only report that the two disagree.
 
 SPDX-License-Identifier: Apache-2.0
+
+## D138 — one reader for a court's observation count, and the committed record compared whole
+
+Three defects, all in the machinery that *reads* court evidence rather than in the courts, and
+one operational change that makes the invariant they support enforced rather than documented.
+
+## 1. Two tools read a field that does not exist
+
+The seal census read `row.get("observations", 0)` and the court runner read the same, so
+`docs/SEAL-CENSUS.md` rendered **every runtime court with 0 observations** while the manifests
+said 124, 1,162, 3,857. Phase 3's total was reported as 0 against an actual 4,412; Phase 5's as 0
+against 10,529. A generated document understating its own evidence by three orders of magnitude,
+and looking entirely plausible doing it, is the worst shape this class can take: a reader has no
+reason to doubt a number that is rendered rather than typed.
+
+The field is `authority_observations`, with `candidate_observations` as the other half of the
+same fact. `regression_guard.py` had the field right and the other two did not, which is exactly
+why there is now **one accessor** rather than three spellings:
+
+```python
+atlas_common.court_observations(row)   # the count, with the invariant
+atlas_common.has_transcript(row)       # whether the court has a transcript at all
+```
+
+`court_observations` raises `EvidenceError` when only one of the two fields is present, and when
+the two disagree — the comparison is line-wise over both transcripts, so a difference between
+them is a record that cannot be true. The seal census, the regression guard and the court runner
+all read through it, so the vocabulary is one word in one place.
+
+**`has_transcript` exists because zero is two different things.** The Phase 2 ABI courts compare
+ELF structure — symbol tables, dynamic tags, layouts — and produce no transcript at all, so they
+carry no counts and their 0 is correct. Telling the two apart is what stops "this court has no
+transcript" being read as "this court observed nothing", which is the mistake that produced the
+bug. The census now prints `— (structural)` for those and says in a line above the table that the
+others observe nothing line-wise *for that reason and not by default*.
+
+## 2. The committed court record is now compared whole
+
+`run_courts.py` re-derived every stratum's courts from the authority — that part was already
+right — but its comparison was `verdicts(committed) == verdicts(fresh)`. Everything else in the
+record was unguarded: a committed `COURTS.json` could have its probe path, exit code, crashed
+flag, `residual_count`, `residuals`, staged-binary paths or input digests altered while its court
+names and verdicts stayed put, and the runner would still print *"committed evidence reproduced"*.
+`evidence_determinism.py` cannot catch it either, and deliberately: court results are excluded
+from that tool because they are the authority venue's output rather than a generator's.
+
+So the comparison is now `compare_records(committed, fresh)` over the **whole** record, structural
+rather than textual so that every difference names its path:
+
+```
+phase 3: the committed evidence is not what this run reproduces
+  .courts[0].authority_exit_code: committed 99, this run 0
+  .courts[0].probe: committed 'courts/phase3/nowhere.c', this run 'court/phase3/…'
+```
+
+The only fields removed before comparison are those **proven** environment-dependent, and the list
+is `CANONICAL_PATHS`, which is currently **empty** — so the comparison is byte-for-byte modulo key
+order. Each entry in that list is a field the comparison stops seeing, so each needs its own
+evidence, and none has been observed to be necessary yet.
+
+**The change was tested against its own defect class**, because a check that cannot detect what it
+claims to cover is not evidence: a committed `phase3/COURTS.json` was tampered with — the first
+court's `authority_exit_code` set to 99 and its `probe` path changed, both fields the old
+comparison never looked at — and the runner failed on it and named both. The runner's success line
+now reports what was actually established:
+
+```
+all_pass, 10 court(s), 4412 observation(s) over 10 transcript court(s):
+the committed record is exactly what this run wrote, in every field
+```
+
+## 3. A typed numeral in the Phase 6 seal
+
+`docs/PHASE-6-PROVIDER-SEAL.md` said "8 courts" in two places while its manifest held 9 — in the
+same document whose §10 states that every count is `docs/SEAL-CENSUS.md`'s. The numerals are
+removed rather than corrected, because a corrected numeral is the same defect with the right value
+this time, and the sentence now says where the count comes from.
+
+## 4. `main` is protected, so the invariant is enforced and not merely written
+
+D137 recorded the 0.0.10 release putting `main` red because the crate version moved without
+regenerating the 43 FRF declarations. GitHub reported `protected = false`, so *"a red `main` is not
+a state this project keeps"* was procedural. It is now enforced: `main` requires
+
+```
+lints (clippy)
+static gates (build, tests, determinism, no-regression)
+every active stratum's courts, and the re-derived guard
+```
+
+with `strict: true` (the branch must be up to date with `main`), a pull request, `enforce_admins:
+true`, and no force pushes or deletions. `enforce_admins` is the load-bearing field: without it the
+owner's own direct push bypasses every check, which is how the incident D137 documents happened.
+
+The README's Status section is rewritten in the same commit, for the same reason the seal's
+numeral was. It said "Phase 1 — in progress" and "no product subsystem is implemented" well past
+six sealed strata and a thousand implemented exports, because a number written into prose has no
+generator to correct it. It now types **no count**: it names the strata's subjects, which change
+when the plan changes, and points at `forensics/STATUS.md` and `docs/SEAL-CENSUS.md` for every
+quantity. `docs/RELEASE_GATES.md` §8's release sequence — written by D137 — now ends at a
+protected `main` rather than at an instruction to push and watch: the last step of a release is no
+longer something a person has to check.
+
+**Numbering.** This is `D140` on the `phase7-evp` staging branch, where three Phase 7
+entries landed ahead of it; the number here is the one this log reaches on `main`, because
+`docs/DECISIONS.md` is append-only and the fix landed first. The staging branch is renumbered
+onto this when it rebases.
+
+SPDX-License-Identifier: Apache-2.0
