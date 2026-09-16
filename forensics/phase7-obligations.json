@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 924,
       "deferred_to_later_phase": 0,
-      "implemented": 105,
-      "open_in_this_stratum": 845,
+      "implemented": 117,
+      "open_in_this_stratum": 833,
       "owned": 950,
       "received_by_handoff": 26
     },
@@ -285,17 +285,29 @@
       "EVP_CIPHER_set_asn1_iv",
       "EVP_CIPHER_settable_ctx_params",
       "EVP_CIPHER_up_ref",
+      "EVP_Cipher",
+      "EVP_CipherFinal",
+      "EVP_CipherFinal_ex",
       "EVP_CipherInit",
       "EVP_CipherInit_ex",
       "EVP_CipherInit_ex2",
       "EVP_CipherPipelineDecryptInit",
       "EVP_CipherPipelineEncryptInit",
+      "EVP_CipherPipelineFinal",
+      "EVP_CipherPipelineUpdate",
+      "EVP_CipherUpdate",
+      "EVP_DecryptFinal",
+      "EVP_DecryptFinal_ex",
       "EVP_DecryptInit",
       "EVP_DecryptInit_ex",
       "EVP_DecryptInit_ex2",
+      "EVP_DecryptUpdate",
+      "EVP_EncryptFinal",
+      "EVP_EncryptFinal_ex",
       "EVP_EncryptInit",
       "EVP_EncryptInit_ex",
       "EVP_EncryptInit_ex2",
+      "EVP_EncryptUpdate",
       "EVP_MD_fetch",
       "EVP_MD_free",
       "EVP_MD_get0_name",
@@ -759,43 +771,7 @@
         "declaring_header": "evp.h",
         "module": "src/evp/cipher.rs",
         "received_from_phase": null,
-        "symbol": "EVP_Cipher"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CipherFinal"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CipherFinal_ex"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
         "symbol": "EVP_CipherInit_SKEY"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CipherPipelineFinal"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CipherPipelineUpdate"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CipherUpdate"
       },
       {
         "declaring_header": "evp.h",
@@ -820,24 +796,6 @@
         "module": "src/evp/encode.rs",
         "received_from_phase": null,
         "symbol": "EVP_DecodeUpdate"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_DecryptFinal"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_DecryptFinal_ex"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_DecryptUpdate"
       },
       {
         "declaring_header": "evp.h",
@@ -1000,24 +958,6 @@
         "module": "src/evp/encode.rs",
         "received_from_phase": null,
         "symbol": "EVP_EncodeUpdate"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_EncryptFinal"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_EncryptFinal_ex"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_EncryptUpdate"
       },
       {
         "declaring_header": "kdf.h",
@@ -5693,12 +5633,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "82680bd7257a599ca622c0bb4982cda949072cb13b87890e89e1459ac43c6b30"
+      "sha256": "dcc181f0c391401a5eb6f41764a82089f4a3a522c60a46dc97819f92b56ba1d2"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "b8d86a6ace21e6532b7850449d4345be7dc018e7023b076237ab79d887a8674e"
+      "sha256": "393c2cf102689c3ce1ccd859d2b5aa192d857033e5d509bac0d850c864fbd426"
     }
   ],
   "kind": "phase7-obligations",
