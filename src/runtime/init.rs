@@ -299,7 +299,10 @@ const OPENSSL_INFO_WINDOWS_CONTEXT: c_int = 1009;
 /// implementation: it reconstructs the OpenSSL 3.6.4 release identity.
 const VERSION_TEXT: &CStr = c"OpenSSL 3.6.4 25 Aug 2026";
 /// Captured authority `OpenSSL_version(6)` / `OPENSSL_VERSION_STR`.
-const VERSION_STRING: &CStr = c"3.6.4";
+///
+/// `providers`' `core_get_params` answers this for `OSSL_PROV_PARAM_CORE_VERSION`, which is
+/// why it is `pub(crate)` rather than private to this module.
+pub(crate) const VERSION_STRING: &CStr = c"3.6.4";
 /// Captured authority `OpenSSL_version(3)` / `PLATFORM`.
 const VERSION_PLATFORM: &CStr = c"platform: linux-x86_64";
 /// Captured authority `OpenSSL_version(10)` (non-Windows branch).

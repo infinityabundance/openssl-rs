@@ -76,6 +76,8 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
+pub(crate) mod core_dispatch;
+
 use core::ffi::{c_char, c_int, c_uint, c_void};
 use core::ptr;
 use core::sync::atomic::{AtomicI32, Ordering};
