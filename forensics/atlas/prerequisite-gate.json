@@ -3,6 +3,13 @@
   "body": {
     "blocking_dependencies": [
       "OSSL_provider_init -> phase 13 (providers/legacy/legacyprov.c's entry point, and the name a third-party provider's own entry point is declared with -- which is why subphase rows 6.8d and 6.12 name it, since the `providers` configuration module needs a module path and RT-PROVIDER-3P compiles its own. The authority symbol is the legacy provider's, so it is Phase 13's.)",
+      "evp_cipher_asn1_to_param_ex -> phase 7 (The rest of `crypto/evp/evp_lib.c`, whose *accessor* half is 7.3b's. 7.3a opened the file for `evp_md_free_int` — the releaser `EVP_MD_free` calls — and that is what made `gen_prerequisite_atlas.py` attribute `src/evp/digest.rs` to this unit, which in turn made the gate ask whether the names this unit *calls* are referenced anywhere. Six of the seven are the symmetric-cipher half (`evp_cipher_cache_constants` and the four ASN.1 parameter helpers) and one is `evp_md_get_number`; all seven are `static` helpers of accessors that have not landed, and a row per name is how the record says so rather than leaving the gate to report them as findings. This is the mechanism the gate documents for exactly this case: planned work whose crate-side reference arrives with the subphase that owns it.)",
+      "evp_cipher_cache_constants -> phase 7 (The rest of `crypto/evp/evp_lib.c`, whose *accessor* half is 7.3b's. 7.3a opened the file for `evp_md_free_int` — the releaser `EVP_MD_free` calls — and that is what made `gen_prerequisite_atlas.py` attribute `src/evp/digest.rs` to this unit, which in turn made the gate ask whether the names this unit *calls* are referenced anywhere. Six of the seven are the symmetric-cipher half (`evp_cipher_cache_constants` and the four ASN.1 parameter helpers) and one is `evp_md_get_number`; all seven are `static` helpers of accessors that have not landed, and a row per name is how the record says so rather than leaving the gate to report them as findings. This is the mechanism the gate documents for exactly this case: planned work whose crate-side reference arrives with the subphase that owns it.)",
+      "evp_cipher_get_asn1_aead_params -> phase 7 (The rest of `crypto/evp/evp_lib.c`, whose *accessor* half is 7.3b's. 7.3a opened the file for `evp_md_free_int` — the releaser `EVP_MD_free` calls — and that is what made `gen_prerequisite_atlas.py` attribute `src/evp/digest.rs` to this unit, which in turn made the gate ask whether the names this unit *calls* are referenced anywhere. Six of the seven are the symmetric-cipher half (`evp_cipher_cache_constants` and the four ASN.1 parameter helpers) and one is `evp_md_get_number`; all seven are `static` helpers of accessors that have not landed, and a row per name is how the record says so rather than leaving the gate to report them as findings. This is the mechanism the gate documents for exactly this case: planned work whose crate-side reference arrives with the subphase that owns it.)",
+      "evp_cipher_get_number -> phase 7 (The rest of `crypto/evp/evp_lib.c`, whose *accessor* half is 7.3b's. 7.3a opened the file for `evp_md_free_int` — the releaser `EVP_MD_free` calls — and that is what made `gen_prerequisite_atlas.py` attribute `src/evp/digest.rs` to this unit, which in turn made the gate ask whether the names this unit *calls* are referenced anywhere. Six of the seven are the symmetric-cipher half (`evp_cipher_cache_constants` and the four ASN.1 parameter helpers) and one is `evp_md_get_number`; all seven are `static` helpers of accessors that have not landed, and a row per name is how the record says so rather than leaving the gate to report them as findings. This is the mechanism the gate documents for exactly this case: planned work whose crate-side reference arrives with the subphase that owns it.)",
+      "evp_cipher_param_to_asn1_ex -> phase 7 (The rest of `crypto/evp/evp_lib.c`, whose *accessor* half is 7.3b's. 7.3a opened the file for `evp_md_free_int` — the releaser `EVP_MD_free` calls — and that is what made `gen_prerequisite_atlas.py` attribute `src/evp/digest.rs` to this unit, which in turn made the gate ask whether the names this unit *calls* are referenced anywhere. Six of the seven are the symmetric-cipher half (`evp_cipher_cache_constants` and the four ASN.1 parameter helpers) and one is `evp_md_get_number`; all seven are `static` helpers of accessors that have not landed, and a row per name is how the record says so rather than leaving the gate to report them as findings. This is the mechanism the gate documents for exactly this case: planned work whose crate-side reference arrives with the subphase that owns it.)",
+      "evp_cipher_set_asn1_aead_params -> phase 7 (The rest of `crypto/evp/evp_lib.c`, whose *accessor* half is 7.3b's. 7.3a opened the file for `evp_md_free_int` — the releaser `EVP_MD_free` calls — and that is what made `gen_prerequisite_atlas.py` attribute `src/evp/digest.rs` to this unit, which in turn made the gate ask whether the names this unit *calls* are referenced anywhere. Six of the seven are the symmetric-cipher half (`evp_cipher_cache_constants` and the four ASN.1 parameter helpers) and one is `evp_md_get_number`; all seven are `static` helpers of accessors that have not landed, and a row per name is how the record says so rather than leaving the gate to report them as findings. This is the mechanism the gate documents for exactly this case: planned work whose crate-side reference arrives with the subphase that owns it.)",
+      "evp_md_get_number -> phase 7 (The rest of `crypto/evp/evp_lib.c`, whose *accessor* half is 7.3b's. 7.3a opened the file for `evp_md_free_int` — the releaser `EVP_MD_free` calls — and that is what made `gen_prerequisite_atlas.py` attribute `src/evp/digest.rs` to this unit, which in turn made the gate ask whether the names this unit *calls* are referenced anywhere. Six of the seven are the symmetric-cipher half (`evp_cipher_cache_constants` and the four ASN.1 parameter helpers) and one is `evp_md_get_number`; all seven are `static` helpers of accessors that have not landed, and a row per name is how the record says so rather than leaving the gate to report them as findings. This is the mechanism the gate documents for exactly this case: planned work whose crate-side reference arrives with the subphase that owns it.)",
       "ossl_get_enginesdir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads)",
       "ossl_get_openssldir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads; so is its sibling)",
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)",
@@ -10,8 +17,8 @@
     ],
     "census": {
       "covered_by_a_divergence": 56,
-      "language_surface_not_modelled_by_name": 2091,
-      "planned_prerequisites": 5
+      "language_surface_not_modelled_by_name": 2262,
+      "planned_prerequisites": 12
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
@@ -121,7 +128,7 @@
         "crypto/context.c": 24,
         "crypto/core_algorithm.c": 7,
         "crypto/core_fetch.c": 8,
-        "crypto/core_namemap.c": 52,
+        "crypto/core_namemap.c": 50,
         "crypto/cryptlib.c": 5,
         "crypto/cversion.c": 13,
         "crypto/defaults.c": 9,
@@ -131,6 +138,7 @@
         "crypto/err/err_all_legacy.c": 11,
         "crypto/err/err_save.c": 2,
         "crypto/evp/evp_fetch.c": 20,
+        "crypto/evp/evp_lib.c": 173,
         "crypto/ex_data.c": 21,
         "crypto/getenv.c": 2,
         "crypto/indicator_core.c": 5,
@@ -164,6 +172,13 @@
         "crypto/trace.c": 25
       },
       "planned_prerequisites": {
+        "evp_cipher_asn1_to_param_ex": 1,
+        "evp_cipher_cache_constants": 1,
+        "evp_cipher_get_asn1_aead_params": 1,
+        "evp_cipher_get_number": 1,
+        "evp_cipher_param_to_asn1_ex": 1,
+        "evp_cipher_set_asn1_aead_params": 1,
+        "evp_md_get_number": 1,
         "ossl_get_enginesdir": 2,
         "ossl_get_openssldir": 2,
         "ossl_get_wininstallcontext": 1
@@ -256,6 +271,13 @@
         "crypto/asn1/a_i2d_fp.c:ERR_raise"
       ],
       "planned_prerequisites": [
+        "evp_cipher_asn1_to_param_ex",
+        "evp_cipher_cache_constants",
+        "evp_cipher_get_asn1_aead_params",
+        "evp_cipher_get_number",
+        "evp_cipher_param_to_asn1_ex",
+        "evp_cipher_set_asn1_aead_params",
+        "evp_md_get_number",
         "ossl_get_enginesdir",
         "ossl_get_enginesdir",
         "ossl_get_openssldir",
@@ -264,9 +286,9 @@
       ]
     },
     "checked": {
-      "authority_units": 114,
-      "crate_modules": 158,
-      "deferrals_recorded": 5,
+      "authority_units": 115,
+      "crate_modules": 159,
+      "deferrals_recorded": 12,
       "divergence_names_covered": 32,
       "divergence_rows": 5,
       "names_referenced_and_not_built": 17
@@ -390,7 +412,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "56994cb1b5aaebc88b734dea5b4a2eb35b3a4cd79cf1dfa24f1e8e039393eb1d",
+  "body_hash": "a1e276b153f7fef94233085bad3e27d61c8fbcbf0f145383d205adc9a5bffd0e",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -411,7 +433,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "8bc4fb3e36bcba585703a0e28a4223ff51547b60f9f42a28e69d00c8ebf3c8c2"
+      "sha256": "fb5e4da40e2ea130217fde14283b70824197f8e8797f4ea872e9e28b4a0a7bb0"
     },
     {
       "name": "symbol-ownership",
@@ -421,17 +443,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "4a7abdd13e3d6528726f48f6be07763b3bcfe567a01f3a1bf9be1ece2662f2bf"
+      "sha256": "adb2d949728e0006d12ab6b55a6dc98535aaa2893664ef99585aa48c6de9f795"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "8372cbfd231bb667c515f8d5b2abd614997e715927e7a8eb0e05488a9c6f3d85"
+      "sha256": "0a54a824de1c91d572459d4b64ecc002ed728558641a092f43b2f791bf2cdd56"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "7332839bd9b4b7647c42848b76ba2346623390ef5449dff0ab4ef9178b498739"
+      "sha256": "5448082cd9cdeab62b69a78879be39f511288002c3fbae4d84a576cb9609a2b9"
     },
     {
       "name": "crate-source-tree",

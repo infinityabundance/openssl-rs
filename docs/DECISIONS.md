@@ -8543,3 +8543,79 @@ own refusal as a candidate divergence.
 | unit tests | 317 | 317 |
 
 SPDX-License-Identifier: Apache-2.0
+
+## D148 — 7.3a: the `EVP_MD` object, and the first exports Phase 7 can be fetched through
+
+**What landed.** `src/evp/digest.rs` is `crypto/evp/digest.c`'s fetch half plus the four accessors
+of the same object that live in `crypto/evp/evp_lib.c` and one function of
+`crypto/evp/evp_utils.c`:
+
+* `evp_md_new`, `set_legacy_nid`, `evp_md_cache_constants`, `evp_md_from_algorithm` (the whole
+  `OSSL_DISPATCH` walk), `evp_md_up_ref`, `evp_md_free`, `evp_md_free_int`, `evp_do_md_getparams`;
+* the `EVP_MD` struct with the fifteen `OSSL_FUNC_digest_*` types and their ids;
+* **seven new exports**: `EVP_MD_fetch`, `EVP_MD_free`, `EVP_MD_up_ref`, `EVP_MD_get_type`,
+  `EVP_MD_get0_name`, `EVP_MD_get_size`, `EVP_MD_get_block_size`. **`implemented[libcrypto]` goes
+  1139 → 1146 and Phase 7's ledger reads 11 implemented** (D145's four plus these seven), with
+  `open` 946 → 939.
+
+Four unit tests, and one small enabling change: `src/runtime/obj.rs`'s `use obj_table::*` became
+`pub(crate) use obj_table::*`, because `NID_undef` is the fetch's legacy-NID sentinel and a caller
+in another module has to be able to name it rather than copy the `0`.
+
+**This is the slice that makes the generic fetch reachable, and it is why 7.2's exit criterion was
+corrected rather than claimed** (D147): everything 7.1 and 7.2 built is internal and hidden from
+the DSO, so until a *class* exists to fetch through there is no observation of the fetch path at
+all. `EVP_MD` is the smallest class — no key, no ASN.1, no context parameters of its own beyond
+two sizes — and `RT-FETCH`'s resolver lands next, in the same subphase as the object it needs.
+
+**The object is two objects in one struct.** `struct evp_md_st` is the legacy method (NID, sizes,
+the six `EVP_MD_CTX` function pointers, `pkey_type`) **followed by** the provider-side one
+(`name_id`, `type_name`, `prov`, `refcnt` and the fifteen dispatch pointers). A fetched method
+fills the second half and leaves the first at zero except for the two sizes; `origin` says which
+half is live, and it is exactly why `EVP_MD_free` refuses anything that is not `EVP_ORIG_DYNAMIC` —
+a method from the method table is a static and freeing it would be freeing a static.
+
+**Four things in the constructor are contract rather than detail.** The dispatch walk fills each
+field **only if it is still NULL**, so the *first* entry for an id wins and a provider that
+publishes `UPDATE` twice is not an error. The structural count is checked against three values —
+`fncnt != 0 && fncnt != 5 && fncnt != 6` — so a digest with `newctx/init/update/final/freectx` and
+nothing else is legal, one with a squeeze and no update is not, and `digest` stands alone and is
+not counted. The provider reference is taken **after** that check, so a refused method never holds
+one. And `EVP_MD_free` is the error path, which is why the object's `origin` is zero from the start.
+
+**And `evp_md_cache_constants` is why a provider must answer two parameters.** `md_size` and
+`block_size` are not read from the dispatch table: they are asked through
+`OSSL_FUNC_DIGEST_GET_PARAMS` at fetch time, and a provider that does not answer
+`OSSL_DIGEST_PARAM_SIZE` and `OSSL_DIGEST_PARAM_BLOCK_SIZE` **fails its own fetch** with
+`EVP_R_CACHE_CONSTANTS_FAILED`. An `int` overflow of either is a refusal rather than a truncation,
+the four parameters are asked in **one** call, and the two `EVP_MD_FLAG_*` bits are **set, never
+cleared**. `RT-FETCH`'s resolver provider has to publish both parameters or the court would report
+the authority's own refusal as a candidate divergence.
+
+**One measurement replaced a call I should not have made.** A test asserted `EVP_MD_get_type(NULL)`
+was harmless. It is not: the authority dereferences the argument unconditionally, so a NULL there
+is undefined behaviour on both sides — the test process died at that line. The call is gone and the
+reason is written where it was: this crate does not reproduce an authority fault, and a "harmless"
+NULL probe of a function that has no NULL arm is the same mistake in test clothing.
+
+**The gate's forward signal, and the record that answers it.** Adding `evp_md_free_int` made
+`gen_prerequisite_atlas.py` attribute `src/evp/digest.rs` to `crypto/evp/evp_lib.c` — the module →
+unit map is a majority vote over the internal symbols a module *defines* — which made the gate ask
+whether the names `evp_lib.c` calls are referenced anywhere. Seven are not: `evp_cipher_cache_constants`,
+the four `evp_cipher_*_asn1_*` parameter helpers, `evp_md_get_number` and one more. They are the
+*accessor* half of the same file, which is 7.3b's, and they are now seven deferral rows owned by
+Phase 7 — the mechanism the gate documents for "planned work whose crate-side reference arrives
+with the subphase that owns it" — rather than findings. Blocking dependencies 5 → 12, which is
+still *below* the authority baseline of 15 and therefore needs no transition row.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 7 implemented / open | 4 / 946 | **11 / 939** |
+| `implemented[libcrypto]` | 1139 | **1146** |
+| recorded deferrals | 5 | 12 (seven of them this unit's remainder) |
+| gate blocking dependencies | 5 | 12 |
+| unit tests | 317 | 321 |
+
+SPDX-License-Identifier: Apache-2.0

@@ -5,19 +5,13 @@
       "in-progress"
     ],
     "census": {
-      "symbols_not_reached": 3,
-      "units_not_reached": 86
+      "units_not_reached": 83
     },
     "census_by_stratum": {
-      "7": 89
+      "7": 83
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
     "census_samples": {
-      "symbols_not_reached": [
-        "evp_do_md_getparams",
-        "evp_md_free_int",
-        "evp_md_new"
-      ],
       "units_not_reached": [
         "crypto/asn1/ameth_lib.c",
         "crypto/asn1/d2i_param.c",
@@ -35,7 +29,6 @@
         "crypto/evp/cmeth_lib.c",
         "crypto/evp/ctrl_params_translate.c",
         "crypto/evp/dh_support.c",
-        "crypto/evp/digest.c",
         "crypto/evp/e_aes.c",
         "crypto/evp/e_aes_cbc_hmac_sha1.c",
         "crypto/evp/e_aes_cbc_hmac_sha256.c",
@@ -61,12 +54,10 @@
         "crypto/evp/evp_enc.c",
         "crypto/evp/evp_err.c",
         "crypto/evp/evp_key.c",
-        "crypto/evp/evp_lib.c",
         "crypto/evp/evp_pbe.c",
         "crypto/evp/evp_pkey.c",
         "crypto/evp/evp_pkey_type.c",
         "crypto/evp/evp_rand.c",
-        "crypto/evp/evp_utils.c",
         "crypto/evp/exchange.c",
         "crypto/evp/kdf_lib.c",
         "crypto/evp/kdf_meth.c",
@@ -78,7 +69,10 @@
         "crypto/evp/legacy_md5.c",
         "crypto/evp/legacy_mdc2.c",
         "crypto/evp/legacy_ripemd.c",
-        "crypto/evp/legacy_sha.c"
+        "crypto/evp/legacy_sha.c",
+        "crypto/evp/legacy_wp.c",
+        "crypto/evp/m_sigver.c",
+        "crypto/evp/mac_lib.c"
       ]
     },
     "checked": {
@@ -89,11 +83,11 @@
       ],
       "rows_judged": 49,
       "symbols_named_by_a_row": 64,
-      "symbols_reached": 61,
+      "symbols_reached": 64,
       "unit_records": 10,
-      "units_named_by_a_record": 11,
+      "units_named_by_a_record": 12,
       "units_named_by_a_row": 129,
-      "units_reached": 43
+      "units_reached": 46
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -771,11 +765,13 @@
           "evp_md_free_int",
           "evp_md_get_number"
         ],
-        "recorded_by": null,
+        "recorded_by": "deferral:evp_cipher_asn1_to_param_ex",
         "subphases": [
           "7.3"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/digest.rs"
+        ]
       },
       "crypto/evp/evp_pbe.c": {
         "defines": [],
@@ -1670,10 +1666,10 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 114
+      "transcribed_units": 115
     }
   },
-  "body_hash": "a0b44b4c366ca0ea6b0e9f0884f1061ad6df2a6815eefe3579a94615e63cd508",
+  "body_hash": "6b589ad0c29c162ec9f97535ed618194aadb4df8287dd66b5dee0b3d68e03198",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -1684,22 +1680,22 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "8bc4fb3e36bcba585703a0e28a4223ff51547b60f9f42a28e69d00c8ebf3c8c2"
+      "sha256": "fb5e4da40e2ea130217fde14283b70824197f8e8797f4ea872e9e28b4a0a7bb0"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "4a7abdd13e3d6528726f48f6be07763b3bcfe567a01f3a1bf9be1ece2662f2bf"
+      "sha256": "adb2d949728e0006d12ab6b55a6dc98535aaa2893664ef99585aa48c6de9f795"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "8372cbfd231bb667c515f8d5b2abd614997e715927e7a8eb0e05488a9c6f3d85"
+      "sha256": "0a54a824de1c91d572459d4b64ecc002ed728558641a092f43b2f791bf2cdd56"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "7332839bd9b4b7647c42848b76ba2346623390ef5449dff0ab4ef9178b498739"
+      "sha256": "5448082cd9cdeab62b69a78879be39f511288002c3fbae4d84a576cb9609a2b9"
     },
     {
       "name": "source-manifest",

@@ -40,6 +40,55 @@
         "authority_unit": "providers/legacy-dso-legacyprov.c",
         "reason": "providers/legacy/legacyprov.c's entry point, and the name a third-party provider's own entry point is declared with -- which is why subphase rows 6.8d and 6.12 name it, since the `providers` configuration module needs a module path and RT-PROVIDER-3P compiles its own. The authority symbol is the legacy provider's, so it is Phase 13's.",
         "evidence": "docs/PHASE-6-SUBPHASES.md rows 6.8d and 6.12"
+      },
+      {
+        "symbol": "evp_cipher_asn1_to_param_ex",
+        "owner_phase": 7,
+        "authority_unit": "crypto/evp/evp_lib.c",
+        "reason": "The rest of `crypto/evp/evp_lib.c`, whose *accessor* half is 7.3b's. 7.3a opened the file for `evp_md_free_int` — the releaser `EVP_MD_free` calls — and that is what made `gen_prerequisite_atlas.py` attribute `src/evp/digest.rs` to this unit, which in turn made the gate ask whether the names this unit *calls* are referenced anywhere. Six of the seven are the symmetric-cipher half (`evp_cipher_cache_constants` and the four ASN.1 parameter helpers) and one is `evp_md_get_number`; all seven are `static` helpers of accessors that have not landed, and a row per name is how the record says so rather than leaving the gate to report them as findings. This is the mechanism the gate documents for exactly this case: planned work whose crate-side reference arrives with the subphase that owns it.",
+        "evidence": "docs/DECISIONS.md D148; docs/PHASE-7-SUBPHASES.md row 7.3; forensics/tools/gen_prerequisite_build_edges (the module -> unit map)"
+      },
+      {
+        "symbol": "evp_cipher_cache_constants",
+        "owner_phase": 7,
+        "authority_unit": "crypto/evp/evp_lib.c",
+        "reason": "The rest of `crypto/evp/evp_lib.c`, whose *accessor* half is 7.3b's. 7.3a opened the file for `evp_md_free_int` — the releaser `EVP_MD_free` calls — and that is what made `gen_prerequisite_atlas.py` attribute `src/evp/digest.rs` to this unit, which in turn made the gate ask whether the names this unit *calls* are referenced anywhere. Six of the seven are the symmetric-cipher half (`evp_cipher_cache_constants` and the four ASN.1 parameter helpers) and one is `evp_md_get_number`; all seven are `static` helpers of accessors that have not landed, and a row per name is how the record says so rather than leaving the gate to report them as findings. This is the mechanism the gate documents for exactly this case: planned work whose crate-side reference arrives with the subphase that owns it.",
+        "evidence": "docs/DECISIONS.md D148; docs/PHASE-7-SUBPHASES.md row 7.3; forensics/tools/gen_prerequisite_build_edges (the module -> unit map)"
+      },
+      {
+        "symbol": "evp_cipher_get_asn1_aead_params",
+        "owner_phase": 7,
+        "authority_unit": "crypto/evp/evp_lib.c",
+        "reason": "The rest of `crypto/evp/evp_lib.c`, whose *accessor* half is 7.3b's. 7.3a opened the file for `evp_md_free_int` — the releaser `EVP_MD_free` calls — and that is what made `gen_prerequisite_atlas.py` attribute `src/evp/digest.rs` to this unit, which in turn made the gate ask whether the names this unit *calls* are referenced anywhere. Six of the seven are the symmetric-cipher half (`evp_cipher_cache_constants` and the four ASN.1 parameter helpers) and one is `evp_md_get_number`; all seven are `static` helpers of accessors that have not landed, and a row per name is how the record says so rather than leaving the gate to report them as findings. This is the mechanism the gate documents for exactly this case: planned work whose crate-side reference arrives with the subphase that owns it.",
+        "evidence": "docs/DECISIONS.md D148; docs/PHASE-7-SUBPHASES.md row 7.3; forensics/tools/gen_prerequisite_build_edges (the module -> unit map)"
+      },
+      {
+        "symbol": "evp_cipher_get_number",
+        "owner_phase": 7,
+        "authority_unit": "crypto/evp/evp_lib.c",
+        "reason": "The rest of `crypto/evp/evp_lib.c`, whose *accessor* half is 7.3b's. 7.3a opened the file for `evp_md_free_int` — the releaser `EVP_MD_free` calls — and that is what made `gen_prerequisite_atlas.py` attribute `src/evp/digest.rs` to this unit, which in turn made the gate ask whether the names this unit *calls* are referenced anywhere. Six of the seven are the symmetric-cipher half (`evp_cipher_cache_constants` and the four ASN.1 parameter helpers) and one is `evp_md_get_number`; all seven are `static` helpers of accessors that have not landed, and a row per name is how the record says so rather than leaving the gate to report them as findings. This is the mechanism the gate documents for exactly this case: planned work whose crate-side reference arrives with the subphase that owns it.",
+        "evidence": "docs/DECISIONS.md D148; docs/PHASE-7-SUBPHASES.md row 7.3; forensics/tools/gen_prerequisite_build_edges (the module -> unit map)"
+      },
+      {
+        "symbol": "evp_cipher_param_to_asn1_ex",
+        "owner_phase": 7,
+        "authority_unit": "crypto/evp/evp_lib.c",
+        "reason": "The rest of `crypto/evp/evp_lib.c`, whose *accessor* half is 7.3b's. 7.3a opened the file for `evp_md_free_int` — the releaser `EVP_MD_free` calls — and that is what made `gen_prerequisite_atlas.py` attribute `src/evp/digest.rs` to this unit, which in turn made the gate ask whether the names this unit *calls* are referenced anywhere. Six of the seven are the symmetric-cipher half (`evp_cipher_cache_constants` and the four ASN.1 parameter helpers) and one is `evp_md_get_number`; all seven are `static` helpers of accessors that have not landed, and a row per name is how the record says so rather than leaving the gate to report them as findings. This is the mechanism the gate documents for exactly this case: planned work whose crate-side reference arrives with the subphase that owns it.",
+        "evidence": "docs/DECISIONS.md D148; docs/PHASE-7-SUBPHASES.md row 7.3; forensics/tools/gen_prerequisite_build_edges (the module -> unit map)"
+      },
+      {
+        "symbol": "evp_cipher_set_asn1_aead_params",
+        "owner_phase": 7,
+        "authority_unit": "crypto/evp/evp_lib.c",
+        "reason": "The rest of `crypto/evp/evp_lib.c`, whose *accessor* half is 7.3b's. 7.3a opened the file for `evp_md_free_int` — the releaser `EVP_MD_free` calls — and that is what made `gen_prerequisite_atlas.py` attribute `src/evp/digest.rs` to this unit, which in turn made the gate ask whether the names this unit *calls* are referenced anywhere. Six of the seven are the symmetric-cipher half (`evp_cipher_cache_constants` and the four ASN.1 parameter helpers) and one is `evp_md_get_number`; all seven are `static` helpers of accessors that have not landed, and a row per name is how the record says so rather than leaving the gate to report them as findings. This is the mechanism the gate documents for exactly this case: planned work whose crate-side reference arrives with the subphase that owns it.",
+        "evidence": "docs/DECISIONS.md D148; docs/PHASE-7-SUBPHASES.md row 7.3; forensics/tools/gen_prerequisite_build_edges (the module -> unit map)"
+      },
+      {
+        "symbol": "evp_md_get_number",
+        "owner_phase": 7,
+        "authority_unit": "crypto/evp/evp_lib.c",
+        "reason": "The rest of `crypto/evp/evp_lib.c`, whose *accessor* half is 7.3b's. 7.3a opened the file for `evp_md_free_int` — the releaser `EVP_MD_free` calls — and that is what made `gen_prerequisite_atlas.py` attribute `src/evp/digest.rs` to this unit, which in turn made the gate ask whether the names this unit *calls* are referenced anywhere. Six of the seven are the symmetric-cipher half (`evp_cipher_cache_constants` and the four ASN.1 parameter helpers) and one is `evp_md_get_number`; all seven are `static` helpers of accessors that have not landed, and a row per name is how the record says so rather than leaving the gate to report them as findings. This is the mechanism the gate documents for exactly this case: planned work whose crate-side reference arrives with the subphase that owns it.",
+        "evidence": "docs/DECISIONS.md D148; docs/PHASE-7-SUBPHASES.md row 7.3; forensics/tools/gen_prerequisite_build_edges (the module -> unit map)"
       }
     ],
     "divergences": [
