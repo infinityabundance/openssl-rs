@@ -12712,7 +12712,7 @@
       }
     ],
     "rule": "an installed header's phase comes from forensics/atlas/symbol-ownership.json when that header declares an export, and is null otherwise; an internal header's comes from the translation unit of the same basename, via the module that transcribes it",
-    "unowned": [
+    "unowned_sample": [
       "ADDED_OBJ",
       "ASN1_BIT_STRING",
       "ASN1_BMPSTRING",
@@ -13235,11 +13235,6 @@
       "sha256": "64535af39ae6732322cce6812534d3e13193771b76a0cd4e3cad06126bdd320e"
     },
     {
-      "name": "authority-build-record",
-      "path": "forensics/atlas/BUILD_RECORDS.json",
-      "sha256": "921ce360ba59cb4e0c39e3adf27c35c0e8256e37a039b50a7f51b953560232b0"
-    },
-    {
       "name": "authority-exports-libcrypto",
       "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
       "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
@@ -13260,14 +13255,22 @@
       "sha256": "af99118d026274d21e18b3c499ec6853eaf463f7491d56e05e934124d1458d83"
     },
     {
+      "name": "authority-functions",
+      "path": "forensics/atlas/openssl-3.6.4-production/functions.json",
+      "sha256": "0add7610e574dc030773b0f76a6cc80215d73cfbca411392bd6b64f3f8de80d0"
+    },
+    {
       "name": "symbol-ownership",
       "path": "forensics/atlas/symbol-ownership.json",
       "sha256": "d42d2ba4f459b729139149f7343cb36357959272a38fecce8f20e6e4aa29a137"
     },
     {
+      "name": "authority-build-record",
+      "note": "read for the build directory, the profile and the source area; its hash is deliberately not recorded, see this list's comment -- the fields are in body.authority_build"
+    },
+    {
       "name": "implemented-surface",
-      "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "ef29bbfccd92b3e053e0e7cb0e075190b4e1a7b7a99f982e2a7fe4b1a8ee7e3e"
+      "note": "deliberately **not** read: the module-to-stratum map comes from symbol-ownership.json, which is committed and machine-independent, where I implemented-surface.json carries a build product's hash. Naming it as an input at all would be a claim about a file this generator does not open."
     },
     {
       "name": "crate-source-tree",

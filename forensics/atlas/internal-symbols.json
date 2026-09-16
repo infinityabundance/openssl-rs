@@ -1,6 +1,28 @@
 {
   "authority": "openssl-3.6.4-production",
   "body": {
+    "authority_build": {
+      "build_dir": "forensics/authorities/build/openssl-3.6.4-production",
+      "configure_argv": [
+        "perl",
+        "/work/forensics/authorities/src/openssl-3.6.4/Configure",
+        "linux-x86_64",
+        "--prefix=/work/forensics/authorities/prefix/openssl-3.6.4-production",
+        "--openssldir=/work/forensics/authorities/prefix/openssl-3.6.4-production/ssl",
+        "--libdir=lib",
+        "shared",
+        "enable-legacy",
+        "no-tests"
+      ],
+      "prefix": "forensics/authorities/prefix/openssl-3.6.4-production",
+      "profile": "linux-x86_64-default-shared-legacy-notests",
+      "profile_args": [
+        "shared",
+        "enable-legacy",
+        "no-tests"
+      ],
+      "version": "3.6.4"
+    },
     "conflicts": [
       "CRYPTO_memcmp: crypto/legacy-dso-x86_64cpuid.c and crypto/x86_64cpuid.c",
       "CRYPTO_memcmp: crypto/legacy-dso-x86_64cpuid.c and crypto/x86_64cpuid.c",
@@ -65,7 +87,87 @@
       "fcrypt_body: crypto/des/fcrypt_b.c and crypto/des/liblegacy-lib-fcrypt_b.c",
       "generic_export: providers/implementations/skeymgmt/libdefault-lib-generic.c and providers/implementations/skeymgmt/liblegacy-lib-generic.c",
       "generic_free: providers/implementations/skeymgmt/libdefault-lib-generic.c and providers/implementations/skeymgmt/liblegacy-lib-generic.c",
-      "generic_imp_settable_params: providers/implementations/skeymgmt/libdefault-lib-generic.c and providers/implementations/skeymgmt/liblegacy-lib-generic.c"
+      "generic_imp_settable_params: providers/implementations/skeymgmt/libdefault-lib-generic.c and providers/implementations/skeymgmt/liblegacy-lib-generic.c",
+      "generic_import: providers/implementations/skeymgmt/libdefault-lib-generic.c and providers/implementations/skeymgmt/liblegacy-lib-generic.c",
+      "i2b_PVK_bio: crypto/pem/pvkfmt.c and crypto/pem/loader_attic-dso-pvkfmt.c",
+      "i2b_PVK_bio_ex: crypto/pem/pvkfmt.c and crypto/pem/loader_attic-dso-pvkfmt.c",
+      "i2b_PrivateKey_bio: crypto/pem/pvkfmt.c and crypto/pem/loader_attic-dso-pvkfmt.c",
+      "i2b_PublicKey_bio: crypto/pem/pvkfmt.c and crypto/pem/loader_attic-dso-pvkfmt.c",
+      "ossl_ascii_isdigit: crypto/legacy-dso-ctype.c and crypto/ctype.c",
+      "ossl_ascii_isdigit: crypto/legacy-dso-ctype.c and crypto/ctype.c",
+      "ossl_ascii_isdigit: crypto/legacy-dso-ctype.c and crypto/ctype.c",
+      "ossl_b2i: crypto/pem/pvkfmt.c and crypto/pem/loader_attic-dso-pvkfmt.c",
+      "ossl_b2i_DSA_after_header: crypto/pem/pvkfmt.c and crypto/pem/loader_attic-dso-pvkfmt.c",
+      "ossl_b2i_RSA_after_header: crypto/pem/pvkfmt.c and crypto/pem/loader_attic-dso-pvkfmt.c",
+      "ossl_b2i_bio: crypto/pem/pvkfmt.c and crypto/pem/loader_attic-dso-pvkfmt.c",
+      "ossl_blob_length: crypto/pem/pvkfmt.c and crypto/pem/loader_attic-dso-pvkfmt.c",
+      "ossl_ctype_check: crypto/legacy-dso-ctype.c and crypto/ctype.c",
+      "ossl_ctype_check: crypto/legacy-dso-ctype.c and crypto/ctype.c",
+      "ossl_ctype_check: crypto/legacy-dso-ctype.c and crypto/ctype.c",
+      "ossl_do_PVK_header: crypto/pem/pvkfmt.c and crypto/pem/loader_attic-dso-pvkfmt.c",
+      "ossl_do_blob_header: crypto/pem/pvkfmt.c and crypto/pem/loader_attic-dso-pvkfmt.c",
+      "ossl_generic_skeymgmt_functions: providers/implementations/skeymgmt/libdefault-lib-generic.c and providers/implementations/skeymgmt/liblegacy-lib-generic.c",
+      "ossl_isdigit: crypto/legacy-dso-ctype.c and crypto/ctype.c",
+      "ossl_isdigit: crypto/legacy-dso-ctype.c and crypto/ctype.c",
+      "ossl_isdigit: crypto/legacy-dso-ctype.c and crypto/ctype.c",
+      "ossl_islower: crypto/legacy-dso-ctype.c and crypto/ctype.c",
+      "ossl_islower: crypto/legacy-dso-ctype.c and crypto/ctype.c",
+      "ossl_islower: crypto/legacy-dso-ctype.c and crypto/ctype.c",
+      "ossl_isupper: crypto/legacy-dso-ctype.c and crypto/ctype.c",
+      "ossl_isupper: crypto/legacy-dso-ctype.c and crypto/ctype.c",
+      "ossl_isupper: crypto/legacy-dso-ctype.c and crypto/ctype.c",
+      "ossl_md5_block_asm_data_order: crypto/md5/md5-x86_64.c and crypto/md5/liblegacy-lib-md5-x86_64.c",
+      "ossl_md5_sha1_ctrl: crypto/md5/md5_sha1.c and crypto/md5/liblegacy-lib-md5_sha1.c",
+      "ossl_md5_sha1_final: crypto/md5/md5_sha1.c and crypto/md5/liblegacy-lib-md5_sha1.c",
+      "ossl_md5_sha1_init: crypto/md5/md5_sha1.c and crypto/md5/liblegacy-lib-md5_sha1.c",
+      "ossl_md5_sha1_update: crypto/md5/md5_sha1.c and crypto/md5/liblegacy-lib-md5_sha1.c",
+      "ossl_prov_cache_exported_algorithms: providers/common/libdefault-lib-provider_util.c and providers/common/liblegacy-lib-provider_util.c",
+      "ossl_prov_cipher_cipher: providers/common/libdefault-lib-provider_util.c and providers/common/liblegacy-lib-provider_util.c",
+      "ossl_prov_cipher_copy: providers/common/libdefault-lib-provider_util.c and providers/common/liblegacy-lib-provider_util.c",
+      "ossl_prov_cipher_engine: providers/common/libdefault-lib-provider_util.c and providers/common/liblegacy-lib-provider_util.c",
+      "ossl_prov_cipher_load: providers/common/libdefault-lib-provider_util.c and providers/common/liblegacy-lib-provider_util.c",
+      "ossl_prov_cipher_load_from_params: providers/common/libdefault-lib-provider_util.c and providers/common/liblegacy-lib-provider_util.c",
+      "ossl_prov_cipher_reset: providers/common/libdefault-lib-provider_util.c and providers/common/liblegacy-lib-provider_util.c",
+      "ossl_prov_digest_copy: providers/common/libdefault-lib-provider_util.c and providers/common/liblegacy-lib-provider_util.c",
+      "ossl_prov_digest_engine: providers/common/libdefault-lib-provider_util.c and providers/common/liblegacy-lib-provider_util.c",
+      "ossl_prov_digest_fetch: providers/common/libdefault-lib-provider_util.c and providers/common/liblegacy-lib-provider_util.c",
+      "ossl_prov_digest_load: providers/common/libdefault-lib-provider_util.c and providers/common/liblegacy-lib-provider_util.c",
+      "ossl_prov_digest_load_from_params: providers/common/libdefault-lib-provider_util.c and providers/common/liblegacy-lib-provider_util.c",
+      "ossl_prov_digest_md: providers/common/libdefault-lib-provider_util.c and providers/common/liblegacy-lib-provider_util.c",
+      "ossl_prov_digest_reset: providers/common/libdefault-lib-provider_util.c and providers/common/liblegacy-lib-provider_util.c",
+      "ossl_prov_digest_set_md: providers/common/libdefault-lib-provider_util.c and providers/common/liblegacy-lib-provider_util.c",
+      "ossl_prov_is_running: providers/prov_running.c and providers/liblegacy-lib-prov_running.c",
+      "ossl_prov_macctx_load: providers/common/libdefault-lib-provider_util.c and providers/common/liblegacy-lib-provider_util.c",
+      "ossl_prov_macctx_load_from_params: providers/common/libdefault-lib-provider_util.c and providers/common/liblegacy-lib-provider_util.c",
+      "ossl_prov_memdup: providers/common/libdefault-lib-provider_util.c and providers/common/liblegacy-lib-provider_util.c",
+      "ossl_prov_set_macctx: providers/common/libdefault-lib-provider_util.c and providers/common/liblegacy-lib-provider_util.c",
+      "ossl_ripemd160_functions: providers/implementations/digests/libdefault-lib-ripemd_prov.c and providers/implementations/digests/liblegacy-lib-ripemd_prov.c",
+      "ossl_set_error_state: providers/prov_running.c and providers/liblegacy-lib-prov_running.c",
+      "ossl_tdes_dinit: providers/implementations/ciphers/libdefault-lib-cipher_tdes_common.c and providers/implementations/ciphers/liblegacy-lib-cipher_tdes_common.c",
+      "ossl_tdes_dupctx: providers/implementations/ciphers/libdefault-lib-cipher_tdes_common.c and providers/implementations/ciphers/liblegacy-lib-cipher_tdes_common.c",
+      "ossl_tdes_einit: providers/implementations/ciphers/libdefault-lib-cipher_tdes_common.c and providers/implementations/ciphers/liblegacy-lib-cipher_tdes_common.c",
+      "ossl_tdes_freectx: providers/implementations/ciphers/libdefault-lib-cipher_tdes_common.c and providers/implementations/ciphers/liblegacy-lib-cipher_tdes_common.c",
+      "ossl_tdes_get_ctx_params: providers/implementations/ciphers/libdefault-lib-cipher_tdes_common.c and providers/implementations/ciphers/liblegacy-lib-cipher_tdes_common.c",
+      "ossl_tdes_get_params: providers/implementations/ciphers/libdefault-lib-cipher_tdes_common.c and providers/implementations/ciphers/liblegacy-lib-cipher_tdes_common.c",
+      "ossl_tdes_gettable_ctx_params: providers/implementations/ciphers/libdefault-lib-cipher_tdes_common.c and providers/implementations/ciphers/liblegacy-lib-cipher_tdes_common.c",
+      "ossl_tdes_newctx: providers/implementations/ciphers/libdefault-lib-cipher_tdes_common.c and providers/implementations/ciphers/liblegacy-lib-cipher_tdes_common.c",
+      "ossl_tdes_set_ctx_params: providers/implementations/ciphers/libdefault-lib-cipher_tdes_common.c and providers/implementations/ciphers/liblegacy-lib-cipher_tdes_common.c",
+      "ossl_tdes_settable_ctx_params: providers/implementations/ciphers/libdefault-lib-cipher_tdes_common.c and providers/implementations/ciphers/liblegacy-lib-cipher_tdes_common.c",
+      "ossl_tolower: crypto/legacy-dso-ctype.c and crypto/ctype.c",
+      "ossl_tolower: crypto/legacy-dso-ctype.c and crypto/ctype.c",
+      "ossl_tolower: crypto/legacy-dso-ctype.c and crypto/ctype.c",
+      "ossl_toupper: crypto/legacy-dso-ctype.c and crypto/ctype.c",
+      "ossl_toupper: crypto/legacy-dso-ctype.c and crypto/ctype.c",
+      "ossl_toupper: crypto/legacy-dso-ctype.c and crypto/ctype.c",
+      "rc4_md5_enc: crypto/rc4/rc4-md5-x86_64.c and crypto/rc4/liblegacy-lib-rc4-md5-x86_64.c",
+      "ssl3_cbc_digest_record: ssl/record/methods/libdefault-lib-ssl3_cbc.c and ssl/record/methods/ssl3_cbc.c",
+      "ssl3_cbc_remove_padding_and_mac: ssl/record/methods/libcommon-lib-tls_pad.c and ssl/record/methods/tls_pad.c",
+      "tls1_cbc_remove_padding_and_mac: ssl/record/methods/libcommon-lib-tls_pad.c and ssl/record/methods/tls_pad.c",
+      "v_check: engines/afalg-dso-e_afalg.c and engines/capi-dso-e_capi.c",
+      "v_check: engines/afalg-dso-e_afalg.c and engines/dasync-dso-e_dasync.c",
+      "v_check: engines/afalg-dso-e_afalg.c and engines/loader_attic-dso-e_loader_attic.c",
+      "v_check: engines/afalg-dso-e_afalg.c and engines/ossltest-dso-e_ossltest.c",
+      "v_check: engines/afalg-dso-e_afalg.c and engines/padlock-dso-e_padlock.c"
     ],
     "declaration_and_export_ownership_disagree": [
       "src/asn1/bio_asn1.rs: declared Phase 5, defines exports owned by phase 4",
@@ -34146,11 +34248,6 @@
       "sha256": "64535af39ae6732322cce6812534d3e13193771b76a0cd4e3cad06126bdd320e"
     },
     {
-      "name": "authority-build-record",
-      "path": "forensics/atlas/BUILD_RECORDS.json",
-      "sha256": "921ce360ba59cb4e0c39e3adf27c35c0e8256e37a039b50a7f51b953560232b0"
-    },
-    {
       "name": "authority-exports-libcrypto",
       "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
       "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
@@ -34171,14 +34268,22 @@
       "sha256": "af99118d026274d21e18b3c499ec6853eaf463f7491d56e05e934124d1458d83"
     },
     {
+      "name": "authority-functions",
+      "path": "forensics/atlas/openssl-3.6.4-production/functions.json",
+      "sha256": "0add7610e574dc030773b0f76a6cc80215d73cfbca411392bd6b64f3f8de80d0"
+    },
+    {
       "name": "symbol-ownership",
       "path": "forensics/atlas/symbol-ownership.json",
       "sha256": "d42d2ba4f459b729139149f7343cb36357959272a38fecce8f20e6e4aa29a137"
     },
     {
+      "name": "authority-build-record",
+      "note": "read for the build directory, the profile and the source area; its hash is deliberately not recorded, see this list's comment -- the fields are in body.authority_build"
+    },
+    {
       "name": "implemented-surface",
-      "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "ef29bbfccd92b3e053e0e7cb0e075190b4e1a7b7a99f982e2a7fe4b1a8ee7e3e"
+      "note": "deliberately **not** read: the module-to-stratum map comes from symbol-ownership.json, which is committed and machine-independent, where I implemented-surface.json carries a build product's hash. Naming it as an input at all would be a claim about a file this generator does not open."
     },
     {
       "name": "crate-source-tree",
