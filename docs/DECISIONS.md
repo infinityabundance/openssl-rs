@@ -8824,3 +8824,58 @@ added and no ledger row moves. What this entry buys is that 7.3c's four external
 known *before* the slice is written rather than discovered four hundred lines in.
 
 SPDX-License-Identifier: Apache-2.0
+
+---
+
+## D153 — 7.3c-i: the context, its parameters and initialisation, and two faults the court met
+
+**What landed.** `src/evp/cipher_ctx.rs`, registered this time: the context object and its
+lifecycle, the flag trio, the whole accessor set, the parameter entry points,
+`EVP_CIPHER_CTX_ctrl`'s nineteen commands, the ASN.1 parameter bridge, `set_key_length`,
+`set_padding`, and the init family — `evp_cipher_init_internal` with both halves, the two pipeline
+initialisers and the six `EVP_EncryptInit*`/`EVP_DecryptInit*` spellings. **53 exports**:
+`implemented[libcrypto]` 1187 → 1240, and the gate's blocking list 10 → 6, because four of the
+five `evp_lib.c` deferral rows are discharged by the ASN.1 bridge. The fifth, `evp_md_get_number`,
+is 7.3d's.
+
+**`ABI-PROTOTYPE` caught a signature defect before anything ran.** The two pipeline initialisers'
+`iv` went in as `*const *const c_uchar`; the authority's `const unsigned char **iv` is a
+**mutable** pointer to a const pointer, because the provider may advance the caller's array. The
+court reported the two types by name —
+`ptr(ptr(const(int:1:u)))` against `ptr(const(ptr(const(int:1:u))))` — which is the plane D98
+added and the reason it is checked at build time instead of being discovered by a probe that
+happens to pass a writable array. This is the first defect that plane has caught.
+
+**`RT-EVP-CIPHER` goes 91 → 154 observations**, and its extension is the other half of the
+stratum: an unarmed context's every empty arm, the two copy refusals, the flag masks, an armed
+context through `EVP_EncryptInit_ex`, the parameter pair, `dup` and `copy` of an armed context,
+`EVP_DecryptInit_ex` re-arming in the other direction, `reset`, and both pipeline initialisers'
+refusals.
+
+**The court found an authority fault, and the probe steps around it.** `EVP_CIPHER_CTX_gettable_params`
+and `_settable_params` test `cctx != NULL` and then dereference `cctx->cipher` — which is NULL on
+a context that has never been armed, which is every caller's state before its first init. The
+authority's probe **died** at the first of the two. The crate answers NULL, and
+`D-CIPHERCTX-PARAMS-NULL` in `docs/SECURITY_DIVERGENCE_POLICY.md` records it; the probe observes
+both calls on an *armed* context, where the authority's own test is satisfied and both answer.
+
+**And one observation was removed because it measures another stratum.** `EVP_EncryptInit_ex(ctx,
+EVP_enc_null(), ...)` succeeds in the authority and fails here, and the reason is not this slice:
+a legacy method with no provider is replaced by `EVP_CIPHER_fetch(NULL, cipher->nid == NID_undef ?
+"NULL" : OBJ_nid2sn(nid), "")` — the **literal string `"NULL"`** — and the authority's *default
+provider* publishes a cipher by that name. This crate's does not; it is Phase 13's. The probe says
+so where the call would have been, because an observation there would read a missing stratum as a
+behavioural divergence.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 7 implemented / open | 52 / 898 | **105 / 845** |
+| `implemented[libcrypto]` | 1187 | **1240** |
+| recorded deferrals / blocking dependencies | 10 / 10 | **6 / 6** |
+| RT-EVP-CIPHER observations | 91 | **154** |
+| courts / observations | 58 / 20,368 | 58 / **20,431** |
+| unit tests | 328 | **334** |
+
+SPDX-License-Identifier: Apache-2.0

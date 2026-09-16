@@ -830,3 +830,18 @@ authority and the candidate for this function, and there was never supposed to b
   two agreed for four phases; the first caller that *returns* the value to a consumer
   (`EVP_CIPHER_names_do_all`) observed `2` against the authority's `1`. That is fixed in the same
   commit, with the unit test that had encoded the wrong semantics corrected rather than deleted.
+
+### D-CIPHERCTX-PARAMS-NULL — the two context-parameter list accessors dereference a NULL cipher
+
+- **Obligation:** `EVP_CIPHER_CTX_gettable_params` and `EVP_CIPHER_CTX_settable_params`.
+- **Authority:** both evaluate `cctx->cipher->gettable_ctx_params` (respectively
+  `settable_ctx_params`) behind a `cctx != NULL` test **only**. On a context that has never been
+  armed — which is the state every caller is in before its first `EVP_CipherInit` — `cipher` is
+  NULL and the read is a null-pointer dereference. `RT-EVP-CIPHER` measured it: the authority's
+  probe died at the first of the two calls, on a context `EVP_CIPHER_CTX_new` had just made.
+- **Crate:** answers NULL for a NULL cipher and asks the provider otherwise. The same choice
+  `D-NAMEMAP-DOALL-1` records, for the same reason: a NULL argument is a caller's error, and an
+  error is not a reason to take the caller's process down.
+- **Claim removed:** `EVP_CIPHER_CTX_gettable_params` and `_settable_params` on an **unarmed**
+  context are not claimed compatible. They are claimed *safe*, and the probe observes both where
+  the authority can answer — on an armed context, where the authority's own test is satisfied.

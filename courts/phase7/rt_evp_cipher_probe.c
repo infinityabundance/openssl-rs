@@ -287,9 +287,19 @@ static const OSSL_DISPATCH court_one_shot_fns[] = {
     { 0, NULL }
 };
 
+/* A duplicate of the context: the same marker, because this provider keeps no per-operation
+ * state that a copy would have to separate. It exists because `EVP_CIPHER_CTX_copy` refuses a
+ * provider shape that does not publish one, and a court that could only observe that refusal
+ * would not observe the copy at all. */
+static void *court_dupctx(void *cctx)
+{
+    return cctx;
+}
+
 static const OSSL_DISPATCH court_enc_fns[] = {
     { OSSL_FUNC_CIPHER_NEWCTX, (void (*)(void)) court_newctx },
     { OSSL_FUNC_CIPHER_FREECTX, (void (*)(void)) court_freectx },
+    { OSSL_FUNC_CIPHER_DUPCTX, (void (*)(void)) court_dupctx },
     { OSSL_FUNC_CIPHER_ENCRYPT_INIT, (void (*)(void)) court_encrypt_init },
     { OSSL_FUNC_CIPHER_UPDATE, (void (*)(void)) court_update },
     { OSSL_FUNC_CIPHER_FINAL, (void (*)(void)) court_final },
@@ -651,6 +661,165 @@ int main(void)
         EVP_CIPHER_free(global);
         sayn("enc_null.block_size_after_free", EVP_CIPHER_get_block_size(global));
         sayp("enc_null.gettable_params", EVP_CIPHER_gettable_params(global));
+    }
+
+    /*
+     * ---- 7.3c-i: the context, its parameters, and initialisation ----
+     *
+     * Everything above observes the *method object*. This observes the other half: a context
+     * armed through `EVP_EncryptInit_ex`, the accessors that read it, and the two refusals a
+     * caller meets before it is armed.
+     *
+     * **Nothing here calls `EVP_EncryptUpdate` or a `Final`.** Those are 7.3c-ii's and calling
+     * one would abort the candidate on a scaffold, which reads as a missing symbol rather than
+     * as a behavioural difference.
+     */
+    {
+        EVP_CIPHER_CTX *cctx = EVP_CIPHER_CTX_new();
+        EVP_CIPHER_CTX *other_ctx = EVP_CIPHER_CTX_new();
+        EVP_CIPHER_CTX *dup = NULL;
+        EVP_CIPHER *stream = EVP_CIPHER_fetch(ctx, "court-enc", NULL);
+        unsigned char key[32], ivb[16], ivout[16];
+        int i;
+
+        for (i = 0; i < 32; i++)
+            key[i] = (unsigned char) i;
+        for (i = 0; i < 16; i++)
+            ivb[i] = (unsigned char) (i + 1);
+
+        sayp("ctx.new", cctx);
+        sayp("ctx.fetched_for_init", stream);
+
+        /* The empty arms, which are what a caller's error path meets first. */
+        sayp("ctx.empty.cipher", EVP_CIPHER_CTX_get0_cipher(cctx));
+        sayn("ctx.empty.block_size", EVP_CIPHER_CTX_get_block_size(cctx));
+        sayn("ctx.empty.iv_length", EVP_CIPHER_CTX_get_iv_length(cctx));
+        sayn("ctx.empty.key_length", EVP_CIPHER_CTX_get_key_length(cctx));
+        sayn("ctx.empty.nid", EVP_CIPHER_CTX_get_nid(cctx));
+        sayn("ctx.empty.tag_length", EVP_CIPHER_CTX_get_tag_length(cctx));
+        sayn("ctx.empty.is_encrypting", EVP_CIPHER_CTX_is_encrypting(cctx));
+        sayn("ctx.empty.num", EVP_CIPHER_CTX_get_num(cctx));
+        sayn("ctx.empty.app_data_null", EVP_CIPHER_CTX_get_app_data(cctx) == NULL ? 1 : 0);
+        sayn("ctx.empty.cipher_data_null", EVP_CIPHER_CTX_get_cipher_data(cctx) == NULL ? 1 : 0);
+        /* The control that refuses before it reads the command, and the reason it raises. */
+        sayn("ctx.empty.ctrl_init", EVP_CIPHER_CTX_ctrl(cctx, EVP_CTRL_INIT, 0, NULL));
+        sayn("ctx.empty.ctrl_init.err", (long long) ERR_peek_error());
+        ERR_clear_error();
+        sayn("ctx.empty.set_padding", EVP_CIPHER_CTX_set_padding(cctx, 0));
+        /*
+         * **`EVP_CIPHER_CTX_gettable_params` and `_settable_params` are NOT called here.** On an
+         * unarmed context the authority evaluates `cctx->cipher->gettable_ctx_params` with
+         * `cipher` NULL and dies; the crate answers NULL, which is recorded as
+         * `D-CIPHERC TX-PARAMS-NULL` in `docs/SECURITY_DIVERGENCE_POLICY.md` rather than
+         * reproduced. They are observed below, where a cipher is on the context, which is the
+         * only state either library can answer from.
+         */
+        /* And the copy refusals, which are the first thing a caller meets with no cipher on. */
+        sayn("ctx.copy_unarmed", EVP_CIPHER_CTX_copy(other_ctx, cctx));
+        sayn("ctx.copy_unarmed.err", (long long) ERR_peek_error());
+        ERR_clear_error();
+        sayp("ctx.dup_unarmed", EVP_CIPHER_CTX_dup(cctx));
+
+        /* The flags: `test_flags` answers the mask, and the two spellings are masks too. */
+        EVP_CIPHER_CTX_set_flags(cctx, EVP_CIPH_NO_PADDING);
+        sayn("ctx.flags.after_set", EVP_CIPHER_CTX_test_flags(cctx, EVP_CIPH_NO_PADDING));
+        EVP_CIPHER_CTX_clear_flags(cctx, EVP_CIPH_NO_PADDING);
+        sayn("ctx.flags.after_clear", EVP_CIPHER_CTX_test_flags(cctx, EVP_CIPH_NO_PADDING));
+
+        if (stream != NULL) {
+            /*
+             * The arming. The key length the provider is handed comes from the *context's*
+             * accessor, which is why the two lengths below are read before the call.
+             */
+            sayn("ctx.init.encrypt", EVP_EncryptInit_ex(cctx, stream, NULL, key, ivb));
+            sayn("ctx.armed.is_encrypting", EVP_CIPHER_CTX_is_encrypting(cctx));
+            printf("ctx.armed.cipher_is_the_fetched_one=%d\n",
+                   EVP_CIPHER_CTX_get0_cipher(cctx) == stream ? 1 : 0);
+            sayn("ctx.armed.block_size", EVP_CIPHER_CTX_get_block_size(cctx));
+            sayn("ctx.armed.iv_length", EVP_CIPHER_CTX_get_iv_length(cctx));
+            sayn("ctx.armed.key_length", EVP_CIPHER_CTX_get_key_length(cctx));
+            sayn("ctx.armed.nid", EVP_CIPHER_CTX_get_nid(cctx));
+            sayn("ctx.armed.mode", EVP_CIPHER_get_mode(EVP_CIPHER_CTX_get0_cipher(cctx)));
+            /* The two parameters, and the pair of refusals around them: this provider has no
+             * ctx-params callbacks, so the asks answer 0 rather than succeeding. */
+            sayn("ctx.armed.set_key_length_same", EVP_CIPHER_CTX_set_key_length(cctx, 32));
+            sayn("ctx.armed.set_key_length_other", EVP_CIPHER_CTX_set_key_length(cctx, 16));
+            sayn("ctx.armed.set_key_length_other.err", (long long) ERR_peek_error());
+            ERR_clear_error();
+            sayn("ctx.armed.set_padding", EVP_CIPHER_CTX_set_padding(cctx, 0));
+            sayn("ctx.armed.get_num", EVP_CIPHER_CTX_get_num(cctx));
+            sayn("ctx.armed.set_num", EVP_CIPHER_CTX_set_num(cctx, 5));
+            sayn("ctx.armed.get_updated_iv", EVP_CIPHER_CTX_get_updated_iv(cctx, ivout, 16));
+            sayn("ctx.armed.get_original_iv", EVP_CIPHER_CTX_get_original_iv(cctx, ivout, 16));
+            /* The parameter *setter* on a provider that publishes no settable list. */
+            sayn("ctx.armed.set_params_empty", EVP_CIPHER_CTX_set_params(cctx, NULL));
+            sayn("ctx.armed.get_params_empty", EVP_CIPHER_CTX_get_params(cctx, NULL));
+            /* The two context-parameter lists, now that there is a cipher to ask. */
+            sayp("ctx.armed.gettable_ctx_params", EVP_CIPHER_CTX_gettable_params(cctx));
+            sayp("ctx.armed.settable_ctx_params", EVP_CIPHER_CTX_settable_params(cctx));
+            sayp("ctx.armed.algor_id_in_list",
+                 OSSL_PARAM_locate_const(EVP_CIPHER_CTX_gettable_params(cctx),
+                                         OSSL_CIPHER_PARAM_ALGORITHM_ID_PARAMS));
+            /* The IV as ASN.1, with a NULL type: `court-enc` is GCM, so the AEAD arm is taken
+             * and refuses the NULL -- the same refusal both directions make. */
+            sayn("ctx.armed.param_to_asn1_null", EVP_CIPHER_param_to_asn1(cctx, NULL));
+            sayn("ctx.armed.asn1_to_param_null", EVP_CIPHER_asn1_to_param(cctx, NULL));
+
+            /* Duplication, which the provider now supports. */
+            dup = EVP_CIPHER_CTX_dup(cctx);
+            sayp("ctx.dup", dup);
+            if (dup != NULL) {
+                printf("ctx.dup.same_cipher=%d\n",
+                       EVP_CIPHER_CTX_get0_cipher(dup) == stream ? 1 : 0);
+                sayn("ctx.dup.is_encrypting", EVP_CIPHER_CTX_is_encrypting(dup));
+                sayn("ctx.dup.key_length", EVP_CIPHER_CTX_get_key_length(dup));
+                EVP_CIPHER_CTX_free(dup);
+                /* The original is untouched by the copy having been released. */
+                sayn("ctx.after_dup_free.key_length", EVP_CIPHER_CTX_get_key_length(cctx));
+                sayn("ctx.after_dup_free.is_encrypting", EVP_CIPHER_CTX_is_encrypting(cctx));
+            }
+            sayn("ctx.copy_armed", EVP_CIPHER_CTX_copy(other_ctx, cctx));
+            sayn("ctx.copy_armed.is_encrypting", EVP_CIPHER_CTX_is_encrypting(other_ctx));
+            sayn("ctx.copy_armed.key_length", EVP_CIPHER_CTX_get_key_length(other_ctx));
+
+            /* The other direction, which keeps the context's cipher and changes its flag. */
+            sayn("ctx.init.decrypt", EVP_DecryptInit_ex(cctx, NULL, NULL, key, ivb));
+            sayn("ctx.after_decrypt_init.is_encrypting", EVP_CIPHER_CTX_is_encrypting(cctx));
+            /* And the reset, which leaves the context as fresh as a new one. */
+            sayn("ctx.reset", EVP_CIPHER_CTX_reset(cctx));
+            sayp("ctx.after_reset.cipher", EVP_CIPHER_CTX_get0_cipher(cctx));
+            sayn("ctx.after_reset.key_length", EVP_CIPHER_CTX_get_key_length(cctx));
+            sayn("ctx.after_reset.is_encrypting", EVP_CIPHER_CTX_is_encrypting(cctx));
+
+            /* The pipeline initialisers: the pipe bound first, then the shape the provider
+             * does not publish -- `court-enc` has no pipeline functions. */
+            sayn("ctx.pipeline.too_many",
+                 EVP_CipherPipelineEncryptInit(cctx, stream, key, 32, 64, NULL, 16));
+            sayn("ctx.pipeline.too_many.err", (long long) ERR_peek_error());
+            ERR_clear_error();
+            sayn("ctx.pipeline.no_impl",
+                 EVP_CipherPipelineEncryptInit(cctx, stream, key, 32, 1, NULL, 16));
+            sayn("ctx.pipeline.no_impl.err", (long long) ERR_peek_error());
+            ERR_clear_error();
+            sayn("ctx.pipeline.decrypt.no_impl",
+                 EVP_CipherPipelineDecryptInit(cctx, stream, key, 32, 1, NULL, 16));
+            ERR_clear_error();
+        }
+
+        /*
+         * **`EVP_EncryptInit_ex(ctx, EVP_enc_null(), ...)` is deliberately NOT observed.** A
+         * legacy method with no provider is replaced by
+         * `EVP_CIPHER_fetch(NULL, cipher->nid == NID_undef ? "NULL" : OBJ_nid2sn(nid), "")` --
+         * the literal string `"NULL"` -- and the authority succeeds because its **default
+         * provider** publishes a cipher called `NULL`. This crate's default provider does not:
+         * it is Phase 13's. So the observation would read a missing stratum as a behavioural
+         * divergence, which is the distinction this probe's header draws for slots 10, 11, 15
+         * and 20, and it is recorded in `docs/DECISIONS.md` D153 instead.
+         */
+
+        EVP_CIPHER_free(stream);
+        EVP_CIPHER_CTX_free(other_ctx);
+        EVP_CIPHER_CTX_free(cctx);
     }
 
     /* The NULL arms, which every accessor with one has to answer for itself. */
