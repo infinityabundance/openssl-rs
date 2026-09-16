@@ -442,10 +442,10 @@ PHASE5_MODULES = [
 # Phase 6 evidence: the parameter surface and the provider core, the differential
 # court that exercises it, and the ledger that decides the stratum's arithmetic.
 #
-# `docs/PHASE-6-PROVIDER-SEAL.md` is deliberately **not** listed yet: the seal does not
-# exist, and listing a document that is absent would put it in `evidence_absent` and
-# understate a stratum whose modules are written. It is added to this list in the commit
-# that writes it, which is what 6.13 is for.
+# `docs/PHASE-6-PROVIDER-SEAL.md` **is** listed now, in the commit that writes it: with the
+# last open obligation closed the stratum can report `complete`, and a `complete` stratum
+# without a seal would be a completion claim nobody can audit. That is the rule phases 3, 4
+# and 5 already follow, and this line is where Phase 6 joins them.
 PHASE6_COURTS = "artifacts/phase6/COURTS.json"
 PHASE6_OBLIGATIONS = "forensics/phase6-obligations.json"
 PHASE6_MODULES = [
@@ -481,6 +481,15 @@ PHASE6_MODULES = [
     # only through a configuration file and every observation of it goes through the
     # provider surface it configures.
     "src/provider/conf.rs",
+    # 6.8e: `crypto/provider_child.c`, the child provider and the parent callbacks, plus the
+    # three accessors `provider_core.c` keeps beside the object. Its observations are split:
+    # `RT-LIBCTX` reaches them through `OSSL_LIB_CTX_new_child`, and `RT-PROVIDER` through the
+    # registry the parent-side registration walks.
+    "src/provider/child.rs",
+    # 6.10 closure: the seal. A stratum may only report `complete` with its seal in place --
+    # that is the rule phases 3, 4 and 5 already follow, and adding it here is what makes
+    # Phase 6's completion claim auditable rather than merely reported.
+    "docs/PHASE-6-PROVIDER-SEAL.md",
     "courts/phase6/rt_provider_probe.c",
     # 6.9: the DSO layer, reassigned from Phase 2 by D95 because Phase 2's definition is
     # distribution structure and the dynamic-loader abstraction is semantic.

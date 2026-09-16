@@ -1,12 +1,12 @@
 {
   "authority": "openssl-3.6.4-production",
   "body": {
-    "complete": false,
+    "complete": true,
     "counts": {
       "atlas_owned": 137,
       "deferred_to_later_phase": 0,
-      "implemented": 160,
-      "open_in_this_stratum": 1,
+      "implemented": 161,
+      "open_in_this_stratum": 0,
       "owned": 161,
       "received_by_handoff": 24
     },
@@ -90,6 +90,7 @@
       "OSSL_LIB_CTX_get_data",
       "OSSL_LIB_CTX_load_config",
       "OSSL_LIB_CTX_new",
+      "OSSL_LIB_CTX_new_child",
       "OSSL_LIB_CTX_new_from_dispatch",
       "OSSL_LIB_CTX_set0_default",
       "OSSL_LIB_CTX_set_conf_diagnostics",
@@ -291,13 +292,7 @@
       }
     ],
     "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum. Nothing here is a parity claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PROVIDER_MODEL.md §5 decides when the stratum may be called complete.",
-    "open": [
-      {
-        "declaring_header": "crypto.h",
-        "module": "src/context/mod.rs",
-        "symbol": "OSSL_LIB_CTX_new_child"
-      }
-    ],
+    "open": [],
     "owned_by_module": {
       "src/context/core_bio.rs": 2,
       "src/context/mod.rs": 10,
@@ -335,7 +330,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "2768f293b471b910a6798ecd0af97f64b40c6f54673ba4b73b385a4242fb93c6"
+      "sha256": "b9e0e7fab60b9998c2644beb2a71d700ed40042476885d2a23c27d393498761d"
     }
   ],
   "kind": "phase6-obligations",

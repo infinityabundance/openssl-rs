@@ -121,13 +121,23 @@ unsafe fn create_provider_children(prov: *mut OsslProvider) -> c_int {
         return 1;
     }
     // SAFETY: `store` is live, so `child_cbs` is a live stack created with it.
-    let n = unsafe { OPENSSL_sk_num((*store).child_cbs) };
-    assert!(
-        n == 0,
-        "openssl-rs: a provider child callback is registered, but 6.8e's walk over \
-         store->child_cbs has not landed; children would not be created"
-    );
-    1
+    unsafe {
+        let max = OPENSSL_sk_num((*store).child_cbs);
+        let mut ret = 1;
+        let mut i = 0;
+        while i < max {
+            let child_cb = OPENSSL_sk_value((*store).child_cbs, i).cast::<ProviderChildCb>();
+            // `ret &=`, not `ret =`: **every** registration is asked, even after one has
+            // refused, because a parent that refuses is not entitled to stop the others from
+            // being told. The authority's `&=` says so and a transcription that broke early
+            // would leave the later parents uninformed.
+            if let Some(create) = (*child_cb).create_cb {
+                ret &= create(prov.cast::<c_void>(), (*child_cb).cbdata);
+            }
+            i += 1;
+        }
+        ret
+    }
 }
 
 /// `static int provider_flush_store_cache(const OSSL_PROVIDER *prov)`.
@@ -291,10 +301,11 @@ pub(crate) unsafe fn provider_deactivate(
         count
     };
 
-    // 6.8e: the `count >= 1 && prov->ischild && upcalls` arm sets a `freeparent` flag whose
-    // `ossl_provider_free_parent(prov, 1)` runs **after** the locks are released. `ischild`
-    // is 0 until 6.8e lands `ossl_provider_set_child`, so the flag has nothing to set.
-    let _ = upcalls;
+    // The flag, not the call: the authority's comment says the down-ref is done **outside**
+    // the locks because it can take locks of its own. So it is a flag here and a call after
+    // the unlocks below, which is the same shape `freeparent` has upstream.
+    // SAFETY: `prov` is live.
+    let freeparent = count >= 1 && unsafe { (*prov).ischild } != 0 && upcalls != 0;
 
     // SAFETY: `prov` is live.
     unsafe {
@@ -302,10 +313,34 @@ pub(crate) unsafe fn provider_deactivate(
             (*prov).flags &= !FLAG_ACTIVATED;
         }
     }
-    // 6.8e: the authority's `else removechildren = 0;` — a provider with activations left
-    // cannot have its children removed. With `ischild` 0 there is nothing to remove either
-    // way, so the watch over the parameter is the whole of it.
-    let _ = removechildren;
+    // The authority's `if (count < 1) prov->flag_activated = 0;` has an `else`, and the
+    // else is `removechildren = 0`: a provider that still has activations cannot have its
+    // children removed. `count == 0` is the only case in which the walk below runs, so the
+    // parameter is narrowed here rather than at the walk.
+    // SAFETY: `prov` is live.
+    let removechildren = if unsafe { (*prov).flags } & FLAG_ACTIVATED != 0 {
+        0
+    } else {
+        removechildren
+    };
+    // The walk, and it is **inside** the lock: it runs before the unlocks below, because the
+    // store's child stack is read here and the callbacks may deactivate the very providers
+    // being walked. Each is called with the provider's own handle.
+    // SAFETY: `prov` is live and `store` is live whenever `lock` is set.
+    if removechildren != 0 && !store.is_null() {
+        // SAFETY: `store` is live and the store lock is held.
+        unsafe {
+            let max = OPENSSL_sk_num((*store).child_cbs);
+            let mut i = 0;
+            while i < max {
+                let child_cb = OPENSSL_sk_value((*store).child_cbs, i).cast::<ProviderChildCb>();
+                if let Some(remove) = (*child_cb).remove_cb {
+                    remove(prov.cast::<c_void>(), (*child_cb).cbdata);
+                }
+                i += 1;
+            }
+        }
+    }
 
     if lock {
         // SAFETY: both locks are held and `store` is live.
@@ -319,6 +354,11 @@ pub(crate) unsafe fn provider_deactivate(
             // SAFETY: `libctx` is NULL or the live context this provider belongs to.
             unsafe { ossl_decoder_cache_flush(libctx) };
         }
+    }
+    // SAFETY: `prov` is live.
+    if freeparent {
+        // SAFETY: `prov` is live and this call holds the reference the activation took.
+        unsafe { crate::provider::child::ossl_provider_free_parent(prov, 1) };
     }
     count
 }
@@ -354,18 +394,35 @@ pub(crate) unsafe fn provider_activate(
     }
 
     // Phase 9: the `random_bytes` guard described in `provider_deactivate`.
-    // 6.8e: `if (prov->ischild && upcalls && !ossl_provider_up_ref_parent(prov, 1)) return -1;`
-    // — guarded by a flag nothing can set yet, and the failure arms below would have to
-    // call `ossl_provider_free_parent(prov, 1)` to match.
-    let _ = upcalls;
+    //
+    // The child arm, and its position is the contract: it runs **before** either lock is
+    // taken, because the parent's upcall may want locks of its own and taking the store's
+    // first would be a lock-order inversion (`provider_core.c`'s comment at the top of the
+    // file says exactly that). A parent that refuses the count fails the activation.
+    // SAFETY: `prov` is live.
+    if unsafe { (*prov).ischild } != 0
+        && upcalls != 0
+        // SAFETY: `prov` is live.
+        && unsafe { crate::provider::child::ossl_provider_up_ref_parent(prov, 1) } == 0
+    {
+        return -1;
+    }
 
     // SAFETY: `store` is live when `lock` is set, so every lock named here exists.
     unsafe {
         if lock != 0 && CRYPTO_THREAD_read_lock((*store).lock) == 0 {
+            // The count taken above is given back before the failure is reported: the
+            // parent must see one release for every reference it handed out.
+            if (*prov).ischild != 0 && upcalls != 0 {
+                crate::provider::child::ossl_provider_free_parent(prov, 1);
+            }
             return -1;
         }
         if lock != 0 && CRYPTO_THREAD_write_lock((*prov).flag_lock) == 0 {
             CRYPTO_THREAD_unlock((*store).lock);
+            if (*prov).ischild != 0 && upcalls != 0 {
+                crate::provider::child::ossl_provider_free_parent(prov, 1);
+            }
             return -1;
         }
         let mut count = -1;
@@ -1247,14 +1304,9 @@ pub(crate) unsafe fn ossl_provider_default_props_update(
         let mut i = 0;
         while i < max {
             let cb = OPENSSL_sk_value((*store).child_cbs, i).cast::<ProviderChildCb>();
-            // SAFETY: `cb` is a live callback record; 6.8e fills the field and nothing in
-            // this build can, so the test is against a NULL that is always NULL today.
-            let f = (*cb).global_props_cb;
-            if !f.is_null() {
-                let f = core::mem::transmute::<
-                    *mut c_void,
-                    unsafe extern "C" fn(*const c_char, *mut c_void),
-                >(f);
+            // `global_props_cb` may be absent: a registrant that supplies only `create_cb`
+            // and `remove_cb` is accepted, and this walk skips the absent one.
+            if let Some(f) = (*cb).global_props_cb {
                 f(props, (*cb).cbdata);
             }
             i += 1;
@@ -1266,20 +1318,28 @@ pub(crate) unsafe fn ossl_provider_default_props_update(
 
 /// `OSSL_PROVIDER_CHILD_CB` — `crypto/provider_local.h`.
 ///
-/// **6.8e's struct.** It is forward-declared here only because the walk above has to have a
-/// type to cast a stack element to; the fields 6.8e fills are named so that a reader can see
-/// which ones this stratum reads. Nothing in this build can push onto `store->child_cbs`, so
-/// the pointer this names is never dereferenced — see the `the_five_slots_are_unfilled` and
-/// `no_provider_child_callback_exists` tests, which assert the stack is empty.
+/// `OSSL_PROVIDER_CHILD_CB` — one registration of a child context's three callbacks.
+///
+/// `prov` is the **parent** provider that registered, so deregistration can find the entry by
+/// identity rather than by handle. The field order is the authority's, and the three
+/// callbacks are typed rather than `*mut c_void` because this is the function that calls
+/// them: a wrong type here is a call to the wrong signature, and the compiler is the only
+/// thing that can catch it.
+///
+/// The three might be NULL: a registrant that supplies only some of them is accepted, and the
+/// two walks below skip an absent one. The authority's `register_child_cb` does not require
+/// any of them, which is why the registration is stored even when `create_cb` is NULL.
 #[repr(C)]
 pub(crate) struct ProviderChildCb {
-    /// `OSSL_FUNC_provider_child_cb_fn global_props_cb` — the one this stratum invokes.
-    pub(crate) global_props_cb: *mut c_void,
-    /// `OSSL_FUNC_provider_child_cb_fn create_cb` — 6.8e's.
-    pub(crate) create_cb: *mut c_void,
-    /// `OSSL_FUNC_provider_child_cb_fn remove_cb` — 6.8e's.
-    pub(crate) remove_cb: *mut c_void,
-    /// The `cbdata` every one of the three receives.
+    /// `OSSL_PROVIDER *prov` — the registering parent.
+    pub(crate) prov: *mut OsslProvider,
+    /// `int (*create_cb)(const OSSL_CORE_HANDLE *provider, void *cbdata)`.
+    pub(crate) create_cb: Option<crate::provider::child::CreateChildCbFn>,
+    /// `int (*remove_cb)(...)`.
+    pub(crate) remove_cb: Option<crate::provider::child::RemoveChildCbFn>,
+    /// `int (*global_props_cb)(const char *props, void *cbdata)`.
+    pub(crate) global_props_cb: Option<crate::provider::child::GlobalPropsCbFn>,
+    /// The `cbdata` every one of the three receives — the child context.
     pub(crate) cbdata: *mut c_void,
 }
 

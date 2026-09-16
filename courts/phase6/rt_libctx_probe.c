@@ -85,6 +85,8 @@
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
+#include <openssl/core.h>
+#include <openssl/core_dispatch.h>
 #include <openssl/crypto.h>
 #include <openssl/err.h>
 #include <openssl/objects.h>
@@ -103,6 +105,92 @@ extern int CONF_modules_load_file(const char *filename, const char *appname,
                                   unsigned long flags);
 
 /* ---------------------------------------------------------------- reporting */
+
+/* The eight upcalls and the four callback recorders for the child-provider section. */
+static int cb_register_called, cb_deregister_called;
+static int cb_create_nonnull, cb_remove_nonnull, cb_props_nonnull;
+static void *cb_cbdata;
+static const OSSL_CORE_HANDLE *cb_dereg_handle;
+static const char PARENT_HANDLE_MARKER = 0x5A;
+#define PARENT_HANDLE PARENT_HANDLE_MARKER
+
+static void *probe_get_libctx(const OSSL_CORE_HANDLE *h)
+{
+    /*
+     * Never reached in this probe, and that is a statement rather than an oversight: the
+     * child-provider `init` that would call it runs only for a provider the probe's
+     * `create_cb` created, and this probe's `create_cb` creates nothing -- it counts. A
+     * probe that did create one would be 6.12's third-party-provider court, where the
+     * parent really is a provider.
+     */
+    return (void *) h;
+}
+
+static const char *probe_prov_name(const OSSL_CORE_HANDLE *p)
+{
+    (void) p;
+    return "rt-libctx-parent";
+}
+
+static void *probe_get0_ctx(const OSSL_CORE_HANDLE *p)
+{
+    (void) p;
+    return NULL;
+}
+
+static const OSSL_DISPATCH *probe_get0_dispatch(const OSSL_CORE_HANDLE *p)
+{
+    (void) p;
+    return NULL;
+}
+
+static int probe_up_ref(const OSSL_CORE_HANDLE *p, int activate)
+{
+    (void) p;
+    (void) activate;
+    return 1;
+}
+
+static int probe_free_parent(const OSSL_CORE_HANDLE *p, int deactivate)
+{
+    (void) p;
+    (void) deactivate;
+    return 1;
+}
+
+static int probe_register_child_cb(const OSSL_CORE_HANDLE *h,
+                                   int (*create_cb)(const OSSL_CORE_HANDLE *,
+                                                    void *),
+                                   int (*remove_cb)(const OSSL_CORE_HANDLE *,
+                                                    void *),
+                                   int (*global_props_cb)(const char *, void *),
+                                   void *cbdata)
+{
+    (void) h;
+    cb_register_called++;
+    cb_create_nonnull = create_cb != NULL;
+    cb_remove_nonnull = remove_cb != NULL;
+    cb_props_nonnull = global_props_cb != NULL;
+    cb_cbdata = cbdata;
+    return 1;
+}
+
+static void probe_deregister_child_cb(const OSSL_CORE_HANDLE *h)
+{
+    cb_deregister_called++;
+    cb_dereg_handle = h;
+}
+
+static void probe_reset_callbacks(void)
+{
+    cb_register_called = 0;
+    cb_deregister_called = 0;
+    cb_create_nonnull = 0;
+    cb_remove_nonnull = 0;
+    cb_props_nonnull = 0;
+    cb_cbdata = NULL;
+    cb_dereg_handle = NULL;
+}
 
 #define SAYN(key, expr)                                                       \
     do {                                                                      \
@@ -526,6 +614,114 @@ int main(void)
          * answer 1. */
 
         OSSL_LIB_CTX_free(lc);
+    }
+
+    /* ------------------------ OSSL_LIB_CTX_new_child (6.6d) and 6.8e's parent half ---- */
+
+    /*
+     * The probe plays the **parent**: it publishes the eight dispatch entries a
+     * third-party provider would, calls `OSSL_LIB_CTX_new_child`, and records what the
+     * core asked it for. That is the only way to reach 6.8e from a probe, because the
+     * mechanism is a conversation between a parent and the core and the probe has to be
+     * the parent.
+     *
+     * Four things are observable and each is a place a plausible transcription differs:
+     *
+     *   * the parent's `register_child_cb` is called **once**, with three non-NULL
+     *     callbacks and the child context as `cbdata` -- so the `cbdata` comparison is the
+     *     evidence that the context, not some other object, was handed over;
+     *   * `OSSL_LIB_CTX_get_data(child, 18)` answers non-NULL: slot 18 exists for *every*
+     *     context because `context_init` builds it, so this is about the slot, not the
+     *     child;
+     *   * `OSSL_LIB_CTX_free(child)` calls the parent's `deregister_child_cb` exactly once
+     *     with the handle the parent was given -- which is `context_deinit`'s `ischild` arm,
+     *     and the arm does not run for an ordinary context;
+     *   * a table missing any of the **seven** validated entries answers NULL *without*
+     *     calling `register_child_cb`, because the validation precedes the registration.
+     *
+     * **The eighth entry is not observed, and that is deliberate.** A table with all seven
+     * and no `DEREGISTER_CHILD_CB` **succeeds** -- the authority does not validate it -- and
+     * the authority then jumps through NULL when that context is freed. That is
+     * `D-CHILD-DEREGISTER-NULL-1`: the crate checks the pointer instead, the fault is
+     * recorded rather than reproduced, and a probe that freed such a context would crash the
+     * authority. So the success half is observed and the context is deliberately left
+     * unreleased, which is stated here rather than hidden.
+     */
+    {
+        void *child, *child_no_get_libctx, *child_no_dereg;
+        static const OSSL_DISPATCH parent_dispatch[] = {
+            { OSSL_FUNC_CORE_GET_LIBCTX, (void (*)(void)) probe_get_libctx },
+            { OSSL_FUNC_PROVIDER_REGISTER_CHILD_CB,
+              (void (*)(void)) probe_register_child_cb },
+            { OSSL_FUNC_PROVIDER_DEREGISTER_CHILD_CB,
+              (void (*)(void)) probe_deregister_child_cb },
+            { OSSL_FUNC_PROVIDER_NAME, (void (*)(void)) probe_prov_name },
+            { OSSL_FUNC_PROVIDER_GET0_PROVIDER_CTX, (void (*)(void)) probe_get0_ctx },
+            { OSSL_FUNC_PROVIDER_GET0_DISPATCH,
+              (void (*)(void)) probe_get0_dispatch },
+            { OSSL_FUNC_PROVIDER_UP_REF, (void (*)(void)) probe_up_ref },
+            { OSSL_FUNC_PROVIDER_FREE, (void (*)(void)) probe_free_parent },
+            { 0, NULL }
+        };
+        /* The same table without `CORE_GET_LIBCTX`, which *is* validated. */
+        static const OSSL_DISPATCH no_get_libctx[] = {
+            { OSSL_FUNC_PROVIDER_REGISTER_CHILD_CB,
+              (void (*)(void)) probe_register_child_cb },
+            { OSSL_FUNC_PROVIDER_DEREGISTER_CHILD_CB,
+              (void (*)(void)) probe_deregister_child_cb },
+            { OSSL_FUNC_PROVIDER_NAME, (void (*)(void)) probe_prov_name },
+            { OSSL_FUNC_PROVIDER_GET0_PROVIDER_CTX, (void (*)(void)) probe_get0_ctx },
+            { OSSL_FUNC_PROVIDER_GET0_DISPATCH,
+              (void (*)(void)) probe_get0_dispatch },
+            { OSSL_FUNC_PROVIDER_UP_REF, (void (*)(void)) probe_up_ref },
+            { OSSL_FUNC_PROVIDER_FREE, (void (*)(void)) probe_free_parent },
+            { 0, NULL }
+        };
+        /* And the same table *with* every validated entry and **without** the eighth. */
+        static const OSSL_DISPATCH no_deregister[] = {
+            { OSSL_FUNC_CORE_GET_LIBCTX, (void (*)(void)) probe_get_libctx },
+            { OSSL_FUNC_PROVIDER_REGISTER_CHILD_CB,
+              (void (*)(void)) probe_register_child_cb },
+            { OSSL_FUNC_PROVIDER_NAME, (void (*)(void)) probe_prov_name },
+            { OSSL_FUNC_PROVIDER_GET0_PROVIDER_CTX, (void (*)(void)) probe_get0_ctx },
+            { OSSL_FUNC_PROVIDER_GET0_DISPATCH,
+              (void (*)(void)) probe_get0_dispatch },
+            { OSSL_FUNC_PROVIDER_UP_REF, (void (*)(void)) probe_up_ref },
+            { OSSL_FUNC_PROVIDER_FREE, (void (*)(void)) probe_free_parent },
+            { 0, NULL }
+        };
+
+        probe_reset_callbacks();
+        child = OSSL_LIB_CTX_new_child((const OSSL_CORE_HANDLE *) &PARENT_HANDLE,
+                                       parent_dispatch);
+        sayp("child.nonnull", child);
+        sayn("child.register_called", cb_register_called);
+        sayn("child.cbdata_is_ctx", (int) (cb_cbdata == child));
+        sayn("child.create_nonnull", cb_create_nonnull);
+        sayn("child.remove_nonnull", cb_remove_nonnull);
+        sayn("child.props_nonnull", cb_props_nonnull);
+        sayn("child.deregister_before_free", cb_deregister_called);
+        sayp("child.slot18", OSSL_LIB_CTX_get_data(child, 18));
+
+        OSSL_LIB_CTX_free(child);
+        sayn("child.deregister_after_free", cb_deregister_called);
+        sayn("child.deregister_handle_matches",
+             (int) (cb_dereg_handle == (const OSSL_CORE_HANDLE *) &PARENT_HANDLE));
+
+        /* A table missing one of the seven validated entries. */
+        probe_reset_callbacks();
+        child_no_get_libctx = OSSL_LIB_CTX_new_child(
+            (const OSSL_CORE_HANDLE *) &PARENT_HANDLE, no_get_libctx);
+        sayp("child.no_get_libctx", child_no_get_libctx);
+        sayn("child.no_get_libctx.register_called", cb_register_called);
+
+        /* The eighth, unvalidated: the initialisation **succeeds**, and the context is
+         * deliberately never freed -- see the note above. */
+        probe_reset_callbacks();
+        child_no_dereg = OSSL_LIB_CTX_new_child(
+            (const OSSL_CORE_HANDLE *) &PARENT_HANDLE, no_deregister);
+        sayp("child.no_deregister", child_no_dereg);
+        sayn("child.no_deregister.register_called", cb_register_called);
     }
 
     /* --------------------------------------------------------------- nothing raised */

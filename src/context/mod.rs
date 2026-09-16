@@ -383,6 +383,21 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
     // SAFETY: as above; the slot is published once, here.
     unsafe { (*ctx).provider_conf = provider_conf.cast::<c_void>() };
 
+    // The child-provider globals, slot 18. Built here and **filled later**:
+    // `ossl_provider_init_as_child` is what creates the lock and stores the upcalls, so a
+    // context that is not a child has a zeroed object with a NULL lock — which
+    // `ossl_child_prov_ctx_free` releases unconditionally, because `CRYPTO_THREAD_lock_free`
+    // accepts NULL. That is why the constructor is `OPENSSL_zalloc` and nothing else.
+    // SAFETY: `ctx` is the live context being initialised, and the constructor reads no field.
+    let child_provider =
+        unsafe { crate::provider::child::ossl_child_prov_ctx_new(ctx.cast::<c_void>()) };
+    if child_provider.is_null() {
+        context_deinit(ctx);
+        return false;
+    }
+    // SAFETY: as above; the slot is published once, here.
+    unsafe { (*ctx).child_provider = child_provider };
+
     // The provider store. **This is the first slot object the authority builds** among
     // those this crate has landed, and its position is not arbitrary: the authority's own
     // comment marks it *P1 -- needs to be freed before the child provider data is freed*,
@@ -539,6 +554,18 @@ fn context_deinit_objs(ctx: *mut OsslLibCtx) {
         if !(*ctx).provider_conf.is_null() {
             crate::provider::conf::ossl_prov_conf_ctx_free((*ctx).provider_conf);
             (*ctx).provider_conf = ptr::null_mut();
+        }
+    }
+
+    // The child-provider globals, released after the provider-config object. The authority's
+    // `context_deinit_objs` reaches `child_provider` through `ossl_provider_deinit_child` and
+    // then releases the slot; the deregistration is 6.6d's call site, and releasing the object
+    // here is what keeps the slot's lifetime this stratum's.
+    // SAFETY: `ctx` is a live context being torn down; each slot is released once.
+    unsafe {
+        if !(*ctx).child_provider.is_null() {
+            crate::provider::child::ossl_child_prov_ctx_free((*ctx).child_provider);
+            (*ctx).child_provider = ptr::null_mut();
         }
     }
 
@@ -854,6 +881,51 @@ pub unsafe extern "C" fn OSSL_LIB_CTX_new_from_dispatch(
     })
 }
 
+/// `OSSL_LIB_CTX *OSSL_LIB_CTX_new_child(const OSSL_CORE_HANDLE *handle,
+/// const OSSL_DISPATCH *in)`.
+///
+/// The context a **third-party provider** creates for its own use. It is
+/// `OSSL_LIB_CTX_new_from_dispatch` first — so the core BIO and the algorithm walk are
+/// reachable through it — then 6.8e's `ossl_provider_init_as_child`, which stores the
+/// parent's handle and its seven upcalls in slot 18 and hands the parent the three callbacks
+/// that make this context's provider set the parent's. Only then is `ischild` set.
+///
+/// The order is the contract: `ischild` is set **last**, so a failure anywhere above leaves a
+/// context that `OSSL_LIB_CTX_free` tears down as an ordinary one. Setting it first would
+/// make the failure path call `ossl_provider_deinit_child` on globals whose upcalls are NULL.
+///
+/// # Safety
+/// `handle` must be the caller's own `OSSL_CORE_HANDLE` and `in` the terminated dispatch
+/// table it was handed; both are passed through to the child-provider globals, which the
+/// parent's callbacks read.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_LIB_CTX_new_child(
+    handle: *const c_void,
+    r#in: *const crate::context::dispatch::OsslDispatch,
+) -> *mut c_void {
+    guard_ffi(ptr::null_mut(), || {
+        // SAFETY: `handle` and `in` are the caller's, and the callee's contract is this
+        // function's.
+        let ctx = unsafe { OSSL_LIB_CTX_new_from_dispatch(handle, r#in) };
+        if ctx.is_null() {
+            return ptr::null_mut();
+        }
+
+        // SAFETY: `ctx` is this call's own live context.
+        if unsafe { crate::provider::child::ossl_provider_init_as_child(ctx, handle, r#in) } == 0 {
+            // SAFETY: `ctx` is this call's own context and `ischild` is still clear, so the
+            // free is the ordinary one.
+            unsafe { OSSL_LIB_CTX_free(ctx) };
+            return ptr::null_mut();
+        }
+
+        // SAFETY: `ctx` is this call's own live context, and this is the write that makes it
+        // a child.
+        unsafe { (*ctx.cast::<OsslLibCtx>()).ischild = 1 };
+        ctx
+    })
+}
+
 /// `OSSL_LIB_CTX *OSSL_LIB_CTX_get0_global_default(void)`
 ///
 /// The process-global object, the same address for every caller in every thread,
@@ -953,9 +1025,15 @@ pub unsafe extern "C" fn OSSL_LIB_CTX_free(ctx: *mut c_void) {
         if ctx.is_null() || lib_ctx_is_default(ctx) != 0 {
             return;
         }
-        // The authority calls `ossl_provider_deinit_child(ctx)` here when
-        // `ischild` is set. `OSSL_LIB_CTX_new_child` is 6.6d, so no context can
-        // have that flag yet; the call goes here when it can.
+        // `if (ctx->ischild) ossl_provider_deinit_child(ctx);` -- before the slot objects
+        // are released, because the deregistration tells the parent that this child is
+        // gone and the parent may reach back through the globals it stored in slot 18.
+        // SAFETY: `ctx` is live and not the default, so this call owns it.
+        if unsafe { (*ctx).ischild } != 0 {
+            // SAFETY: `ctx` is live; the callee reads slot 18, which is still allocated at
+            // this point in the teardown.
+            unsafe { crate::provider::child::ossl_provider_deinit_child(ctx.cast::<c_void>()) };
+        }
         context_deinit(ctx);
         // SAFETY: `ctx` is not the default, so this call owns it, and
         // `context_deinit` has released everything it held. It is freed exactly
