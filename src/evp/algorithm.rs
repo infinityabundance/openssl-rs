@@ -279,8 +279,16 @@ unsafe extern "C" fn algorithm_do_this(provider: *mut OsslProvider, cbdata: *mut
 /// # Safety
 /// `libctx` NULL or live; `provider` NULL or live; `reserve_store`, `fn` and `unreserve_store`
 /// non-NULL; `pre` and `post` NULL or valid; `data` opaque and passed back unchanged.
-#[no_mangle]
-pub unsafe extern "C" fn ossl_algorithm_do_all(
+///
+/// **`pub(crate)`, and deliberately not `#[no_mangle]`.** The authority's `ossl_algorithm_do_all`
+/// is a global C symbol, but libcrypto's version script hides it from the DSO — it is not one of
+/// the 6,499 exports `forensics/atlas/symbol-ownership.json` assigns to a stratum — and its only
+/// caller is `crypto/core_fetch.c`'s `ossl_method_construct`, which is this same stratum's and is
+/// in this crate a sibling module. Exporting it would add a name to the crate's global symbol
+/// table that no consumer can call and that a consumer's own identically named function could
+/// collide with. D140 landed it with `#[no_mangle]`; D141 corrected that, and the correction is
+/// the crate's stated rule rather than a preference.
+pub(crate) unsafe extern "C" fn ossl_algorithm_do_all(
     libctx: *mut c_void,
     operation_id: c_int,
     provider: *mut OsslProvider,
@@ -344,8 +352,17 @@ pub unsafe extern "C" fn ossl_algorithm_do_all(
 ///
 /// # Safety
 /// `algo` must be a live `OSSL_ALGORITHM`.
-#[no_mangle]
-pub unsafe extern "C" fn ossl_algorithm_get1_first_name(algo: *const OsslAlgorithm) -> *mut c_char {
+///
+/// Not `#[no_mangle]`, and that is the crate's rule rather than an omission: this is an
+/// authority-**internal** name (`ossl_*`), libcrypto's version script hides it from the DSO, and
+/// the eight functions that call it — the `_meth.c` method constructors in 7.3 and 7.4 — are the
+/// only way it is ever reached. Making it a crate-global would add a name a consumer's own
+/// `ossl_algorithm_get1_first_name` could collide with, for a symbol nothing outside this crate
+/// can call.
+#[allow(dead_code)] // unreachable until 7.3's `_meth.c` constructors ask a method for its type name
+pub(crate) unsafe extern "C" fn ossl_algorithm_get1_first_name(
+    algo: *const OsslAlgorithm,
+) -> *mut c_char {
     // SAFETY: `algo` is live per the contract.
     let names = unsafe { (*algo).algorithm_names };
     if names.is_null() {

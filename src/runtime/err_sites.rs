@@ -19,7 +19,9 @@ pub(crate) struct ErrSite {
     pub line: c_int,
     /// `OPENSSL_FUNC`.
     pub func: &'static CStr,
-    /// `ERR_GET_LIB` of the raised code.
+    /// `ERR_GET_LIB` of the raised code, which is the value of the site's
+    /// library argument after `ERR_LIB_MASK`. The two differ only at the
+    /// seven sites whose argument is a reason constant; see `LIB_CONST_RE`.
     pub lib: c_int,
     /// The raised reason, including any `ERR_RFLAG_*` bits.
     pub reason: c_int,
@@ -8550,6 +8552,7676 @@ pub(crate) const PROVIDER_CONF_412: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ossl_method_construct_precondition` at `crypto/core_fetch.c:65` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const CORE_FETCH_65: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/core_fetch.c",
+    line: 65,
+    func: c"ossl_method_construct_precondition",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_method_construct_postcondition` at `crypto/core_fetch.c:92` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const CORE_FETCH_92: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/core_fetch.c",
+    line: 92,
+    func: c"ossl_method_construct_postcondition",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_asym_cipher_init` at `crypto/evp/asymcipher.c:43` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const ASYMCIPHER_43: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/asymcipher.c",
+    line: 43,
+    func: c"evp_pkey_asym_cipher_init",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_asym_cipher_init` at `crypto/evp/asymcipher.c:57` (EVP_R_NO_KEY_SET).
+pub(crate) const ASYMCIPHER_57: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/asymcipher.c",
+    line: 57,
+    func: c"evp_pkey_asym_cipher_init",
+    lib: 6,
+    reason: 154,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_asym_cipher_init` at `crypto/evp/asymcipher.c:67` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ASYMCIPHER_67: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/asymcipher.c",
+    line: 67,
+    func: c"evp_pkey_asym_cipher_init",
+    lib: 6,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_asym_cipher_init` at `crypto/evp/asymcipher.c:75` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const ASYMCIPHER_75: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/asymcipher.c",
+    line: 75,
+    func: c"evp_pkey_asym_cipher_init",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_asym_cipher_init` at `crypto/evp/asymcipher.c:160` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const ASYMCIPHER_160: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/asymcipher.c",
+    line: 160,
+    func: c"evp_pkey_asym_cipher_init",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_asym_cipher_init` at `crypto/evp/asymcipher.c:168` (EVP_R_PROVIDER_ASYM_CIPHER_NOT_SUPPORTED).
+pub(crate) const ASYMCIPHER_168: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/asymcipher.c",
+    line: 168,
+    func: c"evp_pkey_asym_cipher_init",
+    lib: 6,
+    reason: 235,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_asym_cipher_init` at `crypto/evp/asymcipher.c:177` (EVP_R_PROVIDER_ASYM_CIPHER_NOT_SUPPORTED).
+pub(crate) const ASYMCIPHER_177: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/asymcipher.c",
+    line: 177,
+    func: c"evp_pkey_asym_cipher_init",
+    lib: 6,
+    reason: 235,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_asym_cipher_init` at `crypto/evp/asymcipher.c:185` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const ASYMCIPHER_185: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/asymcipher.c",
+    line: 185,
+    func: c"evp_pkey_asym_cipher_init",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_asym_cipher_init` at `crypto/evp/asymcipher.c:204` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const ASYMCIPHER_204: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/asymcipher.c",
+    line: 204,
+    func: c"evp_pkey_asym_cipher_init",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_asym_cipher_init` at `crypto/evp/asymcipher.c:219` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const ASYMCIPHER_219: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/asymcipher.c",
+    line: 219,
+    func: c"evp_pkey_asym_cipher_init",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_encrypt` at `crypto/evp/asymcipher.c:251` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const ASYMCIPHER_251: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/asymcipher.c",
+    line: 251,
+    func: c"EVP_PKEY_encrypt",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_encrypt` at `crypto/evp/asymcipher.c:256` (EVP_R_OPERATION_NOT_INITIALIZED).
+pub(crate) const ASYMCIPHER_256: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/asymcipher.c",
+    line: 256,
+    func: c"EVP_PKEY_encrypt",
+    lib: 6,
+    reason: 151,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_encrypt` at `crypto/evp/asymcipher.c:268` (EVP_R_PROVIDER_ASYM_CIPHER_FAILURE).
+pub(crate) const ASYMCIPHER_268: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/asymcipher.c",
+    line: 268,
+    func: c"EVP_PKEY_encrypt",
+    lib: 6,
+    reason: 232,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_encrypt` at `crypto/evp/asymcipher.c:275` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const ASYMCIPHER_275: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/asymcipher.c",
+    line: 275,
+    func: c"EVP_PKEY_encrypt",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_decrypt` at `crypto/evp/asymcipher.c:300` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const ASYMCIPHER_300: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/asymcipher.c",
+    line: 300,
+    func: c"EVP_PKEY_decrypt",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_decrypt` at `crypto/evp/asymcipher.c:305` (EVP_R_OPERATION_NOT_INITIALIZED).
+pub(crate) const ASYMCIPHER_305: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/asymcipher.c",
+    line: 305,
+    func: c"EVP_PKEY_decrypt",
+    lib: 6,
+    reason: 151,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_decrypt` at `crypto/evp/asymcipher.c:317` (EVP_R_PROVIDER_ASYM_CIPHER_FAILURE).
+pub(crate) const ASYMCIPHER_317: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/asymcipher.c",
+    line: 317,
+    func: c"EVP_PKEY_decrypt",
+    lib: 6,
+    reason: 232,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_decrypt` at `crypto/evp/asymcipher.c:325` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const ASYMCIPHER_325: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/asymcipher.c",
+    line: 325,
+    func: c"EVP_PKEY_decrypt",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_decrypt_alloc` at `crypto/evp/asymcipher.c:342` (ERR_R_EVP_LIB).
+pub(crate) const ASYMCIPHER_342: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/asymcipher.c",
+    line: 342,
+    func: c"evp_pkey_decrypt_alloc",
+    lib: 6,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `evp_asym_cipher_from_algorithm` at `crypto/evp/asymcipher.c:378` (ERR_R_EVP_LIB).
+pub(crate) const ASYMCIPHER_378: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/asymcipher.c",
+    line: 378,
+    func: c"evp_asym_cipher_from_algorithm",
+    lib: 6,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `evp_asym_cipher_from_algorithm` at `crypto/evp/asymcipher.c:475` (EVP_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const ASYMCIPHER_475: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/asymcipher.c",
+    line: 475,
+    func: c"evp_asym_cipher_from_algorithm",
+    lib: 6,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `b64_read` at `crypto/evp/bio_b64.c:142` (ERR_R_INTERNAL_ERROR).
+pub(crate) const BIO_B64_142: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/bio_b64.c",
+    line: 142,
+    func: c"b64_read",
+    lib: 32,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `b64_read` at `crypto/evp/bio_b64.c:149` (ERR_R_INTERNAL_ERROR).
+pub(crate) const BIO_B64_149: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/bio_b64.c",
+    line: 149,
+    func: c"b64_read",
+    lib: 32,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `b64_write` at `crypto/evp/bio_b64.c:346` (ERR_R_INTERNAL_ERROR).
+pub(crate) const BIO_B64_346: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/bio_b64.c",
+    line: 346,
+    func: c"b64_write",
+    lib: 32,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `b64_write` at `crypto/evp/bio_b64.c:350` (ERR_R_INTERNAL_ERROR).
+pub(crate) const BIO_B64_350: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/bio_b64.c",
+    line: 350,
+    func: c"b64_write",
+    lib: 32,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `b64_write` at `crypto/evp/bio_b64.c:354` (ERR_R_INTERNAL_ERROR).
+pub(crate) const BIO_B64_354: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/bio_b64.c",
+    line: 354,
+    func: c"b64_write",
+    lib: 32,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `b64_write` at `crypto/evp/bio_b64.c:366` (ERR_R_INTERNAL_ERROR).
+pub(crate) const BIO_B64_366: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/bio_b64.c",
+    line: 366,
+    func: c"b64_write",
+    lib: 32,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `b64_write` at `crypto/evp/bio_b64.c:370` (ERR_R_INTERNAL_ERROR).
+pub(crate) const BIO_B64_370: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/bio_b64.c",
+    line: 370,
+    func: c"b64_write",
+    lib: 32,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `b64_write` at `crypto/evp/bio_b64.c:388` (ERR_R_INTERNAL_ERROR).
+pub(crate) const BIO_B64_388: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/bio_b64.c",
+    line: 388,
+    func: c"b64_write",
+    lib: 32,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `b64_write` at `crypto/evp/bio_b64.c:404` (ERR_R_INTERNAL_ERROR).
+pub(crate) const BIO_B64_404: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/bio_b64.c",
+    line: 404,
+    func: c"b64_write",
+    lib: 32,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `b64_write` at `crypto/evp/bio_b64.c:408` (ERR_R_INTERNAL_ERROR).
+pub(crate) const BIO_B64_408: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/bio_b64.c",
+    line: 408,
+    func: c"b64_write",
+    lib: 32,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `b64_write` at `crypto/evp/bio_b64.c:426` (ERR_R_INTERNAL_ERROR).
+pub(crate) const BIO_B64_426: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/bio_b64.c",
+    line: 426,
+    func: c"b64_write",
+    lib: 32,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `b64_write` at `crypto/evp/bio_b64.c:430` (ERR_R_INTERNAL_ERROR).
+pub(crate) const BIO_B64_430: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/bio_b64.c",
+    line: 430,
+    func: c"b64_write",
+    lib: 32,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `b64_write` at `crypto/evp/bio_b64.c:440` (ERR_R_INTERNAL_ERROR).
+pub(crate) const BIO_B64_440: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/bio_b64.c",
+    line: 440,
+    func: c"b64_write",
+    lib: 32,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `b64_write` at `crypto/evp/bio_b64.c:444` (ERR_R_INTERNAL_ERROR).
+pub(crate) const BIO_B64_444: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/bio_b64.c",
+    line: 444,
+    func: c"b64_write",
+    lib: 32,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `b64_write` at `crypto/evp/bio_b64.c:463` (ERR_R_INTERNAL_ERROR).
+pub(crate) const BIO_B64_463: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/bio_b64.c",
+    line: 463,
+    func: c"b64_write",
+    lib: 32,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `b64_write` at `crypto/evp/bio_b64.c:467` (ERR_R_INTERNAL_ERROR).
+pub(crate) const BIO_B64_467: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/bio_b64.c",
+    line: 467,
+    func: c"b64_write",
+    lib: 32,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `b64_ctrl` at `crypto/evp/bio_b64.c:504` (ERR_R_INTERNAL_ERROR).
+pub(crate) const BIO_B64_504: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/bio_b64.c",
+    line: 504,
+    func: c"b64_ctrl",
+    lib: 32,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `b64_ctrl` at `crypto/evp/bio_b64.c:516` (ERR_R_INTERNAL_ERROR).
+pub(crate) const BIO_B64_516: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/bio_b64.c",
+    line: 516,
+    func: c"b64_ctrl",
+    lib: 32,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `default_check` at `crypto/evp/ctrl_params_translate.c:306` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const CTRL_PARAMS_TRANSLATE_306: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 306,
+    func: c"default_check",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `default_check` at `crypto/evp/ctrl_params_translate.c:311` (ERR_R_INTERNAL_ERROR).
+pub(crate) const CTRL_PARAMS_TRANSLATE_311: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 311,
+    func: c"default_check",
+    lib: 6,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `default_check` at `crypto/evp/ctrl_params_translate.c:324` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const CTRL_PARAMS_TRANSLATE_324: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 324,
+    func: c"default_check",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `default_check` at `crypto/evp/ctrl_params_translate.c:329` (ERR_R_INTERNAL_ERROR).
+pub(crate) const CTRL_PARAMS_TRANSLATE_329: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 329,
+    func: c"default_check",
+    lib: 6,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `default_check` at `crypto/evp/ctrl_params_translate.c:337` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const CTRL_PARAMS_TRANSLATE_337: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 337,
+    func: c"default_check",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `default_check` at `crypto/evp/ctrl_params_translate.c:342` (ERR_R_INTERNAL_ERROR).
+pub(crate) const CTRL_PARAMS_TRANSLATE_342: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 342,
+    func: c"default_check",
+    lib: 6,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `default_fixup_args` at `crypto/evp/ctrl_params_translate.c:407` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const CTRL_PARAMS_TRANSLATE_407: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 407,
+    func: c"default_fixup_args",
+    lib: 6,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `default_fixup_args` at `crypto/evp/ctrl_params_translate.c:424` (ERR_R_UNSUPPORTED).
+pub(crate) const CTRL_PARAMS_TRANSLATE_424: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 424,
+    func: c"default_fixup_args",
+    lib: 6,
+    reason: 524556,
+    dynamic_reason: false,
+};
+
+/// `default_fixup_args` at `crypto/evp/ctrl_params_translate.c:446` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const CTRL_PARAMS_TRANSLATE_446: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 446,
+    func: c"default_fixup_args",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `default_fixup_args` at `crypto/evp/ctrl_params_translate.c:492` (ERR_R_UNSUPPORTED).
+pub(crate) const CTRL_PARAMS_TRANSLATE_492: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 492,
+    func: c"default_fixup_args",
+    lib: 6,
+    reason: 524556,
+    dynamic_reason: false,
+};
+
+/// `default_fixup_args` at `crypto/evp/ctrl_params_translate.c:555` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const CTRL_PARAMS_TRANSLATE_555: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 555,
+    func: c"default_fixup_args",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `default_fixup_args` at `crypto/evp/ctrl_params_translate.c:573` (ERR_R_INTERNAL_ERROR).
+pub(crate) const CTRL_PARAMS_TRANSLATE_573: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 573,
+    func: c"default_fixup_args",
+    lib: 6,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `default_fixup_args` at `crypto/evp/ctrl_params_translate.c:586` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const CTRL_PARAMS_TRANSLATE_586: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 586,
+    func: c"default_fixup_args",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `default_fixup_args` at `crypto/evp/ctrl_params_translate.c:649` (ERR_R_UNSUPPORTED).
+pub(crate) const CTRL_PARAMS_TRANSLATE_649: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 649,
+    func: c"default_fixup_args",
+    lib: 6,
+    reason: 524556,
+    dynamic_reason: false,
+};
+
+/// `default_fixup_args` at `crypto/evp/ctrl_params_translate.c:667` (ERR_R_INTERNAL_ERROR).
+pub(crate) const CTRL_PARAMS_TRANSLATE_667: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 667,
+    func: c"default_fixup_args",
+    lib: 6,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `default_fixup_args` at `crypto/evp/ctrl_params_translate.c:695` (ERR_R_UNSUPPORTED).
+pub(crate) const CTRL_PARAMS_TRANSLATE_695: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 695,
+    func: c"default_fixup_args",
+    lib: 6,
+    reason: 524556,
+    dynamic_reason: false,
+};
+
+/// `fix_dh_nid` at `crypto/evp/ctrl_params_translate.c:1013` (EVP_R_INVALID_VALUE).
+pub(crate) const CTRL_PARAMS_TRANSLATE_1013: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 1013,
+    func: c"fix_dh_nid",
+    lib: 6,
+    reason: 222,
+    dynamic_reason: false,
+};
+
+/// `fix_dh_nid5114` at `crypto/evp/ctrl_params_translate.c:1039` (EVP_R_INVALID_VALUE).
+pub(crate) const CTRL_PARAMS_TRANSLATE_1039: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 1039,
+    func: c"fix_dh_nid5114",
+    lib: 6,
+    reason: 222,
+    dynamic_reason: false,
+};
+
+/// `fix_dh_nid5114` at `crypto/evp/ctrl_params_translate.c:1050` (EVP_R_INVALID_VALUE).
+pub(crate) const CTRL_PARAMS_TRANSLATE_1050: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 1050,
+    func: c"fix_dh_nid5114",
+    lib: 6,
+    reason: 222,
+    dynamic_reason: false,
+};
+
+/// `fix_dh_paramgen_type` at `crypto/evp/ctrl_params_translate.c:1081` (EVP_R_INVALID_VALUE).
+pub(crate) const CTRL_PARAMS_TRANSLATE_1081: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 1081,
+    func: c"fix_dh_paramgen_type",
+    lib: 6,
+    reason: 222,
+    dynamic_reason: false,
+};
+
+/// `fix_ec_param_enc` at `crypto/evp/ctrl_params_translate.c:1134` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const CTRL_PARAMS_TRANSLATE_1134: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 1134,
+    func: c"fix_ec_param_enc",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `fix_rsa_padding_mode` at `crypto/evp/ctrl_params_translate.c:1327` (RSA_R_UNKNOWN_PADDING_TYPE).
+pub(crate) const CTRL_PARAMS_TRANSLATE_1327: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 1327,
+    func: c"fix_rsa_padding_mode",
+    lib: 4,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `fix_rsa_padding_mode` at `crypto/evp/ctrl_params_translate.c:1337` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const CTRL_PARAMS_TRANSLATE_1337: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 1337,
+    func: c"fix_rsa_padding_mode",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `fix_rsa_padding_mode` at `crypto/evp/ctrl_params_translate.c:1357` (RSA_R_UNKNOWN_PADDING_TYPE).
+pub(crate) const CTRL_PARAMS_TRANSLATE_1357: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 1357,
+    func: c"fix_rsa_padding_mode",
+    lib: 4,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `get_payload_group_name` at `crypto/evp/ctrl_params_translate.c:1547` (EVP_R_UNSUPPORTED_KEY_TYPE).
+pub(crate) const CTRL_PARAMS_TRANSLATE_1547: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 1547,
+    func: c"get_payload_group_name",
+    lib: 6,
+    reason: 224,
+    dynamic_reason: false,
+};
+
+/// `get_payload_private_key` at `crypto/evp/ctrl_params_translate.c:1588` (EVP_R_UNSUPPORTED_KEY_TYPE).
+pub(crate) const CTRL_PARAMS_TRANSLATE_1588: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 1588,
+    func: c"get_payload_private_key",
+    lib: 6,
+    reason: 224,
+    dynamic_reason: false,
+};
+
+/// `get_payload_public_key` at `crypto/evp/ctrl_params_translate.c:1649` (EVP_R_UNSUPPORTED_KEY_TYPE).
+pub(crate) const CTRL_PARAMS_TRANSLATE_1649: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 1649,
+    func: c"get_payload_public_key",
+    lib: 6,
+    reason: 224,
+    dynamic_reason: false,
+};
+
+/// `get_payload_public_key_ec` at `crypto/evp/ctrl_params_translate.c:1675` (EVP_R_UNSUPPORTED_KEY_TYPE).
+pub(crate) const CTRL_PARAMS_TRANSLATE_1675: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 1675,
+    func: c"get_payload_public_key_ec",
+    lib: 6,
+    reason: 224,
+    dynamic_reason: false,
+};
+
+/// `get_payload_public_key_ec` at `crypto/evp/ctrl_params_translate.c:1711` (EVP_R_UNSUPPORTED_KEY_TYPE).
+pub(crate) const CTRL_PARAMS_TRANSLATE_1711: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 1711,
+    func: c"get_payload_public_key_ec",
+    lib: 6,
+    reason: 224,
+    dynamic_reason: false,
+};
+
+/// `get_dh_dsa_payload_p` at `crypto/evp/ctrl_params_translate.c:1748` (EVP_R_UNSUPPORTED_KEY_TYPE).
+pub(crate) const CTRL_PARAMS_TRANSLATE_1748: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 1748,
+    func: c"get_dh_dsa_payload_p",
+    lib: 6,
+    reason: 224,
+    dynamic_reason: false,
+};
+
+/// `get_ec_decoded_from_explicit_params` at `crypto/evp/ctrl_params_translate.c:1823` (EVP_R_INVALID_KEY).
+pub(crate) const CTRL_PARAMS_TRANSLATE_1823: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 1823,
+    func: c"get_ec_decoded_from_explicit_params",
+    lib: 6,
+    reason: 163,
+    dynamic_reason: false,
+};
+
+/// `get_ec_decoded_from_explicit_params` at `crypto/evp/ctrl_params_translate.c:1829` (EVP_R_UNSUPPORTED_KEY_TYPE).
+pub(crate) const CTRL_PARAMS_TRANSLATE_1829: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 1829,
+    func: c"get_ec_decoded_from_explicit_params",
+    lib: 6,
+    reason: 224,
+    dynamic_reason: false,
+};
+
+/// `fix_group_ecx` at `crypto/evp/ctrl_params_translate.c:2041` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const CTRL_PARAMS_TRANSLATE_2041: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 2041,
+    func: c"fix_group_ecx",
+    lib: 6,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_ctx_ctrl_to_param` at `crypto/evp/ctrl_params_translate.c:2717` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const CTRL_PARAMS_TRANSLATE_2717: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ctrl_params_translate.c",
+    line: 2717,
+    func: c"evp_pkey_ctx_ctrl_to_param",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `dh_paramgen_check` at `crypto/evp/dh_ctrl.c:22` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const DH_CTRL_22: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/dh_ctrl.c",
+    line: 22,
+    func: c"dh_paramgen_check",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `dh_param_derive_check` at `crypto/evp/dh_ctrl.c:37` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const DH_CTRL_37: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/dh_ctrl.c",
+    line: 37,
+    func: c"dh_param_derive_check",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_set_dh_pad` at `crypto/evp/dh_ctrl.c:166` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const DH_CTRL_166: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/dh_ctrl.c",
+    line: 166,
+    func: c"EVP_PKEY_CTX_set_dh_pad",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_set_dh_kdf_outlen` at `crypto/evp/dh_ctrl.c:261` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const DH_CTRL_261: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/dh_ctrl.c",
+    line: 261,
+    func: c"EVP_PKEY_CTX_set_dh_kdf_outlen",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_get_dh_kdf_outlen` at `crypto/evp/dh_ctrl.c:281` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const DH_CTRL_281: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/dh_ctrl.c",
+    line: 281,
+    func: c"EVP_PKEY_CTX_get_dh_kdf_outlen",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_set0_dh_kdf_ukm` at `crypto/evp/dh_ctrl.c:313` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const DH_CTRL_313: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/dh_ctrl.c",
+    line: 313,
+    func: c"EVP_PKEY_CTX_set0_dh_kdf_ukm",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_get0_dh_kdf_ukm` at `crypto/evp/dh_ctrl.c:336` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const DH_CTRL_336: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/dh_ctrl.c",
+    line: 336,
+    func: c"EVP_PKEY_CTX_get0_dh_kdf_ukm",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `evp_md_ctx_new_ex` at `crypto/evp/digest.c:112` (ERR_R_EVP_LIB).
+pub(crate) const DIGEST_112: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 112,
+    func: c"evp_md_ctx_new_ex",
+    lib: 13,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `evp_md_ctx_free_algctx` at `crypto/evp/digest.c:147` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const DIGEST_147: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 147,
+    func: c"evp_md_ctx_free_algctx",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_md_init_internal` at `crypto/evp/digest.c:178` (EVP_R_UPDATE_ERROR).
+pub(crate) const DIGEST_178: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 178,
+    func: c"evp_md_init_internal",
+    lib: 6,
+    reason: 189,
+    dynamic_reason: false,
+};
+
+/// `evp_md_init_internal` at `crypto/evp/digest.c:189` (EVP_R_NO_DIGEST_SET).
+pub(crate) const DIGEST_189: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 189,
+    func: c"evp_md_init_internal",
+    lib: 6,
+    reason: 139,
+    dynamic_reason: false,
+};
+
+/// `evp_md_init_internal` at `crypto/evp/digest.c:250` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const DIGEST_250: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 250,
+    func: c"evp_md_init_internal",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_md_init_internal` at `crypto/evp/digest.c:261` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const DIGEST_261: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 261,
+    func: c"evp_md_init_internal",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_md_init_internal` at `crypto/evp/digest.c:271` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const DIGEST_271: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 271,
+    func: c"evp_md_init_internal",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_md_init_internal` at `crypto/evp/digest.c:282` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const DIGEST_282: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 282,
+    func: c"evp_md_init_internal",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_md_init_internal` at `crypto/evp/digest.c:292` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const DIGEST_292: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 292,
+    func: c"evp_md_init_internal",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_md_init_internal` at `crypto/evp/digest.c:298` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const DIGEST_298: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 298,
+    func: c"evp_md_init_internal",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_md_init_internal` at `crypto/evp/digest.c:311` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const DIGEST_311: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 311,
+    func: c"evp_md_init_internal",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_md_init_internal` at `crypto/evp/digest.c:323` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const DIGEST_323: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 323,
+    func: c"evp_md_init_internal",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestUpdate` at `crypto/evp/digest.c:391` (EVP_R_UPDATE_ERROR).
+pub(crate) const DIGEST_391: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 391,
+    func: c"EVP_DigestUpdate",
+    lib: 6,
+    reason: 189,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestUpdate` at `crypto/evp/digest.c:412` (EVP_R_UPDATE_ERROR).
+pub(crate) const DIGEST_412: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 412,
+    func: c"EVP_DigestUpdate",
+    lib: 6,
+    reason: 189,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestUpdate` at `crypto/evp/digest.c:422` (EVP_R_UPDATE_ERROR).
+pub(crate) const DIGEST_422: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 422,
+    func: c"EVP_DigestUpdate",
+    lib: 6,
+    reason: 189,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestFinal_ex` at `crypto/evp/digest.c:459` (EVP_R_FINAL_ERROR).
+pub(crate) const DIGEST_459: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 459,
+    func: c"EVP_DigestFinal_ex",
+    lib: 6,
+    reason: 188,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestFinal_ex` at `crypto/evp/digest.c:464` (EVP_R_FINAL_ERROR).
+pub(crate) const DIGEST_464: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 464,
+    func: c"EVP_DigestFinal_ex",
+    lib: 6,
+    reason: 188,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestFinal_ex` at `crypto/evp/digest.c:476` (EVP_R_FINAL_ERROR).
+pub(crate) const DIGEST_476: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 476,
+    func: c"EVP_DigestFinal_ex",
+    lib: 6,
+    reason: 188,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestFinalXOF` at `crypto/evp/digest.c:505` (EVP_R_INVALID_NULL_ALGORITHM).
+pub(crate) const DIGEST_505: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 505,
+    func: c"EVP_DigestFinalXOF",
+    lib: 6,
+    reason: 218,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestFinalXOF` at `crypto/evp/digest.c:513` (EVP_R_FINAL_ERROR).
+pub(crate) const DIGEST_513: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 513,
+    func: c"EVP_DigestFinalXOF",
+    lib: 6,
+    reason: 188,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestFinalXOF` at `crypto/evp/digest.c:518` (EVP_R_FINAL_ERROR).
+pub(crate) const DIGEST_518: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 518,
+    func: c"EVP_DigestFinalXOF",
+    lib: 6,
+    reason: 188,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestFinalXOF` at `crypto/evp/digest.c:548` (EVP_R_NOT_XOF_OR_INVALID_LENGTH).
+pub(crate) const DIGEST_548: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 548,
+    func: c"EVP_DigestFinalXOF",
+    lib: 6,
+    reason: 178,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestSqueeze` at `crypto/evp/digest.c:558` (EVP_R_INVALID_NULL_ALGORITHM).
+pub(crate) const DIGEST_558: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 558,
+    func: c"EVP_DigestSqueeze",
+    lib: 6,
+    reason: 218,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestSqueeze` at `crypto/evp/digest.c:563` (EVP_R_INVALID_OPERATION).
+pub(crate) const DIGEST_563: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 563,
+    func: c"EVP_DigestSqueeze",
+    lib: 6,
+    reason: 148,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestSqueeze` at `crypto/evp/digest.c:568` (EVP_R_METHOD_NOT_SUPPORTED).
+pub(crate) const DIGEST_568: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 568,
+    func: c"EVP_DigestSqueeze",
+    lib: 6,
+    reason: 144,
+    dynamic_reason: false,
+};
+
+/// `EVP_MD_CTX_copy_ex` at `crypto/evp/digest.c:598` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DIGEST_598: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 598,
+    func: c"EVP_MD_CTX_copy_ex",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EVP_MD_CTX_copy_ex` at `crypto/evp/digest.c:616` (EVP_R_NOT_ABLE_TO_COPY_CTX).
+pub(crate) const DIGEST_616: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 616,
+    func: c"EVP_MD_CTX_copy_ex",
+    lib: 6,
+    reason: 190,
+    dynamic_reason: false,
+};
+
+/// `EVP_MD_CTX_copy_ex` at `crypto/evp/digest.c:647` (EVP_R_NOT_ABLE_TO_COPY_CTX).
+pub(crate) const DIGEST_647: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 647,
+    func: c"EVP_MD_CTX_copy_ex",
+    lib: 6,
+    reason: 190,
+    dynamic_reason: false,
+};
+
+/// `EVP_MD_CTX_copy_ex` at `crypto/evp/digest.c:660` (EVP_R_NOT_ABLE_TO_COPY_CTX).
+pub(crate) const DIGEST_660: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 660,
+    func: c"EVP_MD_CTX_copy_ex",
+    lib: 6,
+    reason: 190,
+    dynamic_reason: false,
+};
+
+/// `EVP_MD_CTX_copy_ex` at `crypto/evp/digest.c:674` (ERR_R_ENGINE_LIB).
+pub(crate) const DIGEST_674: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 674,
+    func: c"EVP_MD_CTX_copy_ex",
+    lib: 6,
+    reason: 524326,
+    dynamic_reason: false,
+};
+
+/// `EVP_MD_CTX_ctrl` at `crypto/evp/digest.c:897` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const DIGEST_897: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 897,
+    func: c"EVP_MD_CTX_ctrl",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EVP_MD_CTX_ctrl` at `crypto/evp/digest.c:931` (EVP_R_CTRL_NOT_IMPLEMENTED).
+pub(crate) const DIGEST_931: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 931,
+    func: c"EVP_MD_CTX_ctrl",
+    lib: 6,
+    reason: 132,
+    dynamic_reason: false,
+};
+
+/// `evp_md_from_algorithm` at `crypto/evp/digest.c:1026` (ERR_R_EVP_LIB).
+pub(crate) const DIGEST_1026: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 1026,
+    func: c"evp_md_from_algorithm",
+    lib: 6,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `evp_md_from_algorithm` at `crypto/evp/digest.c:1034` (ERR_R_INTERNAL_ERROR).
+pub(crate) const DIGEST_1034: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 1034,
+    func: c"evp_md_from_algorithm",
+    lib: 6,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `evp_md_from_algorithm` at `crypto/evp/digest.c:1130` (EVP_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const DIGEST_1130: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 1130,
+    func: c"evp_md_from_algorithm",
+    lib: 6,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `evp_md_from_algorithm` at `crypto/evp/digest.c:1139` (EVP_R_CACHE_CONSTANTS_FAILED).
+pub(crate) const DIGEST_1139: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/digest.c",
+    line: 1139,
+    func: c"evp_md_from_algorithm",
+    lib: 6,
+    reason: 225,
+    dynamic_reason: false,
+};
+
+/// `dsa_paramgen_check` at `crypto/evp/dsa_ctrl.c:20` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const DSA_CTRL_20: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/dsa_ctrl.c",
+    line: 20,
+    func: c"dsa_paramgen_check",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `aesni_init_key` at `crypto/evp/e_aes.c:151` (EVP_R_INVALID_KEY_LENGTH).
+pub(crate) const E_AES_151: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 151,
+    func: c"aesni_init_key",
+    lib: 6,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `aesni_init_key` at `crypto/evp/e_aes.c:172` (EVP_R_AES_KEY_SETUP_FAILED).
+pub(crate) const E_AES_172: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 172,
+    func: c"aesni_init_key",
+    lib: 6,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `aesni_gcm_init_key` at `crypto/evp/e_aes.c:234` (EVP_R_INVALID_KEY_LENGTH).
+pub(crate) const E_AES_234: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 234,
+    func: c"aesni_gcm_init_key",
+    lib: 6,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `aesni_xts_init_key` at `crypto/evp/e_aes.c:281` (EVP_R_INVALID_KEY_LENGTH).
+pub(crate) const E_AES_281: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 281,
+    func: c"aesni_xts_init_key",
+    lib: 6,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `aesni_xts_init_key` at `crypto/evp/e_aes.c:292` (EVP_R_XTS_DUPLICATED_KEYS).
+pub(crate) const E_AES_292: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 292,
+    func: c"aesni_xts_init_key",
+    lib: 6,
+    reason: 192,
+    dynamic_reason: false,
+};
+
+/// `aesni_ccm_init_key` at `crypto/evp/e_aes.c:337` (EVP_R_INVALID_KEY_LENGTH).
+pub(crate) const E_AES_337: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 337,
+    func: c"aesni_ccm_init_key",
+    lib: 6,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `aesni_ocb_init_key` at `crypto/evp/e_aes.c:370` (EVP_R_INVALID_KEY_LENGTH).
+pub(crate) const E_AES_370: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 370,
+    func: c"aesni_ocb_init_key",
+    lib: 6,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `aes_t4_init_key` at `crypto/evp/e_aes.c:486` (EVP_R_INVALID_KEY_LENGTH).
+pub(crate) const E_AES_486: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 486,
+    func: c"aes_t4_init_key",
+    lib: 6,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `aes_t4_init_key` at `crypto/evp/e_aes.c:542` (EVP_R_AES_KEY_SETUP_FAILED).
+pub(crate) const E_AES_542: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 542,
+    func: c"aes_t4_init_key",
+    lib: 6,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `aes_t4_gcm_init_key` at `crypto/evp/e_aes.c:588` (EVP_R_INVALID_KEY_LENGTH).
+pub(crate) const E_AES_588: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 588,
+    func: c"aes_t4_gcm_init_key",
+    lib: 6,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `aes_t4_xts_init_key` at `crypto/evp/e_aes.c:648` (EVP_R_INVALID_KEY_LENGTH).
+pub(crate) const E_AES_648: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 648,
+    func: c"aes_t4_xts_init_key",
+    lib: 6,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `aes_t4_xts_init_key` at `crypto/evp/e_aes.c:659` (EVP_R_XTS_DUPLICATED_KEYS).
+pub(crate) const E_AES_659: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 659,
+    func: c"aes_t4_xts_init_key",
+    lib: 6,
+    reason: 192,
+    dynamic_reason: false,
+};
+
+/// `aes_t4_ccm_init_key` at `crypto/evp/e_aes.c:723` (EVP_R_INVALID_KEY_LENGTH).
+pub(crate) const E_AES_723: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 723,
+    func: c"aes_t4_ccm_init_key",
+    lib: 6,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `aes_t4_ocb_init_key` at `crypto/evp/e_aes.c:756` (EVP_R_INVALID_KEY_LENGTH).
+pub(crate) const E_AES_756: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 756,
+    func: c"aes_t4_ocb_init_key",
+    lib: 6,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `s390x_aes_ecb_init_key` at `crypto/evp/e_aes.c:1035` (EVP_R_INVALID_KEY_LENGTH).
+pub(crate) const E_AES_1035: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 1035,
+    func: c"s390x_aes_ecb_init_key",
+    lib: 6,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `s390x_aes_ofb_init_key` at `crypto/evp/e_aes.c:1065` (EVP_R_INVALID_KEY_LENGTH).
+pub(crate) const E_AES_1065: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 1065,
+    func: c"s390x_aes_ofb_init_key",
+    lib: 6,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `s390x_aes_ofb_init_key` at `crypto/evp/e_aes.c:1069` (EVP_R_INVALID_IV_LENGTH).
+pub(crate) const E_AES_1069: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 1069,
+    func: c"s390x_aes_ofb_init_key",
+    lib: 6,
+    reason: 194,
+    dynamic_reason: false,
+};
+
+/// `s390x_aes_cfb_init_key` at `crypto/evp/e_aes.c:1131` (EVP_R_INVALID_KEY_LENGTH).
+pub(crate) const E_AES_1131: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 1131,
+    func: c"s390x_aes_cfb_init_key",
+    lib: 6,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `s390x_aes_cfb_init_key` at `crypto/evp/e_aes.c:1135` (EVP_R_INVALID_IV_LENGTH).
+pub(crate) const E_AES_1135: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 1135,
+    func: c"s390x_aes_cfb_init_key",
+    lib: 6,
+    reason: 194,
+    dynamic_reason: false,
+};
+
+/// `s390x_aes_cfb_cipher` at `crypto/evp/e_aes.c:1161` (EVP_R_INVALID_KEY_LENGTH).
+pub(crate) const E_AES_1161: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 1161,
+    func: c"s390x_aes_cfb_cipher",
+    lib: 6,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `s390x_aes_cfb_cipher` at `crypto/evp/e_aes.c:1165` (EVP_R_INVALID_IV_LENGTH).
+pub(crate) const E_AES_1165: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 1165,
+    func: c"s390x_aes_cfb_cipher",
+    lib: 6,
+    reason: 194,
+    dynamic_reason: false,
+};
+
+/// `s390x_aes_cfb8_init_key` at `crypto/evp/e_aes.c:1216` (EVP_R_INVALID_KEY_LENGTH).
+pub(crate) const E_AES_1216: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 1216,
+    func: c"s390x_aes_cfb8_init_key",
+    lib: 6,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `s390x_aes_cfb8_init_key` at `crypto/evp/e_aes.c:1220` (EVP_R_INVALID_IV_LENGTH).
+pub(crate) const E_AES_1220: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 1220,
+    func: c"s390x_aes_cfb8_init_key",
+    lib: 6,
+    reason: 194,
+    dynamic_reason: false,
+};
+
+/// `s390x_aes_gcm_init_key` at `crypto/evp/e_aes.c:1625` (EVP_R_INVALID_KEY_LENGTH).
+pub(crate) const E_AES_1625: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 1625,
+    func: c"s390x_aes_gcm_init_key",
+    lib: 6,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `s390x_aes_gcm_tls_cipher` at `crypto/evp/e_aes.c:1677` (EVP_R_TOO_MANY_RECORDS).
+pub(crate) const E_AES_1677: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 1677,
+    func: c"s390x_aes_gcm_tls_cipher",
+    lib: 6,
+    reason: 183,
+    dynamic_reason: false,
+};
+
+/// `s390x_aes_ccm_init_key` at `crypto/evp/e_aes.c:2036` (EVP_R_INVALID_KEY_LENGTH).
+pub(crate) const E_AES_2036: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 2036,
+    func: c"s390x_aes_ccm_init_key",
+    lib: 6,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `aes_init_key` at `crypto/evp/e_aes.c:2423` (EVP_R_INVALID_KEY_LENGTH).
+pub(crate) const E_AES_2423: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 2423,
+    func: c"aes_init_key",
+    lib: 6,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `aes_init_key` at `crypto/evp/e_aes.c:2504` (EVP_R_AES_KEY_SETUP_FAILED).
+pub(crate) const E_AES_2504: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 2504,
+    func: c"aes_init_key",
+    lib: 6,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `aes_gcm_init_key` at `crypto/evp/e_aes.c:2806` (EVP_R_INVALID_KEY_LENGTH).
+pub(crate) const E_AES_2806: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 2806,
+    func: c"aes_gcm_init_key",
+    lib: 6,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `aes_gcm_tls_cipher` at `crypto/evp/e_aes.c:2899` (EVP_R_TOO_MANY_RECORDS).
+pub(crate) const E_AES_2899: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 2899,
+    func: c"aes_gcm_tls_cipher",
+    lib: 6,
+    reason: 183,
+    dynamic_reason: false,
+};
+
+/// `aes_xts_init_key` at `crypto/evp/e_aes.c:3240` (EVP_R_INVALID_KEY_LENGTH).
+pub(crate) const E_AES_3240: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 3240,
+    func: c"aes_xts_init_key",
+    lib: 6,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `aes_xts_init_key` at `crypto/evp/e_aes.c:3261` (EVP_R_XTS_DUPLICATED_KEYS).
+pub(crate) const E_AES_3261: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 3261,
+    func: c"aes_xts_init_key",
+    lib: 6,
+    reason: 192,
+    dynamic_reason: false,
+};
+
+/// `aes_xts_cipher` at `crypto/evp/e_aes.c:3360` (EVP_R_XTS_DATA_UNIT_IS_TOO_LARGE).
+pub(crate) const E_AES_3360: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 3360,
+    func: c"aes_xts_cipher",
+    lib: 6,
+    reason: 191,
+    dynamic_reason: false,
+};
+
+/// `aes_ccm_init_key` at `crypto/evp/e_aes.c:3493` (EVP_R_INVALID_KEY_LENGTH).
+pub(crate) const E_AES_3493: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 3493,
+    func: c"aes_ccm_init_key",
+    lib: 6,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `aes_wrap_init_key` at `crypto/evp/e_aes.c:3683` (EVP_R_INVALID_KEY_LENGTH).
+pub(crate) const E_AES_3683: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 3683,
+    func: c"aes_wrap_init_key",
+    lib: 6,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `aes_wrap_cipher` at `crypto/evp/e_aes.c:3722` (EVP_R_PARTIALLY_OVERLAPPING).
+pub(crate) const E_AES_3722: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 3722,
+    func: c"aes_wrap_cipher",
+    lib: 6,
+    reason: 162,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_init_key` at `crypto/evp/e_aes.c:3924` (EVP_R_INVALID_KEY_LENGTH).
+pub(crate) const E_AES_3924: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 3924,
+    func: c"aes_ocb_init_key",
+    lib: 6,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_cipher` at `crypto/evp/e_aes.c:4026` (EVP_R_PARTIALLY_OVERLAPPING).
+pub(crate) const E_AES_4026: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes.c",
+    line: 4026,
+    func: c"aes_ocb_cipher",
+    lib: 6,
+    reason: 162,
+    dynamic_reason: false,
+};
+
+/// `aesni_cbc_hmac_sha1_init_key` at `crypto/evp/e_aes_cbc_hmac_sha1.c:76` (EVP_R_INVALID_KEY_LENGTH).
+pub(crate) const E_AES_CBC_HMAC_SHA1_76: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes_cbc_hmac_sha1.c",
+    line: 76,
+    func: c"aesni_cbc_hmac_sha1_init_key",
+    lib: 6,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `aesni_cbc_hmac_sha1_cipher` at `crypto/evp/e_aes_cbc_hmac_sha1.c:498` (EVP_R_INVALID_KEY_LENGTH).
+pub(crate) const E_AES_CBC_HMAC_SHA1_498: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aes_cbc_hmac_sha1.c",
+    line: 498,
+    func: c"aesni_cbc_hmac_sha1_cipher",
+    lib: 6,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `aria_init_key` at `crypto/evp/e_aria.c:76` (EVP_R_ARIA_KEY_SETUP_FAILED).
+pub(crate) const E_ARIA_76: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aria.c",
+    line: 76,
+    func: c"aria_init_key",
+    lib: 6,
+    reason: 176,
+    dynamic_reason: false,
+};
+
+/// `aria_gcm_init_key` at `crypto/evp/e_aria.c:233` (EVP_R_ARIA_KEY_SETUP_FAILED).
+pub(crate) const E_ARIA_233: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aria.c",
+    line: 233,
+    func: c"aria_gcm_init_key",
+    lib: 6,
+    reason: 176,
+    dynamic_reason: false,
+};
+
+/// `aria_ccm_init_key` at `crypto/evp/e_aria.c:525` (EVP_R_ARIA_KEY_SETUP_FAILED).
+pub(crate) const E_ARIA_525: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_aria.c",
+    line: 525,
+    func: c"aria_ccm_init_key",
+    lib: 6,
+    reason: 176,
+    dynamic_reason: false,
+};
+
+/// `cmll_t4_init_key` at `crypto/evp/e_camellia.c:104` (EVP_R_CAMELLIA_KEY_SETUP_FAILED).
+pub(crate) const E_CAMELLIA_104: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_camellia.c",
+    line: 104,
+    func: c"cmll_t4_init_key",
+    lib: 6,
+    reason: 157,
+    dynamic_reason: false,
+};
+
+/// `camellia_init_key` at `crypto/evp/e_camellia.c:205` (EVP_R_CAMELLIA_KEY_SETUP_FAILED).
+pub(crate) const E_CAMELLIA_205: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_camellia.c",
+    line: 205,
+    func: c"camellia_init_key",
+    lib: 6,
+    reason: 157,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_ctrl` at `crypto/evp/e_chacha20_poly1305.c:508` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const E_CHACHA20_POLY1305_508: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_chacha20_poly1305.c",
+    line: 508,
+    func: c"chacha20_poly1305_ctrl",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `chacha20_poly1305_ctrl` at `crypto/evp/e_chacha20_poly1305.c:527` (EVP_R_COPY_ERROR).
+pub(crate) const E_CHACHA20_POLY1305_527: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_chacha20_poly1305.c",
+    line: 527,
+    func: c"chacha20_poly1305_ctrl",
+    lib: 6,
+    reason: 173,
+    dynamic_reason: false,
+};
+
+/// `des_ede3_wrap_cipher` at `crypto/evp/e_des3.c:398` (EVP_R_PARTIALLY_OVERLAPPING).
+pub(crate) const E_DES3_398: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_des3.c",
+    line: 398,
+    func: c"des_ede3_wrap_cipher",
+    lib: 6,
+    reason: 162,
+    dynamic_reason: false,
+};
+
+/// `rc2_magic_to_meth` at `crypto/evp/e_rc2.c:125` (EVP_R_UNSUPPORTED_KEY_SIZE).
+pub(crate) const E_RC2_125: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_rc2.c",
+    line: 125,
+    func: c"rc2_magic_to_meth",
+    lib: 6,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `rc5_ctrl` at `crypto/evp/e_rc5.c:63` (EVP_R_UNSUPPORTED_NUMBER_OF_ROUNDS).
+pub(crate) const E_RC5_63: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_rc5.c",
+    line: 63,
+    func: c"rc5_ctrl",
+    lib: 6,
+    reason: 135,
+    dynamic_reason: false,
+};
+
+/// `r_32_12_16_init_key` at `crypto/evp/e_rc5.c:78` (EVP_R_BAD_KEY_LENGTH).
+pub(crate) const E_RC5_78: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/e_rc5.c",
+    line: 78,
+    func: c"r_32_12_16_init_key",
+    lib: 6,
+    reason: 195,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_ctx_getset_ecdh_param_checks` at `crypto/evp/ec_ctrl.c:26` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const EC_CTRL_26: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ec_ctrl.c",
+    line: 26,
+    func: c"evp_pkey_ctx_getset_ecdh_param_checks",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_set_ecdh_cofactor_mode` at `crypto/evp/ec_ctrl.c:65` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const EC_CTRL_65: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ec_ctrl.c",
+    line: 65,
+    func: c"EVP_PKEY_CTX_set_ecdh_cofactor_mode",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_get_ecdh_cofactor_mode` at `crypto/evp/ec_ctrl.c:86` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const EC_CTRL_86: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ec_ctrl.c",
+    line: 86,
+    func: c"EVP_PKEY_CTX_get_ecdh_cofactor_mode",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_set_ecdh_kdf_outlen` at `crypto/evp/ec_ctrl.c:171` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const EC_CTRL_171: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ec_ctrl.c",
+    line: 171,
+    func: c"EVP_PKEY_CTX_set_ecdh_kdf_outlen",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_get_ecdh_kdf_outlen` at `crypto/evp/ec_ctrl.c:193` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const EC_CTRL_193: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ec_ctrl.c",
+    line: 193,
+    func: c"EVP_PKEY_CTX_get_ecdh_kdf_outlen",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_set0_ecdh_kdf_ukm` at `crypto/evp/ec_ctrl.c:231` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const EC_CTRL_231: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ec_ctrl.c",
+    line: 231,
+    func: c"EVP_PKEY_CTX_set0_ecdh_kdf_ukm",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_get0_ecdh_kdf_ukm` at `crypto/evp/ec_ctrl.c:260` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const EC_CTRL_260: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/ec_ctrl.c",
+    line: 260,
+    func: c"EVP_PKEY_CTX_get0_ecdh_kdf_ukm",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `alg_module_init` at `crypto/evp/evp_cnf.c:33` (EVP_R_ERROR_LOADING_SECTION).
+pub(crate) const EVP_CNF_33: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_cnf.c",
+    line: 33,
+    func: c"alg_module_init",
+    lib: 6,
+    reason: 165,
+    dynamic_reason: false,
+};
+
+/// `alg_module_init` at `crypto/evp/evp_cnf.c:51` (EVP_R_SET_DEFAULT_PROPERTY_FAILURE).
+pub(crate) const EVP_CNF_51: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_cnf.c",
+    line: 51,
+    func: c"alg_module_init",
+    lib: 6,
+    reason: 209,
+    dynamic_reason: false,
+};
+
+/// `alg_module_init` at `crypto/evp/evp_cnf.c:57` (EVP_R_SET_DEFAULT_PROPERTY_FAILURE).
+pub(crate) const EVP_CNF_57: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_cnf.c",
+    line: 57,
+    func: c"alg_module_init",
+    lib: 6,
+    reason: 209,
+    dynamic_reason: false,
+};
+
+/// `alg_module_init` at `crypto/evp/evp_cnf.c:61` (EVP_R_UNKNOWN_OPTION).
+pub(crate) const EVP_CNF_61: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_cnf.c",
+    line: 61,
+    func: c"alg_module_init",
+    lib: 6,
+    reason: 169,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_init_internal` at `crypto/evp/evp_enc.c:118` (EVP_R_NO_CIPHER_SET).
+pub(crate) const EVP_ENC_118: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 118,
+    func: c"evp_cipher_init_internal",
+    lib: 6,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_init_internal` at `crypto/evp/evp_enc.c:189` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const EVP_ENC_189: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 189,
+    func: c"evp_cipher_init_internal",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_init_internal` at `crypto/evp/evp_enc.c:206` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const EVP_ENC_206: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 206,
+    func: c"evp_cipher_init_internal",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_init_internal` at `crypto/evp/evp_enc.c:212` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const EVP_ENC_212: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 212,
+    func: c"evp_cipher_init_internal",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_init_internal` at `crypto/evp/evp_enc.c:223` (EVP_R_PIPELINE_NOT_SUPPORTED).
+pub(crate) const EVP_ENC_223: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 223,
+    func: c"evp_cipher_init_internal",
+    lib: 6,
+    reason: 230,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_init_internal` at `crypto/evp/evp_enc.c:230` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const EVP_ENC_230: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 230,
+    func: c"evp_cipher_init_internal",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_init_internal` at `crypto/evp/evp_enc.c:273` (EVP_R_INVALID_LENGTH).
+pub(crate) const EVP_ENC_273: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 273,
+    func: c"evp_cipher_init_internal",
+    lib: 6,
+    reason: 221,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_init_internal` at `crypto/evp/evp_enc.c:296` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const EVP_ENC_296: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 296,
+    func: c"evp_cipher_init_internal",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_init_internal` at `crypto/evp/evp_enc.c:322` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const EVP_ENC_322: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 322,
+    func: c"evp_cipher_init_internal",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_init_internal` at `crypto/evp/evp_enc.c:354` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const EVP_ENC_354: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 354,
+    func: c"evp_cipher_init_internal",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_init_internal` at `crypto/evp/evp_enc.c:370` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const EVP_ENC_370: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 370,
+    func: c"evp_cipher_init_internal",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_init_internal` at `crypto/evp/evp_enc.c:401` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const EVP_ENC_401: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 401,
+    func: c"evp_cipher_init_internal",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_init_internal` at `crypto/evp/evp_enc.c:419` (EVP_R_WRAP_MODE_NOT_ALLOWED).
+pub(crate) const EVP_ENC_419: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 419,
+    func: c"evp_cipher_init_internal",
+    lib: 6,
+    reason: 170,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_init_internal` at `crypto/evp/evp_enc.c:441` (EVP_R_INVALID_IV_LENGTH).
+pub(crate) const EVP_ENC_441: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 441,
+    func: c"evp_cipher_init_internal",
+    lib: 6,
+    reason: 194,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_init_internal` at `crypto/evp/evp_enc.c:455` (EVP_R_INVALID_IV_LENGTH).
+pub(crate) const EVP_ENC_455: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 455,
+    func: c"evp_cipher_init_internal",
+    lib: 6,
+    reason: 194,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_init_skey_internal` at `crypto/evp/evp_enc.c:500` (EVP_R_NO_CIPHER_SET).
+pub(crate) const EVP_ENC_500: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 500,
+    func: c"evp_cipher_init_skey_internal",
+    lib: 6,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_init_skey_internal` at `crypto/evp/evp_enc.c:511` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const EVP_ENC_511: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 511,
+    func: c"evp_cipher_init_skey_internal",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_init_skey_internal` at `crypto/evp/evp_enc.c:539` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const EVP_ENC_539: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 539,
+    func: c"evp_cipher_init_skey_internal",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_init_skey_internal` at `crypto/evp/evp_enc.c:545` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const EVP_ENC_545: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 545,
+    func: c"evp_cipher_init_skey_internal",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_init_skey_internal` at `crypto/evp/evp_enc.c:557` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const EVP_ENC_557: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 557,
+    func: c"evp_cipher_init_skey_internal",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_init_skey_internal` at `crypto/evp/evp_enc.c:563` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const EVP_ENC_563: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 563,
+    func: c"evp_cipher_init_skey_internal",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_init_skey_internal` at `crypto/evp/evp_enc.c:590` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const EVP_ENC_590: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 590,
+    func: c"evp_cipher_init_skey_internal",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_init_skey_internal` at `crypto/evp/evp_enc.c:611` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const EVP_ENC_611: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 611,
+    func: c"evp_cipher_init_skey_internal",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `EVP_CipherPipelineEncryptInit` at `crypto/evp/evp_enc.c:662` (EVP_R_TOO_MANY_PIPES).
+pub(crate) const EVP_ENC_662: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 662,
+    func: c"EVP_CipherPipelineEncryptInit",
+    lib: 6,
+    reason: 231,
+    dynamic_reason: false,
+};
+
+/// `EVP_CipherPipelineEncryptInit` at `crypto/evp/evp_enc.c:673` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const EVP_ENC_673: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 673,
+    func: c"EVP_CipherPipelineEncryptInit",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `EVP_CipherPipelineDecryptInit` at `crypto/evp/evp_enc.c:692` (EVP_R_TOO_MANY_PIPES).
+pub(crate) const EVP_ENC_692: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 692,
+    func: c"EVP_CipherPipelineDecryptInit",
+    lib: 6,
+    reason: 231,
+    dynamic_reason: false,
+};
+
+/// `EVP_CipherPipelineDecryptInit` at `crypto/evp/evp_enc.c:703` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const EVP_ENC_703: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 703,
+    func: c"EVP_CipherPipelineDecryptInit",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `EVP_CipherPipelineUpdate` at `crypto/evp/evp_enc.c:733` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EVP_ENC_733: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 733,
+    func: c"EVP_CipherPipelineUpdate",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EVP_CipherPipelineUpdate` at `crypto/evp/evp_enc.c:738` (EVP_R_NO_CIPHER_SET).
+pub(crate) const EVP_ENC_738: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 738,
+    func: c"EVP_CipherPipelineUpdate",
+    lib: 6,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `EVP_CipherPipelineUpdate` at `crypto/evp/evp_enc.c:743` (EVP_R_INVALID_OPERATION).
+pub(crate) const EVP_ENC_743: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 743,
+    func: c"EVP_CipherPipelineUpdate",
+    lib: 6,
+    reason: 148,
+    dynamic_reason: false,
+};
+
+/// `EVP_CipherPipelineUpdate` at `crypto/evp/evp_enc.c:748` (EVP_R_UPDATE_ERROR).
+pub(crate) const EVP_ENC_748: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 748,
+    func: c"EVP_CipherPipelineUpdate",
+    lib: 6,
+    reason: 189,
+    dynamic_reason: false,
+};
+
+/// `EVP_CipherPipelineFinal` at `crypto/evp/evp_enc.c:783` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EVP_ENC_783: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 783,
+    func: c"EVP_CipherPipelineFinal",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EVP_CipherPipelineFinal` at `crypto/evp/evp_enc.c:788` (EVP_R_NO_CIPHER_SET).
+pub(crate) const EVP_ENC_788: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 788,
+    func: c"EVP_CipherPipelineFinal",
+    lib: 6,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `EVP_CipherPipelineFinal` at `crypto/evp/evp_enc.c:793` (EVP_R_INVALID_OPERATION).
+pub(crate) const EVP_ENC_793: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 793,
+    func: c"EVP_CipherPipelineFinal",
+    lib: 6,
+    reason: 148,
+    dynamic_reason: false,
+};
+
+/// `EVP_CipherPipelineFinal` at `crypto/evp/evp_enc.c:798` (EVP_R_FINAL_ERROR).
+pub(crate) const EVP_ENC_798: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 798,
+    func: c"EVP_CipherPipelineFinal",
+    lib: 6,
+    reason: 188,
+    dynamic_reason: false,
+};
+
+/// `evp_EncryptDecryptUpdate` at `crypto/evp/evp_enc.c:899` (EVP_R_PARTIALLY_OVERLAPPING).
+pub(crate) const EVP_ENC_899: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 899,
+    func: c"evp_EncryptDecryptUpdate",
+    lib: 6,
+    reason: 162,
+    dynamic_reason: false,
+};
+
+/// `evp_EncryptDecryptUpdate` at `crypto/evp/evp_enc.c:916` (EVP_R_PARTIALLY_OVERLAPPING).
+pub(crate) const EVP_ENC_916: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 916,
+    func: c"evp_EncryptDecryptUpdate",
+    lib: 6,
+    reason: 162,
+    dynamic_reason: false,
+};
+
+/// `evp_EncryptDecryptUpdate` at `crypto/evp/evp_enc.c:948` (EVP_R_OUTPUT_WOULD_OVERFLOW).
+pub(crate) const EVP_ENC_948: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 948,
+    func: c"evp_EncryptDecryptUpdate",
+    lib: 6,
+    reason: 202,
+    dynamic_reason: false,
+};
+
+/// `EVP_EncryptUpdate` at `crypto/evp/evp_enc.c:983` (EVP_R_INVALID_LENGTH).
+pub(crate) const EVP_ENC_983: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 983,
+    func: c"EVP_EncryptUpdate",
+    lib: 6,
+    reason: 221,
+    dynamic_reason: false,
+};
+
+/// `EVP_EncryptUpdate` at `crypto/evp/evp_enc.c:990` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EVP_ENC_990: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 990,
+    func: c"EVP_EncryptUpdate",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EVP_EncryptUpdate` at `crypto/evp/evp_enc.c:996` (EVP_R_INVALID_OPERATION).
+pub(crate) const EVP_ENC_996: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 996,
+    func: c"EVP_EncryptUpdate",
+    lib: 6,
+    reason: 148,
+    dynamic_reason: false,
+};
+
+/// `EVP_EncryptUpdate` at `crypto/evp/evp_enc.c:1001` (EVP_R_NO_CIPHER_SET).
+pub(crate) const EVP_ENC_1001: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1001,
+    func: c"EVP_EncryptUpdate",
+    lib: 6,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `EVP_EncryptUpdate` at `crypto/evp/evp_enc.c:1011` (EVP_R_UPDATE_ERROR).
+pub(crate) const EVP_ENC_1011: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1011,
+    func: c"EVP_EncryptUpdate",
+    lib: 6,
+    reason: 189,
+    dynamic_reason: false,
+};
+
+/// `EVP_EncryptUpdate` at `crypto/evp/evp_enc.c:1021` (EVP_R_UPDATE_ERROR).
+pub(crate) const EVP_ENC_1021: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1021,
+    func: c"EVP_EncryptUpdate",
+    lib: 6,
+    reason: 189,
+    dynamic_reason: false,
+};
+
+/// `EVP_EncryptFinal_ex` at `crypto/evp/evp_enc.c:1052` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EVP_ENC_1052: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1052,
+    func: c"EVP_EncryptFinal_ex",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EVP_EncryptFinal_ex` at `crypto/evp/evp_enc.c:1058` (EVP_R_INVALID_OPERATION).
+pub(crate) const EVP_ENC_1058: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1058,
+    func: c"EVP_EncryptFinal_ex",
+    lib: 6,
+    reason: 148,
+    dynamic_reason: false,
+};
+
+/// `EVP_EncryptFinal_ex` at `crypto/evp/evp_enc.c:1063` (EVP_R_NO_CIPHER_SET).
+pub(crate) const EVP_ENC_1063: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1063,
+    func: c"EVP_EncryptFinal_ex",
+    lib: 6,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `EVP_EncryptFinal_ex` at `crypto/evp/evp_enc.c:1072` (EVP_R_FINAL_ERROR).
+pub(crate) const EVP_ENC_1072: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1072,
+    func: c"EVP_EncryptFinal_ex",
+    lib: 6,
+    reason: 188,
+    dynamic_reason: false,
+};
+
+/// `EVP_EncryptFinal_ex` at `crypto/evp/evp_enc.c:1081` (EVP_R_FINAL_ERROR).
+pub(crate) const EVP_ENC_1081: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1081,
+    func: c"EVP_EncryptFinal_ex",
+    lib: 6,
+    reason: 188,
+    dynamic_reason: false,
+};
+
+/// `EVP_EncryptFinal_ex` at `crypto/evp/evp_enc.c:1110` (EVP_R_DATA_NOT_MULTIPLE_OF_BLOCK_LENGTH).
+pub(crate) const EVP_ENC_1110: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1110,
+    func: c"EVP_EncryptFinal_ex",
+    lib: 6,
+    reason: 138,
+    dynamic_reason: false,
+};
+
+/// `EVP_DecryptUpdate` at `crypto/evp/evp_enc.c:1137` (EVP_R_INVALID_LENGTH).
+pub(crate) const EVP_ENC_1137: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1137,
+    func: c"EVP_DecryptUpdate",
+    lib: 6,
+    reason: 221,
+    dynamic_reason: false,
+};
+
+/// `EVP_DecryptUpdate` at `crypto/evp/evp_enc.c:1144` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EVP_ENC_1144: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1144,
+    func: c"EVP_DecryptUpdate",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EVP_DecryptUpdate` at `crypto/evp/evp_enc.c:1150` (EVP_R_INVALID_OPERATION).
+pub(crate) const EVP_ENC_1150: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1150,
+    func: c"EVP_DecryptUpdate",
+    lib: 6,
+    reason: 148,
+    dynamic_reason: false,
+};
+
+/// `EVP_DecryptUpdate` at `crypto/evp/evp_enc.c:1155` (EVP_R_NO_CIPHER_SET).
+pub(crate) const EVP_ENC_1155: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1155,
+    func: c"EVP_DecryptUpdate",
+    lib: 6,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `EVP_DecryptUpdate` at `crypto/evp/evp_enc.c:1164` (EVP_R_UPDATE_ERROR).
+pub(crate) const EVP_ENC_1164: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1164,
+    func: c"EVP_DecryptUpdate",
+    lib: 6,
+    reason: 189,
+    dynamic_reason: false,
+};
+
+/// `EVP_DecryptUpdate` at `crypto/evp/evp_enc.c:1173` (EVP_R_UPDATE_ERROR).
+pub(crate) const EVP_ENC_1173: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1173,
+    func: c"EVP_DecryptUpdate",
+    lib: 6,
+    reason: 189,
+    dynamic_reason: false,
+};
+
+/// `EVP_DecryptUpdate` at `crypto/evp/evp_enc.c:1191` (EVP_R_PARTIALLY_OVERLAPPING).
+pub(crate) const EVP_ENC_1191: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1191,
+    func: c"EVP_DecryptUpdate",
+    lib: 6,
+    reason: 162,
+    dynamic_reason: false,
+};
+
+/// `EVP_DecryptUpdate` at `crypto/evp/evp_enc.c:1218` (EVP_R_PARTIALLY_OVERLAPPING).
+pub(crate) const EVP_ENC_1218: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1218,
+    func: c"EVP_DecryptUpdate",
+    lib: 6,
+    reason: 162,
+    dynamic_reason: false,
+};
+
+/// `EVP_DecryptUpdate` at `crypto/evp/evp_enc.c:1231` (EVP_R_OUTPUT_WOULD_OVERFLOW).
+pub(crate) const EVP_ENC_1231: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1231,
+    func: c"EVP_DecryptUpdate",
+    lib: 6,
+    reason: 202,
+    dynamic_reason: false,
+};
+
+/// `EVP_DecryptFinal_ex` at `crypto/evp/evp_enc.c:1278` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EVP_ENC_1278: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1278,
+    func: c"EVP_DecryptFinal_ex",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EVP_DecryptFinal_ex` at `crypto/evp/evp_enc.c:1284` (EVP_R_INVALID_OPERATION).
+pub(crate) const EVP_ENC_1284: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1284,
+    func: c"EVP_DecryptFinal_ex",
+    lib: 6,
+    reason: 148,
+    dynamic_reason: false,
+};
+
+/// `EVP_DecryptFinal_ex` at `crypto/evp/evp_enc.c:1289` (EVP_R_NO_CIPHER_SET).
+pub(crate) const EVP_ENC_1289: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1289,
+    func: c"EVP_DecryptFinal_ex",
+    lib: 6,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `EVP_DecryptFinal_ex` at `crypto/evp/evp_enc.c:1299` (EVP_R_FINAL_ERROR).
+pub(crate) const EVP_ENC_1299: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1299,
+    func: c"EVP_DecryptFinal_ex",
+    lib: 6,
+    reason: 188,
+    dynamic_reason: false,
+};
+
+/// `EVP_DecryptFinal_ex` at `crypto/evp/evp_enc.c:1308` (EVP_R_FINAL_ERROR).
+pub(crate) const EVP_ENC_1308: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1308,
+    func: c"EVP_DecryptFinal_ex",
+    lib: 6,
+    reason: 188,
+    dynamic_reason: false,
+};
+
+/// `EVP_DecryptFinal_ex` at `crypto/evp/evp_enc.c:1332` (EVP_R_DATA_NOT_MULTIPLE_OF_BLOCK_LENGTH).
+pub(crate) const EVP_ENC_1332: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1332,
+    func: c"EVP_DecryptFinal_ex",
+    lib: 6,
+    reason: 138,
+    dynamic_reason: false,
+};
+
+/// `EVP_DecryptFinal_ex` at `crypto/evp/evp_enc.c:1340` (EVP_R_WRONG_FINAL_BLOCK_LENGTH).
+pub(crate) const EVP_ENC_1340: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1340,
+    func: c"EVP_DecryptFinal_ex",
+    lib: 6,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `EVP_DecryptFinal_ex` at `crypto/evp/evp_enc.c:1351` (EVP_R_BAD_DECRYPT).
+pub(crate) const EVP_ENC_1351: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1351,
+    func: c"EVP_DecryptFinal_ex",
+    lib: 6,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `EVP_DecryptFinal_ex` at `crypto/evp/evp_enc.c:1356` (EVP_R_BAD_DECRYPT).
+pub(crate) const EVP_ENC_1356: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1356,
+    func: c"EVP_DecryptFinal_ex",
+    lib: 6,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `EVP_CIPHER_CTX_set_key_length` at `crypto/evp/evp_enc.c:1382` (EVP_R_INVALID_KEY_LENGTH).
+pub(crate) const EVP_ENC_1382: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1382,
+    func: c"EVP_CIPHER_CTX_set_key_length",
+    lib: 6,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `EVP_CIPHER_CTX_set_key_length` at `crypto/evp/evp_enc.c:1410` (EVP_R_INVALID_KEY_LENGTH).
+pub(crate) const EVP_ENC_1410: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1410,
+    func: c"EVP_CIPHER_CTX_set_key_length",
+    lib: 6,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `EVP_CIPHER_CTX_ctrl` at `crypto/evp/evp_enc.c:1444` (EVP_R_NO_CIPHER_SET).
+pub(crate) const EVP_ENC_1444: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1444,
+    func: c"EVP_CIPHER_CTX_ctrl",
+    lib: 6,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `EVP_CIPHER_CTX_ctrl` at `crypto/evp/evp_enc.c:1632` (EVP_R_CTRL_NOT_IMPLEMENTED).
+pub(crate) const EVP_ENC_1632: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1632,
+    func: c"EVP_CIPHER_CTX_ctrl",
+    lib: 6,
+    reason: 132,
+    dynamic_reason: false,
+};
+
+/// `EVP_CIPHER_CTX_ctrl` at `crypto/evp/evp_enc.c:1640` (EVP_R_CTRL_OPERATION_NOT_IMPLEMENTED).
+pub(crate) const EVP_ENC_1640: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1640,
+    func: c"EVP_CIPHER_CTX_ctrl",
+    lib: 6,
+    reason: 133,
+    dynamic_reason: false,
+};
+
+/// `EVP_CIPHER_CTX_copy` at `crypto/evp/evp_enc.c:1785` (EVP_R_INPUT_NOT_INITIALIZED).
+pub(crate) const EVP_ENC_1785: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1785,
+    func: c"EVP_CIPHER_CTX_copy",
+    lib: 6,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `EVP_CIPHER_CTX_copy` at `crypto/evp/evp_enc.c:1793` (EVP_R_NOT_ABLE_TO_COPY_CTX).
+pub(crate) const EVP_ENC_1793: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1793,
+    func: c"EVP_CIPHER_CTX_copy",
+    lib: 6,
+    reason: 190,
+    dynamic_reason: false,
+};
+
+/// `EVP_CIPHER_CTX_copy` at `crypto/evp/evp_enc.c:1809` (EVP_R_NOT_ABLE_TO_COPY_CTX).
+pub(crate) const EVP_ENC_1809: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1809,
+    func: c"EVP_CIPHER_CTX_copy",
+    lib: 6,
+    reason: 190,
+    dynamic_reason: false,
+};
+
+/// `EVP_CIPHER_CTX_copy` at `crypto/evp/evp_enc.c:1821` (ERR_R_ENGINE_LIB).
+pub(crate) const EVP_ENC_1821: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1821,
+    func: c"EVP_CIPHER_CTX_copy",
+    lib: 6,
+    reason: 524326,
+    dynamic_reason: false,
+};
+
+/// `EVP_CIPHER_CTX_copy` at `crypto/evp/evp_enc.c:1841` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const EVP_ENC_1841: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1841,
+    func: c"EVP_CIPHER_CTX_copy",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_from_algorithm` at `crypto/evp/evp_enc.c:1898` (ERR_R_EVP_LIB).
+pub(crate) const EVP_ENC_1898: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1898,
+    func: c"evp_cipher_from_algorithm",
+    lib: 6,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_from_algorithm` at `crypto/evp/evp_enc.c:1906` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EVP_ENC_1906: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 1906,
+    func: c"evp_cipher_from_algorithm",
+    lib: 6,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_from_algorithm` at `crypto/evp/evp_enc.c:2044` (EVP_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const EVP_ENC_2044: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 2044,
+    func: c"evp_cipher_from_algorithm",
+    lib: 6,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_from_algorithm` at `crypto/evp/evp_enc.c:2053` (EVP_R_CACHE_CONSTANTS_FAILED).
+pub(crate) const EVP_ENC_2053: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c",
+    line: 2053,
+    func: c"evp_cipher_from_algorithm",
+    lib: 6,
+    reason: 225,
+    dynamic_reason: false,
+};
+
+/// `inner_evp_generic_fetch` at `crypto/evp/evp_fetch.c:278` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const EVP_FETCH_278: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_fetch.c",
+    line: 278,
+    func: c"inner_evp_generic_fetch",
+    lib: 6,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `inner_evp_generic_fetch` at `crypto/evp/evp_fetch.c:287` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EVP_FETCH_287: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_fetch.c",
+    line: 287,
+    func: c"inner_evp_generic_fetch",
+    lib: 6,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `inner_evp_generic_fetch` at `crypto/evp/evp_fetch.c:303` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EVP_FETCH_303: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_fetch.c",
+    line: 303,
+    func: c"inner_evp_generic_fetch",
+    lib: 6,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `inner_evp_generic_fetch` at `crypto/evp/evp_fetch.c:352` (ERR_R_FETCH_FAILED).
+pub(crate) const EVP_FETCH_352: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_fetch.c",
+    line: 352,
+    func: c"inner_evp_generic_fetch",
+    lib: 6,
+    reason: 524557,
+    dynamic_reason: false,
+};
+
+/// `inner_evp_generic_fetch` at `crypto/evp/evp_fetch.c:376` (ERR_raise_data dynamic reason).
+pub(crate) const EVP_FETCH_376: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_fetch.c",
+    line: 376,
+    func: c"inner_evp_generic_fetch",
+    lib: 6,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `evp_set_parsed_default_properties` at `crypto/evp/evp_fetch.c:485` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EVP_FETCH_485: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_fetch.c",
+    line: 485,
+    func: c"evp_set_parsed_default_properties",
+    lib: 6,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `evp_set_parsed_default_properties` at `crypto/evp/evp_fetch.c:492` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EVP_FETCH_492: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_fetch.c",
+    line: 492,
+    func: c"evp_set_parsed_default_properties",
+    lib: 6,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `evp_set_parsed_default_properties` at `crypto/evp/evp_fetch.c:507` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EVP_FETCH_507: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_fetch.c",
+    line: 507,
+    func: c"evp_set_parsed_default_properties",
+    lib: 6,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `evp_set_default_properties_int` at `crypto/evp/evp_fetch.c:517` (EVP_R_DEFAULT_QUERY_PARSE_ERROR).
+pub(crate) const EVP_FETCH_517: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_fetch.c",
+    line: 517,
+    func: c"evp_set_default_properties_int",
+    lib: 6,
+    reason: 210,
+    dynamic_reason: false,
+};
+
+/// `evp_default_properties_merge` at `crypto/evp/evp_fetch.c:543` (EVP_R_DEFAULT_QUERY_PARSE_ERROR).
+pub(crate) const EVP_FETCH_543: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_fetch.c",
+    line: 543,
+    func: c"evp_default_properties_merge",
+    lib: 6,
+    reason: 210,
+    dynamic_reason: false,
+};
+
+/// `evp_default_properties_merge` at `crypto/evp/evp_fetch.c:549` (ERR_R_CRYPTO_LIB).
+pub(crate) const EVP_FETCH_549: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_fetch.c",
+    line: 549,
+    func: c"evp_default_properties_merge",
+    lib: 6,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `evp_get_global_properties_str` at `crypto/evp/evp_fetch.c:596` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EVP_FETCH_596: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_fetch.c",
+    line: 596,
+    func: c"evp_get_global_properties_str",
+    lib: 6,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `evp_get_global_properties_str` at `crypto/evp/evp_fetch.c:604` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EVP_FETCH_604: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_fetch.c",
+    line: 604,
+    func: c"evp_get_global_properties_str",
+    lib: 6,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_param_to_asn1_ex` at `crypto/evp/evp_lib.c:144` (EVP_R_UNSUPPORTED_CIPHER).
+pub(crate) const EVP_LIB_144: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_lib.c",
+    line: 144,
+    func: c"evp_cipher_param_to_asn1_ex",
+    lib: 6,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_param_to_asn1_ex` at `crypto/evp/evp_lib.c:146` (EVP_R_CIPHER_PARAMETER_ERROR).
+pub(crate) const EVP_LIB_146: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_lib.c",
+    line: 146,
+    func: c"evp_cipher_param_to_asn1_ex",
+    lib: 6,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_asn1_to_param_ex` at `crypto/evp/evp_lib.c:213` (EVP_R_UNSUPPORTED_CIPHER).
+pub(crate) const EVP_LIB_213: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_lib.c",
+    line: 213,
+    func: c"evp_cipher_asn1_to_param_ex",
+    lib: 6,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `evp_cipher_asn1_to_param_ex` at `crypto/evp/evp_lib.c:215` (EVP_R_CIPHER_PARAMETER_ERROR).
+pub(crate) const EVP_LIB_215: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_lib.c",
+    line: 215,
+    func: c"evp_cipher_asn1_to_param_ex",
+    lib: 6,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `EVP_MD_get_block_size` at `crypto/evp/evp_lib.c:803` (EVP_R_MESSAGE_DIGEST_IS_NULL).
+pub(crate) const EVP_LIB_803: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_lib.c",
+    line: 803,
+    func: c"EVP_MD_get_block_size",
+    lib: 6,
+    reason: 159,
+    dynamic_reason: false,
+};
+
+/// `EVP_MD_get_size` at `crypto/evp/evp_lib.c:812` (EVP_R_MESSAGE_DIGEST_IS_NULL).
+pub(crate) const EVP_LIB_812: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_lib.c",
+    line: 812,
+    func: c"EVP_MD_get_size",
+    lib: 6,
+    reason: 159,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_set_group_name` at `crypto/evp/evp_lib.c:1159` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const EVP_LIB_1159: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_lib.c",
+    line: 1159,
+    func: c"EVP_PKEY_CTX_set_group_name",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_get_group_name` at `crypto/evp/evp_lib.c:1179` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const EVP_LIB_1179: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_lib.c",
+    line: 1179,
+    func: c"EVP_PKEY_CTX_get_group_name",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EVP_CIPHER_CTX_get_algor` at `crypto/evp/evp_lib.c:1353` (EVP_R_GETTING_ALGORITHMIDENTIFIER_NOT_SUPPORTED).
+pub(crate) const EVP_LIB_1353: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_lib.c",
+    line: 1353,
+    func: c"EVP_CIPHER_CTX_get_algor",
+    lib: 6,
+    reason: 229,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_get_algor` at `crypto/evp/evp_lib.c:1471` (EVP_R_GETTING_ALGORITHMIDENTIFIER_NOT_SUPPORTED).
+pub(crate) const EVP_LIB_1471: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_lib.c",
+    line: 1471,
+    func: c"EVP_PKEY_CTX_get_algor",
+    lib: 6,
+    reason: 229,
+    dynamic_reason: false,
+};
+
+/// `EVP_PBE_CipherInit_ex` at `crypto/evp/evp_pbe.c:116` (EVP_R_UNKNOWN_PBE_ALGORITHM).
+pub(crate) const EVP_PBE_116: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_pbe.c",
+    line: 116,
+    func: c"EVP_PBE_CipherInit_ex",
+    lib: 6,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `EVP_PBE_CipherInit_ex` at `crypto/evp/evp_pbe.c:134` (EVP_R_UNKNOWN_CIPHER).
+pub(crate) const EVP_PBE_134: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_pbe.c",
+    line: 134,
+    func: c"EVP_PBE_CipherInit_ex",
+    lib: 6,
+    reason: 160,
+    dynamic_reason: false,
+};
+
+/// `EVP_PBE_CipherInit_ex` at `crypto/evp/evp_pbe.c:150` (EVP_R_UNKNOWN_DIGEST).
+pub(crate) const EVP_PBE_150: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_pbe.c",
+    line: 150,
+    func: c"EVP_PBE_CipherInit_ex",
+    lib: 6,
+    reason: 161,
+    dynamic_reason: false,
+};
+
+/// `EVP_PBE_alg_add_type` at `crypto/evp/evp_pbe.c:207` (ERR_R_CRYPTO_LIB).
+pub(crate) const EVP_PBE_207: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_pbe.c",
+    line: 207,
+    func: c"EVP_PBE_alg_add_type",
+    lib: 6,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `EVP_PBE_alg_add_type` at `crypto/evp/evp_pbe.c:222` (ERR_R_CRYPTO_LIB).
+pub(crate) const EVP_PBE_222: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_pbe.c",
+    line: 222,
+    func: c"EVP_PBE_alg_add_type",
+    lib: 6,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `evp_pkcs82pkey_legacy` at `crypto/evp/evp_pkey.c:41` (ERR_R_EVP_LIB).
+pub(crate) const EVP_PKEY_41: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_pkey.c",
+    line: 41,
+    func: c"evp_pkcs82pkey_legacy",
+    lib: 6,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `evp_pkcs82pkey_legacy` at `crypto/evp/evp_pkey.c:47` (EVP_R_UNSUPPORTED_PRIVATE_KEY_ALGORITHM).
+pub(crate) const EVP_PKEY_47: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_pkey.c",
+    line: 47,
+    func: c"evp_pkcs82pkey_legacy",
+    lib: 6,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `evp_pkcs82pkey_legacy` at `crypto/evp/evp_pkey.c:57` (EVP_R_PRIVATE_KEY_DECODE_ERROR).
+pub(crate) const EVP_PKEY_57: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_pkey.c",
+    line: 57,
+    func: c"evp_pkcs82pkey_legacy",
+    lib: 6,
+    reason: 145,
+    dynamic_reason: false,
+};
+
+/// `evp_pkcs82pkey_legacy` at `crypto/evp/evp_pkey.c:61` (EVP_R_METHOD_NOT_SUPPORTED).
+pub(crate) const EVP_PKEY_61: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_pkey.c",
+    line: 61,
+    func: c"evp_pkcs82pkey_legacy",
+    lib: 6,
+    reason: 144,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY2PKCS8` at `crypto/evp/evp_pkey.c:160` (ERR_R_ASN1_LIB).
+pub(crate) const EVP_PKEY_160: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_pkey.c",
+    line: 160,
+    func: c"EVP_PKEY2PKCS8",
+    lib: 6,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY2PKCS8` at `crypto/evp/evp_pkey.c:167` (EVP_R_PRIVATE_KEY_ENCODE_ERROR).
+pub(crate) const EVP_PKEY_167: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_pkey.c",
+    line: 167,
+    func: c"EVP_PKEY2PKCS8",
+    lib: 6,
+    reason: 146,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY2PKCS8` at `crypto/evp/evp_pkey.c:171` (EVP_R_METHOD_NOT_SUPPORTED).
+pub(crate) const EVP_PKEY_171: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_pkey.c",
+    line: 171,
+    func: c"EVP_PKEY2PKCS8",
+    lib: 6,
+    reason: 144,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY2PKCS8` at `crypto/evp/evp_pkey.c:175` (EVP_R_UNSUPPORTED_PRIVATE_KEY_ALGORITHM).
+pub(crate) const EVP_PKEY_175: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_pkey.c",
+    line: 175,
+    func: c"EVP_PKEY2PKCS8",
+    lib: 6,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `EVP_RAND_enable_locking` at `crypto/evp/evp_rand.c:98` (EVP_R_LOCKING_NOT_SUPPORTED).
+pub(crate) const EVP_RAND_98: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_rand.c",
+    line: 98,
+    func: c"EVP_RAND_enable_locking",
+    lib: 6,
+    reason: 213,
+    dynamic_reason: false,
+};
+
+/// `evp_rand_from_algorithm` at `crypto/evp/evp_rand.c:129` (ERR_R_EVP_LIB).
+pub(crate) const EVP_RAND_129: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_rand.c",
+    line: 129,
+    func: c"evp_rand_from_algorithm",
+    lib: 6,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `evp_rand_from_algorithm` at `crypto/evp/evp_rand.c:268` (EVP_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const EVP_RAND_268: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_rand.c",
+    line: 268,
+    func: c"evp_rand_from_algorithm",
+    lib: 6,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `evp_rand_from_algorithm` at `crypto/evp/evp_rand.c:274` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EVP_RAND_274: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_rand.c",
+    line: 274,
+    func: c"evp_rand_from_algorithm",
+    lib: 6,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `EVP_RAND_CTX_new` at `crypto/evp/evp_rand.c:346` (EVP_R_INVALID_NULL_ALGORITHM).
+pub(crate) const EVP_RAND_346: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_rand.c",
+    line: 346,
+    func: c"EVP_RAND_CTX_new",
+    lib: 6,
+    reason: 218,
+    dynamic_reason: false,
+};
+
+/// `EVP_RAND_CTX_new` at `crypto/evp/evp_rand.c:359` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EVP_RAND_359: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_rand.c",
+    line: 359,
+    func: c"EVP_RAND_CTX_new",
+    lib: 6,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `EVP_RAND_CTX_new` at `crypto/evp/evp_rand.c:371` (ERR_R_EVP_LIB).
+pub(crate) const EVP_RAND_371: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_rand.c",
+    line: 371,
+    func: c"EVP_RAND_CTX_new",
+    lib: 6,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `evp_rand_generate_locked` at `crypto/evp/evp_rand.c:562` (EVP_R_UNABLE_TO_GET_MAXIMUM_REQUEST_SIZE).
+pub(crate) const EVP_RAND_562: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_rand.c",
+    line: 562,
+    func: c"evp_rand_generate_locked",
+    lib: 6,
+    reason: 215,
+    dynamic_reason: false,
+};
+
+/// `evp_rand_generate_locked` at `crypto/evp/evp_rand.c:569` (EVP_R_GENERATE_ERROR).
+pub(crate) const EVP_RAND_569: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_rand.c",
+    line: 569,
+    func: c"evp_rand_generate_locked",
+    lib: 6,
+    reason: 214,
+    dynamic_reason: false,
+};
+
+/// `EVP_RAND_nonce` at `crypto/evp/evp_rand.c:656` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EVP_RAND_656: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_rand.c",
+    line: 656,
+    func: c"EVP_RAND_nonce",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `geterr` at `crypto/evp/evp_utils.c:65` (EVP_R_CANNOT_GET_PARAMETERS).
+pub(crate) const EVP_UTILS_65: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_utils.c",
+    line: 65,
+    func: c"geterr",
+    lib: 6,
+    reason: 197,
+    dynamic_reason: false,
+};
+
+/// `seterr` at `crypto/evp/evp_utils.c:70` (EVP_R_CANNOT_SET_PARAMETERS).
+pub(crate) const EVP_UTILS_70: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/evp_utils.c",
+    line: 70,
+    func: c"seterr",
+    lib: 6,
+    reason: 198,
+    dynamic_reason: false,
+};
+
+/// `evp_keyexch_from_algorithm` at `crypto/evp/exchange.c:59` (ERR_R_EVP_LIB).
+pub(crate) const EXCHANGE_59: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/exchange.c",
+    line: 59,
+    func: c"evp_keyexch_from_algorithm",
+    lib: 6,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `evp_keyexch_from_algorithm` at `crypto/evp/exchange.c:150` (EVP_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const EXCHANGE_150: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/exchange.c",
+    line: 150,
+    func: c"evp_keyexch_from_algorithm",
+    lib: 6,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_derive_init_ex` at `crypto/evp/exchange.c:225` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EXCHANGE_225: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/exchange.c",
+    line: 225,
+    func: c"EVP_PKEY_derive_init_ex",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_derive_init_ex` at `crypto/evp/exchange.c:249` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const EXCHANGE_249: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/exchange.c",
+    line: 249,
+    func: c"EVP_PKEY_derive_init_ex",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_derive_init_ex` at `crypto/evp/exchange.c:261` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EXCHANGE_261: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/exchange.c",
+    line: 261,
+    func: c"EVP_PKEY_derive_init_ex",
+    lib: 6,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_derive_init_ex` at `crypto/evp/exchange.c:268` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const EXCHANGE_268: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/exchange.c",
+    line: 268,
+    func: c"EVP_PKEY_derive_init_ex",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_derive_init_ex` at `crypto/evp/exchange.c:355` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const EXCHANGE_355: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/exchange.c",
+    line: 355,
+    func: c"EVP_PKEY_derive_init_ex",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_derive_init_ex` at `crypto/evp/exchange.c:379` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const EXCHANGE_379: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/exchange.c",
+    line: 379,
+    func: c"EVP_PKEY_derive_init_ex",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_derive_set_peer_ex` at `crypto/evp/exchange.c:402` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EXCHANGE_402: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/exchange.c",
+    line: 402,
+    func: c"EVP_PKEY_derive_set_peer_ex",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_derive_set_peer_ex` at `crypto/evp/exchange.c:410` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const EXCHANGE_410: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/exchange.c",
+    line: 410,
+    func: c"EVP_PKEY_derive_set_peer_ex",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_derive_set_peer_ex` at `crypto/evp/exchange.c:464` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const EXCHANGE_464: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/exchange.c",
+    line: 464,
+    func: c"EVP_PKEY_derive_set_peer_ex",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_derive_set_peer_ex` at `crypto/evp/exchange.c:470` (EVP_R_OPERATION_NOT_INITIALIZED).
+pub(crate) const EXCHANGE_470: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/exchange.c",
+    line: 470,
+    func: c"EVP_PKEY_derive_set_peer_ex",
+    lib: 6,
+    reason: 151,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_derive_set_peer_ex` at `crypto/evp/exchange.c:483` (EVP_R_NO_KEY_SET).
+pub(crate) const EXCHANGE_483: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/exchange.c",
+    line: 483,
+    func: c"EVP_PKEY_derive_set_peer_ex",
+    lib: 6,
+    reason: 154,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_derive_set_peer_ex` at `crypto/evp/exchange.c:488` (EVP_R_DIFFERENT_KEY_TYPES).
+pub(crate) const EXCHANGE_488: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/exchange.c",
+    line: 488,
+    func: c"EVP_PKEY_derive_set_peer_ex",
+    lib: 6,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_derive_set_peer_ex` at `crypto/evp/exchange.c:500` (EVP_R_DIFFERENT_PARAMETERS).
+pub(crate) const EXCHANGE_500: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/exchange.c",
+    line: 500,
+    func: c"EVP_PKEY_derive_set_peer_ex",
+    lib: 6,
+    reason: 153,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_derive` at `crypto/evp/exchange.c:529` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EXCHANGE_529: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/exchange.c",
+    line: 529,
+    func: c"EVP_PKEY_derive",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_derive` at `crypto/evp/exchange.c:534` (EVP_R_OPERATION_NOT_INITIALIZED).
+pub(crate) const EXCHANGE_534: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/exchange.c",
+    line: 534,
+    func: c"EVP_PKEY_derive",
+    lib: 6,
+    reason: 151,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_derive` at `crypto/evp/exchange.c:547` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const EXCHANGE_547: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/exchange.c",
+    line: 547,
+    func: c"EVP_PKEY_derive",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_derive_SKEY` at `crypto/evp/exchange.c:562` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const EXCHANGE_562: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/exchange.c",
+    line: 562,
+    func: c"EVP_PKEY_derive_SKEY",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_derive_SKEY` at `crypto/evp/exchange.c:567` (EVP_R_OPERATION_NOT_INITIALIZED).
+pub(crate) const EXCHANGE_567: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/exchange.c",
+    line: 567,
+    func: c"EVP_PKEY_derive_SKEY",
+    lib: 6,
+    reason: 151,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_derive_SKEY` at `crypto/evp/exchange.c:572` (ERR_R_UNSUPPORTED).
+pub(crate) const EXCHANGE_572: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/exchange.c",
+    line: 572,
+    func: c"EVP_PKEY_derive_SKEY",
+    lib: 524294,
+    reason: 524556,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_derive_SKEY` at `crypto/evp/exchange.c:589` (ERR_R_FETCH_FAILED).
+pub(crate) const EXCHANGE_589: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/exchange.c",
+    line: 589,
+    func: c"EVP_PKEY_derive_SKEY",
+    lib: 6,
+    reason: 524557,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_derive_SKEY` at `crypto/evp/exchange.c:601` (ERR_R_UNSUPPORTED).
+pub(crate) const EXCHANGE_601: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/exchange.c",
+    line: 601,
+    func: c"EVP_PKEY_derive_SKEY",
+    lib: 524294,
+    reason: 524556,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_derive_SKEY` at `crypto/evp/exchange.c:607` (ERR_R_CRYPTO_LIB).
+pub(crate) const EXCHANGE_607: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/exchange.c",
+    line: 607,
+    func: c"EVP_PKEY_derive_SKEY",
+    lib: 524294,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_derive_SKEY` at `crypto/evp/exchange.c:619` (ERR_R_INTERNAL_ERROR).
+pub(crate) const EXCHANGE_619: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/exchange.c",
+    line: 619,
+    func: c"EVP_PKEY_derive_SKEY",
+    lib: 524294,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `EVP_KDF_CTX_new` at `crypto/evp/kdf_lib.c:35` (ERR_R_EVP_LIB).
+pub(crate) const KDF_LIB_35: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/kdf_lib.c",
+    line: 35,
+    func: c"EVP_KDF_CTX_new",
+    lib: 6,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `EVP_KDF_CTX_dup` at `crypto/evp/kdf_lib.c:69` (ERR_R_EVP_LIB).
+pub(crate) const KDF_LIB_69: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/kdf_lib.c",
+    line: 69,
+    func: c"EVP_KDF_CTX_dup",
+    lib: 6,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `EVP_KDF_derive_SKEY` at `crypto/evp/kdf_lib.c:211` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const KDF_LIB_211: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/kdf_lib.c",
+    line: 211,
+    func: c"EVP_KDF_derive_SKEY",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EVP_KDF_derive_SKEY` at `crypto/evp/kdf_lib.c:230` (ERR_R_FETCH_FAILED).
+pub(crate) const KDF_LIB_230: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/kdf_lib.c",
+    line: 230,
+    func: c"EVP_KDF_derive_SKEY",
+    lib: 6,
+    reason: 524557,
+    dynamic_reason: false,
+};
+
+/// `EVP_KDF_derive_SKEY` at `crypto/evp/kdf_lib.c:241` (ERR_R_UNSUPPORTED).
+pub(crate) const KDF_LIB_241: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/kdf_lib.c",
+    line: 241,
+    func: c"EVP_KDF_derive_SKEY",
+    lib: 524294,
+    reason: 524556,
+    dynamic_reason: false,
+};
+
+/// `evp_kdf_from_algorithm` at `crypto/evp/kdf_meth.c:67` (ERR_R_EVP_LIB).
+pub(crate) const KDF_METH_67: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/kdf_meth.c",
+    line: 67,
+    func: c"evp_kdf_from_algorithm",
+    lib: 6,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `evp_kdf_from_algorithm` at `crypto/evp/kdf_meth.c:154` (EVP_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const KDF_METH_154: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/kdf_meth.c",
+    line: 154,
+    func: c"evp_kdf_from_algorithm",
+    lib: 6,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `evp_kem_init` at `crypto/evp/kem.c:42` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const KEM_42: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/kem.c",
+    line: 42,
+    func: c"evp_kem_init",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_kem_init` at `crypto/evp/kem.c:50` (EVP_R_NO_KEY_SET).
+pub(crate) const KEM_50: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/kem.c",
+    line: 50,
+    func: c"evp_kem_init",
+    lib: 6,
+    reason: 154,
+    dynamic_reason: false,
+};
+
+/// `evp_kem_init` at `crypto/evp/kem.c:54` (EVP_R_DIFFERENT_KEY_TYPES).
+pub(crate) const KEM_54: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/kem.c",
+    line: 54,
+    func: c"evp_kem_init",
+    lib: 6,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `evp_kem_init` at `crypto/evp/kem.c:62` (ERR_R_INTERNAL_ERROR).
+pub(crate) const KEM_62: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/kem.c",
+    line: 62,
+    func: c"evp_kem_init",
+    lib: 6,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `evp_kem_init` at `crypto/evp/kem.c:68` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const KEM_68: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/kem.c",
+    line: 68,
+    func: c"evp_kem_init",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_kem_init` at `crypto/evp/kem.c:116` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const KEM_116: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/kem.c",
+    line: 116,
+    func: c"evp_kem_init",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `evp_kem_init` at `crypto/evp/kem.c:146` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const KEM_146: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/kem.c",
+    line: 146,
+    func: c"evp_kem_init",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_kem_init` at `crypto/evp/kem.c:157` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const KEM_157: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/kem.c",
+    line: 157,
+    func: c"evp_kem_init",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_kem_init` at `crypto/evp/kem.c:165` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const KEM_165: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/kem.c",
+    line: 165,
+    func: c"evp_kem_init",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_kem_init` at `crypto/evp/kem.c:177` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const KEM_177: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/kem.c",
+    line: 177,
+    func: c"evp_kem_init",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `evp_kem_init` at `crypto/evp/kem.c:189` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const KEM_189: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/kem.c",
+    line: 189,
+    func: c"evp_kem_init",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `evp_kem_init` at `crypto/evp/kem.c:195` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const KEM_195: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/kem.c",
+    line: 195,
+    func: c"evp_kem_init",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_encapsulate` at `crypto/evp/kem.c:234` (EVP_R_OPERATION_NOT_INITIALIZED).
+pub(crate) const KEM_234: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/kem.c",
+    line: 234,
+    func: c"EVP_PKEY_encapsulate",
+    lib: 6,
+    reason: 151,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_encapsulate` at `crypto/evp/kem.c:239` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const KEM_239: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/kem.c",
+    line: 239,
+    func: c"EVP_PKEY_encapsulate",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_decapsulate` at `crypto/evp/kem.c:273` (EVP_R_OPERATION_NOT_INITIALIZED).
+pub(crate) const KEM_273: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/kem.c",
+    line: 273,
+    func: c"EVP_PKEY_decapsulate",
+    lib: 6,
+    reason: 151,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_decapsulate` at `crypto/evp/kem.c:278` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const KEM_278: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/kem.c",
+    line: 278,
+    func: c"EVP_PKEY_decapsulate",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `evp_kem_from_algorithm` at `crypto/evp/kem.c:312` (ERR_R_EVP_LIB).
+pub(crate) const KEM_312: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/kem.c",
+    line: 312,
+    func: c"evp_kem_from_algorithm",
+    lib: 6,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `evp_kem_from_algorithm` at `crypto/evp/kem.c:423` (EVP_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const KEM_423: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/kem.c",
+    line: 423,
+    func: c"evp_kem_from_algorithm",
+    lib: 6,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `evp_keymgmt_util_try_import` at `crypto/evp/keymgmt_lib.c:37` (ERR_R_EVP_LIB).
+pub(crate) const KEYMGMT_LIB_37: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/keymgmt_lib.c",
+    line: 37,
+    func: c"evp_keymgmt_util_try_import",
+    lib: 6,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `evp_keymgmt_util_assign_pkey` at `crypto/evp/keymgmt_lib.c:65` (ERR_R_INTERNAL_ERROR).
+pub(crate) const KEYMGMT_LIB_65: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/keymgmt_lib.c",
+    line: 65,
+    func: c"evp_keymgmt_util_assign_pkey",
+    lib: 6,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `evp_keymgmt_util_match` at `crypto/evp/keymgmt_lib.c:388` (EVP_R_DIFFERENT_KEY_TYPES).
+pub(crate) const KEYMGMT_LIB_388: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/keymgmt_lib.c",
+    line: 388,
+    func: c"evp_keymgmt_util_match",
+    lib: 6,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `evp_keymgmt_util_copy` at `crypto/evp/keymgmt_lib.c:491` (EVP_R_DIFFERENT_KEY_TYPES).
+pub(crate) const KEYMGMT_LIB_491: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/keymgmt_lib.c",
+    line: 491,
+    func: c"evp_keymgmt_util_copy",
+    lib: 6,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `keymgmt_from_algorithm` at `crypto/evp/keymgmt_meth.c:252` (EVP_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const KEYMGMT_METH_252: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/keymgmt_meth.c",
+    line: 252,
+    func: c"keymgmt_from_algorithm",
+    lib: 6,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `evp_keymgmt_gen` at `crypto/evp/keymgmt_meth.c:450` (EVP_R_PROVIDER_KEYMGMT_NOT_SUPPORTED).
+pub(crate) const KEYMGMT_METH_450: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/keymgmt_meth.c",
+    line: 450,
+    func: c"evp_keymgmt_gen",
+    lib: 6,
+    reason: 236,
+    dynamic_reason: false,
+};
+
+/// `evp_keymgmt_gen` at `crypto/evp/keymgmt_meth.c:458` (EVP_R_PROVIDER_KEYMGMT_FAILURE).
+pub(crate) const KEYMGMT_METH_458: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/keymgmt_meth.c",
+    line: 458,
+    func: c"evp_keymgmt_gen",
+    lib: 6,
+    reason: 233,
+    dynamic_reason: false,
+};
+
+/// `update` at `crypto/evp/m_sigver.c:21` (EVP_R_ONLY_ONESHOT_SUPPORTED).
+pub(crate) const M_SIGVER_21: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 21,
+    func: c"update",
+    lib: 6,
+    reason: 177,
+    dynamic_reason: false,
+};
+
+/// `do_sigver_init` at `crypto/evp/m_sigver.c:87` (EVP_R_NO_KEY_SET).
+pub(crate) const M_SIGVER_87: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 87,
+    func: c"do_sigver_init",
+    lib: 6,
+    reason: 154,
+    dynamic_reason: false,
+};
+
+/// `do_sigver_init` at `crypto/evp/m_sigver.c:105` (ERR_R_INTERNAL_ERROR).
+pub(crate) const M_SIGVER_105: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 105,
+    func: c"do_sigver_init",
+    lib: 6,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `do_sigver_init` at `crypto/evp/m_sigver.c:112` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const M_SIGVER_112: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 112,
+    func: c"do_sigver_init",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `do_sigver_init` at `crypto/evp/m_sigver.c:187` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const M_SIGVER_187: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 187,
+    func: c"do_sigver_init",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `do_sigver_init` at `crypto/evp/m_sigver.c:201` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const M_SIGVER_201: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 201,
+    func: c"do_sigver_init",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `do_sigver_init` at `crypto/evp/m_sigver.c:247` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const M_SIGVER_247: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 247,
+    func: c"do_sigver_init",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `do_sigver_init` at `crypto/evp/m_sigver.c:258` (EVP_R_PROVIDER_SIGNATURE_NOT_SUPPORTED).
+pub(crate) const M_SIGVER_258: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 258,
+    func: c"do_sigver_init",
+    lib: 6,
+    reason: 237,
+    dynamic_reason: false,
+};
+
+/// `do_sigver_init` at `crypto/evp/m_sigver.c:266` (EVP_R_PROVIDER_SIGNATURE_NOT_SUPPORTED).
+pub(crate) const M_SIGVER_266: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 266,
+    func: c"do_sigver_init",
+    lib: 6,
+    reason: 237,
+    dynamic_reason: false,
+};
+
+/// `do_sigver_init` at `crypto/evp/m_sigver.c:281` (EVP_R_NO_DEFAULT_DIGEST).
+pub(crate) const M_SIGVER_281: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 281,
+    func: c"do_sigver_init",
+    lib: 6,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `do_sigver_init` at `crypto/evp/m_sigver.c:282` (EVP_R_PROVIDER_SIGNATURE_FAILURE).
+pub(crate) const M_SIGVER_282: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 282,
+    func: c"do_sigver_init",
+    lib: 6,
+    reason: 234,
+    dynamic_reason: false,
+};
+
+/// `do_sigver_init` at `crypto/evp/m_sigver.c:305` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const M_SIGVER_305: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 305,
+    func: c"do_sigver_init",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `do_sigver_init` at `crypto/evp/m_sigver.c:318` (EVP_R_NO_DEFAULT_DIGEST).
+pub(crate) const M_SIGVER_318: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 318,
+    func: c"do_sigver_init",
+    lib: 6,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestSignUpdate` at `crypto/evp/m_sigver.c:411` (EVP_R_UPDATE_ERROR).
+pub(crate) const M_SIGVER_411: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 411,
+    func: c"EVP_DigestSignUpdate",
+    lib: 6,
+    reason: 189,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestSignUpdate` at `crypto/evp/m_sigver.c:424` (EVP_R_PROVIDER_SIGNATURE_NOT_SUPPORTED).
+pub(crate) const M_SIGVER_424: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 424,
+    func: c"EVP_DigestSignUpdate",
+    lib: 6,
+    reason: 237,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestSignUpdate` at `crypto/evp/m_sigver.c:432` (EVP_R_PROVIDER_SIGNATURE_FAILURE).
+pub(crate) const M_SIGVER_432: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 432,
+    func: c"EVP_DigestSignUpdate",
+    lib: 6,
+    reason: 234,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestSignUpdate` at `crypto/evp/m_sigver.c:440` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const M_SIGVER_440: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 440,
+    func: c"EVP_DigestSignUpdate",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestVerifyUpdate` at `crypto/evp/m_sigver.c:461` (EVP_R_UPDATE_ERROR).
+pub(crate) const M_SIGVER_461: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 461,
+    func: c"EVP_DigestVerifyUpdate",
+    lib: 6,
+    reason: 189,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestVerifyUpdate` at `crypto/evp/m_sigver.c:474` (EVP_R_PROVIDER_SIGNATURE_NOT_SUPPORTED).
+pub(crate) const M_SIGVER_474: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 474,
+    func: c"EVP_DigestVerifyUpdate",
+    lib: 6,
+    reason: 237,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestVerifyUpdate` at `crypto/evp/m_sigver.c:482` (EVP_R_PROVIDER_SIGNATURE_FAILURE).
+pub(crate) const M_SIGVER_482: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 482,
+    func: c"EVP_DigestVerifyUpdate",
+    lib: 6,
+    reason: 234,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestSignFinal` at `crypto/evp/m_sigver.c:509` (EVP_R_FINAL_ERROR).
+pub(crate) const M_SIGVER_509: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 509,
+    func: c"EVP_DigestSignFinal",
+    lib: 6,
+    reason: 188,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestSignFinal` at `crypto/evp/m_sigver.c:522` (EVP_R_PROVIDER_SIGNATURE_NOT_SUPPORTED).
+pub(crate) const M_SIGVER_522: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 522,
+    func: c"EVP_DigestSignFinal",
+    lib: 6,
+    reason: 237,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestSignFinal` at `crypto/evp/m_sigver.c:538` (EVP_R_PROVIDER_SIGNATURE_FAILURE).
+pub(crate) const M_SIGVER_538: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 538,
+    func: c"EVP_DigestSignFinal",
+    lib: 6,
+    reason: 234,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestSignFinal` at `crypto/evp/m_sigver.c:549` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const M_SIGVER_549: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 549,
+    func: c"EVP_DigestSignFinal",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestSign` at `crypto/evp/m_sigver.c:628` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const M_SIGVER_628: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 628,
+    func: c"EVP_DigestSign",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestSign` at `crypto/evp/m_sigver.c:633` (EVP_R_FINAL_ERROR).
+pub(crate) const M_SIGVER_633: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 633,
+    func: c"EVP_DigestSign",
+    lib: 6,
+    reason: 188,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestSign` at `crypto/evp/m_sigver.c:651` (EVP_R_PROVIDER_SIGNATURE_FAILURE).
+pub(crate) const M_SIGVER_651: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 651,
+    func: c"EVP_DigestSign",
+    lib: 6,
+    reason: 234,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestVerifyFinal` at `crypto/evp/m_sigver.c:679` (EVP_R_FINAL_ERROR).
+pub(crate) const M_SIGVER_679: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 679,
+    func: c"EVP_DigestVerifyFinal",
+    lib: 6,
+    reason: 188,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestVerifyFinal` at `crypto/evp/m_sigver.c:692` (EVP_R_PROVIDER_SIGNATURE_NOT_SUPPORTED).
+pub(crate) const M_SIGVER_692: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 692,
+    func: c"EVP_DigestVerifyFinal",
+    lib: 6,
+    reason: 237,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestVerifyFinal` at `crypto/evp/m_sigver.c:707` (EVP_R_PROVIDER_SIGNATURE_FAILURE).
+pub(crate) const M_SIGVER_707: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 707,
+    func: c"EVP_DigestVerifyFinal",
+    lib: 6,
+    reason: 234,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestVerifyFinal` at `crypto/evp/m_sigver.c:718` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const M_SIGVER_718: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 718,
+    func: c"EVP_DigestVerifyFinal",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestVerify` at `crypto/evp/m_sigver.c:764` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const M_SIGVER_764: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 764,
+    func: c"EVP_DigestVerify",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestVerify` at `crypto/evp/m_sigver.c:769` (EVP_R_FINAL_ERROR).
+pub(crate) const M_SIGVER_769: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 769,
+    func: c"EVP_DigestVerify",
+    lib: 6,
+    reason: 188,
+    dynamic_reason: false,
+};
+
+/// `EVP_DigestVerify` at `crypto/evp/m_sigver.c:785` (EVP_R_PROVIDER_SIGNATURE_FAILURE).
+pub(crate) const M_SIGVER_785: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/m_sigver.c",
+    line: 785,
+    func: c"EVP_DigestVerify",
+    lib: 6,
+    reason: 234,
+    dynamic_reason: false,
+};
+
+/// `EVP_MAC_CTX_new` at `crypto/evp/mac_lib.c:31` (ERR_R_EVP_LIB).
+pub(crate) const MAC_LIB_31: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/mac_lib.c",
+    line: 31,
+    func: c"EVP_MAC_CTX_new",
+    lib: 6,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `EVP_MAC_CTX_dup` at `crypto/evp/mac_lib.c:63` (ERR_R_EVP_LIB).
+pub(crate) const MAC_LIB_63: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/mac_lib.c",
+    line: 63,
+    func: c"EVP_MAC_CTX_dup",
+    lib: 6,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `EVP_MAC_init` at `crypto/evp/mac_lib.c:119` (ERR_R_UNSUPPORTED).
+pub(crate) const MAC_LIB_119: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/mac_lib.c",
+    line: 119,
+    func: c"EVP_MAC_init",
+    lib: 524294,
+    reason: 524556,
+    dynamic_reason: false,
+};
+
+/// `EVP_MAC_init_SKEY` at `crypto/evp/mac_lib.c:130` (ERR_R_UNSUPPORTED).
+pub(crate) const MAC_LIB_130: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/mac_lib.c",
+    line: 130,
+    func: c"EVP_MAC_init_SKEY",
+    lib: 524294,
+    reason: 524556,
+    dynamic_reason: false,
+};
+
+/// `evp_mac_final` at `crypto/evp/mac_lib.c:150` (EVP_R_INVALID_NULL_ALGORITHM).
+pub(crate) const MAC_LIB_150: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/mac_lib.c",
+    line: 150,
+    func: c"evp_mac_final",
+    lib: 6,
+    reason: 218,
+    dynamic_reason: false,
+};
+
+/// `evp_mac_final` at `crypto/evp/mac_lib.c:154` (EVP_R_FINAL_ERROR).
+pub(crate) const MAC_LIB_154: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/mac_lib.c",
+    line: 154,
+    func: c"evp_mac_final",
+    lib: 6,
+    reason: 188,
+    dynamic_reason: false,
+};
+
+/// `evp_mac_final` at `crypto/evp/mac_lib.c:161` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const MAC_LIB_161: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/mac_lib.c",
+    line: 161,
+    func: c"evp_mac_final",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `evp_mac_final` at `crypto/evp/mac_lib.c:168` (EVP_R_BUFFER_TOO_SMALL).
+pub(crate) const MAC_LIB_168: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/mac_lib.c",
+    line: 168,
+    func: c"evp_mac_final",
+    lib: 6,
+    reason: 155,
+    dynamic_reason: false,
+};
+
+/// `evp_mac_final` at `crypto/evp/mac_lib.c:176` (EVP_R_SETTING_XOF_FAILED).
+pub(crate) const MAC_LIB_176: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/mac_lib.c",
+    line: 176,
+    func: c"evp_mac_final",
+    lib: 6,
+    reason: 227,
+    dynamic_reason: false,
+};
+
+/// `EVP_Q_mac` at `crypto/evp/mac_lib.c:283` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const MAC_LIB_283: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/mac_lib.c",
+    line: 283,
+    func: c"EVP_Q_mac",
+    lib: 6,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `evp_mac_from_algorithm` at `crypto/evp/mac_meth.c:66` (ERR_R_EVP_LIB).
+pub(crate) const MAC_METH_66: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/mac_meth.c",
+    line: 66,
+    func: c"evp_mac_from_algorithm",
+    lib: 6,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `evp_mac_from_algorithm` at `crypto/evp/mac_meth.c:159` (EVP_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const MAC_METH_159: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/mac_meth.c",
+    line: 159,
+    func: c"evp_mac_from_algorithm",
+    lib: 6,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_PBE_keyivgen_ex` at `crypto/evp/p5_crpt.c:46` (EVP_R_DECODE_ERROR).
+pub(crate) const P5_CRPT_46: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p5_crpt.c",
+    line: 46,
+    func: c"PKCS5_PBE_keyivgen_ex",
+    lib: 6,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_PBE_keyivgen_ex` at `crypto/evp/p5_crpt.c:52` (EVP_R_DECODE_ERROR).
+pub(crate) const P5_CRPT_52: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p5_crpt.c",
+    line: 52,
+    func: c"PKCS5_PBE_keyivgen_ex",
+    lib: 6,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_PBE_keyivgen_ex` at `crypto/evp/p5_crpt.c:58` (EVP_R_INVALID_IV_LENGTH).
+pub(crate) const P5_CRPT_58: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p5_crpt.c",
+    line: 58,
+    func: c"PKCS5_PBE_keyivgen_ex",
+    lib: 6,
+    reason: 194,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_PBE_keyivgen_ex` at `crypto/evp/p5_crpt.c:63` (EVP_R_INVALID_KEY_LENGTH).
+pub(crate) const P5_CRPT_63: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p5_crpt.c",
+    line: 63,
+    func: c"PKCS5_PBE_keyivgen_ex",
+    lib: 6,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_v2_PBE_keyivgen_ex` at `crypto/evp/p5_crpt2.c:128` (EVP_R_DECODE_ERROR).
+pub(crate) const P5_CRPT2_128: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p5_crpt2.c",
+    line: 128,
+    func: c"PKCS5_v2_PBE_keyivgen_ex",
+    lib: 6,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_v2_PBE_keyivgen_ex` at `crypto/evp/p5_crpt2.c:135` (EVP_R_UNSUPPORTED_KEY_DERIVATION_FUNCTION).
+pub(crate) const P5_CRPT2_135: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p5_crpt2.c",
+    line: 135,
+    func: c"PKCS5_v2_PBE_keyivgen_ex",
+    lib: 6,
+    reason: 124,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_v2_PBE_keyivgen_ex` at `crypto/evp/p5_crpt2.c:143` (EVP_R_UNSUPPORTED_CIPHER).
+pub(crate) const P5_CRPT2_143: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p5_crpt2.c",
+    line: 143,
+    func: c"PKCS5_v2_PBE_keyivgen_ex",
+    lib: 6,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_v2_PBE_keyivgen_ex` at `crypto/evp/p5_crpt2.c:155` (EVP_R_UNSUPPORTED_CIPHER).
+pub(crate) const P5_CRPT2_155: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p5_crpt2.c",
+    line: 155,
+    func: c"PKCS5_v2_PBE_keyivgen_ex",
+    lib: 6,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_v2_PBE_keyivgen_ex` at `crypto/evp/p5_crpt2.c:164` (EVP_R_CIPHER_PARAMETER_ERROR).
+pub(crate) const P5_CRPT2_164: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p5_crpt2.c",
+    line: 164,
+    func: c"PKCS5_v2_PBE_keyivgen_ex",
+    lib: 6,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_v2_PBKDF2_keyivgen_ex` at `crypto/evp/p5_crpt2.c:196` (EVP_R_NO_CIPHER_SET).
+pub(crate) const P5_CRPT2_196: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p5_crpt2.c",
+    line: 196,
+    func: c"PKCS5_v2_PBKDF2_keyivgen_ex",
+    lib: 6,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_v2_PBKDF2_keyivgen_ex` at `crypto/evp/p5_crpt2.c:207` (EVP_R_DECODE_ERROR).
+pub(crate) const P5_CRPT2_207: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p5_crpt2.c",
+    line: 207,
+    func: c"PKCS5_v2_PBKDF2_keyivgen_ex",
+    lib: 6,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_v2_PBKDF2_keyivgen_ex` at `crypto/evp/p5_crpt2.c:213` (EVP_R_INVALID_KEY_LENGTH).
+pub(crate) const P5_CRPT2_213: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p5_crpt2.c",
+    line: 213,
+    func: c"PKCS5_v2_PBKDF2_keyivgen_ex",
+    lib: 6,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_v2_PBKDF2_keyivgen_ex` at `crypto/evp/p5_crpt2.c:221` (EVP_R_UNSUPPORTED_KEYLENGTH).
+pub(crate) const P5_CRPT2_221: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p5_crpt2.c",
+    line: 221,
+    func: c"PKCS5_v2_PBKDF2_keyivgen_ex",
+    lib: 6,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_v2_PBKDF2_keyivgen_ex` at `crypto/evp/p5_crpt2.c:231` (EVP_R_UNSUPPORTED_PRF).
+pub(crate) const P5_CRPT2_231: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p5_crpt2.c",
+    line: 231,
+    func: c"PKCS5_v2_PBKDF2_keyivgen_ex",
+    lib: 6,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_v2_PBKDF2_keyivgen_ex` at `crypto/evp/p5_crpt2.c:241` (EVP_R_UNSUPPORTED_PRF).
+pub(crate) const P5_CRPT2_241: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p5_crpt2.c",
+    line: 241,
+    func: c"PKCS5_v2_PBKDF2_keyivgen_ex",
+    lib: 6,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_v2_PBKDF2_keyivgen_ex` at `crypto/evp/p5_crpt2.c:247` (EVP_R_UNSUPPORTED_SALT_TYPE).
+pub(crate) const P5_CRPT2_247: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p5_crpt2.c",
+    line: 247,
+    func: c"PKCS5_v2_PBKDF2_keyivgen_ex",
+    lib: 6,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_decrypt_old` at `crypto/evp/p_dec.c:28` (EVP_R_PUBLIC_KEY_NOT_RSA).
+pub(crate) const P_DEC_28: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_dec.c",
+    line: 28,
+    func: c"EVP_PKEY_decrypt_old",
+    lib: 6,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_encrypt_old` at `crypto/evp/p_enc.c:28` (EVP_R_PUBLIC_KEY_NOT_RSA).
+pub(crate) const P_ENC_28: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_enc.c",
+    line: 28,
+    func: c"EVP_PKEY_encrypt_old",
+    lib: 6,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_get0_RSA_int` at `crypto/evp/p_legacy.c:43` (EVP_R_EXPECTING_AN_RSA_KEY).
+pub(crate) const P_LEGACY_43: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_legacy.c",
+    line: 43,
+    func: c"evp_pkey_get0_RSA_int",
+    lib: 6,
+    reason: 127,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_get0_EC_KEY_int` at `crypto/evp/p_legacy.c:79` (EVP_R_EXPECTING_A_EC_KEY).
+pub(crate) const P_LEGACY_79: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_legacy.c",
+    line: 79,
+    func: c"evp_pkey_get0_EC_KEY_int",
+    lib: 6,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_get_bits` at `crypto/evp/p_lib.c:71` (EVP_R_UNKNOWN_BITS).
+pub(crate) const P_LIB_71: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 71,
+    func: c"EVP_PKEY_get_bits",
+    lib: 6,
+    reason: 166,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_get_security_bits` at `crypto/evp/p_lib.c:87` (EVP_R_UNKNOWN_SECURITY_BITS).
+pub(crate) const P_LIB_87: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 87,
+    func: c"EVP_PKEY_get_security_bits",
+    lib: 6,
+    reason: 168,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_copy_parameters` at `crypto/evp/p_lib.c:180` (EVP_R_DIFFERENT_KEY_TYPES).
+pub(crate) const P_LIB_180: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 180,
+    func: c"EVP_PKEY_copy_parameters",
+    lib: 6,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_copy_parameters` at `crypto/evp/p_lib.c:187` (EVP_R_MISSING_PARAMETERS).
+pub(crate) const P_LIB_187: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 187,
+    func: c"EVP_PKEY_copy_parameters",
+    lib: 6,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_copy_parameters` at `crypto/evp/p_lib.c:195` (EVP_R_DIFFERENT_PARAMETERS).
+pub(crate) const P_LIB_195: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 195,
+    func: c"EVP_PKEY_copy_parameters",
+    lib: 6,
+    reason: 153,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_copy_parameters` at `crypto/evp/p_lib.c:223` (EVP_R_DIFFERENT_KEY_TYPES).
+pub(crate) const P_LIB_223: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 223,
+    func: c"EVP_PKEY_copy_parameters",
+    lib: 6,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `new_raw_key_int` at `crypto/evp/p_lib.c:471` (EVP_R_KEY_SETUP_FAILED).
+pub(crate) const P_LIB_471: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 471,
+    func: c"new_raw_key_int",
+    lib: 6,
+    reason: 180,
+    dynamic_reason: false,
+};
+
+/// `new_raw_key_int` at `crypto/evp/p_lib.c:487` (ERR_R_EVP_LIB).
+pub(crate) const P_LIB_487: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 487,
+    func: c"new_raw_key_int",
+    lib: 6,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `new_raw_key_int` at `crypto/evp/p_lib.c:501` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const P_LIB_501: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 501,
+    func: c"new_raw_key_int",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `new_raw_key_int` at `crypto/evp/p_lib.c:506` (EVP_R_KEY_SETUP_FAILED).
+pub(crate) const P_LIB_506: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 506,
+    func: c"new_raw_key_int",
+    lib: 6,
+    reason: 180,
+    dynamic_reason: false,
+};
+
+/// `new_raw_key_int` at `crypto/evp/p_lib.c:511` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const P_LIB_511: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 511,
+    func: c"new_raw_key_int",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `new_raw_key_int` at `crypto/evp/p_lib.c:516` (EVP_R_KEY_SETUP_FAILED).
+pub(crate) const P_LIB_516: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 516,
+    func: c"new_raw_key_int",
+    lib: 6,
+    reason: 180,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_get_raw_private_key` at `crypto/evp/p_lib.c:606` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const P_LIB_606: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 606,
+    func: c"EVP_PKEY_get_raw_private_key",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_get_raw_private_key` at `crypto/evp/p_lib.c:611` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const P_LIB_611: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 611,
+    func: c"EVP_PKEY_get_raw_private_key",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_get_raw_private_key` at `crypto/evp/p_lib.c:616` (EVP_R_GET_RAW_KEY_FAILED).
+pub(crate) const P_LIB_616: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 616,
+    func: c"EVP_PKEY_get_raw_private_key",
+    lib: 6,
+    reason: 182,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_get_raw_public_key` at `crypto/evp/p_lib.c:638` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const P_LIB_638: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 638,
+    func: c"EVP_PKEY_get_raw_public_key",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_get_raw_public_key` at `crypto/evp/p_lib.c:643` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const P_LIB_643: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 643,
+    func: c"EVP_PKEY_get_raw_public_key",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_get_raw_public_key` at `crypto/evp/p_lib.c:648` (EVP_R_GET_RAW_KEY_FAILED).
+pub(crate) const P_LIB_648: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 648,
+    func: c"EVP_PKEY_get_raw_public_key",
+    lib: 6,
+    reason: 182,
+    dynamic_reason: false,
+};
+
+/// `new_cmac_key_int` at `crypto/evp/p_lib.c:673` (EVP_R_KEY_SETUP_FAILED).
+pub(crate) const P_LIB_673: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 673,
+    func: c"new_cmac_key_int",
+    lib: 6,
+    reason: 180,
+    dynamic_reason: false,
+};
+
+/// `new_cmac_key_int` at `crypto/evp/p_lib.c:682` (EVP_R_KEY_SETUP_FAILED).
+pub(crate) const P_LIB_682: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 682,
+    func: c"new_cmac_key_int",
+    lib: 6,
+    reason: 180,
+    dynamic_reason: false,
+};
+
+/// `new_cmac_key_int` at `crypto/evp/p_lib.c:701` (EVP_R_KEY_SETUP_FAILED).
+pub(crate) const P_LIB_701: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 701,
+    func: c"new_cmac_key_int",
+    lib: 6,
+    reason: 180,
+    dynamic_reason: false,
+};
+
+/// `new_cmac_key_int` at `crypto/evp/p_lib.c:710` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const P_LIB_710: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 710,
+    func: c"new_cmac_key_int",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_set1_engine` at `crypto/evp/p_lib.c:736` (ERR_R_ENGINE_LIB).
+pub(crate) const P_LIB_736: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 736,
+    func: c"EVP_PKEY_set1_engine",
+    lib: 6,
+    reason: 524326,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_set1_engine` at `crypto/evp/p_lib.c:741` (EVP_R_UNSUPPORTED_ALGORITHM).
+pub(crate) const P_LIB_741: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 741,
+    func: c"EVP_PKEY_set1_engine",
+    lib: 6,
+    reason: 156,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_get0_hmac` at `crypto/evp/p_lib.c:840` (EVP_R_EXPECTING_AN_HMAC_KEY).
+pub(crate) const P_LIB_840: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 840,
+    func: c"EVP_PKEY_get0_hmac",
+    lib: 6,
+    reason: 174,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_get0_poly1305` at `crypto/evp/p_lib.c:856` (EVP_R_EXPECTING_A_POLY1305_KEY).
+pub(crate) const P_LIB_856: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 856,
+    func: c"EVP_PKEY_get0_poly1305",
+    lib: 6,
+    reason: 164,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_get0_siphash` at `crypto/evp/p_lib.c:874` (EVP_R_EXPECTING_A_SIPHASH_KEY).
+pub(crate) const P_LIB_874: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 874,
+    func: c"EVP_PKEY_get0_siphash",
+    lib: 6,
+    reason: 175,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_get0_DSA_int` at `crypto/evp/p_lib.c:890` (EVP_R_EXPECTING_A_DSA_KEY).
+pub(crate) const P_LIB_890: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 890,
+    func: c"evp_pkey_get0_DSA_int",
+    lib: 6,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_get0_ECX_KEY` at `crypto/evp/p_lib.c:930` (EVP_R_EXPECTING_A_ECX_KEY).
+pub(crate) const P_LIB_930: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 930,
+    func: c"evp_pkey_get0_ECX_KEY",
+    lib: 6,
+    reason: 219,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_get0_DH_int` at `crypto/evp/p_lib.c:1001` (EVP_R_EXPECTING_A_DH_KEY).
+pub(crate) const P_LIB_1001: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 1001,
+    func: c"evp_pkey_get0_DH_int",
+    lib: 6,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_new` at `crypto/evp/p_lib.c:1504` (ERR_R_CRYPTO_LIB).
+pub(crate) const P_LIB_1504: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 1504,
+    func: c"EVP_PKEY_new",
+    lib: 6,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_new` at `crypto/evp/p_lib.c:1511` (ERR_R_CRYPTO_LIB).
+pub(crate) const P_LIB_1511: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 1511,
+    func: c"EVP_PKEY_new",
+    lib: 6,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `pkey_set_type` at `crypto/evp/p_lib.c:1551` (ERR_R_INTERNAL_ERROR).
+pub(crate) const P_LIB_1551: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 1551,
+    func: c"pkey_set_type",
+    lib: 6,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `pkey_set_type` at `crypto/evp/p_lib.c:1601` (EVP_R_UNSUPPORTED_ALGORITHM).
+pub(crate) const P_LIB_1601: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 1601,
+    func: c"pkey_set_type",
+    lib: 6,
+    reason: 156,
+    dynamic_reason: false,
+};
+
+/// `pkey_set_type` at `crypto/evp/p_lib.c:1607` (ERR_R_INTERNAL_ERROR).
+pub(crate) const P_LIB_1607: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 1607,
+    func: c"pkey_set_type",
+    lib: 6,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `pkey_set_type` at `crypto/evp/p_lib.c:1641` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const P_LIB_1641: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 1641,
+    func: c"pkey_set_type",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_set_type_by_keymgmt` at `crypto/evp/p_lib.c:1688` (ERR_R_INTERNAL_ERROR).
+pub(crate) const P_LIB_1688: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 1688,
+    func: c"EVP_PKEY_set_type_by_keymgmt",
+    lib: 6,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_dup` at `crypto/evp/p_lib.c:1720` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const P_LIB_1720: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 1720,
+    func: c"EVP_PKEY_dup",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_dup` at `crypto/evp/p_lib.c:1748` (EVP_R_UNSUPPORTED_KEY_TYPE).
+pub(crate) const P_LIB_1748: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 1748,
+    func: c"EVP_PKEY_dup",
+    lib: 6,
+    reason: 224,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_get_size` at `crypto/evp/p_lib.c:1866` (EVP_R_UNKNOWN_MAX_SIZE).
+pub(crate) const P_LIB_1866: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 1866,
+    func: c"EVP_PKEY_get_size",
+    lib: 6,
+    reason: 167,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_copy_downgraded` at `crypto/evp/p_lib.c:2088` (ERR_R_INTERNAL_ERROR).
+pub(crate) const P_LIB_2088: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 2088,
+    func: c"evp_pkey_copy_downgraded",
+    lib: 6,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_copy_downgraded` at `crypto/evp/p_lib.c:2102` (ERR_R_EVP_LIB).
+pub(crate) const P_LIB_2102: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 2102,
+    func: c"evp_pkey_copy_downgraded",
+    lib: 6,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_copy_downgraded` at `crypto/evp/p_lib.c:2115` (EVP_R_NO_IMPORT_FUNCTION).
+pub(crate) const P_LIB_2115: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 2115,
+    func: c"evp_pkey_copy_downgraded",
+    lib: 6,
+    reason: 206,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_copy_downgraded` at `crypto/evp/p_lib.c:2126` (ERR_R_EVP_LIB).
+pub(crate) const P_LIB_2126: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 2126,
+    func: c"evp_pkey_copy_downgraded",
+    lib: 6,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_copy_downgraded` at `crypto/evp/p_lib.c:2142` (EVP_R_KEYMGMT_EXPORT_FAILURE).
+pub(crate) const P_LIB_2142: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 2142,
+    func: c"evp_pkey_copy_downgraded",
+    lib: 6,
+    reason: 205,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_set_params` at `crypto/evp/p_lib.c:2434` (EVP_R_INVALID_KEY).
+pub(crate) const P_LIB_2434: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 2434,
+    func: c"EVP_PKEY_set_params",
+    lib: 6,
+    reason: 163,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_get_params` at `crypto/evp/p_lib.c:2455` (EVP_R_INVALID_KEY).
+pub(crate) const P_LIB_2455: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_lib.c",
+    line: 2455,
+    func: c"EVP_PKEY_get_params",
+    lib: 6,
+    reason: 163,
+    dynamic_reason: false,
+};
+
+/// `EVP_OpenInit` at `crypto/evp/p_open.c:37` (ERR_R_EVP_LIB).
+pub(crate) const P_OPEN_37: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_open.c",
+    line: 37,
+    func: c"EVP_OpenInit",
+    lib: 6,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `EVP_SealInit` at `crypto/evp/p_seal.c:62` (ERR_R_EVP_LIB).
+pub(crate) const P_SEAL_62: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_seal.c",
+    line: 62,
+    func: c"EVP_SealInit",
+    lib: 6,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `EVP_SignFinal_ex` at `crypto/evp/p_sign.c:36` (ERR_R_EVP_LIB).
+pub(crate) const P_SIGN_36: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_sign.c",
+    line: 36,
+    func: c"EVP_SignFinal_ex",
+    lib: 6,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `EVP_VerifyFinal_ex` at `crypto/evp/p_verify.c:34` (ERR_R_EVP_LIB).
+pub(crate) const P_VERIFY_34: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/p_verify.c",
+    line: 34,
+    func: c"EVP_VerifyFinal_ex",
+    lib: 6,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `EVP_PBE_scrypt_ex` at `crypto/evp/pbe_scrypt.c:50` (EVP_R_PARAMETER_TOO_LARGE).
+pub(crate) const PBE_SCRYPT_50: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pbe_scrypt.c",
+    line: 50,
+    func: c"EVP_PBE_scrypt_ex",
+    lib: 6,
+    reason: 187,
+    dynamic_reason: false,
+};
+
+/// `try_provided_check` at `crypto/evp/pmeth_check.c:40` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const PMETH_CHECK_40: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_check.c",
+    line: 40,
+    func: c"try_provided_check",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_public_check_combined` at `crypto/evp/pmeth_check.c:53` (EVP_R_NO_KEY_SET).
+pub(crate) const PMETH_CHECK_53: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_check.c",
+    line: 53,
+    func: c"evp_pkey_public_check_combined",
+    lib: 6,
+    reason: 154,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_public_check_combined` at `crypto/evp/pmeth_check.c:78` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const PMETH_CHECK_78: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_check.c",
+    line: 78,
+    func: c"evp_pkey_public_check_combined",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_param_check_combined` at `crypto/evp/pmeth_check.c:98` (EVP_R_NO_KEY_SET).
+pub(crate) const PMETH_CHECK_98: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_check.c",
+    line: 98,
+    func: c"evp_pkey_param_check_combined",
+    lib: 6,
+    reason: 154,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_param_check_combined` at `crypto/evp/pmeth_check.c:124` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const PMETH_CHECK_124: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_check.c",
+    line: 124,
+    func: c"evp_pkey_param_check_combined",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_private_check` at `crypto/evp/pmeth_check.c:144` (EVP_R_NO_KEY_SET).
+pub(crate) const PMETH_CHECK_144: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_check.c",
+    line: 144,
+    func: c"EVP_PKEY_private_check",
+    lib: 6,
+    reason: 154,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_private_check` at `crypto/evp/pmeth_check.c:154` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const PMETH_CHECK_154: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_check.c",
+    line: 154,
+    func: c"EVP_PKEY_private_check",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_pairwise_check` at `crypto/evp/pmeth_check.c:169` (EVP_R_NO_KEY_SET).
+pub(crate) const PMETH_CHECK_169: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_check.c",
+    line: 169,
+    func: c"EVP_PKEY_pairwise_check",
+    lib: 6,
+    reason: 154,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_pairwise_check` at `crypto/evp/pmeth_check.c:194` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const PMETH_CHECK_194: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_check.c",
+    line: 194,
+    func: c"EVP_PKEY_pairwise_check",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `gen_init` at `crypto/evp/pmeth_gn.c:50` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const PMETH_GN_50: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_gn.c",
+    line: 50,
+    func: c"gen_init",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `gen_init` at `crypto/evp/pmeth_gn.c:87` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const PMETH_GN_87: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_gn.c",
+    line: 87,
+    func: c"gen_init",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_generate` at `crypto/evp/pmeth_gn.c:146` (ERR_R_EVP_LIB).
+pub(crate) const PMETH_GN_146: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_gn.c",
+    line: 146,
+    func: c"EVP_PKEY_generate",
+    lib: 6,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_generate` at `crypto/evp/pmeth_gn.c:241` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const PMETH_GN_241: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_gn.c",
+    line: 241,
+    func: c"EVP_PKEY_generate",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_generate` at `crypto/evp/pmeth_gn.c:245` (EVP_R_OPERATION_NOT_INITIALIZED).
+pub(crate) const PMETH_GN_245: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_gn.c",
+    line: 245,
+    func: c"EVP_PKEY_generate",
+    lib: 6,
+    reason: 151,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_generate` at `crypto/evp/pmeth_gn.c:250` (EVP_R_INACCESSIBLE_DOMAIN_PARAMETERS).
+pub(crate) const PMETH_GN_250: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_gn.c",
+    line: 250,
+    func: c"EVP_PKEY_generate",
+    lib: 6,
+    reason: 204,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_paramgen` at `crypto/evp/pmeth_gn.c:259` (EVP_R_OPERATION_NOT_INITIALIZED).
+pub(crate) const PMETH_GN_259: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_gn.c",
+    line: 259,
+    func: c"EVP_PKEY_paramgen",
+    lib: 6,
+    reason: 151,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_keygen` at `crypto/evp/pmeth_gn.c:268` (EVP_R_OPERATION_NOT_INITIALIZED).
+pub(crate) const PMETH_GN_268: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_gn.c",
+    line: 268,
+    func: c"EVP_PKEY_keygen",
+    lib: 6,
+    reason: 151,
+    dynamic_reason: false,
+};
+
+/// `fromdata_init` at `crypto/evp/pmeth_gn.c:351` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const PMETH_GN_351: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_gn.c",
+    line: 351,
+    func: c"fromdata_init",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_fromdata` at `crypto/evp/pmeth_gn.c:367` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const PMETH_GN_367: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_gn.c",
+    line: 367,
+    func: c"EVP_PKEY_fromdata",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_fromdata` at `crypto/evp/pmeth_gn.c:378` (ERR_R_EVP_LIB).
+pub(crate) const PMETH_GN_378: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_gn.c",
+    line: 378,
+    func: c"EVP_PKEY_fromdata",
+    lib: 6,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_export` at `crypto/evp/pmeth_gn.c:439` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PMETH_GN_439: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_gn.c",
+    line: 439,
+    func: c"EVP_PKEY_export",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `int_ctx_new` at `crypto/evp/pmeth_lib.c:192` (EVP_R_UNSUPPORTED_ALGORITHM).
+pub(crate) const PMETH_LIB_192: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 192,
+    func: c"int_ctx_new",
+    lib: 6,
+    reason: 156,
+    dynamic_reason: false,
+};
+
+/// `int_ctx_new` at `crypto/evp/pmeth_lib.c:219` (ERR_R_ENGINE_LIB).
+pub(crate) const PMETH_LIB_219: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 219,
+    func: c"int_ctx_new",
+    lib: 6,
+    reason: 524326,
+    dynamic_reason: false,
+};
+
+/// `int_ctx_new` at `crypto/evp/pmeth_lib.c:255` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const PMETH_LIB_255: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 255,
+    func: c"int_ctx_new",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `int_ctx_new` at `crypto/evp/pmeth_lib.c:284` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PMETH_LIB_284: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 284,
+    func: c"int_ctx_new",
+    lib: 6,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `int_ctx_new` at `crypto/evp/pmeth_lib.c:295` (EVP_R_UNSUPPORTED_ALGORITHM).
+pub(crate) const PMETH_LIB_295: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 295,
+    func: c"int_ctx_new",
+    lib: 6,
+    reason: 156,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_dup` at `crypto/evp/pmeth_lib.c:459` (ERR_R_ENGINE_LIB).
+pub(crate) const PMETH_LIB_459: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 459,
+    func: c"EVP_PKEY_CTX_dup",
+    lib: 6,
+    reason: 524326,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_meth_add0` at `crypto/evp/pmeth_lib.c:619` (ERR_R_CRYPTO_LIB).
+pub(crate) const PMETH_LIB_619: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 619,
+    func: c"EVP_PKEY_meth_add0",
+    lib: 6,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_meth_add0` at `crypto/evp/pmeth_lib.c:624` (ERR_R_CRYPTO_LIB).
+pub(crate) const PMETH_LIB_624: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 624,
+    func: c"EVP_PKEY_meth_add0",
+    lib: 6,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_get_signature_md` at `crypto/evp/pmeth_lib.c:916` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const PMETH_LIB_916: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 916,
+    func: c"EVP_PKEY_CTX_get_signature_md",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_ctx_set_md` at `crypto/evp/pmeth_lib.c:950` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const PMETH_LIB_950: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 950,
+    func: c"evp_pkey_ctx_set_md",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_ctx_set1_octet_string` at `crypto/evp/pmeth_lib.c:997` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const PMETH_LIB_997: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 997,
+    func: c"evp_pkey_ctx_set1_octet_string",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_ctx_set1_octet_string` at `crypto/evp/pmeth_lib.c:1008` (EVP_R_INVALID_LENGTH).
+pub(crate) const PMETH_LIB_1008: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 1008,
+    func: c"evp_pkey_ctx_set1_octet_string",
+    lib: 6,
+    reason: 221,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_ctx_add1_octet_string` at `crypto/evp/pmeth_lib.c:1037` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const PMETH_LIB_1037: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 1037,
+    func: c"evp_pkey_ctx_add1_octet_string",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_ctx_add1_octet_string` at `crypto/evp/pmeth_lib.c:1048` (EVP_R_INVALID_LENGTH).
+pub(crate) const PMETH_LIB_1048: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 1048,
+    func: c"evp_pkey_ctx_add1_octet_string",
+    lib: 6,
+    reason: 221,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_set_hkdf_mode` at `crypto/evp/pmeth_lib.c:1158` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const PMETH_LIB_1158: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 1158,
+    func: c"EVP_PKEY_CTX_set_hkdf_mode",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_set_hkdf_mode` at `crypto/evp/pmeth_lib.c:1170` (EVP_R_INVALID_VALUE).
+pub(crate) const PMETH_LIB_1170: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 1170,
+    func: c"EVP_PKEY_CTX_set_hkdf_mode",
+    lib: 6,
+    reason: 222,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_ctx_set_uint64` at `crypto/evp/pmeth_lib.c:1206` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const PMETH_LIB_1206: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 1206,
+    func: c"evp_pkey_ctx_set_uint64",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_set_kem_op` at `crypto/evp/pmeth_lib.c:1267` (EVP_R_INVALID_VALUE).
+pub(crate) const PMETH_LIB_1267: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 1267,
+    func: c"EVP_PKEY_CTX_set_kem_op",
+    lib: 6,
+    reason: 222,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_set_kem_op` at `crypto/evp/pmeth_lib.c:1271` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const PMETH_LIB_1271: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 1271,
+    func: c"EVP_PKEY_CTX_set_kem_op",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_ctx_ctrl_int` at `crypto/evp/pmeth_lib.c:1309` (EVP_R_NO_OPERATION_SET).
+pub(crate) const PMETH_LIB_1309: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 1309,
+    func: c"evp_pkey_ctx_ctrl_int",
+    lib: 6,
+    reason: 149,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_ctx_ctrl_int` at `crypto/evp/pmeth_lib.c:1314` (EVP_R_INVALID_OPERATION).
+pub(crate) const PMETH_LIB_1314: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 1314,
+    func: c"evp_pkey_ctx_ctrl_int",
+    lib: 6,
+    reason: 148,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_ctx_ctrl_int` at `crypto/evp/pmeth_lib.c:1325` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const PMETH_LIB_1325: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 1325,
+    func: c"evp_pkey_ctx_ctrl_int",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_ctx_ctrl_int` at `crypto/evp/pmeth_lib.c:1334` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const PMETH_LIB_1334: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 1334,
+    func: c"evp_pkey_ctx_ctrl_int",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_ctrl` at `crypto/evp/pmeth_lib.c:1346` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const PMETH_LIB_1346: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 1346,
+    func: c"EVP_PKEY_CTX_ctrl",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_ctx_ctrl_str_int` at `crypto/evp/pmeth_lib.c:1380` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const PMETH_LIB_1380: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 1380,
+    func: c"evp_pkey_ctx_ctrl_str_int",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_ctx_ctrl_str_int` at `crypto/evp/pmeth_lib.c:1390` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const PMETH_LIB_1390: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 1390,
+    func: c"evp_pkey_ctx_ctrl_str_int",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_ctx_store_cached_data` at `crypto/evp/pmeth_lib.c:1460` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const PMETH_LIB_1460: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 1460,
+    func: c"evp_pkey_ctx_store_cached_data",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_ctx_store_cached_data` at `crypto/evp/pmeth_lib.c:1468` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const PMETH_LIB_1468: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 1468,
+    func: c"evp_pkey_ctx_store_cached_data",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_ctx_store_cached_data` at `crypto/evp/pmeth_lib.c:1473` (EVP_R_INVALID_OPERATION).
+pub(crate) const PMETH_LIB_1473: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 1473,
+    func: c"evp_pkey_ctx_store_cached_data",
+    lib: 6,
+    reason: 148,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_ctx_store_cached_data` at `crypto/evp/pmeth_lib.c:1480` (EVP_R_COMMAND_NOT_SUPPORTED).
+pub(crate) const PMETH_LIB_1480: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 1480,
+    func: c"evp_pkey_ctx_store_cached_data",
+    lib: 6,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_ctx_store_cached_data` at `crypto/evp/pmeth_lib.c:1484` (EVP_R_INVALID_OPERATION).
+pub(crate) const PMETH_LIB_1484: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 1484,
+    func: c"evp_pkey_ctx_store_cached_data",
+    lib: 6,
+    reason: 148,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_ctx_store_cached_data` at `crypto/evp/pmeth_lib.c:1491` (EVP_R_INVALID_OPERATION).
+pub(crate) const PMETH_LIB_1491: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 1491,
+    func: c"evp_pkey_ctx_store_cached_data",
+    lib: 6,
+    reason: 148,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_md` at `crypto/evp/pmeth_lib.c:1619` (EVP_R_INVALID_DIGEST).
+pub(crate) const PMETH_LIB_1619: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/pmeth_lib.c",
+    line: 1619,
+    func: c"EVP_PKEY_CTX_md",
+    lib: 6,
+    reason: 152,
+    dynamic_reason: false,
+};
+
+/// `EVP_SKEY_export` at `crypto/evp/s_lib.c:25` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const S_LIB_25: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/s_lib.c",
+    line: 25,
+    func: c"EVP_SKEY_export",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `evp_skey_alloc` at `crypto/evp/s_lib.c:47` (ERR_R_CRYPTO_LIB).
+pub(crate) const S_LIB_47: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/s_lib.c",
+    line: 47,
+    func: c"evp_skey_alloc",
+    lib: 6,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `evp_skey_alloc_fetch` at `crypto/evp/s_lib.c:79` (ERR_R_FETCH_FAILED).
+pub(crate) const S_LIB_79: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/s_lib.c",
+    line: 79,
+    func: c"evp_skey_alloc_fetch",
+    lib: 6,
+    reason: 524557,
+    dynamic_reason: false,
+};
+
+/// `EVP_SKEY_get0_raw_key` at `crypto/evp/s_lib.c:169` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const S_LIB_169: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/s_lib.c",
+    line: 169,
+    func: c"EVP_SKEY_get0_raw_key",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EVP_SKEY_to_provider` at `crypto/evp/s_lib.c:285` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const S_LIB_285: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/s_lib.c",
+    line: 285,
+    func: c"EVP_SKEY_to_provider",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EVP_SKEY_to_provider` at `crypto/evp/s_lib.c:305` (ERR_R_FETCH_FAILED).
+pub(crate) const S_LIB_305: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/s_lib.c",
+    line: 305,
+    func: c"EVP_SKEY_to_provider",
+    lib: 6,
+    reason: 524557,
+    dynamic_reason: false,
+};
+
+/// `evp_signature_from_algorithm` at `crypto/evp/signature.c:68` (ERR_R_EVP_LIB).
+pub(crate) const SIGNATURE_68: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 68,
+    func: c"evp_signature_from_algorithm",
+    lib: 6,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `evp_signature_from_algorithm` at `crypto/evp/signature.c:296` (EVP_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const SIGNATURE_296: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 296,
+    func: c"evp_signature_from_algorithm",
+    lib: 6,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `evp_signature_from_algorithm` at `crypto/evp/signature.c:310` (EVP_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const SIGNATURE_310: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 310,
+    func: c"evp_signature_from_algorithm",
+    lib: 6,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `evp_signature_from_algorithm` at `crypto/evp/signature.c:315` (EVP_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const SIGNATURE_315: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 315,
+    func: c"evp_signature_from_algorithm",
+    lib: 6,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `evp_signature_from_algorithm` at `crypto/evp/signature.c:329` (EVP_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const SIGNATURE_329: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 329,
+    func: c"evp_signature_from_algorithm",
+    lib: 6,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `evp_signature_from_algorithm` at `crypto/evp/signature.c:340` (EVP_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const SIGNATURE_340: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 340,
+    func: c"evp_signature_from_algorithm",
+    lib: 6,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `evp_signature_from_algorithm` at `crypto/evp/signature.c:353` (EVP_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const SIGNATURE_353: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 353,
+    func: c"evp_signature_from_algorithm",
+    lib: 6,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `evp_signature_from_algorithm` at `crypto/evp/signature.c:363` (EVP_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const SIGNATURE_363: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 363,
+    func: c"evp_signature_from_algorithm",
+    lib: 6,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `evp_signature_from_algorithm` at `crypto/evp/signature.c:374` (EVP_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const SIGNATURE_374: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 374,
+    func: c"evp_signature_from_algorithm",
+    lib: 6,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `evp_signature_from_algorithm` at `crypto/evp/signature.c:385` (EVP_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const SIGNATURE_385: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 385,
+    func: c"evp_signature_from_algorithm",
+    lib: 6,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `evp_signature_from_algorithm` at `crypto/evp/signature.c:396` (EVP_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const SIGNATURE_396: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 396,
+    func: c"evp_signature_from_algorithm",
+    lib: 6,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `evp_signature_from_algorithm` at `crypto/evp/signature.c:409` (EVP_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const SIGNATURE_409: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 409,
+    func: c"evp_signature_from_algorithm",
+    lib: 6,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `evp_signature_from_algorithm` at `crypto/evp/signature.c:419` (EVP_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const SIGNATURE_419: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 419,
+    func: c"evp_signature_from_algorithm",
+    lib: 6,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `evp_signature_from_algorithm` at `crypto/evp/signature.c:425` (EVP_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const SIGNATURE_425: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 425,
+    func: c"evp_signature_from_algorithm",
+    lib: 6,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `evp_signature_from_algorithm` at `crypto/evp/signature.c:431` (EVP_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const SIGNATURE_431: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 431,
+    func: c"evp_signature_from_algorithm",
+    lib: 6,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `evp_signature_from_algorithm` at `crypto/evp/signature.c:437` (EVP_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const SIGNATURE_437: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 437,
+    func: c"evp_signature_from_algorithm",
+    lib: 6,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `evp_signature_from_algorithm` at `crypto/evp/signature.c:443` (EVP_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const SIGNATURE_443: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 443,
+    func: c"evp_signature_from_algorithm",
+    lib: 6,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_signature_init` at `crypto/evp/signature.c:580` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const SIGNATURE_580: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 580,
+    func: c"evp_pkey_signature_init",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_signature_init` at `crypto/evp/signature.c:596` (EVP_R_NO_KEY_SET).
+pub(crate) const SIGNATURE_596: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 596,
+    func: c"evp_pkey_signature_init",
+    lib: 6,
+    reason: 154,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_signature_init` at `crypto/evp/signature.c:637` (EVP_R_SIGNATURE_TYPE_AND_KEY_TYPE_INCOMPATIBLE).
+pub(crate) const SIGNATURE_637: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 637,
+    func: c"evp_pkey_signature_init",
+    lib: 6,
+    reason: 228,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_signature_init` at `crypto/evp/signature.c:664` (EVP_R_SIGNATURE_TYPE_AND_KEY_TYPE_INCOMPATIBLE).
+pub(crate) const SIGNATURE_664: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 664,
+    func: c"evp_pkey_signature_init",
+    lib: 6,
+    reason: 228,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_signature_init` at `crypto/evp/signature.c:681` (EVP_R_NO_KEY_SET).
+pub(crate) const SIGNATURE_681: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 681,
+    func: c"evp_pkey_signature_init",
+    lib: 6,
+    reason: 154,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_signature_init` at `crypto/evp/signature.c:691` (ERR_R_INTERNAL_ERROR).
+pub(crate) const SIGNATURE_691: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 691,
+    func: c"evp_pkey_signature_init",
+    lib: 6,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_signature_init` at `crypto/evp/signature.c:699` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const SIGNATURE_699: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 699,
+    func: c"evp_pkey_signature_init",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_signature_init` at `crypto/evp/signature.c:786` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const SIGNATURE_786: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 786,
+    func: c"evp_pkey_signature_init",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_signature_init` at `crypto/evp/signature.c:793` (EVP_R_PROVIDER_SIGNATURE_NOT_SUPPORTED).
+pub(crate) const SIGNATURE_793: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 793,
+    func: c"evp_pkey_signature_init",
+    lib: 6,
+    reason: 237,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_signature_init` at `crypto/evp/signature.c:802` (EVP_R_PROVIDER_SIGNATURE_NOT_SUPPORTED).
+pub(crate) const SIGNATURE_802: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 802,
+    func: c"evp_pkey_signature_init",
+    lib: 6,
+    reason: 237,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_signature_init` at `crypto/evp/signature.c:811` (EVP_R_PROVIDER_SIGNATURE_NOT_SUPPORTED).
+pub(crate) const SIGNATURE_811: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 811,
+    func: c"evp_pkey_signature_init",
+    lib: 6,
+    reason: 237,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_signature_init` at `crypto/evp/signature.c:820` (EVP_R_PROVIDER_SIGNATURE_NOT_SUPPORTED).
+pub(crate) const SIGNATURE_820: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 820,
+    func: c"evp_pkey_signature_init",
+    lib: 6,
+    reason: 237,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_signature_init` at `crypto/evp/signature.c:829` (EVP_R_PROVIDER_SIGNATURE_NOT_SUPPORTED).
+pub(crate) const SIGNATURE_829: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 829,
+    func: c"evp_pkey_signature_init",
+    lib: 6,
+    reason: 237,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_signature_init` at `crypto/evp/signature.c:837` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const SIGNATURE_837: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 837,
+    func: c"evp_pkey_signature_init",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_signature_init` at `crypto/evp/signature.c:862` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const SIGNATURE_862: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 862,
+    func: c"evp_pkey_signature_init",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_signature_init` at `crypto/evp/signature.c:883` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const SIGNATURE_883: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 883,
+    func: c"evp_pkey_signature_init",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_sign_message_update` at `crypto/evp/signature.c:933` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const SIGNATURE_933: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 933,
+    func: c"EVP_PKEY_sign_message_update",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_sign_message_update` at `crypto/evp/signature.c:938` (EVP_R_OPERATION_NOT_INITIALIZED).
+pub(crate) const SIGNATURE_938: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 938,
+    func: c"EVP_PKEY_sign_message_update",
+    lib: 6,
+    reason: 151,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_sign_message_update` at `crypto/evp/signature.c:945` (EVP_R_PROVIDER_SIGNATURE_NOT_SUPPORTED).
+pub(crate) const SIGNATURE_945: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 945,
+    func: c"EVP_PKEY_sign_message_update",
+    lib: 6,
+    reason: 237,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_sign_message_update` at `crypto/evp/signature.c:952` (EVP_R_PROVIDER_SIGNATURE_FAILURE).
+pub(crate) const SIGNATURE_952: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 952,
+    func: c"EVP_PKEY_sign_message_update",
+    lib: 6,
+    reason: 234,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_sign_message_final` at `crypto/evp/signature.c:965` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const SIGNATURE_965: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 965,
+    func: c"EVP_PKEY_sign_message_final",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_sign_message_final` at `crypto/evp/signature.c:970` (EVP_R_OPERATION_NOT_INITIALIZED).
+pub(crate) const SIGNATURE_970: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 970,
+    func: c"EVP_PKEY_sign_message_final",
+    lib: 6,
+    reason: 151,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_sign_message_final` at `crypto/evp/signature.c:977` (EVP_R_PROVIDER_SIGNATURE_NOT_SUPPORTED).
+pub(crate) const SIGNATURE_977: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 977,
+    func: c"EVP_PKEY_sign_message_final",
+    lib: 6,
+    reason: 237,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_sign_message_final` at `crypto/evp/signature.c:985` (EVP_R_PROVIDER_SIGNATURE_FAILURE).
+pub(crate) const SIGNATURE_985: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 985,
+    func: c"EVP_PKEY_sign_message_final",
+    lib: 6,
+    reason: 234,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_sign` at `crypto/evp/signature.c:999` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const SIGNATURE_999: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 999,
+    func: c"EVP_PKEY_sign",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_sign` at `crypto/evp/signature.c:1005` (EVP_R_OPERATION_NOT_INITIALIZED).
+pub(crate) const SIGNATURE_1005: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 1005,
+    func: c"EVP_PKEY_sign",
+    lib: 6,
+    reason: 151,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_sign` at `crypto/evp/signature.c:1015` (EVP_R_PROVIDER_SIGNATURE_NOT_SUPPORTED).
+pub(crate) const SIGNATURE_1015: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 1015,
+    func: c"EVP_PKEY_sign",
+    lib: 6,
+    reason: 237,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_sign` at `crypto/evp/signature.c:1023` (EVP_R_PROVIDER_SIGNATURE_FAILURE).
+pub(crate) const SIGNATURE_1023: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 1023,
+    func: c"EVP_PKEY_sign",
+    lib: 6,
+    reason: 234,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_sign` at `crypto/evp/signature.c:1029` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const SIGNATURE_1029: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 1029,
+    func: c"EVP_PKEY_sign",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_CTX_set_signature` at `crypto/evp/signature.c:1064` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const SIGNATURE_1064: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 1064,
+    func: c"EVP_PKEY_CTX_set_signature",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_verify_message_update` at `crypto/evp/signature.c:1087` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const SIGNATURE_1087: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 1087,
+    func: c"EVP_PKEY_verify_message_update",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_verify_message_update` at `crypto/evp/signature.c:1092` (EVP_R_OPERATION_NOT_INITIALIZED).
+pub(crate) const SIGNATURE_1092: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 1092,
+    func: c"EVP_PKEY_verify_message_update",
+    lib: 6,
+    reason: 151,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_verify_message_update` at `crypto/evp/signature.c:1099` (EVP_R_PROVIDER_SIGNATURE_NOT_SUPPORTED).
+pub(crate) const SIGNATURE_1099: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 1099,
+    func: c"EVP_PKEY_verify_message_update",
+    lib: 6,
+    reason: 237,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_verify_message_update` at `crypto/evp/signature.c:1106` (EVP_R_PROVIDER_SIGNATURE_FAILURE).
+pub(crate) const SIGNATURE_1106: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 1106,
+    func: c"EVP_PKEY_verify_message_update",
+    lib: 6,
+    reason: 234,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_verify_message_final` at `crypto/evp/signature.c:1118` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const SIGNATURE_1118: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 1118,
+    func: c"EVP_PKEY_verify_message_final",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_verify_message_final` at `crypto/evp/signature.c:1123` (EVP_R_OPERATION_NOT_INITIALIZED).
+pub(crate) const SIGNATURE_1123: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 1123,
+    func: c"EVP_PKEY_verify_message_final",
+    lib: 6,
+    reason: 151,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_verify_message_final` at `crypto/evp/signature.c:1130` (EVP_R_PROVIDER_SIGNATURE_NOT_SUPPORTED).
+pub(crate) const SIGNATURE_1130: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 1130,
+    func: c"EVP_PKEY_verify_message_final",
+    lib: 6,
+    reason: 237,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_verify_message_final` at `crypto/evp/signature.c:1138` (EVP_R_PROVIDER_SIGNATURE_FAILURE).
+pub(crate) const SIGNATURE_1138: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 1138,
+    func: c"EVP_PKEY_verify_message_final",
+    lib: 6,
+    reason: 234,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_verify` at `crypto/evp/signature.c:1152` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const SIGNATURE_1152: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 1152,
+    func: c"EVP_PKEY_verify",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_verify` at `crypto/evp/signature.c:1158` (EVP_R_OPERATION_NOT_INITIALIZED).
+pub(crate) const SIGNATURE_1158: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 1158,
+    func: c"EVP_PKEY_verify",
+    lib: 6,
+    reason: 151,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_verify` at `crypto/evp/signature.c:1168` (EVP_R_PROVIDER_SIGNATURE_NOT_SUPPORTED).
+pub(crate) const SIGNATURE_1168: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 1168,
+    func: c"EVP_PKEY_verify",
+    lib: 6,
+    reason: 237,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_verify` at `crypto/evp/signature.c:1176` (EVP_R_PROVIDER_SIGNATURE_FAILURE).
+pub(crate) const SIGNATURE_1176: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 1176,
+    func: c"EVP_PKEY_verify",
+    lib: 6,
+    reason: 234,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_verify` at `crypto/evp/signature.c:1182` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const SIGNATURE_1182: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 1182,
+    func: c"EVP_PKEY_verify",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_verify_recover` at `crypto/evp/signature.c:1215` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const SIGNATURE_1215: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 1215,
+    func: c"EVP_PKEY_verify_recover",
+    lib: 6,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_verify_recover` at `crypto/evp/signature.c:1220` (EVP_R_OPERATION_NOT_INITIALIZED).
+pub(crate) const SIGNATURE_1220: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 1220,
+    func: c"EVP_PKEY_verify_recover",
+    lib: 6,
+    reason: 151,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_verify_recover` at `crypto/evp/signature.c:1230` (EVP_R_PROVIDER_SIGNATURE_NOT_SUPPORTED).
+pub(crate) const SIGNATURE_1230: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 1230,
+    func: c"EVP_PKEY_verify_recover",
+    lib: 6,
+    reason: 237,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_verify_recover` at `crypto/evp/signature.c:1238` (EVP_R_PROVIDER_SIGNATURE_FAILURE).
+pub(crate) const SIGNATURE_1238: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 1238,
+    func: c"EVP_PKEY_verify_recover",
+    lib: 6,
+    reason: 234,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_verify_recover` at `crypto/evp/signature.c:1243` (EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE).
+pub(crate) const SIGNATURE_1243: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/signature.c",
+    line: 1243,
+    func: c"EVP_PKEY_verify_recover",
+    lib: 6,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `skeymgmt_from_algorithm` at `crypto/evp/skeymgmt_meth.c:116` (EVP_R_INVALID_PROVIDER_FUNCTIONS).
+pub(crate) const SKEYMGMT_METH_116: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/skeymgmt_meth.c",
+    line: 116,
+    func: c"skeymgmt_from_algorithm",
+    lib: 6,
+    reason: 193,
+    dynamic_reason: false,
+};
+
+/// `skeymgmt_from_algorithm` at `crypto/evp/skeymgmt_meth.c:122` (EVP_R_INITIALIZATION_ERROR).
+pub(crate) const SKEYMGMT_METH_122: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/evp/skeymgmt_meth.c",
+    line: 122,
+    func: c"skeymgmt_from_algorithm",
+    lib: 6,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_new_raw_nist_public_key` at `crypto/hpke/hpke.c:122` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_122: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 122,
+    func: c"evp_pkey_new_raw_nist_public_key",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_aead_dec` at `crypto/hpke/hpke.c:154` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_154: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 154,
+    func: c"hpke_aead_dec",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `hpke_aead_dec` at `crypto/hpke/hpke.c:162` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_162: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 162,
+    func: c"hpke_aead_dec",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_aead_dec` at `crypto/hpke/hpke.c:168` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_168: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 168,
+    func: c"hpke_aead_dec",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_aead_dec` at `crypto/hpke/hpke.c:173` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_173: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 173,
+    func: c"hpke_aead_dec",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_aead_dec` at `crypto/hpke/hpke.c:179` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_179: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 179,
+    func: c"hpke_aead_dec",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_aead_dec` at `crypto/hpke/hpke.c:184` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_184: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 184,
+    func: c"hpke_aead_dec",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_aead_dec` at `crypto/hpke/hpke.c:190` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_190: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 190,
+    func: c"hpke_aead_dec",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_aead_dec` at `crypto/hpke/hpke.c:195` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_195: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 195,
+    func: c"hpke_aead_dec",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_aead_enc` at `crypto/hpke/hpke.c:233` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_233: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 233,
+    func: c"hpke_aead_enc",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `hpke_aead_enc` at `crypto/hpke/hpke.c:237` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_237: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 237,
+    func: c"hpke_aead_enc",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `hpke_aead_enc` at `crypto/hpke/hpke.c:245` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_245: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 245,
+    func: c"hpke_aead_enc",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_aead_enc` at `crypto/hpke/hpke.c:251` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_251: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 251,
+    func: c"hpke_aead_enc",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_aead_enc` at `crypto/hpke/hpke.c:256` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_256: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 256,
+    func: c"hpke_aead_enc",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_aead_enc` at `crypto/hpke/hpke.c:262` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_262: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 262,
+    func: c"hpke_aead_enc",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_aead_enc` at `crypto/hpke/hpke.c:267` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_267: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 267,
+    func: c"hpke_aead_enc",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_aead_enc` at `crypto/hpke/hpke.c:273` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_273: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 273,
+    func: c"hpke_aead_enc",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_aead_enc` at `crypto/hpke/hpke.c:279` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_279: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 279,
+    func: c"hpke_aead_enc",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_expansion` at `crypto/hpke/hpke.c:403` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_403: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 403,
+    func: c"hpke_expansion",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `hpke_expansion` at `crypto/hpke/hpke.c:407` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_407: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 407,
+    func: c"hpke_expansion",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `hpke_encap` at `crypto/hpke/hpke.c:462` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_462: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 462,
+    func: c"hpke_encap",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `hpke_encap` at `crypto/hpke/hpke.c:467` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const HPKE_467: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 467,
+    func: c"hpke_encap",
+    lib: 15,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `hpke_encap` at `crypto/hpke/hpke.c:472` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_472: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 472,
+    func: c"hpke_encap",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_encap` at `crypto/hpke/hpke.c:485` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_485: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 485,
+    func: c"hpke_encap",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_encap` at `crypto/hpke/hpke.c:490` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_490: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 490,
+    func: c"hpke_encap",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_encap` at `crypto/hpke/hpke.c:506` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_506: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 506,
+    func: c"hpke_encap",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_encap` at `crypto/hpke/hpke.c:511` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_511: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 511,
+    func: c"hpke_encap",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_encap` at `crypto/hpke/hpke.c:517` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_517: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 517,
+    func: c"hpke_encap",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_encap` at `crypto/hpke/hpke.c:521` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_521: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 521,
+    func: c"hpke_encap",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `hpke_encap` at `crypto/hpke/hpke.c:534` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_534: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 534,
+    func: c"hpke_encap",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_decap` at `crypto/hpke/hpke.c:564` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_564: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 564,
+    func: c"hpke_decap",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `hpke_decap` at `crypto/hpke/hpke.c:569` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const HPKE_569: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 569,
+    func: c"hpke_decap",
+    lib: 15,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `hpke_decap` at `crypto/hpke/hpke.c:574` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_574: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 574,
+    func: c"hpke_decap",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_decap` at `crypto/hpke/hpke.c:587` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_587: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 587,
+    func: c"hpke_decap",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_decap` at `crypto/hpke/hpke.c:603` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_603: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 603,
+    func: c"hpke_decap",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_decap` at `crypto/hpke/hpke.c:607` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_607: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 607,
+    func: c"hpke_decap",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_decap` at `crypto/hpke/hpke.c:612` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_612: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 612,
+    func: c"hpke_decap",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_decap` at `crypto/hpke/hpke.c:617` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_617: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 617,
+    func: c"hpke_decap",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_decap` at `crypto/hpke/hpke.c:626` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_626: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 626,
+    func: c"hpke_decap",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_do_middle` at `crypto/hpke/hpke.c:672` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const HPKE_672: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 672,
+    func: c"hpke_do_middle",
+    lib: 15,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `hpke_do_middle` at `crypto/hpke/hpke.c:676` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_676: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 676,
+    func: c"hpke_do_middle",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_do_middle` at `crypto/hpke/hpke.c:681` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_681: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 681,
+    func: c"hpke_do_middle",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_do_middle` at `crypto/hpke/hpke.c:686` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_686: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 686,
+    func: c"hpke_do_middle",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_do_middle` at `crypto/hpke/hpke.c:696` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_696: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 696,
+    func: c"hpke_do_middle",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_do_middle` at `crypto/hpke/hpke.c:703` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_703: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 703,
+    func: c"hpke_do_middle",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `hpke_do_middle` at `crypto/hpke/hpke.c:709` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_709: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 709,
+    func: c"hpke_do_middle",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_do_middle` at `crypto/hpke/hpke.c:727` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_727: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 727,
+    func: c"hpke_do_middle",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_do_middle` at `crypto/hpke/hpke.c:736` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_736: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 736,
+    func: c"hpke_do_middle",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_do_middle` at `crypto/hpke/hpke.c:742` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_742: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 742,
+    func: c"hpke_do_middle",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_do_middle` at `crypto/hpke/hpke.c:752` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_752: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 752,
+    func: c"hpke_do_middle",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_do_middle` at `crypto/hpke/hpke.c:767` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_767: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 767,
+    func: c"hpke_do_middle",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_do_middle` at `crypto/hpke/hpke.c:780` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_780: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 780,
+    func: c"hpke_do_middle",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `hpke_do_middle` at `crypto/hpke/hpke.c:794` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_794: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 794,
+    func: c"hpke_do_middle",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_CTX_new` at `crypto/hpke/hpke.c:820` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_820: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 820,
+    func: c"OSSL_HPKE_CTX_new",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_CTX_new` at `crypto/hpke/hpke.c:824` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_824: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 824,
+    func: c"OSSL_HPKE_CTX_new",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_CTX_new` at `crypto/hpke/hpke.c:828` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_828: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 828,
+    func: c"OSSL_HPKE_CTX_new",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_CTX_new` at `crypto/hpke/hpke.c:843` (ERR_R_FETCH_FAILED).
+pub(crate) const HPKE_843: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 843,
+    func: c"OSSL_HPKE_CTX_new",
+    lib: 15,
+    reason: 524557,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_CTX_set1_psk` at `crypto/hpke/hpke.c:887` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_887: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 887,
+    func: c"OSSL_HPKE_CTX_set1_psk",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_CTX_set1_psk` at `crypto/hpke/hpke.c:891` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_891: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 891,
+    func: c"OSSL_HPKE_CTX_set1_psk",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_CTX_set1_psk` at `crypto/hpke/hpke.c:895` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_895: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 895,
+    func: c"OSSL_HPKE_CTX_set1_psk",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_CTX_set1_psk` at `crypto/hpke/hpke.c:899` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_899: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 899,
+    func: c"OSSL_HPKE_CTX_set1_psk",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_CTX_set1_psk` at `crypto/hpke/hpke.c:903` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_903: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 903,
+    func: c"OSSL_HPKE_CTX_set1_psk",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_CTX_set1_psk` at `crypto/hpke/hpke.c:908` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_908: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 908,
+    func: c"OSSL_HPKE_CTX_set1_psk",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_CTX_set1_ikme` at `crypto/hpke/hpke.c:932` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const HPKE_932: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 932,
+    func: c"OSSL_HPKE_CTX_set1_ikme",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_CTX_set1_ikme` at `crypto/hpke/hpke.c:936` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_936: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 936,
+    func: c"OSSL_HPKE_CTX_set1_ikme",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_CTX_set1_ikme` at `crypto/hpke/hpke.c:940` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_940: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 940,
+    func: c"OSSL_HPKE_CTX_set1_ikme",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_CTX_set1_authpriv` at `crypto/hpke/hpke.c:954` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const HPKE_954: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 954,
+    func: c"OSSL_HPKE_CTX_set1_authpriv",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_CTX_set1_authpriv` at `crypto/hpke/hpke.c:959` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_959: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 959,
+    func: c"OSSL_HPKE_CTX_set1_authpriv",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_CTX_set1_authpriv` at `crypto/hpke/hpke.c:963` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_963: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 963,
+    func: c"OSSL_HPKE_CTX_set1_authpriv",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_CTX_set1_authpub` at `crypto/hpke/hpke.c:983` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const HPKE_983: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 983,
+    func: c"OSSL_HPKE_CTX_set1_authpub",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_CTX_set1_authpub` at `crypto/hpke/hpke.c:988` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_988: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 988,
+    func: c"OSSL_HPKE_CTX_set1_authpub",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_CTX_set1_authpub` at `crypto/hpke/hpke.c:992` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_992: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 992,
+    func: c"OSSL_HPKE_CTX_set1_authpub",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_CTX_set1_authpub` at `crypto/hpke/hpke.c:1011` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_1011: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1011,
+    func: c"OSSL_HPKE_CTX_set1_authpub",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_CTX_set1_authpub` at `crypto/hpke/hpke.c:1026` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_1026: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1026,
+    func: c"OSSL_HPKE_CTX_set1_authpub",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_CTX_get_seq` at `crypto/hpke/hpke.c:1043` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const HPKE_1043: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1043,
+    func: c"OSSL_HPKE_CTX_get_seq",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_CTX_set_seq` at `crypto/hpke/hpke.c:1053` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const HPKE_1053: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1053,
+    func: c"OSSL_HPKE_CTX_set_seq",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_CTX_set_seq` at `crypto/hpke/hpke.c:1062` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_1062: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1062,
+    func: c"OSSL_HPKE_CTX_set_seq",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_encap` at `crypto/hpke/hpke.c:1079` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_1079: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1079,
+    func: c"OSSL_HPKE_encap",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_encap` at `crypto/hpke/hpke.c:1083` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_1083: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1083,
+    func: c"OSSL_HPKE_encap",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_encap` at `crypto/hpke/hpke.c:1087` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_1087: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1087,
+    func: c"OSSL_HPKE_encap",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_encap` at `crypto/hpke/hpke.c:1091` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_1091: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1091,
+    func: c"OSSL_HPKE_encap",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_encap` at `crypto/hpke/hpke.c:1096` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_1096: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1096,
+    func: c"OSSL_HPKE_encap",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_encap` at `crypto/hpke/hpke.c:1101` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const HPKE_1101: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1101,
+    func: c"OSSL_HPKE_encap",
+    lib: 15,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_encap` at `crypto/hpke/hpke.c:1105` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_1105: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1105,
+    func: c"OSSL_HPKE_encap",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_decap` at `crypto/hpke/hpke.c:1126` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_1126: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1126,
+    func: c"OSSL_HPKE_decap",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_decap` at `crypto/hpke/hpke.c:1130` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_1130: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1130,
+    func: c"OSSL_HPKE_decap",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_decap` at `crypto/hpke/hpke.c:1134` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_1134: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1134,
+    func: c"OSSL_HPKE_decap",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_decap` at `crypto/hpke/hpke.c:1138` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_1138: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1138,
+    func: c"OSSL_HPKE_decap",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_decap` at `crypto/hpke/hpke.c:1143` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_1143: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1143,
+    func: c"OSSL_HPKE_decap",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_decap` at `crypto/hpke/hpke.c:1148` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const HPKE_1148: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1148,
+    func: c"OSSL_HPKE_decap",
+    lib: 15,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_decap` at `crypto/hpke/hpke.c:1153` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_1153: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1153,
+    func: c"OSSL_HPKE_decap",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_seal` at `crypto/hpke/hpke.c:1175` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_1175: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1175,
+    func: c"OSSL_HPKE_seal",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_seal` at `crypto/hpke/hpke.c:1179` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_1179: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1179,
+    func: c"OSSL_HPKE_seal",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_seal` at `crypto/hpke/hpke.c:1183` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const HPKE_1183: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1183,
+    func: c"OSSL_HPKE_seal",
+    lib: 15,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_seal` at `crypto/hpke/hpke.c:1188` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_1188: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1188,
+    func: c"OSSL_HPKE_seal",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_seal` at `crypto/hpke/hpke.c:1193` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_1193: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1193,
+    func: c"OSSL_HPKE_seal",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_seal` at `crypto/hpke/hpke.c:1197` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_1197: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1197,
+    func: c"OSSL_HPKE_seal",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_open` at `crypto/hpke/hpke.c:1217` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_1217: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1217,
+    func: c"OSSL_HPKE_open",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_open` at `crypto/hpke/hpke.c:1221` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_1221: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1221,
+    func: c"OSSL_HPKE_open",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_open` at `crypto/hpke/hpke.c:1225` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const HPKE_1225: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1225,
+    func: c"OSSL_HPKE_open",
+    lib: 15,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_open` at `crypto/hpke/hpke.c:1230` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_1230: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1230,
+    func: c"OSSL_HPKE_open",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_open` at `crypto/hpke/hpke.c:1235` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_1235: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1235,
+    func: c"OSSL_HPKE_open",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_open` at `crypto/hpke/hpke.c:1239` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_1239: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1239,
+    func: c"OSSL_HPKE_open",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_export` at `crypto/hpke/hpke.c:1259` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_1259: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1259,
+    func: c"OSSL_HPKE_export",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_export` at `crypto/hpke/hpke.c:1263` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_1263: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1263,
+    func: c"OSSL_HPKE_export",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_export` at `crypto/hpke/hpke.c:1267` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_1267: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1267,
+    func: c"OSSL_HPKE_export",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_export` at `crypto/hpke/hpke.c:1271` (ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED).
+pub(crate) const HPKE_1271: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1271,
+    func: c"OSSL_HPKE_export",
+    lib: 15,
+    reason: 786689,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_export` at `crypto/hpke/hpke.c:1276` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_1276: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1276,
+    func: c"OSSL_HPKE_export",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_export` at `crypto/hpke/hpke.c:1282` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_1282: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1282,
+    func: c"OSSL_HPKE_export",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_export` at `crypto/hpke/hpke.c:1300` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_1300: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1300,
+    func: c"OSSL_HPKE_export",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_keygen` at `crypto/hpke/hpke.c:1316` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_1316: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1316,
+    func: c"OSSL_HPKE_keygen",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_keygen` at `crypto/hpke/hpke.c:1320` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_1320: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1320,
+    func: c"OSSL_HPKE_keygen",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_keygen` at `crypto/hpke/hpke.c:1326` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_1326: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1326,
+    func: c"OSSL_HPKE_keygen",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_keygen` at `crypto/hpke/hpke.c:1339` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_1339: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1339,
+    func: c"OSSL_HPKE_keygen",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_keygen` at `crypto/hpke/hpke.c:1347` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_1347: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1347,
+    func: c"OSSL_HPKE_keygen",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_keygen` at `crypto/hpke/hpke.c:1351` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_1351: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1351,
+    func: c"OSSL_HPKE_keygen",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_keygen` at `crypto/hpke/hpke.c:1359` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_1359: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1359,
+    func: c"OSSL_HPKE_keygen",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_get_grease_value` at `crypto/hpke/hpke.c:1391` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_1391: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1391,
+    func: c"OSSL_HPKE_get_grease_value",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_get_grease_value` at `crypto/hpke/hpke.c:1397` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_1397: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1397,
+    func: c"OSSL_HPKE_get_grease_value",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_get_grease_value` at `crypto/hpke/hpke.c:1404` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_1404: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1404,
+    func: c"OSSL_HPKE_get_grease_value",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_get_grease_value` at `crypto/hpke/hpke.c:1410` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_1410: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1410,
+    func: c"OSSL_HPKE_get_grease_value",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_get_grease_value` at `crypto/hpke/hpke.c:1416` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_1416: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1416,
+    func: c"OSSL_HPKE_get_grease_value",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_get_grease_value` at `crypto/hpke/hpke.c:1429` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_1429: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1429,
+    func: c"OSSL_HPKE_get_grease_value",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `OSSL_HPKE_get_grease_value` at `crypto/hpke/hpke.c:1434` (ERR_R_INTERNAL_ERROR).
+pub(crate) const HPKE_1434: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke.c",
+    line: 1434,
+    func: c"OSSL_HPKE_get_grease_value",
+    lib: 15,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_asn1_add0` at `crypto/asn1/ameth_lib.c:162` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const AMETH_LIB_162: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/ameth_lib.c",
+    line: 162,
+    func: c"EVP_PKEY_asn1_add0",
+    lib: 6,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `EVP_PKEY_asn1_add0` at `crypto/asn1/ameth_lib.c:174` (EVP_R_PKEY_APPLICATION_ASN1_METHOD_ALREADY_REGISTERED).
+pub(crate) const AMETH_LIB_174: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/ameth_lib.c",
+    line: 174,
+    func: c"EVP_PKEY_asn1_add0",
+    lib: 6,
+    reason: 179,
+    dynamic_reason: false,
+};
+
+/// `i2d_provided` at `crypto/asn1/i2d_evp.c:69` (ASN1_R_UNSUPPORTED_TYPE).
+pub(crate) const I2D_EVP_69: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/i2d_evp.c",
+    line: 69,
+    func: c"i2d_provided",
+    lib: 13,
+    reason: 196,
+    dynamic_reason: false,
+};
+
+/// `i2d_KeyParams` at `crypto/asn1/i2d_evp.c:87` (ASN1_R_UNSUPPORTED_TYPE).
+pub(crate) const I2D_EVP_87: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/i2d_evp.c",
+    line: 87,
+    func: c"i2d_KeyParams",
+    lib: 13,
+    reason: 196,
+    dynamic_reason: false,
+};
+
+/// `i2d_PrivateKey_impl` at `crypto/asn1/i2d_evp.c:127` (ASN1_R_UNSUPPORTED_PUBLIC_KEY_TYPE).
+pub(crate) const I2D_EVP_127: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/i2d_evp.c",
+    line: 127,
+    func: c"i2d_PrivateKey_impl",
+    lib: 13,
+    reason: 167,
+    dynamic_reason: false,
+};
+
+/// `i2d_PublicKey` at `crypto/asn1/i2d_evp.c:166` (ASN1_R_UNSUPPORTED_PUBLIC_KEY_TYPE).
+pub(crate) const I2D_EVP_166: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/i2d_evp.c",
+    line: 166,
+    func: c"i2d_PublicKey",
+    lib: 13,
+    reason: 167,
+    dynamic_reason: false,
+};
+
+/// `d2i_PrivateKey_decoder` at `crypto/asn1/d2i_pr.c:61` (ASN1_R_ASN1_PARSE_ERROR).
+pub(crate) const D2I_PR_61: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/d2i_pr.c",
+    line: 61,
+    func: c"d2i_PrivateKey_decoder",
+    lib: 13,
+    reason: 203,
+    dynamic_reason: false,
+};
+
+/// `ossl_d2i_PrivateKey_legacy` at `crypto/asn1/d2i_pr.c:110` (ERR_R_EVP_LIB).
+pub(crate) const D2I_PR_110: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/d2i_pr.c",
+    line: 110,
+    func: c"ossl_d2i_PrivateKey_legacy",
+    lib: 13,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_d2i_PrivateKey_legacy` at `crypto/asn1/d2i_pr.c:122` (ASN1_R_UNKNOWN_PUBLIC_KEY_TYPE).
+pub(crate) const D2I_PR_122: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/d2i_pr.c",
+    line: 122,
+    func: c"ossl_d2i_PrivateKey_legacy",
+    lib: 13,
+    reason: 163,
+    dynamic_reason: false,
+};
+
+/// `ossl_d2i_PrivateKey_legacy` at `crypto/asn1/d2i_pr.c:150` (ERR_R_ASN1_LIB).
+pub(crate) const D2I_PR_150: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/d2i_pr.c",
+    line: 150,
+    func: c"ossl_d2i_PrivateKey_legacy",
+    lib: 13,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `d2i_AutoPrivateKey_legacy` at `crypto/asn1/d2i_pr.c:218` (ASN1_R_UNSUPPORTED_PUBLIC_KEY_TYPE).
+pub(crate) const D2I_PR_218: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/d2i_pr.c",
+    line: 218,
+    func: c"d2i_AutoPrivateKey_legacy",
+    lib: 13,
+    reason: 167,
+    dynamic_reason: false,
+};
+
+/// `d2i_KeyParams` at `crypto/asn1/d2i_param.c:33` (ASN1_R_UNSUPPORTED_TYPE).
+pub(crate) const D2I_PARAM_33: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/d2i_param.c",
+    line: 33,
+    func: c"d2i_KeyParams",
+    lib: 13,
+    reason: 196,
+    dynamic_reason: false,
+};
+
+/// `d2i_PublicKey` at `crypto/asn1/d2i_pu.c:36` (ERR_R_EVP_LIB).
+pub(crate) const D2I_PU_36: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/d2i_pu.c",
+    line: 36,
+    func: c"d2i_PublicKey",
+    lib: 13,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `d2i_PublicKey` at `crypto/asn1/d2i_pu.c:53` (ERR_R_EVP_LIB).
+pub(crate) const D2I_PU_53: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/d2i_pu.c",
+    line: 53,
+    func: c"d2i_PublicKey",
+    lib: 13,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `d2i_PublicKey` at `crypto/asn1/d2i_pu.c:60` (ERR_R_ASN1_LIB).
+pub(crate) const D2I_PU_60: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/d2i_pu.c",
+    line: 60,
+    func: c"d2i_PublicKey",
+    lib: 13,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `d2i_PublicKey` at `crypto/asn1/d2i_pu.c:67` (ERR_R_ASN1_LIB).
+pub(crate) const D2I_PU_67: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/d2i_pu.c",
+    line: 67,
+    func: c"d2i_PublicKey",
+    lib: 13,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `d2i_PublicKey` at `crypto/asn1/d2i_pu.c:80` (ERR_R_ASN1_LIB).
+pub(crate) const D2I_PU_80: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/d2i_pu.c",
+    line: 80,
+    func: c"d2i_PublicKey",
+    lib: 13,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `d2i_PublicKey` at `crypto/asn1/d2i_pu.c:86` (ASN1_R_UNKNOWN_PUBLIC_KEY_TYPE).
+pub(crate) const D2I_PU_86: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/d2i_pu.c",
+    line: 86,
+    func: c"d2i_PublicKey",
+    lib: 13,
+    reason: 163,
+    dynamic_reason: false,
+};
+
+/// `pem_read_bio_key_decoder` at `crypto/pem/pem_pkey.c:87` (PEM_R_UNSUPPORTED_KEY_COMPONENTS).
+pub(crate) const PEM_PKEY_87: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_pkey.c",
+    line: 87,
+    func: c"pem_read_bio_key_decoder",
+    lib: 9,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `pem_read_bio_key_legacy` at `crypto/pem/pem_pkey.c:161` (PEM_R_BAD_PASSWORD_READ).
+pub(crate) const PEM_PKEY_161: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_pkey.c",
+    line: 161,
+    func: c"pem_read_bio_key_legacy",
+    lib: 9,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `pem_read_bio_key_legacy` at `crypto/pem/pem_pkey.c:209` (ERR_R_ASN1_LIB).
+pub(crate) const PEM_PKEY_209: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_pkey.c",
+    line: 209,
+    func: c"pem_read_bio_key_legacy",
+    lib: 9,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PEM_read_PUBKEY_ex` at `crypto/pem/pem_pkey.c:288` (ERR_R_BUF_LIB).
+pub(crate) const PEM_PKEY_288: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_pkey.c",
+    line: 288,
+    func: c"PEM_read_PUBKEY_ex",
+    lib: 9,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
+/// `PEM_write_bio_PrivateKey_traditional` at `crypto/pem/pem_pkey.c:360` (PEM_R_UNSUPPORTED_PUBLIC_KEY_TYPE).
+pub(crate) const PEM_PKEY_360: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_pkey.c",
+    line: 360,
+    func: c"PEM_write_bio_PrivateKey_traditional",
+    lib: 9,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `PEM_read_PrivateKey_ex` at `crypto/pem/pem_pkey.c:418` (ERR_R_BUF_LIB).
+pub(crate) const PEM_PKEY_418: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_pkey.c",
+    line: 418,
+    func: c"PEM_read_PrivateKey_ex",
+    lib: 9,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
+/// `PEM_write_cb_ex_fnsig` at `crypto/pem/pem_pkey.c:439` (ERR_R_BUF_LIB).
+pub(crate) const PEM_PKEY_439: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_pkey.c",
+    line: 439,
+    func: c"PEM_write_cb_ex_fnsig",
+    lib: 9,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
+/// `do_pk8pkey` at `crypto/pem/pem_pk8.c:132` (PEM_R_ERROR_CONVERTING_PRIVATE_KEY).
+pub(crate) const PEM_PK8_132: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_pk8.c",
+    line: 132,
+    func: c"do_pk8pkey",
+    lib: 9,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `do_pk8pkey` at `crypto/pem/pem_pk8.c:139` (PEM_R_READ_KEY).
+pub(crate) const PEM_PK8_139: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_pk8.c",
+    line: 139,
+    func: c"do_pk8pkey",
+    lib: 9,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `d2i_PKCS8PrivateKey_bio` at `crypto/pem/pem_pk8.c:185` (PEM_R_BAD_PASSWORD_READ).
+pub(crate) const PEM_PK8_185: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_pk8.c",
+    line: 185,
+    func: c"d2i_PKCS8PrivateKey_bio",
+    lib: 9,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `do_pk8pkey_fp` at `crypto/pem/pem_pk8.c:243` (ERR_R_BUF_LIB).
+pub(crate) const PEM_PK8_243: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_pk8.c",
+    line: 243,
+    func: c"do_pk8pkey_fp",
+    lib: 9,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
+/// `d2i_PKCS8PrivateKey_fp` at `crypto/pem/pem_pk8.c:258` (ERR_R_BUF_LIB).
+pub(crate) const PEM_PK8_258: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_pk8.c",
+    line: 258,
+    func: c"d2i_PKCS8PrivateKey_fp",
+    lib: 9,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
 /// Every recorded raise site, in authority source order.
 ///
 /// This is the complete inventory for the covered files, including the
@@ -9413,4 +17085,771 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROVIDER_CONF_302,
     PROVIDER_CONF_328,
     PROVIDER_CONF_412,
+    CORE_FETCH_65,
+    CORE_FETCH_92,
+    ASYMCIPHER_43,
+    ASYMCIPHER_57,
+    ASYMCIPHER_67,
+    ASYMCIPHER_75,
+    ASYMCIPHER_160,
+    ASYMCIPHER_168,
+    ASYMCIPHER_177,
+    ASYMCIPHER_185,
+    ASYMCIPHER_204,
+    ASYMCIPHER_219,
+    ASYMCIPHER_251,
+    ASYMCIPHER_256,
+    ASYMCIPHER_268,
+    ASYMCIPHER_275,
+    ASYMCIPHER_300,
+    ASYMCIPHER_305,
+    ASYMCIPHER_317,
+    ASYMCIPHER_325,
+    ASYMCIPHER_342,
+    ASYMCIPHER_378,
+    ASYMCIPHER_475,
+    BIO_B64_142,
+    BIO_B64_149,
+    BIO_B64_346,
+    BIO_B64_350,
+    BIO_B64_354,
+    BIO_B64_366,
+    BIO_B64_370,
+    BIO_B64_388,
+    BIO_B64_404,
+    BIO_B64_408,
+    BIO_B64_426,
+    BIO_B64_430,
+    BIO_B64_440,
+    BIO_B64_444,
+    BIO_B64_463,
+    BIO_B64_467,
+    BIO_B64_504,
+    BIO_B64_516,
+    CTRL_PARAMS_TRANSLATE_306,
+    CTRL_PARAMS_TRANSLATE_311,
+    CTRL_PARAMS_TRANSLATE_324,
+    CTRL_PARAMS_TRANSLATE_329,
+    CTRL_PARAMS_TRANSLATE_337,
+    CTRL_PARAMS_TRANSLATE_342,
+    CTRL_PARAMS_TRANSLATE_407,
+    CTRL_PARAMS_TRANSLATE_424,
+    CTRL_PARAMS_TRANSLATE_446,
+    CTRL_PARAMS_TRANSLATE_492,
+    CTRL_PARAMS_TRANSLATE_555,
+    CTRL_PARAMS_TRANSLATE_573,
+    CTRL_PARAMS_TRANSLATE_586,
+    CTRL_PARAMS_TRANSLATE_649,
+    CTRL_PARAMS_TRANSLATE_667,
+    CTRL_PARAMS_TRANSLATE_695,
+    CTRL_PARAMS_TRANSLATE_1013,
+    CTRL_PARAMS_TRANSLATE_1039,
+    CTRL_PARAMS_TRANSLATE_1050,
+    CTRL_PARAMS_TRANSLATE_1081,
+    CTRL_PARAMS_TRANSLATE_1134,
+    CTRL_PARAMS_TRANSLATE_1327,
+    CTRL_PARAMS_TRANSLATE_1337,
+    CTRL_PARAMS_TRANSLATE_1357,
+    CTRL_PARAMS_TRANSLATE_1547,
+    CTRL_PARAMS_TRANSLATE_1588,
+    CTRL_PARAMS_TRANSLATE_1649,
+    CTRL_PARAMS_TRANSLATE_1675,
+    CTRL_PARAMS_TRANSLATE_1711,
+    CTRL_PARAMS_TRANSLATE_1748,
+    CTRL_PARAMS_TRANSLATE_1823,
+    CTRL_PARAMS_TRANSLATE_1829,
+    CTRL_PARAMS_TRANSLATE_2041,
+    CTRL_PARAMS_TRANSLATE_2717,
+    DH_CTRL_22,
+    DH_CTRL_37,
+    DH_CTRL_166,
+    DH_CTRL_261,
+    DH_CTRL_281,
+    DH_CTRL_313,
+    DH_CTRL_336,
+    DIGEST_112,
+    DIGEST_147,
+    DIGEST_178,
+    DIGEST_189,
+    DIGEST_250,
+    DIGEST_261,
+    DIGEST_271,
+    DIGEST_282,
+    DIGEST_292,
+    DIGEST_298,
+    DIGEST_311,
+    DIGEST_323,
+    DIGEST_391,
+    DIGEST_412,
+    DIGEST_422,
+    DIGEST_459,
+    DIGEST_464,
+    DIGEST_476,
+    DIGEST_505,
+    DIGEST_513,
+    DIGEST_518,
+    DIGEST_548,
+    DIGEST_558,
+    DIGEST_563,
+    DIGEST_568,
+    DIGEST_598,
+    DIGEST_616,
+    DIGEST_647,
+    DIGEST_660,
+    DIGEST_674,
+    DIGEST_897,
+    DIGEST_931,
+    DIGEST_1026,
+    DIGEST_1034,
+    DIGEST_1130,
+    DIGEST_1139,
+    DSA_CTRL_20,
+    E_AES_151,
+    E_AES_172,
+    E_AES_234,
+    E_AES_281,
+    E_AES_292,
+    E_AES_337,
+    E_AES_370,
+    E_AES_486,
+    E_AES_542,
+    E_AES_588,
+    E_AES_648,
+    E_AES_659,
+    E_AES_723,
+    E_AES_756,
+    E_AES_1035,
+    E_AES_1065,
+    E_AES_1069,
+    E_AES_1131,
+    E_AES_1135,
+    E_AES_1161,
+    E_AES_1165,
+    E_AES_1216,
+    E_AES_1220,
+    E_AES_1625,
+    E_AES_1677,
+    E_AES_2036,
+    E_AES_2423,
+    E_AES_2504,
+    E_AES_2806,
+    E_AES_2899,
+    E_AES_3240,
+    E_AES_3261,
+    E_AES_3360,
+    E_AES_3493,
+    E_AES_3683,
+    E_AES_3722,
+    E_AES_3924,
+    E_AES_4026,
+    E_AES_CBC_HMAC_SHA1_76,
+    E_AES_CBC_HMAC_SHA1_498,
+    E_ARIA_76,
+    E_ARIA_233,
+    E_ARIA_525,
+    E_CAMELLIA_104,
+    E_CAMELLIA_205,
+    E_CHACHA20_POLY1305_508,
+    E_CHACHA20_POLY1305_527,
+    E_DES3_398,
+    E_RC2_125,
+    E_RC5_63,
+    E_RC5_78,
+    EC_CTRL_26,
+    EC_CTRL_65,
+    EC_CTRL_86,
+    EC_CTRL_171,
+    EC_CTRL_193,
+    EC_CTRL_231,
+    EC_CTRL_260,
+    EVP_CNF_33,
+    EVP_CNF_51,
+    EVP_CNF_57,
+    EVP_CNF_61,
+    EVP_ENC_118,
+    EVP_ENC_189,
+    EVP_ENC_206,
+    EVP_ENC_212,
+    EVP_ENC_223,
+    EVP_ENC_230,
+    EVP_ENC_273,
+    EVP_ENC_296,
+    EVP_ENC_322,
+    EVP_ENC_354,
+    EVP_ENC_370,
+    EVP_ENC_401,
+    EVP_ENC_419,
+    EVP_ENC_441,
+    EVP_ENC_455,
+    EVP_ENC_500,
+    EVP_ENC_511,
+    EVP_ENC_539,
+    EVP_ENC_545,
+    EVP_ENC_557,
+    EVP_ENC_563,
+    EVP_ENC_590,
+    EVP_ENC_611,
+    EVP_ENC_662,
+    EVP_ENC_673,
+    EVP_ENC_692,
+    EVP_ENC_703,
+    EVP_ENC_733,
+    EVP_ENC_738,
+    EVP_ENC_743,
+    EVP_ENC_748,
+    EVP_ENC_783,
+    EVP_ENC_788,
+    EVP_ENC_793,
+    EVP_ENC_798,
+    EVP_ENC_899,
+    EVP_ENC_916,
+    EVP_ENC_948,
+    EVP_ENC_983,
+    EVP_ENC_990,
+    EVP_ENC_996,
+    EVP_ENC_1001,
+    EVP_ENC_1011,
+    EVP_ENC_1021,
+    EVP_ENC_1052,
+    EVP_ENC_1058,
+    EVP_ENC_1063,
+    EVP_ENC_1072,
+    EVP_ENC_1081,
+    EVP_ENC_1110,
+    EVP_ENC_1137,
+    EVP_ENC_1144,
+    EVP_ENC_1150,
+    EVP_ENC_1155,
+    EVP_ENC_1164,
+    EVP_ENC_1173,
+    EVP_ENC_1191,
+    EVP_ENC_1218,
+    EVP_ENC_1231,
+    EVP_ENC_1278,
+    EVP_ENC_1284,
+    EVP_ENC_1289,
+    EVP_ENC_1299,
+    EVP_ENC_1308,
+    EVP_ENC_1332,
+    EVP_ENC_1340,
+    EVP_ENC_1351,
+    EVP_ENC_1356,
+    EVP_ENC_1382,
+    EVP_ENC_1410,
+    EVP_ENC_1444,
+    EVP_ENC_1632,
+    EVP_ENC_1640,
+    EVP_ENC_1785,
+    EVP_ENC_1793,
+    EVP_ENC_1809,
+    EVP_ENC_1821,
+    EVP_ENC_1841,
+    EVP_ENC_1898,
+    EVP_ENC_1906,
+    EVP_ENC_2044,
+    EVP_ENC_2053,
+    EVP_FETCH_278,
+    EVP_FETCH_287,
+    EVP_FETCH_303,
+    EVP_FETCH_352,
+    EVP_FETCH_376,
+    EVP_FETCH_485,
+    EVP_FETCH_492,
+    EVP_FETCH_507,
+    EVP_FETCH_517,
+    EVP_FETCH_543,
+    EVP_FETCH_549,
+    EVP_FETCH_596,
+    EVP_FETCH_604,
+    EVP_LIB_144,
+    EVP_LIB_146,
+    EVP_LIB_213,
+    EVP_LIB_215,
+    EVP_LIB_803,
+    EVP_LIB_812,
+    EVP_LIB_1159,
+    EVP_LIB_1179,
+    EVP_LIB_1353,
+    EVP_LIB_1471,
+    EVP_PBE_116,
+    EVP_PBE_134,
+    EVP_PBE_150,
+    EVP_PBE_207,
+    EVP_PBE_222,
+    EVP_PKEY_41,
+    EVP_PKEY_47,
+    EVP_PKEY_57,
+    EVP_PKEY_61,
+    EVP_PKEY_160,
+    EVP_PKEY_167,
+    EVP_PKEY_171,
+    EVP_PKEY_175,
+    EVP_RAND_98,
+    EVP_RAND_129,
+    EVP_RAND_268,
+    EVP_RAND_274,
+    EVP_RAND_346,
+    EVP_RAND_359,
+    EVP_RAND_371,
+    EVP_RAND_562,
+    EVP_RAND_569,
+    EVP_RAND_656,
+    EVP_UTILS_65,
+    EVP_UTILS_70,
+    EXCHANGE_59,
+    EXCHANGE_150,
+    EXCHANGE_225,
+    EXCHANGE_249,
+    EXCHANGE_261,
+    EXCHANGE_268,
+    EXCHANGE_355,
+    EXCHANGE_379,
+    EXCHANGE_402,
+    EXCHANGE_410,
+    EXCHANGE_464,
+    EXCHANGE_470,
+    EXCHANGE_483,
+    EXCHANGE_488,
+    EXCHANGE_500,
+    EXCHANGE_529,
+    EXCHANGE_534,
+    EXCHANGE_547,
+    EXCHANGE_562,
+    EXCHANGE_567,
+    EXCHANGE_572,
+    EXCHANGE_589,
+    EXCHANGE_601,
+    EXCHANGE_607,
+    EXCHANGE_619,
+    KDF_LIB_35,
+    KDF_LIB_69,
+    KDF_LIB_211,
+    KDF_LIB_230,
+    KDF_LIB_241,
+    KDF_METH_67,
+    KDF_METH_154,
+    KEM_42,
+    KEM_50,
+    KEM_54,
+    KEM_62,
+    KEM_68,
+    KEM_116,
+    KEM_146,
+    KEM_157,
+    KEM_165,
+    KEM_177,
+    KEM_189,
+    KEM_195,
+    KEM_234,
+    KEM_239,
+    KEM_273,
+    KEM_278,
+    KEM_312,
+    KEM_423,
+    KEYMGMT_LIB_37,
+    KEYMGMT_LIB_65,
+    KEYMGMT_LIB_388,
+    KEYMGMT_LIB_491,
+    KEYMGMT_METH_252,
+    KEYMGMT_METH_450,
+    KEYMGMT_METH_458,
+    M_SIGVER_21,
+    M_SIGVER_87,
+    M_SIGVER_105,
+    M_SIGVER_112,
+    M_SIGVER_187,
+    M_SIGVER_201,
+    M_SIGVER_247,
+    M_SIGVER_258,
+    M_SIGVER_266,
+    M_SIGVER_281,
+    M_SIGVER_282,
+    M_SIGVER_305,
+    M_SIGVER_318,
+    M_SIGVER_411,
+    M_SIGVER_424,
+    M_SIGVER_432,
+    M_SIGVER_440,
+    M_SIGVER_461,
+    M_SIGVER_474,
+    M_SIGVER_482,
+    M_SIGVER_509,
+    M_SIGVER_522,
+    M_SIGVER_538,
+    M_SIGVER_549,
+    M_SIGVER_628,
+    M_SIGVER_633,
+    M_SIGVER_651,
+    M_SIGVER_679,
+    M_SIGVER_692,
+    M_SIGVER_707,
+    M_SIGVER_718,
+    M_SIGVER_764,
+    M_SIGVER_769,
+    M_SIGVER_785,
+    MAC_LIB_31,
+    MAC_LIB_63,
+    MAC_LIB_119,
+    MAC_LIB_130,
+    MAC_LIB_150,
+    MAC_LIB_154,
+    MAC_LIB_161,
+    MAC_LIB_168,
+    MAC_LIB_176,
+    MAC_LIB_283,
+    MAC_METH_66,
+    MAC_METH_159,
+    P5_CRPT_46,
+    P5_CRPT_52,
+    P5_CRPT_58,
+    P5_CRPT_63,
+    P5_CRPT2_128,
+    P5_CRPT2_135,
+    P5_CRPT2_143,
+    P5_CRPT2_155,
+    P5_CRPT2_164,
+    P5_CRPT2_196,
+    P5_CRPT2_207,
+    P5_CRPT2_213,
+    P5_CRPT2_221,
+    P5_CRPT2_231,
+    P5_CRPT2_241,
+    P5_CRPT2_247,
+    P_DEC_28,
+    P_ENC_28,
+    P_LEGACY_43,
+    P_LEGACY_79,
+    P_LIB_71,
+    P_LIB_87,
+    P_LIB_180,
+    P_LIB_187,
+    P_LIB_195,
+    P_LIB_223,
+    P_LIB_471,
+    P_LIB_487,
+    P_LIB_501,
+    P_LIB_506,
+    P_LIB_511,
+    P_LIB_516,
+    P_LIB_606,
+    P_LIB_611,
+    P_LIB_616,
+    P_LIB_638,
+    P_LIB_643,
+    P_LIB_648,
+    P_LIB_673,
+    P_LIB_682,
+    P_LIB_701,
+    P_LIB_710,
+    P_LIB_736,
+    P_LIB_741,
+    P_LIB_840,
+    P_LIB_856,
+    P_LIB_874,
+    P_LIB_890,
+    P_LIB_930,
+    P_LIB_1001,
+    P_LIB_1504,
+    P_LIB_1511,
+    P_LIB_1551,
+    P_LIB_1601,
+    P_LIB_1607,
+    P_LIB_1641,
+    P_LIB_1688,
+    P_LIB_1720,
+    P_LIB_1748,
+    P_LIB_1866,
+    P_LIB_2088,
+    P_LIB_2102,
+    P_LIB_2115,
+    P_LIB_2126,
+    P_LIB_2142,
+    P_LIB_2434,
+    P_LIB_2455,
+    P_OPEN_37,
+    P_SEAL_62,
+    P_SIGN_36,
+    P_VERIFY_34,
+    PBE_SCRYPT_50,
+    PMETH_CHECK_40,
+    PMETH_CHECK_53,
+    PMETH_CHECK_78,
+    PMETH_CHECK_98,
+    PMETH_CHECK_124,
+    PMETH_CHECK_144,
+    PMETH_CHECK_154,
+    PMETH_CHECK_169,
+    PMETH_CHECK_194,
+    PMETH_GN_50,
+    PMETH_GN_87,
+    PMETH_GN_146,
+    PMETH_GN_241,
+    PMETH_GN_245,
+    PMETH_GN_250,
+    PMETH_GN_259,
+    PMETH_GN_268,
+    PMETH_GN_351,
+    PMETH_GN_367,
+    PMETH_GN_378,
+    PMETH_GN_439,
+    PMETH_LIB_192,
+    PMETH_LIB_219,
+    PMETH_LIB_255,
+    PMETH_LIB_284,
+    PMETH_LIB_295,
+    PMETH_LIB_459,
+    PMETH_LIB_619,
+    PMETH_LIB_624,
+    PMETH_LIB_916,
+    PMETH_LIB_950,
+    PMETH_LIB_997,
+    PMETH_LIB_1008,
+    PMETH_LIB_1037,
+    PMETH_LIB_1048,
+    PMETH_LIB_1158,
+    PMETH_LIB_1170,
+    PMETH_LIB_1206,
+    PMETH_LIB_1267,
+    PMETH_LIB_1271,
+    PMETH_LIB_1309,
+    PMETH_LIB_1314,
+    PMETH_LIB_1325,
+    PMETH_LIB_1334,
+    PMETH_LIB_1346,
+    PMETH_LIB_1380,
+    PMETH_LIB_1390,
+    PMETH_LIB_1460,
+    PMETH_LIB_1468,
+    PMETH_LIB_1473,
+    PMETH_LIB_1480,
+    PMETH_LIB_1484,
+    PMETH_LIB_1491,
+    PMETH_LIB_1619,
+    S_LIB_25,
+    S_LIB_47,
+    S_LIB_79,
+    S_LIB_169,
+    S_LIB_285,
+    S_LIB_305,
+    SIGNATURE_68,
+    SIGNATURE_296,
+    SIGNATURE_310,
+    SIGNATURE_315,
+    SIGNATURE_329,
+    SIGNATURE_340,
+    SIGNATURE_353,
+    SIGNATURE_363,
+    SIGNATURE_374,
+    SIGNATURE_385,
+    SIGNATURE_396,
+    SIGNATURE_409,
+    SIGNATURE_419,
+    SIGNATURE_425,
+    SIGNATURE_431,
+    SIGNATURE_437,
+    SIGNATURE_443,
+    SIGNATURE_580,
+    SIGNATURE_596,
+    SIGNATURE_637,
+    SIGNATURE_664,
+    SIGNATURE_681,
+    SIGNATURE_691,
+    SIGNATURE_699,
+    SIGNATURE_786,
+    SIGNATURE_793,
+    SIGNATURE_802,
+    SIGNATURE_811,
+    SIGNATURE_820,
+    SIGNATURE_829,
+    SIGNATURE_837,
+    SIGNATURE_862,
+    SIGNATURE_883,
+    SIGNATURE_933,
+    SIGNATURE_938,
+    SIGNATURE_945,
+    SIGNATURE_952,
+    SIGNATURE_965,
+    SIGNATURE_970,
+    SIGNATURE_977,
+    SIGNATURE_985,
+    SIGNATURE_999,
+    SIGNATURE_1005,
+    SIGNATURE_1015,
+    SIGNATURE_1023,
+    SIGNATURE_1029,
+    SIGNATURE_1064,
+    SIGNATURE_1087,
+    SIGNATURE_1092,
+    SIGNATURE_1099,
+    SIGNATURE_1106,
+    SIGNATURE_1118,
+    SIGNATURE_1123,
+    SIGNATURE_1130,
+    SIGNATURE_1138,
+    SIGNATURE_1152,
+    SIGNATURE_1158,
+    SIGNATURE_1168,
+    SIGNATURE_1176,
+    SIGNATURE_1182,
+    SIGNATURE_1215,
+    SIGNATURE_1220,
+    SIGNATURE_1230,
+    SIGNATURE_1238,
+    SIGNATURE_1243,
+    SKEYMGMT_METH_116,
+    SKEYMGMT_METH_122,
+    HPKE_122,
+    HPKE_154,
+    HPKE_162,
+    HPKE_168,
+    HPKE_173,
+    HPKE_179,
+    HPKE_184,
+    HPKE_190,
+    HPKE_195,
+    HPKE_233,
+    HPKE_237,
+    HPKE_245,
+    HPKE_251,
+    HPKE_256,
+    HPKE_262,
+    HPKE_267,
+    HPKE_273,
+    HPKE_279,
+    HPKE_403,
+    HPKE_407,
+    HPKE_462,
+    HPKE_467,
+    HPKE_472,
+    HPKE_485,
+    HPKE_490,
+    HPKE_506,
+    HPKE_511,
+    HPKE_517,
+    HPKE_521,
+    HPKE_534,
+    HPKE_564,
+    HPKE_569,
+    HPKE_574,
+    HPKE_587,
+    HPKE_603,
+    HPKE_607,
+    HPKE_612,
+    HPKE_617,
+    HPKE_626,
+    HPKE_672,
+    HPKE_676,
+    HPKE_681,
+    HPKE_686,
+    HPKE_696,
+    HPKE_703,
+    HPKE_709,
+    HPKE_727,
+    HPKE_736,
+    HPKE_742,
+    HPKE_752,
+    HPKE_767,
+    HPKE_780,
+    HPKE_794,
+    HPKE_820,
+    HPKE_824,
+    HPKE_828,
+    HPKE_843,
+    HPKE_887,
+    HPKE_891,
+    HPKE_895,
+    HPKE_899,
+    HPKE_903,
+    HPKE_908,
+    HPKE_932,
+    HPKE_936,
+    HPKE_940,
+    HPKE_954,
+    HPKE_959,
+    HPKE_963,
+    HPKE_983,
+    HPKE_988,
+    HPKE_992,
+    HPKE_1011,
+    HPKE_1026,
+    HPKE_1043,
+    HPKE_1053,
+    HPKE_1062,
+    HPKE_1079,
+    HPKE_1083,
+    HPKE_1087,
+    HPKE_1091,
+    HPKE_1096,
+    HPKE_1101,
+    HPKE_1105,
+    HPKE_1126,
+    HPKE_1130,
+    HPKE_1134,
+    HPKE_1138,
+    HPKE_1143,
+    HPKE_1148,
+    HPKE_1153,
+    HPKE_1175,
+    HPKE_1179,
+    HPKE_1183,
+    HPKE_1188,
+    HPKE_1193,
+    HPKE_1197,
+    HPKE_1217,
+    HPKE_1221,
+    HPKE_1225,
+    HPKE_1230,
+    HPKE_1235,
+    HPKE_1239,
+    HPKE_1259,
+    HPKE_1263,
+    HPKE_1267,
+    HPKE_1271,
+    HPKE_1276,
+    HPKE_1282,
+    HPKE_1300,
+    HPKE_1316,
+    HPKE_1320,
+    HPKE_1326,
+    HPKE_1339,
+    HPKE_1347,
+    HPKE_1351,
+    HPKE_1359,
+    HPKE_1391,
+    HPKE_1397,
+    HPKE_1404,
+    HPKE_1410,
+    HPKE_1416,
+    HPKE_1429,
+    HPKE_1434,
+    AMETH_LIB_162,
+    AMETH_LIB_174,
+    I2D_EVP_69,
+    I2D_EVP_87,
+    I2D_EVP_127,
+    I2D_EVP_166,
+    D2I_PR_61,
+    D2I_PR_110,
+    D2I_PR_122,
+    D2I_PR_150,
+    D2I_PR_218,
+    D2I_PARAM_33,
+    D2I_PU_36,
+    D2I_PU_53,
+    D2I_PU_60,
+    D2I_PU_67,
+    D2I_PU_80,
+    D2I_PU_86,
+    PEM_PKEY_87,
+    PEM_PKEY_161,
+    PEM_PKEY_209,
+    PEM_PKEY_288,
+    PEM_PKEY_360,
+    PEM_PKEY_418,
+    PEM_PKEY_439,
+    PEM_PK8_132,
+    PEM_PK8_139,
+    PEM_PK8_185,
+    PEM_PK8_243,
+    PEM_PK8_258,
 ];
