@@ -287,10 +287,10 @@
     "9": "not-started"
   },
   "prerequisites": {
-    "blocking_dependencies": 10,
+    "blocking_dependencies": 5,
     "divergence_names_covered": 32,
     "findings": 0,
-    "language_census": 2094,
+    "language_census": 2091,
     "sealed_census": 59
   }
 }

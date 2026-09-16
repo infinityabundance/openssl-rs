@@ -1663,7 +1663,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "8f1c8a3cd685d573a8e647831c8a6214e0e3cb42942f12c31be7ead485808d03"
+      "sha256": "8bc4fb3e36bcba585703a0e28a4223ff51547b60f9f42a28e69d00c8ebf3c8c2"
     },
     {
       "name": "implemented-surface",
@@ -1678,7 +1678,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "a6ec02396c897cd61179348e62069ce5727f6d242ce7f6839adf4e3df6a12b53"
+      "sha256": "7332839bd9b4b7647c42848b76ba2346623390ef5449dff0ab4ef9178b498739"
     },
     {
       "name": "source-manifest",
