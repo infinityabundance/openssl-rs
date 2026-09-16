@@ -454,6 +454,52 @@ PHASE6_MODULES = [
     "src/params/from_text.rs",
     "src/params/build.rs",
     "courts/phase6/rt_param_probe.c",
+    # 6.6: the context and its slot table, the core BIO, the namemap and the thread slot.
+    "src/context/mod.rs",
+    "src/context/dispatch.rs",
+    "src/context/core_bio.rs",
+    "src/context/namemap.rs",
+    "src/context/thread_data.rs",
+    "courts/phase6/rt_libctx_probe.c",
+    "courts/phase6/rt_bio_core_probe.c",
+    # 6.7: the property engine, whose court is the slot table because it exports nothing.
+    "src/property/mod.rs",
+    "src/property/globals.rs",
+    "src/property/defn_cache.rs",
+    "src/property/list.rs",
+    "src/property/parse.rs",
+    "src/property/query.rs",
+    "src/property/strings.rs",
+    # 6.8: the provider object, its registry, its activation and the child callbacks.
+    "src/provider/mod.rs",
+    "src/provider/init.rs",
+    "src/provider/activate.rs",
+    "src/provider/stores.rs",
+    "src/provider/core_dispatch.rs",
+    "courts/phase6/rt_provider_probe.c",
+    # 6.9: the DSO layer, reassigned from Phase 2 by D95 because Phase 2's definition is
+    # distribution structure and the dynamic-loader abstraction is semantic.
+    "src/dso/mod.rs",
+    "src/dso/dlfcn.rs",
+    "courts/phase6/rt_dso_probe.c",
+    # 6.6e-ii and all three units of 6.10a: the thread-event table, the per-context
+    # thread-local family, the sparse array underneath it, and RCU. RCU exports nothing and
+    # has no C-visible entry point, so its evidence is its transcription and its unit tests
+    # rather than a court -- recorded as D-RCU-4 rather than glossed.
+    "src/runtime/thread_events.rs",
+    "src/runtime/threads_common.rs",
+    "src/runtime/sparse_array.rs",
+    "src/runtime/rcu.rs",
+    "courts/phase6/rt_threaddata_probe.c",
+    # 6.7b: the character-class table, generated from the authority's own `crypto/ctype.c`.
+    "src/runtime/ctype.rs",
+    "src/runtime/ctype_table.rs",
+    # 6.8c: the compiled-in directory defaults.
+    "src/runtime/defaults.rs",
+    # 6.6c: the self-test indicator object.
+    "src/selftest/mod.rs",
+    "src/selftest/indicator.rs",
+    "courts/phase6/rt_selftest_probe.c",
     "forensics/tools/phase6_courts.py",
     "forensics/tools/phase6_obligations.py",
 ]

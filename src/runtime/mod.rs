@@ -39,6 +39,7 @@ pub mod init;
 pub mod lhash;
 pub mod mem;
 pub mod obj;
+pub mod rcu;
 pub mod secure;
 pub mod sparse_array;
 pub mod stack;
