@@ -66,6 +66,7 @@
 #include <openssl/core_dispatch.h>
 #include <openssl/crypto.h>
 #include <openssl/err.h>
+#include <openssl/evp.h>
 #include <openssl/provider.h>
 
 /* The index numbers, from `include/internal/cryptlib.h` of the admitted authority. They are
@@ -108,6 +109,12 @@ static void sayp(const char *key, const void *p)
 static void sayn(const char *key, long long v)
 {
     printf("%s=%lld err=%lu\n", key, v, ERR_peek_error());
+    ERR_clear_error();
+}
+
+static void says(const char *key, const char *s)
+{
+    printf("%s=%s err=%lu\n", key, s == NULL ? "(null)" : s, ERR_peek_error());
     ERR_clear_error();
 }
 
@@ -202,6 +209,48 @@ int main(void)
 
         snprintf(key, sizeof key, "slot.dead.%d", dead_slots[i]);
         sayp(key, OSSL_LIB_CTX_get_data(ctx, dead_slots[i]));
+    }
+
+    /* ---- the default-properties surface: this stratum's first *exports* ---- */
+    /*
+     * Unlike everything above, these are exported functions, so the probe calls them directly.
+     * They are the half of `evp_fetch.c` that needs no method objects: they read and write the
+     * context's global-property list, render it back to text, and flush the store's cache.
+     *
+     * The text is compared, not just the return code, because the text is what every activated
+     * provider is handed; and the two directions of `EVP_default_properties_enable_fips` are
+     * compared because enabling merges `fips=yes` while disabling merges the **negative** form.
+     */
+    {
+        char *props;
+
+        sayn("props.set", EVP_set_default_properties(ctx, "fips=yes"));
+        props = EVP_get1_default_properties(ctx);
+        says("props.get", props);
+        OPENSSL_free(props);
+
+        sayn("props.fips_after_set", EVP_default_properties_is_fips_enabled(ctx));
+        sayn("props.enable_fips_off", EVP_default_properties_enable_fips(ctx, 0));
+        props = EVP_get1_default_properties(ctx);
+        says("props.get_after_disable", props);
+        OPENSSL_free(props);
+        sayn("props.fips_after_disable", EVP_default_properties_is_fips_enabled(ctx));
+
+        /* A query the grammar refuses: the *reason* is part of the observation, so the error
+         * queue is printed rather than cleared and ignored. */
+        sayn("props.set_bad", EVP_set_default_properties(ctx, "===no"));
+        printf("props.bad.err=%lu\n", ERR_peek_error());
+        ERR_clear_error();
+        props = EVP_get1_default_properties(ctx);
+        says("props.get_after_bad", props);
+        OPENSSL_free(props);
+
+        /* A NULL query clears them, and the answer is an *empty string* rather than NULL --
+         * a distinction a caller can see, because it is a valid pointer to free and to print. */
+        sayn("props.set_null", EVP_set_default_properties(ctx, NULL));
+        props = EVP_get1_default_properties(ctx);
+        printf("props.get_null.is_empty=%d\n", props != NULL && props[0] == '\0' ? 1 : 0);
+        OPENSSL_free(props);
     }
 
     /* ---- the two store bridges, on the public path ---- */

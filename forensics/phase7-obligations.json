@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 924,
       "deferred_to_later_phase": 0,
-      "implemented": 0,
-      "open_in_this_stratum": 950,
+      "implemented": 4,
+      "open_in_this_stratum": 946,
       "owned": 950,
       "received_by_handoff": 26
     },
@@ -202,7 +202,12 @@
         }
       ]
     },
-    "implemented": [],
+    "implemented": [
+      "EVP_default_properties_enable_fips",
+      "EVP_default_properties_is_fips_enabled",
+      "EVP_get1_default_properties",
+      "EVP_set_default_properties"
+    ],
     "module_prefixes": [
       {
         "module": "src/evp/fetch.rs",
@@ -5187,18 +5192,6 @@
       },
       {
         "declaring_header": "evp.h",
-        "module": "src/evp/fetch.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_default_properties_enable_fips"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/fetch.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_default_properties_is_fips_enabled"
-      },
-      {
-        "declaring_header": "evp.h",
         "module": "src/evp/legacy_cipher.rs",
         "received_from_phase": null,
         "symbol": "EVP_des_cbc"
@@ -5322,12 +5315,6 @@
         "module": "src/evp/legacy_cipher.rs",
         "received_from_phase": null,
         "symbol": "EVP_enc_null"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/fetch.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_get1_default_properties"
       },
       {
         "declaring_header": "evp.h",
@@ -5496,12 +5483,6 @@
         "module": "src/evp/legacy_cipher.rs",
         "received_from_phase": null,
         "symbol": "EVP_seed_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/fetch.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_set_default_properties"
       },
       {
         "declaring_header": "evp.h",
@@ -6217,12 +6198,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "b9e0e7fab60b9998c2644beb2a71d700ed40042476885d2a23c27d393498761d"
+      "sha256": "2dcf5c77393a75a8b1722bd3f4fa9b2f94d588eab0b378e518af52906eb8ede8"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "2df0899e9e795feb6e99eb33bfabd0686cd93bb61451f901824845ac696e035b"
+      "sha256": "91eeb2655064c346336b31fc20edad01c9c1936d534c57f470b8ecd5121624b8"
     }
   ],
   "kind": "phase7-obligations",

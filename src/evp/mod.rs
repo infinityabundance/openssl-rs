@@ -43,4 +43,5 @@
 //! SPDX-License-Identifier: Apache-2.0
 
 pub mod algorithm;
+pub mod fetch;
 pub mod method_store;

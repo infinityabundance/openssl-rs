@@ -102,7 +102,15 @@ def compile_probe(
     src: Path, out: Path, include: Path, libdir: Path, defs: list[str] | None = None
 ) -> tuple[bool, str]:
     res = run([
-        "clang", "-std=c11", "-Wall", "-O1", "-D_GNU_SOURCE",
+        # `-Werror=implicit-function-declaration` is not decoration: without a prototype, C
+        # assumes a function returns `int`, so a probe that forgot an include reads a pointer
+        # return as its low 32 bits and dereferences it. That is exactly what RT-FETCH did on
+        # its first run with the default-properties block -- a segfault on *both* sides, which
+        # the runner correctly refused to read as agreement and which cost a run to find. The
+        # warning was there all along; this turns it into a compile failure so the next one is
+        # caught before anything executes.
+        "clang", "-std=c11", "-Wall", "-Werror=implicit-function-declaration", "-O1",
+        "-D_GNU_SOURCE",
         *(defs or []),
         "-I", str(include),
         "-o", str(out), str(src),

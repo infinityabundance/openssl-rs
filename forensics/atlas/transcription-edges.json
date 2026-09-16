@@ -334,6 +334,13 @@
         "translation_unit": "crypto/core_algorithm.c"
       },
       {
+        "module": "src/evp/fetch.rs",
+        "phase": 7,
+        "phase_source": "module-declaration",
+        "share": "7/7",
+        "translation_unit": "crypto/evp/evp_fetch.c"
+      },
+      {
         "module": "src/evp/method_store.rs",
         "phase": 7,
         "phase_source": "module-declaration",
@@ -12433,6 +12440,7 @@
           "x7FFFFF00"
         ],
         "modules": [
+          "src/evp/fetch.rs",
           "src/provider/stores.rs"
         ],
         "tu": "crypto/evp/evp_fetch.c"
