@@ -60,17 +60,17 @@
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void};
 use core::ptr;
 
-use crate::asn1::a_type::{d2i_ASN1_TYPE, i2d_ASN1_TYPE, Asn1Type};
+use crate::asn1::a_type::{d2i_ASN1_TYPE, i2d_ASN1_TYPE, ASN1_TYPE_set};
 use crate::asn1::evp_asn1::{
     ossl_asn1_type_get_octetstring_int, ossl_asn1_type_set_octetstring_int,
     ASN1_TYPE_get_octetstring, ASN1_TYPE_set_octetstring,
 };
+use crate::asn1::layout::*;
 use crate::evp::cipher::{
-    EVP_ORIG_METH,
     evp_do_ciph_ctx_getparams, evp_do_ciph_ctx_setparams, EVP_CIPHER_free,
     EVP_CIPHER_get0_provider, EVP_CIPHER_get_block_size, EVP_CIPHER_get_flags,
-    EVP_CIPHER_get_iv_length, EVP_CIPHER_get_mode, EVP_CIPHER_get_nid,
-    EVP_CIPHER_is_a, EVP_CIPHER_settable_ctx_params, EVP_CIPHER_up_ref, EvpCipher,
+    EVP_CIPHER_get_iv_length, EVP_CIPHER_get_mode, EVP_CIPHER_get_nid, EVP_CIPHER_is_a,
+    EVP_CIPHER_settable_ctx_params, EVP_CIPHER_up_ref, EvpCipher, EVP_ORIG_METH,
 };
 use crate::params::{
     OSSL_PARAM_construct_end, OSSL_PARAM_construct_octet_ptr, OSSL_PARAM_construct_octet_string,
@@ -80,8 +80,8 @@ use crate::params::{
 use crate::provider::ossl_provider_libctx;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::obj::NID_undef;
 use crate::runtime::obj::OBJ_nid2sn;
-use crate::runtime::obj::{Asn1Object, NID_undef, V_ASN1_NULL};
 
 /// `EVP_CTRL_RET_UNSUPPORTED`, from `crypto/evp/evp_local.h`.
 const EVP_CTRL_RET_UNSUPPORTED: c_int = -1;
@@ -131,14 +131,10 @@ const EVP_CIPH_CTRL_INIT: c_ulong = 0x40;
 const EVP_CIPH_CUSTOM_KEY_LENGTH: c_ulong = 0x80;
 /// `EVP_CIPH_NO_PADDING`.
 const EVP_CIPH_NO_PADDING: c_ulong = 0x100;
-/// `EVP_CIPH_RAND_KEY`.
-const EVP_CIPH_RAND_KEY: c_ulong = 0x200;
 /// `EVP_CIPH_CUSTOM_IV_LENGTH`.
 const EVP_CIPH_CUSTOM_IV_LENGTH: c_ulong = 0x800;
 /// `EVP_CIPH_FLAG_FLAG_LENGTH_BITS`.
 const EVP_CIPH_FLAG_LENGTH_BITS: c_ulong = 0x2000;
-/// `EVP_CIPH_FLAG_CUSTOM_CIPHER`.
-const EVP_CIPH_FLAG_CUSTOM_CIPHER: c_ulong = 0x10_0000;
 /// `EVP_CIPH_FLAG_CUSTOM_ASN1`.
 const EVP_CIPH_FLAG_CUSTOM_ASN1: c_ulong = 0x100_0000;
 /// `EVP_CIPH_CUSTOM_COPY`.
@@ -196,14 +192,14 @@ const EVP_CTRL_SET_SPEED: c_int = 0x27;
 /// `SN_id_smime_alg_CMS3DESwrap` — the one OID name `EVP_CIPHER_param_to_asn1` compares against.
 const SN_ID_SMIME_ALG_CMS3DESWRAP: *const c_char = c"id-smime-alg-CMS3DESwrap".as_ptr();
 
-/// `OSSL_SIGNATURE_PARAM_ALGORITHM_ID` — `OSSL_ALG_PARAM_ALGORITHM_ID`, the key
-/// `EVP_CIPHER_CTX_get_algor_params` asks for.
-const OSSL_SIGNATURE_PARAM_ALGORITHM_ID: *const c_char = c"algorithm-id".as_ptr();
-
 /// `OSSL_SIGNATURE_PARAM_ALGORITHM_ID_PARAMS` — `OSSL_ALG_PARAM_ALGORITHM_ID_PARAMS`, the key
 /// the two `algor_params` functions use.
-const OSSL_SIGNATURE_PARAM_ALGORITHM_ID_PARAMS: *const c_char =
-    c"algorithm-id-params".as_ptr();
+const OSSL_SIGNATURE_PARAM_ALGORITHM_ID_PARAMS: *const c_char = c"algorithm-id-params".as_ptr();
+
+/// `OSSL_CIPHER_PARAM_ALGORITHM_ID_PARAMS_OLD` — the retired spelling of the same key.
+///
+/// Both are sent by the two `algor_params` functions, because a provider may recognise either.
+const OSSL_CIPHER_PARAM_ALGORITHM_ID_PARAMS_OLD: *const c_char = c"alg_id_param".as_ptr();
 
 /// The authority's translation unit, as the compiler spelled it — `evp_enc.c`'s sites.
 const FILE_ENC: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/evp_enc.c".as_ptr();
@@ -232,7 +228,7 @@ const LINE_FREE_AID: c_int = 1517;
 #[repr(C)]
 pub struct X509Algor {
     /// `const ASN1_OBJECT *algorithm` — the OID, which neither function here reads.
-    pub algorithm: *const Asn1Object,
+    pub algorithm: *const crate::runtime::obj::Asn1Object,
     /// `ASN1_TYPE *parameter` — the value, which both functions here do.
     pub parameter: *mut Asn1Type,
 }
@@ -334,6 +330,7 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_reset(ctx: *mut EvpCipherCtx) -> c_int {
     let prov = if cipher.is_null() {
         ptr::null_mut()
     } else {
+        // SAFETY: `cipher` is NULL or the live method this context holds.
         unsafe { (*cipher).prov }
     };
 
@@ -1110,6 +1107,7 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_set_params(
     let set_ctx_params = if cipher.is_null() {
         None
     } else {
+        // SAFETY: `cipher` is NULL or the live method this context holds.
         unsafe { (*cipher).set_ctx_params }
     };
     if let Some(f) = set_ctx_params {
@@ -1166,6 +1164,7 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_get_params(
     let get_ctx_params = if cipher.is_null() {
         None
     } else {
+        // SAFETY: `cipher` is NULL or the live method this context holds.
         unsafe { (*cipher).get_ctx_params }
     };
     let Some(f) = get_ctx_params else {
@@ -1251,7 +1250,10 @@ unsafe fn ossl_provider_ctx_for(cipher: *const EvpCipher) -> *mut c_void {
 ///
 /// # Safety
 /// `ctx` must be a live `EvpCipherCtx`.
-#[allow(dead_code)] // its only caller, `EVP_CIPHER_CTX_rand_key`, is deferred to Phase 9
+#[allow(dead_code)]
+// its only caller, `EVP_CIPHER_CTX_rand_key`, is deferred to Phase 9
+// mirrors the authority's name exactly: this is a transcription, not a Rust function
+#[allow(non_snake_case)]
 unsafe fn EVP_CIPHER_CTX_get_libctx(ctx: *mut EvpCipherCtx) -> *mut c_void {
     // SAFETY: `ctx` is live per the contract.
     let cipher = unsafe { (*ctx).cipher };
@@ -1569,7 +1571,7 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_ctrl(
                     }
                     params[0] = OSSL_PARAM_construct_octet_string(
                         c"tls1multi_aad".as_ptr(),
-                        (*p).inp as *mut c_void
+                        (*p).inp as *mut c_void,
                         (*p).len,
                     );
                     params[1] = OSSL_PARAM_construct_uint(
@@ -1598,12 +1600,12 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_ctrl(
                     let p = ptr_.cast::<MultiblockParam>();
                     params[0] = OSSL_PARAM_construct_octet_string(
                         c"tls1multi_enc".as_ptr(),
-                        (*p).out as *mut c_void
+                        (*p).out as *mut c_void,
                         (*p).len,
                     );
                     params[1] = OSSL_PARAM_construct_octet_string(
                         c"tls1multi_encin".as_ptr(),
-                        (*p).inp as *mut c_void
+                        (*p).inp as *mut c_void,
                         (*p).len,
                     );
                     params[2] = OSSL_PARAM_construct_uint(
@@ -1651,6 +1653,8 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_ctrl(
 /// A `static`-free helper rather than a duplicated tail, because two of the `switch` arms reach
 /// it early — that is what the authority's `goto end` does — and the two paths must raise
 /// identically.
+// mirrors the authority's `end:` label's caller name exactly
+#[allow(non_snake_case)]
 fn EVP_CIPHER_CTX_ctrl_tail(ret: c_int) -> c_int {
     if ret == EVP_CTRL_RET_UNSUPPORTED {
         // SAFETY: a compile-time-constant site.
@@ -1695,6 +1699,8 @@ fn EVP_CIPHER_CTX_ctrl_tail(ret: c_int) -> c_int {
 /// `ctx` must be a live `EvpCipherCtx`; `cipher` NULL or a live method; `impl` NULL (see the
 /// module documentation on ENGINE); `key` and `iv` NULL or valid for the lengths the cipher
 /// reports; `params` NULL or a terminated array.
+// mirrors the authority's signature exactly
+#[allow(clippy::too_many_arguments)]
 unsafe fn evp_cipher_init_internal(
     ctx: *mut EvpCipherCtx,
     cipher: *const EvpCipher,
@@ -1757,6 +1763,7 @@ unsafe fn evp_cipher_init_internal(
                 EVP_CIPHER_free((*ctx).fetched_cipher);
                 (*ctx).fetched_cipher = ptr::null_mut();
             }
+            // SAFETY: the arguments are forwarded under this function's contract.
             return unsafe { evp_cipher_init_legacy_internal(ctx, cipher, key, iv, enc) };
         }
         // The legacy-only clearing, which the non-legacy path does not do.
@@ -1817,9 +1824,8 @@ unsafe fn evp_cipher_init_internal(
             OBJ_nid2sn(nid)
         };
         // SAFETY: `name` is NUL-terminated (a literal or the object table's own string).
-        let provciph = unsafe {
-            crate::evp::cipher::EVP_CIPHER_fetch(ptr::null_mut(), name, c"".as_ptr())
-        };
+        let provciph =
+            unsafe { crate::evp::cipher::EVP_CIPHER_fetch(ptr::null_mut(), name, c"".as_ptr()) };
         if provciph.is_null() {
             return 0;
         }
@@ -1952,6 +1958,7 @@ unsafe fn evp_cipher_init_internal(
             let ivlen = if iv.is_null() {
                 0usize
             } else {
+                // SAFETY: the arguments are forwarded under this function's contract.
                 (unsafe { EVP_CIPHER_CTX_get_iv_length(ctx) }) as usize
             };
             // SAFETY: `sk` is the provider's own callback.
@@ -1987,6 +1994,7 @@ unsafe fn evp_cipher_init_internal(
             let ivlen = if iv.is_null() {
                 0usize
             } else {
+                // SAFETY: the arguments are forwarded under this function's contract.
                 (unsafe { EVP_CIPHER_CTX_get_iv_length(ctx) }) as usize
             };
             // SAFETY: `sk` is the provider's own callback.
@@ -2031,8 +2039,6 @@ unsafe fn evp_cipher_init_legacy_internal(
     iv: *const c_uchar,
     enc: c_int,
 ) -> c_int {
-    let mut cipher = cipher;
-
     if !cipher.is_null() {
         // SAFETY: `ctx` is live.
         if !unsafe { (*ctx).cipher }.is_null() {
@@ -2131,7 +2137,13 @@ unsafe fn evp_cipher_init_legacy_internal(
                 if !iv.is_null() {
                     // SAFETY: `iv` holds `n` bytes per the cipher's own length and `ctx->oiv` holds
                     // sixteen.
-                    unsafe { ptr::copy_nonoverlapping(iv, ptr::addr_of_mut!((*ctx).oiv).cast(), n as usize) };
+                    unsafe {
+                        ptr::copy_nonoverlapping(
+                            iv,
+                            ptr::addr_of_mut!((*ctx).oiv).cast(),
+                            n as usize,
+                        )
+                    };
                 }
                 // SAFETY: `ctx` is live.
                 unsafe {
@@ -2154,7 +2166,13 @@ unsafe fn evp_cipher_init_legacy_internal(
                         return 0;
                     }
                     // SAFETY: `iv` holds `n` bytes and `ctx->iv` holds sixteen.
-                    unsafe { ptr::copy_nonoverlapping(iv, ptr::addr_of_mut!((*ctx).iv).cast(), n as usize) };
+                    unsafe {
+                        ptr::copy_nonoverlapping(
+                            iv,
+                            ptr::addr_of_mut!((*ctx).iv).cast(),
+                            n as usize,
+                        )
+                    };
                 }
             }
             _ => return 0,
@@ -2257,13 +2275,15 @@ pub unsafe extern "C" fn EVP_CipherInit_ex(
 /// # Safety
 /// `ctx` must be a live `EvpCipherCtx`; `cipher` a live method; `key` valid for `keylen`; `iv` an
 /// array of `numpipes` valid pointers each of `ivlen` bytes.
+// mirrors the authority's signature exactly
+#[allow(clippy::too_many_arguments)]
 unsafe fn pipeline_init(
     ctx: *mut EvpCipherCtx,
     cipher: *const EvpCipher,
     key: *const c_uchar,
     keylen: usize,
     numpipes: usize,
-    iv: *const *const c_uchar,
+    iv: *mut *const c_uchar,
     ivlen: usize,
     enc: c_int,
     site: &crate::runtime::err::err_sites::ErrSite,
@@ -2278,8 +2298,16 @@ unsafe fn pipeline_init(
     unsafe { (*ctx).numpipes = numpipes };
     // SAFETY: `ctx` is live and `cipher` is live.
     if unsafe {
-        evp_cipher_init_internal(ctx, cipher, ptr::null_mut(), ptr::null(), ptr::null(), enc, 1,
-                                 ptr::null())
+        evp_cipher_init_internal(
+            ctx,
+            cipher,
+            ptr::null_mut(),
+            ptr::null(),
+            ptr::null(),
+            enc,
+            1,
+            ptr::null(),
+        )
     } == 0
     {
         return 0;
@@ -2316,7 +2344,7 @@ pub unsafe extern "C" fn EVP_CipherPipelineEncryptInit(
     key: *const c_uchar,
     keylen: usize,
     numpipes: usize,
-    iv: *const *const c_uchar,
+    iv: *mut *const c_uchar,
     ivlen: usize,
 ) -> c_int {
     // SAFETY: the arguments are forwarded under this function's contract.
@@ -2349,7 +2377,7 @@ pub unsafe extern "C" fn EVP_CipherPipelineDecryptInit(
     key: *const c_uchar,
     keylen: usize,
     numpipes: usize,
-    iv: *const *const c_uchar,
+    iv: *mut *const c_uchar,
     ivlen: usize,
 ) -> c_int {
     // SAFETY: the arguments are forwarded under this function's contract.
@@ -2469,6 +2497,466 @@ pub unsafe extern "C" fn EVP_DecryptInit_ex2(
     unsafe { EVP_CipherInit_ex2(ctx, cipher, key, iv, 0, params) }
 }
 
+// ---------------------------------------------------------------------------------------------
+// The ASN.1 bridge — `evp_lib.c`'s four entry points, their two shared bodies, and the
+// `X509_ALGOR` pair that needs the layout rather than Phase 11's codec.
+// ---------------------------------------------------------------------------------------------
+
+/// `evp_cipher_aead_asn1_params` — a struct private to `crypto/evp/evp_lib.c`.
+///
+/// No exported function sees one: `EVP_CIPHER_param_to_asn1` and `EVP_CIPHER_asn1_to_param` reach
+/// the two helpers that take it with a **NULL**, so this type exists here for the same reason it
+/// exists in the authority — so the two helpers can share an argument shape.
+#[repr(C)]
+pub struct EvpCipherAeadAsn1Params {
+    /// `unsigned int tag_len` — passed on as `ossl_asn1_type_set_octetstring_int`'s `num`.
+    pub tag_len: c_uint,
+    /// `unsigned char iv[EVP_MAX_IV_LENGTH]`.
+    pub iv: [c_uchar; EVP_MAX_IV_LENGTH],
+    /// `unsigned int iv_len`.
+    pub iv_len: c_uint,
+}
+
+/// `int EVP_CIPHER_get_asn1_iv(EVP_CIPHER_CTX *ctx, ASN1_TYPE *type)`.
+///
+/// Reads an IV **out of** the ASN.1 and then re-initialises the context with it, through
+/// `EVP_CipherInit_ex(ctx, NULL, NULL, NULL, iv, -1)` — whose `enc` of -1 is what keeps the
+/// context's current direction. A NULL type answers 0 and changes nothing.
+///
+/// # Safety
+/// `ctx` must be a live `EvpCipherCtx`; `type_` NULL or a live `Asn1Type`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_CIPHER_get_asn1_iv(
+    ctx: *mut EvpCipherCtx,
+    type_: *mut Asn1Type,
+) -> c_int {
+    if type_.is_null() {
+        return 0;
+    }
+    let mut iv: [c_uchar; EVP_MAX_IV_LENGTH] = [0; EVP_MAX_IV_LENGTH];
+    // SAFETY: `ctx` is live per the contract.
+    let l = unsafe { EVP_CIPHER_CTX_get_iv_length(ctx) };
+    if l < 0 || l as usize > EVP_MAX_IV_LENGTH {
+        return -1;
+    }
+    // SAFETY: `type_` is live and `iv` holds sixteen bytes, which `l` is bounded by.
+    let i = unsafe { ASN1_TYPE_get_octetstring(type_, iv.as_mut_ptr(), l) };
+    if i != l {
+        return -1;
+    }
+    // SAFETY: `ctx` is live; the IV buffer holds `l` bytes and the direction is kept.
+    if unsafe {
+        EVP_CipherInit_ex(
+            ctx,
+            ptr::null(),
+            ptr::null_mut(),
+            ptr::null(),
+            iv.as_ptr(),
+            -1,
+        )
+    } == 0
+    {
+        return -1;
+    }
+    i
+}
+
+/// `int EVP_CIPHER_set_asn1_iv(EVP_CIPHER_CTX *c, ASN1_TYPE *type)`.
+///
+/// The other direction, and it writes `original_iv` rather than `iv`: what belongs in the ASN.1 is
+/// the IV the caller supplied, not the running one.
+///
+/// # Safety
+/// `c` must be a live `EvpCipherCtx`; `type_` NULL or a live `Asn1Type`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_CIPHER_set_asn1_iv(
+    c: *mut EvpCipherCtx,
+    type_: *mut Asn1Type,
+) -> c_int {
+    if type_.is_null() {
+        return 0;
+    }
+    // SAFETY: `c` is live per the contract.
+    let oiv = unsafe { EVP_CIPHER_CTX_original_iv(c) }.cast_mut();
+    // SAFETY: `c` is live.
+    let j = unsafe { EVP_CIPHER_CTX_get_iv_length(c) };
+    // SAFETY: `type_` is live and `oiv` is the context's own buffer of `j` bytes.
+    unsafe { ASN1_TYPE_set_octetstring(type_, oiv, j) }
+}
+
+/// The `err:` label the two `_ex` helpers share: the two reasons, selected by the *caller's* two
+/// sites, and then the clamp that turns `-2` into `-1` **after** the raise — which is the order a
+/// reader has to check, because the clamp would otherwise hide the reason.
+fn evp_cipher_asn1_tail(
+    ret: c_int,
+    unsupported: &crate::runtime::err::err_sites::ErrSite,
+    param_error: &crate::runtime::err::err_sites::ErrSite,
+) -> c_int {
+    if ret == -2 {
+        // SAFETY: a compile-time-constant site supplied by the caller.
+        unsafe { raise_site(unsupported) };
+    } else if ret <= 0 {
+        // SAFETY: a compile-time-constant site supplied by the caller.
+        unsafe { raise_site(param_error) };
+    }
+    if ret < -1 {
+        return -1;
+    }
+    ret
+}
+
+/// `int evp_cipher_param_to_asn1_ex(EVP_CIPHER_CTX *c, ASN1_TYPE *type,
+/// evp_cipher_aead_asn1_params *asn1_params)`.
+///
+/// Four arms, and the *first* is what makes a legacy implementation's custom parameter handling
+/// work: `set_asn1_parameters` beats every flag. Then the flag test, then a mode `switch` whose
+/// three refusals (`-2`) raise `EVP_R_UNSUPPORTED_CIPHER` while every other failure raises
+/// `EVP_R_CIPHER_PARAMETER_ERROR`, and finally the provider arm, which hands the DER to the
+/// implementation through `algorithm-id-params`.
+///
+/// # Safety
+/// `c` must be NULL or a live `EvpCipherCtx`; `type_` NULL or live; `asn1_params` NULL or live.
+unsafe fn evp_cipher_param_to_asn1_ex(
+    c: *mut EvpCipherCtx,
+    type_: *mut Asn1Type,
+    asn1_params: *mut EvpCipherAeadAsn1Params,
+) -> c_int {
+    let mut ret = -1;
+    // SAFETY: `c` is NULL or live per the contract.
+    let cipher = if c.is_null() {
+        ptr::null()
+    } else {
+        // SAFETY: the arguments are forwarded under this function's contract.
+        unsafe { (*c).cipher }
+    };
+    if cipher.is_null() {
+        return evp_cipher_asn1_tail(ret, &err_sites::EVP_LIB_144, &err_sites::EVP_LIB_146);
+    }
+    // SAFETY: `cipher` is live.
+    let set_asn1 = unsafe { (*cipher).set_asn1_parameters };
+    if let Some(f) = set_asn1 {
+        // SAFETY: `f` is the implementation's own callback and `c` is its context.
+        ret = unsafe { f(c.cast::<c_void>(), type_.cast::<c_void>()) };
+    // SAFETY: the arguments are forwarded under this function's contract.
+    } else if (unsafe { EVP_CIPHER_get_flags(cipher) } & EVP_CIPH_FLAG_CUSTOM_ASN1) == 0 {
+        // SAFETY: `cipher` is live.
+        match unsafe { EVP_CIPHER_get_mode(cipher) } {
+            EVP_CIPH_WRAP_MODE => {
+                // SAFETY: `cipher` is live.
+                if unsafe { EVP_CIPHER_is_a(cipher, SN_ID_SMIME_ALG_CMS3DESWRAP) } != 0 {
+                    // SAFETY: `type_` is the caller's type; a NULL value is `V_ASN1_NULL`.
+                    unsafe { ASN1_TYPE_set(type_, V_ASN1_NULL, ptr::null_mut()) };
+                }
+                ret = 1;
+            }
+            EVP_CIPH_GCM_MODE => {
+                // SAFETY: both arguments are the caller's, forwarded.
+                ret = unsafe { evp_cipher_set_asn1_aead_params(c, type_, asn1_params) };
+            }
+            EVP_CIPH_CCM_MODE | EVP_CIPH_XTS_MODE | EVP_CIPH_OCB_MODE => ret = -2,
+            _ => {
+                // SAFETY: `c` is live and `type_` is the caller's.
+                ret = unsafe { EVP_CIPHER_set_asn1_iv(c, type_) };
+            }
+        }
+    // SAFETY: `cipher` is NULL or the live method this context holds.
+    } else if !(unsafe { (*cipher).prov }).is_null() {
+        let mut alg = X509Algor {
+            algorithm: ptr::null(),
+            parameter: type_,
+        };
+        // SAFETY: `c` is live and `alg` is this frame's own.
+        ret = unsafe { EVP_CIPHER_CTX_get_algor_params(c, &mut alg) };
+    } else {
+        ret = -2;
+    }
+    evp_cipher_asn1_tail(ret, &err_sites::EVP_LIB_144, &err_sites::EVP_LIB_146)
+}
+
+/// `int evp_cipher_asn1_to_param_ex(EVP_CIPHER_CTX *c, ASN1_TYPE *type,
+/// evp_cipher_aead_asn1_params *asn1_params)`.
+///
+/// The mirror of the function above, with one difference a reader should not miss: the `default`
+/// arm converts the *helper's* return value into a status — `get_asn1_iv(c, type) >= 0 ? 1 : -1` —
+/// where the other direction returns it raw.
+///
+/// # Safety
+/// As `evp_cipher_param_to_asn1_ex`.
+unsafe fn evp_cipher_asn1_to_param_ex(
+    c: *mut EvpCipherCtx,
+    type_: *mut Asn1Type,
+    asn1_params: *mut EvpCipherAeadAsn1Params,
+) -> c_int {
+    let mut ret = -1;
+    // SAFETY: `c` is NULL or live per the contract.
+    let cipher = if c.is_null() {
+        ptr::null()
+    } else {
+        // SAFETY: the arguments are forwarded under this function's contract.
+        unsafe { (*c).cipher }
+    };
+    if cipher.is_null() {
+        return evp_cipher_asn1_tail(ret, &err_sites::EVP_LIB_213, &err_sites::EVP_LIB_215);
+    }
+    // SAFETY: `cipher` is live.
+    let get_asn1 = unsafe { (*cipher).get_asn1_parameters };
+    if let Some(f) = get_asn1 {
+        // SAFETY: `f` is the implementation's own callback and `c` is its context.
+        ret = unsafe { f(c.cast::<c_void>(), type_.cast::<c_void>()) };
+    // SAFETY: the arguments are forwarded under this function's contract.
+    } else if (unsafe { EVP_CIPHER_get_flags(cipher) } & EVP_CIPH_FLAG_CUSTOM_ASN1) == 0 {
+        // SAFETY: `cipher` is live.
+        match unsafe { EVP_CIPHER_get_mode(cipher) } {
+            EVP_CIPH_WRAP_MODE => ret = 1,
+            EVP_CIPH_GCM_MODE => {
+                // SAFETY: both arguments are the caller's, forwarded.
+                ret = unsafe { evp_cipher_get_asn1_aead_params(c, type_, asn1_params) };
+            }
+            EVP_CIPH_CCM_MODE | EVP_CIPH_XTS_MODE | EVP_CIPH_OCB_MODE => ret = -2,
+            _ => {
+                // SAFETY: `c` is live and `type_` is the caller's.
+                ret = if unsafe { EVP_CIPHER_get_asn1_iv(c, type_) } >= 0 {
+                    1
+                } else {
+                    -1
+                };
+            }
+        }
+    // SAFETY: `cipher` is NULL or the live method this context holds.
+    } else if !(unsafe { (*cipher).prov }).is_null() {
+        let alg = X509Algor {
+            algorithm: ptr::null(),
+            parameter: type_,
+        };
+        // SAFETY: `c` is live and `alg` is this frame's own.
+        ret = unsafe { EVP_CIPHER_CTX_set_algor_params(c, &alg) };
+    } else {
+        ret = -2;
+    }
+    evp_cipher_asn1_tail(ret, &err_sites::EVP_LIB_213, &err_sites::EVP_LIB_215)
+}
+
+/// `int evp_cipher_get_asn1_aead_params(EVP_CIPHER_CTX *c, ASN1_TYPE *type,
+/// evp_cipher_aead_asn1_params *asn1_params)`.
+///
+/// Answers the **length** it extracted, which is why its caller treats `<= 0` as a failure: an IV
+/// of zero bytes is not an IV.
+///
+/// # Safety
+/// `type_` NULL or live; `asn1_params` NULL or live.
+unsafe fn evp_cipher_get_asn1_aead_params(
+    _c: *mut EvpCipherCtx,
+    type_: *mut Asn1Type,
+    asn1_params: *mut EvpCipherAeadAsn1Params,
+) -> c_int {
+    if type_.is_null() || asn1_params.is_null() {
+        return 0;
+    }
+    let mut iv: [c_uchar; EVP_MAX_IV_LENGTH] = [0; EVP_MAX_IV_LENGTH];
+    let mut tl: c_long = 0;
+    // SAFETY: `type_` is live and `iv` holds sixteen bytes.
+    let i = unsafe {
+        ossl_asn1_type_get_octetstring_int(
+            type_,
+            &mut tl,
+            iv.as_mut_ptr(),
+            EVP_MAX_IV_LENGTH as c_int,
+        )
+    };
+    if i <= 0 || i as usize > EVP_MAX_IV_LENGTH {
+        return -1;
+    }
+    // SAFETY: `asn1_params` is live and `i` is bounded by the destination's size.
+    unsafe {
+        ptr::copy_nonoverlapping(iv.as_ptr(), (*asn1_params).iv.as_mut_ptr(), i as usize);
+        (*asn1_params).iv_len = i as c_uint;
+    }
+    i
+}
+
+/// `int evp_cipher_set_asn1_aead_params(EVP_CIPHER_CTX *c, ASN1_TYPE *type,
+/// evp_cipher_aead_asn1_params *asn1_params)`.
+///
+/// # Safety
+/// `type_` NULL or live; `asn1_params` NULL or live.
+unsafe fn evp_cipher_set_asn1_aead_params(
+    _c: *mut EvpCipherCtx,
+    type_: *mut Asn1Type,
+    asn1_params: *mut EvpCipherAeadAsn1Params,
+) -> c_int {
+    if type_.is_null() || asn1_params.is_null() {
+        return 0;
+    }
+    // SAFETY: `type_` and `asn1_params` are live.
+    unsafe {
+        ossl_asn1_type_set_octetstring_int(
+            type_,
+            (*asn1_params).tag_len as c_long,
+            (*asn1_params).iv.as_mut_ptr(),
+            (*asn1_params).iv_len as c_int,
+        )
+    }
+}
+
+/// `int EVP_CIPHER_param_to_asn1(EVP_CIPHER_CTX *c, ASN1_TYPE *type)`.
+///
+/// # Safety
+/// `c` must be a live `EvpCipherCtx`; `type_` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_CIPHER_param_to_asn1(
+    c: *mut EvpCipherCtx,
+    type_: *mut Asn1Type,
+) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { evp_cipher_param_to_asn1_ex(c, type_, ptr::null_mut()) }
+}
+
+/// `int EVP_CIPHER_asn1_to_param(EVP_CIPHER_CTX *c, ASN1_TYPE *type)`.
+///
+/// # Safety
+/// `c` must be a live `EvpCipherCtx`; `type_` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_CIPHER_asn1_to_param(
+    c: *mut EvpCipherCtx,
+    type_: *mut Asn1Type,
+) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { evp_cipher_asn1_to_param_ex(c, type_, ptr::null_mut()) }
+}
+
+/// `int EVP_CIPHER_CTX_set_algor_params(EVP_CIPHER_CTX *ctx, const X509_ALGOR *alg)`.
+///
+/// The DER of `alg->parameter` is sent under **both** parameter names — the retired
+/// `alg_id_param` and the current `algorithm-id-params` — because the two are the same data and a
+/// provider may recognise either. This and its sibling need `X509_ALGOR`'s *layout*, not Phase
+/// 11's codec, which is why they land here while `EVP_CIPHER_CTX_get_algor` is a hand-off.
+///
+/// # Safety
+/// `ctx` must be a live `EvpCipherCtx`; `alg` must be a live `X509Algor`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_CIPHER_CTX_set_algor_params(
+    ctx: *mut EvpCipherCtx,
+    alg: *const X509Algor,
+) -> c_int {
+    let mut ret = -1;
+    let mut der: *mut c_uchar = ptr::null_mut();
+    // SAFETY: `alg` is live per the contract.
+    let derl = unsafe { i2d_ASN1_TYPE((*alg).parameter, &mut der) };
+    if derl >= 0 {
+        let mut params: [OsslParam; 3] = [
+            OSSL_PARAM_construct_end(),
+            OSSL_PARAM_construct_end(),
+            OSSL_PARAM_construct_end(),
+        ];
+        // SAFETY: each constructor writes one entry into this frame's own array.
+        unsafe {
+            params[0] = OSSL_PARAM_construct_octet_string(
+                OSSL_CIPHER_PARAM_ALGORITHM_ID_PARAMS_OLD,
+                der.cast::<c_void>(),
+                derl as usize,
+            );
+            params[1] = OSSL_PARAM_construct_octet_string(
+                OSSL_SIGNATURE_PARAM_ALGORITHM_ID_PARAMS,
+                der.cast::<c_void>(),
+                derl as usize,
+            );
+            params[2] = OSSL_PARAM_construct_end();
+        }
+        // SAFETY: `ctx` is live and `params` is this frame's own terminated array.
+        ret = unsafe { EVP_CIPHER_CTX_set_params(ctx, params.as_ptr()) };
+    }
+    // SAFETY: `der` is NULL or the block `i2d_ASN1_TYPE` allocated for this call.
+    unsafe { CRYPTO_free(der.cast::<c_void>(), FILE_LIB, LINE_FREE_DER) };
+    ret
+}
+
+/// `int EVP_CIPHER_CTX_get_algor_params(EVP_CIPHER_CTX *ctx, X509_ALGOR *alg)`.
+///
+/// **Two passes over two parameter names.** The first asks for the length under both names, and
+/// the higher index that answered wins — the new key beats the old when a provider answers both,
+/// which is why `i` is 1 rather than 0 in that case. The second gets the bytes and hands them to
+/// `d2i_ASN1_TYPE`. The caller's existing `alg->parameter` is saved into the decoder's out-pointer
+/// first and assigned back afterwards, so a decode that fails leaves the caller's pointer alone —
+/// and the authority's comment says explicitly that the old value is **not** freed.
+///
+/// The `err:` label here has no raises at all: both refusals are silent, and `ret` stays -1.
+///
+/// # Safety
+/// `ctx` must be a live `EvpCipherCtx`; `alg` must be a live `X509Algor`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_CIPHER_CTX_get_algor_params(
+    ctx: *mut EvpCipherCtx,
+    alg: *mut X509Algor,
+) -> c_int {
+    let mut ret = -1;
+    let mut params: [OsslParam; 3] = [
+        OSSL_PARAM_construct_end(),
+        OSSL_PARAM_construct_end(),
+        OSSL_PARAM_construct_end(),
+    ];
+    // SAFETY: each constructor writes one entry into this frame's own array.
+    unsafe {
+        params[0] = OSSL_PARAM_construct_octet_string(
+            OSSL_CIPHER_PARAM_ALGORITHM_ID_PARAMS_OLD,
+            ptr::null_mut(),
+            0,
+        );
+        params[1] = OSSL_PARAM_construct_octet_string(
+            OSSL_SIGNATURE_PARAM_ALGORITHM_ID_PARAMS,
+            ptr::null_mut(),
+            0,
+        );
+        params[2] = OSSL_PARAM_construct_end();
+    }
+    // SAFETY: `ctx` is live and `params` is this frame's own terminated array.
+    if unsafe { EVP_CIPHER_CTX_get_params(ctx, params.as_mut_ptr()) } == 0 {
+        return ret;
+    }
+    let mut i: c_int = -1;
+    // SAFETY: `params` is the array the provider just answered into.
+    unsafe {
+        if OSSL_PARAM_modified(params.as_ptr()) != 0 && params[0].return_size != 0 {
+            i = 0;
+        }
+        if OSSL_PARAM_modified(params.as_ptr().add(1)) != 0 && params[1].return_size != 0 {
+            i = 1;
+        }
+    }
+    if i < 0 {
+        return ret;
+    }
+    // The caller's value is what the decoder starts from, and what it is assigned back to.
+    // SAFETY: `alg` is live per the contract.
+    let mut type_ = unsafe { (*alg).parameter };
+    let idx = i as usize;
+    let derk = params[idx].key;
+    let derl = params[idx].return_size;
+    // SAFETY: this allocates a fresh block of `derl` bytes.
+    let der = CRYPTO_malloc(derl, FILE_LIB, LINE_FREE_AID).cast::<c_uchar>();
+    if !der.is_null() {
+        let mut derp: *const c_uchar = der;
+        // SAFETY: the constructor writes one entry of this frame's own array, and `der` holds
+        // `derl` bytes.
+        unsafe {
+            params[idx] = OSSL_PARAM_construct_octet_string(derk, der.cast::<c_void>(), derl)
+        };
+        // SAFETY: `ctx` is live, `params` is this frame's array, `derp` is this frame's slot, and
+        // `type_` is the caller's saved pointer.
+        unsafe {
+            if EVP_CIPHER_CTX_get_params(ctx, params.as_mut_ptr()) != 0
+                && OSSL_PARAM_modified(params.as_ptr().add(idx)) != 0
+                && !d2i_ASN1_TYPE(&mut type_, &mut derp, derl as c_long).is_null()
+            {
+                (*alg).parameter = type_;
+                ret = 1;
+            }
+        }
+    }
+    // SAFETY: `der` is NULL or the block allocated above, released exactly once.
+    unsafe { CRYPTO_free(der.cast::<c_void>(), FILE_LIB, LINE_FREE_AID) };
+    ret
+}
+
 /// `EVP_CTRL_TLS1_1_MULTIBLOCK_PARAM`, from `include/openssl/evp.h`.
 ///
 /// Four fields in the authority's order. `EVP_CTRL_TLS1_1_MULTIBLOCK_AAD` and `_ENCRYPT` are the
@@ -2484,4 +2972,187 @@ pub struct MultiblockParam {
     pub len: usize,
     /// `unsigned int interleave`.
     pub interleave: c_uint,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `EVP_CIPH_RAND_KEY` — `include/openssl/evp.h`.
+    ///
+    /// Declared here rather than with the flags the module's own code tests, because the only
+    /// reader is the flag test below: `EVP_CIPHER_CTX_rand_key`, which is where the flag is used
+    /// in the authority, is this slice's hand-off to Phase 9. A header fact a test needs belongs
+    /// with the test.
+    const EVP_CIPH_RAND_KEY: c_ulong = 0x200;
+
+    /// The context a test arms, released once. Nothing here sets global state: an
+    /// `EVP_CIPHER_CTX` is this crate's own object and the two flags it carries are its own.
+    struct Ctx(*mut EvpCipherCtx);
+
+    impl Ctx {
+        fn new() -> Ctx {
+            // `EVP_CIPHER_CTX_new` is safe in this crate: no arguments, and it answers an object
+            // this value releases once.
+            let ctx = EVP_CIPHER_CTX_new();
+            assert!(!ctx.is_null(), "the context was built");
+            Ctx(ctx)
+        }
+    }
+
+    impl Drop for Ctx {
+        fn drop(&mut self) {
+            // SAFETY: `self.0` came from `EVP_CIPHER_CTX_new` and is released once, here.
+            unsafe { EVP_CIPHER_CTX_free(self.0) };
+        }
+    }
+
+    /// A fresh context is **zeroed with `iv_len` at -1**, and every accessor's empty arm reads
+    /// that: no cipher means no block size, no key length, no NID, and the two that answer a
+    /// sentinel rather than a zero answer their own.
+    #[test]
+    fn a_fresh_context_answers_every_accessors_empty_arm() {
+        let ctx = Ctx::new();
+        // SAFETY: `ctx.0` is live.
+        unsafe {
+            assert!(
+                (*ctx.0).iv_len == -1,
+                "the sentinel a fresh context carries"
+            );
+            assert!(EVP_CIPHER_CTX_cipher(ctx.0).is_null());
+            assert!(EVP_CIPHER_CTX_get0_cipher(ctx.0).is_null());
+            assert_eq!(EVP_CIPHER_CTX_get_block_size(ctx.0), 0);
+            assert_eq!(EVP_CIPHER_CTX_get_iv_length(ctx.0), 0);
+            assert_eq!(EVP_CIPHER_CTX_get_key_length(ctx.0), 0);
+            assert_eq!(EVP_CIPHER_CTX_get_nid(ctx.0), NID_undef);
+            assert_eq!(EVP_CIPHER_CTX_get_tag_length(ctx.0), 0);
+            assert_eq!(EVP_CIPHER_CTX_is_encrypting(ctx.0), 0);
+            assert!(EVP_CIPHER_CTX_get_app_data(ctx.0).is_null());
+            assert!(EVP_CIPHER_CTX_get_cipher_data(ctx.0).is_null());
+            assert!(
+                EVP_CIPHER_CTX_get1_cipher(ctx.0).is_null(),
+                "nothing to up-ref"
+            );
+            assert!(EVP_CIPHER_CTX_settable_params(ctx.0).is_null());
+            assert!(EVP_CIPHER_CTX_gettable_params(ctx.0).is_null());
+            // `get_num` answers the sentinel, not zero, and it does so through a NULL cipher
+            // because `evp_do_ciph_ctx_getparams` refuses one before asking anything.
+            assert_eq!(EVP_CIPHER_CTX_get_num(ctx.0), EVP_CTRL_RET_UNSUPPORTED);
+        }
+    }
+
+    /// The two lifetime entry points with nothing to do, and the fact that `reset` on a fresh
+    /// context leaves it exactly as it was — because the path it takes is the legacy one (no
+    /// cipher means no provider) and that path zeroes and re-sets the sentinel.
+    #[test]
+    fn resetting_an_empty_context_is_idempotent_and_null_is_a_no_op() {
+        assert_eq!(
+            // SAFETY: NULL is what this function's contract tests for.
+            unsafe { EVP_CIPHER_CTX_reset(ptr::null_mut()) },
+            1,
+            "a NULL context is a success, not a refusal"
+        );
+        // SAFETY: NULL is what this function tests for.
+        unsafe { EVP_CIPHER_CTX_free(ptr::null_mut()) };
+
+        let ctx = Ctx::new();
+        // SAFETY: `ctx.0` is live.
+        unsafe {
+            (*ctx.0).flags = 0xF00;
+            assert_eq!(EVP_CIPHER_CTX_reset(ctx.0), 1);
+            assert_eq!((*ctx.0).flags, 0, "reset zeroes the whole struct");
+            assert_eq!((*ctx.0).iv_len, -1, "and restores the sentinel");
+        }
+    }
+
+    /// The flags trio is the context's own state and nothing else: `test_flags` answers the
+    /// **masked value**, not a boolean, and the length-bits notification only happens when that
+    /// one bit actually changed.
+    #[test]
+    fn the_flag_trio_is_a_mask_and_the_length_bits_bit_is_the_only_one_reported() {
+        let ctx = Ctx::new();
+        // SAFETY: `ctx.0` is live.
+        unsafe {
+            EVP_CIPHER_CTX_set_flags(ctx.0, EVP_CIPH_NO_PADDING as c_int);
+            assert_eq!(
+                EVP_CIPHER_CTX_test_flags(ctx.0, EVP_CIPH_NO_PADDING as c_int),
+                EVP_CIPH_NO_PADDING as c_int,
+                "the masked value comes back"
+            );
+            assert_eq!((*ctx.0).flags, EVP_CIPH_NO_PADDING);
+
+            // Two flags at once: the answer is the mask, not 1.
+            EVP_CIPHER_CTX_set_flags(ctx.0, (EVP_CIPH_CUSTOM_IV | EVP_CIPH_RAND_KEY) as c_int);
+            assert_eq!(
+                EVP_CIPHER_CTX_test_flags(ctx.0, (EVP_CIPH_CUSTOM_IV | EVP_CIPH_RAND_KEY) as c_int),
+                (EVP_CIPH_CUSTOM_IV | EVP_CIPH_RAND_KEY) as c_int
+            );
+
+            EVP_CIPHER_CTX_clear_flags(ctx.0, EVP_CIPH_NO_PADDING as c_int);
+            assert_eq!(
+                EVP_CIPHER_CTX_test_flags(ctx.0, EVP_CIPH_NO_PADDING as c_int),
+                0
+            );
+            // The other two survive: clearing is a mask too.
+            assert_eq!((*ctx.0).flags, EVP_CIPH_CUSTOM_IV | EVP_CIPH_RAND_KEY);
+        }
+    }
+
+    /// `EVP_CIPHER_CTX_set_padding` writes the **context's** flag first, so the context records
+    /// the request even when there is no implementation to tell; and a context with no cipher is
+    /// where that asymmetry is visible with nothing else in the way.
+    #[test]
+    fn padding_is_recorded_on_the_context_before_any_cipher_is_told() {
+        let ctx = Ctx::new();
+        // SAFETY: `ctx.0` is live.
+        unsafe {
+            assert_eq!(
+                EVP_CIPHER_CTX_set_padding(ctx.0, 0),
+                0,
+                "there is no implementation to send the parameter to"
+            );
+            assert_eq!(
+                (*ctx.0).flags & EVP_CIPH_NO_PADDING,
+                EVP_CIPH_NO_PADDING,
+                "and the context recorded it anyway"
+            );
+            // The other direction, with no provider to answer either.
+            assert_eq!(EVP_CIPHER_CTX_set_padding(ctx.0, 1), 0);
+            assert_eq!((*ctx.0).flags & EVP_CIPH_NO_PADDING, 0);
+        }
+    }
+
+    /// `EVP_CIPHER_CTX_copy`'s first refusal is the one a caller meets with an unarmed context,
+    /// and `EVP_CIPHER_CTX_dup` turns it into a NULL rather than a half-made object.
+    #[test]
+    fn copying_an_unarmed_context_is_refused_by_both_entry_points() {
+        let ctx = Ctx::new();
+        let other = Ctx::new();
+        // SAFETY: both contexts are live and distinct.
+        unsafe {
+            assert_eq!(EVP_CIPHER_CTX_copy(other.0, ctx.0), 0);
+            assert!(
+                EVP_CIPHER_CTX_dup(ctx.0).is_null(),
+                "and the duplicating entry point answers NULL rather than the new context"
+            );
+            // A NULL source is the same refusal, and it must not be dereferenced.
+            assert_eq!(EVP_CIPHER_CTX_copy(other.0, ptr::null()), 0);
+        }
+    }
+
+    /// `EVP_CIPHER_CTX_ctrl` on an unarmed context raises and answers 0 **before** it looks at
+    /// the command, which is what makes a caller's error path independent of which control it
+    /// was trying to make.
+    #[test]
+    fn control_on_an_unarmed_context_refuses_before_it_reads_the_command() {
+        let ctx = Ctx::new();
+        // SAFETY: `ctx.0` is live and the pointer argument is unused by this command.
+        unsafe {
+            assert_eq!(
+                EVP_CIPHER_CTX_ctrl(ctx.0, EVP_CTRL_INIT, 0, ptr::null_mut()),
+                0,
+                "the same refusal as an unknown command, because neither is reached"
+            );
+        }
+    }
 }
