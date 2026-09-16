@@ -1,0 +1,47 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "all_pass": true,
+    "authority": "openssl-3.6.4-production",
+    "claim": "A passing court means the candidate produced the same observable transcript as the authority for the behaviours this probe exercises. It is a differential-compatibility result, NOT cryptographic or security correctness, and NOT evidence for any behaviour the probe does not touch (docs/PARITY_MODEL.md).",
+    "courts": [
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 27,
+        "candidate_exit_code": 0,
+        "candidate_observations": 27,
+        "candidate_stderr_tail": [],
+        "court": "RT-FETCH",
+        "crashed": false,
+        "probe": "courts/phase7/rt_fetch_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase7/probes/rt_fetch_probe.authority",
+          "candidate": "artifacts/phase7/probes/rt_fetch_probe.candidate"
+        },
+        "verdict": "pass"
+      }
+    ],
+    "summary": {
+      "fail": 0,
+      "pass": 1,
+      "total": 1
+    }
+  },
+  "generator": "forensics/tools/phase7_courts.py",
+  "inputs": [
+    {
+      "name": "authority-symbols",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+      "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase7/rt_fetch_probe.c",
+      "sha256": "9f508bdac80ab4b1bf75bdeb4f4e33c395e760d7e17850f1f469b5e59c3654ed"
+    }
+  ],
+  "kind": "phase7-courts",
+  "schema": "openssl-rs/atlas/phase7-courts/v1"
+}

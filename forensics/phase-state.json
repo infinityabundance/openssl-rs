@@ -349,17 +349,20 @@
           "src/mac/mod.rs",
           "src/mac/hmac.rs",
           "src/mac/cmac.rs",
-          "src/hpke/mod.rs",
-          "forensics/tools/phase7_courts.py",
-          "courts/phase7/rt_fetch_probe.c"
+          "src/hpke/mod.rs"
         ],
         "evidence_present": [
           "docs/PHASE-7-SUBPHASES.md",
           "src/evp/mod.rs",
           "src/evp/algorithm.rs",
           "src/evp/method_store.rs",
+          "src/property/store.rs",
+          "src/runtime/rdtsc.rs",
+          "forensics/tools/phase7_courts.py",
           "forensics/tools/phase7_obligations.py",
-          "forensics/phase7-obligations.json"
+          "courts/phase7/rt_fetch_probe.c",
+          "forensics/phase7-obligations.json",
+          "artifacts/phase7/COURTS.json"
         ],
         "name": "evp",
         "phase": 7,
@@ -529,7 +532,7 @@
       "not_started": 14
     }
   },
-  "body_hash": "82bedd41e407f4a901b80b8fc067b6eaf1ed682935ba710483d1ff495667b006",
+  "body_hash": "b8b39db615db60b46c3220a8ce72e4fad2730b702ab4f93345f53624f4e884b8",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",
