@@ -8879,3 +8879,51 @@ behavioural divergence.
 | unit tests | 328 | **334** |
 
 SPDX-License-Identifier: Apache-2.0
+
+---
+
+## D154 — 7.3c closes: the data path, and 7.3c's twelve exports observed end to end
+
+**What landed.** 7.3c-ii: `evp_EncryptDecryptUpdate`'s block-buffering loop with
+`ossl_is_partially_overlapping` and the header's `safe_div_round_up_int` fast path,
+`EVP_EncryptUpdate`/`EVP_DecryptUpdate`, the four `Final` spellings with the padding loop and the
+padding check, `EVP_Cipher` with its `ccipher`-preferred arm and its answer mapping, the
+`EVP_CipherUpdate`/`EVP_CipherFinal*` dispatchers, and the two pipeline update/final pairs with
+their pre-emptive zeroing of `outl`. **Twelve exports**, and 7.3c is closed with them.
+
+**`RT-EVP-CIPHER` goes 154 → 185 observations, zero residuals on the first run.** The extension
+adds a fifth algorithm, `court-both`, and it exists for exactly one arm: `EVP_Cipher` prefers a
+method's `ccipher` over `cupdate`/`cfinal`, and neither of the two shapes the probe already
+published can show that preference, because each has one of the two and not both. It also
+observes the two direction refusals (which is what stops a caller encrypting through a decrypting
+context), the round trip in both directions, the `_ex`-less aliases, `EVP_Cipher`'s one-shot and
+its NULL-input final, and the two pipeline calls on a context that was not armed for one.
+
+**Three transcriptions in this slice are the kind that look right and are not**, and each is
+written where it can be read against the authority's own comment:
+
+* `safe_div_round_up_int`'s **slow path**. `(a + 7) / 8` overflows for the last eight values of
+  `int`; the header takes it only while `a < INT_MAX - b` and otherwise uses `a / b + (a % b !=
+  0)`, which adds nothing. The caller is a length a probe chooses.
+* `ossl_is_partially_overlapping`'s **integer arithmetic**. Subtracting two pointers that need not
+  be in the same object is undefined in C, so the function subtracts them as integers, wraps, and
+  tests the wrapped difference in both directions — `|`-ed rather than short-circuited because
+  both are computed.
+* `EVP_DecryptUpdate`'s **held-back block**. A full block of the output is copied into `ctx->final`
+  and subtracted from `*outl`, so `EVP_DecryptFinal_ex` can check padding before the caller is
+  ever handed plaintext it might have to retract. `EVP_CIPH_NO_PADDING` skips both, and the
+  authority's comment on the check itself is the security-relevant line in the file:
+  *"The following assumes that the ciphertext has been authenticated. Otherwise it provides a
+  padding oracle."*
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 7 implemented / open | 105 / 845 | **117 / 833** |
+| `implemented[libcrypto]` | 1240 | **1252** |
+| RT-EVP-CIPHER observations | 154 | **185** |
+| courts / observations | 58 / 20,431 | 58 / **20,462** |
+| unit tests | 334 | 334 |
+
+SPDX-License-Identifier: Apache-2.0
