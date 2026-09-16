@@ -33,8 +33,11 @@
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
+#include <openssl/core.h>
+#include <openssl/core_dispatch.h>
 #include <openssl/crypto.h>
 #include <openssl/err.h>
+#include <openssl/provider.h>
 #include <openssl/thread.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -57,6 +60,79 @@ static void sayp(const char *key, const void *p)
     printf("%s=%s err=%lu\n", key, p == NULL ? "NULL" : "nonnull",
            ERR_peek_error());
     ERR_clear_error();
+}
+
+/* ------------------------------------------------------------------ *
+ * 6.6e-ii: the thread-stop handler, and `OPENSSL_atexit`
+ * ------------------------------------------------------------------ */
+
+/* The provider's context, so the handler can check the argument it was given. */
+static char court_provctx_marker;
+
+/* What the core's `thread_start` entry was able to do, and what the handler saw. */
+static int ts_available;
+static int ts_ret = -1;
+static int stop_calls;
+static int stop_arg_matches;
+
+/* The `OPENSSL_atexit` handlers, and the order they ran in. */
+static int atexit_calls;
+static int atexit_order[2];
+
+static void court_stop_handler(void *arg)
+{
+    stop_calls++;
+    if (arg == (void *)&court_provctx_marker)
+        stop_arg_matches = 1;
+}
+
+static void court_atexit_first(void)
+{
+    atexit_order[atexit_calls < 2 ? atexit_calls : 1] = 1;
+    atexit_calls++;
+}
+
+static void court_atexit_second(void)
+{
+    atexit_order[atexit_calls < 2 ? atexit_calls : 1] = 2;
+    atexit_calls++;
+}
+
+/* The provider publishes nothing: this probe's subject is the *core* entry the
+ * provider is handed, and a provider that publishes no algorithms is the smallest
+ * thing that can call it. */
+static const OSSL_DISPATCH court_out[] = {
+    { 0, NULL }
+};
+
+static int court_init(const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in,
+                      const OSSL_DISPATCH **out, void **provctx)
+{
+    const OSSL_DISPATCH *f;
+    OSSL_FUNC_core_thread_start_fn *ts = NULL;
+
+    /* `OSSL_FUNC_core_thread_start(x)` is a **cast of the entry it is handed**, not a
+     * search: `OSSL_CORE_MAKE_FUNC` expands to `return (OSSL_FUNC_##name##_fn
+     * *)opf->function;`. So the table must be walked and the matching entry handed to
+     * the accessor. Applying it to `in` directly asks entry 0 -- `core_gettable_params`
+     * -- to register a thread-stop handler, which returns whatever the callee's `eax`
+     * happens to hold. The first version of this probe did exactly that and both sides
+     * printed a garbage large negative number, differing from each other; the defect
+     * was the probe's, and the lesson is already written down in
+     * `src/context/dispatch.rs`. */
+    for (f = in; f != NULL && f->function_id != 0; f++) {
+        if (f->function_id == OSSL_FUNC_CORE_THREAD_START) {
+            ts = OSSL_FUNC_core_thread_start(f);
+            break;
+        }
+    }
+
+    ts_available = ts != NULL;
+    if (ts != NULL)
+        ts_ret = ts(handle, court_stop_handler, &court_provctx_marker);
+    *out = court_out;
+    *provctx = &court_provctx_marker;
+    return 1;
 }
 
 int main(void)
@@ -135,6 +211,36 @@ int main(void)
     sayu("get.gd.13", OSSL_get_max_threads(gd));
     sayn("set.gd.zero2", OSSL_set_max_threads(gd, 0));
 
+    /* ------------------------------------------------- 6.6e-ii: the thread-stop handler */
+
+    /* The only public way to register a thread-stop handler is the core dispatch
+     * entry a provider is handed, so this declares one. That is also the point:
+     * `ossl_init_thread_start` has no exported symbol, and a provider is the one
+     * caller the ABI admits. */
+    sayn("thread_start.add_builtin",
+         OSSL_PROVIDER_add_builtin(NULL, "rt-td", court_init));
+    {
+        OSSL_PROVIDER *p = OSSL_PROVIDER_load(NULL, "rt-td");
+        sayp("thread_start.provider", p);
+        /* The entry is *published*, which is a compatibility fact: id 3 was absent
+         * from the core table until 6.6e-ii, and a provider compiled against a 3.x
+         * that has it would find NULL here. */
+        sayn("thread_start.accessor.nonnull", ts_available);
+        /* And it answered the registration's result rather than a value of its own. */
+        sayn("thread_start.ret", ts_ret);
+        sayn("stop.before", stop_calls);
+        OPENSSL_thread_stop();
+        sayn("stop.calls", stop_calls);
+        /* The argument the core passes through is the one the provider registered. */
+        sayn("stop.arg_matches", stop_arg_matches);
+        /* The second call is safe and runs nothing: the list was unlinked and its
+         * head released by the first. */
+        OPENSSL_thread_stop();
+        sayn("stop.again", stop_calls);
+        if (p != NULL)
+            OSSL_PROVIDER_unload(p);
+    }
+
     /* ------------------------------------------------------------------ cleanup */
 
     /* `a` and `b` are not the default, so these really release them. */
@@ -143,6 +249,27 @@ int main(void)
     sayp("free.gd.alive", OSSL_LIB_CTX_get0_global_default());
 
     sayn("err.empty", ERR_peek_error() == 0);
-    printf("done=rt-threaddata err=%lu\n", ERR_peek_error());
+
+    /* ------------------------------------------------- 6.6e-ii: `OPENSSL_atexit` */
+
+    /* `OPENSSL_atexit` in this profile is a linked-list push, because the DSO-pinning
+     * block is guarded by `!defined(OPENSSL_USE_NODELETE)` and `configdata.pm` records
+     * `-DOPENSSL_USE_NODELETE`. So what there is to observe is the push's answer and
+     * the order the drain runs them in: LIFO, like the handler table. */
+    sayn("atexit.ret.first", OPENSSL_atexit(court_atexit_first));
+    sayn("atexit.ret.second", OPENSSL_atexit(court_atexit_second));
+    sayn("atexit.before", atexit_calls);
+
+    /* `OPENSSL_cleanup` drains them, and it stops this thread's handlers first -- so
+     * the count below is one higher than the last `stop.calls`, and that *is* the
+     * authority's order rather than an artefact. `printf` is used rather than `sayn`
+     * because the error state is gone by this point and `ERR_peek_error` would be
+     * measuring the teardown rather than the call. */
+    OPENSSL_cleanup();
+    printf("atexit.calls=%d\n", atexit_calls);
+    printf("atexit.first_ran=%d\n", atexit_order[0]);
+    printf("atexit.second_ran=%d\n", atexit_order[1]);
+    printf("stop.after_cleanup=%d\n", stop_calls);
+    printf("done=rt-threaddata\n");
     return 0;
 }

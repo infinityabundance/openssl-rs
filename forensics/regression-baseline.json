@@ -216,7 +216,7 @@
       "verdict": "pass"
     },
     "RT-THREADDATA": {
-      "observations": 39,
+      "observations": 54,
       "verdict": "pass"
     },
     "libcrypto-contamination": {
