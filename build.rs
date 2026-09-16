@@ -127,6 +127,27 @@ fn run() -> Result<(), String> {
     println!("cargo:rustc-env=OPENSSL_RS_AUTHORITY_ARCHIVE_SHA256={archive_sha256}");
     println!("cargo:rustc-env=OPENSSL_RS_AUTHORITY_SOURCE_ROOT_HASH={source_root_hash}");
 
+    // The compiled-in modules directory, which `provider_init` uses when a provider module is
+    // loaded by name and neither the store's search path nor `OPENSSL_MODULES` answers one.
+    //
+    // A *distribution* fact rather than an authority one: the authority bakes its own
+    // configure-time `MODULESDIR` into the library, and a substitute has a different one, so
+    // the two strings can never be equal and the value is not compared by any court. An unset
+    // variable emits the empty string, which `crate::runtime::defaults` reads as "no
+    // compiled-in directory" and answers NULL for -- a state `provider_init` already has to
+    // handle. Injecting a fabricated path would send `dlopen` somewhere the distribution never
+    // intended, which is worse than admitting there is no default.
+    // A NUL would make the value unrepresentable as a C string, and `clippy::panic` is denied
+    // in this crate including its build script -- so the refusal is a `Result` reported the
+    // way the build script's other refusals are.
+    let modulesdir = std::env::var("OPENSSL_RS_MODULESDIR").unwrap_or_default();
+    if modulesdir.contains('\0') {
+        eprintln!("error: OPENSSL_RS_MODULESDIR must not contain a NUL byte");
+        std::process::exit(1);
+    }
+    println!("cargo:rustc-env=OPENSSL_RS_MODULESDIR={modulesdir}");
+    println!("cargo:rerun-if-env-changed=OPENSSL_RS_MODULESDIR");
+
     build_c_adapters(&manifest_dir)?;
 
     Ok(())

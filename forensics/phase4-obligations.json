@@ -3,243 +3,204 @@
   "body": {
     "complete": true,
     "counts": {
-      "deferred_to_later_phase": 31,
-      "implemented": 231,
+      "atlas_owned": 256,
+      "deferred_to_later_phase": 23,
+      "implemented": 249,
       "open_in_this_stratum": 0,
-      "owned": 262
+      "owned": 272,
+      "received_by_handoff": 16
     },
     "deferred": [
       {
+        "declaring_header": "bio.h",
         "implemented_by_owner": true,
         "module": "src/runtime/bio/",
         "owning_phase": 5,
-        "reason": "reads the streaming callbacks of the ASN.1 filter, which Phase 5 owns",
+        "reason": "a control over the streaming encoder the ASN.1 template machinery implements; the template machinery is Phase 5",
         "symbol": "BIO_asn1_get_prefix"
       },
       {
+        "declaring_header": "bio.h",
         "implemented_by_owner": true,
         "module": "src/runtime/bio/",
         "owning_phase": 5,
-        "reason": "reads the streaming callbacks of the ASN.1 filter, which Phase 5 owns",
+        "reason": "a control over the streaming encoder the ASN.1 template machinery implements; the template machinery is Phase 5",
         "symbol": "BIO_asn1_get_suffix"
       },
       {
+        "declaring_header": "bio.h",
         "implemented_by_owner": true,
         "module": "src/runtime/bio/",
         "owning_phase": 5,
-        "reason": "writes the streaming callbacks of the ASN.1 filter, which Phase 5 owns",
+        "reason": "a control over the streaming encoder the ASN.1 template machinery implements; the template machinery is Phase 5",
         "symbol": "BIO_asn1_set_prefix"
       },
       {
+        "declaring_header": "bio.h",
         "implemented_by_owner": true,
         "module": "src/runtime/bio/",
         "owning_phase": 5,
-        "reason": "writes the streaming callbacks of the ASN.1 filter, which Phase 5 owns",
+        "reason": "a control over the streaming encoder the ASN.1 template machinery implements; the template machinery is Phase 5",
         "symbol": "BIO_asn1_set_suffix"
       },
       {
-        "implemented_by_owner": true,
-        "module": "src/runtime/bio/",
-        "owning_phase": 5,
-        "reason": "the ASN.1 filter needs the template machinery to frame an ASN1_ITEM; Phase 5",
-        "symbol": "BIO_f_asn1"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "owning_phase": 7,
-        "reason": "wraps an EVP_ENCODE_CTX; the codec is EVP, Phase 7",
-        "symbol": "BIO_f_base64"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "owning_phase": 7,
-        "reason": "wraps an EVP_CIPHER_CTX; EVP is Phase 7",
-        "symbol": "BIO_f_cipher"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "owning_phase": 7,
-        "reason": "wraps an EVP_MD_CTX; EVP is Phase 7",
-        "symbol": "BIO_f_md"
-      },
-      {
+        "declaring_header": "bio.h",
+        "implemented_by_owner": false,
         "module": "src/runtime/bio/",
         "owning_phase": 9,
         "reason": "its read and write call RAND_priv_bytes; RAND is Phase 9",
         "symbol": "BIO_f_nbio_test"
       },
       {
-        "module": "src/runtime/bio/",
-        "owning_phase": 7,
-        "reason": "wraps EVP_AES_256_CBC message authentication; EVP is Phase 7",
-        "symbol": "BIO_f_reliable"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "owning_phase": 12,
-        "reason": "binds a CMS_ContentInfo to a BIO; CMS is Phase 12",
-        "symbol": "BIO_new_CMS"
-      },
-      {
+        "declaring_header": "bio.h",
         "implemented_by_owner": true,
-        "module": "src/runtime/bio/",
-        "owning_phase": 5,
-        "reason": "builds a streaming encoder around an ASN1_ITEM, which Phase 5 owns",
-        "symbol": "BIO_new_NDEF"
-      },
-      {
-        "module": "src/runtime/bio/",
-        "owning_phase": 12,
-        "reason": "binds a PKCS7 to a BIO; PKCS#7 is Phase 12",
-        "symbol": "BIO_new_PKCS7"
-      },
-      {
         "module": "src/runtime/bio/",
         "owning_phase": 6,
         "reason": "wraps an OSSL_CORE_BIO; OSSL_LIB_CTX is Phase 6",
         "symbol": "BIO_new_from_core_bio"
       },
       {
+        "declaring_header": "bio.h",
+        "implemented_by_owner": true,
         "module": "src/runtime/bio/",
         "owning_phase": 6,
         "reason": "the provider core-to-BIO method; OSSL_LIB_CTX is Phase 6",
         "symbol": "BIO_s_core"
       },
       {
-        "module": "src/runtime/bio/",
-        "owning_phase": 7,
-        "reason": "sets the EVP_CIPHER of a BIO_f_cipher; EVP is Phase 7",
-        "symbol": "BIO_set_cipher"
-      },
-      {
+        "declaring_header": "conf.h",
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "reads a CONF_IMODULE, which only the module registry creates; Phase 6",
         "symbol": "CONF_imodule_get_flags"
       },
       {
+        "declaring_header": "conf.h",
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "reads a CONF_IMODULE, which only the module registry creates; Phase 6",
         "symbol": "CONF_imodule_get_module"
       },
       {
+        "declaring_header": "conf.h",
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "reads a CONF_IMODULE, which only the module registry creates; Phase 6",
         "symbol": "CONF_imodule_get_name"
       },
       {
+        "declaring_header": "conf.h",
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "reads a CONF_IMODULE, which only the module registry creates; Phase 6",
         "symbol": "CONF_imodule_get_usr_data"
       },
       {
+        "declaring_header": "conf.h",
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "reads a CONF_IMODULE, which only the module registry creates; Phase 6",
         "symbol": "CONF_imodule_get_value"
       },
       {
+        "declaring_header": "conf.h",
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "writes a CONF_IMODULE, which only the module registry creates; Phase 6",
         "symbol": "CONF_imodule_set_flags"
       },
       {
+        "declaring_header": "conf.h",
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "writes a CONF_IMODULE, which only the module registry creates; Phase 6",
         "symbol": "CONF_imodule_set_usr_data"
       },
       {
+        "declaring_header": "conf.h",
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "adds to the supported-module list guarded by the RCU lock that the module registry owns; Phase 6",
         "symbol": "CONF_module_add"
       },
       {
+        "declaring_header": "conf.h",
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "reads a CONF_MODULE, which only the module registry creates; Phase 6",
         "symbol": "CONF_module_get_usr_data"
       },
       {
+        "declaring_header": "conf.h",
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "writes a CONF_MODULE, which only the module registry creates; Phase 6",
         "symbol": "CONF_module_set_usr_data"
       },
       {
+        "declaring_header": "conf.h",
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "finishes the initialized-module list, which only CONF_modules_load populates; Phase 6",
         "symbol": "CONF_modules_finish"
       },
       {
+        "declaring_header": "conf.h",
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "calls conf_diagnostics -> OSSL_LIB_CTX_get/set_conf_diagnostics; OSSL_LIB_CTX is Phase 6",
         "symbol": "CONF_modules_load"
       },
       {
+        "declaring_header": "conf.h",
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "forwards to CONF_modules_load_file_ex; OSSL_LIB_CTX is Phase 6",
         "symbol": "CONF_modules_load_file"
       },
       {
+        "declaring_header": "conf.h",
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "reads and preserves OSSL_LIB_CTX diagnostics, and calls CONF_modules_load; OSSL_LIB_CTX is Phase 6",
         "symbol": "CONF_modules_load_file_ex"
       },
       {
+        "declaring_header": "conf.h",
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "unloads entries of the module list and calls DSO_free; DSO is a later stratum and OSSL_LIB_CTX is Phase 6",
         "symbol": "CONF_modules_unload"
-      }
-    ],
-    "families": [
-      {
-        "module": "src/runtime/bio/",
-        "prefixes": [
-          "BIO_",
-          "BUF_"
-        ]
       },
       {
+        "declaring_header": "conf.h",
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
-        "prefixes": [
-          "CONF_",
-          "NCONF_",
-          "OPENSSL_INIT_"
-        ]
-      },
-      {
-        "module": "src/runtime/obj.rs",
-        "prefixes": [
-          "OBJ_create_objects"
-        ]
-      },
-      {
-        "module": "src/runtime/lhash.rs",
-        "prefixes": [
-          "OPENSSL_LH_stats",
-          "OPENSSL_LH_node_stats",
-          "OPENSSL_LH_node_usage_stats"
-        ]
-      },
-      {
-        "module": "src/runtime/err.rs",
-        "prefixes": [
-          "ERR_print_errors",
-          "ERR_add_error_mem_bio"
-        ]
+        "owning_phase": 6,
+        "reason": "registers every built-in CONF_MODULE through CONF_module_add, which Phase 6 owns",
+        "symbol": "OPENSSL_load_builtin_modules"
       }
     ],
+    "deferred_by_phase": {
+      "5": 4,
+      "6": 18,
+      "9": 1
+    },
     "handoffs_discharged": {
       "3": [
         "ERR_add_error_mem_bio",
@@ -247,6 +208,11 @@
         "ERR_print_errors_cb",
         "ERR_print_errors_fp",
         "OBJ_create_objects",
+        "OPENSSL_INIT_free",
+        "OPENSSL_INIT_new",
+        "OPENSSL_INIT_set_config_appname",
+        "OPENSSL_INIT_set_config_file_flags",
+        "OPENSSL_INIT_set_config_filename",
         "OPENSSL_LH_node_stats",
         "OPENSSL_LH_node_stats_bio",
         "OPENSSL_LH_node_usage_stats",
@@ -442,6 +408,20 @@
       "BUF_MEM_new",
       "BUF_MEM_new_ex",
       "BUF_reverse",
+      "COMP_CTX_free",
+      "COMP_CTX_get_method",
+      "COMP_CTX_get_type",
+      "COMP_CTX_new",
+      "COMP_brotli",
+      "COMP_brotli_oneshot",
+      "COMP_compress_block",
+      "COMP_expand_block",
+      "COMP_get_name",
+      "COMP_get_type",
+      "COMP_zlib",
+      "COMP_zlib_oneshot",
+      "COMP_zstd",
+      "COMP_zstd_oneshot",
       "CONF_dump_bio",
       "CONF_dump_fp",
       "CONF_free",
@@ -486,10 +466,77 @@
       "OPENSSL_LH_node_usage_stats",
       "OPENSSL_LH_node_usage_stats_bio",
       "OPENSSL_LH_stats",
-      "OPENSSL_LH_stats_bio"
+      "OPENSSL_LH_stats_bio",
+      "OPENSSL_config",
+      "conf_ssl_get",
+      "conf_ssl_get_cmd",
+      "conf_ssl_name_find"
     ],
-    "note": "`complete` is true only when every export in these families is either implemented or handed to a later stratum. `open` entries belong to this stratum and are recorded gaps, not deferrals; while any exist Phase 4 cannot be called complete. Nothing here is a parity claim.",
-    "open": []
+    "module_prefixes": [
+      {
+        "module": "src/runtime/bio/",
+        "prefixes": [
+          "BIO_",
+          "BIO_s_",
+          "BIO_f_",
+          "BIO_new_",
+          "BIO_set_"
+        ]
+      },
+      {
+        "module": "src/runtime/buffer.rs",
+        "prefixes": [
+          "BUF_"
+        ]
+      },
+      {
+        "module": "src/runtime/bio/comp.rs",
+        "prefixes": [
+          "COMP_"
+        ]
+      },
+      {
+        "module": "src/runtime/conf/",
+        "prefixes": [
+          "CONF_",
+          "NCONF_",
+          "OPENSSL_INIT_",
+          "OPENSSL_config",
+          "OPENSSL_load_builtin_modules",
+          "conf_ssl_"
+        ]
+      },
+      {
+        "module": "src/runtime/obj.rs",
+        "prefixes": [
+          "OBJ_create_objects"
+        ]
+      },
+      {
+        "module": "src/runtime/lhash.rs",
+        "prefixes": [
+          "OPENSSL_LH_"
+        ]
+      },
+      {
+        "module": "src/runtime/err.rs",
+        "prefixes": [
+          "ERR_"
+        ]
+      }
+    ],
+    "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` entries belong to this stratum and are recorded gaps, not deferrals; while any exist Phase 4 cannot be called complete, and it is what returned the stratum to `in-progress` after D97. `implemented_by_owner` on a deferred row records that the receiving stratum has since discharged the hand-off. Nothing here is a parity claim.",
+    "open": [],
+    "owned_by_module": {
+      "src/runtime/bio/": 187,
+      "src/runtime/bio/comp.rs": 14,
+      "src/runtime/buffer.rs": 6,
+      "src/runtime/conf/": 54,
+      "src/runtime/err.rs": 4,
+      "src/runtime/lhash.rs": 6,
+      "src/runtime/obj.rs": 1
+    },
+    "rule": "the stratum's working set is the projection of forensics/atlas/symbol-ownership.json for phase 4, plus the symbols Phase 3 handed it: a symbol belongs to the stratum that owns the header declaring it, and a discharged hand-off belongs to the stratum that built it"
   },
   "generator": "forensics/tools/phase4_obligations.py",
   "inputs": [
@@ -499,9 +546,14 @@
       "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
     },
     {
+      "name": "symbol-ownership",
+      "path": "forensics/atlas/symbol-ownership.json",
+      "sha256": "d42d2ba4f459b729139149f7343cb36357959272a38fecce8f20e6e4aa29a137"
+    },
+    {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "e88230fccb56990c9c5e1631d71f60a5b98b867435869c5b4e7d183f985c323d"
+      "sha256": "b9e0e7fab60b9998c2644beb2a71d700ed40042476885d2a23c27d393498761d"
     }
   ],
   "kind": "phase4-obligations",

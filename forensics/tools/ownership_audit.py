@@ -1,41 +1,68 @@
 #!/usr/bin/env python3
-"""openssl-rs — audit symbol ownership across the phase families.
+"""openssl-rs — audit symbol ownership: the atlas against the ledgers, both ways.
 
 Why this exists
 ---------------
 The per-phase ledgers decide whether a stratum is complete by asking "is every
-export *my family* matches implemented or handed to a later phase?". That question
-is only answerable for exports that *some* family matches. An export that matches
-no family is invisible to every ledger at once, and the ABI shell simply scaffolds
-it — which is a fabricated-looking symbol in the one artefact that is supposed to
-contain only real ones.
+export I own implemented or handed to a later phase?". That question is only
+answerable for exports the stratum knows it owns. Three times in this project an
+export has been invisible to *every* ledger at once, and each time the ABI shell
+scaffolded it while no obligation recorded it:
 
-That is not hypothetical. `docs/DECISIONS.md` D49 records it happening to
-`OPENSSL_INIT_*` (five exports of `conf_lib.c` that only a human reading the header
-noticed), and D51 records it happening to the whole of `crypto/o_str.c` and
-`crypto/o_dir.c` — thirteen exports, including three the CONF reader needs. Both
-were found by reading, not by a check. This tool is the check.
+  * `OPENSSL_INIT_*`, five exports of `conf_lib.c` that only a human reading the
+    header noticed (docs/DECISIONS.md D49);
+  * the whole of `crypto/o_str.c` and `crypto/o_dir.c`, thirteen exports including
+    three the CONF reader needs (D51);
+  * `a2d_ASN1_OBJECT`, declared in `asn1.h` and matching no prefix any ledger listed
+    (D72).
+
+D72 replaced per-phase prefix discovery with one generated artifact,
+`forensics/atlas/symbol-ownership.json`, whose universe is **every one of the
+authority's 6,499 exports**, each assigned to exactly one stratum by one stated rule.
+Each ledger then becomes a *projection* of that atlas.
+
+That closed the class from one side. This tool closes it from the other, because a
+projection can still be wrong, and because a ledger can claim what it does not own.
 
 What it enforces
 ----------------
-The invariant is scoped to what can be true today: phases 5-21 have no families
-yet, so most of the authority's exports are legitimately unowned *for now*. What
-must never be true is an export being **implemented while owned by nobody** — that
-is the state in which work is invisible to the accounting it is supposed to appear
-in. So:
+For every phase that publishes a ledger, **both** directions:
 
-  * error: an export the candidate implements that no phase family claims;
-  * reported: the unowned remainder, in full, with the counts per phase, so the
-    unclaimed scope is a visible fact rather than an implied one;
-  * error: an export claimed by two *different* memory locations in one phase's
-    family list, which usually means one of the patterns was widened by accident.
+1. `atlas-owned -> ledger row`. Every export the atlas assigns a stratum appears in
+   that stratum's ledger as implemented, open, or deferred to a named later phase.
+   Phases 3 and 4 had 69 and 19 atlas-owned exports with no row anywhere — every
+   `ASYNC_*`, every `OSSL_ERR_STATE_*`, every `OSSL_trace_*`, every `COMP_*`, the
+   `conf_ssl_*` helpers, `OPENSSL_config` — while their seals called them complete.
+   Their ledgers' `FAMILIES` were prefix lists, and a prefix that matches nothing
+   reports nothing. See docs/DECISIONS.md D97.
+2. `ledger row -> justification`. A row a stratum's ledger carries for an export the
+   atlas assigns *elsewhere* must be a discharged hand-off: the atlas's owner must
+   list that export as deferred to this stratum. Otherwise two ledgers disagree about
+   who owes it.
 
-The unowned remainder is written to `forensics/atlas/ownership-audit.json`; it is
-not a parity claim, it is a census.
+And, across the ledgers:
+
+3. no export is counted `implemented` by two strata at once, which would
+   double-count one piece of work and let both strata report completion over it
+   (D57 found `ERR_print_errors*`, `ERR_add_error_mem_bio`, the six
+   `OPENSSL_LH_*stats*` and `OBJ_create_objects` in two ledgers' `implemented`
+   lists);
+4. every hand-off edge agrees in both directions: the set the deferring stratum hands
+   over equals the set the receiving stratum declares it discharged. An edge pointing
+   at a stratum with no ledger yet is *forward* and informational, not a mismatch;
+5. each ledger's own arithmetic holds: every row in exactly one of
+   implemented/open/deferred, and the three adding up to the count it publishes.
+
+And the older, weaker invariant is kept because it is cheap and it is what the shell
+depends on: an export the candidate *implements* must have an owner in the atlas,
+because a symbol with no atlas row could not have been exported at all.
 
 Outputs
 -------
   forensics/atlas/ownership-audit.json
+
+It is not a parity claim, it is a census, and `problems` is the only defect list. A
+non-empty one fails this tool.
 
 SPDX-License-Identifier: Apache-2.0
 """
@@ -43,7 +70,6 @@ SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import json
 import re
 import sys
@@ -66,57 +92,42 @@ from atlas_common import (  # noqa: E402
 
 OUT = ATLAS / "ownership-audit.json"
 GENERATOR = "forensics/tools/ownership_audit.py"
-
-# The ledgers that publish a family list. Adding a phase means adding its module
-# here, which is the point: a new stratum cannot be introduced without its
-# families becoming visible to this audit.
 ATLAS_OWNERSHIP = "forensics/atlas/symbol-ownership.json"
 
-LEDGERS = [
-    (3, "forensics/tools/phase3_obligations.py"),
-    (4, "forensics/tools/phase4_obligations.py"),
-    (5, "forensics/tools/phase5_obligations.py"),
-]
-
-# The generated ledgers, for the cross-ledger reconciliation below. They are read
-# as *results* (who claims to have implemented what), not as family definitions;
-# the family scan above uses the generator modules so it sees a prefix that has
-# been edited but not yet regenerated.
-LEDGER_JSON = {
-    3: "forensics/phase3-obligations.json",
-    4: "forensics/phase4-obligations.json",
-    5: "forensics/phase5-obligations.json",
-}
-
 LIBS = ("libcrypto", "libssl")
-# Only `libcrypto` is claimed by any family today: every prefix the ledgers list is
-# a libcrypto one, and libssl's own families arrive with Phase 14. Counting the
-# eight libssl symbols that happen to match a libcrypto prefix (`BIO_ssl_shutdown`,
-# `ERR_load_SSL_strings`, `OPENSSL_init_ssl`, ...) would report an ownership that no
-# ledger acts on, so the *claim* scan is restricted to libcrypto and libssl is
-# reported as unclaimed-by-these-ledgers with that fact stated.
+# Every ledger that exists so far is a libcrypto one: libssl's own strata begin at
+# Phase 14. Counting the eight libssl symbols that happen to look like libcrypto ones
+# (`BIO_ssl_shutdown`, `ERR_load_SSL_strings`, `OPENSSL_init_ssl`, ...) would report an
+# ownership no ledger acts on, so the reconciliation is scoped to libcrypto and libssl
+# is reported as out-of-scope with that fact stated.
 CLAIM_LIBS = ("libcrypto",)
 
 
-def families(relpath: str) -> list[tuple[str, tuple[str, ...]]]:
-    """Load a ledger module and return its `FAMILIES` without running `main`."""
-    path = REPO_ROOT / relpath
-    spec = importlib.util.spec_from_file_location(f"ownership_audit_{path.stem}", path)
-    if spec is None or spec.loader is None:
-        raise SystemExit(f"cannot load {relpath}")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    fams = getattr(module, "FAMILIES", None)
-    if fams is None:
-        raise SystemExit(f"{relpath} has no FAMILIES list")
-    return list(fams)
+def ledger_paths() -> dict[int, str]:
+    """Every `forensics/phase<N>-obligations.json` on disk, by phase number.
+
+    Discovery, not enumeration: a stratum that publishes a ledger is reconciled
+    without anyone remembering to add it here, and a ledger that is deleted shows up
+    as an atlas phase with no ledger rather than as silence.
+    """
+    out: dict[int, str] = {}
+    for path in sorted((REPO_ROOT / "forensics").glob("phase*-obligations.json")):
+        m = re.fullmatch(r"phase(\d+)-obligations\.json", path.name)
+        if m is None:
+            continue
+        out[int(m.group(1))] = rel(path)
+    return out
 
 
-def authority_exports(authority: Path, lib: str) -> list[str]:
-    doc = json.loads(
-        (authority / f"symbols-{lib}.json").read_text(encoding="utf-8")
-    )
-    return sorted(r["symbol"] for r in doc["body"]["records"] if r["dso"]["present"])
+def symbols_of(field: object) -> set[str]:
+    """A ledger's symbol list, whether its rows are names or objects."""
+    out: set[str] = set()
+    for r in field or []:
+        if isinstance(r, str):
+            out.add(r)
+        elif isinstance(r, dict) and "symbol" in r:
+            out.add(r["symbol"])
+    return out
 
 
 def implemented() -> dict[str, set[str]]:
@@ -146,68 +157,31 @@ def main(argv: list[str]) -> int:
     auth = resolve_authority(args.authority)
     authdir = REPO_ROOT / "forensics" / "atlas" / auth.id
 
-    # The **global ownership atlas** is the primary plane. It assigns every one of
-    # the authority's exports to exactly one stratum by one rule
-    # (`forensics/tools/ownership_rules.py`), so the invariant enforced here is now
-    # the stronger one the atlas makes checkable:
-    #
-    #   every authority export has exactly one declared owner, before any
-    #   implementation exists
-    #
-    # rather than "every *implemented* export has an owner", which was the old and
-    # much weaker statement and is what let `a2d_ASN1_OBJECT` be invisible to every
-    # ledger at once (D72).
-    #
-    # The prefix families below are kept as a *cross-check* for the strata that
-    # still declare them. Where a family claims a symbol the atlas gives to another
-    # phase, that disagreement is reported; it is never resolved silently.
-    atlas_doc = json.loads(
-        (REPO_ROOT / ATLAS_OWNERSHIP).read_text(encoding="utf-8")
-    )["body"]
+    doc = json.loads((REPO_ROOT / ATLAS_OWNERSHIP).read_text(encoding="utf-8"))["body"]
     atlas_owner: dict[tuple[str, str], int] = {}
-    for row in atlas_doc["records"]:
+    for row in doc["records"]:
         atlas_owner[(row["library"], row["symbol"])] = row["owner_phase"]
-    atlas_problems: list[str] = []
+
+    problems: list[str] = []
     for field, expected in (("unknown", 0), ("multiply_owned", 0),
                             ("unassigned_headers", 0)):
-        if atlas_doc["invariants"].get(field) != expected:
-            atlas_problems.append(
+        if doc["invariants"].get(field) != expected:
+            problems.append(
                 f"the ownership atlas reports {field}="
-                f"{atlas_doc['invariants'].get(field)}, expected {expected}")
-    if atlas_doc["universe"]["exports"] != len(atlas_owner):
-        atlas_problems.append(
+                f"{doc['invariants'].get(field)}, expected {expected}"
+            )
+    if doc["universe"]["exports"] != len(atlas_owner):
+        problems.append(
             "the ownership atlas lists "
-            f"{atlas_doc['universe']['exports']} exports but has "
-            f"{len(atlas_owner)} rows")
-
-    # (phase, module, prefix) -> the symbols it claims.
-    claims: list[dict] = []
-    owner: dict[tuple[str, str], list[tuple[int, str, str]]] = {}
-    for phase, relpath in LEDGERS:
-        for module, prefixes in families(relpath):
-            for lib in CLAIM_LIBS:
-                for sym in authority_exports(authdir, lib):
-                    for pre in prefixes:
-                        if sym == pre or sym.startswith(pre):
-                            claims.append(
-                                {
-                                    "phase": phase,
-                                    "module": module,
-                                    "prefix": pre,
-                                    "lib": lib,
-                                    "symbol": sym,
-                                }
-                            )
-                            owner.setdefault((lib, sym), []).append(
-                                (phase, module, pre)
-                            )
+            f"{doc['universe']['exports']} exports but has {len(atlas_owner)} rows"
+        )
 
     impl = implemented()
-    problems: list[str] = list(atlas_problems)
 
-    # An implemented export must be owned, or its work is invisible. The atlas
-    # answers this directly now: a symbol with no atlas row could not have been
-    # exported at all, and one the atlas could not assign stopped the atlas run.
+    # An implemented export must be owned, or its work is invisible to the accounting
+    # it is supposed to appear in. The atlas answers this directly: a symbol with no
+    # atlas row could not have been exported at all, and one the atlas could not
+    # assign stopped the atlas run.
     unowned_implemented: list[dict] = []
     for lib in CLAIM_LIBS:
         for sym in sorted(impl[lib]):
@@ -215,63 +189,119 @@ def main(argv: list[str]) -> int:
                 unowned_implemented.append({"lib": lib, "symbol": sym})
     if unowned_implemented:
         problems.append(
-            "these exports are implemented but the ownership atlas does not "
-            "assign them, so no ledger can account for them:\n  "
+            "these exports are implemented but the ownership atlas does not assign "
+            "them, so no ledger can account for them:\n  "
             + "\n  ".join(f"{r['lib']}:{r['symbol']}" for r in unowned_implemented)
         )
 
-    # Two patterns in one family list claiming the same symbol usually means a
-    # prefix was widened by accident, so it is reported. It is not a failure:
-    # `BIO_` and `BUF_` cannot collide, but a future `B` would, and a report is
-    # what tells a reader which one is doing the claiming. Two *phases* claiming
-    # the same symbol is the deliberate hand-off mechanism — Phase 3 owns `ERR_`
-    # and Phase 4 explicitly lists the BIO-coupled members to receive them — so
-    # that is recorded as the hand-off list rather than as a defect.
-    overlaps: list[dict] = []
-    handoffs: list[dict] = []
-    for (lib, sym), owners in sorted(owner.items()):
-        by_family: dict[tuple[int, str], list[str]] = {}
-        for phase, module, pre in owners:
-            by_family.setdefault((phase, module), []).append(pre)
-        for (phase, module), prefixes in by_family.items():
-            if len(set(prefixes)) > 1:
-                overlaps.append(
-                    {
-                        "lib": lib,
-                        "symbol": sym,
-                        "phase": phase,
-                        "module": module,
-                        "prefixes": sorted(set(prefixes)),
-                    }
-                )
-        phases = sorted({p for p, _m, _pre in owners})
-        if len(phases) > 1:
-            handoffs.append({"lib": lib, "symbol": sym, "phases": phases})
+    # ---- the ledgers, and their reconciliation against the atlas --------------
+    paths = ledger_paths()
+    ledger_agreement: list[dict] = []
+    ledger_bodies: dict[int, dict] = {}
+    deferred_to: dict[tuple[int, str], int] = {}
+    implemented_by: dict[str, list[int]] = {}
 
-    # Cross-ledger reconciliation. Two ledgers counting the same symbol as
-    # *implemented by them* double-counts one piece of work and lets both strata
-    # report completion over it; and a hand-off recorded by the deferring stratum
-    # but not declared by the receiving one is an obligation that fell between
-    # them. Both were real: `ERR_print_errors*`, `ERR_add_error_mem_bio`, the six
-    # `OPENSSL_LH_*stats*` and `OBJ_create_objects` sat in *both* strata's
-    # `implemented` lists until this check existed (docs/DECISIONS.md D57).
-    ledger_docs: dict[int, dict] = {}
-    for phase, relpath in LEDGER_JSON.items():
-        p = REPO_ROOT / relpath
-        if not p.exists():
+    for phase in sorted(paths):
+        path = REPO_ROOT / paths[phase]
+        if not path.is_file():
             problems.append(
-                f"phase {phase} ledger {relpath} is absent, so no cross-ledger "
-                "reconciliation is possible; absence of an evidence plane must "
-                "never resemble a satisfied one"
+                f"phase {phase} ledger {paths[phase]} is absent, so no reconciliation "
+                "is possible; absence of an evidence plane must never resemble a "
+                "satisfied one"
             )
             continue
-        ledger_docs[phase] = json.loads(p.read_text(encoding="utf-8"))["body"]
+        rows = json.loads(path.read_text(encoding="utf-8"))["body"]
+        ledger_bodies[phase] = rows
 
-    implemented_by: dict[str, list[int]] = {}
-    for phase, body in sorted(ledger_docs.items()):
-        for sym in body.get("implemented", []):
+        implemented_rows = symbols_of(rows.get("implemented"))
+        open_rows = symbols_of(rows.get("open"))
+        deferred_rows = symbols_of(rows.get("deferred"))
+        for sym in implemented_rows:
             implemented_by.setdefault(sym, []).append(phase)
+        for row in rows.get("deferred") or []:
+            if isinstance(row, dict) and "owning_phase" in row:
+                deferred_to[(phase, row["symbol"])] = int(row["owning_phase"])
+        for source, syms in (rows.get("handoffs_discharged") or {}).items():
+            for sym in syms:
+                deferred_to.setdefault((int(source), sym), phase)
 
+        ledger_symbols = implemented_rows | open_rows | deferred_rows
+
+        # 5. The ledger's own arithmetic.
+        overlap = sorted(
+            (implemented_rows & open_rows)
+            | (implemented_rows & deferred_rows)
+            | (open_rows & deferred_rows)
+        )
+        if overlap:
+            problems.append(
+                f"phase {phase}'s ledger lists these exports in more than one of "
+                "implemented/open/deferred, so its own arithmetic double-counts "
+                "them:\n  " + "\n  ".join(overlap)
+            )
+        owned_n = (rows.get("counts") or {}).get("owned")
+        if owned_n is None:
+            problems.append(
+                f"phase {phase}'s ledger publishes no owned count, so its own "
+                "arithmetic cannot be checked"
+            )
+        elif owned_n != len(ledger_symbols):
+            problems.append(
+                f"phase {phase}'s ledger publishes owned={owned_n} but lists "
+                f"{len(ledger_symbols)} rows across implemented/open/deferred"
+            )
+
+        atlas_symbols = {s for (l, s), p in atlas_owner.items()
+                         if p == phase and l in CLAIM_LIBS}
+
+        # 1. Nothing the atlas gives this stratum may be missing from its ledger.
+        only_atlas = sorted(atlas_symbols - ledger_symbols)
+        if only_atlas:
+            problems.append(
+                f"phase {phase} is assigned {len(atlas_symbols)} libcrypto exports by "
+                f"{ATLAS_OWNERSHIP} and its ledger ({paths[phase]}) has a row for none "
+                f"of these {len(only_atlas)}: an export no ledger mentions cannot be "
+                "shown to be implemented, open or handed on, so the stratum's "
+                "completeness claim does not cover it:\n  "
+                + "\n  ".join(only_atlas)
+            )
+
+        # 2. A row for an export the atlas gives elsewhere must be justified.
+        only_ledger = sorted(ledger_symbols - atlas_symbols)
+        unjustified: list[str] = []
+        for sym in only_ledger:
+            owner_phase = atlas_owner.get((CLAIM_LIBS[0], sym))
+            if owner_phase is None:
+                problems.append(
+                    f"phase {phase}'s ledger lists {sym}, which the ownership atlas "
+                    "does not assign to any stratum"
+                )
+                continue
+            if deferred_to.get((owner_phase, sym)) != phase:
+                unjustified.append(sym)
+        if unjustified:
+            problems.append(
+                f"phase {phase}'s ledger carries these exports, which the atlas "
+                "assigns to another stratum that does not defer them here, so the two "
+                "ledgers disagree about who owes them:\n  "
+                + "\n  ".join(unjustified)
+            )
+
+        ledger_agreement.append({
+            "phase": phase,
+            "ledger": paths[phase],
+            "atlas": len(atlas_symbols),
+            "ledger": len(ledger_symbols),
+            "implemented": len(implemented_rows),
+            "open": len(open_rows),
+            "deferred": len(deferred_rows),
+            "only_in_atlas": len(only_atlas),
+            "only_in_ledger": len(only_ledger),
+            "only_in_atlas_examples": only_atlas[:10],
+            "only_in_ledger_examples": only_ledger[:10],
+        })
+
+    # 3. No export counted `implemented` by two strata.
     double_implemented = [
         {"symbol": s, "phases": ps}
         for s, ps in sorted(implemented_by.items())
@@ -287,38 +317,34 @@ def main(argv: list[str]) -> int:
             )
         )
 
-    # Each deferring stratum's hand-off edges must equal what the receiving
-    # stratum declares it discharged -- but only where the receiving stratum has a
-    # ledger to declare it in. `handoffs_discharged` on ledger Q is keyed by the
-    # *source* phase, so the edge is (source -> Q). An edge pointing at a stratum
-    # that has not been written yet (Phase 4's hand-offs to 5, 6, 7, 9 and 12) is a
-    # forward hand-off: recorded by the deferring ledger, receivable by nobody yet,
-    # and therefore informational rather than a mismatch.
-    declared: dict[tuple[int, int], set[str]] = {}
-    for phase, body in ledger_docs.items():
-        for source, syms in (body.get("handoffs_discharged") or {}).items():
-            declared[(int(source), phase)] = set(syms)
+    # 4. Hand-off edges, in both directions. `deferred_to` is the union of the
+    # deferring strata's `deferred` rows and the receiving strata's
+    # `handoffs_discharged`, so a disagreement between the two readings is itself the
+    # signal -- but the reconciliation is done on the two readings separately, so a
+    # mismatch names which side is missing.
     recorded: dict[tuple[int, int], set[str]] = {}
-    for phase, body in ledger_docs.items():
-        for row in body.get("deferred", []):
+    for phase, rows in ledger_bodies.items():
+        for row in rows.get("deferred") or []:
             if isinstance(row, dict) and "owning_phase" in row:
                 recorded.setdefault((phase, int(row["owning_phase"])), set()).add(
                     row["symbol"]
                 )
+    declared: dict[tuple[int, int], set[str]] = {}
+    for phase, rows in ledger_bodies.items():
+        for source, syms in (rows.get("handoffs_discharged") or {}).items():
+            declared.setdefault((int(source), phase), set()).update(syms)
+
     mismatched_handoffs: list[dict] = []
-    for edge in sorted(recorded):
-        if edge[1] not in ledger_docs:
-            continue  # the receiving stratum has no ledger yet
-        want, got = recorded[edge], declared.get(edge, set())
+    for edge in sorted(set(recorded) | set(declared)):
+        if edge[1] not in ledger_bodies:
+            continue  # the receiving stratum has no ledger yet: a forward hand-off
+        want, got = recorded.get(edge, set()), declared.get(edge, set())
         if want != got:
-            mismatched_handoffs.append(
-                {
-                    "from_phase": edge[0],
-                    "to_phase": edge[1],
-                    "deferred_but_not_declared": sorted(want - got),
-                    "declared_but_not_deferred": sorted(got - want),
-                }
-            )
+            mismatched_handoffs.append({
+                "from_phase": edge[0], "to_phase": edge[1],
+                "deferred_but_not_declared": sorted(want - got),
+                "declared_but_not_deferred": sorted(got - want),
+            })
     if mismatched_handoffs:
         problems.append(
             "these hand-off edges disagree between the deferring and the receiving "
@@ -331,141 +357,61 @@ def main(argv: list[str]) -> int:
             )
         )
 
-    # Every ledger must account for exactly its own family exports: implemented
-    # plus handed-on plus still-open must equal owned, whatever the split.
-    for phase, body in sorted(ledger_docs.items()):
-        counts = body.get("counts", {})
-        deferred = counts.get("deferred", counts.get("deferred_to_later_phase"))
-        if deferred is None:
-            problems.append(
-                f"phase {phase} ledger publishes no deferred count, so its own "
-                "families cannot be shown to be fully accounted for"
-            )
-            continue
-        open_n = counts.get("open_in_this_stratum", 0)
-        owned = counts.get("owned", 0)
-        accounted = counts.get("implemented", 0) + deferred + open_n
-        if accounted != owned:
-            problems.append(
-                f"phase {phase} ledger accounts for {accounted} of {owned} family "
-                f"exports (implemented={counts.get('implemented')} "
-                f"deferred={deferred} open={open_n}), so some export it owns is "
-                "neither implemented, handed on, nor recorded as open"
-            )
-
-    # The unowned remainder: everything the authority exports that no family
-    # claims. This is the scope of the phases that have no families yet.
+    # The remainder: everything the authority exports that no ledger covers, which is
+    # the scope of the strata that have not been reached yet. A census, not a defect,
+    # but recorded in full rather than left implied.
     unowned: dict[str, dict] = {}
     for lib in LIBS:
-        symbols = [
-            s for s in authority_exports(authdir, lib) if (lib, s) not in owner
-        ]
-        classes = Counter(family_key(s) for s in symbols)
+        symbols = json.loads(
+            (authdir / f"symbols-{lib}.json").read_text(encoding="utf-8")
+        )["body"]["records"]
+        all_syms = sorted(r["symbol"] for r in symbols if r["dso"]["present"])
+        covered_phases = set(ledger_bodies)
+        left = [s for s in all_syms
+                if atlas_owner.get((lib, s)) not in covered_phases]
+        classes = Counter(family_key(s) for s in left)
         unowned[lib] = {
-            "count": len(symbols),
-            "claimed_by_these_ledgers": len(
-                [s for s in authority_exports(authdir, lib) if (lib, s) in owner]
-            ),
+            "count": len(left),
+            "covered_by_a_ledger": len(all_syms) - len(left),
             "classes": [{"class": k, "count": v} for k, v in classes.most_common()],
-            "symbols": symbols,
+            "symbols": left,
         }
-
-    # Ledger-versus-atlas agreement, per phase. A phase's ledger owns the symbols
-    # the atlas gives it, minus its explicit hand-offs; a difference in either
-    # direction is reported here rather than left for a reader to notice.
-    ledger_agreement: list[dict] = []
-    for phase, _generator in LEDGERS:
-        # `LEDGERS` names the *generator* modules, because the family cross-check
-        # below reads their `FAMILIES`. The ledger it produces is the JSON.
-        ledger_rel = f"forensics/phase{phase}-obligations.json"
-        path = REPO_ROOT / ledger_rel
-        if not path.is_file():
-            continue
-        rows = json.loads(path.read_text(encoding="utf-8"))["body"]
-        owned = rows.get("owned")
-        def symbols_of(field: object) -> set[str]:
-            """A ledger's symbol list, whether its rows are names or objects."""
-            out: set[str] = set()
-            for r in field or []:
-                if isinstance(r, str):
-                    out.add(r)
-                elif isinstance(r, dict) and "symbol" in r:
-                    out.add(r["symbol"])
-            return out
-
-        ledger_symbols = (
-            symbols_of(owned) if owned is not None
-            else symbols_of(rows.get("implemented")) | symbols_of(rows.get("open"))
-        )
-        if not ledger_symbols:
-            counts = rows.get("counts", {})
-            ledger_symbols = set()
-            ledger_agreement.append({
-                "phase": phase,
-                "ledger": ledger_rel,
-                "atlas": sum(1 for p in atlas_owner.values() if p == phase),
-                "ledger_reported": counts.get("owned", 0),
-                "note": "this ledger does not list its symbols, only counts",
-            })
-            continue
-        atlas_symbols = {s for (l, s), p in atlas_owner.items()
-                         if p == phase and l in CLAIM_LIBS}
-        only_atlas = sorted(atlas_symbols - ledger_symbols)
-        only_ledger = sorted(ledger_symbols - atlas_symbols)
-        ledger_agreement.append({
-            "phase": phase,
-            "ledger": ledger_rel,
-            "atlas": len(atlas_symbols),
-            "ledger": len(ledger_symbols),
-            "only_in_atlas": len(only_atlas),
-            "only_in_ledger": len(only_ledger),
-            "only_in_atlas_examples": only_atlas[:10],
-            "only_in_ledger_examples": only_ledger[:10],
-        })
 
     body = {
         "invariant": (
             "every authority export has exactly one declared owner in "
-            "forensics/atlas/symbol-ownership.json, and every implemented export's "
-            "owner is therefore declared before any implementation exists"
+            "forensics/atlas/symbol-ownership.json; every export the atlas gives a "
+            "stratum appears in that stratum's ledger; every row a stratum's ledger "
+            "carries for another stratum's export is a hand-off that stratum recorded"
         ),
         "atlas": {
             "artifact": ATLAS_OWNERSHIP,
-            "exports": atlas_doc["universe"]["exports"],
-            "invariants": atlas_doc["invariants"],
-            "by_phase": atlas_doc["by_phase"],
-            "rules": atlas_doc["rules"],
+            "exports": doc["universe"]["exports"],
+            "invariants": doc["invariants"],
+            "by_phase": doc["by_phase"],
+            "rules": doc["rules"],
         },
+        "ledgers": [{"phase": p, "ledger": paths[p]} for p in sorted(paths)],
         "ledger_agreement": ledger_agreement,
-        "previous_invariant": (
-            "every implemented export is claimed by at least one phase family"
-        ),
         "why": (
-            "an export that matches no family is invisible to every ledger at once, "
-            "so the shell scaffolds it and no obligation records it (docs/DECISIONS.md "
-            "D49, D51)"
+            "an export that no ledger mentions is invisible to every completeness "
+            "claim at once, so the shell scaffolds it and no obligation records it "
+            "(docs/DECISIONS.md D49, D51, D72, D97)"
         ),
-        "ledgers": [{"phase": p, "ledger": rel(REPO_ROOT / r)} for p, r in LEDGERS],
-        "claims": len(claims),
         "claim_scope": (
-            "libcrypto only: no family listed by any current ledger matches a libssl "
-            "export, so libssl is reported as entirely unclaimed rather than counted "
-            "through eight accidental prefix matches"
+            "libcrypto only: no ledger published so far owns a libssl export, so "
+            "libssl is reported as covered by no ledger rather than counted through "
+            "accidental name matches"
         ),
-        "owned_exports": {
-            lib: len({s for (l, s) in owner if l == lib}) for lib in LIBS
-        },
         "implemented_exports": {lib: len(impl[lib]) for lib in LIBS},
         "unowned_implemented": unowned_implemented,
         "unowned_remainder": unowned,
-        "handoffs": handoffs,
-        "overlaps": overlaps,
         "implemented_by_two_strata": double_implemented,
         "handoff_reconciliation": {
             "rule": (
-                "for every hand-off edge whose receiving stratum has a ledger, the "
-                "set the deferring stratum hands over equals the set the receiving "
-                "stratum declares it discharged"
+                "for every hand-off edge whose receiving stratum has a ledger, the set "
+                "the deferring stratum hands over equals the set the receiving stratum "
+                "declares it discharged"
             ),
             "recorded": [
                 {"from_phase": k[0], "to_phase": k[1], "symbols": sorted(v)}
@@ -478,21 +424,20 @@ def main(argv: list[str]) -> int:
             "forward": [
                 {"from_phase": k[0], "to_phase": k[1], "symbols": sorted(v)}
                 for k, v in sorted(recorded.items())
-                if k[1] not in ledger_docs
+                if k[1] not in ledger_bodies
             ],
             "mismatched": mismatched_handoffs,
         },
         "problems": problems,
         "note": (
-            "The unowned remainder is not a defect: phases 5-21 have no families "
-            "yet. It is the scope that no stratum has claimed, recorded as a count "
-            "and in full rather than left implied. `handoffs` lists the symbols two "
-            "strata coordinate on, which is the deliberate hand-off mechanism; "
-            "`overlaps` lists a symbol two prefixes of one family list both match; "
-            "`implemented_by_two_strata` and `handoff_reconciliation` are the "
-            "cross-ledger invariants that stop one piece of work being counted "
-            "twice or falling between two strata. Only `problems` is a defect "
-            "list, and a non-empty one fails this tool."
+            "`unowned_remainder` is not a defect: the strata above Phase 6 have no "
+            "ledgers yet, so their exports are covered by nothing. It is the scope no "
+            "ledger has claimed, recorded as a count and in full rather than left "
+            "implied. `implemented_by_two_strata` and `handoff_reconciliation` are the "
+            "cross-ledger invariants that stop one piece of work being counted twice "
+            "or falling between two strata, and `ledger_agreement` is the atlas "
+            "reconciliation in both directions. Only `problems` is a defect list, and "
+            "a non-empty one fails this tool."
         ),
     }
 
@@ -500,51 +445,42 @@ def main(argv: list[str]) -> int:
         InputRef(name="implemented-surface", path=REPO_ROOT / "forensics" / "atlas"
                  / "implemented-surface.json"),
         InputRef(name="authority-symbols", path=authdir / "symbols-libcrypto.json"),
+        InputRef(name="symbol-ownership", path=REPO_ROOT / ATLAS_OWNERSHIP),
     ]
-    for _phase, relpath in LEDGERS:
-        inputs.append(InputRef(name="ledger", path=REPO_ROOT / relpath))
-    for _phase, relpath in LEDGER_JSON.items():
-        inputs.append(InputRef(name="ledger-result", path=REPO_ROOT / relpath))
+    for phase in sorted(paths):
+        inputs.append(InputRef(name=f"ledger-{phase}", path=REPO_ROOT / paths[phase]))
 
-    doc = envelope(
-        kind="ownership-audit",
-        authority=auth.id,
-        inputs=inputs,
-        body=body,
-        generator=GENERATOR,
-    )
-    write_json(OUT, doc)
+    write_json(OUT, envelope(kind="ownership-audit", authority=auth.id, inputs=inputs,
+                             body=body, generator=GENERATOR))
 
     print(f"[ownership-audit] authority={auth.id}")
+    print(f"  atlas: {doc['universe']['exports']} exports, "
+          f"by_phase={doc['by_phase']}")
+    for row in ledger_agreement:
+        print(f"  phase {row['phase']}: atlas={row['atlas']:4} ledger={row['ledger']:4} "
+              f"(impl={row['implemented']} open={row['open']} "
+              f"deferred={row['deferred']}) "
+              f"only_in_atlas={row['only_in_atlas']} "
+              f"only_in_ledger={row['only_in_ledger']}")
     for lib in LIBS:
-        print(
-            f"  {lib:9} exports={len(authority_exports(authdir, lib)):5} "
-            f"owned={body['owned_exports'][lib]:5} "
-            f"implemented={body['implemented_exports'][lib]:5} "
-            f"unowned={unowned[lib]['count']:5}"
-        )
+        print(f"  {lib:9} implemented={body['implemented_exports'][lib]:5} "
+              f"covered_by_a_ledger={unowned[lib]['covered_by_a_ledger']:5} "
+              f"outside_every_ledger={unowned[lib]['count']:5}")
+    print(f"  cross-ledger: {len(double_implemented)} double-counted symbol(s), "
+          f"{len(mismatched_handoffs)} mismatched hand-off edge(s)")
+    for k, v in sorted(declared.items()):
+        print(f"  hand-off phase {k[0]} -> {k[1]}: {len(v)} discharged")
+    for k, v in sorted(recorded.items()):
+        if k[1] not in ledger_bodies:
+            print(f"  hand-off phase {k[0]} -> {k[1]}: {len(v)} recorded "
+                  "(receiving stratum has no ledger yet)")
     print(f"  -> {rel(OUT)}")
-    print(
-        f"  cross-ledger: {len(double_implemented)} double-counted symbol(s), "
-        f"{len(mismatched_handoffs)} mismatched hand-off edge(s)"
-    )
-    for edge in sorted(declared):
-        print(
-            f"  hand-off phase {edge[0]} -> {edge[1]}: "
-            f"{len(declared[edge])} discharged"
-        )
-    forward_edges = sorted(k for k in recorded if k[1] not in ledger_docs)
-    for edge in forward_edges:
-        print(
-            f"  hand-off phase {edge[0]} -> {edge[1]}: "
-            f"{len(recorded[edge])} recorded (no ledger yet)"
-        )
     if problems:
         print("  FAIL")
         for p in problems:
             print(f"    {p}")
         return 1
-    print("  every implemented export is owned by a phase family")
+    print("  every atlas-owned export has a ledger row, and every ledger row is owned")
     return 0
 
 

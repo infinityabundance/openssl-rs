@@ -1,13 +1,193 @@
 {
   "authority": "openssl-3.6.4-production",
   "body": {
+    "complete": true,
     "counts": {
-      "deferred": 11,
-      "implemented": 224,
-      "owned": 235
+      "atlas_owned": 294,
+      "deferred_to_later_phase": 43,
+      "implemented": 251,
+      "open_in_this_stratum": 0,
+      "owned": 294
     },
     "deferred": [
       {
+        "declaring_header": "async.h",
+        "implemented_by_owner": false,
+        "module": "src/runtime/async/",
+        "owning_phase": 13,
+        "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+        "symbol": "ASYNC_WAIT_CTX_clear_fd"
+      },
+      {
+        "declaring_header": "async.h",
+        "implemented_by_owner": false,
+        "module": "src/runtime/async/",
+        "owning_phase": 13,
+        "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+        "symbol": "ASYNC_WAIT_CTX_free"
+      },
+      {
+        "declaring_header": "async.h",
+        "implemented_by_owner": false,
+        "module": "src/runtime/async/",
+        "owning_phase": 13,
+        "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+        "symbol": "ASYNC_WAIT_CTX_get_all_fds"
+      },
+      {
+        "declaring_header": "async.h",
+        "implemented_by_owner": false,
+        "module": "src/runtime/async/",
+        "owning_phase": 13,
+        "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+        "symbol": "ASYNC_WAIT_CTX_get_callback"
+      },
+      {
+        "declaring_header": "async.h",
+        "implemented_by_owner": false,
+        "module": "src/runtime/async/",
+        "owning_phase": 13,
+        "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+        "symbol": "ASYNC_WAIT_CTX_get_changed_fds"
+      },
+      {
+        "declaring_header": "async.h",
+        "implemented_by_owner": false,
+        "module": "src/runtime/async/",
+        "owning_phase": 13,
+        "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+        "symbol": "ASYNC_WAIT_CTX_get_fd"
+      },
+      {
+        "declaring_header": "async.h",
+        "implemented_by_owner": false,
+        "module": "src/runtime/async/",
+        "owning_phase": 13,
+        "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+        "symbol": "ASYNC_WAIT_CTX_get_status"
+      },
+      {
+        "declaring_header": "async.h",
+        "implemented_by_owner": false,
+        "module": "src/runtime/async/",
+        "owning_phase": 13,
+        "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+        "symbol": "ASYNC_WAIT_CTX_new"
+      },
+      {
+        "declaring_header": "async.h",
+        "implemented_by_owner": false,
+        "module": "src/runtime/async/",
+        "owning_phase": 13,
+        "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+        "symbol": "ASYNC_WAIT_CTX_set_callback"
+      },
+      {
+        "declaring_header": "async.h",
+        "implemented_by_owner": false,
+        "module": "src/runtime/async/",
+        "owning_phase": 13,
+        "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+        "symbol": "ASYNC_WAIT_CTX_set_status"
+      },
+      {
+        "declaring_header": "async.h",
+        "implemented_by_owner": false,
+        "module": "src/runtime/async/",
+        "owning_phase": 13,
+        "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+        "symbol": "ASYNC_WAIT_CTX_set_wait_fd"
+      },
+      {
+        "declaring_header": "async.h",
+        "implemented_by_owner": false,
+        "module": "src/runtime/async/",
+        "owning_phase": 13,
+        "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+        "symbol": "ASYNC_block_pause"
+      },
+      {
+        "declaring_header": "async.h",
+        "implemented_by_owner": false,
+        "module": "src/runtime/async/",
+        "owning_phase": 13,
+        "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+        "symbol": "ASYNC_cleanup_thread"
+      },
+      {
+        "declaring_header": "async.h",
+        "implemented_by_owner": false,
+        "module": "src/runtime/async/",
+        "owning_phase": 13,
+        "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+        "symbol": "ASYNC_get_current_job"
+      },
+      {
+        "declaring_header": "async.h",
+        "implemented_by_owner": false,
+        "module": "src/runtime/async/",
+        "owning_phase": 13,
+        "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+        "symbol": "ASYNC_get_mem_functions"
+      },
+      {
+        "declaring_header": "async.h",
+        "implemented_by_owner": false,
+        "module": "src/runtime/async/",
+        "owning_phase": 13,
+        "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+        "symbol": "ASYNC_get_wait_ctx"
+      },
+      {
+        "declaring_header": "async.h",
+        "implemented_by_owner": false,
+        "module": "src/runtime/async/",
+        "owning_phase": 13,
+        "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+        "symbol": "ASYNC_init_thread"
+      },
+      {
+        "declaring_header": "async.h",
+        "implemented_by_owner": false,
+        "module": "src/runtime/async/",
+        "owning_phase": 13,
+        "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+        "symbol": "ASYNC_is_capable"
+      },
+      {
+        "declaring_header": "async.h",
+        "implemented_by_owner": false,
+        "module": "src/runtime/async/",
+        "owning_phase": 13,
+        "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+        "symbol": "ASYNC_pause_job"
+      },
+      {
+        "declaring_header": "async.h",
+        "implemented_by_owner": false,
+        "module": "src/runtime/async/",
+        "owning_phase": 13,
+        "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+        "symbol": "ASYNC_set_mem_functions"
+      },
+      {
+        "declaring_header": "async.h",
+        "implemented_by_owner": false,
+        "module": "src/runtime/async/",
+        "owning_phase": 13,
+        "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+        "symbol": "ASYNC_start_job"
+      },
+      {
+        "declaring_header": "async.h",
+        "implemented_by_owner": false,
+        "module": "src/runtime/async/",
+        "owning_phase": 13,
+        "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+        "symbol": "ASYNC_unblock_pause"
+      },
+      {
+        "declaring_header": "err.h",
         "implemented_by_owner": true,
         "module": "src/runtime/err.rs",
         "owning_phase": 4,
@@ -15,6 +195,7 @@
         "symbol": "ERR_add_error_mem_bio"
       },
       {
+        "declaring_header": "err.h",
         "implemented_by_owner": true,
         "module": "src/runtime/err.rs",
         "owning_phase": 4,
@@ -22,6 +203,7 @@
         "symbol": "ERR_print_errors"
       },
       {
+        "declaring_header": "err.h",
         "implemented_by_owner": true,
         "module": "src/runtime/err.rs",
         "owning_phase": 4,
@@ -29,6 +211,7 @@
         "symbol": "ERR_print_errors_cb"
       },
       {
+        "declaring_header": "err.h",
         "implemented_by_owner": true,
         "module": "src/runtime/err.rs",
         "owning_phase": 4,
@@ -36,6 +219,7 @@
         "symbol": "ERR_print_errors_fp"
       },
       {
+        "declaring_header": "objects.h",
         "implemented_by_owner": true,
         "module": "src/runtime/obj.rs",
         "owning_phase": 4,
@@ -43,6 +227,47 @@
         "symbol": "OBJ_create_objects"
       },
       {
+        "declaring_header": "crypto.h",
+        "implemented_by_owner": true,
+        "module": "src/runtime/init.rs",
+        "owning_phase": 4,
+        "reason": "constructs and fills the OPENSSL_INIT_SETTINGS handle that crypto/conf/conf_lib.c defines; CONF is Phase 4",
+        "symbol": "OPENSSL_INIT_free"
+      },
+      {
+        "declaring_header": "crypto.h",
+        "implemented_by_owner": true,
+        "module": "src/runtime/init.rs",
+        "owning_phase": 4,
+        "reason": "constructs and fills the OPENSSL_INIT_SETTINGS handle that crypto/conf/conf_lib.c defines; CONF is Phase 4",
+        "symbol": "OPENSSL_INIT_new"
+      },
+      {
+        "declaring_header": "crypto.h",
+        "implemented_by_owner": true,
+        "module": "src/runtime/init.rs",
+        "owning_phase": 4,
+        "reason": "constructs and fills the OPENSSL_INIT_SETTINGS handle that crypto/conf/conf_lib.c defines; CONF is Phase 4",
+        "symbol": "OPENSSL_INIT_set_config_appname"
+      },
+      {
+        "declaring_header": "crypto.h",
+        "implemented_by_owner": true,
+        "module": "src/runtime/init.rs",
+        "owning_phase": 4,
+        "reason": "constructs and fills the OPENSSL_INIT_SETTINGS handle that crypto/conf/conf_lib.c defines; CONF is Phase 4",
+        "symbol": "OPENSSL_INIT_set_config_file_flags"
+      },
+      {
+        "declaring_header": "crypto.h",
+        "implemented_by_owner": true,
+        "module": "src/runtime/init.rs",
+        "owning_phase": 4,
+        "reason": "constructs and fills the OPENSSL_INIT_SETTINGS handle that crypto/conf/conf_lib.c defines; CONF is Phase 4",
+        "symbol": "OPENSSL_INIT_set_config_filename"
+      },
+      {
+        "declaring_header": "lhash.h",
         "implemented_by_owner": true,
         "module": "src/runtime/lhash.rs",
         "owning_phase": 4,
@@ -50,6 +275,7 @@
         "symbol": "OPENSSL_LH_node_stats"
       },
       {
+        "declaring_header": "lhash.h",
         "implemented_by_owner": true,
         "module": "src/runtime/lhash.rs",
         "owning_phase": 4,
@@ -57,6 +283,7 @@
         "symbol": "OPENSSL_LH_node_stats_bio"
       },
       {
+        "declaring_header": "lhash.h",
         "implemented_by_owner": true,
         "module": "src/runtime/lhash.rs",
         "owning_phase": 4,
@@ -64,6 +291,7 @@
         "symbol": "OPENSSL_LH_node_usage_stats"
       },
       {
+        "declaring_header": "lhash.h",
         "implemented_by_owner": true,
         "module": "src/runtime/lhash.rs",
         "owning_phase": 4,
@@ -71,6 +299,7 @@
         "symbol": "OPENSSL_LH_node_usage_stats_bio"
       },
       {
+        "declaring_header": "lhash.h",
         "implemented_by_owner": true,
         "module": "src/runtime/lhash.rs",
         "owning_phase": 4,
@@ -78,121 +307,60 @@
         "symbol": "OPENSSL_LH_stats"
       },
       {
+        "declaring_header": "lhash.h",
         "implemented_by_owner": true,
         "module": "src/runtime/lhash.rs",
         "owning_phase": 4,
         "reason": "writes to a BIO/FILE sink; BIO is Phase 4",
         "symbol": "OPENSSL_LH_stats_bio"
-      }
-    ],
-    "families": [
-      {
-        "module": "src/runtime/mem.rs",
-        "prefixes": [
-          "CRYPTO_malloc",
-          "CRYPTO_zalloc",
-          "CRYPTO_calloc",
-          "CRYPTO_realloc",
-          "CRYPTO_free",
-          "CRYPTO_strdup",
-          "CRYPTO_strndup",
-          "CRYPTO_memdup",
-          "CRYPTO_memcmp",
-          "CRYPTO_clear_",
-          "CRYPTO_secure_",
-          "CRYPTO_set_mem_",
-          "CRYPTO_get_mem_",
-          "CRYPTO_aligned_alloc",
-          "CRYPTO_mem_ctrl",
-          "CRYPTO_mem_leaks",
-          "CRYPTO_mem_debug",
-          "OPENSSL_cleanse"
-        ]
       },
       {
-        "module": "src/runtime/err.rs",
-        "prefixes": [
-          "ERR_"
-        ]
-      },
-      {
-        "module": "src/runtime/lhash.rs",
-        "prefixes": [
-          "OPENSSL_LH_"
-        ]
-      },
-      {
-        "module": "src/runtime/stack.rs",
-        "prefixes": [
-          "OPENSSL_sk_"
-        ]
-      },
-      {
-        "module": "src/runtime/ex_data.rs",
-        "prefixes": [
-          "CRYPTO_get_ex_new_index",
-          "CRYPTO_free_ex_index",
-          "CRYPTO_new_ex_data",
-          "CRYPTO_dup_ex_data",
-          "CRYPTO_free_ex_data",
-          "CRYPTO_get_ex_data",
-          "CRYPTO_set_ex_data",
-          "CRYPTO_alloc_ex_data"
-        ]
-      },
-      {
-        "module": "src/runtime/thread.rs",
-        "prefixes": [
-          "CRYPTO_THREAD_",
-          "CRYPTO_atomic_",
-          "CRYPTO_ONCE",
-          "CRYPTO_THREAD_run_once"
-        ]
-      },
-      {
+        "declaring_header": "crypto.h",
+        "implemented_by_owner": true,
         "module": "src/runtime/init.rs",
-        "prefixes": [
-          "OPENSSL_init",
-          "OPENSSL_cleanup",
-          "OpenSSL_version",
-          "OpenSSL_version_num",
-          "OPENSSL_info",
-          "OPENSSL_version_major",
-          "OPENSSL_version_minor",
-          "OPENSSL_version_patch",
-          "OPENSSL_version_pre_release",
-          "OPENSSL_version_build_metadata"
-        ]
+        "owning_phase": 6,
+        "reason": "pins the handler's shared object with DSO_dsobyaddr/DSO_free, which the profile compiles in; DSO is Phase 6.8",
+        "symbol": "OPENSSL_atexit"
       },
       {
-        "module": "src/runtime/obj.rs",
-        "prefixes": [
-          "OBJ_",
-          "NID_",
-          "OBJ_NAME_"
-        ]
+        "declaring_header": "crypto.h",
+        "implemented_by_owner": true,
+        "module": "src/runtime/thread.rs",
+        "owning_phase": 6,
+        "reason": "runs the thread's event handlers for a library context; OPENSSL_thread_stop_ex calls ossl_lib_ctx_get_concrete, and OPENSSL_cleanup's OPENSSL_thread_stop call runs the handler list OPENSSL_atexit builds; the library context is Phase 6",
+        "symbol": "OPENSSL_thread_stop"
       },
       {
-        "module": "src/runtime/str.rs",
-        "prefixes": [
-          "OPENSSL_strnlen",
-          "OPENSSL_strlcpy",
-          "OPENSSL_strlcat",
-          "OPENSSL_strtoul",
-          "OPENSSL_hexchar2int",
-          "OPENSSL_hexstr2buf",
-          "OPENSSL_buf2hexstr",
-          "OPENSSL_strcasecmp",
-          "OPENSSL_strncasecmp"
-        ]
+        "declaring_header": "crypto.h",
+        "implemented_by_owner": true,
+        "module": "src/runtime/thread.rs",
+        "owning_phase": 6,
+        "reason": "runs the thread's event handlers for a library context; OPENSSL_thread_stop_ex calls ossl_lib_ctx_get_concrete, and OPENSSL_cleanup's OPENSSL_thread_stop call runs the handler list OPENSSL_atexit builds; the library context is Phase 6",
+        "symbol": "OPENSSL_thread_stop_ex"
       },
       {
-        "module": "src/runtime/dir.rs",
-        "prefixes": [
-          "OPENSSL_DIR_"
-        ]
+        "declaring_header": "thread.h",
+        "implemented_by_owner": true,
+        "module": "src/runtime/thread.rs",
+        "owning_phase": 6,
+        "reason": "reads and writes the thread-tracking ex-data slot of an OSSL_LIB_CTX (OSSL_LIB_CTX_GET_THREADS -> ossl_lib_ctx_get_data(CTX, OSSL_LIB_CTX_THREAD_INDEX)); the library context is Phase 6",
+        "symbol": "OSSL_get_max_threads"
+      },
+      {
+        "declaring_header": "thread.h",
+        "implemented_by_owner": true,
+        "module": "src/runtime/thread.rs",
+        "owning_phase": 6,
+        "reason": "reads and writes the thread-tracking ex-data slot of an OSSL_LIB_CTX (OSSL_LIB_CTX_GET_THREADS -> ossl_lib_ctx_get_data(CTX, OSSL_LIB_CTX_THREAD_INDEX)); the library context is Phase 6",
+        "symbol": "OSSL_set_max_threads"
       }
     ],
+    "deferred_by_phase": {
+      "4": 16,
+      "6": 5,
+      "13": 22
+    },
+    "handoffs_discharged": {},
     "implemented": [
       "CRYPTO_THREAD_cleanup_local",
       "CRYPTO_THREAD_compare_id",
@@ -373,12 +541,21 @@
       "OPENSSL_buf2hexstr_ex",
       "OPENSSL_cleanse",
       "OPENSSL_cleanup",
+      "OPENSSL_die",
+      "OPENSSL_fork_child",
+      "OPENSSL_fork_parent",
+      "OPENSSL_fork_prepare",
+      "OPENSSL_gmtime",
+      "OPENSSL_gmtime_adj",
+      "OPENSSL_gmtime_diff",
       "OPENSSL_hexchar2int",
       "OPENSSL_hexstr2buf",
       "OPENSSL_hexstr2buf_ex",
       "OPENSSL_info",
       "OPENSSL_init",
       "OPENSSL_init_crypto",
+      "OPENSSL_isservice",
+      "OPENSSL_issetugid",
       "OPENSSL_sk_deep_copy",
       "OPENSSL_sk_delete",
       "OPENSSL_sk_delete_ptr",
@@ -416,10 +593,166 @@
       "OPENSSL_version_minor",
       "OPENSSL_version_patch",
       "OPENSSL_version_pre_release",
+      "OSSL_ERR_STATE_free",
+      "OSSL_ERR_STATE_new",
+      "OSSL_ERR_STATE_restore",
+      "OSSL_ERR_STATE_save",
+      "OSSL_ERR_STATE_save_to_mark",
+      "OSSL_get_thread_support_flags",
+      "OSSL_sleep",
+      "OSSL_trace_begin",
+      "OSSL_trace_enabled",
+      "OSSL_trace_end",
+      "OSSL_trace_get_category_name",
+      "OSSL_trace_get_category_num",
+      "OSSL_trace_set_callback",
+      "OSSL_trace_set_channel",
+      "OSSL_trace_set_prefix",
+      "OSSL_trace_set_suffix",
+      "OSSL_trace_string",
       "OpenSSL_version",
-      "OpenSSL_version_num"
+      "OpenSSL_version_num",
+      "err_free_strings_int"
     ],
-    "note": "A deferred symbol is a recorded hand-off to the phase that owns the subsystem it needs, not a parity claim, and the hand-off is sticky: the owning stratum implementing it later does not move the obligation back here (`implemented_by_owner` records that the hand-off has been discharged). `phase_state.py` treats Phase 3 as complete only when every symbol in these families is either implemented here or handed to a later phase, and `forensics/tools/ownership_audit.py` fails if two ledgers both count a symbol as implemented by them."
+    "module_prefixes": [
+      {
+        "module": "src/runtime/mem.rs",
+        "prefixes": [
+          "CRYPTO_",
+          "OPENSSL_cleanse"
+        ]
+      },
+      {
+        "module": "src/runtime/err.rs",
+        "prefixes": [
+          "ERR_",
+          "OSSL_ERR_STATE_",
+          "err_free_strings_int"
+        ]
+      },
+      {
+        "module": "src/runtime/lhash.rs",
+        "prefixes": [
+          "OPENSSL_LH_"
+        ]
+      },
+      {
+        "module": "src/runtime/stack.rs",
+        "prefixes": [
+          "OPENSSL_sk_"
+        ]
+      },
+      {
+        "module": "src/runtime/ex_data.rs",
+        "prefixes": [
+          "CRYPTO_get_ex_new_index",
+          "CRYPTO_free_ex_index",
+          "CRYPTO_new_ex_data",
+          "CRYPTO_dup_ex_data",
+          "CRYPTO_free_ex_data",
+          "CRYPTO_get_ex_data",
+          "CRYPTO_set_ex_data",
+          "CRYPTO_alloc_ex_data"
+        ]
+      },
+      {
+        "module": "src/runtime/thread.rs",
+        "prefixes": [
+          "CRYPTO_THREAD_",
+          "CRYPTO_atomic_",
+          "CRYPTO_ONCE",
+          "CRYPTO_THREAD_run_once",
+          "OSSL_get_max_threads",
+          "OSSL_set_max_threads",
+          "OSSL_get_thread_support_flags",
+          "OSSL_sleep",
+          "OPENSSL_thread_stop"
+        ]
+      },
+      {
+        "module": "src/runtime/trace.rs",
+        "prefixes": [
+          "OSSL_trace_"
+        ]
+      },
+      {
+        "module": "src/runtime/init.rs",
+        "prefixes": [
+          "OPENSSL_init",
+          "OPENSSL_cleanup",
+          "OpenSSL_version",
+          "OPENSSL_version",
+          "OpenSSL_version_num",
+          "OPENSSL_info",
+          "OPENSSL_atexit",
+          "OPENSSL_die",
+          "OPENSSL_fork_",
+          "OPENSSL_INIT_"
+        ]
+      },
+      {
+        "module": "src/runtime/async/",
+        "prefixes": [
+          "ASYNC_"
+        ]
+      },
+      {
+        "module": "src/runtime/getenv.rs",
+        "prefixes": [
+          "OPENSSL_isservice",
+          "OPENSSL_issetugid"
+        ]
+      },
+      {
+        "module": "src/runtime/obj.rs",
+        "prefixes": [
+          "OBJ_",
+          "NID_",
+          "OBJ_NAME_"
+        ]
+      },
+      {
+        "module": "src/runtime/str.rs",
+        "prefixes": [
+          "OPENSSL_str",
+          "OPENSSL_hexchar2int",
+          "OPENSSL_hexstr2buf",
+          "OPENSSL_buf2hexstr",
+          "OPENSSL_strcasecmp",
+          "OPENSSL_strncasecmp"
+        ]
+      },
+      {
+        "module": "src/runtime/dir.rs",
+        "prefixes": [
+          "OPENSSL_DIR_"
+        ]
+      },
+      {
+        "module": "src/runtime/time.rs",
+        "prefixes": [
+          "OPENSSL_gmtime"
+        ]
+      }
+    ],
+    "note": "A deferred symbol is a recorded hand-off to the phase that owns the subsystem it needs, not a parity claim, and the hand-off is sticky: the owning stratum implementing it later does not move the obligation back here (`implemented_by_owner` records that the hand-off has been discharged). `open` is the only list that blocks the stratum, and it is the whole reason this stratum returns to `in-progress` after D97. Nothing here is a parity claim.",
+    "open": [],
+    "owned_by_module": {
+      "src/runtime/async/": 22,
+      "src/runtime/dir.rs": 2,
+      "src/runtime/err.rs": 81,
+      "src/runtime/getenv.rs": 2,
+      "src/runtime/init.rs": 21,
+      "src/runtime/lhash.rs": 21,
+      "src/runtime/mem.rs": 58,
+      "src/runtime/obj.rs": 31,
+      "src/runtime/stack.rs": 26,
+      "src/runtime/str.rs": 11,
+      "src/runtime/thread.rs": 6,
+      "src/runtime/time.rs": 3,
+      "src/runtime/trace.rs": 10
+    },
+    "rule": "the stratum's scope is the projection of forensics/atlas/symbol-ownership.json for phase 3: a symbol belongs to the stratum that owns the header declaring it, `pem.h`'s typed names resolve through the type's header, the exports no installed header declares are dispositioned in ownership_rules.ABI_ONLY_OWNER, and the exports whose declaring header is too coarse are named in ownership_rules.SYMBOL_PHASE"
   },
   "generator": "forensics/tools/phase3_obligations.py",
   "inputs": [
@@ -429,9 +762,14 @@
       "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
     },
     {
+      "name": "symbol-ownership",
+      "path": "forensics/atlas/symbol-ownership.json",
+      "sha256": "d42d2ba4f459b729139149f7343cb36357959272a38fecce8f20e6e4aa29a137"
+    },
+    {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "e88230fccb56990c9c5e1631d71f60a5b98b867435869c5b4e7d183f985c323d"
+      "sha256": "b9e0e7fab60b9998c2644beb2a71d700ed40042476885d2a23c27d393498761d"
     }
   ],
   "kind": "phase3-obligations",

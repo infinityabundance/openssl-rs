@@ -85,11 +85,12 @@
 //! The orderings are the authority's: `AcqRel` for the read-modify-write
 //! operations, `Acquire` for loads, `Release` for stores.
 
-use core::ffi::{c_int, c_uint, c_ulong, c_void};
-use core::sync::atomic::{AtomicI32, AtomicU64, Ordering};
+use core::ffi::{c_int, c_long, c_uint, c_ulong, c_void};
+use core::sync::atomic::{AtomicI32, AtomicPtr, AtomicU64, Ordering};
 use std::sync::{Condvar, Mutex, MutexGuard};
 
 use crate::ffi::guard_ffi;
+use crate::runtime::bio::sys::{self, Timespec, Timeval};
 
 // ---------------------------------------------------------------------------
 // pthread bindings
@@ -386,10 +387,12 @@ pub unsafe extern "C" fn CRYPTO_THREAD_run_once(
 /// destructor clears the value). Returns 1 on success, 0 on failure or NULL
 /// `key`.
 ///
-/// The authority additionally initialises its global thread-event machinery
-/// here. That machinery has no counterpart yet (it carries per-thread
-/// `OSSL_LIB_CTX` teardown, a later phase), and its absence is not observable
-/// through `CRYPTO_THREAD_*` itself.
+/// The authority runs its global thread-event initialisation **first**, through
+/// `ossl_init_thread()`, and refuses the caller's key when that fails. That call
+/// was named here as a later phase until 6.6e-ii landed; it is now made, and the
+/// order matters: a key created before the event machinery exists would be usable
+/// by a caller who then registered a handler against a thread-local list that had
+/// nowhere to go.
 ///
 /// # Safety
 /// `key` must be NULL or valid, writable storage for a `CRYPTO_THREAD_LOCAL`.
@@ -403,13 +406,54 @@ pub unsafe extern "C" fn CRYPTO_THREAD_init_local(
         if key.is_null() {
             return 0;
         }
-        // SAFETY: `key` is valid storage per the caller's contract.
-        if unsafe { pthread_key_create(key, cleanup) } == 0 {
-            1
-        } else {
-            0
+        if crate::runtime::thread_events::ossl_init_thread() == 0 {
+            return 0;
         }
+        // SAFETY: `key` is valid storage per the caller's contract.
+        unsafe { thread_key_create(key, cleanup) }
     })
+}
+
+/// The body of `CRYPTO_THREAD_init_local` without the event-machinery preamble, which the
+/// event machinery itself needs: `ossl_init_thread_once` creates the *destructor* key, and
+/// that creation must not re-enter `ossl_init_thread`.
+///
+/// The authority has this as a separate function, `ossl_thread_init_local`, for exactly that
+/// reason. This crate had folded it in; the fold stays and this is the seam.
+///
+/// # Safety
+/// As [`CRYPTO_THREAD_init_local`], minus the initialisation requirement.
+pub(crate) unsafe fn thread_key_create(
+    key: *mut CryptoThreadLocal,
+    cleanup: Option<extern "C" fn(*mut c_void)>,
+) -> c_int {
+    if key.is_null() {
+        return 0;
+    }
+    // SAFETY: `key` is valid storage per the caller's contract.
+    if unsafe { pthread_key_create(key, cleanup) } == 0 {
+        1
+    } else {
+        0
+    }
+}
+
+/// The body of `CRYPTO_THREAD_cleanup_local`, for the same reason as [`thread_key_create`]:
+/// `ossl_cleanup_thread` releases the destructor key, and going through the exported function
+/// would be guard-wrapped and re-entrant in a way the authority's call is not.
+///
+/// # Safety
+/// `key` must be NULL or a live key from [`thread_key_create`].
+pub(crate) unsafe fn thread_key_free(key: *mut CryptoThreadLocal) -> c_int {
+    if key.is_null() {
+        return 0;
+    }
+    // SAFETY: `key` points to a live key per the caller's contract.
+    if unsafe { pthread_key_delete(*key) } == 0 {
+        1
+    } else {
+        0
+    }
 }
 
 /// `void *CRYPTO_THREAD_get_local(CRYPTO_THREAD_LOCAL *key)`
@@ -472,11 +516,7 @@ pub unsafe extern "C" fn CRYPTO_THREAD_cleanup_local(key: *mut CryptoThreadLocal
             return 0;
         }
         // SAFETY: `key` points to a live key per the caller's contract.
-        if unsafe { pthread_key_delete(*key) } == 0 {
-            1
-        } else {
-            0
-        }
+        unsafe { thread_key_free(key) }
     })
 }
 
@@ -982,5 +1022,409 @@ mod tests {
         assert_eq!(unsafe { CRYPTO_THREAD_unlock(lock) }, 1);
         // SAFETY: no user remains.
         unsafe { CRYPTO_THREAD_lock_free(lock) };
+    }
+}
+
+// ---------------------------------------------------------------------------
+// The thread pool's primitives
+//
+// `crypto/threads_pthread.c` provides `ossl_crypto_mutex_*` and
+// `ossl_crypto_condvar_*` over `pthread_mutex_t`/`pthread_cond_t`, and
+// `crypto/thread/internal.c` builds the per-context thread slot out of them.
+// They are internal: `internal/thread_arch.h` declares the types as opaque
+// typedefs, so no consumer can name them, and their contract is the ordinary
+// mutual-exclusion and signalling contract rather than an OpenSSL-specific one.
+//
+// Two design points are worth stating, because both are places a shim is
+// usually wrong.
+//
+// **The mutex is not recursive, and a second lock by the same thread must
+// block.** The authority's `pthread_mutex_t` is `PTHREAD_MUTEX_DEFAULT`, which
+// deadlocks on re-lock; `std::sync::Mutex` would instead return an error on
+// lock or panic on unlock, so this cannot be a thin wrapper over it. The
+// implementation below parks until the flag is clear, which deadlocks exactly
+// as `PTHREAD_MUTEX_DEFAULT` does.
+//
+// **A condition variable is paired with one mutex, and the pairing is made
+// explicit.** The authority's C API creates the two independently
+// (`ossl_crypto_condvar_new` takes no mutex) and pairs them at each `wait`, on
+// the promise that release-and-wait is atomic. Rust's `Condvar::wait` requires
+// the guard of the mutex it is waiting on, so the pairing is bound on the first
+// `wait` and kept. Every use in the authority pairs one condvar with one mutex
+// for its lifetime -- `OSSL_LIB_CTX_THREADS` is `lock`+`cond_finished`, the
+// thread queue is `alloc_lock`+`alloc_signal`, `prior_lock`+`prior_signal` -- so
+// binding it makes an invariant the authority relies on explicit, and a
+// mismatched pair is reported rather than becoming a lost wakeup.
+// ---------------------------------------------------------------------------
+
+/// `struct crypto_mutex_st`, opaque in `internal/thread_arch.h`.
+pub struct CryptoMutex {
+    /// `true` while a thread holds it. This is the parking mutex *and* the flag,
+    /// so releasing it and waiting on a condition variable is one atomic step.
+    held: Mutex<bool>,
+    /// Signalled when the flag is cleared, to wake a thread waiting in
+    /// [`ossl_crypto_mutex_lock`]. Distinct from a [`CryptoCondvar`]'s own
+    /// condvar even when the two share `held`, because the two wait for
+    /// different things.
+    released: Condvar,
+}
+
+/// `struct crypto_condvar_st`, opaque in `internal/thread_arch.h`.
+pub struct CryptoCondvar {
+    /// The mutex this condition variable was first waited on with. NULL until
+    /// then; one condvar is used with one mutex for its whole life.
+    bound: AtomicPtr<CryptoMutex>,
+    cond: Condvar,
+}
+
+/// `CRYPTO_MUTEX *ossl_crypto_mutex_new(void)` — NULL when allocation fails.
+pub(crate) fn ossl_crypto_mutex_new() -> *mut CryptoMutex {
+    let m = CryptoMutex {
+        held: Mutex::new(false),
+        released: Condvar::new(),
+    };
+    Box::into_raw(Box::new(m))
+}
+
+/// `void ossl_crypto_mutex_lock(CRYPTO_MUTEX *mutex)`
+///
+/// # Safety
+/// `mutex` must be non-NULL and live, and not already held by this thread (the
+/// authority's non-recursive mutex deadlocks on that, and so does this).
+unsafe fn mutex_held(m: *mut CryptoMutex) -> &'static Mutex<bool> {
+    // SAFETY: `mutex` is a live object produced by `ossl_crypto_mutex_new` per
+    // the caller's contract; the returned reference borrows one of its fields
+    // for the duration of one C call.
+    unsafe { &(*m).held }
+}
+
+pub(crate) unsafe fn ossl_crypto_mutex_lock(m: *mut CryptoMutex) {
+    if m.is_null() {
+        return;
+    }
+    // SAFETY: `m` is live per the caller's contract.
+    let held = unsafe { mutex_held(m) };
+    let mut flag = lock_state_poisoned(held);
+    while *flag {
+        // SAFETY: `m` is live per the caller's contract.
+        flag = match unsafe { &(*m).released }.wait(flag) {
+            Ok(g) => g,
+            Err(p) => p.into_inner(),
+        };
+    }
+    *flag = true;
+}
+
+/// Locks, recovering from poisoning, as the rwlock helpers above do.
+fn lock_state_poisoned(held: &Mutex<bool>) -> MutexGuard<'_, bool> {
+    match held.lock() {
+        Ok(g) => g,
+        Err(p) => p.into_inner(),
+    }
+}
+
+/// `int ossl_crypto_mutex_try_lock(CRYPTO_MUTEX *mutex)` — 1 on success.
+///
+/// # Safety
+/// `mutex` must be non-NULL and live.
+#[allow(dead_code)] // unreachable until the thread pool tries one
+pub(crate) unsafe fn ossl_crypto_mutex_try_lock(m: *mut CryptoMutex) -> c_int {
+    if m.is_null() {
+        return 0;
+    }
+    // SAFETY: `m` is live per the caller's contract.
+    let mut flag = lock_state_poisoned(unsafe { mutex_held(m) });
+    if *flag {
+        return 0;
+    }
+    *flag = true;
+    1
+}
+
+/// `void ossl_crypto_mutex_unlock(CRYPTO_MUTEX *mutex)`
+///
+/// # Safety
+/// `mutex` must be non-NULL, live, and held by this thread.
+pub(crate) unsafe fn ossl_crypto_mutex_unlock(m: *mut CryptoMutex) {
+    if m.is_null() {
+        return;
+    }
+    // SAFETY: `m` is live per the caller's contract.
+    let mut flag = lock_state_poisoned(unsafe { mutex_held(m) });
+    *flag = false;
+    drop(flag);
+    // SAFETY: `m` is live per the caller's contract.
+    unsafe { &(*m).released }.notify_one();
+}
+
+/// `void ossl_crypto_mutex_free(CRYPTO_MUTEX **mutex)` — frees and NULLs.
+///
+/// # Safety
+/// `mutex` must be NULL or a live `*mut *mut CryptoMutex` whose target came
+/// from [`ossl_crypto_mutex_new`] and is not held.
+pub(crate) unsafe fn ossl_crypto_mutex_free(m: *mut *mut CryptoMutex) {
+    if m.is_null() {
+        return;
+    }
+    // SAFETY: `m` is a live caller pointer per the contract.
+    let obj = unsafe { *m };
+    if !obj.is_null() {
+        // SAFETY: the pointer came from `Box::into_raw` in
+        // `ossl_crypto_mutex_new` and is freed exactly once here.
+        drop(unsafe { Box::from_raw(obj) });
+        // SAFETY: as above; the caller's slot is NULLed, which is what the
+        // authority's `CRYPTO_MUTEX **` signature is for.
+        unsafe { *m = core::ptr::null_mut() };
+    }
+}
+
+/// `CRYPTO_CONDVAR *ossl_crypto_condvar_new(void)` — NULL when allocation fails.
+pub(crate) fn ossl_crypto_condvar_new() -> *mut CryptoCondvar {
+    let cv = CryptoCondvar {
+        bound: AtomicPtr::new(core::ptr::null_mut()),
+        cond: Condvar::new(),
+    };
+    Box::into_raw(Box::new(cv))
+}
+
+/// `void ossl_crypto_condvar_wait(CRYPTO_CONDVAR *cv, CRYPTO_MUTEX *mutex)`
+///
+/// Releases `mutex`, waits for a signal, and re-acquires it — the release and
+/// the wait are one step with respect to the flag, because both use the mutex's
+/// own parking mutex.
+///
+/// # Safety
+/// `cv` and `mutex` must be live, and `mutex` must be held by this thread. A
+/// `cv` already bound to a different mutex is a caller error: the authority's
+/// `pthread_cond_wait` has no defined answer for it either, and this reports it
+/// by returning without waiting rather than by becoming a lost wakeup.
+#[allow(dead_code)] // unreachable until the thread pool waits on one
+pub(crate) unsafe fn ossl_crypto_condvar_wait(cv: *mut CryptoCondvar, m: *mut CryptoMutex) {
+    if cv.is_null() || m.is_null() {
+        return;
+    }
+    // SAFETY: `cv` is live per the caller's contract.
+    let bound = unsafe { &(*cv).bound };
+    // Bind on first use, and accept only this mutex afterwards.
+    let existing = bound.load(Ordering::Acquire);
+    if existing.is_null() {
+        let _ = bound.compare_exchange(
+            core::ptr::null_mut(),
+            m,
+            Ordering::AcqRel,
+            Ordering::Acquire,
+        );
+    } else if existing != m {
+        return;
+    }
+    // SAFETY: `m` is live and held by this thread per the caller's contract.
+    let held = unsafe { mutex_held(m) };
+    let mut flag = lock_state_poisoned(held);
+    if !*flag {
+        // The caller did not hold it. `pthread_cond_wait` is undefined there too,
+        // so this returns rather than waiting on a mutex it does not own.
+        return;
+    }
+    *flag = false;
+    drop(flag);
+    // Wake one `ossl_crypto_mutex_lock` waiter, now that the flag is clear.
+    // SAFETY: `m` is live.
+    unsafe { &(*m).released }.notify_one();
+    // Re-acquire before waiting, so that a signaller -- which every caller in
+    // the authority is, under this mutex -- cannot slip between the release
+    // above and the wait below. The wait then releases it atomically.
+    // SAFETY: `m` is live.
+    let g = lock_state_poisoned(unsafe { mutex_held(m) });
+    // SAFETY: `cv` is live; the guard belongs to this mutex, which is what makes
+    // release-and-wait one step.
+    let mut g = match unsafe { &(*cv).cond }.wait(g) {
+        Ok(g) => g,
+        Err(p) => p.into_inner(),
+    };
+    // The wait returns with the mutex re-locked: restore the flag so the next
+    // `unlock` releases it rather than corrupting the state.
+    *g = true;
+}
+
+/// `void ossl_crypto_condvar_signal(CRYPTO_CONDVAR *cv)` — wakes one waiter.
+///
+/// # Safety
+/// `cv` must be NULL or live.
+#[allow(dead_code)] // unreachable until the thread pool signals one
+pub(crate) unsafe fn ossl_crypto_condvar_signal(cv: *mut CryptoCondvar) {
+    if cv.is_null() {
+        return;
+    }
+    // SAFETY: `cv` is live per the caller's contract.
+    unsafe { &(*cv).cond }.notify_one();
+}
+
+/// `void ossl_crypto_condvar_broadcast(CRYPTO_CONDVAR *cv)` — wakes all waiters.
+///
+/// # Safety
+/// `cv` must be NULL or live.
+#[allow(dead_code)] // unreachable until the thread pool broadcasts to them
+pub(crate) unsafe fn ossl_crypto_condvar_broadcast(cv: *mut CryptoCondvar) {
+    if cv.is_null() {
+        return;
+    }
+    // SAFETY: `cv` is live per the caller's contract.
+    unsafe { &(*cv).cond }.notify_all();
+}
+
+/// `void ossl_crypto_condvar_free(CRYPTO_CONDVAR **cv)` — frees and NULLs.
+///
+/// # Safety
+/// `cv` must be NULL or a live `*mut *mut CryptoCondvar` whose target came from
+/// [`ossl_crypto_condvar_new`] and has no waiters.
+pub(crate) unsafe fn ossl_crypto_condvar_free(cv: *mut *mut CryptoCondvar) {
+    if cv.is_null() {
+        return;
+    }
+    // SAFETY: `cv` is a live caller pointer per the contract.
+    let obj = unsafe { *cv };
+    if !obj.is_null() {
+        // SAFETY: the pointer came from `Box::into_raw` in
+        // `ossl_crypto_condvar_new` and is freed exactly once here.
+        drop(unsafe { Box::from_raw(obj) });
+        // SAFETY: as above; the caller's slot is NULLed.
+        unsafe { *cv = core::ptr::null_mut() };
+    }
+}
+
+// ---------------------------------------------------------------------------
+// The thread-count surface, and sleeping
+// ---------------------------------------------------------------------------
+
+/// `OSSL_THREAD_SUPPORT_FLAG_THREAD_POOL`, from `openssl/thread.h`.
+const OSSL_THREAD_SUPPORT_FLAG_THREAD_POOL: u32 = 1 << 0;
+/// `OSSL_THREAD_SUPPORT_FLAG_DEFAULT_SPAWN`, from `openssl/thread.h`.
+const OSSL_THREAD_SUPPORT_FLAG_DEFAULT_SPAWN: u32 = 1 << 1;
+
+/// `uint32_t OSSL_get_thread_support_flags(void)`
+///
+/// A compile-time constant of the build, not a runtime query:
+/// `crypto/thread/api.c` ORs a flag in for each of `OPENSSL_NO_THREAD_POOL` and
+/// `OPENSSL_NO_DEFAULT_THREAD_POOL` that is **not** defined. Neither is defined
+/// in the pinned profile — `crypto/thread/arch.c` is built and the option list
+/// contains no `no-thread-pool` — so the answer is `3`.
+///
+/// The two flags decide what `OSSL_get_max_threads`/`OSSL_set_max_threads` mean
+/// for their caller, and those two are **not** implemented here: they read and
+/// write the thread-tracking ex-data slot of an `OSSL_LIB_CTX`
+/// (`OSSL_LIB_CTX_GET_THREADS(ctx)` → `ossl_lib_ctx_get_data(ctx,
+/// OSSL_LIB_CTX_THREAD_INDEX)`), so they are Phase 6's obligation and are
+/// recorded as a hand-off in `forensics/phase3-obligations.json` with that
+/// dependency named.
+#[no_mangle]
+pub extern "C" fn OSSL_get_thread_support_flags() -> u32 {
+    OSSL_THREAD_SUPPORT_FLAG_THREAD_POOL | OSSL_THREAD_SUPPORT_FLAG_DEFAULT_SPAWN
+}
+
+/// `void OSSL_sleep(uint64_t millis)`
+///
+/// Sleeps for at least `millis` milliseconds and returns. The authority's body
+/// recomputes the remaining time after every sleep and loops until the clock has
+/// passed the deadline, so a sleep interrupted by a signal is *continued* rather
+/// than abandoned — which is observable, and is why this is not a bare
+/// `nanosleep` call.
+///
+/// The clock is `gettimeofday`, because that is what `ossl_time_now` uses on this
+/// platform (`crypto/time.c`'s non-Windows arm), and `OSSL_TIME` is microseconds.
+/// Using a monotonic clock here would be tidier and would answer differently if
+/// the wall clock steps backwards mid-sleep.
+///
+/// The `USE_SLEEP_SECS` outer loop in the authority is for platforms without
+/// `nanosleep`; the admitted profile has it, so only the `nanosleep` arm is
+/// present, and a literal for the other arm would be an unmeasured claim.
+// The authority's spelling, which `ABI-PROTOTYPE` resolves by name; renaming it
+// to `ossl_sleep` would make the export disappear.
+#[allow(non_snake_case)]
+#[no_mangle]
+pub extern "C" fn OSSL_sleep(millis: u64) {
+    let now = time_now_nanos();
+    let finish = now.wrapping_add(millis.wrapping_mul(1_000_000));
+    let mut left = millis;
+    loop {
+        sleep_millis(left);
+        let now = time_now_nanos();
+        if now >= finish {
+            return;
+        }
+        left = finish.wrapping_sub(now) / 1_000_000;
+    }
+}
+
+/// `ossl_time_now()` — nanoseconds since the epoch, or zero if `gettimeofday`
+/// fails, which is the authority's `ossl_time_zero()` fallback.
+///
+/// The unit is **nanoseconds**, not microseconds: `OSSL_TIME` counts
+/// `OSSL_TIME_SECOND == 1_000_000_000` ticks per second, and `crypto/time.c`'s
+/// non-Windows arm multiplies the `struct timeval` by `OSSL_TIME_US` (1000) to
+/// get there. Reading `OSSL_TIME` as microseconds made `ossl_ms2time` look like
+/// `ms * 1000`, which is the mistake this comment exists to stop being repeated:
+/// the first version of the test above asserted a microsecond bound against a
+/// nanosecond value and failed by a factor of a thousand.
+fn time_now_nanos() -> u64 {
+    let mut tv = Timeval {
+        tv_sec: 0,
+        tv_usec: 0,
+    };
+    // SAFETY: `tv` is a valid, aligned `Timeval` and the timezone argument is
+    // documented as ignored and may be NULL.
+    let r = unsafe { sys::gettimeofday(&mut tv, core::ptr::null_mut()) };
+    if r < 0 {
+        return 0;
+    }
+    if tv.tv_sec <= 0 {
+        return if tv.tv_usec <= 0 {
+            0
+        } else {
+            (tv.tv_usec as u64) * 1000
+        };
+    }
+    ((tv.tv_sec as u64) * 1_000_000 + tv.tv_usec as u64) * 1000
+}
+
+/// `ossl_sleep_millis` — `nanosleep` for the whole number of milliseconds.
+fn sleep_millis(millis: u64) {
+    let ts = Timespec {
+        tv_sec: (millis / 1000) as c_long,
+        tv_nsec: ((millis % 1000) * 1_000_000) as c_long,
+    };
+    // SAFETY: `ts` is a valid, aligned `Timespec` and the remainder argument is
+    // documented as optional.
+    unsafe { nanosleep(&ts, core::ptr::null_mut()) };
+}
+
+unsafe extern "C" {
+    /// `int nanosleep(const struct timespec *req, struct timespec *rem)`, from
+    /// `<time.h>`.
+    fn nanosleep(req: *const Timespec, rem: *mut Timespec) -> c_int;
+}
+
+#[cfg(test)]
+mod sleep_tests {
+    use super::*;
+
+    #[test]
+    fn the_support_flags_are_the_profiles_three() {
+        assert_eq!(OSSL_get_thread_support_flags(), 3);
+    }
+
+    #[test]
+    fn a_zero_sleep_returns_immediately_and_a_small_one_actually_waits() {
+        let start = time_now_nanos();
+        OSSL_sleep(0);
+        assert!(time_now_nanos().wrapping_sub(start) < 1_000_000);
+
+        let start = time_now_nanos();
+        OSSL_sleep(20);
+        let elapsed = time_now_nanos().wrapping_sub(start);
+        // At least the requested time -- the loop cannot return early -- and not
+        // wildly more: `nanosleep` for 20ms does not overshoot by an order of
+        // magnitude on an unloaded machine. The units are nanoseconds.
+        assert!(elapsed >= 20_000_000, "elapsed {elapsed}ns");
+        assert!(elapsed < 2_000_000_000, "elapsed {elapsed}ns");
     }
 }

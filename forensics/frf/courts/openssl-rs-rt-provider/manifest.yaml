@@ -1,0 +1,59 @@
+# openssl-rs court: the Phase 6 `rt-provider` runtime surface.
+#
+# The subject is the transcript of a differential probe: one C program that
+# prints one `key=value` line per observation while exercising
+#
+#     the provider registry, driven entirely through a provider the probe itself declares: registration through OSSL_PROVIDER_add_builtin and its two refusals (a NULL name and a NULL entry point, the latter refused *before* anything is allocated); the load, which is also what disables automatic loading of the fallback provider, so the remaining observations are of a registry that will not supply one; the entry point's handle and the provider's own context, compared against the marker the probe published rather than printed; the dispatch table read back by entry *id* and terminator, because the two tables are at different addresses and identical in content; a second load of the same name, which finds the stored object and takes a second reference; the four delegated calls that answer through the provider's context, each with a NULL and a non-NULL argument so the pass-through is visible in both directions; an algorithm query whose no_cache the provider writes and the caller reads, unquery receiving exactly the pointer the query answered, and a NULL no_cache that is legal; the CONF parameter list, including a boolean read back through OSSL_PROVIDER_conf_get_bool with its default for a key that is not a boolean and for a key that does not exist; the per-context default search path, which a NULL clears as a *success* because the release precedes the NULL test; availability for a known name, an unknown name and the fallback name that the first load disabled; the enumeration and the callback's arguments; a load of a name that cannot be resolved; and the unload, teardown, reload and second unload that show initialisation happening exactly once and the teardown waiting for the last reference
+#
+# The same source is compiled against the admitted authority and against the
+# candidate, each side executes its own binary, and FRF compares the
+# transcripts.
+#
+# Scope: the observations the probe makes. It is NOT a claim about surface the
+# probe does not touch, and not a cryptographic or security claim.
+
+court:
+  id: openssl-rs-rt-provider
+  question: >-
+    For the rt-provider runtime surface in fixture family rt-provider, does
+    the candidate produce the same observable transcript as the admitted
+    authority OpenSSL 3.6.4 when both run the same probe over the same
+    fixture?
+  falsifier: >-
+    Any observation line differs between the two transcripts, or either
+    side's exit class differs.
+  authority: openssl-rt-3.6.4-r2
+  candidate:
+    name: openssl-rs
+    version_or_commit: "0.0.9"
+    build_profile: linux-x86_64-default-shared-legacy-notests
+    path: forensics/frf/refs/candidate-runtime-probe.sh
+  fixture:
+    id: probe-list.txt
+    path: forensics/frf/courts/openssl-rs-rt-provider/fixtures/probe-list.txt
+    arguments: ["{fixture}", "phase6"]
+  admissibility_envelope:
+    fixture_family: rt-provider
+    platforms: ["x86_64-linux"]
+    observables: [stdout, exit]
+    normalizers: []
+    replay_scope: single-run
+  execution_context:
+    artifacts:
+      - path: forensics/frf/refs/authority-runtime-probe.sh
+        role: child-executable
+      - path: forensics/frf/refs/candidate-runtime-probe.sh
+        role: child-executable
+      - path: artifacts/phase6/probes/rt_provider_probe.authority
+        role: child-executable
+      - path: artifacts/phase6/probes/rt_provider_probe.candidate
+        role: child-executable
+      - path: courts/phase6/rt_provider_probe.c
+        role: data
+      - path: forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+        role: runtime-library
+      - path: artifacts/phase2/libcrypto.so.3
+        role: runtime-library
+  environment:
+    LC_ALL: C
+    TZ: UTC

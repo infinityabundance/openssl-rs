@@ -129,14 +129,35 @@ FAMILIES = [
 # `ownership_audit.py` prove the two ledgers agree: Phase 4 must list exactly these
 # as deferred to Phase 5, and this stratum must list exactly these as the hand-offs
 # it discharged, so no symbol can be counted as implemented by two strata at once.
+# The four ASN.1 filter controls the Phase 4 ledger defers to this stratum. All four
+# are declared in `bio.h`, which is Phase 4's header, so the atlas gives them to
+# Phase 4 and Phase 4 hands their *behaviour* here -- the controls write and read the
+# prefix and suffix callbacks of the streaming encoder the template machinery
+# implements.
+#
+# `BIO_f_asn1` and `BIO_new_NDEF` are deliberately **not** in this list, and were in
+# it until D97. Both are declared in `asn1.h`, so the atlas already gives them to
+# this stratum and they appear here as `implemented`; listing them as a discharged
+# hand-off as well was an artifact of the old handler being prefix-based and
+# matching every `BIO_` name. `handoffs_discharged` and the deferring stratum's
+# `deferred` list are reconciled in both directions by `ownership_audit.py`, so a
+# row this stratum cannot receive is not a harmless extra: it is a claim the other
+# ledger would have to contradict.
 HANDED_OFF_FROM_PHASE4 = (
     "BIO_asn1_get_prefix",
     "BIO_asn1_get_suffix",
     "BIO_asn1_set_prefix",
     "BIO_asn1_set_suffix",
-    "BIO_f_asn1",
-    "BIO_new_NDEF",
 )
+
+# All of them, and the phase each edge comes from, so the ledger's
+# `handoffs_discharged` map is derived rather than typed twice. There is exactly one
+# edge today: Phase 4's six ASN.1 filter members. Phase 3 hands this stratum nothing:
+# `OPENSSL_gmtime` and its two neighbours are implemented in `src/runtime/time.rs`,
+# which is Phase 3's own module, and the ASN.1 time family only *calls* them (D85).
+HANDED_OFF_IN: dict[int, tuple[str, ...]] = {
+    4: HANDED_OFF_FROM_PHASE4,
+}
 
 # Exports of this stratum's families that a *later* stratum owns outright, with the
 # reason. `bn.h` declares every one of them, so they are this stratum's by D64's rule;
@@ -439,22 +460,23 @@ def main(argv: list[str]) -> int:
             continue
         claim(sym, MODULE_OF_HEADER.get(header, "src/asn1/"), header or "(no installed header)")
 
-    # The hand-offs Phase 4 handed this stratum must be accounted for here: a symbol
-    # Phase 4 deferred to Phase 5 that this stratum does not even claim is an
-    # obligation that fell between the two ledgers. They do not match the candidate
-    # prefix, because the header that declares them is `bio.h` -- Phase 4's header --
-    # so they are claimed by name.
-    for sym in HANDED_OFF_FROM_PHASE4:
-        if sym not in exports:
-            raise SystemExit(
-                f"phase5-obligations: {sym} is handed from Phase 4 but the "
-                "authority does not export it from this build profile"
-            )
-        owned.setdefault(sym, {
-            "symbol": sym,
-            "module": "src/asn1/",
-            "declaring_header": headers.get(sym, "bio.h"),
-        })
+    # The hand-offs earlier strata handed this stratum must be accounted for here: a
+    # symbol Phase 3 or Phase 4 deferred to Phase 5 that this stratum does not even
+    # claim is an obligation that fell between the two ledgers. They do not match any
+    # candidate prefix, because the header that declares them is `bio.h` or
+    # `crypto.h` -- an earlier stratum's header -- so they are claimed by name.
+    for source, symbols in sorted(HANDED_OFF_IN.items()):
+        for sym in symbols:
+            if sym not in exports:
+                raise SystemExit(
+                    f"phase5-obligations: {sym} is handed from Phase {source} but "
+                    "the authority does not export it from this build profile"
+                )
+            owned.setdefault(sym, {
+                "symbol": sym,
+                "module": "src/asn1/",
+                "declaring_header": headers.get(sym, "bio.h"),
+            })
 
     bad = [r for r in deferred if r["owning_phase"] <= 5]
     if bad:
@@ -464,23 +486,44 @@ def main(argv: list[str]) -> int:
         )
 
     atlas_symbols = {r["symbol"] for r in mine}
-    by_name = [s for s in HANDED_OFF_FROM_PHASE4 if s not in atlas_symbols]
+    by_name = [s for _source, syms in sorted(HANDED_OFF_IN.items())
+               for s in syms if s not in atlas_symbols]
     if len(owned) != len(mine) + len(by_name):
         raise SystemExit(
             "phase5-obligations: the projection covers "
             f"{len(owned)} exports but the atlas assigns this stratum {len(mine)} "
-            f"plus {len(by_name)} of the {len(HANDED_OFF_FROM_PHASE4)} Phase 4 "
-            "hand-offs (the rest the atlas already assigns, because their "
-            "declaration moved to a header this stratum owns)"
+            f"plus {len(by_name)} of the "
+            f"{sum(len(v) for v in HANDED_OFF_IN.values())} hand-offs from earlier "
+            "strata (the rest the atlas already assigns, because their declaration "
+            "moved to a header this stratum owns)"
         )
 
-    implemented_here = sorted(s for s in owned if s in implemented)
+    # `implemented` means implemented **by this stratum**, so a symbol this stratum handed
+    # on is excluded even once the receiving stratum has built it. Leaving it in counts the
+    # same export as done in two ledgers at once, which is what `ownership_audit.py` reports
+    # as double-counted work rather than as progress. `ASN1_add_oid_module` is the case that
+    # found this: Phase 5 owns it because `asn1.h` declares it, Phase 5 handed it to Phase 6
+    # because only the module registry constructs a `CONF_MODULE`, and 6.10d built it — at
+    # which point this line was the only thing standing between a true statement and a
+    # double-counted one. Phases 3, 4 and 6 already excluded it; Phase 5's generator was
+    # rewritten when it abandoned `FAMILIES` and this one predicate was left behind.
     handed_on = {r["symbol"] for r in deferred}
+    implemented_here = sorted(s for s in owned if s in implemented and s not in handed_on)
     open_rows = [
         {"symbol": s, "module": owned[s]["module"],
          "declaring_header": owned[s]["declaring_header"]}
         for s in sorted(owned) if s not in implemented and s not in handed_on
     ]
+
+    # The same partition identity the other three strata's generators assert: every owned
+    # export is implemented here, handed on, or open -- exactly one of the three. A generator
+    # that lost a symbol would otherwise report a smaller `open` as progress.
+    if len(owned) != len(implemented_here) + len(handed_on) + len(open_rows):
+        raise SystemExit(
+            "phase5-obligations: the projection does not partition: "
+            f"owned={len(owned)} implemented={len(implemented_here)} "
+            f"handed_on={len(handed_on)} open={len(open_rows)}"
+        )
 
     body = {
         "rule": (
@@ -502,7 +545,9 @@ def main(argv: list[str]) -> int:
         "implemented": implemented_here,
         "deferred": sorted(deferred, key=lambda r: r["symbol"]),
         "open": open_rows,
-        "handoffs_discharged": {"4": sorted(HANDED_OFF_FROM_PHASE4)},
+        "handoffs_discharged": {
+            str(source): sorted(syms) for source, syms in sorted(HANDED_OFF_IN.items())
+        },
         "owned_by_module": dict(
             sorted(
                 Counter(

@@ -1048,6 +1048,92 @@ int main(void)
     }
 
     BN_CTX_free(ctx);
+    /*
+     * --- the signed encoders' fit rule -----------------------------------
+     *
+     * These four functions were exercised above with destinations that were obviously
+     * large enough, which is exactly the case where the fit rule does not matter. A
+     * signed encoding needs `n + ext` bytes rather than `n`, where `ext` compensates for
+     * the top byte being read as a sign, so the *tight* destinations are where the rule
+     * is observable — and `crypto/param_build.c` reaches `BN_signed_bn2native` with
+     * exactly `BN_num_bytes` bytes for a negative value, which is why this sweep exists:
+     * `RT-PARAM` found the refusal and it belongs to this stratum.
+     *
+     * Every value is swept over every `tolen` from 0 to 5, and the bytes are compared
+     * after the call so that a refusal that wrote anyway is visible.
+     */
+    {
+        static const char *SIGNED_VALUES[] = {
+            "0", "1", "-1", "7f", "80", "-80", "ff", "-ff", "0102", "-0102",
+            "7fff", "8000", "-8000", "ffff", "-ffff", "010000", "-010000",
+            "ffffffffffffffff", "ffffffffffffffffff", "80000000000000",
+        };
+        size_t vi;
+
+        for (vi = 0; vi < sizeof(SIGNED_VALUES) / sizeof(SIGNED_VALUES[0]); vi++) {
+            BIGNUM *a = bn(SIGNED_VALUES[vi]);
+            int tolen;
+
+            for (tolen = 0; tolen <= 5; tolen++) {
+                unsigned char buf[8];
+                char key[64];
+                int j;
+
+                memset(buf, 0xAA, sizeof buf);
+                printf("signed.native.%s.%d.rc=%d\n", SIGNED_VALUES[vi], tolen,
+                       BN_signed_bn2native(a, buf, tolen));
+                printf("signed.native.%s.%d.bytes=", SIGNED_VALUES[vi], tolen);
+                for (j = 0; j < 8; j++)
+                    printf("%02x", buf[j]);
+                printf("\n");
+
+                memset(buf, 0xAA, sizeof buf);
+                printf("signed.bin.%s.%d.rc=%d\n", SIGNED_VALUES[vi], tolen,
+                       BN_signed_bn2bin(a, buf, tolen));
+                printf("signed.bin.%s.%d.bytes=", SIGNED_VALUES[vi], tolen);
+                for (j = 0; j < 8; j++)
+                    printf("%02x", buf[j]);
+                printf("\n");
+
+                memset(buf, 0xAA, sizeof buf);
+                printf("signed.lebin.%s.%d.rc=%d\n", SIGNED_VALUES[vi], tolen,
+                       BN_signed_bn2lebin(a, buf, tolen));
+                printf("signed.lebin.%s.%d.bytes=", SIGNED_VALUES[vi], tolen);
+                for (j = 0; j < 8; j++)
+                    printf("%02x", buf[j]);
+                printf("\n");
+
+                /* A negative `tolen` is refused by every one of them before anything
+                 * is written. */
+                if (tolen == 0) {
+                    memset(buf, 0xAA, sizeof buf);
+                    snprintf(key, sizeof key, "signed.negative_tolen.%s", SIGNED_VALUES[vi]);
+                    printf("%s.native=%d\n", key, BN_signed_bn2native(a, buf, -1));
+                    printf("%s.bin=%d\n", key, BN_signed_bn2bin(a, buf, -1));
+                    printf("%s.lebin=%d\n", key, BN_signed_bn2lebin(a, buf, -1));
+                }
+            }
+            /* The inverse: a two's-complement byte string back to a value. */
+            {
+                int w;
+
+                for (w = 1; w <= 4; w++) {
+                    unsigned char buf[8];
+                    BIGNUM *back;
+                    size_t j;
+
+                    for (j = 0; j < sizeof buf; j++)
+                        buf[j] = (unsigned char) (0x80 | w);
+                    back = BN_signed_native2bn(buf, w, NULL);
+                    printf("signed.inverse.%s.%d.neg=%d\n", SIGNED_VALUES[vi], w,
+                           back != NULL ? BN_is_negative(back) : -1);
+                    BN_free(back);
+                }
+            }
+            BN_free(a);
+        }
+    }
+
     printf("done=1\n");
     return 0;
 }

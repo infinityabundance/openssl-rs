@@ -124,12 +124,39 @@ jobs:
       - name: Evidence determinism
         run: python3 forensics/tools/evidence_determinism.py
 
-      # An export that matches no phase family is invisible to every ledger at
-      # once, so the shell scaffolds it and no obligation records it. That has
-      # happened twice (D49, D51) and was found by reading both times. This makes
-      # the invariant mechanical: no implemented export may be unowned.
+      # An export the ownership atlas assigns a stratum must appear in that stratum's
+      # ledger, and a row a ledger carries for another stratum's export must be a
+      # hand-off that stratum recorded. Both were unchecked: D49, D51 and D72 record
+      # an export being invisible to every ledger at once, and D97 records sixty-nine
+      # and nineteen such exports in two strata that had already sealed as complete.
       - name: Symbol ownership
         run: python3 forensics/tools/ownership_audit.py
+
+      # Four dependency inversions have been found in Phase 6 alone, every one by hand
+      # and none by a tool, because the authority surface a prerequisite is drawn from
+      # -- non-exported functions, internal-header macros, enum members -- is invisible
+      # to every atlas built from exports. This gate reads the four atlases that cover
+      # it and refuses a dependency nobody owns.
+      - name: Prerequisite coverage
+        run: python3 forensics/tools/prerequisite_gate.py
+
+      # The other half of the same question, and the one D132 fell through. The gate above
+      # asks whether every name the crate *references* has an owner; a name nothing
+      # references is invisible to it, and `crypto/core_algorithm.c` was exactly that --
+      # named by two subphase rows of a stratum about to seal, unbuilt, and reaching no
+      # check at all. This reads the subphase plans instead, so the universe is what a
+      # stratum *promises* rather than what the crate mentions. Every unit and every
+      # authority-internal function a complete or in-progress plan names must be
+      # transcribed, built, referenced or named by an explicit record.
+      - name: Plan reconciliation
+        run: python3 forensics/tools/plan_reconciliation.py
+
+      # The prerequisite atlases are derived from the authority's source and build
+      # trees, which are not committed. Weak tier: the committed artefacts are checked
+      # for internal consistency here, and the `courts` job re-derives them from the
+      # authority and fails on any difference.
+      - name: Prerequisite atlases (committed artefacts)
+        run: python3 forensics/tools/gen_prerequisite_atlas.py --check
 
       # The atlas records every authority prototype and nothing compared it with the
       # crate's declarations, which is how `BN_signed_lebin2bn` came to be declared
@@ -232,6 +259,46 @@ jobs:
       # result this run does not reproduce. See docs/DECISIONS.md D94.
       - name: Every active stratum's courts, derived from the phase registry
         run: bash docker/openssl-rs-court.sh exec python3 forensics/tools/run_courts.py
+
+      # The prerequisite atlases are the one part of the gate that needs the authority,
+      # so they are re-derived here -- after the courts, because the crate's static
+      # archive and `implemented-surface.json` are build products `run_courts.py`
+      # produces on the way -- and compared byte for byte against the committed
+      # artefacts. The gate itself then runs in both jobs from the same committed
+      # files, which is what lets the static job answer the question at all.
+      - name: Re-derive the prerequisite atlases
+        run: |
+          bash docker/openssl-rs-court.sh exec python3 forensics/tools/gen_prerequisite_atlas.py
+          git diff --exit-code -- \
+            forensics/atlas/internal-symbols.json \
+            forensics/atlas/macro-owners.json \
+            forensics/atlas/typedef-owners.json \
+            forensics/atlas/transcription-edges.json || {
+            echo "::error::the prerequisite atlases are stale; regenerate and commit them";
+            exit 1;
+          }
+
+      # A court compares two transcripts, which only means something if the
+      # transcript is a property of the library under test. A probe that reads
+      # memory it did not initialise makes the transcript a property of its own
+      # stack frame, and the difference then looks exactly like a candidate
+      # defect: `RT-PARAM` reported 24 against 22 for an out-of-bounds read in the
+      # probe that cost a session to diagnose. This gate recompiles every probe at
+      # three optimisation levels and fails if the answers differ, which is the
+      # signature of that class. It needs no sanitizer runtime, which is fortunate
+      # because ASan's terabyte shadow reservation is refused by the court's own
+      # OOM protection. See docs/DECISIONS.md D105.
+      - name: Probe hygiene (each probe must answer the same at every -O level)
+        run: |
+          bash docker/openssl-rs-court.sh exec python3 forensics/tools/probe_hygiene.py
+          # The committed record is compared, not merely regenerated. A gate that
+          # passes while its own evidence file has gone stale is the failure mode
+          # `run_courts.py` exists to prevent for the courts, and the artefact is
+          # byte-deterministic (measured), so an exact comparison is available.
+          git diff --exit-code -- artifacts/probe-hygiene.json || {
+            echo "::error::artifacts/probe-hygiene.json changed; regenerate and commit it";
+            exit 1;
+          }
 
       - name: Resolve trusted baseline ref
         id: baseline

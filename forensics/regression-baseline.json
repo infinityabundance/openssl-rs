@@ -3,7 +3,8 @@
     "phase2",
     "phase3",
     "phase4",
-    "phase5"
+    "phase5",
+    "phase6"
   ],
   "courts": {
     "ABI-CONSTANTS": {
@@ -90,6 +91,10 @@
       "observations": 296,
       "verdict": "pass"
     },
+    "RT-BIO-CORE": {
+      "observations": 109,
+      "verdict": "pass"
+    },
     "RT-BIO-DEBUG": {
       "observations": 57,
       "verdict": "pass"
@@ -127,11 +132,23 @@
       "verdict": "pass"
     },
     "RT-BN": {
-      "observations": 650,
+      "observations": 1510,
+      "verdict": "pass"
+    },
+    "RT-COMP": {
+      "observations": 27,
       "verdict": "pass"
     },
     "RT-CONF": {
       "observations": 736,
+      "verdict": "pass"
+    },
+    "RT-CONF-MOD": {
+      "observations": 247,
+      "verdict": "pass"
+    },
+    "RT-DSO": {
+      "observations": 145,
       "verdict": "pass"
     },
     "RT-ERR": {
@@ -150,20 +167,52 @@
       "observations": 56,
       "verdict": "pass"
     },
+    "RT-LIBCTX": {
+      "observations": 124,
+      "verdict": "pass"
+    },
     "RT-MEM": {
       "observations": 82,
+      "verdict": "pass"
+    },
+    "RT-MEM-DEFAULT": {
+      "observations": 39,
+      "verdict": "pass"
+    },
+    "RT-MEM-INSTALL": {
+      "observations": 15,
       "verdict": "pass"
     },
     "RT-OBJ-STREAM": {
       "observations": 91,
       "verdict": "pass"
     },
+    "RT-PARAM": {
+      "observations": 1162,
+      "verdict": "pass"
+    },
     "RT-PEM": {
       "observations": 37,
       "verdict": "pass"
     },
+    "RT-PROVIDER": {
+      "observations": 80,
+      "verdict": "pass"
+    },
+    "RT-PROVIDER-3P": {
+      "observations": 40,
+      "verdict": "pass"
+    },
+    "RT-RUNTIME-EXT": {
+      "observations": 94,
+      "verdict": "pass"
+    },
     "RT-SECURE": {
       "observations": 32,
+      "verdict": "pass"
+    },
+    "RT-SELFTEST": {
+      "observations": 71,
       "verdict": "pass"
     },
     "RT-STACK": {
@@ -174,29 +223,36 @@
       "observations": 40,
       "verdict": "pass"
     },
+    "RT-THREADDATA": {
+      "observations": 54,
+      "verdict": "pass"
+    },
     "libcrypto-contamination": {
       "observations": 0,
       "verdict": "pass"
     }
   },
   "deferred": {
-    "phase3": 11,
-    "phase4": 31,
-    "phase5": 91
+    "phase3": 43,
+    "phase4": 23,
+    "phase5": 91,
+    "phase6": 0
   },
   "implemented": {
-    "libcrypto": 932,
+    "libcrypto": 1135,
     "libssl": 0
   },
   "open_obligations": {
     "phase3": 0,
     "phase4": 0,
-    "phase5": 0
+    "phase5": 0,
+    "phase6": 0
   },
   "owned_obligations": {
-    "phase3": 235,
-    "phase4": 262,
-    "phase5": 565
+    "phase3": 294,
+    "phase4": 272,
+    "phase5": 565,
+    "phase6": 161
   },
   "phases": {
     "0": "complete",
@@ -217,9 +273,16 @@
     "3": "complete",
     "4": "complete",
     "5": "complete",
-    "6": "not-started",
+    "6": "complete",
     "7": "not-started",
     "8": "not-started",
     "9": "not-started"
+  },
+  "prerequisites": {
+    "blocking_dependencies": 15,
+    "divergence_names_covered": 32,
+    "findings": 0,
+    "language_census": 2085,
+    "sealed_census": 59
   }
 }

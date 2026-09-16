@@ -74,6 +74,27 @@ each case the probe prints a `NOT_MEASURED_AUTHORITY_FAULTS` marker: the boundar
 is visible in the transcript rather than silently absent from it. The
 observations that *can* be made around each boundary are compared normally.
 
+### D-MEM-ALIGNED-1 — the `CRYPTO_aligned_alloc` family writes through a NULL `freeptr`
+
+- **Obligation:** `CRYPTO_aligned_alloc(num, align, NULL, file, line)` and
+  `CRYPTO_aligned_alloc_array(num, size, align, NULL, file, line)`.
+- **Authority:** segfaults on both. The first statement of each is `*freeptr =
+  NULL;` with no test, and the `_array` form reaches it through the overflow arm
+  as well. Measured: exit 139 for both, each in a process of its own, so the
+  measurement is the fault and there is nothing to compare past it
+  (`courts/phase3/rt_mem_default_probe.c` prints the marker).
+- **Candidate:** returns NULL. Its own doc comment had said `freeptr` "must be
+  NULL or writable for one pointer", which read as though NULL were an accepted
+  argument while the authority's code makes it a fault; the code was already safe
+  and the *documentation* was the defect.
+- **Reason:** a NULL store is not a contract to reproduce. The distinction matters
+  more here than for the other entries in this section because the guard is the
+  difference between a returned error and a crash in a function whose whole purpose
+  is to hand the caller a pointer to release.
+- **Claim removed:** NULL-`freeptr` behaviour is *not* claimed compatible; it is
+  claimed *safe*. For a writable `freeptr` the value and the block identity are
+  compared normally and match.
+
 ### D-MEM-ATOMIC-1 — atomics dereference a NULL `ret`
 
 - **Obligation:** `CRYPTO_atomic_or` / `CRYPTO_atomic_and` / `CRYPTO_atomic_load`
@@ -492,3 +513,298 @@ observations that *can* be made around each boundary are compared normally.
   an `ASN1_ITEM_EXP` — is the same class and is equally unreproduced.
 - **Claim removed:** not claimed compatible. The probe does not exercise these, because a
   probe cannot compare a crash.
+
+### D-BIOCORE-1 — `BIO_new_from_core_bio` calls a NULL `BIO_up_ref`
+
+- **Obligation:** `BIO_new_from_core_bio(libctx, corebio)` where the context's dispatch
+  table supplies `BIO_read_ex` and/or `BIO_write_ex` but **no** `BIO_up_ref`.
+- **Authority:** the constructor's guard tests only the two I/O callbacks, and the next
+  statement is
+  ```c
+  if (!bcgbl->c_bio_up_ref(corebio)) { BIO_free(outbio); return NULL; }
+  ```
+  with no test for `c_bio_up_ref == NULL`. Measured: the guard passes, a BIO is created,
+  and the unguarded call jumps to address zero. A table with only one of `read_ex` and
+  `write_ex` is therefore accepted by the *guard* and fatal by the *next line*.
+- **Candidate:** answers the documented failure instead. The `up_ref` slot is an
+  `Option<fn>`, so absence is representable; a missing `up_ref` releases the wrapper BIO
+  it just created and returns NULL, exactly as an `up_ref` that answers 0 does. This is
+  the same reachable failure a caller who supplied a refusing `up_ref` sees, which is
+  why it can be answered rather than reproduced.
+- **Reason:** `docs/UNSAFE.md` §5 — a crash is not reproduced merely because an observed
+  run produced one. No caller that supplies a usable table can tell the two behaviours
+  apart, because every path that reaches the unguarded call in the authority dies there.
+- **Claim removed:** a table without `BIO_up_ref` is not claimed to produce a BIO.
+  `RT-BIO-CORE` stops one step short: it supplies a table that has `up_ref` and *refuses*
+  (`noup.bio=NULL`, and the wrapper's `BIO_free` callback runs with a NULL handle), which
+  the authority answers without faulting and which is compared.
+
+### D-BIOCORE-2 — `bio_core_free` calls a NULL `BIO_free`
+
+- **Obligation:** releasing any core BIO whose context has no `BIO_free` callback —
+  which includes every BIO built as `BIO_new(BIO_s_core())`, since no export installs a
+  table on the default context.
+- **Authority:** `bio_core_free` tests only the globals block, then calls
+  `bcgbl->c_bio_free(BIO_get_data(bio))` with no NULL test on the stored pointer. The
+  globals block is non-NULL for every context (`context_init` fills slot 17 eagerly), so
+  the first test never fires and the second call is unguarded.
+- **Candidate:** answers `0` from the destroy operation when the callback is absent, and
+  lets `BIO_free` proceed to release the wrapper. `0` from `destroy` is not observable
+  through `BIO_free`, whose return value reports the reference count rather than the
+  destroy result.
+- **Reason:** as D-BIOCORE-1.
+- **Claim removed:** `BIO_free` of a core BIO whose context supplied no `BIO_free`
+  callback is not claimed compatible. `RT-BIO-CORE` frees only BIOs whose tables supply
+  `free` (`full`, `wonly`, `ronly`, `noup`, `alpha`, `beta`), and deliberately does not
+  free the `plain.bio` it builds with `BIO_new(BIO_s_core())`.
+
+### D-BIOCORE-3 — `ossl_bio_init_core` dereferences a NULL dispatch table
+
+- **Obligation:** `OSSL_LIB_CTX_new_from_dispatch(handle, NULL)` — reachable from an
+  export, since the export forwards its `in` argument straight to `ossl_bio_init_core`.
+- **Authority:** the table walk's own loop condition is `fns->function_id != 0`, evaluated
+  before any NULL test (there is no NULL test anywhere in the function), so a NULL table
+  faults on the first iteration.
+- **Candidate:** treats NULL as the terminator-only table it is equivalent to and answers
+  `1`, so the caller receives an empty but usable context. A table consisting solely of
+  `OSSL_DISPATCH_END` reaches the same state in the authority without faulting, and the
+  candidate's two paths are indistinguishable from the caller's side.
+- **Reason:** `docs/UNSAFE.md` §5. The parameter is documented as a table; the authority's
+  own providers never pass NULL.
+- **Claim removed:** `OSSL_LIB_CTX_new_from_dispatch(handle, NULL)` is not claimed
+  compatible. `RT-BIO-CORE` passes a real table to that export and a NULL *handle*, which
+  the authority accepts and ignores.
+
+### D-OSSL-CORE-BIO-1 — `ossl_core_bio_up_ref` dereferences a NULL handle
+
+- **Obligation:** `ossl_core_bio_up_ref` — reachable from a provider, because
+  `core_dispatch` publishes it as `OSSL_FUNC_BIO_UP_REF` and a provider may call what the
+  core gives it.
+- **Authority:** the whole body is `return CRYPTO_UP_REF(&cb->ref_cnt, &ref);` with no NULL
+  test, so a NULL handle dereferences NULL. `ossl_core_bio_free`, in the same file and on
+  the same type, **is** NULL-tolerant and answers 1 — the asymmetry is the authority's and
+  is not explained by anything in the source.
+- **Candidate:** answers `0` for a NULL handle. `0` is not a defined answer either — it is
+  the value the authority would return for a reference count that has already reached zero —
+  so the caller's behaviour on this path is the same as the authority's would be *if* the
+  fault did not happen.
+- **Reason:** `docs/UNSAFE.md` §5. No caller in the authority passes NULL: the only ones are
+  the two constructors, which pass a handle they just built, and `core_dispatch`'s thunk,
+  which receives whatever a provider supplies.
+- **Claim removed:** `ossl_core_bio_up_ref(NULL)` is not claimed compatible. `RT-PROVIDER`
+  does not call it with NULL, and this function has no exported symbol, so it is reachable
+  only through the dispatch table a provider is handed.
+
+### D-TEVENT-REENTRANT-1 — a thread-stop handler that registers another handler deadlocks upstream
+
+- **Obligation:** `ossl_init_thread_start`, reachable from a provider through
+  `core_dispatch`'s `OSSL_FUNC_CORE_THREAD_START` entry (id 3), which is what
+  `ossl_provider_init`'s `in` table hands a provider.
+- **Authority:** `init_thread_stop` takes the global register's **write lock** and then calls
+  the handler *while holding it*. A handler that calls `ossl_init_thread_start` re-enters
+  `init_thread_push_handlers`, which asks for the same lock. On the admitted pthread profile
+  the register's lock is a `pthread_rwlock_t`, and `pthread_rwlock_wrlock` on a lock the
+  calling thread already holds for writing does not return — the handler never finishes, the
+  lock is never released, and thread teardown hangs. Measured by this crate's own lock, which
+  refuses a same-thread write acquisition instead of deadlocking: the nested registration is
+  answered 0.
+- **Candidate:** the nested registration is **refused** with `0`, and the handler's node is
+  released rather than left on a list nobody can walk. The caller observes a failed
+  registration and can retry from outside the stop; the alternative is a hang.
+- **Reason:** `docs/UNSAFE.md` §5. A deadlock inside thread teardown is not a behaviour a
+  consumer can depend on — there is no return value, no error queue entry and no way to
+  recover — so reproducing it would be importing a hang for the sake of fidelity.
+- **Claim removed:** "a handler may register another handler during a stop" is not claimed
+  compatible. Unit test `a_handler_registered_during_a_stop_is_refused` asserts the refusal,
+  and the *certain* half — that the nested handler is not called by the same stop, because the
+  walk unlinks as it goes — is asserted with it.
+
+### D-CHILD-DEREGISTER-NULL-1 — `ossl_provider_init_as_child` does not validate one pointer, and `ossl_provider_deinit_child` calls it unguarded
+
+- **Obligation:** `ossl_provider_init_as_child` and `ossl_provider_deinit_child`,
+  `crypto/provider_child.c`. Reachable from `OSSL_LIB_CTX_new_child` and
+  `OSSL_LIB_CTX_free`, so any third-party provider that creates a child context is on both
+  paths.
+- **Authority:** the initialiser stores **eight** dispatch entries and validates **seven** —
+  `c_get_libctx`, `c_provider_register_child_cb`, `c_prov_name`,
+  `c_prov_get0_provider_ctx`, `c_prov_get0_dispatch`, `c_prov_up_ref` and `c_prov_free`. The
+  eighth, `c_provider_deregister_child_cb`, is not in the test. Then
+  `ossl_provider_deinit_child` calls `gbl->c_provider_deregister_child_cb(gbl->handle)`
+  **unguarded**, so a parent that publishes a table without `OSSL_FUNC_PROVIDER_DEREGISTER_CHILD_CB`
+  initialises successfully and **jumps through NULL** when the context is freed.
+- **Candidate:** the initialisation half is the authority's **exactly** — seven validated, the
+  eighth stored unvalidated — so a court comparing the initialisation contract sees the
+  authority. The teardown half **checks the pointer and returns when it is absent**.
+- **Reason:** a jump through NULL inside `OSSL_LIB_CTX_free` is a fault, and faults are
+  recorded rather than reproduced (`docs/UNSAFE.md` §5). Splitting the pair is the point: the
+  *validation contract* is observable and is claimed, and the *fault* is not.
+- **Claim removed:** "a child context created from a table without the deregister entry cannot
+  be freed" is not claimed. The candidate can free it; the authority cannot.
+- **Observed how:** `RT-LIBCTX` creates a child with the seven-entry table and observes the
+  initialisation succeeding (`child.no_deregister=nonnull`,
+  `child.no_deregister.register_called=1`), and **deliberately does not free it** — freeing it
+  would crash the authority, so the divergence's teardown half is stated in the probe's own
+  comment rather than measured.
+
+### D-CHILD-REGISTER-PROPS-1 and D-CHILD-PROPS-CB-1 — the child's global-property path, which is Phase 7's
+
+These two are one divergence with two halves, and they are the reason the child mechanism is
+complete in this crate without being complete in the authority. Both are the same missing
+function: `crypto/evp/evp_fetch.c`'s `evp_get_global_properties_str` and
+`evp_set_default_properties_int`, which are **Phase 7's** and are recorded deferrals in
+`forensics/prerequisites.json`.
+
+- **Obligation:** `provider_global_props_cb` (`crypto/provider_child.c`) and
+  `ossl_provider_register_child_cb` (`crypto/provider_core.c`'s, reached through the core
+  dispatch entry `OSSL_FUNC_PROVIDER_REGISTER_CHILD_CB`).
+- **Authority:** `provider_global_props_cb` is `evp_set_default_properties_int(ctx, props, 0,
+  1)` and answers its result. `ossl_provider_register_child_cb` calls `propsstr =
+  evp_get_global_properties_str(libctx, 0)` and, when it is non-NULL, calls the registrant's
+  `global_props_cb(propsstr, cbdata)` **before** the walk over the store's providers.
+- **Candidate:** `provider_global_props_cb` answers **0** — the authority's own failure
+  answer — and raises nothing. `ossl_provider_register_child_cb` omits the property-string
+  step, so a registering parent is not handed its own global properties at registration time.
+- **Reason:** the functions are in a file this stratum does not own and cannot write, and the
+  gate records them as owed to Phase 7. Writing a body that quietly answered a value the
+  authority would compute differently is exactly what a recorded divergence exists to avoid.
+- **Claim removed:** "the child's default property query is initialised from the parent's at
+  registration" is not claimed. It becomes claimable in Phase 7.
+- **Observed as of 6.12, and on one side only:** `RT-PROVIDER-3P` compiles an
+  `OSSL_provider_init` into its own binary, so it is a real third-party provider and it takes
+  the parent role. Its registration **succeeds on both sides** — `child.register_child_ret`
+  is 2 (the child's own registration plus the probe's) and the probe's `create_cb` runs once
+  for the provider it loaded, with the handle equal to the `OSSL_PROVIDER *` the probe's own
+  `OSSL_PROVIDER_load_ex` returned. What the court does **not** observe is
+  `global_props_cb`: the walk over the store's providers is the authority's and the candidate's
+  alike, and it is only the property-string step *before* it that is missing here, so a probe
+  that counted `global_props_cb` calls would be counting the divergence rather than the
+  contract. The probe stores the callback, reports its pointer as non-NULL — which both sides
+  agree on — and does not report whether it was called. The absence of that step is therefore
+  still **not measured by any court**, and this entry is what says so.
+
+### ~~D-TEVENT-CTX-STOP-LEAK-1~~ — **WITHDRAWN: the authority does not do this**
+
+**This entry is retained, struck through, because it was wrong and the way it was wrong is
+worth reading. It is not a divergence: there is no behavioural difference between the
+authority and the candidate for this function, and there was never supposed to be one.**
+
+- **What was claimed:** that the authority's `ossl_ctx_thread_stop` is
+  `hands = clear_thread_local(ctx); init_thread_stop(ctx, hands); OPENSSL_free(hands);`, so the
+  head is released while other contexts' handler nodes are still linked to it, those nodes leak,
+  and a subsequent `OPENSSL_thread_stop` runs nothing.
+- **What the authority actually is:**
+  `void ossl_ctx_thread_stop(OSSL_LIB_CTX *ctx) { if (destructor_key.sane != -1) {
+  THREAD_EVENT_HANDLER **hands = fetch_thread_local(ctx); init_thread_stop(ctx, hands); } }`
+  — `fetch_thread_local`, which is `manage_thread_local(ctx, 0, 1)`, fetches **without**
+  allocating and **without** clearing; the head is neither cleared nor released, the thread
+  keeps it, the register keeps it, and every handler for another context is still reachable.
+  `fetch_thread_local` is marked `ossl_unused` in the source because the FIPS build does not
+  call it; this profile is the non-FIPS build, which does.
+- **How the error survived:** the crate had been written against `clear_thread_local` and a
+  `CRYPTO_free` of the head, this test asserted that shape, and the entry was written from the
+  test rather than from the authority. A divergence record derived from the candidate's own
+  behaviour is a record of nothing, and that is the lesson worth keeping here.
+- **Why it became visible:** leaving a freed head's address in `GLOBAL_TEVENT_REGISTER`'s
+  `skhands` means the walk in `init_thread_deregister(NULL, 1)`, which `OPENSSL_cleanup` runs,
+  dereferences released memory. The Rust build refuses that dereference instead of reading the
+  corpse, so the observable was `OPENSSL_cleanup` **aborting the process at exit** — found by
+  running the full unit-test binary once the exit-time cleanup was reachable, which it had not
+  been before.
+- **Candidate now:** the authority's two statements, and no `CRYPTO_free`. Unit tests
+  `the_context_stop_filters_on_the_argument` (a survivor is still reachable afterwards) and
+  `a_second_context_stop_for_the_same_argument_runs_nothing` (the node that ran is gone) pin
+  both halves.
+- **Claim removed:** none; the claim is now made and true. See `docs/DECISIONS.md` D127.
+
+### D-RCU-1 — the read side indexes `thread_qps[-1]` when the array is full
+
+- **Obligation:** an eleventh *distinct* `CRYPTO_RCU_LOCK` held simultaneously by one
+  thread. `MAX_QPS` is 10 and each slot holds one lock.
+- **Authority:** `ossl_rcu_read_lock` scans the ten slots for a free one, and then, for the
+  case where every slot is taken:
+  ```c
+  assert(available_qp != -1);
+  data->thread_qps[available_qp].qp = get_hold_current_qp(lock);
+  ```
+  `NDEBUG` is defined in the admitted profile, so the `assert` is `((void)0)` and
+  `available_qp` is still `-1`: the three writes that follow go to `thread_qps[-1]`, which
+  is the twelve bytes immediately before the array inside the `rcu_thr_data` allocation.
+- **Candidate:** answers `0` — "the hold was refused" — which the function's other two
+  failure arms already use for "no data block" and "the thread handler could not be
+  registered". A caller that checks the result, as the only in-tree caller will have to
+  because it can already be told 0 for two other reasons, sees a refusal instead of a
+  corruption.
+- **Reason:** out-of-bounds writes are precisely what `docs/UNSAFE.md` §5 refuses to
+  reproduce, and the value written would be a lock pointer and two integers written over
+  whatever the allocator put there.
+- **Claim removed:** eleven simultaneous distinct RCU locks on one thread are not claimed
+  compatible. No probe can reach this: it needs eleven live locks from a consumer, and RCU
+  has no exported entry point at all (see D-RCU-4). The unit test
+  `an_eleventh_distinct_lock_is_refused_rather_than_indexed_out_of_bounds` pins the refusal
+  on the candidate side only.
+
+### D-RCU-2 — `ossl_rcu_read_unlock` dereferences a NULL `rcu_thr_data`
+
+- **Obligation:** `ossl_rcu_read_unlock(lock)` on a lock this thread has never read-locked,
+  with no thread data for the lock's context.
+- **Authority:** the function's first two statements are
+  ```c
+  struct rcu_thr_data *data = CRYPTO_THREAD_get_local_ex(CRYPTO_THREAD_LOCAL_RCU_KEY, lock->ctx);
+  assert(data != NULL);
+  ```
+  and the `assert` is compiled out under `NDEBUG`, so the loop that follows dereferences
+  NULL on its first iteration.
+- **Candidate:** returns. "Unlocking something not held" has no defined answer in the
+  authority either, so there is nothing to be compatible *with*; the crate declines to
+  fault.
+- **Reason:** as D-RCU-1.
+- **Claim removed:** an unbalanced unlock with no thread data is not claimed compatible.
+  `an_unbalanced_unlock_neither_faults_nor_disturbs_a_later_hold` pins that the candidate's
+  answer leaves the surrounding state alone, which is the only property that can be stated.
+
+### D-RCU-3 — the read side dies on an over-unlock where the check *is* active
+
+- **Obligation:** an unlock that takes a quiescent point's reader count below zero — more
+  unlocks than locks on one lock from one thread.
+- **Authority:** the decrement is
+  ```c
+  ret = ATOMIC_SUB_FETCH(&data->thread_qps[i].qp->users, (uint64_t)1, __ATOMIC_RELEASE);
+  OPENSSL_assert(ret != UINT64_MAX);
+  ```
+  and `OPENSSL_assert` in `include/openssl/crypto.h.in` is **not** `NDEBUG`-gated: it is
+  `OPENSSL_die("assertion failed: " #e, ...)`. Measured: the count wrapping to
+  `UINT64_MAX` aborts the process. Note the asymmetry with D-RCU-2, and that it is the
+  reason this entry exists separately: the authority checks this case and not the other,
+  and the crate answers both.
+- **Candidate:** puts the count back to zero — the state a caller who never took the hold
+  describes — and clears the slot. Leaving the wrapped count in place would make every
+  later `ossl_synchronize_rcu` on that lock spin forever, since nothing else can bring a
+  count of `UINT64_MAX` down. The slot clearing is what the authority would have done had
+  it survived; the restore is the smallest addition that keeps retirement live.
+- **Reason:** `OPENSSL_die` is `abort(3)`; a library aborting its caller's process is what
+  `docs/UNSAFE.md` §3 says must not happen, and the crate's whole FFI boundary exists to
+  convert a defect into a documented failure value.
+- **Claim removed:** an over-unlock is not claimed compatible. It is unreachable through the
+  crate's own bookkeeping — a `thread_qp` slot is per thread, so only the thread that took
+  the hold can reach the decrement — which is why the only evidence is the unit test's
+  assertion that the *balanced* path is what reaches the count at all.
+
+### D-RCU-4 — the RCU layer has no C-visible entry point, so it cannot be courted
+
+- **Obligation:** every `ossl_rcu_*` function and `ossl_synchronize_rcu`.
+- **Authority:** the whole family is declared in `include/internal/rcu.h`, which is a
+  non-installed header; nothing in the 6,499 exports resolves to any of the twelve names,
+  and `crypto/conf/conf_mod.c` is the only translation unit in the build that calls them.
+- **Consequence:** there is no way to write a differential court for RCU today. A probe
+  compares an authority object against a candidate object across the exported surface, and
+  RCU is not on it; the only reachable path is `CONF_modules_load`, whose registry the RCU
+  lock protects, and that export is still a scaffold (6.10b).
+- **What stands in its place:** the twelve functions' evidence is (a) this transcription,
+  reviewed against `crypto/threads_pthread.c` order for order and memory-order for
+  memory-order, (b) ten unit tests in `src/runtime/rcu.rs`, of which two spawn threads —
+  one pinning that a reader on another thread holds retirement off, the other that the
+  per-thread data survives a thread stop and is rebuilt on the next hold, which is D118's
+  chain end to end. This is **weaker** than a court and it is recorded rather than glossed:
+  RCU is `IMPLEMENTED` in `docs/PARITY_MODEL.md`'s terms and it is **not** `PARITY_VERIFIED`.
+- **When it changes:** `RT-CONF-MOD` (6.10b) is the court that exercises it end to end, and
+  this entry's consequence narrows to "courted only through its consumer" at that point.

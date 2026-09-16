@@ -133,6 +133,22 @@ def evidence_for(phase: int) -> tuple[list[str], list[str], str]:
     if phase == 3:
         for d in PHASE3_MODULES:
             (present if exists(d) else absent).append(d)
+        ledger = read_json(PHASE3_OBLIGATIONS)
+        if ledger:
+            present.append(PHASE3_OBLIGATIONS)
+            body3 = ledger["body"]
+            open_count = body3["counts"]["open_in_this_stratum"]
+            if open_count:
+                blocking = (
+                    f"{open_count} open obligation(s) of this stratum recorded in "
+                    f"{PHASE3_OBLIGATIONS}; a stratum cannot be complete while any "
+                    f"export it owns is neither implemented nor handed to a later "
+                    f"phase. The ledger reads its universe from the ownership "
+                    f"atlas, so this is no longer a question of which prefixes its "
+                    f"families happened to list (docs/DECISIONS.md D97)"
+                )
+        else:
+            absent.append(PHASE3_OBLIGATIONS)
         courts = read_json(PHASE3_COURTS)
         if courts:
             present.append(PHASE3_COURTS)
@@ -142,11 +158,6 @@ def evidence_for(phase: int) -> tuple[list[str], list[str], str]:
                 blocking = f"Phase 3 courts not passing: {failed}"
         else:
             absent.append(PHASE3_COURTS)
-        ledger = read_json(PHASE3_OBLIGATIONS)
-        if ledger:
-            present.append(PHASE3_OBLIGATIONS)
-        else:
-            absent.append(PHASE3_OBLIGATIONS)
         return present, absent, blocking
 
     if phase == 4:
@@ -179,6 +190,38 @@ def evidence_for(phase: int) -> tuple[list[str], list[str], str]:
             # what must be closed. Listing it as absent would report `not-started`
             # and understate the recorded work.
             blocking = blocking or f"no Phase 4 courts yet ({PHASE4_COURTS} absent)"
+        return present, absent, blocking
+
+    if phase == 6:
+        for d in PHASE6_MODULES:
+            (present if exists(d) else absent).append(d)
+        ledger = read_json(PHASE6_OBLIGATIONS)
+        if ledger:
+            present.append(PHASE6_OBLIGATIONS)
+            body6 = ledger["body"]
+            open_count = body6["counts"]["open_in_this_stratum"]
+            if open_count:
+                blocking = (
+                    f"{open_count} open obligation(s) of this stratum recorded in "
+                    f"{PHASE6_OBLIGATIONS}; a stratum cannot be complete while any "
+                    f"export it owns is neither implemented nor handed to a later "
+                    f"phase"
+                )
+        else:
+            absent.append(PHASE6_OBLIGATIONS)
+        courts = read_json(PHASE6_COURTS)
+        if courts:
+            present.append(PHASE6_COURTS)
+            failed = [c["court"] for c in courts["body"]["courts"]
+                      if c["verdict"] != "pass"]
+            if failed:
+                blocking = f"Phase 6 courts not passing: {failed}"
+        else:
+            # As for Phase 4 and 5: a missing court file is a blocker once the
+            # modules exist, not evidence that the stratum has not begun. Phase 6's
+            # modules landed before `RT-PARAM` did, and reporting `not-started` then
+            # would have understated a stratum with 81 implemented exports in it.
+            blocking = blocking or f"no Phase 6 courts yet ({PHASE6_COURTS} absent)"
         return present, absent, blocking
 
     if phase == 5:
@@ -219,10 +262,11 @@ def evidence_for(phase: int) -> tuple[list[str], list[str], str]:
 # Phase 3 evidence: the core-runtime modules, the differential courts that
 # exercise them, and the seal that records what they establish.
 PHASE3_COURTS = "artifacts/phase3/COURTS.json"
-# Every symbol in the Phase 3 families is either implemented or deferred to a
-# later phase with a stated reason. `phase3_obligations.py` fails closed if any
-# export in those families is neither, so the ledger -- not this file -- decides
-# whether anything is unaccounted for.
+# Every symbol in the Phase 3 projection is either implemented, handed to a later
+# phase with a stated reason, or recorded `open`. The ledger reads its universe from
+# the global ownership atlas and fails closed if any export it assigns this stratum
+# is unaccounted for, so the ledger -- not this file -- decides whether anything is
+# outstanding. `open_in_this_stratum > 0` keeps the phase `in-progress`.
 PHASE3_OBLIGATIONS = "forensics/phase3-obligations.json"
 PHASE3_MODULES = [
     "docs/PHASE-3-CORE-RUNTIME-SEAL.md",
@@ -247,6 +291,17 @@ PHASE3_MODULES = [
     "src/runtime/str.rs",
     "src/runtime/dir.rs",
     "src/runtime/dir_posix.c",
+    # `crypto/o_time.c`, the three calendar primitives the ASN.1 time family in
+    # Phase 5 stands on. The file is this stratum's by placement and by its own
+    # header comment; it was in no `FAMILIES` prefix list, so neither this list nor
+    # the ledger mentioned it until D97.
+    "src/runtime/time.rs",
+    # The D97 reconciliation's own finding, then its work. `trace.rs`, `err_state.rs`
+    # and `uid.rs` are the modules of the three export families that no ledger and
+    # no evidence list mentioned until 6.0 read the ownership atlas against them.
+    "src/runtime/trace.rs",
+    "src/runtime/err_state.rs",
+    "src/runtime/uid.rs",
     # `ossl_safe_getenv`, used by the CONF reader's default-path logic; internal,
     # so it claims no export, but it is core-runtime surface.
     "src/runtime/getenv.rs",
@@ -260,6 +315,7 @@ PHASE3_MODULES = [
     "courts/phase3/rt_thread_probe.c",
     "courts/phase3/rt_secure_probe.c",
     "courts/phase3/rt_lhash_probe.c",
+    "courts/phase3/rt_runtime_ext_probe.c",
 ]
 # Whether anything in the Phase 3 families is unaccounted for is decided by the
 # ledger (`phase3_obligations.py` fails closed), not by a string here.
@@ -318,6 +374,11 @@ PHASE4_MODULES = [
     "src/runtime/conf/lib.rs",
     "src/runtime/conf/modparse.rs",
     "src/runtime/conf/init_settings.rs",
+    # The D97 reconciliation's own finding, then 6.3's work. `conf_ssl.rs` and
+    # `sap.rs` are the two CONF translation units whose exports no ledger and no
+    # evidence list mentioned until 6.0 read the ownership atlas against them.
+    "src/runtime/conf/conf_ssl.rs",
+    "src/runtime/conf/sap.rs",
     # The differential courts, and the discovery probes `docs/DECISIONS.md` and
     # `docs/SECURITY_DIVERGENCE_POLICY.md` cite as the origin of recorded
     # measurements. Both kinds are evidence: a decision that names a probe is only
@@ -338,12 +399,18 @@ PHASE4_MODULES = [
     "courts/phase4/rt_bio_conn_probe.c",
     "courts/phase4/rt_obj_stream_probe.c",
     "courts/phase4/rt_conf_probe.c",
+    "courts/phase4/rt_comp_probe.c",
     "courts/phase4/discover_bio_addr.c",
     "courts/phase4/discover_bio_addr2.c",
     "courts/phase4/discover_bio_lookup.c",
     "courts/phase4/discover_bio_lookup_hints.c",
     "courts/phase4/discover_bio_legacy_host.c",
     "courts/phase4/bio_addr_null_calls.c",
+    # The discovery probe D97's `COMP_*` finding is recorded against: the profile's
+    # `no-zlib`/`no-zstd`/`no-brotli` guards, the six NULL factories and the
+    # `COMP_CTX_get_type(NULL)` fault are all read off its transcript. A decision that
+    # names a probe is only checkable while the probe exists.
+    "courts/phase4/discover_comp.c",
     "forensics/tools/phase4_courts.py",
     "forensics/tools/phase4_obligations.py",
 ]
@@ -370,6 +437,98 @@ PHASE5_MODULES = [
     "courts/phase5/rt_bn_probe.c",
     "forensics/tools/phase5_courts.py",
     "forensics/tools/phase5_obligations.py",
+]
+
+# Phase 6 evidence: the parameter surface and the provider core, the differential
+# court that exercises it, and the ledger that decides the stratum's arithmetic.
+#
+# `docs/PHASE-6-PROVIDER-SEAL.md` **is** listed now, in the commit that writes it: with the
+# last open obligation closed the stratum can report `complete`, and a `complete` stratum
+# without a seal would be a completion claim nobody can audit. That is the rule phases 3, 4
+# and 5 already follow, and this line is where Phase 6 joins them.
+PHASE6_COURTS = "artifacts/phase6/COURTS.json"
+PHASE6_OBLIGATIONS = "forensics/phase6-obligations.json"
+PHASE6_MODULES = [
+    "src/params/mod.rs",
+    "src/params/dup.rs",
+    "src/params/from_text.rs",
+    "src/params/build.rs",
+    "courts/phase6/rt_param_probe.c",
+    # 6.6: the context and its slot table, the core BIO, the namemap and the thread slot.
+    "src/context/mod.rs",
+    "src/context/dispatch.rs",
+    "src/context/core_bio.rs",
+    "src/context/namemap.rs",
+    "src/context/thread_data.rs",
+    "courts/phase6/rt_libctx_probe.c",
+    "courts/phase6/rt_bio_core_probe.c",
+    # 6.7: the property engine, whose court is the slot table because it exports nothing.
+    "src/property/mod.rs",
+    "src/property/globals.rs",
+    "src/property/defn_cache.rs",
+    "src/property/list.rs",
+    "src/property/parse.rs",
+    "src/property/query.rs",
+    "src/property/strings.rs",
+    # 6.8: the provider object, its registry, its activation and the child callbacks.
+    "src/provider/mod.rs",
+    "src/provider/init.rs",
+    "src/provider/activate.rs",
+    "src/provider/stores.rs",
+    "src/provider/core_dispatch.rs",
+    # 6.8d: `crypto/provider_conf.c`, the `providers` configuration module, whose court is
+    # RT-PROVIDER -- the same court the registry calls home, because the module is reached
+    # only through a configuration file and every observation of it goes through the
+    # provider surface it configures.
+    "src/provider/conf.rs",
+    # 6.8e: `crypto/provider_child.c`, the child provider and the parent callbacks, plus the
+    # three accessors `provider_core.c` keeps beside the object. Its observations are split:
+    # `RT-LIBCTX` reaches them through `OSSL_LIB_CTX_new_child`, and `RT-PROVIDER` through the
+    # registry the parent-side registration walks.
+    "src/provider/child.rs",
+    # 6.10 closure: the seal. A stratum may only report `complete` with its seal in place --
+    # that is the rule phases 3, 4 and 5 already follow, and adding it here is what makes
+    # Phase 6's completion claim auditable rather than merely reported.
+    "docs/PHASE-6-PROVIDER-SEAL.md",
+    "courts/phase6/rt_provider_probe.c",
+    # 6.12: the provider **core** hosting a third-party provider. This is the only probe that
+    # compiles an `OSSL_provider_init` into itself, so it is the only one that can see the
+    # provider-facing dispatch table at all -- and it is what closes the two
+    # `D-CHILD-REGISTER-PROPS-1`/`D-CHILD-PROPS-CB-1` entries from "no court has observed
+    # either half" to measured.
+    "courts/phase6/rt_provider_3p_probe.c",
+    # 6.9: the DSO layer, reassigned from Phase 2 by D95 because Phase 2's definition is
+    # distribution structure and the dynamic-loader abstraction is semantic.
+    "src/dso/mod.rs",
+    "src/dso/dlfcn.rs",
+    "courts/phase6/rt_dso_probe.c",
+    # 6.6e-ii and all three units of 6.10a: the thread-event table, the per-context
+    # thread-local family, the sparse array underneath it, and RCU. RCU exports nothing and
+    # has no C-visible entry point, so its evidence is its transcription and its unit tests
+    # rather than a court -- recorded as D-RCU-4 rather than glossed.
+    "src/runtime/thread_events.rs",
+    "src/runtime/threads_common.rs",
+    "src/runtime/sparse_array.rs",
+    "src/runtime/rcu.rs",
+    "courts/phase6/rt_threaddata_probe.c",
+    # 6.7b: the character-class table, generated from the authority's own `crypto/ctype.c`.
+    "src/runtime/ctype.rs",
+    "src/runtime/ctype_table.rs",
+    # 6.8c: the compiled-in directory defaults.
+    "src/runtime/defaults.rs",
+    # 6.6c: the self-test indicator object.
+    "src/selftest/mod.rs",
+    "src/selftest/indicator.rs",
+    "courts/phase6/rt_selftest_probe.c",
+    # 6.10b/6.10c/6.10d: the CONF module registry and the automatic configuration
+    # loader. The court is `RT-CONF-MOD`, which is also what reaches the RCU layer,
+    # since `conf_mod.c` is its only consumer in this build.
+    "src/runtime/confmod/mod.rs",
+    "src/runtime/confmod/asn1.rs",
+    "src/runtime/conf/sap.rs",
+    "courts/phase6/rt_conf_mod_probe.c",
+    "forensics/tools/phase6_courts.py",
+    "forensics/tools/phase6_obligations.py",
 ]
 
 

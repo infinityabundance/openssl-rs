@@ -28,6 +28,8 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
+import re
 import sys
 from pathlib import Path
 
@@ -116,21 +118,160 @@ def to_bytes(hexdigits: str) -> bytes:
     return bytes.fromhex(text)
 
 
+# The number of bytes `rustfmt` packs onto one line of a byte-array literal.
+#
+# Derived rather than typed, because a typed width is what drifted: this generator emitted twelve
+# to a line while the committed file had sixteen, and nothing compared them, so
+# `src/bn/prime_data.rs` failed `cargo fmt --all -- --check` the moment the two were brought into
+# a determinism check (docs/DECISIONS.md D135 and D136). A byte token is `0xNN,` -- five columns --
+# the items are joined by a space, and the literal is indented four columns inside its
+# `pub(crate) const`. So `n` items occupy `4 + 5n + (n - 1)` columns and must not exceed
+# `rustfmt`'s default `max_width` of 100: `4 + 6n - 1 <= 100` gives `6n <= 97`, so `n <= 16`.
+#
+# Sixteen gives 99 columns and seventeen gives 105, which is why the answer is exactly 16 and why
+# the arithmetic is here rather than a bare literal the next reader would have to re-derive.
+# Nothing else depends on the width: the weak tier recovers the bytes by matching `0xNN` tokens,
+# so the check survives a width somebody changes deliberately.
+BYTES_PER_LINE = (100 - 4 + 1) // 6
+
+
 def rust_array(name: str, value: bytes) -> str:
-    """One `pub(crate) const` as a byte array, wrapped at a readable width."""
+    """One `pub(crate) const` as a byte array, wrapped where `rustfmt` would wrap it."""
     lines = [f"/// {name} — {len(value) * 8} bits."]
     lines.append(f"pub(crate) const {name}: [u8; {len(value)}] = [")
-    for i in range(0, len(value), 12):
-        chunk = ", ".join(f"0x{b:02X}" for b in value[i:i + 12])
+    for i in range(0, len(value), BYTES_PER_LINE):
+        chunk = ", ".join(f"0x{b:02X}" for b in value[i:i + BYTES_PER_LINE])
         lines.append(f"    {chunk},")
     lines.append("];")
     return "\n".join(lines)
+
+
+def render_rust(authority_id: str, record: list[dict], values: dict[str, bytes]) -> str:
+    """The generated file, as a pure function of the authority identity and the record.
+
+    Factored out so that the weak tier can rebuild it from the committed JSON alone. That is
+    what makes the check exact rather than approximate: both tiers call this, so a difference
+    is a difference in the *inputs* and never in the rendering.
+    """
+    body = [
+        "//! The authority's named primes — GENERATED, do not edit.",
+        "//!",
+        "//! Regenerate with `forensics/tools/gen_bn_primes.py` inside the court",
+        "//! container. The values are read back from the admitted authority rather than",
+        "//! transcribed from `bn_const.c`, because a typo in an 8192-bit prime is",
+        "//! invisible to everything except a comparison with the authority itself.",
+        "//!",
+        f"//! Authority: `{authority_id}`.",
+        "",
+        "// The constants are named after the authority's own exported functions, so a",
+        "// reader can check one against `nm libcrypto.so.3` without a mapping table.",
+        "// Renaming them to Rust case would break that correspondence and buy nothing:",
+        "// they are data, referenced from exactly one module.",
+        "#![allow(non_upper_case_globals)]",
+        "",
+    ]
+    for r in record:
+        body.append(rust_array(r["symbol"], values[r["symbol"]]))
+        body.append("")
+    return "\n".join(body)
+
+
+def check_against_artefact() -> int:
+    """The weak tier: rebuild the generated Rust from the committed artefact.
+
+    Used when the authority is absent, which is the case on every runner that has only the
+    repository. It catches a hand-edited `prime_data.rs` and a JSON that has drifted from it.
+    It cannot catch the authority having changed -- the authority is pinned by archive hash
+    elsewhere, and the court, which has it, re-derives. Which tier ran is printed, because a
+    check that silently weakens is the thing this project exists not to have.
+
+    The *values* are not in the JSON, only their SHA-256, so the rebuild takes the bytes out of
+    the committed Rust and re-hashes them: a byte changed in `prime_data.rs` then changes the
+    digest and fails, which is the property that matters. The alternative -- storing 8192-bit
+    primes twice -- would put two copies of the same data in the repository and let them
+    disagree.
+    """
+    if not OUT_JSON.is_file() or not OUT_RS.is_file():
+        print(
+            f"[{GENERATOR}] neither the authority nor the pair "
+            f"{rel(OUT_JSON)}/{rel(OUT_RS)} is present; nothing can be checked",
+            file=sys.stderr,
+        )
+        return 1
+    doc = json.loads(OUT_JSON.read_text(encoding="utf-8"))
+    record = doc["body"]["primes"]
+    rust = OUT_RS.read_text(encoding="utf-8")
+
+    # Recover the bytes from the committed Rust, so the digest check is against what is on
+    # disk rather than against what the JSON wishes were on disk.
+    values: dict[str, bytes] = {}
+    for r in record:
+        name = r["symbol"]
+        m = re.search(
+            rf"^pub\(crate\) const {re.escape(name)}: \[u8; \d+\] = \[\n(.*?)\n\];$",
+            rust, re.M | re.S)
+        if m is None:
+            print(
+                f"[{GENERATOR}] {rel(OUT_RS)} has no `{name}` array, which "
+                f"{rel(OUT_JSON)} records as one of {len(record)} primes",
+                file=sys.stderr,
+            )
+            return 1
+        # Every byte is its own `0xNN` token, twelve to a line; joining the tokens rather
+        # than stripping a prefix per line is what makes the recovery independent of the
+        # wrapping width.
+        body = re.findall(r"0x([0-9A-Fa-f]{2})", m.group(1))
+        if not body:
+            print(
+                f"[{GENERATOR}] {name} in {rel(OUT_RS)} has no byte literals",
+                file=sys.stderr,
+            )
+            return 1
+        values[name] = bytes(int(b, 16) for b in body)
+        if len(values[name]) != r["bytes"] or hashlib.sha256(values[name]).hexdigest() != r["sha256"]:
+            print(
+                f"[{GENERATOR}] {name} in {rel(OUT_RS)} does not hash to the value "
+                f"{rel(OUT_JSON)} records; the generated file was edited by hand or the "
+                f"artefact is stale",
+                file=sys.stderr,
+            )
+            return 1
+
+    expected = render_rust(doc["authority"], record, values)
+    if rust != expected:
+        exp = expected.splitlines()
+        act = rust.splitlines()
+        at = next((i for i, (a, b) in enumerate(zip(act, exp)) if a != b),
+                  min(len(act), len(exp)))
+        print(
+            f"[{GENERATOR}] {rel(OUT_RS)} does not match {rel(OUT_JSON)}; first "
+            f"difference at line {at + 1}:\n"
+            f"  committed: {act[at] if at < len(act) else '<eof>'}\n"
+            f"  from json: {exp[at] if at < len(exp) else '<eof>'}",
+            file=sys.stderr,
+        )
+        return 1
+
+    print(
+        f"[bn-primes] ok (weak tier, authority absent): {rel(OUT_RS)} matches "
+        f"{rel(OUT_JSON)} over {len(record)} primes"
+    )
+    return 0
 
 
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
     args = ap.parse_args(argv)
+
+    # The values come from a probe compiled against the **admitted authority prefix**, so a
+    # runner without the authority cannot derive them. Two tiers, exactly as
+    # `gen_ctype_table.py` and `gen_err_raise_sites.py`: re-derive when the prefix is present,
+    # and rebuild-and-compare from the committed pair when it is not. Which tier ran is
+    # printed. See docs/DECISIONS.md D135, which closes the gap D109 recorded for both of the
+    # `.rs` generators.
+    if not (resolve_authority(args.authority).prefix / "include" / "openssl" / "bn.h").is_file():
+        return check_against_artefact()
 
     auth = resolve_authority(args.authority)
     work = REPO_ROOT / "court" / "bn-primes"
@@ -165,28 +306,9 @@ def main(argv: list[str]) -> int:
     if missing:
         raise SystemExit(f"{GENERATOR}: no value for {missing}")
 
-    body = [
-        "//! The authority's named primes — GENERATED, do not edit.",
-        "//!",
-        "//! Regenerate with `forensics/tools/gen_bn_primes.py` inside the court",
-        "//! container. The values are read back from the admitted authority rather than",
-        "//! transcribed from `bn_const.c`, because a typo in an 8192-bit prime is",
-        "//! invisible to everything except a comparison with the authority itself.",
-        "//!",
-        f"//! Authority: `{auth.id}`.",
-        "",
-        "// The constants are named after the authority's own exported functions, so a",
-        "// reader can check one against `nm libcrypto.so.3` without a mapping table.",
-        "// Renaming them to Rust case would break that correspondence and buy nothing:",
-        "// they are data, referenced from exactly one module.",
-        "#![allow(non_upper_case_globals)]",
-        "",
-    ]
     record = []
     for name in GET_RFC + GET0:
         value = values[name]
-        body.append(rust_array(name, value))
-        body.append("")
         record.append({
             "symbol": name,
             "bits": len(value) * 8,
@@ -194,7 +316,7 @@ def main(argv: list[str]) -> int:
             "sha256": hashlib.sha256(value).hexdigest(),
         })
 
-    write_text(OUT_RS, "\n".join(body))
+    write_text(OUT_RS, render_rust(auth.id, record, values))
 
     doc = envelope(
         kind="bn-primes",

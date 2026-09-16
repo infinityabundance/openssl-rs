@@ -1,6 +1,6 @@
 {
   "schema": "openssl-rs/ownership-transitions/v1",
-  "note": "Approved changes to an obligation ledger's *universe*. An increase in open_in_this_stratum is a regression by default (forensics/tools/regression_guard.py); it is accepted only when a row here matches the observed change exactly on every field, so a transition can bless the change it describes and nothing else. Each row names the decision that recorded it and the artifact that is the authority for the new universe. This file is not a place to hide a regression: remove the transition and the same change fails the guard again.",
+  "note": "Approved changes to an obligation ledger's *universe*, in `transitions`, and approved downward corrections to a derived phase state, in `phase_state_transitions`. An increase in open_in_this_stratum is a regression by default (forensics/tools/regression_guard.py), and so is a phase state moving down; each is accepted only when a row here matches the observed change exactly on every field, so a row can bless the change it describes and nothing else. Each row names the decision that recorded it and the artifact that is the authority for the new universe. This file is not a place to hide a regression: remove the row and the same change fails the guard again.",
   "transitions": [
     {
       "phase": 5,
@@ -13,6 +13,86 @@
       "implemented_after": 170,
       "authority_artifact": "forensics/atlas/symbol-ownership.json",
       "recorded_by": "docs/DECISIONS.md D72"
+    },
+    {
+      "phase": 3,
+      "reason": "Phase 3's universe moved from a prefix family list to the global ownership atlas. The old list could not see sixty-nine exports the atlas assigns this stratum: every ASYNC_*, every OSSL_ERR_STATE_*, every OSSL_trace_*, the thread-count trio, OSSL_sleep, OPENSSL_atexit/die/fork_*/isservice/issetugid/thread_stop*, err_free_strings_int, OPENSSL_INIT_*, and the three OPENSSL_gmtime calendar primitives. Twenty-nine are now recorded open -- real, unimplemented surface that no ledger mentioned -- twenty-two are handed to Phase 13 with the async engines named as the dependency, and sixteen were already discharged by Phase 4, which had built them without this ledger ever recording the edge. OPENSSL_gmtime and its two neighbours turned out to be implemented in src/runtime/time.rs, a module of this stratum in no list at all, so implemented rises from 224 to 227. Nothing was undone; the completeness claim simply stopped excluding what it could not see.",
+      "open_before": 0,
+      "open_after": 29,
+      "owned_before": 235,
+      "owned_after": 294,
+      "implemented_before": 224,
+      "implemented_after": 227,
+      "authority_artifact": "forensics/atlas/symbol-ownership.json",
+      "recorded_by": "docs/DECISIONS.md D97"
+    },
+    {
+      "phase": 4,
+      "reason": "Phase 4's universe moved from a prefix family list to the global ownership atlas, plus the sixteen symbols Phase 3 hands it. Nineteen exports the old list matched with no prefix at all are now visible -- the fourteen COMP_* functions, the three conf_ssl_* helpers, OPENSSL_config and OPENSSL_load_builtin_modules -- and eighteen of them are recorded open. Nine of the thirty-one rows the old ledger called deferrals were never this stratum's to defer: BIO_f_asn1 and BIO_new_NDEF are declared in asn1.h (Phase 5) and the seven EVP/CMS/PKCS#7 filter names in evp.h, cms.h and pkcs7.h, so the atlas never gave them to Phase 4 and they leave the ledger entirely. The four BIO_asn1_* controls stay this stratum's by bio.h and stay deferred to Phase 5, which has already discharged them. implemented is unchanged at 231: nothing was undone and no implementation was lost.",
+      "open_before": 0,
+      "open_after": 18,
+      "owned_before": 262,
+      "owned_after": 272,
+      "implemented_before": 231,
+      "implemented_after": 231,
+      "authority_artifact": "forensics/atlas/symbol-ownership.json",
+      "recorded_by": "docs/DECISIONS.md D97"
+    },
+    {
+      "phase": 6,
+      "reason": "Phase 6's working set grew by the five exports Phase 3 deferred to it (docs/DECISIONS.md D97's own disposition, implemented in 6.2's reconnaissance): the two libctx thread-count accessors, the thread-stop pair, and OPENSSL_atexit, whose DSO pinning the profile compiles in. The obligation moved from Phase 3's open list to Phase 6's, so `open` rises here and falls to zero there; nothing was undone and no implementation was lost.",
+      "open_before": 156,
+      "open_after": 161,
+      "owned_before": 156,
+      "owned_after": 161,
+      "implemented_before": 0,
+      "implemented_after": 0,
+      "authority_artifact": "forensics/phase3-obligations.json",
+      "recorded_by": "docs/DECISIONS.md D97, D98"
+    }
+  ],
+  "phase_state_transitions": [
+    {
+      "phase": 3,
+      "state_before": "complete",
+      "state_after": "in-progress",
+      "reason": "Phase 3 was called complete because its ledger's FAMILIES were prefix lists and a prefix that matches nothing reports nothing. Sixty-nine exports the ownership atlas assigns this stratum were in no ledger at all, twenty-nine of which are now recorded open. The state was derived from an incomplete premise; correcting the premise lowers the state. See docs/DECISIONS.md D97.",
+      "authority_artifact": "forensics/phase3-obligations.json",
+      "recorded_by": "docs/DECISIONS.md D97"
+    },
+    {
+      "phase": 4,
+      "state_before": "complete",
+      "state_after": "in-progress",
+      "reason": "Phase 4 was called complete for the same reason: nineteen exports the ownership atlas assigns it -- every COMP_*, the three conf_ssl_* helpers, OPENSSL_config and OPENSSL_load_builtin_modules -- were matched by no family prefix, so no ledger row existed for any of them. See docs/DECISIONS.md D97.",
+      "authority_artifact": "forensics/phase4-obligations.json",
+      "recorded_by": "docs/DECISIONS.md D97"
+    },
+    {
+      "phase": 5,
+      "state_before": "complete",
+      "state_after": "in-progress",
+      "reason": "Phase 5 does not drop on its own evidence: its ledger is at zero open and was already an atlas projection. It drops because the dependency-order invariant in forensics/tools/phase_state.py says a phase may be complete only if every earlier phase is, and Phase 3 is no longer complete. The stratum's work is unchanged; the rule is doing what it was written for.",
+      "authority_artifact": "forensics/phase-state.json",
+      "recorded_by": "docs/DECISIONS.md D97"
+    }
+  ],
+  "prerequisite_transitions": [
+    {
+      "metric": "blocking_dependencies",
+      "before": 11,
+      "after": 12,
+      "reason": "Landing 6.8e/6.6d made `crypto/core_algorithm.c`'s `ossl_algorithm_do_all` visible to the prerequisite gate for the first time. The gate's rule is about names a crate module *references*, and nothing referenced this one -- its only authority caller is `core_fetch.c`'s `ossl_method_construct`, which is Phase 7's -- so a whole translation unit sat unnamed while the stratum was otherwise closed (docs/DECISIONS.md D132). The row added to forensics/prerequisites.json records it as owed to Phase 7. The count rose because a name became *visible*, not because a prerequisite appeared, which is the same class as D130's language census: an invariant that cannot tell a legitimate change from a hidden omission.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D132"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 12,
+      "after": 15,
+      "reason": "The plan-versus-crate reconciliation (docs/DECISIONS.md D134) named three authority symbols that a complete stratum's subphase rows promise and nothing builds or records: `ossl_method_construct` in `crypto/core_fetch.c` (the other half of D132 -- rows 6.6f and 6.8f name it as the caller that makes `ossl_algorithm_do_all` Phase 7's prerequisite), `ossl_random_add_conf_module` in `crypto/rand/rand_lib.c` (one of the seven `OPENSSL_load_builtin_modules` registrations, Phase 9's), and `OSSL_provider_init` in `providers/legacy/legacyprov.c` (Phase 13's, named by rows 6.8d and 6.12 because a third-party provider declares one). All three are owed to strata that have not started, so each is a blocking dependency by the gate's rule. The count rose because three names became *visible*, not because three new prerequisites appeared -- the same class as D132's 11 -> 12 and D130's language census: an invariant that cannot tell a legitimate change from a hidden omission.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D134"
     }
   ]
 }

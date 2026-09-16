@@ -1,11 +1,19 @@
 {
-  "aggregate_hash": "29accda9a8ec56ac78f979dd77bbfecd252cd968dd310b11203c51f83cba500b",
+  "aggregate_hash": "02267f0de7f03ff0c9324a898f1c8039735a287f087157e92b1f14ce8ad3d1d6",
   "aggregate_hash_algorithm": "sha256(<file-sha256>  <path>\\n, lexicographic)",
-  "file_count": 51,
+  "file_count": 62,
   "files": [
     {
       "path": "forensics/atlas/BUILD_RECORDS.json",
       "sha256": "921ce360ba59cb4e0c39e3adf27c35c0e8256e37a039b50a7f51b953560232b0"
+    },
+    {
+      "path": "forensics/atlas/bn-primes.json",
+      "sha256": "dda11996979b01bafd238cc00f27193ea3466547158a57860a07e30eb5610230"
+    },
+    {
+      "path": "forensics/atlas/ctype-table.json",
+      "sha256": "056b1e8323c0ece1e53322b0b8071616d638a3ddf61be0a11986929a54b4a652"
     },
     {
       "path": "forensics/atlas/differential/openssl-3.6.3-historical-vs-openssl-3.6.4-production.json",
@@ -17,7 +25,11 @@
     },
     {
       "path": "forensics/atlas/err-raise-sites.json",
-      "sha256": "41d421616d3da2b04ea90ac6efc065c530e246c78a091c41ddf03524e6ac45cf"
+      "sha256": "e3d3c2033a8348b1527cc4a3b905e7777d0ac5be9c1efb7553a97f7c7df679f9"
+    },
+    {
+      "path": "forensics/atlas/err-reasons.json",
+      "sha256": "b2d2a0eea2c66275261b58c665140473cb7951cd11df63d303894b7721bcdada"
     },
     {
       "path": "forensics/atlas/err-strings.json",
@@ -25,7 +37,15 @@
     },
     {
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "b411c386c802fba6cbcd3f7671616fca772544eeb39f3e6b6b8591cfe04770a8"
+      "sha256": "ee6bbd9d1a2557ee161e9767c3ec32f4985635ea0553ad038c83b46415beccb6"
+    },
+    {
+      "path": "forensics/atlas/internal-symbols.json",
+      "sha256": "0dd58f98b254149dab326e5aaef09d8a9512ace5de92d1a13bb6af46ef40f812"
+    },
+    {
+      "path": "forensics/atlas/macro-owners.json",
+      "sha256": "b047ec90e627b359f4340fd4a18cbda8e330c099444ada5c77db1dff1e1f73cd"
     },
     {
       "path": "forensics/atlas/openssl-3.6.3-historical/ATLAS.md",
@@ -196,12 +216,36 @@
       "sha256": "5133de801f35c4825ef7a03a06fa1decf5203061df9456abe2046b2b8c45dd2c"
     },
     {
+      "path": "forensics/atlas/ownership-audit.json",
+      "sha256": "9b64e272da2cafe464c729497c11b99e743b52edadd6999f048dd10d09255e73"
+    },
+    {
       "path": "forensics/atlas/phase1-completeness.json",
       "sha256": "8c038239c5fcbd2015add6e5aafd219e0f3758d9ea63753d8191093db184c791"
     },
     {
       "path": "forensics/atlas/phase1-completeness.md",
       "sha256": "1e696700f0d13be8d76f07d2f01978c7cc3a876aa470c11e3f8e4c6b46e534be"
+    },
+    {
+      "path": "forensics/atlas/prerequisite-gate.json",
+      "sha256": "7bac2025eedec7c51b64867af0e8a9adaed92b17593d738c0f525085d1f59fcc"
+    },
+    {
+      "path": "forensics/atlas/prototype-court.json",
+      "sha256": "c1b1362d1e39c0a38f66d9496a2ffdf233ae6705fdb3d785930061cec0312353"
+    },
+    {
+      "path": "forensics/atlas/symbol-ownership.json",
+      "sha256": "d42d2ba4f459b729139149f7343cb36357959272a38fecce8f20e6e4aa29a137"
+    },
+    {
+      "path": "forensics/atlas/transcription-edges.json",
+      "sha256": "8ee239ba67fcb5f1047f3c6e428b39aa91da7112ca5a6af97c7b40da91cc8928"
+    },
+    {
+      "path": "forensics/atlas/typedef-owners.json",
+      "sha256": "784e0b32a30b9a65c7e44475f70fc19db2ceda60ddee2a4c35e16d8e4eee7a4d"
     },
     {
       "path": "forensics/authorities/AUTHORITIES.json",

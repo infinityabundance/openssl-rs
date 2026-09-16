@@ -1,0 +1,17 @@
+{
+  "authority_exit_code": 0,
+  "authority_observations": 15,
+  "candidate_exit_code": 0,
+  "candidate_observations": 15,
+  "candidate_stderr_tail": [],
+  "court": "RT-MEM-INSTALL",
+  "crashed": false,
+  "probe": "court/phase3/rt_mem_install_probe.candidate",
+  "residual_count": 0,
+  "residuals": [],
+  "staged_binaries": {
+    "authority": "artifacts/phase3/probes/rt_mem_install_probe.authority",
+    "candidate": "artifacts/phase3/probes/rt_mem_install_probe.candidate"
+  },
+  "verdict": "pass"
+}

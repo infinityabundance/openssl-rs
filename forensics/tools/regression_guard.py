@@ -42,6 +42,8 @@ What counts as a regression
 | court verdict | `pass` must stay `pass` | the strongest claim held |
 | observations per court | non-decreasing | a weakened probe loses coverage silently |
 | phase state | non-decreasing | `complete` must not become `in-progress` |
+| prerequisite findings | zero, and zero | a dependency nobody owns |
+| prerequisite censuses | non-increasing | a hidden omission growing behind a "not a failure" label |
 
 A *deferred* count is recorded and printed but is not directional: a symbol may
 legitimately move from `open` to `deferred` once the stratum owning its dependency
@@ -71,6 +73,7 @@ BASELINE_REL = "forensics/regression-baseline.json"
 BASELINE = REPO_ROOT / BASELINE_REL
 
 IMPLEMENTED_SURFACE = "forensics/atlas/implemented-surface.json"
+PREREQUISITE_GATE = "forensics/atlas/prerequisite-gate.json"
 PHASE_STATE = "forensics/phase-state.json"
 TRANSITIONS = "forensics/ownership-transitions.json"
 
@@ -176,6 +179,24 @@ def observe() -> dict:
         for row in state["body"]["phases"]:
             obs["phases"][str(row["phase"])] = row["state"]
 
+    # The prerequisite gate's numbers, tracked the same way as everything else. Its
+    # two censuses are explicitly *not* failures in the gate -- the C language surface
+    # cannot be matched lexically, and an internal function left unbuilt in a stratum
+    # that has sealed is a decision rather than a repair -- so the only thing keeping
+    # them from becoming a place where real omissions hide is a non-increase invariant.
+    # That invariant lives here, which is why this plane is read at all.
+    gate = read_json(PREREQUISITE_GATE)
+    if gate:
+        gb = gate["body"]
+        obs["prerequisites"] = {
+            "findings": sum(gb["counts"].values()),
+            "sealed_census": gb["sealed_stratum_census"]["names"],
+            "language_census": gb["census"].get(
+                "language_surface_not_modelled_by_name", 0),
+            "blocking_dependencies": len(gb["blocking_dependencies"]),
+            "divergence_names_covered": gb["checked"]["divergence_names_covered"],
+        }
+
     return obs
 
 
@@ -239,6 +260,62 @@ def transition_for(phase: str, was: int, now: int, owned_now: int) -> dict | Non
                 and t.get("open_before") == was
                 and t.get("open_after") == now
                 and t.get("owned_after") == owned_now):
+            return t
+    return None
+
+
+def prerequisite_transition_for(metric: str, was: int, now: int) -> dict | None:
+    """An approved **increase** in a prerequisite-plane count covering exactly that change.
+
+    The same discipline as `transition_for`: a row can bless the change it describes and
+    nothing else -- a larger increase, or a different metric, fails.
+
+    It exists for the case D132 found. The blocking-dependency list is a list of names the
+    gate *observed*, and a name becomes observable when something references it, so landing
+    work can move the count **up** for a reason that is not new work: a whole authority unit
+    that nothing referenced is invisible, and giving it an owner makes it visible. Without
+    this mechanism the invariant would punish exactly the behaviour it wants (a projection
+    that has stopped hiding work), which is the failure D130 found in the language census
+    from the other side.
+    """
+    doc = read_json(TRANSITIONS)
+    if not doc:
+        return None
+    for t in doc.get("prerequisite_transitions", []):
+        if (t.get("metric") == metric
+                and t.get("before") == was
+                and t.get("after") == now):
+            return t
+    return None
+
+
+def phase_transition_for(phase: str, was: str, now: str) -> dict | None:
+    """An approved *downward* phase-state correction covering a state change.
+
+    A stratum's state is derived from its ledger, so when the ledger's universe is
+    corrected the derived state can move **down**. That is exactly what D97 does:
+    Phases 3 and 4 were called `complete` because their ledgers were prefix lists
+    that matched nothing for sixty-nine and nineteen of the exports the ownership
+    atlas assigns them, so the state was derived from an incomplete premise. The
+    correction lowers it.
+
+    A state *downgrade* is a regression by default, and it must stay that way: the
+    whole value of a cumulative invariant is that you cannot quietly undo it. So the
+    same shape is used as for an ownership transition -- a row here that matches the
+    phase and both states **exactly**, naming the decision and the artifact that is
+    the authority for the new state. A different pair of states is not blessed, and
+    removing the row makes the same change fail again.
+
+    Only a *downward* move is ever routed through this file. An upward move is
+    reported as a movement by `compare`, which needs no approval: it is the work.
+    """
+    doc = read_json(TRANSITIONS)
+    if not doc:
+        return None
+    for t in doc.get("phase_state_transitions", []):
+        if (str(t.get("phase")) == str(phase).removeprefix("phase")
+                and t.get("state_before") == was
+                and t.get("state_after") == now):
             return t
     return None
 
@@ -350,7 +427,87 @@ def compare(baseline: dict, current: dict) -> tuple[list[str], list[str]]:
         if now is None:
             regressions.append(f"phase[{phase}]: was {was}, but the phase state is absent")
         elif STATE_RANK.get(now, -1) < STATE_RANK.get(was, -1):
-            regressions.append(f"phase[{phase}]: {was} -> {now}")
+            t = phase_transition_for(phase, was, now)
+            if t is None:
+                regressions.append(f"phase[{phase}]: {was} -> {now}")
+            else:
+                movements.append(
+                    f"phase[{phase}]: {was} -> {now}, an approved state correction "
+                    f"({t.get('reason', 'no reason recorded in ' + TRANSITIONS)})")
+        elif STATE_RANK.get(now, -1) > STATE_RANK.get(was, -1):
+            movements.append(f"phase[{phase}]: {was} -> {now}")
+
+    # The prerequisite plane. `findings` must be zero and stay zero; an absent gate
+    # artefact is an absence of evidence, not a clean bill, so it is a regression like
+    # every other missing plane. The blocking list must not grow, and the language
+    # census is checked **per authority unit** rather than as a total -- see
+    # `language_census_by_unit` below for why the total cannot carry the invariant.
+    for key, was in sorted(baseline.get("prerequisites", {}).items()):
+        now = current.get("prerequisites", {}).get(key)
+        if now is None:
+            regressions.append(
+                f"prerequisites[{key}]: baseline {was}, but {PREREQUISITE_GATE} is "
+                f"absent or does not carry this field -- absence is not completion")
+            continue
+        if key == "language_census_by_unit":
+            # A map, not a count; handled in its own loop below.
+            continue
+        if key == "findings" and now:
+            regressions.append(
+                f"prerequisites[findings]: {now} finding(s) in {PREREQUISITE_GATE}; "
+                f"the gate does not pass")
+            continue
+        if key == "divergence_names_covered":
+            # Not directional in either direction: a divergence row is added when a
+            # difference is understood and removed when it is fixed, and both are work.
+            if now != was:
+                movements.append(f"prerequisites[{key}]: {was} -> {now}")
+            continue
+        if key == "language_census":
+            # The total is *expected* to grow when another authority file is
+            # transcribed, because that file's local identifiers enter the census,
+            # and a growth the total cannot distinguish from a real omission would
+            # hide one. So the total is reported and the per-unit comparison below
+            # carries the invariant.
+            if now != was:
+                movements.append(f"prerequisites[{key}]: {was} -> {now}")
+            continue
+        if now > was:
+            t = prerequisite_transition_for(key, was, now)
+            if t is None:
+                regressions.append(
+                    f"prerequisites[{key}]: {was} -> {now} (+{now - was})")
+            else:
+                movements.append(
+                    f"prerequisites[{key}]: {was} -> {now} (+{now - was}), an approved "
+                    f"transition ({t.get('reason', 'no reason')[:80]}... recorded in "
+                    f"{TRANSITIONS})")
+        elif now < was:
+            movements.append(f"prerequisites[{key}]: {was} -> {now} (-{was - now})")
+
+    # The language census, per authority unit. A unit that was already transcribed may
+    # not gain censused names -- that would be a name this crate should reference or
+    # model and does not -- and a unit that is new is a movement. This is the invariant
+    # the total was standing in for, stated where it can actually be checked
+    # (`docs/DECISIONS.md` D130).
+    was_by_unit = baseline.get("prerequisites", {}).get("language_census_by_unit", {})
+    now_by_unit = current.get("prerequisites", {}).get("language_census_by_unit", {})
+    if was_by_unit and now_by_unit:
+        for unit, was in sorted(was_by_unit.items()):
+            now = now_by_unit.get(unit, 0)
+            if now > was:
+                regressions.append(
+                    f"prerequisites[language_census_by_unit][{unit}]: {was} -> {now} "
+                    f"(+{now - was}); a transcribed unit gained censused names")
+            elif now < was:
+                movements.append(
+                    f"prerequisites[language_census_by_unit][{unit}]: {was} -> "
+                    f"{now} (-{was - now})")
+        for unit, now in sorted(now_by_unit.items()):
+            if unit not in was_by_unit:
+                movements.append(
+                    f"prerequisites[language_census_by_unit][{unit}]: new unit, "
+                    f"{now} censused name(s)")
 
     return regressions, movements
 
@@ -363,7 +520,21 @@ def baseline_mismatch(proposed: dict, current: dict) -> list[str]:
     summarise.
     """
     diffs: list[str] = []
-    for key in ("implemented", "open_obligations", "deferred", "courts", "phases"):
+    for key in (
+        "implemented",
+        "open_obligations",
+        "deferred",
+        "courts",
+        "phases",
+
+        # `prerequisites` is compared too, and it is a *strengthening* rather than a
+        # formality: the per-unit language census and the blocking-dependency count
+        # are evidence the authority baseline certifies against, and a proposed
+        # baseline that disagreed with the checkout would let the next commit's
+        # comparison read the wrong numbers. Its nested `language_census_by_unit`
+        # map is compared by value, which is what the per-unit invariant needs.
+        "prerequisites",
+    ):
         p = proposed.get(key, {})
         c = current.get(key, {})
         for k in sorted(set(p) | set(c)):

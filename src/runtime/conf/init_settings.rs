@@ -46,13 +46,61 @@ pub struct OpenSslInitSettings {
     flags: c_ulong,
 }
 
+// The three readers `crypto/conf/conf_sap.c`'s `ossl_config_int` needs. The authority's
+// function reads the fields directly because it is compiled into the same library; the
+// fields are private here, so the readers stand where the C's member access stands. Each
+// is called only on a non-NULL `settings`, which is the caller's contract.
+impl OpenSslInitSettings {
+    /// `settings->filename`.
+    pub(crate) fn filename(&self) -> *const c_char {
+        self.filename
+    }
+
+    /// `settings->appname`.
+    pub(crate) fn appname(&self) -> *const c_char {
+        self.appname
+    }
+
+    /// `settings->flags`.
+    pub(crate) fn flags(&self) -> c_ulong {
+        self.flags
+    }
+}
+
+/// An `OPENSSL_INIT_SETTINGS` built on the stack, the way `OPENSSL_config` builds
+/// one.
+///
+/// The struct is opaque in the installed headers, so only this module can construct
+/// it; `crypto/conf/conf_sap.c` builds it with `memset(&settings, 0, ...)` plus two
+/// assignments, and the values it installs are exactly `DEFAULT_CONF_MFLAGS` and
+/// the caller's duplicated application name. This constructor exists so that
+/// `OPENSSL_config` can hand over the same three fields without a second definition
+/// of what "the default settings" means, and so that the `appname` the caller
+/// releases is the one this module's `strdup` produced.
+///
+/// `filename` is NULL, which is the authority's `memset` result and therefore means
+/// "the default configuration file".
+pub(crate) fn stack_settings(appname: *mut c_char) -> OpenSslInitSettings {
+    OpenSslInitSettings {
+        filename: ptr::null_mut(),
+        appname,
+        flags: DEFAULT_CONF_MFLAGS,
+    }
+}
+
 /// `DEFAULT_CONF_MFLAGS` — the flag word `OPENSSL_INIT_new` installs.
 ///
 /// `CONF_MFLAGS_DEFAULT_SECTION | CONF_MFLAGS_IGNORE_MISSING_FILE |
 /// CONF_MFLAGS_IGNORE_RETURN_CODES`, which is why a settings object that a caller
 /// never touches still tolerates a missing configuration file and a failing
 /// module.
-const DEFAULT_CONF_MFLAGS: c_ulong = 0x20 | 0x10 | 0x2;
+///
+/// `crypto/conf/conf_mod.c`'s Rust home composes the same value from the four
+/// individual `CONF_MFLAGS_*` bits it documents, because it needs those bits
+/// separately; both are the authority's single definition in
+/// `include/internal/conf.h`, and the two spellings are checked against each other
+/// by a unit test in that module rather than trusted.
+pub(crate) const DEFAULT_CONF_MFLAGS: c_ulong = 0x20 | 0x10 | 0x2;
 
 /// `OPENSSL_INIT_SETTINGS *OPENSSL_INIT_new(void)`
 ///
