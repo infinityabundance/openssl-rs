@@ -67,7 +67,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from atlas_common import REPO_ROOT, rel  # noqa: E402
+from atlas_common import (  # noqa: E402
+    REPO_ROOT,
+    court_observations,
+    rel,
+)
 
 BASELINE_REL = "forensics/regression-baseline.json"
 BASELINE = REPO_ROOT / BASELINE_REL
@@ -171,7 +175,7 @@ def observe() -> dict:
         for c in doc["body"]["courts"]:
             obs["courts"][c["court"]] = {
                 "verdict": c["verdict"],
-                "observations": c.get("authority_observations", 0),
+                "observations": court_observations(c),
             }
 
     state = read_json(PHASE_STATE)

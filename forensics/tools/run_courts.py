@@ -71,6 +71,10 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 TOOLS = REPO_ROOT / "forensics" / "tools"
 PHASE_STATE = REPO_ROOT / "forensics" / "phase-state.json"
 
+sys.path.insert(0, str(TOOLS))
+
+from atlas_common import court_observations, has_transcript  # noqa: E402
+
 # A stratum with no runtime court of its own, and why. Empty is the goal; every entry
 # is a decision that has to be justified rather than an oversight that has to be
 # found. Both entries here are the same kind of stratum: they produce *documents*,
@@ -135,10 +139,63 @@ def verdicts(body: dict | None) -> dict[str, str]:
 
 
 def observations(body: dict | None) -> dict[str, int]:
+    """Per-court observation counts, through the one accessor for the field."""
     if not body:
         return {}
-    return {str(r["court"]): int(r.get("observations", 0))
-            for r in body.get("courts", [])}
+    return {str(r["court"]): court_observations(r) for r in body.get("courts", [])}
+
+
+# Fields that are *proven* environment-dependent, and so are removed before the
+# committed and fresh records are compared. Each entry needs its own evidence: a field
+# in this list is a field the comparison stops seeing, and the whole point of the change
+# above is that the list is short and each line is argued.
+#
+# It is currently **empty**, which makes the comparison byte-for-byte modulo key order.
+# The one candidate is the `staged_binaries` map, whose values are repository-relative
+# paths under `artifacts/phase<N>/probes/` and are therefore identical on any runner that
+# checks out the same commit; it stays out of the list until a runner is observed to
+# disagree. `input digests` are *not* here either: `inputs[].sha256` is the hash of a
+# committed file, which is a fact about the commit.
+CANONICAL_PATHS: tuple[str, ...] = ()
+
+
+def compare_records(committed: dict, fresh: dict) -> list[str]:
+    """Every difference between the committed court record and the fresh one.
+
+    Structural rather than textual, so a difference names the path it is at: a report
+    that says "the JSON differs" sends a reader to `git diff` on a 400-line file, while
+    one that says `courts[3].residual_count: 0 -> 2` is the finding.
+    """
+    return _walk(committed, fresh, "")[0]
+
+
+def _walk(a: object, b: object, path: str) -> tuple[list[str], bool]:
+    """Compare two JSON values, answering the differences and whether they matched."""
+    if any(path == p or path.startswith(p + ".") or path.startswith(p + "[")
+           for p in CANONICAL_PATHS):
+        return [], True
+    if isinstance(a, dict) and isinstance(b, dict):
+        out: list[str] = []
+        for key in sorted(set(a) | set(b)):
+            if key not in a:
+                out.append(f"{path}.{key}: only in this run ({b[key]!r})")
+            elif key not in b:
+                out.append(f"{path}.{key}: only in the committed file ({a[key]!r})")
+            else:
+                sub, _ = _walk(a[key], b[key], f"{path}.{key}")
+                out += sub
+        return out, not out
+    if isinstance(a, list) and isinstance(b, list):
+        out = []
+        if len(a) != len(b):
+            out.append(f"{path}: {len(a)} element(s) committed, {len(b)} in this run")
+        for i, (x, y) in enumerate(zip(a, b)):
+            sub, _ = _walk(x, y, f"{path}[{i}]")
+            out += sub
+        return out, not out
+    if a != b:
+        return [f"{path}: committed {a!r}, this run {b!r}"], False
+    return [], True
 
 
 def main(argv: list[str]) -> int:
@@ -229,32 +286,37 @@ def main(argv: list[str]) -> int:
             print(f"    no committed evidence to compare against; this run is the first")
             continue
 
-        was, now = verdicts(committed), verdicts(fresh)
-        if was != now:
-            lost = sorted(c for c in was if c not in now)
-            gained = sorted(c for c in now if c not in was)
-            changed = sorted(
-                f"{c}: {was[c]} -> {now[c]}" for c in was if c in now and was[c] != now[c]
-            )
+        # **The committed file must be *the file this run writes*, not merely a file
+        # whose verdicts agree.** This used to compare `verdicts(committed) ==
+        # verdicts(fresh)`, which left every other field of the record unguarded: a
+        # committed `COURTS.json` could have its probe path, exit code, crashed flag,
+        # `residual_count`, `residuals`, staged-binary paths or input digests altered
+        # while its court names and verdicts stayed put, and this check would still
+        # print "committed evidence reproduced". `evidence_determinism.py` cannot catch
+        # it either -- court results are excluded from that tool on purpose, because
+        # they are the authority venue's output rather than a generator's.
+        #
+        # So the comparison is `canonical(committed) == canonical(fresh)`, where
+        # `canonical` removes only the fields that are *proven* environment-dependent
+        # and nothing else. See `CANONICAL_PATHS` below for the list and the evidence
+        # for each entry; an empty list would mean byte-for-byte, and that is the state
+        # this is trying to stay near.
+        diffs = compare_records(committed, fresh)
+        if diffs:
             failures.append(
                 f"phase {phase}: the committed evidence is not what this run "
-                f"reproduces\n      courts the committed file has and this run does "
-                f"not: {lost or '<none>'}\n      courts only this run has: "
-                f"{gained or '<none>'}\n      verdicts that moved: {changed or '<none>'}\n"
-                "      A verdict that moved in *either* direction is a failure: this "
-                "run is the authority-derived one, so the committed file has to be "
-                "the file this run writes. Regenerate and commit it."
+                f"reproduces\n" + "\n".join(f"      {d}" for d in diffs) + "\n"
+                "      This run is the authority-derived one, so the committed file "
+                "has to be the file this run writes -- in every field, not only in the "
+                "verdicts. Regenerate and commit it."
             )
-        # An observation *increase* is reported and allowed: recording more is what a
-        # commit is for. A decrease is the regression guard's business, which compares
-        # against the pre-push baseline rather than against the committed file.
-        was_n, now_n = observations(committed), observations(fresh)
-        grew = [f"{c}: {was_n[c]} -> {now_n[c]}"
-                for c in sorted(was_n) if now_n.get(c, 0) > was_n[c]]
-        if grew:
-            print("    more observations than the committed evidence: "
-                  + ", ".join(grew))
-        print(f"    all_pass, {len(now)} court(s), committed evidence reproduced")
+            continue
+
+        now_n = observations(fresh)
+        structural = sum(1 for r in fresh.get("courts", []) if not has_transcript(r))
+        print(f"    all_pass, {len(now_n)} court(s), {sum(now_n.values())} observation(s) "
+              f"over {len(now_n) - structural} transcript court(s): the committed record "
+              f"is exactly what this run wrote, in every field")
 
     if failures:
         print("run-courts: FAIL")
