@@ -59,7 +59,7 @@ and the **provider core** that lives inside it. The scope was not chosen; it was
 | 6.9 | DSO — the fifteen `DSO_*` exports, reassigned from Phase 2 by D95 |
 | 6.10a–e | RCU, the per-context thread-local family, the sparse array, the CONF module registry, the automatic configuration loader, the OID module and the `ssl_conf` module |
 | 6.11 | the self-test and indicator callback pairs |
-| 6.12 | the third-party provider court |
+| 6.12 | the third-party provider court — `RT-PROVIDER-3P`, the only probe that compiles an `OSSL_provider_init` into itself and therefore the only one that can see the core's provider-facing table |
 | 6.13 | this seal, and the closure reconciliation |
 
 ## 3. The evidence
@@ -78,6 +78,7 @@ residual instead of shifting every following line.
 | `RT-BIO-CORE` | `BIO_s_core`, `BIO_new_from_core_bio` and `OSSL_LIB_CTX_new_from_dispatch` |
 | `RT-DSO` | the loader: the filename conversion rules, the bind/unbind contract, and the error paths |
 | `RT-PROVIDER` | the registry, the dispatch-table walk inside `provider_init`, activation and refcounts, the enumeration, and the `providers` configuration module |
+| `RT-PROVIDER-3P` | the core *serving* a provider: the provider-facing dispatch table (its length outside the one deferred family, a digest of its id sequence, and the id it starts with), `CORE_GET_LIBCTX`, `CORE_GET_PARAMS` with the configuration-parameter merge and an absent key left alone, the `CRYPTO_*` trio, `CORE_THREAD_START` with the handler's having run, `OSSL_LIB_CTX_new_child` from inside `init`, the child-callback pair, and the teardown freeing the child |
 | `RT-CONF-MOD` | the CONF module registry, the automatic configuration loader, and the two modules this stratum registers |
 
 `RT-CONF-MOD` is also the differential court **RCU** could not have: `D-RCU-4` recorded that

@@ -85,6 +85,7 @@ COURTS = [
     ("RT-BIO-CORE", "rt_bio_core_probe.c"),
     ("RT-DSO", "rt_dso_probe.c"),
     ("RT-PROVIDER", "rt_provider_probe.c"),
+    ("RT-PROVIDER-3P", "rt_provider_3p_probe.c"),
     ("RT-CONF-MOD", "rt_conf_mod_probe.c"),
 ]
 

@@ -288,6 +288,7 @@
           "src/provider/child.rs",
           "docs/PHASE-6-PROVIDER-SEAL.md",
           "courts/phase6/rt_provider_probe.c",
+          "courts/phase6/rt_provider_3p_probe.c",
           "src/dso/mod.rs",
           "src/dso/dlfcn.rs",
           "courts/phase6/rt_dso_probe.c",
@@ -490,7 +491,7 @@
       "not_started": 15
     }
   },
-  "body_hash": "2904fa4a98315840c5b06cc6007dda3e79d08abde8951bc387b6c00248f50ff7",
+  "body_hash": "86a019054d7247172fa3ac229c70684d8d01c1cee9662b08a0263e1788884f62",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

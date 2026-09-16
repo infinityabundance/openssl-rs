@@ -669,10 +669,18 @@ function: `crypto/evp/evp_fetch.c`'s `evp_get_global_properties_str` and
   authority would compute differently is exactly what a recorded divergence exists to avoid.
 - **Claim removed:** "the child's default property query is initialised from the parent's at
   registration" is not claimed. It becomes claimable in Phase 7.
-- **Unreachable today, and said rather than implied:** both halves are reached only when a
-  provider takes the **parent** role, which needs a third-party provider. Nothing in this
-  crate can be one until 6.12's court, so **no court has observed either half** — the entries
-  say so instead of implying coverage.
+- **Observed as of 6.12, and on one side only:** `RT-PROVIDER-3P` compiles an
+  `OSSL_provider_init` into its own binary, so it is a real third-party provider and it takes
+  the parent role. Its registration **succeeds on both sides** — `child.register_child_ret`
+  is 2 (the child's own registration plus the probe's) and the probe's `create_cb` runs once
+  for the provider it loaded, with the handle equal to the `OSSL_PROVIDER *` the probe's own
+  `OSSL_PROVIDER_load_ex` returned. What the court does **not** observe is
+  `global_props_cb`: the walk over the store's providers is the authority's and the candidate's
+  alike, and it is only the property-string step *before* it that is missing here, so a probe
+  that counted `global_props_cb` calls would be counting the divergence rather than the
+  contract. The probe stores the callback, reports its pointer as non-NULL — which both sides
+  agree on — and does not report whether it was called. The absence of that step is therefore
+  still **not measured by any court**, and this entry is what says so.
 
 ### ~~D-TEVENT-CTX-STOP-LEAK-1~~ — **WITHDRAWN: the authority does not do this**
 

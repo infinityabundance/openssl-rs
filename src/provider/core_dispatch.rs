@@ -13,16 +13,25 @@
 //!
 //! ## What is absent, and why each one is
 //!
+//! One group, and only one:
+//!
 //! | id | function | owner |
 //! |---|---|---|
-//! | `OSSL_FUNC_CORE_THREAD_START` (3) | `ossl_init_thread_start` | **6.6e-ii** — the per-thread event-handler table |
-//! | `OSSL_FUNC_PROVIDER_REGISTER_CHILD_CB` (105), `DEREGISTER_CHILD_CB` (106) | the child callback pair — **published**, by 6.8e | 6.8e |
-//! | `OSSL_FUNC_PROVIDER_UP_REF` (110), `PROVIDER_FREE` (111) | `provider_up_ref_intern`, `provider_free_intern` | **6.8c** — the `activate` arm is `ossl_provider_activate` |
-//! | `OSSL_FUNC_GET_ENTROPY` (101), `GET_USER_ENTROPY` (98), `CLEANUP_ENTROPY` (102), `CLEANUP_USER_ENTROPY` (96), `GET_NONCE` (103), `GET_USER_NONCE` (99), `CLEANUP_NONCE` (104), `CLEANUP_USER_NONCE` (97) | the eight `rand_*` callbacks | **Phase 9** — they wrap `ossl_rand_get_entropy` and friends |
-//! | `OSSL_FUNC_CORE_OBJ_ADD_SIGID` (121), `CORE_OBJ_CREATE` (122) | `core_obj_add_sigid`, `core_obj_create` | **landed** — `OBJ_txt2nid`, `OBJ_find_sigid_algs`, `OBJ_add_sigid` and `OBJ_create` are all in `src/runtime/obj.rs` |
+//! | `OSSL_FUNC_CLEANUP_USER_ENTROPY` (96), `CLEANUP_USER_NONCE` (97), `GET_USER_ENTROPY` (98), `GET_USER_NONCE` (99), `GET_ENTROPY` (101), `CLEANUP_ENTROPY` (102), `GET_NONCE` (103), `CLEANUP_NONCE` (104) | the eight `rand_*` callbacks | **Phase 9** — they wrap `ossl_rand_get_entropy` and friends |
 //!
-//! The first three groups are gaps; the fourth is not, and is included. The distinction is
-//! worth stating because "not in the table yet" reads as one condition and is three.
+//! Every other entry `core_dispatch_` publishes is published here, including the three that
+//! were gaps when this table was first assembled and have since been filled:
+//! `OSSL_FUNC_CORE_THREAD_START` (3, 6.6e-ii), the child-callback pair (105/106, 6.8e) and
+//! `OSSL_FUNC_PROVIDER_UP_REF`/`PROVIDER_FREE` (110/111, 6.8c). Each of those landed with its
+//! own subphase and the row is removed as it lands rather than left to read as a gap — the
+//! distinction between "not in the table yet" and "never going to be" is the whole point of
+//! the table's being assembled rather than stubbed.
+//!
+//! The **count** of published entries is therefore 45 against the authority's 53, and the
+//! difference is exactly the eight above. `RT-PROVIDER-3P` observes the non-deferred count and
+//! a digest of the non-deferred id sequence, so an entry added, dropped, substituted or
+//! reordered outside that one recorded family is a residual; the family itself is excluded by
+//! name and the exclusion is stated in that probe's header.
 //!
 //! ## `core_get_params` has a fall-through that is easy to miss
 //!
@@ -47,6 +56,7 @@ use core::ptr;
 
 use crate::context::dispatch::OsslDispatch;
 use crate::params::{OsslParam, OSSL_PARAM_UNMODIFIED, OSSL_PARAM_UTF8_PTR};
+use crate::provider::activate::{provider_free_intern, provider_up_ref_intern};
 use crate::provider::{
     ossl_provider_ctx, ossl_provider_get0_dispatch, ossl_provider_get_conf_parameters,
     ossl_provider_name, OsslProvider,
@@ -201,11 +211,18 @@ pub(crate) const FUNC_SELF_TEST_CB: c_int = 100;
 #[allow(dead_code)] // unreachable until 6.8b-iii publishes the dispatch table
 pub(crate) const FUNC_CORE_COUNT_TO_MARK: c_int = 120;
 /// `OSSL_FUNC_CORE_OBJ_ADD_SIGID`.
+///
+/// **11, not 121.** The id was written as 121 when this table first landed, and the error was
+/// invisible for three reasons at once: the constant was only ever compared against itself, this
+/// build's own install header says 11 so no compile could disagree, and nothing walked the
+/// published table at runtime. `RT-PROVIDER-3P` digests that sequence, and the authority's ends
+/// `... 110 111 11 12`. A third-party provider compiled against these headers asks for id 12 and
+/// was answered NULL.
 #[allow(dead_code)] // unreachable until 6.8b-iii publishes the dispatch table
-pub(crate) const FUNC_CORE_OBJ_ADD_SIGID: c_int = 121;
-/// `OSSL_FUNC_CORE_OBJ_CREATE`.
+pub(crate) const FUNC_CORE_OBJ_ADD_SIGID: c_int = 11;
+/// `OSSL_FUNC_CORE_OBJ_CREATE` — see the note on `FUNC_CORE_OBJ_ADD_SIGID` above.
 #[allow(dead_code)] // unreachable until 6.8b-iii publishes the dispatch table
-pub(crate) const FUNC_CORE_OBJ_CREATE: c_int = 122;
+pub(crate) const FUNC_CORE_OBJ_CREATE: c_int = 12;
 /// `OSSL_FUNC_PROVIDER_NAME`.
 #[allow(dead_code)] // unreachable until 6.8b-iii publishes the dispatch table
 pub(crate) const FUNC_PROVIDER_NAME: c_int = 107;
@@ -622,6 +639,48 @@ pub(crate) unsafe extern "C" fn core_provider_get0_dispatch(
     unsafe { ossl_provider_get0_dispatch(prov.cast::<OsslProvider>()) }
 }
 
+/// `static int core_provider_up_ref_intern(const OSSL_CORE_HANDLE *prov, int activate)`.
+///
+/// `OSSL_FUNC_PROVIDER_UP_REF` (110). The handle a provider receives for *another* provider
+/// is an `OSSL_CORE_HANDLE *`, and this is the entry that turns it back into a reference.
+/// `activate` is the caller's choice of counter, and the two are separate counters here
+/// exactly as they are in the registry (`activatecnt` versus `refcnt`); the flag is 1 from
+/// the authority's own table, so a provider that asks for a reference also activates.
+///
+/// A dispatch entry's pointer and the `ossl_provider_*` function behind it are cast to each
+/// other rather than wrapped, because `OSSL_FUNC_provider_up_ref_fn` is
+/// `int (*)(const OSSL_CORE_HANDLE *, int)` and `provider_up_ref_intern`'s two parameters
+/// are `(OSSL_PROVIDER *, int)` — the same signature with an opaque first parameter, which
+/// is the whole of the handle contract.
+///
+/// # Safety
+/// `prov` must be the `OSSL_PROVIDER *` the handle names.
+#[allow(dead_code)] // unreachable until 6.8b-iii publishes the dispatch table
+pub(crate) unsafe extern "C" fn core_provider_up_ref_intern(
+    prov: *const c_void,
+    activate: c_int,
+) -> c_int {
+    // SAFETY: `prov` is the live provider the handle names.
+    unsafe { provider_up_ref_intern(prov.cast::<OsslProvider>().cast_mut(), activate) }
+}
+
+/// `static int core_provider_free_intern(const OSSL_CORE_HANDLE *prov, int deactivate)`.
+///
+/// `OSSL_FUNC_PROVIDER_FREE` (111), the mirror of the entry above. The asymmetry between
+/// the two arms — a boolean from the deactivation, an unconditional 1 from the free — is
+/// `provider_free_intern`'s and is not adjusted here.
+///
+/// # Safety
+/// `prov` must be the `OSSL_PROVIDER *` the handle names.
+#[allow(dead_code)] // unreachable until 6.8b-iii publishes the dispatch table
+pub(crate) unsafe extern "C" fn core_provider_free_intern(
+    prov: *const c_void,
+    deactivate: c_int,
+) -> c_int {
+    // SAFETY: `prov` is the live provider the handle names.
+    unsafe { provider_free_intern(prov.cast::<OsslProvider>().cast_mut(), deactivate) }
+}
+
 extern "C" {
     /// `void ERR_vset_error(int lib, int reason, const char *fmt, va_list args)`.
     ///
@@ -651,9 +710,18 @@ const fn e(function_id: c_int, function: *mut c_void) -> OsslDispatch {
 /// which is the same answer it would get from an older build — so the gap is visible to a
 /// provider rather than hidden behind a stub.
 ///
-/// Three groups are absent and each for its own reason: `CORE_THREAD_START` (6.6e-ii), the
-/// eight `rand_*` callbacks (Phase 9), and the two child-callback and two provider-accessor
-/// pairs (6.8e and 6.8c). The module doc's table is the record, and the test below asserts the
+/// The **order is the authority's**, and it is not the numeric order of the ids. Two places
+/// show that plainly: the BIO group is published as 40, 41, 42, 43, **49, 48, 50**, 44, 45, 46,
+/// 47 (the header declares `GETS` and `PUTS` before `UP_REF`, and `CTRL` after `PUTS`), and the
+/// `CRYPTO_*` group is published *before* the child-callback and provider-accessor ids even
+/// though its own ids are lower. Neither order is observable through a lookup — a provider
+/// `switch`es on `function_id` — which is exactly why an earlier revision of this table sorted
+/// the entries and nobody noticed. `RT-PROVIDER-3P` digests the published id sequence, so order
+/// is now observed, and the authority's is what is reproduced.
+///
+/// One group is absent: the eight `rand_*` callbacks (Phase 9). Three earlier groups have left
+/// the absent list as their subphases landed — `CORE_THREAD_START` (6.6e-ii), the child-callback
+/// pair (6.8e) and `PROVIDER_UP_REF`/`PROVIDER_FREE` (6.8c). The test below asserts the
 /// published set so that adding an entry or dropping one cannot happen quietly.
 // SAFETY: every `function` here is a `'static` function item or a `'static` function in
 // another module of this crate, and every `function_id` is a compile-time constant. The array
@@ -663,9 +731,9 @@ unsafe impl Sync for CoreDispatchTable {}
 
 /// A wrapper carrying the table's `Sync` claim.
 #[allow(dead_code)] // unreachable until 6.8c publishes it through `get0_dispatch`
-pub(crate) struct CoreDispatchTable(pub(crate) [OsslDispatch; 44]);
+pub(crate) struct CoreDispatchTable(pub(crate) [OsslDispatch; 46]);
 
-/// The table itself.
+/// The table itself, in `core_dispatch_`'s order.
 #[allow(dead_code)] // unreachable until 6.8c publishes it through `get0_dispatch`
 pub(crate) static CORE_DISPATCH: CoreDispatchTable = CoreDispatchTable([
     e(
@@ -707,6 +775,19 @@ pub(crate) static CORE_DISPATCH: CoreDispatchTable = CoreDispatchTable([
         FUNC_BIO_WRITE_EX,
         crate::runtime::bio::core_bio::ossl_core_bio_write_ex as *mut c_void,
     ),
+    // 49 before 48, and 50 before 44: the header's declaration order, not the ids'.
+    e(
+        FUNC_BIO_GETS,
+        crate::runtime::bio::core_bio::ossl_core_bio_gets as *mut c_void,
+    ),
+    e(
+        FUNC_BIO_PUTS,
+        crate::runtime::bio::core_bio::ossl_core_bio_puts as *mut c_void,
+    ),
+    e(
+        FUNC_BIO_CTRL,
+        crate::runtime::bio::core_bio::ossl_core_bio_ctrl as *mut c_void,
+    ),
     e(
         FUNC_BIO_UP_REF,
         crate::runtime::bio::core_bio::ossl_core_bio_up_ref as *mut c_void,
@@ -721,50 +802,16 @@ pub(crate) static CORE_DISPATCH: CoreDispatchTable = CoreDispatchTable([
     ),
     e(FUNC_BIO_VSNPRINTF, BIO_vsnprintf as *mut c_void),
     e(
-        FUNC_BIO_PUTS,
-        crate::runtime::bio::core_bio::ossl_core_bio_puts as *mut c_void,
-    ),
-    e(
-        FUNC_BIO_GETS,
-        crate::runtime::bio::core_bio::ossl_core_bio_gets as *mut c_void,
-    ),
-    e(
-        FUNC_BIO_CTRL,
-        crate::runtime::bio::core_bio::ossl_core_bio_ctrl as *mut c_void,
+        FUNC_SELF_TEST_CB,
+        core_self_test_get_callback as *mut c_void,
     ),
     e(
         FUNC_INDICATOR_CB,
         core_indicator_get_callback as *mut c_void,
     ),
-    e(
-        FUNC_SELF_TEST_CB,
-        core_self_test_get_callback as *mut c_void,
-    ),
-    // 96-104: the eight `rand_*` callbacks — absent, Phase 9.
-    // The child-callback pair. These are the entries a **third-party provider** uses to
-    // tell the core that its own library context should see its providers, and they are the
-    // parent half of 6.8e. Both casts are of the `ossl_provider_*` functions themselves,
-    // whose signatures are the `OSSL_FUNC_*` types' exactly.
-    e(
-        FUNC_PROVIDER_REGISTER_CHILD_CB,
-        crate::provider::ossl_provider_register_child_cb as *mut c_void,
-    ),
-    e(
-        FUNC_PROVIDER_DEREGISTER_CHILD_CB,
-        crate::provider::ossl_provider_deregister_child_cb as *mut c_void,
-    ),
-    e(FUNC_PROVIDER_NAME, core_provider_get0_name as *mut c_void),
-    e(
-        FUNC_PROVIDER_GET0_PROVIDER_CTX,
-        core_provider_get0_provider_ctx as *mut c_void,
-    ),
-    e(
-        FUNC_PROVIDER_GET0_DISPATCH,
-        core_provider_get0_dispatch as *mut c_void,
-    ),
-    // 110, 111: `PROVIDER_UP_REF` and `PROVIDER_FREE` — absent, 6.8c.
-    e(FUNC_CORE_OBJ_ADD_SIGID, core_obj_add_sigid as *mut c_void),
-    e(FUNC_CORE_OBJ_CREATE, core_obj_create as *mut c_void),
+    // 96-99 and 101-104: the eight `rand_*` callbacks — absent, Phase 9. They sit here in the
+    // authority's table, between the self-test pair and the `CRYPTO_*` group, so an entry added
+    // later must go in this position and not at the end.
     e(FUNC_CRYPTO_MALLOC, CRYPTO_malloc as *mut c_void),
     e(FUNC_CRYPTO_ZALLOC, CRYPTO_zalloc as *mut c_void),
     e(FUNC_CRYPTO_FREE, CRYPTO_free as *mut c_void),
@@ -792,6 +839,34 @@ pub(crate) static CORE_DISPATCH: CoreDispatchTable = CoreDispatchTable([
         CRYPTO_secure_allocated as *mut c_void,
     ),
     e(FUNC_OPENSSL_CLEANSE, OPENSSL_cleanse as *mut c_void),
+    // The child-callback pair. These are the entries a **third-party provider** uses to tell the
+    // core that its own library context should see its providers, and they are the parent half
+    // of 6.8e. Both casts are of the `ossl_provider_*` functions themselves, whose signatures
+    // are the `OSSL_FUNC_*` types' exactly.
+    e(
+        FUNC_PROVIDER_REGISTER_CHILD_CB,
+        crate::provider::ossl_provider_register_child_cb as *mut c_void,
+    ),
+    e(
+        FUNC_PROVIDER_DEREGISTER_CHILD_CB,
+        crate::provider::ossl_provider_deregister_child_cb as *mut c_void,
+    ),
+    e(FUNC_PROVIDER_NAME, core_provider_get0_name as *mut c_void),
+    e(
+        FUNC_PROVIDER_GET0_PROVIDER_CTX,
+        core_provider_get0_provider_ctx as *mut c_void,
+    ),
+    e(
+        FUNC_PROVIDER_GET0_DISPATCH,
+        core_provider_get0_dispatch as *mut c_void,
+    ),
+    e(
+        FUNC_PROVIDER_UP_REF,
+        core_provider_up_ref_intern as *mut c_void,
+    ),
+    e(FUNC_PROVIDER_FREE, core_provider_free_intern as *mut c_void),
+    e(FUNC_CORE_OBJ_ADD_SIGID, core_obj_add_sigid as *mut c_void),
+    e(FUNC_CORE_OBJ_CREATE, core_obj_create as *mut c_void),
     OsslDispatch {
         function_id: DISPATCH_END,
         function: ptr::null_mut(),
@@ -925,7 +1000,11 @@ mod tests {
         assert_eq!(FUNC_INDICATOR_CB, 95);
         assert_eq!(FUNC_SELF_TEST_CB, 100);
         assert_eq!(FUNC_CORE_COUNT_TO_MARK, 120);
-        assert_eq!(FUNC_CORE_OBJ_CREATE, 122);
+        // 11 and 12, as the header says: `CORE_OBJ_ADD_SIGID`/`CORE_OBJ_CREATE` are the two
+        // lowest ids in the *second* series and not a 12x pair. This assertion is the one that
+        // would have caught them being written as 121 and 122.
+        assert_eq!(FUNC_CORE_OBJ_ADD_SIGID, 11);
+        assert_eq!(FUNC_CORE_OBJ_CREATE, 12);
         // Each family is contiguous in the header, and a gap is the failure worth catching:
         // a mistyped id would silently hand a provider a different function than it asked
         // for. The BIO family runs 40..50 and the CRYPTO family 20..31, which the constants
@@ -970,20 +1049,31 @@ mod tests {
     }
     #[test]
     fn the_table_publishes_exactly_the_ids_whose_functions_exist() {
-        // The published set, and the absent set, are both asserted. A provider compiled
-        // against another 3.x looks up the ids it knows and is answered NULL for the ones
-        // this build does not publish, so **which ids are absent is a compatibility fact**,
-        // not an internal detail -- and one that would otherwise be invisible, because a
-        // missing entry and a wrongly-typed entry both produce a provider that misbehaves
-        // rather than a build failure.
+        // The published set, the *order*, and the absent set are all asserted. A provider
+        // compiled against another 3.x looks up the ids it knows and is answered NULL for the
+        // ones this build does not publish, so **which ids are absent is a compatibility fact**,
+        // not an internal detail -- and one that would otherwise be invisible, because a missing
+        // entry and a wrongly-typed entry both produce a provider that misbehaves rather than a
+        // build failure.
+        //
+        // The order is asserted for a different reason. A provider's own walk switches on
+        // `function_id`, so a reordered table is behaviourally identical, and an earlier
+        // revision of this table sorted two groups into numeric order without anyone noticing.
+        // `RT-PROVIDER-3P` digests the published sequence, which makes the order observable
+        // evidence rather than an unexamined accident -- and this array is that sequence, in
+        // `core_dispatch_`'s order, so the two agree by construction when both are right.
         let published: &[c_int] = &[
-            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 120, // the core, error, thread and mark group
+            1, 2, 4, 3, 5, 6, 7, 8, 9, 10, 120, // the core, error, thread and mark group
+            40, 41, 42, 43, 49, 48, 50, 44, 45, 46, 47, // the BIO group, in header order
+            100, 95, // the self-test and indicator callbacks — self-test is published first
+            // 96-99 and 101-104: the eight `rand_*` callbacks -- absent, Phase 9. The run is
+            // written as a comment rather than as entries because a missing id is the fact.
             20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, // CRYPTO_* and OPENSSL_cleanse
-            40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, // the BIO group
-            95, 100, // the indicator and self-test callbacks
             105, 106, // the child-callback pair, 6.8e
             107, 108, 109, // the three provider accessors
-            121, 122, // the two object callbacks
+            110, 111, // the provider refcount pair, 6.8c
+            // 121 and 122 do not exist; the two object callbacks are the header's 11 and 12.
+            11, 12, // the two object callbacks
         ];
         // The terminator is not an id; it ends the walk.
         assert_eq!(CORE_DISPATCH.0.len(), published.len() + 1);
@@ -993,15 +1083,14 @@ mod tests {
             "the terminator publishes no function"
         );
         let mut seen = [0usize; 200];
-        for entry in CORE_DISPATCH.0.iter().take(published.len()) {
+        for (at, entry) in CORE_DISPATCH.0.iter().take(published.len()).enumerate() {
+            assert_eq!(
+                entry.function_id, published[at],
+                "position {at} of the published table"
+            );
             assert!(
                 !entry.function.is_null(),
                 "id {} publishes a function",
-                entry.function_id
-            );
-            assert!(
-                published.contains(&entry.function_id),
-                "id {} is published but not in the expected set",
                 entry.function_id
             );
             let idx = entry.function_id as usize;
@@ -1017,9 +1106,12 @@ mod tests {
             );
         }
         // Every other id below 200 must be absent, and these are the ones that are absent on
-        // purpose: 96-106 needs Phase 9 and 6.8e, and
-        // 110/111 need 6.8c's activate. A test that only listed the published set would let
-        // an id be *added* without anyone deciding it was ready.
+        // purpose: 96-99 and 101-104, the eight `rand_*` callbacks, which need Phase 9. Every
+        // other gap this test used to allow has been closed -- `CORE_THREAD_START` (3) by
+        // 6.6e-ii, the child-callback pair (105/106) by 6.8e, and `PROVIDER_UP_REF`/
+        // `PROVIDER_FREE` (110/111) by 6.8c's `provider_up_ref_intern`/`provider_free_intern`.
+        // A test that only listed the published set would let an id be *added* without anyone
+        // deciding it was ready, which is the failure this half exists to catch.
         for id in 0..200i32 {
             if published.contains(&id) {
                 continue;
@@ -1034,12 +1126,12 @@ mod tests {
     #[test]
     fn the_absent_ids_are_the_ones_the_module_doc_names() {
         // The doc table and the code cannot drift: each named absence is checked against the
-        // table. `CORE_THREAD_START` left this list when 6.6e-ii landed
-        // `ossl_init_thread_start`, and its entry is now published as id 3, so the remaining
-        // names are the eight `rand_*` ids, which are Phase 9's, and the two provider
-        // refcount entries are 6.8c's. The child-callback pair left this list when 6.8e
-        // landed `ossl_provider_register_child_cb` and its counterpart, and their entries are
-        // now published as ids 105 and 106.
+        // table. Three groups have left this list as their subphases landed -- `CORE_THREAD_START`
+        // when 6.6e-ii landed `ossl_init_thread_start` (now published as id 3), the
+        // child-callback pair when 6.8e landed `ossl_provider_register_child_cb` and its
+        // counterpart (now 105 and 106), and `PROVIDER_UP_REF`/`PROVIDER_FREE` when 6.8c's
+        // `provider_up_ref_intern`/`provider_free_intern` landed (now 110 and 111). What is
+        // left is exactly the eight `rand_*` ids, which are Phase 9's and cannot precede it.
         let absent: &[(c_int, &str)] = &[
             (96, "CLEANUP_USER_ENTROPY -- Phase 9"),
             (97, "CLEANUP_USER_NONCE -- Phase 9"),
@@ -1049,8 +1141,6 @@ mod tests {
             (102, "CLEANUP_ENTROPY -- Phase 9"),
             (103, "GET_NONCE -- Phase 9"),
             (104, "CLEANUP_NONCE -- Phase 9"),
-            (110, "PROVIDER_UP_REF -- 6.8c"),
-            (111, "PROVIDER_FREE -- 6.8c"),
         ];
         for (id, why) in absent {
             for entry in CORE_DISPATCH.0.iter() {
