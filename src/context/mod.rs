@@ -365,6 +365,24 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
     // yet, and this is the only write that publishes the lock.
     unsafe { (*ctx).lock = lock };
 
+    // The provider-config object, slot 16 — the **first** slot object in this crate, and in
+    // the authority it is built third, after `evp_method_store` (Phase 7) and before `drbg`
+    // (Phase 9). Of the slots this crate has landed it is therefore first, and the P2 marker
+    // on it is the same one the authority writes: it must be released *before* the provider
+    // store, because a provider this module activated is recorded in the store.
+    //
+    // SAFETY: `ctx` is the live context being initialised — either a fresh `CRYPTO_zalloc`
+    // block or the process-global default during its own `RUN_ONCE` — so it is a live object
+    // no other thread can observe yet.
+    let provider_conf =
+        unsafe { crate::provider::conf::ossl_prov_conf_ctx_new(ctx.cast::<c_void>()) };
+    if provider_conf.is_null() {
+        context_deinit(ctx);
+        return false;
+    }
+    // SAFETY: as above; the slot is published once, here.
+    unsafe { (*ctx).provider_conf = provider_conf.cast::<c_void>() };
+
     // The provider store. **This is the first slot object the authority builds** among
     // those this crate has landed, and its position is not arbitrary: the authority's own
     // comment marks it *P1 -- needs to be freed before the child provider data is freed*,
@@ -508,10 +526,25 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
 /// with respect to the provider store). Only slot 21 has no release: it is an
 /// interior address, not an allocation.
 fn context_deinit_objs(ctx: *mut OsslLibCtx) {
-    // The provider store, released **first** among the slot objects, because the authority
-    // marks it *P1*: the seven slots it builds ahead of this one are explicitly *"cleaned up
-    // before the provider store"*, and the child-provider data that 6.8e lands must be freed
-    // after it. Releasing it here is what makes the P1 relation hold once that arrives.
+    // The provider-config object, released **first** among the slot objects, which is the
+    // authority's order: `context_deinit_objs` releases `evp_method_store` (Phase 7),
+    // `drbg` (Phase 9) and then this one, all before the provider store's *P1* position.
+    // Releasing it here is what makes the P2 relation hold: a provider this module
+    // activated lives in the store, and the module's list is what points at it.
+    // SAFETY: `ctx` is a live context being torn down by `context_deinit`, and no other
+    // thread holds a reference to it -- `OSSL_LIB_CTX_free` is the only caller and the
+    // caller contract is that the object is no longer in use. Each slot is released exactly
+    // once and re-NULLed.
+    unsafe {
+        if !(*ctx).provider_conf.is_null() {
+            crate::provider::conf::ossl_prov_conf_ctx_free((*ctx).provider_conf);
+            (*ctx).provider_conf = ptr::null_mut();
+        }
+    }
+
+    // The provider store, released **first among the slot objects the authority marks P1**,
+    // because the child-provider data that 6.8e lands must be freed after it. Releasing it
+    // here is what makes the P1 relation hold once that arrives.
     // SAFETY: `ctx` is a live context being torn down by `context_deinit`, and no other
     // thread holds a reference to it -- `OSSL_LIB_CTX_free` is the only caller and the
     // caller contract is that the object is no longer in use. Each slot is released exactly

@@ -196,7 +196,7 @@
       "verdict": "pass"
     },
     "RT-PROVIDER": {
-      "observations": 67,
+      "observations": 80,
       "verdict": "pass"
     },
     "RT-RUNTIME-EXT": {
@@ -278,7 +278,7 @@
     "blocking_dependencies": 29,
     "divergence_names_covered": 32,
     "findings": 0,
-    "language_census": 2049,
+    "language_census": 2076,
     "sealed_census": 59
   }
 }

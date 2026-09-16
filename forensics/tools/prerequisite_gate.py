@@ -69,7 +69,7 @@ import argparse
 import json
 import re
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -564,6 +564,19 @@ def main(argv: list[str]) -> int:
             "by_defining_unit": {k: sorted(v) for k, v in sorted(sealed_census.items())},
         },
         "census": {k: len(v) for k, v in sorted(census.items())},
+        # The same census, broken down by the authority unit each name came from.
+        #
+        # The guard holds the totals to non-increase, which is the right invariant for
+        # a name that *disappears* and the wrong one for a unit that is new: transcribing
+        # another authority file necessarily adds that file's local identifiers to the
+        # count, and those are not omissions. A single total cannot tell the two apart, so
+        # the breakdown is published and the guard compares per unit: an existing unit's
+        # count may not grow, and a new unit is a movement. See
+        # `docs/DECISIONS.md` D130.
+        "census_by_unit": {
+            k: dict(sorted(Counter(n.split(":", 1)[0] for n in v).items()))
+            for k, v in sorted(census.items())
+        },
         "census_not_a_failure": (
             "the C language surface is counted and listed, never failed: the crate "
             "models C types, macros and reason codes differently on purpose, and a "
