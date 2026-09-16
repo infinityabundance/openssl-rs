@@ -40,6 +40,7 @@ pub mod lhash;
 pub mod mem;
 pub mod obj;
 pub mod secure;
+pub mod sparse_array;
 pub mod stack;
 pub mod str;
 pub mod thread;
