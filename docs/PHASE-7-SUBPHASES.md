@@ -121,7 +121,19 @@ Recorded so they are not re-derived per subphase.
    `e_des.c`, `e_rc4.c` and their siblings are in the build; their primitives are Phase 13's.
 4. **`OPENSSL_NO_FIPS` is set.** `evp_default_properties_enable_fips_int` exists and is
    deferred; this crate's FIPS claims are recorded separately in `docs/FIPS_CLAIMS.md`.
-5. **`no-asm` is set**, so no `crypto/evp/*.s` or per-architecture `.pl` output is a
+5. **Asm is *enabled*, and this row said the opposite until D143.** The row read "`no-asm` is set,
+   so no `crypto/evp/*.s` or per-architecture `.pl` output is a dependency", and the authority's own
+   build record says otherwise in three places a reader can check: `%disabled` in `configdata.pm`
+   — the admitted profile's actual disable list — contains `trace`, `fips`, `md2`, `rc5`, `ktls`,
+   `asan`, `ubsan`, `zlib` and thirty-five more, and **`asm` is not among them**; `"asm_arch" =>
+   "x86_64"` and `"perlasm_scheme" => "elf"` are both recorded; and the build tree holds
+   `crypto/x86_64cpuid.s` **and** `libcrypto-shlib-x86_64cpuid.o`, where the `.s` is perlasm output
+   that a `no-asm` build does not produce. The consequence is not local: whatever `crypto/*.pl` and
+   `crypto/*/*.pl` emit is part of the authority this crate reconstructs, it is hidden from the DSO
+   by the version script so none of it is exported surface, and a Phase 8 or 9 transcription that
+   reaches `aesni_encrypt` or `sha256_block_data_order` is reaching a perlasm implementation. This
+   stratum's own instance is `OPENSSL_rdtsc` (`src/runtime/rdtsc.rs`), which 7.1's stochastic cache
+   flush seeds from.
    dependency.
 6. **The namemap is Phase 6's and is complete.** `ossl_namemap_doall_names`,
    `ossl_namemap_name2num*` and `ossl_namemap_add_names` are the vocabulary the fetch path

@@ -85,7 +85,7 @@
       "symbols_named_by_a_row": 60,
       "symbols_reached": 60,
       "unit_records": 10,
-      "units_named_by_a_record": 12,
+      "units_named_by_a_record": 11,
       "units_named_by_a_row": 128,
       "units_reached": 43
     },
@@ -1291,7 +1291,7 @@
           "ossl_method_store_remove_all_provided",
           "ossl_method_unlock_store"
         ],
-        "recorded_by": "deferral:ossl_method_store_cache_get",
+        "recorded_by": null,
         "subphases": [
           "6.7",
           "6.7a",
@@ -1651,23 +1651,23 @@
       "transcribed_units": 114
     }
   },
-  "body_hash": "644e826c6490f03a053861b9305da02bdd0d6d1b85537cee0419748626a33295",
+  "body_hash": "612b2b8fb976b3d31047c2d77580be4a696e67d7450c941711c1ebd77e29c989",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "600c6db3dfe1bbb4ed2c4a1eb9c685cc36054878fb39d3045599560d94f72a01"
+      "sha256": "4d028e685db9afdf1cd018128ba3f90b2a9416cc424598236b4a278b7aaa74cc"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "47ccd03624231a43b3db062903e446aaedfcdc989316a32ae6519e02b8e2a95e"
+      "sha256": "067ca07f328da697429dd07cdd6e3fe6f10474a0d6137928b8d61fe449f8adf0"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "0849608a5a0e0f6fcc6ec3c5d60f10141434a45f9d3e7d5099e2ab8f46a6b10f"
+      "sha256": "dcfa50efeafa8fe81de5393428f843a51277c7e8775318b577cc058344b7b24c"
     },
     {
       "name": "phase-state",
@@ -1677,7 +1677,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "96cb5fca52be390f54eab9158a41784b08ea52852634b3692434ea950e25580b"
+      "sha256": "0dd0f305cd8f871be764bba16a8b899e7a82c30f15aa43c9d705bf5e320709bc"
     },
     {
       "name": "source-manifest",
@@ -1697,7 +1697,7 @@
     {
       "name": "plan-PHASE-7-SUBPHASES",
       "path": "docs/PHASE-7-SUBPHASES.md",
-      "sha256": "b0e8964dbcaa511f8b8353c51d642330a571b0a444dd40ee71e7b8d91102361b"
+      "sha256": "e50aeb0b9617da1128c9612317a9d1cd286afa8b73d6048391c166d91445cf9d"
     }
   ],
   "kind": "plan-reconciliation",

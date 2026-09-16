@@ -8286,3 +8286,78 @@ a pointer plus a one-bit field round to the same sixteen bytes on both sides.
 | unit tests | 302 | 308 |
 
 SPDX-License-Identifier: Apache-2.0
+
+## D143 — the store's query path, and a plan claim the authority's own build record contradicts
+
+**What landed.** The rest of `crypto/property/property.c` in `src/property/store.rs`:
+`ossl_method_store_fetch`, the match itself; `ossl_method_store_cache_get` and `_cache_set`, the two
+entry points and the delete arm that `_cache_set` hides behind a NULL method; the stochastic flush —
+`ImplCacheFlush`, `impl_cache_flush_cache`'s Marsaglia xorshift, `impl_cache_flush_one_alg` and
+`ossl_method_cache_flush_some`; `ossl_method_store_do_all` with `alg_do_one`, `alg_copy` and
+`del_tmpalg`; and `src/runtime/rdtsc.rs`, the `OPENSSL_rdtsc` the flush seeds from. Five more unit
+tests, 308 → 313. **The store is now whole**: every function `crypto/property/property.c` defines
+except `ossl_ctx_global_properties_new`/`_free` (6.7a's, already in `globals.rs`) is present.
+
+Three shapes in the query path are worth naming, because each is a place a plausible implementation
+differs from the authority:
+
+* **the no-query and query paths are two loops, not one loop with a condition.** With no query the
+  *first* implementation of a matching provider wins — provider preference is the order of the
+  implementation stack — and with a query every implementation is scored by `ossl_property_match_count`
+  and the best wins, **stopping early only when the query has no optional properties**;
+* **the caller's query is merged with the context's global properties**, and the two merge cases are
+  not symmetric: with no caller query, `pq` becomes an *alias* of the context's own list and must not
+  be freed, which is why the free at the tail is of `p2`;
+* **`_cache_set` with a NULL method is a delete**, and the entry point has a destructor parameter it
+  does not use on that path.
+
+**The stochastic flush's outcome is not reproducible on either side.** Its seed is the CPU timestamp
+counter, so which cached entries survive is seed-dependent on the authority as well; the authority's
+own comment calls the strategy a deliberate compromise. `RT-FETCH` therefore observes the
+*threshold* — `cache_nelem` crossing `IMPL_CACHE_FLUSH_THRESHOLD` (500) sets `cache_need_flush` —
+and not the flush's result, and the unit test for the threshold inserts 500 distinct query strings
+rather than asserting anything about which of them the flush keeps.
+
+**A signature of mine was wrong in a way Rust's type system then made visible.** `prov_rw` is the
+authority's `const OSSL_PROVIDER **prov_rw` — a *writable* pointer to a `const OSSL_PROVIDER *`,
+because the fetch writes the provider that answered back through it. D142 had spelled it
+`*const *const` and used `cast_mut` internally, which clippy rejected as a mutable-reference-needing
+const parameter. The corrected type is `*mut *const OsslProvider`, and the same correction went into
+`src/evp/method_store.rs`'s `McmGetFn`, whose `mcm->get` writes `*prov` too. The `cast_mut` is gone.
+
+**And the plan said `no-asm`, which is false.** `docs/PHASE-7-SUBPHASES.md` §3.5 recorded "`no-asm`
+is set, so no `crypto/evp/*.s` or per-architecture `.pl` output is a dependency". The authority's own
+build record contradicts it three times: `%disabled` in `configdata.pm` — the admitted profile's
+actual disable list, 41 entries — contains `trace`, `fips`, `md2`, `rc5`, `ktls`, `asan`, `ubsan`,
+`zlib` and their siblings, and **`asm` is not among them**; `"asm_arch" => "x86_64"` and
+`"perlasm_scheme" => "elf"` are recorded; and the build tree holds `crypto/x86_64cpuid.s` **and**
+`libcrypto-shlib-x86_64cpuid.o`, where the `.s` is perlasm output that a `no-asm` build does not
+produce. That is the same class as D141's fifteen mislabelled rows — a recorded claim contradicted by
+measurement — and it is corrected in the plan rather than worked around, because the *consequence* is
+not local to this stratum: every `crypto/*.pl` and `crypto/*/*.pl` output is part of the authority
+this crate reconstructs, hidden from the DSO by the version script and therefore never exported
+surface, but reached all the same by any transcription that calls `aesni_encrypt` or
+`sha256_block_data_order`. Phase 8 and Phase 9 are the strata that will meet it.
+
+`OPENSSL_rdtsc` is this stratum's instance, and its value is the one thing here that no court can
+assert: the perlasm body assembles the full 64-bit counter in `rax` and the declared return type is
+`uint32_t`, so the transcription takes the low half; the `x86_64` arm is the `_rdtsc` intrinsic and
+the non-`x86_64` arm answers **0**, which selects the caller's documented global-seed branch rather
+than inventing a timestamp source the authority does not have on that target either. The admitted
+profile is `linux-x86_64`, so that arm is outside the claims in the first place; it is recorded in
+`docs/SECURITY_DIVERGENCE_POLICY.md`'s class list rather than left as an implied fallback.
+
+**Six `#[allow(dead_code)]` rows in `src/runtime/sparse_array.rs` were stale and are gone.** Each
+named `6.10a-ii` as the subphase that would reach it, and the store reaches four of them
+(`doall_arg`, `num`, `get`, `set`) a stratum earlier; the two that remain are the `_ex` pair.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 7 implemented / open | 0 / 950 | 0 / 950 (the store is internal) |
+| store functions present, of `property.c`'s | 11 | 21 |
+| recorded deferrals | 17 | 13 |
+| unit tests | 308 | 313 |
+
+SPDX-License-Identifier: Apache-2.0

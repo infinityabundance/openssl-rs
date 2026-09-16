@@ -41,6 +41,7 @@ pub mod lhash;
 pub mod mem;
 pub mod obj;
 pub mod rcu;
+pub mod rdtsc;
 pub mod secure;
 pub mod sparse_array;
 pub mod stack;

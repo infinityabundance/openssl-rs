@@ -77,34 +77,6 @@
         "evidence": "src/runtime/defaults.rs module doc"
       },
       {
-        "symbol": "ossl_method_store_cache_get",
-        "owner_phase": 7,
-        "reason": "the fetch cache's read. **Corrected in D141: this row said Phase 6, and Phase 6 is complete.** `crypto/property/property.c` is where the authority defines `OSSL_METHOD_STORE`, and Phase 6's own plan gives the file's remainder to subphase 6.7c (`docs/PHASE-6-SUBPHASES.md` row 6.7c) -- but Phase 6 closed without it, so a name owed to a *sealed* stratum was neither blocking the gate nor reported as stale, which is the `a2d_ASN1_OBJECT` failure class arriving through the phase field instead of through a prefix. The owner is Phase 7 for a reason that is a measurement and not a preference: the earliest stratum that calls it is this one. `crypto/evp/evp_fetch.c` is `ossl_method_store_new`'s first caller, ahead of `crypto/encode_decode/decoder_meth.c` and `crypto/store/store_meth.c`, which share the same store object. The unit is named here so a reader can check that claim rather than take it.",
-        "evidence": "docs/DECISIONS.md D141 (the correction and the caller measurement); crypto/property/property.c; crypto/evp/evp_fetch.c; docs/PHASE-6-SUBPHASES.md row 6.7c",
-        "authority_unit": "crypto/property/property.c"
-      },
-      {
-        "symbol": "ossl_method_store_cache_set",
-        "owner_phase": 7,
-        "reason": "the fetch cache's write. **Corrected in D141: this row said Phase 6, and Phase 6 is complete.** `crypto/property/property.c` is where the authority defines `OSSL_METHOD_STORE`, and Phase 6's own plan gives the file's remainder to subphase 6.7c (`docs/PHASE-6-SUBPHASES.md` row 6.7c) -- but Phase 6 closed without it, so a name owed to a *sealed* stratum was neither blocking the gate nor reported as stale, which is the `a2d_ASN1_OBJECT` failure class arriving through the phase field instead of through a prefix. The owner is Phase 7 for a reason that is a measurement and not a preference: the earliest stratum that calls it is this one. `crypto/evp/evp_fetch.c` is `ossl_method_store_new`'s first caller, ahead of `crypto/encode_decode/decoder_meth.c` and `crypto/store/store_meth.c`, which share the same store object. The unit is named here so a reader can check that claim rather than take it.",
-        "evidence": "docs/DECISIONS.md D141 (the correction and the caller measurement); crypto/property/property.c; crypto/evp/evp_fetch.c; docs/PHASE-6-SUBPHASES.md row 6.7c",
-        "authority_unit": "crypto/property/property.c"
-      },
-      {
-        "symbol": "ossl_method_store_do_all",
-        "owner_phase": 7,
-        "reason": "the store's iteration, which `evp_generic_do_all` and the four per-context stores' own `_do_all` wrappers are built on. **Corrected in D141: this row said Phase 6, and Phase 6 is complete.** `crypto/property/property.c` is where the authority defines `OSSL_METHOD_STORE`, and Phase 6's own plan gives the file's remainder to subphase 6.7c (`docs/PHASE-6-SUBPHASES.md` row 6.7c) -- but Phase 6 closed without it, so a name owed to a *sealed* stratum was neither blocking the gate nor reported as stale, which is the `a2d_ASN1_OBJECT` failure class arriving through the phase field instead of through a prefix. The owner is Phase 7 for a reason that is a measurement and not a preference: the earliest stratum that calls it is this one. `crypto/evp/evp_fetch.c` is `ossl_method_store_new`'s first caller, ahead of `crypto/encode_decode/decoder_meth.c` and `crypto/store/store_meth.c`, which share the same store object. The unit is named here so a reader can check that claim rather than take it.",
-        "evidence": "docs/DECISIONS.md D141 (the correction and the caller measurement); crypto/property/property.c; crypto/evp/evp_fetch.c; docs/PHASE-6-SUBPHASES.md row 6.7c",
-        "authority_unit": "crypto/property/property.c"
-      },
-      {
-        "symbol": "ossl_method_store_fetch",
-        "owner_phase": 7,
-        "reason": "the store's fetch, which is also the property-query match and the reason the store cannot precede the grammar. **Corrected in D141: this row said Phase 6, and Phase 6 is complete.** `crypto/property/property.c` is where the authority defines `OSSL_METHOD_STORE`, and Phase 6's own plan gives the file's remainder to subphase 6.7c (`docs/PHASE-6-SUBPHASES.md` row 6.7c) -- but Phase 6 closed without it, so a name owed to a *sealed* stratum was neither blocking the gate nor reported as stale, which is the `a2d_ASN1_OBJECT` failure class arriving through the phase field instead of through a prefix. The owner is Phase 7 for a reason that is a measurement and not a preference: the earliest stratum that calls it is this one. `crypto/evp/evp_fetch.c` is `ossl_method_store_new`'s first caller, ahead of `crypto/encode_decode/decoder_meth.c` and `crypto/store/store_meth.c`, which share the same store object. The unit is named here so a reader can check that claim rather than take it.",
-        "evidence": "docs/DECISIONS.md D141 (the correction and the caller measurement); crypto/property/property.c; crypto/evp/evp_fetch.c; docs/PHASE-6-SUBPHASES.md row 6.7c",
-        "authority_unit": "crypto/property/property.c"
-      },
-      {
         "symbol": "ossl_random_add_conf_module",
         "owner_phase": 9,
         "reason": "One of the seven modules `OPENSSL_load_builtin_modules` registers. It is Phase 9's because it lives in crypto/rand/rand_lib.c, and the fan-out's residual -- six of the seven absent -- is already recorded in the Phase 6 subphase plan and the seal; this row is what makes the name visible to the gate rather than only to a reader.",
