@@ -48,6 +48,67 @@ class AtlasError(RuntimeError):
     """Fatal condition: the generator cannot produce trustworthy evidence."""
 
 
+class EvidenceError(AtlasError):
+    """A committed evidence record contradicts itself or the tool that reads it.
+
+    Separate from `AtlasError` so a caller can tell "the atlas is missing" from "the
+    evidence says two different things", which are different failures with different
+    repairs.
+    """
+
+
+# ---------------------------------------------------------------------------
+# the one reading of a court's observation count
+# ---------------------------------------------------------------------------
+
+def has_transcript(row: dict) -> bool:
+    """Whether a court record compares two *transcripts*, or something else entirely.
+
+    Both kinds are courts and both are evidence. The Phase 2 ABI courts compare ELF
+    structures -- symbol tables, dynamic tags, layouts -- and produce no transcript at
+    all, so they carry no observation counts; every court from Phase 3 on compiles a C
+    probe twice and diffs `key=value` lines, so it carries two counts that must agree.
+    Telling the two apart is what stops "this court has no transcript" from being read
+    as "this court observed nothing".
+    """
+    return "authority_observations" in row or "candidate_observations" in row
+
+
+def court_observations(row: dict) -> int:
+    """The number of observations a court record establishes, and the invariant behind it.
+
+    **One accessor, because two tools read a field that does not exist.** The seal census
+    read `row.get("observations", 0)` and the court runner read the same, so every runtime
+    court was rendered with **0** observations in `docs/SEAL-CENSUS.md` while its manifest
+    said 124 or 1,162 -- a generated document that understated the evidence by three orders
+    of magnitude and looked entirely plausible doing it. The field is
+    `authority_observations`; the candidate's own count is the second half of the same
+    fact, and a transcript court whose two sides disagree is a record that cannot be true,
+    because the comparison is line-wise over both.
+
+    A court with no transcript answers **0** and is not an error -- but it answers 0 for
+    that reason and not by defaulting, which is why `has_transcript` exists beside this.
+    """
+    a = row.get("authority_observations")
+    c = row.get("candidate_observations")
+    if a is None and c is None:
+        return 0
+    if a is None or c is None:
+        raise EvidenceError(
+            f"court {row.get('court')!r} carries only one of "
+            f"authority_observations/candidate_observations: a transcript court needs both "
+            f"(authority={a!r}, candidate={c!r})"
+        )
+    a, c = int(a), int(c)
+    if a != c:
+        raise EvidenceError(
+            f"court {row.get('court')!r} has {a} authority observations and {c} candidate "
+            f"observations: the comparison is line-wise over both transcripts, so a "
+            f"difference here is a record that cannot be true"
+        )
+    return a
+
+
 # ---------------------------------------------------------------------------
 # hashing / canonicalisation
 # ---------------------------------------------------------------------------
