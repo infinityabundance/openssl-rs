@@ -6809,3 +6809,119 @@ Both directions fired, unprompted, on the first run after the change:
 | prerequisite divergence names | 31 | **32** |
 | recorded divergences in the policy | 32 | **36** (`D-RCU-1`..`D-RCU-4`) |
 | courts / observations | 54 / 19,884 | **54 / 19,884** (unchanged) |
+
+## D125 — 6.10b/c/d measured: the eleven facts the next session should not re-derive
+
+**D121 split 6.10 into four parts and D122 split its first into three. This is the
+reconnaissance for the remaining three, read out of the authority rather than assumed, so
+that writing them is transcription rather than archaeology.** Phase 6 stands at **142
+implemented / 19 open**: the 17 this block closes and the two `OSSL_LIB_CTX` exports.
+
+### What each part is, confirmed line by line
+
+* **6.10b — `crypto/conf/conf_mod.c`, 764 lines.** `supported_modules` and
+  `initialized_modules` are two `STACK_OF` **pointers**, and every mutation is
+  copy-modify-swap under the RCU write lock: `sk_CONF_*_dup(old)`, push, `ossl_rcu_assign_ptr`,
+  `ossl_rcu_write_unlock`, `ossl_synchronize_rcu`, *then* `sk_CONF_*_free(old)`. The `sk_dup`
+  is **shallow** — it copies the array of pointers and nothing behind them — which is why
+  freeing the old handle after the synchronize is correct and not a double free.
+* **6.10c — `crypto/conf/conf_sap.c` (82) and `conf_mall.c` (38).** `ossl_config_int` is
+  gated by a file-static `openssl_configured` that **is set even on failure**, so the second
+  call is a no-op regardless of the first's result. `ossl_no_config_int` sets the same flag
+  and nothing else. `OPENSSL_config` and `OPENSSL_no_config` are already written in
+  `src/runtime/conf/sap.rs` and already route through `OPENSSL_init_crypto`.
+* **6.10d — `ASN1_add_oid_module`**, in `crypto/asn1/asn_moid.c`, is four lines over
+  `CONF_module_add("oid_section", oid_module_init, oid_module_finish)`; its handler parses a
+  section with `NCONF_get_section` and calls `OBJ_create` per entry, and its finish is
+  `OBJ_cleanup`. **Both `OBJ_*` are Phase 3's and are implemented**, so once `CONF_module_add`
+  exists this is a transcription, not a build.
+
+### Eleven measured facts, each of which would otherwise be re-derived or got wrong
+
+1. **The profile is `no-trace`.** `OSSL_TRACE1(CONF, ...)` at `conf_mod.c:157` and
+   `OSSL_TRACE3` at `:177` are **compiled out** (`OPENSSL_NO_TRACE`, recorded in
+   `src/runtime/trace.rs`). Three lines of the transcription do not exist; a reader comparing
+   the two files should not go looking for them.
+2. **`OPENSSL_strdup` is a macro, not a function.** `crypto.h.in` defines it as
+   `CRYPTO_strdup(str, OPENSSL_FILE, OPENSSL_LINE)`, so each of `conf_mod.c`'s three call sites
+   is `CRYPTO_strdup(s, "../../crypto/conf/conf_mod.c", <the line of the call>)` — lines 362,
+   445 and 446 — and the coordinates are the *call site's*, not the macro's.
+3. **The raise sites are already generated.** `src/runtime/err_sites.rs` carries sixteen
+   entries for `conf_mod.c`, including the four this block needs: `CONF_R_OPENSSL_CONF_REFERENCES_MISSING_SECTION`
+   at `:163`, `CONF_R_UNKNOWN_MODULE_NAME` at `:276`, `CONF_R_MODULE_INITIALIZATION_ERROR` at
+   `:286`, and the `errcode`-driven pair (`CONF_R_ERROR_LOADING_DSO`, `CONF_R_MISSING_INIT_FUNCTION`)
+   at `:331`. **Nothing here is typed by hand.**
+4. **`ASN1_add_stable_module` is Phase 11's, not this block's.** Phase 5 deferred it to phase
+   11 because its handler needs `X509V3_parse_list`; the phase-6 ledger does not list it, and
+   that is correct rather than a hole — checked in both directions before writing this.
+5. **`OPENSSL_load_builtin_modules` calls seven, and four of them are other phases'.** In
+   order: `ASN1_add_oid_module` (6.10d), `ASN1_add_stable_module` (Phase 11),
+   `ENGINE_add_conf_module` (Phase 13, and **ENGINE is enabled in this profile**),
+   `EVP_add_alg_module` (Phase 7), `ossl_config_add_ssl_module` (libssl, Phase 14),
+   `ossl_provider_add_conf_module` (6.8d) and `ossl_random_add_conf_module` (Phase 9). The
+   function is written in this block and calls the ones that exist; each of the others is a
+   **recorded divergence**, because a config file naming them registers nothing here — which
+   D121 already recorded as the fan-out residual and which `RT-CONF-MOD` observes.
+6. **`module_find` truncates at the *last* dot and compares with `strncmp` of that length.**
+   `modname.XXXX` therefore matches `modname`, and a name of `.foo` has length **0**, so it
+   matches the **first** registered module. That second case is worth a court observation
+   rather than a comment: it is reachable through a config file and it is not obviously the
+   intent.
+7. **`module_init`'s failure arm calls `pmod->finish(imod)` only when `init_called`.**
+   `links++` happens after the push and before the swap; `module_finish` does `links--`.
+8. **`conf_modules_finish_int` returns 0 when `module_list_lock == NULL`** — the authority's
+   own comment: *"If module_list_lock is NULL here it means we were already unloaded"*. So
+   `CONF_modules_unload` after `ossl_config_modules_free` returns early rather than faulting.
+9. **`ossl_config_modules_free` is `CONF_modules_unload(1)` followed by `module_lists_free()`**,
+   which frees the RCU lock and NULLs both lists. It is called from `OPENSSL_cleanup`, so the
+   teardown order there is fixed by it.
+10. **`module_load_dso` reads the module section for `path` before falling back to the name**,
+    and its error path raises with `errcode` set by which of three steps failed — so the
+    reason code is a *variable*, which is what fact 3's "the `errcode`-driven pair" means.
+11. **The RCU client is exactly two lists and one `1`.** `ossl_rcu_lock_new(1, NULL)` at
+    `conf_mod.c:102` — the clamp to two is reached by the only caller in the build — and every
+    read of a list goes through `ossl_rcu_deref` inside a read lock, so `D-RCU-4`'s
+    consequence narrows to "courted only through this consumer" the moment `RT-CONF-MOD`
+    exists.
+
+### Order, and why it is this order
+
+**6.10b, then 6.10d, then 6.10c, then `OPENSSL_load_builtin_modules`, then 6.8d.** The
+registry is the prerequisite of everything else in the block: `ASN1_add_oid_module` needs
+`CONF_module_add`, and `CONF_modules_load` is what 6.10c's `ossl_config_int` calls.
+`OPENSSL_load_builtin_modules` needs 6.10d for one of its seven callees, so it follows 6.10d.
+**6.8d (`provider_conf.c`) then closes 6.10's own residual**, because
+`ossl_provider_add_conf_module` is one of the two functions `OPENSSL_load_builtin_modules`
+calls and 6.8d is where it lives.
+
+### The court
+
+**`RT-CONF-MOD`**, and it is a differential court rather than a unit test, because every one
+of these seventeen symbols is an export. The observations that matter, in the order they
+become reachable:
+
+* `OPENSSL_load_builtin_modules` twice registers each module once (`sk_*_dup` instead of a
+  second add) — the authority's stack is append-only here, so the observable is the *count*;
+* `CONF_module_add` with a name containing a dot, and `module_find`'s prefix match;
+* `CONF_modules_load` with no `openssl_conf` key returns **1**, which is the "nothing to do"
+  answer and not an error;
+* `CONF_modules_load` with `config_diagnostics` set clears the four ignore flags, which is
+  observable by loading a config that names an unknown module: the same file answers 1 with
+  the flags and a negative with the setting;
+* `CONF_modules_load_file` on a missing file answers 1 under `CONF_MFLAGS_IGNORE_MISSING_FILE`
+  and 0 without it;
+* `CONF_imodule_*`'s six accessors across a module that the init function set `usr_data` and
+  `flags` on, including the `flags` round trip;
+* `CONF_modules_unload(1)` twice, and `CONF_modules_finish` after `ossl_config_modules_free`,
+  which is fact 8's early return;
+* and the `oid_section` path end to end: a config with an `oid_section` naming a section whose
+  entries are OIDs, `OPENSSL_load_builtin_modules`, `CONF_modules_load`, and
+  `OBJ_txt2nid` answering the created NID afterwards.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 142 / 19 | **142 / 19** (no source changed) |
+| the block's parts | 6.10a–6.10d named | **6.10a landed; b, c and d measured to the line, with the eleven facts above fixed** |
+| facts that were going to be guessed | — | **11 recorded, of which 3 are build-profile facts and 1 was a suspected hole that is not one** |
