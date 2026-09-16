@@ -157,7 +157,10 @@ that a gate is not a procedure.
 4. `python3 forensics/tools/gen_frf_courts.py --check` and `cargo fmt --all --
    --check` locally, so the release commit is green on its own account rather than
    on the strength of CI.
-5. Push, and let `main` go green. A red `main` is not a state this project keeps.
+5. Push, and let `main` go green. A red `main` is not a state this project keeps, and since
+   D138 it cannot be reached: `main` requires the three CI jobs, requires the branch to be up to
+   date, requires a pull request, and enforces that for admins too. So a release lands by opening
+   a pull request from the release branch and merging it once the three jobs report.
 6. `cargo publish --dry-run`, then `cargo publish`, with `CARGO_TARGET_DIR` outside
    the repository so the packaging target directory does not collide with the
    crate's own.

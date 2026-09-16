@@ -7768,167 +7768,7 @@ check, which can only report that the two disagree.
 
 SPDX-License-Identifier: Apache-2.0
 
-## D138 — Phase 7 opens: the plan, the ledger, and three registries turned into rules
-
-Phase 7 owns 924 exports of `libcrypto` — the EVP framework, which is not the algorithms but the
-machinery every one of them is reached through. `docs/PHASE-7-SUBPHASES.md` is its plan, and this
-is 7.0: the ledger and the wiring, with the stratum's whole working set open, which is the honest
-starting state.
-
-**The plan rests on a measurement rather than on the export list.** The authority's build tree
-holds one `.o` per translation unit per form, so listing every `libcrypto-shlib-*.o` and
-intersecting each one's defined externals with the atlas's Phase 7 set **places 924 of 924** — no
-export in this stratum is unaccounted for by a translation unit. That measurement is what the plan
-groups: `crypto/evp/pmeth_lib.c` 98, `evp_lib.c` 97, `p_lib.c` 74, `evp_enc.c` 45, and forty-odd
-units of one to seven. It also turned up two things a plan written from the export list would have
-got wrong, and both are stated in the plan's §0 rather than left for a reader to be surprised by:
-Phase 7 owns glue that lives in **other directories** (`crypto/asn1/ameth_lib.c`'s 26, `i2d_evp.c`,
-`d2i_pr.c`, `d2i_param.c`, `d2i_pu.c`, `crypto/pem/pem_pkey.c`'s 8), because ownership follows the
-header that promises the symbol and not the directory it was written in; and it owns the legacy
-cipher and digest **wrappers** whose primitives are Phase 13's, which are hand-offs with the
-dependency named rather than stubs.
-
-Two deferrals discharge on arrival and the plan says so in the row that does it: `core_algorithm.c`'s
-`ossl_algorithm_do_all` and `core_fetch.c`'s `ossl_method_construct` are 7.1's first work, because
-nothing in the stratum can be written above the fetch path and they could not be written in Phase 6
-because their only caller is Phase 7's own `evp_fetch.c`.
-
-**`phase7_obligations.py` discovers its incoming edges rather than listing them.** Phase 6's
-generator carries its hand-off set as a literal with the reasons attached, which is right for a
-stratum that had one source of them and wrong as a pattern: the set is a fact about four *other*
-files, and a fact maintained by hand in a fifth place is the class of defect this project keeps
-removing. Here every row of every `phase*-obligations.json` whose `owning_phase` is 7 is read as an
-edge, so a stratum that defers a symbol to this one is recorded on both sides by construction and
-the reasons stay where they were written — which is what `ownership_audit.py` compares in both
-directions. The measurement: 924 atlas-owned plus **26 handed in by Phase 5** (3 `asn1.h`, 23
-`pem.h`), 950 owned, 0 open, 950 open, which is what the plan's §0 says.
-
-**One module table, and the ordering in it is load-bearing.** `module_of` answers with the first
-entry that matches, and `EVP_PKEY_` is a prefix of `EVP_PKEY_CTX_`, `EVP_PKEY_asn1_` and
-`EVP_PKEY_meth_` — so a general entry placed before its own sub-families sends a reader of
-`EVP_PKEY_CTX_new` to the file that holds `EVP_PKEY` itself, which is exactly the failure Phase 6's
-own `MODULE_PREFIXES` comment names. The first run of this generator did precisely that (271
-symbols filed under `src/evp/pkey.rs`); the split is now 132/141 and the comment says why the order
-is part of the meaning.
-
-### Three registries become rules
-
-The reviewer asked twice for this, and this commit is where it was affordable because a new stratum
-had to be added. Each of the three was a place where adding a stratum meant remembering something.
-
-1. **`phase_state.py` derived five strata with five copies of the same thirty lines.** They differed
-   only in the phase number and two paths. A stratum whose copy was forgotten would be derived
-   `not-started` while its modules existed — which is the understatement the Phase 4, 5 and 6
-   comments each record having happened once, and each having fixed *for the court item alone*. The
-   rule is now one function over `STRATUM_EVIDENCE`, a new stratum is one table row, and the
-   court-item fix is applied once to every evidence item.
-2. **The same function's `elif absent: state = "not-started"` was wrong for the same reason.** A
-   stratum whose plan and ledger have landed but whose modules have not was reported as never
-   started. It is now `in-progress` with the missing files listed in `evidence_absent` and named in
-   `blocking`, so the derived state is not weaker for the change — it is what a stratum with a
-   ledger *is*. Phase 7 derives `in-progress` from its own evidence on the first run.
-3. **`run_courts.py` refused a stratum with no runner.** That is right for a stratum with a
-   committed courts file and it was impossible for one in its first subphase: a ledger and a probe
-   cannot be one commit without writing the probe before the thing it probes. Phase 6 did exactly
-   this — its modules landed before `RT-PARAM` did. The exemption is `NO_RUNNER_YET`, which is
-   **conditional**: it applies only while `artifacts/phase<N>/COURTS.json` is absent, so the moment a
-   stratum commits a courts file it must have a runner, and `phase_state.py` still blocks completion
-   without one. The condition is printed rather than silently skipped, so a stratum's first subphase
-   says out loud that it has no court instead of reading as one whose courts all passed.
-
-Two checks were added in the same pass, each in the shape the project uses for "somebody must
-remember": `phase_state.py` now fails when a stratum has **evidence on disk and no
-`STRATUM_EVIDENCE` row**, discovered by looking at the filesystem rather than at the registry
-(reading the registry would be tautological, since all twenty-two phases are in it from the day they
-are planned); and `run_courts.py`'s refusal now names the exemption that would fix it.
-
-### The plan reconciliation learned to tell a plan from a claim
-
-`plan_reconciliation.py` (D134) judged `complete` and `in-progress` strata alike, so Phase 7's plan —
-which names 128 units and has built none of them — failed the gate with 87 findings. That is the gate
-being wrong: a plan names the work a stratum *will* do, and failing a stratum for having a plan is
-not a check. The rule is now the one `prerequisite_gate.py` already uses for its sealed-stratum
-census: a **`complete`** stratum's unreached names are findings, and an **`in-progress`** stratum's are
-a published census — `census_by_stratum: {"7": 86}` — that is not a failure, with the stratum's own
-`open_in_this_stratum` doing the holding to account. `docs/PHASE-7-SUBPHASES.md` is also corrected
-where it wrote `names.c` bare, because the authority has two of them (`apps/lib/names.c` and
-`crypto/evp/names.c`) and the tool reports candidates rather than guessing.
-
-The regression guard reports the new ledger as **`UNCERTIFIED`** rather than as either a pass or a
-regression: a sixth obligation ledger appears where the authority has five, and the guard's rule is
-about a commit not undoing an earlier one's evidence, so there is nothing to compare. It says so,
-which is the honest answer, and the phase movement `not-started -> in-progress` is reported beside it.
-
-SPDX-License-Identifier: Apache-2.0
-
-## D139 — 7.1's first half: the algorithm walk, and D132's deferral discharged
-
-`crypto/core_algorithm.c` is transcribed whole in `src/evp/algorithm.rs`:
-`ossl_algorithm_do_all`, `algorithm_do_this` and `algorithm_do_map`, in that order of nesting.
-
-**This is the item Phase 6 could not build and could not see.** D132 recorded that
-`ossl_algorithm_do_all`'s only authority caller is `crypto/core_fetch.c`'s `ossl_method_construct`,
-which is this stratum's, and that nothing in the Phase 6 crate referenced it — so it was invisible
-to the symbol atlas (it is not an export), to the prerequisite gate (whose universe is names the
-crate *references*) and to every court (a C probe cannot call an internal function with no entry
-point and no caller). D134 built the plan-versus-crate check that made it visible and recorded it
-as a deferral owned by Phase 7. **The deferral is now discharged and its row is removed**, which
-is what the mechanism is for: a deferral is retired by building the name, and the gate reports
-`stale_deferral` until it is. The blocking list goes 15 → 14 and the plan reconciliation's Phase 7
-census drops by two — decreases, so nothing had to record them, which is the point of the
-direction the invariants point in.
-
-**Three return conventions that read alike and are not.** `algorithm_do_map` answers **-1** to quit
-the whole walk, **0** to record a failure and continue, and **1** for success, and
-`algorithm_do_this` treats the first two differently: -1 returns immediately, 0 sets `ok = 0` and
-keeps asking that provider for its remaining operations. The third is the one a transcription is
-most likely to get wrong, because the code says what it does and the comment says why:
-
-```c
-if (ret == 0) {      /* pre-condition not fulfilled: another thread got to it first */
-    ret = 1;         /* -- and the map is skipped, because that is *success* */
-    goto end;
-}
-```
-
-A refused precondition is a **success**, not a failure. An implementation that propagated the 0
-would turn a benign race — two threads fetching the same name — into a fetch failure, and the
-difference is invisible unless a test asserts the *answer* rather than the call. It does now:
-`a_refused_precondition_is_success_and_skips_the_map`.
-
-**`post` overwrites `ret` when it refuses, and `ret` does not survive it.** The authority is
-`if (post == NULL) ret = 1; else if (!post(..., &ret)) ret = -1;`, so a post that writes 0 and
-answers 1 leaves a soft failure while a post that answers **0** overwrites whatever it had written.
-The first version of this file's test asserted the shape a hand-written implementation would have —
-that an erroring post left `ret` alone — and the assertion is what found the difference. The test is
-now named for the behaviour that is actually there.
-
-Two smaller facts the file records because a reader would otherwise assume them away. The operation
-range is `OSSL_OP_DIGEST` (1) through `OSSL_OP__HIGHEST` (**22**), not through `OSSL_OP_KEYEXCH`
-(11): the reserved ids above the last named operation are real dispatch ids a provider may publish,
-and `operation_id == 0` means "all of them" rather than being passed through. And
-`ossl_algorithm_get1_first_name` splits on the **first** colon, copies rather than borrowing, and
-answers NULL — not an empty string — for a NULL name list, which a caller can see under
-`OPENSSL_free`.
-
-**`OSSL_ALGORITHM` is completed, where Phase 6 declared it.** Phase 6 left it an opaque forward
-declaration and recorded that the definition was this stratum's, because its four members are what
-the fetch machinery walks. It now has them, with `implementation` typed `*const c_void` rather than
-as the dispatch struct the authority declares: the only reader upcasts it immediately, and typing it
-would invite a dereference the authority never performs. The type stays in `src/provider/activate.rs`
-rather than moving to `src/evp/`: that is where the pointer crosses the provider boundary and where
-the accessors that hand it out live, and where the *members* are written is not a fact any caller
-can observe.
-
-Six unit tests, and the four that matter are the three return conventions and the two `post`
-behaviours — the branches that produce identical call sequences and different answers. `ossl_algorithm_do_all`'s
-own two paths (the sweep, and the one named provider whose context is asserted equal) are **not**
-unit-testable without a provider registry fixture and are `RT-FETCH`'s, which lands with the method
-store: `ossl_method_construct` and the store are 7.1's other half and remain open.
-
-SPDX-License-Identifier: Apache-2.0
-
-## D140 — one reader for a court's observation count, and the committed record compared whole
+## D138 — one reader for a court's observation count, and the committed record compared whole
 
 Three defects, all in the machinery that *reads* court evidence rather than in the courts, and
 one operational change that makes the invariant they support enforced rather than documented.
@@ -8026,8 +7866,175 @@ numeral was. It said "Phase 1 — in progress" and "no product subsystem is impl
 six sealed strata and a thousand implemented exports, because a number written into prose has no
 generator to correct it. It now types **no count**: it names the strata's subjects, which change
 when the plan changes, and points at `forensics/STATUS.md` and `docs/SEAL-CENSUS.md` for every
-quantity. `docs/RELEASE_GATES.md` §8 gains the release sequence as a numbered list, since D137's
-lesson was that a gate is not a procedure.
+quantity. `docs/RELEASE_GATES.md` §8's release sequence — written by D137 — now ends at a
+protected `main` rather than at an instruction to push and watch: the last step of a release is no
+longer something a person has to check.
+
+**Numbering.** An entry's number is assigned when it lands on `main`, and this one was written
+as `D140` on the `phase7-evp` staging branch where three Phase 7 entries had landed ahead of it.
+It landed first, so it is `D138`, and the staging branch's own entries were renumbered onto it
+when it merged `main` — `docs/DECISIONS.md` is append-only, so the collision had to be resolved
+somewhere and the merge was the only place that could see both lines of history.
+
+SPDX-License-Identifier: Apache-2.0
+
+## D139 — Phase 7 opens: the plan, the ledger, and three registries turned into rules
+
+Phase 7 owns 924 exports of `libcrypto` — the EVP framework, which is not the algorithms but the
+machinery every one of them is reached through. `docs/PHASE-7-SUBPHASES.md` is its plan, and this
+is 7.0: the ledger and the wiring, with the stratum's whole working set open, which is the honest
+starting state.
+
+**The plan rests on a measurement rather than on the export list.** The authority's build tree
+holds one `.o` per translation unit per form, so listing every `libcrypto-shlib-*.o` and
+intersecting each one's defined externals with the atlas's Phase 7 set **places 924 of 924** — no
+export in this stratum is unaccounted for by a translation unit. That measurement is what the plan
+groups: `crypto/evp/pmeth_lib.c` 98, `evp_lib.c` 97, `p_lib.c` 74, `evp_enc.c` 45, and forty-odd
+units of one to seven. It also turned up two things a plan written from the export list would have
+got wrong, and both are stated in the plan's §0 rather than left for a reader to be surprised by:
+Phase 7 owns glue that lives in **other directories** (`crypto/asn1/ameth_lib.c`'s 26, `i2d_evp.c`,
+`d2i_pr.c`, `d2i_param.c`, `d2i_pu.c`, `crypto/pem/pem_pkey.c`'s 8), because ownership follows the
+header that promises the symbol and not the directory it was written in; and it owns the legacy
+cipher and digest **wrappers** whose primitives are Phase 13's, which are hand-offs with the
+dependency named rather than stubs.
+
+Two deferrals discharge on arrival and the plan says so in the row that does it: `core_algorithm.c`'s
+`ossl_algorithm_do_all` and `core_fetch.c`'s `ossl_method_construct` are 7.1's first work, because
+nothing in the stratum can be written above the fetch path and they could not be written in Phase 6
+because their only caller is Phase 7's own `evp_fetch.c`.
+
+**`phase7_obligations.py` discovers its incoming edges rather than listing them.** Phase 6's
+generator carries its hand-off set as a literal with the reasons attached, which is right for a
+stratum that had one source of them and wrong as a pattern: the set is a fact about four *other*
+files, and a fact maintained by hand in a fifth place is the class of defect this project keeps
+removing. Here every row of every `phase*-obligations.json` whose `owning_phase` is 7 is read as an
+edge, so a stratum that defers a symbol to this one is recorded on both sides by construction and
+the reasons stay where they were written — which is what `ownership_audit.py` compares in both
+directions. The measurement: 924 atlas-owned plus **26 handed in by Phase 5** (3 `asn1.h`, 23
+`pem.h`), 950 owned, 0 open, 950 open, which is what the plan's §0 says.
+
+**One module table, and the ordering in it is load-bearing.** `module_of` answers with the first
+entry that matches, and `EVP_PKEY_` is a prefix of `EVP_PKEY_CTX_`, `EVP_PKEY_asn1_` and
+`EVP_PKEY_meth_` — so a general entry placed before its own sub-families sends a reader of
+`EVP_PKEY_CTX_new` to the file that holds `EVP_PKEY` itself, which is exactly the failure Phase 6's
+own `MODULE_PREFIXES` comment names. The first run of this generator did precisely that (271
+symbols filed under `src/evp/pkey.rs`); the split is now 132/141 and the comment says why the order
+is part of the meaning.
+
+### Three registries become rules
+
+The reviewer asked twice for this, and this commit is where it was affordable because a new stratum
+had to be added. Each of the three was a place where adding a stratum meant remembering something.
+
+1. **`phase_state.py` derived five strata with five copies of the same thirty lines.** They differed
+   only in the phase number and two paths. A stratum whose copy was forgotten would be derived
+   `not-started` while its modules existed — which is the understatement the Phase 4, 5 and 6
+   comments each record having happened once, and each having fixed *for the court item alone*. The
+   rule is now one function over `STRATUM_EVIDENCE`, a new stratum is one table row, and the
+   court-item fix is applied once to every evidence item.
+2. **The same function's `elif absent: state = "not-started"` was wrong for the same reason.** A
+   stratum whose plan and ledger have landed but whose modules have not was reported as never
+   started. It is now `in-progress` with the missing files listed in `evidence_absent` and named in
+   `blocking`, so the derived state is not weaker for the change — it is what a stratum with a
+   ledger *is*. Phase 7 derives `in-progress` from its own evidence on the first run.
+3. **`run_courts.py` refused a stratum with no runner.** That is right for a stratum with a
+   committed courts file and it was impossible for one in its first subphase: a ledger and a probe
+   cannot be one commit without writing the probe before the thing it probes. Phase 6 did exactly
+   this — its modules landed before `RT-PARAM` did. The exemption is `NO_RUNNER_YET`, which is
+   **conditional**: it applies only while `artifacts/phase<N>/COURTS.json` is absent, so the moment a
+   stratum commits a courts file it must have a runner, and `phase_state.py` still blocks completion
+   without one. The condition is printed rather than silently skipped, so a stratum's first subphase
+   says out loud that it has no court instead of reading as one whose courts all passed.
+
+Two checks were added in the same pass, each in the shape the project uses for "somebody must
+remember": `phase_state.py` now fails when a stratum has **evidence on disk and no
+`STRATUM_EVIDENCE` row**, discovered by looking at the filesystem rather than at the registry
+(reading the registry would be tautological, since all twenty-two phases are in it from the day they
+are planned); and `run_courts.py`'s refusal now names the exemption that would fix it.
+
+### The plan reconciliation learned to tell a plan from a claim
+
+`plan_reconciliation.py` (D134) judged `complete` and `in-progress` strata alike, so Phase 7's plan —
+which names 128 units and has built none of them — failed the gate with 87 findings. That is the gate
+being wrong: a plan names the work a stratum *will* do, and failing a stratum for having a plan is
+not a check. The rule is now the one `prerequisite_gate.py` already uses for its sealed-stratum
+census: a **`complete`** stratum's unreached names are findings, and an **`in-progress`** stratum's are
+a published census — `census_by_stratum: {"7": 86}` — that is not a failure, with the stratum's own
+`open_in_this_stratum` doing the holding to account. `docs/PHASE-7-SUBPHASES.md` is also corrected
+where it wrote `names.c` bare, because the authority has two of them (`apps/lib/names.c` and
+`crypto/evp/names.c`) and the tool reports candidates rather than guessing.
+
+The regression guard reports the new ledger as **`UNCERTIFIED`** rather than as either a pass or a
+regression: a sixth obligation ledger appears where the authority has five, and the guard's rule is
+about a commit not undoing an earlier one's evidence, so there is nothing to compare. It says so,
+which is the honest answer, and the phase movement `not-started -> in-progress` is reported beside it.
+
+SPDX-License-Identifier: Apache-2.0
+
+## D140 — 7.1's first half: the algorithm walk, and D132's deferral discharged
+
+`crypto/core_algorithm.c` is transcribed whole in `src/evp/algorithm.rs`:
+`ossl_algorithm_do_all`, `algorithm_do_this` and `algorithm_do_map`, in that order of nesting.
+
+**This is the item Phase 6 could not build and could not see.** D132 recorded that
+`ossl_algorithm_do_all`'s only authority caller is `crypto/core_fetch.c`'s `ossl_method_construct`,
+which is this stratum's, and that nothing in the Phase 6 crate referenced it — so it was invisible
+to the symbol atlas (it is not an export), to the prerequisite gate (whose universe is names the
+crate *references*) and to every court (a C probe cannot call an internal function with no entry
+point and no caller). D134 built the plan-versus-crate check that made it visible and recorded it
+as a deferral owned by Phase 7. **The deferral is now discharged and its row is removed**, which
+is what the mechanism is for: a deferral is retired by building the name, and the gate reports
+`stale_deferral` until it is. The blocking list goes 15 → 14 and the plan reconciliation's Phase 7
+census drops by two — decreases, so nothing had to record them, which is the point of the
+direction the invariants point in.
+
+**Three return conventions that read alike and are not.** `algorithm_do_map` answers **-1** to quit
+the whole walk, **0** to record a failure and continue, and **1** for success, and
+`algorithm_do_this` treats the first two differently: -1 returns immediately, 0 sets `ok = 0` and
+keeps asking that provider for its remaining operations. The third is the one a transcription is
+most likely to get wrong, because the code says what it does and the comment says why:
+
+```c
+if (ret == 0) {      /* pre-condition not fulfilled: another thread got to it first */
+    ret = 1;         /* -- and the map is skipped, because that is *success* */
+    goto end;
+}
+```
+
+A refused precondition is a **success**, not a failure. An implementation that propagated the 0
+would turn a benign race — two threads fetching the same name — into a fetch failure, and the
+difference is invisible unless a test asserts the *answer* rather than the call. It does now:
+`a_refused_precondition_is_success_and_skips_the_map`.
+
+**`post` overwrites `ret` when it refuses, and `ret` does not survive it.** The authority is
+`if (post == NULL) ret = 1; else if (!post(..., &ret)) ret = -1;`, so a post that writes 0 and
+answers 1 leaves a soft failure while a post that answers **0** overwrites whatever it had written.
+The first version of this file's test asserted the shape a hand-written implementation would have —
+that an erroring post left `ret` alone — and the assertion is what found the difference. The test is
+now named for the behaviour that is actually there.
+
+Two smaller facts the file records because a reader would otherwise assume them away. The operation
+range is `OSSL_OP_DIGEST` (1) through `OSSL_OP__HIGHEST` (**22**), not through `OSSL_OP_KEYEXCH`
+(11): the reserved ids above the last named operation are real dispatch ids a provider may publish,
+and `operation_id == 0` means "all of them" rather than being passed through. And
+`ossl_algorithm_get1_first_name` splits on the **first** colon, copies rather than borrowing, and
+answers NULL — not an empty string — for a NULL name list, which a caller can see under
+`OPENSSL_free`.
+
+**`OSSL_ALGORITHM` is completed, where Phase 6 declared it.** Phase 6 left it an opaque forward
+declaration and recorded that the definition was this stratum's, because its four members are what
+the fetch machinery walks. It now has them, with `implementation` typed `*const c_void` rather than
+as the dispatch struct the authority declares: the only reader upcasts it immediately, and typing it
+would invite a dereference the authority never performs. The type stays in `src/provider/activate.rs`
+rather than moving to `src/evp/`: that is where the pointer crosses the provider boundary and where
+the accessors that hand it out live, and where the *members* are written is not a fact any caller
+can observe.
+
+Six unit tests, and the four that matter are the three return conventions and the two `post`
+behaviours — the branches that produce identical call sequences and different answers. `ossl_algorithm_do_all`'s
+own two paths (the sweep, and the one named provider whose context is asserted equal) are **not**
+unit-testable without a provider registry fixture and are `RT-FETCH`'s, which lands with the method
+store: `ossl_method_construct` and the store are 7.1's other half and remain open.
 
 SPDX-License-Identifier: Apache-2.0
 
