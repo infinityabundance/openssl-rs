@@ -294,7 +294,7 @@
     "blocking_dependencies": 10,
     "divergence_names_covered": 32,
     "findings": 0,
-    "language_census": 2233,
+    "language_census": 2188,
     "sealed_census": 59
   }
 }

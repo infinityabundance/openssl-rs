@@ -805,6 +805,7 @@
           "7.3d"
         ],
         "transcribed_by": [
+          "src/evp/cipher_ctx.rs",
           "src/evp/digest.rs"
         ]
       },
@@ -1733,7 +1734,7 @@
       "transcribed_units": 116
     }
   },
-  "body_hash": "8ebc020729b9d8373b4325ae84f92e319681141ea91e8231c2353da818ad986d",
+  "body_hash": "aaf6278fcd84152cb005fe4ce389c8acbc02573117c3048e39dee2e7e77f2cea",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -1744,7 +1745,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "585cdb64e3b73ee7c3c119d5697de78f5d01edbaab9cc0b136d390986f0e2b80"
+      "sha256": "b8e208cfa9fe68aa1b4c1135d324125b68906cc874b857b076d0ad8487d7902b"
     },
     {
       "name": "implemented-surface",
@@ -1779,7 +1780,7 @@
     {
       "name": "plan-PHASE-7-SUBPHASES",
       "path": "docs/PHASE-7-SUBPHASES.md",
-      "sha256": "0a0c1544b746b1239b403c19dd8243a816b859f73cb557b53e85a4e50b2750c5"
+      "sha256": "38773bc7fd6761c92b80115165930d208827ea6e9c7abd8f7642089226ef32d2"
     }
   ],
   "kind": "plan-reconciliation",
