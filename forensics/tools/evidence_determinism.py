@@ -82,6 +82,15 @@ GENERATORS_BEFORE_LEDGERS = [
     # 128 masks being recalled, and a generator nothing re-runs would reintroduce
     # exactly that.
     "forensics/tools/gen_ctype_table.py",
+    # The error-coordinate plane (D135, closing D109's open half). It reads the
+    # authority's source tree too, so it carries the same two-tier check: re-derive when
+    # the tree is present, and check `src/runtime/err_sites.rs` against the committed
+    # `err-raise-sites.json` when it is not. `check_evidence_portability.py` tests
+    # `ed.GENERATORS` as one set, so listing it here is also what puts it in that gate's
+    # exercised set -- which was the other half of what D109 left open, and the reason
+    # doing only one of the two would have replaced one silent gap with two.
+    "forensics/tools/gen_err_raise_sites.py",
+    "forensics/tools/gen_bn_primes.py",
 ]
 GENERATORS_AFTER_LEDGERS = [
     "forensics/tools/ownership_audit.py",
@@ -137,6 +146,8 @@ COMPARED = [
     "forensics/atlas/ownership-audit.json",
     "forensics/atlas/prototype-court.json",
     "forensics/atlas/ctype-table.json",
+    "forensics/atlas/err-raise-sites.json",
+    "forensics/atlas/bn-primes.json",
     "forensics/atlas/prerequisite-gate.json",
     "forensics/atlas/plan-reconciliation.json",
     *[a for _g, a in LEDGERS],
@@ -149,6 +160,10 @@ COMPARED = [
     # is listed here rather than in the atlas because a `cargo`-visible source file
     # being stale is the failure this catches.
     "src/runtime/ctype_table.rs",
+    # The same argument for the error-coordinate plane, and the one D109 left open: a
+    # `cargo`-visible file generated from the authority was in neither this list nor the
+    # generator list, so it could drift from the atlas without anything noticing.
+    "src/runtime/err_sites.rs",
 ]
 
 # ---------------------------------------------------------------------------
