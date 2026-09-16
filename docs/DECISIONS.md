@@ -6406,3 +6406,51 @@ complete, and the extension is named in `docs/PHASE-6-SUBPHASES.md`: a provider-
 | unit tests | 257 | **262** |
 | phase courts / observations | 54 / 19,869 | **54 / 19,869** (the probe is unchanged) |
 | recorded divergences added | — | **`D-TEVENT-REENTRANT-1`, `D-TEVENT-CTX-STOP-LEAK-1`** |
+
+## D120 — 6.6e-ii sealed: the probe that called the wrong dispatch entry, and `RT-THREADDATA`'s fifteen new observations
+
+**`RT-THREADDATA` goes 39 → 54 observations with no residuals, and 6.6e-ii is complete.** The
+five phases now total **54 courts and 19,884 observations**, all re-derived from the authority
+in this run. The FRF store is rebuilt around it: 389 objects, **47 receipts**, **94
+challenges**, 5 claims, 141 captures, 97 residuals, `graph_verified`.
+
+**The first version of the extension failed on *both* sides, and the defect was the probe's.**
+`OSSL_FUNC_core_thread_start(x)` is a **cast of the entry it is handed**, not a search:
+`OSSL_CORE_MAKE_FUNC` expands to `return (OSSL_FUNC_##name##_fn *)opf->function;` with no loop
+and no id test. Applied to `in` — the table's first entry — it asked `core_gettable_params` to
+register a thread-stop handler and returned whatever the callee's `eax` happened to hold, so
+the two sides printed two different large negative numbers. The fix is the walk the authority's
+own providers do, and the lesson is already written down in `src/context/dispatch.rs`: *"a
+plain cast of the given entry's function pointer, with no search."* It is worth recording that
+the symptom pointed at the library and the cause was the instrument, for the third time in this
+stratum — after D115's path-length comparison and D117's stale shell.
+
+**What the fifteen observations actually establish.** That the core dispatch table publishes
+**id 3** and the provider-facing accessor answers non-NULL — a compatibility fact, because a
+provider compiled against a 3.x that has this entry would find NULL before 6.6e-ii. That the
+registration answers the provider's own result rather than a value of the core's. That the
+handler runs **exactly once** with the argument the *provider* registered, which is what proves
+`core_thread_start`'s argument order (`handle, handfn, arg`) was not transposed against
+`ossl_init_thread_start`'s (`index, arg, handfn`) — a transposition both are pointer-sized and
+would compile. That a second `OPENSSL_thread_stop` runs nothing. And that `OPENSSL_cleanup`
+drains two `OPENSSL_atexit` handlers in **LIFO** order *after* stopping this thread's handlers,
+which is the authority's order inside that function.
+
+**The record this closes, and the two it keeps.** `CRYPTO_THREAD_init_local`'s doc comment had
+carried "the authority additionally initialises its global thread-event machinery here; that
+machinery has no counterpart yet … a later phase" since Phase 3, and `src/provider/mod.rs` had
+carried `ossl_init_thread_deregister(prov)` as "the most important of the five named omissions"
+since 6.8a. Both are now calls. The two divergences D119 recorded —
+`D-TEVENT-REENTRANT-1` and `D-TEVENT-CTX-STOP-LEAK-1` — stand, each with the unit test that
+pins it; neither is exercised by this court, because neither is reachable from a probe that
+behaves.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 142 / 19 | **142 / 19** (unchanged: the court observes, it does not implement) |
+| `RT-THREADDATA` observations | 39 | **54** |
+| phase courts / observations | 54 / 19,869 | **54 / 19,884** |
+| probe_hygiene | clean (43 probes) | **clean (43 probes)** |
+| FRF objects / receipts / challenges | 389 / 47 / 94 | **389 / 47 / 94** (rebuilt, same counts) |
