@@ -126,9 +126,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 161,
+        "authority_observations": 247,
         "candidate_exit_code": 0,
-        "candidate_observations": 161,
+        "candidate_observations": 247,
         "candidate_stderr_tail": [],
         "court": "RT-CONF-MOD",
         "crashed": false,
@@ -193,7 +193,7 @@
     {
       "name": "probe",
       "path": "courts/phase6/rt_conf_mod_probe.c",
-      "sha256": "8f6148c6e369a2b839649de19969f1cf849e2b97db42ac445e512cd2181fb647"
+      "sha256": "821f3e944e80cbb4eb3b7528aa1c1447090fc1293d66ceb379d3a3767c952f1a"
     }
   ],
   "kind": "phase6-courts",

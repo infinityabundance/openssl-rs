@@ -10,12 +10,6 @@
     ],
     "deferrals": [
       {
-        "symbol": "ossl_config_add_ssl_module",
-        "owner_phase": 6,
-        "reason": "Phase 6.10c: one of the six modules OPENSSL_load_builtin_modules registers",
-        "evidence": "docs/DECISIONS.md D121 (the fan-out is a recorded residual)"
-      },
-      {
         "symbol": "ossl_ctx_global_properties",
         "owner_phase": 6,
         "reason": "Phase 6.7c/6.8: the method store inside crypto/property/property.c, which cannot be written before providers exist",
