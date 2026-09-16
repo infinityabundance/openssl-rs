@@ -574,3 +574,23 @@ observations that *can* be made around each boundary are compared normally.
 - **Claim removed:** `OSSL_LIB_CTX_new_from_dispatch(handle, NULL)` is not claimed
   compatible. `RT-BIO-CORE` passes a real table to that export and a NULL *handle*, which
   the authority accepts and ignores.
+
+### D-OSSL-CORE-BIO-1 — `ossl_core_bio_up_ref` dereferences a NULL handle
+
+- **Obligation:** `ossl_core_bio_up_ref` — reachable from a provider, because
+  `core_dispatch` publishes it as `OSSL_FUNC_BIO_UP_REF` and a provider may call what the
+  core gives it.
+- **Authority:** the whole body is `return CRYPTO_UP_REF(&cb->ref_cnt, &ref);` with no NULL
+  test, so a NULL handle dereferences NULL. `ossl_core_bio_free`, in the same file and on
+  the same type, **is** NULL-tolerant and answers 1 — the asymmetry is the authority's and
+  is not explained by anything in the source.
+- **Candidate:** answers `0` for a NULL handle. `0` is not a defined answer either — it is
+  the value the authority would return for a reference count that has already reached zero —
+  so the caller's behaviour on this path is the same as the authority's would be *if* the
+  fault did not happen.
+- **Reason:** `docs/UNSAFE.md` §5. No caller in the authority passes NULL: the only ones are
+  the two constructors, which pass a handle they just built, and `core_dispatch`'s thunk,
+  which receives whatever a provider supplies.
+- **Claim removed:** `ossl_core_bio_up_ref(NULL)` is not claimed compatible. `RT-PROVIDER`
+  does not call it with NULL, and this function has no exported symbol, so it is reachable
+  only through the dispatch table a provider is handed.
