@@ -107,7 +107,11 @@ use crate::ffi::guard_ffi;
 #[path = "obj_table.rs"]
 mod obj_table;
 
-use obj_table::*;
+// `pub(crate) use` rather than `use`: the table's constants (`NID_undef` and the rest) are
+// the crate's names for the authority's numerics, and a caller in another module has to be
+// able to say `crate::runtime::obj::NID_undef` rather than copy the number. It was a private
+// import until 7.3a's `EVP_MD` needed `NID_undef` for the fetch's legacy-NID sentinel.
+pub(crate) use obj_table::*;
 
 /// `ASN1_OBJECT_FLAG_DYNAMIC` — the object itself is heap-allocated.
 pub(crate) const ASN1_OBJECT_FLAG_DYNAMIC: c_int = 0x01;

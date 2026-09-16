@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 924,
       "deferred_to_later_phase": 0,
-      "implemented": 4,
-      "open_in_this_stratum": 946,
+      "implemented": 11,
+      "open_in_this_stratum": 939,
       "owned": 950,
       "received_by_handoff": 26
     },
@@ -203,6 +203,13 @@
       ]
     },
     "implemented": [
+      "EVP_MD_fetch",
+      "EVP_MD_free",
+      "EVP_MD_get0_name",
+      "EVP_MD_get_block_size",
+      "EVP_MD_get_size",
+      "EVP_MD_get_type",
+      "EVP_MD_up_ref",
       "EVP_default_properties_enable_fips",
       "EVP_default_properties_is_fips_enabled",
       "EVP_get1_default_properties",
@@ -2170,37 +2177,13 @@
         "declaring_header": "evp.h",
         "module": "src/evp/digest.rs",
         "received_from_phase": null,
-        "symbol": "EVP_MD_fetch"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_free"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
         "symbol": "EVP_MD_get0_description"
       },
       {
         "declaring_header": "evp.h",
         "module": "src/evp/digest.rs",
         "received_from_phase": null,
-        "symbol": "EVP_MD_get0_name"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
         "symbol": "EVP_MD_get0_provider"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_get_block_size"
       },
       {
         "declaring_header": "evp.h",
@@ -2219,18 +2202,6 @@
         "module": "src/evp/digest.rs",
         "received_from_phase": null,
         "symbol": "EVP_MD_get_pkey_type"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_get_size"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_get_type"
       },
       {
         "declaring_header": "evp.h",
@@ -2399,12 +2370,6 @@
         "module": "src/evp/digest.rs",
         "received_from_phase": null,
         "symbol": "EVP_MD_settable_ctx_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_up_ref"
       },
       {
         "declaring_header": "evp.h",
@@ -6198,12 +6163,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "2dcf5c77393a75a8b1722bd3f4fa9b2f94d588eab0b378e518af52906eb8ede8"
+      "sha256": "db40e8bc65615c210c7846f3d9cec04d503418f87d9a705b12378aca0a9cfdbd"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "91eeb2655064c346336b31fc20edad01c9c1936d534c57f470b8ecd5121624b8"
+      "sha256": "1bdbe0f3c72c86ab588cb86faee3c880b280c1fb8a44dff381cc7699ccaeb72d"
     }
   ],
   "kind": "phase7-obligations",
