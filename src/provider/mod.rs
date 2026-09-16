@@ -76,8 +76,10 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
+pub(crate) mod activate;
 pub(crate) mod core_dispatch;
 pub(crate) mod init;
+pub(crate) mod stores;
 
 use core::ffi::{c_char, c_int, c_uint, c_void};
 use core::ptr;
@@ -168,6 +170,10 @@ mod lines {
     pub(super) const L_PROV_NEW: c_int = 447;
     /// `provider_new`'s `OPENSSL_strdup(name)`.
     pub(super) const L_PROV_NEW_NAME: c_int = 469;
+    /// `ossl_provider_free`'s `OPENSSL_free(prov->error_strings)`.
+    pub(super) const L_PROV_FREE_ERROR_STRINGS: c_int = 754;
+    /// `ossl_provider_free`'s `OPENSSL_free(prov->operation_bits)`.
+    pub(super) const L_PROV_FREE_OPERATION_BITS: c_int = 759;
     /// `ossl_provider_free`'s frees, in the authority's order.
     pub(super) const L_PROV_FREE_NAME: c_int = 774;
     /// `ossl_provider_free`'s `OPENSSL_free(prov->path)`.
@@ -730,8 +736,15 @@ unsafe extern "C" fn provider_deactivate_free(p: *mut c_void) {
     if prov.is_null() {
         return;
     }
-    // 6.8c: `ossl_provider_deactivate(prov, 1)` goes here, guarded by
-    // `flag_activated`. See the note above.
+    // The guard is `flag_activated`, read **without** `flag_lock`: this runs during the store's
+    // teardown, when nothing else can be looking at the provider, and the authority reads the
+    // bit directly for the same reason.
+    // SAFETY: `prov` is live.
+    if unsafe { (*prov).flags } & FLAG_ACTIVATED != 0 {
+        // SAFETY: `prov` is live. The answer is discarded: this is a teardown path and there
+        // is no caller to report to.
+        unsafe { crate::provider::activate::ossl_provider_deactivate(prov, 1) };
+    }
     // SAFETY: `prov` is live.
     unsafe { ossl_provider_free(prov) };
 }
@@ -1355,15 +1368,24 @@ pub(crate) unsafe fn ossl_provider_add_to_store(
     }
 
     if idx >= 0 {
-        // 6.8c: `ossl_provider_deactivate(prov, 0)` — the losing thread's object is
-        // deactivated and then freed. `ossl_provider_free` also has no `flag_initialized`
-        // arm yet, for the same reason.
+        // The losing thread's object is deactivated and then freed, and the comment above
+        // says why: it was created by this thread and the store's object is the one that will
+        // be used. The deactivation is skipped for a provider that was never activated, which
+        // is what `flag_activated` distinguishes.
+        // SAFETY: `prov` is live.
+        if unsafe { (*prov).flags } & FLAG_ACTIVATED != 0 {
+            // SAFETY: `prov` is live. The `removechildren` argument is 0 because this thread
+            // did not create children — it lost the race before reaching
+            // `create_provider_children`'s call site.
+            unsafe { crate::provider::activate::ossl_provider_deactivate(prov, 0) };
+        }
         // SAFETY: `prov` is the caller's object, which the store did not take.
         unsafe { ossl_provider_free(prov) };
     } else {
-        // Phase 7: `ossl_decoder_cache_flush(prov->libctx)`. It is deliberately *outside*
-        // the lock, and the authority's own comment says other threads tolerate getting the
-        // wrong result briefly while creating `OSSL_DECODER_CTX`s.
+        // Outside the lock, and the authority's own comment says why: other threads tolerate
+        // getting the wrong result briefly while creating `OSSL_DECODER_CTX`s.
+        // SAFETY: `prov` is live, so `libctx` is the context it was built against.
+        unsafe { crate::provider::stores::ossl_decoder_cache_flush((*prov).libctx) };
     }
     1
 }
@@ -1490,29 +1512,44 @@ pub(crate) unsafe fn ossl_provider_free(prov: *mut OsslProvider) {
     }
     // SAFETY: `prov` is live.
     let ref_ = unsafe { (*prov).refcnt.fetch_sub(1, Ordering::AcqRel) } - 1;
-    // The authority's `if (prov->flag_initialized)` arm, before anything is released: the
-    // teardown is what tells the *provider* to release its own state, and it must happen
-    // while the provider's context and dispatch table are still readable.
-    // SAFETY: `prov` is live and this is its last reference.
+    if ref_ != 0 {
+        // 6.8e: the authority's `else if (prov->ischild)` arm calls
+        // `ossl_provider_free_parent(prov, 0)`.
+        //
+        // The whole teardown is inside the authority's `if (ref == 0)`, which is the
+        // point of it: "there may be other structures hanging on to the provider after
+        // the last deactivation and may therefore need full access to the provider's
+        // services. Therefore, we deinit late." A teardown on *every* release would
+        // call the provider's `teardown` while other holders were still using it, so
+        // the arm below must not be reached from here.
+        return;
+    }
+    // The authority's `if (prov->flag_initialized)` arm: the teardown is what tells the
+    // *provider* to release its own state, and it happens on the last reference, while
+    // the provider's context and dispatch table are still readable.
+    // SAFETY: `prov` is live and this is its last reference, so nothing else can reach it.
     unsafe {
         if (*prov).flags & FLAG_INITIALIZED != 0 {
             crate::provider::init::ossl_provider_teardown(prov);
             if !(*prov).error_strings.is_null() {
-                CRYPTO_free((*prov).error_strings, FILE, 0);
+                CRYPTO_free(
+                    (*prov).error_strings,
+                    FILE,
+                    lines::L_PROV_FREE_ERROR_STRINGS,
+                );
                 (*prov).error_strings = ptr::null_mut();
             }
             if !(*prov).operation_bits.is_null() {
-                CRYPTO_free((*prov).operation_bits.cast::<c_void>(), FILE, 0);
+                CRYPTO_free(
+                    (*prov).operation_bits.cast::<c_void>(),
+                    FILE,
+                    lines::L_PROV_FREE_OPERATION_BITS,
+                );
                 (*prov).operation_bits = ptr::null_mut();
             }
             (*prov).operation_bits_sz = 0;
             (*prov).flags &= !FLAG_INITIALIZED;
         }
-    }
-    if ref_ != 0 {
-        // 6.8e: the authority's `else if (prov->ischild)` arm calls
-        // `ossl_provider_free_parent(prov, 0)`.
-        return;
     }
     // SAFETY: `prov` is live and this is its last reference, so nothing else can reach it.
     // Every field is NULL or owned by construction.

@@ -87,23 +87,23 @@ const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/provider_core.c".as
 // which is *not* the sequence the switch is written in, so a guessed id would silently store
 // one operation's function in another's field.
 /// `OSSL_FUNC_PROVIDER_TEARDOWN`.
-const FUNC_PROVIDER_TEARDOWN: c_int = 1024;
+pub(crate) const FUNC_PROVIDER_TEARDOWN: c_int = 1024;
 /// `OSSL_FUNC_PROVIDER_GETTABLE_PARAMS`.
-const FUNC_PROVIDER_GETTABLE_PARAMS: c_int = 1025;
+pub(crate) const FUNC_PROVIDER_GETTABLE_PARAMS: c_int = 1025;
 /// `OSSL_FUNC_PROVIDER_GET_PARAMS`.
-const FUNC_PROVIDER_GET_PARAMS: c_int = 1026;
+pub(crate) const FUNC_PROVIDER_GET_PARAMS: c_int = 1026;
 /// `OSSL_FUNC_PROVIDER_QUERY_OPERATION`.
-const FUNC_PROVIDER_QUERY_OPERATION: c_int = 1027;
+pub(crate) const FUNC_PROVIDER_QUERY_OPERATION: c_int = 1027;
 /// `OSSL_FUNC_PROVIDER_UNQUERY_OPERATION`.
-const FUNC_PROVIDER_UNQUERY_OPERATION: c_int = 1028;
+pub(crate) const FUNC_PROVIDER_UNQUERY_OPERATION: c_int = 1028;
 /// `OSSL_FUNC_PROVIDER_GET_REASON_STRINGS`.
 const FUNC_PROVIDER_GET_REASON_STRINGS: c_int = 1029;
 /// `OSSL_FUNC_PROVIDER_GET_CAPABILITIES`.
-const FUNC_PROVIDER_GET_CAPABILITIES: c_int = 1030;
+pub(crate) const FUNC_PROVIDER_GET_CAPABILITIES: c_int = 1030;
 /// `OSSL_FUNC_PROVIDER_SELF_TEST`.
-const FUNC_PROVIDER_SELF_TEST: c_int = 1031;
+pub(crate) const FUNC_PROVIDER_SELF_TEST: c_int = 1031;
 /// `OSSL_FUNC_PROVIDER_RANDOM_BYTES`.
-const FUNC_PROVIDER_RANDOM_BYTES: c_int = 1032;
+pub(crate) const FUNC_PROVIDER_RANDOM_BYTES: c_int = 1032;
 
 /// `ERR_LIB_OFFSET` — the shift `ERR_GET_LIB` applies.
 const ERR_LIB_OFFSET: c_uint = 23;
