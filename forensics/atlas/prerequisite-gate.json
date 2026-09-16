@@ -3,14 +3,11 @@
   "body": {
     "blocking_dependencies": [
       "OSSL_provider_init -> phase 13 (providers/legacy/legacyprov.c's entry point, and the name a third-party provider's own entry point is declared with -- which is why subphase rows 6.8d and 6.12 name it, since the `providers` configuration module needs a module path and RT-PROVIDER-3P compiles its own. The authority symbol is the legacy provider's, so it is Phase 13's.)",
-      "evp_default_properties_enable_fips_int -> phase 7 (Phase 7 owns crypto/evp/evp_fetch.c; this crate's FIPS claims are recorded separately)",
       "evp_generic_do_all -> phase 7 (Phase 7 owns crypto/evp/evp_fetch.c)",
       "evp_generic_fetch -> phase 7 (Phase 7 owns crypto/evp/evp_fetch.c; the registry's fetch path is written against it, not by it)",
       "evp_generic_fetch_from_prov -> phase 7 (Phase 7 owns crypto/evp/evp_fetch.c)",
-      "evp_get_global_properties_str -> phase 7 (Phase 7 owns crypto/evp/evp_fetch.c)",
       "evp_is_a -> phase 7 (Phase 7 owns crypto/evp/evp_fetch.c)",
       "evp_names_do_all -> phase 7 (Phase 7 owns crypto/evp/evp_fetch.c)",
-      "evp_set_default_properties_int -> phase 7 (Phase 7 owns crypto/evp/evp_fetch.c)",
       "ossl_get_enginesdir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads)",
       "ossl_get_openssldir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads; so is its sibling)",
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)",
@@ -18,8 +15,8 @@
     ],
     "census": {
       "covered_by_a_divergence": 56,
-      "language_surface_not_modelled_by_name": 2098,
-      "planned_prerequisites": 15
+      "language_surface_not_modelled_by_name": 2094,
+      "planned_prerequisites": 10
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
@@ -138,7 +135,7 @@
         "crypto/err/err.c": 99,
         "crypto/err/err_all_legacy.c": 11,
         "crypto/err/err_save.c": 2,
-        "crypto/evp/evp_fetch.c": 26,
+        "crypto/evp/evp_fetch.c": 22,
         "crypto/ex_data.c": 21,
         "crypto/getenv.c": 2,
         "crypto/indicator_core.c": 5,
@@ -172,14 +169,11 @@
         "crypto/trace.c": 25
       },
       "planned_prerequisites": {
-        "evp_default_properties_enable_fips_int": 1,
         "evp_generic_do_all": 1,
         "evp_generic_fetch": 1,
         "evp_generic_fetch_from_prov": 1,
-        "evp_get_global_properties_str": 2,
         "evp_is_a": 1,
         "evp_names_do_all": 1,
-        "evp_set_default_properties_int": 2,
         "ossl_get_enginesdir": 2,
         "ossl_get_openssldir": 2,
         "ossl_get_wininstallcontext": 1
@@ -272,16 +266,11 @@
         "crypto/asn1/a_i2d_fp.c:ERR_raise"
       ],
       "planned_prerequisites": [
-        "evp_default_properties_enable_fips_int",
         "evp_generic_do_all",
         "evp_generic_fetch",
         "evp_generic_fetch_from_prov",
-        "evp_get_global_properties_str",
-        "evp_get_global_properties_str",
         "evp_is_a",
         "evp_names_do_all",
-        "evp_set_default_properties_int",
-        "evp_set_default_properties_int",
         "ossl_get_enginesdir",
         "ossl_get_enginesdir",
         "ossl_get_openssldir",
@@ -291,8 +280,8 @@
     },
     "checked": {
       "authority_units": 114,
-      "crate_modules": 157,
-      "deferrals_recorded": 13,
+      "crate_modules": 158,
+      "deferrals_recorded": 10,
       "divergence_names_covered": 32,
       "divergence_rows": 5,
       "names_referenced_and_not_built": 17
@@ -416,7 +405,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "729eeb23f87030ad002ca1c6ba9f3f91e5e780129036a11a4203eaa806c7aa46",
+  "body_hash": "15f680a712dba34154a45e187a5a6905b2289cbc5969536aef166108fd0646ad",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -437,7 +426,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "067ca07f328da697429dd07cdd6e3fe6f10474a0d6137928b8d61fe449f8adf0"
+      "sha256": "8f1c8a3cd685d573a8e647831c8a6214e0e3cb42942f12c31be7ead485808d03"
     },
     {
       "name": "symbol-ownership",
@@ -447,17 +436,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "dcfa50efeafa8fe81de5393428f843a51277c7e8775318b577cc058344b7b24c"
+      "sha256": "4a7abdd13e3d6528726f48f6be07763b3bcfe567a01f3a1bf9be1ece2662f2bf"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "a6790bd6ef4e79a7efcec83d14dfa00bea069f2fd505a2af43e9fa9e177b1c32"
+      "sha256": "8372cbfd231bb667c515f8d5b2abd614997e715927e7a8eb0e05488a9c6f3d85"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "0dd0f305cd8f871be764bba16a8b899e7a82c30f15aa43c9d705bf5e320709bc"
+      "sha256": "a6ec02396c897cd61179348e62069ce5727f6d242ce7f6839adf4e3df6a12b53"
     },
     {
       "name": "crate-source-tree",

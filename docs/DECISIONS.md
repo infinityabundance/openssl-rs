@@ -8361,3 +8361,69 @@ named `6.10a-ii` as the subphase that would reach it, and the store reaches four
 | unit tests | 308 | 313 |
 
 SPDX-License-Identifier: Apache-2.0
+
+## D145 — 7.2's first half: Phase 7 has exports, and a probe that lied to itself
+
+**What landed.** `src/evp/fetch.rs` is `crypto/evp/evp_fetch.c`'s **default-property** half:
+`evp_set_parsed_default_properties`, `evp_set_default_properties_int`,
+`EVP_set_default_properties`, `evp_default_properties_merge`,
+`evp_default_property_is_enabled`, `EVP_default_properties_is_fips_enabled`,
+`evp_default_properties_enable_fips_int`, `EVP_default_properties_enable_fips`,
+`evp_get_global_properties_str`, `EVP_get1_default_properties`, and `get_evp_method_store` —
+the slot read that keeps the index number in one place. Four unit tests, and **Phase 7's first
+four exports**: `implemented[libcrypto]` 1135 → **1139**, three of the ten remaining blocking
+deferrals discharged (13 → 10 recorded), and `RT-FETCH` extended from 27 to **38** observations
+and passing.
+
+The split is by dependency rather than by file: `evp_fetch.c` is two stories in one translation
+unit, and the boundary is a lock. The *fetch* story needs `EVP_MD`'s and `EVP_CIPHER`'s method
+objects, which are 7.3's and 7.4's; the *default-properties* story needs the per-context
+global-property list 6.7a holds, 6.7b's grammar, and the store's cache flush that D142/D143
+landed. So this half is writable now and that half is not, and the file says so rather than
+being one long scaffold.
+
+**Three things in it are easy to get backwards, so they are recorded.** The properties are
+stored as a list but **rendered back to text and handed to every activated provider**
+(`ossl_provider_default_props_update`) before the list is swapped — a provider that rebuilds its
+own tables needs the query as text. The old list is **freed and the new one adopted**, not
+merged: merging happens one level up and only when the context already has something, and the
+`loadconfig` that inner call passes is **0**, because the accessor two lines above already
+loaded the file. And after the swap the store's query cache is flushed, because every cached
+answer was computed under the old query.
+
+**`mirrored` is a one-way flag.** A child context starts with its parent's properties mirrored;
+an explicit update stops mirroring permanently and a mirroring update is refused outright once
+that has happened. There is no call that turns it back on, which is why the refusal is the
+feature rather than a bug.
+
+**A measurement replaced a guess, in a test I wrote.** The first version of
+`enabling_and_disabling_fips_merge_the_two_opposite_forms` asserted that the text after
+enable-then-disable is `fips=yes,-fips` — the list *accumulating* both forms — and the run said
+`-fips`. A merge gives the incoming query precedence over the list it merges into, so a
+property cannot survive as both itself and its negation. The assertion is now the measurement,
+with the reason written down, because a list holding both forms would select nothing and would
+pass any test that only checked the return code.
+
+**And `RT-FETCH` caught itself lying, which is the entry's most useful part.** The first version
+of the extended probe forgot `#include <openssl/evp.h>`. In C11 an undeclared function is
+assumed to return `int`, so `char *props = EVP_get1_default_properties(ctx)` truncated a pointer
+to its low 32 bits and the probe **segfaulted on both sides after twenty observations** — with
+`residual_count: 0`, because two sides dying at the same place produce identical transcripts.
+The runner's `crashed` flag is what turned that into a failure rather than a pass; Phase 3 and
+Phase 4 added it for exactly this reason and this is the first time it has earned its keep in
+this stratum. The compile line now carries
+**`-Werror=implicit-function-declaration`**, so the warning that was there all along is a build
+failure instead of a mystery, and the probe's header records it.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 7 implemented / open | 0 / 950 | **4 / 946** |
+| `implemented[libcrypto]` | 1135 | 1139 |
+| recorded deferrals | 13 | 10 |
+| gate blocking dependencies | 13 | 10 |
+| courts / RT-FETCH observations | 57 / 27 | 57 / 38 |
+| unit tests | 313 | 317 |
+
+SPDX-License-Identifier: Apache-2.0
