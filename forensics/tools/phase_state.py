@@ -480,9 +480,15 @@ PHASE7_MODULES = [
     # 7.1 -- the fetch core: `crypto/core_algorithm.c`'s walk, transcribed.
     "src/evp/mod.rs",
     "src/evp/algorithm.rs",
-    # 7.1/7.2 -- the method store and the fetch surface above it.
+    # 7.1/7.2 -- the method store and the fetch surface above it. `src/property/store.rs` is
+    # `crypto/property/property.c`'s remainder, which is a `crypto/property/` file belonging to
+    # this stratum because the earliest caller of the object it defines is `evp_fetch.c`
+    # (D141); `src/runtime/rdtsc.rs` is `crypto/x86_64cpuid.pl`'s `OPENSSL_rdtsc`, whose first
+    # caller here is the store's stochastic flush.
     "src/evp/fetch.rs",
     "src/evp/method_store.rs",
+    "src/property/store.rs",
+    "src/runtime/rdtsc.rs",
     # 7.3 -- the symmetric method objects and their legacy wrappers.
     "src/evp/cipher.rs",
     "src/evp/digest.rs",

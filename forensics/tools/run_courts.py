@@ -98,14 +98,10 @@ COURTLESS: dict[int, str] = {
 # problem this whole tool exists for. And the invariant that a stratum cannot *complete*
 # without its courts is not weakened here at all: `phase_state.py` makes an absent courts file
 # a blocking reason, so a stratum with no runner cannot reach `complete`.
-NO_RUNNER_YET: dict[int, str] = {
-    7: (
-        "7.0 is the ledger and the stratum's wiring; the first court is `RT-FETCH` and lands "
-        "with 7.1, which is where the fetch core it observes is written. Remove this row in "
-        "that commit -- the check below fails on a courts file without a runner, so keeping "
-        "it past 7.1 is not possible."
-    ),
-}
+# Empty, and it should stay that way: the row that was here was 7's, and its own text said
+# keeping it past 7.1 was not possible. `RT-FETCH` landed with 7.1's remainder, so the entry is
+# gone rather than emptied -- an empty dict with a comment above it is what a reader needs.
+NO_RUNNER_YET: dict[int, str] = {}
 
 
 def phase_states() -> dict[int, str]:

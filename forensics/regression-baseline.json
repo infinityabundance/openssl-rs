@@ -4,7 +4,8 @@
     "phase3",
     "phase4",
     "phase5",
-    "phase6"
+    "phase6",
+    "phase7"
   ],
   "courts": {
     "ABI-CONSTANTS": {
@@ -161,6 +162,10 @@
     },
     "RT-EXDATA": {
       "observations": 38,
+      "verdict": "pass"
+    },
+    "RT-FETCH": {
+      "observations": 27,
       "verdict": "pass"
     },
     "RT-LHASH": {
