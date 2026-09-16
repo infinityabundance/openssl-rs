@@ -304,10 +304,18 @@ not a plan: the plan is the inventory, and the inventory is generated.
    a descriptor is what a dispatch function is called with, a library context owns
    the property definitions, and a fetch is a property query against a registered
    algorithm.
-5. **6.9, then 6.8a–6.8c, then 6.10, then 6.8d–6.8f, then 6.11**, in that order, for
+5. **6.9, then 6.8a–6.8c, then 6.6e-ii, then 6.10, then 6.8d–6.8f, then 6.11**, in that order, for
 the same reason: the loader is what the registry's dynamic branch loads a provider
 *through*, the registry needs property selection, the module registry is what activates a
 provider from configuration, and self-test is the provider/context callback plumbing.
+**6.6e-ii moved ahead of 6.10 in a third re-derivation (D118).** `CONF_modules_load`
+creates `module_list_lock` through `ossl_rcu_lock_new`, and RCU's *read* path is not a
+counter bump: it stores per-thread state and registers `ossl_rcu_free_local_data` as
+a **thread-exit handler** through `ossl_init_thread_start`. So the CONF registry
+depends on the per-thread event-handler table, which is 6.6e-ii -- one level down
+inside `crypto/threads_pthread.c`, invisible in `conf_mod.c`'s own includes and
+invisible to a grep of that file for thread machinery.
+
 **The loader before the registry is the reverse of this section's original order**, which
 is D114's correction: `OSSL_PROVIDER_load`'s dynamic branch *is* a `DSO_load` call and DSO
 depends on nothing in the provider registry, so the dependency runs one way and the
