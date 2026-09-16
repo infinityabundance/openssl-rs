@@ -118,12 +118,29 @@ def to_bytes(hexdigits: str) -> bytes:
     return bytes.fromhex(text)
 
 
+# The number of bytes `rustfmt` packs onto one line of a byte-array literal.
+#
+# Derived rather than typed, because a typed width is what drifted: this generator emitted twelve
+# to a line while the committed file had sixteen, and nothing compared them, so
+# `src/bn/prime_data.rs` failed `cargo fmt --all -- --check` the moment the two were brought into
+# a determinism check (docs/DECISIONS.md D135 and D136). A byte token is `0xNN,` -- five columns --
+# the items are joined by a space, and the literal is indented four columns inside its
+# `pub(crate) const`. So `n` items occupy `4 + 5n + (n - 1)` columns and must not exceed
+# `rustfmt`'s default `max_width` of 100: `4 + 6n - 1 <= 100` gives `6n <= 97`, so `n <= 16`.
+#
+# Sixteen gives 99 columns and seventeen gives 105, which is why the answer is exactly 16 and why
+# the arithmetic is here rather than a bare literal the next reader would have to re-derive.
+# Nothing else depends on the width: the weak tier recovers the bytes by matching `0xNN` tokens,
+# so the check survives a width somebody changes deliberately.
+BYTES_PER_LINE = (100 - 4 + 1) // 6
+
+
 def rust_array(name: str, value: bytes) -> str:
-    """One `pub(crate) const` as a byte array, wrapped at a readable width."""
+    """One `pub(crate) const` as a byte array, wrapped where `rustfmt` would wrap it."""
     lines = [f"/// {name} — {len(value) * 8} bits."]
     lines.append(f"pub(crate) const {name}: [u8; {len(value)}] = [")
-    for i in range(0, len(value), 12):
-        chunk = ", ".join(f"0x{b:02X}" for b in value[i:i + 12])
+    for i in range(0, len(value), BYTES_PER_LINE):
+        chunk = ", ".join(f"0x{b:02X}" for b in value[i:i + BYTES_PER_LINE])
         lines.append(f"    {chunk},")
     lines.append("];")
     return "\n".join(lines)

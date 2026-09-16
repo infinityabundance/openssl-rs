@@ -59,6 +59,32 @@
 //! table meet exactly here: RCU stores its per-thread state in this table and releases it
 //! through a thread-stop handler, not through the table's own destructor.
 //!
+//! ## `CRYPTO_THREAD_LOCAL_ERR_KEY` is declared and read by nothing, and that is deliberate
+//!
+//! The authority's `crypto/err/err.c` keeps a thread's `ERR_STATE` in this family under key 3:
+//! `ossl_err_get_state_int` is
+//! `CRYPTO_THREAD_get_local_ex(CRYPTO_THREAD_LOCAL_ERR_KEY, libctx)` with a create-on-miss, and
+//! every raise writes through the same key. This crate keeps that state in a Rust
+//! `thread_local!` in `src/runtime/err.rs` instead, so key 3 is declared for the reason every
+//! other member of the enum is — it is part of the authority's numbering and a later reader must
+//! not silently renumber it — and is stored and read by nothing.
+//!
+//! **That is a difference in the transcription and not in the contract, and the distinction is
+//! why it is written down rather than papered over.** The family is reached only through
+//! `CRYPTO_THREAD_get_local_ex` and `CRYPTO_THREAD_set_local_ex`, which are not exported from
+//! `libcrypto.so.3`, are in no installed header, and are on no core dispatch table — so no
+//! consumer and no provider can read a key. `RT-ERR` is 3,857 observations and it is the court
+//! that would have seen the difference, because it measures the per-thread queue through
+//! `ERR_get_error`, `ERR_peek_error`, `ERR_set_mark` and `ERR_pop_to_mark`, all of which the
+//! crate's `thread_local!` answers identically.
+//!
+//! What *is* observable one level down is the other direction: a crate module that read key 3
+//! would find NULL where the authority finds the state. So the condition attached to the
+//! declaration below is not "when this API is used" but "when a crate module needs the state
+//! through this family", and a later stratum that does has to **move** the state rather than
+//! assume it is already there. That is exactly what `ERR_load_strings`'s recorded no-op and
+//! `D-VERIFY-FIRST`'s rule are for: a gap a reader can name is a gap a reader will not trip on.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::cell::UnsafeCell;
@@ -114,8 +140,12 @@ pub(crate) const CRYPTO_THREAD_LOCAL_DRBG_PRIV_KEY: ThreadLocalKeyId = 1;
 /// `CRYPTO_THREAD_LOCAL_DRBG_PUB_KEY` — Phase 9's.
 #[allow(dead_code)] // unreachable until Phase 9 stores a DRBG public state
 pub(crate) const CRYPTO_THREAD_LOCAL_DRBG_PUB_KEY: ThreadLocalKeyId = 2;
-/// `CRYPTO_THREAD_LOCAL_ERR_KEY` — see the module note on `err.c`'s use of this family.
-#[allow(dead_code)] // unreachable until the error queue is read against the current err.c
+/// `CRYPTO_THREAD_LOCAL_ERR_KEY` — declared, and **read by nothing**: this crate keeps a
+/// thread's `ERR_STATE` in `src/runtime/err.rs`'s `thread_local!` rather than at this key. The
+/// declaration is kept so the enum's numbering cannot drift, and the module note above records
+/// why the difference is unreachable through the public contract and what would make it
+/// reachable. Not "unreachable until this API is used" — the API is not the question.
+#[allow(dead_code)] // no reader: the state lives in src/runtime/err.rs's `thread_local!`
 pub(crate) const CRYPTO_THREAD_LOCAL_ERR_KEY: ThreadLocalKeyId = 3;
 /// `CRYPTO_THREAD_LOCAL_ASYNC_CTX_KEY` — Phase 14's.
 #[allow(dead_code)] // unreachable until the async layer lands
