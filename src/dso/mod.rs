@@ -170,7 +170,7 @@ pub type DsoMergerFunc =
 /// `DSO_CTRL_GET_FLAGS` — `include/internal/dso.h`.
 const DSO_CTRL_GET_FLAGS: c_int = 1;
 /// `DSO_CTRL_SET_FLAGS`.
-const DSO_CTRL_SET_FLAGS: c_int = 2;
+pub(crate) const DSO_CTRL_SET_FLAGS: c_int = 2;
 /// `DSO_CTRL_OR_FLAGS`.
 const DSO_CTRL_OR_FLAGS: c_int = 3;
 /// `DSO_FLAG_NO_UNLOAD_ON_FREE`.
