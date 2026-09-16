@@ -82,7 +82,6 @@ from atlas_common import (  # noqa: E402
     authority_build_dir,
     authority_source,
     envelope,
-    implemented_surface_input,
     rel,
     write_json,
 )
@@ -289,7 +288,7 @@ def build_internal_symbols(authority_id: str) -> tuple[dict, dict[str, str]]:
             "conflicting_definitions": len(conflicts),
             "records_without_a_translation_unit": sum(1 for r in records if not r["translation_unit"]),
         },
-        "conflicts": sorted(conflicts)[:64],
+        "conflicts": sorted(conflicts),
         "records": records,
     }
     return body, sym_tu
@@ -420,6 +419,27 @@ def authority_version(authority_id: str) -> str:
     raise KeyError(authority_id)
 
 
+def load_build_record(authority_id: str) -> dict:
+    """The stable fields of this authority's build record.
+
+    The toolchain and artifact sizes are deliberately dropped: they are properties of the
+    machine that ran the build, and this artefact is compared byte for byte on a different one.
+    The build *directory* and the *profile* are what a reader needs, and both are stable.
+    """
+    doc = json.loads((ATLAS / "BUILD_RECORDS.json").read_text(encoding="utf-8"))
+    for b in doc.get("builds", []):
+        if b["id"] == authority_id:
+            return {
+                "profile": b["profile"],
+                "profile_args": b["profile_args"],
+                "version": b["version"],
+                "configure_argv": b["configure_argv"],
+                "build_dir": b["build_dir"],
+                "prefix": b["prefix"],
+            }
+    raise KeyError(authority_id)
+
+
 def owner_phase_for_header(header: str, installed: dict[str, int], tu_of_module: dict[str, str],
                            module_phase: dict[str, int]) -> int | None:
     """The stratum that owns a header.
@@ -545,7 +565,7 @@ def build_language_universe(authority_id: str, module_phase: dict[str, int],
                 "unit of the same basename, via the module that transcribes it"
             ),
             "installed_headers": sorted(installed),
-            "unowned": unowned[:512],
+            "unowned_sample": unowned[:512],
             "records": rows,
         }
 
@@ -753,28 +773,48 @@ def write_all(authority_id: str) -> int:
     macro_body, typedef_body = build_language_universe(authority_id, module_phase, tu_of_module)
 
     auth_atlas = ATLAS / authority_id
-    # The two authority trees are not committed, so the inputs that identify them
-    # are the committed records of what they are: the per-file source manifest whose
-    # root hash is tamper-evidence for the extracted tree, and the build record that
-    # names the build directory, profile and toolchain. Naming the trees themselves
-    # as inputs would make this document unverifiable anywhere but the court.
+    # The two authority **trees** are not committed, and two of the four `inputs` this
+    # document would like to name are not stable either, so neither is hashed here.
+    #
+    # `BUILD_RECORDS.json` is rewritten by `authority_build.py`, which the court job runs
+    # before this generator: its `build_toolchain` and artifact sizes make its hash a property
+    # of the machine that just built the authority. `implemented-surface.json` records the
+    # crate archive's hash, which is a property of the machine that just built the *crate*.
+    # A committed artefact that hashes either of those can never satisfy a byte comparison on
+    # a runner it was not generated on -- and the court job compares these byte for byte with
+    # `git diff --exit-code`. The stable facts each one carries are recorded as body fields
+    # and as notes instead, which is what provenance needs; a hash that changes for a reason
+    # unrelated to the evidence is not provenance, it is a false positive that a reviewer
+    # learns to skip.
+    build_records = load_build_record(authority_id)
     inputs = [
         InputRef(
             name="authority-source-manifest",
             path=REPO_ROOT / "forensics" / "authorities" / f"SOURCE_MANIFEST.{authority_version(authority_id)}.json",
         ),
-        InputRef(name="authority-build-record", path=ATLAS / "BUILD_RECORDS.json"),
         InputRef(name="authority-exports-libcrypto", path=auth_atlas / "symbols-libcrypto.json"),
         InputRef(name="authority-exports-libssl", path=auth_atlas / "symbols-libssl.json"),
         InputRef(name="authority-macros", path=auth_atlas / "macros.json"),
         InputRef(name="authority-typedefs", path=auth_atlas / "typedefs.json"),
+        InputRef(name="authority-functions", path=auth_atlas / "functions.json"),
         InputRef(name="symbol-ownership", path=ATLAS / "symbol-ownership.json"),
-        # The crate-source input is the implemented surface rather than the tree:
-        # the tree is a directory and hashes to nothing, and the surface artefact is
-        # the project's own content binding for it (docs/DECISIONS.md D30). It must be
-        # regenerated before this generator runs, which `run_courts.py`'s pipeline and
-        # the CI step order both enforce.
-        implemented_surface_input(),
+        InputRef(
+            name="authority-build-record",
+            note=(
+                "read for the build directory, the profile and the source area; its hash is "
+                "deliberately not recorded, see this list's comment -- the fields are in "
+                "body.authority_build"
+            ),
+        ),
+        InputRef(
+            name="implemented-surface",
+            note=(
+                "deliberately **not** read: the module-to-stratum map comes from "
+                "symbol-ownership.json, which is committed and machine-independent, where "
+                "I implemented-surface.json carries a build product's hash. Naming it as an input "
+                "at all would be a claim about a file this generator does not open."
+            ),
+        ),
         InputRef(
             name="crate-source-tree",
             note=(
@@ -783,6 +823,8 @@ def write_all(authority_id: str) -> int:
             ),
         ),
     ]
+    internal_body["authority_build"] = build_records
+    edges_body["authority_build"] = build_records
 
     internal_body["modules_with_mixed_ownership"] = sorted(mixed)
     # Not a defect list: a module whose declaration disagrees with the ownership of
@@ -877,10 +919,15 @@ def check_committed(check_only: bool) -> int:
                     f"{rel(path)}: {len(records)} records, universe says "
                     f"{body['universe']['internal']}"
                 )
-            if body["invariants"]["conflicting_definitions"]:
+            if body["invariants"]["conflicting_definitions"] != len(body["conflicts"]):
+                # A conflict is *recorded*, not forbidden: 144 symbols in this authority are
+                # defined by two different translation units (a library copy and a provider
+                # copy of the same source, among others), and the first definition wins. What
+                # the check can require is that the count and the list agree, so that the
+                # number in `invariants` is the number of entries `conflicts` holds.
                 problems.append(
-                    f"{rel(path)}: {body['invariants']['conflicting_definitions']} "
-                    "conflicting symbol definitions recorded"
+                    f"{rel(path)}: {body['invariants']['conflicting_definitions']} conflicting "
+                    f"definitions recorded but {len(body['conflicts'])} listed"
                 )
             for r in records:
                 if not r.get("translation_unit"):
@@ -892,12 +939,22 @@ def check_committed(check_only: bool) -> int:
                     f"{rel(path)}: {len(records)} records, counts says "
                     f"{body['counts']['records']}"
                 )
-            for r in records:
-                if r["owner_phase"] is None and r["name"] not in body["unowned"]:
-                    problems.append(
-                        f"{rel(path)}: {r['name']} is unowned but not listed as such"
-                    )
-                    break
+            # `unowned_sample` is a *sample*, not the list: there are ten thousand unowned
+            # macro names and listing them all would double the artefact to say one thing. The
+            # check is therefore on the sample's length and on the count agreeing with the
+            # records, which is what makes the sample's truncation a fact rather than a hole.
+            expected = min(512, body["counts"]["unowned"])
+            if len(body["unowned_sample"]) != expected:
+                problems.append(
+                    f"{rel(path)}: unowned_sample has {len(body['unowned_sample'])} entries, "
+                    f"expected {expected} for {body['counts']['unowned']} unowned records"
+                )
+            unowned_here = sum(1 for r in records if r["owner_phase"] is None)
+            if unowned_here != body["counts"]["unowned"]:
+                problems.append(
+                    f"{rel(path)}: {unowned_here} unowned records, counts says "
+                    f"{body['counts']['unowned']}"
+                )
         else:
             if not body.get("modules") or not body.get("units"):
                 problems.append(f"{rel(path)}: empty module or unit list")

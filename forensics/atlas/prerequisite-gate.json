@@ -303,22 +303,22 @@
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "0dd58f98b254149dab326e5aaef09d8a9512ace5de92d1a13bb6af46ef40f812"
+      "sha256": "69daa64cd6798dd3dfc91c45b3d1a65b3e41ab1408003708866bd2cd179ad10c"
     },
     {
       "name": "macro-owners",
       "path": "forensics/atlas/macro-owners.json",
-      "sha256": "b047ec90e627b359f4340fd4a18cbda8e330c099444ada5c77db1dff1e1f73cd"
+      "sha256": "b6391f9d4eee8a92e76855171a946f1a442a5eb21e40c29f8233443e93ec1b6c"
     },
     {
       "name": "typedef-owners",
       "path": "forensics/atlas/typedef-owners.json",
-      "sha256": "784e0b32a30b9a65c7e44475f70fc19db2ceda60ddee2a4c35e16d8e4eee7a4d"
+      "sha256": "ffc8babb89e4f13b765eecc3e2aa5ebf7742c7e18a6d9f49363b890eb5742fa4"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "6384bc76467925690d0a7128d9281b21cca7ca1bb22b5ca882ae5eaee7fdba5c"
+      "sha256": "9e4d467d0a7593eba65cfd680576fb716e1108232760432d6ad63f609106b9d2"
     },
     {
       "name": "symbol-ownership",
