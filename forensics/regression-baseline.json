@@ -269,5 +269,12 @@
     "7": "not-started",
     "8": "not-started",
     "9": "not-started"
+  },
+  "prerequisites": {
+    "blocking_dependencies": 45,
+    "divergence_names_covered": 31,
+    "findings": 0,
+    "language_census": 2067,
+    "sealed_census": 59
   }
 }

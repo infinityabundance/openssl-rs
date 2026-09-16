@@ -785,6 +785,21 @@ pub unsafe extern "C" fn OPENSSL_thread_stop_ex(ctx: *mut c_void) {
 /// remove the head from the global register and free the head. After it, this thread has no
 /// handlers and no list — so a second call is safe and runs nothing, and a later
 /// `ossl_init_thread_start` on the same thread allocates a fresh head and re-registers it.
+///
+/// ## The last statement is `CRYPTO_THREAD_clean_local()`, and it is not decoration
+///
+/// `crypto/initthread.c` ends this function with `CRYPTO_THREAD_clean_local()`, which drops
+/// **every per-context thread-local table this thread holds** — the `_ex` family's tables from
+/// `crypto/threads_common.c`, keyed by libctx. Without it, a thread that stops still holds
+/// those tables until `pthread`'s key destructor runs, and for a thread whose key was created
+/// and then deleted and re-created (the same slot number, an uncleared value — see
+/// [`rearm_for_test`]) the destructor is exactly the wrong place to rely on.
+///
+/// This call was **absent** until the prerequisite gate's first run reported it: the crate
+/// defined the function (under the name [`crate::runtime::threads_common::clean_local`], which
+/// the gate's own atlases are what connected to `CRYPTO_THREAD_clean_local`) and never called
+/// it from the one place the authority does. That is the class the gate exists for -- a
+/// dependency the crate has *not noticed* it needs, invisible to any scan of the crate alone.
 #[no_mangle]
 pub extern "C" fn OPENSSL_thread_stop() {
     crate::ffi::guard_ffi((), || {
@@ -800,6 +815,7 @@ pub extern "C" fn OPENSSL_thread_stop() {
                 CRYPTO_free(hands.cast::<c_void>(), FILE, lines::L_DESTRUCTOR_FREE);
             }
         }
+        crate::runtime::threads_common::clean_local();
     })
 }
 
@@ -1004,5 +1020,64 @@ mod tests {
             0,
             "the nested registration is refused rather than deadlocking"
         );
+    }
+
+    /// `OPENSSL_thread_stop` runs `CRYPTO_THREAD_clean_local()`, so the per-context thread-local
+    /// tables this thread holds are gone afterwards.
+    ///
+    /// The call is the *last* statement of `crypto/initthread.c`'s function and it is easy to
+    /// miss, because the function is in a different translation unit from the family it
+    /// cleans — which is exactly how this crate came to define `clean_local` and never call it.
+    /// The prerequisite gate reported that (`docs/DECISIONS.md` D123); this test is what keeps it
+    /// from happening again, because it is the *observable* consequence rather than the call.
+    #[test]
+    fn a_thread_stop_drops_the_per_context_thread_locals() {
+        use crate::runtime::threads_common::{
+            CRYPTO_THREAD_get_local_ex, CRYPTO_THREAD_set_local_ex,
+            CRYPTO_THREAD_LOCAL_ASYNC_CTX_KEY,
+        };
+        reset();
+        // SAFETY: the table calls below take a live context pointer and a marker that is this
+        // test's own static, never dereferenced.
+        unsafe {
+            clean_local_for_the_test();
+            let ctx = crate::context::OSSL_LIB_CTX_new();
+            assert!(!ctx.is_null());
+            assert_eq!(
+                CRYPTO_THREAD_set_local_ex(CRYPTO_THREAD_LOCAL_ASYNC_CTX_KEY, ctx, arg_a()),
+                1
+            );
+            assert_eq!(
+                CRYPTO_THREAD_get_local_ex(CRYPTO_THREAD_LOCAL_ASYNC_CTX_KEY, ctx),
+                arg_a(),
+                "the value is there before the stop"
+            );
+
+            // A handler must be registered for the stop to reach its last statement at all:
+            // the whole body is behind `destructor_key.sane != -1`.
+            assert_eq!(
+                ossl_init_thread_start(ptr::null(), arg_b(), Some(count_handler)),
+                1
+            );
+            OPENSSL_thread_stop();
+
+            assert_eq!(
+                CALLS.load(Ordering::SeqCst),
+                1,
+                "the stop ran, so it reached its last statement"
+            );
+            assert_eq!(
+                CRYPTO_THREAD_get_local_ex(CRYPTO_THREAD_LOCAL_ASYNC_CTX_KEY, ctx),
+                ptr::null_mut(),
+                "CRYPTO_THREAD_clean_local() dropped every per-context table, so this is gone"
+            );
+            crate::context::OSSL_LIB_CTX_free(ctx);
+        }
+    }
+
+    /// `crate::runtime::threads_common::clean_local()`, named once for the test above so that
+    /// the test states the call it is about rather than an inline path.
+    fn clean_local_for_the_test() {
+        crate::runtime::threads_common::clean_local();
     }
 }

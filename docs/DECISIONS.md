@@ -6564,3 +6564,133 @@ guessing at the answer would be worse than leaving the question.
 |---|---|---|
 | Phase 6 implemented / open | 142 / 19 | **142 / 19** (no source changed) |
 | 6.10a | one unit | **three units: `sparse_array.c` (216), `threads_common.c` (414), RCU (~380)** |
+
+## D123 — the prerequisite gate, its first run's two findings, and the two defects the tool had itself
+
+**D122 ended by naming a chain that had been invisible from the file that names its first
+link, and by pointing at the general problem: four dependency inversions have now been found
+in this stratum, every one by hand, and none by a tool.** This is the tool. It is what
+"ensure item 4 is included" asked for, and it is the last piece of Phase 6 infrastructure
+before 6.10a-iii.
+
+### Why an export atlas cannot see a prerequisite
+
+Every atlas this project had before this one is a projection of the authority's **exported**
+surface: `symbol-ownership.json` over the 6,499 DSO exports, `functions.json` over the 7,485
+functions the installed headers declare, `macros.json` over the 16,805 macros those same
+headers define. That is the right universe for a compatibility claim and the wrong universe
+for a prerequisite. `crypto/conf/conf_mod.c` cannot be written without `ossl_rcu_lock_new`,
+and `ossl_rcu_lock_new` is not exported, is declared in no installed header, and therefore
+appeared in no artefact at all.
+
+So four artefacts were added, and each covers a family the others cannot:
+
+| artefact | universe | source |
+|---|---|---|
+| `atlas/internal-symbols.json` | **4,547** non-exported functions, each with the translation unit that defines it | the authority's build tree: 2,201 objects, one per unit per link form |
+| `atlas/macro-owners.json` | **19,839** macros and enum members, installed and internal | `macros.json` plus a `#define`/`enum` scan of the non-installed headers |
+| `atlas/typedef-owners.json` | **1,568** type names | `typedefs.json` plus a `typedef` scan of the same headers |
+| `atlas/transcription-edges.json` | which authority unit each of **120 crate modules** transcribes, and what that unit references | measured from the symbols the module defines, not read out of its prose |
+
+`transcription-edges.json` is the one that had to be committed. The mapping it records — the
+dominant authority translation unit among the symbols a module defines — is a measurement,
+and the identifiers of that unit are exactly what direction B below needs; committing them is
+what lets the gate run in the static CI job, where no authority tree exists. The court job
+re-derives the file and requires `git diff --exit-code` over it, so the committed copy cannot
+drift.
+
+### What it checks
+
+* **A — `undefined_prerequisite`.** A name the crate references, in the internal function,
+  macro, enumerator or typedef universe, that the crate does not build and no record has
+  agreed to build.
+* **B — `unwired_function_in_the_current_stratum`.** An authority internal function a
+  transcribed unit calls, that the crate has no module for, in a unit whose own stratum is
+  still open.
+* **C — the sealed census.** The same for a stratum that has already sealed: **59 names over
+  21 defining units**. Reported and *not* a failure, because each is either modelled
+  differently by the crate or is work a later stratum carried across the boundary, and which
+  of the two is a decision rather than a repair. What keeps that from becoming a hiding place
+  is that `regression_guard.py` now holds the count to non-increase.
+* **D — the records.** `forensics/prerequisites.json` carries deferrals (work with a named
+  owner stratum) and divergences (a difference the crate intends). A divergence's `covers`
+  list is checked in **both** directions: a covered name the gate did not observe is a
+  failure, and an observed name no record covers is a finding. Suppression cannot be silent,
+  and a record cannot quietly widen — a record that kept covering a name the crate has since
+  fixed would be hiding the next one.
+
+The C **language** surface is counted and listed but never failed: the crate models C types,
+macros and reason codes differently on purpose (`BIO_ADDR` is a Rust type with a private
+layout, `ERR_R_CRYPTO_LIB` is an entry in a generated table), and a lexical scan cannot tell a
+rename from a gap. 2,067 such names are recorded. Saying so is the point: a gate that guessed
+here would either be noise or would legitimise a rename.
+
+### The first run's findings, verbatim
+
+The gate's first run reported two classes and nothing else.
+
+```
+[undefined_prerequisite] 16
+    F, arg, cb_arg, in, inlen, libctx, now, out_len, outlen, src, stderr, type, u16, u32, u64, u8
+[unwired_function_in_the_current_stratum] 82
+    crypto/initthread.c -> CRYPTO_THREAD_clean_local (src/runtime/threads_common.rs, phase 6)
+    crypto/threads_common.c -> CRYPTO_THREAD_clean_local (src/runtime/threads_common.rs, phase 6)
+    ... and the libctx accessors, the method store, the child-provider link, the directories
+        and the EVP fetch path
+```
+
+* **`CRYPTO_THREAD_clean_local` is the real one, and it is fixed here.** The crate defines the
+  function — as `threads_common::clean_local` — and called it from nowhere. `crypto/initthread.c`'s
+  `OPENSSL_thread_stop` ends with `CRYPTO_THREAD_clean_local()`, the crate's version did not, and
+  no scan of the crate alone could have seen it: the crate's identifier and the authority's name
+  are different and the call was simply absent. `OPENSSL_thread_stop` now calls it, and
+  `a_thread_stop_drops_the_per_context_thread_locals` pins the *consequence* — a value stored
+  under `CRYPTO_THREAD_LOCAL_ASYNC_CTX_KEY` is gone after the stop — rather than the call.
+* **The 16 `undefined_prerequisite` names are a collision class, not 16 defects.** Each is a name
+  the authority's *non-installed* headers introduce — `#define F(x)` in `md4_local.h`,
+  `u8`/`u16`/`u32`/`u64` in `aes_local.h`, macro-body and parameter names in
+  `include/internal/list.h` and `sha3.h` — and each also appears in this crate as an ordinary Rust
+  identifier: a generic parameter, a local binding, a width alias. A lexical scan of either side
+  cannot separate those two facts, so they are recorded as a class rather than matched away: a
+  matcher tuned to drop `u8` would also drop a real collision. The list is held exact, so a new
+  member has to be looked at.
+* Every other name from that run now has a row: **45 deferrals** with a named owning stratum and
+  a citation (the twelve RCU names to 6.10a-iii, four to 6.10b/c, the method store to 6.7c/6.8,
+  the child-provider link to 6.8e, the directories to Phase 16, the EVP fetch path to Phase 7)
+  and **five divergence rows** covering 31 names.
+
+### The tool had two defects of its own, and both were the class it exists to find
+
+Worth recording because D105's lesson is that **the probe, the generator and the note are all
+suspects before the authority is**:
+
+1. **The reference cleaner mis-paired an apostrophe and blanked 7 KB of `src/property/parse.rs`.**
+   `strip_rust` treated `'` as the start of a character literal, so `// ... this module's
+   comparator` opened a "string" that ran to the next real quote 7,000 characters later. The
+   result was a definition reported as missing, i.e. a false prerequisite. Rust is unambiguous
+   here — `'` opens a literal only as `'x'`, `'\n'` or `'\u{…}'`, and is a lifetime otherwise —
+   and the cleaner now distinguishes them. It also **fails loudly** if any blanked span contains
+   `\nfn `, `\npub `, `\nunsafe `, `\nimpl `, `\n}` or `\n#[`, which cannot appear inside a comment
+   or a string: that is the signature of a mis-pairing, and a cleaner that hides a prerequisite is
+   worse than no cleaner.
+2. **The definition scan could not see `extern "C" fn name(`.** One lens was used for both
+   questions, and blanking string literals — which the *reference* scan needs, so that a
+   `c"ossl_parse_property"` reason-site table is not read as a use — also blanked the `"C"` in the
+   definition form almost every export in this crate is written in. There are now two lenses: a
+   reference is blind to comments and strings, a definition is blind only to comments.
+
+A third defect was in the *artefact*, not the gate: `scan_typedefs` read `typedef` statements out
+of macro **bodies**, and `include/internal/list.h`'s `DEFINE_LIST_OF(name, type)` therefore
+contributed `name` and `type` to the type universe, from which they became missing prerequisites.
+Macro bodies are now blanked before the typedef scan.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 142 / 19 | **142 / 19** (`clean_local` is an internal, so no ledger row moved) |
+| atlas artefacts | 12 | **17** |
+| prerequisite findings | — | **0** |
+| sealed-stratum census / language census / planned | — | **59 / 2,067 / 71** |
+| prerequisite divergence rows / names covered | — | **5 / 31** |
+| CI gates | 13 | **15** (the gate, and the weak-tier atlas check) |

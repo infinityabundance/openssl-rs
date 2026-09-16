@@ -132,6 +132,21 @@ jobs:
       - name: Symbol ownership
         run: python3 forensics/tools/ownership_audit.py
 
+      # Four dependency inversions have been found in Phase 6 alone, every one by hand
+      # and none by a tool, because the authority surface a prerequisite is drawn from
+      # -- non-exported functions, internal-header macros, enum members -- is invisible
+      # to every atlas built from exports. This gate reads the four atlases that cover
+      # it and refuses a dependency nobody owns.
+      - name: Prerequisite coverage
+        run: python3 forensics/tools/prerequisite_gate.py
+
+      # The prerequisite atlases are derived from the authority's source and build
+      # trees, which are not committed. Weak tier: the committed artefacts are checked
+      # for internal consistency here, and the `courts` job re-derives them from the
+      # authority and fails on any difference.
+      - name: Prerequisite atlases (committed artefacts)
+        run: python3 forensics/tools/gen_prerequisite_atlas.py --check
+
       # The atlas records every authority prototype and nothing compared it with the
       # crate's declarations, which is how `BN_signed_lebin2bn` came to be declared
       # `-> c_int` while the authority declares `BIGNUM *` (D65). This compares
@@ -233,6 +248,24 @@ jobs:
       # result this run does not reproduce. See docs/DECISIONS.md D94.
       - name: Every active stratum's courts, derived from the phase registry
         run: bash docker/openssl-rs-court.sh exec python3 forensics/tools/run_courts.py
+
+      # The prerequisite atlases are the one part of the gate that needs the authority,
+      # so they are re-derived here -- after the courts, because the crate's static
+      # archive and `implemented-surface.json` are build products `run_courts.py`
+      # produces on the way -- and compared byte for byte against the committed
+      # artefacts. The gate itself then runs in both jobs from the same committed
+      # files, which is what lets the static job answer the question at all.
+      - name: Re-derive the prerequisite atlases
+        run: |
+          bash docker/openssl-rs-court.sh exec python3 forensics/tools/gen_prerequisite_atlas.py
+          git diff --exit-code -- \
+            forensics/atlas/internal-symbols.json \
+            forensics/atlas/macro-owners.json \
+            forensics/atlas/typedef-owners.json \
+            forensics/atlas/transcription-edges.json || {
+            echo "::error::the prerequisite atlases are stale; regenerate and commit them";
+            exit 1;
+          }
 
       # A court compares two transcripts, which only means something if the
       # transcript is a property of the library under test. A probe that reads

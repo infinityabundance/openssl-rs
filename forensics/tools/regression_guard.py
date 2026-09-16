@@ -42,6 +42,8 @@ What counts as a regression
 | court verdict | `pass` must stay `pass` | the strongest claim held |
 | observations per court | non-decreasing | a weakened probe loses coverage silently |
 | phase state | non-decreasing | `complete` must not become `in-progress` |
+| prerequisite findings | zero, and zero | a dependency nobody owns |
+| prerequisite censuses | non-increasing | a hidden omission growing behind a "not a failure" label |
 
 A *deferred* count is recorded and printed but is not directional: a symbol may
 legitimately move from `open` to `deferred` once the stratum owning its dependency
@@ -71,6 +73,7 @@ BASELINE_REL = "forensics/regression-baseline.json"
 BASELINE = REPO_ROOT / BASELINE_REL
 
 IMPLEMENTED_SURFACE = "forensics/atlas/implemented-surface.json"
+PREREQUISITE_GATE = "forensics/atlas/prerequisite-gate.json"
 PHASE_STATE = "forensics/phase-state.json"
 TRANSITIONS = "forensics/ownership-transitions.json"
 
@@ -175,6 +178,24 @@ def observe() -> dict:
     if state:
         for row in state["body"]["phases"]:
             obs["phases"][str(row["phase"])] = row["state"]
+
+    # The prerequisite gate's numbers, tracked the same way as everything else. Its
+    # two censuses are explicitly *not* failures in the gate -- the C language surface
+    # cannot be matched lexically, and an internal function left unbuilt in a stratum
+    # that has sealed is a decision rather than a repair -- so the only thing keeping
+    # them from becoming a place where real omissions hide is a non-increase invariant.
+    # That invariant lives here, which is why this plane is read at all.
+    gate = read_json(PREREQUISITE_GATE)
+    if gate:
+        gb = gate["body"]
+        obs["prerequisites"] = {
+            "findings": sum(gb["counts"].values()),
+            "sealed_census": gb["sealed_stratum_census"]["names"],
+            "language_census": gb["census"].get(
+                "language_surface_not_modelled_by_name", 0),
+            "blocking_dependencies": len(gb["blocking_dependencies"]),
+            "divergence_names_covered": gb["checked"]["divergence_names_covered"],
+        }
 
     return obs
 
@@ -390,6 +411,32 @@ def compare(baseline: dict, current: dict) -> tuple[list[str], list[str]]:
                     f"({t.get('reason', 'no reason recorded in ' + TRANSITIONS)})")
         elif STATE_RANK.get(now, -1) > STATE_RANK.get(was, -1):
             movements.append(f"phase[{phase}]: {was} -> {now}")
+
+    # The prerequisite plane. `findings` must be zero and stay zero; an absent gate
+    # artefact is an absence of evidence, not a clean bill, so it is a regression like
+    # every other missing plane. The two censuses and the blocking list must not grow.
+    for key, was in sorted(baseline.get("prerequisites", {}).items()):
+        now = current.get("prerequisites", {}).get(key)
+        if now is None:
+            regressions.append(
+                f"prerequisites[{key}]: baseline {was}, but {PREREQUISITE_GATE} is "
+                f"absent or does not carry this field -- absence is not completion")
+            continue
+        if key == "findings" and now:
+            regressions.append(
+                f"prerequisites[findings]: {now} finding(s) in {PREREQUISITE_GATE}; "
+                f"the gate does not pass")
+            continue
+        if key == "divergence_names_covered":
+            # Not directional in either direction: a divergence row is added when a
+            # difference is understood and removed when it is fixed, and both are work.
+            if now != was:
+                movements.append(f"prerequisites[{key}]: {was} -> {now}")
+            continue
+        if now > was:
+            regressions.append(f"prerequisites[{key}]: {was} -> {now} (+{now - was})")
+        elif now < was:
+            movements.append(f"prerequisites[{key}]: {was} -> {now} (-{was - now})")
 
     return regressions, movements
 
