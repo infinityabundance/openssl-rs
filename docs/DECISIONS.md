@@ -7676,3 +7676,57 @@ Both `.rs` generators being unlisted was one gap with two instances; D109 record
 this is the commit that closes it rather than the one that documents it.
 
 SPDX-License-Identifier: Apache-2.0
+
+## D136 — the drift was in the generator, not the artefact, and CI said so
+
+D135 closed D109's determinism gap for the two unlisted `.rs` generators and reported the drift
+it found in `src/bn/prime_data.rs` as a stale artefact: sixteen bytes to a line in the committed
+file against twelve in `rust_array`, so the file was regenerated against the authority. **That
+direction was wrong, and the evidence for it was one push away.** `cargo fmt --all -- --check`
+failed on the regenerated file immediately, because `rustfmt` packs the tokens sixteen to a line
+and the committed file had been the `rustfmt`-clean one all along. The generator's wrapping was
+the drifted half.
+
+The distinction is worth keeping because the two directions mean different things. A stale
+*artefact* is a data problem: the committed file disagrees with the authority. A drifted
+*generator* is a tooling problem: the committed file agrees with the authority and the generator
+no longer reproduces it. D135 asserted the first; this entry corrects it to the second, and the
+correction is a demonstration of why the two gates have to be run together — the determinism
+check found the divergence on its own, and nothing in it could say which side was wrong, because
+"the file does not reproduce from the generator" is symmetric.
+
+What was actually wrong is a crossed discipline rather than a wrong number. D72 recorded the same
+class for `src/runtime/err_sites.rs`: *"the generator emitted two fields per line and `rustfmt`
+wants one, so the committed file was only `cargo fmt --all -- --check`-clean because whoever
+generated it last had run `cargo fmt` afterwards. Nothing enforced that step."* `gen_bn_primes.py`
+had the same shape and its manual step had been performed when the file was last written, which
+is exactly why the committed file was right and the generator was not.
+
+The fix is in the generator, and the width is **derived rather than typed**:
+
+```python
+BYTES_PER_LINE = (100 - 4 + 1) // 6
+```
+
+A byte token is `0xNN,` — five columns — the items are joined by a space, and the literal is
+indented four columns, so `n` items occupy `4 + 6n - 1` columns against `rustfmt`'s default
+`max_width` of 100. Sixteen gives 99 columns and seventeen gives 105, so the answer is exactly 16.
+Writing `16` would have been correct and would have left the next reader to re-derive why, which is
+the shape of defect this entry exists to remove: the number that drifted was a literal nobody had
+a reason to check. Nothing else depends on the width, because the weak tier recovers the bytes by
+matching `0xNN` tokens rather than by counting lines — so a width changed deliberately still
+leaves the check meaningful.
+
+`src/bn/prime_data.rs` is now byte-identical to its pre-D135 content, verified against the commit
+before the regeneration, and `cargo fmt --all -- --check` is clean. `forensics/atlas/bn-primes.json`
+never changed at all: the per-prime SHA-256s were identical throughout, which is the strongest
+available statement that no prime's value was ever in question and that the whole episode was
+wrapping.
+
+The lesson recorded rather than the mechanism changed: a generator whose output is a
+`cargo`-visible file must emit what `rustfmt` emits, and the way to know is to have the artefact in
+a determinism check **and** `cargo fmt --check` in CI — which is now the case. D135's claim that
+the artefact was stale is superseded here and is not rewritten there, because an entry that was
+wrong in a specific and instructive way is worth more as a record than as a correction.
+
+SPDX-License-Identifier: Apache-2.0
