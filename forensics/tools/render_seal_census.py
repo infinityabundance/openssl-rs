@@ -39,7 +39,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from atlas_common import REPO_ROOT, rel  # noqa: E402
+from atlas_common import (  # noqa: E402
+    REPO_ROOT,
+    court_observations,
+    has_transcript,
+    rel,
+)
 
 OUT = REPO_ROOT / "docs" / "SEAL-CENSUS.md"
 GENERATOR = "forensics/tools/render_seal_census.py"
@@ -198,16 +203,25 @@ def main(argv: list[str]) -> int:
 
         if phase in courts:
             c = courts[phase]
+            rows = c.get("courts", [])
+            total = sum(court_observations(x) for x in rows)
+            transcript = sum(1 for x in rows if has_transcript(x))
             L.append(f"Courts: `{c.get('all_pass') and 'all pass' or 'NOT ALL PASS'}`"
-                     f", {len(c.get('courts', []))} court(s), "
-                     f"{sum(int(x.get('observations', 0)) for x in c.get('courts', []))} "
-                     "authority observation(s).")
+                     f", {len(rows)} court(s), "
+                     f"**{total}** authority observation(s) over {transcript} "
+                     f"transcript court(s).")
+            if transcript != len(rows):
+                L.append("")
+                L.append(f"The other {len(rows) - transcript} compare ELF structure rather "
+                         f"than a transcript and observe nothing line-wise; they are counted "
+                         f"as zero for that reason and not by default.")
             L.append("")
             L.append("| court | verdict | observations |")
             L.append("|---|---|---|")
-            for x in c.get("courts", []):
+            for x in rows:
+                n = court_observations(x)
                 L.append(f"| {x['court']} | `{x['verdict']}` | "
-                         f"{x.get('observations', 0)} |")
+                         f"{n if has_transcript(x) else '— (structural)'} |")
             L.append("")
 
     if audit is not None:

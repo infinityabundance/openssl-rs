@@ -16,7 +16,9 @@ current figures, and all 603 `libssl` exports remain `SCAFFOLDED` and abort when
 
 - Authority: `openssl-3.6.4-production` (with `openssl-3.6.3-historical` admitted for the
   oracle-versus-oracle trajectory in `docs/SECURITY_DIVERGENCE_POLICY.md`)
-- Court results: `artifacts/phase6/COURTS.json` — 8 courts, all pass, zero residuals
+- Court results: `artifacts/phase6/COURTS.json` — all pass, zero residuals. **The count is
+  `docs/SEAL-CENSUS.md`'s and is not typed here**, which is the rule this document's own §10
+  states. It said "8 courts" while the manifest held 9, and the numeral is what was wrong.
 - Obligation ledger: `forensics/phase6-obligations.json` — **0 open in this stratum**
 - Derived state: `forensics/phase-state.json`
 - Deciding record: `docs/DECISIONS.md` D106–D131, and `docs/PHASE-6-SUBPHASES.md` for the
@@ -171,7 +173,7 @@ would make the authority's behaviour reachable.
 | criterion | evidence |
 |---|---|
 | every export the stratum owns is implemented or handed to a named later stratum | `forensics/phase6-obligations.json`: `open_in_this_stratum` = 0 |
-| every implemented export is observed by a differential court | `artifacts/phase6/COURTS.json`, 8 courts, `all_pass` |
+| every implemented export is observed by a differential court | `artifacts/phase6/COURTS.json`: `all_pass`, zero residuals. The court and observation counts are `docs/SEAL-CENSUS.md`'s, rendered from the manifests rather than typed here |
 | every internal function a transcribed unit calls is built or owed to a stratum | `forensics/atlas/prerequisite-gate.json`: `findings` = 0 |
 | every authority unit and internal function the stratum's plan names is reached | `forensics/atlas/plan-reconciliation.json`: `findings` = 0 |
 | every implemented export's Rust declaration matches the authority's C prototype | `forensics/atlas/prototype-court.json` |
