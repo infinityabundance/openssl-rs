@@ -8772,3 +8772,55 @@ which makes that reachable. The crate answers 0, and `D-NAMEMAP-DOALL-1` in
 | unit tests | 322 | **328** |
 
 SPDX-License-Identifier: Apache-2.0
+
+---
+
+## D152 — 7.3c's dependency map, measured before the slice is attempted
+
+**What happened.** 7.3c was started and then stopped on purpose, and the reason is the finding:
+the slice is entangled with three *other strata* in ways that the plan's file list did not show,
+and two of them are not visible from `crypto/evp/evp_enc.c` at all. The work in progress is
+committed **unregistered** — `src/evp/cipher_ctx.rs` is in the tree, `src/evp/mod.rs` does not
+name it, and the tree therefore still builds and still passes the gates. That is a checkpoint, not
+a landed slice: the ledger moves zero, the courts move zero, and nothing here is a claim.
+
+**The four dependencies, each read from the authority rather than assumed:**
+
+1. **ENGINE is Phase 13's, and `OPENSSL_NO_ENGINE` is undefined.** `evp_cipher_init_internal`
+   calls `ENGINE_get_cipher_engine`, `ENGINE_init`, `ENGINE_get_cipher` and `ENGINE_finish`;
+   `EVP_CIPHER_CTX_reset` and `EVP_CIPHER_CTX_copy` call `ENGINE_finish` and `ENGINE_init`. The
+   authority's 115 `ENGINE_*` exports are Phase 13's and none exists. **This one is not a
+   blocker**, and saying why is the point: `tmpimpl` is only non-NULL when an engine has been
+   registered, `ctx->engine` is only non-NULL when a caller passed one, and an engine can only be
+   obtained from `ENGINE_new`, which is a scaffold in the candidate — so no court can construct
+   the state in which the omitted calls do anything, and the omission is recorded rather than
+   stubbed. The pattern is `src/runtime/confmod/mod.rs`'s, where `ENGINE_load_builtin_engines` is
+   omitted for the same reason and documented in the module.
+2. **`EVP_CIPHER_CTX_get_algor` needs `d2i_X509_ALGOR`, which is Phase 11's.** One export,
+   `X509_ALGOR_it` and its two codecs. Its siblings `EVP_CIPHER_CTX_get_algor_params` and
+   `_set_algor_params` need only the *layout*, so they stay in 7.3c — which is why the WIP file
+   declares `struct x509_algor_st`'s two fields itself with the reason written down.
+3. **`EVP_CIPHER_CTX_rand_key` needs `RAND_priv_bytes_ex`, which is Phase 9's.** One export, and
+   the whole of its non-`EVP_CIPH_RAND_KEY` arm. `src/runtime/rand.rs` does not exist.
+4. **`EVP_CipherInit_SKEY` needs `EVP_SKEY`'s layout and `EVP_SKEY_get0_raw_key`, which are
+   `skeymgmt_meth.c`'s — 7.3f's.** That one is *inside* the stratum, so it is not a hand-off to a
+   later phase; it is a symbol 7.3f implements, and the ledger keeps it `open` until then.
+
+**And the plan's earlier note that 7.3c "does not split" was wrong, so it is corrected rather than
+kept.** The note said a context slice would answer only its own error paths and that the accessor
+half depends on the operation half through `EVP_CIPHER_CTX_ctrl`. The second half of that is
+true — `EVP_CIPHER_CTX_get_iv_length` reaches `ctrl` for a legacy cipher with
+`EVP_CIPH_CUSTOM_IV_LENGTH`, so `ctrl` belongs to the arming half — but the first half is not:
+`EVP_CipherInit_ex` *is* the arming path, it is four lines and it lives in the same half, so a
+context armed through it can be observed by every accessor, by `EVP_CIPHER_CTX_dup`, by
+`EVP_CIPHER_CTX_copy` and by the parameter round trip. The split that is real is **arming versus
+moving data**: 7.3c-i is the context, its parameters and initialisation (`EVP_CipherInit*`,
+`EVP_EncryptInit*`, `EVP_DecryptInit*`, the two pipeline initialisers, `ctrl`, the flags, the
+accessors, the ASN.1 bridge) and 7.3c-ii is the twelve exports that push bytes through an armed
+context. The plan carries the corrected row.
+
+**Arithmetic:** unchanged. Phase 7 stays at 52 implemented and 898 open; no court observation is
+added and no ledger row moves. What this entry buys is that 7.3c's four external dependencies are
+known *before* the slice is written rather than discovered four hundred lines in.
+
+SPDX-License-Identifier: Apache-2.0

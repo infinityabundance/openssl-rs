@@ -137,15 +137,16 @@ Two consequences of the split that are worth stating rather than discovering:
   a method class needs something to resolve through a real provider; these two are the only
   legacy statics in 7.3 that can be built without a Phase-13 primitive, so they land with their
   class rather than with the wrappers they look like they belong to.
-* **7.3c does not split, and that was established by trying to.** The context is not a second
-  object the way the method object is: a context with no cipher on it answers every accessor's
-  *empty* arm and nothing else, and there is no `EVP_CIPHER_CTX_set_cipher` through which a
-  caller may arm one — the only path is `EVP_CipherInit_ex`. So a context slice on its own would
-  be courted entirely against its own error paths, which is a weaker court than one that observes
-  the object *and* the operation, and the dependency runs the other way as well:
-  `EVP_CIPHER_CTX_get_iv_length` reaches `EVP_CIPHER_CTX_ctrl` when its cipher is a legacy one with
-  `EVP_CIPH_CUSTOM_IV_LENGTH`. The row therefore lands whole, and the reason is recorded here
-  rather than rediscovered as an ordering error later.
+* **7.3c splits as *arming* versus *moving data*, and the first version of this note said
+  otherwise.** The note first claimed the row does not split, on the argument that a context with
+  no cipher answers only its own error paths. That argument is wrong: `EVP_CipherInit_ex` is the
+  arming path, it is in the same half, and a context armed through it is observable by every
+  accessor, by `dup` and `copy`, and by the parameter round trip. What *is* true, and what makes
+  `ctrl` part of the first half rather than the second, is that `EVP_CIPHER_CTX_get_iv_length`
+  reaches `EVP_CIPHER_CTX_ctrl` for a legacy cipher with `EVP_CIPH_CUSTOM_IV_LENGTH`. So:
+  **7.3c-i** is the context, its parameters and initialisation, and **7.3c-ii** is the twelve
+  exports that push bytes through an armed context. `docs/DECISIONS.md` D152 records the
+  correction and the four dependencies the attempt measured.
 
 ## 3. What each subphase must honour — authority facts already established
 
