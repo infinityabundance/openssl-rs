@@ -8,11 +8,17 @@
  * version script hides every `ossl_*` name from the DSO, and a probe is compiled against the
  * *installed* headers and linked against `libcrypto.so`, so it cannot call one of them -- this
  * is the same boundary Phase 6 met with the property grammar, and the same answer applies: what
- * a consumer can reach is `OSSL_LIB_CTX_get_data`, and what a consumer will reach once 7.2
- * lands is `EVP_MD_fetch` and its siblings.
+ * a consumer can reach was `OSSL_LIB_CTX_get_data`, and what a consumer reaches now that 7.2
+ * and 7.3a have landed is `EVP_MD_fetch` and its siblings.
  *
- * So this probe observes the store **as an object in the index table** plus the two export
- * paths that delegate into it, and says so rather than implying more:
+ * **7.3a's `EVP_MD` is what changed that**, and this probe now observes the fetch path itself.
+ * Before it, the store and the walk were reachable from no probe at all: every entry point is
+ * `ossl_*` or `evp_*` and the DSO hides all of them. `EVP_MD_fetch` is the first *exported*
+ * consumer of the fetch path, so the second half of this probe is the observation 7.2's exit
+ * criterion named — a query that selects, a query that **rejects**, and the context's default
+ * properties doing both from the other side.
+ *
+ * What it observes, in three parts:
  *
  *   * `OSSL_LIB_CTX_get_data(ctx, 0)` -- `OSSL_LIB_CTX_EVP_METHOD_STORE_INDEX` -- now answers a
  *     pointer, because `context_init` builds the store. That is the whole of D142's observable
@@ -28,16 +34,27 @@
  *     the CPU timestamp counter -- so what is compared is that the calls happen, answer
  *     success, and leave the store usable. `src/property/store.rs` says the same thing at the
  *     flush, and the unit test for the threshold asserts the flag rather than the outcome.
+ *   * **the resolver**, added by 7.3a. `crypto/evp/evp_fetch.c` has no exported entry point of
+ *     its own -- `EVP_MD_fetch` is the first *exported* consumer of it -- so until a method class
+ *     existed the store's selection was observable from nothing at all. The provider below
+ *     publishes one digest under three names with one property definition, and the block
+ *     observes: a plain fetch, the cache answering the same object a second time, an alias
+ *     resolving to it and reporting the canonical name, the declared property selecting it, a
+ *     property that **contradicts** it rejecting it, a name nobody publishes, the legacy NID,
+ *     the reference count surviving a free, the context's own default properties rejecting and
+ *     then releasing, and finally the same fetch with the provider **unloaded** -- where the
+ *     error *reason* is the observation rather than the NULL.
  *
- * What 7.2 adds, and why the name is right anyway
- * ----------------------------------------------
- * The plan's 7.2 row **extends this court**, and it will not be an extension of a different
- * kind of observation: when `EVP_MD_fetch` and `evp_generic_fetch` exist, the same probe gains
- * a resolver -- a provider that publishes an algorithm, a query that selects it, a query that
- * *rejects* it -- and the fetch path becomes observable the way every other court observes
- * its subject. Until then this is what there is, and the alternative was worse: naming
- * `RT-FETCH` without a probe would leave the stratum's one new observable object uncounted,
- * which is the D49/D51 class this project keeps removing.
+ * What the resolver is, and why it is shaped the way it is
+ * --------------------------------------------------------
+ * The provider publishes **one digest, three names and one property definition**
+ * (`provider=court`). One name is the identity, two are aliases; the property is what the
+ * negative-selection observation rejects. The digest implements only the *one-shot*
+ * `OSSL_FUNC_DIGEST_DIGEST` plus `OSSL_FUNC_DIGEST_GET_PARAMS`, which is the smallest shape
+ * `evp_md_from_algorithm`'s structural check accepts -- a count of zero structural functions is
+ * legal when a standalone `digest` is present -- so the probe exercises that arm rather than the
+ * five-function one. `get_params` is not optional: `evp_md_cache_constants` asks it for the size
+ * and the block size and a provider that does not answer both **fails its own fetch**.
  *
  * Deliberately not observed
  * -------------------------
@@ -48,8 +65,9 @@
  *     deferred slots.
  *   * **a child context's store.** `OSSL_LIB_CTX_new_child` needs a core handle and a
  *     `OSSL_DISPATCH` table, which `RT-PROVIDER-3P` is the court that builds; a child's slot 0
- *     is a real observation and is available there, and it becomes *interesting* rather than
- *     merely present once a fetch can be run against a child's scope -- which is 7.2.
+ *     is a real observation and is available there, and it is still deferred: a fetch against a
+ *     child's scope needs a *provider* published into that child, which is `RT-PROVIDER-3P`'s
+ *     to build, not this court's to approximate.
  *
  * Addresses are never printed. Every observation is a relation between two pointers this probe
  * holds (`same` / `different`), a presence answer (`NULL` / `nonnull`), or a return code,
@@ -127,14 +145,80 @@ static void court_teardown(void *provctx)
     (void) provctx;
 }
 
+/*
+ * The digest this provider publishes, and why it is shaped the way it is.
+ *
+ * `evp_md_from_algorithm` counts the *structural* functions it finds -- `newctx`, `init`,
+ * `update`, `final`, `squeeze`, `freectx` -- and accepts a count of 5 or 6, or a count of 0 when
+ * there is a standalone one-shot `digest`. This provider publishes **only the one-shot** and the
+ * two parameters, which is the smallest legal shape and exercises that arm of the check: a
+ * provider that published `update` without `newctx` would be refused by the authority and by the
+ * candidate alike, and would prove nothing.
+ *
+ * `get_params` is not optional. `evp_md_cache_constants` asks it for `size` and `blocksize` at
+ * fetch time and a digest that does not answer both **fails its own fetch** with
+ * `EVP_R_CACHE_CONSTANTS_FAILED` -- so a resolver without this function would make the court read
+ * the authority's refusal as a candidate divergence.
+ */
+#define COURT_MD_SIZE 32
+#define COURT_MD_BLOCK_SIZE 64
+
+static int court_get_params(OSSL_PARAM params[])
+{
+    OSSL_PARAM *p;
+    size_t size = COURT_MD_SIZE;
+    size_t blocksize = COURT_MD_BLOCK_SIZE;
+
+    p = OSSL_PARAM_locate(params, "size");
+    if (p != NULL && !OSSL_PARAM_set_size_t(p, size))
+        return 0;
+    p = OSSL_PARAM_locate(params, "blocksize");
+    if (p != NULL && !OSSL_PARAM_set_size_t(p, blocksize))
+        return 0;
+    return 1;
+}
+
+static int court_digest(void *provctx, const unsigned char *in, size_t inl,
+                        unsigned char *out, size_t *outl, size_t outsz)
+{
+    size_t i;
+
+    (void) provctx;
+    (void) in;
+    (void) inl;
+    if (outsz < COURT_MD_SIZE)
+        return 0;
+    /* A deterministic byte pattern, so the transcript can prove the *implementation* the fetch
+     * resolved is the one this provider published rather than a plausible stand-in. The digest's
+     * value is not a security claim and the probe never prints it as one: it prints whether the
+     * call answered, and the size. */
+    for (i = 0; i < COURT_MD_SIZE; i++)
+        out[i] = (unsigned char)(i + 1);
+    *outl = COURT_MD_SIZE;
+    return 1;
+}
+
+static const OSSL_DISPATCH court_digest_fns[] = {
+    { OSSL_FUNC_DIGEST_DIGEST, (void (*)(void)) court_digest },
+    { OSSL_FUNC_DIGEST_GET_PARAMS, (void (*)(void)) court_get_params },
+    { 0, NULL }
+};
+
+/* The published name list: three aliases, the first of which is the identity. The provider's
+ * property definition is what the *negative* selection below rejects. */
+static const OSSL_ALGORITHM court_digests[] = {
+    { "court-md:Court-MD:courtmd", "provider=court", court_digest_fns, "court digest" },
+    { NULL, NULL, NULL, NULL }
+};
+
 static const OSSL_ALGORITHM *court_query(void *provctx, int operation_id, int *no_cache)
 {
     (void) provctx;
-    (void) operation_id;
-    /* An empty operation table, which is what makes this provider's only relevance the fact
-     * that it can be loaded and unloaded: `ossl_provider_query_operation` answers NULL, and the
-     * algorithm walk therefore visits nothing. */
     *no_cache = 0;
+    if (operation_id == OSSL_OP_DIGEST)
+        return court_digests;
+    /* Every other operation is empty, so the algorithm walk visits nothing for it and this
+     * provider's only contribution is the digest. */
     return NULL;
 }
 
@@ -279,13 +363,137 @@ int main(void)
     q = OSSL_PROVIDER_load(ctx, "court-fetch");
     printf("load_again.same_object=%d\n", q == p ? 1 : 0);
 
+    /*
+     * ---- the fetch path itself, which 7.3a's EVP_MD makes reachable ----
+     *
+     * Everything above this point observes the *machinery*: the store's shape and the two
+     * bridges that delegate into it. These observations are the ones 7.2's exit criterion named
+     * and could not reach until a class existed to fetch through -- a query that selects, a
+     * query that **rejects**, and the default-properties merge that does the same thing from the
+     * other side.
+     *
+     * The provider is **loaded** here and unloaded below, which is the whole reason the two
+     * blocks are in this order: this one observes resolution, and the next observes the same
+     * call with nothing to resolve against -- and the *reason* the authority answers, which is
+     * the one thing an otherwise-correct transcription gets wrong without any other symptom.
+     */
+    {
+        EVP_MD *md, *md2, *md3;
+        const char *nm;
+
+        md = EVP_MD_fetch(ctx, "court-md", NULL);
+        printf("fetch.plain_nonnull=%d\n", md != NULL ? 1 : 0);
+        if (md != NULL) {
+            printf("fetch.plain_name_matches=%d\n",
+                   (nm = EVP_MD_get0_name(md)) != NULL && strcmp(nm, "court-md") == 0 ? 1 : 0);
+            printf("fetch.plain_size=%d\n", EVP_MD_get_size(md));
+            printf("fetch.plain_block_size=%d\n", EVP_MD_get_block_size(md));
+            printf("fetch.plain_type=%d\n", EVP_MD_get_type(md));
+
+            /* The second fetch of the same name under the same query comes from the *cache*, so
+             * it is the same object with a second reference -- which is observable, and is the
+             * one place a transcription that forgot the cache would still look correct. */
+            md2 = EVP_MD_fetch(ctx, "court-md", NULL);
+            printf("fetch.cached_same_object=%d\n", md2 == md ? 1 : 0);
+            printf("fetch.cached_nonnull=%d\n", md2 != NULL ? 1 : 0);
+            EVP_MD_free(md2);
+
+            /* An alias resolves to the same method: the namemap registered all three names. */
+            md3 = EVP_MD_fetch(ctx, "courtmd", NULL);
+            printf("fetch.alias_same_object=%d\n", md3 == md ? 1 : 0);
+            printf("fetch.alias_name_matches=%d\n",
+                   md3 != NULL && (nm = EVP_MD_get0_name(md3)) != NULL
+                       && strcmp(nm, "court-md") == 0 ? 1 : 0);
+            EVP_MD_free(md3);
+
+            /* The positive selection: the property the provider declares. */
+            md3 = EVP_MD_fetch(ctx, "court-md", "provider=court");
+            printf("fetch.selected_nonnull=%d\n", md3 != NULL ? 1 : 0);
+            EVP_MD_free(md3);
+
+            /* **The negative selection.** The algorithm exists and the query forbids its only
+             * property, so the fetch must fail rather than fall back. */
+            md3 = EVP_MD_fetch(ctx, "court-md", "provider=other");
+            printf("fetch.rejected_null=%d\n", md3 == NULL ? 1 : 0);
+            printf("fetch.rejected.err=%lu\n", ERR_peek_error());
+            ERR_clear_error();
+            EVP_MD_free(md3);
+
+            /* A name nobody publishes, for the other error reason. */
+            md3 = EVP_MD_fetch(ctx, "no-such-md", NULL);
+            printf("fetch.unknown_null=%d\n", md3 == NULL ? 1 : 0);
+            printf("fetch.unknown.err=%lu\n", ERR_peek_error());
+            ERR_clear_error();
+
+            /* The reference count: an extra up_ref survives the first free and the object is
+             * still usable, which is the only observable the refcnt has. */
+            printf("fetch.up_ref=%d\n", EVP_MD_up_ref(md));
+            EVP_MD_free(md);
+            printf("fetch.after_up_ref_free_size=%d\n", EVP_MD_get_size(md));
+            EVP_MD_free(md);
+
+            /*
+             * **The default properties do the same thing from the other side.** A context-wide
+             * query is merged with the caller's before matching, so setting `provider=other` on
+             * the context makes the same fetch fail -- and clearing them makes it work again.
+             * That is the property-string step 6.8's two divergences recorded as unreachable,
+             * observed here through the fetch path rather than through the store.
+             */
+            printf("defaults.set=%d\n", EVP_set_default_properties(ctx, "provider=other"));
+            md = EVP_MD_fetch(ctx, "court-md", NULL);
+            printf("defaults.rejects_null=%d\n", md == NULL ? 1 : 0);
+            ERR_clear_error();
+            EVP_MD_free(md);
+            printf("defaults.clear=%d\n", EVP_set_default_properties(ctx, NULL));
+            md = EVP_MD_fetch(ctx, "court-md", NULL);
+            printf("defaults.cleared_nonnull=%d\n", md != NULL ? 1 : 0);
+            EVP_MD_free(md);
+        } else {
+            printf("fetch.failed=1\n");
+        }
+    }
+
     /* One unload takes the count back to 1, where the authority answers 1 without removing
      * anything; the second reaches `provider_remove_store_methods`, and that reaches
      * `evp_method_store_remove_all_provided`. Both are compared by return code. */
     sayn("unload.first", OSSL_PROVIDER_unload(p));
     sayn("unload.last", OSSL_PROVIDER_unload(q));
 
-    /* And the store is still the same object, still non-NULL, and still usable afterwards. */
+    /*
+     * ---- the same call with nothing loaded, which is where the *reason* is observable ----
+     *
+     * `inner_evp_generic_fetch` computes `unsupported` as "the constructor was never entered"
+     * and then picks between two reasons on it:
+     *
+     *     int code = unsupported ? ERR_R_UNSUPPORTED : ERR_R_FETCH_FAILED;
+     *     ERR_raise_data(ERR_LIB_EVP, code, "%s, Algorithm (%s : %d), Properties (%s)", ...);
+     *
+     * Both arms build the **same message**, so the code is the entire observation: a
+     * transcription that used one arm for both -- or that read the constant off the neighbouring
+     * `ERR_raise_data` at `evp_fetch.c:352`, which is the *other* arm and has a reason of its
+     * own -- raises a plausible error that no other line in any transcript would contradict.
+     * This is the observation that caught exactly that in the candidate, and it is worth its own
+     * block rather than being a side effect of the order two other blocks happen to be in.
+     *
+     * The name is still in no namemap entry a provider published, so the answer is NULL and the
+     * reason is the "nothing offers this" one -- not merely "NULL", which both arms agree on.
+     */
+    {
+        EVP_MD *md = EVP_MD_fetch(ctx, "court-md", NULL);
+
+        printf("fetch.unloaded_null=%d\n", md == NULL ? 1 : 0);
+        printf("fetch.unloaded.err=%lu\n", ERR_peek_error());
+        ERR_clear_error();
+        EVP_MD_free(md);
+    }
+
+    /*
+     * And the store is still the same object, still non-NULL, and still usable afterwards -- and
+     * the queue is empty here on purpose: this line is about the *store*, and a leftover error
+     * from the block above would make it about the fetch instead, which is the class of accident
+     * that hid the reason-code divergence until the block was given a name.
+     */
+    ERR_clear_error();
     printf("after.store.stable=%d err=%lu\n",
            store == OSSL_LIB_CTX_get_data(ctx, IDX_EVP_METHOD_STORE) ? 1 : 0,
            ERR_peek_error());

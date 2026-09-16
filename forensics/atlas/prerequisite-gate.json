@@ -17,7 +17,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 56,
-      "language_surface_not_modelled_by_name": 2262,
+      "language_surface_not_modelled_by_name": 2256,
       "planned_prerequisites": 12
     },
     "census_by_unit": {
@@ -92,7 +92,7 @@
         "crypto/bio/bio_dump.c": 5,
         "crypto/bio/bio_lib.c": 29,
         "crypto/bio/bio_meth.c": 16,
-        "crypto/bio/bio_print.c": 13,
+        "crypto/bio/bio_print.c": 12,
         "crypto/bio/bio_sock.c": 19,
         "crypto/bio/bio_sock2.c": 18,
         "crypto/bio/bss_acpt.c": 19,
@@ -134,10 +134,10 @@
         "crypto/defaults.c": 9,
         "crypto/dso/dso_dlfcn.c": 16,
         "crypto/dso/dso_lib.c": 15,
-        "crypto/err/err.c": 98,
+        "crypto/err/err.c": 96,
         "crypto/err/err_all_legacy.c": 11,
         "crypto/err/err_save.c": 2,
-        "crypto/evp/evp_fetch.c": 20,
+        "crypto/evp/evp_fetch.c": 19,
         "crypto/evp/evp_lib.c": 173,
         "crypto/ex_data.c": 21,
         "crypto/getenv.c": 2,
@@ -150,7 +150,7 @@
         "crypto/o_str.c": 9,
         "crypto/o_time.c": 2,
         "crypto/objects/obj_dat.c": 26,
-        "crypto/param_build.c": 19,
+        "crypto/param_build.c": 18,
         "crypto/params.c": 22,
         "crypto/params_dup.c": 12,
         "crypto/params_from_text.c": 10,
@@ -162,7 +162,7 @@
         "crypto/property/property_string.c": 19,
         "crypto/provider_child.c": 19,
         "crypto/provider_conf.c": 28,
-        "crypto/provider_core.c": 152,
+        "crypto/provider_core.c": 151,
         "crypto/self_test_core.c": 17,
         "crypto/sparse_array.c": 7,
         "crypto/stack/stack.c": 18,
@@ -412,7 +412,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "a1e276b153f7fef94233085bad3e27d61c8fbcbf0f145383d205adc9a5bffd0e",
+  "body_hash": "44b5111153b4025c766af5a86c9dd09f8b05c2d9269344b3ccbd842b7b9e6306",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -443,7 +443,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "adb2d949728e0006d12ab6b55a6dc98535aaa2893664ef99585aa48c6de9f795"
+      "sha256": "3159c500f45456c3193424c15b55a7dbea66e36ec8f911eb79c152f98473b29d"
     },
     {
       "name": "phase-state",

@@ -165,7 +165,7 @@
       "verdict": "pass"
     },
     "RT-FETCH": {
-      "observations": 38,
+      "observations": 60,
       "verdict": "pass"
     },
     "RT-LHASH": {
@@ -290,7 +290,7 @@
     "blocking_dependencies": 12,
     "divergence_names_covered": 32,
     "findings": 0,
-    "language_census": 2262,
+    "language_census": 2256,
     "sealed_census": 59
   }
 }
