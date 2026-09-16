@@ -135,6 +135,8 @@ const EVP_CIPH_NO_PADDING: c_ulong = 0x100;
 const EVP_CIPH_CUSTOM_IV_LENGTH: c_ulong = 0x800;
 /// `EVP_CIPH_FLAG_FLAG_LENGTH_BITS`.
 const EVP_CIPH_FLAG_LENGTH_BITS: c_ulong = 0x2000;
+/// `EVP_CIPH_FLAG_CUSTOM_CIPHER` — the flag that sends the whole call to `do_cipher`.
+const EVP_CIPH_FLAG_CUSTOM_CIPHER: c_ulong = 0x10_0000;
 /// `EVP_CIPH_FLAG_CUSTOM_ASN1`.
 const EVP_CIPH_FLAG_CUSTOM_ASN1: c_ulong = 0x100_0000;
 /// `EVP_CIPH_CUSTOM_COPY`.
@@ -2972,6 +2974,1165 @@ pub struct MultiblockParam {
     pub len: usize,
     /// `unsigned int interleave`.
     pub interleave: c_uint,
+}
+
+// ---------------------------------------------------------------------------------------------
+// 7.3c-ii — the data path: the twelve exports that move bytes through an armed context.
+//
+// Every one of them is written twice over, exactly as `evp_enc.c` writes them: a provider arm
+// that calls the implementation's `cupdate`/`cfinal`/`ccipher` with an `outsize` the authority
+// computes, and a legacy arm that either hands the whole call to `do_cipher` (when the method
+// sets `EVP_CIPH_FLAG_CUSTOM_CIPHER`) or runs this file's block-buffering loop. That loop is why
+// a final block can be held back: `final_used` and `ctx->final` exist so a decryption can check
+// padding before handing the caller plaintext it might have to retract.
+// ---------------------------------------------------------------------------------------------
+
+/// `int safe_div_round_up_int(int a, int b, int *errp)` with `b == 8` and a NULL `errp`, which
+/// is the only way `evp_enc.c` calls it.
+///
+/// The header's `OSSL_SAFE_MATH_DIV_ROUND_UP` has several arms for this call and the *first* is
+/// the one that matters: the fast path `(a + b - 1) / b` is taken only while `a < INT_MAX - b`,
+/// and **the slow path adds nothing to `a`**, so it cannot overflow. A transcription that wrote
+/// `(a + 7) / 8` unconditionally would have an undefined addition on the last eight values of
+/// `int`, and the value is a length a caller chooses.
+///
+/// `a <= 0` cannot reach those arms: both call sites have already refused a negative `inl`, and
+/// the header's own `a == 0` arm answers 0.
+fn safe_div_round_up_int_8(a: c_int) -> c_int {
+    if a <= 0 {
+        return 0;
+    }
+    if a < c_int::MAX - 8 {
+        return (a + 7) / 8;
+    }
+    a / 8 + c_int::from(a % 8 != 0)
+}
+
+/// `int ossl_is_partially_overlapping(const void *ptr1, const void *ptr2, int len)`.
+///
+/// The authority's own comment says why this is not a comparison of two ranges: the standard
+/// gives no meaning to the difference of two pointers that are not in the same object, so the
+/// function subtracts the *addresses as integers*, wraps, and asks whether the wrapped difference
+/// is smaller than the length in either direction. Hence `wrapping_sub` below, and hence the two
+/// tests being `|`-ed rather than short-circuited: both are computed.
+///
+/// # Safety
+/// No preconditions: the pointers are only converted to integers.
+pub(crate) unsafe fn ossl_is_partially_overlapping(
+    ptr1: *const c_void,
+    ptr2: *const c_void,
+    len: c_int,
+) -> c_int {
+    let diff = (ptr1 as usize).wrapping_sub(ptr2 as usize);
+    let lent = len as usize;
+    let overlapped = (len > 0) as u32
+        & (diff != 0) as u32
+        & (((diff < lent) | (diff > 0usize.wrapping_sub(lent))) as u32);
+    overlapped as c_int
+}
+
+/// `static int evp_EncryptDecryptUpdate(EVP_CIPHER_CTX *ctx, unsigned char *out, int *outl,
+/// const unsigned char *in, int inl)`.
+///
+/// The block-buffering loop, shared by both directions because the arithmetic is the same for a
+/// non-custom method. Five things about it are contract:
+///
+///   * a method with `EVP_CIPH_FLAG_CUSTOM_CIPHER` is handed the whole call, and its **negative**
+///     answer is a refusal while a non-negative one *is* the length;
+///   * `inl <= 0` answers **`inl == 0`**, so a negative length is a silent zero-length refusal —
+///     reached only after both callers have already refused one;
+///   * the overflow guard is on `(inl - j) & ~(bl - 1)`, the amount of *full-block* data left,
+///     which is exactly the quantity that becomes output;
+///   * a partial block accumulates in `ctx->buf` and is flushed only when it fills, so an `outl`
+///     of 0 with `buf_len` set is the normal middle of a stream rather than a failure;
+///   * the final copy takes `i` bytes from `in[inl]` **after `inl` has been reduced**, which is
+///     where the unprocessed tail begins.
+///
+/// # Safety
+/// `ctx` must be a live, armed `EvpCipherCtx`; `out` writable for the length the block size
+/// implies; `in_` readable for `inl` bytes; `outl` writable.
+// mirrors the authority's name exactly: this is a transcription, not a Rust function
+#[allow(non_snake_case)]
+unsafe fn evp_EncryptDecryptUpdate(
+    ctx: *mut EvpCipherCtx,
+    out: *mut c_uchar,
+    outl: *mut c_int,
+    in_: *const c_uchar,
+    inl: c_int,
+) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    let cipher = unsafe { (*ctx).cipher };
+    let mut cmpl = inl;
+    // SAFETY: `ctx` is live.
+    if unsafe { EVP_CIPHER_CTX_test_flags(ctx, EVP_CIPH_FLAG_LENGTH_BITS as c_int) } != 0 {
+        cmpl = safe_div_round_up_int_8(cmpl);
+    }
+    // SAFETY: `cipher` is live.
+    let bl = unsafe { (*cipher).block_size };
+    // SAFETY: `cipher` is live.
+    if (unsafe { (*cipher).flags } & EVP_CIPH_FLAG_CUSTOM_CIPHER) != 0 {
+        if bl == 1 {
+            // SAFETY: the two buffers are the caller's, per the contract.
+            if unsafe { ossl_is_partially_overlapping(out.cast(), in_.cast(), cmpl) } != 0 {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::EVP_ENC_899) };
+                return 0;
+            }
+        }
+        // SAFETY: `cipher` is live.
+        let Some(do_cipher) = (unsafe { (*cipher).do_cipher }) else {
+            return 0;
+        };
+        // SAFETY: `do_cipher` is the implementation's own callback and `ctx` is its context.
+        let i = unsafe { do_cipher(ctx.cast::<c_void>(), out, in_, inl as usize) };
+        if i < 0 {
+            return 0;
+        }
+        // SAFETY: `outl` is the caller's slot per the contract.
+        unsafe { *outl = i };
+        return 1;
+    }
+
+    if inl <= 0 {
+        // SAFETY: `outl` is the caller's slot.
+        unsafe { *outl = 0 };
+        return c_int::from(inl == 0);
+    }
+    // SAFETY: `ctx` is live.
+    let buf_len = unsafe { (*ctx).buf_len };
+    // SAFETY: the buffers are the caller's; `out` is advanced only by full blocks, so the offset
+    // is inside the caller's writable range.
+    if unsafe { ossl_is_partially_overlapping(out.add(buf_len as usize).cast(), in_.cast(), cmpl) }
+        != 0
+    {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_ENC_916) };
+        return 0;
+    }
+
+    // SAFETY: `ctx` is live.
+    let block_mask = unsafe { (*ctx).block_mask };
+    if buf_len == 0 && (inl & block_mask) == 0 {
+        // SAFETY: `cipher` is live.
+        let Some(do_cipher) = (unsafe { (*cipher).do_cipher }) else {
+            // SAFETY: `outl` is the caller's slot.
+            unsafe { *outl = 0 };
+            return 0;
+        };
+        // SAFETY: `do_cipher` is the implementation's own callback and the buffers are the
+        // caller's, holding `inl` bytes.
+        if unsafe { do_cipher(ctx.cast::<c_void>(), out, in_, inl as usize) } != 0 {
+            // SAFETY: `outl` is the caller's slot.
+            unsafe { *outl = inl };
+            return 1;
+        }
+        // SAFETY: `outl` is the caller's slot.
+        unsafe { *outl = 0 };
+        return 0;
+    }
+
+    let mut i = buf_len;
+    let mut out = out;
+    let mut inl = inl;
+    if i != 0 {
+        if bl - i > inl {
+            // SAFETY: `ctx->buf` holds `EVP_MAX_BLOCK_LENGTH` bytes, `i` is within it, and `in_`
+            // holds `inl` bytes, which the test above bounded by the room left after `i`.
+            unsafe {
+                ptr::copy_nonoverlapping(
+                    in_,
+                    ptr::addr_of_mut!((*ctx).buf)
+                        .cast::<c_uchar>()
+                        .add(i as usize),
+                    inl as usize,
+                )
+            };
+            // SAFETY: `ctx` is live.
+            unsafe { (*ctx).buf_len += inl };
+            // SAFETY: `outl` is the caller's slot.
+            unsafe { *outl = 0 };
+            return 1;
+        }
+        let j = bl - i;
+        // The guard is on the *full-block* remainder plus the one block this call emits.
+        if ((inl - j) & !(bl - 1)) as i64 > (c_int::MAX as i64 - bl as i64) {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::EVP_ENC_948) };
+            return 0;
+        }
+        // SAFETY: `ctx->buf` has room for the `j` bytes that fill it and `in_` holds them.
+        unsafe {
+            ptr::copy_nonoverlapping(
+                in_,
+                ptr::addr_of_mut!((*ctx).buf)
+                    .cast::<c_uchar>()
+                    .add(i as usize),
+                j as usize,
+            )
+        };
+        inl -= j;
+        // The rebinding is the authority's `in += j`: from here the parameter is an alias of
+        // the advanced pointer, and nothing below uses the original.
+        // SAFETY: `in_` holds at least `j + inl` bytes.
+        #[allow(unused_variables)]
+        let in_ = unsafe { in_.add(j as usize) };
+        // SAFETY: `cipher` is live.
+        let Some(do_cipher) = (unsafe { (*cipher).do_cipher }) else {
+            return 0;
+        };
+        // SAFETY: `do_cipher` is the implementation's own callback; `ctx->buf` holds exactly one
+        // block and `out` is writable for one.
+        if unsafe {
+            do_cipher(
+                ctx.cast::<c_void>(),
+                out,
+                ptr::addr_of!((*ctx).buf).cast::<c_uchar>(),
+                bl as usize,
+            )
+        } == 0
+        {
+            return 0;
+        }
+        // SAFETY: `out` is writable for the block just written.
+        out = unsafe { out.add(bl as usize) };
+        // SAFETY: `outl` is the caller's slot.
+        unsafe { *outl = bl };
+    } else {
+        // SAFETY: `outl` is the caller's slot.
+        unsafe { *outl = 0 };
+    }
+    i = inl & (bl - 1);
+    inl -= i;
+    if inl > 0 {
+        // SAFETY: `cipher` is live.
+        let Some(do_cipher) = (unsafe { (*cipher).do_cipher }) else {
+            return 0;
+        };
+        // SAFETY: `do_cipher` is the implementation's own callback and the buffers hold `inl`.
+        if unsafe { do_cipher(ctx.cast::<c_void>(), out, in_, inl as usize) } == 0 {
+            return 0;
+        }
+        // SAFETY: `outl` is the caller's slot.
+        unsafe { *outl += inl };
+    }
+    if i != 0 {
+        // SAFETY: `ctx->buf` holds a block, `i` is under the block size, and `in_[inl]` begins
+        // the unprocessed tail of the caller's buffer.
+        unsafe {
+            ptr::copy_nonoverlapping(
+                in_.add(inl as usize),
+                ptr::addr_of_mut!((*ctx).buf).cast::<c_uchar>(),
+                i as usize,
+            )
+        };
+    }
+    // SAFETY: `ctx` is live.
+    unsafe { (*ctx).buf_len = i };
+    1
+}
+/// `int EVP_EncryptUpdate(EVP_CIPHER_CTX *ctx, unsigned char *out, int *outl,
+/// const unsigned char *in, int inl)`.
+///
+/// Four refusals before anything happens, in the authority's order: a negative length, a NULL
+/// `outl`, **the wrong direction** — which is what stops a caller from decrypting through an
+/// encrypting context by accident — and a context with no cipher. Then the provider arm computes
+/// an `outsize` of `inl + block size` for a block cipher, which is the room `cupdate` needs to
+/// flush a held-back block; a streaming cipher gets exactly `inl`.
+///
+/// # Safety
+/// `ctx` must be a live, armed `EvpCipherCtx`; `out` writable for `inl` plus a block; `in_`
+/// readable for `inl` bytes; `outl` writable.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_EncryptUpdate(
+    ctx: *mut EvpCipherCtx,
+    out: *mut c_uchar,
+    outl: *mut c_int,
+    in_: *const c_uchar,
+    inl: c_int,
+) -> c_int {
+    if inl < 0 {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_ENC_983) };
+        return 0;
+    }
+    if outl.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_ENC_990) };
+        return 0;
+    }
+    // SAFETY: `outl` is the caller's slot per the contract.
+    unsafe { *outl = 0 };
+
+    // SAFETY: `ctx` is live.
+    if unsafe { (*ctx).encrypt } == 0 {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_ENC_996) };
+        return 0;
+    }
+    // SAFETY: `ctx` is live.
+    let cipher = unsafe { (*ctx).cipher };
+    if cipher.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_ENC_1001) };
+        return 0;
+    }
+    // SAFETY: `cipher` is live.
+    if (unsafe { (*cipher).prov }).is_null() {
+        // SAFETY: `ctx` is live and the rest is the caller's.
+        return unsafe { evp_EncryptDecryptUpdate(ctx, out, outl, in_, inl) };
+    }
+
+    // SAFETY: `ctx` is live.
+    let blocksize = unsafe { EVP_CIPHER_CTX_get_block_size(ctx) };
+    // SAFETY: `cipher` is live.
+    let cupdate = unsafe { (*cipher).cupdate };
+    let Some(f) = cupdate else {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_ENC_1011) };
+        return 0;
+    };
+    if blocksize < 1 {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_ENC_1011) };
+        return 0;
+    }
+    let mut soutl: usize = 0;
+    // SAFETY: `f` is the provider's own callback; `ctx`'s `algctx` is the context it made; `out`
+    // is writable for `inl` plus a block and `in_` readable for `inl`.
+    let ret = unsafe {
+        f(
+            (*ctx).algctx,
+            out,
+            &mut soutl,
+            inl as usize
+                + if blocksize == 1 {
+                    0
+                } else {
+                    blocksize as usize
+                },
+            in_,
+            inl as usize,
+        )
+    };
+    if ret != 0 {
+        if soutl > c_int::MAX as usize {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::EVP_ENC_1021) };
+            return 0;
+        }
+        // SAFETY: `outl` is the caller's slot.
+        unsafe { *outl = soutl as c_int };
+    }
+    ret
+}
+
+/// `int EVP_EncryptFinal(EVP_CIPHER_CTX *ctx, unsigned char *out, int *outl)`.
+///
+/// An alias of `_ex` with no difference at all — kept because the pair is part of the surface and
+/// a caller may compare their addresses.
+///
+/// # Safety
+/// As `EVP_EncryptFinal_ex`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_EncryptFinal(
+    ctx: *mut EvpCipherCtx,
+    out: *mut c_uchar,
+    outl: *mut c_int,
+) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { EVP_EncryptFinal_ex(ctx, out, outl) }
+}
+
+/// `int EVP_EncryptFinal_ex(EVP_CIPHER_CTX *ctx, unsigned char *out, int *outl)`.
+///
+/// The padding loop. `b == 1` answers 1 with nothing written — a streaming cipher has no final
+/// block. `EVP_CIPH_NO_PADDING` refuses a partial block rather than padding it. Otherwise `n`
+/// bytes of value `n` are appended, where `n` is the whole block when the buffer is empty, and the
+/// method is asked to cipher the result.
+///
+/// # Safety
+/// `ctx` must be a live, armed `EvpCipherCtx`; `out` writable for a block; `outl` writable.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_EncryptFinal_ex(
+    ctx: *mut EvpCipherCtx,
+    out: *mut c_uchar,
+    outl: *mut c_int,
+) -> c_int {
+    if outl.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_ENC_1052) };
+        return 0;
+    }
+    // SAFETY: `outl` is the caller's slot.
+    unsafe { *outl = 0 };
+
+    // SAFETY: `ctx` is live.
+    if unsafe { (*ctx).encrypt } == 0 {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_ENC_1058) };
+        return 0;
+    }
+    // SAFETY: `ctx` is live.
+    let cipher = unsafe { (*ctx).cipher };
+    if cipher.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_ENC_1063) };
+        return 0;
+    }
+    // SAFETY: `cipher` is live.
+    if (unsafe { (*cipher).prov }).is_null() {
+        // The legacy arm, below.
+    } else {
+        // SAFETY: `ctx` is live.
+        let blocksize = unsafe { EVP_CIPHER_CTX_get_block_size(ctx) };
+        // SAFETY: `cipher` is live.
+        let cfinal = unsafe { (*cipher).cfinal };
+        let Some(f) = cfinal else {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::EVP_ENC_1072) };
+            return 0;
+        };
+        if blocksize < 1 {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::EVP_ENC_1072) };
+            return 0;
+        }
+        let mut soutl: usize = 0;
+        // SAFETY: `f` is the provider's own callback and `ctx`'s `algctx` is its context; `out`
+        // is writable for a block.
+        let ret = unsafe {
+            f(
+                (*ctx).algctx,
+                out,
+                &mut soutl,
+                if blocksize == 1 {
+                    0
+                } else {
+                    blocksize as usize
+                },
+            )
+        };
+        if ret != 0 {
+            if soutl > c_int::MAX as usize {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::EVP_ENC_1081) };
+                return 0;
+            }
+            // SAFETY: `outl` is the caller's slot.
+            unsafe { *outl = soutl as c_int };
+        }
+        return ret;
+    }
+
+    // The legacy arm.
+    // SAFETY: `cipher` is live.
+    if (unsafe { (*cipher).flags } & EVP_CIPH_FLAG_CUSTOM_CIPHER) != 0 {
+        // SAFETY: `cipher` is live.
+        let Some(do_cipher) = (unsafe { (*cipher).do_cipher }) else {
+            return 0;
+        };
+        // SAFETY: `do_cipher` is the implementation's own callback; a NULL input is the final
+        // call's contract.
+        let ret = unsafe { do_cipher(ctx.cast::<c_void>(), out, ptr::null(), 0) };
+        if ret < 0 {
+            return 0;
+        }
+        // SAFETY: `outl` is the caller's slot.
+        unsafe { *outl = ret };
+        return 1;
+    }
+
+    // SAFETY: `cipher` is live.
+    let b = unsafe { (*cipher).block_size } as c_uint;
+    if b == 1 {
+        // SAFETY: `outl` is the caller's slot.
+        unsafe { *outl = 0 };
+        return 1;
+    }
+    // SAFETY: `ctx` is live.
+    let bl = unsafe { (*ctx).buf_len };
+    // SAFETY: `ctx` is live.
+    if (unsafe { (*ctx).flags } & EVP_CIPH_NO_PADDING) != 0 {
+        if bl != 0 {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::EVP_ENC_1110) };
+            return 0;
+        }
+        // SAFETY: `outl` is the caller's slot.
+        unsafe { *outl = 0 };
+        return 1;
+    }
+
+    let n = (b as c_int) - bl;
+    let mut i = bl;
+    while i < b as c_int {
+        // SAFETY: `ctx->buf` holds `EVP_MAX_BLOCK_LENGTH` bytes and `i` is under the block size
+        // the authority asserts is at most that.
+        unsafe { (*ctx).buf[i as usize] = n as c_uchar };
+        i += 1;
+    }
+    // SAFETY: `cipher` is live.
+    let Some(do_cipher) = (unsafe { (*cipher).do_cipher }) else {
+        return 0;
+    };
+    // SAFETY: `do_cipher` is the implementation's own callback; `ctx->buf` holds one block and
+    // `out` is writable for one.
+    let ret = unsafe {
+        do_cipher(
+            ctx.cast::<c_void>(),
+            out,
+            ptr::addr_of!((*ctx).buf).cast::<c_uchar>(),
+            b as usize,
+        )
+    };
+    if ret != 0 {
+        // SAFETY: `outl` is the caller's slot.
+        unsafe { *outl = b as c_int };
+    }
+    ret
+}
+/// `int EVP_DecryptUpdate(EVP_CIPHER_CTX *ctx, unsigned char *out, int *outl,
+/// const unsigned char *in, int inl)`.
+///
+/// The same four refusals with the direction reversed, and then the one part that has no mirror
+/// in the encrypt direction: **the last block is held back**. After the buffering loop runs, a
+/// full block of the output is copied into `ctx->final` and subtracted from `*outl`, so
+/// `EVP_DecryptFinal_ex` can inspect it for padding and hand back only what the padding leaves.
+/// A decryption whose plaintext would be wrong must be able to answer "bad decrypt" without ever
+/// having given the caller the plaintext, which is the whole reason this exists.
+///
+/// Three details are contract:
+///
+///   * `EVP_CIPH_NO_PADDING` skips both the hold-back and the `final` buffer entirely, because
+///     there is no padding to inspect;
+///   * `final_used` is only set when `buf_len` is 0 after the loop, so the "maximum output"
+///     comment's premise holds;
+///   * when a block was held back, the caller's `out` is advanced by one block *before* the loop
+///     writes, and the overlap test is against `out` and `in` — so a caller passing the same
+///     buffer twice is refused rather than corrupted.
+///
+/// # Safety
+/// `ctx` must be a live, armed `EvpCipherCtx`; `out` writable for `inl` plus a block; `in_`
+/// readable for `inl` bytes; `outl` writable.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_DecryptUpdate(
+    ctx: *mut EvpCipherCtx,
+    out: *mut c_uchar,
+    outl: *mut c_int,
+    in_: *const c_uchar,
+    inl: c_int,
+) -> c_int {
+    if inl < 0 {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_ENC_1137) };
+        return 0;
+    }
+    if outl.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_ENC_1144) };
+        return 0;
+    }
+    // SAFETY: `outl` is the caller's slot per the contract.
+    unsafe { *outl = 0 };
+
+    // SAFETY: `ctx` is live.
+    if unsafe { (*ctx).encrypt } != 0 {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_ENC_1150) };
+        return 0;
+    }
+    // SAFETY: `ctx` is live.
+    let cipher = unsafe { (*ctx).cipher };
+    if cipher.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_ENC_1155) };
+        return 0;
+    }
+    // SAFETY: `cipher` is live.
+    if (unsafe { (*cipher).prov }).is_null() {
+        // The legacy arm, below.
+    } else {
+        // SAFETY: `ctx` is live.
+        let blocksize = unsafe { EVP_CIPHER_CTX_get_block_size(ctx) };
+        // SAFETY: `cipher` is live.
+        let cupdate = unsafe { (*cipher).cupdate };
+        let Some(f) = cupdate else {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::EVP_ENC_1164) };
+            return 0;
+        };
+        if blocksize < 1 {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::EVP_ENC_1164) };
+            return 0;
+        }
+        let mut soutl: usize = 0;
+        // SAFETY: `f` is the provider's own callback and `ctx`'s `algctx` is its context.
+        let ret = unsafe {
+            f(
+                (*ctx).algctx,
+                out,
+                &mut soutl,
+                inl as usize
+                    + if blocksize == 1 {
+                        0
+                    } else {
+                        blocksize as usize
+                    },
+                in_,
+                inl as usize,
+            )
+        };
+        if ret != 0 {
+            if soutl > c_int::MAX as usize {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::EVP_ENC_1173) };
+                return 0;
+            }
+            // SAFETY: `outl` is the caller's slot.
+            unsafe { *outl = soutl as c_int };
+        }
+        return ret;
+    }
+
+    // The legacy arm.
+    // SAFETY: `cipher` is live.
+    let b = unsafe { (*cipher).block_size } as c_uint;
+    let mut cmpl = inl;
+    // SAFETY: `ctx` is live.
+    if unsafe { EVP_CIPHER_CTX_test_flags(ctx, EVP_CIPH_FLAG_LENGTH_BITS as c_int) } != 0 {
+        cmpl = safe_div_round_up_int_8(cmpl);
+    }
+
+    // SAFETY: `cipher` is live.
+    if (unsafe { (*cipher).flags } & EVP_CIPH_FLAG_CUSTOM_CIPHER) != 0 {
+        if b == 1 {
+            // SAFETY: the buffers are the caller's.
+            if unsafe { ossl_is_partially_overlapping(out.cast(), in_.cast(), cmpl) } != 0 {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::EVP_ENC_1191) };
+                return 0;
+            }
+        }
+        // SAFETY: `cipher` is live.
+        let Some(do_cipher) = (unsafe { (*cipher).do_cipher }) else {
+            return 0;
+        };
+        // SAFETY: `do_cipher` is the implementation's own callback and `ctx` is its context.
+        let fix_len = unsafe { do_cipher(ctx.cast::<c_void>(), out, in_, inl as usize) };
+        if fix_len < 0 {
+            // SAFETY: `outl` is the caller's slot.
+            unsafe { *outl = 0 };
+            return 0;
+        }
+        // SAFETY: `outl` is the caller's slot.
+        unsafe { *outl = fix_len };
+        return 1;
+    }
+
+    if inl <= 0 {
+        // SAFETY: `outl` is the caller's slot.
+        unsafe { *outl = 0 };
+        return c_int::from(inl == 0);
+    }
+    // SAFETY: `ctx` is live.
+    if (unsafe { (*ctx).flags } & EVP_CIPH_NO_PADDING) != 0 {
+        // SAFETY: `ctx` is live and the buffers are the caller's.
+        return unsafe { evp_EncryptDecryptUpdate(ctx, out, outl, in_, inl) };
+    }
+
+    let mut out = out;
+    let mut fix_len: c_int;
+    // SAFETY: `ctx` is live.
+    if unsafe { (*ctx).final_used } != 0 {
+        // The held-back block cannot be written under the input, and the authority tests the two
+        // addresses as integers for the reason `ossl_is_partially_overlapping` does.
+        // The equality test is on the *addresses*, which is what the authority's `PTRDIFF_T`
+        // cast does: `core::ptr::eq` on the caller's two buffers.
+        let same_buffer = core::ptr::eq(out.cast_const(), in_);
+        if same_buffer {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::EVP_ENC_1218) };
+            return 0;
+        }
+        // SAFETY: the buffers are the caller's.
+        if unsafe { ossl_is_partially_overlapping(out.cast(), in_.cast(), b as c_int) } != 0 {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::EVP_ENC_1218) };
+            return 0;
+        }
+        if ((inl & !(b as c_int - 1)) as i64) > (c_int::MAX as i64 - b as i64) {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::EVP_ENC_1231) };
+            return 0;
+        }
+        // SAFETY: `ctx->final` holds one block and `out` is writable for one.
+        unsafe {
+            ptr::copy_nonoverlapping(
+                ptr::addr_of!((*ctx).final_).cast::<c_uchar>(),
+                out,
+                b as usize,
+            )
+        };
+        // SAFETY: `out` is writable for the block just written.
+        out = unsafe { out.add(b as usize) };
+        fix_len = 1;
+    } else {
+        fix_len = 0;
+    }
+
+    // SAFETY: `ctx` is live and the buffers are the caller's.
+    if unsafe { evp_EncryptDecryptUpdate(ctx, out, outl, in_, inl) } == 0 {
+        return 0;
+    }
+
+    // SAFETY: `ctx` is live.
+    let buf_len = unsafe { (*ctx).buf_len };
+    if b > 1 && buf_len == 0 {
+        // SAFETY: `outl` is the caller's slot and the loop has just written `*outl` bytes.
+        let written = unsafe {
+            *outl -= b as c_int;
+            *outl
+        };
+        // SAFETY: `ctx` is live and `out[written]` begins the block that was just produced.
+        unsafe {
+            (*ctx).final_used = 1;
+            ptr::copy_nonoverlapping(
+                out.add(written as usize),
+                ptr::addr_of_mut!((*ctx).final_).cast::<c_uchar>(),
+                b as usize,
+            );
+        }
+    } else {
+        // SAFETY: `ctx` is live.
+        unsafe { (*ctx).final_used = 0 };
+    }
+
+    if fix_len != 0 {
+        // SAFETY: `outl` is the caller's slot.
+        unsafe { *outl += b as c_int };
+    }
+    let _ = &mut fix_len;
+    1
+}
+
+/// `int EVP_DecryptFinal(EVP_CIPHER_CTX *ctx, unsigned char *out, int *outl)`.
+///
+/// An alias of `_ex`, for the same reason the encrypt pair is a pair.
+///
+/// # Safety
+/// As `EVP_DecryptFinal_ex`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_DecryptFinal(
+    ctx: *mut EvpCipherCtx,
+    out: *mut c_uchar,
+    outl: *mut c_int,
+) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { EVP_DecryptFinal_ex(ctx, out, outl) }
+}
+
+/// `int EVP_DecryptFinal_ex(EVP_CIPHER_CTX *ctx, unsigned char *out, int *outl)`.
+///
+/// The padding check, and the authority's comment on it is the security-relevant line in this
+/// file: *"The following assumes that the ciphertext has been authenticated. Otherwise it
+/// provides a padding oracle."* The check reads the last byte, refuses a value of 0 or more than
+/// the block size, verifies that the last `n` bytes all equal `n`, and copies out only the
+/// `block_size - n` bytes that are plaintext.
+///
+/// # Safety
+/// `ctx` must be a live, armed `EvpCipherCtx`; `out` writable for a block; `outl` writable.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_DecryptFinal_ex(
+    ctx: *mut EvpCipherCtx,
+    out: *mut c_uchar,
+    outl: *mut c_int,
+) -> c_int {
+    if outl.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_ENC_1278) };
+        return 0;
+    }
+    // SAFETY: `outl` is the caller's slot.
+    unsafe { *outl = 0 };
+
+    // SAFETY: `ctx` is live.
+    if unsafe { (*ctx).encrypt } != 0 {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_ENC_1284) };
+        return 0;
+    }
+    // SAFETY: `ctx` is live.
+    let cipher = unsafe { (*ctx).cipher };
+    if cipher.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_ENC_1289) };
+        return 0;
+    }
+    // SAFETY: `cipher` is live.
+    if !(unsafe { (*cipher).prov }).is_null() {
+        // SAFETY: `ctx` is live.
+        let blocksize = unsafe { EVP_CIPHER_CTX_get_block_size(ctx) };
+        // SAFETY: `cipher` is live.
+        let cfinal = unsafe { (*cipher).cfinal };
+        let Some(f) = cfinal else {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::EVP_ENC_1299) };
+            return 0;
+        };
+        if blocksize < 1 {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::EVP_ENC_1299) };
+            return 0;
+        }
+        let mut soutl: usize = 0;
+        // SAFETY: `f` is the provider's own callback and `ctx`'s `algctx` is its context.
+        let ret = unsafe {
+            f(
+                (*ctx).algctx,
+                out,
+                &mut soutl,
+                if blocksize == 1 {
+                    0
+                } else {
+                    blocksize as usize
+                },
+            )
+        };
+        if ret != 0 {
+            if soutl > c_int::MAX as usize {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::EVP_ENC_1308) };
+                return 0;
+            }
+            // SAFETY: `outl` is the caller's slot.
+            unsafe { *outl = soutl as c_int };
+        }
+        return ret;
+    }
+
+    // The legacy arm.
+    // SAFETY: `cipher` is live.
+    if (unsafe { (*cipher).flags } & EVP_CIPH_FLAG_CUSTOM_CIPHER) != 0 {
+        // SAFETY: `cipher` is live.
+        let Some(do_cipher) = (unsafe { (*cipher).do_cipher }) else {
+            return 0;
+        };
+        // SAFETY: `do_cipher` is the implementation's own callback; a NULL input is the final
+        // call's contract.
+        let i = unsafe { do_cipher(ctx.cast::<c_void>(), out, ptr::null(), 0) };
+        if i < 0 {
+            return 0;
+        }
+        // SAFETY: `outl` is the caller's slot.
+        unsafe { *outl = i };
+        return 1;
+    }
+
+    // SAFETY: `cipher` is live.
+    let mut b = unsafe { (*cipher).block_size } as c_uint;
+    // SAFETY: `ctx` is live.
+    if (unsafe { (*ctx).flags } & EVP_CIPH_NO_PADDING) != 0 {
+        // SAFETY: `ctx` is live.
+        if unsafe { (*ctx).buf_len } != 0 {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::EVP_ENC_1332) };
+            return 0;
+        }
+        // SAFETY: `outl` is the caller's slot.
+        unsafe { *outl = 0 };
+        return 1;
+    }
+    if b > 1 {
+        // SAFETY: `ctx` is live.
+        let (buf_len, final_used) = unsafe { ((*ctx).buf_len, (*ctx).final_used) };
+        if buf_len != 0 || final_used == 0 {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::EVP_ENC_1340) };
+            return 0;
+        }
+        // SAFETY: `ctx->final` holds one block.
+        let mut n = unsafe { (*ctx).final_[(b - 1) as usize] } as c_int;
+        if n == 0 || n > b as c_int {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::EVP_ENC_1351) };
+            return 0;
+        }
+        let mut i = 0;
+        while i < n {
+            b -= 1;
+            // SAFETY: `ctx->final` holds one block and `b` is within it.
+            if unsafe { (*ctx).final_[b as usize] } as c_int != n {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::EVP_ENC_1356) };
+                return 0;
+            }
+            i += 1;
+        }
+        // SAFETY: `cipher` is live.
+        n = unsafe { (*cipher).block_size } - n;
+        let mut i = 0;
+        while i < n {
+            // SAFETY: `out` is writable for a block and `i` is under the block size.
+            unsafe { *out.add(i as usize) = (*ctx).final_[i as usize] };
+            i += 1;
+        }
+        // SAFETY: `outl` is the caller's slot.
+        unsafe { *outl = n };
+    }
+    1
+}
+/// `int EVP_Cipher(EVP_CIPHER_CTX *ctx, unsigned char *out, const unsigned char *in,
+/// unsigned int inl)`.
+///
+/// The one-shot, and its provider arm has a shape none of the four above has: it prefers
+/// `ccipher` when the method publishes one and **maps its answer** — `0` becomes `-1` and a
+/// non-zero answer becomes the *length* — while falling back to `cupdate` for a non-NULL input
+/// and `cfinal` for a NULL one. A blocksize of **zero** is a refusal rather than a call, which is
+/// the only guard the function has.
+///
+/// `inl` is an `unsigned int` here while every other length in the family is an `int`, and that
+/// is the authority's signature rather than an oversight to correct.
+///
+/// # Safety
+/// `ctx` must be NULL or a live, armed `EvpCipherCtx`; `out` and `in_` per the method's contract.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_Cipher(
+    ctx: *mut EvpCipherCtx,
+    out: *mut c_uchar,
+    in_: *const c_uchar,
+    inl: c_uint,
+) -> c_int {
+    if ctx.is_null() {
+        return 0;
+    }
+    // SAFETY: `ctx` is live per the contract.
+    let cipher = unsafe { (*ctx).cipher };
+    if cipher.is_null() {
+        return 0;
+    }
+    // SAFETY: `cipher` is live.
+    if !(unsafe { (*cipher).prov }).is_null() {
+        // SAFETY: `ctx` is live.
+        let blocksize = unsafe { EVP_CIPHER_CTX_get_block_size(ctx) } as usize;
+        if blocksize == 0 {
+            return 0;
+        }
+        let mut outl: usize = 0;
+        let outsize = inl as usize + if blocksize == 1 { 0 } else { blocksize };
+        // SAFETY: `cipher` is live.
+        let (ccipher, cupdate, cfinal) =
+            unsafe { ((*cipher).ccipher, (*cipher).cupdate, (*cipher).cfinal) };
+        // SAFETY: `ctx` is live, so `algctx` is the provider's context, and whichever callback is
+        // taken is that provider's own.
+        return unsafe {
+            if let Some(f) = ccipher {
+                if f((*ctx).algctx, out, &mut outl, outsize, in_, inl as usize) != 0 {
+                    outl as c_int
+                } else {
+                    -1
+                }
+            } else if !in_.is_null() {
+                let Some(f) = cupdate else {
+                    return -1;
+                };
+                f((*ctx).algctx, out, &mut outl, outsize, in_, inl as usize)
+            } else {
+                let Some(f) = cfinal else {
+                    return -1;
+                };
+                f(
+                    (*ctx).algctx,
+                    out,
+                    &mut outl,
+                    if blocksize == 1 { 0 } else { blocksize },
+                )
+            }
+        };
+    }
+
+    // SAFETY: `cipher` is live.
+    let Some(do_cipher) = (unsafe { (*cipher).do_cipher }) else {
+        return 0;
+    };
+    // SAFETY: `do_cipher` is the implementation's own callback and `ctx` is its context.
+    unsafe { do_cipher(ctx.cast::<c_void>(), out, in_, inl as usize) }
+}
+
+/// `int EVP_CipherUpdate(EVP_CIPHER_CTX *ctx, unsigned char *out, int *outl,
+/// const unsigned char *in, int inl)`.
+///
+/// A two-line dispatch on the context's own direction, which is why it is not an alias of either
+/// half: it is the entry point a caller uses when it does not know which direction it set.
+///
+/// # Safety
+/// As `EVP_EncryptUpdate`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_CipherUpdate(
+    ctx: *mut EvpCipherCtx,
+    out: *mut c_uchar,
+    outl: *mut c_int,
+    in_: *const c_uchar,
+    inl: c_int,
+) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    if unsafe { (*ctx).encrypt } != 0 {
+        // SAFETY: the arguments are forwarded under this function's contract.
+        unsafe { EVP_EncryptUpdate(ctx, out, outl, in_, inl) }
+    } else {
+        // SAFETY: the arguments are forwarded under this function's contract.
+        unsafe { EVP_DecryptUpdate(ctx, out, outl, in_, inl) }
+    }
+}
+
+/// `int EVP_CipherFinal_ex(EVP_CIPHER_CTX *ctx, unsigned char *out, int *outl)`.
+///
+/// # Safety
+/// As `EVP_EncryptFinal_ex`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_CipherFinal_ex(
+    ctx: *mut EvpCipherCtx,
+    out: *mut c_uchar,
+    outl: *mut c_int,
+) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    if unsafe { (*ctx).encrypt } != 0 {
+        // SAFETY: the arguments are forwarded under this function's contract.
+        unsafe { EVP_EncryptFinal_ex(ctx, out, outl) }
+    } else {
+        // SAFETY: the arguments are forwarded under this function's contract.
+        unsafe { EVP_DecryptFinal_ex(ctx, out, outl) }
+    }
+}
+
+/// `int EVP_CipherFinal(EVP_CIPHER_CTX *ctx, unsigned char *out, int *outl)`.
+///
+/// The non-`_ex` spelling dispatches to the two non-`_ex` finals rather than to the `_ex` ones,
+/// which for this build is the same function twice over — and which is worth transcribing as
+/// written rather than simplified, because the pair is on the surface and either could stop being
+/// an alias.
+///
+/// # Safety
+/// As `EVP_EncryptFinal`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_CipherFinal(
+    ctx: *mut EvpCipherCtx,
+    out: *mut c_uchar,
+    outl: *mut c_int,
+) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    if unsafe { (*ctx).encrypt } != 0 {
+        // SAFETY: the arguments are forwarded under this function's contract.
+        unsafe { EVP_EncryptFinal(ctx, out, outl) }
+    } else {
+        // SAFETY: the arguments are forwarded under this function's contract.
+        unsafe { EVP_DecryptFinal(ctx, out, outl) }
+    }
+}
+
+/// `int EVP_CipherPipelineUpdate(EVP_CIPHER_CTX *ctx, unsigned char **out, size_t *outl,
+/// const size_t *outsize, const unsigned char **in, const size_t *inl)`.
+///
+/// Four guards, then **`outl` is zeroed for every pipe before the implementation is asked** — so
+/// a provider that returns early leaves a caller reading zeros rather than whatever its array
+/// held. The guards are in the authority's order and the third is the one that matters: a legacy
+/// method with no provider is refused with `EVP_R_INVALID_OPERATION`, not asked.
+///
+/// # Safety
+/// `ctx` must be a live, armed `EvpCipherCtx`; the four arrays must hold `numpipes` entries.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_CipherPipelineUpdate(
+    ctx: *mut EvpCipherCtx,
+    out: *mut *mut c_uchar,
+    outl: *mut usize,
+    outsize: *const usize,
+    in_: *mut *const c_uchar,
+    inl: *const usize,
+) -> c_int {
+    if outl.is_null() || inl.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_ENC_733) };
+        return 0;
+    }
+    // SAFETY: `ctx` is live per the contract.
+    let cipher = unsafe { (*ctx).cipher };
+    if cipher.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_ENC_738) };
+        return 0;
+    }
+    // SAFETY: `cipher` is live.
+    if (unsafe { (*cipher).prov }).is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_ENC_743) };
+        return 0;
+    }
+    // SAFETY: `cipher` is live.
+    let p_cupdate = unsafe { (*cipher).p_cupdate };
+    let Some(f) = p_cupdate else {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_ENC_748) };
+        return 0;
+    };
+    // SAFETY: `ctx` is live.
+    let numpipes = unsafe { (*ctx).numpipes };
+    for i in 0..numpipes {
+        // SAFETY: `outl` holds `numpipes` entries per the contract, and the context's count is
+        // the one the caller's arrays were sized to.
+        unsafe { *outl.add(i) = 0 };
+    }
+    // SAFETY: `f` is the provider's own callback and `ctx`'s `algctx` is its context.
+    unsafe { f((*ctx).algctx, numpipes, out, outl, outsize, in_, inl) }
+}
+
+/// `int EVP_CipherPipelineFinal(EVP_CIPHER_CTX *ctx, unsigned char **out, size_t *outl,
+/// const size_t *outsize)`.
+///
+/// The same shape with three guards instead of four — there is no input to refuse — and the same
+/// pre-zeroing of `outl`.
+///
+/// # Safety
+/// `ctx` must be a live, armed `EvpCipherCtx`; the arrays must hold `numpipes` entries.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_CipherPipelineFinal(
+    ctx: *mut EvpCipherCtx,
+    out: *mut *mut c_uchar,
+    outl: *mut usize,
+    outsize: *const usize,
+) -> c_int {
+    if outl.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_ENC_783) };
+        return 0;
+    }
+    // SAFETY: `ctx` is live per the contract.
+    let cipher = unsafe { (*ctx).cipher };
+    if cipher.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_ENC_788) };
+        return 0;
+    }
+    // SAFETY: `cipher` is live.
+    if (unsafe { (*cipher).prov }).is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_ENC_793) };
+        return 0;
+    }
+    // SAFETY: `cipher` is live.
+    let p_cfinal = unsafe { (*cipher).p_cfinal };
+    let Some(f) = p_cfinal else {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_ENC_798) };
+        return 0;
+    };
+    // SAFETY: `ctx` is live.
+    let numpipes = unsafe { (*ctx).numpipes };
+    for i in 0..numpipes {
+        // SAFETY: `outl` holds `numpipes` entries per the contract.
+        unsafe { *outl.add(i) = 0 };
+    }
+    // SAFETY: `f` is the provider's own callback and `ctx`'s `algctx` is its context.
+    unsafe { f((*ctx).algctx, numpipes, out, outl, outsize) }
 }
 
 #[cfg(test)]
