@@ -316,7 +316,7 @@
       },
       {
         "declaring_header": "crypto.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/init.rs",
         "owning_phase": 6,
         "reason": "pins the handler's shared object with DSO_dsobyaddr/DSO_free, which the profile compiles in; DSO is Phase 6.8",
@@ -324,7 +324,7 @@
       },
       {
         "declaring_header": "crypto.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/thread.rs",
         "owning_phase": 6,
         "reason": "runs the thread's event handlers for a library context; OPENSSL_thread_stop_ex calls ossl_lib_ctx_get_concrete, and OPENSSL_cleanup's OPENSSL_thread_stop call runs the handler list OPENSSL_atexit builds; the library context is Phase 6",
@@ -332,7 +332,7 @@
       },
       {
         "declaring_header": "crypto.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/thread.rs",
         "owning_phase": 6,
         "reason": "runs the thread's event handlers for a library context; OPENSSL_thread_stop_ex calls ossl_lib_ctx_get_concrete, and OPENSSL_cleanup's OPENSSL_thread_stop call runs the handler list OPENSSL_atexit builds; the library context is Phase 6",
@@ -769,7 +769,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "cce5e6f2df1d407cdef5301033d1e3520b13cf36bf9b66c8f5e655645dc705c0"
+      "sha256": "ef29bbfccd92b3e053e0e7cb0e075190b4e1a7b7a99f982e2a7fe4b1a8ee7e3e"
     }
   ],
   "kind": "phase3-obligations",

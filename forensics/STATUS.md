@@ -26,7 +26,7 @@ renderer does not know any phase status.
 | 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `complete` |  |
 | 4 | BIO + CONF + object database | `complete` |  |
 | 5 | BN + ASN.1 + DER/PEM | `complete` |  |
-| 6 | OSSL_LIB_CTX + provider core | `in-progress` | 22 open obligation(s) of this stratum recorded in forensics/phase6-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
+| 6 | OSSL_LIB_CTX + provider core | `in-progress` | 19 open obligation(s) of this stratum recorded in forensics/phase6-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
 
 Not started: strata 7-21 (15 total).
 
@@ -81,9 +81,9 @@ that name is defined, nothing more.
 
 | library | exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 1113 | 4783 |
+| libcrypto | 5896 | 1116 | 4780 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **1113** | **5386** |
+| **total** | **6499** | **1116** | **5383** |
 
 ### Phase 3 obligation ledger
 
@@ -103,7 +103,7 @@ Of those, 16 have since been implemented by phase 4, which is where the obligati
 
 Deferred to phase 6: `OPENSSL_atexit`, `OPENSSL_thread_stop`, `OPENSSL_thread_stop_ex`, `OSSL_get_max_threads`, `OSSL_set_max_threads`
 
-Of those, 2 have since been implemented by phase 6, which is where the obligation sits, so phase 3 does not count them as its own work: `OSSL_get_max_threads`, `OSSL_set_max_threads`
+Of those, 5 have since been implemented by phase 6, which is where the obligation sits, so phase 3 does not count them as its own work: `OPENSSL_atexit`, `OPENSSL_thread_stop`, `OPENSSL_thread_stop_ex`, `OSSL_get_max_threads`, `OSSL_set_max_threads`
 
 Deferred to phase 13: `ASYNC_WAIT_CTX_clear_fd`, `ASYNC_WAIT_CTX_free`, `ASYNC_WAIT_CTX_get_all_fds`, `ASYNC_WAIT_CTX_get_callback`, `ASYNC_WAIT_CTX_get_changed_fds`, `ASYNC_WAIT_CTX_get_fd`, `ASYNC_WAIT_CTX_get_status`, `ASYNC_WAIT_CTX_new`, `ASYNC_WAIT_CTX_set_callback`, `ASYNC_WAIT_CTX_set_status`, `ASYNC_WAIT_CTX_set_wait_fd`, `ASYNC_block_pause`, `ASYNC_cleanup_thread`, `ASYNC_get_current_job`, `ASYNC_get_mem_functions`, `ASYNC_get_wait_ctx`, `ASYNC_init_thread`, `ASYNC_is_capable`, `ASYNC_pause_job`, `ASYNC_set_mem_functions`, `ASYNC_start_job`, `ASYNC_unblock_pause`
 
@@ -165,9 +165,9 @@ handed it, that is neither implemented, deferred to a named later
 phase, nor recorded as open in the stratum is an error, not a warning.
 
 * authority exports in the Phase 6 working set: 161
-* implemented: 139
+* implemented: 142
 * deferred to a later phase with a stated reason: 0
-* open in this stratum: 22
+* open in this stratum: 19
 
 Hand-offs from phase 3 discharged by this stratum: `OPENSSL_atexit`, `OPENSSL_thread_stop`, `OPENSSL_thread_stop_ex`, `OSSL_get_max_threads`, `OSSL_set_max_threads`
 

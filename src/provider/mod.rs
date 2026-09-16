@@ -1546,10 +1546,12 @@ pub(crate) unsafe fn ossl_provider_free(prov: *mut OsslProvider) {
     // SAFETY: `prov` is live and this is its last reference, so nothing else can reach it.
     // Every field is NULL or owned by construction.
     unsafe {
+        // The authority calls this **unconditionally** and *before* the module is released,
+        // whether or not initialisation succeeded, because an init that failed may still have
+        // registered a thread handler -- and its own comment says so. A handler left registered
+        // would run at thread exit against a provider that no longer exists. 6.6e-ii.
+        crate::runtime::thread_events::ossl_init_thread_deregister(prov.cast::<c_void>());
         DSO_free((*prov).module);
-        // 6.6e-ii: `ossl_init_thread_deregister(prov)` goes here. The authority calls it
-        // **unconditionally** at this point, whether or not init succeeded, because an init
-        // that failed may still have registered a thread handler.
         if !(*prov).name.is_null() {
             CRYPTO_free((*prov).name.cast::<c_void>(), FILE, lines::L_PROV_FREE_NAME);
         }

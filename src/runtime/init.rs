@@ -133,7 +133,7 @@
 //! the distribution profile is fixed.
 
 use core::ffi::{c_char, c_int, c_uint, c_ulong, CStr};
-use core::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use core::sync::atomic::{AtomicBool, AtomicPtr, AtomicU64, Ordering};
 use std::sync::Once;
 
 use crate::ffi::guard_ffi;
@@ -531,6 +531,114 @@ pub extern "C" fn OPENSSL_init_crypto(opts: u64, _settings: *const OpenSslInitSe
     })
 }
 
+/// `typedef struct ossl_init_stop_st OPENSSL_INIT_STOP` — `crypto/init.c`.
+///
+/// `next` is a raw pointer, so the node is allocated with `CRYPTO_malloc` rather than `Box`:
+/// an application that installs its own allocator through `CRYPTO_set_mem_functions` must see
+/// these exactly as it sees the authority's, and Phase 3's memory-debug court reads the
+/// coordinates back.
+#[repr(C)]
+struct OpenSslInitStop {
+    /// The handler `OPENSSL_atexit` was given.
+    handler: extern "C" fn(),
+    /// The next node, or NULL.
+    next: *mut OpenSslInitStop,
+}
+
+/// `static OPENSSL_INIT_STOP *stop_handlers = NULL`.
+///
+/// An atomic pointer rather than a `static mut`, because `OPENSSL_atexit` has no lock in the
+/// authority either — the list is a lock-free push, and the drain in `OPENSSL_cleanup` is
+/// single-threaded by the same assumption the authority states for that whole function.
+static STOP_HANDLERS: AtomicPtr<OpenSslInitStop> = AtomicPtr::new(core::ptr::null_mut());
+
+/// The authority's translation unit and line, so a failing allocation records what a
+/// consumer would see from the authority.
+const FILE_INIT: *const c_char = c"../../src/openssl-3.6.4/crypto/init.c".as_ptr();
+/// `OPENSSL_atexit`'s `OPENSSL_malloc(sizeof(*newhand))`.
+const L_ATEXIT_NEWHAND: c_int = 750;
+/// `OPENSSL_cleanup`'s `OPENSSL_free(lasthandler)`.
+const L_CLEANUP_FREE_HANDLER: c_int = 403;
+
+/// `int OPENSSL_atexit(void (*handler)(void))`
+///
+/// Registers `handler` to run when the library is cleaned up, and answers 0 only when the
+/// node cannot be allocated.
+///
+/// **The DSO-pinning block is not compiled in this profile, and that is a build fact rather
+/// than a simplification.** The authority guards it with
+/// `#if !defined(OPENSSL_USE_NODELETE) && !defined(OPENSSL_NO_PINSHARED)`, and this profile's
+/// `configdata.pm` records `lib_cppflags => "-DOPENSSL_USE_NODELETE -DL_ENDIAN"`. So
+/// `OPENSSL_USE_NODELETE` **is** defined, the whole block — the Win32
+/// `GetModuleHandleEx` route and the `DSO_dsobyaddr(handler, DSO_FLAG_NO_UNLOAD_ON_FREE)`
+/// route with it — is skipped, and what remains is the three-line push below. A reader
+/// comparing this against `init.c` will find the block and should find this paragraph with
+/// it: the `DSO_dsobyaddr` call is *not* missing, it is absent from the authority's compiled
+/// form too.
+///
+/// There is no `OPENSSL_INIT_NO_ATEXIT` check here, and there should not be: that flag
+/// suppresses the **`atexit(OPENSSL_cleanup)` registration**, which is a different mechanism
+/// (`register_atexit` above), not the registration of a caller's own handler.
+///
+/// # Safety
+/// `handler` must be a valid `extern "C"` function with no parameters.
+#[no_mangle]
+pub unsafe extern "C" fn OPENSSL_atexit(handler: Option<extern "C" fn()>) -> c_int {
+    guard_ffi(0, || {
+        // The authority dereferences `handlersym.func = handler` without a NULL test when the
+        // pinning block is compiled in; with it out, a NULL handler would be stored and then
+        // *called* by `OPENSSL_cleanup`. Refusing it here is a divergence, and it is the
+        // narrow, fail-closed kind the project takes deliberately: calling NULL in the
+        // library's own teardown is a fault, and a NULL handler is meaningless either way.
+        let Some(handler) = handler else {
+            return 0;
+        };
+        // `CRYPTO_malloc` is a SAFE function in this crate (D113), so this is unguarded.
+        let newhand = crate::runtime::mem::CRYPTO_malloc(
+            core::mem::size_of::<OpenSslInitStop>(),
+            FILE_INIT,
+            L_ATEXIT_NEWHAND,
+        )
+        .cast::<OpenSslInitStop>();
+        if newhand.is_null() {
+            return 0;
+        }
+        // SAFETY: `newhand` is this function's own allocation, so both writes are to owned
+        // storage, and the push is a single release store.
+        unsafe {
+            (*newhand).handler = handler;
+            (*newhand).next = STOP_HANDLERS.load(Ordering::Acquire);
+            STOP_HANDLERS.store(newhand, Ordering::Release);
+        }
+        1
+    })
+}
+
+/// The drain, called from `OPENSSL_cleanup` after `OPENSSL_thread_stop`.
+fn run_atexit_handlers() {
+    loop {
+        let node = STOP_HANDLERS.swap(core::ptr::null_mut(), Ordering::AcqRel);
+        if node.is_null() {
+            return;
+        }
+        let mut curr = node;
+        while !curr.is_null() {
+            // SAFETY: `curr` is a node this module allocated, still owned until freed below.
+            let (handler, next) = unsafe { ((*curr).handler, (*curr).next) };
+            handler();
+            // SAFETY: `curr` is live and owned here, and `next` was read before the free.
+            unsafe {
+                crate::runtime::mem::CRYPTO_free(
+                    curr.cast::<core::ffi::c_void>(),
+                    FILE_INIT,
+                    L_CLEANUP_FREE_HANDLER,
+                );
+            }
+            curr = next;
+        }
+    }
+}
+
 /// `void OPENSSL_cleanup(void)`
 ///
 /// Idempotent and safe to call concurrently. The authority assumes a
@@ -561,6 +669,14 @@ pub extern "C" fn OPENSSL_cleanup() {
             return;
         }
         BASE_INITED.store(false, Ordering::Release);
+        // The authority's order inside `OPENSSL_cleanup`, for the three it has: stop this
+        // thread's event handlers first (`OPENSSL_thread_stop`, which the authority calls
+        // directly because the thread library does not always run the destructor for the last
+        // thread), then the caller's `OPENSSL_atexit` handlers, then the thread-event
+        // machinery itself.
+        crate::runtime::thread_events::OPENSSL_thread_stop();
+        run_atexit_handlers();
+        crate::runtime::thread_events::ossl_cleanup_thread();
         // `err_cleanup()`: the string registry is released.
         crate::runtime::err::unload_strings();
     })

@@ -594,3 +594,48 @@ observations that *can* be made around each boundary are compared normally.
 - **Claim removed:** `ossl_core_bio_up_ref(NULL)` is not claimed compatible. `RT-PROVIDER`
   does not call it with NULL, and this function has no exported symbol, so it is reachable
   only through the dispatch table a provider is handed.
+
+### D-TEVENT-REENTRANT-1 — a thread-stop handler that registers another handler deadlocks upstream
+
+- **Obligation:** `ossl_init_thread_start`, reachable from a provider through
+  `core_dispatch`'s `OSSL_FUNC_CORE_THREAD_START` entry (id 3), which is what
+  `ossl_provider_init`'s `in` table hands a provider.
+- **Authority:** `init_thread_stop` takes the global register's **write lock** and then calls
+  the handler *while holding it*. A handler that calls `ossl_init_thread_start` re-enters
+  `init_thread_push_handlers`, which asks for the same lock. On the admitted pthread profile
+  the register's lock is a `pthread_rwlock_t`, and `pthread_rwlock_wrlock` on a lock the
+  calling thread already holds for writing does not return — the handler never finishes, the
+  lock is never released, and thread teardown hangs. Measured by this crate's own lock, which
+  refuses a same-thread write acquisition instead of deadlocking: the nested registration is
+  answered 0.
+- **Candidate:** the nested registration is **refused** with `0`, and the handler's node is
+  released rather than left on a list nobody can walk. The caller observes a failed
+  registration and can retry from outside the stop; the alternative is a hang.
+- **Reason:** `docs/UNSAFE.md` §5. A deadlock inside thread teardown is not a behaviour a
+  consumer can depend on — there is no return value, no error queue entry and no way to
+  recover — so reproducing it would be importing a hang for the sake of fidelity.
+- **Claim removed:** "a handler may register another handler during a stop" is not claimed
+  compatible. Unit test `a_handler_registered_during_a_stop_is_refused` asserts the refusal,
+  and the *certain* half — that the nested handler is not called by the same stop, because the
+  walk unlinks as it goes — is asserted with it.
+
+### D-TEVENT-CTX-STOP-LEAK-1 — `ossl_ctx_thread_stop` releases a list head that still has handlers on it
+
+- **Obligation:** `ossl_ctx_thread_stop`, called from `context_deinit` for every
+  `OSSL_LIB_CTX` and therefore reachable from `OSSL_LIB_CTX_free`.
+- **Authority:** the body is `hands = clear_thread_local(ctx); init_thread_stop(ctx, hands);
+  OPENSSL_free(hands);`. `clear_thread_local` clears the thread local and returns the head;
+  `init_thread_stop(ctx, …)` runs only the handlers whose `arg` matches `ctx`; and then the
+  **head block itself** is released, while handler nodes registered for other contexts are
+  still linked to it. Those nodes are unreachable afterwards — the thread has no list to walk —
+  and are leaked. A second `OPENSSL_thread_stop` on the same thread runs nothing.
+- **Candidate:** identical, and pinned by unit test
+  `the_context_stop_filters_on_the_argument`: after `ossl_ctx_thread_stop(arg_a())` only the
+  `arg == arg_a()` handler has run, and a subsequent `OPENSSL_thread_stop` calls nothing.
+- **Reason:** this is **not** a fault and is deliberately reproduced — a leak is defined
+  behaviour, and a caller can observe it (`OSSL_free` instrumentation, or the second stop
+  running nothing). It is recorded because a reader who found it independently would otherwise
+  have to decide whether the candidate had got it wrong; the candidate gets it *right*, and
+  the entry says so.
+- **Claim removed:** none. The behaviour is claimed as compatible, and the leak is claimed with
+  it.
