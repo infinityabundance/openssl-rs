@@ -341,6 +341,13 @@
         "translation_unit": "crypto/evp/cmeth_lib.c"
       },
       {
+        "module": "src/evp/cipher_ctx.rs",
+        "phase": 7,
+        "phase_source": "module-declaration",
+        "share": "24/47",
+        "translation_unit": "crypto/evp/evp_lib.c"
+      },
+      {
         "module": "src/evp/digest.rs",
         "phase": 7,
         "phase_source": "module-declaration",
@@ -12948,6 +12955,7 @@
           "x509"
         ],
         "modules": [
+          "src/evp/cipher_ctx.rs",
           "src/evp/digest.rs"
         ],
         "tu": "crypto/evp/evp_lib.c"

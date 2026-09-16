@@ -15,7 +15,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 56,
-      "language_surface_not_modelled_by_name": 2233,
+      "language_surface_not_modelled_by_name": 2188,
       "planned_prerequisites": 10
     },
     "census_by_unit": {
@@ -137,7 +137,7 @@
         "crypto/err/err_save.c": 2,
         "crypto/evp/cmeth_lib.c": 6,
         "crypto/evp/evp_fetch.c": 19,
-        "crypto/evp/evp_lib.c": 148,
+        "crypto/evp/evp_lib.c": 109,
         "crypto/ex_data.c": 21,
         "crypto/getenv.c": 2,
         "crypto/indicator_core.c": 5,
@@ -153,7 +153,7 @@
         "crypto/params.c": 22,
         "crypto/params_dup.c": 12,
         "crypto/params_from_text.c": 10,
-        "crypto/pem/pem_lib.c": 92,
+        "crypto/pem/pem_lib.c": 86,
         "crypto/property/defn_cache.c": 8,
         "crypto/property/property.c": 26,
         "crypto/property/property_parse.c": 15,
@@ -282,7 +282,7 @@
     },
     "checked": {
       "authority_units": 116,
-      "crate_modules": 160,
+      "crate_modules": 161,
       "deferrals_recorded": 10,
       "divergence_names_covered": 32,
       "divergence_rows": 5,
@@ -407,7 +407,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "5ec75961dee7b20396b84c8510e3cefdd03ba0d97a5d0ea9ec47cdf6999d5df7",
+  "body_hash": "2576bdbfa369e2e152a772a5ed6118c2c23152abfdd40dd6601dba17f6fee087",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -428,7 +428,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "585cdb64e3b73ee7c3c119d5697de78f5d01edbaab9cc0b136d390986f0e2b80"
+      "sha256": "b8e208cfa9fe68aa1b4c1135d324125b68906cc874b857b076d0ad8487d7902b"
     },
     {
       "name": "symbol-ownership",
