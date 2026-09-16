@@ -386,7 +386,7 @@
         "module": "src/property/globals.rs",
         "phase": 6,
         "phase_source": "module-declaration",
-        "share": "2/2",
+        "share": "5/5",
         "translation_unit": "crypto/property/property.c"
       },
       {
@@ -402,6 +402,13 @@
         "phase_source": "module-declaration",
         "share": "6/6",
         "translation_unit": "crypto/property/property_query.c"
+      },
+      {
+        "module": "src/property/store.rs",
+        "phase": 7,
+        "phase_source": "module-declaration",
+        "share": "8/8",
+        "translation_unit": "crypto/property/property.c"
       },
       {
         "module": "src/property/strings.rs",
@@ -15038,7 +15045,8 @@
           "void"
         ],
         "modules": [
-          "src/property/globals.rs"
+          "src/property/globals.rs",
+          "src/property/store.rs"
         ],
         "tu": "crypto/property/property.c"
       },

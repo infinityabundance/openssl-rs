@@ -365,6 +365,25 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
     // yet, and this is the only write that publishes the lock.
     unsafe { (*ctx).lock = lock };
 
+    // The EVP method store, slot 0. **This is the authority's first `P2` slot object**, and its
+    // position here is therefore the authority's: `context_init` builds it immediately after the
+    // context's lock and `ossl_do_ex_data_init`, ahead of the provider-config object, because
+    // `P2` means "released before the provider store" and the seven objects that follow it before
+    // `provider_store` are all in that class. Slots 10, 11 and 15 are the *same* constructor and
+    // are not built here: their readers are `decoder_meth.c`, `encoder_meth.c` and
+    // `store_meth.c`, which are Phase 10's, so they land with the strata that read them.
+    //
+    // SAFETY: `ctx` is the live context being initialised, and the store constructor only stores
+    // the pointer it is given.
+    let evp_method_store =
+        unsafe { crate::property::store::ossl_method_store_new(ctx.cast::<c_void>()) };
+    if evp_method_store.is_null() {
+        context_deinit(ctx);
+        return false;
+    }
+    // SAFETY: as above; the slot is published once, here.
+    unsafe { (*ctx).evp_method_store = evp_method_store.cast::<c_void>() };
+
     // The provider-config object, slot 16 — the **first** slot object in this crate, and in
     // the authority it is built third, after `evp_method_store` (Phase 7) and before `drbg`
     // (Phase 9). Of the slots this crate has landed it is therefore first, and the P2 marker
@@ -541,7 +560,22 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
 /// with respect to the provider store). Only slot 21 has no release: it is an
 /// interior address, not an allocation.
 fn context_deinit_objs(ctx: *mut OsslLibCtx) {
-    // The provider-config object, released **first** among the slot objects, which is the
+    // The EVP method store, released **first**, which is the authority's order and the reason
+    // its slot is built before the provider-config one: `context_deinit_objs` starts with
+    // `evp_method_store`, then `drbg` (Phase 9), then the provider-config object.
+    // SAFETY: `ctx` is a live context being torn down; the slot is released once and re-NULLed.
+    unsafe {
+        if !(*ctx).evp_method_store.is_null() {
+            crate::property::store::ossl_method_store_free(
+                (*ctx)
+                    .evp_method_store
+                    .cast::<crate::property::store::OsslMethodStore>(),
+            );
+            (*ctx).evp_method_store = ptr::null_mut();
+        }
+    }
+
+    // The provider-config object, released next among the slot objects, which is the
     // authority's order: `context_deinit_objs` releases `evp_method_store` (Phase 7),
     // `drbg` (Phase 9) and then this one, all before the provider store's *P1* position.
     // Releasing it here is what makes the P2 relation hold: a provider this module

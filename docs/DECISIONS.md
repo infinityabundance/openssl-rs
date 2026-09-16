@@ -8214,3 +8214,75 @@ transition row in `forensics/ownership-transitions.json` and by a reason that ha
 | unit tests | 295 | 302 |
 
 SPDX-License-Identifier: Apache-2.0
+
+## D142 — the method store's object layer, and the checked invariant that fired exactly as designed
+
+**What landed.** `src/property/store.rs` is `crypto/property/property.c`'s remainder, first half: the
+four types the store is made of (`METHOD`, `IMPLEMENTATION`, `QUERY`, `ALGORITHM`) and
+`OSSL_METHOD_STORE` itself; `ossl_method_up_ref`/`_free`; the three property-lock helpers; the
+`QUERY` hash and comparator; `impl_free`, `impl_cache_free`, `impl_cache_flush_alg` and
+`alg_cleanup`; `ossl_method_store_new`, `_free`, `ossl_method_lock_store`, `_unlock_store`,
+`_retrieve`, `_insert`; `ossl_method_store_add`, `_remove`, `_remove_all_provided` and
+`_cache_flush_all`; and with them the two global-properties accessors 6.7a left plus the
+`no_mirrored` field they need. Six unit tests. **The query path — `ossl_method_store_fetch`, the
+cache's `_cache_get`/`_cache_set` and the stochastic half of the flush, and `_do_all` — is the other
+half and lands with `RT-FETCH`**, which is what turns any of this from a transcription into evidence.
+
+**`crypto/property/property.c`'s remainder is a `#!allow(dead_code)]` module, and that is a
+statement rather than a convenience.** Every entry point here is called by a *client* stratum's
+module — `_add`, `_remove`, `_remove_all_provided` and `_cache_flush_all` by `evp_fetch.c`'s
+methods, `_lock_store`/`_unlock_store` by its `mcm`, `_fetch` and the cache pair by the fetch itself
+— so at the moment the object lands, nothing in this crate calls six of them. The allowance is one
+line with the condition that retires it (7.2) rather than eight per-item ones each restating the
+same paragraph.
+
+## The slot table, and the invariant that caught me
+
+`ossl_method_store_new` is the constructor for **four** slots, not one: `evp_method_store` (0),
+`decoder_store` (10), `encoder_store` (11) and `store_loader_store` (15), which is why D-6.8c's note
+says "the four method stores are `ossl_method_store_new(…)`'s (Phase 7 and 10)". D142 fills **slot 0
+only**, in the authority's own position in `context_init` — immediately after the context's lock and
+before the provider-config object, because the authority marks it `P2` ("cleaned up before the
+provider store") and it is the first `P2` object it builds — with the matching release first in
+`context_deinit_objs`. The other three are read by `decoder_meth.c`, `encoder_meth.c` and
+`store_meth.c`, which are Phase 10's, and `decoder_cache` (20) is `ossl_decoder_cache_new`'s, which
+does not exist yet; filling a slot whose reader has not landed would be filling a slot for nobody.
+
+**And that is exactly what Phase 6 predicted, down to the failure message.** `src/provider/stores.rs`
+ends each of the nine store bridges in a call it could not make, and rather than write a plausible
+body it wrote the authority's branch guarded by `assert_slot_unfilled`, whose text is *"reached with
+its store slot filled, but Phase 7 has not landed the store method it delegates to"*. Filling slot 0
+made `the_five_slots_are_unfilled` fail on the first `cargo test`, by design, and the answer it
+pointed at is the one taken: `evp_method_store_cache_flush` and
+`evp_method_store_remove_all_provided` now **delegate** — flush the store if the slot is filled,
+answer 1 if it is not — which is the authority's own three lines. The invariant test is reframed
+rather than deleted: slot 0 must now be filled and slots 10, 11, 15 and 20 must not, so it fires
+again for the next stratum. Three tests in `src/provider/activate.rs` also failed and passed again
+with the delegation written, which is the same fact seen from the activation path.
+
+**My own test found a defect in my own transcription.** `ossl_method_store_remove_all_provided` was
+documented and asserted as "always answers 1, including for a NULL store". It does not: the
+authority's first statement is `if (!ossl_property_write_lock(store)) return 0;`, and a NULL store
+cannot take a lock, so it is **refused before the provider is looked at**. The `1` belongs to the
+*bridges*, which test the slot themselves and never reach the store with NULL. The test was wrong,
+the doc comment was wrong, and the two had agreed with each other — which is the shape a made-up
+contract takes when nothing independent checks it.
+
+**And a layout residual is resolved rather than carried.** `src/property/globals.rs` recorded that
+`OsslGlobalProperties` was the authority's struct *minus* the `no_mirrored` bit, with the four-byte
+padding difference as a residual. The field is now there — a `u32` written through a named mask, for
+`OsslProvider`'s flags' reason — because the two functions that read and write it landed with it, and
+a pointer plus a one-bit field round to the same sixteen bytes on both sides.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 7 implemented / open | 0 / 950 | 0 / 950 (no exported surface: the store is internal) |
+| store/lifecycle entry points built | 0 | 11 |
+| recorded deferrals discharged | 1 | 12 |
+| gate blocking dependencies | 28 | 17 |
+| channel slots filled, of 23 | 14 | 15 (slot 0) |
+| unit tests | 302 | 308 |
+
+SPDX-License-Identifier: Apache-2.0
