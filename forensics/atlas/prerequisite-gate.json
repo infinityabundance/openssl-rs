@@ -34,7 +34,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 53,
-      "language_surface_not_modelled_by_name": 2050,
+      "language_surface_not_modelled_by_name": 2049,
       "planned_prerequisites": 48
     },
     "census_not_a_failure": "the C language surface is counted and listed, never failed: the crate models C types, macros and reason codes differently on purpose, and a lexical scan cannot tell a rename from a gap",
@@ -293,7 +293,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "b5a20022588eeb7ead44e6675ced12f23b28186be00305e739f034f19edaf7a5",
+  "body_hash": "aff6bf469373fc93397995600efd1d1ca984ec38c858bbc04ca8fdaa49f7b7f1",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -314,7 +314,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "171aaa4bd2f40dcf127fb4ba1395ce8de170ee4aece3b4f98322a83e6364687d"
+      "sha256": "8d82bebf59ff511e1ce3c2c3961cb5611a6ddc714b140e08888494fff1abc178"
     },
     {
       "name": "symbol-ownership",
@@ -324,12 +324,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "08949adf29dd648c09dbb5222611e3c648101fc3aa005922e9f51ef29933f998"
+      "sha256": "95d10c387aad2f9bcf595ee790b7e0db6b71462500b89473e285f596b45b0d4f"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "c93a8f66d648c1e7619b568fcc9f832880b8a9d4880243f4aee38169d3a0f91f"
+      "sha256": "27f31034675866c1e00789ce30fb0a1c0a40771df393986b2cde857415a6e83f"
     },
     {
       "name": "prerequisites",

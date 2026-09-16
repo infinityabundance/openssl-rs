@@ -835,6 +835,47 @@ pub extern "C" fn OSSL_LIB_CTX_get0_global_default() -> *mut c_void {
     })
 }
 
+/// `int OSSL_LIB_CTX_load_config(OSSL_LIB_CTX *ctx, const char *config_file)`
+///
+/// The one-line forward `crypto/context.c` has, and it is a forward to a *different*
+/// entry point than the initialiser's: `CONF_modules_load_file_ex(ctx, config_file, NULL, 0)`
+/// with an explicit **zero** flag word, not `DEFAULT_CONF_MFLAGS`. Three consequences
+/// follow from that and each is a behaviour a caller can see:
+///
+/// * the section that is read is `openssl_conf`, because `CONF_MFLAGS_DEFAULT_SECTION` is
+///   not set — and yet `CONF_modules_load`'s fallback is `!appname ||`, so with a NULL
+///   `appname` the file's `openssl_conf` is used either way;
+/// * a missing file is an **error**, because `CONF_MFLAGS_IGNORE_MISSING_FILE` is not set:
+///   this function answers 0 where the automatic loader would answer 1;
+/// * a module that fails is an error for the same reason. The initialiser's flags tolerate
+///   a failure and this call's do not.
+///
+/// The return is `> 0` and not `!= 0`, which matters and is not a style choice:
+/// `CONF_modules_load_file_ex` answers **-1** when a module fails, so a `!= 0` test would
+/// report success for it. The authority's `> 0` collapses the -1 to 0.
+///
+/// # Safety
+/// `ctx` must be NULL or live, and `config_file` NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_LIB_CTX_load_config(
+    ctx: *mut c_void,
+    config_file: *const c_char,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `ctx` is NULL or live and `config_file` is NULL or NUL-terminated, which is
+        // exactly `CONF_modules_load_file_ex`'s contract; `appname` is NULL and `flags` is the
+        // explicit zero the authority passes.
+        let ret = unsafe {
+            crate::runtime::confmod::CONF_modules_load_file_ex(ctx, config_file, ptr::null(), 0)
+        };
+        if ret > 0 {
+            1
+        } else {
+            0
+        }
+    })
+}
+
 /// `OSSL_LIB_CTX *OSSL_LIB_CTX_set0_default(OSSL_LIB_CTX *libctx)`
 ///
 /// Returns the **previous** default and installs `libctx` as this thread's

@@ -17,9 +17,9 @@ name is defined; `open` means the stratum owns it and has not built it;
 
 | library | authority exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 1133 | 4763 |
+| libcrypto | 5896 | 1134 | 4762 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **1133** | **5366** |
+| **total** | **6499** | **1134** | **5365** |
 
 ## Ownership atlas, by stratum
 
@@ -31,7 +31,7 @@ declared owner; this is that assignment.
 | 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `complete` | 294 | 294 | 251 | 43 | 0 |
 | 4 | BIO + CONF + object database | `complete` | 256 | 272 | 249 | 23 | 0 |
 | 5 | BN + ASN.1 + DER/PEM | `complete` | 561 | 565 | 474 | 91 | 0 |
-| 6 | OSSL_LIB_CTX + provider core | `in-progress` | 137 | 161 | 159 | 0 | 2 |
+| 6 | OSSL_LIB_CTX + provider core | `in-progress` | 137 | 161 | 160 | 0 | 1 |
 | 7 | EVP framework | `not-started` | 924 | — | — | — | — |
 | 8 | Native cryptographic primitives | `not-started` | 759 | — | — | — | — |
 | 9 | RAND / DRBG + entropy | `not-started` | 25 | — | — | — | — |
@@ -176,14 +176,14 @@ Courts: `all pass`, 9 court(s), 0 authority observation(s).
 ## Phase 6 — OSSL_LIB_CTX + provider core
 
 * state: `in-progress`
-* blocking: 2 open obligation(s) of this stratum recorded in forensics/phase6-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase
+* blocking: 1 open obligation(s) of this stratum recorded in forensics/phase6-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase
 * seal: none written yet (`docs/PHASE-6-PROVIDER-SEAL.md`)
 * ledger: `forensics/phase6-obligations.json`
 * atlas-owned: 137
 * owned working set: 161
-* implemented: 159
+* implemented: 160
 * deferred to a later stratum with a stated reason: 0
-* **open in this stratum: 2**
+* **open in this stratum: 1**
 
 Hand-offs received and discharged:
 

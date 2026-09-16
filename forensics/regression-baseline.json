@@ -168,7 +168,7 @@
       "verdict": "pass"
     },
     "RT-LIBCTX": {
-      "observations": 91,
+      "observations": 110,
       "verdict": "pass"
     },
     "RT-MEM": {
@@ -235,14 +235,14 @@
     "phase6": 0
   },
   "implemented": {
-    "libcrypto": 1133,
+    "libcrypto": 1134,
     "libssl": 0
   },
   "open_obligations": {
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,
-    "phase6": 2
+    "phase6": 1
   },
   "owned_obligations": {
     "phase3": 294,
@@ -278,7 +278,7 @@
     "blocking_dependencies": 29,
     "divergence_names_covered": 32,
     "findings": 0,
-    "language_census": 2050,
+    "language_census": 2049,
     "sealed_census": 59
   }
 }
