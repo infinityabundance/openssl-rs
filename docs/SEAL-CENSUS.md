@@ -190,7 +190,7 @@ Hand-offs received and discharged:
 * from phase 4: 18 symbol(s) — `BIO_new_from_core_bio`, `BIO_s_core`, `CONF_imodule_get_flags`, `CONF_imodule_get_module`, `CONF_imodule_get_name`, `CONF_imodule_get_usr_data`, `CONF_imodule_get_value`, `CONF_imodule_set_flags`, `CONF_imodule_set_usr_data`, `CONF_module_add`, `CONF_module_get_usr_data`, `CONF_module_set_usr_data`, `CONF_modules_finish`, `CONF_modules_load`, `CONF_modules_load_file`, `CONF_modules_load_file_ex`, `CONF_modules_unload`, `OPENSSL_load_builtin_modules`
 * from phase 5: 1 symbol(s) — `ASN1_add_oid_module`
 
-Courts: `all pass`, 8 court(s), 0 authority observation(s).
+Courts: `all pass`, 9 court(s), 0 authority observation(s).
 
 | court | verdict | observations |
 |---|---|---|
@@ -201,6 +201,7 @@ Courts: `all pass`, 8 court(s), 0 authority observation(s).
 | RT-BIO-CORE | `pass` | 0 |
 | RT-DSO | `pass` | 0 |
 | RT-PROVIDER | `pass` | 0 |
+| RT-PROVIDER-3P | `pass` | 0 |
 | RT-CONF-MOD | `pass` | 0 |
 
 ## Atlas/ledger reconciliation

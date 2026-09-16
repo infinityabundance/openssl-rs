@@ -49,8 +49,11 @@
 //! * `ossl_provider_free`'s `else if (prov->ischild)` arm and `ossl_provider_up_ref`'s
 //!   `ischild` arm — **6.8e**, because nothing can set `ischild` until
 //!   `ossl_provider_set_child` lands there.
-//! * `ossl_provider_add_to_store`'s `create_provider_children` — **6.8e**, same reason: it
-//!   walks a callback stack only 6.8e can push into.
+//! * `ossl_provider_add_to_store`'s `create_provider_children`, and `provider_activate`'s
+//!   — **landed with 6.8e.** The guard that stood here until then was `prov->store == NULL`
+//!   rather than an emptiness test, and it answered 1 rather than failing loudly, so the
+//!   "fails loudly" claim in its own documentation was never true. Both call sites now make
+//!   the authority's call and `store->child_cbs` is a stack a registered parent can be in.
 //! * `provider_deactivate_free`'s `ossl_provider_deactivate(prov, 1)` — **6.8c**, for the
 //!   same reason as the first.
 //! * `ossl_init_thread_deregister(prov)` in `ossl_provider_free` — **6.6e-ii**. It is the
@@ -103,9 +106,9 @@ use crate::runtime::mem::{
     CRYPTO_calloc, CRYPTO_free, CRYPTO_malloc, CRYPTO_realloc_array, CRYPTO_strdup, CRYPTO_zalloc,
 };
 use crate::runtime::stack::{
-    OPENSSL_sk_deep_copy, OPENSSL_sk_delete, OPENSSL_sk_find, OPENSSL_sk_new, OPENSSL_sk_new_null,
-    OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_sort, OPENSSL_sk_value,
-    OpenSslStack,
+    OPENSSL_sk_deep_copy, OPENSSL_sk_delete, OPENSSL_sk_delete_ptr, OPENSSL_sk_find,
+    OPENSSL_sk_new, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push,
+    OPENSSL_sk_sort, OPENSSL_sk_value, OpenSslStack,
 };
 use crate::runtime::str::OPENSSL_strcasecmp;
 use crate::runtime::thread::{
@@ -761,7 +764,14 @@ pub(crate) unsafe fn ossl_provider_register_child_cb(
 
     // SAFETY: `store` is live and its lock is held.
     unsafe { CRYPTO_THREAD_unlock((*store).lock) };
-    1
+    // The **push's own answer**, which is the new length of `store->child_cbs` and not a
+    // boolean: the authority writes `ret = sk_OSSL_PROVIDER_CHILD_CB_push(...)` and returns
+    // `ret`. So the first registration answers 1, the second 2, and a caller can tell how many
+    // parents are already registered. This returned a literal `1` until `RT-PROVIDER-3P`
+    // measured it, because a registration that succeeds and a count that is one look identical
+    // when only one parent ever registers -- and the authority's own child, which registers
+    // during `ossl_provider_init_as_child`, is exactly the second one.
+    ret
 }
 
 /// `static void ossl_provider_deregister_child_cb(const OSSL_CORE_HANDLE *handle)`.
@@ -1477,9 +1487,8 @@ pub(crate) unsafe fn ossl_provider_find(
 /// Two tails belong to later work and are named rather than approximated: the losing
 /// branch calls `ossl_provider_deactivate(prov, 0)` (**6.8c**), and the winning branch ends
 /// with `ossl_decoder_cache_flush(prov->libctx)` (**Phase 7**). `create_provider_children`
-/// is **6.8e** and is likewise named where it would go; it walks a callback stack only
-/// 6.8e can push into, and returning 1 without calling it is correct precisely because that
-/// stack is empty.
+/// sits inside the winning branch's lock, where the authority puts it, because the insertion
+/// it belongs to is undone if a registered parent refuses.
 ///
 /// # Safety
 /// `prov` must be live with a non-NULL `libctx`; `actualprov` NULL or writable.
@@ -1526,11 +1535,19 @@ pub(crate) unsafe fn ossl_provider_add_to_store(
                 return 0;
             }
             (*prov).store = store;
-            // 6.8e: `if (!create_provider_children(prov)) { ... }` goes here, with
-            // `OPENSSL_sk_delete_ptr((*store).providers, prov.cast())` and the `err:` label's
-            // unlock as its failure arm. It cannot fail today: `store->child_cbs` is empty
-            // until 6.8e registers one, and the authority's own loop over an empty stack
-            // returns 1.
+            // The authority's `create_provider_children`, which is where a parent that has
+            // registered child callbacks is told that this provider is now active. It is
+            // **inside** the store lock, unlike the `provider_activate` call site, because
+            // the insertion it belongs to has to be undone if the parent refuses -- and it
+            // could not run at all until 6.8e landed `ossl_provider_register_child_cb`,
+            // which is the only thing that can push onto `store->child_cbs`. Leaving the
+            // call out is not a no-op: `RT-PROVIDER-3P` observes the parent's callback being
+            // called from `main`, after `init` has returned, and only this line calls it.
+            if crate::provider::activate::create_provider_children(prov) == 0 {
+                OPENSSL_sk_delete_ptr((*store).providers, prov.cast::<c_void>());
+                CRYPTO_THREAD_unlock((*store).lock);
+                return 0;
+            }
             if retain_fallbacks == 0 {
                 (*store).use_fallbacks = 0;
             }

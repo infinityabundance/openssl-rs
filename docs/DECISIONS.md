@@ -7430,3 +7430,92 @@ module transcribes, and a *plan-versus-crate* reconciliation — which subphase 
 that neither a ledger nor a reference reaches — is the check that would catch the next one. It
 is named here as an open obligation rather than built, because building it is a change to the
 gate's own contract and belongs in its own commit with its own evidence.
+
+D133 — 6.12: the core hosting a real third-party provider, and the five defects it found
+
+6.12 is the court the plan calls the third-party-provider court, and it is the only probe in
+this stratum that can see the *provider-facing* half of the core. Every other court drives the
+registry from outside, through the public API, and observes the objects it creates.
+`OSSL_PROVIDER_init` — what the core hands a provider, and what it does with what a provider
+hands back — is passed to `OSSL_provider_init` and to nothing else, so a probe that is not a
+provider has no way to reach it at all. `courts/phase6/rt_provider_3p_probe.c` compiles an
+`OSSL_provider_init` into its own binary, registers it with `OSSL_PROVIDER_add_builtin`, loads
+it with `OSSL_PROVIDER_load_ex`, and then everything it reports is what the core gave it.
+
+It found five defects, and every one of them was invisible to the other fifty-five courts for
+the same structural reason: **nothing had ever walked that table or taken that role.**
+
+**1. `FUNC_CORE_OBJ_ADD_SIGID` and `FUNC_CORE_OBJ_CREATE` were 121 and 122. The header says 11
+and 12.** The constant was only ever compared against itself, this build's own install header
+says 11 and 12 so no compile could disagree, and nothing read the published table at runtime. A
+third-party provider compiled against these headers asks for id 12 and was being answered NULL;
+a build that published 121 would hand a provider whatever the core put there. The digest below
+is what makes the class visible, and the unit test now asserts 11 and 12 by value.
+
+**2. The published table was in numeric order, not `core_dispatch_`'s order.** Two groups
+differ: the BIO family is published `40 41 42 43 49 48 50 44 45 46 47` (the header declares
+`GETS` and `PUTS` before `UP_REF`, and `CTRL` after `PUTS`) where the candidate had sorted it,
+and the `CRYPTO_*` group is published *before* the child-callback and provider-accessor ids
+even though its own ids are lower. Neither order is reachable through a lookup — a provider
+switches on `function_id` — which is exactly why nobody noticed. The authority's order is now
+reproduced, and `in.ids_digest` is what measures it: an FNV-1a over the published id sequence
+with the one deferred family skipped, so an entry added, dropped, substituted or reordered
+changes it.
+
+**3. `OSSL_FUNC_PROVIDER_UP_REF` (110) and `PROVIDER_FREE` (111) were absent from the table, and
+`provider_up_ref_intern`/`provider_free_intern` were not written at all.** They are 110 and 111
+of the eight entries `ossl_provider_init_as_child` requires, so **`OSSL_LIB_CTX_new_child`
+could not succeed** — the seven-pointer validation rejected the table and answered 0. The
+crate's own table carried the comment `// 110, 111: ... — absent, 6.8c` three commits after
+6.8c was declared complete. This is the `a2d_ASN1_OBJECT` class again: a stub comment that
+outlived the subphase it named, with nothing to notice that the subphase had closed.
+
+**4. `ossl_provider_register_child_cb` answered `1`, not the push's result.** The authority
+writes `ret = sk_OSSL_PROVIDER_CHILD_CB_push(...)` and returns `ret`, so the answer is the new
+length of `store->child_cbs`: 1 for the first registration, 2 for the second. A literal `1` is
+indistinguishable from a correct answer until a *second* parent registers — and the authority's
+own child, registering during `ossl_provider_init_as_child`, is always the first. The probe is
+the second, so `child.register_child_ret` is 2 on the authority.
+
+**5. `ossl_provider_add_to_store` never called `create_provider_children`.** The crate carried
+`// 6.8e: \`if (!create_provider_children(prov))\` goes here` — a stub that stated its own
+removal condition and then was not removed when 6.8e landed. The consequence is not a missing
+call in a corner: `create_provider_children` is how a registered parent is told that a provider
+has become active, so the parent's `create_cb` was never called for any provider. That is the
+whole mechanism 6.8e exists for, silently not firing, and only a probe holding the parent role
+could see it.
+
+The same commit removes a guard whose documentation had stopped being true:
+`create_provider_children` carried a `prov->store == NULL` test whose comment claimed it would
+"fail loudly" if a callback were ever registered. It answered 1 instead of failing, and both of
+its callers guarantee a non-NULL store, so it could not fire either way. 6.8e landing made the
+premise false, so it is gone and the module docs no longer claim it.
+
+**What the court deliberately does not observe.** Two things, both stated in the probe's own
+header rather than left to be inferred:
+
+* the eight `rand_*` core ids (96-99, 101-104), which are Phase 9's. Their absence is pinned by
+  `core_dispatch.rs`'s own table test and by the ledger; the court reports the count and the
+  digest *excluding* that family, which is strictly stronger than a total because it still
+  catches an entry added, dropped or reordered outside it. That is the arrangement `RT-PROVIDER`
+  uses for `cmod.activate.available`.
+* `global_props_cb`, because the step that would call it is `evp_fetch.c`'s and is the recorded
+  `D-CHILD-REGISTER-PROPS-1` divergence. A probe that counted its calls would be counting the
+  divergence rather than the contract. `D-CHILD-REGISTER-PROPS-1`'s entry is updated from "no
+  court has observed either half" to what is now true: the registration half *is* observed and
+  passes on both sides, the property-string step is still observed by nothing.
+
+Two smaller corrections are in the same commit. The probe's `create_cb` observations were
+assertions rather than measurements — `child.create_cb_got_a_callback` and
+`child.cbdata_is_the_child` were literals — so they are replaced by real ones:
+`create_cb_prov_is_the_loaded_provider` compares the handle the core passed against the
+`OSSL_PROVIDER *` the probe's own load returned, and `create_cb_cbdata_is_the_child` compares
+the `cbdata` against the child. `deregister_child_ret` becomes
+`child.deregister_cb_returned` with the reason spelled out: the entry is `void` on the
+authority, so there is no answer to compare and the observation is a liveness witness.
+
+`RT-PROVIDER-3P` is 40 observations with no residuals against the authority, registered in
+`forensics/tools/phase6_courts.py`'s `COURTS` and `forensics/tools/phase_state.py`'s
+`PHASE6_MODULES`, so a stratum's court runner and its completion rule both know it exists.
+
+SPDX-License-Identifier: Apache-2.0

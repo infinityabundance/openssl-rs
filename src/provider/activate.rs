@@ -39,10 +39,12 @@
 //!   `ossl_provider_free_parent` and the `store->child_cbs` walks are 6.8e's, and every
 //!   one of them is guarded by `prov->ischild`, which nothing can set before 6.8e lands
 //!   `ossl_provider_set_child`.
-//! * **`create_provider_children`** — 6.8e's, and it walks a callback stack that only
-//!   6.8e can push into. It is written here as a function that **asserts the stack is
-//!   empty** and answers 1, so that if 6.8e ever registers a callback without adding the
-//!   walk, this fails loudly instead of silently not creating children.
+//! * **`create_provider_children`** — landed with 6.8e, which is what made
+//!   `ossl_provider_register_child_cb` able to push onto `store->child_cbs`. Until then the
+//!   function carried a `prov->store == NULL` guard whose documentation claimed it would
+//!   "fail loudly" if a callback were ever registered; it answered 1 instead, and the two
+//!   callers both guarantee a non-NULL store, so the guard could never fire either way. It is
+//!   gone, and `RT-PROVIDER-3P` is what measures the walk through a real registered parent.
 //! * **the store bridges** — `provider_flush_store_cache` and
 //!   `provider_remove_store_methods` call the four method-store flush/remove pairs,
 //!   which is [`crate::provider::stores`]'s subject and its module doc explains why each
@@ -68,8 +70,8 @@ use crate::provider::stores::{
     ossl_store_loader_store_cache_flush, ossl_store_loader_store_remove_all_provided,
 };
 use crate::provider::{
-    c_strcmp, get_provider_store, ossl_provider_find, ossl_provider_free, provider_new,
-    OsslProvider, ProviderStore, FILE, FLAG_ACTIVATED,
+    c_strcmp, get_provider_store, ossl_provider_find, ossl_provider_free, ossl_provider_up_ref,
+    provider_new, OsslProvider, ProviderStore, FILE, FLAG_ACTIVATED,
 };
 use crate::runtime::err::{err_sites, raise_site, ERR_get_next_error_library};
 use crate::runtime::init::{OPENSSL_init_crypto, OPENSSL_INIT_LOAD_CONFIG};
@@ -105,21 +107,24 @@ pub(crate) type ProviderDoAllFn = unsafe extern "C" fn(*mut OsslProvider, *mut c
 ///
 /// Called with the store lock held, which is why nothing here takes one.
 ///
-/// The authority walks `store->child_cbs` and calls each registered `create_cb`. That stack
-/// can only be pushed into by `ossl_provider_register_child_cb`, which is **6.8e**'s, so in
-/// this build it is empty and the authority's own loop over an empty stack answers 1. This
-/// version *checks* the emptiness rather than assuming it: if a callback is ever registered
-/// without the walk being written, the check fires instead of children silently not being
-/// created.
+/// The walk is over `store->child_cbs`: every registration made through
+/// `ossl_provider_register_child_cb` (6.8e, reached from a provider through
+/// `OSSL_FUNC_PROVIDER_REGISTER_CHILD_CB`) is asked to create its child for the provider that
+/// has just become active. `ret &=` rather than `ret =` is the authority's and is deliberate:
+/// **every** registration is asked, even after one has refused, because a parent that refuses
+/// is not entitled to stop the other parents from being told.
+///
+/// The two call sites both guarantee a store, which is why there is no test for one here — the
+/// same reason the authority has none. `provider_activate` reaches it only under
+/// `count == 1 && store != NULL`, and `ossl_provider_add_to_store` assigns `prov->store`
+/// immediately before. It was guarded until 6.8e landed and made the guard's premise —
+/// "nothing can register a callback yet" — false.
 ///
 /// # Safety
-/// `prov` must be live and already inserted into a store.
-unsafe fn create_provider_children(prov: *mut OsslProvider) -> c_int {
-    // SAFETY: `prov` is live.
+/// `prov` must be live and already inserted into a store, so that `prov->store` is live.
+pub(crate) unsafe fn create_provider_children(prov: *mut OsslProvider) -> c_int {
+    // SAFETY: `prov` is live and, per the contract, already carries a live store.
     let store = unsafe { (*prov).store };
-    if store.is_null() {
-        return 1;
-    }
     // SAFETY: `store` is live, so `child_cbs` is a live stack created with it.
     unsafe {
         let max = OPENSSL_sk_num((*store).child_cbs);
@@ -127,10 +132,6 @@ unsafe fn create_provider_children(prov: *mut OsslProvider) -> c_int {
         let mut i = 0;
         while i < max {
             let child_cb = OPENSSL_sk_value((*store).child_cbs, i).cast::<ProviderChildCb>();
-            // `ret &=`, not `ret =`: **every** registration is asked, even after one has
-            // refused, because a parent that refuses is not entitled to stop the others from
-            // being told. The authority's `&=` says so and a transcription that broke early
-            // would leave the later parents uninformed.
             if let Some(create) = (*child_cb).create_cb {
                 ret &= create(prov.cast::<c_void>(), (*child_cb).cbdata);
             }
@@ -512,6 +513,60 @@ pub(crate) unsafe fn ossl_provider_deactivate(
         // SAFETY: `prov` is live.
         return unsafe { provider_remove_store_methods(prov) };
     }
+    1
+}
+
+/// `static int provider_up_ref_intern(OSSL_PROVIDER *prov, int activate)`.
+///
+/// The **two-verb** pair behind `OSSL_FUNC_PROVIDER_UP_REF` (110) and
+/// `OSSL_FUNC_PROVIDER_FREE` (111), the entries a provider uses to take and release a
+/// reference on *another* provider handed to it as an `OSSL_CORE_HANDLE *`. `activate`
+/// chooses between the activation counter and the reference counter, and the two are not
+/// interchangeable: `PROVIDER_UP_REF` with `activate` set is `ossl_provider_activate`,
+/// which refuses a child provider outright (`aschild` is 0 here, and the authority's own
+/// caller passes 0), while the reference count has no such rule.
+///
+/// The authority places this pair at `provider_core.c` §499–514, immediately after
+/// `ossl_provider_up_ref`; this crate keeps it beside the activation verbs because that is
+/// where `provider_deactivate`/`provider_remove_store_methods` — the functions the `0`
+/// branch of the second one reaches — already live.
+///
+/// **Both arms are transcribed without a NULL test**, because the authority has none here:
+/// it passes `prov` straight down. The guards that make a NULL handle safe are one level
+/// down, in `ossl_provider_up_ref` (a crate-internal guard, recorded there) and in
+/// `ossl_provider_activate`/`ossl_provider_deactivate` (the authority's own). Adding a
+/// second test here would be a divergence in the transcription for no behavioural gain.
+///
+/// # Safety
+/// `prov` must be live; the authority also dereferences it, so a NULL handle is a fault on
+/// both sides rather than a checked refusal.
+pub(crate) unsafe fn provider_up_ref_intern(prov: *mut OsslProvider, activate: c_int) -> c_int {
+    if activate != 0 {
+        // SAFETY: `prov` is live.
+        return unsafe { ossl_provider_activate(prov, 1, 0) };
+    }
+    // SAFETY: `prov` is live.
+    unsafe { ossl_provider_up_ref(prov) }
+}
+
+/// `static int provider_free_intern(OSSL_PROVIDER *prov, int deactivate)`.
+///
+/// The mirror of `provider_up_ref_intern`, and the answer differs between its arms: the
+/// deactivating arm answers `ossl_provider_deactivate`'s boolean, whereas the plain arm
+/// answers **1 unconditionally**, because `ossl_provider_free` has no answer to give. So a
+/// failure to deactivate is visible to the provider and a free is not — which is exactly
+/// what the authority's two clients expect.
+///
+/// # Safety
+/// `prov` must be live, for the same reason and with the same consequence as
+/// `provider_up_ref_intern` above.
+pub(crate) unsafe fn provider_free_intern(prov: *mut OsslProvider, deactivate: c_int) -> c_int {
+    if deactivate != 0 {
+        // SAFETY: `prov` is live.
+        return unsafe { ossl_provider_deactivate(prov, 1) };
+    }
+    // SAFETY: `prov` is live.
+    unsafe { ossl_provider_free(prov) }
     1
 }
 
@@ -1846,9 +1901,54 @@ mod tests {
         }
     }
 
-    /// `create_provider_children` fires its check rather than assuming, so the invariant it
-    /// rests on has to be true: no child callback exists in this build. And the predefined
-    /// table's fallback count is what the fallback walk's arithmetic depends on.
+    /// `provider_up_ref_intern` / `provider_free_intern` — the two-verb pair behind
+    /// `OSSL_FUNC_PROVIDER_UP_REF` (110) and `OSSL_FUNC_PROVIDER_FREE` (111).
+    ///
+    /// The pair exists so a provider can take and release a reference on *another* provider
+    /// it was handed as an opaque handle. The observation that matters is the **asymmetry
+    /// between the two arms**, because a plausible implementation would make both return a
+    /// boolean: `provider_free_intern(prov, 0)` answers **1 unconditionally** even though
+    /// `ossl_provider_free` answers nothing, while `provider_free_intern(prov, 1)` answers
+    /// `ossl_provider_deactivate`'s boolean and can therefore fail. A caller that treated
+    /// the first as a status would be reading a constant.
+    #[test]
+    fn the_refcount_pair_answers_differently_in_each_arm() {
+        // SAFETY: the helper's contract is this test's.
+        let prov = unsafe { activated_test_provider(c"rs-intern") };
+        // The activation arm is `ossl_provider_activate`, so it counts up the activation
+        // counter *and* answers 1; the reference arm is `ossl_provider_up_ref` and answers
+        // the **new count**, which is 2 here because the store holds one reference already.
+        // SAFETY: `prov` is live and in the store.
+        unsafe {
+            assert_eq!(
+                provider_up_ref_intern(prov, 1),
+                1,
+                "the activating arm answers a boolean"
+            );
+            let refs = provider_up_ref_intern(prov, 0);
+            assert!(refs > 1, "the plain arm answers the new reference count");
+            // Give the plain reference back before the activating one, so the two arms are
+            // released out of order -- which is the case a caller can reach and the case a
+            // test that released them symmetrically would not cover.
+            assert_eq!(
+                provider_free_intern(prov, 0),
+                1,
+                "a free has no status to report, so it answers 1"
+            );
+            assert_eq!(
+                provider_free_intern(prov, 1),
+                1,
+                "the deactivating arm answers the deactivation's boolean"
+            );
+        }
+    }
+
+    /// `create_provider_children` now walks a stack a registered parent can be in, so the
+    /// invariant it rests on has to be true: nothing in the *test* process registers a child
+    /// callback, because registration goes through `ossl_provider_register_child_cb`, which no
+    /// test here calls. Before 6.8e that was a fact about the build; it is now a fact about
+    /// this module's tests, which is why it is asserted rather than assumed. And the
+    /// predefined table's fallback count is what the fallback walk's arithmetic depends on.
     #[test]
     fn no_provider_child_callback_exists() {
         // SAFETY: a NULL context is the default one; the slot read is sound either way.
@@ -1858,7 +1958,9 @@ mod tests {
         let n = unsafe { OPENSSL_sk_num((*store).child_cbs) };
         assert_eq!(
             n, 0,
-            "6.8e's child-callback walk is not written, so the stack must be empty"
+            "no test registers a child callback, so `create_provider_children`'s walk is \
+             entered over an empty stack here. `RT-PROVIDER-3P` is where a non-empty one is \
+             measured, through a real provider's own registration"
         );
         let fallbacks = PREDEFINED_PROVIDERS
             .iter()

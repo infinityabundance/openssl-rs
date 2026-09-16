@@ -491,6 +491,12 @@ PHASE6_MODULES = [
     # Phase 6's completion claim auditable rather than merely reported.
     "docs/PHASE-6-PROVIDER-SEAL.md",
     "courts/phase6/rt_provider_probe.c",
+    # 6.12: the provider **core** hosting a third-party provider. This is the only probe that
+    # compiles an `OSSL_provider_init` into itself, so it is the only one that can see the
+    # provider-facing dispatch table at all -- and it is what closes the two
+    # `D-CHILD-REGISTER-PROPS-1`/`D-CHILD-PROPS-CB-1` entries from "no court has observed
+    # either half" to measured.
+    "courts/phase6/rt_provider_3p_probe.c",
     # 6.9: the DSO layer, reassigned from Phase 2 by D95 because Phase 2's definition is
     # distribution structure and the dynamic-loader abstraction is semantic.
     "src/dso/mod.rs",
