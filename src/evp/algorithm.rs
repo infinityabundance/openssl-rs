@@ -1,4 +1,4 @@
-//! `crypto/core_algorithm.c` — the walk over a provider's algorithms, per operation.
+//! Phase 7.1 — `crypto/core_algorithm.c`: the walk over a provider's algorithms, per operation.
 //!
 //! This is the bottom of Phase 7's fetch path and the first thing the stratum had to write,
 //! for the reason `docs/DECISIONS.md` D132 records: its only caller in the whole authority is
