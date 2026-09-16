@@ -281,7 +281,7 @@
         "truncf128",
         "truncf16"
       ],
-      "compiler_emitted_count": 7079,
+      "compiler_emitted_count": 7095,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -289,7 +289,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 1187,
+        "implemented": 1240,
         "implemented_symbols": [
           "ASN1_ANY_it",
           "ASN1_BIT_STRING_check",
@@ -1070,6 +1070,45 @@
           "ERR_set_mark",
           "ERR_unload_strings",
           "ERR_vset_error",
+          "EVP_CIPHER_CTX_buf_noconst",
+          "EVP_CIPHER_CTX_cipher",
+          "EVP_CIPHER_CTX_clear_flags",
+          "EVP_CIPHER_CTX_copy",
+          "EVP_CIPHER_CTX_ctrl",
+          "EVP_CIPHER_CTX_dup",
+          "EVP_CIPHER_CTX_free",
+          "EVP_CIPHER_CTX_get0_cipher",
+          "EVP_CIPHER_CTX_get1_cipher",
+          "EVP_CIPHER_CTX_get_algor_params",
+          "EVP_CIPHER_CTX_get_app_data",
+          "EVP_CIPHER_CTX_get_block_size",
+          "EVP_CIPHER_CTX_get_cipher_data",
+          "EVP_CIPHER_CTX_get_iv_length",
+          "EVP_CIPHER_CTX_get_key_length",
+          "EVP_CIPHER_CTX_get_nid",
+          "EVP_CIPHER_CTX_get_num",
+          "EVP_CIPHER_CTX_get_original_iv",
+          "EVP_CIPHER_CTX_get_params",
+          "EVP_CIPHER_CTX_get_tag_length",
+          "EVP_CIPHER_CTX_get_updated_iv",
+          "EVP_CIPHER_CTX_gettable_params",
+          "EVP_CIPHER_CTX_is_encrypting",
+          "EVP_CIPHER_CTX_iv",
+          "EVP_CIPHER_CTX_iv_noconst",
+          "EVP_CIPHER_CTX_new",
+          "EVP_CIPHER_CTX_original_iv",
+          "EVP_CIPHER_CTX_reset",
+          "EVP_CIPHER_CTX_set_algor_params",
+          "EVP_CIPHER_CTX_set_app_data",
+          "EVP_CIPHER_CTX_set_cipher_data",
+          "EVP_CIPHER_CTX_set_flags",
+          "EVP_CIPHER_CTX_set_key_length",
+          "EVP_CIPHER_CTX_set_num",
+          "EVP_CIPHER_CTX_set_padding",
+          "EVP_CIPHER_CTX_set_params",
+          "EVP_CIPHER_CTX_settable_params",
+          "EVP_CIPHER_CTX_test_flags",
+          "EVP_CIPHER_asn1_to_param",
           "EVP_CIPHER_can_pipeline",
           "EVP_CIPHER_do_all_provided",
           "EVP_CIPHER_fetch",
@@ -1077,6 +1116,7 @@
           "EVP_CIPHER_get0_description",
           "EVP_CIPHER_get0_name",
           "EVP_CIPHER_get0_provider",
+          "EVP_CIPHER_get_asn1_iv",
           "EVP_CIPHER_get_block_size",
           "EVP_CIPHER_get_flags",
           "EVP_CIPHER_get_iv_length",
@@ -1108,8 +1148,21 @@
           "EVP_CIPHER_meth_set_iv_length",
           "EVP_CIPHER_meth_set_set_asn1_params",
           "EVP_CIPHER_names_do_all",
+          "EVP_CIPHER_param_to_asn1",
+          "EVP_CIPHER_set_asn1_iv",
           "EVP_CIPHER_settable_ctx_params",
           "EVP_CIPHER_up_ref",
+          "EVP_CipherInit",
+          "EVP_CipherInit_ex",
+          "EVP_CipherInit_ex2",
+          "EVP_CipherPipelineDecryptInit",
+          "EVP_CipherPipelineEncryptInit",
+          "EVP_DecryptInit",
+          "EVP_DecryptInit_ex",
+          "EVP_DecryptInit_ex2",
+          "EVP_EncryptInit",
+          "EVP_EncryptInit_ex",
+          "EVP_EncryptInit_ex2",
           "EVP_MD_fetch",
           "EVP_MD_free",
           "EVP_MD_get0_name",
@@ -1479,7 +1532,7 @@
           "i2d_DISPLAYTEXT",
           "i2t_ASN1_OBJECT"
         ],
-        "scaffolded": 4709
+        "scaffolded": 4656
       },
       "libssl": {
         "authority_exports": 603,
@@ -1490,18 +1543,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 1187,
-      "scaffolded": 5312
+      "implemented": 1240,
+      "scaffolded": 5259
     }
   },
-  "body_hash": "f8c1c9f02de347e5422a125b633d053af91e281f3347f058e3caa5750e6944df",
+  "body_hash": "82680bd7257a599ca622c0bb4982cda949072cb13b87890e89e1459ac43c6b30",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "284a9f9c80e66c7871561976ddbe42298bfaee5f57d890f552f18260217b23a5"
+      "sha256": "cac9c853b719eba8656d1bad07c0db2b8c744cc9fa8bb2f0827b6a92de1d9d19"
     },
     {
       "name": "authority-exports",

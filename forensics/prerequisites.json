@@ -42,38 +42,10 @@
         "evidence": "docs/PHASE-6-SUBPHASES.md rows 6.8d and 6.12"
       },
       {
-        "symbol": "evp_cipher_asn1_to_param_ex",
-        "owner_phase": 7,
-        "authority_unit": "crypto/evp/evp_lib.c",
-        "reason": "The rest of `crypto/evp/evp_lib.c`, after 7.3a and 7.3b each opened it. 7.3a landed `evp_md_free_int` and 7.3b landed `evp_cipher_cache_constants` and `evp_cipher_get_number`, which is what made `gen_prerequisite_atlas.py` attribute `src/evp/digest.rs` and then `src/evp/cipher.rs` to this unit, and what made the gate ask whether the names this unit *calls* are referenced anywhere. The five that remain are `static` helpers of accessors that have not landed: four take an `EVP_CIPHER_CTX *` and are 7.3c's (`evp_cipher_param_to_asn1_ex`, `evp_cipher_asn1_to_param_ex`, `evp_cipher_get_asn1_aead_params`, `evp_cipher_set_asn1_aead_params`) and one takes an `EVP_MD *` and is 7.3d's (`evp_md_get_number`). A row per name is how the record says so rather than leaving the gate to report them as findings, and each is discharged by the subphase the split in `docs/PHASE-7-SUBPHASES.md` names.",
-        "evidence": "docs/DECISIONS.md D148; docs/PHASE-7-SUBPHASES.md row 7.3; forensics/tools/gen_prerequisite_build_edges (the module -> unit map)"
-      },
-      {
-        "symbol": "evp_cipher_get_asn1_aead_params",
-        "owner_phase": 7,
-        "authority_unit": "crypto/evp/evp_lib.c",
-        "reason": "The rest of `crypto/evp/evp_lib.c`, after 7.3a and 7.3b each opened it. 7.3a landed `evp_md_free_int` and 7.3b landed `evp_cipher_cache_constants` and `evp_cipher_get_number`, which is what made `gen_prerequisite_atlas.py` attribute `src/evp/digest.rs` and then `src/evp/cipher.rs` to this unit, and what made the gate ask whether the names this unit *calls* are referenced anywhere. The five that remain are `static` helpers of accessors that have not landed: four take an `EVP_CIPHER_CTX *` and are 7.3c's (`evp_cipher_param_to_asn1_ex`, `evp_cipher_asn1_to_param_ex`, `evp_cipher_get_asn1_aead_params`, `evp_cipher_set_asn1_aead_params`) and one takes an `EVP_MD *` and is 7.3d's (`evp_md_get_number`). A row per name is how the record says so rather than leaving the gate to report them as findings, and each is discharged by the subphase the split in `docs/PHASE-7-SUBPHASES.md` names.",
-        "evidence": "docs/DECISIONS.md D148; docs/PHASE-7-SUBPHASES.md row 7.3; forensics/tools/gen_prerequisite_build_edges (the module -> unit map)"
-      },
-      {
-        "symbol": "evp_cipher_param_to_asn1_ex",
-        "owner_phase": 7,
-        "authority_unit": "crypto/evp/evp_lib.c",
-        "reason": "The rest of `crypto/evp/evp_lib.c`, after 7.3a and 7.3b each opened it. 7.3a landed `evp_md_free_int` and 7.3b landed `evp_cipher_cache_constants` and `evp_cipher_get_number`, which is what made `gen_prerequisite_atlas.py` attribute `src/evp/digest.rs` and then `src/evp/cipher.rs` to this unit, and what made the gate ask whether the names this unit *calls* are referenced anywhere. The five that remain are `static` helpers of accessors that have not landed: four take an `EVP_CIPHER_CTX *` and are 7.3c's (`evp_cipher_param_to_asn1_ex`, `evp_cipher_asn1_to_param_ex`, `evp_cipher_get_asn1_aead_params`, `evp_cipher_set_asn1_aead_params`) and one takes an `EVP_MD *` and is 7.3d's (`evp_md_get_number`). A row per name is how the record says so rather than leaving the gate to report them as findings, and each is discharged by the subphase the split in `docs/PHASE-7-SUBPHASES.md` names.",
-        "evidence": "docs/DECISIONS.md D148; docs/PHASE-7-SUBPHASES.md row 7.3; forensics/tools/gen_prerequisite_build_edges (the module -> unit map)"
-      },
-      {
-        "symbol": "evp_cipher_set_asn1_aead_params",
-        "owner_phase": 7,
-        "authority_unit": "crypto/evp/evp_lib.c",
-        "reason": "The rest of `crypto/evp/evp_lib.c`, after 7.3a and 7.3b each opened it. 7.3a landed `evp_md_free_int` and 7.3b landed `evp_cipher_cache_constants` and `evp_cipher_get_number`, which is what made `gen_prerequisite_atlas.py` attribute `src/evp/digest.rs` and then `src/evp/cipher.rs` to this unit, and what made the gate ask whether the names this unit *calls* are referenced anywhere. The five that remain are `static` helpers of accessors that have not landed: four take an `EVP_CIPHER_CTX *` and are 7.3c's (`evp_cipher_param_to_asn1_ex`, `evp_cipher_asn1_to_param_ex`, `evp_cipher_get_asn1_aead_params`, `evp_cipher_set_asn1_aead_params`) and one takes an `EVP_MD *` and is 7.3d's (`evp_md_get_number`). A row per name is how the record says so rather than leaving the gate to report them as findings, and each is discharged by the subphase the split in `docs/PHASE-7-SUBPHASES.md` names.",
-        "evidence": "docs/DECISIONS.md D148; docs/PHASE-7-SUBPHASES.md row 7.3; forensics/tools/gen_prerequisite_build_edges (the module -> unit map)"
-      },
-      {
         "symbol": "evp_md_get_number",
         "owner_phase": 7,
         "authority_unit": "crypto/evp/evp_lib.c",
-        "reason": "The rest of `crypto/evp/evp_lib.c`, after 7.3a and 7.3b each opened it. 7.3a landed `evp_md_free_int` and 7.3b landed `evp_cipher_cache_constants` and `evp_cipher_get_number`, which is what made `gen_prerequisite_atlas.py` attribute `src/evp/digest.rs` and then `src/evp/cipher.rs` to this unit, and what made the gate ask whether the names this unit *calls* are referenced anywhere. The five that remain are `static` helpers of accessors that have not landed: four take an `EVP_CIPHER_CTX *` and are 7.3c's (`evp_cipher_param_to_asn1_ex`, `evp_cipher_asn1_to_param_ex`, `evp_cipher_get_asn1_aead_params`, `evp_cipher_set_asn1_aead_params`) and one takes an `EVP_MD *` and is 7.3d's (`evp_md_get_number`). A row per name is how the record says so rather than leaving the gate to report them as findings, and each is discharged by the subphase the split in `docs/PHASE-7-SUBPHASES.md` names.",
+        "reason": "The last name of `crypto/evp/evp_lib.c` that 7.3a, 7.3b and 7.3c-i between them left open: `evp_md_get_number`, a one-line accessor of the `EVP_MD` object that 7.3d's accessor half implements. 7.3c-i discharged the other four by implementing them (`evp_cipher_param_to_asn1_ex`, `evp_cipher_asn1_to_param_ex`, `evp_cipher_get_asn1_aead_params` and `evp_cipher_set_asn1_aead_params`, the ASN.1 parameter bridge), which is what the gate's `stale_deferral` report said as soon as the code landed.",
         "evidence": "docs/DECISIONS.md D148; docs/PHASE-7-SUBPHASES.md row 7.3; forensics/tools/gen_prerequisite_build_edges (the module -> unit map)"
       }
     ],

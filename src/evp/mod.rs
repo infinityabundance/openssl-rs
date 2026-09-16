@@ -44,6 +44,7 @@
 
 pub mod algorithm;
 pub mod cipher;
+pub mod cipher_ctx;
 pub mod digest;
 pub mod fetch;
 pub mod method_store;

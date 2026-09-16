@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 924,
       "deferred_to_later_phase": 0,
-      "implemented": 52,
-      "open_in_this_stratum": 898,
+      "implemented": 105,
+      "open_in_this_stratum": 845,
       "owned": 950,
       "received_by_handoff": 26
     },
@@ -203,6 +203,45 @@
       ]
     },
     "implemented": [
+      "EVP_CIPHER_CTX_buf_noconst",
+      "EVP_CIPHER_CTX_cipher",
+      "EVP_CIPHER_CTX_clear_flags",
+      "EVP_CIPHER_CTX_copy",
+      "EVP_CIPHER_CTX_ctrl",
+      "EVP_CIPHER_CTX_dup",
+      "EVP_CIPHER_CTX_free",
+      "EVP_CIPHER_CTX_get0_cipher",
+      "EVP_CIPHER_CTX_get1_cipher",
+      "EVP_CIPHER_CTX_get_algor_params",
+      "EVP_CIPHER_CTX_get_app_data",
+      "EVP_CIPHER_CTX_get_block_size",
+      "EVP_CIPHER_CTX_get_cipher_data",
+      "EVP_CIPHER_CTX_get_iv_length",
+      "EVP_CIPHER_CTX_get_key_length",
+      "EVP_CIPHER_CTX_get_nid",
+      "EVP_CIPHER_CTX_get_num",
+      "EVP_CIPHER_CTX_get_original_iv",
+      "EVP_CIPHER_CTX_get_params",
+      "EVP_CIPHER_CTX_get_tag_length",
+      "EVP_CIPHER_CTX_get_updated_iv",
+      "EVP_CIPHER_CTX_gettable_params",
+      "EVP_CIPHER_CTX_is_encrypting",
+      "EVP_CIPHER_CTX_iv",
+      "EVP_CIPHER_CTX_iv_noconst",
+      "EVP_CIPHER_CTX_new",
+      "EVP_CIPHER_CTX_original_iv",
+      "EVP_CIPHER_CTX_reset",
+      "EVP_CIPHER_CTX_set_algor_params",
+      "EVP_CIPHER_CTX_set_app_data",
+      "EVP_CIPHER_CTX_set_cipher_data",
+      "EVP_CIPHER_CTX_set_flags",
+      "EVP_CIPHER_CTX_set_key_length",
+      "EVP_CIPHER_CTX_set_num",
+      "EVP_CIPHER_CTX_set_padding",
+      "EVP_CIPHER_CTX_set_params",
+      "EVP_CIPHER_CTX_settable_params",
+      "EVP_CIPHER_CTX_test_flags",
+      "EVP_CIPHER_asn1_to_param",
       "EVP_CIPHER_can_pipeline",
       "EVP_CIPHER_do_all_provided",
       "EVP_CIPHER_fetch",
@@ -210,6 +249,7 @@
       "EVP_CIPHER_get0_description",
       "EVP_CIPHER_get0_name",
       "EVP_CIPHER_get0_provider",
+      "EVP_CIPHER_get_asn1_iv",
       "EVP_CIPHER_get_block_size",
       "EVP_CIPHER_get_flags",
       "EVP_CIPHER_get_iv_length",
@@ -241,8 +281,21 @@
       "EVP_CIPHER_meth_set_iv_length",
       "EVP_CIPHER_meth_set_set_asn1_params",
       "EVP_CIPHER_names_do_all",
+      "EVP_CIPHER_param_to_asn1",
+      "EVP_CIPHER_set_asn1_iv",
       "EVP_CIPHER_settable_ctx_params",
       "EVP_CIPHER_up_ref",
+      "EVP_CipherInit",
+      "EVP_CipherInit_ex",
+      "EVP_CipherInit_ex2",
+      "EVP_CipherPipelineDecryptInit",
+      "EVP_CipherPipelineEncryptInit",
+      "EVP_DecryptInit",
+      "EVP_DecryptInit_ex",
+      "EVP_DecryptInit_ex2",
+      "EVP_EncryptInit",
+      "EVP_EncryptInit_ex",
+      "EVP_EncryptInit_ex2",
       "EVP_MD_fetch",
       "EVP_MD_free",
       "EVP_MD_get0_name",
@@ -682,247 +735,13 @@
         "declaring_header": "evp.h",
         "module": "src/evp/cipher.rs",
         "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_buf_noconst"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_cipher"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_clear_flags"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_copy"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_ctrl"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_dup"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_free"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_get0_cipher"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_get1_cipher"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
         "symbol": "EVP_CIPHER_CTX_get_algor"
       },
       {
         "declaring_header": "evp.h",
         "module": "src/evp/cipher.rs",
         "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_get_algor_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_get_app_data"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_get_block_size"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_get_cipher_data"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_get_iv_length"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_get_key_length"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_get_nid"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_get_num"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_get_original_iv"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_get_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_get_tag_length"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_get_updated_iv"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_gettable_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_is_encrypting"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_iv"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_iv_noconst"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_new"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_original_iv"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
         "symbol": "EVP_CIPHER_CTX_rand_key"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_reset"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_set_algor_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_set_app_data"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_set_cipher_data"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_set_flags"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_set_key_length"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_set_num"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_set_padding"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_set_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_settable_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_CTX_test_flags"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_asn1_to_param"
       },
       {
         "declaring_header": "evp.h",
@@ -935,24 +754,6 @@
         "module": "src/evp/cipher.rs",
         "received_from_phase": null,
         "symbol": "EVP_CIPHER_do_all_sorted"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_get_asn1_iv"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_param_to_asn1"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_set_asn1_iv"
       },
       {
         "declaring_header": "evp.h",
@@ -976,37 +777,7 @@
         "declaring_header": "evp.h",
         "module": "src/evp/cipher.rs",
         "received_from_phase": null,
-        "symbol": "EVP_CipherInit"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
         "symbol": "EVP_CipherInit_SKEY"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CipherInit_ex"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CipherInit_ex2"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CipherPipelineDecryptInit"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CipherPipelineEncryptInit"
       },
       {
         "declaring_header": "evp.h",
@@ -1061,24 +832,6 @@
         "module": "src/evp/cipher.rs",
         "received_from_phase": null,
         "symbol": "EVP_DecryptFinal_ex"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_DecryptInit"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_DecryptInit_ex"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_DecryptInit_ex2"
       },
       {
         "declaring_header": "evp.h",
@@ -1259,24 +1012,6 @@
         "module": "src/evp/cipher.rs",
         "received_from_phase": null,
         "symbol": "EVP_EncryptFinal_ex"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_EncryptInit"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_EncryptInit_ex"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_EncryptInit_ex2"
       },
       {
         "declaring_header": "evp.h",
@@ -5958,12 +5693,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "f8c1c9f02de347e5422a125b633d053af91e281f3347f058e3caa5750e6944df"
+      "sha256": "82680bd7257a599ca622c0bb4982cda949072cb13b87890e89e1459ac43c6b30"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "347f00f2c18d8b4c22fbb82f43e2f61d838e4a7dfa6a8bff1f7a6e1eb3022bf4"
+      "sha256": "b8d86a6ace21e6532b7850449d4345be7dc018e7023b076237ab79d887a8674e"
     }
   ],
   "kind": "phase7-obligations",

@@ -83,7 +83,10 @@ const EVP_ORIG_DYNAMIC: c_int = 0;
 const EVP_ORIG_GLOBAL: c_int = 1;
 
 /// `EVP_ORIG_METH` — a method `EVP_CIPHER_meth_new` allocated for a caller.
-const EVP_ORIG_METH: c_int = 2;
+///
+/// `pub(crate)` because `evp_cipher_init_internal` (7.3c-i) is the second place that has to
+/// branch on it, and the constant's value is an authority fact that should be written once.
+pub(crate) const EVP_ORIG_METH: c_int = 2;
 
 /// `OSSL_OP_CIPHER` — `include/openssl/core_dispatch.h`. The second operation the walk visits.
 const OSSL_OP_CIPHER: c_int = 2;

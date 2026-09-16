@@ -798,7 +798,7 @@
           "evp_md_free_int",
           "evp_md_get_number"
         ],
-        "recorded_by": "deferral:evp_cipher_asn1_to_param_ex",
+        "recorded_by": "deferral:evp_md_get_number",
         "subphases": [
           "7.3",
           "7.3b",
@@ -1734,7 +1734,7 @@
       "transcribed_units": 116
     }
   },
-  "body_hash": "aaf6278fcd84152cb005fe4ce389c8acbc02573117c3048e39dee2e7e77f2cea",
+  "body_hash": "b0ae708979620771c120494af93849e198f88c5f3f23c2be5924725dbc26576d",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -1745,22 +1745,22 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "b8e208cfa9fe68aa1b4c1135d324125b68906cc874b857b076d0ad8487d7902b"
+      "sha256": "e68ede816d7b2c1200b976cc17b2773736646520152507cb542b8c93165867a8"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "4c9da98cfac3f52a08eaebdc56c7788c9f848b8bf75085b2ff70a0d6564b8cc0"
+      "sha256": "f915dfc5cec34f1a367920d7a1bc6888d97895eff3bcfe0e3b65152833aca0d6"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "3567d3a3d77834173f9a6f2b13b5bb350949f616dd0ab6dc2520dbc80cb6d1fc"
+      "sha256": "c22bf1934ac697bb169451e07c625ae136ce3d3285c9e00002717b85d1785fdc"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "df4b908f1d48770f517f549bbf7802698db2f32a91d0e49cd68217bd3a67dc7a"
+      "sha256": "e1dabec0d95e71ab622cdcd4f966fe5bbc744d8d521800d8a695ae72e53524a2"
     },
     {
       "name": "source-manifest",
