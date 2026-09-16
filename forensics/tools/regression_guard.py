@@ -264,6 +264,31 @@ def transition_for(phase: str, was: int, now: int, owned_now: int) -> dict | Non
     return None
 
 
+def prerequisite_transition_for(metric: str, was: int, now: int) -> dict | None:
+    """An approved **increase** in a prerequisite-plane count covering exactly that change.
+
+    The same discipline as `transition_for`: a row can bless the change it describes and
+    nothing else -- a larger increase, or a different metric, fails.
+
+    It exists for the case D132 found. The blocking-dependency list is a list of names the
+    gate *observed*, and a name becomes observable when something references it, so landing
+    work can move the count **up** for a reason that is not new work: a whole authority unit
+    that nothing referenced is invisible, and giving it an owner makes it visible. Without
+    this mechanism the invariant would punish exactly the behaviour it wants (a projection
+    that has stopped hiding work), which is the failure D130 found in the language census
+    from the other side.
+    """
+    doc = read_json(TRANSITIONS)
+    if not doc:
+        return None
+    for t in doc.get("prerequisite_transitions", []):
+        if (t.get("metric") == metric
+                and t.get("before") == was
+                and t.get("after") == now):
+            return t
+    return None
+
+
 def phase_transition_for(phase: str, was: str, now: str) -> dict | None:
     """An approved *downward* phase-state correction covering a state change.
 
@@ -448,7 +473,15 @@ def compare(baseline: dict, current: dict) -> tuple[list[str], list[str]]:
                 movements.append(f"prerequisites[{key}]: {was} -> {now}")
             continue
         if now > was:
-            regressions.append(f"prerequisites[{key}]: {was} -> {now} (+{now - was})")
+            t = prerequisite_transition_for(key, was, now)
+            if t is None:
+                regressions.append(
+                    f"prerequisites[{key}]: {was} -> {now} (+{now - was})")
+            else:
+                movements.append(
+                    f"prerequisites[{key}]: {was} -> {now} (+{now - was}), an approved "
+                    f"transition ({t.get('reason', 'no reason')[:80]}... recorded in "
+                    f"{TRANSITIONS})")
         elif now < was:
             movements.append(f"prerequisites[{key}]: {was} -> {now} (-{was - now})")
 

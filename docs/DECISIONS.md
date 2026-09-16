@@ -7387,3 +7387,46 @@ registration.
 | courts / observations | 55 / 20,163 | **55 / 20,177** |
 | blocking dependencies | 29 | **11**, and all of them Phase 7's and Phase 16's |
 | unit tests | 287 | **287** |
+
+## D132 — `core_algorithm.c` is Phase 7's prerequisite, and the reason it was invisible
+
+With the stratum at zero open obligations, one item of the plan remained unbuilt: 6.6f/6.8f,
+the algorithm dispatch walk, which are the same function — `crypto/core_algorithm.c`'s
+`ossl_algorithm_do_all` — assigned to two rows. It is **not** built, and the honest disposition
+is not "implement it now" but "say where it belongs".
+
+Its **only** caller in the authority is `crypto/core_fetch.c`'s `ossl_method_construct`, which is
+the fetch path and therefore Phase 7's. Nothing in this crate references it, so:
+
+* no court could reach it, because a C probe cannot call an internal function that has no entry
+  point and no caller; and
+* no ledger could see it, because the symbol-ownership atlas classifies **exports** and this is
+  not one; and
+* the prerequisite gate did not report it, because the gate's rule is *"every
+  authority-internal name a crate module **references** must be built or recorded with the
+  stratum that owns it"* — and a name that nothing references is invisible to it.
+
+That third point is the finding, and it is the `a2d_ASN1_OBJECT` failure class arriving from the
+other direction. There, a census was too narrow because it looked at prefixes; here, a gate is
+too narrow because it looks at references. A whole authority translation unit can therefore sit
+unnamed while a stratum reports complete, and the only thing that caught it was reading the
+plan against the crate rather than reading either alone.
+
+The disposition is a **deferral with the owner named**, which is the mechanism the project
+already has for exactly this: `ossl_algorithm_do_all` is now a row in
+`forensics/prerequisites.json` owned by Phase 7, with the reason and the citation. The gate
+accepts it, reports it as a blocking dependency, and the blocking list goes 11 → 12 — so the
+function is now **visible** to the machinery whose job is to notice it, which it was not
+before this entry.
+
+What this does **not** change: Phase 6's own completion rule. That rule is *"every export it
+owns is implemented or handed to a named later stratum"*, and it is satisfied — the stratum's
+ledger is at zero open and every export the atlas assigns it is accounted for. The seal's §2 no
+longer lists 6.8f among the built subphases, §6 names it, and
+`docs/PHASE-6-SUBPHASES.md`'s two rows carry the disposition.
+
+The lesson is recorded rather than the mechanism fixed: the gate cannot see a unit no crate
+module transcribes, and a *plan-versus-crate* reconciliation — which subphase rows name work
+that neither a ledger nor a reference reaches — is the check that would catch the next one. It
+is named here as an open obligation rather than built, because building it is a change to the
+gate's own contract and belongs in its own commit with its own evidence.

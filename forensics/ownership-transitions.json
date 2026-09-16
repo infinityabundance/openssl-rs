@@ -76,5 +76,15 @@
       "authority_artifact": "forensics/phase-state.json",
       "recorded_by": "docs/DECISIONS.md D97"
     }
+  ],
+  "prerequisite_transitions": [
+    {
+      "metric": "blocking_dependencies",
+      "before": 11,
+      "after": 12,
+      "reason": "Landing 6.8e/6.6d made `crypto/core_algorithm.c`'s `ossl_algorithm_do_all` visible to the prerequisite gate for the first time. The gate's rule is about names a crate module *references*, and nothing referenced this one -- its only authority caller is `core_fetch.c`'s `ossl_method_construct`, which is Phase 7's -- so a whole translation unit sat unnamed while the stratum was otherwise closed (docs/DECISIONS.md D132). The row added to forensics/prerequisites.json records it as owed to Phase 7. The count rose because a name became *visible*, not because a prerequisite appeared, which is the same class as D130's language census: an invariant that cannot tell a legitimate change from a hidden omission.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D132"
+    }
   ]
 }

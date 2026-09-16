@@ -10,6 +10,7 @@
       "evp_is_a -> phase 7 (Phase 7 owns crypto/evp/evp_fetch.c)",
       "evp_names_do_all -> phase 7 (Phase 7 owns crypto/evp/evp_fetch.c)",
       "evp_set_default_properties_int -> phase 7 (Phase 7 owns crypto/evp/evp_fetch.c)",
+      "ossl_algorithm_do_all -> phase 7 (crypto/core_algorithm.c. Its only authority caller is crypto/core_fetch.c's ossl_method_construct -- the fetch path, which is Phase 7's -- and nothing in this crate references it, so 6.6f/6.8f are the fetch stratum's prerequisite rather than this one's obligation. Recorded here so the deferral is visible to the gate rather than invisible because nothing names it (docs/DECISIONS.md D132).)",
       "ossl_get_enginesdir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads)",
       "ossl_get_openssldir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads; so is its sibling)",
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)"
@@ -328,7 +329,7 @@
     "checked": {
       "authority_units": 112,
       "crate_modules": 152,
-      "deferrals_recorded": 26,
+      "deferrals_recorded": 27,
       "divergence_names_covered": 32,
       "divergence_rows": 5,
       "names_referenced_and_not_built": 17
@@ -452,7 +453,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "88d1d4af2150734393c5a3b011be03feac287b942311a82d3a9ffeb81bfbd1fc",
+  "body_hash": "ebcdaa42196ce15015a523c3c14ddfe542cab53deb8a4d97c2bc7ec88a052125",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -493,7 +494,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "a14f30dbadee9818da3d1506833baa3739e29ed77687d5bfb62529a2613c8d84"
+      "sha256": "fb866e3204363c3d7647cdf4e8d2ea07f2e5f1e0569294a3d49492c41a924a8e"
     },
     {
       "name": "crate-source-tree",
