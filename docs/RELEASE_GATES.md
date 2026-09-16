@@ -134,6 +134,38 @@ OpenSSL 4.x is a major-family transition and gets a **new compatibility
 profile**. An OpenSSL 3 receipt is never silently reinterpreted as evidence for
 OpenSSL 4.
 
+### Cutting a release of this crate
+
+A release is a **sequence**, and one step of it is not optional: the crate version
+is an input to generated evidence. Written down here because the first 0.0.10
+attempt skipped step 3 and the `static gates` job's
+`gen_frf_courts.py --check` is what caught it — the gate working, and a reminder
+that a gate is not a procedure.
+
+1. Land the stratum on `main` with the pipeline green (`court/pipeline.sh`, or the
+   two CI jobs, which run the same steps).
+2. Bump `version` in `Cargo.toml` **and** regenerate `Cargo.lock`, which records the
+   crate's own version. `cargo publish --dry-run` refuses a dirty tree, which is how
+   the second file was found.
+3. Re-run every generator whose output carries the version:
+   `python3 forensics/tools/gen_frf_courts.py`. Each court's `version_or_commit` comes
+   from `Cargo.toml` through this tool, deliberately — the alternative is 43 YAML
+   files edited by hand at every release, and the tool's `--check` is the guard that
+   makes skipping it a failure rather than a silent lie. `grep -rl "$(cargo metadata
+   --format-version 1 --no-deps | python3 -c 'import json,sys;
+   print(json.load(sys.stdin)["packages"][0]["version"])')" .` lists the carriers.
+4. `python3 forensics/tools/gen_frf_courts.py --check` and `cargo fmt --all --
+   --check` locally, so the release commit is green on its own account rather than
+   on the strength of CI.
+5. Push, and let `main` go green. A red `main` is not a state this project keeps.
+6. `cargo publish --dry-run`, then `cargo publish`, with `CARGO_TARGET_DIR` outside
+   the repository so the packaging target directory does not collide with the
+   crate's own.
+
+OpenSSL 4.x is a major-family transition and gets a **new compatibility
+profile**. An OpenSSL 3 receipt is never silently reinterpreted as evidence for
+OpenSSL 4.
+
 ## 9. Definition of success
 
 The project is successful when, for explicitly stated authority versions, build
