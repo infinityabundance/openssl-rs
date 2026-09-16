@@ -130,133 +130,53 @@ def evidence_for(phase: int) -> tuple[list[str], list[str], str]:
                 blocking = f"courts not passing: {failed}"
         return present, absent, blocking
 
-    if phase == 3:
-        for d in PHASE3_MODULES:
-            (present if exists(d) else absent).append(d)
-        ledger = read_json(PHASE3_OBLIGATIONS)
-        if ledger:
-            present.append(PHASE3_OBLIGATIONS)
-            body3 = ledger["body"]
-            open_count = body3["counts"]["open_in_this_stratum"]
-            if open_count:
-                blocking = (
-                    f"{open_count} open obligation(s) of this stratum recorded in "
-                    f"{PHASE3_OBLIGATIONS}; a stratum cannot be complete while any "
-                    f"export it owns is neither implemented nor handed to a later "
-                    f"phase. The ledger reads its universe from the ownership "
-                    f"atlas, so this is no longer a question of which prefixes its "
-                    f"families happened to list (docs/DECISIONS.md D97)"
-                )
-        else:
-            absent.append(PHASE3_OBLIGATIONS)
-        courts = read_json(PHASE3_COURTS)
-        if courts:
-            present.append(PHASE3_COURTS)
-            failed = [c["court"] for c in courts["body"]["courts"]
-                      if c["verdict"] != "pass"]
-            if failed:
-                blocking = f"Phase 3 courts not passing: {failed}"
-        else:
-            absent.append(PHASE3_COURTS)
-        return present, absent, blocking
+    # Strata 3 and later are one rule, not five.
+    #
+    # Until Phase 7 the same thirty lines appeared once per stratum, differing only in the
+    # phase number and two path constants. That is the failure mode this project keeps
+    # removing: adding a stratum meant remembering to add a sixth copy, and a stratum whose
+    # copy was forgotten would have been derived `not-started` while its modules existed --
+    # which is precisely the understatement the Phase 4, 5 and 6 comments each record having
+    # happened once. The rule is now one function over `STRATUM_EVIDENCE`, so a new stratum is
+    # a table row and cannot be half-added, and the only per-stratum choice left is the two
+    # paths its plan owns.
+    ev = STRATUM_EVIDENCE.get(phase)
+    if ev is None:
+        return present, absent, "not started"
 
-    if phase == 4:
-        for d in PHASE4_MODULES:
-            (present if exists(d) else absent).append(d)
-        ledger = read_json(PHASE4_OBLIGATIONS)
-        if ledger:
-            present.append(PHASE4_OBLIGATIONS)
-            body4 = ledger["body"]
-            open_count = body4["counts"]["open_in_this_stratum"]
-            if open_count:
-                blocking = (
-                    f"{open_count} open obligation(s) of this stratum recorded in "
-                    f"{PHASE4_OBLIGATIONS}; a stratum cannot be complete while any "
-                    f"export it owns is neither implemented nor handed to a later "
-                    f"phase"
-                )
-        else:
-            absent.append(PHASE4_OBLIGATIONS)
-        courts = read_json(PHASE4_COURTS)
-        if courts:
-            present.append(PHASE4_COURTS)
-            failed = [c["court"] for c in courts["body"]["courts"]
-                      if c["verdict"] != "pass"]
-            if failed:
-                blocking = f"Phase 4 courts not passing: {failed}"
-        else:
-            # Missing courts are a blocker, not evidence of a phase that has not
-            # begun: the modules exist, so the stratum is under way and the gap is
-            # what must be closed. Listing it as absent would report `not-started`
-            # and understate the recorded work.
-            blocking = blocking or f"no Phase 4 courts yet ({PHASE4_COURTS} absent)"
-        return present, absent, blocking
-
-    if phase == 6:
-        for d in PHASE6_MODULES:
-            (present if exists(d) else absent).append(d)
-        ledger = read_json(PHASE6_OBLIGATIONS)
-        if ledger:
-            present.append(PHASE6_OBLIGATIONS)
-            body6 = ledger["body"]
-            open_count = body6["counts"]["open_in_this_stratum"]
-            if open_count:
-                blocking = (
-                    f"{open_count} open obligation(s) of this stratum recorded in "
-                    f"{PHASE6_OBLIGATIONS}; a stratum cannot be complete while any "
-                    f"export it owns is neither implemented nor handed to a later "
-                    f"phase"
-                )
-        else:
-            absent.append(PHASE6_OBLIGATIONS)
-        courts = read_json(PHASE6_COURTS)
-        if courts:
-            present.append(PHASE6_COURTS)
-            failed = [c["court"] for c in courts["body"]["courts"]
-                      if c["verdict"] != "pass"]
-            if failed:
-                blocking = f"Phase 6 courts not passing: {failed}"
-        else:
-            # As for Phase 4 and 5: a missing court file is a blocker once the
-            # modules exist, not evidence that the stratum has not begun. Phase 6's
-            # modules landed before `RT-PARAM` did, and reporting `not-started` then
-            # would have understated a stratum with 81 implemented exports in it.
-            blocking = blocking or f"no Phase 6 courts yet ({PHASE6_COURTS} absent)"
-        return present, absent, blocking
-
-    if phase == 5:
-        for d in PHASE5_MODULES:
-            (present if exists(d) else absent).append(d)
-        ledger = read_json(PHASE5_OBLIGATIONS)
-        if ledger:
-            present.append(PHASE5_OBLIGATIONS)
-            body5 = ledger["body"]
-            open_count = body5["counts"]["open_in_this_stratum"]
-            if open_count:
-                blocking = (
-                    f"{open_count} open obligation(s) of this stratum recorded in "
-                    f"{PHASE5_OBLIGATIONS}; a stratum cannot be complete while any "
-                    f"export it owns is neither implemented nor handed to a later "
-                    f"phase"
-                )
-        else:
-            absent.append(PHASE5_OBLIGATIONS)
-        courts = read_json(PHASE5_COURTS)
-        if courts:
-            present.append(PHASE5_COURTS)
-            failed = [c["court"] for c in courts["body"]["courts"]
-                      if c["verdict"] != "pass"]
-            if failed:
-                blocking = f"Phase 5 courts not passing: {failed}"
-        else:
-            # Missing courts are a blocker, not evidence of a phase that has not
-            # begun: the modules exist, so the stratum is under way and the gap is
-            # what must be closed. Listing it as absent would report `not-started`
-            # and understate the recorded work.
-            blocking = blocking or f"no Phase 5 courts yet ({PHASE5_COURTS} absent)"
-        return present, absent, blocking
+    for d in ev.modules:
+        (present if exists(d) else absent).append(d)
+    ledger = read_json(ev.ledger)
+    if ledger:
+        present.append(ev.ledger)
+        open_count = ledger["body"]["counts"]["open_in_this_stratum"]
+        if open_count:
+            blocking = (
+                f"{open_count} open obligation(s) of this stratum recorded in "
+                f"{ev.ledger}; a stratum cannot be complete while any export it owns is "
+                f"neither implemented nor handed to a later phase"
+                + (f". {ev.ledger_note}" if ev.ledger_note else "")
+            )
+    else:
+        absent.append(ev.ledger)
+    courts = read_json(ev.courts)
+    if courts:
+        present.append(ev.courts)
+        failed = [c["court"] for c in courts["body"]["courts"] if c["verdict"] != "pass"]
+        if failed:
+            blocking = f"Phase {phase} courts not passing: {failed}"
+    else:
+        # A missing court file is a blocker once the modules exist, not evidence that the
+        # stratum has not begun. This was Phase 3's rule and is now every stratum's: the
+        # alternative -- listing the courts as absent -- reports `not-started` and
+        # understates a stratum whose modules have landed, which is the mistake the Phase 4,
+        # 5 and 6 comments each record being made once by hand.
+        blocking = blocking or f"no Phase {phase} courts yet ({ev.courts} absent)"
+    return present, absent, blocking
 
     return present, absent, "not started"
+
+
 
 
 # Phase 3 evidence: the core-runtime modules, the differential courts that
@@ -532,6 +452,85 @@ PHASE6_MODULES = [
 ]
 
 
+class StratumEvidence:
+    """One stratum's evidence: what its plan claims, and where its ledger and courts are.
+
+    Deliberately data. The rule that reads it is a single function, so a stratum that is
+    added to the phase registry without a row here is derived `not-started` however much
+    evidence it carries -- which is why `main` fails when a phase the registry lists at 3 or
+    later has no row, and prints which ones.
+    """
+
+    __slots__ = ("modules", "ledger", "courts", "ledger_note")
+
+    def __init__(self, modules, ledger, courts, ledger_note=""):
+        self.modules = modules
+        self.ledger = ledger
+        self.courts = courts
+        self.ledger_note = ledger_note
+
+
+# Phase 7's evidence: the EVP framework's modules, its ledger and its courts. Its plan is
+# `docs/PHASE-7-SUBPHASES.md`, and 7.0 landed the ledger while the stratum itself is still
+# entirely open, which is the honest starting state and is what that plan's §2 records.
+PHASE7_COURTS = "artifacts/phase7/COURTS.json"
+PHASE7_OBLIGATIONS = "forensics/phase7-obligations.json"
+PHASE7_MODULES = [
+    "docs/PHASE-7-SUBPHASES.md",
+    # 7.1/7.2 -- the fetch layer and the method stores.
+    "src/evp/mod.rs",
+    "src/evp/fetch.rs",
+    "src/evp/method_store.rs",
+    # 7.3 -- the symmetric method objects and their legacy wrappers.
+    "src/evp/cipher.rs",
+    "src/evp/digest.rs",
+    "src/evp/mac.rs",
+    "src/evp/kdf.rs",
+    "src/evp/rand.rs",
+    "src/evp/skeymgmt.rs",
+    "src/evp/legacy_cipher.rs",
+    "src/evp/legacy_digest.rs",
+    "src/evp/legacy_evp.rs",
+    # 7.4 -- the EVP_PKEY layer and the ASN.1 glue declared in `evp.h`.
+    "src/evp/pkey.rs",
+    "src/evp/pkey_ctx.rs",
+    "src/evp/pkey_asn1.rs",
+    "src/evp/pbe.rs",
+    "src/evp/params_translate.rs",
+    "src/evp/signature.rs",
+    "src/evp/asymcipher.rs",
+    "src/evp/kem.rs",
+    "src/evp/exchange.rs",
+    "src/evp/keymgmt.rs",
+    # 7.5 -- the BIO, encoding and PEM bridges.
+    "src/evp/bio_enc.rs",
+    "src/evp/encode.rs",
+    "src/evp/p_legacy.rs",
+    "src/evp/pem_bridge.rs",
+    # 7.6 -- the MAC, KDF and HPKE header surfaces.
+    "src/mac/mod.rs",
+    "src/mac/hmac.rs",
+    "src/mac/cmac.rs",
+    "src/hpke/mod.rs",
+    "forensics/tools/phase7_courts.py",
+    "forensics/tools/phase7_obligations.py",
+    "courts/phase7/rt_fetch_probe.c",
+]
+
+STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
+    3: StratumEvidence(PHASE3_MODULES, PHASE3_OBLIGATIONS, PHASE3_COURTS,
+                       ledger_note=(
+                           "The ledger reads its universe from the ownership atlas, so "
+                           "this is no longer a question of which prefixes its families "
+                           "happened to list (docs/DECISIONS.md D97)"
+                       )),
+    4: StratumEvidence(PHASE4_MODULES, PHASE4_OBLIGATIONS, PHASE4_COURTS),
+    5: StratumEvidence(PHASE5_MODULES, PHASE5_OBLIGATIONS, PHASE5_COURTS),
+    6: StratumEvidence(PHASE6_MODULES, PHASE6_OBLIGATIONS, PHASE6_COURTS),
+    7: StratumEvidence(PHASE7_MODULES, PHASE7_OBLIGATIONS, PHASE7_COURTS),
+}
+
+
 def seal_identity(doc: str) -> str | None:
     p = REPO_ROOT / doc
     return sha256_file(p) if p.exists() else None
@@ -557,16 +556,56 @@ def deferred_rows(phase: int) -> list[str]:
 
 
 def main() -> int:
+    # Every stratum that has *any* of the three artefacts a stratum's evidence is built from
+    # must have a row, or it would be derived `not-started` however much of that evidence is
+    # on disk. The check reads the filesystem rather than `STRATA`, because reading the
+    # registry would make it tautological: every phase is in the registry from the day it is
+    # planned, including the fifteen nothing has been written for. A phase is *started* when a
+    # plan, a ledger or a court file exists, and that is a fact about the tree.
+    #
+    # This is the one place a stratum's existence is discovered rather than declared, and it
+    # runs on every invocation rather than being asserted in prose.
+    started_without_a_row = [
+        phase for phase, _n, _s in STRATA
+        if phase >= 3
+        and phase not in STRATUM_EVIDENCE
+        and (
+            exists(f"docs/PHASE-{phase}-SUBPHASES.md")
+            or exists(f"forensics/phase{phase}-obligations.json")
+            or exists(f"artifacts/phase{phase}/COURTS.json")
+        )
+    ]
+    if started_without_a_row:
+        print(
+            f"[phase-state] fatal: {started_without_a_row} have evidence on disk but no "
+            f"STRATUM_EVIDENCE row, so they would be derived `not-started` despite it. "
+            f"Add the row rather than the state: `forensics/STATUS.md` is generated and "
+            f"docs/DECISIONS.md D138 is why.",
+            file=sys.stderr,
+        )
+        return 1
+
     rows = []
     earlier_incomplete: int | None = None
     for phase, name, stratum in STRATA:
         present, absent, blocking = evidence_for(phase)
-        has_evidence = bool(present)
-        if not has_evidence:
+        # **A stratum with any evidence is under way, and `absent` does not say otherwise.**
+        #
+        # This used to read `elif absent: state = "not-started"`, which meant a stratum whose
+        # plan and ledger had landed but whose modules had not was reported as never started.
+        # The Phase 4, 5 and 6 notes each record that mistake being made once by hand for the
+        # *court* item and being fixed for that item alone; the same reasoning applies to every
+        # other piece of evidence, so it is applied once here instead. What is missing is
+        # reported in `blocking` and listed in `evidence_absent`, so the state is not weaker
+        # for the change -- it is `in-progress`, which is what a stratum with a ledger is.
+        if not present:
             state = "not-started"
         elif absent:
-            state = "not-started"
-            blocking = blocking or "required evidence missing"
+            state = "in-progress"
+            blocking = blocking or (
+                f"{len(absent)} required evidence file(s) absent, the first being "
+                f"{absent[0]}"
+            )
         elif blocking:
             state = "in-progress"
         else:
