@@ -158,7 +158,12 @@ would make the authority's behaviour reachable.
    recorded deferral owned by Phase 7 (`forensics/prerequisites.json`, D132), which is where a
    name that nothing can yet call belongs. The alternative — leaving it unnamed because nothing
    names it — is the `a2d_ASN1_OBJECT` failure class arriving from the other direction, and it
-   is the reason this seal says so instead of staying silent.
+   is the reason this seal says so instead of staying silent. **The check that D132 named as
+   the open obligation is now built** (D134): `forensics/tools/plan_reconciliation.py` reads
+   the subphase plans instead of the crate's references, so a unit a stratum's plan promises
+   and nothing reaches is a failure rather than a thing only a careful reader notices. It is
+   what named `crypto/core_fetch.c`, `crypto/rand/rand_lib.c` and
+   `providers/legacy/legacyprov.c` alongside this one.
 10. **Every count is `docs/SEAL-CENSUS.md`'s.** This document types none of them.
 
 ## 7. Exit criteria
@@ -168,6 +173,7 @@ would make the authority's behaviour reachable.
 | every export the stratum owns is implemented or handed to a named later stratum | `forensics/phase6-obligations.json`: `open_in_this_stratum` = 0 |
 | every implemented export is observed by a differential court | `artifacts/phase6/COURTS.json`, 8 courts, `all_pass` |
 | every internal function a transcribed unit calls is built or owed to a stratum | `forensics/atlas/prerequisite-gate.json`: `findings` = 0 |
+| every authority unit and internal function the stratum's plan names is reached | `forensics/atlas/plan-reconciliation.json`: `findings` = 0 |
 | every implemented export's Rust declaration matches the authority's C prototype | `forensics/atlas/prototype-court.json` |
 | the three earlier strata are complete, which the rule requires | `forensics/phase-state.json` |
 | the stratum's own structure is reconciled against its ledger | `forensics/atlas/ownership-audit.json`, cross-ledger double counts = 0 |

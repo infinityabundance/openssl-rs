@@ -6,7 +6,8 @@
   "body": {
     "rule": [
       "deferrals: a name the crate references, or an authority unit calls, that no stratum has built yet. A row needs the stratum that will build it, a reason, and an evidence citation that can be read. A deferral is discharged by building the name, at which point the gate reports it as stale until the row is removed.",
-      "divergences: a name an authority unit calls that the crate deliberately does not, with the class of the difference and the reason. `covers` is exact in both directions."
+      "divergences: a name an authority unit calls that the crate deliberately does not, with the class of the difference and the reason. `covers` is exact in both directions.",
+      "units: an authority translation unit a subphase plan names, which no transcription edge, no built internal function, no referenced identifier and no symbol record reaches. Each row carries a class from a fixed set, and the class names the fields the row must prove, so the row can be falsified rather than believed. Forensics tools plan_reconciliation.py is the reader, and it also reports a row that covers a unit no plan row names."
     ],
     "deferrals": [
       {
@@ -61,7 +62,8 @@
         "symbol": "ossl_algorithm_do_all",
         "owner_phase": 7,
         "reason": "crypto/core_algorithm.c. Its only authority caller is crypto/core_fetch.c's ossl_method_construct -- the fetch path, which is Phase 7's -- and nothing in this crate references it, so 6.6f/6.8f are the fetch stratum's prerequisite rather than this one's obligation. Recorded here so the deferral is visible to the gate rather than invisible because nothing names it (docs/DECISIONS.md D132).",
-        "evidence": "docs/PHASE-6-PROVIDER-SEAL.md section 6"
+        "evidence": "docs/PHASE-6-PROVIDER-SEAL.md section 6",
+        "authority_unit": "crypto/core_algorithm.c"
       },
       {
         "symbol": "ossl_ctx_global_properties",
@@ -170,6 +172,26 @@
         "owner_phase": 6,
         "reason": "Phase 6.7c/6.8: the method store's lock discipline",
         "evidence": "src/property/globals.rs module doc"
+      },
+      {
+        "symbol": "ossl_method_construct",
+        "owner_phase": 7,
+        "authority_unit": "crypto/core_fetch.c",
+        "reason": "crypto/core_fetch.c's fetch path. Subphase rows 6.6f and 6.8f name it as the caller that makes `ossl_algorithm_do_all` the fetch stratum's prerequisite rather than this one's, so this row is the other half of D132: the file is named by a complete stratum's plan and nothing in this stratum builds it.",
+        "evidence": "docs/DECISIONS.md D132 and D133; docs/PHASE-6-PROVIDER-SEAL.md section 6"
+      },
+      {
+        "symbol": "ossl_random_add_conf_module",
+        "owner_phase": 9,
+        "reason": "One of the seven modules `OPENSSL_load_builtin_modules` registers. It is Phase 9's because it lives in crypto/rand/rand_lib.c, and the fan-out's residual -- six of the seven absent -- is already recorded in the Phase 6 subphase plan and the seal; this row is what makes the name visible to the gate rather than only to a reader.",
+        "evidence": "docs/PHASE-6-SUBPHASES.md row 6.10 (the fan-out residual)"
+      },
+      {
+        "symbol": "OSSL_provider_init",
+        "owner_phase": 13,
+        "authority_unit": "providers/legacy-dso-legacyprov.c",
+        "reason": "providers/legacy/legacyprov.c's entry point, and the name a third-party provider's own entry point is declared with -- which is why subphase rows 6.8d and 6.12 name it, since the `providers` configuration module needs a module path and RT-PROVIDER-3P compiles its own. The authority symbol is the legacy provider's, so it is Phase 13's.",
+        "evidence": "docs/PHASE-6-SUBPHASES.md rows 6.8d and 6.12"
       }
     ],
     "divergences": [
@@ -244,6 +266,113 @@
         ],
         "note": "Each of these is a name the authority's *non-installed* headers introduce -- `#define F(x)` in crypto/md4/md4_local.h and crypto/sha/sha_local.h, `u8`/`u16`/`u32`/`u64` in crypto/aes/aes_local.h, macro-body and parameter names in include/internal/list.h, quic_*.h and sha3.h, and `sleep` in include/internal/e_os.h, which is EINTR-retry shim over the C library's -- and each also appears in this crate as an ordinary Rust identifier: a generic parameter, a local binding, a width alias, or a word inside a doc comment. A lexical scan of either side cannot separate those two facts, which is why this is a recorded class rather than a narrower matcher: a matcher tuned to drop `u8` would also drop a real collision. The gate holds the list exact, so a new member has to be looked at.",
         "evidence": "forensics/atlas/macro-owners.json (defined_in for each name); the gate's first-run report, recorded in docs/DECISIONS.md D123"
+      }
+    ],
+    "units": [
+      {
+        "unit": "crypto/provider.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/mod.rs",
+        "names": [
+          "OSSL_PROVIDER_add_builtin",
+          "OSSL_PROVIDER_add_conf_parameter",
+          "OSSL_PROVIDER_available",
+          "OSSL_PROVIDER_conf_get_bool",
+          "OSSL_PROVIDER_do_all",
+          "OSSL_PROVIDER_get0_default_search_path",
+          "OSSL_PROVIDER_get0_dispatch",
+          "OSSL_PROVIDER_get0_name",
+          "OSSL_PROVIDER_get0_provider_ctx",
+          "OSSL_PROVIDER_get_capabilities",
+          "OSSL_PROVIDER_get_conf_parameters",
+          "OSSL_PROVIDER_get_params",
+          "OSSL_PROVIDER_gettable_params",
+          "OSSL_PROVIDER_load",
+          "OSSL_PROVIDER_load_ex",
+          "OSSL_PROVIDER_query_operation",
+          "OSSL_PROVIDER_self_test",
+          "OSSL_PROVIDER_set_default_search_path",
+          "OSSL_PROVIDER_try_load",
+          "OSSL_PROVIDER_try_load_ex",
+          "OSSL_PROVIDER_unload",
+          "OSSL_PROVIDER_unquery_operation"
+        ],
+        "reason": "`crypto/provider.c` is the twenty-two `OSSL_PROVIDER_*` exports and nothing else -- it has no authority-internal function of its own -- so internal-symbols.json records zero names for it and transcription-edges.json attributes the module that defines them to `crypto/provider_core.c`, which dominates it. The unit is therefore reached and cannot be seen to be reached by any of the three mechanical signals, so the whole export list is named here and the claim is checkable: plan_reconciliation.py fails this row if any of the twenty-two is not in the implemented surface.",
+        "evidence": "docs/PHASE-6-SUBPHASES.md row 6.8; forensics/phase6-obligations.json"
+      },
+      {
+        "unit": "crypto/provider_predefined.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/mod.rs",
+        "names": [
+          "PREDEFINED_PROVIDERS"
+        ],
+        "reason": "The file's content is `ossl_predefined_providers` -- a variable and not a function -- so internal-symbols.json has the name but the crate spells it `PREDEFINED_PROVIDERS` and no lexical signal pairs them. Named here so the claim is explicit rather than resting on a reader's memory.",
+        "evidence": "docs/PHASE-6-SUBPHASES.md rows 6.8 and 6.8b; src/provider/mod.rs"
+      },
+      {
+        "unit": "crypto/conf/conf_mall.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/runtime/confmod/mod.rs",
+        "names": [
+          "OPENSSL_load_builtin_modules"
+        ],
+        "reason": "The file is a single configuration-module list -- `ossl_config_modules[]`, a variable -- and the function that walks it, `OPENSSL_load_builtin_modules`. internal-symbols.json records neither, because the first is a variable and the second is an export. The exported half is named here, and it is what RT-CONF-MOD observes.",
+        "evidence": "docs/PHASE-6-SUBPHASES.md row 6.10 (6.10c); docs/DECISIONS.md D127"
+      },
+      {
+        "unit": "crypto/dso/dso_err.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/runtime/err_loaders.rs",
+        "names": [
+          "ERR_load_DSO_strings"
+        ],
+        "reason": "The file's only function is `ossl_err_load_DSO_strings`, which is not an export: the public `ERR_load_DSO_strings` is `crypto/err/err_all.c`'s wrapper around it. This crate transcribes the wrapper and inlines the table load, so the internal name is built by nothing while the behaviour is fully present. Recorded as reached rather than deferred, because a deferral would be false, and the same disposition holds for every `*_err.c` whose loader is generated.",
+        "evidence": "src/runtime/err_loaders.rs (generated by forensics/tools/gen_err_strings.py)"
+      },
+      {
+        "unit": "crypto/property/property_err.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/runtime/err.rs",
+        "names": [
+          "load_lib"
+        ],
+        "reason": "The same shape as `crypto/dso/dso_err.c` with one more difference: the property library has no public `ERR_load_*_strings` at all -- `crypto/err/err_all.c` calls `ossl_err_load_PROP_strings()` directly -- so there is no export to name either. What reaches the unit is the shared loader that every one of those direct calls in err_all.c becomes, plus the reason-code table the generated module carries for `ERR_LIB_PROP`.",
+        "evidence": "src/runtime/err.rs (load_lib); src/runtime/err_loaders.rs (generated); src/runtime/err_reasons.rs (the PROP section)"
+      },
+      {
+        "unit": "crypto/dso/dso_openssl.c",
+        "class": "not_in_this_profile",
+        "guard": "#ifdef DSO_NONE, which is the file's entire content, against dso_scheme=dlfcn in this profile's configdata.pm",
+        "reason": "The whole file sits inside `#ifdef DSO_NONE`, the branch taken when no dynamic loader is available; this profile builds with `dlfcn`, so the translation unit compiles to nothing and there is nothing to reach. `crypto/dso/build.info` lists it unconditionally, which is why reading the build file alone cannot settle this -- the guard is named rather than described.",
+        "evidence": "crypto/dso/dso_openssl.c (the guard); docs/PHASE-6-SUBPHASES.md row 6.9"
+      },
+      {
+        "unit": "crypto/rcu.c",
+        "class": "does_not_exist_in_this_authority",
+        "reason": "The name appears in the plan only to say it is not where RCU lives: *\"RCU's implementation for this profile is in `crypto/threads_pthread.c` -- there is no `crypto/rcu.c`\"*. The row therefore names a file that does not exist in order to record a reconnaissance finding, and the tool's \"names a file the authority does not have\" check is right about the fact and wrong about the intent. Recorded rather than reworded, because the sentence is worth keeping and the check must keep firing on any *other* row that invents a file. plan_reconciliation.py verifies the absence against the committed manifest, so this row fails the moment the file appears.",
+        "evidence": "docs/PHASE-6-SUBPHASES.md row 6.10; docs/DECISIONS.md D118 and D122"
+      },
+      {
+        "unit": "crypto/async/async.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Row 6.10 names it because it shares `CRYPTO_THREAD_get_local_ex` with the per-context thread-local family, and that sharing is why 6.10a had to land the family. The file itself is the async job framework, which is Phase 13's: every in-tree caller is an asynchronous engine or the SSL async API. `OPENSSL_NO_ASYNC` is not defined in this profile, so this is real functionality waiting for a real dependent rather than a stub.",
+        "evidence": "docs/PHASE-6-SUBPHASES.md section 2 (\"Why ASYNC_* is deferred to Phase 13\"); forensics/phase3-obligations.json's ASYNC_* hand-off"
+      },
+      {
+        "unit": "crypto/rand/rand_lib.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 9,
+        "reason": "Also named by row 6.10 for the shared thread-local family. Its own content is the RAND state and the DRBG plumbing, which is Phase 9's; the one internal 6.10 cares about, `ossl_random_add_conf_module`, is one of the seven registrations `OPENSSL_load_builtin_modules` makes and is recorded separately as a symbol deferral.",
+        "evidence": "docs/PHASE-6-SUBPHASES.md row 6.10; forensics/phase-state.json phase 9"
+      },
+      {
+        "unit": "crypto/rsa/rsa_ossl.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 8,
+        "reason": "Named by row 6.10 only as another sharer of `CRYPTO_THREAD_get_local_ex`. The file is RSA's provider-side implementation and belongs to the algorithm stratum.",
+        "evidence": "docs/PHASE-6-SUBPHASES.md row 6.10; forensics/phase-state.json phase 8"
       }
     ]
   }

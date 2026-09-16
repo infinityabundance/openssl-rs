@@ -279,7 +279,7 @@
     "9": "not-started"
   },
   "prerequisites": {
-    "blocking_dependencies": 12,
+    "blocking_dependencies": 15,
     "divergence_names_covered": 32,
     "findings": 0,
     "language_census": 2085,

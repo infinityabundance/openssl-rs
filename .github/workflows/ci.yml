@@ -140,6 +140,17 @@ jobs:
       - name: Prerequisite coverage
         run: python3 forensics/tools/prerequisite_gate.py
 
+      # The other half of the same question, and the one D132 fell through. The gate above
+      # asks whether every name the crate *references* has an owner; a name nothing
+      # references is invisible to it, and `crypto/core_algorithm.c` was exactly that --
+      # named by two subphase rows of a stratum about to seal, unbuilt, and reaching no
+      # check at all. This reads the subphase plans instead, so the universe is what a
+      # stratum *promises* rather than what the crate mentions. Every unit and every
+      # authority-internal function a complete or in-progress plan names must be
+      # transcribed, built, referenced or named by an explicit record.
+      - name: Plan reconciliation
+        run: python3 forensics/tools/plan_reconciliation.py
+
       # The prerequisite atlases are derived from the authority's source and build
       # trees, which are not committed. Weak tier: the committed artefacts are checked
       # for internal consistency here, and the `courts` job re-derives them from the

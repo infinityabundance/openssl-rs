@@ -85,6 +85,14 @@
       "reason": "Landing 6.8e/6.6d made `crypto/core_algorithm.c`'s `ossl_algorithm_do_all` visible to the prerequisite gate for the first time. The gate's rule is about names a crate module *references*, and nothing referenced this one -- its only authority caller is `core_fetch.c`'s `ossl_method_construct`, which is Phase 7's -- so a whole translation unit sat unnamed while the stratum was otherwise closed (docs/DECISIONS.md D132). The row added to forensics/prerequisites.json records it as owed to Phase 7. The count rose because a name became *visible*, not because a prerequisite appeared, which is the same class as D130's language census: an invariant that cannot tell a legitimate change from a hidden omission.",
       "authority_artifact": "forensics/prerequisites.json",
       "recorded_by": "docs/DECISIONS.md D132"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 12,
+      "after": 15,
+      "reason": "The plan-versus-crate reconciliation (docs/DECISIONS.md D134) named three authority symbols that a complete stratum's subphase rows promise and nothing builds or records: `ossl_method_construct` in `crypto/core_fetch.c` (the other half of D132 -- rows 6.6f and 6.8f name it as the caller that makes `ossl_algorithm_do_all` Phase 7's prerequisite), `ossl_random_add_conf_module` in `crypto/rand/rand_lib.c` (one of the seven `OPENSSL_load_builtin_modules` registrations, Phase 9's), and `OSSL_provider_init` in `providers/legacy/legacyprov.c` (Phase 13's, named by rows 6.8d and 6.12 because a third-party provider declares one). All three are owed to strata that have not started, so each is a blocking dependency by the gate's rule. The count rose because three names became *visible*, not because three new prerequisites appeared -- the same class as D132's 11 -> 12 and D130's language census: an invariant that cannot tell a legitimate change from a hidden omission.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D134"
     }
   ]
 }

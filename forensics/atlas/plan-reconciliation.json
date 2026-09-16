@@ -1,0 +1,773 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "checked": {
+      "plans_read": [
+        "docs/PHASE-5-SUBPHASES.md",
+        "docs/PHASE-6-SUBPHASES.md"
+      ],
+      "rows_judged": 41,
+      "symbols_named_by_a_row": 44,
+      "symbols_reached": 44,
+      "unit_records": 10,
+      "units_named_by_a_record": 13,
+      "units_named_by_a_row": 43,
+      "units_reached": 43
+    },
+    "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
+    "counts": {},
+    "findings": [],
+    "judged_states": [
+      "complete",
+      "in-progress"
+    ],
+    "promised_units": {
+      "crypto/asn1/asn_mime.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "5.4",
+          "5.8"
+        ],
+        "transcribed_by": [
+          "src/asn1/asn_mime.rs"
+        ]
+      },
+      "crypto/asn1/tasn_typ.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "5.3"
+        ],
+        "transcribed_by": [
+          "src/asn1/typ.rs"
+        ]
+      },
+      "crypto/async/async.c": {
+        "defines": [
+          "async_deinit",
+          "async_get_ctx",
+          "async_init",
+          "async_start_func"
+        ],
+        "recorded_by": "units:crypto/async/async.c",
+        "subphases": [
+          "6.10"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/bio/bss_core.c": {
+        "defines": [
+          "ossl_bio_core_globals_free",
+          "ossl_bio_core_globals_new",
+          "ossl_bio_init_core"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "6.6c"
+        ],
+        "transcribed_by": [
+          "src/context/core_bio.rs"
+        ]
+      },
+      "crypto/conf/conf_api.c": {
+        "defines": [
+          "_CONF_add_string",
+          "_CONF_free_data",
+          "_CONF_get_section",
+          "_CONF_get_section_values",
+          "_CONF_get_string",
+          "_CONF_new_data",
+          "_CONF_new_section"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "6.10"
+        ],
+        "transcribed_by": [
+          "src/runtime/conf/api.rs"
+        ]
+      },
+      "crypto/conf/conf_mall.c": {
+        "defines": [],
+        "recorded_by": "units:crypto/conf/conf_mall.c",
+        "subphases": [
+          "6.10"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/conf/conf_mod.c": {
+        "defines": [
+          "ossl_config_modules_free"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "6.10"
+        ],
+        "transcribed_by": [
+          "src/runtime/conf/modparse.rs",
+          "src/runtime/confmod/mod.rs"
+        ]
+      },
+      "crypto/conf/conf_sap.c": {
+        "defines": [
+          "ossl_config_int",
+          "ossl_no_config_int"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "6.10"
+        ],
+        "transcribed_by": [
+          "src/runtime/conf/sap.rs"
+        ]
+      },
+      "crypto/conf/conf_ssl.c": {
+        "defines": [
+          "ossl_config_add_ssl_module"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "6.10"
+        ],
+        "transcribed_by": [
+          "src/runtime/conf/conf_ssl.rs"
+        ]
+      },
+      "crypto/context.c": {
+        "defines": [
+          "ossl_lib_ctx_default_deinit",
+          "ossl_lib_ctx_get_concrete",
+          "ossl_lib_ctx_get_data",
+          "ossl_lib_ctx_get_descriptor",
+          "ossl_lib_ctx_get_ex_data_global",
+          "ossl_lib_ctx_is_child",
+          "ossl_lib_ctx_is_default",
+          "ossl_lib_ctx_is_global_default",
+          "ossl_lib_ctx_read_lock",
+          "ossl_lib_ctx_unlock",
+          "ossl_lib_ctx_write_lock",
+          "ossl_release_default_drbg_ctx"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "6.6"
+        ],
+        "transcribed_by": [
+          "src/context/mod.rs"
+        ]
+      },
+      "crypto/core_algorithm.c": {
+        "defines": [
+          "ossl_algorithm_do_all",
+          "ossl_algorithm_get1_first_name"
+        ],
+        "recorded_by": "deferral:ossl_algorithm_do_all",
+        "subphases": [
+          "6.6",
+          "6.6f",
+          "6.8f"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/core_fetch.c": {
+        "defines": [
+          "ossl_method_construct"
+        ],
+        "recorded_by": "deferral:ossl_method_construct",
+        "subphases": [
+          "6.6f",
+          "6.8f"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/core_namemap.c": {
+        "defines": [
+          "ossl_namemap_add_name",
+          "ossl_namemap_add_names",
+          "ossl_namemap_doall_names",
+          "ossl_namemap_empty",
+          "ossl_namemap_free",
+          "ossl_namemap_name2num",
+          "ossl_namemap_name2num_n",
+          "ossl_namemap_new",
+          "ossl_namemap_num2name",
+          "ossl_namemap_stored",
+          "ossl_stored_namemap_free",
+          "ossl_stored_namemap_new"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "6.6",
+          "6.6b"
+        ],
+        "transcribed_by": [
+          "src/context/namemap.rs"
+        ]
+      },
+      "crypto/dso/dso_dlfcn.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "6.9"
+        ],
+        "transcribed_by": [
+          "src/dso/dlfcn.rs"
+        ]
+      },
+      "crypto/dso/dso_err.c": {
+        "defines": [
+          "ossl_err_load_DSO_strings"
+        ],
+        "recorded_by": "units:crypto/dso/dso_err.c",
+        "subphases": [
+          "6.9"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/dso/dso_lib.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "6.9"
+        ],
+        "transcribed_by": [
+          "src/dso/mod.rs"
+        ]
+      },
+      "crypto/dso/dso_openssl.c": {
+        "defines": [],
+        "recorded_by": "units:crypto/dso/dso_openssl.c",
+        "subphases": [
+          "6.9"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/err/err.c": {
+        "defines": [
+          "err_cleanup",
+          "err_clear_last_constant_time",
+          "err_shelve_state",
+          "err_unshelve_state",
+          "ossl_err_get_state_int",
+          "ossl_err_load_ERR_strings",
+          "ossl_err_string_int"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "6.10"
+        ],
+        "transcribed_by": [
+          "src/runtime/err.rs"
+        ]
+      },
+      "crypto/evp/evp_fetch.c": {
+        "defines": [
+          "evp_default_properties_enable_fips_int",
+          "evp_generic_do_all",
+          "evp_generic_fetch",
+          "evp_generic_fetch_from_prov",
+          "evp_get_global_properties_str",
+          "evp_is_a",
+          "evp_method_store_cache_flush",
+          "evp_method_store_remove_all_provided",
+          "evp_names_do_all",
+          "evp_set_default_properties_int"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "6.8e"
+        ],
+        "transcribed_by": [
+          "src/provider/stores.rs"
+        ]
+      },
+      "crypto/indicator_core.c": {
+        "defines": [
+          "ossl_indicator_set_callback_free",
+          "ossl_indicator_set_callback_new"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "6.11"
+        ],
+        "transcribed_by": [
+          "src/selftest/indicator.rs"
+        ]
+      },
+      "crypto/o_time.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "5.5"
+        ],
+        "transcribed_by": [
+          "src/runtime/time.rs"
+        ]
+      },
+      "crypto/param_build.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "6.5"
+        ],
+        "transcribed_by": [
+          "src/params/build.rs"
+        ]
+      },
+      "crypto/params.c": {
+        "defines": [
+          "ossl_param_get1_concat_octet_string",
+          "ossl_param_get1_octet_string",
+          "ossl_param_get1_octet_string_from_param"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "6.5"
+        ],
+        "transcribed_by": [
+          "src/params/mod.rs"
+        ]
+      },
+      "crypto/property/defn_cache.c": {
+        "defines": [
+          "ossl_prop_defn_get",
+          "ossl_prop_defn_set",
+          "ossl_property_defns_free",
+          "ossl_property_defns_new"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "6.7",
+          "6.7a",
+          "6.7b"
+        ],
+        "transcribed_by": [
+          "src/property/defn_cache.rs"
+        ]
+      },
+      "crypto/property/property.c": {
+        "defines": [
+          "ossl_ctx_global_properties",
+          "ossl_ctx_global_properties_free",
+          "ossl_ctx_global_properties_new",
+          "ossl_global_properties_no_mirrored",
+          "ossl_global_properties_stop_mirroring",
+          "ossl_method_lock_store",
+          "ossl_method_store_add",
+          "ossl_method_store_cache_flush_all",
+          "ossl_method_store_cache_get",
+          "ossl_method_store_cache_set",
+          "ossl_method_store_do_all",
+          "ossl_method_store_fetch",
+          "ossl_method_store_free",
+          "ossl_method_store_new",
+          "ossl_method_store_remove",
+          "ossl_method_store_remove_all_provided",
+          "ossl_method_unlock_store"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "6.7",
+          "6.7a",
+          "6.7c"
+        ],
+        "transcribed_by": [
+          "src/property/globals.rs"
+        ]
+      },
+      "crypto/property/property_err.c": {
+        "defines": [
+          "ossl_err_load_PROP_strings"
+        ],
+        "recorded_by": "units:crypto/property/property_err.c",
+        "subphases": [
+          "6.7"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/property/property_parse.c": {
+        "defines": [
+          "ossl_parse_property",
+          "ossl_parse_query",
+          "ossl_property_free",
+          "ossl_property_list_to_string",
+          "ossl_property_match_count",
+          "ossl_property_merge",
+          "ossl_property_parse_init"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "6.7",
+          "6.7b"
+        ],
+        "transcribed_by": [
+          "src/property/parse.rs"
+        ]
+      },
+      "crypto/property/property_query.c": {
+        "defines": [
+          "ossl_property_find_property",
+          "ossl_property_get_number_value",
+          "ossl_property_get_string_value",
+          "ossl_property_get_type",
+          "ossl_property_has_optional",
+          "ossl_property_is_enabled"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "6.7",
+          "6.7b"
+        ],
+        "transcribed_by": [
+          "src/property/query.rs"
+        ]
+      },
+      "crypto/property/property_string.c": {
+        "defines": [
+          "ossl_property_name",
+          "ossl_property_name_str",
+          "ossl_property_string_data_free",
+          "ossl_property_string_data_new",
+          "ossl_property_value",
+          "ossl_property_value_str"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "6.7",
+          "6.7a"
+        ],
+        "transcribed_by": [
+          "src/property/strings.rs"
+        ]
+      },
+      "crypto/provider.c": {
+        "defines": [],
+        "recorded_by": "units:crypto/provider.c",
+        "subphases": [
+          "6.8",
+          "6.8b"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/provider_child.c": {
+        "defines": [
+          "ossl_child_prov_ctx_free",
+          "ossl_child_prov_ctx_new",
+          "ossl_provider_deinit_child",
+          "ossl_provider_free_parent",
+          "ossl_provider_init_as_child",
+          "ossl_provider_up_ref_parent"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "6.8",
+          "6.8e"
+        ],
+        "transcribed_by": [
+          "src/provider/child.rs"
+        ]
+      },
+      "crypto/provider_conf.c": {
+        "defines": [
+          "ossl_prov_conf_ctx_free",
+          "ossl_prov_conf_ctx_new",
+          "ossl_provider_add_conf_module"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "6.8",
+          "6.8d"
+        ],
+        "transcribed_by": [
+          "src/provider/conf.rs"
+        ]
+      },
+      "crypto/provider_core.c": {
+        "defines": [
+          "ossl_provider_activate",
+          "ossl_provider_activate_fallbacks",
+          "ossl_provider_add_to_store",
+          "ossl_provider_ctx",
+          "ossl_provider_deactivate",
+          "ossl_provider_default_props_update",
+          "ossl_provider_disable_fallback_loading",
+          "ossl_provider_doall_activated",
+          "ossl_provider_dso",
+          "ossl_provider_find",
+          "ossl_provider_free",
+          "ossl_provider_get0_dispatch",
+          "ossl_provider_get_capabilities",
+          "ossl_provider_get_params",
+          "ossl_provider_get_parent",
+          "ossl_provider_gettable_params",
+          "ossl_provider_info_add_parameter",
+          "ossl_provider_info_add_to_store",
+          "ossl_provider_info_clear",
+          "ossl_provider_is_child"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "6.8",
+          "6.8a",
+          "6.8b",
+          "6.8c",
+          "6.8e"
+        ],
+        "transcribed_by": [
+          "src/provider/activate.rs",
+          "src/provider/init.rs",
+          "src/provider/mod.rs"
+        ]
+      },
+      "crypto/provider_predefined.c": {
+        "defines": [
+          "ossl_predefined_providers"
+        ],
+        "recorded_by": "units:crypto/provider_predefined.c",
+        "subphases": [
+          "6.8",
+          "6.8b"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/rand/rand_lib.c": {
+        "defines": [
+          "ossl_rand_check_random_provider_on_load",
+          "ossl_rand_check_random_provider_on_unload",
+          "ossl_rand_cleanup_int",
+          "ossl_rand_ctx_free",
+          "ossl_rand_ctx_new",
+          "ossl_rand_get0_seed_noncreating",
+          "ossl_random_add_conf_module"
+        ],
+        "recorded_by": "units:crypto/rand/rand_lib.c",
+        "subphases": [
+          "6.10"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/rcu.c": {
+        "defines": [],
+        "recorded_by": "units:crypto/rcu.c",
+        "subphases": [
+          "6.10"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/rsa/rsa_ossl.c": {
+        "defines": [
+          "ossl_rsa_alloc_blinding",
+          "ossl_rsa_free_blinding"
+        ],
+        "recorded_by": "units:crypto/rsa/rsa_ossl.c",
+        "subphases": [
+          "6.10"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/self_test_core.c": {
+        "defines": [
+          "ossl_self_test_set_callback_free",
+          "ossl_self_test_set_callback_new"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "6.11"
+        ],
+        "transcribed_by": [
+          "src/selftest/mod.rs"
+        ]
+      },
+      "crypto/sparse_array.c": {
+        "defines": [
+          "ossl_sa_doall",
+          "ossl_sa_doall_arg",
+          "ossl_sa_free",
+          "ossl_sa_free_leaves",
+          "ossl_sa_get",
+          "ossl_sa_new",
+          "ossl_sa_num",
+          "ossl_sa_set"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "6.10"
+        ],
+        "transcribed_by": [
+          "src/runtime/sparse_array.rs"
+        ]
+      },
+      "crypto/thread/api.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "6.6e"
+        ],
+        "transcribed_by": [
+          "src/context/thread_data.rs"
+        ]
+      },
+      "crypto/thread/internal.c": {
+        "defines": [
+          "ossl_crypto_thread_clean",
+          "ossl_crypto_thread_join",
+          "ossl_crypto_thread_start",
+          "ossl_get_avail_threads",
+          "ossl_threads_ctx_free",
+          "ossl_threads_ctx_new"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "6.6e"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/threads_common.c": {
+        "defines": [
+          "CRYPTO_THREAD_clean_local",
+          "CRYPTO_THREAD_get_local_ex",
+          "CRYPTO_THREAD_set_local_ex"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "6.10"
+        ],
+        "transcribed_by": [
+          "src/runtime/threads_common.rs"
+        ]
+      },
+      "crypto/threads_pthread.c": {
+        "defines": [
+          "openssl_get_fork_id",
+          "openssl_init_fork_handlers",
+          "ossl_rcu_assign_uptr",
+          "ossl_rcu_call",
+          "ossl_rcu_cb_item_free",
+          "ossl_rcu_cb_item_new",
+          "ossl_rcu_lock_free",
+          "ossl_rcu_lock_new",
+          "ossl_rcu_read_lock",
+          "ossl_rcu_read_unlock",
+          "ossl_rcu_uptr_deref",
+          "ossl_rcu_write_lock",
+          "ossl_rcu_write_unlock",
+          "ossl_synchronize_rcu",
+          "ossl_thread_init_local"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "6.10"
+        ],
+        "transcribed_by": [
+          "src/runtime/rcu.rs",
+          "src/runtime/thread.rs"
+        ]
+      }
+    },
+    "rule": "every authority translation unit and every authority-internal function named by a subphase row of a complete or in-progress stratum must be transcribed by a crate module or named by an explicit record field; and an explicit record field naming an authority unit must have a subphase row behind it",
+    "unit_records": {
+      "crypto/async/async.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 13
+      },
+      "crypto/conf/conf_mall.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/runtime/confmod/mod.rs",
+        "owner_phase": null
+      },
+      "crypto/dso/dso_err.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/runtime/err_loaders.rs",
+        "owner_phase": null
+      },
+      "crypto/dso/dso_openssl.c": {
+        "class": "not_in_this_profile",
+        "crate_module": null,
+        "owner_phase": null
+      },
+      "crypto/property/property_err.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/runtime/err.rs",
+        "owner_phase": null
+      },
+      "crypto/provider.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/mod.rs",
+        "owner_phase": null
+      },
+      "crypto/provider_predefined.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/mod.rs",
+        "owner_phase": null
+      },
+      "crypto/rand/rand_lib.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 9
+      },
+      "crypto/rcu.c": {
+        "class": "does_not_exist_in_this_authority",
+        "crate_module": null,
+        "owner_phase": null
+      },
+      "crypto/rsa/rsa_ossl.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 8
+      }
+    },
+    "universes": {
+      "authority_files": 5873,
+      "internal_functions": 4547,
+      "transcribed_units": 112
+    }
+  },
+  "body_hash": "b7274fe9851a5f42590e8846804ddc94e1daca18d7880aa9ffc96dc3ddafe0be",
+  "generator": "forensics/tools/plan_reconciliation.py",
+  "inputs": [
+    {
+      "name": "internal-symbols",
+      "path": "forensics/atlas/internal-symbols.json",
+      "sha256": "600c6db3dfe1bbb4ed2c4a1eb9c685cc36054878fb39d3045599560d94f72a01"
+    },
+    {
+      "name": "transcription-edges",
+      "path": "forensics/atlas/transcription-edges.json",
+      "sha256": "ab60e5251b44bdfbe4ad15dafd3e78216615b12a9dad851a74a58bbb97cb2065"
+    },
+    {
+      "name": "implemented-surface",
+      "path": "forensics/atlas/implemented-surface.json",
+      "sha256": "1d56f0f9fb37dcbf90b3d9a5bd1fca5198d22ecb66037982942f73e989754886"
+    },
+    {
+      "name": "phase-state",
+      "path": "forensics/phase-state.json",
+      "sha256": "a130abb0ef2479be9cb07e2eb2ee89d1c19e97e2b81cf57fc177bd8510920d31"
+    },
+    {
+      "name": "prerequisites",
+      "path": "forensics/prerequisites.json",
+      "sha256": "b33df0406e0e2ebddcaa4f73fc35c563da8dff446c0d882d29dc51eff2c7015d"
+    },
+    {
+      "name": "source-manifest",
+      "path": "forensics/authorities/SOURCE_MANIFEST.3.6.4.json",
+      "sha256": "64535af39ae6732322cce6812534d3e13193771b76a0cd4e3cad06126bdd320e"
+    },
+    {
+      "name": "plan-PHASE-5-SUBPHASES",
+      "path": "docs/PHASE-5-SUBPHASES.md",
+      "sha256": "497cf769c67209fbdf7a77bdc48d97d3380dd8c1c2e025dd60f4f39fe199d015"
+    },
+    {
+      "name": "plan-PHASE-6-SUBPHASES",
+      "path": "docs/PHASE-6-SUBPHASES.md",
+      "sha256": "749a8cd25cc37d3d043023af94fcc04e5d9d625b90a3067b722211969884b9b3"
+    }
+  ],
+  "kind": "plan-reconciliation",
+  "schema": "openssl-rs/atlas/plan-reconciliation/v1"
+}
