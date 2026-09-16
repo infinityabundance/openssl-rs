@@ -84,6 +84,7 @@ COURTS = [
     ("RT-THREADDATA", "rt_threaddata_probe.c"),
     ("RT-BIO-CORE", "rt_bio_core_probe.c"),
     ("RT-DSO", "rt_dso_probe.c"),
+    ("RT-PROVIDER", "rt_provider_probe.c"),
 ]
 
 

@@ -191,6 +191,10 @@
       "observations": 37,
       "verdict": "pass"
     },
+    "RT-PROVIDER": {
+      "observations": 67,
+      "verdict": "pass"
+    },
     "RT-RUNTIME-EXT": {
       "observations": 94,
       "verdict": "pass"
@@ -227,14 +231,14 @@
     "phase6": 0
   },
   "implemented": {
-    "libcrypto": 1091,
+    "libcrypto": 1113,
     "libssl": 0
   },
   "open_obligations": {
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,
-    "phase6": 44
+    "phase6": 22
   },
   "owned_obligations": {
     "phase3": 294,

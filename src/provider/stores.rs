@@ -52,15 +52,6 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-// STAGING ALLOWANCE, with its condition stated rather than implied. Every item below is
-// `pub(crate)` and has no caller yet, because the `OSSL_PROVIDER_*` exports that reach them
-// are declared in the commit that lands `RT-PROVIDER` -- and the obligation ledger counts a
-// symbol implemented the moment it is *defined*, so declaring them here would move
-// twenty-two rows on evidence that does not exist. **This attribute is removed in that
-// commit.** If it survives it, the store bridges have stopped being called, which is a
-// defect and not a style matter.
-#![allow(dead_code)]
-
 use core::ffi::{c_int, c_void};
 
 use crate::context::lib_ctx_get_data;

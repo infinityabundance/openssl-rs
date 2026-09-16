@@ -54,14 +54,6 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-// STAGING ALLOWANCE, with its condition stated rather than implied. Everything below is the
-// body of 6.8c and has no caller yet, because the `OSSL_PROVIDER_*` exports that reach it are
-// declared in the commit that lands `RT-PROVIDER` -- and the obligation ledger counts a symbol
-// implemented the moment it is *defined*, so declaring them here would move twenty-two rows on
-// evidence that does not exist. **This attribute is removed in that commit.** If it survives
-// it, the activation pair has stopped being reachable from any export, which is a defect.
-#![allow(dead_code)]
-
 use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
 use core::sync::atomic::Ordering;
@@ -105,8 +97,9 @@ const L_REMOVE_METHODS_FREE_BITS: c_int = 1373;
 ///
 /// The signature `ossl_provider_doall_activated` takes, and the one
 /// `OSSL_PROVIDER_do_all`'s public prototype spells inline.
-pub(crate) type ProviderDoAllFn =
-    unsafe extern "C" fn(prov: *mut OsslProvider, cbdata: *mut c_void) -> c_int;
+// Unnamed parameters, for the reason `ProviderInitFn` states: `ABI-PROTOTYPE` reads a
+// function pointer's *types*, and a named argument is not one.
+pub(crate) type ProviderDoAllFn = unsafe extern "C" fn(*mut OsslProvider, *mut c_void) -> c_int;
 
 /// `static int create_provider_children(OSSL_PROVIDER *prov)`.
 ///
@@ -476,7 +469,7 @@ pub(crate) unsafe fn ossl_provider_deactivate(
 /// pointer's pointee shape is the same whether the pointee is complete or opaque — the
 /// prototype court's canonical form discards the pointee's name for exactly that reason.
 #[repr(C)]
-pub(crate) struct OsslAlgorithm {
+pub struct OsslAlgorithm {
     /// The authority's struct is not `#[repr(C)]`-complete here, so this type has no
     /// constructible values; the field exists only so the type is not a ZST by accident.
     _opaque: [u8; 0],
@@ -1133,6 +1126,7 @@ pub(crate) unsafe fn ossl_provider_unquery_operation(
 ///
 /// # Safety
 /// `provider` must be live.
+#[allow(dead_code)] // unreachable until Phase 7's method stores mark an algorithm as seen
 pub(crate) unsafe fn ossl_provider_set_operation_bit(
     provider: *mut OsslProvider,
     bitnum: usize,
@@ -1190,6 +1184,7 @@ pub(crate) unsafe fn ossl_provider_set_operation_bit(
 ///
 /// # Safety
 /// `provider` must be live; `result` must be non-NULL and writable.
+#[allow(dead_code)] // unreachable until Phase 7's fetch asks whether an algorithm is cached
 pub(crate) unsafe fn ossl_provider_test_operation_bit(
     provider: *mut OsslProvider,
     bitnum: usize,

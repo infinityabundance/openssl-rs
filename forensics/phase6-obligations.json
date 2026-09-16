@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 137,
       "deferred_to_later_phase": 0,
-      "implemented": 117,
-      "open_in_this_stratum": 44,
+      "implemented": 139,
+      "open_in_this_stratum": 22,
       "owned": 161,
       "received_by_handoff": 24
     },
@@ -153,6 +153,28 @@
       "OSSL_PARAM_set_ulong",
       "OSSL_PARAM_set_utf8_ptr",
       "OSSL_PARAM_set_utf8_string",
+      "OSSL_PROVIDER_add_builtin",
+      "OSSL_PROVIDER_add_conf_parameter",
+      "OSSL_PROVIDER_available",
+      "OSSL_PROVIDER_conf_get_bool",
+      "OSSL_PROVIDER_do_all",
+      "OSSL_PROVIDER_get0_default_search_path",
+      "OSSL_PROVIDER_get0_dispatch",
+      "OSSL_PROVIDER_get0_name",
+      "OSSL_PROVIDER_get0_provider_ctx",
+      "OSSL_PROVIDER_get_capabilities",
+      "OSSL_PROVIDER_get_conf_parameters",
+      "OSSL_PROVIDER_get_params",
+      "OSSL_PROVIDER_gettable_params",
+      "OSSL_PROVIDER_load",
+      "OSSL_PROVIDER_load_ex",
+      "OSSL_PROVIDER_query_operation",
+      "OSSL_PROVIDER_self_test",
+      "OSSL_PROVIDER_set_default_search_path",
+      "OSSL_PROVIDER_try_load",
+      "OSSL_PROVIDER_try_load_ex",
+      "OSSL_PROVIDER_unload",
+      "OSSL_PROVIDER_unquery_operation",
       "OSSL_SELF_TEST_free",
       "OSSL_SELF_TEST_get_callback",
       "OSSL_SELF_TEST_new",
@@ -353,116 +375,6 @@
         "declaring_header": "crypto.h",
         "module": "src/context/mod.rs",
         "symbol": "OSSL_LIB_CTX_new_child"
-      },
-      {
-        "declaring_header": "provider.h",
-        "module": "src/provider/mod.rs",
-        "symbol": "OSSL_PROVIDER_add_builtin"
-      },
-      {
-        "declaring_header": "provider.h",
-        "module": "src/provider/mod.rs",
-        "symbol": "OSSL_PROVIDER_add_conf_parameter"
-      },
-      {
-        "declaring_header": "provider.h",
-        "module": "src/provider/mod.rs",
-        "symbol": "OSSL_PROVIDER_available"
-      },
-      {
-        "declaring_header": "provider.h",
-        "module": "src/provider/mod.rs",
-        "symbol": "OSSL_PROVIDER_conf_get_bool"
-      },
-      {
-        "declaring_header": "provider.h",
-        "module": "src/provider/mod.rs",
-        "symbol": "OSSL_PROVIDER_do_all"
-      },
-      {
-        "declaring_header": "provider.h",
-        "module": "src/provider/mod.rs",
-        "symbol": "OSSL_PROVIDER_get0_default_search_path"
-      },
-      {
-        "declaring_header": "provider.h",
-        "module": "src/provider/mod.rs",
-        "symbol": "OSSL_PROVIDER_get0_dispatch"
-      },
-      {
-        "declaring_header": "provider.h",
-        "module": "src/provider/mod.rs",
-        "symbol": "OSSL_PROVIDER_get0_name"
-      },
-      {
-        "declaring_header": "provider.h",
-        "module": "src/provider/mod.rs",
-        "symbol": "OSSL_PROVIDER_get0_provider_ctx"
-      },
-      {
-        "declaring_header": "provider.h",
-        "module": "src/provider/mod.rs",
-        "symbol": "OSSL_PROVIDER_get_capabilities"
-      },
-      {
-        "declaring_header": "provider.h",
-        "module": "src/provider/mod.rs",
-        "symbol": "OSSL_PROVIDER_get_conf_parameters"
-      },
-      {
-        "declaring_header": "provider.h",
-        "module": "src/provider/mod.rs",
-        "symbol": "OSSL_PROVIDER_get_params"
-      },
-      {
-        "declaring_header": "provider.h",
-        "module": "src/provider/mod.rs",
-        "symbol": "OSSL_PROVIDER_gettable_params"
-      },
-      {
-        "declaring_header": "provider.h",
-        "module": "src/provider/mod.rs",
-        "symbol": "OSSL_PROVIDER_load"
-      },
-      {
-        "declaring_header": "provider.h",
-        "module": "src/provider/mod.rs",
-        "symbol": "OSSL_PROVIDER_load_ex"
-      },
-      {
-        "declaring_header": "provider.h",
-        "module": "src/provider/mod.rs",
-        "symbol": "OSSL_PROVIDER_query_operation"
-      },
-      {
-        "declaring_header": "provider.h",
-        "module": "src/provider/mod.rs",
-        "symbol": "OSSL_PROVIDER_self_test"
-      },
-      {
-        "declaring_header": "provider.h",
-        "module": "src/provider/mod.rs",
-        "symbol": "OSSL_PROVIDER_set_default_search_path"
-      },
-      {
-        "declaring_header": "provider.h",
-        "module": "src/provider/mod.rs",
-        "symbol": "OSSL_PROVIDER_try_load"
-      },
-      {
-        "declaring_header": "provider.h",
-        "module": "src/provider/mod.rs",
-        "symbol": "OSSL_PROVIDER_try_load_ex"
-      },
-      {
-        "declaring_header": "provider.h",
-        "module": "src/provider/mod.rs",
-        "symbol": "OSSL_PROVIDER_unload"
-      },
-      {
-        "declaring_header": "provider.h",
-        "module": "src/provider/mod.rs",
-        "symbol": "OSSL_PROVIDER_unquery_operation"
       }
     ],
     "owned_by_module": {
@@ -500,7 +412,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "aa418edd8c99da188dbb7061318024ff7d4669de71c64e6493f709ecdb5866e7"
+      "sha256": "cce5e6f2df1d407cdef5301033d1e3520b13cf36bf9b66c8f5e655645dc705c0"
     }
   ],
   "kind": "phase6-obligations",

@@ -6172,3 +6172,100 @@ like agreement (D33).
 | unit tests | 250 | **257** |
 | `err_sites.rs` coordinates | 830 | **830** |
 | new internal modules | — | **`src/provider/activate.rs`, `src/provider/stores.rs`** |
+
+## D117 — 6.8c closes: a nullable entry point the court caught, two aliases that named their parameters, and a shell that had not been rebuilt
+
+**The twenty-two exports land with their court, and the registry stops being a slot sweep.**
+`crypto/provider.c` whole plus the five `OSSL_PROVIDER_*` wrappers that live in
+`provider_core.c` are declared in `src/provider/mod.rs`, in the same commit as
+`RT-PROVIDER` — because the ledger counts a symbol as implemented the moment it is
+defined, and declaring them a commit earlier would have moved twenty-two rows on evidence
+that did not exist. Phase 6 moves from 117 implemented / 44 open to **139 / 22**;
+`libcrypto` from 1091 to **1113** of 5896. `RT-PROVIDER` is the **54th** court and adds
+**67 observations** with no residuals, so the five phase court sets total **54 courts and
+19,869 observations**, all re-derived from the authority in this run. The FRF store is
+recreated around it: 381 → **389** objects, 46 → **47** receipts, 92 → **94** challenges,
+5 claims, `graph_verified`.
+
+**A builtin provider is the one provider a probe can create on both sides, and that is what
+makes this court possible.** The two libraries' own providers are each published by their own
+`OSSL_provider_init`, so observing them would compare the probe's environment rather than the
+registry. The probe instead declares its own entry point, registers it with
+`OSSL_PROVIDER_add_builtin`, and drives the registry through the public API: register, load,
+initialise, query, configure, enumerate, deactivate, unload, reload. The dispatch-table walk
+inside `provider_init` is on that path and is therefore coursed by *using* it — the seven
+`OSSL_FUNC_PROVIDER_*` entries the probe publishes are what the walk stores, and each is then
+called back through the object. Two of them have an out-parameter (`query_operation`'s
+`no_cache`) or a return the caller reads (`gettable_params`' table), so the pass-through is
+visible in both directions and not only as NULL-ness.
+
+**The court's one finding is a real one, and it is the kind no value-level probe of the
+other twenty-one would have reached.** `add_builtin.null_init` answered **1** where the
+authority answers **0**. The export had taken a bare `ProviderInitFn`, so a NULL entry point
+became `Some(NULL)` and `ossl_provider_add_builtin`'s test — which the authority performs
+*before* it allocates anything, so a refusal costs nothing — could not see it. A consumer
+could register a builtin with no entry point and be told it succeeded. The parameter is now
+`Option<ProviderInitFn>`: `ABI-PROTOTYPE` canonicalises `Option<F>` and `F` identically,
+because a nullable function pointer and a bare one are the same type to a caller, so the
+nullable spelling costs nothing and is the one the contract needs.
+
+**`ABI-PROTOTYPE` then found a hole in itself, or rather in what it had been able to
+reach.** It reported `type_unmapped: 2` for `OSSL_PROVIDER_add_builtin` and
+`OSSL_PROVIDER_do_all`, and the failure was on the **Rust** side in both: the aliases
+`ProviderInitFn` and `ProviderDoAllFn` named their parameters, and a named argument is not a
+type, so the canonicaliser could not read them. Every function-pointer alias in this crate is
+spelled unnamed for that reason; these two were not, and nothing noticed because neither had
+ever appeared in an export's signature. The type plane went from 2 unmapped to **0**, with
+`checked` 1044 → **1066** declarations and `type_checked` 1061 → **1083** types. The lesson is
+sharper than "fix the aliases": an alias is unchecked until an export uses it, so the
+*declaration* was never the thing that was verified — the *use* was.
+
+**Four defects in the instrument, and one stale artefact that read as a divergence.** The
+probe defined `_GNU_SOURCE` over the compiler's own `-D_GNU_SOURCE`; `OSSL_PARAM_construct_utf8_ptr`
+takes `char **` and was handed a `char[64]`; `OSSL_PARAM_END` is a brace *initializer* and not
+an expression, so assigning it needs `OSSL_PARAM_construct_end()`; and a label from an earlier
+draft survived into the source. Then the court's first successful compile reported that the
+**candidate** had called a `SCAFFOLDED` symbol — which reads exactly like the most serious
+divergence there is, and was a stale shell: `implemented-surface.json` had been regenerated to
+1113 but `build_phase2.sh` had not been re-run, so the DSO still carried the previous scaffold
+list and exported a stub for `OSSL_PROVIDER_add_builtin`. The pipeline order documented in the
+project's own notes has `implemented_surface` precede `build_phase2` for precisely this
+reason, and this is what happens when it is not followed. Recorded because the *symptom* was a
+candidate divergence and the *cause* was a build-order mistake: the probe, the generator and
+the note are all suspects before the authority is, and here the suspect was the pipeline.
+
+**The one thing `RT-PROVIDER` deliberately does not observe, and why that is a recorded
+residual rather than a gap.** `provider_activate_fallbacks` loads the table's `is_fallback`
+rows through their compiled-in entry points, and the candidate has none of them:
+`ossl_default_provider_init` is 807 lines and belongs with the algorithm tables in Phases 7
+and 8, so `provider_init` takes the *module* branch, the `DSO_load("libdefault.so")` fails, and
+the walk answers 0 where the authority answers 1. Entered with the flag set, the walk would
+make `ossl_provider_doall_activated` and `OSSL_PROVIDER_available` answer differently too.
+The probe therefore **never puts the flag in its enabled state**: the first public call it
+makes is `OSSL_PROVIDER_load`, which sets `store->use_fallbacks = 0` before it looks anything
+up. From that point both sides take the walk's early return, and `available`, `do_all` and the
+enumeration *are* compared — they would not be otherwise. So the disabled path is courted, the
+enabled path is named rather than hidden, and a unit test pins the current failure so that the
+day Phases 7 and 8 land the entry points the test fails and the residual is retired
+deliberately instead of silently.
+
+**One evidence-discipline finding, and it is the mechanism working.** `evidence_determinism`
+and `check_evidence_portability` both went `STALE` on the **phase 3, 4 and 5** obligation
+ledgers, because each records the sha256 of `forensics/atlas/implemented-surface.json` among
+its inputs and that file had changed from 1091 to 1113 implemented symbols. The remedy is the
+one the tools already prescribe — regenerate and commit, because the generators are the source
+of truth — and all three were regenerated. A ledger that names its inputs is doing its job
+when it goes stale; three of them going stale at once is the mechanism, not a defect.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 117 / 44 | **139 / 22** |
+| `libcrypto` implemented / 5896 | 1091 | **1113** |
+| phase courts / observations | 53 / 19,802 | **54 / 19,869** |
+| Phase 6 courts | 6 | **7** |
+| `ABI-PROTOTYPE` declarations / types checked | 1044 / 1061 | **1066 / 1083** |
+| unit tests | 257 | **257** |
+| `err_sites.rs` coordinates | 830 | **830** |
+| FRF objects / receipts / challenges | 381 / 46 / 92 | **389 / 47 / 94** |
