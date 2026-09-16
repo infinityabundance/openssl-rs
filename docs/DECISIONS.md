@@ -8619,3 +8619,79 @@ still *below* the authority baseline of 15 and therefore needs no transition row
 | unit tests | 317 | 321 |
 
 SPDX-License-Identifier: Apache-2.0
+
+---
+
+## D149 — 7.3a's court: the resolver lands, and it finds the fetch's failure reason wrong
+
+**`RT-FETCH` now observes the fetch path.** D147 corrected 7.2's exit criterion because the
+criterion needed a *class* to fetch through, and the class arrived in D148; this is the resolver
+that criterion named, landed in the same subphase as the object it needs. The court's provider
+publishes **one digest under three names with one property definition** (`provider=court`), and
+the observation count goes **38 → 60**. What the new half observes, in the order a consumer would
+meet it: a plain fetch resolving (`nonnull`, name matches, size 32, block size 64, legacy NID 0);
+the **cache** answering the same object a second time; an **alias** resolving to that same object
+and reporting the canonical first name; the declared property **selecting**; a property that
+contradicts it **rejecting**, with nothing to fall back to; a name nobody publishes; `up_ref`
+surviving a free and leaving the object usable; and the context's own default properties doing the
+reject-then-release from the other side. The provider's digest publishes only the one-shot
+`OSSL_FUNC_DIGEST_DIGEST` plus `OSSL_FUNC_DIGEST_GET_PARAMS`, which is the smallest shape
+`evp_md_from_algorithm` accepts, so the court exercises the *zero-structural-functions* arm rather
+than the five-function one.
+
+**The resolver found a real defect, and it is a class rather than a typo.** The authority chooses
+between two reasons in one expression —
+
+```c
+int code = unsupported ? ERR_R_UNSUPPORTED : ERR_R_FETCH_FAILED;
+ERR_raise_data(ERR_LIB_EVP, code, "%s, Algorithm (%s : %d), Properties (%s)", ...);
+```
+
+— and builds the **same message** for both. The crate's first revision used
+`err_sites::EVP_FETCH_352.reason` for *both* arms: that site is the neighbouring `ERR_raise_data`
+at `evp_fetch.c:352`, which belongs to the *other* arm and has a reason of its own, so every fetch
+that found nothing raised `ERR_R_FETCH_FAILED` where the authority raises `ERR_R_UNSUPPORTED`.
+Three observations expose it and nothing else in any transcript could have: `fetch.rejected.err`,
+`fetch.unknown.err` and `fetch.unloaded.err` are the reason *codes*, and every other line the two
+libraries agree on. A court that printed only `NULL` would have reported this path as passing
+forever. `ERR_R_UNSUPPORTED` is now composed from `err.h`'s own `ERR_RFLAG_COMMON` the way
+`src/runtime/init.rs` spells `ERR_R_INIT_FAIL`, and **a unit test pins it against
+`err_sites::PARAM_BUILD_265`** — a generated site that raises the constant literally — so the
+typed value and the authority-derived one cannot drift apart silently.
+
+**The first wiring of the block was wrong, and the mistake was kept rather than deleted.** It was
+placed after the two `OSSL_PROVIDER_unload` calls, so every fetch in it failed on both sides and the
+block degenerated into one `else` arm. That accident is what exposed the reason code. So the
+resequencing puts the resolver where the provider is **loaded** — where it observes resolution
+rather than a refusal — and gives the unloaded case its own named block, with its own justification
+for existing: it is the only place the reason is observable, and it is kept on purpose. The tail
+observation `after.store.stable` now clears the queue first, so that line is about the *store*, as
+it says, instead of about whichever block ran last.
+
+**A second, smaller record defect is corrected in the same commit.** `src/runtime/bio/mod.rs`
+documented five `ERR_R_*` constants as coming from `cryptoerr.h` with the values `1`, `154`, `106`,
+`114` and `42`. `cryptoerr.h` declares no `ERR_R_*` name at all, and none of those five numbers is
+a reason code in `err.h`; they were unreferenced, so nothing observable depended on them. They now
+carry `err.h` as their provenance and are composed from the header's own `ERR_RFLAG_*` bits. This
+is the same defect class as the reason code above — a record that names a source which does not
+contain the fact — and it is fixed rather than noted because the fix is arithmetic a reader can
+check.
+
+**One thing the resolver confirms by measurement.** `EVP_MD_get_type` on a provider digest whose
+name is in no legacy table answers **0** on both sides, which is `NID_undef`: the namemap's names
+and the `OBJ` NID table are still separate, exactly as D148 recorded when `set_legacy_nid` found
+nothing. The observation is an *id*, so unlike a pointer it is comparable across the two libraries,
+and it is the cheapest standing proof that the separation holds as the stratum grows.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 7 implemented / open | 11 / 939 | 11 / 939 |
+| `implemented[libcrypto]` | 1146 | 1146 |
+| RT-FETCH observations | 38 | **60** |
+| recorded deferrals / blocking dependencies | 12 / 12 | 12 / 12 |
+| language census | 2262 | 2256 |
+| unit tests | 321 | **322** |
+
+SPDX-License-Identifier: Apache-2.0

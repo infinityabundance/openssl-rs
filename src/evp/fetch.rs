@@ -431,12 +431,34 @@ pub unsafe extern "C" fn EVP_get1_default_properties(libctx: *mut c_void) -> *mu
  * The fetch itself: `crypto/evp/evp_fetch.c`'s other half.
  * -------------------------------------------------------------------------------------------*/
 
+/// `ERR_RFLAG_COMMON` (`include/openssl/err.h`) — the bit every `ERR_R_*` common reason carries.
+///
+/// `#define ERR_RFLAG_COMMON (0x2 << ERR_RFLAGS_OFFSET)` with `ERR_RFLAGS_OFFSET` 18.
+const ERR_RFLAG_COMMON: c_int = 0x2 << 18;
+
 /// `ERR_R_FETCH_FAILED`, as the reason site `EVP_FETCH_352` records it.
 ///
 /// Taken from the generated site rather than typed: the value is the authority's own, resolved
 /// through its headers by `gen_err_raise_sites.py`, and this constant is the second place in the
 /// file that needs it.
 const ERR_R_FETCH_FAILED: c_int = err_sites::EVP_FETCH_352.reason;
+
+/// `ERR_R_UNSUPPORTED` (`err.h`): `(268 | ERR_RFLAG_COMMON)`.
+///
+/// The *other* arm of the authority's `int code = unsupported ? ERR_R_UNSUPPORTED :
+/// ERR_R_FETCH_FAILED;` at `crypto/evp/evp_fetch.c:372`, whose raise site `EVP_FETCH_376` is
+/// recorded with `dynamic_reason` precisely because the generator refuses to guess which arm a
+/// site takes. Composed from the header's own flag rather than written as a literal, the same way
+/// `src/runtime/init.rs` spells `ERR_R_INIT_FAIL`.
+///
+/// This constant was **missing** until `RT-FETCH`'s unloaded-provider observation printed the
+/// error queue: the first revision used `err_sites::EVP_FETCH_352.reason` for *both* arms, so a
+/// fetch that found nothing raised `ERR_R_FETCH_FAILED` where the authority raises
+/// `ERR_R_UNSUPPORTED`. Nothing else could have shown it — the two arms build the same message,
+/// so the code is the entire difference, and no transcript line contradicted it. The unit test
+/// below pins the typed value against the generated site `PARAM_BUILD_265`, which raises this
+/// constant literally.
+const ERR_R_UNSUPPORTED: c_int = 268 | ERR_RFLAG_COMMON;
 
 /// `#define NAME_SEPARATOR ':'` — `crypto/evp/evp_local.h`.
 ///
@@ -1041,11 +1063,12 @@ unsafe fn inner_evp_generic_fetch(
     }
 
     if (name_id != 0 || !name.is_null()) && method.is_null() {
-        // The two reasons the authority computes between, and the reason this site is recorded
-        // with `dynamic_reason`: `ERR_raise_data(ERR_LIB_EVP, code, ...)` passes an *identifier*,
-        // so the generator could not resolve a constant and refused to guess one.
+        // The two reasons the authority computes between. The site is recorded with
+        // `dynamic_reason` because `ERR_raise_data(ERR_LIB_EVP, code, ...)` passes an
+        // *identifier*: the generator could not resolve a constant and refused to guess one, so
+        // the choice between the two constants is made here, where the authority makes it.
         let code = if unsupported {
-            err_sites::EVP_FETCH_352.reason
+            ERR_R_UNSUPPORTED
         } else {
             ERR_R_FETCH_FAILED
         };
@@ -1540,5 +1563,26 @@ mod tests {
         // SAFETY: `ctx.0` is live.
         let store = unsafe { get_evp_method_store(ctx.0) };
         assert!(!store.is_null(), "slot 0 is filled for a fresh context");
+    }
+
+    /// `ERR_R_UNSUPPORTED` is composed from `err.h`'s flag, so its value is *derived* rather
+    /// than transcribed — and this asserts the derivation against a second, independent reading
+    /// of the same authority fact: `crypto/param_build.c:265` raises the constant literally, so
+    /// the generated site's `reason` is what the authority's own compiler put in the error
+    /// queue. If the flag or the number ever drifts, one of the two readers changes and this
+    /// fails, which is the whole reason `RT-FETCH`'s unloaded-provider observation is worth
+    /// having: the reason code is the only place this defect is visible, and a court can only
+    /// see it while a probe calls the path.
+    #[test]
+    fn the_unsupported_reason_agrees_with_the_generated_site_that_raises_it() {
+        assert_eq!(
+            ERR_R_UNSUPPORTED,
+            err_sites::PARAM_BUILD_265.reason,
+            "the composed value and the authority's literal are the same code"
+        );
+        assert_ne!(
+            ERR_R_UNSUPPORTED, ERR_R_FETCH_FAILED,
+            "the two arms of the authority's choice are different codes"
+        );
     }
 }
