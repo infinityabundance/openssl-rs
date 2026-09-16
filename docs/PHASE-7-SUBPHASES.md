@@ -107,6 +107,37 @@ almost certainly split as they land — 7.3 and 7.4 are each over two hundred ex
 precedent from Phase 6 is that a split is recorded here with the reason it was needed rather
 than performed silently.
 
+### 7.3, split — recorded when it was needed, not performed silently
+
+7.3's row is a file list, and a file list is not a landing plan: it mixes four method *classes*
+(`EVP_CIPHER`, `EVP_MD`, `EVP_MAC`/`EVP_KDF`, `EVP_RAND`/`EVP_SKEYMGMT`), the shared accessor
+half of `evp_lib.c` that serves all of them, and one hundred and seventy-one legacy wrapper
+statics whose primitives are Phase 13's. The split below is by *dependency*, so each slice can
+be pushed on its own with a court that observes its own new surface, and the counts are the
+ledger's own (`forensics/phase7-obligations.json`) on the day the split was made — a census of
+what was open then, not a claim about the present.
+
+| # | Subphase | Owns | Depends on | Court | Open at the split |
+|---|---|---|---|---|---|
+| 7.3a | **The `EVP_MD` object** | `digest.c`'s fetch half, `evp_md_from_algorithm`'s `OSSL_DISPATCH` walk, `evp_md_free_int`, `evp_do_md_getparams`, the struct; `EVP_MD_fetch`/`free`/`up_ref`/`get_type`/`get0_name`/`get_size`/`get_block_size` | 7.2 | `RT-FETCH` (extended) | **LANDED (D148, D149)** |
+| 7.3b | **The `EVP_CIPHER` object** | `evp_enc.c`'s method half (`evp_cipher_new`, `evp_cipher_from_algorithm`, `evp_cipher_cache_constants`, `evp_cipher_free`/`_up_ref`), `evp_lib.c`'s `EVP_CIPHER_*` accessors, `cmeth_lib.c` whole; and `e_null.c`'s `EVP_enc_null`, which is the one legacy cipher with no Phase-13 primitive under it and the one a cipher court can resolve | 7.3a | `RT-EVP-CIPHER` | 42 |
+| 7.3c | **The `EVP_CIPHER_CTX` and the `EVP_Encrypt`/`EVP_Decrypt` API** | `evp_enc.c`'s remainder: the context, its flags, `EVP_CipherInit*`/`EVP_CipherUpdate`/`EVP_CipherFinal*`, the two `EVP_CipherPipeline*` families and the per-alias spellings of all of them | 7.3b | `RT-EVP-CIPHER` (extended) | 68 |
+| 7.3d | **The `EVP_MD` remainder** | `evp_lib.c`'s `EVP_MD_*` accessors and `EVP_MD_meth_*` constructors, `digest.c`'s context (`EVP_MD_CTX_*`), the one-shot `EVP_Digest*`/`EVP_DigestSign*`/`EVP_DigestVerify*`, `EVP_Q_digest`, `EVP_MD_do_all*`, `EVP_MD_xof`; and `m_null.c`'s `EVP_md_null`, for `EVP_enc_null`'s reason | 7.3a | `RT-EVP-MD` | 80 |
+| 7.3e | **`EVP_MAC` and `EVP_KDF`** | `mac_lib.c`, `mac_meth.c`, `kdf_lib.c`, `kdf_meth.c` — the two symmetric method classes whose operations are supplied entirely by a provider | 7.3d | `RT-EVP-MAC`, `RT-EVP-KDF` | 55 |
+| 7.3f | **`EVP_RAND` and `EVP_SKEYMGMT`** | `evp_rand.c` and `skeymgmt_meth.c` | 7.3e | `RT-EVP-RAND` | 54 |
+| 7.3g | **`names.c`, `evp_err.c`, `c_allc.c`, `c_alld.c`, and the legacy wrappers whose primitives are Phase 13's** | the four `EVP_MD_do_all*`/`EVP_CIPHER_do_all*` in `names.c`, the generated reason table in `evp_err.c`, the three adders, and the one hundred and sixty-eight statics in `e_aes.c`, `e_aria.c`, `e_camellia.c`, `e_des3.c`, `e_sm4.c`, `e_des.c`, `e_rc2.c`, `e_rc4.c`, `e_idea.c`, `e_cast.c`, `e_seed.c`, `e_bf.c`, `e_xcbc_d.c`, `e_aes_cbc_hmac_sha1.c`, `e_aes_cbc_hmac_sha256.c`, `e_chacha20_poly1305.c`, `e_rc4_hmac_md5.c`, `e_old.c`, `legacy_md4.c`, `legacy_md5.c`, `legacy_md5_sha1.c`, `legacy_sha.c`, `legacy_ripemd.c`, `legacy_blake2.c`, `legacy_mdc2.c`, `legacy_wp.c` — **handed to Phase 13 with the dependency named in that stratum's ledger**, because `e_aes.c` calls `AES_encrypt` and its siblings, not a provider | 7.3f | — | 171 |
+
+Two consequences of the split that are worth stating rather than discovering:
+
+* **7.3g is a hand-off, not a deferral of convenience.** Its ledger rows name Phase 13 and the
+  primitive unit (`crypto/aes/`, `crypto/des/`, …), which is the same standard the 26 Phase-5
+  hand-offs met when they arrived. What can be done here *is* done: the adders, the do-all
+  walkers and the two null methods, each of which needs nothing from Phase 13.
+* **`EVP_enc_null` and `EVP_md_null` are why the two courts above can exist at all.** A court for
+  a method class needs something to resolve through a real provider; these two are the only
+  legacy statics in 7.3 that can be built without a Phase-13 primitive, so they land with their
+  class rather than with the wrappers they look like they belong to.
+
 ## 3. What each subphase must honour — authority facts already established
 
 Recorded so they are not re-derived per subphase.
