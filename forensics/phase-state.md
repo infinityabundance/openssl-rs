@@ -14,7 +14,7 @@ enforced here:
 | 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `complete` |  |
 | 4 | BIO + CONF + object database | `complete` |  |
 | 5 | BN + ASN.1 + DER/PEM | `complete` |  |
-| 6 | OSSL_LIB_CTX + provider core | `not-started` | not started |
+| 6 | OSSL_LIB_CTX + provider core | `complete` |  |
 | 7 | EVP framework | `not-started` | not started |
 | 8 | Native cryptographic primitives | `not-started` | not started |
 | 9 | RAND / DRBG + entropy | `not-started` | not started |
@@ -34,14 +34,46 @@ enforced here:
 Deferred out of phase 3 (recorded hand-offs, not parity
 claims):
 
+* ASYNC_WAIT_CTX_clear_fd -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)
+* ASYNC_WAIT_CTX_free -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)
+* ASYNC_WAIT_CTX_get_all_fds -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)
+* ASYNC_WAIT_CTX_get_callback -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)
+* ASYNC_WAIT_CTX_get_changed_fds -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)
+* ASYNC_WAIT_CTX_get_fd -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)
+* ASYNC_WAIT_CTX_get_status -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)
+* ASYNC_WAIT_CTX_new -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)
+* ASYNC_WAIT_CTX_set_callback -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)
+* ASYNC_WAIT_CTX_set_status -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)
+* ASYNC_WAIT_CTX_set_wait_fd -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)
+* ASYNC_block_pause -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)
+* ASYNC_cleanup_thread -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)
+* ASYNC_get_current_job -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)
+* ASYNC_get_mem_functions -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)
+* ASYNC_get_wait_ctx -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)
+* ASYNC_init_thread -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)
+* ASYNC_is_capable -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)
+* ASYNC_pause_job -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)
+* ASYNC_set_mem_functions -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)
+* ASYNC_start_job -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)
+* ASYNC_unblock_pause -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)
 * ERR_add_error_mem_bio -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)
 * ERR_print_errors -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)
 * ERR_print_errors_cb -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)
 * ERR_print_errors_fp -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)
 * OBJ_create_objects -> phase 4 (reads an object description stream from a BIO; BIO is Phase 4)
+* OPENSSL_INIT_free -> phase 4 (constructs and fills the OPENSSL_INIT_SETTINGS handle that crypto/conf/conf_lib.c defines; CONF is Phase 4)
+* OPENSSL_INIT_new -> phase 4 (constructs and fills the OPENSSL_INIT_SETTINGS handle that crypto/conf/conf_lib.c defines; CONF is Phase 4)
+* OPENSSL_INIT_set_config_appname -> phase 4 (constructs and fills the OPENSSL_INIT_SETTINGS handle that crypto/conf/conf_lib.c defines; CONF is Phase 4)
+* OPENSSL_INIT_set_config_file_flags -> phase 4 (constructs and fills the OPENSSL_INIT_SETTINGS handle that crypto/conf/conf_lib.c defines; CONF is Phase 4)
+* OPENSSL_INIT_set_config_filename -> phase 4 (constructs and fills the OPENSSL_INIT_SETTINGS handle that crypto/conf/conf_lib.c defines; CONF is Phase 4)
 * OPENSSL_LH_node_stats -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)
 * OPENSSL_LH_node_stats_bio -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)
 * OPENSSL_LH_node_usage_stats -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)
 * OPENSSL_LH_node_usage_stats_bio -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)
 * OPENSSL_LH_stats -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)
 * OPENSSL_LH_stats_bio -> phase 4 (writes to a BIO/FILE sink; BIO is Phase 4)
+* OPENSSL_atexit -> phase 6 (pins the handler's shared object with DSO_dsobyaddr/DSO_free, which the profile compiles in; DSO is Phase 6.8)
+* OPENSSL_thread_stop -> phase 6 (runs the thread's event handlers for a library context; OPENSSL_thread_stop_ex calls ossl_lib_ctx_get_concrete, and OPENSSL_cleanup's OPENSSL_thread_stop call runs the handler list OPENSSL_atexit builds; the library context is Phase 6)
+* OPENSSL_thread_stop_ex -> phase 6 (runs the thread's event handlers for a library context; OPENSSL_thread_stop_ex calls ossl_lib_ctx_get_concrete, and OPENSSL_cleanup's OPENSSL_thread_stop call runs the handler list OPENSSL_atexit builds; the library context is Phase 6)
+* OSSL_get_max_threads -> phase 6 (reads and writes the thread-tracking ex-data slot of an OSSL_LIB_CTX (OSSL_LIB_CTX_GET_THREADS -> ossl_lib_ctx_get_data(CTX, OSSL_LIB_CTX_THREAD_INDEX)); the library context is Phase 6)
+* OSSL_set_max_threads -> phase 6 (reads and writes the thread-tracking ex-data slot of an OSSL_LIB_CTX (OSSL_LIB_CTX_GET_THREADS -> ossl_lib_ctx_get_data(CTX, OSSL_LIB_CTX_THREAD_INDEX)); the library context is Phase 6)

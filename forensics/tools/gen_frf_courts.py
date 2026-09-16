@@ -92,6 +92,16 @@ COURTS: list[tuple[str, int, str, str]] = [
     # Phase 3 — the core runtime.
     ("rt-mem", 3, "rt_mem_probe",
      "allocation, sizing, cleansing and the installable allocator"),
+    ("rt-mem-default", 3, "rt_mem_default_probe",
+     "the allocation family in the branch a consumer who never installs an "
+     "allocator is in: the zero-length arms of malloc, zalloc, calloc, the array "
+     "forms, the secure heap and the duplication family; CRYPTO_memdup's INT_MAX "
+     "refusal; the CRYPTO_realloc(addr, 0) release observed through a libc "
+     "interposer because the return value hides it; and the allow_customize latch"),
+    ("rt-mem-install", 3, "rt_mem_install_probe",
+     "the allocator dispatch itself: the identity of the reported default, partial "
+     "installation of one slot at a time, reinstallation, installing the default "
+     "back, and the installed branch's answer to a zero-length request"),
     ("rt-exdata", 3, "rt_exdata_probe",
      "per-object extension data (CRYPTO_*_ex_data)"),
     ("rt-err", 3, "rt_err_probe",
@@ -104,6 +114,12 @@ COURTS: list[tuple[str, int, str, str]] = [
      "threads, atomics and thread-local storage"),
     ("rt-secure", 3, "rt_secure_probe",
      "the secure heap"),
+    ("rt-runtime-ext", 3, "rt_runtime_ext_probe",
+     "the OSSL_trace_* surface under OPENSSL_NO_TRACE (the two category interrogators\n"
+     "and OSSL_trace_string are fully live), the OSSL_ERR_STATE_* save/restore round\n"
+     "trip observed through the public ERR_* queue, OSSL_sleep, the thread-support\n"
+     "flags, the two privilege predicates, the three empty OPENSSL_fork_* hooks, and\n"
+     "OPENSSL_die through a forked child"),
     ("rt-lhash", 3, "rt_lhash_probe",
      "the OPENSSL_LH_* hash table"),
     # Phase 4 — BIO, CONF and the buffer object.
@@ -140,6 +156,11 @@ COURTS: list[tuple[str, int, str, str]] = [
      "OBJ_create_objects and the object description stream behind it"),
     ("rt-conf", 4, "rt_conf_probe",
      "the CONF reader, the classic hash bridge and the NCONF_* accessors"),
+    ("rt-comp", 4, "rt_comp_probe",
+     "the COMP_* object API as this profile builds it (all six factories answer NULL\n"
+     "under no-zlib/no-zstd/no-brotli), the NULL contracts of the four NULL-tolerant\n"
+     "accessors, OPENSSL_config, the reachable conf_ssl_name_find answers, and the two\n"
+     "halves of OPENSSL_info"),
     # Phase 5 — the arithmetic and encoding substrate.
     ("rt-bn", 5, "rt_bn_probe",
      "the observable surface of the opaque BIGNUM: the values read back through the\n"
@@ -205,6 +226,101 @@ COURTS: list[tuple[str, int, str, str]] = [
      "counts and the 0xff mask that keeps a negative char two digits wide, the two\n"
      "appending to one buffer in the order PEM_ASN1_write_bio_internal uses them, and\n"
      "the conditional newline as the header buffer fills up"),
+    # Phase 6 — the parameter surface and the provider core.
+    ("rt-param", 6, "rt_param_probe",
+     "the OSSL_PARAM descriptor as a matrix rather than a scenario list: every "
+     "accessor against every source width, signedness and data type, with the "
+     "return code, the error queue and the value or bytes produced; the setters "
+     "against every destination shape including the NULL-buffer size queries that "
+     "answer success; the string and pointer forms and the two readers that accept "
+     "either; BIGNUM in and out with the sign and width rules; dup, merge and "
+     "free; text allocation with the hex prefix; and the builder's one-block "
+     "layout and reuse"),
+    ("rt-libctx", 6, "rt_libctx_probe",
+     "the OSSL_LIB_CTX identity contract: a fresh context distinct from every other, "
+     "the global default handing back one stable address that freeing does not "
+     "release, the thread-default chain including the clear-not-store that passing "
+     "the global default performs, the two of three `free` arguments that are "
+     "no-ops -- NULL and a context this thread has made its default -- "
+     "conf_diagnostics as per-context state read and written through a NULL "
+     "context, and the index registry's boundary: the dead indices and everything "
+     "past the end of the switch answer NULL, while the slot whose answer is the "
+     "address of a field answers a pointer for every context including an empty "
+     "one"),
+    ("rt-threaddata", 6, "rt_threaddata_probe",
+     "the per-context thread slot's two accessors: the counter is per context "
+     "rather than per process, so setting it on one must not move another; a "
+     "NULL context resolves through the library context default chain, so "
+     "installing a thread default changes what the same call answers; and the "
+     "value is stored verbatim, with no range check, so UINT64_MAX is legal to "
+     "set and to read back and zero is a value rather than 'unset'"),
+    ("rt-selftest", 6, "rt_selftest_probe",
+     "the two callback surfaces, observed by being the callback: the array's "
+     "entries alias the object's own phase/type/desc fields, so the same array "
+     "reports Pass inside onend's callback and None when read afterwards; onend "
+     "treats anything other than 1 as failure, so 0 and -1 both report Fail; "
+     "oncorrupt_byte's answer is the callback's inverted, flipping the first "
+     "byte only when the callback refuses; and both per-context callback pairs, "
+     "including that the object's callback is the one passed to "
+     "OSSL_SELF_TEST_new rather than the context's"),
+    ("rt-bio-core", 6, "rt_bio_core_probe",
+     "the core BIO method, whose every operation is a forward to an "
+     "application-supplied dispatch entry: the method's identity and stable "
+     "address; BIO_CORE_INDEX filled eagerly by context_init rather than on "
+     "first use; the constructor's refusal without a table and its acceptance "
+     "when only one of read_ex/write_ex is present; the five-way answer to a "
+     "missing callback, where read_ex and write_ex answer 0 and ctrl, gets and "
+     "puts answer -1, observed by supplying deliberately incomplete tables; the "
+     "handle the callbacks receive, compared against the constructor's argument "
+     "and against NULL rather than printed; two contexts holding two different "
+     "tables, named by the answers their callbacks produce; an up-ref that "
+     "refuses, which releases the wrapper with a NULL handle and never the "
+     "caller's handle; and a BIO built with a NULL context, whose libctx is "
+     "stored as given and resolved against the thread default at use time"),
+    ("rt-dso", 6, "rt_dso_probe",
+     "the generic dynamic-object layer, compared through relations because a DSO's "
+     "subject is a shared library and its filename is necessarily a different path on "
+     "each side: the non-uniform NULL contract (free and flags answer, up_ref, ctrl, "
+     "get_filename, set_filename, merge, convert_filename and bind_func all raise); "
+     "DSO_ctrl's three generic commands intercepted before the NULL method, and the "
+     "unrecognised command that does reach it, plus a negative flag word stored and "
+     "read back as -1 with a clean queue; the name translator's rule being 'contains "
+     "no slash' rather than 'has not been translated', so 'libfoo.so' becomes "
+     "'liblibfoo.so.so'; the extension-only and no-translation flags, the latter "
+     "copying rather than refusing where DSO_merge answers NULL for the same flag; "
+     "DSO_merge's four shapes and its one-trailing-slash strip, with a NULL first spec "
+     "refused by the layer before the merger is reached; DSO_pathbyaddr's size "
+     "arithmetic -- the query, the truncation of min(len, sz - 1) + 1, and the "
+     "dladdr miss that answers -1 with an empty error queue because the site appends "
+     "without raising; DSO_dsobyaddr's two-pass query; the globallookup through the "
+     "whole process; DSO_load's ordered refusals, its translation on the load path, a "
+     "real load of the library under test, binding through it, the already-loaded "
+     "refusal that leaves the caller's object alive, and a reference count observed "
+     "through two frees that both answer 1"),
+    ("rt-provider", 6, "rt_provider_probe",
+     "the provider registry, driven entirely through a provider the probe itself "
+     "declares: registration through OSSL_PROVIDER_add_builtin and its two refusals "
+     "(a NULL name and a NULL entry point, the latter refused *before* anything is "
+     "allocated); the load, which is also what disables automatic loading of the "
+     "fallback provider, so the remaining observations are of a registry that will "
+     "not supply one; the entry point's handle and the provider's own context, "
+     "compared against the marker the probe published rather than printed; the "
+     "dispatch table read back by entry *id* and terminator, because the two tables "
+     "are at different addresses and identical in content; a second load of the same "
+     "name, which finds the stored object and takes a second reference; the four "
+     "delegated calls that answer through the provider's context, each with a NULL "
+     "and a non-NULL argument so the pass-through is visible in both directions; an "
+     "algorithm query whose no_cache the provider writes and the caller reads, "
+     "unquery receiving exactly the pointer the query answered, and a NULL no_cache "
+     "that is legal; the CONF parameter list, including a boolean read back through "
+     "OSSL_PROVIDER_conf_get_bool with its default for a key that is not a boolean "
+     "and for a key that does not exist; the per-context default search path, which "
+     "a NULL clears as a *success* because the release precedes the NULL test; "
+     "availability for a known name, an unknown name and the fallback name that the "
+     "first load disabled; the enumeration and the callback's arguments; a load of a "
+     "name that cannot be resolved; and the unload, teardown, reload and second "
+     "unload that show initialisation happening exactly once and the teardown "
+     "waiting for the last reference"),
 ]
 
 

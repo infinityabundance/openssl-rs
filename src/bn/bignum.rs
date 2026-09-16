@@ -1417,6 +1417,25 @@ pub unsafe extern "C" fn BN_signed_native2bn(
 /// Write the two's-complement form of `b` into `tolen` bytes, big-endian unless
 /// `little`. `None` when the value cannot fit.
 ///
+/// ## The fit rule is not `BN_num_bytes <= tolen`
+///
+/// A signed representation needs `n + ext` bytes, not `n`, where `n` is the magnitude's
+/// byte count and `ext` compensates for the top byte of a two's-complement value being
+/// read as a sign. The authority's `bn2binpad` computes it as
+///
+/// ```c
+/// ext = (n * 8 == n8) ? !a->neg : a->neg;
+/// ```
+///
+/// so one extra byte is required when the magnitude occupies its top byte exactly and the
+/// value is non-negative (`0x80` cannot be stored in one byte, because `0x80` there means
+/// `-128`), or when the magnitude does *not* occupy its top byte exactly and the value is
+/// negative (`-1` needs two bytes: `0xff` is refused, `0xffff` accepted). This module
+/// used to refuse only when `BN_num_bytes(a) > tolen`, which accepted five destinations
+/// the authority refuses — `-1`, `0x80`, `-0x0102`, `0xffff` and each of them one byte
+/// short, plus `0` into a zero-length destination. `RT-BN` now sweeps every combination of
+/// value and `tolen`, which is what found it.
+///
 /// # Safety
 ///
 /// `to` must point to at least `tolen` writable bytes when `tolen` is positive.
@@ -1424,8 +1443,16 @@ unsafe fn signed_bytes(b: &BigNum, to: *mut u8, tolen: c_int, little: bool) -> O
     if tolen < 0 {
         return None;
     }
-    let need = limbs::bit_len(&b.d).div_ceil(8);
-    if need > tolen as usize {
+    let n8 = limbs::bit_len(&b.d);
+    let n = n8.div_ceil(8);
+    // `n8 == 0` (a zero magnitude) makes `n * 8 == n8` true, so `ext` is 1 and a zero
+    // still needs one byte. That is the authority's answer for `tolen == 0` as well.
+    let ext = if n * 8 == n8 {
+        usize::from(b.neg == 0)
+    } else {
+        usize::from(b.neg != 0)
+    };
+    if n + ext > tolen as usize {
         return None;
     }
     if tolen > 0 {

@@ -1,21 +1,20 @@
 # Phase 5 — `BIGNUM`, ASN.1 and PEM: seal
 
-**STATUS: COMPLETE.** Every export this stratum owns is either implemented and
-observed by a differential court, or handed to a named later stratum with the
-dependency it is waiting on. The claim is derived, not typed: `open_in_this_stratum`
-in `forensics/phase5-obligations.json` is zero, `forensics/phase-state.json` reads
-`complete`, and both are produced by the generators in `forensics/tools/`.
+**STATUS: closed within itself, derived `in-progress` (docs/DECISIONS.md D97).** Every export this stratum owns is either implemented and observed by a differential court, or handed to a named later stratum with the dependency it is waiting on: `open_in_this_stratum` in `forensics/phase5-obligations.json` is zero. The stratum nonetheless derives `in-progress`, and not because of anything it did: `forensics/tools/phase_state.py` enforces that a phase may be complete only if every earlier phase is, and D97 reopened Phases 3 and 4. That is the rule doing what it was written for.
 
-This is **not** a claim that openssl-rs is a usable OpenSSL. 932 `libcrypto` exports
-are implemented; the remaining 4,964 `libcrypto` exports and all 603 `libssl` exports
-are still `SCAFFOLDED` and abort when called.
+**For every count in this document, read `docs/SEAL-CENSUS.md`**, which is generated from the ledgers and the court results by `forensics/tools/render_seal_census.py`.
+
+This is **not** a claim that openssl-rs is a usable OpenSSL. `docs/SEAL-CENSUS.md` carries the current figures: 932 of 5,896 `libcrypto` exports are implemented, and all 603 `libssl` exports remain `SCAFFOLDED` and abort when called.
 
 - Authority: `openssl-3.6.4-production` (with `openssl-3.6.3-historical` admitted for
   the oracle-versus-oracle trajectory in `docs/SECURITY_DIVERGENCE_POLICY.md`)
 - Court results: `artifacts/phase5/COURTS.json` — 9 courts, 9,669 observations, 0
   residuals, `all_pass` true
 - Obligation ledger: `forensics/phase5-obligations.json` — 565 exports owned,
-  **474 implemented**, 91 handed on, **0 open**
+  **474 implemented**, 91 handed on, **0 open in this stratum**. The figures are in
+  `docs/SEAL-CENSUS.md`; D97 removed one disputed row from the hand-off list
+  (`BIO_f_asn1` and `BIO_new_NDEF` are declared in `asn1.h` and were always this
+  stratum's outright, so listing them as a discharged hand-off was a prefix artifact)
 - Derived state: `forensics/phase-state.json`
 
 ## 1. What this phase owns, and how that was decided
@@ -230,5 +229,75 @@ Residuals recorded in the store at this boundary rather than left to be rediscov
 the six `asn_mime.c` exports handed to Phases 7 and 12; the 31 RAND-dependent
 `BN_*`/`ASN1_*` exports handed to Phase 9; the four `GF(2^m)` and `BN_GENCB`
 divergences; the two `ABI_ONLY_EXPORTED` symbols the prototype court reports rather
-than skipping; and `D-MIME-1`, whose reachability was established by measurement and
-not by argument.
+rather than skipping; and `D-MIME-1`, whose reachability was established by measurement
+and not by argument.
+
+## 9. Correction from the ownership reconciliation (D97)
+
+Appended, not folded in. This stratum's own evidence did not change, but two things
+touching it did.
+
+**One row left the hand-off list.** `BIO_f_asn1` and `BIO_new_NDEF` were recorded here
+as discharged hand-offs from Phase 4. Both are declared in `asn1.h`, so the ownership
+atlas gives them to this stratum **outright** -- they appear here as `implemented`
+and always did. Listing them a second time as a received hand-off was an artifact of
+the old Phase 4 ledger matching every `BIO_` name with a prefix. The four
+`BIO_asn1_*` controls, which are declared in `bio.h`, are genuinely Phase 4's and
+remain a real edge; both ledgers now record it and `ownership_audit.py` reconciles the
+two readings in both directions.
+
+**The derived state changed to `in-progress`.** Not on this stratum's evidence: its
+ledger is at zero open and always was. D97 reopened Phases 3 and 4 after finding that
+sixty-nine and nineteen of the exports the atlas assigns them had no ledger row at
+all, and the dependency-order invariant says a phase may be complete only if every
+earlier phase is. The stratum's own exit criteria in §7 stand unchanged.
+
+Both corrections are recorded in `docs/DECISIONS.md` D97, and the arithmetic a reader
+should cite is in `docs/SEAL-CENSUS.md`, which regenerates.
+
+## 10. Correction: the signed encoders' fit rule (D104)
+
+`BN_signed_bn2native`, `BN_signed_bn2bin` and `BN_signed_bn2lebin` take a destination
+length, and this stratum's court exercised them with destinations that were obviously
+large enough — which is exactly the case where the fit rule cannot be observed. Found by
+Phase 6's `RT-PARAM`, whose builder path reaches `BN_signed_bn2native` with a *tight*
+destination and whose output disagreed with the authority's.
+
+The rule is in `crypto/bn/bn_lib.c`'s `bn2binpad`:
+
+```c
+n8 = BN_num_bits(a);
+n  = (n8 + 7) / 8;                      /* BN_num_bytes */
+ext = (n * 8 == n8) ? !a->neg : a->neg; /* the MSbit would be misread as a sign */
+if (tolen == -1) tolen = n + ext;
+else if (tolen < n + ext) { … if (tolen < n + ext) return -1; }
+```
+
+So a signed representation needs `n + ext` bytes, not `n`: one extra byte when the
+magnitude fills its top byte exactly and the value is non-negative (`0x80` cannot be held
+in one byte, because `0x80` there is `-128`), or when the magnitude does *not* fill its top
+byte and the value is negative (`-1` needs two bytes — `0xff` is refused, `0xffff`
+accepted). This module refused only when `BN_num_bytes(a) > tolen`.
+
+Five destinations the authority refuses were accepted, and one it refuses was accepted as
+a success with no write:
+
+| value | `tolen` | authority | was |
+|---|---|---|---|
+| `-1` | 1 | refuse | wrote `ff` |
+| `0x80` | 1 | refuse | wrote `80` |
+| `-0x0102` | 2 | refuse | wrote `fefe` |
+| `0xffff` | 2 | refuse | wrote `ffff` |
+| `0` | 0 | refuse | returned 0 |
+
+`RT-BN` now sweeps nineteen values — including `0`, `1`, `-1`, `0x7f`, `0x80`, `-0x80`,
+`0xff`, `-0xff`, `0x0102`, `-0x0102`, `0x7fff`, `0x8000`, `-0x8000`, `0xffff`, `-0xffff`,
+`0x010000`, `-0x010000` and three multi-limb shapes — against every `tolen` from 0 to 5,
+for all three entry points, plus a negative `tolen` and the `BN_signed_native2bn` inverse.
+That is 860 further observations and it is what makes the rule checkable rather than
+asserted. Its first run after the fix is byte-identical to the authority's.
+
+The stratum gains no export and its ledger is unchanged at zero open, so it remains
+`complete`; this section is the correction, not a reopening. The lesson is the one §9 and
+`docs/DECISIONS.md` D96 record from other angles: **a court's coverage is a property of
+the inputs it chooses**, and "obviously large enough" is a choice.

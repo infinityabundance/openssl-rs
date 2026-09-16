@@ -570,9 +570,7 @@
         "BIO_asn1_get_prefix",
         "BIO_asn1_get_suffix",
         "BIO_asn1_set_prefix",
-        "BIO_asn1_set_suffix",
-        "BIO_f_asn1",
-        "BIO_new_NDEF"
+        "BIO_asn1_set_suffix"
       ]
     },
     "header_phase": {
@@ -1121,7 +1119,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "e88230fccb56990c9c5e1631d71f60a5b98b867435869c5b4e7d183f985c323d"
+      "sha256": "b9e0e7fab60b9998c2644beb2a71d700ed40042476885d2a23c27d393498761d"
     }
   ],
   "kind": "phase5-obligations",

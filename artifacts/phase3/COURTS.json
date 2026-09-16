@@ -11,7 +11,7 @@
         "candidate_exit_code": 0,
         "candidate_observations": 82,
         "candidate_stderr_tail": [
-          "counts.malloc=34 realloc=1 free=20 live=14"
+          "counts.malloc=32 realloc=4 free=20 live=13"
         ],
         "court": "RT-MEM",
         "crashed": false,
@@ -21,6 +21,40 @@
         "staged_binaries": {
           "authority": "artifacts/phase3/probes/rt_mem_probe.authority",
           "candidate": "artifacts/phase3/probes/rt_mem_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 39,
+        "candidate_exit_code": 0,
+        "candidate_observations": 39,
+        "candidate_stderr_tail": [],
+        "court": "RT-MEM-DEFAULT",
+        "crashed": false,
+        "probe": "court/phase3/rt_mem_default_probe.candidate",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase3/probes/rt_mem_default_probe.authority",
+          "candidate": "artifacts/phase3/probes/rt_mem_default_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 15,
+        "candidate_exit_code": 0,
+        "candidate_observations": 15,
+        "candidate_stderr_tail": [],
+        "court": "RT-MEM-INSTALL",
+        "crashed": false,
+        "probe": "court/phase3/rt_mem_install_probe.candidate",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase3/probes/rt_mem_install_probe.authority",
+          "candidate": "artifacts/phase3/probes/rt_mem_install_probe.candidate"
         },
         "verdict": "pass"
       },
@@ -125,15 +159,32 @@
           "candidate": "artifacts/phase3/probes/rt_lhash_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 94,
+        "candidate_exit_code": 0,
+        "candidate_observations": 94,
+        "candidate_stderr_tail": [],
+        "court": "RT-RUNTIME-EXT",
+        "crashed": false,
+        "probe": "court/phase3/rt_runtime_ext_probe.candidate",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase3/probes/rt_runtime_ext_probe.authority",
+          "candidate": "artifacts/phase3/probes/rt_runtime_ext_probe.candidate"
+        },
+        "verdict": "pass"
       }
     ],
     "summary": {
       "fail": 0,
-      "pass": 7,
-      "total": 7
+      "pass": 10,
+      "total": 10
     }
   },
-  "body_hash": "503aaec0c27d03d6e3e1c7a3288a9242bc6002a5b1c1d609c30833a64aafe18b",
+  "body_hash": "7b086d8704c4c48c068889dadd629ba06c4cad62e74712b4f409c8d0cdb4b1aa",
   "generator": "forensics/tools/phase3_courts.py",
   "inputs": [],
   "kind": "phase3-courts",

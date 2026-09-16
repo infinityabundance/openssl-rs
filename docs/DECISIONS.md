@@ -4349,3 +4349,3384 @@ owns the court ordering that used to be a property of the workflow's step list �
 the general mechanism is not built, and for the same reason: it is a change to how
 every generator is invoked, and it should not be bolted on at the end of a change
 about something else.
+
+## D97 — the atlas was reconciled in one direction, and the ledgers were wrong in the other
+
+D72 built `forensics/atlas/symbol-ownership.json` and made each phase ledger a
+*projection* of it, which fixed the defect class D49, D51 and D52 had each recorded in
+a different guise: a symbol matching no prefix was invisible to every ledger at once.
+Phase 5 was rewritten to project, and `ownership_audit.py` gained the invariant that
+an export the atlas assigns a stratum where that stratum's ledger has no row is an
+error.
+
+That invariant was written for Phase 5 and **not applied to the strata that had
+already sealed**. Phases 3 and 4 still chose their own universes with
+`(module, prefixes)` family lists, and they failed closed *within* those lists — which
+is not the same thing at all. A prefix that matches nothing reports nothing, so sixty-
+nine Phase 3 exports and nineteen Phase 4 exports that the atlas assigns them were in
+no ledger, in no evidence list and in no audit, while both seals called their strata
+complete.
+
+The Phase 3 sixty-nine were not obscure: every `ASYNC_*` (22), every
+`OSSL_ERR_STATE_*` (5), every `OSSL_trace_*` (10), `OSSL_get_max_threads`,
+`OSSL_set_max_threads`, `OSSL_get_thread_support_flags`, `OSSL_sleep`, `OPENSSL_atexit`,
+`OPENSSL_die`, `OPENSSL_fork_prepare`/`_parent`/`_child`, `OPENSSL_isservice`,
+`OPENSSL_issetugid`, `OPENSSL_thread_stop`, `OPENSSL_thread_stop_ex`,
+`err_free_strings_int`, the five `OPENSSL_INIT_*` handle constructors, and
+`OPENSSL_gmtime` with its two neighbours. The Phase 4 nineteen were the fourteen
+`COMP_*` functions, the three ABI-only `conf_ssl_*` helpers, `OPENSSL_config` and
+`OPENSSL_load_builtin_modules`.
+
+Three of those classes had a second cause worth naming, because each is a different
+way for a list to be wrong:
+
+  * `src/runtime/time.rs` **was in neither list**. It is implemented
+    (`OPENSSL_gmtime`, `OPENSSL_gmtime_adj`, `OPENSSL_gmtime_diff`), it lives in the
+    Phase 3 directory, and its own module comment says it is Phase 3's — but it was in
+    no `FAMILIES` entry and no `PHASE3_MODULES` entry, so three implemented exports
+    belonged to no ledger and to no evidence set simultaneously. An implementation can
+    be invisible in exactly the same way an obligation can.
+  * a **case difference** hid ten exports. Phase 3's families listed
+    `OPENSSL_init` and `OpenSSL_version`; the authority exports `OPENSSL_INIT_new` and
+    `OPENSSL_version_major`. Prefix matching is case-sensitive, so `OPENSSL_INIT_*` and
+    the five `OPENSSL_version_*` accessors matched nothing.
+  * the ledger was **over-claiming** as well as under-claiming. Phase 4's list matched
+    every `BIO_` name, so it carried nine deferral rows — `BIO_f_base64`, `BIO_f_md`,
+    `BIO_f_cipher`, `BIO_f_reliable`, `BIO_set_cipher`, `BIO_new_CMS`, `BIO_new_PKCS7`,
+    `BIO_f_asn1`, `BIO_new_NDEF` — for symbols declared in `evp.h`, `cms.h`, `pkcs7.h`
+    and `asn1.h`. The atlas never gave Phase 4 any of them.
+
+The audit was wrong in the same direction. `ownership_audit.py` read a ledger's row set
+as `implemented | open` and **ignored `deferred`**, so Phase 5's 91 deferred rows read
+as a 91-symbol ownership gap that did not exist. Reading a field that is absent as if
+it were empty, and not reading a field that is there, are the same defect: an absence
+of evidence resembling a satisfied plane.
+
+### What changed
+
+  * `ownership_audit.py` was rewritten. It now reads `implemented | open | deferred`,
+    and enforces **both** directions, as hard failures: every export the atlas assigns
+    a stratum must have a row in that stratum's ledger, and every row a ledger carries
+    for another stratum's export must be a hand-off that stratum recorded. It also
+    checks each ledger's own arithmetic (every row in exactly one list, and the three
+    summing to `owned`), the cross-ledger `implemented` double-count, and the hand-off
+    edges in both readings — the deferring stratum's `deferred` rows against the
+    receiving stratum's `handoffs_discharged`.
+  * `phase3_obligations.py` and `phase4_obligations.py` were rewritten as atlas
+    projections, in the shape Phase 5 already had. The prefix tables survive only as
+    *labels* naming the module expected to hold a symbol, and an unlabelled symbol is
+    now a hard failure rather than a row filed under "other".
+  * `ownership_rules.py` gained `SYMBOL_PHASE`, the third and last name-level
+    exception, because `crypto.h` genuinely declares two strata: `OSSL_LIB_CTX_new`
+    sits nine lines from `CRYPTO_malloc`, and nothing in the header separates them. The
+    ten `OSSL_LIB_CTX_*` exports move to Phase 6, whose subject matter the library
+    context is. The atlas now records a `symbol-override` rule with the reason, and
+    `by_phase` moves from `{3: 304, 6: 127}` to `{3: 294, 6: 137}`.
+  * `phase_state.py` now derives Phase 3's state from its ledger's `open` count, as it
+    already did for Phases 4 and 5. Before this, adding honest `open` rows to Phase 3's
+    ledger would not have moved its state at all.
+  * `regression_guard.py` gained `phase_state_transitions`, because a state *downgrade*
+    is a regression by default — and must stay one. A correction that lowers a derived
+    state is now the same shape as an ownership transition: a row in
+    `forensics/ownership-transitions.json` matching the phase and both states exactly,
+    naming the decision and the artifact that is the authority for the new state.
+  * `docs/SEAL-CENSUS.md` is new, and is generated by
+    `forensics/tools/render_seal_census.py`. Seals were restating their arithmetic in
+    prose, and the prose did not regenerate: the Phase 5 seal's census once disagreed
+    with the generated status and with another section of itself. The arithmetic now
+    lives in one generated document that the seals cite. Phase 3's and Phase 4's seals,
+    and Phase 5's, gained appended correction sections rather than edits — the
+    append-only rule applies to seals as much as to this file.
+  * `render_status.py` now **discovers** the ledgers instead of naming Phases 3 and 4.
+    Phase 5's ledger had never been rendered in `STATUS.md` at all, and no reader could
+    tell whether that was a decision. `evidence_determinism.py` discovers the phase
+    generators the same way, so a new stratum no longer has to be remembered in four
+    registries.
+
+### What was deliberately not done
+
+The sixty-nine and nineteen are **not** deferred to make the states green again. Two
+dispositions were refused for that reason:
+
+  * `OSSL_LIB_CTX_*` are not "deferred to Phase 6"; they are **Phase 6's**, and moving
+    them in the atlas is the correct statement rather than a deferral a reader would
+    have to trust.
+  * the twenty-nine open Phase 3 exports are not handed to a later stratum in a lump.
+    They are recorded `open`, they block the stratum, and `docs/PHASE-6-SUBPHASES.md`
+    6.2 names them as work. `OSSL_trace_*` and `OSSL_ERR_STATE_*` are core-runtime
+    facilities with no later stratum to defer to; inventing one would be the same
+    defect one level up.
+
+`ASYNC_*` **is** deferred, to Phase 13, and the reason is a dependency rather than a
+distance: `OPENSSL_NO_ASYNC` is not defined in the pinned profile, and the authority's
+own tree shows every in-tree caller is either an asynchronous engine
+(`engines/e_dasync.c`, `engines/e_afalg.c`) or the SSL async API (`ssl/ssl_lib.c`).
+Phase 13 is the earliest stratum whose own obligations require the job framework.
+
+Phases 3, 4 and 5 are `in-progress`, Phase 6 has its own ledger at 156 open exports,
+and `implemented` is unchanged at 932: not one implementation was removed and not one
+observation was invalidated. This is a correction to a completeness claim, which is
+the cheapest kind of correction there is — and the only reason it was cheap is that
+the evidence and the accounting were kept apart.
+
+## D98 — the prototype gap was three instrument gaps, and every implemented export is now judged
+
+D96 recorded a measured gap rather than building a mechanism for it: 162 exports whose
+Rust declaration `prototype_court.py` could not read because it was produced by a
+`macro_rules!`, 8 implemented in C, and 3 with no prototype in the atlas. Two designs
+were considered and rejected as too large for the change that found them — a generated
+module of compile-time `const _: fn(...) = item;` assertions, and macro-*
+expanded*source from `cargo rustc -Zunpretty=expanded`, which needs a nightly
+toolchain against a crate pinned to a release one.
+
+The third option is the one that was taken, and it is smaller than either: **read the
+macro, not its expansion.** The crate cannot build a `#[no_mangle]` symbol name from
+another token, so every macro that exports a symbol writes both identifiers at every
+use and its *body* holds a literal signature with `$param` where the name goes. The
+signature was always readable; only the substitution was missing.
+`macro_defs` parses a `macro_rules!` declared parameter list and the literal signature
+inside its body, `expand_macro_invocations` substitutes each invocation's arguments
+positionally, and the result goes through the same `rust_signature_canon` /
+`c_signature_canon` pair as every other declaration. One parser, one canonical form,
+one comparison policy — the property D96's rejected designs would each have broken in
+a different way.
+
+It is robust in the direction that matters because it refuses rather than guesses. A
+macro whose body puts a `$param` in a *type* position is reported as unreadable instead
+of being read as `opaque` (which would make every such symbol compare equal to
+something); a repetition that is not the last matcher element is reported rather than
+having its extent assumed; a macro with no `fn $param(` in its body (`bail!`, the
+`conf/def.rs` helper) is skipped without needing to understand arbitrary macro syntax.
+
+Reading the sources to build that mechanism then found that **two of the three gap
+classes were the instrument, not the code**:
+
+  * `DECL_RE` required `pub` and did not match `pub(crate)`. `src/runtime/err_loaders.rs`
+    declares all twenty-six `ERR_load_<LIB>_strings` entry points as
+    `pub(crate) extern "C" fn` with `#[no_mangle]` — the symbol must be exported while
+    the Rust item stays crate-private — so twenty-six *plainly written* declarations
+    were reported as "the symbol appears in src but not as a declaration this court can
+    parse". One alternation.
+  * `c_signature_canon` built the authority's parameter list from the atlas's `params`
+    array, which records Clang's `ParmVarDecl`s and therefore **omits the varargs**:
+    `int (BIO *, const char *, ...)` has two entries. So the eight C implementations
+    compared a three-parameter definition against a two-parameter prototype and failed.
+    The authority's own `type` string carries the `...`, and the record carries
+    `variadic: true`; the canonical form now appends it. A third bug in the same code
+    path read the definition's return type by removing its *prefix* where the name is a
+    *suffix*, which is why all eight reported `opaque`.
+
+That is the sixth time in this stratum's line of work that the instrument was the first
+suspect, and the second time in this court alone. The pattern is worth naming: a
+measurement mechanism is written once against a shape the author has in mind, and every
+input that does not have that shape is silently miscounted rather than reported. The
+fix each time is the same — make the tool refuse when it cannot read, and add a control
+that proves it can read the defect it claims to cover.
+
+So the court gained a **sensitivity block**: three controls over deliberately defective
+synthetic inputs, parsed by the same functions as the real pass, each asserting both
+that the defective input is detected and that the corrected one is not, and each
+`all_detected` a failure condition. The first draft of the macro control was itself
+wrong — it asserted an empty parameter list where the parser correctly returns the
+parameters *with their names*, as the crate writes them — which is a fair illustration
+of why a control that asserts only "a mismatch was found" would have been worthless.
+
+Result, and it is the whole point of the change: of 932 implemented `libcrypto`
+exports, **921 are checked as Rust declarations, 8 as C definitions, 0 are unreadable,
+0 are ungenerated, 0 are not found, and every one of the 929 has zero mismatches on
+both the class/arity plane and the full canonical type plane**. The remaining 3 are
+documented as unjudgeable by *this* court for a reason that is not a gap in it:
+`OPENSSL_DIR_read`, `OPENSSL_DIR_end` and `asn1_d2i_read_bio` are declared in
+`crypto/o_dir.h` and `crypto/asn1/asn1_local.h`, which the authority does not install,
+so the Phase 1 atlas has no prototype for them. The Phase 2 loader court still proves
+their ABI, resolving each at its declared ELF version.
+
+`declaration_is_generated` is now a **defect** rather than a gap, and the court fails
+on it along with `not_found`, `unreadable_macros`, the C-plane mismatches and a
+sensitivity control that does not fire.
+
+## D99 — the 29 reopened obligations, 24 implemented and 5 handed on with a real dependency
+
+D97 left Phase 3's ledger with twenty-nine `open` exports. This is what happened to
+them, and the split is the interesting part: **five are not Phase 3's** once you read
+past the declaring header, and each of the five names a dependency that can be checked
+rather than an amount of work that cannot.
+
+**Twenty-four implemented** (`docs/PHASE-6-SUBPHASES.md` 6.2), in three new modules
+whose existence is itself the finding that Phase 3's prefix lists had hidden:
+
+  * `src/runtime/trace.rs` — the ten `OSSL_trace_*` exports. The pinned profile is
+    configured `no-trace`, so eight answer a constant; but the two category
+    interrogators and `OSSL_trace_string` are outside every `#ifndef` and are fully
+    live. `OSSL_TRACE_CATEGORY_NUM` is 21 and the name table is order-dependent, and
+    `OSSL_trace_string` is where the interesting behaviour is: `full == 0` with
+    `size > 80` writes a `[len N limited to 80]: ` prefix, `text == 0` masks control
+    characters while preserving newlines and appends one if the input lacked it, and
+    the output goes through `%.*s`, so an embedded NUL does not truncate it.
+  * `src/runtime/err_state.rs` — the five `OSSL_ERR_STATE_*` exports, split out of
+    `err.rs` the way `err_save.c` is split out of `err.c`, because they move whole
+    state structures and transfer ownership of the attached data buffers.
+  * `src/runtime/uid.rs` — `OPENSSL_isservice` and `OPENSSL_issetugid`. Both are
+    platform predicates whose answer is decided entirely by which `#if` arm is
+    selected, and `uid.c` has five. This profile takes the glibc one,
+    `getauxval(AT_SECURE) != 0`; the `getuid() != geteuid()` fallback beside it is
+    deliberately **not** transcribed, because a literal written from the source would
+    be an unmeasured claim about a libc this crate has not observed, and the two
+    disagree for a process that was merely given a group it did not ask for.
+
+plus `OPENSSL_die`, the three `OPENSSL_fork_*` hooks (empty bodies on this profile,
+which is the authority's own body), `err_free_strings_int` (the authority's body is
+the comment `/* obsolete */`), `OSSL_get_thread_support_flags` (a compile-time
+constant, `3` here) and `OSSL_sleep`.
+
+**Five deferred, with the dependency named.** `OSSL_get_max_threads` and
+`OSSL_set_max_threads` read and write the thread-tracking ex-data slot of an
+`OSSL_LIB_CTX`; `OPENSSL_thread_stop_ex` calls `ossl_lib_ctx_get_concrete`;
+`OPENSSL_thread_stop` is the other half of a pair whose first half is a later
+stratum's, and `OPENSSL_cleanup` runs the handler list that `OPENSSL_atexit` builds;
+and `OPENSSL_atexit` itself pins the handler's shared object with
+`DSO_dsobyaddr`/`DSO_free`, a block the profile compiles in — `OPENSSL_USE_NODELETE`,
+`OPENSSL_NO_PINSHARED` and `DSO_NONE` are all unset, which was measured in the court
+rather than read off the configure line. Faking that pin would be a silent
+behavioural substitution for a dependency that exists.
+
+### The court found two real defects, and both were mine
+
+`RT-RUNTIME-EXT` (94 observations) is the differential court for the
+twenty-four, and the first run failed on two things that no amount of re-reading had
+caught:
+
+  * **`OSSL_ERR_STATE_save` released nothing.** The authority memsets the thread's
+    state after copying it into the destination, so the ownership of the attached
+    data buffers **moves**. The implementation called `clear_all(false)` — the
+    authority's own *comment* says "just clear the thread state" — and that function's
+    documented behaviour for an owned buffer is to keep the pointer and truncate it in
+    place. So both states owned the same buffers, and a state reused across an
+    `ERR_clear_error` double-freed. `ErrState::zeroed` exists because the code is what
+    a caller observes and the comment is not.
+  * **`ossl_iscntrl` was wrong above 0x7f.** `ossl_ctype_check` is
+    `a >= 0 && a < max && (map[a] & mask) != 0` with `max == 128`, so a byte at or
+    above 128 is **not** a control character. The first version assumed a
+    `CTYPE_MASK_ascii` fallback and masked those bytes into spaces; the probe passes
+    `0x80` through `OSSL_trace_string`, where the authority passes it through
+    unchanged.
+
+Neither was reachable by inspection and neither would have been found by the unit
+tests, which is the same lesson D65, D76, D90 and D98 each record from a different
+angle. The first is worth naming precisely because the *docstring* of the function
+being misused described the correct behaviour, and the code that used it read
+plausibly.
+
+Phase 3's ledger is at zero open again and `forensics/phase-state.json` derives it
+`complete`; its seal gains an appended §11 rather than an edit. `implemented` for
+`libcrypto` moves 932 → 956 and `libcrypto`'s scaffolds fall to 4,940.
+
+## D100 — `OPENSSL_info` answers NULL for the build-dependent codes, and that was unrecorded
+
+Found by `RT-COMP`, whose subject is the eighteen exports 6.3 implemented and which
+reaches `OPENSSL_info` only because `OPENSSL_config` is one of them and
+`crypto/conf/conf_sap.c`'s loader is what the probe touches next.
+
+`crypto/info.c` is a translation unit of its own, and `OPENSSL_info` splits its codes
+into two kinds. The **build-independent** ones are compile-time platform facts —
+`OPENSSL_INFO_DSO_EXTENSION` (`.so`), `OPENSSL_INFO_DIR_FILENAME_SEPARATOR` (`/`),
+`OPENSSL_INFO_LIST_SEPARATOR` (`:`) — and both sides agree on all three; `RT-COMP`
+now compares them. The **build-dependent** ones answer the authority's own
+`--openssldir`, `--enginesdir` and `--modulesdir`, which are paths inside the
+forensic build tree that no shipped library should reproduce.
+
+`src/runtime/init.rs` answers NULL for the build-dependent codes. That is the *same*
+divergence Phase 4's seal already records for `CONF_get1_default_config_file` under
+`OBL-CONF-DEFAULT-CONFIG-FILE` (Phase 16) — the same underlying fact, reached by a
+second route — and the reason it is worth a decision entry rather than a probe
+comment is that **nothing had recorded that the second route existed**. `RT-CONF`
+recorded one accessor; `OPENSSL_info` is a public entry point into the same fact, and
+a consumer that asks it gets NULL instead of a path.
+
+`RT-COMP` now prints the `RECORDED_DIVERGENCE_OBL_CONF_DEFAULT_CONFIG_FILE` label for
+all three build-dependent codes, on both sides, which is the idiom `RT-CONF` and
+`RT-LHASH` already use for a boundary they cannot compare. The divergence stays open
+with Phase 16, and it is now recorded at two entry points rather than one.
+
+This is the third time in two subphases that adding a court to a surface produced a
+finding about a *different* surface: `RT-RUNTIME-EXT` found the `OSSL_ERR_STATE_save`
+ownership defect (D99), and `RT-COMP` found this. Both were in code that had already
+passed its own stratum's ledger arithmetic, which is the argument for courts over
+ledgers rather than an argument against ledgers.
+
+
+
+## D101 — `crypto/params.c` spells its refusals as macros, and the raise-site generator could not see a call site
+
+Adding Phase 6's four parameter translation units to
+`gen_err_raise_sites.py`'s covered set produced a number that could not be right:
+`crypto/params.c` is 1,723 lines with forty-odd refusals in it, and the scanner
+found none of them.
+
+It found the *definitions*. `params.c` opens with
+
+```c
+#define err_out_of_range      \
+    ERR_raise(ERR_LIB_CRYPTO, \
+        CRYPTO_R_PARAM_VALUE_TOO_LARGE_FOR_DESTINATION)
+```
+
+and then invokes the macro bare — `err_out_of_range;` — at every site. The scanner
+matches `ERR_raise`, `ERR_raise_data` and `<LIB>err`, so it matched the eight
+definitions and none of the invocations. The eight definitions were worse than
+useless as output: `ERR_raise_data` expands `OPENSSL_FILE`/`OPENSSL_LINE`/
+`OPENSSL_FUNC` at the point of *expansion*, so the coordinates a caller reads back
+through `ERR_get_error_all` are the invocation line and the enclosing function, and
+the definition would have recorded `crypto/params.c:26` attributed to whatever
+ename happened to precede the `#define`. `enclosing_function` refuses a line with no
+preceding definition, so in fact the generator did not produce that answer; it
+produced no answer, and the file looked as though it raised nothing at all.
+
+The fix is in two parts, and the second is the one that needed care.
+
+`local_raise_macros` reads the file's own `#define`s, joins backslash
+continuations, parses the raise call out of the body and records the `lib`/`reason`
+pair under the macro's name. The main scan then attributes each bare invocation to
+the invocation's line and enclosing function. That is the whole mechanism.
+
+The part that needed care is that the *definition's own body* is a line containing
+`ERR_raise(` that does not start with `#`. The scanner's existing guard — "a raise
+behind a preprocessor definition is a macro body, not a call" — skipped only the
+`#define` line itself, so the continuation lines became candidates with no enclosing
+function, which is an `SystemExit` rather than a wrong site. `local_raise_macros`
+therefore also returns **every line the preprocessor owns**, each directive
+together with its backslash continuations, and the main scan skips that set. That is
+stronger than the original guard and it is what makes the macro plane safe to add at
+all.
+
+`via_macro` is written to the atlas **only** when a site came through a macro, and
+the body carries a `via_macro_note` saying so. The first attempt wrote
+`"via_macro": null` on all 632 existing sites, which turned a pure addition into a
+632-record rewrite: the evidence diff said every previously recorded coordinate had
+changed, when none had. Evidence diffs are read by humans under time pressure, and
+"every record changed" is the worst possible false signal. The field is now absent
+rather than null, and the check is part of the review: adding the four files changed
+`added 135, removed 0, changed 0`.
+
+Only 4 of the 135 are in `param_build.c`'s *definition* functions; the rest are the
+invocations `params.c` had been hiding. `RT-PARAM` is what makes them evidence
+rather than a table.
+
+## D102 — the allocation family's default branch, which every existing court had stepped over
+
+`src/runtime/mem.rs` documented three behaviours as *measured*, and one of them was
+measured in the wrong branch of a dispatch.
+
+`CRYPTO_malloc` is two functions wearing one name:
+
+```c
+if (malloc_impl != CRYPTO_malloc) {          /* a caller installed one */
+    ptr = malloc_impl(num, file, line);
+    if (ptr != NULL || num == 0) return ptr;
+    goto err;
+}
+if (ossl_unlikely(num == 0)) return NULL;    /* <-- no error raised */
+...
+ptr = malloc(num);
+if (ossl_likely(ptr != NULL)) return ptr;
+err: ossl_report_alloc_err(file, line); return NULL;
+```
+
+`RT-MEM` measures the allocation family, and **every one of its size observations is
+taken after it has installed its counting allocator**, because the counts are how it
+observes the free/realloc asymmetry. Installing an allocator is not a neutral act:
+it selects the first branch. So `RT-MEM` measured the installed branch on both sides,
+agreed, and the file recorded that agreement as the authority's answer, in a doc
+comment that read "matching the authority". The default branch — the one a consumer
+who never calls `CRYPTO_set_mem_functions` is in, which is every consumer that does
+not embed — was measured by nothing.
+
+A new court, `RT-MEM-DEFAULT`, never installs anything. Its first run produced
+**thirteen** divergences, all the same shape: the authority answers NULL to a
+zero-length request and the candidate answered a live allocation. `malloc(0)`,
+`zalloc(0)`, `calloc(0,16)`, `calloc(16,0)`, `malloc_array(0,4)`,
+`malloc_array(4,0)`, `realloc(NULL,0)`, `realloc_array(NULL,0,4)`,
+`clear_realloc(NULL,0,0)`, `clear_realloc_array(NULL,0,4,0)`, and the four
+secure-heap forms, which reach the same place because `CRYPTO_secure_malloc`
+forwards to `CRYPTO_malloc` while the heap is uninitialised. No error is raised on
+any of them, so the return value is the only witness, and it was wrong in thirteen
+places at once.
+
+The same branch holds two more defects, and they needed instruments that did not
+exist.
+
+**A leak that a NULL return value hides.** The default branch of `CRYPTO_realloc`
+is
+```c
+if (num == 0) {
+    CRYPTO_free(str, file, line);
+    return NULL;
+}
+```
+and the crate returned NULL without releasing. `RT-MEM` could not see it for the
+same reason it could not see the zero-length arms — under an installed allocator the
+authority delegates the decision to the caller's `realloc_fn`, so the *authority*
+does not free there either, and both sides agreed. The new probe interposes the four
+libc allocator entry points and reports the **change** in the number of `free` calls
+across the single operation, with a control (`CRYPTO_free`) that certainly releases
+and a sibling (`CRYPTO_clear_realloc`) that already agreed. Forwarding goes to
+glibc's `__libc_*` rather than through `dlsym(RTLD_NEXT, ...)`, because `dlsym`
+itself allocates and would recurse before the real symbols are resolved. The
+observation is a *delta*, not a total: the crate's own runtime allocations are not
+part of it, and `phase3_courts.py`'s rule that internal allocation counts are not
+diffed is unaffected.
+
+**A crash.** `CRYPTO_memdup` refuses `siz >= INT_MAX` before allocating. The crate
+omitted the check, so `RT-MEM-DEFAULT`'s `CRYPTO_memdup(buf, INT_MAX)` — a request
+to copy two gigabytes out of a 32-byte buffer — returned a live pointer in the
+candidate and read out of bounds; the candidate segfaulted, and the truncated
+transcript was the evidence. The authority's refusal is not an optimisation: `siz`
+is an `int` at the allocator boundary.
+
+Two further gaps in the *dispatch* are recorded by a second new court,
+`RT-MEM-INSTALL`, which measures the installation state machine instead of any one
+allocation. `CRYPTO_set_mem_functions` accepted only an all-or-nothing install and
+answered 1 unconditionally, where the authority replaces each slot whose argument is
+non-NULL, leaves the rest alone, and **refuses with 0** once `allow_customize` is
+clear — which the default branch of `CRYPTO_malloc` clears on the first non-zero
+request. And `CRYPTO_get_mem_functions` reported private shims where the authority
+reports the address of its own exported `CRYPTO_malloc`, `CRYPTO_realloc` and
+`CRYPTO_free`; a caller may compare the returned pointer against `&CRYPTO_malloc` or
+hand it straight back, so the crate now stores that identity as "not installed" and
+reports it back. The latch is the reason the two new courts are two: the branch a
+process is in is chosen once and is permanent, so no single probe can measure both,
+and `RT-MEM-DEFAULT` closes with the latch observation — the only order in which
+the 0 is reachable — while `RT-MEM-INSTALL` measures the accepted order.
+
+One constant was renamed. The `*_array` helpers' overflow constant was called
+`ERR_R_OVERFLOW` in this file, and OpenSSL has no such symbol: the packed code they
+raise is `CRYPTO_R_INTEGER_OVERFLOW`. The value 127 was right and the name was an
+invention, which is D33's class — recalled rather than read — and the check is that
+compiling `ERR_R_OVERFLOW` against the authority's own headers fails to compile.
+
+The unit tests for the zero-length arms and for `CRYPTO_realloc(addr, 0)` were
+removed rather than repaired. Both depend on which branch the process is in, the
+branch is chosen once per process, and Rust's test harness runs every test in one
+process; an assertion there would be a claim about test ordering rather than about
+the contract. The two courts measure each branch in a process that chose it, which is
+the division of labour `phase3_courts.py` already describes. The allocator
+installation test was rewritten to assert *which* outcome it got and that the
+outcome is self-consistent, instead of assuming the state it starts in — it had been
+passing by accident, because the old model could not tell the two branches apart.
+
+One more divergence was found while building the instrument and is a *recorded*
+divergence rather than a fix: both `CRYPTO_aligned_alloc` and
+`CRYPTO_aligned_alloc_array` write through `*freeptr` with no NULL test, so the
+authority segfaults and the candidate answers NULL. The candidate's doc comment had
+described NULL as an accepted argument, which is where the guard came from; the code
+was right and the documentation was wrong. It is now
+`docs/SECURITY_DIVERGENCE_POLICY.md` D-MEM-ALIGNED-1, and both cases print the
+`NOT_MEASURED_AUTHORITY_FAULTS` marker in the new probe so the boundary is visible
+in the transcript.
+
+Two courts were added to Phase 3, its observation count moves 4,358 → 4,410, and
+`src/runtime/mem.rs` gains the two-branch model. Nothing about the *installed*
+branch changed, which is why `RT-MEM` still reproduces its 82 committed
+observations byte for byte: the finding is entirely about the branch no probe had
+entered.
+
+## D103 — the 81 parameter exports, and two more instrument gaps the prototype court had
+
+Phase 6.5 implements the parameter surface: the 56 exports of `crypto/params.c`, the
+three of `crypto/params_dup.c`, the two of `crypto/params_from_text.c` and the twenty
+of `crypto/param_build.c`, across `src/params/{mod,dup,from_text,build}.rs`. The module
+tree mirrors the authority's file boundaries, because those are what the ownership
+atlas and the raise-site coordinates are keyed on.
+
+Three things about this surface were worth writing down before the code, and each
+turned out to matter:
+
+* **`params.c` spells its eight refusals as file-local macros and invokes them bare.**
+  D101 fixed the generator; this is the first stratum to *use* the fix, and the
+  fifty-odd invocation coordinates are now carried as `err_sites::PARAMS_*`.
+* **`return_size` is a state, not a length.** Every setter has an early `data == NULL`
+  arm that records the size the caller would need and answers **success** — that is how
+  a provider asks "how big is this?" without a buffer. A reimplementation that treated
+  a NULL buffer as an error would break every size query in the library.
+* **"Native order" is little-endian here, and the code never says so.** The integer
+  buffers a parameter carries are in the host's byte order — the opposite of
+  `ASN1_INTEGER` one stratum below — so `copy_integer`'s `IS_BIG_ENDIAN` branch is taken
+  as the little-endian arm, and `is_negative` reads the last byte rather than the first.
+
+Two behaviours were reproduced rather than tidied, because a court compares answers and
+there is no way from outside to tell which internal path produced one:
+
+* `OSSL_PARAM_get_int32` reads a four-byte `INTEGER` *directly* while the general path
+  would reject the same bytes if their sign disagreed with the destination. Both paths
+  are in the module, in the authority's order.
+* `OSSL_PARAM_set_double`'s bounds are half-open — an unsigned destination accepts
+  `0 <= v < 2^32` and a signed one `-2^31 <= v < 2^31` — so `2^31` is *rejected* for an
+  `int32` destination, which is one off from a "fits in an int32" reading.
+
+The internal helpers `params.c` defines for later strata — `ossl_param_get1_octet_string`,
+`ossl_param_get1_octet_string_from_param`, `ossl_param_get1_concat_octet_string` and
+`setbuf_fromparams` — are implemented although no Phase 6 export reaches them, since
+they are part of the translation unit this module reconstructs. They carry an
+`allow(dead_code)` with the reason, as `err_reasons.rs` does. `setbuf_fromparams` drives
+`WPACKET` in the authority and `crypto/packet.c` is Phase 7's; it is reproduced as the
+two operations actually used (refuse a non-`OCTET_STRING` element, refuse a copy that
+does not fit), including `WPACKET_init_static_len`'s `len > 0` refusal by a direct test
+rather than by an assertion. It is to be re-based on the real `WPACKET` when that
+stratum lands, and that is a **residual**, not a claim.
+
+Three smaller divergences are recorded rather than hidden. `prepare_from_text`'s
+`switch` has no `default` in C, so an unhandled `data_type` leaves `buf_n` indeterminate;
+every type the atlas's headers define is handled, and the unreachable arm answers 0
+bytes rather than reading uninitialised memory. `param_build.c`'s `n < 0` arm cannot be
+reached because `BN_num_bits` is never negative for a live `BIGNUM`, so the generated
+site exists and is not called. `OSSL_PARAM_print_to_bio` dereferences a NULL array in
+the authority and answers 0 here. And `OSSL_PARAM_merge`'s `qsort` is unspecified among
+*equal* keys within one list, where this implementation is stable.
+
+### Two more instrument gaps, and they were the same gap twice
+
+The court reported `implemented=974 checked=... unclassified=15 unreadable=10`. Both
+numbers were the instrument, not the code.
+
+**`unclassified=15`: a struct returned by value.** `classify_c` does not follow
+typedefs, so `OSSL_PARAM` — a typedef of `struct ossl_param_st` — has no class, and
+`classify_c_return` answered `unclassified`. The class plane is a coarse filter (return
+kind and arity) and the *type* plane canonicalises `opaque` on both sides correctly, so
+the fix is not to teach `classify_c` about typedefs: it is that an `unclassified` symbol
+`continue`d **before** the type plane, so those fifteen exports were checked by
+**neither plane**. No export had ever returned a struct by value before, which is why
+nothing had noticed. The symbol is now dropped only when the type plane cannot
+canonicalise it either, and `unclassified` counts what genuinely could not be read by
+either. That is the D96/`a2d_ASN1_OBJECT` class a fourth time: an obligation that
+disappears between classification layers.
+
+**`unreadable=10`: my own macro.** The twelve scalar pushes were written as one
+`macro_rules!` so that the width and the `OSSL_PARAM_*` code could not drift apart. D98
+established that the court refuses a macro body that puts a metavariable in a *type*
+position — deliberately, because reading one would mean guessing what it expands to —
+and this macro did exactly that. The ten functions are now written out literally. The
+repetition is the price of being read, and it is the second time this phase has paid it.
+
+After both fixes: `implemented=1054 checked=1023 mismatches=0 unclassified=0 generated=0
+unreadable=0 not-found=0`, and `type plane: checked=1039 mismatches=0 unmapped=0`. The
+difference between 1023 and 1039 is the C-definition and macro planes, which the type
+plane covers separately.
+
+### What is NOT claimed yet
+
+`RT-PARAM` does not exist. By D73's rule a subphase closes only when its exports are
+implemented **and** a differential court observes them *in the same commit*, so the
+parameter surface is **implemented and uncourted**, `forensics/phase6-obligations.json`
+moves from 161 open to 80 open (81 implemented), and 6.5 stays `IN PROGRESS`. The court is the next
+commit, not this one, and this paragraph exists so that the ledger's arithmetic is not
+mistaken for an exit criterion met.
+
+## D104 — `RT-PARAM`, the first Phase 6 court, and the fit rule it found in Phase 5
+
+Phase 6.5's parameter surface is 81 exports across four modules, and `RT-PARAM` is the
+court that closes it. It is 1,161 observations on each side, zero residuals.
+
+### The court is a matrix, because the surface is a data type
+
+An `OSSL_PARAM` has no behaviour of its own: it is a descriptor whose answer is a
+function of three independent axes a caller sets — the parameter's `data_type` (seven of
+them), the width and signedness the *caller's* accessor uses (which need not match the
+parameter's, and which for four types selects a fast path that is not the general
+conversion path), and whether `data` is NULL (which turns a setter into a size query that
+answers **success**).
+
+So the probe is a matrix rather than a scenario list. Every accessor against every
+source width, signedness and type; every setter against every destination shape,
+recording the return code, the error queue, `return_size` and the bytes produced. The
+reason is that the *refusals* are where a plausible implementation and the authority
+differ, and the two refusals are not interchangeable: reading a negative
+`UNSIGNED_INTEGER` and reading one that is merely too large are
+`CRYPTO_R_PARAM_UNSIGNED_INTEGER_NEGATIVE_VALUE_UNSUPPORTED` and
+`CRYPTO_R_PARAM_VALUE_TOO_LARGE_FOR_DESTINATION`, and a caller that exercises only the
+happy path cannot tell the two implementations apart.
+
+Three behaviours are reproduced rather than tidied, because the court compares answers
+and there is no way from outside to tell which internal path produced one. `get_int32`
+reads a four-byte `INTEGER` directly where the general path would reject the same bytes
+if their sign disagreed with the destination. `set_double`'s bounds are half-open, so
+`2^31` is *rejected* for an `int32` destination — one off from a "fits in an int32"
+reading. And `OSSL_PARAM_print_to_bio` answers 0 for an **empty** array, because `ok`
+starts at `-1` and the loop never runs.
+
+### Three findings, and two of them were mine
+
+The first run had 226 residuals and the candidate crashed at observation 939. Both
+defects were in the crate, and both were the kind a unit test would not have found.
+
+**`OSSL_PARAM_get_utf8_string` wrote its terminator through the wrong pointer.**
+`**val.add(data_length) = 0` parses as `*(*(val.add(n)))`: pointer arithmetic on
+`char **`, scaled by eight and dereferenced twice. The terminator belongs in the buffer
+at index `data_length`. The observable was a segfault on the first call that reached it
+with a caller-supplied `char **`.
+
+**`set_double`'s exactness test used Rust's saturating cast where the authority uses the
+platform's.** The authority's test is a round trip through a C cast — `val !=
+(int64_t)val` — and a `double` outside `int64`'s range makes that cast undefined in C.
+What the *comparison* observes is the conversion, which on x86-64 is `INT64_MIN` for
+every out-of-range and NaN input. Rust's `as` saturates, so it reported such a value as
+**exact** and fell through to the range check: a different error reason for a caller that
+did nothing wrong. Reproduced as `to_i64_as_c`/`to_u64_as_c`, which specify the
+conversion rather than the undefined behaviour, and document that the value is the one
+the authority's own comparison compares against.
+
+### The finding that belongs to another stratum
+
+After those two, three residuals remained. Two were the probe's fault: the builder's
+`_PTR` parameters hold a *pointer*, and `dump_params` printed the first `data_size` bytes
+of that pointer — part of an address, differing between two runs of the same binary. It
+prints the pointer's *target* now. The third was real.
+
+`OSSL_PARAM_BLD_push_BN_pad` with a negative `BIGNUM` records `BN_num_bytes(bn)` bytes —
+`sz` is ignored for a negative value, because the encoding must be exactly two's
+complement — and `BN_signed_bn2native` **refuses** that width: it needs `n + ext`, with
+`ext` 1 for a negative value whose magnitude does not fill its top byte. The authority's
+buffer then held zeros only because a fresh mapping is zero-filled on first touch; that is
+not a contract, and comparing it would have been comparing uninitialised memory. So the
+probe records `NOT_COMPARABLE_AUTHORITY_UNINITIALISED` for that one parameter and keeps
+the *push* result, which is deterministic.
+
+The refusal itself is `bn.h`'s, and `bn.h` is **Phase 5's**. A sweep of nineteen values
+against every `tolen` from 0 to 5 found **five** destinations the authority refuses and
+this crate accepted — `-1` and `0x80` into one byte, `-0x0102` and `0xffff` into two, and
+`0` into a zero-length destination, which was answered as a success. `signed_bytes` had
+the fit rule as `BN_num_bytes(a) > tolen` and the authority's is `n + ext > tolen`.
+Phase 5's seal gains §10 and `RT-BN` gains 860 observations; the stride is unchanged at
+zero open, so the stratum stays `complete` and the section is a correction, not a
+reopening. See D104's table in `docs/PHASE-5-BN-ASN1-PEM-SEAL.md`.
+
+That is the third time a court has found a defect in a stratum other than the one it was
+written for, and the first time the *input choice* was the whole of the gap: Phase 5's
+court called these three functions with destinations that were obviously large enough,
+which is exactly the case where the fit rule cannot be observed. A court's coverage is a
+property of the inputs it chooses.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 courts | 0 | 1 |
+| Phase 6 observations | 0 | 1,161 |
+| `RT-BN` observations | 650 | 1,510 |
+| Phase 6 ledger | 81 implemented / 80 open | unchanged |
+| all courts | 47 | 48 |
+| all observations | 17,325 | 19,346 |
+
+`forensics/tools/phase_state.py` gains a Phase 6 evidence registry, which is what makes
+`run_courts.py` run this stratum's runner at all: the workflow derives the list of active
+strata from `phase-state.json`, and Phase 6 was `not-started` there only because nothing
+had told the registry about its modules. It is `in-progress` now, on its ledger's 80 open
+obligations, and `run_courts.py` refuses to run a runner for a `not-started` phase — which
+is the check that caught this.
+
+---
+
+## D105 — a probe read past its own buffer, and every probe is now held to a level-differential gate
+
+**The observation that was wrong.** `courts/phase6/rt_param_probe.c` declared
+`char buf[16]`, filled all sixteen bytes with `0xaa`, and handed the buffer to
+`OSSL_PARAM_construct_utf8_string("k", buf, 0)`. A zero `bsize` with a non-NULL
+buffer means "measure it", and the authority measures it with `strlen` — so the
+terminator was left to whatever happened to follow the array on the stack. It was
+reading past the array, and the court recorded the result:
+
+| build of the *same* source | authority | candidate |
+|---|---|---|
+| the revision the capture `run-openssl-rs-rt-param-ccb0bc0e…` was taken from | 24 | 22 |
+| the committed revision, `-O0` | 22 | 22 |
+| the committed revision, `-O1`, `-O2`, `-O3` | 16 | 16 |
+
+Those are three different answers from one probe. The residual
+`a0eaeb5b2946497400a7b63f1d0d78efe4f90ae91ee24ef1e910c7ce19551a7` was therefore
+**not a candidate divergence at all**: it was the optimizer's stack layout being
+compared against itself. The `-O0` reading is what makes that unambiguous — the same
+source, both sides, 22 — and the two sides differing at `-O1` while the *authority*
+moves to 16 is only possible if at least one side is reading beyond its own object.
+
+**Why it cost more than one line.** The probe was edited after the court had run, and
+the FRF store was not recreated, so the store held transcripts from a probe source
+that no longer existed. The visible symptom was `frf court challenge` refusing this
+court's `stdout-first-line` mutant with
+
+```
+run 'run-openssl-rs-rt-param-…' already exists and verifies
+(identical evidence was already captured); raw captures are immutable
+```
+
+which reads like an FRF limitation and is nothing of the kind: the mutant's run
+identity is a function of the court's declared inputs, the store already held a run
+for it, and re-capturing would have produced a *different* transcript. The rule this
+stratum now applies is the one the README already states for a rebuilt candidate:
+
+> a change to any probe source invalidates the whole store; `run_courts.sh` recreates
+> it from clean, because a store that mixes revisions cannot be compared to itself.
+
+**And it means D104's "three residuals remained" was two residuals.** The third was
+this read. The decision D104 records — that `RT-PARAM` is the first Phase 6 court and
+that the fit rule it found belongs to Phase 5 — is unaffected.
+
+**Remedy, part one: the probe terminates its own buffer.** The observation now sets
+the terminator itself and is taken at two declared lengths, so the court compares the
+*rule* (`strlen` of the declared buffer, plus one) rather than one number that a frame
+happened to produce:
+
+```c
+memset(buf, 0xaa, sizeof buf);
+buf[12] = '\0';
+p = OSSL_PARAM_construct_utf8_string("k", buf, 0);
+sayn("str.utf8.size0_construct.is_measured", (long long) p.data_size);
+buf[15] = '\0';
+p = OSSL_PARAM_construct_utf8_string("k", buf, 0);
+sayn("str.utf8.size0_construct.is_measured_long", (long long) p.data_size);
+```
+
+**Remedy, part two: `forensics/tools/probe_hygiene.py`.** A differential court compares
+two transcripts, and that is only meaningful if the transcript is a function of the
+library under test. The gate compiles every `courts/phase<N>/*_probe.c` against each
+side at `-O0`, `-O1` and `-O2`, runs each twice, and fails on either signature:
+
+* **level drift** — the answers differ between optimization levels, which is what a
+  read of uninitialised or out-of-bounds memory looks like;
+* **run drift** — two runs at the *same* level differ, which is nondeterminism no court
+  can compare either.
+
+It was falsified against the pre-fix probe text before being trusted, and it reports
+both signatures on it — including a run-drift reading of `22` then `17` at `-O0`, from
+two executions of the *same binary*.
+
+**Why not a sanitizer.** `-fsanitize=address` is the natural tool and cannot be used
+here: ASan reserves a terabyte-scale shadow mapping and aborts with
+`AddressSanitizer failed to allocate 0xdfff0001000 bytes` under the court's own
+`RLIMIT_DATA` cap. The cap stays — it is what keeps a runaway court off the host — so
+the level-differential method is the substitute: it needs no runtime support, it uses
+the compiler that is already there, and it detects precisely the class that bit.
+`gcc-12`'s `libasan` is present in the image and is refused for the same reason.
+
+**Also in this commit.** `forensics/tools/phase6_courts.py` declared
+`GENERATOR = "forensics/tools/phase5_courts.py"`, so every
+`artifacts/phase6/COURTS.json` this stratum produced named the wrong generator in its
+envelope. A copy-paste, and exactly the kind of provenance error the envelope exists to
+prevent; `evidence_determinism.py` does not compare `generator`, which is why it
+survived a green CI run.
+
+**The store, recreated.** `run_courts.sh` from clean: 41 receipts, 82 challenges, 5
+claims, `graph_verified: yes`, `object_closure: complete`, `replay_ready: yes`. Every
+runtime court's `stdout-first-line` and `exit-class` mutants are adjudicated on their
+own axis and no other, including the three that could not adjudicate before
+(`rt-param`, `rt-mem-default`, `rt-mem-install`). `openssl-cli-version` remains the one
+honest refusal D13 records and is compiled at `--policy baseline` with `openssl-cli-dgst`.
+
+**Supersedes D104's counts; D104's decision stands.** D104 recorded Phase 6 at 1,161
+observations and all courts at 19,346. Both were that generation's readings, and this
+project never asserts a current count from `DECISIONS.md` — it derives them. Current:
+
+| | D104's reading | now |
+|---|---|---|
+| Phase 6 observations (`RT-PARAM`) | 1,161 | 1,162 |
+| all courts | 48 | 48 |
+| all observations | 19,346 | 19,347 |
+| runtime courts in the FRF store | 25 (stated in prose; already stale, actually 37) | 37 |
+| probes under a hygiene gate | 0 | 37 |
+| FRF store objects | 333 | 341 |
+
+---
+
+## D106 — `OSSL_LIB_CTX`, and the index slots as an obligation of their own kind
+
+**What landed.** Phase 6.6a: seven of the ten `OSSL_LIB_CTX_*` exports —
+`new`, `free`, `get0_global_default`, `set0_default`, `get_data`,
+`get_conf_diagnostics`, `set_conf_diagnostics` — in `src/context/mod.rs`, from
+`crypto/context.c`. `RT-LIBCTX` observes all of it in 73 observations with zero
+residuals, on the first run.
+
+**The reconnaissance came first, and it changed the design.** The probe was run
+against the authority before any Rust was written, and it answered a question the
+source does not: the authority's `switch` in `ossl_lib_ctx_get_data` has arms for
+eighteen indices, and the three it does *not* answer for — 7 and 8, which the
+authority once used for other things; 9, which is `FIPS_PROV` in a build that is
+not FIPS; and 13, which was `BIO_PROV` — answer NULL. The measurement also settled
+one build question that no installed header answers: index 19 (`THREAD`) answers a
+pointer, so this profile has the thread pool compiled in, and index 21
+(`COMP_METHODS`) answers `&ctx->comp_methods`, the address of a field *inside* the
+object, so it is non-NULL for a context whose compression stack is empty.
+
+`COMP_METHODS` is the one slot this stratum fills, and it is filled by having the
+field rather than by allocating anything: the answer is an interior address and is
+therefore exact immediately. It is also the arm most likely to be "simplified" into
+returning the field's *value*, which would answer NULL for every context — so it
+has a unit test of its own, and `RT-LIBCTX` compares it against the authority.
+
+**Three of the ten exports are not writable yet, and the split is by dependency
+rather than by convenience.** `OSSL_LIB_CTX_new_from_dispatch` calls
+`ossl_bio_init_core` (6.6c, the core BIO); `OSSL_LIB_CTX_new_child` calls
+`ossl_provider_init_as_child` (6.8) and is what sets `ischild`;
+`OSSL_LIB_CTX_load_config` is a one-line forward to `CONF_modules_load_file_ex`
+(6.10). Writing any of them now would mean writing it against a stub, so 6.6 is
+now 6.6a–6.6g in `docs/PHASE-6-SUBPHASES.md` with each dependency named, and this
+commit is 6.6a.
+
+**The index slots are obligations of their own kind, and this is the decision.**
+Seventeen of the eighteen live slots belong to a later stratum, so the arms answer
+NULL until their owner lands. That gap is invisible to every symbol ledger — a
+*field* that was never filled is not a symbol — which is exactly the
+`a2d_ASN1_OBJECT` defect class one layer down. Three things make it visible
+instead of latent:
+
+  * the per-slot owner table is in `docs/PHASE-6-SUBPHASES.md` **and** in the
+    module documentation, with the closure rule stated in both: Phase 6 cannot be
+    called complete while any row is unfilled;
+  * the probe observes the dead indices and the filled slots, and prints
+    `libctx.slots.live` (18), `.filled` (1) and `.deferred` (17), so the
+    transcript states the scope of its own table rather than leaving a reader to
+    infer it from an absent line;
+  * nothing is filled with a placeholder. The value is a live object of a type a
+    later stratum owns; a one-byte allocation that only made the pointer non-NULL
+    would satisfy the observation while saying something false about the object.
+
+An unfilled slot may not be *observed* either, and that follows the rule the later
+probes already use: comparing a missing subsystem is the ledger's business, not a
+court's. The probe observes what a divergence can be seen in.
+
+**Two behaviours that a plausible reading gets wrong.** Both are in the probe and
+both are in the module documentation because neither is documented anywhere else:
+
+  * `OSSL_LIB_CTX_set0_default(OSSL_LIB_CTX_get0_global_default())` does not
+    install the global default, it **clears** the thread's slot
+    (`set_default_context` rewrites the global object to NULL). The NULL context
+    still resolves to the same object, but a following
+    `set0_default(NULL)` reports the global default rather than the pointer that
+    was passed in.
+  * `OSSL_LIB_CTX_free` is a no-op for two of the three values it accepts: NULL,
+    and whatever the calling thread's default resolves to — which includes the
+    global default in a thread that never changed its default, and includes a
+    context the thread installed itself. Only a non-default context is released.
+    The probe reads the context *after* that no-op free to tell the two apart, and
+    the hazard that creates (a candidate that really freed it is reading released
+    memory, which glibc does not fault on at this size) is stated in the probe
+    rather than avoided, because avoiding it would remove the only observation
+    that can see the behaviour.
+
+**Two deferrals are named in the code rather than left as absences.**
+`context_deinit` calls `ossl_ctx_thread_stop` in the authority; it cannot be
+called until 6.6e registers threads against a context, and the line it goes on
+says so. And `ossl_do_ex_data_init(ctx)` gives each context its own ex-data
+registry, which `src/runtime/ex_data.rs` records as a process-global Phase 3
+deferral; this module does not quietly change that.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented | 81 | 88 |
+| Phase 6 open | 80 | 73 |
+| `implemented[libcrypto]` | 1,055 | 1,062 |
+| Phase 6 courts | 1 | 2 |
+| all courts | 48 | 49 |
+| all observations | 19,347 | 19,420 |
+| runtime courts in the FRF store | 37 | 38 |
+
+---
+
+## D107 — the thread slot, and a counter that is per context rather than per process
+
+**What landed.** Phase 6.6e: slot 19 of the library context, `OSSL_get_max_threads`
+and `OSSL_set_max_threads`. The slot is `crypto/thread/internal.c`'s
+`ossl_threads_ctx_new`/`_free` — two counters, a mutex and a condition variable —
+and `src/context/mod.rs` now creates it in `context_init` (failing the context if
+it cannot be built) and releases it in `context_deinit_objs`, in the authority's
+`#ifndef OPENSSL_NO_THREAD_POOL` position between the two callback slots and
+`child_provider`. `RT-THREADDATA` observes all of it in 39 observations with zero
+residuals, first run; `RT-LIBCTX` grows from 73 to 75 as slot 19 joins its
+`filled_slots` list, which is the mechanism 6.6a described.
+
+**The two accessors look trivial and are not.** Everything about them is in the
+plural, and all three are in the court:
+
+  * the counter is per **context**, so `OSSL_set_max_threads(a, 7)` must not move
+    `OSSL_get_max_threads(b)`, and the default context is one of the contexts
+    rather than a special case;
+  * a NULL context resolves through the library context default chain, so the same
+    call answers differently once this thread installs a default — the probe
+    installs one, reads through NULL, restores, and reads again;
+  * the value is stored **verbatim**: no range check, so `UINT64_MAX` is legal to
+    set and to read back, and zero is a value rather than "unset". A `uint64_t`
+    that was clipped, or a setter that refused a large value, would be a plausible
+    reading and a wrong one.
+
+**Why the pool's primitives are in this commit.** `ossl_threads_ctx_new` allocates
+a mutex and a condition variable and **fails** if either cannot be built, so they
+are part of the slot's constructor and cannot be deferred with it.
+`src/runtime/thread.rs` gains the authority's `ossl_crypto_mutex_*` and
+`ossl_crypto_condvar_*` over the same primitives (`crypto/threads_pthread.c` uses
+`pthread_mutex_t`/`pthread_cond_t` directly). Two design points are recorded
+because both are places a shim is usually wrong:
+
+  * the mutex is **not** recursive. `PTHREAD_MUTEX_DEFAULT` deadlocks on re-lock by
+    the same thread, and `std::sync::Mutex` would instead error or panic, so this
+    cannot be a thin wrapper over it; it parks on a flag and deadlocks as the
+    authority does.
+  * a condition variable is paired with one mutex and the pairing is made
+    **explicit**. The C API creates the two independently and pairs them at each
+    `wait` on the promise that release-and-wait is atomic; Rust's
+    `Condvar::wait` needs the guard of the mutex it waits on, so the pairing is
+    bound on first `wait` and a mismatched pair is reported rather than becoming a
+    lost wakeup. Every use in the authority pairs one condvar with one mutex for
+    its lifetime.
+
+Nothing waits on the condition variable yet: it is created and released here
+because the constructor creates and releases it, and the pool that signals it is
+not a Phase 6 subsystem.
+
+**6.6e is split, and the reason is a file rather than a distance.** The subphase
+was to carry `OSSL_get/set_max_threads` *and* `OPENSSL_thread_stop`/`_ex`. The
+counter pair needs only the slot, which is why it landed here; the stop pair needs
+`crypto/initthread.c`'s per-thread event-handler table, and `OPENSSL_atexit` (the
+fifth Phase 3 hand-off) needs `DSO_dsobyaddr` to pin the handler's object, so it
+waits for 6.9. Those three are now 6.6e-ii with both dependencies named, and
+`context_deinit`'s missing `ossl_ctx_thread_stop` call is the line 6.6e-ii
+unblocks.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented | 88 | 90 |
+| Phase 6 open | 73 | 71 |
+| `implemented[libcrypto]` | 1,062 | 1,064 |
+| Phase 6 courts | 2 | 3 |
+| all courts | 49 | 50 |
+| all observations | 19,420 | 19,461 |
+| `RT-LIBCTX` observations | 73 | 75 |
+| runtime courts in the FRF store | 38 | 39 |
+
+---
+
+## D108 — the self-test object aliases its own fields, and the prototype court earned its keep
+
+**What landed.** Phase 6.11: all nine exports of `self_test.h` (seven) and
+`indicator.h` (two), in `src/selftest/{mod,indicator}.rs`, from
+`crypto/self_test_core.c` (160 lines) and `crypto/indicator_core.c` (54).
+`RT-SELFTEST` observes them in 71 observations with zero residuals, first run, and
+slots 12 and 22 join `RT-LIBCTX`'s `filled_slots` list, taking that court from 75
+to 79 observations. Four slots of the eighteen are filled now; the other fourteen
+are owed and named in `docs/PHASE-6-SUBPHASES.md`.
+
+**The probe is the callback, because there is nothing else to be.** Both surfaces
+are callback plumbing, so the only way to observe them is to register a callback
+and record what the library passes it. Four things came out of that, and each is
+somewhere a plausible transcription differs:
+
+  * **the array's entries alias the object's own fields.**
+    `self_test_setparams` builds `st-phase`, `st-type` and `st-desc` with
+    `OSSL_PARAM_construct_utf8_string(key, st->field, 0)`, which stores the
+    *address* of the field rather than a copy of the string.
+    `OSSL_SELF_TEST_onend` reassigns all three fields to `"None"` **after** calling
+    the callback and does **not** rebuild the array — so the same array reports
+    `Pass` inside the callback and `None` afterwards, and there is no rebuild that
+    could be observed either way. The probe stashes the array pointer inside the
+    callback and reads through it again after the call; that is the only way a C
+    caller can see the aliasing at all, and it is the reason this court is worth
+    writing rather than unit-testing.
+  * **`onend` treats anything other than 1 as a failure**, including 0 and
+    negative values. "Failed" and "did not answer 1" are the same thing to the
+    authority.
+  * **`oncorrupt_byte`'s answer is the callback's, inverted**: the callback
+    answering 0 flips the first byte and the call answers 1; answering 1 leaves the
+    byte alone and answers 0.
+  * **the object's callback is the one passed to `OSSL_SELF_TEST_new`, not the
+    context's.** The context's pair is what other code invokes; an implementation
+    that read the context's callback from inside `onbegin` would pass a probe that
+    only ever set both to the same function, so the probe sets them to different
+    things and checks which one ran.
+
+**The prototype court found a real defect that the runtime court could not.** An
+earlier revision of this landing declared
+
+```rust
+pub unsafe extern "C" fn OSSL_SELF_TEST_get_callback(
+    libctx: *mut c_void, cb: *mut *mut c_void, cbarg: *mut *mut c_void)
+```
+
+The authority's second parameter is `OSSL_CALLBACK **` — a pointer to a **function
+pointer**, not a `void **`. Both spellings work at run time for any caller that
+passes correctly sized storage, so `RT-SELFTEST` passed 71 observations against the
+wrong prototype; `ABI-PROTOTYPE` reported it as one of two type mismatches and
+named the canonical form. The same was true of `OSSL_INDICATOR_get_callback`. That
+is exactly the blind spot D98 and D103 each recorded from the other direction: a
+runtime court compares *answers*, and a prototype that is wrong only in the
+*shape* of an output parameter has no answer to compare.
+
+**Two safety divergences, both recorded rather than reproduced.**
+
+  * `OSSL_SELF_TEST_oncorrupt_byte` dereferences `bytes` only when its callback
+    refuses the corruption. The authority faults on a NULL `bytes` in that case;
+    this answers 0, because nothing was corrupted.
+  * both setters store nothing and both getters answer NULL when the context's slot
+    cannot be read, which the authority's own NULL guards already do.
+
+**The indicator half is storage without a caller, and that is stated rather than
+implied.** `OSSL_INDICATOR_set_callback`/`get_callback` are implemented and
+courted; nothing invokes the callback, because the code that reports an indicator —
+an operation with an approved or non-approved state — is provider-side. A subphase
+that "implemented the indicator" by inventing a call site would be claiming
+behaviour no consumer can reach.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented | 90 | 99 |
+| Phase 6 open | 71 | 62 |
+| `implemented[libcrypto]` | 1,064 | 1,073 |
+| Phase 6 courts | 3 | 4 |
+| all courts | 50 | 51 |
+| all observations | 19,461 | 19,536 |
+| `RT-LIBCTX` observations | 75 | 79 |
+| index slots filled | 2 | 4 |
+| runtime courts in the FRF store | 39 | 40 |
+
+---
+
+## D109 — the namemap: a bit-5 mask, an order-dependent refusal, and a pre-population deferred whole
+
+**What landed.** Phase 6.6b: `crypto/core_namemap.c`, 584 lines, as
+`src/context/namemap.rs` — all ten internal functions
+(`ossl_namemap_new/free/empty/stored/name2num/name2num_n/num2name/doall_names/add_name/add_names`
+plus the two context-slot constructors). It adds **no export**, so what moves is
+slot 4: `RT-LIBCTX` goes from 79 to 81 observations, comparing the slot's presence,
+stability, per-context distinctness and difference from the object's own address
+against the authority. Five of the eighteen index slots are filled now.
+
+**The comparison is a bit mask, not a case fold.** `name2num` keys its lookup
+through `ossl_ht_strcase`, which is `tgt[i] = ~0x20 & src[i]`. For ASCII letters
+that is a case fold, which is the documented intent. For every other byte it is
+not: `'!'` (`0x21`) and `0x01` both map to `0x01`, so two names differing only by
+bit 5 in a non-letter position are the same name to this map. Reproduced rather
+than normalised, because a map that answered differently from the authority for
+such a name is exactly the kind of divergence this project exists not to have.
+The same macro caps the key at **63** bytes — two names sharing a 63-byte prefix
+are one name — which is also reproduced and unit-tested. The explicit-length form
+keys on a prefix instead, so `name2num_n(nm, "sha256", 3)` asks for `"sha"`.
+
+**`NDEBUG` is defined in the admitted build, and that decides a branch.** The two
+`ossl_assert`s in this file are `OPENSSL_die(...)` in a debug build and a plain
+`(x) != 0` under `NDEBUG`; the admitted profile's `configdata.pm` lists `NDEBUG`,
+so a NULL namemap **reaches the `ERR_R_PASSED_NULL_PARAMETER` raise** rather than
+aborting the process. Read from the authority's own build record, not assumed:
+the opposite assumption turns a raise into a process death, and the generator had
+already recorded that site as an active raise.
+
+**The conflict refusal is order-dependent, and the unit test found it.** The first
+run of the test asserted the intuitive thing — that
+`ossl_namemap_add_names(nm, 0, "fresh:known", ':')` is refused because `known`
+belongs to another number — and failed, because it is **accepted**. The number
+being built starts as the caller's (0 for "none") and a part only *sets* it when
+that part resolves to an existing number, so `fresh` resolves to 0 (changing
+nothing), `known` then resolves to its number, and no comparison against `fresh`
+ever happens. The conflict is reachable only between a part that comes *after* one
+that already resolved. Both halves are now asserted, and the behaviour is in the
+module documentation, because it is the sort of thing a later reader would
+otherwise "fix".
+
+Also reproduced and tested: `max_number` is stored on **every** successful
+addition, so appending an alias to an existing number can *lower* it — the only
+reader is `ossl_namemap_empty`, which asks whether it is zero, so the oddity is
+invisible and still reproduced; and `stored` makes `ossl_namemap_free` a no-op,
+with the context's destructor clearing the flag first.
+
+**The pre-population is deferred whole, and the reason is the guard.**
+`ossl_namemap_stored` pilfers the legacy `OBJ_NAME` database and the
+`EVP_PKEY_ASN1_METHOD` set on first use of an empty map, then adds four RSA-PSS
+aliases — all inside `if (ossl_namemap_empty(namemap))`. Every one of those names
+takes a number, so the numbering of everything registered later depends on them.
+That population cannot be built before the legacy method database and
+`OBJ_NAME_do_all` exist (Phase 13). Running the RSA-PSS block *alone* would be
+worse than running none of it: the map would no longer be empty, so a later phase
+adding the legacy load would find the guard false and skip it entirely, silently
+leaving the legacy names out of a map that had already been numbered wrongly.
+Deferring both together keeps the ordering decision in one place.
+
+**The container is not the authority's table.** The authority's `name -> number`
+map is `crypto/hashtable/hashtable.c`: open addressing over 512 neighbourhoods,
+FNV-1a, with `collision_check` turning an excessive conflict rate into
+`CRYPTO_R_TOO_MANY_NAMES`. This module uses a `HashMap` keyed on the transformed
+bytes, so the *lookup* behaviour is identical and the collision failure is
+unreachable. Recorded rather than papered over: the site constant
+`CORE_NAMEMAP_288` exists with `dynamic_reason: true` and one function beside it
+carries the `#[allow(dead_code)]` that says why a raise which cannot happen is
+not called. Reproducing it would mean reproducing the hash function too, and no
+observable depends on which of two names occupies which slot.
+
+**The error coordinates are generated, and `crypto/core_namemap.c` is now covered.**
+`gen_err_raise_sites.py` gained the file as part of this stratum's obligation set
+by the same rule Phase 4 and Phase 5 used — every authority file in the subsystem
+that raises belongs to it. Regeneration was **purely additive**: 767 sites to 772,
+nothing removed, nothing changed. One of the five is the first site in the table
+whose reason is chosen at run time; the generator classified it `dynamic_reason`
+rather than guessing which of its two constants the call site means.
+
+**A gap this exposed, recorded rather than fixed here.**
+`src/runtime/err_sites.rs` and `forensics/atlas/err-raise-sites.json` are
+generated but are **not** in `evidence_determinism.py`'s generator or comparison
+lists, so CI would not notice if a future edit to the generator — or to
+`COVERED_FILES` — left the committed coordinates stale. They are contract
+(`ERR_get_error_all` reports them), so this is a real incompleteness in the
+evidence machinery rather than a cosmetic one. The remedy is to add the generator
+and both outputs to that tool and to `check_evidence_portability.py`'s exercised
+set; the cost is that the tool would then need the authority source tree and
+`configdata.pm` on the host runner, which are both committed.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 99 / 62 | 99 / 62 (no export) |
+| `implemented[libcrypto]` | 1,073 | 1,073 |
+| Phase 6 courts / observations | 4 / 1,353 | 4 / 1,355 |
+| `RT-LIBCTX` observations | 79 | 81 |
+| index slots filled | 4 | 5 |
+| `err_sites.rs` coordinates | 767 | 772 |
+| unit tests | 183 | 189 |
+
+## D110 — the core BIO: a slot filled eagerly, a `libctx` resolved at use time, and three faults registered rather than reproduced
+
+**What landed.** Phase 6.6c: `crypto/bio/bss_core.c` (188 lines) as
+`src/context/core_bio.rs`, plus `src/context/dispatch.rs` for the `OSSL_DISPATCH`
+walk, plus `OSSL_LIB_CTX_BIO_CORE_INDEX` (17) and the export it exists for. Three
+exports are implemented — `BIO_s_core`, `BIO_new_from_core_bio` and
+`OSSL_LIB_CTX_new_from_dispatch` — and **slot 17 is filled**, so six of the
+eighteen index slots are live. `docs/PHASE-6-SUBPHASES.md` carried this subphase as
+`crypto/bio/bio_core.c`; the authority's file is `bss_core.c`, corrected there.
+
+**Phase 4's accepted-and-ignored argument is now honoured, in Phase 4's code.**
+`BIO_new_ex` has always taken an `OSSL_LIB_CTX *` and discarded it, because nothing
+in Phase 4 could read it; Phase 4's seal named this subphase as the obligation that
+created. `src/runtime/bio/mod.rs`'s `Bio` therefore gains a `libctx` field here.
+That is a change to a **sealed** stratum's source by a later one, which the seal
+rules permit only when the earlier seal named the obligation and the later stratum
+discharges it — which is why the field is recorded here rather than left as an
+unexplained diff. The Phase 4 courts are unaffected (3,244 observations, unchanged),
+because no Phase 4 behaviour depends on the field.
+
+**The finding: slot 17 is filled eagerly, not on first use.** `context_init` calls
+`ossl_bio_core_globals_new(ctx)` for every context, so
+`OSSL_LIB_CTX_get_data(ctx, 17)` answers non-NULL for a context that has never seen a
+dispatch table. The consequence is not cosmetic: `get_globals()` **cannot return
+NULL through the public API**, so `BIO_new_from_core_bio`'s NULL answer comes from
+the absent `BIO_read_ex`/`BIO_write_ex` callbacks and never from an absent globals
+block, and the `if (bcgbl == NULL)` arms in all seven operations are unreachable from
+a consumer. A candidate that created the globals lazily would answer every
+constructor observation identically and still be wrong about the slot. `RT-LIBCTX`
+now carries index 17 in its `filled_slots` array — the same fact observed from the
+other end — and moves from 81 to 83 observations.
+
+**`bio->libctx` is stored as given and resolved at *use* time.** The authority's
+`BIO_new_ex` assigns the argument with no concretisation, and
+`ossl_lib_ctx_get_concrete(NULL)` answers the **thread** default. So a core BIO built
+with a NULL context reaches whatever this thread's default is *when the operation
+runs*. `RT-BIO-CORE` proves it rather than asserting it: it builds one such BIO
+before any default is installed and writes to it (`0`, no callbacks reachable), then
+installs a context that has them and writes to **the same BIO** again (`18`, that
+channel's answer). A candidate that resolved the context at construction would pass
+every other observation in this court and fail exactly that one. Two contexts holding
+two tables are named the same way — the callbacks answer `3 × channel`, so the
+transcript says which channel ran without trusting a counter.
+
+**The court is a matrix over deliberately incomplete tables.** `BIO_new_from_core_bio`
+accepts a table carrying only one of `read_ex`/`write_ex`, so the probe builds a
+write-only and a read-only table and observes the answer to each *missing* callback
+separately: `read_ex` and `write_ex` answer `0`, `ctrl`, `gets` and `puts` answer `-1`,
+and `destroy` answers `0`. A transcription that picked one of the two values and used
+it everywhere passes a happy-path test and fails this one. The handler the callbacks
+receive is compared against the constructor's argument and against NULL and only the
+booleans are printed — an address would make the transcript a property of the loader.
+108 observations, zero residuals, first run.
+
+**Three authority fault boundaries, registered rather than reproduced.** Each calls a
+stored function pointer with no NULL test. `D-BIOCORE-1`: a table with `read_ex` or
+`write_ex` but no `BIO_up_ref` — the guard passes and the *next line* jumps to zero.
+`D-BIOCORE-2`: `BIO_free` of a core BIO whose context has no `BIO_free` callback,
+which is every BIO built as `BIO_new(BIO_s_core())`. `D-BIOCORE-3`:
+`OSSL_LIB_CTX_new_from_dispatch(handle, NULL)`, which is **reachable from an export**
+because the export forwards its table straight into the walk whose own loop condition
+dereferences it. The candidate's slots are `Option<fn>` precisely so that absence is
+representable, and each such path answers the documented failure instead. No caller
+supplying a usable table can tell the two behaviours apart, because in the authority
+every path that reaches the unguarded call dies there.
+
+**The probe was the suspect twice before the crate was.** `BIO_method_type` and
+`BIO_method_name` take a `const BIO *`, not a `BIO_METHOD *`, so the first draft
+compiled against a type error it read as a warning and would have been comparing
+whatever those two functions do with a method pointer; and a channel's seven
+callbacks are defined whichever table it sits in, so the two deliberately incomplete
+tables left four and five functions unreferenced. Both were the instrument rather
+than the subject, which is the failure mode this project has recorded most often. The
+second also produced a unit-test trap worth naming: `clippy` rejects a `// SAFETY:`
+comment that is not **directly** above its `unsafe` block — an `assert_eq!` between
+them does not count — and it rejects `panic!` in a `#[cfg(test)]` module too.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 99 / 62 | 102 / 59 |
+| `implemented[libcrypto]` | 1,073 | 1,076 |
+| Phase 6 courts / observations | 4 / 1,353 | 5 / 1,463 |
+| `RT-LIBCTX` observations | 81 | 83 |
+| index slots filled | 5 | 6 |
+| all courts / observations | 51 / 19,538 | 52 / 19,648 |
+| prototype court, class / type plane | 1,041 / 1,058 | 1,044 / 1,061 |
+| `err_sites.rs` coordinates | 772 | 772 |
+| FRF courts | 40 | 41 |
+| unit tests | 189 | 193 |
+
+## D111 — the property engine has no export, so its court is the slot table
+
+**What landed.** Phase 6.7a: `crypto/property/property_string.c` as
+`src/property/strings.rs`, plus `defn_cache.c`'s constructor and releaser, plus the two
+global-property functions from `property.c`, plus `ossl_property_parse_init` from
+`property_parse.c`. **Index slots 2, 3 and 14 are filled**, so nine of the eighteen are
+live, and `context_init` now ends with the property pre-initialisation the authority
+puts there. No export changes: the Phase 6 ledger stays at 102 implemented and 59 open.
+
+**The correction, and it is to the plan rather than to the code.**
+`docs/PHASE-6-SUBPHASES.md` recorded 6.7's exit criterion as "definition, parse, string
+round-trip, matching, query parse and negative selection", with `RT-PROPERTY` as its
+court. Measured against the authority, **the property engine has no exported symbol at
+all**: all thirty-odd entry points are `ossl_property_*`, `ossl_ctx_global_properties*`
+and `ossl_prop_defn_*`. A probe is compiled against *installed headers* and linked
+against the library, so it cannot call one function of the grammar, and a court that
+claimed to compare the parse would be claiming an observation no probe can make — which
+is the failure mode this project has now recorded four times in other forms
+(`a2d_ASN1_OBJECT`, the prefix-derived discovery of D49 and D51, the unread ledger of
+D94). The criterion and the court are corrected in place, and the *behaviour* it named
+is not dropped: it becomes observable at 6.8, where a provider fetch applies a query to
+a candidate set, and is corroborated at 6.12 by an independently written provider. That
+is exactly `docs/PROVIDER_MODEL.md` §5's gate item 4, "property-based fetch selection
+matches, including negative selection", and it was always 6.8's, not 6.7's.
+
+**What the three slots can witness, and the one thing that is a start-up contract.**
+`RT-LIBCTX` gains slots 2, 3 and 14 and moves 83 → 89 observations: presence, stability,
+per-context distinctness and difference from the object's own address, for each of the
+three, on two independent contexts. The engine's *ordering* contract is not visible
+through a slot, but it is asserted by the authority at every context construction and is
+reproduced here for the same reason:
+
+```c
+if ((ossl_property_value(ctx, "yes", 1) != OSSL_PROPERTY_TRUE)
+    || (ossl_property_value(ctx, "no", 1) != OSSL_PROPERTY_FALSE))
+    goto err;
+```
+
+`OSSL_PROPERTY_TRUE` is 1 and `OSSL_PROPERTY_FALSE` is 2, and the value table's counter
+is **separate** from the name table's, so the six predefined names take 1..6 in their own
+space while "yes" and "no" are the *first two values*. One shared counter, or interning
+the names as values, fails the authority's own check. The two `if`s are written as two
+`if`s rather than one tuple comparison because the authority's `||` short-circuits: a
+table that numbers "yes" wrongly also leaves "no" uninterned, and that state is part of
+what is reproduced.
+
+**Two slots are filled and empty, and that is the authority's own state.**
+`ossl_property_defns_new` is one empty lhash and `ossl_ctx_global_properties_new` is one
+`OPENSSL_zalloc`ed block with a NULL `list`. A zeroed holder is a *valid empty* holder,
+not an uninitialised slot: the authority's own constructor produces exactly this, and
+the reader that would distinguish them is `ossl_ctx_global_properties`, which returns
+`&globp->list`. So filling these two asserts nothing about property behaviour, and the
+releasers are written to handle a non-empty state because that is the state 6.7b will
+create — a releaser that ignored the list would leak, so it does not.
+
+**The element layout is reproduced, not approximated.** `PROPERTY_STRING` is
+`{ const char *s; OSSL_PROPERTY_IDX idx; char body[1]; }` with `s` pointing at its own
+`body`, so one allocation holds the header and the string and `property_free` is a bare
+`OPENSSL_free`. On x86-64 that is `size_of` 16 with `body` at offset 12, and
+`new_property_string` allocates `16 + l`. A Rust `#[repr(C)]` type with a trailing
+`[c_char; 1]` gives the same offsets and the same `size_of`, so the arithmetic is the
+authority's down to the slack byte. `defn_cache.c`'s element has the same shape and the
+same treatment.
+
+**`PROP_R_*` is the first reason family in this table that is not in an installed
+header.** The error-coordinate resolver compiles a C probe against the authority's
+headers and prints what each symbol evaluates to, and it had only ever needed the
+installed ones — `ERR_R_*`, `CRYPTO_R_*`, `BIO_R_*`, `ASN1_R_*`. The property grammar
+raises `PROP_R_*`, which lives in `include/internal/propertyerr.h`, present in the
+committed source tree and **not installed**. The resolver therefore gained
+`-I <authority source>/include` as a *second* include directory, after the built prefix,
+so every `openssl/...` header still comes from the prefix the courts link against and
+only `internal/...` falls through to the tree the build was made from. 23 coordinates
+were added — `property_string.c`'s 3 and `property_parse.c`'s 20 — taking the table from
+772 to 795. `property_parse.c`'s are 6.7b's implementation, and they are taken now
+because the rule Phase 4 and Phase 5 established is the *subsystem* set rather than the
+implemented subset: a site nobody calls yet is a coordinate, not a claim.
+
+**A naming correction.** The file mirroring `property.c` was first written as
+`src/property/property.rs`, which clippy refuses (`module_inception`) and which would
+have needed an `#[allow]` — a suppression rather than a correction. It is
+`src/property/globals.rs`, named for the object, and says in its header that everything
+in it is `property.c`'s.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 102 / 59 | 102 / 59 (no export) |
+| index slots filled | 6 | 9 |
+| `RT-LIBCTX` observations | 83 | 89 |
+| all courts / observations | 52 / 19,649 | 52 / 19,655 |
+| `err_sites.rs` coordinates | 772 | 795 |
+| unit tests | 193 | 196 |
+
+**The ordering contract has a unit test because no court can see it.** Three tests were
+added to `src/property/strings.rs`: the two Boolean values are 1 and 2 *and* the six
+predefined names occupy their own 1..6; a repeat intern answers the same index and a
+non-`create` miss answers 0, with index 0 naming nothing on both tables; and two contexts
+have their own tables and their own counters. That is the same reasoning D109 applied to
+the namemap's order-dependent refusal — when a behaviour is real and nothing observable
+reaches it, the assertion has to live where it can be made, and the residual says so.
+
+## D112 — the ctype table is generated, and a range test that was only ever asserted
+
+**What landed (6.7b, in progress).** Four things, of which two are compiled and tested
+and two are committed but deliberately not yet in the module tree:
+
+| artefact | state |
+|---|---|
+| `src/runtime/bsearch.rs` — `crypto/bsearch.c` mirrored | in the tree, 4 unit tests |
+| `forensics/tools/gen_ctype_table.py` + `src/runtime/ctype_table.rs` | in the tree, registered with `evidence_determinism.py` |
+| `src/runtime/ctype.rs` — five more classes | in the tree, 3 more unit tests |
+| `src/property/list.rs` — the list and definition types | committed, **not declared** |
+| `src/property/query.rs` — `property_query.c` | committed, **not declared** |
+
+`list.rs` and `query.rs` are held out of the module tree on purpose. Their only caller is
+the grammar `property_parse.c`, which is the next step; declaring them today would mean
+nine `allow(dead_code)` markers on interfaces rather than on obligations, and an interface
+that nothing calls is a placeholder wearing a different hat. Committing the files while
+leaving them undeclared keeps them from being lost and keeps the crate honest — the
+compiler does not see them, so nothing about them is claimed.
+
+**No Gemel checkpoint accompanies this commit, and that is deliberate.** The constitution
+requires a checkpoint at a *phase boundary*. This is a mid-subphase commit on a staging
+branch, made so that the work survives; the 6.7b checkpoint comes when the grammar is
+complete and courted.
+
+**The instrument was wrong again, and the way it was wrong is worth recording.** The first
+version of `gen_ctype_table.py` read **one source line per table entry**. The authority's
+entries span two lines — the sum is wrapped — so every mask after the first line was
+dropped, and the generator reported:
+
+```text
+digit      10 byte(s)
+xdigit      0 byte(s)      <-- the authority has 22
+```
+
+`xdigit` appearing empty is a *plausible authority finding* — "the table has no xdigit
+bits" — and it is exactly the shape of a real one. It was not: `/* 30  0  */` begins the
+entry and `| CTYPE_MASK_xdigit | CTYPE_MASK_base64 | CTYPE_MASK_asn1print,` continues it.
+The parser now accumulates until the next comment and checks each comment against its
+position, and the corrected counts are 10 / 22 / 6 / 52 / 62 / 95. This is the failure
+mode the project has now recorded more times than any other: **the probe, the generator and
+the note are suspects before the authority is.**
+
+**The more useful result: a Phase 5 claim was an assertion, and is now a check.**
+`src/runtime/ctype.rs` implemented five predicates as ASCII *range tests* and recorded in
+its header that the sets "were read back out of the authority's own table rather than
+recalled". That equivalence lived in a doc comment. Nothing compared the two. With the
+table now generated, one test walks every value a signed `char` can produce — `-256..512`,
+so the values either side of the 128-byte boundary are included — and asserts that
+`ossl_isdigit`, `ossl_isxdigit`, `ossl_isspace`, `ossl_isalpha`, `ossl_isalnum`,
+`ossl_isprint` and `ossl_isasn1print` each agree with the table. They do. The claim is
+retired into evidence, at the cost of one test.
+
+That also settles *why* the table is generated rather than written. Phase 5's header says
+transcribing 128 masks by hand would be "exactly the kind of hand-copied constant D33
+forbids: a transcription that nothing regenerates and that nothing would notice going
+stale". A generated table is the opposite of that, and it gives every class at once instead
+of five more reasoned-out range tests.
+
+**`CTYPE_MASK_ascii` is `(~0)` and must be truncated, not negated.** The masks are
+`unsigned int`, so `~0` is `0xFFFFFFFF`. The generator's first resolution left it as `-1`,
+which produced `pub(crate) const MASK_ASCII: u32 = -0x1;` and a compile error. The
+constants are now masked to 32 bits at resolution. The table itself stores `unsigned
+short`, and the entry check rejects anything that does not fit — which is what caught the
+class of mistake rather than the instance.
+
+**`ossl_tolower` XORs `c`, not the ascii image.** `return ASCII_IS_UPPER(a) ? c ^
+case_change : c;` with `case_change` `0x20` in this profile and `0x40` only under a real
+EBCDIC build. `ossl_toascii` is the identity here so the two coincide, and the distinction
+is kept because the authority keeps it. The test covers `-256..512` and asserts that an
+out-of-range value comes back unchanged.
+
+**One determinism gap closed, one left open on purpose.** `gen_ctype_table.py` and its two
+outputs are in `evidence_determinism.py`'s generator and comparison lists, so a stale
+committed table is now a failure rather than a silent divergence — the artefact count goes
+from 12 to 14. The gap D109 recorded, that `gen_err_raise_sites.py` and
+`err-raise-sites.json` are in neither list, is **still open**: fixing it means adding the
+same tool to `check_evidence_portability.py`'s exercised set as well, so that the two agree
+about which generators need the authority's source tree. Doing half of that now would
+replace one silent gap with two.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 102 / 59 | 102 / 59 (no export) |
+| index slots filled | 9 | 9 (unchanged) |
+| courts / observations | 52 / 19,655 | 52 / 19,655 (no behaviour change) |
+| determinism-checked artefacts | 12 | 14 |
+| unit tests | 196 | 203 |
+
+## D113 — 6.7b closes: a backwards printer, a four-shape cache, and a clippy verdict on `unsafe fn` bodies
+
+**What landed.** The rest of the property engine's grammar, so **6.7b is complete**:
+`ossl_property_list_to_string` with its `put_char`/`put_str`/`put_num` helpers, and all
+of `defn_cache.c` — `ossl_prop_defn_get` and `ossl_prop_defn_set`. With D112's half, the
+whole of `property_parse.c`, `property_query.c` and `defn_cache.c` is reconstructed. Unit
+tests go 203 → **216**.
+
+**The reverse printer walks the sorted array backwards, and that is a test rather than a
+comment.** `ossl_property_list_to_string` starts at `properties[num_properties - 1]` and
+decrements while the output cursor advances, so the string lists the clauses in
+*descending* `name_idx` order even though the array it reads is sorted ascending. It looks
+like a defect and is reproduced, because it is observable. The test does not assert the
+oddity in the abstract — it uses `input=certificate,output=certificate`, where
+`ossl_property_parse_init` interns `output` before `input`, so the *higher* index is
+`input` and the printed string must therefore contain `input` first. A forward walk would
+put `output` first and fail.
+
+The same test covers the printer's other two obligations: `put_num` advances the cursor by
+a length it computed itself, not by what it wrote, so a truncated number leaves the cursor
+*past* the NUL that terminated it; and a buffer with exactly one byte of room becomes a
+terminator rather than a character, which is the `*remain == 1` arm of `put_char`. A NULL
+list answers **1** and writes a bare terminator, so a caller can pass NULL and get a valid
+empty string rather than a failure.
+
+**`put_str` reads its input twice.** The first pass decides only *which* quote — single,
+or double when the string contains a single — and never whether the value will be
+truncated; that is the second pass and the `remain` arithmetic. A restructured version that
+decided both in one pass would agree on every short value and differ on a value that
+contains an apostrophe *and* overflows the buffer.
+
+**The definition cache has four shapes, not two.** `prop == NULL` answers **1** without
+touching anything; `pl == NULL` **deletes** the entry and answers 1; an already-cached text
+frees the caller's list and **overwrites `*pl` with the cache's own**, so both sides then
+share one object; and otherwise the text and the list are copied into a single
+self-referential block whose key lives inside it. Three tests cover all four plus the
+per-context isolation. The third shape is the one with teeth: nothing may free a list it
+obtained that way twice, and the test asserts the pointer identity that makes that true.
+
+**`ossl_assert` is non-fatal here too.** `NDEBUG` is defined in the admitted build, so the
+two asserts in `ossl_prop_defn_get` are `(x) != 0` and a NULL table answers NULL rather
+than aborting. That is the same build fact D109 read from `configdata.pm`, applied to a
+third file.
+
+**A clippy verdict worth recording, because it corrects an assumption.** The crate's
+convention — every pointer operation in its own `unsafe` block with a `SAFETY` line
+directly above — does not mean every *call* in an `unsafe fn` needs one. `lib_ctx_get_data`,
+`lib_ctx_read_lock`, `lib_ctx_write_lock`, `lib_ctx_unlock` and `CRYPTO_malloc` are all
+**safe** functions in this crate, so wrapping them is an `unused_unsafe` error under
+`-D warnings`. Eight such blocks were removed from `defn_cache.rs`, and one in
+`parse.rs`'s `put_char` (a pointer *cast* needs no block either). The distinction is worth
+having in the record because the opposite assumption is the natural one to make from the
+handoff's summary of the convention.
+
+Two smaller corrections of my own work, both caught by clippy rather than by a court:
+`items_after_test_module` — the printer was appended after the `#[cfg(test)]` module, so
+the module moved to the end of the file; and `expect_used` is denied crate-wide, so a
+test's three `expect`s became `unwrap_or_default`/`unwrap_or` with assertions that carry
+the printed transcript into the failure message.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 102 / 59 | 102 / 59 (no export) |
+| index slots filled | 9 | 9 (unchanged) |
+| courts / observations | 52 / 19,655 | 52 / 19,655 (no behaviour change) |
+| determinism-checked artefacts | 14 | 14 |
+| unit tests | 203 | 216 |
+
+## D114 — 6.8 and 6.9 swap, and the DSO contract that made the swap obvious
+
+**The dependency only runs one way, and the plan had it backwards.**
+`docs/PHASE-6-SUBPHASES.md` recorded 6.8 (provider) before 6.9 (DSO), with 6.9 depending on
+6.8. But `OSSL_PROVIDER_load`'s dynamic branch **is** a `DSO_load` call, and DSO depends on
+nothing in the provider stack — so landing the provider registry first would mean writing
+`load` against a loader that does not exist, or writing it without its dynamic branch and
+then reopening it. The rows now record **6.9 before 6.8**: an order correction of exactly
+the kind the 6.6 split made when reconnaissance found `new_from_dispatch` could not precede
+the core BIO.
+
+While correcting that, a second error in the same row: 6.9's dependency was written as
+`6.6g`, which is itself downstream — `6.6g` is `OSSL_LIB_CTX_load_config`, which waits for
+6.10, which waits for 6.8, which waits for 6.9. A cycle. DSO's only Phase 6 dependency is
+the context, so the row now says `6.6a`. This is worth recording rather than quietly
+fixing: a dependency column nobody re-derives is exactly where a cycle can hide, and the
+`phase_state.py` rule ("a phase cannot be complete while an earlier one is not") would
+never have caught it because it orders *phases*, not subphases.
+
+**Four facts the reconnaissance established, which fix the shape of the work.**
+
+1. **All fifteen `DSO_*` symbols are exported, and `openssl/dso.h` is not installed.**
+   `forensics/authorities/prefix/.../include/openssl/dso.h` does not exist, so these are in
+   the atlas's `abi-only` class: a consumer can link them but cannot *declare* them from an
+   installed header. That is why `RT-DSO` must take its prototypes from the authority's
+   committed source tree, exactly as the error-coordinate resolver takes
+   `internal/propertyerr.h` — and it means this court's subject is the ABI and the
+   behaviour, not a source-level contract. It also means the property engine's situation
+   and DSO's are **not** the same: the property engine has no exported symbol at all, while
+   DSO has fifteen that no header declares.
+2. **The method is `dlfcn`, and the file that supplies it is chosen by configuration.**
+   `dso_openssl.c` compiles to a null method under `DSO_NONE`; this profile's
+   `build/.../include/crypto/dso_conf.h` defines `DSO_DLFCN`, `HAVE_DLFCN_H` and
+   `DSO_EXTENSION ".so"`, and `configdata.pm` lists `dso_dlfcn.o` — so `DSO_METHOD_openssl`
+   returns the `dlfcn` method and `DSO_DLFCN` is the branch to reproduce. `dso_dl.c`,
+   `dso_vms.c` and `dso_win32.c` are not this profile.
+3. **The method struct is eleven fields and its order is load-bearing.** From
+   `dso_local.h`: `name`, `dso_load`, `dso_unload`, `dso_bind_func`, `dso_ctrl`,
+   `dso_name_converter`, `dso_merger`, `init`, `finish`, `pathbyaddr`, `globallookup`.
+   The `dlfcn` initialiser fills `ctrl`, `init` and `finish` with NULL, so those three
+   paths in the generic layer are reachable only through the *method* being NULL — which is
+   the `DSO_R_UNSUPPORTED` arm.
+4. **`DSO_new_method` does not initialise `ex_data`.** It zeroes the struct and never calls
+   `CRYPTO_new_ex_data`, and `DSO_free` never calls `CRYPTO_free_ex_data`. So the field is
+   present for layout and is dead in both directions — reproduced as a field, not
+   implemented as a subsystem.
+
+**Three behaviours that will need care in the court, written down before the code.**
+
+* `DSO_convert_filename` translates `"foo"` to `"libfoo.so"` and `"libfoo.so"` to
+  **`"liblibfoo.so"`** — the transform is "no `/` in the name", not "not already
+  translated". With `DSO_FLAG_NAME_TRANSLATION_EXT_ONLY` it is `"foo.so"`, and with
+  `DSO_FLAG_NO_NAME_TRANSLATION` the name is returned **unchanged by a `strdup`**, not by
+  the converter.
+* `DSO_merge` has four shapes: a rooted first spec wins, a missing first spec yields the
+  second, a missing second yields the first, and otherwise the two are joined with one `/`
+  — with a trailing `/` on the second **removed first**, so `"/d/", "f"` is `/d/f` and not
+  `/d//f`.
+* `DSO_pathbyaddr` and `DSO_dsobyaddr` return the path of the library the *function* lives
+  in, which is necessarily different on the two sides of a differential court. The
+  comparable observations are therefore the **contract** and not the text: `sz <= 0`
+  answers `len + 1`, otherwise `min(len, sz - 1) + 1`, so `sz` in `{1, 2, 4}` answers
+  `{1, 2, 4}` on both sides and the buffer's terminator is at `sz - 1`. That the paths
+  differ is a *platform* divergence to record, not a residual to chase.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 102 / 59 | 102 / 59 (documentation only) |
+| subphase order | 6.8 then 6.9 | **6.9 then 6.8** |
+| unit tests | 216 | 216 |
+
+## D115 — 6.9 closes: the DSO layer, one corrected error site, and a probe bug that looked like agreement
+
+**All fifteen exports land and the court is a real one.** `crypto/dso/dso_lib.c` (329
+lines) becomes `src/dso/mod.rs` (983) and `crypto/dso/dso_dlfcn.c` (445) becomes
+`src/dso/dlfcn.rs` (616). `dso_err.c`'s reason table joins the generated
+error-coordinate plane (`err_sites.rs` 795 → **830** coordinates) and `dso_openssl.c` is
+the one-line accessor that the `DSO_DLFCN` profile resolves to. Phase 6 moves from 102
+implemented / 59 open to **117 / 44**, and `libcrypto` from 1076 to **1091** of 5896.
+`RT-DSO` is the 53rd court and adds **145 observations** with **no residuals**; the five
+phase court sets now total **53 courts and 19,800 observations**, every one re-derived
+from the authority in this run. The FRF store is recreated around it: 373 → **381**
+objects, 90 → **92** challenges, 45 → **46** receipts, 5 claims, `graph_verified`.
+
+**A number in this entry was mis-summed on first writing, and the correction is
+recorded rather than applied quietly.** The first draft of the Gemel change for this
+subphase stated the five-phase total as 19,796 and the pre-6.9 total as 19,651. Both
+were hand arithmetic over the court artefacts; the derived sum is **19,800** before and
+**19,655** after, and `regression_guard` prints the same 19,800 from
+`forensics/regression-baseline.json`. Nothing about the evidence changed — only my
+addition. It is mentioned here because an evidence record that silently acquires the
+right number is indistinguishable from one that was right all along, and this project
+has already decided which of those it wants to be (D33). The four-observation
+difference is not attributable to a court; it is simply a bad sum.
+
+**The court's first failure was the probe's, not the library's — the same lesson as the
+ctype table, in a different guise.** The first `RT-DSO` run failed on three keys:
+`path.query`, `path.full` and `path.negative` differed by exactly the difference between
+the two libraries' path lengths (79 against 38). That is not a divergence; it is the one
+dimension a `DSO` court *cannot* compare, because a `DSO`'s subject is a shared library
+and the two sides are different libraries at different paths. The probe was rewritten to
+compare the **arithmetic** instead: that the size query is positive, that it agrees with
+the full-size answer, that `sz` in `{1, 2, 4}` answers `{1, 2, 4}`, that a size one below
+the length truncates to `len - 1` by the `min(len, sz - 1) + 1` rule, and that the
+buffer is terminated at each size. `q` and `full` are now used only inside relations and
+never printed. D114 predicted this divergence; the probe had to be built to not *measure*
+it rather than merely to tolerate it.
+
+**`ERR_add_error_data` appends. It does not replace, and the comment in the code said it
+did.** `dlfcn_pathbyaddr`'s failure path was reproduced through `ERR_add_error_txt` with
+two calls and a note claiming that the authority's `ERR_add_error_data` "*replaces* rather
+than appends", which was written down as the reason for a recorded divergence
+(`D-DSO-1`). Reading `crypto/err/err.c` settles it the other way: `ERR_add_error_vdata`
+reuses the slot's existing `MALLOCED|STRING` buffer, `realloc`s it to fit and `strlcat`s
+into it. So the two are *both* append, and the divergence did not exist. What did exist
+is the next paragraph. A recalled constant presented as a measured one is D33's defect
+class, and this is its second instance in this stratum.
+
+**The `<NULL>` substitution is reachable at exactly one site in this subsystem, and it
+was missing.** `ERR_add_error_vdata` does `if (arg == NULL) arg = "<NULL>";`, so a NULL
+argument to `ERR_add_error_data` becomes the literal `"<NULL>"`. The candidate's
+`c_str_bytes` answers an empty slice for NULL — invisible at the load and bind sites,
+because those fail immediately after a `dlopen`/`dlsym` that just set `dlerror`'s state,
+but **wrong at `pathbyaddr`**, which fails because `dladdr` did — and `dladdr` does not
+touch `dlerror`. So a caller who drained the error queue gets
+`dlfcn_pathbyaddr(): <NULL>` from the authority. `c_str_or_null_literal` now makes all
+three sites match, and `RT-DSO` observes the text itself rather than asserting it:
+`ERR_raise(ERR_LIB_USER, 1)` puts a code on the queue with *no data*, the failing
+`DSO_pathbyaddr` appends to that slot, and `ERR_get_error_all` reads back
+`dlfcn_pathbyaddr(): <NULL>` — identical on both sides. A mutation that removes the
+substitution makes the court **fail** (`court/dso-sensitivity.py`), so this is a
+sensitivity-backed observation rather than a claim.
+
+**`DSO_merge` refuses a NULL first spec before it reads the flag, so the merger's own
+both-NULL arm is unreachable.** The layer's test is
+`if (dso == NULL || filespec1 == NULL)` and it comes first; the
+`DSO_FLAG_NO_NAME_TRANSLATION` test comes second and can only suppress the *call*. The
+merger therefore cannot be entered with a NULL first spec, so its
+`filespec1 == NULL && filespec2 == NULL` branch is dead code in the authority — and dead
+here by the same construction. The probe records it as two observations rather than one:
+`merge.both.null` and `merge.notranslate.null.first` carry the *layer's* reason and not
+the merger's, which is also why a NULL-first refusal is unaffected by the flag.
+
+**`DSO_bind_func` asked the method twice.** The authority assigns and then tests
+(`if ((ret = dso->meth->dso_bind_func(dso, symname)) == NULL)`), so the method is asked
+**once**. The candidate called it in the test and again in the return. That is invisible
+through the ABI — `dlsym` is idempotent and raises nothing OpenSSL-owned — so no court
+could have found it; it was found by reading the authority's function beside the
+candidate's, which is the reason that reading is part of the method. Fixed.
+
+**`probe_hygiene` had to learn a probe's build definitions, and learned them by asking
+the runner.** `RT-DSO` is the first probe that cannot be compiled without per-side
+input: it needs the path of the library under test, because the only `DSO_load` both
+sides can be expected to succeed at is a load of the library each is itself built as,
+and that path differs per side. The hygiene tool compiles every probe independently at
+three optimisation levels and reported `UNSTABLE` — correctly, via the probe's own
+`#error`. The fix is not a definition table in the hygiene tool: it imports each
+`phaseN_courts.py`, finds the one that lists this probe, and calls its `extra_defs`.
+That follows `discover_probes`'s reasoning, and it means adding a Phase 7 court with a
+definition does not require remembering a second place. The definition itself is never
+printed by the probe: the observations around it are NULL-ness and `strcmp` against the
+input, which are equal on both sides by construction.
+
+**A probe bug that looked like agreement, and would have looked like a divergence next
+time.** The first version of the `<NULL>` observation printed `data` through a helper
+that ends with `ERR_clear_error()` — and `data` **aliases the slot's own buffer**, which
+that clear releases. Both sides printed an empty string, which reads as "the two sides
+agree" while actually being "the probe never observed anything". The text is copied
+before any helper runs. This is the failure mode the project's whole evidence model
+exists to prevent, and it happened *inside* the instrument: worth recording because the
+symptom — identical on both sides — is the symptom of success.
+
+**Two behaviours the code reproduces because they look like mistakes, and one that would
+have been.** `DSO_ctrl` with `DSO_CTRL_SET_FLAGS` and `larg = -1` answers `0` and then
+reads back `-1` with a **clean error queue**, so the authority's own "a negative answer
+means an error" comment does not hold for the value a caller may have stored; the probe
+records the write, the read-back and the empty queue separately. `DSO_convert_filename`
+translates `"libfoo.so"` to **`"liblibfoo.so.so"`** (D114 predicted
+`"liblibfoo.so"`; the extension is appended to what is already there), which the probe
+observes directly. And `DSO_load`'s refusals are *ordered*: the already-loaded test comes
+before the filename is even looked at, so a second load on a live object is
+`DSO_R_DSO_ALREADY_LOADED` and leaves the caller's object untouched — observed by
+binding through the object after the refusal and by reading its filename back.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 102 / 59 | **117 / 44** |
+| `libcrypto` implemented / 5896 | 1076 | **1091** |
+| phase courts | 52 | **53** |
+| court observations | 19,655 | **19,800** |
+| Phase 6 courts | 5 | **6** |
+| `err_sites.rs` coordinates | 795 | **830** |
+| unit tests | 216 | **226** |
+| `probe_hygiene` | clean (41 probes) | clean (**42 probes**) |
+| FRF objects / challenges / receipts | 373 / 90 / 45 | **381 / 92 / 46** |
+
+## D116 — 6.8c's activation half: an arm on the wrong side of `if (ref == 0)`, five bridges that refuse to be stubs, and an activation order that is load-bearing
+
+**A defect that no court could have found, because nothing could reach it yet.**
+`ossl_provider_free`'s `flag_initialized` arm — the teardown, the error-string unload and
+the `operation_bits` release — had been written **before** the `if (ref == 0)` test rather
+than inside it, so a provider was torn down on *every* release instead of on the last
+one. The authority's own comment is the whole argument against that: *"there may be other
+structures hanging on to the provider after the last deactivation and may therefore need
+full access to the provider's services. Therefore, we deinit late."* The arm was
+unreachable when it was written (`ossl_provider_free` carried a dead-code allowance),
+which is exactly why the reading mattered and why no differential court could have caught
+it: 6.8c's exports are what make the function live, and the first thing 6.8c does is
+declare them. Its two allocation coordinates — `OPENSSL_free(prov->error_strings)` at
+**754** and `OPENSSL_free(prov->operation_bits)` at **759** — also replaced the
+placeholders `0`s that part 1 left, so a failing allocation records what a consumer would
+see from the authority and not a line that does not exist.
+
+**Five store bridges, and the decision not to stub them.** `provider_flush_store_cache`,
+`provider_remove_store_methods` and the two activation functions each end in a call into
+one of five libctx slots — the four method stores and the decoder cache — none of which
+this build has. Every one of those calls is guarded by a NULL test on the slot, and the
+NULL answers are **not uniform**: seven of the nine delegate functions answer 1, the
+decoder *cache* answers 0, and the two sums compare against `== 4`. So the part of each
+that decides behaviour in this build is the read and the NULL test, and that part is
+written verbatim in `src/provider/stores.rs`. The delegation body is not: the four stores
+are `ossl_method_store_new(…)`'s (Phase 7 and 10), and `ossl_method_store_cache_flush_all`
+and `_remove_all_provided` are 6.7c's, which 6.7 deferred to 6.8 and which has not landed.
+Writing a plausible body there would be a stub that reads as evidence, which is the one
+thing this project does not do; writing nothing would let a later stratum fill the slot
+and silently flush nothing. What is written instead is the authority's branch guarded by
+an `assert!` on the invariant, the same shape `create_provider_children` already uses, and
+`the_five_slots_are_unfilled` turns the invariant into a unit test so a slot that moves
+fails the test *before* the first activation reaches the assertion. `docs/PARITY_MODEL.md`
+does not have a name for "a branch that is correct because it cannot be taken"; this is
+the project's answer to it, and it is a *checked* construction rather than an assumed one.
+
+**The authority's construction order is load-bearing, and the first version of the test
+got it backwards.** `provider_init` runs from `provider_activate` **only while the
+provider has no store**. A second activation of a storeless provider re-enters
+`provider_init`, finds `flag_initialized` set, and is refused — non-fatally, because
+`NDEBUG` makes `ossl_assert` `(x) != 0`, so the answer is 0 and not an abort. That means
+`OSSL_PROVIDER_try_load_ex`'s order is not a detail: create storeless, activate **once**
+while storeless (which is when init happens), *then* `ossl_provider_add_to_store`. The
+test originally added the provider to the store first and then expected the count to
+advance; it does not, and the failure was the test's, not the library's. The helper now
+performs the authority's own sequence and says why, and the store is what makes a
+*second* activation possible at all — so the same test pins both halves: storeless
+activation counts once, and a stored provider's count runs 1, 2, 3.
+
+**`ossl_provider_deactivate` is a deactivation, not a report.** The two functions one
+wraps the other, and their conventions are **opposite and neither is `>= 1`**:
+`provider_deactivate` answers the *resulting* activation count — so from four activations
+the first call answers **3**, not 4 — and `-1` on failure, which is not a count and is why
+its callers test `< 0`; `ossl_provider_deactivate` answers `count == 0 ? provider_remove_store_methods(prov) : 1`,
+a boolean that on the transition to zero *is the store sweep's verdict*. The test asserted
+`2` where the wrapper had already consumed one deactivation, which is the same class of
+error as the load-order and address mistakes this project keeps finding: the instrument
+before the subject. Both conventions are now pinned, including the `-1` edge.
+
+**Three smaller things, each kept rather than tidied.** `assert(ref > 0)` in
+`ossl_provider_doall_activated` is **compiled out** under this profile's `NDEBUG` — the
+authority says so in a comment ("Not much we can do if this assert ever fails. So we don't
+use `ossl_assert` here") — so emitting a live assertion would have been a divergence and
+not a fidelity; the line is a comment where it would be. `provider_init`'s walk stores
+eight provider-side dispatch pointers and every one is read back through a
+`transmute::<*mut c_void, fn(…)>` whose signature is named beside it, which is the only
+way a `dlsym`-shaped pointer can be called at all. And `(1u8 << (bitnum % 8)) & 0xFF` is
+kept verbatim from the authority in both bitset functions with a `#[allow(clippy::identity_op)]`
+naming the lint: the mask is redundant in both languages, and it is the line a reader
+compares against `crypto/provider_core.c`.
+
+**D113's rule applied twice more, and the first draft was wrong both times.**
+`lib_ctx_get_data` is a **safe** function in this crate, so the nine `unsafe` blocks the
+bridge module was written with were unnecessary — `unused_unsafe` said so, once per
+bridge. And a raw-pointer *comparison* needs no block either: the eight
+`unsafe { ctx == provctx_addr() }` markers in the test's own callbacks became plain
+comparisons. The rule is not "unsafe functions are everywhere"; it is that a safe
+function called from an `unsafe fn` needs nothing, and the compiler is the authority on
+which is which.
+
+**D115's arithmetic was right when it was written, and the total has moved twice since.**
+D115's table records 19,800 observations at `1b850aa`. `RT-LIBCTX` moved 89 → 91 in
+`7e97ed5` (6.8b-ii, when the core dispatch table landed) and the committed baseline has
+read **19,802** from that commit onward. This commit does not move it: it adds no export,
+so no court gains an observation and none loses one. Recorded because a number that
+differs from the previous entry's table is otherwise indistinguishable from a regression,
+and this project has decided it would rather explain a difference than have one that looks
+like agreement (D33).
+
+### Residuals this subphase makes observable, rather than closes
+
+1. **The three predefined `init` pointers are NULL, so `default`, `base` and `null` cannot
+   activate.** `provider_new` receives `None`, so `provider_init` takes the module branch,
+   `DSO_load("libnull.so")` fails, and the activation fails. The consequence is measured
+   rather than guessed — `a_builtin_without_an_entry_point_cannot_activate` pins `-1`, `0`
+   and `0` for the three entry points — and it propagates: `ossl_provider_activate_fallbacks`
+   answers 0, so `ossl_provider_doall_activated` answers 0 and `OSSL_PROVIDER_available`
+   answers 0 for every name, where the authority answers 1 and 1. The test is written to
+   **fail when 7/8 lands the pointers**, so the residual is retired deliberately instead of
+   silently.
+2. **The `random_bytes` guard pair is Phase 9's and is skipped.** The authority's
+   `prov->random_bytes != NULL && !ossl_rand_check_random_provider_on_load(…)` is
+   reachable for any provider that publishes `OSSL_FUNC_PROVIDER_RANDOM_BYTES`; the check
+   is omitted in both activation functions and the omission is registered, not hidden.
+   `ossl_provider_random_bytes` itself *is* written, because the pointer and the call are
+   this stratum's — only its callers are Phase 9's.
+3. **`create_provider_children` asserts the child-callback stack is empty.** 6.8e owns both
+   the stack and the walk, so the authority's loop over an empty stack is what runs; the
+   assertion is what makes "empty" a checked fact rather than an assumption, and
+   `no_provider_child_callback_exists` checks it independently.
+4. **`osl_decoder_cache_flush`'s absent-cache answer is 0, and both activation callers
+   discard it.** That asymmetry with the other four bridges is deliberate and pinned by a
+   unit test, because "make them all return 1" is the plausible simplification.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 117 / 44 | **117 / 44** (unchanged: no export declared yet) |
+| `libcrypto` implemented / 5896 | 1091 | **1091** |
+| phase courts / observations | 53 / 19,802 | **53 / 19,802** |
+| unit tests | 250 | **257** |
+| `err_sites.rs` coordinates | 830 | **830** |
+| new internal modules | — | **`src/provider/activate.rs`, `src/provider/stores.rs`** |
+
+## D117 — 6.8c closes: a nullable entry point the court caught, two aliases that named their parameters, and a shell that had not been rebuilt
+
+**The twenty-two exports land with their court, and the registry stops being a slot sweep.**
+`crypto/provider.c` whole plus the five `OSSL_PROVIDER_*` wrappers that live in
+`provider_core.c` are declared in `src/provider/mod.rs`, in the same commit as
+`RT-PROVIDER` — because the ledger counts a symbol as implemented the moment it is
+defined, and declaring them a commit earlier would have moved twenty-two rows on evidence
+that did not exist. Phase 6 moves from 117 implemented / 44 open to **139 / 22**;
+`libcrypto` from 1091 to **1113** of 5896. `RT-PROVIDER` is the **54th** court and adds
+**67 observations** with no residuals, so the five phase court sets total **54 courts and
+19,869 observations**, all re-derived from the authority in this run. The FRF store is
+recreated around it: 381 → **389** objects, 46 → **47** receipts, 92 → **94** challenges,
+5 claims, `graph_verified`.
+
+**A builtin provider is the one provider a probe can create on both sides, and that is what
+makes this court possible.** The two libraries' own providers are each published by their own
+`OSSL_provider_init`, so observing them would compare the probe's environment rather than the
+registry. The probe instead declares its own entry point, registers it with
+`OSSL_PROVIDER_add_builtin`, and drives the registry through the public API: register, load,
+initialise, query, configure, enumerate, deactivate, unload, reload. The dispatch-table walk
+inside `provider_init` is on that path and is therefore coursed by *using* it — the seven
+`OSSL_FUNC_PROVIDER_*` entries the probe publishes are what the walk stores, and each is then
+called back through the object. Two of them have an out-parameter (`query_operation`'s
+`no_cache`) or a return the caller reads (`gettable_params`' table), so the pass-through is
+visible in both directions and not only as NULL-ness.
+
+**The court's one finding is a real one, and it is the kind no value-level probe of the
+other twenty-one would have reached.** `add_builtin.null_init` answered **1** where the
+authority answers **0**. The export had taken a bare `ProviderInitFn`, so a NULL entry point
+became `Some(NULL)` and `ossl_provider_add_builtin`'s test — which the authority performs
+*before* it allocates anything, so a refusal costs nothing — could not see it. A consumer
+could register a builtin with no entry point and be told it succeeded. The parameter is now
+`Option<ProviderInitFn>`: `ABI-PROTOTYPE` canonicalises `Option<F>` and `F` identically,
+because a nullable function pointer and a bare one are the same type to a caller, so the
+nullable spelling costs nothing and is the one the contract needs.
+
+**`ABI-PROTOTYPE` then found a hole in itself, or rather in what it had been able to
+reach.** It reported `type_unmapped: 2` for `OSSL_PROVIDER_add_builtin` and
+`OSSL_PROVIDER_do_all`, and the failure was on the **Rust** side in both: the aliases
+`ProviderInitFn` and `ProviderDoAllFn` named their parameters, and a named argument is not a
+type, so the canonicaliser could not read them. Every function-pointer alias in this crate is
+spelled unnamed for that reason; these two were not, and nothing noticed because neither had
+ever appeared in an export's signature. The type plane went from 2 unmapped to **0**, with
+`checked` 1044 → **1066** declarations and `type_checked` 1061 → **1083** types. The lesson is
+sharper than "fix the aliases": an alias is unchecked until an export uses it, so the
+*declaration* was never the thing that was verified — the *use* was.
+
+**Four defects in the instrument, and one stale artefact that read as a divergence.** The
+probe defined `_GNU_SOURCE` over the compiler's own `-D_GNU_SOURCE`; `OSSL_PARAM_construct_utf8_ptr`
+takes `char **` and was handed a `char[64]`; `OSSL_PARAM_END` is a brace *initializer* and not
+an expression, so assigning it needs `OSSL_PARAM_construct_end()`; and a label from an earlier
+draft survived into the source. Then the court's first successful compile reported that the
+**candidate** had called a `SCAFFOLDED` symbol — which reads exactly like the most serious
+divergence there is, and was a stale shell: `implemented-surface.json` had been regenerated to
+1113 but `build_phase2.sh` had not been re-run, so the DSO still carried the previous scaffold
+list and exported a stub for `OSSL_PROVIDER_add_builtin`. The pipeline order documented in the
+project's own notes has `implemented_surface` precede `build_phase2` for precisely this
+reason, and this is what happens when it is not followed. Recorded because the *symptom* was a
+candidate divergence and the *cause* was a build-order mistake: the probe, the generator and
+the note are all suspects before the authority is, and here the suspect was the pipeline.
+
+**The one thing `RT-PROVIDER` deliberately does not observe, and why that is a recorded
+residual rather than a gap.** `provider_activate_fallbacks` loads the table's `is_fallback`
+rows through their compiled-in entry points, and the candidate has none of them:
+`ossl_default_provider_init` is 807 lines and belongs with the algorithm tables in Phases 7
+and 8, so `provider_init` takes the *module* branch, the `DSO_load("libdefault.so")` fails, and
+the walk answers 0 where the authority answers 1. Entered with the flag set, the walk would
+make `ossl_provider_doall_activated` and `OSSL_PROVIDER_available` answer differently too.
+The probe therefore **never puts the flag in its enabled state**: the first public call it
+makes is `OSSL_PROVIDER_load`, which sets `store->use_fallbacks = 0` before it looks anything
+up. From that point both sides take the walk's early return, and `available`, `do_all` and the
+enumeration *are* compared — they would not be otherwise. So the disabled path is courted, the
+enabled path is named rather than hidden, and a unit test pins the current failure so that the
+day Phases 7 and 8 land the entry points the test fails and the residual is retired
+deliberately instead of silently.
+
+**One evidence-discipline finding, and it is the mechanism working.** `evidence_determinism`
+and `check_evidence_portability` both went `STALE` on the **phase 3, 4 and 5** obligation
+ledgers, because each records the sha256 of `forensics/atlas/implemented-surface.json` among
+its inputs and that file had changed from 1091 to 1113 implemented symbols. The remedy is the
+one the tools already prescribe — regenerate and commit, because the generators are the source
+of truth — and all three were regenerated. A ledger that names its inputs is doing its job
+when it goes stale; three of them going stale at once is the mechanism, not a defect.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 117 / 44 | **139 / 22** |
+| `libcrypto` implemented / 5896 | 1091 | **1113** |
+| phase courts / observations | 53 / 19,802 | **54 / 19,869** |
+| Phase 6 courts | 6 | **7** |
+| `ABI-PROTOTYPE` declarations / types checked | 1044 / 1061 | **1066 / 1083** |
+| unit tests | 257 | **257** |
+| `err_sites.rs` coordinates | 830 | **830** |
+| FRF objects / receipts / challenges | 381 / 46 / 92 | **389 / 47 / 94** |
+
+## D118 — 6.10 cannot precede 6.6e-ii: RCU's read path registers a thread-exit handler
+
+**The documented order was 6.9, then 6.8a–6.8c, then 6.10. Re-deriving 6.10's dependency
+set instead of trusting the column shows that order is wrong, and the correction moves
+6.6e-ii onto the critical path ahead of it.** The measurement is a symbol sweep over the
+four translation units 6.10 is made of — `conf_mod.c` (764), `conf_api.c` (214),
+`conf_sap.c` (82), `conf_mall.c` (38) — against everything the crate defines. Of the 58
+names that appear to be missing, most are naming rather than absence: `OPENSSL_malloc` is
+`CRYPTO_malloc` here, `OPENSSL_free` is `CRYPTO_free`, and the fourteen `sk_CONF_*` /
+`sk_CONF_VALUE_*` are the untyped `OPENSSL_sk_*` the crate already has. What is really
+absent is three groups, and one of them is the finding.
+
+**`ossl_rcu_read_lock` calls `ossl_init_thread_start`.** That is the whole of it. The RCU
+implementation for this profile is `crypto/threads_pthread.c` — there is no `crypto/rcu.c` —
+and its read path is not a counter bump: it allocates a per-thread `rcu_thr_data`, stores it
+under `CRYPTO_THREAD_LOCAL_RCU_KEY` in the *lock's own context*, and then registers
+`ossl_rcu_free_local_data` as a **thread-exit handler** so that data is released when the
+thread stops. So RCU depends on the per-thread event-handler table, and the event-handler
+table is 6.6e-ii. Since `CONF_modules_load` creates `module_list_lock` through
+`ossl_rcu_lock_new(1, NULL)` and every `CONF_modules_*` entry point takes it, **6.10 cannot
+be written before 6.6e-ii**. The order in this document is corrected to 6.9, 6.8a–6.8c,
+**6.6e-ii**, 6.10, 6.8d–6.8f, 6.11, and 6.6e-ii's row no longer reads as an optional
+remainder of the 6.6 series.
+
+This is the third dependency cycle or inversion this planning pass has found in the same
+column, after D114's 6.9/6.6g cycle and D97's 6.6f/6.8 siting, and it is the same lesson
+each time: **a dependency column nobody re-derives is where they hide.** It is also worth
+naming why this one was invisible. `conf_mod.c` names `ossl_rcu_*` and never names
+`ossl_init_thread_start`; the dependency is one level down, inside `threads_pthread.c`. A
+reader checking `conf_mod.c`'s own includes would not see it, and neither would a grep of
+the file for thread-event machinery.
+
+**The second group is the builtin-module fan-out, and it is why `OPENSSL_load_builtin_modules`
+is not a list this stratum can complete.** `do_load_builtin_modules` runs once and calls
+`OPENSSL_load_builtin_modules`, which registers one module per subsystem —
+`ENGINE_add_conf_module`, `ASN1_add_oid_module`, the deprecated `EVP_add_alg_module`,
+`ossl_provider_add_conf_module` (6.8d), `ossl_random_add_conf_module` (Phase 9) and
+`ossl_config_add_ssl_module` (libssl). This profile has **ENGINE enabled** — `configdata.pm`
+carries `engine` in its options and `"engine" => "1"` — so `ENGINE_load_builtin_engines` is
+compiled in and called. Of the six, this stratum owns one (`ASN1_add_oid_module`), 6.8d owns
+one, and four belong to later strata. So 6.10's registry is implementable, but
+`OPENSSL_load_builtin_modules`'s *fan-out* is not, and a config file that names
+`openssl_init` will observe the difference. That is a residual of the same shape as 6.8c's
+predefined-provider one, and it is named rather than smoothed over: the honest construction
+is a registry that registers the modules which exist and a recorded divergence for the ones
+that do not, with a unit test that fails when each of them lands.
+
+**The third group is small and fully this stratum's**: `CONF_modules_unload`'s
+`sk_CONF_MODULE_pop_free(to_delete, module_free)` chain, `module_free`/`module_finish`'s
+`DSO_free` and `finish` calls, and `ossl_config_modules_free`. Nothing missing there.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 139 / 22 | **139 / 22** (no source changed) |
+| phase courts / observations | 54 / 19,869 | **54 / 19,869** |
+| subphase order corrected | — | **6.6e-ii before 6.10** |
+
+## D119 — 6.6e-ii's source lands: four call sites close, two divergences fall out of the tests, and the court follows
+
+**The three exports are declared and Phase 6 moves 139/22 → 142/19**, `libcrypto`
+1113 → **1116** of 5896. `crypto/initthread.c` becomes `src/runtime/thread_events.rs` — the
+handler record, the global register of per-thread list heads, `destructor_key` as a sentinel
+plus a key cell, `manage_thread_local` and its three spellings, the push/remove/destructor
+trio, `init_thread_stop`, `init_thread_deregister`'s two modes, `ossl_init_thread`,
+`ossl_cleanup_thread`, `ossl_init_thread_start`, `ossl_init_thread_deregister`,
+`ossl_ctx_thread_stop` and both `OPENSSL_thread_stop` spellings — and `crypto/init.c`'s
+`OPENSSL_atexit` joins `src/runtime/init.rs` with `stop_handlers` and the drain that
+`OPENSSL_cleanup` now runs.
+
+**`OPENSSL_USE_NODELETE` is defined in this profile, so `OPENSSL_atexit`'s DSO-pinning block
+does not exist in the authority either.** `configdata.pm` records
+`lib_cppflags => "-DOPENSSL_USE_NODELETE -DL_ENDIAN"`, and the block is guarded by
+`#if !defined(OPENSSL_USE_NODELETE) && !defined(OPENSSL_NO_PINSHARED)`. So the Win32
+`GetModuleHandleEx` route and the `DSO_dsobyaddr(handler, DSO_FLAG_NO_UNLOAD_ON_FREE)` route
+are both compiled out and what remains is a three-line linked-list push. D118's plan called
+for reading that profile fact rather than assuming it, and the answer removed the whole
+supposed difficulty. The `DSO_dsobyaddr` that 6.9 landed is not needed here at all.
+
+**Four call sites close.** `ossl_provider_free`'s `ossl_init_thread_deregister(prov)`, which
+the provider module had carried as "the most important of the five named omissions" since
+6.8a, and which the authority calls **unconditionally** because an init that *failed* may
+still have registered a handler. `context_deinit`'s `ossl_ctx_thread_stop(ctx)`, named in
+`src/context/mod.rs` since Phase 3. `CRYPTO_THREAD_init_local`'s `ossl_init_thread()`
+preamble, whose absence the same function's doc comment recorded as "a later phase" — the
+marker and the code are now the same paragraph. And `core_dispatch`'s
+`OSSL_FUNC_CORE_THREAD_START`, published as id 3, which is the provider-facing spelling of
+`ossl_init_thread_start` and the mechanism by which a third-party provider is told when a
+thread stops.
+
+**Two defects the unit tests found, and neither is a defect in the transcription.**
+
+* **`D-TEVENT-REENTRANT-1`.** `init_thread_stop` calls the handler *while holding* the global
+  register's write lock, so a handler that calls `ossl_init_thread_start` re-enters the lock.
+  On the authority's pthread rwlock that is a **deadlock** — `pthread_rwlock_wrlock` on a
+  same-thread write acquisition does not return — which the test discovered by observing that
+  this crate's lock *refuses* it with 0. A hang inside thread teardown has no return value, no
+  error-queue entry and no recovery, so it is recorded rather than reproduced, and the refusal
+  is pinned.
+* **`D-TEVENT-CTX-STOP-LEAK-1`.** `ossl_ctx_thread_stop` frees the list **head** after running
+  only the handlers whose `arg` matches, so handler nodes registered for *other* contexts are
+  left linked to a released block: leaked, and unreachable, because the thread local was
+  cleared. A leak is defined behaviour rather than a fault, so this one **is** reproduced and
+  claimed, and it is recorded so that a reader who finds it independently knows the candidate
+  got it right rather than wrong.
+
+**Two instrumentation lessons, both the same shape.** A `static CryptoOnce = 0` handed to
+`pthread_once` **faults**: `pthread_once` writes through its argument and a bare `static`
+lands in read-only storage. `OSSL_LIB_CTX_new()` segfaulted on the first run, and the crate's
+own pattern (`AtomicI32` + `.as_ptr()`, as `context/mod.rs` already did) is the fix. And
+`pthread_key_create` after a `pthread_key_delete` routinely returns the **same key number**,
+and glibc does not clear the per-thread value array for it — so a re-created key can read the
+old, freed value. That bit the tests that ran after the one test in this crate that calls
+`OPENSSL_cleanup`, and it is why the test-only re-arm clears the thread local as well as the
+two run-onces.
+
+**`RT-THREADDATA` does not yet observe any of this, and 6.6e-ii is therefore not sealed.**
+The three rows move because the ledger counts a symbol as implemented the moment it is
+*defined* — that is the documented property of this project's arithmetic — while the *seal*
+requires differential evidence, and the existing probe's 39 observations do not include the
+handler table. The same commit that extends the probe will be the one that calls this row
+complete, and the extension is named in `docs/PHASE-6-SUBPHASES.md`: a provider-mediated
+`OSSL_FUNC_CORE_THREAD_START` registration, "the handler ran exactly once with its argument",
+"a second stop is a no-op", and the `OPENSSL_atexit` drain observed around `OPENSSL_cleanup`.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 139 / 22 | **142 / 19** |
+| `libcrypto` implemented / 5896 | 1113 | **1116** |
+| `ABI-PROTOTYPE` declarations / types checked | 1066 / 1083 | **1069 / 1086** |
+| unit tests | 257 | **262** |
+| phase courts / observations | 54 / 19,869 | **54 / 19,869** (the probe is unchanged) |
+| recorded divergences added | — | **`D-TEVENT-REENTRANT-1`, `D-TEVENT-CTX-STOP-LEAK-1`** |
+
+## D120 — 6.6e-ii sealed: the probe that called the wrong dispatch entry, and `RT-THREADDATA`'s fifteen new observations
+
+**`RT-THREADDATA` goes 39 → 54 observations with no residuals, and 6.6e-ii is complete.** The
+five phases now total **54 courts and 19,884 observations**, all re-derived from the authority
+in this run. The FRF store is rebuilt around it: 389 objects, **47 receipts**, **94
+challenges**, 5 claims, 141 captures, 97 residuals, `graph_verified`.
+
+**The first version of the extension failed on *both* sides, and the defect was the probe's.**
+`OSSL_FUNC_core_thread_start(x)` is a **cast of the entry it is handed**, not a search:
+`OSSL_CORE_MAKE_FUNC` expands to `return (OSSL_FUNC_##name##_fn *)opf->function;` with no loop
+and no id test. Applied to `in` — the table's first entry — it asked `core_gettable_params` to
+register a thread-stop handler and returned whatever the callee's `eax` happened to hold, so
+the two sides printed two different large negative numbers. The fix is the walk the authority's
+own providers do, and the lesson is already written down in `src/context/dispatch.rs`: *"a
+plain cast of the given entry's function pointer, with no search."* It is worth recording that
+the symptom pointed at the library and the cause was the instrument, for the third time in this
+stratum — after D115's path-length comparison and D117's stale shell.
+
+**What the fifteen observations actually establish.** That the core dispatch table publishes
+**id 3** and the provider-facing accessor answers non-NULL — a compatibility fact, because a
+provider compiled against a 3.x that has this entry would find NULL before 6.6e-ii. That the
+registration answers the provider's own result rather than a value of the core's. That the
+handler runs **exactly once** with the argument the *provider* registered, which is what proves
+`core_thread_start`'s argument order (`handle, handfn, arg`) was not transposed against
+`ossl_init_thread_start`'s (`index, arg, handfn`) — a transposition both are pointer-sized and
+would compile. That a second `OPENSSL_thread_stop` runs nothing. And that `OPENSSL_cleanup`
+drains two `OPENSSL_atexit` handlers in **LIFO** order *after* stopping this thread's handlers,
+which is the authority's order inside that function.
+
+**The record this closes, and the two it keeps.** `CRYPTO_THREAD_init_local`'s doc comment had
+carried "the authority additionally initialises its global thread-event machinery here; that
+machinery has no counterpart yet … a later phase" since Phase 3, and `src/provider/mod.rs` had
+carried `ossl_init_thread_deregister(prov)` as "the most important of the five named omissions"
+since 6.8a. Both are now calls. The two divergences D119 recorded —
+`D-TEVENT-REENTRANT-1` and `D-TEVENT-CTX-STOP-LEAK-1` — stand, each with the unit test that
+pins it; neither is exercised by this court, because neither is reachable from a probe that
+behaves.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 142 / 19 | **142 / 19** (unchanged: the court observes, it does not implement) |
+| `RT-THREADDATA` observations | 39 | **54** |
+| phase courts / observations | 54 / 19,869 | **54 / 19,884** |
+| probe_hygiene | clean (43 probes) | **clean (43 probes)** |
+| FRF objects / receipts / challenges | 389 / 47 / 94 | **389 / 47 / 94** (rebuilt, same counts) |
+
+## D121 — 6.10 splits four ways, and its first part is RCU
+
+**Consequence of D118, written down because 6.10 is the largest remaining block in the
+stratum and the next session should not re-derive its shape.** Phase 6 stands at **142
+implemented / 19 open** with 6.6e-ii sealed; the nineteen are 6.10's seventeen and the two
+`OSSL_LIB_CTX` exports of 6.6d/6.6g.
+
+**6.10a — the RCU layer.** `ossl_rcu_lock_new`, `_lock_free`, `_read_lock`, `_read_unlock`,
+`_write_lock`, `_write_unlock`, `synchronize_rcu`, `cb_item_new`, `cb_item_free`, `rcu_call`,
+`uptr_deref` and `assign_uptr`, over `crypto/threads_pthread.c`. The structures are
+`rcu_lock_st` (a callback list, the owning context, the quiescent-point array and its six
+indices, three mutexes and two condition variables), `rcu_qp { uint64_t users; }`,
+`thread_qp { qp, depth, lock }` and `rcu_thr_data { thread_qp[10] }` with `MAX_QPS 10`. The
+read path stores that per-thread state under `CRYPTO_THREAD_LOCAL_RCU_KEY` **in the lock's
+own context** and registers `ossl_rcu_free_local_data` as a thread-exit handler — which is
+D118's finding, and the reason 6.6e-ii had to land first. `get_hold_current_qp` is a re-try
+loop over `reader_idx`; `ossl_synchronize_rcu` waits for in-order retirement on
+`prior_signal` and then for the reader count to reach zero.
+
+**This part is a transcription rather than a design, because the primitives already exist.**
+`src/runtime/thread.rs` carries `ossl_crypto_condvar_*` over `pthread_mutex_t` and
+`pthread_cond_t`, which is what the authority's RCU is built on. The search that established
+this is the same one that would have been made anyway; recording it here means the next
+session starts by writing the file rather than by asking whether it can.
+
+**6.10b — the registry.** `conf_mod.c`'s fifteen exports plus `ossl_config_modules_free`,
+over `supported_modules` and `initialized_modules`: two `STACK_OF` pointers that are *copied,
+modified and swapped* under the RCU write lock, which is why the two parts are not one.
+`module_find`'s truncation at the last `.` is the behaviour worth its own observation — a
+module named `modname.XXXX` matches `modname`, so the same module can be initialised more
+than once.
+
+**6.10c — `conf_sap.c` and `conf_mall.c`**, which is where `OPENSSL_config`/`OPENSSL_no_config`
+and the default-method initialiser live, and therefore where the builtin-module fan-out is.
+
+**6.10d — `ASN1_add_oid_module`**, the one of the six builtin modules this stratum owns.
+
+**The fan-out is a recorded residual, measured rather than assumed.** `OPENSSL_load_builtin_modules`
+registers six modules: `ENGINE_add_conf_module` and `ENGINE_load_builtin_engines` (ENGINE's,
+and **ENGINE is enabled in this profile** — `configdata.pm` carries `engine` in its options
+and `"engine" => "1"`), `ossl_provider_add_conf_module` (6.8d), `ossl_random_add_conf_module`
+(Phase 9), the deprecated `EVP_add_alg_module` (Phase 7) and `ossl_config_add_ssl_module`
+(libssl's). The registry registers the ones that exist and names the ones that do not, and a
+config file naming `openssl_init` observes the difference. **`RT-CONF-MOD` is the court.**
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 142 / 19 | **142 / 19** (no source changed) |
+| subphases named | 6.10 | **6.10a–6.10d** |
+
+## D122 — 6.10a is three units, not one: the `_ex` thread-local family and the sparse array underneath it
+
+**D121 said 6.10a was "a transcription rather than a design", and it was right about the
+nature of the work and wrong about its size, because it missed two units.** Following the RCU
+read path to its ends lands on `CRYPTO_THREAD_get_local_ex(CRYPTO_THREAD_LOCAL_RCU_KEY,
+lock->ctx)` — and that function is not in `crypto/threads_pthread.c`, which is where D121
+looked. It is `crypto/threads_common.c`, **414 lines**, added upstream in 2025 and used by
+`crypto/err/err.c`, `crypto/rand/rand_lib.c`, `crypto/rsa/rsa_ossl.c` and
+`crypto/async/async.c` as well as by RCU. It is the *per-context* thread-local family: one
+operating-system key per process, a fixed array indexed by an eight-value key id, and under
+each of those a **sparse array indexed by the libctx pointer cast to `uintptr_t`** — a lookup
+that is legitimate precisely because libctx pointers are unique. Its destructor is
+`clean_master_key`, which releases every table and the fixed array.
+
+The sparse array is `crypto/sparse_array.c`, **216 lines**, with `DEFINE_SPARSE_ARRAY_OF`
+generating `new`/`get`/`set`/`free` per element type. The crate has **no** sparse array at
+all, which is why this is a prerequisite rather than a detail: `threads_common.c` cannot be
+written without it.
+
+**So 6.10a splits three ways, and the order is forced:**
+
+* **6.10a-i — the sparse array**, `crypto/sparse_array.c`. 216 lines, no dependencies beyond
+  allocation, and the only thing in the chain that can be tested on its own.
+* **6.10a-ii — the `_ex` thread-local family**, `crypto/threads_common.c`: `master_key` as a
+  `CRYPTO_THREAD_LOCAL` with its own `RUN_ONCE`, `master_key_init` as the flag the destructor
+  reads, `MASTER_KEY_ENTRY` as a one-field wrapper over the sparse array, `clean_master_key_id`,
+  `clean_master_key`, `init_master_key`, `CRYPTO_THREAD_get_local_ex`,
+  `CRYPTO_THREAD_set_local_ex` and `CRYPTO_THREAD_clean_local`. Note the two subtleties the
+  file states in its own comments: `master_key_init` exists because an uninitialised key would
+  otherwise return garbage in the destructor, and `CRYPTO_THREAD_run_once` is used rather than
+  the `RUN_ONCE` macro because the same source is compiled into the FIPS provider, where
+  `RUN_ONCE` is suppressed. `CRYPTO_THREAD_NO_CONTEXT` is `(void *)1`, not NULL, and is folded
+  to NULL before the concrete-context resolution.
+* **6.10a-iii — RCU**, `crypto/threads_pthread.c`'s section, as D121 described it.
+
+**This is the fourth dependency the planning pass did not see, and the pattern is now
+established**: D114's 6.9/6.6g cycle, D97's 6.6f/6.8 siting, D118's RCU-to-`ossl_init_thread_start`
+edge, and this one — a chain that is invisible from the file that names its first link. Each
+was found by following the *call* rather than the *include*, which is the only method that has
+worked. It is also why the estimate for 6.10 has to be stated in units rather than in
+subphases: 6.10a alone is roughly a thousand lines of C across three files.
+
+**One thing this turns up that is not 6.10's business, and is worth naming so it is not
+forgotten.** `crypto/err/err.c` uses `CRYPTO_THREAD_LOCAL_ERR_KEY` from this same family, and
+Phase 3's ERR is complete — so either the crate's error queue keeps its thread-local a
+different way, or there is a 2025-era upstream change that Phase 3's archaeology did not see
+because it read `err.c` at a different moment. The Phase 3 seal's ERR section should be read
+against the current `err.c` before Phase 7 depends on the error queue further. Recorded as an
+open item rather than investigated here, because investigating it is not 6.10a-iii's job and
+guessing at the answer would be worse than leaving the question.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 142 / 19 | **142 / 19** (no source changed) |
+| 6.10a | one unit | **three units: `sparse_array.c` (216), `threads_common.c` (414), RCU (~380)** |
+
+## D123 — the prerequisite gate, its first run's two findings, and the two defects the tool had itself
+
+**D122 ended by naming a chain that had been invisible from the file that names its first
+link, and by pointing at the general problem: four dependency inversions have now been found
+in this stratum, every one by hand, and none by a tool.** This is the tool. It is what
+"ensure item 4 is included" asked for, and it is the last piece of Phase 6 infrastructure
+before 6.10a-iii.
+
+### Why an export atlas cannot see a prerequisite
+
+Every atlas this project had before this one is a projection of the authority's **exported**
+surface: `symbol-ownership.json` over the 6,499 DSO exports, `functions.json` over the 7,485
+functions the installed headers declare, `macros.json` over the 16,805 macros those same
+headers define. That is the right universe for a compatibility claim and the wrong universe
+for a prerequisite. `crypto/conf/conf_mod.c` cannot be written without `ossl_rcu_lock_new`,
+and `ossl_rcu_lock_new` is not exported, is declared in no installed header, and therefore
+appeared in no artefact at all.
+
+So four artefacts were added, and each covers a family the others cannot:
+
+| artefact | universe | source |
+|---|---|---|
+| `atlas/internal-symbols.json` | **4,547** non-exported functions, each with the translation unit that defines it | the authority's build tree: 2,201 objects, one per unit per link form |
+| `atlas/macro-owners.json` | **19,839** macros and enum members, installed and internal | `macros.json` plus a `#define`/`enum` scan of the non-installed headers |
+| `atlas/typedef-owners.json` | **1,568** type names | `typedefs.json` plus a `typedef` scan of the same headers |
+| `atlas/transcription-edges.json` | which authority unit each of **120 crate modules** transcribes, and what that unit references | measured from the symbols the module defines, not read out of its prose |
+
+`transcription-edges.json` is the one that had to be committed. The mapping it records — the
+dominant authority translation unit among the symbols a module defines — is a measurement,
+and the identifiers of that unit are exactly what direction B below needs; committing them is
+what lets the gate run in the static CI job, where no authority tree exists. The court job
+re-derives the file and requires `git diff --exit-code` over it, so the committed copy cannot
+drift.
+
+### What it checks
+
+* **A — `undefined_prerequisite`.** A name the crate references, in the internal function,
+  macro, enumerator or typedef universe, that the crate does not build and no record has
+  agreed to build.
+* **B — `unwired_function_in_the_current_stratum`.** An authority internal function a
+  transcribed unit calls, that the crate has no module for, in a unit whose own stratum is
+  still open.
+* **C — the sealed census.** The same for a stratum that has already sealed: **59 names over
+  21 defining units**. Reported and *not* a failure, because each is either modelled
+  differently by the crate or is work a later stratum carried across the boundary, and which
+  of the two is a decision rather than a repair. What keeps that from becoming a hiding place
+  is that `regression_guard.py` now holds the count to non-increase.
+* **D — the records.** `forensics/prerequisites.json` carries deferrals (work with a named
+  owner stratum) and divergences (a difference the crate intends). A divergence's `covers`
+  list is checked in **both** directions: a covered name the gate did not observe is a
+  failure, and an observed name no record covers is a finding. Suppression cannot be silent,
+  and a record cannot quietly widen — a record that kept covering a name the crate has since
+  fixed would be hiding the next one.
+
+The C **language** surface is counted and listed but never failed: the crate models C types,
+macros and reason codes differently on purpose (`BIO_ADDR` is a Rust type with a private
+layout, `ERR_R_CRYPTO_LIB` is an entry in a generated table), and a lexical scan cannot tell a
+rename from a gap. 2,067 such names are recorded. Saying so is the point: a gate that guessed
+here would either be noise or would legitimise a rename.
+
+### The first run's findings, verbatim
+
+The gate's first run reported two classes and nothing else.
+
+```
+[undefined_prerequisite] 16
+    F, arg, cb_arg, in, inlen, libctx, now, out_len, outlen, src, stderr, type, u16, u32, u64, u8
+[unwired_function_in_the_current_stratum] 82
+    crypto/initthread.c -> CRYPTO_THREAD_clean_local (src/runtime/threads_common.rs, phase 6)
+    crypto/threads_common.c -> CRYPTO_THREAD_clean_local (src/runtime/threads_common.rs, phase 6)
+    ... and the libctx accessors, the method store, the child-provider link, the directories
+        and the EVP fetch path
+```
+
+* **`CRYPTO_THREAD_clean_local` is the real one, and it is fixed here.** The crate defines the
+  function — as `threads_common::clean_local` — and called it from nowhere. `crypto/initthread.c`'s
+  `OPENSSL_thread_stop` ends with `CRYPTO_THREAD_clean_local()`, the crate's version did not, and
+  no scan of the crate alone could have seen it: the crate's identifier and the authority's name
+  are different and the call was simply absent. `OPENSSL_thread_stop` now calls it, and
+  `a_thread_stop_drops_the_per_context_thread_locals` pins the *consequence* — a value stored
+  under `CRYPTO_THREAD_LOCAL_ASYNC_CTX_KEY` is gone after the stop — rather than the call.
+* **The 16 `undefined_prerequisite` names are a collision class, not 16 defects.** Each is a name
+  the authority's *non-installed* headers introduce — `#define F(x)` in `md4_local.h`,
+  `u8`/`u16`/`u32`/`u64` in `aes_local.h`, macro-body and parameter names in
+  `include/internal/list.h` and `sha3.h` — and each also appears in this crate as an ordinary Rust
+  identifier: a generic parameter, a local binding, a width alias. A lexical scan of either side
+  cannot separate those two facts, so they are recorded as a class rather than matched away: a
+  matcher tuned to drop `u8` would also drop a real collision. The list is held exact, so a new
+  member has to be looked at.
+* Every other name from that run now has a row: **45 deferrals** with a named owning stratum and
+  a citation (the twelve RCU names to 6.10a-iii, four to 6.10b/c, the method store to 6.7c/6.8,
+  the child-provider link to 6.8e, the directories to Phase 16, the EVP fetch path to Phase 7)
+  and **five divergence rows** covering 31 names.
+
+### The tool had two defects of its own, and both were the class it exists to find
+
+Worth recording because D105's lesson is that **the probe, the generator and the note are all
+suspects before the authority is**:
+
+1. **The reference cleaner mis-paired an apostrophe and blanked 7 KB of `src/property/parse.rs`.**
+   `strip_rust` treated `'` as the start of a character literal, so `// ... this module's
+   comparator` opened a "string" that ran to the next real quote 7,000 characters later. The
+   result was a definition reported as missing, i.e. a false prerequisite. Rust is unambiguous
+   here — `'` opens a literal only as `'x'`, `'\n'` or `'\u{…}'`, and is a lifetime otherwise —
+   and the cleaner now distinguishes them. It also **fails loudly** if any blanked span contains
+   `\nfn `, `\npub `, `\nunsafe `, `\nimpl `, `\n}` or `\n#[`, which cannot appear inside a comment
+   or a string: that is the signature of a mis-pairing, and a cleaner that hides a prerequisite is
+   worse than no cleaner.
+2. **The definition scan could not see `extern "C" fn name(`.** One lens was used for both
+   questions, and blanking string literals — which the *reference* scan needs, so that a
+   `c"ossl_parse_property"` reason-site table is not read as a use — also blanked the `"C"` in the
+   definition form almost every export in this crate is written in. There are now two lenses: a
+   reference is blind to comments and strings, a definition is blind only to comments.
+
+A third defect was in the *artefact*, not the gate: `scan_typedefs` read `typedef` statements out
+of macro **bodies**, and `include/internal/list.h`'s `DEFINE_LIST_OF(name, type)` therefore
+contributed `name` and `type` to the type universe, from which they became missing prerequisites.
+Macro bodies are now blanked before the typedef scan.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 142 / 19 | **142 / 19** (`clean_local` is an internal, so no ledger row moved) |
+| atlas artefacts | 12 | **17** |
+| prerequisite findings | — | **0** |
+| sealed-stratum census / language census / planned | — | **59 / 2,067 / 71** |
+| prerequisite divergence rows / names covered | — | **5 / 31** |
+| CI gates | 13 | **15** (the gate, and the weak-tier atlas check) |
+
+## D124 — 6.10a-iii lands: the RCU layer, four recorded divergences, and the defect the tests found
+
+**6.10a is now complete**, and with it the last unit of Phase 6's infrastructure that stood
+between the stratum and its seventeen remaining exports. `src/runtime/rcu.rs` transcribes
+`crypto/threads_pthread.c`'s RCU section — 12 functions and 5 statics over 380 lines of C —
+and brings `crypto/conf/conf_mod.c` within reach.
+
+### What the file's own comments say, and why each is load-bearing
+
+**A quiescent point is a counter.** `struct rcu_qp` is a `uint64_t` and nothing else, so the
+read side's entire cost is one `Acquire` add. `get_hold_current_qp`'s retry loop is what makes
+that race-free: it adds to the point `reader_idx` named, re-reads `reader_idx` with `Acquire`,
+and if the index moved subtracts with `Relaxed` and starts again. **The atomics are
+order-for-order the authority's** — `Relaxed` for the first load and the compensating
+decrement, `Acquire` for the increment and the confirming re-read, `Release` for the reader's
+final decrement, and `Release` for both the writer's `reader_idx` store and the zero-add that
+follows it. `__atomic_add_fetch` answers the *new* value where Rust's `fetch_add` answers the
+old, so the two sites that use it are written as `fetch_add` plus the macro's arithmetic,
+marked `wrapping_*` because the C is unsigned and wraps.
+
+**Retirement is in order, and the order is a counter rather than a queue.** `update_qp` hands
+out `id_ctr`; `ossl_synchronize_rcu` waits on `prior_signal` until `next_to_retire` equals the
+id it was given, *and only then* examines the reader count. So a slow writer cannot let a fast
+one reclaim a point a reader has not left.
+
+**The per-thread bookkeeping is collective.** `rcu_thr_data` holds ten `thread_qp` slots, each
+naming its lock, and it lives under `CRYPTO_THREAD_LOCAL_RCU_KEY` in the lock's own context —
+so a thread holding two locks from two contexts keeps two arrays — and it is released by a
+thread-stop handler rather than by a key destructor of its own. That is D118's chain: this file
+could not be written before 6.6e-ii's handler table and 6.10a-ii's `_ex` family, and the reason
+6.10a was three units rather than one (D122).
+
+### Four places the transcription is deliberately not literal
+
+1. **The mutexes and condition variables are handles, not embedded objects.** The authority
+   embeds three `pthread_mutex_t` and two `pthread_cond_t` in `struct rcu_lock_st`; this
+   crate's equivalents are opaque heap handles, so the struct holds pointers and
+   `ossl_rcu_lock_new` allocates five objects instead of one. Unobservable: `rcu_lock_st` is
+   `typedef`d opaque in `include/internal/rcu.h`, RCU exports no symbol, and its only consumer
+   is in this crate.
+2. **`ossl_rcu_lock_new`'s unwind uses two arrays of what was created rather than reading the
+   struct's fields back.** The C tracks the successful `pthread_*_init` calls in
+   `mutexes[3]`/`conds[2]`; this keeps the same information in the same shape. **The failure it
+   unwinds is unreachable here**, because this crate's constructors box and cannot fail; the
+   unwind is written out anyway, for the day that stops being true.
+3. **`get_hold_current_qp`'s first `Relaxed` load is a plain `AtomicU32` load rather than an
+   `ATOMIC_LOAD_N` macro**, which is what the macro expands to on this profile — the file's
+   fallback path exists for compilers without `__atomic_*`, and this profile has them.
+4. **The drain loop is a `while` over the list rather than the same `while` with a `goto`-free
+   local.** No behavioural difference; noted so a reader comparing the two does not look for
+   one.
+
+### Four divergences, recorded in `docs/SECURITY_DIVERGENCE_POLICY.md`
+
+The three faults are all in `ossl_rcu_read_lock`/`_read_unlock`, and the interesting part is
+that the authority behaves *differently* on three paths that look alike:
+
+| entry | obligation | authority | candidate |
+|---|---|---|---|
+| `D-RCU-1` | an eleventh distinct lock held at once | `assert` compiled out under `NDEBUG`; writes through `thread_qps[-1]` | answers 0 |
+| `D-RCU-2` | an unlock with no thread data | `assert` compiled out; dereferences NULL | returns |
+| `D-RCU-3` | an over-unlock (count below zero) | `OPENSSL_assert` is **active** and calls `OPENSSL_die` | restores the count to zero and clears the slot |
+
+`D-RCU-3` is the one worth reading: `OPENSSL_assert` in `crypto.h.in` is not `NDEBUG`-gated,
+so the authority checks *this* case with a fatal abort and does not check the other two at all.
+The candidate answers all three, because a library aborting its caller's process is what
+`docs/UNSAFE.md` §3 says must not happen.
+
+**`D-RCU-4` is not a divergence but a limitation, and it is recorded as one.** The whole family
+is declared in a non-installed header, none of the 6,499 exports resolves to any of the twelve
+names, and the only caller in the build is `crypto/conf/conf_mod.c`. **So there is no way to
+write a differential court for RCU today**: a probe compares two libraries across the exported
+surface, and RCU is not on it. What stands in its place is the transcription plus ten unit
+tests, two of which spawn threads — one pinning that a reader on *another* thread holds
+retirement off (the writer's completion is observed, never timed, and the 50 ms wait is in the
+safe direction: a slower machine only widens the window the assertion inspects), the other that
+the per-thread data survives an explicit thread stop and is rebuilt on the next hold. That is
+**weaker than a court and it is stated as weaker**: RCU is `IMPLEMENTED` and not
+`PARITY_VERIFIED`, and `RT-CONF-MOD` is the court that will exercise it end to end.
+
+### The defect the tests found
+
+`ossl_rcu_read_lock` allocated the thread data, stored it under the key, registered the
+handler — and never bound it to the local the walk below used, so the walk ran against the NULL
+the lookup had answered. `a_read_hold_counts_once_and_a_re_entrant_hold_counts_depth` caught it
+on the first run as a null dereference. It is the third defect in two commits that a *unit test*
+found before a court could exist, and the reason the module doc says what the tests can and
+cannot pin: the retry loop and the two condition-variable waits only fire under contention, and
+two tests exist solely because of that.
+
+### The prerequisite gate did its job twice
+
+Both directions fired, unprompted, on the first run after the change:
+
+* Its `stale_deferral` class refused the twelve `ossl_rcu_*` names the moment the crate defined
+  them, which is what retired those twelve rows from `forensics/prerequisites.json` — a
+  deferral is a promise, and this is the mechanism that makes the promise come due.
+* It reported one *new* `undefined_prerequisite`: `sleep`, because the threaded test says
+  `thread::sleep` and the authority defines a `sleep` wrapper in `include/internal/e_os.h`. That
+  is the class the row `shadowed_by_a_crate_identifier` exists for, and it now covers 18 names.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 142 / 19 | **142 / 19** (RCU exports nothing, so no ledger row moved) |
+| 6.10a units landed | 2 of 3 | **3 of 3** |
+| Phase 6 modules named as evidence | 7 | **40** |
+| unit tests | 274 | **284** |
+| prerequisite planned census | 71 | **52** |
+| prerequisite blocking dependencies | 45 | **33** |
+| prerequisite divergence names | 31 | **32** |
+| recorded divergences in the policy | 32 | **36** (`D-RCU-1`..`D-RCU-4`) |
+| courts / observations | 54 / 19,884 | **54 / 19,884** (unchanged) |
+
+## D125 — 6.10b/c/d measured: the eleven facts the next session should not re-derive
+
+**D121 split 6.10 into four parts and D122 split its first into three. This is the
+reconnaissance for the remaining three, read out of the authority rather than assumed, so
+that writing them is transcription rather than archaeology.** Phase 6 stands at **142
+implemented / 19 open**: the 17 this block closes and the two `OSSL_LIB_CTX` exports.
+
+### What each part is, confirmed line by line
+
+* **6.10b — `crypto/conf/conf_mod.c`, 764 lines.** `supported_modules` and
+  `initialized_modules` are two `STACK_OF` **pointers**, and every mutation is
+  copy-modify-swap under the RCU write lock: `sk_CONF_*_dup(old)`, push, `ossl_rcu_assign_ptr`,
+  `ossl_rcu_write_unlock`, `ossl_synchronize_rcu`, *then* `sk_CONF_*_free(old)`. The `sk_dup`
+  is **shallow** — it copies the array of pointers and nothing behind them — which is why
+  freeing the old handle after the synchronize is correct and not a double free.
+* **6.10c — `crypto/conf/conf_sap.c` (82) and `conf_mall.c` (38).** `ossl_config_int` is
+  gated by a file-static `openssl_configured` that **is set even on failure**, so the second
+  call is a no-op regardless of the first's result. `ossl_no_config_int` sets the same flag
+  and nothing else. `OPENSSL_config` and `OPENSSL_no_config` are already written in
+  `src/runtime/conf/sap.rs` and already route through `OPENSSL_init_crypto`.
+* **6.10d — `ASN1_add_oid_module`**, in `crypto/asn1/asn_moid.c`, is four lines over
+  `CONF_module_add("oid_section", oid_module_init, oid_module_finish)`; its handler parses a
+  section with `NCONF_get_section` and calls `OBJ_create` per entry, and its finish is
+  `OBJ_cleanup`. **Both `OBJ_*` are Phase 3's and are implemented**, so once `CONF_module_add`
+  exists this is a transcription, not a build.
+
+### Eleven measured facts, each of which would otherwise be re-derived or got wrong
+
+1. **The profile is `no-trace`.** `OSSL_TRACE1(CONF, ...)` at `conf_mod.c:157` and
+   `OSSL_TRACE3` at `:177` are **compiled out** (`OPENSSL_NO_TRACE`, recorded in
+   `src/runtime/trace.rs`). Three lines of the transcription do not exist; a reader comparing
+   the two files should not go looking for them.
+2. **`OPENSSL_strdup` is a macro, not a function.** `crypto.h.in` defines it as
+   `CRYPTO_strdup(str, OPENSSL_FILE, OPENSSL_LINE)`, so each of `conf_mod.c`'s three call sites
+   is `CRYPTO_strdup(s, "../../crypto/conf/conf_mod.c", <the line of the call>)` — lines 362,
+   445 and 446 — and the coordinates are the *call site's*, not the macro's.
+3. **The raise sites are already generated.** `src/runtime/err_sites.rs` carries sixteen
+   entries for `conf_mod.c`, including the four this block needs: `CONF_R_OPENSSL_CONF_REFERENCES_MISSING_SECTION`
+   at `:163`, `CONF_R_UNKNOWN_MODULE_NAME` at `:276`, `CONF_R_MODULE_INITIALIZATION_ERROR` at
+   `:286`, and the `errcode`-driven pair (`CONF_R_ERROR_LOADING_DSO`, `CONF_R_MISSING_INIT_FUNCTION`)
+   at `:331`. **Nothing here is typed by hand.**
+4. **`ASN1_add_stable_module` is Phase 11's, not this block's.** Phase 5 deferred it to phase
+   11 because its handler needs `X509V3_parse_list`; the phase-6 ledger does not list it, and
+   that is correct rather than a hole — checked in both directions before writing this.
+5. **`OPENSSL_load_builtin_modules` calls seven, and four of them are other phases'.** In
+   order: `ASN1_add_oid_module` (6.10d), `ASN1_add_stable_module` (Phase 11),
+   `ENGINE_add_conf_module` (Phase 13, and **ENGINE is enabled in this profile**),
+   `EVP_add_alg_module` (Phase 7), `ossl_config_add_ssl_module` (libssl, Phase 14),
+   `ossl_provider_add_conf_module` (6.8d) and `ossl_random_add_conf_module` (Phase 9). The
+   function is written in this block and calls the ones that exist; each of the others is a
+   **recorded divergence**, because a config file naming them registers nothing here — which
+   D121 already recorded as the fan-out residual and which `RT-CONF-MOD` observes.
+6. **`module_find` truncates at the *last* dot and compares with `strncmp` of that length.**
+   `modname.XXXX` therefore matches `modname`, and a name of `.foo` has length **0**, so it
+   matches the **first** registered module. That second case is worth a court observation
+   rather than a comment: it is reachable through a config file and it is not obviously the
+   intent.
+7. **`module_init`'s failure arm calls `pmod->finish(imod)` only when `init_called`.**
+   `links++` happens after the push and before the swap; `module_finish` does `links--`.
+8. **`conf_modules_finish_int` returns 0 when `module_list_lock == NULL`** — the authority's
+   own comment: *"If module_list_lock is NULL here it means we were already unloaded"*. So
+   `CONF_modules_unload` after `ossl_config_modules_free` returns early rather than faulting.
+9. **`ossl_config_modules_free` is `CONF_modules_unload(1)` followed by `module_lists_free()`**,
+   which frees the RCU lock and NULLs both lists. It is called from `OPENSSL_cleanup`, so the
+   teardown order there is fixed by it.
+10. **`module_load_dso` reads the module section for `path` before falling back to the name**,
+    and its error path raises with `errcode` set by which of three steps failed — so the
+    reason code is a *variable*, which is what fact 3's "the `errcode`-driven pair" means.
+11. **The RCU client is exactly two lists and one `1`.** `ossl_rcu_lock_new(1, NULL)` at
+    `conf_mod.c:102` — the clamp to two is reached by the only caller in the build — and every
+    read of a list goes through `ossl_rcu_deref` inside a read lock, so `D-RCU-4`'s
+    consequence narrows to "courted only through this consumer" the moment `RT-CONF-MOD`
+    exists.
+
+### Order, and why it is this order
+
+**6.10b, then 6.10d, then 6.10c, then `OPENSSL_load_builtin_modules`, then 6.8d.** The
+registry is the prerequisite of everything else in the block: `ASN1_add_oid_module` needs
+`CONF_module_add`, and `CONF_modules_load` is what 6.10c's `ossl_config_int` calls.
+`OPENSSL_load_builtin_modules` needs 6.10d for one of its seven callees, so it follows 6.10d.
+**6.8d (`provider_conf.c`) then closes 6.10's own residual**, because
+`ossl_provider_add_conf_module` is one of the two functions `OPENSSL_load_builtin_modules`
+calls and 6.8d is where it lives.
+
+### The court
+
+**`RT-CONF-MOD`**, and it is a differential court rather than a unit test, because every one
+of these seventeen symbols is an export. The observations that matter, in the order they
+become reachable:
+
+* `OPENSSL_load_builtin_modules` twice registers each module once (`sk_*_dup` instead of a
+  second add) — the authority's stack is append-only here, so the observable is the *count*;
+* `CONF_module_add` with a name containing a dot, and `module_find`'s prefix match;
+* `CONF_modules_load` with no `openssl_conf` key returns **1**, which is the "nothing to do"
+  answer and not an error;
+* `CONF_modules_load` with `config_diagnostics` set clears the four ignore flags, which is
+  observable by loading a config that names an unknown module: the same file answers 1 with
+  the flags and a negative with the setting;
+* `CONF_modules_load_file` on a missing file answers 1 under `CONF_MFLAGS_IGNORE_MISSING_FILE`
+  and 0 without it;
+* `CONF_imodule_*`'s six accessors across a module that the init function set `usr_data` and
+  `flags` on, including the `flags` round trip;
+* `CONF_modules_unload(1)` twice, and `CONF_modules_finish` after `ossl_config_modules_free`,
+  which is fact 8's early return;
+* and the `oid_section` path end to end: a config with an `oid_section` naming a section whose
+  entries are OIDs, `OPENSSL_load_builtin_modules`, `CONF_modules_load`, and
+  `OBJ_txt2nid` answering the created NID afterwards.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 142 / 19 | **142 / 19** (no source changed) |
+| the block's parts | 6.10a–6.10d named | **6.10a landed; b, c and d measured to the line, with the eleven facts above fixed** |
+| facts that were going to be guessed | — | **11 recorded, of which 3 are build-profile facts and 1 was a suspected hole that is not one** |
+
+## D126 — 6.10b's first attempt, discarded, and the four things it proved must be looked up first
+
+**A first transcription of `conf_mod.c` was composed and then deleted rather than committed, and
+that is the record.** It was ~1,000 lines of Rust covering the registry, the copy-modify-swap
+discipline, the DSO path and all sixteen exports, and it referenced **ten identifiers that were
+guessed rather than read**: six `err_sites::ERR_RAISE_SITES_*` constants, `str.rs::strncmp`,
+`obj.rs::NID_undef`, `ctype.rs::ossl_isspace`, and two `ERR_*` spellings. Nine of the ten were
+wrong or absent. The staging branch stayed green because nothing was pushed, and the attempt is
+recorded here rather than in the tree because **a transcription whose error coordinates are
+invented is not a transcription** — it is the shape of one, and it would have been reviewed as
+if it were real.
+
+**D125's eleven facts came out of reading the authority. These four came out of *trying to
+write* it, and they are the ones that cost the attempt.**
+
+1. **The raise-site constants are generated, and their names are `CONF_MOD_<line>`.**
+   `src/runtime/err_sites.rs` has exactly four entries for `conf_mod.c` — `CONF_MOD_104`
+   (`do_init_module_list_lock`, `ERR_R_CRYPTO_LIB`), `CONF_MOD_163`
+   (`CONF_R_OPENSSL_CONF_REFERENCES_MISSING_SECTION`), `CONF_MOD_276`
+   (`CONF_R_UNKNOWN_MODULE_NAME`) and `CONF_MOD_286`
+   (`CONF_R_MODULE_INITIALIZATION_ERROR`) — each carrying `file`, `line`, `func`, `lib`,
+   `reason` and `dynamic_reason`. The naming rule is the header stem and the line, so **a
+   raise site is never typed and never guessed**: the generator's own name is looked up. That
+   is D123's `err_sites` note applied, and it is the class of mistake that survives review
+   because a plausible-looking constant name reads like evidence.
+2. **`conf_mod.c:331`'s raise is the one with a variable reason**, `ERR_raise_data(ERR_LIB_CONF,
+   errcode, ...)` where `errcode` is set by which of three steps failed. The artefact carries
+   **79** sites with `dynamic_reason: true`, so the shape exists; whether this specific site is
+   among them is the first thing to check, because if the generator emits a constant for it the
+   transcription reads it and if it does not then the reason code is a *runtime* value and needs
+   the dynamic-raise entry point rather than a site constant.
+3. **Three helpers do not exist where the authority's names suggest.** `str.rs` has **no
+   `strncmp`** — `module_find`'s comparison must be transcribed rather than forwarded, and it is
+   the second place in this file (after the last-dot scan) where a libc call has to be written
+   out. The `ERR_*` accessors are not spelled `ERR_peek_last_error` / `ERR_GET_REASON`:
+   `err.rs` exports `ERR_peek_last_error_all` and the two halves of a packed error are reached
+   another way, which is what `CONF_modules_load_file_ex`'s missing-file test needs. `ctype.rs`
+   **does** have `ossl_isspace` and `obj.rs` **does** have `NID_undef`, and turning up two of
+   the ten right is not a defence of the other eight.
+4. **The module belongs in `src/runtime/confmod/`, not the ledger's `src/confmod/`.** The
+   crate's CONF data model is `src/runtime/conf/` (`conf_api.c`, `conf_def.c`, `conf_lib.c`,
+   `conf_sap.c`), so `conf_mod.c`'s transcription belongs beside it; `src/confmod/` at the crate
+   root would be the only stratum module outside its stratum's directory. That means
+   `phase6_obligations.py`'s `MODULE_PREFIXES` and `phase_state.py`'s `PHASE6_MODULES` are
+   **updated to the real path in the same commit that creates it** — a ledger naming a module
+   that does not exist is the defect the ownership audit exists to catch, and pointing it at
+   itself is not a way to keep it quiet.
+
+### What the next attempt starts from
+
+D125's eleven facts, these four, and nothing else to derive: the registry's structures and the
+copy-modify-swap are written out in D125; the raise sites are four named constants; the two
+places a libc call must be transcribed by hand are known by name; and the module's home is
+decided. The order is unchanged — **6.10b, then 6.10d, then 6.10c, then
+`OPENSSL_load_builtin_modules`, then 6.8d** — and `RT-CONF-MOD` is its court.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 142 / 19 | **142 / 19** (nothing was committed) |
+| lines composed and discarded | — | **~1,000, whose ten guessed identifiers are the reason** |
+| identifiers that must be read rather than guessed | 10 | **2 left to check** (`conf_mod.c:331`'s site, and the `ERR_*` pair for the packed-error test) |
+## D127 — 6.10b/c/d land, and the first thing the finished pipeline found was a defect in 6.6e-ii
+
+6.10b (`conf_mod.c`'s registry, fifteen exports plus `ossl_config_modules_free`), 6.10c
+(`conf_sap.c`'s `ossl_config_int`/`ossl_no_config_int` and the config step in
+`OPENSSL_init_crypto`) and 6.10d (`asn_moid.c`'s `ASN1_add_oid_module`) are implemented, and
+`RT-CONF-MOD` observes them differentially in 161 observations with zero residuals. Phase 6
+goes from 19 open to **2**, `libcrypto` from 1116 to **1133** implemented exports, and the
+prerequisite gate's blocking-dependency list from 33 to 30.
+
+### The defect: `ossl_ctx_thread_stop` was written against the wrong helper
+
+`docs/SECURITY_DIVERGENCE_POLICY.md` carried `D-TEVENT-CTX-STOP-LEAK-1`, which claimed that
+the authority's `ossl_ctx_thread_stop` is
+
+```c
+hands = clear_thread_local(ctx); init_thread_stop(ctx, hands); OPENSSL_free(hands);
+```
+
+and that the head is therefore released while other contexts' handler nodes are still linked
+to it. **The authority is not that.** It is:
+
+```c
+void ossl_ctx_thread_stop(OSSL_LIB_CTX *ctx)
+{
+    if (destructor_key.sane != -1) {
+        THREAD_EVENT_HANDLER **hands = fetch_thread_local(ctx);
+        init_thread_stop(ctx, hands);
+    }
+}
+```
+
+`fetch_thread_local` is `manage_thread_local(ctx, 0, 1)`: fetch without allocating and
+**without clearing**. Nothing is freed, the head stays in the thread's slot, and the register
+keeps pointing at it. The source marks `fetch_thread_local` `ossl_unused` because the FIPS
+build does not call it; this profile is the non-FIPS build, which does — and that is exactly
+how the misreading was available to make.
+
+The crate had been written against `clear_thread_local` plus a `CRYPTO_free`, and the
+divergence entry had been written **from the test rather than from the authority**. That is
+the lesson: a divergence record derived from the candidate's own behaviour records nothing.
+
+**What made it visible.** Freeing the head left its address in
+`GLOBAL_TEVENT_REGISTER`'s `skhands`, so the walk in `init_thread_deregister(NULL, 1)` —
+which `OPENSSL_cleanup` runs — dereferenced released memory. Rust refuses that dereference
+instead of reading the corpse, so the observable was the unit-test binary **aborting at
+process exit**. It had never been reachable before, because until this commit nothing made the
+exit-time `OPENSSL_cleanup` actually run its teardown: `crate::runtime::init`'s test-only
+`reset_for_test` cleared `BASE_INITED`, and `OPENSSL_cleanup` therefore returned early at
+exit. Making `base_init` a faithful `RUN_ONCE` — which 6.10c needs, because the base step now
+creates the configuration re-entrancy key and can fail — is what closed that hole.
+
+Three corrections followed, and each is a correction rather than a patch:
+
+* `fetch_thread_local` exists as its own helper, with the authority's `ossl_unused` note
+  recorded and the reason it applies to a different build profile;
+* `ossl_ctx_thread_stop` is the authority's two statements;
+* `init::reset_for_test` restores `BASE_INITED` from a new `BASE_ONCE_RET` — the authority's
+  own `base_ossl_ret_`, which is **not** `base_inited`: `OPENSSL_cleanup` clears the latter and
+  a `CRYPTO_ONCE` cannot be un-run. Taking `base_init`'s answer from `base_inited` made a
+  post-cleanup call report a base-initialisation failure instead of the terminal refusal.
+
+`D-TEVENT-CTX-STOP-LEAK-1` is struck through in the policy document with the misreading, the
+truth and the reason it survived written out. The tests that encoded it are replaced by
+`the_context_stop_filters_on_the_argument` (a survivor is still reachable afterwards) and
+`a_second_context_stop_for_the_same_argument_runs_nothing`, and the module's `reset()` now
+drains with `OPENSSL_thread_stop` — a line that was only needed once the defect was gone,
+which is its own evidence that the tests had been leaning on it.
+
+### `D86` is superseded, and the refusal moved
+
+D86 recorded that a configuration file which exists is not applied, because the loader did not
+exist yet. It is applied now. Two consequences are worth naming:
+
+* the config step needed `settings`, which `OPENSSL_init_crypto` was ignoring. It reads it
+  now, through `OPENSSL_INIT_SET_*`'s three fields, and the `OSS_LIB_CTX`/module-registry
+  call that the old comment named as the blocker is made: `CONF_modules_load_file_ex` against
+  `OSSL_LIB_CTX_get0_global_default()`.
+* **the refusal for the unsupported options moved.** The authority tests `ADD_ALL_CIPHERS`,
+  `ADD_ALL_DIGESTS`, `ASYNC` and the `ENGINE_*` bits *before* its `LOAD_CONFIG` block, so a
+  caller who asks for `ADD_ALL_CIPHERS | LOAD_CONFIG` is refused **without a configuration
+  having been read**. The crate tested them after, which was unobservable while the config
+  step loaded nothing and is observable now. It is at the authority's position.
+
+Three details of the config step are transcribed and each is a test: the flag
+`openssl_configured` is set **unconditionally**, so a *failed* load is permanent for the
+process rather than retried; the re-entrancy thread-local is **set and never cleared**, so
+after a failed load a second call on the same thread takes the skip branch and answers 1
+while the same call on another thread answers the once's recorded 0; and
+`NO_LOAD_CONFIG | LOAD_CONFIG` marks the process configured and loads nothing, because
+`NO_LOAD_CONFIG` claims the *same* once. Those three are why `RT-CONF-MOD` re-executes itself
+with a mode argument: a process can only observe its own first configuration load once, so
+each scenario is a fresh process and the parent reports the child's exit code.
+
+### `RT-CONF-MOD`'s observations, and the two it deliberately does not make
+
+161 observations, zero residuals. The ones that carry the most weight:
+
+* **the error coordinates are the authority's own**, read through `ERR_peek_last_error_all`:
+  `../../src/openssl-3.6.4/crypto/conf/conf_mod.c:286`, function `module_run`, and the data
+  string `module=rt-cm-fail, value=fv retcode=-1      ` — including the six spaces of
+  `%-8d`'s left justification, which `format!` cannot express and which is therefore built
+  with the authority's own `BIO_snprintf`;
+* **`module_init` answers -1 on failure**, not the initialiser's own code: the module returns
+  0, `CONF_modules_load` answers -1, and the data field says `retcode=-1`;
+* **`module_add` pushes and never deduplicates**, so the first registration shadows the
+  second — observed with two counters;
+* **`module_find` truncates at the *last* dot**, which the probe exercises both ways:
+  `rt-cm-a.alpha` and `rt-cm-a.beta` find `rt-cm-a`, and `rt-cm-a.gamma.delta` **does not**
+  (it truncates to `rt-cm-a.gamma`), so a three-part name is an unknown module;
+* **a name whose last dot is its first character truncates to zero bytes**, and
+  `strncmp(x, y, 0)` is 0 for every `y` — so `.weird` lands on the **first entry in the
+  registry**, which is the built-in `oid_section`, and the OID module's initialiser is called
+  with `.weird`'s value and fails;
+* **`config_diagnostics` is per-context and sticky**, and turning it on clears four ignore
+  flags — so the same call that answered 1 answers -1 afterwards.
+
+It does **not** observe the fan-out of `OPENSSL_load_builtin_modules` (six of its seven
+registrations belong to later strata, which is D121's recorded divergence and would fail the
+court for a reason the court is not about), and it does not read `CONF_imodule_get_flags`
+before a module's initialiser has run, because the authority allocates `CONF_IMODULE` with
+`OPENSSL_malloc` and never initialises that field. Both are stated in the probe's header, and
+the second is recorded in the divergence policy.
+
+### Phase 5's generator had one predicate missing
+
+The pipeline's ownership audit caught `ASN1_add_oid_module` counted as implemented by **both**
+Phase 5 and Phase 6. Phase 5's generator was the outlier: `phase3`, `phase4` and `phase6`
+each compute `implemented_here = sorted(s for s in owned if s in done and s not in handed_on)`,
+and `phase5_obligations.py` — rewritten when Phase 5 abandoned `FAMILIES` — had dropped the
+`and s not in handed_on`. `implemented` means implemented **by this stratum**, and a hand-off
+the receiving stratum has built is not this stratum's work. The change is one predicate and
+one partition-identity assertion, the latter already present in the other three generators.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 142 / 19 | **159 / 2** |
+| `libcrypto` implemented | 1116 | **1133** |
+| courts / observations | 54 / 19,884 | **55 / 20,045** |
+| unit tests | 284 | **285** |
+| blocking dependencies | 33 | **30** |
+| language census | 2066 | **2050** |
+| the two that remain open | — | `OSSL_LIB_CTX_new_child` (6.6d), `OSSL_LIB_CTX_load_config` (6.6g) |
+
+## D128 — `ossl_config_add_ssl_module` is this stratum's, not libssl's: the plan and the ledger disagreed and the ledger is right
+
+`docs/PHASE-6-SUBPHASES.md`'s 6.10 row ends its fan-out paragraph by listing the six modules
+`OPENSSL_load_builtin_modules` registers that this stratum does not: `ENGINE_add_conf_module`
+and `ENGINE_load_builtin_engines` (ENGINE), `ossl_provider_add_conf_module` (6.8d),
+`ossl_random_add_conf_module` (Phase 9), `EVP_add_alg_module` (Phase 7) — and
+`ossl_config_add_ssl_module`, which the row calls **libssl's**. `forensics/prerequisites.json`
+has carried a row assigning the same symbol to **Phase 6.10c** since before 6.10 began, and
+`D123`'s gate checks that row on every run.
+
+Two records, two owners, and only one can be right. The ledger's is:
+
+* `ossl_config_add_ssl_module` is `crypto/conf/conf_ssl.c`'s, in the same translation unit as
+  `conf_ssl_get`/`conf_ssl_name_find`/`conf_ssl_get_cmd`, which Phase 4 built as part of 6.3;
+* its body is `CONF_module_add("ssl_conf", ssl_module_init, ssl_module_free)`, and its handler
+  reads the module's value with `CONF_imodule_get_value` and walks a section with
+  `NCONF_get_section` — `CONF_IMODULE` and `CONF_module_add` are both this stratum's, which is
+  the same dependency that put `ASN1_add_oid_module` (6.10d) and `ASN1_add_stable_module`
+  (Phase 11) where they are;
+* nothing in it needs libssl. It *registers* a store that libssl later reads through
+  `SSL_CONF`, and the store and the accessors are Phase 4's and Phase 6's.
+
+So the plan's sentence is wrong and the deferral row is right, which is D123's point arriving
+from the other direction: a prose assignment in a plan is an act of judgement that nothing
+checks, and a row in `prerequisites.json` is an act of judgement that every pipeline run
+checks. When they disagree, the checked one wins, and the unchecked one is corrected.
+
+**Nothing is implemented by this entry.** It records the correction, moves the unit to 6.10e
+in `docs/PHASE-6-SUBPHASES.md`, and leaves the work — `conf_ssl.c`'s `ssl_module_init`,
+`ssl_module_free` and the registration, plus the `RT-CONF-MOD` observations for
+`ssl_module_init`'s two raise sites — to be done as its own commit under the same
+`all_pass` discipline every other unit in this stratum has met.
+
+## D129 — 6.6g: `OSSL_LIB_CTX_load_config`, and the three details one line does not show
+
+`int OSSL_LIB_CTX_load_config(OSSL_LIB_CTX *ctx, const char *config_file)` is
+`return CONF_modules_load_file_ex(ctx, config_file, NULL, 0) > 0;` in `crypto/context.c:479`.
+It was the last thing 6.6 was waiting for the CONF module registry to unlock, and it is
+written now that 6.10 has landed. Phase 6 goes from **2 open to 1**, and `libcrypto` from 1133
+to 1134 implemented exports.
+
+The body is one line; its **contract** is three details, each of which a transcription that
+copied the surrounding entry point would get wrong, and each of which `RT-LIBCTX` observes:
+
+1. **The flag word is a literal zero, not `DEFAULT_CONF_MFLAGS`.** The automatic loader
+   tolerates a missing file and a failing module; this call does not. Same file, two entry
+   points, two answers — and that is what makes it a *different* loader rather than a second
+   spelling of the same one.
+2. **The answer is `> 0`, not `!= 0`.** `CONF_modules_load_file_ex` answers **-1** when a
+   module fails, so a `!= 0` test would report success for exactly the failure a caller most
+   needs to see. The probe pins this by calling the *same* file through
+   `CONF_modules_load_file` (-1) and through this function (0), one line apart.
+3. **`config_diagnostics` in the file is set on the context it was loaded into**, because
+   `CONF_modules_load` writes `cnf->libctx`. The probe loads a diagnostics-bearing file into a
+   fresh context and observes its flag go to 1 while the process default's stays 0 — which is
+   also why the observation could be made at all without disturbing the default.
+
+Two more were worth the observations:
+
+* **`oid_section` is loadable once per process, and that is the OID database's rule rather than
+  the loader's.** `OBJ_create` refuses a short name that already exists, so a second load of a
+  file carrying an `oid_section` **fails** — with `OBJ_R_OID_EXISTS` underneath and
+  `CONF_R_MODULE_INITIALIZATION_ERROR` on top. It is observed, and it is why the repeatability
+  observations use a file naming `ssl_conf`, whose reader frees its store before rebuilding it
+  and is therefore idempotent.
+* **a NULL context resolves through the thread's default**, so a load with `ctx == NULL` lands
+  on the global default object; two loads of the same `ssl_conf` file into it both answer 1,
+  which shows the load is not tied to the context that made the call.
+
+**One observation is deliberately absent**, and the probe's header says so: a NULL `config_file`
+with `OPENSSL_CONF` unset reaches `CONF_get1_default_config_file`'s fallback, which is the
+authority's own `OPENSSLDIR` string and this crate's empty string — a recorded divergence, since
+claiming a path inside the authority's build tree would be a false statement about this build.
+Observing it would fail the court for a reason the court is not about, exactly as the
+`OPENSSL_load_builtin_modules` fan-out would in `RT-CONF-MOD`. The half that *is* in scope — a
+default file that exists — is observed, with `OPENSSL_CONF` pointed at a file the probe wrote.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 159 / 2 | **160 / 1** |
+| `libcrypto` implemented | 1133 | **1134** |
+| `RT-LIBCTX` observations | 91 | **110** |
+| courts / observations | 55 / 20,131 | **55 / 20,150** |
+| language census | 2050 | **2049** |
+| the one that remains open | — | `OSSL_LIB_CTX_new_child` (6.6d), which needs `ossl_provider_init_as_child` (6.8e) |
+
+## D130 — 6.8d lands, and the language census needed to become per-unit to mean anything
+
+`crypto/provider_conf.c` is transcribed whole into `src/provider/conf.rs`: the slot-16
+`PROVIDER_CONF_GLOBAL` and its two halves, `skip_dot`, the recursive parameter walk,
+`prov_already_activated`, `provider_conf_activate`, `provider_conf_parse_bool_setting`,
+`provider_conf_load`, `provider_conf_init` and `ossl_provider_add_conf_module`. Slot 16 is
+filled by `context_init` and released **first** among the slots by `context_deinit_objs` —
+the authority's *P2* position, ahead of the provider store's *P1* — and `providers` becomes
+the third of the seven `OPENSSL_load_builtin_modules` registrations this crate can make.
+
+`RT-PROVIDER` goes 67 → 80 observations and the pipeline is green at 55 courts and 20,163
+observations. The observations are the two entry-point paths, the exact fourteen-spelling
+boolean grammar (`Yes` and `2` refused; `TRUE` and `on` accepted), the two section errors
+carrying `CRYPTO_R_PROVIDER_SECTION_ERROR`, and the recursion refusal.
+
+### Three transcriptions that a plausible version gets wrong
+
+* **Recursion is detected by pointer identity, not by text.** `visited` holds the `const
+  char *` the `CONF` owns and the test is `==`, so two sections with the same *content* are
+  not recursive while the same section reached twice is. A `strcmp` version would refuse a
+  legitimate configuration; no test at all would not terminate.
+* **The buffer bound is `>=`, checked before the append.** `char buffer[512]` and
+  `buffer_len + strlen(sectconf->name) >= sizeof(buffer)` refuses a name that would exactly
+  fill it, and the refusal is **-1** (fatal) rather than 0.
+* **A nested 0 is swallowed.** The loop propagates only `rc < 0`, so a section with one bad
+  parameter and one good one answers 1. Only the fatal answers escape.
+
+And one truncation of the module's own making: `provider_conf_load` answers `ok >= 0`, so a
+**non-fatal** activation failure is reported as success. That is deliberate — a `soft_load`
+provider that could not be loaded must not fail the configuration — and it is why
+`cmod.activate.load` is 1 on the authority even though the provider it names is activated
+by a different path.
+
+### The observation the court caught, and why it is not 6.8d's
+
+`OSSL_PROVIDER_available` after an `activate = 1` differed: authority 1, candidate 0.
+`default`'s `OSSL_provider_init` is `ossl_default_provider_init`, which is 7/8's and does not
+exist in this crate, so the activation succeeds at the registry level and the provider is not
+activated. That is 6.8c's **recorded residual 1** arriving through a second door, and the
+probe now states the exclusion where it applies rather than observing it — the same
+discipline the fan-out and the default-config-file fallback already get. What 6.8d owns is
+the configuration walk, and every walk observable is in scope and observed.
+
+### The census invariant had to move from a total to a per-unit map
+
+Landing this made the prerequisite gate's `language_census` rise from 2049 to 2076, and the
+regression guard — whose rule for that plane was non-increase — failed. The rise is not a
+regression: the census counts the identifiers of every **transcribed authority unit** that
+the crate neither models nor references, so transcribing another file necessarily adds that
+file's local identifiers (`pcgbl`, `sectconf`, `ecmd`, `cval`, …). The guard's own comment
+says the invariant exists so the census cannot "become a place where real omissions hide",
+and a total that grows for a legitimate reason is exactly a place where an omission *can*
+hide.
+
+So the invariant is now stated where it can be checked:
+
+* `prerequisite_gate.py` publishes `census_by_unit` — the same census, grouped by the
+  authority unit each name came from;
+* `regression_guard.py` fails when a unit that was **already transcribed** gains censused
+  names, and reports a unit that is **new** as a movement; the total is reported and never
+  fails on its own.
+
+The per-unit map is bootstrap-only on the commit that introduces it, because the authority
+baseline at `origin/phase6-libctx` predates the field; from the next commit the guard
+compares it. The proposed-baseline check was extended to cover `prerequisites` in the same
+change — it compared only five planes, so the blocking-dependency count and the new census
+map were evidence the authority certified against and nothing verified.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 160 / 1 | **160 / 1** (6.8d adds no export) |
+| `RT-PROVIDER` observations | 67 | **80** |
+| courts / observations | 55 / 20,150 | **55 / 20,163** |
+| language census | 2049 | **2076**, now with a per-unit invariant |
+| the one that remains open | — | `OSSL_LIB_CTX_new_child` (6.6d), which needs `ossl_provider_init_as_child` (6.8e) |
+
+## D131 — Phase 6 closes: the child provider, `OSSL_LIB_CTX_new_child`, and the last obligation
+
+`crypto/provider_child.c` is transcribed into `src/provider/child.rs` — the slot-18 globals,
+`ossl_provider_init_as_child`, `ossl_provider_deinit_child`, the two parent-reference helpers,
+`ossl_child_provider_init` and the three callbacks — and the three accessors
+`provider_core.c` keeps beside the object (`ossl_provider_set_child`, `_is_child`,
+`_get_parent`). The parent half lands in `provider_core.c`'s Rust home:
+`ossl_provider_register_child_cb`, `ossl_provider_deregister_child_cb`, the `OSSL_PROVIDER_CHILD_CB`
+record, and the two core-dispatch entries that publish them — ids 105 and 106, which were
+*absent* in the table's own test until this commit.
+
+`OSSL_LIB_CTX_new_child` — the **last open export of the stratum, and the last of the whole
+ownership atlas's Phase 6 set** — is written in `src/context/mod.rs`, and `OSSL_LIB_CTX_free`
+gains the `ischild` arm that calls `ossl_provider_deinit_child` before the slots are released.
+Its order is the contract: `OSSL_LIB_CTX_new_from_dispatch` first, then
+`ossl_provider_init_as_child`, and **`ischild` last** — so a failure anywhere above leaves a
+context that the free tears down as an ordinary one, rather than one whose teardown calls
+`ossl_provider_deinit_child` on globals whose upcalls are NULL.
+
+`forensics/phase6-obligations.json` goes to **zero open**, `forensics/phase-state.json` derives
+**complete** for Phase 6, and the seal is `docs/PHASE-6-PROVIDER-SEAL.md`.
+
+### Five call sites that had been waiting for this
+
+Each was a `// 6.8e` marker naming the exact line the authority writes, and each is now that
+line:
+
+1. `ossl_provider_up_ref`'s child arm — an **up-ref of the parent** whose failure *rolls back*
+   the reference just taken before reporting 0.
+2. `ossl_provider_free`'s child arm — a **down-ref of the parent** before the early return.
+3. `provider_activate`'s guard and its two failure arms — before either lock, because the
+   parent's upcall may want locks of its own and taking the store's first is a lock-order
+   inversion the authority's file header calls out by name.
+4. `provider_deactivate`'s `freeparent` flag — set inside the locks, spent **after** them, for
+   the same reason.
+5. `create_provider_children` — the walk that replaces a loud `assert!`. Its `ret &=` is
+   deliberate: every registration is asked even after one has refused, because a parent that
+   refuses is not entitled to stop the others being told.
+
+Plus the `removechildren` walk in `provider_deactivate`, which is **inside** the locks and runs
+before the unlocks — the authority's position — and the `else removechildren = 0` narrowing that
+a provider with activations left cannot have its children removed.
+
+### Three divergences, all recorded rather than reproduced
+
+`D-CHILD-DEREGISTER-NULL-1` is the pair worth reading. `ossl_provider_init_as_child` stores
+**eight** dispatch entries and validates **seven**; the eighth,
+`c_provider_deregister_child_cb`, is not in the test, and `ossl_provider_deinit_child` calls it
+**unguarded**. So a parent that omits that entry initialises successfully and jumps through NULL
+at teardown. The candidate keeps the *initialisation* half exactly — seven validated, the eighth
+stored unvalidated — and makes the teardown half check and return. Splitting the pair is the
+point: the validation contract is observable and is claimed, and the fault is not. `RT-LIBCTX`
+observes the success half (`child.no_deregister=nonnull` with `register_called=1`) and
+**deliberately does not free that context**, because freeing it would crash the authority — so
+the divergence's teardown half is stated in the probe's own comment rather than measured.
+
+`D-CHILD-REGISTER-PROPS-1` and `D-CHILD-PROPS-CB-1` are one missing function in two places:
+`evp_get_global_properties_str` and `evp_set_default_properties_int` are `evp_fetch.c`'s and
+therefore Phase 7's, and both are recorded deferrals in `forensics/prerequisites.json`. So
+`provider_global_props_cb` answers 0 and raises nothing, and
+`ossl_provider_register_child_cb` omits the property-string step before its walk. Both halves
+are unreachable until a provider can take the **parent** role, which needs a third-party
+provider — 6.12 — and the entries say so instead of implying a court has seen them.
+
+### The probe plays the parent
+
+`RT-LIBCTX` goes 110 → 124 observations, and the new ones are the child mechanism end to end,
+which needed the probe to *be* a parent: it publishes the eight dispatch entries a third-party
+provider would, calls `OSSL_LIB_CTX_new_child`, and records what the core asked it for. The
+observations are that the registration happens once with three non-NULL callbacks and the
+**child context as `cbdata`**; that slot 18 exists for every context; that the free calls the
+deregistration exactly once with the handle it was given — which is `context_deinit`'s `ischild`
+arm, and it does not run for an ordinary context; and that a table missing any of the **seven**
+validated entries answers NULL **without** registering, because the validation precedes the
+registration.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 open obligations | 1 | **0** |
+| Phase 6 state | in-progress | **complete** |
+| `libcrypto` implemented | 1134 | **1135** |
+| `RT-LIBCTX` observations | 110 | **124** |
+| courts / observations | 55 / 20,163 | **55 / 20,177** |
+| blocking dependencies | 29 | **11**, and all of them Phase 7's and Phase 16's |
+| unit tests | 287 | **287** |
+
+## D132 — `core_algorithm.c` is Phase 7's prerequisite, and the reason it was invisible
+
+With the stratum at zero open obligations, one item of the plan remained unbuilt: 6.6f/6.8f,
+the algorithm dispatch walk, which are the same function — `crypto/core_algorithm.c`'s
+`ossl_algorithm_do_all` — assigned to two rows. It is **not** built, and the honest disposition
+is not "implement it now" but "say where it belongs".
+
+Its **only** caller in the authority is `crypto/core_fetch.c`'s `ossl_method_construct`, which is
+the fetch path and therefore Phase 7's. Nothing in this crate references it, so:
+
+* no court could reach it, because a C probe cannot call an internal function that has no entry
+  point and no caller; and
+* no ledger could see it, because the symbol-ownership atlas classifies **exports** and this is
+  not one; and
+* the prerequisite gate did not report it, because the gate's rule is *"every
+  authority-internal name a crate module **references** must be built or recorded with the
+  stratum that owns it"* — and a name that nothing references is invisible to it.
+
+That third point is the finding, and it is the `a2d_ASN1_OBJECT` failure class arriving from the
+other direction. There, a census was too narrow because it looked at prefixes; here, a gate is
+too narrow because it looks at references. A whole authority translation unit can therefore sit
+unnamed while a stratum reports complete, and the only thing that caught it was reading the
+plan against the crate rather than reading either alone.
+
+The disposition is a **deferral with the owner named**, which is the mechanism the project
+already has for exactly this: `ossl_algorithm_do_all` is now a row in
+`forensics/prerequisites.json` owned by Phase 7, with the reason and the citation. The gate
+accepts it, reports it as a blocking dependency, and the blocking list goes 11 → 12 — so the
+function is now **visible** to the machinery whose job is to notice it, which it was not
+before this entry.
+
+What this does **not** change: Phase 6's own completion rule. That rule is *"every export it
+owns is implemented or handed to a named later stratum"*, and it is satisfied — the stratum's
+ledger is at zero open and every export the atlas assigns it is accounted for. The seal's §2 no
+longer lists 6.8f among the built subphases, §6 names it, and
+`docs/PHASE-6-SUBPHASES.md`'s two rows carry the disposition.
+
+The lesson is recorded rather than the mechanism fixed: the gate cannot see a unit no crate
+module transcribes, and a *plan-versus-crate* reconciliation — which subphase rows name work
+that neither a ledger nor a reference reaches — is the check that would catch the next one. It
+is named here as an open obligation rather than built, because building it is a change to the
+gate's own contract and belongs in its own commit with its own evidence.
+
+## D133 — 6.12: the core hosting a real third-party provider, and the five defects it found
+
+6.12 is the court the plan calls the third-party-provider court, and it is the only probe in
+this stratum that can see the *provider-facing* half of the core. Every other court drives the
+registry from outside, through the public API, and observes the objects it creates.
+`OSSL_PROVIDER_init` — what the core hands a provider, and what it does with what a provider
+hands back — is passed to `OSSL_provider_init` and to nothing else, so a probe that is not a
+provider has no way to reach it at all. `courts/phase6/rt_provider_3p_probe.c` compiles an
+`OSSL_provider_init` into its own binary, registers it with `OSSL_PROVIDER_add_builtin`, loads
+it with `OSSL_PROVIDER_load_ex`, and then everything it reports is what the core gave it.
+
+It found five defects, and every one of them was invisible to the other fifty-five courts for
+the same structural reason: **nothing had ever walked that table or taken that role.**
+
+**1. `FUNC_CORE_OBJ_ADD_SIGID` and `FUNC_CORE_OBJ_CREATE` were 121 and 122. The header says 11
+and 12.** The constant was only ever compared against itself, this build's own install header
+says 11 and 12 so no compile could disagree, and nothing read the published table at runtime. A
+third-party provider compiled against these headers asks for id 12 and was being answered NULL;
+a build that published 121 would hand a provider whatever the core put there. The digest below
+is what makes the class visible, and the unit test now asserts 11 and 12 by value.
+
+**2. The published table was in numeric order, not `core_dispatch_`'s order.** Two groups
+differ: the BIO family is published `40 41 42 43 49 48 50 44 45 46 47` (the header declares
+`GETS` and `PUTS` before `UP_REF`, and `CTRL` after `PUTS`) where the candidate had sorted it,
+and the `CRYPTO_*` group is published *before* the child-callback and provider-accessor ids
+even though its own ids are lower. Neither order is reachable through a lookup — a provider
+switches on `function_id` — which is exactly why nobody noticed. The authority's order is now
+reproduced, and `in.ids_digest` is what measures it: an FNV-1a over the published id sequence
+with the one deferred family skipped, so an entry added, dropped, substituted or reordered
+changes it.
+
+**3. `OSSL_FUNC_PROVIDER_UP_REF` (110) and `PROVIDER_FREE` (111) were absent from the table, and
+`provider_up_ref_intern`/`provider_free_intern` were not written at all.** They are 110 and 111
+of the eight entries `ossl_provider_init_as_child` requires, so **`OSSL_LIB_CTX_new_child`
+could not succeed** — the seven-pointer validation rejected the table and answered 0. The
+crate's own table carried the comment `// 110, 111: ... — absent, 6.8c` three commits after
+6.8c was declared complete. This is the `a2d_ASN1_OBJECT` class again: a stub comment that
+outlived the subphase it named, with nothing to notice that the subphase had closed.
+
+**4. `ossl_provider_register_child_cb` answered `1`, not the push's result.** The authority
+writes `ret = sk_OSSL_PROVIDER_CHILD_CB_push(...)` and returns `ret`, so the answer is the new
+length of `store->child_cbs`: 1 for the first registration, 2 for the second. A literal `1` is
+indistinguishable from a correct answer until a *second* parent registers — and the authority's
+own child, registering during `ossl_provider_init_as_child`, is always the first. The probe is
+the second, so `child.register_child_ret` is 2 on the authority.
+
+**5. `ossl_provider_add_to_store` never called `create_provider_children`.** The crate carried
+`// 6.8e: \`if (!create_provider_children(prov))\` goes here` — a stub that stated its own
+removal condition and then was not removed when 6.8e landed. The consequence is not a missing
+call in a corner: `create_provider_children` is how a registered parent is told that a provider
+has become active, so the parent's `create_cb` was never called for any provider. That is the
+whole mechanism 6.8e exists for, silently not firing, and only a probe holding the parent role
+could see it.
+
+The same commit removes a guard whose documentation had stopped being true:
+`create_provider_children` carried a `prov->store == NULL` test whose comment claimed it would
+"fail loudly" if a callback were ever registered. It answered 1 instead of failing, and both of
+its callers guarantee a non-NULL store, so it could not fire either way. 6.8e landing made the
+premise false, so it is gone and the module docs no longer claim it.
+
+**What the court deliberately does not observe.** Two things, both stated in the probe's own
+header rather than left to be inferred:
+
+* the eight `rand_*` core ids (96-99, 101-104), which are Phase 9's. Their absence is pinned by
+  `core_dispatch.rs`'s own table test and by the ledger; the court reports the count and the
+  digest *excluding* that family, which is strictly stronger than a total because it still
+  catches an entry added, dropped or reordered outside it. That is the arrangement `RT-PROVIDER`
+  uses for `cmod.activate.available`.
+* `global_props_cb`, because the step that would call it is `evp_fetch.c`'s and is the recorded
+  `D-CHILD-REGISTER-PROPS-1` divergence. A probe that counted its calls would be counting the
+  divergence rather than the contract. `D-CHILD-REGISTER-PROPS-1`'s entry is updated from "no
+  court has observed either half" to what is now true: the registration half *is* observed and
+  passes on both sides, the property-string step is still observed by nothing.
+
+Two smaller corrections are in the same commit. The probe's `create_cb` observations were
+assertions rather than measurements — `child.create_cb_got_a_callback` and
+`child.cbdata_is_the_child` were literals — so they are replaced by real ones:
+`create_cb_prov_is_the_loaded_provider` compares the handle the core passed against the
+`OSSL_PROVIDER *` the probe's own load returned, and `create_cb_cbdata_is_the_child` compares
+the `cbdata` against the child. `deregister_child_ret` becomes
+`child.deregister_cb_returned` with the reason spelled out: the entry is `void` on the
+authority, so there is no answer to compare and the observation is a liveness witness.
+
+`RT-PROVIDER-3P` is 40 observations with no residuals against the authority, registered in
+`forensics/tools/phase6_courts.py`'s `COURTS` and `forensics/tools/phase_state.py`'s
+`PHASE6_MODULES`, so a stratum's court runner and its completion rule both know it exists.
+
+SPDX-License-Identifier: Apache-2.0
+
+## D134 — the plan-versus-crate reconciliation, so a promise that reaches nothing fails a check
+
+D132 ended by naming its own open obligation rather than fixing it: `core_algorithm.c` was
+invisible because `prerequisite_gate.py`'s universe is the set of names a crate module
+*references*, and a name nothing references is invisible to a gate built that way. The
+disposition was a deferral with the owner named, and the mechanism was left for a later commit
+because building it changes the gate's own contract. This is that commit.
+
+`forensics/tools/plan_reconciliation.py` reads the subphase plans and asks the other half of the
+same question. Its universe is **what a stratum promises**, not what the crate mentions: every
+authority translation unit and every authority-internal function named by a subphase row of a
+stratum that is `complete` or `in-progress`. A `not-started` stratum's plan is not judged,
+because nothing has claimed to have done it yet; a stratum that has sealed *is* claiming, and
+that claim is what is reconciled.
+
+Three findings, and each is a class rather than an instance:
+
+* **P1 `plan_named_unit_not_reached`** — a unit a row names that no crate module transcribes,
+  that defines no internal function the crate builds, whose identifier list the crate never
+  references, and that no record names. This is the `core_algorithm.c` class exactly.
+* **P2 `plan_named_symbol_not_reached`** — an authority-internal function a row names that the
+  crate neither builds nor records nor covers by a divergence. The gate's direction A with the
+  reference set replaced by the plan's name set.
+* **P3 `plan_unit_record_is_stale`** — a record that names an authority unit no row mentions.
+  The reverse direction, which is what keeps the mechanism from quietly widening.
+
+Two smaller findings exist because the plan is prose and prose can be wrong: a row naming a
+`.c` file the authority does not have, and a row naming a bare basename the authority repeats.
+Neither is guessed at. `crypto/provider.c` is one of three `provider.c`s in the authority
+(`fuzz/`, `test/testutil/`), and the tool reports the candidates rather than picking one,
+because picking one is precisely the unexamined transcription this project exists to remove.
+Both rows that did it were written with the path instead, which is a one-word discipline and
+not a limitation.
+
+**The reach test needed four signals, and the reason is worth recording.** A unit is reached if
+a crate module's *dominant* unit is it; or if the crate builds one of the authority-internal
+functions it defines; or if the crate references one of the identifiers the unit's own row in
+`transcription-edges.json` lists; or if a record names it. The first signal alone is not enough
+because `transcription-edges.json` maps each module to one dominant unit **on purpose** — a
+module whose definitions are spread across units appears once — so `crypto/provider.c`, whose
+twenty-two exports are thin wrappers and which has no internal function of its own, is invisible
+to it while every one of its exports is implemented. That is not a gap in the crate; it is a gap
+in the vocabulary, and it is closed by a record that names the construct instead:
+
+**The `units` block.** `forensics/prerequisites.json` gains a third record kind, holding the
+units that no symbol can stand for. Each row carries a class from a fixed set, and the class
+names the fields the row must prove, so a row is a claim that can be **falsified** rather than a
+sentence that can be believed:
+
+| class | what it must prove |
+|---|---|
+| `reached_by_a_named_construct` | a `crate_module` that exists and a list of `names` every one of which the crate actually builds |
+| `deferred_to_later_stratum` | an `owner_phase` whose stratum has not already sealed |
+| `not_in_this_profile` | the `guard` that empties the file |
+| `does_not_exist_in_this_authority` | nothing — because the tool checks the absence against the committed manifest itself |
+
+Ten rows are recorded, and the triage found things a reader would not have. `crypto/dso/dso_openssl.c`
+is **entirely** inside `#ifdef DSO_NONE` and compiles to nothing in this profile, while
+`crypto/dso/build.info` lists it unconditionally — so the build file alone cannot settle it, and
+the guard is the evidence. `crypto/property/property_err.c` has no public loader at all: the
+authority's `err_all.c` calls `ossl_err_load_PROP_strings()` directly, and this crate models every
+one of those direct calls as one generated `load_lib(<lib>)`. `crypto/rcu.c` **does not exist**,
+and the plan names it only in order to say so — "there is no `crypto/rcu.c`" — so the row is
+recorded rather than the sentence reworded, because the sentence is worth keeping and the check
+must keep firing on any *other* row that invents a file.
+
+**Three symbols and two units were genuinely unreached**, and they are the point of the exercise.
+`ossl_method_construct` in `crypto/core_fetch.c` is the other half of D132 — rows 6.6f and 6.8f
+name it as the caller that makes `ossl_algorithm_do_all` Phase 7's prerequisite, and nothing
+recorded it. `ossl_random_add_conf_module` is one of the seven `OPENSSL_load_builtin_modules`
+registrations, Phase 9's, named by row 6.10 as a fan-out residual but present in no machine-
+readable record. `OSSL_provider_init` is `providers/legacy/legacyprov.c`'s, Phase 13's, and rows
+6.8d and 6.12 name it because a third-party provider declares one. All three are now deferrals
+with their authority units named; `crypto/core_fetch.c`, `crypto/rand/rand_lib.c` and
+`providers/legacy/legacyprov.c` are reached through them.
+
+**The counterfactual was measured, not asserted.** Removing the `authority_unit` field from
+D132's own `ossl_algorithm_do_all` deferral and re-running the tool reports
+`plan_named_unit_not_reached: crypto/core_algorithm.c (6.6, 6.6f, 6.8f)` — the file, and exactly
+the three rows that promised it. So the check catches the class it was built for, on the instance
+it was built from.
+
+The blocking-dependency count rises 12 → 15 because three names became **visible**, which is the
+same shape as D132's own 11 → 12 and D130's language census: an invariant that cannot tell a
+legitimate change from a hidden omission. The transition is recorded in
+`forensics/ownership-transitions.json` with its reason, and `regression_guard.py` reports it as
+an approved movement rather than failing.
+
+`plan_reconciliation.py` runs in `court/pipeline.sh` after `phase_state.py` (it reads the derived
+states to decide which strata are claiming), is listed in `evidence_determinism.py`'s
+`GENERATORS_AFTER_LEDGERS` and its `COMPARED` set, and is a step of the `static gates` job in
+`.github/workflows/ci.yml`. The Phase 6 seal's §6 and its exit-criteria table name it, because
+D132's obligation was Phase 6's and this is what discharges it.
+
+SPDX-License-Identifier: Apache-2.0
+
+## D135 — D109's two unlisted generators are listed, and the drift it predicted was real
+
+D109 recorded an open gap and deliberately left it open: `gen_err_raise_sites.py`, its
+`forensics/atlas/err-raise-sites.json` and `src/runtime/err_sites.rs` were in neither
+`evidence_determinism.py`'s generator list nor its comparison list — and the same was true of
+`gen_bn_primes.py` and `src/bn/prime_data.rs`. The note said why it was not fixed there and then:
+"fixing it means adding the same tool to `check_evidence_portability.py`'s exercised set as well,
+so that the two agree about which generators need the authority's source tree. Doing half of that
+now would replace one silent gap with two."
+
+Both halves are now in, and the reason they had to be done together is structural rather than
+stylistic: `check_evidence_portability.py` imports `evidence_determinism.GENERATORS` and exercises
+that one list, so listing a generator is what puts it in both gates at once. Doing half would have
+meant a second, hand-maintained list — which is the failure mode this project keeps removing.
+
+**The blocker was real, and it is why the gap needed a weak tier rather than a list entry.**
+Both generators read the **authority**, and the authority is not committed: `gen_err_raise_sites.py`
+scans the covered units' `ERR_raise*` sites and resolves their symbol values through the compiler,
+and `gen_bn_primes.py` compiles a C probe against the admitted prefix and runs it to read the
+primes back. `evidence_determinism.py` runs every listed generator with no arguments and fails on
+a non-zero exit, so simply listing either one would have made the `static gates` job — which has no
+authority — fail. That is the same constraint `gen_ctype_table.py` already solved, and the solution
+is the same: **two tiers, with which one ran printed rather than implied.**
+
+* authority present → re-derive from the authority (the strong tier, and the one the court and the
+  pipeline use);
+* authority absent → check the generated `.rs` against the committed JSON, which still catches a
+  hand-edited generated file or a stale artefact, and cannot catch the authority itself having
+  changed (the authority is pinned by archive hash elsewhere, and the court re-derives).
+
+`gen_bn_primes.py` needed one more thing than the other two: the primes themselves are not in the
+JSON, only their SHA-256, and storing 8192-bit primes twice would put two copies of the same data
+in the repository and let them disagree. So the weak tier recovers the bytes **from the committed
+Rust**, re-hashes them against the record, and only then rebuilds and compares the file. A byte
+changed in `prime_data.rs` therefore fails twice over — once on the digest and once on the
+rebuild — and neither check needs a second copy of the data. Both generators' rendering is now a
+pure function factored out of `main` (`render_rust`), so the comparison is a difference in the
+*inputs* and never in the rendering.
+
+**And the drift D109 predicted had already happened.** `src/bn/prime_data.rs` was committed with
+sixteen bytes to a line while `rust_array` had been changed to wrap at twelve, so the file was
+stale relative to its own generator and nothing compared them. Regenerating it against the
+authority changes the wrapping and **no value** — the per-prime SHA-256s in `bn-primes.json` are
+byte-identical, which is what makes this a formatting repair rather than a data correction. The
+same check on `err_sites.rs` and `err-raise-sites.json` found them in sync; that is the difference
+between a gap that was theoretical and one that had already bitten, and it is the argument for
+closing both at once rather than leaving D109's note as the record.
+
+`evidence_determinism.py`'s artefact count goes 14 → 19 (two JSON artefacts and one more `.rs`
+source, plus the two generators). `check_evidence_portability.py` exercises the same 19 and still
+passes with `nm`, `objdump`, `readelf`, `ar` and `file` stubbed out — which is the property that
+matters, because both new generators invoke `clang` on the strong tier and the point of that gate
+is that no *stubbed* tool is needed either way. Both gates were also run with the authority
+directory moved aside, which is exactly the CI environment, and the three weak tiers were observed
+firing by name rather than inferred from a green exit.
+
+Both `.rs` generators being unlisted was one gap with two instances; D109 recorded it as such, and
+this is the commit that closes it rather than the one that documents it.
+
+SPDX-License-Identifier: Apache-2.0
+
+## D136 — the drift was in the generator, not the artefact, and CI said so
+
+D135 closed D109's determinism gap for the two unlisted `.rs` generators and reported the drift
+it found in `src/bn/prime_data.rs` as a stale artefact: sixteen bytes to a line in the committed
+file against twelve in `rust_array`, so the file was regenerated against the authority. **That
+direction was wrong, and the evidence for it was one push away.** `cargo fmt --all -- --check`
+failed on the regenerated file immediately, because `rustfmt` packs the tokens sixteen to a line
+and the committed file had been the `rustfmt`-clean one all along. The generator's wrapping was
+the drifted half.
+
+The distinction is worth keeping because the two directions mean different things. A stale
+*artefact* is a data problem: the committed file disagrees with the authority. A drifted
+*generator* is a tooling problem: the committed file agrees with the authority and the generator
+no longer reproduces it. D135 asserted the first; this entry corrects it to the second, and the
+correction is a demonstration of why the two gates have to be run together — the determinism
+check found the divergence on its own, and nothing in it could say which side was wrong, because
+"the file does not reproduce from the generator" is symmetric.
+
+What was actually wrong is a crossed discipline rather than a wrong number. D72 recorded the same
+class for `src/runtime/err_sites.rs`: *"the generator emitted two fields per line and `rustfmt`
+wants one, so the committed file was only `cargo fmt --all -- --check`-clean because whoever
+generated it last had run `cargo fmt` afterwards. Nothing enforced that step."* `gen_bn_primes.py`
+had the same shape and its manual step had been performed when the file was last written, which
+is exactly why the committed file was right and the generator was not.
+
+The fix is in the generator, and the width is **derived rather than typed**:
+
+```python
+BYTES_PER_LINE = (100 - 4 + 1) // 6
+```
+
+A byte token is `0xNN,` — five columns — the items are joined by a space, and the literal is
+indented four columns, so `n` items occupy `4 + 6n - 1` columns against `rustfmt`'s default
+`max_width` of 100. Sixteen gives 99 columns and seventeen gives 105, so the answer is exactly 16.
+Writing `16` would have been correct and would have left the next reader to re-derive why, which is
+the shape of defect this entry exists to remove: the number that drifted was a literal nobody had
+a reason to check. Nothing else depends on the width, because the weak tier recovers the bytes by
+matching `0xNN` tokens rather than by counting lines — so a width changed deliberately still
+leaves the check meaningful.
+
+`src/bn/prime_data.rs` is now byte-identical to its pre-D135 content, verified against the commit
+before the regeneration, and `cargo fmt --all -- --check` is clean. `forensics/atlas/bn-primes.json`
+never changed at all: the per-prime SHA-256s were identical throughout, which is the strongest
+available statement that no prime's value was ever in question and that the whole episode was
+wrapping.
+
+The lesson recorded rather than the mechanism changed: a generator whose output is a
+`cargo`-visible file must emit what `rustfmt` emits, and the way to know is to have the artefact in
+a determinism check **and** `cargo fmt --check` in CI — which is now the case. D135's claim that
+the artefact was stale is superseded here and is not rewritten there, because an entry that was
+wrong in a specific and instructive way is worth more as a record than as a correction.
+
+SPDX-License-Identifier: Apache-2.0

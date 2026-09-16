@@ -64,7 +64,13 @@
 
 pub mod asn1;
 pub mod bn;
+pub mod context;
+pub mod dso;
 pub mod ffi;
+pub mod params;
 pub mod pem;
+pub mod property;
+pub mod provider;
 pub mod runtime;
+pub mod selftest;
 pub mod status;

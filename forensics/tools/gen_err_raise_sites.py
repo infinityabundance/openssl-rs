@@ -70,6 +70,7 @@ from atlas_common import (  # noqa: E402
     write_text,
 )
 
+GENERATOR = "forensics/tools/gen_err_raise_sites.py"
 OUT_JSON = REPO_ROOT / "forensics" / "atlas" / "err-raise-sites.json"
 OUT_RS = REPO_ROOT / "src" / "runtime" / "err_sites.rs"
 
@@ -115,6 +116,12 @@ COVERED_FILES = [
     ("crypto/conf/conf_lib.c", "CONF_LIB"),
     ("crypto/conf/conf_mod.c", "CONF_MOD"),
     ("crypto/conf/conf_sap.c", "CONF_SAP"),
+    # Phase 6.10e: the `ssl_conf` configuration module's own translation unit. Its
+    # three accessors are Phase 4's surface and its two module callbacks are Phase 6's
+    # (the handler reads `CONF_imodule_get_value` and needs `CONF_module_add`), so the
+    # file belongs here -- and leaving it out is why `ssl_module_init` had no
+    # coordinates to raise from. See `docs/DECISIONS.md` D128.
+    ("crypto/conf/conf_ssl.c", "CONF_SSL"),
     # The object database's one Phase 4 obligation (`OBJ_create_objects`) reads a
     # BIO, so its raise sites are part of this stratum.
     ("crypto/objects/obj_dat.c", "OBJ_DAT"),
@@ -235,6 +242,56 @@ COVERED_FILES = [
     # never excluded — `x_long.c` is covered above, and `n_pkey.c` does not exist in
     # the authority. A list of exclusions is a claim about the tree, and this one had
     # two false entries and one wrong reason.
+    #
+    # Phase 6: the parameter surface and the provider core it belongs to. Every
+    # authority file in the subsystem that raises an error belongs to the obligation
+    # set, by the same rule as `crypto/bn` and `crypto/asn1` above.
+    #
+    # `crypto/params.c` is also the file that forced `local_raise_macros` into this
+    # generator. It spells its eight refusals as file-local macros (`err_out_of_range`
+    # and friends) and then invokes them bare, so a scan for `ERR_raise*` found the
+    # eight definitions and none of the fifty-odd call sites. The coordinates a caller
+    # reads back are the *invocation* line, so the definitions are not merely
+    # redundant — they are the wrong answer, and attributing them was impossible
+    # anyway (`enclosing_function` refuses a line with no preceding definition).
+    ("crypto/params.c", "PARAMS"),
+    ("crypto/params_dup.c", "PARAMS_DUP"),
+    ("crypto/params_from_text.c", "PARAMS_FROM_TEXT"),
+    ("crypto/param_build.c", "PARAM_BUILD"),
+    # Phase 6.6b: the name map. Five raise sites, and one of them is the first in this
+    # table whose reason is chosen at run time — `core_namemap.c:288` raises
+    # `(ret < 0) ? CRYPTO_R_TOO_MANY_NAMES : ERR_R_INTERNAL_ERROR`, so the generator
+    # records it with `dynamic_reason` and the caller supplies which of the two it is.
+    # `crypto/context.c`, `crypto/core_algorithm.c`, `crypto/thread/internal.c` and
+    # `crypto/threads_common.c` are the rest of this stratum's files and raise nothing,
+    # so they are absent rather than listed with an empty contribution.
+    ("crypto/core_namemap.c", "CORE_NAMEMAP"),
+    # Phase 6.7: the property engine. Two of its six files raise anything —
+    # `property.c`, `property_query.c`, `defn_cache.c` and `property_err.c` raise
+    # nothing. `property_string.c` is 6.7a's; `property_parse.c`'s grammar is 6.7b's,
+    # and its coordinates are taken with the file because the rule is the *subsystem*
+    # set rather than the implemented subset, exactly as Phase 4 and Phase 5 took
+    # their own. A site nobody calls yet is a coordinate, not a claim.
+    ("crypto/property/property_string.c", "PROPERTY_STRING"),
+    ("crypto/property/property_parse.c", "PROPERTY_PARSE"),
+    # Phase 6.9: DSO. Two of its files raise; `dso_err.c` is the string table,
+    # `dso_openssl.c` is the null method of a different configuration, and
+    # `dso_dl.c` is a method this profile does not build.
+    ("crypto/dso/dso_lib.c", "DSO_LIB"),
+    ("crypto/dso/dso_dlfcn.c", "DSO_DLFCN"),
+    # Phase 6.8: the provider registry. Registered now, with 6.8a, rather than in the
+    # subphase that first raises from each file, for 6.7's reason: the rule is the
+    # *subsystem* set and a site nobody calls yet is a coordinate, not a claim. All
+    # three files that raise use `ERR_LIB_CRYPTO` with `ERR_R_*` reasons -- there is no
+    # `PROV_R_*` family in this subsystem, so `cryptoerr.h` already covers every one and
+    # no internal header has to be added.
+    #
+    # `provider_child.c`, `provider_predefined.c` and `core_algorithm.c` raise nothing,
+    # so they are deliberately **not** listed: a covered file with no sites would be an
+    # entry that can never change and would read as coverage that does not exist.
+    ("crypto/provider.c", "PROVIDER"),
+    ("crypto/provider_core.c", "PROVIDER_CORE"),
+    ("crypto/provider_conf.c", "PROVIDER_CONF"),
 ]
 
 # Raise macros, in the forms the authority actually spells them. `ERR_raise`
@@ -256,6 +313,8 @@ REASON_CONST_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
 # function's, and `_dopr` as `dopr`. Six sites were mis-attributed that way; the
 # coordinates are readable through `ERR_get_error_all`, so they are contract.
 IDENT_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+# A file-local object-like or function-like `#define`.
+DEFINE_RE = re.compile(r"^#\s*define\s+(?P<name>[A-Za-z_][A-Za-z0-9_]*)\b(?P<body>.*)$")
 
 
 def definition_name(line: str) -> str | None:
@@ -470,20 +529,125 @@ def mask_comments_and_strings(text: str) -> str:
     return "".join(out)
 
 
+def local_raise_macros(masked: list[str]) -> tuple[dict[str, dict], set[int]]:
+    """The file's own `#define`s whose body *is* a raise, and the lines they own.
+
+    `crypto/params.c` spells its eight refusals as macros:
+
+        #define err_out_of_range      \\
+            ERR_raise(ERR_LIB_CRYPTO, \\
+                CRYPTO_R_PARAM_VALUE_TOO_LARGE_FOR_DESTINATION)
+
+    and uses them bare -- `err_out_of_range;` -- at forty-odd call sites. The
+    raise those sites *record* is not at the definition: `ERR_raise_data` expands
+    `OPENSSL_FILE`/`OPENSSL_LINE`/`OPENSSL_FUNC` at the point of expansion, so the
+    coordinates a caller reads back through `ERR_get_error_all` are the
+    **invocation** line and the enclosing function, with the macro's own
+    `lib`/`reason`. Scanning only for the macro names `ERR_raise`,
+    `ERR_raise_data` and `<LIB>err` therefore finds the definition and none of
+    the invocations, and the whole file appears to raise nothing.
+
+    This reads the definition to learn the `lib`/`reason` pair and returns it, so
+    the main scan can attribute each bare invocation. A macro whose body is not a
+    resolvable raise is not returned: it is not this tool's business.
+
+    The second return value is every line the preprocessor owns -- each `#`
+    directive together with its backslash continuations. Those lines must be
+    skipped by the main scan, because a raise *inside* a macro body is not a call
+    site: its `ERR_raise(` line carries no `__LINE__` of its own, and attributing
+    a site to it would invent a coordinate the authority never records and would
+    attribute it to whatever function name happened to precede the `#define`.
+    """
+    out: dict[str, dict] = {}
+    preproc: set[int] = set()
+    i = 0
+    while i < len(masked):
+        if masked[i].lstrip().startswith("#"):
+            j = i
+            body = masked[i]
+            while body.rstrip().endswith("\\") and j + 1 < len(masked):
+                j += 1
+                body = body.rstrip()[:-1] + " " + masked[j]
+            preproc.update(range(i, j + 1))
+        m = DEFINE_RE.match(masked[i])
+        if not m:
+            i += 1
+            continue
+        name = m.group("name")
+        # A backslash-continued definition is one logical line. Join it so the
+        # raise call inside the body can be parsed as a whole call.
+        body = m.group("body")
+        j = i
+        while body.rstrip().endswith("\\") and j + 1 < len(masked):
+            j += 1
+            body = body.rstrip()[:-1] + " " + masked[j]
+        i = j + 1
+        rm = RAISE_RE.search(body)
+        if rm is None:
+            continue
+        call = body[rm.start():]
+        args = split_args(call)
+        if len(args) < 2:
+            continue
+        macro = rm.group("macro")
+        if macro in ("ERR_raise", "ERR_raise_data"):
+            lib_sym, reason_sym = args[0], args[1]
+        else:
+            lib_sym, reason_sym = "ERR_LIB_" + macro[: -len("err")], args[0]
+        if not LIB_CONST_RE.match(lib_sym):
+            continue
+        out[name] = {
+            "macro": macro,
+            "lib_symbol": lib_sym,
+            "reason_symbol": reason_sym,
+            "dynamic_reason": not REASON_CONST_RE.match(reason_sym),
+        }
+    return out, preproc
+
+
 def scan(path: Path) -> tuple[list[dict], list[dict]]:
     text = path.read_text(encoding="utf-8", errors="replace")
     lines = text.splitlines()
     masked = mask_comments_and_strings(text).splitlines()
     if len(masked) != len(lines):
         raise SystemExit(f"{path}: masking changed the line count")
+    file_macros, preproc = local_raise_macros(masked)
+    macro_re = (
+        re.compile(r"\b(" + "|".join(re.escape(n) for n in file_macros) + r")\b")
+        if file_macros
+        else None
+    )
     sites: list[dict] = []
     unattributed: list[dict] = []
     i = 0
     while i < len(lines):
         # A raise behind a preprocessor definition is a macro body, not a call.
-        if masked[i].lstrip().startswith("#"):
+        if i in preproc:
             i += 1
             continue
+        # A bare invocation of one of this file's own raise macros is a site at
+        # *this* line: see `local_raise_macros`.
+        if macro_re is not None:
+            mm = macro_re.search(masked[i])
+            if mm is not None:
+                spec = file_macros[mm.group(1)]
+                sites.append(
+                    {
+                        "file": rel(path),
+                        "line": i + 1,
+                        "function": enclosing_function(lines, i + 1),
+                        "macro": spec["macro"],
+                        "lib_symbol": spec["lib_symbol"],
+                        "reason_symbol": (
+                            None if spec["dynamic_reason"] else spec["reason_symbol"]
+                        ),
+                        "dynamic_reason": spec["dynamic_reason"],
+                        "data_format": None,
+                        "via_macro": mm.group(1),
+                    }
+                )
+                i += 1
+                continue
         m = RAISE_RE.search(masked[i])
         if not m:
             i += 1
@@ -556,6 +720,16 @@ def resolve_symbols(authority, symbols: list[str], work: Path) -> dict[str, int]
         # `crypto/x509` translation units raise from that library.
         "#include <openssl/x509v3err.h>",
         "#include <openssl/sslerr.h>",
+        # `PROP_R_*` is the first reason family this table needs that lives in an
+        # *internal* header rather than an installed one: `internal/propertyerr.h`,
+        # which the property grammar raises from. It is resolveable because the
+        # authority's source tree is committed; the source include directory is added
+        # **after** the installed one below, so every `openssl/...` header still comes
+        # from the built prefix and only `internal/...` falls through to the tree the
+        # build was made from.
+        "#include <internal/propertyerr.h>",
+        # `DSO_R_*` likewise, from `internal/dsoerr.h`.
+        "#include <internal/dsoerr.h>",
         "#include <stdio.h>",
         "",
     ]
@@ -579,6 +753,11 @@ def resolve_symbols(authority, symbols: list[str], work: Path) -> dict[str, int]
             "-std=c11",
             "-I",
             str(include),
+            # Second, so it only supplies what the prefix does not have: the
+            # `internal/` headers, which are not installed but are the source the
+            # authority's own objects were compiled against.
+            "-I",
+            str(authority.source / "include"),
             "-o",
             str(binp),
             str(src),
@@ -684,10 +863,80 @@ def render_rust(doc: dict, prefix: str) -> str:
     return "\n".join(out)
 
 
+def check_against_artefact() -> int:
+    """The weak tier: verify the generated Rust against the committed artefact.
+
+    Used when the authority's source tree is absent, which is the case on every runner that has
+    only the repository. It catches a hand-edited `err_sites.rs` and a JSON that has drifted
+    from it. It cannot catch the authority having changed -- the authority is pinned by archive
+    hash elsewhere, and the court, which has the tree, re-derives. Which tier ran is printed,
+    because a check that silently weakens is the thing this project exists not to have.
+
+    The pairing is exact rather than approximate: `render_rust` is a pure function of the
+    committed document, so the comparison is the generator run against its own output.
+    """
+    if not OUT_JSON.is_file():
+        print(
+            f"[{GENERATOR}] neither the authority's source tree nor "
+            f"{rel(OUT_JSON)} is present; nothing can be checked",
+            file=sys.stderr,
+        )
+        return 1
+    doc = json.loads(OUT_JSON.read_text(encoding="utf-8"))
+    prefix = doc["body"]["prefix"]
+    expected = render_rust(doc, prefix)
+    actual = OUT_RS.read_text(encoding="utf-8") if OUT_RS.is_file() else ""
+    if actual != expected:
+        # The first differing line, because a 900-line coordinate table makes "they differ"
+        # useless on its own.
+        exp_lines = expected.splitlines()
+        act_lines = actual.splitlines()
+        at = next(
+            (i for i, (a, b) in enumerate(zip(act_lines, exp_lines)) if a != b),
+            min(len(act_lines), len(exp_lines)),
+        )
+        print(
+            f"[{GENERATOR}] {rel(OUT_RS)} does not match {rel(OUT_JSON)}; the generated "
+            f"file was edited by hand, the artefact is stale, or the renderer changed "
+            f"without the artefact being regenerated. First difference at line {at + 1}:\n"
+            f"  committed: {act_lines[at] if at < len(act_lines) else '<eof>'}\n"
+            f"  from json: {exp_lines[at] if at < len(exp_lines) else '<eof>'}",
+            file=sys.stderr,
+        )
+        return 1
+    print(
+        f"[err-raise-sites] ok (weak tier, authority source absent): {rel(OUT_RS)} "
+        f"matches {rel(OUT_JSON)}"
+    )
+    return 0
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
     args = ap.parse_args(argv)
+
+    # The authority's source tree is **not committed**, so a runner that has only the
+    # repository cannot re-derive the coordinates. That is a fact about this project and not a
+    # defect: the tree is ~100 MB and the courts, which do have it, are where re-derivation
+    # happens. So the generator has two tiers, and which one ran is printed rather than
+    # implied:
+    #
+    #   * authority present  -> re-derive from the covered units' `ERR_raise*` sites (the
+    #                           strong tier, and the one the pipeline and the CI `courts` job
+    #                           use);
+    #   * authority absent   -> check `err_sites.rs` against the committed JSON, which still
+    #                           catches a hand-edit or a stale artefact.
+    #
+    # This is `gen_ctype_table.py`'s pattern, and it is here for the same reason: the pair is
+    # what `evidence_determinism.py` needs in order to run this generator on a runner that has
+    # no authority. That was D109's open half -- the generator was in neither the determinism
+    # list nor the portability list, so `err_sites.rs` could drift silently. Adding it to only
+    # one of the two lists would have replaced one silent gap with two (docs/DECISIONS.md
+    # D109, closed by D135).
+    first_source = COVERED_FILES[0][0]
+    if not (resolve_authority(args.authority).source / first_source).is_file():
+        return check_against_artefact()
 
     auth = resolve_authority(args.authority)
     build_dir = authority_build_dir(auth.id)
@@ -738,6 +987,17 @@ def main(argv: list[str]) -> int:
             "than normalized away, so the candidate's ERR records compare "
             "byte-for-byte with the authority's."
         ),
+        "via_macro_note": (
+            "A site carries `via_macro` **only** when the raise was spelled as a "
+            "call to a macro the same file defines (`crypto/params.c`'s "
+            "`err_out_of_range` and its seven siblings), in which case the value "
+            "names that macro. The `line`/`function` are then the *invocation*, "
+            "because `ERR_raise_data` expands `OPENSSL_LINE`/`OPENSSL_FUNC` where "
+            "it is used; `lib_symbol`/`reason_symbol` come from the definition. "
+            "Sites without the key were spelled as a direct `ERR_raise*` call. "
+            "The key is absent rather than null so that adding the macro form "
+            "left every previously recorded site byte-identical."
+        ),
     }
 
     inputs = [
@@ -752,7 +1012,7 @@ def main(argv: list[str]) -> int:
         authority=auth.id,
         inputs=inputs,
         body=body,
-        generator="forensics/tools/gen_err_raise_sites.py",
+        generator=GENERATOR,
     )
     write_json(OUT_JSON, doc)
     write_text(OUT_RS, render_rust(doc, prefix))

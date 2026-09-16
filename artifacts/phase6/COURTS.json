@@ -1,0 +1,223 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "all_pass": true,
+    "authority": "openssl-3.6.4-production",
+    "claim": "A passing court means the candidate produced the same observable transcript as the authority for the behaviours this probe exercises. It is a differential-compatibility result, NOT cryptographic or security correctness, and NOT evidence for any behaviour the probe does not touch (docs/PARITY_MODEL.md).",
+    "courts": [
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 124,
+        "candidate_exit_code": 0,
+        "candidate_observations": 124,
+        "candidate_stderr_tail": [],
+        "court": "RT-LIBCTX",
+        "crashed": false,
+        "probe": "courts/phase6/rt_libctx_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase6/probes/rt_libctx_probe.authority",
+          "candidate": "artifacts/phase6/probes/rt_libctx_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 1162,
+        "candidate_exit_code": 0,
+        "candidate_observations": 1162,
+        "candidate_stderr_tail": [],
+        "court": "RT-PARAM",
+        "crashed": false,
+        "probe": "courts/phase6/rt_param_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase6/probes/rt_param_probe.authority",
+          "candidate": "artifacts/phase6/probes/rt_param_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 71,
+        "candidate_exit_code": 0,
+        "candidate_observations": 71,
+        "candidate_stderr_tail": [],
+        "court": "RT-SELFTEST",
+        "crashed": false,
+        "probe": "courts/phase6/rt_selftest_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase6/probes/rt_selftest_probe.authority",
+          "candidate": "artifacts/phase6/probes/rt_selftest_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 54,
+        "candidate_exit_code": 0,
+        "candidate_observations": 54,
+        "candidate_stderr_tail": [],
+        "court": "RT-THREADDATA",
+        "crashed": false,
+        "probe": "courts/phase6/rt_threaddata_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase6/probes/rt_threaddata_probe.authority",
+          "candidate": "artifacts/phase6/probes/rt_threaddata_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 109,
+        "candidate_exit_code": 0,
+        "candidate_observations": 109,
+        "candidate_stderr_tail": [],
+        "court": "RT-BIO-CORE",
+        "crashed": false,
+        "probe": "courts/phase6/rt_bio_core_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase6/probes/rt_bio_core_probe.authority",
+          "candidate": "artifacts/phase6/probes/rt_bio_core_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 145,
+        "candidate_exit_code": 0,
+        "candidate_observations": 145,
+        "candidate_stderr_tail": [],
+        "court": "RT-DSO",
+        "crashed": false,
+        "probe": "courts/phase6/rt_dso_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase6/probes/rt_dso_probe.authority",
+          "candidate": "artifacts/phase6/probes/rt_dso_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 80,
+        "candidate_exit_code": 0,
+        "candidate_observations": 80,
+        "candidate_stderr_tail": [],
+        "court": "RT-PROVIDER",
+        "crashed": false,
+        "probe": "courts/phase6/rt_provider_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase6/probes/rt_provider_probe.authority",
+          "candidate": "artifacts/phase6/probes/rt_provider_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 40,
+        "candidate_exit_code": 0,
+        "candidate_observations": 40,
+        "candidate_stderr_tail": [],
+        "court": "RT-PROVIDER-3P",
+        "crashed": false,
+        "probe": "courts/phase6/rt_provider_3p_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase6/probes/rt_provider_3p_probe.authority",
+          "candidate": "artifacts/phase6/probes/rt_provider_3p_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 247,
+        "candidate_exit_code": 0,
+        "candidate_observations": 247,
+        "candidate_stderr_tail": [],
+        "court": "RT-CONF-MOD",
+        "crashed": false,
+        "probe": "courts/phase6/rt_conf_mod_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase6/probes/rt_conf_mod_probe.authority",
+          "candidate": "artifacts/phase6/probes/rt_conf_mod_probe.candidate"
+        },
+        "verdict": "pass"
+      }
+    ],
+    "summary": {
+      "fail": 0,
+      "pass": 9,
+      "total": 9
+    }
+  },
+  "generator": "forensics/tools/phase6_courts.py",
+  "inputs": [
+    {
+      "name": "authority-symbols",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+      "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase6/rt_libctx_probe.c",
+      "sha256": "7b5a8d1d34fe1a5a744aa4458b50a906a7143e63cf18e446b77803f1c968947a"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase6/rt_param_probe.c",
+      "sha256": "c2bcb07b21923942e7cb74db868c5a71e7cf8ae34075818dd2d9cc528547fc83"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase6/rt_selftest_probe.c",
+      "sha256": "95794b7cc1d81d4b5f91f2529cf82511c988b620f0bbed3e0c540d247aa3501b"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase6/rt_threaddata_probe.c",
+      "sha256": "a487dd3232bb66a020fbcf105a080ae1ee4241e073aa0a84f78c069977d726cd"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase6/rt_bio_core_probe.c",
+      "sha256": "6c89f138d791a7a43fe8441c94ac65a343d183d4a3718edf8c206ee8c0598e53"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase6/rt_dso_probe.c",
+      "sha256": "9ec0b92966b1af00343365a1b406dc023634dc9cf7064085862f220effb533be"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase6/rt_provider_probe.c",
+      "sha256": "f9aa25cc12690565daccc316df88baa46ac5ff16936a5e2a92df31f416d34de1"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase6/rt_provider_3p_probe.c",
+      "sha256": "bacd64753063ec8ce427bf3b346a368ecaa6b3a37c5428df5b52563ff47d4725"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase6/rt_conf_mod_probe.c",
+      "sha256": "821f3e944e80cbb4eb3b7528aa1c1447090fc1293d66ceb379d3a3767c952f1a"
+    }
+  ],
+  "kind": "phase6-courts",
+  "schema": "openssl-rs/atlas/phase6-courts/v1"
+}

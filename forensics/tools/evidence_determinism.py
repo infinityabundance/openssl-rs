@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -56,25 +57,85 @@ from atlas_common import REPO_ROOT, rel  # noqa: E402
 # `implemented_surface.py` needs a built archive, so the build is a precondition
 # and the caller runs it first.
 #
-# `ownership_audit.py` sits **after** the three obligation generators, not before
-# them: it reconciles the ledgers and records each one's sha256 as an input, so
-# running it first makes it record the *previous* generation's hashes. That
-# mistake is invisible to this tool, because `inputs[].sha256` for a path that is
-# itself compared is normalised away (COMPARED_INPUT_PATHS below) -- the ledger's
-# content is compared directly, so a wrong recorded hash changes nothing this
-# check can see. It was found by running the audit alone, after the ledgers, and
-# watching the recorded hashes move. Measured on the Phase 5.3 landing.
-GENERATORS = [
+# The per-stratum obligation generators are **discovered**, not listed. Listing them
+# meant every new stratum had to remember to add its generator here as well as to the
+# court runner, the ownership audit and the regression guard -- four registries for
+# one fact, which is the failure mode `run_courts.py` removed for the courts and
+# D94 records in full. The glob is checked in both directions below: a
+# `phase<N>_obligations.py` with no ledger, and a ledger with no generator, are both
+# failures rather than silent omissions.
+#
+# `ownership_audit.py` sits **after** the obligation generators, not before them: it
+# reconciles the ledgers and records each one's sha256 as an input, so running it
+# first makes it record the *previous* generation's hashes. That mistake is invisible
+# to this tool, because `inputs[].sha256` for a path that is itself compared is
+# normalised away (COMPARED_INPUT_PATHS below) -- the ledger's content is compared
+# directly, so a wrong recorded hash changes nothing this check can see. It was found
+# by running the audit alone, after the ledgers, and watching the recorded hashes
+# move. Measured on the Phase 5.3 landing.
+GENERATORS_BEFORE_LEDGERS = [
     "forensics/tools/symbol_ownership.py",
     "forensics/tools/implemented_surface.py",
-    "forensics/tools/phase3_obligations.py",
-    "forensics/tools/phase4_obligations.py",
-    "forensics/tools/phase5_obligations.py",
+    # Phase 6.7b: the character-class table, derived from the authority's own
+    # `crypto/ctype.c`. It is listed so that a stale committed copy is a failure
+    # rather than a silent divergence: the whole point of generating it was to stop
+    # 128 masks being recalled, and a generator nothing re-runs would reintroduce
+    # exactly that.
+    "forensics/tools/gen_ctype_table.py",
+    # The error-coordinate plane (D135, closing D109's open half). It reads the
+    # authority's source tree too, so it carries the same two-tier check: re-derive when
+    # the tree is present, and check `src/runtime/err_sites.rs` against the committed
+    # `err-raise-sites.json` when it is not. `check_evidence_portability.py` tests
+    # `ed.GENERATORS` as one set, so listing it here is also what puts it in that gate's
+    # exercised set -- which was the other half of what D109 left open, and the reason
+    # doing only one of the two would have replaced one silent gap with two.
+    "forensics/tools/gen_err_raise_sites.py",
+    "forensics/tools/gen_bn_primes.py",
+]
+GENERATORS_AFTER_LEDGERS = [
     "forensics/tools/ownership_audit.py",
     "forensics/tools/prototype_court.py",
     "forensics/tools/phase_state.py",
+    # The prerequisite gate reads the phase states to decide whether a stratum has
+    # sealed, so it sits after `phase_state.py` rather than beside it. It needs no
+    # authority: the one authority-derived artefact it consumes is
+    # `transcription-edges.json`, which `gen_prerequisite_atlas.py` generates in the
+    # court job and which is committed for exactly this reason (D123).
+    "forensics/tools/prerequisite_gate.py",
+    # The plan-versus-crate reconciliation (D134). It sits beside the gate and for the same
+    # reason: it reads `phase-state.json` to decide which strata are claiming, so it must run
+    # after `phase_state.py`. The pair is deliberately adjacent in this list, because the two
+    # answer the two halves of one question -- the gate asks whether every name the crate
+    # *references* has an owner, and this asks whether every unit the plan *promises* is
+    # reached -- and D132 was the case that fell between them.
+    "forensics/tools/plan_reconciliation.py",
+    "forensics/tools/render_seal_census.py",
     "forensics/tools/render_status.py",
 ]
+
+
+def phase_ledgers() -> list[tuple[str, str]]:
+    """`(generator, artefact)` for every stratum's obligation ledger on disk."""
+    out: list[tuple[str, str]] = []
+    for path in sorted((REPO_ROOT / "forensics" / "tools").glob("phase*_obligations.py")):
+        m = re.fullmatch(r"phase(\d+)_obligations\.py", path.name)
+        if m is None:
+            continue
+        out.append((rel(path), f"forensics/phase{m.group(1)}-obligations.json"))
+    if not out:
+        raise SystemExit(
+            "[evidence-determinism] no forensics/tools/phase<N>_obligations.py found, "
+            "which cannot be right"
+        )
+    return out
+
+
+LEDGERS = phase_ledgers()
+GENERATORS = (
+    GENERATORS_BEFORE_LEDGERS
+    + [g for g, _a in LEDGERS]
+    + GENERATORS_AFTER_LEDGERS
+)
 
 # Derived artefacts that are compared. Anything not listed is not this tool's
 # business (court transcripts, staged probe binaries and the ABI shell are
@@ -84,12 +145,25 @@ COMPARED = [
     "forensics/atlas/implemented-surface.json",
     "forensics/atlas/ownership-audit.json",
     "forensics/atlas/prototype-court.json",
-    "forensics/phase3-obligations.json",
-    "forensics/phase4-obligations.json",
-    "forensics/phase5-obligations.json",
+    "forensics/atlas/ctype-table.json",
+    "forensics/atlas/err-raise-sites.json",
+    "forensics/atlas/bn-primes.json",
+    "forensics/atlas/prerequisite-gate.json",
+    "forensics/atlas/plan-reconciliation.json",
+    *[a for _g, a in LEDGERS],
     "forensics/phase-state.json",
     "forensics/phase-state.md",
+    "docs/SEAL-CENSUS.md",
     "forensics/STATUS.md",
+    # Not a JSON artefact and not written by a generator that reads the atlas: it is
+    # emitted by `gen_ctype_table.py` above, so it is compared in the same pass. It
+    # is listed here rather than in the atlas because a `cargo`-visible source file
+    # being stale is the failure this catches.
+    "src/runtime/ctype_table.rs",
+    # The same argument for the error-coordinate plane, and the one D109 left open: a
+    # `cargo`-visible file generated from the authority was in neither this list nor the
+    # generator list, so it could drift from the atlas without anything noticing.
+    "src/runtime/err_sites.rs",
 ]
 
 # ---------------------------------------------------------------------------
