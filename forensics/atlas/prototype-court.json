@@ -3,15 +3,15 @@
   "body": {
     "canonical_form": "both sides are reduced to one grammar: `void`; `int:<bytes>:<s|u>`; `float:<bytes>`; `ptr(<inner>)`; `const(<inner>)`; `fn(<ret>; <args>)`; `opaque`. A struct pointee's *name* is deliberately discarded -- `*mut Asn1String` and `*mut c_void` are the same to a caller -- while pointer depth, pointee constness, integer width and signedness, and function-pointer argument shape are kept. A type the table cannot canonicalise is reported under `type_unmapped` and never counted as a pass",
     "counts": {
-      "checked": 1099,
+      "checked": 1140,
       "declaration_is_generated": 0,
       "implementation_is_c": 8,
       "implementation_is_c_mismatches": 0,
-      "implemented": 1146,
+      "implemented": 1187,
       "mismatches": 0,
       "no_prototype_in_atlas": 22,
       "not_found": 0,
-      "type_checked": 1116,
+      "type_checked": 1157,
       "type_mismatches": 0,
       "type_unmapped": 0,
       "unclassified": 0,
@@ -109,7 +109,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "3159c500f45456c3193424c15b55a7dbea66e36ec8f911eb79c152f98473b29d"
+      "sha256": "4c9da98cfac3f52a08eaebdc56c7788c9f848b8bf75085b2ff70a0d6564b8cc0"
     }
   ],
   "kind": "prototype-court",

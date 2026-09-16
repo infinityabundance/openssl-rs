@@ -808,3 +808,25 @@ authority and the candidate for this function, and there was never supposed to b
   RCU is `IMPLEMENTED` in `docs/PARITY_MODEL.md`'s terms and it is **not** `PARITY_VERIFIED`.
 - **When it changes:** `RT-CONF-MOD` (6.10b) is the court that exercises it end to end, and
   this entry's consequence narrows to "courted only through its consumer" at that point.
+
+### D-NAMEMAP-DOALL-1 — `ossl_namemap_doall_names` calls its visitor without a NULL test
+
+- **Obligation:** `ossl_namemap_doall_names`, and the two `evp_names_do_all` wrappers that
+  forward a caller's visitor straight to it.
+- **Authority:** `crypto/core_namemap.c` reaches `fn(sk_OPENSSL_STRING_value(names, i), data)`
+  with no test, so a NULL visitor is an indirect call through a null pointer. `EVP_CIPHER_names_do_all`
+  and `EVP_MD_names_do_all` pass a consumer's pointer through unchanged, and 7.3b makes the first
+  of those reachable from a probe, so the fault is no longer only theoretical.
+- **Crate:** answers 0 for a NULL visitor. Returning rather than faulting is the same choice
+  `docs/UNSAFE.md` §3 records for every other null-callback case, and it is safe *because* the
+  visitor is a `const`-qualified function pointer a caller supplies: a NULL one is a caller's
+  error, and an error is not a reason to take the caller's process down.
+- **Claim removed:** `EVP_CIPHER_names_do_all(cipher, NULL, data)` is not claimed compatible with
+  the authority. It is claimed *safe*; the authority's behaviour is a fault and
+  `RT-EVP-CIPHER` does not reproduce it — the probe passes a real visitor.
+- **Measured, not assumed:** the return value of this function was **also** wrong until
+  `RT-EVP-CIPHER` read it. The authority's last line is `return i > 0;` — a presence answer — and
+  the crate returned `i`, the count. Every caller before 7.3b tested the result for zero, so the
+  two agreed for four phases; the first caller that *returns* the value to a consumer
+  (`EVP_CIPHER_names_do_all`) observed `2` against the authority's `1`. That is fixed in the same
+  commit, with the unit test that had encoded the wrong semantics corrected rather than deleted.
