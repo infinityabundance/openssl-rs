@@ -477,8 +477,10 @@ PHASE7_COURTS = "artifacts/phase7/COURTS.json"
 PHASE7_OBLIGATIONS = "forensics/phase7-obligations.json"
 PHASE7_MODULES = [
     "docs/PHASE-7-SUBPHASES.md",
-    # 7.1/7.2 -- the fetch layer and the method stores.
+    # 7.1 -- the fetch core: `crypto/core_algorithm.c`'s walk, transcribed.
     "src/evp/mod.rs",
+    "src/evp/algorithm.rs",
+    # 7.1/7.2 -- the method store and the fetch surface above it.
     "src/evp/fetch.rs",
     "src/evp/method_store.rs",
     # 7.3 -- the symmetric method objects and their legacy wrappers.

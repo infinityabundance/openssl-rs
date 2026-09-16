@@ -59,13 +59,6 @@
         "evidence": "docs/RELEASE_GATES.md phase order"
       },
       {
-        "symbol": "ossl_algorithm_do_all",
-        "owner_phase": 7,
-        "reason": "crypto/core_algorithm.c. Its only authority caller is crypto/core_fetch.c's ossl_method_construct -- the fetch path, which is Phase 7's -- and nothing in this crate references it, so 6.6f/6.8f are the fetch stratum's prerequisite rather than this one's obligation. Recorded here so the deferral is visible to the gate rather than invisible because nothing names it (docs/DECISIONS.md D132).",
-        "evidence": "docs/PHASE-6-PROVIDER-SEAL.md section 6",
-        "authority_unit": "crypto/core_algorithm.c"
-      },
-      {
         "symbol": "ossl_ctx_global_properties",
         "owner_phase": 6,
         "reason": "Phase 6.7c/6.8: the method store inside crypto/property/property.c, which cannot be written before providers exist",
