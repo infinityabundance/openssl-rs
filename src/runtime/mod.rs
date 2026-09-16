@@ -27,6 +27,7 @@ pub mod bio;
 pub mod bsearch;
 pub mod buffer;
 pub mod conf;
+pub mod confmod;
 pub mod ctype;
 pub mod ctype_table;
 pub mod defaults;

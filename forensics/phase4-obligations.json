@@ -69,7 +69,7 @@
       },
       {
         "declaring_header": "conf.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "reads a CONF_IMODULE, which only the module registry creates; Phase 6",
@@ -77,7 +77,7 @@
       },
       {
         "declaring_header": "conf.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "reads a CONF_IMODULE, which only the module registry creates; Phase 6",
@@ -85,7 +85,7 @@
       },
       {
         "declaring_header": "conf.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "reads a CONF_IMODULE, which only the module registry creates; Phase 6",
@@ -93,7 +93,7 @@
       },
       {
         "declaring_header": "conf.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "reads a CONF_IMODULE, which only the module registry creates; Phase 6",
@@ -101,7 +101,7 @@
       },
       {
         "declaring_header": "conf.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "reads a CONF_IMODULE, which only the module registry creates; Phase 6",
@@ -109,7 +109,7 @@
       },
       {
         "declaring_header": "conf.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "writes a CONF_IMODULE, which only the module registry creates; Phase 6",
@@ -117,7 +117,7 @@
       },
       {
         "declaring_header": "conf.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "writes a CONF_IMODULE, which only the module registry creates; Phase 6",
@@ -125,7 +125,7 @@
       },
       {
         "declaring_header": "conf.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "adds to the supported-module list guarded by the RCU lock that the module registry owns; Phase 6",
@@ -133,7 +133,7 @@
       },
       {
         "declaring_header": "conf.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "reads a CONF_MODULE, which only the module registry creates; Phase 6",
@@ -141,7 +141,7 @@
       },
       {
         "declaring_header": "conf.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "writes a CONF_MODULE, which only the module registry creates; Phase 6",
@@ -149,7 +149,7 @@
       },
       {
         "declaring_header": "conf.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "finishes the initialized-module list, which only CONF_modules_load populates; Phase 6",
@@ -157,7 +157,7 @@
       },
       {
         "declaring_header": "conf.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "calls conf_diagnostics -> OSSL_LIB_CTX_get/set_conf_diagnostics; OSSL_LIB_CTX is Phase 6",
@@ -165,7 +165,7 @@
       },
       {
         "declaring_header": "conf.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "forwards to CONF_modules_load_file_ex; OSSL_LIB_CTX is Phase 6",
@@ -173,7 +173,7 @@
       },
       {
         "declaring_header": "conf.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "reads and preserves OSSL_LIB_CTX diagnostics, and calls CONF_modules_load; OSSL_LIB_CTX is Phase 6",
@@ -181,7 +181,7 @@
       },
       {
         "declaring_header": "conf.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "unloads entries of the module list and calls DSO_free; DSO is a later stratum and OSSL_LIB_CTX is Phase 6",
@@ -189,7 +189,7 @@
       },
       {
         "declaring_header": "conf.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/conf/",
         "owning_phase": 6,
         "reason": "registers every built-in CONF_MODULE through CONF_module_add, which Phase 6 owns",
@@ -553,7 +553,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "ef29bbfccd92b3e053e0e7cb0e075190b4e1a7b7a99f982e2a7fe4b1a8ee7e3e"
+      "sha256": "24b6e8c14b10cf749e2a0e3b26310e44daf946997333b364f32f2b8a5ad0c8d2"
     }
   ],
   "kind": "phase4-obligations",

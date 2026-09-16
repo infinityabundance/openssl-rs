@@ -23,8 +23,8 @@
 //! | `NO_LOAD_SSL_STRINGS` | as `NO_LOAD_CRYPTO_STRINGS` |
 //! | `LOAD_SSL_STRINGS` | **implemented**: loads library 20's reason table, which `err_all.c` deliberately excludes from the crypto set |
 //! | `NO_ADD_ALL_CIPHERS`, `NO_ADD_ALL_DIGESTS` | the authority's alternative initialisers are empty |
-//! | `NO_LOAD_CONFIG` | requests exactly this build's behaviour: no config is loaded |
-//! | `LOAD_CONFIG` | **accepted**: the config step succeeds having loaded nothing, which is the authority's own answer when no config file exists. Applying a config file that *does* exist is Phase 6 (D86) |
+//! | `NO_LOAD_CONFIG` | **implemented**: runs the authority's alternative initialiser, `ossl_no_config_int`, which sets the process-wide `openssl_configured` flag and loads nothing. It is the *same* once `LOAD_CONFIG` claims, so `NO_LOAD_CONFIG | LOAD_CONFIG` sets the flag and then loads nothing — the authority's behaviour, not an accident of ordering |
+//! | `LOAD_CONFIG` | **implemented**: runs `ossl_config_int`, which is `CONF_modules_load_file_ex` against the global default context with the caller's settings, or with `DEFAULT_CONF_MFLAGS` when there are none. A missing file is not an error — `DEFAULT_CONF_MFLAGS` carries `CONF_MFLAGS_IGNORE_MISSING_FILE` — so the no-configuration-file case is a *successful* no-op, which is what `ASN1_STRING_TABLE_get` observes first. 6.10c; supersedes D86, which recorded the load as absent |
 //! | `OPENSSL_INIT_ATFORK` | the authority's `openssl_init_fork_handlers()` is `return 1`, i.e. a no-op on the admitted pthread profile (verified in the 3.6.4 source) |
 //! | `OPENSSL_INIT_NO_ATEXIT` | fully honoured: it suppresses the `atexit` registration |
 //! | `OPENSSL_INIT_BASE_ONLY` | internal flag; base init is all this build has |
@@ -42,18 +42,28 @@
 //! | `ASYNC` | ASYNC (7) | initialises the async job framework |
 //! | `ENGINE_*` | ENGINE (13) | loads/registers engines |
 //!
-//! Refusals happen *after* the `atexit` step, matching the authority's ordering,
-//! so a refused call still has the side effect the authority would have had by
-//! that point.
+//! Refusals happen *after* the `atexit` step and **before** the config step,
+//! matching the authority's ordering: `init.c` tests `ADD_ALL_*`, `ASYNC` and the
+//! `ENGINE_*` bits ahead of its `OPENSSL_INIT_LOAD_CONFIG` block, so a refused call
+//! still has the side effects the authority would have had by that point and does
+//! **not** have the ones it would not. That distinction was unobservable while the
+//! config step loaded nothing; it stopped being unobservable in 6.10c, and the
+//! position below is the correction.
 //!
 //! ## Idempotency, and being safe from a constructor or `atexit` frame
 //!
 //! State is process-global and guarded with atomics, so `OPENSSL_init_crypto`
 //! may be called from any thread, including concurrently, and from a library
-//! constructor or an `atexit` handler. Base initialisation performs no
-//! allocation, so unlike the authority it cannot fail: the authority's base
-//! allocates two locks and a TLS key and can return 0 on exhaustion, whereas
-//! this implementation needs neither (Rust atomics and `Once` are static).
+//! constructor or an `atexit` handler.
+//!
+//! Base initialisation **can** now fail, and it is the authority's failure shape:
+//! the authority allocates two locks and a TLS key there and returns 0 on
+//! exhaustion; this implementation's locks are `CRYPTO_atomic_*` calls, which
+//! cannot fail, but the TLS key is a real `pthread_key_create`, which can. So
+//! `ossl_init_base`'s run-once is modelled with a sticky result rather than as a
+//! flag that is simply set: a base initialisation that failed leaves
+//! `base_inited` clear and every later `OPENSSL_init_crypto` answers 0, exactly as
+//! `RUN_ONCE(&base, ossl_init_base)` does once `base_ossl_ret_` holds 0.
 //!
 //! ## `OPENSSL_cleanup`
 //!
@@ -132,11 +142,17 @@
 //! the obligation is to decide and document this build's provenance string once
 //! the distribution profile is fixed.
 
-use core::ffi::{c_char, c_int, c_uint, c_ulong, CStr};
-use core::sync::atomic::{AtomicBool, AtomicPtr, AtomicU64, Ordering};
+use core::ffi::{c_char, c_int, c_uint, c_ulong, c_void, CStr};
+use core::sync::atomic::{AtomicBool, AtomicI32, AtomicPtr, AtomicU32, AtomicU64, Ordering};
 use std::sync::Once;
 
 use crate::ffi::guard_ffi;
+use crate::runtime::conf::sap::{ossl_config_int, ossl_no_config_int};
+use crate::runtime::confmod::ossl_config_modules_free;
+use crate::runtime::thread::{
+    CRYPTO_THREAD_cleanup_local, CRYPTO_THREAD_get_local, CRYPTO_THREAD_init_local,
+    CRYPTO_THREAD_run_once, CRYPTO_THREAD_set_local,
+};
 
 // ---------------------------------------------------------------------------
 // `OPENSSL_INIT_*` option bits — values from the authority's `crypto.h`
@@ -163,8 +179,7 @@ const OPENSSL_INIT_NO_ADD_ALL_CIPHERS: u64 = 0x0000_0010;
 const OPENSSL_INIT_NO_ADD_ALL_DIGESTS: u64 = 0x0000_0020;
 /// `OPENSSL_INIT_LOAD_CONFIG`
 pub(crate) const OPENSSL_INIT_LOAD_CONFIG: u64 = 0x0000_0040;
-/// `OPENSSL_INIT_NO_LOAD_CONFIG` — accepted: no config is loaded either way.
-#[allow(dead_code)]
+/// `OPENSSL_INIT_NO_LOAD_CONFIG`
 const OPENSSL_INIT_NO_LOAD_CONFIG: u64 = 0x0000_0080;
 /// `OPENSSL_INIT_ASYNC`
 const OPENSSL_INIT_ASYNC: u64 = 0x0000_0100;
@@ -203,13 +218,14 @@ const OPENSSL_INIT_NO_ATEXIT: u64 = 0x0008_0000;
 /// Do not add to this list without reading the module note: refusal is the
 /// honest choice *because* these are not no-ops in the authority.
 ///
-/// `OPENSSL_INIT_LOAD_CONFIG` was on this list until Phase 5 needed it: the
-/// authority's config step is
+/// `OPENSSL_INIT_LOAD_CONFIG` was on this list until Phase 5 needed it, and it left
+/// the list for good in Phase 6.10c: the authority's config step is
 /// `CONF_modules_load_file_ex(global_default, NULL, NULL, DEFAULT_CONF_MFLAGS)`,
 /// and `DEFAULT_CONF_MFLAGS` includes `CONF_MFLAGS_IGNORE_MISSING_FILE`, so a
 /// profile with no default config file gets a *successful* no-op — which is what
 /// `ASN1_STRING_TABLE_get` observes first and what the RT-ASN1-STR court measured.
-/// See `docs/DECISIONS.md` D86.
+/// See `docs/DECISIONS.md` D86 for the phase in which the loader was absent, and
+/// the entry that supersedes it for the phase in which it arrived.
 const INIT_UNSUPPORTED: u64 = OPENSSL_INIT_ADD_ALL_CIPHERS
     | OPENSSL_INIT_ADD_ALL_DIGESTS
     | OPENSSL_INIT_ASYNC
@@ -342,7 +358,8 @@ const VERSION_BUILT_ON: &CStr = c"built on: N/A";
 
 /// Set once `OPENSSL_cleanup` has run; terminal, exactly as in the authority.
 static STOPPED: AtomicBool = AtomicBool::new(false);
-/// Whether base initialisation has happened. Cleared again by cleanup.
+/// Whether base initialisation has happened. Cleared again by cleanup, and only ever set on
+/// **success**, so it is the authority's `base_inited` rather than a "we tried" flag.
 static BASE_INITED: AtomicBool = AtomicBool::new(false);
 /// The authority's `optsdone`: every option bit whose request has been recorded.
 static OPTSDONE: AtomicU64 = AtomicU64::new(0);
@@ -402,10 +419,175 @@ fn raise_init_fail() {
     unsafe { crate::runtime::err::raise_site(&crate::runtime::err::err_sites::INIT_504) };
 }
 
-/// Base initialisation. See the module note on why this cannot fail.
+/// `static CRYPTO_ONCE base = CRYPTO_ONCE_STATIC_INIT;`
+///
+/// `pthread_once` writes this field and nothing else does, so it is storage rather than state
+/// this crate interprets; an `AtomicI32` is the crate's way of having addressable mutable
+/// storage without a `static mut`.
+static BASE_ONCE: AtomicI32 = AtomicI32::new(0);
+
+/// The `RUN_ONCE` macro's own `base_ossl_ret_` — what `ossl_init_base` answered, kept for
+/// every later `RUN_ONCE(&base, ossl_init_base)` to read.
+///
+/// This is **not** `BASE_INITED`, and the difference is not cosmetic: `OPENSSL_cleanup`
+/// clears `base_inited` on the way out, while `base_ossl_ret_` stays 1 forever, because
+/// a `CRYPTO_ONCE` cannot be un-run. A reader who took `base_init`'s answer from
+/// `BASE_INITED` would make a second `OPENSSL_init_crypto` after a cleanup report a
+/// *base-initialisation failure* rather than the terminal refusal the authority gives —
+/// which is what the unit tests caught the moment this pair was split.
+static BASE_ONCE_RET: AtomicI32 = AtomicI32::new(0);
+
+/// `static CRYPTO_THREAD_LOCAL in_init_config_local;` — `crypto/init.c`.
+///
+/// The **re-entrancy guard** around configuration loading. `OPENSSL_init_crypto`'s `LOAD_CONFIG`
+/// step sets this thread's slot to a non-NULL sentinel before it loads a configuration, and
+/// because a module's initialiser may create an object — which calls `OBJ_` functions, which
+/// call `OPENSSL_init_crypto` — the nested call sees a non-NULL slot and skips the config step
+/// rather than parsing the same file again.
+///
+/// The authority **never clears it**. That is not an oversight to correct: the slot stays set
+/// for the life of the thread, and the observable consequence is that after a failed
+/// configuration load, a second `OPENSSL_init_crypto(LOAD_CONFIG)` on the *same* thread takes
+/// the skip path and answers 1, while the same call on a *different* thread re-enters the once
+/// and answers the once's recorded 0. The crate reproduces both halves, which is why this slot
+/// is set and not restored. `OPENSSL_cleanup` deletes the key, which is the only release.
+static IN_INIT_CONFIG_LOCAL: AtomicU32 = AtomicU32::new(0);
+
+/// `(void *)-1` — the sentinel the authority stores in the slot above.
+///
+/// Any non-NULL value would serve the test the authority makes, and the exact value is
+/// unobservable through the API, so the authority's own is used rather than a fresh `1`.
+const CONFIG_LOADING: *mut c_void = usize::MAX as *mut c_void;
+
+/// `static CRYPTO_ONCE config = CRYPTO_ONCE_STATIC_INIT;` — `crypto/init.c`.
+///
+/// One `CRYPTO_ONCE` shared by three bodies: `ossl_init_config`, `ossl_init_config_settings`
+/// and `ossl_init_no_config`. Which one runs is decided by *which entry point reaches it first*
+/// — that is what the authority's `RUN_ONCE`/`RUN_ONCE_ALT` pair means — and the value it
+/// recorded is what every later reader gets.
+static CONFIG_ONCE: AtomicI32 = AtomicI32::new(0);
+
+/// The `RUN_ONCE` macro's `config_ossl_ret_`. Written by whichever body ran, read by every
+/// later `RUN_ONCE`/`RUN_ONCE_ALT` on [`CONFIG_ONCE`].
+static CONFIG_ONCE_RET: AtomicI32 = AtomicI32::new(0);
+
+/// `static const OPENSSL_INIT_SETTINGS *conf_settings = NULL;` — `crypto/init.c`.
+///
+/// The authority publishes the caller's settings pointer here under `init_lock` for the duration
+/// of the `RUN_ONCE_ALT`, so that the alternative body can read it. An `AtomicPtr` store/load
+/// provides exactly what the lock provides — the alternative body sees the pointer the caller
+/// published and no other — so the lock itself is not modelled. It is stored and cleared around
+/// the once, as the authority stores and clears it.
+static CONF_SETTINGS: AtomicPtr<OpenSslInitSettings> = AtomicPtr::new(core::ptr::null_mut());
+
+/// `DEFINE_RUN_ONCE_STATIC(ossl_init_config)` — the `settings == NULL` body.
+///
+/// A **safe** `extern "C" fn` of no arguments, because that is the type
+/// [`CRYPTO_THREAD_run_once`] takes.
+extern "C" fn ossl_init_config() {
+    // SAFETY: NULL is the argument that asks for the default file and the default flag word,
+    // and does not dereference anything.
+    let ret = unsafe { ossl_config_int(core::ptr::null()) };
+    CONFIG_ONCE_RET.store(ret, Ordering::Release);
+}
+
+/// `DEFINE_RUN_ONCE_STATIC_ALT(ossl_init_config_settings, ossl_init_config)`.
+///
+/// Read `CONF_SETTINGS` rather than taking a parameter, because a once body takes none. The
+/// pointer is published by the caller that is inside the once, so this read sees it.
+extern "C" fn ossl_init_config_settings() {
+    let settings = CONF_SETTINGS.load(Ordering::Acquire);
+    // SAFETY: `settings` was published by the caller inside this once and is the caller's live
+    // object; `ossl_config_int`'s contract is exactly that.
+    let ret = unsafe { ossl_config_int(settings) };
+    CONFIG_ONCE_RET.store(ret, Ordering::Release);
+}
+
+/// `DEFINE_RUN_ONCE_STATIC_ALT(ossl_init_no_config, ossl_init_config)`.
+///
+/// The `OSSL_TRACE(INIT, "ossl_no_config_int()\n")` above its body is compiled out in this
+/// profile, which is `no-trace`.
+extern "C" fn ossl_init_no_config() {
+    ossl_no_config_int();
+    CONFIG_ONCE_RET.store(1, Ordering::Release);
+}
+
+/// `RUN_ONCE`/`RUN_ONCE_ALT` over [`CONFIG_ONCE`] with `body` as the alternative initialiser.
+///
+/// Both macros, and the single shape they share: run the body if the once has not run, then
+/// answer the recorded result. `RUN_ONCE_ALT(once, initalt, init)` expands to
+/// `(CRYPTO_THREAD_run_once(once, initalt##_ossl_) ? init##_ossl_ret_ : 0)` and
+/// `RUN_ONCE(once, init)` to `(CRYPTO_THREAD_run_once(once, init##_ossl_) ? init##_ossl_ret_ : 0)`
+/// — and because `DEFINE_RUN_ONCE_STATIC_ALT` writes the **same** `init##_ossl_ret_` as its
+/// primary, both are this function with a different body.
+fn run_config_once(body: extern "C" fn()) -> c_int {
+    // SAFETY: the once is this module's own static, initially zero, and the body is a safe
+    // `extern "C" fn` of no arguments.
+    let ran = unsafe { CRYPTO_THREAD_run_once(CONFIG_ONCE.as_ptr(), Some(body)) };
+    if ran == 0 {
+        // `pthread_once` failed, which is what makes the authority's `RUN_ONCE` answer 0 rather
+        // than the recorded value.
+        return 0;
+    }
+    CONFIG_ONCE_RET.load(Ordering::Acquire)
+}
+
+/// `int loading = CRYPTO_THREAD_get_local(&in_init_config_local) != NULL;`
+fn config_loading() -> bool {
+    // SAFETY: the key was created by `base_init` and this function is only reachable through
+    // `OPENSSL_init_crypto`, which returns 0 when `base_init` failed. It has not been deleted,
+    // because `OPENSSL_cleanup` is the only deleter and every caller past it is refused.
+    let value = unsafe { CRYPTO_THREAD_get_local(IN_INIT_CONFIG_LOCAL.as_ptr()) };
+    !value.is_null()
+}
+
+/// `CRYPTO_THREAD_set_local(&in_init_config_local, (void *)-1)`.
+///
+/// Answers false only when the platform refuses the store, which the authority treats as a
+/// failed initialisation rather than a warning.
+fn set_config_loading() -> bool {
+    // SAFETY: as `config_loading`, and the value is a sentinel that is never dereferenced and
+    // never freed — the authority's own `(void *)-1`.
+    unsafe { CRYPTO_THREAD_set_local(IN_INIT_CONFIG_LOCAL.as_ptr(), CONFIG_LOADING) != 0 }
+}
+
+/// `DEFINE_RUN_ONCE_STATIC(ossl_init_base)` — the authority's base step, minus the two locks
+/// this crate's equivalents do not need.
+///
+/// The authority's body allocates `optsdone_lock` and `init_lock`, calls `OPENSSL_cpuid_setup()`,
+/// calls `ossl_init_thread()`, creates the configuration re-entrancy key, and sets `base_inited`.
+/// This crate's `OPTSDONE` and `CONF_SETTINGS` are atomics, so neither lock has anything to
+/// protect; `OPENSSL_cpuid_setup` and the CPU dispatch it feeds are Phase 19 and are a recorded
+/// open obligation. What is left is the two calls that can fail, and both are made.
+///
+/// `ossl_init_thread()` is reached through [`CRYPTO_THREAD_init_local`], which calls it first
+/// for exactly the reason the authority's body calls it first: a key created before the thread
+/// event machinery exists would be usable by a caller who then registered a handler against a
+/// thread-local list that had nowhere to go. The relative order is therefore the authority's,
+/// and it is not an accident of which function happens to contain the call.
 fn base_init() -> bool {
+    // SAFETY: the once is this module's own static, initially zero, and the body is a safe
+    // `extern "C" fn` of no arguments.
+    let ran = unsafe { CRYPTO_THREAD_run_once(BASE_ONCE.as_ptr(), Some(init_base_body)) };
+    if ran == 0 {
+        // `pthread_once` failed, which is what makes `RUN_ONCE` answer 0 rather than the
+        // recorded value.
+        return false;
+    }
+    BASE_ONCE_RET.load(Ordering::Acquire) != 0
+}
+
+/// The `ossl_init_base` body, in the shape `CRYPTO_THREAD_run_once` takes.
+extern "C" fn init_base_body() {
+    // SAFETY: the key is this module's own static and the destructor is NULL, which is the
+    // authority's argument. A second call would leak a key, which is why this body is inside a
+    // run-once.
+    if unsafe { CRYPTO_THREAD_init_local(IN_INIT_CONFIG_LOCAL.as_ptr(), None) } == 0 {
+        BASE_ONCE_RET.store(0, Ordering::Release);
+        return;
+    }
     BASE_INITED.store(true, Ordering::Release);
-    true
+    BASE_ONCE_RET.store(1, Ordering::Release);
 }
 
 /// Registers `OPENSSL_cleanup` with `atexit`, unless suppressed, exactly once.
@@ -441,7 +623,7 @@ pub extern "C" fn OPENSSL_init() {
 /// options and for a call made after `OPENSSL_cleanup`). See the module note for
 /// the option-by-option disposition.
 #[no_mangle]
-pub extern "C" fn OPENSSL_init_crypto(opts: u64, _settings: *const OpenSslInitSettings) -> c_int {
+pub extern "C" fn OPENSSL_init_crypto(opts: u64, settings: *const OpenSslInitSettings) -> c_int {
     guard_ffi(0, || {
         // Terminal after cleanup. `BASE_ONLY` is the authority's one silent case.
         if STOPPED.load(Ordering::Acquire) {
@@ -497,27 +679,57 @@ pub extern "C" fn OPENSSL_init_crypto(opts: u64, _settings: *const OpenSslInitSe
             return 0;
         }
 
-        // The config step. The authority's structure is two independent tests:
-        // `NO_LOAD_CONFIG` runs the alternative initialiser (which only marks the
-        // configuration as done) and `LOAD_CONFIG` runs the real one, which is
-        // `ossl_config_int` -> `CONF_modules_load_file_ex(global_default, NULL,
-        // NULL, DEFAULT_CONF_MFLAGS)`. That call needs `OSSL_LIB_CTX` and the
-        // module registry, both Phase 6.
+        // The refusal, at the authority's own position in the sequence: after the
+        // `atexit` registration and the two string loads, and **before** the config
+        // step. A caller who asks for `ADD_ALL_CIPHERS | LOAD_CONFIG` is therefore
+        // refused without a configuration having been read, which is what the
+        // authority does — see the module note.
+        if opts & INIT_UNSUPPORTED != 0 {
+            raise_init_fail();
+            return 0;
+        }
+
+        // The config step, in the authority's own two-part shape.
         //
-        // What this crate can honour is the *outcome* on a profile with no
-        // configuration source: `DEFAULT_CONF_MFLAGS` carries
-        // `CONF_MFLAGS_IGNORE_MISSING_FILE`, so a missing file is not an error and
-        // the step succeeds having loaded nothing. It succeeds that way here for
-        // every profile, which is the divergence recorded as D86: a config file
-        // that *does* exist is not applied until Phase 6 lands the loader.
+        // The two tests are **not** symmetric, and the asymmetry is observable. The
+        // first is `RUN_ONCE_ALT(&config, ossl_init_no_config, ossl_init_config)`, so
+        // `NO_LOAD_CONFIG` claims the shared `config` once and records 1; the second is
+        // a plain `if (opts & OPENSSL_INIT_LOAD_CONFIG)` block that then reaches
+        // `RUN_ONCE(&config, ossl_init_config)` — which, the once already having run,
+        // answers the recorded 1 without calling the loader. So
+        // `NO_LOAD_CONFIG | LOAD_CONFIG` marks the process configured and loads
+        // nothing, which is why the two bits are two `if`s here and not an `else if`.
         //
-        // The authority's re-entrancy guard (`in_init_config_local`) protects
-        // against `OBJ_` calls made from inside config parsing; nothing here
-        // parses config, so there is nothing to re-enter.
-        if opts & OPENSSL_INIT_NO_LOAD_CONFIG != 0 {
-            // The alternative initialiser ran; it does nothing.
-        } else if opts & OPENSSL_INIT_LOAD_CONFIG != 0 {
-            // Nothing to load yet; see above.
+        // The re-entrancy guard is the authority's and is load-bearing now that a
+        // configuration really is parsed: a module's initialiser creates objects, and
+        // `OBJ_create` calls `OPENSSL_init_crypto`, so without the guard a load would
+        // call itself. The slot is **set and never cleared**, exactly as upstream —
+        // see [`IN_INIT_CONFIG_LOCAL`] for why that is reproduced rather than tidied.
+        if opts & OPENSSL_INIT_NO_LOAD_CONFIG != 0 && run_config_once(ossl_init_no_config) == 0 {
+            return 0;
+        }
+        if opts & OPENSSL_INIT_LOAD_CONFIG != 0 && !config_loading() {
+            if !set_config_loading() {
+                return 0;
+            }
+            let ret = if settings.is_null() {
+                run_config_once(ossl_init_config)
+            } else {
+                // The authority publishes the pointer for the duration of the once,
+                // under `init_lock`, and clears it after.
+                CONF_SETTINGS.store(settings.cast_mut(), Ordering::Release);
+                let r = run_config_once(ossl_init_config_settings);
+                CONF_SETTINGS.store(core::ptr::null_mut(), Ordering::Release);
+                r
+            };
+            // `if (ret <= 0) return 0;` — a failed configuration load fails the
+            // initialisation, and because the step is above the `OPTSDONE` union
+            // the failure is not recorded as done. It is *sticky* all the same: the
+            // once has run, so a later call reads the recorded 0 rather than
+            // retrying.
+            if ret <= 0 {
+                return 0;
+            }
         }
 
         if opts & INIT_UNSUPPORTED != 0 {
@@ -676,6 +888,21 @@ pub extern "C" fn OPENSSL_cleanup() {
         // machinery itself.
         crate::runtime::thread_events::OPENSSL_thread_stop();
         run_atexit_handlers();
+        // The authority frees its two locks here and then releases the configuration
+        // re-entrancy key. The locks have no counterpart, but the key does, and it must go
+        // before `ossl_cleanup_thread` for the authority's reason: deleting a key does not run
+        // destructors in other threads, so the thread-event teardown is what actually drains
+        // them and it comes later.
+        // SAFETY: the key was created by `base_init`, which is what got us here — `BASE_INITED`
+        // is set only after it succeeded — and this is its only deleter.
+        unsafe { CRYPTO_THREAD_cleanup_local(IN_INIT_CONFIG_LOCAL.as_ptr()) };
+        // `ossl_config_modules_free()`. The authority's comment places it here for a
+        // dependency reason and not for tidiness: *"ossl_config_modules_free() can end up in
+        // ENGINE code so must be called before engine_cleanup_int()"*. It is
+        // `CONF_modules_unload(1)` followed by the registry's own teardown, so an unload that
+        // a module's `finish` callback triggers still finds a live registry, and a second
+        // unload after it returns early rather than walking a freed list.
+        ossl_config_modules_free();
         crate::runtime::thread_events::ossl_cleanup_thread();
         // `err_cleanup()`: the string registry is released.
         crate::runtime::err::unload_strings();
@@ -920,7 +1147,16 @@ mod tests {
 
     fn reset_for_test() {
         STOPPED.store(false, Ordering::Release);
-        BASE_INITED.store(false, Ordering::Release);
+        // `BASE_INITED` is restored to what the **once** recorded, not to `false`:
+        // `ossl_init_base` runs under a `CRYPTO_ONCE`, and a `CRYPTO_ONCE` cannot be
+        // un-run, so a test that cleared this flag would be asserting a state the
+        // authority's own structures cannot reach. `BASE_ONCE_RET` is the authority's
+        // `base_ossl_ret_` and is what `base_init` answers from — which is what makes
+        // this the right value to restore rather than an arbitrary `true`.
+        BASE_INITED.store(
+            BASE_ONCE_RET.load(Ordering::Acquire) != 0,
+            Ordering::Release,
+        );
         OPTSDONE.store(0, Ordering::Release);
     }
 

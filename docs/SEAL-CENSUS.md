@@ -17,9 +17,9 @@ name is defined; `open` means the stratum owns it and has not built it;
 
 | library | authority exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 1116 | 4780 |
+| libcrypto | 5896 | 1133 | 4763 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **1116** | **5383** |
+| **total** | **6499** | **1133** | **5366** |
 
 ## Ownership atlas, by stratum
 
@@ -31,7 +31,7 @@ declared owner; this is that assignment.
 | 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `complete` | 294 | 294 | 251 | 43 | 0 |
 | 4 | BIO + CONF + object database | `complete` | 256 | 272 | 249 | 23 | 0 |
 | 5 | BN + ASN.1 + DER/PEM | `complete` | 561 | 565 | 474 | 91 | 0 |
-| 6 | OSSL_LIB_CTX + provider core | `in-progress` | 137 | 161 | 142 | 0 | 19 |
+| 6 | OSSL_LIB_CTX + provider core | `in-progress` | 137 | 161 | 159 | 0 | 2 |
 | 7 | EVP framework | `not-started` | 924 | — | — | — | — |
 | 8 | Native cryptographic primitives | `not-started` | 759 | — | — | — | — |
 | 9 | RAND / DRBG + entropy | `not-started` | 25 | — | — | — | — |
@@ -98,7 +98,7 @@ Deferred out, by receiving stratum:
 
 * to phase 5: 4 symbol(s), 4 already discharged by that stratum
   `BIO_asn1_get_prefix`, `BIO_asn1_get_suffix`, `BIO_asn1_set_prefix`, `BIO_asn1_set_suffix`
-* to phase 6: 18 symbol(s), 2 already discharged by that stratum
+* to phase 6: 18 symbol(s), 18 already discharged by that stratum
   `BIO_new_from_core_bio`, `BIO_s_core`, `CONF_imodule_get_flags`, `CONF_imodule_get_module`, `CONF_imodule_get_name`, `CONF_imodule_get_usr_data`, `CONF_imodule_get_value`, `CONF_imodule_set_flags`, `CONF_imodule_set_usr_data`, `CONF_module_add`, `CONF_module_get_usr_data`, `CONF_module_set_usr_data`, `CONF_modules_finish`, `CONF_modules_load`, `CONF_modules_load_file`, `CONF_modules_load_file_ex`, `CONF_modules_unload`, `OPENSSL_load_builtin_modules`
 * to phase 9: 1 symbol(s)
   `BIO_f_nbio_test`
@@ -176,14 +176,14 @@ Courts: `all pass`, 9 court(s), 0 authority observation(s).
 ## Phase 6 — OSSL_LIB_CTX + provider core
 
 * state: `in-progress`
-* blocking: 19 open obligation(s) of this stratum recorded in forensics/phase6-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase
+* blocking: 2 open obligation(s) of this stratum recorded in forensics/phase6-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase
 * seal: none written yet (`docs/PHASE-6-PROVIDER-SEAL.md`)
 * ledger: `forensics/phase6-obligations.json`
 * atlas-owned: 137
 * owned working set: 161
-* implemented: 142
+* implemented: 159
 * deferred to a later stratum with a stated reason: 0
-* **open in this stratum: 19**
+* **open in this stratum: 2**
 
 Hand-offs received and discharged:
 
@@ -191,7 +191,7 @@ Hand-offs received and discharged:
 * from phase 4: 18 symbol(s) — `BIO_new_from_core_bio`, `BIO_s_core`, `CONF_imodule_get_flags`, `CONF_imodule_get_module`, `CONF_imodule_get_name`, `CONF_imodule_get_usr_data`, `CONF_imodule_get_value`, `CONF_imodule_set_flags`, `CONF_imodule_set_usr_data`, `CONF_module_add`, `CONF_module_get_usr_data`, `CONF_module_set_usr_data`, `CONF_modules_finish`, `CONF_modules_load`, `CONF_modules_load_file`, `CONF_modules_load_file_ex`, `CONF_modules_unload`, `OPENSSL_load_builtin_modules`
 * from phase 5: 1 symbol(s) — `ASN1_add_oid_module`
 
-Courts: `all pass`, 7 court(s), 0 authority observation(s).
+Courts: `all pass`, 8 court(s), 0 authority observation(s).
 
 | court | verdict | observations |
 |---|---|---|
@@ -202,6 +202,7 @@ Courts: `all pass`, 7 court(s), 0 authority observation(s).
 | RT-BIO-CORE | `pass` | 0 |
 | RT-DSO | `pass` | 0 |
 | RT-PROVIDER | `pass` | 0 |
+| RT-CONF-MOD | `pass` | 0 |
 
 ## Atlas/ledger reconciliation
 

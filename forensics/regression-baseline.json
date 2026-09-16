@@ -143,6 +143,10 @@
       "observations": 736,
       "verdict": "pass"
     },
+    "RT-CONF-MOD": {
+      "observations": 161,
+      "verdict": "pass"
+    },
     "RT-DSO": {
       "observations": 145,
       "verdict": "pass"
@@ -231,14 +235,14 @@
     "phase6": 0
   },
   "implemented": {
-    "libcrypto": 1116,
+    "libcrypto": 1133,
     "libssl": 0
   },
   "open_obligations": {
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,
-    "phase6": 19
+    "phase6": 2
   },
   "owned_obligations": {
     "phase3": 294,
@@ -271,10 +275,10 @@
     "9": "not-started"
   },
   "prerequisites": {
-    "blocking_dependencies": 33,
+    "blocking_dependencies": 30,
     "divergence_names_covered": 32,
     "findings": 0,
-    "language_census": 2066,
+    "language_census": 2050,
     "sealed_census": 59
   }
 }

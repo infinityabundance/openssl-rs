@@ -619,26 +619,39 @@ observations that *can* be made around each boundary are compared normally.
   and the *certain* half — that the nested handler is not called by the same stop, because the
   walk unlinks as it goes — is asserted with it.
 
-### D-TEVENT-CTX-STOP-LEAK-1 — `ossl_ctx_thread_stop` releases a list head that still has handlers on it
+### ~~D-TEVENT-CTX-STOP-LEAK-1~~ — **WITHDRAWN: the authority does not do this**
 
-- **Obligation:** `ossl_ctx_thread_stop`, called from `context_deinit` for every
-  `OSSL_LIB_CTX` and therefore reachable from `OSSL_LIB_CTX_free`.
-- **Authority:** the body is `hands = clear_thread_local(ctx); init_thread_stop(ctx, hands);
-  OPENSSL_free(hands);`. `clear_thread_local` clears the thread local and returns the head;
-  `init_thread_stop(ctx, …)` runs only the handlers whose `arg` matches `ctx`; and then the
-  **head block itself** is released, while handler nodes registered for other contexts are
-  still linked to it. Those nodes are unreachable afterwards — the thread has no list to walk —
-  and are leaked. A second `OPENSSL_thread_stop` on the same thread runs nothing.
-- **Candidate:** identical, and pinned by unit test
-  `the_context_stop_filters_on_the_argument`: after `ossl_ctx_thread_stop(arg_a())` only the
-  `arg == arg_a()` handler has run, and a subsequent `OPENSSL_thread_stop` calls nothing.
-- **Reason:** this is **not** a fault and is deliberately reproduced — a leak is defined
-  behaviour, and a caller can observe it (`OSSL_free` instrumentation, or the second stop
-  running nothing). It is recorded because a reader who found it independently would otherwise
-  have to decide whether the candidate had got it wrong; the candidate gets it *right*, and
-  the entry says so.
-- **Claim removed:** none. The behaviour is claimed as compatible, and the leak is claimed with
-  it.
+**This entry is retained, struck through, because it was wrong and the way it was wrong is
+worth reading. It is not a divergence: there is no behavioural difference between the
+authority and the candidate for this function, and there was never supposed to be one.**
+
+- **What was claimed:** that the authority's `ossl_ctx_thread_stop` is
+  `hands = clear_thread_local(ctx); init_thread_stop(ctx, hands); OPENSSL_free(hands);`, so the
+  head is released while other contexts' handler nodes are still linked to it, those nodes leak,
+  and a subsequent `OPENSSL_thread_stop` runs nothing.
+- **What the authority actually is:**
+  `void ossl_ctx_thread_stop(OSSL_LIB_CTX *ctx) { if (destructor_key.sane != -1) {
+  THREAD_EVENT_HANDLER **hands = fetch_thread_local(ctx); init_thread_stop(ctx, hands); } }`
+  — `fetch_thread_local`, which is `manage_thread_local(ctx, 0, 1)`, fetches **without**
+  allocating and **without** clearing; the head is neither cleared nor released, the thread
+  keeps it, the register keeps it, and every handler for another context is still reachable.
+  `fetch_thread_local` is marked `ossl_unused` in the source because the FIPS build does not
+  call it; this profile is the non-FIPS build, which does.
+- **How the error survived:** the crate had been written against `clear_thread_local` and a
+  `CRYPTO_free` of the head, this test asserted that shape, and the entry was written from the
+  test rather than from the authority. A divergence record derived from the candidate's own
+  behaviour is a record of nothing, and that is the lesson worth keeping here.
+- **Why it became visible:** leaving a freed head's address in `GLOBAL_TEVENT_REGISTER`'s
+  `skhands` means the walk in `init_thread_deregister(NULL, 1)`, which `OPENSSL_cleanup` runs,
+  dereferences released memory. The Rust build refuses that dereference instead of reading the
+  corpse, so the observable was `OPENSSL_cleanup` **aborting the process at exit** — found by
+  running the full unit-test binary once the exit-time cleanup was reachable, which it had not
+  been before.
+- **Candidate now:** the authority's two statements, and no `CRYPTO_free`. Unit tests
+  `the_context_stop_filters_on_the_argument` (a survivor is still reachable afterwards) and
+  `a_second_context_stop_for_the_same_argument_runs_nothing` (the node that ran is gone) pin
+  both halves.
+- **Claim removed:** none; the claim is now made and true. See `docs/DECISIONS.md` D127.
 
 ### D-RCU-1 — the read side indexes `thread_qps[-1]` when the array is full
 
