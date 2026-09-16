@@ -639,3 +639,96 @@ observations that *can* be made around each boundary are compared normally.
   the entry says so.
 - **Claim removed:** none. The behaviour is claimed as compatible, and the leak is claimed with
   it.
+
+### D-RCU-1 — the read side indexes `thread_qps[-1]` when the array is full
+
+- **Obligation:** an eleventh *distinct* `CRYPTO_RCU_LOCK` held simultaneously by one
+  thread. `MAX_QPS` is 10 and each slot holds one lock.
+- **Authority:** `ossl_rcu_read_lock` scans the ten slots for a free one, and then, for the
+  case where every slot is taken:
+  ```c
+  assert(available_qp != -1);
+  data->thread_qps[available_qp].qp = get_hold_current_qp(lock);
+  ```
+  `NDEBUG` is defined in the admitted profile, so the `assert` is `((void)0)` and
+  `available_qp` is still `-1`: the three writes that follow go to `thread_qps[-1]`, which
+  is the twelve bytes immediately before the array inside the `rcu_thr_data` allocation.
+- **Candidate:** answers `0` — "the hold was refused" — which the function's other two
+  failure arms already use for "no data block" and "the thread handler could not be
+  registered". A caller that checks the result, as the only in-tree caller will have to
+  because it can already be told 0 for two other reasons, sees a refusal instead of a
+  corruption.
+- **Reason:** out-of-bounds writes are precisely what `docs/UNSAFE.md` §5 refuses to
+  reproduce, and the value written would be a lock pointer and two integers written over
+  whatever the allocator put there.
+- **Claim removed:** eleven simultaneous distinct RCU locks on one thread are not claimed
+  compatible. No probe can reach this: it needs eleven live locks from a consumer, and RCU
+  has no exported entry point at all (see D-RCU-4). The unit test
+  `an_eleventh_distinct_lock_is_refused_rather_than_indexed_out_of_bounds` pins the refusal
+  on the candidate side only.
+
+### D-RCU-2 — `ossl_rcu_read_unlock` dereferences a NULL `rcu_thr_data`
+
+- **Obligation:** `ossl_rcu_read_unlock(lock)` on a lock this thread has never read-locked,
+  with no thread data for the lock's context.
+- **Authority:** the function's first two statements are
+  ```c
+  struct rcu_thr_data *data = CRYPTO_THREAD_get_local_ex(CRYPTO_THREAD_LOCAL_RCU_KEY, lock->ctx);
+  assert(data != NULL);
+  ```
+  and the `assert` is compiled out under `NDEBUG`, so the loop that follows dereferences
+  NULL on its first iteration.
+- **Candidate:** returns. "Unlocking something not held" has no defined answer in the
+  authority either, so there is nothing to be compatible *with*; the crate declines to
+  fault.
+- **Reason:** as D-RCU-1.
+- **Claim removed:** an unbalanced unlock with no thread data is not claimed compatible.
+  `an_unbalanced_unlock_neither_faults_nor_disturbs_a_later_hold` pins that the candidate's
+  answer leaves the surrounding state alone, which is the only property that can be stated.
+
+### D-RCU-3 — the read side dies on an over-unlock where the check *is* active
+
+- **Obligation:** an unlock that takes a quiescent point's reader count below zero — more
+  unlocks than locks on one lock from one thread.
+- **Authority:** the decrement is
+  ```c
+  ret = ATOMIC_SUB_FETCH(&data->thread_qps[i].qp->users, (uint64_t)1, __ATOMIC_RELEASE);
+  OPENSSL_assert(ret != UINT64_MAX);
+  ```
+  and `OPENSSL_assert` in `include/openssl/crypto.h.in` is **not** `NDEBUG`-gated: it is
+  `OPENSSL_die("assertion failed: " #e, ...)`. Measured: the count wrapping to
+  `UINT64_MAX` aborts the process. Note the asymmetry with D-RCU-2, and that it is the
+  reason this entry exists separately: the authority checks this case and not the other,
+  and the crate answers both.
+- **Candidate:** puts the count back to zero — the state a caller who never took the hold
+  describes — and clears the slot. Leaving the wrapped count in place would make every
+  later `ossl_synchronize_rcu` on that lock spin forever, since nothing else can bring a
+  count of `UINT64_MAX` down. The slot clearing is what the authority would have done had
+  it survived; the restore is the smallest addition that keeps retirement live.
+- **Reason:** `OPENSSL_die` is `abort(3)`; a library aborting its caller's process is what
+  `docs/UNSAFE.md` §3 says must not happen, and the crate's whole FFI boundary exists to
+  convert a defect into a documented failure value.
+- **Claim removed:** an over-unlock is not claimed compatible. It is unreachable through the
+  crate's own bookkeeping — a `thread_qp` slot is per thread, so only the thread that took
+  the hold can reach the decrement — which is why the only evidence is the unit test's
+  assertion that the *balanced* path is what reaches the count at all.
+
+### D-RCU-4 — the RCU layer has no C-visible entry point, so it cannot be courted
+
+- **Obligation:** every `ossl_rcu_*` function and `ossl_synchronize_rcu`.
+- **Authority:** the whole family is declared in `include/internal/rcu.h`, which is a
+  non-installed header; nothing in the 6,499 exports resolves to any of the twelve names,
+  and `crypto/conf/conf_mod.c` is the only translation unit in the build that calls them.
+- **Consequence:** there is no way to write a differential court for RCU today. A probe
+  compares an authority object against a candidate object across the exported surface, and
+  RCU is not on it; the only reachable path is `CONF_modules_load`, whose registry the RCU
+  lock protects, and that export is still a scaffold (6.10b).
+- **What stands in its place:** the twelve functions' evidence is (a) this transcription,
+  reviewed against `crypto/threads_pthread.c` order for order and memory-order for
+  memory-order, (b) ten unit tests in `src/runtime/rcu.rs`, of which two spawn threads —
+  one pinning that a reader on another thread holds retirement off, the other that the
+  per-thread data survives a thread stop and is rebuilt on the next hold, which is D118's
+  chain end to end. This is **weaker** than a court and it is recorded rather than glossed:
+  RCU is `IMPLEMENTED` in `docs/PARITY_MODEL.md`'s terms and it is **not** `PARITY_VERIFIED`.
+- **When it changes:** `RT-CONF-MOD` (6.10b) is the court that exercises it end to end, and
+  this entry's consequence narrows to "courted only through its consumer" at that point.

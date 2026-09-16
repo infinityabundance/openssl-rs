@@ -199,6 +199,22 @@ fn destructor_key_ptr() -> *mut CryptoThreadLocal {
     DESTRUCTOR_VALUE.0.get()
 }
 
+/// A **test-only** guarantee that the thread-event machinery is live in *this* thread.
+///
+/// A module whose unit tests reach the machinery has to say so, because libtest runs every
+/// test in the crate in one process and one of them calls `OPENSSL_cleanup`, which is
+/// terminal by contract. `threads_common.rs` and `thread_events.rs` each spell the guard out;
+/// this names it once so a third module does not have to reach for `rearm_for_test` and the
+/// private sentinel both. See `rearm_for_test` for what re-arming costs and why it is
+/// test-only.
+#[cfg(test)]
+pub(crate) fn ensure_thread_machinery_for_test() {
+    if !destructor_key_sane() {
+        rearm_for_test();
+    }
+    assert_eq!(ossl_init_thread(), 1, "the thread machinery must be live");
+}
+
 /// A **test-only** re-arm of the machinery, for the one case a process cannot have: the
 /// library has been cleaned up and a later test in the same process needs a live handler
 /// table.

@@ -34,24 +34,12 @@
       "ossl_no_config_int -> phase 6 (Phase 6.10c: crypto/conf/conf_sap.c's automatic loader)",
       "ossl_provider_get_parent -> phase 6 (Phase 6.8e: the child-provider link, whose slot is index 18 of the context table)",
       "ossl_provider_is_child -> phase 6 (Phase 6.8e: the child-provider link)",
-      "ossl_provider_set_child -> phase 6 (Phase 6.8e: the child-provider link)",
-      "ossl_rcu_assign_uptr -> phase 6 (Phase 6.10a-iii: the RCU pointer accessors)",
-      "ossl_rcu_call -> phase 6 (Phase 6.10a-iii: the RCU callback list)",
-      "ossl_rcu_cb_item_free -> phase 6 (Phase 6.10a-iii: the RCU callback list)",
-      "ossl_rcu_cb_item_new -> phase 6 (Phase 6.10a-iii: the RCU callback list)",
-      "ossl_rcu_lock_free -> phase 6 (Phase 6.10a-iii: the RCU layer of crypto/threads_pthread.c)",
-      "ossl_rcu_lock_new -> phase 6 (Phase 6.10a-iii: the RCU layer of crypto/threads_pthread.c)",
-      "ossl_rcu_read_lock -> phase 6 (Phase 6.10a-iii: the RCU reader holds a quiescent point under CRYPTO_THREAD_LOCAL_RCU_KEY)",
-      "ossl_rcu_read_unlock -> phase 6 (Phase 6.10a-iii: the RCU layer of crypto/threads_pthread.c)",
-      "ossl_rcu_uptr_deref -> phase 6 (Phase 6.10a-iii: the RCU pointer accessors)",
-      "ossl_rcu_write_lock -> phase 6 (Phase 6.10a-iii: the RCU layer of crypto/threads_pthread.c)",
-      "ossl_rcu_write_unlock -> phase 6 (Phase 6.10a-iii: the RCU layer of crypto/threads_pthread.c)",
-      "ossl_synchronize_rcu -> phase 6 (Phase 6.10a-iii: quiescent-point retirement on prior_signal)"
+      "ossl_provider_set_child -> phase 6 (Phase 6.8e: the child-provider link)"
     ],
     "census": {
-      "covered_by_a_divergence": 52,
-      "language_surface_not_modelled_by_name": 2067,
-      "planned_prerequisites": 71
+      "covered_by_a_divergence": 53,
+      "language_surface_not_modelled_by_name": 2066,
+      "planned_prerequisites": 52
     },
     "census_not_a_failure": "the C language surface is counted and listed, never failed: the crate models C types, macros and reason codes differently on purpose, and a lexical scan cannot tell a rename from a gap",
     "census_samples": {
@@ -184,11 +172,11 @@
     },
     "checked": {
       "authority_units": 109,
-      "crate_modules": 147,
-      "deferrals_recorded": 45,
-      "divergence_names_covered": 31,
+      "crate_modules": 148,
+      "deferrals_recorded": 33,
+      "divergence_names_covered": 32,
       "divergence_rows": 5,
-      "names_referenced_and_not_built": 16
+      "names_referenced_and_not_built": 17
     },
     "claim": "A structural gate, not a parity claim. It answers whether a dependency has an owner and whether the owner arrives in time; it says nothing about whether the dependency behaves as the authority's does.",
     "counts": {},
@@ -309,7 +297,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "5677873822c7dd359cb6b0644cba01b951fa7b7933fff4f796dc9a5ad0629e46",
+  "body_hash": "ced32074b9eacf38e30232e71e98de10178a1c41d9e566a18fc1aa478caf59e0",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -330,7 +318,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "8ee239ba67fcb5f1047f3c6e428b39aa91da7112ca5a6af97c7b40da91cc8928"
+      "sha256": "6384bc76467925690d0a7128d9281b21cca7ca1bb22b5ca882ae5eaee7fdba5c"
     },
     {
       "name": "symbol-ownership",
@@ -350,7 +338,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "13ded1613bd990048de7c7b6790e1d462f3144df80aebaefc8eebb8bd54ea7bb"
+      "sha256": "74a706a3a0a93eefad1f82b1eec2f9e725fcae73901b5f341145795b040fa197"
     },
     {
       "name": "crate-source-tree",

@@ -6694,3 +6694,118 @@ Macro bodies are now blanked before the typedef scan.
 | sealed-stratum census / language census / planned | — | **59 / 2,067 / 71** |
 | prerequisite divergence rows / names covered | — | **5 / 31** |
 | CI gates | 13 | **15** (the gate, and the weak-tier atlas check) |
+
+## D124 — 6.10a-iii lands: the RCU layer, four recorded divergences, and the defect the tests found
+
+**6.10a is now complete**, and with it the last unit of Phase 6's infrastructure that stood
+between the stratum and its seventeen remaining exports. `src/runtime/rcu.rs` transcribes
+`crypto/threads_pthread.c`'s RCU section — 12 functions and 5 statics over 380 lines of C —
+and brings `crypto/conf/conf_mod.c` within reach.
+
+### What the file's own comments say, and why each is load-bearing
+
+**A quiescent point is a counter.** `struct rcu_qp` is a `uint64_t` and nothing else, so the
+read side's entire cost is one `Acquire` add. `get_hold_current_qp`'s retry loop is what makes
+that race-free: it adds to the point `reader_idx` named, re-reads `reader_idx` with `Acquire`,
+and if the index moved subtracts with `Relaxed` and starts again. **The atomics are
+order-for-order the authority's** — `Relaxed` for the first load and the compensating
+decrement, `Acquire` for the increment and the confirming re-read, `Release` for the reader's
+final decrement, and `Release` for both the writer's `reader_idx` store and the zero-add that
+follows it. `__atomic_add_fetch` answers the *new* value where Rust's `fetch_add` answers the
+old, so the two sites that use it are written as `fetch_add` plus the macro's arithmetic,
+marked `wrapping_*` because the C is unsigned and wraps.
+
+**Retirement is in order, and the order is a counter rather than a queue.** `update_qp` hands
+out `id_ctr`; `ossl_synchronize_rcu` waits on `prior_signal` until `next_to_retire` equals the
+id it was given, *and only then* examines the reader count. So a slow writer cannot let a fast
+one reclaim a point a reader has not left.
+
+**The per-thread bookkeeping is collective.** `rcu_thr_data` holds ten `thread_qp` slots, each
+naming its lock, and it lives under `CRYPTO_THREAD_LOCAL_RCU_KEY` in the lock's own context —
+so a thread holding two locks from two contexts keeps two arrays — and it is released by a
+thread-stop handler rather than by a key destructor of its own. That is D118's chain: this file
+could not be written before 6.6e-ii's handler table and 6.10a-ii's `_ex` family, and the reason
+6.10a was three units rather than one (D122).
+
+### Four places the transcription is deliberately not literal
+
+1. **The mutexes and condition variables are handles, not embedded objects.** The authority
+   embeds three `pthread_mutex_t` and two `pthread_cond_t` in `struct rcu_lock_st`; this
+   crate's equivalents are opaque heap handles, so the struct holds pointers and
+   `ossl_rcu_lock_new` allocates five objects instead of one. Unobservable: `rcu_lock_st` is
+   `typedef`d opaque in `include/internal/rcu.h`, RCU exports no symbol, and its only consumer
+   is in this crate.
+2. **`ossl_rcu_lock_new`'s unwind uses two arrays of what was created rather than reading the
+   struct's fields back.** The C tracks the successful `pthread_*_init` calls in
+   `mutexes[3]`/`conds[2]`; this keeps the same information in the same shape. **The failure it
+   unwinds is unreachable here**, because this crate's constructors box and cannot fail; the
+   unwind is written out anyway, for the day that stops being true.
+3. **`get_hold_current_qp`'s first `Relaxed` load is a plain `AtomicU32` load rather than an
+   `ATOMIC_LOAD_N` macro**, which is what the macro expands to on this profile — the file's
+   fallback path exists for compilers without `__atomic_*`, and this profile has them.
+4. **The drain loop is a `while` over the list rather than the same `while` with a `goto`-free
+   local.** No behavioural difference; noted so a reader comparing the two does not look for
+   one.
+
+### Four divergences, recorded in `docs/SECURITY_DIVERGENCE_POLICY.md`
+
+The three faults are all in `ossl_rcu_read_lock`/`_read_unlock`, and the interesting part is
+that the authority behaves *differently* on three paths that look alike:
+
+| entry | obligation | authority | candidate |
+|---|---|---|---|
+| `D-RCU-1` | an eleventh distinct lock held at once | `assert` compiled out under `NDEBUG`; writes through `thread_qps[-1]` | answers 0 |
+| `D-RCU-2` | an unlock with no thread data | `assert` compiled out; dereferences NULL | returns |
+| `D-RCU-3` | an over-unlock (count below zero) | `OPENSSL_assert` is **active** and calls `OPENSSL_die` | restores the count to zero and clears the slot |
+
+`D-RCU-3` is the one worth reading: `OPENSSL_assert` in `crypto.h.in` is not `NDEBUG`-gated,
+so the authority checks *this* case with a fatal abort and does not check the other two at all.
+The candidate answers all three, because a library aborting its caller's process is what
+`docs/UNSAFE.md` §3 says must not happen.
+
+**`D-RCU-4` is not a divergence but a limitation, and it is recorded as one.** The whole family
+is declared in a non-installed header, none of the 6,499 exports resolves to any of the twelve
+names, and the only caller in the build is `crypto/conf/conf_mod.c`. **So there is no way to
+write a differential court for RCU today**: a probe compares two libraries across the exported
+surface, and RCU is not on it. What stands in its place is the transcription plus ten unit
+tests, two of which spawn threads — one pinning that a reader on *another* thread holds
+retirement off (the writer's completion is observed, never timed, and the 50 ms wait is in the
+safe direction: a slower machine only widens the window the assertion inspects), the other that
+the per-thread data survives an explicit thread stop and is rebuilt on the next hold. That is
+**weaker than a court and it is stated as weaker**: RCU is `IMPLEMENTED` and not
+`PARITY_VERIFIED`, and `RT-CONF-MOD` is the court that will exercise it end to end.
+
+### The defect the tests found
+
+`ossl_rcu_read_lock` allocated the thread data, stored it under the key, registered the
+handler — and never bound it to the local the walk below used, so the walk ran against the NULL
+the lookup had answered. `a_read_hold_counts_once_and_a_re_entrant_hold_counts_depth` caught it
+on the first run as a null dereference. It is the third defect in two commits that a *unit test*
+found before a court could exist, and the reason the module doc says what the tests can and
+cannot pin: the retry loop and the two condition-variable waits only fire under contention, and
+two tests exist solely because of that.
+
+### The prerequisite gate did its job twice
+
+Both directions fired, unprompted, on the first run after the change:
+
+* Its `stale_deferral` class refused the twelve `ossl_rcu_*` names the moment the crate defined
+  them, which is what retired those twelve rows from `forensics/prerequisites.json` — a
+  deferral is a promise, and this is the mechanism that makes the promise come due.
+* It reported one *new* `undefined_prerequisite`: `sleep`, because the threaded test says
+  `thread::sleep` and the authority defines a `sleep` wrapper in `include/internal/e_os.h`. That
+  is the class the row `shadowed_by_a_crate_identifier` exists for, and it now covers 18 names.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 142 / 19 | **142 / 19** (RCU exports nothing, so no ledger row moved) |
+| 6.10a units landed | 2 of 3 | **3 of 3** |
+| Phase 6 modules named as evidence | 7 | **40** |
+| unit tests | 274 | **284** |
+| prerequisite planned census | 71 | **52** |
+| prerequisite blocking dependencies | 45 | **33** |
+| prerequisite divergence names | 31 | **32** |
+| recorded divergences in the policy | 32 | **36** (`D-RCU-1`..`D-RCU-4`) |
+| courts / observations | 54 / 19,884 | **54 / 19,884** (unchanged) |

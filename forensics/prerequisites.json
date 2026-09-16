@@ -10,78 +10,6 @@
     ],
     "deferrals": [
       {
-        "symbol": "ossl_rcu_lock_new",
-        "owner_phase": 6,
-        "reason": "Phase 6.10a-iii: the RCU layer of crypto/threads_pthread.c",
-        "evidence": "docs/DECISIONS.md D121 (6.10a's shape), D122 (the three units of 6.10a)"
-      },
-      {
-        "symbol": "ossl_rcu_lock_free",
-        "owner_phase": 6,
-        "reason": "Phase 6.10a-iii: the RCU layer of crypto/threads_pthread.c",
-        "evidence": "docs/DECISIONS.md D121"
-      },
-      {
-        "symbol": "ossl_rcu_read_lock",
-        "owner_phase": 6,
-        "reason": "Phase 6.10a-iii: the RCU reader holds a quiescent point under CRYPTO_THREAD_LOCAL_RCU_KEY",
-        "evidence": "docs/DECISIONS.md D118 (why 6.10 could not precede 6.6e-ii), D121"
-      },
-      {
-        "symbol": "ossl_rcu_read_unlock",
-        "owner_phase": 6,
-        "reason": "Phase 6.10a-iii: the RCU layer of crypto/threads_pthread.c",
-        "evidence": "docs/DECISIONS.md D121"
-      },
-      {
-        "symbol": "ossl_rcu_write_lock",
-        "owner_phase": 6,
-        "reason": "Phase 6.10a-iii: the RCU layer of crypto/threads_pthread.c",
-        "evidence": "docs/DECISIONS.md D121"
-      },
-      {
-        "symbol": "ossl_rcu_write_unlock",
-        "owner_phase": 6,
-        "reason": "Phase 6.10a-iii: the RCU layer of crypto/threads_pthread.c",
-        "evidence": "docs/DECISIONS.md D121"
-      },
-      {
-        "symbol": "ossl_synchronize_rcu",
-        "owner_phase": 6,
-        "reason": "Phase 6.10a-iii: quiescent-point retirement on prior_signal",
-        "evidence": "docs/DECISIONS.md D121"
-      },
-      {
-        "symbol": "ossl_rcu_cb_item_new",
-        "owner_phase": 6,
-        "reason": "Phase 6.10a-iii: the RCU callback list",
-        "evidence": "docs/DECISIONS.md D121"
-      },
-      {
-        "symbol": "ossl_rcu_cb_item_free",
-        "owner_phase": 6,
-        "reason": "Phase 6.10a-iii: the RCU callback list",
-        "evidence": "docs/DECISIONS.md D121"
-      },
-      {
-        "symbol": "ossl_rcu_call",
-        "owner_phase": 6,
-        "reason": "Phase 6.10a-iii: the RCU callback list",
-        "evidence": "docs/DECISIONS.md D121"
-      },
-      {
-        "symbol": "ossl_rcu_uptr_deref",
-        "owner_phase": 6,
-        "reason": "Phase 6.10a-iii: the RCU pointer accessors",
-        "evidence": "docs/DECISIONS.md D121"
-      },
-      {
-        "symbol": "ossl_rcu_assign_uptr",
-        "owner_phase": 6,
-        "reason": "Phase 6.10a-iii: the RCU pointer accessors",
-        "evidence": "docs/DECISIONS.md D121"
-      },
-      {
         "symbol": "ossl_config_modules_free",
         "owner_phase": 6,
         "reason": "Phase 6.10b: crypto/conf/conf_mod.c's registry teardown",
@@ -341,6 +269,7 @@
           "now",
           "out_len",
           "outlen",
+          "sleep",
           "src",
           "stderr",
           "type",
@@ -349,7 +278,7 @@
           "u64",
           "u8"
         ],
-        "note": "Each of these is a name the authority's *non-installed* headers introduce -- `#define F(x)` in crypto/md4/md4_local.h and crypto/sha/sha_local.h, `u8`/`u16`/`u32`/`u64` in crypto/aes/aes_local.h, and macro-body and parameter names in include/internal/list.h, quic_*.h and sha3.h -- and each also appears in this crate as an ordinary Rust identifier: a generic parameter, a local binding, a width alias, or a word inside a doc comment. A lexical scan of either side cannot separate those two facts, which is why this is a recorded class rather than a narrower matcher: a matcher tuned to drop `u8` would also drop a real collision. The gate holds the list exact, so a new member has to be looked at.",
+        "note": "Each of these is a name the authority's *non-installed* headers introduce -- `#define F(x)` in crypto/md4/md4_local.h and crypto/sha/sha_local.h, `u8`/`u16`/`u32`/`u64` in crypto/aes/aes_local.h, macro-body and parameter names in include/internal/list.h, quic_*.h and sha3.h, and `sleep` in include/internal/e_os.h, which is EINTR-retry shim over the C library's -- and each also appears in this crate as an ordinary Rust identifier: a generic parameter, a local binding, a width alias, or a word inside a doc comment. A lexical scan of either side cannot separate those two facts, which is why this is a recorded class rather than a narrower matcher: a matcher tuned to drop `u8` would also drop a real collision. The gate holds the list exact, so a new member has to be looked at.",
         "evidence": "forensics/atlas/macro-owners.json (defined_in for each name); the gate's first-run report, recorded in docs/DECISIONS.md D123"
       }
     ]
