@@ -161,7 +161,7 @@
       "verdict": "pass"
     },
     "RT-EVP-CIPHER": {
-      "observations": 91,
+      "observations": 154,
       "verdict": "pass"
     },
     "RT-EXDATA": {
