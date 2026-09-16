@@ -8695,3 +8695,80 @@ and it is the cheapest standing proof that the separation holds as the stratum g
 | unit tests | 321 | **322** |
 
 SPDX-License-Identifier: Apache-2.0
+
+---
+
+## D151 — 7.3b: the `EVP_CIPHER` method object, and a Phase-6 defect four phases of callers could not see
+
+**What landed.** `src/evp/cipher.rs` is 7.3a's shape applied to the cipher class, and it is a
+subphase of its own because a cipher's context is where its *operation* lives: `EVP_CIPHER_CTX`
+and the `EVP_Encrypt*`/`EVP_Decrypt*`/`EVP_Cipher*` family are 7.3c's, so **forty-two exports** land
+here and every `EVP_CIPHER_CTX_*` name is a parameter rather than an export. The units are
+`crypto/evp/evp_enc.c`'s method half (`evp_cipher_new`, `evp_cipher_from_algorithm` with its
+four-clause structural check, `evp_cipher_cache_constants`, the three `evp_do_ciph_*` parameter
+helpers, `evp_cipher_up_ref`/`_free`/`_free_int`, `EVP_CIPHER_fetch`, `EVP_CIPHER_up_ref`,
+`EVP_CIPHER_free`, `EVP_CIPHER_can_pipeline`, `EVP_CIPHER_do_all_provided` and the four
+method-object parameter entry points), `evp_lib.c`'s thirteen method-object accessors,
+`crypto/evp/cmeth_lib.c` whole (eighteen `EVP_CIPHER_meth_*`), and `crypto/evp/e_null.c`'s
+`EVP_enc_null`.
+
+**`EVP_enc_null` is here rather than with the wrappers it looks like it belongs to**, and the
+reason is the same one that puts `EVP_md_null` in 7.3d: it is the only `e_*.c` static whose
+primitive is nobody's. `e_aes.c` calls `AES_encrypt` — that is Phase 13's, named in that stratum's
+ledger — and a court for a method class needs something to resolve through a real provider, so the
+two null methods land with their classes. It is also the first read-only method global in this
+crate, and it is where the `static` + `unsafe impl Sync` pattern enters: a `const` item would be
+inlined at each use and `EVP_enc_null()` would answer a different address per call, which is the
+one property a method object cannot lose.
+
+**Five deferral rows are discharged and the gate's blocking list is 12 → 10.** The two that this
+subphase's code actually references (`evp_cipher_cache_constants`, `evp_cipher_get_number`) were
+reported `stale_deferral` on the first run after the implementation — which is the mechanism
+working — and the five that remain are restated: four take an `EVP_CIPHER_CTX *` and are 7.3c's,
+one takes an `EVP_MD *` and is 7.3d's.
+
+**`RT-EVP-CIPHER` lands with it: ninety-one observations, zero residuals.** Four algorithms, each
+chosen for one clause of the structural check rather than for coverage of a table: `court-one` is
+the smallest legal shape (`newctx` + `freectx` + a standalone one-shot, so `fnciphcnt` is 0 and
+`ccipher` carries it), `court-enc` is the three-function arm, `court-pipe` is a pipeline with
+**no** decrypt init and is therefore the only shape that separates
+`EVP_CIPHER_can_pipeline(c, 1)` from `(c, 0)`, and `court-bad` publishes `update` with no `final`.
+
+**And `court-bad` is why the refusal is worth observing rather than annotating.** The two reasons
+`inner_evp_generic_fetch` chooses between share one message and differ only in the code: a name
+nothing publishes takes `ERR_R_UNSUPPORTED`, and a name whose constructor was *entered and
+refused* takes `ERR_R_FETCH_FAILED`. `RT-FETCH` could only reach the first, because its provider
+publishes nothing illegal; this court reaches the second, and it is the arm D149's fix had to be
+right about in the opposite direction. The flags are the other observation that carries weight:
+`evp_cipher_cache_constants` assigns `mode` and then ORs seven bits that the parameter cannot
+express, and the observed mask is `0x11300016` — five of the seven set by this probe's provider,
+one from `ccipher`'s presence, one from a name in a gettable list.
+
+**The court found a real defect, and it is older than this stratum.** `ossl_namemap_doall_names`
+— `crypto/core_namemap.c`, landed in Phase 6 — ended with `count`, the number of names walked. The
+authority's last line is `return i > 0;`: the answer is a *presence* answer, 1 when the number has
+any name at all. Every caller for four phases tested it for zero — `evp_md_from_algorithm` does —
+so the two agreed everywhere they were observed, and the crate's own unit test had encoded the
+wrong semantics (`assert_eq!(..., 4)`). The first caller that *returns the value to a consumer* is
+`EVP_CIPHER_names_do_all`, which 7.3b makes reachable, and it read `2` against the authority's
+`1`. This is the D49/D51 class at a level below the ownership model: not a symbol that went
+unowned, but a return value that no court had ever read.
+
+**One class of fault is not reproduced and is now recorded.** The authority calls the visitor
+without a NULL test, so a NULL `fn` is an indirect call through a null pointer;
+`EVP_CIPHER_names_do_all` and `EVP_MD_names_do_all` pass a consumer's pointer through unchanged,
+which makes that reachable. The crate answers 0, and `D-NAMEMAP-DOALL-1` in
+`docs/SECURITY_DIVERGENCE_POLICY.md` records it rather than the probe reproducing it.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 7 implemented / open | 11 / 939 | **52 / 898** |
+| `implemented[libcrypto]` | 1146 | **1187** |
+| recorded deferrals / blocking dependencies | 12 / 12 | **10 / 10** |
+| courts / observations | 57 / 20,277 | **58 / 20,368** |
+| prototype court: implemented / mismatches | 1146 / 0 | **1187 / 0** |
+| unit tests | 322 | **328** |
+
+SPDX-License-Identifier: Apache-2.0

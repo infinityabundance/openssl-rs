@@ -5,13 +5,17 @@
       "in-progress"
     ],
     "census": {
+      "names_a_basename_the_authority_repeats": 1,
       "units_not_reached": 83
     },
     "census_by_stratum": {
-      "7": 83
+      "7": 84
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
     "census_samples": {
+      "names_a_basename_the_authority_repeats": [
+        "docs/PHASE-7-SUBPHASES.md:7.3g:names.c"
+      ],
       "units_not_reached": [
         "crypto/asn1/ameth_lib.c",
         "crypto/asn1/d2i_param.c",
@@ -26,7 +30,6 @@
         "crypto/evp/bio_ok.c",
         "crypto/evp/c_allc.c",
         "crypto/evp/c_alld.c",
-        "crypto/evp/cmeth_lib.c",
         "crypto/evp/ctrl_params_translate.c",
         "crypto/evp/dh_support.c",
         "crypto/evp/e_aes.c",
@@ -51,7 +54,6 @@
         "crypto/evp/ec_support.c",
         "crypto/evp/encode.c",
         "crypto/evp/evp_cnf.c",
-        "crypto/evp/evp_enc.c",
         "crypto/evp/evp_err.c",
         "crypto/evp/evp_key.c",
         "crypto/evp/evp_pbe.c",
@@ -67,10 +69,12 @@
         "crypto/evp/legacy_blake2.c",
         "crypto/evp/legacy_md4.c",
         "crypto/evp/legacy_md5.c",
+        "crypto/evp/legacy_md5_sha1.c",
         "crypto/evp/legacy_mdc2.c",
         "crypto/evp/legacy_ripemd.c",
         "crypto/evp/legacy_sha.c",
         "crypto/evp/legacy_wp.c",
+        "crypto/evp/m_null.c",
         "crypto/evp/m_sigver.c",
         "crypto/evp/mac_lib.c"
       ]
@@ -81,13 +85,13 @@
         "docs/PHASE-6-SUBPHASES.md",
         "docs/PHASE-7-SUBPHASES.md"
       ],
-      "rows_judged": 49,
-      "symbols_named_by_a_row": 64,
-      "symbols_reached": 64,
+      "rows_judged": 56,
+      "symbols_named_by_a_row": 66,
+      "symbols_reached": 66,
       "unit_records": 10,
       "units_named_by_a_record": 12,
-      "units_named_by_a_row": 129,
-      "units_reached": 46
+      "units_named_by_a_row": 131,
+      "units_reached": 48
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -443,7 +447,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3g"
         ],
         "transcribed_by": []
       },
@@ -453,7 +458,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3g"
         ],
         "transcribed_by": []
       },
@@ -461,9 +467,12 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3b"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/cipher.rs"
+        ]
       },
       "crypto/evp/ctrl_params_translate.c": {
         "defines": [
@@ -502,7 +511,9 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3a",
+          "7.3d"
         ],
         "transcribed_by": []
       },
@@ -510,7 +521,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3g"
         ],
         "transcribed_by": []
       },
@@ -518,7 +530,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3g"
         ],
         "transcribed_by": []
       },
@@ -526,7 +539,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3g"
         ],
         "transcribed_by": []
       },
@@ -534,7 +548,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3g"
         ],
         "transcribed_by": []
       },
@@ -542,7 +557,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3g"
         ],
         "transcribed_by": []
       },
@@ -550,7 +566,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3g"
         ],
         "transcribed_by": []
       },
@@ -558,7 +575,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3g"
         ],
         "transcribed_by": []
       },
@@ -566,7 +584,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3g"
         ],
         "transcribed_by": []
       },
@@ -574,7 +593,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3g"
         ],
         "transcribed_by": []
       },
@@ -582,7 +602,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3g"
         ],
         "transcribed_by": []
       },
@@ -590,7 +611,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3g"
         ],
         "transcribed_by": []
       },
@@ -598,7 +620,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3b"
         ],
         "transcribed_by": []
       },
@@ -617,7 +640,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3g"
         ],
         "transcribed_by": []
       },
@@ -625,7 +649,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3g"
         ],
         "transcribed_by": []
       },
@@ -633,7 +658,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3g"
         ],
         "transcribed_by": []
       },
@@ -641,7 +667,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3g"
         ],
         "transcribed_by": []
       },
@@ -649,7 +676,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3g"
         ],
         "transcribed_by": []
       },
@@ -657,7 +685,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3g"
         ],
         "transcribed_by": []
       },
@@ -665,7 +694,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3g"
         ],
         "transcribed_by": []
       },
@@ -708,7 +738,9 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3b",
+          "7.3c"
         ],
         "transcribed_by": []
       },
@@ -718,7 +750,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3g"
         ],
         "transcribed_by": []
       },
@@ -767,7 +800,9 @@
         ],
         "recorded_by": "deferral:evp_cipher_asn1_to_param_ex",
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3b",
+          "7.3d"
         ],
         "transcribed_by": [
           "src/evp/digest.rs"
@@ -808,7 +843,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3f"
         ],
         "transcribed_by": []
       },
@@ -844,7 +880,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3e"
         ],
         "transcribed_by": []
       },
@@ -852,7 +889,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3e"
         ],
         "transcribed_by": []
       },
@@ -925,7 +963,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3g"
         ],
         "transcribed_by": []
       },
@@ -933,7 +972,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3g"
         ],
         "transcribed_by": []
       },
@@ -941,7 +981,16 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3g"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/legacy_md5_sha1.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.3g"
         ],
         "transcribed_by": []
       },
@@ -949,7 +998,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3g"
         ],
         "transcribed_by": []
       },
@@ -957,7 +1007,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3g"
         ],
         "transcribed_by": []
       },
@@ -965,7 +1016,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3g"
         ],
         "transcribed_by": []
       },
@@ -973,7 +1025,16 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3g"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/evp/m_null.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.3d"
         ],
         "transcribed_by": []
       },
@@ -991,7 +1052,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3e"
         ],
         "transcribed_by": []
       },
@@ -1001,7 +1063,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3e"
         ],
         "transcribed_by": []
       },
@@ -1189,7 +1252,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7.3",
+          "7.3f"
         ],
         "transcribed_by": []
       },
@@ -1666,10 +1730,10 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 115
+      "transcribed_units": 116
     }
   },
-  "body_hash": "6b589ad0c29c162ec9f97535ed618194aadb4df8287dd66b5dee0b3d68e03198",
+  "body_hash": "8ebc020729b9d8373b4325ae84f92e319681141ea91e8231c2353da818ad986d",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -1680,22 +1744,22 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "fb5e4da40e2ea130217fde14283b70824197f8e8797f4ea872e9e28b4a0a7bb0"
+      "sha256": "585cdb64e3b73ee7c3c119d5697de78f5d01edbaab9cc0b136d390986f0e2b80"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "3159c500f45456c3193424c15b55a7dbea66e36ec8f911eb79c152f98473b29d"
+      "sha256": "4c9da98cfac3f52a08eaebdc56c7788c9f848b8bf75085b2ff70a0d6564b8cc0"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "0a54a824de1c91d572459d4b64ecc002ed728558641a092f43b2f791bf2cdd56"
+      "sha256": "3567d3a3d77834173f9a6f2b13b5bb350949f616dd0ab6dc2520dbc80cb6d1fc"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "5448082cd9cdeab62b69a78879be39f511288002c3fbae4d84a576cb9609a2b9"
+      "sha256": "df4b908f1d48770f517f549bbf7802698db2f32a91d0e49cd68217bd3a67dc7a"
     },
     {
       "name": "source-manifest",
@@ -1715,7 +1779,7 @@
     {
       "name": "plan-PHASE-7-SUBPHASES",
       "path": "docs/PHASE-7-SUBPHASES.md",
-      "sha256": "503ef0bc96d3cfc9e96ac2f409e19722d490fa1bb31fa2faef1bb5729b096913"
+      "sha256": "7d160103e871650e0fe9cd46bc5f604a8efc0263d60679f0b3ddf3373fa3ef47"
     }
   ],
   "kind": "plan-reconciliation",

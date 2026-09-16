@@ -322,10 +322,15 @@ pub(crate) fn ossl_namemap_empty(namemap: *mut OsslNamemap) -> c_int {
 /// `sk_OPENSSL_STRING_free`, which frees the array but not the names, because the
 /// originals still belong to the map.
 ///
-/// Answers the number of names for which `fn` ran, or 0 when the number has none.
+/// Answers **`i > 0`**, not `i`: the authority's last line is `return i > 0;`, so the
+/// answer is a *presence* answer — 1 when the number has at least one name — and never
+/// a count. That distinction is invisible to every caller that tests it for zero, which
+/// is all of them until `EVP_CIPHER_names_do_all` (7.3b) returns the value straight to
+/// a consumer; `RT-EVP-CIPHER`'s `one.names_do_all.ret` is the observation that found
+/// it, and it read `2` against the authority's `1`.
 ///
 /// # Safety
-/// `namemap` must be NULL or live; `fn` must be a valid function pointer or NULL.
+/// `namemap` must be NULL or live; `fn` must be a valid function pointer.
 #[allow(dead_code)] // unreachable until the stratum that calls it lands
 pub(crate) unsafe fn ossl_namemap_doall_names(
     namemap: *mut OsslNamemap,
@@ -336,6 +341,9 @@ pub(crate) unsafe fn ossl_namemap_doall_names(
     if namemap.is_null() || number <= 0 {
         return 0;
     }
+    // The authority calls `fn` unguarded and a NULL there is a fault on its side; this
+    // crate answers 0 instead, which is D-NAMEMAP-DOALL-1 in
+    // `docs/SECURITY_DIVERGENCE_POLICY.md`.
     let Some(callback) = callback else {
         return 0;
     };
@@ -363,7 +371,7 @@ pub(crate) unsafe fn ossl_namemap_doall_names(
     // SAFETY: `dup` is the copy made above and is released exactly once, without
     // its elements.
     unsafe { OPENSSL_sk_free(dup) };
-    count
+    c_int::from(count > 0)
 }
 
 /// The name list for a number, or NULL. Caller holds the lock; the authority's
@@ -1057,18 +1065,19 @@ mod tests {
             assert_eq!(ossl_namemap_name2num(nm, s(c"zz")), 2);
 
             // `doall_names` walks one number's names in insertion order and
-            // answers their count. The counter is passed by pointer, which is the
-            // callback's only channel back.
+            // answers **whether it had any** -- `return i > 0`, not `return i`. The
+            // counter is passed by pointer, which is the callback's only channel back.
             let mut count: c_int = 0;
             let counter = ptr::addr_of_mut!(count).cast::<c_void>();
             assert_eq!(ossl_namemap_doall_names(nm, 1, None, counter), 0);
             assert_eq!(ossl_namemap_doall_names(nm, 99, Some(count_cb), counter), 0);
             // Number 1 holds "a", "b", "c" and the "fresh" that the
-            // order-dependent check let through; number 2 holds only "zz".
+            // order-dependent check let through; number 2 holds only "zz". The return
+            // is 1 for both, because both have names at all.
             assert_eq!(ossl_namemap_doall_names(nm, 2, Some(count_cb), counter), 1);
             assert_eq!(count, 1);
-            assert_eq!(ossl_namemap_doall_names(nm, 1, Some(count_cb), counter), 4);
-            assert_eq!(count, 5);
+            assert_eq!(ossl_namemap_doall_names(nm, 1, Some(count_cb), counter), 1);
+            assert_eq!(count, 5, "and the visitor ran four more times");
 
             // A NULL namemap is "empty", and a stored map is not freed by the
             // free-standing releaser.

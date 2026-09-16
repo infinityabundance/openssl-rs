@@ -281,7 +281,7 @@
         "truncf128",
         "truncf16"
       ],
-      "compiler_emitted_count": 7088,
+      "compiler_emitted_count": 7079,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -289,7 +289,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 1146,
+        "implemented": 1187,
         "implemented_symbols": [
           "ASN1_ANY_it",
           "ASN1_BIT_STRING_check",
@@ -1070,6 +1070,46 @@
           "ERR_set_mark",
           "ERR_unload_strings",
           "ERR_vset_error",
+          "EVP_CIPHER_can_pipeline",
+          "EVP_CIPHER_do_all_provided",
+          "EVP_CIPHER_fetch",
+          "EVP_CIPHER_free",
+          "EVP_CIPHER_get0_description",
+          "EVP_CIPHER_get0_name",
+          "EVP_CIPHER_get0_provider",
+          "EVP_CIPHER_get_block_size",
+          "EVP_CIPHER_get_flags",
+          "EVP_CIPHER_get_iv_length",
+          "EVP_CIPHER_get_key_length",
+          "EVP_CIPHER_get_mode",
+          "EVP_CIPHER_get_nid",
+          "EVP_CIPHER_get_params",
+          "EVP_CIPHER_get_type",
+          "EVP_CIPHER_gettable_ctx_params",
+          "EVP_CIPHER_gettable_params",
+          "EVP_CIPHER_impl_ctx_size",
+          "EVP_CIPHER_is_a",
+          "EVP_CIPHER_meth_dup",
+          "EVP_CIPHER_meth_free",
+          "EVP_CIPHER_meth_get_cleanup",
+          "EVP_CIPHER_meth_get_ctrl",
+          "EVP_CIPHER_meth_get_do_cipher",
+          "EVP_CIPHER_meth_get_get_asn1_params",
+          "EVP_CIPHER_meth_get_init",
+          "EVP_CIPHER_meth_get_set_asn1_params",
+          "EVP_CIPHER_meth_new",
+          "EVP_CIPHER_meth_set_cleanup",
+          "EVP_CIPHER_meth_set_ctrl",
+          "EVP_CIPHER_meth_set_do_cipher",
+          "EVP_CIPHER_meth_set_flags",
+          "EVP_CIPHER_meth_set_get_asn1_params",
+          "EVP_CIPHER_meth_set_impl_ctx_size",
+          "EVP_CIPHER_meth_set_init",
+          "EVP_CIPHER_meth_set_iv_length",
+          "EVP_CIPHER_meth_set_set_asn1_params",
+          "EVP_CIPHER_names_do_all",
+          "EVP_CIPHER_settable_ctx_params",
+          "EVP_CIPHER_up_ref",
           "EVP_MD_fetch",
           "EVP_MD_free",
           "EVP_MD_get0_name",
@@ -1079,6 +1119,7 @@
           "EVP_MD_up_ref",
           "EVP_default_properties_enable_fips",
           "EVP_default_properties_is_fips_enabled",
+          "EVP_enc_null",
           "EVP_get1_default_properties",
           "EVP_set_default_properties",
           "INT32_it",
@@ -1438,7 +1479,7 @@
           "i2d_DISPLAYTEXT",
           "i2t_ASN1_OBJECT"
         ],
-        "scaffolded": 4750
+        "scaffolded": 4709
       },
       "libssl": {
         "authority_exports": 603,
@@ -1449,18 +1490,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 1146,
-      "scaffolded": 5353
+      "implemented": 1187,
+      "scaffolded": 5312
     }
   },
-  "body_hash": "db40e8bc65615c210c7846f3d9cec04d503418f87d9a705b12378aca0a9cfdbd",
+  "body_hash": "f8c1c9f02de347e5422a125b633d053af91e281f3347f058e3caa5750e6944df",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "cd18a0732460480d67ee82d713143bff351311fea4ddfa6377ad1a28b3d16474"
+      "sha256": "284a9f9c80e66c7871561976ddbe42298bfaee5f57d890f552f18260217b23a5"
     },
     {
       "name": "authority-exports",
