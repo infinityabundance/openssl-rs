@@ -6454,3 +6454,55 @@ behaves.
 | phase courts / observations | 54 / 19,869 | **54 / 19,884** |
 | probe_hygiene | clean (43 probes) | **clean (43 probes)** |
 | FRF objects / receipts / challenges | 389 / 47 / 94 | **389 / 47 / 94** (rebuilt, same counts) |
+
+## D121 — 6.10 splits four ways, and its first part is RCU
+
+**Consequence of D118, written down because 6.10 is the largest remaining block in the
+stratum and the next session should not re-derive its shape.** Phase 6 stands at **142
+implemented / 19 open** with 6.6e-ii sealed; the nineteen are 6.10's seventeen and the two
+`OSSL_LIB_CTX` exports of 6.6d/6.6g.
+
+**6.10a — the RCU layer.** `ossl_rcu_lock_new`, `_lock_free`, `_read_lock`, `_read_unlock`,
+`_write_lock`, `_write_unlock`, `synchronize_rcu`, `cb_item_new`, `cb_item_free`, `rcu_call`,
+`uptr_deref` and `assign_uptr`, over `crypto/threads_pthread.c`. The structures are
+`rcu_lock_st` (a callback list, the owning context, the quiescent-point array and its six
+indices, three mutexes and two condition variables), `rcu_qp { uint64_t users; }`,
+`thread_qp { qp, depth, lock }` and `rcu_thr_data { thread_qp[10] }` with `MAX_QPS 10`. The
+read path stores that per-thread state under `CRYPTO_THREAD_LOCAL_RCU_KEY` **in the lock's
+own context** and registers `ossl_rcu_free_local_data` as a thread-exit handler — which is
+D118's finding, and the reason 6.6e-ii had to land first. `get_hold_current_qp` is a re-try
+loop over `reader_idx`; `ossl_synchronize_rcu` waits for in-order retirement on
+`prior_signal` and then for the reader count to reach zero.
+
+**This part is a transcription rather than a design, because the primitives already exist.**
+`src/runtime/thread.rs` carries `ossl_crypto_condvar_*` over `pthread_mutex_t` and
+`pthread_cond_t`, which is what the authority's RCU is built on. The search that established
+this is the same one that would have been made anyway; recording it here means the next
+session starts by writing the file rather than by asking whether it can.
+
+**6.10b — the registry.** `conf_mod.c`'s fifteen exports plus `ossl_config_modules_free`,
+over `supported_modules` and `initialized_modules`: two `STACK_OF` pointers that are *copied,
+modified and swapped* under the RCU write lock, which is why the two parts are not one.
+`module_find`'s truncation at the last `.` is the behaviour worth its own observation — a
+module named `modname.XXXX` matches `modname`, so the same module can be initialised more
+than once.
+
+**6.10c — `conf_sap.c` and `conf_mall.c`**, which is where `OPENSSL_config`/`OPENSSL_no_config`
+and the default-method initialiser live, and therefore where the builtin-module fan-out is.
+
+**6.10d — `ASN1_add_oid_module`**, the one of the six builtin modules this stratum owns.
+
+**The fan-out is a recorded residual, measured rather than assumed.** `OPENSSL_load_builtin_modules`
+registers six modules: `ENGINE_add_conf_module` and `ENGINE_load_builtin_engines` (ENGINE's,
+and **ENGINE is enabled in this profile** — `configdata.pm` carries `engine` in its options
+and `"engine" => "1"`), `ossl_provider_add_conf_module` (6.8d), `ossl_random_add_conf_module`
+(Phase 9), the deprecated `EVP_add_alg_module` (Phase 7) and `ossl_config_add_ssl_module`
+(libssl's). The registry registers the ones that exist and names the ones that do not, and a
+config file naming `openssl_init` observes the difference. **`RT-CONF-MOD` is the court.**
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 142 / 19 | **142 / 19** (no source changed) |
+| subphases named | 6.10 | **6.10a–6.10d** |
