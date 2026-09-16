@@ -70,6 +70,7 @@ from atlas_common import (  # noqa: E402
     write_text,
 )
 
+GENERATOR = "forensics/tools/gen_err_raise_sites.py"
 OUT_JSON = REPO_ROOT / "forensics" / "atlas" / "err-raise-sites.json"
 OUT_RS = REPO_ROOT / "src" / "runtime" / "err_sites.rs"
 
@@ -862,10 +863,80 @@ def render_rust(doc: dict, prefix: str) -> str:
     return "\n".join(out)
 
 
+def check_against_artefact() -> int:
+    """The weak tier: verify the generated Rust against the committed artefact.
+
+    Used when the authority's source tree is absent, which is the case on every runner that has
+    only the repository. It catches a hand-edited `err_sites.rs` and a JSON that has drifted
+    from it. It cannot catch the authority having changed -- the authority is pinned by archive
+    hash elsewhere, and the court, which has the tree, re-derives. Which tier ran is printed,
+    because a check that silently weakens is the thing this project exists not to have.
+
+    The pairing is exact rather than approximate: `render_rust` is a pure function of the
+    committed document, so the comparison is the generator run against its own output.
+    """
+    if not OUT_JSON.is_file():
+        print(
+            f"[{GENERATOR}] neither the authority's source tree nor "
+            f"{rel(OUT_JSON)} is present; nothing can be checked",
+            file=sys.stderr,
+        )
+        return 1
+    doc = json.loads(OUT_JSON.read_text(encoding="utf-8"))
+    prefix = doc["body"]["prefix"]
+    expected = render_rust(doc, prefix)
+    actual = OUT_RS.read_text(encoding="utf-8") if OUT_RS.is_file() else ""
+    if actual != expected:
+        # The first differing line, because a 900-line coordinate table makes "they differ"
+        # useless on its own.
+        exp_lines = expected.splitlines()
+        act_lines = actual.splitlines()
+        at = next(
+            (i for i, (a, b) in enumerate(zip(act_lines, exp_lines)) if a != b),
+            min(len(act_lines), len(exp_lines)),
+        )
+        print(
+            f"[{GENERATOR}] {rel(OUT_RS)} does not match {rel(OUT_JSON)}; the generated "
+            f"file was edited by hand, the artefact is stale, or the renderer changed "
+            f"without the artefact being regenerated. First difference at line {at + 1}:\n"
+            f"  committed: {act_lines[at] if at < len(act_lines) else '<eof>'}\n"
+            f"  from json: {exp_lines[at] if at < len(exp_lines) else '<eof>'}",
+            file=sys.stderr,
+        )
+        return 1
+    print(
+        f"[err-raise-sites] ok (weak tier, authority source absent): {rel(OUT_RS)} "
+        f"matches {rel(OUT_JSON)}"
+    )
+    return 0
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
     args = ap.parse_args(argv)
+
+    # The authority's source tree is **not committed**, so a runner that has only the
+    # repository cannot re-derive the coordinates. That is a fact about this project and not a
+    # defect: the tree is ~100 MB and the courts, which do have it, are where re-derivation
+    # happens. So the generator has two tiers, and which one ran is printed rather than
+    # implied:
+    #
+    #   * authority present  -> re-derive from the covered units' `ERR_raise*` sites (the
+    #                           strong tier, and the one the pipeline and the CI `courts` job
+    #                           use);
+    #   * authority absent   -> check `err_sites.rs` against the committed JSON, which still
+    #                           catches a hand-edit or a stale artefact.
+    #
+    # This is `gen_ctype_table.py`'s pattern, and it is here for the same reason: the pair is
+    # what `evidence_determinism.py` needs in order to run this generator on a runner that has
+    # no authority. That was D109's open half -- the generator was in neither the determinism
+    # list nor the portability list, so `err_sites.rs` could drift silently. Adding it to only
+    # one of the two lists would have replaced one silent gap with two (docs/DECISIONS.md
+    # D109, closed by D135).
+    first_source = COVERED_FILES[0][0]
+    if not (resolve_authority(args.authority).source / first_source).is_file():
+        return check_against_artefact()
 
     auth = resolve_authority(args.authority)
     build_dir = authority_build_dir(auth.id)
@@ -941,7 +1012,7 @@ def main(argv: list[str]) -> int:
         authority=auth.id,
         inputs=inputs,
         body=body,
-        generator="forensics/tools/gen_err_raise_sites.py",
+        generator=GENERATOR,
     )
     write_json(OUT_JSON, doc)
     write_text(OUT_RS, render_rust(doc, prefix))

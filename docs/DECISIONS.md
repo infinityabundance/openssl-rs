@@ -7615,3 +7615,64 @@ states to decide which strata are claiming), is listed in `evidence_determinism.
 D132's obligation was Phase 6's and this is what discharges it.
 
 SPDX-License-Identifier: Apache-2.0
+
+## D135 — D109's two unlisted generators are listed, and the drift it predicted was real
+
+D109 recorded an open gap and deliberately left it open: `gen_err_raise_sites.py`, its
+`forensics/atlas/err-raise-sites.json` and `src/runtime/err_sites.rs` were in neither
+`evidence_determinism.py`'s generator list nor its comparison list — and the same was true of
+`gen_bn_primes.py` and `src/bn/prime_data.rs`. The note said why it was not fixed there and then:
+"fixing it means adding the same tool to `check_evidence_portability.py`'s exercised set as well,
+so that the two agree about which generators need the authority's source tree. Doing half of that
+now would replace one silent gap with two."
+
+Both halves are now in, and the reason they had to be done together is structural rather than
+stylistic: `check_evidence_portability.py` imports `evidence_determinism.GENERATORS` and exercises
+that one list, so listing a generator is what puts it in both gates at once. Doing half would have
+meant a second, hand-maintained list — which is the failure mode this project keeps removing.
+
+**The blocker was real, and it is why the gap needed a weak tier rather than a list entry.**
+Both generators read the **authority**, and the authority is not committed: `gen_err_raise_sites.py`
+scans the covered units' `ERR_raise*` sites and resolves their symbol values through the compiler,
+and `gen_bn_primes.py` compiles a C probe against the admitted prefix and runs it to read the
+primes back. `evidence_determinism.py` runs every listed generator with no arguments and fails on
+a non-zero exit, so simply listing either one would have made the `static gates` job — which has no
+authority — fail. That is the same constraint `gen_ctype_table.py` already solved, and the solution
+is the same: **two tiers, with which one ran printed rather than implied.**
+
+* authority present → re-derive from the authority (the strong tier, and the one the court and the
+  pipeline use);
+* authority absent → check the generated `.rs` against the committed JSON, which still catches a
+  hand-edited generated file or a stale artefact, and cannot catch the authority itself having
+  changed (the authority is pinned by archive hash elsewhere, and the court re-derives).
+
+`gen_bn_primes.py` needed one more thing than the other two: the primes themselves are not in the
+JSON, only their SHA-256, and storing 8192-bit primes twice would put two copies of the same data
+in the repository and let them disagree. So the weak tier recovers the bytes **from the committed
+Rust**, re-hashes them against the record, and only then rebuilds and compares the file. A byte
+changed in `prime_data.rs` therefore fails twice over — once on the digest and once on the
+rebuild — and neither check needs a second copy of the data. Both generators' rendering is now a
+pure function factored out of `main` (`render_rust`), so the comparison is a difference in the
+*inputs* and never in the rendering.
+
+**And the drift D109 predicted had already happened.** `src/bn/prime_data.rs` was committed with
+sixteen bytes to a line while `rust_array` had been changed to wrap at twelve, so the file was
+stale relative to its own generator and nothing compared them. Regenerating it against the
+authority changes the wrapping and **no value** — the per-prime SHA-256s in `bn-primes.json` are
+byte-identical, which is what makes this a formatting repair rather than a data correction. The
+same check on `err_sites.rs` and `err-raise-sites.json` found them in sync; that is the difference
+between a gap that was theoretical and one that had already bitten, and it is the argument for
+closing both at once rather than leaving D109's note as the record.
+
+`evidence_determinism.py`'s artefact count goes 14 → 19 (two JSON artefacts and one more `.rs`
+source, plus the two generators). `check_evidence_portability.py` exercises the same 19 and still
+passes with `nm`, `objdump`, `readelf`, `ar` and `file` stubbed out — which is the property that
+matters, because both new generators invoke `clang` on the strong tier and the point of that gate
+is that no *stubbed* tool is needed either way. Both gates were also run with the authority
+directory moved aside, which is exactly the CI environment, and the three weak tiers were observed
+firing by name rather than inferred from a green exit.
+
+Both `.rs` generators being unlisted was one gap with two instances; D109 recorded it as such, and
+this is the commit that closes it rather than the one that documents it.
+
+SPDX-License-Identifier: Apache-2.0
