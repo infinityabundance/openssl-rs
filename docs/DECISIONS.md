@@ -6925,3 +6925,67 @@ become reachable:
 | Phase 6 implemented / open | 142 / 19 | **142 / 19** (no source changed) |
 | the block's parts | 6.10a–6.10d named | **6.10a landed; b, c and d measured to the line, with the eleven facts above fixed** |
 | facts that were going to be guessed | — | **11 recorded, of which 3 are build-profile facts and 1 was a suspected hole that is not one** |
+
+## D126 — 6.10b's first attempt, discarded, and the four things it proved must be looked up first
+
+**A first transcription of `conf_mod.c` was composed and then deleted rather than committed, and
+that is the record.** It was ~1,000 lines of Rust covering the registry, the copy-modify-swap
+discipline, the DSO path and all sixteen exports, and it referenced **ten identifiers that were
+guessed rather than read**: six `err_sites::ERR_RAISE_SITES_*` constants, `str.rs::strncmp`,
+`obj.rs::NID_undef`, `ctype.rs::ossl_isspace`, and two `ERR_*` spellings. Nine of the ten were
+wrong or absent. The staging branch stayed green because nothing was pushed, and the attempt is
+recorded here rather than in the tree because **a transcription whose error coordinates are
+invented is not a transcription** — it is the shape of one, and it would have been reviewed as
+if it were real.
+
+**D125's eleven facts came out of reading the authority. These four came out of *trying to
+write* it, and they are the ones that cost the attempt.**
+
+1. **The raise-site constants are generated, and their names are `CONF_MOD_<line>`.**
+   `src/runtime/err_sites.rs` has exactly four entries for `conf_mod.c` — `CONF_MOD_104`
+   (`do_init_module_list_lock`, `ERR_R_CRYPTO_LIB`), `CONF_MOD_163`
+   (`CONF_R_OPENSSL_CONF_REFERENCES_MISSING_SECTION`), `CONF_MOD_276`
+   (`CONF_R_UNKNOWN_MODULE_NAME`) and `CONF_MOD_286`
+   (`CONF_R_MODULE_INITIALIZATION_ERROR`) — each carrying `file`, `line`, `func`, `lib`,
+   `reason` and `dynamic_reason`. The naming rule is the header stem and the line, so **a
+   raise site is never typed and never guessed**: the generator's own name is looked up. That
+   is D123's `err_sites` note applied, and it is the class of mistake that survives review
+   because a plausible-looking constant name reads like evidence.
+2. **`conf_mod.c:331`'s raise is the one with a variable reason**, `ERR_raise_data(ERR_LIB_CONF,
+   errcode, ...)` where `errcode` is set by which of three steps failed. The artefact carries
+   **79** sites with `dynamic_reason: true`, so the shape exists; whether this specific site is
+   among them is the first thing to check, because if the generator emits a constant for it the
+   transcription reads it and if it does not then the reason code is a *runtime* value and needs
+   the dynamic-raise entry point rather than a site constant.
+3. **Three helpers do not exist where the authority's names suggest.** `str.rs` has **no
+   `strncmp`** — `module_find`'s comparison must be transcribed rather than forwarded, and it is
+   the second place in this file (after the last-dot scan) where a libc call has to be written
+   out. The `ERR_*` accessors are not spelled `ERR_peek_last_error` / `ERR_GET_REASON`:
+   `err.rs` exports `ERR_peek_last_error_all` and the two halves of a packed error are reached
+   another way, which is what `CONF_modules_load_file_ex`'s missing-file test needs. `ctype.rs`
+   **does** have `ossl_isspace` and `obj.rs` **does** have `NID_undef`, and turning up two of
+   the ten right is not a defence of the other eight.
+4. **The module belongs in `src/runtime/confmod/`, not the ledger's `src/confmod/`.** The
+   crate's CONF data model is `src/runtime/conf/` (`conf_api.c`, `conf_def.c`, `conf_lib.c`,
+   `conf_sap.c`), so `conf_mod.c`'s transcription belongs beside it; `src/confmod/` at the crate
+   root would be the only stratum module outside its stratum's directory. That means
+   `phase6_obligations.py`'s `MODULE_PREFIXES` and `phase_state.py`'s `PHASE6_MODULES` are
+   **updated to the real path in the same commit that creates it** — a ledger naming a module
+   that does not exist is the defect the ownership audit exists to catch, and pointing it at
+   itself is not a way to keep it quiet.
+
+### What the next attempt starts from
+
+D125's eleven facts, these four, and nothing else to derive: the registry's structures and the
+copy-modify-swap are written out in D125; the raise sites are four named constants; the two
+places a libc call must be transcribed by hand are known by name; and the module's home is
+decided. The order is unchanged — **6.10b, then 6.10d, then 6.10c, then
+`OPENSSL_load_builtin_modules`, then 6.8d** — and `RT-CONF-MOD` is its court.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 142 / 19 | **142 / 19** (nothing was committed) |
+| lines composed and discarded | — | **~1,000, whose ten guessed identifiers are the reason** |
+| identifiers that must be read rather than guessed | 10 | **2 left to check** (`conf_mod.c:331`'s site, and the `ERR_*` pair for the packed-error test) |
