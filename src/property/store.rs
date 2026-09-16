@@ -55,33 +55,40 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-// The query path is this file's other half, and its callers are 7.2's `evp_fetch.c` and 7.1's
-// `core_fetch.c` walk: `_add`, `_remove`, `_remove_all_provided` and `_cache_flush_all` are reached
-// by a method store's clients, and `_lock_store`/`_unlock_store` are the `mcm` pair the walk takes
-// around every map. None of them has a caller in this crate yet, so the module carries one
-// allowance rather than eight per-item ones whose comments would each restate this paragraph.
-// What retires it is 7.2, which calls every entry point here.
+// D143 lands the query path, so `_fetch`, `_cache_get`, `_cache_set` and `_do_all` are complete and
+// the *store* is whole. What still has no caller in this crate is the store's surface as seen from
+// outside it: `_add`, `_remove`, `_remove_all_provided`, `_fetch`, the cache pair and `_do_all` are
+// called by `evp_fetch.c`'s methods, and `_lock_store`/`_unlock_store` by its `mcm` — which is 7.2.
+// The module carries one allowance rather than nine per-item ones whose comments would each
+// restate this paragraph, and what retires it is 7.2.
 #![allow(dead_code)]
 
 use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
+use core::sync::atomic::{AtomicU32, Ordering};
 
 use crate::property::defn_cache::{ossl_prop_defn_get, ossl_prop_defn_set};
 use crate::property::list::OsslPropertyList;
 use crate::property::parse::{ossl_parse_property, ossl_property_free};
+use crate::property::parse::{ossl_parse_query, ossl_property_match_count, ossl_property_merge};
+use crate::property::query::ossl_property_has_optional;
 use crate::provider::OsslProvider;
 use crate::runtime::lhash::{
-    OPENSSL_LH_doall, OPENSSL_LH_flush, OPENSSL_LH_free, OPENSSL_LH_new, OPENSSL_LH_num_items,
-    OPENSSL_LH_strhash, OpenSslLhash,
+    OPENSSL_LH_delete, OPENSSL_LH_doall, OPENSSL_LH_doall_arg, OPENSSL_LH_error, OPENSSL_LH_flush,
+    OPENSSL_LH_free, OPENSSL_LH_get_down_load, OPENSSL_LH_insert, OPENSSL_LH_new,
+    OPENSSL_LH_num_items, OPENSSL_LH_retrieve, OPENSSL_LH_set_down_load, OPENSSL_LH_strhash,
+    OpenSslLhash,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup, CRYPTO_zalloc};
+use crate::runtime::rdtsc::OPENSSL_rdtsc;
 use crate::runtime::sparse_array::{
-    ossl_sa_doall, ossl_sa_doall_arg, ossl_sa_free, ossl_sa_get, ossl_sa_new, ossl_sa_set,
-    OpenSslSa, OsslUintMax,
+    ossl_sa_doall, ossl_sa_doall_arg, ossl_sa_free, ossl_sa_get, ossl_sa_new, ossl_sa_num,
+    ossl_sa_set, OpenSslSa, OsslUintMax,
 };
 use crate::runtime::stack::{
-    OPENSSL_sk_delete, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push,
-    OPENSSL_sk_value, OpenSslStack,
+    OPENSSL_sk_delete, OPENSSL_sk_dup, OPENSSL_sk_free, OPENSSL_sk_new_null,
+    OPENSSL_sk_new_reserve, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_value,
+    OpenSslStack,
 };
 use crate::runtime::thread::{
     CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new, CRYPTO_THREAD_read_lock, CRYPTO_THREAD_unlock,
@@ -105,6 +112,10 @@ const LINE_FREE_IMPL: c_int = 207;
 const LINE_FREE_QUERY: c_int = 215;
 /// `ossl_method_store_free`'s `OPENSSL_free(store)` (line 268).
 const LINE_FREE_STORE: c_int = 268;
+/// `ossl_method_store_cache_set`'s `OPENSSL_malloc` for the cache entry (line 922).
+const LINE_MALLOC_QUERY: c_int = 922;
+/// `alg_copy`'s `OPENSSL_memdup(alg, sizeof(ALGORITHM))` (line 563).
+const LINE_MEMDUP_ALG: c_int = 563;
 
 /// `int (*up_ref)(void *)` and `void (*free)(void *)` — the reference count and the destructor a
 /// method carries, so the store can hold one without knowing what it is.
@@ -900,6 +911,642 @@ pub(crate) unsafe fn ossl_method_store_remove_all_provided(
     1
 }
 
+/// `#define IMPL_CACHE_FLUSH_THRESHOLD 500`.
+///
+/// The number of cached query results the whole store may hold before a `_cache_set` asks for a
+/// flush. The authority's own comment calls it a threshold rather than a bound and says why the
+/// strategy on the other side of it is stochastic.
+const IMPL_CACHE_FLUSH_THRESHOLD: usize = 500;
+
+/// `typedef struct { LHASH_OF(QUERY) *cache; size_t nelem; uint32_t seed;
+/// unsigned char using_global_seed; } IMPL_CACHE_FLUSH`.
+///
+/// The state one stochastic flush carries: the table currently being walked (rewritten per
+/// algorithm), how many entries were *kept*, the xorshift's current word, and whether the seed came
+/// from the counter or from the process-global fallback.
+#[repr(C)]
+struct ImplCacheFlush {
+    /// `LHASH_OF(QUERY) *cache` — the table being flushed, not the store's.
+    cache: *mut OpenSslLhash,
+    /// `size_t nelem` — entries the walk kept.
+    nelem: usize,
+    /// `uint32_t seed` — the xorshift's state, advanced in place.
+    seed: u32,
+    /// `unsigned char using_global_seed` — 1 when the counter answered 0.
+    using_global_seed: core::ffi::c_uchar,
+}
+
+/// `static TSAN_QUALIFIER uint32_t global_seed = 1;`.
+///
+/// The fallback seed, advanced only when the timestamp counter is unavailable — and then advanced
+/// by *adding* the word just generated, so two flush cycles a moment apart do not draw the same
+/// sequence. `TSAN_QUALIFIER` and the `tsan_load`/`tsan_add` pair the authority wraps it in are
+/// thread-sanitizer annotations; the atomic is the part that matters, and an `AtomicU32` with
+/// `Relaxed` ordering reproduces the annotation's guarantee (a plain load and a plain add) without
+/// claiming stronger ordering than the authority has.
+static GLOBAL_SEED: AtomicU32 = AtomicU32::new(1);
+
+/// `static void impl_cache_flush_cache(QUERY *c, IMPL_CACHE_FLUSH *state)`.
+///
+/// The 32-bit xorshift from Marsaglia's *Xorshift RNGs*, which the authority cites by DOI, and then
+/// one bit decides: **odd frees, even keeps**. The free is a `delete` from the table rather than a
+/// `doall`-style release, and that is safe because the table's down-load was set to 0 by the caller
+/// — every element is in a bucket of its own, so a delete cannot shift another element out from
+/// under the walk.
+///
+/// # Safety
+/// `c` must be a live element of `(*state).cache`, and `state` a live `ImplCacheFlush`.
+unsafe extern "C" fn impl_cache_flush_cache(c: *mut c_void, state: *mut c_void) {
+    let state = state.cast::<ImplCacheFlush>();
+    // SAFETY: `state` is live per the contract.
+    let n = unsafe { (*state).seed };
+    let n = n ^ (n << 13);
+    let n = n ^ (n >> 17);
+    let n = n ^ (n << 5);
+    // SAFETY: `state` is live, so this writes the advanced word back on both branches -- which is
+    // the point: the sequence advances once per element whether the element is kept or dropped.
+    unsafe { (*state).seed = n };
+    if (n & 1) != 0 {
+        // SAFETY: `c` is a live element of the table and `state` is live.
+        let removed = unsafe { OPENSSL_LH_delete((*state).cache, c) };
+        // SAFETY: `removed` is the element just unlinked, so it is this walk's own.
+        unsafe { impl_cache_free(removed.cast::<Query>()) };
+    } else {
+        // SAFETY: `state` is live.
+        unsafe { (*state).nelem += 1 };
+    }
+}
+
+/// `IMPLEMENT_LHASH_DOALL_ARG(QUERY, IMPL_CACHE_FLUSH)`, which is the `doall_arg` call with the
+/// two-argument thunk: `lh_QUERY_doall_IMPL_CACHE_FLUSH`.
+///
+/// # Safety
+/// `alg` must be a live `Algorithm` and `v` a live `ImplCacheFlush`.
+unsafe fn impl_cache_flush_one_alg(_idx: OsslUintMax, alg: *mut c_void, v: *mut c_void) {
+    let alg = alg.cast::<Algorithm>();
+    let state = v.cast::<ImplCacheFlush>();
+    // SAFETY: `alg` and `state` are live per the contract.
+    let cache = unsafe { (*alg).cache };
+    // SAFETY: `cache` is the table this module built.
+    let orig = unsafe { OPENSSL_LH_get_down_load(cache) };
+    // SAFETY: `state` is live.
+    unsafe { (*state).cache = cache };
+    // The down-load is **set to 0 for the walk and restored after**, and both halves matter: at 0
+    // every element is in a bucket of its own, so a `delete` inside the walk cannot move an element
+    // the walk has not reached; and restoring it is what keeps the table's later retrievals
+    // O(1)-ish rather than a linear scan.
+    // SAFETY: `cache` is live.
+    unsafe { OPENSSL_LH_set_down_load(cache, 0) };
+    // SAFETY: `cache` is live and every element it hands the thunk is a `Query` this module built;
+    // `state` outlives the walk.
+    unsafe {
+        OPENSSL_LH_doall_arg(cache, Some(impl_cache_flush_cache), state.cast::<c_void>());
+        OPENSSL_LH_set_down_load(cache, orig);
+    }
+}
+
+/// `static void ossl_method_cache_flush_some(OSSL_METHOD_STORE *store)`.
+///
+/// The stochastic flush, and every part of it is deliberate:
+///
+///   * the seed comes from the **timestamp counter**, so two flushes do not drop the same entries;
+///   * a counter that answers 0 falls back to `GLOBAL_SEED` and *adds* the word back, so the
+///     fallback still advances;
+///   * `cache_need_flush` is cleared **before** the walk rather than after, so a concurrent
+///     `_cache_set` that races the flush leaves the flag set for the next one instead of losing it;
+///   * `cache_nelem` is replaced by the number of entries the walk *kept*, which is exact because
+///     every kept entry was counted and every dropped one was deleted from a table whose count is
+///     therefore unchanged.
+///
+/// **Its outcome is not reproducible, on either side.** The authority's own answer depends on its
+/// timestamp counter, so no court may assert which entries survive — `RT-FETCH` says so in its
+/// header and observes the *threshold* behaviour instead.
+///
+/// # Safety
+/// `store` must be a live store.
+unsafe fn ossl_method_cache_flush_some(store: *mut OsslMethodStore) {
+    let mut state = ImplCacheFlush {
+        cache: core::ptr::null_mut(),
+        nelem: 0,
+        seed: OPENSSL_rdtsc(),
+        using_global_seed: 0,
+    };
+    if state.seed == 0 {
+        state.using_global_seed = 1;
+        state.seed = GLOBAL_SEED.load(Ordering::Relaxed);
+    }
+    // SAFETY: `store` is live per the contract.
+    unsafe {
+        (*store).cache_need_flush = 0;
+        ossl_sa_doall_arg(
+            (*store).algs,
+            Some(impl_cache_flush_one_alg),
+            ptr::addr_of_mut!(state).cast::<c_void>(),
+        );
+        (*store).cache_nelem = state.nelem;
+    }
+    if state.using_global_seed != 0 {
+        GLOBAL_SEED.fetch_add(state.seed, Ordering::Relaxed);
+    }
+}
+
+/// `int ossl_method_store_cache_get(OSSL_METHOD_STORE *store, OSSL_PROVIDER *prov, int nid,
+/// const char *prop_query, void **method)`.
+///
+/// A cached *lookup*: build a key of the query text and the provider, retrieve, and take a
+/// reference. `method` is written only on success, which is why `res` is the return value and not
+/// `*method`.
+///
+/// The three refusals are the authority's: a non-positive id, a NULL store, and a **NULL
+/// `prop_query`** — a cache keyed by text cannot be asked with no text, and that is a refusal rather
+/// than a miss, so a caller that passes NULL learns nothing from the zero it gets.
+///
+/// # Safety
+/// `store` must be NULL or live; `prov` NULL or live; `prop_query` NULL or NUL-terminated;
+/// `method` NULL or writable for a `*mut c_void`.
+pub(crate) unsafe fn ossl_method_store_cache_get(
+    store: *mut OsslMethodStore,
+    prov: *mut OsslProvider,
+    nid: c_int,
+    prop_query: *const c_char,
+    method: *mut *mut c_void,
+) -> c_int {
+    if nid <= 0 || store.is_null() || prop_query.is_null() {
+        return 0;
+    }
+    let mut res: c_int = 0;
+    // SAFETY: `store` is live per the contract.
+    unsafe {
+        if ossl_property_read_lock(store) == 0 {
+            return 0;
+        }
+        let alg = ossl_method_store_retrieve(store, nid);
+        if !alg.is_null() {
+            // The key is a *stack* `Query` whose `body` is never used: the comparator reads `query`
+            // and `provider` only, and the hash reads `query`. The authority builds it on the stack
+            // for exactly that reason.
+            let mut elem = Query {
+                provider: prov,
+                query: prop_query,
+                method: Method {
+                    method: ptr::null_mut(),
+                    up_ref: unused_up_ref,
+                    free: unused_free,
+                },
+                body: [0],
+            };
+            let r = OPENSSL_LH_retrieve((*alg).cache, ptr::addr_of_mut!(elem).cast::<c_void>())
+                .cast::<Query>();
+            if !r.is_null() && ossl_method_up_ref(ptr::addr_of_mut!((*r).method)) != 0 {
+                *method = (*r).method.method;
+                res = 1;
+            }
+        }
+        ossl_property_unlock(store);
+    }
+    res
+}
+
+/// `int ossl_method_store_cache_set(OSSL_METHOD_STORE *store, OSSL_PROVIDER *prov, int nid,
+/// const char *prop_query, void *method, int (*method_up_ref)(void *),
+/// void (*method_destruct)(void *))`.
+///
+/// Three behaviours in one function, and the `method == NULL` arm is the one a reader is least
+/// likely to expect: **it is a delete.** A caller that finds the provider gone invalidates its
+/// entry by setting NULL, which is why the entry point has a destructor parameter it does not use
+/// on that path.
+///
+/// The insert path allocates one block for the header *and* the query text, points `query` at the
+/// text inside the same allocation, copies the text with its terminator, and then distinguishes
+/// three outcomes from one `insert`:
+///
+///   * the insert **replaced** an entry — free the old one and return, without touching the count,
+///     because the table's size did not change;
+///   * the insert succeeded — bump the count, and cross the threshold into a flush request;
+///   * the insert failed — drop the reference the new entry took and report 0, leaving nothing
+///     behind.
+///
+/// The `ossl_assert(prov != NULL)` is `(x) != 0` under `NDEBUG`, so a NULL provider is a refusal.
+///
+/// # Safety
+/// `store` must be NULL or live; `prov` live; `prop_query` NULL or NUL-terminated; `method` NULL or
+/// the method to cache, valid for the two callbacks.
+pub(crate) unsafe fn ossl_method_store_cache_set(
+    store: *mut OsslMethodStore,
+    prov: *mut OsslProvider,
+    nid: c_int,
+    prop_query: *const c_char,
+    method: *mut c_void,
+    method_up_ref: MethodUpRefFn,
+    method_destruct: MethodFreeFn,
+) -> c_int {
+    if nid <= 0 || store.is_null() || prop_query.is_null() {
+        return 0;
+    }
+    if prov.is_null() {
+        return 0;
+    }
+    let mut res: c_int = 1;
+    let mut p: *mut Query = ptr::null_mut();
+    // SAFETY: `store` is live per the contract.
+    unsafe {
+        if ossl_property_write_lock(store) == 0 {
+            return 0;
+        }
+        if (*store).cache_need_flush != 0 {
+            ossl_method_cache_flush_some(store);
+        }
+        let alg = ossl_method_store_retrieve(store, nid);
+        if alg.is_null() {
+            res = 0;
+            CRYPTO_free(p.cast::<c_void>(), FILE, LINE_FREE_QUERY);
+            ossl_property_unlock(store);
+            return res;
+        }
+
+        if method.is_null() {
+            let mut elem = Query {
+                provider: prov,
+                query: prop_query,
+                method: Method {
+                    method: ptr::null_mut(),
+                    up_ref: unused_up_ref,
+                    free: unused_free,
+                },
+                body: [0],
+            };
+            let old = OPENSSL_LH_delete((*alg).cache, ptr::addr_of_mut!(elem).cast::<c_void>())
+                .cast::<Query>();
+            if !old.is_null() {
+                impl_cache_free(old);
+                (*store).cache_nelem -= 1;
+            }
+            ossl_property_unlock(store);
+            return res;
+        }
+
+        // `sizeof(QUERY) + strlen(prop_query)`, which is exactly enough for a header whose `body`
+        // already holds one `char` plus the text and its terminator.
+        let len = c_strlen(prop_query);
+        p = CRYPTO_malloc(core::mem::size_of::<Query>() + len, FILE, LINE_MALLOC_QUERY)
+            .cast::<Query>();
+        if !p.is_null() {
+            (*p).query = ptr::addr_of!((*p).body).cast::<c_char>();
+            (*p).provider = prov;
+            (*p).method.method = method;
+            (*p).method.up_ref = method_up_ref;
+            (*p).method.free = method_destruct;
+            if ossl_method_up_ref(ptr::addr_of_mut!((*p).method)) == 0 {
+                res = 0;
+                CRYPTO_free(p.cast::<c_void>(), FILE, LINE_MALLOC_QUERY);
+                ossl_property_unlock(store);
+                return res;
+            }
+            c_memcpy(
+                (*p).query.cast_mut().cast::<c_void>(),
+                prop_query.cast(),
+                len + 1,
+            );
+            let old = OPENSSL_LH_insert((*alg).cache, p.cast::<c_void>()).cast::<Query>();
+            if !old.is_null() {
+                impl_cache_free(old);
+                ossl_property_unlock(store);
+                return res;
+            }
+            if OPENSSL_LH_error((*alg).cache) == 0 {
+                (*store).cache_nelem += 1;
+                if (*store).cache_nelem >= IMPL_CACHE_FLUSH_THRESHOLD {
+                    (*store).cache_need_flush = 1;
+                }
+                ossl_property_unlock(store);
+                return res;
+            }
+            // The insert failed: the table did not take the entry, so the reference it took is
+            // dropped here -- and the block is released by the shared `err:` path below.
+            ossl_method_free(ptr::addr_of_mut!((*p).method));
+        }
+        res = 0;
+        CRYPTO_free(p.cast::<c_void>(), FILE, LINE_MALLOC_QUERY);
+        ossl_property_unlock(store);
+    }
+    res
+}
+
+/// `int ossl_method_store_fetch(OSSL_METHOD_STORE *store, int nid, const char *prop_query,
+/// const OSSL_PROVIDER **prov_rw, void **method)`.
+///
+/// The match itself. The shape a reader has to hold on to is that the *no-query* path and the
+/// *query* path are separate loops, not one loop with a condition:
+///
+///   * with no query at all, the first implementation of the first matching provider wins — the
+///     authority's comment says provider preference is expressed by the *order* of the
+///     implementation stack, so scanning in order and stopping is the preference rule;
+///   * with a query, every matching implementation is scored by `ossl_property_match_count` and the
+///     best score wins. **If the query has no optional properties the loop stops at the first
+///     match**, because a score that cannot be improved on need not be searched for; if it has any,
+///     the whole stack is walked, because a later implementation may match more of them.
+///
+/// The query is the caller's **merged with the context's global properties**, and the merge is
+/// allocated when both exist — which is why `p2`, and not `pq`, is what is freed at the end. When
+/// the caller's query is NULL and the context has global properties, `pq` *points at the context's
+/// list* and must not be freed; when both exist, `p2` is the new list and `pq` is an alias of it.
+///
+/// The default-context shortcut is the authority's: a fetch against the default context loads the
+/// configuration file first, so a `providers` section has been honoured before a name is resolved.
+///
+/// # Safety
+/// `method` must be non-NULL and writable for a `*mut c_void`; `prov_rw` NULL or pointing at a
+/// NULL-or-live provider **and writable for one**; `prop_query` NULL or NUL-terminated; `store`
+/// NULL or live.
+pub(crate) unsafe fn ossl_method_store_fetch(
+    store: *mut OsslMethodStore,
+    nid: c_int,
+    prop_query: *const c_char,
+    prov_rw: *mut *const OsslProvider,
+    method: *mut *mut c_void,
+) -> c_int {
+    if nid <= 0 || method.is_null() || store.is_null() {
+        return 0;
+    }
+    let prov = if prov_rw.is_null() {
+        ptr::null()
+    } else {
+        // SAFETY: non-NULL here, so it points at a provider, which this reads.
+        unsafe { *prov_rw }
+    };
+
+    let mut ret: c_int = 0;
+    let mut pq: *mut OsslPropertyList = ptr::null_mut();
+    let mut p2: *mut OsslPropertyList = ptr::null_mut();
+    let mut best_impl: *mut Implementation = ptr::null_mut();
+
+    // SAFETY: `store` is live per the contract.
+    unsafe {
+        // `#if !defined(FIPS_MODULE) && !defined(OPENSSL_NO_AUTOLOAD_CONFIG)`: neither is defined on
+        // the admitted profile, so the branch is live. A refused load is a refusal to fetch.
+        if crate::context::lib_ctx_is_default_symbol((*store).ctx) != 0
+            && crate::runtime::init::OPENSSL_init_crypto(
+                crate::runtime::init::OPENSSL_INIT_LOAD_CONFIG,
+                ptr::null(),
+            ) == 0
+        {
+            return 0;
+        }
+
+        // A **read** lock: a fetch creates nothing.
+        if ossl_property_read_lock(store) == 0 {
+            return 0;
+        }
+        let alg = ossl_method_store_retrieve(store, nid);
+        if alg.is_null() {
+            ossl_property_unlock(store);
+            return 0;
+        }
+
+        if !prop_query.is_null() {
+            pq = ossl_parse_query((*store).ctx, prop_query, 0);
+            p2 = pq;
+        }
+
+        // The context's own default properties are merged in, and the two cases are not the same:
+        // with no caller query, `pq` becomes an **alias** of the context's list.
+        let plp = crate::property::globals::ossl_ctx_global_properties((*store).ctx, 0);
+        if !plp.is_null() && !(*plp).is_null() {
+            if pq.is_null() {
+                pq = *plp;
+            } else {
+                p2 = ossl_property_merge(pq, *plp);
+                ossl_property_free(pq);
+                if p2.is_null() {
+                    // The authority's `goto fin` with `ret == 0` and `p2 == NULL`: the caller's own
+                    // list has already been released, the merge produced nothing, and the free at
+                    // the tail is `ossl_property_free(NULL)`. Nothing is left to point `pq` at, so
+                    // it is not touched -- writing NULL there would be a line the authority does
+                    // not have.
+                    ossl_property_unlock(store);
+                    return 0;
+                }
+                pq = p2;
+            }
+        }
+
+        if pq.is_null() {
+            let mut j: c_int = 0;
+            while j < OPENSSL_sk_num((*alg).impls) {
+                let implementation = OPENSSL_sk_value((*alg).impls, j).cast::<Implementation>();
+                if !implementation.is_null()
+                    && (prov.is_null() || (*implementation).provider == prov)
+                {
+                    best_impl = implementation;
+                    ret = 1;
+                    break;
+                }
+                j += 1;
+            }
+        } else {
+            let optional = ossl_property_has_optional(pq);
+            let mut best: c_int = -1;
+            let mut j: c_int = 0;
+            while j < OPENSSL_sk_num((*alg).impls) {
+                let implementation = OPENSSL_sk_value((*alg).impls, j).cast::<Implementation>();
+                if !implementation.is_null()
+                    && (prov.is_null() || (*implementation).provider == prov)
+                {
+                    let score = ossl_property_match_count(pq, (*implementation).properties);
+                    if score > best {
+                        best_impl = implementation;
+                        best = score;
+                        ret = 1;
+                        if optional == 0 {
+                            break;
+                        }
+                    }
+                }
+                j += 1;
+            }
+        }
+
+        if ret != 0 && ossl_method_up_ref(ptr::addr_of_mut!((*best_impl).method)) != 0 {
+            *method = (*best_impl).method.method;
+            if !prov_rw.is_null() {
+                // The authority's `const OSSL_PROVIDER **prov_rw`: the *pointee* is a
+                // `const OSSL_PROVIDER *` and the pointer itself is writable, which is why this
+                // parameter is `*mut *const` rather than `*const *const`. The fetch reports
+                // **which** provider the method came from, which is how a caller learns the answer
+                // was not the one it asked for.
+                *prov_rw = (*best_impl).provider;
+            }
+        } else {
+            ret = 0;
+        }
+
+        ossl_property_unlock(store);
+        ossl_property_free(p2);
+    }
+    ret
+}
+
+/// `static void alg_do_one(ALGORITHM *alg, IMPLEMENTATION *impl,
+/// void (*fn)(int id, void *method, void *fnarg), void *fnarg)`.
+///
+/// # Safety
+/// `alg` and `impl` live; `fn` valid for a method.
+unsafe fn alg_do_one(
+    alg: *const Algorithm,
+    implementation: *const Implementation,
+    fn_: Option<MethodDoAllFn>,
+    fnarg: *mut c_void,
+) {
+    if let Some(f) = fn_ {
+        // SAFETY: `alg` and `implementation` are live per the contract and `fnarg` is the caller's.
+        unsafe { f((*alg).nid, (*implementation).method.method, fnarg) };
+    }
+}
+
+/// `void (*fn)(int id, void *method, void *fnarg)` — the visitor `ossl_method_store_do_all` takes.
+pub(crate) type MethodDoAllFn = unsafe extern "C" fn(c_int, *mut c_void, *mut c_void);
+
+/// `static void alg_copy(ossl_uintmax_t idx, ALGORITHM *alg, void *arg)`.
+///
+/// The store is **copied under the lock and walked outside it**, which is the whole reason this
+/// function exists: a visitor may call back into the store, and holding the read lock across a
+/// visitor that takes the write lock would deadlock. The copy is *shallow in the author's intent and
+/// accidentally deep in one field* — `OPENSSL_memdup` copies the `ALGORITHM` header, and then
+/// `sk_IMPLEMENTATION_dup` copies the implementation **stack** — so the snapshot's stack is its own
+/// while the implementations inside it are the store's, and `del_tmpalg` frees only the stack and
+/// the copied header.
+///
+/// # Safety
+/// `alg` must be a live entry of the array being walked and `arg` a live `OPENSSL_STACK`.
+unsafe fn alg_copy(_idx: OsslUintMax, alg: *mut c_void, arg: *mut c_void) {
+    let newalg = arg.cast::<OpenSslStack>();
+    let alg = alg.cast::<Algorithm>();
+    // `OPENSSL_memdup(str, s)` is a macro: `CRYPTO_memdup((str), s, OPENSSL_FILE, OPENSSL_LINE)`,
+    // which is why the coordinates are this call site's.
+    // SAFETY: `alg` is live per the contract, so this reads `sizeof(ALGORITHM)` bytes of it.
+    let copy = unsafe {
+        CRYPTO_memdup(
+            alg.cast::<c_void>(),
+            core::mem::size_of::<Algorithm>(),
+            FILE,
+            LINE_MEMDUP_ALG,
+        )
+        .cast::<Algorithm>()
+    };
+    if copy.is_null() {
+        return;
+    }
+    // SAFETY: `copy` is a fresh block this call owns and `alg` is live per the contract.
+    unsafe {
+        (*copy).impls = OPENSSL_sk_dup((*alg).impls);
+        OPENSSL_sk_push(newalg, copy.cast::<c_void>());
+    }
+}
+
+/// `static void del_tmpalg(ALGORITHM *alg)`.
+///
+/// The copied header's releaser: the **stack container only**, not its elements — they belong to the
+/// store and are still in it.
+///
+/// # Safety
+/// `alg` must be a copied header produced by [`alg_copy`].
+unsafe extern "C" fn del_tmpalg(alg: *mut c_void) {
+    let alg = alg.cast::<Algorithm>();
+    // SAFETY: `alg` is a copy this module made, so `impls` is the duplicate stack it created.
+    unsafe {
+        OPENSSL_sk_free((*alg).impls);
+        CRYPTO_free(alg.cast::<c_void>(), FILE, LINE_FREE_ALG);
+    }
+}
+
+/// `void ossl_method_store_do_all(OSSL_METHOD_STORE *store,
+/// void (*fn)(int id, void *method, void *fnarg), void *fnarg)`.
+///
+/// A read lock, a snapshot, an unlock, then the walk. A NULL store is a no-op rather than a
+/// refusal, because the entry point returns nothing: there is no answer to distinguish.
+///
+/// # Safety
+/// `store` must be NULL or live; `fn` NULL or valid for every method the store holds.
+pub(crate) unsafe fn ossl_method_store_do_all(
+    store: *mut OsslMethodStore,
+    fn_: Option<MethodDoAllFn>,
+    fnarg: *mut c_void,
+) {
+    if store.is_null() {
+        return;
+    }
+    // SAFETY: `store` is live per the contract.
+    unsafe {
+        if ossl_property_read_lock(store) == 0 {
+            return;
+        }
+        let tmpalgs = OPENSSL_sk_new_reserve(None, ossl_sa_num((*store).algs) as c_int);
+        if tmpalgs.is_null() {
+            ossl_property_unlock(store);
+            return;
+        }
+        ossl_sa_doall_arg((*store).algs, Some(alg_copy), tmpalgs.cast::<c_void>());
+        ossl_property_unlock(store);
+        let numalgs = OPENSSL_sk_num(tmpalgs);
+        let mut i: c_int = 0;
+        while i < numalgs {
+            let alg = OPENSSL_sk_value(tmpalgs, i).cast::<Algorithm>();
+            let numimps = OPENSSL_sk_num((*alg).impls);
+            let mut j: c_int = 0;
+            while j < numimps {
+                let implementation = OPENSSL_sk_value((*alg).impls, j).cast::<Implementation>();
+                alg_do_one(alg, implementation, fn_, fnarg);
+                j += 1;
+            }
+            i += 1;
+        }
+        OPENSSL_sk_pop_free(tmpalgs, Some(del_tmpalg));
+    }
+}
+
+/// `strlen`, behind a safe-to-call-from-`unsafe` name.
+///
+/// # Safety
+/// `s` must be NUL-terminated.
+unsafe fn c_strlen(s: *const c_char) -> usize {
+    extern "C" {
+        fn strlen(s: *const c_char) -> usize;
+    }
+    // SAFETY: the caller's contract.
+    unsafe { strlen(s) }
+}
+
+/// `memcpy`, behind a safe-to-call-from-`unsafe` name.
+///
+/// # Safety
+/// `dst` must be writable for `n` bytes and `src` readable for the same.
+unsafe fn c_memcpy(dst: *mut c_void, src: *const c_void, n: usize) {
+    extern "C" {
+        fn memcpy(dst: *mut c_void, src: *const c_void, n: usize) -> *mut c_void;
+    }
+    // SAFETY: the caller's contract.
+    unsafe {
+        memcpy(dst, src, n);
+    }
+}
+
+/// The two callbacks a **stack-built key** carries, which are never called.
+///
+/// `ossl_method_store_cache_get` and `_cache_set`'s delete arm each build a `Query` on the stack
+/// whose `query` and `provider` are read by the hash and comparator and whose `method` is never
+/// touched — the authority leaves those three fields indeterminate and the table never looks at
+/// them, because a key is not stored. Rust cannot spell an indeterminate function pointer, so the
+/// fields are initialised to functions that abort if they are ever reached, which turns "the table
+/// never calls this" from a comment into a check.
+unsafe extern "C" fn unused_up_ref(_method: *mut c_void) -> c_int {
+    unreachable!("a stack-built QUERY key's `method.up_ref` was called")
+}
+
+/// See [`unused_up_ref`].
+unsafe extern "C" fn unused_free(_method: *mut c_void) {
+    unreachable!("a stack-built QUERY key's `method.free` was called")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -916,6 +1563,17 @@ mod tests {
         AtomicI32::new(0),
         AtomicI32::new(0),
     ];
+
+    /// `[4]`/`[5]`: `do_all`'s visitor counters -- the number of visits and the sum of the ids it
+    /// was handed, so a visitor called with the wrong id is visible.
+    static VISITS: AtomicI32 = AtomicI32::new(0);
+    static NIDS: AtomicI32 = AtomicI32::new(0);
+
+    /// `void (*fn)(int id, void *method, void *fnarg)`, for `do_all`'s test.
+    unsafe extern "C" fn visit(id: c_int, _method: *mut c_void, _fnarg: *mut c_void) {
+        VISITS.fetch_add(1, Ordering::SeqCst);
+        NIDS.fetch_add(id, Ordering::SeqCst);
+    }
 
     fn method_ptr() -> *mut c_void {
         ptr::addr_of!(METHOD) as *mut c_void
@@ -1177,6 +1835,286 @@ mod tests {
             assert_eq!(ossl_property_read_lock(ptr::null_mut()), 0);
             assert_eq!(ossl_property_write_lock(ptr::null_mut()), 0);
             assert_eq!(ossl_property_unlock(ptr::null_mut()), 0);
+        }
+        release(s);
+    }
+
+    /// The cache round-trips, and **a NULL method deletes**. The delete arm is the one a reader
+    /// would not predict from the name, and it is what `evp_fetch.c` uses to invalidate an entry
+    /// whose provider has gone: the entry point takes a destructor parameter it does not need on
+    /// that path.
+    #[test]
+    fn the_cache_round_trips_a_result_and_a_null_method_deletes_it() {
+        reset();
+        let s = store();
+        let prov = 0x1000usize as *mut OsslProvider;
+        let mut got: *mut c_void = ptr::null_mut();
+        // SAFETY: `s` is live; `prov` is a marker compared by identity; the query is a literal and
+        // the out-parameter is this frame's own slot.
+        unsafe {
+            // A miss first: the table is empty.
+            assert_eq!(
+                ossl_method_store_cache_get(s, prov, 5, c"provider=default".as_ptr(), &mut got),
+                0,
+                "nothing is cached yet"
+            );
+            // A store the entry can be attached to: the cache is per-nid, so the nid must exist.
+            assert_eq!(
+                ossl_method_store_add(
+                    s,
+                    prov,
+                    5,
+                    c"provider=default".as_ptr(),
+                    method_ptr(),
+                    up_ref,
+                    free
+                ),
+                1
+            );
+            reset();
+            assert_eq!(
+                ossl_method_store_cache_set(
+                    s,
+                    prov,
+                    5,
+                    c"provider=default".as_ptr(),
+                    method_ptr(),
+                    up_ref,
+                    free
+                ),
+                1
+            );
+            assert_eq!(
+                ossl_method_store_cache_get(s, prov, 5, c"provider=default".as_ptr(), &mut got),
+                1
+            );
+            assert_eq!(got, method_ptr(), "the cached method came back");
+            assert_eq!(
+                SAW[0].load(Ordering::SeqCst),
+                2,
+                "set and get each took one"
+            );
+
+            // A NULL `method` is a delete, and the entry's reference is dropped with it.
+            reset();
+            assert_eq!(
+                ossl_method_store_cache_set(
+                    s,
+                    prov,
+                    5,
+                    c"provider=default".as_ptr(),
+                    ptr::null_mut(),
+                    up_ref,
+                    free
+                ),
+                1
+            );
+            assert_eq!(
+                SAW[1].load(Ordering::SeqCst),
+                1,
+                "the entry's reference was dropped"
+            );
+            assert_eq!(
+                ossl_method_store_cache_get(s, prov, 5, c"provider=default".as_ptr(), &mut got),
+                0,
+                "and the entry is gone"
+            );
+        }
+        release(s);
+    }
+
+    /// With no query at all the **first** implementation wins, because the authority's provider
+    /// preference is expressed by the order of the implementation stack rather than by a score.
+    #[test]
+    fn the_fetch_takes_the_first_implementation_when_there_is_no_query() {
+        reset();
+        let s = store();
+        let first = 0x1000usize as *const OsslProvider;
+        let second = 0x2000usize as *const OsslProvider;
+        let mut got: *mut c_void = ptr::null_mut();
+        let mut reported: *const OsslProvider = ptr::null();
+        // SAFETY: `s` is live; the providers are markers compared by identity only.
+        unsafe {
+            assert_eq!(
+                ossl_method_store_add(s, first, 3, c"".as_ptr(), method_ptr(), up_ref, free),
+                1
+            );
+            assert_eq!(
+                ossl_method_store_add(s, second, 3, c"".as_ptr(), method_ptr(), up_ref, free),
+                1
+            );
+            assert_eq!(
+                ossl_method_store_fetch(s, 3, ptr::null(), &mut reported, &mut got),
+                1
+            );
+            assert_eq!(got, method_ptr());
+            assert_eq!(
+                reported, first,
+                "the provider pushed first is the one reported"
+            );
+
+            // The provider filter is the caller's: asking for the second provider answers the
+            // second, even though the first is earlier in the stack.
+            let mut got2: *mut c_void = ptr::null_mut();
+            let mut want = second;
+            assert_eq!(
+                ossl_method_store_fetch(s, 3, ptr::null(), &mut want, &mut got2),
+                1
+            );
+            assert_eq!(got2, method_ptr());
+
+            // An id nobody added is a refusal, and `*method` is left alone.
+            let untouched = got2;
+            assert_eq!(
+                ossl_method_store_fetch(s, 99, ptr::null(), ptr::null_mut(), &mut got2),
+                0
+            );
+            assert_eq!(got2, untouched, "a failed fetch writes nothing");
+        }
+        release(s);
+    }
+
+    /// With a query, the **best match** wins rather than the first, and the provider that answered
+    /// is written back through the caller's out-parameter — which is how a caller learns the method
+    /// it got was not the one it asked for.
+    #[test]
+    fn the_fetch_scores_against_a_query_and_reports_the_answering_provider() {
+        reset();
+        let s = store();
+        let default_prov = 0x1000usize as *const OsslProvider;
+        let other_prov = 0x2000usize as *const OsslProvider;
+        let mut got: *mut c_void = ptr::null_mut();
+        let mut reported: *const OsslProvider = ptr::null();
+        // SAFETY: `s` is live; the providers are markers compared by identity only.
+        unsafe {
+            assert_eq!(
+                ossl_method_store_add(
+                    s,
+                    default_prov,
+                    8,
+                    c"provider=default".as_ptr(),
+                    method_ptr(),
+                    up_ref,
+                    free
+                ),
+                1
+            );
+            assert_eq!(
+                ossl_method_store_add(
+                    s,
+                    other_prov,
+                    8,
+                    c"provider=other".as_ptr(),
+                    method_ptr(),
+                    up_ref,
+                    free
+                ),
+                1
+            );
+            // A query that only the second implementation satisfies: the score picks it over the
+            // implementation that is earlier in the stack.
+            assert_eq!(
+                ossl_method_store_fetch(s, 8, c"provider=other".as_ptr(), &mut reported, &mut got),
+                1
+            );
+            assert_eq!(
+                reported, other_prov,
+                "the query decided the provider, not the stack order"
+            );
+            assert_eq!(got, method_ptr());
+
+            // A query nobody satisfies is still a refusal rather than a partial match.
+            let mut got3: *mut c_void = ptr::null_mut();
+            assert_eq!(
+                ossl_method_store_fetch(s, 8, c"fips=yes".as_ptr(), ptr::null_mut(), &mut got3),
+                0,
+                "no implementation declares fips=yes"
+            );
+        }
+        release(s);
+    }
+
+    /// `do_all` visits every implementation of every id, and the visitor sees the id the store is
+    /// keyed by. It is the only entry point here whose contract is a *count* of visits rather than
+    /// an answer, which is what makes it the one that catches a snapshot built wrongly.
+    #[test]
+    fn do_all_visits_every_method_once() {
+        reset();
+        let s = store();
+        let prov = 0x1000usize as *const OsslProvider;
+        VISITS.store(0, Ordering::SeqCst);
+        NIDS.store(0, Ordering::SeqCst);
+        // SAFETY: `s` is live and the provider is a marker compared by identity only.
+        unsafe {
+            assert_eq!(
+                ossl_method_store_add(s, prov, 1, c"".as_ptr(), method_ptr(), up_ref, free),
+                1
+            );
+            assert_eq!(
+                ossl_method_store_add(s, prov, 2, c"".as_ptr(), method_ptr(), up_ref, free),
+                1
+            );
+            ossl_method_store_do_all(s, Some(visit), ptr::null_mut());
+        }
+        assert_eq!(VISITS.load(Ordering::SeqCst), 2, "two ids, one method each");
+        assert_eq!(
+            NIDS.load(Ordering::SeqCst),
+            3,
+            "the visitor saw nid 1 and nid 2"
+        );
+        release(s);
+    }
+
+    /// `cache_need_flush` is requested **at** the threshold, not above it, and a `_cache_set` that
+    /// arrives with the flag set flushes before it inserts. The flush's *outcome* is seed-dependent
+    /// on the authority as well, so this asserts the flag only — see the module's note on the
+    /// stochastic flush and `RT-FETCH`'s header.
+    #[test]
+    fn the_threshold_requests_a_flush() {
+        reset();
+        let s = store();
+        let prov = 0x1000usize as *mut OsslProvider;
+        // SAFETY: `s` is live and the provider is a marker compared by identity only.
+        unsafe {
+            assert_eq!(
+                ossl_method_store_add(
+                    s,
+                    prov.cast_const(),
+                    6,
+                    c"".as_ptr(),
+                    method_ptr(),
+                    up_ref,
+                    free
+                ),
+                1
+            );
+            assert_eq!((*s).cache_need_flush, 0, "not yet");
+            // `IMPL_CACHE_FLUSH_THRESHOLD` distinct query strings, which is what makes them
+            // distinct entries rather than replacements.
+            let mut buf = [0i8; 16];
+            let alphabet = b"0123456789abcdef";
+            for i in 0..IMPL_CACHE_FLUSH_THRESHOLD {
+                buf[0] = b'q' as i8;
+                buf[1] = b'=' as i8;
+                buf[2] = alphabet[(i >> 4) & 0xf] as i8;
+                buf[3] = alphabet[i & 0xf] as i8;
+                buf[4] = alphabet[(i >> 8) & 0xf] as i8;
+                buf[5] = 0;
+                assert_eq!(
+                    ossl_method_store_cache_set(
+                        s,
+                        prov,
+                        6,
+                        buf.as_ptr(),
+                        method_ptr(),
+                        up_ref,
+                        free
+                    ),
+                    1
+                );
+            }
+            assert_eq!((*s).cache_nelem, IMPL_CACHE_FLUSH_THRESHOLD);
+            assert_eq!((*s).cache_need_flush, 1, "the threshold was crossed");
         }
         release(s);
     }

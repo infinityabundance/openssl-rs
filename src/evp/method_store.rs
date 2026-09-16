@@ -112,7 +112,7 @@ pub(crate) type McmLockStoreFn = unsafe extern "C" fn(*mut c_void, *mut c_void) 
 pub(crate) type McmUnlockStoreFn = unsafe extern "C" fn(*mut c_void, *mut c_void) -> c_int;
 /// `void *(*get)(void *store, const OSSL_PROVIDER **prov, void *data)`.
 pub(crate) type McmGetFn =
-    unsafe extern "C" fn(*mut c_void, *const *const OsslProvider, *mut c_void) -> *mut c_void;
+    unsafe extern "C" fn(*mut c_void, *mut *const OsslProvider, *mut c_void) -> *mut c_void;
 /// `int (*put)(void *store, void *method, const OSSL_PROVIDER *prov, const char *name,
 /// const char *propdef, void *data)`.
 pub(crate) type McmPutFn = unsafe extern "C" fn(
@@ -550,7 +550,7 @@ mod tests {
 
     unsafe extern "C" fn get(
         store: *mut c_void,
-        _prov: *const *const OsslProvider,
+        _prov: *mut *const OsslProvider,
         _data: *mut c_void,
     ) -> *mut c_void {
         SAW[GET].fetch_add(1, Ordering::SeqCst);

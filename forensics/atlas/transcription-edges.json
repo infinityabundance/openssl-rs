@@ -407,7 +407,7 @@
         "module": "src/property/store.rs",
         "phase": 7,
         "phase_source": "module-declaration",
-        "share": "8/8",
+        "share": "12/12",
         "translation_unit": "crypto/property/property.c"
       },
       {
@@ -836,6 +836,13 @@
         "phase_source": "module-declaration",
         "share": "12/12",
         "translation_unit": "crypto/threads_pthread.c"
+      },
+      {
+        "module": "src/runtime/rdtsc.rs",
+        "phase": 7,
+        "phase_source": "module-declaration",
+        "share": "1/1",
+        "translation_unit": "crypto/legacy-dso-x86_64cpuid.c"
       },
       {
         "module": "src/runtime/secure.rs",
