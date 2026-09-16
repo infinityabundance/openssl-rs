@@ -79,6 +79,8 @@
 pub(crate) mod activate;
 // 6.8d: `crypto/provider_conf.c`, the `providers` configuration module.
 pub(crate) mod conf;
+// 6.8e: `crypto/provider_child.c`, the child provider and its parent callbacks.
+pub(crate) mod child;
 pub(crate) mod core_dispatch;
 pub(crate) mod init;
 pub(crate) mod stores;
@@ -98,11 +100,12 @@ use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, ERR_get_next_error_library};
 use crate::runtime::init::{OPENSSL_init_crypto, OPENSSL_INIT_LOAD_CONFIG};
 use crate::runtime::mem::{
-    CRYPTO_calloc, CRYPTO_free, CRYPTO_realloc_array, CRYPTO_strdup, CRYPTO_zalloc,
+    CRYPTO_calloc, CRYPTO_free, CRYPTO_malloc, CRYPTO_realloc_array, CRYPTO_strdup, CRYPTO_zalloc,
 };
 use crate::runtime::stack::{
-    OPENSSL_sk_deep_copy, OPENSSL_sk_find, OPENSSL_sk_new, OPENSSL_sk_new_null, OPENSSL_sk_num,
-    OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_sort, OPENSSL_sk_value, OpenSslStack,
+    OPENSSL_sk_deep_copy, OPENSSL_sk_delete, OPENSSL_sk_find, OPENSSL_sk_new, OPENSSL_sk_new_null,
+    OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_sort, OPENSSL_sk_value,
+    OpenSslStack,
 };
 use crate::runtime::str::OPENSSL_strcasecmp;
 use crate::runtime::thread::{
@@ -614,6 +617,191 @@ unsafe extern "C" fn child_cb_free(p: *mut c_void) {
     }
     // SAFETY: the block came from this crate's allocator in 6.8e.
     unsafe { CRYPTO_free(p, FILE, lines::L_CHILD_CB_FREE) };
+}
+
+/// The coordinates `ossl_provider_register_child_cb` allocates and frees at.
+mod child_cb_lines {
+    /// `child_cb = OPENSSL_malloc(sizeof(*child_cb))`.
+    pub(super) const L_CB_ALLOC: core::ffi::c_int = 2138;
+    /// `OPENSSL_free(child_cb)` in the lock-failure arm and in the rollback.
+    pub(super) const L_CB_FREE: core::ffi::c_int = 2151;
+    /// `OPENSSL_free(child_cb)` in the rollback arm.
+    pub(super) const L_CB_FREE_ROLLBACK: core::ffi::c_int = 2189;
+}
+
+use crate::provider::activate::ProviderChildCb;
+
+/// `static int ossl_provider_register_child_cb(const OSSL_CORE_HANDLE *handle, ...)`.
+///
+/// The **parent side** of the child mechanism: a third-party provider that wants its own
+/// library context to see its providers calls this — through the core dispatch entry
+/// `OSSL_FUNC_PROVIDER_REGISTER_CHILD_CB`, which is what publishes it — and the core records
+/// the three callbacks against the provider the handle names.
+///
+/// The body is a walk of the store's already-activated providers, calling `create_cb` for
+/// each under the **store lock**, with the authority's own justification: *"We hold the store
+/// lock while calling the user callback... the user callback must be short and simple."* The
+/// `flag_lock` is taken and released per provider so a concurrent deactivation is possible,
+/// which the authority accepts because the other thread then calls `remove_cb`.
+///
+/// One line of the authority's is not written: `propsstr = evp_get_global_properties_str(
+/// libctx, 0)` and the `global_props_cb(propsstr, cbdata)` call that follows. That function is
+/// `crypto/evp/evp_fetch.c`'s and therefore **Phase 7's**, and it is a recorded deferral in
+/// `forensics/prerequisites.json`. The consequence is observable and recorded as
+/// `D-CHILD-REGISTER-PROPS-1`: a parent with global properties does not hand them to the
+/// child at registration time, so the child's default property query stays unset where the
+/// authority would set it. Everything else — the allocation, the identity recorded, the walk,
+/// the per-provider `create_cb`, the rollback that calls `remove_cb` for every provider it had
+/// already handed over, and the push — is the authority's.
+///
+/// # Safety
+/// `handle` must be the `OSSL_PROVIDER *` of the registering parent; `cbdata` is opaque to
+/// this function and is passed back to every callback.
+pub(crate) unsafe fn ossl_provider_register_child_cb(
+    handle: *const c_void,
+    create_cb: Option<crate::provider::child::CreateChildCbFn>,
+    remove_cb: Option<crate::provider::child::RemoveChildCbFn>,
+    global_props_cb: Option<crate::provider::child::GlobalPropsCbFn>,
+    cbdata: *mut c_void,
+) -> c_int {
+    // The cast the authority's comment justifies: the handle *is* the provider object.
+    let thisprov = handle.cast::<OsslProvider>().cast_mut();
+    // SAFETY: `thisprov` is live per the caller's contract.
+    let libctx = unsafe { (*thisprov).libctx };
+    // SAFETY: `libctx` is NULL or live, so the slot read inside is sound.
+    let store = unsafe { get_provider_store(libctx) };
+    if store.is_null() {
+        return 0;
+    }
+
+    // `OPENSSL_malloc`, which is a macro over `CRYPTO_malloc` that fills in the file and
+    // line at the call site — which is why this needs no `unsafe` block.
+    let child_cb = CRYPTO_malloc(
+        core::mem::size_of::<ProviderChildCb>(),
+        FILE,
+        child_cb_lines::L_CB_ALLOC,
+    )
+    .cast::<ProviderChildCb>();
+    if child_cb.is_null() {
+        return 0;
+    }
+    // SAFETY: `child_cb` is this call's own fresh block.
+    unsafe {
+        (*child_cb).prov = thisprov;
+        (*child_cb).create_cb = create_cb;
+        (*child_cb).remove_cb = remove_cb;
+        (*child_cb).global_props_cb = global_props_cb;
+        (*child_cb).cbdata = cbdata;
+    }
+
+    // SAFETY: `store` is live, so its lock exists.
+    if unsafe { CRYPTO_THREAD_write_lock((*store).lock) } == 0 {
+        // SAFETY: `child_cb` is this call's own allocation.
+        unsafe { CRYPTO_free(child_cb.cast::<c_void>(), FILE, child_cb_lines::L_CB_FREE) };
+        return 0;
+    }
+
+    // `evp_get_global_properties_str` and its `global_props_cb` call are Phase 7's; see the
+    // documentation for the recorded divergence.
+
+    // SAFETY: `store` is live and its lock is held, so the provider list is this thread's to
+    // read. `i` is the authority's loop variable and is deliberately visible after the loop,
+    // because the rollback below starts from wherever it stopped.
+    // SAFETY: `store` is live, so its provider list is a live stack.
+    let max = unsafe { OPENSSL_sk_num((*store).providers) };
+    // SAFETY: `store` is live and its lock is held by this thread, so the provider list and
+    // each provider's flag lock are this thread's to read, and `child_cbs` is this thread's
+    // to push onto.
+    let (ret, mut i) = unsafe {
+        let mut i = 0;
+        let mut ret: c_int = 0;
+        while i < max {
+            let prov = OPENSSL_sk_value((*store).providers, i).cast::<OsslProvider>();
+            if CRYPTO_THREAD_read_lock((*prov).flag_lock) == 0 {
+                break;
+            }
+            let activated = (*prov).flags & FLAG_ACTIVATED != 0;
+            CRYPTO_THREAD_unlock((*prov).flag_lock);
+            let Some(create) = create_cb else { break };
+            if activated && create(prov.cast::<c_void>(), cbdata) == 0 {
+                break;
+            }
+            i += 1;
+        }
+        if i == max {
+            // Success: record the registration.
+            ret = OPENSSL_sk_push((*store).child_cbs, child_cb.cast::<c_void>());
+        }
+        (ret, i)
+    };
+
+    if i != max || ret <= 0 {
+        // The rollback: every provider the loop already handed over is handed back, walking
+        // *downwards* from where it stopped, and then the registration block is released.
+        // SAFETY: `store` is live and its lock is held.
+        unsafe {
+            while i >= 0 {
+                let prov = OPENSSL_sk_value((*store).providers, i).cast::<OsslProvider>();
+                if let Some(remove) = remove_cb {
+                    remove(prov.cast::<c_void>(), cbdata);
+                }
+                i -= 1;
+            }
+            CRYPTO_free(
+                child_cb.cast::<c_void>(),
+                FILE,
+                child_cb_lines::L_CB_FREE_ROLLBACK,
+            );
+        }
+        // The rollback reports failure whatever `ret` was; the authority assigns 0.
+        // SAFETY: `store` is live and its lock is held.
+        unsafe { CRYPTO_THREAD_unlock((*store).lock) };
+        return 0;
+    }
+
+    // SAFETY: `store` is live and its lock is held.
+    unsafe { CRYPTO_THREAD_unlock((*store).lock) };
+    1
+}
+
+/// `static void ossl_provider_deregister_child_cb(const OSSL_CORE_HANDLE *handle)`.
+///
+/// Finds the registration by **provider identity** — the first entry whose `prov` is the
+/// handle's own object — deletes it from the stack and releases the block. The three
+/// callbacks are not called on the way out: a deregistration is a parent withdrawing its
+/// consent, not a teardown of what it was shown.
+///
+/// # Safety
+/// `handle` must be the `OSSL_PROVIDER *` of a parent that registered.
+pub(crate) unsafe fn ossl_provider_deregister_child_cb(handle: *const c_void) {
+    let thisprov = handle.cast::<OsslProvider>().cast_mut();
+    // SAFETY: `thisprov` is live per the caller's contract.
+    let libctx = unsafe { (*thisprov).libctx };
+    // SAFETY: `libctx` is NULL or live.
+    let store = unsafe { get_provider_store(libctx) };
+    if store.is_null() {
+        return;
+    }
+    // SAFETY: `store` is live, so its lock exists.
+    if unsafe { CRYPTO_THREAD_write_lock((*store).lock) } == 0 {
+        return;
+    }
+
+    // SAFETY: `store` is live and its lock is held.
+    unsafe {
+        let max = OPENSSL_sk_num((*store).child_cbs);
+        let mut i = 0;
+        while i < max {
+            let child_cb = OPENSSL_sk_value((*store).child_cbs, i).cast::<ProviderChildCb>();
+            if (*child_cb).prov == thisprov {
+                OPENSSL_sk_delete((*store).child_cbs, i);
+                CRYPTO_free(child_cb.cast::<c_void>(), FILE, child_cb_lines::L_CB_FREE);
+                break;
+            }
+            i += 1;
+        }
+        CRYPTO_THREAD_unlock((*store).lock);
+    }
 }
 
 /// `void *ossl_provider_store_new(OSSL_LIB_CTX *ctx)`.
@@ -1483,9 +1671,19 @@ pub(crate) unsafe fn ossl_provider_up_ref(prov: *mut OsslProvider) -> c_int {
     if ref_ <= 0 {
         return 0;
     }
-    // 6.8e: the authority's `if (prov->ischild) { if (!ossl_provider_up_ref_parent(prov, 0))
-    // { ossl_provider_free(prov); return 0; } }` goes here. Nothing can set `ischild` until
-    // `ossl_provider_set_child` lands there.
+    // The child arm, and it is a *rollback*: a child's reference is a reference on its
+    // parent, and if the parent refuses the count the reference just taken is given back
+    // before the caller is told the call failed. That is why the failure path calls
+    // `ossl_provider_free` rather than simply answering 0.
+    // SAFETY: `prov` is live.
+    if unsafe { (*prov).ischild } != 0 {
+        // SAFETY: `prov` is live and this call holds the reference taken above.
+        if unsafe { crate::provider::child::ossl_provider_up_ref_parent(prov, 0) } == 0 {
+            // SAFETY: `prov` is live; this releases the reference taken above.
+            unsafe { ossl_provider_free(prov) };
+            return 0;
+        }
+    }
     ref_
 }
 
@@ -1507,8 +1705,15 @@ pub(crate) unsafe fn ossl_provider_free(prov: *mut OsslProvider) {
     // SAFETY: `prov` is live.
     let ref_ = unsafe { (*prov).refcnt.fetch_sub(1, Ordering::AcqRel) } - 1;
     if ref_ != 0 {
-        // 6.8e: the authority's `else if (prov->ischild)` arm calls
-        // `ossl_provider_free_parent(prov, 0)`.
+        // The child arm: the release of *this* reference is a release of the parent's,
+        // and it is made before the early return so that the parent sees one balance
+        // for every one it handed out. `ossl_provider_free_parent` answers 1 for a
+        // self-referencing child without calling anything.
+        // SAFETY: `prov` is live.
+        if unsafe { (*prov).ischild } != 0 {
+            // SAFETY: `prov` is live.
+            unsafe { crate::provider::child::ossl_provider_free_parent(prov, 0) };
+        }
         //
         // The whole teardown is inside the authority's `if (ref == 0)`, which is the
         // point of it: "there may be other structures hanging on to the provider after

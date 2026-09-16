@@ -7299,3 +7299,91 @@ map were evidence the authority certified against and nothing verified.
 | courts / observations | 55 / 20,150 | **55 / 20,163** |
 | language census | 2049 | **2076**, now with a per-unit invariant |
 | the one that remains open | — | `OSSL_LIB_CTX_new_child` (6.6d), which needs `ossl_provider_init_as_child` (6.8e) |
+
+## D131 — Phase 6 closes: the child provider, `OSSL_LIB_CTX_new_child`, and the last obligation
+
+`crypto/provider_child.c` is transcribed into `src/provider/child.rs` — the slot-18 globals,
+`ossl_provider_init_as_child`, `ossl_provider_deinit_child`, the two parent-reference helpers,
+`ossl_child_provider_init` and the three callbacks — and the three accessors
+`provider_core.c` keeps beside the object (`ossl_provider_set_child`, `_is_child`,
+`_get_parent`). The parent half lands in `provider_core.c`'s Rust home:
+`ossl_provider_register_child_cb`, `ossl_provider_deregister_child_cb`, the `OSSL_PROVIDER_CHILD_CB`
+record, and the two core-dispatch entries that publish them — ids 105 and 106, which were
+*absent* in the table's own test until this commit.
+
+`OSSL_LIB_CTX_new_child` — the **last open export of the stratum, and the last of the whole
+ownership atlas's Phase 6 set** — is written in `src/context/mod.rs`, and `OSSL_LIB_CTX_free`
+gains the `ischild` arm that calls `ossl_provider_deinit_child` before the slots are released.
+Its order is the contract: `OSSL_LIB_CTX_new_from_dispatch` first, then
+`ossl_provider_init_as_child`, and **`ischild` last** — so a failure anywhere above leaves a
+context that the free tears down as an ordinary one, rather than one whose teardown calls
+`ossl_provider_deinit_child` on globals whose upcalls are NULL.
+
+`forensics/phase6-obligations.json` goes to **zero open**, `forensics/phase-state.json` derives
+**complete** for Phase 6, and the seal is `docs/PHASE-6-PROVIDER-SEAL.md`.
+
+### Five call sites that had been waiting for this
+
+Each was a `// 6.8e` marker naming the exact line the authority writes, and each is now that
+line:
+
+1. `ossl_provider_up_ref`'s child arm — an **up-ref of the parent** whose failure *rolls back*
+   the reference just taken before reporting 0.
+2. `ossl_provider_free`'s child arm — a **down-ref of the parent** before the early return.
+3. `provider_activate`'s guard and its two failure arms — before either lock, because the
+   parent's upcall may want locks of its own and taking the store's first is a lock-order
+   inversion the authority's file header calls out by name.
+4. `provider_deactivate`'s `freeparent` flag — set inside the locks, spent **after** them, for
+   the same reason.
+5. `create_provider_children` — the walk that replaces a loud `assert!`. Its `ret &=` is
+   deliberate: every registration is asked even after one has refused, because a parent that
+   refuses is not entitled to stop the others being told.
+
+Plus the `removechildren` walk in `provider_deactivate`, which is **inside** the locks and runs
+before the unlocks — the authority's position — and the `else removechildren = 0` narrowing that
+a provider with activations left cannot have its children removed.
+
+### Three divergences, all recorded rather than reproduced
+
+`D-CHILD-DEREGISTER-NULL-1` is the pair worth reading. `ossl_provider_init_as_child` stores
+**eight** dispatch entries and validates **seven**; the eighth,
+`c_provider_deregister_child_cb`, is not in the test, and `ossl_provider_deinit_child` calls it
+**unguarded**. So a parent that omits that entry initialises successfully and jumps through NULL
+at teardown. The candidate keeps the *initialisation* half exactly — seven validated, the eighth
+stored unvalidated — and makes the teardown half check and return. Splitting the pair is the
+point: the validation contract is observable and is claimed, and the fault is not. `RT-LIBCTX`
+observes the success half (`child.no_deregister=nonnull` with `register_called=1`) and
+**deliberately does not free that context**, because freeing it would crash the authority — so
+the divergence's teardown half is stated in the probe's own comment rather than measured.
+
+`D-CHILD-REGISTER-PROPS-1` and `D-CHILD-PROPS-CB-1` are one missing function in two places:
+`evp_get_global_properties_str` and `evp_set_default_properties_int` are `evp_fetch.c`'s and
+therefore Phase 7's, and both are recorded deferrals in `forensics/prerequisites.json`. So
+`provider_global_props_cb` answers 0 and raises nothing, and
+`ossl_provider_register_child_cb` omits the property-string step before its walk. Both halves
+are unreachable until a provider can take the **parent** role, which needs a third-party
+provider — 6.12 — and the entries say so instead of implying a court has seen them.
+
+### The probe plays the parent
+
+`RT-LIBCTX` goes 110 → 124 observations, and the new ones are the child mechanism end to end,
+which needed the probe to *be* a parent: it publishes the eight dispatch entries a third-party
+provider would, calls `OSSL_LIB_CTX_new_child`, and records what the core asked it for. The
+observations are that the registration happens once with three non-NULL callbacks and the
+**child context as `cbdata`**; that slot 18 exists for every context; that the free calls the
+deregistration exactly once with the handle it was given — which is `context_deinit`'s `ischild`
+arm, and it does not run for an ordinary context; and that a table missing any of the **seven**
+validated entries answers NULL **without** registering, because the validation precedes the
+registration.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 open obligations | 1 | **0** |
+| Phase 6 state | in-progress | **complete** |
+| `libcrypto` implemented | 1134 | **1135** |
+| `RT-LIBCTX` observations | 110 | **124** |
+| courts / observations | 55 / 20,163 | **55 / 20,177** |
+| blocking dependencies | 29 | **11**, and all of them Phase 7's and Phase 16's |
+| unit tests | 287 | **287** |

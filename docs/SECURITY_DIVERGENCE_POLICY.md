@@ -619,6 +619,61 @@ observations that *can* be made around each boundary are compared normally.
   and the *certain* half — that the nested handler is not called by the same stop, because the
   walk unlinks as it goes — is asserted with it.
 
+### D-CHILD-DEREGISTER-NULL-1 — `ossl_provider_init_as_child` does not validate one pointer, and `ossl_provider_deinit_child` calls it unguarded
+
+- **Obligation:** `ossl_provider_init_as_child` and `ossl_provider_deinit_child`,
+  `crypto/provider_child.c`. Reachable from `OSSL_LIB_CTX_new_child` and
+  `OSSL_LIB_CTX_free`, so any third-party provider that creates a child context is on both
+  paths.
+- **Authority:** the initialiser stores **eight** dispatch entries and validates **seven** —
+  `c_get_libctx`, `c_provider_register_child_cb`, `c_prov_name`,
+  `c_prov_get0_provider_ctx`, `c_prov_get0_dispatch`, `c_prov_up_ref` and `c_prov_free`. The
+  eighth, `c_provider_deregister_child_cb`, is not in the test. Then
+  `ossl_provider_deinit_child` calls `gbl->c_provider_deregister_child_cb(gbl->handle)`
+  **unguarded**, so a parent that publishes a table without `OSSL_FUNC_PROVIDER_DEREGISTER_CHILD_CB`
+  initialises successfully and **jumps through NULL** when the context is freed.
+- **Candidate:** the initialisation half is the authority's **exactly** — seven validated, the
+  eighth stored unvalidated — so a court comparing the initialisation contract sees the
+  authority. The teardown half **checks the pointer and returns when it is absent**.
+- **Reason:** a jump through NULL inside `OSSL_LIB_CTX_free` is a fault, and faults are
+  recorded rather than reproduced (`docs/UNSAFE.md` §5). Splitting the pair is the point: the
+  *validation contract* is observable and is claimed, and the *fault* is not.
+- **Claim removed:** "a child context created from a table without the deregister entry cannot
+  be freed" is not claimed. The candidate can free it; the authority cannot.
+- **Observed how:** `RT-LIBCTX` creates a child with the seven-entry table and observes the
+  initialisation succeeding (`child.no_deregister=nonnull`,
+  `child.no_deregister.register_called=1`), and **deliberately does not free it** — freeing it
+  would crash the authority, so the divergence's teardown half is stated in the probe's own
+  comment rather than measured.
+
+### D-CHILD-REGISTER-PROPS-1 and D-CHILD-PROPS-CB-1 — the child's global-property path, which is Phase 7's
+
+These two are one divergence with two halves, and they are the reason the child mechanism is
+complete in this crate without being complete in the authority. Both are the same missing
+function: `crypto/evp/evp_fetch.c`'s `evp_get_global_properties_str` and
+`evp_set_default_properties_int`, which are **Phase 7's** and are recorded deferrals in
+`forensics/prerequisites.json`.
+
+- **Obligation:** `provider_global_props_cb` (`crypto/provider_child.c`) and
+  `ossl_provider_register_child_cb` (`crypto/provider_core.c`'s, reached through the core
+  dispatch entry `OSSL_FUNC_PROVIDER_REGISTER_CHILD_CB`).
+- **Authority:** `provider_global_props_cb` is `evp_set_default_properties_int(ctx, props, 0,
+  1)` and answers its result. `ossl_provider_register_child_cb` calls `propsstr =
+  evp_get_global_properties_str(libctx, 0)` and, when it is non-NULL, calls the registrant's
+  `global_props_cb(propsstr, cbdata)` **before** the walk over the store's providers.
+- **Candidate:** `provider_global_props_cb` answers **0** — the authority's own failure
+  answer — and raises nothing. `ossl_provider_register_child_cb` omits the property-string
+  step, so a registering parent is not handed its own global properties at registration time.
+- **Reason:** the functions are in a file this stratum does not own and cannot write, and the
+  gate records them as owed to Phase 7. Writing a body that quietly answered a value the
+  authority would compute differently is exactly what a recorded divergence exists to avoid.
+- **Claim removed:** "the child's default property query is initialised from the parent's at
+  registration" is not claimed. It becomes claimable in Phase 7.
+- **Unreachable today, and said rather than implied:** both halves are reached only when a
+  provider takes the **parent** role, which needs a third-party provider. Nothing in this
+  crate can be one until 6.12's court, so **no court has observed either half** — the entries
+  say so instead of implying coverage.
+
 ### ~~D-TEVENT-CTX-STOP-LEAK-1~~ — **WITHDRAWN: the authority does not do this**
 
 **This entry is retained, struck through, because it was wrong and the way it was wrong is

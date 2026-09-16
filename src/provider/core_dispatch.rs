@@ -16,7 +16,7 @@
 //! | id | function | owner |
 //! |---|---|---|
 //! | `OSSL_FUNC_CORE_THREAD_START` (3) | `ossl_init_thread_start` | **6.6e-ii** — the per-thread event-handler table |
-//! | `OSSL_FUNC_PROVIDER_REGISTER_CHILD_CB` (105), `DEREGISTER_CHILD_CB` (106) | the child callback pair | **6.8e** |
+//! | `OSSL_FUNC_PROVIDER_REGISTER_CHILD_CB` (105), `DEREGISTER_CHILD_CB` (106) | the child callback pair — **published**, by 6.8e | 6.8e |
 //! | `OSSL_FUNC_PROVIDER_UP_REF` (110), `PROVIDER_FREE` (111) | `provider_up_ref_intern`, `provider_free_intern` | **6.8c** — the `activate` arm is `ossl_provider_activate` |
 //! | `OSSL_FUNC_GET_ENTROPY` (101), `GET_USER_ENTROPY` (98), `CLEANUP_ENTROPY` (102), `CLEANUP_USER_ENTROPY` (96), `GET_NONCE` (103), `GET_USER_NONCE` (99), `CLEANUP_NONCE` (104), `CLEANUP_USER_NONCE` (97) | the eight `rand_*` callbacks | **Phase 9** — they wrap `ossl_rand_get_entropy` and friends |
 //! | `OSSL_FUNC_CORE_OBJ_ADD_SIGID` (121), `CORE_OBJ_CREATE` (122) | `core_obj_add_sigid`, `core_obj_create` | **landed** — `OBJ_txt2nid`, `OBJ_find_sigid_algs`, `OBJ_add_sigid` and `OBJ_create` are all in `src/runtime/obj.rs` |
@@ -663,7 +663,7 @@ unsafe impl Sync for CoreDispatchTable {}
 
 /// A wrapper carrying the table's `Sync` claim.
 #[allow(dead_code)] // unreachable until 6.8c publishes it through `get0_dispatch`
-pub(crate) struct CoreDispatchTable(pub(crate) [OsslDispatch; 42]);
+pub(crate) struct CoreDispatchTable(pub(crate) [OsslDispatch; 44]);
 
 /// The table itself.
 #[allow(dead_code)] // unreachable until 6.8c publishes it through `get0_dispatch`
@@ -741,7 +741,18 @@ pub(crate) static CORE_DISPATCH: CoreDispatchTable = CoreDispatchTable([
         core_self_test_get_callback as *mut c_void,
     ),
     // 96-104: the eight `rand_*` callbacks — absent, Phase 9.
-    // 105, 106: the child-callback pair — absent, 6.8e.
+    // The child-callback pair. These are the entries a **third-party provider** uses to
+    // tell the core that its own library context should see its providers, and they are the
+    // parent half of 6.8e. Both casts are of the `ossl_provider_*` functions themselves,
+    // whose signatures are the `OSSL_FUNC_*` types' exactly.
+    e(
+        FUNC_PROVIDER_REGISTER_CHILD_CB,
+        crate::provider::ossl_provider_register_child_cb as *mut c_void,
+    ),
+    e(
+        FUNC_PROVIDER_DEREGISTER_CHILD_CB,
+        crate::provider::ossl_provider_deregister_child_cb as *mut c_void,
+    ),
     e(FUNC_PROVIDER_NAME, core_provider_get0_name as *mut c_void),
     e(
         FUNC_PROVIDER_GET0_PROVIDER_CTX,
@@ -970,6 +981,7 @@ mod tests {
             20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, // CRYPTO_* and OPENSSL_cleanse
             40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, // the BIO group
             95, 100, // the indicator and self-test callbacks
+            105, 106, // the child-callback pair, 6.8e
             107, 108, 109, // the three provider accessors
             121, 122, // the two object callbacks
         ];
@@ -1024,8 +1036,10 @@ mod tests {
         // The doc table and the code cannot drift: each named absence is checked against the
         // table. `CORE_THREAD_START` left this list when 6.6e-ii landed
         // `ossl_init_thread_start`, and its entry is now published as id 3, so the remaining
-        // names are the eight `rand_*` ids, which are Phase 9's, the
-        // child-callback pair is 6.8e's and the two provider refcount entries are 6.8c's.
+        // names are the eight `rand_*` ids, which are Phase 9's, and the two provider
+        // refcount entries are 6.8c's. The child-callback pair left this list when 6.8e
+        // landed `ossl_provider_register_child_cb` and its counterpart, and their entries are
+        // now published as ids 105 and 106.
         let absent: &[(c_int, &str)] = &[
             (96, "CLEANUP_USER_ENTROPY -- Phase 9"),
             (97, "CLEANUP_USER_NONCE -- Phase 9"),
@@ -1035,8 +1049,6 @@ mod tests {
             (102, "CLEANUP_ENTROPY -- Phase 9"),
             (103, "GET_NONCE -- Phase 9"),
             (104, "CLEANUP_NONCE -- Phase 9"),
-            (105, "PROVIDER_REGISTER_CHILD_CB -- 6.8e"),
-            (106, "PROVIDER_DEREGISTER_CHILD_CB -- 6.8e"),
             (110, "PROVIDER_UP_REF -- 6.8c"),
             (111, "PROVIDER_FREE -- 6.8c"),
         ];

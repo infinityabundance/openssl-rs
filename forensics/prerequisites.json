@@ -100,24 +100,6 @@
         "evidence": "src/property/globals.rs module doc"
       },
       {
-        "symbol": "ossl_provider_get_parent",
-        "owner_phase": 6,
-        "reason": "Phase 6.8e: the child-provider link, whose slot is index 18 of the context table",
-        "evidence": "src/context/mod.rs slot table (row 18), docs/DECISIONS.md D121 (6.8e)"
-      },
-      {
-        "symbol": "ossl_provider_is_child",
-        "owner_phase": 6,
-        "reason": "Phase 6.8e: the child-provider link",
-        "evidence": "src/context/mod.rs slot table (row 18)"
-      },
-      {
-        "symbol": "ossl_provider_set_child",
-        "owner_phase": 6,
-        "reason": "Phase 6.8e: the child-provider link",
-        "evidence": "src/context/mod.rs slot table (row 18)"
-      },
-      {
         "symbol": "ossl_get_openssldir",
         "owner_phase": 16,
         "reason": "The OPENSSL_info strings rather than anything the registry reads; so is its sibling",
