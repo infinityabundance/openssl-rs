@@ -85,6 +85,7 @@ pub mod globals;
 pub mod list;
 pub mod parse;
 pub mod query;
+pub mod store;
 pub mod strings;
 
 pub(crate) use defn_cache::{ossl_property_defns_free, ossl_property_defns_new};

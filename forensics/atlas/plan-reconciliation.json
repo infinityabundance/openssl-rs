@@ -82,8 +82,8 @@
         "docs/PHASE-7-SUBPHASES.md"
       ],
       "rows_judged": 49,
-      "symbols_named_by_a_row": 59,
-      "symbols_reached": 59,
+      "symbols_named_by_a_row": 60,
+      "symbols_reached": 60,
       "unit_records": 10,
       "units_named_by_a_record": 12,
       "units_named_by_a_row": 128,
@@ -1291,7 +1291,7 @@
           "ossl_method_store_remove_all_provided",
           "ossl_method_unlock_store"
         ],
-        "recorded_by": "deferral:ossl_ctx_global_properties",
+        "recorded_by": "deferral:ossl_method_store_cache_get",
         "subphases": [
           "6.7",
           "6.7a",
@@ -1299,7 +1299,8 @@
           "7.1"
         ],
         "transcribed_by": [
-          "src/property/globals.rs"
+          "src/property/globals.rs",
+          "src/property/store.rs"
         ]
       },
       "crypto/property/property_err.c": {
@@ -1650,7 +1651,7 @@
       "transcribed_units": 114
     }
   },
-  "body_hash": "4d3f779515c9cb9878de4d0966c0b6d5be2de307141a057aae49c8999ac52341",
+  "body_hash": "644e826c6490f03a053861b9305da02bdd0d6d1b85537cee0419748626a33295",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -1661,12 +1662,12 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "64867f9f829ae625196a6e1bed562f79d0b1af61dd699debc883c90a845cd11e"
+      "sha256": "47ccd03624231a43b3db062903e446aaedfcdc989316a32ae6519e02b8e2a95e"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "358957e08046fa6b85d9fd51746de6983fe7c6a8320dd4572bfff0bd798a7ebe"
+      "sha256": "0849608a5a0e0f6fcc6ec3c5d60f10141434a45f9d3e7d5099e2ab8f46a6b10f"
     },
     {
       "name": "phase-state",
@@ -1676,7 +1677,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "c317a1b146ed6a3da63aa7b033eeed7e06388f4f7c4175bce17a348f2dc4b45d"
+      "sha256": "96cb5fca52be390f54eab9158a41784b08ea52852634b3692434ea950e25580b"
     },
     {
       "name": "source-manifest",
@@ -1696,7 +1697,7 @@
     {
       "name": "plan-PHASE-7-SUBPHASES",
       "path": "docs/PHASE-7-SUBPHASES.md",
-      "sha256": "5d6c71d4987bd06f760419b16834601a15a33c127c01bab74cbda52df5fc456b"
+      "sha256": "b0e8964dbcaa511f8b8353c51d642330a571b0a444dd40ee71e7b8d91102361b"
     }
   ],
   "kind": "plan-reconciliation",
