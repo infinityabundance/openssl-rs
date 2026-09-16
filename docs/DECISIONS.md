@@ -7221,3 +7221,81 @@ default file that exists — is observed, with `OPENSSL_CONF` pointed at a file 
 | courts / observations | 55 / 20,131 | **55 / 20,150** |
 | language census | 2050 | **2049** |
 | the one that remains open | — | `OSSL_LIB_CTX_new_child` (6.6d), which needs `ossl_provider_init_as_child` (6.8e) |
+
+## D130 — 6.8d lands, and the language census needed to become per-unit to mean anything
+
+`crypto/provider_conf.c` is transcribed whole into `src/provider/conf.rs`: the slot-16
+`PROVIDER_CONF_GLOBAL` and its two halves, `skip_dot`, the recursive parameter walk,
+`prov_already_activated`, `provider_conf_activate`, `provider_conf_parse_bool_setting`,
+`provider_conf_load`, `provider_conf_init` and `ossl_provider_add_conf_module`. Slot 16 is
+filled by `context_init` and released **first** among the slots by `context_deinit_objs` —
+the authority's *P2* position, ahead of the provider store's *P1* — and `providers` becomes
+the third of the seven `OPENSSL_load_builtin_modules` registrations this crate can make.
+
+`RT-PROVIDER` goes 67 → 80 observations and the pipeline is green at 55 courts and 20,163
+observations. The observations are the two entry-point paths, the exact fourteen-spelling
+boolean grammar (`Yes` and `2` refused; `TRUE` and `on` accepted), the two section errors
+carrying `CRYPTO_R_PROVIDER_SECTION_ERROR`, and the recursion refusal.
+
+### Three transcriptions that a plausible version gets wrong
+
+* **Recursion is detected by pointer identity, not by text.** `visited` holds the `const
+  char *` the `CONF` owns and the test is `==`, so two sections with the same *content* are
+  not recursive while the same section reached twice is. A `strcmp` version would refuse a
+  legitimate configuration; no test at all would not terminate.
+* **The buffer bound is `>=`, checked before the append.** `char buffer[512]` and
+  `buffer_len + strlen(sectconf->name) >= sizeof(buffer)` refuses a name that would exactly
+  fill it, and the refusal is **-1** (fatal) rather than 0.
+* **A nested 0 is swallowed.** The loop propagates only `rc < 0`, so a section with one bad
+  parameter and one good one answers 1. Only the fatal answers escape.
+
+And one truncation of the module's own making: `provider_conf_load` answers `ok >= 0`, so a
+**non-fatal** activation failure is reported as success. That is deliberate — a `soft_load`
+provider that could not be loaded must not fail the configuration — and it is why
+`cmod.activate.load` is 1 on the authority even though the provider it names is activated
+by a different path.
+
+### The observation the court caught, and why it is not 6.8d's
+
+`OSSL_PROVIDER_available` after an `activate = 1` differed: authority 1, candidate 0.
+`default`'s `OSSL_provider_init` is `ossl_default_provider_init`, which is 7/8's and does not
+exist in this crate, so the activation succeeds at the registry level and the provider is not
+activated. That is 6.8c's **recorded residual 1** arriving through a second door, and the
+probe now states the exclusion where it applies rather than observing it — the same
+discipline the fan-out and the default-config-file fallback already get. What 6.8d owns is
+the configuration walk, and every walk observable is in scope and observed.
+
+### The census invariant had to move from a total to a per-unit map
+
+Landing this made the prerequisite gate's `language_census` rise from 2049 to 2076, and the
+regression guard — whose rule for that plane was non-increase — failed. The rise is not a
+regression: the census counts the identifiers of every **transcribed authority unit** that
+the crate neither models nor references, so transcribing another file necessarily adds that
+file's local identifiers (`pcgbl`, `sectconf`, `ecmd`, `cval`, …). The guard's own comment
+says the invariant exists so the census cannot "become a place where real omissions hide",
+and a total that grows for a legitimate reason is exactly a place where an omission *can*
+hide.
+
+So the invariant is now stated where it can be checked:
+
+* `prerequisite_gate.py` publishes `census_by_unit` — the same census, grouped by the
+  authority unit each name came from;
+* `regression_guard.py` fails when a unit that was **already transcribed** gains censused
+  names, and reports a unit that is **new** as a movement; the total is reported and never
+  fails on its own.
+
+The per-unit map is bootstrap-only on the commit that introduces it, because the authority
+baseline at `origin/phase6-libctx` predates the field; from the next commit the guard
+compares it. The proposed-baseline check was extended to cover `prerequisites` in the same
+change — it compared only five planes, so the blocking-dependency count and the new census
+map were evidence the authority certified against and nothing verified.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 160 / 1 | **160 / 1** (6.8d adds no export) |
+| `RT-PROVIDER` observations | 67 | **80** |
+| courts / observations | 55 / 20,150 | **55 / 20,163** |
+| language census | 2049 | **2076**, now with a per-unit invariant |
+| the one that remains open | — | `OSSL_LIB_CTX_new_child` (6.6d), which needs `ossl_provider_init_as_child` (6.8e) |

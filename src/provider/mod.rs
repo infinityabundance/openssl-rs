@@ -77,6 +77,8 @@
 //! SPDX-License-Identifier: Apache-2.0
 
 pub(crate) mod activate;
+// 6.8d: `crypto/provider_conf.c`, the `providers` configuration module.
+pub(crate) mod conf;
 pub(crate) mod core_dispatch;
 pub(crate) mod init;
 pub(crate) mod stores;

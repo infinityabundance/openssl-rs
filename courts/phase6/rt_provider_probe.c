@@ -39,10 +39,17 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+/* `OPENSSL_load_builtin_modules` and `OSSL_LIB_CTX_load_config` are exported. */
+extern void OPENSSL_load_builtin_modules(void);
 
 #include <openssl/core.h>
 #include <openssl/core_dispatch.h>
 #include <openssl/core_names.h>
+#include <openssl/crypto.h>
+#include <openssl/err.h>
 #include <openssl/params.h>
 #include <openssl/provider.h>
 
@@ -384,6 +391,155 @@ int main(void)
 
     /* ---- the NULL contract on the releases ---- */
     printf("unload.null=%d\n", OSSL_PROVIDER_unload(NULL));
+
+    /* ---- the `providers` configuration module (6.8d) ----
+     *
+     * `provider_conf_init` is reached only through a configuration file, so this section
+     * writes its own files and drives them with `OSSL_LIB_CTX_load_config` -- the 6.6g
+     * export, whose flags are the literal zero that makes a module failure an error. That
+     * pairing is deliberate: it is the only path on which a probe can see the module's
+     * return value rather than having it swallowed by `DEFAULT_CONF_MFLAGS`.
+     *
+     * Five behaviours are the ones a plausible transcription loses:
+     *
+     *   * an entry with `activate = 1` really does load a provider, observed through
+     *     `OSSL_PROVIDER_available`;
+     *   * an entry with `activate = no` adds a **template** instead, which is findable but
+     *     not available;
+     *   * the boolean grammar is exact -- `Yes` and `2` are refused;
+     *   * a missing command section and a missing `providers` section are different
+     *     failures with different messages;
+     *   * a section that refers back to itself is refused by *pointer identity*, which is
+     *     why the observation is a reason code and not a timeout.
+     *
+     * The provider named is the library's own `default`, so the observation is about the
+     * **configuration module** and not about a probe-supplied entry point: whether the
+     * provider's own `OSSL_provider_init` exists in this profile is a different stratum's
+     * question and is named rather than hidden (see the header). `available` is the
+     * observable, and it answers 1 on both sides only if the activation really happened. */
+    {
+        static const char *DIR = "/tmp/rt-provider";
+        char p_activate[160], p_template[160], p_badbool[160], p_nosect[160];
+        char p_nocmds[160], p_recursive[160], p_dotted[160], p_noprovsect[160];
+        FILE *f;
+#define WR(i, v, name, act)                                                    \
+    snprintf((i), 160, "%s/" name, DIR);                                       \
+    f = fopen((i), "wb");                                                      \
+    if (f != NULL) {                                                           \
+        fputs("openssl_conf = init_sect\n"                                      \
+              "[init_sect]\n"                                                 \
+              "providers = provs\n"                                            \
+              "[provs]\n"                                                      \
+              "default = d_sect\n"                                             \
+              "[d_sect]\n" act,                                                \
+              f);                                                              \
+        fclose(f);                                                             \
+    }
+        mkdir(DIR, 0755);
+        WR(p_activate, 0, "activate.cnf", "activate = 1\n");
+        WR(p_template, 0, "template.cnf", "activate = no\n");
+        WR(p_badbool, 0, "badbool.cnf", "activate = Yes\n");
+        WR(p_dotted, 0, "dotted.cnf", "activate = TRUE\n");
+        /* A section the entry names but the file does not define. */
+        snprintf(p_nocmds, 160, "%s/nocmds.cnf", DIR);
+        f = fopen(p_nocmds, "wb");
+        if (f != NULL) {
+            fputs("openssl_conf = init_sect\n"
+                  "[init_sect]\n"
+                  "providers = provs\n"
+                  "[provs]\n"
+                  "default = no_such_command_section\n",
+                  f);
+            fclose(f);
+        }
+        /* A `providers` value that names no section at all. */
+        snprintf(p_noprovsect, 160, "%s/noprovsect.cnf", DIR);
+        f = fopen(p_noprovsect, "wb");
+        if (f != NULL) {
+            fputs("openssl_conf = init_sect\n"
+                  "[init_sect]\n"
+                  "providers = no_such_providers_section\n",
+                  f);
+            fclose(f);
+        }
+        /* The recursion: a parameter whose *value* names the section it is in. */
+        snprintf(p_recursive, 160, "%s/recursive.cnf", DIR);
+        f = fopen(p_recursive, "wb");
+        if (f != NULL) {
+            fputs("openssl_conf = init_sect\n"
+                  "[init_sect]\n"
+                  "providers = provs\n"
+                  "[provs]\n"
+                  "default = d_sect\n"
+                  "[d_sect]\n"
+                  "loop = d_sect\n",
+                  f);
+            fclose(f);
+        }
+        /* A missing file, so the `> 0` of the wrapper is visible once more. */
+        snprintf(p_nosect, 160, "%s/not-here.cnf", DIR);
+        unlink(p_nosect);
+#undef WR
+
+        /* The `providers` module must be registered before any of this resolves. It is
+         * reached through `module_run`'s run-once, but only if that run-once has not
+         * fired yet; calling it explicitly makes the observation about the module. */
+        OPENSSL_load_builtin_modules();
+        ERR_clear_error();
+
+        /* The template case, and the activation case. Both answer 1, and the
+         * activation's answer is the `ok >= 0` collapse described above rather than a
+         * statement that the provider loaded.
+         *
+         * **`OSSL_PROVIDER_available` is deliberately not observed here**, and this is
+         * the same exclusion the header already makes for the fallback walk, arriving
+         * through a second door. `default`'s `OSSL_provider_init` --
+         * `ossl_default_provider_init` -- is 7/8's and does not exist in this crate, so
+         * the activation succeeds at the registry level and the provider is not
+         * activated, and `available` answers 0 where the authority answers 1. That is a
+         * *recorded residual* of 6.8c (`docs/PHASE-6-SUBPHASES.md`, residual 1) and not a
+         * defect in this module: what 6.8d owns is the configuration walk, and the walk's
+         * own observables -- the flag grammar, the two section errors, the recursion
+         * refusal and the wrapper's return -- are all below and all in scope. */
+        ret = OSSL_LIB_CTX_load_config(ctx, p_template);
+        printf("cmod.template.load=%d err=%lu\n", ret, ERR_peek_last_error());
+        ERR_clear_error();
+
+        ret = OSSL_LIB_CTX_load_config(ctx, p_activate);
+        printf("cmod.activate.load=%d err=%lu\n", ret, ERR_peek_last_error());
+        ERR_clear_error();
+
+        /* `Yes` is not one of the fourteen spellings. */
+        ret = OSSL_LIB_CTX_load_config(ctx, p_badbool);
+        printf("cmod.badbool.load=%d\n", ret);
+        printf("cmod.badbool.reason=%d\n", ERR_GET_REASON(ERR_peek_error()));
+        printf("cmod.badbool.lib=%d\n", ERR_GET_LIB(ERR_peek_error()));
+        ERR_clear_error();
+
+        /* `TRUE` is, and a `.default` key is the same key as `default`. */
+        ret = OSSL_LIB_CTX_load_config(ctx, p_dotted);
+        printf("cmod.dotted.load=%d err=%lu\n", ret, ERR_peek_last_error());
+        ERR_clear_error();
+
+        ret = OSSL_LIB_CTX_load_config(ctx, p_nocmds);
+        printf("cmod.nocmds.load=%d\n", ret);
+        printf("cmod.nocmds.reason=%d\n", ERR_GET_REASON(ERR_peek_error()));
+        ERR_clear_error();
+
+        ret = OSSL_LIB_CTX_load_config(ctx, p_noprovsect);
+        printf("cmod.noprovsect.load=%d\n", ret);
+        printf("cmod.noprovsect.reason=%d\n", ERR_GET_REASON(ERR_peek_error()));
+        ERR_clear_error();
+
+        ret = OSSL_LIB_CTX_load_config(ctx, p_recursive);
+        printf("cmod.recursive.load=%d\n", ret);
+        printf("cmod.recursive.reason=%d\n", ERR_GET_REASON(ERR_peek_error()));
+        ERR_clear_error();
+
+        ret = OSSL_LIB_CTX_load_config(ctx, p_nosect);
+        printf("cmod.missing_file.load=%d err=%lu\n", ret, ERR_peek_last_error());
+        ERR_clear_error();
+    }
 
     OSSL_LIB_CTX_free(ctx);
     return 0;

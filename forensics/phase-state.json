@@ -284,6 +284,7 @@
           "src/provider/activate.rs",
           "src/provider/stores.rs",
           "src/provider/core_dispatch.rs",
+          "src/provider/conf.rs",
           "courts/phase6/rt_provider_probe.c",
           "src/dso/mod.rs",
           "src/dso/dlfcn.rs",
@@ -487,7 +488,7 @@
       "not_started": 15
     }
   },
-  "body_hash": "8994239e719ff5dae72831abef8ddd5fabfcc7c1a269a7cca80a3e2df647194b",
+  "body_hash": "4df4e0ae9d481278f2e83d4a02fa664019a5e23b65a892bd6ae653b43ebf2adf",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

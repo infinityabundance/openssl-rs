@@ -476,6 +476,11 @@ PHASE6_MODULES = [
     "src/provider/activate.rs",
     "src/provider/stores.rs",
     "src/provider/core_dispatch.rs",
+    # 6.8d: `crypto/provider_conf.c`, the `providers` configuration module, whose court is
+    # RT-PROVIDER -- the same court the registry calls home, because the module is reached
+    # only through a configuration file and every observation of it goes through the
+    # provider surface it configures.
+    "src/provider/conf.rs",
     "courts/phase6/rt_provider_probe.c",
     # 6.9: the DSO layer, reassigned from Phase 2 by D95 because Phase 2's definition is
     # distribution structure and the dynamic-loader abstraction is semantic.

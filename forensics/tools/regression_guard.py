@@ -414,13 +414,18 @@ def compare(baseline: dict, current: dict) -> tuple[list[str], list[str]]:
 
     # The prerequisite plane. `findings` must be zero and stay zero; an absent gate
     # artefact is an absence of evidence, not a clean bill, so it is a regression like
-    # every other missing plane. The two censuses and the blocking list must not grow.
+    # every other missing plane. The blocking list must not grow, and the language
+    # census is checked **per authority unit** rather than as a total -- see
+    # `language_census_by_unit` below for why the total cannot carry the invariant.
     for key, was in sorted(baseline.get("prerequisites", {}).items()):
         now = current.get("prerequisites", {}).get(key)
         if now is None:
             regressions.append(
                 f"prerequisites[{key}]: baseline {was}, but {PREREQUISITE_GATE} is "
                 f"absent or does not carry this field -- absence is not completion")
+            continue
+        if key == "language_census_by_unit":
+            # A map, not a count; handled in its own loop below.
             continue
         if key == "findings" and now:
             regressions.append(
@@ -433,10 +438,43 @@ def compare(baseline: dict, current: dict) -> tuple[list[str], list[str]]:
             if now != was:
                 movements.append(f"prerequisites[{key}]: {was} -> {now}")
             continue
+        if key == "language_census":
+            # The total is *expected* to grow when another authority file is
+            # transcribed, because that file's local identifiers enter the census,
+            # and a growth the total cannot distinguish from a real omission would
+            # hide one. So the total is reported and the per-unit comparison below
+            # carries the invariant.
+            if now != was:
+                movements.append(f"prerequisites[{key}]: {was} -> {now}")
+            continue
         if now > was:
             regressions.append(f"prerequisites[{key}]: {was} -> {now} (+{now - was})")
         elif now < was:
             movements.append(f"prerequisites[{key}]: {was} -> {now} (-{was - now})")
+
+    # The language census, per authority unit. A unit that was already transcribed may
+    # not gain censused names -- that would be a name this crate should reference or
+    # model and does not -- and a unit that is new is a movement. This is the invariant
+    # the total was standing in for, stated where it can actually be checked
+    # (`docs/DECISIONS.md` D130).
+    was_by_unit = baseline.get("prerequisites", {}).get("language_census_by_unit", {})
+    now_by_unit = current.get("prerequisites", {}).get("language_census_by_unit", {})
+    if was_by_unit and now_by_unit:
+        for unit, was in sorted(was_by_unit.items()):
+            now = now_by_unit.get(unit, 0)
+            if now > was:
+                regressions.append(
+                    f"prerequisites[language_census_by_unit][{unit}]: {was} -> {now} "
+                    f"(+{now - was}); a transcribed unit gained censused names")
+            elif now < was:
+                movements.append(
+                    f"prerequisites[language_census_by_unit][{unit}]: {was} -> "
+                    f"{now} (-{was - now})")
+        for unit, now in sorted(now_by_unit.items()):
+            if unit not in was_by_unit:
+                movements.append(
+                    f"prerequisites[language_census_by_unit][{unit}]: new unit, "
+                    f"{now} censused name(s)")
 
     return regressions, movements
 
@@ -449,7 +487,21 @@ def baseline_mismatch(proposed: dict, current: dict) -> list[str]:
     summarise.
     """
     diffs: list[str] = []
-    for key in ("implemented", "open_obligations", "deferred", "courts", "phases"):
+    for key in (
+        "implemented",
+        "open_obligations",
+        "deferred",
+        "courts",
+        "phases",
+
+        # `prerequisites` is compared too, and it is a *strengthening* rather than a
+        # formality: the per-unit language census and the blocking-dependency count
+        # are evidence the authority baseline certifies against, and a proposed
+        # baseline that disagreed with the checkout would let the next commit's
+        # comparison read the wrong numbers. Its nested `language_census_by_unit`
+        # map is compared by value, which is what the per-unit invariant needs.
+        "prerequisites",
+    ):
         p = proposed.get(key, {})
         c = current.get(key, {})
         for k in sorted(set(p) | set(c)):

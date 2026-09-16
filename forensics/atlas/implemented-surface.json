@@ -281,7 +281,7 @@
         "truncf128",
         "truncf16"
       ],
-      "compiler_emitted_count": 5253,
+      "compiler_emitted_count": 6950,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -1448,7 +1448,7 @@
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "61acfa0409d15de3c22fd403c52b56d291c71c3c0d37fcd215b50ec95f183a6c"
+      "sha256": "e3caeabeefe0bd4bda3a2ed3f8ab98fdc4901c24e84fab259983d637260b7b71"
     },
     {
       "name": "authority-exports",
