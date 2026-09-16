@@ -43,6 +43,7 @@ pub mod secure;
 pub mod stack;
 pub mod str;
 pub mod thread;
+pub mod thread_events;
 pub mod time;
 pub mod trace;
 pub mod uid;

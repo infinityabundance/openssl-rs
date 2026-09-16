@@ -17,9 +17,9 @@ name is defined; `open` means the stratum owns it and has not built it;
 
 | library | authority exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 1113 | 4783 |
+| libcrypto | 5896 | 1116 | 4780 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **1113** | **5386** |
+| **total** | **6499** | **1116** | **5383** |
 
 ## Ownership atlas, by stratum
 
@@ -31,7 +31,7 @@ declared owner; this is that assignment.
 | 3 | Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects | `complete` | 294 | 294 | 251 | 43 | 0 |
 | 4 | BIO + CONF + object database | `complete` | 256 | 272 | 249 | 23 | 0 |
 | 5 | BN + ASN.1 + DER/PEM | `complete` | 561 | 565 | 474 | 91 | 0 |
-| 6 | OSSL_LIB_CTX + provider core | `in-progress` | 137 | 161 | 139 | 0 | 22 |
+| 6 | OSSL_LIB_CTX + provider core | `in-progress` | 137 | 161 | 142 | 0 | 19 |
 | 7 | EVP framework | `not-started` | 924 | — | — | — | — |
 | 8 | Native cryptographic primitives | `not-started` | 759 | — | — | — | — |
 | 9 | RAND / DRBG + entropy | `not-started` | 25 | — | — | — | — |
@@ -63,7 +63,7 @@ Deferred out, by receiving stratum:
 
 * to phase 4: 16 symbol(s), 16 already discharged by that stratum
   `ERR_add_error_mem_bio`, `ERR_print_errors`, `ERR_print_errors_cb`, `ERR_print_errors_fp`, `OBJ_create_objects`, `OPENSSL_INIT_free`, `OPENSSL_INIT_new`, `OPENSSL_INIT_set_config_appname`, `OPENSSL_INIT_set_config_file_flags`, `OPENSSL_INIT_set_config_filename`, `OPENSSL_LH_node_stats`, `OPENSSL_LH_node_stats_bio`, `OPENSSL_LH_node_usage_stats`, `OPENSSL_LH_node_usage_stats_bio`, `OPENSSL_LH_stats`, `OPENSSL_LH_stats_bio`
-* to phase 6: 5 symbol(s), 2 already discharged by that stratum
+* to phase 6: 5 symbol(s), 5 already discharged by that stratum
   `OPENSSL_atexit`, `OPENSSL_thread_stop`, `OPENSSL_thread_stop_ex`, `OSSL_get_max_threads`, `OSSL_set_max_threads`
 * to phase 13: 22 symbol(s)
   `ASYNC_WAIT_CTX_clear_fd`, `ASYNC_WAIT_CTX_free`, `ASYNC_WAIT_CTX_get_all_fds`, `ASYNC_WAIT_CTX_get_callback`, `ASYNC_WAIT_CTX_get_changed_fds`, `ASYNC_WAIT_CTX_get_fd`, `ASYNC_WAIT_CTX_get_status`, `ASYNC_WAIT_CTX_new`, `ASYNC_WAIT_CTX_set_callback`, `ASYNC_WAIT_CTX_set_status`, `ASYNC_WAIT_CTX_set_wait_fd`, `ASYNC_block_pause`, `ASYNC_cleanup_thread`, `ASYNC_get_current_job`, `ASYNC_get_mem_functions`, `ASYNC_get_wait_ctx`, `ASYNC_init_thread`, `ASYNC_is_capable`, `ASYNC_pause_job`, `ASYNC_set_mem_functions`, `ASYNC_start_job`, `ASYNC_unblock_pause`
@@ -176,14 +176,14 @@ Courts: `all pass`, 9 court(s), 0 authority observation(s).
 ## Phase 6 — OSSL_LIB_CTX + provider core
 
 * state: `in-progress`
-* blocking: 22 open obligation(s) of this stratum recorded in forensics/phase6-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase
+* blocking: 19 open obligation(s) of this stratum recorded in forensics/phase6-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase
 * seal: none written yet (`docs/PHASE-6-PROVIDER-SEAL.md`)
 * ledger: `forensics/phase6-obligations.json`
 * atlas-owned: 137
 * owned working set: 161
-* implemented: 139
+* implemented: 142
 * deferred to a later stratum with a stated reason: 0
-* **open in this stratum: 22**
+* **open in this stratum: 19**
 
 Hand-offs received and discharged:
 

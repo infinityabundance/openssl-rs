@@ -74,11 +74,18 @@ MODULE_PREFIXES: list[tuple[str, tuple[str, ...]]] = [
     ("src/confmod/asn1.rs", ("ASN1_add_oid_module",)),
     ("src/context/core_bio.rs", ("BIO_s_core", "BIO_new_from_core_bio")),
     # The five Phase 3 handed over. They are labels for rows this stratum *owes*,
-    # and they name where the machinery each one needs lives: the library context
-    # and its thread slot, and the loader `OPENSSL_atexit` pins through.
-    ("src/context/thread_data.rs", ("OSSL_get_max_threads", "OSSL_set_max_threads",
-                                    "OPENSSL_thread_stop", "OPENSSL_thread_stop_ex")),
-    ("src/dso/mod.rs", ("OPENSSL_atexit",)),
+    # and until 6.6e-ii landed they named where the machinery each one *needed* lived:
+    # the library context, its thread slot, and the loader `OPENSSL_atexit` pins
+    # through. Two of the five have moved now that they are written -- see below.
+    ("src/context/thread_data.rs", ("OSSL_get_max_threads", "OSSL_set_max_threads")),
+    # 6.6e-ii's three. They are labelled where they are written rather than where the
+    # planning pass expected them: `OPENSSL_thread_stop` and `_ex` are the two
+    # `crypto/initthread.c` entry points and live with the handler table in
+    # `src/runtime/thread_events.rs`, and `OPENSSL_atexit` is `crypto/init.c`'s and lives
+    # with the cleanup it feeds in `src/runtime/init.rs`. A label is a label, and a ledger
+    # that named the wrong module would send a reader to a file that does not hold the symbol.
+    ("src/runtime/thread_events.rs", ("OPENSSL_thread_stop", "OPENSSL_thread_stop_ex")),
+    ("src/runtime/init.rs", ("OPENSSL_atexit",)),
 ]
 
 # Symbols earlier strata hand to this one. Each edge is declared here as discharged
@@ -118,8 +125,9 @@ HANDED_OFF_IN: dict[int, tuple[str, ...]] = {
     # reconnaissance found them `open` in Phase 3's ledger, and the dependencies
     # below are what moved them. Each was read from the authority's source rather
     # than guessed -- `crypto/thread/api.c` for the two count accessors,
-    # `crypto/initthread.c` for the thread-stop pair, and `crypto/init.c`'s DSO
-    # pinning block for `OPENSSL_atexit`.
+    # `crypto/initthread.c` for the thread-stop pair, and `crypto/init.c` for
+    # `OPENSSL_atexit` -- where the pinning block turned out **not** to be compiled in,
+    # because this profile defines `OPENSSL_USE_NODELETE` (D119).
     3: (
         "OPENSSL_atexit",
         "OPENSSL_thread_stop",

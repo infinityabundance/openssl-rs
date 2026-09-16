@@ -331,6 +331,32 @@ pub(crate) unsafe extern "C" fn core_get_params(
     }
 }
 
+/// `static int core_thread_start(const OSSL_CORE_HANDLE *handle,
+/// OSSL_thread_stop_handler_fn handfn, void *arg)`.
+///
+/// The provider-facing spelling of `ossl_init_thread_start`: a provider that has per-thread
+/// state asks the core to be told when that thread stops, and the core registers the
+/// provider's own handler against the **handle**, which is the `OSSL_PROVIDER *` the loader
+/// created. The authority's comment says exactly that, and it is why the cast is safe: the
+/// handle a provider receives through `OSSL_provider_init` is the provider object.
+///
+/// Note the argument order. The dispatch entry is `(handle, handfn, arg)` and
+/// `ossl_init_thread_start` is `(index, arg, handfn)` — the handler is the *third* parameter
+/// there and the *second* here. Transposing them compiles, because both are pointer-sized,
+/// and would register the argument as a function and call it at thread exit. That is why this
+/// body is a named call rather than an inline cast.
+///
+/// 6.6e-ii, and the entry it publishes is id 3 in the 1024-series table.
+pub(crate) unsafe extern "C" fn core_thread_start(
+    handle: *const c_void,
+    handfn: Option<crate::runtime::thread_events::ThreadStopHandlerFn>,
+    arg: *mut c_void,
+) -> c_int {
+    // SAFETY: the handle is the `OSSL_PROVIDER *` the loader passed to `OSSL_provider_init`,
+    // per the authority's own comment, and it is used only as an opaque deregistration key.
+    unsafe { crate::runtime::thread_events::ossl_init_thread_start(handle, arg, handfn) }
+}
+
 /// `static OPENSSL_CORE_CTX *core_get_libctx(const OSSL_CORE_HANDLE *handle)`.
 ///
 /// Reads `prov->libctx` **directly** rather than through `ossl_provider_libctx`, and the
@@ -637,7 +663,7 @@ unsafe impl Sync for CoreDispatchTable {}
 
 /// A wrapper carrying the table's `Sync` claim.
 #[allow(dead_code)] // unreachable until 6.8c publishes it through `get0_dispatch`
-pub(crate) struct CoreDispatchTable(pub(crate) [OsslDispatch; 41]);
+pub(crate) struct CoreDispatchTable(pub(crate) [OsslDispatch; 42]);
 
 /// The table itself.
 #[allow(dead_code)] // unreachable until 6.8c publishes it through `get0_dispatch`
@@ -648,7 +674,7 @@ pub(crate) static CORE_DISPATCH: CoreDispatchTable = CoreDispatchTable([
     ),
     e(FUNC_CORE_GET_PARAMS, core_get_params as *mut c_void),
     e(FUNC_CORE_GET_LIBCTX, core_get_libctx as *mut c_void),
-    // 3 `OSSL_FUNC_CORE_THREAD_START` — absent, 6.6e-ii.
+    e(FUNC_CORE_THREAD_START, core_thread_start as *mut c_void),
     e(FUNC_CORE_NEW_ERROR, core_new_error as *mut c_void),
     e(
         FUNC_CORE_SET_ERROR_DEBUG,
@@ -940,7 +966,7 @@ mod tests {
         // missing entry and a wrongly-typed entry both produce a provider that misbehaves
         // rather than a build failure.
         let published: &[c_int] = &[
-            1, 2, 4, 5, 6, 7, 8, 9, 10, 120, // the core, error and mark group
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 120, // the core, error, thread and mark group
             20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, // CRYPTO_* and OPENSSL_cleanse
             40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, // the BIO group
             95, 100, // the indicator and self-test callbacks
@@ -979,7 +1005,7 @@ mod tests {
             );
         }
         // Every other id below 200 must be absent, and these are the ones that are absent on
-        // purpose: 3 needs `ossl_init_thread_start`, 96-106 needs Phase 9 and 6.8e, and
+        // purpose: 96-106 needs Phase 9 and 6.8e, and
         // 110/111 need 6.8c's activate. A test that only listed the published set would let
         // an id be *added* without anyone deciding it was ready.
         for id in 0..200i32 {
@@ -996,10 +1022,11 @@ mod tests {
     #[test]
     fn the_absent_ids_are_the_ones_the_module_doc_names() {
         // The doc table and the code cannot drift: each named absence is checked against the
-        // table. `CORE_THREAD_START` is 6.6e-ii's, the eight `rand_*` ids are Phase 9's, the
+        // table. `CORE_THREAD_START` left this list when 6.6e-ii landed
+        // `ossl_init_thread_start`, and its entry is now published as id 3, so the remaining
+        // names are the eight `rand_*` ids, which are Phase 9's, the
         // child-callback pair is 6.8e's and the two provider refcount entries are 6.8c's.
         let absent: &[(c_int, &str)] = &[
-            (3, "CORE_THREAD_START -- 6.6e-ii"),
             (96, "CLEANUP_USER_ENTROPY -- Phase 9"),
             (97, "CLEANUP_USER_NONCE -- Phase 9"),
             (98, "GET_USER_ENTROPY -- Phase 9"),

@@ -6328,3 +6328,81 @@ that do not, with a unit test that fails when each of them lands.
 | Phase 6 implemented / open | 139 / 22 | **139 / 22** (no source changed) |
 | phase courts / observations | 54 / 19,869 | **54 / 19,869** |
 | subphase order corrected | — | **6.6e-ii before 6.10** |
+
+## D119 — 6.6e-ii's source lands: four call sites close, two divergences fall out of the tests, and the court follows
+
+**The three exports are declared and Phase 6 moves 139/22 → 142/19**, `libcrypto`
+1113 → **1116** of 5896. `crypto/initthread.c` becomes `src/runtime/thread_events.rs` — the
+handler record, the global register of per-thread list heads, `destructor_key` as a sentinel
+plus a key cell, `manage_thread_local` and its three spellings, the push/remove/destructor
+trio, `init_thread_stop`, `init_thread_deregister`'s two modes, `ossl_init_thread`,
+`ossl_cleanup_thread`, `ossl_init_thread_start`, `ossl_init_thread_deregister`,
+`ossl_ctx_thread_stop` and both `OPENSSL_thread_stop` spellings — and `crypto/init.c`'s
+`OPENSSL_atexit` joins `src/runtime/init.rs` with `stop_handlers` and the drain that
+`OPENSSL_cleanup` now runs.
+
+**`OPENSSL_USE_NODELETE` is defined in this profile, so `OPENSSL_atexit`'s DSO-pinning block
+does not exist in the authority either.** `configdata.pm` records
+`lib_cppflags => "-DOPENSSL_USE_NODELETE -DL_ENDIAN"`, and the block is guarded by
+`#if !defined(OPENSSL_USE_NODELETE) && !defined(OPENSSL_NO_PINSHARED)`. So the Win32
+`GetModuleHandleEx` route and the `DSO_dsobyaddr(handler, DSO_FLAG_NO_UNLOAD_ON_FREE)` route
+are both compiled out and what remains is a three-line linked-list push. D118's plan called
+for reading that profile fact rather than assuming it, and the answer removed the whole
+supposed difficulty. The `DSO_dsobyaddr` that 6.9 landed is not needed here at all.
+
+**Four call sites close.** `ossl_provider_free`'s `ossl_init_thread_deregister(prov)`, which
+the provider module had carried as "the most important of the five named omissions" since
+6.8a, and which the authority calls **unconditionally** because an init that *failed* may
+still have registered a handler. `context_deinit`'s `ossl_ctx_thread_stop(ctx)`, named in
+`src/context/mod.rs` since Phase 3. `CRYPTO_THREAD_init_local`'s `ossl_init_thread()`
+preamble, whose absence the same function's doc comment recorded as "a later phase" — the
+marker and the code are now the same paragraph. And `core_dispatch`'s
+`OSSL_FUNC_CORE_THREAD_START`, published as id 3, which is the provider-facing spelling of
+`ossl_init_thread_start` and the mechanism by which a third-party provider is told when a
+thread stops.
+
+**Two defects the unit tests found, and neither is a defect in the transcription.**
+
+* **`D-TEVENT-REENTRANT-1`.** `init_thread_stop` calls the handler *while holding* the global
+  register's write lock, so a handler that calls `ossl_init_thread_start` re-enters the lock.
+  On the authority's pthread rwlock that is a **deadlock** — `pthread_rwlock_wrlock` on a
+  same-thread write acquisition does not return — which the test discovered by observing that
+  this crate's lock *refuses* it with 0. A hang inside thread teardown has no return value, no
+  error-queue entry and no recovery, so it is recorded rather than reproduced, and the refusal
+  is pinned.
+* **`D-TEVENT-CTX-STOP-LEAK-1`.** `ossl_ctx_thread_stop` frees the list **head** after running
+  only the handlers whose `arg` matches, so handler nodes registered for *other* contexts are
+  left linked to a released block: leaked, and unreachable, because the thread local was
+  cleared. A leak is defined behaviour rather than a fault, so this one **is** reproduced and
+  claimed, and it is recorded so that a reader who finds it independently knows the candidate
+  got it right rather than wrong.
+
+**Two instrumentation lessons, both the same shape.** A `static CryptoOnce = 0` handed to
+`pthread_once` **faults**: `pthread_once` writes through its argument and a bare `static`
+lands in read-only storage. `OSSL_LIB_CTX_new()` segfaulted on the first run, and the crate's
+own pattern (`AtomicI32` + `.as_ptr()`, as `context/mod.rs` already did) is the fix. And
+`pthread_key_create` after a `pthread_key_delete` routinely returns the **same key number**,
+and glibc does not clear the per-thread value array for it — so a re-created key can read the
+old, freed value. That bit the tests that ran after the one test in this crate that calls
+`OPENSSL_cleanup`, and it is why the test-only re-arm clears the thread local as well as the
+two run-onces.
+
+**`RT-THREADDATA` does not yet observe any of this, and 6.6e-ii is therefore not sealed.**
+The three rows move because the ledger counts a symbol as implemented the moment it is
+*defined* — that is the documented property of this project's arithmetic — while the *seal*
+requires differential evidence, and the existing probe's 39 observations do not include the
+handler table. The same commit that extends the probe will be the one that calls this row
+complete, and the extension is named in `docs/PHASE-6-SUBPHASES.md`: a provider-mediated
+`OSSL_FUNC_CORE_THREAD_START` registration, "the handler ran exactly once with its argument",
+"a second stop is a no-op", and the `OPENSSL_atexit` drain observed around `OPENSSL_cleanup`.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 6 implemented / open | 139 / 22 | **142 / 19** |
+| `libcrypto` implemented / 5896 | 1113 | **1116** |
+| `ABI-PROTOTYPE` declarations / types checked | 1066 / 1083 | **1069 / 1086** |
+| unit tests | 257 | **262** |
+| phase courts / observations | 54 / 19,869 | **54 / 19,869** (the probe is unchanged) |
+| recorded divergences added | — | **`D-TEVENT-REENTRANT-1`, `D-TEVENT-CTX-STOP-LEAK-1`** |

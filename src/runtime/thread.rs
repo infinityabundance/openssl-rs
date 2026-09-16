@@ -387,10 +387,12 @@ pub unsafe extern "C" fn CRYPTO_THREAD_run_once(
 /// destructor clears the value). Returns 1 on success, 0 on failure or NULL
 /// `key`.
 ///
-/// The authority additionally initialises its global thread-event machinery
-/// here. That machinery has no counterpart yet (it carries per-thread
-/// `OSSL_LIB_CTX` teardown, a later phase), and its absence is not observable
-/// through `CRYPTO_THREAD_*` itself.
+/// The authority runs its global thread-event initialisation **first**, through
+/// `ossl_init_thread()`, and refuses the caller's key when that fails. That call
+/// was named here as a later phase until 6.6e-ii landed; it is now made, and the
+/// order matters: a key created before the event machinery exists would be usable
+/// by a caller who then registered a handler against a thread-local list that had
+/// nowhere to go.
 ///
 /// # Safety
 /// `key` must be NULL or valid, writable storage for a `CRYPTO_THREAD_LOCAL`.
@@ -404,13 +406,54 @@ pub unsafe extern "C" fn CRYPTO_THREAD_init_local(
         if key.is_null() {
             return 0;
         }
-        // SAFETY: `key` is valid storage per the caller's contract.
-        if unsafe { pthread_key_create(key, cleanup) } == 0 {
-            1
-        } else {
-            0
+        if crate::runtime::thread_events::ossl_init_thread() == 0 {
+            return 0;
         }
+        // SAFETY: `key` is valid storage per the caller's contract.
+        unsafe { thread_key_create(key, cleanup) }
     })
+}
+
+/// The body of `CRYPTO_THREAD_init_local` without the event-machinery preamble, which the
+/// event machinery itself needs: `ossl_init_thread_once` creates the *destructor* key, and
+/// that creation must not re-enter `ossl_init_thread`.
+///
+/// The authority has this as a separate function, `ossl_thread_init_local`, for exactly that
+/// reason. This crate had folded it in; the fold stays and this is the seam.
+///
+/// # Safety
+/// As [`CRYPTO_THREAD_init_local`], minus the initialisation requirement.
+pub(crate) unsafe fn thread_key_create(
+    key: *mut CryptoThreadLocal,
+    cleanup: Option<extern "C" fn(*mut c_void)>,
+) -> c_int {
+    if key.is_null() {
+        return 0;
+    }
+    // SAFETY: `key` is valid storage per the caller's contract.
+    if unsafe { pthread_key_create(key, cleanup) } == 0 {
+        1
+    } else {
+        0
+    }
+}
+
+/// The body of `CRYPTO_THREAD_cleanup_local`, for the same reason as [`thread_key_create`]:
+/// `ossl_cleanup_thread` releases the destructor key, and going through the exported function
+/// would be guard-wrapped and re-entrant in a way the authority's call is not.
+///
+/// # Safety
+/// `key` must be NULL or a live key from [`thread_key_create`].
+pub(crate) unsafe fn thread_key_free(key: *mut CryptoThreadLocal) -> c_int {
+    if key.is_null() {
+        return 0;
+    }
+    // SAFETY: `key` points to a live key per the caller's contract.
+    if unsafe { pthread_key_delete(*key) } == 0 {
+        1
+    } else {
+        0
+    }
 }
 
 /// `void *CRYPTO_THREAD_get_local(CRYPTO_THREAD_LOCAL *key)`
@@ -473,11 +516,7 @@ pub unsafe extern "C" fn CRYPTO_THREAD_cleanup_local(key: *mut CryptoThreadLocal
             return 0;
         }
         // SAFETY: `key` points to a live key per the caller's contract.
-        if unsafe { pthread_key_delete(*key) } == 0 {
-            1
-        } else {
-            0
-        }
+        unsafe { thread_key_free(key) }
     })
 }
 

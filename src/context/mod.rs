@@ -624,11 +624,16 @@ fn context_deinit_objs(ctx: *mut OsslLibCtx) {
 
 /// `context_deinit(OSSL_LIB_CTX *ctx)`.
 ///
-/// The authority calls `ossl_ctx_thread_stop(ctx)` first. That function releases
-/// the per-thread objects *this context* owns, and none can exist until 6.6e
-/// registers threads against a context, so it is not called yet — see the module
-/// documentation. When it lands, this is the line it goes on.
+/// The authority calls `ossl_ctx_thread_stop(ctx)` **first**, before any of the
+/// context's sub-objects are released: it stops the handlers registered for this
+/// context on whatever threads still hold them, and those handlers may reach the
+/// objects the release below is about to free. It landed with 6.6e-ii, which is
+/// where the per-thread event-handler table comes from.
 fn context_deinit(ctx: *mut OsslLibCtx) {
+    // SAFETY: `ctx` is live, and `ossl_ctx_thread_stop` accepts NULL or live; the
+    // context is passed as the concrete object, which is what the authority's own
+    // call reaches through `ossl_lib_ctx_get_concrete`.
+    unsafe { crate::runtime::thread_events::ossl_ctx_thread_stop(ctx.cast::<c_void>()) };
     context_deinit_objs(ctx);
     // SAFETY: `ctx->lock` was created by `context_init` (or is NULL for a
     // context whose initialisation failed before the lock, which cannot be freed
