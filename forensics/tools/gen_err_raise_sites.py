@@ -115,6 +115,12 @@ COVERED_FILES = [
     ("crypto/conf/conf_lib.c", "CONF_LIB"),
     ("crypto/conf/conf_mod.c", "CONF_MOD"),
     ("crypto/conf/conf_sap.c", "CONF_SAP"),
+    # Phase 6.10e: the `ssl_conf` configuration module's own translation unit. Its
+    # three accessors are Phase 4's surface and its two module callbacks are Phase 6's
+    # (the handler reads `CONF_imodule_get_value` and needs `CONF_module_add`), so the
+    # file belongs here -- and leaving it out is why `ssl_module_init` had no
+    # coordinates to raise from. See `docs/DECISIONS.md` D128.
+    ("crypto/conf/conf_ssl.c", "CONF_SSL"),
     # The object database's one Phase 4 obligation (`OBJ_create_objects`) reads a
     # BIO, so its raise sites are part of this stratum.
     ("crypto/objects/obj_dat.c", "OBJ_DAT"),

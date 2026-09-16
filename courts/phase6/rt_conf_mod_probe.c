@@ -160,6 +160,19 @@ static void sayne(const char *key, long long v)
     saye(key);
 }
 
+/*
+ * The three `conf_ssl.c` accessors are **internal**: they are declared in
+ * `include/internal/sslconf.h`, which is not installed, so a probe compiled against
+ * installed headers has to declare them the way that header does. `SSL_CONF_CMD` is
+ * opaque here on purpose -- every observation below goes through `conf_ssl_get_cmd`,
+ * which is what libssl uses too, so the struct's layout is never needed.
+ */
+typedef struct ssl_conf_cmd_st SSL_CONF_CMD;
+extern const SSL_CONF_CMD *conf_ssl_get(size_t idx, const char **name, size_t *cnt);
+extern void conf_ssl_get_cmd(const SSL_CONF_CMD *cmd, size_t idx, char **cmdstr,
+                             char **arg);
+extern int conf_ssl_name_find(const char *name, size_t *idx);
+
 /* ------------------------------------------------------------------- fixtures */
 
 /*
@@ -173,7 +186,8 @@ static void sayne(const char *key, long long v)
 static const char *DIR = "/tmp/rt-conf-mod";
 
 static char path_main[256], path_noinit[256], path_badsec[256], path_unknown[256],
-    path_diag[256], path_empty[256], path_oids[256], path_missing[256];
+    path_diag[256], path_empty[256], path_oids[256], path_missing[256],
+    path_sslconf[256], path_sslconf_nosect[256], path_sslconf_nocmds[256];
 
 static int write_file(const char *path, const char *text)
 {
@@ -246,6 +260,44 @@ static const char *TEXT_DIAG =
     "[diag_sect]\n"
     "nosuchmodule = x\n";
 
+/*
+ * The `ssl_conf` module's two sections, and the three shapes its reader distinguishes.
+ *
+ * `ssl_conf` is the second of the seven `OPENSSL_load_builtin_modules` registrations this
+ * crate can make (6.10e), and it is the one whose *store* is observable: the accessors in
+ * `conf_ssl.c` answer what the module's reader put there. So this file is the only way to
+ * see the reader at all through the installed headers.
+ */
+static const char *TEXT_SSLCONF =
+    "openssl_conf = ssl_init_sect\n"
+    "\n"
+    "[ssl_init_sect]\n"
+    "ssl_conf = ssl_sect\n"
+    "\n"
+    "[ssl_sect]\n"
+    "system_default = sds\n"
+    "\n"
+    "[sds]\n"
+    ".CipherString = DEFAULT:@SECLEVEL=2\n"
+    "MinProtocol = TLSv1.2\n";
+
+/* `ssl_conf` naming a section the file does not define: `CONF_R_SSL_SECTION_NOT_FOUND`. */
+static const char *TEXT_SSLCONF_NOSECT =
+    "openssl_conf = ssl_init_sect\n"
+    "\n"
+    "[ssl_init_sect]\n"
+    "ssl_conf = no_such_section\n";
+
+/* A command set whose own section is absent: `CONF_R_SSL_COMMAND_SECTION_NOT_FOUND`. */
+static const char *TEXT_SSLCONF_NOCMDS =
+    "openssl_conf = ssl_init_sect\n"
+    "\n"
+    "[ssl_init_sect]\n"
+    "ssl_conf = ssl_sect\n"
+    "\n"
+    "[ssl_sect]\n"
+    "system_default = no_such_command_section\n";
+
 static void fixtures(void)
 {
     mkdir(DIR, 0755);
@@ -257,6 +309,9 @@ static void fixtures(void)
     snprintf(path_empty, sizeof path_empty, "%s/empty.cnf", DIR);
     snprintf(path_oids, sizeof path_oids, "%s/oids.cnf", DIR);
     snprintf(path_missing, sizeof path_missing, "%s/not-here.cnf", DIR);
+    snprintf(path_sslconf, sizeof path_sslconf, "%s/sslconf.cnf", DIR);
+    snprintf(path_sslconf_nosect, sizeof path_sslconf_nosect, "%s/sslconf-nosect.cnf", DIR);
+    snprintf(path_sslconf_nocmds, sizeof path_sslconf_nocmds, "%s/sslconf-nocmds.cnf", DIR);
 
     /* A path that has never existed, so the "missing file" observations cannot be
      * satisfied by a leftover from an earlier run. Its own directory is removed
@@ -268,6 +323,9 @@ static void fixtures(void)
     write_file(path_diag, TEXT_DIAG);
     write_file(path_empty, "");
     write_file(path_oids, TEXT_OIDS);
+    write_file(path_sslconf, TEXT_SSLCONF);
+    write_file(path_sslconf_nosect, TEXT_SSLCONF_NOSECT);
+    write_file(path_sslconf_nocmds, TEXT_SSLCONF_NOCMDS);
     unlink(path_missing);
 
     /* `CONF_get1_default_config_file` answers `$OPENSSL_CONF` when it is set, which
@@ -732,6 +790,169 @@ static void section_e(void)
     sayn("E_diag_null_conf", CONF_modules_load(NULL, NULL, 0));
 }
 
+/* ------------------------------------------------------------------ section G */
+
+/*
+ * Pop the whole error queue, reporting each record's lib, reason, line and function.
+ *
+ * `ERR_peek_last_error` shows only the **outermost** record, and the `ssl_conf` reader's own
+ * two raise sites are inner ones: `module_run` raises `CONF_R_MODULE_INITIALIZATION_ERROR`
+ * after the initialiser has already raised `CONF_SSL_75` or `CONF_SSL_94`. So the inner
+ * coordinates are unreachable through the peek and have to be drained. The order is the
+ * authority's: `ERR_get_error` takes the **oldest** record, so index 0 is the initialiser's
+ * and index 1 is `module_run`'s.
+ */
+static void drain_errors(const char *key)
+{
+    int i;
+    for (i = 0; i < 4; i++) {
+        const char *file = NULL, *func = NULL, *data = NULL;
+        int line = 0, flags = 0;
+        unsigned long e = ERR_get_error_all(&file, &line, &func, &data, &flags);
+        printf("%s_%d_lib=%d\n", key, i, ERR_GET_LIB(e));
+        printf("%s_%d_reason=%d\n", key, i, ERR_GET_REASON(e));
+        printf("%s_%d_line=%d\n", key, i, line);
+        printf("%s_%d_func=%s\n", key, i, func == NULL ? "(null)" : func);
+        printf("%s_%d_data=%s\n", key, i, data == NULL ? "(null)" : data);
+        if (e == 0) {
+            break;
+        }
+    }
+    ERR_clear_error();
+}
+
+/* One command set's worth of store, read back through the three accessors. */
+static void report_store(const char *key)
+{
+    const char *name = NULL;
+    size_t cnt = 0;
+    size_t idx = (size_t)-1;
+    const SSL_CONF_CMD *set;
+    char cmdkey[32];
+
+    snprintf(cmdkey, sizeof cmdkey, "%s_find_system_default", key);
+    sayn(cmdkey, conf_ssl_name_find("system_default", &idx));
+    snprintf(cmdkey, sizeof cmdkey, "%s_idx", key);
+    sayn(cmdkey, (long long)idx);
+    snprintf(cmdkey, sizeof cmdkey, "%s_find_absent", key);
+    sayn(cmdkey, conf_ssl_name_find("not_a_set", &idx));
+    /* A NULL name is answered 0 rather than dereferenced -- the authority's first check,
+     * and the one Phase 4's `RT-COMP` already observed. Repeated here because the store is
+     * now non-empty, which is the case that could have changed it. */
+    snprintf(cmdkey, sizeof cmdkey, "%s_find_null", key);
+    sayn(cmdkey, conf_ssl_name_find(NULL, &idx));
+    /* An empty name is a prefix of nothing and a match for nothing. */
+    snprintf(cmdkey, sizeof cmdkey, "%s_find_empty", key);
+    sayn(cmdkey, conf_ssl_name_find("", &idx));
+
+    if (conf_ssl_name_find("system_default", &idx) != 1) {
+        return;
+    }
+    set = conf_ssl_get(idx, &name, &cnt);
+    snprintf(cmdkey, sizeof cmdkey, "%s_set_name", key);
+    says(cmdkey, name);
+    snprintf(cmdkey, sizeof cmdkey, "%s_set_count", key);
+    sayn(cmdkey, (long long)cnt);
+    if (cnt < 2) {
+        return;
+    }
+    {
+        char *cs = NULL, *arg = NULL;
+        conf_ssl_get_cmd(set, 0, &cs, &arg);
+        snprintf(cmdkey, sizeof cmdkey, "%s_cmd0_name", key);
+        says(cmdkey, cs);
+        snprintf(cmdkey, sizeof cmdkey, "%s_cmd0_arg", key);
+        says(cmdkey, arg);
+        conf_ssl_get_cmd(set, 1, &cs, &arg);
+        snprintf(cmdkey, sizeof cmdkey, "%s_cmd1_name", key);
+        says(cmdkey, cs);
+        snprintf(cmdkey, sizeof cmdkey, "%s_cmd1_arg", key);
+        says(cmdkey, arg);
+    }
+}
+
+/*
+ * The `ssl_conf` module (6.10e).
+ *
+ * Three things here are the module's own contract rather than the accessors':
+ *
+ *   * the store is filled by loading a configuration, and the command set's name is the
+ *     section entry's *key*, not its value;
+ *   * a command's name has one leading dot stripped -- `.CipherString` becomes
+ *     `CipherString`, and `conf_def.c` passes the dot through deliberately;
+ *   * both of the reader's failure modes leave the store **empty**, because its `err:` label
+ *     calls the free, and the reason distinguishes a missing section from a missing command
+ *     section.
+ *
+ * That last one is checkable from outside: after a failed load, `conf_ssl_name_find` answers
+ * 0 for a name that a previous successful load had put there.
+ */
+static void section_g(void)
+{
+    printf("-- G: the ssl_conf module, and the store its reader fills\n");
+
+    /*
+     * The registry was **emptied** by section D's `CONF_modules_unload(1)`, and
+     * `module_run`'s own run-once has already fired, so nothing will repopulate it on its
+     * own. The re-registration is explicit, and it is also an observation: it is what proves
+     * `CONF_modules_unload(1)` really removed the built-in modules and that
+     * `OPENSSL_load_builtin_modules` can put them back.
+     */
+    OPENSSL_load_builtin_modules();
+    ERR_clear_error();
+
+    /* Nothing is loaded yet, so the store is empty and every name is absent. */
+    {
+        size_t idx = (size_t)-1;
+        says("G_before_any_load", "empty");
+        sayn("G_before_find", conf_ssl_name_find("system_default", &idx));
+    }
+
+    /* A successful load. */
+    sayne("G_load", CONF_modules_load_file(path_sslconf, NULL, CONF_MFLAGS_NO_DSO));
+    report_store("G");
+
+    /* A second load of the same file: the reader calls its free before replacing the store,
+     * so the result is the same store, not a doubled one and not a leak. */
+    sayne("G_reload",
+          CONF_modules_load_file(path_sslconf, NULL, CONF_MFLAGS_NO_DSO));
+    report_store("G_reload");
+
+    /* `ssl_conf` naming a section the file does not define. The reader raises its own
+     * `CONF_SSL_75` before `module_run` raises `CONF_MOD_286`, so the queue is drained to
+     * observe the inner coordinate. */
+    {
+        int r = CONF_modules_load_file(path_sslconf_nosect, NULL, CONF_MFLAGS_NO_DSO);
+        printf("G_nosect_load=%d\n", r);
+        drain_errors("G_nosect");
+    }
+    /* The store was released by the reader's `err:` label. */
+    {
+        size_t idx = (size_t)-1;
+        sayn("G_after_nosect_find", conf_ssl_name_find("system_default", &idx));
+    }
+
+    /* A command set whose own section is missing. */
+    {
+        int r = CONF_modules_load_file(path_sslconf_nocmds, NULL, CONF_MFLAGS_NO_DSO);
+        printf("G_nocmds_load=%d\n", r);
+        drain_errors("G_nocmds");
+    }
+    {
+        size_t idx = (size_t)-1;
+        sayn("G_after_nocmds_find", conf_ssl_name_find("system_default", &idx));
+    }
+
+    /* And a successful load after two failures restores the store, which is what proves the
+     * failures did not leave the module's own registration broken. */
+    sayne("G_reload_after_failure",
+          CONF_modules_load_file(path_sslconf, NULL, CONF_MFLAGS_NO_DSO));
+    {
+        size_t idx = (size_t)-1;
+        sayn("G_recovered_find", conf_ssl_name_find("system_default", &idx));
+    }
+}
+
 /* ------------------------------------------------- the fresh-process scenarios */
 
 /*
@@ -931,6 +1152,7 @@ int main(int argc, char **argv)
     spawn_mode(6);
 
     /* Last, because it is sticky on the default context. */
+    section_g();
     section_e();
 
     printf("-- done\n");

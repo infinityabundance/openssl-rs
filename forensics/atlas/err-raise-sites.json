@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 850,
+      "sites": 852,
       "unattributed": 0
     },
     "covered_files": [
@@ -41,6 +41,7 @@
       "crypto/conf/conf_lib.c",
       "crypto/conf/conf_mod.c",
       "crypto/conf/conf_sap.c",
+      "crypto/conf/conf_ssl.c",
       "crypto/objects/obj_dat.c",
       "crypto/asn1/a_object.c",
       "crypto/buffer/buffer.c",
@@ -4174,6 +4175,34 @@
         "reason": 115,
         "reason_symbol": "CONF_R_LIST_CANNOT_BE_NULL",
         "rel_source": "crypto/conf/conf_mod.c"
+      },
+      {
+        "const_name": "CONF_SSL_75",
+        "data_format": "\"section=%s\"",
+        "dynamic_reason": true,
+        "file": "../../src/openssl-3.6.4/crypto/conf/conf_ssl.c",
+        "function": "ssl_module_init",
+        "lib": 14,
+        "lib_symbol": "ERR_LIB_CONF",
+        "line": 75,
+        "macro": "ERR_raise_data",
+        "reason": 0,
+        "reason_symbol": null,
+        "rel_source": "crypto/conf/conf_ssl.c"
+      },
+      {
+        "const_name": "CONF_SSL_94",
+        "data_format": "\"name=%s, value=%s\"",
+        "dynamic_reason": true,
+        "file": "../../src/openssl-3.6.4/crypto/conf/conf_ssl.c",
+        "function": "ssl_module_init",
+        "lib": 14,
+        "lib_symbol": "ERR_LIB_CONF",
+        "line": 94,
+        "macro": "ERR_raise_data",
+        "reason": 0,
+        "reason_symbol": null,
+        "rel_source": "crypto/conf/conf_ssl.c"
       },
       {
         "const_name": "OBJ_DAT_270",
@@ -12294,6 +12323,11 @@
       "name": "authority:crypto/conf/conf_sap.c",
       "path": "forensics/authorities/src/openssl-3.6.4/crypto/conf/conf_sap.c",
       "sha256": "37465bf0c75e4bf74e2ba575b28c56344da4131bc12d5b636335d0f419b9ce0d"
+    },
+    {
+      "name": "authority:crypto/conf/conf_ssl.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/conf/conf_ssl.c",
+      "sha256": "97b5fbf693facdcd648fdbaf31865bd28172af1c57dbe26546de20946941b0b8"
     },
     {
       "name": "authority:crypto/objects/obj_dat.c",

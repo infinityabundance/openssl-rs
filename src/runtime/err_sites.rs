@@ -2930,6 +2930,26 @@ pub(crate) const CONF_MOD_734: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ssl_module_init` at `crypto/conf/conf_ssl.c:75` (ERR_raise_data dynamic reason).
+pub(crate) const CONF_SSL_75: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/conf/conf_ssl.c",
+    line: 75,
+    func: c"ssl_module_init",
+    lib: 14,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `ssl_module_init` at `crypto/conf/conf_ssl.c:94` (ERR_raise_data dynamic reason).
+pub(crate) const CONF_SSL_94: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/conf/conf_ssl.c",
+    line: 94,
+    func: c"ssl_module_init",
+    lib: 14,
+    reason: 0,
+    dynamic_reason: true,
+};
+
 /// `OBJ_nid2obj` at `crypto/objects/obj_dat.c:270` (ERR_R_UNABLE_TO_GET_READ_LOCK).
 pub(crate) const OBJ_DAT_270: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/objects/obj_dat.c",
@@ -8831,6 +8851,8 @@ pub(crate) static ALL: &[ErrSite] = &[
     CONF_MOD_475,
     CONF_MOD_482,
     CONF_MOD_734,
+    CONF_SSL_75,
+    CONF_SSL_94,
     OBJ_DAT_270,
     OBJ_DAT_278,
     OBJ_DAT_329,

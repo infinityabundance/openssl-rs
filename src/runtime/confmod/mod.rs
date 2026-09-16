@@ -1380,16 +1380,20 @@ pub unsafe extern "C" fn CONF_module_set_usr_data(pmod: *mut ConfModule, usr_dat
 
 /// `void OPENSSL_load_builtin_modules(void)`.
 ///
-/// Seven calls in the authority and one that this crate can make today. See the module
-/// documentation for which six belong to other strata and for why their absence is a recorded
+/// Seven calls in the authority and two that this crate can make today. See the module
+/// documentation for which five belong to other strata and for why their absence is a recorded
 /// divergence rather than a stub: registering nothing where the authority registers a module is
 /// a behaviour a configuration file can observe, so it must be *stated* rather than faked.
 ///
-/// `ASN1_add_oid_module` is 6.10d and lands with this block, so it is called.
+/// `ASN1_add_oid_module` is 6.10d and `ossl_config_add_ssl_module` is 6.10e; both are called.
+/// `ENGINE_add_conf_module` (Phase 13), `EVP_add_alg_module` (Phase 7),
+/// `ossl_provider_add_conf_module` (6.8d), `ossl_random_add_conf_module` (Phase 9) and
+/// `ASN1_add_stable_module` (Phase 11) are not.
 #[no_mangle]
 pub extern "C" fn OPENSSL_load_builtin_modules() {
     guard_ffi((), || {
         crate::runtime::confmod::asn1::ASN1_add_oid_module();
+        crate::runtime::conf::conf_ssl::ossl_config_add_ssl_module();
     })
 }
 

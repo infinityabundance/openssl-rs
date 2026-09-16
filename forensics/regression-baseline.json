@@ -144,7 +144,7 @@
       "verdict": "pass"
     },
     "RT-CONF-MOD": {
-      "observations": 161,
+      "observations": 247,
       "verdict": "pass"
     },
     "RT-DSO": {
@@ -275,7 +275,7 @@
     "9": "not-started"
   },
   "prerequisites": {
-    "blocking_dependencies": 30,
+    "blocking_dependencies": 29,
     "divergence_names_covered": 32,
     "findings": 0,
     "language_census": 2050,
