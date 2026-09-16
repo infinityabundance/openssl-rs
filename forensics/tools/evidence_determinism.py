@@ -87,6 +87,12 @@ GENERATORS_AFTER_LEDGERS = [
     "forensics/tools/ownership_audit.py",
     "forensics/tools/prototype_court.py",
     "forensics/tools/phase_state.py",
+    # The prerequisite gate reads the phase states to decide whether a stratum has
+    # sealed, so it sits after `phase_state.py` rather than beside it. It needs no
+    # authority: the one authority-derived artefact it consumes is
+    # `transcription-edges.json`, which `gen_prerequisite_atlas.py` generates in the
+    # court job and which is committed for exactly this reason (D123).
+    "forensics/tools/prerequisite_gate.py",
     "forensics/tools/render_seal_census.py",
     "forensics/tools/render_status.py",
 ]
@@ -124,6 +130,7 @@ COMPARED = [
     "forensics/atlas/ownership-audit.json",
     "forensics/atlas/prototype-court.json",
     "forensics/atlas/ctype-table.json",
+    "forensics/atlas/prerequisite-gate.json",
     *[a for _g, a in LEDGERS],
     "forensics/phase-state.json",
     "forensics/phase-state.md",

@@ -1,0 +1,362 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "blocking_dependencies": [
+      "evp_default_properties_enable_fips_int -> phase 7 (Phase 7 owns crypto/evp/evp_fetch.c; this crate's FIPS claims are recorded separately)",
+      "evp_generic_do_all -> phase 7 (Phase 7 owns crypto/evp/evp_fetch.c)",
+      "evp_generic_fetch -> phase 7 (Phase 7 owns crypto/evp/evp_fetch.c; the registry's fetch path is written against it, not by it)",
+      "evp_generic_fetch_from_prov -> phase 7 (Phase 7 owns crypto/evp/evp_fetch.c)",
+      "evp_get_global_properties_str -> phase 7 (Phase 7 owns crypto/evp/evp_fetch.c)",
+      "evp_is_a -> phase 7 (Phase 7 owns crypto/evp/evp_fetch.c)",
+      "evp_names_do_all -> phase 7 (Phase 7 owns crypto/evp/evp_fetch.c)",
+      "evp_set_default_properties_int -> phase 7 (Phase 7 owns crypto/evp/evp_fetch.c)",
+      "ossl_config_add_ssl_module -> phase 6 (Phase 6.10c: one of the six modules OPENSSL_load_builtin_modules registers)",
+      "ossl_config_int -> phase 6 (Phase 6.10c: crypto/conf/conf_sap.c's automatic loader)",
+      "ossl_config_modules_free -> phase 6 (Phase 6.10b: crypto/conf/conf_mod.c's registry teardown)",
+      "ossl_ctx_global_properties -> phase 6 (Phase 6.7c/6.8: the method store inside crypto/property/property.c, which cannot be written before providers exist)",
+      "ossl_get_enginesdir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads)",
+      "ossl_get_openssldir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads; so is its sibling)",
+      "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)",
+      "ossl_global_properties_no_mirrored -> phase 6 (Phase 6.7c/6.8: reader of the no_mirrored bit, deferred with the store)",
+      "ossl_global_properties_stop_mirroring -> phase 6 (Phase 6.7c/6.8: writer of the no_mirrored bit, deferred with the store)",
+      "ossl_method_lock_store -> phase 6 (Phase 6.7c/6.8: the method store's lock discipline)",
+      "ossl_method_store_add -> phase 6 (Phase 6.7c/6.8: the method store)",
+      "ossl_method_store_cache_flush_all -> phase 6 (Phase 6.7c/6.8: the method store's fetch cache)",
+      "ossl_method_store_cache_get -> phase 6 (Phase 6.7c/6.8: the method store's fetch cache)",
+      "ossl_method_store_cache_set -> phase 6 (Phase 6.7c/6.8: the method store's fetch cache)",
+      "ossl_method_store_do_all -> phase 6 (Phase 6.7c/6.8: the method store)",
+      "ossl_method_store_fetch -> phase 6 (Phase 6.7c/6.8: the method store's fetch path)",
+      "ossl_method_store_free -> phase 6 (Phase 6.7c/6.8: the method store)",
+      "ossl_method_store_new -> phase 6 (Phase 6.7c/6.8: ossl_method_store_add takes an OSSL_PROVIDER *, and there are no providers yet)",
+      "ossl_method_store_remove -> phase 6 (Phase 6.7c/6.8: the method store)",
+      "ossl_method_store_remove_all_provided -> phase 6 (Phase 6.7c/6.8: the method store)",
+      "ossl_method_unlock_store -> phase 6 (Phase 6.7c/6.8: the method store's lock discipline)",
+      "ossl_no_config_int -> phase 6 (Phase 6.10c: crypto/conf/conf_sap.c's automatic loader)",
+      "ossl_provider_get_parent -> phase 6 (Phase 6.8e: the child-provider link, whose slot is index 18 of the context table)",
+      "ossl_provider_is_child -> phase 6 (Phase 6.8e: the child-provider link)",
+      "ossl_provider_set_child -> phase 6 (Phase 6.8e: the child-provider link)",
+      "ossl_rcu_assign_uptr -> phase 6 (Phase 6.10a-iii: the RCU pointer accessors)",
+      "ossl_rcu_call -> phase 6 (Phase 6.10a-iii: the RCU callback list)",
+      "ossl_rcu_cb_item_free -> phase 6 (Phase 6.10a-iii: the RCU callback list)",
+      "ossl_rcu_cb_item_new -> phase 6 (Phase 6.10a-iii: the RCU callback list)",
+      "ossl_rcu_lock_free -> phase 6 (Phase 6.10a-iii: the RCU layer of crypto/threads_pthread.c)",
+      "ossl_rcu_lock_new -> phase 6 (Phase 6.10a-iii: the RCU layer of crypto/threads_pthread.c)",
+      "ossl_rcu_read_lock -> phase 6 (Phase 6.10a-iii: the RCU reader holds a quiescent point under CRYPTO_THREAD_LOCAL_RCU_KEY)",
+      "ossl_rcu_read_unlock -> phase 6 (Phase 6.10a-iii: the RCU layer of crypto/threads_pthread.c)",
+      "ossl_rcu_uptr_deref -> phase 6 (Phase 6.10a-iii: the RCU pointer accessors)",
+      "ossl_rcu_write_lock -> phase 6 (Phase 6.10a-iii: the RCU layer of crypto/threads_pthread.c)",
+      "ossl_rcu_write_unlock -> phase 6 (Phase 6.10a-iii: the RCU layer of crypto/threads_pthread.c)",
+      "ossl_synchronize_rcu -> phase 6 (Phase 6.10a-iii: quiescent-point retirement on prior_signal)"
+    ],
+    "census": {
+      "covered_by_a_divergence": 52,
+      "language_surface_not_modelled_by_name": 2067,
+      "planned_prerequisites": 71
+    },
+    "census_not_a_failure": "the C language surface is counted and listed, never failed: the crate models C types, macros and reason codes differently on purpose, and a lexical scan cannot tell a rename from a gap",
+    "census_samples": {
+      "covered_by_a_divergence": [
+        "CRYPTO_THREAD_clean_local",
+        "CRYPTO_THREAD_clean_local",
+        "F",
+        "arg",
+        "cb_arg",
+        "in",
+        "inlen",
+        "libctx",
+        "now",
+        "openssl_get_fork_id",
+        "openssl_init_fork_handlers",
+        "ossl_lib_ctx_default_deinit",
+        "ossl_lib_ctx_get_concrete",
+        "ossl_lib_ctx_get_concrete",
+        "ossl_lib_ctx_get_concrete",
+        "ossl_lib_ctx_get_concrete",
+        "ossl_lib_ctx_get_data",
+        "ossl_lib_ctx_get_data",
+        "ossl_lib_ctx_get_data",
+        "ossl_lib_ctx_get_data",
+        "ossl_lib_ctx_get_data",
+        "ossl_lib_ctx_get_data",
+        "ossl_lib_ctx_get_data",
+        "ossl_lib_ctx_get_data",
+        "ossl_lib_ctx_get_data",
+        "ossl_lib_ctx_get_data",
+        "ossl_lib_ctx_get_descriptor",
+        "ossl_lib_ctx_get_descriptor",
+        "ossl_lib_ctx_get_ex_data_global",
+        "ossl_lib_ctx_get_ex_data_global",
+        "ossl_lib_ctx_is_child",
+        "ossl_lib_ctx_is_default",
+        "ossl_lib_ctx_is_default",
+        "ossl_lib_ctx_is_default",
+        "ossl_lib_ctx_is_global_default",
+        "ossl_lib_ctx_is_global_default",
+        "ossl_lib_ctx_read_lock",
+        "ossl_lib_ctx_read_lock",
+        "ossl_lib_ctx_unlock",
+        "ossl_lib_ctx_unlock"
+      ],
+      "language_surface_not_modelled_by_name": [
+        "crypto/asn1/a_bitstr.c:ASN1_BIT_STRING",
+        "crypto/asn1/a_bitstr.c:ERR_LIB_ASN1",
+        "crypto/asn1/a_bitstr.c:ERR_raise",
+        "crypto/asn1/a_bitstr.c:OPENSSL_clear_realloc",
+        "crypto/asn1/a_bitstr.c:OPENSSL_malloc",
+        "crypto/asn1/a_bitstr.c:type",
+        "crypto/asn1/a_d2i_fp.c:ASN1_ITEM",
+        "crypto/asn1/a_d2i_fp.c:BIO",
+        "crypto/asn1/a_d2i_fp.c:BIO_set_fp",
+        "crypto/asn1/a_d2i_fp.c:BUF_MEM",
+        "crypto/asn1/a_d2i_fp.c:ERR_LIB_ASN1",
+        "crypto/asn1/a_d2i_fp.c:ERR_R_BUF_LIB",
+        "crypto/asn1/a_d2i_fp.c:ERR_raise",
+        "crypto/asn1/a_d2i_fp.c:OSSL_LIB_CTX",
+        "crypto/asn1/a_d2i_fp.c:UINT32_MAX",
+        "crypto/asn1/a_d2i_fp.c:d2i_of_void",
+        "crypto/asn1/a_d2i_fp.c:in",
+        "crypto/asn1/a_d2i_fp.c:void",
+        "crypto/asn1/a_dup.c:ASN1_AUX",
+        "crypto/asn1/a_dup.c:ASN1_ITEM",
+        "crypto/asn1/a_dup.c:ASN1_VALUE",
+        "crypto/asn1/a_dup.c:ASN1_aux_cb",
+        "crypto/asn1/a_dup.c:ERR_LIB_ASN1",
+        "crypto/asn1/a_dup.c:ERR_R_ASN1_LIB",
+        "crypto/asn1/a_dup.c:ERR_raise",
+        "crypto/asn1/a_dup.c:ERR_raise_data",
+        "crypto/asn1/a_dup.c:OPENSSL_free",
+        "crypto/asn1/a_dup.c:OPENSSL_malloc",
+        "crypto/asn1/a_dup.c:OSSL_LIB_CTX",
+        "crypto/asn1/a_dup.c:d2i_of_void",
+        "crypto/asn1/a_dup.c:i2d_of_void",
+        "crypto/asn1/a_dup.c:void",
+        "crypto/asn1/a_i2d_fp.c:ASN1_ITEM",
+        "crypto/asn1/a_i2d_fp.c:ASN1_VALUE",
+        "crypto/asn1/a_i2d_fp.c:BIO",
+        "crypto/asn1/a_i2d_fp.c:BIO_set_fp",
+        "crypto/asn1/a_i2d_fp.c:ERR_LIB_ASN1",
+        "crypto/asn1/a_i2d_fp.c:ERR_R_ASN1_LIB",
+        "crypto/asn1/a_i2d_fp.c:ERR_R_BUF_LIB",
+        "crypto/asn1/a_i2d_fp.c:ERR_raise"
+      ],
+      "planned_prerequisites": [
+        "evp_default_properties_enable_fips_int",
+        "evp_generic_do_all",
+        "evp_generic_fetch",
+        "evp_generic_fetch_from_prov",
+        "evp_get_global_properties_str",
+        "evp_get_global_properties_str",
+        "evp_is_a",
+        "evp_names_do_all",
+        "evp_set_default_properties_int",
+        "ossl_config_add_ssl_module",
+        "ossl_config_int",
+        "ossl_config_modules_free",
+        "ossl_ctx_global_properties",
+        "ossl_ctx_global_properties",
+        "ossl_get_enginesdir",
+        "ossl_get_enginesdir",
+        "ossl_get_openssldir",
+        "ossl_get_openssldir",
+        "ossl_get_wininstallcontext",
+        "ossl_global_properties_no_mirrored",
+        "ossl_global_properties_no_mirrored",
+        "ossl_global_properties_stop_mirroring",
+        "ossl_global_properties_stop_mirroring",
+        "ossl_method_lock_store",
+        "ossl_method_lock_store",
+        "ossl_method_store_add",
+        "ossl_method_store_add",
+        "ossl_method_store_cache_flush_all",
+        "ossl_method_store_cache_flush_all",
+        "ossl_method_store_cache_get",
+        "ossl_method_store_cache_get",
+        "ossl_method_store_cache_set",
+        "ossl_method_store_cache_set",
+        "ossl_method_store_do_all",
+        "ossl_method_store_do_all",
+        "ossl_method_store_fetch",
+        "ossl_method_store_fetch",
+        "ossl_method_store_free",
+        "ossl_method_store_free",
+        "ossl_method_store_free"
+      ]
+    },
+    "checked": {
+      "authority_units": 109,
+      "crate_modules": 147,
+      "deferrals_recorded": 45,
+      "divergence_names_covered": 31,
+      "divergence_rows": 5,
+      "names_referenced_and_not_built": 16
+    },
+    "claim": "A structural gate, not a parity claim. It answers whether a dependency has an owner and whether the owner arrives in time; it says nothing about whether the dependency behaves as the authority's does.",
+    "counts": {},
+    "findings": [],
+    "rule": "every authority-internal name a crate module references must be built by the crate or recorded with the stratum that owns it; every internal function a transcribed authority unit calls must exist, unless a divergence record covering exactly that name says why not; and a divergence record may not cover a name the gate did not observe",
+    "sealed_stratum_census": {
+      "by_defining_unit": {
+        "crypto/asn1/asn1_lib.c": [
+          "ossl_asn1_string_embed_free",
+          "ossl_asn1_string_set_bits_left",
+          "ossl_sk_ASN1_UTF8STRING2text"
+        ],
+        "crypto/asn1/tasn_dec.c": [
+          "asn1_item_embed_d2i"
+        ],
+        "crypto/asn1/tasn_fre.c": [
+          "ossl_asn1_item_embed_free",
+          "ossl_asn1_primitive_free",
+          "ossl_asn1_template_free"
+        ],
+        "crypto/asn1/tasn_new.c": [
+          "ossl_asn1_item_ex_new_intern"
+        ],
+        "crypto/bio/bio_addr.c": [
+          "BIO_ADDRINFO_sockaddr",
+          "BIO_ADDRINFO_sockaddr_size",
+          "BIO_ADDR_make",
+          "BIO_ADDR_sockaddr",
+          "BIO_ADDR_sockaddr_noconst",
+          "BIO_ADDR_sockaddr_size",
+          "bio_lookup_lock"
+        ],
+        "crypto/bio/bio_lib.c": [
+          "bio_cleanup",
+          "bio_free_ex_data"
+        ],
+        "crypto/bio/bio_meth.c": [
+          "bio_type_count"
+        ],
+        "crypto/bio/bio_sock.c": [
+          "bio_sock_cleanup_int"
+        ],
+        "crypto/bn/bn_ctx.c": [
+          "ossl_bn_get_libctx"
+        ],
+        "crypto/bn/bn_lib.c": [
+          "bn_cmp_part_words",
+          "bn_cmp_words",
+          "bn_correct_top",
+          "bn_correct_top_consttime",
+          "bn_expand2",
+          "bn_init",
+          "bn_wexpand",
+          "ossl_bn_is_word_fixed_top",
+          "ossl_bn_mask_bits_fixed_top"
+        ],
+        "crypto/bn/bn_mod.c": [
+          "bn_mod_add_fixed_top",
+          "bn_mod_sub_fixed_top"
+        ],
+        "crypto/bn/bn_mont.c": [
+          "BN_MONT_CTX_init",
+          "bn_from_mont_fixed_top",
+          "bn_mul_mont_fixed_top",
+          "bn_to_mont_fixed_top",
+          "ossl_bn_mont_ctx_eq",
+          "ossl_bn_mont_ctx_set"
+        ],
+        "crypto/bn/bn_recp.c": [
+          "BN_RECP_CTX_init"
+        ],
+        "crypto/cryptlib.c": [
+          "OPENSSL_showfatal"
+        ],
+        "crypto/err/err.c": [
+          "err_cleanup",
+          "err_clear_last_constant_time",
+          "err_shelve_state",
+          "err_unshelve_state",
+          "ossl_err_get_state_int",
+          "ossl_err_load_ERR_strings",
+          "ossl_err_string_int"
+        ],
+        "crypto/ex_data.c": [
+          "ossl_crypto_alloc_ex_data_intern",
+          "ossl_crypto_cleanup_all_ex_data_int",
+          "ossl_crypto_ex_data_get_ossl_lib_ctx",
+          "ossl_crypto_free_ex_index_ex",
+          "ossl_crypto_get_ex_new_index_ex",
+          "ossl_crypto_new_ex_data_ex",
+          "ossl_do_ex_data_init"
+        ],
+        "crypto/lhash/lhash.c": [
+          "ossl_lh_strcasehash"
+        ],
+        "crypto/o_str.c": [
+          "openssl_strerror_r",
+          "ossl_to_hex"
+        ],
+        "crypto/objects/obj_dat.c": [
+          "ossl_obj_cleanup_int"
+        ],
+        "crypto/pem/pem_lib.c": [
+          "ossl_pem_check_suffix"
+        ],
+        "crypto/trace.c": [
+          "ossl_trace_cleanup"
+        ]
+      },
+      "definition": "authority internal functions a transcribed unit calls, whose own translation unit's stratum has already sealed. Not a failure: each is either modelled differently by the crate or is work carried across the boundary by a later stratum. The count is held to non-increase by the regression guard.",
+      "names": 59
+    },
+    "universes": {
+      "crate_references_checked": 32433,
+      "exports": 6499,
+      "internal_functions": 4547,
+      "macros_and_enumerators": 19839,
+      "typedefs": 1568
+    }
+  },
+  "body_hash": "5677873822c7dd359cb6b0644cba01b951fa7b7933fff4f796dc9a5ad0629e46",
+  "generator": "forensics/tools/prerequisite_gate.py",
+  "inputs": [
+    {
+      "name": "internal-symbols",
+      "path": "forensics/atlas/internal-symbols.json",
+      "sha256": "0dd58f98b254149dab326e5aaef09d8a9512ace5de92d1a13bb6af46ef40f812"
+    },
+    {
+      "name": "macro-owners",
+      "path": "forensics/atlas/macro-owners.json",
+      "sha256": "b047ec90e627b359f4340fd4a18cbda8e330c099444ada5c77db1dff1e1f73cd"
+    },
+    {
+      "name": "typedef-owners",
+      "path": "forensics/atlas/typedef-owners.json",
+      "sha256": "784e0b32a30b9a65c7e44475f70fc19db2ceda60ddee2a4c35e16d8e4eee7a4d"
+    },
+    {
+      "name": "transcription-edges",
+      "path": "forensics/atlas/transcription-edges.json",
+      "sha256": "8ee239ba67fcb5f1047f3c6e428b39aa91da7112ca5a6af97c7b40da91cc8928"
+    },
+    {
+      "name": "symbol-ownership",
+      "path": "forensics/atlas/symbol-ownership.json",
+      "sha256": "d42d2ba4f459b729139149f7343cb36357959272a38fecce8f20e6e4aa29a137"
+    },
+    {
+      "name": "implemented-surface",
+      "path": "forensics/atlas/implemented-surface.json",
+      "sha256": "ee6bbd9d1a2557ee161e9767c3ec32f4985635ea0553ad038c83b46415beccb6"
+    },
+    {
+      "name": "phase-state",
+      "path": "forensics/phase-state.json",
+      "sha256": "e581b1362a2a8737a0e0a06529e41bee0e687484e3b082946dc09e6dd18e1763"
+    },
+    {
+      "name": "prerequisites",
+      "path": "forensics/prerequisites.json",
+      "sha256": "13ded1613bd990048de7c7b6790e1d462f3144df80aebaefc8eebb8bd54ea7bb"
+    },
+    {
+      "name": "crate-source-tree",
+      "note": "every .rs under src/ was read twice: once with comments and string literals blanked for the reference set, once with only comments blanked for the definition set"
+    }
+  ],
+  "kind": "prerequisite-gate",
+  "schema": "openssl-rs/atlas/prerequisite-gate/v1"
+}
