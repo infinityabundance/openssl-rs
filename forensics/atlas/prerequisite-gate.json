@@ -18,8 +18,8 @@
       "ossl_random_add_conf_module -> phase 9 (One of the seven modules `OPENSSL_load_builtin_modules` registers. It is Phase 9's because it lives in crypto/rand/rand_lib.c, and the fan-out's residual -- six of the seven absent -- is already recorded in the Phase 6 subphase plan and the seal; this row is what makes the name visible to the gate rather than only to a reader.)"
     ],
     "census": {
-      "covered_by_a_divergence": 55,
-      "language_surface_not_modelled_by_name": 2085,
+      "covered_by_a_divergence": 56,
+      "language_surface_not_modelled_by_name": 2092,
       "planned_prerequisites": 46
     },
     "census_by_unit": {
@@ -35,7 +35,7 @@
         "openssl_get_fork_id": 1,
         "openssl_init_fork_handlers": 1,
         "ossl_lib_ctx_default_deinit": 1,
-        "ossl_lib_ctx_get_concrete": 4,
+        "ossl_lib_ctx_get_concrete": 5,
         "ossl_lib_ctx_get_data": 12,
         "ossl_lib_ctx_get_descriptor": 2,
         "ossl_lib_ctx_get_ex_data_global": 2,
@@ -128,6 +128,7 @@
         "crypto/conf/conf_sap.c": 3,
         "crypto/conf/conf_ssl.c": 13,
         "crypto/context.c": 24,
+        "crypto/core_algorithm.c": 7,
         "crypto/core_namemap.c": 52,
         "crypto/cryptlib.c": 5,
         "crypto/cversion.c": 13,
@@ -218,6 +219,7 @@
         "ossl_lib_ctx_get_concrete",
         "ossl_lib_ctx_get_concrete",
         "ossl_lib_ctx_get_concrete",
+        "ossl_lib_ctx_get_concrete",
         "ossl_lib_ctx_get_data",
         "ossl_lib_ctx_get_data",
         "ossl_lib_ctx_get_data",
@@ -240,7 +242,6 @@
         "ossl_lib_ctx_is_default",
         "ossl_lib_ctx_is_global_default",
         "ossl_lib_ctx_is_global_default",
-        "ossl_lib_ctx_read_lock",
         "ossl_lib_ctx_read_lock"
       ],
       "language_surface_not_modelled_by_name": [
@@ -329,7 +330,7 @@
       ]
     },
     "checked": {
-      "authority_units": 112,
+      "authority_units": 113,
       "crate_modules": 154,
       "deferrals_recorded": 29,
       "divergence_names_covered": 32,
@@ -455,13 +456,13 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "b99b26436fa08485bfc16f804264a9231765d066eeeb214c7c73af3c4761da3d",
+  "body_hash": "a023a92002e0f20c304c2ac0258f910d8707a7aadc05b958b1fe67a236fd9963",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "600c6db3dfe1bbb4ed2c4a1eb9c685cc36054878fb39d3045599560d94f72a01"
+      "sha256": "775c3e5e4a988b37c619c3fe4409d74709a88ea342c3c567d577f316521c0662"
     },
     {
       "name": "macro-owners",
@@ -476,7 +477,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "ab60e5251b44bdfbe4ad15dafd3e78216615b12a9dad851a74a58bbb97cb2065"
+      "sha256": "52d943a34b4d568c7976298182dc067f6d8c1f2eda0b9cf59d20dda76755b531"
     },
     {
       "name": "symbol-ownership",
