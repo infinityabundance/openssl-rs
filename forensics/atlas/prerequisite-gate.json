@@ -11,7 +11,6 @@
       "evp_is_a -> phase 7 (Phase 7 owns crypto/evp/evp_fetch.c)",
       "evp_names_do_all -> phase 7 (Phase 7 owns crypto/evp/evp_fetch.c)",
       "evp_set_default_properties_int -> phase 7 (Phase 7 owns crypto/evp/evp_fetch.c)",
-      "ossl_algorithm_do_all -> phase 7 (crypto/core_algorithm.c. Its only authority caller is crypto/core_fetch.c's ossl_method_construct -- the fetch path, which is Phase 7's -- and nothing in this crate references it, so 6.6f/6.8f are the fetch stratum's prerequisite rather than this one's obligation. Recorded here so the deferral is visible to the gate rather than invisible because nothing names it (docs/DECISIONS.md D132).)",
       "ossl_get_enginesdir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads)",
       "ossl_get_openssldir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads; so is its sibling)",
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)",
@@ -331,8 +330,8 @@
     },
     "checked": {
       "authority_units": 112,
-      "crate_modules": 152,
-      "deferrals_recorded": 30,
+      "crate_modules": 154,
+      "deferrals_recorded": 29,
       "divergence_names_covered": 32,
       "divergence_rows": 5,
       "names_referenced_and_not_built": 17
@@ -456,7 +455,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "b6a3870d009ce03652221bb767c6b45cba074d68bf079409d982ebddd8be8554",
+  "body_hash": "b99b26436fa08485bfc16f804264a9231765d066eeeb214c7c73af3c4761da3d",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -487,17 +486,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "7dce259d2b159b772c26a047e5a1a21744bcc01138f2df04242109b5bbcb1a5b"
+      "sha256": "21a1cf77fb0d7537e1c30e288a2cef5bc66bae89bcb9cfba029a02597f624e86"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "b2a849f571e07132e5234e046551111c0cdd6e56c245c7f605ab5e87f68ed2d0"
+      "sha256": "d10c3cb7ac6d2e66a387f95052eda9df0eb46abe0718b96e5a152088abd7fed2"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "b33df0406e0e2ebddcaa4f73fc35c563da8dff446c0d882d29dc51eff2c7015d"
+      "sha256": "6cff4aad427194e7152d0d39cbbf29cb48215e831884a56d8b6f9245d55464e6"
     },
     {
       "name": "crate-source-tree",

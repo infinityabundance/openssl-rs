@@ -322,7 +322,6 @@
         "blocking": "950 open obligation(s) of this stratum recorded in forensics/phase7-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase",
         "deferred": [],
         "evidence_absent": [
-          "src/evp/mod.rs",
           "src/evp/fetch.rs",
           "src/evp/method_store.rs",
           "src/evp/cipher.rs",
@@ -357,6 +356,8 @@
         ],
         "evidence_present": [
           "docs/PHASE-7-SUBPHASES.md",
+          "src/evp/mod.rs",
+          "src/evp/algorithm.rs",
           "forensics/tools/phase7_obligations.py",
           "forensics/phase7-obligations.json"
         ],
@@ -528,7 +529,7 @@
       "not_started": 14
     }
   },
-  "body_hash": "53656b562abfd1e8d7dc6fa2ee79cac07f6ce8e054a3cd115b88da935cd2845f",
+  "body_hash": "a4f5f17ec1e8b23ac738bc39414548c92edb12b3c2e42e20022b8e97c38e5650",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

@@ -5,17 +5,13 @@
       "in-progress"
     ],
     "census": {
-      "symbols_not_reached": 1,
       "units_not_reached": 85
     },
     "census_by_stratum": {
-      "7": 86
+      "7": 85
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
     "census_samples": {
-      "symbols_not_reached": [
-        "ossl_algorithm_get1_first_name"
-      ],
       "units_not_reached": [
         "crypto/asn1/ameth_lib.c",
         "crypto/asn1/d2i_param.c",
@@ -87,9 +83,9 @@
       ],
       "rows_judged": 49,
       "symbols_named_by_a_row": 54,
-      "symbols_reached": 53,
+      "symbols_reached": 54,
       "unit_records": 10,
-      "units_named_by_a_record": 13,
+      "units_named_by_a_record": 12,
       "units_named_by_a_row": 128,
       "units_reached": 43
     },
@@ -292,7 +288,7 @@
           "ossl_algorithm_do_all",
           "ossl_algorithm_get1_first_name"
         ],
-        "recorded_by": "deferral:ossl_algorithm_do_all",
+        "recorded_by": null,
         "subphases": [
           "6.6",
           "6.6f",
@@ -1649,7 +1645,7 @@
       "transcribed_units": 112
     }
   },
-  "body_hash": "2b5df6cebe870b5eab4ee2ddd212380df4991d84708c410a5532db1ea675e55b",
+  "body_hash": "07d043b2c51ecfb81834d002cd609de12e018f27340737451dc687029f506b21",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -1665,17 +1661,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "7dce259d2b159b772c26a047e5a1a21744bcc01138f2df04242109b5bbcb1a5b"
+      "sha256": "21a1cf77fb0d7537e1c30e288a2cef5bc66bae89bcb9cfba029a02597f624e86"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "b2a849f571e07132e5234e046551111c0cdd6e56c245c7f605ab5e87f68ed2d0"
+      "sha256": "d10c3cb7ac6d2e66a387f95052eda9df0eb46abe0718b96e5a152088abd7fed2"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "b33df0406e0e2ebddcaa4f73fc35c563da8dff446c0d882d29dc51eff2c7015d"
+      "sha256": "6cff4aad427194e7152d0d39cbbf29cb48215e831884a56d8b6f9245d55464e6"
     },
     {
       "name": "source-manifest",
@@ -1695,7 +1691,7 @@
     {
       "name": "plan-PHASE-7-SUBPHASES",
       "path": "docs/PHASE-7-SUBPHASES.md",
-      "sha256": "dffc21da1b284c97787d27457d3acaee439aea456b44ce4b56aa2c1c3c7a6f40"
+      "sha256": "8320d3c62afe4c3b7a243582f491dfbbb882f4fa1eca4f5655772e8250198c24"
     }
   ],
   "kind": "plan-reconciliation",

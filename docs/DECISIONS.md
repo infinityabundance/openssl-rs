@@ -7861,3 +7861,70 @@ which is the honest answer, and the phase movement `not-started -> in-progress` 
 
 SPDX-License-Identifier: Apache-2.0
 
+## D139 — 7.1's first half: the algorithm walk, and D132's deferral discharged
+
+`crypto/core_algorithm.c` is transcribed whole in `src/evp/algorithm.rs`:
+`ossl_algorithm_do_all`, `algorithm_do_this` and `algorithm_do_map`, in that order of nesting.
+
+**This is the item Phase 6 could not build and could not see.** D132 recorded that
+`ossl_algorithm_do_all`'s only authority caller is `crypto/core_fetch.c`'s `ossl_method_construct`,
+which is this stratum's, and that nothing in the Phase 6 crate referenced it — so it was invisible
+to the symbol atlas (it is not an export), to the prerequisite gate (whose universe is names the
+crate *references*) and to every court (a C probe cannot call an internal function with no entry
+point and no caller). D134 built the plan-versus-crate check that made it visible and recorded it
+as a deferral owned by Phase 7. **The deferral is now discharged and its row is removed**, which
+is what the mechanism is for: a deferral is retired by building the name, and the gate reports
+`stale_deferral` until it is. The blocking list goes 15 → 14 and the plan reconciliation's Phase 7
+census drops by two — decreases, so nothing had to record them, which is the point of the
+direction the invariants point in.
+
+**Three return conventions that read alike and are not.** `algorithm_do_map` answers **-1** to quit
+the whole walk, **0** to record a failure and continue, and **1** for success, and
+`algorithm_do_this` treats the first two differently: -1 returns immediately, 0 sets `ok = 0` and
+keeps asking that provider for its remaining operations. The third is the one a transcription is
+most likely to get wrong, because the code says what it does and the comment says why:
+
+```c
+if (ret == 0) {      /* pre-condition not fulfilled: another thread got to it first */
+    ret = 1;         /* -- and the map is skipped, because that is *success* */
+    goto end;
+}
+```
+
+A refused precondition is a **success**, not a failure. An implementation that propagated the 0
+would turn a benign race — two threads fetching the same name — into a fetch failure, and the
+difference is invisible unless a test asserts the *answer* rather than the call. It does now:
+`a_refused_precondition_is_success_and_skips_the_map`.
+
+**`post` overwrites `ret` when it refuses, and `ret` does not survive it.** The authority is
+`if (post == NULL) ret = 1; else if (!post(..., &ret)) ret = -1;`, so a post that writes 0 and
+answers 1 leaves a soft failure while a post that answers **0** overwrites whatever it had written.
+The first version of this file's test asserted the shape a hand-written implementation would have —
+that an erroring post left `ret` alone — and the assertion is what found the difference. The test is
+now named for the behaviour that is actually there.
+
+Two smaller facts the file records because a reader would otherwise assume them away. The operation
+range is `OSSL_OP_DIGEST` (1) through `OSSL_OP__HIGHEST` (**22**), not through `OSSL_OP_KEYEXCH`
+(11): the reserved ids above the last named operation are real dispatch ids a provider may publish,
+and `operation_id == 0` means "all of them" rather than being passed through. And
+`ossl_algorithm_get1_first_name` splits on the **first** colon, copies rather than borrowing, and
+answers NULL — not an empty string — for a NULL name list, which a caller can see under
+`OPENSSL_free`.
+
+**`OSSL_ALGORITHM` is completed, where Phase 6 declared it.** Phase 6 left it an opaque forward
+declaration and recorded that the definition was this stratum's, because its four members are what
+the fetch machinery walks. It now has them, with `implementation` typed `*const c_void` rather than
+as the dispatch struct the authority declares: the only reader upcasts it immediately, and typing it
+would invite a dereference the authority never performs. The type stays in `src/provider/activate.rs`
+rather than moving to `src/evp/`: that is where the pointer crosses the provider boundary and where
+the accessors that hand it out live, and where the *members* are written is not a fact any caller
+can observe.
+
+Six unit tests, and the four that matter are the three return conventions and the two `post`
+behaviours — the branches that produce identical call sequences and different answers. `ossl_algorithm_do_all`'s
+own two paths (the sweep, and the one named provider whose context is asserted equal) are **not**
+unit-testable without a provider registry fixture and are `RT-FETCH`'s, which lands with the method
+store: `ossl_method_construct` and the store are 7.1's other half and remain open.
+
+SPDX-License-Identifier: Apache-2.0
+

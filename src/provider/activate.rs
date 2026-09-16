@@ -570,21 +570,33 @@ pub(crate) unsafe fn provider_free_intern(prov: *mut OsslProvider, deactivate: c
     1
 }
 
-/// `void *ossl_provider_ctx(const OSSL_PROVIDER *prov)`.
-///
 /// `OSSL_ALGORITHM` — `openssl/core.h`: `typedef struct ossl_algorithm_st OSSL_ALGORITHM;`.
 ///
-/// **An opaque forward declaration, not the definition.** Phase 7 owns the struct, because
-/// its three members (`algorithm_names`, `property_definition`, `algorithm_description`) plus
-/// the two dispatch pointers are what the fetch machinery walks. What this stratum needs is
-/// only that `ossl_provider_query_operation`'s return type have the right **shape**, and a
-/// pointer's pointee shape is the same whether the pointee is complete or opaque — the
-/// prototype court's canonical form discards the pointee's name for exactly that reason.
+/// **Completed in 7.1.** Phase 6 declared this as an opaque forward declaration and recorded
+/// that the *definition* was this stratum's, because its four members are what the fetch
+/// machinery walks: `algorithm_do_map` reads `algorithm_names` to find the terminator and hands
+/// each entry to a constructor, and `ossl_algorithm_get1_first_name` reads the same field to
+/// split the alias list. The type stays in this module rather than moving to `src/evp/`,
+/// because this is where the pointer crosses the provider boundary and the accessors that hand
+/// it out live here; where the *members* are written is not a fact any caller can observe, and
+/// a move would be churn for tidiness.
+///
+/// `implementation` is a `*const c_void` rather than a `*const OsslDispatch`: the authority
+/// declares it `const OSSL_DISPATCH *`, but the only reader in this crate upcasts it to an
+/// `*const c_void` immediately, and typing it as the dispatch struct would invite a
+/// dereference the authority never performs here.
 #[repr(C)]
 pub struct OsslAlgorithm {
-    /// The authority's struct is not `#[repr(C)]`-complete here, so this type has no
-    /// constructible values; the field exists only so the type is not a ZST by accident.
-    _opaque: [u8; 0],
+    /// `const char *algorithm_names` — the `:`-separated alias list, and the array's key: a
+    /// **NULL** here terminates the array, which is how every walk in this crate stops.
+    pub algorithm_names: *const c_char,
+    /// `const char *property_definition` — the property query this implementation answers.
+    pub property_definition: *const c_char,
+    /// `const OSSL_DISPATCH *implementation` — the provider's operation table. Opaque here; see
+    /// the type's own note.
+    pub implementation: *const c_void,
+    /// `const char *algorithm_description` — human-readable, and NULL for most providers.
+    pub algorithm_description: *const c_char,
 }
 
 /// `typedef int (*OSSL_provider_random_bytes_fn)(void *provctx, int which, void *buf,
