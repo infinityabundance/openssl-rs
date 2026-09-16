@@ -297,6 +297,30 @@ COURTS: list[tuple[str, int, str, str]] = [
      "real load of the library under test, binding through it, the already-loaded "
      "refusal that leaves the caller's object alive, and a reference count observed "
      "through two frees that both answer 1"),
+    ("rt-provider", 6, "rt_provider_probe",
+     "the provider registry, driven entirely through a provider the probe itself "
+     "declares: registration through OSSL_PROVIDER_add_builtin and its two refusals "
+     "(a NULL name and a NULL entry point, the latter refused *before* anything is "
+     "allocated); the load, which is also what disables automatic loading of the "
+     "fallback provider, so the remaining observations are of a registry that will "
+     "not supply one; the entry point's handle and the provider's own context, "
+     "compared against the marker the probe published rather than printed; the "
+     "dispatch table read back by entry *id* and terminator, because the two tables "
+     "are at different addresses and identical in content; a second load of the same "
+     "name, which finds the stored object and takes a second reference; the four "
+     "delegated calls that answer through the provider's context, each with a NULL "
+     "and a non-NULL argument so the pass-through is visible in both directions; an "
+     "algorithm query whose no_cache the provider writes and the caller reads, "
+     "unquery receiving exactly the pointer the query answered, and a NULL no_cache "
+     "that is legal; the CONF parameter list, including a boolean read back through "
+     "OSSL_PROVIDER_conf_get_bool with its default for a key that is not a boolean "
+     "and for a key that does not exist; the per-context default search path, which "
+     "a NULL clears as a *success* because the release precedes the NULL test; "
+     "availability for a known name, an unknown name and the fallback name that the "
+     "first load disabled; the enumeration and the callback's arguments; a load of a "
+     "name that cannot be resolved; and the unload, teardown, reload and second "
+     "unload that show initialisation happening exactly once and the teardown "
+     "waiting for the last reference"),
 ]
 
 

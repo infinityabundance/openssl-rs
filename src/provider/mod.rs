@@ -88,6 +88,7 @@ use core::sync::atomic::{AtomicI32, Ordering};
 use crate::context::dispatch::OsslDispatch;
 use crate::context::{lib_ctx_get_data, lib_ctx_is_default_symbol};
 use crate::dso::{DSO_free, DSO_get_filename, Dso};
+use crate::ffi::guard_ffi;
 use crate::params::{
     OsslParam, OSSL_PARAM_UNMODIFIED, OSSL_PARAM_UTF8_PTR, OSSL_PARAM_UTF8_STRING,
 };
@@ -106,6 +107,7 @@ use crate::runtime::thread::{
     CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new, CRYPTO_THREAD_read_lock, CRYPTO_THREAD_unlock,
     CRYPTO_THREAD_write_lock, CryptoRwlock,
 };
+use crate::selftest::OsslCallback;
 
 /// `OSSL_LIB_CTX_PROVIDER_STORE_INDEX` — slot 1, from `include/internal/cryptlib.h`.
 pub(crate) const PROVIDER_STORE_INDEX: c_int = 1;
@@ -117,7 +119,6 @@ pub(crate) const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/provider
 ///
 /// The allocation-tracking `file` is part of what Phase 3's memory-debug court reads back,
 /// so `OSSL_PROVIDER_add_builtin`'s dup must name *its* file and not `provider_core.c`'s.
-#[allow(dead_code)] // unreachable until 6.8b's export wraps `ossl_provider_add_builtin`
 pub(crate) const FILE_PROVIDER: *const c_char =
     c"../../src/openssl-3.6.4/crypto/provider.c".as_ptr();
 
@@ -220,11 +221,17 @@ type SkCopyFn = unsafe extern "C" fn(*const c_void) -> *mut c_void;
 
 /// `typedef int (*OSSL_provider_init_fn)(const OSSL_CORE_HANDLE *handle, const
 /// OSSL_DISPATCH *in, const OSSL_DISPATCH **out, void **provctx)` — `openssl/provider.h`.
+// The parameters are deliberately **unnamed**. `ABI-PROTOTYPE` canonicalises a function
+// pointer's argument *types*, and a named argument is not a type: `handle: *const c_void`
+// is unreadable to it, so a named alias is reported under `type_unmapped` and never counted
+// as checked. Every function-pointer alias in this crate is spelled this way for that
+// reason, and this one was not until 6.8c put it in an export's signature and the court
+// said so.
 pub(crate) type ProviderInitFn = unsafe extern "C" fn(
-    handle: *const c_void,
-    input: *const OsslDispatch,
-    output: *mut *const OsslDispatch,
-    provctx: *mut *mut c_void,
+    *const c_void,
+    *const OsslDispatch,
+    *mut *const OsslDispatch,
+    *mut *mut c_void,
 ) -> c_int;
 
 /// `typedef struct { char *name; char *value; } INFOPAIR` — `crypto/provider_local.h`.
@@ -269,7 +276,7 @@ pub(crate) struct OsslProviderInfo {
 /// The authority places `error_lib` and `error_strings` behind `#ifndef FIPS_MODULE`; both
 /// are present because this build is not the FIPS module.
 #[repr(C)]
-pub(crate) struct OsslProvider {
+pub struct OsslProvider {
     /// The authority's two one-bit flag fields, as named masks.
     pub(crate) flags: c_uint,
     /// Guards `flags`.
@@ -334,10 +341,8 @@ pub(crate) struct OsslProvider {
 ///
 /// Unread in this subphase: `provider_init` is what sets it and that is 6.8c's, so the only
 /// consumer is the arm of `ossl_provider_free` that 6.8c inserts.
-#[allow(dead_code)] // unreachable until 6.8c sets and tests it
 pub(crate) const FLAG_INITIALIZED: c_uint = 0x01;
 /// `flag_activated` — bit 1 of [`OsslProvider::flags`].
-#[allow(dead_code)] // unreachable until 6.8c sets and tests it
 pub(crate) const FLAG_ACTIVATED: c_uint = 0x02;
 
 /// `struct provider_store_st` — the per-context object in slot 1.
@@ -456,7 +461,6 @@ unsafe extern "C" fn infopair_free(p: *mut c_void) {
 ///
 /// # Safety
 /// `p` must be a live `InfoPair`.
-#[allow(dead_code)] // unreachable until 6.8c declares the exports
 unsafe extern "C" fn infopair_copy(p: *const c_void) -> *mut c_void {
     let src = p.cast::<InfoPair>();
     // SAFETY: a fresh zeroed block of exactly this type.
@@ -497,7 +501,6 @@ unsafe extern "C" fn infopair_copy(p: *const c_void) -> *mut c_void {
 ///
 /// # Safety
 /// `infopairsk` must be writable; `name` and `value` must be NUL-terminated.
-#[allow(dead_code)] // unreachable until 6.8c declares the exports
 pub(crate) unsafe fn infopair_add(
     infopairsk: *mut *mut OpenSslStack,
     name: *const c_char,
@@ -586,7 +589,6 @@ pub(crate) unsafe fn ossl_provider_info_clear(info: *mut OsslProviderInfo) {
 ///
 /// # Safety
 /// `provinfo` must be live; both strings NUL-terminated.
-#[allow(dead_code)] // unreachable until 6.8c declares the exports
 pub(crate) unsafe fn ossl_provider_info_add_parameter(
     provinfo: *mut OsslProviderInfo,
     name: *const c_char,
@@ -621,7 +623,6 @@ unsafe extern "C" fn child_cb_free(p: *mut c_void) {
 ///
 /// # Safety
 /// `ctx` is stored and never dereferenced.
-#[allow(dead_code)] // unreachable until 6.8c calls it
 pub(crate) unsafe fn ossl_provider_store_new(ctx: *mut c_void) -> *mut c_void {
     // SAFETY: a fresh zeroed block of exactly this type.
     let store = CRYPTO_zalloc(
@@ -782,7 +783,6 @@ pub(crate) unsafe fn get_provider_store(libctx: *mut c_void) -> *mut ProviderSto
 ///
 /// # Safety
 /// `libctx` must be NULL or live.
-#[allow(dead_code)] // unreachable until 6.8c calls it
 pub(crate) unsafe fn ossl_provider_disable_fallback_loading(libctx: *mut c_void) -> c_int {
     // SAFETY: `libctx` is NULL or live; `get_provider_store` raises in the NULL answer's
     // case.
@@ -813,7 +813,6 @@ pub(crate) unsafe fn ossl_provider_disable_fallback_loading(libctx: *mut c_void)
 ///
 /// # Safety
 /// `libctx` NULL or live; `entry` live and writable.
-#[allow(dead_code)] // unreachable until 6.8b calls it
 pub(crate) unsafe fn ossl_provider_info_add_to_store(
     libctx: *mut c_void,
     entry: *mut OsslProviderInfo,
@@ -880,7 +879,6 @@ pub(crate) unsafe fn ossl_provider_info_add_to_store(
 /// The authority writes `OSSL_PROVIDER tmpl = { 0, };` and then sets only `name`, so every
 /// other field is zero. Spelling that out here is what makes the search key a value rather
 /// than a caller-owned object with stray fields.
-#[allow(dead_code)] // unreachable until 6.8c declares the exports
 pub(crate) fn blank_provider() -> OsslProvider {
     OsslProvider {
         flags: 0,
@@ -1016,7 +1014,6 @@ fn predefined_row(name: *const c_char) -> Option<&'static PredefinedProvider> {
 ///
 /// # Safety
 /// `libctx` NULL or live; `name` NUL-terminated; `init_fn` non-NULL.
-#[allow(dead_code)] // unreachable until 6.8b's export wraps it
 pub(crate) unsafe fn ossl_provider_add_builtin(
     libctx: *mut c_void,
     name: *const c_char,
@@ -1076,7 +1073,6 @@ pub(crate) unsafe fn ossl_provider_add_builtin(
 /// # Safety
 /// `libctx` NULL or live; `name` NUL-terminated; `params` NULL or a terminated `OSSL_PARAM`
 /// array.
-#[allow(dead_code)] // unreachable until 6.8c calls it
 pub(crate) unsafe fn ossl_provider_new(
     libctx: *mut c_void,
     name: *const c_char,
@@ -1226,7 +1222,6 @@ pub(crate) unsafe fn ossl_provider_new(
 ///
 /// # Safety
 /// `libctx` NULL or live; `name` NUL-terminated.
-#[allow(dead_code)] // unreachable until 6.8c declares the exports
 pub(crate) unsafe fn ossl_provider_find(
     libctx: *mut c_void,
     name: *const c_char,
@@ -1298,7 +1293,6 @@ pub(crate) unsafe fn ossl_provider_find(
 ///
 /// # Safety
 /// `prov` must be live with a non-NULL `libctx`; `actualprov` NULL or writable.
-#[allow(dead_code)] // unreachable until 6.8b calls it
 pub(crate) unsafe fn ossl_provider_add_to_store(
     prov: *mut OsslProvider,
     actualprov: *mut *mut OsslProvider,
@@ -1400,7 +1394,6 @@ pub(crate) unsafe fn ossl_provider_add_to_store(
 ///
 /// # Safety
 /// `name` NUL-terminated; `parameters` NULL or a live stack.
-#[allow(dead_code)] // unreachable until 6.8c declares the exports
 pub(crate) unsafe fn provider_new(
     name: *const c_char,
     init_function: Option<ProviderInitFn>,
@@ -1479,7 +1472,6 @@ pub(crate) unsafe fn provider_new(
 ///
 /// # Safety
 /// `prov` must be NULL or live.
-#[allow(dead_code)] // unreachable until 6.8c declares the exports
 pub(crate) unsafe fn ossl_provider_up_ref(prov: *mut OsslProvider) -> c_int {
     if prov.is_null() {
         return 0;
@@ -1580,7 +1572,6 @@ pub(crate) unsafe fn ossl_provider_free(prov: *mut OsslProvider) {
 ///
 /// # Safety
 /// `prov` must be live; `module_path` NULL or NUL-terminated.
-#[allow(dead_code)] // unreachable until 6.8c declares the exports
 pub(crate) unsafe fn ossl_provider_set_module_path(
     prov: *mut OsslProvider,
     module_path: *const c_char,
@@ -1606,7 +1597,6 @@ pub(crate) unsafe fn ossl_provider_set_module_path(
 ///
 /// # Safety
 /// `prov` must be NULL or live.
-#[allow(dead_code)] // unreachable until 6.8c declares the exports
 pub(crate) unsafe fn ossl_provider_name(prov: *const OsslProvider) -> *const c_char {
     if prov.is_null() {
         return ptr::null();
@@ -1619,7 +1609,7 @@ pub(crate) unsafe fn ossl_provider_name(prov: *const OsslProvider) -> *const c_c
 ///
 /// # Safety
 /// `prov` must be NULL or live.
-#[allow(dead_code)] // unreachable until 6.8c declares the exports
+#[allow(dead_code)] // unreachable until Phases 7-10's store methods ask for a provider's DSO
 pub(crate) unsafe fn ossl_provider_dso(prov: *const OsslProvider) -> *const Dso {
     if prov.is_null() {
         return ptr::null();
@@ -1636,7 +1626,6 @@ pub(crate) unsafe fn ossl_provider_dso(prov: *const OsslProvider) -> *const Dso 
 ///
 /// # Safety
 /// `prov` must be live.
-#[allow(dead_code)] // unreachable until 6.8c declares the exports
 pub(crate) unsafe fn ossl_provider_module_name(prov: *const OsslProvider) -> *const c_char {
     // SAFETY: `prov` is live.
     let module = unsafe { (*prov).module };
@@ -1654,7 +1643,6 @@ pub(crate) unsafe fn ossl_provider_module_name(prov: *const OsslProvider) -> *co
 ///
 /// # Safety
 /// `prov` must be live.
-#[allow(dead_code)] // unreachable until 6.8c declares the exports
 pub(crate) unsafe fn ossl_provider_module_path(prov: *const OsslProvider) -> *const c_char {
     // SAFETY: `prov` is live.
     unsafe { ossl_provider_module_name(prov) }
@@ -1666,7 +1654,6 @@ pub(crate) unsafe fn ossl_provider_module_path(prov: *const OsslProvider) -> *co
 ///
 /// # Safety
 /// `prov` must be NULL or live.
-#[allow(dead_code)] // unreachable until 6.8c declares the exports
 pub(crate) unsafe fn ossl_provider_get0_dispatch(prov: *const OsslProvider) -> *const OsslDispatch {
     if prov.is_null() {
         return ptr::null();
@@ -1679,7 +1666,6 @@ pub(crate) unsafe fn ossl_provider_get0_dispatch(prov: *const OsslProvider) -> *
 ///
 /// # Safety
 /// `prov` must be NULL or live.
-#[allow(dead_code)] // unreachable until 6.8c declares the exports
 pub(crate) unsafe fn ossl_provider_libctx(prov: *const OsslProvider) -> *mut c_void {
     if prov.is_null() {
         return ptr::null_mut();
@@ -1695,7 +1681,6 @@ pub(crate) unsafe fn ossl_provider_libctx(prov: *const OsslProvider) -> *mut c_v
 ///
 /// # Safety
 /// `prov` must be NULL or live.
-#[allow(dead_code)] // unreachable until 6.8c declares the exports
 pub(crate) unsafe fn ossl_provider_ctx(prov: *const OsslProvider) -> *mut c_void {
     if prov.is_null() {
         return ptr::null_mut();
@@ -1711,7 +1696,6 @@ pub(crate) unsafe fn ossl_provider_ctx(prov: *const OsslProvider) -> *mut c_void
 ///
 /// # Safety
 /// `libctx` NULL or live; `path` NULL or NUL-terminated.
-#[allow(dead_code)] // unreachable until 6.8c declares the exports
 pub(crate) unsafe fn ossl_provider_set_default_search_path(
     libctx: *mut c_void,
     path: *const c_char,
@@ -1760,7 +1744,6 @@ pub(crate) unsafe fn ossl_provider_set_default_search_path(
 ///
 /// # Safety
 /// `libctx` NULL or live.
-#[allow(dead_code)] // unreachable until 6.8c declares the exports
 pub(crate) unsafe fn ossl_provider_get0_default_search_path(libctx: *mut c_void) -> *const c_char {
     let mut path: *const c_char = ptr::null();
     // SAFETY: `libctx` is NULL or live.
@@ -1788,7 +1771,6 @@ pub(crate) unsafe fn ossl_provider_get0_default_search_path(libctx: *mut c_void)
 ///
 /// # Safety
 /// `prov` live; `params` NULL or a terminated `OSSL_PARAM` array.
-#[allow(dead_code)] // unreachable until 6.8c declares the exports
 pub(crate) unsafe fn ossl_provider_get_conf_parameters(
     prov: *const OsslProvider,
     params: *mut OsslParam,
@@ -1825,7 +1807,6 @@ pub(crate) unsafe fn ossl_provider_get_conf_parameters(
 ///
 /// # Safety
 /// `val` must be NUL-terminated.
-#[allow(dead_code)] // unreachable until 6.8c declares the exports
 unsafe fn conf_bool_true(val: *const c_char) -> bool {
     // SAFETY: both are NUL-terminated.
     unsafe {
@@ -1842,7 +1823,6 @@ unsafe fn conf_bool_true(val: *const c_char) -> bool {
 ///
 /// # Safety
 /// `val` must be NUL-terminated.
-#[allow(dead_code)] // unreachable until 6.8c declares the exports
 unsafe fn conf_bool_false(val: *const c_char) -> bool {
     // SAFETY: both are NUL-terminated.
     unsafe {
@@ -1866,7 +1846,6 @@ unsafe fn conf_bool_false(val: *const c_char) -> bool {
 ///
 /// # Safety
 /// `prov` live; `name` NUL-terminated.
-#[allow(dead_code)] // unreachable until 6.8c declares the exports
 pub(crate) unsafe fn ossl_provider_conf_get_bool(
     prov: *const OsslProvider,
     name: *const c_char,
@@ -1901,7 +1880,6 @@ pub(crate) unsafe fn ossl_provider_conf_get_bool(
 }
 
 /// `OSSL_PARAM_END` — the all-zero terminating descriptor.
-#[allow(dead_code)] // unreachable until 6.8c declares the exports
 pub(crate) fn blank_param() -> OsslParam {
     OsslParam {
         key: ptr::null(),
@@ -1910,6 +1888,465 @@ pub(crate) fn blank_param() -> OsslParam {
         data_size: 0,
         return_size: OSSL_PARAM_UNMODIFIED,
     }
+}
+
+// ---------------------------------------------------------------------------
+// The twenty-two `OSSL_PROVIDER_*` exports
+// ---------------------------------------------------------------------------
+//
+// `crypto/provider.c`'s wrappers plus the five that live in `provider_core.c`, in the
+// authority's own order. Every one is a thin delegation and every one is a **coordinate**:
+// the ledger counts a symbol as implemented the moment it is defined, so this section is
+// what moves twenty-two rows of `forensics/phase6-obligations.json` and it lands in the same
+// commit as `RT-PROVIDER`, the court that observes the behaviour behind them.
+//
+// Three of them are not thin, and each is the whole reason it is written out:
+//
+//   * `OSSL_PROVIDER_try_load_ex` is the one place the **construction order** is decided:
+//     find, or create storeless, then activate **once** (which is when `provider_init` runs
+//     and the only time it can), then add to the store, then activate the store's object if
+//     this thread lost the race. Every other entry point funnels through it.
+//   * `OSSL_PROVIDER_load_ex` disables fallback loading **before** it tries to load, so a
+//     failed `OSSL_PROVIDER_load` has a side effect: the next operation that would have
+//     loaded `default` automatically no longer does. That is the authority's design and not
+//     an accident of ordering, and the value is inverted -- `load_ex` refuses when
+//     `ossl_provider_disable_fallback_loading` **succeeds**.
+//   * `OSSL_PROVIDER_unload` deactivates and *then* frees, and reports the deactivation's
+//     verdict rather than the free's, which returns nothing.
+//
+// The prototypes are the authority's (`provider.h` lines 21-88), and `ABI-PROTOTYPE`'s class
+// and type planes check every one of them against `functions.json` -- including the four
+// `OSSL_ALGORITHM` and `OSSL_DISPATCH` pointee shapes, which is why `OsslAlgorithm` and
+// `OsslDispatch` exist as named types rather than as `*const c_void`.
+
+/// `OSSL_PROVIDER *OSSL_PROVIDER_try_load_ex(OSSL_LIB_CTX *libctx, const char *name,
+/// OSSL_PARAM *params, int retain_fallbacks)`.
+///
+/// The one entry point that decides the construction order. `isnew` is what makes the
+/// `ossl_provider_add_to_store` call conditional: a provider that was already in the store
+/// has already been through it.
+///
+/// The second activation is the losing thread's remedy. When two threads create objects with
+/// the same name, `ossl_provider_add_to_store` hands back the store's, and the caller must take
+/// its own reference to that object — which is what the second `ossl_provider_activate`
+/// establishes before returning it.
+///
+/// # Safety
+/// `libctx` NULL or live; `name` NUL-terminated; `params` NULL or an `OSSL_PARAM` array.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_PROVIDER_try_load_ex(
+    libctx: *mut c_void,
+    name: *const c_char,
+    params: *mut OsslParam,
+    retain_fallbacks: c_int,
+) -> *mut OsslProvider {
+    guard_ffi(ptr::null_mut(), || {
+        // SAFETY: `libctx` is NULL or live and `name` is NUL-terminated; `noconfig` is 0, as
+        // the authority's own call has it, so the config loader may run first.
+        let mut prov = unsafe { ossl_provider_find(libctx, name, 0) };
+        let mut isnew = 0;
+        if prov.is_null() {
+            // SAFETY: as above; the initialiser comes from the template, not the caller.
+            prov = unsafe { ossl_provider_new(libctx, name, None, params, 0) };
+            if prov.is_null() {
+                return ptr::null_mut();
+            }
+            isnew = 1;
+        }
+        // SAFETY: `prov` is live; `upcalls` is 1 and `aschild` 0, as in the authority.
+        if unsafe { crate::provider::activate::ossl_provider_activate(prov, 1, 0) } == 0 {
+            // SAFETY: `prov` is live and this function's own reference.
+            unsafe { ossl_provider_free(prov) };
+            return ptr::null_mut();
+        }
+        let mut actual = prov;
+        if isnew != 0 {
+            // SAFETY: `prov` is live and `actual` is a writable slot of the right type.
+            let added = unsafe { ossl_provider_add_to_store(prov, &mut actual, retain_fallbacks) };
+            if added == 0 {
+                // SAFETY: `prov` is live, activated, and not in the store.
+                unsafe {
+                    crate::provider::activate::ossl_provider_deactivate(prov, 1);
+                    ossl_provider_free(prov);
+                }
+                return ptr::null_mut();
+            }
+        }
+        if actual != prov {
+            // SAFETY: `actual` is the store's object, which `ossl_provider_add_to_store`
+            // up-ref'd on this function's behalf.
+            if unsafe { crate::provider::activate::ossl_provider_activate(actual, 1, 0) } == 0 {
+                // SAFETY: `actual` is live and holds the reference taken above.
+                unsafe { ossl_provider_free(actual) };
+                return ptr::null_mut();
+            }
+        }
+        actual
+    })
+}
+
+/// `OSSL_PROVIDER *OSSL_PROVIDER_try_load(OSSL_LIB_CTX *libctx, const char *name,
+/// int retain_fallbacks)`.
+///
+/// # Safety
+/// `libctx` NULL or live; `name` NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_PROVIDER_try_load(
+    libctx: *mut c_void,
+    name: *const c_char,
+    retain_fallbacks: c_int,
+) -> *mut OsslProvider {
+    guard_ffi(ptr::null_mut(), || {
+        // SAFETY: every argument is passed through unchanged; `params` is NULL.
+        unsafe { OSSL_PROVIDER_try_load_ex(libctx, name, ptr::null_mut(), retain_fallbacks) }
+    })
+}
+
+/// `OSSL_PROVIDER *OSSL_PROVIDER_load_ex(OSSL_LIB_CTX *libctx, const char *name,
+/// OSSL_PARAM *params)`.
+///
+/// The refusal is **inverted**, and that is the whole function: *any* attempt to load a
+/// provider disables automatic loading of the default one, so a failure here is a promise that
+/// the next operation will not silently supply `default` instead. `ossl_provider_disable_fallback_loading`
+/// answers 1 on success — `retain_fallbacks` is then **0**, because a load that asked for a
+/// named provider did not ask for the fallbacks.
+///
+/// # Safety
+/// `libctx` NULL or live; `name` NUL-terminated; `params` NULL or an `OSSL_PARAM` array.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_PROVIDER_load_ex(
+    libctx: *mut c_void,
+    name: *const c_char,
+    params: *mut OsslParam,
+) -> *mut OsslProvider {
+    guard_ffi(ptr::null_mut(), || {
+        // SAFETY: `libctx` is NULL or live, which is the contract of the call.
+        if unsafe { ossl_provider_disable_fallback_loading(libctx) } != 0 {
+            // SAFETY: as above.
+            return unsafe { OSSL_PROVIDER_try_load_ex(libctx, name, params, 0) };
+        }
+        ptr::null_mut()
+    })
+}
+
+/// `OSSL_PROVIDER *OSSL_PROVIDER_load(OSSL_LIB_CTX *libctx, const char *name)`.
+///
+/// # Safety
+/// `libctx` NULL or live; `name` NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_PROVIDER_load(
+    libctx: *mut c_void,
+    name: *const c_char,
+) -> *mut OsslProvider {
+    guard_ffi(ptr::null_mut(), || {
+        // SAFETY: every argument is passed through unchanged; `params` is NULL.
+        unsafe { OSSL_PROVIDER_load_ex(libctx, name, ptr::null_mut()) }
+    })
+}
+
+/// `int OSSL_PROVIDER_unload(OSSL_PROVIDER *prov)`.
+///
+/// Deactivate, then free: the free is unconditional once the deactivation succeeded, because
+/// the caller's reference is what is being released either way. The **answer** is the
+/// deactivation's, because `ossl_provider_free` has none to give.
+///
+/// # Safety
+/// `prov` must be NULL or a live provider the caller holds a reference to.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_PROVIDER_unload(prov: *mut OsslProvider) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `prov` is NULL or live; `removechildren` is 1, as in the authority.
+        if unsafe { crate::provider::activate::ossl_provider_deactivate(prov, 1) } == 0 {
+            return 0;
+        }
+        // SAFETY: `prov` is live.
+        unsafe { ossl_provider_free(prov) };
+        1
+    })
+}
+
+/// `const OSSL_PARAM *OSSL_PROVIDER_gettable_params(const OSSL_PROVIDER *prov)`.
+///
+/// # Safety
+/// `prov` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_PROVIDER_gettable_params(
+    prov: *const OsslProvider,
+) -> *const OsslParam {
+    guard_ffi(ptr::null(), || {
+        // SAFETY: `prov` is live.
+        unsafe { crate::provider::activate::ossl_provider_gettable_params(prov) }
+    })
+}
+
+/// `int OSSL_PROVIDER_get_params(const OSSL_PROVIDER *prov, OSSL_PARAM params[])`.
+///
+/// # Safety
+/// `prov` must be live; `params` NULL or the provider's array.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_PROVIDER_get_params(
+    prov: *const OsslProvider,
+    params: *mut OsslParam,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `prov` is live.
+        unsafe { crate::provider::activate::ossl_provider_get_params(prov, params) }
+    })
+}
+
+/// `const OSSL_ALGORITHM *OSSL_PROVIDER_query_operation(const OSSL_PROVIDER *prov,
+/// int operation_id, int *no_cache)`.
+///
+/// # Safety
+/// `prov` must be live; `no_cache` NULL or writable.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_PROVIDER_query_operation(
+    prov: *const OsslProvider,
+    operation_id: c_int,
+    no_cache: *mut c_int,
+) -> *const crate::provider::activate::OsslAlgorithm {
+    guard_ffi(ptr::null(), || {
+        // SAFETY: `prov` is live; `no_cache` is NULL or writable per the contract.
+        unsafe {
+            crate::provider::activate::ossl_provider_query_operation(prov, operation_id, no_cache)
+        }
+    })
+}
+
+/// `void OSSL_PROVIDER_unquery_operation(const OSSL_PROVIDER *prov, int operation_id,
+/// const OSSL_ALGORITHM *algs)`.
+///
+/// # Safety
+/// `prov` must be live; `algs` must be what the matching query answered.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_PROVIDER_unquery_operation(
+    prov: *const OsslProvider,
+    operation_id: c_int,
+    algs: *const crate::provider::activate::OsslAlgorithm,
+) {
+    guard_ffi((), || {
+        // SAFETY: `prov` is live; `algs` is the query's answer.
+        unsafe {
+            crate::provider::activate::ossl_provider_unquery_operation(prov, operation_id, algs)
+        }
+    })
+}
+
+/// `void *OSSL_PROVIDER_get0_provider_ctx(const OSSL_PROVIDER *prov)`.
+///
+/// # Safety
+/// `prov` must be NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_PROVIDER_get0_provider_ctx(prov: *const OsslProvider) -> *mut c_void {
+    guard_ffi(ptr::null_mut(), || {
+        // SAFETY: `prov` is NULL or live.
+        unsafe { ossl_provider_ctx(prov) }
+    })
+}
+
+/// `const OSSL_DISPATCH *OSSL_PROVIDER_get0_dispatch(const OSSL_PROVIDER *prov)`.
+///
+/// # Safety
+/// `prov` must be NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_PROVIDER_get0_dispatch(
+    prov: *const OsslProvider,
+) -> *const OsslDispatch {
+    guard_ffi(ptr::null(), || {
+        // SAFETY: `prov` is NULL or live.
+        unsafe { ossl_provider_get0_dispatch(prov) }
+    })
+}
+
+/// `int OSSL_PROVIDER_self_test(const OSSL_PROVIDER *prov)`.
+///
+/// # Safety
+/// `prov` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_PROVIDER_self_test(prov: *const OsslProvider) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `prov` is live.
+        unsafe { crate::provider::activate::ossl_provider_self_test(prov) }
+    })
+}
+
+/// `int OSSL_PROVIDER_get_capabilities(const OSSL_PROVIDER *prov, const char *capability,
+/// OSSL_CALLBACK *cb, void *arg)`.
+///
+/// # Safety
+/// `prov` must be live; `capability` NULL or NUL-terminated; `cb`/`arg` are the provider's to
+/// interpret.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_PROVIDER_get_capabilities(
+    prov: *const OsslProvider,
+    capability: *const c_char,
+    cb: Option<OsslCallback>,
+    arg: *mut c_void,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `prov` is live.
+        unsafe {
+            crate::provider::activate::ossl_provider_get_capabilities(prov, capability, cb, arg)
+        }
+    })
+}
+
+/// `int OSSL_PROVIDER_add_builtin(OSSL_LIB_CTX *libctx, const char *name,
+/// OSSL_provider_init_fn *init_fn)`.
+///
+/// The third parameter is `Option<ProviderInitFn>` and **not** `ProviderInitFn`, which is the
+/// one place in this file where the distinction between "a function pointer" and "a nullable
+/// function pointer" is the difference between a correct answer and a wrong one: the
+/// authority refuses a NULL entry point with `ERR_R_PASSED_NULL_PARAMETER` **before** it
+/// allocates anything, so a bare parameter would make `Some(NULL)` indistinguishable from a
+/// real one and the registration would succeed where the authority's fails. `ABI-PROTOTYPE`
+/// canonicalises `Option<F>` and `F` identically -- a nullable function pointer and a bare one
+/// are the same type to a caller -- so the nullable spelling costs nothing and is the one the
+/// contract needs. `RT-PROVIDER` found this: `add_builtin.null_init` answered 1 where the
+/// authority answers 0.
+///
+/// # Safety
+/// `libctx` NULL or live; `name` NULL or NUL-terminated; `init_fn` NULL or a valid entry point.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_PROVIDER_add_builtin(
+    libctx: *mut c_void,
+    name: *const c_char,
+    init_fn: Option<ProviderInitFn>,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: the three arguments are the contract's; `ossl_provider_add_builtin` is the
+        // one that tests them, and it raises what the authority raises.
+        unsafe { ossl_provider_add_builtin(libctx, name, init_fn) }
+    })
+}
+
+/// `const char *OSSL_PROVIDER_get0_name(const OSSL_PROVIDER *prov)`.
+///
+/// # Safety
+/// `prov` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_PROVIDER_get0_name(prov: *const OsslProvider) -> *const c_char {
+    guard_ffi(ptr::null(), || {
+        // SAFETY: `prov` is live.
+        unsafe { ossl_provider_name(prov) }
+    })
+}
+
+/// `int OSSL_PROVIDER_do_all(OSSL_LIB_CTX *ctx, int (*cb)(OSSL_PROVIDER *provider,
+/// void *cbdata), void *cbdata)`.
+///
+/// # Safety
+/// `ctx` NULL or live; `cb` non-NULL and valid for every provider on the stack.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_PROVIDER_do_all(
+    ctx: *mut c_void,
+    cb: crate::provider::activate::ProviderDoAllFn,
+    cbdata: *mut c_void,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `ctx` is NULL or live.
+        unsafe { crate::provider::activate::ossl_provider_doall_activated(ctx, cb, cbdata) }
+    })
+}
+
+/// `int OSSL_PROVIDER_available(OSSL_LIB_CTX *libctx, const char *name)`.
+///
+/// # Safety
+/// `libctx` NULL or live; `name` is NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_PROVIDER_available(
+    libctx: *mut c_void,
+    name: *const c_char,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `libctx` is NULL or live; `name` is passed through to `ossl_provider_find`,
+        // whose contract is NULL or NUL-terminated.
+        unsafe { crate::provider::activate::ossl_provider_available(libctx, name) }
+    })
+}
+
+/// `int OSSL_PROVIDER_add_conf_parameter(OSSL_PROVIDER *prov, const char *name,
+/// const char *value)`.
+///
+/// The only export in this file whose body is another function **in this file**, because
+/// `infopair_add` is `provider_core.c`'s static helper and this is its one external caller.
+///
+/// # Safety
+/// `prov` must be live; `name` and `value` NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_PROVIDER_add_conf_parameter(
+    prov: *mut OsslProvider,
+    name: *const c_char,
+    value: *const c_char,
+) -> c_int {
+    guard_ffi(0, || {
+        if prov.is_null() {
+            return 0;
+        }
+        // SAFETY: `prov` is live, so the address of its `parameters` field is valid for the
+        // duration of the call; both strings are NUL-terminated.
+        unsafe { infopair_add(ptr::addr_of_mut!((*prov).parameters), name, value) }
+    })
+}
+
+/// `int OSSL_PROVIDER_get_conf_parameters(const OSSL_PROVIDER *prov, OSSL_PARAM params[])`.
+///
+/// # Safety
+/// `prov` must be live; `params` NULL or an array of at least one descriptor.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_PROVIDER_get_conf_parameters(
+    prov: *const OsslProvider,
+    params: *mut OsslParam,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `prov` is live.
+        unsafe { ossl_provider_get_conf_parameters(prov, params) }
+    })
+}
+
+/// `int OSSL_PROVIDER_conf_get_bool(const OSSL_PROVIDER *prov, const char *name, int defval)`.
+///
+/// # Safety
+/// `prov` must be live; `name` NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_PROVIDER_conf_get_bool(
+    prov: *const OsslProvider,
+    name: *const c_char,
+    defval: c_int,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `prov` is live.
+        unsafe { ossl_provider_conf_get_bool(prov, name, defval) }
+    })
+}
+
+/// `int OSSL_PROVIDER_set_default_search_path(OSSL_LIB_CTX *libctx, const char *path)`.
+///
+/// # Safety
+/// `libctx` NULL or live; `path` NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_PROVIDER_set_default_search_path(
+    libctx: *mut c_void,
+    path: *const c_char,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `libctx` is NULL or live; `path` is NULL or NUL-terminated.
+        unsafe { ossl_provider_set_default_search_path(libctx, path) }
+    })
+}
+
+/// `const char *OSSL_PROVIDER_get0_default_search_path(OSSL_LIB_CTX *libctx)`.
+///
+/// # Safety
+/// `libctx` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_PROVIDER_get0_default_search_path(
+    libctx: *mut c_void,
+) -> *const c_char {
+    guard_ffi(ptr::null(), || {
+        // SAFETY: `libctx` is NULL or live.
+        unsafe { ossl_provider_get0_default_search_path(libctx) }
+    })
 }
 
 #[cfg(test)]

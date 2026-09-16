@@ -53,14 +53,6 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-// EVERY ITEM IN THIS MODULE IS UNREACHABLE UNTIL `OSSL_PROVIDER_load` LANDS, which is the
-// next commit of this subphase: the twenty-two `OSSL_PROVIDER_*` exports are declared
-// together with `RT-PROVIDER`, because the obligation ledger counts a symbol as implemented
-// the moment it is defined. So the allowance below is a *staging* allowance with a condition
-// rather than a habit, and the commit that adds the exports removes it. If it is still here
-// afterwards, that is a defect rather than a style matter.
-#![allow(dead_code)] // removed in the commit that declares the exports
-
 use core::ffi::{c_char, c_int, c_long, c_uint, c_ulong, c_void};
 use core::ptr;
 
