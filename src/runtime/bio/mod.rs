@@ -75,6 +75,7 @@ pub mod bss_mem;
 pub mod bss_null;
 pub mod bss_sock;
 pub mod comp;
+pub mod core_bio;
 pub mod dump;
 pub mod iolib;
 pub mod legacy_host;
