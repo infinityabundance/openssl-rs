@@ -1,8 +1,11 @@
 //! Phase 7.4 — the `EVP_KEM` method object.
 //!
-//! `crypto/evp/kem.c`'s **method half**. The file's other half — `EVP_PKEY_encapsulate_init`,
-//! `EVP_PKEY_encapsulate`, `EVP_PKEY_decapsulate_init`, `EVP_PKEY_decapsulate` and the two
-//! `auth_*_init` spellings — is `EVP_PKEY_CTX` work and lands with 7.4c's context.
+//! `crypto/evp/kem.c` whole: the **method half** — the object, its lifetime, and the eleven exports
+//! that reach it — and the **operation half**: `EVP_PKEY_encapsulate_init`, `EVP_PKEY_encapsulate`,
+//! `EVP_PKEY_decapsulate_init`, `EVP_PKEY_decapsulate` and the two `auth_*_init` spellings. The
+//! operations are here rather than with the method object because every one of them reads
+//! `ctx->operation` and `ctx->op.encap.algctx`, which belong to the `EVP_PKEY_CTX` object that landed
+//! in 7.4c-i.
 //!
 //! ## The structural check is the only one in the family with a *balanced* clause
 //!
@@ -45,6 +48,16 @@ use crate::evp::algorithm::ossl_algorithm_get1_first_name;
 use crate::evp::fetch::{
     evp_generic_do_all, evp_generic_fetch, evp_generic_fetch_from_prov, evp_is_a, evp_names_do_all,
     GenericDoAllFn, MethodFromAlgorithmFn,
+};
+use crate::evp::keymgmt::{
+    evp_keymgmt_fetch_from_prov, EVP_KEYMGMT_free, EVP_KEYMGMT_get0_name,
+    EVP_KEYMGMT_get0_provider, EvpKeyMgmt,
+};
+use crate::evp::keymgmt_lib::evp_keymgmt_util_query_operation_name;
+use crate::evp::pkey::{evp_pkey_export_to_provider, EvpPkey};
+use crate::evp::pkey_ctx::{
+    evp_pkey_ctx_free_old_ops, EvpPkeyCtx, EVP_PKEY_OP_DECAPSULATE, EVP_PKEY_OP_ENCAPSULATE,
+    EVP_PKEY_OP_UNDEFINED,
 };
 use crate::params::OsslParam;
 use crate::property::store::{MethodFreeFn, MethodUpRefFn};
@@ -411,7 +424,7 @@ pub unsafe extern "C" fn EVP_KEM_fetch(
 ///
 /// # Safety
 /// `prov` must be live; `algorithm` and `properties` NULL or NUL-terminated.
-#[allow(dead_code)] // first live caller is `evp_pkey_kem_init`, which lands with 7.4c's context
+#[allow(dead_code)] // first live caller is `evp_kem_init`
 pub(crate) unsafe fn evp_kem_fetch_from_prov(
     prov: *mut OsslProvider,
     algorithm: *const c_char,
@@ -567,6 +580,477 @@ pub unsafe extern "C" fn EVP_KEM_settable_ctx_params(kem: *const EvpKem) -> *con
     // SAFETY: `settable` is the provider's own callback and a NULL operation context is what the
     // authority passes here.
     unsafe { settable(ptr::null_mut(), provctx) }
+}
+
+// ---------------------------------------------------------------------------------------------
+// The operation half — `evp_kem_init` and the six exports over it.
+//
+// These read `ctx->operation` and `ctx->op.encap.algctx`, which is why they land after the
+// `EVP_PKEY_CTX` object (7.4c-i) rather than with the method object above.
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's `err:` label — `crypto/evp/kem.c:204`.
+///
+/// # Safety
+/// `ctx` must be live; `tmp_keymgmt` NULL or live.
+unsafe fn evp_kem_init_err(
+    ctx: *mut EvpPkeyCtx,
+    tmp_keymgmt: *mut EvpKeyMgmt,
+    ret: c_int,
+) -> c_int {
+    if ret <= 0 {
+        // SAFETY: `ctx` is live.
+        unsafe { evp_pkey_ctx_free_old_ops(ctx) };
+        // SAFETY: `ctx` is live.
+        unsafe { (*ctx).operation = EVP_PKEY_OP_UNDEFINED };
+    }
+    // SAFETY: `tmp_keymgmt` is NULL or live.
+    unsafe { EVP_KEYMGMT_free(tmp_keymgmt) };
+    ret
+}
+
+/// `static int evp_kem_init(EVP_PKEY_CTX *ctx, int operation, const OSSL_PARAM params[],
+/// EVP_PKEY *authkey)` — `crypto/evp/kem.c:30`.
+///
+/// Three things distinguish this from `evp_pkey_asym_cipher_init`, and each is a place a copy would
+/// have been wrong:
+///
+///   * there is **no mark**. The asymmetric cipher brackets its fetches with `ERR_set_mark` and pops
+///     them on the way to `legacy:`; a KEM has no legacy fallback to reach, so no fetch error is ever
+///     withdrawn;
+///   * `ctx->keytype` is tested **as well as** `ctx`, and a NULL `keytype` is refused with
+///     `EVP_R_INITIALIZATION_ERROR` rather than `EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE`;
+///   * a mismatched `authkey` returns **0 with the operation still set** — not through `err:`, so
+///     the context is not torn down. That is the authority's own asymmetry and it is observable.
+///
+/// # Safety
+/// `ctx` NULL or live; `authkey` NULL or live; `params` NULL or a terminated array.
+unsafe fn evp_kem_init(
+    ctx: *mut EvpPkeyCtx,
+    operation: c_int,
+    params: *const OsslParam,
+    authkey: *mut EvpPkey,
+) -> c_int {
+    if ctx.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::KEM_42) };
+        return 0;
+    }
+    // SAFETY: `ctx` is live.
+    if unsafe { (*ctx).keytype }.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::KEM_42) };
+        return 0;
+    }
+
+    // SAFETY: `ctx` is live.
+    unsafe { evp_pkey_ctx_free_old_ops(ctx) };
+    // SAFETY: `ctx` is live.
+    unsafe { (*ctx).operation = operation };
+
+    // SAFETY: `ctx` is live.
+    let pkey = unsafe { (*ctx).pkey };
+    if pkey.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::KEM_50) };
+        // SAFETY: `ctx` is live and the second argument is a literal NULL.
+        return unsafe { evp_kem_init_err(ctx, ptr::null_mut(), 0) };
+    }
+
+    if !authkey.is_null() {
+        // SAFETY: both keys are live.
+        let (auth_type, pkey_type) = unsafe { ((*authkey).type_, (*pkey).type_) };
+        if auth_type != pkey_type {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::KEM_54) };
+            /* `return 0`, **not** `goto err`: the operation stays set and the old ops stay freed of
+             * nothing. The authority's own report is unambiguous, and it is the one place in this
+             * file where a failure does not tear the context down. */
+            return 0;
+        }
+    }
+
+    /* `ossl_assert` under `NDEBUG` is `(x) != 0`, so this is a live refusal (`docs/DECISIONS.md`
+     * D167). */
+    // SAFETY: `pkey` is live.
+    let pkey_keymgmt = unsafe { (*pkey).keymgmt };
+    // SAFETY: `ctx` is live.
+    if !(pkey_keymgmt.is_null() || pkey_keymgmt == unsafe { (*ctx).keymgmt }) {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::KEM_62) };
+        // SAFETY: `ctx` is live and the second argument is a literal NULL.
+        return unsafe { evp_kem_init_err(ctx, ptr::null_mut(), 0) };
+    }
+
+    // SAFETY: `ctx` is live.
+    let ctx_keymgmt = unsafe { (*ctx).keymgmt };
+    // SAFETY: `ctx_keymgmt` is live — the context is provided-side, so it has a method.
+    let supported_kem = unsafe { evp_keymgmt_util_query_operation_name(ctx_keymgmt, OSSL_OP_KEM) };
+    if supported_kem.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::KEM_68) };
+        // SAFETY: `ctx` is live and the second argument is a literal NULL.
+        return unsafe { evp_kem_init_err(ctx, ptr::null_mut(), 0) };
+    }
+
+    let mut kem: *mut EvpKem = ptr::null_mut();
+    let mut tmp_keymgmt: *mut EvpKeyMgmt = ptr::null_mut();
+    let mut tmp_prov: *const OsslProvider = ptr::null();
+    let mut provkey: *mut c_void = ptr::null_mut();
+    let mut provauthkey: *mut c_void = ptr::null_mut();
+
+    let mut iter: c_int = 1;
+    while iter < 3 && provkey.is_null() {
+        // SAFETY: `kem` is NULL or live.
+        unsafe { EVP_KEM_free(kem) };
+        // SAFETY: `tmp_keymgmt` is NULL or live.
+        unsafe { EVP_KEYMGMT_free(tmp_keymgmt) };
+        tmp_keymgmt = ptr::null_mut();
+
+        if iter == 1 {
+            // SAFETY: `ctx` is live.
+            let (libctx, propquery) = unsafe { ((*ctx).libctx, (*ctx).propquery) };
+            // SAFETY: `libctx` is live and `supported_kem` is NUL-terminated.
+            kem = unsafe { EVP_KEM_fetch(libctx, supported_kem, propquery) };
+            if !kem.is_null() {
+                // SAFETY: `kem` is live.
+                tmp_prov = unsafe { EVP_KEM_get0_provider(kem) };
+            }
+        } else {
+            // SAFETY: `ctx_keymgmt` is live.
+            tmp_prov = unsafe { EVP_KEYMGMT_get0_provider(ctx_keymgmt) };
+            // SAFETY: `ctx` is live.
+            let propquery = unsafe { (*ctx).propquery };
+            // SAFETY: `tmp_prov` is live and `supported_kem` is NUL-terminated.
+            kem = unsafe { evp_kem_fetch_from_prov(tmp_prov.cast_mut(), supported_kem, propquery) };
+            if kem.is_null() {
+                /* Unlike the asymmetric cipher's second iteration, this one does **not** fall back:
+                 * a KEM has no legacy half, so a provider-specific miss is the final answer. */
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::KEM_116) };
+                // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+                return unsafe { evp_kem_init_err(ctx, tmp_keymgmt, -2) };
+            }
+        }
+
+        if !kem.is_null() {
+            // SAFETY: `ctx_keymgmt` is live and its name is NUL-terminated; `ctx` is live.
+            let (name, propquery) =
+                unsafe { (EVP_KEYMGMT_get0_name(ctx_keymgmt), (*ctx).propquery) };
+            // SAFETY: `tmp_prov` is live and `name` is NUL-terminated.
+            let tmp_keymgmt_tofree =
+                unsafe { evp_keymgmt_fetch_from_prov(tmp_prov.cast_mut(), name, propquery) };
+            tmp_keymgmt = tmp_keymgmt_tofree;
+            if !tmp_keymgmt.is_null() {
+                // SAFETY: `ctx` is live.
+                let libctx = unsafe { (*ctx).libctx };
+                // SAFETY: `pkey` is live, and `tmp_keymgmt` is a live local whose address is valid
+                // for the call -- which may replace it.
+                provkey = unsafe {
+                    evp_pkey_export_to_provider(
+                        pkey,
+                        libctx,
+                        ptr::addr_of_mut!(tmp_keymgmt),
+                        propquery,
+                    )
+                };
+                if !provkey.is_null() && !authkey.is_null() {
+                    // SAFETY: `authkey` is live and `tmp_keymgmt`'s address is valid for the call.
+                    provauthkey = unsafe {
+                        evp_pkey_export_to_provider(
+                            authkey,
+                            libctx,
+                            ptr::addr_of_mut!(tmp_keymgmt),
+                            propquery,
+                        )
+                    };
+                    if provauthkey.is_null() {
+                        // SAFETY: `kem` is live and the caller drops its reference here.
+                        unsafe { EVP_KEM_free(kem) };
+                        // SAFETY: a compile-time-constant site.
+                        unsafe { raise_site(&err_sites::KEM_146) };
+                        // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+                        return unsafe { evp_kem_init_err(ctx, tmp_keymgmt, 0) };
+                    }
+                }
+            }
+            if tmp_keymgmt.is_null() {
+                // SAFETY: `tmp_keymgmt_tofree` is NULL or live and the caller dropped it.
+                unsafe { EVP_KEYMGMT_free(tmp_keymgmt_tofree) };
+            }
+        }
+        iter += 1;
+    }
+
+    if provkey.is_null() {
+        // SAFETY: `kem` is NULL or live.
+        unsafe { EVP_KEM_free(kem) };
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::KEM_157) };
+        // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+        return unsafe { evp_kem_init_err(ctx, tmp_keymgmt, 0) };
+    }
+
+    // SAFETY: `ctx` is live and `kem` is live.
+    unsafe { (*ctx).op_encap_kem = kem };
+    /* `newctx` is mandatory: a provider that publishes no `OSSL_FUNC_KEM_NEWCTX` is refused by the
+     * walk, so the `else` is unreachable and gives the authority's own INITIALIZATION_ERROR. */
+    // SAFETY: `kem` is live.
+    let Some(newctx) = (unsafe { (*kem).newctx }) else {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::KEM_165) };
+        // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+        return unsafe { evp_kem_init_err(ctx, tmp_keymgmt, 0) };
+    };
+    // SAFETY: `newctx` is the provider's own callback and `(*kem).prov` is live.
+    let algctx = unsafe { newctx(ossl_provider_ctx((*kem).prov)) };
+    // SAFETY: `ctx` is live.
+    unsafe { (*ctx).op_encap_algctx = algctx };
+    if algctx.is_null() {
+        /* The provider key can stay in the cache. */
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::KEM_165) };
+        // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+        return unsafe { evp_kem_init_err(ctx, tmp_keymgmt, 0) };
+    }
+
+    /* The authenticating initialiser is selected by whether an `authkey` **was exported**, not by
+     * whether one was passed: a method that publishes the authenticating initialiser and no plain
+     * one is unreachable without an `authkey`, and one that publishes both is asked for the
+     * authenticating form exactly when there is a key to authenticate with. */
+    let ret = match operation {
+        EVP_PKEY_OP_ENCAPSULATE => {
+            // SAFETY: `kem` is live.
+            let auth_init = unsafe { (*kem).auth_encapsulate_init };
+            // SAFETY: `kem` is live.
+            let plain_init = unsafe { (*kem).encapsulate_init };
+            if !provauthkey.is_null() {
+                match auth_init {
+                    // SAFETY: the provider's own callback, with the authority's arguments.
+                    Some(f) => unsafe { f(algctx, provkey, provauthkey, params) },
+                    None => {
+                        // SAFETY: a compile-time-constant site.
+                        unsafe { raise_site(&err_sites::KEM_177) };
+                        // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+                        return unsafe { evp_kem_init_err(ctx, tmp_keymgmt, -2) };
+                    }
+                }
+            } else {
+                match plain_init {
+                    // SAFETY: as above.
+                    Some(f) => unsafe { f(algctx, provkey, params) },
+                    None => {
+                        // SAFETY: a compile-time-constant site.
+                        unsafe { raise_site(&err_sites::KEM_177) };
+                        // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+                        return unsafe { evp_kem_init_err(ctx, tmp_keymgmt, -2) };
+                    }
+                }
+            }
+        }
+        EVP_PKEY_OP_DECAPSULATE => {
+            // SAFETY: `kem` is live.
+            let auth_init = unsafe { (*kem).auth_decapsulate_init };
+            // SAFETY: `kem` is live.
+            let plain_init = unsafe { (*kem).decapsulate_init };
+            if !provauthkey.is_null() {
+                match auth_init {
+                    // SAFETY: the provider's own callback, with the authority's arguments.
+                    Some(f) => unsafe { f(algctx, provkey, provauthkey, params) },
+                    None => {
+                        // SAFETY: a compile-time-constant site.
+                        unsafe { raise_site(&err_sites::KEM_189) };
+                        // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+                        return unsafe { evp_kem_init_err(ctx, tmp_keymgmt, -2) };
+                    }
+                }
+            } else {
+                match plain_init {
+                    // SAFETY: as above.
+                    Some(f) => unsafe { f(algctx, provkey, params) },
+                    None => {
+                        // SAFETY: a compile-time-constant site.
+                        unsafe { raise_site(&err_sites::KEM_189) };
+                        // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+                        return unsafe { evp_kem_init_err(ctx, tmp_keymgmt, -2) };
+                    }
+                }
+            }
+        }
+        _ => {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::KEM_195) };
+            // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+            return unsafe { evp_kem_init_err(ctx, tmp_keymgmt, 0) };
+        }
+    };
+
+    // SAFETY: `tmp_keymgmt` is NULL or live.
+    unsafe { EVP_KEYMGMT_free(tmp_keymgmt) };
+
+    if ret > 0 {
+        return 1;
+    }
+    // SAFETY: `ctx` is live and the second argument is a literal NULL.
+    unsafe { evp_kem_init_err(ctx, ptr::null_mut(), ret) }
+}
+
+/// `int EVP_PKEY_auth_encapsulate_init(EVP_PKEY_CTX *ctx, EVP_PKEY *authpriv,
+/// const OSSL_PARAM params[])`.
+///
+/// # Safety
+/// `ctx` must be live; `authpriv` must be live (the authority refuses NULL before dereferencing it);
+/// `params` NULL or a terminated array.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_auth_encapsulate_init(
+    ctx: *mut EvpPkeyCtx,
+    authpriv: *mut EvpPkey,
+    params: *const OsslParam,
+) -> c_int {
+    if authpriv.is_null() {
+        return 0;
+    }
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { evp_kem_init(ctx, EVP_PKEY_OP_ENCAPSULATE, params, authpriv) }
+}
+
+/// `int EVP_PKEY_encapsulate_init(EVP_PKEY_CTX *ctx, const OSSL_PARAM params[])`.
+///
+/// # Safety
+/// `ctx` must be live; `params` NULL or a terminated array.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_encapsulate_init(
+    ctx: *mut EvpPkeyCtx,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { evp_kem_init(ctx, EVP_PKEY_OP_ENCAPSULATE, params, ptr::null_mut()) }
+}
+
+/// `int EVP_PKEY_encapsulate(EVP_PKEY_CTX *ctx, unsigned char *out, size_t *outlen,
+/// unsigned char *secret, size_t *secretlen)` — `crypto/evp/kem.c:226`.
+///
+/// Note where the refusals sit relative to each other: a NULL `ctx` answers **0 without raising**,
+/// a wrong operation raises `EVP_R_OPERATION_NOT_INITIALIZED` and answers `-1`, and unbound algorithm
+/// context raises `EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE` and answers `-2`. Three different
+/// answers for three different mistakes, and none of them is the others'.
+///
+/// # Safety
+/// `ctx` NULL or live; `out` NULL or `*outlen` writable; `secret` NULL or `*secretlen` writable.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_encapsulate(
+    ctx: *mut EvpPkeyCtx,
+    out: *mut u8,
+    outlen: *mut usize,
+    secret: *mut u8,
+    secretlen: *mut usize,
+) -> c_int {
+    if ctx.is_null() {
+        return 0;
+    }
+    // SAFETY: `ctx` is live.
+    if unsafe { (*ctx).operation } != EVP_PKEY_OP_ENCAPSULATE {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::KEM_234) };
+        return -1;
+    }
+    // SAFETY: `ctx` is live.
+    let algctx = unsafe { (*ctx).op_encap_algctx };
+    if algctx.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::KEM_239) };
+        return -2;
+    }
+    if !out.is_null() && secret.is_null() {
+        return 0;
+    }
+    // SAFETY: `ctx` is live, the operation is bound, and its KEM is live; the callback is present
+    // because `evp_kem_init` refused a method without one.
+    let kem = unsafe { (*ctx).op_encap_kem };
+    // SAFETY: `kem` is live and its callback is the provider's own.
+    match unsafe { (*kem).encapsulate } {
+        // SAFETY: the provider's own callback, with the authority's arguments.
+        Some(f) => unsafe { f(algctx, out, outlen, secret, secretlen) },
+        None => 0,
+    }
+}
+
+/// `int EVP_PKEY_decapsulate_init(EVP_PKEY_CTX *ctx, const OSSL_PARAM params[])`.
+///
+/// # Safety
+/// `ctx` must be live; `params` NULL or a terminated array.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_decapsulate_init(
+    ctx: *mut EvpPkeyCtx,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { evp_kem_init(ctx, EVP_PKEY_OP_DECAPSULATE, params, ptr::null_mut()) }
+}
+
+/// `int EVP_PKEY_auth_decapsulate_init(EVP_PKEY_CTX *ctx, EVP_PKEY *authpub,
+/// const OSSL_PARAM params[])`.
+///
+/// # Safety
+/// `ctx` must be live; `authpub` must be live; `params` NULL or a terminated array.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_auth_decapsulate_init(
+    ctx: *mut EvpPkeyCtx,
+    authpub: *mut EvpPkey,
+    params: *const OsslParam,
+) -> c_int {
+    if authpub.is_null() {
+        return 0;
+    }
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { evp_kem_init(ctx, EVP_PKEY_OP_DECAPSULATE, params, authpub) }
+}
+
+/// `int EVP_PKEY_decapsulate(EVP_PKEY_CTX *ctx, unsigned char *secret, size_t *secretlen,
+/// const unsigned char *in, size_t inlen)` — `crypto/evp/kem.c:263`.
+///
+/// The argument test is **one** condition over three clauses and it answers 0 without raising:
+/// a NULL `ctx`, an absent or empty input, and a call with neither an output buffer nor a length.
+/// It happens before the operation is looked at, so a NULL `ctx` answers 0 even though the same
+/// function's other refusals answer -1 and -2.
+///
+/// # Safety
+/// `ctx` NULL or live; `secret` NULL or `*secretlen` writable; `in` `inlen` readable.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_decapsulate(
+    ctx: *mut EvpPkeyCtx,
+    secret: *mut u8,
+    secretlen: *mut usize,
+    input: *const u8,
+    inlen: usize,
+) -> c_int {
+    if ctx.is_null() || input.is_null() || inlen == 0 {
+        return 0;
+    }
+    if secret.is_null() && secretlen.is_null() {
+        return 0;
+    }
+    // SAFETY: `ctx` is live.
+    if unsafe { (*ctx).operation } != EVP_PKEY_OP_DECAPSULATE {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::KEM_273) };
+        return -1;
+    }
+    // SAFETY: `ctx` is live.
+    let algctx = unsafe { (*ctx).op_encap_algctx };
+    if algctx.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::KEM_278) };
+        return -2;
+    }
+    // SAFETY: `ctx` is live, the operation is bound, and its KEM is live.
+    let kem = unsafe { (*ctx).op_encap_kem };
+    // SAFETY: `kem` is live and its callback is the provider's own.
+    match unsafe { (*kem).decapsulate } {
+        // SAFETY: the provider's own callback, with the authority's arguments.
+        Some(f) => unsafe { f(algctx, secret, secretlen, input, inlen) },
+        None => 0,
+    }
 }
 
 // SPDX-License-Identifier: Apache-2.0
