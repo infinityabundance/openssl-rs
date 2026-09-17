@@ -17,9 +17,9 @@ name is defined; `open` means the stratum owns it and has not built it;
 
 | library | authority exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 1484 | 4412 |
+| libcrypto | 5896 | 1506 | 4390 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **1484** | **5015** |
+| **total** | **6499** | **1506** | **4993** |
 
 ## Ownership atlas, by stratum
 
@@ -32,7 +32,7 @@ declared owner; this is that assignment.
 | 4 | BIO + CONF + object database | `complete` | 256 | 272 | 249 | 23 | 0 |
 | 5 | BN + ASN.1 + DER/PEM | `complete` | 561 | 565 | 474 | 91 | 0 |
 | 6 | OSSL_LIB_CTX + provider core | `complete` | 137 | 161 | 161 | 0 | 0 |
-| 7 | EVP framework | `in-progress` | 924 | 950 | 349 | 164 | 437 |
+| 7 | EVP framework | `in-progress` | 924 | 950 | 371 | 164 | 415 |
 | 8 | Native cryptographic primitives | `not-started` | 759 | — | — | — | — |
 | 9 | RAND / DRBG + entropy | `not-started` | 25 | — | — | — | — |
 | 10 | Key formats + PKCS + STORE | `not-started` | 272 | — | — | — | — |
@@ -207,14 +207,14 @@ Courts: `all pass`, 9 court(s), **2032** authority observation(s) over 9 transcr
 ## Phase 7 — EVP framework
 
 * state: `in-progress`
-* blocking: 437 open obligation(s) of this stratum recorded in forensics/phase7-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase
+* blocking: 415 open obligation(s) of this stratum recorded in forensics/phase7-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase
 * seal: none written yet (`unnamed`)
 * ledger: `forensics/phase7-obligations.json`
 * atlas-owned: 924
 * owned working set: 950
-* implemented: 349
+* implemented: 371
 * deferred to a later stratum with a stated reason: 164
-* **open in this stratum: 437**
+* **open in this stratum: 415**
 
 Deferred out, by receiving stratum:
 

@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 924,
       "deferred_to_later_phase": 164,
-      "implemented": 349,
-      "open_in_this_stratum": 437,
+      "implemented": 371,
+      "open_in_this_stratum": 415,
       "owned": 950,
       "received_by_handoff": 26
     },
@@ -1190,6 +1190,17 @@
       ]
     },
     "implemented": [
+      "EVP_ASYM_CIPHER_do_all_provided",
+      "EVP_ASYM_CIPHER_fetch",
+      "EVP_ASYM_CIPHER_free",
+      "EVP_ASYM_CIPHER_get0_description",
+      "EVP_ASYM_CIPHER_get0_name",
+      "EVP_ASYM_CIPHER_get0_provider",
+      "EVP_ASYM_CIPHER_gettable_ctx_params",
+      "EVP_ASYM_CIPHER_is_a",
+      "EVP_ASYM_CIPHER_names_do_all",
+      "EVP_ASYM_CIPHER_settable_ctx_params",
+      "EVP_ASYM_CIPHER_up_ref",
       "EVP_CIPHER_CTX_buf_noconst",
       "EVP_CIPHER_CTX_cipher",
       "EVP_CIPHER_CTX_clear_flags",
@@ -1333,6 +1344,17 @@
       "EVP_KDF_names_do_all",
       "EVP_KDF_settable_ctx_params",
       "EVP_KDF_up_ref",
+      "EVP_KEM_do_all_provided",
+      "EVP_KEM_fetch",
+      "EVP_KEM_free",
+      "EVP_KEM_get0_description",
+      "EVP_KEM_get0_name",
+      "EVP_KEM_get0_provider",
+      "EVP_KEM_gettable_ctx_params",
+      "EVP_KEM_is_a",
+      "EVP_KEM_names_do_all",
+      "EVP_KEM_settable_ctx_params",
+      "EVP_KEM_up_ref",
       "EVP_KEYMGMT_do_all_provided",
       "EVP_KEYMGMT_fetch",
       "EVP_KEYMGMT_free",
@@ -1892,72 +1914,6 @@
       },
       {
         "declaring_header": "evp.h",
-        "module": "src/evp/asymcipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_ASYM_CIPHER_do_all_provided"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/asymcipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_ASYM_CIPHER_fetch"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/asymcipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_ASYM_CIPHER_free"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/asymcipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_ASYM_CIPHER_get0_description"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/asymcipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_ASYM_CIPHER_get0_name"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/asymcipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_ASYM_CIPHER_get0_provider"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/asymcipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_ASYM_CIPHER_gettable_ctx_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/asymcipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_ASYM_CIPHER_is_a"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/asymcipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_ASYM_CIPHER_names_do_all"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/asymcipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_ASYM_CIPHER_settable_ctx_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/asymcipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_ASYM_CIPHER_up_ref"
-      },
-      {
-        "declaring_header": "evp.h",
         "module": "src/evp/p_legacy.rs",
         "received_from_phase": null,
         "symbol": "EVP_BytesToKey"
@@ -2105,72 +2061,6 @@
         "module": "src/evp/encode.rs",
         "received_from_phase": null,
         "symbol": "EVP_EncodeUpdate"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/kem.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEM_do_all_provided"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/kem.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEM_fetch"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/kem.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEM_free"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/kem.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEM_get0_description"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/kem.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEM_get0_name"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/kem.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEM_get0_provider"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/kem.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEM_gettable_ctx_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/kem.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEM_is_a"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/kem.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEM_names_do_all"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/kem.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEM_settable_ctx_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/kem.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEM_up_ref"
       },
       {
         "declaring_header": "evp.h",
@@ -4476,12 +4366,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "9a97970c4fe4f079335d3b7e765279d3417f20aa903ea100a984b682c4da3590"
+      "sha256": "3527a563426faa4e15184bb95b240071dffecf4fdf089883d016d78b29b75a9c"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "2b884e8da848521a86534f3733a18c1e95cfd925985e1842e54360acfb177b8d"
+      "sha256": "b294d857cdf95510c620b14fe404a01569e92424302553ee8f026008fbb15678"
     }
   ],
   "kind": "phase7-obligations",
