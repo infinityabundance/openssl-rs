@@ -48,14 +48,28 @@ use crate::evp::fetch::{
     evp_generic_do_all, evp_generic_fetch, GenericDoAllFn, MethodFromAlgorithmFn,
 };
 use crate::evp::fetch::{evp_is_a, evp_names_do_all};
-use crate::params::{OSSL_PARAM_construct_end, OSSL_PARAM_construct_size_t, OsslParam};
+use crate::evp::skeymgmt::{
+    evp_skey_alloc, evp_skeymgmt_fetch_from_prov, EVP_SKEYMGMT_fetch, EVP_SKEYMGMT_free,
+    EVP_SKEY_export, EVP_SKEY_free, EVP_SKEY_import_SKEYMGMT, EvpSkey, EvpSkeyMgmt,
+    OSSL_SKEYMGMT_SELECT_SECRET_KEY, OSSL_SKEY_PARAM_RAW_BYTES,
+};
+use crate::params::{
+    OSSL_PARAM_construct_end, OSSL_PARAM_construct_octet_string, OSSL_PARAM_construct_size_t,
+    OSSL_PARAM_get_octet_string_ptr, OSSL_PARAM_locate_const, OsslParam,
+};
 use crate::property::store::{MethodFreeFn, MethodUpRefFn};
-use crate::provider::{ossl_provider_ctx, ossl_provider_free, ossl_provider_up_ref, OsslProvider};
+use crate::provider::{
+    ossl_provider_ctx, ossl_provider_free, ossl_provider_libctx, ossl_provider_up_ref, OsslProvider,
+};
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
 
 /// `OSSL_OP_KDF` — `include/openssl/core_dispatch.h`. The fourth operation the walk visits.
 const OSSL_OP_KDF: c_int = 4;
+
+/// `EVP_KDF_CTX_set_SKEY`'s default parameter name — `include/openssl/core_names.h`. Used when the
+/// caller does not name the parameter the exported bytes should be set under.
+const OSSL_KDF_PARAM_KEY: *const c_char = c"key".as_ptr();
 
 /// The authority's translation unit, so a failing allocation or free records its coordinates.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/kdf_lib.c".as_ptr();
@@ -75,6 +89,13 @@ const LINE_FREE_CTX: c_int = 53;
 const LINE_MALLOC_CTX_DUP: c_int = 63;
 /// `EVP_KDF_CTX_dup`'s `OPENSSL_free(dst)` (line 70).
 const LINE_FREE_CTX_ON_DUP: c_int = 70;
+/// `EVP_KDF_derive_SKEY`'s `OPENSSL_zalloc(keylen)` (line 245). The only allocation in this file
+/// whose size is a caller's argument rather than a `sizeof`.
+const LINE_ZALLOC_DERIVE_SKEY: c_int = 245;
+/// `EVP_KDF_derive_SKEY`'s `OPENSSL_free(key)` on the derivation's own failure (line 250).
+const LINE_FREE_DERIVE_SKEY_ON_FAIL: c_int = 250;
+/// `EVP_KDF_derive_SKEY`'s `OPENSSL_clear_free(key, keylen)` on the success path (line 262).
+const LINE_FREE_DERIVE_SKEY: c_int = 262;
 
 /// `OSSL_KDF_PARAM_SIZE` — `include/openssl/core_names.h`.
 const OSSL_KDF_PARAM_SIZE: *const c_char = c"size".as_ptr();
@@ -1011,20 +1032,335 @@ pub unsafe extern "C" fn EVP_KDF_derive(
 }
 
 // ---------------------------------------------------------------------------------------------
-// The two entry points that are 7.3f's
+// The two entry points that take an object
 //
-// `int EVP_KDF_CTX_set_SKEY(EVP_KDF_CTX *ctx, EVP_SKEY *key, const char *paramname)` and
-// `EVP_SKEY *EVP_KDF_derive_SKEY(EVP_KDF_CTX *ctx, EVP_SKEYMGMT *mgmt, const char *key_type,
-// const char *propquery, size_t keylen, const OSSL_PARAM params[])` are **not here**: both take an
-// `EVP_SKEY`, whose `EVP_SKEYMGMT` is `crypto/evp/skeymgmt_lib.c`'s and is 7.3f's, and every
-// constructor for one is a scaffold in this crate today. They are handed forward with the
-// dependency named, in the ledger and in D158, exactly as `EVP_MAC_init_SKEY` and
-// `EVP_CipherInit_SKEY` are.
+// `EVP_KDF_CTX_set_SKEY` and `EVP_KDF_derive_SKEY` both take an `EVP_SKEY`. They were handed
+// forward from 7.3e with the dependency named because the object's constructors did not exist yet;
+// they landed with `src/evp/skeymgmt.rs`, and both are written here because a function belongs with
+// the object it is a method of.
 //
-// What *is* here is the machinery they will be built on: the walk fills `set_skey` and
-// `derive_skey` from the dispatch table because the table is this file's, so 7.3f's bodies need
-// only the two exported functions and an `EVP_SKEY` to hand them.
+// All three raise sites in the file are `EVP_KDF_derive_SKEY`'s, and the first two are one line
+// apart: a NULL context and a NULL key *type* raise together, and a fetch that finds no method in
+// either the operation's provider or the libctx raises `ERR_R_FETCH_FAILED`.
 // ---------------------------------------------------------------------------------------------
+
+/// `struct convert_key { const char *name; OSSL_PARAM *param; }` — the export callback's argument
+/// when a KDF can only take the key as *bytes*.
+#[repr(C)]
+struct ConvertKey {
+    /// `const char *name` — the parameter the caller asked the key to be set under.
+    name: *const c_char,
+    /// `OSSL_PARAM *param` — the caller's slot, written by the callback.
+    param: *mut OsslParam,
+}
+
+/// `static int convert_key_cb(const OSSL_PARAM params[], void *arg)`.
+///
+/// It reads exactly one parameter and answers 0 when it is absent, which is what turns "this
+/// provider can only take bytes" into a refusal for a key that has no raw bytes to export. The
+/// constructed parameter is written **into the caller's array** rather than returned, because the
+/// array outlives the callback and a pointer into the export's own storage would not.
+///
+/// # Safety
+/// `params` must be a terminated array; `arg` must point at a live `ConvertKey` whose `param`
+/// points at storage for one `OSSL_PARAM`.
+unsafe extern "C" fn convert_key_cb(params: *const OsslParam, arg: *mut c_void) -> c_int {
+    let ckey = arg.cast::<ConvertKey>();
+    if ckey.is_null() {
+        return 0;
+    }
+    // SAFETY: `params` is a terminated array per the contract.
+    let raw_bytes = unsafe { OSSL_PARAM_locate_const(params, OSSL_SKEY_PARAM_RAW_BYTES) };
+    if raw_bytes.is_null() {
+        return 0;
+    }
+    let mut data: *const c_void = ptr::null();
+    let mut len: usize = 0;
+    // SAFETY: `raw_bytes` is a located entry of the caller's array and the two out-parameters are
+    // this frame's own.
+    if unsafe { OSSL_PARAM_get_octet_string_ptr(raw_bytes, &mut data, &mut len) } == 0 {
+        return 0;
+    }
+    // SAFETY: `ckey` is live per the contract and its `param` slot is the caller's own storage.
+    let (name, slot) = unsafe { ((*ckey).name, (*ckey).param) };
+    // SAFETY: `name` is the caller's NUL-terminated string, `slot` is writable for one
+    // `OSSL_PARAM`, and `data`/`len` describe the exported bytes.
+    unsafe { *slot = OSSL_PARAM_construct_octet_string(name, data.cast_mut(), len) };
+    1
+}
+
+/// `int EVP_KDF_CTX_set_SKEY(EVP_KDF_CTX *ctx, EVP_SKEY *key, const char *paramname)`.
+///
+/// **Two paths, and the choice between them is a provider comparison rather than a capability
+/// test.** When the context's method publishes `set_skey` *and* the key came from the same provider,
+/// the provider's own key data is handed over opaquely. Otherwise the key is **exported to bytes**
+/// and set through the ordinary `set_ctx_params`, under a parameter named by the caller (or
+/// `OSSL_KDF_PARAM_KEY` by default).
+///
+/// A context whose method publishes no `set_ctx_params` cannot take the fallback at all and is
+/// refused, which is the one arm where a caller can distinguish "this provider takes keys" from
+/// "this provider takes bytes".
+///
+/// Note the first test: a NULL context answers **0 without raising**, alone among the three
+/// refusal paths in this pair.
+///
+/// # Safety
+/// `ctx` must be NULL or a live context whose `meth` is live; `key` must be a live key; `paramname`
+/// NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_KDF_CTX_set_SKEY(
+    ctx: *mut EvpKdfCtx,
+    key: *mut EvpSkey,
+    paramname: *const c_char,
+) -> c_int {
+    let mut params = [OSSL_PARAM_construct_end(), OSSL_PARAM_construct_end()];
+
+    if ctx.is_null() {
+        return 0;
+    }
+
+    let name = if paramname.is_null() {
+        OSSL_KDF_PARAM_KEY
+    } else {
+        paramname
+    };
+
+    // SAFETY: `ctx` is live per the contract.
+    let meth = unsafe { (*ctx).meth };
+    // SAFETY: `meth` is live.
+    let (set_skey, meth_prov) = unsafe { ((*meth).set_skey, (*meth).prov) };
+    // SAFETY: `key` is live per the contract.
+    let skey_mgmt = unsafe { (*key).skeymgmt };
+    // SAFETY: `skey_mgmt` is the method this key holds a reference to.
+    let skey_prov = unsafe { (*skey_mgmt).prov };
+
+    if set_skey.is_some() && skey_prov == meth_prov {
+        // SAFETY: `ctx` and `key` are live and the callback is the method's own.
+        let (algctx, keydata) = unsafe { ((*ctx).algctx, (*key).keydata) };
+        let Some(f) = set_skey else {
+            return 0;
+        };
+        // SAFETY: `f` is the provider's own callback and the rest are its context and the caller's
+        // parameter name.
+        return unsafe { f(algctx, keydata, name) };
+    }
+
+    // The fallback: the key is exported to bytes and set the traditional way.
+    let mut ckey = ConvertKey {
+        name,
+        param: params.as_mut_ptr(),
+    };
+    // SAFETY: `meth` is live.
+    let set_ctx_params = unsafe { (*meth).set_ctx_params };
+    let Some(f) = set_ctx_params else {
+        return 0;
+    };
+    // SAFETY: `key` is live and `ckey` is this frame's own live object whose address outlives the
+    // call.
+    if unsafe {
+        EVP_SKEY_export(
+            key,
+            OSSL_SKEYMGMT_SELECT_SECRET_KEY,
+            Some(convert_key_cb),
+            ptr::addr_of_mut!(ckey).cast::<c_void>(),
+        )
+    } == 0
+    {
+        return 0;
+    }
+    // SAFETY: `ctx` is live, so its `algctx` is the implementation's context; `params` is this
+    // frame's own terminated array, written by the callback above.
+    unsafe { f((*ctx).algctx, params.as_ptr()) }
+}
+
+/// `EVP_SKEY *EVP_KDF_derive_SKEY(EVP_KDF_CTX *ctx, EVP_SKEYMGMT *mgmt, const char *key_type,
+/// const char *propquery, size_t keylen, const OSSL_PARAM params[])`.
+///
+/// The derivation that produces a **key object** rather than a buffer, and the three ways it can
+/// be satisfied:
+///
+///   1. **the caller supplied the method** (`mgmt != NULL`) — and then this function does *not own*
+///      it, which is the whole meaning of every `if (mgmt != skeymgmt) EVP_SKEYMGMT_free(skeymgmt)`
+///      in the body;
+///   2. **the context's own provider** can produce it, so the method is fetched from that provider
+///      and, if that fails, from the libctx — the same two-step fallback `evp_skey_alloc_fetch`
+///      makes, for the same reason;
+///   3. **the destination is a different provider, or has no `derive_skey`** — and then the key is
+///      derived into a *buffer* and imported, which is the raw path and the reason
+///      `EVP_SKEY_import_SKEYMGMT` exists as a public entry point at all.
+///
+/// The buffer of the raw path is **cleared** before it is released, which is the one thing in this
+/// file that a caller cannot observe and that a transcription must not omit: it is the secret's only
+/// copy.
+///
+/// # Safety
+/// `ctx` NULL or a live context whose `meth` is live; `mgmt` NULL or a live method; `key_type` and
+/// `propquery` NULL or NUL-terminated; `params` NULL or terminated.
+// mirrors the authority's signature exactly
+#[allow(clippy::too_many_arguments)]
+#[no_mangle]
+pub unsafe extern "C" fn EVP_KDF_derive_SKEY(
+    ctx: *mut EvpKdfCtx,
+    mgmt: *mut EvpSkeyMgmt,
+    key_type: *const c_char,
+    propquery: *const c_char,
+    keylen: usize,
+    params: *const OsslParam,
+) -> *mut EvpSkey {
+    if ctx.is_null() || key_type.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::KDF_LIB_211) };
+        return ptr::null_mut();
+    }
+
+    // SAFETY: `ctx` is live per the contract.
+    let meth = unsafe { (*ctx).meth };
+    // SAFETY: `meth` is live.
+    let meth_prov = unsafe { (*meth).prov };
+
+    let skeymgmt: *mut EvpSkeyMgmt = if !mgmt.is_null() {
+        mgmt
+    } else {
+        // SAFETY: `meth_prov` is live and the two strings are NULL or NUL-terminated.
+        let mut fetched = unsafe { evp_skeymgmt_fetch_from_prov(meth_prov, key_type, propquery) };
+        if fetched.is_null() {
+            // The operation's provider does not publish it; the libctx may still have one.
+            // SAFETY: `meth_prov` is live, so its libctx is readable.
+            let libctx = unsafe { ossl_provider_libctx(meth_prov) };
+            // SAFETY: `libctx` is NULL or live and the two strings are NULL or NUL-terminated.
+            fetched = unsafe { EVP_SKEYMGMT_fetch(libctx, key_type, propquery) };
+        }
+        if fetched.is_null() {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::KDF_LIB_230) };
+            return ptr::null_mut();
+        }
+        fetched
+    };
+
+    // SAFETY: `skeymgmt` is live.
+    let (skeymgmt_prov, skeymgmt_import, derive_skey) =
+        unsafe { ((*skeymgmt).prov, (*skeymgmt).import, (*meth).derive_skey) };
+
+    // The raw fallback: a different provider, or a method that cannot derive a key object.
+    if skeymgmt_prov != meth_prov || derive_skey.is_none() {
+        let mut import_params = [OSSL_PARAM_construct_end(), OSSL_PARAM_construct_end()];
+
+        // SAFETY: `meth` is live.
+        let derive = unsafe { (*meth).derive };
+        let Some(derive) = derive else {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::KDF_LIB_241) };
+            if mgmt != skeymgmt {
+                // SAFETY: `skeymgmt` is live and this is this call's own reference.
+                unsafe { EVP_SKEYMGMT_free(skeymgmt) };
+            }
+            return ptr::null_mut();
+        };
+
+        // SAFETY: `ctx` is live, so its `algctx` is the implementation's context.
+        let algctx = unsafe { (*ctx).algctx };
+        let key = CRYPTO_zalloc(keylen, FILE, LINE_ZALLOC_DERIVE_SKEY).cast::<c_uchar>();
+        if key.is_null() {
+            if mgmt != skeymgmt {
+                // SAFETY: `skeymgmt` is live and this is this call's own reference.
+                unsafe { EVP_SKEYMGMT_free(skeymgmt) };
+            }
+            return ptr::null_mut();
+        }
+
+        // SAFETY: `derive` is the provider's own callback, `algctx` is its context, `key` is this
+        // call's own block of `keylen` bytes and `params` is the caller's.
+        if unsafe { derive(algctx, key, keylen, params) } == 0 {
+            // SAFETY: `key` is this call's own block and it holds a partial secret.
+            unsafe { CRYPTO_free(key.cast::<c_void>(), FILE, LINE_FREE_DERIVE_SKEY_ON_FAIL) };
+            if mgmt != skeymgmt {
+                // SAFETY: `skeymgmt` is live and this is this call's own reference.
+                unsafe { EVP_SKEYMGMT_free(skeymgmt) };
+            }
+            return ptr::null_mut();
+        }
+
+        // SAFETY: the constructor takes a key string and a buffer; the array is already terminated.
+        import_params[0] = unsafe {
+            OSSL_PARAM_construct_octet_string(
+                OSSL_SKEY_PARAM_RAW_BYTES,
+                key.cast::<c_void>(),
+                keylen,
+            )
+        };
+
+        // SAFETY: `meth_prov` is live, so its libctx is readable.
+        let libctx = unsafe { ossl_provider_libctx(meth_prov) };
+        // SAFETY: `libctx` is NULL or live, `skeymgmt` is live, and the array is this frame's own.
+        let ret = unsafe {
+            EVP_SKEY_import_SKEYMGMT(
+                libctx,
+                skeymgmt,
+                OSSL_SKEYMGMT_SELECT_SECRET_KEY,
+                import_params.as_ptr(),
+            )
+        };
+
+        if mgmt != skeymgmt {
+            // SAFETY: `skeymgmt` is live and this is this call's own reference.
+            unsafe { EVP_SKEYMGMT_free(skeymgmt) };
+        }
+
+        // The secret is cleared before it is released: this buffer is its only copy outside the
+        // caller's hands.
+        // SAFETY: `key` is this call's own block of `keylen` bytes and is not used again.
+        unsafe { CRYPTO_clear_free(key.cast::<c_void>(), keylen, FILE, LINE_FREE_DERIVE_SKEY) };
+        return ret;
+    }
+
+    // The key-aware path.
+    // SAFETY: `skeymgmt` is live.
+    let ret = unsafe { evp_skey_alloc(skeymgmt) };
+    if ret.is_null() {
+        if mgmt != skeymgmt {
+            // SAFETY: `skeymgmt` is live and this is this call's own reference.
+            unsafe { EVP_SKEYMGMT_free(skeymgmt) };
+        }
+        return ptr::null_mut();
+    }
+
+    // SAFETY: `skeymgmt_prov` is live, so its context is readable.
+    let provctx = unsafe { ossl_provider_ctx(skeymgmt_prov) };
+    let Some(f) = derive_skey else {
+        return ptr::null_mut();
+    };
+    // SAFETY: `ctx` is live, so its `algctx` is the implementation's context; the rest are the
+    // caller's arguments and the destination method's own importer, which is what the callback
+    // needs to build the key data it returns.
+    let keydata = unsafe {
+        f(
+            (*ctx).algctx,
+            key_type,
+            provctx,
+            skeymgmt_import.map_or(ptr::null_mut(), |import| import as *mut c_void),
+            keylen,
+            params,
+        )
+    };
+    if keydata.is_null() {
+        // SAFETY: `ret` is this call's own object.
+        unsafe { EVP_SKEY_free(ret) };
+        if mgmt != skeymgmt {
+            // SAFETY: `skeymgmt` is live and this is this call's own reference.
+            unsafe { EVP_SKEYMGMT_free(skeymgmt) };
+        }
+        return ptr::null_mut();
+    }
+    // SAFETY: `ret` is live and `keydata` is what its method just produced.
+    unsafe { (*ret).keydata = keydata };
+
+    if mgmt != skeymgmt {
+        // SAFETY: `skeymgmt` is live and this is this call's own reference.
+        unsafe { EVP_SKEYMGMT_free(skeymgmt) };
+    }
+    ret
+}
 
 // SPDX-License-Identifier: Apache-2.0
 

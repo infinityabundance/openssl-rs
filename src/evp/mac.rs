@@ -47,10 +47,24 @@
 //!
 //! ## What is not here
 //!
-//! `EVP_MAC_init_SKEY` takes an `EVP_SKEY`, whose `EVP_SKEYMGMT` is 7.3f's, and it is the one row
-//! of this subphase handed forward with the dependency named. `EVP_MAC_do_all_provided`'s NULL
+//! `EVP_MAC_do_all_provided`'s NULL
 //! visitor is refused rather than called through, for the reason `EVP_MD_do_all_provided`'s is
 //! (`docs/SECURITY_DIVERGENCE_POLICY.md` D-MD-DOALL-NULL-1).
+//!
+//! `EVP_MAC_init_SKEY` takes an `EVP_SKEY`, whose `EVP_SKEYMGMT` is 7.3f's; the object's
+//! constructors landed there and this function was written with them, in `src/evp/skeymgmt.rs`.
+//!
+//! ## `EVP_MAC_init_SKEY`, and the provider test that makes a key usable
+//!
+//! `EVP_MAC_init_SKEY` is the second initialiser and the only one that takes an object. It tests
+//! **the key's provider against the method's** before calling anything, so a key imported from one
+//! provider cannot be handed to another provider's MAC — and it raises `ERR_R_UNSUPPORTED`, the
+//! same reason `EVP_MAC_init` raises when the byte-string initialiser is absent.
+//!
+//! The authority's own condition names `ctx->meth->init_skey == NULL` **twice**, once on each side
+//! of the provider test. It is redundant and it is reproduced rather than cleaned up, because a
+//! reader comparing the two readings must find the same shape.
+//!
 //!
 //! One more boundary was *found* by transcribing this file rather than known in advance, and it is
 //! worth naming here because it is in `EVP_MAC_CTX_dup`'s own body: the authority reaches
@@ -72,6 +86,7 @@ use crate::evp::fetch::{
     evp_generic_do_all, evp_generic_fetch, GenericDoAllFn, MethodFromAlgorithmFn,
 };
 use crate::evp::fetch::{evp_is_a, evp_names_do_all};
+use crate::evp::skeymgmt::EvpSkey;
 use crate::params::{
     OSSL_PARAM_construct_end, OSSL_PARAM_construct_int, OSSL_PARAM_construct_size_t,
     OSSL_PARAM_construct_utf8_string, OSSL_PARAM_locate_const, OsslParam,
@@ -1054,6 +1069,55 @@ pub unsafe extern "C" fn EVP_MAC_init(
     // SAFETY: `f` is the provider's own callback, `algctx` is its context and the rest are the
     // caller's arguments.
     unsafe { f((*ctx).algctx, key, keylen, params) }
+}
+
+/// `int EVP_MAC_init_SKEY(EVP_MAC_CTX *ctx, EVP_SKEY *skey, const OSSL_PARAM params[])`.
+///
+/// The symmetric-key initialiser. Two conditions, and both are refusals:
+///
+///   * the method must publish `init_skey`, and
+///   * **the key's provider must be the method's provider**, which is the contract that makes the
+///     class meaningful — the `void *key` handed to the callback is the *provider's own* key data,
+///     so a key from a different provider would be a foreign pointer.
+///
+/// When neither holds, the answer is `ERR_R_UNSUPPORTED` rather than a fault: a caller with a key
+/// from elsewhere has a supported-looking call that this provider simply cannot make.
+///
+/// # Safety
+/// `ctx` must be a live context whose `meth` is live; `skey` must be a live key; `params` NULL or
+/// terminated.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MAC_init_SKEY(
+    ctx: *mut EvpMacCtx,
+    skey: *mut EvpSkey,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    let meth = unsafe { (*ctx).meth };
+    // SAFETY: `meth` is live.
+    let init_skey = unsafe { (*meth).init_skey };
+    // SAFETY: `meth` is live, so its provider is readable.
+    let meth_prov = unsafe { (*meth).prov };
+    // SAFETY: `skey` is live per the contract.
+    let skey_mgmt = unsafe { (*skey).skeymgmt };
+    // SAFETY: `skey_mgmt` is the method this key holds a reference to.
+    let skey_prov = unsafe { (*skey_mgmt).prov };
+    // The authority writes the `init_skey == NULL` test on both sides of the provider comparison;
+    // it is one condition twice and it is reproduced as written.
+    if init_skey.is_none() || skey_prov != meth_prov || init_skey.is_none() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::MAC_LIB_130) };
+        return 0;
+    }
+    let Some(f) = init_skey else {
+        return 0;
+    };
+    // SAFETY: `ctx` is live, so its `algctx` is the implementation's context; `skey` is live, so
+    // its key data is the provider's own.
+    let (algctx, keydata) = unsafe { ((*ctx).algctx, (*skey).keydata) };
+    // SAFETY: `f` is the provider's own callback and the rest are its context and the caller's
+    // arguments.
+    unsafe { f(algctx, keydata, params) }
 }
 
 /// `int EVP_MAC_update(EVP_MAC_CTX *ctx, const unsigned char *data, size_t datalen)`.
