@@ -11143,3 +11143,131 @@ pipeline passes, both static courts are clean, and the three added tests are
 `the_tables_are_the_authority_rows_and_only_its_shapes`,
 `a_ctrl_number_finds_its_row_and_an_unknown_one_does_not` and
 `the_distid_strings_match_their_own_columns_and_the_template_says_which`.
+
+## D189 — the signature entry points land, and the `legacy:` label does not reset the operation
+
+`crypto/evp/signature.c` lines 568–1247 are transcribed whole into `src/evp/signature.rs`, after the
+method half that 7.4b-i landed: the static `evp_pkey_signature_init` with its two-iteration fetch
+loop, both name fallbacks and all three labels, and the eighteen exported entry points —
+`EVP_PKEY_sign_init`, `_init_ex`, `_init_ex2`, `EVP_PKEY_sign_message_init`, `_update`, `_final`,
+`EVP_PKEY_sign`, the three `verify` spellings of each, `EVP_PKEY_verify_recover` and its three, and
+`EVP_PKEY_verify_recover`. `evp_pkey_ctx_use_cached_data` — `crypto/evp/pmeth_lib.c:1534`, the replay
+half of the cached-data trio whose store and free halves 7.4c landed — goes into the same section of
+`src/evp/pkey_ctx.rs` as its two siblings, and its row is removed from
+`forensics/prerequisites.json`. `implemented[libcrypto]` moves **1691 → 1709** and phase 7 to
+**574 implemented and 212 open** (from 556 and 230), and the gate's blocking list holds at 14
+because nothing in this slice was blocking anything.
+
+**The finding, and it is a reading rather than a transcription.** `legacy:` **does not reset
+`ctx->operation`.** The authority's `err:` label ends
+
+```text
+err:
+    evp_pkey_ctx_free_old_ops(ctx);
+    ctx->operation = EVP_PKEY_OP_UNDEFINED;
+    EVP_KEYMGMT_free(tmp_keymgmt);
+    return ret;
+```
+
+and its `legacy:` label ends in a bare `return -2` after the `ctx->pmeth == NULL` refusal, with no
+reset and no `free_old_ops`. So an init that fell through to the legacy half leaves the context
+**armed** — `operation` is the caller's operation and `op.sig.algctx` is NULL. The obvious reading is
+the opposite one: every other failed init in this file takes `err:` and leaves the context
+`UNDEFINED`, and `_init`'s contract is usually described in those terms. The consequence is that the
+`if (ctx->op.sig.algctx == NULL) goto legacy;` arms of `EVP_PKEY_sign`, `EVP_PKEY_verify` and
+`EVP_PKEY_verify_recover` — three `-2`s that a court could otherwise only reach by hand-building a
+context — are reachable from the public API, and `RT-EVP-PKEY` reaches all three at
+`signature.c:1029`, `:1182` and `:1243`. The same asymmetry is why the three *legacy entries* are
+distinguishable in the court: the middle one is the second iteration's provider-specific fetch
+(no signature under the key's preferred name), the last is the post-loop `provkey == NULL` test (a
+key with a method and no key data), and the first, `evp_pkey_ctx_is_legacy`, is unreachable here
+because no context this crate can build has a NULL `keymgmt`.
+
+**The deferral row's reason was wrong, and it was wrong about its callers.** The
+`evp_pkey_ctx_use_cached_data` row said its "three callers are `signature.c`, `exchange.c` and
+`pmeth_gn.c`". The authority has exactly two, and neither of the two extra names calls it at all:
+`crypto/evp/signature.c:891` and `crypto/evp/m_sigver.c:365` — and `m_sigver.c` is not one of the
+three the row named. `exchange.c`'s derive init has no cached-data step, and `pmeth_gn.c` has none
+either. This is the second deferral row in two slices whose *reason* described a body the authority
+does not have (D188 found the first), and the same lesson: the gate owes *names* and cannot falsify a
+reason, so the detail is recorded here because the row is gone. The new row's site comment in
+`src/evp/pkey_ctx.rs` states the caller count and cites this entry.
+
+**Four stream-entry sites are an authority fault on both sides, and that is a measurement rather
+than an assumption.** `EVP_PKEY_sign_message_update`, `_final`, `EVP_PKEY_verify_message_update` and
+`_final` read `ctx->op.sig.signature` with no test; on a context left armed by a `legacy:` refusal
+that pointer is NULL, and `signature->description` dereferences it. Measured out of band: four
+programs, each against the pinned authority and against the candidate shell, each printing its
+markers line-buffered and then dying with **exit 139** — the same four, the same way, on both sides.
+So there is **nothing to register** in `docs/SECURITY_DIVERGENCE_POLICY.md`: a divergence is a
+behaviour the two sides do not share, and two sides faulting identically is worse evidence than
+agreement but is not a divergence. `RT-EVP-PKEY` prints
+`NOT_MEASURED_AUTHORITY_FAULTS` at the four sites so the boundary is visible in the transcript
+instead of silently absent from it.
+
+**One arm is written and cannot be driven, and one is a single statement that needs Phase 8.**
+`EVP_PKEY_verify_recover`'s `verify_recover == NULL` arm is unreachable through this unit's exports:
+an armed `EVP_PKEY_OP_VERIFYRECOVER` requires `verify_recover_init`, and
+`evp_signature_from_algorithm` refuses a method that publishes an init without its operation
+callback, so no fetched method can reach the operate entry point with the callback absent. The
+`legacy:` label's `switch (operation)` — three `ctx->pmeth->*_init` calls and a `default:` — is not
+written at all, because every arm reads `ctx->pmeth` and `EVP_PKEY_METHOD` is Phase 8's; the refusal
+above it is written, and it is the whole of what this crate can reach. Both are named at their sites
+rather than left for a reader to notice.
+
+**Three transcription liberties, each with a cost stated.** (1) `signature_op_prelude` factors the
+prologue the seven non-init entry points share — the NULL-context test, the operation test and the
+`algctx == NULL` jump — because the authority writes the same seven statements seven times with four
+different site constants and one `Option` that says whether the third test is present at all. What is
+given up is line-for-line diffability of eleven short bodies; what is kept is that the *order* of the
+three tests, which is observable, is written once. The authority's operation test has two spellings
+(`a != X && a != Y` for the one-shot pair, `a != X` for the four stream entries) and the helper takes
+a mask; the two agree for every value the exports can leave in the field, because each of the five
+inits stores one constant and nothing else writes it. (2) `signature_init_err` does **not** duplicate
+the authority's explicit `signature->freectx(ctx->op.sig.algctx)` on the way to `err:`:
+`evp_pkey_ctx_free_old_ops` calls that same callback before it releases the method, so the provider
+sees one `freectx` for one `newctx` either way, and the authority's unguarded call against the
+crate's guarded release differs only for a state no `newctx` can produce. (3) two stores the
+authority makes are dropped because they are dead in both: the loop's `signature = NULL` (both arms
+of the `switch` below assign it first) and `supported_sig`'s initialiser in the pre-fetched branch
+(it is assigned before its only read). Both are noted at the site.
+
+`#[allow(dead_code)]` came off `evp_signature_fetch_from_prov`: its first live caller was
+`evp_pkey_signature_init`, and this is that caller.
+
+**The court is `RT-EVP-PKEY`, 175 observations, zero residuals.** It publishes one provider with one
+key type and fifteen signature arms, one per way the code under test can behave, and every
+observation is a return code, a reason and its message data, a counter vector or a relation between
+two pointers the probe holds — no address is printed. Eight dispatch tables, one per *shape* the
+structural check admits, because five of the arms exist only to be refused by `evp_pkey_signature_init`
+and a court that published only well-formed methods would measure nothing. The arms cover the
+eighteen NULL-context answers (where the *line* is what separates them), the operation guard in both
+directions, the two `EVP_R_NO_KEY_SET` sites, every callback of the full method through both the
+fetching and the pre-fetched spellings, the zero-length convention on the three output buffers, the
+`PROVIDER_SIGNATURE_FAILURE` arm at 0, one arm per missing init callback and for the two operation
+callbacks a message-only method leaves absent, the `query_key_types` walk with a match, a
+non-matching entry and an empty array, both name fallbacks and the `query_operation_name`-answers-NULL
+fallback *inside* `evp_keymgmt_util_query_operation_name`, and the three legacy entries with the
+`algctx == NULL` arm each makes reachable.
+
+**Two things `RT-EVP-PKEY` deliberately does not print, both found while building it.** A *failing*
+`EVP_KEYMGMT_fetch` or `EVP_SIGNATURE_fetch` puts a **namemap id** in the message —
+`crypto/evp/evp_fetch.c:376`'s `Algorithm (%s : %d)` — and that number is not reproducible between
+the two sides: the authority answered `(COURT-SIGKEY : 119)` on the first run of the probe and the
+candidate `(COURT-SIGKEY : 1)`, from the same statement, and a separate measurement on a libctx with
+no activated provider answered `(NO-SUCH-ONE : 0)` on *both* sides. The number is which name the
+library registered that spelling as, so it counts what else was registered first; the probe therefore
+never prints the data of a fetch it expects to fail, and every failing fetch inside
+`evp_pkey_signature_init` is popped by its own error mark anyway. That same separate measurement
+found a real and **pre-existing** difference that this slice does not touch and does not excuse: with
+no activated provider, the candidate attempts a **DSO** load of `default` and leaves three entries on
+the queue where the authority leaves none — `no filename@DSO_convert_filename/274`,
+`no filename@DSO_load/139` and `(null)@provider_init/1026[name=default]` — which is the candidate
+distribution having no default-provider module, not a behaviour `signature.c` owns. It is recorded
+here rather than registered as a divergence, because it is a distribution gap in the fetch plane's
+territory (7.1–7.3) and not a safety-versus-compatibility choice; `RT-EVP-PKEY` passes because it
+loads its own provider before its first fetch.
+
+No new function-pointer type alias was added, so `forensics/tools/dispatch_court.py`'s
+`NOT_A_DISPATCH` table is untouched and its `unlinked=N` stays zero; the pipeline's `PIPELINE OK`
+covers that, the prototype court, the prerequisite gate at zero findings and the FRF declarations.

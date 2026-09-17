@@ -198,6 +198,19 @@ and the exports. Every helper they need is already in the crate — the twelve `
 slice — `keymgmt_meth.c` whole and `p_lib.c`'s two name walkers — is landed and pushed to the
 staging branch, awaiting its court (`RT-EVP-KEYMGMT`) and the `EVP_PKEY` object itself (D164).
 
+**7.4b is sliced by the files' own two halves, and the split is named here rather than performed
+silently (D189).** The row above is five method families whose files each contain a *method* half
+(the object, its lifetime, the exports that reach it) and an *operation* half (the `EVP_PKEY_*`
+entry points over it). The method halves land as **7.4b-i**; the operation halves are **7.4b-ii**
+(`asymcipher.c`, landed), **7.4c-i** (`exchange.c` and `kem.c`, landed with the context) and
+**7.4d** — `crypto/evp/signature.c`'s entry-point half, the eighteen `EVP_PKEY_sign*`/`verify*`/
+`verify_recover*` exports, plus the replay half of the cached-data trio
+(`evp_pkey_ctx_use_cached_data`) that is the only internal they owe. 7.4d is landed with its court
+`RT-EVP-PKEY` (175 observations, zero residuals) and its finding recorded in D189: `legacy:` does
+not reset `ctx->operation`, which is what makes the `algctx == NULL` arm of the three one-shot
+entry points reachable from the public API. The remaining 7.4b work is `keymgmt_meth.c`'s
+`legacy_alg` fill, which is blocked on `evp_pkey_name2type` and therefore on Phase 8.
+
 **The ledger still owes 7.4l, and D165 measured why it is not a table yet.** `EVP_PKEY_type` sits in
 `forensics/phase7-obligations.json`'s `open` list while this table hands `evp_pkey_type.c` to Phase 8:
 the atlas decides ownership by the declaring header (`evp.h` is this stratum's) and this table decides

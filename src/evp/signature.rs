@@ -1,8 +1,32 @@
-//! Phase 7.4 — the `EVP_SIGNATURE` method object.
+//! Phase 7.4 — the `EVP_SIGNATURE` method object, and the eighteen entry points over it.
 //!
-//! `crypto/evp/signature.c`'s **method half**. The file's other half — the nineteen `EVP_PKEY_sign*`,
-//! `verify*` and `verify_recover*` entry points, plus `EVP_PKEY_CTX_set_signature` — is
-//! `EVP_PKEY_CTX` work and lands with 7.4c's context.
+//! `crypto/evp/signature.c`, both halves. The **method half** is the object, its lifetime and the
+//! eleven exports that reach it. The **operation half** is `evp_pkey_signature_init` and the
+//! eighteen `EVP_PKEY_sign*`, `verify*` and `verify_recover*` entry points, and it is written here
+//! rather than beside the method object because every one of the eighteen begins by reading
+//! `ctx->operation` and `ctx->op.sig.algctx` — the `EVP_PKEY_CTX` object that landed with 7.4c. The
+//! file's nineteenth `EVP_PKEY_*` name, `EVP_PKEY_CTX_set_signature`, is `pmeth_lib.c`'s and
+//! belongs to that unit rather than to this one.
+//!
+//! ## The operation half's own shape
+//!
+//! Three things about the entry points are worth stating before reading them, because each is a
+//! place a plausible transcription goes wrong:
+//!
+//!   * **`evp_pkey_signature_init` has three exits and only one of them is `err:`.** `legacy:`
+//!     returns `-2` **without** resetting `ctx->operation`, so a context whose init fell through to
+//!     the legacy half is left *armed* with no algorithm context; and `end:` frees the keymgmt and
+//!     replays the cached data only when the result is positive. That asymmetry is what makes the
+//!     `algctx == NULL` arm of `EVP_PKEY_sign`, `EVP_PKEY_verify` and `EVP_PKEY_verify_recover`
+//!     reachable at all from this crate, and `RT-EVP-PKEY` measures it rather than asserting it.
+//!   * **the `query_key_types` walk exists only in the pre-fetched branch.** A method handed to
+//!     `EVP_PKEY_sign_init_ex2` and its siblings is checked against the key by the *caller's own
+//!     method*; a method the init fetched itself is checked by the two name fallbacks instead. A
+//!     court that only used the fetching spellings would never call `query_key_types`.
+//!   * **the one-shot and the stream entry points differ in exactly one test.** `EVP_PKEY_sign` and
+//!     `EVP_PKEY_verify` accept either an armed one-shot operation or its message spelling, while
+//!     the four stream entry points accept one operation each — and none of the four tests the
+//!     algorithm context before it dereferences the method.
 //!
 //! ## The structural check is the only one in the family that is a *sequence*, not a conjunction
 //!
@@ -44,13 +68,26 @@ use crate::evp::fetch::{
     evp_generic_do_all, evp_generic_fetch, evp_generic_fetch_from_prov, evp_is_a, evp_names_do_all,
     GenericDoAllFn, MethodFromAlgorithmFn,
 };
+use crate::evp::keymgmt::{
+    evp_keymgmt_fetch_from_prov, EVP_KEYMGMT_free, EVP_KEYMGMT_get0_name,
+    EVP_KEYMGMT_get0_provider, EvpKeyMgmt,
+};
+use crate::evp::keymgmt_lib::evp_keymgmt_util_query_operation_name;
+use crate::evp::pkey::evp_pkey_export_to_provider;
+use crate::evp::pkey_ctx::{
+    evp_pkey_ctx_free_old_ops, evp_pkey_ctx_use_cached_data, EVP_PKEY_CTX_is_a, EvpPkeyCtx,
+    EVP_PKEY_OP_SIGN, EVP_PKEY_OP_SIGNMSG, EVP_PKEY_OP_UNDEFINED, EVP_PKEY_OP_VERIFY,
+    EVP_PKEY_OP_VERIFYMSG, EVP_PKEY_OP_VERIFYRECOVER,
+};
 use crate::params::OsslParam;
 use crate::property::store::{MethodFreeFn, MethodUpRefFn};
 use crate::provider::activate::OsslAlgorithm;
 use crate::provider::{ossl_provider_ctx, ossl_provider_free, ossl_provider_up_ref, OsslProvider};
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::err_sites;
+use crate::runtime::err::raise_site;
 use crate::runtime::err::raise_site_data;
+use crate::runtime::err::{ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 
 /// `OSSL_OP_SIGNATURE` — `include/openssl/core_dispatch.h`.
@@ -915,7 +952,6 @@ pub unsafe extern "C" fn EVP_SIGNATURE_fetch(
 ///
 /// # Safety
 /// `prov` must be live; `algorithm` and `properties` NULL or NUL-terminated.
-#[allow(dead_code)] // first live caller is `evp_pkey_signature_init`, which lands with 7.4c's context
 pub(crate) unsafe fn evp_signature_fetch_from_prov(
     prov: *mut OsslProvider,
     algorithm: *const c_char,
@@ -1082,6 +1118,1061 @@ pub unsafe extern "C" fn EVP_SIGNATURE_settable_ctx_params(
     // SAFETY: `settable` is the provider's own callback and a NULL operation context is what the
     // authority passes here.
     unsafe { settable(ptr::null_mut(), provctx) }
+}
+
+// ---------------------------------------------------------------------------------------------
+// The operation half — `evp_pkey_signature_init` and the eighteen exports over it.
+//
+// These read `ctx->operation` and `ctx->op.sig.algctx`, which is why they land after the
+// `EVP_PKEY_CTX` object rather than with the method object above.
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's `err:` label — `crypto/evp/signature.c:896`.
+///
+/// **Not guarded by `ret`**, unlike the asymmetric cipher's: every arrival tears the operation down
+/// and answers with the caller's running result, so a failed init leaves the context `UNDEFINED`
+/// and re-initialisable rather than half-bound.
+///
+/// The authority's own `signature->freectx(ctx->op.sig.algctx)` — the one it writes after a
+/// callback answered non-positive — is not duplicated here, and it does not need to be:
+/// `evp_pkey_ctx_free_old_ops` releases the algorithm context through the method's own `freectx`
+/// before it releases the method, so the provider sees exactly one `freectx` for one successful
+/// `newctx` either way. The authority's call is unguarded and this crate's release is guarded by
+/// both pointers being non-NULL, which differs only for a state no `newctx` can produce.
+///
+/// # Safety
+/// `ctx` must be live; `tmp_keymgmt` NULL or live.
+unsafe fn signature_init_err(
+    ctx: *mut EvpPkeyCtx,
+    tmp_keymgmt: *mut EvpKeyMgmt,
+    ret: c_int,
+) -> c_int {
+    // SAFETY: `ctx` is live.
+    unsafe { evp_pkey_ctx_free_old_ops(ctx) };
+    // SAFETY: `ctx` is live.
+    unsafe { (*ctx).operation = EVP_PKEY_OP_UNDEFINED };
+    // SAFETY: `tmp_keymgmt` is NULL or live.
+    unsafe { EVP_KEYMGMT_free(tmp_keymgmt) };
+    ret
+}
+
+/// The authority's `end:` label — `crypto/evp/signature.c:888`.
+///
+/// The cached-data replay is guarded by `ret > 0` rather than by "did we arrive happily". Two
+/// arrivals have a non-positive `ret`: the pre-fetched branch when the key could not be exported
+/// (still 0, and *no error raised of its own*), and an incompatible key type (`-2`). Neither may
+/// replay a distinguishing identifier into an operation that was never armed, and the guard is what
+/// says so.
+///
+/// # Safety
+/// `ctx` must be live; `tmp_keymgmt` NULL or live.
+unsafe fn signature_init_end(
+    ctx: *mut EvpPkeyCtx,
+    tmp_keymgmt: *mut EvpKeyMgmt,
+    ret: c_int,
+) -> c_int {
+    let mut ret = ret;
+    if ret > 0 {
+        // SAFETY: `ctx` is live.
+        ret = unsafe { evp_pkey_ctx_use_cached_data(ctx) };
+    }
+    // SAFETY: `tmp_keymgmt` is NULL or live.
+    unsafe { EVP_KEYMGMT_free(tmp_keymgmt) };
+    ret
+}
+
+/// The authority's `legacy:` label — `crypto/evp/signature.c:848`.
+///
+/// **The label does not reset `ctx->operation`.** The non-guarded part of its body ends in
+/// `return -2`, not in a `goto err`, so a context whose init fell through to the legacy half is
+/// left with the operation still *armed* and no algorithm context. That is not an artefact of the
+/// transcription and it is observable: a following `EVP_PKEY_sign` on such a context takes its own
+/// `algctx == NULL` arm, which is how this crate reaches that arm at all — the crate cannot build a
+/// context whose `keymgmt` is NULL, so `evp_pkey_ctx_is_legacy` never sends an init here directly.
+///
+/// The `if (ctx->pmeth == NULL || ...)` test is satisfied on every arrival: `ctx->pmeth` belongs to
+/// `EVP_PKEY_METHOD`, which is Phase 8's, so the arm it guards — handing the operation to a legacy
+/// method — is the branch this crate cannot represent. The `switch` after it is therefore
+/// unreachable and is not written: every one of its arms reads `ctx->pmeth`, and the same statement
+/// covers its `default:` arm.
+///
+/// # Safety
+/// `tmp_keymgmt` NULL or live.
+unsafe fn signature_init_legacy(tmp_keymgmt: *mut EvpKeyMgmt) -> c_int {
+    ERR_pop_to_mark();
+    // SAFETY: `tmp_keymgmt` is NULL or live.
+    unsafe { EVP_KEYMGMT_free(tmp_keymgmt) };
+    // SAFETY: a compile-time-constant site.
+    unsafe { raise_site(&err_sites::SIGNATURE_862) };
+    -2
+}
+
+/// `static int evp_pkey_signature_init(EVP_PKEY_CTX *ctx, EVP_SIGNATURE *signature, int operation,
+/// const OSSL_PARAM params[])` — `crypto/evp/signature.c:568`.
+///
+/// The unit's heart, and it is **two different functions in one body**, chosen by whether the
+/// caller handed it a method:
+///
+///   * **pre-fetched** (`signature != NULL`, the `_ex2` and message spellings). The key is exported
+///     to the method's provider and then checked: `query_key_types`' NUL-terminated array is walked
+///     and the first spelling the context's key answers to is the match. When the method publishes
+///     no such callback the check falls back twice — the key's *type name* against the method's
+///     names, then the key's *preferred operation name* against the same — and **both fallbacks
+///     answer -2 from `end:`, not from `err:`**, so the context keeps the operation the caller
+///     asked for and no algorithm context. A key that cannot be exported at all is not a refusal:
+///     it arrives at `end:` with `ret` still 0.
+///   * **fetched** (`signature == NULL`, the plain spellings). The name comes from the *key*, and
+///     the method is fetched twice: once through `EVP_SIGNATURE_fetch` under the context's
+///     property query, and once through `evp_signature_fetch_from_prov` from the key's own
+///     provider. The second is not a retry — it is how an algorithm a property query would reject
+///     is still reachable when the key's provider publishes it. Each iteration re-derives the
+///     keymgmt from the *method's* provider and re-exports the key into it, and three arrivals
+///     leave for `legacy:`: a key whose provider cannot produce the algorithm at all, and two more
+///     below.
+///
+/// The common tail arms the operation: it stores the method and its context, passes the caller's
+/// **property query** on to `newctx` as its second argument, and dispatches on `operation` to one
+/// of five init callbacks. A missing callback is `PROVIDER_SIGNATURE_NOT_SUPPORTED` with the
+/// method's own type name and description in the message — which is what makes the failing clause
+/// identifiable from a transcript — and an operation outside the five is
+/// `INITIALIZATION_ERROR`.
+///
+/// # Safety
+/// `ctx` NULL or live; `signature` NULL or live; `params` NULL or a terminated array.
+unsafe fn evp_pkey_signature_init(
+    ctx: *mut EvpPkeyCtx,
+    signature: *mut EvpSignature,
+    operation: c_int,
+    params: *const OsslParam,
+) -> c_int {
+    let mut ret: c_int = 0;
+    let mut provkey: *mut c_void = ptr::null_mut();
+    let mut tmp_keymgmt: *mut EvpKeyMgmt = ptr::null_mut();
+    let mut tmp_prov: *const OsslProvider = ptr::null();
+
+    if ctx.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::SIGNATURE_580) };
+        return -1;
+    }
+
+    // SAFETY: `ctx` is live.
+    unsafe { evp_pkey_ctx_free_old_ops(ctx) };
+    // SAFETY: `ctx` is live.
+    unsafe { (*ctx).operation = operation };
+
+    let mut signature = signature;
+    if !signature.is_null() {
+        /* A caller-supplied method has to be checked against the key, and the check is done after
+         * the export for a reason the authority states in its own comment: the comparison is not
+         * designed to work with a key that has not been made provider-side. */
+        // SAFETY: `ctx` is live.
+        if unsafe { (*ctx).pkey }.is_null() {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::SIGNATURE_596) };
+            // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+            return unsafe { signature_init_err(ctx, tmp_keymgmt, ret) };
+        }
+
+        /* `evp_pkey_export_to_provider` is documented as a no-op when the keymgmt it is handed is
+         * already the key's own, which is why the two steps are written out rather than skipped. */
+        // SAFETY: `signature` is live.
+        tmp_prov = unsafe { EVP_SIGNATURE_get0_provider(signature) };
+        // SAFETY: `ctx` is live, `tmp_prov` is live, and the context's keymgmt has a
+        // NUL-terminated name.
+        let tmp_keymgmt_tofree = unsafe {
+            evp_keymgmt_fetch_from_prov(
+                tmp_prov.cast_mut(),
+                EVP_KEYMGMT_get0_name((*ctx).keymgmt),
+                (*ctx).propquery,
+            )
+        };
+        tmp_keymgmt = tmp_keymgmt_tofree;
+        if !tmp_keymgmt.is_null() {
+            // SAFETY: `ctx` is live, and `tmp_keymgmt`'s address is valid for the call — which may
+            // replace it, and is the whole reason it is passed by address rather than by value.
+            provkey = unsafe {
+                evp_pkey_export_to_provider(
+                    (*ctx).pkey,
+                    (*ctx).libctx,
+                    ptr::addr_of_mut!(tmp_keymgmt),
+                    (*ctx).propquery,
+                )
+            };
+        }
+        if tmp_keymgmt.is_null() {
+            // SAFETY: `tmp_keymgmt_tofree` is NULL or live and the caller just dropped it.
+            unsafe { EVP_KEYMGMT_free(tmp_keymgmt_tofree) };
+        }
+
+        if provkey.is_null() {
+            // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+            return unsafe { signature_init_end(ctx, tmp_keymgmt, ret) };
+        }
+
+        // SAFETY: `signature` is live.
+        if let Some(query_key_types) = unsafe { (*signature).query_key_types } {
+            /* The callback answers a **NUL-terminated array** and the walk stops at the first
+             * spelling the context's key answers to. The array's own terminator is what reports "no
+             * match", so an empty array is a refusal rather than a vacuous success — the distinction
+             * the court measures with two arms. */
+            // SAFETY: the callback is the provider's own and takes no arguments.
+            let keytypes = unsafe { query_key_types() };
+            // SAFETY: `keytypes` is a NUL-terminated array of NUL-terminated names per the
+            // callback's contract, and `ctx` is live.
+            let mut cursor = keytypes;
+            // SAFETY: `keytypes` is a NUL-terminated array of NUL-terminated names, `ctx` is live, and `cursor` walks inside it.
+            unsafe {
+                while !(*cursor).is_null() {
+                    if EVP_PKEY_CTX_is_a(ctx, *cursor) != 0 {
+                        break;
+                    }
+                    cursor = cursor.add(1);
+                }
+            }
+            // SAFETY: `cursor` points inside that array, so it names a readable entry.
+            if unsafe { *cursor }.is_null() {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::SIGNATURE_637) };
+                ret = -2;
+                // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+                return unsafe { signature_init_end(ctx, tmp_keymgmt, ret) };
+            }
+        } else {
+            /* Fallback 1: the key's type name and the method's name are the same spelling. */
+            // SAFETY: `ctx` is live.
+            let keytype = unsafe { EVP_KEYMGMT_get0_name((*ctx).keymgmt) };
+            // SAFETY: `signature` is live and `keytype` is NUL-terminated.
+            let mut ok = unsafe { EVP_SIGNATURE_is_a(signature, keytype) };
+
+            /* Fallback 2: the **key** names the signature algorithm it wants, and the two are
+             * compared by identity rather than by spelling.
+             * `evp_keymgmt_util_query_operation_name` answers the method's own name when the
+             * provider publishes no `query_operation_name`, so this arm is reached with a name
+             * rather than with NULL — which is what keeps the `EVP_SIGNATURE_is_a` below honest. */
+            if ok == 0 {
+                // SAFETY: `ctx` is live and its keymgmt is a live method.
+                let signame = unsafe {
+                    evp_keymgmt_util_query_operation_name((*ctx).keymgmt, OSSL_OP_SIGNATURE)
+                };
+                // SAFETY: `signature` is live and `signame` is NULL or NUL-terminated.
+                ok = unsafe { EVP_SIGNATURE_is_a(signature, signame) };
+            }
+
+            if ok == 0 {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::SIGNATURE_664) };
+                ret = -2;
+                // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+                return unsafe { signature_init_end(ctx, tmp_keymgmt, ret) };
+            }
+        }
+
+        /* The context takes a reference on the caller's method, so the caller may release its own
+         * copy while the operation is armed. */
+        // SAFETY: `signature` is live.
+        if unsafe { EVP_SIGNATURE_up_ref(signature) } == 0 {
+            // SAFETY: `signature` is live.
+            return unsafe { signature_init_err(ctx, tmp_keymgmt, ret) };
+        }
+    } else {
+        /* Without a method, one has to be derived from the key. The mark covers exactly the
+         * *probing* part of that derivation: a fetch that fails while looking for a signature the
+         * key does not support leaves nothing behind once the legacy half is entered, and the
+         * success path pops the mark so the caller sees only the operation's own errors. */
+        ERR_set_mark();
+
+        // SAFETY: `ctx` is live.
+        if unsafe { &*ctx }.is_legacy() {
+            /* Reached from *inside* the mark, which is why the label pops it. */
+            // SAFETY: `tmp_keymgmt` is a literal NULL here.
+            return unsafe { signature_init_legacy(ptr::null_mut()) };
+        }
+
+        // SAFETY: `ctx` is live.
+        if unsafe { (*ctx).pkey }.is_null() {
+            ERR_clear_last_mark();
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::SIGNATURE_681) };
+            // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+            return unsafe { signature_init_err(ctx, tmp_keymgmt, ret) };
+        }
+
+        /* `ossl_assert` under `NDEBUG` is `(x) != 0`, so this is a live refusal and not a
+         * debug-only abort (`docs/DECISIONS.md` D167). */
+        // SAFETY: `ctx` is live and its `pkey` is non-NULL.
+        let pkey_keymgmt = unsafe { (*(*ctx).pkey).keymgmt };
+        // SAFETY: `ctx` is live.
+        if !(pkey_keymgmt.is_null() || pkey_keymgmt == unsafe { (*ctx).keymgmt }) {
+            ERR_clear_last_mark();
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::SIGNATURE_691) };
+            // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+            return unsafe { signature_init_err(ctx, tmp_keymgmt, ret) };
+        }
+
+        // SAFETY: `ctx` is live.
+        let ctx_keymgmt = unsafe { (*ctx).keymgmt };
+        /* The name of the signature the **key** wants, and a NULL answer here is an error rather
+         * than a fallback: the two fallbacks above are about the *method*, and this one is about
+         * the key. */
+        // SAFETY: `ctx_keymgmt` is live.
+        let supported_sig =
+            unsafe { evp_keymgmt_util_query_operation_name(ctx_keymgmt, OSSL_OP_SIGNATURE) };
+        if supported_sig.is_null() {
+            ERR_clear_last_mark();
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::SIGNATURE_699) };
+            // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+            return unsafe { signature_init_err(ctx, tmp_keymgmt, ret) };
+        }
+
+        /* Two iterations of one fetch. Each iteration drops the previous iteration's method and
+         * keymgmt first, because the pair is re-derived as a unit and iteration 1's keymgmt came
+         * from a provider that may not be the key's. */
+        let mut iter: c_int = 1;
+        while iter < 3 && provkey.is_null() {
+            /* The authority nulls `signature` beside the release. That store is not written here
+             * because both arms of the switch below assign it before anything can read it, so it
+             * has no observable effect — the `EVP_SIGNATURE_free` is the whole of the pair. */
+            // SAFETY: `signature` is NULL or live.
+            unsafe { EVP_SIGNATURE_free(signature) };
+            // SAFETY: `tmp_keymgmt` is NULL or live.
+            unsafe { EVP_KEYMGMT_free(tmp_keymgmt) };
+            tmp_keymgmt = ptr::null_mut();
+
+            if iter == 1 {
+                // SAFETY: `ctx` is live.
+                let (libctx, propquery) = unsafe { ((*ctx).libctx, (*ctx).propquery) };
+                // SAFETY: `libctx` is live and `supported_sig` is NUL-terminated.
+                signature = unsafe { EVP_SIGNATURE_fetch(libctx, supported_sig, propquery) };
+                if !signature.is_null() {
+                    // SAFETY: `signature` is live.
+                    tmp_prov = unsafe { EVP_SIGNATURE_get0_provider(signature) };
+                }
+            } else {
+                // SAFETY: `ctx_keymgmt` is live.
+                tmp_prov = unsafe { EVP_KEYMGMT_get0_provider(ctx_keymgmt) };
+                // SAFETY: `ctx` is live.
+                let propquery = unsafe { (*ctx).propquery };
+                // SAFETY: `tmp_prov` is live and `supported_sig` is NUL-terminated.
+                signature = unsafe {
+                    evp_signature_fetch_from_prov(tmp_prov.cast_mut(), supported_sig, propquery)
+                };
+                if signature.is_null() {
+                    /* The second iteration is the last chance: the key's own provider cannot
+                     * produce the algorithm, so no provider can. `tmp_keymgmt` is NULL here — the
+                     * iteration cleared it at the top. */
+                    // SAFETY: `tmp_keymgmt` is a literal NULL at this point of the iteration.
+                    return unsafe { signature_init_legacy(ptr::null_mut()) };
+                }
+            }
+            if signature.is_null() {
+                iter += 1;
+                continue;
+            }
+
+            // SAFETY: `ctx_keymgmt` is live and its name is NUL-terminated; `ctx` is live.
+            let (name, propquery) =
+                unsafe { (EVP_KEYMGMT_get0_name(ctx_keymgmt), (*ctx).propquery) };
+            // SAFETY: `tmp_prov` is live and `name` is NUL-terminated.
+            let tmp_keymgmt_tofree =
+                unsafe { evp_keymgmt_fetch_from_prov(tmp_prov.cast_mut(), name, propquery) };
+            tmp_keymgmt = tmp_keymgmt_tofree;
+            if !tmp_keymgmt.is_null() {
+                // SAFETY: `ctx` is live and `tmp_keymgmt`'s address is valid for the call.
+                provkey = unsafe {
+                    evp_pkey_export_to_provider(
+                        (*ctx).pkey,
+                        (*ctx).libctx,
+                        ptr::addr_of_mut!(tmp_keymgmt),
+                        propquery,
+                    )
+                };
+            }
+            if tmp_keymgmt.is_null() {
+                // SAFETY: `tmp_keymgmt_tofree` is NULL or live and the caller just dropped it.
+                unsafe { EVP_KEYMGMT_free(tmp_keymgmt_tofree) };
+            }
+            iter += 1;
+        }
+
+        if provkey.is_null() {
+            // SAFETY: `signature` is NULL or live.
+            unsafe { EVP_SIGNATURE_free(signature) };
+            /* The post-loop entry to `legacy:` is the one that has a live keymgmt to release: the
+             * loop's own two entries cleared it before they left. */
+            // SAFETY: `tmp_keymgmt` is NULL or live.
+            return unsafe { signature_init_legacy(tmp_keymgmt) };
+        }
+
+        ERR_pop_to_mark();
+    }
+
+    /* No more legacy from here down to the `legacy:` label. */
+
+    // SAFETY: `ctx` is live and `signature` is live.
+    unsafe { (*ctx).op_sig_signature = signature };
+    /* `newctx` is mandatory: `evp_signature_from_algorithm` refuses a provider that publishes no
+     * `OSSL_FUNC_SIGNATURE_NEWCTX`, so a fetched method always has one and the `else` below is
+     * unreachable. It is written out rather than `unwrap`ped because the crate denies `unwrap_used`
+     * and because the answer it gives is the authority's own INITIALIZATION_ERROR. */
+    // SAFETY: `signature` is live.
+    let Some(newctx) = (unsafe { (*signature).newctx }) else {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::SIGNATURE_786) };
+        // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+        return unsafe { signature_init_err(ctx, tmp_keymgmt, ret) };
+    };
+    /* The context's property query is passed **on to the method**, and this is the only place it
+     * reaches the algorithm context: the method sees the same string the fetch used, or NULL when
+     * the caller supplied none. */
+    // SAFETY: `newctx` is the provider's own callback and `(*signature).prov` is live.
+    let algctx = unsafe { newctx(ossl_provider_ctx((*signature).prov), (*ctx).propquery) };
+    // SAFETY: `ctx` is live.
+    unsafe { (*ctx).op_sig_algctx = algctx };
+    if algctx.is_null() {
+        /* The provider key can stay in the cache. */
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::SIGNATURE_786) };
+        // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+        return unsafe { signature_init_err(ctx, tmp_keymgmt, ret) };
+    }
+
+    match operation {
+        EVP_PKEY_OP_SIGN => {
+            // SAFETY: `signature` is live.
+            let Some(sign_init) = (unsafe { (*signature).sign_init }) else {
+                // SAFETY: `signature` is live.
+                unsafe { raise_clause(signature, &err_sites::SIGNATURE_793, c"sign_init") };
+                // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+                return unsafe { signature_init_err(ctx, tmp_keymgmt, -2) };
+            };
+            // SAFETY: `algctx` is non-NULL, `provkey` is non-NULL and `params` is NULL or a
+            // terminated array — the provider's own callback contract.
+            ret = unsafe { sign_init(algctx, provkey, params) };
+        }
+        EVP_PKEY_OP_SIGNMSG => {
+            // SAFETY: `signature` is live.
+            let Some(sign_message_init) = (unsafe { (*signature).sign_message_init }) else {
+                // SAFETY: `signature` is live.
+                unsafe { raise_clause(signature, &err_sites::SIGNATURE_802, c"sign_message_init") };
+                // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+                return unsafe { signature_init_err(ctx, tmp_keymgmt, -2) };
+            };
+            // SAFETY: as above.
+            ret = unsafe { sign_message_init(algctx, provkey, params) };
+        }
+        EVP_PKEY_OP_VERIFY => {
+            // SAFETY: `signature` is live.
+            let Some(verify_init) = (unsafe { (*signature).verify_init }) else {
+                // SAFETY: `signature` is live.
+                unsafe { raise_clause(signature, &err_sites::SIGNATURE_811, c"verify_init") };
+                // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+                return unsafe { signature_init_err(ctx, tmp_keymgmt, -2) };
+            };
+            // SAFETY: as above.
+            ret = unsafe { verify_init(algctx, provkey, params) };
+        }
+        EVP_PKEY_OP_VERIFYMSG => {
+            // SAFETY: `signature` is live.
+            let Some(verify_message_init) = (unsafe { (*signature).verify_message_init }) else {
+                // SAFETY: `signature` is live.
+                unsafe {
+                    raise_clause(signature, &err_sites::SIGNATURE_820, c"verify_message_init")
+                };
+                // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+                return unsafe { signature_init_err(ctx, tmp_keymgmt, -2) };
+            };
+            // SAFETY: as above.
+            ret = unsafe { verify_message_init(algctx, provkey, params) };
+        }
+        EVP_PKEY_OP_VERIFYRECOVER => {
+            // SAFETY: `signature` is live.
+            let Some(verify_recover_init) = (unsafe { (*signature).verify_recover_init }) else {
+                // SAFETY: `signature` is live.
+                unsafe {
+                    raise_clause(signature, &err_sites::SIGNATURE_829, c"verify_recover_init")
+                };
+                // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+                return unsafe { signature_init_err(ctx, tmp_keymgmt, -2) };
+            };
+            // SAFETY: as above.
+            ret = unsafe { verify_recover_init(algctx, provkey, params) };
+        }
+        _ => {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::SIGNATURE_837) };
+            // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+            return unsafe { signature_init_err(ctx, tmp_keymgmt, ret) };
+        }
+    }
+
+    if ret <= 0 {
+        // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+        return unsafe { signature_init_err(ctx, tmp_keymgmt, ret) };
+    }
+    // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+    unsafe { signature_init_end(ctx, tmp_keymgmt, ret) }
+}
+
+/// `int EVP_PKEY_sign_init(EVP_PKEY_CTX *ctx)`.
+///
+/// # Safety
+/// `ctx` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_sign_init(ctx: *mut EvpPkeyCtx) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { evp_pkey_signature_init(ctx, ptr::null_mut(), EVP_PKEY_OP_SIGN, ptr::null()) }
+}
+
+/// `int EVP_PKEY_sign_init_ex(EVP_PKEY_CTX *ctx, const OSSL_PARAM params[])`.
+///
+/// # Safety
+/// `ctx` must be live; `params` NULL or a terminated array.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_sign_init_ex(
+    ctx: *mut EvpPkeyCtx,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { evp_pkey_signature_init(ctx, ptr::null_mut(), EVP_PKEY_OP_SIGN, params) }
+}
+
+/// `int EVP_PKEY_sign_init_ex2(EVP_PKEY_CTX *ctx, EVP_SIGNATURE *algo,
+/// const OSSL_PARAM params[])` — the only `sign` spelling that reaches the pre-fetched branch.
+///
+/// # Safety
+/// `ctx` must be live; `algo` must be live; `params` NULL or a terminated array.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_sign_init_ex2(
+    ctx: *mut EvpPkeyCtx,
+    algo: *mut EvpSignature,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { evp_pkey_signature_init(ctx, algo, EVP_PKEY_OP_SIGN, params) }
+}
+
+/// `int EVP_PKEY_sign_message_init(EVP_PKEY_CTX *ctx, EVP_SIGNATURE *algo,
+/// const OSSL_PARAM params[])`.
+///
+/// # Safety
+/// `ctx` must be live; `algo` NULL or live; `params` NULL or a terminated array.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_sign_message_init(
+    ctx: *mut EvpPkeyCtx,
+    algo: *mut EvpSignature,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { evp_pkey_signature_init(ctx, algo, EVP_PKEY_OP_SIGNMSG, params) }
+}
+
+/// `int EVP_PKEY_verify_init(EVP_PKEY_CTX *ctx)`.
+///
+/// # Safety
+/// `ctx` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_verify_init(ctx: *mut EvpPkeyCtx) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { evp_pkey_signature_init(ctx, ptr::null_mut(), EVP_PKEY_OP_VERIFY, ptr::null()) }
+}
+
+/// `int EVP_PKEY_verify_init_ex(EVP_PKEY_CTX *ctx, const OSSL_PARAM params[])`.
+///
+/// # Safety
+/// `ctx` must be live; `params` NULL or a terminated array.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_verify_init_ex(
+    ctx: *mut EvpPkeyCtx,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { evp_pkey_signature_init(ctx, ptr::null_mut(), EVP_PKEY_OP_VERIFY, params) }
+}
+
+/// `int EVP_PKEY_verify_init_ex2(EVP_PKEY_CTX *ctx, EVP_SIGNATURE *algo,
+/// const OSSL_PARAM params[])`.
+///
+/// # Safety
+/// `ctx` must be live; `algo` must be live; `params` NULL or a terminated array.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_verify_init_ex2(
+    ctx: *mut EvpPkeyCtx,
+    algo: *mut EvpSignature,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { evp_pkey_signature_init(ctx, algo, EVP_PKEY_OP_VERIFY, params) }
+}
+
+/// `int EVP_PKEY_verify_message_init(EVP_PKEY_CTX *ctx, EVP_SIGNATURE *algo,
+/// const OSSL_PARAM params[])`.
+///
+/// # Safety
+/// `ctx` must be live; `algo` NULL or live; `params` NULL or a terminated array.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_verify_message_init(
+    ctx: *mut EvpPkeyCtx,
+    algo: *mut EvpSignature,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { evp_pkey_signature_init(ctx, algo, EVP_PKEY_OP_VERIFYMSG, params) }
+}
+
+/// `int EVP_PKEY_verify_recover_init(EVP_PKEY_CTX *ctx)`.
+///
+/// # Safety
+/// `ctx` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_verify_recover_init(ctx: *mut EvpPkeyCtx) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { evp_pkey_signature_init(ctx, ptr::null_mut(), EVP_PKEY_OP_VERIFYRECOVER, ptr::null()) }
+}
+
+/// `int EVP_PKEY_verify_recover_init_ex(EVP_PKEY_CTX *ctx, const OSSL_PARAM params[])`.
+///
+/// # Safety
+/// `ctx` must be live; `params` NULL or a terminated array.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_verify_recover_init_ex(
+    ctx: *mut EvpPkeyCtx,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { evp_pkey_signature_init(ctx, ptr::null_mut(), EVP_PKEY_OP_VERIFYRECOVER, params) }
+}
+
+/// `int EVP_PKEY_verify_recover_init_ex2(EVP_PKEY_CTX *ctx, EVP_SIGNATURE *algo,
+/// const OSSL_PARAM params[])`.
+///
+/// # Safety
+/// `ctx` must be live; `algo` must be live; `params` NULL or a terminated array.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_verify_recover_init_ex2(
+    ctx: *mut EvpPkeyCtx,
+    algo: *mut EvpSignature,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { evp_pkey_signature_init(ctx, algo, EVP_PKEY_OP_VERIFYRECOVER, params) }
+}
+
+/// The prologue the seven non-init entry points share.
+///
+/// `Ok` carries the method the operation is armed with; `Err` carries the code the entry point must
+/// return, with the reason already raised. The order is the authority's and it is observable: a
+/// context in the *wrong* operation answers `OPERATION_NOT_INITIALIZED` even when its algorithm
+/// context is NULL, because the operation test comes first — and the court uses a context in
+/// exactly that state.
+///
+/// `mask` is the set of operations the entry point accepts, and the authority spells the two shapes
+/// it has as `a != X && a != Y` and as `a != X`. The bit test below is the same test for every
+/// value the exports can leave in `ctx->operation` — each of the five inits stores one constant and
+/// nothing else writes the field — and it is written once rather than five times.
+///
+/// `check_algctx` is `Some(site)` for the three one-shot entry points, whose arm for a NULL
+/// algorithm context is the authority's `goto legacy`: `ctx->pmeth` is Phase 8's and always NULL
+/// here, so that arm answers `OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE` and `-2`. It is `None` for
+/// the four stream entry points, which read `ctx->op.sig.signature` **without any test at all** —
+/// a stream call on a context whose init refused dereferences a NULL method in the authority, which
+/// is why nothing here walks into that state; the module's boundary note says so rather than
+/// pretending the arm is guarded.
+///
+/// # Safety
+/// `ctx` NULL or live.
+unsafe fn signature_op_prelude(
+    ctx: *mut EvpPkeyCtx,
+    mask: c_int,
+    null_site: &err_sites::ErrSite,
+    not_init_site: &err_sites::ErrSite,
+    legacy_site: Option<&err_sites::ErrSite>,
+) -> Result<*mut EvpSignature, c_int> {
+    if ctx.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(null_site) };
+        return Err(-1);
+    }
+
+    // SAFETY: `ctx` is live.
+    if (unsafe { (*ctx).operation } & mask) == 0 {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(not_init_site) };
+        return Err(-1);
+    }
+
+    if let Some(site) = legacy_site {
+        // SAFETY: `ctx` is live and the operation is armed.
+        if unsafe { (*ctx).op_sig_algctx }.is_null() {
+            /* The authority's `goto legacy`. Its `ctx->pmeth == NULL` clause is satisfied on every
+             * arrival, so the answer this arm gives is fixed. */
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(site) };
+            return Err(-2);
+        }
+    }
+
+    // SAFETY: `ctx` is live and the operation is armed, so the method it names is live.
+    Ok(unsafe { (*ctx).op_sig_signature })
+}
+
+/// `int EVP_PKEY_sign_message_update(EVP_PKEY_CTX *ctx, const unsigned char *in, size_t inlen)`.
+///
+/// The **equality** operation test is this function's own and not the one-shot's: a stream update
+/// belongs to `EVP_PKEY_OP_SIGNMSG` alone, so a context armed for a one-shot sign answers
+/// `OPERATION_NOT_INITIALIZED` here.
+///
+/// # Safety
+/// `ctx` NULL or live; `in` NULL or `inlen` readable bytes.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_sign_message_update(
+    ctx: *mut EvpPkeyCtx,
+    input: *const u8,
+    inlen: usize,
+) -> c_int {
+    // SAFETY: `ctx` NULL or live per the contract; the sites are compile-time constants.
+    let signature = match unsafe {
+        signature_op_prelude(
+            ctx,
+            EVP_PKEY_OP_SIGNMSG,
+            &err_sites::SIGNATURE_933,
+            &err_sites::SIGNATURE_938,
+            None,
+        )
+    } {
+        Ok(signature) => signature,
+        Err(ret) => return ret,
+    };
+
+    // SAFETY: `signature` is live — that is the prelude's postcondition.
+    let Some(update) = (unsafe { (*signature).sign_message_update }) else {
+        // SAFETY: `signature` is live.
+        unsafe { raise_clause(signature, &err_sites::SIGNATURE_945, c"sign_message_update") };
+        return -2;
+    };
+    // SAFETY: `ctx` is live and the operation is armed, so `algctx` belongs to `signature`; `input`
+    // is NULL or `inlen` readable bytes.
+    let ret = unsafe { update((*ctx).op_sig_algctx, input, inlen) };
+    if ret <= 0 {
+        // SAFETY: `signature` is live.
+        unsafe { raise_clause(signature, &err_sites::SIGNATURE_952, c"sign_message_update") };
+    }
+    ret
+}
+
+/// `int EVP_PKEY_sign_message_final(EVP_PKEY_CTX *ctx, unsigned char *sig, size_t *siglen)`.
+///
+/// The length the provider is handed is the same "or zero" the one-shot entries use: a NULL output
+/// buffer means the provider sees **0**, not that the call is skipped.
+///
+/// # Safety
+/// `ctx` NULL or live; `sig` NULL or `*siglen` writable bytes.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_sign_message_final(
+    ctx: *mut EvpPkeyCtx,
+    sig: *mut u8,
+    siglen: *mut usize,
+) -> c_int {
+    // SAFETY: `ctx` NULL or live per the contract; the sites are compile-time constants.
+    let signature = match unsafe {
+        signature_op_prelude(
+            ctx,
+            EVP_PKEY_OP_SIGNMSG,
+            &err_sites::SIGNATURE_965,
+            &err_sites::SIGNATURE_970,
+            None,
+        )
+    } {
+        Ok(signature) => signature,
+        Err(ret) => return ret,
+    };
+
+    // SAFETY: `signature` is live.
+    let Some(finalise) = (unsafe { (*signature).sign_message_final }) else {
+        // SAFETY: `signature` is live.
+        unsafe { raise_clause(signature, &err_sites::SIGNATURE_977, c"sign_message_final") };
+        return -2;
+    };
+    let mut siglen_in: usize = 0;
+    if !sig.is_null() {
+        // SAFETY: `sig` is non-NULL, so `siglen` is the caller's valid buffer length.
+        siglen_in = unsafe { *siglen };
+    }
+    // SAFETY: `ctx` is live and the operation is armed, so `algctx` belongs to `signature`.
+    let ret = unsafe { finalise((*ctx).op_sig_algctx, sig, siglen, siglen_in) };
+    if ret <= 0 {
+        // SAFETY: `signature` is live.
+        unsafe { raise_clause(signature, &err_sites::SIGNATURE_985, c"sign_message_final") };
+    }
+    ret
+}
+
+/// `int EVP_PKEY_sign(EVP_PKEY_CTX *ctx, unsigned char *sig, size_t *siglen,
+/// const unsigned char *tbs, size_t tbslen)`.
+///
+/// The one-shot entry accepts **either** a one-shot operation or the message spelling, which is
+/// what lets a provider that publishes only the message triple be driven through this call — and
+/// what makes this function's `signature->sign == NULL` arm reachable at all: such a provider's
+/// method has no `sign`, and the structural check admits it.
+///
+/// The legacy arm is entered from the prelude when the algorithm context is NULL, which a context
+/// left armed by a `legacy:` refusal has. That state is reachable and the court drives it.
+///
+/// # Safety
+/// `ctx` NULL or live; `sig` NULL or `*siglen` writable bytes; `tbs` NULL or `tbslen` readable
+/// bytes.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_sign(
+    ctx: *mut EvpPkeyCtx,
+    sig: *mut u8,
+    siglen: *mut usize,
+    tbs: *const u8,
+    tbslen: usize,
+) -> c_int {
+    // SAFETY: `ctx` NULL or live per the contract; the sites are compile-time constants.
+    let signature = match unsafe {
+        signature_op_prelude(
+            ctx,
+            EVP_PKEY_OP_SIGN | EVP_PKEY_OP_SIGNMSG,
+            &err_sites::SIGNATURE_999,
+            &err_sites::SIGNATURE_1005,
+            Some(&err_sites::SIGNATURE_1029),
+        )
+    } {
+        Ok(signature) => signature,
+        Err(ret) => return ret,
+    };
+
+    // SAFETY: `signature` is live.
+    let Some(sign) = (unsafe { (*signature).sign }) else {
+        // SAFETY: `signature` is live.
+        unsafe { raise_clause(signature, &err_sites::SIGNATURE_1015, c"sign") };
+        return -2;
+    };
+    let mut siglen_in: usize = 0;
+    if !sig.is_null() {
+        // SAFETY: `sig` is non-NULL, so `siglen` is the caller's valid buffer length.
+        siglen_in = unsafe { *siglen };
+    }
+    // SAFETY: `ctx` is live and the operation is armed, so `algctx` belongs to `signature`.
+    let ret = unsafe { sign((*ctx).op_sig_algctx, sig, siglen, siglen_in, tbs, tbslen) };
+    if ret <= 0 {
+        // SAFETY: `signature` is live.
+        unsafe { raise_clause(signature, &err_sites::SIGNATURE_1023, c"sign") };
+    }
+    ret
+}
+
+/// `int EVP_PKEY_verify_message_update(EVP_PKEY_CTX *ctx, const unsigned char *in, size_t inlen)`.
+///
+/// # Safety
+/// `ctx` NULL or live; `in` NULL or `inlen` readable bytes.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_verify_message_update(
+    ctx: *mut EvpPkeyCtx,
+    input: *const u8,
+    inlen: usize,
+) -> c_int {
+    // SAFETY: `ctx` NULL or live per the contract; the sites are compile-time constants.
+    let signature = match unsafe {
+        signature_op_prelude(
+            ctx,
+            EVP_PKEY_OP_VERIFYMSG,
+            &err_sites::SIGNATURE_1087,
+            &err_sites::SIGNATURE_1092,
+            None,
+        )
+    } {
+        Ok(signature) => signature,
+        Err(ret) => return ret,
+    };
+
+    // SAFETY: `signature` is live.
+    let Some(update) = (unsafe { (*signature).verify_message_update }) else {
+        // SAFETY: `signature` is live.
+        unsafe {
+            raise_clause(
+                signature,
+                &err_sites::SIGNATURE_1099,
+                c"verify_message_update",
+            )
+        };
+        return -2;
+    };
+    // SAFETY: `ctx` is live and the operation is armed, so `algctx` belongs to `signature`; `input`
+    // is NULL or `inlen` readable bytes.
+    let ret = unsafe { update((*ctx).op_sig_algctx, input, inlen) };
+    if ret <= 0 {
+        // SAFETY: `signature` is live.
+        unsafe {
+            raise_clause(
+                signature,
+                &err_sites::SIGNATURE_1106,
+                c"verify_message_update",
+            )
+        };
+    }
+    ret
+}
+
+/// `int EVP_PKEY_verify_message_final(EVP_PKEY_CTX *ctx)`.
+///
+/// The signature was set with `EVP_PKEY_CTX_set_signature`, which is `pmeth_lib.c`'s and not this
+/// unit's; nothing on this path reads it back.
+///
+/// # Safety
+/// `ctx` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_verify_message_final(ctx: *mut EvpPkeyCtx) -> c_int {
+    // SAFETY: `ctx` NULL or live per the contract; the sites are compile-time constants.
+    let signature = match unsafe {
+        signature_op_prelude(
+            ctx,
+            EVP_PKEY_OP_VERIFYMSG,
+            &err_sites::SIGNATURE_1118,
+            &err_sites::SIGNATURE_1123,
+            None,
+        )
+    } {
+        Ok(signature) => signature,
+        Err(ret) => return ret,
+    };
+
+    // SAFETY: `signature` is live.
+    let Some(finalise) = (unsafe { (*signature).verify_message_final }) else {
+        // SAFETY: `signature` is live.
+        unsafe {
+            raise_clause(
+                signature,
+                &err_sites::SIGNATURE_1130,
+                c"verify_message_final",
+            )
+        };
+        return -2;
+    };
+    // SAFETY: `ctx` is live and the operation is armed, so `algctx` belongs to `signature`.
+    let ret = unsafe { finalise((*ctx).op_sig_algctx) };
+    if ret <= 0 {
+        // SAFETY: `signature` is live.
+        unsafe {
+            raise_clause(
+                signature,
+                &err_sites::SIGNATURE_1138,
+                c"verify_message_final",
+            )
+        };
+    }
+    ret
+}
+
+/// `int EVP_PKEY_verify(EVP_PKEY_CTX *ctx, const unsigned char *sig, size_t siglen,
+/// const unsigned char *tbs, size_t tbslen)`.
+///
+/// Note the authority's own inconsistency, and it is transcribed rather than tidied: this body
+/// calls `ctx->op.sig.signature->verify(...)` where its sibling `EVP_PKEY_sign` reads the local it
+/// had already stored. The two are the same pointer, so nothing is observable; the line is the
+/// authority's.
+///
+/// # Safety
+/// `ctx` NULL or live; `sig` NULL or `siglen` readable bytes; `tbs` NULL or `tbslen` readable
+/// bytes.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_verify(
+    ctx: *mut EvpPkeyCtx,
+    sig: *const u8,
+    siglen: usize,
+    tbs: *const u8,
+    tbslen: usize,
+) -> c_int {
+    // SAFETY: `ctx` NULL or live per the contract; the sites are compile-time constants.
+    let signature = match unsafe {
+        signature_op_prelude(
+            ctx,
+            EVP_PKEY_OP_VERIFY | EVP_PKEY_OP_VERIFYMSG,
+            &err_sites::SIGNATURE_1152,
+            &err_sites::SIGNATURE_1158,
+            Some(&err_sites::SIGNATURE_1182),
+        )
+    } {
+        Ok(signature) => signature,
+        Err(ret) => return ret,
+    };
+
+    // SAFETY: `signature` is live.
+    let Some(verify) = (unsafe { (*signature).verify }) else {
+        // SAFETY: `signature` is live.
+        unsafe { raise_clause(signature, &err_sites::SIGNATURE_1168, c"verify") };
+        return -2;
+    };
+    // SAFETY: `ctx` is live and the operation is armed, so `algctx` belongs to `signature`; `sig`
+    // is NULL or `siglen` readable bytes and `tbs` is NULL or `tbslen` readable bytes.
+    let ret = unsafe { verify((*ctx).op_sig_algctx, sig, siglen, tbs, tbslen) };
+    if ret <= 0 {
+        // SAFETY: `signature` is live.
+        unsafe { raise_clause(signature, &err_sites::SIGNATURE_1176, c"verify") };
+    }
+    ret
+}
+
+/// `int EVP_PKEY_verify_recover(EVP_PKEY_CTX *ctx, unsigned char *rout, size_t *routlen,
+/// const unsigned char *sig, size_t siglen)`.
+///
+/// The fourth argument is `(rout == NULL ? 0 : *routlen)` — the same "or zero" convention, and its
+/// comparison is written the other way round from every sibling's for no reason the authority
+/// gives. It is transcribed as written.
+///
+/// The `verify_recover == NULL` arm is **unreachable through this unit's exports** and that is a
+/// fact about the structural check rather than about the call: an armed `EVP_PKEY_OP_VERIFYRECOVER`
+/// operation requires `verify_recover_init` to be present, and `evp_signature_from_algorithm`
+/// refuses a method that publishes an init without its operation callback. So the arm exists in the
+/// authority and cannot be driven; the crate answers the same `-2` for it, because the code path is
+/// written identically.
+///
+/// # Safety
+/// `ctx` NULL or live; `rout` NULL or `*routlen` writable bytes; `sig` NULL or `siglen` readable
+/// bytes.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_verify_recover(
+    ctx: *mut EvpPkeyCtx,
+    rout: *mut u8,
+    routlen: *mut usize,
+    sig: *const u8,
+    siglen: usize,
+) -> c_int {
+    // SAFETY: `ctx` NULL or live per the contract; the sites are compile-time constants.
+    let signature = match unsafe {
+        signature_op_prelude(
+            ctx,
+            EVP_PKEY_OP_VERIFYRECOVER,
+            &err_sites::SIGNATURE_1215,
+            &err_sites::SIGNATURE_1220,
+            Some(&err_sites::SIGNATURE_1243),
+        )
+    } {
+        Ok(signature) => signature,
+        Err(ret) => return ret,
+    };
+
+    // SAFETY: `signature` is live.
+    let Some(recover) = (unsafe { (*signature).verify_recover }) else {
+        // SAFETY: `signature` is live.
+        unsafe { raise_clause(signature, &err_sites::SIGNATURE_1230, c"verify_recover") };
+        return -2;
+    };
+    let mut routlen_in: usize = 0;
+    if !rout.is_null() {
+        // SAFETY: `rout` is non-NULL, so `routlen` is the caller's valid buffer length.
+        routlen_in = unsafe { *routlen };
+    }
+    // SAFETY: `ctx` is live and the operation is armed, so `algctx` belongs to `signature`.
+    let ret = unsafe { recover((*ctx).op_sig_algctx, rout, routlen, routlen_in, sig, siglen) };
+    if ret <= 0 {
+        // SAFETY: `signature` is live.
+        unsafe { raise_clause(signature, &err_sites::SIGNATURE_1238, c"verify_recover") };
+    }
+    ret
 }
 
 // SPDX-License-Identifier: Apache-2.0

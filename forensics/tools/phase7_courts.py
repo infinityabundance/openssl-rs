@@ -89,6 +89,7 @@ COURTS = [
     ("RT-EVP-SKEY", "rt_evp_skey_probe.c"),
     ("RT-EVP-KEYMGMT", "rt_evp_keymgmt_probe.c"),
     ("RT-EVP-NAMES", "rt_evp_names_probe.c"),
+    ("RT-EVP-PKEY", "rt_evp_pkey_probe.c"),
 ]
 
 

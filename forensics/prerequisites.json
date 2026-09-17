@@ -94,12 +94,6 @@
         "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4b (the operation half of the five classes); src/evp/asymcipher.rs module doc, section on what the file's two halves are"
       },
       {
-        "symbol": "evp_pkey_ctx_use_cached_data",
-        "owner_phase": 7,
-        "reason": "Internal to `crypto/evp/pmeth_lib.c`, and the *replay* half of the cached-data trio whose store and free halves 7.4c-i landed. Its body tests `dist_id_set` and then hands the distinguishing identifier to `evp_pkey_ctx_ctrl_str_int` or `evp_pkey_ctx_ctrl_int` -- the ctrl machinery, which is 7.4c-ii's. So it is owed to the second half of this same subphase, and its three callers (`signature.c`, `exchange.c`, `pmeth_gn.c`) are the operation inits that land with the ctrl path beside it.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4c; src/evp/pkey_ctx.rs, the cached-data section of the module doc"
-      },
-      {
         "symbol": "evp_app_cleanup_int",
         "owner_phase": 8,
         "reason": "Defined in `crypto/evp/pmeth_lib.c` and called from `crypto/evp/names.c`'s `EVP_cleanup_int`, so two transcribed units now owe it. Its whole body is `sk_EVP_PKEY_METHOD_pop_free(app_pkey_methods, EVP_PKEY_meth_free)`: both the stack and the destructor belong to the **application-supplied `EVP_PKEY_METHOD` registry**, which is 7.4l's because `EVP_PKEY_meth_find`'s lookup searches `standard_methods[]` -- the table whose contents are Phase 8's objects under D163 and D165. So this is Phase 8's with its sibling rows rather than a same-subphase deferral: there is no 7.4c-ii or 7.4d that could land it, because the two symbols it needs do not exist until Phase 8 does.",
