@@ -76,7 +76,9 @@ use core::sync::atomic::{AtomicI32, Ordering};
 use crate::bn::bignum::BigNum;
 use crate::evp::cipher::EVP_CIPHER_get0_name;
 use crate::evp::cipher::EvpCipher;
-use crate::evp::digest::{EVP_MD_fetch, EVP_MD_free};
+use crate::evp::digest::{
+    EVP_DigestSignInit_ex, EVP_MD_CTX_free, EVP_MD_CTX_new, EVP_MD_fetch, EVP_MD_free,
+};
 use crate::evp::keymgmt::{
     EVP_KEYMGMT_free, EVP_KEYMGMT_get0_name, EVP_KEYMGMT_get0_provider, EVP_KEYMGMT_is_a,
     EVP_KEYMGMT_names_do_all, EVP_KEYMGMT_up_ref, EvpKeyMgmt,
@@ -2918,6 +2920,52 @@ pub unsafe extern "C" fn EVP_PKEY_get_group_name(
             gname_len,
         )
     }
+}
+
+/// `int EVP_PKEY_digestsign_supports_digest(EVP_PKEY *pkey, OSSL_LIB_CTX *libctx, const char *name,
+/// const char *propq)` — `crypto/evp/p_lib.c:1398`.
+///
+/// Three statements around one question: can this key digest-sign with `name`? The answer is a
+/// fresh `EVP_MD_CTX` put through `EVP_DigestSignInit_ex` — which is `m_sigver.c`'s provider half —
+/// with the context freed immediately afterwards, so nothing but the return code survives.
+///
+/// **The `ERR_set_mark`/`ERR_pop_to_mark` pair is why a bad digest name is observable as an
+/// *empty* error queue.** `do_sigver_init` raises for a name that cannot be fetched, and the pop
+/// removes every one of those errors before the caller can see them, so a caller that looks at the
+/// queue rather than the return code reads `0` and nothing else. That is the authority's shape and
+/// the court observes it rather than the raise.
+///
+/// `-1` is the `EVP_MD_CTX_new` failure, and it is **unreachable in the court**: the allocation
+/// has no injectable failure point, and a probe that faked one would be measuring its own seam
+/// rather than this function. It is named rather than driven.
+///
+/// # Safety
+/// `pkey` must be NULL or live; `libctx` NULL or live; `name` and `propq` NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_digestsign_supports_digest(
+    pkey: *mut EvpPkey,
+    libctx: *mut c_void,
+    name: *const c_char,
+    propq: *const c_char,
+) -> c_int {
+    // SAFETY: `EVP_MD_CTX_new` allocates a zeroed context and cannot fail for a live allocator;
+    // the NULL arm below is written anyway because it is the authority's.
+    let ctx = EVP_MD_CTX_new();
+    if ctx.is_null() {
+        return -1;
+    }
+
+    ERR_set_mark();
+    // SAFETY: `ctx` is live, `name`/`propq` are NULL or NUL-terminated, and `pkey` is NULL or
+    // live per the contract.
+    let rv = unsafe {
+        EVP_DigestSignInit_ex(ctx, ptr::null_mut(), name, libctx, propq, pkey, ptr::null())
+    };
+    ERR_pop_to_mark();
+
+    // SAFETY: `ctx` is this call's own context and nothing else holds it.
+    unsafe { EVP_MD_CTX_free(ctx) };
+    rv
 }
 
 /// `int EVP_PKEY_set1_encoded_public_key(EVP_PKEY *pkey, const unsigned char *pub,
