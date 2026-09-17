@@ -74,6 +74,7 @@ use crate::runtime::stack::{
     OPENSSL_sk_delete_ptr, OPENSSL_sk_find, OPENSSL_sk_new, OPENSSL_sk_push, OPENSSL_sk_sort,
     OPENSSL_sk_value, OpenSslStack,
 };
+use core::ffi::c_uint;
 
 // ---------------------------------------------------------------------------------------------
 // The operation bits and the state values.
@@ -1592,6 +1593,8 @@ static mut APP_PKEY_METHODS: *mut OpenSslStack = ptr::null_mut();
 const LINE_ZALLOC_PMETH: c_int = 128;
 /// `EVP_PKEY_meth_free`'s `OPENSSL_free(pmeth)` (line 439).
 const LINE_FREE_PMETH: c_int = 439;
+/// `cleanup_translation_ctx`'s `OPENSSL_free(ctx->allocated_buf)` — the authority's line 718.
+const LINE_FREE_XLAT_CTX: c_int = 718;
 
 /// `static int pmeth_cmp(const EVP_PKEY_METHOD *const *a, const EVP_PKEY_METHOD *const *b)` —
 /// `crypto/asn1/ameth_lib.c:31`'s counterpart in `crypto/evp/pmeth_lib.c:86`.
@@ -2515,6 +2518,295 @@ pub unsafe extern "C" fn EVP_PKEY_meth_get_digest_custom(
         // SAFETY: `pdigest_custom` is writable per the contract and `pmeth` is live.
         unsafe { *pdigest_custom = (*pmeth).digest_custom };
     }
+}
+
+// ---------------------------------------------------------------------------------------------
+// `crypto/evp/ctrl_params_translate.c` — the ctrl/params translation layer (7.4c-v, in progress)
+//
+// This is the file that makes the *legacy* control interface and the *provider* parameter interface
+// the same interface. An `EVP_PKEY_CTX_ctrl` call carries a command number and two arguments of no
+// declared type; a provider carries an `OSSL_PARAM` array with a declared data type and a key string.
+// The translation is a table of entries, each of which may name a `fixup_args` function that runs
+// before and after the actual call, and the states those functions are called in are the whole of
+// the contract — which is why the enum's values are pinned here rather than left to declaration
+// order: they are printed into `ERR_raise_data`'s `"[action:%d, state:%d]"` text, so the *number* is
+// observable.
+//
+// **Slices (1) and (2) are landed; (3), (4) and (5) are next.** The type layer, `default_check` and
+// `cleanup_translation_ctx` are here; the ~40 `fix_*`/`get_payload_*` functions, the two tables and
+// the seven entry points follow. Nothing in the file is observable until the last slice, because the
+// entry points read the tables and the tables name the fix functions — `docs/DECISIONS.md` D187
+// records the measurement that says so, and why the slices are not a size boundary.
+// ---------------------------------------------------------------------------------------------
+
+/// `OSSL_MAX_NAME_SIZE` — `include/internal/sizes.h:18`.
+///
+/// The authority's `ctx->name_buf[OSSL_MAX_NAME_SIZE]`, and the bound `OPENSSL_strlcat` is given when
+/// the `hex` prefix is prepended to a parameter key.
+const OSSL_MAX_NAME_SIZE: usize = 50;
+
+/// `enum state` — `crypto/evp/ctrl_params_translate.c:144-154`, ten values.
+///
+/// **The discriminants are pinned and are not decoration.** `default_fixup_args`'s default arm raises
+/// `ERR_raise_data(..., "[action:%d, state:%d]", ctx->action_type, state)`, so the *number* a state
+/// carries is part of an observable error's data text. C numbers an enum from zero in declaration
+/// order, which is what these are, and writing them out is what keeps a variant inserted in the
+/// middle from shifting every later one.
+#[repr(C)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[allow(dead_code)] // slices (3)-(5): the fixup functions, the two tables and the seven entry points
+pub(crate) enum XlatState {
+    /// `PKEY` — the caller is an `EVP_PKEY` payload getter/setter and is fully responsible.
+    Pkey = 0,
+    /// `PRE_CTRL_TO_PARAMS` — prepare `*params` from the ctrl arguments.
+    PreCtrlToParams = 1,
+    /// `POST_CTRL_TO_PARAMS` — bring the result back to `*p2` and the return value.
+    PostCtrlToParams = 2,
+    /// `CLEANUP_CTRL_TO_PARAMS`.
+    CleanupCtrlToParams = 3,
+    /// `PRE_CTRL_STR_TO_PARAMS`.
+    PreCtrlStrToParams = 4,
+    /// `POST_CTRL_STR_TO_PARAMS`.
+    PostCtrlStrToParams = 5,
+    /// `CLEANUP_CTRL_STR_TO_PARAMS`.
+    CleanupCtrlStrToParams = 6,
+    /// `PRE_PARAMS_TO_CTRL` — prepare `p1` and `p2` from `*params`.
+    PreParamsToCtrl = 7,
+    /// `POST_PARAMS_TO_CTRL` — bring the return value and `p2` back to `*params`.
+    PostParamsToCtrl = 8,
+    /// `CLEANUP_PARAMS_TO_CTRL`.
+    CleanupParamsToCtrl = 9,
+}
+
+/// `enum action` — `crypto/evp/ctrl_params_translate.c:155-159`. The values are the authority's own
+/// explicit ones, and `NONE` is 0 rather than absent: an item may leave the action undetermined and
+/// let its `fixup_args` function decide, which is what makes the ctrls whose direction depends on
+/// `p1` or `p2` expressible.
+///
+/// `None` is a Rust keyword, so the variant takes the project's trailing-underscore spelling.
+#[repr(C)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[allow(dead_code)] // slices (3)-(5), as above; `None_` is additionally the unset action type
+pub(crate) enum XlatAction {
+    /// `OSSL_ACTION_NONE`.
+    None_ = 0,
+    /// `OSSL_ACTION_GET`.
+    Get = 1,
+    /// `OSSL_ACTION_SET`.
+    Set = 2,
+}
+
+/// `struct translation_ctx_st` — `crypto/evp/ctrl_params_translate.c:160-215`.
+///
+/// The eleven fields the caller fills in, then the four the `fixup_args` functions own. The split is
+/// the contract: "The following are used entirely internally by the fixup_args functions and should
+/// not be touched by the callers, at all."
+///
+/// `#[repr(C)]` rather than the default layout, for one reason that is about the reader rather than
+/// the ABI: the field order is the header's, so a comparison against the authority is line by line.
+/// Nothing outside this crate ever sees the layout — the struct is internal and no table is exported.
+#[repr(C)]
+#[allow(dead_code)] // slices (3)-(5): every field is read or written by a fixup function
+pub(crate) struct XlatCtx {
+    /// `EVP_PKEY_CTX *pctx` — to be pilfered for data as necessary.
+    pub(crate) pctx: *mut EvpPkeyCtx,
+    /// `enum action action_type` — may be 0 on entry, and the `PRE` states set it.
+    pub(crate) action_type: XlatAction,
+    /// `int ctrl_cmd` — the ctrl number for ctrl-to-params, and 0 for params-to-ctrl.
+    pub(crate) ctrl_cmd: c_int,
+    /// `const char *ctrl_str` — the ctrl string for ctrl_str-to-params, and NULL otherwise. The
+    /// *value* is always passed as `p2`.
+    pub(crate) ctrl_str: *const c_char,
+    /// `int ishex` — whether the string matched `ctrl_hexstr` rather than `ctrl_str`.
+    pub(crate) ishex: c_int,
+    /// `int p1` — the ctrl-style integer argument.
+    pub(crate) p1: c_int,
+    /// `void *p2` — the ctrl-style pointer argument.
+    pub(crate) p2: *mut c_void,
+    /// `size_t sz` — a size, for passing back the `p2` size where applicable.
+    pub(crate) sz: usize,
+    /// `OSSL_PARAM *params` — the parameter-array side.
+    pub(crate) params: *mut OsslParam,
+    /// `void *orig_p2` — the original `p2`, when a fixup has to move it and remember.
+    pub(crate) orig_p2: *mut c_void,
+    /// `char name_buf[OSSL_MAX_NAME_SIZE]` — where the `hex`-prefixed key is built.
+    pub(crate) name_buf: [c_char; OSSL_MAX_NAME_SIZE],
+    /// `void *allocated_buf` — storage a fixup allocated, which the cleanup frees.
+    pub(crate) allocated_buf: *mut c_void,
+    /// `void *bufp` — the `OSSL_PARAM_OCTET_PTR` get path's indirection slot.
+    pub(crate) bufp: *mut c_void,
+    /// `size_t buflen` — `allocated_buf`'s length.
+    pub(crate) buflen: usize,
+}
+
+/// `typedef int fixup_args_fn(enum state, const struct translation_st *,
+/// struct translation_ctx_st *)` — `crypto/evp/ctrl_params_translate.c:161-163`.
+///
+/// A function *type*, so a table field spelled `fixup_args_fn *` is a bare function pointer.
+#[allow(dead_code)] // slices (4)-(5): the tables' `fixup_args` slots and the entry points
+pub(crate) type FixupArgsFn =
+    unsafe extern "C" fn(XlatState, *const XlatEntry, *mut XlatCtx) -> c_int;
+
+/// `typedef int cleanup_args_fn(enum state, const struct translation_st *,
+/// struct translation_ctx_st *)` — `crypto/evp/ctrl_params_translate.c:164-166`.
+///
+/// The same shape as [`FixupArgsFn`] and a distinct name, because the authority declares it twice:
+/// the two are called at different points and a table that mixed them up would call a cleanup where
+/// it wanted a fixup. Kept separate for the same reason `KeyexchDeriveFn` and `KdfDeriveFn` are.
+#[allow(dead_code)] // slice (4): installed in the three `CLEANUP_*` arms of both tables
+pub(crate) type CleanupArgsFn =
+    unsafe extern "C" fn(XlatState, *const XlatEntry, *mut XlatCtx) -> c_int;
+
+/// `struct translation_st` — `crypto/evp/ctrl_params_translate.c:217-295` — one table entry.
+///
+/// Ten fields in the header's order: the action type, the three conditions, the four lookup
+/// attributes, the parameter data type, and the fixer. `ctrl_num` may be 0 **or** `param_key` may be
+/// NULL but not both, a `ctrl_hexstr` with a NULL `ctrl_str` means "always interpret as hex", and a
+/// `param_data_type` of 0 means the type depends on the input — three rules that are documented in the
+/// authority's comment above the struct and that the fixup functions rely on rather than check.
+#[repr(C)]
+#[allow(dead_code)] // slices (4)-(5): the two tables and the lookups that read them
+pub(crate) struct XlatEntry {
+    /// `enum action action_type` — 0 means both directions are supported and `fixup_args` decides.
+    pub(crate) action_type: XlatAction,
+    /// `int keytype1` — an `EVP_PKEY_XXX` NID, or -1 for all types, or 0 for unset.
+    pub(crate) keytype1: c_int,
+    /// `int keytype2` — another NID, used for aliases.
+    pub(crate) keytype2: c_int,
+    /// `int optype` — the operation type.
+    pub(crate) optype: c_int,
+    /// `int ctrl_num` — the `EVP_PKEY_CTRL_xxx` number. 0 means no ctrl is called.
+    pub(crate) ctrl_num: c_int,
+    /// `const char *ctrl_str` — the corresponding ctrl string.
+    pub(crate) ctrl_str: *const c_char,
+    /// `const char *ctrl_hexstr` — the `hex{str}` alternative.
+    pub(crate) ctrl_hexstr: *const c_char,
+    /// `const char *param_key` — the corresponding `OSSL_PARAM` key. NULL means no setter/getter.
+    pub(crate) param_key: *const c_char,
+    /// `unsigned int param_data_type` — the `OSSL_PARAM_*` data type, or 0 for "depends".
+    pub(crate) param_data_type: c_uint,
+    /// `fixup_args_fn *fixup_args` — always called before a `SET` and after a `GET`.
+    pub(crate) fixup_args: Option<FixupArgsFn>,
+}
+
+/// `static int default_check(enum state state, const struct translation_st *translation,
+/// const struct translation_ctx_st *ctx)` — `crypto/evp/ctrl_params_translate.c:297`.
+///
+/// Not a fixer: the standard preconditions, called by every fixup function through
+/// `default_fixup_args` and directly by the ones that replace it. Four arms and one fall-through, and
+/// the return values are three different things — `-2` for "this command is not supported", `-1` for
+/// "the table entry is malformed" (an internal error), `0` for one specific arm, `1` for pass —
+/// which the callers distinguish because `-2` is handed back to the caller of
+/// `EVP_PKEY_CTX_ctrl` unchanged.
+///
+/// `ctx` is **not read**: the authority passes it and no arm uses it. It is named `_ctx` so the
+/// signature is the authority's without an unused-binding warning, and the omission is one the
+/// authority makes rather than one this transcription makes.
+///
+/// `ossl_assert` is a **live** guard, not a debug one — D167: under `NDEBUG` it is
+/// `ossl_likely((x) != 0)`, the identity on a boolean, so `if (!ossl_assert(C))` is `if (!C)`. Each
+/// of the six sites is therefore a plain negation here, and the two-condition tests are `||` of two
+/// negations rather than a conjunction.
+///
+/// # Safety
+/// `translation` NULL or live; `ctx` NULL or live.
+#[allow(dead_code)] // slices (3)-(5): called by `default_fixup_args` and the seven entry points
+pub(crate) unsafe fn default_check(
+    state: XlatState,
+    translation: *const XlatEntry,
+    _ctx: *const XlatCtx,
+) -> c_int {
+    match state {
+        XlatState::PreCtrlToParams => {
+            if translation.is_null() {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::CTRL_PARAMS_TRANSLATE_306) };
+                return -2;
+            }
+            // SAFETY: `translation` is non-null here.
+            let (param_key, param_data_type) =
+                unsafe { ((*translation).param_key, (*translation).param_data_type) };
+            if param_key.is_null() || param_data_type == 0 {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::CTRL_PARAMS_TRANSLATE_311) };
+                return -1;
+            }
+        }
+        XlatState::PreCtrlStrToParams => {
+            /* For ctrl_str to params translation a direct `OSSL_PARAM` key is allowed as the ctrl_str
+             * key, so a NULL `translation` is legal here and the fixup function deals with it. */
+            if !translation.is_null() {
+                // SAFETY: `translation` is non-null here.
+                let (action_type, param_key, param_data_type) = unsafe {
+                    (
+                        (*translation).action_type,
+                        (*translation).param_key,
+                        (*translation).param_data_type,
+                    )
+                };
+                if action_type == XlatAction::Get {
+                    // SAFETY: a compile-time-constant site.
+                    unsafe { raise_site(&err_sites::CTRL_PARAMS_TRANSLATE_324) };
+                    return -2;
+                }
+                if param_key.is_null() || param_data_type == 0 {
+                    // SAFETY: a compile-time-constant site.
+                    unsafe { raise_site(&err_sites::CTRL_PARAMS_TRANSLATE_329) };
+                    return 0;
+                }
+            }
+        }
+        XlatState::PreParamsToCtrl | XlatState::PostParamsToCtrl => {
+            if translation.is_null() {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::CTRL_PARAMS_TRANSLATE_337) };
+                return -2;
+            }
+            // SAFETY: `translation` is non-null here.
+            let (ctrl_num, param_data_type) =
+                unsafe { ((*translation).ctrl_num, (*translation).param_data_type) };
+            if ctrl_num == 0 || param_data_type == 0 {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::CTRL_PARAMS_TRANSLATE_342) };
+                return -1;
+            }
+        }
+        // The remaining six states have nothing to check.
+        XlatState::Pkey
+        | XlatState::PostCtrlToParams
+        | XlatState::CleanupCtrlToParams
+        | XlatState::PostCtrlStrToParams
+        | XlatState::CleanupCtrlStrToParams
+        | XlatState::CleanupParamsToCtrl => {}
+    }
+    1
+}
+
+/// `static int cleanup_translation_ctx(enum state state, const struct translation_st *translation,
+/// struct translation_ctx_st *ctx)` — `crypto/evp/ctrl_params_translate.c:713`.
+///
+/// Frees `allocated_buf` if a fixup allocated one and always answers 1 — and it is installed in the
+/// tables' `fixup_args` slot for the three `CLEANUP_*` states rather than being called by the
+/// translation loop, which is why its return value is a `c_int` it never varies. The two `state` and
+/// `translation` parameters are unread, as in the authority.
+///
+/// # Safety
+/// `ctx` must be live; `allocated_buf` must be NULL or a block this module allocated.
+#[allow(dead_code)] // installed in the two translation tables, which land with slices (3) and (4)
+pub(crate) unsafe fn cleanup_translation_ctx(
+    _state: XlatState,
+    _translation: *const XlatEntry,
+    ctx: *mut XlatCtx,
+) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    let allocated = unsafe { (*ctx).allocated_buf };
+    if !allocated.is_null() {
+        // SAFETY: `allocated` is this module's own block per the contract.
+        unsafe { CRYPTO_free(allocated, FILE, LINE_FREE_XLAT_CTX) };
+    }
+    // SAFETY: `ctx` is live.
+    unsafe { (*ctx).allocated_buf = ptr::null_mut() };
+    1
 }
 
 #[cfg(test)]

@@ -22,7 +22,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 56,
-      "language_surface_not_modelled_by_name": 2685,
+      "language_surface_not_modelled_by_name": 2684,
       "planned_prerequisites": 19
     },
     "census_by_unit": {
@@ -134,7 +134,7 @@
         "crypto/context.c": 24,
         "crypto/core_algorithm.c": 7,
         "crypto/core_fetch.c": 8,
-        "crypto/core_namemap.c": 44,
+        "crypto/core_namemap.c": 43,
         "crypto/cryptlib.c": 5,
         "crypto/cversion.c": 13,
         "crypto/defaults.c": 9,
@@ -448,7 +448,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "74b229bf0faa291cddff0537f7770efb916724fd503b51811b4e9a0754afa113",
+  "body_hash": "1cdbcbe867425a7c9b1571811345dec0d1494ba36f1cbf7e78066851085ad414",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -479,7 +479,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "70d195262034b76fdd324d7ead6f661cc8374f8a6046a0e88646be732d5e55f1"
+      "sha256": "acdcf7248d840a5e74b03536e6cb5cabafc3ba1c7d3737aac72788d7b082bfcf"
     },
     {
       "name": "phase-state",

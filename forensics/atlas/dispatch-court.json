@@ -19,7 +19,7 @@
       "signatures_authority_only": 414,
       "signatures_checked": 219,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 100,
+      "signatures_not_a_dispatch": 102,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -3750,6 +3750,16 @@
           "alias": "PkeyMethDigestCustomFn",
           "at": "src/evp/pkey_ctx.rs",
           "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`. The atlas records no typedef for them because its universe is the installed public surface and that header is internal: 307 of the 465 struct records have no body at all and only 8 of the 158 complete ones have a function-pointer field, none of them this one. So the check these need is a second Clang pass over the internal headers or a generated C assertion, not a consumer of `structs.json` -- see docs/DECISIONS.md D185"
+        },
+        {
+          "alias": "FixupArgsFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: one of `ctrl_params_translate.c`'s two function *types*, `fixup_args_fn` and `cleanup_args_fn`, which the translation tables store as function pointers and which the authority declares as bare typedefs rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
+          "alias": "CleanupArgsFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: one of `ctrl_params_translate.c`'s two function *types*, `fixup_args_fn` and `cleanup_args_fn`, which the translation tables store as function pointers and which the authority declares as bare typedefs rather than through `OSSL_CORE_MAKE_FUNC`"
         },
         {
           "alias": "MethodUpRefFn",
