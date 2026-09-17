@@ -1,0 +1,5230 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "complete": false,
+    "counts": {
+      "atlas_owned": 759,
+      "deferred_to_later_phase": 16,
+      "implemented": 0,
+      "open_in_this_stratum": 770,
+      "owned": 786,
+      "received_by_handoff": 27
+    },
+    "deferred": [
+      {
+        "declaring_header": "des.h",
+        "owning_phase": 9,
+        "reason": "`crypto/des/rand_key.c:22` is `RAND_priv_bytes((unsigned char *)ret, sizeof(DES_cblock))` and its failure arm answers 0. `rand.h` is Phase 9's, and this is the one `des.h` export whose body is the random layer rather than the cipher. `DES_string_to_key` and `DES_string_to_2keys` are *not* in this row: they build a key from a string with `DES_cbc_cksum`, which is this stratum's own.",
+        "symbol": "DES_random_key"
+      },
+      {
+        "declaring_header": "dh.h",
+        "owning_phase": 9,
+        "reason": "each is an `EVP_KDF` fetch of a *provider* KDF: `crypto/dh/dh_kdf.c:40` asks for `OSSL_KDF_NAME_X942KDF_ASN1` and `crypto/ec/ecdh_kdf.c:34` for `OSSL_KDF_NAME_X963KDF`, then derives through `EVP_KDF_derive`. The `EVP_KDF` object is Phase 7's and every KDF the fetch can find is a provider implementation, so the answer is a later stratum's. Phase 9 is named because it is the stratum the plan puts the provider KDF family in; if that plan names a different stratum, this row is the one to correct, and `docs/DECISIONS.md` D197 says so.",
+        "symbol": "DH_KDF_X9_42"
+      },
+      {
+        "declaring_header": "dh.h",
+        "owning_phase": 9,
+        "reason": "every one of these reaches a BN random primitive: `ossl_rsa_keygen`'s primes come from `BN_generate_prime_ex2` (`crypto/rsa/rsa_gen.c:388`), `DH_generate_parameters_ex` from the same call at `crypto/dh/dh_gen.c:217`, `DH_generate_key`'s private value from `BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and `EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so Phase 9 is the phase that retires the eleven. `DH_generate_parameters` is the deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same reason.",
+        "symbol": "DH_generate_key"
+      },
+      {
+        "declaring_header": "dh.h",
+        "owning_phase": 9,
+        "reason": "every one of these reaches a BN random primitive: `ossl_rsa_keygen`'s primes come from `BN_generate_prime_ex2` (`crypto/rsa/rsa_gen.c:388`), `DH_generate_parameters_ex` from the same call at `crypto/dh/dh_gen.c:217`, `DH_generate_key`'s private value from `BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and `EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so Phase 9 is the phase that retires the eleven. `DH_generate_parameters` is the deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same reason.",
+        "symbol": "DH_generate_parameters"
+      },
+      {
+        "declaring_header": "dh.h",
+        "owning_phase": 9,
+        "reason": "every one of these reaches a BN random primitive: `ossl_rsa_keygen`'s primes come from `BN_generate_prime_ex2` (`crypto/rsa/rsa_gen.c:388`), `DH_generate_parameters_ex` from the same call at `crypto/dh/dh_gen.c:217`, `DH_generate_key`'s private value from `BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and `EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so Phase 9 is the phase that retires the eleven. `DH_generate_parameters` is the deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same reason.",
+        "symbol": "DH_generate_parameters_ex"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "owning_phase": 9,
+        "reason": "every one of these reaches a BN random primitive: `ossl_rsa_keygen`'s primes come from `BN_generate_prime_ex2` (`crypto/rsa/rsa_gen.c:388`), `DH_generate_parameters_ex` from the same call at `crypto/dh/dh_gen.c:217`, `DH_generate_key`'s private value from `BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and `EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so Phase 9 is the phase that retires the eleven. `DH_generate_parameters` is the deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same reason.",
+        "symbol": "DSA_generate_key"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "owning_phase": 9,
+        "reason": "every one of these reaches a BN random primitive: `ossl_rsa_keygen`'s primes come from `BN_generate_prime_ex2` (`crypto/rsa/rsa_gen.c:388`), `DH_generate_parameters_ex` from the same call at `crypto/dh/dh_gen.c:217`, `DH_generate_key`'s private value from `BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and `EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so Phase 9 is the phase that retires the eleven. `DH_generate_parameters` is the deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same reason.",
+        "symbol": "DSA_generate_parameters_ex"
+      },
+      {
+        "declaring_header": "ec.h",
+        "owning_phase": 9,
+        "reason": "each is an `EVP_KDF` fetch of a *provider* KDF: `crypto/dh/dh_kdf.c:40` asks for `OSSL_KDF_NAME_X942KDF_ASN1` and `crypto/ec/ecdh_kdf.c:34` for `OSSL_KDF_NAME_X963KDF`, then derives through `EVP_KDF_derive`. The `EVP_KDF` object is Phase 7's and every KDF the fetch can find is a provider implementation, so the answer is a later stratum's. Phase 9 is named because it is the stratum the plan puts the provider KDF family in; if that plan names a different stratum, this row is the one to correct, and `docs/DECISIONS.md` D197 says so.",
+        "symbol": "ECDH_KDF_X9_62"
+      },
+      {
+        "declaring_header": "ec.h",
+        "owning_phase": 9,
+        "reason": "every one of these reaches a BN random primitive: `ossl_rsa_keygen`'s primes come from `BN_generate_prime_ex2` (`crypto/rsa/rsa_gen.c:388`), `DH_generate_parameters_ex` from the same call at `crypto/dh/dh_gen.c:217`, `DH_generate_key`'s private value from `BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and `EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so Phase 9 is the phase that retires the eleven. `DH_generate_parameters` is the deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same reason.",
+        "symbol": "EC_KEY_generate_key"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "owning_phase": 9,
+        "reason": "every one of these reaches a BN random primitive: `ossl_rsa_keygen`'s primes come from `BN_generate_prime_ex2` (`crypto/rsa/rsa_gen.c:388`), `DH_generate_parameters_ex` from the same call at `crypto/dh/dh_gen.c:217`, `DH_generate_key`'s private value from `BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and `EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so Phase 9 is the phase that retires the eleven. `DH_generate_parameters` is the deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same reason.",
+        "symbol": "RSA_X931_derive_ex"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "owning_phase": 9,
+        "reason": "every one of these reaches a BN random primitive: `ossl_rsa_keygen`'s primes come from `BN_generate_prime_ex2` (`crypto/rsa/rsa_gen.c:388`), `DH_generate_parameters_ex` from the same call at `crypto/dh/dh_gen.c:217`, `DH_generate_key`'s private value from `BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and `EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so Phase 9 is the phase that retires the eleven. `DH_generate_parameters` is the deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same reason.",
+        "symbol": "RSA_X931_generate_key_ex"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "owning_phase": 9,
+        "reason": "`RSA_blinding_on` (`crypto/rsa/rsa_crpt.c:68`) is a lock plus `RSA_setup_blinding`, and `RSA_setup_blinding` (`:104`) ends in `BN_BLINDING_create_param` (`crypto/bn/bn_blind.c`), whose `ai`/`e` values come from `BN_rand_range_ex` -> `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`). So both are blocked on Phase 9 through BN's own random path, and `RSA_blinding_off` is *not* in this row: it frees the object and needs nothing random.",
+        "symbol": "RSA_blinding_on"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "owning_phase": 9,
+        "reason": "every one of these reaches a BN random primitive: `ossl_rsa_keygen`'s primes come from `BN_generate_prime_ex2` (`crypto/rsa/rsa_gen.c:388`), `DH_generate_parameters_ex` from the same call at `crypto/dh/dh_gen.c:217`, `DH_generate_key`'s private value from `BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and `EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so Phase 9 is the phase that retires the eleven. `DH_generate_parameters` is the deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same reason.",
+        "symbol": "RSA_generate_key"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "owning_phase": 9,
+        "reason": "every one of these reaches a BN random primitive: `ossl_rsa_keygen`'s primes come from `BN_generate_prime_ex2` (`crypto/rsa/rsa_gen.c:388`), `DH_generate_parameters_ex` from the same call at `crypto/dh/dh_gen.c:217`, `DH_generate_key`'s private value from `BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and `EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so Phase 9 is the phase that retires the eleven. `DH_generate_parameters` is the deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same reason.",
+        "symbol": "RSA_generate_key_ex"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "owning_phase": 9,
+        "reason": "every one of these reaches a BN random primitive: `ossl_rsa_keygen`'s primes come from `BN_generate_prime_ex2` (`crypto/rsa/rsa_gen.c:388`), `DH_generate_parameters_ex` from the same call at `crypto/dh/dh_gen.c:217`, `DH_generate_key`'s private value from `BN_priv_rand_ex` (`crypto/dh/dh_key.c:336`), `DSA_generate_key`/`_parameters_ex` from `crypto/dsa/dsa_key.c` and `crypto/dsa/dsa_gen.c`'s equivalents, and `EC_KEY_generate_key`'s scalar from `BN_rand_range` on the group order. All of them land on `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`), which is Phase 9's, so Phase 9 is the phase that retires the eleven. `DH_generate_parameters` is the deprecated wrapper over `DH_generate_parameters_ex` and is in the row for the same reason.",
+        "symbol": "RSA_generate_multi_prime_key"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "owning_phase": 9,
+        "reason": "`RSA_blinding_on` (`crypto/rsa/rsa_crpt.c:68`) is a lock plus `RSA_setup_blinding`, and `RSA_setup_blinding` (`:104`) ends in `BN_BLINDING_create_param` (`crypto/bn/bn_blind.c`), whose `ai`/`e` values come from `BN_rand_range_ex` -> `bnrand` -> `RAND_bytes_ex` (`crypto/bn/bn_rand.c:50`). So both are blocked on Phase 9 through BN's own random path, and `RSA_blinding_off` is *not* in this row: it frees the object and needs nothing random.",
+        "symbol": "RSA_setup_blinding"
+      }
+    ],
+    "deferred_by_phase": {
+      "9": 16
+    },
+    "handoffs_discharged": {
+      "7": [
+        "EVP_PKEY_assign",
+        "EVP_PKEY_decrypt_old",
+        "EVP_PKEY_encrypt_old",
+        "EVP_PKEY_get0_DH",
+        "EVP_PKEY_get0_DSA",
+        "EVP_PKEY_get0_EC_KEY",
+        "EVP_PKEY_get0_RSA",
+        "EVP_PKEY_get0_hmac",
+        "EVP_PKEY_get0_poly1305",
+        "EVP_PKEY_get0_siphash",
+        "EVP_PKEY_get1_DH",
+        "EVP_PKEY_get1_DSA",
+        "EVP_PKEY_get1_EC_KEY",
+        "EVP_PKEY_get1_RSA",
+        "EVP_PKEY_get_ec_point_conv_form",
+        "EVP_PKEY_get_field_type",
+        "EVP_PKEY_meth_find",
+        "EVP_PKEY_meth_get0",
+        "EVP_PKEY_meth_get_count",
+        "EVP_PKEY_set1_DH",
+        "EVP_PKEY_set1_DSA",
+        "EVP_PKEY_set1_EC_KEY",
+        "EVP_PKEY_set1_RSA",
+        "EVP_PKEY_type",
+        "d2i_KeyParams",
+        "d2i_KeyParams_bio",
+        "d2i_PublicKey"
+      ]
+    },
+    "handoffs_discharged_with_reasons": {
+      "7": [
+        {
+          "declaring_header": "evp.h",
+          "owning_phase": 8,
+          "reason": "`crypto/evp/p_lib.c:791` calls `EVP_PKEY_type` (`:797`, the `standard_methods[]` walk `crypto/evp/evp_pkey_type.c:63` is the export for), `EC_KEY_get0_group` and `EC_GROUP_get_curve_name` (`:801`, `:803`) on the incoming key, and then `detect_foreign_key` -> `ossl_dh_is_foreign` (`:819`, `:782`). Every one is Phase 8's; the `EVP_PKEY_set_type` call between them is landed. `EVP_PKEY_assign_RSA`/`_DSA`/`_DH`/`_EC_KEY` are `#define`s over this function (`include/openssl/evp.h`), so the four `set1_*` names in the first row wait on it too.",
+          "symbol": "EVP_PKEY_assign"
+        },
+        {
+          "declaring_header": "evp.h",
+          "owning_phase": 8,
+          "reason": "`crypto/evp/p_enc.c:32` and `crypto/evp/p_dec.c:32` both take the low-level key with `evp_pkey_get0_RSA_int` (`crypto/evp/p_legacy.c:40`, which is `evp_pkey_get_legacy` behind a type test) and then call the primitive -- `RSA_public_encrypt` (`p_enc.c:36`) and `RSA_private_decrypt` (`p_dec.c:36`). Both the accessor and the two primitives are Phase 8's.",
+          "symbol": "EVP_PKEY_decrypt_old"
+        },
+        {
+          "declaring_header": "evp.h",
+          "owning_phase": 8,
+          "reason": "`crypto/evp/p_enc.c:32` and `crypto/evp/p_dec.c:32` both take the low-level key with `evp_pkey_get0_RSA_int` (`crypto/evp/p_legacy.c:40`, which is `evp_pkey_get_legacy` behind a type test) and then call the primitive -- `RSA_public_encrypt` (`p_enc.c:36`) and `RSA_private_decrypt` (`p_dec.c:36`). Both the accessor and the two primitives are Phase 8's.",
+          "symbol": "EVP_PKEY_encrypt_old"
+        },
+        {
+          "declaring_header": "evp.h",
+          "owning_phase": 8,
+          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int` (`crypto/evp/p_legacy.c:40`, `:76`; `crypto/evp/p_lib.c:887`, `:998`), and that function's body past its fast paths is `evp_pkey_copy_downgraded` (`crypto/evp/p_lib.c:2066`), which **constructs** an `RSA`/`DH`/`DSA`/`EC_KEY` and imports into its `ameth`. Neither the four types nor the ameth objects exist yet, so every one of the twelve is blocked on Phase 8 -- and so are the `RSA_up_ref`/`RSA_free` (`p_legacy.c:29`, `:35`), `EC_KEY_up_ref`/`EC_KEY_free` (`:67`, `:70`), `DSA_up_ref`/`DSA_free` (`p_lib.c:905`, `:911`) and `ossl_dh_is_named_safe_prime_group`/`DH_get0_q`/`DH_up_ref`/`DH_free` (`p_lib.c:982`, `:985`, `:987`, `:993`) names the `set1_*` and `get1_*` spellings call directly. `evp_pkey_get_legacy` carries its own `forensics/prerequisites.json` row (Phase 8, D193); this row is the twelve exports that sit behind it.",
+          "symbol": "EVP_PKEY_get0_DH"
+        },
+        {
+          "declaring_header": "evp.h",
+          "owning_phase": 8,
+          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int` (`crypto/evp/p_legacy.c:40`, `:76`; `crypto/evp/p_lib.c:887`, `:998`), and that function's body past its fast paths is `evp_pkey_copy_downgraded` (`crypto/evp/p_lib.c:2066`), which **constructs** an `RSA`/`DH`/`DSA`/`EC_KEY` and imports into its `ameth`. Neither the four types nor the ameth objects exist yet, so every one of the twelve is blocked on Phase 8 -- and so are the `RSA_up_ref`/`RSA_free` (`p_legacy.c:29`, `:35`), `EC_KEY_up_ref`/`EC_KEY_free` (`:67`, `:70`), `DSA_up_ref`/`DSA_free` (`p_lib.c:905`, `:911`) and `ossl_dh_is_named_safe_prime_group`/`DH_get0_q`/`DH_up_ref`/`DH_free` (`p_lib.c:982`, `:985`, `:987`, `:993`) names the `set1_*` and `get1_*` spellings call directly. `evp_pkey_get_legacy` carries its own `forensics/prerequisites.json` row (Phase 8, D193); this row is the twelve exports that sit behind it.",
+          "symbol": "EVP_PKEY_get0_DSA"
+        },
+        {
+          "declaring_header": "evp.h",
+          "owning_phase": 8,
+          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int` (`crypto/evp/p_legacy.c:40`, `:76`; `crypto/evp/p_lib.c:887`, `:998`), and that function's body past its fast paths is `evp_pkey_copy_downgraded` (`crypto/evp/p_lib.c:2066`), which **constructs** an `RSA`/`DH`/`DSA`/`EC_KEY` and imports into its `ameth`. Neither the four types nor the ameth objects exist yet, so every one of the twelve is blocked on Phase 8 -- and so are the `RSA_up_ref`/`RSA_free` (`p_legacy.c:29`, `:35`), `EC_KEY_up_ref`/`EC_KEY_free` (`:67`, `:70`), `DSA_up_ref`/`DSA_free` (`p_lib.c:905`, `:911`) and `ossl_dh_is_named_safe_prime_group`/`DH_get0_q`/`DH_up_ref`/`DH_free` (`p_lib.c:982`, `:985`, `:987`, `:993`) names the `set1_*` and `get1_*` spellings call directly. `evp_pkey_get_legacy` carries its own `forensics/prerequisites.json` row (Phase 8, D193); this row is the twelve exports that sit behind it.",
+          "symbol": "EVP_PKEY_get0_EC_KEY"
+        },
+        {
+          "declaring_header": "evp.h",
+          "owning_phase": 8,
+          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int` (`crypto/evp/p_legacy.c:40`, `:76`; `crypto/evp/p_lib.c:887`, `:998`), and that function's body past its fast paths is `evp_pkey_copy_downgraded` (`crypto/evp/p_lib.c:2066`), which **constructs** an `RSA`/`DH`/`DSA`/`EC_KEY` and imports into its `ameth`. Neither the four types nor the ameth objects exist yet, so every one of the twelve is blocked on Phase 8 -- and so are the `RSA_up_ref`/`RSA_free` (`p_legacy.c:29`, `:35`), `EC_KEY_up_ref`/`EC_KEY_free` (`:67`, `:70`), `DSA_up_ref`/`DSA_free` (`p_lib.c:905`, `:911`) and `ossl_dh_is_named_safe_prime_group`/`DH_get0_q`/`DH_up_ref`/`DH_free` (`p_lib.c:982`, `:985`, `:987`, `:993`) names the `set1_*` and `get1_*` spellings call directly. `evp_pkey_get_legacy` carries its own `forensics/prerequisites.json` row (Phase 8, D193); this row is the twelve exports that sit behind it.",
+          "symbol": "EVP_PKEY_get0_RSA"
+        },
+        {
+          "declaring_header": "evp.h",
+          "owning_phase": 8,
+          "reason": "each is `pkey->type == <type> ? evp_pkey_get_legacy(pkey) : NULL` and then reads `os->length`/`os->data` off the answer (`crypto/evp/p_lib.c:843`, `:859`, `:877`). `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) is the whole dependency and it is Phase 8's: it constructs a legacy key with `evp_pkey_copy_downgraded` (`:2066`) and caches it against an `ameth` the crate cannot find. Same row in `forensics/prerequisites.json`, same stratum.",
+          "symbol": "EVP_PKEY_get0_hmac"
+        },
+        {
+          "declaring_header": "evp.h",
+          "owning_phase": 8,
+          "reason": "each is `pkey->type == <type> ? evp_pkey_get_legacy(pkey) : NULL` and then reads `os->length`/`os->data` off the answer (`crypto/evp/p_lib.c:843`, `:859`, `:877`). `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) is the whole dependency and it is Phase 8's: it constructs a legacy key with `evp_pkey_copy_downgraded` (`:2066`) and caches it against an `ameth` the crate cannot find. Same row in `forensics/prerequisites.json`, same stratum.",
+          "symbol": "EVP_PKEY_get0_poly1305"
+        },
+        {
+          "declaring_header": "evp.h",
+          "owning_phase": 8,
+          "reason": "each is `pkey->type == <type> ? evp_pkey_get_legacy(pkey) : NULL` and then reads `os->length`/`os->data` off the answer (`crypto/evp/p_lib.c:843`, `:859`, `:877`). `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) is the whole dependency and it is Phase 8's: it constructs a legacy key with `evp_pkey_copy_downgraded` (`:2066`) and caches it against an `ameth` the crate cannot find. Same row in `forensics/prerequisites.json`, same stratum.",
+          "symbol": "EVP_PKEY_get0_siphash"
+        },
+        {
+          "declaring_header": "evp.h",
+          "owning_phase": 8,
+          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int` (`crypto/evp/p_legacy.c:40`, `:76`; `crypto/evp/p_lib.c:887`, `:998`), and that function's body past its fast paths is `evp_pkey_copy_downgraded` (`crypto/evp/p_lib.c:2066`), which **constructs** an `RSA`/`DH`/`DSA`/`EC_KEY` and imports into its `ameth`. Neither the four types nor the ameth objects exist yet, so every one of the twelve is blocked on Phase 8 -- and so are the `RSA_up_ref`/`RSA_free` (`p_legacy.c:29`, `:35`), `EC_KEY_up_ref`/`EC_KEY_free` (`:67`, `:70`), `DSA_up_ref`/`DSA_free` (`p_lib.c:905`, `:911`) and `ossl_dh_is_named_safe_prime_group`/`DH_get0_q`/`DH_up_ref`/`DH_free` (`p_lib.c:982`, `:985`, `:987`, `:993`) names the `set1_*` and `get1_*` spellings call directly. `evp_pkey_get_legacy` carries its own `forensics/prerequisites.json` row (Phase 8, D193); this row is the twelve exports that sit behind it.",
+          "symbol": "EVP_PKEY_get1_DH"
+        },
+        {
+          "declaring_header": "evp.h",
+          "owning_phase": 8,
+          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int` (`crypto/evp/p_legacy.c:40`, `:76`; `crypto/evp/p_lib.c:887`, `:998`), and that function's body past its fast paths is `evp_pkey_copy_downgraded` (`crypto/evp/p_lib.c:2066`), which **constructs** an `RSA`/`DH`/`DSA`/`EC_KEY` and imports into its `ameth`. Neither the four types nor the ameth objects exist yet, so every one of the twelve is blocked on Phase 8 -- and so are the `RSA_up_ref`/`RSA_free` (`p_legacy.c:29`, `:35`), `EC_KEY_up_ref`/`EC_KEY_free` (`:67`, `:70`), `DSA_up_ref`/`DSA_free` (`p_lib.c:905`, `:911`) and `ossl_dh_is_named_safe_prime_group`/`DH_get0_q`/`DH_up_ref`/`DH_free` (`p_lib.c:982`, `:985`, `:987`, `:993`) names the `set1_*` and `get1_*` spellings call directly. `evp_pkey_get_legacy` carries its own `forensics/prerequisites.json` row (Phase 8, D193); this row is the twelve exports that sit behind it.",
+          "symbol": "EVP_PKEY_get1_DSA"
+        },
+        {
+          "declaring_header": "evp.h",
+          "owning_phase": 8,
+          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int` (`crypto/evp/p_legacy.c:40`, `:76`; `crypto/evp/p_lib.c:887`, `:998`), and that function's body past its fast paths is `evp_pkey_copy_downgraded` (`crypto/evp/p_lib.c:2066`), which **constructs** an `RSA`/`DH`/`DSA`/`EC_KEY` and imports into its `ameth`. Neither the four types nor the ameth objects exist yet, so every one of the twelve is blocked on Phase 8 -- and so are the `RSA_up_ref`/`RSA_free` (`p_legacy.c:29`, `:35`), `EC_KEY_up_ref`/`EC_KEY_free` (`:67`, `:70`), `DSA_up_ref`/`DSA_free` (`p_lib.c:905`, `:911`) and `ossl_dh_is_named_safe_prime_group`/`DH_get0_q`/`DH_up_ref`/`DH_free` (`p_lib.c:982`, `:985`, `:987`, `:993`) names the `set1_*` and `get1_*` spellings call directly. `evp_pkey_get_legacy` carries its own `forensics/prerequisites.json` row (Phase 8, D193); this row is the twelve exports that sit behind it.",
+          "symbol": "EVP_PKEY_get1_EC_KEY"
+        },
+        {
+          "declaring_header": "evp.h",
+          "owning_phase": 8,
+          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int` (`crypto/evp/p_legacy.c:40`, `:76`; `crypto/evp/p_lib.c:887`, `:998`), and that function's body past its fast paths is `evp_pkey_copy_downgraded` (`crypto/evp/p_lib.c:2066`), which **constructs** an `RSA`/`DH`/`DSA`/`EC_KEY` and imports into its `ameth`. Neither the four types nor the ameth objects exist yet, so every one of the twelve is blocked on Phase 8 -- and so are the `RSA_up_ref`/`RSA_free` (`p_legacy.c:29`, `:35`), `EC_KEY_up_ref`/`EC_KEY_free` (`:67`, `:70`), `DSA_up_ref`/`DSA_free` (`p_lib.c:905`, `:911`) and `ossl_dh_is_named_safe_prime_group`/`DH_get0_q`/`DH_up_ref`/`DH_free` (`p_lib.c:982`, `:985`, `:987`, `:993`) names the `set1_*` and `get1_*` spellings call directly. `evp_pkey_get_legacy` carries its own `forensics/prerequisites.json` row (Phase 8, D193); this row is the twelve exports that sit behind it.",
+          "symbol": "EVP_PKEY_get1_RSA"
+        },
+        {
+          "declaring_header": "evp.h",
+          "owning_phase": 8,
+          "reason": "each opens with `pkey->keymgmt == NULL || pkey->keydata == NULL` and answers its legacy arm -- `EVP_PKEY_get0_EC_KEY` then `EC_KEY_get_conv_form` (`crypto/evp/p_lib.c:2472`, `:2477`) or `EC_KEY_get0_group` then `EC_GROUP_get_field_type` (`:2512`, `:2517`, `:2521`). The provider arm above those needs nothing foreign, but the legacy arm is compiled in and the crate's `EVP_PKEY_get0_EC_KEY` is itself withheld in this stratum, so both are Phase 8's.",
+          "symbol": "EVP_PKEY_get_ec_point_conv_form"
+        },
+        {
+          "declaring_header": "evp.h",
+          "owning_phase": 8,
+          "reason": "each opens with `pkey->keymgmt == NULL || pkey->keydata == NULL` and answers its legacy arm -- `EVP_PKEY_get0_EC_KEY` then `EC_KEY_get_conv_form` (`crypto/evp/p_lib.c:2472`, `:2477`) or `EC_KEY_get0_group` then `EC_GROUP_get_field_type` (`:2512`, `:2517`, `:2521`). The provider arm above those needs nothing foreign, but the legacy arm is compiled in and the crate's `EVP_PKEY_get0_EC_KEY` is itself withheld in this stratum, so both are Phase 8's.",
+          "symbol": "EVP_PKEY_get_field_type"
+        },
+        {
+          "declaring_header": "evp.h",
+          "owning_phase": 8,
+          "reason": "`EVP_PKEY_meth_find` (`crypto/evp/pmeth_lib.c:106`) searches `standard_methods[]` (`:54`) with `OBJ_bsearch_pmeth_func` (`:114`); `EVP_PKEY_meth_get_count` (`:646`) answers `OSSL_NELEM(standard_methods)` plus the application stack; `EVP_PKEY_meth_get0` (`:655`) indexes the table outright before it touches that stack. The ten `ossl_<alg>_pkey_method` objects the table holds are Phase 8's contents (D163, D165, D184), and the application half of the registry is already landed and courted -- so Phase 8 is the only phase that retires these three, and a stub would answer the application count where the authority answers twelve more.",
+          "symbol": "EVP_PKEY_meth_find"
+        },
+        {
+          "declaring_header": "evp.h",
+          "owning_phase": 8,
+          "reason": "`EVP_PKEY_meth_find` (`crypto/evp/pmeth_lib.c:106`) searches `standard_methods[]` (`:54`) with `OBJ_bsearch_pmeth_func` (`:114`); `EVP_PKEY_meth_get_count` (`:646`) answers `OSSL_NELEM(standard_methods)` plus the application stack; `EVP_PKEY_meth_get0` (`:655`) indexes the table outright before it touches that stack. The ten `ossl_<alg>_pkey_method` objects the table holds are Phase 8's contents (D163, D165, D184), and the application half of the registry is already landed and courted -- so Phase 8 is the only phase that retires these three, and a stub would answer the application count where the authority answers twelve more.",
+          "symbol": "EVP_PKEY_meth_get0"
+        },
+        {
+          "declaring_header": "evp.h",
+          "owning_phase": 8,
+          "reason": "`EVP_PKEY_meth_find` (`crypto/evp/pmeth_lib.c:106`) searches `standard_methods[]` (`:54`) with `OBJ_bsearch_pmeth_func` (`:114`); `EVP_PKEY_meth_get_count` (`:646`) answers `OSSL_NELEM(standard_methods)` plus the application stack; `EVP_PKEY_meth_get0` (`:655`) indexes the table outright before it touches that stack. The ten `ossl_<alg>_pkey_method` objects the table holds are Phase 8's contents (D163, D165, D184), and the application half of the registry is already landed and courted -- so Phase 8 is the only phase that retires these three, and a stub would answer the application count where the authority answers twelve more.",
+          "symbol": "EVP_PKEY_meth_get_count"
+        },
+        {
+          "declaring_header": "evp.h",
+          "owning_phase": 8,
+          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int` (`crypto/evp/p_legacy.c:40`, `:76`; `crypto/evp/p_lib.c:887`, `:998`), and that function's body past its fast paths is `evp_pkey_copy_downgraded` (`crypto/evp/p_lib.c:2066`), which **constructs** an `RSA`/`DH`/`DSA`/`EC_KEY` and imports into its `ameth`. Neither the four types nor the ameth objects exist yet, so every one of the twelve is blocked on Phase 8 -- and so are the `RSA_up_ref`/`RSA_free` (`p_legacy.c:29`, `:35`), `EC_KEY_up_ref`/`EC_KEY_free` (`:67`, `:70`), `DSA_up_ref`/`DSA_free` (`p_lib.c:905`, `:911`) and `ossl_dh_is_named_safe_prime_group`/`DH_get0_q`/`DH_up_ref`/`DH_free` (`p_lib.c:982`, `:985`, `:987`, `:993`) names the `set1_*` and `get1_*` spellings call directly. `evp_pkey_get_legacy` carries its own `forensics/prerequisites.json` row (Phase 8, D193); this row is the twelve exports that sit behind it.",
+          "symbol": "EVP_PKEY_set1_DH"
+        },
+        {
+          "declaring_header": "evp.h",
+          "owning_phase": 8,
+          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int` (`crypto/evp/p_legacy.c:40`, `:76`; `crypto/evp/p_lib.c:887`, `:998`), and that function's body past its fast paths is `evp_pkey_copy_downgraded` (`crypto/evp/p_lib.c:2066`), which **constructs** an `RSA`/`DH`/`DSA`/`EC_KEY` and imports into its `ameth`. Neither the four types nor the ameth objects exist yet, so every one of the twelve is blocked on Phase 8 -- and so are the `RSA_up_ref`/`RSA_free` (`p_legacy.c:29`, `:35`), `EC_KEY_up_ref`/`EC_KEY_free` (`:67`, `:70`), `DSA_up_ref`/`DSA_free` (`p_lib.c:905`, `:911`) and `ossl_dh_is_named_safe_prime_group`/`DH_get0_q`/`DH_up_ref`/`DH_free` (`p_lib.c:982`, `:985`, `:987`, `:993`) names the `set1_*` and `get1_*` spellings call directly. `evp_pkey_get_legacy` carries its own `forensics/prerequisites.json` row (Phase 8, D193); this row is the twelve exports that sit behind it.",
+          "symbol": "EVP_PKEY_set1_DSA"
+        },
+        {
+          "declaring_header": "evp.h",
+          "owning_phase": 8,
+          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int` (`crypto/evp/p_legacy.c:40`, `:76`; `crypto/evp/p_lib.c:887`, `:998`), and that function's body past its fast paths is `evp_pkey_copy_downgraded` (`crypto/evp/p_lib.c:2066`), which **constructs** an `RSA`/`DH`/`DSA`/`EC_KEY` and imports into its `ameth`. Neither the four types nor the ameth objects exist yet, so every one of the twelve is blocked on Phase 8 -- and so are the `RSA_up_ref`/`RSA_free` (`p_legacy.c:29`, `:35`), `EC_KEY_up_ref`/`EC_KEY_free` (`:67`, `:70`), `DSA_up_ref`/`DSA_free` (`p_lib.c:905`, `:911`) and `ossl_dh_is_named_safe_prime_group`/`DH_get0_q`/`DH_up_ref`/`DH_free` (`p_lib.c:982`, `:985`, `:987`, `:993`) names the `set1_*` and `get1_*` spellings call directly. `evp_pkey_get_legacy` carries its own `forensics/prerequisites.json` row (Phase 8, D193); this row is the twelve exports that sit behind it.",
+          "symbol": "EVP_PKEY_set1_EC_KEY"
+        },
+        {
+          "declaring_header": "evp.h",
+          "owning_phase": 8,
+          "reason": "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's own `evp_pkey_get0_<TYPE>_int` (`crypto/evp/p_legacy.c:40`, `:76`; `crypto/evp/p_lib.c:887`, `:998`), and that function's body past its fast paths is `evp_pkey_copy_downgraded` (`crypto/evp/p_lib.c:2066`), which **constructs** an `RSA`/`DH`/`DSA`/`EC_KEY` and imports into its `ameth`. Neither the four types nor the ameth objects exist yet, so every one of the twelve is blocked on Phase 8 -- and so are the `RSA_up_ref`/`RSA_free` (`p_legacy.c:29`, `:35`), `EC_KEY_up_ref`/`EC_KEY_free` (`:67`, `:70`), `DSA_up_ref`/`DSA_free` (`p_lib.c:905`, `:911`) and `ossl_dh_is_named_safe_prime_group`/`DH_get0_q`/`DH_up_ref`/`DH_free` (`p_lib.c:982`, `:985`, `:987`, `:993`) names the `set1_*` and `get1_*` spellings call directly. `evp_pkey_get_legacy` carries its own `forensics/prerequisites.json` row (Phase 8, D193); this row is the twelve exports that sit behind it.",
+          "symbol": "EVP_PKEY_set1_RSA"
+        },
+        {
+          "declaring_header": "evp.h",
+          "owning_phase": 8,
+          "reason": "`crypto/evp/evp_pkey_type.c:63` is `EVP_PKEY_asn1_find(&e, type)` and then `ameth->pkey_id`. The function is landed -- `src/evp/pkey_asn1.rs` holds it as the `pub(crate) evp_pkey_type` helper `EVP_PKEY_get_base_id` calls (D193) -- and the export is withheld because its whole answer is the `standard_methods[]` table `crypto/asn1/ameth_lib.c:54` fills from `crypto/asn1/standard_methods.h`, whose twelve `ossl_<alg>_asn1_meth` objects are Phase 8's. The `ENGINE_finish(e)` at `:75` is the `*pe = NULL` mechanism D181 records, not a second blocker.",
+          "symbol": "EVP_PKEY_type"
+        },
+        {
+          "declaring_header": "evp.h",
+          "owning_phase": 8,
+          "reason": "`d2i_PublicKey` (`crypto/asn1/d2i_pu.c:28`) is a `switch` on `EVP_PKEY_get_base_id(ret)` whose three arms call `d2i_RSAPublicKey` (`:52`), `d2i_DSAPublicKey` (`:59`) and `o2i_ECPublicKey` (`:71`), plus `evp_pkey_copy_downgraded` (`:42`) for the provided-EC input. `d2i_KeyParams` (`crypto/asn1/d2i_param.c:18`) refuses unless `ret->ameth != NULL && ret->ameth->param_decode != NULL` (`:31`) and then calls it, and `d2i_KeyParams_bio` (`:49`) is a `BUF_MEM` read around it. Every one of those names is Phase 8's; the `asn1_d2i_read_bio`/`EVP_PKEY_set_type` calls are landed.",
+          "symbol": "d2i_KeyParams"
+        },
+        {
+          "declaring_header": "evp.h",
+          "owning_phase": 8,
+          "reason": "`d2i_PublicKey` (`crypto/asn1/d2i_pu.c:28`) is a `switch` on `EVP_PKEY_get_base_id(ret)` whose three arms call `d2i_RSAPublicKey` (`:52`), `d2i_DSAPublicKey` (`:59`) and `o2i_ECPublicKey` (`:71`), plus `evp_pkey_copy_downgraded` (`:42`) for the provided-EC input. `d2i_KeyParams` (`crypto/asn1/d2i_param.c:18`) refuses unless `ret->ameth != NULL && ret->ameth->param_decode != NULL` (`:31`) and then calls it, and `d2i_KeyParams_bio` (`:49`) is a `BUF_MEM` read around it. Every one of those names is Phase 8's; the `asn1_d2i_read_bio`/`EVP_PKEY_set_type` calls are landed.",
+          "symbol": "d2i_KeyParams_bio"
+        },
+        {
+          "declaring_header": "evp.h",
+          "owning_phase": 8,
+          "reason": "`d2i_PublicKey` (`crypto/asn1/d2i_pu.c:28`) is a `switch` on `EVP_PKEY_get_base_id(ret)` whose three arms call `d2i_RSAPublicKey` (`:52`), `d2i_DSAPublicKey` (`:59`) and `o2i_ECPublicKey` (`:71`), plus `evp_pkey_copy_downgraded` (`:42`) for the provided-EC input. `d2i_KeyParams` (`crypto/asn1/d2i_param.c:18`) refuses unless `ret->ameth != NULL && ret->ameth->param_decode != NULL` (`:31`) and then calls it, and `d2i_KeyParams_bio` (`:49`) is a `BUF_MEM` read around it. Every one of those names is Phase 8's; the `asn1_d2i_read_bio`/`EVP_PKEY_set_type` calls are landed.",
+          "symbol": "d2i_PublicKey"
+        }
+      ]
+    },
+    "implemented": [],
+    "module_prefixes": [
+      {
+        "module": "src/digest/md4.rs",
+        "prefixes": [
+          "MD4"
+        ]
+      },
+      {
+        "module": "src/digest/md5.rs",
+        "prefixes": [
+          "MD5"
+        ]
+      },
+      {
+        "module": "src/digest/mdc2.rs",
+        "prefixes": [
+          "MDC2"
+        ]
+      },
+      {
+        "module": "src/digest/ripemd.rs",
+        "prefixes": [
+          "RIPEMD160"
+        ]
+      },
+      {
+        "module": "src/digest/wp.rs",
+        "prefixes": [
+          "WHIRLPOOL"
+        ]
+      },
+      {
+        "module": "src/digest/sha1.rs",
+        "prefixes": [
+          "SHA1"
+        ]
+      },
+      {
+        "module": "src/digest/sha2.rs",
+        "prefixes": [
+          "SHA224",
+          "SHA256",
+          "SHA384",
+          "SHA512"
+        ]
+      },
+      {
+        "module": "src/des/mod.rs",
+        "prefixes": [
+          "DES"
+        ]
+      },
+      {
+        "module": "src/aes.rs",
+        "prefixes": [
+          "AES_"
+        ]
+      },
+      {
+        "module": "src/camellia.rs",
+        "prefixes": [
+          "Camellia"
+        ]
+      },
+      {
+        "module": "src/blowfish.rs",
+        "prefixes": [
+          "BF"
+        ]
+      },
+      {
+        "module": "src/cast.rs",
+        "prefixes": [
+          "CAST"
+        ]
+      },
+      {
+        "module": "src/idea.rs",
+        "prefixes": [
+          "IDEA"
+        ]
+      },
+      {
+        "module": "src/rc2.rs",
+        "prefixes": [
+          "RC2"
+        ]
+      },
+      {
+        "module": "src/rc4.rs",
+        "prefixes": [
+          "RC4"
+        ]
+      },
+      {
+        "module": "src/seed.rs",
+        "prefixes": [
+          "SEED"
+        ]
+      },
+      {
+        "module": "src/modes/mod.rs",
+        "prefixes": [
+          "CRYPTO_"
+        ]
+      },
+      {
+        "module": "src/rsa/mod.rs",
+        "prefixes": [
+          "RSA",
+          "PKCS1_MGF1",
+          "d2i_RSA",
+          "i2d_RSA",
+          "EVP_PKEY_CTX_get0_rsa",
+          "EVP_PKEY_CTX_get_rsa",
+          "EVP_PKEY_CTX_set0_rsa",
+          "EVP_PKEY_CTX_set1_rsa",
+          "EVP_PKEY_CTX_set_rsa",
+          "EVP_PKEY_get0_RSA",
+          "EVP_PKEY_get1_RSA",
+          "EVP_PKEY_set1_RSA"
+        ]
+      },
+      {
+        "module": "src/dh/mod.rs",
+        "prefixes": [
+          "DH",
+          "d2i_DH",
+          "i2d_DH",
+          "EVP_PKEY_CTX_get0_dh",
+          "EVP_PKEY_CTX_get_dh",
+          "EVP_PKEY_CTX_set0_dh",
+          "EVP_PKEY_CTX_set_dh",
+          "EVP_PKEY_get0_DH",
+          "EVP_PKEY_get1_DH",
+          "EVP_PKEY_set1_DH"
+        ]
+      },
+      {
+        "module": "src/dsa/mod.rs",
+        "prefixes": [
+          "DSA",
+          "d2i_DSA",
+          "i2d_DSA",
+          "EVP_PKEY_CTX_set_dsa",
+          "EVP_PKEY_get0_DSA",
+          "EVP_PKEY_get1_DSA",
+          "EVP_PKEY_set1_DSA"
+        ]
+      },
+      {
+        "module": "src/ec/mod.rs",
+        "prefixes": [
+          "EC_",
+          "ECPARAMETERS",
+          "ECPK",
+          "ECParameters",
+          "ECDH_",
+          "ECDSA_",
+          "OSSL_EC_",
+          "EVP_PKEY_CTX_get0_ecdh",
+          "EVP_PKEY_CTX_get_ecdh",
+          "EVP_PKEY_CTX_set0_ecdh",
+          "EVP_PKEY_CTX_set_ecdh",
+          "EVP_PKEY_CTX_set_ec_param",
+          "EVP_PKEY_CTX_set_ec_paramgen",
+          "EVP_PKEY_get0_EC",
+          "EVP_PKEY_get1_EC",
+          "EVP_PKEY_set1_EC",
+          "d2i_EC",
+          "i2d_EC",
+          "i2o_EC",
+          "o2i_EC"
+        ]
+      },
+      {
+        "module": "src/asn1/ameth.rs",
+        "prefixes": [
+          "EVP_PKEY_type",
+          "EVP_PKEY_meth_",
+          "EVP_PKEY_assign",
+          "d2i_PublicKey",
+          "d2i_KeyParams",
+          "EVP_PKEY_get0_hmac",
+          "EVP_PKEY_get0_poly1305",
+          "EVP_PKEY_get0_siphash",
+          "EVP_PKEY_get_ec_point_conv_form",
+          "EVP_PKEY_get_field_type",
+          "EVP_PKEY_encrypt_old",
+          "EVP_PKEY_decrypt_old"
+        ]
+      },
+      {
+        "module": "src/pem/key_legacy.rs",
+        "prefixes": [
+          "PEM_read_DH",
+          "PEM_read_DSA",
+          "PEM_read_EC",
+          "PEM_read_RSA",
+          "PEM_read_bio_DH",
+          "PEM_read_bio_DSA",
+          "PEM_read_bio_EC",
+          "PEM_read_bio_RSA",
+          "PEM_write_DH",
+          "PEM_write_DSA",
+          "PEM_write_EC",
+          "PEM_write_RSA",
+          "PEM_write_bio_DH",
+          "PEM_write_bio_DSA",
+          "PEM_write_bio_EC",
+          "PEM_write_bio_RSA"
+        ]
+      }
+    ],
+    "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum, and it starts at the whole working set, which is the honest starting state. Nothing here is a parity claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-8-SUBPHASES.md §4 decides when the stratum may be called complete.",
+    "open": [
+      {
+        "declaring_header": "aes.h",
+        "module": "src/aes.rs",
+        "received_from_phase": null,
+        "symbol": "AES_bi_ige_encrypt"
+      },
+      {
+        "declaring_header": "aes.h",
+        "module": "src/aes.rs",
+        "received_from_phase": null,
+        "symbol": "AES_cbc_encrypt"
+      },
+      {
+        "declaring_header": "aes.h",
+        "module": "src/aes.rs",
+        "received_from_phase": null,
+        "symbol": "AES_cfb128_encrypt"
+      },
+      {
+        "declaring_header": "aes.h",
+        "module": "src/aes.rs",
+        "received_from_phase": null,
+        "symbol": "AES_cfb1_encrypt"
+      },
+      {
+        "declaring_header": "aes.h",
+        "module": "src/aes.rs",
+        "received_from_phase": null,
+        "symbol": "AES_cfb8_encrypt"
+      },
+      {
+        "declaring_header": "aes.h",
+        "module": "src/aes.rs",
+        "received_from_phase": null,
+        "symbol": "AES_decrypt"
+      },
+      {
+        "declaring_header": "aes.h",
+        "module": "src/aes.rs",
+        "received_from_phase": null,
+        "symbol": "AES_ecb_encrypt"
+      },
+      {
+        "declaring_header": "aes.h",
+        "module": "src/aes.rs",
+        "received_from_phase": null,
+        "symbol": "AES_encrypt"
+      },
+      {
+        "declaring_header": "aes.h",
+        "module": "src/aes.rs",
+        "received_from_phase": null,
+        "symbol": "AES_ige_encrypt"
+      },
+      {
+        "declaring_header": "aes.h",
+        "module": "src/aes.rs",
+        "received_from_phase": null,
+        "symbol": "AES_ofb128_encrypt"
+      },
+      {
+        "declaring_header": "aes.h",
+        "module": "src/aes.rs",
+        "received_from_phase": null,
+        "symbol": "AES_options"
+      },
+      {
+        "declaring_header": "aes.h",
+        "module": "src/aes.rs",
+        "received_from_phase": null,
+        "symbol": "AES_set_decrypt_key"
+      },
+      {
+        "declaring_header": "aes.h",
+        "module": "src/aes.rs",
+        "received_from_phase": null,
+        "symbol": "AES_set_encrypt_key"
+      },
+      {
+        "declaring_header": "aes.h",
+        "module": "src/aes.rs",
+        "received_from_phase": null,
+        "symbol": "AES_unwrap_key"
+      },
+      {
+        "declaring_header": "aes.h",
+        "module": "src/aes.rs",
+        "received_from_phase": null,
+        "symbol": "AES_wrap_key"
+      },
+      {
+        "declaring_header": "blowfish.h",
+        "module": "src/blowfish.rs",
+        "received_from_phase": null,
+        "symbol": "BF_cbc_encrypt"
+      },
+      {
+        "declaring_header": "blowfish.h",
+        "module": "src/blowfish.rs",
+        "received_from_phase": null,
+        "symbol": "BF_cfb64_encrypt"
+      },
+      {
+        "declaring_header": "blowfish.h",
+        "module": "src/blowfish.rs",
+        "received_from_phase": null,
+        "symbol": "BF_decrypt"
+      },
+      {
+        "declaring_header": "blowfish.h",
+        "module": "src/blowfish.rs",
+        "received_from_phase": null,
+        "symbol": "BF_ecb_encrypt"
+      },
+      {
+        "declaring_header": "blowfish.h",
+        "module": "src/blowfish.rs",
+        "received_from_phase": null,
+        "symbol": "BF_encrypt"
+      },
+      {
+        "declaring_header": "blowfish.h",
+        "module": "src/blowfish.rs",
+        "received_from_phase": null,
+        "symbol": "BF_ofb64_encrypt"
+      },
+      {
+        "declaring_header": "blowfish.h",
+        "module": "src/blowfish.rs",
+        "received_from_phase": null,
+        "symbol": "BF_options"
+      },
+      {
+        "declaring_header": "blowfish.h",
+        "module": "src/blowfish.rs",
+        "received_from_phase": null,
+        "symbol": "BF_set_key"
+      },
+      {
+        "declaring_header": "cast.h",
+        "module": "src/cast.rs",
+        "received_from_phase": null,
+        "symbol": "CAST_cbc_encrypt"
+      },
+      {
+        "declaring_header": "cast.h",
+        "module": "src/cast.rs",
+        "received_from_phase": null,
+        "symbol": "CAST_cfb64_encrypt"
+      },
+      {
+        "declaring_header": "cast.h",
+        "module": "src/cast.rs",
+        "received_from_phase": null,
+        "symbol": "CAST_decrypt"
+      },
+      {
+        "declaring_header": "cast.h",
+        "module": "src/cast.rs",
+        "received_from_phase": null,
+        "symbol": "CAST_ecb_encrypt"
+      },
+      {
+        "declaring_header": "cast.h",
+        "module": "src/cast.rs",
+        "received_from_phase": null,
+        "symbol": "CAST_encrypt"
+      },
+      {
+        "declaring_header": "cast.h",
+        "module": "src/cast.rs",
+        "received_from_phase": null,
+        "symbol": "CAST_ofb64_encrypt"
+      },
+      {
+        "declaring_header": "cast.h",
+        "module": "src/cast.rs",
+        "received_from_phase": null,
+        "symbol": "CAST_set_key"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_128_unwrap"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_128_unwrap_pad"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_128_wrap"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_128_wrap_pad"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_cbc128_decrypt"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_cbc128_encrypt"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_ccm128_aad"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_ccm128_decrypt"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_ccm128_decrypt_ccm64"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_ccm128_encrypt"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_ccm128_encrypt_ccm64"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_ccm128_init"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_ccm128_setiv"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_ccm128_tag"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_cfb128_1_encrypt"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_cfb128_8_encrypt"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_cfb128_encrypt"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_ctr128_encrypt"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_ctr128_encrypt_ctr32"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_cts128_decrypt"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_cts128_decrypt_block"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_cts128_encrypt"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_cts128_encrypt_block"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_gcm128_aad"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_gcm128_decrypt"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_gcm128_decrypt_ctr32"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_gcm128_encrypt"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_gcm128_encrypt_ctr32"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_gcm128_finish"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_gcm128_init"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_gcm128_new"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_gcm128_release"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_gcm128_setiv"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_gcm128_tag"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_nistcts128_decrypt"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_nistcts128_decrypt_block"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_nistcts128_encrypt"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_nistcts128_encrypt_block"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_ocb128_aad"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_ocb128_cleanup"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_ocb128_copy_ctx"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_ocb128_decrypt"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_ocb128_encrypt"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_ocb128_finish"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_ocb128_init"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_ocb128_new"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_ocb128_setiv"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_ocb128_tag"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_ofb128_encrypt"
+      },
+      {
+        "declaring_header": "modes.h",
+        "module": "src/modes/mod.rs",
+        "received_from_phase": null,
+        "symbol": "CRYPTO_xts128_encrypt"
+      },
+      {
+        "declaring_header": "camellia.h",
+        "module": "src/camellia.rs",
+        "received_from_phase": null,
+        "symbol": "Camellia_cbc_encrypt"
+      },
+      {
+        "declaring_header": "camellia.h",
+        "module": "src/camellia.rs",
+        "received_from_phase": null,
+        "symbol": "Camellia_cfb128_encrypt"
+      },
+      {
+        "declaring_header": "camellia.h",
+        "module": "src/camellia.rs",
+        "received_from_phase": null,
+        "symbol": "Camellia_cfb1_encrypt"
+      },
+      {
+        "declaring_header": "camellia.h",
+        "module": "src/camellia.rs",
+        "received_from_phase": null,
+        "symbol": "Camellia_cfb8_encrypt"
+      },
+      {
+        "declaring_header": "camellia.h",
+        "module": "src/camellia.rs",
+        "received_from_phase": null,
+        "symbol": "Camellia_ctr128_encrypt"
+      },
+      {
+        "declaring_header": "camellia.h",
+        "module": "src/camellia.rs",
+        "received_from_phase": null,
+        "symbol": "Camellia_decrypt"
+      },
+      {
+        "declaring_header": "camellia.h",
+        "module": "src/camellia.rs",
+        "received_from_phase": null,
+        "symbol": "Camellia_ecb_encrypt"
+      },
+      {
+        "declaring_header": "camellia.h",
+        "module": "src/camellia.rs",
+        "received_from_phase": null,
+        "symbol": "Camellia_encrypt"
+      },
+      {
+        "declaring_header": "camellia.h",
+        "module": "src/camellia.rs",
+        "received_from_phase": null,
+        "symbol": "Camellia_ofb128_encrypt"
+      },
+      {
+        "declaring_header": "camellia.h",
+        "module": "src/camellia.rs",
+        "received_from_phase": null,
+        "symbol": "Camellia_set_key"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_cbc_cksum"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_cbc_encrypt"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_cfb64_encrypt"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_cfb_encrypt"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_check_key_parity"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_crypt"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_decrypt3"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_ecb3_encrypt"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_ecb_encrypt"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_ede3_cbc_encrypt"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_ede3_cfb64_encrypt"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_ede3_cfb_encrypt"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_ede3_ofb64_encrypt"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_encrypt1"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_encrypt2"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_encrypt3"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_fcrypt"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_is_weak_key"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_key_sched"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_ncbc_encrypt"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_ofb64_encrypt"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_ofb_encrypt"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_options"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_pcbc_encrypt"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_quad_cksum"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_set_key"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_set_key_checked"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_set_key_unchecked"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_set_odd_parity"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_string_to_2keys"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_string_to_key"
+      },
+      {
+        "declaring_header": "des.h",
+        "module": "src/des/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DES_xcbc_encrypt"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_OpenSSL"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_bits"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_check"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_check_ex"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_check_params"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_check_params_ex"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_check_pub_key"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_check_pub_key_ex"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_clear_flags"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_compute_key"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_compute_key_padded"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_free"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_get0_engine"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_get0_g"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_get0_key"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_get0_p"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_get0_pqg"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_get0_priv_key"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_get0_pub_key"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_get0_q"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_get_1024_160"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_get_2048_224"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_get_2048_256"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_get_default_method"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_get_ex_data"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_get_length"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_get_nid"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_meth_dup"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_meth_free"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_meth_get0_app_data"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_meth_get0_name"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_meth_get_bn_mod_exp"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_meth_get_compute_key"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_meth_get_finish"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_meth_get_flags"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_meth_get_generate_key"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_meth_get_generate_params"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_meth_get_init"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_meth_new"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_meth_set0_app_data"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_meth_set1_name"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_meth_set_bn_mod_exp"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_meth_set_compute_key"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_meth_set_finish"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_meth_set_flags"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_meth_set_generate_key"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_meth_set_generate_params"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_meth_set_init"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_new"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_new_by_nid"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_new_method"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_security_bits"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_set0_key"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_set0_pqg"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_set_default_method"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_set_ex_data"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_set_flags"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_set_length"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_set_method"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_size"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_test_flags"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DH_up_ref"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DHparams_dup"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DHparams_it"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DHparams_print"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DHparams_print_fp"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_OpenSSL"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_SIG_free"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_SIG_get0"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_SIG_new"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_SIG_set0"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_bits"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_clear_flags"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_do_sign"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_do_verify"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_dup_DH"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_free"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_generate_parameters"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_get0_engine"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_get0_g"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_get0_key"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_get0_p"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_get0_pqg"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_get0_priv_key"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_get0_pub_key"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_get0_q"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_get_default_method"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_get_ex_data"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_get_method"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_meth_dup"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_meth_free"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_meth_get0_app_data"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_meth_get0_name"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_meth_get_bn_mod_exp"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_meth_get_finish"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_meth_get_flags"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_meth_get_init"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_meth_get_keygen"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_meth_get_mod_exp"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_meth_get_paramgen"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_meth_get_sign"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_meth_get_sign_setup"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_meth_get_verify"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_meth_new"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_meth_set0_app_data"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_meth_set1_name"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_meth_set_bn_mod_exp"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_meth_set_finish"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_meth_set_flags"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_meth_set_init"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_meth_set_keygen"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_meth_set_mod_exp"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_meth_set_paramgen"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_meth_set_sign"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_meth_set_sign_setup"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_meth_set_verify"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_new"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_new_method"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_print"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_print_fp"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_security_bits"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_set0_key"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_set0_pqg"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_set_default_method"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_set_ex_data"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_set_flags"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_set_method"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_sign"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_sign_setup"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_size"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_test_flags"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_up_ref"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSA_verify"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSAparams_dup"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSAparams_print"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "DSAparams_print_fp"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "ECDH_compute_key"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "ECDSA_SIG_free"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "ECDSA_SIG_get0"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "ECDSA_SIG_get0_r"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "ECDSA_SIG_get0_s"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "ECDSA_SIG_new"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "ECDSA_SIG_set0"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "ECDSA_do_sign"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "ECDSA_do_sign_ex"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "ECDSA_do_verify"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "ECDSA_sign"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "ECDSA_sign_ex"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "ECDSA_sign_setup"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "ECDSA_size"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "ECDSA_verify"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "ECPARAMETERS_free"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "ECPARAMETERS_it"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "ECPARAMETERS_new"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "ECPKPARAMETERS_free"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "ECPKPARAMETERS_it"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "ECPKPARAMETERS_new"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "ECPKParameters_print"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "ECPKParameters_print_fp"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "ECParameters_print"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "ECParameters_print_fp"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GF2m_simple_method"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GFp_mont_method"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GFp_nist_method"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GFp_simple_method"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_check"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_check_discriminant"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_check_named_curve"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_clear_free"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_cmp"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_copy"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_dup"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_free"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_get0_cofactor"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_get0_field"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_get0_generator"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_get0_order"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_get0_seed"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_get_asn1_flag"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_get_basis_type"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_get_cofactor"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_get_curve"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_get_curve_GF2m"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_get_curve_GFp"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_get_curve_name"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_get_degree"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_get_ecparameters"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_get_ecpkparameters"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_get_field_type"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_get_mont_data"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_get_order"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_get_pentanomial_basis"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_get_point_conversion_form"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_get_seed_len"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_get_trinomial_basis"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_have_precompute_mult"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_method_of"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_new"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_new_by_curve_name"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_new_by_curve_name_ex"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_new_curve_GF2m"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_new_curve_GFp"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_new_from_ecparameters"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_new_from_ecpkparameters"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_new_from_params"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_order_bits"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_precompute_mult"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_set_asn1_flag"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_set_curve"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_set_curve_GF2m"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_set_curve_GFp"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_set_curve_name"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_set_generator"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_set_point_conversion_form"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_set_seed"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_GROUP_to_params"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_METHOD_free"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_METHOD_get_compute_key"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_METHOD_get_init"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_METHOD_get_keygen"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_METHOD_get_sign"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_METHOD_get_verify"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_METHOD_new"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_METHOD_set_compute_key"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_METHOD_set_init"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_METHOD_set_keygen"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_METHOD_set_sign"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_METHOD_set_verify"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_OpenSSL"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_can_sign"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_check_key"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_clear_flags"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_copy"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_decoded_from_explicit_params"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_dup"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_free"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_get0_engine"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_get0_group"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_get0_private_key"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_get0_public_key"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_get_conv_form"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_get_default_method"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_get_enc_flags"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_get_ex_data"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_get_flags"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_get_method"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_key2buf"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_new"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_new_by_curve_name"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_new_by_curve_name_ex"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_new_ex"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_new_method"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_oct2key"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_oct2priv"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_precompute_mult"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_print"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_print_fp"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_priv2buf"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_priv2oct"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_set_asn1_flag"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_set_conv_form"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_set_default_method"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_set_enc_flags"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_set_ex_data"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_set_flags"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_set_group"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_set_method"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_set_private_key"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_set_public_key"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_set_public_key_affine_coordinates"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_KEY_up_ref"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_METHOD_get_field_type"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_add"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_bn2point"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_clear_free"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_cmp"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_copy"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_dbl"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_dup"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_free"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_get_Jprojective_coordinates_GFp"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_get_affine_coordinates"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_get_affine_coordinates_GF2m"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_get_affine_coordinates_GFp"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_hex2point"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_invert"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_is_at_infinity"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_is_on_curve"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_make_affine"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_method_of"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_mul"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_new"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_oct2point"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_point2bn"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_point2buf"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_point2hex"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_point2oct"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_set_Jprojective_coordinates_GFp"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_set_affine_coordinates"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_set_affine_coordinates_GF2m"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_set_affine_coordinates_GFp"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_set_compressed_coordinates"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_set_compressed_coordinates_GF2m"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_set_compressed_coordinates_GFp"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINT_set_to_infinity"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINTs_make_affine"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_POINTs_mul"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_curve_nid2nist"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_curve_nist2nid"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EC_get_builtin_curves"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get0_dh_kdf_oid"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get0_dh_kdf_ukm"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get0_ecdh_kdf_ukm"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get0_rsa_oaep_label"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get_dh_kdf_md"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get_dh_kdf_outlen"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get_dh_kdf_type"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get_ecdh_cofactor_mode"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get_ecdh_kdf_md"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get_ecdh_kdf_outlen"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get_ecdh_kdf_type"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get_rsa_mgf1_md"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get_rsa_mgf1_md_name"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get_rsa_oaep_md"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get_rsa_oaep_md_name"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get_rsa_padding"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_get_rsa_pss_saltlen"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set0_dh_kdf_oid"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set0_dh_kdf_ukm"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set0_ecdh_kdf_ukm"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set0_rsa_oaep_label"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set1_rsa_keygen_pubexp"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_dh_kdf_md"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_dh_kdf_outlen"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_dh_kdf_type"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_dh_nid"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_dh_pad"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_dh_paramgen_generator"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_dh_paramgen_gindex"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_dh_paramgen_prime_len"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_dh_paramgen_seed"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_dh_paramgen_subprime_len"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_dh_paramgen_type"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_dh_rfc5114"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_dhx_rfc5114"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_dsa_paramgen_bits"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_dsa_paramgen_gindex"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_dsa_paramgen_md"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_dsa_paramgen_md_props"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_dsa_paramgen_q_bits"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_dsa_paramgen_seed"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_dsa_paramgen_type"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_ec_param_enc"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_ec_paramgen_curve_nid"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_ecdh_cofactor_mode"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_ecdh_kdf_md"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_ecdh_kdf_outlen"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_ecdh_kdf_type"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_rsa_keygen_bits"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_rsa_keygen_primes"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_rsa_keygen_pubexp"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_rsa_mgf1_md"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_rsa_mgf1_md_name"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_rsa_oaep_md"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_rsa_oaep_md_name"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_rsa_padding"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_rsa_pss_keygen_md"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_rsa_pss_keygen_md_name"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_rsa_pss_keygen_mgf1_md"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_rsa_pss_keygen_mgf1_md_name"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_rsa_pss_keygen_saltlen"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "EVP_PKEY_CTX_set_rsa_pss_saltlen"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/asn1/ameth.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_PKEY_assign"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/asn1/ameth.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_PKEY_decrypt_old"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/asn1/ameth.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_PKEY_encrypt_old"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_PKEY_get0_DH"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_PKEY_get0_DSA"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_PKEY_get0_EC_KEY"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_PKEY_get0_RSA"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/asn1/ameth.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_PKEY_get0_hmac"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/asn1/ameth.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_PKEY_get0_poly1305"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/asn1/ameth.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_PKEY_get0_siphash"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_PKEY_get1_DH"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_PKEY_get1_DSA"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_PKEY_get1_EC_KEY"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_PKEY_get1_RSA"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/asn1/ameth.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_PKEY_get_ec_point_conv_form"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/asn1/ameth.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_PKEY_get_field_type"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/asn1/ameth.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_PKEY_meth_find"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/asn1/ameth.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_PKEY_meth_get0"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/asn1/ameth.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_PKEY_meth_get_count"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_PKEY_set1_DH"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_PKEY_set1_DSA"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_PKEY_set1_EC_KEY"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_PKEY_set1_RSA"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/asn1/ameth.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_PKEY_type"
+      },
+      {
+        "declaring_header": "idea.h",
+        "module": "src/idea.rs",
+        "received_from_phase": null,
+        "symbol": "IDEA_cbc_encrypt"
+      },
+      {
+        "declaring_header": "idea.h",
+        "module": "src/idea.rs",
+        "received_from_phase": null,
+        "symbol": "IDEA_cfb64_encrypt"
+      },
+      {
+        "declaring_header": "idea.h",
+        "module": "src/idea.rs",
+        "received_from_phase": null,
+        "symbol": "IDEA_ecb_encrypt"
+      },
+      {
+        "declaring_header": "idea.h",
+        "module": "src/idea.rs",
+        "received_from_phase": null,
+        "symbol": "IDEA_encrypt"
+      },
+      {
+        "declaring_header": "idea.h",
+        "module": "src/idea.rs",
+        "received_from_phase": null,
+        "symbol": "IDEA_ofb64_encrypt"
+      },
+      {
+        "declaring_header": "idea.h",
+        "module": "src/idea.rs",
+        "received_from_phase": null,
+        "symbol": "IDEA_options"
+      },
+      {
+        "declaring_header": "idea.h",
+        "module": "src/idea.rs",
+        "received_from_phase": null,
+        "symbol": "IDEA_set_decrypt_key"
+      },
+      {
+        "declaring_header": "idea.h",
+        "module": "src/idea.rs",
+        "received_from_phase": null,
+        "symbol": "IDEA_set_encrypt_key"
+      },
+      {
+        "declaring_header": "md4.h",
+        "module": "src/digest/md4.rs",
+        "received_from_phase": null,
+        "symbol": "MD4"
+      },
+      {
+        "declaring_header": "md4.h",
+        "module": "src/digest/md4.rs",
+        "received_from_phase": null,
+        "symbol": "MD4_Final"
+      },
+      {
+        "declaring_header": "md4.h",
+        "module": "src/digest/md4.rs",
+        "received_from_phase": null,
+        "symbol": "MD4_Init"
+      },
+      {
+        "declaring_header": "md4.h",
+        "module": "src/digest/md4.rs",
+        "received_from_phase": null,
+        "symbol": "MD4_Transform"
+      },
+      {
+        "declaring_header": "md4.h",
+        "module": "src/digest/md4.rs",
+        "received_from_phase": null,
+        "symbol": "MD4_Update"
+      },
+      {
+        "declaring_header": "md5.h",
+        "module": "src/digest/md5.rs",
+        "received_from_phase": null,
+        "symbol": "MD5"
+      },
+      {
+        "declaring_header": "md5.h",
+        "module": "src/digest/md5.rs",
+        "received_from_phase": null,
+        "symbol": "MD5_Final"
+      },
+      {
+        "declaring_header": "md5.h",
+        "module": "src/digest/md5.rs",
+        "received_from_phase": null,
+        "symbol": "MD5_Init"
+      },
+      {
+        "declaring_header": "md5.h",
+        "module": "src/digest/md5.rs",
+        "received_from_phase": null,
+        "symbol": "MD5_Transform"
+      },
+      {
+        "declaring_header": "md5.h",
+        "module": "src/digest/md5.rs",
+        "received_from_phase": null,
+        "symbol": "MD5_Update"
+      },
+      {
+        "declaring_header": "mdc2.h",
+        "module": "src/digest/mdc2.rs",
+        "received_from_phase": null,
+        "symbol": "MDC2"
+      },
+      {
+        "declaring_header": "mdc2.h",
+        "module": "src/digest/mdc2.rs",
+        "received_from_phase": null,
+        "symbol": "MDC2_Final"
+      },
+      {
+        "declaring_header": "mdc2.h",
+        "module": "src/digest/mdc2.rs",
+        "received_from_phase": null,
+        "symbol": "MDC2_Init"
+      },
+      {
+        "declaring_header": "mdc2.h",
+        "module": "src/digest/mdc2.rs",
+        "received_from_phase": null,
+        "symbol": "MDC2_Update"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_EC_curve_nid2name"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_read_DHparams"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_read_DSAPrivateKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_read_DSAparams"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_read_ECPKParameters"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_read_ECPrivateKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_read_RSAPrivateKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_read_RSAPublicKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_read_bio_DHparams"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_read_bio_DSAPrivateKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_read_bio_DSAparams"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_read_bio_ECPKParameters"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_read_bio_ECPrivateKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_read_bio_RSAPrivateKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_read_bio_RSAPublicKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_write_DHparams"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_write_DHxparams"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_write_DSAPrivateKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_write_DSAparams"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_write_ECPKParameters"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_write_ECPrivateKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_write_RSAPrivateKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_write_RSAPublicKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_write_bio_DHparams"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_write_bio_DHxparams"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_write_bio_DSAPrivateKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_write_bio_DSAparams"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_write_bio_ECPKParameters"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_write_bio_ECPrivateKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_write_bio_RSAPrivateKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/key_legacy.rs",
+        "received_from_phase": null,
+        "symbol": "PEM_write_bio_RSAPublicKey"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS1_MGF1"
+      },
+      {
+        "declaring_header": "rc2.h",
+        "module": "src/rc2.rs",
+        "received_from_phase": null,
+        "symbol": "RC2_cbc_encrypt"
+      },
+      {
+        "declaring_header": "rc2.h",
+        "module": "src/rc2.rs",
+        "received_from_phase": null,
+        "symbol": "RC2_cfb64_encrypt"
+      },
+      {
+        "declaring_header": "rc2.h",
+        "module": "src/rc2.rs",
+        "received_from_phase": null,
+        "symbol": "RC2_decrypt"
+      },
+      {
+        "declaring_header": "rc2.h",
+        "module": "src/rc2.rs",
+        "received_from_phase": null,
+        "symbol": "RC2_ecb_encrypt"
+      },
+      {
+        "declaring_header": "rc2.h",
+        "module": "src/rc2.rs",
+        "received_from_phase": null,
+        "symbol": "RC2_encrypt"
+      },
+      {
+        "declaring_header": "rc2.h",
+        "module": "src/rc2.rs",
+        "received_from_phase": null,
+        "symbol": "RC2_ofb64_encrypt"
+      },
+      {
+        "declaring_header": "rc2.h",
+        "module": "src/rc2.rs",
+        "received_from_phase": null,
+        "symbol": "RC2_set_key"
+      },
+      {
+        "declaring_header": "rc4.h",
+        "module": "src/rc4.rs",
+        "received_from_phase": null,
+        "symbol": "RC4"
+      },
+      {
+        "declaring_header": "rc4.h",
+        "module": "src/rc4.rs",
+        "received_from_phase": null,
+        "symbol": "RC4_options"
+      },
+      {
+        "declaring_header": "rc4.h",
+        "module": "src/rc4.rs",
+        "received_from_phase": null,
+        "symbol": "RC4_set_key"
+      },
+      {
+        "declaring_header": "ripemd.h",
+        "module": "src/digest/ripemd.rs",
+        "received_from_phase": null,
+        "symbol": "RIPEMD160"
+      },
+      {
+        "declaring_header": "ripemd.h",
+        "module": "src/digest/ripemd.rs",
+        "received_from_phase": null,
+        "symbol": "RIPEMD160_Final"
+      },
+      {
+        "declaring_header": "ripemd.h",
+        "module": "src/digest/ripemd.rs",
+        "received_from_phase": null,
+        "symbol": "RIPEMD160_Init"
+      },
+      {
+        "declaring_header": "ripemd.h",
+        "module": "src/digest/ripemd.rs",
+        "received_from_phase": null,
+        "symbol": "RIPEMD160_Transform"
+      },
+      {
+        "declaring_header": "ripemd.h",
+        "module": "src/digest/ripemd.rs",
+        "received_from_phase": null,
+        "symbol": "RIPEMD160_Update"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSAPrivateKey_dup"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSAPrivateKey_it"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSAPublicKey_dup"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSAPublicKey_it"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_OAEP_PARAMS_free"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_OAEP_PARAMS_it"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_OAEP_PARAMS_new"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_PKCS1_OpenSSL"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_PSS_PARAMS_dup"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_PSS_PARAMS_free"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_PSS_PARAMS_it"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_PSS_PARAMS_new"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_X931_hash_id"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_bits"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_blinding_off"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_check_key"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_check_key_ex"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_clear_flags"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_flags"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_free"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_get0_crt_params"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_get0_d"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_get0_dmp1"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_get0_dmq1"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_get0_e"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_get0_engine"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_get0_factors"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_get0_iqmp"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_get0_key"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_get0_multi_prime_crt_params"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_get0_multi_prime_factors"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_get0_n"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_get0_p"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_get0_pss_params"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_get0_q"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_get_default_method"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_get_ex_data"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_get_method"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_get_multi_prime_extra_count"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_get_version"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_dup"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_free"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_get0_app_data"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_get0_name"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_get_bn_mod_exp"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_get_finish"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_get_flags"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_get_init"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_get_keygen"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_get_mod_exp"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_get_multi_prime_keygen"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_get_priv_dec"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_get_priv_enc"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_get_pub_dec"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_get_pub_enc"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_get_sign"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_get_verify"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_new"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_set0_app_data"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_set1_name"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_set_bn_mod_exp"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_set_finish"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_set_flags"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_set_init"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_set_keygen"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_set_mod_exp"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_set_multi_prime_keygen"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_set_priv_dec"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_set_priv_enc"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_set_pub_dec"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_set_pub_enc"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_set_sign"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_meth_set_verify"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_new"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_new_method"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_null_method"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_padding_add_PKCS1_OAEP"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_padding_add_PKCS1_OAEP_mgf1"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_padding_add_PKCS1_PSS"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_padding_add_PKCS1_PSS_mgf1"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_padding_add_PKCS1_type_1"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_padding_add_PKCS1_type_2"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_padding_add_X931"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_padding_add_none"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_padding_check_PKCS1_OAEP"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_padding_check_PKCS1_OAEP_mgf1"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_padding_check_PKCS1_type_1"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_padding_check_PKCS1_type_2"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_padding_check_X931"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_padding_check_none"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_pkey_ctx_ctrl"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_print"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_print_fp"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_private_decrypt"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_private_encrypt"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_public_decrypt"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_public_encrypt"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_security_bits"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_set0_crt_params"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_set0_factors"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_set0_key"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_set0_multi_prime_params"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_set_default_method"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_set_ex_data"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_set_flags"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_set_method"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_sign"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_sign_ASN1_OCTET_STRING"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_size"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_test_flags"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_up_ref"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_verify"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_verify_ASN1_OCTET_STRING"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_verify_PKCS1_PSS"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "RSA_verify_PKCS1_PSS_mgf1"
+      },
+      {
+        "declaring_header": "seed.h",
+        "module": "src/seed.rs",
+        "received_from_phase": null,
+        "symbol": "SEED_cbc_encrypt"
+      },
+      {
+        "declaring_header": "seed.h",
+        "module": "src/seed.rs",
+        "received_from_phase": null,
+        "symbol": "SEED_cfb128_encrypt"
+      },
+      {
+        "declaring_header": "seed.h",
+        "module": "src/seed.rs",
+        "received_from_phase": null,
+        "symbol": "SEED_decrypt"
+      },
+      {
+        "declaring_header": "seed.h",
+        "module": "src/seed.rs",
+        "received_from_phase": null,
+        "symbol": "SEED_ecb_encrypt"
+      },
+      {
+        "declaring_header": "seed.h",
+        "module": "src/seed.rs",
+        "received_from_phase": null,
+        "symbol": "SEED_encrypt"
+      },
+      {
+        "declaring_header": "seed.h",
+        "module": "src/seed.rs",
+        "received_from_phase": null,
+        "symbol": "SEED_ofb128_encrypt"
+      },
+      {
+        "declaring_header": "seed.h",
+        "module": "src/seed.rs",
+        "received_from_phase": null,
+        "symbol": "SEED_set_key"
+      },
+      {
+        "declaring_header": "sha.h",
+        "module": "src/digest/sha1.rs",
+        "received_from_phase": null,
+        "symbol": "SHA1"
+      },
+      {
+        "declaring_header": "sha.h",
+        "module": "src/digest/sha1.rs",
+        "received_from_phase": null,
+        "symbol": "SHA1_Final"
+      },
+      {
+        "declaring_header": "sha.h",
+        "module": "src/digest/sha1.rs",
+        "received_from_phase": null,
+        "symbol": "SHA1_Init"
+      },
+      {
+        "declaring_header": "sha.h",
+        "module": "src/digest/sha1.rs",
+        "received_from_phase": null,
+        "symbol": "SHA1_Transform"
+      },
+      {
+        "declaring_header": "sha.h",
+        "module": "src/digest/sha1.rs",
+        "received_from_phase": null,
+        "symbol": "SHA1_Update"
+      },
+      {
+        "declaring_header": "sha.h",
+        "module": "src/digest/sha2.rs",
+        "received_from_phase": null,
+        "symbol": "SHA224"
+      },
+      {
+        "declaring_header": "sha.h",
+        "module": "src/digest/sha2.rs",
+        "received_from_phase": null,
+        "symbol": "SHA224_Final"
+      },
+      {
+        "declaring_header": "sha.h",
+        "module": "src/digest/sha2.rs",
+        "received_from_phase": null,
+        "symbol": "SHA224_Init"
+      },
+      {
+        "declaring_header": "sha.h",
+        "module": "src/digest/sha2.rs",
+        "received_from_phase": null,
+        "symbol": "SHA224_Update"
+      },
+      {
+        "declaring_header": "sha.h",
+        "module": "src/digest/sha2.rs",
+        "received_from_phase": null,
+        "symbol": "SHA256"
+      },
+      {
+        "declaring_header": "sha.h",
+        "module": "src/digest/sha2.rs",
+        "received_from_phase": null,
+        "symbol": "SHA256_Final"
+      },
+      {
+        "declaring_header": "sha.h",
+        "module": "src/digest/sha2.rs",
+        "received_from_phase": null,
+        "symbol": "SHA256_Init"
+      },
+      {
+        "declaring_header": "sha.h",
+        "module": "src/digest/sha2.rs",
+        "received_from_phase": null,
+        "symbol": "SHA256_Transform"
+      },
+      {
+        "declaring_header": "sha.h",
+        "module": "src/digest/sha2.rs",
+        "received_from_phase": null,
+        "symbol": "SHA256_Update"
+      },
+      {
+        "declaring_header": "sha.h",
+        "module": "src/digest/sha2.rs",
+        "received_from_phase": null,
+        "symbol": "SHA384"
+      },
+      {
+        "declaring_header": "sha.h",
+        "module": "src/digest/sha2.rs",
+        "received_from_phase": null,
+        "symbol": "SHA384_Final"
+      },
+      {
+        "declaring_header": "sha.h",
+        "module": "src/digest/sha2.rs",
+        "received_from_phase": null,
+        "symbol": "SHA384_Init"
+      },
+      {
+        "declaring_header": "sha.h",
+        "module": "src/digest/sha2.rs",
+        "received_from_phase": null,
+        "symbol": "SHA384_Update"
+      },
+      {
+        "declaring_header": "sha.h",
+        "module": "src/digest/sha2.rs",
+        "received_from_phase": null,
+        "symbol": "SHA512"
+      },
+      {
+        "declaring_header": "sha.h",
+        "module": "src/digest/sha2.rs",
+        "received_from_phase": null,
+        "symbol": "SHA512_Final"
+      },
+      {
+        "declaring_header": "sha.h",
+        "module": "src/digest/sha2.rs",
+        "received_from_phase": null,
+        "symbol": "SHA512_Init"
+      },
+      {
+        "declaring_header": "sha.h",
+        "module": "src/digest/sha2.rs",
+        "received_from_phase": null,
+        "symbol": "SHA512_Transform"
+      },
+      {
+        "declaring_header": "sha.h",
+        "module": "src/digest/sha2.rs",
+        "received_from_phase": null,
+        "symbol": "SHA512_Update"
+      },
+      {
+        "declaring_header": "whrlpool.h",
+        "module": "src/digest/wp.rs",
+        "received_from_phase": null,
+        "symbol": "WHIRLPOOL"
+      },
+      {
+        "declaring_header": "whrlpool.h",
+        "module": "src/digest/wp.rs",
+        "received_from_phase": null,
+        "symbol": "WHIRLPOOL_BitUpdate"
+      },
+      {
+        "declaring_header": "whrlpool.h",
+        "module": "src/digest/wp.rs",
+        "received_from_phase": null,
+        "symbol": "WHIRLPOOL_Final"
+      },
+      {
+        "declaring_header": "whrlpool.h",
+        "module": "src/digest/wp.rs",
+        "received_from_phase": null,
+        "symbol": "WHIRLPOOL_Init"
+      },
+      {
+        "declaring_header": "whrlpool.h",
+        "module": "src/digest/wp.rs",
+        "received_from_phase": null,
+        "symbol": "WHIRLPOOL_Update"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "d2i_DHparams"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "d2i_DHxparams"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "d2i_DSAPrivateKey"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "d2i_DSAPublicKey"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "d2i_DSA_SIG"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "d2i_DSAparams"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "d2i_ECDSA_SIG"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "d2i_ECPKParameters"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "d2i_ECParameters"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "d2i_ECPrivateKey"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/asn1/ameth.rs",
+        "received_from_phase": 7,
+        "symbol": "d2i_KeyParams"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/asn1/ameth.rs",
+        "received_from_phase": 7,
+        "symbol": "d2i_KeyParams_bio"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/asn1/ameth.rs",
+        "received_from_phase": 7,
+        "symbol": "d2i_PublicKey"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "d2i_RSAPrivateKey"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "d2i_RSAPublicKey"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "d2i_RSA_OAEP_PARAMS"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "d2i_RSA_PSS_PARAMS"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "i2d_DHparams"
+      },
+      {
+        "declaring_header": "dh.h",
+        "module": "src/dh/mod.rs",
+        "received_from_phase": null,
+        "symbol": "i2d_DHxparams"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "i2d_DSAPrivateKey"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "i2d_DSAPublicKey"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "i2d_DSA_SIG"
+      },
+      {
+        "declaring_header": "dsa.h",
+        "module": "src/dsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "i2d_DSAparams"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "i2d_ECDSA_SIG"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "i2d_ECPKParameters"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "i2d_ECParameters"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "i2d_ECPrivateKey"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "i2d_RSAPrivateKey"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "i2d_RSAPublicKey"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "i2d_RSA_OAEP_PARAMS"
+      },
+      {
+        "declaring_header": "rsa.h",
+        "module": "src/rsa/mod.rs",
+        "received_from_phase": null,
+        "symbol": "i2d_RSA_PSS_PARAMS"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "i2o_ECPublicKey"
+      },
+      {
+        "declaring_header": "ec.h",
+        "module": "src/ec/mod.rs",
+        "received_from_phase": null,
+        "symbol": "o2i_ECPublicKey"
+      }
+    ],
+    "owned_by_header": {
+      "aes.h": 15,
+      "blowfish.h": 8,
+      "camellia.h": 10,
+      "cast.h": 7,
+      "des.h": 33,
+      "dh.h": 94,
+      "dsa.h": 87,
+      "ec.h": 199,
+      "evp.h": 27,
+      "idea.h": 8,
+      "md4.h": 5,
+      "md5.h": 5,
+      "mdc2.h": 4,
+      "modes.h": 50,
+      "pem.h": 30,
+      "rc2.h": 7,
+      "rc4.h": 3,
+      "ripemd.h": 5,
+      "rsa.h": 154,
+      "seed.h": 7,
+      "sha.h": 23,
+      "whrlpool.h": 5
+    },
+    "owned_by_module": {
+      "src/aes.rs": 15,
+      "src/asn1/ameth.rs": 15,
+      "src/blowfish.rs": 8,
+      "src/camellia.rs": 10,
+      "src/cast.rs": 7,
+      "src/des/mod.rs": 33,
+      "src/dh/mod.rs": 97,
+      "src/digest/md4.rs": 5,
+      "src/digest/md5.rs": 5,
+      "src/digest/mdc2.rs": 4,
+      "src/digest/ripemd.rs": 5,
+      "src/digest/sha1.rs": 5,
+      "src/digest/sha2.rs": 18,
+      "src/digest/wp.rs": 5,
+      "src/dsa/mod.rs": 90,
+      "src/ec/mod.rs": 202,
+      "src/idea.rs": 8,
+      "src/modes/mod.rs": 50,
+      "src/pem/key_legacy.rs": 30,
+      "src/rc2.rs": 7,
+      "src/rc4.rs": 3,
+      "src/rsa/mod.rs": 157,
+      "src/seed.rs": 7
+    },
+    "rule": "the stratum's working set is the projection of forensics/atlas/symbol-ownership.json for phase 8, plus every symbol an earlier stratum's ledger records as handed to it: a symbol belongs to the stratum that owns the header declaring it, and a discharged hand-off belongs to the stratum that built it"
+  },
+  "generator": "forensics/tools/phase8_obligations.py",
+  "inputs": [
+    {
+      "name": "authority-symbols",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+      "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
+    },
+    {
+      "name": "authority-functions",
+      "path": "forensics/atlas/openssl-3.6.4-production/functions.json",
+      "sha256": "0add7610e574dc030773b0f76a6cc80215d73cfbca411392bd6b64f3f8de80d0"
+    },
+    {
+      "name": "symbol-ownership",
+      "path": "forensics/atlas/symbol-ownership.json",
+      "sha256": "d42d2ba4f459b729139149f7343cb36357959272a38fecce8f20e6e4aa29a137"
+    },
+    {
+      "name": "implemented-surface",
+      "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
+      "sha256": "c93c4a20ca9f2ca351525e7b07f84c8275d3134340e72bfa8df30519bf70cb19"
+    },
+    {
+      "name": "phase7-obligations",
+      "path": "forensics/phase7-obligations.json",
+      "sha256": "6d102d637435cb594a5b730e7bbacfcaadf39968f290d93b66247a637bae92c4"
+    }
+  ],
+  "kind": "phase8-obligations",
+  "schema": "openssl-rs/atlas/phase8-obligations/v1"
+}

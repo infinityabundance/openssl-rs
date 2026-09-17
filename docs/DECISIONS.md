@@ -12625,3 +12625,132 @@ per-slice reading is the previous head's.
 note that said `evp_cleanup_int` and `EVP_add_alg_module` were "owed to 7.4" is corrected in place
 with a pointer to this entry rather than rewritten silently — the reading it recorded was right when
 it was written and the two facts under it have since changed.
+
+## D197 — Phase 8 opens: 786 rows, sixteen recorded hand-offs, and four readings the plan had to correct before any of it could be written
+
+**8.0 lands the plan, the ledger, the runner and the registration, and it found four things
+about the stratum that no amount of reading the subphase table would have produced.** Phase 8
+is the native primitives — 759 exports the atlas assigns it plus 27 Phase 7 handed over, 786
+rows across the nine working subphases — and the arithmetic is a *projection* of
+`forensics/atlas/symbol-ownership.json` exactly as every stratum since Phase 3's is. This
+entry records the bootstrap and the four readings; the digest work is D198.
+
+**The measurement, and it is the strongest one this project has produced for a stratum.**
+Intersecting every `libcrypto-shlib-*.o` in the authority's build tree — 845 objects — with
+the atlas's Phase 8 set places **759 of 759** across **143 units**. No export in this stratum
+is unaccounted for by a translation unit, and unlike Phase 7's the accounting is *complete*
+rather than nearly so. The largest units are `crypto/ec/ec_lib.c` (69), `crypto/rsa/rsa_lib.c`
+(57), `crypto/ec/ec_key.c` (34), `crypto/rsa/rsa_meth.c` (33) and `crypto/pem/pem_all.c` (30).
+By declaring header the stratum is 22 headers, led by `ec.h` 199, `rsa.h` 154, `dh.h` 94,
+`dsa.h` 87 and `modes.h` 50.
+
+**Reading one: nine of this stratum's exports are perlasm's in the authority, and none of the
+digests' are.** The same object-by-object measurement says which units define which exports,
+and among them are `crypto/aes/asm/aes-x86_64.pl`'s object with **five** Phase-8 exports
+(`AES_cbc_encrypt`, `AES_decrypt`, `AES_encrypt`, `AES_set_decrypt_key`,
+`AES_set_encrypt_key`), `crypto/rc4/asm/rc4-x86_64.pl`'s with **three** (`RC4`, `RC4_options`,
+`RC4_set_key`) and `crypto/camellia/asm/cmll-x86_64.pl`'s with **one**
+(`Camellia_cbc_encrypt`). The digest objects — `md5-x86_64`, `sha1-x86_64`, `sha256-x86_64`,
+`sha512-x86_64`, `wp-x86_64`, `sm3-x86_64`, `keccak1600-x86_64` — define **zero** Phase-8
+exports: what they provide is `sha256_block_data_order` and its siblings, which the version
+script hides. This is not a curiosity, it is what decides how each subphase must be verified.
+For 8.1 the portable arm reproduces an *internal* alternative implementation, and a discrepancy
+would show only as a wrong digest byte. For 8.2 the portable arm reproduces **the symbol
+itself**, and a published test vector would prove that the crate computes AES correctly while
+saying nothing about whether it is the same observable function the authority publishes. Both
+are the same requirement — a differential court, the same program compiled twice — and the plan
+records the distinction so that neither subphase is verified by a weaker instrument than its
+authority demands. `docs/PHASE-8-SUBPHASES.md` §0 and §3.1 carry it, and the assembly fast
+paths themselves are Phase 19's, which `docs/RELEASE_GATES.md` already says.
+
+**Reading two: 8.1's row names MDC2, and MDC2 cannot be written before 8.2.** The plan's
+subphase table is dependency-ordered, and reading 8.1's own units against each other says one
+of them is on the wrong side of the boundary. MD4, MD5, RIPEMD-160, Whirlpool, SHA-1 and SHA-2
+are self-contained — a message schedule, a compression function, and the collector
+`include/crypto/md32_common.h` implements. `crypto/mdc2/mdc2dgst.c`'s `mdc2_body` is not: lines
+79-85 are `DES_set_odd_parity`, `DES_set_key_unchecked` and `DES_encrypt1`, twice, and those
+three are 8.2's `des.h` exports. MDC2 is DES-based by construction, which is what its name
+says. The row is not rewritten and MDC2 is not silently moved: the inversion is recorded in the
+plan and MDC2's four labels stay in the ledger's `open` list until 8.2 lands the DES key
+schedule. Landing the three DES functions early was rejected because it would put 8.2's first
+work in 8.1's commit for a reason 8.1's row does not name, and writing MDC2 over a private DES
+was rejected because this stratum exports `DES_encrypt1` once. It is the disposition D163 gave
+7.4's own inversion, reached from the same direction.
+
+**Reading three: the brief's SHA-3, SHAKE, SHA-512/224 and SM3 "low-level API" does not exist
+in this authority.** The authority's `include/openssl/sha.h` is 139 lines and declares no
+`SHA3_*`, no `SHAKE*`, no `SHA512_224`/`SHA512_256` and no `SHA256_192` function;
+`forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json` has no record for
+`SHA3_absorb`, `SHA3_squeeze` or `SHA3_256` either. `crypto/sha/sha3.c`'s entry points are
+`ossl_sha3_reset`, `_init`, `_update`, `_final`, `_squeeze`, of which none is exported, and
+`crypto/sm3/sm3.c`'s are `ossl_sm3_init` and `ossl_sm3_block_data_order`. What the authority
+*does* export for those constructions is the `EVP_MD` name — `EVP_sha3_224`…`EVP_sha3_512`,
+`EVP_shake128`, `EVP_shake256`, `EVP_sha512_224`, `EVP_sha512_256`, `EVP_sm3` — and all of
+those are Phase 7's and already implemented. So that part of 8.1 is **provider work with no
+low-level export to land**, and the internal entry points it needs are the `ossl_*` names above
+plus `sha512_224_init`/`sha512_256_init`/`ossl_sha256_192_init` and `ossl_sm3_*`, which carry no
+`#[no_mangle]` because the authority keeps them local. This is the same class as D195's
+`EVP_AEAD`: a name in the plan that the pinned source does not have, found by reading the
+header and the symbol inventory rather than by trusting the plan.
+
+**Reading four: five of the seven digest one-shots are `EVP_Q_digest`, so they are the provider
+half's and not the construction's.** `crypto/sha/sha1_one.c` implements `SHA1`, `SHA224`,
+`SHA256`, `SHA384` and `SHA512` as `EVP_Q_digest(NULL, "SHA256", NULL, d, n, md, NULL)` — a
+fetch through the **default library context**. `EVP_Q_digest` is Phase 7's and is implemented,
+but the candidate has no default provider, because `ossl_default_provider_init` does not exist;
+that is the residual D117 records and the reason Phase 6's `RT-PROVIDER` deliberately never
+enables the fallback walk. `MD4`, `MD5`, `RIPEMD160`, `MDC2` and `WHIRLPOOL` are one-shots in
+the older sense — `crypto/md5/md5_one.c` calls `MD5_Init`/`_Update`/`_Final` directly — so they
+land with their construction. **That split is the plan's reason for slicing 8.1 into 8.1a and
+8.1b**: thirty-eight exports land as constructions, five wait on the provider half, and MDC2's
+four wait on 8.2. The provider half is not an appendix to this subphase; it is the half that
+makes the public spellings of SHA-1 and SHA-2 work at all, and the plan says so in the slice
+table rather than leaving it to be discovered when the one-shots are attempted.
+
+**The twenty-seven hand-offs are one mechanism and one subphase.** Every row Phase 7 deferred
+to this stratum is `evp.h`'s, and every one takes the legacy route — a downgraded
+`RSA`/`DH`/`DSA`/`EC_KEY`, or a search of `standard_methods[]` — so **8.8 is what retires all
+twenty-seven**, plus the `EVP_PKEY_type`, `d2i_PublicKey`/`d2i_KeyParams*` and
+`EVP_PKEY_meth_find`/`_get0`/`_get_count` blockers 7.4l and 7.7 left open. Three of the twelve
+`EVP_PKEY_get0_*`/`get1_*`/`set1_*` spellings per key type are labelled with that key type's
+module and the fifteen remaining are `src/asn1/ameth.rs`'s, which is the ledger's answer to
+"which module is expected to hold it" and not a claim about which file will be written first.
+
+**The sixteen recorded hand-offs are all Phase 9's and all verified call by call.** `DES_random_key`
+(`crypto/des/rand_key.c:22`, `RAND_priv_bytes`), the two RSA blinding names
+(`crypto/rsa/rsa_crpt.c:104` → `BN_BLINDING_create_param` → `BN_rand_range_ex` → `RAND_bytes_ex`
+at `crypto/bn/bn_rand.c:50`), eleven key and parameter generators across the four key types
+(`BN_generate_prime_ex2` at `crypto/rsa/rsa_gen.c:388` and `crypto/dh/dh_gen.c:217`,
+`BN_priv_rand_ex` at `crypto/dh/dh_key.c:336`, and the DSA and EC equivalents), and the two X9
+KDF wrappers (`crypto/dh/dh_kdf.c:40` and `crypto/ec/ecdh_kdf.c:34`, each an `EVP_KDF` fetch of
+a provider KDF). **The four key types themselves are not hand-offs**: `RSA_get0_key` needs the
+`RSA` object `RSA_new` allocates, which is 8.4's own work, and a stratum cannot hand a symbol to
+itself — so those rows are `open`, not `deferred`, and the plan says so because the opposite
+reading is the tempting one. The one phase number that is an inference rather than a reading is
+the X9 KDF pair's "Phase 9": no plan names the provider KDF family yet, and the row says it is
+the one to correct if a later plan says otherwise.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 8 working set / implemented / deferred / open | — | **786 / 0 / 16 / 770** |
+| `libcrypto` implemented / 5896 | 1841 | **1841** |
+| phase-state `complete` / `in-progress` | 8 / 0 | **8 / 1** |
+| obligation ledgers / court result files | 7 / 6 | **8 / 6** |
+| `prerequisite-gate` findings / blocking / planned | 0 / 25 / — | **0 / 25 / 14** |
+| `plan-reconciliation` findings / phase-8 census | 0 / — | **0 / 6** |
+| `evidence_determinism` artefacts | 21 | **22** |
+| `ownership-audit` hand-off edges | 6 | **7** (the Phase 7 → 8 edge, 27 symbols, `mismatched: 0`) |
+
+The guard reports two movements against this branch's previous head: `phase[8]`
+`not-started -> in-progress`, and the new `open[phase8] = 770` it cannot certify against
+`origin/main` because the ledger did not exist there — `UNCERTIFIED: obligation ledger 'phase8'
+exists now but not in the authority`, which is the mechanism working rather than a finding.
+
+**What 8.0 does not claim.** The registry row, the ledger, the runner and the plan are evidence,
+and evidence is not implementation: this commit moves `implemented[libcrypto]` by zero and the
+stratum from `not-started` to `in-progress`. `forensics/tools/phase8_courts.py` lands with an
+**empty** court list — the shape 7.0 had — because a runner that names a probe which does not
+exist cannot be committed, and `RT-DIGEST` arrives in D198 with its probe in the same commit as
+the symbols it observes.

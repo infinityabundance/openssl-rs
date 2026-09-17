@@ -538,6 +538,21 @@ PHASE7_MODULES = [
     "courts/phase7/rt_fetch_probe.c",
 ]
 
+
+# Phase 8's evidence: the native cryptographic primitives -- the digests, the symmetric
+# ciphers and their modes, and the four asymmetric key types with the ASN.1 method objects
+# that name them. Its plan is `docs/PHASE-8-SUBPHASES.md`, and 8.0 landed the ledger while the
+# stratum itself is entirely open, which is the honest starting state and is what that plan's
+# §2 records. The modules are added by the subphase that lands them, in the same commit, so
+# that this list is a statement about the tree rather than about the plan.
+PHASE8_COURTS = "artifacts/phase8/COURTS.json"
+PHASE8_OBLIGATIONS = "forensics/phase8-obligations.json"
+PHASE8_MODULES = [
+    "docs/PHASE-8-SUBPHASES.md",
+    "forensics/tools/phase8_courts.py",
+    "forensics/tools/phase8_obligations.py",
+]
+
 STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
     3: StratumEvidence(PHASE3_MODULES, PHASE3_OBLIGATIONS, PHASE3_COURTS,
                        ledger_note=(
@@ -549,6 +564,7 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
     5: StratumEvidence(PHASE5_MODULES, PHASE5_OBLIGATIONS, PHASE5_COURTS),
     6: StratumEvidence(PHASE6_MODULES, PHASE6_OBLIGATIONS, PHASE6_COURTS),
     7: StratumEvidence(PHASE7_MODULES, PHASE7_OBLIGATIONS, PHASE7_COURTS),
+    8: StratumEvidence(PHASE8_MODULES, PHASE8_OBLIGATIONS, PHASE8_COURTS),
 }
 
 
