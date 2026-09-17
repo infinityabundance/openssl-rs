@@ -33,8 +33,32 @@
 //! can `EVP_PKEY_type` itself. `docs/DECISIONS.md` D163 records the dependency and
 //! `docs/PHASE-7-SUBPHASES.md` splits 7.4 accordingly.
 //!
-//! What that means concretely, and it is the strongest statement this file can make: **no exported
-//! function in this crate can observe the gap yet.** `evp_pkey_name2type`'s callers are
+//! ## What else is not here, and why each is a stratum boundary rather than a choice
+//!
+//! Four omissions, each recorded where its first reader will be rather than only here:
+//!
+//!   * **`pkey_set_type`'s legacy-method lookup.** The authority finds an `EVP_PKEY_ASN1_METHOD` by
+//!     name and takes its **legacy NID** into `pkey->type` even for a provider-side key, so
+//!     `EVP_PKEY_get_id` on a method named `"RSA"` answers `EVP_PKEY_RSA`. That lookup is Phase 8's,
+//!     and its absence is the one *reachable* difference in this file:
+//!     `docs/SECURITY_DIVERGENCE_POLICY.md` **D-PKEY-AMETH-1** records it, names the trigger, and
+//!     says which comparisons stop being claimed.
+//!   * **the legacy block of `struct evp_pkey_st`** — `ameth`, `engine`, `pmeth_engine` and the two
+//!     low-level-key unions. `EVP_PKEY_ASN1_METHOD` is Phase 8's and `ENGINE` is Phase 13's, so the
+//!     fields would be untyped placeholders. The state they represent — a *legacy origin key*,
+//!     `keymgmt == NULL` with `type != EVP_PKEY_NONE` — is therefore one this crate cannot enter, and
+//!     that is what makes `EVP_PKEY_get0_description`'s and `EVP_PKEY_dup`'s legacy arms unreachable
+//!     rather than merely untested.
+//!   * **`attributes`** — a `STACK_OF(X509_ATTRIBUTE)` whose element destructor is
+//!     `X509_ATTRIBUTE_free`, a Phase 12 symbol. No function in `p_lib.c` sets it (the
+//!     `EVP_PKEY_add1_attr` family is `crypto/x509/`'s), so `EVP_PKEY_free` has a field to name and
+//!     no branch to omit.
+//!   * **the arms that read a legacy origin** in the functions that *are* here. Each is marked at the
+//!     site with the stratum that fills it, because a reader of one function should not have to find
+//!     this paragraph first.
+//!
+//! What that means concretely, and it is the strongest statement the two name translations can make:
+//! **no exported function in this crate can observe the `name2type` gap yet.** `evp_pkey_name2type`'s callers are
 //! `EVP_PKEY_is_a`'s legacy arm, `EVP_PKEY_type_names_do_all`'s legacy arm and `keymgmt_meth.c`'s
 //! `legacy_alg` fill — and all three read it through a `pkey->ameth` path or through
 //! `evp_keymgmt_get_legacy_alg`, which the legacy half owns. The moment Phase 8 lands the fallback
@@ -45,13 +69,28 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, CStr};
+use core::ffi::{c_char, c_int, c_void, CStr};
+use core::ptr;
+use core::sync::atomic::{AtomicI32, Ordering};
 
+use crate::evp::keymgmt::{
+    EVP_KEYMGMT_free, EVP_KEYMGMT_get0_name, EVP_KEYMGMT_get0_provider, EVP_KEYMGMT_is_a,
+    EVP_KEYMGMT_names_do_all, EVP_KEYMGMT_up_ref, EvpKeyMgmt,
+};
+use crate::evp::keymgmt_lib::evp_keymgmt_util_clear_operation_cache;
+use crate::provider::OsslProvider;
+use crate::runtime::err::{err_sites, raise_site};
+use crate::runtime::ex_data::{
+    CRYPTO_dup_ex_data, CRYPTO_free_ex_data, CRYPTO_get_ex_data, CRYPTO_new_ex_data,
+    CRYPTO_set_ex_data, CryptoExData, CRYPTO_EX_INDEX_EVP_PKEY,
+};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 use crate::runtime::obj::{
     NID_X9_62_id_ecPublicKey, NID_dhKeyAgreement, NID_dhpublicnumber, NID_dsa, NID_rsaEncryption,
     NID_rsassaPss, NID_sm2, NID_undef, OBJ_ln2nid, OBJ_nid2sn, OBJ_sn2nid, NID_ED25519, NID_ED448,
     NID_X25519, NID_X448,
 };
+use crate::runtime::thread::{CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new, CryptoRwlock};
 
 /// `EVP_PKEY_NONE` — `include/openssl/evp.h`, which spells it `NID_undef`.
 #[allow(dead_code)] // read by `pkey_set_type` and `EVP_PKEY_get_id`, both of which 7.4a's next slice lands
@@ -135,6 +174,635 @@ pub(crate) fn evp_pkey_type2name(type_: c_int) -> *const c_char {
     }
     OBJ_nid2sn(type_)
 }
+
+// ---------------------------------------------------------------------------------------------
+// The object
+// ---------------------------------------------------------------------------------------------
+
+/// `struct evp_pkey_st`'s `cache` member — four key properties every `EVP_PKEY_get_*` accessor
+/// answers from, filled once per assignment by `evp_keymgmt_util_cache_keyinfo`.
+///
+/// `security_category` is the one field whose *unfilled* value differs from zero, and the difference
+/// is the authority's: the provider's own initial value is `-1`, so a provider that answers the
+/// parameter with 0 is saying something the cache can distinguish from a provider that does not
+/// answer at all — but only if the cache is filled. An unfilled cache holds the struct's zero.
+#[repr(C)]
+pub struct EvpPkeyCache {
+    /// `int bits`.
+    pub(crate) bits: c_int,
+    /// `int security_bits`.
+    pub(crate) security_bits: c_int,
+    /// `int security_category`.
+    pub(crate) security_category: c_int,
+    /// `int size`.
+    pub(crate) size: c_int,
+}
+
+/// `struct evp_pkey_st` — the provider block and the block both halves share.
+///
+/// **The legacy block is deliberately absent**, and what that costs is stated here rather than left
+/// to be inferred: there is no `ameth`, no `engine`, no `pmeth_engine`, and no `pkey` /
+/// `legacy_cache_pkey` union, because `EVP_PKEY_ASN1_METHOD` and `ENGINE` are Phase 8's and Phase
+/// 13's and the fields would be untyped placeholders. The effect is exactly one state this crate
+/// cannot enter — `keymgmt == NULL` with `type_ != EVP_PKEY_NONE`, a *legacy origin key* — which is
+/// why every provider-path function below tests `keymgmt` rather than a state flag, and why the
+/// functions that have a legacy arm in the authority record that arm as absent at the site.
+///
+/// `attributes` is absent for the same reason: it is a `STACK_OF(X509_ATTRIBUTE)` whose element
+/// destructor is `X509_ATTRIBUTE_free`, a Phase 12 symbol. Nothing in this crate can make it
+/// non-NULL — no `p_lib.c` function sets it, and the `EVP_PKEY_add1_attr` family is `crypto/x509/`'s —
+/// so `EVP_PKEY_free` has no branch to omit, only a field to name.
+#[repr(C)]
+pub struct EvpPkey {
+    /// `int type` — the legacy NID, `EVP_PKEY_KEYMGMT` for an unnamed provider key, or
+    /// `EVP_PKEY_NONE` for a blank one. Rust reserves `type`, so the field takes the trailing
+    /// underscore the project uses for a reserved word.
+    pub(crate) type_: c_int,
+    /// `int save_type` — the type as it was *asked for*, before the ameth lookup may have rewritten
+    /// `type`.
+    pub(crate) save_type: c_int,
+    /// `CRYPTO_REF_COUNT references`.
+    pub(crate) references: AtomicI32,
+    /// `CRYPTO_RWLOCK *lock` — guards the operation cache and the dirty counters.
+    pub(crate) lock: *mut CryptoRwlock,
+    /// `CRYPTO_EX_DATA ex_data`.
+    pub(crate) ex_data: CryptoExData,
+    /// `EVP_KEYMGMT *keymgmt` — the provider method that owns `keydata`, holding a reference.
+    pub(crate) keymgmt: *mut EvpKeyMgmt,
+    /// `void *keydata` — the provider-side key, owned by `keymgmt`.
+    pub(crate) keydata: *mut c_void,
+    /// `size_t dirty_cnt` — incremented whenever anything modifies the key data.
+    pub(crate) dirty_cnt: usize,
+    /// `STACK_OF(OP_CACHE_ELEM) *operation_cache` — the exported copies, one per destination method.
+    pub(crate) operation_cache: *mut crate::runtime::stack::OpenSslStack,
+    /// `size_t dirty_cnt_copy` — `dirty_cnt` as of the last cache synchronisation.
+    pub(crate) dirty_cnt_copy: usize,
+    /// `struct { int bits; ... } cache`.
+    pub(crate) cache: EvpPkeyCache,
+}
+
+/// The authority's translation unit, so a failing allocation records its coordinates.
+const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/p_lib.c".as_ptr();
+/// `EVP_PKEY_new`'s `OPENSSL_zalloc(sizeof(*ret))` (line 1491).
+const LINE_ZALLOC_PKEY: c_int = 1491;
+
+/// `EVP_PKEY *EVP_PKEY_new(void)`.
+///
+/// Two allocations and an ex-data initialisation, and the failure path is the reason the order is
+/// what it is: the reference counter is created **before** the lock, so the `err` label can free the
+/// counter whether or not the lock exists, and `CRYPTO_THREAD_lock_free(NULL)` is a no-op for the
+/// same reason. `save_parameters = 1` is the one non-zero default, and it is set on the *legacy*
+/// half's behalf: a `d2i` of a key with parameters saves them unless told otherwise.
+///
+/// # Safety
+/// No preconditions. The function is `unsafe` because it is an exported `extern "C"` entry point
+/// whose result is a raw pointer, not because it reads anything of the caller's.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_new() -> *mut EvpPkey {
+    /* `CRYPTO_zalloc` is one of the safe entry points of this crate: it validates its own argument
+     * and answers NULL rather than reading anything of the caller's. */
+    let ret =
+        CRYPTO_zalloc(core::mem::size_of::<EvpPkey>(), FILE, LINE_ZALLOC_PKEY).cast::<EvpPkey>();
+
+    if ret.is_null() {
+        return ptr::null_mut();
+    }
+
+    // SAFETY: `ret` is this call's own allocation.
+    unsafe {
+        (*ret).type_ = EVP_PKEY_NONE;
+        (*ret).save_type = EVP_PKEY_NONE;
+        (*ret).references = AtomicI32::new(1);
+    }
+
+    let lock = CRYPTO_THREAD_lock_new();
+    if lock.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::P_LIB_1504) };
+        // SAFETY: `ret` is this call's own allocation, not yet published.
+        unsafe { CRYPTO_free(ret.cast(), FILE, LINE_ZALLOC_PKEY) };
+        return ptr::null_mut();
+    }
+    // SAFETY: `ret` is live.
+    unsafe { (*ret).lock = lock };
+
+    // SAFETY: `ret` is live and `ex_data` is a field of it.
+    if unsafe {
+        CRYPTO_new_ex_data(
+            CRYPTO_EX_INDEX_EVP_PKEY,
+            ret.cast(),
+            ptr::addr_of_mut!((*ret).ex_data),
+        )
+    } == 0
+    {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::P_LIB_1511) };
+        // SAFETY: `lock` is live and `ret` is this call's own allocation.
+        unsafe { CRYPTO_THREAD_lock_free(lock) };
+        // SAFETY: `ret` is this call's own allocation, not yet published.
+        unsafe { CRYPTO_free(ret.cast(), FILE, LINE_ZALLOC_PKEY) };
+        return ptr::null_mut();
+    }
+    ret
+}
+
+/// `int EVP_PKEY_up_ref(EVP_PKEY *pkey)`.
+///
+/// Answers **1** for any live key, and that is not a simplification: the authority's `CRYPTO_UP_REF`
+/// cannot fail for a positive count, so the `i > 1` test it does afterwards is true for every
+/// object that can reach here.
+///
+/// # Safety
+/// `pkey` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_up_ref(pkey: *mut EvpPkey) -> c_int {
+    // SAFETY: `pkey` is live per the contract.
+    unsafe { (*pkey).references.fetch_add(1, Ordering::AcqRel) };
+    1
+}
+
+/// `static void evp_pkey_free_it(EVP_PKEY *x)` — release the key data, keeping the object.
+///
+/// The authority's comment says "x is never NULL", and it is the only function here that says so.
+/// The **order** is the contract: the operation cache is cleared *first*, because every cached entry
+/// holds a reference to its `keymgmt` and a key data derived from `x->keydata`, and releasing
+/// `x->keymgmt` before the cache would leave the entries pointing at a freed method.
+///
+/// # Safety
+/// `x` must be live.
+unsafe fn evp_pkey_free_it(x: *mut EvpPkey) {
+    // SAFETY: `x` is live per the contract.
+    unsafe { evp_keymgmt_util_clear_operation_cache(x) };
+
+    // SAFETY: `x` is live.
+    let keymgmt = unsafe { (*x).keymgmt };
+    if !keymgmt.is_null() {
+        // SAFETY: `keymgmt` is live and `keydata` belongs to it.
+        unsafe { crate::evp::keymgmt::evp_keymgmt_freedata(keymgmt, (*x).keydata) };
+        // SAFETY: `keymgmt` is live and this key holds the reference `pkey_set_type` took.
+        unsafe { EVP_KEYMGMT_free(keymgmt) };
+        // SAFETY: `x` is live.
+        unsafe {
+            (*x).keymgmt = ptr::null_mut();
+            (*x).keydata = ptr::null_mut();
+        }
+    }
+    // SAFETY: `x` is live.
+    unsafe { (*x).type_ = EVP_PKEY_NONE };
+}
+
+/// `void EVP_PKEY_free(EVP_PKEY *x)`.
+///
+/// `EVP_PKEY_free` has no legacy `pkey->ameth->pkey_free` for now, but is otherwise complete.
+///
+/// The release order matches the authority's, and the release-then-free pair is `fetch_sub`'s return:
+/// the object is freed exactly by the call that observes a count of **1**, and a key with no
+/// references left reports `0` because the count was already 1 and not because anything set it.
+///
+/// # Safety
+/// `x` must be NULL or a live `EvpPkey`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_free(x: *mut EvpPkey) {
+    if x.is_null() {
+        return;
+    }
+
+    // SAFETY: `x` is live per the contract.
+    let last = unsafe { (*x).references.fetch_sub(1, Ordering::AcqRel) };
+    if last > 1 {
+        return;
+    }
+
+    // SAFETY: `x` is live and this is the last reference.
+    unsafe { evp_pkey_free_it(x) };
+    // SAFETY: `x` is live and `ex_data` is a field of it.
+    unsafe {
+        CRYPTO_free_ex_data(
+            CRYPTO_EX_INDEX_EVP_PKEY,
+            x.cast(),
+            ptr::addr_of_mut!((*x).ex_data),
+        )
+    };
+    // SAFETY: `x` is live and `lock` is the lock `EVP_PKEY_new` created.
+    let lock = unsafe { (*x).lock };
+    // SAFETY: `lock` is live and not yet freed.
+    unsafe { CRYPTO_THREAD_lock_free(lock) };
+    // SAFETY: `x` is this object's own allocation.
+    unsafe { CRYPTO_free(x.cast(), FILE, LINE_ZALLOC_PKEY) };
+}
+
+/// `static int pkey_set_type(EVP_PKEY *pkey, ENGINE *e, int type, const char *str, int len,
+/// EVP_KEYMGMT *keymgmt)`.
+///
+/// The provider path only, and the two clauses that would find an `EVP_PKEY_ASN1_METHOD` are absent
+/// — `EVP_PKEY_asn1_find_str` and `EVP_PKEY_asn1_find` are `ameth_lib.c`'s and search a table of
+/// Phase 8's objects (`docs/DECISIONS.md` D163/D165), and `ENGINE` is Phase 13's. What that costs is
+/// one observable, and it is recorded as `D-PKEY-AMETH-1`: with `ameth` always NULL the last block
+/// takes its `else` arm, so a provider key reports `EVP_PKEY_KEYMGMT` from `EVP_PKEY_get_id` where
+/// the authority reports the *legacy* NID for any name that has a legacy method — `EVP_PKEY_RSA`
+/// for a key type named `"RSA"`.
+///
+/// Three things that look like details and are not:
+///
+///   * the two `ossl_assert`s are **not** errors in a released build — they are the identity
+///     function under `NDEBUG` — so the provider path never takes them, and the crate follows the
+///     released build because that is the profile the authority is built with;
+///   * `free_it` is true when the key is **assigned**, in either half, and it releases the key data
+///     *before* the new type is looked up: reassigning is destructive even if the new type turns
+///     out not to exist;
+///   * the `up_ref` is taken **after** the "unsupported" refusal, so a failed call takes nothing.
+///
+/// # Safety
+/// `pkey` must be NULL or live; `keymgmt` must be NULL or live.
+unsafe fn pkey_set_type(pkey: *mut EvpPkey, type_: c_int, keymgmt: *mut EvpKeyMgmt) -> c_int {
+    if !pkey.is_null() {
+        // SAFETY: `pkey` is live.
+        let free_it = unsafe { !(*pkey).keydata.is_null() };
+        if free_it {
+            // SAFETY: `pkey` is live.
+            unsafe { evp_pkey_free_it(pkey) };
+        }
+    }
+
+    /* The check the authority writes as two `ossl_assert`s: a key cannot be both legacy and
+     * provider-side. With no ameth and no ENGINE available the first clause is the only one this
+     * crate can violate, and a caller that passes both a type and a method has made a mistake the
+     * authority refuses in a debug build and proceeds from in a released one. */
+    if keymgmt.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::P_LIB_1601) };
+        return 0;
+    }
+
+    if !pkey.is_null() {
+        // SAFETY: `keymgmt` is live and this takes the key's own reference to it.
+        if unsafe { EVP_KEYMGMT_up_ref(keymgmt) } == 0 {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::P_LIB_1607) };
+            return 0;
+        }
+
+        // SAFETY: `pkey` is live.
+        unsafe {
+            (*pkey).keymgmt = keymgmt;
+            (*pkey).save_type = type_;
+            (*pkey).type_ = type_;
+            /* The authority's `else` arm: no ameth was found, so the type is the pseudo-NID that
+             * says "this key has a provider method and no legacy implementation". See the note
+             * above -- this is D-PKEY-AMETH-1's site, and the `if (ameth != NULL)` arm it replaces
+             * is Phase 8's. */
+            (*pkey).type_ = EVP_PKEY_KEYMGMT;
+        }
+    }
+    1
+}
+
+/// `int evp_pkey_set_type_by_keymgmt(EVP_PKEY *pkey, EVP_KEYMGMT *keymgmt)` — the internal name the
+/// unit exports to `keymgmt_lib.c`.
+///
+/// # Safety
+/// `pkey` must be live; `keymgmt` must be live.
+pub(crate) unsafe fn evp_pkey_set_type_by_keymgmt(
+    pkey: *mut EvpPkey,
+    keymgmt: *mut EvpKeyMgmt,
+) -> c_int {
+    // SAFETY: `pkey` is live and `keymgmt` is live.
+    unsafe { pkey_set_type(pkey, EVP_PKEY_NONE, keymgmt) }
+}
+
+/// `int EVP_PKEY_set_type_by_keymgmt(EVP_PKEY *pkey, EVP_KEYMGMT *keymgmt)`.
+///
+/// The public entry point, and the asymmetry between it and its sibling above is the whole of 7.4a's
+/// ameth gap in one function: the authority first walks the method's **names** looking for one that
+/// an `EVP_PKEY_ASN1_METHOD` exists for, refuses if it finds two, and passes the one it found on. The
+/// walk is here and the lookup is Phase 8's, so `str[0]` is always NULL and `pkey_set_type`'s ameth
+/// argument is always NULL. **The walk is written rather than omitted** so that the day Phase 8 lands,
+/// the only change is the loop body — and because the walk is what makes the *ambiguity* refusal
+/// reachable, which is a behaviour the crate does own.
+///
+/// # Safety
+/// `pkey` must be live; `keymgmt` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_set_type_by_keymgmt(
+    pkey: *mut EvpPkey,
+    keymgmt: *mut EvpKeyMgmt,
+) -> c_int {
+    let mut found: [*const c_char; 2] = [ptr::null(); 2];
+
+    // SAFETY: `keymgmt` is live per the contract, the visitor is this file's own, and `found` is a
+    // live local of two entries.
+    let walked = unsafe {
+        EVP_KEYMGMT_names_do_all(
+            keymgmt,
+            Some(find_ameth),
+            ptr::addr_of_mut!(found).cast::<c_void>(),
+        )
+    };
+    if walked == 0 || !found[1].is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::P_LIB_1688) };
+        return 0;
+    }
+
+    // SAFETY: `pkey` is live and `keymgmt` is live.
+    unsafe { pkey_set_type(pkey, EVP_PKEY_NONE, keymgmt) }
+}
+
+/// `static void find_ameth(const char *name, void *data)` — the visitor `find_ameth` is named after
+/// above: it records at most **two** names, and the second is what makes an ambiguous match a
+/// refusal rather than a choice.
+///
+/// The authority's body calls `pkey_set_type(NULL, NULL, EVP_PKEY_NONE, name, strlen(name), NULL)`
+/// purely to ask whether an ameth exists, wrapped in `ERR_set_mark`/`ERR_pop_to_mark` because "the
+/// error messages from `pkey_set_type()` are uninteresting here, and misleading". With the ameth
+/// lookup absent the question has no answer, so the visitor records **nothing** — which makes every
+/// `EVP_PKEY_set_type_by_keymgmt` call agree with `found[1] == NULL` and reach `pkey_set_type`. Its
+/// mark/pop pair is kept because it is what a Phase-8 fill needs, and because leaving it out would
+/// make the fill's diff larger than the fill.
+///
+/// # Safety
+/// `data` must point at a two-element array of `const char *`; `name` must be NUL-terminated.
+unsafe extern "C" fn find_ameth(_name: *const c_char, data: *mut c_void) {
+    crate::runtime::err::ERR_set_mark();
+    /* Phase 8: `pkey_set_type(NULL, NULL, EVP_PKEY_NONE, name, strlen(name), NULL)` and the two
+     * `str[i] == NULL` stores. See this function's doc comment. */
+    let _ = data;
+    crate::runtime::err::ERR_pop_to_mark();
+}
+
+/// `int EVP_PKEY_get_id(const EVP_PKEY *pkey)`.
+///
+/// A field read, and the field is the interesting part: for a provider key it is
+/// `EVP_PKEY_KEYMGMT` unless an ameth was found for one of the method's names, which is Phase 8's
+/// and is recorded as `D-PKEY-AMETH-1`.
+///
+/// # Safety
+/// `pkey` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_get_id(pkey: *const EvpPkey) -> c_int {
+    // SAFETY: `pkey` is live per the contract.
+    unsafe { (*pkey).type_ }
+}
+
+/// `int EVP_PKEY_is_a(const EVP_PKEY *pkey, const char *name)`.
+///
+/// Two arms, and the first is a **NULL guard that answers 0** rather than a fault. The legacy arm
+/// compares the key's type against `evp_pkey_name2type(name)`, whose `EVP_PKEY_type` fallback is
+/// Phase 8's — a real gap, unreachable here because a legacy origin cannot be constructed, and
+/// recorded in this file's module doc and D163.
+///
+/// # Safety
+/// `pkey` NULL or live; `name` NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_is_a(pkey: *const EvpPkey, name: *const c_char) -> c_int {
+    if pkey.is_null() {
+        return 0;
+    }
+    // SAFETY: `pkey` is live per the contract.
+    let keymgmt = unsafe { (*pkey).keymgmt };
+    if keymgmt.is_null() {
+        // SAFETY: `pkey` is live and `name` is NUL-terminated per the contract.
+        let type_ = unsafe { (*pkey).type_ };
+        // SAFETY: `name` is NUL-terminated.
+        return c_int::from(type_ == unsafe { evp_pkey_name2type(name) });
+    }
+    // SAFETY: `keymgmt` is live and `name` is NUL-terminated.
+    unsafe { EVP_KEYMGMT_is_a(keymgmt, name) }
+}
+
+/// `int EVP_PKEY_type_names_do_all(const EVP_PKEY *pkey, void (*fn)(const char *, void *),
+/// void *data)`.
+///
+/// A **typed** key is required and a blank one answers 0 — the only refusal, and it is tested with
+/// `evp_pkey_is_typed`, which is true when *either* half has a type. The legacy arm visits exactly
+/// one name, from the object table; the provider arm delegates to the method's own walk.
+///
+/// # Safety
+/// `pkey` must be live; `fn` must be a valid visitor.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_type_names_do_all(
+    pkey: *const EvpPkey,
+    fn_: Option<unsafe extern "C" fn(*const c_char, *mut c_void)>,
+    data: *mut c_void,
+) -> c_int {
+    // SAFETY: `pkey` is live per the contract.
+    let (type_, keymgmt) = unsafe { ((*pkey).type_, (*pkey).keymgmt) };
+    if type_ == EVP_PKEY_NONE && keymgmt.is_null() {
+        return 0;
+    }
+
+    if keymgmt.is_null() {
+        let name = OBJ_nid2sn(type_);
+        if let Some(f) = fn_ {
+            // SAFETY: `f` is the caller's visitor and `name` is a NUL-terminated string of the
+            // object table alives for the process's lifetime.
+            unsafe { f(name, data) };
+        }
+        return 1;
+    }
+    // SAFETY: `keymgmt` is live and `fn_` is the caller's visitor.
+    unsafe { EVP_KEYMGMT_names_do_all(keymgmt, fn_, data) }
+}
+
+/// `const char *EVP_PKEY_get0_description(const EVP_PKEY *pkey)`.
+///
+/// Two refusals that look like one: an **unassigned** key answers NULL, and an assigned one whose
+/// method publishes no description answers NULL as well. The distinction is that the first is about
+/// the key having no data and the second about the provider having no prose.
+///
+/// # Safety
+/// `pkey` must be live.
+///
+/// The `pkey->ameth->info` arm is Phase 8's and unreachable here; the authority's own order puts the
+/// provider's description first, so a provider key never reaches it.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_get0_description(pkey: *const EvpPkey) -> *const c_char {
+    // SAFETY: `pkey` is live per the contract.
+    let (keydata, keymgmt) = unsafe { ((*pkey).keydata, (*pkey).keymgmt) };
+    if keydata.is_null() {
+        return ptr::null();
+    }
+
+    if !keymgmt.is_null() {
+        // SAFETY: `keymgmt` is live.
+        let description = unsafe { (*keymgmt).description };
+        if !description.is_null() {
+            return description;
+        }
+    }
+    ptr::null()
+}
+
+/// `const OSSL_PROVIDER *EVP_PKEY_get0_provider(const EVP_PKEY *key)`.
+///
+/// One arm, and it answers NULL for a key that is not provider-side rather than faulting. The
+/// authority writes the test as `evp_pkey_is_provided`, i.e. `keymgmt != NULL`.
+///
+/// # Safety
+/// `key` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_get0_provider(key: *const EvpPkey) -> *const OsslProvider {
+    // SAFETY: `key` is live per the contract.
+    let keymgmt = unsafe { (*key).keymgmt };
+    if keymgmt.is_null() {
+        return ptr::null();
+    }
+    // SAFETY: `keymgmt` is live.
+    unsafe { EVP_KEYMGMT_get0_provider(keymgmt) }
+}
+
+/// `const char *EVP_PKEY_get0_type_name(const EVP_PKEY *key)`.
+///
+/// The provider arm answers the method's first name; the legacy arm asks the ameth for an info string
+/// and is Phase 8's, so an unnamed key answers NULL.
+///
+/// # Safety
+/// `key` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_get0_type_name(key: *const EvpPkey) -> *const c_char {
+    // SAFETY: `key` is live per the contract.
+    let keymgmt = unsafe { (*key).keymgmt };
+    if !keymgmt.is_null() {
+        // SAFETY: `keymgmt` is live.
+        return unsafe { EVP_KEYMGMT_get0_name(keymgmt) };
+    }
+    ptr::null()
+}
+
+/// `int EVP_PKEY_get_size(const EVP_PKEY *pkey)`.
+///
+/// Answers the cached `size` and **raises** `EVP_R_UNKNOWN_MAX_SIZE` when it is not positive, so a
+/// key whose provider does not publish `max-size` is a *reported* failure rather than a zero.
+///
+/// # Safety
+/// `pkey` must be NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_get_size(pkey: *const EvpPkey) -> c_int {
+    let mut size = 0;
+
+    if !pkey.is_null() {
+        // SAFETY: `pkey` is live per the contract.
+        size = unsafe { (*pkey).cache.size };
+    }
+    if size <= 0 {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::P_LIB_1866) };
+        return 0;
+    }
+    size
+}
+
+/// `int EVP_PKEY_set_ex_data(EVP_PKEY *key, int idx, void *arg)`.
+///
+/// # Safety
+/// `key` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_set_ex_data(
+    key: *mut EvpPkey,
+    idx: c_int,
+    arg: *mut c_void,
+) -> c_int {
+    // SAFETY: `key` is live and `ex_data` is a field of it.
+    unsafe { CRYPTO_set_ex_data(ptr::addr_of_mut!((*key).ex_data), idx, arg) }
+}
+
+/// `void *EVP_PKEY_get_ex_data(const EVP_PKEY *key, int idx)`.
+///
+/// # Safety
+/// `key` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_get_ex_data(key: *const EvpPkey, idx: c_int) -> *mut c_void {
+    // SAFETY: `key` is live and `ex_data` is a field of it.
+    unsafe { CRYPTO_get_ex_data(ptr::addr_of!((*key).ex_data), idx) }
+}
+
+/// `EVP_PKEY *EVP_PKEY_dup(EVP_PKEY *pkey)`.
+///
+/// Public key is **required** and a NULL one raises `ERR_R_PASSED_NULL_PARAMETER`, which is the only
+/// place in this unit that raises for a NULL argument rather than answering a value.
+///
+/// A **blank** key is duplicated as a blank key — the `goto done` — and the difference from a typed
+/// but unassigned one is the whole reason `is_blank` exists beside `is_typed`. `done` copies the
+/// ex-data for every non-blank key, so a key's `CRYPTO_EX_DATA` callbacks see the duplicate.
+///
+/// The `attributes` copy is Phase 12's `ossl_x509at_dup`, and the field it copies cannot be non-NULL
+/// in this crate — see `EvpPkey`'s doc comment.
+///
+/// # Safety
+/// `pkey` must be NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_dup(pkey: *mut EvpPkey) -> *mut EvpPkey {
+    if pkey.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::P_LIB_1720) };
+        return ptr::null_mut();
+    }
+
+    // SAFETY: no preconditions.
+    let dup_pk = unsafe { EVP_PKEY_new() };
+    if dup_pk.is_null() {
+        return ptr::null_mut();
+    }
+
+    // SAFETY: `pkey` is live per the contract.
+    let (type_, keymgmt) = unsafe { ((*pkey).type_, (*pkey).keymgmt) };
+    /* Blank: nothing to copy, and the duplicate stays blank. */
+    if type_ == EVP_PKEY_NONE && keymgmt.is_null() {
+        // SAFETY: `dup_pk` is this call's own object and `pkey` is live.
+        return unsafe { pkey_dup_done(dup_pk, pkey) };
+    }
+
+    if keymgmt.is_null() {
+        /* A legacy key: Phase 8's `ameth->copy`, or a type-only assign. Neither is reachable in
+         * this crate, because `pkey_set_type` cannot produce a legacy origin. */
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::P_LIB_1748) };
+        // SAFETY: `dup_pk` is this call's own object.
+        unsafe { EVP_PKEY_free(dup_pk) };
+        return ptr::null_mut();
+    }
+
+    /* The provider arm. The authority's `#ifndef FIPS_MODULE` guard is around the *test*, so the
+     * provider path is the only one a key with a method can take. */
+    // SAFETY: both keys are live and the selection is the authority's constant.
+    if unsafe {
+        crate::evp::keymgmt_lib::evp_keymgmt_util_copy(dup_pk, pkey, OSSL_KEYMGMT_SELECT_ALL)
+    } == 0
+    {
+        // SAFETY: `dup_pk` is this call's own object.
+        unsafe { EVP_PKEY_free(dup_pk) };
+        return ptr::null_mut();
+    }
+
+    // SAFETY: `dup_pk` is this call's own object and `pkey` is live.
+    unsafe { pkey_dup_done(dup_pk, pkey) }
+}
+
+/// The authority's `done:` label — copy the ex-data and hand back the duplicate.
+///
+/// # Safety
+/// `dup_pk` must be this call's own, unpublished object; `pkey` must be live.
+unsafe fn pkey_dup_done(dup_pk: *mut EvpPkey, pkey: *const EvpPkey) -> *mut EvpPkey {
+    // SAFETY: both keys are live and their `ex_data` fields are live.
+    if unsafe {
+        CRYPTO_dup_ex_data(
+            CRYPTO_EX_INDEX_EVP_PKEY,
+            ptr::addr_of_mut!((*dup_pk).ex_data),
+            ptr::addr_of!((*pkey).ex_data),
+        )
+    } == 0
+    {
+        // SAFETY: `dup_pk` is this call's own object.
+        unsafe { EVP_PKEY_free(dup_pk) };
+        return ptr::null_mut();
+    }
+    dup_pk
+}
+
+/// `OSSL_KEYMGMT_SELECT_ALL` — `include/openssl/core_dispatch.h`, spelled out as the authority
+/// composes it: the key pair (`PRIVATE_KEY | PUBLIC_KEY`) and all parameters
+/// (`DOMAIN_PARAMETERS | OTHER_PARAMETERS`).
+const OSSL_KEYMGMT_SELECT_ALL: c_int = (0x01 | 0x02) | (0x04 | 0x80);
 
 // SPDX-License-Identifier: Apache-2.0
 

@@ -49,6 +49,7 @@ pub mod digest;
 pub mod fetch;
 pub mod kdf;
 pub mod keymgmt;
+pub mod keymgmt_lib;
 pub mod legacy_evp;
 pub mod mac;
 pub mod method_store;
