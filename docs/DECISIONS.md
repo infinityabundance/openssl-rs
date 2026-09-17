@@ -10171,3 +10171,64 @@ is suspect.
 **What this means for the plan, stated plainly:** `signature.c`'s operation half (and therefore the
 completion of 7.4b) is gated on `ctrl_params_translate.c`. The next stretch of work in plan order is
 7.4c-ii's ctrl and params core, and finishing 7.4b-iii comes immediately after it.
+
+## D172 — 7.4c-ii's dependency map, and a divergence between the vendored header source and the built one
+
+This entry records reconnaissance rather than work: the next stretch of 7.4c-ii was scoped and the
+scope is written down here so it is not repeated. Two of the three findings are dependencies; the
+third is an observation about an input the project trusts.
+
+**1. `pmeth_gn.c` is the next independently landable unit, and one of its fourteen exports is not.**
+Four hundred and fifty-eight lines, fourteen exports, and — measured by listing every external call
+its body makes — **no dependency on `ctrl_params_translate.c`**. It needs `evp_keymgmt_gen_init`,
+`evp_keymgmt_gen_set_template`, `evp_keymgmt_util_gen`, `evp_keymgmt_import_types`,
+`evp_keymgmt_util_export`, `evp_keymgmt_util_fromdata`, `evp_pkey_ctx_free_old_ops`,
+`OSSL_PARAM_dup`, `BN_GENCB_set` and `BN_GENCB_get_arg`, all of which are landed. Thirteen of the
+fourteen — the two `*gen_init`s, `EVP_PKEY_generate`, `EVP_PKEY_paramgen`, `EVP_PKEY_keygen`,
+`EVP_PKEY_CTX_set_cb`, `EVP_PKEY_CTX_get_cb`, `EVP_PKEY_CTX_get_keygen_info`,
+`EVP_PKEY_fromdata_init`, `EVP_PKEY_fromdata`, `EVP_PKEY_fromdata_settable`, `EVP_PKEY_todata` and
+`EVP_PKEY_export` — are therefore landable together.
+
+The fourteenth is `EVP_PKEY_new_mac_key`, and it is not: its body is
+`EVP_PKEY_CTX_new_id(type, e)` then `EVP_PKEY_keygen_init` then
+`EVP_PKEY_CTX_set_mac_key(mac_ctx, key, keylen)` then `EVP_PKEY_keygen`. The third call is
+`ctrl_params_translate.c`'s and the first is `pmeth_lib.c`'s `EVP_PKEY_CTX_new_id`, which is 7.4c-ii's
+and also unlanded. So it joins `signature.c`'s eighteen behind the same gate (D171).
+
+**2. `EVP_PKEY_generate` calls `evp_pkey_free_legacy`, and that is compiled in.**
+`crypto/evp/pmeth_gn.c:192-196` is guarded by `#if !defined(FIPS_MODULE) && !defined(OPENSSL_NO_DEPRECATED_3_6)`,
+and the check that matters is whether the second is defined in the build. It is **not**:
+`forensics/authorities/build/openssl-3.6.4-production/configdata.pm` defines `NDEBUG` and no
+`OPENSSL_NO_DEPRECATED_*`. So the call is live, on the success path of every `EVP_PKEY_generate`,
+and `evp_pkey_free_legacy` (`crypto/evp/p_lib.c:1777`, declared in `include/crypto/evp.h:780`) is a
+**real pre-existing dependency** of that unit rather than a dead branch. It is the kind of thing that
+is invisible to a source read that stops at the `#if`.
+
+**3. The vendored `core_names.h.in` is not the generated `core_names.h`, and they differ by a lot.**
+
+```text
+forensics/authorities/src/openssl-3.6.4/include/openssl/core_names.h.in   75  `define OSSL_` lines
+forensics/authorities/build/openssl-3.6.4-production/include/openssl/core_names.h
+                                                                         532  `define OSSL_` lines
+```
+
+`OSSL_GEN_PARAM_POTENTIAL` and `OSSL_GEN_PARAM_ITERATION` — needed by `pmeth_gn.c`'s
+`ossl_callback_to_pkey_gencb`, which locates them in the params its provider hands it — are in the
+generated header and **not** in the `.in`. Their values are `"potential"` and `"iteration"`.
+
+What this means depends on which plane is asking, and the two are worth separating rather than
+lumping:
+
+* for **symbols**, it should not matter. `symbol-ownership.json`'s `declaring_header` comes from the
+  Clang AST over the build's own include path (which has the generated header), and every exported
+  symbol's declaration is in a public header rather than a name-macro header. The atlas's
+  `unassigned_headers = 0` and `multiply_owned = 0` are unaffected;
+* for **name macros** — the `OSSL_*` string constants, which are what a provider and this crate's
+  params code compare against — a lookup that reads the vendored `.in` will miss 457 of 532 of them.
+
+So this is recorded as an observation with a named verification, not as a defect: the next stretch
+should establish which inputs resolve `OSSL_*` **name macros** rather than symbols, and if any of
+them reads the source tree, they need the generated header (or the build directory) added. It is
+recorded now because the transcribing of `pmeth_gn.c` is the first work that *needs* one of these
+constants, and because a difference of 457 constants between two files with the same name is the kind
+of thing that should be found by reading rather than by being surprised.
