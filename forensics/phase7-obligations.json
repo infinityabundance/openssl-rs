@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 924,
       "deferred_to_later_phase": 164,
-      "implemented": 639,
-      "open_in_this_stratum": 147,
+      "implemented": 665,
+      "open_in_this_stratum": 121,
       "owned": 950,
       "received_by_handoff": 26
     },
@@ -1190,6 +1190,10 @@
       ]
     },
     "implemented": [
+      "BIO_f_base64",
+      "BIO_f_cipher",
+      "BIO_f_md",
+      "BIO_set_cipher",
       "EVP_ASYM_CIPHER_do_all_provided",
       "EVP_ASYM_CIPHER_fetch",
       "EVP_ASYM_CIPHER_free",
@@ -1298,6 +1302,10 @@
       "EVP_CipherPipelineFinal",
       "EVP_CipherPipelineUpdate",
       "EVP_CipherUpdate",
+      "EVP_DecodeBlock",
+      "EVP_DecodeFinal",
+      "EVP_DecodeInit",
+      "EVP_DecodeUpdate",
       "EVP_DecryptFinal",
       "EVP_DecryptFinal_ex",
       "EVP_DecryptInit",
@@ -1323,6 +1331,14 @@
       "EVP_DigestVerifyInit",
       "EVP_DigestVerifyInit_ex",
       "EVP_DigestVerifyUpdate",
+      "EVP_ENCODE_CTX_copy",
+      "EVP_ENCODE_CTX_free",
+      "EVP_ENCODE_CTX_new",
+      "EVP_ENCODE_CTX_num",
+      "EVP_EncodeBlock",
+      "EVP_EncodeFinal",
+      "EVP_EncodeInit",
+      "EVP_EncodeUpdate",
       "EVP_EncryptFinal",
       "EVP_EncryptFinal_ex",
       "EVP_EncryptInit",
@@ -1820,6 +1836,16 @@
       "EVP_md_null",
       "EVP_set_default_properties",
       "EVP_set_pw_prompt",
+      "PEM_SignFinal",
+      "PEM_SignInit",
+      "PEM_SignUpdate",
+      "PEM_get_EVP_CIPHER_INFO",
+      "PEM_read",
+      "PEM_read_bio",
+      "PEM_read_bio_ex",
+      "PEM_write",
+      "PEM_write_bio",
+      "PEM_write_bio_ASN1_stream",
       "PKCS5_PBE_add",
       "PKCS5_PBE_keyivgen",
       "PKCS5_PBE_keyivgen_ex",
@@ -2100,31 +2126,7 @@
         "declaring_header": "evp.h",
         "module": "src/evp/bio_enc.rs",
         "received_from_phase": null,
-        "symbol": "BIO_f_base64"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/bio_enc.rs",
-        "received_from_phase": null,
-        "symbol": "BIO_f_cipher"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/bio_enc.rs",
-        "received_from_phase": null,
-        "symbol": "BIO_f_md"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/bio_enc.rs",
-        "received_from_phase": null,
         "symbol": "BIO_f_reliable"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/bio_enc.rs",
-        "received_from_phase": null,
-        "symbol": "BIO_set_cipher"
       },
       {
         "declaring_header": "cmac.h",
@@ -2191,78 +2193,6 @@
         "module": "src/evp/cipher.rs",
         "received_from_phase": null,
         "symbol": "EVP_CIPHER_CTX_rand_key"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/encode.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_DecodeBlock"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/encode.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_DecodeFinal"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/encode.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_DecodeInit"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/encode.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_DecodeUpdate"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/encode.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_ENCODE_CTX_copy"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/encode.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_ENCODE_CTX_free"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/encode.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_ENCODE_CTX_new"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/encode.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_ENCODE_CTX_num"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/encode.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_EncodeBlock"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/encode.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_EncodeFinal"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/encode.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_EncodeInit"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/encode.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_EncodeUpdate"
       },
       {
         "declaring_header": "evp.h",
@@ -2718,24 +2648,6 @@
         "declaring_header": "pem.h",
         "module": "src/evp/pem_bridge.rs",
         "received_from_phase": 5,
-        "symbol": "PEM_SignFinal"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/evp/pem_bridge.rs",
-        "received_from_phase": 5,
-        "symbol": "PEM_SignInit"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/evp/pem_bridge.rs",
-        "received_from_phase": 5,
-        "symbol": "PEM_SignUpdate"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/evp/pem_bridge.rs",
-        "received_from_phase": 5,
         "symbol": "PEM_bytes_read_bio"
       },
       {
@@ -2760,18 +2672,6 @@
         "declaring_header": "pem.h",
         "module": "src/evp/pem_bridge.rs",
         "received_from_phase": null,
-        "symbol": "PEM_get_EVP_CIPHER_INFO"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/evp/pem_bridge.rs",
-        "received_from_phase": 5,
-        "symbol": "PEM_read"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/evp/pem_bridge.rs",
-        "received_from_phase": null,
         "symbol": "PEM_read_PrivateKey"
       },
       {
@@ -2779,12 +2679,6 @@
         "module": "src/evp/pem_bridge.rs",
         "received_from_phase": null,
         "symbol": "PEM_read_PrivateKey_ex"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/evp/pem_bridge.rs",
-        "received_from_phase": 5,
-        "symbol": "PEM_read_bio"
       },
       {
         "declaring_header": "pem.h",
@@ -2813,18 +2707,6 @@
       {
         "declaring_header": "pem.h",
         "module": "src/evp/pem_bridge.rs",
-        "received_from_phase": 5,
-        "symbol": "PEM_read_bio_ex"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/evp/pem_bridge.rs",
-        "received_from_phase": 5,
-        "symbol": "PEM_write"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/evp/pem_bridge.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_PKCS8PrivateKey"
       },
@@ -2845,18 +2727,6 @@
         "module": "src/evp/pem_bridge.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_PrivateKey_ex"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/evp/pem_bridge.rs",
-        "received_from_phase": 5,
-        "symbol": "PEM_write_bio"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/evp/pem_bridge.rs",
-        "received_from_phase": 5,
-        "symbol": "PEM_write_bio_ASN1_stream"
       },
       {
         "declaring_header": "pem.h",
@@ -3026,12 +2896,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "016f8952ef32d823b0ee86b5c031efc37fa6c681561ba815f58debc028a0fadd"
+      "sha256": "0193a26dc0d29491afcda366dd338e92bfa7388c6b3d0afe19fbb2af0844fdd1"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "3add07c2f047e3fbc878cad9643a79fd339c1a495cbf18af04968d4c3910f20e"
+      "sha256": "dc13333d83cc5780fa77655dcb4a1ab0f7ada95a21aeb9c199c2b1e5afed0688"
     }
   ],
   "kind": "phase7-obligations",

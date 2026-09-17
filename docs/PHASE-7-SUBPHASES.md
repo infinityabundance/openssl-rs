@@ -98,7 +98,7 @@ calls rather than from the export list — the method D114, D118 and D122 establ
 | 7.2 | **The fetch surface and the default properties** | `crypto/evp/evp_fetch.c`'s remaining ten internals and the eight names Phase 3 and 4 deferred here: `evp_generic_fetch`, `evp_generic_fetch_from_prov`, `evp_generic_do_all`, `evp_names_do_all`, `evp_is_a`, `evp_set_default_properties_int`, `evp_get_global_properties_str`, `evp_default_properties_enable_fips_int`; `crypto/evp/names.c` whole | 7.1 | `RT-FETCH` (extended) | **LANDED (D145, D146).** The default-property half and the fetch half are both transcribed: four exports, the six `mcm` callbacks, `inner_evp_generic_fetch`, `evp_generic_fetch`, `evp_generic_fetch_from_prov`, `evp_generic_do_all`, `evp_is_a`, `evp_names_do_all` and `ossl_lib_ctx_get_descriptor`. All five of this stratum's remaining deferrals are discharged, so the gate's blocking list is 15 -> 5 and **no Phase-7 name blocks anything**. **The exit criterion above cannot be met in 7.2, and the reason is a dependency rather than an omission.** "A property query selects and rejects algorithms through the real fetch path" needs a *class* to fetch through: `evp_generic_fetch` is internal, `libcrypto.ld` hides it, and a probe compiled against installed headers reaches the fetch path only through `EVP_MD_fetch` and its siblings — which are 7.3's, because they need the `EVP_MD` object. So the resolver (a provider publishing an algorithm, a query that selects it and a query that rejects it) lands with 7.3's first slice, in the same commit that makes `EVP_MD_fetch` exist, rather than as a claim this subphase cannot support. `RT-FETCH` already carries the part that *is* observable here: the store's shape in the index table, the two provider bridges that delegate into it, and the whole default-property surface — 38 observations, zero residuals
 | 7.3 | **The symmetric method objects** | `crypto/evp/evp_enc.c`, `evp_lib.c`, `digest.c`, `cmeth_lib.c`, `mac_lib.c`, `mac_meth.c`, `kdf_lib.c`, `kdf_meth.c`, `skeymgmt_meth.c`, `evp_rand.c`, `e_old.c`, `c_allc.c`, `c_alld.c`, `evp_err.c`, `crypto/evp/names.c`; the legacy wrappers `crypto/evp/e_aes.c`, `e_aria.c`, `e_camellia.c`, `e_des3.c`, `e_sm4.c`, `e_des.c`, `e_rc2.c`, `e_rc4.c`, `e_idea.c`, `e_cast.c`, `e_seed.c`, `e_bf.c`, `e_null.c`, `e_xcbc_d.c`, `e_aes_cbc_hmac_sha1.c`, `e_aes_cbc_hmac_sha256.c`, `e_chacha20_poly1305.c`, `e_rc4_hmac_md5.c`, `legacy_md4.c`, `legacy_md5.c`, `legacy_sha.c`, `legacy_ripemd.c`, `legacy_blake2.c`, `legacy_mdc2.c`, `legacy_wp.c` — those whose primitives are Phase 13's are **handed on with the dependency named**, in this ledger | 7.2 | `RT-EVP-CIPHER`, `RT-EVP-MD` | **7.3a is the slice that unblocks the fetch court, and it is named here so it is not discovered.** `crypto/evp/digest.c`'s `evp_md_new`, `evp_md_from_algorithm` (the whole `OSSL_DISPATCH` walk, `set_legacy_nid` and `evp_md_cache_constants`), `evp_md_up_ref`, `evp_md_free`, `crypto/evp/evp_lib.c`'s `evp_md_free_int`, `crypto/evp/evp_utils.c`'s `evp_do_md_getparams`, the `EVP_MD` struct from `include/crypto/evp.h` with the fifteen `OSSL_FUNC_digest_*` types, and the three exports `EVP_MD_fetch`, `EVP_MD_free`, `EVP_MD_up_ref` — that is what makes the generic fetch path reachable from a probe, and with it the **negative-selection** observation 7.2's row names. `evp_md_cache_constants` is the reason the court's provider must publish `OSSL_FUNC_DIGEST_GET_PARAMS`: a digest whose `get_params` does not answer `OSSL_DIGEST_PARAM_BLOCK_SIZE` and `OSSL_DIGEST_PARAM_SIZE` fails the fetch with `EVP_R_CACHE_CONSTANTS_FAILED`, which is a contract fact rather than a probe detail. The rest of the row — the contexts, the ciphers, the legacy wrappers — follows 7.3a and is unchanged
 | 7.4 | **The `EVP_PKEY` layer** | `crypto/evp/p_lib.c`, `pmeth_lib.c`, `pmeth_check.c`, `pmeth_gn.c`, `p_legacy.c`, `evp_pkey.c`, `evp_key.c`, `evp_pbe.c`, `p5_crpt.c`, `p5_crpt2.c`, `pbe_scrypt.c`, `p_seal.c`, `p_sign.c`, `p_verify.c`, `p_enc.c`, `p_dec.c`, `p_open.c`, `m_sigver.c`, `signature.c`, `asymcipher.c`, `kem.c`, `exchange.c`, `keymgmt_meth.c`, `keymgmt_lib.c`, `ec_support.c`, `dh_support.c`, `evp_pkey_type.c`, `evp_cnf.c`, `ctrl_params_translate.c`; and the `asn1.h` glue that lives outside the directory — `crypto/asn1/ameth_lib.c`, `i2d_evp.c`, `d2i_pr.c`, `d2i_param.c`, `d2i_pu.c` | 7.3 | `RT-EVP-PKEY` | `EVP_PKEY` holds a key from a provider, its `EVP_PKEY_ASN1_METHOD` glue is reachable, and the key's parameters round-trip through `ctrl_params_translate` |
-| 7.5 | **The BIO, encoding and PEM bridges** | `crypto/evp/bio_enc.c`, `bio_b64.c`, `bio_md.c`, `bio_ok.c`, `encode.c`, `s_lib.c`; and the twenty-six hand-offs from Phase 5 — the twenty-three `pem.h` ones (`crypto/pem/pem_pkey.c`, `pem_pk8.c`) and the three `asn1.h` ones | 7.4 | `RT-EVP-BIO`, `RT-EVP-PEM` | the PEM and ASN.1 surface that deferred its EVP dependency to this stratum is implemented, and the hand-off edges on both sides are discharged |
+| 7.5 | **The BIO, encoding and PEM bridges** | `crypto/evp/bio_enc.c`, `bio_b64.c`, `bio_md.c`, `bio_ok.c`, `encode.c`, `s_lib.c`; and the twenty-six hand-offs from Phase 5 — the twenty-three `pem.h` ones (`crypto/pem/pem_pkey.c`, `pem_pk8.c`) and the three `asn1.h` ones | 7.4 | `RT-EVP-BIO`, `RT-EVP-PEM` | the PEM and ASN.1 surface that deferred its EVP dependency to this stratum is implemented, and the hand-off edges on both sides are discharged. **LANDED (D194).** Twenty-six exports across `src/evp/encode.rs` (the twelve `EVP_Encode*`/`EVP_Decode*`/`EVP_ENCODE_CTX_*` names of `encode.c`), `src/evp/bio_enc.rs` (`BIO_f_base64`, `BIO_f_cipher`, `BIO_f_md`, `BIO_set_cipher` — the three single-export files `bio_b64.c`/`bio_md.c`/`bio_ok.c` land in the module their one shared `BIO_METHOD` struct belongs to) and `src/evp/pem_bridge.rs` (ten `PEM_*` names of `pem_lib.c`/`pem_sign.c`/`pem_oth.c`). Twenty-six do not and each names its blocker: `BIO_f_reliable` on `RAND_bytes` (Phase 9, `bio_ok.c:456`), and twenty-five `PEM_*` on `EVP_md5` (8, Phase 13), `OSSL_ENCODER_*`/`OSSL_DECODER_*` (15, Phase 10), `EVP_read_pw_string_min` (1, Phase 13 `UI`) and `evp_pkey_copy_downgraded` (1, Phase 8). `s_lib.c` is 7.3f's work and contributes nothing. Of the twenty-six hand-offs, nine land and seventeen are withheld with their blockers named; `ownership-audit.json` reads the Phase-5→7 edge with `mismatched: 0`, which is the exit criterion's "both sides" |
 | 7.6 | **The MAC, KDF and HPKE header surfaces** | `crypto/hmac/hmac.c`'s twelve, `crypto/cmac/cmac.c`'s nine, `crypto/hpke/hpke.c`'s twenty, and the `kdf.h` remainder | 7.3 | `RT-HMAC`, `RT-CMAC`, `RT-HPKE` | the three header surfaces are implemented against the `EVP_MAC`/`EVP_KDF` objects 7.3 built, and each court observes its own surface rather than the shared machinery |
 | 7.7 | **The seal** | nothing in the crate — evidence | 7.0–7.6 | — | `docs/PHASE-7-EVP-SEAL.md`: zero open obligations, every court passing, the prototype court clean, **the dispatch plane clean** (`forensics/tools/dispatch_court.py`, D180 — it is not a stratum and has no row of its own, but it is the only instrument that reaches the `OSSL_FUNC_*` identities and callback signatures, and its first run found thirteen disagreeing declarations in landed code), the prerequisite gate and the plan reconciliation at zero findings, the FRF receipts and the Gemel checkpoint |
 
@@ -285,6 +285,52 @@ table does; `EVP_read_pw_string` is withheld with its `_min` because its whole b
 all. Each withheld name has a `forensics/prerequisites.json` row naming the stratum and the name that
 blocks it, a `NOT_MEASURED_…` line in `RT-EVP-PKEY` or `RT-EVP-PBE`, and a paragraph in D193.
 
+
+### 7.5's row names six units, and two of them are not its work
+
+**D194.** The row above is a file list, and a file list is not a landing plan — `s_lib.c` is the
+clearest case. Its exports are the `EVP_SKEY_*` family, 7.3f landed them in `src/evp/skeymgmt.rs`, and
+`plan-reconciliation.json` does not census `crypto/evp/s_lib.c` as unreached: the row is
+dependency-ordered and that dependency had already arrived. The other five units are `encode.c`'s
+twelve names, `bio_enc.c`'s two, and the *three single-export files* `bio_b64.c` (`BIO_f_base64`),
+`bio_md.c` (`BIO_f_md`) and `bio_ok.c` (`BIO_f_reliable`). They land in two modules — `src/evp/encode.rs`
+and `src/evp/bio_enc.rs` — because a `BIO_METHOD` is a struct of function pointers rather than a set of
+entry points, and the four filters share the dispatch kind. The dominant-unit rule then leaves
+`bio_b64.c`, `bio_md.c` and `bio_ok.c` in `plan-reconciliation.json`'s `units_not_reached` census while
+`encode.c` and `bio_enc.c` leave it, which is the `p_legacy.rs` reading D193 recorded.
+
+**The twenty-six hand-offs are 23 `pem.h` and 3 `asn1.h`, and nine of them land.** The three `asn1.h`
+ones are `ASN1_item_sign_ex`, `ASN1_item_verify_ex` (both withheld on Phase 11 by D193) and
+`PEM_write_bio_ASN1_stream`, which the brief placed in `bio_asn1.c` and which is `crypto/asn1/asn_mime.c:128`'s
+— it builds because everything under it (`BIO_f_base64`, `i2d_ASN1_bio_stream`, `BIO_printf`) is already
+in the crate. The other eight that land are `PEM_SignInit`, `PEM_SignUpdate`, `PEM_SignFinal`,
+`PEM_read`, `PEM_read_bio`, `PEM_read_bio_ex`, `PEM_write` and `PEM_write_bio`. The remaining seventeen
+are withheld with their blockers named, in four families read rather than assumed: `EVP_md5`
+(`legacy_md5.c:36`, Phase 13) is the hinge and takes eight names through `PEM_do_header`
+(`pem_lib.c:479`); the `OSSL_ENCODER_*`/`OSSL_DECODER_*` branch is taken **first** by a provider key and
+takes fifteen (`pem_pkey.c:49`, `pem_local.h:44`, `pem_pk8.c:75`); `EVP_read_pw_string_min`
+(`evp_key.c:52`) takes `PEM_def_callback` because it is a `UI` program; and
+`evp_pkey_copy_downgraded` (`pem_pkey.c:356`) takes `PEM_write_bio_PrivateKey_traditional`, which reads
+the legacy `ameth` before it reads any encoder. `ownership-audit.json`'s `handoff_reconciliation` reads
+the Phase-5 → 7 edge with a declared set of all twenty-six and `mismatched: 0`, which is both strata
+agreeing and the row's "hand-off edges on both sides" criterion.
+
+**Two arms of the plan's own sentence were false as measured, and the ledger settled both.**
+`PKCS5_PBE_add` *is* landed (`src/evp/p5_crpt.rs:167`, by 7.4c) and `PEM_write_bio_PKCS8PrivateKey_nid`
+*is not* — it is open, `git grep` finds no definition, and this slice withholds it on Phase 10 with a
+`NOT_MEASURED` line. And the twenty-three `pem.h` hand-offs are not all `pem_pkey.c`'s and `pem_pk8.c`'s:
+they span `pem_lib.c`, `pem_oth.c`, `pem_sign.c`, `pem_pkey.c` and `pem_pk8.c`.
+
+**The row's court found a defect on its first run, and it is the kind a unit test alone would not
+have.** `PEM_get_EVP_CIPHER_INFO` hands `EVP_get_cipherbyname` the `DEK-Info:` name *after* skipping the
+whitespace that separates it from the label (`crypto/pem/pem_lib.c:561`, `:567`, `:571`); the
+candidate had passed the un-skipped pointer, so `DEK-Info: UNDEF,...` resolved `" UNDEF"` and refused a
+header the authority accepts. The fix is one saved pointer, and the arm is now identical on both sides.
+The same court is what made the success path reachable at all: `EVP_get_cipherbyname` can only return a
+method the legacy `OBJ_NAME` table holds (`crypto/evp/names.c:86`, and the namemap retry ends at the
+same table at `:114`), so the probe registers a method of its own with `EVP_CIPHER_meth_new` +
+`EVP_add_cipher` — and drives the contrast, because `EVP_CIPHER_fetch` *does* return its provider's
+cipher and `EVP_get_cipherbyname` does not.
 
 ### 7.3, split — recorded when it was needed, not performed silently
 

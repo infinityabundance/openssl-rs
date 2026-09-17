@@ -12049,3 +12049,195 @@ The two guard pairs were run: against this branch's previous head (`0a2a741e`:
 `implemented[libcrypto] 1764 → 1774`, `open_obligations[phase7] 157 → 147`) and against the merge
 base with `origin/main` (`c2fdcae4`).
 
+
+## D194 — 7.5 lands the twenty-six names of the BIO, encoding and PEM bridges, withholds twenty-six with their blockers named, and its new court finds a whitespace defect in `PEM_get_EVP_CIPHER_INFO`
+
+The slice is the ledger's three rows `src/evp/encode.rs`, `src/evp/bio_enc.rs` and `src/evp/pem_bridge.rs`
+-- fifty-two open symbols between them -- plus the twenty-six Phase-5 hand-offs the row names.
+**Twenty-six exports land**: the twelve `EVP_Encode*`/`EVP_Decode*`/`EVP_ENCODE_CTX_*` names
+(`crypto/evp/encode.c`), four of the five BIO filters (`BIO_f_base64`, `BIO_f_cipher`, `BIO_f_md`,
+`BIO_set_cipher`), and ten `PEM_*` names. **Twenty-six do not**, and every one is withheld rather
+than stubbed with an answer that would diverge: the `EVP_PKEY_type` precedent D190 and D192 state,
+executed per symbol as D165 measured it. `implemented[libcrypto]` moves **1774 → 1800** and phase 7
+to **665 implemented and 121 open** (from 639 and 147) -- read from `forensics/phase7-obligations.json`
+after the pipeline ran, not predicted here. The suite gains the **one** test the slice adds and stands
+at **453**. The courts are `RT-EVP-PEM`, **80 observations, zero residuals**, and `RT-EVP-BIO`,
+**147 observations, zero residuals**; the full pipeline ends `PIPELINE OK` with 68 courts, 22313
+observations, and the gate at zero findings.
+
+### The row's six units are four BIO/encoding files and two units that are not this row's work
+
+The row names `crypto/evp/bio_enc.c`, `bio_b64.c`, `bio_md.c`, `bio_ok.c`, `encode.c` and `s_lib.c`,
+and the third and second of those are **single-export files**: `bio_b64.c` exports `BIO_f_base64` and
+nothing else, `bio_md.c` exports `BIO_f_md`, and `bio_ok.c` exports `BIO_f_reliable`. `bio_enc.c`
+exports `BIO_f_cipher` and `BIO_set_cipher`; `encode.c` exports the twelve in one family. They land in
+one module, `src/evp/bio_enc.rs`, for the reason the row groups them: a `BIO_METHOD` is a struct of
+function pointers rather than a set of entry points, and the four filters share the dispatch kind.
+
+**`s_lib.c` contributes no work.** Its exports are the `EVP_SKEY_*` family, and 7.3f landed them in
+`src/evp/skeymgmt.rs` -- the ledger labels them there because `MODULE_PREFIXES` maps `EVP_SKEY`/`OSSL_SKEYMGMT_`
+to that module by the header that promises them rather than by the directory the file sits in. The row
+is dependency-ordered and the dependency had already arrived; `plan-reconciliation.json` does not census
+`crypto/evp/s_lib.c` as unreached, which is the measurement.
+
+### The twenty-six that do not build, family by family, because the families do not share a reason
+
+* **`EVP_md5()` (`crypto/evp/legacy_md5.c:36`) blocks eight.** It is a legacy `EVP_MD` over
+  `MD5_Init`/`MD5_Update`/`MD5_Final`, and 7.3g handed every such static to Phase 13 with its primitive
+  unit named. `PEM_do_header` calls it at `crypto/pem/pem_lib.c:479`; `PEM_ASN1_write_bio_internal`
+  calls it at `:392`. Through the first it withholds `PEM_do_header` itself, `PEM_bytes_read_bio`, its
+  `_secmem` spelling, `PEM_ASN1_read_bio` (`pem_oth.c:28`, via `PEM_bytes_read_bio`) and
+  `PEM_ASN1_read` (`pem_lib.c:122`, via `PEM_ASN1_read_bio`); through the second it withholds
+  `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx` and `PEM_ASN1_write` (`pem_lib.c:316`).
+* **`OSSL_ENCODER_*`/`OSSL_DECODER_*` (Phase 10) block fifteen**, and they are reached **first**:
+  `PEM_read_bio_Parameters(_ex)` go through `pem_read_bio_key` -> `pem_read_bio_key_decoder` ->
+  `OSSL_DECODER_CTX_new_for_pkey` (`pem_pkey.c:49`); the four `PEM_read_*PrivateKey*` spellings take
+  the same path; `PEM_write_bio_PrivateKey(_ex)`, the `FILE *` pair, and `PEM_write_bio_Parameters`
+  expand `IMPLEMENT_PEM_provided_write_body_vars`, whose call is `pem_local.h:44`; and the four
+  `PKCS8PrivateKey*` spellings go through `do_pk8pkey`'s `OSSL_ENCODER_CTX_new_for_pkey` at
+  `pem_pk8.c:75`.
+* **`EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`) blocks `PEM_def_callback`**, and only that one.
+  It is a `UI` program and `ui.h` is Phase 13's. The row's other arm -- `userdata != NULL`, which is a
+  `strlen`/`memcpy` with `num` as the clamp and no `UI` at all -- *is* transcribable, and the export is
+  still withheld: an export cannot be half-written, and the arm that would have to be answered from
+  elsewhere is the one every `PEM_write_*PrivateKey*` caller reaches. That is D165's argument in the
+  direction it can be applied to a partially reachable function.
+* **`evp_pkey_copy_downgraded` (`pem_pkey.c:356`) and the legacy `ameth` it and
+  `PEM_write_bio_PrivateKey_traditional` read (`:354`, `:359`)** are Phase 8's, which is the boundary
+  D193 recorded for the rest of the ameth table; `PEM_write_bio_PrivateKey_traditional` is the one name
+  in the private-key family that needs it *before* it needs the encoder.
+
+The nine `EVP_md5` names split further by measurement: `PEM_ASN1_write_bio`'s `enc == NULL` arm needs
+none of the blockers (it is `i2d` + `PEM_write_bio` and nothing else), and the module doc says so, but
+the withheld export is the whole function and the encrypted arm is the one with the callers.
+
+### `PEM_write_bio_ASN1_stream` is `asn_mime.c`'s, and the hand-off counts are not the brief's
+
+The brief for this row guessed `crypto/asn1/bio_asn1.c`; it is `crypto/asn1/asn_mime.c:128`, and the
+Phase-5 ledger already gave it `declaring_header: asn1.h`, which is right. That makes the twenty-six
+hand-offs **twenty-three `pem.h` and three `asn1.h`** (`ASN1_item_sign_ex`, `ASN1_item_verify_ex` and
+`PEM_write_bio_ASN1_stream`), and the brief's parenthetical is the accurate one. Its own provenance
+sentence is not: the twenty-three `pem.h` names are not all `pem_pkey.c`'s and `pem_pk8.c`'s -- they
+span `pem_lib.c`, `pem_oth.c`, `pem_sign.c`, `pem_pkey.c` and `pem_pk8.c`. Of the twenty-six, **nine
+land** and seventeen do not: eight `pem.h` (`PEM_SignInit`, `PEM_SignUpdate`, `PEM_SignFinal`,
+`PEM_read`, `PEM_read_bio`, `PEM_read_bio_ex`, `PEM_write`, `PEM_write_bio`) plus
+`PEM_write_bio_ASN1_stream`, and the two `ASN1_item_*_ex` names D193 withheld on Phase 11 remain
+withheld. `ownership-audit.json`'s `handoff_reconciliation` reports the Phase-5 → 7 edge with
+`mismatched: 0`, which is both sides agreeing about all twenty-six -- the row's exit criterion.
+
+Two premises in the brief are false as measured, and the ledger is what settles both.
+`PKCS5_PBE_add` **is** landed -- `src/evp/p5_crpt.rs:167`, by 7.4c -- so nothing is re-landed for it.
+`PEM_write_bio_PKCS8PrivateKey_nid` is **not**: it is open in `forensics/phase7-obligations.json`,
+`git grep` finds no definition, and this slice withholds it on Phase 10 with a `NOT_MEASURED` line.
+`PEM_ASN1_write_bio_ctx` is likewise open and withheld, not already landed.
+
+### The defect the first run found: the name was looked up before the whitespace was skipped
+
+`RT-EVP-PEM`'s `cipher_info.ok` arm was the first thing the new probe drove that had an answer other
+than "unsupported encryption", and on the candidate it drove the wrong pointer. The authority's
+`PEM_get_EVP_CIPHER_INFO` assigns `dekinfostart = header` **after** its own
+`header += strspn(header, " \t")` (`crypto/pem/pem_lib.c:561`, `:567`), so the name it hands to
+`EVP_get_cipherbyname` has had the separating whitespace removed (`:571`). `src/evp/pem_bridge.rs`
+had hoisted `dek_info` -- the pointer returned by the `DEK-Info:` prefix scan -- straight into the
+lookup and skipped its own `strspn` for that argument, so `DEK-Info: UNDEF,...` with a space after
+the colon resolved `" UNDEF"` and answered `PEM_R_UNSUPPORTED_ENCRYPTION` for a header the authority
+accepts. The pointer is now named `name_start` after the `strspn`, the site carries the coordinate,
+and `cipher_info_skips_the_whitespace_before_the_dek_info_name` in the module's own test module
+registers a legacy method and pins both the answer and the eight IV bytes. The arm is
+`cipher_info.ok.rv=1 cipher_same=1 iv=0001020304050607...` on both sides now.
+
+That the arm exists at all is the other half of the finding, and it is why the probe registers its
+own legacy method with `EVP_CIPHER_meth_new` + `EVP_add_cipher` rather than using its provider:
+**`EVP_get_cipherbyname` can only return a method the legacy `OBJ_NAME` table holds.** Its first step
+is `OBJ_NAME_get` (`crypto/evp/names.c:86`), and its third-step namemap retry ends by asking the same
+table for every alias the namemap knows (`:114`). This probe's provider cipher is returned by
+`EVP_CIPHER_fetch` -- the court prints that -- and is *not* returned by `EVP_get_cipherbyname`; both
+lanes answer NULL, and the probe drives that asymmetry as an observation
+(`cipher_info.provider_by_name.null=1`). The consequence for the court is that the success path is
+reachable only through a method the probe registers itself, and the consequence for the plan is
+already recorded: a name that only the authority's `OPENSSL_init_crypto(ADD_ALL_CIPHERS)` table knows
+(`DES-CBC`) is a *contents* distribution gap (D162) and not this row's behaviour, so it is named and
+not driven.
+
+### Two parser facts the probe had to build its own blocks to see
+
+* **The 65-byte line test is on the line, not on the body.** `get_header_and_data` applies it only
+  once the header has ended, and counts the trailing newline (`crypto/pem/pem_lib.c:924-928`), so
+  sixty-four content bytes are the last accepted and sixty-five are refused -- and refused by a
+  `goto err` with **no** `ERR_raise` after it. The court drives both sides of the boundary and prints
+  the chain, so `read.line_64.rv=1 name_null=0 len=48` and `read.line_65.rv=0 name_null=1 len=0
+  chain=<empty>` are one observation of the limit and one of the silence.
+* **A `DEK-Info:` name ends at `,`, `' '` or `'\t'` and at nothing else**, because the scan is
+  `strcspn(header, " \t,")`. A name followed directly by the line ending therefore carries the `'\n'`
+  into the lookup and cannot resolve (`cipher_info.name_takes_newline=0`, `…/576`), and a zero-IV
+  method's success path is reachable only through a name terminated by one of those three bytes
+  (`cipher_info.zero_iv_ok.rv=1`). Both are the authority's behaviour and both lanes agree.
+
+The court also drives `sanitize_line`'s three rules against one another, because they are not
+interchangeable: the same body with an internal space decodes to `abcd` under `EAY_COMPATIBLE` (the
+space stays and the decoder skips it) and to `abc` under `ONLY_B64` (the line is truncated at the
+space), and the same body with an internal `0x01` **fails** under `EAY_COMPATIBLE` (the byte reaches
+`conv_ascii2bin` as `B64_ERROR`) and **succeeds** under the default rule (control bytes become
+spaces). `read.sanitize.{eay_space,onlyb64_space,eay_ctrl,default_ctrl}` are those four.
+
+### The courts, and what is not driven
+
+`RT-EVP-BIO` (`courts/phase7/rt_evp_encode_probe.c`) is the encode/BIO court and was extended in this
+slice: every `EVP_Encode*`/`EVP_Decode*` arm as a round trip against the probe's own bytes with the
+documented tails (0/1/2/3 bytes), the whitespace and partial-group edges, `EVP_ENCODE_CTX_num` after
+each call and the retry loop's refusal to consume a partial group; `BIO_f_base64` with and without
+`BIO_FLAGS_BASE64_NO_NL` through a `BIO_new(BIO_s_mem())` pair; `BIO_f_md` for a two-part write whose
+digest the probe recomputes; `BIO_f_cipher` for an encrypt/decrypt round trip and a zero-key refusal;
+and `BIO_f_reliable`'s absence. **`BIO_f_reliable` is withheld on `RAND_bytes`**
+(`crypto/evp/bio_ok.c:456`, `sig_out`; the table itself is `:112`), which is Phase 9 -- *not* the
+`EVP_Encode`/`EVP_Digest` dependency the brief predicted, both of which landed in 7.3. Its line is
+`BIO_f_reliable=NOT_MEASURED_RAND_bytes_IS_PHASE_9_bio_ok_c_456`.
+
+`RT-EVP-PEM` (`courts/phase7/rt_evp_pem_probe.c`) is new, and D193's `RT-EVP-PBE` is why: the surface
+this slice adds is a reader, a writer, a header parser and three wrappers, and none of them is reached
+by a probe that courts the cipher or the digest object. It observes `PEM_write_bio` → `PEM_read_bio_ex`/
+`PEM_read_bio` round trips with the name and header compared against the probe's own; the reader's
+flag, framing, BOM, empty-body and long-line edges; `PEM_get_EVP_CIPHER_INFO` arm by arm, including
+the six malformed-prefix refusals; `PEM_SignInit`/`PEM_SignUpdate` against a digest the probe re-runs;
+`PEM_SignFinal` with a key that has no signature method, whose answer is `0` with
+`EVP_R_UNKNOWN_MAX_SIZE` from `EVP_PKEY_get_size` (`crypto/evp/p_lib.c:1866`) because
+`OPENSSL_malloc(0)` is NULL (`crypto/mem.c:201`); `PEM_write_bio_ASN1_stream`'s whole block against the
+probe's own `i2d_ASN1_INTEGER` + `EVP_EncodeBlock`; and the `FILE *` pair through `tmpfile()`.
+
+Two arms are named rather than driven and one is named in the probe's comment:
+`cipher_info.legacy_name` (the legacy-only name above) and `PEM_SignFinal`'s signing arm -- which
+needs a provider `EVP_PKEY` and is `RT-EVP-PKEY`'s, where one already exists. Every one of the
+twenty-five withheld `PEM_*` names has a `NOT_MEASURED_…` line naming its blocker and coordinate. No
+address is printed; every arm prints the error chain it leaves, because a refusal that raises nothing
+and one that raises a reason are different contracts -- the long-line arm is the first and
+`read.bad_base64` is the second. Nothing in the slice adds a `dispatch_court.py` `NOT_A_DISPATCH`
+entry: the slice adds no function-pointer alias, and `pem_password_cb` -- the one dispatch-adjacent
+type it does add, as `PemPasswordCb` -- links by the naming convention (`links_convention` 196 → 197,
+`problems` 0).
+
+### The two prerequisite rows, and the guard
+
+Two new `forensics/prerequisites.json` rows name the dependency that blocks a withheld name:
+`EVP_md5` (Phase 13) and `RAND_bytes` (Phase 9). No row names a Phase-7-owned export: `PEM_def_callback`'s
+immediate callee `EVP_read_pw_string_min` is a Phase-7-owned open row of D193's, so that family keeps
+the `UI_new` row it already had rather than gaining one here, and the probe's line names both the
+callee and the stratum reason. No existing row is discharged, so none is deleted.
+`blocking_dependencies` moves **23 → 25** against this branch's previous head (`11a14466`) and
+**15 → 25** against `origin/main`, which are two rows in `forensics/ownership-transitions.json`
+because the guard matches `before` and `after` exactly. `language_census` moves 2085 → 2633 and
+`sealed_census` 59 → 57 (both reported as movements, not regressions: the first is another three
+authority files transcribed, the second is a name ceasing to be owed), `divergence_names_covered`
+stays 32, and the gate reports zero findings. `plan-reconciliation.json`'s `units_not_reached` census
+moves 59 → 57 -- `crypto/evp/encode.c` and `crypto/evp/bio_enc.c` become the dominant units of their
+new modules, while `crypto/evp/bio_b64.c`, `bio_md.c`, `bio_ok.c`, `crypto/pem/pem_pkey.c` and
+`pem_pk8.c` stay in the census because the atlas measures the edge as the **dominant** unit among the
+symbols a module defines, which is the `p_legacy.rs` reading D193 recorded.
+
+One generator input was edited and re-run: `forensics/tools/gen_err_raise_sites.py` gained
+`("crypto/pem/pem_lib.c", "PEM_LIB")` and `("crypto/pem/pem_oth.c", "PEM_OTH")`, so the sites the new
+module raises through are registered in `src/runtime/err_sites.rs` and
+`forensics/atlas/err-raise-sites.json` rather than being hand-written. The regenerated artefacts ship
+in the same commit as the source.
+
+The two guard pairs were run: against this branch's previous head (`11a14466`:
+`implemented[libcrypto] 1774 → 1800`, `open_obligations[phase7] 147 → 121`) and against `origin/main`.

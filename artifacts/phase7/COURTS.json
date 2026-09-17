@@ -174,12 +174,46 @@
           "candidate": "artifacts/phase7/probes/rt_evp_pbe_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 147,
+        "candidate_exit_code": 0,
+        "candidate_observations": 147,
+        "candidate_stderr_tail": [],
+        "court": "RT-EVP-BIO",
+        "crashed": false,
+        "probe": "courts/phase7/rt_evp_encode_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase7/probes/rt_evp_encode_probe.authority",
+          "candidate": "artifacts/phase7/probes/rt_evp_encode_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 80,
+        "candidate_exit_code": 0,
+        "candidate_observations": 80,
+        "candidate_stderr_tail": [],
+        "court": "RT-EVP-PEM",
+        "crashed": false,
+        "probe": "courts/phase7/rt_evp_pem_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase7/probes/rt_evp_pem_probe.authority",
+          "candidate": "artifacts/phase7/probes/rt_evp_pem_probe.candidate"
+        },
+        "verdict": "pass"
       }
     ],
     "summary": {
       "fail": 0,
-      "pass": 10,
-      "total": 10
+      "pass": 12,
+      "total": 12
     }
   },
   "generator": "forensics/tools/phase7_courts.py",
@@ -238,6 +272,16 @@
       "name": "probe",
       "path": "courts/phase7/rt_evp_pbe_probe.c",
       "sha256": "55a1a30ea578d8ef06e0389d2adf65151713a44b35cd970e93f3aebfc5e0df6d"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase7/rt_evp_encode_probe.c",
+      "sha256": "81ce6ca9f1b81425d419449413ea484454d96bc345f2617396143408ebb253f5"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase7/rt_evp_pem_probe.c",
+      "sha256": "ae41c532130afb321522f163893441307ae1bf3257c7cde53567a5b09f9e2ac4"
     }
   ],
   "kind": "phase7-courts",

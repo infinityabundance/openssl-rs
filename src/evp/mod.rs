@@ -44,9 +44,11 @@
 
 pub mod algorithm;
 pub mod asymcipher;
+pub mod bio_enc;
 pub mod cipher;
 pub mod cipher_ctx;
 pub mod digest;
+pub mod encode;
 pub mod evp_pbe;
 pub mod exchange;
 pub mod fetch;
@@ -62,6 +64,7 @@ pub mod p5_crpt2;
 pub mod p5_scrypt;
 pub mod p_legacy;
 pub mod pbe;
+pub mod pem_bridge;
 pub mod pkey;
 pub mod pkey_asn1;
 pub mod pkey_ctx;

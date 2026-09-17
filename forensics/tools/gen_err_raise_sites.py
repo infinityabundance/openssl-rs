@@ -400,6 +400,8 @@ COVERED_FILES = [
     ("crypto/asn1/d2i_pr.c", "D2I_PR"),
     ("crypto/asn1/d2i_param.c", "D2I_PARAM"),
     ("crypto/asn1/d2i_pu.c", "D2I_PU"),
+    ("crypto/pem/pem_lib.c", "PEM_LIB"),
+    ("crypto/pem/pem_oth.c", "PEM_OTH"),
     ("crypto/pem/pem_pkey.c", "PEM_PKEY"),
     ("crypto/pem/pem_pk8.c", "PEM_PK8"),
 ]

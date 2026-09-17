@@ -27,7 +27,6 @@
         "crypto/asn1/i2d_evp.c",
         "crypto/cmac/cmac.c",
         "crypto/evp/bio_b64.c",
-        "crypto/evp/bio_enc.c",
         "crypto/evp/bio_md.c",
         "crypto/evp/bio_ok.c",
         "crypto/evp/c_allc.c",
@@ -52,7 +51,6 @@
         "crypto/evp/e_sm4.c",
         "crypto/evp/e_xcbc_d.c",
         "crypto/evp/ec_support.c",
-        "crypto/evp/encode.c",
         "crypto/evp/evp_cnf.c",
         "crypto/evp/evp_err.c",
         "crypto/evp/evp_pkey.c",
@@ -78,8 +76,10 @@
         "crypto/evp/p_verify.c",
         "crypto/hmac/hmac.c",
         "crypto/hpke/hpke.c",
+        "crypto/pem/pem_oth.c",
         "crypto/pem/pem_pk8.c",
-        "crypto/pem/pem_pkey.c"
+        "crypto/pem/pem_pkey.c",
+        "crypto/pem/pem_sign.c"
       ]
     },
     "checked": {
@@ -89,12 +89,12 @@
         "docs/PHASE-7-SUBPHASES.md"
       ],
       "rows_judged": 62,
-      "symbols_named_by_a_row": 69,
-      "symbols_reached": 69,
+      "symbols_named_by_a_row": 70,
+      "symbols_reached": 70,
       "unit_records": 10,
       "units_named_by_a_record": 13,
-      "units_named_by_a_row": 131,
-      "units_reached": 72
+      "units_named_by_a_row": 134,
+      "units_reached": 75
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -432,7 +432,9 @@
         "subphases": [
           "7.5"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/bio_enc.rs"
+        ]
       },
       "crypto/evp/bio_md.c": {
         "defines": [],
@@ -728,7 +730,9 @@
         "subphases": [
           "7.5"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/encode.rs"
+        ]
       },
       "crypto/evp/evp_cnf.c": {
         "defines": [],
@@ -1389,6 +1393,27 @@
           "src/params/mod.rs"
         ]
       },
+      "crypto/pem/pem_lib.c": {
+        "defines": [
+          "ossl_pem_check_suffix"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "7.5"
+        ],
+        "transcribed_by": [
+          "src/evp/pem_bridge.rs",
+          "src/pem/pem_lib.rs"
+        ]
+      },
+      "crypto/pem/pem_oth.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.5"
+        ],
+        "transcribed_by": []
+      },
       "crypto/pem/pem_pk8.c": {
         "defines": [],
         "recorded_by": null,
@@ -1398,6 +1423,14 @@
         "transcribed_by": []
       },
       "crypto/pem/pem_pkey.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "7.5"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/pem/pem_sign.c": {
         "defines": [],
         "recorded_by": null,
         "subphases": [
@@ -1799,36 +1832,36 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 139
+      "transcribed_units": 141
     }
   },
-  "body_hash": "c603a818fefb877c8d48e53f93bc867b6b60b7be82c3855123d210a22ed008e3",
+  "body_hash": "d0ca650f673546071adaa2918232494d1203f6593b7fb77fb659273452e3a746",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "4d028e685db9afdf1cd018128ba3f90b2a9416cc424598236b4a278b7aaa74cc"
+      "sha256": "c129e2181d6c1f696c8ddb6f0035a4d00adcf7e9d07a771a3b825163dc0fe7c6"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "959f1639dcf29b5cff4a23acf673759d21787b1ebf503b2128c2ead4fb6123bd"
+      "sha256": "dabe8d724fd499897a1b1eb5a2973ae70554225a053a753915848c68e158447b"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "5a88b4607730a9fbe388771c58ccc9635b36e6f76388d9d0b63a99219fc31791"
+      "sha256": "88e00ef6d514e84ce65962d9a1d20b99a6dc622b2d58d69216b1a8657744f1b0"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "c6b31bb9d52fb5cadea3146613012cd5dd9a10cdb79002eef00f553ae6a3cf76"
+      "sha256": "1b3b78a7fc41dfb4ca2f6e20562164e8a085a37c9c498cbd61e1b471e0d64de1"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "b7e6f191ff61cc2bea553039380fafa974a53edb8b79f1f81dbb39023fbe14d5"
+      "sha256": "f7334e1b30c2876e0d03c9e5e86d3e971a7e859344ba0488039e1822295710c4"
     },
     {
       "name": "source-manifest",
@@ -1848,7 +1881,7 @@
     {
       "name": "plan-PHASE-7-SUBPHASES",
       "path": "docs/PHASE-7-SUBPHASES.md",
-      "sha256": "585401b0fbc3e6d0f4576e03d77f67081b9710277662a0324e54e310d7c23c72"
+      "sha256": "9cf113e24025a5310cd11b241567adf8529c4225dbd277c8de4b5ced5e34e355"
     }
   ],
   "kind": "plan-reconciliation",
