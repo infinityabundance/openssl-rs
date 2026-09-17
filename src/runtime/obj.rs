@@ -128,7 +128,7 @@ const OBJ_BSEARCH_FIRST_VALUE_ON_MATCH: c_int = 0x02;
 /// `OBJ_NAME_TYPE_NUM` — the first dynamically allocated name type index.
 const OBJ_NAME_TYPE_NUM: c_int = 0x07;
 /// `OBJ_NAME_ALIAS` — the entry names another entry rather than a value.
-const OBJ_NAME_ALIAS: c_int = 0x8000;
+pub(crate) const OBJ_NAME_ALIAS: c_int = 0x8000;
 
 extern "C" {
     fn malloc(n: usize) -> *mut c_void;
@@ -1951,7 +1951,7 @@ pub struct ObjName {
 type ObjNameHashFn = unsafe extern "C" fn(*const c_char) -> c_ulong;
 type ObjNameCmpFn = unsafe extern "C" fn(*const c_char, *const c_char) -> c_int;
 type ObjNameFreeFn = unsafe extern "C" fn(*const c_char, c_int, *const c_char);
-type ObjNameDoAllFn = unsafe extern "C" fn(*const ObjName, *mut c_void);
+pub(crate) type ObjNameDoAllFn = unsafe extern "C" fn(*const ObjName, *mut c_void);
 
 /// Per-type callbacks registered by [`OBJ_NAME_new_index`].
 #[derive(Clone, Copy, Default)]

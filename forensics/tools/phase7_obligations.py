@@ -152,6 +152,54 @@ MODULE_PREFIXES: list[tuple[str, tuple[str, ...]]] = [
 ]
 
 
+# ---------------------------------------------------------------------------------------------
+# 7.3g's hand-off table
+#
+# Every entry is a group of prefix-matched exports, the primitive unit whose functions their
+# callbacks call, and the sentence that says which translation unit they come from. The prefix
+# groups are deliberately per-family rather than one `EVP_` catch-all: a row that named one
+# primitive unit for all one hundred and sixty-four statics would be a row nobody could check.
+#
+# `EVP_sm3` is its own row rather than part of a `EVP_sm` group because there is no other
+# `EVP_sm` name here, and `EVP_sha` covers `EVP_shake128`/`EVP_shake256` because they are
+# `legacy_sha.c`'s alongside SHA-2 and a reader looking for them will not find them under a
+# `shake` prefix.
+# ---------------------------------------------------------------------------------------------
+
+LEGACY_HANDOFFS: list[tuple[tuple[str, ...], str, str]] = [
+    (("EVP_aes_",), "crypto/aes/",
+     "`e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the "
+     "low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`"),
+    (("EVP_aria_",), "crypto/aria/", "`e_aria.c`"),
+    (("EVP_camellia_",), "crypto/camellia/", "`e_camellia.c`"),
+    (("EVP_des",), "crypto/des/",
+     "`e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction"),
+    (("EVP_rc2",), "crypto/rc2/", "`e_rc2.c`"),
+    (("EVP_rc4",), "crypto/rc4/",
+     "`e_rc4.c` and `e_rc4_hmac_md5.c`, the second being a composition with `crypto/md5/`"),
+    (("EVP_idea",), "crypto/idea/", "`e_idea.c`"),
+    (("EVP_cast5",), "crypto/cast/", "`e_cast.c`"),
+    (("EVP_seed",), "crypto/seed/", "`e_seed.c`"),
+    (("EVP_bf_",), "crypto/bf/", "`e_bf.c`"),
+    (("EVP_sm4",), "crypto/sm4/", "`e_sm4.c`"),
+    (("EVP_chacha20",), "crypto/chacha/ and crypto/poly1305/",
+     "`e_chacha20_poly1305.c`; the AEAD is a composition of the two primitive units"),
+    (("EVP_xcbc",), "crypto/aes/",
+     "`e_xcbc_d.c`, which is the XCBC-MAC construction over the AES-CBC primitive"),
+    (("EVP_md4",), "crypto/md4/", "`legacy_md4.c`"),
+    (("EVP_md5",), "crypto/md5/",
+     "`legacy_md5.c` and `legacy_md5_sha1.c`, the second an MD5-then-SHA1 composition"),
+    (("EVP_mdc2",), "crypto/mdc2/", "`legacy_mdc2.c`, itself over `crypto/des/`"),
+    (("EVP_sha",), "crypto/sha/",
+     "`legacy_sha.c`, which builds every SHA-1, SHA-2, SHA-3 and SHAKE static in one table"),
+    (("EVP_blake2",), "crypto/blake2/", "`legacy_blake2.c`"),
+    (("EVP_ripemd",), "crypto/ripemd/", "`legacy_ripemd.c`"),
+    (("EVP_whirlpool",), "crypto/whirlpool/", "`legacy_wp.c`"),
+    (("EVP_sm3",), "crypto/sm3/", "`legacy_sm3.c`"),
+]
+
+
+
 def load(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))["body"]
 
@@ -258,26 +306,51 @@ def main(argv: list[str]) -> int:
             + "\n  ".join(f"{s}  ({owned[s]['declaring_header']})" for s in unlabelled)
         )
 
-    # Nothing is handed *on* yet. The plan's §2 says the legacy cipher and digest wrappers
-    # whose primitives are Phase 13's will be, and the row that decides it belongs to 7.3,
-    # where the primitive each wrapper calls is read. An empty table at the start is the
-    # honest state: everything Phase 7 owns, it intends to implement.
-    handed_on: set[str] = set()
-    deferred: list[dict] = []
+    # 7.3g's hand-off, and the plan's §2 predicts it: the legacy `EVP_CIPHER` and `EVP_MD`
+    # statics are one `EVP_add_*` registration each of a method whose callbacks call a
+    # *primitive* -- `AES_encrypt`, `SHA256_Update`, `Camellia_EncryptBlock` -- and the
+    # primitive units are Phase 13's. What 7.3g *can* do is done and is not in this table:
+    # the four walkers in `names.c`, and the two adders, which take their method from the
+    # caller and read no primitive at all.
+    #
+    # `EVP_get_cipherbyname` and `EVP_get_digestbyname` were in this table for one revision of
+    # the plan and are **not** in it now. Their bodies need nothing Phase 13 has -- the legacy
+    # lookup is only the first of three steps, and the namemap retry and the fetch behind it are
+    # this stratum's -- and what Phase 13 changes is which names the first step finds. Refusing to
+    # write a function whose *input* is another stratum's contents would have been the same
+    # mistake as refusing to write `EVP_add_cipher`. RT-EVP-NAMES is what settled it, and
+    # `src/evp/legacy_evp.rs`'s module doc is where the reversal is argued.
+    handed_on: dict[str, dict] = {}
+    for prefixes, primitive, note in LEGACY_HANDOFFS:
+        for sym in owned:
+            if sym in done or sym in handed_on:
+                continue
+            if any(sym == p or sym.startswith(p) for p in prefixes):
+                handed_on[sym] = {
+                    "symbol": sym,
+                    "owning_phase": 13,
+                    "declaring_header": owned[sym]["declaring_header"],
+                    "reason": (
+                        f"a legacy method static whose callbacks call {primitive}'s own "
+                        f"primitives; {note}"
+                    ),
+                }
+    handed_on_names = set(handed_on)
+    deferred: list[dict] = list(handed_on.values())
 
-    implemented_here = sorted(s for s in owned if s in done and s not in handed_on)
+    implemented_here = sorted(s for s in owned if s in done and s not in handed_on_names)
     open_rows = [
         {"symbol": s, "module": owned[s]["module"],
          "declaring_header": owned[s]["declaring_header"],
          "received_from_phase": owned[s]["from"]}
-        for s in sorted(owned) if s not in done and s not in handed_on
+        for s in sorted(owned) if s not in done and s not in handed_on_names
     ]
 
-    if len(owned) != len(implemented_here) + len(handed_on) + len(open_rows):
+    if len(owned) != len(implemented_here) + len(handed_on_names) + len(open_rows):
         raise SystemExit(
             "phase7-obligations: the ledger does not account for exactly its own working "
             f"set: owned={len(owned)} implemented={len(implemented_here)} "
-            f"deferred={len(handed_on)} open={len(open_rows)}"
+            f"deferred={len(handed_on_names)} open={len(open_rows)}"
         )
 
     body = {

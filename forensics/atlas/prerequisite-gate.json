@@ -3,6 +3,7 @@
   "body": {
     "blocking_dependencies": [
       "OSSL_provider_init -> phase 13 (providers/legacy/legacyprov.c's entry point, and the name a third-party provider's own entry point is declared with -- which is why subphase rows 6.8d and 6.12 name it, since the `providers` configuration module needs a module path and RT-PROVIDER-3P compiles its own. The authority symbol is the legacy provider's, so it is Phase 13's.)",
+      "evp_cleanup_int -> phase 7 (Internal, called only by `OPENSSL_cleanup`, and **owed to 7.4 inside this stratum**. Its body is seven calls: four `OBJ_NAME_cleanup`, then `EVP_PBE_cleanup` -- which is `crypto/evp/evp_pbe.c`'s, a 7.4 unit that does not exist yet -- then `OBJ_sigid_free`, then `evp_app_cleanup_int`. So half of it cannot be written, and the half that could would have to omit the other half. `owner_phase` is 7 rather than a later stratum because the dependency is a later *subphase* of the same stratum, which is why it appears in the blocking census rather than in a hand-off edge.)",
       "evp_rand_can_seed -> phase 9 (Internal: declared in `include/crypto/evp.h`, which is not installed, and its only caller in the whole authority is `crypto/rand/rand_lib.c`, already recorded in this file's `units` section as Phase 9's. 7.3f transcribes `evp_rand.c` and deliberately stops at the dispatch walk that fills the `get_seed` and `clear_seed` *fields*: the fields are this file's, the three callers are the stratum that needs the DRBG plumbing. Recording the name here is what makes that boundary visible to the gate rather than only to a reader.)",
       "evp_rand_clear_seed -> phase 9 (The third of the seed trio, and the same boundary again: internal, declared in the uninstalled `include/crypto/evp.h`, called only by `crypto/rand/rand_lib.c`, and the releasing half of the pair whose acquiring half is `evp_rand_get_seed`. Neither half has a caller before Phase 9.)",
       "evp_rand_get_seed -> phase 9 (The same boundary as its `can_seed` sibling: internal to `crypto/evp/evp_rand.c`, declared in the uninstalled `include/crypto/evp.h`, called only by `crypto/rand/rand_lib.c`. It answers entropy to the DRBG, so it cannot be written before the thing that asks for entropy exists.)",
@@ -13,8 +14,8 @@
     ],
     "census": {
       "covered_by_a_divergence": 56,
-      "language_surface_not_modelled_by_name": 2262,
-      "planned_prerequisites": 8
+      "language_surface_not_modelled_by_name": 2271,
+      "planned_prerequisites": 9
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
@@ -140,6 +141,7 @@
         "crypto/evp/evp_rand.c": 34,
         "crypto/evp/kdf_lib.c": 15,
         "crypto/evp/mac_lib.c": 14,
+        "crypto/evp/names.c": 10,
         "crypto/evp/skeymgmt_meth.c": 12,
         "crypto/ex_data.c": 21,
         "crypto/getenv.c": 2,
@@ -156,7 +158,7 @@
         "crypto/params.c": 22,
         "crypto/params_dup.c": 12,
         "crypto/params_from_text.c": 10,
-        "crypto/pem/pem_lib.c": 82,
+        "crypto/pem/pem_lib.c": 81,
         "crypto/property/defn_cache.c": 8,
         "crypto/property/property.c": 26,
         "crypto/property/property_parse.c": 15,
@@ -174,6 +176,7 @@
         "crypto/trace.c": 25
       },
       "planned_prerequisites": {
+        "evp_cleanup_int": 1,
         "evp_rand_can_seed": 1,
         "evp_rand_clear_seed": 1,
         "evp_rand_get_seed": 1,
@@ -269,6 +272,7 @@
         "crypto/asn1/a_i2d_fp.c:ERR_raise"
       ],
       "planned_prerequisites": [
+        "evp_cleanup_int",
         "evp_rand_can_seed",
         "evp_rand_clear_seed",
         "evp_rand_get_seed",
@@ -280,9 +284,9 @@
       ]
     },
     "checked": {
-      "authority_units": 121,
-      "crate_modules": 166,
-      "deferrals_recorded": 8,
+      "authority_units": 122,
+      "crate_modules": 167,
+      "deferrals_recorded": 9,
       "divergence_names_covered": 32,
       "divergence_rows": 5,
       "names_referenced_and_not_built": 17
@@ -406,7 +410,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "eb8b6be2cfce89cd0eb34a63b82a44b44efe4a68a9eea05e7d37ed034280a2e5",
+  "body_hash": "ddf407e5e13ada2ad380a140adb4deb0993fd35ec30d12f003618c12c46a7283",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -417,7 +421,7 @@
     {
       "name": "macro-owners",
       "path": "forensics/atlas/macro-owners.json",
-      "sha256": "b6391f9d4eee8a92e76855171a946f1a442a5eb21e40c29f8233443e93ec1b6c"
+      "sha256": "b738aa29c48ab176f87af05c829849ad7bd3c6b6987e49715a8cbfbeeb929877"
     },
     {
       "name": "typedef-owners",
@@ -427,7 +431,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "29deb34375a481eff774f65353cce079b5a4bba46b96c485242c6b3a2a849fe4"
+      "sha256": "54c639950ac6135db9c715726ed9b4b411a3fb328a75cf6716c100f0fae9fa4d"
     },
     {
       "name": "symbol-ownership",
@@ -437,17 +441,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "18cf855cef29a8d95442015ebd4352b3fdf0dba30f1c924247098e2ea4e6be44"
+      "sha256": "d5e063c62e9bf3c568fb574d0a6ddd70ce1b6a23e4736cab926a23391480efb6"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "849ef0aeb3e9ba7681ee836d3c73ba47bf3d887cc020e294686ce3bb6fbf4d64"
+      "sha256": "7cc76e0da69e9c76add3317b2ad5653a489dc2635b2d25b95c5c205e6269ba61"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "4e7e2abb1f85ba3c190d25a25f1bd37c9090afa5339dc8b0049ba61292628cc1"
+      "sha256": "a68b881d4739537e3796ad634127dcef46c38b06fc46cbb53217ce7bc0c6e049"
     },
     {
       "name": "crate-source-tree",

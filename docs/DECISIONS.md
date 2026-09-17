@@ -9432,3 +9432,133 @@ for a test.
 | 7.3f's open rows | 24 | **0** |
 
 SPDX-License-Identifier: Apache-2.0
+
+---
+
+## D161 — `OPENSSL_INIT_ADD_ALL_CIPHERS` is accepted, not refused; found by a court reading the error queue
+
+**Decision.** Take `OPENSSL_INIT_ADD_ALL_CIPHERS` and `OPENSSL_INIT_ADD_ALL_DIGESTS` **off**
+`INIT_UNSUPPORTED` in `src/runtime/init.rs`. `OPENSSL_init_crypto` now accepts them, raises nothing,
+answers 1, and records them so the second call takes the fast path. Their action is
+`add_all_legacy_methods(opts)`, which is one expression and does nothing until Phase 13 supplies
+`crypto/evp/c_allc.c`'s and `c_alld.c`'s bodies.
+
+**Why the earlier decision was wrong, and in which direction.** The two bits were refused on the
+reasoning that "the authority's action for them is observable, so refusing is the honest choice
+because they are not no-ops". That reasoning is sound about the *table* and was wrong about the
+*return value*. The authority's code is
+
+```c
+if (opts & OPENSSL_INIT_ADD_ALL_CIPHERS) {
+    if (!RUN_ONCE(&add_all_ciphers, ossl_init_add_all_ciphers))
+        return 0;
+}
+```
+
+and the once-raiser answers 1 and raises nothing. So the crate was reporting a *failure the
+authority does not have* — and `OpenSSL_add_all_algorithms_noconf()` is, in `crypto.h`, literally
+`OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS | OPENSSL_INIT_ADD_ALL_DIGESTS, NULL)`. Every
+caller that checks that answer — which is what the spelling is for — failed against this crate and
+succeeded against the authority. The table staying empty is a contents divergence and is recorded;
+the call *failing* was a behaviour divergence that **no record named**, in either direction, because
+the decision was recorded as a decision and never measured.
+
+**How it was found.** By writing `EVP_CIPHER_do_all`, whose first statement is one of these calls,
+and having `RT-EVP-NAMES` read `ERR_peek_error()` after it. The probe reported
+`out_of_order:0 err=126615813` against the authority's `out_of_order:0 err=0` — a five-minute
+measurement of a three-year-old assumption, and the only reason the difference was visible is that
+the court compares *executions* rather than assertions. A unit test written from the same
+understanding would have asserted the refusal and passed.
+
+**What changes observably.** Three things, and they are all new capabilities rather than repairs:
+`OPENSSL_add_all_algorithms_noconf()` answers 1; `EVP_CIPHER_do_all`/`EVP_MD_do_all` and their
+sorted twins no longer leave an error on the queue after a successful walk; and the crate's own
+`EVP_get_cipherbyname`/`EVP_get_digestbyname` — which have the same call as their first statement —
+become writable at all, because their guard was what made them look unimplementable.
+
+**The unit test that encoded the old decision is rewritten rather than deleted.** It was
+`unsupported_options_fail_with_init_fail_and_do_not_get_recorded` and it asserted `0x4` was refused;
+it now lists only the ENGINE and ASYNC bits, and a new test,
+`the_legacy_adder_bits_are_accepted_and_raise_nothing`, asserts the opposite for the two that
+moved — including that the queue is empty and that the option is recorded. A test that had been
+deleted would have taken the argument with it.
+
+SPDX-License-Identifier: Apache-2.0
+
+---
+
+## D162 — 7.3g closes: the two walkers, the two adders, the two lookups, and one hundred and sixty-four hand-offs with a primitive named for each
+
+**What landed.** `crypto/evp/names.c`'s implementable half — `EVP_CIPHER_do_all`,
+`EVP_CIPHER_do_all_sorted`, `EVP_MD_do_all`, `EVP_MD_do_all_sorted`, `EVP_add_cipher`,
+`EVP_add_digest`, `EVP_get_cipherbyname`, `EVP_get_digestbyname` and their two internal `_ex`
+halves — **eight exports**, and with them 7.3g is closed. `RT-EVP-NAMES` lands with **25
+observations and zero residuals**.
+
+**The rest of 7.3g is a hand-off, and the plan predicted it.** One hundred and sixty-four legacy
+method statics — the `EVP_aes_*`, `EVP_des*`, `EVP_sha*` and their families — are Phase 13's, and
+each row now names the primitive unit whose functions the wrapper's callbacks call:
+`crypto/aes/` for `e_aes.c` and `e_xcbc_d.c`, `crypto/sha/` for `legacy_sha.c` (which is where
+`EVP_shake128` lives, not under a `shake` prefix), `crypto/md5/` for `legacy_md5_sha1.c`, and so
+on. The table in `forensics/tools/phase7_obligations.py` is per-family rather than one `EVP_`
+catch-all, because a row that named one primitive unit for all of them would be a row nobody could
+check.
+
+**The judgement that changed while writing it, and it is worth recording because the reasoning was
+wrong rather than incomplete.** The first reading handed `EVP_get_cipherbyname` and
+`EVP_get_digestbyname` to Phase 13 as well, on the argument that *their whole answer is a lookup in
+the table the wrappers fill*, so a court could observe the function and not its result. Reading the
+bodies again says otherwise, and three things follow:
+
+  * the legacy lookup is only the **first** of three steps. A miss falls through to the namemap; a
+    name the namemap does not know is **fetched** — with `ERR_set_mark` around the fetch, so that a
+    failed resolution leaves the error queue exactly as it found it — and the namemap is asked
+    again. Every piece of that is this stratum's or an earlier one's;
+  * a caller who has added a method with `EVP_add_cipher` gets it back **by name**, which is the
+    whole point of the pair, and it needs no Phase-13 primitive;
+  * what Phase 13 changes is *which names the first step finds*. That is a contents divergence,
+    already recorded; refusing to write a function because one of its **inputs** is another
+    stratum's contents would be the same mistake as refusing to write `EVP_add_cipher`.
+
+`RT-EVP-NAMES` settled it by calling both lookups: for the probe's own entry, and for a name nobody
+publishes — the second of which answers NULL with the error queue unchanged, which is the mark/pop
+pair doing its job and would be the first thing lost by a transcription that "simplified" the fetch
+away.
+
+**The court's central design problem, and its answer.** Most of what these six functions return is
+another stratum's contents: `EVP_CIPHER_do_all` calls
+`OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS, NULL)`, which in the authority populates the
+table with those one hundred and sixty-four statics. A probe that printed the visit count would be
+printing **how much of Phase 13 exists** — six hundred on one side and three on the other — and
+reporting it as a behavioural residual. So the probe observes the walk's *shape*, which is
+contents-independent: alias rows report a NULL cipher and their target in `to` while real rows report
+the method in `from` and a NULL `to`; the sorted walk is sorted; and the one contents-dependent fact
+it may state is *the entry it added itself*, because that entry is the probe's. Three invariant
+counts and two pointer relations replace a count that would have been a lie.
+
+**One of those invariants caught the probe, not the crate.** The first version checked sortedness on
+*both* walks and reported `out_of_order:1` on the authority for the unsorted one — which is a correct
+observation of the wrong contract: `OBJ_NAME_do_all` is a hash-order walk and never promised an
+order. The check is now gated on the sorted walk and the comment at the site says why. A court is a
+program too.
+
+**What is not here, each with its reason.** `evp_cleanup_int` is `names.c`'s and is owed to **7.4**
+inside this stratum: its body calls `EVP_PBE_cleanup`, which is `crypto/evp/evp_pbe.c`'s, so half of
+it cannot be written; it is recorded in `forensics/prerequisites.json` with `owner_phase: 7`, which
+is why it appears in the blocking census rather than in a hand-off edge.
+`EVP_add_alg_module` is `evp_cnf.c`'s and is 7.4's, because the callback it registers reads the
+configuration through `X509V3_get_value_bool`, which is Phase 11's.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 7 implemented / open / deferred | 296 / 654 / 0 | **304 / 482 / 164** |
+| `implemented[libcrypto]` | 1431 | **1439** |
+| courts | 62 | **63** |
+| RT-EVP-NAMES observations | — | **25** |
+| prototype court: checked / mismatch | 1384 / 0 | **1392 / 0** |
+| unit tests | 383 | **389** |
+| prerequisite deferrals | 8 | **9** |
+
+SPDX-License-Identifier: Apache-2.0

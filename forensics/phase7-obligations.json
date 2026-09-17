@@ -4,14 +4,1001 @@
     "complete": false,
     "counts": {
       "atlas_owned": 924,
-      "deferred_to_later_phase": 0,
-      "implemented": 296,
-      "open_in_this_stratum": 654,
+      "deferred_to_later_phase": 164,
+      "implemented": 304,
+      "open_in_this_stratum": 482,
       "owned": 950,
       "received_by_handoff": 26
     },
-    "deferred": [],
-    "deferred_by_phase": {},
+    "deferred": [
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_128_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_128_cbc_hmac_sha1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_128_cbc_hmac_sha256"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_128_ccm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_128_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_128_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_128_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_128_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_128_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_128_gcm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_128_ocb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_128_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_128_wrap"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_128_wrap_pad"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_128_xts"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_192_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_192_ccm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_192_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_192_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_192_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_192_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_192_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_192_gcm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_192_ocb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_192_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_192_wrap"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_192_wrap_pad"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_256_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_256_cbc_hmac_sha1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_256_cbc_hmac_sha256"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_256_ccm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_256_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_256_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_256_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_256_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_256_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_256_gcm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_256_ocb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_256_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_256_wrap"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_256_wrap_pad"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+        "symbol": "EVP_aes_256_xts"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+        "symbol": "EVP_aria_128_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+        "symbol": "EVP_aria_128_ccm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+        "symbol": "EVP_aria_128_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+        "symbol": "EVP_aria_128_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+        "symbol": "EVP_aria_128_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+        "symbol": "EVP_aria_128_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+        "symbol": "EVP_aria_128_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+        "symbol": "EVP_aria_128_gcm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+        "symbol": "EVP_aria_128_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+        "symbol": "EVP_aria_192_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+        "symbol": "EVP_aria_192_ccm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+        "symbol": "EVP_aria_192_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+        "symbol": "EVP_aria_192_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+        "symbol": "EVP_aria_192_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+        "symbol": "EVP_aria_192_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+        "symbol": "EVP_aria_192_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+        "symbol": "EVP_aria_192_gcm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+        "symbol": "EVP_aria_192_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+        "symbol": "EVP_aria_256_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+        "symbol": "EVP_aria_256_ccm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+        "symbol": "EVP_aria_256_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+        "symbol": "EVP_aria_256_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+        "symbol": "EVP_aria_256_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+        "symbol": "EVP_aria_256_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+        "symbol": "EVP_aria_256_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+        "symbol": "EVP_aria_256_gcm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+        "symbol": "EVP_aria_256_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/bf/'s own primitives; `e_bf.c`",
+        "symbol": "EVP_bf_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/bf/'s own primitives; `e_bf.c`",
+        "symbol": "EVP_bf_cfb64"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/bf/'s own primitives; `e_bf.c`",
+        "symbol": "EVP_bf_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/bf/'s own primitives; `e_bf.c`",
+        "symbol": "EVP_bf_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/blake2/'s own primitives; `legacy_blake2.c`",
+        "symbol": "EVP_blake2b512"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/blake2/'s own primitives; `legacy_blake2.c`",
+        "symbol": "EVP_blake2s256"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+        "symbol": "EVP_camellia_128_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+        "symbol": "EVP_camellia_128_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+        "symbol": "EVP_camellia_128_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+        "symbol": "EVP_camellia_128_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+        "symbol": "EVP_camellia_128_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+        "symbol": "EVP_camellia_128_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+        "symbol": "EVP_camellia_128_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+        "symbol": "EVP_camellia_192_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+        "symbol": "EVP_camellia_192_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+        "symbol": "EVP_camellia_192_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+        "symbol": "EVP_camellia_192_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+        "symbol": "EVP_camellia_192_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+        "symbol": "EVP_camellia_192_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+        "symbol": "EVP_camellia_192_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+        "symbol": "EVP_camellia_256_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+        "symbol": "EVP_camellia_256_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+        "symbol": "EVP_camellia_256_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+        "symbol": "EVP_camellia_256_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+        "symbol": "EVP_camellia_256_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+        "symbol": "EVP_camellia_256_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+        "symbol": "EVP_camellia_256_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/cast/'s own primitives; `e_cast.c`",
+        "symbol": "EVP_cast5_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/cast/'s own primitives; `e_cast.c`",
+        "symbol": "EVP_cast5_cfb64"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/cast/'s own primitives; `e_cast.c`",
+        "symbol": "EVP_cast5_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/cast/'s own primitives; `e_cast.c`",
+        "symbol": "EVP_cast5_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/chacha/ and crypto/poly1305/'s own primitives; `e_chacha20_poly1305.c`; the AEAD is a composition of the two primitive units",
+        "symbol": "EVP_chacha20"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/chacha/ and crypto/poly1305/'s own primitives; `e_chacha20_poly1305.c`; the AEAD is a composition of the two primitive units",
+        "symbol": "EVP_chacha20_poly1305"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+        "symbol": "EVP_des_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+        "symbol": "EVP_des_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+        "symbol": "EVP_des_cfb64"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+        "symbol": "EVP_des_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+        "symbol": "EVP_des_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+        "symbol": "EVP_des_ede"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+        "symbol": "EVP_des_ede3"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+        "symbol": "EVP_des_ede3_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+        "symbol": "EVP_des_ede3_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+        "symbol": "EVP_des_ede3_cfb64"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+        "symbol": "EVP_des_ede3_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+        "symbol": "EVP_des_ede3_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+        "symbol": "EVP_des_ede3_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+        "symbol": "EVP_des_ede3_wrap"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+        "symbol": "EVP_des_ede_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+        "symbol": "EVP_des_ede_cfb64"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+        "symbol": "EVP_des_ede_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+        "symbol": "EVP_des_ede_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+        "symbol": "EVP_des_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+        "symbol": "EVP_desx_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/idea/'s own primitives; `e_idea.c`",
+        "symbol": "EVP_idea_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/idea/'s own primitives; `e_idea.c`",
+        "symbol": "EVP_idea_cfb64"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/idea/'s own primitives; `e_idea.c`",
+        "symbol": "EVP_idea_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/idea/'s own primitives; `e_idea.c`",
+        "symbol": "EVP_idea_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/md4/'s own primitives; `legacy_md4.c`",
+        "symbol": "EVP_md4"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/md5/'s own primitives; `legacy_md5.c` and `legacy_md5_sha1.c`, the second an MD5-then-SHA1 composition",
+        "symbol": "EVP_md5"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/md5/'s own primitives; `legacy_md5.c` and `legacy_md5_sha1.c`, the second an MD5-then-SHA1 composition",
+        "symbol": "EVP_md5_sha1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/mdc2/'s own primitives; `legacy_mdc2.c`, itself over `crypto/des/`",
+        "symbol": "EVP_mdc2"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/rc2/'s own primitives; `e_rc2.c`",
+        "symbol": "EVP_rc2_40_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/rc2/'s own primitives; `e_rc2.c`",
+        "symbol": "EVP_rc2_64_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/rc2/'s own primitives; `e_rc2.c`",
+        "symbol": "EVP_rc2_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/rc2/'s own primitives; `e_rc2.c`",
+        "symbol": "EVP_rc2_cfb64"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/rc2/'s own primitives; `e_rc2.c`",
+        "symbol": "EVP_rc2_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/rc2/'s own primitives; `e_rc2.c`",
+        "symbol": "EVP_rc2_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/rc4/'s own primitives; `e_rc4.c` and `e_rc4_hmac_md5.c`, the second being a composition with `crypto/md5/`",
+        "symbol": "EVP_rc4"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/rc4/'s own primitives; `e_rc4.c` and `e_rc4_hmac_md5.c`, the second being a composition with `crypto/md5/`",
+        "symbol": "EVP_rc4_40"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/rc4/'s own primitives; `e_rc4.c` and `e_rc4_hmac_md5.c`, the second being a composition with `crypto/md5/`",
+        "symbol": "EVP_rc4_hmac_md5"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/ripemd/'s own primitives; `legacy_ripemd.c`",
+        "symbol": "EVP_ripemd160"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/seed/'s own primitives; `e_seed.c`",
+        "symbol": "EVP_seed_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/seed/'s own primitives; `e_seed.c`",
+        "symbol": "EVP_seed_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/seed/'s own primitives; `e_seed.c`",
+        "symbol": "EVP_seed_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/seed/'s own primitives; `e_seed.c`",
+        "symbol": "EVP_seed_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/sha/'s own primitives; `legacy_sha.c`, which builds every SHA-1, SHA-2, SHA-3 and SHAKE static in one table",
+        "symbol": "EVP_sha1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/sha/'s own primitives; `legacy_sha.c`, which builds every SHA-1, SHA-2, SHA-3 and SHAKE static in one table",
+        "symbol": "EVP_sha224"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/sha/'s own primitives; `legacy_sha.c`, which builds every SHA-1, SHA-2, SHA-3 and SHAKE static in one table",
+        "symbol": "EVP_sha256"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/sha/'s own primitives; `legacy_sha.c`, which builds every SHA-1, SHA-2, SHA-3 and SHAKE static in one table",
+        "symbol": "EVP_sha384"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/sha/'s own primitives; `legacy_sha.c`, which builds every SHA-1, SHA-2, SHA-3 and SHAKE static in one table",
+        "symbol": "EVP_sha3_224"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/sha/'s own primitives; `legacy_sha.c`, which builds every SHA-1, SHA-2, SHA-3 and SHAKE static in one table",
+        "symbol": "EVP_sha3_256"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/sha/'s own primitives; `legacy_sha.c`, which builds every SHA-1, SHA-2, SHA-3 and SHAKE static in one table",
+        "symbol": "EVP_sha3_384"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/sha/'s own primitives; `legacy_sha.c`, which builds every SHA-1, SHA-2, SHA-3 and SHAKE static in one table",
+        "symbol": "EVP_sha3_512"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/sha/'s own primitives; `legacy_sha.c`, which builds every SHA-1, SHA-2, SHA-3 and SHAKE static in one table",
+        "symbol": "EVP_sha512"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/sha/'s own primitives; `legacy_sha.c`, which builds every SHA-1, SHA-2, SHA-3 and SHAKE static in one table",
+        "symbol": "EVP_sha512_224"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/sha/'s own primitives; `legacy_sha.c`, which builds every SHA-1, SHA-2, SHA-3 and SHAKE static in one table",
+        "symbol": "EVP_sha512_256"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/sha/'s own primitives; `legacy_sha.c`, which builds every SHA-1, SHA-2, SHA-3 and SHAKE static in one table",
+        "symbol": "EVP_shake128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/sha/'s own primitives; `legacy_sha.c`, which builds every SHA-1, SHA-2, SHA-3 and SHAKE static in one table",
+        "symbol": "EVP_shake256"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/sm3/'s own primitives; `legacy_sm3.c`",
+        "symbol": "EVP_sm3"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/sm4/'s own primitives; `e_sm4.c`",
+        "symbol": "EVP_sm4_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/sm4/'s own primitives; `e_sm4.c`",
+        "symbol": "EVP_sm4_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/sm4/'s own primitives; `e_sm4.c`",
+        "symbol": "EVP_sm4_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/sm4/'s own primitives; `e_sm4.c`",
+        "symbol": "EVP_sm4_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/sm4/'s own primitives; `e_sm4.c`",
+        "symbol": "EVP_sm4_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "owning_phase": 13,
+        "reason": "a legacy method static whose callbacks call crypto/whirlpool/'s own primitives; `legacy_wp.c`",
+        "symbol": "EVP_whirlpool"
+      }
+    ],
+    "deferred_by_phase": {
+      "13": 164
+    },
     "handoffs_discharged": {
       "5": [
         "ASN1_item_sign_ex",
@@ -243,7 +1230,9 @@
       "EVP_CIPHER_CTX_test_flags",
       "EVP_CIPHER_asn1_to_param",
       "EVP_CIPHER_can_pipeline",
+      "EVP_CIPHER_do_all",
       "EVP_CIPHER_do_all_provided",
+      "EVP_CIPHER_do_all_sorted",
       "EVP_CIPHER_fetch",
       "EVP_CIPHER_free",
       "EVP_CIPHER_get0_description",
@@ -395,7 +1384,9 @@
       "EVP_MD_CTX_settable_params",
       "EVP_MD_CTX_test_flags",
       "EVP_MD_CTX_update_fn",
+      "EVP_MD_do_all",
       "EVP_MD_do_all_provided",
+      "EVP_MD_do_all_sorted",
       "EVP_MD_fetch",
       "EVP_MD_free",
       "EVP_MD_get0_description",
@@ -493,10 +1484,14 @@
       "EVP_SKEY_is_a",
       "EVP_SKEY_to_provider",
       "EVP_SKEY_up_ref",
+      "EVP_add_cipher",
+      "EVP_add_digest",
       "EVP_default_properties_enable_fips",
       "EVP_default_properties_is_fips_enabled",
       "EVP_enc_null",
       "EVP_get1_default_properties",
+      "EVP_get_cipherbyname",
+      "EVP_get_digestbyname",
       "EVP_md_null",
       "EVP_set_default_properties"
     ],
@@ -936,18 +1931,6 @@
       },
       {
         "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_do_all"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CIPHER_do_all_sorted"
-      },
-      {
-        "declaring_header": "evp.h",
         "module": "src/evp/encode.rs",
         "received_from_phase": null,
         "symbol": "EVP_DecodeBlock"
@@ -1287,18 +2270,6 @@
         "module": "src/evp/keymgmt.rs",
         "received_from_phase": null,
         "symbol": "EVP_KEYMGMT_up_ref"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_do_all"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_do_all_sorted"
       },
       {
         "declaring_header": "evp.h",
@@ -3120,867 +4091,9 @@
       },
       {
         "declaring_header": "evp.h",
-        "module": "src/evp/legacy_evp.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_add_cipher"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_evp.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_add_digest"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_128_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_128_cbc_hmac_sha1"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_128_cbc_hmac_sha256"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_128_ccm"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_128_cfb1"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_128_cfb128"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_128_cfb8"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_128_ctr"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_128_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_128_gcm"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_128_ocb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_128_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_128_wrap"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_128_wrap_pad"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_128_xts"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_192_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_192_ccm"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_192_cfb1"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_192_cfb128"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_192_cfb8"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_192_ctr"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_192_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_192_gcm"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_192_ocb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_192_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_192_wrap"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_192_wrap_pad"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_256_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_256_cbc_hmac_sha1"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_256_cbc_hmac_sha256"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_256_ccm"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_256_cfb1"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_256_cfb128"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_256_cfb8"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_256_ctr"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_256_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_256_gcm"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_256_ocb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_256_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_256_wrap"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_256_wrap_pad"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aes_256_xts"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aria_128_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aria_128_ccm"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aria_128_cfb1"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aria_128_cfb128"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aria_128_cfb8"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aria_128_ctr"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aria_128_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aria_128_gcm"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aria_128_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aria_192_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aria_192_ccm"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aria_192_cfb1"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aria_192_cfb128"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aria_192_cfb8"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aria_192_ctr"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aria_192_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aria_192_gcm"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aria_192_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aria_256_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aria_256_ccm"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aria_256_cfb1"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aria_256_cfb128"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aria_256_cfb8"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aria_256_ctr"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aria_256_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aria_256_gcm"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_aria_256_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_bf_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_bf_cfb64"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_bf_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_bf_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_blake2b512"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_blake2s256"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_camellia_128_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_camellia_128_cfb1"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_camellia_128_cfb128"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_camellia_128_cfb8"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_camellia_128_ctr"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_camellia_128_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_camellia_128_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_camellia_192_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_camellia_192_cfb1"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_camellia_192_cfb128"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_camellia_192_cfb8"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_camellia_192_ctr"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_camellia_192_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_camellia_192_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_camellia_256_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_camellia_256_cfb1"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_camellia_256_cfb128"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_camellia_256_cfb8"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_camellia_256_ctr"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_camellia_256_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_camellia_256_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_cast5_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_cast5_cfb64"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_cast5_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_cast5_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_chacha20"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_chacha20_poly1305"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_des_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_des_cfb1"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_des_cfb64"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_des_cfb8"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_des_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_des_ede"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_des_ede3"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_des_ede3_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_des_ede3_cfb1"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_des_ede3_cfb64"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_des_ede3_cfb8"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_des_ede3_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_des_ede3_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_des_ede3_wrap"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_des_ede_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_des_ede_cfb64"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_des_ede_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_des_ede_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_des_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_desx_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_get_cipherbyname"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_get_digestbyname"
-      },
-      {
-        "declaring_header": "evp.h",
         "module": "src/evp/p_legacy.rs",
         "received_from_phase": null,
         "symbol": "EVP_get_pw_prompt"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_idea_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_idea_cfb64"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_idea_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_idea_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_md4"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_md5"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_md5_sha1"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_mdc2"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_rc2_40_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_rc2_64_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_rc2_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_rc2_cfb64"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_rc2_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_rc2_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_rc4"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_rc4_40"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_rc4_hmac_md5"
       },
       {
         "declaring_header": "evp.h",
@@ -3996,159 +4109,9 @@
       },
       {
         "declaring_header": "evp.h",
-        "module": "src/evp/legacy_digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_ripemd160"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_seed_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_seed_cfb128"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_seed_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_seed_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
         "module": "src/evp/p_legacy.rs",
         "received_from_phase": null,
         "symbol": "EVP_set_pw_prompt"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_sha1"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_sha224"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_sha256"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_sha384"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_sha3_224"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_sha3_256"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_sha3_384"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_sha3_512"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_sha512"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_sha512_224"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_sha512_256"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_shake128"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_shake256"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_sm3"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_sm4_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_sm4_cfb128"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_sm4_ctr"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_sm4_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_sm4_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_whirlpool"
       },
       {
         "declaring_header": "hmac.h",
@@ -4738,12 +4701,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "e20b1febf0f79d918bbe992c4622b557e3b592d711e76aaf2d02a800b5ea3255"
+      "sha256": "e7706ffb09fb2831e8a149fc5a61086e4cfd0b81898f85344c50059b34f40630"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "4bdc677be035034890ef5d7a57eb864ff0f0e76d17481e7cf488d966576c9552"
+      "sha256": "2af5069c21f1f2ffa1dc75a181b0a624555200257a29390b6dae8393e36e979c"
     }
   ],
   "kind": "phase7-obligations",

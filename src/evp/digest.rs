@@ -112,6 +112,7 @@ use crate::params::{
 use crate::property::store::{MethodFreeFn, MethodUpRefFn};
 use crate::provider::{ossl_provider_ctx, ossl_provider_free, ossl_provider_up_ref, OsslProvider};
 use crate::runtime::err::{err_sites, raise_site};
+use crate::runtime::init::{OPENSSL_init_crypto, OPENSSL_INIT_ADD_ALL_DIGESTS};
 use crate::runtime::mem::{cleanse, CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
 use crate::runtime::obj::NID_undef;
 use crate::runtime::obj::{
@@ -121,7 +122,8 @@ use crate::runtime::obj::{
     NID_id_GostR3411_2012_512, NID_id_GostR3411_94, NID_id_HMACGostR3411_94,
     NID_id_tc26_hmac_gost_3411_2012_256, NID_id_tc26_hmac_gost_3411_2012_512, NID_md5, NID_sha1,
     NID_sha224, NID_sha256, NID_sha384, NID_sha3_224, NID_sha3_256, NID_sha3_384, NID_sha3_512,
-    NID_sha512, NID_sha512_224, NID_sha512_256, OBJ_NAME_get, OBJ_nid2ln, OBJ_nid2sn,
+    NID_sha512, NID_sha512_224, NID_sha512_256, OBJ_NAME_do_all, OBJ_NAME_do_all_sorted,
+    OBJ_NAME_get, OBJ_nid2ln, OBJ_nid2sn, ObjName,
 };
 
 /// `EVP_CTRL_RET_UNSUPPORTED`, from `crypto/evp/evp_local.h`.
@@ -146,7 +148,7 @@ const EVP_MD_FLAG_DIGALGID_ABSENT: core::ffi::c_ulong = 0x0008;
 
 /// `OBJ_NAME_TYPE_MD_METH` — `include/openssl/objects.h`. **0x01**, and not one of the type
 /// indices `src/runtime/obj.rs` already names, so it is declared here where its one reader is.
-const OBJ_NAME_TYPE_MD_METH: c_int = 0x01;
+pub(crate) const OBJ_NAME_TYPE_MD_METH: c_int = 0x01;
 
 /// The authority's translation unit, so a failing allocation records its coordinates.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/digest.c".as_ptr();
@@ -3532,6 +3534,109 @@ static N_MD: StaticMd = StaticMd(EvpMd {
 #[no_mangle]
 pub extern "C" fn EVP_md_null() -> *const EvpMd {
     &N_MD.0
+}
+
+// ---------------------------------------------------------------------------------------------
+// `names.c`'s two digest walkers
+//
+// `EVP_CIPHER_do_all`'s twins over the digest half of the legacy table, and the same shape for the
+// same reason: an alias row reports a **NULL method** and its target in `to` where a real row
+// reports the method in `from`. The provider walk is `EVP_MD_do_all_provided`'s and is a different
+// function over a different structure.
+// ---------------------------------------------------------------------------------------------
+
+/// `struct doall_md { void *arg; void (*fn)(const EVP_MD *md, const char *from,
+/// const char *to, void *arg); }`.
+#[repr(C)]
+struct DoAllMd {
+    /// `void *arg` — the caller's argument, passed through unchanged.
+    arg: *mut c_void,
+    /// The caller's visitor.
+    fn_: Option<MdDoAllFn>,
+}
+
+/// `void (*)(const EVP_MD *md, const char *from, const char *to, void *x)`.
+pub(crate) type MdDoAllFn =
+    unsafe extern "C" fn(*const EvpMd, *const c_char, *const c_char, *mut c_void);
+
+/// `static void do_all_md_fn(const OBJ_NAME *nm, void *arg)`.
+///
+/// # Safety
+/// `nm` must be a live `ObjName` and `arg` must point at a live `DoAllMd`.
+unsafe extern "C" fn do_all_md_fn(nm: *const ObjName, arg: *mut c_void) {
+    let dc = arg.cast::<DoAllMd>();
+    if nm.is_null() || dc.is_null() {
+        return;
+    }
+    // SAFETY: `dc` is live per the contract.
+    let (fn_, dc_arg) = unsafe { ((*dc).fn_, (*dc).arg) };
+    let Some(f) = fn_ else {
+        return;
+    };
+    // SAFETY: `nm` is live per the contract.
+    let (alias, name, data) = unsafe { ((*nm).alias, (*nm).name, (*nm).data) };
+    if alias != 0 {
+        // SAFETY: `f` is the caller's visitor; an alias row reports a NULL method and the target
+        // name in `to`, which is `data`.
+        unsafe { f(ptr::null(), name, data, dc_arg) };
+    } else {
+        // SAFETY: `f` is the caller's visitor and `data` is the method the adder stored.
+        unsafe { f(data.cast::<EvpMd>(), name, ptr::null(), dc_arg) };
+    }
+}
+
+/// The shared body of the two walkers, for `EVP_CIPHER_do_all`'s reasons and with the other
+/// initialisation bit: `OPENSSL_INIT_ADD_ALL_DIGESTS`, whose answer is ignored.
+///
+/// # Safety
+/// `fn_` may be NULL, in which case nothing happens; otherwise it must be a valid visitor for the
+/// signature it is declared with.
+unsafe fn digest_names_do_all(fn_: Option<MdDoAllFn>, arg: *mut c_void, sorted: bool) {
+    // SAFETY: `arg` is the caller's own and is passed through unchanged.
+    let mut dc = DoAllMd { arg, fn_ };
+    OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_DIGESTS, ptr::null());
+    if sorted {
+        // SAFETY: `dc` is this frame's own live object and `do_all_md_fn` is the visitor the
+        // table's contract asks for.
+        unsafe {
+            OBJ_NAME_do_all_sorted(
+                OBJ_NAME_TYPE_MD_METH,
+                Some(do_all_md_fn),
+                ptr::addr_of_mut!(dc).cast::<c_void>(),
+            )
+        };
+    } else {
+        // SAFETY: as above.
+        unsafe {
+            OBJ_NAME_do_all(
+                OBJ_NAME_TYPE_MD_METH,
+                Some(do_all_md_fn),
+                ptr::addr_of_mut!(dc).cast::<c_void>(),
+            )
+        };
+    }
+}
+
+/// `void EVP_MD_do_all(void (*fn)(const EVP_MD *md, const char *from, const char *to, void *x),
+/// void *arg)`.
+///
+/// # Safety
+/// `fn_` NULL or a valid visitor; `arg` is the visitor's own argument.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_do_all(fn_: Option<MdDoAllFn>, arg: *mut c_void) {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { digest_names_do_all(fn_, arg, false) };
+}
+
+/// `void EVP_MD_do_all_sorted(void (*fn)(const EVP_MD *md, const char *from, const char *to,
+/// void *x), void *arg)`.
+///
+/// # Safety
+/// `fn_` NULL or a valid visitor; `arg` is the visitor's own argument.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_do_all_sorted(fn_: Option<MdDoAllFn>, arg: *mut c_void) {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { digest_names_do_all(fn_, arg, true) };
 }
 
 #[cfg(test)]
