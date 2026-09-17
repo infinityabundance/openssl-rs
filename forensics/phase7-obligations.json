@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 924,
       "deferred_to_later_phase": 0,
-      "implemented": 186,
-      "open_in_this_stratum": 764,
+      "implemented": 214,
+      "open_in_this_stratum": 736,
       "owned": 950,
       "received_by_handoff": 26
     },
@@ -317,6 +317,33 @@
       "EVP_EncryptInit_ex",
       "EVP_EncryptInit_ex2",
       "EVP_EncryptUpdate",
+      "EVP_MAC_CTX_dup",
+      "EVP_MAC_CTX_free",
+      "EVP_MAC_CTX_get0_mac",
+      "EVP_MAC_CTX_get_block_size",
+      "EVP_MAC_CTX_get_mac_size",
+      "EVP_MAC_CTX_get_params",
+      "EVP_MAC_CTX_gettable_params",
+      "EVP_MAC_CTX_new",
+      "EVP_MAC_CTX_set_params",
+      "EVP_MAC_CTX_settable_params",
+      "EVP_MAC_do_all_provided",
+      "EVP_MAC_fetch",
+      "EVP_MAC_final",
+      "EVP_MAC_finalXOF",
+      "EVP_MAC_free",
+      "EVP_MAC_get0_description",
+      "EVP_MAC_get0_name",
+      "EVP_MAC_get0_provider",
+      "EVP_MAC_get_params",
+      "EVP_MAC_gettable_ctx_params",
+      "EVP_MAC_gettable_params",
+      "EVP_MAC_init",
+      "EVP_MAC_is_a",
+      "EVP_MAC_names_do_all",
+      "EVP_MAC_settable_ctx_params",
+      "EVP_MAC_up_ref",
+      "EVP_MAC_update",
       "EVP_MD_CTX_clear_flags",
       "EVP_MD_CTX_copy",
       "EVP_MD_CTX_copy_ex",
@@ -383,6 +410,7 @@
       "EVP_MD_up_ref",
       "EVP_MD_xof",
       "EVP_Q_digest",
+      "EVP_Q_mac",
       "EVP_default_properties_enable_fips",
       "EVP_default_properties_is_fips_enabled",
       "EVP_enc_null",
@@ -1344,169 +1372,7 @@
         "declaring_header": "evp.h",
         "module": "src/evp/mac.rs",
         "received_from_phase": null,
-        "symbol": "EVP_MAC_CTX_dup"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/mac.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MAC_CTX_free"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/mac.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MAC_CTX_get0_mac"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/mac.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MAC_CTX_get_block_size"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/mac.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MAC_CTX_get_mac_size"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/mac.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MAC_CTX_get_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/mac.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MAC_CTX_gettable_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/mac.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MAC_CTX_new"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/mac.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MAC_CTX_set_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/mac.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MAC_CTX_settable_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/mac.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MAC_do_all_provided"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/mac.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MAC_fetch"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/mac.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MAC_final"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/mac.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MAC_finalXOF"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/mac.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MAC_free"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/mac.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MAC_get0_description"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/mac.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MAC_get0_name"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/mac.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MAC_get0_provider"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/mac.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MAC_get_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/mac.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MAC_gettable_ctx_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/mac.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MAC_gettable_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/mac.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MAC_init"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/mac.rs",
-        "received_from_phase": null,
         "symbol": "EVP_MAC_init_SKEY"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/mac.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MAC_is_a"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/mac.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MAC_names_do_all"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/mac.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MAC_settable_ctx_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/mac.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MAC_up_ref"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/mac.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MAC_update"
       },
       {
         "declaring_header": "evp.h",
@@ -3229,12 +3095,6 @@
         "module": "src/evp/pkey.rs",
         "received_from_phase": null,
         "symbol": "EVP_PKEY_verify_recover_init_ex2"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/mac.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_Q_mac"
       },
       {
         "declaring_header": "evp.h",
@@ -5288,12 +5148,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "fdb66c12e7edd6160fb4c648b1d936a4e75d50ef897098873319bacdcc95ac8c"
+      "sha256": "68e9244f2f4959ef80da4e4bb500ea54f2c71fb79282a03d856ae678b23a5921"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "cf876e5246ae0b2949e7dccce443ad69adc9a119c352b7af5a17190c8341a311"
+      "sha256": "15823e77067007502efdc7c65d38fc102c5c1c7d25d37db3beee91bea7ee861e"
     }
   ],
   "kind": "phase7-obligations",

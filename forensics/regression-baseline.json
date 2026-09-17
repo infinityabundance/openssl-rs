@@ -164,6 +164,10 @@
       "observations": 185,
       "verdict": "pass"
     },
+    "RT-EVP-MAC": {
+      "observations": 96,
+      "verdict": "pass"
+    },
     "RT-EXDATA": {
       "observations": 38,
       "verdict": "pass"
@@ -249,7 +253,7 @@
     "phase7": 0
   },
   "implemented": {
-    "libcrypto": 1321,
+    "libcrypto": 1349,
     "libssl": 0
   },
   "open_obligations": {
@@ -257,7 +261,7 @@
     "phase4": 0,
     "phase5": 0,
     "phase6": 0,
-    "phase7": 764
+    "phase7": 736
   },
   "owned_obligations": {
     "phase3": 294,
@@ -294,7 +298,7 @@
     "blocking_dependencies": 5,
     "divergence_names_covered": 32,
     "findings": 0,
-    "language_census": 2130,
+    "language_census": 2145,
     "sealed_census": 59
   }
 }

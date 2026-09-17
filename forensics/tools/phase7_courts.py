@@ -83,6 +83,7 @@ RUN_TIMEOUT_S = "60"
 COURTS = [
     ("RT-FETCH", "rt_fetch_probe.c"),
     ("RT-EVP-CIPHER", "rt_evp_cipher_probe.c"),
+    ("RT-EVP-MAC", "rt_evp_mac_probe.c"),
 ]
 
 
