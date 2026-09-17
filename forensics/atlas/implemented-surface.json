@@ -281,7 +281,7 @@
         "truncf128",
         "truncf16"
       ],
-      "compiler_emitted_count": 7098,
+      "compiler_emitted_count": 7129,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -289,7 +289,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 1252,
+        "implemented": 1287,
         "implemented_symbols": [
           "ASN1_ANY_it",
           "ASN1_BIT_STRING_check",
@@ -1177,15 +1177,50 @@
           "EVP_EncryptUpdate",
           "EVP_MD_fetch",
           "EVP_MD_free",
+          "EVP_MD_get0_description",
           "EVP_MD_get0_name",
+          "EVP_MD_get0_provider",
           "EVP_MD_get_block_size",
+          "EVP_MD_get_flags",
+          "EVP_MD_get_params",
+          "EVP_MD_get_pkey_type",
           "EVP_MD_get_size",
           "EVP_MD_get_type",
+          "EVP_MD_gettable_ctx_params",
+          "EVP_MD_gettable_params",
+          "EVP_MD_is_a",
+          "EVP_MD_meth_dup",
+          "EVP_MD_meth_free",
+          "EVP_MD_meth_get_app_datasize",
+          "EVP_MD_meth_get_cleanup",
+          "EVP_MD_meth_get_copy",
+          "EVP_MD_meth_get_ctrl",
+          "EVP_MD_meth_get_final",
+          "EVP_MD_meth_get_flags",
+          "EVP_MD_meth_get_init",
+          "EVP_MD_meth_get_input_blocksize",
+          "EVP_MD_meth_get_result_size",
+          "EVP_MD_meth_get_update",
+          "EVP_MD_meth_new",
+          "EVP_MD_meth_set_app_datasize",
+          "EVP_MD_meth_set_cleanup",
+          "EVP_MD_meth_set_copy",
+          "EVP_MD_meth_set_ctrl",
+          "EVP_MD_meth_set_final",
+          "EVP_MD_meth_set_flags",
+          "EVP_MD_meth_set_init",
+          "EVP_MD_meth_set_input_blocksize",
+          "EVP_MD_meth_set_result_size",
+          "EVP_MD_meth_set_update",
+          "EVP_MD_names_do_all",
+          "EVP_MD_settable_ctx_params",
           "EVP_MD_up_ref",
+          "EVP_MD_xof",
           "EVP_default_properties_enable_fips",
           "EVP_default_properties_is_fips_enabled",
           "EVP_enc_null",
           "EVP_get1_default_properties",
+          "EVP_md_null",
           "EVP_set_default_properties",
           "INT32_it",
           "INT64_it",
@@ -1544,7 +1579,7 @@
           "i2d_DISPLAYTEXT",
           "i2t_ASN1_OBJECT"
         ],
-        "scaffolded": 4644
+        "scaffolded": 4609
       },
       "libssl": {
         "authority_exports": 603,
@@ -1555,18 +1590,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 1252,
-      "scaffolded": 5247
+      "implemented": 1287,
+      "scaffolded": 5212
     }
   },
-  "body_hash": "dcc181f0c391401a5eb6f41764a82089f4a3a522c60a46dc97819f92b56ba1d2",
+  "body_hash": "60bde051fa49dec17e24f9a9292e3be761f08dcb23606c1c597df26f7ddbb788",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "668f9ce3a6e6590ade95eef6e9aa16b1bbae54f026568f19a67daba5641aa3c4"
+      "sha256": "ed8b07068b7b1f261585c3ebcd0bb36a11e61f741905c8473ad0172ca03c4f65"
     },
     {
       "name": "authority-exports",

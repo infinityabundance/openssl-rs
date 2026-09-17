@@ -49,22 +49,23 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_void};
+use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
 use core::sync::atomic::{AtomicI32, Ordering};
 
 use crate::context::dispatch::{entry_function, OsslDispatch, OSSL_DISPATCH_END};
 use crate::evp::algorithm::ossl_algorithm_get1_first_name;
 use crate::evp::fetch::{evp_generic_fetch, MethodFromAlgorithmFn};
+use crate::evp::fetch::{evp_is_a, evp_names_do_all};
 use crate::params::{
     OSSL_PARAM_construct_end, OSSL_PARAM_construct_int, OSSL_PARAM_construct_size_t, OsslParam,
 };
 use crate::property::store::{MethodFreeFn, MethodUpRefFn};
-use crate::provider::{ossl_provider_free, ossl_provider_up_ref, OsslProvider};
+use crate::provider::{ossl_provider_ctx, ossl_provider_free, ossl_provider_up_ref, OsslProvider};
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 use crate::runtime::obj::NID_undef;
-use crate::runtime::obj::{OBJ_NAME_get, OBJ_nid2sn};
+use crate::runtime::obj::{OBJ_NAME_get, OBJ_nid2ln, OBJ_nid2sn};
 
 /// `EVP_CTRL_RET_UNSUPPORTED`, from `crypto/evp/evp_local.h`.
 ///
@@ -282,6 +283,18 @@ pub struct EvpMd {
     /// `OSSL_FUNC_digest_gettable_ctx_params_fn *gettable_ctx_params`.
     pub(crate) gettable_ctx_params: Option<DigestGettableCtxParamsFn>,
 }
+
+// SAFETY: a `static` `EVP_MD` is fully initialised at compile time and is never mutated — every
+// mutating arm is guarded by `origin`, and `EVP_ORIG_GLOBAL` is not `EVP_ORIG_DYNAMIC`, so both
+// `EVP_MD_up_ref` and `EVP_MD_free` refuse it. Sharing `&EvpMd` across threads therefore
+// introduces no data race.
+//
+// It is claimed for the wrapper rather than for `EvpMd`, because the claim is only true of the
+// read-only globals: a heap `EvpMd` is mutable and is synchronised by its own reference count.
+struct StaticMd(EvpMd);
+
+// SAFETY: see the note on `StaticMd`: the inner value is a compile-time constant nothing writes.
+unsafe impl Sync for StaticMd {}
 
 /// `EVP_MD *evp_md_new(void)`.
 ///
@@ -794,6 +807,699 @@ pub unsafe extern "C" fn EVP_MD_get_block_size(md: *const EvpMd) -> c_int {
     }
     // SAFETY: `md` is live per the contract.
     unsafe { (*md).block_size }
+}
+
+// ---------------------------------------------------------------------------------------------
+// 7.3d — the `EVP_MD` remainder, first half: the accessors and the method constructors.
+//
+// These are `evp_lib.c`'s MD half (the same translation unit 7.3c-i opened for the cipher half)
+// plus the four parameter entry points `digest.c` owns, and they are one slice because they are
+// one shape: a getter that reads one field, or a setter that writes one field **only if it is
+// still zero**. `EVP_MD_meth_new` is what makes the second shape possible at all — it is the
+// constructor that sets `EVP_ORIG_METH`, and therefore the only way to build a method that
+// `EVP_MD_meth_free` will release and `EVP_MD_free` will refuse.
+//
+// `EVP_md_null` is here for the reason `EVP_enc_null` is in 7.3b: it is the one `m_*.c` static
+// with no primitive under it, and it is what a digest court can resolve through a provider-shaped
+// path once the context exists. Its `ctx_size` is `sizeof(EVP_MD *)`, which looks like a mistake
+// in the authority and is not: a method whose `init`/`update`/`final` need no state still gets a
+// context block, because the legacy context allocates `md_data` from this field.
+// ---------------------------------------------------------------------------------------------
+
+/// `EVP_ORIG_GLOBAL` — `include/crypto/evp.h`. A method in read-only memory.
+const EVP_ORIG_GLOBAL: c_int = 1;
+
+/// `int EVP_MD_is_a(const EVP_MD *md, const char *name)`.
+///
+/// Two paths, chosen by `prov` — a provider method is asked through the namemap with its
+/// `name_id`, and a legacy one by comparing the caller's name against the method's own.
+///
+/// # Safety
+/// `md` must be NULL or live; `name` must be NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_is_a(md: *const EvpMd, name: *const c_char) -> c_int {
+    if md.is_null() {
+        return 0;
+    }
+    // SAFETY: `md` is live per the contract.
+    let (prov, name_id, type_name) = unsafe { ((*md).prov, (*md).name_id, (*md).type_name) };
+    if !prov.is_null() {
+        // SAFETY: `prov` is live, `name` is NUL-terminated, and the other two arguments are the
+        // method's own identity.
+        return unsafe { evp_is_a(prov, name_id, ptr::null(), name) };
+    }
+    // SAFETY: `name` is NUL-terminated; `type_name` is this method's own string.
+    unsafe { evp_is_a(ptr::null_mut(), 0, type_name, name) }
+}
+
+/// `int evp_md_get_number(const EVP_MD *md)`.
+///
+/// The namemap identity — the "number" the fetch machinery uses, not a NID. **This is the last
+/// name `crypto/evp/evp_lib.c` was carrying as a deferral**, and its row is discharged with it.
+///
+/// # Safety
+/// `md` must be a live `EvpMd`.
+#[allow(dead_code)]
+pub(crate) unsafe fn evp_md_get_number(md: *const EvpMd) -> c_int {
+    // SAFETY: `md` is live per the contract.
+    unsafe { (*md).name_id }
+}
+
+/// `const char *EVP_MD_get0_description(const EVP_MD *md)`.
+///
+/// The provider's own description, or the legacy **long** name for a method that has none.
+///
+/// # Safety
+/// `md` must be a live `EvpMd`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_get0_description(md: *const EvpMd) -> *const c_char {
+    // SAFETY: `md` is live per the contract.
+    let description = unsafe { (*md).description };
+    if !description.is_null() {
+        return description;
+    }
+    // SAFETY: `md` is live.
+    let nid = unsafe { EVP_MD_get_type(md) };
+    OBJ_nid2ln(nid)
+}
+
+/// `int EVP_MD_names_do_all(const EVP_MD *md, void (*fn)(const char *, void *), void *data)`.
+///
+/// A legacy method has no namemap entry, so the authority answers **1** without visiting
+/// anything — the same asymmetry `EVP_CIPHER_names_do_all` has.
+///
+/// # Safety
+/// `md` must be a live `EvpMd`; `fn_` may be NULL.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_names_do_all(
+    md: *const EvpMd,
+    fn_: Option<unsafe extern "C" fn(*const c_char, *mut c_void)>,
+    data: *mut c_void,
+) -> c_int {
+    // SAFETY: `md` is live per the contract.
+    let (prov, name_id) = unsafe { ((*md).prov, (*md).name_id) };
+    if !prov.is_null() {
+        // SAFETY: `prov` is live and the visitor contract is the namemap's.
+        return unsafe { evp_names_do_all(prov, name_id, fn_, data) };
+    }
+    1
+}
+
+/// `const OSSL_PROVIDER *EVP_MD_get0_provider(const EVP_MD *md)`.
+///
+/// # Safety
+/// `md` must be a live `EvpMd`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_get0_provider(md: *const EvpMd) -> *const OsslProvider {
+    // SAFETY: `md` is live per the contract.
+    unsafe { (*md).prov }
+}
+
+/// `int EVP_MD_get_pkey_type(const EVP_MD *md)`.
+///
+/// The pkey NID a legacy digest is also registered under, and **no NULL arm**: the authority
+/// dereferences unconditionally, the same way `EVP_MD_get_type` does.
+///
+/// # Safety
+/// `md` must be a live `EvpMd`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_get_pkey_type(md: *const EvpMd) -> c_int {
+    // SAFETY: `md` is live per the contract.
+    unsafe { (*md).pkey_type }
+}
+
+/// `int EVP_MD_xof(const EVP_MD *md)`.
+///
+/// Answers **0 for NULL** where `EVP_MD_get_flags` would dereference — the one place this family
+/// guards a flag read.
+///
+/// # Safety
+/// `md` must be NULL or a live `EvpMd`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_xof(md: *const EvpMd) -> c_int {
+    if md.is_null() {
+        return 0;
+    }
+    // SAFETY: `md` is live per the contract.
+    c_int::from((unsafe { EVP_MD_get_flags(md) } & EVP_MD_FLAG_XOF) != 0)
+}
+
+/// `unsigned long EVP_MD_get_flags(const EVP_MD *md)`.
+///
+/// # Safety
+/// `md` must be a live `EvpMd`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_get_flags(md: *const EvpMd) -> core::ffi::c_ulong {
+    // SAFETY: `md` is live per the contract.
+    unsafe { (*md).flags }
+}
+
+/// `int EVP_MD_get_params(const EVP_MD *digest, OSSL_PARAM params[])`.
+///
+/// The method-object parameter read, and it answers 0 rather than refusing when there is no
+/// callback: the test is on the callback, not on an error path.
+///
+/// # Safety
+/// `md` must be NULL or live; `params` a terminated array.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_get_params(md: *const EvpMd, params: *mut OsslParam) -> c_int {
+    if md.is_null() {
+        return 0;
+    }
+    // SAFETY: `md` is live per the contract.
+    let Some(f) = (unsafe { (*md).get_params }) else {
+        return 0;
+    };
+    // SAFETY: `f` is the provider's own callback and `params` is the caller's array.
+    unsafe { f(params) }
+}
+
+/// `const OSSL_PARAM *EVP_MD_gettable_params(const EVP_MD *digest)`.
+///
+/// The callback takes the **provider context**, not the method, which is why a legacy method's
+/// answer is NULL: it has no provider to ask.
+///
+/// # Safety
+/// `md` must be NULL or a live `EvpMd`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_gettable_params(md: *const EvpMd) -> *const OsslParam {
+    if md.is_null() {
+        return ptr::null();
+    }
+    // SAFETY: `md` is live per the contract.
+    let Some(f) = (unsafe { (*md).gettable_params }) else {
+        return ptr::null();
+    };
+    // SAFETY: `md` is live.
+    let provctx = unsafe { ossl_provider_ctx(EVP_MD_get0_provider(md)) };
+    // SAFETY: `f` is the provider's own callback and `provctx` is its context.
+    unsafe { f(provctx) }
+}
+
+/// `const OSSL_PARAM *EVP_MD_settable_ctx_params(const EVP_MD *md)`.
+///
+/// A **NULL** context and the provider context, in that order: the method-level question has no
+/// context to describe.
+///
+/// # Safety
+/// `md` must be NULL or a live `EvpMd`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_settable_ctx_params(md: *const EvpMd) -> *const OsslParam {
+    if md.is_null() {
+        return ptr::null();
+    }
+    // SAFETY: `md` is live per the contract.
+    let Some(f) = (unsafe { (*md).settable_ctx_params }) else {
+        return ptr::null();
+    };
+    // SAFETY: `md` is live.
+    let provctx = unsafe { ossl_provider_ctx(EVP_MD_get0_provider(md)) };
+    // SAFETY: `f` is the provider's own callback.
+    unsafe { f(ptr::null_mut(), provctx) }
+}
+
+/// `const OSSL_PARAM *EVP_MD_gettable_ctx_params(const EVP_MD *md)`.
+///
+/// # Safety
+/// `md` must be NULL or a live `EvpMd`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_gettable_ctx_params(md: *const EvpMd) -> *const OsslParam {
+    if md.is_null() {
+        return ptr::null();
+    }
+    // SAFETY: `md` is live per the contract.
+    let Some(f) = (unsafe { (*md).gettable_ctx_params }) else {
+        return ptr::null();
+    };
+    // SAFETY: `md` is live.
+    let provctx = unsafe { ossl_provider_ctx(EVP_MD_get0_provider(md)) };
+    // SAFETY: `f` is the provider's own callback.
+    unsafe { f(ptr::null_mut(), provctx) }
+}
+
+// ---------------------------------------------------------------------------------------------
+// `EVP_MD_meth_*` — `cmeth_lib.c`'s sibling for the digest class.
+//
+// The same two contracts as the cipher constructors: every setter refuses a second write, so a
+// method built by hand is append-only, and the two functions that test their subject are
+// `EVP_MD_meth_dup` and `EVP_MD_meth_free`.
+// ---------------------------------------------------------------------------------------------
+
+/// `EVP_MD *EVP_MD_meth_new(int md_type, int pkey_type)`.
+///
+/// # Safety
+/// No preconditions: it allocates and writes three fields.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_meth_new(md_type: c_int, pkey_type: c_int) -> *mut EvpMd {
+    // SAFETY: this allocates a fresh object and reads nothing.
+    let md = evp_md_new();
+    if !md.is_null() {
+        // SAFETY: `md` is a fresh block this call owns.
+        unsafe {
+            (*md).type_ = md_type;
+            (*md).pkey_type = pkey_type;
+            (*md).origin = EVP_ORIG_METH;
+        }
+    }
+    md
+}
+
+/// `EVP_MD *EVP_MD_meth_dup(const EVP_MD *md)`.
+///
+/// A provider method refuses: `EVP_MD_up_ref` is what a caller wants there. The count is saved
+/// from the **new** object and restored after the copy, so the duplicate does not inherit the
+/// original's — which, as `RT-EVP-CIPHER` measured for the cipher twin, cannot differ in practice
+/// because the only methods whose count can be raised are the provider ones this refuses.
+///
+/// # Safety
+/// `md` must be a live `EvpMd`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_meth_dup(md: *const EvpMd) -> *mut EvpMd {
+    // SAFETY: `md` is live per the contract.
+    if !unsafe { (*md).prov }.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `md` is live per the contract.
+    let to = unsafe { EVP_MD_meth_new((*md).type_, (*md).pkey_type) };
+    if !to.is_null() {
+        // SAFETY: `to` is a fresh live object this call owns.
+        let refcnt = unsafe { (*to).refcnt.load(Ordering::Acquire) };
+        // SAFETY: `to` and `md` are both live and `to` is this call's own block, so the copy is
+        // into memory nothing else can see.
+        unsafe {
+            ptr::copy_nonoverlapping(
+                md.cast::<u8>(),
+                to.cast::<u8>(),
+                core::mem::size_of::<EvpMd>(),
+            );
+            (*to).refcnt = AtomicI32::new(refcnt);
+            // The copy brought the original's origin across, so it is set again: a duplicate of a
+            // `METH` method is a `METH` method.
+            (*to).origin = EVP_ORIG_METH;
+        }
+    }
+    to
+}
+
+/// `void EVP_MD_meth_free(EVP_MD *md)`.
+///
+/// Frees `EVP_ORIG_METH` and nothing else.
+///
+/// # Safety
+/// `md` must be NULL or a live `EvpMd` this module owns.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_meth_free(md: *mut EvpMd) {
+    if md.is_null() {
+        return;
+    }
+    // SAFETY: `md` is live per the contract.
+    if unsafe { (*md).origin } != EVP_ORIG_METH {
+        return;
+    }
+    // SAFETY: `md` is a live `METH` method, which this function alone releases.
+    unsafe { evp_md_free_int(md) };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Every one of the thirty `EVP_MD_meth_*` functions is written out rather than generated.
+//
+// The first attempt used four `macro_rules!` invocations, which is what the cipher class's
+// constructors were not, and `ABI-PROTOTYPE` refused all nineteen of the generated ones:
+// *"its macro fills a type position in the signature"*. That is the plane's own sensitivity case
+// -- its self-test perturbs a `macro_rules!` return type from `c_int` to `c_long` and requires the
+// court to **refuse rather than read** it -- and it means a macro-generated export is an export
+// whose signature no evidence plane can check. Nineteen unchecked signatures is exactly the hole
+// D98 added the plane to close, so the generation is gone and every signature is written where the
+// prototype reader can see it.
+// ---------------------------------------------------------------------------------------------
+
+/// `int EVP_MD_meth_set_input_blocksize(EVP_MD *md, int blocksize)`.
+///
+/// # Safety
+/// `md` must be a live `EvpMd`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_meth_set_input_blocksize(
+    md: *mut EvpMd,
+    blocksize: c_int,
+) -> c_int {
+    // SAFETY: `md` is live per the contract.
+    unsafe {
+        if (*md).block_size != 0 {
+            return 0;
+        }
+        (*md).block_size = blocksize;
+    }
+    1
+}
+
+/// `int EVP_MD_meth_set_result_size(EVP_MD *md, int resultsize)`.
+///
+/// # Safety
+/// `md` must be a live `EvpMd`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_meth_set_result_size(md: *mut EvpMd, resultsize: c_int) -> c_int {
+    // SAFETY: `md` is live per the contract.
+    unsafe {
+        if (*md).md_size != 0 {
+            return 0;
+        }
+        (*md).md_size = resultsize;
+    }
+    1
+}
+
+/// `int EVP_MD_meth_set_app_datasize(EVP_MD *md, int datasize)`.
+///
+/// # Safety
+/// `md` must be a live `EvpMd`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_meth_set_app_datasize(md: *mut EvpMd, datasize: c_int) -> c_int {
+    // SAFETY: `md` is live per the contract.
+    unsafe {
+        if (*md).ctx_size != 0 {
+            return 0;
+        }
+        (*md).ctx_size = datasize;
+    }
+    1
+}
+
+/// `int EVP_MD_meth_set_init(EVP_MD *md, int (*init)(EVP_MD_CTX *ctx))`.
+///
+/// # Safety
+/// `md` must be a live `EvpMd`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_meth_set_init(
+    md: *mut EvpMd,
+    init: Option<MdLegacyInitFn>,
+) -> c_int {
+    // SAFETY: `md` is live per the contract.
+    unsafe {
+        if (*md).init.is_some() {
+            return 0;
+        }
+        (*md).init = init;
+    }
+    1
+}
+
+/// `int EVP_MD_meth_set_update(EVP_MD *md, int (*update)(EVP_MD_CTX *ctx, const void *data,
+/// size_t count))`.
+///
+/// # Safety
+/// `md` must be a live `EvpMd`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_meth_set_update(
+    md: *mut EvpMd,
+    update: Option<MdLegacyUpdateFn>,
+) -> c_int {
+    // SAFETY: `md` is live per the contract.
+    unsafe {
+        if (*md).update.is_some() {
+            return 0;
+        }
+        (*md).update = update;
+    }
+    1
+}
+
+/// `int EVP_MD_meth_set_final(EVP_MD *md, int (*final)(EVP_MD_CTX *ctx, unsigned char *md))`.
+///
+/// # Safety
+/// `md` must be a live `EvpMd`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_meth_set_final(
+    md: *mut EvpMd,
+    final_: Option<MdLegacyFinalFn>,
+) -> c_int {
+    // SAFETY: `md` is live per the contract.
+    unsafe {
+        if (*md).final_.is_some() {
+            return 0;
+        }
+        (*md).final_ = final_;
+    }
+    1
+}
+
+/// `int EVP_MD_meth_set_copy(EVP_MD *md, int (*copy)(EVP_MD_CTX *to, const EVP_MD_CTX *from))`.
+///
+/// # Safety
+/// `md` must be a live `EvpMd`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_meth_set_copy(
+    md: *mut EvpMd,
+    copy: Option<MdLegacyCopyFn>,
+) -> c_int {
+    // SAFETY: `md` is live per the contract.
+    unsafe {
+        if (*md).copy.is_some() {
+            return 0;
+        }
+        (*md).copy = copy;
+    }
+    1
+}
+
+/// `int EVP_MD_meth_set_cleanup(EVP_MD *md, int (*cleanup)(EVP_MD_CTX *ctx))`.
+///
+/// # Safety
+/// `md` must be a live `EvpMd`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_meth_set_cleanup(
+    md: *mut EvpMd,
+    cleanup: Option<MdLegacyCleanupFn>,
+) -> c_int {
+    // SAFETY: `md` is live per the contract.
+    unsafe {
+        if (*md).cleanup.is_some() {
+            return 0;
+        }
+        (*md).cleanup = cleanup;
+    }
+    1
+}
+
+/// `int EVP_MD_meth_set_ctrl(EVP_MD *md, int (*ctrl)(EVP_MD_CTX *ctx, int cmd, int p1,
+/// void *p2))`.
+///
+/// # Safety
+/// `md` must be a live `EvpMd`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_meth_set_ctrl(
+    md: *mut EvpMd,
+    ctrl: Option<MdLegacyCtrlFn>,
+) -> c_int {
+    // SAFETY: `md` is live per the contract.
+    unsafe {
+        if (*md).md_ctrl.is_some() {
+            return 0;
+        }
+        (*md).md_ctrl = ctrl;
+    }
+    1
+}
+
+/// `int EVP_MD_meth_set_flags(EVP_MD *md, unsigned long flags)`.
+///
+/// # Safety
+/// `md` must be a live `EvpMd`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_meth_set_flags(md: *mut EvpMd, flags: core::ffi::c_ulong) -> c_int {
+    // SAFETY: `md` is live per the contract.
+    unsafe {
+        if (*md).flags != 0 {
+            return 0;
+        }
+        (*md).flags = flags;
+    }
+    1
+}
+
+/// `int EVP_MD_meth_get_input_blocksize(const EVP_MD *md)`.
+///
+/// # Safety
+/// `md` must be a live `EvpMd`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_meth_get_input_blocksize(md: *const EvpMd) -> c_int {
+    // SAFETY: `md` is live per the contract.
+    unsafe { (*md).block_size }
+}
+
+/// `int EVP_MD_meth_get_result_size(const EVP_MD *md)`.
+///
+/// # Safety
+/// `md` must be a live `EvpMd`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_meth_get_result_size(md: *const EvpMd) -> c_int {
+    // SAFETY: `md` is live per the contract.
+    unsafe { (*md).md_size }
+}
+
+/// `int EVP_MD_meth_get_app_datasize(const EVP_MD *md)`.
+///
+/// # Safety
+/// `md` must be a live `EvpMd`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_meth_get_app_datasize(md: *const EvpMd) -> c_int {
+    // SAFETY: `md` is live per the contract.
+    unsafe { (*md).ctx_size }
+}
+
+/// `unsigned long EVP_MD_meth_get_flags(const EVP_MD *md)`.
+///
+/// # Safety
+/// `md` must be a live `EvpMd`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_meth_get_flags(md: *const EvpMd) -> core::ffi::c_ulong {
+    // SAFETY: `md` is live per the contract.
+    unsafe { (*md).flags }
+}
+
+/// `int (*EVP_MD_meth_get_init(const EVP_MD *md))(EVP_MD_CTX *ctx)`.
+///
+/// # Safety
+/// `md` must be a live `EvpMd`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_meth_get_init(md: *const EvpMd) -> Option<MdLegacyInitFn> {
+    // SAFETY: `md` is live per the contract.
+    unsafe { (*md).init }
+}
+
+/// `int (*EVP_MD_meth_get_update(const EVP_MD *md))(EVP_MD_CTX *ctx, const void *data,
+/// size_t count)`.
+///
+/// # Safety
+/// `md` must be a live `EvpMd`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_meth_get_update(md: *const EvpMd) -> Option<MdLegacyUpdateFn> {
+    // SAFETY: `md` is live per the contract.
+    unsafe { (*md).update }
+}
+
+/// `int (*EVP_MD_meth_get_final(const EVP_MD *md))(EVP_MD_CTX *ctx, unsigned char *md)`.
+///
+/// # Safety
+/// `md` must be a live `EvpMd`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_meth_get_final(md: *const EvpMd) -> Option<MdLegacyFinalFn> {
+    // SAFETY: `md` is live per the contract.
+    unsafe { (*md).final_ }
+}
+
+/// `int (*EVP_MD_meth_get_copy(const EVP_MD *md))(EVP_MD_CTX *to, const EVP_MD_CTX *from)`.
+///
+/// # Safety
+/// `md` must be a live `EvpMd`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_meth_get_copy(md: *const EvpMd) -> Option<MdLegacyCopyFn> {
+    // SAFETY: `md` is live per the contract.
+    unsafe { (*md).copy }
+}
+
+/// `int (*EVP_MD_meth_get_cleanup(const EVP_MD *md))(EVP_MD_CTX *ctx)`.
+///
+/// # Safety
+/// `md` must be a live `EvpMd`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_meth_get_cleanup(md: *const EvpMd) -> Option<MdLegacyCleanupFn> {
+    // SAFETY: `md` is live per the contract.
+    unsafe { (*md).cleanup }
+}
+
+/// `int (*EVP_MD_meth_get_ctrl(const EVP_MD *md))(EVP_MD_CTX *ctx, int cmd, int p1,
+/// void *p2)`.
+///
+/// # Safety
+/// `md` must be a live `EvpMd`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_meth_get_ctrl(md: *const EvpMd) -> Option<MdLegacyCtrlFn> {
+    // SAFETY: `md` is live per the contract.
+    unsafe { (*md).md_ctrl }
+}
+
+// ---------------------------------------------------------------------------------------------
+// `crypto/evp/m_null.c` — the one legacy digest with no primitive under it
+// ---------------------------------------------------------------------------------------------
+
+/// `static int init(EVP_MD_CTX *ctx)` — answers 1 without touching anything.
+///
+/// # Safety
+/// The ABI is the authority's; no argument is read.
+unsafe extern "C" fn md_null_init(_ctx: *mut c_void) -> c_int {
+    1
+}
+
+/// `static int update(EVP_MD_CTX *ctx, const void *data, size_t count)` — answers 1.
+///
+/// # Safety
+/// The ABI is the authority's; no argument is read.
+unsafe extern "C" fn md_null_update(
+    _ctx: *mut c_void,
+    _data: *const c_void,
+    _count: usize,
+) -> c_int {
+    1
+}
+
+/// `static int final(EVP_MD_CTX *ctx, unsigned char *md)` — answers 1.
+///
+/// # Safety
+/// The ABI is the authority's; no argument is read.
+unsafe extern "C" fn md_null_final(_ctx: *mut c_void, _md: *mut c_uchar) -> c_int {
+    1
+}
+
+/// The authority's `null_md`: `{NID_undef, NID_undef, 0, 0, EVP_ORIG_GLOBAL, init, update, final,
+/// NULL, NULL, 0, sizeof(EVP_MD *)}`, with the provider half left at zero as the initialiser
+/// list leaves it.
+///
+/// `ctx_size` is **`sizeof(EVP_MD *)`** rather than 0, which reads like an oversight and is not:
+/// the legacy context allocates its `md_data` from this field, and a method that publishes three
+/// callbacks gets a context block even though none of them uses one.
+static N_MD: StaticMd = StaticMd(EvpMd {
+    type_: NID_undef,
+    pkey_type: NID_undef,
+    md_size: 0,
+    flags: 0,
+    origin: EVP_ORIG_GLOBAL,
+    init: Some(md_null_init),
+    update: Some(md_null_update),
+    final_: Some(md_null_final),
+    copy: None,
+    cleanup: None,
+    block_size: 0,
+    ctx_size: core::mem::size_of::<*mut EvpMd>() as c_int,
+    md_ctrl: None,
+    name_id: 0,
+    type_name: ptr::null_mut(),
+    description: ptr::null(),
+    prov: ptr::null_mut(),
+    refcnt: AtomicI32::new(0),
+    newctx: None,
+    dinit: None,
+    dupdate: None,
+    dfinal: None,
+    dsqueeze: None,
+    digest: None,
+    freectx: None,
+    copyctx: None,
+    dupctx: None,
+    get_params: None,
+    set_ctx_params: None,
+    get_ctx_params: None,
+    gettable_params: None,
+    settable_ctx_params: None,
+    gettable_ctx_params: None,
+});
+
+/// `const EVP_MD *EVP_md_null(void)`.
+///
+/// The same address on every call — the property a method object needs and a `const` item cannot
+/// provide.
+#[no_mangle]
+pub extern "C" fn EVP_md_null() -> *const EvpMd {
+    &N_MD.0
 }
 
 #[cfg(test)]

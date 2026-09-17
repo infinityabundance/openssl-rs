@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 924,
       "deferred_to_later_phase": 0,
-      "implemented": 117,
-      "open_in_this_stratum": 833,
+      "implemented": 152,
+      "open_in_this_stratum": 798,
       "owned": 950,
       "received_by_handoff": 26
     },
@@ -310,15 +310,50 @@
       "EVP_EncryptUpdate",
       "EVP_MD_fetch",
       "EVP_MD_free",
+      "EVP_MD_get0_description",
       "EVP_MD_get0_name",
+      "EVP_MD_get0_provider",
       "EVP_MD_get_block_size",
+      "EVP_MD_get_flags",
+      "EVP_MD_get_params",
+      "EVP_MD_get_pkey_type",
       "EVP_MD_get_size",
       "EVP_MD_get_type",
+      "EVP_MD_gettable_ctx_params",
+      "EVP_MD_gettable_params",
+      "EVP_MD_is_a",
+      "EVP_MD_meth_dup",
+      "EVP_MD_meth_free",
+      "EVP_MD_meth_get_app_datasize",
+      "EVP_MD_meth_get_cleanup",
+      "EVP_MD_meth_get_copy",
+      "EVP_MD_meth_get_ctrl",
+      "EVP_MD_meth_get_final",
+      "EVP_MD_meth_get_flags",
+      "EVP_MD_meth_get_init",
+      "EVP_MD_meth_get_input_blocksize",
+      "EVP_MD_meth_get_result_size",
+      "EVP_MD_meth_get_update",
+      "EVP_MD_meth_new",
+      "EVP_MD_meth_set_app_datasize",
+      "EVP_MD_meth_set_cleanup",
+      "EVP_MD_meth_set_copy",
+      "EVP_MD_meth_set_ctrl",
+      "EVP_MD_meth_set_final",
+      "EVP_MD_meth_set_flags",
+      "EVP_MD_meth_set_init",
+      "EVP_MD_meth_set_input_blocksize",
+      "EVP_MD_meth_set_result_size",
+      "EVP_MD_meth_set_update",
+      "EVP_MD_names_do_all",
+      "EVP_MD_settable_ctx_params",
       "EVP_MD_up_ref",
+      "EVP_MD_xof",
       "EVP_default_properties_enable_fips",
       "EVP_default_properties_is_fips_enabled",
       "EVP_enc_null",
       "EVP_get1_default_properties",
+      "EVP_md_null",
       "EVP_set_default_properties"
     ],
     "module_prefixes": [
@@ -1648,210 +1683,6 @@
         "module": "src/evp/digest.rs",
         "received_from_phase": null,
         "symbol": "EVP_MD_do_all_sorted"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_get0_description"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_get0_provider"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_get_flags"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_get_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_get_pkey_type"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_gettable_ctx_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_gettable_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_is_a"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_meth_dup"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_meth_free"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_meth_get_app_datasize"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_meth_get_cleanup"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_meth_get_copy"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_meth_get_ctrl"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_meth_get_final"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_meth_get_flags"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_meth_get_init"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_meth_get_input_blocksize"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_meth_get_result_size"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_meth_get_update"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_meth_new"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_meth_set_app_datasize"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_meth_set_cleanup"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_meth_set_copy"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_meth_set_ctrl"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_meth_set_final"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_meth_set_flags"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_meth_set_init"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_meth_set_input_blocksize"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_meth_set_result_size"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_meth_set_update"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_names_do_all"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_settable_ctx_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MD_xof"
       },
       {
         "declaring_header": "evp.h",
@@ -4815,12 +4646,6 @@
         "declaring_header": "evp.h",
         "module": "src/evp/digest.rs",
         "received_from_phase": null,
-        "symbol": "EVP_md_null"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/digest.rs",
-        "received_from_phase": null,
         "symbol": "EVP_mdc2"
       },
       {
@@ -5633,12 +5458,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "dcc181f0c391401a5eb6f41764a82089f4a3a522c60a46dc97819f92b56ba1d2"
+      "sha256": "60bde051fa49dec17e24f9a9292e3be761f08dcb23606c1c597df26f7ddbb788"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "393c2cf102689c3ce1ccd859d2b5aa192d857033e5d509bac0d850c864fbd426"
+      "sha256": "b3bba46305862a1bc66247cb74fc0a8a56ca95cd2fd3be06c923dd4bb33028e2"
     }
   ],
   "kind": "phase7-obligations",

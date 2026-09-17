@@ -7,9 +7,9 @@
     "courts": [
       {
         "authority_exit_code": 0,
-        "authority_observations": 60,
+        "authority_observations": 103,
         "candidate_exit_code": 0,
-        "candidate_observations": 60,
+        "candidate_observations": 103,
         "candidate_stderr_tail": [],
         "court": "RT-FETCH",
         "crashed": false,
@@ -56,7 +56,7 @@
     {
       "name": "probe",
       "path": "courts/phase7/rt_fetch_probe.c",
-      "sha256": "c38aceb653d954382e1bacbeda8946d29869b370450c17c70bb8c63cceea7df7"
+      "sha256": "b79f50c1578e8faea868c4746027d5eb6dc5c97106e38d932b0b70b6392c7807"
     },
     {
       "name": "probe",
