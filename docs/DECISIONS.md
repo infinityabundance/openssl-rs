@@ -10333,3 +10333,51 @@ check above), `evp_pbe.c` (pending Phase 12's `p12_crpt.c`), `p_sign.c` / `p_ver
 `p_dec.c` / `p_seal.c` / `p_open.c` (each of which calls `EVP_PKEY_CTX_ctrl`, so they follow
 `ctrl_params_translate.c`), the raw-key constructors, `EVP_PKEY_new_mac_key`, and the
 params/ctrl core itself.
+
+## D175 — two more gates on 7.4c-ii's row, and the two raw-key getters that have none
+
+`EVP_PKEY_get_raw_private_key` and `EVP_PKEY_get_raw_public_key` land (`crypto/evp/p_lib.c:591` and
+`:623`), and they are the row's **only** remaining pair with no cross-phase gate at all — which is
+worth stating because everything else in the row has one, and this entry names them.
+
+**What the two getters are.** A key with a `keymgmt` — every key this crate can build — exports through
+`evp_keymgmt_util_export` with a callback that locates `OSSL_PKEY_PARAM_PRIV_KEY` or
+`OSSL_PKEY_PARAM_PUB_KEY` and calls `OSSL_PARAM_get_octet_string` with a `max_len` of
+**`raw_key->key == NULL ? 0 : *raw_key->len`**. That ternary is what makes a NULL buffer a *length
+query* rather than an error, and it is the whole reason the parameter travels as an octet string: the
+caller learns the size and the size travels back through the same pointer. The second path needs
+`pkey->ameth` and `ameth->get_priv_key` — Phase 8's, always NULL here — and answers what the authority
+answers for a key with no method: `EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE`. Two functions, four
+error sites, and no gate.
+
+**The gates on everything else in the row, re-verified by reading rather than assumed:**
+
+* **`p5_crpt.c` and `p5_crpt2.c` are gated on Phase 10, by a *type*.** D174 named `PBEPARAM` as the
+  thing to check, and it is a gate: `typedef struct PBEPARAM_st` is declared in
+  **`include/openssl/x509.h.in:261`**, so the ownership atlas assigns it to the stratum owning
+  `x509.h` — Phase 10 — and `PKCS5_PBE_keyivgen_ex` needs not just the struct but its `ASN1_ITEM`
+  (`ASN1_ITEM_rptr(PBEPARAM)`). The crate has the ASN.1 mechanism Phase 5 built (`Asn1Item` in
+  `src/asn1/layout.rs`, `ASN1_TYPE_unpack_sequence` in `src/asn1/a_type.rs`), so this is a missing
+  *item definition*, not a missing capability — and it is a data gate, which no call listing finds.
+* **The raw-key *constructors* are gated on Phase 8, and the gate is inside an `#ifndef`.** D174
+  recorded the summary that `new_raw_key_int` "builds an `EVP_PKEY_CTX`" and inferred it followed
+  `ctrl_params_translate.c`. Reading it changes the answer twice over. `EVP_PKEY_CTX_new_from_name`
+  and `EVP_PKEY_fromdata_init` are both landed (7.4c-i and `pmeth_gn.c`), so the *provider* path is
+  ready. What blocks it is the block above it: `#ifndef OPENSSL_NO_ENGINE` is compiled in, and inside
+  it `strtype != NULL` calls **`EVP_PKEY_asn1_find_str`** — `crypto/asn1/ameth_lib.c`'s, whose body is
+  a search of `standard_methods[]`, the table of twelve `ossl_<alg>_asn1_meth` objects that are Phase
+  8's (D163, D165). So the constructors are gated the same way `pkey_set_type`'s ameth arm is and for
+  the same reason — and the gate is two levels down from the call that looks like the blocker.
+* **`p_sign.c`, `p_verify.c`, `p_enc.c`, `p_dec.c`, `p_seal.c` and `p_open.c`** each call
+  `EVP_PKEY_CTX_ctrl`, so they follow `ctrl_params_translate.c`, as D174 recorded.
+
+**So the row's remaining order is forced, and it is not a preference:** `ctrl_params_translate.c` first
+(it unblocks `signature.c`'s eighteen, which closes 7.4b, and the six `p_*` units, and the params core);
+then `EVP_PKEY_asn1_find_str` and its siblings once Phase 8's table exists — or landed *partially* with
+the table empty, which is the `D-PKEY-AMETH-1` precedent and would unblock the raw-key constructors
+today; then `p5_crpt.c`/`p5_crpt2.c` when Phase 10 declares `PBEPARAM`; then `evp_pbe.c` when Phase 12
+declares `PKCS12_PBE_keyivgen`.
+
+That last paragraph is the useful output of this entry: three of the row's gates are in *other phases*,
+and only one of them — the `EVP_PKEY_asn1_find_str` pair — can be converted into landable work inside
+Phase 7 by the partial-transcription precedent the project already uses.
