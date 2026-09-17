@@ -9562,3 +9562,76 @@ configuration through `X509V3_get_value_bool`, which is Phase 11's.
 | prerequisite deferrals | 8 | **9** |
 
 SPDX-License-Identifier: Apache-2.0
+
+---
+
+## D163 — 7.4's dependency set was wrong: its legacy registry half is Phase 8's, and the gate could not have said so
+
+**The finding.** 7.4's plan row says it depends on 7.3. Reading its calls says otherwise. Two
+translation units hold a table of **Phase 8's** method objects and nothing else of consequence:
+
+```text
+crypto/evp/pmeth_lib.c   standard_methods[]  ->  ten ossl_<alg>_pkey_method functions
+                                                 (crypto/rsa/rsa_pmeth.c, dh/dh_pmeth.c,
+                                                  dsa/dsa_pmeth.c, ec/ec_pmeth.c, ec/ecx_meth.c)
+crypto/asn1/ameth_lib.c  standard_methods[]  ->  twelve ossl_<alg>_asn1_meth objects
+  (via crypto/asn1/standard_methods.h)           (crypto/rsa/rsa_ameth.c, dh/dh_ameth.c,
+                                                  dsa/dsa_ameth.c, ec/ec_ameth.c, ec/ecx_meth.c)
+```
+
+Both tables *are* the algorithm strata's method objects. The subtree of 7.4 reachable only through
+them — `evp_pkey_type.c`, `p_lib.c`'s `pkey_set_type` and `find_ameth`, `pmeth_lib.c`'s whole
+`EVP_PKEY_meth_*`/`EVP_PKEY_asn1_*` registry, `p_legacy.c`, `ec_support.c`, `dh_support.c` — cannot
+be transcribed before Phase 8; and `evp_cnf.c` cannot be transcribed before Phase 11, whose
+`X509V3_get_value_bool` its module callback reads. The profile defines no `OPENSSL_NO_DEPRECATED_3_6`
+(`Configure linux-x86_64 --prefix=… --openssldir=… --libdir=lib shared enable-legacy no-tests`), so
+`EVP_PKEY_type` compiles its ameth branch rather than the local `base_id_conversion` table.
+
+**Why no tool said so, and it is the mirror image of `a2d_ASN1_OBJECT`.** The prerequisite gate fires
+on a name only when the crate has a module for the unit that *defines* it. `ossl_rsa_pkey_method` is
+defined by `crypto/rsa/rsa_pmeth.c`, which has no module and will not have one until Phase 8, so
+`owners` is empty and the gate `continue`s. A D49-class omission is a name whose **owner has a
+module** and is not recorded; this is a name whose owner has **no** module, which the gate is
+designed to skip — correctly, since a stratum cannot owe what it has no file for. The information is
+still there, in `forensics/atlas/transcription-edges.json`'s `identifiers` per unit, and reading two
+tables by hand is what found it. D114, D118, D122, D132 and D134 were found that way too.
+
+**The measurement that makes it actionable rather than blocking.** I had assumed a unit was atomic
+for the gate — that implementing one of its exports makes every identifier of it owed. It is not.
+Implementing one export of `p_lib.c` makes the gate owe exactly **seven** names, and they are the
+seven `include/crypto/evp.h` declares:
+
+```text
+evp_pkey_copy_downgraded   evp_pkey_export_to_provider   evp_pkey_free_legacy
+evp_pkey_get0_DH_int       evp_pkey_get_legacy           evp_pkey_name2type
+evp_pkey_type2name
+```
+
+File-local statics are not owed. Six of the seven are the legacy half and are Phase 8's; the seventh
+is `keymgmt_lib.c`'s and lands here. So the provider half of `p_lib.c` lands with **six recorded rows
+naming Phase 8**, and the gate's blocking census *says* what is outstanding rather than hiding it —
+the disposition 7.3g used for one hundred and sixty-four legacy statics, applied at the granularity
+of the names a header promises. The experiment is worth recording as an experiment: the first
+version of it suppressed `gen_prerequisite_atlas.py`'s output, the atlas stayed stale, the gate
+reported nothing, and the wrong conclusion was drawn from a silent failure — which is why the
+generator's output is not suppressed in this project's own pipeline.
+
+**The consequence for the order.** 7.4 splits, and the split is in `docs/PHASE-7-SUBPHASES.md`: 7.4a
+(the `EVP_PKEY` object's provider attributes and lifetime, plus `keymgmt_lib.c` whole), 7.4b (the
+five method-object families, minus `keymgmt_meth.c`'s `legacy_alg` fill), 7.4c (the `EVP_PKEY_CTX`
+object and its accessors, `pmeth_check.c`, `pmeth_gn.c`, `m_sigver.c`, the PBE and PKCS#5 units), then
+**7.4l handed to Phase 8 with the dependency named** (the two registries, `evp_pkey_type.c`,
+`p_legacy.c`, `ec_support.c`, `dh_support.c`, `ameth_lib.c`, `i2d_evp.c` and the three `d2i_*`) and
+**7.4n held for Phase 11** (`evp_cnf.c`). 7.4l is the largest hand-off in the programme and it is not
+a deferral of convenience: it is the same judgement 7.3g made when it sent the legacy `EVP_aes_*`
+statics to Phase 13 with `crypto/aes/` named.
+
+**One thing this changes for every future stratum.** The plan's dependency column was read from the
+authority's calls by hand, and this is the fourth time it has been wrong in a way no gate could see.
+The two `standard_methods[]` tables are the *first* entries that a mechanical check could have
+found, because the atlas already records every unit's identifier list: a scan for identifiers whose
+defining unit has no module, whose *phase owner* is later than the referencing unit's, is a few lines
+and would have printed both tables. It is not written here — this entry records the finding and the
+mechanism that would generalise it, rather than claiming a tool that does not exist.
+
+SPDX-License-Identifier: Apache-2.0

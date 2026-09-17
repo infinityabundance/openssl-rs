@@ -7,10 +7,11 @@
     "census": {
       "names_a_basename_the_authority_repeats": 1,
       "names_a_file_the_authority_does_not_have": 1,
+      "symbols_not_reached": 2,
       "units_not_reached": 77
     },
     "census_by_stratum": {
-      "7": 79
+      "7": 81
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
     "census_samples": {
@@ -19,6 +20,10 @@
       ],
       "names_a_file_the_authority_does_not_have": [
         "docs/PHASE-7-SUBPHASES.md:7.3f:pkey_derive.c"
+      ],
+      "symbols_not_reached": [
+        "evp_pkey_get_legacy",
+        "evp_pkey_name2type"
       ],
       "units_not_reached": [
         "crypto/asn1/ameth_lib.c",
@@ -89,8 +94,8 @@
         "docs/PHASE-6-SUBPHASES.md",
         "docs/PHASE-7-SUBPHASES.md"
       ],
-      "rows_judged": 56,
-      "symbols_named_by_a_row": 66,
+      "rows_judged": 61,
+      "symbols_named_by_a_row": 68,
       "symbols_reached": 66,
       "unit_records": 10,
       "units_named_by_a_record": 13,
@@ -108,7 +113,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.4"
+          "7.4",
+          "7.4l"
         ],
         "transcribed_by": []
       },
@@ -127,7 +133,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.4"
+          "7.4",
+          "7.4l"
         ],
         "transcribed_by": []
       },
@@ -137,7 +144,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.4"
+          "7.4",
+          "7.4l"
         ],
         "transcribed_by": []
       },
@@ -145,7 +153,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.4"
+          "7.4",
+          "7.4l"
         ],
         "transcribed_by": []
       },
@@ -153,7 +162,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.4"
+          "7.4",
+          "7.4l"
         ],
         "transcribed_by": []
       },
@@ -409,7 +419,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.4"
+          "7.4",
+          "7.4b"
         ],
         "transcribed_by": []
       },
@@ -499,7 +510,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.4"
+          "7.4",
+          "7.4l"
         ],
         "transcribed_by": []
       },
@@ -711,7 +723,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.4"
+          "7.4",
+          "7.4l"
         ],
         "transcribed_by": []
       },
@@ -729,7 +742,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.4"
+          "7.4",
+          "7.4n"
         ],
         "transcribed_by": []
       },
@@ -818,7 +832,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.4"
+          "7.4",
+          "7.4c"
         ],
         "transcribed_by": []
       },
@@ -836,7 +851,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.4"
+          "7.4",
+          "7.4l"
         ],
         "transcribed_by": []
       },
@@ -878,7 +894,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.4"
+          "7.4",
+          "7.4b"
         ],
         "transcribed_by": []
       },
@@ -911,7 +928,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.4"
+          "7.4",
+          "7.4b"
         ],
         "transcribed_by": []
       },
@@ -936,7 +954,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.4"
+          "7.4",
+          "7.4a"
         ],
         "transcribed_by": []
       },
@@ -965,7 +984,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.4"
+          "7.4",
+          "7.4b"
         ],
         "transcribed_by": []
       },
@@ -1053,7 +1073,8 @@
         "recorded_by": null,
         "subphases": [
           "7.3d",
-          "7.4"
+          "7.4",
+          "7.4c"
         ],
         "transcribed_by": []
       },
@@ -1139,7 +1160,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.4"
+          "7.4",
+          "7.4l"
         ],
         "transcribed_by": []
       },
@@ -1159,7 +1181,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.4"
+          "7.4",
+          "7.4a"
         ],
         "transcribed_by": []
       },
@@ -1207,7 +1230,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.4"
+          "7.4",
+          "7.4c"
         ],
         "transcribed_by": []
       },
@@ -1217,7 +1241,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.4"
+          "7.4",
+          "7.4c"
         ],
         "transcribed_by": []
       },
@@ -1232,7 +1257,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.4"
+          "7.4",
+          "7.4c"
         ],
         "transcribed_by": []
       },
@@ -1254,7 +1280,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.4"
+          "7.4",
+          "7.4b"
         ],
         "transcribed_by": []
       },
@@ -1751,7 +1778,7 @@
       "transcribed_units": 122
     }
   },
-  "body_hash": "7e3771ae821b94c4bdf762c67a769a2218777e1f93680aa25ced086f2d066e42",
+  "body_hash": "f26e8c4ab1c4b5402b59d6d16d584f85d3930d4364e17bc6d3a63a0ee63f6ff8",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -1797,7 +1824,7 @@
     {
       "name": "plan-PHASE-7-SUBPHASES",
       "path": "docs/PHASE-7-SUBPHASES.md",
-      "sha256": "d8f0945859a0a5e65482870c282a759698fce0ca29f31988d09ce872688a4b0f"
+      "sha256": "27efe3b5355776189e8204c9faf2c4e89246a9528385e743d5ed850d549f6d71"
     }
   ],
   "kind": "plan-reconciliation",

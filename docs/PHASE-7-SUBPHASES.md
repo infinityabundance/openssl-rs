@@ -107,6 +107,77 @@ almost certainly split as they land — 7.3 and 7.4 are each over two hundred ex
 precedent from Phase 6 is that a split is recorded here with the reason it was needed rather
 than performed silently.
 
+### 7.4's dependency set was wrong, and it is the largest inversion found so far
+
+**D163.** The row above says 7.4 depends on 7.3. Reading its calls says otherwise: **7.4's legacy
+registry half depends on Phase 8**, and one unit of it on Phase 11. Nothing in the tooling could
+have said so, and the reason is the blind spot `a2d_ASN1_OBJECT` exposed in the other direction —
+the prerequisite gate fires on a name only when the crate has a module for the *defining* unit, so a
+call into `crypto/rsa/rsa_pmeth.c` is invisible until `rsa_pmeth.c` itself is transcribed. The two
+tables are where the dependency lives:
+
+```text
+crypto/evp/pmeth_lib.c      standard_methods[]  ->  ossl_rsa_pkey_method   (crypto/rsa/rsa_pmeth.c)
+                                                    ossl_dh_pkey_method    (crypto/dh/dh_pmeth.c)
+                                                    ossl_dsa_pkey_method   (crypto/dsa/dsa_pmeth.c)
+                                                    ossl_ec_pkey_method    (crypto/ec/ec_pmeth.c)
+                                                    ossl_rsa_pss_pkey_method
+                                                    ossl_dhx_pkey_method
+                                                    ossl_ecx25519_pkey_method   (crypto/ec/ecx_meth.c)
+                                                    ossl_ecx448_pkey_method
+                                                    ossl_ed25519_pkey_method
+                                                    ossl_ed448_pkey_method
+crypto/asn1/ameth_lib.c     standard_methods[]  ->  ossl_rsa_asn1_meths[0..1]   (crypto/rsa/rsa_ameth.c)
+  (via crypto/asn1/standard_methods.h)             ossl_dh_asn1_meth            (crypto/dh/dh_ameth.c)
+                                                   ossl_dsa_asn1_meths[0..3]    (crypto/dsa/dsa_ameth.c)
+                                                   ossl_eckey_asn1_meth         (crypto/ec/ec_ameth.c)
+                                                   ossl_rsa_pss_asn1_meth
+                                                   ossl_dhx_asn1_meth
+                                                   ossl_ecx/ed*_asn1_meth       (crypto/ec/ecx_meth.c)
+                                                   ossl_sm2_asn1_meth
+```
+
+Both tables are **Phase 8's contents**: they *are* the algorithm strata's method objects, and the
+plan already says as much in 7.3g's row for the legacy wrappers. So the subtree of 7.4 reachable only
+through them — `evp_pkey_type.c` (`EVP_PKEY_type` → `EVP_PKEY_asn1_find`; the profile defines no
+`OPENSSL_NO_DEPRECATED_3_6`, so the ameth branch is the one compiled), `p_lib.c`'s `pkey_set_type`
+and `find_ameth`, `pmeth_lib.c`'s whole `EVP_PKEY_meth_*`/`EVP_PKEY_asn1_*` registry, `p_legacy.c`,
+`ec_support.c`, `dh_support.c` (the last two need Phase 8's `EC_KEY`/`DH` *types*) — **cannot be
+transcribed before Phase 8**. And `evp_cnf.c`, before Phase 11: its module callback reads the
+configuration through `X509V3_get_value_bool`.
+
+**The measurement that makes this actionable rather than blocking.** Implementing one export of a
+unit makes the gate owe that unit's **header-declared internals** — not its file-local statics, which
+is what I had assumed and which would have made every one of these units atomic. It is exactly seven
+for `p_lib.c`, and they are the seven functions `include/crypto/evp.h` declares:
+
+```text
+evp_pkey_copy_downgraded   evp_pkey_export_to_provider   evp_pkey_free_legacy
+evp_pkey_get0_DH_int       evp_pkey_get_legacy           evp_pkey_name2type
+evp_pkey_type2name
+```
+
+Six of those seven are the legacy half and are Phase 8's; the seventh,
+`evp_pkey_export_to_provider`, is `keymgmt_lib.c`'s and lands here. So the provider half of `p_lib.c`
+lands with **six recorded rows naming Phase 8**, and the gate's blocking census then *says* what is
+owed instead of hiding it. That is the disposition 7.3g used for its one hundred and sixty-four
+legacy statics, at the granularity of the names a header promises.
+
+**What this means for the order.** 7.4 lands provider-side first and in this order, each row a unit
+or a named half of one:
+
+| # | Land | Blocked half |
+|---|---|---|
+| 7.4a | the `EVP_PKEY` object's provider attributes and lifetime (`p_lib.c`'s provider paths), `keymgmt_lib.c` whole, the six rows above | `pkey_set_type`/`find_ameth`, `evp_pkey_get_legacy`/`_free_legacy`/`_copy_downgraded`/`get0_DH_int`, `evp_pkey_name2type`/`type2name` |
+| 7.4b | the five method-object families — `signature.c`, `asymcipher.c`, `kem.c`, `exchange.c`, `keymgmt_meth.c` — with their `EVP_PKEY_*` operations, minus `keymgmt_meth.c`'s `legacy_alg` fill | `keymgmt_meth.c`'s `get_legacy_alg_type_from_keymgmt` (→ `evp_pkey_name2type` → `EVP_PKEY_type`) |
+| 7.4c | `pmeth_lib.c`'s `EVP_PKEY_CTX` object and its accessors, `pmeth_check.c`, `pmeth_gn.c`, `m_sigver.c`, `evp_pbe.c` and the five `p5_*`/`pbe_*` units | `EVP_PKEY_meth_*`, `EVP_PKEY_asn1_*`, `EVP_PKEY_CTX_new`/`_new_id` (the legacy-typed constructors) |
+| 7.4l | — **handed to Phase 8 with the dependency named**: the two registries, `evp_pkey_type.c`, `p_legacy.c`, `ec_support.c`, `dh_support.c`, `ameth_lib.c`, `i2d_evp.c`, `d2i_pr.c`, `d2i_param.c`, `d2i_pu.c` | — |
+| 7.4n | `evp_cnf.c` — **held for Phase 11** (`X509V3_get_value_bool`) | — |
+
+7.4a is not a size boundary either: it is the whole of `keymgmt_lib.c` plus the provider paths of
+`p_lib.c`, and the six rows are what keeps it honest while the rest of that unit waits.
+
+
 ### 7.3, split — recorded when it was needed, not performed silently
 
 7.3's row is a file list, and a file list is not a landing plan: it mixes four method *classes*
