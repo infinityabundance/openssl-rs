@@ -168,6 +168,10 @@
       "observations": 68,
       "verdict": "pass"
     },
+    "RT-EVP-KEYMGMT": {
+      "observations": 73,
+      "verdict": "pass"
+    },
     "RT-EVP-MAC": {
       "observations": 96,
       "verdict": "pass"
