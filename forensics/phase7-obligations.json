@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 924,
       "deferred_to_later_phase": 164,
-      "implemented": 371,
-      "open_in_this_stratum": 415,
+      "implemented": 393,
+      "open_in_this_stratum": 393,
       "owned": 950,
       "received_by_handoff": 26
     },
@@ -1355,6 +1355,17 @@
       "EVP_KEM_names_do_all",
       "EVP_KEM_settable_ctx_params",
       "EVP_KEM_up_ref",
+      "EVP_KEYEXCH_do_all_provided",
+      "EVP_KEYEXCH_fetch",
+      "EVP_KEYEXCH_free",
+      "EVP_KEYEXCH_get0_description",
+      "EVP_KEYEXCH_get0_name",
+      "EVP_KEYEXCH_get0_provider",
+      "EVP_KEYEXCH_gettable_ctx_params",
+      "EVP_KEYEXCH_is_a",
+      "EVP_KEYEXCH_names_do_all",
+      "EVP_KEYEXCH_settable_ctx_params",
+      "EVP_KEYEXCH_up_ref",
       "EVP_KEYMGMT_do_all_provided",
       "EVP_KEYMGMT_fetch",
       "EVP_KEYMGMT_free",
@@ -1527,6 +1538,17 @@
       "EVP_RAND_uninstantiate",
       "EVP_RAND_up_ref",
       "EVP_RAND_verify_zeroization",
+      "EVP_SIGNATURE_do_all_provided",
+      "EVP_SIGNATURE_fetch",
+      "EVP_SIGNATURE_free",
+      "EVP_SIGNATURE_get0_description",
+      "EVP_SIGNATURE_get0_name",
+      "EVP_SIGNATURE_get0_provider",
+      "EVP_SIGNATURE_gettable_ctx_params",
+      "EVP_SIGNATURE_is_a",
+      "EVP_SIGNATURE_names_do_all",
+      "EVP_SIGNATURE_settable_ctx_params",
+      "EVP_SIGNATURE_up_ref",
       "EVP_SKEYMGMT_do_all_provided",
       "EVP_SKEYMGMT_fetch",
       "EVP_SKEYMGMT_free",
@@ -2061,72 +2083,6 @@
         "module": "src/evp/encode.rs",
         "received_from_phase": null,
         "symbol": "EVP_EncodeUpdate"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/exchange.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEYEXCH_do_all_provided"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/exchange.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEYEXCH_fetch"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/exchange.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEYEXCH_free"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/exchange.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEYEXCH_get0_description"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/exchange.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEYEXCH_get0_name"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/exchange.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEYEXCH_get0_provider"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/exchange.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEYEXCH_gettable_ctx_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/exchange.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEYEXCH_is_a"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/exchange.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEYEXCH_names_do_all"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/exchange.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEYEXCH_settable_ctx_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/exchange.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEYEXCH_up_ref"
       },
       {
         "declaring_header": "evp.h",
@@ -3648,72 +3604,6 @@
       },
       {
         "declaring_header": "evp.h",
-        "module": "src/evp/signature.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SIGNATURE_do_all_provided"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/signature.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SIGNATURE_fetch"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/signature.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SIGNATURE_free"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/signature.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SIGNATURE_get0_description"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/signature.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SIGNATURE_get0_name"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/signature.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SIGNATURE_get0_provider"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/signature.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SIGNATURE_gettable_ctx_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/signature.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SIGNATURE_is_a"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/signature.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SIGNATURE_names_do_all"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/signature.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SIGNATURE_settable_ctx_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/signature.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SIGNATURE_up_ref"
-      },
-      {
-        "declaring_header": "evp.h",
         "module": "src/evp/p_legacy.rs",
         "received_from_phase": null,
         "symbol": "EVP_SealFinal"
@@ -4366,12 +4256,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "3527a563426faa4e15184bb95b240071dffecf4fdf089883d016d78b29b75a9c"
+      "sha256": "752c1a59fc20f2754f005b58137fa634d60a66dd81039320b2d1af490a1b3aa5"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "b294d857cdf95510c620b14fe404a01569e92424302553ee8f026008fbb15678"
+      "sha256": "8f6ee0631030e01bbace1a7b1072a1e0c16a3b67fbbabeccc959e7b115d1fa76"
     }
   ],
   "kind": "phase7-obligations",
