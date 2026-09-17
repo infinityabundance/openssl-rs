@@ -47,15 +47,17 @@
 use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
 
-use crate::evp::asymcipher::EvpAsymCipher;
-use crate::evp::exchange::EvpKeyExch;
-use crate::evp::kem::EvpKem;
+use crate::evp::asymcipher::{EVP_ASYM_CIPHER_get0_provider, EvpAsymCipher};
+use crate::evp::exchange::{EVP_KEYEXCH_get0_provider, EvpKeyExch};
+use crate::evp::kem::{EVP_KEM_get0_provider, EvpKem};
 use crate::evp::keymgmt::{
-    evp_keymgmt_get_legacy_alg, EVP_KEYMGMT_fetch, EVP_KEYMGMT_free, EvpKeyMgmt,
+    evp_keymgmt_get_legacy_alg, EVP_KEYMGMT_fetch, EVP_KEYMGMT_free, EVP_KEYMGMT_get0_provider,
+    EVP_KEYMGMT_is_a, EvpKeyMgmt,
 };
 use crate::evp::pkey::{evp_pkey_name2type, EVP_PKEY_free, EVP_PKEY_up_ref, EvpPkey};
-use crate::evp::signature::EvpSignature;
-use crate::provider::OsslProvider;
+use crate::evp::signature::{EVP_SIGNATURE_get0_provider, EvpSignature};
+use crate::params::OsslParam;
+use crate::provider::{ossl_provider_ctx, OsslProvider};
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
 use crate::runtime::obj::{NID_undef, OBJ_nid2sn};
@@ -1170,6 +1172,190 @@ pub(crate) unsafe fn evp_pkey_ctx_dup(pctx: *const EvpPkeyCtx) -> *mut EvpPkeyCt
 pub unsafe extern "C" fn EVP_PKEY_CTX_get_operation(ctx: *mut EvpPkeyCtx) -> c_int {
     // SAFETY: `ctx` is live per the contract.
     unsafe { (*ctx).operation }
+}
+
+// ---------------------------------------------------------------------------------------------
+// The two descriptor-table accessors and the type test.
+//
+// These three are 7.4c-ii's first exports, and they land ahead of the rest of that subphase because
+// `EVP_PKEY_CTX_set_params` and `EVP_PKEY_CTX_get_params` cannot be written without
+// `ctrl_params_translate.c` -- their `EVP_PKEY_STATE_LEGACY` arm *is* the params-to-ctrl translation,
+// which is that file's 2,959 lines. These three have no legacy arm at all, so they are exactly as
+// complete as the authority's.
+// ---------------------------------------------------------------------------------------------
+
+/// `int EVP_PKEY_CTX_is_a(EVP_PKEY_CTX *ctx, const char *keytype)` — `crypto/evp/pmeth_lib.c:668`.
+///
+/// The authority's legacy arm is `ctx->pmeth->pkey_id == evp_pkey_name2type(keytype)`, and it is
+/// guarded by `evp_pkey_ctx_is_legacy(ctx)` — which is `keymgmt == NULL` (D168). So the arm is
+/// reached only by a context whose `keymgmt` is NULL, and in the authority such a context is one
+/// built through the legacy constructors, which always carry a `pmeth`.
+///
+/// **Note the NULL test the authority does not make**: unlike every other accessor in this file, this
+/// one dereferences `ctx` without checking it, in the provided path *and* in the legacy path. A NULL
+/// context faults the authority here, so the crate does not invent an answer for one.
+///
+/// # Safety
+/// `ctx` must be live; `keytype` NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_CTX_is_a(ctx: *mut EvpPkeyCtx, keytype: *const c_char) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    let keymgmt = unsafe { (*ctx).keymgmt };
+    /* The legacy arm above is unreachable: it needs `keymgmt == NULL`, and every context this crate
+     * can build with a NULL `keymgmt` is refused before it exists (`int_ctx_new` always fetches a
+     * method). Reading the context is what keeps that statement checkable at the site rather than in
+     * a comment. */
+    // SAFETY: `keymgmt` is live — the context is provided-side.
+    unsafe { EVP_KEYMGMT_is_a(keymgmt, keytype) }
+}
+
+/// `const OSSL_PARAM *EVP_PKEY_CTX_gettable_params(const EVP_PKEY_CTX *ctx)` —
+/// `crypto/evp/pmeth_lib.c:758`.
+///
+/// **No state test and no legacy arm**: the five blocks are tried in order and NULL is the answer
+/// when none matches, so a legacy context and an uninitialised one both get NULL rather than an
+/// error. Each block passes the provider's own context — `ossl_provider_ctx` of **the method's**
+/// provider, not the libctx — because the descriptor table is a property of the method.
+///
+/// # Safety
+/// `ctx` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_CTX_gettable_params(ctx: *const EvpPkeyCtx) -> *const OsslParam {
+    if ctx.is_null() {
+        return ptr::null();
+    }
+    // SAFETY: `ctx` is live.
+    let c = unsafe { &*ctx };
+
+    if c.is_derive_op() && !c.op_kex_exchange.is_null() {
+        // SAFETY: `op_kex_exchange` is live.
+        let f = unsafe { (*c.op_kex_exchange).gettable_ctx_params };
+        if let Some(f) = f {
+            // SAFETY: `op_kex_exchange` is live, so its provider is readable.
+            let provctx =
+                unsafe { ossl_provider_ctx(EVP_KEYEXCH_get0_provider(c.op_kex_exchange)) };
+            // SAFETY: `f` is the provider's own callback and `op_kex_algctx` is its context.
+            return unsafe { f(c.op_kex_algctx, provctx) };
+        }
+    }
+    if c.is_signature_op() && !c.op_sig_signature.is_null() {
+        // SAFETY: `op_sig_signature` is live.
+        let f = unsafe { (*c.op_sig_signature).gettable_ctx_params };
+        if let Some(f) = f {
+            // SAFETY: `op_sig_signature` is live, so its provider is readable.
+            let provctx =
+                unsafe { ossl_provider_ctx(EVP_SIGNATURE_get0_provider(c.op_sig_signature)) };
+            // SAFETY: `f` is the provider's own callback and `op_sig_algctx` is its context.
+            return unsafe { f(c.op_sig_algctx, provctx) };
+        }
+    }
+    if c.is_asym_cipher_op() && !c.op_ciph_cipher.is_null() {
+        // SAFETY: `op_ciph_cipher` is live.
+        let f = unsafe { (*c.op_ciph_cipher).gettable_ctx_params };
+        if let Some(f) = f {
+            // SAFETY: `op_ciph_cipher` is live, so its provider is readable.
+            let provctx =
+                unsafe { ossl_provider_ctx(EVP_ASYM_CIPHER_get0_provider(c.op_ciph_cipher)) };
+            // SAFETY: `f` is the provider's own callback and `op_ciph_algctx` is its context.
+            return unsafe { f(c.op_ciph_algctx, provctx) };
+        }
+    }
+    if c.is_kem_op() && !c.op_encap_kem.is_null() {
+        // SAFETY: `op_encap_kem` is live.
+        let f = unsafe { (*c.op_encap_kem).gettable_ctx_params };
+        if let Some(f) = f {
+            // SAFETY: `op_encap_kem` is live, so its provider is readable.
+            let provctx = unsafe { ossl_provider_ctx(EVP_KEM_get0_provider(c.op_encap_kem)) };
+            // SAFETY: `f` is the provider's own callback and `op_encap_algctx` is its context.
+            return unsafe { f(c.op_encap_algctx, provctx) };
+        }
+    }
+    if c.is_gen_op() && !c.keymgmt.is_null() {
+        // SAFETY: `keymgmt` is live.
+        let f = unsafe { (*c.keymgmt).gen_gettable_params };
+        if let Some(f) = f {
+            // SAFETY: `keymgmt` is live, so its provider is readable.
+            let provctx = unsafe { ossl_provider_ctx(EVP_KEYMGMT_get0_provider(c.keymgmt)) };
+            // SAFETY: `f` is the provider's own callback and `op_keymgmt_genctx` is its context.
+            return unsafe { f(c.op_keymgmt_genctx, provctx) };
+        }
+    }
+    ptr::null()
+}
+
+/// `const OSSL_PARAM *EVP_PKEY_CTX_settable_params(const EVP_PKEY_CTX *ctx)` —
+/// `crypto/evp/pmeth_lib.c:802`.
+///
+/// The same five blocks as the getter, and **a different order**: the authority tries the key
+/// generation family *before* the KEM family here and after it in `gettable`. Nothing observable
+/// depends on the order, because a context carries one operation at a time — which is precisely why
+/// copying the order rather than sorting it is the right transcription. A reader who "normalised"
+/// the two would be editing the authority.
+///
+/// # Safety
+/// `ctx` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_CTX_settable_params(ctx: *const EvpPkeyCtx) -> *const OsslParam {
+    if ctx.is_null() {
+        return ptr::null();
+    }
+    // SAFETY: `ctx` is live.
+    let c = unsafe { &*ctx };
+
+    if c.is_derive_op() && !c.op_kex_exchange.is_null() {
+        // SAFETY: `op_kex_exchange` is live.
+        let f = unsafe { (*c.op_kex_exchange).settable_ctx_params };
+        if let Some(f) = f {
+            // SAFETY: `op_kex_exchange` is live, so its provider is readable.
+            let provctx =
+                unsafe { ossl_provider_ctx(EVP_KEYEXCH_get0_provider(c.op_kex_exchange)) };
+            // SAFETY: `f` is the provider's own callback and `op_kex_algctx` is its context.
+            return unsafe { f(c.op_kex_algctx, provctx) };
+        }
+    }
+    if c.is_signature_op() && !c.op_sig_signature.is_null() {
+        // SAFETY: `op_sig_signature` is live.
+        let f = unsafe { (*c.op_sig_signature).settable_ctx_params };
+        if let Some(f) = f {
+            // SAFETY: `op_sig_signature` is live, so its provider is readable.
+            let provctx =
+                unsafe { ossl_provider_ctx(EVP_SIGNATURE_get0_provider(c.op_sig_signature)) };
+            // SAFETY: `f` is the provider's own callback and `op_sig_algctx` is its context.
+            return unsafe { f(c.op_sig_algctx, provctx) };
+        }
+    }
+    if c.is_asym_cipher_op() && !c.op_ciph_cipher.is_null() {
+        // SAFETY: `op_ciph_cipher` is live.
+        let f = unsafe { (*c.op_ciph_cipher).settable_ctx_params };
+        if let Some(f) = f {
+            // SAFETY: `op_ciph_cipher` is live, so its provider is readable.
+            let provctx =
+                unsafe { ossl_provider_ctx(EVP_ASYM_CIPHER_get0_provider(c.op_ciph_cipher)) };
+            // SAFETY: `f` is the provider's own callback and `op_ciph_algctx` is its context.
+            return unsafe { f(c.op_ciph_algctx, provctx) };
+        }
+    }
+    if c.is_gen_op() && !c.keymgmt.is_null() {
+        // SAFETY: `keymgmt` is live.
+        let f = unsafe { (*c.keymgmt).gen_settable_params };
+        if let Some(f) = f {
+            // SAFETY: `keymgmt` is live, so its provider is readable.
+            let provctx = unsafe { ossl_provider_ctx(EVP_KEYMGMT_get0_provider(c.keymgmt)) };
+            // SAFETY: `f` is the provider's own callback and `op_keymgmt_genctx` is its context.
+            return unsafe { f(c.op_keymgmt_genctx, provctx) };
+        }
+    }
+    if c.is_kem_op() && !c.op_encap_kem.is_null() {
+        // SAFETY: `op_encap_kem` is live.
+        let f = unsafe { (*c.op_encap_kem).settable_ctx_params };
+        if let Some(f) = f {
+            // SAFETY: `op_encap_kem` is live, so its provider is readable.
+            let provctx = unsafe { ossl_provider_ctx(EVP_KEM_get0_provider(c.op_encap_kem)) };
+            // SAFETY: `f` is the provider's own callback and `op_encap_algctx` is its context.
+            return unsafe { f(c.op_encap_algctx, provctx) };
+        }
+    }
+    ptr::null()
 }
 
 // SPDX-License-Identifier: Apache-2.0

@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 924,
       "deferred_to_later_phase": 164,
-      "implemented": 433,
-      "open_in_this_stratum": 353,
+      "implemented": 436,
+      "open_in_this_stratum": 350,
       "owned": 950,
       "received_by_handoff": 26
     },
@@ -1484,11 +1484,14 @@
       "EVP_PKEY_CTX_get_app_data",
       "EVP_PKEY_CTX_get_data",
       "EVP_PKEY_CTX_get_operation",
+      "EVP_PKEY_CTX_gettable_params",
+      "EVP_PKEY_CTX_is_a",
       "EVP_PKEY_CTX_new_from_name",
       "EVP_PKEY_CTX_new_from_pkey",
       "EVP_PKEY_CTX_set0_keygen_info",
       "EVP_PKEY_CTX_set_app_data",
       "EVP_PKEY_CTX_set_data",
+      "EVP_PKEY_CTX_settable_params",
       "EVP_PKEY_auth_decapsulate_init",
       "EVP_PKEY_auth_encapsulate_init",
       "EVP_PKEY_check",
@@ -2284,19 +2287,7 @@
         "declaring_header": "evp.h",
         "module": "src/evp/pkey_ctx.rs",
         "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_gettable_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
         "symbol": "EVP_PKEY_CTX_hex2ctrl"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_is_a"
       },
       {
         "declaring_header": "evp.h",
@@ -2441,12 +2432,6 @@
         "module": "src/evp/pkey_ctx.rs",
         "received_from_phase": null,
         "symbol": "EVP_PKEY_CTX_set_tls1_prf_md"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_settable_params"
       },
       {
         "declaring_header": "evp.h",
@@ -4056,12 +4041,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "a6b541f94b2e1c3d4a75e1f88e69ac2f0a54c37d7f3a4f141ed3433354d26ce0"
+      "sha256": "1258860d0b17cfe3ed02176debd21c3708331d4a1ae67a81d0a67ca51896faf9"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "4e900ada1558425ce465521a8501cf572d51c39e1acf7096ffd6306d982cf45c"
+      "sha256": "82d95266241a470c9dff2f244a8fb994d6b56d94554f885f07e987267f2c4124"
     }
   ],
   "kind": "phase7-obligations",
