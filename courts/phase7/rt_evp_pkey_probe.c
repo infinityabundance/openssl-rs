@@ -58,9 +58,9 @@
  *   * **the `ctx == NULL` arm of all ten `m_sigver.c` exports.** There is no such arm: the file has
  *     no NULL test on `ctx`, so `do_sigver_init`'s first statement (`m_sigver.c:53`,
  *     `evp_md_ctx_free_algctx(ctx)`) and the six operate entry points' `ctx->pctx` read (`:407`,
- *     `:457`, `:506`, `:676`) dereference it. The boundary is printed as one line rather than
- *     called; a probe that called it would abort the harness on **both** sides, which is not
- *     agreement.
+ *     `:457`, `:506`, `:624`, `:676`, `:761`) dereference it. The boundary is printed as one line
+ *     rather than called; a probe that called it would abort the harness on **both** sides, which
+ *     is not agreement.
  *   * **`EVP_PKEY_digestsign_supports_digest`'s `-1`.** It is the `EVP_MD_CTX_new` failure and an
  *     allocation has no injectable seam here; faking one would measure the seam. Named, not
  *     driven (`p_lib.c:1404`).
