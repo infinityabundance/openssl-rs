@@ -48,3 +48,4 @@ pub mod cipher_ctx;
 pub mod digest;
 pub mod fetch;
 pub mod method_store;
+pub mod pkey_ctx;
