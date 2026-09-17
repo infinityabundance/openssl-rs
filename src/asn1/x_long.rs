@@ -101,7 +101,7 @@ unsafe extern "C" fn long_free(pval: *mut *mut c_void, it: *const Asn1Item) {
 /// `pval` must point to a live slot at least `size_of::<c_long>()` bytes wide;
 /// `cont` must be null or writable for the length this answers; `it` must be live.
 unsafe extern "C" fn long_i2c(
-    pval: *const *const c_void,
+    pval: *mut *const c_void,
     cont: *mut c_uchar,
     _putype: *mut c_int,
     it: *const Asn1Item,
@@ -255,7 +255,7 @@ unsafe extern "C" fn long_c2i(
 /// `out` must be a live BIO; `pval` must point to a live slot holding a `long`.
 unsafe extern "C" fn long_print(
     out: *mut crate::runtime::bio::Bio,
-    pval: *const *const c_void,
+    pval: *mut *const c_void,
     _it: *const Asn1Item,
     _indent: c_int,
     _pctx: *const Asn1Pctx,

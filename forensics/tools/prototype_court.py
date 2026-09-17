@@ -344,13 +344,28 @@ def canon_c_type(
 
 
 def canon_c_fnptr(t: str, typedefs: dict[str, str], depth: int) -> str | None:
-    """A C function-pointer type: `int (*)(BIO *, char *, int)`."""
+    """A C function-pointer type: `int (*)(BIO *, char *, int)`.
+
+    The declarator may carry **more than one** `*`, and the count is the depth:
+    `int (*)(...)` is a function pointer, `int (**pinit)(...)` is a pointer to one,
+    `int (***)(...)` a pointer to two. All three are one pointer in the call
+    convention, which is why collapsing them is easy to miss -- and why it was
+    missed: `EVP_PKEY_meth_get_init`'s `int (**pinit)(EVP_PKEY_CTX *)` compared equal
+    to `int (*)(EVP_PKEY_CTX *)`, so a crate that declared the output parameter as a
+    bare function pointer instead of a pointer to one would have passed. Found when
+    the forty `EVP_PKEY_meth_get_*` accessors landed (`docs/DECISIONS.md` D183).
+    """
     groups = top_level_groups(t)
     if not groups:
         return None
     g0 = groups[0]
-    content = t[g0[0] + 1:g0[1]]
-    if not content.strip().startswith("*"):
+    content = t[g0[0] + 1:g0[1]].strip()
+    stars = 0
+    for ch in content:
+        if ch != "*":
+            break
+        stars += 1
+    if stars == 0:
         return None
     ret = canon_c_type(t[:g0[0]].strip(), typedefs, depth + 1)
     if ret is None:
@@ -370,7 +385,8 @@ def canon_c_fnptr(t: str, typedefs: dict[str, str], depth: int) -> str | None:
         if c is None:
             return None
         args.append(c)
-    return f"fptr({ret}; {', '.join(args)})"
+    inner = f"fptr({ret}; {', '.join(args)})"
+    return "ptr(" * (stars - 1) + inner + ")" * (stars - 1)
 
 
 def canon_rust_type(text: str, aliases: dict[str, str], depth: int = 0) -> str | None:
@@ -378,6 +394,23 @@ def canon_rust_type(text: str, aliases: dict[str, str], depth: int = 0) -> str |
     if depth > 12:
         return None
     t = " ".join(text.split()).strip()
+    # A type that sits in a comma-separated *list* may carry the list's trailing comma.
+    # Rust allows it, and `cargo fmt` emits it for every multi-line generic argument
+    # whose argument is itself long enough to wrap:
+    #
+    #     pub_print: Option<
+    #         unsafe extern "C" fn(*mut Bio, *const EvpPkey, c_int, *mut Asn1Pctx) -> c_int,
+    #     >,
+    #
+    # The comma belongs to `Option<...>`'s argument list, but `canon_rust_fnptr` reads
+    # the text after the inner `->` as the return type, so it becomes `c_int,` and
+    # canonicalises to None -- which reported five *correct* `EVP_PKEY_asn1_set_*`
+    # mutators as `type_unmapped` and produced a false "the declarations need named
+    # aliases" conclusion in docs/DECISIONS.md D178 (corrected by D179). Dropping a
+    # trailing comma at the top level is a normalisation of the same kind as the
+    # `Option<...>` unwrap above: the text is a type the compiler accepts.
+    while t.endswith(","):
+        t = t[:-1].strip()
     if t in ("()", "void", ""):
         return "void"
     if t.startswith("Option<") and t.endswith(">"):
@@ -409,6 +442,38 @@ def canon_rust_type(text: str, aliases: dict[str, str], depth: int = 0) -> str |
     return None
 
 
+def strip_binding(raw: str) -> str:
+    """A declared item's *type*, with a binding name removed if it has one.
+
+    `a: *mut T` and `*mut T` are the same type; the name is not. A parameter of a
+    function *declaration* always has one, an argument of a function-*pointer* type may
+    (`unsafe extern "C" fn(provctx: *mut c_void) -> c_int` is legal Rust), and
+    `canon_rust_fnptr` reads the second while `canon_rust_param` reads the first. They
+    disagreed about it until D180: `GetReasonStringsFn` was the crate's one named
+    fn-pointer argument and the dispatch plane reported it `unmapped`.
+
+    The type follows the first top-level `:` that is not part of a `::` path.
+    """
+    depth = 0
+    i = 0
+    t = " ".join(raw.split())
+    while i < len(t):
+        ch = t[i]
+        if ch in "(<[":
+            depth += 1
+        elif ch in ")>]":
+            depth -= 1
+        elif ch == ":" and depth == 0:
+            before = t[i - 1] if i > 0 else ""
+            after = t[i + 1] if i + 1 < len(t) else ""
+            if before != ":" and after != ":":
+                return t[i + 1:].strip()
+            i += 1
+            continue
+        i += 1
+    return t
+
+
 def canon_rust_fnptr(t: str, aliases: dict[str, str], depth: int) -> str | None:
     body = t[t.index("fn") + 2:].strip()
     if not body.startswith("("):
@@ -427,7 +492,7 @@ def canon_rust_fnptr(t: str, aliases: dict[str, str], depth: int) -> str | None:
         if a.strip() == "...":
             args.append("...")
             continue
-        c = canon_rust_type(a, aliases, depth + 1)
+        c = canon_rust_type(strip_binding(a), aliases, depth + 1)
         if c is None:
             return None
         args.append(c)
@@ -438,13 +503,25 @@ def strip_qualifiers(text: str) -> str:
     return " ".join(text.replace("const ", " ").replace("volatile ", " ").split())
 
 
-def classify_c(text: str) -> str:
+def classify_c(text: str, typedefs: dict[str, str] | None = None) -> str:
     t = strip_qualifiers(text)
     if t in ("void", ""):
         return "void"
     if "(*" in t or "(*)" in t:
         return "function_pointer"
     if t.endswith("*"):
+        # A pointer to a **typedef that names a function type** is a function pointer, and the
+        # syntactic test above cannot see it. `EVP_PKEY_gen_cb *EVP_PKEY_CTX_get_cb(EVP_PKEY_CTX *)`
+        # resolves to `int (*)(EVP_PKEY_CTX *)`, while `BIO_meth_get_read` spells the same thing
+        # `int (*(const BIO_METHOD *))(BIO *, char *, int)` and hits the test above. Those are one C
+        # type spelled two ways, so they must classify alike and the canonicaliser decides. The
+        # crate's side of that comparison is `Option<EvpPkeyGenCb>` against an alias, which
+        # `classify_rust` resolves to `function_pointer` -- so without this the court reports a
+        # mismatch between a type and itself.
+        if typedefs is not None:
+            canon = canon_c_type(t, typedefs)
+            if canon is not None and canon.startswith("fptr("):
+                return "function_pointer"
         return "pointer"
     if t in ("float", "double"):
         return "floating"
@@ -600,7 +677,7 @@ def parse_c_prototype(proto: str, typedefs: dict[str, str]) -> tuple[str, int] |
         return "function_pointer", arity
     params = content.strip()
     arity = 0 if params in ("", "void") else len(split_top_level(params))
-    return classify_c(resolve_c(text[:first[0]], typedefs)), arity
+    return classify_c(resolve_c(text[:first[0]], typedefs), typedefs), arity
 
 
 def parse_rust_declaration(
@@ -1255,24 +1332,12 @@ def canon_rust_param(raw: str, aliases: dict[str, str]) -> str | None:
     spelled without a binding (`_: T`) therefore still reads correctly, and one
     spelled without a type cannot occur in a valid declaration.
     """
-    depth = 0
-    i = 0
-    t = " ".join(raw.split())
-    while i < len(t):
-        ch = t[i]
-        if ch in "(<[":
-            depth += 1
-        elif ch in ")>]":
-            depth -= 1
-        elif ch == ":" and depth == 0:
-            before = t[i - 1] if i > 0 else ""
-            after = t[i + 1] if i + 1 < len(t) else ""
-            if before != ":" and after != ":":
-                return canon_rust_type(t[i + 1:].strip(), aliases)
-            i += 1
-            continue
-        i += 1
-    return None
+    raw = " ".join(raw.split())
+    stripped = strip_binding(raw)
+    if stripped == raw:
+        # No binding, and a parameter of a declaration must have one.
+        return None
+    return canon_rust_type(stripped, aliases)
 
 
 def rust_signature_canon(
@@ -1536,6 +1601,94 @@ def sensitivity_report() -> dict:
         "observed": {
             "correct": None if sig_good is None else canon_render(sig_good),
             "perturbed": None if sig_bad is None else canon_render(sig_bad),
+        },
+    })
+
+    # The trailing-comma reading, which D179 records: `cargo fmt` wraps a multi-line
+    # generic argument and leaves the list's trailing comma inside it, and the court
+    # read that comma as part of the inner function pointer's *return* type.
+    comma_free = 'Option<unsafe extern "C" fn(*mut Bio, *const EvpPkey, c_int, *mut Asn1Pctx) -> c_int>'
+    comma_wrapped = (
+        'Option<\n        unsafe extern "C" fn(*mut Bio, *const EvpPkey, c_int, *mut Asn1Pctx) -> c_int,\n    >'
+    )
+    want_print = 'fptr(int:4:s; ptr(opaque), ptr(const(opaque)), int:4:s, ptr(opaque))'
+    comma_ok = (
+        canon_rust_type(comma_wrapped, aliases) == want_print
+        and canon_rust_type(comma_free, aliases) == want_print
+        and canon_rust_param("p: " + comma_wrapped, aliases) == want_print
+        # ... and the same reading must still separate a *different* type, so this
+        # control cannot pass for a court that ignores the comma by ignoring the type.
+        and canon_rust_type(comma_wrapped.replace("*mut Asn1Pctx", "*const Asn1Pctx"), aliases)
+        != want_print
+    )
+    report["controls"].append({
+        "control": "generic-argument-trailing-comma",
+        "what": "`cargo fmt`'s multi-line `Option<...,>` and its unwrapped spelling must "
+                "canonicalise identically, while a pointee-constness change inside the "
+                "same text must still differ",
+        "detected": bool(comma_ok),
+        "observed": {
+            "comma_wrapped": canon_rust_type(comma_wrapped, aliases),
+            "comma_free": canon_rust_type(comma_free, aliases),
+            "perturbed": canon_rust_type(
+                comma_wrapped.replace("*mut Asn1Pctx", "*const Asn1Pctx"), aliases),
+        },
+    })
+
+    # The named fn-pointer argument, which D180 records: an argument of a function
+    # *pointer* type may carry a binding name, and the reader used to canonicalise the
+    # whole `name: T` text and fail.
+    unnamed = 'unsafe extern "C" fn(*mut c_void) -> c_int'
+    named = 'unsafe extern "C" fn(provctx: *mut c_void) -> c_int'
+    named_ok = (canon_rust_type(named, aliases) == canon_rust_type(unnamed, aliases)
+                and canon_rust_type(named, aliases) == "fptr(int:4:s; ptr(opaque))"
+                # ... and the same reading must still separate a different type.
+                and canon_rust_type('unsafe extern "C" fn(p: *const c_void) -> c_int',
+                                    aliases) != canon_rust_type(unnamed, aliases))
+    report["controls"].append({
+        "control": "named-fn-pointer-argument",
+        "what": "a function-pointer argument that carries a binding name must "
+                "canonicalise identically to the unnamed form, while a pointee-constness "
+                "change must still differ",
+        "detected": bool(named_ok),
+        "observed": {
+            "named": canon_rust_type(named, aliases),
+            "unnamed": canon_rust_type(unnamed, aliases),
+            "perturbed": canon_rust_type('unsafe extern "C" fn(p: *const c_void) -> c_int',
+                                         aliases),
+        },
+    })
+
+    # The function-pointer declarator's *depth*, which D183 records: `int (*)(...)`,
+    # `int (**)(...)` and `int (***)(...)` are one, two and three levels, and they are
+    # all one pointer in the call convention, which is why collapsing them is easy to
+    # miss.
+    one = 'int (*)(EVP_PKEY_CTX *)'
+    two = 'int (**)(EVP_PKEY_CTX *)'
+    depth_ok = (
+        canon_c_type(one, c_typedefs := dict(C_SYSTEM_TYPEDEFS))
+        != canon_c_type(two, c_typedefs)
+        and canon_c_type(one, c_typedefs) == "fptr(int:4:s; ptr(opaque))"
+        and canon_c_type(two, c_typedefs) == "ptr(fptr(int:4:s; ptr(opaque)))"
+        and canon_c_type('int (***)(void)', c_typedefs)
+        == "ptr(ptr(fptr(int:4:s; )))"
+        # ... and the Rust side must read the same two levels, or the plane would have
+        # one side right and the other flattened.
+        and canon_rust_type('*mut Option<unsafe extern "C" fn(*mut c_void) -> c_int>',
+                            aliases) == "ptr(fptr(int:4:s; ptr(opaque)))"
+    )
+    report["controls"].append({
+        "control": "function-pointer-declarator-depth",
+        "what": "`int (*)(...)` and `int (**)(...)` must canonicalise to one and two "
+                "pointer levels, and the Rust `*mut Option<fn ...>` spelling must read "
+                "the same two",
+        "detected": bool(depth_ok),
+        "observed": {
+            "one_star": canon_c_type(one, c_typedefs),
+            "two_stars": canon_c_type(two, c_typedefs),
+            "three_stars": canon_c_type('int (***)(void)', c_typedefs),
+            "rust_pointer_to_fn_pointer": canon_rust_type(
+                '*mut Option<unsafe extern "C" fn(*mut c_void) -> c_int>', aliases),
         },
     })
 

@@ -85,6 +85,25 @@ COURTLESS: dict[int, str] = {
 }
 
 
+# A stratum that is `in-progress` and has no runner *yet*. This is a different condition from
+# `COURTLESS`, which is a permanent statement that a stratum's evidence is not a court: a
+# stratum lands its ledger in its first subphase and its first probe in its second, and the
+# two cannot be one commit without writing the probe before the thing it probes. Phase 6 did
+# exactly this -- its modules landed before `RT-PARAM` did, which its own phase-state note
+# records.
+#
+# The exemption is deliberately **conditional and checked in both directions**: it applies
+# only while `artifacts/phase<N>/COURTS.json` is absent. The moment a stratum commits a courts
+# file it must have a runner, because a committed file that no run reproduces is the trust
+# problem this whole tool exists for. And the invariant that a stratum cannot *complete*
+# without its courts is not weakened here at all: `phase_state.py` makes an absent courts file
+# a blocking reason, so a stratum with no runner cannot reach `complete`.
+# Empty, and it should stay that way: the row that was here was 7's, and its own text said
+# keeping it past 7.1 was not possible. `RT-FETCH` landed with 7.1's remainder, so the entry is
+# gone rather than emptied -- an empty dict with a comment above it is what a reader needs.
+NO_RUNNER_YET: dict[int, str] = {}
+
+
 def phase_states() -> dict[int, str]:
     """The derived phase registry, as `phase_state.py` writes it."""
     if not PHASE_STATE.is_file():
@@ -218,10 +237,16 @@ def main(argv: list[str]) -> int:
     # before anything expensive so a drift is reported rather than paid for.
     problems: list[str] = []
     plan: list[tuple[int, str, list[str]]] = []
+    # Reported rather than silently skipped, so a stratum's first subphase says out loud that
+    # it has no court rather than reading as a stratum whose courts all passed.
+    no_runner_yet: list[str] = []
     for phase in active:
         found = runner_for(phase)
         if found is None:
             if phase in COURTLESS:
+                continue
+            if phase in NO_RUNNER_YET and not courts_path(phase).exists():
+                no_runner_yet.append(f"phase {phase} ({states[phase]}): {NO_RUNNER_YET[phase]}")
                 continue
             problems.append(
                 f"phase {phase} ({states[phase]}) is not `not-started` and has no "
@@ -245,6 +270,9 @@ def main(argv: list[str]) -> int:
         for p in problems:
             print(f"  {p}")
         return 1
+
+    for line in no_runner_yet:
+        print(f"run-courts: no runner yet -- {line}")
 
     if args.list:
         for phase, command, _argv in plan:

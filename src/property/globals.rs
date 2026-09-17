@@ -46,6 +46,7 @@
 use core::ffi::{c_char, c_int, c_void};
 
 use crate::property::parse::ossl_property_free;
+use crate::runtime::init::{OPENSSL_init_crypto, OPENSSL_INIT_LOAD_CONFIG};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 
 /// The authority's translation unit.
@@ -56,11 +57,29 @@ const LINE_FREE_GLOBP: c_int = 120;
 /// `ossl_ctx_global_properties_new`'s `OPENSSL_zalloc`.
 const LINE_ZALLOC_GLOBP: c_int = 126;
 
-/// `struct ossl_global_properties_st`, minus the FIPS-blocked `no_mirrored` bit.
+/// `struct ossl_global_properties_st`.
+///
+/// **The `no_mirrored` bit landed in D142**, and until then this struct was the authority's minus
+/// that field: 6.7a omitted it because nothing in that stratum read or wrote it and a bitfield
+/// nothing touches would have been a placeholder. Now the two functions that read and write it are
+/// here — `ossl_global_properties_no_mirrored` and `ossl_global_properties_stop_mirroring` — and
+/// with them the layout matches the authority's exactly: a pointer and a one-bit field, which
+/// both round to sixteen bytes.
+///
+/// The bit is stored as a `u32` with a mask rather than as a Rust `bool`, for the reason
+/// `OsslProvider`'s flags are: the authority's field shares its storage unit with nothing else
+/// here, but writing a `bool` into a C bitfield's slot would claim a one-byte field the layout
+/// does not have.
 #[repr(C)]
 pub(crate) struct OsslGlobalProperties {
     list: *mut crate::property::list::OsslPropertyList,
+    /// `unsigned int no_mirrored : 1;` — set once, never cleared.
+    no_mirrored: u32,
 }
+
+/// `NO_MIRRORED`'s bit, so the field is written by name rather than by a bare `1`.
+#[allow(dead_code)] // its two readers are the accessors below, which are not yet reached
+const NO_MIRRORED: u32 = 1;
 
 /// `void ossl_ctx_global_properties_free(void *vglobp)`
 ///
@@ -92,4 +111,88 @@ pub(crate) fn ossl_ctx_global_properties_new(_ctx: *mut c_void) -> *mut c_void {
         FILE,
         LINE_ZALLOC_GLOBP,
     )
+}
+
+/// `OSSL_PROPERTY_LIST **ossl_ctx_global_properties(OSSL_LIB_CTX *libctx, int loadconfig)`.
+///
+/// Answers a pointer to the **holder's `list` field**, not the holder: the caller owns the list it
+/// finds there, and `add`'s property lookup is the only thing that reads through it. A NULL holder
+/// answers NULL rather than pointing at anything, which is the distinction the caller tests.
+///
+/// `loadconfig` is what makes this more than a slot read: with it set, the configuration file is
+/// loaded **first**, so a `providers` section can set properties before the first query is
+/// answered. The `#if !defined(FIPS_MODULE) && !defined(OPENSSL_NO_AUTOLOAD_CONFIG)` guard is not
+/// present on the admitted profile — neither name is defined — so the branch is live, and a
+/// refused load is a NULL answer rather than a slot read that would have loaded nothing.
+///
+/// # Safety
+/// `libctx` must be NULL or live.
+#[allow(dead_code)] // // unreachable until the store's `_fetch` and 7.2's default-property paths
+pub(crate) unsafe fn ossl_ctx_global_properties(
+    libctx: *mut c_void,
+    loadconfig: c_int,
+) -> *mut *mut crate::property::list::OsslPropertyList {
+    if loadconfig != 0 && OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, core::ptr::null()) == 0 {
+        return core::ptr::null_mut();
+    }
+    // `lib_ctx_get_data` is a SAFE function in this crate (D113), so the slot read needs no block
+    // even though this function is `unsafe`.
+    let globp = crate::context::lib_ctx_get_data(
+        libctx,
+        crate::context::OSSL_LIB_CTX_GLOBAL_PROPERTIES_INDEX,
+    )
+    .cast::<OsslGlobalProperties>();
+    if globp.is_null() {
+        return core::ptr::null_mut();
+    }
+    // SAFETY: `globp` is the live slot object.
+    unsafe { core::ptr::addr_of_mut!((*globp).list) }
+}
+
+/// `int ossl_global_properties_no_mirrored(OSSL_LIB_CTX *libctx)`.
+///
+/// The reader is `evp_fetch.c:471`'s, inside `evp_default_properties_is_fips_enabled`: a NULL
+/// holder is **0** and not an error, so a context that was never given global properties answers
+/// "mirroring is still on".
+///
+/// # Safety
+/// `libctx` must be NULL or live.
+#[allow(dead_code)] // // unreachable until 7.2's `evp_default_properties_is_fips_enabled`
+pub(crate) unsafe fn ossl_global_properties_no_mirrored(libctx: *mut c_void) -> c_int {
+    // `lib_ctx_get_data` is a SAFE function in this crate (D113), so the slot read needs no block
+    // even though this function is `unsafe`.
+    let globp = crate::context::lib_ctx_get_data(
+        libctx,
+        crate::context::OSSL_LIB_CTX_GLOBAL_PROPERTIES_INDEX,
+    )
+    .cast::<OsslGlobalProperties>();
+    if globp.is_null() {
+        return 0;
+    }
+    // SAFETY: `globp` is the live slot object.
+    c_int::from(unsafe { (*globp).no_mirrored } & NO_MIRRORED != 0)
+}
+
+/// `void ossl_global_properties_stop_mirroring(OSSL_LIB_CTX *libctx)`.
+///
+/// A one-way flag — there is no function that clears it — and a NULL holder is *nothing to do*
+/// rather than an error. Its only caller is `evp_fetch.c:478`, which sets it when the default
+/// property query turns FIPS mode on, so that the context's global properties stop being mirrored
+/// into the default context.
+///
+/// # Safety
+/// `libctx` must be NULL or live.
+#[allow(dead_code)] // // unreachable until 7.2 sets the flag from the FIPS default query
+pub(crate) unsafe fn ossl_global_properties_stop_mirroring(libctx: *mut c_void) {
+    // `lib_ctx_get_data` is a SAFE function in this crate (D113), so the slot read needs no block
+    // even though this function is `unsafe`.
+    let globp = crate::context::lib_ctx_get_data(
+        libctx,
+        crate::context::OSSL_LIB_CTX_GLOBAL_PROPERTIES_INDEX,
+    )
+    .cast::<OsslGlobalProperties>();
+    if !globp.is_null() {
+        // SAFETY: `globp` is the live slot object.
+        unsafe { (*globp).no_mirrored |= NO_MIRRORED };
+    }
 }

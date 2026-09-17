@@ -276,7 +276,6 @@ pub(crate) unsafe fn ossl_sa_doall(
 ///
 /// # Safety
 /// `sa` must be NULL or live; `leaf` valid for each value; `arg` the caller's.
-#[allow(dead_code)] // unreachable until 6.10a-ii walks with an argument
 pub(crate) unsafe fn ossl_sa_doall_arg(
     sa: *const OpenSslSa,
     leaf: Option<unsafe fn(OsslUintMax, *mut c_void, *mut c_void)>,
@@ -295,7 +294,6 @@ pub(crate) unsafe fn ossl_sa_doall_arg(
 ///
 /// # Safety
 /// `sa` must be NULL or live.
-#[allow(dead_code)] // unreachable until 6.10a-ii asks for a count
 pub(crate) unsafe fn ossl_sa_num(sa: *const OpenSslSa) -> usize {
     if sa.is_null() {
         return 0;
@@ -313,7 +311,6 @@ pub(crate) unsafe fn ossl_sa_num(sa: *const OpenSslSa) -> usize {
 ///
 /// # Safety
 /// `sa` must be NULL or live.
-#[allow(dead_code)] // unreachable until 6.10a-ii reads a slot
 pub(crate) unsafe fn ossl_sa_get(sa: *const OpenSslSa, n: OsslUintMax) -> *mut c_void {
     if sa.is_null() {
         return ptr::null_mut();
@@ -363,7 +360,6 @@ pub(crate) unsafe fn ossl_sa_get(sa: *const OpenSslSa, n: OsslUintMax) -> *mut c
 ///
 /// # Safety
 /// `sa` must be live. `val` is borrowed, never copied, and the caller owns it.
-#[allow(dead_code)] // unreachable until 6.10a-ii writes a slot
 pub(crate) unsafe fn ossl_sa_set(sa: *mut OpenSslSa, posn: OsslUintMax, val: *mut c_void) -> c_int {
     if sa.is_null() {
         return 0;

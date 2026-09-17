@@ -95,6 +95,11 @@ GENERATORS_BEFORE_LEDGERS = [
 GENERATORS_AFTER_LEDGERS = [
     "forensics/tools/ownership_audit.py",
     "forensics/tools/prototype_court.py",
+    # The provider dispatch plane (D180). It reads only the atlas's `macros.json` and
+    # `typedefs.json` and the crate's sources, so it has no position dependence beyond
+    # being after the surface it does not consume; it is listed here so that a stale
+    # committed copy is a failure rather than a silent divergence.
+    "forensics/tools/dispatch_court.py",
     "forensics/tools/phase_state.py",
     # The prerequisite gate reads the phase states to decide whether a stratum has
     # sealed, so it sits after `phase_state.py` rather than beside it. It needs no
@@ -145,6 +150,7 @@ COMPARED = [
     "forensics/atlas/implemented-surface.json",
     "forensics/atlas/ownership-audit.json",
     "forensics/atlas/prototype-court.json",
+    "forensics/atlas/dispatch-court.json",
     "forensics/atlas/ctype-table.json",
     "forensics/atlas/err-raise-sites.json",
     "forensics/atlas/bn-primes.json",

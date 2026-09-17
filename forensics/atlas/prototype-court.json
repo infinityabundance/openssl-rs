@@ -3,15 +3,15 @@
   "body": {
     "canonical_form": "both sides are reduced to one grammar: `void`; `int:<bytes>:<s|u>`; `float:<bytes>`; `ptr(<inner>)`; `const(<inner>)`; `fn(<ret>; <args>)`; `opaque`. A struct pointee's *name* is deliberately discarded -- `*mut Asn1String` and `*mut c_void` are the same to a caller -- while pointer depth, pointee constness, integer width and signedness, and function-pointer argument shape are kept. A type the table cannot canonicalise is reported under `type_unmapped` and never counted as a pass",
     "counts": {
-      "checked": 1088,
+      "checked": 1793,
       "declaration_is_generated": 0,
-      "implementation_is_c": 8,
+      "implementation_is_c": 9,
       "implementation_is_c_mismatches": 0,
-      "implemented": 1135,
+      "implemented": 1841,
       "mismatches": 0,
       "no_prototype_in_atlas": 22,
       "not_found": 0,
-      "type_checked": 1105,
+      "type_checked": 1810,
       "type_mismatches": 0,
       "type_unmapped": 0,
       "unclassified": 0,
@@ -26,7 +26,8 @@
       "ERR_add_error_data",
       "ERR_add_error_vdata",
       "ERR_set_error",
-      "ERR_vset_error"
+      "ERR_vset_error",
+      "EVP_PKEY_Q_keygen"
     ],
     "implementation_is_c_mismatches": [],
     "mismatches": [],
@@ -79,6 +80,37 @@
           "what": "a C definition's parameter perturbed from `int` to `long`"
         },
         {
+          "control": "generic-argument-trailing-comma",
+          "detected": true,
+          "observed": {
+            "comma_free": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)), int:4:s, ptr(opaque))",
+            "comma_wrapped": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)), int:4:s, ptr(opaque))",
+            "perturbed": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)), int:4:s, ptr(const(opaque)))"
+          },
+          "what": "`cargo fmt`'s multi-line `Option<...,>` and its unwrapped spelling must canonicalise identically, while a pointee-constness change inside the same text must still differ"
+        },
+        {
+          "control": "named-fn-pointer-argument",
+          "detected": true,
+          "observed": {
+            "named": "fptr(int:4:s; ptr(opaque))",
+            "perturbed": "fptr(int:4:s; ptr(const(opaque)))",
+            "unnamed": "fptr(int:4:s; ptr(opaque))"
+          },
+          "what": "a function-pointer argument that carries a binding name must canonicalise identically to the unnamed form, while a pointee-constness change must still differ"
+        },
+        {
+          "control": "function-pointer-declarator-depth",
+          "detected": true,
+          "observed": {
+            "one_star": "fptr(int:4:s; ptr(opaque))",
+            "rust_pointer_to_fn_pointer": "ptr(fptr(int:4:s; ptr(opaque)))",
+            "three_stars": "ptr(ptr(fptr(int:4:s; )))",
+            "two_stars": "ptr(fptr(int:4:s; ptr(opaque)))"
+          },
+          "what": "`int (*)(...)` and `int (**)(...)` must canonicalise to one and two pointer levels, and the Rust `*mut Option<fn ...>` spelling must read the same two"
+        },
+        {
           "control": "variadic-reading",
           "detected": true,
           "observed": "int:4:s (ptr(int:1:s), ...)",
@@ -109,7 +141,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "7dce259d2b159b772c26a047e5a1a21744bcc01138f2df04242109b5bbcb1a5b"
+      "sha256": "bbb4d8803f8da01924f162b883a1803a967eb9c2f3a50f8dfa14b6726e5c2d64"
     }
   ],
   "kind": "prototype-court",

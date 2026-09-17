@@ -107,7 +107,11 @@ use crate::ffi::guard_ffi;
 #[path = "obj_table.rs"]
 mod obj_table;
 
-use obj_table::*;
+// `pub(crate) use` rather than `use`: the table's constants (`NID_undef` and the rest) are
+// the crate's names for the authority's numerics, and a caller in another module has to be
+// able to say `crate::runtime::obj::NID_undef` rather than copy the number. It was a private
+// import until 7.3a's `EVP_MD` needed `NID_undef` for the fetch's legacy-NID sentinel.
+pub(crate) use obj_table::*;
 
 /// `ASN1_OBJECT_FLAG_DYNAMIC` — the object itself is heap-allocated.
 pub(crate) const ASN1_OBJECT_FLAG_DYNAMIC: c_int = 0x01;
@@ -124,7 +128,7 @@ const OBJ_BSEARCH_FIRST_VALUE_ON_MATCH: c_int = 0x02;
 /// `OBJ_NAME_TYPE_NUM` — the first dynamically allocated name type index.
 const OBJ_NAME_TYPE_NUM: c_int = 0x07;
 /// `OBJ_NAME_ALIAS` — the entry names another entry rather than a value.
-const OBJ_NAME_ALIAS: c_int = 0x8000;
+pub(crate) const OBJ_NAME_ALIAS: c_int = 0x8000;
 
 extern "C" {
     fn malloc(n: usize) -> *mut c_void;
@@ -1947,7 +1951,7 @@ pub struct ObjName {
 type ObjNameHashFn = unsafe extern "C" fn(*const c_char) -> c_ulong;
 type ObjNameCmpFn = unsafe extern "C" fn(*const c_char, *const c_char) -> c_int;
 type ObjNameFreeFn = unsafe extern "C" fn(*const c_char, c_int, *const c_char);
-type ObjNameDoAllFn = unsafe extern "C" fn(*const ObjName, *mut c_void);
+pub(crate) type ObjNameDoAllFn = unsafe extern "C" fn(*const ObjName, *mut c_void);
 
 /// Per-type callbacks registered by [`OBJ_NAME_new_index`].
 #[derive(Clone, Copy, Default)]

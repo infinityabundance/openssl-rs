@@ -178,6 +178,13 @@ fn build_c_adapters(manifest_dir: &Path) -> Result<(), String> {
         ("src/runtime/err_variadic.c", "openssl_rs_err_variadic"),
         ("src/runtime/bio/bio_variadic.c", "openssl_rs_bio_variadic"),
         ("src/runtime/bio/bio_va.c", "openssl_rs_bio_va"),
+        // `EVP_PKEY_Q_keygen` is C-variadic for the same reason the BIO printf
+        // surface is: stable Rust cannot define one, so the shim reads the
+        // arguments and the Rust half does everything else.
+        (
+            "src/evp/pkey_q_keygen_variadic.c",
+            "openssl_rs_pkey_q_keygen_variadic",
+        ),
         // Not a variadic adapter: `struct dirent` and `struct stat` are read on
         // the C side of the ABI so that no field offset is assumed. See the
         // file's own header.

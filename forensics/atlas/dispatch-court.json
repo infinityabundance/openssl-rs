@@ -1,0 +1,4067 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "authority_census": {
+      "crate_files_read": 190,
+      "function_type_typedefs": 631,
+      "identity_macros": 277,
+      "identity_macros_non_numeric": 0
+    },
+    "canonical_form": "the authority's typedef body and the crate's alias are both read by `ABI-PROTOTYPE`'s canonicaliser, so pointer depth, pointee constness, integer width and signedness and function-pointer shape are compared while a struct pointee's name is discarded; a C function *type* and a Rust `extern \"C\" fn` item type differ only in the canonical head tag and are compared after normalising it",
+    "counts": {
+      "identities_authority_only": 82,
+      "identities_checked": 195,
+      "identities_mismatches": 0,
+      "links_convention": 197,
+      "links_documented": 8,
+      "links_explicit": 14,
+      "problems": 0,
+      "signatures_authority_only": 411,
+      "signatures_checked": 222,
+      "signatures_mismatches": 0,
+      "signatures_not_a_dispatch": 104,
+      "signatures_unlinked": 0,
+      "signatures_unmapped": 0
+    },
+    "identities": {
+      "authority_only": [
+        "OSSL_FUNC_BIO_NEW_FILE",
+        "OSSL_FUNC_BIO_NEW_MEMBUF",
+        "OSSL_FUNC_BIO_VPRINTF",
+        "OSSL_FUNC_BIO_VSNPRINTF",
+        "OSSL_FUNC_CLEANUP_ENTROPY",
+        "OSSL_FUNC_CLEANUP_NONCE",
+        "OSSL_FUNC_CLEANUP_USER_ENTROPY",
+        "OSSL_FUNC_CLEANUP_USER_NONCE",
+        "OSSL_FUNC_CORE_CLEAR_LAST_ERROR_MARK",
+        "OSSL_FUNC_CORE_COUNT_TO_MARK",
+        "OSSL_FUNC_CORE_GETTABLE_PARAMS",
+        "OSSL_FUNC_CORE_GET_PARAMS",
+        "OSSL_FUNC_CORE_NEW_ERROR",
+        "OSSL_FUNC_CORE_OBJ_ADD_SIGID",
+        "OSSL_FUNC_CORE_OBJ_CREATE",
+        "OSSL_FUNC_CORE_POP_ERROR_TO_MARK",
+        "OSSL_FUNC_CORE_SET_ERROR_DEBUG",
+        "OSSL_FUNC_CORE_SET_ERROR_MARK",
+        "OSSL_FUNC_CORE_THREAD_START",
+        "OSSL_FUNC_CORE_VSET_ERROR",
+        "OSSL_FUNC_CRYPTO_CLEAR_FREE",
+        "OSSL_FUNC_CRYPTO_CLEAR_REALLOC",
+        "OSSL_FUNC_CRYPTO_FREE",
+        "OSSL_FUNC_CRYPTO_MALLOC",
+        "OSSL_FUNC_CRYPTO_REALLOC",
+        "OSSL_FUNC_CRYPTO_SECURE_ALLOCATED",
+        "OSSL_FUNC_CRYPTO_SECURE_CLEAR_FREE",
+        "OSSL_FUNC_CRYPTO_SECURE_FREE",
+        "OSSL_FUNC_CRYPTO_SECURE_MALLOC",
+        "OSSL_FUNC_CRYPTO_SECURE_ZALLOC",
+        "OSSL_FUNC_CRYPTO_ZALLOC",
+        "OSSL_FUNC_DECODER_DECODE",
+        "OSSL_FUNC_DECODER_DOES_SELECTION",
+        "OSSL_FUNC_DECODER_EXPORT_OBJECT",
+        "OSSL_FUNC_DECODER_FREECTX",
+        "OSSL_FUNC_DECODER_GETTABLE_PARAMS",
+        "OSSL_FUNC_DECODER_GET_PARAMS",
+        "OSSL_FUNC_DECODER_NEWCTX",
+        "OSSL_FUNC_DECODER_SETTABLE_CTX_PARAMS",
+        "OSSL_FUNC_DECODER_SET_CTX_PARAMS",
+        "OSSL_FUNC_ENCODER_DOES_SELECTION",
+        "OSSL_FUNC_ENCODER_ENCODE",
+        "OSSL_FUNC_ENCODER_FREECTX",
+        "OSSL_FUNC_ENCODER_FREE_OBJECT",
+        "OSSL_FUNC_ENCODER_GETTABLE_PARAMS",
+        "OSSL_FUNC_ENCODER_GET_PARAMS",
+        "OSSL_FUNC_ENCODER_IMPORT_OBJECT",
+        "OSSL_FUNC_ENCODER_NEWCTX",
+        "OSSL_FUNC_ENCODER_SETTABLE_CTX_PARAMS",
+        "OSSL_FUNC_ENCODER_SET_CTX_PARAMS",
+        "OSSL_FUNC_GET_ENTROPY",
+        "OSSL_FUNC_GET_NONCE",
+        "OSSL_FUNC_GET_USER_ENTROPY",
+        "OSSL_FUNC_GET_USER_NONCE",
+        "OSSL_FUNC_INDICATOR_CB",
+        "OSSL_FUNC_OPENSSL_CLEANSE",
+        "OSSL_FUNC_PROVIDER_GETTABLE_PARAMS",
+        "OSSL_FUNC_PROVIDER_GET_CAPABILITIES",
+        "OSSL_FUNC_PROVIDER_GET_PARAMS",
+        "OSSL_FUNC_PROVIDER_GET_REASON_STRINGS",
+        "OSSL_FUNC_PROVIDER_QUERY_OPERATION",
+        "OSSL_FUNC_PROVIDER_RANDOM_BYTES",
+        "OSSL_FUNC_PROVIDER_SELF_TEST",
+        "OSSL_FUNC_PROVIDER_TEARDOWN",
+        "OSSL_FUNC_PROVIDER_UNQUERY_OPERATION",
+        "OSSL_FUNC_SELF_TEST_CB",
+        "OSSL_FUNC_SSL_QUIC_TLS_ALERT",
+        "OSSL_FUNC_SSL_QUIC_TLS_CRYPTO_RECV_RCD",
+        "OSSL_FUNC_SSL_QUIC_TLS_CRYPTO_RELEASE_RCD",
+        "OSSL_FUNC_SSL_QUIC_TLS_CRYPTO_SEND",
+        "OSSL_FUNC_SSL_QUIC_TLS_GOT_TRANSPORT_PARAMS",
+        "OSSL_FUNC_SSL_QUIC_TLS_YIELD_SECRET",
+        "OSSL_FUNC_STORE_ATTACH",
+        "OSSL_FUNC_STORE_CLOSE",
+        "OSSL_FUNC_STORE_DELETE",
+        "OSSL_FUNC_STORE_EOF",
+        "OSSL_FUNC_STORE_EXPORT_OBJECT",
+        "OSSL_FUNC_STORE_LOAD",
+        "OSSL_FUNC_STORE_OPEN",
+        "OSSL_FUNC_STORE_OPEN_EX",
+        "OSSL_FUNC_STORE_SETTABLE_CTX_PARAMS",
+        "OSSL_FUNC_STORE_SET_CTX_PARAMS"
+      ],
+      "checked": [
+        {
+          "authority": 5,
+          "crate": 5,
+          "crate_at": "src/evp/asymcipher.rs",
+          "symbol": "OSSL_FUNC_ASYM_CIPHER_DECRYPT"
+        },
+        {
+          "authority": 4,
+          "crate": 4,
+          "crate_at": "src/evp/asymcipher.rs",
+          "symbol": "OSSL_FUNC_ASYM_CIPHER_DECRYPT_INIT"
+        },
+        {
+          "authority": 7,
+          "crate": 7,
+          "crate_at": "src/evp/asymcipher.rs",
+          "symbol": "OSSL_FUNC_ASYM_CIPHER_DUPCTX"
+        },
+        {
+          "authority": 3,
+          "crate": 3,
+          "crate_at": "src/evp/asymcipher.rs",
+          "symbol": "OSSL_FUNC_ASYM_CIPHER_ENCRYPT"
+        },
+        {
+          "authority": 2,
+          "crate": 2,
+          "crate_at": "src/evp/asymcipher.rs",
+          "symbol": "OSSL_FUNC_ASYM_CIPHER_ENCRYPT_INIT"
+        },
+        {
+          "authority": 6,
+          "crate": 6,
+          "crate_at": "src/evp/asymcipher.rs",
+          "symbol": "OSSL_FUNC_ASYM_CIPHER_FREECTX"
+        },
+        {
+          "authority": 9,
+          "crate": 9,
+          "crate_at": "src/evp/asymcipher.rs",
+          "symbol": "OSSL_FUNC_ASYM_CIPHER_GETTABLE_CTX_PARAMS"
+        },
+        {
+          "authority": 8,
+          "crate": 8,
+          "crate_at": "src/evp/asymcipher.rs",
+          "symbol": "OSSL_FUNC_ASYM_CIPHER_GET_CTX_PARAMS"
+        },
+        {
+          "authority": 1,
+          "crate": 1,
+          "crate_at": "src/evp/asymcipher.rs",
+          "symbol": "OSSL_FUNC_ASYM_CIPHER_NEWCTX"
+        },
+        {
+          "authority": 11,
+          "crate": 11,
+          "crate_at": "src/evp/asymcipher.rs",
+          "symbol": "OSSL_FUNC_ASYM_CIPHER_SETTABLE_CTX_PARAMS"
+        },
+        {
+          "authority": 10,
+          "crate": 10,
+          "crate_at": "src/evp/asymcipher.rs",
+          "symbol": "OSSL_FUNC_ASYM_CIPHER_SET_CTX_PARAMS"
+        },
+        {
+          "authority": 50,
+          "crate": 50,
+          "crate_at": "src/context/dispatch.rs",
+          "symbol": "OSSL_FUNC_BIO_CTRL"
+        },
+        {
+          "authority": 45,
+          "crate": 45,
+          "crate_at": "src/context/dispatch.rs",
+          "symbol": "OSSL_FUNC_BIO_FREE"
+        },
+        {
+          "authority": 49,
+          "crate": 49,
+          "crate_at": "src/context/dispatch.rs",
+          "symbol": "OSSL_FUNC_BIO_GETS"
+        },
+        {
+          "authority": 48,
+          "crate": 48,
+          "crate_at": "src/context/dispatch.rs",
+          "symbol": "OSSL_FUNC_BIO_PUTS"
+        },
+        {
+          "authority": 42,
+          "crate": 42,
+          "crate_at": "src/context/dispatch.rs",
+          "symbol": "OSSL_FUNC_BIO_READ_EX"
+        },
+        {
+          "authority": 44,
+          "crate": 44,
+          "crate_at": "src/context/dispatch.rs",
+          "symbol": "OSSL_FUNC_BIO_UP_REF"
+        },
+        {
+          "authority": 43,
+          "crate": 43,
+          "crate_at": "src/context/dispatch.rs",
+          "symbol": "OSSL_FUNC_BIO_WRITE_EX"
+        },
+        {
+          "authority": 6,
+          "crate": 6,
+          "crate_at": "src/evp/cipher.rs",
+          "symbol": "OSSL_FUNC_CIPHER_CIPHER"
+        },
+        {
+          "authority": 3,
+          "crate": 3,
+          "crate_at": "src/evp/cipher.rs",
+          "symbol": "OSSL_FUNC_CIPHER_DECRYPT_INIT"
+        },
+        {
+          "authority": 20,
+          "crate": 20,
+          "crate_at": "src/evp/cipher.rs",
+          "symbol": "OSSL_FUNC_CIPHER_DECRYPT_SKEY_INIT"
+        },
+        {
+          "authority": 8,
+          "crate": 8,
+          "crate_at": "src/evp/cipher.rs",
+          "symbol": "OSSL_FUNC_CIPHER_DUPCTX"
+        },
+        {
+          "authority": 2,
+          "crate": 2,
+          "crate_at": "src/evp/cipher.rs",
+          "symbol": "OSSL_FUNC_CIPHER_ENCRYPT_INIT"
+        },
+        {
+          "authority": 19,
+          "crate": 19,
+          "crate_at": "src/evp/cipher.rs",
+          "symbol": "OSSL_FUNC_CIPHER_ENCRYPT_SKEY_INIT"
+        },
+        {
+          "authority": 5,
+          "crate": 5,
+          "crate_at": "src/evp/cipher.rs",
+          "symbol": "OSSL_FUNC_CIPHER_FINAL"
+        },
+        {
+          "authority": 7,
+          "crate": 7,
+          "crate_at": "src/evp/cipher.rs",
+          "symbol": "OSSL_FUNC_CIPHER_FREECTX"
+        },
+        {
+          "authority": 13,
+          "crate": 13,
+          "crate_at": "src/evp/cipher.rs",
+          "symbol": "OSSL_FUNC_CIPHER_GETTABLE_CTX_PARAMS"
+        },
+        {
+          "authority": 12,
+          "crate": 12,
+          "crate_at": "src/evp/cipher.rs",
+          "symbol": "OSSL_FUNC_CIPHER_GETTABLE_PARAMS"
+        },
+        {
+          "authority": 10,
+          "crate": 10,
+          "crate_at": "src/evp/cipher.rs",
+          "symbol": "OSSL_FUNC_CIPHER_GET_CTX_PARAMS"
+        },
+        {
+          "authority": 9,
+          "crate": 9,
+          "crate_at": "src/evp/cipher.rs",
+          "symbol": "OSSL_FUNC_CIPHER_GET_PARAMS"
+        },
+        {
+          "authority": 1,
+          "crate": 1,
+          "crate_at": "src/evp/cipher.rs",
+          "symbol": "OSSL_FUNC_CIPHER_NEWCTX"
+        },
+        {
+          "authority": 16,
+          "crate": 16,
+          "crate_at": "src/evp/cipher.rs",
+          "symbol": "OSSL_FUNC_CIPHER_PIPELINE_DECRYPT_INIT"
+        },
+        {
+          "authority": 15,
+          "crate": 15,
+          "crate_at": "src/evp/cipher.rs",
+          "symbol": "OSSL_FUNC_CIPHER_PIPELINE_ENCRYPT_INIT"
+        },
+        {
+          "authority": 18,
+          "crate": 18,
+          "crate_at": "src/evp/cipher.rs",
+          "symbol": "OSSL_FUNC_CIPHER_PIPELINE_FINAL"
+        },
+        {
+          "authority": 17,
+          "crate": 17,
+          "crate_at": "src/evp/cipher.rs",
+          "symbol": "OSSL_FUNC_CIPHER_PIPELINE_UPDATE"
+        },
+        {
+          "authority": 14,
+          "crate": 14,
+          "crate_at": "src/evp/cipher.rs",
+          "symbol": "OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS"
+        },
+        {
+          "authority": 11,
+          "crate": 11,
+          "crate_at": "src/evp/cipher.rs",
+          "symbol": "OSSL_FUNC_CIPHER_SET_CTX_PARAMS"
+        },
+        {
+          "authority": 4,
+          "crate": 4,
+          "crate_at": "src/evp/cipher.rs",
+          "symbol": "OSSL_FUNC_CIPHER_UPDATE"
+        },
+        {
+          "authority": 4,
+          "crate": 4,
+          "crate_at": "src/provider/child.rs",
+          "symbol": "OSSL_FUNC_CORE_GET_LIBCTX"
+        },
+        {
+          "authority": 15,
+          "crate": 15,
+          "crate_at": "src/evp/digest.rs",
+          "symbol": "OSSL_FUNC_DIGEST_COPYCTX"
+        },
+        {
+          "authority": 5,
+          "crate": 5,
+          "crate_at": "src/evp/digest.rs",
+          "symbol": "OSSL_FUNC_DIGEST_DIGEST"
+        },
+        {
+          "authority": 7,
+          "crate": 7,
+          "crate_at": "src/evp/digest.rs",
+          "symbol": "OSSL_FUNC_DIGEST_DUPCTX"
+        },
+        {
+          "authority": 4,
+          "crate": 4,
+          "crate_at": "src/evp/digest.rs",
+          "symbol": "OSSL_FUNC_DIGEST_FINAL"
+        },
+        {
+          "authority": 6,
+          "crate": 6,
+          "crate_at": "src/evp/digest.rs",
+          "symbol": "OSSL_FUNC_DIGEST_FREECTX"
+        },
+        {
+          "authority": 13,
+          "crate": 13,
+          "crate_at": "src/evp/digest.rs",
+          "symbol": "OSSL_FUNC_DIGEST_GETTABLE_CTX_PARAMS"
+        },
+        {
+          "authority": 11,
+          "crate": 11,
+          "crate_at": "src/evp/digest.rs",
+          "symbol": "OSSL_FUNC_DIGEST_GETTABLE_PARAMS"
+        },
+        {
+          "authority": 10,
+          "crate": 10,
+          "crate_at": "src/evp/digest.rs",
+          "symbol": "OSSL_FUNC_DIGEST_GET_CTX_PARAMS"
+        },
+        {
+          "authority": 8,
+          "crate": 8,
+          "crate_at": "src/evp/digest.rs",
+          "symbol": "OSSL_FUNC_DIGEST_GET_PARAMS"
+        },
+        {
+          "authority": 2,
+          "crate": 2,
+          "crate_at": "src/evp/digest.rs",
+          "symbol": "OSSL_FUNC_DIGEST_INIT"
+        },
+        {
+          "authority": 1,
+          "crate": 1,
+          "crate_at": "src/evp/digest.rs",
+          "symbol": "OSSL_FUNC_DIGEST_NEWCTX"
+        },
+        {
+          "authority": 12,
+          "crate": 12,
+          "crate_at": "src/evp/digest.rs",
+          "symbol": "OSSL_FUNC_DIGEST_SETTABLE_CTX_PARAMS"
+        },
+        {
+          "authority": 9,
+          "crate": 9,
+          "crate_at": "src/evp/digest.rs",
+          "symbol": "OSSL_FUNC_DIGEST_SET_CTX_PARAMS"
+        },
+        {
+          "authority": 14,
+          "crate": 14,
+          "crate_at": "src/evp/digest.rs",
+          "symbol": "OSSL_FUNC_DIGEST_SQUEEZE"
+        },
+        {
+          "authority": 3,
+          "crate": 3,
+          "crate_at": "src/evp/digest.rs",
+          "symbol": "OSSL_FUNC_DIGEST_UPDATE"
+        },
+        {
+          "authority": 5,
+          "crate": 5,
+          "crate_at": "src/evp/kdf.rs",
+          "symbol": "OSSL_FUNC_KDF_DERIVE"
+        },
+        {
+          "authority": 13,
+          "crate": 13,
+          "crate_at": "src/evp/kdf.rs",
+          "symbol": "OSSL_FUNC_KDF_DERIVE_SKEY"
+        },
+        {
+          "authority": 2,
+          "crate": 2,
+          "crate_at": "src/evp/kdf.rs",
+          "symbol": "OSSL_FUNC_KDF_DUPCTX"
+        },
+        {
+          "authority": 3,
+          "crate": 3,
+          "crate_at": "src/evp/kdf.rs",
+          "symbol": "OSSL_FUNC_KDF_FREECTX"
+        },
+        {
+          "authority": 7,
+          "crate": 7,
+          "crate_at": "src/evp/kdf.rs",
+          "symbol": "OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS"
+        },
+        {
+          "authority": 6,
+          "crate": 6,
+          "crate_at": "src/evp/kdf.rs",
+          "symbol": "OSSL_FUNC_KDF_GETTABLE_PARAMS"
+        },
+        {
+          "authority": 10,
+          "crate": 10,
+          "crate_at": "src/evp/kdf.rs",
+          "symbol": "OSSL_FUNC_KDF_GET_CTX_PARAMS"
+        },
+        {
+          "authority": 9,
+          "crate": 9,
+          "crate_at": "src/evp/kdf.rs",
+          "symbol": "OSSL_FUNC_KDF_GET_PARAMS"
+        },
+        {
+          "authority": 1,
+          "crate": 1,
+          "crate_at": "src/evp/kdf.rs",
+          "symbol": "OSSL_FUNC_KDF_NEWCTX"
+        },
+        {
+          "authority": 4,
+          "crate": 4,
+          "crate_at": "src/evp/kdf.rs",
+          "symbol": "OSSL_FUNC_KDF_RESET"
+        },
+        {
+          "authority": 8,
+          "crate": 8,
+          "crate_at": "src/evp/kdf.rs",
+          "symbol": "OSSL_FUNC_KDF_SETTABLE_CTX_PARAMS"
+        },
+        {
+          "authority": 11,
+          "crate": 11,
+          "crate_at": "src/evp/kdf.rs",
+          "symbol": "OSSL_FUNC_KDF_SET_CTX_PARAMS"
+        },
+        {
+          "authority": 12,
+          "crate": 12,
+          "crate_at": "src/evp/kdf.rs",
+          "symbol": "OSSL_FUNC_KDF_SET_SKEY"
+        },
+        {
+          "authority": 13,
+          "crate": 13,
+          "crate_at": "src/evp/kem.rs",
+          "symbol": "OSSL_FUNC_KEM_AUTH_DECAPSULATE_INIT"
+        },
+        {
+          "authority": 12,
+          "crate": 12,
+          "crate_at": "src/evp/kem.rs",
+          "symbol": "OSSL_FUNC_KEM_AUTH_ENCAPSULATE_INIT"
+        },
+        {
+          "authority": 5,
+          "crate": 5,
+          "crate_at": "src/evp/kem.rs",
+          "symbol": "OSSL_FUNC_KEM_DECAPSULATE"
+        },
+        {
+          "authority": 4,
+          "crate": 4,
+          "crate_at": "src/evp/kem.rs",
+          "symbol": "OSSL_FUNC_KEM_DECAPSULATE_INIT"
+        },
+        {
+          "authority": 7,
+          "crate": 7,
+          "crate_at": "src/evp/kem.rs",
+          "symbol": "OSSL_FUNC_KEM_DUPCTX"
+        },
+        {
+          "authority": 3,
+          "crate": 3,
+          "crate_at": "src/evp/kem.rs",
+          "symbol": "OSSL_FUNC_KEM_ENCAPSULATE"
+        },
+        {
+          "authority": 2,
+          "crate": 2,
+          "crate_at": "src/evp/kem.rs",
+          "symbol": "OSSL_FUNC_KEM_ENCAPSULATE_INIT"
+        },
+        {
+          "authority": 6,
+          "crate": 6,
+          "crate_at": "src/evp/kem.rs",
+          "symbol": "OSSL_FUNC_KEM_FREECTX"
+        },
+        {
+          "authority": 9,
+          "crate": 9,
+          "crate_at": "src/evp/kem.rs",
+          "symbol": "OSSL_FUNC_KEM_GETTABLE_CTX_PARAMS"
+        },
+        {
+          "authority": 8,
+          "crate": 8,
+          "crate_at": "src/evp/kem.rs",
+          "symbol": "OSSL_FUNC_KEM_GET_CTX_PARAMS"
+        },
+        {
+          "authority": 1,
+          "crate": 1,
+          "crate_at": "src/evp/kem.rs",
+          "symbol": "OSSL_FUNC_KEM_NEWCTX"
+        },
+        {
+          "authority": 11,
+          "crate": 11,
+          "crate_at": "src/evp/kem.rs",
+          "symbol": "OSSL_FUNC_KEM_SETTABLE_CTX_PARAMS"
+        },
+        {
+          "authority": 10,
+          "crate": 10,
+          "crate_at": "src/evp/kem.rs",
+          "symbol": "OSSL_FUNC_KEM_SET_CTX_PARAMS"
+        },
+        {
+          "authority": 3,
+          "crate": 3,
+          "crate_at": "src/evp/exchange.rs",
+          "symbol": "OSSL_FUNC_KEYEXCH_DERIVE"
+        },
+        {
+          "authority": 11,
+          "crate": 11,
+          "crate_at": "src/evp/exchange.rs",
+          "symbol": "OSSL_FUNC_KEYEXCH_DERIVE_SKEY"
+        },
+        {
+          "authority": 6,
+          "crate": 6,
+          "crate_at": "src/evp/exchange.rs",
+          "symbol": "OSSL_FUNC_KEYEXCH_DUPCTX"
+        },
+        {
+          "authority": 5,
+          "crate": 5,
+          "crate_at": "src/evp/exchange.rs",
+          "symbol": "OSSL_FUNC_KEYEXCH_FREECTX"
+        },
+        {
+          "authority": 10,
+          "crate": 10,
+          "crate_at": "src/evp/exchange.rs",
+          "symbol": "OSSL_FUNC_KEYEXCH_GETTABLE_CTX_PARAMS"
+        },
+        {
+          "authority": 9,
+          "crate": 9,
+          "crate_at": "src/evp/exchange.rs",
+          "symbol": "OSSL_FUNC_KEYEXCH_GET_CTX_PARAMS"
+        },
+        {
+          "authority": 2,
+          "crate": 2,
+          "crate_at": "src/evp/exchange.rs",
+          "symbol": "OSSL_FUNC_KEYEXCH_INIT"
+        },
+        {
+          "authority": 1,
+          "crate": 1,
+          "crate_at": "src/evp/exchange.rs",
+          "symbol": "OSSL_FUNC_KEYEXCH_NEWCTX"
+        },
+        {
+          "authority": 8,
+          "crate": 8,
+          "crate_at": "src/evp/exchange.rs",
+          "symbol": "OSSL_FUNC_KEYEXCH_SETTABLE_CTX_PARAMS"
+        },
+        {
+          "authority": 7,
+          "crate": 7,
+          "crate_at": "src/evp/exchange.rs",
+          "symbol": "OSSL_FUNC_KEYEXCH_SET_CTX_PARAMS"
+        },
+        {
+          "authority": 4,
+          "crate": 4,
+          "crate_at": "src/evp/exchange.rs",
+          "symbol": "OSSL_FUNC_KEYEXCH_SET_PEER"
+        },
+        {
+          "authority": 44,
+          "crate": 44,
+          "crate_at": "src/evp/keymgmt.rs",
+          "symbol": "OSSL_FUNC_KEYMGMT_DUP"
+        },
+        {
+          "authority": 42,
+          "crate": 42,
+          "crate_at": "src/evp/keymgmt.rs",
+          "symbol": "OSSL_FUNC_KEYMGMT_EXPORT"
+        },
+        {
+          "authority": 43,
+          "crate": 43,
+          "crate_at": "src/evp/keymgmt.rs",
+          "symbol": "OSSL_FUNC_KEYMGMT_EXPORT_TYPES"
+        },
+        {
+          "authority": 46,
+          "crate": 46,
+          "crate_at": "src/evp/keymgmt.rs",
+          "symbol": "OSSL_FUNC_KEYMGMT_EXPORT_TYPES_EX"
+        },
+        {
+          "authority": 10,
+          "crate": 10,
+          "crate_at": "src/evp/keymgmt.rs",
+          "symbol": "OSSL_FUNC_KEYMGMT_FREE"
+        },
+        {
+          "authority": 6,
+          "crate": 6,
+          "crate_at": "src/evp/keymgmt.rs",
+          "symbol": "OSSL_FUNC_KEYMGMT_GEN"
+        },
+        {
+          "authority": 7,
+          "crate": 7,
+          "crate_at": "src/evp/keymgmt.rs",
+          "symbol": "OSSL_FUNC_KEYMGMT_GEN_CLEANUP"
+        },
+        {
+          "authority": 16,
+          "crate": 16,
+          "crate_at": "src/evp/keymgmt.rs",
+          "symbol": "OSSL_FUNC_KEYMGMT_GEN_GETTABLE_PARAMS"
+        },
+        {
+          "authority": 15,
+          "crate": 15,
+          "crate_at": "src/evp/keymgmt.rs",
+          "symbol": "OSSL_FUNC_KEYMGMT_GEN_GET_PARAMS"
+        },
+        {
+          "authority": 2,
+          "crate": 2,
+          "crate_at": "src/evp/keymgmt.rs",
+          "symbol": "OSSL_FUNC_KEYMGMT_GEN_INIT"
+        },
+        {
+          "authority": 5,
+          "crate": 5,
+          "crate_at": "src/evp/keymgmt.rs",
+          "symbol": "OSSL_FUNC_KEYMGMT_GEN_SETTABLE_PARAMS"
+        },
+        {
+          "authority": 4,
+          "crate": 4,
+          "crate_at": "src/evp/keymgmt.rs",
+          "symbol": "OSSL_FUNC_KEYMGMT_GEN_SET_PARAMS"
+        },
+        {
+          "authority": 3,
+          "crate": 3,
+          "crate_at": "src/evp/keymgmt.rs",
+          "symbol": "OSSL_FUNC_KEYMGMT_GEN_SET_TEMPLATE"
+        },
+        {
+          "authority": 12,
+          "crate": 12,
+          "crate_at": "src/evp/keymgmt.rs",
+          "symbol": "OSSL_FUNC_KEYMGMT_GETTABLE_PARAMS"
+        },
+        {
+          "authority": 11,
+          "crate": 11,
+          "crate_at": "src/evp/keymgmt.rs",
+          "symbol": "OSSL_FUNC_KEYMGMT_GET_PARAMS"
+        },
+        {
+          "authority": 21,
+          "crate": 21,
+          "crate_at": "src/evp/keymgmt.rs",
+          "symbol": "OSSL_FUNC_KEYMGMT_HAS"
+        },
+        {
+          "authority": 40,
+          "crate": 40,
+          "crate_at": "src/evp/keymgmt.rs",
+          "symbol": "OSSL_FUNC_KEYMGMT_IMPORT"
+        },
+        {
+          "authority": 41,
+          "crate": 41,
+          "crate_at": "src/evp/keymgmt.rs",
+          "symbol": "OSSL_FUNC_KEYMGMT_IMPORT_TYPES"
+        },
+        {
+          "authority": 45,
+          "crate": 45,
+          "crate_at": "src/evp/keymgmt.rs",
+          "symbol": "OSSL_FUNC_KEYMGMT_IMPORT_TYPES_EX"
+        },
+        {
+          "authority": 8,
+          "crate": 8,
+          "crate_at": "src/evp/keymgmt.rs",
+          "symbol": "OSSL_FUNC_KEYMGMT_LOAD"
+        },
+        {
+          "authority": 23,
+          "crate": 23,
+          "crate_at": "src/evp/keymgmt.rs",
+          "symbol": "OSSL_FUNC_KEYMGMT_MATCH"
+        },
+        {
+          "authority": 1,
+          "crate": 1,
+          "crate_at": "src/evp/keymgmt.rs",
+          "symbol": "OSSL_FUNC_KEYMGMT_NEW"
+        },
+        {
+          "authority": 20,
+          "crate": 20,
+          "crate_at": "src/evp/keymgmt.rs",
+          "symbol": "OSSL_FUNC_KEYMGMT_QUERY_OPERATION_NAME"
+        },
+        {
+          "authority": 14,
+          "crate": 14,
+          "crate_at": "src/evp/keymgmt.rs",
+          "symbol": "OSSL_FUNC_KEYMGMT_SETTABLE_PARAMS"
+        },
+        {
+          "authority": 13,
+          "crate": 13,
+          "crate_at": "src/evp/keymgmt.rs",
+          "symbol": "OSSL_FUNC_KEYMGMT_SET_PARAMS"
+        },
+        {
+          "authority": 22,
+          "crate": 22,
+          "crate_at": "src/evp/keymgmt.rs",
+          "symbol": "OSSL_FUNC_KEYMGMT_VALIDATE"
+        },
+        {
+          "authority": 2,
+          "crate": 2,
+          "crate_at": "src/evp/mac.rs",
+          "symbol": "OSSL_FUNC_MAC_DUPCTX"
+        },
+        {
+          "authority": 6,
+          "crate": 6,
+          "crate_at": "src/evp/mac.rs",
+          "symbol": "OSSL_FUNC_MAC_FINAL"
+        },
+        {
+          "authority": 3,
+          "crate": 3,
+          "crate_at": "src/evp/mac.rs",
+          "symbol": "OSSL_FUNC_MAC_FREECTX"
+        },
+        {
+          "authority": 11,
+          "crate": 11,
+          "crate_at": "src/evp/mac.rs",
+          "symbol": "OSSL_FUNC_MAC_GETTABLE_CTX_PARAMS"
+        },
+        {
+          "authority": 10,
+          "crate": 10,
+          "crate_at": "src/evp/mac.rs",
+          "symbol": "OSSL_FUNC_MAC_GETTABLE_PARAMS"
+        },
+        {
+          "authority": 8,
+          "crate": 8,
+          "crate_at": "src/evp/mac.rs",
+          "symbol": "OSSL_FUNC_MAC_GET_CTX_PARAMS"
+        },
+        {
+          "authority": 7,
+          "crate": 7,
+          "crate_at": "src/evp/mac.rs",
+          "symbol": "OSSL_FUNC_MAC_GET_PARAMS"
+        },
+        {
+          "authority": 4,
+          "crate": 4,
+          "crate_at": "src/evp/mac.rs",
+          "symbol": "OSSL_FUNC_MAC_INIT"
+        },
+        {
+          "authority": 13,
+          "crate": 13,
+          "crate_at": "src/evp/mac.rs",
+          "symbol": "OSSL_FUNC_MAC_INIT_SKEY"
+        },
+        {
+          "authority": 1,
+          "crate": 1,
+          "crate_at": "src/evp/mac.rs",
+          "symbol": "OSSL_FUNC_MAC_NEWCTX"
+        },
+        {
+          "authority": 12,
+          "crate": 12,
+          "crate_at": "src/evp/mac.rs",
+          "symbol": "OSSL_FUNC_MAC_SETTABLE_CTX_PARAMS"
+        },
+        {
+          "authority": 9,
+          "crate": 9,
+          "crate_at": "src/evp/mac.rs",
+          "symbol": "OSSL_FUNC_MAC_SET_CTX_PARAMS"
+        },
+        {
+          "authority": 5,
+          "crate": 5,
+          "crate_at": "src/evp/mac.rs",
+          "symbol": "OSSL_FUNC_MAC_UPDATE"
+        },
+        {
+          "authority": 106,
+          "crate": 106,
+          "crate_at": "src/provider/child.rs",
+          "symbol": "OSSL_FUNC_PROVIDER_DEREGISTER_CHILD_CB"
+        },
+        {
+          "authority": 111,
+          "crate": 111,
+          "crate_at": "src/provider/child.rs",
+          "symbol": "OSSL_FUNC_PROVIDER_FREE"
+        },
+        {
+          "authority": 109,
+          "crate": 109,
+          "crate_at": "src/provider/child.rs",
+          "symbol": "OSSL_FUNC_PROVIDER_GET0_DISPATCH"
+        },
+        {
+          "authority": 108,
+          "crate": 108,
+          "crate_at": "src/provider/child.rs",
+          "symbol": "OSSL_FUNC_PROVIDER_GET0_PROVIDER_CTX"
+        },
+        {
+          "authority": 107,
+          "crate": 107,
+          "crate_at": "src/provider/child.rs",
+          "symbol": "OSSL_FUNC_PROVIDER_NAME"
+        },
+        {
+          "authority": 105,
+          "crate": 105,
+          "crate_at": "src/provider/child.rs",
+          "symbol": "OSSL_FUNC_PROVIDER_REGISTER_CHILD_CB"
+        },
+        {
+          "authority": 110,
+          "crate": 110,
+          "crate_at": "src/provider/child.rs",
+          "symbol": "OSSL_FUNC_PROVIDER_UP_REF"
+        },
+        {
+          "authority": 19,
+          "crate": 19,
+          "crate_at": "src/evp/rand.rs",
+          "symbol": "OSSL_FUNC_RAND_CLEAR_SEED"
+        },
+        {
+          "authority": 8,
+          "crate": 8,
+          "crate_at": "src/evp/rand.rs",
+          "symbol": "OSSL_FUNC_RAND_ENABLE_LOCKING"
+        },
+        {
+          "authority": 2,
+          "crate": 2,
+          "crate_at": "src/evp/rand.rs",
+          "symbol": "OSSL_FUNC_RAND_FREECTX"
+        },
+        {
+          "authority": 5,
+          "crate": 5,
+          "crate_at": "src/evp/rand.rs",
+          "symbol": "OSSL_FUNC_RAND_GENERATE"
+        },
+        {
+          "authority": 12,
+          "crate": 12,
+          "crate_at": "src/evp/rand.rs",
+          "symbol": "OSSL_FUNC_RAND_GETTABLE_CTX_PARAMS"
+        },
+        {
+          "authority": 11,
+          "crate": 11,
+          "crate_at": "src/evp/rand.rs",
+          "symbol": "OSSL_FUNC_RAND_GETTABLE_PARAMS"
+        },
+        {
+          "authority": 15,
+          "crate": 15,
+          "crate_at": "src/evp/rand.rs",
+          "symbol": "OSSL_FUNC_RAND_GET_CTX_PARAMS"
+        },
+        {
+          "authority": 14,
+          "crate": 14,
+          "crate_at": "src/evp/rand.rs",
+          "symbol": "OSSL_FUNC_RAND_GET_PARAMS"
+        },
+        {
+          "authority": 18,
+          "crate": 18,
+          "crate_at": "src/evp/rand.rs",
+          "symbol": "OSSL_FUNC_RAND_GET_SEED"
+        },
+        {
+          "authority": 3,
+          "crate": 3,
+          "crate_at": "src/evp/rand.rs",
+          "symbol": "OSSL_FUNC_RAND_INSTANTIATE"
+        },
+        {
+          "authority": 9,
+          "crate": 9,
+          "crate_at": "src/evp/rand.rs",
+          "symbol": "OSSL_FUNC_RAND_LOCK"
+        },
+        {
+          "authority": 1,
+          "crate": 1,
+          "crate_at": "src/evp/rand.rs",
+          "symbol": "OSSL_FUNC_RAND_NEWCTX"
+        },
+        {
+          "authority": 7,
+          "crate": 7,
+          "crate_at": "src/evp/rand.rs",
+          "symbol": "OSSL_FUNC_RAND_NONCE"
+        },
+        {
+          "authority": 6,
+          "crate": 6,
+          "crate_at": "src/evp/rand.rs",
+          "symbol": "OSSL_FUNC_RAND_RESEED"
+        },
+        {
+          "authority": 13,
+          "crate": 13,
+          "crate_at": "src/evp/rand.rs",
+          "symbol": "OSSL_FUNC_RAND_SETTABLE_CTX_PARAMS"
+        },
+        {
+          "authority": 16,
+          "crate": 16,
+          "crate_at": "src/evp/rand.rs",
+          "symbol": "OSSL_FUNC_RAND_SET_CTX_PARAMS"
+        },
+        {
+          "authority": 4,
+          "crate": 4,
+          "crate_at": "src/evp/rand.rs",
+          "symbol": "OSSL_FUNC_RAND_UNINSTANTIATE"
+        },
+        {
+          "authority": 10,
+          "crate": 10,
+          "crate_at": "src/evp/rand.rs",
+          "symbol": "OSSL_FUNC_RAND_UNLOCK"
+        },
+        {
+          "authority": 17,
+          "crate": 17,
+          "crate_at": "src/evp/rand.rs",
+          "symbol": "OSSL_FUNC_RAND_VERIFY_ZEROIZATION"
+        },
+        {
+          "authority": 11,
+          "crate": 11,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_DIGEST_SIGN"
+        },
+        {
+          "authority": 10,
+          "crate": 10,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_DIGEST_SIGN_FINAL"
+        },
+        {
+          "authority": 8,
+          "crate": 8,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_DIGEST_SIGN_INIT"
+        },
+        {
+          "authority": 9,
+          "crate": 9,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_DIGEST_SIGN_UPDATE"
+        },
+        {
+          "authority": 15,
+          "crate": 15,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_DIGEST_VERIFY"
+        },
+        {
+          "authority": 14,
+          "crate": 14,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_DIGEST_VERIFY_FINAL"
+        },
+        {
+          "authority": 12,
+          "crate": 12,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_DIGEST_VERIFY_INIT"
+        },
+        {
+          "authority": 13,
+          "crate": 13,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_DIGEST_VERIFY_UPDATE"
+        },
+        {
+          "authority": 17,
+          "crate": 17,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_DUPCTX"
+        },
+        {
+          "authority": 16,
+          "crate": 16,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_FREECTX"
+        },
+        {
+          "authority": 23,
+          "crate": 23,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_GETTABLE_CTX_MD_PARAMS"
+        },
+        {
+          "authority": 19,
+          "crate": 19,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_GETTABLE_CTX_PARAMS"
+        },
+        {
+          "authority": 22,
+          "crate": 22,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_GET_CTX_MD_PARAMS"
+        },
+        {
+          "authority": 18,
+          "crate": 18,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_GET_CTX_PARAMS"
+        },
+        {
+          "authority": 1,
+          "crate": 1,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_NEWCTX"
+        },
+        {
+          "authority": 26,
+          "crate": 26,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_QUERY_KEY_TYPES"
+        },
+        {
+          "authority": 25,
+          "crate": 25,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_SETTABLE_CTX_MD_PARAMS"
+        },
+        {
+          "authority": 21,
+          "crate": 21,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_SETTABLE_CTX_PARAMS"
+        },
+        {
+          "authority": 24,
+          "crate": 24,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_SET_CTX_MD_PARAMS"
+        },
+        {
+          "authority": 20,
+          "crate": 20,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_SET_CTX_PARAMS"
+        },
+        {
+          "authority": 3,
+          "crate": 3,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_SIGN"
+        },
+        {
+          "authority": 2,
+          "crate": 2,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_SIGN_INIT"
+        },
+        {
+          "authority": 29,
+          "crate": 29,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_SIGN_MESSAGE_FINAL"
+        },
+        {
+          "authority": 27,
+          "crate": 27,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_SIGN_MESSAGE_INIT"
+        },
+        {
+          "authority": 28,
+          "crate": 28,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_SIGN_MESSAGE_UPDATE"
+        },
+        {
+          "authority": 5,
+          "crate": 5,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_VERIFY"
+        },
+        {
+          "authority": 4,
+          "crate": 4,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_VERIFY_INIT"
+        },
+        {
+          "authority": 32,
+          "crate": 32,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_VERIFY_MESSAGE_FINAL"
+        },
+        {
+          "authority": 30,
+          "crate": 30,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_VERIFY_MESSAGE_INIT"
+        },
+        {
+          "authority": 31,
+          "crate": 31,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_VERIFY_MESSAGE_UPDATE"
+        },
+        {
+          "authority": 7,
+          "crate": 7,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_VERIFY_RECOVER"
+        },
+        {
+          "authority": 6,
+          "crate": 6,
+          "crate_at": "src/evp/signature.rs",
+          "symbol": "OSSL_FUNC_SIGNATURE_VERIFY_RECOVER_INIT"
+        },
+        {
+          "authority": 3,
+          "crate": 3,
+          "crate_at": "src/evp/skeymgmt.rs",
+          "symbol": "OSSL_FUNC_SKEYMGMT_EXPORT"
+        },
+        {
+          "authority": 1,
+          "crate": 1,
+          "crate_at": "src/evp/skeymgmt.rs",
+          "symbol": "OSSL_FUNC_SKEYMGMT_FREE"
+        },
+        {
+          "authority": 4,
+          "crate": 4,
+          "crate_at": "src/evp/skeymgmt.rs",
+          "symbol": "OSSL_FUNC_SKEYMGMT_GENERATE"
+        },
+        {
+          "authority": 7,
+          "crate": 7,
+          "crate_at": "src/evp/skeymgmt.rs",
+          "symbol": "OSSL_FUNC_SKEYMGMT_GEN_SETTABLE_PARAMS"
+        },
+        {
+          "authority": 5,
+          "crate": 5,
+          "crate_at": "src/evp/skeymgmt.rs",
+          "symbol": "OSSL_FUNC_SKEYMGMT_GET_KEY_ID"
+        },
+        {
+          "authority": 2,
+          "crate": 2,
+          "crate_at": "src/evp/skeymgmt.rs",
+          "symbol": "OSSL_FUNC_SKEYMGMT_IMPORT"
+        },
+        {
+          "authority": 6,
+          "crate": 6,
+          "crate_at": "src/evp/skeymgmt.rs",
+          "symbol": "OSSL_FUNC_SKEYMGMT_IMP_SETTABLE_PARAMS"
+        }
+      ],
+      "mismatches": []
+    },
+    "link_rule": "an alias is resolved to its authority typedef by `NOT_A_DISPATCH` first, then `LINKS`, then the squashed name with an optional `OSSLFunc`/`OsslFunc` prefix and `Fn` suffix removed, then the `OSSL_FUNC_*_fn` names in its doc comment. An alias that none of them resolves must be exempted with a reason, so a typo cannot silently acquire no counterpart; the tables accept `Name@src/path.rs` for a name the crate declares twice with different types",
+    "note": "`signatures_authority_only` is coverage, not a defect: the authority declares the dispatch contract for every stratum and the crate has reached seven of them, so an unclaimed typedef is work not yet done rather than a disagreement. What is a defect is a claim that disagrees, an alias that links to nothing and is not exempted, and a link or exemption that names something that does not exist.",
+    "problems": [],
+    "sensitivity": {
+      "all_detected": true,
+      "controls": [
+        {
+          "control": "identity-number",
+          "detected": true,
+          "observed": {
+            "authority": 5,
+            "correct": [
+              5
+            ],
+            "perturbed": [
+              6
+            ],
+            "symbol": "OSSL_FUNC_ASYM_CIPHER_DECRYPT"
+          },
+          "what": "`OSSL_FUNC_ASYM_CIPHER_DECRYPT` moved by one must be reported, the correct value must not"
+        },
+        {
+          "control": "callback-arity",
+          "detected": true,
+          "observed": {
+            "alias": "Asn1PsFunc",
+            "authority": "asn1_ps_func",
+            "correct": "fptr(int:4:s; ptr(opaque), ptr(ptr(int:1:u)), ptr(int:4:s), ptr(opaque))",
+            "perturbed": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(ptr(int:1:u)), ptr(int:4:s), ptr(opaque))"
+          },
+          "what": "`Asn1PsFunc` given one extra parameter must be reported, the correct signature must not"
+        },
+        {
+          "control": "unlinked-typo",
+          "detected": true,
+          "observed": {
+            "renamed": "ZzAsn1PsFunc",
+            "unlinked": [
+              "ZzAsn1PsFunc"
+            ]
+          },
+          "what": "`Asn1PsFunc` renamed so no link resolves it must be reported as unlinked rather than exempted by silence"
+        }
+      ],
+      "what": "the same comparison functions, run over deliberately perturbed inputs, must notice; and over the correct inputs, must not"
+    },
+    "signatures": {
+      "authority_only": [
+        "ASN1_ITEM_EXP",
+        "ASN1_ex_d2i",
+        "ASN1_ex_d2i_ex",
+        "ASN1_ex_free_func",
+        "ASN1_ex_i2d",
+        "ASN1_ex_new_ex_func",
+        "ASN1_ex_new_func",
+        "ASN1_ex_print_func",
+        "ASN1_primitive_c2i",
+        "ASN1_primitive_i2c",
+        "ASN1_primitive_print",
+        "ASYNC_callback_fn",
+        "ASYNC_stack_alloc_fn",
+        "ASYNC_stack_free_fn",
+        "BIO_dgram_sctp_notification_handler_fn",
+        "CRYPTO_EX_free",
+        "DTLS_timer_cb",
+        "ENGINE_CIPHERS_PTR",
+        "ENGINE_CTRL_FUNC_PTR",
+        "ENGINE_DIGESTS_PTR",
+        "ENGINE_GEN_FUNC_PTR",
+        "ENGINE_GEN_INT_FUNC_PTR",
+        "ENGINE_LOAD_KEY_PTR",
+        "ENGINE_PKEY_ASN1_METHS_PTR",
+        "ENGINE_PKEY_METHS_PTR",
+        "ENGINE_SSL_CLIENT_CERT_PTR",
+        "GEN_SESSION_CB",
+        "OPENSSL_LH_COMPFUNC",
+        "OPENSSL_LH_COMPFUNCTHUNK",
+        "OPENSSL_LH_DOALL_FUNC",
+        "OPENSSL_LH_DOALL_FUNCARG",
+        "OPENSSL_LH_DOALL_FUNCARG_THUNK",
+        "OPENSSL_LH_DOALL_FUNC_THUNK",
+        "OPENSSL_LH_HASHFUNC",
+        "OPENSSL_LH_HASHFUNCTHUNK",
+        "OPENSSL_sk_compfunc",
+        "OPENSSL_sk_copyfunc",
+        "OPENSSL_sk_freefunc",
+        "OPENSSL_sk_freefunc_thunk",
+        "OSSL_CMP_SRV_certConf_cb_t",
+        "OSSL_CMP_SRV_cert_request_cb_t",
+        "OSSL_CMP_SRV_clean_transaction_cb_t",
+        "OSSL_CMP_SRV_delayed_delivery_cb_t",
+        "OSSL_CMP_SRV_error_cb_t",
+        "OSSL_CMP_SRV_genm_cb_t",
+        "OSSL_CMP_SRV_pollReq_cb_t",
+        "OSSL_CMP_SRV_rr_cb_t",
+        "OSSL_CMP_certConf_cb_t",
+        "OSSL_CMP_log_cb_t",
+        "OSSL_CMP_transfer_cb_t",
+        "OSSL_DECODER_CLEANUP",
+        "OSSL_DECODER_CONSTRUCT",
+        "OSSL_ENCODER_CLEANUP",
+        "OSSL_ENCODER_CONSTRUCT",
+        "OSSL_FUNC",
+        "OSSL_FUNC_BIO_new_file_fn",
+        "OSSL_FUNC_BIO_new_membuf_fn",
+        "OSSL_FUNC_BIO_vprintf_fn",
+        "OSSL_FUNC_BIO_vsnprintf_fn",
+        "OSSL_FUNC_CRYPTO_clear_free_fn",
+        "OSSL_FUNC_CRYPTO_clear_realloc_fn",
+        "OSSL_FUNC_CRYPTO_free_fn",
+        "OSSL_FUNC_CRYPTO_malloc_fn",
+        "OSSL_FUNC_CRYPTO_realloc_fn",
+        "OSSL_FUNC_CRYPTO_secure_allocated_fn",
+        "OSSL_FUNC_CRYPTO_secure_clear_free_fn",
+        "OSSL_FUNC_CRYPTO_secure_free_fn",
+        "OSSL_FUNC_CRYPTO_secure_malloc_fn",
+        "OSSL_FUNC_CRYPTO_secure_zalloc_fn",
+        "OSSL_FUNC_CRYPTO_zalloc_fn",
+        "OSSL_FUNC_OPENSSL_cleanse_fn",
+        "OSSL_FUNC_SSL_QUIC_TLS_alert_fn",
+        "OSSL_FUNC_SSL_QUIC_TLS_crypto_recv_rcd_fn",
+        "OSSL_FUNC_SSL_QUIC_TLS_crypto_release_rcd_fn",
+        "OSSL_FUNC_SSL_QUIC_TLS_crypto_send_fn",
+        "OSSL_FUNC_SSL_QUIC_TLS_got_transport_params_fn",
+        "OSSL_FUNC_SSL_QUIC_TLS_yield_secret_fn",
+        "OSSL_FUNC_cleanup_entropy_fn",
+        "OSSL_FUNC_cleanup_nonce_fn",
+        "OSSL_FUNC_cleanup_user_entropy_fn",
+        "OSSL_FUNC_cleanup_user_nonce_fn",
+        "OSSL_FUNC_core_clear_last_error_mark_fn",
+        "OSSL_FUNC_core_count_to_mark_fn",
+        "OSSL_FUNC_core_get_params_fn",
+        "OSSL_FUNC_core_gettable_params_fn",
+        "OSSL_FUNC_core_new_error_fn",
+        "OSSL_FUNC_core_obj_add_sigid_fn",
+        "OSSL_FUNC_core_obj_create_fn",
+        "OSSL_FUNC_core_pop_error_to_mark_fn",
+        "OSSL_FUNC_core_set_error_debug_fn",
+        "OSSL_FUNC_core_set_error_mark_fn",
+        "OSSL_FUNC_core_thread_start_fn",
+        "OSSL_FUNC_core_vset_error_fn",
+        "OSSL_FUNC_decoder_decode_fn",
+        "OSSL_FUNC_decoder_does_selection_fn",
+        "OSSL_FUNC_decoder_export_object_fn",
+        "OSSL_FUNC_decoder_freectx_fn",
+        "OSSL_FUNC_decoder_get_params_fn",
+        "OSSL_FUNC_decoder_gettable_params_fn",
+        "OSSL_FUNC_decoder_newctx_fn",
+        "OSSL_FUNC_decoder_set_ctx_params_fn",
+        "OSSL_FUNC_decoder_settable_ctx_params_fn",
+        "OSSL_FUNC_encoder_does_selection_fn",
+        "OSSL_FUNC_encoder_encode_fn",
+        "OSSL_FUNC_encoder_free_object_fn",
+        "OSSL_FUNC_encoder_freectx_fn",
+        "OSSL_FUNC_encoder_get_params_fn",
+        "OSSL_FUNC_encoder_gettable_params_fn",
+        "OSSL_FUNC_encoder_import_object_fn",
+        "OSSL_FUNC_encoder_newctx_fn",
+        "OSSL_FUNC_encoder_set_ctx_params_fn",
+        "OSSL_FUNC_encoder_settable_ctx_params_fn",
+        "OSSL_FUNC_get_entropy_fn",
+        "OSSL_FUNC_get_nonce_fn",
+        "OSSL_FUNC_get_user_entropy_fn",
+        "OSSL_FUNC_get_user_nonce_fn",
+        "OSSL_FUNC_indicator_cb_fn",
+        "OSSL_FUNC_provider_get_capabilities_fn",
+        "OSSL_FUNC_provider_get_params_fn",
+        "OSSL_FUNC_provider_gettable_params_fn",
+        "OSSL_FUNC_provider_query_operation_fn",
+        "OSSL_FUNC_provider_self_test_fn",
+        "OSSL_FUNC_provider_teardown_fn",
+        "OSSL_FUNC_provider_unquery_operation_fn",
+        "OSSL_FUNC_rand_set_callbacks_fn",
+        "OSSL_FUNC_self_test_cb_fn",
+        "OSSL_FUNC_store_attach_fn",
+        "OSSL_FUNC_store_close_fn",
+        "OSSL_FUNC_store_delete_fn",
+        "OSSL_FUNC_store_eof_fn",
+        "OSSL_FUNC_store_export_object_fn",
+        "OSSL_FUNC_store_load_fn",
+        "OSSL_FUNC_store_open_ex_fn",
+        "OSSL_FUNC_store_open_fn",
+        "OSSL_FUNC_store_set_ctx_params_fn",
+        "OSSL_FUNC_store_settable_ctx_params_fn",
+        "OSSL_HTTP_bio_cb_t",
+        "OSSL_INOUT_CALLBACK",
+        "OSSL_PASSPHRASE_CALLBACK",
+        "OSSL_STORE_attach_fn",
+        "OSSL_STORE_close_fn",
+        "OSSL_STORE_ctrl_fn",
+        "OSSL_STORE_eof_fn",
+        "OSSL_STORE_error_fn",
+        "OSSL_STORE_expect_fn",
+        "OSSL_STORE_find_fn",
+        "OSSL_STORE_load_fn",
+        "OSSL_STORE_open_ex_fn",
+        "OSSL_STORE_open_fn",
+        "OSSL_STORE_post_process_info_fn",
+        "OSSL_i2d_of_void_ctx",
+        "PKCS12_create_cb",
+        "SSL_CTX_alpn_select_cb_func",
+        "SSL_CTX_decrypt_session_ticket_fn",
+        "SSL_CTX_generate_session_ticket_fn",
+        "SSL_CTX_keylog_cb_func",
+        "SSL_CTX_npn_advertised_cb_func",
+        "SSL_CTX_npn_select_cb_func",
+        "SSL_allow_early_data_cb_fn",
+        "SSL_async_callback_fn",
+        "SSL_client_hello_cb_fn",
+        "SSL_custom_ext_add_cb_ex",
+        "SSL_custom_ext_free_cb_ex",
+        "SSL_custom_ext_parse_cb_ex",
+        "SSL_new_pending_conn_cb_fn",
+        "SSL_psk_client_cb_func",
+        "SSL_psk_find_session_cb_func",
+        "SSL_psk_server_cb_func",
+        "SSL_psk_use_session_cb_func",
+        "SSL_verify_cb",
+        "TS_extension_cb",
+        "TS_serial_cb",
+        "TS_time_cb",
+        "X509V3_EXT_D2I",
+        "X509V3_EXT_FREE",
+        "X509V3_EXT_I2D",
+        "X509V3_EXT_I2R",
+        "X509V3_EXT_I2S",
+        "X509V3_EXT_I2V",
+        "X509V3_EXT_NEW",
+        "X509V3_EXT_R2I",
+        "X509V3_EXT_S2I",
+        "X509V3_EXT_V2I",
+        "X509_LOOKUP_ctrl_ex_fn",
+        "X509_LOOKUP_ctrl_fn",
+        "X509_LOOKUP_get_by_alias_fn",
+        "X509_LOOKUP_get_by_fingerprint_fn",
+        "X509_LOOKUP_get_by_issuer_serial_fn",
+        "X509_LOOKUP_get_by_subject_ex_fn",
+        "X509_LOOKUP_get_by_subject_fn",
+        "X509_STORE_CTX_cert_crl_fn",
+        "X509_STORE_CTX_check_crl_fn",
+        "X509_STORE_CTX_check_issued_fn",
+        "X509_STORE_CTX_check_policy_fn",
+        "X509_STORE_CTX_check_revocation_fn",
+        "X509_STORE_CTX_cleanup_fn",
+        "X509_STORE_CTX_get_crl_fn",
+        "X509_STORE_CTX_get_issuer_fn",
+        "X509_STORE_CTX_lookup_certs_fn",
+        "X509_STORE_CTX_lookup_crls_fn",
+        "X509_STORE_CTX_verify_cb",
+        "X509_STORE_CTX_verify_fn",
+        "bio_info_cb",
+        "block128_f",
+        "cbc128_f",
+        "ccm128_f",
+        "conf_finish_func",
+        "ctr128_f",
+        "custom_ext_add_cb",
+        "custom_ext_free_cb",
+        "custom_ext_parse_cb",
+        "dyn_MEM_free_fn",
+        "dyn_MEM_malloc_fn",
+        "dyn_MEM_realloc_fn",
+        "dynamic_bind_engine",
+        "dynamic_v_check_fn",
+        "ecb128_f",
+        "lh_CONF_VALUE_compfunc",
+        "lh_CONF_VALUE_doallfunc",
+        "lh_CONF_VALUE_hashfunc",
+        "lh_ERR_STRING_DATA_compfunc",
+        "lh_ERR_STRING_DATA_doallfunc",
+        "lh_ERR_STRING_DATA_hashfunc",
+        "lh_OPENSSL_CSTRING_compfunc",
+        "lh_OPENSSL_CSTRING_doallfunc",
+        "lh_OPENSSL_CSTRING_hashfunc",
+        "lh_OPENSSL_STRING_compfunc",
+        "lh_OPENSSL_STRING_doallfunc",
+        "lh_OPENSSL_STRING_hashfunc",
+        "ocb128_f",
+        "sk_ACCESS_DESCRIPTION_copyfunc",
+        "sk_ACCESS_DESCRIPTION_freefunc",
+        "sk_ADMISSIONS_copyfunc",
+        "sk_ADMISSIONS_freefunc",
+        "sk_ASIdOrRange_copyfunc",
+        "sk_ASIdOrRange_freefunc",
+        "sk_ASN1_GENERALSTRING_copyfunc",
+        "sk_ASN1_GENERALSTRING_freefunc",
+        "sk_ASN1_INTEGER_copyfunc",
+        "sk_ASN1_INTEGER_freefunc",
+        "sk_ASN1_OBJECT_copyfunc",
+        "sk_ASN1_OBJECT_freefunc",
+        "sk_ASN1_STRING_TABLE_copyfunc",
+        "sk_ASN1_STRING_TABLE_freefunc",
+        "sk_ASN1_STRING_copyfunc",
+        "sk_ASN1_STRING_freefunc",
+        "sk_ASN1_TYPE_copyfunc",
+        "sk_ASN1_TYPE_freefunc",
+        "sk_ASN1_UTF8STRING_copyfunc",
+        "sk_ASN1_UTF8STRING_freefunc",
+        "sk_ASN1_VALUE_copyfunc",
+        "sk_ASN1_VALUE_freefunc",
+        "sk_BIO_copyfunc",
+        "sk_BIO_freefunc",
+        "sk_CMS_RecipientEncryptedKey_copyfunc",
+        "sk_CMS_RecipientEncryptedKey_freefunc",
+        "sk_CMS_RecipientInfo_copyfunc",
+        "sk_CMS_RecipientInfo_freefunc",
+        "sk_CMS_RevocationInfoChoice_copyfunc",
+        "sk_CMS_RevocationInfoChoice_freefunc",
+        "sk_CMS_SignerInfo_copyfunc",
+        "sk_CMS_SignerInfo_freefunc",
+        "sk_CONF_VALUE_copyfunc",
+        "sk_CONF_VALUE_freefunc",
+        "sk_CTLOG_copyfunc",
+        "sk_CTLOG_freefunc",
+        "sk_DIST_POINT_copyfunc",
+        "sk_DIST_POINT_freefunc",
+        "sk_ESS_CERT_ID_V2_copyfunc",
+        "sk_ESS_CERT_ID_V2_freefunc",
+        "sk_ESS_CERT_ID_copyfunc",
+        "sk_ESS_CERT_ID_freefunc",
+        "sk_GENERAL_NAMES_copyfunc",
+        "sk_GENERAL_NAMES_freefunc",
+        "sk_GENERAL_NAME_copyfunc",
+        "sk_GENERAL_NAME_freefunc",
+        "sk_GENERAL_SUBTREE_copyfunc",
+        "sk_GENERAL_SUBTREE_freefunc",
+        "sk_IPAddressFamily_copyfunc",
+        "sk_IPAddressFamily_freefunc",
+        "sk_IPAddressOrRange_copyfunc",
+        "sk_IPAddressOrRange_freefunc",
+        "sk_OCSP_CERTID_copyfunc",
+        "sk_OCSP_CERTID_freefunc",
+        "sk_OCSP_ONEREQ_copyfunc",
+        "sk_OCSP_ONEREQ_freefunc",
+        "sk_OCSP_RESPID_copyfunc",
+        "sk_OCSP_RESPID_freefunc",
+        "sk_OCSP_RESPONSE_copyfunc",
+        "sk_OCSP_RESPONSE_freefunc",
+        "sk_OCSP_SINGLERESP_copyfunc",
+        "sk_OCSP_SINGLERESP_freefunc",
+        "sk_OPENSSL_BLOCK_copyfunc",
+        "sk_OPENSSL_BLOCK_freefunc",
+        "sk_OPENSSL_CSTRING_copyfunc",
+        "sk_OPENSSL_CSTRING_freefunc",
+        "sk_OPENSSL_PSTRING_copyfunc",
+        "sk_OPENSSL_PSTRING_freefunc",
+        "sk_OPENSSL_STRING_copyfunc",
+        "sk_OPENSSL_STRING_freefunc",
+        "sk_OSSL_ALLOWED_ATTRIBUTES_CHOICE_copyfunc",
+        "sk_OSSL_ALLOWED_ATTRIBUTES_CHOICE_freefunc",
+        "sk_OSSL_ALLOWED_ATTRIBUTES_ITEM_copyfunc",
+        "sk_OSSL_ALLOWED_ATTRIBUTES_ITEM_freefunc",
+        "sk_OSSL_ATTRIBUTE_MAPPING_copyfunc",
+        "sk_OSSL_ATTRIBUTE_MAPPING_freefunc",
+        "sk_OSSL_CMP_CERTREPMESSAGE_copyfunc",
+        "sk_OSSL_CMP_CERTREPMESSAGE_freefunc",
+        "sk_OSSL_CMP_CERTRESPONSE_copyfunc",
+        "sk_OSSL_CMP_CERTRESPONSE_freefunc",
+        "sk_OSSL_CMP_CERTSTATUS_copyfunc",
+        "sk_OSSL_CMP_CERTSTATUS_freefunc",
+        "sk_OSSL_CMP_CRLSTATUS_copyfunc",
+        "sk_OSSL_CMP_CRLSTATUS_freefunc",
+        "sk_OSSL_CMP_ITAV_copyfunc",
+        "sk_OSSL_CMP_ITAV_freefunc",
+        "sk_OSSL_CMP_PKISI_copyfunc",
+        "sk_OSSL_CMP_PKISI_freefunc",
+        "sk_OSSL_CRMF_ATTRIBUTETYPEANDVALUE_copyfunc",
+        "sk_OSSL_CRMF_ATTRIBUTETYPEANDVALUE_freefunc",
+        "sk_OSSL_CRMF_CERTID_copyfunc",
+        "sk_OSSL_CRMF_CERTID_freefunc",
+        "sk_OSSL_CRMF_MSG_copyfunc",
+        "sk_OSSL_CRMF_MSG_freefunc",
+        "sk_OSSL_DAY_TIME_BAND_copyfunc",
+        "sk_OSSL_DAY_TIME_BAND_freefunc",
+        "sk_OSSL_IETF_ATTR_SYNTAX_VALUE_copyfunc",
+        "sk_OSSL_IETF_ATTR_SYNTAX_VALUE_freefunc",
+        "sk_OSSL_ISSUER_SERIAL_copyfunc",
+        "sk_OSSL_ISSUER_SERIAL_freefunc",
+        "sk_OSSL_ROLE_SPEC_CERT_ID_copyfunc",
+        "sk_OSSL_ROLE_SPEC_CERT_ID_freefunc",
+        "sk_OSSL_TARGETS_copyfunc",
+        "sk_OSSL_TARGETS_freefunc",
+        "sk_OSSL_TARGET_copyfunc",
+        "sk_OSSL_TARGET_freefunc",
+        "sk_OSSL_TIME_PERIOD_copyfunc",
+        "sk_OSSL_TIME_PERIOD_freefunc",
+        "sk_PKCS12_SAFEBAG_copyfunc",
+        "sk_PKCS12_SAFEBAG_freefunc",
+        "sk_PKCS7_RECIP_INFO_copyfunc",
+        "sk_PKCS7_RECIP_INFO_freefunc",
+        "sk_PKCS7_SIGNER_INFO_copyfunc",
+        "sk_PKCS7_SIGNER_INFO_freefunc",
+        "sk_PKCS7_copyfunc",
+        "sk_PKCS7_freefunc",
+        "sk_POLICYINFO_copyfunc",
+        "sk_POLICYINFO_freefunc",
+        "sk_POLICYQUALINFO_copyfunc",
+        "sk_POLICYQUALINFO_freefunc",
+        "sk_POLICY_MAPPING_copyfunc",
+        "sk_POLICY_MAPPING_freefunc",
+        "sk_PROFESSION_INFO_copyfunc",
+        "sk_PROFESSION_INFO_freefunc",
+        "sk_SCT_copyfunc",
+        "sk_SCT_freefunc",
+        "sk_SRP_gN_cache_copyfunc",
+        "sk_SRP_gN_cache_freefunc",
+        "sk_SRP_gN_copyfunc",
+        "sk_SRP_gN_freefunc",
+        "sk_SRP_user_pwd_copyfunc",
+        "sk_SRP_user_pwd_freefunc",
+        "sk_SRTP_PROTECTION_PROFILE_copyfunc",
+        "sk_SRTP_PROTECTION_PROFILE_freefunc",
+        "sk_SSL_CIPHER_copyfunc",
+        "sk_SSL_CIPHER_freefunc",
+        "sk_SSL_COMP_copyfunc",
+        "sk_SSL_COMP_freefunc",
+        "sk_SXNETID_copyfunc",
+        "sk_SXNETID_freefunc",
+        "sk_UI_STRING_copyfunc",
+        "sk_UI_STRING_freefunc",
+        "sk_USERNOTICE_copyfunc",
+        "sk_USERNOTICE_freefunc",
+        "sk_X509V3_EXT_METHOD_copyfunc",
+        "sk_X509V3_EXT_METHOD_freefunc",
+        "sk_X509_ALGOR_copyfunc",
+        "sk_X509_ALGOR_freefunc",
+        "sk_X509_ATTRIBUTE_copyfunc",
+        "sk_X509_ATTRIBUTE_freefunc",
+        "sk_X509_CRL_copyfunc",
+        "sk_X509_CRL_freefunc",
+        "sk_X509_EXTENSION_copyfunc",
+        "sk_X509_EXTENSION_freefunc",
+        "sk_X509_INFO_copyfunc",
+        "sk_X509_INFO_freefunc",
+        "sk_X509_LOOKUP_copyfunc",
+        "sk_X509_LOOKUP_freefunc",
+        "sk_X509_NAME_ENTRY_copyfunc",
+        "sk_X509_NAME_ENTRY_freefunc",
+        "sk_X509_NAME_copyfunc",
+        "sk_X509_NAME_freefunc",
+        "sk_X509_OBJECT_copyfunc",
+        "sk_X509_OBJECT_freefunc",
+        "sk_X509_POLICY_NODE_copyfunc",
+        "sk_X509_POLICY_NODE_freefunc",
+        "sk_X509_PURPOSE_copyfunc",
+        "sk_X509_PURPOSE_freefunc",
+        "sk_X509_REVOKED_copyfunc",
+        "sk_X509_REVOKED_freefunc",
+        "sk_X509_TRUST_copyfunc",
+        "sk_X509_TRUST_freefunc",
+        "sk_X509_VERIFY_PARAM_copyfunc",
+        "sk_X509_VERIFY_PARAM_freefunc",
+        "sk_X509_copyfunc",
+        "sk_X509_freefunc",
+        "sk_void_copyfunc",
+        "sk_void_freefunc",
+        "ssl_ct_validation_cb",
+        "tls_session_secret_cb_fn",
+        "tls_session_ticket_ext_cb_fn"
+      ],
+      "checked": [
+        {
+          "alias": "Asn1PsFunc",
+          "at": "src/asn1/bio_asn1.rs",
+          "authority": "asn1_ps_func",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(ptr(int:1:u)), ptr(int:4:s), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(ptr(int:1:u)), ptr(int:4:s), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "Asn1AuxCb",
+          "at": "src/asn1/layout.rs",
+          "authority": "ASN1_aux_cb",
+          "authority_signature": "fptr(int:4:s; int:4:s, ptr(ptr(opaque)), ptr(const(opaque)), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; int:4:s, ptr(ptr(opaque)), ptr(const(opaque)), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "Asn1AuxConstCb",
+          "at": "src/asn1/layout.rs",
+          "authority": "ASN1_aux_const_cb",
+          "authority_signature": "fptr(int:4:s; int:4:s, ptr(ptr(const(opaque))), ptr(const(opaque)), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; int:4:s, ptr(ptr(const(opaque))), ptr(const(opaque)), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "D2iOfVoid",
+          "at": "src/asn1/layout.rs",
+          "authority": "d2i_of_void",
+          "authority_signature": "fptr(ptr(opaque); ptr(ptr(opaque)), ptr(ptr(const(int:1:u))), int:8:s)",
+          "crate_signature": "fptr(ptr(opaque); ptr(ptr(opaque)), ptr(ptr(const(int:1:u))), int:8:s)",
+          "how": "convention"
+        },
+        {
+          "alias": "I2dOfVoid",
+          "at": "src/asn1/layout.rs",
+          "authority": "i2d_of_void",
+          "authority_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(ptr(int:1:u)))",
+          "crate_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(ptr(int:1:u)))",
+          "how": "convention"
+        },
+        {
+          "alias": "OsslFuncBioReadEx",
+          "at": "src/context/dispatch.rs",
+          "authority": "OSSL_FUNC_BIO_read_ex_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), int:8:u, ptr(int:8:u))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), int:8:u, ptr(int:8:u))",
+          "how": "convention"
+        },
+        {
+          "alias": "OsslFuncBioWriteEx",
+          "at": "src/context/dispatch.rs",
+          "authority": "OSSL_FUNC_BIO_write_ex_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)), int:8:u, ptr(int:8:u))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)), int:8:u, ptr(int:8:u))",
+          "how": "convention"
+        },
+        {
+          "alias": "OsslFuncBioGets",
+          "at": "src/context/dispatch.rs",
+          "authority": "OSSL_FUNC_BIO_gets_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:s), int:4:s)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:s), int:4:s)",
+          "how": "convention"
+        },
+        {
+          "alias": "OsslFuncBioPuts",
+          "at": "src/context/dispatch.rs",
+          "authority": "OSSL_FUNC_BIO_puts_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:s)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:s)))",
+          "how": "convention"
+        },
+        {
+          "alias": "OsslFuncBioCtrl",
+          "at": "src/context/dispatch.rs",
+          "authority": "OSSL_FUNC_BIO_ctrl_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), int:4:s, int:8:s, ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), int:4:s, int:8:s, ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "OsslFuncBioUpRef",
+          "at": "src/context/dispatch.rs",
+          "authority": "OSSL_FUNC_BIO_up_ref_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "OsslFuncBioFree",
+          "at": "src/context/dispatch.rs",
+          "authority": "OSSL_FUNC_BIO_free_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "AsymCipherNewctxFn",
+          "at": "src/evp/asymcipher.rs",
+          "authority": "OSSL_FUNC_asym_cipher_newctx_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "AsymCipherEncryptInitFn",
+          "at": "src/evp/asymcipher.rs",
+          "authority": "OSSL_FUNC_asym_cipher_encrypt_init_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "AsymCipherEncryptFn",
+          "at": "src/evp/asymcipher.rs",
+          "authority": "OSSL_FUNC_asym_cipher_encrypt_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), int:8:u, ptr(const(int:1:u)), int:8:u)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), int:8:u, ptr(const(int:1:u)), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "AsymCipherDecryptInitFn",
+          "at": "src/evp/asymcipher.rs",
+          "authority": "OSSL_FUNC_asym_cipher_decrypt_init_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "AsymCipherDecryptFn",
+          "at": "src/evp/asymcipher.rs",
+          "authority": "OSSL_FUNC_asym_cipher_decrypt_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), int:8:u, ptr(const(int:1:u)), int:8:u)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), int:8:u, ptr(const(int:1:u)), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "AsymCipherFreectxFn",
+          "at": "src/evp/asymcipher.rs",
+          "authority": "OSSL_FUNC_asym_cipher_freectx_fn",
+          "authority_signature": "fptr(void; ptr(opaque))",
+          "crate_signature": "fptr(void; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "AsymCipherDupctxFn",
+          "at": "src/evp/asymcipher.rs",
+          "authority": "OSSL_FUNC_asym_cipher_dupctx_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "AsymCipherGetCtxParamsFn",
+          "at": "src/evp/asymcipher.rs",
+          "authority": "OSSL_FUNC_asym_cipher_get_ctx_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "AsymCipherGettableCtxParamsFn",
+          "at": "src/evp/asymcipher.rs",
+          "authority": "OSSL_FUNC_asym_cipher_gettable_ctx_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "AsymCipherSetCtxParamsFn",
+          "at": "src/evp/asymcipher.rs",
+          "authority": "OSSL_FUNC_asym_cipher_set_ctx_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "AsymCipherSettableCtxParamsFn",
+          "at": "src/evp/asymcipher.rs",
+          "authority": "OSSL_FUNC_asym_cipher_settable_ctx_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "CipherNewCtxFn",
+          "at": "src/evp/cipher.rs",
+          "authority": "OSSL_FUNC_cipher_newctx_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "CipherInitFn",
+          "at": "src/evp/cipher.rs",
+          "authority": "OSSL_FUNC_cipher_encrypt_init_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u, ptr(const(int:1:u)), int:8:u, ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u, ptr(const(int:1:u)), int:8:u, ptr(const(opaque)))",
+          "how": "explicit"
+        },
+        {
+          "alias": "CipherInitFn",
+          "at": "src/evp/cipher.rs",
+          "authority": "OSSL_FUNC_cipher_decrypt_init_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u, ptr(const(int:1:u)), int:8:u, ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u, ptr(const(int:1:u)), int:8:u, ptr(const(opaque)))",
+          "how": "explicit"
+        },
+        {
+          "alias": "CipherUpdateFn",
+          "at": "src/evp/cipher.rs",
+          "authority": "OSSL_FUNC_cipher_update_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), int:8:u, ptr(const(int:1:u)), int:8:u)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), int:8:u, ptr(const(int:1:u)), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "CipherFinalFn",
+          "at": "src/evp/cipher.rs",
+          "authority": "OSSL_FUNC_cipher_final_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), int:8:u)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "CipherCipherFn",
+          "at": "src/evp/cipher.rs",
+          "authority": "OSSL_FUNC_cipher_cipher_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), int:8:u, ptr(const(int:1:u)), int:8:u)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), int:8:u, ptr(const(int:1:u)), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "CipherFreeCtxFn",
+          "at": "src/evp/cipher.rs",
+          "authority": "OSSL_FUNC_cipher_freectx_fn",
+          "authority_signature": "fptr(void; ptr(opaque))",
+          "crate_signature": "fptr(void; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "CipherDupCtxFn",
+          "at": "src/evp/cipher.rs",
+          "authority": "OSSL_FUNC_cipher_dupctx_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "CipherGetParamsFn",
+          "at": "src/evp/cipher.rs",
+          "authority": "OSSL_FUNC_cipher_get_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "CipherGetCtxParamsFn",
+          "at": "src/evp/cipher.rs",
+          "authority": "OSSL_FUNC_cipher_get_ctx_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "CipherSetCtxParamsFn",
+          "at": "src/evp/cipher.rs",
+          "authority": "OSSL_FUNC_cipher_set_ctx_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "CipherGettableParamsFn",
+          "at": "src/evp/cipher.rs",
+          "authority": "OSSL_FUNC_cipher_gettable_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "CipherGettableCtxParamsFn",
+          "at": "src/evp/cipher.rs",
+          "authority": "OSSL_FUNC_cipher_gettable_ctx_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "CipherSettableCtxParamsFn",
+          "at": "src/evp/cipher.rs",
+          "authority": "OSSL_FUNC_cipher_settable_ctx_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "CipherPipelineInitFn",
+          "at": "src/evp/cipher.rs",
+          "authority": "OSSL_FUNC_cipher_pipeline_encrypt_init_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u, int:8:u, ptr(ptr(const(int:1:u))), int:8:u, ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u, int:8:u, ptr(ptr(const(int:1:u))), int:8:u, ptr(const(opaque)))",
+          "how": "explicit"
+        },
+        {
+          "alias": "CipherPipelineInitFn",
+          "at": "src/evp/cipher.rs",
+          "authority": "OSSL_FUNC_cipher_pipeline_decrypt_init_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u, int:8:u, ptr(ptr(const(int:1:u))), int:8:u, ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u, int:8:u, ptr(ptr(const(int:1:u))), int:8:u, ptr(const(opaque)))",
+          "how": "explicit"
+        },
+        {
+          "alias": "CipherPipelineUpdateFn",
+          "at": "src/evp/cipher.rs",
+          "authority": "OSSL_FUNC_cipher_pipeline_update_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), int:8:u, ptr(ptr(int:1:u)), ptr(int:8:u), ptr(const(int:8:u)), ptr(ptr(const(int:1:u))), ptr(const(int:8:u)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), int:8:u, ptr(ptr(int:1:u)), ptr(int:8:u), ptr(const(int:8:u)), ptr(ptr(const(int:1:u))), ptr(const(int:8:u)))",
+          "how": "convention"
+        },
+        {
+          "alias": "CipherPipelineFinalFn",
+          "at": "src/evp/cipher.rs",
+          "authority": "OSSL_FUNC_cipher_pipeline_final_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), int:8:u, ptr(ptr(int:1:u)), ptr(int:8:u), ptr(const(int:8:u)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), int:8:u, ptr(ptr(int:1:u)), ptr(int:8:u), ptr(const(int:8:u)))",
+          "how": "convention"
+        },
+        {
+          "alias": "CipherSkeyInitFn",
+          "at": "src/evp/cipher.rs",
+          "authority": "OSSL_FUNC_cipher_encrypt_skey_init_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(int:1:u)), int:8:u, ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(int:1:u)), int:8:u, ptr(const(opaque)))",
+          "how": "explicit"
+        },
+        {
+          "alias": "CipherSkeyInitFn",
+          "at": "src/evp/cipher.rs",
+          "authority": "OSSL_FUNC_cipher_decrypt_skey_init_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(int:1:u)), int:8:u, ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(int:1:u)), int:8:u, ptr(const(opaque)))",
+          "how": "explicit"
+        },
+        {
+          "alias": "DigestNewCtxFn",
+          "at": "src/evp/digest.rs",
+          "authority": "OSSL_FUNC_digest_newctx_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "DigestInitFn",
+          "at": "src/evp/digest.rs",
+          "authority": "OSSL_FUNC_digest_init_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "DigestUpdateFn",
+          "at": "src/evp/digest.rs",
+          "authority": "OSSL_FUNC_digest_update_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "DigestFinalFn",
+          "at": "src/evp/digest.rs",
+          "authority": "OSSL_FUNC_digest_final_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), int:8:u)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "DigestSqueezeFn",
+          "at": "src/evp/digest.rs",
+          "authority": "OSSL_FUNC_digest_squeeze_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), int:8:u)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "DigestDigestFn",
+          "at": "src/evp/digest.rs",
+          "authority": "OSSL_FUNC_digest_digest_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u, ptr(int:1:u), ptr(int:8:u), int:8:u)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u, ptr(int:1:u), ptr(int:8:u), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "DigestFreeCtxFn",
+          "at": "src/evp/digest.rs",
+          "authority": "OSSL_FUNC_digest_freectx_fn",
+          "authority_signature": "fptr(void; ptr(opaque))",
+          "crate_signature": "fptr(void; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "DigestDupCtxFn",
+          "at": "src/evp/digest.rs",
+          "authority": "OSSL_FUNC_digest_dupctx_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "DigestCopyCtxFn",
+          "at": "src/evp/digest.rs",
+          "authority": "OSSL_FUNC_digest_copyctx_fn",
+          "authority_signature": "fptr(void; ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(void; ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "DigestGetParamsFn",
+          "at": "src/evp/digest.rs",
+          "authority": "OSSL_FUNC_digest_get_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "DigestSetCtxParamsFn",
+          "at": "src/evp/digest.rs",
+          "authority": "OSSL_FUNC_digest_set_ctx_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "DigestGetCtxParamsFn",
+          "at": "src/evp/digest.rs",
+          "authority": "OSSL_FUNC_digest_get_ctx_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "DigestGettableParamsFn",
+          "at": "src/evp/digest.rs",
+          "authority": "OSSL_FUNC_digest_gettable_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "DigestSettableCtxParamsFn",
+          "at": "src/evp/digest.rs",
+          "authority": "OSSL_FUNC_digest_settable_ctx_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "DigestGettableCtxParamsFn",
+          "at": "src/evp/digest.rs",
+          "authority": "OSSL_FUNC_digest_gettable_ctx_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "EvpPbeKeygen",
+          "at": "src/evp/evp_pbe.rs",
+          "authority": "EVP_PBE_KEYGEN",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:s)), int:4:s, ptr(opaque), ptr(const(opaque)), ptr(const(opaque)), int:4:s)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:s)), int:4:s, ptr(opaque), ptr(const(opaque)), ptr(const(opaque)), int:4:s)",
+          "how": "convention"
+        },
+        {
+          "alias": "EvpPbeKeygenEx",
+          "at": "src/evp/evp_pbe.rs",
+          "authority": "EVP_PBE_KEYGEN_EX",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:s)), int:4:s, ptr(opaque), ptr(const(opaque)), ptr(const(opaque)), int:4:s, ptr(opaque), ptr(const(int:1:s)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:s)), int:4:s, ptr(opaque), ptr(const(opaque)), ptr(const(opaque)), int:4:s, ptr(opaque), ptr(const(int:1:s)))",
+          "how": "convention"
+        },
+        {
+          "alias": "KeyexchNewctxFn",
+          "at": "src/evp/exchange.rs",
+          "authority": "OSSL_FUNC_keyexch_newctx_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KeyexchInitFn",
+          "at": "src/evp/exchange.rs",
+          "authority": "OSSL_FUNC_keyexch_init_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "KeyexchSetPeerFn",
+          "at": "src/evp/exchange.rs",
+          "authority": "OSSL_FUNC_keyexch_set_peer_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KeyexchDeriveFn",
+          "at": "src/evp/exchange.rs",
+          "authority": "OSSL_FUNC_keyexch_derive_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), int:8:u)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "KeyexchFreectxFn",
+          "at": "src/evp/exchange.rs",
+          "authority": "OSSL_FUNC_keyexch_freectx_fn",
+          "authority_signature": "fptr(void; ptr(opaque))",
+          "crate_signature": "fptr(void; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KeyexchDupctxFn",
+          "at": "src/evp/exchange.rs",
+          "authority": "OSSL_FUNC_keyexch_dupctx_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KeyexchSetCtxParamsFn",
+          "at": "src/evp/exchange.rs",
+          "authority": "OSSL_FUNC_keyexch_set_ctx_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "KeyexchSettableCtxParamsFn",
+          "at": "src/evp/exchange.rs",
+          "authority": "OSSL_FUNC_keyexch_settable_ctx_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KeyexchGetCtxParamsFn",
+          "at": "src/evp/exchange.rs",
+          "authority": "OSSL_FUNC_keyexch_get_ctx_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KeyexchGettableCtxParamsFn",
+          "at": "src/evp/exchange.rs",
+          "authority": "OSSL_FUNC_keyexch_gettable_ctx_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KeyexchDeriveSkeyFn",
+          "at": "src/evp/exchange.rs",
+          "authority": "OSSL_FUNC_keyexch_derive_skey_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque), ptr(const(int:1:s)), ptr(opaque), fptr(ptr(opaque); ptr(opaque), int:4:s, ptr(const(opaque))), int:8:u, ptr(const(opaque)))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque), ptr(const(int:1:s)), ptr(opaque), fptr(ptr(opaque); ptr(opaque), int:4:s, ptr(const(opaque))), int:8:u, ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "KdfNewCtxFn",
+          "at": "src/evp/kdf.rs",
+          "authority": "OSSL_FUNC_kdf_newctx_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KdfDupCtxFn",
+          "at": "src/evp/kdf.rs",
+          "authority": "OSSL_FUNC_kdf_dupctx_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KdfFreeCtxFn",
+          "at": "src/evp/kdf.rs",
+          "authority": "OSSL_FUNC_kdf_freectx_fn",
+          "authority_signature": "fptr(void; ptr(opaque))",
+          "crate_signature": "fptr(void; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KdfResetFn",
+          "at": "src/evp/kdf.rs",
+          "authority": "OSSL_FUNC_kdf_reset_fn",
+          "authority_signature": "fptr(void; ptr(opaque))",
+          "crate_signature": "fptr(void; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KdfDeriveFn",
+          "at": "src/evp/kdf.rs",
+          "authority": "OSSL_FUNC_kdf_derive_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), int:8:u, ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), int:8:u, ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "KdfGettableParamsFn",
+          "at": "src/evp/kdf.rs",
+          "authority": "OSSL_FUNC_kdf_gettable_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KdfGettableCtxParamsFn",
+          "at": "src/evp/kdf.rs",
+          "authority": "OSSL_FUNC_kdf_gettable_ctx_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KdfSettableCtxParamsFn",
+          "at": "src/evp/kdf.rs",
+          "authority": "OSSL_FUNC_kdf_settable_ctx_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KdfGetParamsFn",
+          "at": "src/evp/kdf.rs",
+          "authority": "OSSL_FUNC_kdf_get_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KdfGetCtxParamsFn",
+          "at": "src/evp/kdf.rs",
+          "authority": "OSSL_FUNC_kdf_get_ctx_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KdfSetCtxParamsFn",
+          "at": "src/evp/kdf.rs",
+          "authority": "OSSL_FUNC_kdf_set_ctx_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "KdfSetSkeyFn",
+          "at": "src/evp/kdf.rs",
+          "authority": "OSSL_FUNC_kdf_set_skey_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(int:1:s)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(int:1:s)))",
+          "how": "convention"
+        },
+        {
+          "alias": "KdfDeriveSkeyFn",
+          "at": "src/evp/kdf.rs",
+          "authority": "OSSL_FUNC_kdf_derive_skey_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque), ptr(const(int:1:s)), ptr(opaque), fptr(ptr(opaque); ptr(opaque), int:4:s, ptr(const(opaque))), int:8:u, ptr(const(opaque)))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque), ptr(const(int:1:s)), ptr(opaque), fptr(ptr(opaque); ptr(opaque), int:4:s, ptr(const(opaque))), int:8:u, ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "KemNewctxFn",
+          "at": "src/evp/kem.rs",
+          "authority": "OSSL_FUNC_kem_newctx_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KemEncapsulateInitFn",
+          "at": "src/evp/kem.rs",
+          "authority": "OSSL_FUNC_kem_encapsulate_init_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "KemAuthEncapsulateInitFn",
+          "at": "src/evp/kem.rs",
+          "authority": "OSSL_FUNC_kem_auth_encapsulate_init_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "KemEncapsulateFn",
+          "at": "src/evp/kem.rs",
+          "authority": "OSSL_FUNC_kem_encapsulate_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), ptr(int:1:u), ptr(int:8:u))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), ptr(int:1:u), ptr(int:8:u))",
+          "how": "convention"
+        },
+        {
+          "alias": "KemDecapsulateInitFn",
+          "at": "src/evp/kem.rs",
+          "authority": "OSSL_FUNC_kem_decapsulate_init_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "KemAuthDecapsulateInitFn",
+          "at": "src/evp/kem.rs",
+          "authority": "OSSL_FUNC_kem_auth_decapsulate_init_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "KemDecapsulateFn",
+          "at": "src/evp/kem.rs",
+          "authority": "OSSL_FUNC_kem_decapsulate_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), ptr(const(int:1:u)), int:8:u)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), ptr(const(int:1:u)), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "KemFreectxFn",
+          "at": "src/evp/kem.rs",
+          "authority": "OSSL_FUNC_kem_freectx_fn",
+          "authority_signature": "fptr(void; ptr(opaque))",
+          "crate_signature": "fptr(void; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KemDupctxFn",
+          "at": "src/evp/kem.rs",
+          "authority": "OSSL_FUNC_kem_dupctx_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KemGetCtxParamsFn",
+          "at": "src/evp/kem.rs",
+          "authority": "OSSL_FUNC_kem_get_ctx_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KemGettableCtxParamsFn",
+          "at": "src/evp/kem.rs",
+          "authority": "OSSL_FUNC_kem_gettable_ctx_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KemSetCtxParamsFn",
+          "at": "src/evp/kem.rs",
+          "authority": "OSSL_FUNC_kem_set_ctx_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "KemSettableCtxParamsFn",
+          "at": "src/evp/kem.rs",
+          "authority": "OSSL_FUNC_kem_settable_ctx_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KeymgmtNewFn",
+          "at": "src/evp/keymgmt.rs",
+          "authority": "OSSL_FUNC_keymgmt_new_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KeymgmtFreeFn",
+          "at": "src/evp/keymgmt.rs",
+          "authority": "OSSL_FUNC_keymgmt_free_fn",
+          "authority_signature": "fptr(void; ptr(opaque))",
+          "crate_signature": "fptr(void; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KeymgmtGetParamsFn",
+          "at": "src/evp/keymgmt.rs",
+          "authority": "OSSL_FUNC_keymgmt_get_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KeymgmtGettableParamsFn",
+          "at": "src/evp/keymgmt.rs",
+          "authority": "OSSL_FUNC_keymgmt_gettable_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KeymgmtSetParamsFn",
+          "at": "src/evp/keymgmt.rs",
+          "authority": "OSSL_FUNC_keymgmt_set_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "KeymgmtSettableParamsFn",
+          "at": "src/evp/keymgmt.rs",
+          "authority": "OSSL_FUNC_keymgmt_settable_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KeymgmtGenInitFn",
+          "at": "src/evp/keymgmt.rs",
+          "authority": "OSSL_FUNC_keymgmt_gen_init_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque), int:4:s, ptr(const(opaque)))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque), int:4:s, ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "KeymgmtGenSetTemplateFn",
+          "at": "src/evp/keymgmt.rs",
+          "authority": "OSSL_FUNC_keymgmt_gen_set_template_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KeymgmtGenSetParamsFn",
+          "at": "src/evp/keymgmt.rs",
+          "authority": "OSSL_FUNC_keymgmt_gen_set_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "KeymgmtGenGetParamsFn",
+          "at": "src/evp/keymgmt.rs",
+          "authority": "OSSL_FUNC_keymgmt_gen_get_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KeymgmtGenSettableParamsFn",
+          "at": "src/evp/keymgmt.rs",
+          "authority": "OSSL_FUNC_keymgmt_gen_settable_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KeymgmtGenGettableParamsFn",
+          "at": "src/evp/keymgmt.rs",
+          "authority": "OSSL_FUNC_keymgmt_gen_gettable_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KeymgmtGenFn",
+          "at": "src/evp/keymgmt.rs",
+          "authority": "OSSL_FUNC_keymgmt_gen_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque), fptr(int:4:s; ptr(const(opaque)), ptr(opaque)), ptr(opaque))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque), fptr(int:4:s; ptr(const(opaque)), ptr(opaque)), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KeymgmtGenCleanupFn",
+          "at": "src/evp/keymgmt.rs",
+          "authority": "OSSL_FUNC_keymgmt_gen_cleanup_fn",
+          "authority_signature": "fptr(void; ptr(opaque))",
+          "crate_signature": "fptr(void; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KeymgmtLoadFn",
+          "at": "src/evp/keymgmt.rs",
+          "authority": "OSSL_FUNC_keymgmt_load_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(const(opaque)), int:8:u)",
+          "crate_signature": "fptr(ptr(opaque); ptr(const(opaque)), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "KeymgmtQueryOperationNameFn",
+          "at": "src/evp/keymgmt.rs",
+          "authority": "OSSL_FUNC_keymgmt_query_operation_name_fn",
+          "authority_signature": "fptr(ptr(const(int:1:s)); int:4:s)",
+          "crate_signature": "fptr(ptr(const(int:1:s)); int:4:s)",
+          "how": "convention"
+        },
+        {
+          "alias": "KeymgmtHasFn",
+          "at": "src/evp/keymgmt.rs",
+          "authority": "OSSL_FUNC_keymgmt_has_fn",
+          "authority_signature": "fptr(int:4:s; ptr(const(opaque)), int:4:s)",
+          "crate_signature": "fptr(int:4:s; ptr(const(opaque)), int:4:s)",
+          "how": "convention"
+        },
+        {
+          "alias": "KeymgmtValidateFn",
+          "at": "src/evp/keymgmt.rs",
+          "authority": "OSSL_FUNC_keymgmt_validate_fn",
+          "authority_signature": "fptr(int:4:s; ptr(const(opaque)), int:4:s, int:4:s)",
+          "crate_signature": "fptr(int:4:s; ptr(const(opaque)), int:4:s, int:4:s)",
+          "how": "convention"
+        },
+        {
+          "alias": "KeymgmtMatchFn",
+          "at": "src/evp/keymgmt.rs",
+          "authority": "OSSL_FUNC_keymgmt_match_fn",
+          "authority_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(const(opaque)), int:4:s)",
+          "crate_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(const(opaque)), int:4:s)",
+          "how": "convention"
+        },
+        {
+          "alias": "KeymgmtImportFn",
+          "at": "src/evp/keymgmt.rs",
+          "authority": "OSSL_FUNC_keymgmt_import_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), int:4:s, ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), int:4:s, ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "KeymgmtImportTypesFn",
+          "at": "src/evp/keymgmt.rs",
+          "authority": "OSSL_FUNC_keymgmt_import_types_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); int:4:s)",
+          "crate_signature": "fptr(ptr(const(opaque)); int:4:s)",
+          "how": "convention"
+        },
+        {
+          "alias": "KeymgmtImportTypesExFn",
+          "at": "src/evp/keymgmt.rs",
+          "authority": "OSSL_FUNC_keymgmt_import_types_ex_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque), int:4:s)",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque), int:4:s)",
+          "how": "convention"
+        },
+        {
+          "alias": "KeymgmtExportFn",
+          "at": "src/evp/keymgmt.rs",
+          "authority": "OSSL_FUNC_keymgmt_export_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), int:4:s, fptr(int:4:s; ptr(const(opaque)), ptr(opaque)), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), int:4:s, fptr(int:4:s; ptr(const(opaque)), ptr(opaque)), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "KeymgmtExportTypesFn",
+          "at": "src/evp/keymgmt.rs",
+          "authority": "OSSL_FUNC_keymgmt_export_types_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); int:4:s)",
+          "crate_signature": "fptr(ptr(const(opaque)); int:4:s)",
+          "how": "convention"
+        },
+        {
+          "alias": "KeymgmtExportTypesExFn",
+          "at": "src/evp/keymgmt.rs",
+          "authority": "OSSL_FUNC_keymgmt_export_types_ex_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque), int:4:s)",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque), int:4:s)",
+          "how": "convention"
+        },
+        {
+          "alias": "KeymgmtDupFn",
+          "at": "src/evp/keymgmt.rs",
+          "authority": "OSSL_FUNC_keymgmt_dup_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(const(opaque)), int:4:s)",
+          "crate_signature": "fptr(ptr(opaque); ptr(const(opaque)), int:4:s)",
+          "how": "convention"
+        },
+        {
+          "alias": "MacNewCtxFn",
+          "at": "src/evp/mac.rs",
+          "authority": "OSSL_FUNC_mac_newctx_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "MacDupCtxFn",
+          "at": "src/evp/mac.rs",
+          "authority": "OSSL_FUNC_mac_dupctx_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "MacFreeCtxFn",
+          "at": "src/evp/mac.rs",
+          "authority": "OSSL_FUNC_mac_freectx_fn",
+          "authority_signature": "fptr(void; ptr(opaque))",
+          "crate_signature": "fptr(void; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "MacInitFn",
+          "at": "src/evp/mac.rs",
+          "authority": "OSSL_FUNC_mac_init_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u, ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u, ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "MacUpdateFn",
+          "at": "src/evp/mac.rs",
+          "authority": "OSSL_FUNC_mac_update_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "MacFinalFn",
+          "at": "src/evp/mac.rs",
+          "authority": "OSSL_FUNC_mac_final_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), int:8:u)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "MacGettableParamsFn",
+          "at": "src/evp/mac.rs",
+          "authority": "OSSL_FUNC_mac_gettable_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "MacGettableCtxParamsFn",
+          "at": "src/evp/mac.rs",
+          "authority": "OSSL_FUNC_mac_gettable_ctx_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "MacSettableCtxParamsFn",
+          "at": "src/evp/mac.rs",
+          "authority": "OSSL_FUNC_mac_settable_ctx_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "MacGetParamsFn",
+          "at": "src/evp/mac.rs",
+          "authority": "OSSL_FUNC_mac_get_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "MacGetCtxParamsFn",
+          "at": "src/evp/mac.rs",
+          "authority": "OSSL_FUNC_mac_get_ctx_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "MacSetCtxParamsFn",
+          "at": "src/evp/mac.rs",
+          "authority": "OSSL_FUNC_mac_set_ctx_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "MacInitSkeyFn",
+          "at": "src/evp/mac.rs",
+          "authority": "OSSL_FUNC_mac_init_skey_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "PemPasswordCb",
+          "at": "src/evp/pem_bridge.rs",
+          "authority": "pem_password_cb",
+          "authority_signature": "fptr(int:4:s; ptr(int:1:s), int:4:s, int:4:s, ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(int:1:s), int:4:s, int:4:s, ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "EvpPkeyGenCb",
+          "at": "src/evp/pkey_ctx.rs",
+          "authority": "EVP_PKEY_gen_cb",
+          "authority_signature": "fptr(int:4:s; ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "RandNewCtxFn",
+          "at": "src/evp/rand.rs",
+          "authority": "OSSL_FUNC_rand_newctx_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque), ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque), ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "RandFreeCtxFn",
+          "at": "src/evp/rand.rs",
+          "authority": "OSSL_FUNC_rand_freectx_fn",
+          "authority_signature": "fptr(void; ptr(opaque))",
+          "crate_signature": "fptr(void; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "RandInstantiateFn",
+          "at": "src/evp/rand.rs",
+          "authority": "OSSL_FUNC_rand_instantiate_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), int:4:u, int:4:s, ptr(const(int:1:u)), int:8:u, ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), int:4:u, int:4:s, ptr(const(int:1:u)), int:8:u, ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "RandUninstantiateFn",
+          "at": "src/evp/rand.rs",
+          "authority": "OSSL_FUNC_rand_uninstantiate_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "RandGenerateFn",
+          "at": "src/evp/rand.rs",
+          "authority": "OSSL_FUNC_rand_generate_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), int:8:u, int:4:u, int:4:s, ptr(const(int:1:u)), int:8:u)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), int:8:u, int:4:u, int:4:s, ptr(const(int:1:u)), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "RandReseedFn",
+          "at": "src/evp/rand.rs",
+          "authority": "OSSL_FUNC_rand_reseed_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), int:4:s, ptr(const(int:1:u)), int:8:u, ptr(const(int:1:u)), int:8:u)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), int:4:s, ptr(const(int:1:u)), int:8:u, ptr(const(int:1:u)), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "RandNonceFn",
+          "at": "src/evp/rand.rs",
+          "authority": "OSSL_FUNC_rand_nonce_fn",
+          "authority_signature": "fptr(int:8:u; ptr(opaque), ptr(int:1:u), int:4:u, int:8:u, int:8:u)",
+          "crate_signature": "fptr(int:8:u; ptr(opaque), ptr(int:1:u), int:4:u, int:8:u, int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "RandEnableLockingFn",
+          "at": "src/evp/rand.rs",
+          "authority": "OSSL_FUNC_rand_enable_locking_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "RandLockFn",
+          "at": "src/evp/rand.rs",
+          "authority": "OSSL_FUNC_rand_lock_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "RandUnlockFn",
+          "at": "src/evp/rand.rs",
+          "authority": "OSSL_FUNC_rand_unlock_fn",
+          "authority_signature": "fptr(void; ptr(opaque))",
+          "crate_signature": "fptr(void; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "RandGettableParamsFn",
+          "at": "src/evp/rand.rs",
+          "authority": "OSSL_FUNC_rand_gettable_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "RandGettableCtxParamsFn",
+          "at": "src/evp/rand.rs",
+          "authority": "OSSL_FUNC_rand_gettable_ctx_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "RandSettableCtxParamsFn",
+          "at": "src/evp/rand.rs",
+          "authority": "OSSL_FUNC_rand_settable_ctx_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "RandGetParamsFn",
+          "at": "src/evp/rand.rs",
+          "authority": "OSSL_FUNC_rand_get_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "RandGetCtxParamsFn",
+          "at": "src/evp/rand.rs",
+          "authority": "OSSL_FUNC_rand_get_ctx_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "RandSetCtxParamsFn",
+          "at": "src/evp/rand.rs",
+          "authority": "OSSL_FUNC_rand_set_ctx_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "RandVerifyZeroizationFn",
+          "at": "src/evp/rand.rs",
+          "authority": "OSSL_FUNC_rand_verify_zeroization_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "RandGetSeedFn",
+          "at": "src/evp/rand.rs",
+          "authority": "OSSL_FUNC_rand_get_seed_fn",
+          "authority_signature": "fptr(int:8:u; ptr(opaque), ptr(ptr(int:1:u)), int:4:s, int:8:u, int:8:u, int:4:s, ptr(const(int:1:u)), int:8:u)",
+          "crate_signature": "fptr(int:8:u; ptr(opaque), ptr(ptr(int:1:u)), int:4:s, int:8:u, int:8:u, int:4:s, ptr(const(int:1:u)), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "RandClearSeedFn",
+          "at": "src/evp/rand.rs",
+          "authority": "OSSL_FUNC_rand_clear_seed_fn",
+          "authority_signature": "fptr(void; ptr(opaque), ptr(int:1:u), int:8:u)",
+          "crate_signature": "fptr(void; ptr(opaque), ptr(int:1:u), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureNewctxFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_newctx_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque), ptr(const(int:1:s)))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque), ptr(const(int:1:s)))",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureSignInitFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_sign_init_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureSignFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_sign_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), int:8:u, ptr(const(int:1:u)), int:8:u)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), int:8:u, ptr(const(int:1:u)), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureSignMessageInitFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_sign_message_init_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureSignMessageUpdateFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_sign_message_update_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureSignMessageFinalFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_sign_message_final_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), int:8:u)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureVerifyInitFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_verify_init_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureVerifyFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_verify_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u, ptr(const(int:1:u)), int:8:u)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u, ptr(const(int:1:u)), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureVerifyMessageInitFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_verify_message_init_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureVerifyMessageUpdateFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_verify_message_update_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureVerifyMessageFinalFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_verify_message_final_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureVerifyRecoverInitFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_verify_recover_init_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureVerifyRecoverFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_verify_recover_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), int:8:u, ptr(const(int:1:u)), int:8:u)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), int:8:u, ptr(const(int:1:u)), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureDigestSignInitFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_digest_sign_init_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:s)), ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:s)), ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureDigestSignUpdateFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_digest_sign_update_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureDigestSignFinalFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_digest_sign_final_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), int:8:u)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureDigestSignFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_digest_sign_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), int:8:u, ptr(const(int:1:u)), int:8:u)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:u), ptr(int:8:u), int:8:u, ptr(const(int:1:u)), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureDigestVerifyInitFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_digest_verify_init_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:s)), ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:s)), ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureDigestVerifyUpdateFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_digest_verify_update_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureDigestVerifyFinalFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_digest_verify_final_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureDigestVerifyFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_digest_verify_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u, ptr(const(int:1:u)), int:8:u)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:u)), int:8:u, ptr(const(int:1:u)), int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureFreectxFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_freectx_fn",
+          "authority_signature": "fptr(void; ptr(opaque))",
+          "crate_signature": "fptr(void; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureDupctxFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_dupctx_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureGetCtxParamsFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_get_ctx_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureGettableCtxParamsFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_gettable_ctx_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureSetCtxParamsFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_set_ctx_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureSettableCtxParamsFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_settable_ctx_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureGetCtxMdParamsFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_get_ctx_md_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureGettableCtxMdParamsFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_gettable_ctx_md_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureSetCtxMdParamsFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_set_ctx_md_params_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureSettableCtxMdParamsFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_settable_ctx_md_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "SignatureQueryKeyTypesFn",
+          "at": "src/evp/signature.rs",
+          "authority": "OSSL_FUNC_signature_query_key_types_fn",
+          "authority_signature": "fptr(ptr(ptr(const(int:1:s))); )",
+          "crate_signature": "fptr(ptr(ptr(const(int:1:s))); )",
+          "how": "convention"
+        },
+        {
+          "alias": "SkeymgmtFreeFn",
+          "at": "src/evp/skeymgmt.rs",
+          "authority": "OSSL_FUNC_skeymgmt_free_fn",
+          "authority_signature": "fptr(void; ptr(opaque))",
+          "crate_signature": "fptr(void; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "SkeymgmtImportFn",
+          "at": "src/evp/skeymgmt.rs",
+          "authority": "OSSL_FUNC_skeymgmt_import_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque), int:4:s, ptr(const(opaque)))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque), int:4:s, ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "SkeymgmtExportFn",
+          "at": "src/evp/skeymgmt.rs",
+          "authority": "OSSL_FUNC_skeymgmt_export_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), int:4:s, fptr(int:4:s; ptr(const(opaque)), ptr(opaque)), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), int:4:s, fptr(int:4:s; ptr(const(opaque)), ptr(opaque)), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "SkeymgmtImpSettableParamsFn",
+          "at": "src/evp/skeymgmt.rs",
+          "authority": "OSSL_FUNC_skeymgmt_imp_settable_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "SkeymgmtGenSettableParamsFn",
+          "at": "src/evp/skeymgmt.rs",
+          "authority": "OSSL_FUNC_skeymgmt_gen_settable_params_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "SkeymgmtGenerateFn",
+          "at": "src/evp/skeymgmt.rs",
+          "authority": "OSSL_FUNC_skeymgmt_generate_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "SkeymgmtGetKeyIdFn",
+          "at": "src/evp/skeymgmt.rs",
+          "authority": "OSSL_FUNC_skeymgmt_get_key_id_fn",
+          "authority_signature": "fptr(ptr(const(int:1:s)); ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(int:1:s)); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "ProviderRandomBytesFn",
+          "at": "src/provider/activate.rs",
+          "authority": "OSSL_FUNC_provider_random_bytes_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), int:4:s, ptr(opaque), int:8:u, int:4:u)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), int:4:s, ptr(opaque), int:8:u, int:4:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "CoreGetLibCtxFn",
+          "at": "src/provider/child.rs",
+          "authority": "OSSL_FUNC_core_get_libctx_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(const(opaque)))",
+          "crate_signature": "fptr(ptr(opaque); ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "RegisterChildCbFn",
+          "at": "src/provider/child.rs",
+          "authority": "OSSL_FUNC_provider_register_child_cb_fn",
+          "authority_signature": "fptr(int:4:s; ptr(const(opaque)), fptr(int:4:s; ptr(const(opaque)), ptr(opaque)), fptr(int:4:s; ptr(const(opaque)), ptr(opaque)), fptr(int:4:s; ptr(const(int:1:s)), ptr(opaque)), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(const(opaque)), fptr(int:4:s; ptr(const(opaque)), ptr(opaque)), fptr(int:4:s; ptr(const(opaque)), ptr(opaque)), fptr(int:4:s; ptr(const(int:1:s)), ptr(opaque)), ptr(opaque))",
+          "how": "documented"
+        },
+        {
+          "alias": "DeregisterChildCbFn",
+          "at": "src/provider/child.rs",
+          "authority": "OSSL_FUNC_provider_deregister_child_cb_fn",
+          "authority_signature": "fptr(void; ptr(const(opaque)))",
+          "crate_signature": "fptr(void; ptr(const(opaque)))",
+          "how": "documented"
+        },
+        {
+          "alias": "ChildNameFn",
+          "at": "src/provider/child.rs",
+          "authority": "OSSL_FUNC_provider_name_fn",
+          "authority_signature": "fptr(ptr(const(int:1:s)); ptr(const(opaque)))",
+          "crate_signature": "fptr(ptr(const(int:1:s)); ptr(const(opaque)))",
+          "how": "documented"
+        },
+        {
+          "alias": "ChildGet0ProviderCtxFn",
+          "at": "src/provider/child.rs",
+          "authority": "OSSL_FUNC_provider_get0_provider_ctx_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(const(opaque)))",
+          "crate_signature": "fptr(ptr(opaque); ptr(const(opaque)))",
+          "how": "documented"
+        },
+        {
+          "alias": "ChildGet0DispatchFn",
+          "at": "src/provider/child.rs",
+          "authority": "OSSL_FUNC_provider_get0_dispatch_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(const(opaque)))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(const(opaque)))",
+          "how": "documented"
+        },
+        {
+          "alias": "ChildUpRefFn",
+          "at": "src/provider/child.rs",
+          "authority": "OSSL_FUNC_provider_up_ref_fn",
+          "authority_signature": "fptr(int:4:s; ptr(const(opaque)), int:4:s)",
+          "crate_signature": "fptr(int:4:s; ptr(const(opaque)), int:4:s)",
+          "how": "documented"
+        },
+        {
+          "alias": "ChildFreeFn",
+          "at": "src/provider/child.rs",
+          "authority": "OSSL_FUNC_provider_free_fn",
+          "authority_signature": "fptr(int:4:s; ptr(const(opaque)), int:4:s)",
+          "crate_signature": "fptr(int:4:s; ptr(const(opaque)), int:4:s)",
+          "how": "documented"
+        },
+        {
+          "alias": "GetReasonStringsFn",
+          "at": "src/provider/init.rs",
+          "authority": "OSSL_FUNC_provider_get_reason_strings_fn",
+          "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque))",
+          "how": "documented"
+        },
+        {
+          "alias": "ProviderInitFn",
+          "at": "src/provider/mod.rs",
+          "authority": "OSSL_provider_init_fn",
+          "authority_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(const(opaque)), ptr(ptr(const(opaque))), ptr(ptr(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(const(opaque)), ptr(ptr(const(opaque))), ptr(ptr(opaque)))",
+          "how": "explicit"
+        },
+        {
+          "alias": "BioInfoCb",
+          "at": "src/runtime/bio/mod.rs",
+          "authority": "BIO_info_cb",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), int:4:s, int:4:s)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), int:4:s, int:4:s)",
+          "how": "explicit"
+        },
+        {
+          "alias": "BioCallbackFn",
+          "at": "src/runtime/bio/mod.rs",
+          "authority": "BIO_callback_fn",
+          "authority_signature": "fptr(int:8:s; ptr(opaque), int:4:s, ptr(const(int:1:s)), int:4:s, int:8:s, int:8:s)",
+          "crate_signature": "fptr(int:8:s; ptr(opaque), int:4:s, ptr(const(int:1:s)), int:4:s, int:8:s, int:8:s)",
+          "how": "explicit"
+        },
+        {
+          "alias": "BioCallbackExFn",
+          "at": "src/runtime/bio/mod.rs",
+          "authority": "BIO_callback_fn_ex",
+          "authority_signature": "fptr(int:8:s; ptr(opaque), int:4:s, ptr(const(int:1:s)), int:8:u, int:4:s, int:8:s, int:4:s, ptr(int:8:u))",
+          "crate_signature": "fptr(int:8:s; ptr(opaque), int:4:s, ptr(const(int:1:s)), int:8:u, int:4:s, int:8:s, int:4:s, ptr(int:8:u))",
+          "how": "explicit"
+        },
+        {
+          "alias": "BioPutsFn",
+          "at": "src/runtime/bio/mod.rs",
+          "authority": "OSSL_FUNC_BIO_puts_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:s)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:s)))",
+          "how": "convention"
+        },
+        {
+          "alias": "BioGetsFn",
+          "at": "src/runtime/bio/mod.rs",
+          "authority": "OSSL_FUNC_BIO_gets_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:s), int:4:s)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(int:1:s), int:4:s)",
+          "how": "convention"
+        },
+        {
+          "alias": "ConfInitFn",
+          "at": "src/runtime/confmod/mod.rs",
+          "authority": "conf_init_func",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "how": "explicit"
+        },
+        {
+          "alias": "NewFunc",
+          "at": "src/runtime/ex_data.rs",
+          "authority": "CRYPTO_EX_new",
+          "authority_signature": "fptr(void; ptr(opaque), ptr(opaque), ptr(opaque), int:4:s, int:8:s, ptr(opaque))",
+          "crate_signature": "fptr(void; ptr(opaque), ptr(opaque), ptr(opaque), int:4:s, int:8:s, ptr(opaque))",
+          "how": "explicit"
+        },
+        {
+          "alias": "DupFunc",
+          "at": "src/runtime/ex_data.rs",
+          "authority": "CRYPTO_EX_dup",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)), ptr(ptr(opaque)), int:4:s, int:8:s, ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)), ptr(ptr(opaque)), int:4:s, int:8:s, ptr(opaque))",
+          "how": "explicit"
+        },
+        {
+          "alias": "MallocFn",
+          "at": "src/runtime/mem.rs",
+          "authority": "CRYPTO_malloc_fn",
+          "authority_signature": "fptr(ptr(opaque); int:8:u, ptr(const(int:1:s)), int:4:s)",
+          "crate_signature": "fptr(ptr(opaque); int:8:u, ptr(const(int:1:s)), int:4:s)",
+          "how": "explicit"
+        },
+        {
+          "alias": "ReallocFn",
+          "at": "src/runtime/mem.rs",
+          "authority": "CRYPTO_realloc_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque), int:8:u, ptr(const(int:1:s)), int:4:s)",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque), int:8:u, ptr(const(int:1:s)), int:4:s)",
+          "how": "explicit"
+        },
+        {
+          "alias": "FreeFn",
+          "at": "src/runtime/mem.rs",
+          "authority": "CRYPTO_free_fn",
+          "authority_signature": "fptr(void; ptr(opaque), ptr(const(int:1:s)), int:4:s)",
+          "crate_signature": "fptr(void; ptr(opaque), ptr(const(int:1:s)), int:4:s)",
+          "how": "explicit"
+        },
+        {
+          "alias": "ThreadStopHandlerFn",
+          "at": "src/runtime/thread_events.rs",
+          "authority": "OSSL_thread_stop_handler_fn",
+          "authority_signature": "fptr(void; ptr(opaque))",
+          "crate_signature": "fptr(void; ptr(opaque))",
+          "how": "explicit"
+        },
+        {
+          "alias": "OsslTraceCb",
+          "at": "src/runtime/trace.rs",
+          "authority": "OSSL_trace_cb",
+          "authority_signature": "fptr(int:8:u; ptr(const(int:1:s)), int:8:u, int:4:s, int:4:s, ptr(opaque))",
+          "crate_signature": "fptr(int:8:u; ptr(const(int:1:s)), int:8:u, int:4:s, int:4:s, ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "OsslCallback",
+          "at": "src/selftest/mod.rs",
+          "authority": "OSSL_CALLBACK",
+          "authority_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "OsslIndicatorCallback",
+          "at": "src/selftest/mod.rs",
+          "authority": "OSSL_INDICATOR_CALLBACK",
+          "authority_signature": "fptr(int:4:s; ptr(const(int:1:s)), ptr(const(int:1:s)), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(const(int:1:s)), ptr(const(int:1:s)), ptr(const(opaque)))",
+          "how": "convention"
+        }
+      ],
+      "mismatches": [],
+      "not_a_dispatch": [
+        {
+          "alias": "Rfunc",
+          "at": "src/asn1/a_mbstr.rs",
+          "why": "not an authority type: a crate-local callback shape with no header counterpart"
+        },
+        {
+          "alias": "CharIo",
+          "at": "src/asn1/a_strex.rs",
+          "why": "not an authority type: a crate-local callback shape with no header counterpart"
+        },
+        {
+          "alias": "NistReduce",
+          "at": "src/bn/nist.rs",
+          "why": "not an authority type: a crate-local callback shape with no header counterpart"
+        },
+        {
+          "alias": "DsoNameConverterFunc",
+          "at": "src/dso/mod.rs",
+          "why": "not a provider dispatch: declared in `include/internal/dso.h`, which is not installed, so the atlas has no record of it"
+        },
+        {
+          "alias": "DsoMergerFunc",
+          "at": "src/dso/mod.rs",
+          "why": "not a provider dispatch: declared in `include/internal/dso.h`, which is not installed, so the atlas has no record of it"
+        },
+        {
+          "alias": "AlgorithmPreFn",
+          "at": "src/evp/algorithm.rs",
+          "why": "not a provider dispatch: the authority declares it as a member of `OSSL_METHOD_CONSTRUCT_METHOD` (`include/internal/core.h:41-47`), a struct of plain function pointers in an internal header, so there is no typedef for the atlas to record"
+        },
+        {
+          "alias": "AlgorithmReserveStoreFn",
+          "at": "src/evp/algorithm.rs",
+          "why": "not a provider dispatch: the authority declares it as a member of `OSSL_METHOD_CONSTRUCT_METHOD` (`include/internal/core.h:41-47`), a struct of plain function pointers in an internal header, so there is no typedef for the atlas to record"
+        },
+        {
+          "alias": "AlgorithmFn",
+          "at": "src/evp/algorithm.rs",
+          "why": "not a provider dispatch: the authority declares it as a member of `OSSL_METHOD_CONSTRUCT_METHOD` (`include/internal/core.h:41-47`), a struct of plain function pointers in an internal header, so there is no typedef for the atlas to record"
+        },
+        {
+          "alias": "AlgorithmUnreserveStoreFn",
+          "at": "src/evp/algorithm.rs",
+          "why": "not a provider dispatch: the authority declares it as a member of `OSSL_METHOD_CONSTRUCT_METHOD` (`include/internal/core.h:41-47`), a struct of plain function pointers in an internal header, so there is no typedef for the atlas to record"
+        },
+        {
+          "alias": "AlgorithmPostFn",
+          "at": "src/evp/algorithm.rs",
+          "why": "not a provider dispatch: the authority declares it as a member of `OSSL_METHOD_CONSTRUCT_METHOD` (`include/internal/core.h:41-47`), a struct of plain function pointers in an internal header, so there is no typedef for the atlas to record"
+        },
+        {
+          "alias": "CipherLegacyInitFn",
+          "at": "src/evp/cipher.rs",
+          "why": "not a provider dispatch: a member of `EVP_CIPHER`'s or `EVP_MD`'s legacy callback list in `evp.h`, declared as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
+          "alias": "CipherLegacyDoFn",
+          "at": "src/evp/cipher.rs",
+          "why": "not a provider dispatch: a member of `EVP_CIPHER`'s or `EVP_MD`'s legacy callback list in `evp.h`, declared as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
+          "alias": "CipherLegacyCleanupFn",
+          "at": "src/evp/cipher.rs",
+          "why": "not a provider dispatch: a member of `EVP_CIPHER`'s or `EVP_MD`'s legacy callback list in `evp.h`, declared as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
+          "alias": "CipherLegacyAsn1Fn",
+          "at": "src/evp/cipher.rs",
+          "why": "not a provider dispatch: a member of `EVP_CIPHER`'s or `EVP_MD`'s legacy callback list in `evp.h`, declared as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
+          "alias": "CipherLegacyCtrlFn",
+          "at": "src/evp/cipher.rs",
+          "why": "not a provider dispatch: a member of `EVP_CIPHER`'s or `EVP_MD`'s legacy callback list in `evp.h`, declared as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
+          "alias": "CipherDoAllFn",
+          "at": "src/evp/cipher.rs",
+          "why": "not a provider dispatch: a member of `EVP_CIPHER`'s or `EVP_MD`'s legacy callback list in `evp.h`, declared as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
+          "alias": "MdLegacyInitFn",
+          "at": "src/evp/digest.rs",
+          "why": "not a provider dispatch: a member of `EVP_CIPHER`'s or `EVP_MD`'s legacy callback list in `evp.h`, declared as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
+          "alias": "MdLegacyUpdateFn",
+          "at": "src/evp/digest.rs",
+          "why": "not a provider dispatch: a member of `EVP_CIPHER`'s or `EVP_MD`'s legacy callback list in `evp.h`, declared as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
+          "alias": "MdLegacyFinalFn",
+          "at": "src/evp/digest.rs",
+          "why": "not a provider dispatch: a member of `EVP_CIPHER`'s or `EVP_MD`'s legacy callback list in `evp.h`, declared as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
+          "alias": "MdLegacyCopyFn",
+          "at": "src/evp/digest.rs",
+          "why": "not a provider dispatch: a member of `EVP_CIPHER`'s or `EVP_MD`'s legacy callback list in `evp.h`, declared as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
+          "alias": "MdLegacyCleanupFn",
+          "at": "src/evp/digest.rs",
+          "why": "not a provider dispatch: a member of `EVP_CIPHER`'s or `EVP_MD`'s legacy callback list in `evp.h`, declared as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
+          "alias": "MdLegacyCtrlFn",
+          "at": "src/evp/digest.rs",
+          "why": "not a provider dispatch: a member of `EVP_CIPHER`'s or `EVP_MD`'s legacy callback list in `evp.h`, declared as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
+          "alias": "MdDoAllFn",
+          "at": "src/evp/digest.rs",
+          "why": "not a provider dispatch: a member of `EVP_CIPHER`'s or `EVP_MD`'s legacy callback list in `evp.h`, declared as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
+          "alias": "MethodFromAlgorithmFn",
+          "at": "src/evp/fetch.rs",
+          "why": "not a provider dispatch: the authority declares it as a member of `OSSL_METHOD_CONSTRUCT_METHOD` (`include/internal/core.h:41-47`), a struct of plain function pointers in an internal header, so there is no typedef for the atlas to record"
+        },
+        {
+          "alias": "GenericDoAllFn",
+          "at": "src/evp/fetch.rs",
+          "why": "not a provider dispatch: the crate's own do-all callback, constructed from `OSSL_METHOD_CONSTRUCT_METHOD`; the authority has no named type for it"
+        },
+        {
+          "alias": "McmGetTmpStoreFn",
+          "at": "src/evp/method_store.rs",
+          "why": "not a provider dispatch: the authority declares it as a member of `OSSL_METHOD_CONSTRUCT_METHOD` (`include/internal/core.h:41-47`), a struct of plain function pointers in an internal header, so there is no typedef for the atlas to record"
+        },
+        {
+          "alias": "McmLockStoreFn",
+          "at": "src/evp/method_store.rs",
+          "why": "not a provider dispatch: the authority declares it as a member of `OSSL_METHOD_CONSTRUCT_METHOD` (`include/internal/core.h:41-47`), a struct of plain function pointers in an internal header, so there is no typedef for the atlas to record"
+        },
+        {
+          "alias": "McmUnlockStoreFn",
+          "at": "src/evp/method_store.rs",
+          "why": "not a provider dispatch: the authority declares it as a member of `OSSL_METHOD_CONSTRUCT_METHOD` (`include/internal/core.h:41-47`), a struct of plain function pointers in an internal header, so there is no typedef for the atlas to record"
+        },
+        {
+          "alias": "McmGetFn",
+          "at": "src/evp/method_store.rs",
+          "why": "not a provider dispatch: the authority declares it as a member of `OSSL_METHOD_CONSTRUCT_METHOD` (`include/internal/core.h:41-47`), a struct of plain function pointers in an internal header, so there is no typedef for the atlas to record"
+        },
+        {
+          "alias": "McmPutFn",
+          "at": "src/evp/method_store.rs",
+          "why": "not a provider dispatch: the authority declares it as a member of `OSSL_METHOD_CONSTRUCT_METHOD` (`include/internal/core.h:41-47`), a struct of plain function pointers in an internal header, so there is no typedef for the atlas to record"
+        },
+        {
+          "alias": "McmConstructFn",
+          "at": "src/evp/method_store.rs",
+          "why": "not a provider dispatch: the authority declares it as a member of `OSSL_METHOD_CONSTRUCT_METHOD` (`include/internal/core.h:41-47`), a struct of plain function pointers in an internal header, so there is no typedef for the atlas to record"
+        },
+        {
+          "alias": "McmDestructFn",
+          "at": "src/evp/method_store.rs",
+          "why": "not a provider dispatch: the authority declares it as a member of `OSSL_METHOD_CONSTRUCT_METHOD` (`include/internal/core.h:41-47`), a struct of plain function pointers in an internal header, so there is no typedef for the atlas to record"
+        },
+        {
+          "alias": "PkeyMethInitFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`. The atlas records no typedef for them because its universe is the installed public surface and that header is internal: 307 of the 465 struct records have no body at all and only 8 of the 158 complete ones have a function-pointer field, none of them this one. So the check these need is a second Clang pass over the internal headers or a generated C assertion, not a consumer of `structs.json` -- see docs/DECISIONS.md D185"
+        },
+        {
+          "alias": "PkeyMethCleanupFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`. The atlas records no typedef for them because its universe is the installed public surface and that header is internal: 307 of the 465 struct records have no body at all and only 8 of the 158 complete ones have a function-pointer field, none of them this one. So the check these need is a second Clang pass over the internal headers or a generated C assertion, not a consumer of `structs.json` -- see docs/DECISIONS.md D185"
+        },
+        {
+          "alias": "PkeyMethCopyFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`. The atlas records no typedef for them because its universe is the installed public surface and that header is internal: 307 of the 465 struct records have no body at all and only 8 of the 158 complete ones have a function-pointer field, none of them this one. So the check these need is a second Clang pass over the internal headers or a generated C assertion, not a consumer of `structs.json` -- see docs/DECISIONS.md D185"
+        },
+        {
+          "alias": "PkeyMethParamgenFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`. The atlas records no typedef for them because its universe is the installed public surface and that header is internal: 307 of the 465 struct records have no body at all and only 8 of the 158 complete ones have a function-pointer field, none of them this one. So the check these need is a second Clang pass over the internal headers or a generated C assertion, not a consumer of `structs.json` -- see docs/DECISIONS.md D185"
+        },
+        {
+          "alias": "PkeyMethSignFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`. The atlas records no typedef for them because its universe is the installed public surface and that header is internal: 307 of the 465 struct records have no body at all and only 8 of the 158 complete ones have a function-pointer field, none of them this one. So the check these need is a second Clang pass over the internal headers or a generated C assertion, not a consumer of `structs.json` -- see docs/DECISIONS.md D185"
+        },
+        {
+          "alias": "PkeyMethCryptFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`. The atlas records no typedef for them because its universe is the installed public surface and that header is internal: 307 of the 465 struct records have no body at all and only 8 of the 158 complete ones have a function-pointer field, none of them this one. So the check these need is a second Clang pass over the internal headers or a generated C assertion, not a consumer of `structs.json` -- see docs/DECISIONS.md D185"
+        },
+        {
+          "alias": "PkeyMethVerifyFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`. The atlas records no typedef for them because its universe is the installed public surface and that header is internal: 307 of the 465 struct records have no body at all and only 8 of the 158 complete ones have a function-pointer field, none of them this one. So the check these need is a second Clang pass over the internal headers or a generated C assertion, not a consumer of `structs.json` -- see docs/DECISIONS.md D185"
+        },
+        {
+          "alias": "PkeyMethVerifyRecoverFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`. The atlas records no typedef for them because its universe is the installed public surface and that header is internal: 307 of the 465 struct records have no body at all and only 8 of the 158 complete ones have a function-pointer field, none of them this one. So the check these need is a second Clang pass over the internal headers or a generated C assertion, not a consumer of `structs.json` -- see docs/DECISIONS.md D185"
+        },
+        {
+          "alias": "PkeyMethSignctxInitFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`. The atlas records no typedef for them because its universe is the installed public surface and that header is internal: 307 of the 465 struct records have no body at all and only 8 of the 158 complete ones have a function-pointer field, none of them this one. So the check these need is a second Clang pass over the internal headers or a generated C assertion, not a consumer of `structs.json` -- see docs/DECISIONS.md D185"
+        },
+        {
+          "alias": "PkeyMethSignctxFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`. The atlas records no typedef for them because its universe is the installed public surface and that header is internal: 307 of the 465 struct records have no body at all and only 8 of the 158 complete ones have a function-pointer field, none of them this one. So the check these need is a second Clang pass over the internal headers or a generated C assertion, not a consumer of `structs.json` -- see docs/DECISIONS.md D185"
+        },
+        {
+          "alias": "PkeyMethVerifyctxFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`. The atlas records no typedef for them because its universe is the installed public surface and that header is internal: 307 of the 465 struct records have no body at all and only 8 of the 158 complete ones have a function-pointer field, none of them this one. So the check these need is a second Clang pass over the internal headers or a generated C assertion, not a consumer of `structs.json` -- see docs/DECISIONS.md D185"
+        },
+        {
+          "alias": "PkeyMethDeriveFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`. The atlas records no typedef for them because its universe is the installed public surface and that header is internal: 307 of the 465 struct records have no body at all and only 8 of the 158 complete ones have a function-pointer field, none of them this one. So the check these need is a second Clang pass over the internal headers or a generated C assertion, not a consumer of `structs.json` -- see docs/DECISIONS.md D185"
+        },
+        {
+          "alias": "PkeyMethCtrlFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`. The atlas records no typedef for them because its universe is the installed public surface and that header is internal: 307 of the 465 struct records have no body at all and only 8 of the 158 complete ones have a function-pointer field, none of them this one. So the check these need is a second Clang pass over the internal headers or a generated C assertion, not a consumer of `structs.json` -- see docs/DECISIONS.md D185"
+        },
+        {
+          "alias": "PkeyMethCtrlStrFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`. The atlas records no typedef for them because its universe is the installed public surface and that header is internal: 307 of the 465 struct records have no body at all and only 8 of the 158 complete ones have a function-pointer field, none of them this one. So the check these need is a second Clang pass over the internal headers or a generated C assertion, not a consumer of `structs.json` -- see docs/DECISIONS.md D185"
+        },
+        {
+          "alias": "PkeyMethDigestsignFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`. The atlas records no typedef for them because its universe is the installed public surface and that header is internal: 307 of the 465 struct records have no body at all and only 8 of the 158 complete ones have a function-pointer field, none of them this one. So the check these need is a second Clang pass over the internal headers or a generated C assertion, not a consumer of `structs.json` -- see docs/DECISIONS.md D185"
+        },
+        {
+          "alias": "PkeyMethDigestverifyFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`. The atlas records no typedef for them because its universe is the installed public surface and that header is internal: 307 of the 465 struct records have no body at all and only 8 of the 158 complete ones have a function-pointer field, none of them this one. So the check these need is a second Clang pass over the internal headers or a generated C assertion, not a consumer of `structs.json` -- see docs/DECISIONS.md D185"
+        },
+        {
+          "alias": "PkeyMethCheckFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`. The atlas records no typedef for them because its universe is the installed public surface and that header is internal: 307 of the 465 struct records have no body at all and only 8 of the 158 complete ones have a function-pointer field, none of them this one. So the check these need is a second Clang pass over the internal headers or a generated C assertion, not a consumer of `structs.json` -- see docs/DECISIONS.md D185"
+        },
+        {
+          "alias": "PkeyMethDigestCustomFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`. The atlas records no typedef for them because its universe is the installed public surface and that header is internal: 307 of the 465 struct records have no body at all and only 8 of the 158 complete ones have a function-pointer field, none of them this one. So the check these need is a second Clang pass over the internal headers or a generated C assertion, not a consumer of `structs.json` -- see docs/DECISIONS.md D185"
+        },
+        {
+          "alias": "FixupArgsFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: one of `ctrl_params_translate.c`'s two function *types*, `fixup_args_fn` and `cleanup_args_fn`, which the translation tables store as function pointers and which the authority declares as bare typedefs rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
+          "alias": "CleanupArgsFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: one of `ctrl_params_translate.c`'s two function *types*, `fixup_args_fn` and `cleanup_args_fn`, which the translation tables store as function pointers and which the authority declares as bare typedefs rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
+          "alias": "XlatGetNameFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `fix_cipher_md`'s two function-pointer parameters (`ctrl_params_translate.c:748-751`), which the authority spells inline in its own signature rather than as typedefs; the crate names them to parameterise one function over `EVP_CIPHER` and `EVP_MD`"
+        },
+        {
+          "alias": "XlatGetByNameFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `fix_cipher_md`'s two function-pointer parameters (`ctrl_params_translate.c:748-751`), which the authority spells inline in its own signature rather than as typedefs; the crate names them to parameterise one function over `EVP_CIPHER` and `EVP_MD`"
+        },
+        {
+          "alias": "MethodUpRefFn",
+          "at": "src/property/store.rs",
+          "why": "not a provider dispatch: the crate's own method-store up-ref callback, constructed from `OSSL_METHOD_CONSTRUCT_METHOD`; the authority has no named type for it"
+        },
+        {
+          "alias": "MethodFreeFn",
+          "at": "src/property/store.rs",
+          "why": "not a provider dispatch: the crate's own method-store free callback, constructed from `OSSL_METHOD_CONSTRUCT_METHOD`; the authority has no named type for it"
+        },
+        {
+          "alias": "MethodDoAllFn",
+          "at": "src/property/store.rs",
+          "why": "not a provider dispatch: the crate's own method-store traversal callback, constructed from `OSSL_METHOD_CONSTRUCT_METHOD`; the authority has no named type for it"
+        },
+        {
+          "alias": "ProviderDoAllFn",
+          "at": "src/provider/activate.rs",
+          "why": "not a provider dispatch: the crate's own provider-table traversal callback; the authority has no named type for it"
+        },
+        {
+          "alias": "CreateChildCbFn",
+          "at": "src/provider/child.rs",
+          "why": "not a provider dispatch: the type of a parameter of `OSSL_FUNC_provider_register_child_cb_fn`, spelled `int (*create_cb)(const OSSL_CORE_HANDLE *, const OSSL_DISPATCH *, void *)` inline in the header rather than as a typedef"
+        },
+        {
+          "alias": "RemoveChildCbFn",
+          "at": "src/provider/child.rs",
+          "why": "not a provider dispatch: the type of a parameter of `OSSL_FUNC_provider_register_child_cb_fn`, spelled `void (*remove_cb)(const OSSL_CORE_HANDLE *, void *)` inline in the header rather than as a typedef"
+        },
+        {
+          "alias": "GlobalPropsCbFn",
+          "at": "src/provider/child.rs",
+          "why": "not a provider dispatch: the type of a parameter of `OSSL_FUNC_provider_register_child_cb_fn`, spelled `int (*global_props_cb)(const void *, const OSSL_PARAM *)` inline in the header rather than as a typedef"
+        },
+        {
+          "alias": "SkCompFn",
+          "at": "src/provider/mod.rs",
+          "why": "not a provider dispatch: `safestack.h.in`'s `sk_*_compfunc` / `freefunc` / `copyfunc` macros generate it per type, so there is no single typedef"
+        },
+        {
+          "alias": "SkFreeFn",
+          "at": "src/provider/mod.rs",
+          "why": "not a provider dispatch: `safestack.h.in`'s `sk_*_compfunc` / `freefunc` / `copyfunc` macros generate it per type, so there is no single typedef"
+        },
+        {
+          "alias": "SkCopyFn",
+          "at": "src/provider/mod.rs",
+          "why": "not a provider dispatch: `safestack.h.in`'s `sk_*_compfunc` / `freefunc` / `copyfunc` macros generate it per type, so there is no single typedef"
+        },
+        {
+          "alias": "DumpCb",
+          "at": "src/runtime/bio/dump.rs",
+          "why": "not a provider dispatch: the type of a parameter of `BIO_dump_cb`, spelled `int (*cb)(const void *, size_t, void *)` inline in the header rather than as a typedef"
+        },
+        {
+          "alias": "BioWriteFn",
+          "at": "src/runtime/bio/mod.rs",
+          "why": "not a provider dispatch: the type of a parameter of `BIO_meth_set_write`, spelled `int (*write)(BIO *, const char *, int)` inline in the header rather than as a typedef"
+        },
+        {
+          "alias": "BioWriteExFn",
+          "at": "src/runtime/bio/mod.rs",
+          "why": "not a provider dispatch: the type of a parameter of `BIO_meth_set_write_ex`, spelled `int (*bwrite)(BIO *, const char *, size_t, size_t *)` inline in the header rather than as a typedef"
+        },
+        {
+          "alias": "BioReadFn",
+          "at": "src/runtime/bio/mod.rs",
+          "why": "not a provider dispatch: the type of a parameter of `BIO_meth_set_read`, spelled `int (*read)(BIO *, char *, int)` inline in the header rather than as a typedef"
+        },
+        {
+          "alias": "BioReadExFn",
+          "at": "src/runtime/bio/mod.rs",
+          "why": "not a provider dispatch: the type of a parameter of `BIO_meth_set_read_ex`, spelled `int (*bread)(BIO *, char *, size_t, size_t *)` inline in the header rather than as a typedef"
+        },
+        {
+          "alias": "BioCtrlFn",
+          "at": "src/runtime/bio/mod.rs",
+          "why": "not a provider dispatch: the type of a parameter of `BIO_meth_set_ctrl`, spelled `long (*ctrl)(BIO *, int, long, void *)` inline in the header rather than as a typedef"
+        },
+        {
+          "alias": "BioCreateFn",
+          "at": "src/runtime/bio/mod.rs",
+          "why": "not a provider dispatch: the type of a parameter of `BIO_meth_set_create`, spelled `int (*create)(BIO *)` inline in the header rather than as a typedef"
+        },
+        {
+          "alias": "BioDestroyFn",
+          "at": "src/runtime/bio/mod.rs",
+          "why": "not a provider dispatch: the type of a parameter of `BIO_meth_set_destroy`, spelled `int (*destroy)(BIO *)` inline in the header rather than as a typedef"
+        },
+        {
+          "alias": "BioCallbackCtrlFn",
+          "at": "src/runtime/bio/mod.rs",
+          "why": "not a provider dispatch: the type of a parameter of `BIO_meth_set_callback_ctrl`, spelled `long (*callback_ctrl)(BIO *, int, BIO_info_cb *)` inline in the header rather than as a typedef"
+        },
+        {
+          "alias": "BioSendmmsgFn",
+          "at": "src/runtime/bio/mod.rs",
+          "why": "not a provider dispatch: the type of a parameter of `BIO_meth_set_sendmmsg`, spelled `int (*f)(BIO *, BIO_MSG *, size_t, size_t, uint64_t, size_t *)` inline in the header rather than as a typedef"
+        },
+        {
+          "alias": "LhHash",
+          "at": "src/runtime/conf/api.rs",
+          "why": "not a provider dispatch: `lhash.h.in`'s `LHASH_HASH_FN` / `LHASH_COMP_FN` / `LHASH_DOALL*` macros generate it per type, so there is no single typedef"
+        },
+        {
+          "alias": "LhCmp",
+          "at": "src/runtime/conf/api.rs",
+          "why": "not a provider dispatch: `lhash.h.in`'s `LHASH_HASH_FN` / `LHASH_COMP_FN` / `LHASH_DOALL*` macros generate it per type, so there is no single typedef"
+        },
+        {
+          "alias": "ConfCreateFn",
+          "at": "src/runtime/conf/types.rs",
+          "why": "not a provider dispatch: a member of the `CONF_METHOD` vtable, which the atlas records as a struct of plain function pointers rather than as typedefs"
+        },
+        {
+          "alias": "ConfInitFn",
+          "at": "src/runtime/conf/types.rs",
+          "why": "not a provider dispatch: a member of `include/openssl/conftypes.h:21-32`'s `struct conf_method_st`, a plain function pointer rather than an `OSSL_CORE_MAKE_FUNC` declaration"
+        },
+        {
+          "alias": "ConfDestroyFn",
+          "at": "src/runtime/conf/types.rs",
+          "why": "not a provider dispatch: a member of the `CONF_METHOD` vtable, which the atlas records as a struct of plain function pointers rather than as typedefs"
+        },
+        {
+          "alias": "ConfDestroyDataFn",
+          "at": "src/runtime/conf/types.rs",
+          "why": "not a provider dispatch: a member of the `CONF_METHOD` vtable, which the atlas records as a struct of plain function pointers rather than as typedefs"
+        },
+        {
+          "alias": "ConfLoadBioFn",
+          "at": "src/runtime/conf/types.rs",
+          "why": "not a provider dispatch: a member of the `CONF_METHOD` vtable, which the atlas records as a struct of plain function pointers rather than as typedefs"
+        },
+        {
+          "alias": "ConfDumpFn",
+          "at": "src/runtime/conf/types.rs",
+          "why": "not a provider dispatch: a member of the `CONF_METHOD` vtable, which the atlas records as a struct of plain function pointers rather than as typedefs"
+        },
+        {
+          "alias": "ConfIsNumberFn",
+          "at": "src/runtime/conf/types.rs",
+          "why": "not a provider dispatch: a member of the `CONF_METHOD` vtable, which the atlas records as a struct of plain function pointers rather than as typedefs"
+        },
+        {
+          "alias": "ConfToIntFn",
+          "at": "src/runtime/conf/types.rs",
+          "why": "not a provider dispatch: a member of the `CONF_METHOD` vtable, which the atlas records as a struct of plain function pointers rather than as typedefs"
+        },
+        {
+          "alias": "ConfLoadFn",
+          "at": "src/runtime/conf/types.rs",
+          "why": "not a provider dispatch: a member of the `CONF_METHOD` vtable, which the atlas records as a struct of plain function pointers rather than as typedefs"
+        },
+        {
+          "alias": "ConfFinishFn",
+          "at": "src/runtime/confmod/mod.rs",
+          "why": "not a provider dispatch: the crate's `conf_finish_func` equivalent for the `CONF_METHOD` vtable; the authority declares the module finish callback only as a local typedef in `conf.h`, which the atlas does not record"
+        },
+        {
+          "alias": "ErrPrintCb",
+          "at": "src/runtime/err.rs",
+          "why": "not a provider dispatch: the type of a parameter of `ERR_print_errors_cb`, spelled `int (*cb)(const char *, size_t, void *)` inline in the header rather than as a typedef"
+        },
+        {
+          "alias": "HashFunc",
+          "at": "src/runtime/lhash.rs",
+          "why": "not a provider dispatch: `lhash.h.in`'s `LHASH_HASH_FN` / `LHASH_COMP_FN` / `LHASH_DOALL*` macros generate it per type, so there is no single typedef"
+        },
+        {
+          "alias": "CompFunc",
+          "at": "src/runtime/lhash.rs",
+          "why": "not a provider dispatch: `lhash.h.in`'s `LHASH_HASH_FN` / `LHASH_COMP_FN` / `LHASH_DOALL*` macros generate it per type, so there is no single typedef"
+        },
+        {
+          "alias": "HashThunk",
+          "at": "src/runtime/lhash.rs",
+          "why": "not a provider dispatch: `lhash.h.in`'s `LHASH_HASH_FN` / `LHASH_COMP_FN` / `LHASH_DOALL*` macros generate it per type, so there is no single typedef"
+        },
+        {
+          "alias": "CompThunk",
+          "at": "src/runtime/lhash.rs",
+          "why": "not a provider dispatch: `lhash.h.in`'s `LHASH_HASH_FN` / `LHASH_COMP_FN` / `LHASH_DOALL*` macros generate it per type, so there is no single typedef"
+        },
+        {
+          "alias": "DoallFunc",
+          "at": "src/runtime/lhash.rs",
+          "why": "not a provider dispatch: `lhash.h.in`'s `LHASH_HASH_FN` / `LHASH_COMP_FN` / `LHASH_DOALL*` macros generate it per type, so there is no single typedef"
+        },
+        {
+          "alias": "DoallArgFunc",
+          "at": "src/runtime/lhash.rs",
+          "why": "not a provider dispatch: `lhash.h.in`'s `LHASH_HASH_FN` / `LHASH_COMP_FN` / `LHASH_DOALL*` macros generate it per type, so there is no single typedef"
+        },
+        {
+          "alias": "DoallThunk",
+          "at": "src/runtime/lhash.rs",
+          "why": "not a provider dispatch: `lhash.h.in`'s `LHASH_HASH_FN` / `LHASH_COMP_FN` / `LHASH_DOALL*` macros generate it per type, so there is no single typedef"
+        },
+        {
+          "alias": "DoallArgThunk",
+          "at": "src/runtime/lhash.rs",
+          "why": "not a provider dispatch: `lhash.h.in`'s `LHASH_HASH_FN` / `LHASH_COMP_FN` / `LHASH_DOALL*` macros generate it per type, so there is no single typedef"
+        },
+        {
+          "alias": "ObjNameHashFn",
+          "at": "src/runtime/obj.rs",
+          "why": "not a provider dispatch: `include/crypto/objects.h`'s `OBJ_NAME` table member, an internal header the atlas does not record"
+        },
+        {
+          "alias": "ObjNameCmpFn",
+          "at": "src/runtime/obj.rs",
+          "why": "not a provider dispatch: `include/crypto/objects.h`'s `OBJ_NAME` table member, an internal header the atlas does not record"
+        },
+        {
+          "alias": "ObjNameFreeFn",
+          "at": "src/runtime/obj.rs",
+          "why": "not a provider dispatch: `include/crypto/objects.h`'s `OBJ_NAME` table member, an internal header the atlas does not record"
+        },
+        {
+          "alias": "ObjNameDoAllFn",
+          "at": "src/runtime/obj.rs",
+          "why": "not a provider dispatch: the type of a parameter of `OBJ_NAME_do_all`, spelled `void (*fn)(const OBJ_NAME *, void *arg)` inline in the header rather than as a typedef"
+        },
+        {
+          "alias": "RcuCbFn",
+          "at": "src/runtime/rcu.rs",
+          "why": "not a provider dispatch: `include/internal/rcu.h`'s callback shape, in an internal header the atlas does not record"
+        },
+        {
+          "alias": "CompFn",
+          "at": "src/runtime/stack.rs",
+          "why": "not a provider dispatch: `safestack.h.in`'s `sk_*_compfunc` / `freefunc` / `copyfunc` macros generate it per type, so there is no single typedef"
+        },
+        {
+          "alias": "FreeFn",
+          "at": "src/runtime/stack.rs",
+          "why": "not a provider dispatch: `safestack.h.in`'s `sk_*_compfunc` / `freefunc` / `copyfunc` macros generate it per type, so there is no single typedef"
+        },
+        {
+          "alias": "CopyFn",
+          "at": "src/runtime/stack.rs",
+          "why": "not a provider dispatch: `safestack.h.in`'s `sk_*_compfunc` / `freefunc` / `copyfunc` macros generate it per type, so there is no single typedef"
+        },
+        {
+          "alias": "FreeThunk",
+          "at": "src/runtime/stack.rs",
+          "why": "not a provider dispatch: `safestack.h.in`'s `sk_*_compfunc` / `freefunc` / `copyfunc` macros generate it per type, so there is no single typedef"
+        }
+      ],
+      "unlinked": [],
+      "unmapped": []
+    },
+    "what": "every `OSSL_FUNC_*` dispatch identity the crate declares agrees with the authority's recorded macro value, and every Rust function-type alias the crate declares agrees with the canonical form of the authority function-type typedef it implements",
+    "why": "the dispatch contract is numbers and types rather than symbols, so no other instrument reaches it: the prototype court sees only exported declarations, the ABI courts resolve only symbols, and a runtime court sees a wrong identity or a wrong callback arity only if a probe happens to exercise exactly that entry (docs/DECISIONS.md D170 records two landed defects of this shape, and this plane's first run found the same class again -- see D180)"
+  },
+  "generator": "forensics/tools/dispatch_court.py",
+  "inputs": [
+    {
+      "name": "authority-macros",
+      "path": "forensics/atlas/openssl-3.6.4-production/macros.json",
+      "sha256": "99e595fad544d1cff98c5495519db7abe68a34b32e6e97fd29735f9686c846da"
+    },
+    {
+      "name": "authority-typedefs",
+      "path": "forensics/atlas/openssl-3.6.4-production/typedefs.json",
+      "sha256": "af99118d026274d21e18b3c499ec6853eaf463f7491d56e05e934124d1458d83"
+    }
+  ],
+  "kind": "dispatch-court",
+  "schema": "openssl-rs/atlas/dispatch-court/v1"
+}

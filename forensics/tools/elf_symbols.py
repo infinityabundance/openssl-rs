@@ -118,6 +118,70 @@ def elf_defined_external_symbols(data: bytes) -> set[str]:
     return names
 
 
+def elf_undefined_symbols(data: bytes) -> set[str]:
+    """Global/weak symbols a single ELF64 object *references and does not define*.
+
+    Mirrors `nm --undefined-only`: the complement of `elf_defined_external_symbols`
+    over the same two filters, and the reason it exists rather than being derived from
+    the defined set is that the two are read from different sides of different files.
+    A translation unit's undefined set is the exact list of names its object needs from
+    elsewhere in the link, which is a property of the *object* and not of the source: a
+    C body that mentions `standard_methods` has not thereby referenced anything outside
+    its own unit, whereas the table's initialiser has.
+
+    This is the measurement D165 specifies for the D163 class -- "does this unit's
+    object need a symbol that lives in a unit the crate has not transcribed" -- and it
+    is a measurement rather than an inference because the linker's own view of the
+    dependency is what the link will actually require.
+    """
+    if len(data) < 64 or not data.startswith(ELF_MAGIC):
+        raise ElfError("not an ELF object")
+    if data[4] != ELFCLASS64:
+        raise ElfError("only ELFCLASS64 is supported")
+    if data[5] != ELFDATA2LSB:
+        raise ElfError("only little-endian ELF objects are supported")
+
+    (e_shoff,) = struct.unpack_from("<Q", data, 0x28)
+    (e_shentsize, e_shnum, _e_shstrndx) = struct.unpack_from("<HHH", data, 0x3A)
+    if e_shoff == 0 or e_shnum == 0 or e_shentsize != SHEntSize:
+        raise ElfError(f"unusable section table (off={e_shoff} num={e_shnum})")
+
+    sections = []
+    for i in range(e_shnum):
+        base = e_shoff + i * e_shentsize
+        if base + SHEntSize > len(data):
+            raise ElfError("section table runs past the end of the object")
+        (sh_type,) = struct.unpack_from("<I", data, base + 0x04)
+        (sh_offset, sh_size) = struct.unpack_from("<QQ", data, base + 0x18)
+        (sh_link,) = struct.unpack_from("<I", data, base + 0x28)
+        (sh_entsize,) = struct.unpack_from("<Q", data, base + 0x38)
+        sections.append((sh_type, sh_offset, sh_size, sh_link, sh_entsize))
+
+    names: set[str] = set()
+    for sh_type, sh_offset, sh_size, sh_link, sh_entsize in sections:
+        if sh_type != SHT_SYMTAB:
+            continue
+        if sh_entsize != SYMENT_SIZE:
+            raise ElfError(f"unexpected symbol entry size {sh_entsize}")
+        if sh_link >= len(sections):
+            raise ElfError("symbol table links to a missing string table")
+        _, str_off, str_size = sections[sh_link][:3]
+        strtab = data[str_off : str_off + str_size]
+        for j in range(sh_size // SYMENT_SIZE):
+            ent = sh_offset + j * SYMENT_SIZE
+            (st_name, st_info, _st_other, st_shndx) = struct.unpack_from("<IBBH", data, ent)
+            if st_shndx != SHN_UNDEF:
+                continue
+            if (st_info >> 4) not in (STB_GLOBAL, STB_WEAK, STB_GNU_UNIQUE):
+                continue
+            name = _cstring(strtab, st_name)
+            # A weak reference is a *permitted* absence and the link does not require
+            # it; `nm -u` lists it, so it is listed here, and the caller decides.
+            if name:
+                names.add(name)
+    return names
+
+
 def _ar_member_payloads(data: bytes):
     """Yield the payload of each object member of an `ar` archive."""
     off = len(AR_MAGIC)
