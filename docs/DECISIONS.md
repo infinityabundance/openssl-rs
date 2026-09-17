@@ -10975,3 +10975,31 @@ ABI — and is bound to `_` with the reason stated at the site rather than dropp
 authority's parameter list and the decision in one place.
 
 `implemented[libcrypto]` moves 1660 → 1662 and phase 7 to 527 implemented and 259 open.
+
+## D187 — `ctrl_params_translate.c` is one atomic unit, and that is measured rather than assumed
+
+The plan's 7.4c row now carries the slicing, and this entry records why the slicing is *not* by size.
+
+The file is 2,959 lines. Its last 400 hold every export. The type layer (`enum state`'s ten values,
+`enum action`'s three, `struct translation_ctx_st`, `struct translation_st`) and the ~40 `fixup_args`
+functions are unreachable until the two translation tables exist; the tables are ~520 lines of
+designated initialisers that reference the fix functions by name; and the seven entry points read the
+tables. So there is no prefix of the file that is observable, and transcribing a prefix as
+`#[allow(dead_code)]` internals would add ~900 unexercised lines and no evidence.
+
+That is the *opposite* of the unit D184 landed. `EVP_PKEY_METHOD`'s forty accessors each export on
+their own — the struct and six registry functions are the only shared prerequisite — which is why that
+unit was one commit of forty-six exports while this one is one commit of about thirty after five
+slices of work that produce nothing observable until the last.
+
+**Every helper the unit needs is already in the crate**, which is what makes it a transcription rather
+than a dependency wait: the twelve `OSSL_PARAM_construct_*` / `get_*` / `set_*` functions from Phase 6,
+`OSSL_PARAM_allocate_from_text` (`src/params/from_text.rs`), `BN_bn2nativepad` and a `BN_num_bytes`
+equivalent, `EVP_PKEY_CTX_settable_params`, the six `EVP_PKEY_CTX_IS_*_OP` tests on `EvpPkeyCtx`, and
+`raise_site_data` for the `ERR_raise_data` sites. That list was measured, not assumed: each name was
+looked for before the slicing was written down, because the alternative — discovering halfway through
+a 2,959-line transcription that `OSSL_PARAM_allocate_from_text` is Phase 12's — is the failure this
+project keeps recording under a different name each time.
+
+No code changed in this commit. `implemented[libcrypto]` stays 1662, phase 7 at 527 implemented and
+259 open, and the full ordered pipeline passes with both static courts clean.
