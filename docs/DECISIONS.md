@@ -10438,3 +10438,121 @@ court, and this family adds ~40 more types to the unverified set); then this fam
 in-phase and unblocks the raw-key constructors with a documented empty table; then
 `ctrl_params_translate.c`, which is the single gate on `signature.c`'s eighteen and therefore on
 closing 7.4b.
+
+## D177 — `EVP_PKEY_ASN1_METHOD` transcribed: forty-one members, ten types to declare, and two exports that need none of it
+
+D176 established that the twenty-three `EVP_PKEY_asn1_*` accessors are Phase 7's and that the struct
+body is in the internal `include/crypto/asn1.h`. This entry records the struct itself, member by
+member, so that the unit can be written without re-reading the header — and records the type inventory
+that says what else has to exist first.
+
+**The struct is forty-one members and the order is the ABI.** From `include/crypto/asn1.h:23-89`:
+
+```text
+ 1  int         pkey_id
+ 2  int         pkey_base_id
+ 3  unsigned long pkey_flags
+ 4  char *      pem_str
+ 5  char *      info
+
+    /* Decoding and encoding, public side */
+ 6  int  (*pub_decode)(EVP_PKEY *pk, const X509_PUBKEY *pub)
+ 7  int  (*pub_encode)(X509_PUBKEY *pub, const EVP_PKEY *pk)
+ 8  int  (*pub_cmp)(const EVP_PKEY *a, const EVP_PKEY *b)
+ 9  int  (*pub_print)(BIO *out, const EVP_PKEY *pkey, int indent, ASN1_PCTX *pctx)
+
+    /* Private side */
+10  int  (*priv_decode)(EVP_PKEY *pk, const PKCS8_PRIV_KEY_INFO *p8inf)
+11  int  (*priv_encode)(PKCS8_PRIV_KEY_INFO *p8, const EVP_PKEY *pk)
+12  int  (*priv_print)(BIO *out, const EVP_PKEY *pkey, int indent, ASN1_PCTX *pctx)
+
+    /* Sizes */
+13  int  (*pkey_size)(const EVP_PKEY *pk)
+14  int  (*pkey_bits)(const EVP_PKEY *pk)
+15  int  (*pkey_security_bits)(const EVP_PKEY *pk)
+
+    /* Parameters */
+16  int  (*param_decode)(EVP_PKEY *pkey, const unsigned char **pder, int derlen)
+17  int  (*param_encode)(const EVP_PKEY *pkey, unsigned char **pder)
+18  int  (*param_missing)(const EVP_PKEY *pk)
+19  int  (*param_copy)(EVP_PKEY *to, const EVP_PKEY *from)
+20  int  (*param_cmp)(const EVP_PKEY *a, const EVP_PKEY *b)
+21  int  (*param_print)(BIO *out, const EVP_PKEY *pkey, int indent, ASN1_PCTX *pctx)
+
+22  int  (*sig_print)(BIO *out, const X509_ALGOR *sigalg, const ASN1_STRING *sig,
+                     int indent, ASN1_PCTX *pctx)
+23  void (*pkey_free)(EVP_PKEY *pkey)
+24  int  (*pkey_ctrl)(EVP_PKEY *pkey, int op, long arg1, void *arg2)
+
+    /* Legacy functions for old PEM */
+25  int  (*old_priv_decode)(EVP_PKEY *pkey, const unsigned char **pder, int derlen)
+26  int  (*old_priv_encode)(const EVP_PKEY *pkey, unsigned char **pder)
+
+    /* Custom ASN1 signature verification and generation */
+27  int  (*item_verify)(EVP_MD_CTX *ctx, const ASN1_ITEM *it, const void *data,
+                      const X509_ALGOR *a, const ASN1_BIT_STRING *sig, EVP_PKEY *pkey)
+28  int  (*item_sign)(EVP_MD_CTX *ctx, const ASN1_ITEM *it, const void *data,
+                    X509_ALGOR *alg1, X509_ALGOR *alg2, ASN1_BIT_STRING *sig)
+29  int  (*siginf_set)(X509_SIG_INFO *siginf, const X509_ALGOR *alg, const ASN1_STRING *sig)
+
+    /* Check */
+30  int  (*pkey_check)(const EVP_PKEY *pk)
+31  int  (*pkey_public_check)(const EVP_PKEY *pk)
+32  int  (*pkey_param_check)(const EVP_PKEY *pk)
+
+    /* Get/set raw private/public key data */
+33  int  (*set_priv_key)(EVP_PKEY *pk, const unsigned char *priv, size_t len)
+34  int  (*set_pub_key)(EVP_PKEY *pk, const unsigned char *pub, size_t len)
+35  int  (*get_priv_key)(const EVP_PKEY *pk, unsigned char *priv, size_t *len)
+36  int  (*get_pub_key)(const EVP_PKEY *pk, unsigned char *pub, size_t *len)
+
+    /* Exports and imports to / from providers */
+37  size_t (*dirty_cnt)(const EVP_PKEY *pk)
+38  int  (*export_to)(const EVP_PKEY *pk, void *to_keydata,
+                      OSSL_FUNC_keymgmt_import_fn *importer,
+                      OSSL_LIB_CTX *libctx, const char *propq)
+39  OSSL_CALLBACK *import_from
+40  int  (*copy)(EVP_PKEY *to, EVP_PKEY *from)
+
+41  int  (*priv_decode_ex)(EVP_PKEY *pk, const PKCS8_PRIV_KEY_INFO *p8inf,
+                          OSSL_LIB_CTX *libctx, const char *propq)
+```
+
+**The type inventory, checked rather than assumed.** Ten pointee types appear in those signatures and
+the crate has **three** of them:
+
+| C type | crate | note |
+|---|---|---|
+| `ASN1_ITEM` | `crate::asn1::layout::Asn1Item` | exists |
+| `ASN1_STRING` | `crate::asn1::layout::Asn1String` | exists |
+| `ASN1_PCTX` | `crate::asn1::layout::Asn1Pctx` | exists |
+| `EVP_PKEY` | `crate::evp::pkey::EvpPkey` | exists |
+| `OSSL_LIB_CTX` | `*mut c_void` | the crate's convention |
+| `OSSL_CALLBACK` | `Option<unsafe extern "C" fn(*const OsslParam, *mut c_void) -> c_int>` | exists as a shape |
+| `OSSL_FUNC_keymgmt_import_fn` | `crate::evp::keymgmt::KeymgmtImportFn` | exists |
+| `X509_PUBKEY` | **absent** | Phase 10's object |
+| `PKCS8_PRIV_KEY_INFO` | **absent** | Phase 10's object |
+| `X509_ALGOR` | **absent** | Phase 10's object |
+| `ASN1_BIT_STRING` | **absent** | Phase 5's object, not yet transcribed |
+| `X509_SIG_INFO` | **absent** | Phase 10's object |
+| `EVP_MD_CTX` | **absent as a named type** | `src/evp/digest.rs` has the object; the Rust name needs checking |
+| `BIO` | `crate::runtime::bio::Bio` | exists |
+
+So six types need an **opaque declaration** first — `#[repr(C)] pub struct X { _private: [u8; 0] }`,
+the crate's documented idiom for a type that appears in a signature before its body is transcribed.
+That is honest here rather than a shortcut: the accessors store and return the struct and never call
+through those members, and the ones that *do* read fields — `get0_info`, `copy`, the `set_*` family —
+are the ones that must wait for the body. The opaque declarations are therefore the prerequisite of
+the unit and not a substitute for it.
+
+**Two conclusions for the next stretch.**
+
+* **`EVP_PKEY_asn1_get_count` and `EVP_PKEY_asn1_get0` are the only two that need no struct body at
+  all** — one returns a length, the other indexes `standard_methods[]` (empty until Phase 8) and then
+  `app_methods`. Everything else in the family either allocates the struct, copies it, reads a
+  member, or compares two of them with `ameth_cmp`, which reads `pkey_id`. So the family does not
+  decompose into a small first slice; it is one unit whose prerequisite is the struct.
+* **the risk is D170's class and the mitigation is not optional.** Thirty-six of the forty-one members
+  are function-pointer types, none of which `ABI-PROTOTYPE` can see, and D170 records two real defects
+  of exactly that shape. So the `OSSL_CORE_MAKE_FUNC` type-plane generator is not a nice-to-have before
+  this family — it is the check that makes forty-one hand-transcribed types credible.
