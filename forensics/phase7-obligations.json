@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 924,
       "deferred_to_later_phase": 164,
-      "implemented": 525,
-      "open_in_this_stratum": 261,
+      "implemented": 527,
+      "open_in_this_stratum": 259,
       "owned": 950,
       "received_by_handoff": 26
     },
@@ -1490,8 +1490,10 @@
       "EVP_PKEY_CTX_get_operation",
       "EVP_PKEY_CTX_gettable_params",
       "EVP_PKEY_CTX_is_a",
+      "EVP_PKEY_CTX_new",
       "EVP_PKEY_CTX_new_from_name",
       "EVP_PKEY_CTX_new_from_pkey",
+      "EVP_PKEY_CTX_new_id",
       "EVP_PKEY_CTX_set0_keygen_info",
       "EVP_PKEY_CTX_set_app_data",
       "EVP_PKEY_CTX_set_cb",
@@ -2359,18 +2361,6 @@
         "module": "src/evp/pkey_ctx.rs",
         "received_from_phase": null,
         "symbol": "EVP_PKEY_CTX_md"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_new"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_new_id"
       },
       {
         "declaring_header": "kdf.h",
@@ -3596,12 +3586,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "7efa644211d54afdb1affb392396cf30291882388aac756f2397e996cc0b9421"
+      "sha256": "16fcd49b0716a68fd51327312a0e8bd0577432318b169a7341c18bee92c2dc40"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "de065350a3d70e01dc973b45abc1dd9f4cdfc89cb3db4e529d45ed7c24a06027"
+      "sha256": "54a2eb78e6a5492d30bd87b26930d7605d348ee716f5096597ead153e17e0a5c"
     }
   ],
   "kind": "phase7-obligations",

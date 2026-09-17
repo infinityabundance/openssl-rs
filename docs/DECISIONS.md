@@ -10920,3 +10920,58 @@ an `#[allow(dead_code)]` that names the two callers that will land — `EVP_PKEY
 `int_ctx_new`'s `app_pmeth` arm (7.4c).
 
 `implemented[libcrypto]` moves 1614 → 1660 and phase 7 to 525 implemented and 261 open.
+
+## D185 — the struct-member plane's real obstacle is the atlas's universe, not a missing consumer
+
+D180 named "struct members declared inline rather than through an alias" as the half of D170's class it
+did not claim, and pointed at `structs.json`, which does record `conf_method_st` and its members. D184
+then found eighteen `EVP_PKEY_METHOD` callback types that nothing checks and named the same plane again.
+**Measured, the plane is not the answer, and the measurement is worth more than the plane would have
+been.**
+
+`forensics/atlas/openssl-3.6.4-production/structs.json` holds 465 struct records. **307 of them have no
+body at all** — `complete: false` with an empty `fields` list — because the atlas's universe is the
+*installed public surface*, and the bodies of the structs that matter are in headers that are not
+installed. Of the 158 complete records, **8** have a field whose type is a function pointer, and only
+**4** of those eight overlap the crate by name at all (`ASN1_ADB_st`/`Asn1Adb`,
+`conf_method_st`/`ConfMethod`, `ossl_dispatch_st`/`OsslDispatch`, and one more through the `_st` strip).
+
+The six structs whose function-pointer members are actually worth checking are `EVP_PKEY_METHOD`,
+`EVP_PKEY_ASN1_METHOD`, `ASN1_PRIMITIVE_FUNCS`, `ASN1_EXTERN_FUNCS`, `DSO_METHOD` and `COMP_METHOD` —
+and the atlas records **no** body for any of them, because all six live in `include/internal/`,
+`include/crypto/` or `crypto/evp/`. A consumer written against `structs.json` today would check four
+structs and report the other six as `no_prototype_in_atlas`, which is the same shape of blind spot the
+plane was supposed to close.
+
+**The fix is therefore upstream**, and there are two honest forms of it. A **second Clang pass over the
+internal headers** puts the six bodies into the atlas and the plane becomes worthwhile for them; it also
+grows the atlas's universe deliberately rather than accidentally, which is a change to Phase 1's
+definition of that universe and so needs its own record. A **generated C translation unit** that
+`#include`s the authority's internal headers and asserts each struct's member offsets and types, then
+compares the crate's transcription against the assertion output, gets the same answer without changing
+the atlas — and it is closer to what item 4 of the review asked for (a compile-time assertion rather
+than a source parser). Neither is attempted in this commit, and neither is claimed.
+
+What lands instead is the measurement and this conclusion: `ABI-DISPATCH`'s exemption reason for the
+eighteen `PkeyMeth*Fn` aliases says the struct-member plane is what will check them, and that sentence
+is now known to be false as written. The exemption is still correct — it is the only honest state
+available — but it now names the *internal-header* gap rather than a plane that would not have reached
+them. The other half of D180's commit, `ASN1_PRIMITIVE_FUNCS`'s four inline members and
+`ASN1_EXTERN_FUNCS`'s four, were fixed by hand there for exactly this reason, and they remain checked by
+nothing.
+
+## D186 — `EVP_PKEY_CTX_new` and `_new_id` land, and the engine parameter is read and discarded
+
+`crypto/evp/pmeth_lib.c:442` and `:447`, the two legacy-typed constructors, which is the whole of the
+file's remaining constructor surface: `int_ctx_new` has existed since 7.4a, and these are its two
+`EVP_PKEY *` / `int` doors. Both pass `libctx = NULL`, two NULL strings, and an id of `-1` or the
+caller's.
+
+**Both take `ENGINE *e` and neither forwards it.** The authority's `int_ctx_new` takes one and the
+crate's has no such parameter, because `ENGINE` is Phase 13's; and `EVP_PKEY_CTX_new`'s engine arm is
+reachable in the authority only when an engine implements the key's type, which cannot happen here for
+the reason D181 records at the two `asn1_find` sites. The parameter stays in the signature — that is the
+ABI — and is bound to `_` with the reason stated at the site rather than dropped, so a reader sees the
+authority's parameter list and the decision in one place.
+
+`implemented[libcrypto]` moves 1660 → 1662 and phase 7 to 527 implemented and 259 open.

@@ -149,9 +149,12 @@ OBJ_INT = ("not a provider dispatch: `include/crypto/objects.h`'s `OBJ_NAME` tab
 # header, so the atlas records no typedef for any of them, and the struct-member record it does
 # keep is empty for a struct whose body it cannot see.
 PKEY_METHOD = ("not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline "
-               "in `include/crypto/evp.h:145-192`, an internal header the atlas does not record "
-               "the body of; the struct-member plane D180 names as not yet built is what will "
-               "check these")
+               "in `include/crypto/evp.h:145-192`. The atlas records no typedef for them because "
+               "its universe is the installed public surface and that header is internal: 307 of "
+               "the 465 struct records have no body at all and only 8 of the 158 complete ones "
+               "have a function-pointer field, none of them this one. So the check these need is "
+               "a second Clang pass over the internal headers or a generated C assertion, not a "
+               "consumer of `structs.json` -- see docs/DECISIONS.md D185")
 CRATE_LOCAL = "not an authority type: a crate-local callback shape with no header counterpart"
 
 
