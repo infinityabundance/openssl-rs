@@ -78,8 +78,8 @@ use crate::evp::keymgmt::{
     EVP_KEYMGMT_free, EVP_KEYMGMT_get0_name, EVP_KEYMGMT_get0_provider, EVP_KEYMGMT_is_a,
     EVP_KEYMGMT_names_do_all, EVP_KEYMGMT_up_ref, EvpKeyMgmt,
 };
-use crate::evp::keymgmt_lib::evp_keymgmt_util_clear_operation_cache;
-use crate::params::OsslParam;
+use crate::evp::keymgmt_lib::{evp_keymgmt_util_clear_operation_cache, evp_keymgmt_util_export};
+use crate::params::{OSSL_PARAM_get_octet_string, OSSL_PARAM_locate_const, OsslParam};
 use crate::provider::OsslProvider;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::ex_data::{
@@ -1500,8 +1500,14 @@ pub(crate) unsafe fn evp_pkey_export_to_provider(
 /// The name is the authority's and it is narrower than it reads: the macro is **one** bit, and
 /// `OSSL_KEYMGMT_SELECT_OTHER_PARAMETERS` is deliberately not in it.
 const SELECT_PARAMETERS: c_int = 0x04;
+/// `OSSL_KEYMGMT_SELECT_PRIVATE_KEY`.
+const OSSL_KEYMGMT_SELECT_PRIVATE_KEY: c_int = 0x01;
 /// `OSSL_KEYMGMT_SELECT_PUBLIC_KEY`.
 const OSSL_KEYMGMT_SELECT_PUBLIC_KEY: c_int = 0x02;
+/// `OSSL_PKEY_PARAM_PRIV_KEY` — `include/openssl/core_names.h`, the generated one.
+const OSSL_PKEY_PARAM_PRIV_KEY: *const c_char = c"priv".as_ptr();
+/// `OSSL_PKEY_PARAM_PUB_KEY` — the same header and the same note.
+const OSSL_PKEY_PARAM_PUB_KEY: *const c_char = c"pub".as_ptr();
 /// `OSSL_KEYMGMT_SELECT_KEYPAIR` — `PRIVATE_KEY | PUBLIC_KEY`.
 const OSSL_KEYMGMT_SELECT_KEYPAIR: c_int = 0x01 | 0x02;
 
@@ -1644,6 +1650,153 @@ pub unsafe extern "C" fn EVP_PKEY_cmp(a: *const EvpPkey, b: *const EvpPkey) -> c
     unsafe { EVP_PKEY_eq(a, b) }
 }
 
+//`struct raw_key_details_st` — `crypto/evp/p_lib.c:562`.
+#[repr(C)]
+struct RawKeyDetails {
+    /// `unsigned char **key` — the caller's pointer-to-buffer, or NULL for a length query.
+    key: *mut *mut u8,
+    /// `size_t *len` — the caller's length, in and out.
+    len: *mut usize,
+    /// `int selection` — which of the two keys this call is asking for.
+    selection: c_int,
+}
+
+/// `static int get_raw_key_details(const OSSL_PARAM params[], void *arg)` —
+/// `crypto/evp/p_lib.c:569`.
+///
+/// The callback the two `EVP_PKEY_get_raw_*` entry points hand [`evp_keymgmt_util_export`], and the
+/// whole of its shape is one `OSSL_PARAM_get_octet_string` call whose `max_len` is
+/// **`raw_key->key == NULL ? 0 : *raw_key->len`**. That ternary is what makes a NULL buffer a
+/// *length query*: the caller gets the length back through the same pointer and is not asked to
+/// allocate twice.
+///
+/// The outer `if` is a selection test and **not** a NULL test on the located parameter: a params
+/// array with no `priv` in it answers 0 (the export failed) rather than being skipped.
+///
+/// # Safety
+/// `arg` must be a live `RawKeyDetails` whose `len` is the caller's pointer.
+unsafe extern "C" fn get_raw_key_details(params: *const OsslParam, arg: *mut c_void) -> c_int {
+    let raw_key = arg.cast::<RawKeyDetails>();
+
+    // SAFETY: `raw_key` is live per the contract.
+    let selection = unsafe { (*raw_key).selection };
+    let name = if selection == OSSL_KEYMGMT_SELECT_PRIVATE_KEY {
+        OSSL_PKEY_PARAM_PRIV_KEY
+    } else if selection == OSSL_KEYMGMT_SELECT_PUBLIC_KEY {
+        OSSL_PKEY_PARAM_PUB_KEY
+    } else {
+        return 0;
+    };
+
+    // SAFETY: `params` is NULL or a terminated array and `name` is NUL-terminated.
+    let p = unsafe { OSSL_PARAM_locate_const(params, name) };
+    if p.is_null() {
+        return 0;
+    }
+    // SAFETY: `raw_key` is live.
+    let (key, len) = unsafe { ((*raw_key).key, (*raw_key).len) };
+    let max_len = if key.is_null() {
+        0
+    } else {
+        // SAFETY: `key` is non-NULL, so `len` is the caller's valid length per the contract.
+        unsafe { *len }
+    };
+    // SAFETY: `p` is a live entry of the array; `key` is NULL or writable; `len` is the caller's.
+    unsafe { OSSL_PARAM_get_octet_string(p, key.cast::<*mut c_void>(), max_len, len) }
+}
+
+/// `int EVP_PKEY_get_raw_private_key(const EVP_PKEY *pkey, unsigned char *priv, size_t *len)` —
+/// `crypto/evp/p_lib.c:591`.
+///
+/// Two paths and the first is the whole of this crate's: a key with a `keymgmt` (every key it can
+/// build) exports through `evp_keymgmt_util_export`, and a key without one needs `pkey->ameth` —
+/// `EVP_PKEY_ASN1_METHOD`, Phase 8's, whose `get_priv_key` the authority falls back to. With
+/// `ameth` always NULL here the second path is unreachable, and it answers exactly what the
+/// authority answers for a key with no method: `EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE`.
+///
+/// # Safety
+/// `pkey` must be live; `priv` NULL or `*len` writable bytes; `len` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_get_raw_private_key(
+    pkey: *const EvpPkey,
+    mut priv_: *mut u8,
+    len: *mut usize,
+) -> c_int {
+    // SAFETY: `pkey` is live per the contract.
+    let keymgmt = unsafe { (*pkey).keymgmt };
+    if !keymgmt.is_null() {
+        let mut raw_key = RawKeyDetails {
+            key: if priv_.is_null() {
+                ptr::null_mut()
+            } else {
+                ptr::addr_of_mut!(priv_)
+            },
+            len,
+            selection: OSSL_KEYMGMT_SELECT_PRIVATE_KEY,
+        };
+        /* SAFETY: `pkey` is live, the callback is this file's own, and `raw_key` is a live local
+         * whose address the callback writes through. */
+        return unsafe {
+            evp_keymgmt_util_export(
+                pkey,
+                OSSL_KEYMGMT_SELECT_PRIVATE_KEY,
+                Some(get_raw_key_details),
+                ptr::addr_of_mut!(raw_key).cast::<c_void>(),
+            )
+        };
+    }
+
+    /* The legacy path: `pkey->ameth == NULL` or `ameth->get_priv_key == NULL` — one reason code,
+     * `EVP_R_OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE`, raised at two sites. `ameth` is Phase 8's
+     * and is always NULL here, so the second site is unreachable and the first is the answer. */
+    // SAFETY: a compile-time-constant site.
+    unsafe { raise_site(&err_sites::P_LIB_606) };
+    0
+}
+
+/// `int EVP_PKEY_get_raw_public_key(const EVP_PKEY *pkey, unsigned char *pub, size_t *len)` —
+/// `crypto/evp/p_lib.c:623`.
+///
+/// The sibling of the getter above, differing in one selection and one parameter name. Written out
+/// rather than folded into it for the same reason the authority writes it out: the two are separate
+/// exports whose error *sites* are separate, and a shared body would have to be told which site to
+/// raise.
+///
+/// # Safety
+/// `pkey` must be live; `pub_` NULL or `*len` writable bytes; `len` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_get_raw_public_key(
+    pkey: *const EvpPkey,
+    mut pub_: *mut u8,
+    len: *mut usize,
+) -> c_int {
+    // SAFETY: `pkey` is live per the contract.
+    let keymgmt = unsafe { (*pkey).keymgmt };
+    if !keymgmt.is_null() {
+        let mut raw_key = RawKeyDetails {
+            key: if pub_.is_null() {
+                ptr::null_mut()
+            } else {
+                ptr::addr_of_mut!(pub_)
+            },
+            len,
+            selection: OSSL_KEYMGMT_SELECT_PUBLIC_KEY,
+        };
+        // SAFETY: as the private getter above.
+        return unsafe {
+            evp_keymgmt_util_export(
+                pkey,
+                OSSL_KEYMGMT_SELECT_PUBLIC_KEY,
+                Some(get_raw_key_details),
+                ptr::addr_of_mut!(raw_key).cast::<c_void>(),
+            )
+        };
+    }
+
+    // SAFETY: a compile-time-constant site.
+    unsafe { raise_site(&err_sites::P_LIB_638) };
+    0
+}
 // SPDX-License-Identifier: Apache-2.0
 
 #[cfg(test)]
