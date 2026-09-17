@@ -56,6 +56,7 @@ pub mod keymgmt_lib;
 pub mod legacy_evp;
 pub mod mac;
 pub mod method_store;
+pub mod pbe;
 pub mod pkey;
 pub mod pkey_ctx;
 pub mod pmeth_check;

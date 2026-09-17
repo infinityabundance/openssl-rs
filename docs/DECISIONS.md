@@ -10286,3 +10286,50 @@ The lesson is the one D167 recorded from the other direction: a court's *own* cl
 claim, and this one was doing a syntactic test where the type system was available. It was found
 because the crate got a declaration right and the court called it wrong — which is the only direction
 in which a false mismatch is visible.
+
+## D174 — the rest of 7.4c-ii's row, scoped: `evp_pbe.c` is gated on Phase 12, and the p5 units on one ASN.1 item
+
+`crypto/evp/pbe_scrypt.c` lands whole (its two exports), and this entry records the scope of what is
+left in the row so the next stretch does not re-derive it. Three findings, all from reading rather
+than from running.
+
+**1. `evp_pbe.c` is gated on Phase 12, by a table.** The unit is 313 lines and eight exports and has
+no ctrl dependency, which made it look like the next independent landable thing. It is not, and the
+reason is its `builtin_pbe[]` table: thirty-eight entries whose `keygen`/`keygen_ex` fields are
+**function pointers**, and the `EVP_PBE_TYPE_OUTER` block names `PKCS5_PBE_keyivgen`,
+`PKCS12_PBE_keyivgen`, `PKCS5_v2_PBE_keyivgen` and `PKCS5_v2_PBKDF2_keyivgen` among others. The
+`PKCS12_*` pair is `crypto/pkcs12/p12_crpt.c`'s and is declared in `include/openssl/pkcs12.h`, so the
+ownership atlas assigns it to **Phase 12** — which means `evp_pbe.c`'s table cannot be built until a
+Phase-12 unit lands, and the table's contents are observable through `EVP_PBE_find_ex`, so the
+pointers cannot be stubbed. That is the D169 pattern again, one phase further out, and it is why this
+entry exists: the *shape* of the gate is a table of function pointers, not a call.
+
+**2. `p5_crpt.c`'s and `p5_crpt2.c`'s own dependencies, checked the way D172 checked `pmeth_gn.c`'s.**
+Neither unit calls any ctrl entry point — established by listing every external call, not by reading
+includes. What they need instead is `EVP_KDF_fetch` / `EVP_KDF_CTX_new` / `EVP_KDF_derive`
+(`src/evp/kdf.rs`, landed), `EVP_CipherInit_ex` (`cipher_ctx.rs`, landed), the `EVP_CIPHER_get_*` and
+`EVP_MD_get_*` accessors, and — the one item that is not a call at all — **`PBEPARAM`**, the ASN.1 item
+`PKCS5_PBE_keyivgen_ex` unpacks its parameter with (`ASN1_TYPE_unpack_sequence(ASN1_ITEM_rptr(PBEPARAM),
+param)`). `PBEPARAM` is an `ASN1_ITEM` whose definition and `ASN1_ITEM` table entry are Phase 5's
+work; if it is not in the crate, that is the second gate on those two units and it is a *data* gate
+rather than a call graph, so it would not show up in a call listing.
+
+**3. `pbe_scrypt.c` is self-contained, and it landed.** `EVP_PBE_scrypt_ex` and `EVP_PBE_scrypt` need
+nothing but the KDF layer, the param constructors and one error site, and they are transcribed whole
+in `src/evp/pbe.rs` — including the two facts a plausible transcription gets wrong: the bound is on
+`r` and `p` and **not** on `N`, and it is tested **before** the `pass`/`salt` NULL normalisation, so an
+oversized `r` refuses even with no salt at all; and both NULL strings become the empty string with
+length **0**, which is why the pair travels as `octet_string` parameters and not as C strings.
+
+**One build fact recorded while here:** `SCRYPT_MAX_MEM` is a Configure option, and
+`configdata.pm` for the production build does **not** define it — so the `#else` arm is live
+(`1024 * 1024 * 32`) and the `SCRYPT_MAX_MEM == 0` arm, half of `SIZE_MAX`, is dead in this profile.
+That is the same class as D172's `OPENSSL_NO_DEPRECATED_3_6` check: a `#ifdef` whose answer is in the
+build record rather than in the source, and which changes what a unit's body is.
+
+**Where the row stands.** Done: `pmeth_check.c`, `pmeth_gn.c` (thirteen of fourteen), the three
+descriptor-table accessors, `pbe_scrypt.c`. Left: `p5_crpt.c` and `p5_crpt2.c` (pending the `PBEPARAM`
+check above), `evp_pbe.c` (pending Phase 12's `p12_crpt.c`), `p_sign.c` / `p_verify.c` / `p_enc.c` /
+`p_dec.c` / `p_seal.c` / `p_open.c` (each of which calls `EVP_PKEY_CTX_ctrl`, so they follow
+`ctrl_params_translate.c`), the raw-key constructors, `EVP_PKEY_new_mac_key`, and the
+params/ctrl core itself.
