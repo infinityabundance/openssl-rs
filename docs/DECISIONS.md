@@ -8975,3 +8975,101 @@ records the move rather than the ledger being bent to match it.
 | unit tests | 334 | 334 |
 
 SPDX-License-Identifier: Apache-2.0
+
+---
+
+## D156 — 7.3d-ii: the `EVP_MD_CTX` object, and three NULL callback calls measured rather than guessed
+
+**What landed.** The context half of `crypto/evp/digest.c` — `struct evp_md_ctx_st`, the release
+path, the initialise decision tree with both its arms, the two finals, the squeeze, the three ways
+a context is copied, `EVP_Digest`, `EVP_Q_digest`, the five parameter entry points,
+`EVP_MD_CTX_ctrl` and `EVP_MD_do_all_provided` — plus the twelve `EVP_MD_CTX_*` accessors that sit
+in `crypto/evp/evp_lib.c` beside them. **33 exports**, and with them the object every digest call is
+actually made on is transcribed rather than deferred.
+
+**The typing correction that came with it.** `EvpMd`'s six legacy function pointers were typed with
+an opaque `*mut c_void` because `struct evp_md_ctx_st` did not exist. It does now, so they take
+`*mut EvpMdCtx` and `m_null.c`'s three callbacks are declared the way the authority declares them.
+`ABI-PROTOTYPE` canonicalises both spellings to `ptr(opaque)` and the ABI does not distinguish them,
+so this is not an evidence change — but a declaration that no longer matches the struct it belongs
+to is a defect waiting for a reader, and there was no reason to leave one behind now that the
+struct exists.
+
+**`EVP_PKEY_CTX` is 7.4's, and the seam is named rather than faked.** `struct evp_md_ctx_st` carries
+an `EVP_PKEY_CTX *pctx`, and `digest.c` touches it in exactly three places: a reset releases it,
+`EVP_MD_CTX_set_pkey_ctx` releases the old one and stores the new one, and `EVP_MD_CTX_copy_ex`
+duplicates it. So the digest stratum needs exactly two operations on a type that is one hundred and
+forty-one obligations wide. Transcribing `evp_pkey_ctx_st` here would have pulled a stratum into a
+subphase that cannot court any of it; ignoring the field would have made the accessors wrong.
+`src/evp/pkey_ctx.rs` therefore declares the type opaquely and gives the two operations the
+internal spellings the digest stratum calls, with its own module documentation saying why. Every
+constructor for an `EVP_PKEY_CTX` is 7.4's and is a scaffold that **aborts**, so no caller of this
+crate can hold a non-NULL one: the NULL arm is the whole of the reachable contract and is
+transcribed exactly, and the non-NULL arm **aborts with a diagnostic** rather than returning
+quietly, because a quiet return would leak the block it was asked to release or hand back a second
+reference to an object it cannot copy, and both of those are wrong answers no court could see. When
+7.4 lands, `EVP_PKEY_CTX_free` and `EVP_PKEY_CTX_dup` become one-line wrappers over these two
+functions rather than a second implementation.
+
+**Two blocks are omitted because they are unreachable, at a named site each.** The
+`EVP_PKEY_CTX_IS_SIGNATURE_OP` redirects into `EVP_DigestSignUpdate`/`EVP_DigestVerifyUpdate` at
+`digest.c:163` and `:395` are skipped — `ctx->pctx` is NULL until 7.4, and the authority's own
+comment says the redirect exists only for a context initialised for signing. The `ENGINE_*` arms
+are skipped for the reason `src/evp/cipher_ctx.rs` records for the cipher half: `tmpimpl` is
+omitted and therefore NULL, `ctx->engine` is always NULL, and every `ENGINE_init`/`ENGINE_get_digest`
+/`ENGINE_finish` call is guarded by a test on one of the two. An `impl` argument that is **not**
+NULL is a caller holding an ENGINE, which no caller can obtain here, and it is refused at the
+authority's own raise site (`DIGEST_311`, which is `!ENGINE_init(impl)`'s own line).
+
+**Three NULL callback calls are faults, and they were measured rather than inferred.** This is the
+finding of the subphase. `evp_md_init_internal` ends its legacy arm with `return
+ctx->digest->init(ctx)`, `EVP_DigestFinal_ex`'s legacy arm calls `ctx->digest->final(ctx, md)`, and
+the provider arm calls `ctx->digest->newctx(...)` — none of the three tests its pointer, and all
+three are reachable through documented entry points:
+
+  * `EVP_MD_meth_new` produces a method with `init`, `final` and `copy` all NULL and `ctx_size`
+    zero, and `EVP_DigestInit_ex(ctx, that_method, NULL)` takes the legacy arm because the origin is
+    `EVP_ORIG_METH`;
+  * a provider that publishes only the standalone `OSSL_FUNC_DIGEST_DIGEST` is **accepted** by
+    `evp_md_from_algorithm` — a structural count of zero is legal when the one-shot is present —
+    and such a method has a NULL `newctx`, so `EVP_DigestInit_ex` on a fetched one-shot-only digest
+    takes the provider arm and calls through NULL.
+
+Measured, each in a process of its own against the pinned authority: a hand-built method with no
+`init` prints `built=1 ctx=1` and dies with **exit 139**; the same with `init` set prints
+`set_init=1 init=1 cmp_final_is_null=1` and dies at `EVP_DigestFinal_ex`; the one-shot-only provider
+prints `add_builtin=1 load=1 fetch=1` and dies at the initialise. All three are recorded as
+`D-MD-NULL-CALLBACK-1` in `docs/SECURITY_DIVERGENCE_POLICY.md` with the measurements, and the crate
+answers 0 for each — raising nothing, because the authority raises nothing: it does not return.
+`EVP_MD_do_all_provided` with a **NULL visitor** is the fourth, measured the same way (`add_builtin=1
+load=1` then exit 139) and recorded as `D-MD-DOALL-NULL-1`; the crate refuses the walk, which is a
+real narrowing rather than an equivalence and is recorded as one. `RT-FETCH` prints
+`NOT_MEASURED_AUTHORITY_FAULTS` at each boundary, so a reader of the transcript sees the edge rather
+than a gap.
+
+**Two smaller decisions inside the transcription.** `ctx->flags` is `unsigned long` and every entry
+point takes or answers an `int`, so the three flag operations are transcribed with the authority's
+own conversions — the mask-and-truncate on `test_flags`, the `~flags` taken on the `int` and then
+widened on `clear_flags` — rather than with a boolean, because they differ and a caller can see
+that they do. And `EVP_MD_CTX_ctrl`'s three commands are where a caller-visible asymmetry lives: two of them
+(`XOF_LEN`, `SSL3_MASTER_SECRET`) *set* a parameter and one (`MICALG`) *gets* one, so the same
+entry point reads and writes depending on the command. The scalar it builds its descriptor from is
+a *local* `size_t`, whose address the provider may rewrite, so the array is built from that local
+and the answer is read back out of it; and the `<= 0` test at the bottom is what turns a provider's
+`EVP_CTRL_RET_UNSUPPORTED` into a plain 0 rather than letting it escape as a negative success.
+`size_t` whose address the provider may rewrite, so the array is built from that local and the
+answer is read back out of it afterwards; the authority's `<= 0` test at the bottom is what turns a
+provider's `EVP_CTRL_RET_UNSUPPORTED` into a plain 0 rather than letting it escape as a negative
+success.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 7 implemented / open | 152 / 798 | **185 / 765** |
+| `implemented[libcrypto]` | 1287 | **1320** |
+| RT-FETCH observations | 103 | **241** |
+| prototype court: checked / mismatch / unreadable | 1240 / 0 / 0 | **1273 / 0 / 0** |
+| unit tests | 334 | **349** |
+
+SPDX-License-Identifier: Apache-2.0

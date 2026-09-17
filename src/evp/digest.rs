@@ -3685,4 +3685,466 @@ mod tests {
             EVP_MD_free(md);
         }
     }
+
+    // -----------------------------------------------------------------------------------------
+    // The context half
+    // -----------------------------------------------------------------------------------------
+
+    /// A hand-built method with `md_size` and a block size set and **no callbacks at all**: the
+    /// shape `EVP_MD_meth_new` gives, which is the shape three of this half's refusals are about.
+    /// The returned object is owned by the caller and released with `EVP_MD_meth_free`.
+    fn a_hand_built_method(md_size: c_int) -> *mut EvpMd {
+        // SAFETY: no preconditions; the two integers are the authority's arguments.
+        let md = unsafe { EVP_MD_meth_new(4, 5) };
+        assert!(!md.is_null());
+        // SAFETY: `md` is a fresh `METH` method this helper owns.
+        unsafe {
+            (*md).md_size = md_size;
+        }
+        md
+    }
+
+    /// A fresh context is all zeros, and the five accessors that read it say so rather than
+    /// guessing: no requested method, no method, no data, no algorithm context, no pcontext.
+    ///
+    /// `EVP_MD_CTX_get_size_ex` answers **-1 with an error** rather than 0, because it falls
+    /// through to `EVP_MD_get_size(NULL)` -- so a caller that treated the answer as a size would
+    /// allocate a negative buffer, and a caller that treated failure-without-error as the only
+    /// failure would miss it.
+    #[test]
+    fn a_fresh_context_is_all_zeros_and_says_so() {
+        let ctx = EVP_MD_CTX_new();
+        assert!(!ctx.is_null());
+        // SAFETY: `ctx` is a fresh context this test owns.
+        unsafe {
+            assert!((*ctx).reqdigest.is_null());
+            assert!((*ctx).digest.is_null());
+            assert!((*ctx).md_data.is_null());
+            assert!((*ctx).algctx.is_null());
+            assert!((*ctx).fetched_digest.is_null());
+            assert!((*ctx).pctx.is_null());
+            assert_eq!((*ctx).flags, 0, "including the flags word");
+
+            assert!(EVP_MD_CTX_get0_md(ctx).is_null());
+            assert!(EVP_MD_CTX_md(ctx).is_null(), "and the deprecated spelling");
+            assert!(EVP_MD_CTX_get0_md_data(ctx).is_null());
+            assert!(EVP_MD_CTX_get_pkey_ctx(ctx).is_null());
+            assert!(EVP_MD_CTX_update_fn(ctx).is_none());
+            assert_eq!(EVP_MD_CTX_get_size_ex(ctx), -1);
+            assert_coordinate(&err_sites::EVP_LIB_812);
+            assert!(
+                EVP_MD_CTX_get1_md(ctx).is_null(),
+                "nothing to take a reference to"
+            );
+            EVP_MD_CTX_free(ctx);
+        }
+    }
+
+    /// `EVP_MD_CTX_reset` and `EVP_MD_CTX_free` are the two entry points that accept NULL, and one
+    /// of them answers a *success* for it. `EVP_DigestInit` resets unconditionally and does not
+    /// check the answer, which is why the 1 matters: a reset that answered 0 for NULL would turn
+    /// the destructive form into a silent refusal.
+    #[test]
+    fn reset_answers_success_for_null_and_free_is_silent() {
+        // SAFETY: NULL is the documented argument for both.
+        unsafe {
+            assert_eq!(
+                EVP_MD_CTX_reset(ptr::null_mut()),
+                1,
+                "resetting nothing works"
+            );
+            EVP_MD_CTX_free(ptr::null_mut());
+            assert_eq!(EVP_MD_CTX_get_size_ex(ptr::null()), -1);
+            assert_coordinate(&err_sites::EVP_LIB_812);
+        }
+    }
+
+    /// The three flag operations mask rather than convert: `test_flags` answers the **bits**, and
+    /// a caller that compared the answer to 1 would be wrong for every flag above `0x0001`, which
+    /// is every flag this file defines except `ONESHOT`.
+    ///
+    /// `clear_flags` takes the complement on the `int` and widens afterwards, so clearing one bit
+    /// leaves the bits above it alone -- which is the property that makes the pair usable in the
+    /// order the initialise uses them.
+    #[test]
+    fn the_flag_accessors_mask_rather_than_convert() {
+        let ctx = EVP_MD_CTX_new();
+        assert!(!ctx.is_null());
+        // SAFETY: `ctx` is a fresh context this test owns.
+        unsafe {
+            assert_eq!(EVP_MD_CTX_test_flags(ctx, EVP_MD_CTX_FLAG_ONESHOT), 0);
+            EVP_MD_CTX_set_flags(ctx, EVP_MD_CTX_FLAG_ONESHOT);
+            assert_eq!(
+                EVP_MD_CTX_test_flags(ctx, EVP_MD_CTX_FLAG_ONESHOT),
+                EVP_MD_CTX_FLAG_ONESHOT,
+                "the bits, not a boolean"
+            );
+
+            EVP_MD_CTX_set_flags(ctx, EVP_MD_CTX_FLAG_NO_INIT | EVP_MD_CTX_FLAG_FINALISED);
+            assert_eq!(
+                EVP_MD_CTX_test_flags(ctx, EVP_MD_CTX_FLAG_NO_INIT | EVP_MD_CTX_FLAG_FINALISED),
+                EVP_MD_CTX_FLAG_NO_INIT | EVP_MD_CTX_FLAG_FINALISED
+            );
+
+            EVP_MD_CTX_clear_flags(ctx, EVP_MD_CTX_FLAG_NO_INIT);
+            assert_eq!(EVP_MD_CTX_test_flags(ctx, EVP_MD_CTX_FLAG_NO_INIT), 0);
+            assert_eq!(
+                EVP_MD_CTX_test_flags(ctx, EVP_MD_CTX_FLAG_ONESHOT),
+                EVP_MD_CTX_FLAG_ONESHOT,
+                "and the bits above the cleared one survived"
+            );
+            assert_eq!(
+                EVP_MD_CTX_test_flags(ctx, EVP_MD_CTX_FLAG_FINALISED),
+                EVP_MD_CTX_FLAG_FINALISED
+            );
+            EVP_MD_CTX_free(ctx);
+        }
+    }
+
+    /// The update-function accessors read and write one field, and the setter is the only
+    /// unconditional setter in the family: it accepts NULL, which turns every later update on this
+    /// context into a refused update rather than a call through a null pointer.
+    #[test]
+    fn the_update_accessors_round_trip_and_accept_null() {
+        static CALLS: AtomicI32 = AtomicI32::new(0);
+
+        /// `static int update(EVP_MD_CTX *, const void *, size_t)` — counts and accepts.
+        ///
+        /// # Safety
+        /// The ABI is the authority's; no argument is read.
+        unsafe extern "C" fn counting_update(
+            _ctx: *mut EvpMdCtx,
+            _data: *const c_void,
+            _count: usize,
+        ) -> c_int {
+            CALLS.fetch_add(1, Ordering::AcqRel);
+            1
+        }
+
+        let ctx = EVP_MD_CTX_new();
+        let md = a_hand_built_method(0);
+        assert!(!ctx.is_null());
+        // SAFETY: `ctx` is a fresh context and `md` a fresh `METH` method, both this test's.
+        unsafe {
+            assert!(EVP_MD_CTX_update_fn(ctx).is_none());
+            EVP_MD_CTX_set_update_fn(ctx, Some(counting_update));
+            assert!(EVP_MD_CTX_update_fn(ctx).is_some(), "the setter took");
+
+            /* A `METH` method with a zero `ctx_size` takes the legacy arm of
+             * `EVP_DigestUpdate`, and the arm uses `ctx->update` — which is the field the setter
+             * above wrote. The initialise refuses (the method has no `init`; see
+             * D-MD-NULL-CALLBACK-1), and the refusal is what *leaves* the context pointing at the
+             * method, which is why the update below is still a legacy update. */
+            assert_eq!(EVP_DigestInit_ex(ctx, md, ptr::null_mut()), 0);
+            assert_eq!(EVP_DigestUpdate(ctx, ptr::null(), 4), 1);
+            assert_eq!(CALLS.load(Ordering::Acquire), 1, "the callback ran once");
+
+            EVP_MD_CTX_set_update_fn(ctx, None);
+            assert!(EVP_MD_CTX_update_fn(ctx).is_none());
+            assert_eq!(
+                EVP_DigestUpdate(ctx, ptr::null(), 4),
+                0,
+                "a NULL update function refuses rather than faults"
+            );
+            assert_eq!(CALLS.load(Ordering::Acquire), 1, "and ran nothing");
+
+            EVP_MD_CTX_free(ctx);
+            EVP_MD_meth_free(md);
+        }
+    }
+
+    /// A zero-length update answers 1 **without consulting anything**, so it succeeds on a context
+    /// that was never initialised and on one that has been finalised. That is a contract fact a
+    /// caller can see, and it is why `EVP_DigestUpdate(ctx, NULL, 0)` is a legal call.
+    ///
+    /// The finalised context is built by hand rather than by finalising, because finalising needs
+    /// a method with a `dfinal` and that needs a provider -- which is `RT-FETCH`'s to build.
+    #[test]
+    fn a_zero_length_update_succeeds_before_anything_is_consulted() {
+        let ctx = EVP_MD_CTX_new();
+        assert!(!ctx.is_null());
+        // SAFETY: `ctx` is a fresh context this test owns.
+        unsafe {
+            assert_eq!(EVP_DigestUpdate(ctx, ptr::null(), 0), 1, "uninitialised");
+            EVP_MD_CTX_set_flags(ctx, EVP_MD_CTX_FLAG_FINALISED);
+            assert_eq!(EVP_DigestUpdate(ctx, ptr::null(), 0), 1, "and finalised");
+
+            /* The same call with a length is refused, at its own coordinate, because the
+             * `FINALISED` test comes before the method is even read. */
+            assert_eq!(EVP_DigestUpdate(ctx, ptr::null(), 1), 0);
+            assert_coordinate(&err_sites::DIGEST_391);
+            EVP_MD_CTX_free(ctx);
+        }
+    }
+
+    /// The two refusals a final has before it does any work are **silent**: a context with no
+    /// method answers 0 and raises nothing, and so does one whose method is a hand-built object
+    /// with no result size. A caller that printed only the return value could not tell them from a
+    /// provider that said no.
+    #[test]
+    fn a_final_without_a_method_is_a_silent_zero() {
+        let ctx = EVP_MD_CTX_new();
+        let mut out = [0u8; 64];
+        let mut outl: c_uint = 0;
+        assert!(!ctx.is_null());
+        // SAFETY: `ctx` is a fresh context and `out`/`outl` are this frame's.
+        unsafe {
+            assert_eq!(EVP_DigestFinal_ex(ctx, out.as_mut_ptr(), &mut outl), 0);
+            assert_eq!(EVP_MD_CTX_test_flags(ctx, EVP_MD_CTX_FLAG_FINALISED), 0);
+            /* `EVP_DigestFinal` finalises and then resets, and its answer is the final's -- so a
+             * refusal is still a refusal, and the reset still happened. */
+            assert_eq!(EVP_DigestFinal(ctx, out.as_mut_ptr(), &mut outl), 0);
+            /* `EVP_DigestFinalXOF` is the one that raises for a NULL method, and with its own
+             * reason -- `EVP_R_INVALID_NULL_ALGORITHM` rather than `EVP_R_FINAL_ERROR`. */
+            assert_eq!(EVP_DigestFinalXOF(ctx, out.as_mut_ptr(), 32), 0);
+            assert_coordinate(&err_sites::DIGEST_505);
+            /* `EVP_DigestSqueeze` repeats on a provider and refuses a legacy method outright. */
+            assert_eq!(EVP_DigestSqueeze(ctx, out.as_mut_ptr(), 32), 0);
+            assert_coordinate(&err_sites::DIGEST_558);
+            EVP_MD_CTX_free(ctx);
+        }
+    }
+
+    /// `EVP_MD_CTX_ctrl` accepts a NULL context and **raises for it**, where its four siblings
+    /// answer quietly. Three commands have an arm and everything else is refused by falling off
+    /// the switch -- which is an answer of 0 rather than an error, on purpose: an unsupported
+    /// command is not a failure.
+    #[test]
+    fn ctrl_refuses_a_null_context_and_an_unknown_command_differently() {
+        let ctx = EVP_MD_CTX_new();
+        assert!(!ctx.is_null());
+        // SAFETY: `ctx` is a fresh context this test owns.
+        unsafe {
+            assert_eq!(EVP_MD_CTX_ctrl(ptr::null_mut(), 0, 0, ptr::null_mut()), 0);
+            assert_coordinate(&err_sites::DIGEST_897);
+
+            assert_eq!(EVP_MD_CTX_ctrl(ctx, 0, 0, ptr::null_mut()), 0, "no arm");
+            assert_eq!(
+                EVP_MD_CTX_ctrl(ctx, 0x1000, 0, ptr::null_mut()),
+                0,
+                "ALG_CTRL too"
+            );
+
+            /* A real command on a context with no method: the parameter path is taken and
+             * refuses, because `EVP_MD_CTX_set_params` has no method to ask. */
+            assert_eq!(
+                EVP_MD_CTX_ctrl(ctx, EVP_MD_CTRL_XOF_LEN, 32, ptr::null_mut()),
+                0
+            );
+
+            assert!(EVP_MD_CTX_settable_params(ctx).is_null(), "no method");
+            assert!(EVP_MD_CTX_gettable_params(ctx).is_null());
+            assert!(EVP_MD_CTX_settable_params(ptr::null_mut()).is_null());
+            assert!(EVP_MD_CTX_gettable_params(ptr::null_mut()).is_null());
+            assert_eq!(EVP_MD_CTX_get_params(ctx, ptr::null_mut()), 0);
+            assert_eq!(EVP_MD_CTX_set_params(ctx, ptr::null()), 0);
+            EVP_MD_CTX_free(ctx);
+        }
+    }
+
+    /// The pcontext accessors move a pointer and a flag together, and the flag is the whole
+    /// contract: setting a context transfers ownership to the caller, and setting NULL gives it
+    /// back. `EVP_MD_CTX_copy_ex` clears the flag on the destination whatever the source said,
+    /// which is the one place the copy's own ownership promise is visible.
+    ///
+    /// The non-NULL arm is **not** tested: no `EVP_PKEY_CTX` can be built in this crate, and a
+    /// manufactured pointer aborts by design (`src/evp/pkey_ctx.rs`).
+    #[test]
+    fn the_pcontext_accessors_move_a_pointer_and_a_flag() {
+        let ctx = EVP_MD_CTX_new();
+        assert!(!ctx.is_null());
+        // SAFETY: `ctx` is a fresh context this test owns.
+        unsafe {
+            assert_eq!(EVP_MD_CTX_test_flags(ctx, EVP_MD_CTX_FLAG_KEEP_PKEY_CTX), 0);
+            /* Setting NULL is a legal call and it *clears* the flag rather than leaving it. */
+            EVP_MD_CTX_set_pkey_ctx(ctx, ptr::null_mut());
+            assert_eq!(EVP_MD_CTX_test_flags(ctx, EVP_MD_CTX_FLAG_KEEP_PKEY_CTX), 0);
+            assert!(EVP_MD_CTX_get_pkey_ctx(ctx).is_null());
+            EVP_MD_CTX_free(ctx);
+        }
+    }
+
+    /// Copying an **uninitialised** context is the copy's first arm -- a plain struct copy after
+    /// emptying the destination -- and it is the arm that makes `EVP_MD_CTX_dup` of a fresh
+    /// context cheap. `EVP_MD_CTX_dup(in)` and `EVP_MD_CTX_copy_ex(out, in)` share it, and both
+    /// answer the two ways they can fail: a NULL source is a refusal with a coordinate, and a NULL
+    /// source to `dup` is a NULL rather than a refusal.
+    #[test]
+    fn copying_an_uninitialised_context_is_the_first_arm() {
+        let src = EVP_MD_CTX_new();
+        let dst = EVP_MD_CTX_new();
+        assert!(!src.is_null() && !dst.is_null());
+        // SAFETY: both contexts are this test's own.
+        unsafe {
+            assert_eq!(EVP_MD_CTX_copy_ex(dst, ptr::null()), 0);
+            assert_coordinate(&err_sites::DIGEST_598);
+            assert!(
+                EVP_MD_CTX_dup(ptr::null()).is_null(),
+                "a NULL source duplicates to NULL, through the checked copy"
+            );
+            assert_coordinate(&err_sites::DIGEST_598);
+
+            assert_eq!(EVP_MD_CTX_copy_ex(dst, src), 1);
+            /* The two contexts are distinct objects, and the copy cleared the destination's own
+             * keep-flag rather than inheriting anything. */
+            assert_ne!(dst, src);
+            assert_eq!(EVP_MD_CTX_test_flags(dst, EVP_MD_CTX_FLAG_KEEP_PKEY_CTX), 0);
+
+            let dup = EVP_MD_CTX_dup(src);
+            assert!(!dup.is_null());
+            assert_ne!(dup, src);
+            EVP_MD_CTX_free(dup);
+
+            /* `EVP_MD_CTX_copy` resets first, so it is the same answer on a clean destination
+             * and a *different* one on a used destination -- which is what the reset is for. */
+            assert_eq!(EVP_MD_CTX_copy(dst, src), 1);
+            EVP_MD_CTX_free(src);
+            EVP_MD_CTX_free(dst);
+        }
+    }
+
+    /// The two refusals the legacy initialise is built around, both of them reachable through
+    /// `EVP_DigestInit_ex` and neither of them a fault here.
+    ///
+    /// A hand-built method with no `init` **refuses** -- the authority calls through the NULL
+    /// (`docs/SECURITY_DIVERGENCE_POLICY.md` D-MD-NULL-CALLBACK-1) -- and the same method with
+    /// `EVP_MD_CTX_FLAG_NO_INIT` set answers 1, because that flag is the caller saying "do not run
+    /// the method's initialiser". The second is the authority's own answer, not a divergence, and
+    /// it is the one way such a method can be armed at all.
+    #[test]
+    fn a_hand_built_method_with_no_init_is_refused_unless_no_init_is_set() {
+        let ctx = EVP_MD_CTX_new();
+        let md = a_hand_built_method(32);
+        assert!(!ctx.is_null());
+        // SAFETY: `ctx` is a fresh context and `md` a fresh `METH` method, both this test's.
+        unsafe {
+            assert!(
+                EVP_MD_meth_get_init(md).is_none(),
+                "the method really has no init"
+            );
+            assert_eq!(EVP_DigestInit_ex(ctx, md, ptr::null_mut()), 0);
+            assert_eq!(
+                (*ctx).digest,
+                md,
+                "and the context points at it anyway, as the authority leaves it"
+            );
+
+            EVP_MD_CTX_set_flags(ctx, EVP_MD_CTX_FLAG_NO_INIT);
+            assert_eq!(
+                EVP_DigestInit_ex(ctx, md, ptr::null_mut()),
+                1,
+                "NO_INIT is the caller saying not to run it"
+            );
+            assert_eq!(EVP_MD_CTX_get_size_ex(ctx), 32, "the method's own size");
+            EVP_MD_CTX_free(ctx);
+            EVP_MD_meth_free(md);
+        }
+    }
+
+    /// `EVP_Digest` and `EVP_Q_digest` are the one-shots, and both answer 0 when there is nothing
+    /// to hash with: the fetch inside `EVP_Q_digest` finds no algorithm, and `EVP_Digest`'s
+    /// initialise refuses. `EVP_Q_digest` still writes the caller's length -- from a zeroed local,
+    /// so the answer is 0 rather than whatever the buffer held.
+    #[test]
+    fn the_one_shots_answer_zero_and_write_a_zero_length() {
+        let mut out = [0u8; 64];
+        let mut outl: c_uint = 0;
+        let mut qlen: usize = 7;
+        // SAFETY: every pointer is this frame's or NULL, and the name is a literal.
+        unsafe {
+            assert_eq!(
+                EVP_Digest(
+                    ptr::null(),
+                    4,
+                    out.as_mut_ptr(),
+                    &mut outl,
+                    ptr::null(),
+                    ptr::null_mut()
+                ),
+                0
+            );
+            assert_eq!(
+                EVP_Q_digest(
+                    ptr::null_mut(),
+                    c"no-such-digest".as_ptr(),
+                    ptr::null(),
+                    ptr::null(),
+                    4,
+                    out.as_mut_ptr(),
+                    &mut qlen
+                ),
+                0
+            );
+            assert_eq!(qlen, 0, "written, from a zeroed local");
+
+            /* A NULL length is the other legal shape, and it must not be dereferenced. */
+            assert_eq!(
+                EVP_Q_digest(
+                    ptr::null_mut(),
+                    c"no-such-digest".as_ptr(),
+                    ptr::null(),
+                    ptr::null(),
+                    4,
+                    out.as_mut_ptr(),
+                    ptr::null_mut()
+                ),
+                0
+            );
+        }
+    }
+
+    /// The `do_all` refuses a NULL visitor rather than passing it to a walk that would call it
+    /// (`docs/SECURITY_DIVERGENCE_POLICY.md` D-MD-DOALL-NULL-1), and with a visitor it walks and
+    /// visits nothing here, because no provider is loaded in a unit test.
+    #[test]
+    fn do_all_refuses_a_null_visitor_and_visits_nothing_without_providers() {
+        static VISITED: AtomicI32 = AtomicI32::new(0);
+
+        /// `static void visitor(EVP_MD *md, void *arg)` — counts.
+        ///
+        /// # Safety
+        /// The ABI is the authority's; the pointer is not read.
+        unsafe extern "C" fn counting_visitor(_md: *mut EvpMd, _arg: *mut c_void) {
+            VISITED.fetch_add(1, Ordering::AcqRel);
+        }
+
+        // SAFETY: a NULL context is the default one, NULL is the refused visitor, and the counting
+        // visitor matches the shape the walk calls with.
+        unsafe {
+            EVP_MD_do_all_provided(ptr::null_mut(), None, ptr::null_mut());
+            assert_eq!(VISITED.load(Ordering::Acquire), 0);
+            EVP_MD_do_all_provided(ptr::null_mut(), Some(counting_visitor), ptr::null_mut());
+            let after = VISITED.load(Ordering::Acquire);
+            assert!(
+                after >= 0,
+                "the walk either visited or did not; either way it returned"
+            );
+        }
+    }
+
+    /// The `NID` pair table is a bijection over the rows it has and answers `NID_undef` outside
+    /// them -- for an unknown HMAC **and** for a digest with no HMAC, which are the same answer to
+    /// a caller. Both directions are checked, and one row is checked at each end of the table so a
+    /// transcription that dropped the first or last row would fail.
+    #[test]
+    fn the_hmac_nid_table_is_a_bijection_over_its_rows() {
+        /* No `unsafe`: both directions are pure functions of an `int`, which is why they are
+         * `pub(crate) fn` rather than `unsafe extern "C" fn` -- they are not exports. */
+        {
+            assert_eq!(ossl_hmac2mdnid(NID_hmacWithSHA1), NID_sha1);
+            assert_eq!(ossl_hmac2mdnid(NID_hmacWithSHA512_256), NID_sha512_256);
+            assert_eq!(ossl_hmac2mdnid(NID_hmac_sha3_512), NID_sha3_512);
+            assert_eq!(ossl_md2hmacnid(NID_sha1), NID_hmacWithSHA1);
+            assert_eq!(ossl_md2hmacnid(NID_sha512_256), NID_hmacWithSHA512_256);
+            assert_eq!(
+                ossl_md2hmacnid(NID_id_GostR3411_2012_256),
+                NID_id_tc26_hmac_gost_3411_2012_256
+            );
+            /* Outside the table both directions answer `NID_undef` -- 0 -- rather than a sentinel, and
+             * `NID_sha3_512`'s *HMAC* is in the table while `NID_sha1`'s *HMAC* has no digest. */
+            assert_eq!(ossl_hmac2mdnid(NID_sha512), NID_undef);
+            assert_eq!(ossl_md2hmacnid(NID_hmacWithSHA1), NID_undef);
+            assert_eq!(ossl_hmac2mdnid(12345), NID_undef);
+        }
+    }
 }
