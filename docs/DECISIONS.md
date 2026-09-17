@@ -10584,3 +10584,63 @@ fifteen exports — the trade this project's constitution exists to refuse. What
 the finding, and the shape of the fix is exact: seventeen names for seventeen parameter types, each
 declared beside the struct, and the same discipline D177 already imposed on the struct's
 thirty-six function-pointer *members*.
+
+## D179 — D178's diagnosis was wrong: the reader could not read `cargo fmt`'s trailing comma
+
+D178 concluded that the five refused `EVP_PKEY_asn1_set_*` mutators needed seventeen named parameter
+aliases, because `ABI-PROTOTYPE`'s Rust reader "resolves a function-pointer type through a named alias
+it can look up, and an inline `Option<unsafe extern "C" fn(...)>` has nothing to look up". **That is
+false, and the reader is the defect.** The aliases would have worked — they are a valid workaround —
+but they would have been seventeen names created to dodge a parser bug, and the bug would have
+remained for every future declaration of the same shape.
+
+**What the instrument actually did.** The refused artifact carried `rust_signature: null`, not a wrong
+canonical form: `canon_rust_param` returned `None`. The failing parameter in each of the five was the
+one `cargo fmt` had wrapped across lines, and the wrap puts the *generic argument list's* trailing
+comma inside the text:
+
+```rust
+    pub_print: Option<
+        unsafe extern "C" fn(*mut Bio, *const EvpPkey, c_int, *mut Asn1Pctx) -> c_int,
+    >,
+```
+
+`canon_rust_type` strips the `Option<`/`>` wrapper and hands `unsafe extern "C" fn(...) -> c_int, ` to
+`canon_rust_fnptr`, which reads everything after the inner `->` as the return type. It therefore read
+the return type as **`c_int,`**, which is not an identifier, not an integer width, and not a pointer —
+so it canonicalised to `None`, and the symbol was reported `type_unmapped` with the authority's side
+perfectly readable. `set_ctrl` (four parameters), `set_check`, `set_free` and the two `set_*_key`
+families are written on one line and so carry no trailing comma, which is exactly why they passed and
+why the failure looked like it tracked parameter *count*. It does not; it tracks line wrapping.
+
+**The fix**, in `forensics/tools/prototype_court.py`: `canon_rust_type` drops a trailing comma at its
+own top level before classifying. A type in a list position may carry the list's trailing comma in
+Rust, so this is a normalisation of the same kind as the `Option<...>` unwrap beside it, not a
+loosening of the comparison. `canon_rust_param` reads through it; the recursion that unwraps
+`Option<...>` re-enters at the top and so handles both the wrapped `Option<\n ...,\n>` and the
+single-line `Option<X,>` shape.
+
+**Evidence that the fix is the fix, and not merely a green run.** `compare_all` now reports
+`checked=15 type_checked=15 type_unmapped=0 type_mismatches=0` over the fifteen mutators with the
+declarations **unmodified** — the aliases are not on the tree. The court's own sensitivity section
+gains a fourth control, `generic-argument-trailing-comma`, which asserts both halves the existing
+controls assert: that the wrapped and unwrapped spellings canonicalise to the *same* form, and that a
+`*mut`→`*const` change inside the same text still canonicalises *differently*. A control that only
+asserted the first half would pass for a court that ignored the text entirely.
+
+**The generalisable lesson, which is the same one the project keeps relearning.** D178 was arrived at
+by reading the failing counts (`unmapped=5`) and the shape that correlated with them (the longest
+parameter lists), and then reasoning from the reader's documented alias behaviour to a plausible
+mechanism. The correlation was real and the mechanism was invented. What settled it in one step was
+not reasoning but **reproducing the exact input**: calling `canon_rust_param` on the captured parameter
+text and reading `None`, and calling `canon_rust_type("c_int,")` and reading `None`. Before that, the
+plausible mechanism had already been written into the append-only record as though it were established.
+The remedy is the one D178's own subject matter keeps calling for: an instrument defect is a claim
+about the instrument and needs the instrument's own input, not a correlation with its output.
+
+**Consequence for the aliases.** They are not added. `D178`'s stated fix is superseded by this entry
+and is retained unedited because this file is append-only. The fifteen mutators land with their
+signatures written inline, transcribed against `include/openssl/evp.h:1642-1748` parameter by
+parameter, which is what D177 already did for the struct's thirty-six function-pointer members.
+
+`implemented[libcrypto]` moves 1596 → 1611. No behaviour changed.

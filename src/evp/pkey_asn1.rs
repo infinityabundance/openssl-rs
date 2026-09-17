@@ -1,7 +1,8 @@
 //! Phase 7.4c-ii — `crypto/asn1/ameth_lib.c`: the `EVP_PKEY_ASN1_METHOD` registry and its accessors.
 //!
-//! Twenty-three exports, of which this file lands the eight that need no `standard_methods[]`:
-//! `get_count`, `get0`, `add0`, `add_alias`, `get0_info`, `new`, `copy` and `free`. The two
+//! Twenty-six exports, of which this file lands the twenty-three that need no
+//! `standard_methods[]`: the eight accessors — `get_count`, `get0`, `add0`, `add_alias`,
+//! `get0_info`, `new`, `copy` and `free` — and the fifteen `EVP_PKEY_asn1_set_*` mutators. The two
 //! `find` functions and `get0_asn1` are the rest, and each is held for a stated reason — see the
 //! module's last section.
 //!
@@ -48,9 +49,23 @@
 //! `standard_methods[]`, which is Phase 8's twelve objects; they land with a documented empty table
 //! or with Phase 8, and the `D-PKEY-AMETH-1` precedent says which. `EVP_PKEY_get0_asn1` is
 //! `return pkey->ameth;` and `EvpPkey` has no such field, so it lands with `EvpPkey`'s ameth rather
-//! than with the accessors. And the fifteen `EVP_PKEY_asn1_set_*` mutators write the struct's
-//! callback fields one by one; they are mechanical and they are next, not now, because each writes a
-//! *different* subset of the thirty-six and every one has to be read against the header.
+//! than with the accessors.
+//!
+//! ## The fifteen mutators, and why their signatures are the whole of their contract
+//!
+//! Each of `EVP_PKEY_asn1_set_*` is a list of field assignments and nothing else: no validation, no
+//! allocation, no reference counting and no return value. That is worth stating as a group, because
+//! it means the whole of their contract is the **parameter list** — fifteen signatures of one to six
+//! function-pointer parameters each, where a wrong argument order or a missing `const` is invisible
+//! to every court until a provider object built with them is driven. That is D170's class, and it is
+//! the reason these are transcribed against `include/openssl/evp.h:1642-1748` one parameter at a
+//! time rather than written from the struct's member order.
+//!
+//! Two details of the group are contract rather than style. `set_item` assigns `item_sign` **before**
+//! `item_verify`, which is the reverse of its parameter order — nothing can observe the order, and
+//! copying it is still right, because a reader who "tidied" it would be editing the authority.
+//! `set_public_check` and `set_param_check` name their parameter `pkey_pub_check` /
+//! `pkey_param_check` and store it in `pkey_public_check` / `pkey_param_check`.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -592,4 +607,288 @@ pub unsafe extern "C" fn EVP_PKEY_asn1_free(ameth: *mut EvpPkeyAsn1Method) {
         CRYPTO_free((*ameth).info.cast::<c_void>(), FILE, LINE_ZALLOC_AMETH);
         CRYPTO_free(ameth.cast::<c_void>(), FILE, LINE_ZALLOC_AMETH);
     }
+}
+
+// ---------------------------------------------------------------------------------------------
+// The fifteen `EVP_PKEY_asn1_set_*` mutators.
+//
+// Every one is a list of field assignments and nothing else: no validation, no allocation, no
+// reference counting, and no return value. That is worth stating as a group because it is the only
+// family in this file that has *no* branch — and because it means the whole of their contract is the
+// **parameter list**, which is what D170's class is about: fifteen signatures of five to six
+// function-pointer parameters each, where a wrong argument order or a missing `const` is invisible to
+// every court until a provider object built with them is driven.
+//
+// Two details of the group are contract rather than style:
+//
+//   * **`set_item` assigns `item_sign` before `item_verify`**, which is the reverse of its parameter
+//     order. Nothing can observe the order, and copying it is still right: a reader who "tidied" it
+//     would be editing the authority;
+//   * **`set_public_check` and `set_param_check` name their parameter `pkey_pub_check` /
+//     `pkey_param_check`** and store it in `pkey_public_check` / `pkey_param_check`. The first is the
+//     one place the two sides of the assignment are spelled differently.
+// ---------------------------------------------------------------------------------------------
+
+/// `void EVP_PKEY_asn1_set_public(EVP_PKEY_ASN1_METHOD *ameth, ...)` — six members at once.
+///
+/// # Safety
+/// `ameth` must be live; every callback is the caller's and must outlive the method.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_asn1_set_public(
+    ameth: *mut EvpPkeyAsn1Method,
+    pub_decode: Option<unsafe extern "C" fn(*mut EvpPkey, *const X509Pubkey) -> c_int>,
+    pub_encode: Option<unsafe extern "C" fn(*mut X509Pubkey, *const EvpPkey) -> c_int>,
+    pub_cmp: Option<unsafe extern "C" fn(*const EvpPkey, *const EvpPkey) -> c_int>,
+    pub_print: Option<
+        unsafe extern "C" fn(*mut Bio, *const EvpPkey, c_int, *mut Asn1Pctx) -> c_int,
+    >,
+    pkey_size: Option<unsafe extern "C" fn(*const EvpPkey) -> c_int>,
+    pkey_bits: Option<unsafe extern "C" fn(*const EvpPkey) -> c_int>,
+) {
+    // SAFETY: `ameth` is live per the contract.
+    unsafe {
+        (*ameth).pub_decode = pub_decode;
+        (*ameth).pub_encode = pub_encode;
+        (*ameth).pub_cmp = pub_cmp;
+        (*ameth).pub_print = pub_print;
+        (*ameth).pkey_size = pkey_size;
+        (*ameth).pkey_bits = pkey_bits;
+    }
+}
+
+/// `void EVP_PKEY_asn1_set_private(EVP_PKEY_ASN1_METHOD *ameth, ...)`.
+///
+/// # Safety
+/// `ameth` must be live; every callback is the caller's and must outlive the method.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_asn1_set_private(
+    ameth: *mut EvpPkeyAsn1Method,
+    priv_decode: Option<unsafe extern "C" fn(*mut EvpPkey, *const Pkcs8PrivKeyInfo) -> c_int>,
+    priv_encode: Option<unsafe extern "C" fn(*mut Pkcs8PrivKeyInfo, *const EvpPkey) -> c_int>,
+    priv_print: Option<
+        unsafe extern "C" fn(*mut Bio, *const EvpPkey, c_int, *mut Asn1Pctx) -> c_int,
+    >,
+) {
+    // SAFETY: `ameth` is live per the contract.
+    unsafe {
+        (*ameth).priv_decode = priv_decode;
+        (*ameth).priv_encode = priv_encode;
+        (*ameth).priv_print = priv_print;
+    }
+}
+
+/// `void EVP_PKEY_asn1_set_param(EVP_PKEY_ASN1_METHOD *ameth, ...)` — six more members.
+///
+/// # Safety
+/// `ameth` must be live; every callback is the caller's and must outlive the method.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_asn1_set_param(
+    ameth: *mut EvpPkeyAsn1Method,
+    param_decode: Option<unsafe extern "C" fn(*mut EvpPkey, *mut *const u8, c_int) -> c_int>,
+    param_encode: Option<unsafe extern "C" fn(*const EvpPkey, *mut *mut u8) -> c_int>,
+    param_missing: Option<unsafe extern "C" fn(*const EvpPkey) -> c_int>,
+    param_copy: Option<unsafe extern "C" fn(*mut EvpPkey, *const EvpPkey) -> c_int>,
+    param_cmp: Option<unsafe extern "C" fn(*const EvpPkey, *const EvpPkey) -> c_int>,
+    param_print: Option<
+        unsafe extern "C" fn(*mut Bio, *const EvpPkey, c_int, *mut Asn1Pctx) -> c_int,
+    >,
+) {
+    // SAFETY: `ameth` is live per the contract.
+    unsafe {
+        (*ameth).param_decode = param_decode;
+        (*ameth).param_encode = param_encode;
+        (*ameth).param_missing = param_missing;
+        (*ameth).param_copy = param_copy;
+        (*ameth).param_cmp = param_cmp;
+        (*ameth).param_print = param_print;
+    }
+}
+
+/// `void EVP_PKEY_asn1_set_free(EVP_PKEY_ASN1_METHOD *ameth, void (*pkey_free)(EVP_PKEY *))`.
+///
+/// # Safety
+/// `ameth` must be live; `pkey_free` is the caller's and must outlive the method.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_asn1_set_free(
+    ameth: *mut EvpPkeyAsn1Method,
+    pkey_free: Option<unsafe extern "C" fn(*mut EvpPkey)>,
+) {
+    // SAFETY: `ameth` is live per the contract.
+    unsafe { (*ameth).pkey_free = pkey_free };
+}
+
+/// `void EVP_PKEY_asn1_set_ctrl(EVP_PKEY_ASN1_METHOD *ameth, ...)`.
+///
+/// # Safety
+/// `ameth` must be live; `pkey_ctrl` is the caller's and must outlive the method.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_asn1_set_ctrl(
+    ameth: *mut EvpPkeyAsn1Method,
+    pkey_ctrl: Option<unsafe extern "C" fn(*mut EvpPkey, c_int, c_long, *mut c_void) -> c_int>,
+) {
+    // SAFETY: `ameth` is live per the contract.
+    unsafe { (*ameth).pkey_ctrl = pkey_ctrl };
+}
+
+/// `void EVP_PKEY_asn1_set_security_bits(EVP_PKEY_ASN1_METHOD *ameth, ...)`.
+///
+/// # Safety
+/// `ameth` must be live; `pkey_security_bits` is the caller's and must outlive the method.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_asn1_set_security_bits(
+    ameth: *mut EvpPkeyAsn1Method,
+    pkey_security_bits: Option<unsafe extern "C" fn(*const EvpPkey) -> c_int>,
+) {
+    // SAFETY: `ameth` is live per the contract.
+    unsafe { (*ameth).pkey_security_bits = pkey_security_bits };
+}
+
+/// `void EVP_PKEY_asn1_set_item(EVP_PKEY_ASN1_METHOD *ameth, ...)` — and note the assignment order.
+///
+/// # Safety
+/// `ameth` must be live; both callbacks are the caller's and must outlive the method.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_asn1_set_item(
+    ameth: *mut EvpPkeyAsn1Method,
+    item_verify: Option<
+        unsafe extern "C" fn(
+            *mut EvpMdCtx,
+            *const Asn1Item,
+            *const c_void,
+            *const X509Algor,
+            *const Asn1BitString,
+            *mut EvpPkey,
+        ) -> c_int,
+    >,
+    item_sign: Option<
+        unsafe extern "C" fn(
+            *mut EvpMdCtx,
+            *const Asn1Item,
+            *const c_void,
+            *mut X509Algor,
+            *mut X509Algor,
+            *mut Asn1BitString,
+        ) -> c_int,
+    >,
+) {
+    /* `item_sign` first, which is the reverse of this function's parameter order — the authority's
+     * own order, and unobservable, which is exactly why it is copied rather than tidied. */
+    // SAFETY: `ameth` is live per the contract.
+    unsafe {
+        (*ameth).item_sign = item_sign;
+        (*ameth).item_verify = item_verify;
+    }
+}
+
+/// `void EVP_PKEY_asn1_set_siginf(EVP_PKEY_ASN1_METHOD *ameth, ...)`.
+///
+/// # Safety
+/// `ameth` must be live; `siginf_set` is the caller's and must outlive the method.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_asn1_set_siginf(
+    ameth: *mut EvpPkeyAsn1Method,
+    siginf_set: Option<
+        unsafe extern "C" fn(*mut X509SigInfo, *const X509Algor, *const Asn1String) -> c_int,
+    >,
+) {
+    // SAFETY: `ameth` is live per the contract.
+    unsafe { (*ameth).siginf_set = siginf_set };
+}
+
+/// `void EVP_PKEY_asn1_set_check(EVP_PKEY_ASN1_METHOD *ameth, int (*pkey_check)(const EVP_PKEY *))`.
+///
+/// # Safety
+/// `ameth` must be live; `pkey_check` is the caller's and must outlive the method.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_asn1_set_check(
+    ameth: *mut EvpPkeyAsn1Method,
+    pkey_check: Option<unsafe extern "C" fn(*const EvpPkey) -> c_int>,
+) {
+    // SAFETY: `ameth` is live per the contract.
+    unsafe { (*ameth).pkey_check = pkey_check };
+}
+
+/// `void EVP_PKEY_asn1_set_public_check(EVP_PKEY_ASN1_METHOD *ameth, ...)`.
+///
+/// The parameter is `pkey_pub_check` and the field is `pkey_public_check` — the one setter whose two
+/// sides are spelled differently, and the reason this is not folded into `set_check`.
+///
+/// # Safety
+/// `ameth` must be live; the callback is the caller's and must outlive the method.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_asn1_set_public_check(
+    ameth: *mut EvpPkeyAsn1Method,
+    pkey_pub_check: Option<unsafe extern "C" fn(*const EvpPkey) -> c_int>,
+) {
+    // SAFETY: `ameth` is live per the contract.
+    unsafe { (*ameth).pkey_public_check = pkey_pub_check };
+}
+
+/// `void EVP_PKEY_asn1_set_param_check(EVP_PKEY_ASN1_METHOD *ameth, ...)`.
+///
+/// # Safety
+/// `ameth` must be live; the callback is the caller's and must outlive the method.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_asn1_set_param_check(
+    ameth: *mut EvpPkeyAsn1Method,
+    pkey_param_check: Option<unsafe extern "C" fn(*const EvpPkey) -> c_int>,
+) {
+    // SAFETY: `ameth` is live per the contract.
+    unsafe { (*ameth).pkey_param_check = pkey_param_check };
+}
+
+/// `void EVP_PKEY_asn1_set_set_priv_key(EVP_PKEY_ASN1_METHOD *ameth, ...)`.
+///
+/// The doubled `set_set_` is the authority's export name and not a typo here.
+///
+/// # Safety
+/// `ameth` must be live; the callback is the caller's and must outlive the method.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_asn1_set_set_priv_key(
+    ameth: *mut EvpPkeyAsn1Method,
+    set_priv_key: Option<unsafe extern "C" fn(*mut EvpPkey, *const u8, usize) -> c_int>,
+) {
+    // SAFETY: `ameth` is live per the contract.
+    unsafe { (*ameth).set_priv_key = set_priv_key };
+}
+
+/// `void EVP_PKEY_asn1_set_set_pub_key(EVP_PKEY_ASN1_METHOD *ameth, ...)`.
+///
+/// # Safety
+/// `ameth` must be live; the callback is the caller's and must outlive the method.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_asn1_set_set_pub_key(
+    ameth: *mut EvpPkeyAsn1Method,
+    set_pub_key: Option<unsafe extern "C" fn(*mut EvpPkey, *const u8, usize) -> c_int>,
+) {
+    // SAFETY: `ameth` is live per the contract.
+    unsafe { (*ameth).set_pub_key = set_pub_key };
+}
+
+/// `void EVP_PKEY_asn1_set_get_priv_key(EVP_PKEY_ASN1_METHOD *ameth, ...)`.
+///
+/// # Safety
+/// `ameth` must be live; the callback is the caller's and must outlive the method.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_asn1_set_get_priv_key(
+    ameth: *mut EvpPkeyAsn1Method,
+    get_priv_key: Option<unsafe extern "C" fn(*const EvpPkey, *mut u8, *mut usize) -> c_int>,
+) {
+    // SAFETY: `ameth` is live per the contract.
+    unsafe { (*ameth).get_priv_key = get_priv_key };
+}
+
+/// `void EVP_PKEY_asn1_set_get_pub_key(EVP_PKEY_ASN1_METHOD *ameth, ...)`.
+///
+/// # Safety
+/// `ameth` must be live; the callback is the caller's and must outlive the method.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_asn1_set_get_pub_key(
+    ameth: *mut EvpPkeyAsn1Method,
+    get_pub_key: Option<unsafe extern "C" fn(*const EvpPkey, *mut u8, *mut usize) -> c_int>,
+) {
+    // SAFETY: `ameth` is live per the contract.
+    unsafe { (*ameth).get_pub_key = get_pub_key };
 }
