@@ -10831,3 +10831,92 @@ source, no obligation row and no court manifest. It has no subphase number, and 
 rewritten, because the commit is pushed and this file is append-only; the plan document is the record
 that matters and it does not carry the label. Its two correct names are
 `forensics/tools/dispatch_court.py` and `forensics/atlas/dispatch-court.json`.
+
+## D183 — the canonicaliser dropped pointer depth in `(**)(...)` declarators
+
+`canon_c_fnptr` read the declarator inside the outermost group and returned `fptr(...)` whatever it
+found there. So `int (*)(EVP_PKEY_CTX *)`, `int (**)(EVP_PKEY_CTX *)` and `int (***)(void)` all
+canonicalised to the same string.
+
+**Why that is a defect and not a simplification.** Only the first is a function pointer. The second is
+a *pointer to* a function pointer and the third a pointer to that — and while all three are one
+pointer in the call convention, the *declared* type is what a caller writes and what the callee may
+write through. The branch immediately below this one already knew this: `canon_c_type`'s `T *` arm
+returns `ptr(fn(...))` for a pointer to a function type only after a comment saying "A pointer to a
+function *pointer* is a real second level and is left alone (`ptr(fptr(...))`)". The declarator path
+never got the same treatment, so the same type read two ways was two types.
+
+**What found it.** The forty `EVP_PKEY_meth_get_*` accessors. Their out-parameters are
+`int (**pinit)(EVP_PKEY_CTX *)` — the whole point of the `get` family is that it writes a function
+pointer *through* the caller's pointer, which is why every one of them is a double pointer. The crate
+declares `*mut Option<PkeyMethInitFn>`, which is exactly that; `ABI-PROTOTYPE` reported twenty type
+mismatches and the instrument was the suspect. It was: `canon_rust_type` on
+`*mut Option<unsafe extern "C" fn(...) -> c_int>` has always produced `ptr(fptr(...))`, so the two
+sides disagreed only because the C side lost a level.
+
+**The fix** counts the leading `*`s in the declarator and wraps in `ptr(...)` once per level beyond
+the first. The court's sensitivity section gains a fifth control,
+`function-pointer-declarator-depth`, which asserts both halves: one star and two stars must
+canonicalise *differently* (`fptr(...)` against `ptr(fptr(...))`), three stars must give
+`ptr(ptr(fptr(...)))`, and the Rust `*mut Option<fn ...>` spelling must produce the same two levels
+the C does — because a fix applied to one side only would leave the plane structurally unable to see
+the defect it was written for.
+
+**The generalisable note, which is now the fifth of its kind in this stratum.** D178 invented a
+mechanism from a correlation; D179, D180 and this one were each found by *reproducing the input* —
+calling the reader on the exact text and reading what it returned. In every case the declaration was
+right and the instrument was wrong, and in every case the correlation (parameter count, line
+wrapping, parameter count again, parameter count a third time) pointed somewhere else. The
+project's rule is "the instrument is the suspect before the code is", and the operative half of that
+rule is *reproduce the input*, not *read the instrument's output*.
+
+`implemented[libcrypto]` unchanged at 1614 in this commit; the court's type plane reports
+`checked=1630 mismatches=0 unmapped=0` and its sensitivity section six controls, all detected.
+
+## D184 — the `EVP_PKEY_METHOD` registry lands, and the accessors are where the depth defect hid
+
+Forty-six exports: `EVP_PKEY_meth_new`, `_free`, `_copy`, `_get0_info`, `_add0`, `_remove`, and the
+twenty `EVP_PKEY_meth_set_*` / `EVP_PKEY_meth_get_*` pairs. `include/crypto/evp.h:145-192`'s
+`struct evp_pkey_method_st` is transcribed with its thirty-two members in the header's order, and
+`EVP_PKEY_FLAG_DYNAMIC` with it.
+
+**Three ways this struct is not its ASN.1 sibling, and each is a place a transcription would go
+wrong by analogy.** `EVP_PKEY_meth_add0` has **no validation at all** — no alias/null rule like
+`EVP_PKEY_asn1_add0`'s pair, no duplicate-`pkey_id` check, and a duplicate is pushed and the stack
+sorted with both present. `EVP_PKEY_meth_copy` restores **two** fields where the ASN.1 copy restores
+five, because this struct has no owned strings. And `EVP_PKEY_meth_free` frees on `DYNAMIC` alone,
+which is the same rule as the ASN.1 one but load-bearing for a different reason: Phase 8's ten
+`ossl_<alg>_pkey_method` objects are `static const` and must survive it.
+
+**`EVP_PKEY_meth_remove` is pointer identity, not `pkey_id`.** The authority calls
+`sk_EVP_PKEY_METHOD_delete_ptr` with no NULL test on the stack, and `OPENSSL_sk_delete_ptr` answers
+NULL for a NULL stack, so a caller that removes before adding gets 0 rather than a fault. That is
+reproduced rather than guarded, and it is the opposite of what `EVP_PKEY_meth_find` does — which
+compares `pkey_id` through the comparator. Two lookups over one table with two different notions of
+identity, both copied.
+
+**The forty accessors are where D183's instrument defect hid**, and the reason it hid is worth
+recording: every one of them takes a **double** pointer for each output, because the `get` family
+writes a function pointer through the caller's pointer. Sixteen of the forty take two outputs, so a
+transcription that flattened one level would have been wrong in eight of them and the court would
+have said so — but only after the flattening on the *authority* side was fixed first.
+
+**Two spellings are copied rather than tidied.** `EVP_PKEY_meth_get_encrypt`'s second output is
+`pencryptfn` while its member is `encrypt`; and `get_check`, `get_public_check` and `get_param_check`
+all name their output `pcheck` while writing three different members. `get_digestsign` and
+`get_digestverify` name theirs with no `p` prefix at all.
+
+**The eighteen aliases are exempted in the dispatch plane, and the reason is the next plane to
+build.** `EVP_PKEY_METHOD`'s callbacks are declared **inline** in an internal header, so the atlas
+records no typedef and `ABI-PROTOTYPE` sees nothing; `structs.json` has a record for the struct but
+with `complete: false` and no fields, because the body is in a header the atlas does not scan. So
+these eighteen types are checked by nothing, which is the second concrete argument for the
+struct-member plane D180 named — the first being `ASN1_PRIMITIVE_FUNCS`'s four inline members, which
+were fixed by hand in D180's commit for exactly this reason. The exemption reason says so at the
+site rather than leaving it implicit.
+
+`evp_pkey_meth_find_added_by_application` lands as a `pub(crate)` internal with no caller, carrying
+an `#[allow(dead_code)]` that names the two callers that will land — `EVP_PKEY_meth_find` (7.4l) and
+`int_ctx_new`'s `app_pmeth` arm (7.4c).
+
+`implemented[libcrypto]` moves 1614 → 1660 and phase 7 to 525 implemented and 261 open.
