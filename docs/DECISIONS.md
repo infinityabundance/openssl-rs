@@ -10756,3 +10756,55 @@ No behaviour changed. `implemented[libcrypto]` is unchanged at 1611. `cargo fmt`
 `-D warnings`, 423 unit tests, the full ordered pipeline and the guard all pass; the dispatch court
 reports `identities 195/195`, `signatures checked=216 mismatches=0 unmapped=0 unlinked=0
 problems=0`, and the regression baseline gains its artefact.
+
+## D181 — 7.4c-ii closes: the two `find` functions land, and `OPENSSL_NO_ENGINE` is undefined
+
+The last three of `crypto/asn1/ameth_lib.c`'s twenty-six exports — `EVP_PKEY_asn1_find`,
+`EVP_PKEY_asn1_find_str` and `EVP_PKEY_get0_asn1` — land, and the unit is complete.
+
+**The reason two of them were held was the wrong reason.** The module's own doc said the two `find`
+functions were held because `standard_methods[]` is Phase 8's twelve objects. But
+`EVP_PKEY_asn1_get_count` and `_get0` were already landed *against that same empty table*, with the
+divergence recorded — so the table was never the reason not to define a symbol. The project's rule is
+the opposite of withholding: define the symbol, answer correctly for every state the crate can reach,
+and record what differs. They are now defined, they answer correctly for every method an application
+registers through `add0`/`add_alias`, and the twelve legacy types are
+`docs/SECURITY_DIVERGENCE_POLICY.md` **D-PKEY-AMETH-2**. The doc has been corrected rather than left
+standing, because a record that names the wrong reason is the defect this project keeps finding.
+
+**`OPENSSL_NO_ENGINE` is undefined, and an earlier note said otherwise.** The consequence is not
+cosmetic: with the macro undefined the authority's engine arms in both functions are compiled **in**,
+calling `ENGINE_get_pkey_asn1_meth_engine` / `ENGINE_get_pkey_asn1_meth` /
+`ENGINE_pkey_asn1_find_str` / `ENGINE_init` / `ENGINE_free`. `ENGINE` is Phase 13's, so this crate has
+no engine type and no registry — a consumer calling `ENGINE_add` fails to link before it can reach the
+state — and with no engine registered the authority's arm itself answers NULL and falls through to
+`*pe = NULL`. The crate writes that `*pe = NULL` and nothing else, so the two answers are
+**identical** and there is nothing to record as a divergence; what is recorded is the reason the call
+is absent, at both sites. That is the same shape as `cipher_ctx.rs`'s `ENGINE_finish` note.
+
+**`pkey_asn1_find` is transcribed as a linear search, deliberately.** The authority asks
+`standard_methods[]` with `OBJ_bsearch_ameth`, a binary search over a table sorted by `pkey_id`. The
+crate's table is empty, and a binary search over it is vacuous; the linear form is what a binary
+search is *equivalent to* for a table whose keys are unique, which `add0`'s duplicate check enforces
+for `app_methods` and which the twelve standard objects satisfy. Transcribing the mechanism rather
+than the answer would have been a longer program that means the same thing in the only state that
+exists, and the reason is at the site.
+
+**`EVP_PKEY_get0_asn1` needed `EvpPkey.ameth`, and the field is declared rather than synthesised.**
+`EvpPkey`'s doc said the whole legacy block was absent "because `EVP_PKEY_ASN1_METHOD` and `ENGINE`
+are Phase 8's and Phase 13's". D176 established that the *type* is Phase 7's — the accessors are
+declared in installed `evp.h`, so the ownership atlas assigns them here, and this stratum defines the
+struct — so the first half of that sentence was wrong. The field is typed, added in the authority's
+own position (after `save_type`), and the doc now says which of the legacy fields remain absent and
+why. Nothing in this crate sets it, and the field's doc says so and names the writer that will;
+declaring it is what lets the accessor be `return pkey->ameth` rather than a function that manufactures
+a NULL from nowhere.
+
+`EVP_PKEY` is opaque, so the field order is the crate's and adding a field is invisible to the ABI;
+`EVP_PKEY_new` allocates with `CRYPTO_zalloc`, so the field is zero-initialised with no constructor
+change. The two `find` functions take `ENGINE **`, which needed an opaque `Engine` declaration — the
+crate's documented idiom for a type that appears in a signature before its body.
+
+`implemented[libcrypto]` moves 1611 → 1614, phase 7 to 479 implemented and 307 open. `cargo fmt`,
+clippy `-D warnings`, 423 unit tests, the full ordered pipeline, the determinism and portability gates
+and the regression guard all pass.

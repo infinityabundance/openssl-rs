@@ -1,10 +1,8 @@
 //! Phase 7.4c-ii — `crypto/asn1/ameth_lib.c`: the `EVP_PKEY_ASN1_METHOD` registry and its accessors.
 //!
-//! Twenty-six exports, of which this file lands the twenty-three that need no
-//! `standard_methods[]`: the eight accessors — `get_count`, `get0`, `add0`, `add_alias`,
-//! `get0_info`, `new`, `copy` and `free` — and the fifteen `EVP_PKEY_asn1_set_*` mutators. The two
-//! `find` functions and `get0_asn1` are the rest, and each is held for a stated reason — see the
-//! module's last section.
+//! Twenty-six exports, and this file lands all twenty-six: the eight accessors — `get_count`,
+//! `get0`, `add0`, `add_alias`, `get0_info`, `new`, `copy` and `free` — the fifteen
+//! `EVP_PKEY_asn1_set_*` mutators, the two `find` functions and `get0_asn1`.
 //!
 //! ## The struct is forty-one members and the order is the ABI
 //!
@@ -19,9 +17,9 @@
 //!
 //! Thirty-six of the forty-one members are function-pointer types. `ABI-PROTOTYPE` cannot see them,
 //! because they are fields and not exports, and D170 records two real defects of exactly that shape
-//! in this project — which is why the member list is transcribed against the header member by member
-//! and why the `OSSL_CORE_MAKE_FUNC` type-plane generator D170 names is the check that makes this
-//! credible rather than merely careful.
+//! in this project. The check D170 named as missing is `forensics/tools/dispatch_court.py`, which
+//! landed as D180 and compares every Rust function-type alias against the authority's
+//! `OSSL_CORE_MAKE_FUNC` typedef on both its first run and every run after.
 //!
 //! ## The two flags, and the check `add0` makes that nothing else does
 //!
@@ -43,13 +41,28 @@
 //! else from `src`. A transcription that copied the whole struct would alias `src`'s strings into
 //! `dst` and then free them twice.
 //!
-//! ## What is not here, and the reason each is held
+//! ## The two `find` functions: the empty table, and the engine arm that cannot fire
 //!
-//! `EVP_PKEY_asn1_find` and `EVP_PKEY_asn1_find_str` search `app_methods` **and then**
-//! `standard_methods[]`, which is Phase 8's twelve objects; they land with a documented empty table
-//! or with Phase 8, and the `D-PKEY-AMETH-1` precedent says which. `EVP_PKEY_get0_asn1` is
-//! `return pkey->ameth;` and `EvpPkey` has no such field, so it lands with `EvpPkey`'s ameth rather
-//! than with the accessors.
+//! `pkey_asn1_find` asks `app_methods` first and then `standard_methods[]`, which is Phase 8's twelve
+//! objects and empty here. So `EVP_PKEY_asn1_find` answers a method for an **application-registered**
+//! type and NULL for every one of the twelve legacy types, where the authority answers the twelve —
+//! the `D-PKEY-AMETH-1` divergence reached through the public door, and the register carries it as
+//! `D-PKEY-AMETH-2`. Both functions are still defined rather than withheld, for the reason the whole
+//! project defines rather than withholds: a consumer that calls them must link, and the answer is
+//! right in every state this crate can reach.
+//!
+//! The engine arm is **absent and cannot fire**. `OPENSSL_NO_ENGINE` is undefined in this profile, so
+//! the authority's `ENGINE_get_pkey_asn1_meth_engine` / `ENGINE_pkey_asn1_find_str` /
+//! `ENGINE_init` / `ENGINE_free` calls are compiled *in*; `ENGINE` is Phase 13's, so this crate has no
+//! engine type, no engine registry and no way to register one. A consumer that calls `ENGINE_add`
+//! fails to link before it can reach this state, and with no engine registered the authority's own
+//! arm answers NULL too — which is why the crate's transcription writes the `*pe = NULL` that
+//! follows it and nothing else, and why the answer is identical rather than approximate.
+//!
+//! `EVP_PKEY_get0_asn1` is `return pkey->ameth;` with no NULL test, and `EvpPkey` now carries the
+//! field. Nothing in this crate sets it — that is `pkey_set_type`'s, and `D-PKEY-AMETH-1` records why
+//! it cannot yet — so it answers NULL for every state reachable here, which is what the authority
+//! answers for every key this crate can build (a provider key, or a blank one).
 //!
 //! ## The fifteen mutators, and why their signatures are the whole of their contract
 //!
@@ -76,6 +89,7 @@ use crate::asn1::layout::{Asn1Item, Asn1Pctx, Asn1String};
 use crate::evp::digest::EvpMdCtx;
 use crate::evp::keymgmt::KeymgmtImportFn;
 use crate::evp::pkey::EvpPkey;
+use crate::runtime::bio::sys::strlen;
 use crate::runtime::bio::Bio;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
@@ -83,6 +97,7 @@ use crate::runtime::stack::{
     OPENSSL_sk_find, OPENSSL_sk_new, OPENSSL_sk_num, OPENSSL_sk_push, OPENSSL_sk_sort,
     OPENSSL_sk_value, OpenSslStack,
 };
+use crate::runtime::str::OPENSSL_strncasecmp;
 use crate::selftest::OsslCallback;
 
 /// `ASN1_PKEY_ALIAS` — `include/openssl/evp.h:1603`.
@@ -269,6 +284,16 @@ pub struct EvpPkeyAsn1Method {
             *const c_char,
         ) -> c_int,
     >,
+}
+
+/// `ENGINE` — Phase 13's object.
+///
+/// Declared opaque because both `find` functions take `ENGINE **`: the parameter has to exist for
+/// the signature to be the authority's, even though the crate has no engine to put in it. This is
+/// the crate's documented idiom for a type that appears in a signature before its body does.
+#[repr(C)]
+pub struct Engine {
+    _private: [u8; 0],
 }
 
 /// `standard_methods[]` — `crypto/asn1/ameth_lib.c`, twelve objects in the authority.
@@ -891,4 +916,156 @@ pub unsafe extern "C" fn EVP_PKEY_asn1_set_get_pub_key(
 ) {
     // SAFETY: `ameth` is live per the contract.
     unsafe { (*ameth).get_pub_key = get_pub_key };
+}
+
+/// `static const EVP_PKEY_ASN1_METHOD *pkey_asn1_find(int type)` — `crypto/asn1/ameth_lib.c:52`.
+///
+/// The application table first, then `standard_methods[]`. The authority asks the second with
+/// `OBJ_bsearch_ameth`, a macro over a binary search; the table is Phase 8's and empty here, so the
+/// search is written as the linear form a binary search is equivalent to for a table whose
+/// `pkey_id`s are **unique** — which `add0`'s duplicate check enforces for `app_methods`, and which
+/// the twelve `ossl_<alg>_asn1_meth` objects also satisfy. A binary search over a table that is
+/// empty now and sorted later would have been a transcription of the mechanism rather than of the
+/// answer, and the answer is the whole contract.
+///
+/// # Safety
+/// Nothing: both tables are this module's own.
+unsafe fn pkey_asn1_find(type_: c_int) -> *const EvpPkeyAsn1Method {
+    /* The comparator reads `pkey_id` alone, so a zeroed probe of the right shape is a legal
+     * argument; see `add0`'s duplicate test for the same construction. */
+    // SAFETY: every field is a scalar, a raw pointer or an `Option` of a function pointer, so the
+    // all-zero bit pattern is valid, and `pkey_id` is assigned on the next line.
+    let mut probe: EvpPkeyAsn1Method = unsafe { core::mem::zeroed() };
+    probe.pkey_id = type_;
+
+    // SAFETY: `APP_METHODS` is NULL or a stack this module owns.
+    if !unsafe { APP_METHODS }.is_null() {
+        // SAFETY: `APP_METHODS` is live and `probe` is a live local the comparator reads as a
+        // method.
+        let idx = unsafe { OPENSSL_sk_find(APP_METHODS, ptr::addr_of!(probe).cast::<c_void>()) };
+        if idx >= 0 {
+            // SAFETY: `idx` is a valid index into `APP_METHODS`.
+            return unsafe { OPENSSL_sk_value(APP_METHODS, idx) }.cast::<EvpPkeyAsn1Method>();
+        }
+    }
+    for m in STANDARD_METHODS.iter() {
+        // SAFETY: every entry of the table is a live method or NULL.
+        if !m.is_null() && unsafe { (**m).pkey_id } == type_ {
+            return *m;
+        }
+    }
+    ptr::null()
+}
+
+/// `const EVP_PKEY_ASN1_METHOD *EVP_PKEY_asn1_find(ENGINE **pe, int type)` —
+/// `crypto/asn1/ameth_lib.c:90`.
+///
+/// The alias walk is the whole of the loop: an `ASN1_PKEY_ALIAS` method names another type in
+/// `pkey_base_id`, and the authority follows the chain until it reaches one that does not, with no
+/// cycle guard. A pair of aliases that point at each other is therefore an infinite loop in the
+/// authority, and it is reproduced rather than repaired — see the module doc for the engine arm
+/// that is absent and cannot fire.
+///
+/// # Safety
+/// `pe` NULL or a writable slot for a pointer the caller owns.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_asn1_find(
+    pe: *mut *mut Engine,
+    type_: c_int,
+) -> *const EvpPkeyAsn1Method {
+    let mut type_ = type_;
+    let mut t;
+    loop {
+        // SAFETY: no preconditions.
+        t = unsafe { pkey_asn1_find(type_) };
+        if t.is_null() {
+            break;
+        }
+        // SAFETY: `t` is a live method.
+        let flags = unsafe { (*t).pkey_flags };
+        if (flags & ASN1_PKEY_ALIAS) == 0 {
+            break;
+        }
+        // SAFETY: `t` is a live method.
+        type_ = unsafe { (*t).pkey_base_id };
+    }
+    if !pe.is_null() {
+        // SAFETY: `pe` is the caller's writable slot. This is the authority's `*pe = NULL`, which
+        // is what its own engine arm answers with when no engine implements `type_`; see the
+        // module doc for why the arm itself is absent rather than omitted.
+        unsafe { *pe = ptr::null_mut() };
+    }
+    t
+}
+
+/// `const EVP_PKEY_ASN1_METHOD *EVP_PKEY_asn1_find_str(ENGINE **pe, const char *str, int len)` —
+/// `crypto/asn1/ameth_lib.c:114`.
+///
+/// A **case-insensitive** walk of the whole index space, backwards, skipping aliases: the authority
+/// starts at `EVP_PKEY_asn1_get_count()` and pre-decrements, so the last registered method wins if
+/// two share a PEM name. `len == -1` means "measure `str`", and an explicit `len` is compared
+/// against the method's own length first, so a shorter string that is a prefix of a PEM name does
+/// not match.
+///
+/// # Safety
+/// `pe` NULL or a writable slot; `str` NUL-terminated, or readable for `len` bytes when `len` is not
+/// `-1`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_asn1_find_str(
+    pe: *mut *mut Engine,
+    str_: *const c_char,
+    len: c_int,
+) -> *const EvpPkeyAsn1Method {
+    let mut len = len;
+    if len == -1 {
+        // SAFETY: `str_` is NUL-terminated per the contract.
+        len = unsafe { strlen(str_) as c_int };
+    }
+    if !pe.is_null() {
+        // SAFETY: `pe` is the caller's writable slot; the engine arm is absent for the reason the
+        // module doc gives.
+        unsafe { *pe = ptr::null_mut() };
+    }
+    // SAFETY: it touches no pointer argument.
+    let mut i = unsafe { EVP_PKEY_asn1_get_count() };
+    while i > 0 {
+        i -= 1;
+        // SAFETY: `i` is inside the index space the count just reported.
+        let ameth = unsafe { EVP_PKEY_asn1_get0(i) };
+        if ameth.is_null() {
+            continue;
+        }
+        // SAFETY: `ameth` is a live method.
+        let (flags, pem_str) = unsafe { ((*ameth).pkey_flags, (*ameth).pem_str) };
+        if (flags & ASN1_PKEY_ALIAS) != 0 {
+            continue;
+        }
+        /* A non-alias method has a `pem_str`: `add0` refuses one that does not, and
+         * `STANDARD_METHODS` is empty here, so the dereference the authority performs is guarded by
+         * the same check on both sides. */
+        // SAFETY: `pem_str` is non-NULL for a registered non-alias method.
+        if unsafe { strlen(pem_str) as c_int } == len
+            // SAFETY: both strings are readable for `len` bytes per the contract.
+            && unsafe { OPENSSL_strncasecmp(pem_str, str_, len as usize) } == 0
+        {
+            return ameth;
+        }
+    }
+    ptr::null()
+}
+
+/// `const EVP_PKEY_ASN1_METHOD *EVP_PKEY_get0_asn1(const EVP_PKEY *pkey)` —
+/// `crypto/asn1/ameth_lib.c:480`.
+///
+/// `return pkey->ameth;`, with **no** NULL test on `pkey` — the authority dereferences
+/// unconditionally, so a null `pkey` faults there and here rather than being refused. Nothing in
+/// this crate sets `ameth`; `D-PKEY-AMETH-1` records why `pkey_set_type` cannot yet, and this
+/// answers NULL for exactly the states the authority answers NULL for on a key this crate can build.
+///
+/// # Safety
+/// `pkey` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_get0_asn1(pkey: *const EvpPkey) -> *const EvpPkeyAsn1Method {
+    // SAFETY: `pkey` is live per the contract.
+    unsafe { (*pkey).ameth }
 }
