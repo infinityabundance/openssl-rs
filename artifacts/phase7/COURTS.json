@@ -177,9 +177,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 147,
+        "authority_observations": 154,
         "candidate_exit_code": 0,
-        "candidate_observations": 147,
+        "candidate_observations": 154,
         "candidate_stderr_tail": [],
         "court": "RT-EVP-BIO",
         "crashed": false,
@@ -276,7 +276,7 @@
     {
       "name": "probe",
       "path": "courts/phase7/rt_evp_encode_probe.c",
-      "sha256": "81ce6ca9f1b81425d419449413ea484454d96bc345f2617396143408ebb253f5"
+      "sha256": "24e29e9ba21c8365794ec144346f7a3c96a661e2051cd75138c606d277243b22"
     },
     {
       "name": "probe",

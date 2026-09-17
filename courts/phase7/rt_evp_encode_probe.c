@@ -60,6 +60,12 @@
  *   * **`BIO_f_md`'s `BIO_C_SET_MD_CTX` arm** replaces the filter's data pointer with the
  *     caller's, so driving it would require the probe to own an `EVP_MD_CTX` afterwards and free
  *     it exactly once; the arm is named here and `BIO_C_GET_MD_CTX` is the half that is driven.
+ *   * **`EVP_DecodeUpdate`'s `n >= 64` refusal** (`crypto/evp/encode.c:348-356`) needs a context
+ *     whose `num` is already 64, and `EVP_ENCODE_CTX` is opaque in the installed header
+ *     (`include/openssl/evp.h:901-914`), so no public call can build one and the arm is
+ *     unreachable rather than awkward. The court drives the *reachable* half of the same guard --
+ *     sixty-three saved characters take `EVP_ENCODE_CTX_num` to 63 and the sixty-fourth empties
+ *     the buffer (`encode.c:361-370`) -- and prints the refusal's coordinate as a line.
  *
  * Addresses are never printed. Every observation is a return code, an integer this lane's own
  * headers define, a byte-for-byte comparison the probe performs itself, or a length.
@@ -722,6 +728,31 @@ static void decoder_edges(void)
     sayn("decode.seof_after_group.update",
          EVP_DecodeUpdate(c, back, &outl, (const unsigned char *)"YWJjZA==-", 9));
     sayn("decode.seof_after_group.outl", outl);
+
+    /* The reset at exactly sixty-four saved characters is the *reachable* half of the refusal
+     * below it (`crypto/evp/encode.c:361-370`): a caller can drive `num` up to 63 through the
+     * public API and no further, because the sixty-fourth character empties the buffer. The
+     * refusal itself (`crypto/evp/encode.c:348-356`) needs a context whose `num` is already 64,
+     * and `EVP_ENCODE_CTX` is opaque in the installed header (`include/openssl/evp.h:901-914`),
+     * so no probe can reach it and the line below says so rather than implying coverage. */
+    EVP_DecodeInit(c);
+    {
+        unsigned char raw[48], enc[128], dec[96];
+        int n64, k;
+
+        for (k = 0; k < 48; k++)
+            raw[k] = (unsigned char)k;
+        n64 = EVP_EncodeBlock(enc, raw, 48);
+        outl = 0;
+        sayn("decode.reset64.first63", EVP_DecodeUpdate(c, dec, &outl, enc, 63));
+        sayn("decode.reset64.num", EVP_ENCODE_CTX_num(c));
+        outl = 0;
+        sayn("decode.reset64.plus1", EVP_DecodeUpdate(c, dec, &outl, enc + 63, 1));
+        sayn("decode.reset64.outl", outl);
+        sayn("decode.reset64.num_after", EVP_ENCODE_CTX_num(c));
+        sayn("decode.reset64.enc_len", n64);
+    }
+    printf("decode.num_ge_64=NOT_MEASURED_CONTEXT_IS_OPAQUE_encode_c_348\n");
 
     EVP_ENCODE_CTX_free(c);
 }
