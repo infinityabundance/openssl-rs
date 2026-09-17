@@ -12215,6 +12215,20 @@ entry: the slice adds no function-pointer alias, and `pem_password_cb` -- the on
 type it does add, as `PemPasswordCb` -- links by the naming convention (`links_convention` 196 → 197,
 `problems` 0).
 
+**Correction, marked inside this entry rather than folded away, the way `a2a296e7` corrects D190 (this
+entry is recent).** The first pass of this slice left one arm of landed code unnamed in the encode
+court: `EVP_DecodeUpdate`'s `n >= 64` refusal (`crypto/evp/encode.c:348-356`), the branch that
+refuses to save a sixty-fifth character into `ctx->enc_data`. It is **unreachable rather than awkward**:
+the loop empties the buffer at exactly sixty-four (`encode.c:361-370`), so a caller can drive
+`EVP_ENCODE_CTX_num` to 63 and no further, and the guard needs a context whose `num` is already 64 --
+which no public call builds, because `EVP_ENCODE_CTX` is opaque in the installed header
+(`include/openssl/evp.h:901-914`). The second pass drives the reachable half
+(`decode.reset64.first63`, `decode.reset64.num=63`, `decode.reset64.plus1`, `decode.reset64.outl=48`,
+`decode.reset64.num_after=0`) and prints the refusal's coordinate rather than implying coverage, so
+`RT-EVP-BIO` goes from 147 observations to 154 and the probe's "what it cannot drive" list gains the
+fourth entry it was missing. The ruling is unchanged: number every arm the slice lands, including the
+ones no probe can reach.
+
 ### The two prerequisite rows, and the guard
 
 Two new `forensics/prerequisites.json` rows name the dependency that blocks a withheld name:

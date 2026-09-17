@@ -161,7 +161,7 @@
       "verdict": "pass"
     },
     "RT-EVP-BIO": {
-      "observations": 147,
+      "observations": 154,
       "verdict": "pass"
     },
     "RT-EVP-CIPHER": {
