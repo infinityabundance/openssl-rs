@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 924,
       "deferred_to_later_phase": 164,
-      "implemented": 331,
-      "open_in_this_stratum": 455,
+      "implemented": 345,
+      "open_in_this_stratum": 441,
       "owned": 950,
       "received_by_handoff": 26
     },
@@ -1446,13 +1446,27 @@
       "EVP_PKEY_get0_description",
       "EVP_PKEY_get0_provider",
       "EVP_PKEY_get0_type_name",
+      "EVP_PKEY_get_bn_param",
       "EVP_PKEY_get_ex_data",
       "EVP_PKEY_get_id",
+      "EVP_PKEY_get_int_param",
+      "EVP_PKEY_get_octet_string_param",
+      "EVP_PKEY_get_params",
       "EVP_PKEY_get_size",
+      "EVP_PKEY_get_size_t_param",
+      "EVP_PKEY_get_utf8_string_param",
+      "EVP_PKEY_gettable_params",
       "EVP_PKEY_is_a",
       "EVP_PKEY_new",
+      "EVP_PKEY_set_bn_param",
       "EVP_PKEY_set_ex_data",
+      "EVP_PKEY_set_int_param",
+      "EVP_PKEY_set_octet_string_param",
+      "EVP_PKEY_set_params",
+      "EVP_PKEY_set_size_t_param",
       "EVP_PKEY_set_type_by_keymgmt",
+      "EVP_PKEY_set_utf8_string_param",
+      "EVP_PKEY_settable_params",
       "EVP_PKEY_type_names_do_all",
       "EVP_PKEY_up_ref",
       "EVP_Q_digest",
@@ -3100,12 +3114,6 @@
         "declaring_header": "evp.h",
         "module": "src/evp/pkey.rs",
         "received_from_phase": null,
-        "symbol": "EVP_PKEY_get_bn_param"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
         "symbol": "EVP_PKEY_get_default_digest_name"
       },
       {
@@ -3136,24 +3144,6 @@
         "declaring_header": "evp.h",
         "module": "src/evp/pkey.rs",
         "received_from_phase": null,
-        "symbol": "EVP_PKEY_get_int_param"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_get_octet_string_param"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_get_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
         "symbol": "EVP_PKEY_get_raw_private_key"
       },
       {
@@ -3173,24 +3163,6 @@
         "module": "src/evp/pkey.rs",
         "received_from_phase": null,
         "symbol": "EVP_PKEY_get_security_category"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_get_size_t_param"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_get_utf8_string_param"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_gettable_params"
       },
       {
         "declaring_header": "evp.h",
@@ -3676,36 +3648,6 @@
         "declaring_header": "evp.h",
         "module": "src/evp/pkey.rs",
         "received_from_phase": null,
-        "symbol": "EVP_PKEY_set_bn_param"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_set_int_param"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_set_octet_string_param"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_set_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_set_size_t_param"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
         "symbol": "EVP_PKEY_set_type"
       },
       {
@@ -3713,18 +3655,6 @@
         "module": "src/evp/pkey.rs",
         "received_from_phase": null,
         "symbol": "EVP_PKEY_set_type_str"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_set_utf8_string_param"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_settable_params"
       },
       {
         "declaring_header": "evp.h",
@@ -4566,12 +4496,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "dd6da58901aef6e26433d1b248186806d712f175e0ed68549c22ed95519bcc3b"
+      "sha256": "8949a624fbacc9665e18a2599f0aa30faf7d3e783d4a5e1509c407c3ddded1d6"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "db26088436619784fadcca757c833c82fa7200188758e34c9b8ad41ffa141127"
+      "sha256": "51f3d902730c0fcbd7804341a4e0587b5266966e65a1ee4c85e1f5b12aff9e12"
     }
   ],
   "kind": "phase7-obligations",
