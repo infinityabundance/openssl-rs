@@ -12080,6 +12080,18 @@ to that module by the header that promises them rather than by the directory the
 is dependency-ordered and the dependency had already arrived; `plan-reconciliation.json` does not census
 `crypto/evp/s_lib.c` as unreached, which is the measurement.
 
+**One label in the ledger is accepted as wrong, and named here rather than fixed.** The
+`src/evp/pem_bridge.rs` row's `module_prefixes` entry is `("PEM_", "PKCS5_", "PKCS8_")`, and the
+`PKCS5_` half is a mislabel this slice measured: those nine names are `crypto/evp/p5_crpt.c`'s,
+`p5_crpt2.c`'s and `pbe_scrypt.c`'s, 7.4c landed them in `src/evp/p5_crpt.rs`, and there is no
+`PKCS8_`-prefixed export in this stratum's working set at all. The entry is left as it stands because
+the alternative trades one wrong label for another: `PKCS5_` is not one unit, so moving the prefix to
+`src/evp/p5_crpt.rs` would label `PKCS5_PBKDF2_HMAC` and the two `PKCS5_v2_scrypt_keyivgen` spellings
+with a file that does not define them, and the ledger's `owned_by_module` counts would move for a
+purely cosmetic reason. The row's own *name* has the same shape, and D193 recorded that reading for
+`p_legacy.rs`: a ledger row is the unit of a slice and its prefix group is a label, not a claim about
+which authority file holds the result.
+
 ### The twenty-six that do not build, family by family, because the families do not share a reason
 
 * **`EVP_md5()` (`crypto/evp/legacy_md5.c:36`) blocks eight.** It is a legacy `EVP_MD` over
