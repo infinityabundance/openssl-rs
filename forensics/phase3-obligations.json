@@ -769,7 +769,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "2905935adfe3a0b2834adde5ea7b3933a1961b9a7f9bb34cd14deb7c823c2911"
+      "sha256": "a69a73b1a99fd0bd23ba36bd3c986d34212fe735a6bab316c080a9afbe9a00a7"
     }
   ],
   "kind": "phase3-obligations",

@@ -319,12 +319,11 @@
         "stratum": "OSSL_LIB_CTX + provider core"
       },
       {
-        "blocking": "333 open obligation(s) of this stratum recorded in forensics/phase7-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase",
+        "blocking": "325 open obligation(s) of this stratum recorded in forensics/phase7-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase",
         "deferred": [],
         "evidence_absent": [
           "src/evp/legacy_cipher.rs",
           "src/evp/legacy_digest.rs",
-          "src/evp/pkey_asn1.rs",
           "src/evp/params_translate.rs",
           "src/evp/bio_enc.rs",
           "src/evp/encode.rs",
@@ -352,6 +351,7 @@
           "src/evp/legacy_evp.rs",
           "src/evp/pkey.rs",
           "src/evp/pkey_ctx.rs",
+          "src/evp/pkey_asn1.rs",
           "src/evp/pbe.rs",
           "src/evp/signature.rs",
           "src/evp/asymcipher.rs",
@@ -532,7 +532,7 @@
       "not_started": 14
     }
   },
-  "body_hash": "37d6ce96d850216da36e133860f0e3dd50de6a67c920e049f64967934d44c189",
+  "body_hash": "bc1efb3041770954a8c8fed2a4d931b0ab26f4cd6315b14309a35cc39bf7c85b",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

@@ -58,6 +58,7 @@ pub mod mac;
 pub mod method_store;
 pub mod pbe;
 pub mod pkey;
+pub mod pkey_asn1;
 pub mod pkey_ctx;
 pub mod pmeth_check;
 pub mod pmeth_gn;
