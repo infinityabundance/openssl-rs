@@ -181,7 +181,7 @@
       "verdict": "pass"
     },
     "RT-EVP-PKEY": {
-      "observations": 175,
+      "observations": 178,
       "verdict": "pass"
     },
     "RT-EVP-RAND": {

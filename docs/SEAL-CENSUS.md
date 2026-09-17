@@ -225,7 +225,7 @@ Hand-offs received and discharged:
 
 * from phase 5: 26 symbol(s) — `ASN1_item_sign_ex`, `ASN1_item_verify_ex`, `PEM_ASN1_read`, `PEM_ASN1_read_bio`, `PEM_ASN1_write`, `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx`, `PEM_SignFinal`, `PEM_SignInit`, `PEM_SignUpdate`, `PEM_bytes_read_bio`, `PEM_bytes_read_bio_secmem`, `PEM_def_callback`, `PEM_do_header`, `PEM_read`, `PEM_read_bio`, `PEM_read_bio_Parameters`, `PEM_read_bio_Parameters_ex`, `PEM_read_bio_ex`, `PEM_write`, `PEM_write_PKCS8PrivateKey_nid`, `PEM_write_bio`, `PEM_write_bio_ASN1_stream`, `PEM_write_bio_PKCS8PrivateKey_nid`, `PEM_write_bio_Parameters`, `PEM_write_bio_PrivateKey_traditional`
 
-Courts: `all pass`, 9 court(s), **1104** authority observation(s) over 9 transcript court(s).
+Courts: `all pass`, 9 court(s), **1107** authority observation(s) over 9 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
@@ -237,7 +237,7 @@ Courts: `all pass`, 9 court(s), **1104** authority observation(s) over 9 transcr
 | RT-EVP-SKEY | `pass` | 97 |
 | RT-EVP-KEYMGMT | `pass` | 73 |
 | RT-EVP-NAMES | `pass` | 25 |
-| RT-EVP-PKEY | `pass` | 175 |
+| RT-EVP-PKEY | `pass` | 178 |
 
 ## Atlas/ledger reconciliation
 

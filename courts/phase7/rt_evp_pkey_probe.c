@@ -1064,6 +1064,21 @@ int main(void)
     sayr("legacy.empty_key_then_sign", EVP_PKEY_sign(ectx, out, &len, msg, 3));
 
     /*
+     * The pre-fetched branch's other exit, and the one that is neither a refusal nor a success: a
+     * method *is* handed in and the key cannot be exported to it, so the authority jumps to `end:`
+     * with `ret` still **0** and raises nothing at all. Two things follow, and both are
+     * observations: the answer is `0` rather than the `-2` the fallback refusals give, and the
+     * context is left **armed** -- `end:` does not reset the operation either -- so the one-shot
+     * entry point takes its NULL-algorithm-context arm next.
+     */
+    s = EVP_SIGNATURE_fetch(ctx, "COURT-SIG", NULL);
+    reset_c();
+    sayr("prefetched.end_no_export", EVP_PKEY_sign_init_ex2(ectx, s, NULL));
+    sayr("prefetched.end_no_export_then_sign", EVP_PKEY_sign(ectx, out, &len, msg, 3));
+    say_c("prefetched.end_no_export.vec");
+    EVP_SIGNATURE_free(s);
+
+    /*
      * Four sites are reached only by a call this probe must not make, and the reason is the same
      * for all four: the stream entry points read `ctx->op.sig.signature` with no test, and a
      * context left armed by a `legacy:` refusal has none.

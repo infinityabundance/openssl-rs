@@ -11235,7 +11235,7 @@ of the `switch` below assign it first) and `supported_sig`'s initialiser in the 
 `#[allow(dead_code)]` came off `evp_signature_fetch_from_prov`: its first live caller was
 `evp_pkey_signature_init`, and this is that caller.
 
-**The court is `RT-EVP-PKEY`, 175 observations, zero residuals.** It publishes one provider with one
+**The court is `RT-EVP-PKEY`, 178 observations, zero residuals.** It publishes one provider with one
 key type and fifteen signature arms, one per way the code under test can behave, and every
 observation is a return code, a reason and its message data, a counter vector or a relation between
 two pointers the probe holds — no address is printed. Eight dispatch tables, one per *shape* the
@@ -11248,7 +11248,10 @@ fetching and the pre-fetched spellings, the zero-length convention on the three 
 callbacks a message-only method leaves absent, the `query_key_types` walk with a match, a
 non-matching entry and an empty array, both name fallbacks and the `query_operation_name`-answers-NULL
 fallback *inside* `evp_keymgmt_util_query_operation_name`, and the three legacy entries with the
-`algctx == NULL` arm each makes reachable.
+`algctx == NULL` arm each makes reachable. Two arms cover the pre-fetched branch's *other* exit — the
+`goto end:` a key that cannot be exported takes with `ret` still 0 — which is the third place the
+crate's answer is neither the authority's refusal nor its success, and which leaves the context
+armed exactly as `legacy:` does.
 
 **Two things `RT-EVP-PKEY` deliberately does not print, both found while building it.** A *failing*
 `EVP_KEYMGMT_fetch` or `EVP_SIGNATURE_fetch` puts a **namemap id** in the message —
