@@ -68,6 +68,8 @@ pub mod context;
 pub mod dso;
 pub mod evp;
 pub mod ffi;
+pub mod hpke;
+pub mod mac;
 pub mod params;
 pub mod pem;
 pub mod property;

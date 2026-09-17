@@ -12267,3 +12267,157 @@ in the same commit as the source.
 
 The two guard pairs were run: against this branch's previous head (`11a14466`:
 `implemented[libcrypto] 1774 → 1800`, `open_obligations[phase7] 147 → 121`) and against `origin/main`.
+
+## D195 — 7.6 lands the three legacy MAC/HPKE header surfaces, withholds one export on the random layer, and finds that `EVP_AEAD` does not exist in this authority
+
+The slice is the ledger's three rows `src/mac/hmac.rs`, `src/mac/cmac.rs` and `src/hpke/mod.rs` --
+forty-one open symbols between them -- plus the `kdf.h` remainder the plan's row names. **Forty
+exports land**: the twelve `HMAC_*` names, the nine `CMAC_*` names plus the
+`include/crypto/cmac.h` internal `ossl_cmac_init`, and nineteen of the twenty `OSSL_HPKE_*` names.
+**One does not**, and it is withheld rather than stubbed with an answer that would diverge:
+`OSSL_HPKE_get_grease_value` needs `RAND_bytes_ex` (`crypto/hpke/hpke.c:1433`, Phase 9).
+`implemented[libcrypto]` moves **1800 -> 1840** and phase 7 to **705 implemented and 81 open**
+(from 665 and 121) -- read from `forensics/phase7-obligations.json` after the pipeline ran, not
+predicted here. The suite gains the **seven** tests the slice adds and stands at **461**. The three
+new courts are `RT-HMAC` (**32 observations**), `RT-CMAC` (**26**) and `RT-HPKE` (**65**), all with
+zero residuals; the full pipeline ends `PIPELINE OK` with the gate at zero findings.
+
+### The `EVP_AEAD` the brief names does not exist, and the measurement is the point
+
+The row's brief for this subphase says `crypto/hpke/hpke.c` is "over `EVP_KEM`, `EVP_KDF` and,
+importantly, `EVP_AEAD` (`crypto/evp/evp_aead.c`)". **There is no `EVP_AEAD` object in this
+authority at all.** A `git grep` over the pinned source for `EVP_AEAD_CTX`, `EVP_AEAD` and
+`evp_aead` returns nothing; there is no `crypto/evp/evp_aead.c` in the manifest; and
+`include/crypto/evp.h` declares neither. What `hpke_aead_enc`/`hpke_aead_dec`
+(`crypto/hpke/hpke.c:219`, `:141`) use is an **`EVP_CIPHER` in AEAD mode** --
+`EVP_EncryptInit_ex`/`EVP_DecryptInit_ex` over `ctx->aead_ciph`, with
+`EVP_CTRL_AEAD_SET_IVLEN`, `EVP_CTRL_AEAD_GET_TAG` and `EVP_CTRL_AEAD_SET_TAG` -- and
+`ctx->aead_ciph` is `EVP_CIPHER_fetch(libctx, aead_info->name, propq)` (`hpke.c:841`). So the
+dependency the brief names does not exist, and the surface that *does* exist is this stratum's own
+7.3b/7.3c work; no export is withheld on it. That is the class of finding the brief's own
+instruction to measure first was for.
+
+### `hpke_util.c` is not a ledger unit, and its internals land with a named substitution
+
+`crypto/hpke/hpke.c`'s helpers are `crypto/hpke/hpke_util.c`'s, declared in the **uninstalled**
+`include/internal/hpke_util.h`, so the atlas does not census them as obligations and the ledger has
+no module for them. They are transcribed as `pub(crate)` internals in `src/hpke/mod.rs` beside the
+exports they serve, with two deliberate departures, each named at the site:
+
+* **`WPACKET` is replaced by direct concatenation.** `ossl_hpke_labeled_extract`/`_expand`
+  (`hpke_util.c:295`, `:345`) build `concat("HPKE-v1", protocol_label, suiteid, label, ikm)` through
+  `WPACKET` (`include/internal/packet.h`), which this crate does not have. Those calls are an
+  exactly-sized concatenation and nothing else -- the buffer length is computed as the exact sum of
+  the pieces, so `WPACKET_finish` cannot fail and the `PROV_R_OUTPUT_BUFFER_TOO_SMALL` arm at
+  `:329`/`:380` is **unreachable**. The concatenation is written directly and the unreachable arm is
+  named in the module doc and in `RT-HPKE`, rather than stubbed.
+* **`ossl_HPKE_KEM_INFO_find_random`, `_KDF_INFO_find_random`, `_AEAD_INFO_find_random` and
+  `hpke_random_suite` are omitted**, because their only caller is the withheld
+  `OSSL_HPKE_get_grease_value`; they call `ossl_rand_uniform_uint32`
+  (`crypto/rand/rand_lib.c`, Phase 9). `ossl_HPKE_KEM_INFO_find_curve` is omitted for the other
+  direction: nothing in `hpke.c` calls it.
+
+`find_random`'s omission is why the withheld export's prerequisite row names `RAND_bytes_ex` as the
+direct callee and `ossl_rand_uniform_uint32` in its reason rather than as a second row.
+
+### `kdf.h`'s remainder was already discharged
+
+The row's fourth unit contributes no work. `forensics/phase7-obligations.json`'s
+`owned_by_header['kdf.h']` is forty names and the `open` list filtered to that header is **empty**:
+7.3e and the `p5_*`/`pbe_*` slices had already implemented or deferred every one. Checking was the
+work, and the check is what the row's "and the `kdf.h` remainder" is discharged by.
+
+### The three courts, and what each one had to build
+
+Each of the three surfaces is reached differently, and that is why there are three probes rather
+than one.
+
+**`RT-HMAC`** (`courts/phase7/rt_hmac_probe.c`). `HMAC_Init_ex` takes an `EVP_MD *`, not an
+`EVP_MAC *`, so the probe publishes its own **SHA-256** digest and the court's method is a
+known-answer vector: the probe checks its own HMAC-SHA-256 against RFC 4231's Test Cases 1, 2, 5 and
+6, and then compares the crate's answer with *that*. The arms are the two special cases the
+contract is made of -- a **NULL `key` reuses the previous key** (`hmac.c:60`) and a **NULL `md`
+reuses `ctx->md`** (`:38`), with both NULL a refusal (`:43`) and a second digest driving the
+"changing MD requires a key" refusal (`:35`); `HMAC_size` before init, where
+`EVP_MD_get_size(NULL)` answers -1 with `EVP_R_MESSAGE_DIGEST_IS_NULL` and the `size < 0` fold makes
+the answer 0; `HMAC_CTX_copy` independence, with the copy advanced by one message and the original
+by another and each compared against the probe's own HMAC of *its* message; `HMAC_CTX_reset` then
+reuse; and `HMAC_CTX_set_flags`'s effect on the final, where the public `EVP_MD_CTX_FLAG_FINALISE`
+has none on a *provider* final and the internal `EVP_MD_CTX_FLAG_FINALISED`
+(`include/crypto/evp.h`, 0x0800) makes `HMAC_Final`'s first `EVP_DigestFinal_ex` refuse. Named
+rather than driven: **`HMAC()`'s success arm**, whose body is one `EVP_Q_mac(NULL, "HMAC", ...)`
+call (`hmac.c:260`) resolving in the **default** library context, where the authority's own provider
+publishes a real HMAC that has no `COURT-SHA256` digest -- the `EVP_Q_mac` path is `RT-EVP-MAC`'s
+subject, and the refusal arm (`evp_md == NULL`) is driven and needs no provider. Also named:
+`HMAC_Init_ex`'s XOF refusal (`:49`), and `HMAC_CTX_reset(NULL)`, which faults the authority.
+
+**`RT-CMAC`** (`courts/phase7/rt_cmac_probe.c`). `CMAC_Init` takes an `EVP_CIPHER *`, so the probe
+publishes a **real AES-128** and the vectors are RFC 4493's, for message lengths 0, 16, 40 and 64.
+The arms are `ossl_cmac_init`'s three entry conditions (`cmac.c:119`, `:133`, `:145`) -- the
+**restart** (all four arguments zero/NULL), a non-NULL **`cipher`** with a NULL key, and a non-NULL
+**`key`** -- plus `CMAC_Init` with `cipher == NULL` and a NULL key but a non-empty `keylen`, which
+falls through both blocks and answers 1 with the context untouched; `CMAC_CTX_copy` independence;
+`CMAC_CTX_get0_cipher_ctx`'s relation; and the NULL-context and NULL-output refusals, with the
+latter distinguished from `CMAC_Final`'s `out == NULL` *length query*, which answers 1. Named rather
+than driven: `CMAC_Final`'s `EVP_Cipher`-failure arm (`:272`), the `max_burst_blocks == 0` arm
+(`:215`, which needs a block larger than 2048 bytes), and the two malloc-failure arms.
+
+**The CMAC court's first run found that the provider cipher must be CBC, not ECB, and the finding is
+the construction's own.** `cmac.c` carries the chaining value in the cipher context's **IV** --
+`CMAC_resume` is literally `EVP_EncryptInit_ex(cctx, NULL, NULL, NULL, ctx->tbl)` (`:290`) and
+`ossl_cmac_init` resets it with the zero IV (`:155`, `:165`) -- so `EVP_Cipher(cctx, tbl,
+last_block, bl)` is `AES(last_block ^ IV)` and the final's XOR against `tbl` happens inside the
+cipher call. A probe cipher that encrypts the block without the IV agrees on the empty and
+one-block vectors and disagrees on every multi-block one, which is exactly what the first run
+measured (`kat.empty` and `kat.m16` correct, `kat.m40`/`kat.m64` wrong). The provider now chains,
+and all four vectors agree.
+
+**`RT-HPKE`** (`courts/phase7/rt_hpke_probe.c`). HPKE is not an algorithm the crate implements: it
+is a layer over `EVP_PKEY`'s KEM operations, `EVP_KDF`'s HKDF and an `EVP_CIPHER` in AEAD mode, all
+three of which are *provider* methods, and the candidate has no default provider. So the probe
+publishes an **`X25519` keymgmt** (32-byte key, `pub`/`priv` import, `encoded-pub-key` get,
+`query_operation_name(OSSL_OP_KEM)` answering `COURTKEM`), a deterministic **`COURTKEM`**, a real
+**`HKDF`** (with the probe's own SHA-256), and an **`aes-128-gcm`** whose `update` XORs a keystream
+and whose `final` computes or checks the tag over the ciphertext. The arms are the parameter getters
+and their validation; `OSSL_HPKE_CTX_new`'s three validations in the authority's order; the
+sequence accessors including the sender's refusal; `set1_psk`'s six validations, `set1_ikme`'s
+three, `set1_authpriv`'s role rule and `set1_authpub`'s; and then the **whole sequence** --
+`OSSL_HPKE_keygen`, `encap` with `info`, `seal`, a receiver context, `decap`, `open`, and `export`
+on both sides -- with the two exported secrets **compared with each other**, so the round trip is
+checked against the two sides agreeing rather than against the probe's own arithmetic. A corrupted
+tag is refused, and the `OSSL_HPKE_CTX_free` boundary is driven both ways.
+
+Two provider facts the court had to measure rather than assume, and both are contract rather than
+convenience: an AEAD's `update` is called with a **NULL output for the AAD** (`hpke.c:261`, `:178`),
+so a provider that refuses it cannot be used; and the crate's `evp_cipher_init_internal` reads the
+key length through `EVP_CIPHER_CTX_get_key_length` and hands it to `einit`, so a provider that does
+not answer `keylen` gets 0 and a non-NULL key is refused. Both are named in the probe.
+
+### The one withheld export, the prerequisite row and the guard
+
+`OSSL_HPKE_get_grease_value` (`crypto/hpke/hpke.c:1377`) is withheld on `RAND_bytes_ex`
+(`hpke.c:1433`, Phase 9), whose whole observable is whether the random GREET fill succeeds; there is
+no partial answer to write. It has a `forensics/prerequisites.json` row naming Phase 9 (and, in the
+same reason, `ossl_rand_uniform_uint32`, reached only through `find_random`, whose only caller is
+the withheld function), a `NOT_MEASURED_RAND_bytes_ex_IS_PHASE_9_hpke_c_1433` line in `RT-HPKE`,
+and this entry. No row names a Phase-7-owned export (D165), and no existing row is discharged by
+this slice, so none is deleted: `ossl_cmac_init` is landed but was never a deferral row (it is a
+`plan-reconciliation.json` promised-unit name, a different mechanism).
+
+`blocking_dependencies` moves **25 -> 26** against this branch's previous head (`34c68191`) and
+**15 -> 26** against `origin/main`, which are two rows in `forensics/ownership-transitions.json`
+because the guard matches `before` and `after` exactly. `language_census` moves 2633 -> 2673,
+`sealed_census` stays 57, `divergence_names_covered` stays 32, and the gate reports zero findings.
+`plan-reconciliation.json`'s `units_not_reached` census moves **59 -> 56**:
+`crypto/hmac/hmac.c`, `crypto/cmac/cmac.c` and `crypto/hpke/hpke.c` become the dominant units of
+their new modules. `dispatch_court.py` needed **no** `NOT_A_DISPATCH` entry: the slice adds no
+function-pointer alias, only provider callbacks in a probe.
+
+One generator input was edited and re-run: `forensics/tools/gen_err_raise_sites.py` gained
+`("crypto/hpke/hpke_util.c", "HPKE_UTIL")` and the resolver gained `#include <openssl/proverr.h>`,
+because `hpke_util.c` is a `crypto/` file whose helpers raise with the *provider* library's reasons.
+The regenerated `src/runtime/err_sites.rs` and `forensics/atlas/err-raise-sites.json` ship in the
+same commit as the source.
+
+The two guard pairs were run: against this branch's previous head (`34c68191`:
+`implemented[libcrypto] 1800 -> 1840`, `open_obligations[phase7] 121 -> 81`) and against `origin/main`.

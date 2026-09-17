@@ -164,6 +164,12 @@
         "owner_phase": 9,
         "reason": "`PEM_ASN1_write_bio_internal`'s encrypted arm generates the DEK-Info salt from `RAND_bytes(iv, EVP_CIPHER_get_iv_length(enc))` (`crypto/pem/pem_lib.c:386`), and `rand.h` is Phase 9's. The name blocks `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx` and `PEM_ASN1_write` alongside `EVP_md5`; all three are withheld, and this row records the second of their two blockers rather than a second withheld export. The same argument D165 makes applies in the other direction here: the `enc == NULL` arm of the function is transcribable against landed machinery alone, but an export cannot be half-written, and the encrypted arm is the one every `PEM_write_*PrivateKey*` caller reaches.",
         "evidence": "docs/DECISIONS.md D194; docs/PHASE-7-SUBPHASES.md row 7.5"
+      },
+      {
+        "symbol": "RAND_bytes_ex",
+        "owner_phase": 9,
+        "reason": "`OSSL_HPKE_get_grease_value` fills the GREASE ciphertext with `RAND_bytes_ex(libctx, ct, ctlen, 0)` (`crypto/hpke/hpke.c:1433`), and its random-suite arm calls `ossl_rand_uniform_uint32` (`crypto/hpke/hpke_util.c:198`, `:220`, `:243`); both are `crypto/rand/`'s and Phase 9's. The whole observable of that export is whether the random fill succeeds, so there is no partial answer to write and it is withheld rather than stubbed. No other `OSSL_HPKE_*` name needs the random layer: the KEM, KDF and AEAD arms all build over landed 7.3 objects, which is what D195 records. This row names the direct callee; `ossl_rand_uniform_uint32` is the same stratum, reached only through `ossl_HPKE_*_INFO_find_random`, whose only caller is the same withheld function.",
+        "evidence": "docs/DECISIONS.md D195; docs/PHASE-7-SUBPHASES.md row 7.6"
       }
     ],
     "divergences": [

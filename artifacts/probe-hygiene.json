@@ -2802,6 +2802,68 @@
         "verdict": "clean"
       },
       {
+        "probe": "courts/phase7/rt_cmac_probe.c",
+        "sides": {
+          "authority": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 26,
+              "-O1": 26,
+              "-O2": 26
+            },
+            "side": "authority",
+            "verdict": "clean"
+          },
+          "candidate": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 26,
+              "-O1": 26,
+              "-O2": 26
+            },
+            "side": "candidate",
+            "verdict": "clean"
+          }
+        },
+        "verdict": "clean"
+      },
+      {
         "probe": "courts/phase7/rt_evp_cipher_probe.c",
         "sides": {
           "authority": {
@@ -3544,12 +3606,136 @@
           }
         },
         "verdict": "clean"
+      },
+      {
+        "probe": "courts/phase7/rt_hmac_probe.c",
+        "sides": {
+          "authority": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 32,
+              "-O1": 32,
+              "-O2": 32
+            },
+            "side": "authority",
+            "verdict": "clean"
+          },
+          "candidate": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 32,
+              "-O1": 32,
+              "-O2": 32
+            },
+            "side": "candidate",
+            "verdict": "clean"
+          }
+        },
+        "verdict": "clean"
+      },
+      {
+        "probe": "courts/phase7/rt_hpke_probe.c",
+        "sides": {
+          "authority": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 65,
+              "-O1": 65,
+              "-O2": 65
+            },
+            "side": "authority",
+            "verdict": "clean"
+          },
+          "candidate": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 65,
+              "-O1": 65,
+              "-O2": 65
+            },
+            "side": "candidate",
+            "verdict": "clean"
+          }
+        },
+        "verdict": "clean"
       }
     ],
     "runs_per_level": 2,
     "summary": {
-      "clean": 57,
-      "total": 57,
+      "clean": 60,
+      "total": 60,
       "unstable": 0
     }
   },
@@ -3782,6 +3968,11 @@
     },
     {
       "name": "probe",
+      "path": "courts/phase7/rt_cmac_probe.c",
+      "sha256": "01e9816f619c51aef5652d08558d753965bbeceeb51ca3c06e00c348086586c2"
+    },
+    {
+      "name": "probe",
       "path": "courts/phase7/rt_evp_cipher_probe.c",
       "sha256": "2abeca762170f61569fd135ee3d5f0e616ed2689be49afb2e6fd312a3badd31a"
     },
@@ -3839,6 +4030,16 @@
       "name": "probe",
       "path": "courts/phase7/rt_fetch_probe.c",
       "sha256": "bbd752db6c52867a27260ebda57ed0cecbd8ebcbea2764a55181983cef367ff4"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase7/rt_hmac_probe.c",
+      "sha256": "39b84756d4ec935a34e8fb10e228540d7bda1365fac1aa2ce5a73aaed4b983a6"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase7/rt_hpke_probe.c",
+      "sha256": "b0aded0cb3319828582946351d52f49b6be48a894eeb51c17787c429d5c803f9"
     }
   ],
   "kind": "probe-hygiene",

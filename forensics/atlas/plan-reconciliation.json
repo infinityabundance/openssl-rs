@@ -7,10 +7,10 @@
     "census": {
       "names_a_basename_the_authority_repeats": 1,
       "names_a_file_the_authority_does_not_have": 1,
-      "units_not_reached": 59
+      "units_not_reached": 56
     },
     "census_by_stratum": {
-      "7": 61
+      "7": 58
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
     "census_samples": {
@@ -25,7 +25,6 @@
         "crypto/asn1/d2i_pr.c",
         "crypto/asn1/d2i_pu.c",
         "crypto/asn1/i2d_evp.c",
-        "crypto/cmac/cmac.c",
         "crypto/evp/bio_b64.c",
         "crypto/evp/bio_md.c",
         "crypto/evp/bio_ok.c",
@@ -74,8 +73,6 @@
         "crypto/evp/p_seal.c",
         "crypto/evp/p_sign.c",
         "crypto/evp/p_verify.c",
-        "crypto/hmac/hmac.c",
-        "crypto/hpke/hpke.c",
         "crypto/pem/pem_oth.c",
         "crypto/pem/pem_pk8.c",
         "crypto/pem/pem_pkey.c",
@@ -89,12 +86,12 @@
         "docs/PHASE-7-SUBPHASES.md"
       ],
       "rows_judged": 62,
-      "symbols_named_by_a_row": 70,
-      "symbols_reached": 70,
+      "symbols_named_by_a_row": 71,
+      "symbols_reached": 71,
       "unit_records": 10,
       "units_named_by_a_record": 13,
       "units_named_by_a_row": 134,
-      "units_reached": 75
+      "units_reached": 78
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -204,7 +201,9 @@
         "subphases": [
           "7.6"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/mac/cmac.rs"
+        ]
       },
       "crypto/conf/conf_api.c": {
         "defines": [
@@ -1336,7 +1335,9 @@
         "subphases": [
           "7.6"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/mac/hmac.rs"
+        ]
       },
       "crypto/hpke/hpke.c": {
         "defines": [],
@@ -1344,7 +1345,9 @@
         "subphases": [
           "7.6"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/hpke/mod.rs"
+        ]
       },
       "crypto/indicator_core.c": {
         "defines": [
@@ -1832,10 +1835,10 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 141
+      "transcribed_units": 144
     }
   },
-  "body_hash": "d0ca650f673546071adaa2918232494d1203f6593b7fb77fb659273452e3a746",
+  "body_hash": "b3355ee19dbc49f01f8c5dfd81196a855ea85e11f68f8e7c8244eec531d877c1",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -1846,22 +1849,22 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "dabe8d724fd499897a1b1eb5a2973ae70554225a053a753915848c68e158447b"
+      "sha256": "8066895dab0b2439bb37c93cb92e16578964696c07f870573e544330b3bc42e0"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "88e00ef6d514e84ce65962d9a1d20b99a6dc622b2d58d69216b1a8657744f1b0"
+      "sha256": "4a8a291c12f7a352bbeecc829f9dd1199aca2810c3e66475877e886f30b71795"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "1b3b78a7fc41dfb4ca2f6e20562164e8a085a37c9c498cbd61e1b471e0d64de1"
+      "sha256": "5fdb42a488c6937d024d93d404ab09e8450bdd3d88a525e90960205aba52de9a"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "f7334e1b30c2876e0d03c9e5e86d3e971a7e859344ba0488039e1822295710c4"
+      "sha256": "3dd94b0248746f2499e2f7e69f249e5322f77c3f40d7aa80ff1df1cb702d0744"
     },
     {
       "name": "source-manifest",
@@ -1881,7 +1884,7 @@
     {
       "name": "plan-PHASE-7-SUBPHASES",
       "path": "docs/PHASE-7-SUBPHASES.md",
-      "sha256": "9cf113e24025a5310cd11b241567adf8529c4225dbd277c8de4b5ced5e34e355"
+      "sha256": "ef2b00338d52c025d4a49e739a63d97860009369292074b5607e09715531ddae"
     }
   ],
   "kind": "plan-reconciliation",

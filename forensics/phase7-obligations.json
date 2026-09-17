@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 924,
       "deferred_to_later_phase": 164,
-      "implemented": 665,
-      "open_in_this_stratum": 121,
+      "implemented": 705,
+      "open_in_this_stratum": 81,
       "owned": 950,
       "received_by_handoff": 26
     },
@@ -1194,6 +1194,15 @@
       "BIO_f_cipher",
       "BIO_f_md",
       "BIO_set_cipher",
+      "CMAC_CTX_cleanup",
+      "CMAC_CTX_copy",
+      "CMAC_CTX_free",
+      "CMAC_CTX_get0_cipher_ctx",
+      "CMAC_CTX_new",
+      "CMAC_Final",
+      "CMAC_Init",
+      "CMAC_Update",
+      "CMAC_resume",
       "EVP_ASYM_CIPHER_do_all_provided",
       "EVP_ASYM_CIPHER_fetch",
       "EVP_ASYM_CIPHER_free",
@@ -1836,6 +1845,37 @@
       "EVP_md_null",
       "EVP_set_default_properties",
       "EVP_set_pw_prompt",
+      "HMAC",
+      "HMAC_CTX_copy",
+      "HMAC_CTX_free",
+      "HMAC_CTX_get_md",
+      "HMAC_CTX_new",
+      "HMAC_CTX_reset",
+      "HMAC_CTX_set_flags",
+      "HMAC_Final",
+      "HMAC_Init",
+      "HMAC_Init_ex",
+      "HMAC_Update",
+      "HMAC_size",
+      "OSSL_HPKE_CTX_free",
+      "OSSL_HPKE_CTX_get_seq",
+      "OSSL_HPKE_CTX_new",
+      "OSSL_HPKE_CTX_set1_authpriv",
+      "OSSL_HPKE_CTX_set1_authpub",
+      "OSSL_HPKE_CTX_set1_ikme",
+      "OSSL_HPKE_CTX_set1_psk",
+      "OSSL_HPKE_CTX_set_seq",
+      "OSSL_HPKE_decap",
+      "OSSL_HPKE_encap",
+      "OSSL_HPKE_export",
+      "OSSL_HPKE_get_ciphertext_size",
+      "OSSL_HPKE_get_public_encap_size",
+      "OSSL_HPKE_get_recommended_ikmelen",
+      "OSSL_HPKE_keygen",
+      "OSSL_HPKE_open",
+      "OSSL_HPKE_seal",
+      "OSSL_HPKE_str2suite",
+      "OSSL_HPKE_suite_check",
       "PEM_SignFinal",
       "PEM_SignInit",
       "PEM_SignUpdate",
@@ -2129,60 +2169,6 @@
         "symbol": "BIO_f_reliable"
       },
       {
-        "declaring_header": "cmac.h",
-        "module": "src/mac/cmac.rs",
-        "received_from_phase": null,
-        "symbol": "CMAC_CTX_cleanup"
-      },
-      {
-        "declaring_header": "cmac.h",
-        "module": "src/mac/cmac.rs",
-        "received_from_phase": null,
-        "symbol": "CMAC_CTX_copy"
-      },
-      {
-        "declaring_header": "cmac.h",
-        "module": "src/mac/cmac.rs",
-        "received_from_phase": null,
-        "symbol": "CMAC_CTX_free"
-      },
-      {
-        "declaring_header": "cmac.h",
-        "module": "src/mac/cmac.rs",
-        "received_from_phase": null,
-        "symbol": "CMAC_CTX_get0_cipher_ctx"
-      },
-      {
-        "declaring_header": "cmac.h",
-        "module": "src/mac/cmac.rs",
-        "received_from_phase": null,
-        "symbol": "CMAC_CTX_new"
-      },
-      {
-        "declaring_header": "cmac.h",
-        "module": "src/mac/cmac.rs",
-        "received_from_phase": null,
-        "symbol": "CMAC_Final"
-      },
-      {
-        "declaring_header": "cmac.h",
-        "module": "src/mac/cmac.rs",
-        "received_from_phase": null,
-        "symbol": "CMAC_Init"
-      },
-      {
-        "declaring_header": "cmac.h",
-        "module": "src/mac/cmac.rs",
-        "received_from_phase": null,
-        "symbol": "CMAC_Update"
-      },
-      {
-        "declaring_header": "cmac.h",
-        "module": "src/mac/cmac.rs",
-        "received_from_phase": null,
-        "symbol": "CMAC_resume"
-      },
-      {
         "declaring_header": "evp.h",
         "module": "src/evp/cipher.rs",
         "received_from_phase": null,
@@ -2423,196 +2409,10 @@
         "symbol": "EVP_read_pw_string_min"
       },
       {
-        "declaring_header": "hmac.h",
-        "module": "src/mac/hmac.rs",
-        "received_from_phase": null,
-        "symbol": "HMAC"
-      },
-      {
-        "declaring_header": "hmac.h",
-        "module": "src/mac/hmac.rs",
-        "received_from_phase": null,
-        "symbol": "HMAC_CTX_copy"
-      },
-      {
-        "declaring_header": "hmac.h",
-        "module": "src/mac/hmac.rs",
-        "received_from_phase": null,
-        "symbol": "HMAC_CTX_free"
-      },
-      {
-        "declaring_header": "hmac.h",
-        "module": "src/mac/hmac.rs",
-        "received_from_phase": null,
-        "symbol": "HMAC_CTX_get_md"
-      },
-      {
-        "declaring_header": "hmac.h",
-        "module": "src/mac/hmac.rs",
-        "received_from_phase": null,
-        "symbol": "HMAC_CTX_new"
-      },
-      {
-        "declaring_header": "hmac.h",
-        "module": "src/mac/hmac.rs",
-        "received_from_phase": null,
-        "symbol": "HMAC_CTX_reset"
-      },
-      {
-        "declaring_header": "hmac.h",
-        "module": "src/mac/hmac.rs",
-        "received_from_phase": null,
-        "symbol": "HMAC_CTX_set_flags"
-      },
-      {
-        "declaring_header": "hmac.h",
-        "module": "src/mac/hmac.rs",
-        "received_from_phase": null,
-        "symbol": "HMAC_Final"
-      },
-      {
-        "declaring_header": "hmac.h",
-        "module": "src/mac/hmac.rs",
-        "received_from_phase": null,
-        "symbol": "HMAC_Init"
-      },
-      {
-        "declaring_header": "hmac.h",
-        "module": "src/mac/hmac.rs",
-        "received_from_phase": null,
-        "symbol": "HMAC_Init_ex"
-      },
-      {
-        "declaring_header": "hmac.h",
-        "module": "src/mac/hmac.rs",
-        "received_from_phase": null,
-        "symbol": "HMAC_Update"
-      },
-      {
-        "declaring_header": "hmac.h",
-        "module": "src/mac/hmac.rs",
-        "received_from_phase": null,
-        "symbol": "HMAC_size"
-      },
-      {
-        "declaring_header": "hpke.h",
-        "module": "src/hpke/mod.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_HPKE_CTX_free"
-      },
-      {
-        "declaring_header": "hpke.h",
-        "module": "src/hpke/mod.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_HPKE_CTX_get_seq"
-      },
-      {
-        "declaring_header": "hpke.h",
-        "module": "src/hpke/mod.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_HPKE_CTX_new"
-      },
-      {
-        "declaring_header": "hpke.h",
-        "module": "src/hpke/mod.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_HPKE_CTX_set1_authpriv"
-      },
-      {
-        "declaring_header": "hpke.h",
-        "module": "src/hpke/mod.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_HPKE_CTX_set1_authpub"
-      },
-      {
-        "declaring_header": "hpke.h",
-        "module": "src/hpke/mod.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_HPKE_CTX_set1_ikme"
-      },
-      {
-        "declaring_header": "hpke.h",
-        "module": "src/hpke/mod.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_HPKE_CTX_set1_psk"
-      },
-      {
-        "declaring_header": "hpke.h",
-        "module": "src/hpke/mod.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_HPKE_CTX_set_seq"
-      },
-      {
-        "declaring_header": "hpke.h",
-        "module": "src/hpke/mod.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_HPKE_decap"
-      },
-      {
-        "declaring_header": "hpke.h",
-        "module": "src/hpke/mod.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_HPKE_encap"
-      },
-      {
-        "declaring_header": "hpke.h",
-        "module": "src/hpke/mod.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_HPKE_export"
-      },
-      {
-        "declaring_header": "hpke.h",
-        "module": "src/hpke/mod.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_HPKE_get_ciphertext_size"
-      },
-      {
         "declaring_header": "hpke.h",
         "module": "src/hpke/mod.rs",
         "received_from_phase": null,
         "symbol": "OSSL_HPKE_get_grease_value"
-      },
-      {
-        "declaring_header": "hpke.h",
-        "module": "src/hpke/mod.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_HPKE_get_public_encap_size"
-      },
-      {
-        "declaring_header": "hpke.h",
-        "module": "src/hpke/mod.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_HPKE_get_recommended_ikmelen"
-      },
-      {
-        "declaring_header": "hpke.h",
-        "module": "src/hpke/mod.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_HPKE_keygen"
-      },
-      {
-        "declaring_header": "hpke.h",
-        "module": "src/hpke/mod.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_HPKE_open"
-      },
-      {
-        "declaring_header": "hpke.h",
-        "module": "src/hpke/mod.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_HPKE_seal"
-      },
-      {
-        "declaring_header": "hpke.h",
-        "module": "src/hpke/mod.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_HPKE_str2suite"
-      },
-      {
-        "declaring_header": "hpke.h",
-        "module": "src/hpke/mod.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_HPKE_suite_check"
       },
       {
         "declaring_header": "pem.h",
@@ -2896,12 +2696,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "0193a26dc0d29491afcda366dd338e92bfa7388c6b3d0afe19fbb2af0844fdd1"
+      "sha256": "a013c4d3419d14b7bd5c8086282998d1e1cab64d21127921c2848e25a0c30620"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "dc13333d83cc5780fa77655dcb4a1ab0f7ada95a21aeb9c199c2b1e5afed0688"
+      "sha256": "3c455fd442043e5331c97c336d5c230dee0c161ee350b19ac790048925782504"
     }
   ],
   "kind": "phase7-obligations",

@@ -17,9 +17,9 @@ name is defined; `open` means the stratum owns it and has not built it;
 
 | library | authority exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 1800 | 4096 |
+| libcrypto | 5896 | 1840 | 4056 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **1800** | **4699** |
+| **total** | **6499** | **1840** | **4659** |
 
 ## Ownership atlas, by stratum
 
@@ -32,7 +32,7 @@ declared owner; this is that assignment.
 | 4 | BIO + CONF + object database | `complete` | 256 | 272 | 249 | 23 | 0 |
 | 5 | BN + ASN.1 + DER/PEM | `complete` | 561 | 565 | 474 | 91 | 0 |
 | 6 | OSSL_LIB_CTX + provider core | `complete` | 137 | 161 | 161 | 0 | 0 |
-| 7 | EVP framework | `in-progress` | 924 | 950 | 665 | 164 | 121 |
+| 7 | EVP framework | `in-progress` | 924 | 950 | 705 | 164 | 81 |
 | 8 | Native cryptographic primitives | `not-started` | 759 | — | — | — | — |
 | 9 | RAND / DRBG + entropy | `not-started` | 25 | — | — | — | — |
 | 10 | Key formats + PKCS + STORE | `not-started` | 272 | — | — | — | — |
@@ -207,14 +207,14 @@ Courts: `all pass`, 9 court(s), **2032** authority observation(s) over 9 transcr
 ## Phase 7 — EVP framework
 
 * state: `in-progress`
-* blocking: 121 open obligation(s) of this stratum recorded in forensics/phase7-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase
+* blocking: 81 open obligation(s) of this stratum recorded in forensics/phase7-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase
 * seal: none written yet (`unnamed`)
 * ledger: `forensics/phase7-obligations.json`
 * atlas-owned: 924
 * owned working set: 950
-* implemented: 665
+* implemented: 705
 * deferred to a later stratum with a stated reason: 164
-* **open in this stratum: 121**
+* **open in this stratum: 81**
 
 Deferred out, by receiving stratum:
 
@@ -225,7 +225,7 @@ Hand-offs received and discharged:
 
 * from phase 5: 26 symbol(s) — `ASN1_item_sign_ex`, `ASN1_item_verify_ex`, `PEM_ASN1_read`, `PEM_ASN1_read_bio`, `PEM_ASN1_write`, `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx`, `PEM_SignFinal`, `PEM_SignInit`, `PEM_SignUpdate`, `PEM_bytes_read_bio`, `PEM_bytes_read_bio_secmem`, `PEM_def_callback`, `PEM_do_header`, `PEM_read`, `PEM_read_bio`, `PEM_read_bio_Parameters`, `PEM_read_bio_Parameters_ex`, `PEM_read_bio_ex`, `PEM_write`, `PEM_write_PKCS8PrivateKey_nid`, `PEM_write_bio`, `PEM_write_bio_ASN1_stream`, `PEM_write_bio_PKCS8PrivateKey_nid`, `PEM_write_bio_Parameters`, `PEM_write_bio_PrivateKey_traditional`
 
-Courts: `all pass`, 12 court(s), **2103** authority observation(s) over 12 transcript court(s).
+Courts: `all pass`, 15 court(s), **2226** authority observation(s) over 15 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
@@ -241,6 +241,9 @@ Courts: `all pass`, 12 court(s), **2103** authority observation(s) over 12 trans
 | RT-EVP-PBE | `pass` | 442 |
 | RT-EVP-BIO | `pass` | 154 |
 | RT-EVP-PEM | `pass` | 80 |
+| RT-HMAC | `pass` | 32 |
+| RT-CMAC | `pass` | 26 |
+| RT-HPKE | `pass` | 65 |
 
 ## Atlas/ledger reconciliation
 
