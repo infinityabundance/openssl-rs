@@ -357,6 +357,35 @@ unsafe fn evp_pkey_free_it(x: *mut EvpPkey) {
     unsafe { (*x).type_ = EVP_PKEY_NONE };
 }
 
+/// `void evp_pkey_free_legacy(EVP_PKEY *x)` — `crypto/evp/p_lib.c:1777`.
+///
+/// **The body is empty here, and that is a transcription rather than an omission.** Every statement
+/// the authority's function has is `ameth` or `ENGINE` work:
+///
+/// ```c
+/// const EVP_PKEY_ASN1_METHOD *ameth = x->ameth;
+/// if (ameth == NULL && x->legacy_cache_pkey.ptr != NULL)
+///     ameth = EVP_PKEY_asn1_find(&tmpe, x->type);
+/// if (ameth != NULL) { ...; ameth->pkey_free(x); }
+/// ENGINE_finish(tmpe); ENGINE_finish(x->engine); ...
+/// ```
+///
+/// `EVP_PKEY_ASN1_METHOD` and `EVP_PKEY_asn1_find` are Phase 8's (D163, D165), `ENGINE` is Phase
+/// 13's, and this crate has neither an `ameth` nor an `engine` field — so `ameth` is NULL on entry,
+/// the block it guards is skipped, and the four `ENGINE_finish` calls are each handed a NULL. The
+/// function is called where the authority calls it (the success path of `EVP_PKEY_generate`, whose
+/// `#if` guard does **not** remove it in this build, D172) so that the site reads as the authority's
+/// and so that the day Phase 8 lands, the body is the authority's.
+///
+/// # Safety
+/// `x` must be NULL or a live `EvpPkey`.
+#[allow(dead_code)] // first live caller is `EVP_PKEY_generate` in `pmeth_gn.rs`
+pub(crate) unsafe fn evp_pkey_free_legacy(x: *mut EvpPkey) {
+    /* Nothing to release without an `EVP_PKEY_ASN1_METHOD` or an `ENGINE`. The parameter is named
+     * rather than elided because the contract above is about it. */
+    let _ = x;
+}
+
 /// `void EVP_PKEY_free(EVP_PKEY *x)`.
 ///
 /// `EVP_PKEY_free` has no legacy `pkey->ameth->pkey_free` for now, but is otherwise complete.
