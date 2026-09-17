@@ -206,7 +206,7 @@ entry points over it). The method halves land as **7.4b-i**; the operation halve
 **7.4d** — `crypto/evp/signature.c`'s entry-point half, the eighteen `EVP_PKEY_sign*`/`verify*`/
 `verify_recover*` exports, plus the replay half of the cached-data trio
 (`evp_pkey_ctx_use_cached_data`) that is the only internal they owe. 7.4d is landed with its court
-`RT-EVP-PKEY` (175 observations, zero residuals) and its finding recorded in D189: `legacy:` does
+`RT-EVP-PKEY` (178 observations, zero residuals) and its finding recorded in D189: `legacy:` does
 not reset `ctx->operation`, which is what makes the `algctx == NULL` arm of the three one-shot
 entry points reachable from the public API. The remaining 7.4b work is `keymgmt_meth.c`'s
 `legacy_alg` fill, which is blocked on `evp_pkey_name2type` and therefore on Phase 8.
