@@ -1030,3 +1030,37 @@ between the authority and the candidate at this site.**
 - **Claim removed:** the claim of divergence, which was never made in the register -- only cited
   from `src/evp/pkey_ctx.rs`. That citation is gone; the site now states the authority's
   behaviour, and cites D167 for the measurement.
+
+### D-PKEY-AMETH-2 — the two `find` functions answer NULL for the twelve legacy types, because `standard_methods[]` is Phase 8's
+
+- **Obligation:** `EVP_PKEY_asn1_find` and `EVP_PKEY_asn1_find_str` on any of the twelve legacy key types
+  (`EVP_PKEY_RSA`, `EVP_PKEY_EC`, `EVP_PKEY_DSA`, and the rest), and therefore every caller that
+  resolves a type to its `EVP_PKEY_ASN1_METHOD` through them.
+- **Authority:** `pkey_asn1_find` asks `app_methods` with `sk_EVP_PKEY_ASN1_METHOD_find` and then
+  `standard_methods[]` with `OBJ_bsearch_ameth`; `standard_methods[]` is
+  `crypto/asn1/ameth_lib.c`'s own table of the twelve `ossl_<alg>_asn1_meth` objects, sorted by
+  `pkey_id`. So `EVP_PKEY_asn1_find(NULL, EVP_PKEY_RSA)` answers `&ossl_rsa_asn1_meth` and
+  `EVP_PKEY_asn1_find_str(NULL, "RSA", 3)` answers the same object.
+- **Crate:** answers NULL in both cases, and answers correctly for every method an application
+  registered through `EVP_PKEY_asn1_add0`/`_add_alias`. `STANDARD_METHODS` is declared as a
+  zero-length table with its reason at the site, and the twelve objects are Phase 8's (D163, D165).
+  Both functions are **defined rather than withheld**: a consumer that calls them must link, and the
+  answer is right in every state this crate can reach.
+- **Reason:** the dependency is a stratum boundary and not a choice. It is the same boundary
+  `D-PKEY-AMETH-1` records from the key-type side, reached through the public door instead of through
+  `pkey_set_type`, and it is why that entry's crate description names these two functions.
+  Distinguishing this from a *deferral* is what the gate's rule forces: a deferral row is refused for
+  a name the crate defines (`stale_deferral`), and both names are defined here.
+- **Engine arm, which is absent and is *not* a divergence:** `OPENSSL_NO_ENGINE` is undefined in the
+  pinned profile, so the authority's `ENGINE_get_pkey_asn1_meth_engine` /
+  `ENGINE_pkey_asn1_find_str` / `ENGINE_init` / `ENGINE_free` calls are compiled **in**. `ENGINE` is
+  Phase 13's, so this crate has no engine type, no registry and no way to register one: a consumer
+  that calls `ENGINE_add` fails to link before it can reach the state. With no engine registered the
+  authority's own arm answers NULL and falls through to `*pe = NULL`, which is what the crate writes.
+  The two answers are identical, so there is nothing to record as a divergence — only the reason the
+  call is missing, which is stated at both sites.
+- **Claim removed:** the claim that these two functions could not land at all. The module's own doc
+  and the D-PKEY-AMETH-1 entry both described the empty table as the reason to *hold* them; the
+  project's rule is the opposite — define the symbol, answer correctly for every reachable state, and
+  record the divergence — and that is what `EVP_PKEY_asn1_get_count` and `_get0` already did for the
+  same table.

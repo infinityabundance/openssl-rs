@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 924,
       "deferred_to_later_phase": 164,
-      "implemented": 476,
-      "open_in_this_stratum": 310,
+      "implemented": 479,
+      "open_in_this_stratum": 307,
       "owned": 950,
       "received_by_handoff": 26
     },
@@ -1500,6 +1500,8 @@
       "EVP_PKEY_asn1_add0",
       "EVP_PKEY_asn1_add_alias",
       "EVP_PKEY_asn1_copy",
+      "EVP_PKEY_asn1_find",
+      "EVP_PKEY_asn1_find_str",
       "EVP_PKEY_asn1_free",
       "EVP_PKEY_asn1_get0",
       "EVP_PKEY_asn1_get0_info",
@@ -1549,6 +1551,7 @@
       "EVP_PKEY_fromdata_init",
       "EVP_PKEY_fromdata_settable",
       "EVP_PKEY_generate",
+      "EVP_PKEY_get0_asn1",
       "EVP_PKEY_get0_description",
       "EVP_PKEY_get0_provider",
       "EVP_PKEY_get0_type_name",
@@ -2457,18 +2460,6 @@
       },
       {
         "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_asn1_find"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_asn1_find_str"
-      },
-      {
-        "declaring_header": "evp.h",
         "module": "src/evp/pkey.rs",
         "received_from_phase": null,
         "symbol": "EVP_PKEY_assign"
@@ -2532,12 +2523,6 @@
         "module": "src/evp/pkey.rs",
         "received_from_phase": null,
         "symbol": "EVP_PKEY_get0_RSA"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_get0_asn1"
       },
       {
         "declaring_header": "evp.h",
@@ -3841,12 +3826,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "3e79fa37723be3dcfd331d0ef3a0d29c3576f0fca74ba6d6d1a22121ef1c0a8b"
+      "sha256": "982911204633e7677f40dee2711ad5fe61d0696452dc07c9790975abf384c8ec"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "2f554f00ba9dceba9fef3d20d6cd47b732e874833a109ad0b6366a5c935138df"
+      "sha256": "f741e34c5ebe630a2e5f2980b13df2f94e1c7e63145abf9b1ceb87fe4c116616"
     }
   ],
   "kind": "phase7-obligations",

@@ -442,7 +442,7 @@
         "module": "src/evp/pkey_asn1.rs",
         "phase": 7,
         "phase_source": "module-declaration",
-        "share": "23/23",
+        "share": "26/26",
         "translation_unit": "crypto/asn1/ameth_lib.c"
       },
       {

@@ -79,6 +79,7 @@ use crate::evp::keymgmt::{
     EVP_KEYMGMT_names_do_all, EVP_KEYMGMT_up_ref, EvpKeyMgmt,
 };
 use crate::evp::keymgmt_lib::{evp_keymgmt_util_clear_operation_cache, evp_keymgmt_util_export};
+use crate::evp::pkey_asn1::EvpPkeyAsn1Method;
 use crate::params::{OSSL_PARAM_get_octet_string, OSSL_PARAM_locate_const, OsslParam};
 use crate::provider::OsslProvider;
 use crate::runtime::err::{err_sites, raise_site};
@@ -202,13 +203,16 @@ pub struct EvpPkeyCache {
 
 /// `struct evp_pkey_st` — the provider block and the block both halves share.
 ///
-/// **The legacy block is deliberately absent**, and what that costs is stated here rather than left
-/// to be inferred: there is no `ameth`, no `engine`, no `pmeth_engine`, and no `pkey` /
-/// `legacy_cache_pkey` union, because `EVP_PKEY_ASN1_METHOD` and `ENGINE` are Phase 8's and Phase
-/// 13's and the fields would be untyped placeholders. The effect is exactly one state this crate
-/// cannot enter — `keymgmt == NULL` with `type_ != EVP_PKEY_NONE`, a *legacy origin key* — which is
-/// why every provider-path function below tests `keymgmt` rather than a state flag, and why the
-/// functions that have a legacy arm in the authority record that arm as absent at the site.
+/// **Most of the legacy block is deliberately absent**, and the part that is present is `ameth`.
+/// `EVP_PKEY_ASN1_METHOD` is this stratum's type — D176: the accessors are declared in `evp.h`, so
+/// the ownership atlas assigns them to Phase 7, and `src/evp/pkey_asn1.rs` defines the struct — so
+/// the field is typed rather than a placeholder, which is what `EVP_PKEY_get0_asn1` needs. Still
+/// absent: `engine`, `pmeth_engine`, the `pkey` / `legacy_cache_pkey` union and `attributes`,
+/// because `ENGINE` is Phase 13's and `X509_ATTRIBUTE_free` is Phase 12's. The effect is exactly one
+/// state this crate cannot enter — `keymgmt == NULL` with `type_ != EVP_PKEY_NONE`, a *legacy origin
+/// key* — which is why every provider-path function below tests `keymgmt` rather than a state flag,
+/// and why the functions that have a legacy arm in the authority record that arm as absent at the
+/// site.
 ///
 /// `attributes` is absent for the same reason: it is a `STACK_OF(X509_ATTRIBUTE)` whose element
 /// destructor is `X509_ATTRIBUTE_free`, a Phase 12 symbol. Nothing in this crate can make it
@@ -223,6 +227,15 @@ pub struct EvpPkey {
     /// `int save_type` — the type as it was *asked for*, before the ameth lookup may have rewritten
     /// `type`.
     pub(crate) save_type: c_int,
+    /// `const EVP_PKEY_ASN1_METHOD *ameth` — the legacy method of an origin key.
+    ///
+    /// **Nothing in this crate sets it.** `pkey_set_type` is the authority's only writer and its
+    /// lookup is `EVP_PKEY_asn1_find_str`, whose `standard_methods[]` is empty, so it answers NULL for
+    /// every legacy type; the register carries that as `D-PKEY-AMETH-1`. Declaring the field and
+    /// landing `EVP_PKEY_get0_asn1` against it makes the accessor answer what the authority answers
+    /// for every key this crate can build, and an accessor that synthesised NULL from nowhere would
+    /// be a different function.
+    pub(crate) ameth: *mut EvpPkeyAsn1Method,
     /// `CRYPTO_REF_COUNT references`.
     pub(crate) references: AtomicI32,
     /// `CRYPTO_RWLOCK *lock` — guards the operation cache and the dirty counters.

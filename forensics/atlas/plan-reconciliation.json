@@ -1802,17 +1802,17 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "44eaac75dce5dd77a5f3ba8a4b8a070bbd586c0dcdf225a04a60d53415991510"
+      "sha256": "2b4e75e8220e04c078758b2cda0a2e46262ee7994db320fe750282833e4884f5"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "ed94f128d8e728bdb0ef5d22bfc0388d946ad7a2cb8b2c9399e8c47ffc4533d9"
+      "sha256": "0142732a569948683f868f26b8ac93cfd53daf1f8181a54e793eb4b45c4e7304"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "4787a5959d45424a19bbf6e13670eded37dfadb1d0468b65a216dc3574da4b97"
+      "sha256": "2124335f41f93816a988d2b3b4df270be4614977c1271f45e7d1627dd3c02661"
     },
     {
       "name": "prerequisites",
