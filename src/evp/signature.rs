@@ -179,13 +179,8 @@ pub(crate) type SignatureVerifyRecoverInitFn =
 pub(crate) type SignatureVerifyRecoverFn =
     unsafe extern "C" fn(*mut c_void, *mut u8, *mut usize, usize, *const u8, usize) -> c_int;
 /// `OSSL_FUNC_signature_digest_sign_init_fn`.
-pub(crate) type SignatureDigestSignInitFn = unsafe extern "C" fn(
-    *mut c_void,
-    *const c_char,
-    *mut c_void,
-    *mut c_void,
-    *const OsslParam,
-) -> c_int;
+pub(crate) type SignatureDigestSignInitFn =
+    unsafe extern "C" fn(*mut c_void, *const c_char, *mut c_void, *const OsslParam) -> c_int;
 /// `OSSL_FUNC_signature_digest_sign_update_fn`.
 pub(crate) type SignatureDigestSignUpdateFn =
     unsafe extern "C" fn(*mut c_void, *const u8, usize) -> c_int;
@@ -193,25 +188,11 @@ pub(crate) type SignatureDigestSignUpdateFn =
 pub(crate) type SignatureDigestSignFinalFn =
     unsafe extern "C" fn(*mut c_void, *mut u8, *mut usize, usize) -> c_int;
 /// `OSSL_FUNC_signature_digest_sign_fn`.
-pub(crate) type SignatureDigestSignFn = unsafe extern "C" fn(
-    *mut c_void,
-    *const c_char,
-    *mut c_void,
-    *mut u8,
-    *mut usize,
-    usize,
-    *const u8,
-    usize,
-    *const OsslParam,
-) -> c_int;
+pub(crate) type SignatureDigestSignFn =
+    unsafe extern "C" fn(*mut c_void, *mut u8, *mut usize, usize, *const u8, usize) -> c_int;
 /// `OSSL_FUNC_signature_digest_verify_init_fn`.
-pub(crate) type SignatureDigestVerifyInitFn = unsafe extern "C" fn(
-    *mut c_void,
-    *const c_char,
-    *mut c_void,
-    *mut c_void,
-    *const OsslParam,
-) -> c_int;
+pub(crate) type SignatureDigestVerifyInitFn =
+    unsafe extern "C" fn(*mut c_void, *const c_char, *mut c_void, *const OsslParam) -> c_int;
 /// `OSSL_FUNC_signature_digest_verify_update_fn`.
 pub(crate) type SignatureDigestVerifyUpdateFn =
     unsafe extern "C" fn(*mut c_void, *const u8, usize) -> c_int;
@@ -219,16 +200,8 @@ pub(crate) type SignatureDigestVerifyUpdateFn =
 pub(crate) type SignatureDigestVerifyFinalFn =
     unsafe extern "C" fn(*mut c_void, *const u8, usize) -> c_int;
 /// `OSSL_FUNC_signature_digest_verify_fn`.
-pub(crate) type SignatureDigestVerifyFn = unsafe extern "C" fn(
-    *mut c_void,
-    *const c_char,
-    *mut c_void,
-    *const u8,
-    usize,
-    *const u8,
-    usize,
-    *const OsslParam,
-) -> c_int;
+pub(crate) type SignatureDigestVerifyFn =
+    unsafe extern "C" fn(*mut c_void, *const u8, usize, *const u8, usize) -> c_int;
 /// `OSSL_FUNC_signature_freectx_fn`.
 pub(crate) type SignatureFreectxFn = unsafe extern "C" fn(*mut c_void);
 /// `OSSL_FUNC_signature_dupctx_fn`.
@@ -258,7 +231,7 @@ pub(crate) type SignatureSetCtxMdParamsFn =
 pub(crate) type SignatureSettableCtxMdParamsFn =
     unsafe extern "C" fn(*mut c_void) -> *const OsslParam;
 /// `OSSL_FUNC_signature_query_key_types_fn`.
-pub(crate) type SignatureQueryKeyTypesFn = unsafe extern "C" fn() -> *const *const c_char;
+pub(crate) type SignatureQueryKeyTypesFn = unsafe extern "C" fn() -> *mut *const c_char;
 
 /// `struct evp_signature_st` — `crypto/evp/evp_local.h`, **in the header's field order**, which is
 /// neither the dispatch-id order nor a grouping.

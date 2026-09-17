@@ -57,8 +57,8 @@ use crate::evp::pkey_ctx::{
 use crate::evp::pmeth_check::EVP_PKEY_public_check;
 use crate::evp::skeymgmt::{
     evp_skey_alloc, evp_skeymgmt_fetch_from_prov, EVP_SKEYMGMT_fetch, EVP_SKEYMGMT_free,
-    EVP_SKEY_free, EVP_SKEY_import_SKEYMGMT, EvpSkey, EvpSkeyMgmt, OSSL_SKEYMGMT_SELECT_SECRET_KEY,
-    OSSL_SKEY_PARAM_RAW_BYTES,
+    EVP_SKEY_free, EVP_SKEY_import_SKEYMGMT, EvpSkey, EvpSkeyMgmt, SkeymgmtImportFn,
+    OSSL_SKEYMGMT_SELECT_SECRET_KEY, OSSL_SKEY_PARAM_RAW_BYTES,
 };
 use crate::params::{OSSL_PARAM_construct_end, OSSL_PARAM_construct_octet_string, OsslParam};
 use crate::property::store::{MethodFreeFn, MethodUpRefFn};
@@ -161,11 +161,16 @@ pub(crate) type KeyexchGettableCtxParamsFn =
 /// value is the key data the destination method builds, which `EVP_PKEY_derive_SKEY` stores in the
 /// new `EVP_SKEY` — so an `int` return type would truncate a pointer. The `KdfDeriveSkeyFn` beside
 /// this class had it right; this one did not (`docs/DECISIONS.md` D170).
+///
+/// The fourth parameter is `OSSL_FUNC_skeymgmt_import_fn *import`, and it is typed here as the
+/// function pointer it is rather than as `*mut c_void`. D170 corrected this type's arity and its
+/// return type and left that parameter opaque; the dispatch plane reported the remainder as a
+/// mismatch on its first run (`docs/DECISIONS.md` D180).
 pub(crate) type KeyexchDeriveSkeyFn = unsafe extern "C" fn(
     *mut c_void,
     *const c_char,
     *mut c_void,
-    *mut c_void,
+    Option<SkeymgmtImportFn>,
     usize,
     *const OsslParam,
 ) -> *mut c_void;
@@ -1285,16 +1290,8 @@ pub unsafe extern "C" fn EVP_PKEY_derive_SKEY(
     // SAFETY: `derive_skey` is the provider's own callback; `algctx` is its context, `key_type` is
     // the caller's, `provctx` is the destination's, and `skeymgmt_import` is the destination's own
     // importer — which is what the callback needs to build the key data it returns.
-    let keydata = unsafe {
-        derive_skey(
-            algctx,
-            key_type,
-            provctx,
-            skeymgmt_import.map_or(ptr::null_mut(), |import| import as *mut c_void),
-            keylen,
-            params,
-        )
-    };
+    let keydata =
+        unsafe { derive_skey(algctx, key_type, provctx, skeymgmt_import, keylen, params) };
     // SAFETY: `ret` is this call's own object.
     unsafe { (*ret).keydata = keydata };
     if keydata.is_null() {

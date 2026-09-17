@@ -235,7 +235,7 @@ pub(crate) type CipherPipelineInitFn = unsafe extern "C" fn(
     *const u8,
     usize,
     usize,
-    *const *const u8,
+    *mut *const u8,
     usize,
     *const OsslParam,
 ) -> c_int;
@@ -246,7 +246,7 @@ pub(crate) type CipherPipelineUpdateFn = unsafe extern "C" fn(
     *mut *mut u8,
     *mut usize,
     *const usize,
-    *const *const u8,
+    *mut *const u8,
     *const usize,
 ) -> c_int;
 /// `OSSL_FUNC_cipher_pipeline_final_fn`.

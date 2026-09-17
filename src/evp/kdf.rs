@@ -51,7 +51,7 @@ use crate::evp::fetch::{evp_is_a, evp_names_do_all};
 use crate::evp::skeymgmt::{
     evp_skey_alloc, evp_skeymgmt_fetch_from_prov, EVP_SKEYMGMT_fetch, EVP_SKEYMGMT_free,
     EVP_SKEY_export, EVP_SKEY_free, EVP_SKEY_import_SKEYMGMT, EvpSkey, EvpSkeyMgmt,
-    OSSL_SKEYMGMT_SELECT_SECRET_KEY, OSSL_SKEY_PARAM_RAW_BYTES,
+    SkeymgmtImportFn, OSSL_SKEYMGMT_SELECT_SECRET_KEY, OSSL_SKEY_PARAM_RAW_BYTES,
 };
 use crate::params::{
     OSSL_PARAM_construct_end, OSSL_PARAM_construct_octet_string, OSSL_PARAM_construct_size_t,
@@ -167,15 +167,17 @@ pub(crate) type KdfSetSkeyFn =
 /// `OSSL_FUNC_kdf_derive_skey_fn` — `void *(*)(void *ctx, const char *key_type, void *provctx,
 /// OSSL_FUNC_skeymgmt_import_fn *import, size_t keylen, const OSSL_PARAM params[])`.
 ///
-/// The fourth parameter is a **function pointer** whose type is `OSSL_FUNC_skeymgmt_import_fn`,
-/// which is `EVP_SKEYMGMT`'s and therefore 7.3f's. It is typed with an opaque pointer here rather
-/// than with a type this file cannot declare; the field is filled by the walk and read by 7.3f's
-/// `EVP_KDF_derive_SKEY`, so nothing in this file loses anything by not naming its pointee.
+/// The fourth parameter is a **function pointer** whose type is `OSSL_FUNC_skeymgmt_import_fn`.
+/// It was typed here as `*mut c_void` under the belief that this file could not name the type;
+/// that was wrong in both directions -- `KeymgmtImportFn` exists in `crate::evp::keymgmt`, and a
+/// data pointer and a function pointer are different *declared* types even where they are the
+/// same ABI. The dispatch plane reported it as a mismatch the first time it ran
+/// (`docs/DECISIONS.md` D180), which is the same class as D170 and the reason that plane exists.
 pub(crate) type KdfDeriveSkeyFn = unsafe extern "C" fn(
     *mut c_void,
     *const c_char,
     *mut c_void,
-    *mut c_void,
+    Option<SkeymgmtImportFn>,
     usize,
     *const OsslParam,
 ) -> *mut c_void;
@@ -1338,7 +1340,7 @@ pub unsafe extern "C" fn EVP_KDF_derive_SKEY(
             (*ctx).algctx,
             key_type,
             provctx,
-            skeymgmt_import.map_or(ptr::null_mut(), |import| import as *mut c_void),
+            skeymgmt_import,
             keylen,
             params,
         )

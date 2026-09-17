@@ -10644,3 +10644,115 @@ signatures written inline, transcribed against `include/openssl/evp.h:1642-1748`
 parameter, which is what D177 already did for the struct's thirty-six function-pointer members.
 
 `implemented[libcrypto]` moves 1596 → 1611. No behaviour changed.
+
+## D180 — the dispatch plane exists, and its first run found the D170 class again
+
+D170 recorded two wrong callback types in landed code — `KeyexchDeriveFn` with three parameters where
+the header declares four, and `KeyexchDeriveSkeyFn` returning `c_int` where the header returns
+`void *` — and named the generable `OSSL_CORE_MAKE_FUNC` type-plane check as **the highest-value
+missing evidence plane**. D178 then reached for named aliases as a fix for an unrelated symptom.
+`forensics/tools/dispatch_court.py` is that plane, and on its first run it found the class again:
+thirteen declarations in landed code disagree with the authority, including four that would have
+mis-called a provider.
+
+**Why nothing else could see it.** `core_dispatch.h` declares the provider contract as a preprocessor
+constant and a typedef'd *function type*:
+
+```c
+#define OSSL_FUNC_CIPHER_NEWCTX 1
+OSSL_CORE_MAKE_FUNC(void *, cipher_newctx, (void *provctx))
+```
+
+Neither half is an exported symbol. `ABI-PROTOTYPE` compares exported declarations, so it sees
+nothing here; the ABI courts resolve exported symbols at their ELF versions; a runtime court observes
+values, so a wrong dispatch id is visible only if a probe happens to drive exactly that entry and a
+wrong callback arity only if the wrong register is read in a way the probe can see. The Phase 6
+third-party provider court found bad core dispatch *IDs* by driving a provider; nothing found the
+*types*.
+
+**Two planes, authority side from the Clang atlas.** Identities: all 277 `OSSL_FUNC_*` object-like
+macros in `macros.json` against every `const OSSL_FUNC_X: c_int = n;` in the crate — 195 declared,
+195 agree. Signatures: all 631 function-type typedefs in `typedefs.json` against every Rust
+`type X = unsafe extern "C" fn(...) -> T;` — 298 declared, 216 linked and checked, 82 exempted with a
+reason, 0 unlinked. The canonicaliser is `ABI-PROTOTYPE`'s, imported rather than copied, so the two
+planes cannot drift.
+
+**The link is data, not inference, where inference cannot carry it.** The names are usually the
+authority's in Rust spelling (`OSSL_FUNC_BIO_read_ex_fn` → `OsslFuncBioReadEx`), so the squashed name
+is the first rule — measurable and injective, and the injectivity is *required*: the tool reports two
+authority typedefs that squash to one key rather than resolving them. But a convention cannot tell
+`BIO_meth_set_read_ex`'s `char *` from the core dispatch's `void *`, and those two alias names
+collide. So the order is `NOT_A_DISPATCH` (a declaration of what the alias is instead, with a
+reason), then `LINKS` (an explicit link — `CipherInitFn` is one Rust type for two authority
+typedefs), then the convention, then the crate's own doc comment (`ChildFreeFn` is
+`OSSL_FUNC_provider_free_fn`). Every alias none of the four resolves is a **failure**, which is what
+stops a typo'd name from silently acquiring no counterpart; that is `run_courts.py`'s `COURTLESS`
+idiom. The tables accept `Name@src/path.rs`, because a crate may declare one name twice with
+different types: `ConfInitFn` is `CONF_METHOD.init` in `src/runtime/conf/types.rs` and
+`conf_init_func` in `src/runtime/confmod/mod.rs`.
+
+**What it found, and every one is fixed in this commit.**
+
+| declaration | the authority says | the crate said |
+|---|---|---|
+| `SignatureDigestSignFn` | `int (void *, unsigned char *, size_t *, size_t, const unsigned char *, size_t)` | nine parameters, with `mdname`/`provkey`/`params` folded in from the *init* form |
+| `SignatureDigestSignInitFn` | `int (void *, const char *, void *, const OSSL_PARAM [])` | five, with an extra `void *` before `params` |
+| `SignatureDigestVerifyFn` | `int (void *, const unsigned char *, size_t, const unsigned char *, size_t)` | eight, the same transposition |
+| `SignatureDigestVerifyInitFn` | as the sign-init form | five, same extra parameter |
+| `KeyexchDeriveSkeyFn` | `..., OSSL_FUNC_skeymgmt_import_fn *import, ...` | `*mut c_void` |
+| `KdfDeriveSkeyFn` | same | `*mut c_void` |
+| `CipherPipelineInitFn` | `const unsigned char **iv` | `*const *const u8` |
+| `CipherPipelineUpdateFn` | `const unsigned char **in` | `*const *const u8` |
+| `SignatureQueryKeyTypesFn` | returns `const char **` | `*const *const c_char` |
+| `Asn1AuxConstCb` | `int (int, const ASN1_VALUE **, const ASN1_ITEM *, void *)` | `*const *const c_void` |
+
+The four `SignatureDigest*` types are the serious ones: the crate's parameter *order* put `mdname` and
+`provkey` where the authority puts the output buffer. **No caller existed yet** — the fields are
+assigned from dispatch entries and read by callers that land later — which is the best possible time
+for this to be found, and it is the whole argument for building the plane before Phase 7.5's EVP code
+rather than after.
+
+The remaining five are one systematic transcription error: where the authority writes
+`const T **pval` the crate wrote `*const *const U`. The C form means the *outer* pointer is writable —
+only the pointee's pointee is const — so the Rust is `*mut *const U`. The fix is that class
+throughout `src/asn1/` (24 sites), not only the one the plane can reach: `prim_i2c`, `prim_print`,
+`asn1_ex_i2d`, `asn1_ex_print`, `ASN1_aux_const_cb`, and the internal helpers that mirror them. Call
+sites that took the address of a slot now bind it `mut` and use `addr_of_mut!`, which is the sound
+form the authority's own signature licenses.
+
+**Two corrections to the tables, both made because the run disagreed with me.** `FreeFn` linked by
+bare name to `CRYPTO_free_fn` and so also claimed `stack.rs`'s `OPENSSL_sk_freefunc`-shaped
+declaration; the link is now scoped to `FreeFn@src/runtime/mem.rs` and the `stack.rs` one is exempted.
+And `ConfInitFn` was linked to `conf_init_func`, which is `int (CONF_IMODULE *, const CONF *)` — the
+DSO module init, not `CONF_METHOD.init`; the link is now scoped to the `confmod` declaration and the
+`conf/types.rs` one is a `conftypes.h` struct member. **A plane whose first output is a list of its
+own author's mistakes is a plane that is measuring something.**
+
+**One instrument fix, in `ABI-PROTOTYPE`'s reader.** `GetReasonStringsFn` was reported `unmapped` and
+the reason was not the declaration: it is the crate's one function-pointer type whose argument carries
+a binding name —
+
+```rust
+type GetReasonStringsFn = unsafe extern "C" fn(provctx: *mut c_void) -> *const OsslItem;
+```
+
+— which is legal Rust, and `canon_rust_fnptr` canonicalised the whole `provctx: *mut c_void` text. A
+parameter of a *declaration* always has a name and `canon_rust_param` already stripped it; an argument
+of a function *pointer* may have one and nothing did. Both now call one `strip_binding`, so they
+cannot drift again, and `ABI-PROTOTYPE`'s sensitivity section gains a
+`named-fn-pointer-argument` control asserting both halves: the named and unnamed forms canonicalise
+identically, and a pointee-constness change still differs.
+
+**What is deliberately not claimed.** `signatures_authority_only` is 415 of 631 and is *coverage*, not
+a defect: the authority declares the dispatch contract for every stratum and the crate has reached
+seven. Nor does the plane check the two other places the same authority types appear — `OSSL_DISPATCH`
+tables' identity/type pairing, and struct members declared inline rather than through an alias. The
+first needs a dispatch-table reader; the second needs `structs.json`, which does record
+`struct conf_method_st` and its members. Both are named here so they are not rediscovered, and
+`Asn1AuxConstCb`'s four inline siblings in `ASN1_PRIMITIVE_FUNCS`/`ASN1_EXTERN_FUNCS` were fixed by
+hand in this commit for exactly that reason.
+
+No behaviour changed. `implemented[libcrypto]` is unchanged at 1611. `cargo fmt`, clippy
+`-D warnings`, 423 unit tests, the full ordered pipeline and the guard all pass; the dispatch court
+reports `identities 195/195`, `signatures checked=216 mismatches=0 unmapped=0 unlinked=0
+problems=0`, and the regression baseline gains its artefact.

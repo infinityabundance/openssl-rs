@@ -165,6 +165,15 @@ jobs:
       - name: Export prototypes
         run: python3 forensics/tools/prototype_court.py
 
+      # The provider dispatch contract is numbers and types rather than symbols --
+      # `#define OSSL_FUNC_x n` and `typedef T (OSSL_FUNC_x_fn)(...)` -- so the
+      # prototype court, the ABI courts and every runtime court are all blind to it.
+      # D170 recorded two wrong callback types in landed code and named this plane as
+      # the highest-value missing one; D180 is where it landed, and its first run found
+      # the class again. It compares both halves against the Clang atlas.
+      - name: Provider dispatch plane
+        run: python3 forensics/tools/dispatch_court.py
+
       # A court declaration is written by `gen_frf_courts.py` from one table, so a
       # hand-edit to a single manifest cannot survive: the table and the
       # declarations must agree. This is also what keeps every court's

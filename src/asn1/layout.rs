@@ -293,7 +293,7 @@ pub type Asn1AuxCb =
 
 /// `ASN1_aux_const_cb` — the same, with a `const ASN1_VALUE **`.
 pub type Asn1AuxConstCb =
-    unsafe extern "C" fn(c_int, *const *const c_void, *const Asn1Item, *mut c_void) -> c_int;
+    unsafe extern "C" fn(c_int, *mut *const c_void, *const Asn1Item, *mut c_void) -> c_int;
 
 /// `d2i_of_void` — `void *d2i_of_void(void **, const unsigned char **, long)`.
 ///
@@ -339,7 +339,7 @@ pub struct Asn1PrimitiveFuncs {
     /// Value to content octets.
     pub(crate) prim_i2c: Option<
         unsafe extern "C" fn(
-            *const *const c_void,
+            *mut *const c_void,
             *mut c_uchar,
             *mut c_int,
             *const Asn1Item,
@@ -349,7 +349,7 @@ pub struct Asn1PrimitiveFuncs {
     pub(crate) prim_print: Option<
         unsafe extern "C" fn(
             *mut Bio,
-            *const *const c_void,
+            *mut *const c_void,
             *const Asn1Item,
             c_int,
             *const Asn1Pctx,
@@ -385,7 +385,7 @@ pub struct Asn1ExternFuncs {
     /// Encode.
     pub(crate) asn1_ex_i2d: Option<
         unsafe extern "C" fn(
-            *const *const c_void,
+            *mut *const c_void,
             *mut *mut c_uchar,
             *const Asn1Item,
             c_int,
@@ -396,7 +396,7 @@ pub struct Asn1ExternFuncs {
     pub(crate) asn1_ex_print: Option<
         unsafe extern "C" fn(
             *mut Bio,
-            *const *const c_void,
+            *mut *const c_void,
             c_int,
             *const c_char,
             *const Asn1Pctx,

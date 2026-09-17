@@ -89,6 +89,16 @@
           "what": "`cargo fmt`'s multi-line `Option<...,>` and its unwrapped spelling must canonicalise identically, while a pointee-constness change inside the same text must still differ"
         },
         {
+          "control": "named-fn-pointer-argument",
+          "detected": true,
+          "observed": {
+            "named": "fptr(int:4:s; ptr(opaque))",
+            "perturbed": "fptr(int:4:s; ptr(const(opaque)))",
+            "unnamed": "fptr(int:4:s; ptr(opaque))"
+          },
+          "what": "a function-pointer argument that carries a binding name must canonicalise identically to the unnamed form, while a pointee-constness change must still differ"
+        },
+        {
           "control": "variadic-reading",
           "detected": true,
           "observed": "int:4:s (ptr(int:1:s), ...)",
@@ -119,7 +129,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "0751ac35f51a9044bf4a44010e42264a2abb911d7499d35eedb68ee934cb4e0a"
+      "sha256": "ed94f128d8e728bdb0ef5d22bfc0388d946ad7a2cb8b2c9399e8c47ffc4533d9"
     }
   ],
   "kind": "prototype-court",
