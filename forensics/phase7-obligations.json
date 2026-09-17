@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 924,
       "deferred_to_later_phase": 0,
-      "implemented": 268,
-      "open_in_this_stratum": 682,
+      "implemented": 296,
+      "open_in_this_stratum": 654,
       "owned": 950,
       "received_by_handoff": 26
     },
@@ -289,6 +289,7 @@
       "EVP_CipherFinal",
       "EVP_CipherFinal_ex",
       "EVP_CipherInit",
+      "EVP_CipherInit_SKEY",
       "EVP_CipherInit_ex",
       "EVP_CipherInit_ex2",
       "EVP_CipherPipelineDecryptInit",
@@ -325,9 +326,11 @@
       "EVP_KDF_CTX_kdf",
       "EVP_KDF_CTX_new",
       "EVP_KDF_CTX_reset",
+      "EVP_KDF_CTX_set_SKEY",
       "EVP_KDF_CTX_set_params",
       "EVP_KDF_CTX_settable_params",
       "EVP_KDF_derive",
+      "EVP_KDF_derive_SKEY",
       "EVP_KDF_do_all_provided",
       "EVP_KDF_fetch",
       "EVP_KDF_free",
@@ -363,6 +366,7 @@
       "EVP_MAC_gettable_ctx_params",
       "EVP_MAC_gettable_params",
       "EVP_MAC_init",
+      "EVP_MAC_init_SKEY",
       "EVP_MAC_is_a",
       "EVP_MAC_names_do_all",
       "EVP_MAC_settable_ctx_params",
@@ -465,6 +469,30 @@
       "EVP_RAND_uninstantiate",
       "EVP_RAND_up_ref",
       "EVP_RAND_verify_zeroization",
+      "EVP_SKEYMGMT_do_all_provided",
+      "EVP_SKEYMGMT_fetch",
+      "EVP_SKEYMGMT_free",
+      "EVP_SKEYMGMT_get0_description",
+      "EVP_SKEYMGMT_get0_gen_settable_params",
+      "EVP_SKEYMGMT_get0_imp_settable_params",
+      "EVP_SKEYMGMT_get0_name",
+      "EVP_SKEYMGMT_get0_provider",
+      "EVP_SKEYMGMT_is_a",
+      "EVP_SKEYMGMT_names_do_all",
+      "EVP_SKEYMGMT_up_ref",
+      "EVP_SKEY_export",
+      "EVP_SKEY_free",
+      "EVP_SKEY_generate",
+      "EVP_SKEY_get0_key_id",
+      "EVP_SKEY_get0_provider_name",
+      "EVP_SKEY_get0_raw_key",
+      "EVP_SKEY_get0_skeymgmt_name",
+      "EVP_SKEY_import",
+      "EVP_SKEY_import_SKEYMGMT",
+      "EVP_SKEY_import_raw_key",
+      "EVP_SKEY_is_a",
+      "EVP_SKEY_to_provider",
+      "EVP_SKEY_up_ref",
       "EVP_default_properties_enable_fips",
       "EVP_default_properties_is_fips_enabled",
       "EVP_enc_null",
@@ -920,12 +948,6 @@
       },
       {
         "declaring_header": "evp.h",
-        "module": "src/evp/cipher.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_CipherInit_SKEY"
-      },
-      {
-        "declaring_header": "evp.h",
         "module": "src/evp/encode.rs",
         "received_from_phase": null,
         "symbol": "EVP_DecodeBlock"
@@ -1055,18 +1077,6 @@
         "module": "src/evp/encode.rs",
         "received_from_phase": null,
         "symbol": "EVP_EncodeUpdate"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/kdf.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KDF_CTX_set_SKEY"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/kdf.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KDF_derive_SKEY"
       },
       {
         "declaring_header": "evp.h",
@@ -1277,12 +1287,6 @@
         "module": "src/evp/keymgmt.rs",
         "received_from_phase": null,
         "symbol": "EVP_KEYMGMT_up_ref"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/mac.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_MAC_init_SKEY"
       },
       {
         "declaring_header": "evp.h",
@@ -3074,150 +3078,6 @@
       },
       {
         "declaring_header": "evp.h",
-        "module": "src/evp/skeymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SKEYMGMT_do_all_provided"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/skeymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SKEYMGMT_fetch"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/skeymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SKEYMGMT_free"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/skeymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SKEYMGMT_get0_description"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/skeymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SKEYMGMT_get0_gen_settable_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/skeymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SKEYMGMT_get0_imp_settable_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/skeymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SKEYMGMT_get0_name"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/skeymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SKEYMGMT_get0_provider"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/skeymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SKEYMGMT_is_a"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/skeymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SKEYMGMT_names_do_all"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/skeymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SKEYMGMT_up_ref"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/skeymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SKEY_export"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/skeymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SKEY_free"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/skeymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SKEY_generate"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/skeymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SKEY_get0_key_id"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/skeymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SKEY_get0_provider_name"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/skeymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SKEY_get0_raw_key"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/skeymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SKEY_get0_skeymgmt_name"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/skeymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SKEY_import"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/skeymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SKEY_import_SKEYMGMT"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/skeymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SKEY_import_raw_key"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/skeymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SKEY_is_a"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/skeymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SKEY_to_provider"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/skeymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SKEY_up_ref"
-      },
-      {
-        "declaring_header": "evp.h",
         "module": "src/evp/p_legacy.rs",
         "received_from_phase": null,
         "symbol": "EVP_SealFinal"
@@ -4878,12 +4738,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "75bf26003bb16eb91f503404d9f1033a5aded4c315dd64809fdb84df45661d64"
+      "sha256": "e20b1febf0f79d918bbe992c4622b557e3b592d711e76aaf2d02a800b5ea3255"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "d1dbdddc57a6d9462b65ba56f3bf230a72a36956b28e5ba3cdf198aee4528c46"
+      "sha256": "4bdc677be035034890ef5d7a57eb864ff0f0e76d17481e7cf488d966576c9552"
     }
   ],
   "kind": "phase7-obligations",

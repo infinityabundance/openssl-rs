@@ -281,7 +281,7 @@
         "truncf128",
         "truncf16"
       ],
-      "compiler_emitted_count": 7142,
+      "compiler_emitted_count": 7139,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -289,7 +289,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 1403,
+        "implemented": 1431,
         "implemented_symbols": [
           "ASN1_ANY_it",
           "ASN1_BIT_STRING_check",
@@ -1156,6 +1156,7 @@
           "EVP_CipherFinal",
           "EVP_CipherFinal_ex",
           "EVP_CipherInit",
+          "EVP_CipherInit_SKEY",
           "EVP_CipherInit_ex",
           "EVP_CipherInit_ex2",
           "EVP_CipherPipelineDecryptInit",
@@ -1192,9 +1193,11 @@
           "EVP_KDF_CTX_kdf",
           "EVP_KDF_CTX_new",
           "EVP_KDF_CTX_reset",
+          "EVP_KDF_CTX_set_SKEY",
           "EVP_KDF_CTX_set_params",
           "EVP_KDF_CTX_settable_params",
           "EVP_KDF_derive",
+          "EVP_KDF_derive_SKEY",
           "EVP_KDF_do_all_provided",
           "EVP_KDF_fetch",
           "EVP_KDF_free",
@@ -1230,6 +1233,7 @@
           "EVP_MAC_gettable_ctx_params",
           "EVP_MAC_gettable_params",
           "EVP_MAC_init",
+          "EVP_MAC_init_SKEY",
           "EVP_MAC_is_a",
           "EVP_MAC_names_do_all",
           "EVP_MAC_settable_ctx_params",
@@ -1332,6 +1336,30 @@
           "EVP_RAND_uninstantiate",
           "EVP_RAND_up_ref",
           "EVP_RAND_verify_zeroization",
+          "EVP_SKEYMGMT_do_all_provided",
+          "EVP_SKEYMGMT_fetch",
+          "EVP_SKEYMGMT_free",
+          "EVP_SKEYMGMT_get0_description",
+          "EVP_SKEYMGMT_get0_gen_settable_params",
+          "EVP_SKEYMGMT_get0_imp_settable_params",
+          "EVP_SKEYMGMT_get0_name",
+          "EVP_SKEYMGMT_get0_provider",
+          "EVP_SKEYMGMT_is_a",
+          "EVP_SKEYMGMT_names_do_all",
+          "EVP_SKEYMGMT_up_ref",
+          "EVP_SKEY_export",
+          "EVP_SKEY_free",
+          "EVP_SKEY_generate",
+          "EVP_SKEY_get0_key_id",
+          "EVP_SKEY_get0_provider_name",
+          "EVP_SKEY_get0_raw_key",
+          "EVP_SKEY_get0_skeymgmt_name",
+          "EVP_SKEY_import",
+          "EVP_SKEY_import_SKEYMGMT",
+          "EVP_SKEY_import_raw_key",
+          "EVP_SKEY_is_a",
+          "EVP_SKEY_to_provider",
+          "EVP_SKEY_up_ref",
           "EVP_default_properties_enable_fips",
           "EVP_default_properties_is_fips_enabled",
           "EVP_enc_null",
@@ -1695,7 +1723,7 @@
           "i2d_DISPLAYTEXT",
           "i2t_ASN1_OBJECT"
         ],
-        "scaffolded": 4493
+        "scaffolded": 4465
       },
       "libssl": {
         "authority_exports": 603,
@@ -1706,18 +1734,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 1403,
-      "scaffolded": 5096
+      "implemented": 1431,
+      "scaffolded": 5068
     }
   },
-  "body_hash": "75bf26003bb16eb91f503404d9f1033a5aded4c315dd64809fdb84df45661d64",
+  "body_hash": "e20b1febf0f79d918bbe992c4622b557e3b592d711e76aaf2d02a800b5ea3255",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "c6ddb0a2df8b37d8842eece996395b078a187693e94882809d494e1088c7ee81"
+      "sha256": "2d6753a1a5f27be58079e70fbc1415e55ccb327c5ff457ed1e2f3df43083c43f"
     },
     {
       "name": "authority-exports",

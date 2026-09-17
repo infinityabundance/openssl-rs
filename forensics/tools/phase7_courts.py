@@ -86,6 +86,7 @@ COURTS = [
     ("RT-EVP-MAC", "rt_evp_mac_probe.c"),
     ("RT-EVP-KDF", "rt_evp_kdf_probe.c"),
     ("RT-EVP-RAND", "rt_evp_rand_probe.c"),
+    ("RT-EVP-SKEY", "rt_evp_skey_probe.c"),
 ]
 
 

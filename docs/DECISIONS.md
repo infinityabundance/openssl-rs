@@ -9327,3 +9327,108 @@ its siblings on a NULL method dereference, so they are not called either.
 | prerequisite deferrals | 5 | **8** |
 
 SPDX-License-Identifier: Apache-2.0
+
+---
+
+## D160 — 7.3f closes: `EVP_SKEYMGMT` and `EVP_SKEY`, and the prototype court refusing a signature its own transcription read wrong
+
+**What landed.** `crypto/evp/skeymgmt_meth.c` and `crypto/evp/s_lib.c`, both whole — **24 exports** —
+plus the four entry points that were handed forward from 7.3e for want of the object they take:
+`EVP_MAC_init_SKEY`, `EVP_KDF_CTX_set_SKEY`, `EVP_KDF_derive_SKEY` and `EVP_CipherInit_SKEY`. With
+them **7.3f is complete**: 7.3f's last row, `EVP_PKEY_derive_SKEY`, is 7.4's and is recorded as such
+with its module named. `RT-EVP-SKEY` lands with **97 observations and zero residuals on the first
+run**.
+
+**The fourth class, and the first whose object is not a context.** `EVP_MD`, `EVP_CIPHER`, `EVP_MAC`
+and `EVP_KDF` are four names for one shape: a method that has a *context*, and the state lives in the
+context. `EVP_SKEY` has none. It is **made** by an operation — `import` or `generate` — rather than by
+a constructor, so there is no `EVP_SKEY_new`, and the object **owns a reference to its method**, where
+an `EVP_MD_CTX` owns one only for the life of the context. `EVP_SKEY_free` therefore releases the
+provider's key data, then the method, then the lock the object allocated at import time, then the
+block — and the court's `free` counter across two `up_ref`s and three `free`s is the observation that
+the chain runs exactly once, at the end.
+
+**Three things this class does that no sibling does.**
+
+  * **The structural check has no counter.** `EVP_MD`'s constructor weighs five functions against
+    four, `EVP_MAC`'s three against two, `EVP_KDF`'s one against two. This one is three plain NULL
+    tests — `free`, `import`, `export` — and the *absence* of an arithmetic is observable: a method
+    that lists `import` **twice** is fetchable, because there is nothing counting entries to notice,
+    and the first entry wins. `RT-EVP-SKEY` publishes such a method and three with one of the three
+    mandatory callbacks missing, and the four transcripts together are the shape of the check.
+  * **The two reference counts disagree.** `EVP_SKEYMGMT_up_ref` reads the count, discards the
+    result, and answers the constant **1** — `CRYPTO_UP_REF` returns 1 on every platform it is
+    defined for, so there is nothing to report. `EVP_SKEY_up_ref` computes, and computes the thing
+    `EVP_MAC_up_ref` does not: `CRYPTO_UP_REF` writes the **new** count, so the answer is exactly
+    `new > 1` and a key whose count reached zero is not brought back to life. Both are pinned.
+  * **`names_do_all` answers 0 for a NULL method** where every sibling answers 1. That boundary is in
+    the crate's unit tests rather than the court, because every other observation this probe makes
+    needs a live method and mixing the two would make one line's failure ambiguous. Saying which plane
+    holds which observation is the point.
+
+**`EVP_SKEY_to_provider` is four arms and the first is a pointer identity.** Same method name *and*
+same provider is an `up_ref` of the object the caller passed; the same name from a **different**
+provider is a full round trip — export to parameters, import into the destination — because the two
+providers' key data are different objects and there is no common representation. `RT-EVP-SKEY` loads
+two providers that publish the same first name for the key type and prints, for each arm, whether the
+result is the same pointer and what its provider name is; the round trip's result reports the
+*destination's* provider, and its key id says which provider's data it is.
+
+**`EVP_SKEY_import` falls back by name, and the fallback is a second fetch.** A key type nobody
+publishes is not an error: the method is asked for again under `OSSL_SKEY_TYPE_GENERIC`
+(`"GENERIC-SECRET"`), and only a second failure raises `ERR_R_FETCH_FAILED`. The court observes the
+fallback with a key type the provider does not publish and a `GENERIC-SECRET` it does, and the
+resulting key reports the generic method's name.
+
+**The finding: `ABI-PROTOTYPE` refused `EVP_CipherInit_SKEY`, and it was right.** The header declares
+
+```c
+int EVP_CipherInit_SKEY(EVP_CIPHER_CTX *ctx, const EVP_CIPHER *cipher, EVP_SKEY *skey,
+    const unsigned char *iv, size_t iv_len, int enc, const OSSL_PARAM params[]);
+```
+
+and the authority's *internal* helper it forwards to is
+`evp_cipher_init_skey_internal(EVP_CIPHER_CTX *ctx, const EVP_CIPHER *cipher, const EVP_SKEY *skey,
+...)` — **the two disagree about constness**, and the exported signature is the header's. The
+transcription was written from the internal helper and carried `*const` outward, which is a defect no
+runtime court in this project could see: a probe compiled against the header cannot tell the
+difference at the ABI level, and `cargo build` cannot either. The prototype court compared the
+canonical declaration and named the parameter:
+
+```text
+TYPE-MISMATCH EVP_CipherInit_SKEY: authority int:4:s (ptr(opaque), ptr(const(opaque)), ptr(opaque),
+  ptr(const(int:1:u)), int:8:u, int:4:s, ptr(const(opaque))) != crate ... ptr(const(opaque)) ...
+```
+
+This is the first defect this stratum has found in a function **before** its court ever ran, and it is
+the argument for the plane rather than an anecdote about it: the reading that produced the wrong
+signature was the reading of a *faithful* transcription of a different function.
+
+**The other finding of the same run was a test defect, not an implementation defect.** The unit test
+that drives `transfer_cb` — the callback `EVP_SKEY_to_provider` installs — first passed it a
+`RawKeyDetails`, which is a two-field structure, where the callback writes a three-field
+`TransferCbCtx`. The write was out of bounds and the debug-assertion layer aborted the test on a null
+dereference. The fix is not a smaller cast: it is a provider `import` that *refuses*, so the test
+drives the callback on the path where its constant answer of 1 is observable, which is the only arm
+where that constant is not masked by a successful import. The test says so.
+
+**One more boundary is now measured rather than assumed.** `EVP_KDF_derive_SKEY`'s raw fallback
+derives into a buffer and then **clears** it before releasing it — `OPENSSL_clear_free`, not
+`OPENSSL_free` — and a transcription that used the plain free would lose nothing observable to a
+court and would leave the only copy of a derived secret in the heap. It is transcribed as written and
+called out here because it is the class of thing this project keeps for a decision record rather than
+for a test.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 7 implemented / open | 268 / 682 | **296 / 654** |
+| `implemented[libcrypto]` | 1403 | **1431** |
+| courts | 61 | **62** |
+| RT-EVP-SKEY observations | — | **97** |
+| prototype court: checked / mismatches | 1356 / 0 | **1384 / 0** |
+| unit tests | 374 | **383** |
+| 7.3f's open rows | 24 | **0** |
+
+SPDX-License-Identifier: Apache-2.0

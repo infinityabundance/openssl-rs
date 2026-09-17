@@ -72,12 +72,13 @@ use crate::evp::cipher::{
     EVP_CIPHER_get_iv_length, EVP_CIPHER_get_mode, EVP_CIPHER_get_nid, EVP_CIPHER_is_a,
     EVP_CIPHER_settable_ctx_params, EVP_CIPHER_up_ref, EvpCipher, EVP_ORIG_METH,
 };
+use crate::evp::skeymgmt::{EVP_SKEY_get0_raw_key, EvpSkey};
 use crate::params::{
     OSSL_PARAM_construct_end, OSSL_PARAM_construct_octet_ptr, OSSL_PARAM_construct_octet_string,
     OSSL_PARAM_construct_size_t, OSSL_PARAM_construct_uint, OSSL_PARAM_get_int,
     OSSL_PARAM_locate_const, OSSL_PARAM_modified, OSSL_PARAM_set_int, OsslParam,
 };
-use crate::provider::ossl_provider_libctx;
+use crate::provider::{ossl_provider_ctx, ossl_provider_libctx};
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
 use crate::runtime::obj::NID_undef;
@@ -2204,6 +2205,319 @@ unsafe fn evp_cipher_init_legacy_internal(
         (*ctx).block_mask = (*cipher).block_size - 1;
     }
     1
+}
+
+/// `static int evp_cipher_init_skey_internal(EVP_CIPHER_CTX *ctx, const EVP_CIPHER *cipher,
+/// const EVP_SKEY *skey, const unsigned char *iv, size_t iv_len, int enc,
+/// const OSSL_PARAM params[])`.
+///
+/// The sibling `evp_cipher_init_internal` is not, and the differences are all one way: this
+/// function has **no legacy path, no ENGINE path, no pipeline and no parameter pre-pass**. Where
+/// the other one falls through to `evp_cipher_init_legacy_internal` when an ENGINE or an
+/// `EVP_ORIG_METH` cipher is involved, this one **refuses** — because a symmetric key managed by a
+/// provider cannot be handed to a legacy method that has no way to receive it.
+///
+/// Three things are contract rather than detail:
+///
+///   * **the key's provider must be the cipher's.** `skey->skeymgmt->prov != ctx->cipher->prov` is
+///     an `EVP_R_INITIALIZATION_ERROR`, and the test happens *after* `newctx` has run, because it
+///     is `ctx->cipher` rather than the argument that is compared;
+///   * **the fallback is a byte export.** A provider that publishes no `einit_skey` is not
+///     refused: the key's raw bytes are asked for through `EVP_SKEY_get0_raw_key` and handed to
+///     the ordinary `einit`. A key whose provider cannot export its bytes — an AES key type, whose
+///     `export` publishes parameters rather than a secret — therefore **fails here**, with
+///     `EVP_R_INITIALIZATION_ERROR`, rather than being silently keyed with the wrong bytes;
+///   * **a NULL `skey` is legal and means the multi-step API.** Both arms test `skey != NULL`
+///     before the export, so `EVP_CipherInit_SKEY(ctx, cipher, NULL, ...)` is the ordinary two-step
+///     init with the parameters this function was given.
+///
+/// # Safety
+/// `ctx` must be a live `EvpCipherCtx`; `cipher` NULL or a live method; `skey` NULL or a live key;
+/// `iv` NULL or valid for `iv_len`; `params` NULL or a terminated array.
+// mirrors the authority's signature exactly
+#[allow(clippy::too_many_arguments)]
+unsafe fn evp_cipher_init_skey_internal(
+    ctx: *mut EvpCipherCtx,
+    cipher: *const EvpCipher,
+    skey: *const EvpSkey,
+    iv: *const c_uchar,
+    mut iv_len: usize,
+    enc: c_int,
+    params: *const OsslParam,
+) -> c_int {
+    let mut cipher = cipher;
+    let mut enc = enc;
+
+    // `enc == -1` keeps the context's own direction; anything else normalises and is written back.
+    if enc == -1 {
+        // SAFETY: `ctx` is live per the contract.
+        enc = unsafe { (*ctx).encrypt };
+    } else {
+        // SAFETY: `ctx` is live.
+        unsafe { (*ctx).encrypt = c_int::from(enc != 0) };
+    }
+
+    if cipher.is_null() {
+        // SAFETY: `ctx` is live.
+        if unsafe { (*ctx).cipher }.is_null() {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::EVP_ENC_500) };
+            return 0;
+        }
+    }
+
+    // The ENGINE refusal. `ctx->engine` is always NULL in this crate and `impl` is a parameter this
+    // function does not have, so the reachable half of the condition is the `origin` test.
+    // SAFETY: `ctx` is live.
+    let engine = unsafe { (*ctx).engine };
+    let mut refuses = !engine.is_null();
+    if !cipher.is_null() {
+        // SAFETY: `cipher` is live.
+        refuses |= unsafe { (*cipher).origin == EVP_ORIG_METH };
+    } else {
+        // SAFETY: `ctx` is live.
+        let ctx_cipher = unsafe { (*ctx).cipher };
+        if !ctx_cipher.is_null() {
+            // SAFETY: `ctx_cipher` is live.
+            refuses |= unsafe { (*ctx_cipher).origin == EVP_ORIG_METH };
+        }
+    }
+    if refuses {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_ENC_511) };
+        return 0;
+    }
+
+    // The legacy clearing, which happens when a *new* cipher is being installed over an old one.
+    if !cipher.is_null() {
+        // SAFETY: `ctx` is live.
+        let ctx_cipher = unsafe { (*ctx).cipher };
+        if !ctx_cipher.is_null() {
+            // SAFETY: `ctx_cipher` is live.
+            let cleanup = unsafe { (*ctx_cipher).cleanup };
+            if let Some(f) = cleanup {
+                // SAFETY: `f` is the implementation's own callback and `ctx` is its context.
+                if unsafe { f(ctx.cast::<c_void>()) } == 0 {
+                    return 0;
+                }
+            }
+            // SAFETY: `ctx` is live.
+            let data = unsafe { (*ctx).cipher_data };
+            // SAFETY: `ctx_cipher` is live.
+            let size = unsafe { (*ctx_cipher).ctx_size };
+            // SAFETY: `data` is this context's own block of `size` bytes.
+            unsafe { CRYPTO_clear_free(data, size as usize, FILE_ENC, 521) };
+            // SAFETY: `ctx` is live.
+            unsafe { (*ctx).cipher_data = ptr::null_mut() };
+        }
+    }
+
+    // The reset, with `encrypt` and `flags` carried across it by hand.
+    if !cipher.is_null() {
+        // SAFETY: `ctx` is live.
+        let ctx_cipher = unsafe { (*ctx).cipher };
+        if !ctx_cipher.is_null() {
+            // SAFETY: `ctx` is live.
+            let flags = unsafe { (*ctx).flags };
+            // SAFETY: `ctx` is live.
+            unsafe { EVP_CIPHER_CTX_reset(ctx) };
+            // SAFETY: `ctx` is live.
+            unsafe {
+                (*ctx).encrypt = enc;
+                (*ctx).flags = flags;
+            }
+        }
+    }
+
+    if cipher.is_null() {
+        // SAFETY: `ctx` is live.
+        cipher = unsafe { (*ctx).cipher };
+    }
+
+    // SAFETY: `cipher` is live, either as the argument or as the context's own.
+    if unsafe { (*cipher).prov }.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_ENC_539) };
+        return 0;
+    }
+
+    // SAFETY: `ctx` and `cipher` are live. The comparison is between the argument and the field the
+    // context already holds, which is what makes a repeated init on the same cipher free.
+    if cipher != unsafe { (*ctx).fetched_cipher.cast_const() } {
+        // SAFETY: `cipher` is live.
+        if unsafe { EVP_CIPHER_up_ref(cipher.cast_mut()) } == 0 {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::EVP_ENC_545) };
+            return 0;
+        }
+        // SAFETY: `ctx` is live.
+        unsafe { EVP_CIPHER_free((*ctx).fetched_cipher) };
+        // SAFETY: `ctx` is live.
+        unsafe { (*ctx).fetched_cipher = cipher.cast_mut() };
+    }
+    // SAFETY: `ctx` is live.
+    unsafe { (*ctx).cipher = cipher };
+
+    // SAFETY: `ctx` is live.
+    if unsafe { (*ctx).algctx }.is_null() {
+        // SAFETY: `cipher` is live, so its provider is readable.
+        let prov = unsafe { (*cipher).prov };
+        // SAFETY: `prov` is live, so its context is readable.
+        let provctx = unsafe { ossl_provider_ctx(prov) };
+        // SAFETY: `cipher` is live, so its constructor is readable.
+        let newctx = unsafe { (*cipher).newctx };
+        let Some(f) = newctx else {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::EVP_ENC_557) };
+            return 0;
+        };
+        // SAFETY: `f` is the provider's own constructor and `provctx` is its context.
+        let algctx = unsafe { f(provctx) };
+        if algctx.is_null() {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::EVP_ENC_557) };
+            return 0;
+        }
+        // SAFETY: `ctx` is live and `algctx` is the implementation's fresh context.
+        unsafe { (*ctx).algctx = algctx };
+    }
+
+    // The key's provider must be the cipher's, and this is the test that makes the class usable: a
+    // key from one provider cannot be handed to another provider's cipher.
+    if !skey.is_null() {
+        // SAFETY: `skey` is live per the contract.
+        let skey_mgmt = unsafe { (*skey).skeymgmt };
+        if !skey_mgmt.is_null() {
+            // SAFETY: `skey_mgmt` is the method this key holds a reference to.
+            let skey_prov = unsafe { (*skey_mgmt).prov };
+            // SAFETY: `cipher` is live.
+            if skey_prov != unsafe { (*cipher).prov } {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::EVP_ENC_563) };
+                return 0;
+            }
+        }
+    }
+
+    // The no-padding flag, told to the *new* implementation because the reset above dropped it.
+    // SAFETY: `ctx` is live.
+    if (unsafe { (*ctx).flags } & EVP_CIPH_NO_PADDING) != 0 {
+        // SAFETY: `ctx` is live.
+        if unsafe { EVP_CIPHER_CTX_set_padding(ctx, 0) } == 0 {
+            return 0;
+        }
+    }
+
+    if iv.is_null() {
+        iv_len = 0;
+    }
+
+    // SAFETY: `cipher` and `ctx` are live.
+    let (einit, dinit, einit_skey, dinit_skey) = unsafe {
+        (
+            (*cipher).einit,
+            (*cipher).dinit,
+            (*cipher).einit_skey,
+            (*cipher).dinit_skey,
+        )
+    };
+    // SAFETY: `ctx` is live and its `algctx` is the implementation's context.
+    let algctx = unsafe { (*ctx).algctx };
+
+    if enc != 0 {
+        let Some(sk) = einit_skey else {
+            // The fallback: the provider has no key-aware initialiser, so the key's bytes are asked
+            // for and handed to the ordinary one. A key that cannot export them is a refusal.
+            let mut keydata: *const c_uchar = ptr::null();
+            let mut keylen: usize = 0;
+            if !skey.is_null() {
+                // SAFETY: `skey` is live and the two out-parameters are this frame's own.
+                if unsafe { EVP_SKEY_get0_raw_key(skey, &mut keydata, &mut keylen) } == 0 {
+                    // SAFETY: a compile-time-constant site.
+                    unsafe { raise_site(&err_sites::EVP_ENC_590) };
+                    return 0;
+                }
+            }
+            let Some(f) = einit else {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::EVP_ENC_590) };
+                return 0;
+            };
+            // SAFETY: `f` is the provider's own callback and `algctx` is its context.
+            return unsafe { f(algctx, keydata, keylen, iv, iv_len, params) };
+        };
+        // SAFETY: `skey` is NULL or live per the contract; `sk` is the provider's own callback.
+        let keydata = if skey.is_null() {
+            ptr::null_mut()
+        } else {
+            // SAFETY: `skey` is live.
+            unsafe { (*skey).keydata }
+        };
+        // SAFETY: `sk` is the provider's own callback and `algctx` is its context.
+        return unsafe { sk(algctx, keydata, iv, iv_len, params) };
+    }
+
+    let Some(sk) = dinit_skey else {
+        let mut keydata: *const c_uchar = ptr::null();
+        let mut keylen: usize = 0;
+        if !skey.is_null() {
+            // SAFETY: `skey` is live and the two out-parameters are this frame's own.
+            if unsafe { EVP_SKEY_get0_raw_key(skey, &mut keydata, &mut keylen) } == 0 {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::EVP_ENC_611) };
+                return 0;
+            }
+        }
+        let Some(f) = dinit else {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::EVP_ENC_611) };
+            return 0;
+        };
+        // SAFETY: `f` is the provider's own callback and `algctx` is its context.
+        return unsafe { f(algctx, keydata, keylen, iv, iv_len, params) };
+    };
+    // SAFETY: `skey` is NULL or live per the contract.
+    let keydata = if skey.is_null() {
+        ptr::null_mut()
+    } else {
+        // SAFETY: `skey` is live.
+        unsafe { (*skey).keydata }
+    };
+    // SAFETY: `sk` is the provider's own callback and `algctx` is its context.
+    unsafe { sk(algctx, keydata, iv, iv_len, params) }
+}
+
+/// `int EVP_CipherInit_SKEY(EVP_CIPHER_CTX *ctx, const EVP_CIPHER *cipher, EVP_SKEY *skey,
+/// const unsigned char *iv, size_t iv_len, int enc, const OSSL_PARAM params[])`.
+///
+/// The only exported cipher initialiser whose key is an object rather than a buffer, and the one
+/// that makes `EVP_SKEY` useful: it is how a key imported once is used by a cipher without ever
+/// being copied into a caller's buffer.
+///
+/// **`skey` is `EVP_SKEY *` and not `const EVP_SKEY *`**, where the internal helper below takes
+/// the const form. The two disagree in the authority and the exported signature is the one the
+/// header promises; `ABI-PROTOTYPE` found the difference on this function's first run, which is the
+/// whole argument for checking a prototype against the canonical declaration rather than against
+/// the transcription's own reading of it.
+///
+/// # Safety
+/// The arguments are forwarded under `evp_cipher_init_skey_internal`'s contract.
+// mirrors the authority's signature exactly
+#[allow(clippy::too_many_arguments)]
+#[no_mangle]
+pub unsafe extern "C" fn EVP_CipherInit_SKEY(
+    ctx: *mut EvpCipherCtx,
+    cipher: *const EvpCipher,
+    skey: *mut EvpSkey,
+    iv: *const c_uchar,
+    iv_len: usize,
+    enc: c_int,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract; the key is only read.
+    unsafe {
+        evp_cipher_init_skey_internal(ctx, cipher, skey.cast_const(), iv, iv_len, enc, params)
+    }
 }
 
 /// `int EVP_CipherInit_ex2(EVP_CIPHER_CTX *ctx, const EVP_CIPHER *cipher,
