@@ -11271,9 +11271,25 @@ no activated provider, the candidate attempts a **DSO** load of `default` and le
 the queue where the authority leaves none — `no filename@DSO_convert_filename/274`,
 `no filename@DSO_load/139` and `(null)@provider_init/1026[name=default]` — which is the candidate
 distribution having no default-provider module, not a behaviour `signature.c` owns. It is recorded
+notes`). It is recorded
 here rather than registered as a divergence, because it is a distribution gap in the fetch plane's
 territory (7.1–7.3) and not a safety-versus-compatibility choice; `RT-EVP-PKEY` passes because it
 loads its own provider before its first fetch.
+
+**Both of those are already-owned records, and naming the owner is the point. (Correction, added in
+a follow-up commit for the reason `211ba2bb` gives.)** The namemap **number** is not a mystery and
+not a new gap: `docs/DECISIONS.md` **D109** predicts it exactly — "Every one of those names takes a
+number, so the numbering of everything registered later depends on them" — because the legacy
+pre-population is deferred whole to Phase 13, and the number in `evp_fetch.c:376`'s message is
+*which name the library registered that spelling as*. A reader who finds `119` against the
+candidate's `1` should go to D109, not to this entry: this slice did not cause it, cannot fix it,
+and its arrival in an error message's data is the only new thing about it. Likewise the three
+`default`-provider DSO entries are the residual **D117** already records for `RT-PROVIDER` —
+`ossl_default_provider_init` is the algorithm tables' and `provider_init` takes the module branch
+until they land. Neither is registered in `docs/SECURITY_DIVERGENCE_POLICY.md` because neither is a
+safety-versus-compatibility choice; both are *distribution* gaps with a named future owner. The
+remaining question D189 first raised as uncertain — whether the namemap number is "a real gap or
+expected ordering" — is answered here: expected ordering, per D109.
 
 No new function-pointer type alias was added, so `forensics/tools/dispatch_court.py`'s
 `NOT_A_DISPATCH` table is untouched and its `unlinked=N` stays zero; the pipeline's `PIPELINE OK`
