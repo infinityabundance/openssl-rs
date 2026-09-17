@@ -155,6 +155,12 @@ PKEY_METHOD = ("not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members
                "have a function-pointer field, none of them this one. So the check these need is "
                "a second Clang pass over the internal headers or a generated C assertion, not a "
                "consumer of `structs.json` -- see docs/DECISIONS.md D185")
+# `crypto/evp/ctrl_params_translate.c:161-166` -- the two function *types* the translation tables
+# store, not function pointers to a `OSSL_CORE_MAKE_FUNC` typedef.
+XLAT = ("not a provider dispatch: one of `ctrl_params_translate.c`'s two function *types*, "
+        "`fixup_args_fn` and `cleanup_args_fn`, which the translation tables store as function "
+        "pointers and which the authority declares as bare typedefs rather than through "
+        "`OSSL_CORE_MAKE_FUNC`")
 CRATE_LOCAL = "not an authority type: a crate-local callback shape with no header counterpart"
 
 
@@ -327,6 +333,8 @@ NOT_A_DISPATCH: dict[str, str] = {
     "PkeyMethDigestverifyFn": PKEY_METHOD,
     "PkeyMethCheckFn": PKEY_METHOD,
     "PkeyMethDigestCustomFn": PKEY_METHOD,
+    "FixupArgsFn": XLAT,
+    "CleanupArgsFn": XLAT,
     "Rfunc": CRATE_LOCAL,
     "CharIo": CRATE_LOCAL,
     "NistReduce": CRATE_LOCAL,
