@@ -966,3 +966,35 @@ authority and the candidate for this function, and there was never supposed to b
 - **Claim removed:** the four accessors with a NULL method are not claimed compatible. They are
   claimed *safe*. On a live method all four are compared normally, including which of the two
   provider tables came back.
+
+### D-PKEY-AMETH-1 — `pkey_set_type`'s legacy-method lookup is Phase 8's, so a provider key's `type` stays `EVP_PKEY_KEYMGMT`
+
+- **Obligation:** `EVP_PKEY_set_type_by_keymgmt` on a provider method whose **name is a legacy key
+  type** -- `"RSA"`, `"EC"`, `"DSA"`, and the rest of the twelve -- and, through it,
+  `EVP_PKEY_get_id`, `EVP_PKEY_get_base_id` and every accessor that branches on the resulting type.
+- **Authority:** **read from the source, and the read is the whole finding.** `pkey_set_type` looks
+  the type up with `EVP_PKEY_asn1_find_str(eptr, str, len)`, and when it finds a method it takes the
+  **legacy** NID into `pkey->type` even though the key is provider-side: `if (ameth != NULL) { if
+  (type == EVP_PKEY_NONE) pkey->type = ameth->pkey_id; } else { pkey->type = EVP_PKEY_KEYMGMT; }`.
+  So `EVP_PKEY_get_id` on a provider key named `"RSA"` answers `EVP_PKEY_RSA`, and only a key whose
+  name matches **no** legacy method answers the pseudo-NID `EVP_PKEY_KEYMGMT` (`-1`). The comment
+  above the lookup explains why the field keeps its legacy meaning: "for any key type that has a
+  legacy implementation, regardless of if the internal key is a legacy or a provider side one".
+- **Crate:** answers `EVP_PKEY_KEYMGMT` in both cases, because `EVP_PKEY_asn1_find_str` and
+  `EVP_PKEY_asn1_find` are `crypto/asn1/ameth_lib.c`'s and search `standard_methods[]` -- a
+  compile-time table of the twelve `ossl_<alg>_asn1_meth` objects that Phase 8's units define
+  (`docs/DECISIONS.md` D163, D165). The lookup is the only thing missing: the **name walk** that feeds
+  it is written, including the two-name ambiguity refusal that makes `found[1] != NULL` an error.
+- **Reason:** the dependency is a stratum boundary and not a choice, and it is the same boundary D163
+  recorded for `evp_pkey_name2type`'s fallback and D165 for row 7.4l. Recording it as a divergence
+  rather than as a deferral is what the gate's own rule forces: a deferral row is refused for a name
+  the crate *defines* (`stale_deferral`), and `EVP_PKEY_set_type_by_keymgmt` is defined here.
+- **Claim removed:** `EVP_PKEY_get_id` -- and therefore `EVP_PKEY_get_base_id`, `EVP_PKEY_can_sign`,
+  `EVP_PKEY_get0_type_name`'s legacy arm and every `EVP_PKEY_is_a` comparison against a legacy
+  spelling -- is not claimed compatible for a provider key whose name is among the twelve standard
+  names. It is claimed compatible for a key whose name is not, which is the only case in which the
+  authority and the crate agree today.
+- **Trigger:** Phase 8's first commit that lands an `EVP_PKEY_ASN1_METHOD` object. At that point
+  `find_ameth`'s body is the loop the authority writes and `pkey_set_type`'s `if (ameth != NULL)` arm
+  becomes reachable; `RT-EVP-PKEY` is where the difference would be measured, and the measurement is
+  `EVP_PKEY_get_id` on a fetched keymgmt named `"RSA"`.

@@ -7,10 +7,10 @@
     "census": {
       "names_a_basename_the_authority_repeats": 1,
       "names_a_file_the_authority_does_not_have": 1,
-      "units_not_reached": 75
+      "units_not_reached": 74
     },
     "census_by_stratum": {
-      "7": 77
+      "7": 76
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
     "census_samples": {
@@ -66,7 +66,6 @@
         "crypto/evp/exchange.c",
         "crypto/evp/kdf_meth.c",
         "crypto/evp/kem.c",
-        "crypto/evp/keymgmt_lib.c",
         "crypto/evp/legacy_blake2.c",
         "crypto/evp/legacy_md4.c",
         "crypto/evp/legacy_md5.c",
@@ -80,7 +79,8 @@
         "crypto/evp/mac_meth.c",
         "crypto/evp/p5_crpt.c",
         "crypto/evp/p5_crpt2.c",
-        "crypto/evp/p_dec.c"
+        "crypto/evp/p_dec.c",
+        "crypto/evp/p_enc.c"
       ]
     },
     "checked": {
@@ -95,7 +95,7 @@
       "unit_records": 10,
       "units_named_by_a_record": 13,
       "units_named_by_a_row": 131,
-      "units_reached": 56
+      "units_reached": 57
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -945,7 +945,9 @@
           "7.4",
           "7.4a"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/keymgmt_lib.rs"
+        ]
       },
       "crypto/evp/keymgmt_meth.c": {
         "defines": [
@@ -1768,10 +1770,10 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 124
+      "transcribed_units": 125
     }
   },
-  "body_hash": "8b5c1b3ec9a45855e4c99d172372f243b12433e991c782c2955183633fc750ea",
+  "body_hash": "e81505515f23f95eaedea52764b7d1ac01fe895f225bdbe34ddc9b05047d990f",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -1782,17 +1784,17 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "bbe01601d0de85b520e546b6b05a6dea0e97d98184c76b5bc511010a2f9e0833"
+      "sha256": "2dd325aad706f14b1c248a0c98ad6b24951a746872cb5acf171ea5a9495b8ec3"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "38c6638c951de3eda31b51e379f8834a06b75a14ae4978243ea9ec286746e5bd"
+      "sha256": "dfb2dcc8481cf0527a5fc7dc18e8c9dbceb22416b8aba563cff5281a76d53cf3"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "2b2b9ac4d4c6ee8bc539afd4bd485bf520f792e4243ecdc1bfe2dad7d417897a"
+      "sha256": "930cb1678a3dcd2f7edf79866171e133f34eb7a0fa47184f8a27f47dfae376b7"
     },
     {
       "name": "prerequisites",
