@@ -127,7 +127,7 @@ unsafe extern "C" fn bn_free(pval: *mut *mut c_void, it: *const Asn1Item) {
 /// `pval` must point to a live slot holding null or a live `BIGNUM`; `cont` must be null or
 /// writable for the length this answers.
 unsafe extern "C" fn bn_i2c(
-    pval: *const *const c_void,
+    pval: *mut *const c_void,
     cont: *mut c_uchar,
     _putype: *mut c_int,
     _it: *const Asn1Item,
@@ -231,7 +231,7 @@ unsafe extern "C" fn bn_secure_c2i(
 /// `out` must be a live BIO; `pval` must point to a live slot holding a live `BIGNUM`.
 unsafe extern "C" fn bn_print(
     out: *mut Bio,
-    pval: *const *const c_void,
+    pval: *mut *const c_void,
     _it: *const Asn1Item,
     _indent: c_int,
     _pctx: *const Asn1Pctx,

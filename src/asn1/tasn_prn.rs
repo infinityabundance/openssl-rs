@@ -120,7 +120,7 @@ const OID_BUF: usize = 80;
 #[no_mangle]
 pub unsafe extern "C" fn ASN1_item_print(
     out: *mut Bio,
-    ifld: *const c_void,
+    mut ifld: *const c_void,
     indent: c_int,
     it: *const Asn1Item,
     pctx: *const Asn1Pctx,
@@ -145,7 +145,7 @@ pub unsafe extern "C" fn ASN1_item_print(
         unsafe {
             asn1_item_print_ctx(
                 out,
-                core::ptr::addr_of!(ifld),
+                core::ptr::addr_of_mut!(ifld),
                 indent,
                 item,
                 core::ptr::null(),
@@ -189,7 +189,7 @@ unsafe fn aux_const_cb(aux: *const Asn1Aux) -> Option<Asn1AuxConstCb> {
 #[allow(clippy::too_many_arguments)] // mirrors the authority's own signature exactly
 unsafe fn asn1_item_print_ctx(
     out: *mut Bio,
-    fld: *const *const c_void,
+    fld: *mut *const c_void,
     indent: c_int,
     it: &Asn1Item,
     fname: *const c_char,
@@ -416,7 +416,7 @@ unsafe fn asn1_item_print_ctx(
 /// be a live template. `pctx` must be live.
 unsafe fn asn1_template_print_ctx(
     out: *mut Bio,
-    fld: *const *const c_void,
+    fld: *mut *const c_void,
     indent: c_int,
     tt: &Asn1Template,
     pctx: &Asn1Pctx,
@@ -444,9 +444,9 @@ unsafe fn asn1_template_print_ctx(
     // because the recursive call below reads through `&tfld`. The authority
     // declares it at function scope for exactly that reason; as `i2d.rs` does for
     // its own `tval`.
-    let tfld: *const c_void = fld.cast::<c_void>();
+    let mut tfld: *const c_void = fld.cast::<c_void>();
     let fld = if flags & (ASN1_TFLG_EMBED as c_int) != 0 {
-        core::ptr::addr_of!(tfld)
+        core::ptr::addr_of_mut!(tfld).cast::<*const c_void>()
     } else {
         fld
     };
@@ -500,13 +500,13 @@ unsafe fn asn1_template_print_ctx(
                 }
             }
             // SAFETY: `stack` is non-null here and `i` is in `0..num`.
-            let skitem: *const c_void = unsafe { OPENSSL_sk_value(stack, i) };
+            let mut skitem: *const c_void = unsafe { OPENSSL_sk_value(stack, i) };
             // SAFETY: `tt.item` is the element type's `ASN1_ITEM_EXP`, so the call
             // answers its live item; `skitem` is this frame's slot and outlives it.
             if unsafe {
                 asn1_item_print_ctx(
                     out,
-                    core::ptr::addr_of!(skitem),
+                    core::ptr::addr_of_mut!(skitem),
                     indent + 2,
                     &*call_item_exp(tt.item).cast::<Asn1Item>(),
                     core::ptr::null(),
@@ -819,7 +819,7 @@ unsafe fn asn1_print_obstring(out: *mut Bio, str_: *const Asn1String, indent: c_
 #[allow(clippy::too_many_arguments)] // mirrors the authority's own signature exactly
 unsafe fn asn1_primitive_print(
     out: *mut Bio,
-    fld: *const *const c_void,
+    fld: *mut *const c_void,
     it: &Asn1Item,
     indent: c_int,
     fname: *const c_char,
@@ -868,7 +868,9 @@ unsafe fn asn1_primitive_print(
         // SAFETY: `atype` is non-null, so its `type` is readable.
         utype = c_long::from(unsafe { (*atype).type_ });
         // SAFETY: the union of a live `ASN1_TYPE` is readable.
-        fld = unsafe { core::ptr::addr_of!((*atype).value) }.cast::<*const c_void>();
+        fld = unsafe { core::ptr::addr_of!((*atype).value) }
+            .cast::<*const c_void>()
+            .cast_mut();
         // SAFETY: `fld` now points at the union, which is the payload slot.
         str_ = unsafe { *fld }.cast_mut().cast::<Asn1String>();
         pname = if pctx.flags & ASN1_PCTX_FLAGS_NO_ANY_TYPE != 0 {

@@ -426,6 +426,38 @@ def canon_rust_type(text: str, aliases: dict[str, str], depth: int = 0) -> str |
     return None
 
 
+def strip_binding(raw: str) -> str:
+    """A declared item's *type*, with a binding name removed if it has one.
+
+    `a: *mut T` and `*mut T` are the same type; the name is not. A parameter of a
+    function *declaration* always has one, an argument of a function-*pointer* type may
+    (`unsafe extern "C" fn(provctx: *mut c_void) -> c_int` is legal Rust), and
+    `canon_rust_fnptr` reads the second while `canon_rust_param` reads the first. They
+    disagreed about it until D180: `GetReasonStringsFn` was the crate's one named
+    fn-pointer argument and the dispatch plane reported it `unmapped`.
+
+    The type follows the first top-level `:` that is not part of a `::` path.
+    """
+    depth = 0
+    i = 0
+    t = " ".join(raw.split())
+    while i < len(t):
+        ch = t[i]
+        if ch in "(<[":
+            depth += 1
+        elif ch in ")>]":
+            depth -= 1
+        elif ch == ":" and depth == 0:
+            before = t[i - 1] if i > 0 else ""
+            after = t[i + 1] if i + 1 < len(t) else ""
+            if before != ":" and after != ":":
+                return t[i + 1:].strip()
+            i += 1
+            continue
+        i += 1
+    return t
+
+
 def canon_rust_fnptr(t: str, aliases: dict[str, str], depth: int) -> str | None:
     body = t[t.index("fn") + 2:].strip()
     if not body.startswith("("):
@@ -444,7 +476,7 @@ def canon_rust_fnptr(t: str, aliases: dict[str, str], depth: int) -> str | None:
         if a.strip() == "...":
             args.append("...")
             continue
-        c = canon_rust_type(a, aliases, depth + 1)
+        c = canon_rust_type(strip_binding(a), aliases, depth + 1)
         if c is None:
             return None
         args.append(c)
@@ -1284,24 +1316,12 @@ def canon_rust_param(raw: str, aliases: dict[str, str]) -> str | None:
     spelled without a binding (`_: T`) therefore still reads correctly, and one
     spelled without a type cannot occur in a valid declaration.
     """
-    depth = 0
-    i = 0
-    t = " ".join(raw.split())
-    while i < len(t):
-        ch = t[i]
-        if ch in "(<[":
-            depth += 1
-        elif ch in ")>]":
-            depth -= 1
-        elif ch == ":" and depth == 0:
-            before = t[i - 1] if i > 0 else ""
-            after = t[i + 1] if i + 1 < len(t) else ""
-            if before != ":" and after != ":":
-                return canon_rust_type(t[i + 1:].strip(), aliases)
-            i += 1
-            continue
-        i += 1
-    return None
+    raw = " ".join(raw.split())
+    stripped = strip_binding(raw)
+    if stripped == raw:
+        # No binding, and a parameter of a declaration must have one.
+        return None
+    return canon_rust_type(stripped, aliases)
 
 
 def rust_signature_canon(
@@ -1596,6 +1616,30 @@ def sensitivity_report() -> dict:
             "comma_free": canon_rust_type(comma_free, aliases),
             "perturbed": canon_rust_type(
                 comma_wrapped.replace("*mut Asn1Pctx", "*const Asn1Pctx"), aliases),
+        },
+    })
+
+    # The named fn-pointer argument, which D180 records: an argument of a function
+    # *pointer* type may carry a binding name, and the reader used to canonicalise the
+    # whole `name: T` text and fail.
+    unnamed = 'unsafe extern "C" fn(*mut c_void) -> c_int'
+    named = 'unsafe extern "C" fn(provctx: *mut c_void) -> c_int'
+    named_ok = (canon_rust_type(named, aliases) == canon_rust_type(unnamed, aliases)
+                and canon_rust_type(named, aliases) == "fptr(int:4:s; ptr(opaque))"
+                # ... and the same reading must still separate a different type.
+                and canon_rust_type('unsafe extern "C" fn(p: *const c_void) -> c_int',
+                                    aliases) != canon_rust_type(unnamed, aliases))
+    report["controls"].append({
+        "control": "named-fn-pointer-argument",
+        "what": "a function-pointer argument that carries a binding name must "
+                "canonicalise identically to the unnamed form, while a pointee-constness "
+                "change must still differ",
+        "detected": bool(named_ok),
+        "observed": {
+            "named": canon_rust_type(named, aliases),
+            "unnamed": canon_rust_type(unnamed, aliases),
+            "perturbed": canon_rust_type('unsafe extern "C" fn(p: *const c_void) -> c_int',
+                                         aliases),
         },
     })
 

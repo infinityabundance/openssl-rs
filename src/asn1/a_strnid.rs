@@ -165,8 +165,8 @@ unsafe extern "C" fn table_cmp(a: *const c_void, b: *const c_void) -> c_int {
     // SAFETY: the caller's contract is the typed-stack comparator's.
     let (x, y) = unsafe {
         (
-            *(a as *const *const Asn1StringTable),
-            *(b as *const *const Asn1StringTable),
+            *(a as *mut *const Asn1StringTable),
+            *(b as *mut *const Asn1StringTable),
         )
     };
     if x.is_null() || y.is_null() {
