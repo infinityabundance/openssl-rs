@@ -9066,10 +9066,22 @@ success.
 
 | | before | after |
 |---|---|---|
-| Phase 7 implemented / open | 152 / 798 | **185 / 765** |
-| `implemented[libcrypto]` | 1287 | **1320** |
-| RT-FETCH observations | 103 | **241** |
-| prototype court: checked / mismatch / unreadable | 1240 / 0 / 0 | **1273 / 0 / 0** |
-| unit tests | 334 | **349** |
+| Phase 7 implemented / open | 152 / 798 | **186 / 764** |
+| `implemented[libcrypto]` | 1287 | **1321** |
+| recorded deferrals | 5 | 5 |
+| RT-FETCH observations | 103 | **217** |
+| prototype court: checked / mismatch / unreadable | 1240 / 0 / 0 | **1274 / 0 / 0** |
+| unit tests | 334 | **348** |
+
+`RT-FETCH`'s 114 new observations passed **with zero residuals on the first run**, which is worth
+saying plainly rather than as a boast: the context half is the largest surface this stratum has
+transcribed, and the activity vectors are the kind of observation that fails loudly when a branch is
+taken the other way. What they show, in the authority's own transcript, is the whole call path —
+`ctx.activity.after_init=1,0,0,1,0,0,0,0,1` (one `newctx`, one `init`, one context-parameter read),
+`after_destructive_final=1,1,0,2,2,2,0,0,4` (the reset released the algorithm context and the
+re-initialise built a new one), `after_copy=2,1,1,...` (a copy *duplicates*), `after_dup=2,1,2,...`
+(and so does a dup), `after_reset=2,2,2,...` (a reset releases). A transcription that shared an
+algorithm context instead of duplicating it, or that reused one instead of releasing it, cannot
+produce those vectors.
 
 SPDX-License-Identifier: Apache-2.0

@@ -289,7 +289,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 1287,
+        "implemented": 1321,
         "implemented_symbols": [
           "ASN1_ANY_it",
           "ASN1_BIT_STRING_check",
@@ -1169,12 +1169,45 @@
           "EVP_DecryptInit_ex",
           "EVP_DecryptInit_ex2",
           "EVP_DecryptUpdate",
+          "EVP_Digest",
+          "EVP_DigestFinal",
+          "EVP_DigestFinalXOF",
+          "EVP_DigestFinal_ex",
+          "EVP_DigestInit",
+          "EVP_DigestInit_ex",
+          "EVP_DigestInit_ex2",
+          "EVP_DigestSqueeze",
+          "EVP_DigestUpdate",
           "EVP_EncryptFinal",
           "EVP_EncryptFinal_ex",
           "EVP_EncryptInit",
           "EVP_EncryptInit_ex",
           "EVP_EncryptInit_ex2",
           "EVP_EncryptUpdate",
+          "EVP_MD_CTX_clear_flags",
+          "EVP_MD_CTX_copy",
+          "EVP_MD_CTX_copy_ex",
+          "EVP_MD_CTX_ctrl",
+          "EVP_MD_CTX_dup",
+          "EVP_MD_CTX_free",
+          "EVP_MD_CTX_get0_md",
+          "EVP_MD_CTX_get0_md_data",
+          "EVP_MD_CTX_get1_md",
+          "EVP_MD_CTX_get_params",
+          "EVP_MD_CTX_get_pkey_ctx",
+          "EVP_MD_CTX_get_size_ex",
+          "EVP_MD_CTX_gettable_params",
+          "EVP_MD_CTX_md",
+          "EVP_MD_CTX_new",
+          "EVP_MD_CTX_reset",
+          "EVP_MD_CTX_set_flags",
+          "EVP_MD_CTX_set_params",
+          "EVP_MD_CTX_set_pkey_ctx",
+          "EVP_MD_CTX_set_update_fn",
+          "EVP_MD_CTX_settable_params",
+          "EVP_MD_CTX_test_flags",
+          "EVP_MD_CTX_update_fn",
+          "EVP_MD_do_all_provided",
           "EVP_MD_fetch",
           "EVP_MD_free",
           "EVP_MD_get0_description",
@@ -1216,6 +1249,7 @@
           "EVP_MD_settable_ctx_params",
           "EVP_MD_up_ref",
           "EVP_MD_xof",
+          "EVP_Q_digest",
           "EVP_default_properties_enable_fips",
           "EVP_default_properties_is_fips_enabled",
           "EVP_enc_null",
@@ -1579,7 +1613,7 @@
           "i2d_DISPLAYTEXT",
           "i2t_ASN1_OBJECT"
         ],
-        "scaffolded": 4609
+        "scaffolded": 4575
       },
       "libssl": {
         "authority_exports": 603,
@@ -1590,18 +1624,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 1287,
-      "scaffolded": 5212
+      "implemented": 1321,
+      "scaffolded": 5178
     }
   },
-  "body_hash": "60bde051fa49dec17e24f9a9292e3be761f08dcb23606c1c597df26f7ddbb788",
+  "body_hash": "fdb66c12e7edd6160fb4c648b1d936a4e75d50ef897098873319bacdcc95ac8c",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "ed8b07068b7b1f261585c3ebcd0bb36a11e61f741905c8473ad0172ca03c4f65"
+      "sha256": "283677e2337c32dd322f2904abbf1a083fe4361aab768852e6dbb990f3af14bb"
     },
     {
       "name": "authority-exports",
