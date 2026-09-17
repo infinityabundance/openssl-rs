@@ -177,6 +177,22 @@ or a named half of one:
 | 7.4l | — **the two `standard_methods[]` tables and the exports that read them**, per symbol and not per unit (D165): `EVP_PKEY_type`, the six in `p_legacy.c`, the twelve in the `i2d_*`/`d2i_*` units, the `asn1_find`/`asn1_get0`/`asn1_get_count` half of `ameth_lib.c`, and `EVP_PKEY_meth_find`/`_get0`/`_get_count` in `pmeth_lib.c` | — |
 | 7.4n | `evp_cnf.c` — **held for Phase 11** (`X509V3_get_value_bool`) | — |
 
+**`ctrl_params_translate.c` is one unit and it is sliced by its own structure, not by size (D187).**
+The file is 2,959 lines and every export in it is in its last 400: the type layer and the ~40
+`fixup_args` functions are dead weight until the two translation tables and the seven entry points
+exist, and the tables reference the fix functions, so nothing in the file is observable until the whole
+of it is. That is the opposite of the `EVP_PKEY_METHOD` registry, whose forty accessors each export on
+their own, and it is why this row's remaining work is one commit and not five. The slices, in order,
+for a reader who has to stop early: (1) the type layer — `enum state`'s ten values, `enum action`'s
+three, `struct translation_ctx_st` and `struct translation_st`; (2) `default_check`,
+`default_fixup_args` and `cleanup_translation_ctx`, which are the file's core and are called by every
+table entry; (3) the ~40 `fix_*` / `get_payload_*` functions; (4) `evp_pkey_ctx_translations[]` and
+`evp_pkey_translations[]`, which are ~520 lines of designated initialisers; (5) the seven entry points
+and the exports. Every helper they need is already in the crate — the twelve `OSSL_PARAM_construct_*` /
+`get_*` / `set_*` functions, `OSSL_PARAM_allocate_from_text`, `BN_bn2nativepad`, `BN_num_bytes`,
+`EVP_PKEY_CTX_settable_params`, the six `EVP_PKEY_CTX_IS_*_OP` tests, and `raise_site_data` for the
+`ERR_raise_data` sites — which is what makes the unit transcribable rather than blocked.
+
 7.4a is not a size boundary either: it is the whole of `keymgmt_lib.c` plus the provider paths of
 `p_lib.c`, and the rows above are what keep it honest while the rest of that unit waits. Its first
 slice — `keymgmt_meth.c` whole and `p_lib.c`'s two name walkers — is landed and pushed to the
