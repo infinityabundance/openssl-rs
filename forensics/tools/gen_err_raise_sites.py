@@ -230,12 +230,20 @@ COVERED_FILES = [
     ("crypto/asn1/asn_mime.c", "ASN_MIME"),
     # Deliberately *not* covered, with the stratum that owns each: `a_digest.c`,
     # `ameth_lib.c` (Phase 7); `d2i_param.c`, `d2i_pr.c`, `d2i_pu.c`, `i2d_evp.c`,
-    # `n_pkey.c`, `p5_pbe.c`, `p5_pbev2.c`, `p5_scrypt.c` (Phase 10); `a_sign.c`,
+    # `n_pkey.c`, `p5_pbe.c`, `p5_pbev2.c` (Phase 10 or 11 as their exports say); `a_sign.c`,
     # `a_verify.c`, `x_algor.c`, `x_pkey.c` (Phase 11); the rest of `asn_mime.c`
     # (Phase 12; the file is covered above for the two coordinates a Phase 5 export
     # raises);
     # `nsseq.c` (Phase 13). Their raises are visible as uncovered sites in
     # `forensics/atlas/err-raise-sites.json` until those phases land.
+    #
+    # `p5_scrypt.c` was on this list and is not any more: 7.4c lands
+    # `PKCS5_v2_scrypt_keyivgen`/`_ex`, which are that file's and Phase 7's by its
+    # `evp.h` declarations, and they raise the five `EVP_R_*` reasons at lines 252,
+    # 261, 267, 278 and 289. The file is therefore covered for the coordinates a
+    # Phase 7 export raises, which also brings in the nineteen `ERR_LIB_ASN1` sites of
+    # `PKCS5_pbe2_set_scrypt` (Phase 11's export, same unit) — the same
+    # per-file-not-per-symbol reasoning `asn_mime.c` and `v3_utl.c` already use above.
     #
     # `evp_asn1.c` was on this list and is not any more: see the comment where it is
     # covered. Two names that were on it are also worth correcting because they were
@@ -387,6 +395,7 @@ COVERED_FILES = [
     ("crypto/evp/skeymgmt_meth.c", "SKEYMGMT_METH"),
     ("crypto/hpke/hpke.c", "HPKE"),
     ("crypto/asn1/ameth_lib.c", "AMETH_LIB"),
+    ("crypto/asn1/p5_scrypt.c", "P5_SCRYPT"),
     ("crypto/asn1/i2d_evp.c", "I2D_EVP"),
     ("crypto/asn1/d2i_pr.c", "D2I_PR"),
     ("crypto/asn1/d2i_param.c", "D2I_PARAM"),

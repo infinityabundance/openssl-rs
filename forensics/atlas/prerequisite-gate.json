@@ -19,7 +19,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 56,
-      "language_surface_not_modelled_by_name": 2552,
+      "language_surface_not_modelled_by_name": 2641,
       "planned_prerequisites": 15
     },
     "census_by_unit": {
@@ -78,6 +78,7 @@
         "crypto/asn1/bio_asn1.c": 14,
         "crypto/asn1/evp_asn1.c": 15,
         "crypto/asn1/f_int.c": 8,
+        "crypto/asn1/p5_scrypt.c": 29,
         "crypto/asn1/t_pkey.c": 6,
         "crypto/asn1/tasn_dec.c": 31,
         "crypto/asn1/tasn_enc.c": 23,
@@ -145,6 +146,7 @@
         "crypto/evp/evp_enc.c": 57,
         "crypto/evp/evp_fetch.c": 19,
         "crypto/evp/evp_lib.c": 42,
+        "crypto/evp/evp_pbe.c": 23,
         "crypto/evp/evp_rand.c": 34,
         "crypto/evp/exchange.c": 23,
         "crypto/evp/kdf_lib.c": 15,
@@ -152,7 +154,9 @@
         "crypto/evp/keymgmt_lib.c": 11,
         "crypto/evp/keymgmt_meth.c": 14,
         "crypto/evp/mac_lib.c": 14,
-        "crypto/evp/names.c": 10,
+        "crypto/evp/names.c": 9,
+        "crypto/evp/p5_crpt.c": 16,
+        "crypto/evp/p5_crpt2.c": 23,
         "crypto/evp/p_lib.c": 101,
         "crypto/evp/pbe_scrypt.c": 8,
         "crypto/evp/pmeth_check.c": 7,
@@ -175,7 +179,7 @@
         "crypto/params.c": 22,
         "crypto/params_dup.c": 12,
         "crypto/params_from_text.c": 10,
-        "crypto/pem/pem_lib.c": 80,
+        "crypto/pem/pem_lib.c": 79,
         "crypto/property/defn_cache.c": 8,
         "crypto/property/property.c": 26,
         "crypto/property/property_parse.c": 15,
@@ -312,8 +316,8 @@
       ]
     },
     "checked": {
-      "authority_units": 134,
-      "crate_modules": 178,
+      "authority_units": 138,
+      "crate_modules": 182,
       "deferrals_recorded": 14,
       "divergence_names_covered": 32,
       "divergence_rows": 5,
@@ -393,7 +397,6 @@
           "OPENSSL_showfatal"
         ],
         "crypto/err/err.c": [
-          "err_cleanup",
           "err_clear_last_constant_time",
           "err_shelve_state",
           "err_unshelve_state",
@@ -428,7 +431,7 @@
         ]
       },
       "definition": "authority internal functions a transcribed unit calls, whose own translation unit's stratum has already sealed. Not a failure: each is either modelled differently by the crate or is work carried across the boundary by a later stratum. The count is held to non-increase by the regression guard.",
-      "names": 59
+      "names": 58
     },
     "universes": {
       "crate_references_checked": 32433,
@@ -438,7 +441,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "e08b5024ca2545d21ea299cad599ad40dd4cec25df3951790377272619a4e23e",
+  "body_hash": "7d62e8ab375e2cfc2211136707223642f1e1a2620dd8f24226da3936fbfcabf1",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -459,7 +462,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "2df78e7b87134ef9616fad4a719033aeaba0e3bd7f93db4e9bd877352e8ce087"
+      "sha256": "59967c1a8ff7407d8e65df7acec4f37e982e0ded0028b7384a9fecf38c42cce9"
     },
     {
       "name": "symbol-ownership",
@@ -469,12 +472,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "52e66b08fe5d74dfba920617e2daa8ed42d7ac3cc2b25953da8f88775a19e675"
+      "sha256": "82e49b684d2123cab965fcf0732318a3fa36b2d4a40468e3767040b16fa94d35"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "a441bc05fe5d3e5f0ca457b4cda4c1b47c27ab50cb08d743a3e4435095ba360e"
+      "sha256": "0bd219d1f108c89d6d3286137a3fe4556aa73c4865ff163642eff7c2cd7919fa"
     },
     {
       "name": "prerequisites",

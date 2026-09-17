@@ -11645,3 +11645,233 @@ pairs were run and are clean: against the branch's own previous head (`a2a296e7`
 `implemented[libcrypto] 1736 → 1747`, `open_obligations[phase7] 185 → 174`,
 `court[RT-EVP-PKEY] observations 354 → 438`, `prerequisites[language_census] 2554 → 2552`) and
 against the merge base with `origin/main` (`c2fdcae4`).
+## D192 — 7.4c's PBE remainder lands whole, the six `PKCS12_PBE_keyivgen` rows are a register entry rather than a deferral, and the `builtin_pbe[]` count is thirty-four
+
+The slice is `crypto/evp/evp_pbe.c` whole, `crypto/evp/p5_crpt.c` whole, `crypto/evp/p5_crpt2.c`
+whole and `crypto/asn1/p5_scrypt.c`'s two keygen exports: **seventeen exports and two internals**,
+in four new modules. `implemented[libcrypto]` moves **1747 → 1764** and phase 7 to **629
+implemented and 157 open** (from 612 and 174) — read from `forensics/phase7-obligations.json` after
+the pipeline ran, not predicted here. The suite gains the **twelve** tests these four modules carry
+and stands at **438**. The court is `RT-EVP-PBE`,
+**420 observations, zero residuals**, and the full pipeline ends `PIPELINE OK` with the gate at
+zero findings.
+
+### Where the code went, and why the ledger's prediction was wrong
+
+`forensics/phase7-obligations.json` labelled the `PKCS5_*` names `src/evp/pem_bridge.rs`, which is a
+prediction from `MODULE_PREFIXES` (`"PKCS5_"`) and not a measurement: the module that prefix names
+does not exist, and no `PKCS5_` symbol belongs in a PEM bridge. The landed convention is one crate
+file per authority unit, so the placement is the units':
+
+```text
+src/evp/evp_pbe.rs    crypto/evp/evp_pbe.c      the eight exports, the table, the registry
+src/evp/p5_crpt.rs    crypto/evp/p5_crpt.c      three exports, one of them empty
+src/evp/p5_crpt2.rs   crypto/evp/p5_crpt2.c     six exports and two internals
+src/evp/p5_scrypt.rs  crypto/asn1/p5_scrypt.c   its two Phase-7 exports
+```
+
+`src/evp/pbe.rs`, which 7.4c-ii landed for `crypto/evp/pbe_scrypt.c`, is unchanged. The three
+internals the slice owes — `ossl_pkcs5_pbkdf2_hmac_ex` and `PKCS5_v2_PBKDF2_keyivgen`/`_ex` — are
+`pub(crate)` and carry **no** `#[no_mangle]`, which is not a style choice: the authority declares
+all three in headers that are not installed, and its version script keeps the latter two *local*
+(`nm` shows `t`, not `T`), so no symbol of any of the three names exists in `libcrypto.so`. Defining
+one would put a name in the crate's global namespace that a consumer's own symbol could collide
+with, and `forensics/atlas/implemented-surface.json`'s `internal_symbols.c_style` — "the names a
+consumer's own symbols could collide with", compared exactly — is back at its pre-slice 274 because
+of it. The fifth unit
+is **not** `pbe_scrypt.c`: `PKCS5_v2_scrypt_keyivgen`/`_ex` are `crypto/asn1/p5_scrypt.c`'s, which
+the brief for this slice placed in `pbe_scrypt.c`, and the file is a unit split across two strata —
+its two keygens are declared in `evp.h` and are this stratum's, while `PKCS5_pbe2_set_scrypt` and
+the `SCRYPT_PARAMS_*`/`d2i_SCRYPT_PARAMS` accessors are declared in `x509.h` and are Phase 11's. It
+lands under `src/evp/` because that is where this stratum's `crypto/asn1/*` units already are
+(`src/evp/pkey_asn1.rs` is `crypto/asn1/ameth_lib.c`).
+
+### (A) or (B)? The deferral reading does not build, and the measurement is four exports deep
+
+Six of the table's thirty-four rows name `PKCS12_PBE_keyivgen` and `&PKCS12_PBE_keyivgen_ex`
+(`evp_pbe.c:46-57`), both `owner_phase: 10` in `forensics/atlas/symbol-ownership.json`. The
+per-symbol rule D165 measured for `standard_methods[]` would say: add a `prerequisites.json`
+deferral naming `PKCS12_PBE_keyivgen` and land `evp_pbe.c` except the four symbols that expose the
+table — `EVP_PBE_find_ex`, `EVP_PBE_find`, `EVP_PBE_CipherInit`, `EVP_PBE_CipherInit_ex`. **That
+reading was measured and cannot be built**, and the reason is inside this slice:
+
+* `PKCS5_v2_PBE_keyivgen_ex` calls `EVP_PBE_find_ex(EVP_PBE_TYPE_KDF, ...)` at `p5_crpt2.c:133`;
+* `PKCS5_v2_PBKDF2_keyivgen_ex` calls `EVP_PBE_find(EVP_PBE_TYPE_PRF, ...)` at `p5_crpt2.c:230`.
+
+Both are four of this slice's own mandated exports, and both are reached by `builtin_pbe[]`'s own
+rows (`NID_pbes2` names the first, `NID_id_pbkdf2` — twice, `OUTER` and `KDF` — names the second).
+So withholding the finders takes `PKCS5_v2_PBE_keyivgen`/`_ex` and
+`PKCS5_v2_PBKDF2_keyivgen`/`_ex` with them, leaves three more table rows with no keygen to name, and
+leaves the court unable to observe the table at all — which is the observation the court exists to
+make. **(A) is not a smaller slice; it is the same divergence hidden behind a symbol nobody can
+call yet.**
+
+So the choice is **(B)**, and it is the disposition the register already carries twice: all eight
+`evp_pbe.c` exports are **defined**, the six rows keep their place in the table with `None` in both
+keygen columns, `EVP_PBE_find`/`_ex` answer **1** with the authority's `cipher_nid` and `md_nid` for
+all six, and the two presence answers are
+`docs/SECURITY_DIVERGENCE_POLICY.md` **D-PBE-PKCS12-KEYGEN-1**. No `prerequisites.json` row is added
+and none could be: `PKCS12_PBE_keyivgen` is defined by no crate module and *referenced* by none, so
+the gate observes it only as a language-census name — a `divergences` row covering it would fail
+`divergence_record_does_not_match`, which is the same reason D-PKEY-AMETH-2 gives for the same
+choice.
+
+The cost is exact and small: `EVP_PBE_find`/`_ex`'s two keygen out-parameters and
+`EVP_PBE_CipherInit_ex`'s whole behaviour for those six NIDs. The return code and both NIDs are
+claimed for all thirty-four rows, and the court compares them for all thirty-four. Phase 10's first
+commit retires the entry.
+
+**One guard is part of the same record, and it is not only about those six rows.** The authority's
+`EVP_PBE_CipherInit_ex` ends with a bare `keygen(ctx, ...)` on the else arm, and its own table has
+**eighteen** rows whose two keygen columns are both empty — the `PRF` block. `EVP_PBE_find`
+answers 1 for those, so a caller that hands the function a PRF object faults. This crate answers 0
+there and calls nothing; the court prints the boundary rather than driving it. The same shape is in
+`PKCS5_v2_PBE_keyivgen_ex`, where the found `keygen_ex` can be NULL for a KDF row a caller added
+with `EVP_PBE_alg_add_type` (which leaves the `ex` column empty by construction).
+
+### Four ASN.1 descriptors land privately, and the exported accessors stay Phase 11's
+
+Every keygen in this slice decodes its parameter through a template the authority keeps in a
+**different** translation unit:
+
+```text
+PBEPARAM       crypto/asn1/p5_pbe.c:19-22      used by PKCS5_PBE_keyivgen_ex
+PBKDF2PARAM    crypto/asn1/p5_pbev2.c:25-32    used by PKCS5_v2_PBKDF2_keyivgen_ex
+PBE2PARAM      crypto/asn1/p5_pbev2.c:20-23    used by PKCS5_v2_PBE_keyivgen_ex
+X509_ALGOR     crypto/asn1/x_algor.c:18-21     a field of both of the above
+SCRYPT_PARAMS  crypto/asn1/p5_scrypt.c:21-27   the slice's own unit
+```
+
+their exported accessors (`PBEPARAM_it`, `d2i_PBEPARAM`, `X509_ALGOR_it`, …) are Phase 11's by
+`symbol-ownership.json`, and `X509_ALGOR`'s *struct* already lands in `src/evp/cipher_ctx.rs` for
+`EVP_CIPHER_CTX_get_algor_params` **with the same words** this slice needed: "Phase 11 owns this
+type … and two functions in this file need one thing from it: the layout". So the four descriptors
+are transcribed as **file-local statics** in the module that decodes through them, with `sname`
+spelled exactly as `ASN1_SEQUENCE_END_name` spells it, and the nested `X509_ALGOR` item is a private
+`extern "C" fn` returning it — the shape `src/asn1/evp_asn1.rs` established for its two pair items
+and the shape `ASN1_ITEM_ref` requires. Phase 11 will land the accessors and a second descriptor
+with identical fields; the `pub` half stays its own and no symbol is defined twice. The alternative —
+deferring four of this slice's exports until Phase 11 — was rejected for the same reason (A) was.
+
+### The brief's block, corrected against the authority
+
+* **`builtin_pbe[]` has thirty-four rows, not forty.** `sed -n '35,94p' crypto/evp/evp_pbe.c |
+  grep -c '{ EVP_PBE_TYPE'` answers 34: fourteen `EVP_PBE_TYPE_OUTER`, eighteen `EVP_PBE_TYPE_PRF`,
+  two `EVP_PBE_TYPE_KDF`. The court walks all thirty-four by index, so a miscount cannot survive a
+  run; `pbe.get.00..33` are thirty-four transcript lines and `pbe.get.oob` is the refusal.
+* **`pbe_cmp` and `pbe2_cmp` sort on the same keys.** The brief described them as sorting "on
+  different key sets". They do not: both are `(pbe_type, pbe_nid)`. The difference is one level of
+  dereference — `bsearch` hands element *values* and `OPENSSL_sk_*` hands slot *addresses* — which is
+  what the two `DECLARE_/IMPLEMENT_OBJ_BSEARCH_CMP_FN` spellings exist for.
+* **`EVP_PBE_alg_add_type` has no unknown-type refusal.** It stores `pbe_type` verbatim, and the
+  type is part of the sort key, so an unknown type is *accepted* and is findable afterwards under
+  that same number. The court drives all three arms **and** type 99, and `pbe.added.3` is the
+  acceptance: the two refusals the function does have are both allocation failures, and both raise
+  `ERR_R_CRYPTO_LIB` (`evp_pbe.c:207` and `:222`), which no probe can inject.
+* **`EVP_PBE_get` reads two columns.** It answers the type and the NID and never the keygens, which
+  is why it is faithful for the six rows this build holds with `None` — the court can walk the whole
+  table on both sides without a residual, and the table's *order* is what it pins.
+* **`EVP_PBE_add` is empty and stays empty.** `PKCS5_PBE_add` (`p5_crpt.c:22-24`) is one comment and
+  a body, and it lands with its file rather than with 7.5's row: a caller that links it must not
+  fail to link on an empty body. It is driven twice.
+* **`EVP_MD_name` is a macro** (`evp.h:556` → `EVP_MD_get0_name`), so the digest name the v1 keygen
+  hands the KDF is the method's *short* name, and it is read **before** the parameter is validated
+  because the authority spells it as an initialiser.
+* **`p5_scrypt.c` does not normalise `passlen`.** Where `p5_crpt2.c`'s facade turns `-1` into
+  `strlen(pass)`, this file forwards the `int` into `EVP_PBE_scrypt_ex`'s `size_t`, so `-1` arrives
+  as `SIZE_MAX`. The two files disagree about the same argument and both are reproduced; the court
+  shows it as `scrypt.*_kdf.pass_seen=1,null=0,shown=18446744073709551615`.
+
+### The court, and what it cannot drive
+
+`RT-EVP-PBE` declares a provider of its own — three KDFs (`PBKDF1`, `PBKDF2`, `SCRYPT`), two digests
+(`SHA1`, `MD2`) and two ciphers (`DES-CBC` with an 8-byte key, `DES-EDE3-CBC` with 24) — and
+installs it as the **thread default library context's only provider**, because every keygen in the
+slice resolves its algorithms by name and the candidate has no provider that publishes any of them.
+Each name is the one the authority's own lookup asks for: `OBJ_nid2sn(NID_des_cbc)` is `DES-CBC`,
+`OBJ_nid2sn(NID_md2)` is `MD2`, `SN_sha1` is `SHA1`, and `OBJ_obj2txt(..., 0)` of the
+`des-ede3-cbc` OID is `DES-EDE3-CBC`.
+
+The KDF callbacks record what they were asked. That is what makes each normalisation observable
+rather than assumed: `pbkdf2.plain_kdf` shows the six parameters
+(`pass=pw`, `salt=sal`, `iter=4`, `pkcs5=1`, `digest=SHA1`, `out=16`), `pbkdf2.null_zero_kdf` shows
+both NULLs arriving as present zero-length strings, `pbkdf2.null_pass_neg_kdf` shows that the
+`else if (passlen == -1)` is not a second `if`, and `pbkdf2.null_salt_len_kdf` shows the
+conjunction — a NULL salt with a length of 5 arrives as `null=1,shown=5`, which is *not* what
+`EVP_PBE_scrypt_ex` does with the same input. The derived key is a function of exactly those
+inputs, so the cipher's `encrypt_init` record proves which KDF's output reached the cipher:
+`pbeparam.key=3e454c535a61686f` and `pbeparam.iv=767d848b9299a0a7` are `md_tmp[0..8]` and
+`md_tmp[8..16]`, which is the authority's `16 - ivl` split and not `kl`-based.
+
+Five things are named rather than driven, each with its coordinate:
+
+* **`PKCS5_v2_PBKDF2_keyivgen`/`_ex` called directly.** Both are declared in `crypto/evp/evp_local.h`
+  and the authority's version script keeps them **local**: `nm` shows `t`, not `T`, so a probe
+  cannot link them and a hand-written prototype would fail to link rather than fail to compile.
+  Their existence is still observed (`pbe.find.32`/`pbe.find.33` report `K,E`, the `OUTER` and `KDF`
+  rows of `NID_id_pbkdf2`) and the `_ex` body is reached through `v2.param` and
+  `pbe.cipherinit.pbes2`; the plain spelling has no caller on either side, because the table names
+  it in the `keygen` column and every caller prefers `keygen_ex`.
+* **A key length above 64.** `PKCS5_v2_PBKDF2_keyivgen_ex`'s `OPENSSL_assert` (`p5_crpt2.c:200`) is
+  an `OPENSSL_die` and not an `ossl_assert`, so the authority aborts; `PKCS5_v2_scrypt_keyivgen_ex`
+  has no test at all and writes past its stack buffer. This crate refuses in both places, which is
+  D-RCU-3's disposition for the same shape, and a fault cannot be compared.
+* **A KDF row with no `keygen_ex`** naming a `PBE2PARAM` keyfunc, which faults the authority at
+  `p5_crpt2.c:167`.
+* **`EVP_PBE_CipherInit_ex` on one of the six PKCS12 objects** — the register entry above.
+* **The `:289` scrypt refusal for illegal parameters.** The probe's SCRYPT implementation accepts
+  every parameter set, so the arm the authority reaches by asking scrypt is not reachable here; the
+  *ordering* that puts the probe call before the derivation is still observed, because a success
+  records two derivations (`scrypt.param_kdf.activity=…,2`) and the `:278` refusal records none.
+
+### Two register entries, one of them new, and one defect found and not repaired
+
+The slice needed a second entry that has nothing to do with the six rows.
+`EVP_PBE_alg_add` converts its cipher argument with `EVP_CIPHER_get_nid`, and the court measured
+that on a **fetched** provider cipher named `DES-CBC` the authority answers `NID_des_cbc` (31) where
+this crate answers `NID_undef` (0). The mechanism is 7.3b's `set_legacy_nid`, which the
+`OBJ_NAME`-table contents are Phase 13's — and the *digest* half agrees on both sides, which is the
+observation D148 recorded from `RT-FETCH`. That is now
+`docs/SECURITY_DIVERGENCE_POLICY.md` **D-EVP-CIPHER-LEGACY-NID-1**, and the court's
+`pbe.cipher_nid.legacy` line names it while `pbe.alg_add.methods_nids` holds the two NIDs back.
+
+**And one defect this court measured and did *not* repair, because it is not this slice's file.**
+The `v2.wrong_shape` arm's error chain is identical on both sides except for one record's raising
+line: the authority's `asn1_template_noexp_d2i` raises `ERR_R_NESTED_ASN1_ERROR` at
+`crypto/asn1/tasn_dec.c:712` for the `ASN1_SIMPLE` arm, where this crate records `:703`, the
+`ASN1_TFLG_IMPTAG` arm's line. The cause is visible in `src/asn1/d2i.rs`: the two arms' raises were
+folded into one epilogue after the `match`, and the epilogue carries the first arm's site. Phase 5
+is sealed, the fix is a per-arm site rather than my slice's, and the honest move is to report it
+with its coordinates instead of changing a sealed stratum under a PBE commit: the arm prints the
+chain's reasons and *this slice's own* last record's coordinates (`say_top`), and the Phase-5 lines
+are not compared. It is a one-line-per-arm correction whenever someone wants it, and
+`RT-ASN1-TEMPLATE` does not observe that path today.
+
+### One generator input changed, and nothing else did
+
+`crypto/asn1/p5_scrypt.c` was on `forensics/tools/gen_err_raise_sites.py`'s "deliberately not
+covered" list with a Phase-10 label. This slice raises five of that file's sites — `:252`, `:261`,
+`:267`, `:278`, `:289` — so the file is now covered, which also brings in the nineteen
+`ERR_LIB_ASN1` sites of `PKCS5_pbe2_set_scrypt` (Phase 11's export, same unit). The list's comment
+is corrected in place, with the same per-file-not-per-symbol reasoning `asn_mime.c` and `v3_utl.c`
+already use; the atlas's `covered_files` and `sites` counts move with it, and every derived artefact
+is in this commit.
+
+`dispatch_court.py` needed **no** `NOT_A_DISPATCH` entry: the two new aliases (`EvpPbeKeygen`,
+`EvpPbeKeygenEx`) are resolved by the naming convention against the authority's `EVP_PBE_KEYGEN` and
+`EVP_PBE_KEYGEN_EX` typedefs, `signatures_unlinked` stays 0 and both signatures are checked. The two
+new modules add four *new* census units rather than growing an existing one, which is the movement
+D130 says is legitimate: `crypto/evp/evp_pbe.c` 23 censused names, `crypto/evp/p5_crpt.c` 16,
+`crypto/evp/p5_crpt2.c` 23, `crypto/asn1/p5_scrypt.c` 29.
+
+`docs/PHASE-7-SUBPHASES.md`'s 7.4c row is updated with what landed, and the narrative beside it says
+which unit is which and what the one table row that cannot name its keygen is. `PKCS5_PBE_add`
+lands with the slice and is named there too.
+
+No `ownership-transitions.json` row was needed, and both guard pairs were run: against the branch's
+own previous head (`6a325e62`: `implemented[libcrypto] 1747 → 1764`,
+`open_obligations[phase7] 174 → 157`, `prerequisites[language_census] 2552 → 2641`,
+`prerequisites[sealed_census] 59 → 58`) and against the merge base with `origin/main`
+(`c2fdcae4`). `blocking_dependencies` stays 14, `divergence_names_covered` stays 32, and the
+prerequisite gate reports zero findings.
+

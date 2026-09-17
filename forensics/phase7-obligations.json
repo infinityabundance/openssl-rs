@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 924,
       "deferred_to_later_phase": 164,
-      "implemented": 612,
-      "open_in_this_stratum": 174,
+      "implemented": 629,
+      "open_in_this_stratum": 157,
       "owned": 950,
       "received_by_handoff": 26
     },
@@ -1484,6 +1484,14 @@
       "EVP_MD_settable_ctx_params",
       "EVP_MD_up_ref",
       "EVP_MD_xof",
+      "EVP_PBE_CipherInit",
+      "EVP_PBE_CipherInit_ex",
+      "EVP_PBE_alg_add",
+      "EVP_PBE_alg_add_type",
+      "EVP_PBE_cleanup",
+      "EVP_PBE_find",
+      "EVP_PBE_find_ex",
+      "EVP_PBE_get",
       "EVP_PBE_scrypt",
       "EVP_PBE_scrypt_ex",
       "EVP_PKEY_CTX_add1_hkdf_info",
@@ -1801,7 +1809,16 @@
       "EVP_get_cipherbyname",
       "EVP_get_digestbyname",
       "EVP_md_null",
-      "EVP_set_default_properties"
+      "EVP_set_default_properties",
+      "PKCS5_PBE_add",
+      "PKCS5_PBE_keyivgen",
+      "PKCS5_PBE_keyivgen_ex",
+      "PKCS5_PBKDF2_HMAC",
+      "PKCS5_PBKDF2_HMAC_SHA1",
+      "PKCS5_v2_PBE_keyivgen",
+      "PKCS5_v2_PBE_keyivgen_ex",
+      "PKCS5_v2_scrypt_keyivgen",
+      "PKCS5_v2_scrypt_keyivgen_ex"
     ],
     "module_prefixes": [
       {
@@ -2254,54 +2271,6 @@
         "module": "src/evp/p_legacy.rs",
         "received_from_phase": null,
         "symbol": "EVP_OpenInit"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pbe.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PBE_CipherInit"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pbe.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PBE_CipherInit_ex"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pbe.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PBE_alg_add"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pbe.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PBE_alg_add_type"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pbe.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PBE_cleanup"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pbe.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PBE_find"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pbe.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PBE_find_ex"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pbe.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PBE_get"
       },
       {
         "declaring_header": "evp.h",
@@ -2977,60 +2946,6 @@
       },
       {
         "declaring_header": "evp.h",
-        "module": "src/evp/pem_bridge.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS5_PBE_add"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pem_bridge.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS5_PBE_keyivgen"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pem_bridge.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS5_PBE_keyivgen_ex"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pem_bridge.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS5_PBKDF2_HMAC"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pem_bridge.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS5_PBKDF2_HMAC_SHA1"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pem_bridge.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS5_v2_PBE_keyivgen"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pem_bridge.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS5_v2_PBE_keyivgen_ex"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pem_bridge.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS5_v2_scrypt_keyivgen"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pem_bridge.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS5_v2_scrypt_keyivgen_ex"
-      },
-      {
-        "declaring_header": "evp.h",
         "module": "src/evp/pkey_asn1.rs",
         "received_from_phase": null,
         "symbol": "d2i_AutoPrivateKey"
@@ -3161,12 +3076,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "8d9b0cbdda9f5f8326175148483795bfa9e3b60af70d677227a03b8cbce7c321"
+      "sha256": "2c632d87e17236ad9fc0045f48621911a8edafcb8c6fa42d172352d113cc1711"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "6cca7bc4bd803515c793d4fe205dcd6a80f136e289ed035cfba380ab0089d2cc"
+      "sha256": "4d66f17755bc92cad05ab8a5c10fa739011667d0377040705962dd043b3c83af"
     }
   ],
   "kind": "phase7-obligations",

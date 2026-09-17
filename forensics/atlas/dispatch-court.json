@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 178,
+      "crate_files_read": 182,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -12,12 +12,12 @@
       "identities_authority_only": 82,
       "identities_checked": 195,
       "identities_mismatches": 0,
-      "links_convention": 194,
+      "links_convention": 196,
       "links_documented": 8,
       "links_explicit": 14,
       "problems": 0,
-      "signatures_authority_only": 414,
-      "signatures_checked": 219,
+      "signatures_authority_only": 412,
+      "signatures_checked": 221,
       "signatures_mismatches": 0,
       "signatures_not_a_dispatch": 104,
       "signatures_unlinked": 0,
@@ -1356,8 +1356,6 @@
         "ENGINE_PKEY_ASN1_METHS_PTR",
         "ENGINE_PKEY_METHS_PTR",
         "ENGINE_SSL_CLIENT_CERT_PTR",
-        "EVP_PBE_KEYGEN",
-        "EVP_PBE_KEYGEN_EX",
         "GEN_SESSION_CB",
         "OPENSSL_LH_COMPFUNC",
         "OPENSSL_LH_COMPFUNCTHUNK",
@@ -2208,6 +2206,22 @@
           "authority": "OSSL_FUNC_digest_gettable_ctx_params_fn",
           "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
           "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "EvpPbeKeygen",
+          "at": "src/evp/evp_pbe.rs",
+          "authority": "EVP_PBE_KEYGEN",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:s)), int:4:s, ptr(opaque), ptr(const(opaque)), ptr(const(opaque)), int:4:s)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:s)), int:4:s, ptr(opaque), ptr(const(opaque)), ptr(const(opaque)), int:4:s)",
+          "how": "convention"
+        },
+        {
+          "alias": "EvpPbeKeygenEx",
+          "at": "src/evp/evp_pbe.rs",
+          "authority": "EVP_PBE_KEYGEN_EX",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:s)), int:4:s, ptr(opaque), ptr(const(opaque)), ptr(const(opaque)), int:4:s, ptr(opaque), ptr(const(int:1:s)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:s)), int:4:s, ptr(opaque), ptr(const(opaque)), ptr(const(opaque)), int:4:s, ptr(opaque), ptr(const(int:1:s)))",
           "how": "convention"
         },
         {
