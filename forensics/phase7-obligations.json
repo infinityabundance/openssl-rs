@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 924,
       "deferred_to_later_phase": 164,
-      "implemented": 345,
-      "open_in_this_stratum": 441,
+      "implemented": 349,
+      "open_in_this_stratum": 437,
       "owned": 950,
       "received_by_handoff": 26
     },
@@ -1441,7 +1441,10 @@
       "EVP_MD_settable_ctx_params",
       "EVP_MD_up_ref",
       "EVP_MD_xof",
+      "EVP_PKEY_cmp",
+      "EVP_PKEY_cmp_parameters",
       "EVP_PKEY_dup",
+      "EVP_PKEY_eq",
       "EVP_PKEY_free",
       "EVP_PKEY_get0_description",
       "EVP_PKEY_get0_provider",
@@ -1458,6 +1461,7 @@
       "EVP_PKEY_gettable_params",
       "EVP_PKEY_is_a",
       "EVP_PKEY_new",
+      "EVP_PKEY_parameters_eq",
       "EVP_PKEY_set_bn_param",
       "EVP_PKEY_set_ex_data",
       "EVP_PKEY_set_int_param",
@@ -2844,18 +2848,6 @@
         "declaring_header": "evp.h",
         "module": "src/evp/pkey.rs",
         "received_from_phase": null,
-        "symbol": "EVP_PKEY_cmp"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_cmp_parameters"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
         "symbol": "EVP_PKEY_copy_parameters"
       },
       {
@@ -2971,12 +2963,6 @@
         "module": "src/evp/pkey.rs",
         "received_from_phase": null,
         "symbol": "EVP_PKEY_encrypt_old"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_eq"
       },
       {
         "declaring_header": "evp.h",
@@ -3529,12 +3515,6 @@
         "module": "src/evp/pkey_ctx.rs",
         "received_from_phase": null,
         "symbol": "EVP_PKEY_param_check_quick"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_parameters_eq"
       },
       {
         "declaring_header": "evp.h",
@@ -4496,12 +4476,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "8949a624fbacc9665e18a2599f0aa30faf7d3e783d4a5e1509c407c3ddded1d6"
+      "sha256": "9a97970c4fe4f079335d3b7e765279d3417f20aa903ea100a984b682c4da3590"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "51f3d902730c0fcbd7804341a4e0587b5266966e65a1ee4c85e1f5b12aff9e12"
+      "sha256": "2b884e8da848521a86534f3733a18c1e95cfd925985e1842e54360acfb177b8d"
     }
   ],
   "kind": "phase7-obligations",

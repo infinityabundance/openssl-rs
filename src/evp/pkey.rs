@@ -1360,6 +1360,170 @@ pub unsafe extern "C" fn EVP_PKEY_get_params(
     0
 }
 
+// ---------------------------------------------------------------------------------------------
+// Equality, and the four answers it can give
+// ---------------------------------------------------------------------------------------------
+//
+// `EVP_PKEY_eq` returns **1** same key, **0** different key, **-1** different key *type* and **-2**
+// unsupported operation. The four are the contract that `evp_keymgmt_util_match` documents from the
+// other side, and the two functions divide the work: this one decides *which selection* to compare
+// over, and the util decides how.
+//
+// The selection is not a constant, and that is the part a plausible transcription gets wrong.
+// `EVP_PKEY_eq` asks each key whether it **has** a public key and compares over
+// `SELECT_DOMAIN_PARAMETERS | PUBLIC_KEY` when both do, over `SELECT_DOMAIN_PARAMETERS | KEYPAIR`
+// otherwise. So a pair of keys that both lack a public key is compared over *more* than a pair that
+// has them -- because a key with no public key must be compared with its private half included, or
+// two private keys with the same parameters would compare equal.
+
+/// `OSSL_KEYMGMT_SELECT_DOMAIN_PARAMETERS` — the authority's `SELECT_PARAMETERS`.
+///
+/// The name is the authority's and it is narrower than it reads: the macro is **one** bit, and
+/// `OSSL_KEYMGMT_SELECT_OTHER_PARAMETERS` is deliberately not in it.
+const SELECT_PARAMETERS: c_int = 0x04;
+/// `OSSL_KEYMGMT_SELECT_PUBLIC_KEY`.
+const OSSL_KEYMGMT_SELECT_PUBLIC_KEY: c_int = 0x02;
+/// `OSSL_KEYMGMT_SELECT_KEYPAIR` — `PRIVATE_KEY | PUBLIC_KEY`.
+const OSSL_KEYMGMT_SELECT_KEYPAIR: c_int = 0x01 | 0x02;
+
+/// `static int evp_pkey_cmp_any(const EVP_PKEY *a, const EVP_PKEY *b, int selection)`.
+///
+/// The mixed-legacy-path function, and in this crate it has exactly two arms: the assertion that at
+/// least one key is provider-side, and the case where both are. Everything past that — comparing a
+/// legacy NID against a provider method's names, then cross-exporting with
+/// `evp_pkey_export_to_provider` — needs a legacy origin key, which is a state this crate cannot
+/// build, and `evp_pkey_export_to_provider` besides, which is 7.4c's. The authority's own comment on
+/// the `#ifdef FIPS_MODULE` arm says the whole function "will just call
+/// `evp_keymgmt_util_match` when legacy support is gone", which is precisely the crate's situation.
+///
+/// # Safety
+/// `a` and `b` must be live.
+unsafe fn evp_pkey_cmp_any(a: *const EvpPkey, b: *const EvpPkey, selection: c_int) -> c_int {
+    // SAFETY: both keys are live per the contract.
+    let (a_provided, b_provided) = unsafe { (!(*a).keymgmt.is_null(), !(*b).keymgmt.is_null()) };
+
+    /* The authority writes this as `ossl_assert`, which is the identity function under `NDEBUG`, so
+     * the released build *does* take the -2. The crate follows the released build. */
+    if !a_provided && !b_provided {
+        return -2;
+    }
+
+    if a_provided && b_provided {
+        // SAFETY: both keys are live and provider-side.
+        return unsafe {
+            crate::evp::keymgmt_lib::evp_keymgmt_util_match(a.cast_mut(), b.cast_mut(), selection)
+        };
+    }
+
+    /* Phase 8: one key is provider-side and the other is a legacy origin, which this crate cannot
+     * construct. See this function's doc comment. */
+    -2
+}
+
+/// `int EVP_PKEY_parameters_eq(const EVP_PKEY *a, const EVP_PKEY *b)`.
+///
+/// Parameters only, and the **first** thing it does is decide whether either key is provider-side: if
+/// so it defers to `evp_pkey_cmp_any`, and if neither is, it compares legacy NIDs directly and then
+/// the ameth's `param_cmp` — Phase 8's, and unreachable here because neither key can be legacy.
+///
+/// # Safety
+/// `a` and `b` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_parameters_eq(a: *const EvpPkey, b: *const EvpPkey) -> c_int {
+    // SAFETY: both keys are live per the contract.
+    if unsafe { !(*a).keymgmt.is_null() || !(*b).keymgmt.is_null() } {
+        // SAFETY: both keys are live.
+        return unsafe { evp_pkey_cmp_any(a, b, SELECT_PARAMETERS) };
+    }
+    /* All legacy keys: Phase 8's `a->ameth->param_cmp`, unreachable here. */
+    // SAFETY: both keys are live.
+    if unsafe { (*a).type_ != (*b).type_ } {
+        return -1;
+    }
+    -2
+}
+
+/// `int EVP_PKEY_cmp_parameters(const EVP_PKEY *a, const EVP_PKEY *b)` — the deprecated spelling.
+///
+/// Literally `EVP_PKEY_parameters_eq`, behind `#ifndef OPENSSL_NO_DEPRECATED_3_0`. The wrapper exists
+/// so that a program built against the older header links, and it is **not** a second implementation:
+/// a difference between the two would be a defect, so there is nothing here to transcribe.
+///
+/// # Safety
+/// `a` and `b` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_cmp_parameters(a: *const EvpPkey, b: *const EvpPkey) -> c_int {
+    // SAFETY: both keys are live per the contract.
+    unsafe { EVP_PKEY_parameters_eq(a, b) }
+}
+
+/// `int EVP_PKEY_eq(const EVP_PKEY *a, const EVP_PKEY *b)`.
+///
+/// Two **trivial shortcuts** first, and both are contract rather than optimisation: a key is equal to
+/// itself even if it is blank or has no key data (`a == b` → **1**), and a NULL against anything else
+/// is a difference rather than an error (`a == NULL || b == NULL` → **0**). So `EVP_PKEY_eq(NULL,
+/// NULL)` is **1** through the first test and `EVP_PKEY_eq(NULL, key)` is **0** through the second.
+///
+/// Then the selection, and then `evp_pkey_cmp_any`. The `has` questions are asked **both ways**: a
+/// pair where only one key reports a public key takes the `KEYPAIR` arm, not a one-sided comparison.
+///
+/// # Safety
+/// `a` and `b` must be NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_eq(a: *const EvpPkey, b: *const EvpPkey) -> c_int {
+    if a == b {
+        return 1;
+    }
+    if a.is_null() || b.is_null() {
+        return 0;
+    }
+
+    // SAFETY: both keys are live per the contract.
+    if unsafe { !(*a).keymgmt.is_null() || !(*b).keymgmt.is_null() } {
+        let mut selection = SELECT_PARAMETERS;
+
+        /* SAFETY: both keys are live and the selection is a plain bit set. */
+        let both_have_public = unsafe {
+            crate::evp::keymgmt_lib::evp_keymgmt_util_has(
+                a.cast_mut(),
+                OSSL_KEYMGMT_SELECT_PUBLIC_KEY,
+            ) != 0
+                && crate::evp::keymgmt_lib::evp_keymgmt_util_has(
+                    b.cast_mut(),
+                    OSSL_KEYMGMT_SELECT_PUBLIC_KEY,
+                ) != 0
+        };
+        if both_have_public {
+            selection |= OSSL_KEYMGMT_SELECT_PUBLIC_KEY;
+        } else {
+            selection |= OSSL_KEYMGMT_SELECT_KEYPAIR;
+        }
+        // SAFETY: both keys are live.
+        return unsafe { evp_pkey_cmp_any(a, b, selection) };
+    }
+
+    /* All legacy keys: Phase 8's `a->ameth->param_cmp` then `pub_cmp`, unreachable here. */
+    // SAFETY: both keys are live.
+    if unsafe { (*a).type_ != (*b).type_ } {
+        return -1;
+    }
+    -2
+}
+
+/// `int EVP_PKEY_cmp(const EVP_PKEY *a, const EVP_PKEY *b)` — the deprecated spelling.
+///
+/// Literally `EVP_PKEY_eq`, behind the same `#ifndef OPENSSL_NO_DEPRECATED_3_0`, and the two are
+/// separate exported symbols on purpose: a program linked against either name must reach the same
+/// answer, and the only way to guarantee that is for one of them to be the other.
+///
+/// # Safety
+/// `a` and `b` must be NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_cmp(a: *const EvpPkey, b: *const EvpPkey) -> c_int {
+    // SAFETY: both keys are NULL or live per the contract.
+    unsafe { EVP_PKEY_eq(a, b) }
+}
+
 // SPDX-License-Identifier: Apache-2.0
 
 #[cfg(test)]
@@ -1415,6 +1579,53 @@ mod tests {
             assert!(EVP_PKEY_gettable_params(ptr::null()).is_null());
             assert!(EVP_PKEY_settable_params(ptr::null()).is_null());
             EVP_PKEY_free(pkey);
+        }
+    }
+
+    /// The four answers `EVP_PKEY_eq` can give, without a provider: identity is **1** even for a blank
+    /// key, a NULL against anything else is **0**, and two blank keys reach `evp_pkey_cmp_any`'s
+    /// assertion arm and answer **-2** -- unsupported, not equal, and not different.
+    #[test]
+    fn equality_answers_its_four_values() {
+        // SAFETY: no preconditions.
+        let a = unsafe { EVP_PKEY_new() };
+        // SAFETY: no preconditions.
+        let b = unsafe { EVP_PKEY_new() };
+        assert!(!a.is_null() && !b.is_null());
+
+        // SAFETY: both keys are this test's own, and NULL is the other documented input.
+        unsafe {
+            assert_eq!(
+                EVP_PKEY_eq(a, a),
+                1,
+                "identity, without asking anything of the key"
+            );
+            assert_eq!(
+                EVP_PKEY_eq(ptr::null(), ptr::null()),
+                1,
+                "the same test, both NULL"
+            );
+            assert_eq!(
+                EVP_PKEY_eq(a, ptr::null()),
+                0,
+                "NULL against a key is a difference"
+            );
+            assert_eq!(EVP_PKEY_eq(ptr::null(), b), 0);
+            assert_eq!(
+                EVP_PKEY_eq(a, b),
+                -2,
+                "two blank keys are unsupported, not equal"
+            );
+            assert_eq!(EVP_PKEY_parameters_eq(a, b), -2);
+            crate::runtime::err::ERR_clear_error();
+
+            /* The deprecated spellings are the same functions, and that is the whole claim. */
+            assert_eq!(EVP_PKEY_cmp(a, b), EVP_PKEY_eq(a, b));
+            assert_eq!(EVP_PKEY_cmp_parameters(a, b), EVP_PKEY_parameters_eq(a, b));
+            crate::runtime::err::ERR_clear_error();
+
+            EVP_PKEY_free(a);
+            EVP_PKEY_free(b);
         }
     }
 
