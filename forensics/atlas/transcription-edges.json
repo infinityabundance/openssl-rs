@@ -358,7 +358,7 @@
         "module": "src/evp/digest.rs",
         "phase": 7,
         "phase_source": "module-declaration",
-        "share": "48/86",
+        "share": "48/96",
         "translation_unit": "crypto/evp/evp_lib.c"
       },
       {
@@ -435,7 +435,7 @@
         "module": "src/evp/pkey.rs",
         "phase": 7,
         "phase_source": "module-declaration",
-        "share": "57/59",
+        "share": "58/60",
         "translation_unit": "crypto/evp/p_lib.c"
       },
       {

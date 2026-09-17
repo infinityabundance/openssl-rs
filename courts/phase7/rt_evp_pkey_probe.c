@@ -55,6 +55,19 @@
  *   * **`evp_pkey_ctx_is_legacy`'s entry to `legacy:`.** It is `ctx->keymgmt == NULL`, and this
  *     crate cannot build such a context: `int_ctx_new` always fetches a method and refuses
  *     otherwise. The authority reaches it only through the legacy-typed constructors.
+ *   * **the `ctx == NULL` arm of all ten `m_sigver.c` exports.** There is no such arm: the file has
+ *     no NULL test on `ctx`, so `do_sigver_init`'s first statement (`m_sigver.c:53`,
+ *     `evp_md_ctx_free_algctx(ctx)`) and the six operate entry points' `ctx->pctx` read (`:407`,
+ *     `:457`, `:506`, `:676`) dereference it. The boundary is printed as one line rather than
+ *     called; a probe that called it would abort the harness on **both** sides, which is not
+ *     agreement.
+ *   * **`EVP_PKEY_digestsign_supports_digest`'s `-1`.** It is the `EVP_MD_CTX_new` failure and an
+ *     allocation has no injectable seam here; faking one would measure the seam. Named, not
+ *     driven (`p_lib.c:1404`).
+ *   * **`do_sigver_init`'s `ERR_R_INTERNAL_ERROR` assert (`m_sigver.c:105`), the NULL
+ *     `query_operation_name` (`:112`) and the legacy `NO_DEFAULT_DIGEST` (`:318`).** The first two
+ *     need a key whose `keymgmt` disagrees with its context's, which `int_ctx_new` cannot build;
+ *     the third sits below the label's unconditional `pmeth == NULL` refusal.
  *
  * The 7.4e half -- `p_lib.c`'s provider half, the five `EVP_PKEY_CTX_*` accessors beside it, and
  * the four `EVP_PKEY_new_raw_*` constructors -- has its own comment at the head of its provider
@@ -187,6 +200,225 @@ static void say_k(const char *key)
     printf("%s=new:%d,free:%d,has:%d,get_params:%d,import:%d,qon:%d\n",
            key, n_km_new, n_km_free, n_km_has, n_km_get, n_km_import, n_km_qon);
     ERR_clear_error();
+}
+
+/*
+ * 7.4f. One counter per "digest" signature callback, plus the two shape questions the entry
+ * points' argument conventions turn on: whether the init was handed a digest **name** (and whether
+ * it was the one the caller passed) and whether an absent output buffer reached the provider as a
+ * length query. The four init counters are separate because `do_sigver_init` reaches
+ * `digest_sign_init` and `digest_verify_init` down the same code and a transcription that swapped
+ * them would leave a
+ * counter at zero rather than failing.
+ */
+static int n_dsi, n_dsi_named, n_dsi_sha256, n_dsi_nomd, n_dsi_params;
+static int n_dsu, n_dsf, n_dsf_query, n_dsf_short;
+static int n_ds, n_ds_null_out, n_ds_short;
+static int n_dvi, n_dvi_named, n_dvi_sha256, n_dvi_nomd;
+static int n_dvu, n_dvf, n_dvf_short, n_dv, n_dv_short;
+
+/* `g_dsg_init_fails` makes the two digest `*_init` callbacks answer 0, which is the only way the
+ * `NO_DEFAULT_DIGEST`/`PROVIDER_SIGNATURE_FAILURE` pair is reachable with an init that was
+ * *found*. `g_dsg_newctx_null` makes the method's `newctx` answer NULL, for the arm that refuses
+ * an algorithm context. */
+static int g_dsg_init_fails;
+
+static void reset_dsg(void)
+{
+    n_dsi = n_dsi_named = n_dsi_sha256 = n_dsi_nomd = n_dsi_params = 0;
+    n_dsu = n_dsf = n_dsf_query = n_dsf_short = 0;
+    n_ds = n_ds_null_out = n_ds_short = 0;
+    n_dvi = n_dvi_named = n_dvi_sha256 = n_dvi_nomd = 0;
+    n_dvu = n_dvf = n_dvf_short = n_dv = n_dv_short = 0;
+    ERR_clear_error();
+}
+
+static void say_dsg(const char *key)
+{
+    printf("%s=dsi:%d,dsi_named:%d,dsi_sha256:%d,dsi_nomd:%d,dsi_params:%d,"
+           "dsu:%d,dsf:%d,dsf_query:%d,dsf_short:%d,"
+           "ds:%d,ds_null_out:%d,ds_short:%d,"
+           "dvi:%d,dvi_named:%d,dvi_sha256:%d,dvi_nomd:%d,"
+           "dvu:%d,dvf:%d,dvf_short:%d,dv:%d,dv_short:%d\n",
+           key, n_dsi, n_dsi_named, n_dsi_sha256, n_dsi_nomd, n_dsi_params,
+           n_dsu, n_dsf, n_dsf_query, n_dsf_short,
+           n_ds, n_ds_null_out, n_ds_short,
+           n_dvi, n_dvi_named, n_dvi_sha256, n_dvi_nomd,
+           n_dvu, n_dvf, n_dvf_short, n_dv, n_dv_short);
+    ERR_clear_error();
+}
+
+/* The counters and the two out-relations are the whole transcript for this half; no address is
+ * printed. `sha256` above is the string comparison the init's `mdname` argument is measured with. */
+static int dsg_dsig_init(void *ctx, const char *mdname, void *provkey, const OSSL_PARAM params[])
+{
+    (void) ctx;
+    (void) provkey;
+    n_dsi++;
+    if (mdname == NULL) {
+        n_dsi_nomd++;
+    } else {
+        n_dsi_named++;
+        if (strcmp(mdname, "SHA256") == 0)
+            n_dsi_sha256++;
+    }
+    if (params != NULL)
+        n_dsi_params++;
+    return g_dsg_init_fails ? 0 : 1;
+}
+
+static int dsg_dsig_update(void *ctx, const unsigned char *in, size_t inl)
+{
+    (void) ctx;
+    (void) in;
+    (void) inl;
+    n_dsu++;
+    return 1;
+}
+
+/* The two-call convention lives here: a NULL buffer is the length query and answers 8; a buffer
+ * smaller than 8 is the refusal, which is what the entry point turns into
+ * `PROVIDER_SIGNATURE_FAILURE`. */
+static int dsg_dsig_final(void *ctx, unsigned char *sig, size_t *siglen, size_t sigsize)
+{
+    (void) ctx;
+    n_dsf++;
+    if (sig == NULL) {
+        n_dsf_query++;
+        if (siglen != NULL)
+            *siglen = 8;
+        return 1;
+    }
+    if (sigsize < 8) {
+        n_dsf_short++;
+        return 0;
+    }
+    if (siglen != NULL)
+        *siglen = 8;
+    return 1;
+}
+
+static int dsg_dsig_sign(void *ctx, unsigned char *sig, size_t *siglen, size_t sigsize,
+                         const unsigned char *tbs, size_t tbslen)
+{
+    (void) ctx;
+    (void) tbs;
+    (void) tbslen;
+    n_ds++;
+    if (sig == NULL) {
+        n_ds_null_out++;
+        if (siglen != NULL)
+            *siglen = 8;
+        return 1;
+    }
+    if (sigsize < 8) {
+        n_ds_short++;
+        return 0;
+    }
+    if (siglen != NULL)
+        *siglen = 8;
+    return 1;
+}
+
+static int dsg_dvi_init(void *ctx, const char *mdname, void *provkey, const OSSL_PARAM params[])
+{
+    (void) ctx;
+    (void) provkey;
+    (void) params;
+    n_dvi++;
+    if (mdname == NULL) {
+        n_dvi_nomd++;
+    } else {
+        n_dvi_named++;
+        if (strcmp(mdname, "SHA256") == 0)
+            n_dvi_sha256++;
+    }
+    return 1;
+}
+
+static int dsg_dvu(void *ctx, const unsigned char *in, size_t inl)
+{
+    (void) ctx;
+    (void) in;
+    (void) inl;
+    n_dvu++;
+    return 1;
+}
+
+/* A verify final has no buffer convention; the "too small" arm is a signature whose length is not
+ * the provider's eight. */
+static int dsg_dvf(void *ctx, const unsigned char *sig, size_t siglen)
+{
+    (void) ctx;
+    (void) sig;
+    n_dvf++;
+    if (siglen != 8) {
+        n_dvf_short++;
+        return 0;
+    }
+    return 1;
+}
+
+static int dsg_dv(void *ctx, const unsigned char *sig, size_t siglen,
+                  const unsigned char *tbs, size_t tbslen)
+{
+    (void) ctx;
+    (void) sig;
+    (void) tbs;
+    (void) tbslen;
+    n_dv++;
+    if (siglen != 8) {
+        n_dv_short++;
+        return 0;
+    }
+    return 1;
+}
+
+/* One signature method whose `newctx` refuses, so the `algctx == NULL` arm of `do_sigver_init`
+ * (m_sigver.c:201) has a method to refuse it. */
+static void *dsg_newctx_null(void *provctx, const char *propq)
+{
+    (void) provctx;
+    (void) propq;
+    return NULL;
+}
+
+/* The md-level parameter pair, published only so `EVP_MD_CTX_set_params`'s pctx-first block has a
+ * signature method to find. The counter says whether the redirect happened rather than the digest
+ * path. */
+static int n_setmd, n_getmd;
+
+static int dsg_set_md_params(void *ctx, const OSSL_PARAM params[])
+{
+    (void) ctx;
+    (void) params;
+    n_setmd++;
+    return 1;
+}
+
+static int dsg_get_md_params(void *ctx, OSSL_PARAM params[])
+{
+    (void) ctx;
+    (void) params;
+    n_getmd++;
+    return 1;
+}
+
+static const OSSL_PARAM *dsg_gettable_md_params(void *ctx)
+{
+    static const OSSL_PARAM md_tab[] = {
+        OSSL_PARAM_size_t("court-md-param", NULL),
+        OSSL_PARAM_END
+    };
+
+    (void) ctx;
+    return md_tab;
+}
+
+static const OSSL_PARAM *dsg_settable_md_params(void *ctx)
+{
+    (void) ctx;
+    return dsg_gettable_md_params(NULL);
 }
 
 /* `g_fail_ops` makes the four *operation* callbacks answer 0, so the entry points' FAILURE arm is
@@ -518,6 +750,102 @@ static const OSSL_DISPATCH sig_verifymsghalf_fns[] = {
     { OSSL_FUNC_SIGNATURE_FREECTX, (void (*)(void)) sig_freectx },
     { OSSL_FUNC_SIGNATURE_VERIFY_MESSAGE_INIT, (void (*)(void)) sig_vmi },
     { OSSL_FUNC_SIGNATURE_VERIFY, (void (*)(void)) sig_verify },
+    { 0, NULL }
+};
+
+/*
+ * The `DSG-*` tables, one per shape the digest-signature structural check admits. The check is
+ * *different* from the nine above: a digest method needs `newctx`+`freectx`, at least one init,
+ * and for each init either its one-shot operation or **both** of the update/final pair. So:
+ *
+ *   `DSG-FULL`       every digest callback, so every arm the entry points have is reachable.
+ *   `DSG-NOSTREAM`   a one-shot only: `digest_sign_update`/`_final` are absent, which is the
+ *                    `PROVIDER_SIGNATURE_NOT_SUPPORTED` pair of `EVP_DigestSignUpdate`/`Final`.
+ *   `DSG-SIGNONLY`   a signer with no `digest_verify_init`, which is how a `VERIFYCTX` operation
+ *                    reaches `m_sigver.c:258`.
+ *   `DSG-VERIFYONLY` the mirror, for `m_sigver.c:266`.
+ *   `DSG-NONEWCTX`   `newctx` answers NULL, for `m_sigver.c:201`.
+ *   `DSG-NODUP`      no `dupctx`, so `EVP_PKEY_CTX_dup` fails and the final marks the context.
+ *   `DSG-SETMD`      the md-parameter pair, for the `EVP_MD_CTX_set_params` redirect.
+ */
+static const OSSL_DISPATCH dsg_full_fns[] = {
+    { OSSL_FUNC_SIGNATURE_NEWCTX, (void (*)(void)) sig_newctx },
+    { OSSL_FUNC_SIGNATURE_FREECTX, (void (*)(void)) sig_freectx },
+    { OSSL_FUNC_SIGNATURE_DUPCTX, (void (*)(void)) sig_dupctx },
+    { OSSL_FUNC_SIGNATURE_DIGEST_SIGN_INIT, (void (*)(void)) dsg_dsig_init },
+    { OSSL_FUNC_SIGNATURE_DIGEST_SIGN_UPDATE, (void (*)(void)) dsg_dsig_update },
+    { OSSL_FUNC_SIGNATURE_DIGEST_SIGN_FINAL, (void (*)(void)) dsg_dsig_final },
+    { OSSL_FUNC_SIGNATURE_DIGEST_SIGN, (void (*)(void)) dsg_dsig_sign },
+    { OSSL_FUNC_SIGNATURE_DIGEST_VERIFY_INIT, (void (*)(void)) dsg_dvi_init },
+    { OSSL_FUNC_SIGNATURE_DIGEST_VERIFY_UPDATE, (void (*)(void)) dsg_dvu },
+    { OSSL_FUNC_SIGNATURE_DIGEST_VERIFY_FINAL, (void (*)(void)) dsg_dvf },
+    { OSSL_FUNC_SIGNATURE_DIGEST_VERIFY, (void (*)(void)) dsg_dv },
+    { 0, NULL }
+};
+
+static const OSSL_DISPATCH dsg_nostream_fns[] = {
+    { OSSL_FUNC_SIGNATURE_NEWCTX, (void (*)(void)) sig_newctx },
+    { OSSL_FUNC_SIGNATURE_FREECTX, (void (*)(void)) sig_freectx },
+    { OSSL_FUNC_SIGNATURE_DUPCTX, (void (*)(void)) sig_dupctx },
+    { OSSL_FUNC_SIGNATURE_DIGEST_SIGN_INIT, (void (*)(void)) dsg_dsig_init },
+    { OSSL_FUNC_SIGNATURE_DIGEST_SIGN, (void (*)(void)) dsg_dsig_sign },
+    { OSSL_FUNC_SIGNATURE_DIGEST_VERIFY_INIT, (void (*)(void)) dsg_dvi_init },
+    { OSSL_FUNC_SIGNATURE_DIGEST_VERIFY, (void (*)(void)) dsg_dv },
+    { 0, NULL }
+};
+
+static const OSSL_DISPATCH dsg_signonly_fns[] = {
+    { OSSL_FUNC_SIGNATURE_NEWCTX, (void (*)(void)) sig_newctx },
+    { OSSL_FUNC_SIGNATURE_FREECTX, (void (*)(void)) sig_freectx },
+    { OSSL_FUNC_SIGNATURE_DUPCTX, (void (*)(void)) sig_dupctx },
+    { OSSL_FUNC_SIGNATURE_DIGEST_SIGN_INIT, (void (*)(void)) dsg_dsig_init },
+    { OSSL_FUNC_SIGNATURE_DIGEST_SIGN_UPDATE, (void (*)(void)) dsg_dsig_update },
+    { OSSL_FUNC_SIGNATURE_DIGEST_SIGN_FINAL, (void (*)(void)) dsg_dsig_final },
+    { 0, NULL }
+};
+
+static const OSSL_DISPATCH dsg_verifyonly_fns[] = {
+    { OSSL_FUNC_SIGNATURE_NEWCTX, (void (*)(void)) sig_newctx },
+    { OSSL_FUNC_SIGNATURE_FREECTX, (void (*)(void)) sig_freectx },
+    { OSSL_FUNC_SIGNATURE_DUPCTX, (void (*)(void)) sig_dupctx },
+    { OSSL_FUNC_SIGNATURE_DIGEST_VERIFY_INIT, (void (*)(void)) dsg_dvi_init },
+    { OSSL_FUNC_SIGNATURE_DIGEST_VERIFY_UPDATE, (void (*)(void)) dsg_dvu },
+    { OSSL_FUNC_SIGNATURE_DIGEST_VERIFY_FINAL, (void (*)(void)) dsg_dvf },
+    { 0, NULL }
+};
+
+static const OSSL_DISPATCH dsg_nonewctx_fns[] = {
+    { OSSL_FUNC_SIGNATURE_NEWCTX, (void (*)(void)) dsg_newctx_null },
+    { OSSL_FUNC_SIGNATURE_FREECTX, (void (*)(void)) sig_freectx },
+    { OSSL_FUNC_SIGNATURE_DUPCTX, (void (*)(void)) sig_dupctx },
+    { OSSL_FUNC_SIGNATURE_DIGEST_SIGN_INIT, (void (*)(void)) dsg_dsig_init },
+    { OSSL_FUNC_SIGNATURE_DIGEST_SIGN, (void (*)(void)) dsg_dsig_sign },
+    { 0, NULL }
+};
+
+static const OSSL_DISPATCH dsg_nodup_fns[] = {
+    { OSSL_FUNC_SIGNATURE_NEWCTX, (void (*)(void)) sig_newctx },
+    { OSSL_FUNC_SIGNATURE_FREECTX, (void (*)(void)) sig_freectx },
+    { OSSL_FUNC_SIGNATURE_DIGEST_SIGN_INIT, (void (*)(void)) dsg_dsig_init },
+    { OSSL_FUNC_SIGNATURE_DIGEST_SIGN_UPDATE, (void (*)(void)) dsg_dsig_update },
+    { OSSL_FUNC_SIGNATURE_DIGEST_SIGN_FINAL, (void (*)(void)) dsg_dsig_final },
+    { OSSL_FUNC_SIGNATURE_DIGEST_VERIFY_INIT, (void (*)(void)) dsg_dvi_init },
+    { OSSL_FUNC_SIGNATURE_DIGEST_VERIFY_UPDATE, (void (*)(void)) dsg_dvu },
+    { OSSL_FUNC_SIGNATURE_DIGEST_VERIFY_FINAL, (void (*)(void)) dsg_dvf },
+    { 0, NULL }
+};
+
+static const OSSL_DISPATCH dsg_setmd_fns[] = {
+    { OSSL_FUNC_SIGNATURE_NEWCTX, (void (*)(void)) sig_newctx },
+    { OSSL_FUNC_SIGNATURE_FREECTX, (void (*)(void)) sig_freectx },
+    { OSSL_FUNC_SIGNATURE_DUPCTX, (void (*)(void)) sig_dupctx },
+    { OSSL_FUNC_SIGNATURE_DIGEST_SIGN_INIT, (void (*)(void)) dsg_dsig_init },
+    { OSSL_FUNC_SIGNATURE_DIGEST_SIGN_UPDATE, (void (*)(void)) dsg_dsig_update },
+    { OSSL_FUNC_SIGNATURE_DIGEST_SIGN_FINAL, (void (*)(void)) dsg_dsig_final },
+    { OSSL_FUNC_SIGNATURE_SET_CTX_MD_PARAMS, (void (*)(void)) dsg_set_md_params },
+    { OSSL_FUNC_SIGNATURE_SETTABLE_CTX_MD_PARAMS, (void (*)(void)) dsg_settable_md_params },
+    { OSSL_FUNC_SIGNATURE_GET_CTX_MD_PARAMS, (void (*)(void)) dsg_get_md_params },
+    { OSSL_FUNC_SIGNATURE_GETTABLE_CTX_MD_PARAMS, (void (*)(void)) dsg_gettable_md_params },
     { 0, NULL }
 };
 
@@ -992,12 +1320,34 @@ static int dg_final(void *vctx, unsigned char *out, size_t *outl, size_t outsz)
     return 1;
 }
 
+/*
+ * Two parameters, and both are load-bearing for a *different* reason than the SHA256 name above:
+ * `evp_md_cache_constants` asks for them at fetch time and **fails the fetch** if either is left
+ * unanswered. So this callback is what makes `EVP_MD_fetch(ctx, "SHA256", NULL)` a success, which
+ * is what `do_sigver_init`'s digest step needs; without it the name would still be registered but
+ * the method would never come back. The name is the authority's own: `OSSL_DIGEST_PARAM_SIZE` is
+ * `"size"` and the block size is asked under the literal `"blocksize"`.
+ */
+static int dg_get_params(OSSL_PARAM params[])
+{
+    OSSL_PARAM *p;
+
+    p = OSSL_PARAM_locate(params, OSSL_DIGEST_PARAM_SIZE);
+    if (p != NULL && !OSSL_PARAM_set_size_t(p, 32))
+        return 0;
+    p = OSSL_PARAM_locate(params, "blocksize");
+    if (p != NULL && !OSSL_PARAM_set_size_t(p, 64))
+        return 0;
+    return 1;
+}
+
 static const OSSL_DISPATCH dg_fns[] = {
     { OSSL_FUNC_DIGEST_NEWCTX, (void (*)(void)) dg_newctx },
     { OSSL_FUNC_DIGEST_FREECTX, (void (*)(void)) dg_freectx },
     { OSSL_FUNC_DIGEST_INIT, (void (*)(void)) dg_init },
     { OSSL_FUNC_DIGEST_UPDATE, (void (*)(void)) dg_update },
     { OSSL_FUNC_DIGEST_FINAL, (void (*)(void)) dg_final },
+    { OSSL_FUNC_DIGEST_GET_PARAMS, (void (*)(void)) dg_get_params },
     { 0, NULL }
 };
 
@@ -1146,6 +1496,22 @@ static const OSSL_ALGORITHM court_sigs[] = {
       "refused: verify_message_init without update or final" },
     { "SIG-SetParams:QON-SSP:courtsigssp", COURT_PROV, sig_setparams_fns,
       "publishes set_ctx_params, so `EVP_PKEY_CTX_set_signature`'s parameter is observable" },
+    /* 7.4f: the digest signature methods. Each is selected by moving the keymgmt's
+     * `query_operation_name` answer (`g_qon`), which is the one lever `do_sigver_init` reads. */
+    { "DSG-FULL:QON-DSF:courtdsgfull", COURT_PROV, dsg_full_fns,
+      "every digest callback" },
+    { "DSG-NOSTREAM:QON-DSN:courtdsgnostream", COURT_PROV, dsg_nostream_fns,
+      "a one-shot: no digest_sign_update/final, no digest_verify_update/final" },
+    { "DSG-SIGNONLY:QON-DSO:courtdsgsignonly", COURT_PROV, dsg_signonly_fns,
+      "refused by digest_verify_init's absence" },
+    { "DSG-VERIFYONLY:QON-DVO:courtdsgverifyonly", COURT_PROV, dsg_verifyonly_fns,
+      "refused by digest_sign_init's absence" },
+    { "DSG-NONEWCTX:QON-DNN:courtdsgnonewctx", COURT_PROV, dsg_nonewctx_fns,
+      "newctx answers NULL" },
+    { "DSG-NODUP:QON-DND:courtdsgnodup", COURT_PROV, dsg_nodup_fns,
+      "no dupctx, so a final with a buffer runs on the original" },
+    { "DSG-SETMD:QON-DSM:courtdsgsetsmd", COURT_PROV, dsg_setmd_fns,
+      "the md-parameter pair, for the EVP_MD_CTX_set_params redirect" },
     { NULL, NULL, NULL, NULL }
 };
 
@@ -2225,6 +2591,375 @@ int main(void)
         printf("set1_engine_and_get0_engine=NOT_MEASURED_ENGINE_IS_PHASE_13\n");
         printf("EVP_PKEY_type=NOT_MEASURED_STANDARD_METHODS_IS_PHASE_8\n");
         printf("EVP_PKEY_CTX_get_algor=NOT_MEASURED_NEEDS_d2i_X509_ALGOR_PHASE_11\n");
+    }
+
+    /*
+     * ---- 7.4f: the signature half of `EVP_MD_CTX` (`m_sigver.c`) ----
+     *
+     * `do_sigver_init` reaches an `OSSL_OP_DIGEST` and an `OSSL_OP_SIGNATURE` at once, so this
+     * block needs both: the SHA256 above, now fetchable because `dg_fns` publishes `get_params`,
+     * and the `DSG-*` signature methods. Every arm's key is the same `pkey`, and the method
+     * `do_sigver_init` fetches is chosen by moving the keymgmt's `query_operation_name` answer
+     * (`g_qon`) -- the one lever it reads.
+     *
+     * The `ctx == NULL` arm of all ten exports is **not called**: `m_sigver.c` has no NULL test on
+     * `ctx`, so the authority dereferences it (`m_sigver.c:53` for the four inits and the
+     * `ctx->pctx` read at `:407`, `:457`, `:506`, `:676` for the six operate entry points) and
+     * dies. The boundary is printed, the way D189's four stream arms are.
+     */
+    {
+        EVP_MD_CTX *md = NULL, *md2 = NULL, *blank = NULL;
+        EVP_PKEY_CTX *outp = NULL, *pre = NULL;
+        EVP_MD *sha = NULL;
+        OSSL_PARAM mdp[1];
+
+        printf("dsg.null_ctx=NOT_MEASURED_AUTHORITY_DEREFERENCES_NULL_CTX_m_sigver_c_53\n");
+
+        /*
+         * The `pctx == NULL` arm of the six operate entry points, on a fresh context. The two
+         * one-shots disagree about it -- `EVP_DigestSign` answers 0 with `INITIALIZATION_ERROR`
+         * and `EVP_DigestVerify` answers **-1** with the same reason -- which is why both are
+         * here rather than one.
+         */
+        blank = EVP_MD_CTX_new();
+        len = sizeof out;
+        sayr("dsg.null_pctx.sign_update", EVP_DigestSignUpdate(blank, msg, 1));
+        sayr("dsg.null_pctx.verify_update", EVP_DigestVerifyUpdate(blank, msg, 1));
+        sayr("dsg.null_pctx.sign_final", EVP_DigestSignFinal(blank, out, &len));
+        sayr("dsg.null_pctx.verify_final", EVP_DigestVerifyFinal(blank, out, 1));
+        sayr("dsg.null_pctx.sign", EVP_DigestSign(blank, out, &len, msg, 1));
+        sayr("dsg.null_pctx.verify", EVP_DigestVerify(blank, out, 1, msg, 1));
+        EVP_MD_CTX_free(blank);
+
+        /*
+         * The signing success path. `outp` is a *relation*: the context the out-parameter was
+         * filled with is the one `ctx->pctx` holds, and no address is printed.
+         */
+        g_qon = "DSG-FULL";
+        reset_dsg();
+        md = EVP_MD_CTX_new();
+        outp = NULL;
+        sayr("dsg.sign_init_ex.named",
+             EVP_DigestSignInit_ex(md, &outp, "SHA256", ctx, NULL, pkey, NULL));
+        sayn("dsg.sign_init_ex.pctx_is_ctx_pctx",
+             outp != NULL && outp == EVP_MD_CTX_get_pkey_ctx(md));
+        say_dsg("dsg.sign_init_ex.named.vec");
+
+        reset_dsg();
+        sayr("dsg.sign_update.armed", EVP_DigestSignUpdate(md, msg, 3));
+        say_dsg("dsg.sign_update.armed.vec");
+
+        /*
+         * The reuse arm: a second init with no key and no name reaches `reinitialize:` from the
+         * `reinit` branch, so the digest is re-fetched from `ctx->reqdigest` and the *same* pctx
+         * comes back through the out-parameter.
+         */
+        outp = NULL;
+        sayr("dsg.sign_init_ex.reinit",
+             EVP_DigestSignInit_ex(md, &outp, NULL, ctx, NULL, NULL, NULL));
+        sayn("dsg.sign_init_ex.reinit_same_pctx", outp == EVP_MD_CTX_get_pkey_ctx(md));
+        say_dsg("dsg.sign_init_ex.reinit.vec");
+
+        /* The digest's own entry point, redirected to the operation that is armed. */
+        reset_dsg();
+        sayr("dsg.digest_update_redirects_sign", EVP_DigestUpdate(md, msg, 3));
+        say_dsg("dsg.digest_update_redirects_sign.vec");
+
+        /* `type`-override: `EVP_DigestSignInit` takes a method, and its name becomes `mdname`. */
+        sha = EVP_MD_fetch(ctx, "SHA256", NULL);
+        sayp("dsg.type_override.algo", sha);
+        outp = NULL;
+        reset_dsg();
+        sayr("dsg.type_override.sign_init", EVP_DigestSignInit(md, &outp, sha, NULL, pkey));
+        say_dsg("dsg.type_override.sign_init.vec");
+
+        /*
+         * The two-call convention on one context, then the buffer-too-small refusal. The first
+         * call is the length query (a NULL buffer answers 8); the second runs on a duplicate and
+         * leaves the context usable, which is why a third call is possible at all.
+         */
+        reset_dsg();
+        len = 0;
+        sayr("dsg.sign_final.query", EVP_DigestSignFinal(md, NULL, &len));
+        sayn("dsg.sign_final.query_len", (long long) len);
+        len = sizeof out;
+        sayr("dsg.sign_final.value", EVP_DigestSignFinal(md, out, &len));
+        sayn("dsg.sign_final.value_len", (long long) len);
+        len = 4;
+        sayr("dsg.sign_final.short", EVP_DigestSignFinal(md, out, &len));
+        say_dsg("dsg.sign_final.vec");
+
+        /* The one-shot `EVP_DigestSign`, and its absent-buffer arm. */
+        reset_dsg();
+        len = sizeof out;
+        sayr("dsg.sign.oneshot", EVP_DigestSign(md, out, &len, msg, 3));
+        say_dsg("dsg.sign.oneshot.vec");
+        EVP_MD_CTX_free(md);
+        md = NULL;
+
+        /*
+         * The `digest_sign_update`/`_final` absence pair, and the one-shot fall-through: a
+         * `DSG-NOSTREAM` method has a `digest_sign` but neither stream callback, so
+         * `EVP_DigestSignUpdate`/`Final` are refused with `PROVIDER_SIGNATURE_NOT_SUPPORTED` while
+         * `EVP_DigestSign` still succeeds through `digest_sign`.
+         */
+        g_qon = "DSG-NOSTREAM";
+        reset_dsg();
+        md = EVP_MD_CTX_new();
+        outp = NULL;
+        sayr("dsg.nostream.sign_init",
+             EVP_DigestSignInit_ex(md, &outp, "SHA256", ctx, NULL, pkey, NULL));
+        sayr("dsg.nostream.sign_update", EVP_DigestSignUpdate(md, msg, 3));
+        len = sizeof out;
+        sayr("dsg.nostream.sign_final", EVP_DigestSignFinal(md, out, &len));
+        len = sizeof out;
+        sayr("dsg.nostream.sign_oneshot", EVP_DigestSign(md, out, &len, msg, 3));
+        say_dsg("dsg.nostream.vec");
+        EVP_MD_CTX_free(md);
+        md = NULL;
+
+        /*
+         * The sign-only method: its `digest_verify_init` is absent, which is `m_sigver.c:258`.
+         */
+        g_qon = "DSG-SIGNONLY";
+        md = EVP_MD_CTX_new();
+        outp = NULL;
+        sayr("dsg.signonly.sign_init",
+             EVP_DigestSignInit_ex(md, &outp, "SHA256", ctx, NULL, pkey, NULL));
+        sayr("dsg.signonly.verify_init",
+             EVP_DigestVerifyInit_ex(md, &outp, "SHA256", ctx, NULL, pkey, NULL));
+        EVP_MD_CTX_free(md);
+        md = NULL;
+
+        /* The mirror: a verify-only method refuses `digest_sign_init` at `m_sigver.c:266`. */
+        g_qon = "DSG-VERIFYONLY";
+        md = EVP_MD_CTX_new();
+        outp = NULL;
+        sayr("dsg.verifyonly.verify_init",
+             EVP_DigestVerifyInit_ex(md, &outp, "SHA256", ctx, NULL, pkey, NULL));
+        sayr("dsg.verifyonly.sign_init",
+             EVP_DigestSignInit_ex(md, &outp, "SHA256", ctx, NULL, pkey, NULL));
+        EVP_MD_CTX_free(md);
+        md = NULL;
+
+        /* `newctx` answering NULL is `m_sigver.c:201`. */
+        g_qon = "DSG-NONEWCTX";
+        md = EVP_MD_CTX_new();
+        outp = NULL;
+        sayr("dsg.nonewctx.sign_init",
+             EVP_DigestSignInit_ex(md, &outp, "SHA256", ctx, NULL, pkey, NULL));
+        sayn("dsg.nonewctx.pctx_not_filled", outp == NULL);
+        EVP_MD_CTX_free(md);
+        md = NULL;
+
+        /*
+         * A digest name that cannot be fetched: the return code and whatever the mark/pop pair
+         * leaves on the queue. The name is deliberately one nothing publishes on either side.
+         */
+        g_qon = "DSG-FULL";
+        md = EVP_MD_CTX_new();
+        outp = NULL;
+        sayr("dsg.bad_digest.sign_init",
+             EVP_DigestSignInit_ex(md, &outp, "COURT-NO-SUCH-DIGEST", ctx, NULL, pkey, NULL));
+        /* The out-parameter *is* filled: `reinitialize:` runs `*pctx = locpctx` before the digest
+         * fetch that fails. */
+        sayn("dsg.bad_digest.pctx_filled", outp != NULL);
+        EVP_MD_CTX_free(md);
+        md = NULL;
+
+        /*
+         * `mdname == NULL` on a fresh context: the keymgmt answers nothing for
+         * `default-digest`, so the init is handed NULL and the operation is still armed.
+         */
+        reset_dsg();
+        md = EVP_MD_CTX_new();
+        outp = NULL;
+        sayr("dsg.null_mdname.sign_init",
+             EVP_DigestSignInit_ex(md, &outp, NULL, ctx, NULL, pkey, NULL));
+        say_dsg("dsg.null_mdname.vec");
+        EVP_MD_CTX_free(md);
+        md = NULL;
+
+        /*
+         * `pkey == NULL`: the `EVP_PKEY_CTX` constructor inside `do_sigver_init` cannot resolve a
+         * method, so the init answers 0 and the only error is the constructor's.
+         */
+        md = EVP_MD_CTX_new();
+        outp = NULL;
+        sayr("dsg.null_pkey.sign_init",
+             EVP_DigestSignInit_ex(md, &outp, "SHA256", ctx, NULL, NULL, NULL));
+        sayn("dsg.null_pkey.pctx_not_filled", outp == NULL);
+        EVP_MD_CTX_free(md);
+        md = NULL;
+
+        /*
+         * The legacy entry the loop reaches: the keymgmt answers a name nothing publishes, so
+         * both fetch iterations fail and the label refuses with
+         * `OPERATION_NOT_SUPPORTED_FOR_THIS_KEYTYPE`.
+         */
+        g_qon = "COURT-NO-SUCH-SIG";
+        md = EVP_MD_CTX_new();
+        outp = NULL;
+        sayr("dsg.legacy.no_such_sig",
+             EVP_DigestSignInit_ex(md, &outp, "SHA256", ctx, NULL, pkey, NULL));
+        sayn("dsg.legacy.pctx_not_filled", outp == NULL);
+        EVP_MD_CTX_free(md);
+        md = NULL;
+        g_qon = "DSG-FULL";
+
+        /*
+         * `provkey == NULL`: a key with a method and no key data cannot be exported to the
+         * method's provider, so the loop falls out and `m_sigver.c:187` refuses.
+         */
+        md = EVP_MD_CTX_new();
+        outp = NULL;
+        sayr("dsg.empty_key.sign_init",
+             EVP_DigestSignInit_ex(md, &outp, "SHA256", ctx, NULL, empty, NULL));
+        sayn("dsg.empty_key.pctx_not_filled", outp == NULL);
+        EVP_MD_CTX_free(md);
+        md = NULL;
+
+        /*
+         * `NO_KEY_SET` (`m_sigver.c:87`): a context whose pctx is a method with no key. The
+         * caller supplies the pctx, so the caller owns it: `EVP_MD_CTX_set_pkey_ctx(md, NULL)`
+         * releases it, and the KEEP_PKEY_CTX flag is what makes the reset not do so.
+         */
+        pre = EVP_PKEY_CTX_new_from_name(ctx, "COURT-SIGKEY", NULL);
+        sayp("dsg.nokey.pre_ctx", pre);
+        md = EVP_MD_CTX_new();
+        EVP_MD_CTX_set_pkey_ctx(md, pre);
+        outp = NULL;
+        sayr("dsg.nokey.sign_init",
+             EVP_DigestSignInit_ex(md, &outp, "SHA256", ctx, NULL, NULL, NULL));
+        sayn("dsg.nokey.pctx_not_filled", outp == NULL);
+        /* `KEEP_PKEY_CTX` means the reset neither releases it nor is released by this detach. */
+        EVP_MD_CTX_set_pkey_ctx(md, NULL);
+        EVP_PKEY_CTX_free(pre);
+        EVP_MD_CTX_free(md);
+        md = NULL;
+
+        /*
+         * The verification arms. `EVP_DigestVerifyFinal` runs on a duplicate even without a
+         * buffer convention, and `EVP_DigestVerify` marks the context finalised unconditionally,
+         * which is why each success is followed by a fresh init.
+         */
+        g_qon = "DSG-FULL";
+        reset_dsg();
+        md2 = EVP_MD_CTX_new();
+        outp = NULL;
+        sayr("dsg.verify_init_ex.named",
+             EVP_DigestVerifyInit_ex(md2, &outp, "SHA256", ctx, NULL, pkey, NULL));
+        sayn("dsg.verify_init_ex.pctx_is_ctx_pctx",
+             outp != NULL && outp == EVP_MD_CTX_get_pkey_ctx(md2));
+        sayr("dsg.verify_update.armed", EVP_DigestVerifyUpdate(md2, msg, 3));
+        sayr("dsg.verify_final.good", EVP_DigestVerifyFinal(md2, out, 8));
+        sayr("dsg.verify_final.short", EVP_DigestVerifyFinal(md2, out, 4));
+        say_dsg("dsg.verify_final.vec");
+        EVP_MD_CTX_free(md2);
+        md2 = NULL;
+
+        reset_dsg();
+        md2 = EVP_MD_CTX_new();
+        outp = NULL;
+        sayr("dsg.verify.oneshot_init",
+             EVP_DigestVerifyInit_ex(md2, &outp, "SHA256", ctx, NULL, pkey, NULL));
+        sayr("dsg.verify.oneshot", EVP_DigestVerify(md2, out, 8, msg, 3));
+        sayr("dsg.verify.oneshot_again", EVP_DigestVerify(md2, out, 8, msg, 3));
+        say_dsg("dsg.verify.oneshot.vec");
+        EVP_MD_CTX_free(md2);
+        md2 = NULL;
+
+        /* `EVP_DigestVerify` with no `digest_verify`: update then final. */
+        g_qon = "DSG-NOSTREAM";
+        reset_dsg();
+        md2 = EVP_MD_CTX_new();
+        outp = NULL;
+        sayr("dsg.nostream.verify_init",
+             EVP_DigestVerifyInit_ex(md2, &outp, "SHA256", ctx, NULL, pkey, NULL));
+        sayr("dsg.nostream.verify_update", EVP_DigestVerifyUpdate(md2, msg, 3));
+        sayr("dsg.nostream.verify_final", EVP_DigestVerifyFinal(md2, out, 8));
+        say_dsg("dsg.nostream.verify.vec");
+        EVP_MD_CTX_free(md2);
+        md2 = NULL;
+
+        /*
+         * The no-`dupctx` method: a final with a buffer cannot duplicate, so it runs on the
+         * original and marks the context, and the next final is `FINAL_ERROR`.
+         */
+        g_qon = "DSG-NODUP";
+        md = EVP_MD_CTX_new();
+        outp = NULL;
+        sayr("dsg.nodup.sign_init",
+             EVP_DigestSignInit_ex(md, &outp, "SHA256", ctx, NULL, pkey, NULL));
+        len = sizeof out;
+        sayr("dsg.nodup.sign_final", EVP_DigestSignFinal(md, out, &len));
+        len = sizeof out;
+        sayr("dsg.nodup.sign_final_again", EVP_DigestSignFinal(md, out, &len));
+        EVP_MD_CTX_free(md);
+        md = NULL;
+
+        /*
+         * The `digest_sign_init` that answers 0 with no digest name: `NO_DEFAULT_DIGEST` first,
+         * then `PROVIDER_SIGNATURE_FAILURE`, and the context is *not* left armed -- this is the
+         * `err:` label. With a name the same callback's 0 is a success, which is the other half.
+         */
+        g_qon = "DSG-FULL";
+        g_dsg_init_fails = 1;
+        md = EVP_MD_CTX_new();
+        outp = NULL;
+        sayr("dsg.init_fails.null_mdname",
+             EVP_DigestSignInit_ex(md, &outp, NULL, ctx, NULL, pkey, NULL));
+        EVP_MD_CTX_free(md);
+        md = NULL;
+        md = EVP_MD_CTX_new();
+        outp = NULL;
+        sayr("dsg.init_fails.named",
+             EVP_DigestSignInit_ex(md, &outp, "SHA256", ctx, NULL, pkey, NULL));
+        EVP_MD_CTX_free(md);
+        md = NULL;
+        g_dsg_init_fails = 0;
+
+        /*
+         * The md-parameter redirect: a signature method that publishes the md-parameter pair is
+         * preferred by `EVP_MD_CTX_set_params`/`_settable_params` over the digest's own.
+         */
+        g_qon = "DSG-SETMD";
+        md = EVP_MD_CTX_new();
+        outp = NULL;
+        sayr("dsg.setmd.sign_init",
+             EVP_DigestSignInit_ex(md, &outp, "SHA256", ctx, NULL, pkey, NULL));
+        n_setmd = 0;
+        mdp[0] = OSSL_PARAM_construct_end();
+        sayr("dsg.setmd.mdctx_set_params", EVP_MD_CTX_set_params(md, mdp));
+        sayn("dsg.setmd.set_redirected", n_setmd);
+        sayp("dsg.setmd.mdctx_settable_params", (const void *) EVP_MD_CTX_settable_params(md));
+        sayn("dsg.setmd.get_redirected", n_getmd);
+        sayr("dsg.setmd.mdctx_get_params", EVP_MD_CTX_get_params(md, mdp));
+        sayn("dsg.setmd.get_redirected_after", n_getmd);
+        sayp("dsg.setmd.mdctx_gettable_params", (const void *) EVP_MD_CTX_gettable_params(md));
+        EVP_MD_CTX_free(md);
+        md = NULL;
+
+        /*
+         * `EVP_PKEY_digestsign_supports_digest` (`p_lib.c:1398`). Its whole answer is the return
+         * code: the outer `ERR_set_mark`/`ERR_pop_to_mark` removes everything the init raised, so
+         * the `err=` on these lines is the *empty* queue a refused name leaves. The `-1` arm is
+         * the `EVP_MD_CTX_new` failure, which has no injectable seam and is named rather than
+         * faked.
+         */
+        g_qon = "DSG-FULL";
+        reset_dsg();
+        sayr("dsg.supports.named",
+             EVP_PKEY_digestsign_supports_digest(pkey, ctx, "SHA256", NULL));
+        sayr("dsg.supports.bad_name",
+             EVP_PKEY_digestsign_supports_digest(pkey, ctx, "COURT-NO-SUCH-DIGEST", NULL));
+        sayr("dsg.supports.null_key",
+             EVP_PKEY_digestsign_supports_digest(NULL, ctx, "SHA256", NULL));
+        say_dsg("dsg.supports.vec");
+        printf("dsg.supports.new_ctx_fails=NOT_MEASURED_NO_INJECTABLE_ALLOC_SEAM_p_lib_c_1404\n");
+
+        EVP_MD_free(sha);
+        g_qon = "COURT-SIG";
     }
 
     /*

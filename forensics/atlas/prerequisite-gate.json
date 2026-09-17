@@ -19,7 +19,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 56,
-      "language_surface_not_modelled_by_name": 2554,
+      "language_surface_not_modelled_by_name": 2552,
       "planned_prerequisites": 15
     },
     "census_by_unit": {
@@ -153,7 +153,7 @@
         "crypto/evp/keymgmt_meth.c": 14,
         "crypto/evp/mac_lib.c": 14,
         "crypto/evp/names.c": 10,
-        "crypto/evp/p_lib.c": 103,
+        "crypto/evp/p_lib.c": 101,
         "crypto/evp/pbe_scrypt.c": 8,
         "crypto/evp/pmeth_check.c": 7,
         "crypto/evp/pmeth_gn.c": 16,
@@ -438,7 +438,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "a81769d3343c7a336b170f58431c3509c9d63961b20a1334012d795e51fd29f1",
+  "body_hash": "e08b5024ca2545d21ea299cad599ad40dd4cec25df3951790377272619a4e23e",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -459,7 +459,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "2b91c35a4a7e0741404b7fea765ccc60606040151dd901c1dd7efc92575ec18b"
+      "sha256": "2df78e7b87134ef9616fad4a719033aeaba0e3bd7f93db4e9bd877352e8ce087"
     },
     {
       "name": "symbol-ownership",
@@ -469,12 +469,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "18c6fbaa8fb70af9527df8c441cbf080ad391e4345eb83139b58d6320f546cc7"
+      "sha256": "52e66b08fe5d74dfba920617e2daa8ed42d7ac3cc2b25953da8f88775a19e675"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "37407ab7042c48f68066648ecd50baf1cce2ec87baa3d1e4d95373ff6c326463"
+      "sha256": "a441bc05fe5d3e5f0ca457b4cda4c1b47c27ab50cb08d743a3e4435095ba360e"
     },
     {
       "name": "prerequisites",

@@ -11342,6 +11342,20 @@ instruction, which says all twenty-four land, and it is recorded rather than qui
 twenty-four.**
 
 **Correction, marked inside this entry rather than folded away, the way commits `211ba2bb` and
+`bd487c5b` correct D189 (7.4f is the entry that makes this stale).** The paragraph above is right
+about *what* blocked the name and wrong about *when* it stops being blocked: it is not "7.4's own
+remaining work" in the sense of an open-ended debt, it is work with **one named symbol** as its
+gate, and that symbol is now landed. 7.4f (`docs/DECISIONS.md` **D191**) transcribes
+`crypto/evp/m_sigver.c` whole, so `EVP_DigestSignInit_ex` (`m_sigver.c:371`) exists, and 7.4f lands
+`EVP_PKEY_digestsign_supports_digest` (`crypto/evp/p_lib.c:1398`) in `src/evp/pkey.rs` with it. The
+reasoning above is kept rather than deleted because it is the reason the name could not be stubbed:
+the function's whole observable is whether that init succeeds, so a partial answer would have had to
+be answered from something else -- and "something else" is exactly what the landed body no longer
+is. The probe's `NOT_MEASURED_OWED_TO_7_4_ITSELF_m_sigver_c_371` line is **gone**, replaced by the
+`dsg.supports.*` arms, and `EVP_PKEY_digestsign_supports_digest` is no longer in phase 7's `open`
+list.
+
+**Correction, marked inside this entry rather than folded away, the way commits `211ba2bb` and
 `bd487c5b` correct D189 (this entry is recent).** The slice's report declined four more names —
 `EVP_PKEY_new_raw_private_key_ex`, `_new_raw_public_key_ex`, `EVP_PKEY_new_raw_private_key` and
 `_new_raw_public_key` — with the reason "*blocked on* `EVP_PKEY_asn1_find_str` (`ameth_lib.c:114`,
@@ -11516,3 +11530,117 @@ guard pairs were run and are clean: against the branch's own previous head (`3f2
 `implemented[libcrypto] 1732 → 1736`, `open_obligations[phase7] 189 → 185`,
 `court[RT-EVP-PKEY] observations 330 → 354`) and against the merge base with `origin/main`
 (`c2fdcae4`).
+
+## D191 — `m_sigver.c` lands whole, and the `reinit` test's assignment is inside a short-circuit
+
+`crypto/evp/m_sigver.c` (798 lines) is transcribed whole into `src/evp/digest.rs`: the dead static
+`update`, `canon_mdname`, the ~330-line `do_sigver_init` with its three-way `EVP_PKEY_CTX` branch,
+two-iteration fetch loop, digest fetch and both exit labels, and the ten exports —
+`EVP_DigestSignInit_ex`, `_Init`, `EVP_DigestVerifyInit_ex`, `_Init`, `EVP_DigestSignUpdate`,
+`EVP_DigestVerifyUpdate`, `EVP_DigestSignFinal`, `EVP_DigestSign`, `EVP_DigestVerifyFinal`,
+`EVP_DigestVerify`. The same slice lands `EVP_PKEY_digestsign_supports_digest`
+(`crypto/evp/p_lib.c:1398`) in `src/evp/pkey.rs`, which D190 had recorded as owed to this unit and
+which is now unblocked; D190's paragraph is corrected in place rather than deleted.
+`implemented[libcrypto]` moves **1736 → 1747** and phase 7 to **612 implemented and 174 open** (from
+601 and 185) — read from `forensics/phase7-obligations.json` after the pipeline ran, not predicted
+here.
+
+**The transcription trap, and it was not a reading but a compile-and-run.** The `reinit` test is
+
+```text
+if (reinit
+    && (pkey != NULL
+        || locpctx->operation != (ver ? EVP_PKEY_OP_VERIFYCTX : EVP_PKEY_OP_SIGNCTX)
+        || (signature = locpctx->op.sig.signature) == NULL
+        || locpctx->op.sig.algctx == NULL))
+    reinit = 0;
+```
+
+and **the assignment sits inside `||`'s short-circuit**. Hoisting it out — the refactor a reader
+reaches for to make the test legible — changes the answer for one input: a call that hands in a key
+(`pkey != NULL`) with an already-armed context. The authority never runs the assignment there, so its
+local `signature` stays NULL, `evp_pkey_ctx_free_old_ops` releases the context's method, and the
+loop's own `EVP_SIGNATURE_free(signature)` is a no-op. A hoisted version holds the *same pointer*
+that `free_old_ops` just released and frees it a second time. The candidate did exactly that on the
+extended court's `dsg.verifyonly.sign_init` arm and died at provider unload with
+`free(): invalid pointer` (exit `-6`), which is how the arm was found; the fix keeps the
+short-circuit and says so at the site. No authority line changed and no observation was lost, but the
+entry is written down because the *shape* — a store inside a `||` that another statement also
+performs — is the kind of thing a "clean up this condition" pass removes silently.
+
+**Three redirects in `digest.c` became reachable the moment `ctx->pctx` stopped being NULL, and they
+land with this slice.** The module doc of `src/evp/digest.rs` and D156 both recorded them as
+*unreachable* because every `EVP_PKEY_CTX` constructor was 7.4's; that condition is gone, so the
+claims are corrected and the code is written rather than left as a latent divergence:
+`evp_md_init_internal`'s redirect to `EVP_DigestSignInit`/`EVP_DigestVerifyInit`
+(`crypto/evp/digest.c:165`), `EVP_DigestUpdate`'s to
+`EVP_DigestSignUpdate`/`EVP_DigestVerifyUpdate` (`digest.c:395`), and the four
+`EVP_MD_CTX_*params` functions' preference for the signature method's `*_ctx_md_params` callbacks
+(`digest.c:778`, `:806`, `:832`, `:862`). None can change a behaviour that existed before this
+slice: `ctx->pctx` was NULL on every input any earlier court drove, so each new block is followed by
+the `pctx == NULL` statement that used to be the whole function. The court drives two of them —
+`dsg.digest_update_redirects_sign` (the `EVP_DigestUpdate` switch) and `dsg.setmd.*` (the
+`EVP_MD_CTX_set_params`/`_settable_params` preference) — and the other four are written but not
+driven; they are named here rather than left to look measured.
+
+**The court is `RT-EVP-PKEY`, 354 → 438 observations (+84), zero residuals.** It keeps its single
+probe and gains a `DSG-*` signature-method family beside the nine `SIG-*` shapes, one table per
+digest-method shape the structural check admits (`DSG-FULL`, `-NOSTREAM`, `-SIGNONLY`, `-VERIFYONLY`,
+`-NONEWCTX`, `-NODUP`, `-SETMD`). `do_sigver_init` reaches an `OSSL_OP_DIGEST` and an
+`OSSL_OP_SIGNATURE` at once, so the same provider's `SHA256` had to become **fetchable**:
+`dg_fns` now publishes `OSSL_FUNC_DIGEST_GET_PARAMS` answering `OSSL_DIGEST_PARAM_SIZE` and
+`"blocksize"`, which is what `evp_md_cache_constants` requires and what a name-only registration did
+not need. The method `do_sigver_init` fetches is selected by moving the keymgmt's
+`query_operation_name` answer (`g_qon`) — the one lever the function reads. The arms cover, on both
+sides identically: the four init spellings' success paths with a named digest and with `mdname ==
+NULL`; the `pctx` out-parameter as a **relation** to `EVP_MD_CTX_get_pkey_ctx`'s answer; the reuse
+arm (a second init with no key and no name) coming back with the same context; the `pkey == NULL`,
+`NO_KEY_SET`, `provkey == NULL`, `newctx == NULL`, missing `digest_sign_init`/`digest_verify_init`,
+bad-digest-name and unpublished-algorithm (`legacy:`) refusals, each with its reason and site; the
+`type`-override spelling; both update states (`algctx != NULL` and the `legacy:` fall-through, where
+`EVP_DigestSignUpdate` and `EVP_DigestVerifyUpdate` *disagree* about a non-NULL `pctx` whose `pmeth`
+is NULL — one raises, the other reaches `EVP_DigestUpdate`); the two-call final convention and its
+buffer-too-small refusal; the no-`dupctx` arm that marks the context `FINALISED`; both one-shots,
+including `EVP_DigestSign`'s `pctx == NULL` arm answering **0** where `EVP_DigestVerify` answers
+**-1**; the `digest_sign_init`-answers-0 pair, where a name makes the same `0` a success and no name
+raises `NO_DEFAULT_DIGEST` then `PROVIDER_SIGNATURE_FAILURE`; and
+`EVP_PKEY_digestsign_supports_digest` returning 1 for `SHA256` and 0 for a name nothing publishes,
+**with an empty queue** — the property the task named, and the one the outer
+`ERR_set_mark`/`ERR_pop_to_mark` pair produces.
+
+**Arms named rather than driven, with their coordinates.** The `ctx == NULL` arm of all ten exports
+does not exist: `m_sigver.c` has no NULL test on `ctx`, so `do_sigver_init`'s first statement
+(`:53`) and the six operate entry points' `ctx->pctx` read (`:407`, `:457`, `:506`, `:676`)
+dereference it. The boundary is one printed line, not a call — a call would abort the harness on
+*both* sides, which is not agreement, exactly as D189 recorded for the four stream arms.
+`EVP_PKEY_digestsign_supports_digest`'s `-1` (`p_lib.c:1404`) is the `EVP_MD_CTX_new` failure and has
+no injectable seam; faking one would measure the seam. Inside `do_sigver_init`, three raises are
+written and unreachable: the `ERR_R_INTERNAL_ERROR` assert (`:105`) needs a key whose `keymgmt`
+disagrees with its context's, which `int_ctx_new` cannot build; the NULL `query_operation_name`
+(`:112`) needs a keymgmt with no name, which no fetched method has; and the legacy
+`NO_DEFAULT_DIGEST` (`:318`) sits below the label's unconditional `ctx->pctx->pmeth == NULL` refusal
+(`:305`), which is the only part of the label this crate can reach. The `legacy:` label's six
+`pmeth` arms — `SIGCTX_CUSTOM`, the `EVP_PKEY_get_default_digest_nid` fallback, the four
+`signctx_init`/`verifyctx_init`/`digestsign`/`digestverify` chains, `set_signature_md` and the final
+`EVP_DigestInit_ex` — are not written, because every one reads `EVP_PKEY_METHOD`, which is Phase 8's;
+the same is true of the `flag_call_digest_custom` pair in both update labels (its only writer is that
+unreachable arm, so it is always zero) and of the static `update` (`:19`), whose only installers are
+`:330` and `:341` below the refusal. The `e` parameter reaches only two statements —
+`EVP_PKEY_CTX_new(pkey, e)` (`:61`) and the legacy label's `EVP_DigestInit_ex(ctx, type, e)`
+(`:352`) — and no caller here can hold an `ENGINE` (Phase 13's), so neither is driven.
+
+**No structural addition to `EVP_MD_CTX` was needed.** The task's premise is confirmed against the
+authority rather than assumed: `do_sigver_init` writes `ctx->pctx`, and the signature method and its
+algorithm context live on the `EVP_PKEY_CTX` (`pctx->op.sig.signature`, `pctx->op.sig.algctx`), which
+7.4c already declares. The only constant added is `EVP_MD_CTX_FLAG_FINALISE` (`0x0200`,
+`include/openssl/evp.h:246`), read by the two finals.
+
+No new function-pointer type alias was added, so `forensics/tools/dispatch_court.py`'s
+`NOT_A_DISPATCH` table is untouched and its `unlinked=N` stays zero; the pipeline's `PIPELINE OK`
+covers that, the prototype court, the prerequisite gate at zero findings, the FRF declarations and
+`gen_frf_courts.py --check`. The regression guard reports no movement needing an
+`ownership-transitions.json` row — the phase-7 open count moves *down*, 185 → 174 — and both guard
+pairs were run and are clean: against the branch's own previous head (`a2a296e7`:
+`implemented[libcrypto] 1736 → 1747`, `open_obligations[phase7] 185 → 174`,
+`court[RT-EVP-PKEY] observations 354 → 438`, `prerequisites[language_census] 2554 → 2552`) and
+against the merge base with `origin/main` (`c2fdcae4`).
