@@ -1303,8 +1303,11 @@ pub unsafe extern "C" fn EVP_CIPHER_CTX_set_key_length(
         let settable = unsafe { EVP_CIPHER_settable_ctx_params(cipher) };
         // SAFETY: `settable` is NULL or the provider's own terminated list.
         if unsafe { OSSL_PARAM_locate_const(settable, c"keylen".as_ptr()) }.is_null() {
+            /* The provider branch has its **own** raise site (`evp_enc.c:1382`), and the
+             * legacy branch's is `:1410`; the two were folded onto one site until the
+             * `RT-EVP-PKEY` mismatch arm measured the difference. */
             // SAFETY: a compile-time-constant site.
-            unsafe { raise_site(&err_sites::EVP_ENC_1410) };
+            unsafe { raise_site(&err_sites::EVP_ENC_1382) };
             return 0;
         }
         // SAFETY: the constructor writes one entry into this frame's own array.

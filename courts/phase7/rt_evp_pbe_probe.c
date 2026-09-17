@@ -570,6 +570,87 @@ static int dg_get_params_md2(OSSL_PARAM params[])
 static const OSSL_DISPATCH dg_sha1_fns[] = { DG_FNS(dg_get_params_sha1), { 0, NULL } };
 static const OSSL_DISPATCH dg_md2_fns[] = { DG_FNS(dg_get_params_md2), { 0, NULL } };
 
+/*
+ * 7.4l. A digest whose `final` actually writes bytes, because `EVP_BytesToKey` is a *loop* over
+ * final: the two stubs above answer a length of zero, and the authority's own `for (;;)` would
+ * then spin forever -- `nkey` and `niv` never reach zero and `i == mds` on every pass. So this one
+ * keeps a twenty-byte state and folds the input into it, which also makes the derived key a
+ * function of the probe's own input rather than of a constant. The two sides run the same provider,
+ * so any deterministic implementation would do; one whose output *depends* on the input is the one
+ * that catches a transcription that passed the wrong pointer or the wrong length.
+ */
+struct legmd_ctx {
+    unsigned char st[20];
+};
+
+static void *legmd_newctx(void *provctx)
+{
+    struct legmd_ctx *d;
+
+    (void) provctx;
+    d = malloc(sizeof *d);
+    if (d == NULL)
+        return NULL;
+    memset(d->st, 0, sizeof d->st);
+    return d;
+}
+
+static void legmd_freectx(void *vctx)
+{
+    free(vctx);
+}
+
+static int legmd_init(void *vctx, const OSSL_PARAM params[])
+{
+    struct legmd_ctx *d = vctx;
+
+    (void) params;
+    memset(d->st, 0, sizeof d->st);
+    return 1;
+}
+
+static int legmd_update(void *vctx, const unsigned char *in, size_t inl)
+{
+    struct legmd_ctx *d = vctx;
+    size_t i;
+
+    for (i = 0; i < inl; i++)
+        d->st[i % sizeof d->st] = (unsigned char) (d->st[i % sizeof d->st] + in[i]
+                                                   + (unsigned char) i);
+    return 1;
+}
+
+static int legmd_final(void *vctx, unsigned char *out, size_t *outl, size_t outsz)
+{
+    struct legmd_ctx *d = vctx;
+    size_t n = outsz < sizeof d->st ? outsz : sizeof d->st;
+
+    if (out != NULL)
+        memcpy(out, d->st, n);
+    if (outl != NULL)
+        *outl = n;
+    return 1;
+}
+
+static int legmd_get_params(OSSL_PARAM params[])
+{
+    OSSL_PARAM *p = OSSL_PARAM_locate(params, OSSL_DIGEST_PARAM_SIZE);
+
+    if (p != NULL && !OSSL_PARAM_set_size_t(p, sizeof(((struct legmd_ctx *) 0)->st)))
+        return 0;
+    return 1;
+}
+
+static const OSSL_DISPATCH legmd_fns[] = {
+    { OSSL_FUNC_DIGEST_NEWCTX, (void (*)(void)) legmd_newctx },
+    { OSSL_FUNC_DIGEST_FREECTX, (void (*)(void)) legmd_freectx },
+    { OSSL_FUNC_DIGEST_INIT, (void (*)(void)) legmd_init },
+    { OSSL_FUNC_DIGEST_UPDATE, (void (*)(void)) legmd_update },
+    { OSSL_FUNC_DIGEST_FINAL, (void (*)(void)) legmd_final },
+    { OSSL_FUNC_DIGEST_GET_PARAMS, (void (*)(void)) legmd_get_params },
+    { 0, NULL }
+};
+
 /* ---- the cipher ------------------------------------------------------------------------- */
 
 /* The key and IV the last `encrypt_init` was handed: that pair *is* the derived key, so it is the
@@ -754,6 +835,7 @@ static const OSSL_ALGORITHM court_kdfs[] = {
 static const OSSL_ALGORITHM court_digests[] = {
     { "SHA1", "provider=court", dg_sha1_fns, "court sha1" },
     { "MD2", "provider=court", dg_md2_fns, "court md2" },
+    { "LEG-MD", "provider=court", legmd_fns, "a digest whose final writes bytes, for EVP_BytesToKey" },
     { NULL, NULL, NULL, NULL }
 };
 
@@ -986,7 +1068,7 @@ static int is_pkcs12_row(int nid)
 int main(void)
 {
     EVP_CIPHER *cipher8, *cipher24;
-    EVP_MD *md_sha1, *md_md2;
+    EVP_MD *md_sha1, *md_md2, *md_leg;
     ASN1_TYPE *pbeparam, *wrong_type, *pbe2_param, *scrypt_param, *scrypt_param_kl;
     unsigned char pbe2_der[sizeof pbe2_prefix + 8];
     unsigned char salt[] = { 's', 'a', 'l' };
@@ -1008,13 +1090,14 @@ int main(void)
 
     md_sha1 = EVP_MD_fetch(gctx, "SHA1", NULL);
     md_md2 = EVP_MD_fetch(gctx, "MD2", NULL);
+    md_leg = EVP_MD_fetch(gctx, "LEG-MD", NULL);
     cipher8 = EVP_CIPHER_fetch(gctx, "DES-CBC", NULL);
     cipher24 = EVP_CIPHER_fetch(gctx, "DES-EDE3-CBC", NULL);
     printf("setup.digests=%d,%d err=%lu\n", md_sha1 != NULL, md_md2 != NULL, ERR_peek_error());
     ERR_clear_error();
     printf("setup.ciphers=%d,%d err=%lu\n", cipher8 != NULL, cipher24 != NULL, ERR_peek_error());
     ERR_clear_error();
-    if (md_sha1 == NULL || md_md2 == NULL || cipher8 == NULL || cipher24 == NULL) {
+    if (md_sha1 == NULL || md_md2 == NULL || md_leg == NULL || cipher8 == NULL || cipher24 == NULL) {
         printf("setup.aborted=1 err=%lu\n", ERR_peek_error());
         return 0;
     }
@@ -1440,6 +1523,84 @@ int main(void)
     ERR_clear_error();
 
     /*
+     * ---- `EVP_BytesToKey` (7.4l) -------------------------------------------------------
+     *
+     * The digest is `LEG-MD`, whose `final` writes twenty bytes: the authority's loop is infinite
+     * with a zero-length digest, so a stub could not be used. The salt is exactly `PKCS5_SALT_LEN`
+     * because that is how much the function reads, and the cipher is the eight-byte one whose
+     * `key + iv` (16) fits inside a single digest block, and the twenty-four-byte one whose `24 + 8`
+     * does not and forces the outer loop's second round. Every arm prints the raw key and IV,
+     * because a transcription that fed the wrong pointer or the wrong length produces different
+     * bytes rather than a different return code.
+     */
+    {
+        unsigned char salt8[] = { 's', 'a', 'l', 't', '0', '1', '2', '3' };
+        unsigned char data[] = "the probe's own input";
+        const int datalen = (int) sizeof data - 1;
+        unsigned char key[32], iv[32];
+        int n;
+
+        memset(key, 0xAA, sizeof key);
+        memset(iv, 0xAA, sizeof iv);
+        n = EVP_BytesToKey(cipher8, md_leg, salt8, NULL, 0, 1, key, iv);
+        printf("btk.nodata=%d err=", n);
+        drain();
+        say_hex("btk.nodata.key", key, 8);
+        say_hex("btk.nodata.iv", iv, 8);
+
+        memset(key, 0xAA, sizeof key);
+        memset(iv, 0xAA, sizeof iv);
+        n = EVP_BytesToKey(cipher8, md_leg, salt8, data, datalen, 1, key, iv);
+        printf("btk.count1=%d err=", n);
+        drain();
+        say_hex("btk.count1.key", key, 8);
+        say_hex("btk.count1.iv", iv, 8);
+
+        memset(key, 0xAA, sizeof key);
+        memset(iv, 0xAA, sizeof iv);
+        n = EVP_BytesToKey(cipher8, md_leg, salt8, data, datalen, 2, key, iv);
+        printf("btk.count2=%d err=", n);
+        drain();
+        say_hex("btk.count2.key", key, 8);
+        say_hex("btk.count2.iv", iv, 8);
+
+        /* `count == 0` casts to zero, so the extra loop runs zero times and this equals `count1`. */
+        memset(key, 0xAA, sizeof key);
+        memset(iv, 0xAA, sizeof iv);
+        n = EVP_BytesToKey(cipher8, md_leg, salt8, data, datalen, 0, key, iv);
+        printf("btk.count0=%d err=", n);
+        drain();
+        say_hex("btk.count0.key", key, 8);
+        say_hex("btk.count0.iv", iv, 8);
+
+        memset(key, 0xAA, sizeof key);
+        memset(iv, 0xAA, sizeof iv);
+        n = EVP_BytesToKey(cipher8, md_leg, NULL, data, datalen, 1, key, iv);
+        printf("btk.nosalt=%d err=", n);
+        drain();
+        say_hex("btk.nosalt.key", key, 8);
+        say_hex("btk.nosalt.iv", iv, 8);
+
+        /* The 24-byte-key cipher: `24 + 8` exceeds one twenty-byte block, so the outer loop turns
+         * a second time and the second block's bytes land in both the key and the IV. */
+        memset(key, 0xAA, sizeof key);
+        memset(iv, 0xAA, sizeof iv);
+        n = EVP_BytesToKey(cipher24, md_leg, salt8, data, datalen, 1, key, iv);
+        printf("btk.tworounds=%d err=", n);
+        drain();
+        say_hex("btk.tworounds.key", key, 24);
+        say_hex("btk.tworounds.iv", iv, 8);
+
+        /* Both output pointers NULL: the key is still derived and the length still answered. */
+        n = EVP_BytesToKey(cipher8, md_leg, salt8, data, datalen, 1, NULL, NULL);
+        printf("btk.noout=%d err=", n);
+        drain();
+        n = EVP_BytesToKey(cipher8, md_leg, NULL, NULL, 0, 1, NULL, NULL);
+        printf("btk.nodata_noout=%d err=", n);
+        drain();
+    }
+
+    /*
      * ---- the boundaries, named rather than driven -------------------------------------------
      */
     printf("pkcs12.keygen=NOT_MEASURED_REGISTERED_DIVERGENCE\n");
@@ -1450,6 +1611,8 @@ int main(void)
     printf("scrypt.keylen_over_64=NOT_MEASURED_AUTHORITY_OVERFLOWS\n");
     printf("scrypt.illegal_params=NOT_MEASURED_PROBE_PROVIDER_ACCEPTS_ANY\n");
     printf("pbe.cipher_nid.legacy=NOT_COMPARED_REGISTERED_DIVERGENCE_D_EVP_CIPHER_LEGACY_NID_1\n");
+    printf("btk.overlong_key=NOT_MEASURED_AUTHORITY_ABORTS_evp_key_c_92\n");
+    printf("btk.negative_count=NOT_MEASURED_AUTHORITY_LOOPS_2_32_TIMES\n");
 
     ASN1_TYPE_free(pbeparam);
     ASN1_TYPE_free(wrong_type);
@@ -1458,6 +1621,7 @@ int main(void)
     ASN1_TYPE_free(scrypt_param_kl);
     EVP_MD_free(md_sha1);
     EVP_MD_free(md_md2);
+    EVP_MD_free(md_leg);
     EVP_CIPHER_free(cipher8);
     EVP_CIPHER_free(cipher24);
     OSSL_LIB_CTX_set0_default(gprev);

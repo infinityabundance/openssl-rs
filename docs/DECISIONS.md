@@ -11875,3 +11875,177 @@ own previous head (`6a325e62`: `implemented[libcrypto] 1747 → 1764`,
 (`c2fdcae4`). `blocking_dependencies` stays 14, `divergence_names_covered` stays 32, and the
 prerequisite gate reports zero findings.
 
+## D193 — 7.4l lands the ten names that read no method table, withholds thirteen with their blockers named, and courts the `EVP_PKEY_METHOD` registry's application stack for the first time
+
+The slice is the ledger's `src/evp/p_legacy.rs` row, which groups thirteen open symbols by prefix
+rather than by translation unit. **Ten exports land**, in one new module of that name:
+`EVP_BytesToKey`, `EVP_get_pw_prompt` and `EVP_set_pw_prompt` (`crypto/evp/evp_key.c`),
+`EVP_SignFinal_ex`/`EVP_SignFinal` (`p_sign.c`), `EVP_VerifyFinal_ex`/`EVP_VerifyFinal`
+(`p_verify.c`), `EVP_OpenInit`/`EVP_OpenFinal` (`p_open.c`) and `EVP_SealFinal` (`p_seal.c`).
+Thirteen do not, and every one of them is withheld rather than stubbed with an answer that would
+diverge: the `EVP_PKEY_type` precedent that D190 and D192 state, executed per symbol as D165
+measured it. `implemented[libcrypto]` moves **1764 → 1774** and phase 7 to **639 implemented and
+147 open** (from 629 and 157) -- read from `forensics/phase7-obligations.json` after the pipeline
+ran, not predicted here. The suite gains the **three** tests the module carries and stands at
+**441**. The courts are `RT-EVP-PKEY`, **498 observations, zero residuals**, and `RT-EVP-PBE`,
+**442 observations, zero residuals**; the full pipeline ends `PIPELINE OK` with the gate at zero
+findings.
+
+### The ledger's row is a prefix group, and the module deliberately is too
+
+The row's name is `src/evp/p_legacy.rs` and its prefixes are `EVP_Open`/`EVP_Seal`/`EVP_Sign`/
+`EVP_Verify`/`EVP_BytesToKey`/`EVP_read_pw_string*`/`EVP_get_pw_prompt`/`EVP_set_pw_prompt` -- which
+is **not** the authority's `crypto/evp/p_legacy.c`, whose six exports are the legacy key accessors
+`EVP_PKEY_set1_RSA` and its siblings and are Phase 8's. The thirteen symbols are `evp_key.c`'s
+five, `p_sign.c`'s two, `p_verify.c`'s two, `p_open.c`'s two and `p_seal.c`'s two. The module keeps
+the row's name rather than splitting into five files, for the reason the row exists: this slice is
+per symbol and the row is the unit of the slice. The atlas's transcription edge is measured as the
+**dominant** unit among the symbols a module defines (`gen_prerequisite_atlas.py`), so
+`src/evp/p_legacy.rs` becomes `crypto/evp/evp_key.c`'s module and the other four units stay in
+`plan-reconciliation.json`'s `units_not_reached` census, which is a census for an in-progress
+stratum and not a finding. The census count moves 60 → 59 for exactly that reason.
+
+### The thirteen that do not build, family by family, because three of the families do not share a reason
+
+* **`ASN1_item_sign_ex` and `ASN1_item_verify_ex`** are Phase 5's hand-offs and the brief expected
+them to be unblocked now that `EVP_DigestSignInit`/`EVP_DigestVerifyInit` landed. They are not, and
+the reason is one level down: `ASN1_item_sign_ex`'s whole body after the digest init is
+`ASN1_item_sign_ctx` (`a_sign.c:138`) and `ASN1_item_verify_ex`'s is `ASN1_item_verify_ctx`
+(`a_verify.c:104`), both declared in `x509.h` and both Phase 11's exports. The hand-off therefore
+needs `evp_md_ctx_new_ex` *and* another stratum's function, and it is withheld on Phase 11.
+* **The twelve `d2i_*`/`i2d_*` names** split into two sub-families by measurement rather than by
+guess. `d2i_PrivateKey_ex`/`d2i_AutoPrivateKey_ex` and their plain wrappers try
+`d2i_PrivateKey_decoder` **first**, which needs `OSSL_DECODER_CTX_new_for_pkey` (Phase 10), and fall
+back to `ossl_d2i_PrivateKey_legacy`, which needs `EVP_PKEY_set_type`'s ameth table (Phase 8).
+`d2i_PublicKey` and `d2i_KeyParams` have **only** the legacy path, which reads `ret->ameth` and the
+low-level `d2i_RSAPublicKey`/`d2i_DSAPublicKey`/`o2i_ECPublicKey` (Phase 8); `d2i_KeyParams_bio` is
+the same boundary reached through `asn1_d2i_read_bio` (Phase 5, landed) and then `d2i_KeyParams`.
+`i2d_KeyParams`, `i2d_KeyParams_bio`, `i2d_PrivateKey`, `i2d_PKCS8PrivateKey` and `i2d_PublicKey` all
+take `i2d_provided` first for a provider key, which is `OSSL_ENCODER_CTX_new_for_pkey` (Phase 10),
+and the legacy arm needs `a->ameth` (Phase 8). The brief's hypothesis that `i2d_PKCS8PrivateKey`
+might delegate entirely to landed machinery does not hold, and the measurement says why: it is
+`i2d_PrivateKey_impl(a, pp, 0)`, the same encoder call with the `PrivateKeyInfo` structure name.
+* **`EVP_PKEY_type`, `EVP_PKEY_meth_find`, `EVP_PKEY_meth_get0` and `EVP_PKEY_meth_get_count`**
+read the two `standard_methods[]` tables outright. `EVP_PKEY_type` was already withheld with its
+`evp_pkey_type` internal landed (D164); the three method-registry names are the same boundary on the
+other table, and they are withheld for the same reason. `EVP_PKEY_CTX_get_algor`'s 7.4e record --
+blocked on `d2i_X509_ALGOR`, Phase 11 -- is re-read and still accurate.
+* **`EVP_SealInit`** needs `RAND_priv_bytes_ex` (`p_seal.c:46`) and `EVP_CIPHER_CTX_rand_key`
+(`:42`), the second of which is itself an open 7.3c row for the same reason. Phase 9. Its
+`EVP_SealFinal` sibling needs neither and lands.
+* **`EVP_read_pw_string` and `EVP_read_pw_string_min`** are a `UI` program (`UI_new`,
+`UI_add_input_string`, `UI_add_verify_string`, `UI_process`, `UI_free`) and `ui.h` is Phase 13's.
+They are withheld together because `EVP_read_pw_string`'s body *is* the call to `_min`.
+* **`EVP_get_pw_prompt` and `EVP_set_pw_prompt` land**, and they are the one place the row's prefix
+grouping and the dependency boundary disagree: they touch `evp_key.c`'s own eighty-byte
+`prompt_string` and nothing else, so the `UI` boundary does not reach them.
+
+The nine dependency names are recorded in `forensics/prerequisites.json` with their owning phases,
+each withheld name has a `NOT_MEASURED_…_<file>_<line>` line in `RT-EVP-PKEY` or `RT-EVP-PBE`, and
+this entry is the third artefact the brief asks for. No deferral row names a Phase-7-owned export:
+D165 refused that shape, and a row for `EVP_PKEY_type` would move work into Phase 8 that belongs
+here.
+
+### `EVP_BytesToKey` is a loop, and its two `OPENSSL_assert`s are refusals
+
+The function is a digest loop over the landed `EVP_DigestInit_ex`/`Update`/`Final_ex`, and it is the
+only name in the slice with a **fault** inside it: `OPENSSL_assert(nkey <= EVP_MAX_KEY_LENGTH)` and
+`OPENSSL_assert(niv >= 0 && niv <= EVP_MAX_IV_LENGTH)` are active (`include/openssl/crypto.h:475`
+expands the macro to `OPENSSL_die`, which is not `NDEBUG`-gated), so a cipher with a 65-byte key or
+a negative IV length aborts the authority *before* the `data == NULL` early return. This crate
+refuses, returning 0, which is `D-RCU-3`'s disposition for the same shape; the boundary is named in
+`RT-EVP-PBE` and not driven, because a fault cannot be compared. The `count` argument is cast to
+`unsigned` exactly as the authority casts it, so `count == 0` runs the extra loop zero times and a
+**negative** count would run it ~2^32 times on both sides; the court drives the first and names the
+second. The `goto err` is not the fall-through and the transcription carries a `done` flag for it:
+`rv` is assigned the cipher's key length only on the loop's normal exit, so a digest failure
+mid-derivation answers 0 where a success answers `nkey`.
+
+### The courts, and what they observe
+
+`RT-EVP-PBE` gains an `EVP_BytesToKey` block, and it needed a provider surface: the probe's two
+existing digests answer a final length of **zero**, and the authority's `for (;;)` would then spin
+forever because `nkey` and `niv` never reach zero and `i == mds` on every pass. So the probe
+publishes `LEG-MD`, a twenty-byte digest whose `update` folds the input into its state and whose
+`final` writes it -- deterministic, and a function of the probe's own input, which is what makes a
+wrong pointer or a wrong length visible as different bytes rather than as the same return code.
+Seven arms: `data == NULL` (the answer is the key length and the output buffer is untouched),
+`count` 1, 2 and 0, a NULL salt, and the twenty-four-byte-key cipher whose `24 + 8` exceeds one
+digest block and forces the outer loop's **second** round. `btk.count0` equals `btk.count1` on both
+sides, which is the `(unsigned)count` cast measured; `btk.tworounds.key` is the full twenty-four
+bytes and `btk.tworounds.iv` is the second block's bytes at offset four, which is the split no
+single-round arm could show.
+
+`RT-EVP-PKEY` gains three things. **`LEG-SIG`** is a signature method with `sign`/`verify` *and* a
+`set_ctx_params` that accepts `OSSL_SIGNATURE_PARAM_DIGEST`, which is the one combination none of
+the probe's existing tables carries and the one `EVP_SignFinal` needs: it calls
+`EVP_PKEY_CTX_set_signature_md` between the init and the one-shot. The arms are the plain and `_ex`
+spellings of both functions, the verification refusal through `g_fail_ops`, a method with no
+`sign_init` (which refuses at the init), and the `EVP_MD_CTX_FLAG_FINALISE` door, which finalises
+the caller's context in place instead of a copy -- and the arm after it shows the context is then
+`FINALISED` and refuses, which is the difference the flag makes. **`LEG-CIPH`/`LEG-CIPH8` and
+`LEG-ACIPH`** are the cipher and the asymmetric cipher `EVP_OpenInit` drives; the arms are
+`priv == NULL` (a success with no work), the whole path, the **cipher/key mismatch** refusal (an
+8-byte cipher whose `settable_ctx_params` does not publish `keylen`, so
+`EVP_CIPHER_CTX_set_key_length(ctx, 16)` cannot be satisfied), a decrypt that answers 0 after a
+successful size query, a key whose `OSSL_OP_ASYM_CIPHER` name no provider publishes, `type == NULL`
+with `priv == NULL`, and `EVP_SealFinal` on an encrypt-armed context. **The `EVP_PKEY_METHOD`
+registry's application stack** is courted for the first time: `EVP_PKEY_meth_new`, `_get0_info`,
+`_add0` (including the same pointer twice, which has no duplicate check), `_remove` (pointer
+identity, so the first two removals answer 1 and the third 0) and `_copy` (the destination keeps
+its own id and flags). The registry's forty-odd exports landed in D184 with **no court at all**,
+and this is the half of them that does not need Phase 8.
+
+`EVP_PKEY_meth_find`'s application half is not observable through any door in this crate, and that
+is said rather than implied: `evp_pkey_meth_find_added_by_application` keeps its
+`#[allow(dead_code)]`, its only remaining prospective caller is `int_ctx_new`'s `app_pmeth` arm, and
+that arm needs the `pmeth` field on `EVP_PKEY_CTX` -- which every `legacy:` label in `signature.c`,
+`asymcipher.c`, `exchange.c`, `kem.c` and `pmeth_gn.c` also reads, so wiring it is the legacy half
+of the whole stratum and not a per-symbol slice. `RT-EVP-PKEY` prints
+`evp_pkey_meth_find_added_by_application=NOT_MEASURED_NO_PUBLIC_DOOR_WITHOUT_PMETH_FIELD` and
+`EVP_PKEY_meth_find=NOT_MEASURED_STANDARD_METHODS_IS_PHASE_8_pmeth_lib_c_54`, and the next slice
+that adds the field retires both. The probe also prints **twenty-one** further `NOT_MEASURED` lines:
+one for each of the twenty withheld exports and one for the application-half internal, each naming
+the authority file and line of the call that blocks it. `EVP_PKEY_type` and
+`EVP_PKEY_CTX_get_algor` keep the lines 7.4e wrote for them.
+
+Two probe facts that are *not* crate divergences and are worth stating so a reader does not read
+them as agreement on something else: the probe's `SHA256` digest has no `dupctx`, so
+`EVP_MD_CTX_copy_ex` fails and `EVP_SignFinal`/`EVP_VerifyFinal` take their inline fallback -- the
+`not able to copy ctx` record at the head of every `err=` is that, on both sides; and the same
+stub's `final` answers a zero length, so `m_len` is 0 when `EVP_PKEY_sign` is called and
+`sigfinal.plain.vec` shows `sign_zero_len:1`. Both are the probe's own surfaces, identical on both
+sides, and the arms are still observations of the two functions' control flow.
+
+### One defect repaired, and it is the provider branch's raise site
+
+The new cipher-mismatch arm measured a **pre-existing** divergence in a sealed stratum's code:
+`EVP_CIPHER_CTX_set_key_length` has **two** `EVP_R_INVALID_KEY_LENGTH` raise sites in the authority
+-- `evp_enc.c:1382` in the provider branch and `:1410` in the legacy branch -- and `src/evp/
+cipher_ctx.rs` used `EVP_ENC_1410` for both, so the provider path reported the legacy branch's
+coordinate. `RT-EVP-CIPHER` does not see it because its one `set_key_length` arm prints
+`ERR_peek_error()` as a *number*, not the chain. The site is corrected to `EVP_ENC_1382` in this
+commit, which is a one-line change with no behavioural effect; the court's
+`open.cipher_mismatch=0 err=invalid key length[]@EVP_CIPHER_CTX_set_key_length/1382` is now
+identical on both sides.
+
+### The nine prerequisite rows, and the guard
+
+Nine new `forensics/prerequisites.json` rows name the dependency that blocks a withheld name:
+`ossl_rsa_asn1_meths` and `ossl_rsa_pkey_method` (Phase 8's two tables),
+`OSSL_ENCODER_CTX_new_for_pkey` and `OSSL_DECODER_CTX_new_for_pkey` (Phase 10),
+`ASN1_item_sign_ctx`, `ASN1_item_verify_ctx` and `d2i_X509_ALGOR` (Phase 11), `RAND_priv_bytes_ex`
+(Phase 9) and `UI_new` (Phase 13). No row names a Phase-7-owned export, and no existing row is
+discharged, so none is deleted. `blocking_dependencies` moves **15 → 23** against the merge base
+with `origin/main` (`c2fdcae4`) and **14 → 23** against this branch's previous head (`0a2a741e`),
+which are two rows in `forensics/ownership-transitions.json` because the guard matches `before` and
+`after` exactly. The nine are `+9` from the branch tip and `+8` from the merge base because the
+baseline there already counts one more blocking row than the branch tip does. `divergence_names_covered`
+stays 32, `language_census` moves 2641 → 2653, `sealed_census` stays 58, and the gate
+reports zero findings. `dispatch_court.py` needed **no** `NOT_A_DISPATCH` entry: the slice adds no
+function-pointer alias.
+
+The two guard pairs were run: against this branch's previous head (`0a2a741e`:
+`implemented[libcrypto] 1764 → 1774`, `open_obligations[phase7] 157 → 147`) and against the merge
+base with `origin/main` (`c2fdcae4`).
+

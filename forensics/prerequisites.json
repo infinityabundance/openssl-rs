@@ -98,6 +98,60 @@
         "owner_phase": 8,
         "reason": "Defined in `crypto/evp/pmeth_lib.c` and called from `crypto/evp/names.c`'s `EVP_cleanup_int`, so two transcribed units now owe it. Its whole body is `sk_EVP_PKEY_METHOD_pop_free(app_pkey_methods, EVP_PKEY_meth_free)`: both the stack and the destructor belong to the **application-supplied `EVP_PKEY_METHOD` registry**, which is 7.4l's because `EVP_PKEY_meth_find`'s lookup searches `standard_methods[]` -- the table whose contents are Phase 8's objects under D163 and D165. So this is Phase 8's with its sibling rows rather than a same-subphase deferral: there is no 7.4c-ii or 7.4d that could land it, because the two symbols it needs do not exist until Phase 8 does.",
         "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4l; docs/DECISIONS.md D165; src/evp/pkey_ctx.rs module doc, section on the absent registry"
+      },
+      {
+        "symbol": "ossl_rsa_asn1_meths",
+        "owner_phase": 8,
+        "reason": "The `EVP_PKEY_ASN1_METHOD` half of the `standard_methods[]` contents that `crypto/asn1/ameth_lib.c` searches -- the twelve `ossl_<alg>_asn1_meth` objects. `EVP_PKEY_asn1_find`/`_find_str` are landed and do search it, so their answer is NULL for every standard type until Phase 8 publishes the objects. That is why 7.4l withholds `EVP_PKEY_type`, `d2i_PrivateKey`/`_ex`, `d2i_AutoPrivateKey`/`_ex`, `d2i_PublicKey`, `d2i_KeyParams`/`_bio` and the legacy paths of the five `i2d_*` names rather than stubbing a divergent answer into them. `ossl_rsa_asn1_meths` is named as the first object of the table; the other eleven are the same stratum, same table, same answer.",
+        "evidence": "docs/DECISIONS.md D193; docs/DECISIONS.md D163 and D165; docs/PHASE-7-SUBPHASES.md row 7.4l"
+      },
+      {
+        "symbol": "ossl_rsa_pkey_method",
+        "owner_phase": 8,
+        "reason": "The `EVP_PKEY_METHOD` half of the same boundary: `crypto/evp/pmeth_lib.c`'s `standard_methods[]` holds the ten `ossl_<alg>_pkey_method` objects of the algorithm strata. `EVP_PKEY_meth_find`'s application half (`evp_pkey_meth_find_added_by_application`) is landed and courted; its `OBJ_bsearch_pmeth_func` half is not, and `EVP_PKEY_meth_get0` and `_get_count` index the table outright, so all three exports are withheld rather than stubbed with an application-count answer.",
+        "evidence": "docs/DECISIONS.md D193; docs/DECISIONS.md D163, D165 and D184; docs/PHASE-7-SUBPHASES.md row 7.4l"
+      },
+      {
+        "symbol": "OSSL_ENCODER_CTX_new_for_pkey",
+        "owner_phase": 10,
+        "reason": "`crypto/asn1/i2d_evp.c`'s `i2d_provided` builds an `OSSL_ENCODER_CTX` for a **provider** key, which is the branch every one of `i2d_KeyParams`, `i2d_KeyParams_bio`, `i2d_PrivateKey`, `i2d_PKCS8PrivateKey` and `i2d_PublicKey` takes first. The names are declared in `encoder.h`, Phase 10's, so no provider key can be encoded and the five exports are withheld with the boundary named in `RT-EVP-PKEY`.",
+        "evidence": "docs/DECISIONS.md D193; docs/PHASE-7-SUBPHASES.md row 7.4l"
+      },
+      {
+        "symbol": "OSSL_DECODER_CTX_new_for_pkey",
+        "owner_phase": 10,
+        "reason": "`crypto/asn1/d2i_pr.c`'s `d2i_PrivateKey_decoder` builds an `OSSL_DECODER_CTX` and is the first thing `d2i_PrivateKey_ex` and `d2i_AutoPrivateKey_ex` try, with the legacy ameth path only as a fallback. The names are declared in `decoder.h`, Phase 10's, so the four `d2i_PrivateKey*`/`d2i_AutoPrivateKey*` exports are withheld.",
+        "evidence": "docs/DECISIONS.md D193; docs/PHASE-7-SUBPHASES.md row 7.4l"
+      },
+      {
+        "symbol": "ASN1_item_sign_ctx",
+        "owner_phase": 11,
+        "reason": "`ASN1_item_sign_ex` (`crypto/asn1/a_sign.c:138`) hands the digest context to `ASN1_item_sign_ctx`, which is declared in `x509.h` and is Phase 11's. The hand-off from Phase 5 that 7.4l owns therefore cannot be completed here even though `EVP_DigestSignInit` landed: the `_ex` spelling is a constructor for a context the `x509.h` function consumes, and its own answer would be the delegate's.",
+        "evidence": "docs/DECISIONS.md D193; docs/PHASE-7-SUBPHASES.md row 7.4l"
+      },
+      {
+        "symbol": "ASN1_item_verify_ctx",
+        "owner_phase": 11,
+        "reason": "The verification twin of `ASN1_item_sign_ctx`: `ASN1_item_verify_ex` (`crypto/asn1/a_verify.c:104`) delegates to it, and it is declared in `x509.h`, Phase 11's. The hand-off from Phase 5 to this stratum cannot be completed while the delegate is another stratum's export.",
+        "evidence": "docs/DECISIONS.md D193; docs/PHASE-7-SUBPHASES.md row 7.4l"
+      },
+      {
+        "symbol": "d2i_X509_ALGOR",
+        "owner_phase": 11,
+        "reason": "`EVP_PKEY_CTX_get_algor` (`crypto/evp/evp_lib.c:1455`) decodes the provider's `OSSL_SIGNATURE_PARAM_ALGORITHM_ID` answer with `d2i_X509_ALGOR`, declared in `x509.h` and Phase 11's. The record is unchanged from 7.4e: the accessor is withheld, and its probe line names this coordinate.",
+        "evidence": "docs/DECISIONS.md D193 and D190; docs/PHASE-7-SUBPHASES.md row 7.4e"
+      },
+      {
+        "symbol": "RAND_priv_bytes_ex",
+        "owner_phase": 9,
+        "reason": "`EVP_SealInit` (`crypto/evp/p_seal.c:42` and `:46`) needs the random layer twice: `EVP_CIPHER_CTX_rand_key` for the session key and `RAND_priv_bytes_ex` for the IV. Both land in Phase 9 and `crypto/evp/evp_enc.c`'s `EVP_CIPHER_CTX_rand_key` is itself still an open 7.3c row for the same reason, so `EVP_SealInit` is withheld while its `_Final` half -- which needs no random -- lands with the rest of 7.4l.",
+        "evidence": "docs/DECISIONS.md D193; docs/PHASE-7-SUBPHASES.md rows 7.3c and 7.4l"
+      },
+      {
+        "symbol": "UI_new",
+        "owner_phase": 13,
+        "reason": "`EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`) is a `UI` program -- `UI_new`, `UI_add_input_string`, `UI_add_verify_string`, `UI_process`, `UI_free` -- and `ui.h` is Phase 13's. `EVP_read_pw_string` goes with it because its whole body is a call to `_min`; `EVP_get_pw_prompt`/`EVP_set_pw_prompt` do **not**, because they touch the file's own eighty-byte static and nothing else, and they land.",
+        "evidence": "docs/DECISIONS.md D193; docs/PHASE-7-SUBPHASES.md row 7.4l"
       }
     ],
     "divergences": [

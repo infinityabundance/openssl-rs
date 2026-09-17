@@ -60,6 +60,7 @@ pub mod method_store;
 pub mod p5_crpt;
 pub mod p5_crpt2;
 pub mod p5_scrypt;
+pub mod p_legacy;
 pub mod pbe;
 pub mod pkey;
 pub mod pkey_asn1;
