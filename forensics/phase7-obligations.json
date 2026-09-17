@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 924,
       "deferred_to_later_phase": 164,
-      "implemented": 453,
-      "open_in_this_stratum": 333,
+      "implemented": 461,
+      "open_in_this_stratum": 325,
       "owned": 950,
       "received_by_handoff": 26
     },
@@ -1497,6 +1497,14 @@
       "EVP_PKEY_CTX_set_cb",
       "EVP_PKEY_CTX_set_data",
       "EVP_PKEY_CTX_settable_params",
+      "EVP_PKEY_asn1_add0",
+      "EVP_PKEY_asn1_add_alias",
+      "EVP_PKEY_asn1_copy",
+      "EVP_PKEY_asn1_free",
+      "EVP_PKEY_asn1_get0",
+      "EVP_PKEY_asn1_get0_info",
+      "EVP_PKEY_asn1_get_count",
+      "EVP_PKEY_asn1_new",
       "EVP_PKEY_auth_decapsulate_init",
       "EVP_PKEY_auth_encapsulate_init",
       "EVP_PKEY_check",
@@ -2436,24 +2444,6 @@
         "declaring_header": "evp.h",
         "module": "src/evp/pkey_ctx.rs",
         "received_from_phase": null,
-        "symbol": "EVP_PKEY_asn1_add0"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_asn1_add_alias"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_asn1_copy"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
         "symbol": "EVP_PKEY_asn1_find"
       },
       {
@@ -2461,36 +2451,6 @@
         "module": "src/evp/pkey_ctx.rs",
         "received_from_phase": null,
         "symbol": "EVP_PKEY_asn1_find_str"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_asn1_free"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_asn1_get0"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_asn1_get0_info"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_asn1_get_count"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_asn1_new"
       },
       {
         "declaring_header": "evp.h",
@@ -3956,12 +3916,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "2905935adfe3a0b2834adde5ea7b3933a1961b9a7f9bb34cd14deb7c823c2911"
+      "sha256": "a69a73b1a99fd0bd23ba36bd3c986d34212fe735a6bab316c080a9afbe9a00a7"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "05d472602d8fe2ff750965a593b00ae5a921b6ee94844bfc690c99c321eb574f"
+      "sha256": "fe530828184f3601c6135f9161676b2422365861c5181b12eb0e49a548ae8305"
     }
   ],
   "kind": "phase7-obligations",
