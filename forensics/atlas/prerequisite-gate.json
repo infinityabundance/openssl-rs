@@ -3,7 +3,6 @@
   "body": {
     "blocking_dependencies": [
       "OSSL_provider_init -> phase 13 (providers/legacy/legacyprov.c's entry point, and the name a third-party provider's own entry point is declared with -- which is why subphase rows 6.8d and 6.12 name it, since the `providers` configuration module needs a module path and RT-PROVIDER-3P compiles its own. The authority symbol is the legacy provider's, so it is Phase 13's.)",
-      "evp_md_get_number -> phase 7 (The last name of `crypto/evp/evp_lib.c` that 7.3a, 7.3b and 7.3c-i between them left open: `evp_md_get_number`, a one-line accessor of the `EVP_MD` object that 7.3d's accessor half implements. 7.3c-i discharged the other four by implementing them (`evp_cipher_param_to_asn1_ex`, `evp_cipher_asn1_to_param_ex`, `evp_cipher_get_asn1_aead_params` and `evp_cipher_set_asn1_aead_params`, the ASN.1 parameter bridge), which is what the gate's `stale_deferral` report said as soon as the code landed.)",
       "ossl_get_enginesdir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads)",
       "ossl_get_openssldir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads; so is its sibling)",
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)",
@@ -269,26 +268,14 @@
     "checked": {
       "authority_units": 116,
       "crate_modules": 161,
-      "deferrals_recorded": 6,
+      "deferrals_recorded": 5,
       "divergence_names_covered": 32,
       "divergence_rows": 5,
       "names_referenced_and_not_built": 17
     },
     "claim": "A structural gate, not a parity claim. It answers whether a dependency has an owner and whether the owner arrives in time; it says nothing about whether the dependency behaves as the authority's does.",
-    "counts": {
-      "stale_deferral": 1
-    },
-    "findings": [
-      {
-        "defined_in": [
-          "src/evp/digest.rs"
-        ],
-        "detail": "recorded as owed to a later stratum, but the crate defines it; retire the record so a real future gap is not hidden behind a stale one",
-        "direction": "A",
-        "kind": "stale_deferral",
-        "name": "evp_md_get_number"
-      }
-    ],
+    "counts": {},
+    "findings": [],
     "rule": "every authority-internal name a crate module references must be built by the crate or recorded with the stratum that owns it; every internal function a transcribed authority unit calls must exist, unless a divergence record covering exactly that name says why not; and a divergence record may not cover a name the gate did not observe",
     "sealed_stratum_census": {
       "by_defining_unit": {
@@ -405,7 +392,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "66ad776603ec7ba5e1c2a1dffe0a50e7b094da1b0495a69ceb4f26843b461497",
+  "body_hash": "26a661ccd1debb27cdc16cdfa044ae33f1498ea742eca9d3e948b45897e6b4c9",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -446,7 +433,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "e1dabec0d95e71ab622cdcd4f966fe5bbc744d8d521800d8a695ae72e53524a2"
+      "sha256": "7332839bd9b4b7647c42848b76ba2346623390ef5449dff0ab4ef9178b498739"
     },
     {
       "name": "crate-source-tree",
