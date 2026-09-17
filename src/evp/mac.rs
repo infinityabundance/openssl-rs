@@ -202,7 +202,7 @@ pub(crate) type MacInitSkeyFn =
     unsafe extern "C" fn(*mut c_void, *mut c_void, *const OsslParam) -> c_int;
 
 /// `OSSL_MAC_PARAM_SIZE` — `include/openssl/core_names.h`.
-const OSSL_MAC_PARAM_SIZE: *const c_char = c"size".as_ptr();
+pub(crate) const OSSL_MAC_PARAM_SIZE: *const c_char = c"size".as_ptr();
 /// `OSSL_MAC_PARAM_BLOCK_SIZE` — `include/openssl/core_names.h`.
 ///
 /// **`"block-size"`, with a hyphen.** The digest class's key is `"blocksize"` and the cipher

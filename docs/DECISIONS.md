@@ -11003,3 +11003,143 @@ project keeps recording under a different name each time.
 
 No code changed in this commit. `implemented[libcrypto]` stays 1662, phase 7 at 527 implemented and
 259 open, and the full ordered pipeline passes with both static courts clean.
+
+## D188 — the ctrl plane lands whole, and three of its four absences were found by reading the table
+
+`crypto/evp/ctrl_params_translate.c` is finished, together with the twenty-nine `pmeth_lib.c` exports
+that are its only callers. `src/evp/pkey_ctx.rs` goes from 4,138 to 10,644 lines: the nine remaining
+`fix_*` functions, twenty-five payload getters, the three `IMPL_GET_RSA_PAYLOAD_*` macros expanded
+into twenty-nine instantiations apiece, `lookup_translation` and its two wrappers, the seven entry
+points, and **both** translation tables — 86 rows and 41 — transcribed positionally to named fields
+with the authority's own comments kept above the rows they belong to. `implemented[libcrypto]` moves
+1662 → 1691 and phase 7 to 556 implemented and 230 open.
+
+**D187 said the unit was one commit because nothing in it is observable until the last slice. That
+held.** The tables read the fixers, the lookups read the tables, and the exports read the lookups, so
+the evidence for the whole thing is the exports exercising the chain; three unit tests were added for
+the parts of it that *cannot* be reached that way, and they are named below.
+
+**A wrong constant was in the crate and this slice is where it became observable.**
+`EVP_PKEY_CTRL_SET1_ID` was `13`; `include/openssl/evp.h:1824` says `15`, and 13 is
+`EVP_PKEY_CTRL_GET_MD`. It was invisible for as long as nothing compared a *caller's* ctrl number
+against it — the only two readers were `decode_cmd`, which compared it with itself, and the tables,
+which did not exist. `EVP_PKEY_CTX_ctrl` is the caller that makes it observable, and a C caller
+passing the header's 15 would have been answered `EVP_R_COMMAND_NOT_SUPPORTED`. Fixed, with the note
+at the declaration.
+
+**The table facts were checked against the authority rather than assumed, and one of them was wrong
+in the task's own summary.** The five `OSSL_ACTION_NONE` rows name three ctrls, not one or three
+rows: `DH_KDF_TYPE`, `EC_ECDH_COFACTOR` and `EC_KDF_TYPE`, with the two EC ones appearing **twice**
+because the SM2 block repeats the whole of the EC block and the repetition is real — an SM2 context
+is a different key type. The first draft of `the_tables_are_the_authority_rows_and_only_its_shapes`
+asserted three and the table was right; the assertion is now five, with the multiset of ctrl numbers
+spelled out, because a count that is *checked* is worth more than a count that is quoted.
+
+**Three of the four shape facts the task named were confirmed, and the fourth was sharpened.** All
+127 rows carry an explicit `action_type`; `ctrl_num == -1` is exactly the four ECX rows and every
+pkey row is `0`; exactly two rows are hex-only, and they are `rsa_oaep_label` and
+`rsa_pkcs1_implicit_rejection`. The sharpened one is the `NONE` count above. A second test pins the
+lookup itself — by ctrl number, by an unrelated operation bit, and by an unknown number — and a third
+pins the string door's **return channel**: `lookup_translation` rewrites the template's two ctrl-string
+fields to say which column matched, and `evp_pkey_ctx_ctrl_str_to_param` reads exactly that to set
+`ctx.ishex`. A transcription that set both would make every `distid` value hex-decoded, and no runtime
+court would have been able to say which of the two was wrong.
+
+**The pkey half cannot be finished, and neither can two of the exports, and this is the measurement
+that D187 did not make.** Every one of the twenty-five payload getters reads the *legacy key* out of
+the `EVP_PKEY *` it is handed: `EVP_PKEY_get_base_id`, `EVP_PKEY_get0_DH`, `_get0_DSA`,
+`_get0_EC_KEY`, `_get0_RSA`, and then `DH_get0_p`, `RSA_get0_n`, `EC_KEY_get0_group` and their
+siblings. **None of those ten functions exists in the crate**, and none can: they read `pkey->pkey.dh`
+and its union siblings from the legacy block of `struct evp_pkey_st`, which `src/evp/pkey.rs`
+deliberately does not have. There is no honest stand-in — a helper answering NULL would be a
+placeholder pretending to be an accessor — so each getter keeps the whole of its own logic around the
+dispatch and the dispatch is the absence its site names. Every one of them is nevertheless correct as
+written for every key this crate can hold, because the whole table is **unreachable here**: its only
+reader is `evp_pkey_setget_params_to_ctrl`, whose only reader is `evp_pkey_get_params_to_ctrl`, whose
+only caller is `EVP_PKEY_get_params`'s legacy arm, reached when
+`evp_pkey_is_legacy(pk)` = `type != EVP_PKEY_NONE && keymgmt == NULL` — a state this crate cannot
+enter, and the crate's own `EVP_PKEY_get_params` has no such arm.
+
+That has a **nice consequence in the dead-code structure, and it is the reason the file carries one
+allow for the chain instead of forty-five.** Keeping `#[allow(dead_code)]` on
+`evp_pkey_get_params_to_ctrl` alone makes `EVP_PKEY_TRANSLATIONS`, the thirteen payload getters, the
+thirty-two RSA payload functions and the thirty `OSSL_PKEY_PARAM_RSA_*` keys they name all reachable.
+That was established by stripping *every* allow in the file, compiling, and looking at what the
+compiler still called dead; the residual was five items, and every other allow that had accumulated
+across the five slices was removed. The seven that remain each have a different reason, which is the
+point: `EVP_PKEY_OP_ALL` and `EVP_PKEY_OP_TYPE_NOGEN` are read only by the unit test,
+`EVP_PKEY_meth_find_added_by_application` waits on 7.4l, the `CleanupCtrlToParams` variant is
+unconstructed **in the authority too**, the `CleanupArgsFn` alias is the authority's second typedef
+for one signature that Rust cannot coerce across, `get_payload_int` has no caller at all — its would-be
+caller is the EC arm whose accessors are absent — and the last is the chain root above.
+**And one of the removed ones turned out to be load-bearing for a reason nobody had written down**: `evp_pkey_ctx_free_all_cached_data`'s allow said `EVP_PKEY_CTX_free` calls it, and
+`EVP_PKEY_CTX_free` called `evp_pkey_ctx_free_cached_data` instead. The authority's line 399 is the
+*all* variant. The two are behaviourally identical — the all-variant's body is one call to the other
+— so nothing was observable, and the stale allow was the *only* evidence that a call site had been
+transcribed against the wrong half of a pair. The call is the authority's now and the allow is gone.
+An unnecessary `#[allow(dead_code)]` is therefore worth reading twice rather than deleting: its
+comment is a claim about a call graph, and a claim no compiler checks.
+
+**`EVP_PKEY_CTX_str2ctrl` and `_hex2ctrl` are the two exports that cannot be finished, and for the
+same one-line reason.** Each ends with `ctx->pmeth->ctrl(...)` and **no NULL test on `ctx->pmeth`**,
+beyond which `EVP_PKEY_CTX_ctrl_int` and `_ctrl_str_int` refuse. The crate's `EvpPkeyCtx` has no
+`pmeth` at all, so every context it can build is in exactly the state the authority would fault in;
+the decode and the `INT_MAX` test are transcribed whole and the answer is the value the authority
+reserves for "the callback was not reached", `-1`. These are the only two exports in this slice whose
+answer differs from the authority's for a context the authority *can* build, and both are recorded at
+their sites rather than in the ledger alone.
+
+**Four more divergences, all named at their sites.** `EVP_PKEY_CTX_set_params`/`get_params` answer
+`0` for a NULL context where the authority dereferences it — the crate's `gettable_params` and
+`settable_params`, landed earlier in this file, already do that, so this keeps the family consistent
+rather than making one of the five the odd one out. `fix_dh_nid` and `fix_dh_nid5114`'s FFC lookup is
+**not** transcribed at all: `ossl_ffc_uid_to_dh_named_group` is two functions over
+`crypto/ffc/ffc_dh.c`'s `dh_named_groups[]`, whose entries carry each group's prime and generator,
+and a partial copy of that table's name column is precisely the half-transcription that reads as
+complete; the arm answers `EVP_R_INVALID_VALUE`, which is the authority's answer for a UID with no
+group. `fix_dh_paramgen_type`'s table **is** transcribed, because `crypto/evp/dh_support.c`'s
+`dhtype2id[]` is four integers and four printable names with no key material — the distinction between
+the two is the principle, not the size.
+
+**One authority fault is documented rather than reproduced.** `fix_rsa_padding_mode`'s second loop
+calls `strcmp(ctx->p2, str_value_map[i].ptr)` for *every* entry, and the last entry's `ptr` is NULL:
+`RSA_PKCS1_WITH_TLS_PADDING` has no name. A `pad-mode` string matching none of the six therefore
+reaches `strcmp` with a NULL second argument, which is undefined and faults on the glibc build the
+authority is pinned to. The crate treats `None` as "this entry does not match" and takes the loop's own
+not-found exit: the caller gets the `RSA_R_UNKNOWN_PADDING_TYPE` data error and `-2`, which is what it
+would get for any of the other five unmatched names. Recorded because it is a reachable authority
+defect, not a transcription choice.
+
+**`evp_pkey_ctx_set_params_strict` and `_get_params_strict` were owed to 7.4c-ii and both rows were
+wrong twice over.** They were in `forensics/prerequisites.json`'s `deferrals`, so building them made
+the prerequisite gate report two `stale_deferral` findings — which is the gate working. Removing the
+rows is the discharge, and while removing them the second problem showed: the row's *reason* describes
+a body the authority does not have. It says "a three-line guard over `evp_keymgmt_get_params` — it
+refuses unless the context is an `EVP_PKEY_OP_FROMDATA` operation with a live algorithm context",
+which is `EVP_PKEY_fromdata`'s guard in `crypto/evp/pmeth_gn.c`. `pmeth_lib.c:858` and `:883` are
+instead a settable/gettable membership check in front of `EVP_PKEY_CTX_{set,get}_params`, and that is
+what landed. A deferral whose reason names the wrong body cannot be falsified by the gate, which owes
+*names*; the detail is recorded here because the row is gone.
+
+**Three supporting helpers came with the exports and were not in the task's list.**
+`evp_pkey_ctx_set_md`, `_set1_octet_string`, `_add1_octet_string` and `_set_uint64` are the shared
+bodies of the twenty-three wrapper exports; `decode_cmd` and `evp_pkey_ctx_store_cached_data` are the
+cached-data store whose *free* half 7.4c-i landed, and `evp_pkey_ctx_ctrl_int`/`_ctrl_str_int` are the
+two dispatch helpers. `evp_pkey_ctx_use_cached_data`, the store's replay half, is **not** written: its
+callers are the operation inits of 7.4c-ii and it has none here, so it stays a row of the prerequisite
+table rather than code with no reader.
+
+**One transcription liberty, and it is named in the table's own comment.** The authority's 127
+initialisers are positional; every one is a named-field `XlatEntry` here. The values are identical and
+the only thing given up is the authority's line-for-line diffability — which is the property the
+positional form *loses* the moment a field is inserted, so the trade is one readability for another.
+The tables are `static` rather than `const` so that a `*const XlatEntry` handed out by the lookup stays
+valid, which needs `unsafe impl Sync for XlatEntry`: its fields are raw pointers and a function
+pointer, the tables are never written after their initialiser runs, and every pointer in them points
+at a `c"..."` literal or a `static` in this file.
+
+`implemented[libcrypto]` moves 1662 → 1691 and phase 7 to 556 implemented and 230 open. The ordered
+pipeline passes, both static courts are clean, and the three added tests are
+`the_tables_are_the_authority_rows_and_only_its_shapes`,
+`a_ctrl_number_finds_its_row_and_an_unknown_one_does_not` and
+`the_distid_strings_match_their_own_columns_and_the_template_says_which`.

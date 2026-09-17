@@ -1518,9 +1518,9 @@ const OSSL_KEYMGMT_SELECT_PRIVATE_KEY: c_int = 0x01;
 /// `OSSL_KEYMGMT_SELECT_PUBLIC_KEY`.
 const OSSL_KEYMGMT_SELECT_PUBLIC_KEY: c_int = 0x02;
 /// `OSSL_PKEY_PARAM_PRIV_KEY` — `include/openssl/core_names.h`, the generated one.
-const OSSL_PKEY_PARAM_PRIV_KEY: *const c_char = c"priv".as_ptr();
+pub(crate) const OSSL_PKEY_PARAM_PRIV_KEY: *const c_char = c"priv".as_ptr();
 /// `OSSL_PKEY_PARAM_PUB_KEY` — the same header and the same note.
-const OSSL_PKEY_PARAM_PUB_KEY: *const c_char = c"pub".as_ptr();
+pub(crate) const OSSL_PKEY_PARAM_PUB_KEY: *const c_char = c"pub".as_ptr();
 /// `OSSL_KEYMGMT_SELECT_KEYPAIR` — `PRIVATE_KEY | PUBLIC_KEY`.
 const OSSL_KEYMGMT_SELECT_KEYPAIR: c_int = 0x01 | 0x02;
 
