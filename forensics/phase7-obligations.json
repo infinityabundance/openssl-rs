@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 924,
       "deferred_to_later_phase": 164,
-      "implemented": 436,
-      "open_in_this_stratum": 350,
+      "implemented": 449,
+      "open_in_this_stratum": 337,
       "owned": 950,
       "received_by_handoff": 26
     },
@@ -1482,7 +1482,9 @@
       "EVP_PKEY_CTX_get0_propq",
       "EVP_PKEY_CTX_get0_provider",
       "EVP_PKEY_CTX_get_app_data",
+      "EVP_PKEY_CTX_get_cb",
       "EVP_PKEY_CTX_get_data",
+      "EVP_PKEY_CTX_get_keygen_info",
       "EVP_PKEY_CTX_get_operation",
       "EVP_PKEY_CTX_gettable_params",
       "EVP_PKEY_CTX_is_a",
@@ -1490,6 +1492,7 @@
       "EVP_PKEY_CTX_new_from_pkey",
       "EVP_PKEY_CTX_set0_keygen_info",
       "EVP_PKEY_CTX_set_app_data",
+      "EVP_PKEY_CTX_set_cb",
       "EVP_PKEY_CTX_set_data",
       "EVP_PKEY_CTX_settable_params",
       "EVP_PKEY_auth_decapsulate_init",
@@ -1515,7 +1518,12 @@
       "EVP_PKEY_encrypt_init",
       "EVP_PKEY_encrypt_init_ex",
       "EVP_PKEY_eq",
+      "EVP_PKEY_export",
       "EVP_PKEY_free",
+      "EVP_PKEY_fromdata",
+      "EVP_PKEY_fromdata_init",
+      "EVP_PKEY_fromdata_settable",
+      "EVP_PKEY_generate",
       "EVP_PKEY_get0_description",
       "EVP_PKEY_get0_provider",
       "EVP_PKEY_get0_type_name",
@@ -1530,11 +1538,15 @@
       "EVP_PKEY_get_utf8_string_param",
       "EVP_PKEY_gettable_params",
       "EVP_PKEY_is_a",
+      "EVP_PKEY_keygen",
+      "EVP_PKEY_keygen_init",
       "EVP_PKEY_new",
       "EVP_PKEY_pairwise_check",
       "EVP_PKEY_param_check",
       "EVP_PKEY_param_check_quick",
       "EVP_PKEY_parameters_eq",
+      "EVP_PKEY_paramgen",
+      "EVP_PKEY_paramgen_init",
       "EVP_PKEY_private_check",
       "EVP_PKEY_public_check",
       "EVP_PKEY_public_check_quick",
@@ -1547,6 +1559,7 @@
       "EVP_PKEY_set_type_by_keymgmt",
       "EVP_PKEY_set_utf8_string_param",
       "EVP_PKEY_settable_params",
+      "EVP_PKEY_todata",
       "EVP_PKEY_type_names_do_all",
       "EVP_PKEY_up_ref",
       "EVP_Q_digest",
@@ -2257,19 +2270,7 @@
         "declaring_header": "evp.h",
         "module": "src/evp/pkey_ctx.rs",
         "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_get_cb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
         "symbol": "EVP_PKEY_CTX_get_group_name"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_get_keygen_info"
       },
       {
         "declaring_header": "evp.h",
@@ -2348,12 +2349,6 @@
         "module": "src/evp/pkey_ctx.rs",
         "received_from_phase": null,
         "symbol": "EVP_PKEY_CTX_set_algor_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_set_cb"
       },
       {
         "declaring_header": "evp.h",
@@ -2635,36 +2630,6 @@
         "declaring_header": "evp.h",
         "module": "src/evp/pkey.rs",
         "received_from_phase": null,
-        "symbol": "EVP_PKEY_export"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_fromdata"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_fromdata_init"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_fromdata_settable"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_generate"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
         "symbol": "EVP_PKEY_get0"
       },
       {
@@ -2816,18 +2781,6 @@
         "module": "src/evp/pkey.rs",
         "received_from_phase": null,
         "symbol": "EVP_PKEY_get_security_category"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_keygen"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_keygen_init"
       },
       {
         "declaring_header": "evp.h",
@@ -3167,18 +3120,6 @@
       },
       {
         "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_paramgen"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_paramgen_init"
-      },
-      {
-        "declaring_header": "evp.h",
         "module": "src/evp/pkey.rs",
         "received_from_phase": null,
         "symbol": "EVP_PKEY_print_params"
@@ -3308,12 +3249,6 @@
         "module": "src/evp/pkey.rs",
         "received_from_phase": null,
         "symbol": "EVP_PKEY_sign_message_update"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_todata"
       },
       {
         "declaring_header": "evp.h",
@@ -4041,12 +3976,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "1258860d0b17cfe3ed02176debd21c3708331d4a1ae67a81d0a67ca51896faf9"
+      "sha256": "81f0982c4b4c35cff79654501786c39acbed84a40fe7582b7ff2627d8371c34c"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "82d95266241a470c9dff2f244a8fb994d6b56d94554f885f07e987267f2c4124"
+      "sha256": "d1329e02d81db4f313e93ec0479a4c7c1c06abb54cc7261b8f1b2b73402f9a3d"
     }
   ],
   "kind": "phase7-obligations",

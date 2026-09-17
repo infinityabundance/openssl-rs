@@ -162,6 +162,16 @@ pub struct CachedParameters {
     pub(crate) dist_id_set: c_int,
 }
 
+/// `EVP_PKEY_gen_cb` — `typedef int EVP_PKEY_gen_cb(EVP_PKEY_CTX *ctx)`,
+/// `include/openssl/evp.h:2076`.
+///
+/// A **named** alias rather than an inline `Option<unsafe extern "C" fn(...) -> c_int>`, and the
+/// reason is measurable: `ABI-PROTOTYPE`'s Rust-side reader resolves a function-pointer return
+/// through an alias it can name, and an inline spelling of the same type was rendered as
+/// `fptr(void; ptr(opaque))` — a `void` return — and reported as a mismatch on
+/// `EVP_PKEY_CTX_get_cb`. `BIO_meth_get_read -> Option<BioReadFn>` is the crate's precedent.
+pub(crate) type EvpPkeyGenCb = unsafe extern "C" fn(*mut EvpPkeyCtx) -> c_int;
+
 /// `struct evp_pkey_ctx_st` — `EVP_PKEY_CTX`, with the `op` union **flattened**.
 ///
 /// See this module's documentation for why the flattening is a deliberate simplification: every
@@ -210,7 +220,7 @@ pub struct EvpPkeyCtx {
     /// `void *app_data`.
     pub(crate) app_data: *mut c_void,
     /// `EVP_PKEY_gen_cb *pkey_gencb`.
-    pub(crate) pkey_gencb: Option<unsafe extern "C" fn(*mut EvpPkeyCtx) -> c_int>,
+    pub(crate) pkey_gencb: Option<EvpPkeyGenCb>,
     /// `int *keygen_info` — the caller's array, **not** owned.
     pub(crate) keygen_info: *mut c_int,
     /// `int keygen_info_count`.

@@ -438,13 +438,25 @@ def strip_qualifiers(text: str) -> str:
     return " ".join(text.replace("const ", " ").replace("volatile ", " ").split())
 
 
-def classify_c(text: str) -> str:
+def classify_c(text: str, typedefs: dict[str, str] | None = None) -> str:
     t = strip_qualifiers(text)
     if t in ("void", ""):
         return "void"
     if "(*" in t or "(*)" in t:
         return "function_pointer"
     if t.endswith("*"):
+        # A pointer to a **typedef that names a function type** is a function pointer, and the
+        # syntactic test above cannot see it. `EVP_PKEY_gen_cb *EVP_PKEY_CTX_get_cb(EVP_PKEY_CTX *)`
+        # resolves to `int (*)(EVP_PKEY_CTX *)`, while `BIO_meth_get_read` spells the same thing
+        # `int (*(const BIO_METHOD *))(BIO *, char *, int)` and hits the test above. Those are one C
+        # type spelled two ways, so they must classify alike and the canonicaliser decides. The
+        # crate's side of that comparison is `Option<EvpPkeyGenCb>` against an alias, which
+        # `classify_rust` resolves to `function_pointer` -- so without this the court reports a
+        # mismatch between a type and itself.
+        if typedefs is not None:
+            canon = canon_c_type(t, typedefs)
+            if canon is not None and canon.startswith("fptr("):
+                return "function_pointer"
         return "pointer"
     if t in ("float", "double"):
         return "floating"
@@ -600,7 +612,7 @@ def parse_c_prototype(proto: str, typedefs: dict[str, str]) -> tuple[str, int] |
         return "function_pointer", arity
     params = content.strip()
     arity = 0 if params in ("", "void") else len(split_top_level(params))
-    return classify_c(resolve_c(text[:first[0]], typedefs)), arity
+    return classify_c(resolve_c(text[:first[0]], typedefs), typedefs), arity
 
 
 def parse_rust_declaration(

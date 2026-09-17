@@ -70,12 +70,6 @@
         "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4 (which names `evp_pbe.c`); src/evp/legacy_evp.rs module doc, section \"What is not here\""
       },
       {
-        "symbol": "evp_pkey_free_legacy",
-        "owner_phase": 8,
-        "reason": "One of the seven functions `include/crypto/evp.h` declares for `crypto/evp/p_lib.c`, and so one the gate owes the moment the crate has a module for that unit (D163, the `a2d_ASN1_OBJECT` class in the other direction). Its body needs `x->ameth`, an `EVP_PKEY_ASN1_METHOD *`, and the branch that finds one when the key has only a legacy cache entry calls `EVP_PKEY_asn1_find` -- the registry `crypto/asn1/ameth_lib.c` builds from `standard_methods[]`, whose twelve objects are the algorithm strata's and are Phase 8's contents. There is also an `ameth->pkey_free` call through the found method, so the free path is not merely gated on the table's existence: it *is* the table.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4a (the dependency column names `_free_legacy`); row 7.4l (the unit handed to Phase 8); src/evp/pkey.rs module doc, section \"What is not here\""
-      },
-      {
         "symbol": "evp_pkey_get_legacy",
         "owner_phase": 8,
         "reason": "The second of the seven. It downgrades a provider key to a legacy one, so its whole body past the fast paths is `evp_pkey_copy_downgraded`, and the cache it then holds is keyed on `ameth` being non-NULL (`EVP_PKEY_asn1_find` for the type). Both halves are Phase 8's, which is why this name waits on the same registry as its sibling rather than on anything in this stratum.",

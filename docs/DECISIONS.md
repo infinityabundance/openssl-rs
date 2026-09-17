@@ -10232,3 +10232,57 @@ them reads the source tree, they need the generated header (or the build directo
 recorded now because the transcribing of `pmeth_gn.c` is the first work that *needs* one of these
 constants, and because a difference of 457 constants between two files with the same name is the kind
 of thing that should be found by reading rather than by being surprised.
+
+## D173 — `pmeth_gn.c` lands, `evp_pkey_free_legacy` stops being a deferral, and a court's class label cannot tell a typedef from its expansion
+
+Thirteen of `crypto/evp/pmeth_gn.c`'s fourteen exports land: the two `*gen_init`s, `EVP_PKEY_generate`,
+`EVP_PKEY_paramgen`, `EVP_PKEY_keygen`, `EVP_PKEY_CTX_set_cb`, `EVP_PKEY_CTX_get_cb`,
+`EVP_PKEY_CTX_get_keygen_info`, `EVP_PKEY_fromdata_init`, `EVP_PKEY_fromdata`,
+`EVP_PKEY_fromdata_settable`, `EVP_PKEY_todata` and `EVP_PKEY_export`. The fourteenth,
+`EVP_PKEY_new_mac_key`, is gated exactly as D172 predicted: its body reaches
+`EVP_PKEY_CTX_set_mac_key` (`ctrl_params_translate.c`) and `EVP_PKEY_CTX_new_id` (7.4c-ii).
+
+**The deferral that had to move rather than be discharged.** D172 established that
+`EVP_PKEY_generate` calls `evp_pkey_free_legacy` on its success path and that the `#if` guarding the
+call does not remove it in this build. The function is `crypto/evp/p_lib.c`'s and had a deferral row
+naming Phase 8, because its body is `x->ameth`, `EVP_PKEY_asn1_find`, `ameth->pkey_free` and four
+`ENGINE_finish` calls. The crate now **defines** the name — with an empty body, and a doc stating that
+every statement the authority's version has is `ameth` or `ENGINE` work — which makes the row stale,
+because the gate's rule is that a row's symbol must be a name the crate does **not** define.
+
+So the row is retired and the Phase-8 record moves into the code and into this entry, which is the
+`evp_pkey_name2type` precedent exactly (D163): a name the crate defines *partially* cannot carry a
+deferral, and the honest record of its missing half is the site, not the ledger. The blocking-dependency
+census therefore moves **down**, which needs no transition row.
+
+**Two contract details of the unit worth naming, because a plausible transcription gets both wrong:**
+
+* **`EVP_PKEY_CTX_get_keygen_info`'s two boundaries are not one test.** `idx == -1` answers the
+  *count*; `idx < 0` answers 0 — so `-1` is a count query and every other negative is out of range.
+  And the upper test is `idx > keygen_info_count`, **not** `>=`, so `idx == count` reads one past what
+  the count reports. `>=` would be the natural thing to write and would refuse a call the authority
+  answers.
+* **`EVP_PKEY_generate` attaches a stack array to the context** (`ctx->keygen_info = gentmp;
+  keygen_info_count = 2;`) and clears the pointer after the generator returns, because a provider is
+  not allowed to reach into the `EVP_PKEY_CTX` and the two legacy-compatible counters it reports
+  through need somewhere to land. Leaving the pointer set would hand a later
+  `EVP_PKEY_CTX_get_keygen_info` a dangling array — which is why the clearing is a statement.
+
+**And a defect in the court, found by the court.** `EVP_PKEY_CTX_get_cb` returns `EVP_PKEY_gen_cb *`,
+and `typedef int EVP_PKEY_gen_cb(EVP_PKEY_CTX *ctx)` makes that `int (*)(EVP_PKEY_CTX *)`. The crate's
+first spelling of it was an inline `Option<unsafe extern "C" fn(*mut EvpPkeyCtx) -> c_int>`, which the
+Rust-side reader rendered as `fptr(void; ptr(opaque))` — a `void` return — and reported. The fix is the
+crate's own precedent for a function-pointer return: a **named alias**, as `BIO_meth_get_read ->
+Option<BioReadFn>` does. The alias is now `EvpPkeyGenCb` in `pkey_ctx.rs`, beside the field it types.
+
+That left a mismatch the crate could not fix, and it is the more interesting half: `classify_c` named
+the authority's `EVP_PKEY_gen_cb *` a **`pointer`** on the syntactic test `t.endswith("*")`, while the
+crate's resolved alias is a **`function_pointer`** — the same C type spelled two ways, classified two
+ways. The BIO accessors spell it `int (*(...))(...)` and hit the `(*` test, so the two spellings had
+always disagreed and nothing had compared them before. `classify_c` now consults the canonicaliser and
+answers `function_pointer` when the pointee resolves to `fptr(...)`, so one type has one class.
+
+The lesson is the one D167 recorded from the other direction: a court's *own* classification is a
+claim, and this one was doing a syntactic test where the type system was available. It was found
+because the crate got a declaration right and the court called it wrong — which is the only direction
+in which a false mismatch is visible.

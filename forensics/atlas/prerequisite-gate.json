@@ -10,7 +10,6 @@
       "evp_pkey_ctx_set_params_strict -> phase 7 (The setter half of the same pair, and it has the same three-line shape with `evp_keymgmt_set_params` in place of the getter. Recorded separately because the gate owes *names* rather than call graphs: a reader of the blocking census should see both rather than one and an implication.)",
       "evp_pkey_ctx_use_cached_data -> phase 7 (Internal to `crypto/evp/pmeth_lib.c`, and the *replay* half of the cached-data trio whose store and free halves 7.4c-i landed. Its body tests `dist_id_set` and then hands the distinguishing identifier to `evp_pkey_ctx_ctrl_str_int` or `evp_pkey_ctx_ctrl_int` -- the ctrl machinery, which is 7.4c-ii's. So it is owed to the second half of this same subphase, and its three callers (`signature.c`, `exchange.c`, `pmeth_gn.c`) are the operation inits that land with the ctrl path beside it.)",
       "evp_pkey_decrypt_alloc -> phase 7 (Internal to `crypto/evp/asymcipher.c` and declared in `include/crypto/evp.h`, so the gate owes it the moment the crate has a module for that unit -- which 7.4b-i's method half gave it. Its body is the two-pass auto-allocating decrypt: call `EVP_PKEY_decrypt(ctx, NULL, outlenp, in, inlen)` to learn the length, `OPENSSL_malloc` it, call again, then refuse if the second call failed, the length came back zero, or a non-zero `expected_outlen` disagrees. So it is owed to the **operation half of the same subphase** (`owner_phase` 7, the `evp_cleanup_int` precedent) because `EVP_PKEY_decrypt` is `asymcipher.c`'s own and lands directly beside it. Its two callers are `crypto/pkcs7/pk7_doit.c` and `crypto/cms/cms_env.c`, both Phase 12's, which is why nothing reaches it yet.)",
-      "evp_pkey_free_legacy -> phase 8 (One of the seven functions `include/crypto/evp.h` declares for `crypto/evp/p_lib.c`, and so one the gate owes the moment the crate has a module for that unit (D163, the `a2d_ASN1_OBJECT` class in the other direction). Its body needs `x->ameth`, an `EVP_PKEY_ASN1_METHOD *`, and the branch that finds one when the key has only a legacy cache entry calls `EVP_PKEY_asn1_find` -- the registry `crypto/asn1/ameth_lib.c` builds from `standard_methods[]`, whose twelve objects are the algorithm strata's and are Phase 8's contents. There is also an `ameth->pkey_free` call through the found method, so the free path is not merely gated on the table's existence: it *is* the table.)",
       "evp_pkey_get0_DH_int -> phase 8 (The third of the seven, and the shortest: it is `pkey->type == EVP_PKEY_DH ? evp_pkey_get_legacy(pkey) : NULL`. It is therefore blocked by nothing of its own and inherited entirely from its sibling above -- the DH *type* it compares against is real now, the downgrade it calls is not. Recorded separately rather than folded into `evp_pkey_get_legacy` because the gate owes names, not call graphs, and a reader of the blocking census should see all four rather than three and an implication.)",
       "evp_pkey_get_legacy -> phase 8 (The second of the seven. It downgrades a provider key to a legacy one, so its whole body past the fast paths is `evp_pkey_copy_downgraded`, and the cache it then holds is keyed on `ameth` being non-NULL (`EVP_PKEY_asn1_find` for the type). Both halves are Phase 8's, which is why this name waits on the same registry as its sibling rather than on anything in this stratum.)",
       "evp_rand_can_seed -> phase 9 (Internal: declared in `include/crypto/evp.h`, which is not installed, and its only caller in the whole authority is `crypto/rand/rand_lib.c`, already recorded in this file's `units` section as Phase 9's. 7.3f transcribes `evp_rand.c` and deliberately stops at the dispatch walk that fills the `get_seed` and `clear_seed` *fields*: the fields are this file's, the three callers are the stratum that needs the DRBG plumbing. Recording the name here is what makes that boundary visible to the gate rather than only to a reader.)",
@@ -23,8 +22,8 @@
     ],
     "census": {
       "covered_by_a_divergence": 56,
-      "language_surface_not_modelled_by_name": 2701,
-      "planned_prerequisites": 20
+      "language_surface_not_modelled_by_name": 2714,
+      "planned_prerequisites": 19
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
@@ -147,7 +146,7 @@
         "crypto/evp/cmeth_lib.c": 6,
         "crypto/evp/evp_enc.c": 57,
         "crypto/evp/evp_fetch.c": 19,
-        "crypto/evp/evp_lib.c": 54,
+        "crypto/evp/evp_lib.c": 52,
         "crypto/evp/evp_rand.c": 34,
         "crypto/evp/exchange.c": 24,
         "crypto/evp/kdf_lib.c": 15,
@@ -156,9 +155,10 @@
         "crypto/evp/keymgmt_meth.c": 14,
         "crypto/evp/mac_lib.c": 14,
         "crypto/evp/names.c": 10,
-        "crypto/evp/p_lib.c": 149,
+        "crypto/evp/p_lib.c": 147,
         "crypto/evp/pmeth_check.c": 7,
-        "crypto/evp/pmeth_lib.c": 146,
+        "crypto/evp/pmeth_gn.c": 18,
+        "crypto/evp/pmeth_lib.c": 145,
         "crypto/evp/signature.c": 42,
         "crypto/evp/skeymgmt_meth.c": 12,
         "crypto/ex_data.c": 21,
@@ -201,7 +201,6 @@
         "evp_pkey_ctx_set_params_strict": 1,
         "evp_pkey_ctx_use_cached_data": 2,
         "evp_pkey_decrypt_alloc": 1,
-        "evp_pkey_free_legacy": 1,
         "evp_pkey_get0_DH_int": 1,
         "evp_pkey_get_legacy": 1,
         "evp_rand_can_seed": 1,
@@ -308,7 +307,6 @@
         "evp_pkey_ctx_use_cached_data",
         "evp_pkey_ctx_use_cached_data",
         "evp_pkey_decrypt_alloc",
-        "evp_pkey_free_legacy",
         "evp_pkey_get0_DH_int",
         "evp_pkey_get_legacy",
         "evp_rand_can_seed",
@@ -322,9 +320,9 @@
       ]
     },
     "checked": {
-      "authority_units": 131,
-      "crate_modules": 175,
-      "deferrals_recorded": 18,
+      "authority_units": 132,
+      "crate_modules": 176,
+      "deferrals_recorded": 17,
       "divergence_names_covered": 32,
       "divergence_rows": 5,
       "names_referenced_and_not_built": 17
@@ -448,7 +446,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "1ccc8feb0d663cdefbc08bf4964ef3f3be53a9d23d0ac12c68b2263df00645ea",
+  "body_hash": "743492243d766fa42c70375132ca430cf494ccdd5981afe5c5f59183c981ffcb",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -469,7 +467,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "1e1bbf056af7718e3fd130f181d195c8d70a11aa2bccdaaf575bcf3237846486"
+      "sha256": "f7cce03d77d1a66939e93c1e417f445261a10df137a36f295e8e27e9bfe47230"
     },
     {
       "name": "symbol-ownership",
@@ -479,17 +477,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "bf6042120e43502f32718b2fea96fe3b2ccc5cd194deafaecc4937319251e654"
+      "sha256": "12611996017762d3b498d370c7f84bf4b57fd3c2d46b8b6bd56bab65432f17a5"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "79d3b70108c73f812aca815d2599a521239cf39352cafb1ebfc0b841b1a88ebd"
+      "sha256": "ba0cc5a9b74b10e8646f6bc20196a1692ea702c25b516585c639ac0e9b972194"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "5036a88268615840770feb942df6122bfe8553d9ce77ff180aec1b3f9d32fed7"
+      "sha256": "29056c651a17e0cc2cc0ec6295986ffab54757fc585f50ec94fd8b0eb4f5bb34"
     },
     {
       "name": "crate-source-tree",

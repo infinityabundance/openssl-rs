@@ -141,6 +141,30 @@
       "reason": "Giving `crypto/evp/pmeth_lib.c` a module (7.4c-i, the `EVP_PKEY_CTX` object) made four authority-internal names visible to the prerequisite gate for the first time -- the same *visibility* movement D159, D160, D161/D162 and D164 each recorded, and not new prerequisites. `evp_pkey_ctx_get_params_strict`, `evp_pkey_ctx_set_params_strict` and `evp_pkey_ctx_use_cached_data` are that unit's own, declared in `include/crypto/evp.h`, and are owed to 7.4c-ii inside this stratum; `evp_app_cleanup_int` is its too and is called by `names.c`'s `EVP_cleanup_int`, so a second transcribed unit names it as well, and it is Phase 8's because its body frees the application-supplied `EVP_PKEY_METHOD` stack whose lookup searches the two `standard_methods[]` tables (D163, D165). All four are rows in `forensics/prerequisites.json` naming the stratum that will build them. This row is the comparison against the state D164's rows were written against, which already counted the four names from `names.c` and `evp_rand.c` but not `pmeth_lib.c`'s three. The movement is `before` -> 18 on each row, and the three rows differ only in which ref supplies `before`, because the guard matches `before` and `after` exactly while the project compares against three: the previous commit on this branch, the merge base with `main`, and the state D164's rows were written against. A baseline further back already counts fewer of the names, so the same *visibility* event appears as a smaller or larger rise depending on where it is measured from -- it is one event, recorded once per comparison. The same class as D132's 11 -> 12 and D134's 12 -> 15: an invariant that cannot tell a legitimate change from a hidden omission.",
       "authority_artifact": "forensics/prerequisites.json",
       "recorded_by": "docs/DECISIONS.md D164 and D166"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 8,
+      "after": 17,
+      "reason": "The blocking-dependency census moves **down**, from 18 to 17, because `evp_pkey_free_legacy`'s deferral row was retired rather than discharged: 7.4c-ii's `pmeth_gn.c` (D173) needs the name, the crate now defines it, and the gate's `stale_deferral` rule refuses a row whose symbol the crate defines -- so the row had to go. That name was one of the four whose *visibility* D166 recorded when `crypto/evp/pmeth_lib.c` got a module, which is why the movement is visible against these three baselines at all. The Phase-8 record of the function's missing half -- every statement its body has is `ameth` or `ENGINE` work -- now lives in the site's doc and in `docs/DECISIONS.md` D173 rather than in the ledger, which is the `evp_pkey_name2type` precedent (D163): a partially defined name cannot carry a deferral. The rows for `-> 18` are kept because they record the step before this one. Each baseline is a different ref and the guard matches `before` and `after` exactly, so each is recorded separately.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D166 and D173"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 14,
+      "after": 17,
+      "reason": "The blocking-dependency census moves **down**, from 18 to 17, because `evp_pkey_free_legacy`'s deferral row was retired rather than discharged: 7.4c-ii's `pmeth_gn.c` (D173) needs the name, the crate now defines it, and the gate's `stale_deferral` rule refuses a row whose symbol the crate defines -- so the row had to go. That name was one of the four whose *visibility* D166 recorded when `crypto/evp/pmeth_lib.c` got a module, which is why the movement is visible against these three baselines at all. The Phase-8 record of the function's missing half -- every statement its body has is `ameth` or `ENGINE` work -- now lives in the site's doc and in `docs/DECISIONS.md` D173 rather than in the ledger, which is the `evp_pkey_name2type` precedent (D163): a partially defined name cannot carry a deferral. The rows for `-> 18` are kept because they record the step before this one. Each baseline is a different ref and the guard matches `before` and `after` exactly, so each is recorded separately.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D166 and D173"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 15,
+      "after": 17,
+      "reason": "The blocking-dependency census moves **down**, from 18 to 17, because `evp_pkey_free_legacy`'s deferral row was retired rather than discharged: 7.4c-ii's `pmeth_gn.c` (D173) needs the name, the crate now defines it, and the gate's `stale_deferral` rule refuses a row whose symbol the crate defines -- so the row had to go. That name was one of the four whose *visibility* D166 recorded when `crypto/evp/pmeth_lib.c` got a module, which is why the movement is visible against these three baselines at all. The Phase-8 record of the function's missing half -- every statement its body has is `ameth` or `ENGINE` work -- now lives in the site's doc and in `docs/DECISIONS.md` D173 rather than in the ledger, which is the `evp_pkey_name2type` precedent (D163): a partially defined name cannot carry a deferral. The rows for `-> 18` are kept because they record the step before this one. Each baseline is a different ref and the guard matches `before` and `after` exactly, so each is recorded separately.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D166 and D173"
     }
   ]
 }
