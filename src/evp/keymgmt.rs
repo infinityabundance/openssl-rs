@@ -993,11 +993,15 @@ pub(crate) unsafe fn evp_keymgmt_gen_set_params(
 /// generation.
 ///
 /// # Safety
-/// `keymgmt` must be a live `EvpKeyMgmt`.
+/// `keymgmt` must be NULL or live. A NULL method answers NULL here rather than faulting, which
+/// the authority does: `docs/SECURITY_DIVERGENCE_POLICY.md` D-KEYMGMT-PARAMS-NULL-1.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_KEYMGMT_gen_settable_params(
     keymgmt: *const EvpKeyMgmt,
 ) -> *const OsslParam {
+    if keymgmt.is_null() {
+        return ptr::null();
+    }
     // SAFETY: `keymgmt` is live per the contract.
     let (f, prov) = unsafe { ((*keymgmt).gen_settable_params, (*keymgmt).prov) };
     // SAFETY: `prov` is live, so its context is readable.
@@ -1033,11 +1037,15 @@ pub(crate) unsafe fn evp_keymgmt_gen_get_params(
 /// `const OSSL_PARAM *EVP_KEYMGMT_gen_gettable_params(const EVP_KEYMGMT *keymgmt)`.
 ///
 /// # Safety
-/// `keymgmt` must be a live `EvpKeyMgmt`.
+/// `keymgmt` must be NULL or live. A NULL method answers NULL here rather than faulting, which
+/// the authority does: `docs/SECURITY_DIVERGENCE_POLICY.md` D-KEYMGMT-PARAMS-NULL-1.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_KEYMGMT_gen_gettable_params(
     keymgmt: *const EvpKeyMgmt,
 ) -> *const OsslParam {
+    if keymgmt.is_null() {
+        return ptr::null();
+    }
     // SAFETY: `keymgmt` is live per the contract.
     let (f, prov) = unsafe { ((*keymgmt).gen_gettable_params, (*keymgmt).prov) };
     // SAFETY: `prov` is live, so its context is readable.
@@ -1202,11 +1210,15 @@ pub(crate) unsafe fn evp_keymgmt_get_params(
 /// `const OSSL_PARAM *EVP_KEYMGMT_gettable_params(const EVP_KEYMGMT *keymgmt)`.
 ///
 /// # Safety
-/// `keymgmt` must be a live `EvpKeyMgmt`.
+/// `keymgmt` must be NULL or live. A NULL method answers NULL here rather than faulting, which
+/// the authority does: `docs/SECURITY_DIVERGENCE_POLICY.md` D-KEYMGMT-PARAMS-NULL-1.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_KEYMGMT_gettable_params(
     keymgmt: *const EvpKeyMgmt,
 ) -> *const OsslParam {
+    if keymgmt.is_null() {
+        return ptr::null();
+    }
     // SAFETY: `keymgmt` is live per the contract.
     let (f, prov) = unsafe { ((*keymgmt).gettable_params, (*keymgmt).prov) };
     // SAFETY: `prov` is live, so its context is readable.
@@ -1244,11 +1256,15 @@ pub(crate) unsafe fn evp_keymgmt_set_params(
 /// `const OSSL_PARAM *EVP_KEYMGMT_settable_params(const EVP_KEYMGMT *keymgmt)`.
 ///
 /// # Safety
-/// `keymgmt` must be a live `EvpKeyMgmt`.
+/// `keymgmt` must be NULL or live. A NULL method answers NULL here rather than faulting, which
+/// the authority does: `docs/SECURITY_DIVERGENCE_POLICY.md` D-KEYMGMT-PARAMS-NULL-1.
 #[no_mangle]
 pub unsafe extern "C" fn EVP_KEYMGMT_settable_params(
     keymgmt: *const EvpKeyMgmt,
 ) -> *const OsslParam {
+    if keymgmt.is_null() {
+        return ptr::null();
+    }
     // SAFETY: `keymgmt` is live per the contract.
     let (f, prov) = unsafe { ((*keymgmt).settable_params, (*keymgmt).prov) };
     // SAFETY: `prov` is live, so its context is readable.
@@ -1548,6 +1564,22 @@ mod tests {
              * method, because only `keymgmt_from_algorithm` creates an `EVP_KEYMGMT` and it always
              * sets a provider. `RT-EVP-KEYMGMT` measures this against the authority. */
             assert_eq!(EVP_KEYMGMT_is_a(p, c"absent-from-the-namemap".as_ptr()), 1);
+        }
+    }
+
+    /// The four descriptor accessors answer **NULL** for a NULL method rather than dereferencing
+    /// it. All four fault the authority on that input, which no court can compare — a fault is not
+    /// an observation — so this is where the crate's own answer is pinned, and
+    /// `docs/SECURITY_DIVERGENCE_POLICY.md` D-KEYMGMT-PARAMS-NULL-1 is the record.
+    #[test]
+    fn the_descriptor_accessors_answer_null_for_a_null_method() {
+        // SAFETY: NULL is the one input these four accept without a live object, per their
+        // contract, and none of them writes anything.
+        unsafe {
+            assert!(EVP_KEYMGMT_gettable_params(ptr::null()).is_null());
+            assert!(EVP_KEYMGMT_settable_params(ptr::null()).is_null());
+            assert!(EVP_KEYMGMT_gen_settable_params(ptr::null()).is_null());
+            assert!(EVP_KEYMGMT_gen_gettable_params(ptr::null()).is_null());
         }
     }
 

@@ -942,3 +942,27 @@ authority and the candidate for this function, and there was never supposed to b
 - **Claim removed:** `EVP_MAC_CTX_dup` on a method with no `dupctx` is not claimed compatible. It is
   claimed *safe*. On a method that publishes one — `RT-EVP-MAC`'s `court-mac5` — the call is
   compared normally, including the reference count it leaves behind.
+
+### D-KEYMGMT-PARAMS-NULL-1 — the four `EVP_KEYMGMT` descriptor accessors dereference a NULL method
+
+- **Obligation:** `EVP_KEYMGMT_gettable_params(NULL)`, `EVP_KEYMGMT_settable_params(NULL)`,
+  `EVP_KEYMGMT_gen_settable_params(NULL)`, `EVP_KEYMGMT_gen_gettable_params(NULL)`.
+- **Authority:** **measured**. Each is
+  `void *provctx = ossl_provider_ctx(EVP_KEYMGMT_get0_provider(keymgmt)); if (keymgmt->X != NULL)
+  return keymgmt->X(provctx); return NULL;` — the method pointer is dereferenced on the *first*
+  line, before the callback is tested, so a NULL method is a SIGSEGV (exit 139) and not a NULL
+  answer. Measured once with a standalone probe; `RT-EVP-KEYMGMT` prints
+  `params.*.null_method=NOT_MEASURED_AUTHORITY_FAULTS` at all four sites rather than comparing a
+  fault.
+- **Crate:** answers **NULL**, which is the same answer each of the four gives for a live method
+  whose callback is absent. The divergence is therefore exactly one input wide — a method that does
+  not exist — and it is invisible to every caller that has a method, which is every caller the
+  library's own code has.
+- **Reason:** `D-NAMEMAP-DOALL-1`'s and `D-MD-NULL-CALLBACK-1`'s. The method pointer is the
+  caller's input, and a caller that passes NULL has made a mistake; an input mistake is not a
+  reason to take the caller's process down. It is recorded separately from
+  the four accessors' sibling `evp_keymgmt_has`, which carries the same guard and cites the same
+  class in its own doc, because the two are reached through different entry points.
+- **Claim removed:** the four accessors with a NULL method are not claimed compatible. They are
+  claimed *safe*. On a live method all four are compared normally, including which of the two
+  provider tables came back.

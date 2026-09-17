@@ -109,6 +109,23 @@
       },
       {
         "authority_exit_code": 0,
+        "authority_observations": 73,
+        "candidate_exit_code": 0,
+        "candidate_observations": 73,
+        "candidate_stderr_tail": [],
+        "court": "RT-EVP-KEYMGMT",
+        "crashed": false,
+        "probe": "courts/phase7/rt_evp_keymgmt_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase7/probes/rt_evp_keymgmt_probe.authority",
+          "candidate": "artifacts/phase7/probes/rt_evp_keymgmt_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
         "authority_observations": 25,
         "candidate_exit_code": 0,
         "candidate_observations": 25,
@@ -127,8 +144,8 @@
     ],
     "summary": {
       "fail": 0,
-      "pass": 7,
-      "total": 7
+      "pass": 8,
+      "total": 8
     }
   },
   "generator": "forensics/tools/phase7_courts.py",
@@ -167,6 +184,11 @@
       "name": "probe",
       "path": "courts/phase7/rt_evp_skey_probe.c",
       "sha256": "9c8fb9c3b0f024185aec4558d46a72f450be60a3420687d0810735f71320ab43"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase7/rt_evp_keymgmt_probe.c",
+      "sha256": "3f0189cd69c236cc324a9f55697b8cd2cfbf55d4549a7eb64e64847b79e72580"
     },
     {
       "name": "probe",
