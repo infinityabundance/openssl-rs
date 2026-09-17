@@ -33,7 +33,7 @@ declared owner; this is that assignment.
 | 5 | BN + ASN.1 + DER/PEM | `complete` | 561 | 565 | 474 | 91 | 0 |
 | 6 | OSSL_LIB_CTX + provider core | `complete` | 137 | 161 | 161 | 0 | 0 |
 | 7 | EVP framework | `complete` | 924 | 950 | 706 | 244 | 0 |
-| 8 | Native cryptographic primitives | `not-started` | 759 | — | — | — | — |
+| 8 | Native cryptographic primitives | `in-progress` | 759 | 786 | 0 | 16 | 770 |
 | 9 | RAND / DRBG + entropy | `not-started` | 25 | — | — | — | — |
 | 10 | Key formats + PKCS + STORE | `not-started` | 272 | — | — | — | — |
 | 11 | X.509 + verification | `not-started` | 1455 | — | — | — | — |
@@ -252,6 +252,27 @@ Courts: `all pass`, 15 court(s), **2230** authority observation(s) over 15 trans
 | RT-CMAC | `pass` | 26 |
 | RT-HPKE | `pass` | 65 |
 
+## Phase 8 — Native cryptographic primitives
+
+* state: `in-progress`
+* blocking: 770 open obligation(s) of this stratum recorded in forensics/phase8-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase
+* seal: none written yet (`unnamed`)
+* ledger: `forensics/phase8-obligations.json`
+* atlas-owned: 759
+* owned working set: 786
+* implemented: 0
+* deferred to a later stratum with a stated reason: 16
+* **open in this stratum: 770**
+
+Deferred out, by receiving stratum:
+
+* to phase 9: 16 symbol(s)
+  `DES_random_key`, `DH_KDF_X9_42`, `DH_generate_key`, `DH_generate_parameters`, `DH_generate_parameters_ex`, `DSA_generate_key`, `DSA_generate_parameters_ex`, `ECDH_KDF_X9_62`, `EC_KEY_generate_key`, `RSA_X931_derive_ex`, `RSA_X931_generate_key_ex`, `RSA_blinding_on`, `RSA_generate_key`, `RSA_generate_key_ex`, `RSA_generate_multi_prime_key`, `RSA_setup_blinding`
+
+Hand-offs received and discharged:
+
+* from phase 7: 27 symbol(s) — `EVP_PKEY_assign`, `EVP_PKEY_decrypt_old`, `EVP_PKEY_encrypt_old`, `EVP_PKEY_get0_DH`, `EVP_PKEY_get0_DSA`, `EVP_PKEY_get0_EC_KEY`, `EVP_PKEY_get0_RSA`, `EVP_PKEY_get0_hmac`, `EVP_PKEY_get0_poly1305`, `EVP_PKEY_get0_siphash`, `EVP_PKEY_get1_DH`, `EVP_PKEY_get1_DSA`, `EVP_PKEY_get1_EC_KEY`, `EVP_PKEY_get1_RSA`, `EVP_PKEY_get_ec_point_conv_form`, `EVP_PKEY_get_field_type`, `EVP_PKEY_meth_find`, `EVP_PKEY_meth_get0`, `EVP_PKEY_meth_get_count`, `EVP_PKEY_set1_DH`, `EVP_PKEY_set1_DSA`, `EVP_PKEY_set1_EC_KEY`, `EVP_PKEY_set1_RSA`, `EVP_PKEY_type`, `d2i_KeyParams`, `d2i_KeyParams_bio`, `d2i_PublicKey`
+
 ## Atlas/ledger reconciliation
 
 From `forensics/atlas/ownership-audit.json`: every export the atlas
@@ -265,5 +286,6 @@ row for another stratum's export is a hand-off that stratum recorded.
 | 5 | 561 | 565 | 0 | 4 |
 | 6 | 137 | 161 | 0 | 24 |
 | 7 | 924 | 950 | 0 | 26 |
+| 8 | 759 | 786 | 0 | 27 |
 
 Problems recorded by the audit: 0.
