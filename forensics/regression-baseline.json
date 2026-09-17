@@ -197,7 +197,7 @@
       "verdict": "pass"
     },
     "RT-EVP-PKEY": {
-      "observations": 498,
+      "observations": 502,
       "verdict": "pass"
     },
     "RT-EVP-RAND": {
@@ -298,10 +298,10 @@
     "phase4": 23,
     "phase5": 91,
     "phase6": 0,
-    "phase7": 164
+    "phase7": 244
   },
   "implemented": {
-    "libcrypto": 1840,
+    "libcrypto": 1841,
     "libssl": 0
   },
   "open_obligations": {
@@ -309,7 +309,7 @@
     "phase4": 0,
     "phase5": 0,
     "phase6": 0,
-    "phase7": 81
+    "phase7": 0
   },
   "owned_obligations": {
     "phase3": 294,
@@ -338,15 +338,15 @@
     "4": "complete",
     "5": "complete",
     "6": "complete",
-    "7": "in-progress",
+    "7": "complete",
     "8": "not-started",
     "9": "not-started"
   },
   "prerequisites": {
-    "blocking_dependencies": 26,
+    "blocking_dependencies": 25,
     "divergence_names_covered": 32,
     "findings": 0,
-    "language_census": 2673,
+    "language_census": 2672,
     "sealed_census": 57
   }
 }

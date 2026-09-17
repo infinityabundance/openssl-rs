@@ -496,15 +496,24 @@ PHASE7_MODULES = [
     "src/evp/kdf.rs",
     "src/evp/rand.rs",
     "src/evp/skeymgmt.rs",
-    "src/evp/legacy_cipher.rs",
-    "src/evp/legacy_digest.rs",
+    # **`src/evp/legacy_cipher.rs` and `src/evp/legacy_digest.rs` were listed here and never came
+    # into being**, which made `absent` non-empty and held this stratum `in-progress`. They were the
+    # destinations 7.3g's ledger labels the legacy `EVP_CIPHER`/`EVP_MD` statics with, and 7.3g handed
+    # **every** one of them to Phase 13 with its primitive unit named, so no file was written and
+    # none should be: creating empty modules to satisfy an evidence list is the failure mode
+    # `docs/NON_CLAIMS.md` is about. The label stays in `phase7_obligations.py`'s `MODULE_PREFIXES`,
+    # where it is documented as a label rather than a claim about a file (D193's `p_legacy.rs`
+    # reading, and D194 for the `PKCS5_` half of the `pem_bridge.rs` label); the evidence list is
+    # what had the wrong shape, and D196 removes the two entries.
     "src/evp/legacy_evp.rs",
     # 7.4 -- the EVP_PKEY layer and the ASN.1 glue declared in `evp.h`.
     "src/evp/pkey.rs",
     "src/evp/pkey_ctx.rs",
     "src/evp/pkey_asn1.rs",
     "src/evp/pbe.rs",
-    "src/evp/params_translate.rs",
+    # `ctrl_params_translate.c`'s work is in `pkey_ctx.rs`, which is where the ctrl plane landed
+    # (D188); `src/evp/params_translate.rs` was listed here as the expected module for that unit and
+    # was never created. D196 removes it, for the reason the two above are removed.
     "src/evp/signature.rs",
     "src/evp/asymcipher.rs",
     "src/evp/kem.rs",
@@ -520,6 +529,10 @@ PHASE7_MODULES = [
     "src/mac/hmac.rs",
     "src/mac/cmac.rs",
     "src/hpke/mod.rs",
+    # 7.7 -- the seal. A stratum may only report `complete` with its seal in place, which is the rule
+    # phases 3, 4, 5 and 6 already follow and which is the reason this line is added in the commit
+    # that writes the document rather than after it.
+    "docs/PHASE-7-EVP-SEAL.md",
     "forensics/tools/phase7_courts.py",
     "forensics/tools/phase7_obligations.py",
     "courts/phase7/rt_fetch_probe.c",

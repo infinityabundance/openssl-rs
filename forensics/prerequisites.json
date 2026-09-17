@@ -64,10 +64,10 @@
       },
       {
         "symbol": "evp_cleanup_int",
-        "owner_phase": 7,
+        "owner_phase": 8,
         "authority_unit": "crypto/evp/names.c",
-        "reason": "Internal, called only by `OPENSSL_cleanup`, and **owed to 7.4 inside this stratum**. Its body is seven calls: four `OBJ_NAME_cleanup`, then `EVP_PBE_cleanup` -- which is `crypto/evp/evp_pbe.c`'s, a 7.4 unit that does not exist yet -- then `OBJ_sigid_free`, then `evp_app_cleanup_int`. So half of it cannot be written, and the half that could would have to omit the other half. `owner_phase` is 7 rather than a later stratum because the dependency is a later *subphase* of the same stratum, which is why it appears in the blocking census rather than in a hand-off edge.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4 (which names `evp_pbe.c`); src/evp/legacy_evp.rs module doc, section \"What is not here\""
+        "reason": "Internal, called only by `OPENSSL_cleanup`, and **owed to Phase 8 through `evp_app_cleanup_int`**. Its body is seven calls -- four `OBJ_NAME_cleanup`, then `EVP_PBE_cleanup`, then `OBJ_sigid_free`, then `evp_app_cleanup_int` -- and the first six are landed: `EVP_PBE_cleanup` is `crypto/evp/evp_pbe.c`'s and landed with 7.4c's PBE remainder (D192), which is the dependency this row was written against. What is left is the seventh, and `evp_app_cleanup_int` (`crypto/evp/pmeth_lib.c`) is Phase 8's because its whole body pops the **application-supplied `EVP_PKEY_METHOD` registry** against `EVP_PKEY_meth_free`, and `EVP_PKEY_meth_find` searches `standard_methods[]` (D165, D193). So the row is retargeted rather than discharged: the name cannot be written before Phase 8, and leaving it pinned to this stratum would have made a Phase-7 gap out of a Phase-8 dependency on the day this stratum sealed.",
+        "evidence": "docs/DECISIONS.md D196; docs/DECISIONS.md D165 and D193; src/evp/legacy_evp.rs module doc, section \"What is not here\""
       },
       {
         "symbol": "evp_pkey_get_legacy",
@@ -86,12 +86,6 @@
         "owner_phase": 8,
         "reason": "The fourth of the seven and the one that makes the other three wait. Its body exports the provider keydata through `evp_keymgmt_export` -- this stratum's -- and then imports it with `(*dest)->ameth->import_from`, synchronising `(*dest)->ameth->dirty_cnt`. Two fields of an `EVP_PKEY_ASN1_METHOD` and one of that struct's function pointers are read directly, so the function cannot be written before an ameth object exists, and the ameth objects are the twelve `crypto/asn1/ameth_lib.c` builds from Phase 8's `standard_methods[]`. It also needs `EVP_PKEY_CTX_new_from_pkey`, which is `pmeth_lib.c`'s and lands in 7.4c *inside* this stratum -- so the order is 7.4c, then Phase 8, then this row.",
         "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.4a, 7.4c and 7.4l; docs/DECISIONS.md D163; src/evp/pkey.rs module doc, section \"What is not here\""
-      },
-      {
-        "symbol": "evp_pkey_decrypt_alloc",
-        "owner_phase": 7,
-        "reason": "Internal to `crypto/evp/asymcipher.c` and declared in `include/crypto/evp.h`, so the gate owes it the moment the crate has a module for that unit -- which 7.4b-i's method half gave it. Its body is the two-pass auto-allocating decrypt: call `EVP_PKEY_decrypt(ctx, NULL, outlenp, in, inlen)` to learn the length, `OPENSSL_malloc` it, call again, then refuse if the second call failed, the length came back zero, or a non-zero `expected_outlen` disagrees. So it is owed to the **operation half of the same subphase** (`owner_phase` 7, the `evp_cleanup_int` precedent) because `EVP_PKEY_decrypt` is `asymcipher.c`'s own and lands directly beside it. Its two callers are `crypto/pkcs7/pk7_doit.c` and `crypto/cms/cms_env.c`, both Phase 12's, which is why nothing reaches it yet.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4b (the operation half of the five classes); src/evp/asymcipher.rs module doc, section on what the file's two halves are"
       },
       {
         "symbol": "evp_app_cleanup_int",
@@ -138,8 +132,8 @@
       {
         "symbol": "d2i_X509_ALGOR",
         "owner_phase": 11,
-        "reason": "`EVP_PKEY_CTX_get_algor` (`crypto/evp/evp_lib.c:1455`) decodes the provider's `OSSL_SIGNATURE_PARAM_ALGORITHM_ID` answer with `d2i_X509_ALGOR`, declared in `x509.h` and Phase 11's. The record is unchanged from 7.4e: the accessor is withheld, and its probe line names this coordinate.",
-        "evidence": "docs/DECISIONS.md D193 and D190; docs/PHASE-7-SUBPHASES.md row 7.4e"
+        "reason": "`EVP_PKEY_CTX_get_algor` (`crypto/evp/evp_lib.c:1455`) decodes the provider's `OSSL_SIGNATURE_PARAM_ALGORITHM_ID` answer with `d2i_X509_ALGOR`, declared in `x509.h` and Phase 11's. **`EVP_CIPHER_CTX_get_algor` (`:1337`) is the same call in the same shape** and is withheld on it too, so this one row covers both accessors and the Phase-7 obligation ledger's two deferral rows name the same coordinate. The record is otherwise unchanged from 7.4e: the accessor is withheld, and its probe line names this coordinate.",
+        "evidence": "docs/DECISIONS.md D196; docs/DECISIONS.md D193 and D190; docs/PHASE-7-SUBPHASES.md rows 7.3c and 7.4e"
       },
       {
         "symbol": "RAND_priv_bytes_ex",
@@ -248,6 +242,472 @@
     ],
     "units": [
       {
+        "unit": "crypto/evp/e_aes.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 38 export(s) are legacy method statics whose callbacks call `crypto/aes/`'s own primitives (`AES_encrypt`/`AES_set_encrypt_key`), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
+      },
+      {
+        "unit": "crypto/evp/e_aes_cbc_hmac_sha1.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 2 export(s) are legacy method statics whose callbacks call `crypto/aes/` and `crypto/hmac/`'s own primitives (`AES_cbc_encrypt` and `HMAC_Init_ex`), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
+      },
+      {
+        "unit": "crypto/evp/e_aes_cbc_hmac_sha256.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 2 export(s) are legacy method statics whose callbacks call `crypto/aes/` and `crypto/hmac/`'s own primitives (the same pair as its SHA-1 sibling), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
+      },
+      {
+        "unit": "crypto/evp/e_aria.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 27 export(s) are legacy method statics whose callbacks call `crypto/aria/`'s own primitives (`ARIA_encrypt`/`ARIA_set_encrypt_key`), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
+      },
+      {
+        "unit": "crypto/evp/e_bf.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 4 export(s) are legacy method statics whose callbacks call `crypto/bf/`'s own primitives (`BF_encrypt`/`BF_set_key`), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
+      },
+      {
+        "unit": "crypto/evp/e_camellia.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 21 export(s) are legacy method statics whose callbacks call `crypto/camellia/`'s own primitives (`Camellia_EncryptBlock`/`Camellia_set_key`), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
+      },
+      {
+        "unit": "crypto/evp/e_cast.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 4 export(s) are legacy method statics whose callbacks call `crypto/cast/`'s own primitives (`CAST_encrypt`/`CAST_set_key`), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
+      },
+      {
+        "unit": "crypto/evp/e_chacha20_poly1305.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 2 export(s) are legacy method statics whose callbacks call `crypto/chacha/` and `crypto/poly1305/`'s own primitives (`ChaCha20_ctr32` and the Poly1305 one-shot), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
+      },
+      {
+        "unit": "crypto/evp/e_des.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 6 export(s) are legacy method statics whose callbacks call `crypto/des/`'s own primitives (`DES_encrypt1`/`DES_set_key_unchecked`), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
+      },
+      {
+        "unit": "crypto/evp/e_des3.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 13 export(s) are legacy method statics whose callbacks call `crypto/des/`'s own primitives (`DES_ede3_cbc_encrypt` and its siblings), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
+      },
+      {
+        "unit": "crypto/evp/e_idea.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 4 export(s) are legacy method statics whose callbacks call `crypto/idea/`'s own primitives (`idea_encrypt`/`idea_set_encrypt_key`), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
+      },
+      {
+        "unit": "crypto/evp/e_rc2.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 6 export(s) are legacy method statics whose callbacks call `crypto/rc2/`'s own primitives (`RC2_encrypt`/`RC2_set_key`), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
+      },
+      {
+        "unit": "crypto/evp/e_rc4.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 2 export(s) are legacy method statics whose callbacks call `crypto/rc4/`'s own primitives (`RC4`/`RC4_set_key`), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
+      },
+      {
+        "unit": "crypto/evp/e_rc4_hmac_md5.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 1 export(s) are legacy method statics whose callbacks call `crypto/rc4/` and `crypto/md5/`'s own primitives (`RC4` composed with `MD5_Update`), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
+      },
+      {
+        "unit": "crypto/evp/e_seed.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 4 export(s) are legacy method statics whose callbacks call `crypto/seed/`'s own primitives (`SEED_encrypt`/`SEED_set_key`), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
+      },
+      {
+        "unit": "crypto/evp/e_sm4.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 5 export(s) are legacy method statics whose callbacks call `crypto/sm4/`'s own primitives (`SM4_encrypt`/`SM4_set_key`), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
+      },
+      {
+        "unit": "crypto/evp/e_xcbc_d.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 1 export(s) are legacy method statics whose callbacks call `crypto/aes/`'s own primitives (the AES-CBC primitive under the XCBC-MAC), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
+      },
+      {
+        "unit": "crypto/evp/legacy_blake2.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 2 export(s) are legacy method statics whose callbacks call `crypto/blake2/`'s own primitives (`ossl_blake2b_init`/`ossl_blake2s_init`), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
+      },
+      {
+        "unit": "crypto/evp/legacy_md4.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 1 export(s) are legacy method statics whose callbacks call `crypto/md4/`'s own primitives (`MD4_Init`/`MD4_Update`/`MD4_Final`), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
+      },
+      {
+        "unit": "crypto/evp/legacy_md5.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 1 export(s) are legacy method statics whose callbacks call `crypto/md5/`'s own primitives (`MD5_Init`/`MD5_Update`/`MD5_Final`), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
+      },
+      {
+        "unit": "crypto/evp/legacy_md5_sha1.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 1 export(s) are legacy method statics whose callbacks call `crypto/md5/` and `crypto/sha/`'s own primitives (the MD5-then-SHA1 composition), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
+      },
+      {
+        "unit": "crypto/evp/legacy_mdc2.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 1 export(s) are legacy method statics whose callbacks call `crypto/mdc2/` over `crypto/des/`'s own primitives (`MDC2_Init`/`MDC2_Update` over the DES block), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
+      },
+      {
+        "unit": "crypto/evp/legacy_ripemd.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 1 export(s) are legacy method statics whose callbacks call `crypto/ripemd/`'s own primitives (`RIPEMD160_Init`/`_Update`/`_Final`), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
+      },
+      {
+        "unit": "crypto/evp/legacy_sha.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 13 export(s) are legacy method statics whose callbacks call `crypto/sha/`'s own primitives (`SHA1_Init` through the SHA-3 and SHAKE one-shots, one table), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
+      },
+      {
+        "unit": "crypto/evp/legacy_wp.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Row 7.3's file list and row 7.3g name it, and this stratum's ledger carries it: its 1 export(s) are legacy method statics whose callbacks call `crypto/whirlpool/`'s own primitives (`WHIRLPOOL_Init`/`_Update`/`_Final`), which is why 7.3g's table hands every one of them to Phase 13 with the primitive unit named. `transcription-edges.json` attributes the crate module that holds the `EVP_*` label to this unit's family and no module transcribes it, so none of the three signals reaches it -- and it cannot be written before Phase 13 either: the statics are `evp.h`'s and the primitives under them are Phase 8's, and 7.3g's row is what turns the second fact into the first stratum's reason.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.3 and 7.3g; forensics/phase7-obligations.json (the deferral rows whose `owning_phase` is 13 and whose reasons name this primitive unit); forensics/tools/phase7_obligations.py LEGACY_HANDOFFS"
+      },
+      {
+        "unit": "crypto/evp/bio_b64.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/bio_enc.rs",
+        "names": [
+          "BIO_f_base64"
+        ],
+        "reason": "Its single export is `BIO_f_base64`, which landed in 7.5 with `bio_b64.c`'s read and write state machine. `internal-symbols.json` records no internal function for the file and nothing in the crate references one of its identifiers, so none of the three mechanical signals sees it -- the module that defines it is dominated by `crypto/evp/bio_enc.c`, which is the same file's larger sibling.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json; forensics/atlas/transcription-edges.json; src/evp/bio_enc.rs"
+      },
+      {
+        "unit": "crypto/evp/bio_md.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/bio_enc.rs",
+        "names": [
+          "BIO_f_md"
+        ],
+        "reason": "`BIO_f_md` is the file's only export and landed with the other three filters in 7.5. The same reading as `bio_b64.c`: no internal symbol of its own, no identifier of the file referenced by name, and the crate module that holds it is attributed to `crypto/evp/bio_enc.c`.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json; forensics/atlas/transcription-edges.json; src/evp/bio_enc.rs"
+      },
+      {
+        "unit": "crypto/evp/e_null.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/cipher.rs",
+        "names": [
+          "EVP_enc_null"
+        ],
+        "reason": "`EVP_enc_null` is the file's whole content and landed in 7.3b, because it is the one legacy cipher with no Phase-13 primitive under it and the one a cipher court can resolve through a real provider. It lives in `src/evp/cipher.rs` -- **not** in `src/evp/legacy_cipher.rs`, which this stratum's ledger labels the `EVP_aes_*` family with and which was never created, because 7.3g handed that whole family to Phase 13 -- so the unit is reached and none of the three mechanical signals says so.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json; forensics/atlas/transcription-edges.json; src/evp/cipher.rs"
+      },
+      {
+        "unit": "crypto/evp/m_null.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/digest.rs",
+        "names": [
+          "EVP_md_null"
+        ],
+        "reason": "`EVP_md_null` is the file's whole content and landed in 7.3d for `EVP_enc_null`'s reason: it is a digest whose callbacks call no primitive, so a digest court can fetch it. It lives in `src/evp/digest.rs`, the module that holds the `EVP_MD_*` labels -- `src/evp/legacy_digest.rs` was labelled for that family and, like its cipher twin, was never created.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json; forensics/atlas/transcription-edges.json; src/evp/digest.rs"
+      },
+      {
+        "unit": "crypto/evp/kdf_meth.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/kdf.rs",
+        "names": [
+          "EVP_KDF_CTX_gettable_params",
+          "EVP_KDF_CTX_settable_params",
+          "EVP_KDF_do_all_provided",
+          "EVP_KDF_fetch",
+          "EVP_KDF_free",
+          "EVP_KDF_gettable_ctx_params",
+          "EVP_KDF_gettable_params",
+          "EVP_KDF_settable_ctx_params",
+          "EVP_KDF_up_ref"
+        ],
+        "reason": "Nine of its ten exports are built in `src/evp/kdf.rs` (7.3e); the tenth, `EVP_KDF_CTX_dup`, is `kdf_lib.c`'s and is built there too. The file has no authority-internal function of its own -- every name it defines is an export -- so `internal-symbols.json` records zero names and none of the three signals can see the unit. Every name above is asserted built by the reader.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json; forensics/atlas/transcription-edges.json; src/evp/kdf.rs"
+      },
+      {
+        "unit": "crypto/evp/mac_meth.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/mac.rs",
+        "names": [
+          "EVP_MAC_CTX_gettable_params",
+          "EVP_MAC_CTX_settable_params",
+          "EVP_MAC_do_all_provided",
+          "EVP_MAC_fetch",
+          "EVP_MAC_free",
+          "EVP_MAC_get0_provider",
+          "EVP_MAC_gettable_ctx_params",
+          "EVP_MAC_gettable_params",
+          "EVP_MAC_settable_ctx_params",
+          "EVP_MAC_up_ref"
+        ],
+        "reason": "All ten of its exports are built in `src/evp/mac.rs` (7.3e) and `EVP_MAC_CTX_dup` with them. Same shape as `kdf_meth.c`: the file is exports and nothing else, so the internal-symbol universe has no row for it.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json; forensics/atlas/transcription-edges.json; src/evp/mac.rs"
+      },
+      {
+        "unit": "crypto/evp/m_sigver.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/digest.rs",
+        "names": [
+          "EVP_DigestSign",
+          "EVP_DigestSignFinal",
+          "EVP_DigestSignInit",
+          "EVP_DigestSignInit_ex",
+          "EVP_DigestSignUpdate",
+          "EVP_DigestVerify",
+          "EVP_DigestVerifyFinal",
+          "EVP_DigestVerifyInit",
+          "EVP_DigestVerifyInit_ex",
+          "EVP_DigestVerifyUpdate"
+        ],
+        "reason": "All ten of its exports are built, at the bottom of `src/evp/digest.rs` (7.4f, D191), and the file defines no authority-internal function. Rows 7.3d, 7.4, 7.4c and 7.4e each name it as the unit the `EVP_DigestSign*`/`EVP_DigestVerify*` names belong to, which is why it is named four times: the rows were written before D191 settled that it lands whole.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json; forensics/atlas/transcription-edges.json; src/evp/digest.rs"
+      },
+      {
+        "unit": "crypto/evp/p_open.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/p_legacy.rs",
+        "names": [
+          "EVP_OpenFinal",
+          "EVP_OpenInit"
+        ],
+        "reason": "Both of its exports are built in `src/evp/p_legacy.rs`. The file has no internal function of its own, and the module that holds them is dominated by `crypto/evp/p_lib.c`.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json; forensics/atlas/transcription-edges.json; src/evp/p_legacy.rs"
+      },
+      {
+        "unit": "crypto/evp/p_seal.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/p_legacy.rs",
+        "names": [
+          "EVP_SealFinal"
+        ],
+        "reason": "One of its two exports is built: `EVP_SealFinal` needs no random layer and landed with 7.4l. `EVP_SealInit` is withheld on `RAND_priv_bytes_ex` (`crypto/evp/p_seal.c:46`, Phase 9) and `EVP_CIPHER_CTX_rand_key` (`:42`, the same stratum) -- it is a reasoned deferral in `forensics/phase7-obligations.json`, which is where the missing half is recorded rather than here.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json; forensics/atlas/transcription-edges.json; src/evp/p_legacy.rs"
+      },
+      {
+        "unit": "crypto/evp/p_sign.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/p_legacy.rs",
+        "names": [
+          "EVP_SignFinal",
+          "EVP_SignFinal_ex"
+        ],
+        "reason": "Both exports are built in `src/evp/p_legacy.rs`; the pairing `EVP_SignInit` is `evp_key.c`'s and landed with them. No internal function of the file's own, and the crate module is attributed to `crypto/evp/p_lib.c`.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json; forensics/atlas/transcription-edges.json; src/evp/p_legacy.rs"
+      },
+      {
+        "unit": "crypto/evp/p_verify.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/p_legacy.rs",
+        "names": [
+          "EVP_VerifyFinal",
+          "EVP_VerifyFinal_ex"
+        ],
+        "reason": "Both exports are built in `src/evp/p_legacy.rs` for the same reason as `p_sign.c`'s pair, and the unit has the same shape.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json; forensics/atlas/transcription-edges.json; src/evp/p_legacy.rs"
+      },
+      {
+        "unit": "crypto/pem/pem_sign.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/pem_bridge.rs",
+        "names": [
+          "PEM_SignInit",
+          "PEM_SignUpdate",
+          "PEM_SignFinal"
+        ],
+        "reason": "All three are built in `src/evp/pem_bridge.rs`, where 7.5 landed the three one-line wrappers over `EVP_DigestInit_ex`/`EVP_DigestUpdate`/`EVP_SignFinal` plus `EVP_EncodeBlock` (D194). The unit is Phase 5's by its ledger row and Phase 7's by the hand-off, which is why its row is in this stratum's plan at all.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json; forensics/atlas/transcription-edges.json; src/evp/pem_bridge.rs"
+      },
+      {
+        "unit": "crypto/evp/evp_pkey.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/pkey.rs",
+        "names": [
+          "EVP_PKEY_get0_provider",
+          "EVP_PKEY_get0_type_name"
+        ],
+        "reason": "Two of its fourteen exports are built -- `EVP_PKEY_get0_provider` and `EVP_PKEY_get0_type_name`, both `evp.h`'s and both 7.4a's. The other twelve are `EVP_PKCS82PKEY*`, `EVP_PKEY2PKCS8` and the seven `EVP_PKEY_*_attr*` accessors, which the ownership atlas gives to **Phase 11** because they take or return an `X509_ATTRIBUTE`/`PKCS8_PRIV_KEY_INFO`; they are not this stratum's rows and their absence is Phase 11's ledger's business, not a gap in this one.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json; forensics/atlas/transcription-edges.json; src/evp/pkey.rs"
+      },
+      {
+        "unit": "crypto/evp/evp_err.c",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/runtime/err_loaders.rs",
+        "names": [
+          "ERR_load_EVP_strings"
+        ],
+        "reason": "The file is generated (`util/mkerr.pl`): a `EVP_str_reasons[]` table and `ossl_err_load_EVP_strings`, which is not an export. This crate generates the same table into `src/runtime/err_reasons.rs` and the loader into `src/runtime/err_loaders.rs`, whose `ERR_load_EVP_strings` is the built name above -- the same disposition `crypto/dso/dso_err.c` and `crypto/property/property_err.c` already have rows for.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json; forensics/atlas/transcription-edges.json; src/runtime/err_loaders.rs"
+      },
+      {
+        "unit": "crypto/evp/e_old.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Its content is ten deprecated aliases -- `EVP_des_cfb`, `EVP_aes_128_cfb` and their siblings -- each a one-line call to the `*_cfb64` constructor beside it, and `internal-symbols.json` records all ten as authority-internal names of this file. They are `crypto/des/`'s and `crypto/aes/`'s statics by the table 7.3g wrote (`EVP_des`/`EVP_aes_` -> Phase 13), so the unit is Phase 13's: it cannot be written before the constructors it forwards to exist.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
+      },
+      {
+        "unit": "crypto/evp/c_allc.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Its whole content is `openssl_add_all_ciphers_int`, one `EVP_add_cipher(EVP_aes_...)` call per legacy cipher static. Every argument is a Phase-13 constructor from 7.3g's table, so the function cannot be written before they are -- which is the same hand-off read one level up, and `src/runtime/init.rs`'s `add_all_legacy_methods` is the line the authority's action collapses to until then (D161).",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
+      },
+      {
+        "unit": "crypto/evp/c_alld.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "The digest twin of `c_allc.c`: `openssl_add_all_digests_int`, one `EVP_add_digest` per legacy digest static. Same dependency, same stratum, and the same `OPENSSL_INIT_ADD_ALL_DIGESTS` line in `src/runtime/init.rs`.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
+      },
+      {
+        "unit": "crypto/evp/evp_pkey_type.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 8,
+        "reason": "Its single export is `EVP_PKEY_type`, and its body is `EVP_PKEY_asn1_find(&e, type)` followed by `ameth->pkey_id` (`crypto/evp/evp_pkey_type.c:63`). The alias-walking call and the `NID_undef` fallback are already written -- `src/evp/pkey_asn1.rs` holds them as the `pub(crate) evp_pkey_type` helper `EVP_PKEY_get_base_id` calls (D193) -- and the export is withheld because the answer is `standard_methods[]`, whose twelve `ossl_<alg>_asn1_meth` objects are Phase 8's.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
+      },
+      {
+        "unit": "crypto/evp/ec_support.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 8,
+        "reason": "Its single export is `OSSL_EC_curve_nid2name`, which the ownership atlas gives to Phase 8 (`ec.h`'s and the EC stratum's). Row 7.4 names the file only as one of the two the `ec_support.c`/`dh_support.c` pair stands for, and `src/evp/pkey.rs`'s module doc records that both halves wait on Phase 8's `EC_KEY`/`DH` types.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
+      },
+      {
+        "unit": "crypto/asn1/d2i_param.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 8,
+        "reason": "Its two exports are `d2i_KeyParams` and `d2i_KeyParams_bio`, and the first refuses unless `ret->ameth->param_decode != NULL` (`crypto/asn1/d2i_param.c:31`) before it calls it. The ameth objects are the twelve `crypto/asn1/standard_methods.h` builds, which are Phase 8's, so both are reasoned deferrals in this stratum's ledger.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
+      },
+      {
+        "unit": "crypto/asn1/d2i_pu.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 8,
+        "reason": "`d2i_PublicKey`'s three `switch` arms call `d2i_RSAPublicKey`, `d2i_DSAPublicKey` and `o2i_ECPublicKey` (`crypto/asn1/d2i_pu.c:52`, `:59`, `:71`) and its provided-EC arm calls `evp_pkey_copy_downgraded` (`:42`). All four are Phase 8's.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
+      },
+      {
+        "unit": "crypto/asn1/d2i_pr.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 10,
+        "reason": "The four `d2i_PrivateKey*`/`d2i_AutoPrivateKey*` exports run `d2i_PrivateKey_decoder` first (`crypto/asn1/d2i_pr.c:172`, `:247`), which builds an `OSSL_DECODER_CTX` with `OSSL_DECODER_CTX_new_for_pkey` (`:78`, `decoder.h`, Phase 10), and fall back to `ossl_d2i_PrivateKey_legacy` (`:102`), which reads the ameth decode pointers (Phase 8). Both phases feed the unit and Phase 10 is the binding one.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
+      },
+      {
+        "unit": "crypto/asn1/i2d_evp.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 10,
+        "reason": "Its five exports all reach `i2d_provided` (`crypto/asn1/i2d_evp.c:33`), which is `OSSL_ENCODER_CTX_new_for_pkey` (`:53`) + `OSSL_ENCODER_to_data` (`:59`), `encoder.h`'s and Phase 10's; their non-provided arms additionally call `i2d_RSAPublicKey` and its siblings and `EVP_PKEY2PKCS8` (`crypto/evp/evp_pkey.c:129`), all of which are Phase 8's or Phase 10's.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
+      },
+      {
+        "unit": "crypto/evp/p_dec.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 8,
+        "reason": "Its single export is `EVP_PKEY_decrypt_old`, which takes the low-level key with `evp_pkey_get0_RSA_int` (`crypto/evp/p_dec.c:32`) and then calls `RSA_private_decrypt` (`:36`). Both are Phase 8's.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
+      },
+      {
+        "unit": "crypto/evp/p_enc.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 8,
+        "reason": "The encryption twin of `p_dec.c`: `evp_pkey_get0_RSA_int` at `crypto/evp/p_enc.c:32` and `RSA_public_encrypt` at `:36`, both Phase 8's.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
+      },
+      {
+        "unit": "crypto/evp/p_legacy.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 8,
+        "reason": "Six of its exports are the `EVP_PKEY_get0_/get1_/set1_RSA` and `_EC_KEY` spellings, and each reaches `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through the file's own `evp_pkey_get0_RSA_int` (`:40`) and `evp_pkey_get0_EC_KEY_int` (`:76`). That function **constructs** the legacy `RSA`/`EC_KEY` with `evp_pkey_copy_downgraded` (`:2066`) and imports into its ameth, so the six are Phase 8's; the ledger carries the same twelve accessors as one group.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
+      },
+      {
+        "unit": "crypto/evp/evp_cnf.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 11,
+        "reason": "Its single export is `EVP_add_alg_module` (`crypto/evp/evp_cnf.c:69`), which registers `alg_module_init` (`:24`); the handler's `fips_mode` arm reads the section value with `X509V3_get_value_bool` (`:46`, defined at `crypto/x509/v3_utl.c:266`), which is `x509v3.h`'s and Phase 11's. The other three calls in the handler are landed.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
+      },
+      {
+        "unit": "crypto/evp/bio_ok.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 9,
+        "reason": "Its single export is `BIO_f_reliable` (`crypto/evp/bio_ok.c:127`), which answers `&methods_ok` (`:112`) -- a `BIO_METHOD` whose write path is `ok_write` (`:254`) and `sig_out`, and `sig_out` fills the record's digest half with `RAND_bytes(md_data, md_size)` (`:456`). `rand.h` is Phase 9's, and a method struct cannot be published with a callback that has no callee.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
+      },
+      {
+        "unit": "crypto/pem/pem_oth.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Its single export is `PEM_ASN1_read_bio` (`crypto/pem/pem_oth.c:20`), which is a call to `PEM_bytes_read_bio` (`:28`) and then an `i2d`/callback pair. `PEM_bytes_read_bio` is one of the eight names `EVP_md5` withholds (`crypto/pem/pem_lib.c:479`), and `EVP_md5` is `crypto/evp/legacy_md5.c:36`'s -- handed to Phase 13 by 7.3g with its primitive unit named.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
+      },
+      {
+        "unit": "crypto/pem/pem_pk8.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Its eighteen exports are the four `PEM_write_*PKCS8PrivateKey*` spellings, the four `i2d_PKCS8PrivateKey*` ones, their `_fp` twins and `PKCS8_encrypt`'s family, and every one goes through `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`). That function is `OSSL_ENCODER_CTX_new_for_pkey` (`:75`, Phase 10) and `cb = PEM_def_callback` (`:91`, withheld on Phase 13's `UI`). Both phases feed it; Phase 13 is the binding one, which is what the ledger's four `PEM_write_*PKCS8PrivateKey*` rows say.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
+      },
+      {
+        "unit": "crypto/pem/pem_pkey.c",
+        "class": "deferred_to_later_stratum",
+        "owner_phase": 13,
+        "reason": "Its sixteen exports are the `PEM_read_*PrivateKey*` and `PEM_read_bio_Parameters*` families and the write family, and all of them run through `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`) or the write macro that mirrors it. The reader is `pem_read_bio_key_decoder` (`:35` -> `OSSL_DECODER_CTX_new_for_pkey` at `:49`, Phase 10) with `pem_read_bio_key_legacy` (`:101` -> `PEM_bytes_read_bio_secmem` at `:116`, Phase 13) as its fallback; the writer is Phase 10's encoder with Phase 13's `PEM_def_callback` and `PEM_ASN1_write_bio` behind it. The ledger carries each of the sixteen as its own reasoned deferral and names both phases.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
+      },
+      {
         "unit": "crypto/provider.c",
         "class": "reached_by_a_named_construct",
         "crate_module": "src/provider/mod.rs",
@@ -351,6 +811,12 @@
         "owner_phase": 8,
         "reason": "Named by row 6.10 only as another sharer of `CRYPTO_THREAD_get_local_ex`. The file is RSA's provider-side implementation and belongs to the algorithm stratum.",
         "evidence": "docs/PHASE-6-SUBPHASES.md row 6.10; forensics/phase-state.json phase 8"
+      },
+      {
+        "unit": "pkey_derive.c",
+        "class": "does_not_exist_in_this_authority",
+        "reason": "Row 7.3f names it in order to say it is **not** where `EVP_PKEY_derive_SKEY` lives: *\"`EVP_PKEY_derive_SKEY` is `pkey_derive.c`'s and is 7.4's, with its module named\"*, and the module it names is `crypto/evp/exchange.c`, which defines the function at `:554` and is a promised unit this stratum reached. The file is therefore a reconnaissance finding rather than a promise -- the same shape as `crypto/rcu.c`, which row 6.10 names in order to say RCU lives in `crypto/threads_pthread.c` -- so the tool's \"names a file the authority does not have\" check is right about the fact and wrong about the intent. The plan sentence is kept rather than reworded, because a guessed filename recorded beside its correction is what the next reader needs, and the record fails the moment the file appears.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md row 7.3f; forensics/atlas/export-defining-units.json (crypto/evp/exchange.c defines `EVP_PKEY_derive_SKEY`); docs/DECISIONS.md D196"
       }
     ]
   }

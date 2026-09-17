@@ -269,6 +269,83 @@
         {
           "from_phase": 7,
           "symbols": [
+            "EVP_PKEY_assign",
+            "EVP_PKEY_decrypt_old",
+            "EVP_PKEY_encrypt_old",
+            "EVP_PKEY_get0_DH",
+            "EVP_PKEY_get0_DSA",
+            "EVP_PKEY_get0_EC_KEY",
+            "EVP_PKEY_get0_RSA",
+            "EVP_PKEY_get0_hmac",
+            "EVP_PKEY_get0_poly1305",
+            "EVP_PKEY_get0_siphash",
+            "EVP_PKEY_get1_DH",
+            "EVP_PKEY_get1_DSA",
+            "EVP_PKEY_get1_EC_KEY",
+            "EVP_PKEY_get1_RSA",
+            "EVP_PKEY_get_ec_point_conv_form",
+            "EVP_PKEY_get_field_type",
+            "EVP_PKEY_meth_find",
+            "EVP_PKEY_meth_get0",
+            "EVP_PKEY_meth_get_count",
+            "EVP_PKEY_set1_DH",
+            "EVP_PKEY_set1_DSA",
+            "EVP_PKEY_set1_EC_KEY",
+            "EVP_PKEY_set1_RSA",
+            "EVP_PKEY_type",
+            "d2i_KeyParams",
+            "d2i_KeyParams_bio",
+            "d2i_PublicKey"
+          ],
+          "to_phase": 8
+        },
+        {
+          "from_phase": 7,
+          "symbols": [
+            "BIO_f_reliable",
+            "EVP_CIPHER_CTX_rand_key",
+            "EVP_SealInit",
+            "OSSL_HPKE_get_grease_value"
+          ],
+          "to_phase": 9
+        },
+        {
+          "from_phase": 7,
+          "symbols": [
+            "EVP_PKEY_print_params",
+            "EVP_PKEY_print_params_fp",
+            "EVP_PKEY_print_private",
+            "EVP_PKEY_print_private_fp",
+            "EVP_PKEY_print_public",
+            "EVP_PKEY_print_public_fp",
+            "d2i_AutoPrivateKey",
+            "d2i_AutoPrivateKey_ex",
+            "d2i_PrivateKey",
+            "d2i_PrivateKey_ex",
+            "i2d_KeyParams",
+            "i2d_KeyParams_bio",
+            "i2d_PKCS8PrivateKey",
+            "i2d_PrivateKey",
+            "i2d_PublicKey"
+          ],
+          "to_phase": 10
+        },
+        {
+          "from_phase": 7,
+          "symbols": [
+            "ASN1_item_sign_ex",
+            "ASN1_item_verify_ex",
+            "EVP_CIPHER_CTX_get_algor",
+            "EVP_PKEY_CTX_get_algor",
+            "EVP_add_alg_module"
+          ],
+          "to_phase": 11
+        },
+        {
+          "from_phase": 7,
+          "symbols": [
+            "EVP_PKEY_get0_engine",
+            "EVP_PKEY_set1_engine",
             "EVP_aes_128_cbc",
             "EVP_aes_128_cbc_hmac_sha1",
             "EVP_aes_128_cbc_hmac_sha256",
@@ -408,6 +485,8 @@
             "EVP_rc4",
             "EVP_rc4_40",
             "EVP_rc4_hmac_md5",
+            "EVP_read_pw_string",
+            "EVP_read_pw_string_min",
             "EVP_ripemd160",
             "EVP_seed_cbc",
             "EVP_seed_cfb128",
@@ -432,7 +511,32 @@
             "EVP_sm4_ctr",
             "EVP_sm4_ecb",
             "EVP_sm4_ofb",
-            "EVP_whirlpool"
+            "EVP_whirlpool",
+            "PEM_ASN1_read",
+            "PEM_ASN1_read_bio",
+            "PEM_ASN1_write",
+            "PEM_ASN1_write_bio",
+            "PEM_ASN1_write_bio_ctx",
+            "PEM_bytes_read_bio",
+            "PEM_bytes_read_bio_secmem",
+            "PEM_def_callback",
+            "PEM_do_header",
+            "PEM_read_PrivateKey",
+            "PEM_read_PrivateKey_ex",
+            "PEM_read_bio_Parameters",
+            "PEM_read_bio_Parameters_ex",
+            "PEM_read_bio_PrivateKey",
+            "PEM_read_bio_PrivateKey_ex",
+            "PEM_write_PKCS8PrivateKey",
+            "PEM_write_PKCS8PrivateKey_nid",
+            "PEM_write_PrivateKey",
+            "PEM_write_PrivateKey_ex",
+            "PEM_write_bio_PKCS8PrivateKey",
+            "PEM_write_bio_PKCS8PrivateKey_nid",
+            "PEM_write_bio_Parameters",
+            "PEM_write_bio_PrivateKey",
+            "PEM_write_bio_PrivateKey_ex",
+            "PEM_write_bio_PrivateKey_traditional"
           ],
           "to_phase": 13
         }
@@ -671,6 +775,83 @@
         {
           "from_phase": 7,
           "symbols": [
+            "EVP_PKEY_assign",
+            "EVP_PKEY_decrypt_old",
+            "EVP_PKEY_encrypt_old",
+            "EVP_PKEY_get0_DH",
+            "EVP_PKEY_get0_DSA",
+            "EVP_PKEY_get0_EC_KEY",
+            "EVP_PKEY_get0_RSA",
+            "EVP_PKEY_get0_hmac",
+            "EVP_PKEY_get0_poly1305",
+            "EVP_PKEY_get0_siphash",
+            "EVP_PKEY_get1_DH",
+            "EVP_PKEY_get1_DSA",
+            "EVP_PKEY_get1_EC_KEY",
+            "EVP_PKEY_get1_RSA",
+            "EVP_PKEY_get_ec_point_conv_form",
+            "EVP_PKEY_get_field_type",
+            "EVP_PKEY_meth_find",
+            "EVP_PKEY_meth_get0",
+            "EVP_PKEY_meth_get_count",
+            "EVP_PKEY_set1_DH",
+            "EVP_PKEY_set1_DSA",
+            "EVP_PKEY_set1_EC_KEY",
+            "EVP_PKEY_set1_RSA",
+            "EVP_PKEY_type",
+            "d2i_KeyParams",
+            "d2i_KeyParams_bio",
+            "d2i_PublicKey"
+          ],
+          "to_phase": 8
+        },
+        {
+          "from_phase": 7,
+          "symbols": [
+            "BIO_f_reliable",
+            "EVP_CIPHER_CTX_rand_key",
+            "EVP_SealInit",
+            "OSSL_HPKE_get_grease_value"
+          ],
+          "to_phase": 9
+        },
+        {
+          "from_phase": 7,
+          "symbols": [
+            "EVP_PKEY_print_params",
+            "EVP_PKEY_print_params_fp",
+            "EVP_PKEY_print_private",
+            "EVP_PKEY_print_private_fp",
+            "EVP_PKEY_print_public",
+            "EVP_PKEY_print_public_fp",
+            "d2i_AutoPrivateKey",
+            "d2i_AutoPrivateKey_ex",
+            "d2i_PrivateKey",
+            "d2i_PrivateKey_ex",
+            "i2d_KeyParams",
+            "i2d_KeyParams_bio",
+            "i2d_PKCS8PrivateKey",
+            "i2d_PrivateKey",
+            "i2d_PublicKey"
+          ],
+          "to_phase": 10
+        },
+        {
+          "from_phase": 7,
+          "symbols": [
+            "ASN1_item_sign_ex",
+            "ASN1_item_verify_ex",
+            "EVP_CIPHER_CTX_get_algor",
+            "EVP_PKEY_CTX_get_algor",
+            "EVP_add_alg_module"
+          ],
+          "to_phase": 11
+        },
+        {
+          "from_phase": 7,
+          "symbols": [
+            "EVP_PKEY_get0_engine",
+            "EVP_PKEY_set1_engine",
             "EVP_aes_128_cbc",
             "EVP_aes_128_cbc_hmac_sha1",
             "EVP_aes_128_cbc_hmac_sha256",
@@ -810,6 +991,8 @@
             "EVP_rc4",
             "EVP_rc4_40",
             "EVP_rc4_hmac_md5",
+            "EVP_read_pw_string",
+            "EVP_read_pw_string_min",
             "EVP_ripemd160",
             "EVP_seed_cbc",
             "EVP_seed_cfb128",
@@ -834,7 +1017,32 @@
             "EVP_sm4_ctr",
             "EVP_sm4_ecb",
             "EVP_sm4_ofb",
-            "EVP_whirlpool"
+            "EVP_whirlpool",
+            "PEM_ASN1_read",
+            "PEM_ASN1_read_bio",
+            "PEM_ASN1_write",
+            "PEM_ASN1_write_bio",
+            "PEM_ASN1_write_bio_ctx",
+            "PEM_bytes_read_bio",
+            "PEM_bytes_read_bio_secmem",
+            "PEM_def_callback",
+            "PEM_do_header",
+            "PEM_read_PrivateKey",
+            "PEM_read_PrivateKey_ex",
+            "PEM_read_bio_Parameters",
+            "PEM_read_bio_Parameters_ex",
+            "PEM_read_bio_PrivateKey",
+            "PEM_read_bio_PrivateKey_ex",
+            "PEM_write_PKCS8PrivateKey",
+            "PEM_write_PKCS8PrivateKey_nid",
+            "PEM_write_PrivateKey",
+            "PEM_write_PrivateKey_ex",
+            "PEM_write_bio_PKCS8PrivateKey",
+            "PEM_write_bio_PKCS8PrivateKey_nid",
+            "PEM_write_bio_Parameters",
+            "PEM_write_bio_PrivateKey",
+            "PEM_write_bio_PrivateKey_ex",
+            "PEM_write_bio_PrivateKey_traditional"
           ],
           "to_phase": 13
         }
@@ -843,7 +1051,7 @@
     },
     "implemented_by_two_strata": [],
     "implemented_exports": {
-      "libcrypto": 1840,
+      "libcrypto": 1841,
       "libssl": 0
     },
     "invariant": "every authority export has exactly one declared owner in forensics/atlas/symbol-ownership.json; every export the atlas gives a stratum appears in that stratum's ledger; every row a stratum's ledger carries for another stratum's export is a hand-off that stratum recorded",
@@ -925,8 +1133,8 @@
       },
       {
         "atlas": 924,
-        "deferred": 164,
-        "implemented": 705,
+        "deferred": 244,
+        "implemented": 706,
         "ledger": 950,
         "only_in_atlas": 0,
         "only_in_atlas_examples": [],
@@ -943,7 +1151,7 @@
           "PEM_SignInit",
           "PEM_SignUpdate"
         ],
-        "open": 81,
+        "open": 0,
         "phase": 7
       }
     ],
@@ -5480,7 +5688,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "4a8a291c12f7a352bbeecc829f9dd1199aca2810c3e66475877e886f30b71795"
+      "sha256": "bbb4d8803f8da01924f162b883a1803a967eb9c2f3a50f8dfa14b6726e5c2d64"
     },
     {
       "name": "authority-symbols",
@@ -5495,27 +5703,27 @@
     {
       "name": "ledger-3",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "4b9b0765b378afc0ef2569e10327bffaa5c8f7a464950fb47d47ac5f5cbda4a5"
+      "sha256": "594e50063675041a719a72397dad56995ef2f8faaae26f73cb0a99ad84e5de84"
     },
     {
       "name": "ledger-4",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "2cd01896f91986f0bea962507a62afae908fafafb489b6c939b50f549c3ce909"
+      "sha256": "c888583df8602ed04857a406a0b8ef202c7c74d1f179b43fa8e399be9b2ff85c"
     },
     {
       "name": "ledger-5",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "3c455fd442043e5331c97c336d5c230dee0c161ee350b19ac790048925782504"
+      "sha256": "43ebc309c0b49a0f1fa6a04848b4c3f6ef9ed0a6baf75562aeeab0d5a77cae52"
     },
     {
       "name": "ledger-6",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "31e9ef889522148f3f862934c7e0e2dd3f2bdd98e8922f600604ebf3931c7f9c"
+      "sha256": "0f963291b75fbcd5f7b47ac24018c36a0c699c81818502ad6d118382b4cab095"
     },
     {
       "name": "ledger-7",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "69ae4f81268bcdcc4028e53fe8df5e049792e6dfb053b7c033353ca087359f23"
+      "sha256": "6d102d637435cb594a5b730e7bbacfcaadf39968f290d93b66247a637bae92c4"
     }
   ],
   "kind": "ownership-audit",

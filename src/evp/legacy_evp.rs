@@ -57,14 +57,19 @@
 //!
 //! ## What is not here
 //!
-//! `evp_cleanup_int` is `names.c`'s too, and it is **owed to 7.4**: its body calls
-//! `EVP_PBE_cleanup`, which is `crypto/evp/evp_pbe.c`'s, so half of it does not exist yet. It is
-//! recorded in `forensics/prerequisites.json` with that dependency named rather than stubbed.
+//! `evp_cleanup_int` is `names.c`'s too, and it is **owed to Phase 8**. Its body is four
+//! `OBJ_NAME_cleanup` calls, `EVP_PBE_cleanup`, `OBJ_sigid_free` and `evp_app_cleanup_int`; the
+//! first six are landed -- `EVP_PBE_cleanup` landed with 7.4c's PBE remainder (D192), which is the
+//! dependency this note was written against -- and the seventh is Phase 8's, because
+//! `evp_app_cleanup_int` pops the application-supplied `EVP_PKEY_METHOD` registry that
+//! `EVP_PKEY_meth_find` searches. It is recorded in `forensics/prerequisites.json` with that
+//! dependency named rather than stubbed, and D196 retargets the row from this stratum to Phase 8.
 //!
-//! `EVP_add_alg_module` is `crypto/evp/evp_cnf.c`'s and is **7.4's**: its body is two lines of
+//! `EVP_add_alg_module` is `crypto/evp/evp_cnf.c`'s, a 7.4 unit: its body is two lines of
 //! `CONF_module_add`, but the module callback it registers reads the configuration through
-//! `X509V3_get_value_bool`, which is Phase 11's, so the pair lands together with its caller rather
-//! than half of it here. `EVP_add_cipher_alias` and `EVP_add_digest_alias` are **macros** over
+//! `X509V3_get_value_bool` (`crypto/x509/v3_utl.c:266`, Phase 11's), so the pair lands together
+//! rather than half of it here. It is one of the ledger's reasoned deferrals to Phase 11; D196
+//! records the two lines and the coordinate. `EVP_add_cipher_alias` and `EVP_add_digest_alias` are **macros** over
 //! `OBJ_NAME_add` in `evp.h` and have no export to transcribe.
 //!
 //! SPDX-License-Identifier: Apache-2.0
