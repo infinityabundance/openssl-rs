@@ -378,6 +378,23 @@ def canon_rust_type(text: str, aliases: dict[str, str], depth: int = 0) -> str |
     if depth > 12:
         return None
     t = " ".join(text.split()).strip()
+    # A type that sits in a comma-separated *list* may carry the list's trailing comma.
+    # Rust allows it, and `cargo fmt` emits it for every multi-line generic argument
+    # whose argument is itself long enough to wrap:
+    #
+    #     pub_print: Option<
+    #         unsafe extern "C" fn(*mut Bio, *const EvpPkey, c_int, *mut Asn1Pctx) -> c_int,
+    #     >,
+    #
+    # The comma belongs to `Option<...>`'s argument list, but `canon_rust_fnptr` reads
+    # the text after the inner `->` as the return type, so it becomes `c_int,` and
+    # canonicalises to None -- which reported five *correct* `EVP_PKEY_asn1_set_*`
+    # mutators as `type_unmapped` and produced a false "the declarations need named
+    # aliases" conclusion in docs/DECISIONS.md D178 (corrected by D179). Dropping a
+    # trailing comma at the top level is a normalisation of the same kind as the
+    # `Option<...>` unwrap above: the text is a type the compiler accepts.
+    while t.endswith(","):
+        t = t[:-1].strip()
     if t in ("()", "void", ""):
         return "void"
     if t.startswith("Option<") and t.endswith(">"):
@@ -1548,6 +1565,37 @@ def sensitivity_report() -> dict:
         "observed": {
             "correct": None if sig_good is None else canon_render(sig_good),
             "perturbed": None if sig_bad is None else canon_render(sig_bad),
+        },
+    })
+
+    # The trailing-comma reading, which D179 records: `cargo fmt` wraps a multi-line
+    # generic argument and leaves the list's trailing comma inside it, and the court
+    # read that comma as part of the inner function pointer's *return* type.
+    comma_free = 'Option<unsafe extern "C" fn(*mut Bio, *const EvpPkey, c_int, *mut Asn1Pctx) -> c_int>'
+    comma_wrapped = (
+        'Option<\n        unsafe extern "C" fn(*mut Bio, *const EvpPkey, c_int, *mut Asn1Pctx) -> c_int,\n    >'
+    )
+    want_print = 'fptr(int:4:s; ptr(opaque), ptr(const(opaque)), int:4:s, ptr(opaque))'
+    comma_ok = (
+        canon_rust_type(comma_wrapped, aliases) == want_print
+        and canon_rust_type(comma_free, aliases) == want_print
+        and canon_rust_param("p: " + comma_wrapped, aliases) == want_print
+        # ... and the same reading must still separate a *different* type, so this
+        # control cannot pass for a court that ignores the comma by ignoring the type.
+        and canon_rust_type(comma_wrapped.replace("*mut Asn1Pctx", "*const Asn1Pctx"), aliases)
+        != want_print
+    )
+    report["controls"].append({
+        "control": "generic-argument-trailing-comma",
+        "what": "`cargo fmt`'s multi-line `Option<...,>` and its unwrapped spelling must "
+                "canonicalise identically, while a pointee-constness change inside the "
+                "same text must still differ",
+        "detected": bool(comma_ok),
+        "observed": {
+            "comma_wrapped": canon_rust_type(comma_wrapped, aliases),
+            "comma_free": canon_rust_type(comma_free, aliases),
+            "perturbed": canon_rust_type(
+                comma_wrapped.replace("*mut Asn1Pctx", "*const Asn1Pctx"), aliases),
         },
     })
 

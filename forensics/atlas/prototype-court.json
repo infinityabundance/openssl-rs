@@ -3,15 +3,15 @@
   "body": {
     "canonical_form": "both sides are reduced to one grammar: `void`; `int:<bytes>:<s|u>`; `float:<bytes>`; `ptr(<inner>)`; `const(<inner>)`; `fn(<ret>; <args>)`; `opaque`. A struct pointee's *name* is deliberately discarded -- `*mut Asn1String` and `*mut c_void` are the same to a caller -- while pointer depth, pointee constness, integer width and signedness, and function-pointer argument shape are kept. A type the table cannot canonicalise is reported under `type_unmapped` and never counted as a pass",
     "counts": {
-      "checked": 1549,
+      "checked": 1564,
       "declaration_is_generated": 0,
       "implementation_is_c": 8,
       "implementation_is_c_mismatches": 0,
-      "implemented": 1596,
+      "implemented": 1611,
       "mismatches": 0,
       "no_prototype_in_atlas": 22,
       "not_found": 0,
-      "type_checked": 1566,
+      "type_checked": 1581,
       "type_mismatches": 0,
       "type_unmapped": 0,
       "unclassified": 0,
@@ -79,6 +79,16 @@
           "what": "a C definition's parameter perturbed from `int` to `long`"
         },
         {
+          "control": "generic-argument-trailing-comma",
+          "detected": true,
+          "observed": {
+            "comma_free": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)), int:4:s, ptr(opaque))",
+            "comma_wrapped": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)), int:4:s, ptr(opaque))",
+            "perturbed": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)), int:4:s, ptr(const(opaque)))"
+          },
+          "what": "`cargo fmt`'s multi-line `Option<...,>` and its unwrapped spelling must canonicalise identically, while a pointee-constness change inside the same text must still differ"
+        },
+        {
           "control": "variadic-reading",
           "detected": true,
           "observed": "int:4:s (ptr(int:1:s), ...)",
@@ -109,7 +119,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "5451d604717364a95afc614f9dfd7f95df436f748aa95a65857f0f1a58663f04"
+      "sha256": "0751ac35f51a9044bf4a44010e42264a2abb911d7499d35eedb68ee934cb4e0a"
     }
   ],
   "kind": "prototype-court",
