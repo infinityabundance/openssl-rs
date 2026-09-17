@@ -1,5 +1,6 @@
 /*
- * RT-EVP-PKEY -- `crypto/evp/signature.c`'s entry-point half, differentially.
+ * RT-EVP-PKEY -- `crypto/evp/signature.c`'s entry-point half and `p_lib.c`'s provider half,
+ * differentially.
  *
  * The method object's structural check was courted by `RT-EVP-KEYMGMT`'s sibling rules and is not
  * this court's subject. What is here is `evp_pkey_signature_init` and the eighteen exports over it,
@@ -54,7 +55,11 @@
  *   * **`evp_pkey_ctx_is_legacy`'s entry to `legacy:`.** It is `ctx->keymgmt == NULL`, and this
  *     crate cannot build such a context: `int_ctx_new` always fetches a method and refuses
  *     otherwise. The authority reaches it only through the legacy-typed constructors.
- *   * **`EVP_PKEY_CTX_set_signature`.** It is `pmeth_lib.c`'s and another slice's.
+ *
+ * The 7.4e half -- `p_lib.c`'s provider half, the five `EVP_PKEY_CTX_*` accessors beside it, and
+ * the four `EVP_PKEY_new_raw_*` constructors -- has its own comment at the head of its provider
+ * block below. Note that `EVP_PKEY_CTX_set_signature` used to be on the list above; 7.4e landed it
+ * and the arms under `ctxsig.*` drive it, so the bullet is gone rather than left stale.
  *
  * Addresses are never printed. Every observation is a relation between two pointers this probe
  * holds, a presence answer, a return code, a counter vector, a bounded byte comparison or a
@@ -556,6 +561,7 @@ static int g_pn_has_data = 1;   /* `has(DOMAIN_PARAMETERS)` for a key **with** k
 static int g_pn_has_empty;      /* ... and for a typed key with none */
 static int g_pn_match = 1;      /* what `match` answers */
 static int g_pn_no_encpub;      /* do not publish `encoded-pub-key` at all */
+static int g_pn_import_fails;   /* `import` answers 0, so `fromdata` refuses */
 static const char *g_pn_group;
 static const char *g_pn_default_digest;
 static const char *g_pn_mandatory_digest;
@@ -682,6 +688,8 @@ static int pn_import(void *keydata, int selection, const OSSL_PARAM params[])
     (void) keydata;
     (void) selection;
     pn_import_calls++;
+    if (g_pn_import_fails)
+        return 0;
     p = OSSL_PARAM_locate_const(params, "priv");
     if (p != NULL && OSSL_PARAM_get_octet_string_ptr(p, &data, &len) && data != NULL) {
         if (len > sizeof g_pn_priv)
@@ -1058,6 +1066,26 @@ static const OSSL_ALGORITHM court_keymgmts[] = {
       "the same for `RSA`, whose argument is a size_t" },
     { "COURT-GEN:courtgen", COURT_PROV, pk_gen_fns,
       "the control: a name the walk reads nothing for" },
+    /*
+     * Four more names, all `pn_fns`, and each exists for one road into `new_raw_key_int`'s
+     * provider branch. The two legacy-type spellings do not name a key type at all: they fetch
+     * `OBJ_nid2sn(type)` in the **default** library context, so these are also published there (see
+     * `main`'s second registration), and each is chosen so that no other provider can answer it --
+     * `UNDEF` is `OBJ_nid2sn(EVP_PKEY_NONE)` and nothing publishes it, `X448` is a name the
+     * authority's default provider also has, and the measurement is that the probe's provider wins
+     * for it (D190 records it). `EVP_PKEY_RSA`'s `rsaEncryption` is deliberately **not** one of
+     * them: it is already the probe's *generation* key type, which `EVP_PKEY_Q_keygen("RSA", ...)`
+     * needs, and two algorithms under one name list would leave the store to pick between them --
+     * `EVP_PKEY_X448` is the same shape and does not collide.
+     */
+    { "UNDEF:courtrawex", COURT_PROV, pn_fns,
+      "`OBJ_nid2sn(EVP_PKEY_NONE)`, so a raw constructor with type 0 has exactly one provider" },
+    { "X448:courtx448", COURT_PROV, pn_fns,
+      "`EVP_PKEY_X448`: the authority's `EVP_PKEY_asn1_find` *does* find `ossl_ecx448_asn1_meth`" },
+    { "COURT-RAWKEY:courtrawkey", COURT_PROV, pn_fns,
+      "the name the two `_ex` spellings are handed" },
+    { "CMAC:courtrcmac", COURT_PROV, pn_fns,
+      "`EVP_PKEY_new_CMAC_key`'s hardcoded name; its success arm needs the default context" },
     { NULL, NULL, NULL, NULL }
 };
 
@@ -1163,7 +1191,7 @@ static int court_init(const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in,
 int main(void)
 {
     OSSL_LIB_CTX *ctx;
-    OSSL_PROVIDER *prov;
+    OSSL_PROVIDER *prov, *prov_default;
     EVP_KEYMGMT *keymgmt, *again;
     EVP_PKEY_CTX *fctx, *sctx, *kctx, *ectx;
     EVP_PKEY *pkey = NULL, *empty = NULL;
@@ -1188,6 +1216,19 @@ int main(void)
         OSSL_LIB_CTX_free(ctx);
         return 0;
     }
+
+    /*
+     * The **same** provider, in the default library context. Three entry points cannot be given a
+     * context and hardcode NULL instead -- `EVP_PKEY_new_CMAC_key` and the two legacy-type raw
+     * constructors -- so their provider branch resolves `"CMAC"` or `OBJ_nid2sn(type)` there. The
+     * measurement that makes this deterministic is below and in D190: with this provider present
+     * the authority's own default provider is never activated for those names, so both sides answer
+     * from the probe. Nothing above this line touches the default context, so the arms before it
+     * are unaffected.
+     */
+    sayn("add_builtin_default", OSSL_PROVIDER_add_builtin(NULL, "court-pkey", court_init));
+    prov_default = OSSL_PROVIDER_load(NULL, "court-pkey");
+    sayn("load_default", prov_default != NULL ? 1 : 0);
 
     /*
      * ---- the key ----
@@ -2041,6 +2082,121 @@ int main(void)
         say_gen("algor.set_null_parameter.vec");
         alg_in.parameter = &alg_type;
 
+        /*
+         * ---- 23. the four raw-key constructors ----
+         *
+         * Each is driven once through `_ex` (an explicit context and an explicit name) and once
+         * through the legacy-type spelling (no context, and the name comes from `OBJ_nid2sn`), and
+         * each successful construction is followed by the **round trip**: the bytes come back out
+         * through `EVP_PKEY_get_raw_private_key`/`_public_key` and are compared against the
+         * probe's own input. `EVP_PKEY_X448` is the arm that proves the engine block's
+         * `tmpe == NULL -> ameth = NULL`: the authority's `EVP_PKEY_asn1_find` *finds*
+         * `ossl_ecx448_asn1_meth` for 1035, and the provider branch is still the one taken.
+         * `EVP_PKEY_NONE` is the third: its name is `OBJ_nid2sn(0)`, `"UNDEF"`, which nothing but
+         * this probe publishes.
+         */
+        {
+            unsigned char raw_in[4] = { 'r', 'a', 'w', 'k' };
+            unsigned char raw_pub[4] = { 'p', 'u', 'b', 'k' };
+            unsigned char back[8];
+            size_t back_len;
+            EVP_PKEY *raw;
+
+            reset_pn();
+            raw = EVP_PKEY_new_raw_private_key_ex(ctx, "COURT-RAWKEY", NULL, raw_in,
+                                                  sizeof raw_in);
+            sayp("rawkey.ex.priv", raw);
+            say_pn("rawkey.ex.priv.vec");
+            back_len = sizeof back;
+            sayr("rawkey.ex.priv.get", EVP_PKEY_get_raw_private_key(raw, back, &back_len));
+            sayn("rawkey.ex.priv.len", (long long) back_len);
+            sayn("rawkey.ex.priv.round_trip",
+                 memcmp(back, raw_in, sizeof raw_in) == 0);
+            EVP_PKEY_free(raw);
+
+            raw = EVP_PKEY_new_raw_public_key_ex(ctx, "COURT-RAWKEY", NULL, raw_pub,
+                                                 sizeof raw_pub);
+            sayp("rawkey.ex.pub", raw);
+            back_len = sizeof back;
+            sayr("rawkey.ex.pub.get", EVP_PKEY_get_raw_public_key(raw, back, &back_len));
+            sayn("rawkey.ex.pub.round_trip",
+                 memcmp(back, raw_pub, sizeof raw_pub) == 0);
+            EVP_PKEY_free(raw);
+
+            /* The context the name would need does not exist: `EVP_KEYMGMT_fetch` raised. */
+            sayp("rawkey.ex.no_type",
+                 EVP_PKEY_new_raw_private_key_ex(ctx, "NO-SUCH-RAWTYPE", NULL, raw_in,
+                                                 sizeof raw_in));
+
+            /* A provider that refuses `import`: `EVP_PKEY_fromdata` answers != 1 and the
+             * `EVP_R_KEY_SETUP_FAILED` arm is taken. */
+            g_pn_import_fails = 1;
+            raw = EVP_PKEY_new_raw_private_key_ex(ctx, "COURT-RAWKEY", NULL, raw_in,
+                                                  sizeof raw_in);
+            sayp("rawkey.ex.import_fails", raw);
+            EVP_PKEY_free(raw);
+            g_pn_import_fails = 0;
+
+            /* The legacy-type spellings: `strtype` NULL, `libctx` NULL, the name is
+             * `OBJ_nid2sn(type)` in the default context. */
+            raw = EVP_PKEY_new_raw_private_key(EVP_PKEY_NONE, NULL, raw_in, sizeof raw_in);
+            sayp("rawkey.undef.priv", raw);
+            back_len = sizeof back;
+            sayr("rawkey.undef.priv.get", EVP_PKEY_get_raw_private_key(raw, back, &back_len));
+            sayn("rawkey.undef.priv.round_trip",
+                 memcmp(back, raw_in, sizeof raw_in) == 0);
+            EVP_PKEY_free(raw);
+
+            raw = EVP_PKEY_new_raw_public_key(EVP_PKEY_NONE, NULL, raw_pub, sizeof raw_pub);
+            sayp("rawkey.undef.pub", raw);
+            back_len = sizeof back;
+            sayr("rawkey.undef.pub.get", EVP_PKEY_get_raw_public_key(raw, back, &back_len));
+            sayn("rawkey.undef.pub.round_trip",
+                 memcmp(back, raw_pub, sizeof raw_pub) == 0);
+            EVP_PKEY_free(raw);
+
+            raw = EVP_PKEY_new_raw_private_key(EVP_PKEY_X448, NULL, raw_in, sizeof raw_in);
+            sayp("rawkey.x448.priv", raw);
+            back_len = sizeof back;
+            sayr("rawkey.x448.priv.get", EVP_PKEY_get_raw_private_key(raw, back, &back_len));
+            sayn("rawkey.x448.priv.round_trip",
+                 memcmp(back, raw_in, sizeof raw_in) == 0);
+            EVP_PKEY_free(raw);
+
+            raw = EVP_PKEY_new_raw_public_key(EVP_PKEY_X448, NULL, raw_pub, sizeof raw_pub);
+            sayp("rawkey.x448.pub", raw);
+            back_len = sizeof back;
+            sayr("rawkey.x448.pub.get", EVP_PKEY_get_raw_public_key(raw, back, &back_len));
+            sayn("rawkey.x448.pub.round_trip",
+                 memcmp(back, raw_pub, sizeof raw_pub) == 0);
+            EVP_PKEY_free(raw);
+        }
+
+        /*
+         * ---- 24. `EVP_PKEY_new_CMAC_key` with a cipher ----
+         *
+         * The arm the first run of this slice could not drive: it resolves `"CMAC"` in the
+         * **default** context, and this probe now publishes a `CMAC` key type there. The cipher is
+         * `EVP_enc_null`, whose name is `"NULL"` -- which no provisioned cipher answers, and the
+         * probe's import ignores it, so the round trip is against the probe's own four bytes.
+         */
+        {
+            unsigned char cmac_in[4] = { 'c', 'm', 'a', 'c' };
+            unsigned char back[8];
+            size_t back_len;
+            EVP_PKEY *ck;
+
+            reset_pn();
+            ck = EVP_PKEY_new_CMAC_key(NULL, cmac_in, sizeof cmac_in, EVP_enc_null());
+            sayp("cmac.with_cipher", ck);
+            say_pn("cmac.with_cipher.vec");
+            back_len = sizeof back;
+            sayr("cmac.with_cipher.get", EVP_PKEY_get_raw_private_key(ck, back, &back_len));
+            sayn("cmac.with_cipher.round_trip",
+                 memcmp(back, cmac_in, sizeof cmac_in) == 0);
+            EVP_PKEY_free(ck);
+        }
+
         EVP_PKEY_CTX_free(ngctx);
         EVP_PKEY_free(np);
         EVP_PKEY_free(np_silent);
@@ -2057,13 +2213,8 @@ int main(void)
          * Named refusals, with the authority file and line, for the exports and the arms this
          * probe cannot drive. Each is a *statement about a boundary* rather than a silent omission.
          */
-        printf("digestsign_supports_digest=NOT_MEASURED_BLOCKED_ON_EVP_DigestSignInit_ex_m_sigver_c_371\n");
-        printf("new_raw_private_key_ex=NOT_MEASURED_BLOCKED_ON_EVP_PKEY_asn1_find_str_ameth_lib_c_114\n");
-        printf("new_raw_public_key_ex=NOT_MEASURED_BLOCKED_ON_EVP_PKEY_asn1_find_str_ameth_lib_c_114\n");
-        printf("new_raw_private_key=NOT_MEASURED_BLOCKED_ON_EVP_PKEY_asn1_find_str_ameth_lib_c_114\n");
-        printf("new_raw_public_key=NOT_MEASURED_BLOCKED_ON_EVP_PKEY_asn1_find_str_ameth_lib_c_114\n");
+        printf("digestsign_supports_digest=NOT_MEASURED_OWED_TO_7_4_ITSELF_m_sigver_c_371\n");
         printf("set_type_legacy_nid=NOT_MEASURED_DIVERGENCE_D_PKEY_AMETH_1\n");
-        printf("new_CMAC_key_with_cipher=NOT_MEASURED_DEFAULT_PROVIDER_IS_PHASE_9\n");
         printf("get_base_id_null_key=NOT_MEASURED_AUTHORITY_FAULTS\n");
         printf("get_default_digest_name_blank_key=NOT_MEASURED_AUTHORITY_FAULTS\n");
         printf("set_algor_params_null_ctx=NOT_MEASURED_AUTHORITY_FAULTS\n");
@@ -2099,6 +2250,8 @@ int main(void)
     EVP_KEYMGMT_free(keymgmt);
     say_k("release.vec.after_all");
     sayn("unload", OSSL_PROVIDER_unload(prov));
+    /* The default-context provider goes last: nothing after it may fetch. */
+    sayn("unload_default", OSSL_PROVIDER_unload(prov_default));
     OSSL_LIB_CTX_free(ctx);
     printf("done=1\n");
     return 0;

@@ -290,7 +290,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 1732,
+        "implemented": 1736,
         "implemented_symbols": [
           "ASN1_ANY_it",
           "ASN1_BIT_STRING_check",
@@ -1548,6 +1548,10 @@
           "EVP_PKEY_missing_parameters",
           "EVP_PKEY_new",
           "EVP_PKEY_new_CMAC_key",
+          "EVP_PKEY_new_raw_private_key",
+          "EVP_PKEY_new_raw_private_key_ex",
+          "EVP_PKEY_new_raw_public_key",
+          "EVP_PKEY_new_raw_public_key_ex",
           "EVP_PKEY_pairwise_check",
           "EVP_PKEY_param_check",
           "EVP_PKEY_param_check_quick",
@@ -2025,7 +2029,7 @@
           "i2d_DISPLAYTEXT",
           "i2t_ASN1_OBJECT"
         ],
-        "scaffolded": 4164
+        "scaffolded": 4160
       },
       "libssl": {
         "authority_exports": 603,
@@ -2036,18 +2040,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 1732,
-      "scaffolded": 4767
+      "implemented": 1736,
+      "scaffolded": 4763
     }
   },
-  "body_hash": "c8404ad4238fb70c18caff6299e74303948b5890602a0708f5ddb7e65f850282",
+  "body_hash": "c705f3e187ab9d0b6429960fb55c29d864b91cc0cbc12773377bf0fb7f64abd4",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "9bed65cca57200fb5dce8730e1c41c69bb2d1958a106bbfc5b5cd757c790fa0e"
+      "sha256": "1f4f045e2458158822b84582d7a3f5d23711442b16712c23e3a4e448fa44ef43"
     },
     {
       "name": "authority-exports",
