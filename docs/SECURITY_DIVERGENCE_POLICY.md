@@ -845,3 +845,72 @@ authority and the candidate for this function, and there was never supposed to b
 - **Claim removed:** `EVP_CIPHER_CTX_gettable_params` and `_settable_params` on an **unarmed**
   context are not claimed compatible. They are claimed *safe*, and the probe observes both where
   the authority can answer — on an armed context, where the authority's own test is satisfied.
+
+### D-MD-NULL-CALLBACK-1 — `evp_md_init_internal` and `EVP_DigestFinal_ex` call through a NULL
+### method callback
+
+- **Obligation:** three calls in `crypto/evp/digest.c`, on two different kinds of method.
+  - `digest->init` — `evp_md_init_internal`'s legacy arm ends `return ctx->digest->init(ctx);`
+    with no test, and a method built by `EVP_MD_meth_new` that never had
+    `EVP_MD_meth_set_init` called has a NULL `init`.
+  - `digest->final` — `EVP_DigestFinal_ex`'s legacy arm calls `ctx->digest->final(ctx, md)`
+    with no test, for a method with `init` set and `final` unset.
+  - `digest->newctx` — `evp_md_init_internal`'s provider arm calls
+    `ctx->digest->newctx(ossl_provider_ctx(type->prov))` with no test, and a provider that
+    publishes only `OSSL_FUNC_DIGEST_DIGEST` (which `evp_md_from_algorithm` accepts: a
+    structural count of zero is legal when the standalone one-shot is present) has a NULL
+    `newctx`, because the count is what decides whether any of the six structural functions is
+    filled.
+- **Authority:** **measured**. Three programs, each compiled against
+  `forensics/authorities/prefix/openssl-3.6.4-production` and each run in a process of its own,
+  print the observations around the call and then die:
+  - `EVP_MD_meth_new(NID_undef, NID_undef)` then `EVP_DigestInit_ex(ctx, md, NULL)` —
+    `built=1 ctx=1` then **exit 139** (SIGSEGV);
+  - the same with `EVP_MD_meth_set_init` called first — `set_init=1`, `init=1`,
+    `cmp_final_is_null=1`, then **exit 139** at `EVP_DigestFinal_ex`;
+  - `OSSL_PROVIDER_add_builtin` + `OSSL_PROVIDER_load` + `EVP_MD_fetch` of a one-shot-only
+    digest, then `EVP_DigestInit_ex(ctx, md, NULL)` — `add_builtin=1 load=1 fetch=1`, then
+    **exit 139**.
+
+  In each case the fault is the measurement, so there is nothing to compare past it.
+  `RT-FETCH` prints `NOT_MEASURED_AUTHORITY_FAULTS` at each of the three boundaries, so the
+  boundary is visible in the transcript rather than silently absent from it.
+- **Crate:** answers 0 for each, and raises **nothing**, because the authority raises nothing on
+  these paths — it does not return. For the `init` and `final` refusals the context is left as it
+  was found, so a caller that catches the 0 can set the missing callback and try again; that is
+  the one place this crate's behaviour is *more* usable than the authority's, and it is the
+  smallest divergence available rather than a designed kindness.
+- **Reason:** an indirect call through a null pointer is not a contract to reproduce. The
+  distinction matters more here than for the other entries in this section because all three are
+  reached through documented, non-deprecated entry points — `EVP_DigestInit_ex` and `EVP_Digest`,
+  both of which a legacy consumer is expected to call — rather than through an argument a caller
+  would have to pass deliberately.
+- **Claim removed:** the behaviour of `EVP_DigestInit_ex`, `EVP_DigestInit`, `EVP_DigestInit_ex2`
+  and `EVP_Digest` on a hand-built method with no `init`, of `EVP_DigestFinal_ex` and
+  `EVP_DigestFinal` on one with no `final`, and of any initialise on a provider method with no
+  `newctx`, is *not* claimed compatible. It is claimed *safe*.
+- **When it changes:** it does not. The authority's behaviour is a fault in 3.6.3 and 3.6.4
+  alike; the boundary is permanent and the claim stays narrowed.
+
+### D-MD-DOALL-NULL-1 — `EVP_MD_do_all_provided` calls a NULL visitor
+
+- **Obligation:** `EVP_MD_do_all_provided(libctx, NULL, arg)`.
+- **Authority:** **measured**. `evp_generic_do_all` passes the visitor to
+  `crypto/evp/evp_fetch.c`'s `filter_on_operation_id`, which calls
+  `((*data).user_fn)(method, (*data).user_arg)` for every method whose operation id matches, with
+  no test on the pointer. A program that registers a builtin provider, loads it, and then calls
+  `EVP_MD_do_all_provided(ctx, NULL, NULL)` prints `add_builtin=1`, `load=1` and dies with
+  **exit 139** (SIGSEGV). The fault is the measurement, so there is nothing to compare past it.
+- **Crate:** returns without walking. The walk is not "a no-op with the same answer": it
+  constructs every algorithm of every activated provider into the store as a side effect, so the
+  refusal is a real behavioural narrowing and is recorded as one rather than presented as
+  equivalence.
+- **Reason:** `D-NAMEMAP-DOALL-1`'s, exactly. The visitor is a function pointer the caller
+  supplies; a NULL one is the caller's error, and an error is not a reason to take the caller's
+  process down.
+- **Claim removed:** `EVP_MD_do_all_provided` with a NULL visitor is not claimed compatible. It is
+  claimed *safe*. With a visitor the entry point is compared normally.
+- **Note:** this is the same class as `D-NAMEMAP-DOALL-1` recorded from the other side — a
+  `do_all` whose visitor is forwarded rather than tested — and it is a separate entry because the
+  two are reached through different exported entry points and a future reader of either should not
+  have to find the other first.
