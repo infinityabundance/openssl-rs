@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 924,
       "deferred_to_later_phase": 164,
-      "implemented": 479,
-      "open_in_this_stratum": 307,
+      "implemented": 525,
+      "open_in_this_stratum": 261,
       "owned": 950,
       "received_by_handoff": 26
     },
@@ -1570,6 +1570,52 @@
       "EVP_PKEY_is_a",
       "EVP_PKEY_keygen",
       "EVP_PKEY_keygen_init",
+      "EVP_PKEY_meth_add0",
+      "EVP_PKEY_meth_copy",
+      "EVP_PKEY_meth_free",
+      "EVP_PKEY_meth_get0_info",
+      "EVP_PKEY_meth_get_check",
+      "EVP_PKEY_meth_get_cleanup",
+      "EVP_PKEY_meth_get_copy",
+      "EVP_PKEY_meth_get_ctrl",
+      "EVP_PKEY_meth_get_decrypt",
+      "EVP_PKEY_meth_get_derive",
+      "EVP_PKEY_meth_get_digest_custom",
+      "EVP_PKEY_meth_get_digestsign",
+      "EVP_PKEY_meth_get_digestverify",
+      "EVP_PKEY_meth_get_encrypt",
+      "EVP_PKEY_meth_get_init",
+      "EVP_PKEY_meth_get_keygen",
+      "EVP_PKEY_meth_get_param_check",
+      "EVP_PKEY_meth_get_paramgen",
+      "EVP_PKEY_meth_get_public_check",
+      "EVP_PKEY_meth_get_sign",
+      "EVP_PKEY_meth_get_signctx",
+      "EVP_PKEY_meth_get_verify",
+      "EVP_PKEY_meth_get_verify_recover",
+      "EVP_PKEY_meth_get_verifyctx",
+      "EVP_PKEY_meth_new",
+      "EVP_PKEY_meth_remove",
+      "EVP_PKEY_meth_set_check",
+      "EVP_PKEY_meth_set_cleanup",
+      "EVP_PKEY_meth_set_copy",
+      "EVP_PKEY_meth_set_ctrl",
+      "EVP_PKEY_meth_set_decrypt",
+      "EVP_PKEY_meth_set_derive",
+      "EVP_PKEY_meth_set_digest_custom",
+      "EVP_PKEY_meth_set_digestsign",
+      "EVP_PKEY_meth_set_digestverify",
+      "EVP_PKEY_meth_set_encrypt",
+      "EVP_PKEY_meth_set_init",
+      "EVP_PKEY_meth_set_keygen",
+      "EVP_PKEY_meth_set_param_check",
+      "EVP_PKEY_meth_set_paramgen",
+      "EVP_PKEY_meth_set_public_check",
+      "EVP_PKEY_meth_set_sign",
+      "EVP_PKEY_meth_set_signctx",
+      "EVP_PKEY_meth_set_verify",
+      "EVP_PKEY_meth_set_verify_recover",
+      "EVP_PKEY_meth_set_verifyctx",
       "EVP_PKEY_new",
       "EVP_PKEY_pairwise_check",
       "EVP_PKEY_param_check",
@@ -2636,25 +2682,7 @@
         "declaring_header": "evp.h",
         "module": "src/evp/pkey_ctx.rs",
         "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_add0"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_copy"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
         "symbol": "EVP_PKEY_meth_find"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_free"
       },
       {
         "declaring_header": "evp.h",
@@ -2666,265 +2694,7 @@
         "declaring_header": "evp.h",
         "module": "src/evp/pkey_ctx.rs",
         "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_get0_info"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_get_check"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_get_cleanup"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_get_copy"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
         "symbol": "EVP_PKEY_meth_get_count"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_get_ctrl"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_get_decrypt"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_get_derive"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_get_digest_custom"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_get_digestsign"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_get_digestverify"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_get_encrypt"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_get_init"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_get_keygen"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_get_param_check"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_get_paramgen"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_get_public_check"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_get_sign"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_get_signctx"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_get_verify"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_get_verify_recover"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_get_verifyctx"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_new"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_remove"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_set_check"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_set_cleanup"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_set_copy"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_set_ctrl"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_set_decrypt"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_set_derive"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_set_digest_custom"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_set_digestsign"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_set_digestverify"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_set_encrypt"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_set_init"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_set_keygen"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_set_param_check"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_set_paramgen"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_set_public_check"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_set_sign"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_set_signctx"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_set_verify"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_set_verify_recover"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_meth_set_verifyctx"
       },
       {
         "declaring_header": "evp.h",
@@ -3826,12 +3596,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "982911204633e7677f40dee2711ad5fe61d0696452dc07c9790975abf384c8ec"
+      "sha256": "7efa644211d54afdb1affb392396cf30291882388aac756f2397e996cc0b9421"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "f741e34c5ebe630a2e5f2980b13df2f94e1c7e63145abf9b1ceb87fe4c116616"
+      "sha256": "de065350a3d70e01dc973b45abc1dd9f4cdfc89cb3db4e529d45ed7c24a06027"
     }
   ],
   "kind": "phase7-obligations",

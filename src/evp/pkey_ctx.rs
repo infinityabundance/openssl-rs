@@ -1,11 +1,18 @@
 //! Phase 7.4 — the `EVP_PKEY_CTX` object.
 //!
-//! `crypto/evp/pmeth_lib.c`'s **object half**: the struct, its four constructors, its lifetime, the
-//! operation-state test every operation init starts from, the cached-data trio, and the accessors.
-//! What is *not* here is the `EVP_PKEY_METHOD` registry — `EVP_PKEY_meth_find`, `_new`, `_add0`,
-//! `_remove`, the `get`/`set` accessors — which is 7.4l's because its lookup searches
-//! `standard_methods[]`, a table whose contents are Phase 8's objects (`docs/DECISIONS.md` D163,
-//! D165).
+//! `crypto/evp/pmeth_lib.c`'s **object and registry halves**: the `EVP_PKEY_CTX` struct, its four
+//! constructors, its lifetime, the operation-state test every operation init starts from, the
+//! cached-data trio and the accessors — and, below those, the `EVP_PKEY_METHOD` struct with its
+//! registry (`_new`, `_free`, `_copy`, `_get0_info`, `_add0`, `_remove`) and the forty
+//! `EVP_PKEY_meth_get_*`/`set_*` accessors.
+//!
+//! **What is not here is the three exports that read `standard_methods[]`** —
+//! `EVP_PKEY_meth_find`, `_get0` and `_get_count` — which are 7.4l's, because that table's
+//! contents are Phase 8's `ossl_<alg>_pkey_method` objects (`docs/DECISIONS.md` D163, D165). The
+//! *application* half of the registry landed here: `evp_pkey_meth_find_added_by_application` is
+//! written and has no caller until `EVP_PKEY_meth_find` and `int_ctx_new`'s `app_pmeth` arm land,
+//! so a caller that installs its own method with `EVP_PKEY_meth_add0` is reachable today while the
+//! twelve built-in types are not.
 //!
 //! ## A context is one object with two halves, and `evp_pkey_ctx_state` is the switch
 //!
@@ -48,6 +55,7 @@ use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
 
 use crate::evp::asymcipher::{EVP_ASYM_CIPHER_get0_provider, EvpAsymCipher};
+use crate::evp::digest::EvpMdCtx;
 use crate::evp::exchange::{EVP_KEYEXCH_get0_provider, EvpKeyExch};
 use crate::evp::kem::{EVP_KEM_get0_provider, EvpKem};
 use crate::evp::keymgmt::{
@@ -61,6 +69,10 @@ use crate::provider::{ossl_provider_ctx, OsslProvider};
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
 use crate::runtime::obj::{NID_undef, OBJ_nid2sn};
+use crate::runtime::stack::{
+    OPENSSL_sk_delete_ptr, OPENSSL_sk_find, OPENSSL_sk_new, OPENSSL_sk_push, OPENSSL_sk_sort,
+    OPENSSL_sk_value, OpenSslStack,
+};
 
 // ---------------------------------------------------------------------------------------------
 // The operation bits and the state values.
@@ -1369,6 +1381,1093 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_settable_params(ctx: *const EvpPkeyCtx) ->
 }
 
 // SPDX-License-Identifier: Apache-2.0
+
+// ---------------------------------------------------------------------------------------------
+// The `EVP_PKEY_METHOD` registry — the same shape as `EVP_PKEY_ASN1_METHOD`'s, one file over.
+//
+// `EVP_PKEY_METHOD` is `include/crypto/evp.h:145-192`'s `struct evp_pkey_method_st`: thirty-two
+// members, twenty-seven of them function pointers, and the order is the ABI. It is the **legacy**
+// method object — the one a caller builds with `EVP_PKEY_meth_new` and installs with `_add0` — and
+// it is distinct from `EVP_PKEY_ASN1_METHOD`, which is the encoding side. Both are read by the
+// legacy `EVP_PKEY_CTX` paths and by `p_legacy.c`.
+//
+// The typedef is in `include/openssl/types.h`, the **body** is in an internal header that is not
+// installed, and the accessors are declared in `evp.h`, so the ownership atlas assigns the
+// accessors to this stratum and this stratum defines the struct — the argument D176 made for the
+// ASN.1 one, and the same one applies here.
+//
+// Twenty-seven members name eighteen distinct callback shapes, so there are eighteen aliases rather
+// than twenty-seven: `EVP_PKEY_meth`'s nine `*_init` members are one type, its three `*_check`
+// members are one type, and `sign` and `encrypt` are the same shape under two names because the
+// authority declares them twice and the crate names by role (`KeyexchDeriveFn` and `KdfDeriveFn`
+// are the same shape and are also distinct).
+// ---------------------------------------------------------------------------------------------
+
+/// `int (*)(EVP_PKEY_CTX *) — the nine `*_init` members`.
+pub(crate) type PkeyMethInitFn = unsafe extern "C" fn(*mut EvpPkeyCtx) -> c_int;
+/// `void (*)(EVP_PKEY_CTX *)`.
+pub(crate) type PkeyMethCleanupFn = unsafe extern "C" fn(*mut EvpPkeyCtx);
+/// `int (*)(EVP_PKEY_CTX *, const EVP_PKEY_CTX *)`.
+pub(crate) type PkeyMethCopyFn = unsafe extern "C" fn(*mut EvpPkeyCtx, *const EvpPkeyCtx) -> c_int;
+/// `int (*)(EVP_PKEY_CTX *, EVP_PKEY *)`.
+pub(crate) type PkeyMethParamgenFn = unsafe extern "C" fn(*mut EvpPkeyCtx, *mut EvpPkey) -> c_int;
+/// `int (*)(EVP_PKEY_CTX *, unsigned char *, size_t *, const unsigned char *, size_t)`.
+pub(crate) type PkeyMethSignFn =
+    unsafe extern "C" fn(*mut EvpPkeyCtx, *mut u8, *mut usize, *const u8, usize) -> c_int;
+/// `int (*)(EVP_PKEY_CTX *, unsigned char *, size_t *, const unsigned char *, size_t)`.
+pub(crate) type PkeyMethCryptFn =
+    unsafe extern "C" fn(*mut EvpPkeyCtx, *mut u8, *mut usize, *const u8, usize) -> c_int;
+/// `int (*)(EVP_PKEY_CTX *, const unsigned char *, size_t, const unsigned char *, size_t)`.
+pub(crate) type PkeyMethVerifyFn =
+    unsafe extern "C" fn(*mut EvpPkeyCtx, *const u8, usize, *const u8, usize) -> c_int;
+/// `int (*)(EVP_PKEY_CTX *, unsigned char *, size_t *, const unsigned char *, size_t)`.
+pub(crate) type PkeyMethVerifyRecoverFn =
+    unsafe extern "C" fn(*mut EvpPkeyCtx, *mut u8, *mut usize, *const u8, usize) -> c_int;
+/// `int (*)(EVP_PKEY_CTX *, EVP_MD_CTX *)`.
+pub(crate) type PkeyMethSignctxInitFn =
+    unsafe extern "C" fn(*mut EvpPkeyCtx, *mut EvpMdCtx) -> c_int;
+/// `int (*)(EVP_PKEY_CTX *, unsigned char *, size_t *, EVP_MD_CTX *)`.
+pub(crate) type PkeyMethSignctxFn =
+    unsafe extern "C" fn(*mut EvpPkeyCtx, *mut u8, *mut usize, *mut EvpMdCtx) -> c_int;
+/// `int (*)(EVP_PKEY_CTX *, const unsigned char *, int, EVP_MD_CTX *)`.
+pub(crate) type PkeyMethVerifyctxFn =
+    unsafe extern "C" fn(*mut EvpPkeyCtx, *const u8, c_int, *mut EvpMdCtx) -> c_int;
+/// `int (*)(EVP_PKEY_CTX *, unsigned char *, size_t *)`.
+pub(crate) type PkeyMethDeriveFn =
+    unsafe extern "C" fn(*mut EvpPkeyCtx, *mut u8, *mut usize) -> c_int;
+/// `int (*)(EVP_PKEY_CTX *, int, int, void *)`.
+pub(crate) type PkeyMethCtrlFn =
+    unsafe extern "C" fn(*mut EvpPkeyCtx, c_int, c_int, *mut c_void) -> c_int;
+/// `int (*)(EVP_PKEY_CTX *, const char *, const char *)`.
+pub(crate) type PkeyMethCtrlStrFn =
+    unsafe extern "C" fn(*mut EvpPkeyCtx, *const c_char, *const c_char) -> c_int;
+/// `int (*)(EVP_MD_CTX *, unsigned char *, size_t *, const unsigned char *, size_t)`.
+pub(crate) type PkeyMethDigestsignFn =
+    unsafe extern "C" fn(*mut EvpMdCtx, *mut u8, *mut usize, *const u8, usize) -> c_int;
+/// `int (*)(EVP_MD_CTX *, const unsigned char *, size_t, const unsigned char *, size_t)`.
+pub(crate) type PkeyMethDigestverifyFn =
+    unsafe extern "C" fn(*mut EvpMdCtx, *const u8, usize, *const u8, usize) -> c_int;
+/// `int (*)(EVP_PKEY *)`.
+pub(crate) type PkeyMethCheckFn = unsafe extern "C" fn(*mut EvpPkey) -> c_int;
+/// `int (*)(EVP_PKEY_CTX *, EVP_MD_CTX *)`.
+pub(crate) type PkeyMethDigestCustomFn =
+    unsafe extern "C" fn(*mut EvpPkeyCtx, *mut EvpMdCtx) -> c_int;
+
+/// `struct evp_pkey_method_st` — `include/crypto/evp.h:145-192`, thirty-two members in ABI order.
+///
+/// `pkey_id` and `flags` first, then the twenty-seven callbacks in the header's order, then
+/// `digest_custom` last — which is *after* the three `*_check` members, so a transcription that
+/// sorted by role would put it a member early.
+#[repr(C)]
+pub struct EvpPkeyMethod {
+    /// `int pkey_id`.
+    pub(crate) pkey_id: c_int,
+    /// `int flags`.
+    pub(crate) flags: c_int,
+    /// `int (*init)(EVP_PKEY_CTX *ctx)`.
+    pub(crate) init: Option<PkeyMethInitFn>,
+    /// `int (*copy)(EVP_PKEY_CTX *dst, const EVP_PKEY_CTX *src)`.
+    pub(crate) copy: Option<PkeyMethCopyFn>,
+    /// `void (*cleanup)(EVP_PKEY_CTX *ctx)`.
+    pub(crate) cleanup: Option<PkeyMethCleanupFn>,
+    /// `int (*paramgen_init)(EVP_PKEY_CTX *ctx)`.
+    pub(crate) paramgen_init: Option<PkeyMethInitFn>,
+    /// `int (*paramgen)(EVP_PKEY_CTX *ctx, EVP_PKEY *pkey)`.
+    pub(crate) paramgen: Option<PkeyMethParamgenFn>,
+    /// `int (*keygen_init)(EVP_PKEY_CTX *ctx)`.
+    pub(crate) keygen_init: Option<PkeyMethInitFn>,
+    /// `int (*keygen)(EVP_PKEY_CTX *ctx, EVP_PKEY *pkey)`.
+    pub(crate) keygen: Option<PkeyMethParamgenFn>,
+    /// `int (*sign_init)(EVP_PKEY_CTX *ctx)`.
+    pub(crate) sign_init: Option<PkeyMethInitFn>,
+    /// `int (*sign)(EVP_PKEY_CTX *ctx, unsigned char *sig, size_t *siglen, const unsigned char *tbs, size_t tbslen)`.
+    pub(crate) sign: Option<PkeyMethSignFn>,
+    /// `int (*verify_init)(EVP_PKEY_CTX *ctx)`.
+    pub(crate) verify_init: Option<PkeyMethInitFn>,
+    /// `int (*verify)(EVP_PKEY_CTX *ctx, const unsigned char *sig, size_t siglen, const unsigned char *tbs, size_t tbslen)`.
+    pub(crate) verify: Option<PkeyMethVerifyFn>,
+    /// `int (*verify_recover_init)(EVP_PKEY_CTX *ctx)`.
+    pub(crate) verify_recover_init: Option<PkeyMethInitFn>,
+    /// `int (*verify_recover)(EVP_PKEY_CTX *ctx, unsigned char *rout, size_t *routlen, const unsigned char *sig, size_t siglen)`.
+    pub(crate) verify_recover: Option<PkeyMethVerifyRecoverFn>,
+    /// `int (*signctx_init)(EVP_PKEY_CTX *ctx, EVP_MD_CTX *mctx)`.
+    pub(crate) signctx_init: Option<PkeyMethSignctxInitFn>,
+    /// `int (*signctx)(EVP_PKEY_CTX *ctx, unsigned char *sig, size_t *siglen, EVP_MD_CTX *mctx)`.
+    pub(crate) signctx: Option<PkeyMethSignctxFn>,
+    /// `int (*verifyctx_init)(EVP_PKEY_CTX *ctx, EVP_MD_CTX *mctx)`.
+    pub(crate) verifyctx_init: Option<PkeyMethSignctxInitFn>,
+    /// `int (*verifyctx)(EVP_PKEY_CTX *ctx, const unsigned char *sig, int siglen, EVP_MD_CTX *mctx)`.
+    pub(crate) verifyctx: Option<PkeyMethVerifyctxFn>,
+    /// `int (*encrypt_init)(EVP_PKEY_CTX *ctx)`.
+    pub(crate) encrypt_init: Option<PkeyMethInitFn>,
+    /// `int (*encrypt)(EVP_PKEY_CTX *ctx, unsigned char *out, size_t *outlen, const unsigned char *in, size_t inlen)`.
+    pub(crate) encrypt: Option<PkeyMethCryptFn>,
+    /// `int (*decrypt_init)(EVP_PKEY_CTX *ctx)`.
+    pub(crate) decrypt_init: Option<PkeyMethInitFn>,
+    /// `int (*decrypt)(EVP_PKEY_CTX *ctx, unsigned char *out, size_t *outlen, const unsigned char *in, size_t inlen)`.
+    pub(crate) decrypt: Option<PkeyMethCryptFn>,
+    /// `int (*derive_init)(EVP_PKEY_CTX *ctx)`.
+    pub(crate) derive_init: Option<PkeyMethInitFn>,
+    /// `int (*derive)(EVP_PKEY_CTX *ctx, unsigned char *key, size_t *keylen)`.
+    pub(crate) derive: Option<PkeyMethDeriveFn>,
+    /// `int (*ctrl)(EVP_PKEY_CTX *ctx, int type, int p1, void *p2)`.
+    pub(crate) ctrl: Option<PkeyMethCtrlFn>,
+    /// `int (*ctrl_str)(EVP_PKEY_CTX *ctx, const char *type, const char *value)`.
+    pub(crate) ctrl_str: Option<PkeyMethCtrlStrFn>,
+    /// `int (*digestsign)(EVP_MD_CTX *ctx, unsigned char *sig, size_t *siglen, const unsigned char *tbs, size_t tbslen)`.
+    pub(crate) digestsign: Option<PkeyMethDigestsignFn>,
+    /// `int (*digestverify)(EVP_MD_CTX *ctx, const unsigned char *sig, size_t siglen, const unsigned char *tbs, size_t tbslen)`.
+    pub(crate) digestverify: Option<PkeyMethDigestverifyFn>,
+    /// `int (*check)(EVP_PKEY *pkey)`.
+    pub(crate) check: Option<PkeyMethCheckFn>,
+    /// `int (*public_check)(EVP_PKEY *pkey)`.
+    pub(crate) public_check: Option<PkeyMethCheckFn>,
+    /// `int (*param_check)(EVP_PKEY *pkey)`.
+    pub(crate) param_check: Option<PkeyMethCheckFn>,
+    /// `int (*digest_custom)(EVP_PKEY_CTX *ctx, EVP_MD_CTX *mctx)`.
+    pub(crate) digest_custom: Option<PkeyMethDigestCustomFn>,
+}
+
+/// `EVP_PKEY_FLAG_DYNAMIC` — `include/crypto/evp.h:143`.
+///
+/// Vanishingly easy to miss and load-bearing in two places: `EVP_PKEY_meth_new` **or**s it into the
+/// caller's flags, and `EVP_PKEY_meth_free` frees on nothing else. A method a caller built
+/// statically — which every one of Phase 8's `ossl_<alg>_pkey_method` objects is — must survive
+/// `EVP_PKEY_meth_free`, so a transcription that freed unconditionally would free a
+/// `static const` object.
+const EVP_PKEY_FLAG_DYNAMIC: c_int = 1;
+
+/// `app_pkey_methods` — the application-registered methods, sorted by `pmeth_cmp`.
+static mut APP_PKEY_METHODS: *mut OpenSslStack = ptr::null_mut();
+
+/// `EVP_PKEY_meth_new`'s `OPENSSL_zalloc(sizeof(*pmeth))` (line 128).
+const LINE_ZALLOC_PMETH: c_int = 128;
+/// `EVP_PKEY_meth_free`'s `OPENSSL_free(pmeth)` (line 439).
+const LINE_FREE_PMETH: c_int = 439;
+
+/// `static int pmeth_cmp(const EVP_PKEY_METHOD *const *a, const EVP_PKEY_METHOD *const *b)` —
+/// `crypto/asn1/ameth_lib.c:31`'s counterpart in `crypto/evp/pmeth_lib.c:86`.
+///
+/// # Safety
+/// Both arguments must point at live `*const EvpPkeyMethod` slots.
+unsafe extern "C" fn pmeth_cmp(a: *const c_void, b: *const c_void) -> c_int {
+    /* The stack stores the elements themselves and hands the comparator the addresses of the slots
+     * they live in -- what the authority's `DECLARE_OBJ_BSEARCH_CMP_FN` macro spells as a
+     * `*const *const` pair, and what the crate's `CompFn` erases to a `*const c_void` pair. */
+    let a = a.cast::<*const EvpPkeyMethod>();
+    let b = b.cast::<*const EvpPkeyMethod>();
+    // SAFETY: both arguments are slots holding live methods per the contract.
+    let (x, y) = unsafe { ((**a).pkey_id, (**b).pkey_id) };
+    x - y
+}
+
+/// `static const EVP_PKEY_METHOD *evp_pkey_meth_find_added_by_application(int type)` —
+/// `crypto/evp/pmeth_lib.c:92`.
+///
+/// The application table alone, which is why it is separate from `EVP_PKEY_meth_find`: that one
+/// asks this first and only then searches `standard_methods[]`. `int_ctx_new` and
+/// `EVP_PKEY_CTX_dup` call **this** one, so a caller that installed its own method reaches it
+/// without the Phase-8 table being present at all.
+///
+/// **No caller in this crate yet.** Two land later in this stratum and neither is here:
+/// `EVP_PKEY_meth_find` (7.4l, which asks this first and only then searches `standard_methods[]`)
+/// and `int_ctx_new`'s `app_pmeth` arm (7.4c, which the crate currently records as absent because
+/// `ctx->pmeth` does not exist until then).
+///
+/// # Safety
+/// Nothing: the table is this module's own.
+#[allow(dead_code)] // called by `EVP_PKEY_meth_find` (7.4l) and `int_ctx_new` (7.4c)
+pub(crate) unsafe fn evp_pkey_meth_find_added_by_application(type_: c_int) -> *const EvpPkeyMethod {
+    // SAFETY: `APP_PKEY_METHODS` is NULL or a stack this module owns.
+    if unsafe { APP_PKEY_METHODS }.is_null() {
+        return ptr::null();
+    }
+    /* The comparator reads `pkey_id` alone, so a zeroed probe of the right shape is a legal
+     * argument; see `EVP_PKEY_asn1_add0`'s duplicate test for the same construction. */
+    // SAFETY: every field is a scalar, a raw pointer or an `Option` of a function pointer, so the
+    // all-zero bit pattern is valid, and `pkey_id` is assigned on the next line.
+    let mut probe: EvpPkeyMethod = unsafe { core::mem::zeroed() };
+    probe.pkey_id = type_;
+    // SAFETY: `APP_PKEY_METHODS` is live and `probe` is a live local the comparator reads as a
+    // method.
+    let idx = unsafe { OPENSSL_sk_find(APP_PKEY_METHODS, ptr::addr_of!(probe).cast::<c_void>()) };
+    if idx < 0 {
+        return ptr::null();
+    }
+    // SAFETY: `idx` is a valid index into `APP_PKEY_METHODS`.
+    unsafe { OPENSSL_sk_value(APP_PKEY_METHODS, idx) }.cast::<EvpPkeyMethod>()
+}
+
+/// `EVP_PKEY_METHOD *EVP_PKEY_meth_new(int id, int flags)` — `crypto/evp/pmeth_lib.c:124`.
+///
+/// `OPENSSL_zalloc`, then the id, then `flags | EVP_PKEY_FLAG_DYNAMIC`. The **or** is what makes
+/// `EVP_PKEY_meth_free` able to release the object later, and it is the one thing this constructor
+/// does that a caller could not do itself.
+///
+/// # Safety
+/// Nothing: both arguments are integers.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_new(id: c_int, flags: c_int) -> *mut EvpPkeyMethod {
+    /* `CRYPTO_zalloc` is one of the safe entry points of this crate: it validates its own argument
+     * and answers NULL rather than reading anything of the caller's. */
+    let pmeth = CRYPTO_zalloc(
+        core::mem::size_of::<EvpPkeyMethod>(),
+        FILE,
+        LINE_ZALLOC_PMETH,
+    )
+    .cast::<EvpPkeyMethod>();
+    if pmeth.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `pmeth` is this call's own allocation.
+    unsafe {
+        (*pmeth).pkey_id = id;
+        (*pmeth).flags = flags | EVP_PKEY_FLAG_DYNAMIC;
+    }
+    pmeth
+}
+
+/// `void EVP_PKEY_meth_free(EVP_PKEY_METHOD *pmeth)` — `crypto/evp/pmeth_lib.c:436`.
+///
+/// **Only frees a `DYNAMIC` method**, and that is not a fast path: a method the caller owns
+/// statically — which is every one of Phase 8's `ossl_<alg>_pkey_method` objects — must survive a
+/// `free` call.
+///
+/// # Safety
+/// `pmeth` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_free(pmeth: *mut EvpPkeyMethod) {
+    if pmeth.is_null() {
+        return;
+    }
+    // SAFETY: `pmeth` is live per the contract.
+    if (unsafe { (*pmeth).flags } & EVP_PKEY_FLAG_DYNAMIC) == 0 {
+        return;
+    }
+    // SAFETY: `pmeth` is live and `DYNAMIC` is set, so this object is this module's own.
+    unsafe { CRYPTO_free(pmeth.cast::<c_void>(), FILE, LINE_FREE_PMETH) };
+}
+
+/// `void EVP_PKEY_meth_copy(EVP_PKEY_METHOD *dst, const EVP_PKEY_METHOD *src)` —
+/// `crypto/evp/pmeth_lib.c:424`.
+///
+/// `*dst = *src` and then **two** restores, where the ASN.1 counterpart restores five: `dst` keeps
+/// its own `pkey_id` and `flags` and takes the twenty-seven callbacks from `src`. The authority's
+/// comment is the same sentence as the ASN.1 one — "We only copy the function pointers so restore
+/// the other values" — and here it means exactly two fields, because this struct has no owned
+/// strings.
+///
+/// # Safety
+/// `dst` and `src` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_copy(dst: *mut EvpPkeyMethod, src: *const EvpPkeyMethod) {
+    // SAFETY: `dst` is live per the contract.
+    let (pkey_id, flags) = unsafe { ((*dst).pkey_id, (*dst).flags) };
+
+    // SAFETY: both are live and non-overlapping per the contract.
+    unsafe { ptr::copy_nonoverlapping(src, dst, 1) };
+
+    // SAFETY: `dst` is live.
+    unsafe {
+        (*dst).pkey_id = pkey_id;
+        (*dst).flags = flags;
+    }
+}
+
+/// `void EVP_PKEY_meth_get0_info(int *ppkey_id, int *pflags, const EVP_PKEY_METHOD *meth)` —
+/// `crypto/evp/pmeth_lib.c:415`.
+///
+/// Two out-parameters, each written **only if the caller passed one** — unlike its ASN.1
+/// counterpart, which has five and also writes the method's own string pointers.
+///
+/// # Safety
+/// `meth` must be live; each out-parameter NULL or writable.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_get0_info(
+    ppkey_id: *mut c_int,
+    pflags: *mut c_int,
+    meth: *const EvpPkeyMethod,
+) {
+    if !ppkey_id.is_null() {
+        // SAFETY: `ppkey_id` is writable per the contract and `meth` is live.
+        unsafe { *ppkey_id = (*meth).pkey_id };
+    }
+    if !pflags.is_null() {
+        // SAFETY: `pflags` is writable per the contract and `meth` is live.
+        unsafe { *pflags = (*meth).flags };
+    }
+}
+
+/// `int EVP_PKEY_meth_add0(const EVP_PKEY_METHOD *pmeth)` — `crypto/evp/pmeth_lib.c:614`.
+///
+/// **No validation at all**, which is the difference from `EVP_PKEY_asn1_add0`: no alias/null rule,
+/// no duplicate check, and a duplicate `pkey_id` is pushed and the stack sorted with both present.
+/// The two allocation failures are the file's only recorded sites, and both take `ERR_R_CRYPTO_LIB`
+/// rather than a reason of this unit's own.
+///
+/// # Safety
+/// `pmeth` must be a live method, and it must outlive the registry.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_add0(pmeth: *const EvpPkeyMethod) -> c_int {
+    // SAFETY: `APP_PKEY_METHODS` is NULL or a stack this module owns.
+    if unsafe { APP_PKEY_METHODS }.is_null() {
+        // SAFETY: the comparator reads only `pkey_id`, which every pushed method has.
+        /* `OPENSSL_sk_new` is a safe entry point of this crate. */
+        let st = OPENSSL_sk_new(Some(pmeth_cmp));
+        if st.is_null() {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::PMETH_LIB_619) };
+            return 0;
+        }
+        // SAFETY: this module owns the pointer and nothing else writes it.
+        unsafe { APP_PKEY_METHODS = st };
+    }
+    // SAFETY: `APP_PKEY_METHODS` is live and `pmeth` outlives the registry per the contract.
+    if unsafe { OPENSSL_sk_push(APP_PKEY_METHODS, pmeth.cast::<c_void>()) } == 0 {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::PMETH_LIB_624) };
+        return 0;
+    }
+    // SAFETY: `APP_PKEY_METHODS` is live.
+    unsafe { OPENSSL_sk_sort(APP_PKEY_METHODS) };
+    1
+}
+
+/// `int EVP_PKEY_meth_remove(const EVP_PKEY_METHOD *pmeth)` — `crypto/evp/pmeth_lib.c:637`.
+///
+/// `sk_EVP_PKEY_METHOD_delete_ptr`, which compares **pointer identity** rather than `pkey_id` — so
+/// it removes the one object the caller holds, not the first with the same id. The authority calls
+/// it with no NULL test on the stack and no NULL test on `pmeth`; `OPENSSL_sk_delete_ptr` answers
+/// NULL for a NULL stack, so a caller that removes before adding gets 0 rather than a fault, and
+/// that is reproduced rather than guarded.
+///
+/// # Safety
+/// `pmeth` must be the pointer that was pushed, or NULL.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_remove(pmeth: *const EvpPkeyMethod) -> c_int {
+    // SAFETY: `pmeth` is the caller's own pointer per the contract; the stack is this module's own
+    // and `OPENSSL_sk_delete_ptr` answers NULL for a NULL one.
+    let ret = unsafe { OPENSSL_sk_delete_ptr(APP_PKEY_METHODS, pmeth.cast::<c_void>()) };
+    if ret.is_null() {
+        0
+    } else {
+        1
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// The forty `get`/`set` accessors.
+//
+// Every setter is a list of field assignments and every getter is a list of guarded stores, so the
+// whole of their contract is the **parameter list** — and twenty of them take *two* output
+// parameters, which is the part a reader is most likely to drop. `get_encrypt`'s second parameter
+// is spelled `pencryptfn` and its member is `encrypt`, and the three `get_*_check` functions all
+// name their parameter `pcheck` while writing three different members; both are the authority's own
+// spellings, copied rather than tidied.
+//
+// The getter's guard is a NULL test and not a validity test: `if (pinit) *pinit = ...`. A caller
+// that wants only the second of two callbacks passes NULL for the first, which is why the pair
+// cannot be collapsed.
+// ---------------------------------------------------------------------------------------------
+
+/// `void EVP_PKEY_meth_set_init(EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `set_init` arm.
+///
+/// # Safety
+/// `pmeth` must be live; every callback is the caller's and must outlive the method.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_set_init(
+    pmeth: *mut EvpPkeyMethod,
+    init: Option<PkeyMethInitFn>,
+) {
+    // SAFETY: `pmeth` is live per the contract.
+    unsafe {
+        (*pmeth).init = init;
+    }
+}
+
+/// `void EVP_PKEY_meth_get_init(const EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `get_init` arm.
+///
+/// # Safety
+/// `pmeth` must be live; each out-parameter NULL or writable.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_get_init(
+    pmeth: *const EvpPkeyMethod,
+    pinit: *mut Option<PkeyMethInitFn>,
+) {
+    if !pinit.is_null() {
+        // SAFETY: `pinit` is writable per the contract and `pmeth` is live.
+        unsafe { *pinit = (*pmeth).init };
+    }
+}
+
+/// `void EVP_PKEY_meth_set_copy(EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `set_copy` arm.
+///
+/// # Safety
+/// `pmeth` must be live; every callback is the caller's and must outlive the method.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_set_copy(
+    pmeth: *mut EvpPkeyMethod,
+    copy: Option<PkeyMethCopyFn>,
+) {
+    // SAFETY: `pmeth` is live per the contract.
+    unsafe {
+        (*pmeth).copy = copy;
+    }
+}
+
+/// `void EVP_PKEY_meth_get_copy(const EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `get_copy` arm.
+///
+/// # Safety
+/// `pmeth` must be live; each out-parameter NULL or writable.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_get_copy(
+    pmeth: *const EvpPkeyMethod,
+    pcopy: *mut Option<PkeyMethCopyFn>,
+) {
+    if !pcopy.is_null() {
+        // SAFETY: `pcopy` is writable per the contract and `pmeth` is live.
+        unsafe { *pcopy = (*pmeth).copy };
+    }
+}
+
+/// `void EVP_PKEY_meth_set_cleanup(EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `set_cleanup` arm.
+///
+/// # Safety
+/// `pmeth` must be live; every callback is the caller's and must outlive the method.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_set_cleanup(
+    pmeth: *mut EvpPkeyMethod,
+    cleanup: Option<PkeyMethCleanupFn>,
+) {
+    // SAFETY: `pmeth` is live per the contract.
+    unsafe {
+        (*pmeth).cleanup = cleanup;
+    }
+}
+
+/// `void EVP_PKEY_meth_get_cleanup(const EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `get_cleanup` arm.
+///
+/// # Safety
+/// `pmeth` must be live; each out-parameter NULL or writable.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_get_cleanup(
+    pmeth: *const EvpPkeyMethod,
+    pcleanup: *mut Option<PkeyMethCleanupFn>,
+) {
+    if !pcleanup.is_null() {
+        // SAFETY: `pcleanup` is writable per the contract and `pmeth` is live.
+        unsafe { *pcleanup = (*pmeth).cleanup };
+    }
+}
+
+/// `void EVP_PKEY_meth_set_paramgen(EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `set_paramgen` arm.
+///
+/// # Safety
+/// `pmeth` must be live; every callback is the caller's and must outlive the method.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_set_paramgen(
+    pmeth: *mut EvpPkeyMethod,
+    paramgen_init: Option<PkeyMethInitFn>,
+    paramgen: Option<PkeyMethParamgenFn>,
+) {
+    // SAFETY: `pmeth` is live per the contract.
+    unsafe {
+        (*pmeth).paramgen_init = paramgen_init;
+        (*pmeth).paramgen = paramgen;
+    }
+}
+
+/// `void EVP_PKEY_meth_get_paramgen(const EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `get_paramgen` arm.
+///
+/// # Safety
+/// `pmeth` must be live; each out-parameter NULL or writable.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_get_paramgen(
+    pmeth: *const EvpPkeyMethod,
+    pparamgen_init: *mut Option<PkeyMethInitFn>,
+    pparamgen: *mut Option<PkeyMethParamgenFn>,
+) {
+    if !pparamgen_init.is_null() {
+        // SAFETY: `pparamgen_init` is writable per the contract and `pmeth` is live.
+        unsafe { *pparamgen_init = (*pmeth).paramgen_init };
+    }
+    if !pparamgen.is_null() {
+        // SAFETY: `pparamgen` is writable per the contract and `pmeth` is live.
+        unsafe { *pparamgen = (*pmeth).paramgen };
+    }
+}
+
+/// `void EVP_PKEY_meth_set_keygen(EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `set_keygen` arm.
+///
+/// # Safety
+/// `pmeth` must be live; every callback is the caller's and must outlive the method.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_set_keygen(
+    pmeth: *mut EvpPkeyMethod,
+    keygen_init: Option<PkeyMethInitFn>,
+    keygen: Option<PkeyMethParamgenFn>,
+) {
+    // SAFETY: `pmeth` is live per the contract.
+    unsafe {
+        (*pmeth).keygen_init = keygen_init;
+        (*pmeth).keygen = keygen;
+    }
+}
+
+/// `void EVP_PKEY_meth_get_keygen(const EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `get_keygen` arm.
+///
+/// # Safety
+/// `pmeth` must be live; each out-parameter NULL or writable.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_get_keygen(
+    pmeth: *const EvpPkeyMethod,
+    pkeygen_init: *mut Option<PkeyMethInitFn>,
+    pkeygen: *mut Option<PkeyMethParamgenFn>,
+) {
+    if !pkeygen_init.is_null() {
+        // SAFETY: `pkeygen_init` is writable per the contract and `pmeth` is live.
+        unsafe { *pkeygen_init = (*pmeth).keygen_init };
+    }
+    if !pkeygen.is_null() {
+        // SAFETY: `pkeygen` is writable per the contract and `pmeth` is live.
+        unsafe { *pkeygen = (*pmeth).keygen };
+    }
+}
+
+/// `void EVP_PKEY_meth_set_sign(EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `set_sign` arm.
+///
+/// # Safety
+/// `pmeth` must be live; every callback is the caller's and must outlive the method.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_set_sign(
+    pmeth: *mut EvpPkeyMethod,
+    sign_init: Option<PkeyMethInitFn>,
+    sign: Option<PkeyMethSignFn>,
+) {
+    // SAFETY: `pmeth` is live per the contract.
+    unsafe {
+        (*pmeth).sign_init = sign_init;
+        (*pmeth).sign = sign;
+    }
+}
+
+/// `void EVP_PKEY_meth_get_sign(const EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `get_sign` arm.
+///
+/// # Safety
+/// `pmeth` must be live; each out-parameter NULL or writable.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_get_sign(
+    pmeth: *const EvpPkeyMethod,
+    psign_init: *mut Option<PkeyMethInitFn>,
+    psign: *mut Option<PkeyMethSignFn>,
+) {
+    if !psign_init.is_null() {
+        // SAFETY: `psign_init` is writable per the contract and `pmeth` is live.
+        unsafe { *psign_init = (*pmeth).sign_init };
+    }
+    if !psign.is_null() {
+        // SAFETY: `psign` is writable per the contract and `pmeth` is live.
+        unsafe { *psign = (*pmeth).sign };
+    }
+}
+
+/// `void EVP_PKEY_meth_set_verify(EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `set_verify` arm.
+///
+/// # Safety
+/// `pmeth` must be live; every callback is the caller's and must outlive the method.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_set_verify(
+    pmeth: *mut EvpPkeyMethod,
+    verify_init: Option<PkeyMethInitFn>,
+    verify: Option<PkeyMethVerifyFn>,
+) {
+    // SAFETY: `pmeth` is live per the contract.
+    unsafe {
+        (*pmeth).verify_init = verify_init;
+        (*pmeth).verify = verify;
+    }
+}
+
+/// `void EVP_PKEY_meth_get_verify(const EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `get_verify` arm.
+///
+/// # Safety
+/// `pmeth` must be live; each out-parameter NULL or writable.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_get_verify(
+    pmeth: *const EvpPkeyMethod,
+    pverify_init: *mut Option<PkeyMethInitFn>,
+    pverify: *mut Option<PkeyMethVerifyFn>,
+) {
+    if !pverify_init.is_null() {
+        // SAFETY: `pverify_init` is writable per the contract and `pmeth` is live.
+        unsafe { *pverify_init = (*pmeth).verify_init };
+    }
+    if !pverify.is_null() {
+        // SAFETY: `pverify` is writable per the contract and `pmeth` is live.
+        unsafe { *pverify = (*pmeth).verify };
+    }
+}
+
+/// `void EVP_PKEY_meth_set_verify_recover(EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `set_verify_recover` arm.
+///
+/// # Safety
+/// `pmeth` must be live; every callback is the caller's and must outlive the method.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_set_verify_recover(
+    pmeth: *mut EvpPkeyMethod,
+    verify_recover_init: Option<PkeyMethInitFn>,
+    verify_recover: Option<PkeyMethVerifyRecoverFn>,
+) {
+    // SAFETY: `pmeth` is live per the contract.
+    unsafe {
+        (*pmeth).verify_recover_init = verify_recover_init;
+        (*pmeth).verify_recover = verify_recover;
+    }
+}
+
+/// `void EVP_PKEY_meth_get_verify_recover(const EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `get_verify_recover` arm.
+///
+/// # Safety
+/// `pmeth` must be live; each out-parameter NULL or writable.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_get_verify_recover(
+    pmeth: *const EvpPkeyMethod,
+    pverify_recover_init: *mut Option<PkeyMethInitFn>,
+    pverify_recover: *mut Option<PkeyMethVerifyRecoverFn>,
+) {
+    if !pverify_recover_init.is_null() {
+        // SAFETY: `pverify_recover_init` is writable per the contract and `pmeth` is live.
+        unsafe { *pverify_recover_init = (*pmeth).verify_recover_init };
+    }
+    if !pverify_recover.is_null() {
+        // SAFETY: `pverify_recover` is writable per the contract and `pmeth` is live.
+        unsafe { *pverify_recover = (*pmeth).verify_recover };
+    }
+}
+
+/// `void EVP_PKEY_meth_set_signctx(EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `set_signctx` arm.
+///
+/// # Safety
+/// `pmeth` must be live; every callback is the caller's and must outlive the method.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_set_signctx(
+    pmeth: *mut EvpPkeyMethod,
+    signctx_init: Option<PkeyMethSignctxInitFn>,
+    signctx: Option<PkeyMethSignctxFn>,
+) {
+    // SAFETY: `pmeth` is live per the contract.
+    unsafe {
+        (*pmeth).signctx_init = signctx_init;
+        (*pmeth).signctx = signctx;
+    }
+}
+
+/// `void EVP_PKEY_meth_get_signctx(const EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `get_signctx` arm.
+///
+/// # Safety
+/// `pmeth` must be live; each out-parameter NULL or writable.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_get_signctx(
+    pmeth: *const EvpPkeyMethod,
+    psignctx_init: *mut Option<PkeyMethSignctxInitFn>,
+    psignctx: *mut Option<PkeyMethSignctxFn>,
+) {
+    if !psignctx_init.is_null() {
+        // SAFETY: `psignctx_init` is writable per the contract and `pmeth` is live.
+        unsafe { *psignctx_init = (*pmeth).signctx_init };
+    }
+    if !psignctx.is_null() {
+        // SAFETY: `psignctx` is writable per the contract and `pmeth` is live.
+        unsafe { *psignctx = (*pmeth).signctx };
+    }
+}
+
+/// `void EVP_PKEY_meth_set_verifyctx(EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `set_verifyctx` arm.
+///
+/// # Safety
+/// `pmeth` must be live; every callback is the caller's and must outlive the method.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_set_verifyctx(
+    pmeth: *mut EvpPkeyMethod,
+    verifyctx_init: Option<PkeyMethSignctxInitFn>,
+    verifyctx: Option<PkeyMethVerifyctxFn>,
+) {
+    // SAFETY: `pmeth` is live per the contract.
+    unsafe {
+        (*pmeth).verifyctx_init = verifyctx_init;
+        (*pmeth).verifyctx = verifyctx;
+    }
+}
+
+/// `void EVP_PKEY_meth_get_verifyctx(const EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `get_verifyctx` arm.
+///
+/// # Safety
+/// `pmeth` must be live; each out-parameter NULL or writable.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_get_verifyctx(
+    pmeth: *const EvpPkeyMethod,
+    pverifyctx_init: *mut Option<PkeyMethSignctxInitFn>,
+    pverifyctx: *mut Option<PkeyMethVerifyctxFn>,
+) {
+    if !pverifyctx_init.is_null() {
+        // SAFETY: `pverifyctx_init` is writable per the contract and `pmeth` is live.
+        unsafe { *pverifyctx_init = (*pmeth).verifyctx_init };
+    }
+    if !pverifyctx.is_null() {
+        // SAFETY: `pverifyctx` is writable per the contract and `pmeth` is live.
+        unsafe { *pverifyctx = (*pmeth).verifyctx };
+    }
+}
+
+/// `void EVP_PKEY_meth_set_encrypt(EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `set_encrypt` arm.
+///
+/// # Safety
+/// `pmeth` must be live; every callback is the caller's and must outlive the method.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_set_encrypt(
+    pmeth: *mut EvpPkeyMethod,
+    encrypt_init: Option<PkeyMethInitFn>,
+    encryptfn: Option<PkeyMethCryptFn>,
+) {
+    // SAFETY: `pmeth` is live per the contract.
+    unsafe {
+        (*pmeth).encrypt_init = encrypt_init;
+        (*pmeth).encrypt = encryptfn;
+    }
+}
+
+/// `void EVP_PKEY_meth_get_encrypt(const EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `get_encrypt` arm.
+///
+/// # Safety
+/// `pmeth` must be live; each out-parameter NULL or writable.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_get_encrypt(
+    pmeth: *const EvpPkeyMethod,
+    pencrypt_init: *mut Option<PkeyMethInitFn>,
+    pencryptfn: *mut Option<PkeyMethCryptFn>,
+) {
+    if !pencrypt_init.is_null() {
+        // SAFETY: `pencrypt_init` is writable per the contract and `pmeth` is live.
+        unsafe { *pencrypt_init = (*pmeth).encrypt_init };
+    }
+    if !pencryptfn.is_null() {
+        // SAFETY: `pencryptfn` is writable per the contract and `pmeth` is live.
+        unsafe { *pencryptfn = (*pmeth).encrypt };
+    }
+}
+
+/// `void EVP_PKEY_meth_set_decrypt(EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `set_decrypt` arm.
+///
+/// # Safety
+/// `pmeth` must be live; every callback is the caller's and must outlive the method.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_set_decrypt(
+    pmeth: *mut EvpPkeyMethod,
+    decrypt_init: Option<PkeyMethInitFn>,
+    decrypt: Option<PkeyMethCryptFn>,
+) {
+    // SAFETY: `pmeth` is live per the contract.
+    unsafe {
+        (*pmeth).decrypt_init = decrypt_init;
+        (*pmeth).decrypt = decrypt;
+    }
+}
+
+/// `void EVP_PKEY_meth_get_decrypt(const EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `get_decrypt` arm.
+///
+/// # Safety
+/// `pmeth` must be live; each out-parameter NULL or writable.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_get_decrypt(
+    pmeth: *const EvpPkeyMethod,
+    pdecrypt_init: *mut Option<PkeyMethInitFn>,
+    pdecrypt: *mut Option<PkeyMethCryptFn>,
+) {
+    if !pdecrypt_init.is_null() {
+        // SAFETY: `pdecrypt_init` is writable per the contract and `pmeth` is live.
+        unsafe { *pdecrypt_init = (*pmeth).decrypt_init };
+    }
+    if !pdecrypt.is_null() {
+        // SAFETY: `pdecrypt` is writable per the contract and `pmeth` is live.
+        unsafe { *pdecrypt = (*pmeth).decrypt };
+    }
+}
+
+/// `void EVP_PKEY_meth_set_derive(EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `set_derive` arm.
+///
+/// # Safety
+/// `pmeth` must be live; every callback is the caller's and must outlive the method.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_set_derive(
+    pmeth: *mut EvpPkeyMethod,
+    derive_init: Option<PkeyMethInitFn>,
+    derive: Option<PkeyMethDeriveFn>,
+) {
+    // SAFETY: `pmeth` is live per the contract.
+    unsafe {
+        (*pmeth).derive_init = derive_init;
+        (*pmeth).derive = derive;
+    }
+}
+
+/// `void EVP_PKEY_meth_get_derive(const EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `get_derive` arm.
+///
+/// # Safety
+/// `pmeth` must be live; each out-parameter NULL or writable.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_get_derive(
+    pmeth: *const EvpPkeyMethod,
+    pderive_init: *mut Option<PkeyMethInitFn>,
+    pderive: *mut Option<PkeyMethDeriveFn>,
+) {
+    if !pderive_init.is_null() {
+        // SAFETY: `pderive_init` is writable per the contract and `pmeth` is live.
+        unsafe { *pderive_init = (*pmeth).derive_init };
+    }
+    if !pderive.is_null() {
+        // SAFETY: `pderive` is writable per the contract and `pmeth` is live.
+        unsafe { *pderive = (*pmeth).derive };
+    }
+}
+
+/// `void EVP_PKEY_meth_set_ctrl(EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `set_ctrl` arm.
+///
+/// # Safety
+/// `pmeth` must be live; every callback is the caller's and must outlive the method.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_set_ctrl(
+    pmeth: *mut EvpPkeyMethod,
+    ctrl: Option<PkeyMethCtrlFn>,
+    ctrl_str: Option<PkeyMethCtrlStrFn>,
+) {
+    // SAFETY: `pmeth` is live per the contract.
+    unsafe {
+        (*pmeth).ctrl = ctrl;
+        (*pmeth).ctrl_str = ctrl_str;
+    }
+}
+
+/// `void EVP_PKEY_meth_get_ctrl(const EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `get_ctrl` arm.
+///
+/// # Safety
+/// `pmeth` must be live; each out-parameter NULL or writable.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_get_ctrl(
+    pmeth: *const EvpPkeyMethod,
+    pctrl: *mut Option<PkeyMethCtrlFn>,
+    pctrl_str: *mut Option<PkeyMethCtrlStrFn>,
+) {
+    if !pctrl.is_null() {
+        // SAFETY: `pctrl` is writable per the contract and `pmeth` is live.
+        unsafe { *pctrl = (*pmeth).ctrl };
+    }
+    if !pctrl_str.is_null() {
+        // SAFETY: `pctrl_str` is writable per the contract and `pmeth` is live.
+        unsafe { *pctrl_str = (*pmeth).ctrl_str };
+    }
+}
+
+/// `void EVP_PKEY_meth_set_digestsign(EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `set_digestsign` arm.
+///
+/// # Safety
+/// `pmeth` must be live; every callback is the caller's and must outlive the method.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_set_digestsign(
+    pmeth: *mut EvpPkeyMethod,
+    digestsign: Option<PkeyMethDigestsignFn>,
+) {
+    // SAFETY: `pmeth` is live per the contract.
+    unsafe {
+        (*pmeth).digestsign = digestsign;
+    }
+}
+
+/// `void EVP_PKEY_meth_get_digestsign(const EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `get_digestsign` arm.
+///
+/// # Safety
+/// `pmeth` must be live; each out-parameter NULL or writable.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_get_digestsign(
+    pmeth: *const EvpPkeyMethod,
+    digestsign: *mut Option<PkeyMethDigestsignFn>,
+) {
+    if !digestsign.is_null() {
+        // SAFETY: `digestsign` is writable per the contract and `pmeth` is live.
+        unsafe { *digestsign = (*pmeth).digestsign };
+    }
+}
+
+/// `void EVP_PKEY_meth_set_digestverify(EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `set_digestverify` arm.
+///
+/// # Safety
+/// `pmeth` must be live; every callback is the caller's and must outlive the method.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_set_digestverify(
+    pmeth: *mut EvpPkeyMethod,
+    digestverify: Option<PkeyMethDigestverifyFn>,
+) {
+    // SAFETY: `pmeth` is live per the contract.
+    unsafe {
+        (*pmeth).digestverify = digestverify;
+    }
+}
+
+/// `void EVP_PKEY_meth_get_digestverify(const EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `get_digestverify` arm.
+///
+/// # Safety
+/// `pmeth` must be live; each out-parameter NULL or writable.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_get_digestverify(
+    pmeth: *const EvpPkeyMethod,
+    digestverify: *mut Option<PkeyMethDigestverifyFn>,
+) {
+    if !digestverify.is_null() {
+        // SAFETY: `digestverify` is writable per the contract and `pmeth` is live.
+        unsafe { *digestverify = (*pmeth).digestverify };
+    }
+}
+
+/// `void EVP_PKEY_meth_set_check(EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `set_check` arm.
+///
+/// # Safety
+/// `pmeth` must be live; every callback is the caller's and must outlive the method.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_set_check(
+    pmeth: *mut EvpPkeyMethod,
+    check: Option<PkeyMethCheckFn>,
+) {
+    // SAFETY: `pmeth` is live per the contract.
+    unsafe {
+        (*pmeth).check = check;
+    }
+}
+
+/// `void EVP_PKEY_meth_get_check(const EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `get_check` arm.
+///
+/// # Safety
+/// `pmeth` must be live; each out-parameter NULL or writable.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_get_check(
+    pmeth: *const EvpPkeyMethod,
+    pcheck: *mut Option<PkeyMethCheckFn>,
+) {
+    if !pcheck.is_null() {
+        // SAFETY: `pcheck` is writable per the contract and `pmeth` is live.
+        unsafe { *pcheck = (*pmeth).check };
+    }
+}
+
+/// `void EVP_PKEY_meth_set_public_check(EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `set_public_check` arm.
+///
+/// # Safety
+/// `pmeth` must be live; every callback is the caller's and must outlive the method.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_set_public_check(
+    pmeth: *mut EvpPkeyMethod,
+    check: Option<PkeyMethCheckFn>,
+) {
+    // SAFETY: `pmeth` is live per the contract.
+    unsafe {
+        (*pmeth).public_check = check;
+    }
+}
+
+/// `void EVP_PKEY_meth_get_public_check(const EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `get_public_check` arm.
+///
+/// # Safety
+/// `pmeth` must be live; each out-parameter NULL or writable.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_get_public_check(
+    pmeth: *const EvpPkeyMethod,
+    pcheck: *mut Option<PkeyMethCheckFn>,
+) {
+    if !pcheck.is_null() {
+        // SAFETY: `pcheck` is writable per the contract and `pmeth` is live.
+        unsafe { *pcheck = (*pmeth).public_check };
+    }
+}
+
+/// `void EVP_PKEY_meth_set_param_check(EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `set_param_check` arm.
+///
+/// # Safety
+/// `pmeth` must be live; every callback is the caller's and must outlive the method.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_set_param_check(
+    pmeth: *mut EvpPkeyMethod,
+    check: Option<PkeyMethCheckFn>,
+) {
+    // SAFETY: `pmeth` is live per the contract.
+    unsafe {
+        (*pmeth).param_check = check;
+    }
+}
+
+/// `void EVP_PKEY_meth_get_param_check(const EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `get_param_check` arm.
+///
+/// # Safety
+/// `pmeth` must be live; each out-parameter NULL or writable.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_get_param_check(
+    pmeth: *const EvpPkeyMethod,
+    pcheck: *mut Option<PkeyMethCheckFn>,
+) {
+    if !pcheck.is_null() {
+        // SAFETY: `pcheck` is writable per the contract and `pmeth` is live.
+        unsafe { *pcheck = (*pmeth).param_check };
+    }
+}
+
+/// `void EVP_PKEY_meth_set_digest_custom(EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `set_digest_custom` arm.
+///
+/// # Safety
+/// `pmeth` must be live; every callback is the caller's and must outlive the method.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_set_digest_custom(
+    pmeth: *mut EvpPkeyMethod,
+    digest_custom: Option<PkeyMethDigestCustomFn>,
+) {
+    // SAFETY: `pmeth` is live per the contract.
+    unsafe {
+        (*pmeth).digest_custom = digest_custom;
+    }
+}
+
+/// `void EVP_PKEY_meth_get_digest_custom(const EVP_PKEY_METHOD *pmeth, ...)` — `crypto/evp/pmeth_lib.c`, the `get_digest_custom` arm.
+///
+/// # Safety
+/// `pmeth` must be live; each out-parameter NULL or writable.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_meth_get_digest_custom(
+    pmeth: *const EvpPkeyMethod,
+    pdigest_custom: *mut Option<PkeyMethDigestCustomFn>,
+) {
+    if !pdigest_custom.is_null() {
+        // SAFETY: `pdigest_custom` is writable per the contract and `pmeth` is live.
+        unsafe { *pdigest_custom = (*pmeth).digest_custom };
+    }
+}
 
 #[cfg(test)]
 mod tests {

@@ -19,7 +19,7 @@
       "signatures_authority_only": 414,
       "signatures_checked": 219,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 82,
+      "signatures_not_a_dispatch": 100,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -3660,6 +3660,96 @@
           "alias": "McmDestructFn",
           "at": "src/evp/method_store.rs",
           "why": "not a provider dispatch: the authority declares it as a member of `OSSL_METHOD_CONSTRUCT_METHOD` (`include/internal/core.h:41-47`), a struct of plain function pointers in an internal header, so there is no typedef for the atlas to record"
+        },
+        {
+          "alias": "PkeyMethInitFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`, an internal header the atlas does not record the body of; the struct-member plane D180 names as not yet built is what will check these"
+        },
+        {
+          "alias": "PkeyMethCleanupFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`, an internal header the atlas does not record the body of; the struct-member plane D180 names as not yet built is what will check these"
+        },
+        {
+          "alias": "PkeyMethCopyFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`, an internal header the atlas does not record the body of; the struct-member plane D180 names as not yet built is what will check these"
+        },
+        {
+          "alias": "PkeyMethParamgenFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`, an internal header the atlas does not record the body of; the struct-member plane D180 names as not yet built is what will check these"
+        },
+        {
+          "alias": "PkeyMethSignFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`, an internal header the atlas does not record the body of; the struct-member plane D180 names as not yet built is what will check these"
+        },
+        {
+          "alias": "PkeyMethCryptFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`, an internal header the atlas does not record the body of; the struct-member plane D180 names as not yet built is what will check these"
+        },
+        {
+          "alias": "PkeyMethVerifyFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`, an internal header the atlas does not record the body of; the struct-member plane D180 names as not yet built is what will check these"
+        },
+        {
+          "alias": "PkeyMethVerifyRecoverFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`, an internal header the atlas does not record the body of; the struct-member plane D180 names as not yet built is what will check these"
+        },
+        {
+          "alias": "PkeyMethSignctxInitFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`, an internal header the atlas does not record the body of; the struct-member plane D180 names as not yet built is what will check these"
+        },
+        {
+          "alias": "PkeyMethSignctxFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`, an internal header the atlas does not record the body of; the struct-member plane D180 names as not yet built is what will check these"
+        },
+        {
+          "alias": "PkeyMethVerifyctxFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`, an internal header the atlas does not record the body of; the struct-member plane D180 names as not yet built is what will check these"
+        },
+        {
+          "alias": "PkeyMethDeriveFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`, an internal header the atlas does not record the body of; the struct-member plane D180 names as not yet built is what will check these"
+        },
+        {
+          "alias": "PkeyMethCtrlFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`, an internal header the atlas does not record the body of; the struct-member plane D180 names as not yet built is what will check these"
+        },
+        {
+          "alias": "PkeyMethCtrlStrFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`, an internal header the atlas does not record the body of; the struct-member plane D180 names as not yet built is what will check these"
+        },
+        {
+          "alias": "PkeyMethDigestsignFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`, an internal header the atlas does not record the body of; the struct-member plane D180 names as not yet built is what will check these"
+        },
+        {
+          "alias": "PkeyMethDigestverifyFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`, an internal header the atlas does not record the body of; the struct-member plane D180 names as not yet built is what will check these"
+        },
+        {
+          "alias": "PkeyMethCheckFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`, an internal header the atlas does not record the body of; the struct-member plane D180 names as not yet built is what will check these"
+        },
+        {
+          "alias": "PkeyMethDigestCustomFn",
+          "at": "src/evp/pkey_ctx.rs",
+          "why": "not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline in `include/crypto/evp.h:145-192`, an internal header the atlas does not record the body of; the struct-member plane D180 names as not yet built is what will check these"
         },
         {
           "alias": "MethodUpRefFn",

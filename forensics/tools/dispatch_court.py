@@ -145,6 +145,13 @@ SK_MACRO = ("not a provider dispatch: `safestack.h.in`'s `sk_*_compfunc` / `free
             "`copyfunc` macros generate it per type, so there is no single typedef")
 OBJ_INT = ("not a provider dispatch: `include/crypto/objects.h`'s `OBJ_NAME` table member, an "
            "internal header the atlas does not record")
+# `include/crypto/evp.h:145-192` -- the `EVP_PKEY_METHOD` members. The body is in an internal
+# header, so the atlas records no typedef for any of them, and the struct-member record it does
+# keep is empty for a struct whose body it cannot see.
+PKEY_METHOD = ("not a provider dispatch: the type of `EVP_PKEY_METHOD`'s members, declared inline "
+               "in `include/crypto/evp.h:145-192`, an internal header the atlas does not record "
+               "the body of; the struct-member plane D180 names as not yet built is what will "
+               "check these")
 CRATE_LOCAL = "not an authority type: a crate-local callback shape with no header counterpart"
 
 
@@ -298,6 +305,25 @@ NOT_A_DISPATCH: dict[str, str] = {
     "GenericDoAllFn": ("not a provider dispatch: the crate's own do-all callback, constructed "
                        "from `OSSL_METHOD_CONSTRUCT_METHOD`; the authority has no named type "
                        "for it"),
+    # --- `EVP_PKEY_METHOD`'s eighteen callback shapes (`include/crypto/evp.h`) -----------------
+    "PkeyMethInitFn": PKEY_METHOD,
+    "PkeyMethCleanupFn": PKEY_METHOD,
+    "PkeyMethCopyFn": PKEY_METHOD,
+    "PkeyMethParamgenFn": PKEY_METHOD,
+    "PkeyMethSignFn": PKEY_METHOD,
+    "PkeyMethCryptFn": PKEY_METHOD,
+    "PkeyMethVerifyFn": PKEY_METHOD,
+    "PkeyMethVerifyRecoverFn": PKEY_METHOD,
+    "PkeyMethSignctxInitFn": PKEY_METHOD,
+    "PkeyMethSignctxFn": PKEY_METHOD,
+    "PkeyMethVerifyctxFn": PKEY_METHOD,
+    "PkeyMethDeriveFn": PKEY_METHOD,
+    "PkeyMethCtrlFn": PKEY_METHOD,
+    "PkeyMethCtrlStrFn": PKEY_METHOD,
+    "PkeyMethDigestsignFn": PKEY_METHOD,
+    "PkeyMethDigestverifyFn": PKEY_METHOD,
+    "PkeyMethCheckFn": PKEY_METHOD,
+    "PkeyMethDigestCustomFn": PKEY_METHOD,
     "Rfunc": CRATE_LOCAL,
     "CharIo": CRATE_LOCAL,
     "NistReduce": CRATE_LOCAL,

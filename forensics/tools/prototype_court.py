@@ -344,13 +344,28 @@ def canon_c_type(
 
 
 def canon_c_fnptr(t: str, typedefs: dict[str, str], depth: int) -> str | None:
-    """A C function-pointer type: `int (*)(BIO *, char *, int)`."""
+    """A C function-pointer type: `int (*)(BIO *, char *, int)`.
+
+    The declarator may carry **more than one** `*`, and the count is the depth:
+    `int (*)(...)` is a function pointer, `int (**pinit)(...)` is a pointer to one,
+    `int (***)(...)` a pointer to two. All three are one pointer in the call
+    convention, which is why collapsing them is easy to miss -- and why it was
+    missed: `EVP_PKEY_meth_get_init`'s `int (**pinit)(EVP_PKEY_CTX *)` compared equal
+    to `int (*)(EVP_PKEY_CTX *)`, so a crate that declared the output parameter as a
+    bare function pointer instead of a pointer to one would have passed. Found when
+    the forty `EVP_PKEY_meth_get_*` accessors landed (`docs/DECISIONS.md` D183).
+    """
     groups = top_level_groups(t)
     if not groups:
         return None
     g0 = groups[0]
-    content = t[g0[0] + 1:g0[1]]
-    if not content.strip().startswith("*"):
+    content = t[g0[0] + 1:g0[1]].strip()
+    stars = 0
+    for ch in content:
+        if ch != "*":
+            break
+        stars += 1
+    if stars == 0:
         return None
     ret = canon_c_type(t[:g0[0]].strip(), typedefs, depth + 1)
     if ret is None:
@@ -370,7 +385,8 @@ def canon_c_fnptr(t: str, typedefs: dict[str, str], depth: int) -> str | None:
         if c is None:
             return None
         args.append(c)
-    return f"fptr({ret}; {', '.join(args)})"
+    inner = f"fptr({ret}; {', '.join(args)})"
+    return "ptr(" * (stars - 1) + inner + ")" * (stars - 1)
 
 
 def canon_rust_type(text: str, aliases: dict[str, str], depth: int = 0) -> str | None:
@@ -1640,6 +1656,39 @@ def sensitivity_report() -> dict:
             "unnamed": canon_rust_type(unnamed, aliases),
             "perturbed": canon_rust_type('unsafe extern "C" fn(p: *const c_void) -> c_int',
                                          aliases),
+        },
+    })
+
+    # The function-pointer declarator's *depth*, which D183 records: `int (*)(...)`,
+    # `int (**)(...)` and `int (***)(...)` are one, two and three levels, and they are
+    # all one pointer in the call convention, which is why collapsing them is easy to
+    # miss.
+    one = 'int (*)(EVP_PKEY_CTX *)'
+    two = 'int (**)(EVP_PKEY_CTX *)'
+    depth_ok = (
+        canon_c_type(one, c_typedefs := dict(C_SYSTEM_TYPEDEFS))
+        != canon_c_type(two, c_typedefs)
+        and canon_c_type(one, c_typedefs) == "fptr(int:4:s; ptr(opaque))"
+        and canon_c_type(two, c_typedefs) == "ptr(fptr(int:4:s; ptr(opaque)))"
+        and canon_c_type('int (***)(void)', c_typedefs)
+        == "ptr(ptr(fptr(int:4:s; )))"
+        # ... and the Rust side must read the same two levels, or the plane would have
+        # one side right and the other flattened.
+        and canon_rust_type('*mut Option<unsafe extern "C" fn(*mut c_void) -> c_int>',
+                            aliases) == "ptr(fptr(int:4:s; ptr(opaque)))"
+    )
+    report["controls"].append({
+        "control": "function-pointer-declarator-depth",
+        "what": "`int (*)(...)` and `int (**)(...)` must canonicalise to one and two "
+                "pointer levels, and the Rust `*mut Option<fn ...>` spelling must read "
+                "the same two",
+        "detected": bool(depth_ok),
+        "observed": {
+            "one_star": canon_c_type(one, c_typedefs),
+            "two_stars": canon_c_type(two, c_typedefs),
+            "three_stars": canon_c_type('int (***)(void)', c_typedefs),
+            "rust_pointer_to_fn_pointer": canon_rust_type(
+                '*mut Option<unsafe extern "C" fn(*mut c_void) -> c_int>', aliases),
         },
     })
 
