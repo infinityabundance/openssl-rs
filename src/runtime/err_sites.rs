@@ -15922,6 +15922,116 @@ pub(crate) const HPKE_1434: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ossl_HPKE_KEM_INFO_find_curve` at `crypto/hpke/hpke_util.c:168` (PROV_R_INVALID_CURVE).
+pub(crate) const HPKE_UTIL_168: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke_util.c",
+    line: 168,
+    func: c"ossl_HPKE_KEM_INFO_find_curve",
+    lib: 57,
+    reason: 176,
+    dynamic_reason: false,
+};
+
+/// `ossl_HPKE_KEM_INFO_find_id` at `crypto/hpke/hpke_util.c:181` (PROV_R_INVALID_CURVE).
+pub(crate) const HPKE_UTIL_181: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke_util.c",
+    line: 181,
+    func: c"ossl_HPKE_KEM_INFO_find_id",
+    lib: 57,
+    reason: 176,
+    dynamic_reason: false,
+};
+
+/// `ossl_HPKE_KEM_INFO_find_id` at `crypto/hpke/hpke_util.c:188` (PROV_R_INVALID_CURVE).
+pub(crate) const HPKE_UTIL_188: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke_util.c",
+    line: 188,
+    func: c"ossl_HPKE_KEM_INFO_find_id",
+    lib: 57,
+    reason: 176,
+    dynamic_reason: false,
+};
+
+/// `ossl_HPKE_KDF_INFO_find_id` at `crypto/hpke/hpke_util.c:210` (PROV_R_INVALID_KDF).
+pub(crate) const HPKE_UTIL_210: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke_util.c",
+    line: 210,
+    func: c"ossl_HPKE_KDF_INFO_find_id",
+    lib: 57,
+    reason: 232,
+    dynamic_reason: false,
+};
+
+/// `ossl_HPKE_AEAD_INFO_find_id` at `crypto/hpke/hpke_util.c:232` (PROV_R_INVALID_AEAD).
+pub(crate) const HPKE_UTIL_232: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke_util.c",
+    line: 232,
+    func: c"ossl_HPKE_AEAD_INFO_find_id",
+    lib: 57,
+    reason: 231,
+    dynamic_reason: false,
+};
+
+/// `kdf_derive` at `crypto/hpke/hpke_util.c:269` (PROV_R_FAILED_DURING_DERIVATION).
+pub(crate) const HPKE_UTIL_269: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke_util.c",
+    line: 269,
+    func: c"kdf_derive",
+    lib: 57,
+    reason: 164,
+    dynamic_reason: false,
+};
+
+/// `ossl_hpke_labeled_extract` at `crypto/hpke/hpke_util.c:329` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const HPKE_UTIL_329: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke_util.c",
+    line: 329,
+    func: c"ossl_hpke_labeled_extract",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_hpke_labeled_expand` at `crypto/hpke/hpke_util.c:380` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const HPKE_UTIL_380: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke_util.c",
+    line: 380,
+    func: c"ossl_hpke_labeled_expand",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_kdf_ctx_create` at `crypto/hpke/hpke_util.c:401` (ERR_R_FETCH_FAILED).
+pub(crate) const HPKE_UTIL_401: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke_util.c",
+    line: 401,
+    func: c"ossl_kdf_ctx_create",
+    lib: 15,
+    reason: 524557,
+    dynamic_reason: false,
+};
+
+/// `ossl_hpke_str2suite` at `crypto/hpke/hpke_util.c:459` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const HPKE_UTIL_459: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke_util.c",
+    line: 459,
+    func: c"ossl_hpke_str2suite",
+    lib: 15,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_hpke_str2suite` at `crypto/hpke/hpke_util.c:464` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const HPKE_UTIL_464: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/hpke/hpke_util.c",
+    line: 464,
+    func: c"ossl_hpke_str2suite",
+    lib: 15,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
 /// `EVP_PKEY_asn1_add0` at `crypto/asn1/ameth_lib.c:162` (ERR_R_PASSED_INVALID_ARGUMENT).
 pub(crate) const AMETH_LIB_162: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/asn1/ameth_lib.c",
@@ -18382,6 +18492,17 @@ pub(crate) static ALL: &[ErrSite] = &[
     HPKE_1416,
     HPKE_1429,
     HPKE_1434,
+    HPKE_UTIL_168,
+    HPKE_UTIL_181,
+    HPKE_UTIL_188,
+    HPKE_UTIL_210,
+    HPKE_UTIL_232,
+    HPKE_UTIL_269,
+    HPKE_UTIL_329,
+    HPKE_UTIL_380,
+    HPKE_UTIL_401,
+    HPKE_UTIL_459,
+    HPKE_UTIL_464,
     AMETH_LIB_162,
     AMETH_LIB_174,
     P5_SCRYPT_54,

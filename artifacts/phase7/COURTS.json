@@ -208,12 +208,63 @@
           "candidate": "artifacts/phase7/probes/rt_evp_pem_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 32,
+        "candidate_exit_code": 0,
+        "candidate_observations": 32,
+        "candidate_stderr_tail": [],
+        "court": "RT-HMAC",
+        "crashed": false,
+        "probe": "courts/phase7/rt_hmac_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase7/probes/rt_hmac_probe.authority",
+          "candidate": "artifacts/phase7/probes/rt_hmac_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 26,
+        "candidate_exit_code": 0,
+        "candidate_observations": 26,
+        "candidate_stderr_tail": [],
+        "court": "RT-CMAC",
+        "crashed": false,
+        "probe": "courts/phase7/rt_cmac_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase7/probes/rt_cmac_probe.authority",
+          "candidate": "artifacts/phase7/probes/rt_cmac_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 65,
+        "candidate_exit_code": 0,
+        "candidate_observations": 65,
+        "candidate_stderr_tail": [],
+        "court": "RT-HPKE",
+        "crashed": false,
+        "probe": "courts/phase7/rt_hpke_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase7/probes/rt_hpke_probe.authority",
+          "candidate": "artifacts/phase7/probes/rt_hpke_probe.candidate"
+        },
+        "verdict": "pass"
       }
     ],
     "summary": {
       "fail": 0,
-      "pass": 12,
-      "total": 12
+      "pass": 15,
+      "total": 15
     }
   },
   "generator": "forensics/tools/phase7_courts.py",
@@ -282,6 +333,21 @@
       "name": "probe",
       "path": "courts/phase7/rt_evp_pem_probe.c",
       "sha256": "ae41c532130afb321522f163893441307ae1bf3257c7cde53567a5b09f9e2ac4"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase7/rt_hmac_probe.c",
+      "sha256": "39b84756d4ec935a34e8fb10e228540d7bda1365fac1aa2ce5a73aaed4b983a6"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase7/rt_cmac_probe.c",
+      "sha256": "01e9816f619c51aef5652d08558d753965bbeceeb51ca3c06e00c348086586c2"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase7/rt_hpke_probe.c",
+      "sha256": "b0aded0cb3319828582946351d52f49b6be48a894eeb51c17787c429d5c803f9"
     }
   ],
   "kind": "phase7-courts",

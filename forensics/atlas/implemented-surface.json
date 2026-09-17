@@ -282,7 +282,7 @@
         "truncf128",
         "truncf16"
       ],
-      "compiler_emitted_count": 7474,
+      "compiler_emitted_count": 7490,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -290,7 +290,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 1800,
+        "implemented": 1840,
         "implemented_symbols": [
           "ASN1_ANY_it",
           "ASN1_BIT_STRING_check",
@@ -880,6 +880,15 @@
           "BUF_MEM_new_ex",
           "BUF_reverse",
           "CBIGNUM_it",
+          "CMAC_CTX_cleanup",
+          "CMAC_CTX_copy",
+          "CMAC_CTX_free",
+          "CMAC_CTX_get0_cipher_ctx",
+          "CMAC_CTX_new",
+          "CMAC_Final",
+          "CMAC_Init",
+          "CMAC_Update",
+          "CMAC_resume",
           "COMP_CTX_free",
           "COMP_CTX_get_method",
           "COMP_CTX_get_type",
@@ -1717,6 +1726,18 @@
           "EVP_md_null",
           "EVP_set_default_properties",
           "EVP_set_pw_prompt",
+          "HMAC",
+          "HMAC_CTX_copy",
+          "HMAC_CTX_free",
+          "HMAC_CTX_get_md",
+          "HMAC_CTX_new",
+          "HMAC_CTX_reset",
+          "HMAC_CTX_set_flags",
+          "HMAC_Final",
+          "HMAC_Init",
+          "HMAC_Init_ex",
+          "HMAC_Update",
+          "HMAC_size",
           "INT32_it",
           "INT64_it",
           "LONG_it",
@@ -1861,6 +1882,25 @@
           "OSSL_ERR_STATE_restore",
           "OSSL_ERR_STATE_save",
           "OSSL_ERR_STATE_save_to_mark",
+          "OSSL_HPKE_CTX_free",
+          "OSSL_HPKE_CTX_get_seq",
+          "OSSL_HPKE_CTX_new",
+          "OSSL_HPKE_CTX_set1_authpriv",
+          "OSSL_HPKE_CTX_set1_authpub",
+          "OSSL_HPKE_CTX_set1_ikme",
+          "OSSL_HPKE_CTX_set1_psk",
+          "OSSL_HPKE_CTX_set_seq",
+          "OSSL_HPKE_decap",
+          "OSSL_HPKE_encap",
+          "OSSL_HPKE_export",
+          "OSSL_HPKE_get_ciphertext_size",
+          "OSSL_HPKE_get_public_encap_size",
+          "OSSL_HPKE_get_recommended_ikmelen",
+          "OSSL_HPKE_keygen",
+          "OSSL_HPKE_open",
+          "OSSL_HPKE_seal",
+          "OSSL_HPKE_str2suite",
+          "OSSL_HPKE_suite_check",
           "OSSL_INDICATOR_get_callback",
           "OSSL_INDICATOR_set_callback",
           "OSSL_LIB_CTX_free",
@@ -2093,7 +2133,7 @@
           "i2d_DISPLAYTEXT",
           "i2t_ASN1_OBJECT"
         ],
-        "scaffolded": 4096
+        "scaffolded": 4056
       },
       "libssl": {
         "authority_exports": 603,
@@ -2104,18 +2144,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 1800,
-      "scaffolded": 4699
+      "implemented": 1840,
+      "scaffolded": 4659
     }
   },
-  "body_hash": "0193a26dc0d29491afcda366dd338e92bfa7388c6b3d0afe19fbb2af0844fdd1",
+  "body_hash": "a013c4d3419d14b7bd5c8086282998d1e1cab64d21127921c2848e25a0c30620",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "568d7c3d50123c735bcbc42b015ad3adf63304d0ec34f245cea9bd72133f79e5"
+      "sha256": "d53ec0ff9306820de5a019c63d73b2015b258c34a01d93d464b6a45717d0a53d"
     },
     {
       "name": "authority-exports",

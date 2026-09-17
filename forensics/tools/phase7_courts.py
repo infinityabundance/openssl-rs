@@ -93,6 +93,9 @@ COURTS = [
     ("RT-EVP-PBE", "rt_evp_pbe_probe.c"),
     ("RT-EVP-BIO", "rt_evp_encode_probe.c"),
     ("RT-EVP-PEM", "rt_evp_pem_probe.c"),
+    ("RT-HMAC", "rt_hmac_probe.c"),
+    ("RT-CMAC", "rt_cmac_probe.c"),
+    ("RT-HPKE", "rt_hpke_probe.c"),
 ]
 
 

@@ -394,6 +394,7 @@ COVERED_FILES = [
     ("crypto/evp/signature.c", "SIGNATURE"),
     ("crypto/evp/skeymgmt_meth.c", "SKEYMGMT_METH"),
     ("crypto/hpke/hpke.c", "HPKE"),
+    ("crypto/hpke/hpke_util.c", "HPKE_UTIL"),
     ("crypto/asn1/ameth_lib.c", "AMETH_LIB"),
     ("crypto/asn1/p5_scrypt.c", "P5_SCRYPT"),
     ("crypto/asn1/i2d_evp.c", "I2D_EVP"),
@@ -857,6 +858,12 @@ def resolve_symbols(authority, symbols: list[str], work: Path) -> dict[str, int]
     "#include <openssl/evperr.h>",
     "#include <openssl/pemerr.h>",
     "#include <openssl/rsaerr.h>",
+    # Phase 7.6 needs `PROV_R_*`: `crypto/hpke/hpke_util.c` is a `crypto/` file whose
+    # helpers raise with the *provider* library's reasons (they are shared with the
+    # `providers/` implementations that use the same labelled extract/expand).
+    # `proverr.h` is an installed header, so this is the same fallthrough-free case as
+    # `evperr.h` above.
+    "#include <openssl/proverr.h>",
         # `PROP_R_*` is the first reason family this table needs that lives in an
         # *internal* header rather than an installed one: `internal/propertyerr.h`,
         # which the property grammar raises from. It is resolveable because the

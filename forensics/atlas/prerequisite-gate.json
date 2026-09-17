@@ -9,6 +9,7 @@
       "OSSL_ENCODER_CTX_new_for_pkey -> phase 10 (`crypto/asn1/i2d_evp.c`'s `i2d_provided` builds an `OSSL_ENCODER_CTX` for a **provider** key, which is the branch every one of `i2d_KeyParams`, `i2d_KeyParams_bio`, `i2d_PrivateKey`, `i2d_PKCS8PrivateKey` and `i2d_PublicKey` takes first. The names are declared in `encoder.h`, Phase 10's, so no provider key can be encoded and the five exports are withheld with the boundary named in `RT-EVP-PKEY`.)",
       "OSSL_provider_init -> phase 13 (providers/legacy/legacyprov.c's entry point, and the name a third-party provider's own entry point is declared with -- which is why subphase rows 6.8d and 6.12 name it, since the `providers` configuration module needs a module path and RT-PROVIDER-3P compiles its own. The authority symbol is the legacy provider's, so it is Phase 13's.)",
       "RAND_bytes -> phase 9 (`PEM_ASN1_write_bio_internal`'s encrypted arm generates the DEK-Info salt from `RAND_bytes(iv, EVP_CIPHER_get_iv_length(enc))` (`crypto/pem/pem_lib.c:386`), and `rand.h` is Phase 9's. The name blocks `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx` and `PEM_ASN1_write` alongside `EVP_md5`; all three are withheld, and this row records the second of their two blockers rather than a second withheld export. The same argument D165 makes applies in the other direction here: the `enc == NULL` arm of the function is transcribable against landed machinery alone, but an export cannot be half-written, and the encrypted arm is the one every `PEM_write_*PrivateKey*` caller reaches.)",
+      "RAND_bytes_ex -> phase 9 (`OSSL_HPKE_get_grease_value` fills the GREASE ciphertext with `RAND_bytes_ex(libctx, ct, ctlen, 0)` (`crypto/hpke/hpke.c:1433`), and its random-suite arm calls `ossl_rand_uniform_uint32` (`crypto/hpke/hpke_util.c:198`, `:220`, `:243`); both are `crypto/rand/`'s and Phase 9's. The whole observable of that export is whether the random fill succeeds, so there is no partial answer to write and it is withheld rather than stubbed. No other `OSSL_HPKE_*` name needs the random layer: the KEM, KDF and AEAD arms all build over landed 7.3 objects, which is what D195 records. This row names the direct callee; `ossl_rand_uniform_uint32` is the same stratum, reached only through `ossl_HPKE_*_INFO_find_random`, whose only caller is the same withheld function.)",
       "RAND_priv_bytes_ex -> phase 9 (`EVP_SealInit` (`crypto/evp/p_seal.c:42` and `:46`) needs the random layer twice: `EVP_CIPHER_CTX_rand_key` for the session key and `RAND_priv_bytes_ex` for the IV. Both land in Phase 9 and `crypto/evp/evp_enc.c`'s `EVP_CIPHER_CTX_rand_key` is itself still an open 7.3c row for the same reason, so `EVP_SealInit` is withheld while its `_Final` half -- which needs no random -- lands with the rest of 7.4l.)",
       "UI_new -> phase 13 (`EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`) is a `UI` program -- `UI_new`, `UI_add_input_string`, `UI_add_verify_string`, `UI_process`, `UI_free` -- and `ui.h` is Phase 13's. `EVP_read_pw_string` goes with it because its whole body is a call to `_min`; `EVP_get_pw_prompt`/`EVP_set_pw_prompt` do **not**, because they touch the file's own eighty-byte static and nothing else, and they land.)",
       "d2i_X509_ALGOR -> phase 11 (`EVP_PKEY_CTX_get_algor` (`crypto/evp/evp_lib.c:1455`) decodes the provider's `OSSL_SIGNATURE_PARAM_ALGORITHM_ID` answer with `d2i_X509_ALGOR`, declared in `x509.h` and Phase 11's. The record is unchanged from 7.4e: the accessor is withheld, and its probe line names this coordinate.)",
@@ -30,7 +31,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 56,
-      "language_surface_not_modelled_by_name": 2633,
+      "language_surface_not_modelled_by_name": 2673,
       "planned_prerequisites": 15
     },
     "census_by_unit": {
@@ -133,6 +134,7 @@
         "crypto/bn/bn_recp.c": 10,
         "crypto/bsearch.c": 1,
         "crypto/buffer/buffer.c": 12,
+        "crypto/cmac/cmac.c": 8,
         "crypto/comp/comp_lib.c": 7,
         "crypto/conf/conf_api.c": 22,
         "crypto/conf/conf_def.c": 41,
@@ -180,6 +182,8 @@
         "crypto/evp/skeymgmt_meth.c": 12,
         "crypto/ex_data.c": 21,
         "crypto/getenv.c": 2,
+        "crypto/hmac/hmac.c": 7,
+        "crypto/hpke/hpke.c": 25,
         "crypto/indicator_core.c": 5,
         "crypto/initthread.c": 18,
         "crypto/lhash/lhash.c": 16,
@@ -330,9 +334,9 @@
       ]
     },
     "checked": {
-      "authority_units": 141,
-      "crate_modules": 186,
-      "deferrals_recorded": 25,
+      "authority_units": 144,
+      "crate_modules": 190,
+      "deferrals_recorded": 26,
       "divergence_names_covered": 32,
       "divergence_rows": 5,
       "names_referenced_and_not_built": 17
@@ -452,7 +456,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "ff94fe1f91db2cc16b9000af88cef36db327ea502408e5aef84e1653c87dbdce",
+  "body_hash": "a4e0ee7c2aaa51b330b5de9b06c1999ad464cf1ac38fa6e0e30726b8cc497a64",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -473,7 +477,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "dabe8d724fd499897a1b1eb5a2973ae70554225a053a753915848c68e158447b"
+      "sha256": "8066895dab0b2439bb37c93cb92e16578964696c07f870573e544330b3bc42e0"
     },
     {
       "name": "symbol-ownership",
@@ -483,17 +487,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "88e00ef6d514e84ce65962d9a1d20b99a6dc622b2d58d69216b1a8657744f1b0"
+      "sha256": "4a8a291c12f7a352bbeecc829f9dd1199aca2810c3e66475877e886f30b71795"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "1b3b78a7fc41dfb4ca2f6e20562164e8a085a37c9c498cbd61e1b471e0d64de1"
+      "sha256": "5fdb42a488c6937d024d93d404ab09e8450bdd3d88a525e90960205aba52de9a"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "f7334e1b30c2876e0d03c9e5e86d3e971a7e859344ba0488039e1822295710c4"
+      "sha256": "3dd94b0248746f2499e2f7e69f249e5322f77c3f40d7aa80ff1df1cb702d0744"
     },
     {
       "name": "crate-source-tree",

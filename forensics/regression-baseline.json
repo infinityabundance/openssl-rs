@@ -136,6 +136,10 @@
       "observations": 1510,
       "verdict": "pass"
     },
+    "RT-CMAC": {
+      "observations": 26,
+      "verdict": "pass"
+    },
     "RT-COMP": {
       "observations": 27,
       "verdict": "pass"
@@ -210,6 +214,14 @@
     },
     "RT-FETCH": {
       "observations": 217,
+      "verdict": "pass"
+    },
+    "RT-HMAC": {
+      "observations": 32,
+      "verdict": "pass"
+    },
+    "RT-HPKE": {
+      "observations": 65,
       "verdict": "pass"
     },
     "RT-LHASH": {
@@ -289,7 +301,7 @@
     "phase7": 164
   },
   "implemented": {
-    "libcrypto": 1800,
+    "libcrypto": 1840,
     "libssl": 0
   },
   "open_obligations": {
@@ -297,7 +309,7 @@
     "phase4": 0,
     "phase5": 0,
     "phase6": 0,
-    "phase7": 121
+    "phase7": 81
   },
   "owned_obligations": {
     "phase3": 294,
@@ -331,10 +343,10 @@
     "9": "not-started"
   },
   "prerequisites": {
-    "blocking_dependencies": 25,
+    "blocking_dependencies": 26,
     "divergence_names_covered": 32,
     "findings": 0,
-    "language_census": 2633,
+    "language_census": 2673,
     "sealed_census": 57
   }
 }
