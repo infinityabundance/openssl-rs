@@ -98,6 +98,30 @@
         "owner_phase": 7,
         "reason": "Internal to `crypto/evp/asymcipher.c` and declared in `include/crypto/evp.h`, so the gate owes it the moment the crate has a module for that unit -- which 7.4b-i's method half gave it. Its body is the two-pass auto-allocating decrypt: call `EVP_PKEY_decrypt(ctx, NULL, outlenp, in, inlen)` to learn the length, `OPENSSL_malloc` it, call again, then refuse if the second call failed, the length came back zero, or a non-zero `expected_outlen` disagrees. So it is owed to the **operation half of the same subphase** (`owner_phase` 7, the `evp_cleanup_int` precedent) because `EVP_PKEY_decrypt` is `asymcipher.c`'s own and lands directly beside it. Its two callers are `crypto/pkcs7/pk7_doit.c` and `crypto/cms/cms_env.c`, both Phase 12's, which is why nothing reaches it yet.",
         "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4b (the operation half of the five classes); src/evp/asymcipher.rs module doc, section on what the file's two halves are"
+      },
+      {
+        "symbol": "evp_pkey_ctx_get_params_strict",
+        "owner_phase": 7,
+        "reason": "Internal to `crypto/evp/pmeth_lib.c`, declared in `include/crypto/evp.h`, so the gate owes it now that 7.4c-i has given that unit a module. Its body is a three-line guard over `evp_keymgmt_get_params` -- it refuses unless the context is an `EVP_PKEY_OP_FROMDATA` operation with a live algorithm context -- and it is owed to the **second half of this same subphase** (`owner_phase` 7, the `evp_cleanup_int` precedent) because 7.4c-ii is where the params path lands beside it. Its callers are `pmeth_gn.c` and `m_sigver.c`, both 7.4's.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4c; src/evp/pkey_ctx.rs module doc"
+      },
+      {
+        "symbol": "evp_pkey_ctx_set_params_strict",
+        "owner_phase": 7,
+        "reason": "The setter half of the same pair, and it has the same three-line shape with `evp_keymgmt_set_params` in place of the getter. Recorded separately because the gate owes *names* rather than call graphs: a reader of the blocking census should see both rather than one and an implication.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4c; src/evp/pkey_ctx.rs module doc"
+      },
+      {
+        "symbol": "evp_pkey_ctx_use_cached_data",
+        "owner_phase": 7,
+        "reason": "Internal to `crypto/evp/pmeth_lib.c`, and the *replay* half of the cached-data trio whose store and free halves 7.4c-i landed. Its body tests `dist_id_set` and then hands the distinguishing identifier to `evp_pkey_ctx_ctrl_str_int` or `evp_pkey_ctx_ctrl_int` -- the ctrl machinery, which is 7.4c-ii's. So it is owed to the second half of this same subphase, and its three callers (`signature.c`, `exchange.c`, `pmeth_gn.c`) are the operation inits that land with the ctrl path beside it.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4c; src/evp/pkey_ctx.rs, the cached-data section of the module doc"
+      },
+      {
+        "symbol": "evp_app_cleanup_int",
+        "owner_phase": 8,
+        "reason": "Defined in `crypto/evp/pmeth_lib.c` and called from `crypto/evp/names.c`'s `EVP_cleanup_int`, so two transcribed units now owe it. Its whole body is `sk_EVP_PKEY_METHOD_pop_free(app_pkey_methods, EVP_PKEY_meth_free)`: both the stack and the destructor belong to the **application-supplied `EVP_PKEY_METHOD` registry**, which is 7.4l's because `EVP_PKEY_meth_find`'s lookup searches `standard_methods[]` -- the table whose contents are Phase 8's objects under D163 and D165. So this is Phase 8's with its sibling rows rather than a same-subphase deferral: there is no 7.4c-ii or 7.4d that could land it, because the two symbols it needs do not exist until Phase 8 does.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4l; docs/DECISIONS.md D165; src/evp/pkey_ctx.rs module doc, section on the absent registry"
       }
     ],
     "divergences": [

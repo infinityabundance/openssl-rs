@@ -7,10 +7,10 @@
     "census": {
       "names_a_basename_the_authority_repeats": 1,
       "names_a_file_the_authority_does_not_have": 1,
-      "units_not_reached": 70
+      "units_not_reached": 69
     },
     "census_by_stratum": {
-      "7": 72
+      "7": 71
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
     "census_samples": {
@@ -95,7 +95,7 @@
       "unit_records": 10,
       "units_named_by_a_record": 13,
       "units_named_by_a_row": 131,
-      "units_reached": 61
+      "units_reached": 62
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -1261,7 +1261,9 @@
           "7.4c",
           "7.4l"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/pkey_ctx.rs"
+        ]
       },
       "crypto/evp/s_lib.c": {
         "defines": [
@@ -1778,10 +1780,10 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 129
+      "transcribed_units": 130
     }
   },
-  "body_hash": "9ec6bf5d3ed38d986fd16bda9fbf090ce70bd33f49a9dda300009196c5958d4c",
+  "body_hash": "71af78da8e2d107407e32932fb99792e828450c4dc5cd466234058bef8a3bc8a",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -1792,22 +1794,22 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "12fabea42adff6cf1c0b5e3924c39a9b93ba70227567240e0d36423cec9bdbcd"
+      "sha256": "3d38c95dd2b7cfd4c48e3d5bc66169bbe9d9b6b5276d9374e1db83e85e963f06"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "2a3b7c0982420692f995c7e2f11268b4a713ba3e5780e9416013afc6b5271386"
+      "sha256": "2a09d6cef85335be895840f977b26bd6a24e4913ae4057285525a9c5dbe8163a"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "855152d56f232e07610b36f892b16c3e432aea6c08724cab0b10ffd10e4d47b3"
+      "sha256": "ba107cb2d3684385e275a7893e221d9c70d4017e3798e9c659b1cc4bb56c490d"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "ddf868c88c549c42da3ff4a5b21fc9a246ff3e291a275e9aaa639a4fcdbfc38b"
+      "sha256": "5036a88268615840770feb942df6122bfe8553d9ce77ff180aec1b3f9d32fed7"
     },
     {
       "name": "source-manifest",
