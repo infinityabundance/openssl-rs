@@ -10381,3 +10381,60 @@ declares `PKCS12_PBE_keyivgen`.
 That last paragraph is the useful output of this entry: three of the row's gates are in *other phases*,
 and only one of them — the `EVP_PKEY_asn1_find_str` pair — can be converted into landable work inside
 Phase 7 by the partial-transcription precedent the project already uses.
+
+## D176 — the `EVP_PKEY_asn1_*` family is landable inside Phase 7, and the crate's own doc says it is not
+
+The next in-phase work after D175 was `EVP_PKEY_asn1_find_str` and its siblings, on the reasoning that
+a partial transcription with an empty table would unblock the raw-key constructors. Reading the unit
+shows the finding is bigger than that and that one of the crate's own statements is wrong.
+
+**The family is twenty-three exports across `crypto/asn1/ameth_lib.c` (438 lines), and they are
+`OSSL_DEPRECATEDIN_3_6`.** Three of them are already partially landed in spirit — the
+`EVP_PKEY_set_type_by_keymgmt` ameth arm is `D-PKEY-AMETH-1` — but the family itself is untouched.
+The deprecation is a warning attribute and not a removal: this build defines `NDEBUG` and no
+`OPENSSL_NO_DEPRECATED_*` (D172), the symbols are exported, and the prototype court reports
+`not-found=0` for them. So they are owed and they are reachable.
+
+**The correction: `EVP_PKEY_ASN1_METHOD` is not "Phase 8's" as a type.** Three places in the crate say
+so — `src/evp/pkey.rs`'s module doc, its `EvpPkey` field note, and `evp_pkey_free_legacy`'s doc — and
+the shape of the claim is right about the *objects* and wrong about the *struct*:
+
+```c
+include/openssl/types.h:119   typedef struct evp_pkey_asn1_method_st EVP_PKEY_ASN1_METHOD;
+include/crypto/asn1.h:23      struct evp_pkey_asn1_method_st { ... };
+```
+
+The **body** is in `include/crypto/asn1.h`, which is an *internal* header — not installed, and
+therefore not a declaration the ownership atlas can see. What the atlas sees is `evp.h`, which
+declares the twenty-three accessors, and that makes them Phase 7's. So Phase 7 must define the struct
+in order to implement its own exports, exactly as it defines `EvpPkeyCtx` in order to implement
+`pmeth_lib.c`'s. What is genuinely Phase 8's is the twelve `ossl_<alg>_asn1_meth` **objects** that
+populate `standard_methods[]` (D163, D165) — and only two of the twenty-three touch that table.
+
+**So the split inside the family is what matters, and it is not the obvious one:**
+
+* **twenty of the twenty-three are gate-free**: `get_count`, `get0`, `get0_info`, `add0`,
+  `add_alias`, `new`, `free`, `copy` and the fifteen `set_*` mutators. Their bodies are `app_methods`
+  (a stack, `OPENSSL_sk_*`), `CRYPTO_zalloc`, `memcpy` and field assignment;
+* **`EVP_PKEY_get0_asn1` is not**, and for a different reason: its body is `return pkey->ameth;`, and
+  `EvpPkey` has no `ameth` field because the field's type is the struct above — so it lands with the
+  struct and not with the accessors;
+* **`EVP_PKEY_asn1_find` and `EVP_PKEY_asn1_find_str`** search `app_methods` **and then**
+  `standard_methods[]`. They are the two that need Phase 8's table, and they are the pair that
+  `new_raw_key_int` calls (D175).
+
+**And one exception worth naming, because it is the same shape as `evp_pkey_free_legacy`:** the
+`set_*` mutators and `get0_info` read and write the struct's **callback fields**, so the struct cannot
+be transcribed as an opaque placeholder. Its ~40 members are function-pointer types, which puts this
+family squarely in **D170's class** — the class where a wrong parameter list is invisible to
+`ABI-PROTOTYPE` (the types are fields, not exports) and to every court until a caller drives that
+particular callback. So the discipline for this unit is: transcribe `include/crypto/asn1.h`'s struct
+by reading each member against the header, and write the generator D170 names *before* the family, not
+after it.
+
+**Ordering consequence.** Three things are now competing for the next stretch, and the honest ranking
+is: the `OSSL_CORE_MAKE_FUNC` type-plane generator first (it is mechanical, needs no provider and no
+court, and this family adds ~40 more types to the unverified set); then this family, which is entirely
+in-phase and unblocks the raw-key constructors with a documented empty table; then
+`ctrl_params_translate.c`, which is the single gate on `signature.c`'s eighteen and therefore on
+closing 7.4b.
