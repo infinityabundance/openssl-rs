@@ -9692,3 +9692,90 @@ called done, because a stratum with an open symbol it can never build is a strat
 close.
 
 SPDX-License-Identifier: Apache-2.0
+
+## D165 — 7.4l's deferral is per-symbol, and neither the source nor the relocations alone can compute it
+
+D164 recorded that row 7.4l's hand-off was not in the ledger yet, and named the mechanical step: a
+second hand-off table in `phase7_obligations.py` whose rows are the eleven units 7.4l names. Building
+that table turned out to require three facts that do not exist, and the attempt is worth recording in
+full because the same three will be met by every later stratum.
+
+**One: the census now exists, and it is 144.** `forensics/atlas/export-defining-units.json` is a new
+generated artefact — every DSO export of each admitted library with the translation unit that defines
+it, measured from the authority's own object files rather than inferred from prose, joined with the
+owning stratum and declaring header from `symbol-ownership.json`. It is the fifth artefact of
+`gen_prerequisite_atlas.py` and it exists because D163's finding needed it: a rule that assigns a
+symbol to the stratum owning its *header* cannot see a call, and a rule that assigns a unit to a
+stratum cannot express "this unit's exports are half this stratum's". 6,499 exports over 624 units,
+**zero without a defining unit**, 34 defined by two units. Phase 7 owns exports defined in 83 units;
+the eleven 7.4l names 144 of them:
+
+```text
+crypto/evp/pmeth_lib.c       98    crypto/asn1/ameth_lib.c      26
+crypto/evp/p_legacy.c         6    crypto/asn1/i2d_evp.c         5
+crypto/asn1/d2i_pr.c          4    crypto/asn1/d2i_param.c       2
+crypto/evp/evp_pkey_type.c    1    crypto/asn1/d2i_pu.c          1
+crypto/evp/evp_cnf.c          1    crypto/evp/ec_support.c       0
+crypto/evp/dh_support.c       0
+```
+
+`evp_cnf.c`'s one is `EVP_add_alg_module`, already a deferral row. `ec_support.c` and
+`dh_support.c` have one export and none between them that this stratum owns — they are named in the
+plan because the *functions they implement* are needed, not because they export anything.
+
+**Two: the unit is not the granularity, and D163's "the whole `EVP_PKEY_meth_*` registry" is
+over-broad.** By hand, `EVP_PKEY_meth_get_sign` is
+`if (psign_init) *psign_init = pmeth->sign_init; if (psign) *psign = pmeth->sign;` — two field reads
+of a method object the caller supplies, with no reference to any table. So is `EVP_PKEY_meth_new`
+(`CRYPTO_zalloc` and two assignments), and so is every `EVP_PKEY_meth_get_*`/`set_*` accessor and
+most of `ameth_lib.c`. What is genuinely blocked is the handful of functions that reach the
+`standard_methods[]` tables, and the tables are what make unit-level deferral wrong in the *dangerous*
+direction: it would hand ~134 exports that this stratum can and must implement to Phase 8, and the
+stratum would then be unable to close for a reason that is not real.
+
+**Three: a bag-of-identifiers scan over the C bodies cannot replace the judgement, and 100% of its
+answer is false.** The obvious mechanical rule — a body is blocked if it mentions an identifier whose
+defining unit has no crate module — flags **98 of 98** `pmeth_lib.c` exports, `EVP_PKEY_meth_get_sign`
+among them, because short field and parameter names (`sign`, `copy`, `free`, `init`, `check`) collide
+with authority symbol names. Without a compiler's scoping, the source is a bag of words, and the tool
+this project builds on is a *lexical* scan that its own doc already says cannot tell a rename from a
+gap. Adding a scanner would have produced a confident, complete, wrong census.
+
+**The measurement that does work, and the three layers it needs.** Undefined symbols are a property of
+the *object*, not of the source: `crypto/evp/libcrypto-lib-pmeth_lib.o` needs 84 names, 37 of which
+live in units the crate has not transcribed, and ten of those 37 are exactly the
+`ossl_{rsa,rsa_pss,dh,dhx,dsa,ec,ecx25519,ecx448,ed25519,ed448}_pkey_method` objects from
+`crypto/rsa/rsa_pmeth.c`, `crypto/dh/dh_pmeth.c`, `crypto/dsa/dsa_pmeth.c`, `crypto/ec/ec_pmeth.c` and
+`crypto/ec/ecx_meth.c`. `elf_symbols.elf_undefined_symbols` was added for this and is the complement
+of the function beside it. The other 27 are this stratum's own units in a later subphase
+(`asymcipher.c`, `kem.c`, `exchange.c`, `signature.c` are 7.4b's; `ctrl_params_translate.c` is 7.4's),
+which is the same census the plan already carries one level up.
+
+But the object is not the granularity either, and the reason is three layers deep — all three measured
+on that one object:
+
+* **Relocations in `.text` give per-function references, and they are right.** Pairing each `SHT_RELA`
+  entry with the defined function whose `[st_value, st_value+st_size)` contains its `r_offset` answers
+  `EVP_PKEY_meth_get_sign -> []`, `EVP_PKEY_meth_new -> {CRYPTO_zalloc}`, which is exactly the hand
+  reading. OpenSSL's build does **not** use `-ffunction-sections` — the object has one `.text` — so
+  this pairing is what supplies the granularity the section table does not.
+* **The table's own references are in a data section, not in the function.** `EVP_PKEY_meth_find`'s
+  relocations name `OPENSSL_sk_find`, `OPENSSL_sk_value` and one *unnamed* symbol — the section symbol
+  for the section holding `standard_methods`, with the offset in the addend. The ten
+  `ossl_*_pkey_method` names appear in *that* section's relocations. So the rule needs recursion
+  through data objects, and identifying a static object from a relocation means resolving
+  section-plus-addend rather than a name — the same "one layer outward" shape as the whole of D163.
+* **`OSSL_NELEM(standard_methods)` is a compile-time constant and leaves no relocation at all.**
+  `EVP_PKEY_meth_get_count`'s only undefined symbol is `OPENSSL_sk_num`, and it is nonetheless blocked:
+  its answer is `sizeof(standard_methods)/sizeof(standard_methods[0])`, which is ten today and is
+  *whatever the algorithm strata compile in*. A relocation-only rule reports it as free. A rule that
+  reads the source for the table's name reports it as blocked for the right reason by accident.
+
+So the durable rule is: build the dependency graph the *linker* would build — text relocations, data
+relocations, and a macro expansion for the constants — and then a symbol is blocked exactly when its
+node reaches a node the crate does not define. That is a real tool with three passes, not the few
+lines D163 estimated, and writing it is the next step rather than this entry's conclusion. What this
+entry concludes is negative and worth as much: **no deferral row was added for these 144**, because the
+two rules available today give opposite answers on evidence I can check, and 7.4l as written would have
+deferred work that belongs here. The plan's row 7.4l is corrected to say so, and the artefact that
+makes the rule writable is landed.

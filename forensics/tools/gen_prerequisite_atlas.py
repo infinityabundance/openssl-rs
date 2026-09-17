@@ -25,7 +25,7 @@ hand and none by a tool:
 Each was found by following the *call*, which is the only method that has worked and
 the method this tool mechanises.
 
-The four artefacts
+The five artefacts
 ------------------
 `forensics/atlas/internal-symbols.json`
     The **function** universe: every symbol the authority's objects define that is
@@ -48,6 +48,20 @@ The four artefacts
     of those units the internal symbols and macros it references. This is the half of
     the gate that can only be computed where the authority is: it is committed so the
     gate itself needs no authority tree and can therefore run in the static job.
+
+`forensics/atlas/export-defining-units.json`
+    The **export** universe with the translation unit that defines each symbol, which is the
+    old half of the measurement the four above only ever applied to internals. It exists
+    because D163 found a dependency no gate could see: `crypto/evp/pmeth_lib.c` and
+    `crypto/asn1/ameth_lib.c` each hold a `standard_methods[]` table whose contents are the
+    *algorithm strata's* `ossl_*_pkey_method` and `ossl_*_asn1_meth` objects, so the units that
+    define Phase 2's exports can depend on Phase 8's contents -- and a rule that assigns a
+    symbol to the stratum owning its *header* cannot see a call at all, while a rule that
+    assigns a unit to a stratum cannot express "this unit's exports are half this stratum's".
+    Three facts are therefore recorded per export rather than one: the library, the defining
+    unit, and the owning stratum. `units_by_owner_phase` is the projection that answers "which
+    translation units would a stratum's exports come from", which is the question 7.4l had to
+    answer by reading eleven units by hand.
 
 The two tiers
 -------------
@@ -92,6 +106,7 @@ OUT_INTERNAL = ATLAS / "internal-symbols.json"
 OUT_MACROS = ATLAS / "macro-owners.json"
 OUT_TYPEDEFS = ATLAS / "typedef-owners.json"
 OUT_EDGES = ATLAS / "transcription-edges.json"
+OUT_EXPORT_UNITS = ATLAS / "export-defining-units.json"
 
 SRC = REPO_ROOT / "src"
 
@@ -417,6 +432,87 @@ def authority_version(authority_id: str) -> str:
         if a["id"] == authority_id:
             return a["version"]
     raise KeyError(authority_id)
+
+
+def build_export_units(authority_id: str, sym_tu: dict[str, str],
+                       conflicts: list[str]) -> dict:
+    """The export universe with its defining translation unit and its owning stratum.
+
+    The defining unit is measured, not inferred: it comes from the same object-file scan
+    that `build_internal_symbols` uses, which reads the symbol table of the `.o` the
+    authority's build produced for each translation unit. The owning stratum and the
+    declaring header come from `symbol-ownership.json`, so this artefact is the join of
+    the two questions a dependency analysis needs and neither of them alone can answer.
+    """
+    ownership: dict[str, dict] = {}
+    owner = json.loads((ATLAS / "symbol-ownership.json").read_text(encoding="utf-8"))
+    for rec in (owner.get("body") or owner)["records"]:
+        ownership.setdefault(
+            rec["symbol"],
+            {"owner_phase": rec.get("owner_phase"),
+             "declaring_header": rec.get("declaring_header")},
+        )
+
+    conflicting = {c.split(":", 1)[0] for c in conflicts}
+    records: list[dict] = []
+    missing: list[str] = []
+    by_unit: dict[str, list[str]] = defaultdict(list)
+    units_by_phase: dict[str, list[str]] = defaultdict(list)
+    for lib in ("libcrypto", "libssl"):
+        doc = json.loads(
+            (ATLAS / authority_id / f"symbols-{lib}.json").read_text(encoding="utf-8")
+        )
+        for rec in doc["body"]["records"]:
+            if not (rec.get("dso") or {}).get("present"):
+                continue
+            symbol = rec["symbol"]
+            tu = sym_tu.get(symbol)
+            own = ownership.get(symbol, {})
+            if tu is None:
+                missing.append(f"{lib}:{symbol}")
+            else:
+                by_unit[tu].append(symbol)
+                phase = own.get("owner_phase")
+                if tu not in units_by_phase[str(phase)]:
+                    units_by_phase[str(phase)].append(tu)
+            records.append({
+                "symbol": symbol,
+                "library": lib,
+                "translation_unit": tu,
+                "declaring_header": own.get("declaring_header"),
+                "owner_phase": own.get("owner_phase"),
+            })
+    records.sort(key=lambda r: (r["symbol"], r["library"]))
+
+    return {
+        "definition": (
+            "every DSO export of each admitted library, with the translation unit that "
+            "defines it -- measured from the authority's object files -- and the stratum "
+            "that owns it, taken from symbol-ownership.json. The defining unit is the "
+            "third fact D163 needed and no artefact carried"
+        ),
+        "universe": {
+            "exports": len(records),
+            "libcrypto": sum(1 for r in records if r["library"] == "libcrypto"),
+            "libssl": sum(1 for r in records if r["library"] == "libssl"),
+            "translation_units": len(by_unit),
+        },
+        "invariants": {
+            "exports_without_a_translation_unit": len(missing),
+            "exports_defined_by_more_than_one_unit": len(
+                sorted(conflicting & {r["symbol"] for r in records})
+            ),
+        },
+        "exports_without_a_translation_unit": sorted(missing),
+        "exports_defined_by_more_than_one_unit": sorted(
+            conflicting & {r["symbol"] for r in records}
+        ),
+        "by_translation_unit": {tu: sorted(s) for tu, s in sorted(by_unit.items())},
+        "units_by_owner_phase": {p: sorted(u) for p, u in sorted(
+            units_by_phase.items(), key=lambda kv: int(kv[0])
+        )},
+        "records": records,
+    }
 
 
 def load_build_record(authority_id: str) -> dict:
@@ -823,8 +919,13 @@ def write_all(authority_id: str) -> int:
             ),
         ),
     ]
+    export_units_body = build_export_units(
+        authority_id, sym_tu, internal_body["conflicts"]
+    )
+
     internal_body["authority_build"] = build_records
     edges_body["authority_build"] = build_records
+    export_units_body["authority_build"] = build_records
 
     internal_body["modules_with_mixed_ownership"] = sorted(mixed)
     # Not a defect list: a module whose declaration disagrees with the ownership of
@@ -859,6 +960,11 @@ def write_all(authority_id: str) -> int:
         OUT_EDGES,
         envelope("transcription-edges", GENERATOR, inputs, edges_body, authority=authority_id),
     )
+    write_json(
+        OUT_EXPORT_UNITS,
+        envelope("export-defining-units", GENERATOR, inputs, export_units_body,
+                 authority=authority_id),
+    )
 
     print(f"[prerequisite-atlas] internal symbols: {internal_body['universe']['internal']}"
           f" of {internal_body['universe']['authority_defined_symbols']} defined")
@@ -866,6 +972,9 @@ def write_all(authority_id: str) -> int:
     print(f"[prerequisite-atlas] typedefs: {typedef_body['counts']}")
     print(f"[prerequisite-atlas] edges: {len(edges_body['modules'])} modules over "
           f"{len(edges_body['units'])} translation units")
+    print(f"[prerequisite-atlas] exports: {export_units_body['universe']['exports']} over "
+          f"{export_units_body['universe']['translation_units']} translation units, "
+          f"{export_units_body['invariants']['exports_without_a_translation_unit']} without one")
     if mixed:
         print(f"[prerequisite-atlas] modules with mixed export ownership: {len(mixed)}",
               file=sys.stderr)
@@ -899,6 +1008,7 @@ def check_committed(check_only: bool) -> int:
         (OUT_MACROS, "macro-owners"),
         (OUT_TYPEDEFS, "typedef-owners"),
         (OUT_EDGES, "transcription-edges"),
+        (OUT_EXPORT_UNITS, "export-defining-units"),
     ):
         if not path.is_file():
             problems.append(f"{rel(path)} is absent")
@@ -955,6 +1065,33 @@ def check_committed(check_only: bool) -> int:
                     f"{rel(path)}: {unowned_here} unowned records, counts says "
                     f"{body['counts']['unowned']}"
                 )
+        elif kind == "export-defining-units":
+            if len(records) != body["universe"]["exports"]:
+                problems.append(
+                    f"{rel(path)}: {len(records)} records, universe says "
+                    f"{body['universe']['exports']}"
+                )
+            #
+            # The projection and the records have to agree. `units_by_owner_phase` is the
+            # field 7.4l's analysis reads, and a projection that has drifted from the
+            # records it summarises is worse than no projection: it reads as a census
+            # while being a memory.
+            #
+            seen = sum(len(v) for v in body["by_translation_unit"].values())
+            without = sum(1 for r in records if r["translation_unit"] is None)
+            if seen + without != len(records):
+                problems.append(
+                    f"{rel(path)}: by_translation_unit holds {seen} symbols plus {without} "
+                    f"without a unit, over {len(records)} records"
+                )
+            if body["invariants"]["exports_without_a_translation_unit"] != len(
+                body["exports_without_a_translation_unit"]
+            ):
+                problems.append(
+                    f"{rel(path)}: {body['invariants']['exports_without_a_translation_unit']} "
+                    f"exports without a unit recorded but "
+                    f"{len(body['exports_without_a_translation_unit'])} listed"
+                )
         else:
             if not body.get("modules") or not body.get("units"):
                 problems.append(f"{rel(path)}: empty module or unit list")
@@ -969,8 +1106,8 @@ def check_committed(check_only: bool) -> int:
     if check_only:
         print(
             f"[prerequisite-atlas] ok (weak tier, authority absent): "
-            f"{rel(OUT_INTERNAL)}, {rel(OUT_MACROS)}, {rel(OUT_TYPEDEFS)} and "
-            f"{rel(OUT_EDGES)} are structurally consistent"
+            f"{rel(OUT_INTERNAL)}, {rel(OUT_MACROS)}, {rel(OUT_TYPEDEFS)}, "
+            f"{rel(OUT_EDGES)} and {rel(OUT_EXPORT_UNITS)} are structurally consistent"
         )
     else:
         print(
