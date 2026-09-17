@@ -10106,3 +10106,68 @@ transcription commit. What is written here is the correction and the record.
   cipher's label frees it *before* the test, so the two files differ. The crate reproduces the leak
   because nothing observable distinguishes the two, and a silent improvement is still a silent
   change; the site comment says so.
+
+## D171 — `signature.c`'s operation half is blocked on `ctrl_params_translate.c`, and three accessors land instead
+
+7.4b-iii's last unit is `signature.c`'s operation half — nineteen exports. Its init function ends at a
+shared `end:` label whose last statement is
+
+```c
+/* crypto/evp/signature.c:889 */
+end:
+#ifndef FIPS_MODULE
+    if (ret > 0)
+        ret = evp_pkey_ctx_use_cached_data(ctx);
+#endif
+```
+
+`evp_pkey_ctx_use_cached_data` is already a deferral row owed to 7.4c-ii (it is one of the four rows
+7.4c-i created). It acts only when `ctx->cached_parameters.dist_id_set`, and when it acts it calls
+`evp_pkey_ctx_ctrl_str_int` or `evp_pkey_ctx_ctrl_int`.
+**Those two route a *provider* context — the only kind this crate can build — to
+`evp_pkey_ctx_ctrl_str_to_param` and `evp_pkey_ctx_ctrl_to_param`, which are
+`crypto/evp/ctrl_params_translate.c`'s**, and that file is **2,959 lines**. It is the plan's own 7.4c
+row, not a prerequisite anyone can land in passing.
+
+So the plan's order has 7.4b-iii depending on 7.4c. That is not an error in the plan: row 7.4b says
+"the five method-object families … with their `EVP_PKEY_*` operations" and row 7.4c names
+`m_sigver.c`, `pmeth_check.c`, `pmeth_gn.c` and the `p5_*`/`pbe_*` units — the translation is a
+*shared internal*, and by the rule D141 already applied, its owner is the earliest stratum that calls
+it. 7.4b calls it; 7.4c owns it.
+
+**What landed instead, and why it is not a substitute.** Three exports in the same family have no
+legacy arm and no ctrl dependency at all:
+
+* `EVP_PKEY_CTX_gettable_params` and `EVP_PKEY_CTX_settable_params` — five blocks over the five
+  method classes, and **no state test whatsoever**: a legacy context and an uninitialised one both
+  get NULL rather than an error, because the only thing they consult is which operation's algorithm
+  context is present. Each block passes `ossl_provider_ctx` of **the method's** provider, not the
+  libctx, because the descriptor table is a property of the method and not of one context;
+* `EVP_PKEY_CTX_is_a` — whose legacy arm is `ctx->pmeth->pkey_id == evp_pkey_name2type(keytype)`,
+  reached only through `evp_pkey_ctx_is_legacy` (D168) and therefore only by a context whose
+  `keymgmt` is NULL, which the legacy constructors never produce without a `pmeth`. The arm is
+  unreachable here, and the provided arm is the whole function.
+
+These three are exactly as complete as the authority's. `EVP_PKEY_CTX_set_params`,
+`EVP_PKEY_CTX_get_params` and the `_strict` pair are **not** landed: their `EVP_PKEY_STATE_LEGACY`
+arm *is* the params-to-ctrl translation, so transcribing them now would mean writing an answer for a
+branch whose body is a file this crate does not have — a guess dressed as a transcription.
+
+**Two small things copied rather than normalised.** The authority tries the five families in a
+different order in the two accessors — key generation before KEM in `gettable_params`, after it in
+`settable_params` — and nothing can observe the difference, because a context carries one operation
+at a time. That is the reason to copy the order rather than sort it: a reader who "tidied" the two
+would be editing the authority. And `EVP_PKEY_CTX_is_a` is the one accessor in `pmeth_lib.c` that
+dereferences `ctx` **without a NULL test**, in both arms — so the crate does not invent an answer for
+a NULL context, and the site says so.
+
+**One verification done while here, in D170's class.** All six `*_gettable_ctx_params`,
+`*_settable_ctx_params` and keymgmt-generator callback types were checked against their
+`OSSL_CORE_MAKE_FUNC` lines: arity, parameter types and return type all agree. The two exchange
+defects D170 records are the exception in this family, not the rule — which is worth stating, because
+the useful conclusion from D170 is that the type plane needs a generator, not that every type in it
+is suspect.
+
+**What this means for the plan, stated plainly:** `signature.c`'s operation half (and therefore the
+completion of 7.4b) is gated on `ctrl_params_translate.c`. The next stretch of work in plan order is
+7.4c-ii's ctrl and params core, and finishing 7.4b-iii comes immediately after it.
