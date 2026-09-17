@@ -84,10 +84,10 @@ unsafe fn item_flags_i2d(
 ) -> c_int {
     // SAFETY: the caller's slot is readable when `out` is non-null.
     if !out.is_null() && unsafe { *out }.is_null() {
-        let v = val;
+        let mut v = val;
         // SAFETY: `v` is a live slot holding the caller's value; `it` is the
         // caller's item.
-        let len = unsafe { item_ex_i2d(&v, core::ptr::null_mut(), it, -1, flags) };
+        let len = unsafe { item_ex_i2d(&mut v, core::ptr::null_mut(), it, -1, flags) };
         if len <= 0 {
             return len;
         }
@@ -102,14 +102,14 @@ unsafe fn item_flags_i2d(
         }
         let mut p = buf;
         // SAFETY: `p` has room for `len` bytes and `v` is a live slot.
-        unsafe { item_ex_i2d(&v, &mut p, it, -1, flags) };
+        unsafe { item_ex_i2d(&mut v, &mut p, it, -1, flags) };
         // SAFETY: the caller's slot is writable and now owns `buf`.
         unsafe { *out = buf };
         return len;
     }
-    let v = val;
+    let mut v = val;
     // SAFETY: `v` is a live slot; `out` is the caller's, possibly null.
-    unsafe { item_ex_i2d(&v, out, it, -1, flags) }
+    unsafe { item_ex_i2d(&mut v, out, it, -1, flags) }
 }
 
 /// `int ASN1_item_i2d(const ASN1_VALUE *val, unsigned char **out,
@@ -206,7 +206,7 @@ pub(crate) unsafe fn item_i2d(
 #[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
 #[allow(clippy::not_unsafe_ptr_arg_deref)] // the authority's `pval` contract
 unsafe fn item_ex_i2d(
-    pval: *const *const Asn1String,
+    pval: *mut *const Asn1String,
     out: *mut *mut c_uchar,
     it: *const Asn1Item,
     tag: c_int,
@@ -445,7 +445,7 @@ fn aux_const_cb(aux: *const Asn1Aux) -> Option<Asn1AuxConstCb> {
 #[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
 #[allow(clippy::not_unsafe_ptr_arg_deref)] // the authority's `pval` contract
 unsafe fn i2d_ex_primitive(
-    pval: *const *const Asn1String,
+    pval: *mut *const Asn1String,
     out: *mut *mut c_uchar,
     it: &Asn1Item,
     tag: c_int,
@@ -511,7 +511,7 @@ unsafe fn i2d_ex_primitive(
 #[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
 #[allow(clippy::not_unsafe_ptr_arg_deref)] // the authority's `pval` contract
 unsafe fn ex_i2c(
-    pval: *const *const Asn1String,
+    pval: *mut *const Asn1String,
     cout: *mut c_uchar,
     putype: *mut c_int,
     it: &Asn1Item,
@@ -561,7 +561,9 @@ unsafe fn ex_i2c(
         // SAFETY: `putype` is the caller's live slot.
         unsafe { *putype = utype };
         // SAFETY: `typ` is live; the union's `ptr` member is the value slot.
-        pval = unsafe { core::ptr::addr_of!((*typ).value.ptr) }.cast::<*const Asn1String>();
+        pval = unsafe { core::ptr::addr_of!((*typ).value.ptr) }
+            .cast::<*const Asn1String>()
+            .cast_mut();
     } else {
         // SAFETY: `putype` is the caller's live slot, seeded with the item's type.
         utype = unsafe { *putype };
@@ -729,7 +731,7 @@ unsafe fn ex_i2c(
 #[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
 #[allow(clippy::not_unsafe_ptr_arg_deref)] // the authority's `pval` contract
 unsafe fn template_ex_i2d(
-    pval: *const *const Asn1String,
+    pval: *mut *const Asn1String,
     out: *mut *mut c_uchar,
     tt: *const Asn1Template,
     tag: c_int,
@@ -744,9 +746,9 @@ unsafe fn template_ex_i2d(
 
     // An embedded field's value *is* the field's storage, so the address of the caller's
     // slot stands in for it: `tval` holds it and the encode reads through `&tval`.
-    let tval: *const c_void = pval as *const c_void;
+    let mut tval: *const c_void = pval as *const c_void;
     let pval = if flags & ASN1_TFLG_EMBED != 0 {
-        &tval as *const *const c_void
+        core::ptr::addr_of_mut!(tval).cast::<*const c_void>()
     } else {
         pval.cast::<*const c_void>()
     };
@@ -815,9 +817,9 @@ unsafe fn template_ex_i2d(
         let mut i: c_int = 0;
         while i < n {
             // SAFETY: `i` indexes the caller's stack.
-            let skitem = unsafe { OPENSSL_sk_value(sk, i) } as *const Asn1String;
+            let mut skitem = unsafe { OPENSSL_sk_value(sk, i) } as *const Asn1String;
             // SAFETY: the element's item is the template's own.
-            let len = unsafe { item_ex_i2d(&skitem, core::ptr::null_mut(), sub, -1, iclass) };
+            let len = unsafe { item_ex_i2d(&mut skitem, core::ptr::null_mut(), sub, -1, iclass) };
             if len == -1 || skcontlen > c_int::MAX - len {
                 return -1;
             }
@@ -986,9 +988,9 @@ unsafe fn set_seq_out(
         let mut i: c_int = 0;
         while i < n {
             // SAFETY: `i` indexes the caller's stack.
-            let skitem = unsafe { OPENSSL_sk_value(sk, i) } as *const Asn1String;
+            let mut skitem = unsafe { OPENSSL_sk_value(sk, i) } as *const Asn1String;
             // SAFETY: the element's item is the caller's.
-            unsafe { item_ex_i2d(&skitem, out, item, -1, iclass) };
+            unsafe { item_ex_i2d(&mut skitem, out, item, -1, iclass) };
             i += 1;
         }
         return 1;
@@ -1015,10 +1017,10 @@ unsafe fn set_seq_out(
     let mut i: c_int = 0;
     while i < n {
         // SAFETY: `i` indexes the caller's stack.
-        let skitem = unsafe { OPENSSL_sk_value(sk, i) } as *const Asn1String;
+        let mut skitem = unsafe { OPENSSL_sk_value(sk, i) } as *const Asn1String;
         let start = p;
         // SAFETY: `p` has room for the remaining elements per the caller's measurement.
-        let len = unsafe { item_ex_i2d(&skitem, &mut p, item, -1, iclass) };
+        let len = unsafe { item_ex_i2d(&mut skitem, &mut p, item, -1, iclass) };
         // SAFETY: `i` is inside the list just allocated.
         unsafe {
             let e = derlst.add(i as usize);

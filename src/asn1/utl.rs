@@ -155,7 +155,7 @@ pub(crate) unsafe fn get_choice_selector(pval: *mut *mut c_void, it: &Asn1Item) 
 /// # Safety
 ///
 /// As [`get_choice_selector`].
-pub(crate) unsafe fn get_choice_selector_const(pval: *const *const c_void, it: &Asn1Item) -> c_int {
+pub(crate) unsafe fn get_choice_selector_const(pval: *mut *const c_void, it: &Asn1Item) -> c_int {
     // SAFETY: `*pval` is a live value and `utype` is its selector offset.
     let sel = unsafe { offset2ptr(*pval, it.utype) } as *const c_int;
     // SAFETY: that offset holds the selector `int`.
@@ -294,7 +294,7 @@ unsafe fn get_enc_ptr(pval: *mut *mut c_void, it: &Asn1Item) -> *mut Asn1Encodin
 /// # Safety
 ///
 /// As [`get_enc_ptr`].
-unsafe fn get_const_enc_ptr(pval: *const *const c_void, it: &Asn1Item) -> *const Asn1Encoding {
+unsafe fn get_const_enc_ptr(pval: *mut *const c_void, it: &Asn1Item) -> *const Asn1Encoding {
     // SAFETY: the caller's contract.
     if pval.is_null() || unsafe { *pval }.is_null() {
         return core::ptr::null();
@@ -407,7 +407,7 @@ pub(crate) unsafe fn enc_save(
 pub(crate) unsafe fn enc_restore(
     len: *mut c_int,
     out: *mut *mut c_uchar,
-    pval: *const *const c_void,
+    pval: *mut *const c_void,
     it: &Asn1Item,
 ) -> c_int {
     // SAFETY: the caller's contract.
@@ -458,11 +458,11 @@ pub(crate) unsafe fn get_field_ptr(pval: *mut *mut c_void, tt: &Asn1Template) ->
 ///
 /// As [`get_field_ptr`].
 pub(crate) unsafe fn get_const_field_ptr(
-    pval: *const *const c_void,
+    pval: *mut *const c_void,
     tt: &Asn1Template,
-) -> *const *const c_void {
+) -> *mut *const c_void {
     // SAFETY: the caller's contract.
-    unsafe { offset2ptr(*pval, tt.offset as c_long) as *const *const c_void }
+    unsafe { offset2ptr(*pval, tt.offset as c_long) as *mut *const c_void }
 }
 
 /// `ossl_asn1_do_adb` — resolve an `ANY DEFINED BY` template to a concrete one.
@@ -511,7 +511,7 @@ pub(crate) unsafe fn do_adb(
     let adb = unsafe { &*adb };
 
     // SAFETY: `val` is live and `adb.offset` is a field of it.
-    let sfld = unsafe { offset2ptr(val, adb.offset as c_long) } as *const *const c_void;
+    let sfld = unsafe { offset2ptr(val, adb.offset as c_long) } as *mut *const c_void;
     // SAFETY: that field is readable.
     if unsafe { *sfld }.is_null() {
         if adb.null_tt.is_null() {

@@ -1,0 +1,355 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "all_pass": true,
+    "authority": "openssl-3.6.4-production",
+    "claim": "A passing court means the candidate produced the same observable transcript as the authority for the behaviours this probe exercises. It is a differential-compatibility result, NOT cryptographic or security correctness, and NOT evidence for any behaviour the probe does not touch (docs/PARITY_MODEL.md).",
+    "courts": [
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 217,
+        "candidate_exit_code": 0,
+        "candidate_observations": 217,
+        "candidate_stderr_tail": [],
+        "court": "RT-FETCH",
+        "crashed": false,
+        "probe": "courts/phase7/rt_fetch_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase7/probes/rt_fetch_probe.authority",
+          "candidate": "artifacts/phase7/probes/rt_fetch_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 185,
+        "candidate_exit_code": 0,
+        "candidate_observations": 185,
+        "candidate_stderr_tail": [],
+        "court": "RT-EVP-CIPHER",
+        "crashed": false,
+        "probe": "courts/phase7/rt_evp_cipher_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase7/probes/rt_evp_cipher_probe.authority",
+          "candidate": "artifacts/phase7/probes/rt_evp_cipher_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 96,
+        "candidate_exit_code": 0,
+        "candidate_observations": 96,
+        "candidate_stderr_tail": [],
+        "court": "RT-EVP-MAC",
+        "crashed": false,
+        "probe": "courts/phase7/rt_evp_mac_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase7/probes/rt_evp_mac_probe.authority",
+          "candidate": "artifacts/phase7/probes/rt_evp_mac_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 68,
+        "candidate_exit_code": 0,
+        "candidate_observations": 68,
+        "candidate_stderr_tail": [],
+        "court": "RT-EVP-KDF",
+        "crashed": false,
+        "probe": "courts/phase7/rt_evp_kdf_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase7/probes/rt_evp_kdf_probe.authority",
+          "candidate": "artifacts/phase7/probes/rt_evp_kdf_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 168,
+        "candidate_exit_code": 0,
+        "candidate_observations": 168,
+        "candidate_stderr_tail": [],
+        "court": "RT-EVP-RAND",
+        "crashed": false,
+        "probe": "courts/phase7/rt_evp_rand_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase7/probes/rt_evp_rand_probe.authority",
+          "candidate": "artifacts/phase7/probes/rt_evp_rand_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 97,
+        "candidate_exit_code": 0,
+        "candidate_observations": 97,
+        "candidate_stderr_tail": [],
+        "court": "RT-EVP-SKEY",
+        "crashed": false,
+        "probe": "courts/phase7/rt_evp_skey_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase7/probes/rt_evp_skey_probe.authority",
+          "candidate": "artifacts/phase7/probes/rt_evp_skey_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 73,
+        "candidate_exit_code": 0,
+        "candidate_observations": 73,
+        "candidate_stderr_tail": [],
+        "court": "RT-EVP-KEYMGMT",
+        "crashed": false,
+        "probe": "courts/phase7/rt_evp_keymgmt_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase7/probes/rt_evp_keymgmt_probe.authority",
+          "candidate": "artifacts/phase7/probes/rt_evp_keymgmt_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 25,
+        "candidate_exit_code": 0,
+        "candidate_observations": 25,
+        "candidate_stderr_tail": [],
+        "court": "RT-EVP-NAMES",
+        "crashed": false,
+        "probe": "courts/phase7/rt_evp_names_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase7/probes/rt_evp_names_probe.authority",
+          "candidate": "artifacts/phase7/probes/rt_evp_names_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 502,
+        "candidate_exit_code": 0,
+        "candidate_observations": 502,
+        "candidate_stderr_tail": [],
+        "court": "RT-EVP-PKEY",
+        "crashed": false,
+        "probe": "courts/phase7/rt_evp_pkey_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase7/probes/rt_evp_pkey_probe.authority",
+          "candidate": "artifacts/phase7/probes/rt_evp_pkey_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 442,
+        "candidate_exit_code": 0,
+        "candidate_observations": 442,
+        "candidate_stderr_tail": [],
+        "court": "RT-EVP-PBE",
+        "crashed": false,
+        "probe": "courts/phase7/rt_evp_pbe_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase7/probes/rt_evp_pbe_probe.authority",
+          "candidate": "artifacts/phase7/probes/rt_evp_pbe_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 154,
+        "candidate_exit_code": 0,
+        "candidate_observations": 154,
+        "candidate_stderr_tail": [],
+        "court": "RT-EVP-BIO",
+        "crashed": false,
+        "probe": "courts/phase7/rt_evp_encode_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase7/probes/rt_evp_encode_probe.authority",
+          "candidate": "artifacts/phase7/probes/rt_evp_encode_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 80,
+        "candidate_exit_code": 0,
+        "candidate_observations": 80,
+        "candidate_stderr_tail": [],
+        "court": "RT-EVP-PEM",
+        "crashed": false,
+        "probe": "courts/phase7/rt_evp_pem_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase7/probes/rt_evp_pem_probe.authority",
+          "candidate": "artifacts/phase7/probes/rt_evp_pem_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 32,
+        "candidate_exit_code": 0,
+        "candidate_observations": 32,
+        "candidate_stderr_tail": [],
+        "court": "RT-HMAC",
+        "crashed": false,
+        "probe": "courts/phase7/rt_hmac_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase7/probes/rt_hmac_probe.authority",
+          "candidate": "artifacts/phase7/probes/rt_hmac_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 26,
+        "candidate_exit_code": 0,
+        "candidate_observations": 26,
+        "candidate_stderr_tail": [],
+        "court": "RT-CMAC",
+        "crashed": false,
+        "probe": "courts/phase7/rt_cmac_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase7/probes/rt_cmac_probe.authority",
+          "candidate": "artifacts/phase7/probes/rt_cmac_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 65,
+        "candidate_exit_code": 0,
+        "candidate_observations": 65,
+        "candidate_stderr_tail": [],
+        "court": "RT-HPKE",
+        "crashed": false,
+        "probe": "courts/phase7/rt_hpke_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase7/probes/rt_hpke_probe.authority",
+          "candidate": "artifacts/phase7/probes/rt_hpke_probe.candidate"
+        },
+        "verdict": "pass"
+      }
+    ],
+    "summary": {
+      "fail": 0,
+      "pass": 15,
+      "total": 15
+    }
+  },
+  "generator": "forensics/tools/phase7_courts.py",
+  "inputs": [
+    {
+      "name": "authority-symbols",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+      "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase7/rt_fetch_probe.c",
+      "sha256": "bbd752db6c52867a27260ebda57ed0cecbd8ebcbea2764a55181983cef367ff4"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase7/rt_evp_cipher_probe.c",
+      "sha256": "2abeca762170f61569fd135ee3d5f0e616ed2689be49afb2e6fd312a3badd31a"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase7/rt_evp_mac_probe.c",
+      "sha256": "d5bccecb8032b45cb0edf2e7bc3cc4588262b20186e1c1fcea78ad6804f50387"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase7/rt_evp_kdf_probe.c",
+      "sha256": "bd0d658490ef0e5b3bf36491d30a0f3387158dbefc4ba0d211b33d8b0dbba34f"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase7/rt_evp_rand_probe.c",
+      "sha256": "8622403bec9078a33a1eebce4964d867124a51f3f2e9c38eaac0d1a89844f0f9"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase7/rt_evp_skey_probe.c",
+      "sha256": "9c8fb9c3b0f024185aec4558d46a72f450be60a3420687d0810735f71320ab43"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase7/rt_evp_keymgmt_probe.c",
+      "sha256": "3f0189cd69c236cc324a9f55697b8cd2cfbf55d4549a7eb64e64847b79e72580"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase7/rt_evp_names_probe.c",
+      "sha256": "8fedfbb2070a5a6fa7f3fb848640e3a29463ea441d795ec43da4d7166932e4b5"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase7/rt_evp_pkey_probe.c",
+      "sha256": "63d59ff9f83da54a375306b9e76901682abb13910b3bd4c02ce5b1809be8b6e2"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase7/rt_evp_pbe_probe.c",
+      "sha256": "55a1a30ea578d8ef06e0389d2adf65151713a44b35cd970e93f3aebfc5e0df6d"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase7/rt_evp_encode_probe.c",
+      "sha256": "24e29e9ba21c8365794ec144346f7a3c96a661e2051cd75138c606d277243b22"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase7/rt_evp_pem_probe.c",
+      "sha256": "ae41c532130afb321522f163893441307ae1bf3257c7cde53567a5b09f9e2ac4"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase7/rt_hmac_probe.c",
+      "sha256": "39b84756d4ec935a34e8fb10e228540d7bda1365fac1aa2ce5a73aaed4b983a6"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase7/rt_cmac_probe.c",
+      "sha256": "01e9816f619c51aef5652d08558d753965bbeceeb51ca3c06e00c348086586c2"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase7/rt_hpke_probe.c",
+      "sha256": "b0aded0cb3319828582946351d52f49b6be48a894eeb51c17787c429d5c803f9"
+    }
+  ],
+  "kind": "phase7-courts",
+  "schema": "openssl-rs/atlas/phase7-courts/v1"
+}

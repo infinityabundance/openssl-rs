@@ -487,27 +487,45 @@ pub const BIO_CTRL_GET_READ_REQUEST: c_int = BIO_C_GET_READ_REQUEST;
 pub const BIO_CTRL_RESET_READ_REQUEST: c_int = BIO_C_RESET_READ_REQUEST;
 
 // ---------------------------------------------------------------------------
-// Error classes, from `bioerr.h`, `err.h` and `cryptoerr.h`.
+// Error classes, from `err.h`.
+//
+// These are the `ERR_R_*` *common* reason codes and the two reason-flag bits.
+// They were once documented here as coming from `cryptoerr.h`, with values
+// (`1`, `154`, `106`, `114`, `42`) that header does not contain and that are not
+// reason codes at all; `cryptoerr.h` declares no `ERR_R_*` name in the
+// authority. Corrected against the header that does declare them, and composed
+// from the header's own flags rather than written as literals, so a reader can
+// check the arithmetic.
 // ---------------------------------------------------------------------------
 
 /// `ERR_LIB_SYS`.
 pub const ERR_LIB_SYS: c_int = 2;
+/// `ERR_LIB_CRYPTO`.
+pub const ERR_LIB_CRYPTO: c_int = 15;
 /// `ERR_LIB_BIO`.
 pub const BIO_LIB_CODE: c_int = 32;
-/// `ERR_RFLAG_COMMON`.
+/// `ERR_RFLAG_FATAL` (`err.h`): `(0x1 << ERR_RFLAGS_OFFSET)`, `ERR_RFLAGS_OFFSET` 18.
+pub const ERR_RFLAG_FATAL: c_int = 0x1 << 18;
+/// `ERR_RFLAG_COMMON` (`err.h`): `(0x2 << ERR_RFLAGS_OFFSET)`.
 pub const ERR_RFLAG_COMMON: c_int = 0x2 << 18;
-/// `ERR_R_SYS_LIB` — the syscall-error reason, carrying `ERR_RFLAG_COMMON`.
+/// `ERR_R_FATAL` (`err.h`): `(ERR_RFLAG_FATAL | ERR_RFLAG_COMMON)`.
+pub const ERR_R_FATAL: c_int = ERR_RFLAG_FATAL | ERR_RFLAG_COMMON;
+/// `ERR_R_SYS_LIB` (`err.h`): `(ERR_LIB_SYS | ERR_RFLAG_COMMON)`.
+///
+/// A *reason*, not a library, despite its value: `crypto/bio/bss_file.c` and
+/// its siblings raise it with `ERR_LIB_BIO`, and `crypto/bio/bio_lib.c` switches
+/// on it as a reason.
 pub const ERR_R_SYS_LIB: c_int = ERR_LIB_SYS | ERR_RFLAG_COMMON;
-/// `ERR_R_MALLOC_FAILURE` (`cryptoerr.h`).
-pub const ERR_R_MALLOC_FAILURE: c_int = 1;
-/// `ERR_R_INIT_FAIL` (`cryptoerr.h`).
-pub const ERR_R_INIT_FAIL: c_int = 154;
-/// `ERR_R_PASSED_NULL_PARAMETER` (`cryptoerr.h`).
-pub const ERR_R_PASSED_NULL_PARAMETER: c_int = 106;
-/// `ERR_R_INTERNAL_ERROR` (`cryptoerr.h`).
-pub const ERR_R_INTERNAL_ERROR: c_int = 114;
-/// `ERR_R_CRYPTO_LIB` (`cryptoerr.h`).
-pub const ERR_R_CRYPTO_LIB: c_int = 42;
+/// `ERR_R_MALLOC_FAILURE` (`err.h`): `(256 | ERR_R_FATAL)`.
+pub const ERR_R_MALLOC_FAILURE: c_int = 256 | ERR_R_FATAL;
+/// `ERR_R_INIT_FAIL` (`err.h`): `(261 | ERR_R_FATAL)`.
+pub const ERR_R_INIT_FAIL: c_int = 261 | ERR_R_FATAL;
+/// `ERR_R_PASSED_NULL_PARAMETER` (`err.h`): `(258 | ERR_R_FATAL)`.
+pub const ERR_R_PASSED_NULL_PARAMETER: c_int = 258 | ERR_R_FATAL;
+/// `ERR_R_INTERNAL_ERROR` (`err.h`): `(259 | ERR_R_FATAL)`.
+pub const ERR_R_INTERNAL_ERROR: c_int = 259 | ERR_R_FATAL;
+/// `ERR_R_CRYPTO_LIB` (`err.h`): `(ERR_LIB_CRYPTO | ERR_RFLAG_COMMON)`.
+pub const ERR_R_CRYPTO_LIB: c_int = ERR_LIB_CRYPTO | ERR_RFLAG_COMMON;
 
 /// `BIO_R_ACCEPT_ERROR`.
 pub const BIO_R_ACCEPT_ERROR: c_int = 100;

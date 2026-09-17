@@ -84,11 +84,21 @@ fn assert_slot_unfilled(slot: *mut c_void, name: &str, owner: &str) {
 
 /// `int evp_method_store_cache_flush(OSSL_LIB_CTX *libctx)` — `crypto/evp/evp_fetch.c`.
 ///
+/// **Implemented in D142**, when slot 0 stopped being unfilled: `context_init` builds the store
+/// now, so the authority's branch — flush it if it is there, answer 1 if it is not — can be taken
+/// and there is no longer anything to check rather than call. The absent arm still answers 1, which
+/// is what `provider_flush_store_cache`'s `== 4` sum depends on.
+///
 /// # Safety
 /// `libctx` must be NULL or live.
 pub(crate) unsafe fn evp_method_store_cache_flush(libctx: *mut c_void) -> c_int {
-    let store = lib_ctx_get_data(libctx, OSSL_LIB_CTX_EVP_METHOD_STORE_INDEX);
-    assert_slot_unfilled(store, "evp_method_store_cache_flush", "Phase 7");
+    let store = lib_ctx_get_data(libctx, OSSL_LIB_CTX_EVP_METHOD_STORE_INDEX)
+        .cast::<crate::property::store::OsslMethodStore>();
+    if !store.is_null() {
+        // SAFETY: the slot holds a store `context_init` built and released once, so it is live
+        // here; a store nobody has added to has an empty cache, which the flush handles.
+        return unsafe { crate::property::store::ossl_method_store_cache_flush_all(store) };
+    }
     1
 }
 
@@ -137,8 +147,15 @@ pub(crate) unsafe fn ossl_store_loader_store_cache_flush(libctx: *mut c_void) ->
 pub(crate) unsafe fn evp_method_store_remove_all_provided(prov: *const OsslProvider) -> c_int {
     // SAFETY: `prov` is live.
     let libctx = unsafe { ossl_provider_libctx(prov) };
-    let store = lib_ctx_get_data(libctx, OSSL_LIB_CTX_EVP_METHOD_STORE_INDEX);
-    assert_slot_unfilled(store, "evp_method_store_remove_all_provided", "Phase 7");
+    let store = lib_ctx_get_data(libctx, OSSL_LIB_CTX_EVP_METHOD_STORE_INDEX)
+        .cast::<crate::property::store::OsslMethodStore>();
+    if !store.is_null() {
+        // SAFETY: the slot holds a store `context_init` built; `prov` is live, and the store
+        // compares it by identity against the implementations it holds.
+        return unsafe {
+            crate::property::store::ossl_method_store_remove_all_provided(store, prov)
+        };
+    }
     1
 }
 
@@ -212,37 +229,37 @@ mod tests {
     use super::*;
     use crate::context::OSSL_LIB_CTX_new;
 
-    /// The invariant the five bridges rest on, checked rather than assumed: in this
-    /// build no method store and no decoder cache exists, so every one of the nine
-    /// delegations is unreachable and each answers the authority's *absent* value.
+    /// The invariant the remaining bridges rest on, checked rather than assumed.
     ///
-    /// If a later stratum fills one of these slots, this test fails **before** the
-    /// first activation reaches the assertion in the bridge, which is the point: the
-    /// reader learns which slot moved rather than which call happened to run first.
+    /// **Slot 0 is no longer in the set.** D142 built the EVP method store — `context_init` fills
+    /// slot 0 — and implemented the two bridges that delegate to it, so the assertion this test
+    /// used to make fired exactly as designed and the answer is the one it pointed at: write the
+    /// delegation. What remains unfilled is slots 10, 11, 15 and 20, whose readers are Phase 10's
+    /// `encoder_meth.c`, `decoder_meth.c` and `store_meth.c` and Phase 10's decoder cache.
     #[test]
-    fn the_five_slots_are_unfilled() {
+    fn the_evp_store_slot_is_filled_and_the_other_four_are_not() {
         let ctx = OSSL_LIB_CTX_new();
         assert!(!ctx.is_null());
         // `lib_ctx_get_data` is a SAFE function in this crate (D113), so this is not
         // guarded: a NULL context is the default one and the read is total.
-        let empty = {
-            let mut empty = 0;
-            for index in [
-                OSSL_LIB_CTX_EVP_METHOD_STORE_INDEX,
-                OSSL_LIB_CTX_ENCODER_STORE_INDEX,
-                OSSL_LIB_CTX_DECODER_STORE_INDEX,
-                OSSL_LIB_CTX_STORE_LOADER_STORE_INDEX,
-                OSSL_LIB_CTX_DECODER_CACHE_INDEX,
-            ] {
-                if !lib_ctx_get_data(ctx, index).is_null() {
-                    empty += 1;
-                }
+        assert!(
+            !lib_ctx_get_data(ctx, OSSL_LIB_CTX_EVP_METHOD_STORE_INDEX).is_null(),
+            "context_init builds the EVP method store"
+        );
+        let mut filled = 0;
+        for index in [
+            OSSL_LIB_CTX_ENCODER_STORE_INDEX,
+            OSSL_LIB_CTX_DECODER_STORE_INDEX,
+            OSSL_LIB_CTX_STORE_LOADER_STORE_INDEX,
+            OSSL_LIB_CTX_DECODER_CACHE_INDEX,
+        ] {
+            if !lib_ctx_get_data(ctx, index).is_null() {
+                filled += 1;
             }
-            empty
-        };
+        }
         assert_eq!(
-            empty, 0,
-            "a method-store slot has been filled by another stratum"
+            filled, 0,
+            "a Phase 10 slot has been filled without the delegation it needs"
         );
     }
 

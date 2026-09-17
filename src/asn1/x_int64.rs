@@ -101,7 +101,7 @@ unsafe extern "C" fn uint64_clear(pval: *mut *mut c_void, _it: *const Asn1Item) 
 /// `pval` must point to a live slot holding a live eight-byte value; `cont` must be null
 /// or writable for the length this answers.
 unsafe extern "C" fn uint64_i2c(
-    pval: *const *const c_void,
+    pval: *mut *const c_void,
     cont: *mut c_uchar,
     _putype: *mut c_int,
     it: *const Asn1Item,
@@ -190,7 +190,7 @@ unsafe extern "C" fn uint64_c2i(
 /// value; `it` must be live.
 unsafe extern "C" fn uint64_print(
     out: *mut crate::runtime::bio::Bio,
-    pval: *const *const c_void,
+    pval: *mut *const c_void,
     it: *const Asn1Item,
     _indent: c_int,
     _pctx: *const Asn1Pctx,
@@ -257,7 +257,7 @@ unsafe extern "C" fn uint32_clear(pval: *mut *mut c_void, _it: *const Asn1Item) 
 /// `pval` must point to a live slot holding a live four-byte value; `cont` must be null or
 /// writable for the length this answers.
 unsafe extern "C" fn uint32_i2c(
-    pval: *const *const c_void,
+    pval: *mut *const c_void,
     cont: *mut c_uchar,
     _putype: *mut c_int,
     it: *const Asn1Item,
@@ -356,7 +356,7 @@ unsafe extern "C" fn uint32_c2i(
 /// value; `it` must be live.
 unsafe extern "C" fn uint32_print(
     out: *mut crate::runtime::bio::Bio,
-    pval: *const *const c_void,
+    pval: *mut *const c_void,
     it: *const Asn1Item,
     _indent: c_int,
     _pctx: *const Asn1Pctx,

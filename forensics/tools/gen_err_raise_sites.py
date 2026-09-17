@@ -230,12 +230,20 @@ COVERED_FILES = [
     ("crypto/asn1/asn_mime.c", "ASN_MIME"),
     # Deliberately *not* covered, with the stratum that owns each: `a_digest.c`,
     # `ameth_lib.c` (Phase 7); `d2i_param.c`, `d2i_pr.c`, `d2i_pu.c`, `i2d_evp.c`,
-    # `n_pkey.c`, `p5_pbe.c`, `p5_pbev2.c`, `p5_scrypt.c` (Phase 10); `a_sign.c`,
+    # `n_pkey.c`, `p5_pbe.c`, `p5_pbev2.c` (Phase 10 or 11 as their exports say); `a_sign.c`,
     # `a_verify.c`, `x_algor.c`, `x_pkey.c` (Phase 11); the rest of `asn_mime.c`
     # (Phase 12; the file is covered above for the two coordinates a Phase 5 export
     # raises);
     # `nsseq.c` (Phase 13). Their raises are visible as uncovered sites in
     # `forensics/atlas/err-raise-sites.json` until those phases land.
+    #
+    # `p5_scrypt.c` was on this list and is not any more: 7.4c lands
+    # `PKCS5_v2_scrypt_keyivgen`/`_ex`, which are that file's and Phase 7's by its
+    # `evp.h` declarations, and they raise the five `EVP_R_*` reasons at lines 252,
+    # 261, 267, 278 and 289. The file is therefore covered for the coordinates a
+    # Phase 7 export raises, which also brings in the nineteen `ERR_LIB_ASN1` sites of
+    # `PKCS5_pbe2_set_scrypt` (Phase 11's export, same unit) — the same
+    # per-file-not-per-symbol reasoning `asn_mime.c` and `v3_utl.c` already use above.
     #
     # `evp_asn1.c` was on this list and is not any more: see the comment where it is
     # covered. Two names that were on it are also worth correcting because they were
@@ -292,6 +300,111 @@ COVERED_FILES = [
     ("crypto/provider.c", "PROVIDER"),
     ("crypto/provider_core.c", "PROVIDER_CORE"),
     ("crypto/provider_conf.c", "PROVIDER_CONF"),
+    # The file 7.1 transcribes first, and the only one of this stratum's that is not under a
+    # directory the block below names: `crypto/core_fetch.c` is `ossl_method_construct`'s
+    # translation unit, it is one of the two deferrals Phase 6 handed forward (D132, D134),
+    # and its two `ossl_assert`-guarded `ERR_raise` sites are the coordinates a caller sees
+    # when a NULL `result` reaches the walk's pre- or postcondition. `crypto/core_algorithm.c`
+    # is its sibling, raises nothing, and is therefore absent.
+    ("crypto/core_fetch.c", "CORE_FETCH"),
+    # Phase 7: the EVP framework, and the *subsystem* set rather than the subphase that
+    # first raises from each file -- 6.8a's rule, stated there as "a site nobody calls yet
+    # is a coordinate, not a claim". Three parts, in the order they were derived:
+    #
+    #   * `crypto/evp/` is the directory whose exports `evp.h` declares, and forty-nine of
+    #     its eighty-four translation units raise something in this profile;
+    #   * `crypto/hpke/hpke.c` is 7.6's, and is *not* in `crypto/evp/` even though its
+    #     surface is `hpke.h`'s -- the atlas gives it to this stratum by header, which is
+    #     the rule D72 established and the reason this block is not a directory listing;
+    #   * the eight remaining files are the per-symbol exceptions the plan's own 7.4 and
+    #     7.5 rows name. `crypto/asn1/ameth_lib.c` was already excluded from Phase 5's block
+    #     above **with this phase named**; `i2d_evp.c`, `d2i_pr.c`, `d2i_param.c` and
+    #     `d2i_pu.c` are the same shape and had no earlier block to be excluded from;
+    #     `pem_pkey.c` and `pem_pk8.c` are where the twenty-three `pem.h` hand-offs Phase 5
+    #     recorded actually land. All of the eight declare their exports in `evp.h` or
+    #     `pem.h` and therefore belong to this stratum and not to the stratum whose
+    #     directory they sit in.
+    #
+    # **Thirty-seven of the eighty-four raise nothing and are deliberately absent**: the BIO
+    # and encoding bridges (`bio_enc.c`, `bio_md.c`, `bio_ok.c`, `encode.c`), the twelve
+    # `legacy_*` wrappers and the legacy cipher wrappers whose primitives are Phase 13's
+    # (`e_des.c`, `e_rc4.c`, `e_bf.c`, `e_cast.c`, `e_idea.c`, `e_seed.c`, `e_sm4.c`,
+    # `e_null.c`, `e_xcbc_d.c`, `e_old.c`, `m_null.c`), the four name/type helpers
+    # (`names.c`, `evp_key.c`, `evp_pkey_type.c`, `ec_support.c`, `dh_support.c`), the two
+    # algorithm tables (`c_allc.c`, `c_alld.c`), the method-object accessor `cmeth_lib.c`,
+    # and `evp_err.c`. That last one is worth naming: it is the error *string* table for the
+    # whole library and it raises nothing at all, which is exactly the shape of entry this
+    # list is supposed to avoid -- it can never change and would read as coverage that does
+    # not exist. The same note applies to `crypto/hmac/hmac.c` and `crypto/cmac/cmac.c`:
+    # they look like they must raise and they do not, because both are façades over
+    # `EVP_MAC` and every refusal a caller sees comes from the provider's implementation.
+    #
+    # **Seven sites pass a reason constant where the library argument belongs** --
+    # `exchange.c` at 572, 601, 607 and 619, `kdf_lib.c` at 241 and `mac_lib.c` at 119 and
+    # 130 all spell `ERR_raise(ERR_R_EVP_LIB, ...)`. It is the authority's own shape and it
+    # is kept: what a caller reads back through `ERR_get_error_all` is the number that
+    # argument evaluates to, so "correcting" it would be a divergence rather than a fix.
+    ("crypto/evp/asymcipher.c", "ASYMCIPHER"),
+    ("crypto/evp/bio_b64.c", "BIO_B64"),
+    ("crypto/evp/ctrl_params_translate.c", "CTRL_PARAMS_TRANSLATE"),
+    ("crypto/evp/dh_ctrl.c", "DH_CTRL"),
+    ("crypto/evp/digest.c", "DIGEST"),
+    ("crypto/evp/dsa_ctrl.c", "DSA_CTRL"),
+    ("crypto/evp/e_aes.c", "E_AES"),
+    ("crypto/evp/e_aes_cbc_hmac_sha1.c", "E_AES_CBC_HMAC_SHA1"),
+    ("crypto/evp/e_aria.c", "E_ARIA"),
+    ("crypto/evp/e_camellia.c", "E_CAMELLIA"),
+    ("crypto/evp/e_chacha20_poly1305.c", "E_CHACHA20_POLY1305"),
+    ("crypto/evp/e_des3.c", "E_DES3"),
+    ("crypto/evp/e_rc2.c", "E_RC2"),
+    ("crypto/evp/e_rc5.c", "E_RC5"),
+    ("crypto/evp/ec_ctrl.c", "EC_CTRL"),
+    ("crypto/evp/evp_cnf.c", "EVP_CNF"),
+    ("crypto/evp/evp_enc.c", "EVP_ENC"),
+    ("crypto/evp/evp_fetch.c", "EVP_FETCH"),
+    ("crypto/evp/evp_lib.c", "EVP_LIB"),
+    ("crypto/evp/evp_pbe.c", "EVP_PBE"),
+    ("crypto/evp/evp_pkey.c", "EVP_PKEY"),
+    ("crypto/evp/evp_rand.c", "EVP_RAND"),
+    ("crypto/evp/evp_utils.c", "EVP_UTILS"),
+    ("crypto/evp/exchange.c", "EXCHANGE"),
+    ("crypto/evp/kdf_lib.c", "KDF_LIB"),
+    ("crypto/evp/kdf_meth.c", "KDF_METH"),
+    ("crypto/evp/kem.c", "KEM"),
+    ("crypto/evp/keymgmt_lib.c", "KEYMGMT_LIB"),
+    ("crypto/evp/keymgmt_meth.c", "KEYMGMT_METH"),
+    ("crypto/evp/m_sigver.c", "M_SIGVER"),
+    ("crypto/evp/mac_lib.c", "MAC_LIB"),
+    ("crypto/evp/mac_meth.c", "MAC_METH"),
+    ("crypto/evp/p5_crpt.c", "P5_CRPT"),
+    ("crypto/evp/p5_crpt2.c", "P5_CRPT2"),
+    ("crypto/evp/p_dec.c", "P_DEC"),
+    ("crypto/evp/p_enc.c", "P_ENC"),
+    ("crypto/evp/p_legacy.c", "P_LEGACY"),
+    ("crypto/evp/p_lib.c", "P_LIB"),
+    ("crypto/evp/p_open.c", "P_OPEN"),
+    ("crypto/evp/p_seal.c", "P_SEAL"),
+    ("crypto/evp/p_sign.c", "P_SIGN"),
+    ("crypto/evp/p_verify.c", "P_VERIFY"),
+    ("crypto/evp/pbe_scrypt.c", "PBE_SCRYPT"),
+    ("crypto/evp/pmeth_check.c", "PMETH_CHECK"),
+    ("crypto/evp/pmeth_gn.c", "PMETH_GN"),
+    ("crypto/evp/pmeth_lib.c", "PMETH_LIB"),
+    ("crypto/evp/s_lib.c", "S_LIB"),
+    ("crypto/evp/signature.c", "SIGNATURE"),
+    ("crypto/evp/skeymgmt_meth.c", "SKEYMGMT_METH"),
+    ("crypto/hpke/hpke.c", "HPKE"),
+    ("crypto/hpke/hpke_util.c", "HPKE_UTIL"),
+    ("crypto/asn1/ameth_lib.c", "AMETH_LIB"),
+    ("crypto/asn1/p5_scrypt.c", "P5_SCRYPT"),
+    ("crypto/asn1/i2d_evp.c", "I2D_EVP"),
+    ("crypto/asn1/d2i_pr.c", "D2I_PR"),
+    ("crypto/asn1/d2i_param.c", "D2I_PARAM"),
+    ("crypto/asn1/d2i_pu.c", "D2I_PU"),
+    ("crypto/pem/pem_lib.c", "PEM_LIB"),
+    ("crypto/pem/pem_oth.c", "PEM_OTH"),
+    ("crypto/pem/pem_pkey.c", "PEM_PKEY"),
+    ("crypto/pem/pem_pk8.c", "PEM_PK8"),
 ]
 
 # Raise macros, in the forms the authority actually spells them. `ERR_raise`
@@ -300,10 +413,28 @@ COVERED_FILES = [
 RAISE_RE = re.compile(
     r"(?P<macro>ERR_raise_data|ERR_raise|[A-Z][A-Za-z0-9_]*err)\s*\("
 )
-# A resolvable library symbol must be an `ERR_LIB_*` constant, and a resolvable
-# reason must be an upper-case constant. Anything else means the match is not a
-# plain raise site and is recorded as unattributed instead of guessed.
-LIB_CONST_RE = re.compile(r"^ERR_LIB_[A-Z0-9_]+$")
+# A resolvable library argument must be a constant, and a resolvable reason must
+# be an upper-case constant. Anything else means the match is not a plain raise
+# site and is recorded as unattributed instead of guessed.
+#
+# "A constant" and not "an `ERR_LIB_*` constant", because the authority has seven
+# sites that pass a *reason* constant where the library argument belongs:
+# `ERR_raise(ERR_R_EVP_LIB, ERR_R_UNSUPPORTED)` in `crypto/evp/exchange.c` at
+# 572, 601, 607 and 619, `crypto/evp/kdf_lib.c` at 241 and `crypto/evp/mac_lib.c`
+# at 119 and 130. The old form of this pattern rejected them, which was right
+# about the *shape* -- a library argument that is not a library constant is
+# usually a call spelled inside a macro body -- and wrong about these seven,
+# which are real, reachable, observable raise sites in Phase 7's surface.
+#
+# Emitting them is a transcription and not an interpretation. `ERR_set_error`
+# packs `(lib & ERR_LIB_MASK) << ERR_LIB_OFFSET`, and the authority's
+# `ERR_LIB_MASK` is `0xFF`, so `ERR_R_EVP_LIB` -- a reason, `(4|ERR_RFLAG_COMMON)`
+# = `0x80004` -- contributes exactly the `4` that `ERR_LIB_EVP` would: the seven
+# sites are observationally identical to `ERR_raise(ERR_LIB_EVP, ...)`. The
+# resolved value is still what is emitted rather than the low byte, because the
+# table records what the authority's own argument evaluates to and the masking
+# belongs to the code that consumes it.
+LIB_CONST_RE = re.compile(r"^(?:ERR_LIB|ERR_R)_[A-Z0-9_]+$")
 REASON_CONST_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
 # A function definition: a line starting at column 0 that introduces a
 # parameter list. The name is the identifier immediately before the parenthesis
@@ -720,6 +851,19 @@ def resolve_symbols(authority, symbols: list[str], work: Path) -> dict[str, int]
         # `crypto/x509` translation units raise from that library.
         "#include <openssl/x509v3err.h>",
         "#include <openssl/sslerr.h>",
+    # Phase 7 needs three more installed reason families: `EVP_R_*` for `crypto/evp/`,
+    # `PEM_R_*` for the two `crypto/pem/` files the plan's 7.5 row owns, and
+    # `RSA_R_*` for the two sites in `p_lib.c` that raise one. All three are installed
+    # headers, so no `internal/` fallthrough is added for this stratum.
+    "#include <openssl/evperr.h>",
+    "#include <openssl/pemerr.h>",
+    "#include <openssl/rsaerr.h>",
+    # Phase 7.6 needs `PROV_R_*`: `crypto/hpke/hpke_util.c` is a `crypto/` file whose
+    # helpers raise with the *provider* library's reasons (they are shared with the
+    # `providers/` implementations that use the same labelled extract/expand).
+    # `proverr.h` is an installed header, so this is the same fallthrough-free case as
+    # `evperr.h` above.
+    "#include <openssl/proverr.h>",
         # `PROP_R_*` is the first reason family this table needs that lives in an
         # *internal* header rather than an installed one: `internal/propertyerr.h`,
         # which the property grammar raises from. It is resolveable because the
@@ -811,7 +955,9 @@ def render_rust(doc: dict, prefix: str) -> str:
         "    pub line: c_int,",
         "    /// `OPENSSL_FUNC`.",
         "    pub func: &'static CStr,",
-        "    /// `ERR_GET_LIB` of the raised code.",
+        "    /// `ERR_GET_LIB` of the raised code, which is the value of the site's",
+        "    /// library argument after `ERR_LIB_MASK`. The two differ only at the",
+        "    /// seven sites whose argument is a reason constant; see `LIB_CONST_RE`.",
         "    pub lib: c_int,",
         "    /// The raised reason, including any `ERR_RFLAG_*` bits.",
         "    pub reason: c_int,",

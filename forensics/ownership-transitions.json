@@ -93,6 +93,126 @@
       "reason": "The plan-versus-crate reconciliation (docs/DECISIONS.md D134) named three authority symbols that a complete stratum's subphase rows promise and nothing builds or records: `ossl_method_construct` in `crypto/core_fetch.c` (the other half of D132 -- rows 6.6f and 6.8f name it as the caller that makes `ossl_algorithm_do_all` Phase 7's prerequisite), `ossl_random_add_conf_module` in `crypto/rand/rand_lib.c` (one of the seven `OPENSSL_load_builtin_modules` registrations, Phase 9's), and `OSSL_provider_init` in `providers/legacy/legacyprov.c` (Phase 13's, named by rows 6.8d and 6.12 because a third-party provider declares one). All three are owed to strata that have not started, so each is a blocking dependency by the gate's rule. The count rose because three names became *visible*, not because three new prerequisites appeared -- the same class as D132's 11 -> 12 and D130's language census: an invariant that cannot tell a legitimate change from a hidden omission.",
       "authority_artifact": "forensics/prerequisites.json",
       "recorded_by": "docs/DECISIONS.md D134"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 15,
+      "after": 13,
+      "reason": "The net movement of three commits against this baseline, and it is a *record* movement rather than a work movement. D141 discharges ossl_method_construct's deferral (-1) and retargets fifteen rows that named Phase 6 as the stratum that would build them, while Phase 6 is complete and they were not built (+15): the gate's blocking set is 'deferrals whose owner stratum is not complete' and its stale set is 'deferrals the crate has since built', so a name owed to a *sealed* stratum satisfied neither and was invisible to both -- the a2d_ASN1_OBJECT failure class arriving through the phase field rather than through a prefix (D49, D72, D134). D142 and D143 then build all fifteen and retire their rows (-15), which is why the net is 15 - 1 + 15 - 15 = 14, less the ossl_method_construct row that D139 had already discharged, and the count is *lower* than this baseline -- so this row is a record of the journey rather than a blessing of a rise, and the guard never consults it (a decrease needs no row). The retarget in D141 was a measurement: the owner of a shared internal is the earliest stratum that calls it, and crypto/evp/evp_fetch.c is ossl_method_store_new's first caller, ahead of the decoder, encoder and store method modules that share the store object. The rise the retarget caused was real and temporary -- fifteen obligations became *countable* -- and the same class as D132's 11 -> 12, D134's 12 -> 15 and D130's language census: an invariant that cannot tell a legitimate change from a hidden omission.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D141"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 5,
+      "after": 9,
+      "reason": "Writing `EVP_RAND` (D159) and `EVP_SKEYMGMT`/`EVP_SKEY` (D160) and then `names.c` (D161, D162) made three authority-internal names visible to the prerequisite gate for the first time: `evp_rand_can_seed`, `evp_rand_get_seed` and `evp_rand_clear_seed`, which are `crypto/evp/evp_rand.c`'s and whose only caller in the whole authority is `crypto/rand/rand_lib.c`, Phase 9's -- so the gate's rule (an internal function a transcribed unit calls, in a unit whose own stratum is open) now fires on them; and `evp_cleanup_int`, which is `crypto/evp/names.c`'s and is owed to 7.4 *inside this stratum*, because its body calls `EVP_PBE_cleanup` from `crypto/evp/evp_pbe.c`. All four are rows in `forensics/prerequisites.json` naming the stratum that will build them. The count rose because the names became *visible*, not because four prerequisites appeared -- the same class as D132's 11 -> 12 and D134's 12 -> 15: an invariant that cannot tell a legitimate change from a hidden omission. It is worth saying which way the third one cuts, because it is not a coincidence: `EVP_cleanup_int` was always there, and it became visible only because `src/evp/legacy_evp.rs` exists as a module of `names.c` -- which is to say the gate found a name nobody had recorded *because* the adder that unit exports finally got a file. This row covers the comparison a pull request makes -- against the merge base with `main`, which is still the state before D159 -- where the same nine names are visible from a baseline that predates all three of the commits above. It is the same movement seen from a further-away baseline, and it is recorded separately because the guard matches `before` and `after` exactly and would otherwise refuse the pull-request comparison for a change already approved for the branch comparison.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D159, D160, D161 and D162"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 8,
+      "after": 9,
+      "reason": "Writing `EVP_RAND` (D159) and `EVP_SKEYMGMT`/`EVP_SKEY` (D160) and then `names.c` (D161, D162) made three authority-internal names visible to the prerequisite gate for the first time: `evp_rand_can_seed`, `evp_rand_get_seed` and `evp_rand_clear_seed`, which are `crypto/evp/evp_rand.c`'s and whose only caller in the whole authority is `crypto/rand/rand_lib.c`, Phase 9's -- so the gate's rule (an internal function a transcribed unit calls, in a unit whose own stratum is open) now fires on them; and `evp_cleanup_int`, which is `crypto/evp/names.c`'s and is owed to 7.4 *inside this stratum*, because its body calls `EVP_PBE_cleanup` from `crypto/evp/evp_pbe.c`. All four are rows in `forensics/prerequisites.json` naming the stratum that will build them. The count rose because the names became *visible*, not because four prerequisites appeared -- the same class as D132's 11 -> 12 and D134's 12 -> 15: an invariant that cannot tell a legitimate change from a hidden omission. It is worth saying which way the third one cuts, because it is not a coincidence: `EVP_cleanup_int` was always there, and it became visible only because `src/evp/legacy_evp.rs` exists as a module of `names.c` -- which is to say the gate found a name nobody had recorded *because* the adder that unit exports finally got a file.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D159, D160, D161 and D162"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 8,
+      "after": 18,
+      "reason": "Giving `crypto/evp/pmeth_lib.c` a module (7.4c-i, the `EVP_PKEY_CTX` object) made four authority-internal names visible to the prerequisite gate for the first time -- the same *visibility* movement D159, D160, D161/D162 and D164 each recorded, and not new prerequisites. `evp_pkey_ctx_get_params_strict`, `evp_pkey_ctx_set_params_strict` and `evp_pkey_ctx_use_cached_data` are that unit's own, declared in `include/crypto/evp.h`, and are owed to 7.4c-ii inside this stratum; `evp_app_cleanup_int` is its too and is called by `names.c`'s `EVP_cleanup_int`, so a second transcribed unit names it as well, and it is Phase 8's because its body frees the application-supplied `EVP_PKEY_METHOD` stack whose lookup searches the two `standard_methods[]` tables (D163, D165). All four are rows in `forensics/prerequisites.json` naming the stratum that will build them. This row is the comparison from the merge base with `main`, which still predates D159's four rows and D164's four: ten names in total are visible from here that were not when `before` was recorded. The movement is `before` -> 18 on each row, and the three rows differ only in which ref supplies `before`, because the guard matches `before` and `after` exactly while the project compares against three: the previous commit on this branch, the merge base with `main`, and the state D164's rows were written against. A baseline further back already counts fewer of the names, so the same *visibility* event appears as a smaller or larger rise depending on where it is measured from -- it is one event, recorded once per comparison. The same class as D132's 11 -> 12 and D134's 12 -> 15: an invariant that cannot tell a legitimate change from a hidden omission.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D164 and D166"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 14,
+      "after": 18,
+      "reason": "Giving `crypto/evp/pmeth_lib.c` a module (7.4c-i, the `EVP_PKEY_CTX` object) made four authority-internal names visible to the prerequisite gate for the first time -- the same *visibility* movement D159, D160, D161/D162 and D164 each recorded, and not new prerequisites. `evp_pkey_ctx_get_params_strict`, `evp_pkey_ctx_set_params_strict` and `evp_pkey_ctx_use_cached_data` are that unit's own, declared in `include/crypto/evp.h`, and are owed to 7.4c-ii inside this stratum; `evp_app_cleanup_int` is its too and is called by `names.c`'s `EVP_cleanup_int`, so a second transcribed unit names it as well, and it is Phase 8's because its body frees the application-supplied `EVP_PKEY_METHOD` stack whose lookup searches the two `standard_methods[]` tables (D163, D165). All four are rows in `forensics/prerequisites.json` naming the stratum that will build them. This row is the comparison against the previous commit on this branch (`ee87f232`), which already carries D164's four rows -- so only the three `pmeth_lib.c`-owned names and `evp_app_cleanup_int`'s second naming are new here, and one of the four was already counted from `names.c`. Four names, +3. The movement is `before` -> 18 on each row, and the three rows differ only in which ref supplies `before`, because the guard matches `before` and `after` exactly while the project compares against three: the previous commit on this branch, the merge base with `main`, and the state D164's rows were written against. A baseline further back already counts fewer of the names, so the same *visibility* event appears as a smaller or larger rise depending on where it is measured from -- it is one event, recorded once per comparison. The same class as D132's 11 -> 12 and D134's 12 -> 15: an invariant that cannot tell a legitimate change from a hidden omission.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D164 and D166"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 15,
+      "after": 18,
+      "reason": "Giving `crypto/evp/pmeth_lib.c` a module (7.4c-i, the `EVP_PKEY_CTX` object) made four authority-internal names visible to the prerequisite gate for the first time -- the same *visibility* movement D159, D160, D161/D162 and D164 each recorded, and not new prerequisites. `evp_pkey_ctx_get_params_strict`, `evp_pkey_ctx_set_params_strict` and `evp_pkey_ctx_use_cached_data` are that unit's own, declared in `include/crypto/evp.h`, and are owed to 7.4c-ii inside this stratum; `evp_app_cleanup_int` is its too and is called by `names.c`'s `EVP_cleanup_int`, so a second transcribed unit names it as well, and it is Phase 8's because its body frees the application-supplied `EVP_PKEY_METHOD` stack whose lookup searches the two `standard_methods[]` tables (D163, D165). All four are rows in `forensics/prerequisites.json` naming the stratum that will build them. This row is the comparison against the state D164's rows were written against, which already counted the four names from `names.c` and `evp_rand.c` but not `pmeth_lib.c`'s three. The movement is `before` -> 18 on each row, and the three rows differ only in which ref supplies `before`, because the guard matches `before` and `after` exactly while the project compares against three: the previous commit on this branch, the merge base with `main`, and the state D164's rows were written against. A baseline further back already counts fewer of the names, so the same *visibility* event appears as a smaller or larger rise depending on where it is measured from -- it is one event, recorded once per comparison. The same class as D132's 11 -> 12 and D134's 12 -> 15: an invariant that cannot tell a legitimate change from a hidden omission.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D164 and D166"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 8,
+      "after": 17,
+      "reason": "The blocking-dependency census moves **down**, from 18 to 17, because `evp_pkey_free_legacy`'s deferral row was retired rather than discharged: 7.4c-ii's `pmeth_gn.c` (D173) needs the name, the crate now defines it, and the gate's `stale_deferral` rule refuses a row whose symbol the crate defines -- so the row had to go. That name was one of the four whose *visibility* D166 recorded when `crypto/evp/pmeth_lib.c` got a module, which is why the movement is visible against these three baselines at all. The Phase-8 record of the function's missing half -- every statement its body has is `ameth` or `ENGINE` work -- now lives in the site's doc and in `docs/DECISIONS.md` D173 rather than in the ledger, which is the `evp_pkey_name2type` precedent (D163): a partially defined name cannot carry a deferral. The rows for `-> 18` are kept because they record the step before this one. Each baseline is a different ref and the guard matches `before` and `after` exactly, so each is recorded separately.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D166 and D173"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 14,
+      "after": 17,
+      "reason": "The blocking-dependency census moves **down**, from 18 to 17, because `evp_pkey_free_legacy`'s deferral row was retired rather than discharged: 7.4c-ii's `pmeth_gn.c` (D173) needs the name, the crate now defines it, and the gate's `stale_deferral` rule refuses a row whose symbol the crate defines -- so the row had to go. That name was one of the four whose *visibility* D166 recorded when `crypto/evp/pmeth_lib.c` got a module, which is why the movement is visible against these three baselines at all. The Phase-8 record of the function's missing half -- every statement its body has is `ameth` or `ENGINE` work -- now lives in the site's doc and in `docs/DECISIONS.md` D173 rather than in the ledger, which is the `evp_pkey_name2type` precedent (D163): a partially defined name cannot carry a deferral. The rows for `-> 18` are kept because they record the step before this one. Each baseline is a different ref and the guard matches `before` and `after` exactly, so each is recorded separately.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D166 and D173"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 15,
+      "after": 17,
+      "reason": "The blocking-dependency census moves **down**, from 18 to 17, because `evp_pkey_free_legacy`'s deferral row was retired rather than discharged: 7.4c-ii's `pmeth_gn.c` (D173) needs the name, the crate now defines it, and the gate's `stale_deferral` rule refuses a row whose symbol the crate defines -- so the row had to go. That name was one of the four whose *visibility* D166 recorded when `crypto/evp/pmeth_lib.c` got a module, which is why the movement is visible against these three baselines at all. The Phase-8 record of the function's missing half -- every statement its body has is `ameth` or `ENGINE` work -- now lives in the site's doc and in `docs/DECISIONS.md` D173 rather than in the ledger, which is the `evp_pkey_name2type` precedent (D163): a partially defined name cannot carry a deferral. The rows for `-> 18` are kept because they record the step before this one. Each baseline is a different ref and the guard matches `before` and `after` exactly, so each is recorded separately.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D166 and D173"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 15,
+      "after": 23,
+      "reason": "7.4l withholds thirteen exports whose answers depend on a later stratum, and each withheld name is recorded in `forensics/prerequisites.json` as a deferral naming the *dependency* that blocks it rather than as a row for itself (D165 refused a deferral for a Phase-7-owned export). Nine dependency names are new: `ossl_rsa_asn1_meths` and `ossl_rsa_pkey_method` (Phase 8's two `standard_methods[]` tables, which block `EVP_PKEY_type`, `EVP_PKEY_meth_find`/`_get0`/`_get_count`, the twelve `d2i_*`/`i2d_*` legacy paths and `d2i_PublicKey`), `OSSL_ENCODER_CTX_new_for_pkey` and `OSSL_DECODER_CTX_new_for_pkey` (Phase 10's encoder and decoder, which a provider key takes *first*), `ASN1_item_sign_ctx` and `ASN1_item_verify_ctx` (Phase 11's `x509.h` delegates of the two Phase-5 hand-offs), `d2i_X509_ALGOR` (Phase 11's, for `EVP_PKEY_CTX_get_algor`), `RAND_priv_bytes_ex` (Phase 9's, for `EVP_SealInit`) and `UI_new` (Phase 13's, for `EVP_read_pw_string`/`_min`). All nine name strata that have not started, so all nine are blocking by the gate's rule. The count rises because the blockers became *recorded*, not because the work appeared: every one of the nine was already the reason the export was open, and the same class D132's 11 -> 12 and D134's 12 -> 15 recorded -- an invariant that cannot tell a legitimate change from a hidden omission. Each baseline is a different ref and the guard matches `before` and `after` exactly, so each is recorded separately.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D193"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 14,
+      "after": 23,
+      "reason": "7.4l withholds thirteen exports whose answers depend on a later stratum, and each withheld name is recorded in `forensics/prerequisites.json` as a deferral naming the *dependency* that blocks it rather than as a row for itself (D165 refused a deferral for a Phase-7-owned export). Nine dependency names are new: `ossl_rsa_asn1_meths` and `ossl_rsa_pkey_method` (Phase 8's two `standard_methods[]` tables, which block `EVP_PKEY_type`, `EVP_PKEY_meth_find`/`_get0`/`_get_count`, the twelve `d2i_*`/`i2d_*` legacy paths and `d2i_PublicKey`), `OSSL_ENCODER_CTX_new_for_pkey` and `OSSL_DECODER_CTX_new_for_pkey` (Phase 10's encoder and decoder, which a provider key takes *first*), `ASN1_item_sign_ctx` and `ASN1_item_verify_ctx` (Phase 11's `x509.h` delegates of the two Phase-5 hand-offs), `d2i_X509_ALGOR` (Phase 11's, for `EVP_PKEY_CTX_get_algor`), `RAND_priv_bytes_ex` (Phase 9's, for `EVP_SealInit`) and `UI_new` (Phase 13's, for `EVP_read_pw_string`/`_min`). All nine name strata that have not started, so all nine are blocking by the gate's rule. The count rises because the blockers became *recorded*, not because the work appeared: every one of the nine was already the reason the export was open, and the same class D132's 11 -> 12 and D134's 12 -> 15 recorded -- an invariant that cannot tell a legitimate change from a hidden omission. Each baseline is a different ref and the guard matches `before` and `after` exactly, so each is recorded separately.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D193"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 15,
+      "after": 25,
+      "reason": "7.5 withholds twenty-five `PEM_*` exports and `BIO_f_reliable`, and each withheld name is recorded in `forensics/prerequisites.json` as a deferral naming the *dependency* that blocks it rather than as a row for itself (D165 refused a deferral for a Phase-7-owned export; `EVP_read_pw_string_min`, the immediate callee of `PEM_def_callback`, is Phase-7-owned and therefore takes the existing `UI_new` row instead of one of its own). Two dependency names are new: `EVP_md5` (`crypto/evp/legacy_md5.c:36`, Phase 13's, reached by `PEM_do_header` at `crypto/pem/pem_lib.c:479` and by `PEM_ASN1_write_bio_internal` at `:392`) and `RAND_bytes` (`rand.h`, Phase 9's, reached at `crypto/pem/pem_lib.c:386`). Both name strata that have not started, so both are blocking by the gate's rule. The count rises because two blockers became *recorded*, not because work appeared: both were already the reason the export was open, and this is the same class D193's 15 -> 23 recorded -- an invariant that cannot tell a legitimate change from a hidden omission. Each baseline is a different ref and the guard matches `before` and `after` exactly, so each is recorded separately.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D194"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 23,
+      "after": 25,
+      "reason": "7.5 withholds twenty-five `PEM_*` exports and `BIO_f_reliable`, and each withheld name is recorded in `forensics/prerequisites.json` as a deferral naming the *dependency* that blocks it rather than as a row for itself (D165 refused a deferral for a Phase-7-owned export; `EVP_read_pw_string_min`, the immediate callee of `PEM_def_callback`, is Phase-7-owned and therefore takes the existing `UI_new` row instead of one of its own). Two dependency names are new: `EVP_md5` (`crypto/evp/legacy_md5.c:36`, Phase 13's, reached by `PEM_do_header` at `crypto/pem/pem_lib.c:479` and by `PEM_ASN1_write_bio_internal` at `:392`) and `RAND_bytes` (`rand.h`, Phase 9's, reached at `crypto/pem/pem_lib.c:386`). Both name strata that have not started, so both are blocking by the gate's rule. The count rises because two blockers became *recorded*, not because work appeared: both were already the reason the export was open, and this is the same class D193's 15 -> 23 recorded -- an invariant that cannot tell a legitimate change from a hidden omission. This row is the same change measured against this branch's previous head (`11a14466`), whose committed baseline already counts 23.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D194"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 15,
+      "after": 26,
+      "reason": "7.6 withholds `OSSL_HPKE_get_grease_value`, and `forensics/prerequisites.json` records the *dependency* that blocks it rather than a row for itself (D165 refused a deferral for a Phase-7-owned export). One dependency name is new: `RAND_bytes_ex` (`crypto/hpke/hpke.c:1433`, Phase 9's), which the random GREASE fill is the whole observable of; its random-suite helper `ossl_rand_uniform_uint32` (`hpke_util.c:198`, `:220`, `:243`) is the same stratum and is named in the same row's reason rather than as a second blocking entry. Phase 9 has not started, so the name is blocking by the gate's rule. The count rises because a blocker became *recorded*, not because work appeared -- the same class D193's 15 -> 23 and D194's 15 -> 25 recorded. Each baseline is a different ref and the guard matches `before` and `after` exactly, so each is recorded separately.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D195"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 25,
+      "after": 26,
+      "reason": "7.6 withholds `OSSL_HPKE_get_grease_value`, and `forensics/prerequisites.json` records the *dependency* that blocks it rather than a row for itself (D165 refused a deferral for a Phase-7-owned export). One dependency name is new: `RAND_bytes_ex` (`crypto/hpke/hpke.c:1433`, Phase 9's), which the random GREASE fill is the whole observable of; its random-suite helper `ossl_rand_uniform_uint32` (`hpke_util.c:198`, `:220`, `:243`) is the same stratum and is named in the same row's reason rather than as a second blocking entry. Phase 9 has not started, so the name is blocking by the gate's rule. This row is the same change measured against this branch's previous head (`34c68191`), whose committed baseline already counts 25. The count rises because a blocker became *recorded*, not because work appeared, and nothing was undone.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D195"
     }
   ]
 }

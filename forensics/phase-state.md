@@ -15,7 +15,7 @@ enforced here:
 | 4 | BIO + CONF + object database | `complete` |  |
 | 5 | BN + ASN.1 + DER/PEM | `complete` |  |
 | 6 | OSSL_LIB_CTX + provider core | `complete` |  |
-| 7 | EVP framework | `not-started` | not started |
+| 7 | EVP framework | `complete` |  |
 | 8 | Native cryptographic primitives | `not-started` | not started |
 | 9 | RAND / DRBG + entropy | `not-started` | not started |
 | 10 | Key formats + PKCS + STORE | `not-started` | not started |

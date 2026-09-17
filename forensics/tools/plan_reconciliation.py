@@ -117,10 +117,25 @@ PHASE_STATE = REPO_ROOT / "forensics" / "phase-state.json"
 PREREQUISITES = REPO_ROOT / "forensics" / "prerequisites.json"
 DOCS = REPO_ROOT / "docs"
 
-# The strata this tool judges. A `not-started` stratum's plan names work nothing has claimed
-# to have done, so calling it unreached would be calling a plan a lie. A stratum that is
-# `complete` or `in-progress` *is* claiming, and that is the claim this reconciles.
-JUDGED = ("complete", "in-progress")
+# The strata this tool judges. A `not-started` stratum's plan names work nothing has claimed to
+# have done, so calling it unreached would be calling a plan a lie. An `in-progress` stratum is
+# judged differently from a `complete` one, and the difference is the whole of this tool's
+# contract:
+#
+#   * `complete` -- a plan-named unit or symbol that nothing reaches is a **finding**. The
+#     stratum is claiming the work is done, and this is the check that `crypto/core_algorithm.c`
+#     fell through until D134 built it.
+#   * `in-progress` -- the same names are reported as a **census**, per stratum, and are not a
+#     failure. A plan names the work a stratum *will* do; a stratum in its first subphase has
+#     done none of it, and failing it for that is failing it for having a plan. The census is
+#     published so the distance is visible, and `open_in_this_stratum` in the stratum's own
+#     ledger is what holds it to account.
+#
+# This is the arrangement `prerequisite_gate.py` already uses for its sealed-stratum census:
+# report, do not fail, and let the number be visible rather than inferred.
+JUDGED = ("complete",)
+CENSUSED = ("in-progress",)
+JUDGED_OR_CENSUSED = JUDGED + CENSUSED
 
 # `crypto/provider_core.c`, `` `core_algorithm.c` ``, `providers/defltprov.c`,
 # `./crypto/x509/x_x509.c`. The trailing-boundary group keeps `a.c` inside a longer word
@@ -392,6 +407,11 @@ def main(argv: list[str]) -> int:
     # --- what the plan promises --------------------------------------------
     named_units: dict[str, list[str]] = defaultdict(list)   # tu -> subphase rows
     named_symbols: dict[str, list[str]] = defaultdict(list)  # symbol -> subphase rows
+    # The row's stratum state travels with the row, so a name can be a finding in one stratum
+    # and a census entry in another without the caller having to re-derive which stratum owns
+    # which row.
+    row_state: dict[str, str] = {}
+    row_phase: dict[str, int] = {}
     unresolvable: list[dict] = []
     ambiguous: list[dict] = []
     judged_rows = 0
@@ -407,12 +427,14 @@ def main(argv: list[str]) -> int:
         if m is None:
             continue
         phase = int(m.group(1))
-        if states.get(phase) not in JUDGED:
+        if states.get(phase) not in JUDGED_OR_CENSUSED:
             continue
         plan_files.append(plan)
         text = plan.read_text()
         for head, cs in subphase_rows(text):
             judged_rows += 1
+            row_state[head] = states.get(phase, "not-started")
+            row_phase[head] = phase
             blob = " ".join(cs[1:])
             for raw in _UNIT.findall(blob):
                 if raw.startswith("./"):
@@ -461,36 +483,62 @@ def main(argv: list[str]) -> int:
 
     # --- P1: a promised unit nothing reaches -------------------------------
     findings: list[dict] = []
+    # The same two conditions as a finding, split by the state of the row's stratum. A
+    # `complete` stratum is claiming the work; an `in-progress` one is not yet.
+    census: dict[str, set[str]] = defaultdict(set)
+    census_by_stratum: dict[int, set[str]] = defaultdict(set)
+
+    def cense(kind: str, name: str, heads: list[str]) -> None:
+        """Record an unreached name in the census: once by kind, once per stratum.
+
+        Both readings are kept because they answer different questions. By kind, so the
+        totals are comparable across runs; by stratum, so a stratum's distance from its
+        own plan is a number rather than something a reader derives by filtering.
+        """
+        census[kind].add(name)
+        for head in heads:
+            phase = row_phase.get(head)
+            if phase is not None:
+                census_by_stratum[phase].add(f"{kind}:{name}")
     for d in unresolvable:
-        findings.append(
-            {
-                "kind": "plan_names_a_file_the_authority_does_not_have",
-                "direction": "P1",
-                "unit": d["unit"],
-                "subphase": d["subphase"],
-                "plan": d["plan"],
-                "detail": (
-                    "this row names a `.c` file that is not in the authority's own manifest, "
-                    "so either the row is wrong or the authority id is"
-                ),
-            }
-        )
+        if row_state.get(d["subphase"], "not-started") in JUDGED:
+            findings.append(
+                {
+                    "kind": "plan_names_a_file_the_authority_does_not_have",
+                    "direction": "P1",
+                    "unit": d["unit"],
+                    "subphase": d["subphase"],
+                    "plan": d["plan"],
+                    "detail": (
+                        "this row names a `.c` file that is not in the authority's own "
+                        "manifest, so either the row is wrong or the authority id is"
+                    ),
+                }
+            )
+        else:
+            cense("names_a_file_the_authority_does_not_have",
+                  f"{d['plan']}:{d['subphase']}:{d['unit']}", [d["subphase"]])
     for d in ambiguous:
-        findings.append(
-            {
-                "kind": "plan_names_a_basename_the_authority_repeats",
-                "direction": "P1",
-                "unit": d["basename"],
-                "subphase": d["subphase"],
-                "plan": d["plan"],
-                "candidates": d["candidates"],
-                "detail": (
-                    "this row names a bare basename and more than one authority file has it; "
-                    "the row must say which one, because the tool will not guess and a guess "
-                    "is exactly the sort of unexamined transcription this project removes"
-                ),
-            }
-        )
+        if row_state.get(d["subphase"], "not-started") in JUDGED:
+            findings.append(
+                {
+                    "kind": "plan_names_a_basename_the_authority_repeats",
+                    "direction": "P1",
+                    "unit": d["basename"],
+                    "subphase": d["subphase"],
+                    "plan": d["plan"],
+                    "candidates": d["candidates"],
+                    "detail": (
+                        "this row names a bare basename and more than one authority file has "
+                        "it; the row must say which one, because the tool will not guess and a "
+                        "guess is exactly the sort of unexamined transcription this project "
+                        "removes"
+                    ),
+                }
+            )
+        else:
+            cense("names_a_basename_the_authority_repeats",
+                  f"{d['plan']}:{d['subphase']}:{d['basename']}", [d["subphase"]])
 
     reached_units: set[str] = set()
     for tu, rows in sorted(named_units.items()):
@@ -506,29 +554,36 @@ def main(argv: list[str]) -> int:
         if unit_identifiers.get(tu, set()) & refs_anywhere:
             reached_units.add(tu)
             continue
-        findings.append(
-            {
-                "kind": "plan_named_unit_not_reached",
-                "direction": "P1",
-                "unit": tu,
-                "subphases": sorted(rows),
-                "defines": sorted(unit_symbols.get(tu, set()))[:20],
-                "detail": (
-                    "a subphase row of a stratum that is complete or in progress names this "
-                    "authority translation unit, no crate module transcribes it, the crate "
-                    "builds none of the internal functions it defines, references none of the "
-                    "identifiers its row lists, and no record names it: the plan claims work "
-                    "that nothing reaches. `ossl_algorithm_do_all` in "
-                    "`crypto/core_algorithm.c` is the worked example (docs/DECISIONS.md D132)"
-                ),
-            }
-        )
+        if row_state.get(rows[0], "not-started") in JUDGED:
+            findings.append(
+                {
+                    "kind": "plan_named_unit_not_reached",
+                    "direction": "P1",
+                    "unit": tu,
+                    "subphases": sorted(rows),
+                    "defines": sorted(unit_symbols.get(tu, set()))[:20],
+                    "detail": (
+                        "a subphase row of a stratum that is **complete** names this "
+                        "authority translation unit, no crate module transcribes it, the crate "
+                        "builds none of the internal functions it defines, references none of "
+                        "the identifiers its row lists, and no record names it: the plan claims "
+                        "work that nothing reaches. `ossl_algorithm_do_all` in "
+                        "`crypto/core_algorithm.c` is the worked example (docs/DECISIONS.md "
+                        "D132)"
+                    ),
+                }
+            )
+        else:
+            cense("units_not_reached", tu, rows)
 
     # --- P2: a promised symbol nothing reaches -----------------------------
     reached_symbols: set[str] = set()
     for name, rows in sorted(named_symbols.items()):
         if name in built or name in deferrals or name in covered:
             reached_symbols.add(name)
+            continue
+        if row_state.get(rows[0], "not-started") not in JUDGED:
+            cense("symbols_not_reached", name, rows)
             continue
         findings.append(
             {
@@ -538,7 +593,7 @@ def main(argv: list[str]) -> int:
                 "defines_it": internal[name],
                 "subphases": sorted(rows),
                 "detail": (
-                    "a subphase row of a stratum that is complete or in progress names this "
+                    "a subphase row of a stratum that is **complete** names this "
                     "authority-internal function, the crate builds nothing by that name, no "
                     "deferral records it and no divergence covers it -- the same shape as "
                     "`ossl_algorithm_do_all` (docs/DECISIONS.md D132)"
@@ -585,12 +640,15 @@ def main(argv: list[str]) -> int:
 
     rec_body = {
         "rule": (
-            "every authority translation unit and every authority-internal function named by a "
-            "subphase row of a complete or in-progress stratum must be transcribed by a crate "
-            "module or named by an explicit record field; and an explicit record field naming "
-            "an authority unit must have a subphase row behind it"
+            "every authority translation unit and every authority-internal function named by "
+            "a subphase row of a **complete** stratum must be transcribed by a crate module or "
+            "named by an explicit record field; and an explicit record field naming an "
+            "authority unit must have a subphase row behind it. An `in-progress` stratum's "
+            "unreached names are published as a census and are not a failure, because a plan "
+            "names the work a stratum will do"
         ),
         "judged_states": list(JUDGED),
+        "censed_states": list(CENSUSED),
         "universes": {
             "authority_files": len(manifest["files"]),
             "transcribed_units": len(transcribed),
@@ -607,6 +665,17 @@ def main(argv: list[str]) -> int:
             "unit_records": len(unit_records),
         },
         "counts": dict(sorted(by_kind.items())),
+        "census": {k: len(v) for k, v in sorted(census.items())},
+        "census_by_stratum": {
+            str(phase): len(names) for phase, names in sorted(census_by_stratum.items())
+        },
+        "census_samples": {k: sorted(v)[:60] for k, v in sorted(census.items())},
+        "census_not_a_failure": (
+            "a name an `in-progress` stratum's plan promises and nothing yet reaches is "
+            "counted here and not failed: a plan names the work a stratum will do, and the "
+            "stratum's own ledger's `open_in_this_stratum` is what holds it to account. The "
+            "census exists so the distance is visible rather than inferred"
+        ),
         # Published for a reader rather than a check: this is what the plan is understood to
         # promise, so a disagreement about the plan can be argued against a list instead of
         # against a reading.
@@ -650,7 +719,7 @@ def main(argv: list[str]) -> int:
         write_json(OUT, doc)
 
     print(f"[plan-reconciliation] {len(plan_files)} plan(s), {judged_rows} row(s) of a "
-          f"complete or in-progress stratum")
+          f"judged or censused stratum")
     print(f"  units named by a row:   {len(named_units)} "
           f"({len(reached_units)} reached, "
           f"{len(named_units) - len(reached_units)} not)")
@@ -661,6 +730,12 @@ def main(argv: list[str]) -> int:
           f"({len(unit_records)} of them through the `units` block)")
     for k in sorted(by_kind):
         print(f"  {k}: {by_kind[k]}")
+    for k in sorted(census):
+        print(f"  census {k}: {len(census[k])} (not a failure)")
+    if census_by_stratum:
+        print("  census by stratum: "
+              + ", ".join(f"phase {p}: {len(names)}"
+                          for p, names in sorted(census_by_stratum.items())))
 
     for f in findings:
         print(f"[{f['kind']}]", file=sys.stderr)
@@ -682,9 +757,9 @@ def main(argv: list[str]) -> int:
               file=sys.stderr)
         return 1
     where = "not written (--no-write)" if args.no_write else rel(OUT)
-    print(f"[{GENERATOR}] ok: every unit and every internal function a complete or "
-          f"in-progress stratum's plan names is reached, and every unit-naming record has a "
-          f"row behind it -> {where}")
+    print(f"[{GENERATOR}] ok: every unit and every internal function a complete "
+          f"stratum's plan names is reached, every unit-naming record has a row behind it, "
+          f"and the in-progress strata's distance is published as a census -> {where}")
     return 0
 
 

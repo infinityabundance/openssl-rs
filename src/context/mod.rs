@@ -365,6 +365,25 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
     // yet, and this is the only write that publishes the lock.
     unsafe { (*ctx).lock = lock };
 
+    // The EVP method store, slot 0. **This is the authority's first `P2` slot object**, and its
+    // position here is therefore the authority's: `context_init` builds it immediately after the
+    // context's lock and `ossl_do_ex_data_init`, ahead of the provider-config object, because
+    // `P2` means "released before the provider store" and the seven objects that follow it before
+    // `provider_store` are all in that class. Slots 10, 11 and 15 are the *same* constructor and
+    // are not built here: their readers are `decoder_meth.c`, `encoder_meth.c` and
+    // `store_meth.c`, which are Phase 10's, so they land with the strata that read them.
+    //
+    // SAFETY: `ctx` is the live context being initialised, and the store constructor only stores
+    // the pointer it is given.
+    let evp_method_store =
+        unsafe { crate::property::store::ossl_method_store_new(ctx.cast::<c_void>()) };
+    if evp_method_store.is_null() {
+        context_deinit(ctx);
+        return false;
+    }
+    // SAFETY: as above; the slot is published once, here.
+    unsafe { (*ctx).evp_method_store = evp_method_store.cast::<c_void>() };
+
     // The provider-config object, slot 16 — the **first** slot object in this crate, and in
     // the authority it is built third, after `evp_method_store` (Phase 7) and before `drbg`
     // (Phase 9). Of the slots this crate has landed it is therefore first, and the P2 marker
@@ -541,7 +560,22 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
 /// with respect to the provider store). Only slot 21 has no release: it is an
 /// interior address, not an allocation.
 fn context_deinit_objs(ctx: *mut OsslLibCtx) {
-    // The provider-config object, released **first** among the slot objects, which is the
+    // The EVP method store, released **first**, which is the authority's order and the reason
+    // its slot is built before the provider-config one: `context_deinit_objs` starts with
+    // `evp_method_store`, then `drbg` (Phase 9), then the provider-config object.
+    // SAFETY: `ctx` is a live context being torn down; the slot is released once and re-NULLed.
+    unsafe {
+        if !(*ctx).evp_method_store.is_null() {
+            crate::property::store::ossl_method_store_free(
+                (*ctx)
+                    .evp_method_store
+                    .cast::<crate::property::store::OsslMethodStore>(),
+            );
+            (*ctx).evp_method_store = ptr::null_mut();
+        }
+    }
+
+    // The provider-config object, released next among the slot objects, which is the
     // authority's order: `context_deinit_objs` releases `evp_method_store` (Phase 7),
     // `drbg` (Phase 9) and then this one, all before the provider store's *P1* position.
     // Releasing it here is what makes the P2 relation hold: a provider this module
@@ -1179,6 +1213,31 @@ pub(crate) fn lib_ctx_is_default_symbol(ctx: *mut c_void) -> c_int {
 /// same question as [`lib_ctx_is_default_symbol`]: a thread that installed the
 /// global default explicitly has it as its default and it is the global object.
 #[allow(dead_code)] // unreachable until the stratum that calls it lands
+/// `const char *ossl_lib_ctx_get_descriptor(OSSL_LIB_CTX *libctx)`.
+///
+/// **Landed with its first caller, which is 7.2.** Nothing in Phase 6 or in `src/evp/` before
+/// this needed it, and it is not an answer any court can reach directly — but it *is* reachable
+/// through the fetch path, because `inner_evp_generic_fetch` puts it in the data half of an
+/// `ERR_raise_data` and a caller reads that back through `ERR_get_error_all`. So the three
+/// strings are contract, and they are the authority's spellings exactly:
+/// `"Global default library context"`, `"Thread-local default library context"` and
+/// `"Non-default library context"`.
+///
+/// The FIPS arm is not built: `configdata.pm` lists `fips` among the disabled features, so
+/// `FIPS_MODULE` is not defined for any translation unit in this profile.
+///
+/// # Safety
+/// `libctx` must be NULL or live.
+pub(crate) fn lib_ctx_get_descriptor(libctx: *mut c_void) -> *const c_char {
+    if lib_ctx_is_global_default(libctx) != 0 {
+        c"Global default library context".as_ptr()
+    } else if lib_ctx_is_default_symbol(libctx) != 0 {
+        c"Thread-local default library context".as_ptr()
+    } else {
+        c"Non-default library context".as_ptr()
+    }
+}
+
 pub(crate) fn lib_ctx_is_global_default(ctx: *mut c_void) -> c_int {
     if concrete(ctx.cast::<OsslLibCtx>()) == global_default() {
         1

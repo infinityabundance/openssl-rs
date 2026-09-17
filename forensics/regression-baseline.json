@@ -4,7 +4,8 @@
     "phase3",
     "phase4",
     "phase5",
-    "phase6"
+    "phase6",
+    "phase7"
   ],
   "courts": {
     "ABI-CONSTANTS": {
@@ -135,6 +136,10 @@
       "observations": 1510,
       "verdict": "pass"
     },
+    "RT-CMAC": {
+      "observations": 26,
+      "verdict": "pass"
+    },
     "RT-COMP": {
       "observations": 27,
       "verdict": "pass"
@@ -159,8 +164,64 @@
       "observations": 17,
       "verdict": "pass"
     },
+    "RT-EVP-BIO": {
+      "observations": 154,
+      "verdict": "pass"
+    },
+    "RT-EVP-CIPHER": {
+      "observations": 185,
+      "verdict": "pass"
+    },
+    "RT-EVP-KDF": {
+      "observations": 68,
+      "verdict": "pass"
+    },
+    "RT-EVP-KEYMGMT": {
+      "observations": 73,
+      "verdict": "pass"
+    },
+    "RT-EVP-MAC": {
+      "observations": 96,
+      "verdict": "pass"
+    },
+    "RT-EVP-NAMES": {
+      "observations": 25,
+      "verdict": "pass"
+    },
+    "RT-EVP-PBE": {
+      "observations": 442,
+      "verdict": "pass"
+    },
+    "RT-EVP-PEM": {
+      "observations": 80,
+      "verdict": "pass"
+    },
+    "RT-EVP-PKEY": {
+      "observations": 502,
+      "verdict": "pass"
+    },
+    "RT-EVP-RAND": {
+      "observations": 168,
+      "verdict": "pass"
+    },
+    "RT-EVP-SKEY": {
+      "observations": 97,
+      "verdict": "pass"
+    },
     "RT-EXDATA": {
       "observations": 38,
+      "verdict": "pass"
+    },
+    "RT-FETCH": {
+      "observations": 217,
+      "verdict": "pass"
+    },
+    "RT-HMAC": {
+      "observations": 32,
+      "verdict": "pass"
+    },
+    "RT-HPKE": {
+      "observations": 65,
       "verdict": "pass"
     },
     "RT-LHASH": {
@@ -236,23 +297,26 @@
     "phase3": 43,
     "phase4": 23,
     "phase5": 91,
-    "phase6": 0
+    "phase6": 0,
+    "phase7": 244
   },
   "implemented": {
-    "libcrypto": 1135,
+    "libcrypto": 1841,
     "libssl": 0
   },
   "open_obligations": {
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,
-    "phase6": 0
+    "phase6": 0,
+    "phase7": 0
   },
   "owned_obligations": {
     "phase3": 294,
     "phase4": 272,
     "phase5": 565,
-    "phase6": 161
+    "phase6": 161,
+    "phase7": 950
   },
   "phases": {
     "0": "complete",
@@ -274,15 +338,15 @@
     "4": "complete",
     "5": "complete",
     "6": "complete",
-    "7": "not-started",
+    "7": "complete",
     "8": "not-started",
     "9": "not-started"
   },
   "prerequisites": {
-    "blocking_dependencies": 15,
+    "blocking_dependencies": 25,
     "divergence_names_covered": 32,
     "findings": 0,
-    "language_census": 2085,
-    "sealed_census": 59
+    "language_census": 2672,
+    "sealed_census": 57
   }
 }

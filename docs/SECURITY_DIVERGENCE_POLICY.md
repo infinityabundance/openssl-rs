@@ -68,8 +68,11 @@ are recorded as *compatibility boundaries* (see `docs/RELEASE_GATES.md`
 
 ## 6. Register of recorded safety divergences
 
-Every entry below was found by running a Phase 3 probe against the authority
-(`courts/phase3/`) and observing a fault. A probe cannot compare a crash, so in
+Every entry below was found by running a probe against the authority and observing a fault -- the
+Phase 3 entries from `courts/phase3/`, and the Phase 7 ones from `RT-FETCH`'s provider plus, where
+the entry says so, a measurement program compiled against the pinned prefix in a process of its own,
+because a fault cannot be *compared* and so is measured once and printed as a boundary from then
+on. A probe cannot compare a crash, so in
 each case the probe prints a `NOT_MEASURED_AUTHORITY_FAULTS` marker: the boundary
 is visible in the transcript rather than silently absent from it. The
 observations that *can* be made around each boundary are compared normally.
@@ -808,3 +811,323 @@ authority and the candidate for this function, and there was never supposed to b
   RCU is `IMPLEMENTED` in `docs/PARITY_MODEL.md`'s terms and it is **not** `PARITY_VERIFIED`.
 - **When it changes:** `RT-CONF-MOD` (6.10b) is the court that exercises it end to end, and
   this entry's consequence narrows to "courted only through its consumer" at that point.
+
+### D-NAMEMAP-DOALL-1 — `ossl_namemap_doall_names` calls its visitor without a NULL test
+
+- **Obligation:** `ossl_namemap_doall_names`, and the two `evp_names_do_all` wrappers that
+  forward a caller's visitor straight to it.
+- **Authority:** `crypto/core_namemap.c` reaches `fn(sk_OPENSSL_STRING_value(names, i), data)`
+  with no test, so a NULL visitor is an indirect call through a null pointer. `EVP_CIPHER_names_do_all`
+  and `EVP_MD_names_do_all` pass a consumer's pointer through unchanged, and 7.3b makes the first
+  of those reachable from a probe, so the fault is no longer only theoretical.
+- **Crate:** answers 0 for a NULL visitor. Returning rather than faulting is the same choice
+  `docs/UNSAFE.md` §3 records for every other null-callback case, and it is safe *because* the
+  visitor is a `const`-qualified function pointer a caller supplies: a NULL one is a caller's
+  error, and an error is not a reason to take the caller's process down.
+- **Claim removed:** `EVP_CIPHER_names_do_all(cipher, NULL, data)` is not claimed compatible with
+  the authority. It is claimed *safe*; the authority's behaviour is a fault and
+  `RT-EVP-CIPHER` does not reproduce it — the probe passes a real visitor.
+- **Measured, not assumed:** the return value of this function was **also** wrong until
+  `RT-EVP-CIPHER` read it. The authority's last line is `return i > 0;` — a presence answer — and
+  the crate returned `i`, the count. Every caller before 7.3b tested the result for zero, so the
+  two agreed for four phases; the first caller that *returns* the value to a consumer
+  (`EVP_CIPHER_names_do_all`) observed `2` against the authority's `1`. That is fixed in the same
+  commit, with the unit test that had encoded the wrong semantics corrected rather than deleted.
+
+### D-CIPHERCTX-PARAMS-NULL — the two context-parameter list accessors dereference a NULL cipher
+
+- **Obligation:** `EVP_CIPHER_CTX_gettable_params` and `EVP_CIPHER_CTX_settable_params`.
+- **Authority:** both evaluate `cctx->cipher->gettable_ctx_params` (respectively
+  `settable_ctx_params`) behind a `cctx != NULL` test **only**. On a context that has never been
+  armed — which is the state every caller is in before its first `EVP_CipherInit` — `cipher` is
+  NULL and the read is a null-pointer dereference. `RT-EVP-CIPHER` measured it: the authority's
+  probe died at the first of the two calls, on a context `EVP_CIPHER_CTX_new` had just made.
+- **Crate:** answers NULL for a NULL cipher and asks the provider otherwise. The same choice
+  `D-NAMEMAP-DOALL-1` records, for the same reason: a NULL argument is a caller's error, and an
+  error is not a reason to take the caller's process down.
+- **Claim removed:** `EVP_CIPHER_CTX_gettable_params` and `_settable_params` on an **unarmed**
+  context are not claimed compatible. They are claimed *safe*, and the probe observes both where
+  the authority can answer — on an armed context, where the authority's own test is satisfied.
+
+### D-MD-NULL-CALLBACK-1 — `evp_md_init_internal` and `EVP_DigestFinal_ex` call through a NULL
+### method callback
+
+- **Obligation:** three calls in `crypto/evp/digest.c`, on two different kinds of method.
+  - `digest->init` — `evp_md_init_internal`'s legacy arm ends `return ctx->digest->init(ctx);`
+    with no test, and a method built by `EVP_MD_meth_new` that never had
+    `EVP_MD_meth_set_init` called has a NULL `init`.
+  - `digest->final` — `EVP_DigestFinal_ex`'s legacy arm calls `ctx->digest->final(ctx, md)`
+    with no test, for a method with `init` set and `final` unset.
+  - `digest->newctx` — `evp_md_init_internal`'s provider arm calls
+    `ctx->digest->newctx(ossl_provider_ctx(type->prov))` with no test, and a provider that
+    publishes only `OSSL_FUNC_DIGEST_DIGEST` (which `evp_md_from_algorithm` accepts: a
+    structural count of zero is legal when the standalone one-shot is present) has a NULL
+    `newctx`, because the count is what decides whether any of the six structural functions is
+    filled.
+- **Authority:** **measured**. Three programs, each compiled against
+  `forensics/authorities/prefix/openssl-3.6.4-production` and each run in a process of its own,
+  print the observations around the call and then die:
+  - `EVP_MD_meth_new(NID_undef, NID_undef)` then `EVP_DigestInit_ex(ctx, md, NULL)` —
+    `built=1 ctx=1` then **exit 139** (SIGSEGV);
+  - the same with `EVP_MD_meth_set_init` called first — `set_init=1`, `init=1`,
+    `cmp_final_is_null=1`, then **exit 139** at `EVP_DigestFinal_ex`;
+  - `OSSL_PROVIDER_add_builtin` + `OSSL_PROVIDER_load` + `EVP_MD_fetch` of a one-shot-only
+    digest, then `EVP_DigestInit_ex(ctx, md, NULL)` — `add_builtin=1 load=1 fetch=1`, then
+    **exit 139**.
+
+  In each case the fault is the measurement, so there is nothing to compare past it.
+  `RT-FETCH` prints `NOT_MEASURED_AUTHORITY_FAULTS` at each of the three boundaries, so the
+  boundary is visible in the transcript rather than silently absent from it.
+- **Crate:** answers 0 for each, and raises **nothing**, because the authority raises nothing on
+  these paths — it does not return. For the `init` and `final` refusals the context is left as it
+  was found, so a caller that catches the 0 can set the missing callback and try again; that is
+  the one place this crate's behaviour is *more* usable than the authority's, and it is the
+  smallest divergence available rather than a designed kindness.
+- **Reason:** an indirect call through a null pointer is not a contract to reproduce. The
+  distinction matters more here than for the other entries in this section because all three are
+  reached through documented, non-deprecated entry points — `EVP_DigestInit_ex` and `EVP_Digest`,
+  both of which a legacy consumer is expected to call — rather than through an argument a caller
+  would have to pass deliberately.
+- **Claim removed:** the behaviour of `EVP_DigestInit_ex`, `EVP_DigestInit`, `EVP_DigestInit_ex2`
+  and `EVP_Digest` on a hand-built method with no `init`, of `EVP_DigestFinal_ex` and
+  `EVP_DigestFinal` on one with no `final`, and of any initialise on a provider method with no
+  `newctx`, is *not* claimed compatible. It is claimed *safe*.
+- **When it changes:** it does not. The authority's behaviour is a fault in 3.6.3 and 3.6.4
+  alike; the boundary is permanent and the claim stays narrowed.
+
+### D-MD-DOALL-NULL-1 — `EVP_MD_do_all_provided` calls a NULL visitor
+
+- **Obligation:** `EVP_MD_do_all_provided(libctx, NULL, arg)`.
+- **Authority:** **measured**. `evp_generic_do_all` passes the visitor to
+  `crypto/evp/evp_fetch.c`'s `filter_on_operation_id`, which calls
+  `((*data).user_fn)(method, (*data).user_arg)` for every method whose operation id matches, with
+  no test on the pointer. A program that registers a builtin provider, loads it, and then calls
+  `EVP_MD_do_all_provided(ctx, NULL, NULL)` prints `add_builtin=1`, `load=1` and dies with
+  **exit 139** (SIGSEGV). The fault is the measurement, so there is nothing to compare past it.
+- **Crate:** returns without walking. The walk is not "a no-op with the same answer": it
+  constructs every algorithm of every activated provider into the store as a side effect, so the
+  refusal is a real behavioural narrowing and is recorded as one rather than presented as
+  equivalence.
+- **Reason:** `D-NAMEMAP-DOALL-1`'s, exactly. The visitor is a function pointer the caller
+  supplies; a NULL one is the caller's error, and an error is not a reason to take the caller's
+  process down.
+- **Claim removed:** `EVP_MD_do_all_provided` with a NULL visitor is not claimed compatible. It is
+  claimed *safe*. With a visitor the entry point is compared normally.
+- **Note:** this is the same class as `D-NAMEMAP-DOALL-1` recorded from the other side — a
+  `do_all` whose visitor is forwarded rather than tested — and it is a separate entry because the
+  two are reached through different exported entry points and a future reader of either should not
+  have to find the other first.
+
+### D-MAC-DUPCTX-NULL-1 — `EVP_MAC_CTX_dup` calls through a NULL `dupctx`
+
+- **Obligation:** `EVP_MAC_CTX_dup` on a method that publishes no `OSSL_FUNC_MAC_DUPCTX`.
+- **Authority:** **measured**. `crypto/evp/mac_lib.c` reaches
+  `dst->algctx = src->meth->dupctx(src->algctx)` with no test on the pointer, and `dupctx` is
+  deliberately **not** counted by `evp_mac_from_algorithm`'s structural check — so a method without
+  a duplicator is perfectly fetchable and perfectly usable until it is duplicated. A program that
+  registers a builtin provider publishing a MAC without `dupctx`, loads it, fetches it, makes a
+  context and duplicates it prints `add_builtin=1`, `load=1`, `fetch=1`, `ctx_new=1` and dies with
+  **exit 139** (SIGSEGV). The fault is the measurement, so there is nothing to compare past it.
+  `RT-EVP-MAC` prints `NOT_MEASURED_AUTHORITY_FAULTS` at the boundary.
+- **Crate:** answers **NULL**, which is not an invented answer: it is what the authority's own next
+  statement does when a duplicator answers NULL (`if (dst->algctx == NULL) { EVP_MAC_CTX_free(dst);
+  return NULL; }`). So the divergence is exactly one step wide — a missing duplicator is treated as
+  a duplicator that could not duplicate — and the reference the duplicate took on the method is
+  given back through `EVP_MAC_CTX_free` on the way out.
+- **Reason:** an indirect call through a null pointer is not a contract to reproduce. This one is
+  worth its own entry rather than being folded into D-MD-NULL-CALLBACK-1 because the *shape* is
+  different in a way that matters to a reader: the digest class's faults are on a method a caller
+  had to build by hand, whereas this one is on a method the library itself fetched from a provider
+  whose dispatch table simply omitted an optional callback.
+- **Claim removed:** `EVP_MAC_CTX_dup` on a method with no `dupctx` is not claimed compatible. It is
+  claimed *safe*. On a method that publishes one — `RT-EVP-MAC`'s `court-mac5` — the call is
+  compared normally, including the reference count it leaves behind.
+
+### D-KEYMGMT-PARAMS-NULL-1 — the four `EVP_KEYMGMT` descriptor accessors dereference a NULL method
+
+- **Obligation:** `EVP_KEYMGMT_gettable_params(NULL)`, `EVP_KEYMGMT_settable_params(NULL)`,
+  `EVP_KEYMGMT_gen_settable_params(NULL)`, `EVP_KEYMGMT_gen_gettable_params(NULL)`.
+- **Authority:** **measured**. Each is
+  `void *provctx = ossl_provider_ctx(EVP_KEYMGMT_get0_provider(keymgmt)); if (keymgmt->X != NULL)
+  return keymgmt->X(provctx); return NULL;` — the method pointer is dereferenced on the *first*
+  line, before the callback is tested, so a NULL method is a SIGSEGV (exit 139) and not a NULL
+  answer. Measured once with a standalone probe; `RT-EVP-KEYMGMT` prints
+  `params.*.null_method=NOT_MEASURED_AUTHORITY_FAULTS` at all four sites rather than comparing a
+  fault.
+- **Crate:** answers **NULL**, which is the same answer each of the four gives for a live method
+  whose callback is absent. The divergence is therefore exactly one input wide — a method that does
+  not exist — and it is invisible to every caller that has a method, which is every caller the
+  library's own code has.
+- **Reason:** `D-NAMEMAP-DOALL-1`'s and `D-MD-NULL-CALLBACK-1`'s. The method pointer is the
+  caller's input, and a caller that passes NULL has made a mistake; an input mistake is not a
+  reason to take the caller's process down. It is recorded separately from
+  the four accessors' sibling `evp_keymgmt_has`, which carries the same guard and cites the same
+  class in its own doc, because the two are reached through different entry points.
+- **Claim removed:** the four accessors with a NULL method are not claimed compatible. They are
+  claimed *safe*. On a live method all four are compared normally, including which of the two
+  provider tables came back.
+
+### D-PKEY-AMETH-1 — `pkey_set_type`'s legacy-method lookup is Phase 8's, so a provider key's `type` stays `EVP_PKEY_KEYMGMT`
+
+- **Obligation:** `EVP_PKEY_set_type_by_keymgmt` on a provider method whose **name is a legacy key
+  type** -- `"RSA"`, `"EC"`, `"DSA"`, and the rest of the twelve -- and, through it,
+  `EVP_PKEY_get_id`, `EVP_PKEY_get_base_id` and every accessor that branches on the resulting type.
+- **Authority:** **read from the source, and the read is the whole finding.** `pkey_set_type` looks
+  the type up with `EVP_PKEY_asn1_find_str(eptr, str, len)`, and when it finds a method it takes the
+  **legacy** NID into `pkey->type` even though the key is provider-side: `if (ameth != NULL) { if
+  (type == EVP_PKEY_NONE) pkey->type = ameth->pkey_id; } else { pkey->type = EVP_PKEY_KEYMGMT; }`.
+  So `EVP_PKEY_get_id` on a provider key named `"RSA"` answers `EVP_PKEY_RSA`, and only a key whose
+  name matches **no** legacy method answers the pseudo-NID `EVP_PKEY_KEYMGMT` (`-1`). The comment
+  above the lookup explains why the field keeps its legacy meaning: "for any key type that has a
+  legacy implementation, regardless of if the internal key is a legacy or a provider side one".
+- **Crate:** answers `EVP_PKEY_KEYMGMT` in both cases, because `EVP_PKEY_asn1_find_str` and
+  `EVP_PKEY_asn1_find` are `crypto/asn1/ameth_lib.c`'s and search `standard_methods[]` -- a
+  compile-time table of the twelve `ossl_<alg>_asn1_meth` objects that Phase 8's units define
+  (`docs/DECISIONS.md` D163, D165). The lookup is the only thing missing: the **name walk** that feeds
+  it is written, including the two-name ambiguity refusal that makes `found[1] != NULL` an error.
+- **Reason:** the dependency is a stratum boundary and not a choice, and it is the same boundary D163
+  recorded for `evp_pkey_name2type`'s fallback and D165 for row 7.4l. Recording it as a divergence
+  rather than as a deferral is what the gate's own rule forces: a deferral row is refused for a name
+  the crate *defines* (`stale_deferral`), and `EVP_PKEY_set_type_by_keymgmt` is defined here.
+- **Claim removed:** `EVP_PKEY_get_id` -- and therefore `EVP_PKEY_get_base_id`, `EVP_PKEY_can_sign`,
+  `EVP_PKEY_get0_type_name`'s legacy arm and every `EVP_PKEY_is_a` comparison against a legacy
+  spelling -- is not claimed compatible for a provider key whose name is among the twelve standard
+  names. It is claimed compatible for a key whose name is not, which is the only case in which the
+  authority and the crate agree today.
+- **Trigger:** Phase 8's first commit that lands an `EVP_PKEY_ASN1_METHOD` object. At that point
+  `find_ameth`'s body is the loop the authority writes and `pkey_set_type`'s `if (ameth != NULL)` arm
+  becomes reachable; `RT-EVP-PKEY` is where the difference would be measured, and the measurement is
+  `EVP_PKEY_get_id` on a fetched keymgmt named `"RSA"`.
+
+### ~~D-PKEYCTX-LEGACY-ALG-1~~ — **WITHDRAWN: the released authority refuses this too**
+
+**This entry is retained, struck through, because it was cited before it was written and writing
+it would have recorded a divergence that does not exist. There is no behavioural difference
+between the authority and the candidate at this site.**
+
+- **What was claimed:** that `int_ctx_new` compares the caller's `id` against the fetched
+  method's `legacy_alg` by way of `ossl_assert(id == tmp_id)`, that this assertion is "the
+  identity function" under `NDEBUG` and therefore does not fire in the released authority, and
+  that the crate -- which *does* raise and refuse -- was therefore deliberately diverging.
+- **What the authority actually is:** under `NDEBUG`, `include/internal/common.h` defines
+  `ossl_assert(x)` as `ossl_likely((x) != 0)`, which is the identity on a boolean, so
+  `if (!ossl_assert(C))` is `if (!C)` -- a live guard. The released authority raises
+  `ERR_raise(ERR_LIB_EVP, ERR_R_INTERNAL_ERROR)`, frees the previously taken `EVP_KEYMGMT`
+  reference, and returns NULL.
+- **Measured:** the authority binary's `int_ctx_new` branches on `cmp %r12d,%eax; jne 22c07d`,
+  and `22c07d` is `ERR_new` / `ERR_set_debug` with line `0x11c` (**284**, the `ERR_raise` line in
+  `crypto/evp/pmeth_lib.c`) / `ERR_set_error(0x6, 0xc0103, 0)` -- `ERR_LIB_EVP` and
+  `ERR_R_INTERNAL_ERROR` -- / `EVP_KEYMGMT_free` / a jump to the NULL-return epilogue. The crate
+  writes `raise_site(&err_sites::PMETH_LIB_284)`, `EVP_KEYMGMT_free`, `return NULL`. The two are
+  the same call, the same library, the same reason and the same cleanup.
+- **How the error was produced:** the claim was written from the macro's *text* rather than from
+  its expansion. `(x) != 0` is the identity function, and the comment stopped there -- but the
+  guard is `!ossl_assert(C)`, and the identity function applied to `C` and then negated is `!C`,
+  which fires. The one thing `NDEBUG` removes is the abort, not the refusal. Five other sites in
+  the crate carried the same premise and the same conclusion; all six are corrected in
+  `docs/DECISIONS.md` D167.
+- **Candidate:** unchanged, and correct. It refuses exactly where the authority refuses.
+- **Claim removed:** the claim of divergence, which was never made in the register -- only cited
+  from `src/evp/pkey_ctx.rs`. That citation is gone; the site now states the authority's
+  behaviour, and cites D167 for the measurement.
+
+### D-PKEY-AMETH-2 — the two `find` functions answer NULL for the twelve legacy types, because `standard_methods[]` is Phase 8's
+
+- **Obligation:** `EVP_PKEY_asn1_find` and `EVP_PKEY_asn1_find_str` on any of the twelve legacy key types
+  (`EVP_PKEY_RSA`, `EVP_PKEY_EC`, `EVP_PKEY_DSA`, and the rest), and therefore every caller that
+  resolves a type to its `EVP_PKEY_ASN1_METHOD` through them.
+- **Authority:** `pkey_asn1_find` asks `app_methods` with `sk_EVP_PKEY_ASN1_METHOD_find` and then
+  `standard_methods[]` with `OBJ_bsearch_ameth`; `standard_methods[]` is
+  `crypto/asn1/ameth_lib.c`'s own table of the twelve `ossl_<alg>_asn1_meth` objects, sorted by
+  `pkey_id`. So `EVP_PKEY_asn1_find(NULL, EVP_PKEY_RSA)` answers `&ossl_rsa_asn1_meth` and
+  `EVP_PKEY_asn1_find_str(NULL, "RSA", 3)` answers the same object.
+- **Crate:** answers NULL in both cases, and answers correctly for every method an application
+  registered through `EVP_PKEY_asn1_add0`/`_add_alias`. `STANDARD_METHODS` is declared as a
+  zero-length table with its reason at the site, and the twelve objects are Phase 8's (D163, D165).
+  Both functions are **defined rather than withheld**: a consumer that calls them must link, and the
+  answer is right in every state this crate can reach.
+- **Reason:** the dependency is a stratum boundary and not a choice. It is the same boundary
+  `D-PKEY-AMETH-1` records from the key-type side, reached through the public door instead of through
+  `pkey_set_type`, and it is why that entry's crate description names these two functions.
+  Distinguishing this from a *deferral* is what the gate's rule forces: a deferral row is refused for
+  a name the crate defines (`stale_deferral`), and both names are defined here.
+- **Engine arm, which is absent and is *not* a divergence:** `OPENSSL_NO_ENGINE` is undefined in the
+  pinned profile, so the authority's `ENGINE_get_pkey_asn1_meth_engine` /
+  `ENGINE_pkey_asn1_find_str` / `ENGINE_init` / `ENGINE_free` calls are compiled **in**. `ENGINE` is
+  Phase 13's, so this crate has no engine type, no registry and no way to register one: a consumer
+  that calls `ENGINE_add` fails to link before it can reach the state. With no engine registered the
+  authority's own arm answers NULL and falls through to `*pe = NULL`, which is what the crate writes.
+  The two answers are identical, so there is nothing to record as a divergence — only the reason the
+  call is missing, which is stated at both sites.
+- **Claim removed:** the claim that these two functions could not land at all. The module's own doc
+  and the D-PKEY-AMETH-1 entry both described the empty table as the reason to *hold* them; the
+  project's rule is the opposite — define the symbol, answer correctly for every reachable state, and
+  record the divergence — and that is what `EVP_PKEY_asn1_get_count` and `_get0` already did for the
+  same table.
+
+### D-PBE-PKCS12-KEYGEN-1 — the six `PKCS12_PBE_keyivgen` rows of `builtin_pbe[]` carry no keygen
+
+- **Obligation:** `EVP_PBE_find` and `EVP_PBE_find_ex` for the six NIDs `NID_pbe_WithSHA1And128BitRC4`
+  (144), `NID_pbe_WithSHA1And40BitRC4` (145), `NID_pbe_WithSHA1And3_Key_TripleDES_CBC` (146),
+  `NID_pbe_WithSHA1And2_Key_TripleDES_CBC` (147), `NID_pbe_WithSHA1And128BitRC2_CBC` (148) and
+  `NID_pbe_WithSHA1And40BitRC2_CBC` (149) under `EVP_PBE_TYPE_OUTER`, and `EVP_PBE_CipherInit_ex`
+  on an `ASN1_OBJECT` whose `OBJ_obj2nid` is one of the six.
+- **Authority:** the six rows of `crypto/evp/evp_pbe.c:46-57` name `PKCS12_PBE_keyivgen` in the
+  `keygen` column and `&PKCS12_PBE_keyivgen_ex` in the `keygen_ex` column, so `EVP_PBE_find_ex`
+  answers **1** for each with both `cipher_nid` and `md_nid` set (`NID_rc4`/`NID_sha1`,
+  `NID_rc4_40`/`NID_sha1`, `NID_des_ede3_cbc`/`NID_sha1`, `NID_des_ede_cbc`/`NID_sha1`,
+  `NID_rc2_cbc`/`NID_sha1`, `NID_rc2_40_cbc`/`NID_sha1`) and both pointers **non-NULL**, and
+  `EVP_PBE_CipherInit_ex` reaches `PKCS12_PBE_keyivgen_ex` (`crypto/pkcs12/p12_crpt.c:23`).
+- **Crate:** the six rows are **present and in place**, so the return code and both NIDs are the
+  authority's for all six; the two keygen columns are `None`, so `EVP_PBE_find`/`_ex` answers 1 with
+  `*pkeygen == NULL` and `*pkeygen_ex == NULL`, and `EVP_PBE_CipherInit_ex` answers **0** without
+  calling through either. Measured by `RT-EVP-PBE`: its `pbe.find.04`…`pbe.find.09` arms print
+  `1,0,144,5,64`…`1,0,149,98,64` — the return code, the type, the NID and both NIDs — on both
+  sides, and `pbe.find_plain.04`…`pbe.find_plain.09` print `1,5,64`…`1,98,64`, followed in each
+  case by a fixed marker in place of the two presence answers, because the two libraries' answers
+  there differ (non-NULL on the authority, `NULL` here) and printing them would report a registered
+  difference as a residual.
+- **Reason:** `PKCS12_PBE_keyivgen` and `PKCS12_PBE_keyivgen_ex` are declared in `pkcs12.h` and
+  `forensics/atlas/symbol-ownership.json` gives both `owner_phase: 10`. A Rust `static` is fully
+  initialised or it does not exist, so a row whose keygen column is another stratum's function
+  cannot be written at all, and a placeholder would change `EVP_PBE_find`'s answer — which is the
+  thing the table exists to give. The alternative the project's per-symbol rule would normally reach
+  for, deferring the *readers* (`EVP_PBE_find`, `_ex`, `EVP_PBE_CipherInit*`), was measured and
+  does not build: `PKCS5_v2_PBE_keyivgen_ex` calls `EVP_PBE_find_ex` at `p5_crpt2.c:133` and
+  `PKCS5_v2_PBKDF2_keyivgen_ex` calls `EVP_PBE_find` at `:230`, so deferring the readers would take
+  four of this slice's own mandated exports with them and leave the court unable to observe the
+  table at all. `docs/DECISIONS.md` D192 carries the argument and the cost.
+- **Claim removed:** `EVP_PBE_find`/`_ex`'s two keygen out-parameters, and
+  `EVP_PBE_CipherInit_ex`'s behaviour as a whole, are not claimed compatible for these six NIDs.
+  The return code and both NID out-parameters **are** claimed compatible, for all thirty-four rows.
+  The same record covers the guard in `EVP_PBE_CipherInit_ex` and in `PKCS5_v2_PBE_keyivgen_ex` that
+  answers 0 where the authority would call a NULL pointer: the authority's eighteen `PRF` rows carry
+  no keygen in either column, so `EVP_PBE_CipherInit_ex` on one of those objects — and on a KDF row
+  a caller added with `EVP_PBE_alg_add_type`, which leaves `keygen_ex` empty — faults there.
+- **Trigger:** Phase 10's first commit that lands `crypto/pkcs12/p12_crpt.c`. At that point the six
+  rows take the two function addresses and this entry is removed with them; `RT-EVP-PBE`'s
+  `pbe.find.04`…`pbe.find.09` arms would gain the two presence answers, which is the measurement.
+
+### D-EVP-CIPHER-LEGACY-NID-1 — a fetched provider cipher's legacy NID is `NID_undef`, because the legacy table is Phase 13's
+
+- **Obligation:** `EVP_CIPHER_get_nid` on a method returned by `EVP_CIPHER_fetch` whose name is a
+  legacy name, and every caller that reads the result — measured here through `EVP_PBE_alg_add`,
+  whose cipher argument is converted with `EVP_CIPHER_get_nid` (`crypto/evp/evp_pbe.c:238`).
+- **Authority:** `evp_cipher_from_algorithm` calls `set_legacy_nid` over the method's names, which
+  looks each one up in the `OBJ_NAME` table under `OBJ_NAME_TYPE_CIPHER_METH`. That table is
+  populated by the legacy wrappers (`EVP_des_cbc` and its hundred and sixty siblings), so a fetch of
+  `"DES-CBC"` answers `nid == NID_des_cbc` (**31**) and `EVP_PBE_alg_add` stores `31`.
+- **Crate:** answers `NID_undef` (**0**), because those wrappers are Phase 13's and the table is
+  empty. Measured by `RT-EVP-PBE`: the `EVP_PBE_alg_add` arm's stored `pcnid` is 31 on the authority
+  and 0 here, while the *digest* half of the same arm agrees — `EVP_MD_get_type` answers 0 on both
+  sides, which is the observation `docs/DECISIONS.md` D148 already recorded from `RT-FETCH`.
+- **Reason:** the dependency is a contents boundary and not a choice: `set_legacy_nid`'s *code* is
+  7.3b's and landed, and what it finds is Phase 13's. Recording it as a divergence rather than a
+  deferral is what the gate's rule forces, as in D-PKEY-AMETH-1 and D-PKEY-AMETH-2.
+- **Claim removed:** the legacy NID of a fetched provider method is not claimed compatible. Every
+  other observable of the fetch — the name, the description, the parameters, the two length
+  constants and the provider — is, and the *fetch* itself is unchanged: this is a value the method
+  carries, not a refusal.
+- **Trigger:** Phase 13's first legacy cipher wrapper. `RT-EVP-PBE`'s
+  `pbe.cipher_nid.legacy` marker is where the difference would be measured, and
+  `pbe.alg_add.methods_nids` is the arm it holds back.

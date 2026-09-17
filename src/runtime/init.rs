@@ -168,9 +168,9 @@ const OPENSSL_INIT_NO_LOAD_CRYPTO_STRINGS: u64 = 0x0000_0001;
 /// set of library reason tables.
 const OPENSSL_INIT_LOAD_CRYPTO_STRINGS: u64 = 0x0000_0002;
 /// `OPENSSL_INIT_ADD_ALL_CIPHERS`
-const OPENSSL_INIT_ADD_ALL_CIPHERS: u64 = 0x0000_0004;
+pub(crate) const OPENSSL_INIT_ADD_ALL_CIPHERS: u64 = 0x0000_0004;
 /// `OPENSSL_INIT_ADD_ALL_DIGESTS`
-const OPENSSL_INIT_ADD_ALL_DIGESTS: u64 = 0x0000_0008;
+pub(crate) const OPENSSL_INIT_ADD_ALL_DIGESTS: u64 = 0x0000_0008;
 /// `OPENSSL_INIT_NO_ADD_ALL_CIPHERS` — accepted no-op.
 #[allow(dead_code)]
 const OPENSSL_INIT_NO_ADD_ALL_CIPHERS: u64 = 0x0000_0010;
@@ -210,6 +210,27 @@ const OPENSSL_INIT_LOAD_SSL_STRINGS: u64 = 0x0020_0000;
 const OPENSSL_INIT_ATFORK: u64 = 0x0002_0000;
 /// `OPENSSL_INIT_BASE_ONLY` — internal to the authority; not a public macro.
 const OPENSSL_INIT_BASE_ONLY: u64 = 0x0004_0000;
+/// The two legacy-adder bits, which are **accepted and do nothing yet**.
+///
+/// The authority's action for `OPENSSL_INIT_ADD_ALL_CIPHERS` is
+/// `openssl_add_all_ciphers_int()` -- one hundred and sixty-odd
+/// `EVP_add_cipher(EVP_aes_...)` calls over primitives this crate does not have yet, which is why
+/// `crypto/evp/c_allc.c` and `c_alld.c` are Phase 13's. What the authority *returns* is 1 with
+/// nothing raised, and `OpenSSL_add_all_algorithms_noconf()` is a macro over exactly these two
+/// bits -- so a refusal here is a caller-visible failure where the authority has none.
+///
+/// They were on `INIT_UNSUPPORTED` until D161, which is the decision entry that retired them and
+/// the one that records why: the table staying empty is a contents divergence recorded in
+/// `docs/PHASE-7-SUBPHASES.md`, and the call *failing* was a behaviour divergence that no record
+/// named. `RT-EVP-NAMES` measured the difference, because `EVP_CIPHER_do_all`'s first statement is
+/// one of these calls and the probe reads the error queue after it.
+///
+/// The single expression below is the whole action, and it is written as an expression rather than
+/// as a comment so that Phase 13 has one line to replace rather than a paragraph to find.
+fn add_all_legacy_methods(opts: u64) {
+    let _ = opts;
+}
+
 /// `OPENSSL_INIT_NO_ATEXIT` — fully honoured: suppresses the `atexit` handler.
 const OPENSSL_INIT_NO_ATEXIT: u64 = 0x0008_0000;
 
@@ -226,9 +247,7 @@ const OPENSSL_INIT_NO_ATEXIT: u64 = 0x0008_0000;
 /// `ASN1_STRING_TABLE_get` observes first and what the RT-ASN1-STR court measured.
 /// See `docs/DECISIONS.md` D86 for the phase in which the loader was absent, and
 /// the entry that supersedes it for the phase in which it arrived.
-const INIT_UNSUPPORTED: u64 = OPENSSL_INIT_ADD_ALL_CIPHERS
-    | OPENSSL_INIT_ADD_ALL_DIGESTS
-    | OPENSSL_INIT_ASYNC
+const INIT_UNSUPPORTED: u64 = OPENSSL_INIT_ASYNC
     | OPENSSL_INIT_ENGINE_RDRAND
     | OPENSSL_INIT_ENGINE_DYNAMIC
     | OPENSSL_INIT_ENGINE_OPENSSL
@@ -678,6 +697,15 @@ pub extern "C" fn OPENSSL_init_crypto(opts: u64, settings: *const OpenSslInitSet
         if !register_atexit(opts & OPENSSL_INIT_NO_ATEXIT != 0) {
             return 0;
         }
+
+        // The two legacy-adder bits, at the authority's own position in the sequence:
+        // after the `atexit` registration and the two string loads, and **before** the
+        // config step. The action is `add_all_legacy_methods`'s, and the answer is
+        // ignored exactly as the authority ignores the adders' -- neither can fail in
+        // this profile.
+        add_all_legacy_methods(
+            opts & (OPENSSL_INIT_ADD_ALL_CIPHERS | OPENSSL_INIT_ADD_ALL_DIGESTS),
+        );
 
         // The refusal, at the authority's own position in the sequence: after the
         // `atexit` registration and the two string loads, and **before** the config
@@ -1295,12 +1323,32 @@ mod tests {
         });
     }
 
+    /// The refused options are the ones whose subsystem is genuinely absent. **The two
+    /// legacy-adder bits are not among them**, and the test says so in its own name: they were
+    /// until D161, which is the entry that retired them because the authority answers 1 and
+    /// `OpenSSL_add_all_algorithms_noconf()` is a macro over exactly those two bits.
+    #[test]
+    fn the_legacy_adder_bits_are_accepted_and_raise_nothing() {
+        with_init_lock(|| {
+            for opts in [OPENSSL_INIT_ADD_ALL_CIPHERS, OPENSSL_INIT_ADD_ALL_DIGESTS] {
+                ERR_clear_error();
+                assert_eq!(
+                    OPENSSL_init_crypto(opts, core::ptr::null()),
+                    1,
+                    "option {opts:#x} must be accepted"
+                );
+                assert_eq!(ERR_peek_error(), 0, "an accepted option raises nothing");
+                /* And it is recorded, so the second call takes the fast path and still answers 1. */
+                assert_eq!(OPENSSL_init_crypto(opts, core::ptr::null()), 1);
+                assert_eq!(ERR_peek_error(), 0);
+            }
+        });
+    }
+
     #[test]
     fn unsupported_options_fail_with_init_fail_and_do_not_get_recorded() {
         with_init_lock(|| {
             let cases = [
-                OPENSSL_INIT_ADD_ALL_CIPHERS,
-                OPENSSL_INIT_ADD_ALL_DIGESTS,
                 OPENSSL_INIT_ASYNC,
                 OPENSSL_INIT_ENGINE_RDRAND,
                 OPENSSL_INIT_ENGINE_DYNAMIC,

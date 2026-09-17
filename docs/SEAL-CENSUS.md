@@ -17,9 +17,9 @@ name is defined; `open` means the stratum owns it and has not built it;
 
 | library | authority exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 1135 | 4761 |
+| libcrypto | 5896 | 1841 | 4055 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **1135** | **5364** |
+| **total** | **6499** | **1841** | **4658** |
 
 ## Ownership atlas, by stratum
 
@@ -32,7 +32,7 @@ declared owner; this is that assignment.
 | 4 | BIO + CONF + object database | `complete` | 256 | 272 | 249 | 23 | 0 |
 | 5 | BN + ASN.1 + DER/PEM | `complete` | 561 | 565 | 474 | 91 | 0 |
 | 6 | OSSL_LIB_CTX + provider core | `complete` | 137 | 161 | 161 | 0 | 0 |
-| 7 | EVP framework | `not-started` | 924 | — | — | — | — |
+| 7 | EVP framework | `complete` | 924 | 950 | 706 | 244 | 0 |
 | 8 | Native cryptographic primitives | `not-started` | 759 | — | — | — | — |
 | 9 | RAND / DRBG + entropy | `not-started` | 25 | — | — | — | — |
 | 10 | Key formats + PKCS + STORE | `not-started` | 272 | — | — | — | — |
@@ -204,6 +204,54 @@ Courts: `all pass`, 9 court(s), **2032** authority observation(s) over 9 transcr
 | RT-PROVIDER-3P | `pass` | 40 |
 | RT-CONF-MOD | `pass` | 247 |
 
+## Phase 7 — EVP framework
+
+* state: `complete`
+* seal: `docs/PHASE-7-EVP-SEAL.md`
+* ledger: `forensics/phase7-obligations.json`
+* atlas-owned: 924
+* owned working set: 950
+* implemented: 706
+* deferred to a later stratum with a stated reason: 244
+* **open in this stratum: 0**
+
+Deferred out, by receiving stratum:
+
+* to phase 8: 27 symbol(s)
+  `EVP_PKEY_assign`, `EVP_PKEY_decrypt_old`, `EVP_PKEY_encrypt_old`, `EVP_PKEY_get0_DH`, `EVP_PKEY_get0_DSA`, `EVP_PKEY_get0_EC_KEY`, `EVP_PKEY_get0_RSA`, `EVP_PKEY_get0_hmac`, `EVP_PKEY_get0_poly1305`, `EVP_PKEY_get0_siphash`, `EVP_PKEY_get1_DH`, `EVP_PKEY_get1_DSA`, `EVP_PKEY_get1_EC_KEY`, `EVP_PKEY_get1_RSA`, `EVP_PKEY_get_ec_point_conv_form`, `EVP_PKEY_get_field_type`, `EVP_PKEY_meth_find`, `EVP_PKEY_meth_get0`, `EVP_PKEY_meth_get_count`, `EVP_PKEY_set1_DH`, `EVP_PKEY_set1_DSA`, `EVP_PKEY_set1_EC_KEY`, `EVP_PKEY_set1_RSA`, `EVP_PKEY_type`, `d2i_KeyParams`, `d2i_KeyParams_bio`, `d2i_PublicKey`
+* to phase 9: 4 symbol(s)
+  `BIO_f_reliable`, `EVP_CIPHER_CTX_rand_key`, `EVP_SealInit`, `OSSL_HPKE_get_grease_value`
+* to phase 10: 15 symbol(s)
+  `EVP_PKEY_print_params`, `EVP_PKEY_print_params_fp`, `EVP_PKEY_print_private`, `EVP_PKEY_print_private_fp`, `EVP_PKEY_print_public`, `EVP_PKEY_print_public_fp`, `d2i_AutoPrivateKey`, `d2i_AutoPrivateKey_ex`, `d2i_PrivateKey`, `d2i_PrivateKey_ex`, `i2d_KeyParams`, `i2d_KeyParams_bio`, `i2d_PKCS8PrivateKey`, `i2d_PrivateKey`, `i2d_PublicKey`
+* to phase 11: 5 symbol(s)
+  `ASN1_item_sign_ex`, `ASN1_item_verify_ex`, `EVP_CIPHER_CTX_get_algor`, `EVP_PKEY_CTX_get_algor`, `EVP_add_alg_module`
+* to phase 13: 193 symbol(s)
+  `EVP_PKEY_get0_engine`, `EVP_PKEY_set1_engine`, `EVP_aes_128_cbc`, `EVP_aes_128_cbc_hmac_sha1`, `EVP_aes_128_cbc_hmac_sha256`, `EVP_aes_128_ccm`, `EVP_aes_128_cfb1`, `EVP_aes_128_cfb128`, `EVP_aes_128_cfb8`, `EVP_aes_128_ctr`, `EVP_aes_128_ecb`, `EVP_aes_128_gcm`, `EVP_aes_128_ocb`, `EVP_aes_128_ofb`, `EVP_aes_128_wrap`, `EVP_aes_128_wrap_pad`, `EVP_aes_128_xts`, `EVP_aes_192_cbc`, `EVP_aes_192_ccm`, `EVP_aes_192_cfb1`, `EVP_aes_192_cfb128`, `EVP_aes_192_cfb8`, `EVP_aes_192_ctr`, `EVP_aes_192_ecb`, `EVP_aes_192_gcm`, `EVP_aes_192_ocb`, `EVP_aes_192_ofb`, `EVP_aes_192_wrap`, `EVP_aes_192_wrap_pad`, `EVP_aes_256_cbc`, `EVP_aes_256_cbc_hmac_sha1`, `EVP_aes_256_cbc_hmac_sha256`, `EVP_aes_256_ccm`, `EVP_aes_256_cfb1`, `EVP_aes_256_cfb128`, `EVP_aes_256_cfb8`, `EVP_aes_256_ctr`, `EVP_aes_256_ecb`, `EVP_aes_256_gcm`, `EVP_aes_256_ocb`, `EVP_aes_256_ofb`, `EVP_aes_256_wrap`, `EVP_aes_256_wrap_pad`, `EVP_aes_256_xts`, `EVP_aria_128_cbc`, `EVP_aria_128_ccm`, `EVP_aria_128_cfb1`, `EVP_aria_128_cfb128`, `EVP_aria_128_cfb8`, `EVP_aria_128_ctr`, `EVP_aria_128_ecb`, `EVP_aria_128_gcm`, `EVP_aria_128_ofb`, `EVP_aria_192_cbc`, `EVP_aria_192_ccm`, `EVP_aria_192_cfb1`, `EVP_aria_192_cfb128`, `EVP_aria_192_cfb8`, `EVP_aria_192_ctr`, `EVP_aria_192_ecb`, `EVP_aria_192_gcm`, `EVP_aria_192_ofb`, `EVP_aria_256_cbc`, `EVP_aria_256_ccm`, `EVP_aria_256_cfb1`, `EVP_aria_256_cfb128`, `EVP_aria_256_cfb8`, `EVP_aria_256_ctr`, `EVP_aria_256_ecb`, `EVP_aria_256_gcm`, `EVP_aria_256_ofb`, `EVP_bf_cbc`, `EVP_bf_cfb64`, `EVP_bf_ecb`, `EVP_bf_ofb`, `EVP_blake2b512`, `EVP_blake2s256`, `EVP_camellia_128_cbc`, `EVP_camellia_128_cfb1`, `EVP_camellia_128_cfb128`, `EVP_camellia_128_cfb8`, `EVP_camellia_128_ctr`, `EVP_camellia_128_ecb`, `EVP_camellia_128_ofb`, `EVP_camellia_192_cbc`, `EVP_camellia_192_cfb1`, `EVP_camellia_192_cfb128`, `EVP_camellia_192_cfb8`, `EVP_camellia_192_ctr`, `EVP_camellia_192_ecb`, `EVP_camellia_192_ofb`, `EVP_camellia_256_cbc`, `EVP_camellia_256_cfb1`, `EVP_camellia_256_cfb128`, `EVP_camellia_256_cfb8`, `EVP_camellia_256_ctr`, `EVP_camellia_256_ecb`, `EVP_camellia_256_ofb`, `EVP_cast5_cbc`, `EVP_cast5_cfb64`, `EVP_cast5_ecb`, `EVP_cast5_ofb`, `EVP_chacha20`, `EVP_chacha20_poly1305`, `EVP_des_cbc`, `EVP_des_cfb1`, `EVP_des_cfb64`, `EVP_des_cfb8`, `EVP_des_ecb`, `EVP_des_ede`, `EVP_des_ede3`, `EVP_des_ede3_cbc`, `EVP_des_ede3_cfb1`, `EVP_des_ede3_cfb64`, `EVP_des_ede3_cfb8`, `EVP_des_ede3_ecb`, `EVP_des_ede3_ofb`, `EVP_des_ede3_wrap`, `EVP_des_ede_cbc`, `EVP_des_ede_cfb64`, `EVP_des_ede_ecb`, `EVP_des_ede_ofb`, `EVP_des_ofb`, `EVP_desx_cbc`, `EVP_idea_cbc`, `EVP_idea_cfb64`, `EVP_idea_ecb`, `EVP_idea_ofb`, `EVP_md4`, `EVP_md5`, `EVP_md5_sha1`, `EVP_mdc2`, `EVP_rc2_40_cbc`, `EVP_rc2_64_cbc`, `EVP_rc2_cbc`, `EVP_rc2_cfb64`, `EVP_rc2_ecb`, `EVP_rc2_ofb`, `EVP_rc4`, `EVP_rc4_40`, `EVP_rc4_hmac_md5`, `EVP_read_pw_string`, `EVP_read_pw_string_min`, `EVP_ripemd160`, `EVP_seed_cbc`, `EVP_seed_cfb128`, `EVP_seed_ecb`, `EVP_seed_ofb`, `EVP_sha1`, `EVP_sha224`, `EVP_sha256`, `EVP_sha384`, `EVP_sha3_224`, `EVP_sha3_256`, `EVP_sha3_384`, `EVP_sha3_512`, `EVP_sha512`, `EVP_sha512_224`, `EVP_sha512_256`, `EVP_shake128`, `EVP_shake256`, `EVP_sm3`, `EVP_sm4_cbc`, `EVP_sm4_cfb128`, `EVP_sm4_ctr`, `EVP_sm4_ecb`, `EVP_sm4_ofb`, `EVP_whirlpool`, `PEM_ASN1_read`, `PEM_ASN1_read_bio`, `PEM_ASN1_write`, `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx`, `PEM_bytes_read_bio`, `PEM_bytes_read_bio_secmem`, `PEM_def_callback`, `PEM_do_header`, `PEM_read_PrivateKey`, `PEM_read_PrivateKey_ex`, `PEM_read_bio_Parameters`, `PEM_read_bio_Parameters_ex`, `PEM_read_bio_PrivateKey`, `PEM_read_bio_PrivateKey_ex`, `PEM_write_PKCS8PrivateKey`, `PEM_write_PKCS8PrivateKey_nid`, `PEM_write_PrivateKey`, `PEM_write_PrivateKey_ex`, `PEM_write_bio_PKCS8PrivateKey`, `PEM_write_bio_PKCS8PrivateKey_nid`, `PEM_write_bio_Parameters`, `PEM_write_bio_PrivateKey`, `PEM_write_bio_PrivateKey_ex`, `PEM_write_bio_PrivateKey_traditional`
+
+Hand-offs received and discharged:
+
+* from phase 5: 26 symbol(s) — `ASN1_item_sign_ex`, `ASN1_item_verify_ex`, `PEM_ASN1_read`, `PEM_ASN1_read_bio`, `PEM_ASN1_write`, `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx`, `PEM_SignFinal`, `PEM_SignInit`, `PEM_SignUpdate`, `PEM_bytes_read_bio`, `PEM_bytes_read_bio_secmem`, `PEM_def_callback`, `PEM_do_header`, `PEM_read`, `PEM_read_bio`, `PEM_read_bio_Parameters`, `PEM_read_bio_Parameters_ex`, `PEM_read_bio_ex`, `PEM_write`, `PEM_write_PKCS8PrivateKey_nid`, `PEM_write_bio`, `PEM_write_bio_ASN1_stream`, `PEM_write_bio_PKCS8PrivateKey_nid`, `PEM_write_bio_Parameters`, `PEM_write_bio_PrivateKey_traditional`
+
+Courts: `all pass`, 15 court(s), **2230** authority observation(s) over 15 transcript court(s).
+
+| court | verdict | observations |
+|---|---|---|
+| RT-FETCH | `pass` | 217 |
+| RT-EVP-CIPHER | `pass` | 185 |
+| RT-EVP-MAC | `pass` | 96 |
+| RT-EVP-KDF | `pass` | 68 |
+| RT-EVP-RAND | `pass` | 168 |
+| RT-EVP-SKEY | `pass` | 97 |
+| RT-EVP-KEYMGMT | `pass` | 73 |
+| RT-EVP-NAMES | `pass` | 25 |
+| RT-EVP-PKEY | `pass` | 502 |
+| RT-EVP-PBE | `pass` | 442 |
+| RT-EVP-BIO | `pass` | 154 |
+| RT-EVP-PEM | `pass` | 80 |
+| RT-HMAC | `pass` | 32 |
+| RT-CMAC | `pass` | 26 |
+| RT-HPKE | `pass` | 65 |
+
 ## Atlas/ledger reconciliation
 
 From `forensics/atlas/ownership-audit.json`: every export the atlas
@@ -216,5 +264,6 @@ row for another stratum's export is a hand-off that stratum recorded.
 | 4 | 256 | 272 | 0 | 16 |
 | 5 | 561 | 565 | 0 | 4 |
 | 6 | 137 | 161 | 0 | 24 |
+| 7 | 924 | 950 | 0 | 26 |
 
 Problems recorded by the audit: 0.
