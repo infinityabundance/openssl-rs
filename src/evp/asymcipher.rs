@@ -1,9 +1,10 @@
 //! Phase 7.4 — the `EVP_ASYM_CIPHER` method object.
 //!
-//! `crypto/evp/asymcipher.c`'s **method half**: the object, its lifetime, and the eleven exports that
-//! reach it. The file's other half — `EVP_PKEY_encrypt_init`, `EVP_PKEY_encrypt`, `EVP_PKEY_decrypt`
-//! and their `_init_ex` spellings — is `EVP_PKEY_CTX` work and lands with 7.4c's context, because every
-//! one of them begins by reading `ctx->operation` and `ctx->op.ciph.algctx`.
+//! `crypto/evp/asymcipher.c` whole: the **method half** — the object, its lifetime, and the eleven
+//! exports that reach it — and the **operation half**, `EVP_PKEY_encrypt_init`, `EVP_PKEY_encrypt`,
+//! `EVP_PKEY_decrypt` and their `_init_ex` spellings. The operation half is here rather than with
+//! the method object because every one of its six exports begins by reading `ctx->operation` and
+//! `ctx->op.ciph.algctx`, and those belong to the `EVP_PKEY_CTX` object that landed in 7.4c-i.
 //!
 //! ## The structural check is six counters and one cross-product
 //!
@@ -36,7 +37,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_void};
+use core::ffi::{c_char, c_int, c_void, CStr};
 use core::ptr;
 use core::sync::atomic::{AtomicI32, Ordering};
 
@@ -46,11 +47,25 @@ use crate::evp::fetch::{
     evp_generic_do_all, evp_generic_fetch, evp_generic_fetch_from_prov, evp_is_a, evp_names_do_all,
     GenericDoAllFn, MethodFromAlgorithmFn,
 };
+use crate::evp::keymgmt::{
+    evp_keymgmt_fetch_from_prov, EVP_KEYMGMT_free, EVP_KEYMGMT_get0_name,
+    EVP_KEYMGMT_get0_provider, EvpKeyMgmt,
+};
+use crate::evp::keymgmt_lib::evp_keymgmt_util_query_operation_name;
+use crate::evp::pkey::evp_pkey_export_to_provider;
+use crate::evp::pkey_ctx::{
+    evp_pkey_ctx_free_old_ops, EvpPkeyCtx, EVP_PKEY_OP_DECRYPT, EVP_PKEY_OP_ENCRYPT,
+    EVP_PKEY_OP_UNDEFINED,
+};
 use crate::params::OsslParam;
 use crate::property::store::{MethodFreeFn, MethodUpRefFn};
 use crate::provider::activate::OsslAlgorithm;
 use crate::provider::{ossl_provider_ctx, ossl_provider_free, ossl_provider_up_ref, OsslProvider};
-use crate::runtime::err::{err_sites, raise_site};
+use crate::runtime::bio::print::BIO_snprintf;
+use crate::runtime::err::{
+    err_sites, raise_site, raise_site_data, ERR_clear_last_mark, ERR_count_to_mark,
+    ERR_pop_to_mark, ERR_set_mark,
+};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 
 /// `OSSL_OP_ASYM_CIPHER` — `include/openssl/core_dispatch.h`.
@@ -58,6 +73,9 @@ pub(crate) const OSSL_OP_ASYM_CIPHER: c_int = 13;
 
 /// The authority's translation unit, so a failing allocation records its coordinates.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/asymcipher.c".as_ptr();
+/// The buffer size the authority's `ERR_raise_data` messages are formatted into —
+/// `ERR_MAX_DATA_SIZE`, `include/internal/err.h`.
+const ERR_DATA_BUFFER: usize = 1024;
 /// `evp_asym_cipher_new`'s `OPENSSL_zalloc(sizeof(EVP_ASYM_CIPHER))` (line 352).
 const LINE_ZALLOC_CIPHER: c_int = 352;
 /// `EVP_ASYM_CIPHER_free`'s `OPENSSL_free(cipher->type_name)` (line 494).
@@ -422,7 +440,7 @@ pub unsafe extern "C" fn EVP_ASYM_CIPHER_fetch(
 ///
 /// # Safety
 /// `prov` must be live; `algorithm` and `properties` NULL or NUL-terminated.
-#[allow(dead_code)] // first live caller is `evp_pkey_asym_cipher_init`, which lands with 7.4c's context
+#[allow(dead_code)] // first live caller is `evp_pkey_asym_cipher_init`
 pub(crate) unsafe fn evp_asym_cipher_fetch_from_prov(
     prov: *mut OsslProvider,
     algorithm: *const c_char,
@@ -598,6 +616,532 @@ pub unsafe extern "C" fn EVP_ASYM_CIPHER_settable_ctx_params(
     // SAFETY: `settable` is the provider's own callback and a NULL operation context is what the
     // authority passes here.
     unsafe { settable(ptr::null_mut(), provctx) }
+}
+
+// ---------------------------------------------------------------------------------------------
+// The operation half — `evp_pkey_asym_cipher_init` and the six exports over it.
+//
+// These are the functions that read `ctx->operation` and `ctx->op.ciph.algctx`, which is why they
+// land after the `EVP_PKEY_CTX` object (7.4c-i) rather than with the method object above.
+// ---------------------------------------------------------------------------------------------
+
+/// `#define evp_pkey_ctx_is_legacy(ctx)` — `include/crypto/evp.h:35`.
+///
+/// **A header macro, and not what its name suggests**: it is `keymgmt == NULL`, not
+/// `pmeth != NULL`. That distinction matters here, because this crate's `pmeth` is always NULL
+/// while its `keymgmt` is not always set — so the test is *reachable* even though the `legacy:` arm
+/// it jumps to, which builds a legacy `EVP_PKEY_CTX`, is not representable in this crate at all.
+fn evp_pkey_ctx_is_legacy(ctx: &EvpPkeyCtx) -> bool {
+    ctx.keymgmt.is_null()
+}
+
+/// `cipher->description != NULL ? cipher->description : ""` — the empty string is the authority's
+/// fallback and not an accident: a court reads the message to tell one provider from another.
+///
+/// # Safety
+/// `cipher` must be live.
+unsafe fn asym_cipher_description(cipher: *const EvpAsymCipher) -> *const c_char {
+    // SAFETY: `cipher` is live per the contract.
+    let description = unsafe { (*cipher).description };
+    if description.is_null() {
+        c"".as_ptr()
+    } else {
+        description
+    }
+}
+
+/// Raise `EVP_R_PROVIDER_ASYM_CIPHER_NOT_SUPPORTED` with the authority's message for one clause.
+///
+/// The message is `%s <clause>:%s` — the method's type name, the operation, and its description —
+/// which is what makes the failing clause identifiable from the error queue alone.
+///
+/// # Safety
+/// `cipher` must be live.
+unsafe fn raise_clause(cipher: *const EvpAsymCipher, site: &err_sites::ErrSite, clause: &CStr) {
+    // SAFETY: `cipher` is live and `type_name` is a NUL-terminated string it owns.
+    let type_name = unsafe { (*cipher).type_name };
+    // SAFETY: `cipher` is live.
+    let desc = unsafe { asym_cipher_description(cipher) };
+    let mut msg = [0 as c_char; ERR_DATA_BUFFER];
+    // SAFETY: `msg` is 1024 writable bytes and `type_name` is NUL-terminated.
+    unsafe { BIO_snprintf(msg.as_mut_ptr(), msg.len(), c"%s ".as_ptr(), type_name) };
+    let mut full = [0 as c_char; ERR_DATA_BUFFER];
+    // SAFETY: `full` is 1024 writable bytes; all four arguments are NUL-terminated.
+    unsafe {
+        BIO_snprintf(
+            full.as_mut_ptr(),
+            full.len(),
+            c"%s%s:%s".as_ptr(),
+            msg.as_ptr(),
+            clause.as_ptr(),
+            desc,
+        )
+    };
+    // SAFETY: a compile-time-constant site; the message is NUL-terminated.
+    unsafe { raise_site_data(site, full.as_ptr()) };
+}
+
+/// The authority's `err:` label — `crypto/evp/asymcipher.c:223`.
+///
+/// `ret` is the caller's running result, so a non-positive one tears the half-built operation back
+/// down and leaves the context `UNDEFINED` — which is what makes a failed `_init` re-initialisable
+/// rather than half-bound.
+///
+/// # Safety
+/// `ctx` must be live; `tmp_keymgmt` NULL or live.
+unsafe fn asym_cipher_init_err(
+    ctx: *mut EvpPkeyCtx,
+    tmp_keymgmt: *mut EvpKeyMgmt,
+    ret: c_int,
+) -> c_int {
+    if ret <= 0 {
+        // SAFETY: `ctx` is live.
+        unsafe { evp_pkey_ctx_free_old_ops(ctx) };
+        // SAFETY: `ctx` is live.
+        unsafe { (*ctx).operation = EVP_PKEY_OP_UNDEFINED };
+    }
+    // SAFETY: `tmp_keymgmt` is NULL or live.
+    unsafe { EVP_KEYMGMT_free(tmp_keymgmt) };
+    ret
+}
+
+/// The authority's `legacy:` label — `crypto/evp/asymcipher.c:194`.
+///
+/// Three of the four ways to arrive here have already dropped `cipher` — the second fetch returning
+/// NULL, and the post-loop `provkey == NULL` test — and the fourth, the `evp_pkey_ctx_is_legacy`
+/// entry, never took one. So the label holds no live method and the authority frees none here
+/// either.
+///
+/// The body is a refusal, and the reason is structural rather than chosen: `ctx->pmeth` belongs to
+/// `EVP_PKEY_METHOD`, which is Phase 8's, so `ctx->pmeth == NULL` always and the authority's
+/// `if (ctx->pmeth == NULL || ctx->pmeth->encrypt == NULL)` is satisfied on every arrival. The arm
+/// it guards is the one that hands the operation to a legacy method, which is the branch this crate
+/// cannot represent.
+///
+/// # Safety
+/// `tmp_keymgmt` NULL or live.
+unsafe fn asym_cipher_init_legacy(tmp_keymgmt: *mut EvpKeyMgmt) -> c_int {
+    ERR_pop_to_mark();
+    // SAFETY: `tmp_keymgmt` is NULL or live.
+    unsafe { EVP_KEYMGMT_free(tmp_keymgmt) };
+    // SAFETY: a compile-time-constant site.
+    unsafe { raise_site(&err_sites::ASYMCIPHER_204) };
+    -2
+}
+
+/// `static int evp_pkey_asym_cipher_init(EVP_PKEY_CTX *ctx, int operation,
+/// const OSSL_PARAM params[])` — `crypto/evp/asymcipher.c:34`.
+///
+/// Two iterations of one fetch, and the second is not a retry: the first asks by *property query*
+/// and the second asks the same question of the **provider that owns the key**, which is the only
+/// way to reach an algorithm a property query would not select. The key is then exported to
+/// whichever provider answered, and when neither does the authority falls through to its legacy
+/// half — which in this crate is the refusal above.
+///
+/// # Safety
+/// `ctx` NULL or live; `params` NULL or a terminated array.
+unsafe fn evp_pkey_asym_cipher_init(
+    ctx: *mut EvpPkeyCtx,
+    operation: c_int,
+    params: *const OsslParam,
+) -> c_int {
+    if ctx.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::ASYMCIPHER_43) };
+        return -2;
+    }
+
+    // SAFETY: `ctx` is live.
+    unsafe { evp_pkey_ctx_free_old_ops(ctx) };
+    // SAFETY: `ctx` is live.
+    unsafe { (*ctx).operation = operation };
+
+    ERR_set_mark();
+
+    // SAFETY: `ctx` is live.
+    if evp_pkey_ctx_is_legacy(unsafe { &*ctx }) {
+        // SAFETY: `tmp_keymgmt` is NULL or live at this label, and the arm frees it and refuses without touching another pointer.
+        return unsafe { asym_cipher_init_legacy(ptr::null_mut()) };
+    }
+
+    // SAFETY: `ctx` is live.
+    if unsafe { (*ctx).pkey }.is_null() {
+        ERR_clear_last_mark();
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::ASYMCIPHER_57) };
+        // SAFETY: `ctx` is live and the second argument is a literal NULL.
+        return unsafe { asym_cipher_init_err(ctx, ptr::null_mut(), 0) };
+    }
+
+    /* The key's own method and the context's must be the same one, or the key must not be bound
+     * to a method at all. `ossl_assert` under `NDEBUG` is `(x) != 0`, so this is a live refusal
+     * and not a debug-only abort (`docs/DECISIONS.md` D167). */
+    // SAFETY: `ctx` is live and its `pkey` is non-NULL.
+    let pkey_keymgmt = unsafe { (*(*ctx).pkey).keymgmt };
+    // SAFETY: `ctx` is live.
+    if !(pkey_keymgmt.is_null() || pkey_keymgmt == unsafe { (*ctx).keymgmt }) {
+        ERR_clear_last_mark();
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::ASYMCIPHER_67) };
+        // SAFETY: `ctx` is live and the second argument is a literal NULL.
+        return unsafe { asym_cipher_init_err(ctx, ptr::null_mut(), 0) };
+    }
+
+    // SAFETY: `ctx` is live.
+    let ctx_keymgmt = unsafe { (*ctx).keymgmt };
+    // SAFETY: `ctx_keymgmt` is live — the context is provided-side, so it has a method.
+    let supported_ciph =
+        unsafe { evp_keymgmt_util_query_operation_name(ctx_keymgmt, OSSL_OP_ASYM_CIPHER) };
+    if supported_ciph.is_null() {
+        ERR_clear_last_mark();
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::ASYMCIPHER_75) };
+        // SAFETY: `ctx` is live and the second argument is a literal NULL.
+        return unsafe { asym_cipher_init_err(ctx, ptr::null_mut(), 0) };
+    }
+
+    let mut cipher: *mut EvpAsymCipher = ptr::null_mut();
+    let mut tmp_keymgmt: *mut EvpKeyMgmt = ptr::null_mut();
+    let mut tmp_prov: *const OsslProvider = ptr::null();
+    let mut provkey: *mut c_void = ptr::null_mut();
+
+    let mut iter: c_int = 1;
+    while iter < 3 && provkey.is_null() {
+        // SAFETY: `cipher` is NULL or live.
+        unsafe { EVP_ASYM_CIPHER_free(cipher) };
+        // SAFETY: `tmp_keymgmt` is NULL or live.
+        unsafe { EVP_KEYMGMT_free(tmp_keymgmt) };
+        tmp_keymgmt = ptr::null_mut();
+
+        if iter == 1 {
+            // SAFETY: `ctx` is live.
+            let (libctx, propquery) = unsafe { ((*ctx).libctx, (*ctx).propquery) };
+            // SAFETY: `libctx` is live and `supported_ciph` is NUL-terminated.
+            cipher = unsafe { EVP_ASYM_CIPHER_fetch(libctx, supported_ciph, propquery) };
+            if !cipher.is_null() {
+                // SAFETY: `cipher` is live.
+                tmp_prov = unsafe { EVP_ASYM_CIPHER_get0_provider(cipher) };
+            }
+        } else {
+            // SAFETY: `ctx_keymgmt` is live.
+            tmp_prov = unsafe { EVP_KEYMGMT_get0_provider(ctx_keymgmt) };
+            // SAFETY: `ctx` is live.
+            let propquery = unsafe { (*ctx).propquery };
+            // SAFETY: `tmp_prov` is live and `supported_ciph` is NUL-terminated.
+            cipher = unsafe {
+                evp_asym_cipher_fetch_from_prov(tmp_prov.cast_mut(), supported_ciph, propquery)
+            };
+            if cipher.is_null() {
+                // SAFETY: `tmp_keymgmt` is NULL or live at this label, and the arm frees it and refuses without touching another pointer.
+                return unsafe { asym_cipher_init_legacy(tmp_keymgmt) };
+            }
+        }
+
+        if !cipher.is_null() {
+            // SAFETY: `ctx_keymgmt` is live and its name is NUL-terminated; `ctx` is live.
+            let (name, propquery) =
+                unsafe { (EVP_KEYMGMT_get0_name(ctx_keymgmt), (*ctx).propquery) };
+            // SAFETY: `tmp_prov` is live and `name` is NUL-terminated.
+            let tmp_keymgmt_tofree =
+                unsafe { evp_keymgmt_fetch_from_prov(tmp_prov.cast_mut(), name, propquery) };
+            tmp_keymgmt = tmp_keymgmt_tofree;
+            if !tmp_keymgmt.is_null() {
+                // SAFETY: `ctx` is live.
+                let (pkey, libctx) = unsafe { ((*ctx).pkey, (*ctx).libctx) };
+                // SAFETY: `pkey` is live, and `tmp_keymgmt` is a live local whose address is valid
+                // for the call -- which may replace it, and is the whole reason it is passed by
+                // address rather than by value.
+                provkey = unsafe {
+                    evp_pkey_export_to_provider(
+                        pkey,
+                        libctx,
+                        ptr::addr_of_mut!(tmp_keymgmt),
+                        propquery,
+                    )
+                };
+            }
+            if tmp_keymgmt.is_null() {
+                // SAFETY: `tmp_keymgmt_tofree` is NULL or live and the caller dropped it.
+                unsafe { EVP_KEYMGMT_free(tmp_keymgmt_tofree) };
+            }
+        }
+        iter += 1;
+    }
+
+    if provkey.is_null() {
+        // SAFETY: `cipher` is NULL or live.
+        unsafe { EVP_ASYM_CIPHER_free(cipher) };
+        // SAFETY: `tmp_keymgmt` is NULL or live at this label, and the arm frees it and refuses without touching another pointer.
+        return unsafe { asym_cipher_init_legacy(tmp_keymgmt) };
+    }
+
+    ERR_pop_to_mark();
+
+    /* No more legacy from here down to `legacy:`. */
+
+    // SAFETY: `ctx` is live and `cipher` is live.
+    unsafe { (*ctx).op_ciph_cipher = cipher };
+    /* `newctx` is mandatory: `evp_asym_cipher_from_algorithm` refuses a provider that publishes no
+     * `OSSL_FUNC_ASYM_CIPHER_NEWCTX`, so a fetched method always has one and the `else` below is
+     * unreachable. It is written out rather than `unwrap`ped because the crate denies `unwrap_used`,
+     * and because the answer it gives is the authority's own INITIALIZATION_ERROR. */
+    // SAFETY: `cipher` is live.
+    let Some(newctx) = (unsafe { (*cipher).newctx }) else {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::ASYMCIPHER_160) };
+        // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+        return unsafe { asym_cipher_init_err(ctx, tmp_keymgmt, 0) };
+    };
+    // SAFETY: `newctx` is the provider's own callback and `(*cipher).prov` is live.
+    let algctx = unsafe { newctx(ossl_provider_ctx((*cipher).prov)) };
+    // SAFETY: `ctx` is live.
+    unsafe { (*ctx).op_ciph_algctx = algctx };
+    if algctx.is_null() {
+        /* The provider key can stay in the cache. */
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::ASYMCIPHER_160) };
+        // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+        return unsafe { asym_cipher_init_err(ctx, tmp_keymgmt, 0) };
+    }
+
+    let ret = match operation {
+        EVP_PKEY_OP_ENCRYPT => {
+            // SAFETY: `cipher` is live.
+            let encrypt_init = unsafe { (*cipher).encrypt_init };
+            let Some(encrypt_init) = encrypt_init else {
+                // SAFETY: `cipher` is live.
+                unsafe { raise_clause(cipher, &err_sites::ASYMCIPHER_168, c"encrypt_init") };
+                // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+                return unsafe { asym_cipher_init_err(ctx, tmp_keymgmt, -2) };
+            };
+            // SAFETY: `algctx` is non-NULL, `provkey` is non-NULL, and `params` is NULL or a
+            // terminated array — the provider's own callback contract.
+            unsafe { encrypt_init(algctx, provkey, params) }
+        }
+        EVP_PKEY_OP_DECRYPT => {
+            // SAFETY: `cipher` is live.
+            let decrypt_init = unsafe { (*cipher).decrypt_init };
+            let Some(decrypt_init) = decrypt_init else {
+                // SAFETY: `cipher` is live.
+                unsafe { raise_clause(cipher, &err_sites::ASYMCIPHER_177, c"decrypt_init") };
+                // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+                return unsafe { asym_cipher_init_err(ctx, tmp_keymgmt, -2) };
+            };
+            // SAFETY: as above.
+            unsafe { decrypt_init(algctx, provkey, params) }
+        }
+        _ => {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::ASYMCIPHER_185) };
+            // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+            return unsafe { asym_cipher_init_err(ctx, tmp_keymgmt, 0) };
+        }
+    };
+
+    if ret <= 0 {
+        // SAFETY: `ctx` is live and `tmp_keymgmt` is NULL or live.
+        return unsafe { asym_cipher_init_err(ctx, tmp_keymgmt, ret) };
+    }
+    // SAFETY: `tmp_keymgmt` is NULL or live.
+    unsafe { EVP_KEYMGMT_free(tmp_keymgmt) };
+    1
+}
+
+/// `int EVP_PKEY_encrypt_init(EVP_PKEY_CTX *ctx)`.
+///
+/// # Safety
+/// `ctx` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_encrypt_init(ctx: *mut EvpPkeyCtx) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    unsafe { evp_pkey_asym_cipher_init(ctx, EVP_PKEY_OP_ENCRYPT, ptr::null()) }
+}
+
+/// `int EVP_PKEY_encrypt_init_ex(EVP_PKEY_CTX *ctx, const OSSL_PARAM params[])`.
+///
+/// # Safety
+/// `ctx` must be live; `params` NULL or a terminated array.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_encrypt_init_ex(
+    ctx: *mut EvpPkeyCtx,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { evp_pkey_asym_cipher_init(ctx, EVP_PKEY_OP_ENCRYPT, params) }
+}
+
+/// `int EVP_PKEY_encrypt(EVP_PKEY_CTX *ctx, unsigned char *out, size_t *outlen,
+/// const unsigned char *in, size_t inlen)` — `crypto/evp/asymcipher.c:242`.
+///
+/// The `out == NULL` case is not a query here: the authority passes **0** as the caller's buffer
+/// length rather than skipping the operation, so a provider that sizes its answer from `*outlen`
+/// sees a zero and a provider that ignores it sees a NULL buffer. The distinction is the
+/// provider's, and this function must not make it.
+///
+/// The mark discipline is the other half: the provider's own error survives, and
+/// `EVP_R_PROVIDER_ASYM_CIPHER_FAILURE` is raised **only** when it failed silently
+/// (`ERR_count_to_mark() == 0`).
+///
+/// # Safety
+/// `ctx` NULL or live; `out` NULL or `*outlen` writable bytes; `in` `inlen` readable bytes.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_encrypt(
+    ctx: *mut EvpPkeyCtx,
+    out: *mut u8,
+    outlen: *mut usize,
+    input: *const u8,
+    inlen: usize,
+) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe {
+        evp_pkey_asym_cipher_operate(
+            ctx,
+            EVP_PKEY_OP_ENCRYPT,
+            out,
+            outlen,
+            input,
+            inlen,
+            &err_sites::ASYMCIPHER_251,
+            &err_sites::ASYMCIPHER_256,
+            &err_sites::ASYMCIPHER_268,
+            &err_sites::ASYMCIPHER_275,
+            c"encrypt",
+        )
+    }
+}
+
+/// `int EVP_PKEY_decrypt_init(EVP_PKEY_CTX *ctx)`.
+///
+/// # Safety
+/// `ctx` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_decrypt_init(ctx: *mut EvpPkeyCtx) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    unsafe { evp_pkey_asym_cipher_init(ctx, EVP_PKEY_OP_DECRYPT, ptr::null()) }
+}
+
+/// `int EVP_PKEY_decrypt_init_ex(EVP_PKEY_CTX *ctx, const OSSL_PARAM params[])`.
+///
+/// # Safety
+/// `ctx` must be live; `params` NULL or a terminated array.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_decrypt_init_ex(
+    ctx: *mut EvpPkeyCtx,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { evp_pkey_asym_cipher_init(ctx, EVP_PKEY_OP_DECRYPT, params) }
+}
+
+/// `int EVP_PKEY_decrypt(EVP_PKEY_CTX *ctx, unsigned char *out, size_t *outlen,
+/// const unsigned char *in, size_t inlen)`.
+///
+/// # Safety
+/// `ctx` NULL or live; `out` NULL or `*outlen` writable bytes; `in` `inlen` readable bytes.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_decrypt(
+    ctx: *mut EvpPkeyCtx,
+    out: *mut u8,
+    outlen: *mut usize,
+    input: *const u8,
+    inlen: usize,
+) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe {
+        evp_pkey_asym_cipher_operate(
+            ctx,
+            EVP_PKEY_OP_DECRYPT,
+            out,
+            outlen,
+            input,
+            inlen,
+            &err_sites::ASYMCIPHER_300,
+            &err_sites::ASYMCIPHER_305,
+            &err_sites::ASYMCIPHER_317,
+            &err_sites::ASYMCIPHER_325,
+            c"decrypt",
+        )
+    }
+}
+
+/// The shared body of `EVP_PKEY_encrypt` and `EVP_PKEY_decrypt`, which differ in four constants
+/// and one callback. Written as one function because the authority writes them as two functions of
+/// thirteen lines each that are the same thirteen lines — and because the *marks* have to be the
+/// same three calls in the same order for the error queue to match.
+///
+/// # Safety
+/// `ctx` NULL or live; `out` NULL or `*outlen` writable bytes; `in` `inlen` readable bytes.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's two signatures exactly
+unsafe fn evp_pkey_asym_cipher_operate(
+    ctx: *mut EvpPkeyCtx,
+    operation: c_int,
+    out: *mut u8,
+    outlen: *mut usize,
+    input: *const u8,
+    inlen: usize,
+    null_site: &err_sites::ErrSite,
+    not_init_site: &err_sites::ErrSite,
+    failure_site: &err_sites::ErrSite,
+    legacy_site: &err_sites::ErrSite,
+    clause: &CStr,
+) -> c_int {
+    if ctx.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(null_site) };
+        return -2;
+    }
+
+    // SAFETY: `ctx` is live.
+    if unsafe { (*ctx).operation } != operation {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(not_init_site) };
+        return -1;
+    }
+
+    // SAFETY: `ctx` is live.
+    let algctx = unsafe { (*ctx).op_ciph_algctx };
+    if algctx.is_null() {
+        /* The authority's `goto legacy`. `ctx->pmeth` is Phase 8's and always NULL here, so
+         * `ctx->pmeth == NULL || ctx->pmeth->encrypt == NULL` is satisfied on arrival. */
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(legacy_site) };
+        return -2;
+    }
+
+    // SAFETY: `ctx` is live and the operation is bound, so the method is live.
+    let cipher = unsafe { (*ctx).op_ciph_cipher };
+    ERR_set_mark();
+    /* The authority passes the caller's own length, or **0** when there is no output buffer — it
+     * does not skip the operation. Which of the two the provider sees is the provider's business,
+     * so this function must not decide it. */
+    let mut outlen_in: usize = 0;
+    if !out.is_null() {
+        // SAFETY: `out` is non-NULL, so `outlen` is the caller's valid buffer length per this
+        // function's contract.
+        outlen_in = unsafe { *outlen };
+    }
+    // SAFETY: `cipher` is live, and the callback for the operation that bound it is present:
+    // `evp_pkey_asym_cipher_init` refused a method whose callback was absent, and
+    // `operation == (*ctx).operation` above is what establishes which one was selected.
+    let f = unsafe {
+        if operation == EVP_PKEY_OP_ENCRYPT {
+            (*cipher).encrypt
+        } else {
+            (*cipher).decrypt
+        }
+    };
+    let ret = match f {
+        // SAFETY: the provider's own callback, called with exactly the arguments the authority
+        // passes: the operation context, the caller's buffers, and the length or 0.
+        Some(f) => unsafe { f(algctx, out, outlen, outlen_in, input, inlen) },
+        None => 0,
+    };
+    if ret <= 0 && ERR_count_to_mark() == 0 {
+        // SAFETY: `cipher` is live.
+        unsafe { raise_clause(cipher, failure_site, clause) };
+    }
+    ERR_clear_last_mark();
+    ret
 }
 
 // SPDX-License-Identifier: Apache-2.0

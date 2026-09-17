@@ -9921,3 +9921,69 @@ the error the site raises. It now says what it is.
 
 **What this does not change:** no behaviour, no courtroom, no obligation. `D-GF2M-1`'s divergence
 is unaffected -- it is about blinding, not about `ossl_assert`.
+
+## D168 — 7.4b-iii's first unit: `asymcipher.c`'s operation half, and `evp_pkey_ctx_is_legacy` is a header macro
+
+7.4b is the five method-object families *with their `EVP_PKEY_*` operations*, and the plan's row
+already said so; the crate's `src/evp/asymcipher.rs` module doc disagreed, saying its operation half
+"is `EVP_PKEY_CTX` work and lands with 7.4c's context". Both are now true at once and that is the
+right shape: the operations *belong to* 7.4b and could not be *written* before 7.4c-i landed the
+`EVP_PKEY_CTX` object they read. The doc now says that instead of the weaker thing.
+
+**One macro decides whether a branch is dead, and it is not what its name says.**
+
+```c
+/* include/crypto/evp.h:35 */
+#define evp_pkey_ctx_is_legacy(ctx) \
+    ((ctx)->keymgmt == NULL)
+```
+
+`pkey == NULL`, `pmeth == NULL`, `engine != NULL` — none of those is the test. It is `keymgmt == NULL`,
+and in this crate that is a *reachable* state: `EVP_PKEY_CTX_new_id`-style construction and a context
+whose key has not been assigned both produce it. So the authority's
+
+```c
+if (evp_pkey_ctx_is_legacy(ctx))
+    goto legacy;
+```
+
+is live here, and the label it jumps to is **not** dead code. A transcription that read the macro by
+its name would have concluded the opposite, dropped the label, and let `EVP_PKEY_encrypt_init` fall
+through to the provider path with `ctx->op.ciph.cipher` never set — a NULL method dereferenced at the
+first operation. The name is the hazard, not the branch.
+
+**The `legacy:` label is a refusal, and the reason is structural rather than chosen.** Its body tests
+`ctx->pmeth == NULL || ctx->pmeth->encrypt == NULL`, and `pmeth` is `EVP_PKEY_METHOD`'s, which is
+Phase 8's (D163, D165). So the condition is satisfied on all three ways in — the macro above, the
+second fetch returning NULL, and the post-loop `provkey == NULL` — and the arm it guards is the one
+that hands the operation to a legacy method, which this crate cannot represent. Three of the arrivals
+have already dropped `cipher` and the fourth never took one, which is why the label frees no method
+here; the authority does not free one there either.
+
+**The two-iteration fetch is not a retry.** The first iteration asks `EVP_ASYM_CIPHER_fetch` by
+*property query*; the second asks `evp_asym_cipher_fetch_from_prov` for the same name at the
+**provider that owns the key**, which is the only way to reach an algorithm a property query would not
+select. The key is then exported to whichever provider answered, and `tmp_keymgmt` is passed to
+`evp_pkey_export_to_provider` **by address** because that call may replace it — which is also why the
+copy taken before the call is what gets freed when the callee NULLs it. Neither half of that survives
+being "simplified".
+
+**`out == NULL` is not a query mode.** The authority passes the caller's length, or **0** when there is
+no output buffer — it does not skip the operation and does not pass a NULL length. A provider that
+sizes its answer from `*outlen` therefore sees a zero, and one that ignores it sees a NULL buffer. The
+distinction is the provider's to make, so the crate makes neither choice.
+
+**The mark discipline is three calls and they are contract.** `EVP_PKEY_encrypt` sets a mark, runs the
+provider's callback, and raises `EVP_R_PROVIDER_ASYM_CIPHER_FAILURE` **only** when the callback failed
+*silently* — `ret <= 0 && ERR_count_to_mark() == 0`. A provider that raised its own error keeps it, and
+the mark is cleared either way. The raised message is `"%s <clause>:%s"` over the method's type name
+and its description, which is what makes the failing clause identifiable from the queue alone.
+
+**What landed:** `evp_pkey_asym_cipher_init` and its six exports — `EVP_PKEY_encrypt_init`,
+`_encrypt_init_ex`, `EVP_PKEY_encrypt`, `EVP_PKEY_decrypt_init`, `_decrypt_init_ex`,
+`EVP_PKEY_decrypt`. `implemented[libcrypto]` moves 1543 -> 1549, and the six names leave the shell's
+scaffold list. `evp_asym_cipher_fetch_from_prov`'s `#[allow(dead_code)]` is retired: its first live
+caller has arrived, which is what the comment on it said to wait for.
+
+**Still open in 7.4b-iii:** `kem.c`'s six, `exchange.c`'s six, and `signature.c`'s eighteen — the last
+of which is where `EVP_PKEY_CTX_set_signature` and the four `*_message_*` pairs live.
