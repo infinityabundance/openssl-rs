@@ -57,17 +57,17 @@ use crate::runtime::err::{err_sites, raise_site};
 /// `OSSL_KDF_NAME_SCRYPT` — `include/openssl/core_names.h`, the generated one.
 const OSSL_KDF_NAME_SCRYPT: *const c_char = c"SCRYPT".as_ptr();
 /// `OSSL_KDF_PARAM_PASSWORD`.
-const OSSL_KDF_PARAM_PASSWORD: *const c_char = c"pass".as_ptr();
+pub(crate) const OSSL_KDF_PARAM_PASSWORD: *const c_char = c"pass".as_ptr();
 /// `OSSL_KDF_PARAM_SALT`.
-const OSSL_KDF_PARAM_SALT: *const c_char = c"salt".as_ptr();
+pub(crate) const OSSL_KDF_PARAM_SALT: *const c_char = c"salt".as_ptr();
 /// `OSSL_KDF_PARAM_SCRYPT_N`.
-const OSSL_KDF_PARAM_SCRYPT_N: *const c_char = c"n".as_ptr();
+pub(crate) const OSSL_KDF_PARAM_SCRYPT_N: *const c_char = c"n".as_ptr();
 /// `OSSL_KDF_PARAM_SCRYPT_R`.
-const OSSL_KDF_PARAM_SCRYPT_R: *const c_char = c"r".as_ptr();
+pub(crate) const OSSL_KDF_PARAM_SCRYPT_R: *const c_char = c"r".as_ptr();
 /// `OSSL_KDF_PARAM_SCRYPT_P`.
-const OSSL_KDF_PARAM_SCRYPT_P: *const c_char = c"p".as_ptr();
+pub(crate) const OSSL_KDF_PARAM_SCRYPT_P: *const c_char = c"p".as_ptr();
 /// `OSSL_KDF_PARAM_SCRYPT_MAXMEM`.
-const OSSL_KDF_PARAM_SCRYPT_MAXMEM: *const c_char = c"maxmem_bytes".as_ptr();
+pub(crate) const OSSL_KDF_PARAM_SCRYPT_MAXMEM: *const c_char = c"maxmem_bytes".as_ptr();
 
 /// `SCRYPT_MAX_MEM` — `crypto/evp/pbe_scrypt.c:34`, the `#else` arm, because this build does not
 /// define the Configure option. 32 MB.

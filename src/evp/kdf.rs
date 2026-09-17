@@ -69,7 +69,7 @@ const OSSL_OP_KDF: c_int = 4;
 
 /// `EVP_KDF_CTX_set_SKEY`'s default parameter name — `include/openssl/core_names.h`. Used when the
 /// caller does not name the parameter the exported bytes should be set under.
-const OSSL_KDF_PARAM_KEY: *const c_char = c"key".as_ptr();
+pub(crate) const OSSL_KDF_PARAM_KEY: *const c_char = c"key".as_ptr();
 
 /// The authority's translation unit, so a failing allocation or free records its coordinates.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/kdf_lib.c".as_ptr();

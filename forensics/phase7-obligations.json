@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 924,
       "deferred_to_later_phase": 164,
-      "implemented": 527,
-      "open_in_this_stratum": 259,
+      "implemented": 556,
+      "open_in_this_stratum": 230,
       "owned": 950,
       "received_by_handoff": 26
     },
@@ -1476,6 +1476,11 @@
       "EVP_MD_xof",
       "EVP_PBE_scrypt",
       "EVP_PBE_scrypt_ex",
+      "EVP_PKEY_CTX_add1_hkdf_info",
+      "EVP_PKEY_CTX_add1_tls1_prf_seed",
+      "EVP_PKEY_CTX_ctrl",
+      "EVP_PKEY_CTX_ctrl_str",
+      "EVP_PKEY_CTX_ctrl_uint64",
       "EVP_PKEY_CTX_dup",
       "EVP_PKEY_CTX_free",
       "EVP_PKEY_CTX_get0_libctx",
@@ -1483,22 +1488,46 @@
       "EVP_PKEY_CTX_get0_pkey",
       "EVP_PKEY_CTX_get0_propq",
       "EVP_PKEY_CTX_get0_provider",
+      "EVP_PKEY_CTX_get1_id",
+      "EVP_PKEY_CTX_get1_id_len",
       "EVP_PKEY_CTX_get_app_data",
       "EVP_PKEY_CTX_get_cb",
       "EVP_PKEY_CTX_get_data",
       "EVP_PKEY_CTX_get_keygen_info",
       "EVP_PKEY_CTX_get_operation",
+      "EVP_PKEY_CTX_get_params",
+      "EVP_PKEY_CTX_get_signature_md",
       "EVP_PKEY_CTX_gettable_params",
+      "EVP_PKEY_CTX_hex2ctrl",
       "EVP_PKEY_CTX_is_a",
+      "EVP_PKEY_CTX_md",
       "EVP_PKEY_CTX_new",
       "EVP_PKEY_CTX_new_from_name",
       "EVP_PKEY_CTX_new_from_pkey",
       "EVP_PKEY_CTX_new_id",
       "EVP_PKEY_CTX_set0_keygen_info",
+      "EVP_PKEY_CTX_set1_hkdf_key",
+      "EVP_PKEY_CTX_set1_hkdf_salt",
+      "EVP_PKEY_CTX_set1_id",
+      "EVP_PKEY_CTX_set1_pbe_pass",
+      "EVP_PKEY_CTX_set1_scrypt_salt",
+      "EVP_PKEY_CTX_set1_tls1_prf_secret",
       "EVP_PKEY_CTX_set_app_data",
       "EVP_PKEY_CTX_set_cb",
       "EVP_PKEY_CTX_set_data",
+      "EVP_PKEY_CTX_set_hkdf_md",
+      "EVP_PKEY_CTX_set_hkdf_mode",
+      "EVP_PKEY_CTX_set_kem_op",
+      "EVP_PKEY_CTX_set_mac_key",
+      "EVP_PKEY_CTX_set_params",
+      "EVP_PKEY_CTX_set_scrypt_N",
+      "EVP_PKEY_CTX_set_scrypt_maxmem_bytes",
+      "EVP_PKEY_CTX_set_scrypt_p",
+      "EVP_PKEY_CTX_set_scrypt_r",
+      "EVP_PKEY_CTX_set_signature_md",
+      "EVP_PKEY_CTX_set_tls1_prf_md",
       "EVP_PKEY_CTX_settable_params",
+      "EVP_PKEY_CTX_str2ctrl",
       "EVP_PKEY_asn1_add0",
       "EVP_PKEY_asn1_add_alias",
       "EVP_PKEY_asn1_copy",
@@ -2279,48 +2308,6 @@
         "symbol": "EVP_PBE_get"
       },
       {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_add1_hkdf_info"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_add1_tls1_prf_seed"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_ctrl"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_ctrl_str"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_ctrl_uint64"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_get1_id"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_get1_id_len"
-      },
-      {
         "declaring_header": "evp.h",
         "module": "src/evp/pkey_ctx.rs",
         "received_from_phase": null,
@@ -2342,66 +2329,6 @@
         "declaring_header": "evp.h",
         "module": "src/evp/pkey_ctx.rs",
         "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_get_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_get_signature_md"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_hex2ctrl"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_md"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_set1_hkdf_key"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_set1_hkdf_salt"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_set1_id"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_set1_pbe_pass"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_set1_scrypt_salt"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_set1_tls1_prf_secret"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
         "symbol": "EVP_PKEY_CTX_set_algor_params"
       },
       {
@@ -2411,82 +2338,10 @@
         "symbol": "EVP_PKEY_CTX_set_group_name"
       },
       {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_set_hkdf_md"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_set_hkdf_mode"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_set_kem_op"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_set_mac_key"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_set_params"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_set_scrypt_N"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_set_scrypt_maxmem_bytes"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_set_scrypt_p"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_set_scrypt_r"
-      },
-      {
         "declaring_header": "evp.h",
         "module": "src/evp/pkey_ctx.rs",
         "received_from_phase": null,
         "symbol": "EVP_PKEY_CTX_set_signature"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_set_signature_md"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_set_tls1_prf_md"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_str2ctrl"
       },
       {
         "declaring_header": "evp.h",
@@ -3586,12 +3441,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "16fcd49b0716a68fd51327312a0e8bd0577432318b169a7341c18bee92c2dc40"
+      "sha256": "b448207d0f26c1cb08fb7a933ace5b62f97d6b272595c54286ee3cc2e92cc7fa"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "54a2eb78e6a5492d30bd87b26930d7605d348ee716f5096597ead153e17e0a5c"
+      "sha256": "61357e258c972dee77d0627653560eebda77d7d5ed34cb2c18c11872d93a2c45"
     }
   ],
   "kind": "phase7-obligations",

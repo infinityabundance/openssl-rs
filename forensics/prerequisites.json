@@ -94,18 +94,6 @@
         "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4b (the operation half of the five classes); src/evp/asymcipher.rs module doc, section on what the file's two halves are"
       },
       {
-        "symbol": "evp_pkey_ctx_get_params_strict",
-        "owner_phase": 7,
-        "reason": "Internal to `crypto/evp/pmeth_lib.c`, declared in `include/crypto/evp.h`, so the gate owes it now that 7.4c-i has given that unit a module. Its body is a three-line guard over `evp_keymgmt_get_params` -- it refuses unless the context is an `EVP_PKEY_OP_FROMDATA` operation with a live algorithm context -- and it is owed to the **second half of this same subphase** (`owner_phase` 7, the `evp_cleanup_int` precedent) because 7.4c-ii is where the params path lands beside it. Its callers are `pmeth_gn.c` and `m_sigver.c`, both 7.4's.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4c; src/evp/pkey_ctx.rs module doc"
-      },
-      {
-        "symbol": "evp_pkey_ctx_set_params_strict",
-        "owner_phase": 7,
-        "reason": "The setter half of the same pair, and it has the same three-line shape with `evp_keymgmt_set_params` in place of the getter. Recorded separately because the gate owes *names* rather than call graphs: a reader of the blocking census should see both rather than one and an implication.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4c; src/evp/pkey_ctx.rs module doc"
-      },
-      {
         "symbol": "evp_pkey_ctx_use_cached_data",
         "owner_phase": 7,
         "reason": "Internal to `crypto/evp/pmeth_lib.c`, and the *replay* half of the cached-data trio whose store and free halves 7.4c-i landed. Its body tests `dist_id_set` and then hands the distinguishing identifier to `evp_pkey_ctx_ctrl_str_int` or `evp_pkey_ctx_ctrl_int` -- the ctrl machinery, which is 7.4c-ii's. So it is owed to the second half of this same subphase, and its three callers (`signature.c`, `exchange.c`, `pmeth_gn.c`) are the operation inits that land with the ctrl path beside it.",
