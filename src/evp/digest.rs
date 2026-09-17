@@ -1,4 +1,5 @@
-//! Phase 7.3a — `crypto/evp/digest.c`'s fetch half: the `EVP_MD` object, and `EVP_MD_fetch`.
+//! Phase 7.3a and 7.3d — `crypto/evp/digest.c`: the `EVP_MD` object, its fetch, and the
+//! `EVP_MD_CTX` every digest call is actually made through.
 //!
 //! This is the smallest slice of 7.3 that makes the generic fetch *reachable*. Everything 7.1
 //! and 7.2 built — the algorithm walk, `ossl_method_construct`, the method store and its query
@@ -39,33 +40,89 @@
 //! **set, never cleared** — a fetched method starts with `flags` zero, so the difference is
 //! invisible today and would not be if a legacy method were ever fetched through here.
 //!
+//! ## The context, and the five things about it that are not obvious
+//!
+//! `struct evp_md_ctx_st` is eight fields and a flag word, and the whole of the digest data path
+//! is in the way they relate. Five of those relations are the ones a plausible transcription gets
+//! wrong, so they are stated rather than left to the code below:
+//!
+//!   * **`reqdigest` is not `digest`.** `reqdigest` is what the caller asked for and is what
+//!     `EVP_MD_CTX_get0_md` (and the deprecated `EVP_MD_CTX_md`) reports. `digest` is what will
+//!     actually run. They differ exactly when the caller handed in a *legacy* method and a provider
+//!     counterpart was fetched to replace it, which is why the accessors answer the request and the
+//!     data path uses the replacement.
+//!   * **A context can hold two references to one method.** `digest` and `fetched_digest` are
+//!     separate references whenever the context fetched the method itself, and `digest ==
+//!     fetched_digest` in the common case. The invariant the release paths rely on is that
+//!     `digest` is either the caller's or `fetched_digest` — never a third, unowned object — and
+//!     `evp_md_ctx_clear_digest` restores it before the fetched reference is dropped for exactly
+//!     that reason: the authority's own comment says the legacy cleaning has to happen *before*
+//!     the fetched one.
+//!   * **`md_data` and `algctx` are the two halves of the same slot.** A legacy method runs on the
+//!     context's own `md_data` block, sized by the method's `ctx_size`; a provider method runs on
+//!     the opaque `algctx` the provider's `newctx` handed back. Only one is ever live, and the code
+//!     is written so that each release path names which one it is releasing.
+//!   * **`EVP_MD_CTX_FLAG_CLEANED` is a memory, not a state.** It records that the *last* cleanup
+//!     has already run — for the legacy half after `digest->cleanup`, for the provider half after
+//!     `digest->freectx` — and it is what stops `cleanup_old_md_data` calling the same cleanup
+//!     twice on a context that is finalised twice. It is cleared at the top of every initialise,
+//!     and that one line is the difference between a context that can be re-initialised and one
+//!     that cannot.
+//!   * **`EVP_DigestFinal` resets and `EVP_DigestFinal_ex` does not**, and a second `_ex` final is
+//!     a **refusal with an error** rather than a repeat: `EVP_MD_CTX_FLAG_FINALISED` is set by the
+//!     first and tested by the second. A caller that read only the return value would see 0 in both
+//!     cases, which is why the court compares the *reason* and not just the failure.
+//!
 //! ## What is deliberately not here
 //!
-//! The **contexts**. `EVP_MD_CTX_new`, `_free`, `_init`, `_update`, `_final` and the twenty-odd
-//! accessors that go with them are 7.3b's, and `struct evp_md_ctx_st` is not transcribed, so the
-//! six legacy function pointers on this struct are typed with an opaque `*mut c_void` where the
-//! authority has `EVP_MD_CTX *`. That is a *typing* difference and not a behavioural one — no
-//! field is read before 7.3b — and it is stated here rather than silently made.
+//! The **signature operations**. `EVP_DigestSignInit`, `EVP_DigestVerifyInit` and their four
+//! `*Update`/`*Final` siblings are `crypto/evp/m_sigver.c`'s, which is 7.4's, and the redirects
+//! into them that `evp_md_init_internal` and `EVP_DigestUpdate` perform for a context that was
+//! initialised for signing are therefore unreachable here: `ctx->pctx` is NULL until an
+//! `EVP_PKEY_CTX` exists, and every constructor for one is 7.4's
+//! (`src/evp/pkey_ctx.rs` says why in full). The two redirects are named in the code rather than
+//! silently dropped, and `docs/DECISIONS.md` D156 records the omission.
+//!
+//! The **ENGINE arms**, for the reason `src/evp/cipher_ctx.rs` records for the cipher half: the
+//! profile has `OPENSSL_NO_ENGINE` undefined, so `engines`' 115 exports are compiled into the
+//! authority and none of them exists here. `tmpimpl` is therefore omitted and NULL,
+//! `ctx->engine` is always NULL, and every `ENGINE_init`/`ENGINE_get_digest`/`ENGINE_finish` call
+//! is guarded by a test on one of those two — so each is unreachable rather than unimplemented.
+//! An `impl` argument that is **not** NULL is a caller holding an ENGINE, which no caller can
+//! obtain here, and is refused at the authority's own raise site (`DIGEST_311`).
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_uchar, c_void};
+use core::ffi::{c_char, c_int, c_uchar, c_uint, c_ulong, c_void};
 use core::ptr;
 use core::sync::atomic::{AtomicI32, Ordering};
 
 use crate::context::dispatch::{entry_function, OsslDispatch, OSSL_DISPATCH_END};
-use crate::evp::algorithm::ossl_algorithm_get1_first_name;
-use crate::evp::fetch::{evp_generic_fetch, MethodFromAlgorithmFn};
+use crate::evp::algorithm::{ossl_algorithm_get1_first_name, OSSL_OP_DIGEST};
+use crate::evp::fetch::{
+    evp_generic_do_all, evp_generic_fetch, GenericDoAllFn, MethodFromAlgorithmFn,
+};
 use crate::evp::fetch::{evp_is_a, evp_names_do_all};
+use crate::evp::pkey_ctx::{evp_pkey_ctx_dup, evp_pkey_ctx_free, EvpPkeyCtx};
 use crate::params::{
-    OSSL_PARAM_construct_end, OSSL_PARAM_construct_int, OSSL_PARAM_construct_size_t, OsslParam,
+    OSSL_PARAM_construct_end, OSSL_PARAM_construct_int, OSSL_PARAM_construct_octet_string,
+    OSSL_PARAM_construct_size_t, OSSL_PARAM_construct_utf8_string, OSSL_PARAM_locate_const,
+    OsslParam,
 };
 use crate::property::store::{MethodFreeFn, MethodUpRefFn};
 use crate::provider::{ossl_provider_ctx, ossl_provider_free, ossl_provider_up_ref, OsslProvider};
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem::{cleanse, CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
 use crate::runtime::obj::NID_undef;
-use crate::runtime::obj::{OBJ_NAME_get, OBJ_nid2ln, OBJ_nid2sn};
+use crate::runtime::obj::{
+    NID_hmacWithMD5, NID_hmacWithSHA1, NID_hmacWithSHA224, NID_hmacWithSHA256, NID_hmacWithSHA384,
+    NID_hmacWithSHA512, NID_hmacWithSHA512_224, NID_hmacWithSHA512_256, NID_hmac_sha3_224,
+    NID_hmac_sha3_256, NID_hmac_sha3_384, NID_hmac_sha3_512, NID_id_GostR3411_2012_256,
+    NID_id_GostR3411_2012_512, NID_id_GostR3411_94, NID_id_HMACGostR3411_94,
+    NID_id_tc26_hmac_gost_3411_2012_256, NID_id_tc26_hmac_gost_3411_2012_512, NID_md5, NID_sha1,
+    NID_sha224, NID_sha256, NID_sha384, NID_sha3_224, NID_sha3_256, NID_sha3_384, NID_sha3_512,
+    NID_sha512, NID_sha512_224, NID_sha512_256, OBJ_NAME_get, OBJ_nid2ln, OBJ_nid2sn,
+};
 
 /// `EVP_CTRL_RET_UNSUPPORTED`, from `crypto/evp/evp_local.h`.
 ///
@@ -77,10 +134,9 @@ const EVP_CTRL_RET_UNSUPPORTED: c_int = -1;
 const EVP_ORIG_DYNAMIC: c_int = 0;
 /// `EVP_ORIG_METH`, from `include/crypto/evp.h`: an object the method table owns.
 ///
-/// Its only reader is `EVP_MD_meth_free`, which is 7.3b's alongside the legacy `EVP_MD_meth_*`
-/// setters that build such an object; the constant is here with the other origin so the pair is
-/// read together.
-#[allow(dead_code)] // unreachable until 7.3b's legacy `EVP_MD_meth_*` object exists
+/// Set by `EVP_MD_meth_new` and `EVP_MD_meth_dup` and read by `EVP_MD_meth_free`; it is also the
+/// reason `evp_md_init_internal` takes the legacy arm for a method a caller built by hand, which
+/// is the whole of what "legacy" means here.
 const EVP_ORIG_METH: c_int = 2;
 
 /// `EVP_MD_FLAG_XOF` — `include/openssl/evp.h`.
@@ -186,19 +242,25 @@ pub(crate) type DigestSettableCtxParamsFn =
 pub(crate) type DigestGettableCtxParamsFn =
     unsafe extern "C" fn(*mut c_void, *mut c_void) -> *const OsslParam;
 
-/// The legacy `EVP_MD_CTX` function pointers, typed with an **opaque** context.
+/// The legacy digest function pointers, typed with the **transcribed** context.
 ///
-/// `struct evp_md_ctx_st` is 7.3b's and is not transcribed yet, so the authority's `EVP_MD_CTX *`
-/// is a `*mut c_void` here. Nothing in this file reads one; the fields exist because they are part
-/// of the struct's layout and because `EVP_MD_meth_set_*` fills them in the legacy half.
-pub(crate) type MdLegacyInitFn = unsafe extern "C" fn(*mut c_void) -> c_int;
-pub(crate) type MdLegacyUpdateFn = unsafe extern "C" fn(*mut c_void, *const c_void, usize) -> c_int;
-pub(crate) type MdLegacyFinalFn =
-    unsafe extern "C" fn(*mut c_void, *mut core::ffi::c_uchar) -> c_int;
-pub(crate) type MdLegacyCopyFn = unsafe extern "C" fn(*mut c_void, *const c_void) -> c_int;
-pub(crate) type MdLegacyCleanupFn = unsafe extern "C" fn(*mut c_void) -> c_int;
+/// Until 7.3d-ii these took a `*mut c_void`, because `struct evp_md_ctx_st` did not exist. It does
+/// now — it is below, with the rest of the context half — so the authority's `EVP_MD_CTX *` is
+/// spelled `*mut EvpMdCtx` and `m_null.c`'s three callbacks are typed the way the authority
+/// declares them. The change is a *typing* correction and not a behavioural one: `ABI-PROTOTYPE`
+/// canonicalises both spellings to `ptr(opaque)`, the ABI does not distinguish them, and no field's
+/// use changed.
+///
+/// [`MdLegacyUpdateFn`] is also `EVP_MD_CTX`'s own `update` member. `evp_local.h` says the
+/// context's update function is "usually copied from `EVP_MD`", so one type serves both fields.
+pub(crate) type MdLegacyInitFn = unsafe extern "C" fn(*mut EvpMdCtx) -> c_int;
+pub(crate) type MdLegacyUpdateFn =
+    unsafe extern "C" fn(*mut EvpMdCtx, *const c_void, usize) -> c_int;
+pub(crate) type MdLegacyFinalFn = unsafe extern "C" fn(*mut EvpMdCtx, *mut c_uchar) -> c_int;
+pub(crate) type MdLegacyCopyFn = unsafe extern "C" fn(*mut EvpMdCtx, *const EvpMdCtx) -> c_int;
+pub(crate) type MdLegacyCleanupFn = unsafe extern "C" fn(*mut EvpMdCtx) -> c_int;
 pub(crate) type MdLegacyCtrlFn =
-    unsafe extern "C" fn(*mut c_void, c_int, c_int, *mut c_void) -> c_int;
+    unsafe extern "C" fn(*mut EvpMdCtx, c_int, c_int, *mut c_void) -> c_int;
 
 /// `struct evp_md_st` — `EVP_MD`, from `include/crypto/evp.h`.
 ///
@@ -1419,6 +1481,1976 @@ pub unsafe extern "C" fn EVP_MD_meth_get_ctrl(md: *const EvpMd) -> Option<MdLega
 }
 
 // ---------------------------------------------------------------------------------------------
+// `struct evp_md_ctx_st` — the context half of `crypto/evp/digest.c`
+//
+// Everything below this line is the object the *calls* are made on: `EVP_DigestInit_ex`,
+// `EVP_DigestUpdate`, `EVP_DigestFinal_ex` and the four ways a context is copied. The method
+// objects above are what a context points at; this is the pointer.
+// ---------------------------------------------------------------------------------------------
+
+/// `EVP_MD_CTX_FLAG_ONESHOT` — `include/openssl/evp.h`, "digest update will be called only
+/// once".
+///
+/// Read by nothing in `digest.c`; set by `EVP_Digest` and read by `m_sigver.c`, which is 7.4's.
+/// It is transcribed here because the *set* is this half's.
+const EVP_MD_CTX_FLAG_ONESHOT: c_int = 0x0001;
+/// `EVP_MD_CTX_FLAG_CLEANED` — "context has already been cleaned". See the module
+/// documentation: this is a memory of what has run, not a state.
+const EVP_MD_CTX_FLAG_CLEANED: c_int = 0x0002;
+/// `EVP_MD_CTX_FLAG_REUSE` — "don't free up `ctx->md_data` in `EVP_DigestFinal_ex`". Set by
+/// `EVP_MD_CTX_copy_ex`'s legacy arm, where the destination block is kept and copied over.
+const EVP_MD_CTX_FLAG_REUSE: c_int = 0x0004;
+/// `EVP_MD_CTX_FLAG_NO_INIT` — "don't initialize `md_data`".
+///
+/// A caller sets this through `EVP_MD_CTX_set_flags`, and it makes the legacy path skip both the
+/// block allocation and the call to the method's `init` -- which is the **only** way a hand-built
+/// method with a NULL `init` can be initialised without faulting.
+const EVP_MD_CTX_FLAG_NO_INIT: c_int = 0x0100;
+/// `EVP_MD_CTX_FLAG_KEEP_PKEY_CTX` — `include/crypto/evp.h`.
+///
+/// Set by `EVP_MD_CTX_set_pkey_ctx` and cleared by `EVP_MD_CTX_copy_ex`, and the pair is what
+/// decides who releases `ctx->pctx`: the caller when the flag is set, the context otherwise.
+const EVP_MD_CTX_FLAG_KEEP_PKEY_CTX: c_int = 0x0400;
+/// `EVP_MD_CTX_FLAG_FINALISED` — `include/crypto/evp.h`.
+///
+/// Set by a successful final, cleared by every initialise, and tested by the next final. It is
+/// what makes a second `EVP_DigestFinal_ex` a refusal rather than a repeat.
+const EVP_MD_CTX_FLAG_FINALISED: c_int = 0x0800;
+
+/// `EVP_MD_CTRL_XOF_LEN` — `include/openssl/evp.h`.
+const EVP_MD_CTRL_XOF_LEN: c_int = 0x3;
+/// `EVP_MD_CTRL_MICALG` — `include/openssl/evp.h`.
+const EVP_MD_CTRL_MICALG: c_int = 0x2;
+/// `EVP_CTRL_SSL3_MASTER_SECRET` — `include/openssl/evp.h`.
+const EVP_CTRL_SSL3_MASTER_SECRET: c_int = 0x1d;
+
+/// `OSSL_DIGEST_PARAM_SIZE` — `include/openssl/core_names.h`.
+const OSSL_DIGEST_PARAM_SIZE: *const c_char = c"size".as_ptr();
+/// `OSSL_DIGEST_PARAM_XOFLEN` — `include/openssl/core_names.h`.
+const OSSL_DIGEST_PARAM_XOFLEN: *const c_char = c"xoflen".as_ptr();
+/// `OSSL_DIGEST_PARAM_MICALG` — `include/openssl/core_names.h`.
+const OSSL_DIGEST_PARAM_MICALG: *const c_char = c"micalg".as_ptr();
+/// `OSSL_DIGEST_PARAM_SSL3_MS` — `include/openssl/core_names.h`.
+const OSSL_DIGEST_PARAM_SSL3_MS: *const c_char = c"ssl3-ms".as_ptr();
+
+/// `EVP_MD_CTX_new`'s `OPENSSL_zalloc(sizeof(EVP_MD_CTX))` (line 131).
+const LINE_ZALLOC_CTX: c_int = 131;
+/// `EVP_MD_CTX_free`'s `OPENSSL_free(ctx)` (line 140).
+const LINE_FREE_CTX: c_int = 140;
+/// `cleanup_old_md_data`'s `OPENSSL_clear_free(ctx->md_data, ctx->digest->ctx_size)` (line 38).
+const LINE_CLEAR_MD_DATA: c_int = 38;
+/// `evp_md_init_internal`'s `OPENSSL_zalloc(type->ctx_size)` (line 344).
+const LINE_ZALLOC_MD_DATA: c_int = 344;
+/// `EVP_MD_CTX_copy_ex`'s `OPENSSL_malloc(out->digest->ctx_size)` (line 701), in the legacy arm.
+const LINE_COPY_MD_DATA: c_int = 701;
+
+/// `struct evp_md_ctx_st` — `EVP_MD_CTX`, from `crypto/evp/evp_local.h`.
+///
+/// The field order is the authority's, and `reqdigest` really is first: it is the **requested**
+/// method, and a reader asking what the caller asked for looks at it rather than at `digest`.
+/// `engine` sits third because the engine reference has always been there; `algctx` and
+/// `fetched_digest` are last because they arrived with the provider interface.
+///
+/// `pub` for the reason every internal type in an exported signature is: `EVP_MD_CTX_new` returns
+/// one and twenty of its siblings take one, Rust requires the type of an exported item's parameter
+/// to be at least as visible, and the authority keeps `evp_md_ctx_st` in `crypto/evp/evp_local.h`,
+/// which is not installed. Every field is `pub(crate)`, so nothing outside this crate can name or
+/// reach one.
+#[repr(C)]
+pub struct EvpMdCtx {
+    /// `const EVP_MD *reqdigest` — what the caller asked for; `EVP_MD_CTX_get0_md` answers this.
+    pub(crate) reqdigest: *const EvpMd,
+    /// `const EVP_MD *digest` — what will actually run. Differs from `reqdigest` only when a
+    /// legacy method was replaced by its provider counterpart.
+    pub(crate) digest: *const EvpMd,
+    /// `ENGINE *engine` — **always NULL** here; ENGINE is Phase 13's.
+    pub(crate) engine: *mut c_void,
+    /// `unsigned long flags` — the `EVP_MD_CTX_FLAG_*` bits.
+    pub(crate) flags: c_ulong,
+    /// `void *md_data` — the legacy half's block, `digest->ctx_size` bytes.
+    pub(crate) md_data: *mut c_void,
+    /// `EVP_PKEY_CTX *pctx` — **always NULL** until 7.4; see `src/evp/pkey_ctx.rs`.
+    pub(crate) pctx: *mut EvpPkeyCtx,
+    /// `int (*update)(EVP_MD_CTX *, const void *, size_t)` — copied from the method.
+    pub(crate) update: Option<MdLegacyUpdateFn>,
+    /// `void *algctx` — the provider half's opaque context, from `newctx`.
+    pub(crate) algctx: *mut c_void,
+    /// `EVP_MD *fetched_digest` — a second reference to a method this context fetched itself.
+    pub(crate) fetched_digest: *mut EvpMd,
+}
+
+/// `static void cleanup_old_md_data(EVP_MD_CTX *ctx, int force)`.
+///
+/// Two things, in this order: run the legacy method's `cleanup` **if it has not already run**,
+/// then release the legacy `md_data` block **unless the context was told to keep it**.
+///
+/// The `EVP_MD_CTX_FLAG_CLEANED` test is not a redundancy. `EVP_DigestFinal_ex`'s legacy arm runs
+/// the cleanup itself and sets the flag, and a context can then be re-initialised -- so without
+/// the flag this function would run the method's cleanup a second time on a block the method had
+/// already finished with.
+///
+/// `force` is what distinguishes the two callers: `evp_md_ctx_clear_digest` passes its argument
+/// through, so a *reset* releases the block even under `REUSE`, while a *re-initialise* keeps it.
+///
+/// # Safety
+/// `ctx` must be a live context; `force` is 0 or 1.
+unsafe fn cleanup_old_md_data(ctx: *mut EvpMdCtx, force: c_int) {
+    // SAFETY: `ctx` is live per the contract.
+    let digest = unsafe { (*ctx).digest };
+    if digest.is_null() {
+        return;
+    }
+    // SAFETY: `digest` is the live method this context holds a reference to.
+    let cleanup = unsafe { (*digest).cleanup };
+    if let Some(f) = cleanup {
+        // SAFETY: `ctx` is live per the contract.
+        let already_cleaned = (unsafe { EVP_MD_CTX_test_flags(ctx, EVP_MD_CTX_FLAG_CLEANED) }) != 0;
+        if !already_cleaned {
+            // SAFETY: `f` is the method's own callback and `ctx` is the context it expects.
+            unsafe { f(ctx) };
+        }
+    }
+    // SAFETY: `ctx` is live, so `md_data` and `digest` are both readable.
+    let md_data = unsafe { (*ctx).md_data };
+    // SAFETY: `digest` is live.
+    let ctx_size = unsafe { (*digest).ctx_size };
+    // SAFETY: `ctx` is live per the contract. The flags are read *after* the cleanup above, as
+    // the authority reads them, because a cleanup callback is allowed to change them.
+    let reuse = (unsafe { EVP_MD_CTX_test_flags(ctx, EVP_MD_CTX_FLAG_REUSE) }) != 0;
+    if !md_data.is_null() && ctx_size > 0 && (!reuse || force != 0) {
+        // SAFETY: `md_data` is the block this context allocated for `digest`, which is
+        // `ctx_size` bytes as that field said when it was allocated.
+        unsafe { CRYPTO_clear_free(md_data, ctx_size as usize, FILE, LINE_CLEAR_MD_DATA) };
+        // SAFETY: `ctx` is live.
+        unsafe { (*ctx).md_data = ptr::null_mut() };
+    }
+}
+
+/// `void evp_md_ctx_clear_digest(EVP_MD_CTX *ctx, int force, int keep_fetched)`.
+///
+/// The release path both a reset and a re-initialise go through, and the **order is the whole of
+/// it**: the provider half is released first, then the legacy half, then the engine, and the
+/// fetched method *last* -- after `digest` has been dealt with. The authority's own comment says
+/// why: "non legacy code, this has to be later than the `ctx->digest` cleaning", because the
+/// legacy cleaning reads `ctx->digest` to find the cleanup function and the block size.
+///
+/// `keep_fetched` is what `EVP_MD_CTX_copy_ex` needs and nothing else does: a copy that is about
+/// to overwrite the whole struct keeps the fetched reference it is going to re-set, rather than
+/// dropping and re-acquiring it.
+///
+/// The `ENGINE_finish(ctx->engine)` between the legacy half and the fetched half is omitted, and
+/// it is unreachable rather than unimplemented: `ctx->engine` is always NULL here.
+///
+/// `pub(crate)` because `m_sigver.c` calls it, and `m_sigver.c` is 7.4's.
+///
+/// # Safety
+/// `ctx` must be a live context; `force` and `keep_fetched` are 0 or 1.
+pub(crate) unsafe fn evp_md_ctx_clear_digest(
+    ctx: *mut EvpMdCtx,
+    force: c_int,
+    keep_fetched: c_int,
+) {
+    // SAFETY: `ctx` is live per the contract.
+    if !unsafe { (*ctx).algctx }.is_null() {
+        // SAFETY: `ctx` is live.
+        let digest = unsafe { (*ctx).digest };
+        if !digest.is_null() {
+            // SAFETY: `digest` is live.
+            if let Some(f) = unsafe { (*digest).freectx } {
+                // SAFETY: `f` is the provider's own callback and `algctx` is the context its
+                // `newctx` handed back, which is what it expects to be released.
+                unsafe { f((*ctx).algctx) };
+            }
+        }
+        // SAFETY: `ctx` is live.
+        unsafe { (*ctx).algctx = ptr::null_mut() };
+        // SAFETY: `ctx` is live per the contract.
+        unsafe { EVP_MD_CTX_set_flags(ctx, EVP_MD_CTX_FLAG_CLEANED) };
+    }
+
+    // SAFETY: `ctx` is live per the contract.
+    unsafe { cleanup_old_md_data(ctx, force) };
+    if force != 0 {
+        // SAFETY: `ctx` is live.
+        unsafe { (*ctx).digest = ptr::null() };
+    }
+
+    if keep_fetched == 0 {
+        // SAFETY: `EVP_MD_free` accepts NULL and releases only an object this crate owns.
+        unsafe { EVP_MD_free((*ctx).fetched_digest) };
+        // SAFETY: `ctx` is live.
+        unsafe {
+            (*ctx).fetched_digest = ptr::null_mut();
+            (*ctx).reqdigest = ptr::null();
+        }
+    }
+}
+
+/// `static int evp_md_ctx_reset_ex(EVP_MD_CTX *ctx, int keep_fetched)`.
+///
+/// **Answers 1 for a NULL context.** That is the one arm that makes `EVP_MD_CTX_reset(NULL)` a
+/// defined call, and `EVP_DigestInit` -- which resets unconditionally -- depends on it.
+///
+/// The `pctx` is released *first*, and only when the caller has not claimed it: the flag is a
+/// promise that the caller will release it, and a context that released it anyway would leave the
+/// caller with a dangling pointer.
+///
+/// The final `OPENSSL_cleanse` is the difference between a reset and a re-initialise: with
+/// `keep_fetched` it is skipped, because a copy is about to fill the struct in again.
+///
+/// # Safety
+/// `ctx` must be NULL or a live context; `keep_fetched` is 0 or 1.
+unsafe fn evp_md_ctx_reset_ex(ctx: *mut EvpMdCtx, keep_fetched: c_int) -> c_int {
+    if ctx.is_null() {
+        return 1;
+    }
+
+    // SAFETY: `ctx` is live per the contract.
+    let keep_pkey_ctx = (unsafe { EVP_MD_CTX_test_flags(ctx, EVP_MD_CTX_FLAG_KEEP_PKEY_CTX) }) != 0;
+    if !keep_pkey_ctx {
+        // SAFETY: `ctx` is live, so `pctx` is NULL or the caller's own context.
+        unsafe { evp_pkey_ctx_free((*ctx).pctx) };
+        // SAFETY: `ctx` is live.
+        unsafe { (*ctx).pctx = ptr::null_mut() };
+    }
+
+    // SAFETY: `ctx` is live per the contract.
+    unsafe { evp_md_ctx_clear_digest(ctx, 0, keep_fetched) };
+    if keep_fetched == 0 {
+        // The authority's `OPENSSL_cleanse(ctx, sizeof(*ctx))`. `cleanse` is the crate's
+        // volatile-write form of it rather than a `memset`, because the block may hold key
+        // material through `md_data`'s neighbours and the compiler must not elide the zeroing.
+        // SAFETY: `ctx` is live for `size_of::<EvpMdCtx>()` bytes, which is what is zeroed.
+        unsafe { cleanse(ctx.cast::<u8>(), core::mem::size_of::<EvpMdCtx>()) };
+    }
+
+    1
+}
+
+/// `int EVP_MD_CTX_reset(EVP_MD_CTX *ctx)`.
+///
+/// # Safety
+/// `ctx` must be NULL or a live context.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_CTX_reset(ctx: *mut EvpMdCtx) -> c_int {
+    // SAFETY: `ctx` is NULL or live per the contract.
+    unsafe { evp_md_ctx_reset_ex(ctx, 0) }
+}
+
+/// `EVP_MD_CTX *EVP_MD_CTX_new(void)`.
+///
+/// A zeroed block and nothing else -- **including no flags**, which is why a fresh context is
+/// `FINALISED`-free and `NO_INIT`-free, and why the first initialise's clear of those two bits is
+/// invisible until the context has been used once.
+#[no_mangle]
+pub extern "C" fn EVP_MD_CTX_new() -> *mut EvpMdCtx {
+    CRYPTO_zalloc(core::mem::size_of::<EvpMdCtx>(), FILE, LINE_ZALLOC_CTX).cast::<EvpMdCtx>()
+}
+
+/// `void EVP_MD_CTX_free(EVP_MD_CTX *ctx)`.
+///
+/// A reset and then the block. The reset is what releases everything the context holds, so a
+/// caller that frees a finalised context gets both releases through one path.
+///
+/// # Safety
+/// `ctx` must be NULL or a live context this crate allocated.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_CTX_free(ctx: *mut EvpMdCtx) {
+    if ctx.is_null() {
+        return;
+    }
+    // SAFETY: `ctx` is live per the contract.
+    unsafe { EVP_MD_CTX_reset(ctx) };
+    // SAFETY: `ctx` came from this crate's allocator and has just been released of everything it
+    // held, so this is its last use.
+    unsafe { CRYPTO_free(ctx.cast::<c_void>(), FILE, LINE_FREE_CTX) };
+}
+
+/// `int evp_md_ctx_free_algctx(EVP_MD_CTX *ctx)`.
+///
+/// A **separate** release from `evp_md_ctx_clear_digest`'s, and the difference is the return: this
+/// one reports the inconsistent state `algctx != NULL && digest == NULL` rather than skipping past
+/// it, because it is called from a path (`m_sigver.c`'s) that is about to rely on the context
+/// being consistent. The crate's `ossl_assert` is non-fatal under `NDEBUG`, which is how the
+/// authority compiles, so the refusal below is the arm that runs.
+///
+/// Note what it does **not** do: it does not set `EVP_MD_CTX_FLAG_CLEANED`, because nothing has
+/// been cleaned -- the legacy `md_data` is untouched.
+///
+/// `pub(crate)` because `m_sigver.c` calls it, and `m_sigver.c` is 7.4's.
+///
+/// # Safety
+/// `ctx` must be a live context.
+pub(crate) unsafe fn evp_md_ctx_free_algctx(ctx: *mut EvpMdCtx) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    if unsafe { (*ctx).algctx }.is_null() {
+        return 1;
+    }
+    // SAFETY: `ctx` is live.
+    let digest = unsafe { (*ctx).digest };
+    if digest.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::DIGEST_147) };
+        return 0;
+    }
+    // SAFETY: `digest` is live.
+    if let Some(f) = unsafe { (*digest).freectx } {
+        // SAFETY: `f` is the provider's own callback and `algctx` is its `newctx`'s answer.
+        unsafe { f((*ctx).algctx) };
+    }
+    // SAFETY: `ctx` is live.
+    unsafe { (*ctx).algctx = ptr::null_mut() };
+    1
+}
+
+/// `static int evp_md_init_internal(EVP_MD_CTX *ctx, const EVP_MD *type,
+/// const OSSL_PARAM params[], ENGINE *impl)`.
+///
+/// The initialise, and the place where the two halves of this file meet. It is long because it is
+/// the authority's decision tree transcribed rather than summarised, and every branch is a
+/// different answer:
+///
+///   1. **clear `CLEANED` and `FINALISED`.** Unconditional, and before anything else -- a context
+///      that has been finalised can be re-initialised, and this line is what makes that work.
+///   2. **resolve `type`.** A NULL argument means "whatever this context already had", and a
+///      context with neither is `EVP_R_NO_DIGEST_SET`.
+///   3. **decide legacy or provider.** A hand-built method (`EVP_ORIG_METH`) or `NO_INIT` goes
+///      legacy; everything else goes to the provider path.
+///   4. **the provider path replaces a legacy method with its provider counterpart**, fetching by
+///      the legacy short name -- and `type->prov == NULL` is a *normal* state on that path, not an
+///      error, which is why the fetch is there.
+///   5. **the legacy path allocates the method's own data block** and calls `digest->init`, which
+///      is where an incomplete hand-built method becomes observable (see the divergence note in
+///      `docs/SECURITY_DIVERGENCE_POLICY.md`).
+///
+/// `impl` is accepted and refused rather than ignored: a non-NULL `impl` is a caller that already
+/// holds an ENGINE, and the authority's answer for an ENGINE it cannot initialise is
+/// `EVP_R_INITIALIZATION_ERROR` at `digest.c:311`. No caller here can hold one -- every
+/// `ENGINE_*` symbol is a scaffold that aborts -- so the refusal is unreachable in practice and
+/// correct if it ever is reached.
+///
+/// # Safety
+/// `ctx` must be a live context; `type` NULL or a live method; `params` NULL or a terminated
+/// array; `impl` NULL.
+unsafe fn evp_md_init_internal(
+    ctx: *mut EvpMdCtx,
+    mut type_: *const EvpMd,
+    params: *const OsslParam,
+    impl_: *mut c_void,
+) -> c_int {
+    // 1. Both flags, unconditionally, before the method is even resolved.
+    // SAFETY: `ctx` is live per the contract.
+    unsafe { EVP_MD_CTX_clear_flags(ctx, EVP_MD_CTX_FLAG_CLEANED | EVP_MD_CTX_FLAG_FINALISED) };
+
+    // 2. The requested method, which is remembered even when it will be replaced.
+    if !type_.is_null() {
+        // SAFETY: `ctx` is live per the contract.
+        unsafe { (*ctx).reqdigest = type_ };
+    } else {
+        // SAFETY: `ctx` is live per the contract.
+        let digest = unsafe { (*ctx).digest };
+        if digest.is_null() {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::DIGEST_189) };
+            return 0;
+        }
+        type_ = digest;
+    }
+
+    // 3a. `impl`. See the contract: unreachable in practice, refused rather than ignored.
+    if !impl_.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::DIGEST_311) };
+        return 0;
+    }
+
+    // 3b. The legacy decision. Of the authority's six disjuncts, two are constant false here --
+    // `ctx->engine != NULL` and `tmpimpl != NULL`, because ENGINE is Phase 13's -- and two more
+    // are the same test written twice, because `type` cannot be NULL by the time the authority
+    // reaches them: the `else` arm above either returned or assigned `ctx->digest` to it.
+    // SAFETY: `type_` is non-NULL: either it arrived non-NULL or step 2 assigned it.
+    let type_origin = unsafe { (*type_).origin };
+    // SAFETY: `ctx` is live per the contract.
+    let no_init = (unsafe { EVP_MD_CTX_test_flags(ctx, EVP_MD_CTX_FLAG_NO_INIT) }) != 0;
+    if no_init || type_origin == EVP_ORIG_METH {
+        // Not an early return: the legacy path is at the bottom of this function, so the state
+        // the authority sets up on the way to it is set up here too.
+        // SAFETY: `ctx` is live per the contract.
+        if unsafe { evp_md_ctx_free_algctx(ctx) } == 0 {
+            return 0;
+        }
+        // SAFETY: `ctx` is live.
+        unsafe {
+            if (*ctx).digest == (*ctx).fetched_digest {
+                (*ctx).digest = ptr::null();
+            }
+            // SAFETY: the reference is this context's own, and NULL is accepted.
+            EVP_MD_free((*ctx).fetched_digest);
+            (*ctx).fetched_digest = ptr::null_mut();
+        }
+        // SAFETY: `ctx` is live and `type_` is the live method step 2 or 3 resolved.
+        return unsafe { evp_md_init_legacy(ctx, type_) };
+    }
+
+    // 4. The provider path.
+    // SAFETY: `ctx` is live per the contract.
+    unsafe { cleanup_old_md_data(ctx, 1) };
+
+    // SAFETY: `ctx` is live per the contract.
+    if unsafe { (*ctx).digest } == type_ {
+        // The `ossl_assert(type->prov != NULL)`, non-fatal under `NDEBUG` as the authority
+        // compiles it -- so the raise below is the arm that runs.
+        // SAFETY: `type_` is live.
+        if unsafe { (*type_).prov }.is_null() {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::DIGEST_250) };
+            return 0;
+        }
+    } else {
+        // SAFETY: `ctx` is live per the contract.
+        if unsafe { evp_md_ctx_free_algctx(ctx) } == 0 {
+            return 0;
+        }
+    }
+
+    // A legacy method that reached the provider path has no provider, so its provider
+    // counterpart is fetched by name. This is the one place `EVP_MD_fetch` is called with an
+    // empty property query rather than the caller's, and the reason is that the argument list has
+    // nowhere to carry one.
+    // SAFETY: `type_` is live.
+    if unsafe { (*type_).prov }.is_null() {
+        // SAFETY: `type_` is live.
+        let type_id = unsafe { (*type_).type_ };
+        let name = if type_id != NID_undef {
+            OBJ_nid2sn(type_id)
+        } else {
+            c"NULL".as_ptr()
+        };
+        // SAFETY: `name` is NUL-terminated -- either the object table's own string or a literal
+        // -- and the empty query is a literal.
+        let provmd = unsafe { EVP_MD_fetch(ptr::null_mut(), name, c"".as_ptr()) };
+        if provmd.is_null() {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::DIGEST_271) };
+            return 0;
+        }
+        type_ = provmd;
+        // SAFETY: `ctx` is live; NULL is accepted by the releaser.
+        unsafe {
+            EVP_MD_free((*ctx).fetched_digest);
+            (*ctx).fetched_digest = provmd;
+        }
+    }
+
+    // The second reference, taken only when this context did not already hold one for this very
+    // method. That test is what keeps a re-initialise from counting two references.
+    // SAFETY: `type_` is live per the contract.
+    let has_provider = !(unsafe { (*type_).prov }).is_null();
+    // SAFETY: `ctx` is live per the contract.
+    let already_fetched = (unsafe { (*ctx).fetched_digest }).cast_const() == type_;
+    if has_provider && !already_fetched {
+        // SAFETY: `type_` is live and this is the class's own reference taker.
+        if unsafe { EVP_MD_up_ref(type_.cast_mut()) } == 0 {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::DIGEST_282) };
+            return 0;
+        }
+        // SAFETY: `ctx` is live; NULL is accepted.
+        unsafe {
+            EVP_MD_free((*ctx).fetched_digest);
+            (*ctx).fetched_digest = type_.cast_mut();
+        }
+    }
+
+    // SAFETY: `ctx` is live per the contract.
+    unsafe { (*ctx).digest = type_ };
+    // SAFETY: `ctx` is live.
+    if unsafe { (*ctx).algctx }.is_null() {
+        // SAFETY: `type_` is live.
+        let newctx = unsafe { (*type_).newctx };
+        let Some(newctx) = newctx else {
+            // The authority calls through this NULL: a provider that publishes only the one-shot
+            // `OSSL_FUNC_DIGEST_DIGEST` has a NULL `newctx` (`evp_md_from_algorithm` counts zero
+            // structural functions and fills none), and `evp_md_init_internal` does not test it.
+            // A call through NULL is a fault this crate does not reproduce
+            // (`docs/SECURITY_DIVERGENCE_POLICY.md` §5, D-MD-NULL-CALLBACK-1). The refusal below
+            // raises nothing, because the authority raises nothing: it does not return at all.
+            return 0;
+        };
+        // SAFETY: `type_` is live, so its provider is too.
+        let provctx = unsafe { ossl_provider_ctx((*type_).prov) };
+        // SAFETY: `newctx` is the provider's own constructor and `provctx` is its context.
+        let algctx = unsafe { newctx(provctx) };
+        if algctx.is_null() {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::DIGEST_292) };
+            return 0;
+        }
+        // SAFETY: `ctx` is live.
+        unsafe { (*ctx).algctx = algctx };
+    }
+
+    // SAFETY: `ctx` is live and `digest` was just set to `type_`.
+    let dinit = unsafe { (*ctx).digest };
+    // SAFETY: `dinit` is `type_`, which is live.
+    let dinit = unsafe { (*dinit).dinit };
+    let Some(dinit) = dinit else {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::DIGEST_298) };
+        return 0;
+    };
+    // SAFETY: `ctx` is live, so `algctx` is the context the provider just handed back, and
+    // `params` is the caller's array.
+    unsafe { dinit((*ctx).algctx, params) }
+}
+
+/// The authority's `legacy:` label in `evp_md_init_internal` — the hand-built-method path.
+///
+/// It is a separate function rather than a label-and-jump because Rust has no `goto`, and the
+/// authority reaches it from the middle of the function with three fields already adjusted. Those
+/// adjustments are made at the call site; what is here is everything from the label down.
+///
+/// `impl`/`tmpimpl` are the two ENGINE locals the authority's block starts with, and both are
+/// NULL here, so the only line of that block with an effect is `ctx->engine = NULL` — which the
+/// field already satisfies, since nothing in this crate ever writes it.
+///
+/// # Safety
+/// `ctx` must be a live context and `type_` a live method, with the caller having released the
+/// provider-side state first.
+unsafe fn evp_md_init_legacy(ctx: *mut EvpMdCtx, type_: *const EvpMd) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    if unsafe { (*ctx).digest } != type_ {
+        // SAFETY: `ctx` is live per the contract.
+        unsafe { cleanup_old_md_data(ctx, 1) };
+        // SAFETY: `ctx` is live.
+        unsafe { (*ctx).digest = type_ };
+        // SAFETY: `type_` is live.
+        let ctx_size = unsafe { (*type_).ctx_size };
+        // SAFETY: `ctx` is live per the contract.
+        let no_init = (unsafe { EVP_MD_CTX_test_flags(ctx, EVP_MD_CTX_FLAG_NO_INIT) }) != 0;
+        if !no_init && ctx_size != 0 {
+            // SAFETY: `type_` is live.
+            let update = unsafe { (*type_).update };
+            // SAFETY: `ctx` is live.
+            unsafe { (*ctx).update = update };
+            let block = CRYPTO_zalloc(ctx_size as usize, FILE, LINE_ZALLOC_MD_DATA);
+            if block.is_null() {
+                return 0;
+            }
+            // SAFETY: `ctx` is live and `block` is this context's own allocation.
+            unsafe { (*ctx).md_data = block };
+        }
+    }
+
+    // `skip_to_init:` is not a label here but the natural fall-through: the authority's own
+    // `goto skip_to_init` is guarded by `ctx->engine != NULL`, which cannot hold.
+    //
+    // The `EVP_PKEY_CTX_ctrl(ctx->pctx, ..., EVP_PKEY_CTRL_DIGESTINIT, 0, ctx)` block that follows
+    // in the authority is omitted, and unreachable rather than unimplemented: `ctx->pctx` is NULL
+    // until 7.4 (`src/evp/pkey_ctx.rs`).
+    // SAFETY: `ctx` is live per the contract.
+    if (unsafe { EVP_MD_CTX_test_flags(ctx, EVP_MD_CTX_FLAG_NO_INIT) }) != 0 {
+        return 1;
+    }
+
+    // SAFETY: `ctx` is live and `digest` is `type_`.
+    let init = unsafe { (*(*ctx).digest).init };
+    let Some(init) = init else {
+        // The authority calls through this NULL. A method built by `EVP_MD_meth_new` that never
+        // had `EVP_MD_meth_set_init` called has a NULL `init` and a zero `ctx_size`, so the block
+        // above is skipped and the call is reached -- measured, as
+        // `docs/SECURITY_DIVERGENCE_POLICY.md` D-MD-NULL-CALLBACK-1 records.
+        return 0;
+    };
+    // SAFETY: `init` is the method's own callback and `ctx` is the context it expects.
+    unsafe { init(ctx) }
+}
+
+/// `int EVP_DigestInit_ex2(EVP_MD_CTX *ctx, const EVP_MD *type, const OSSL_PARAM params[])`.
+///
+/// # Safety
+/// `ctx` live; `type` NULL or live; `params` NULL or terminated.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_DigestInit_ex2(
+    ctx: *mut EvpMdCtx,
+    type_: *const EvpMd,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract, and Phase 13's ENGINE
+    // is not involved: the authority passes NULL here too.
+    unsafe { evp_md_init_internal(ctx, type_, params, ptr::null_mut()) }
+}
+
+/// `int EVP_DigestInit(EVP_MD_CTX *ctx, const EVP_MD *type)`.
+///
+/// **Resets first, and does not check the reset.** That is what makes it the destructive form:
+/// `EVP_DigestInit_ex` on a used context keeps what it can, this one throws it away.
+///
+/// # Safety
+/// `ctx` must be NULL or a live context; `type` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_DigestInit(ctx: *mut EvpMdCtx, type_: *const EvpMd) -> c_int {
+    // SAFETY: `ctx` is NULL or live per the contract, and the reset accepts NULL.
+    unsafe { EVP_MD_CTX_reset(ctx) };
+    // SAFETY: `ctx` is live (a NULL was either accepted by the reset or is the caller's error, as
+    // it is the authority's).
+    unsafe { evp_md_init_internal(ctx, type_, ptr::null(), ptr::null_mut()) }
+}
+
+/// `int EVP_DigestInit_ex(EVP_MD_CTX *ctx, const EVP_MD *type, ENGINE *impl)`.
+///
+/// # Safety
+/// `ctx` live; `type` NULL or live; `impl` NULL.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_DigestInit_ex(
+    ctx: *mut EvpMdCtx,
+    type_: *const EvpMd,
+    impl_: *mut c_void,
+) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { evp_md_init_internal(ctx, type_, ptr::null(), impl_) }
+}
+
+/// `int EVP_DigestUpdate(EVP_MD_CTX *ctx, const void *data, size_t count)`.
+///
+/// Four arms, in the authority's order, and the first one is the surprise: **a zero-length update
+/// answers 1 without consulting anything**, so it succeeds on a context that was never
+/// initialised and on one that has been finalised. That is a contract fact a caller can see, and
+/// it is the reason this function can be called with `data` NULL.
+///
+/// The `pctx` redirect into `EVP_DigestSignUpdate`/`EVP_DigestVerifyUpdate` is omitted and is
+/// unreachable: `ctx->pctx` is NULL until 7.4 (`src/evp/pkey_ctx.rs`), and the authority's own
+/// comment says the redirect exists only for a context that was initialised for signing.
+///
+/// The legacy test is `digest == NULL || digest->prov == NULL || NO_INIT`, which is why a
+/// hand-built method takes the `ctx->update` pointer rather than the provider callback.
+///
+/// # Safety
+/// `ctx` must be a live context; `data` readable for `count` bytes (or `count` zero).
+#[no_mangle]
+pub unsafe extern "C" fn EVP_DigestUpdate(
+    ctx: *mut EvpMdCtx,
+    data: *const c_void,
+    count: usize,
+) -> c_int {
+    if count == 0 {
+        return 1;
+    }
+
+    // SAFETY: `ctx` is live per the contract.
+    let finalised = (unsafe { EVP_MD_CTX_test_flags(ctx, EVP_MD_CTX_FLAG_FINALISED) }) != 0;
+    if finalised {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::DIGEST_391) };
+        return 0;
+    }
+
+    // SAFETY: `ctx` is live per the contract.
+    let digest = unsafe { (*ctx).digest };
+    // SAFETY: `ctx` is live per the contract.
+    let no_init = (unsafe { EVP_MD_CTX_test_flags(ctx, EVP_MD_CTX_FLAG_NO_INIT) }) != 0;
+    // SAFETY: `digest` is live on the arm that reads its provider.
+    let legacy = digest.is_null() || (unsafe { (*digest).prov }).is_null() || no_init;
+    if legacy {
+        // SAFETY: `ctx` is live, so `update` is the method's callback or NULL.
+        let update = unsafe { (*ctx).update };
+        return match update {
+            // SAFETY: `f` is the method's own callback and `ctx` is the context it expects.
+            Some(f) => unsafe { f(ctx, data, count) },
+            None => 0,
+        };
+    }
+
+    // SAFETY: `digest` is non-NULL and live on this arm.
+    let dupdate = unsafe { (*digest).dupdate };
+    let Some(dupdate) = dupdate else {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::DIGEST_422) };
+        return 0;
+    };
+    // SAFETY: `dupdate` is the provider's own callback, `algctx` is the context its `newctx`
+    // handed back, and `data`/`count` are the caller's.
+    unsafe { dupdate((*ctx).algctx, data.cast::<c_uchar>(), count) }
+}
+
+/// `int EVP_DigestFinal(EVP_MD_CTX *ctx, unsigned char *md, unsigned int *size)`.
+///
+/// The **destructive** form: it finalises and then resets, so the context is reusable but the
+/// digest is gone. The return value is the final's, not the reset's -- the reset of a live
+/// context cannot fail.
+///
+/// # Safety
+/// `ctx` must be a live context; `md` writable for the digest's size; `size` NULL or writable.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_DigestFinal(
+    ctx: *mut EvpMdCtx,
+    md: *mut c_uchar,
+    size: *mut c_uint,
+) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    let ret = unsafe { EVP_DigestFinal_ex(ctx, md, size) };
+    // SAFETY: `ctx` is live per the contract.
+    unsafe { EVP_MD_CTX_reset(ctx) };
+    ret
+}
+
+/// `int EVP_DigestFinal_ex(EVP_MD_CTX *ctx, unsigned char *md, unsigned int *isize)`.
+///
+/// Three refusals before any work, and they are all silent -- a NULL method, a negative size, and
+/// a second final -- so a caller that prints only the return value cannot tell them apart. The
+/// third is the one with a *state* behind it: `EVP_MD_CTX_FLAG_FINALISED`.
+///
+/// The size the provider is told is the authority's `EVP_MD_CTX_get_size`, **not** the method's
+/// `md_size`, and the two differ for a XOF: `get_size_ex` asks the context's own gettable
+/// parameters first and answers -1 for an XOF whose length has not been set. So a XOF finalised
+/// without setting `xoflen` is refused before the provider is called.
+///
+/// The `OPENSSL_assert(mdsize <= EVP_MAX_MD_SIZE)` in the legacy arm has no effect: the authority
+/// compiles with `NDEBUG`, where it is `(x) != 0` and non-fatal.
+///
+/// # Safety
+/// `ctx` must be a live context; `md` writable for the digest's size; `isize` NULL or writable.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_DigestFinal_ex(
+    ctx: *mut EvpMdCtx,
+    md: *mut c_uchar,
+    isize: *mut c_uint,
+) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    let digest = unsafe { (*ctx).digest };
+    if digest.is_null() {
+        return 0;
+    }
+
+    // SAFETY: `ctx` is live.
+    let sz = unsafe { EVP_MD_CTX_get_size_ex(ctx) };
+    if sz < 0 {
+        return 0;
+    }
+    let mdsize = sz as usize;
+
+    // SAFETY: `digest` is non-NULL and live.
+    if unsafe { (*digest).prov }.is_null() {
+        // SAFETY: `ctx` is live and its method has no provider, which is this arm's premise.
+        return unsafe { evp_md_final_legacy(ctx, md, isize, mdsize) };
+    }
+
+    // SAFETY: `digest` is live.
+    let dfinal = unsafe { (*digest).dfinal };
+    let Some(dfinal) = dfinal else {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::DIGEST_459) };
+        return 0;
+    };
+
+    // SAFETY: `ctx` is live per the contract.
+    let finalised = (unsafe { EVP_MD_CTX_test_flags(ctx, EVP_MD_CTX_FLAG_FINALISED) }) != 0;
+    if finalised {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::DIGEST_464) };
+        return 0;
+    }
+
+    // The provider writes the length it produced through this local, and the caller's pointer is
+    // written afterwards -- so a provider that answers more than `UINT_MAX` bytes leaves the
+    // caller's value untouched and turns the final into a failure.
+    let mut size: usize = 0;
+    // SAFETY: `dfinal` is the provider's own callback, `algctx` is its context, `md` is the
+    // caller's buffer and `size`/`mdsize` are this frame's.
+    let ret = unsafe { dfinal((*ctx).algctx, md, &mut size, mdsize) };
+
+    // SAFETY: `ctx` is live.
+    unsafe { (*ctx).flags |= EVP_MD_CTX_FLAG_FINALISED as c_ulong };
+
+    // SAFETY: `isize` was checked for NULL on this arm.
+    unsafe {
+        if !isize.is_null() {
+            if size <= c_uint::MAX as usize {
+                *isize = size as c_uint;
+            } else {
+                // SAFETY: a compile-time-constant site.
+                raise_site(&err_sites::DIGEST_476);
+                return 0;
+            }
+        }
+    }
+    ret
+}
+
+/// The authority's `legacy:` label in `EVP_DigestFinal_ex`.
+///
+/// It sets `CLEANED` after running the method's cleanup and then cleanses the data block
+/// **whether or not** the final succeeded -- so a failed legacy final still leaves no digest state
+/// behind. That is the opposite of the provider arm, which leaves the algorithm context alone.
+///
+/// # Safety
+/// `ctx` must be a live context whose `digest` is non-NULL and has no provider; `md` writable for
+/// `mdsize` bytes; `isize` NULL or writable.
+unsafe fn evp_md_final_legacy(
+    ctx: *mut EvpMdCtx,
+    md: *mut c_uchar,
+    isize: *mut c_uint,
+    mdsize: usize,
+) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    let digest = unsafe { (*ctx).digest };
+    // SAFETY: `digest` is non-NULL and live per the contract.
+    let final_ = unsafe { (*digest).final_ };
+    let Some(final_) = final_ else {
+        // The authority calls through this NULL, for the reason D-MD-NULL-CALLBACK-1 records:
+        // a hand-built method with no `EVP_MD_meth_set_final`. The refusal returns before the
+        // length is written and before the block is cleansed, so the context is left as it was.
+        return 0;
+    };
+    // SAFETY: `final_` is the method's own callback and `ctx` is the context it expects.
+    let ret = unsafe { final_(ctx, md) };
+    // SAFETY: `isize` is NULL or writable per the contract.
+    unsafe {
+        if !isize.is_null() {
+            *isize = mdsize as c_uint;
+        }
+    }
+    // SAFETY: `digest` is non-NULL and live.
+    let (cleanup, ctx_size, md_data) =
+        unsafe { ((*digest).cleanup, (*digest).ctx_size, (*ctx).md_data) };
+    if let Some(cleanup) = cleanup {
+        // SAFETY: `cleanup` is the method's own callback and `ctx` is the context it expects.
+        unsafe { cleanup(ctx) };
+        // SAFETY: `ctx` is live per the contract.
+        unsafe { EVP_MD_CTX_set_flags(ctx, EVP_MD_CTX_FLAG_CLEANED) };
+    }
+    if !md_data.is_null() && ctx_size > 0 {
+        // SAFETY: `md_data` is this context's own block of `ctx_size` bytes.
+        unsafe { cleanse(md_data.cast::<u8>(), ctx_size as usize) };
+    }
+    ret
+}
+
+/// `int EVP_DigestFinalXOF(EVP_MD_CTX *ctx, unsigned char *md, size_t size)`.
+///
+/// **One shot**: the authority's comment says so, and it is why the length travels as the
+/// `xoflen` parameter *and* as the `outsz` argument -- the parameter is for providers that predate
+/// the argument. `EVP_DigestSqueeze` is the repeatable one.
+///
+/// The `set_params` answer is **tested but not obeyed**: `ret` is left at 0 and only the final's
+/// own return survives, so a provider that refuses `xoflen` still gets called. That is the
+/// authority's `if (ossl_likely(EVP_MD_CTX_set_params(ctx, params) >= 0))` and is not a typo.
+///
+/// # Safety
+/// `ctx` must be a live context; `md` writable for `size` bytes; `size` the requested length.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_DigestFinalXOF(
+    ctx: *mut EvpMdCtx,
+    md: *mut c_uchar,
+    size: usize,
+) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    let digest = unsafe { (*ctx).digest };
+    if digest.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::DIGEST_505) };
+        return 0;
+    }
+
+    // SAFETY: `digest` is live.
+    if unsafe { (*digest).prov }.is_null() {
+        // SAFETY: `ctx` is live and its method has no provider.
+        return unsafe { evp_digest_final_xof_legacy(ctx, md, size) };
+    }
+
+    // SAFETY: `digest` is live.
+    let dfinal = unsafe { (*digest).dfinal };
+    let Some(dfinal) = dfinal else {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::DIGEST_513) };
+        return 0;
+    };
+
+    // SAFETY: `ctx` is live per the contract.
+    let finalised = (unsafe { EVP_MD_CTX_test_flags(ctx, EVP_MD_CTX_FLAG_FINALISED) }) != 0;
+    if finalised {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::DIGEST_518) };
+        return 0;
+    }
+
+    // The parameter array is a *local*, and its one entry points at the caller's `size` -- so the
+    // provider may rewrite the length it is asked for, and the final below uses whatever it left
+    // there. That aliasing is the authority's, not this transcription's.
+    let mut outlen = size;
+    let mut params: [OsslParam; 2] = [OSSL_PARAM_construct_end(); 2];
+    // SAFETY: the constructor writes one entry and `params` has room for two; the key is a
+    // literal and the value pointer is this frame's.
+    unsafe { params[0] = OSSL_PARAM_construct_size_t(OSSL_DIGEST_PARAM_XOFLEN, &mut outlen) };
+    // SAFETY: `params` is terminated by its second entry.
+    params[1] = OSSL_PARAM_construct_end();
+
+    let mut ret = 0;
+    // SAFETY: `ctx` is live and `params` is a terminated array of this frame's storage.
+    if unsafe { EVP_MD_CTX_set_params(ctx, params.as_mut_ptr()) } >= 0 {
+        // SAFETY: `dfinal` is the provider's own callback, `algctx` is its context, `md` is the
+        // caller's buffer, and `outlen`/`size` are this frame's.
+        ret = unsafe { dfinal((*ctx).algctx, md, &mut outlen, size) };
+    }
+
+    // SAFETY: `ctx` is live.
+    unsafe { (*ctx).flags |= EVP_MD_CTX_FLAG_FINALISED as c_ulong };
+    ret
+}
+
+/// The authority's `legacy:` label in `EVP_DigestFinalXOF`.
+///
+/// The legacy arm is the one place `EVP_MD_CTRL_XOF_LEN` is used: a legacy XOF is told its length
+/// through `md_ctrl` rather than through a parameter, and the test is a **conjunction** -- a
+/// method that is not XOF, or a length above `INT_MAX`, or a `md_ctrl` that refuses, all land on
+/// the same `EVP_R_NOT_XOF_OR_INVALID_LENGTH`.
+///
+/// # Safety
+/// `ctx` must be a live context whose `digest` is non-NULL and has no provider; `md` writable for
+/// `size` bytes.
+unsafe fn evp_digest_final_xof_legacy(ctx: *mut EvpMdCtx, md: *mut c_uchar, size: usize) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    let digest = unsafe { (*ctx).digest };
+    // SAFETY: `digest` is non-NULL and live per the contract, and `EVP_MD_xof` accepts it.
+    let is_xof = unsafe { EVP_MD_xof(digest) } != 0 && size <= c_int::MAX as usize;
+    let ctrl_ok = if is_xof {
+        // SAFETY: `digest` is live.
+        let Some(md_ctrl) = (unsafe { (*digest).md_ctrl }) else {
+            // SAFETY: no preconditions; a compile-time-constant raise site.
+            return unsafe { evp_digest_final_xof_not_xof() };
+        };
+        // SAFETY: `md_ctrl` is the method's own callback and `ctx` is the context it expects.
+        (unsafe { md_ctrl(ctx, EVP_MD_CTRL_XOF_LEN, size as c_int, ptr::null_mut()) }) != 0
+    } else {
+        false
+    };
+    if !ctrl_ok {
+        // SAFETY: no preconditions; a compile-time-constant raise site.
+        return unsafe { evp_digest_final_xof_not_xof() };
+    }
+    // SAFETY: `digest` is live.
+    let Some(final_) = (unsafe { (*digest).final_ }) else {
+        // The same NULL-callback boundary as the plain legacy final; see D-MD-NULL-CALLBACK-1.
+        return 0;
+    };
+    // SAFETY: `final_` is the method's own callback and `ctx` is the context it expects.
+    let ret = unsafe { final_(ctx, md) };
+    // SAFETY: `digest` is live.
+    let (cleanup, ctx_size, md_data) =
+        unsafe { ((*digest).cleanup, (*digest).ctx_size, (*ctx).md_data) };
+    if let Some(cleanup) = cleanup {
+        // SAFETY: `cleanup` is the method's own callback and `ctx` is the context it expects.
+        unsafe { cleanup(ctx) };
+        // SAFETY: `ctx` is live per the contract.
+        unsafe { EVP_MD_CTX_set_flags(ctx, EVP_MD_CTX_FLAG_CLEANED) };
+    }
+    if !md_data.is_null() && ctx_size > 0 {
+        // SAFETY: `md_data` is this context's own block of `ctx_size` bytes.
+        unsafe { cleanse(md_data.cast::<u8>(), ctx_size as usize) };
+    }
+    ret
+}
+
+/// The `ERR_raise(ERR_LIB_EVP, EVP_R_NOT_XOF_OR_INVALID_LENGTH)` the legacy XOF arm falls to.
+///
+/// A named helper rather than two copies of one line, because the *two* ways to reach it are what
+/// the court compares and a reader should see that they are one answer.
+///
+/// # Safety
+/// No preconditions; a compile-time-constant raise site.
+unsafe fn evp_digest_final_xof_not_xof() -> c_int {
+    // SAFETY: a compile-time-constant site.
+    unsafe { raise_site(&err_sites::DIGEST_548) };
+    0
+}
+
+/// `int EVP_DigestSqueeze(EVP_MD_CTX *ctx, unsigned char *md, size_t size)`.
+///
+/// The **repeatable** XOF read, and the difference from `EVP_DigestFinalXOF` is that nothing is
+/// finalised: no flag is set, no parameter is passed, and the length is both the requested and the
+/// reported one through the same local. Three refusals, each with its own reason -- and the
+/// distinction between them is a contract fact, because a caller that wants to know whether it can
+/// squeeze at all reads the reason.
+///
+/// # Safety
+/// `ctx` must be a live context; `md` writable for `size` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_DigestSqueeze(
+    ctx: *mut EvpMdCtx,
+    md: *mut c_uchar,
+    size: usize,
+) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    let digest = unsafe { (*ctx).digest };
+    if digest.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::DIGEST_558) };
+        return 0;
+    }
+    // SAFETY: `digest` is live.
+    if unsafe { (*digest).prov }.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::DIGEST_563) };
+        return 0;
+    }
+    // SAFETY: `digest` is live.
+    let Some(dsqueeze) = (unsafe { (*digest).dsqueeze }) else {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::DIGEST_568) };
+        return 0;
+    };
+    let mut outlen = size;
+    // SAFETY: `dsqueeze` is the provider's own callback, `algctx` is its context, `md` is the
+    // caller's buffer, and `outlen`/`size` are this frame's.
+    unsafe { dsqueeze((*ctx).algctx, md, &mut outlen, size) }
+}
+
+/// `EVP_MD_CTX *EVP_MD_CTX_dup(const EVP_MD_CTX *in)`.
+///
+/// A fresh context and a copy into it, with the free on failure -- so the two ways to fail
+/// (`in` NULL, and a copy that could not allocate) both answer NULL rather than a half-made
+/// context.
+///
+/// # Safety
+/// `in` must be NULL or a live context.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_CTX_dup(in_: *const EvpMdCtx) -> *mut EvpMdCtx {
+    let out = EVP_MD_CTX_new();
+    if !out.is_null() {
+        // SAFETY: `out` is this call's own fresh context and `in_` is the caller's.
+        if unsafe { EVP_MD_CTX_copy_ex(out, in_) } == 0 {
+            // SAFETY: `out` is this call's own context.
+            unsafe { EVP_MD_CTX_free(out) };
+            return ptr::null_mut();
+        }
+    }
+    out
+}
+
+/// `int EVP_MD_CTX_copy(EVP_MD_CTX *out, const EVP_MD_CTX *in)`.
+///
+/// The reset first is the whole difference from `_ex`: this form refuses to reuse anything the
+/// destination already had, so a copy onto a used context cannot inherit its method.
+///
+/// # Safety
+/// `out` must be a live context; `in` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_CTX_copy(out: *mut EvpMdCtx, in_: *const EvpMdCtx) -> c_int {
+    // SAFETY: `out` is live per the contract.
+    unsafe { EVP_MD_CTX_reset(out) };
+    // SAFETY: both arguments are forwarded under this function's contract.
+    unsafe { EVP_MD_CTX_copy_ex(out, in_) }
+}
+
+/// `int EVP_MD_CTX_copy_ex(EVP_MD_CTX *out, const EVP_MD_CTX *in)`.
+///
+/// **Three arms, and they are not interchangeable.** Which one runs is decided by what the two
+/// contexts already hold:
+///
+///   * an **uninitialised source** -- `in->digest == NULL` -- is a plain struct copy after
+///     resetting the destination, and it is the arm that makes copying a fresh context cheap;
+///   * a **provider source with a `copyctx` and a destination already on the same method** copies
+///     *into* the destination's existing algorithm context. That is the in-place arm: the
+///     destination's block is reused, and its flags and update pointer are overwritten from the
+///     source rather than the source's being copied wholesale;
+///   * everything else resets the destination, releases it, and re-acquires: a reference is taken
+///     on the source's fetched method, the struct is copied whole, and the algorithm context is
+///     **duplicated** rather than shared.
+///
+/// The shared tail is `clone_pkey`, and it is where the copy's own `KEEP_PKEY_CTX` promise is
+/// cleared: a copied context always releases the pcontext it receives, whatever the source's flag
+/// said, because otherwise two contexts would own one reference.
+///
+/// The legacy arm is a *fourth* shape and is not a variation of the third: it saves the
+/// destination's data block under `REUSE` so the reset cannot free it, copies the whole struct,
+/// and then copies the source's bytes into that block. A caller that copies onto a context on the
+/// same legacy method therefore does not lose the destination's existing state to a reallocation.
+///
+/// The `FAIL_IF_NULL(in->digest)` is not a check but a **contract**: the third arm dereferences
+/// `in->digest` unconditionally, and a NULL there is a caller error on both sides.
+///
+/// # Safety
+/// `out` must be a live context; `in` NULL or live (and already initialised for the third arm).
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_CTX_copy_ex(out: *mut EvpMdCtx, in_: *const EvpMdCtx) -> c_int {
+    if in_.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::DIGEST_598) };
+        return 0;
+    }
+
+    // SAFETY: `in_` is live per the contract.
+    let in_digest = unsafe { (*in_).digest };
+    if in_digest.is_null() {
+        // Copying an uninitialised context. The destination is emptied, and the one reference it
+        // might hold is released *before* the struct copy, because the copy would otherwise
+        // overwrite the only pointer to it.
+        // SAFETY: `out` is live per the contract.
+        unsafe {
+            EVP_MD_CTX_reset(out);
+            if !(*out).fetched_digest.is_null() {
+                EVP_MD_free((*out).fetched_digest);
+            }
+            ptr::copy_nonoverlapping(in_, out, 1);
+        }
+        // SAFETY: both contexts are live and the destination has just been overwritten.
+        return unsafe { evp_md_ctx_copy_clone_pkey(out, in_) };
+    }
+
+    // SAFETY: `in_digest` is non-NULL and live.
+    let in_prov = unsafe { (*in_digest).prov };
+    // SAFETY: `in_` is live per the contract.
+    let in_no_init = (unsafe { EVP_MD_CTX_test_flags(in_, EVP_MD_CTX_FLAG_NO_INIT) }) != 0;
+    if in_prov.is_null() || in_no_init {
+        // SAFETY: `out` and `in_` are live per the contract.
+        return unsafe { evp_md_ctx_copy_legacy(out, in_) };
+    }
+
+    // SAFETY: `in_digest` is live.
+    let (in_dupctx, in_copyctx) = unsafe { ((*in_digest).dupctx, (*in_digest).copyctx) };
+    let Some(in_dupctx) = in_dupctx else {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::DIGEST_616) };
+        return 0;
+    };
+
+    // SAFETY: `out` is live per the contract.
+    if unsafe { (*out).digest } == in_digest {
+        if let Some(copyctx) = in_copyctx {
+            // SAFETY: `copyctx` is the method's own callback, and both algorithm contexts belong
+            // to that method -- which is what the branch's test established.
+            unsafe { copyctx((*out).algctx, (*in_).algctx) };
+            // SAFETY: `out` is live; its pcontext, if any, is the destination's own.
+            unsafe {
+                evp_pkey_ctx_free((*out).pctx);
+                (*out).pctx = ptr::null_mut();
+            }
+            // SAFETY: `out` is live per the contract.
+            unsafe { cleanup_old_md_data(out, 0) };
+            // SAFETY: `out` and `in_` are live, and the fields being copied are scalars.
+            unsafe {
+                (*out).flags = (*in_).flags;
+                (*out).update = (*in_).update;
+            }
+            // SAFETY: both contexts are live.
+            return unsafe { evp_md_ctx_copy_clone_pkey(out, in_) };
+        }
+    }
+
+    // The re-acquiring arm.
+    // SAFETY: `out` is live per the contract, and `keep_fetched` is what the authority passes.
+    unsafe { evp_md_ctx_reset_ex(out, 1) };
+    // SAFETY: `out` and `in_` are live.
+    let digest_change = unsafe { (*out).fetched_digest != (*in_).fetched_digest };
+    if digest_change {
+        // SAFETY: `in_` is live.
+        let in_fetched = unsafe { (*in_).fetched_digest };
+        if !in_fetched.is_null() {
+            // SAFETY: `in_fetched` is a live method and this is the class's own reference taker.
+            if unsafe { EVP_MD_up_ref(in_fetched) } == 0 {
+                return 0;
+            }
+        }
+        // SAFETY: `out` is live; NULL is accepted by the releaser.
+        unsafe {
+            if !(*out).fetched_digest.is_null() {
+                EVP_MD_free((*out).fetched_digest);
+            }
+        }
+    }
+
+    // The whole struct, as the authority's `*out = *in`, and then the two pointers that must not
+    // be shared are NULLed -- so an error in the duplicate below cannot make either context own the
+    // other's algorithm context or pcontext.
+    // SAFETY: `out` and `in_` are distinct live contexts, which is this function's contract.
+    unsafe {
+        ptr::copy_nonoverlapping(in_, out, 1);
+        (*out).pctx = ptr::null_mut();
+        (*out).algctx = ptr::null_mut();
+    }
+
+    // SAFETY: `in_` is live per the contract.
+    let in_algctx = unsafe { (*in_).algctx };
+    if !in_algctx.is_null() {
+        // SAFETY: `in_dupctx` is the method's own callback and `in_algctx` is its context.
+        let algctx = unsafe { in_dupctx(in_algctx) };
+        if algctx.is_null() {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::DIGEST_647) };
+            return 0;
+        }
+        // SAFETY: `out` is live.
+        unsafe { (*out).algctx = algctx };
+    }
+
+    // SAFETY: both contexts are live.
+    unsafe { evp_md_ctx_copy_clone_pkey(out, in_) }
+}
+
+/// The authority's `clone_pkey:` label in `EVP_MD_CTX_copy_ex`.
+///
+/// Two things: the destination gives up the right to keep whatever pcontext it inherited, and then
+/// the source's pcontext -- if it has one -- is duplicated into it. The flag clear comes **first**
+/// and is unconditional, and it is what stops the destination releasing a reference it is about to
+/// be given a copy of.
+///
+/// # Safety
+/// `out` and `in_` must both be live contexts, and `out` must already hold its copied state.
+unsafe fn evp_md_ctx_copy_clone_pkey(out: *mut EvpMdCtx, in_: *const EvpMdCtx) -> c_int {
+    // SAFETY: `out` is live per the contract.
+    unsafe { EVP_MD_CTX_clear_flags(out, EVP_MD_CTX_FLAG_KEEP_PKEY_CTX) };
+    // SAFETY: `in_` is live per the contract.
+    if !unsafe { (*in_).pctx }.is_null() {
+        // SAFETY: `in_` is live, so `pctx` is a live `EVP_PKEY_CTX` the source holds.
+        let pctx = unsafe { evp_pkey_ctx_dup((*in_).pctx) };
+        if pctx.is_null() {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::DIGEST_660) };
+            // SAFETY: `out` is live per the contract.
+            unsafe { EVP_MD_CTX_reset(out) };
+            return 0;
+        }
+        // SAFETY: `out` is live.
+        unsafe { (*out).pctx = pctx };
+    }
+    1
+}
+
+/// The authority's `legacy:` label in `EVP_MD_CTX_copy_ex`.
+///
+/// The `ENGINE_init(in->engine)` that opens it is omitted, because `in->engine` is always NULL
+/// here. What remains is the `REUSE` trick: the destination's data block is remembered, the
+/// destination is reset with that flag set so the reset does not release it, and the block is then
+/// **reused** if the method is the same -- otherwise a fresh one is allocated and the source's
+/// bytes are copied into it.
+///
+/// The order matters in a way that is easy to miss: the whole struct is copied from the source
+/// *between* the reset and the block fix-up, so `out->digest` afterwards is the source's method and
+/// `out->md_data` has to be repaired by hand.
+///
+/// # Safety
+/// `out` and `in_` must both be live contexts with non-NULL methods.
+unsafe fn evp_md_ctx_copy_legacy(out: *mut EvpMdCtx, in_: *const EvpMdCtx) -> c_int {
+    // SAFETY: `out` and `in_` are live per the contract.
+    let tmp_buf = unsafe {
+        if (*out).digest == (*in_).digest {
+            let buf = (*out).md_data;
+            EVP_MD_CTX_set_flags(out, EVP_MD_CTX_FLAG_REUSE);
+            buf
+        } else {
+            ptr::null_mut()
+        }
+    };
+    // SAFETY: `out` is live per the contract.
+    unsafe { EVP_MD_CTX_reset(out) };
+    // SAFETY: the destination was just reset and holds nothing; the source is live.
+    unsafe { ptr::copy_nonoverlapping(in_, out, 1) };
+
+    // SAFETY: `out` is live per the contract.
+    unsafe { EVP_MD_CTX_clear_flags(out, EVP_MD_CTX_FLAG_KEEP_PKEY_CTX) };
+
+    // The two pointers that are *not* copied, because both are about to be fixed up and would
+    // otherwise be a leak and a double free if anything below failed.
+    // SAFETY: `out` is live and was just overwritten from `in_`.
+    unsafe {
+        (*out).md_data = ptr::null_mut();
+        (*out).pctx = ptr::null_mut();
+    }
+
+    // SAFETY: `out` and `in_` are live; `out->digest` is the source's method.
+    let (in_md_data, ctx_size, out_digest) =
+        unsafe { ((*in_).md_data, (*(*out).digest).ctx_size, (*out).digest) };
+    if !in_md_data.is_null() && ctx_size != 0 {
+        let block = if !tmp_buf.is_null() {
+            tmp_buf
+        } else {
+            let fresh = CRYPTO_malloc(ctx_size as usize, FILE, LINE_COPY_MD_DATA);
+            if fresh.is_null() {
+                return 0;
+            }
+            fresh
+        };
+        // SAFETY: `block` is at least `ctx_size` bytes -- either the destination's own old block
+        // for this very method, or a fresh allocation of exactly that size -- and `in_md_data` is
+        // the source's block for the same method.
+        unsafe {
+            ptr::copy_nonoverlapping(
+                in_md_data.cast::<u8>(),
+                block.cast::<u8>(),
+                ctx_size as usize,
+            );
+            (*out).md_data = block;
+        }
+    }
+
+    // SAFETY: `out` and `in_` are live.
+    unsafe { (*out).update = (*in_).update };
+
+    // SAFETY: both contexts are live. The clone-pkey step is the same one every arm uses.
+    let cloned = unsafe { evp_md_ctx_copy_clone_pkey(out, in_) };
+    if cloned == 0 {
+        return 0;
+    }
+
+    // SAFETY: `out_digest` is live.
+    if let Some(copy) = unsafe { (*out_digest).copy } {
+        // SAFETY: `copy` is the method's own callback, and both arguments are contexts of it.
+        return unsafe { copy(out, in_) };
+    }
+    1
+}
+
+/// `int EVP_Digest(const void *data, size_t count, unsigned char *md, unsigned int *size,
+/// const EVP_MD *type, ENGINE *impl)`.
+///
+/// The one-shot, and the two lines that make it one: `EVP_MD_CTX_FLAG_ONESHOT` is set on the
+/// temporary context -- which is what tells a signature operation's provider that no update will
+/// follow -- and the three calls are joined by **short-circuit** `&&`, so a failed initialise
+/// never reaches the update and a failed update never reaches the final.
+///
+/// # Safety
+/// `data` readable for `count` bytes; `md` writable for the digest's size; `size` NULL or
+/// writable; `type` NULL or live; `impl` NULL.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_Digest(
+    data: *const c_void,
+    count: usize,
+    md: *mut c_uchar,
+    size: *mut c_uint,
+    type_: *const EvpMd,
+    impl_: *mut c_void,
+) -> c_int {
+    let ctx = EVP_MD_CTX_new();
+    if ctx.is_null() {
+        return 0;
+    }
+    // SAFETY: `EVP_Digest` set the flag on a context this call owns.
+    unsafe { EVP_MD_CTX_set_flags(ctx, EVP_MD_CTX_FLAG_ONESHOT) };
+    // SAFETY: `ctx` is this call's own context and the arguments are the caller's, forwarded
+    // under this function's contract.
+    let ret = unsafe {
+        EVP_DigestInit_ex(ctx, type_, impl_) != 0
+            && EVP_DigestUpdate(ctx, data, count) != 0
+            && EVP_DigestFinal_ex(ctx, md, size) != 0
+    };
+    // SAFETY: `ctx` is this call's own context.
+    unsafe { EVP_MD_CTX_free(ctx) };
+    c_int::from(ret)
+}
+
+/// `int EVP_Q_digest(OSSL_LIB_CTX *libctx, const char *name, const char *propq,
+/// const void *data, size_t datalen, unsigned char *md, size_t *mdlen)`.
+///
+/// A fetch and then the one-shot above, with the length widened on the way out: the one-shot works
+/// in `unsigned int` and this entry point reports `size_t`. The length is written **even when the
+/// fetch failed**, from a zero-initialised local -- which is why a caller cannot read an
+/// uninitialised value out of a failed `EVP_Q_digest`, and why the answer is 0 rather than whatever
+/// the buffer held.
+///
+/// # Safety
+/// `name` NUL-terminated; `data` readable for `datalen` bytes; `md` writable for the digest's
+/// size; `mdlen` NULL or writable.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_Q_digest(
+    libctx: *mut c_void,
+    name: *const c_char,
+    propq: *const c_char,
+    data: *const c_void,
+    datalen: usize,
+    md: *mut c_uchar,
+    mdlen: *mut usize,
+) -> c_int {
+    // SAFETY: `name` and `propq` are NULL or NUL-terminated per the contract.
+    let digest = unsafe { EVP_MD_fetch(libctx, name, propq) };
+    let mut temp: c_uint = 0;
+    let mut ret = 0;
+    if !digest.is_null() {
+        // SAFETY: `digest` is a live method and the rest are the caller's arguments.
+        ret = unsafe { EVP_Digest(data, datalen, md, &mut temp, digest, ptr::null_mut()) };
+        // SAFETY: `digest` is this call's own reference.
+        unsafe { EVP_MD_free(digest) };
+    }
+    // SAFETY: `mdlen` was checked for NULL.
+    unsafe {
+        if !mdlen.is_null() {
+            *mdlen = temp as usize;
+        }
+    }
+    ret
+}
+
+/// `int EVP_MD_CTX_set_params(EVP_MD_CTX *ctx, const OSSL_PARAM params[])`.
+///
+/// A method with no `set_ctx_params` answers **0 without an error**, which is a refusal a caller
+/// can tell apart from a provider that answered "no": the second also answers 0, but only after
+/// being asked. That distinction is what `EVP_DigestFinalXOF`'s `>= 0` test depends on.
+///
+/// # Safety
+/// `ctx` must be a live context; `params` NULL or terminated.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_CTX_set_params(
+    ctx: *mut EvpMdCtx,
+    params: *const OsslParam,
+) -> c_int {
+    // The authority tries `ctx->pctx`'s signature parameters first. `ctx->pctx` is NULL until 7.4
+    // (`src/evp/pkey_ctx.rs`), so that block is omitted and unreachable rather than unimplemented.
+    // SAFETY: `ctx` is live per the contract.
+    let digest = unsafe { (*ctx).digest };
+    if digest.is_null() {
+        return 0;
+    }
+    // SAFETY: `digest` is live.
+    let Some(set_ctx_params) = (unsafe { (*digest).set_ctx_params }) else {
+        return 0;
+    };
+    // SAFETY: `set_ctx_params` is the provider's own callback, `algctx` is the context its
+    // `newctx` handed back, and `params` is the caller's array.
+    unsafe { set_ctx_params((*ctx).algctx, params) }
+}
+
+/// `const OSSL_PARAM *EVP_MD_CTX_settable_params(EVP_MD_CTX *ctx)`.
+///
+/// **Answers NULL for a NULL context**, which is the check `EVP_MD_CTX_set_params` does not have --
+/// so the two halves of the same question differ on their NULL arm.
+///
+/// The provider context is fetched from the *method's* provider and passed second, after the
+/// algorithm context: the callback is `(void *vctx, void *provctx)` and this call fills both.
+///
+/// # Safety
+/// `ctx` must be NULL or a live context.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_CTX_settable_params(ctx: *mut EvpMdCtx) -> *const OsslParam {
+    if ctx.is_null() {
+        return ptr::null();
+    }
+    // SAFETY: `ctx` is live per the contract.
+    let digest = unsafe { (*ctx).digest };
+    if digest.is_null() {
+        return ptr::null();
+    }
+    // SAFETY: `digest` is live.
+    let Some(settable) = (unsafe { (*digest).settable_ctx_params }) else {
+        return ptr::null();
+    };
+    // SAFETY: `digest` is live, so a method with a `settable_ctx_params` has a provider.
+    let provctx = unsafe { ossl_provider_ctx((*digest).prov) };
+    // SAFETY: `settable` is the provider's own callback; both arguments are its contexts.
+    unsafe { settable((*ctx).algctx, provctx) }
+}
+
+/// `int EVP_MD_CTX_get_params(EVP_MD_CTX *ctx, OSSL_PARAM params[])`.
+///
+/// # Safety
+/// `ctx` must be a live context; `params` NULL or terminated.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_CTX_get_params(
+    ctx: *mut EvpMdCtx,
+    params: *mut OsslParam,
+) -> c_int {
+    // The `ctx->pctx` block is omitted for the reason `EVP_MD_CTX_set_params` records.
+    // SAFETY: `ctx` is live per the contract.
+    let digest = unsafe { (*ctx).digest };
+    if digest.is_null() {
+        return 0;
+    }
+    // SAFETY: `digest` is live.
+    let Some(get_ctx_params) = (unsafe { (*digest).get_ctx_params }) else {
+        return 0;
+    };
+    // SAFETY: `get_ctx_params` is the provider's own callback and both arguments are its contexts
+    // and the caller's array.
+    unsafe { get_ctx_params((*ctx).algctx, params) }
+}
+
+/// `const OSSL_PARAM *EVP_MD_CTX_gettable_params(EVP_MD_CTX *ctx)`.
+///
+/// The one accessor in this family whose NULL check is spelled `ossl_unlikely`, which is a
+/// prediction and not a difference: the answer is NULL either way.
+///
+/// # Safety
+/// `ctx` must be NULL or a live context.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_CTX_gettable_params(ctx: *mut EvpMdCtx) -> *const OsslParam {
+    if ctx.is_null() {
+        return ptr::null();
+    }
+    // SAFETY: `ctx` is live per the contract.
+    let digest = unsafe { (*ctx).digest };
+    if digest.is_null() {
+        return ptr::null();
+    }
+    // SAFETY: `digest` is live.
+    let Some(gettable) = (unsafe { (*digest).gettable_ctx_params }) else {
+        return ptr::null();
+    };
+    // SAFETY: `digest` is live, so a method with a `gettable_ctx_params` has a provider.
+    let provctx = unsafe { ossl_provider_ctx((*digest).prov) };
+    // SAFETY: `gettable` is the provider's own callback; both arguments are its contexts.
+    unsafe { gettable((*ctx).algctx, provctx) }
+}
+
+/// `int EVP_MD_CTX_ctrl(EVP_MD_CTX *ctx, int cmd, int p1, void *p2)`.
+///
+/// The legacy control entry point, and **four of the commands a caller might try are refused by
+/// returning -1 from the switch and then 0 at the bottom**: only `XOF_LEN`, `MICALG` and
+/// `SSL3_MASTER_SECRET` have an arm. The two that answer through parameters differ in direction --
+/// `XOF_LEN` and `SSL3_MASTER_SECRET` *set*, `MICALG` *gets* -- and the return value is the
+/// provider's own, so a `get` that filled the caller's buffer answers 1.
+///
+/// A negative answer from the provider is turned into **0**, which is what makes `<= 0` the test
+/// rather than `< 0`: `EVP_CTRL_RET_UNSUPPORTED` (-1) is a provider saying "not supported", and a
+/// caller must not see it as a successful answer.
+///
+/// # Safety
+/// `ctx` must be NULL or a live context; `p2` is the command's own argument.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_CTX_ctrl(
+    ctx: *mut EvpMdCtx,
+    cmd: c_int,
+    p1: c_int,
+    p2: *mut c_void,
+) -> c_int {
+    let mut set_params = true;
+    // The authority's `size_t sz` is assigned in one arm and read in that same arm. The assignment
+    // is the declaration here rather than a later statement, because an initialiser the only reader
+    // never sees is exactly what `unused_assignments` is for.
+    let mut sz: usize = p1 as usize;
+    let mut params: [OsslParam; 2] = [OSSL_PARAM_construct_end(); 2];
+
+    if ctx.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::DIGEST_897) };
+        return 0;
+    }
+
+    // SAFETY: `ctx` is live per the contract.
+    let digest = unsafe { (*ctx).digest };
+    if !digest.is_null() {
+        // SAFETY: `digest` is live.
+        if unsafe { (*digest).prov }.is_null() {
+            // SAFETY: `ctx` is live and its method has no provider.
+            return unsafe { evp_md_ctx_ctrl_legacy(ctx, cmd, p1, p2) };
+        }
+    }
+
+    // SAFETY: each constructor writes one entry, `params` has room for two, the keys are literals
+    // and the value pointers are this frame's or the caller's.
+    let built = unsafe {
+        match cmd {
+            EVP_MD_CTRL_XOF_LEN => {
+                params[0] = OSSL_PARAM_construct_size_t(OSSL_DIGEST_PARAM_XOFLEN, &mut sz);
+                true
+            }
+            EVP_MD_CTRL_MICALG => {
+                set_params = false;
+                params[0] = OSSL_PARAM_construct_utf8_string(
+                    OSSL_DIGEST_PARAM_MICALG,
+                    p2.cast::<c_char>(),
+                    if p1 != 0 { p1 as usize } else { 9999 },
+                );
+                true
+            }
+            EVP_CTRL_SSL3_MASTER_SECRET => {
+                params[0] =
+                    OSSL_PARAM_construct_octet_string(OSSL_DIGEST_PARAM_SSL3_MS, p2, p1 as usize);
+                true
+            }
+            _ => false,
+        }
+    };
+    if !built {
+        // The authority's `goto conclude` with `ret` still at `EVP_CTRL_RET_UNSUPPORTED`.
+        return 0;
+    }
+
+    // The authority's `ret = EVP_CTRL_RET_UNSUPPORTED` at the top of the function is the value the
+    // `default:` arm carries to `conclude`; that arm returns 0 above rather than carrying it, so
+    // the initial value has no reader here.
+    // SAFETY: `ctx` is live and `params` is a terminated array of this frame's storage.
+    let ret = unsafe {
+        if set_params {
+            EVP_MD_CTX_set_params(ctx, params.as_ptr())
+        } else {
+            EVP_MD_CTX_get_params(ctx, params.as_mut_ptr())
+        }
+    };
+
+    if ret <= 0 {
+        return 0;
+    }
+    ret
+}
+
+/// The authority's `legacy:` label in `EVP_MD_CTX_ctrl`.
+///
+/// One check and one call: a legacy method with no `md_ctrl` is `EVP_R_CTRL_NOT_IMPLEMENTED`
+/// rather than a refusal with no reason, and otherwise the command is handed to the method
+/// unchanged -- no translation to a parameter, which is the whole difference from the provider
+/// arm.
+///
+/// # Safety
+/// `ctx` must be a live context whose `digest` is non-NULL and has no provider.
+unsafe fn evp_md_ctx_ctrl_legacy(
+    ctx: *mut EvpMdCtx,
+    cmd: c_int,
+    p1: c_int,
+    p2: *mut c_void,
+) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    let Some(md_ctrl) = (unsafe { (*(*ctx).digest).md_ctrl }) else {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::DIGEST_931) };
+        return 0;
+    };
+    // SAFETY: `md_ctrl` is the method's own callback and `ctx` is the context it expects.
+    let ret = unsafe { md_ctrl(ctx, cmd, p1, p2) };
+    if ret <= 0 {
+        return 0;
+    }
+    ret
+}
+
+/// `void EVP_MD_do_all_provided(OSSL_LIB_CTX *libctx, void (*fn)(EVP_MD *md, void *arg),
+/// void *arg)`.
+///
+/// Every digest every activated provider publishes, constructed and visited. The construction is
+/// not an implementation detail: `evp_generic_do_all` fetches with a **NULL name** first, which
+/// constructs every algorithm of every provider into the store, and then walks the store -- so a
+/// provider whose constructor refuses for one algorithm leaves that algorithm out of the
+/// enumeration, and a visitor that counted would see the refusal as an absence.
+///
+/// The authority's cast, `(void (*)(void *, void *))fn`, is the same cast Rust refuses to make
+/// implicitly: the two function-pointer types have the same ABI and differ only in the pointee
+/// name, which is not part of the ABI. It is made explicitly below.
+///
+/// A **NULL visitor is refused** rather than passed on. The authority calls it through
+/// (`filter_on_operation_id` has no check), so a NULL there is a fault this crate does not
+/// reproduce; see `docs/SECURITY_DIVERGENCE_POLICY.md` D-MD-DOALL-NULL-1. The refusal is the early
+/// return, and it is silent because there is nothing a silent walk of nothing would have told the
+/// caller anyway.
+///
+/// # Safety
+/// `libctx` NULL or live; `fn_` a valid visitor or NULL; `arg` is the visitor's own argument.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_do_all_provided(
+    libctx: *mut c_void,
+    fn_: Option<unsafe extern "C" fn(*mut EvpMd, *mut c_void)>,
+    arg: *mut c_void,
+) {
+    let Some(visitor) = fn_ else {
+        return;
+    };
+    // SAFETY: `visitor` is a live function pointer and `GenericDoAllFn` is the same ABI with an
+    // unnamed pointee -- the authority's own cast, and the reason both sides canonicalise to
+    // `ptr(opaque)`. Nothing is called through it except by the walk, in this call.
+    let trampoline: GenericDoAllFn = unsafe { core::mem::transmute::<_, GenericDoAllFn>(visitor) };
+    // SAFETY: `libctx` is NULL or live; the three class callbacks are this module's own and match
+    // the shapes `evp_generic_do_all` declares.
+    unsafe {
+        evp_generic_do_all(
+            libctx,
+            OSSL_OP_DIGEST,
+            trampoline,
+            arg,
+            evp_md_from_algorithm as MethodFromAlgorithmFn,
+            evp_md_up_ref as MethodUpRefFn,
+            evp_md_free as MethodFreeFn,
+        )
+    }
+}
+
+/// The `NID` pair table `ossl_hmac2mdnid` and `ossl_md2hmacnid` walk, from `digest.c`.
+///
+/// Fifteen rows, in the authority's order, and the order is not observable through either
+/// function -- a table with unique values on both sides is a bijection wherever it starts. It is
+/// written in the authority's order anyway, because the next reader's question is "is this the
+/// same table", and a reordering would make that question unanswerable by comparison.
+const OSSL_HMACMD_PAIRS: [(c_int, c_int); 15] = [
+    (NID_sha1, NID_hmacWithSHA1),
+    (NID_md5, NID_hmacWithMD5),
+    (NID_sha224, NID_hmacWithSHA224),
+    (NID_sha256, NID_hmacWithSHA256),
+    (NID_sha384, NID_hmacWithSHA384),
+    (NID_sha512, NID_hmacWithSHA512),
+    (NID_id_GostR3411_94, NID_id_HMACGostR3411_94),
+    (
+        NID_id_GostR3411_2012_256,
+        NID_id_tc26_hmac_gost_3411_2012_256,
+    ),
+    (
+        NID_id_GostR3411_2012_512,
+        NID_id_tc26_hmac_gost_3411_2012_512,
+    ),
+    (NID_sha3_224, NID_hmac_sha3_224),
+    (NID_sha3_256, NID_hmac_sha3_256),
+    (NID_sha3_384, NID_hmac_sha3_384),
+    (NID_sha3_512, NID_hmac_sha3_512),
+    (NID_sha512_224, NID_hmacWithSHA512_224),
+    (NID_sha512_256, NID_hmacWithSHA512_256),
+];
+
+/// `int ossl_hmac2mdnid(int hmac_nid)`.
+///
+/// The HMAC NID for a digest NID, or `NID_undef` -- which is also what an *unknown* NID answers,
+/// so a caller cannot distinguish "no such HMAC" from "no HMAC for that digest".
+///
+/// `pub(crate)` and not yet called: its only caller is `crypto/pkcs12/p12_mutl.c`, which belongs to
+/// a stratum that has not landed. It is transcribed here because it is `digest.c`'s and because the
+/// table it walks is the reason `digest.c` needs the object database at all.
+#[allow(dead_code)] // no caller until PKCS12's p12_mutl.c lands
+pub(crate) fn ossl_hmac2mdnid(hmac_nid: c_int) -> c_int {
+    for (md, hmac) in OSSL_HMACMD_PAIRS {
+        if hmac == hmac_nid {
+            return md;
+        }
+    }
+    NID_undef
+}
+
+/// `int ossl_md2hmacnid(int md_nid)` — the other direction, over the same table.
+#[allow(dead_code)] // no caller until PKCS12's p12_mutl.c lands
+pub(crate) fn ossl_md2hmacnid(md_nid: c_int) -> c_int {
+    for (md, hmac) in OSSL_HMACMD_PAIRS {
+        if md == md_nid {
+            return hmac;
+        }
+    }
+    NID_undef
+}
+
+// ---------------------------------------------------------------------------------------------
+// `crypto/evp/evp_lib.c` — the context accessors
+//
+// Twelve functions that sit beside the method accessors above in the authority's file and beside
+// the context half here, because every one of them reads a field of `struct evp_md_ctx_st` and
+// nothing else. They are the surface a *legacy* consumer uses, which is why four of them are
+// `EVP_MD_CTX_FLAG_*` bit operations and two are the deprecated spellings.
+// ---------------------------------------------------------------------------------------------
+
+/// `const EVP_MD *EVP_MD_CTX_md(const EVP_MD_CTX *ctx)`.
+///
+/// The pre-3.0 spelling of `EVP_MD_CTX_get0_md`, kept because it is an exported symbol. **Answers
+/// the requested method**, not the one that will run -- see the module documentation.
+///
+/// # Safety
+/// `ctx` must be NULL or a live context.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_CTX_md(ctx: *const EvpMdCtx) -> *const EvpMd {
+    if ctx.is_null() {
+        return ptr::null();
+    }
+    // SAFETY: `ctx` is live per the contract.
+    unsafe { (*ctx).reqdigest }
+}
+
+/// `const EVP_MD *EVP_MD_CTX_get0_md(const EVP_MD_CTX *ctx)`.
+///
+/// # Safety
+/// `ctx` must be NULL or a live context.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_CTX_get0_md(ctx: *const EvpMdCtx) -> *const EvpMd {
+    if ctx.is_null() {
+        return ptr::null();
+    }
+    // SAFETY: `ctx` is live per the contract.
+    unsafe { (*ctx).reqdigest }
+}
+
+/// `EVP_MD *EVP_MD_CTX_get1_md(EVP_MD_CTX *ctx)`.
+///
+/// The owned form: the same pointer, with a reference taken. A `reqdigest` that is a *legacy*
+/// method answers the pointer with **no count taken**, because `EVP_MD_up_ref` is free for the
+/// method table's objects -- so the answer is a borrowed static dressed as an owned one, which is
+/// the authority's own contract and not a leak here.
+///
+/// # Safety
+/// `ctx` must be NULL or a live context.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_CTX_get1_md(ctx: *mut EvpMdCtx) -> *mut EvpMd {
+    if ctx.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `ctx` is live per the contract.
+    let md = unsafe { (*ctx).reqdigest.cast_mut() };
+    if md.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `md` is a live method and this is the class's own reference taker.
+    if unsafe { EVP_MD_up_ref(md) } == 0 {
+        return ptr::null_mut();
+    }
+    md
+}
+
+/// `int EVP_MD_CTX_get_size_ex(const EVP_MD_CTX *ctx)`.
+///
+/// **The context is asked before the method is**, and that is the whole function: a provider that
+/// publishes a `size` *context parameter* -- which is how an XOF reports a length it was told --
+/// overrides the method's constant. The order of the two refusals is what makes an unset XOF a
+/// refusal rather than a zero: a size of zero from the provider is `-1`, not `0`.
+///
+/// # Safety
+/// `ctx` must be NULL or a live context.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_CTX_get_size_ex(ctx: *const EvpMdCtx) -> c_int {
+    // The authority casts the const away to ask the context for its gettable parameters, and the
+    // cast is sound because neither call mutates the context.
+    let c = ctx.cast_mut();
+    // SAFETY: `c` is `ctx` with the const taken off, and NULL is accepted by the callee.
+    let gettables = unsafe { EVP_MD_CTX_gettable_params(c) };
+    if !gettables.is_null() {
+        // SAFETY: `gettables` is the provider's own terminated array of descriptors.
+        if !unsafe { OSSL_PARAM_locate_const(gettables, OSSL_DIGEST_PARAM_SIZE) }.is_null() {
+            let mut sz: usize = 0;
+            let mut params: [OsslParam; 2] = [OSSL_PARAM_construct_end(); 2];
+            // SAFETY: the constructor writes one entry and `params` has room for two; the key is a
+            // literal and the value pointer is this frame's.
+            unsafe { params[0] = OSSL_PARAM_construct_size_t(OSSL_DIGEST_PARAM_SIZE, &mut sz) };
+            // SAFETY: `params` is terminated by its second entry.
+            params[1] = OSSL_PARAM_construct_end();
+            // SAFETY: `c` is NULL or live and `params` is a terminated array of this frame's
+            // storage.
+            if unsafe { EVP_MD_CTX_get_params(c, params.as_mut_ptr()) } != 1
+                || sz > c_int::MAX as usize
+                || sz == 0
+            {
+                return -1;
+            }
+            return sz as c_int;
+        }
+    }
+    // SAFETY: `ctx` is NULL or live, and `EVP_MD_get0_md` accepts NULL; `EVP_MD_get_size` accepts
+    // a NULL method and answers -1 with its own error.
+    unsafe { EVP_MD_get_size(EVP_MD_CTX_get0_md(ctx)) }
+}
+
+/// `EVP_PKEY_CTX *EVP_MD_CTX_get_pkey_ctx(const EVP_MD_CTX *ctx)`.
+///
+/// **No NULL check**: the authority dereferences `ctx` unconditionally, so a NULL is a caller error
+/// on both sides and not a checked refusal -- the same contract `EVP_MD_get_type` has.
+///
+/// # Safety
+/// `ctx` must be a live context.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_CTX_get_pkey_ctx(ctx: *const EvpMdCtx) -> *mut EvpPkeyCtx {
+    // SAFETY: `ctx` is live per the contract.
+    unsafe { (*ctx).pctx }
+}
+
+/// `void EVP_MD_CTX_set_pkey_ctx(EVP_MD_CTX *ctx, EVP_PKEY_CTX *pctx)`.
+///
+/// The flag is the whole contract: setting a context makes the *caller* its owner
+/// (`KEEP_PKEY_CTX`), and setting NULL gives the ownership back. The release of the previous one
+/// happens **first** and is skipped when the flag says the caller already owns it -- so replacing a
+/// kept context is the caller's leak to manage, not this function's.
+///
+/// # Safety
+/// `ctx` must be a live context; `pctx` NULL or a live `EVP_PKEY_CTX`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_CTX_set_pkey_ctx(ctx: *mut EvpMdCtx, pctx: *mut EvpPkeyCtx) {
+    // SAFETY: `ctx` is live per the contract.
+    let keep_pkey_ctx = (unsafe { EVP_MD_CTX_test_flags(ctx, EVP_MD_CTX_FLAG_KEEP_PKEY_CTX) }) != 0;
+    if !keep_pkey_ctx {
+        // SAFETY: `ctx` is live per the contract, so `pctx` is NULL or the caller's own context.
+        unsafe { evp_pkey_ctx_free((*ctx).pctx) };
+    }
+    // SAFETY: `ctx` is live.
+    unsafe { (*ctx).pctx = pctx };
+    if pctx.is_null() {
+        // SAFETY: `ctx` is live per the contract.
+        unsafe { EVP_MD_CTX_clear_flags(ctx, EVP_MD_CTX_FLAG_KEEP_PKEY_CTX) };
+    } else {
+        // SAFETY: `ctx` is live per the contract.
+        unsafe { EVP_MD_CTX_set_flags(ctx, EVP_MD_CTX_FLAG_KEEP_PKEY_CTX) };
+    }
+}
+
+/// `void *EVP_MD_CTX_get0_md_data(const EVP_MD_CTX *ctx)`.
+///
+/// The legacy half's data block, which is what a legacy `EVP_MD`'s callbacks receive as `ctx` and
+/// read through this accessor. NULL for a provider-initialised context, because that half has an
+/// `algctx` instead -- so this is the one accessor that says which half is live.
+///
+/// # Safety
+/// `ctx` must be a live context.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_CTX_get0_md_data(ctx: *const EvpMdCtx) -> *mut c_void {
+    // SAFETY: `ctx` is live per the contract.
+    unsafe { (*ctx).md_data }
+}
+
+/// `int (*EVP_MD_CTX_update_fn(EVP_MD_CTX *ctx))(EVP_MD_CTX *ctx, const void *data,
+/// size_t count)`.
+///
+/// Returns the function pointer rather than calling it, and the pointer is what
+/// `EVP_DigestUpdate`'s legacy arm would use -- so this accessor and that arm read the same field,
+/// and a caller that replaces it with [`EVP_MD_CTX_set_update_fn`] changes both.
+///
+/// # Safety
+/// `ctx` must be a live context.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_CTX_update_fn(ctx: *mut EvpMdCtx) -> Option<MdLegacyUpdateFn> {
+    // SAFETY: `ctx` is live per the contract.
+    unsafe { (*ctx).update }
+}
+
+/// `void EVP_MD_CTX_set_update_fn(EVP_MD_CTX *ctx, int (*update)(EVP_MD_CTX *ctx,
+/// const void *data, size_t count))`.
+///
+/// The one setter in this family, and it is unconditional: it neither refuses a second write nor
+/// checks the argument, so a caller can install a NULL and turn every later `EVP_DigestUpdate` on
+/// this context into a refused update rather than a crash.
+///
+/// # Safety
+/// `ctx` must be a live context; `update` NULL or a valid callback for this context's method.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_CTX_set_update_fn(
+    ctx: *mut EvpMdCtx,
+    update: Option<MdLegacyUpdateFn>,
+) {
+    // SAFETY: `ctx` is live per the contract.
+    unsafe { (*ctx).update = update }
+}
+
+/// `void EVP_MD_CTX_set_flags(EVP_MD_CTX *ctx, int flags)`.
+///
+/// # Safety
+/// `ctx` must be a live context.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_CTX_set_flags(ctx: *mut EvpMdCtx, flags: c_int) {
+    // SAFETY: `ctx` is live per the contract.
+    unsafe { (*ctx).flags |= flags as c_ulong }
+}
+
+/// `void EVP_MD_CTX_clear_flags(EVP_MD_CTX *ctx, int flags)`.
+///
+/// The `~flags` is taken on the **`int`** in the authority and then widened, which is why the
+/// complement here is of the widened value: the two differ for a negative `flags`, and this one is
+/// what the authority's usual arithmetic conversions produce.
+///
+/// # Safety
+/// `ctx` must be a live context.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_CTX_clear_flags(ctx: *mut EvpMdCtx, flags: c_int) {
+    // SAFETY: `ctx` is live per the contract.
+    unsafe { (*ctx).flags &= !(flags as c_ulong) }
+}
+
+/// `int EVP_MD_CTX_test_flags(const EVP_MD_CTX *ctx, int flags)`.
+///
+/// The mask and nothing else -- so the answer is the *bits*, not a boolean, and a caller that
+/// tested `== 1` would be wrong for every flag above `0x0001`. The truncation to `int` is the
+/// authority's return conversion and is preserved.
+///
+/// # Safety
+/// `ctx` must be a live context.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_MD_CTX_test_flags(ctx: *const EvpMdCtx, flags: c_int) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    unsafe { ((*ctx).flags & (flags as c_ulong)) as c_int }
+}
+
+// ---------------------------------------------------------------------------------------------
 // `crypto/evp/m_null.c` — the one legacy digest with no primitive under it
 // ---------------------------------------------------------------------------------------------
 
@@ -1426,7 +3458,7 @@ pub unsafe extern "C" fn EVP_MD_meth_get_ctrl(md: *const EvpMd) -> Option<MdLega
 ///
 /// # Safety
 /// The ABI is the authority's; no argument is read.
-unsafe extern "C" fn md_null_init(_ctx: *mut c_void) -> c_int {
+unsafe extern "C" fn md_null_init(_ctx: *mut EvpMdCtx) -> c_int {
     1
 }
 
@@ -1435,7 +3467,7 @@ unsafe extern "C" fn md_null_init(_ctx: *mut c_void) -> c_int {
 /// # Safety
 /// The ABI is the authority's; no argument is read.
 unsafe extern "C" fn md_null_update(
-    _ctx: *mut c_void,
+    _ctx: *mut EvpMdCtx,
     _data: *const c_void,
     _count: usize,
 ) -> c_int {
@@ -1446,7 +3478,7 @@ unsafe extern "C" fn md_null_update(
 ///
 /// # Safety
 /// The ABI is the authority's; no argument is read.
-unsafe extern "C" fn md_null_final(_ctx: *mut c_void, _md: *mut c_uchar) -> c_int {
+unsafe extern "C" fn md_null_final(_ctx: *mut EvpMdCtx, _md: *mut c_uchar) -> c_int {
     1
 }
 
