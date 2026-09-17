@@ -73,18 +73,20 @@ use core::ffi::{c_char, c_int, c_void, CStr};
 use core::ptr;
 use core::sync::atomic::{AtomicI32, Ordering};
 
+use crate::bn::bignum::BigNum;
 use crate::evp::keymgmt::{
     EVP_KEYMGMT_free, EVP_KEYMGMT_get0_name, EVP_KEYMGMT_get0_provider, EVP_KEYMGMT_is_a,
     EVP_KEYMGMT_names_do_all, EVP_KEYMGMT_up_ref, EvpKeyMgmt,
 };
 use crate::evp::keymgmt_lib::evp_keymgmt_util_clear_operation_cache;
+use crate::params::OsslParam;
 use crate::provider::OsslProvider;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::ex_data::{
     CRYPTO_dup_ex_data, CRYPTO_free_ex_data, CRYPTO_get_ex_data, CRYPTO_new_ex_data,
     CRYPTO_set_ex_data, CryptoExData, CRYPTO_EX_INDEX_EVP_PKEY,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_zalloc};
 use crate::runtime::obj::{
     NID_X9_62_id_ecPublicKey, NID_dhKeyAgreement, NID_dhpublicnumber, NID_dsa, NID_rsaEncryption,
     NID_rsassaPss, NID_sm2, NID_undef, OBJ_ln2nid, OBJ_nid2sn, OBJ_sn2nid, NID_ED25519, NID_ED448,
@@ -245,6 +247,10 @@ pub struct EvpPkey {
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/p_lib.c".as_ptr();
 /// `EVP_PKEY_new`'s `OPENSSL_zalloc(sizeof(*ret))` (line 1491).
 const LINE_ZALLOC_PKEY: c_int = 1491;
+/// `EVP_PKEY_get_bn_param`'s `OPENSSL_zalloc(buf_sz)` (line 2232).
+const LINE_ZALLOC_BN_BUFFER: c_int = 2232;
+/// `EVP_PKEY_get_bn_param`'s two frees of that buffer (lines 2248 and 2250).
+const LINE_FREE_BN_BUFFER: c_int = 2248;
 
 /// `EVP_PKEY *EVP_PKEY_new(void)`.
 ///
@@ -804,13 +810,667 @@ unsafe fn pkey_dup_done(dup_pk: *mut EvpPkey, pkey: *const EvpPkey) -> *mut EvpP
 /// (`DOMAIN_PARAMETERS | OTHER_PARAMETERS`).
 const OSSL_KEYMGMT_SELECT_ALL: c_int = (0x01 | 0x02) | (0x04 | 0x80);
 
+// ---------------------------------------------------------------------------------------------
+// The parameter family
+// ---------------------------------------------------------------------------------------------
+//
+// Ten accessors over one pair of delegations. Every one of them builds a **one-parameter**
+// `OSSL_PARAM` array addressed at a caller-supplied buffer, hands it to `EVP_PKEY_get_params` or
+// `EVP_PKEY_set_params`, and then reads the `return_size`/`modified` information back — so the shape
+// of the whole family is decided by two facts about the parameter contract:
+//
+//   * a `get` that succeeds may still not have filled the parameter, which is why every reader
+//     checks `OSSL_PARAM_modified` as well as the call's own return, and
+//   * a `get` that *fails* may have failed **only because the buffer was too small**, which is why
+//     `EVP_PKEY_get_bn_param` retries into an allocation sized by `return_size`. That retry is the
+//     only member of the family with a heap allocation, and its two cleanup paths differ: a buffer
+//     that was filled is cleared before it is freed, and one that was not is freed plain.
+
+/// `int EVP_PKEY_get_bn_param(const EVP_PKEY *pkey, const char *key_name, BIGNUM **bn)`.
+///
+/// The **retry** member. A 2048-byte stack buffer first, then a sized heap buffer if the call failed
+/// with the parameter *modified* — which is the authority's way of saying "the destination was too
+/// small, here is the size you need". `OSSL_PARAM_modified` is tested three times in three different
+/// senses and each one is load-bearing:
+///
+///   * after the first failure, to tell "too small" from "not supported" (an unmodified parameter
+///     means the provider never looked at it, so there is nothing to retry and nothing to report),
+///   * after the retry block, to tell "filled" from "absent" — a provider that answers `get_params`
+///     successfully while leaving the parameter unset is a *failure* here,
+///   * in the cleanup, to choose between `OPENSSL_clear_free` (the buffer holds key material) and
+///     `OPENSSL_free` (it does not), and between clearing the stack buffer and leaving it.
+///
+/// # Safety
+/// `pkey` must be NULL or live; `key_name` NULL or NUL-terminated; `bn` NULL or a live `BIGNUM **`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_get_bn_param(
+    pkey: *const EvpPkey,
+    key_name: *const c_char,
+    bn: *mut *mut BigNum,
+) -> c_int {
+    let mut params = [crate::params::END; 2];
+    /* The authority memsets this to zero before handing it to the constructor, which matters for the
+     * cleanup rather than for the read: an unfilled buffer is cleansed on the way out, and cleansing
+     * uninitialised bytes would be a read of them. */
+    let mut buffer = [0u8; 2048];
+    let mut buf: *mut u8 = ptr::null_mut();
+    let mut buf_sz: usize = 0;
+
+    if key_name.is_null() || bn.is_null() {
+        return 0;
+    }
+
+    // SAFETY: `key_name` is NUL-terminated and `buffer` is a live 2048-byte buffer.
+    unsafe {
+        params[0] =
+            crate::params::OSSL_PARAM_construct_BN(key_name, buffer.as_mut_ptr(), buffer.len());
+        params[1] = crate::params::OSSL_PARAM_construct_end();
+    }
+    // SAFETY: `pkey` is NULL or live and `params` is a terminated array whose data pointer is live.
+    if unsafe { EVP_PKEY_get_params(pkey, params.as_mut_ptr()) } == 0 {
+        // SAFETY: `params` is a live array.
+        if unsafe { crate::params::OSSL_PARAM_modified(params.as_ptr()) } == 0
+            || params[0].return_size == 0
+        {
+            return 0;
+        }
+        buf_sz = params[0].return_size;
+        /* `CRYPTO_zalloc` is a safe entry point of this crate: it validates its own argument and
+         * answers NULL rather than reading anything of the caller's. */
+        buf = CRYPTO_zalloc(buf_sz, FILE, LINE_ZALLOC_BN_BUFFER).cast::<u8>();
+        if buf.is_null() {
+            return 0;
+        }
+        params[0].data = buf.cast::<c_void>();
+        params[0].data_size = buf_sz;
+
+        // SAFETY: `pkey` is NULL or live and the buffer is now `buf_sz` bytes of `buf`.
+        if unsafe { EVP_PKEY_get_params(pkey, params.as_mut_ptr()) } == 0 {
+            // SAFETY: both are this call's own.
+            return unsafe { bn_param_cleanup(buf, buf_sz, &mut params, &mut buffer, 0) };
+        }
+    }
+    /* Fail if the param was not found. */
+    // SAFETY: `params` is a live array.
+    if unsafe { crate::params::OSSL_PARAM_modified(params.as_ptr()) } == 0 {
+        // SAFETY: both are this call's own.
+        return unsafe { bn_param_cleanup(buf, buf_sz, &mut params, &mut buffer, 0) };
+    }
+    // SAFETY: `params` holds one modified BN parameter and `bn` is a live out-parameter.
+    let ret = unsafe { crate::params::OSSL_PARAM_get_BN(params.as_ptr(), bn) };
+    // SAFETY: both are this call's own.
+    unsafe { bn_param_cleanup(buf, buf_sz, &mut params, &mut buffer, ret) }
+}
+
+/// The `err:` label of `EVP_PKEY_get_bn_param`, which is reached with `ret` still zero.
+///
+/// # Safety
+/// `buf` must be NULL or `buf_sz` bytes allocated by this call; `params` and `buffer` must be the
+/// live locals of the caller.
+unsafe fn bn_param_cleanup(
+    buf: *mut u8,
+    buf_sz: usize,
+    params: &mut [crate::params::OsslParam; 2],
+    buffer: &mut [u8; 2048],
+    ret: c_int,
+) -> c_int {
+    // SAFETY: `params` is a live array of two.
+    let modified = unsafe { crate::params::OSSL_PARAM_modified(params.as_ptr()) } != 0;
+    if !buf.is_null() {
+        if modified {
+            // SAFETY: `buf` is `buf_sz` bytes this call allocated and `modified` says the provider
+            // wrote into it, so it may hold key material.
+            unsafe { CRYPTO_clear_free(buf.cast(), buf_sz, FILE, LINE_FREE_BN_BUFFER) };
+        } else {
+            // SAFETY: `buf` is `buf_sz` bytes this call allocated and nothing was written.
+            unsafe { CRYPTO_free(buf.cast(), FILE, LINE_FREE_BN_BUFFER) };
+        }
+    } else if modified {
+        // SAFETY: `buffer` is a live 2048-byte buffer and the provider wrote
+        // `params[0].data_size` bytes into it.
+        unsafe {
+            crate::runtime::mem::OPENSSL_cleanse(buffer.as_mut_ptr().cast(), params[0].data_size)
+        };
+    }
+    ret
+}
+
+/// `int EVP_PKEY_get_octet_string_param(const EVP_PKEY *pkey, const char *key_name,
+/// unsigned char *buf, size_t max_buf_sz, size_t *out_len)`.
+///
+/// Two return values folded into one: the call's own success **and** the parameter's modification,
+/// so a provider that answered successfully without filling the parameter reports failure. The
+/// length out-parameter is written only when both are true.
+///
+/// # Safety
+/// `pkey` NULL or live; `key_name` NULL or NUL-terminated; `buf` NULL or writable for `max_buf_sz`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_get_octet_string_param(
+    pkey: *const EvpPkey,
+    key_name: *const c_char,
+    buf: *mut u8,
+    max_buf_sz: usize,
+    out_len: *mut usize,
+) -> c_int {
+    let mut params = [crate::params::END; 2];
+    let mut ret2 = 0;
+
+    if key_name.is_null() {
+        return 0;
+    }
+
+    // SAFETY: `key_name` is NUL-terminated and `buf` is writable for `max_buf_sz`.
+    unsafe {
+        params[0] =
+            crate::params::OSSL_PARAM_construct_octet_string(key_name, buf.cast(), max_buf_sz);
+        params[1] = crate::params::OSSL_PARAM_construct_end();
+    }
+    // SAFETY: `pkey` is NULL or live and `params` is a terminated array.
+    let ret1 = unsafe { EVP_PKEY_get_params(pkey, params.as_mut_ptr()) };
+    if ret1 != 0 {
+        // SAFETY: `params` is a live array.
+        ret2 = unsafe { crate::params::OSSL_PARAM_modified(params.as_ptr()) };
+    }
+    if ret2 != 0 && !out_len.is_null() {
+        // SAFETY: `out_len` is non-NULL.
+        unsafe { *out_len = params[0].return_size };
+    }
+    c_int::from(ret1 != 0 && ret2 != 0)
+}
+
+/// `int EVP_PKEY_get_utf8_string_param(const EVP_PKEY *pkey, const char *key_name, char *str,
+/// size_t max_buf_sz, size_t *out_len)`.
+///
+/// The octet-string shape with two additions, and both are about the **terminator**: a `return_size`
+/// equal to the buffer size means there was no room for a NUL, which is a failure rather than a
+/// truncated success; otherwise a NUL is written *one past the reported length*, which is safe
+/// exactly because of that test.
+///
+/// # Safety
+/// `pkey` NULL or live; `key_name` NULL or NUL-terminated; `str` NULL or writable for `max_buf_sz`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_get_utf8_string_param(
+    pkey: *const EvpPkey,
+    key_name: *const c_char,
+    str_: *mut c_char,
+    max_buf_sz: usize,
+    out_len: *mut usize,
+) -> c_int {
+    let mut params = [crate::params::END; 2];
+    let mut ret2 = 0;
+
+    if key_name.is_null() {
+        return 0;
+    }
+
+    // SAFETY: `key_name` is NUL-terminated and `str_` is writable for `max_buf_sz`.
+    unsafe {
+        params[0] = crate::params::OSSL_PARAM_construct_utf8_string(key_name, str_, max_buf_sz);
+        params[1] = crate::params::OSSL_PARAM_construct_end();
+    }
+    // SAFETY: `pkey` is NULL or live and `params` is a terminated array.
+    let ret1 = unsafe { EVP_PKEY_get_params(pkey, params.as_mut_ptr()) };
+    if ret1 != 0 {
+        // SAFETY: `params` is a live array.
+        ret2 = unsafe { crate::params::OSSL_PARAM_modified(params.as_ptr()) };
+    }
+    if ret2 != 0 && !out_len.is_null() {
+        // SAFETY: `out_len` is non-NULL.
+        unsafe { *out_len = params[0].return_size };
+    }
+
+    if ret2 != 0 && params[0].return_size == max_buf_sz {
+        /* There was no space for a NUL byte. */
+        return 0;
+    }
+    if ret2 != 0 && !str_.is_null() {
+        // SAFETY: `str_` is writable for `max_buf_sz` and `return_size < max_buf_sz`.
+        unsafe { *str_.add(params[0].return_size) = 0 };
+    }
+
+    c_int::from(ret1 != 0 && ret2 != 0)
+}
+
+/// `int EVP_PKEY_get_int_param(const EVP_PKEY *pkey, const char *key_name, int *out)`.
+///
+/// The short shape: the call's return **and** the modification, with the destination written by the
+/// provider through the descriptor rather than by this function.
+///
+/// # Safety
+/// `pkey` NULL or live; `key_name` NULL or NUL-terminated; `out` NULL or a live `int`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_get_int_param(
+    pkey: *const EvpPkey,
+    key_name: *const c_char,
+    out: *mut c_int,
+) -> c_int {
+    let mut params = [crate::params::END; 2];
+
+    if key_name.is_null() {
+        return 0;
+    }
+
+    // SAFETY: `key_name` is NUL-terminated and `out` is a live `int`.
+    unsafe {
+        params[0] = crate::params::OSSL_PARAM_construct_int(key_name, out);
+        params[1] = crate::params::OSSL_PARAM_construct_end();
+    }
+    // SAFETY: `pkey` is NULL or live and `params` is a terminated array.
+    let got = unsafe { EVP_PKEY_get_params(pkey, params.as_mut_ptr()) };
+    if got == 0 {
+        return 0;
+    }
+    // SAFETY: `params` is a live array.
+    unsafe { crate::params::OSSL_PARAM_modified(params.as_ptr()) }
+}
+
+/// `int EVP_PKEY_get_size_t_param(const EVP_PKEY *pkey, const char *key_name, size_t *out)`.
+///
+/// # Safety
+/// `pkey` NULL or live; `key_name` NULL or NUL-terminated; `out` NULL or a live `size_t`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_get_size_t_param(
+    pkey: *const EvpPkey,
+    key_name: *const c_char,
+    out: *mut usize,
+) -> c_int {
+    let mut params = [crate::params::END; 2];
+
+    if key_name.is_null() {
+        return 0;
+    }
+
+    // SAFETY: `key_name` is NUL-terminated and `out` is a live `size_t`.
+    unsafe {
+        params[0] = crate::params::OSSL_PARAM_construct_size_t(key_name, out);
+        params[1] = crate::params::OSSL_PARAM_construct_end();
+    }
+    // SAFETY: `pkey` is NULL or live and `params` is a terminated array.
+    let got = unsafe { EVP_PKEY_get_params(pkey, params.as_mut_ptr()) };
+    if got == 0 {
+        return 0;
+    }
+    // SAFETY: `params` is a live array.
+    unsafe { crate::params::OSSL_PARAM_modified(params.as_ptr()) }
+}
+
+/// `int EVP_PKEY_set_int_param(EVP_PKEY *pkey, const char *key_name, int in)`.
+///
+/// The setter shape: **no** modification test, because a setter writes the value itself and there is
+/// nothing for the provider to report back. The value's address is a local of this function, which is
+/// what makes the descriptor valid only for the duration of the call.
+///
+/// # Safety
+/// `pkey` NULL or live; `key_name` NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_set_int_param(
+    pkey: *mut EvpPkey,
+    key_name: *const c_char,
+    value: c_int,
+) -> c_int {
+    let mut params = [crate::params::END; 2];
+
+    if key_name.is_null() {
+        return 0;
+    }
+
+    // SAFETY: `key_name` is NUL-terminated and `value` is a live local.
+    unsafe {
+        params[0] =
+            crate::params::OSSL_PARAM_construct_int(key_name, ptr::addr_of!(value).cast_mut());
+        params[1] = crate::params::OSSL_PARAM_construct_end();
+    }
+    // SAFETY: `pkey` is NULL or live and `params` is a terminated array.
+    unsafe { EVP_PKEY_set_params(pkey, params.as_mut_ptr()) }
+}
+
+/// `int EVP_PKEY_set_size_t_param(EVP_PKEY *pkey, const char *key_name, size_t in)`.
+///
+/// # Safety
+/// `pkey` NULL or live; `key_name` NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_set_size_t_param(
+    pkey: *mut EvpPkey,
+    key_name: *const c_char,
+    value: usize,
+) -> c_int {
+    let mut params = [crate::params::END; 2];
+
+    if key_name.is_null() {
+        return 0;
+    }
+
+    // SAFETY: `key_name` is NUL-terminated and `value` is a live local.
+    unsafe {
+        params[0] =
+            crate::params::OSSL_PARAM_construct_size_t(key_name, ptr::addr_of!(value).cast_mut());
+        params[1] = crate::params::OSSL_PARAM_construct_end();
+    }
+    // SAFETY: `pkey` is NULL or live and `params` is a terminated array.
+    unsafe { EVP_PKEY_set_params(pkey, params.as_mut_ptr()) }
+}
+
+/// `int EVP_PKEY_set_bn_param(EVP_PKEY *pkey, const char *key_name, const BIGNUM *bn)`.
+///
+/// The one setter with a **length** and the one with a **NULL test on the key**: an unassigned key
+/// refuses before anything is converted. The conversion is `BN_bn2nativepad` into a 2048-byte stack
+/// buffer, which writes the magnitude **little-endian in the host's word order** — the "native" in the
+/// name — and it is what a provider's `set_params` expects for a `BN` parameter.
+///
+/// `ossl_assert(bsize <= sizeof(buffer))` is the identity function under `NDEBUG`, so in the released
+/// authority an oversized `BIGNUM` writes past the buffer; the crate follows the released build's
+/// *acceptance* and refuses the oversized case instead of reproducing the overflow, which is the same
+/// class as `D-GF2M-1`.
+///
+/// # Safety
+/// `pkey` NULL or live; `key_name` NULL or NUL-terminated; `bn` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_set_bn_param(
+    pkey: *mut EvpPkey,
+    key_name: *const c_char,
+    bn: *const BigNum,
+) -> c_int {
+    let mut params = [crate::params::END; 2];
+    let mut buffer = [0u8; 2048];
+
+    if key_name.is_null() || bn.is_null() || pkey.is_null() {
+        return 0;
+    }
+    // SAFETY: `pkey` is live and non-NULL.
+    if unsafe { (*pkey).keymgmt.is_null() && (*pkey).keydata.is_null() } {
+        return 0;
+    }
+
+    // SAFETY: `bn` is live per the contract.
+    let bsize = (unsafe { crate::bn::bignum::BN_num_bits(bn) } + 7) / 8;
+    if bsize <= 0 || bsize as usize > buffer.len() {
+        return 0;
+    }
+
+    // SAFETY: `bn` is live and `buffer` is `bsize` writable bytes.
+    if unsafe { crate::bn::bignum::BN_bn2nativepad(bn, buffer.as_mut_ptr(), bsize) } < 0 {
+        return 0;
+    }
+    // SAFETY: `key_name` is NUL-terminated and `buffer` is live for `bsize` bytes.
+    unsafe {
+        params[0] =
+            crate::params::OSSL_PARAM_construct_BN(key_name, buffer.as_mut_ptr(), bsize as usize);
+        params[1] = crate::params::OSSL_PARAM_construct_end();
+    }
+    // SAFETY: `pkey` is NULL or live and `params` is a terminated array.
+    unsafe { EVP_PKEY_set_params(pkey, params.as_mut_ptr()) }
+}
+
+/// `int EVP_PKEY_set_utf8_string_param(EVP_PKEY *pkey, const char *key_name, const char *str)`.
+///
+/// The size is passed as **0**, which for a `UTF8_STRING` parameter means "the string is
+/// NUL-terminated, measure it yourself" — the one place in this family where a size of zero is
+/// meaningful rather than absent.
+///
+/// # Safety
+/// `pkey` NULL or live; `key_name` NULL or NUL-terminated; `str_` NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_set_utf8_string_param(
+    pkey: *mut EvpPkey,
+    key_name: *const c_char,
+    str_: *const c_char,
+) -> c_int {
+    let mut params = [crate::params::END; 2];
+
+    if key_name.is_null() {
+        return 0;
+    }
+
+    // SAFETY: `key_name` is NUL-terminated and `str_` is NUL-terminated.
+    unsafe {
+        params[0] = crate::params::OSSL_PARAM_construct_utf8_string(key_name, str_.cast_mut(), 0);
+        params[1] = crate::params::OSSL_PARAM_construct_end();
+    }
+    // SAFETY: `pkey` is NULL or live and `params` is a terminated array.
+    unsafe { EVP_PKEY_set_params(pkey, params.as_mut_ptr()) }
+}
+
+/// `int EVP_PKEY_set_octet_string_param(EVP_PKEY *pkey, const char *key_name,
+/// const unsigned char *buf, size_t bsize)`.
+///
+/// # Safety
+/// `pkey` NULL or live; `key_name` NULL or NUL-terminated; `buf` NULL or readable for `bsize`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_set_octet_string_param(
+    pkey: *mut EvpPkey,
+    key_name: *const c_char,
+    buf: *const u8,
+    bsize: usize,
+) -> c_int {
+    let mut params = [crate::params::END; 2];
+
+    if key_name.is_null() {
+        return 0;
+    }
+
+    // SAFETY: `key_name` is NUL-terminated and `buf` is readable for `bsize`.
+    unsafe {
+        params[0] = crate::params::OSSL_PARAM_construct_octet_string(
+            key_name,
+            buf.cast_mut().cast(),
+            bsize,
+        );
+        params[1] = crate::params::OSSL_PARAM_construct_end();
+    }
+    // SAFETY: `pkey` is NULL or live and `params` is a terminated array.
+    unsafe { EVP_PKEY_set_params(pkey, params.as_mut_ptr()) }
+}
+
+/// `const OSSL_PARAM *EVP_PKEY_settable_params(const EVP_PKEY *pkey)`.
+///
+/// A **provider-only** answer: a legacy key's settable parameters are not modelled, so the test is
+/// `is_provided` and a NULL key falls into the same arm as a legacy one.
+///
+/// # Safety
+/// `pkey` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_settable_params(pkey: *const EvpPkey) -> *const OsslParam {
+    if pkey.is_null() {
+        return ptr::null();
+    }
+    // SAFETY: `pkey` is live.
+    let keymgmt = unsafe { (*pkey).keymgmt };
+    if keymgmt.is_null() {
+        return ptr::null();
+    }
+    // SAFETY: `keymgmt` is live.
+    unsafe { crate::evp::keymgmt::EVP_KEYMGMT_settable_params(keymgmt) }
+}
+
+/// `int EVP_PKEY_set_params(EVP_PKEY *pkey, OSSL_PARAM params[])`.
+///
+/// The **dirty counter is incremented before the call**, not after and not conditionally: a provider
+/// that fails may still have modified the key, and the cache must be invalidated for either outcome.
+/// That is the one line in this function that a plausible transcription gets wrong, and it is
+/// invisible until an operation hits a stale cache entry.
+///
+/// A NULL key and a legacy key reach the same `ERR_R_INVALID_KEY`, because the authority's legacy arm
+/// is `#if 0` — commented out, with a comment saying it can "safely be removed when #legacy support is
+/// removed". So a legacy key is *refused* rather than handled, and there is no arm to omit here.
+///
+/// # Safety
+/// `pkey` NULL or live; `params` a terminated array.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_set_params(pkey: *mut EvpPkey, params: *mut OsslParam) -> c_int {
+    if !pkey.is_null() {
+        // SAFETY: `pkey` is live.
+        let (keymgmt, keydata) = unsafe { ((*pkey).keymgmt, (*pkey).keydata) };
+        if !keymgmt.is_null() {
+            // SAFETY: `pkey` is live.
+            unsafe { (*pkey).dirty_cnt += 1 };
+            // SAFETY: `keymgmt` is live, `keydata` belongs to it, and `params` is terminated.
+            return unsafe {
+                crate::evp::keymgmt::evp_keymgmt_set_params(keymgmt, keydata, params)
+            };
+        }
+    }
+    // SAFETY: a compile-time-constant site.
+    unsafe { raise_site(&err_sites::P_LIB_2434) };
+    0
+}
+
+/// `const OSSL_PARAM *EVP_PKEY_gettable_params(const EVP_PKEY *pkey)`.
+///
+/// # Safety
+/// `pkey` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_gettable_params(pkey: *const EvpPkey) -> *const OsslParam {
+    if pkey.is_null() {
+        return ptr::null();
+    }
+    // SAFETY: `pkey` is live.
+    let keymgmt = unsafe { (*pkey).keymgmt };
+    if keymgmt.is_null() {
+        return ptr::null();
+    }
+    // SAFETY: `keymgmt` is live.
+    unsafe { crate::evp::keymgmt::EVP_KEYMGMT_gettable_params(keymgmt) }
+}
+
+/// `int EVP_PKEY_get_params(const EVP_PKEY *pkey, OSSL_PARAM params[])`.
+///
+/// The read half, and it is **`> 0`** rather than `!= 0`: `evp_keymgmt_get_params` answers `1` for a
+/// method with no callback and the provider's own value otherwise, and the authority normalises both
+/// through a positivity test. The error is raised for a NULL key and for a legacy key alike.
+///
+/// # Safety
+/// `pkey` NULL or live; `params` a terminated array.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_get_params(
+    pkey: *const EvpPkey,
+    params: *mut OsslParam,
+) -> c_int {
+    if !pkey.is_null() {
+        // SAFETY: `pkey` is live.
+        let (keymgmt, keydata) = unsafe { ((*pkey).keymgmt, (*pkey).keydata) };
+        if !keymgmt.is_null() {
+            // SAFETY: `keymgmt` is live, `keydata` belongs to it, and `params` is terminated.
+            let answer =
+                unsafe { crate::evp::keymgmt::evp_keymgmt_get_params(keymgmt, keydata, params) };
+            return c_int::from(answer > 0);
+        }
+    }
+    // SAFETY: a compile-time-constant site.
+    unsafe { raise_site(&err_sites::P_LIB_2455) };
+    0
+}
+
 // SPDX-License-Identifier: Apache-2.0
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// The twelve names resolve, case-insensitively, and each answers its own NID.
+    /// `EVP_PKEY_get_params` and `EVP_PKEY_set_params` refuse a **blank** key, and the refusal is the
+    /// same `EVP_R_INVALID_KEY` a NULL key gets -- because the authority's legacy arm is `#if 0`, so a
+    /// key with no provider method has nothing to delegate to. Both leave one error on the queue,
+    /// which is the observation.
+    #[test]
+    fn the_parameter_delegations_refuse_a_key_with_no_method() {
+        // SAFETY: no preconditions.
+        let pkey = unsafe { EVP_PKEY_new() };
+        assert!(!pkey.is_null());
+        let mut params = [crate::params::END; 2];
+
+        // SAFETY: `pkey` is this test's own blank key and `params` is a terminated array.
+        unsafe {
+            assert_eq!(EVP_PKEY_get_params(pkey, params.as_mut_ptr()), 0);
+            assert_ne!(
+                crate::runtime::err::ERR_peek_error(),
+                0,
+                "the refusal raises"
+            );
+            crate::runtime::err::ERR_clear_error();
+            assert_eq!(EVP_PKEY_set_params(pkey, params.as_mut_ptr()), 0);
+            assert_ne!(crate::runtime::err::ERR_peek_error(), 0);
+            crate::runtime::err::ERR_clear_error();
+
+            /* A NULL key takes the same arm and therefore raises the same error. */
+            assert_eq!(EVP_PKEY_get_params(ptr::null(), params.as_mut_ptr()), 0);
+            crate::runtime::err::ERR_clear_error();
+            assert_eq!(EVP_PKEY_set_params(ptr::null_mut(), params.as_mut_ptr()), 0);
+            crate::runtime::err::ERR_clear_error();
+
+            EVP_PKEY_free(pkey);
+        }
+    }
+
+    /// The two descriptor accessors answer NULL for a NULL key **and** for a blank one, because both
+    /// are tested with `keymgmt != NULL` rather than with a state flag. A single NULL is the point:
+    /// there is no third answer.
+    #[test]
+    fn the_descriptor_accessors_answer_null_without_a_method() {
+        // SAFETY: no preconditions.
+        let pkey = unsafe { EVP_PKEY_new() };
+        assert!(!pkey.is_null());
+        // SAFETY: `pkey` is this test's own blank key; NULL is the other documented input.
+        unsafe {
+            assert!(EVP_PKEY_gettable_params(pkey).is_null());
+            assert!(EVP_PKEY_settable_params(pkey).is_null());
+            assert!(EVP_PKEY_gettable_params(ptr::null()).is_null());
+            assert!(EVP_PKEY_settable_params(ptr::null()).is_null());
+            EVP_PKEY_free(pkey);
+        }
+    }
+
+    /// `EVP_PKEY_get_bn_param`'s two NULL guards come **before** anything is allocated or read, so
+    /// each answers 0 with the error queue untouched -- unlike the delegations above, this is a silent
+    /// refusal and the distinction is the contract.
+    #[test]
+    fn the_bn_reader_refuses_its_two_null_arguments_silently() {
+        // SAFETY: no preconditions.
+        let pkey = unsafe { EVP_PKEY_new() };
+        assert!(!pkey.is_null());
+        let mut out: *mut BigNum = ptr::null_mut();
+
+        // SAFETY: `pkey` is this test's own key; the NULLs are the documented refusals.
+        unsafe {
+            assert_eq!(
+                EVP_PKEY_get_bn_param(pkey, ptr::null(), ptr::addr_of_mut!(out)),
+                0
+            );
+            assert_eq!(
+                crate::runtime::err::ERR_peek_error(),
+                0,
+                "no error for a NULL name"
+            );
+            assert_eq!(
+                EVP_PKEY_get_bn_param(pkey, c"n".as_ptr(), ptr::null_mut()),
+                0
+            );
+            assert_eq!(
+                crate::runtime::err::ERR_peek_error(),
+                0,
+                "no error for a NULL out"
+            );
+            EVP_PKEY_free(pkey);
+        }
+    }
+
+    /// A new key's four cached properties are zero, and `EVP_PKEY_get_size` **raises** rather than
+    /// answering a silent zero when the size is not positive -- which is also the answer for a NULL
+    /// key, and the two are indistinguishable by the return value alone.
+    #[test]
+    fn a_size_of_zero_is_a_reported_failure() {
+        // SAFETY: no preconditions.
+        let pkey = unsafe { EVP_PKEY_new() };
+        assert!(!pkey.is_null());
+        // SAFETY: `pkey` is this test's own key; NULL is the other documented input.
+        unsafe {
+            assert_eq!(EVP_PKEY_get_size(pkey), 0);
+            assert_ne!(crate::runtime::err::ERR_peek_error(), 0);
+            crate::runtime::err::ERR_clear_error();
+            assert_eq!(EVP_PKEY_get_size(ptr::null()), 0);
+            assert_ne!(crate::runtime::err::ERR_peek_error(), 0);
+            crate::runtime::err::ERR_clear_error();
+            EVP_PKEY_free(pkey);
+        }
+    }
     #[test]
     fn the_twelve_standard_names_resolve_case_insensitively() {
         // SAFETY: every argument is a NUL-terminated constant.
