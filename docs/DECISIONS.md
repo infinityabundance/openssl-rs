@@ -11150,13 +11150,17 @@ pipeline passes, both static courts are clean, and the three added tests are
 method half that 7.4b-i landed: the static `evp_pkey_signature_init` with its two-iteration fetch
 loop, both name fallbacks and all three labels, and the eighteen exported entry points —
 `EVP_PKEY_sign_init`, `_init_ex`, `_init_ex2`, `EVP_PKEY_sign_message_init`, `_update`, `_final`,
-`EVP_PKEY_sign`, the three `verify` spellings of each, `EVP_PKEY_verify_recover` and its three, and
-`EVP_PKEY_verify_recover`. `evp_pkey_ctx_use_cached_data` — `crypto/evp/pmeth_lib.c:1534`, the replay
-half of the cached-data trio whose store and free halves 7.4c landed — goes into the same section of
-`src/evp/pkey_ctx.rs` as its two siblings, and its row is removed from
-`forensics/prerequisites.json`. `implemented[libcrypto]` moves **1691 → 1709** and phase 7 to
-**574 implemented and 212 open** (from 556 and 230), and the gate's blocking list holds at 14
-because nothing in this slice was blocking anything.
+`EVP_PKEY_sign`; the same seven on the verification side (`EVP_PKEY_verify_init`, `_init_ex`,
+`_init_ex2`, `EVP_PKEY_verify_message_init`, `_update`, `_final`, `EVP_PKEY_verify`); and
+`EVP_PKEY_verify_recover` with its three `_init` spellings. `evp_pkey_ctx_use_cached_data` —
+`crypto/evp/pmeth_lib.c:1534`, the replay half of the cached-data trio whose store and free halves
+7.4c landed — goes into the same section of `src/evp/pkey_ctx.rs` as its two siblings, and its row is
+removed from `forensics/prerequisites.json`. `implemented[libcrypto]` moves **1691 → 1709** and phase
+7 to **574 implemented and 212 open** (from 556 and 230), and the gate's blocking list falls
+**15 → 14**: the cached-data replay row was the *only* entry in this slice's census that was
+blocking anything, so discharging it is what removes the name rather than merely recording that it
+landed. (This sentence said "holds at 14" when it was first written; the census was read rather than
+assumed after the pipeline ran, and it had moved. Corrected here rather than left standing.)
 
 **The finding, and it is a reading rather than a transcription.** `legacy:` **does not reset
 `ctx->operation`.** The authority's `err:` label ends
