@@ -319,7 +319,7 @@
         "stratum": "OSSL_LIB_CTX + provider core"
       },
       {
-        "blocking": "359 open obligation(s) of this stratum recorded in forensics/phase7-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase",
+        "blocking": "353 open obligation(s) of this stratum recorded in forensics/phase7-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase",
         "deferred": [],
         "evidence_absent": [
           "src/evp/legacy_cipher.rs",
@@ -532,7 +532,7 @@
       "not_started": 14
     }
   },
-  "body_hash": "33aa3ca00b48189d33006db83508a630b0d2043c2580c0efd27ae0e1f61eef61",
+  "body_hash": "1278c340f6a23cbec27b5caa41084ea3a7470ee2dcd813ec8419c97fcd244665",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

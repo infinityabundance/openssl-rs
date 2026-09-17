@@ -10040,3 +10040,69 @@ reason it cannot be taken here.
 the header macro `keymgmt == NULL` (D168), and it now lives on `EvpPkeyCtx` as `is_legacy()` rather
 than as a private function in `asymcipher.rs`, because `pmeth_check.c` and `exchange.c` both need it
 and neither is the cipher's.
+
+## D170 — `exchange.c`: two wrong callback types in landed code, and the evidence plane that cannot see them
+
+7.4b-iii's last unit is `exchange.c`'s operation half. Writing `EVP_PKEY_derive` and
+`EVP_PKEY_derive_SKEY` required *reading* the two method-object fields they call, and both were
+wrong — in code that has been on `phase7-evp` since 7.4b-ii and through four CI runs.
+
+**The two defects, both against `include/openssl/core_dispatch.h`:**
+
+```c
+OSSL_CORE_MAKE_FUNC(int, keyexch_derive,
+    (void *ctx, unsigned char *secret, size_t *secretlen, size_t outlen))
+OSSL_CORE_MAKE_FUNC(void *, keyexch_derive_skey,
+    (void *ctx, const char *key_type, void *provctx,
+     OSSL_FUNC_skeymgmt_import_fn *import, size_t keylen, const OSSL_PARAM params[]))
+```
+
+* `KeyexchDeriveFn` declared **three** parameters. `keyexch_derive` has four, and
+  `EVP_PKEY_derive` forwards `key != NULL ? *pkeylen : 0` into the fourth. A provider that sizes its
+  output from `outlen` therefore read whatever happened to be in that register.
+* `KeyexchDeriveSkeyFn` declared `-> c_int`. It returns `void *` — the key data the destination
+  method builds, which `EVP_PKEY_derive_SKEY` stores into the new `EVP_SKEY`. That is a pointer
+  truncated to 32 bits.
+
+The second was found by comparison: the sibling class had it right. `KdfDeriveSkeyFn` in
+`src/evp/kdf.rs` returns `*mut c_void`, and `OSSL_FUNC_kdf_derive_skey` is declared identically to
+`OSSL_FUNC_keyexch_derive_skey` in the same header, a few dozen lines apart.
+
+**Why nothing caught them.** These are *internal* function-pointer fields of `EvpKeyExch`, not
+exports. `ABI-PROTOTYPE` verifies the shape of the crate's **exported** functions against the Clang
+prototype atlas, so a wrong arity two levels down is outside its reach. And no runtime court has yet
+called `EVP_PKEY_derive` against a provider that publishes `keyexch_derive` — the court that will is
+`RT-EVP-PKEY`, which does not exist yet. So the defect was invisible to every evidence plane the
+project has: the prototype court, all sixty-four courts, the prerequisite gate and the ownership
+audit. It was found by reading the header while transcribing the caller, which is exactly the kind of
+discovery that stops scaling once the surface is five thousand symbols.
+
+**The gap this names, and the mechanism that would close it.** `include/openssl/core_dispatch.h` is a
+machine-readable table: every `OSSL_CORE_MAKE_FUNC(ret, name, (args))` line states a return type, an
+arity and a parameter list, and every dispatch entry the crate stores is a `*Fn` type in
+`src/provider/dispatch/` or beside a method object. So the check is generable and cheap:
+
+```text
+for every OSSL_CORE_MAKE_FUNC in the authority's header:
+    find the crate type with that name
+    assert  arity, parameter types (by pointer depth and constness), and return type
+            match, after the crate's documented rewrites
+```
+
+That is the internal-facing sibling of `ABI-PROTOTYPE`, it needs no compiled provider and no court,
+and it would have failed on both of the types above on the day 7.4b-ii landed. It is **not written
+here**: this entry names it as the next evidence plane rather than smuggling a tool into a
+transcription commit. What is written here is the correction and the record.
+
+**Two more things this unit is, both the authority's own shape and both reproduced:**
+
+* **`evp_pkey_derive_init` builds a key when `ctx->pkey` is NULL** rather than refusing. A blank
+  `EVP_PKEY_new`, typed by the context's own method, with `evp_keymgmt_newdata` key data allocated
+  and empty — because the legacy KDFs select a key type with no key. That is what lets
+  `EVP_PKEY_derive` be reached from a context built out of a KDF name, and it is the only place in
+  the five operation families where a missing key is a construction rather than an error.
+* **the `legacy:` label leaks `tmp_keymgmt`.** `exchange.c`'s label frees it *after* the `pmeth`
+  test, and the refusal returns before that — so the reference is dropped on the refusal path. The
+  cipher's label frees it *before* the test, so the two files differ. The crate reproduces the leak
+  because nothing observable distinguishes the two, and a silent improvement is still a silent
+  change; the site comment says so.
