@@ -16342,6 +16342,326 @@ pub(crate) const D2I_PU_86: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `PEM_def_callback` at `crypto/pem/pem_lib.c:64` (PEM_R_PROBLEMS_GETTING_PASSWORD).
+pub(crate) const PEM_LIB_64: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 64,
+    func: c"PEM_def_callback",
+    lib: 9,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `PEM_ASN1_read` at `crypto/pem/pem_lib.c:118` (ERR_R_BUF_LIB).
+pub(crate) const PEM_LIB_118: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 118,
+    func: c"PEM_ASN1_read",
+    lib: 9,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
+/// `PEM_ASN1_write` at `crypto/pem/pem_lib.c:312` (ERR_R_BUF_LIB).
+pub(crate) const PEM_LIB_312: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 312,
+    func: c"PEM_ASN1_write",
+    lib: 9,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
+/// `PEM_ASN1_write_bio_internal` at `crypto/pem/pem_lib.c:346` (PEM_R_UNSUPPORTED_CIPHER).
+pub(crate) const PEM_LIB_346: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 346,
+    func: c"PEM_ASN1_write_bio_internal",
+    lib: 9,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `PEM_ASN1_write_bio_internal` at `crypto/pem/pem_lib.c:352` (CRYPTO_R_INVALID_NULL_ARGUMENT).
+pub(crate) const PEM_LIB_352: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 352,
+    func: c"PEM_ASN1_write_bio_internal",
+    lib: 15,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `PEM_ASN1_write_bio_internal` at `crypto/pem/pem_lib.c:358` (ERR_R_ASN1_LIB).
+pub(crate) const PEM_LIB_358: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 358,
+    func: c"PEM_ASN1_write_bio_internal",
+    lib: 9,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PEM_ASN1_write_bio_internal` at `crypto/pem/pem_lib.c:376` (PEM_R_READ_KEY).
+pub(crate) const PEM_LIB_376: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 376,
+    func: c"PEM_ASN1_write_bio_internal",
+    lib: 9,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `PEM_do_header` at `crypto/pem/pem_lib.c:459` (PEM_R_HEADER_TOO_LONG).
+pub(crate) const PEM_LIB_459: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 459,
+    func: c"PEM_do_header",
+    lib: 9,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `PEM_do_header` at `crypto/pem/pem_lib.c:471` (PEM_R_BAD_PASSWORD_READ).
+pub(crate) const PEM_LIB_471: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 471,
+    func: c"PEM_do_header",
+    lib: 9,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `PEM_do_header` at `crypto/pem/pem_lib.c:498` (PEM_R_BAD_DECRYPT).
+pub(crate) const PEM_LIB_498: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 498,
+    func: c"PEM_do_header",
+    lib: 9,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `PEM_get_EVP_CIPHER_INFO` at `crypto/pem/pem_lib.c:533` (PEM_R_NOT_PROC_TYPE).
+pub(crate) const PEM_LIB_533: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 533,
+    func: c"PEM_get_EVP_CIPHER_INFO",
+    lib: 9,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `PEM_get_EVP_CIPHER_INFO` at `crypto/pem/pem_lib.c:544` (PEM_R_NOT_ENCRYPTED).
+pub(crate) const PEM_LIB_544: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 544,
+    func: c"PEM_get_EVP_CIPHER_INFO",
+    lib: 9,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `PEM_get_EVP_CIPHER_INFO` at `crypto/pem/pem_lib.c:549` (PEM_R_SHORT_HEADER).
+pub(crate) const PEM_LIB_549: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 549,
+    func: c"PEM_get_EVP_CIPHER_INFO",
+    lib: 9,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `PEM_get_EVP_CIPHER_INFO` at `crypto/pem/pem_lib.c:558` (PEM_R_NOT_DEK_INFO).
+pub(crate) const PEM_LIB_558: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 558,
+    func: c"PEM_get_EVP_CIPHER_INFO",
+    lib: 9,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `PEM_get_EVP_CIPHER_INFO` at `crypto/pem/pem_lib.c:576` (PEM_R_UNSUPPORTED_ENCRYPTION).
+pub(crate) const PEM_LIB_576: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 576,
+    func: c"PEM_get_EVP_CIPHER_INFO",
+    lib: 9,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `PEM_get_EVP_CIPHER_INFO` at `crypto/pem/pem_lib.c:581` (PEM_R_MISSING_DEK_IV).
+pub(crate) const PEM_LIB_581: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 581,
+    func: c"PEM_get_EVP_CIPHER_INFO",
+    lib: 9,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `PEM_get_EVP_CIPHER_INFO` at `crypto/pem/pem_lib.c:584` (PEM_R_UNEXPECTED_DEK_IV).
+pub(crate) const PEM_LIB_584: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 584,
+    func: c"PEM_get_EVP_CIPHER_INFO",
+    lib: 9,
+    reason: 130,
+    dynamic_reason: false,
+};
+
+/// `load_iv` at `crypto/pem/pem_lib.c:606` (PEM_R_BAD_IV_CHARS).
+pub(crate) const PEM_LIB_606: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 606,
+    func: c"load_iv",
+    lib: 9,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `PEM_write` at `crypto/pem/pem_lib.c:625` (ERR_R_BUF_LIB).
+pub(crate) const PEM_LIB_625: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 625,
+    func: c"PEM_write",
+    lib: 9,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
+/// `PEM_write_bio` at `crypto/pem/pem_lib.c:697` (ERR_raise dynamic reason).
+pub(crate) const PEM_LIB_697: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 697,
+    func: c"PEM_write_bio",
+    lib: 9,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `PEM_read` at `crypto/pem/pem_lib.c:711` (ERR_R_BUF_LIB).
+pub(crate) const PEM_LIB_711: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 711,
+    func: c"PEM_read",
+    lib: 9,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
+/// `get_name` at `crypto/pem/pem_lib.c:794` (PEM_R_NO_START_LINE).
+pub(crate) const PEM_LIB_794: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 794,
+    func: c"get_name",
+    lib: 9,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `get_header_and_data` at `crypto/pem/pem_lib.c:858` (PEM_R_BAD_END_LINE).
+pub(crate) const PEM_LIB_858: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 858,
+    func: c"get_header_and_data",
+    lib: 9,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `get_header_and_data` at `crypto/pem/pem_lib.c:887` (PEM_R_BAD_END_LINE).
+pub(crate) const PEM_LIB_887: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 887,
+    func: c"get_header_and_data",
+    lib: 9,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `get_header_and_data` at `crypto/pem/pem_lib.c:901` (PEM_R_BAD_END_LINE).
+pub(crate) const PEM_LIB_901: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 901,
+    func: c"get_header_and_data",
+    lib: 9,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `get_header_and_data` at `crypto/pem/pem_lib.c:911` (PEM_R_BAD_END_LINE).
+pub(crate) const PEM_LIB_911: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 911,
+    func: c"get_header_and_data",
+    lib: 9,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `PEM_read_bio_ex` at `crypto/pem/pem_lib.c:959` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PEM_LIB_959: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 959,
+    func: c"PEM_read_bio_ex",
+    lib: 9,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `PEM_read_bio_ex` at `crypto/pem/pem_lib.c:967` (ERR_R_BIO_LIB).
+pub(crate) const PEM_LIB_967: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 967,
+    func: c"PEM_read_bio_ex",
+    lib: 9,
+    reason: 524320,
+    dynamic_reason: false,
+};
+
+/// `PEM_read_bio_ex` at `crypto/pem/pem_lib.c:978` (PEM_R_BAD_BASE64_DECODE).
+pub(crate) const PEM_LIB_978: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 978,
+    func: c"PEM_read_bio_ex",
+    lib: 9,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `PEM_read_bio_ex` at `crypto/pem/pem_lib.c:989` (ERR_R_EVP_LIB).
+pub(crate) const PEM_LIB_989: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 989,
+    func: c"PEM_read_bio_ex",
+    lib: 9,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `PEM_read_bio_ex` at `crypto/pem/pem_lib.c:1000` (PEM_R_BAD_BASE64_DECODE).
+pub(crate) const PEM_LIB_1000: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_lib.c",
+    line: 1000,
+    func: c"PEM_read_bio_ex",
+    lib: 9,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `PEM_ASN1_read_bio` at `crypto/pem/pem_oth.c:33` (ERR_R_ASN1_LIB).
+pub(crate) const PEM_OTH_33: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_oth.c",
+    line: 33,
+    func: c"PEM_ASN1_read_bio",
+    lib: 9,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
 /// `pem_read_bio_key_decoder` at `crypto/pem/pem_pkey.c:87` (PEM_R_UNSUPPORTED_KEY_COMPONENTS).
 pub(crate) const PEM_PKEY_87: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/pem/pem_pkey.c",
@@ -18104,6 +18424,38 @@ pub(crate) static ALL: &[ErrSite] = &[
     D2I_PU_67,
     D2I_PU_80,
     D2I_PU_86,
+    PEM_LIB_64,
+    PEM_LIB_118,
+    PEM_LIB_312,
+    PEM_LIB_346,
+    PEM_LIB_352,
+    PEM_LIB_358,
+    PEM_LIB_376,
+    PEM_LIB_459,
+    PEM_LIB_471,
+    PEM_LIB_498,
+    PEM_LIB_533,
+    PEM_LIB_544,
+    PEM_LIB_549,
+    PEM_LIB_558,
+    PEM_LIB_576,
+    PEM_LIB_581,
+    PEM_LIB_584,
+    PEM_LIB_606,
+    PEM_LIB_625,
+    PEM_LIB_697,
+    PEM_LIB_711,
+    PEM_LIB_794,
+    PEM_LIB_858,
+    PEM_LIB_887,
+    PEM_LIB_901,
+    PEM_LIB_911,
+    PEM_LIB_959,
+    PEM_LIB_967,
+    PEM_LIB_978,
+    PEM_LIB_989,
+    PEM_LIB_1000,
+    PEM_OTH_33,
     PEM_PKEY_87,
     PEM_PKEY_161,
     PEM_PKEY_209,

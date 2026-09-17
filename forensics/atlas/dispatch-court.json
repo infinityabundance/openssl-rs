@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 183,
+      "crate_files_read": 186,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -12,12 +12,12 @@
       "identities_authority_only": 82,
       "identities_checked": 195,
       "identities_mismatches": 0,
-      "links_convention": 196,
+      "links_convention": 197,
       "links_documented": 8,
       "links_explicit": 14,
       "problems": 0,
-      "signatures_authority_only": 412,
-      "signatures_checked": 221,
+      "signatures_authority_only": 411,
+      "signatures_checked": 222,
       "signatures_mismatches": 0,
       "signatures_not_a_dispatch": 104,
       "signatures_unlinked": 0,
@@ -1560,7 +1560,6 @@
         "lh_OPENSSL_STRING_doallfunc",
         "lh_OPENSSL_STRING_hashfunc",
         "ocb128_f",
-        "pem_password_cb",
         "sk_ACCESS_DESCRIPTION_copyfunc",
         "sk_ACCESS_DESCRIPTION_freefunc",
         "sk_ADMISSIONS_copyfunc",
@@ -2830,6 +2829,14 @@
           "authority": "OSSL_FUNC_mac_init_skey_fn",
           "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(opaque)))",
           "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "PemPasswordCb",
+          "at": "src/evp/pem_bridge.rs",
+          "authority": "pem_password_cb",
+          "authority_signature": "fptr(int:4:s; ptr(int:1:s), int:4:s, int:4:s, ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(int:1:s), int:4:s, int:4:s, ptr(opaque))",
           "how": "convention"
         },
         {

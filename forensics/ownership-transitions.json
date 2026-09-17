@@ -181,6 +181,22 @@
       "reason": "7.4l withholds thirteen exports whose answers depend on a later stratum, and each withheld name is recorded in `forensics/prerequisites.json` as a deferral naming the *dependency* that blocks it rather than as a row for itself (D165 refused a deferral for a Phase-7-owned export). Nine dependency names are new: `ossl_rsa_asn1_meths` and `ossl_rsa_pkey_method` (Phase 8's two `standard_methods[]` tables, which block `EVP_PKEY_type`, `EVP_PKEY_meth_find`/`_get0`/`_get_count`, the twelve `d2i_*`/`i2d_*` legacy paths and `d2i_PublicKey`), `OSSL_ENCODER_CTX_new_for_pkey` and `OSSL_DECODER_CTX_new_for_pkey` (Phase 10's encoder and decoder, which a provider key takes *first*), `ASN1_item_sign_ctx` and `ASN1_item_verify_ctx` (Phase 11's `x509.h` delegates of the two Phase-5 hand-offs), `d2i_X509_ALGOR` (Phase 11's, for `EVP_PKEY_CTX_get_algor`), `RAND_priv_bytes_ex` (Phase 9's, for `EVP_SealInit`) and `UI_new` (Phase 13's, for `EVP_read_pw_string`/`_min`). All nine name strata that have not started, so all nine are blocking by the gate's rule. The count rises because the blockers became *recorded*, not because the work appeared: every one of the nine was already the reason the export was open, and the same class D132's 11 -> 12 and D134's 12 -> 15 recorded -- an invariant that cannot tell a legitimate change from a hidden omission. Each baseline is a different ref and the guard matches `before` and `after` exactly, so each is recorded separately.",
       "authority_artifact": "forensics/prerequisites.json",
       "recorded_by": "docs/DECISIONS.md D193"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 15,
+      "after": 25,
+      "reason": "7.5 withholds twenty-five `PEM_*` exports and `BIO_f_reliable`, and each withheld name is recorded in `forensics/prerequisites.json` as a deferral naming the *dependency* that blocks it rather than as a row for itself (D165 refused a deferral for a Phase-7-owned export; `EVP_read_pw_string_min`, the immediate callee of `PEM_def_callback`, is Phase-7-owned and therefore takes the existing `UI_new` row instead of one of its own). Two dependency names are new: `EVP_md5` (`crypto/evp/legacy_md5.c:36`, Phase 13's, reached by `PEM_do_header` at `crypto/pem/pem_lib.c:479` and by `PEM_ASN1_write_bio_internal` at `:392`) and `RAND_bytes` (`rand.h`, Phase 9's, reached at `crypto/pem/pem_lib.c:386`). Both name strata that have not started, so both are blocking by the gate's rule. The count rises because two blockers became *recorded*, not because work appeared: both were already the reason the export was open, and this is the same class D193's 15 -> 23 recorded -- an invariant that cannot tell a legitimate change from a hidden omission. Each baseline is a different ref and the guard matches `before` and `after` exactly, so each is recorded separately.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D194"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 23,
+      "after": 25,
+      "reason": "7.5 withholds twenty-five `PEM_*` exports and `BIO_f_reliable`, and each withheld name is recorded in `forensics/prerequisites.json` as a deferral naming the *dependency* that blocks it rather than as a row for itself (D165 refused a deferral for a Phase-7-owned export; `EVP_read_pw_string_min`, the immediate callee of `PEM_def_callback`, is Phase-7-owned and therefore takes the existing `UI_new` row instead of one of its own). Two dependency names are new: `EVP_md5` (`crypto/evp/legacy_md5.c:36`, Phase 13's, reached by `PEM_do_header` at `crypto/pem/pem_lib.c:479` and by `PEM_ASN1_write_bio_internal` at `:392`) and `RAND_bytes` (`rand.h`, Phase 9's, reached at `crypto/pem/pem_lib.c:386`). Both name strata that have not started, so both are blocking by the gate's rule. The count rises because two blockers became *recorded*, not because work appeared: both were already the reason the export was open, and this is the same class D193's 15 -> 23 recorded -- an invariant that cannot tell a legitimate change from a hidden omission. This row is the same change measured against this branch's previous head (`11a14466`), whose committed baseline already counts 23.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D194"
     }
   ]
 }

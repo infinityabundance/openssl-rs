@@ -282,7 +282,7 @@
         "truncf128",
         "truncf16"
       ],
-      "compiler_emitted_count": 5713,
+      "compiler_emitted_count": 7474,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -290,7 +290,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 1774,
+        "implemented": 1800,
         "implemented_symbols": [
           "ASN1_ANY_it",
           "ASN1_BIT_STRING_check",
@@ -558,9 +558,12 @@
           "BIO_dup_chain",
           "BIO_err_is_non_fatal",
           "BIO_f_asn1",
+          "BIO_f_base64",
           "BIO_f_brotli",
           "BIO_f_buffer",
+          "BIO_f_cipher",
           "BIO_f_linebuffer",
+          "BIO_f_md",
           "BIO_f_null",
           "BIO_f_prefix",
           "BIO_f_readbuffer",
@@ -671,6 +674,7 @@
           "BIO_set_callback",
           "BIO_set_callback_arg",
           "BIO_set_callback_ex",
+          "BIO_set_cipher",
           "BIO_set_data",
           "BIO_set_ex_data",
           "BIO_set_flags",
@@ -1179,6 +1183,10 @@
           "EVP_CipherPipelineFinal",
           "EVP_CipherPipelineUpdate",
           "EVP_CipherUpdate",
+          "EVP_DecodeBlock",
+          "EVP_DecodeFinal",
+          "EVP_DecodeInit",
+          "EVP_DecodeUpdate",
           "EVP_DecryptFinal",
           "EVP_DecryptFinal_ex",
           "EVP_DecryptInit",
@@ -1204,6 +1212,14 @@
           "EVP_DigestVerifyInit",
           "EVP_DigestVerifyInit_ex",
           "EVP_DigestVerifyUpdate",
+          "EVP_ENCODE_CTX_copy",
+          "EVP_ENCODE_CTX_free",
+          "EVP_ENCODE_CTX_new",
+          "EVP_ENCODE_CTX_num",
+          "EVP_EncodeBlock",
+          "EVP_EncodeFinal",
+          "EVP_EncodeInit",
+          "EVP_EncodeUpdate",
           "EVP_EncryptFinal",
           "EVP_EncryptFinal_ex",
           "EVP_EncryptInit",
@@ -1983,8 +1999,18 @@
           "OSSL_trace_string",
           "OpenSSL_version",
           "OpenSSL_version_num",
+          "PEM_SignFinal",
+          "PEM_SignInit",
+          "PEM_SignUpdate",
           "PEM_dek_info",
+          "PEM_get_EVP_CIPHER_INFO",
           "PEM_proc_type",
+          "PEM_read",
+          "PEM_read_bio",
+          "PEM_read_bio_ex",
+          "PEM_write",
+          "PEM_write_bio",
+          "PEM_write_bio_ASN1_stream",
           "PKCS5_PBE_add",
           "PKCS5_PBE_keyivgen",
           "PKCS5_PBE_keyivgen_ex",
@@ -2067,7 +2093,7 @@
           "i2d_DISPLAYTEXT",
           "i2t_ASN1_OBJECT"
         ],
-        "scaffolded": 4122
+        "scaffolded": 4096
       },
       "libssl": {
         "authority_exports": 603,
@@ -2078,18 +2104,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 1774,
-      "scaffolded": 4725
+      "implemented": 1800,
+      "scaffolded": 4699
     }
   },
-  "body_hash": "016f8952ef32d823b0ee86b5c031efc37fa6c681561ba815f58debc028a0fadd",
+  "body_hash": "0193a26dc0d29491afcda366dd338e92bfa7388c6b3d0afe19fbb2af0844fdd1",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "b629b6b93031cf088f3ab65b53ccd91cf2f58ba16fd4fb1214d2af3d3b875210"
+      "sha256": "568d7c3d50123c735bcbc42b015ad3adf63304d0ec34f245cea9bd72133f79e5"
     },
     {
       "name": "authority-exports",
