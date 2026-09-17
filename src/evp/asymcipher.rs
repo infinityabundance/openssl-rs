@@ -625,16 +625,6 @@ pub unsafe extern "C" fn EVP_ASYM_CIPHER_settable_ctx_params(
 // land after the `EVP_PKEY_CTX` object (7.4c-i) rather than with the method object above.
 // ---------------------------------------------------------------------------------------------
 
-/// `#define evp_pkey_ctx_is_legacy(ctx)` — `include/crypto/evp.h:35`.
-///
-/// **A header macro, and not what its name suggests**: it is `keymgmt == NULL`, not
-/// `pmeth != NULL`. That distinction matters here, because this crate's `pmeth` is always NULL
-/// while its `keymgmt` is not always set — so the test is *reachable* even though the `legacy:` arm
-/// it jumps to, which builds a legacy `EVP_PKEY_CTX`, is not representable in this crate at all.
-fn evp_pkey_ctx_is_legacy(ctx: &EvpPkeyCtx) -> bool {
-    ctx.keymgmt.is_null()
-}
-
 /// `cipher->description != NULL ? cipher->description : ""` — the empty string is the authority's
 /// fallback and not an accident: a court reads the message to tell one provider from another.
 ///
@@ -759,8 +749,8 @@ unsafe fn evp_pkey_asym_cipher_init(
     ERR_set_mark();
 
     // SAFETY: `ctx` is live.
-    if evp_pkey_ctx_is_legacy(unsafe { &*ctx }) {
-        // SAFETY: `tmp_keymgmt` is NULL or live at this label, and the arm frees it and refuses without touching another pointer.
+    if unsafe { &*ctx }.is_legacy() {
+        // SAFETY: the second argument is a literal NULL and the label holds no live method.
         return unsafe { asym_cipher_init_legacy(ptr::null_mut()) };
     }
 
