@@ -998,3 +998,35 @@ authority and the candidate for this function, and there was never supposed to b
   `find_ameth`'s body is the loop the authority writes and `pkey_set_type`'s `if (ameth != NULL)` arm
   becomes reachable; `RT-EVP-PKEY` is where the difference would be measured, and the measurement is
   `EVP_PKEY_get_id` on a fetched keymgmt named `"RSA"`.
+
+### ~~D-PKEYCTX-LEGACY-ALG-1~~ — **WITHDRAWN: the released authority refuses this too**
+
+**This entry is retained, struck through, because it was cited before it was written and writing
+it would have recorded a divergence that does not exist. There is no behavioural difference
+between the authority and the candidate at this site.**
+
+- **What was claimed:** that `int_ctx_new` compares the caller's `id` against the fetched
+  method's `legacy_alg` by way of `ossl_assert(id == tmp_id)`, that this assertion is "the
+  identity function" under `NDEBUG` and therefore does not fire in the released authority, and
+  that the crate -- which *does* raise and refuse -- was therefore deliberately diverging.
+- **What the authority actually is:** under `NDEBUG`, `include/internal/common.h` defines
+  `ossl_assert(x)` as `ossl_likely((x) != 0)`, which is the identity on a boolean, so
+  `if (!ossl_assert(C))` is `if (!C)` -- a live guard. The released authority raises
+  `ERR_raise(ERR_LIB_EVP, ERR_R_INTERNAL_ERROR)`, frees the previously taken `EVP_KEYMGMT`
+  reference, and returns NULL.
+- **Measured:** the authority binary's `int_ctx_new` branches on `cmp %r12d,%eax; jne 22c07d`,
+  and `22c07d` is `ERR_new` / `ERR_set_debug` with line `0x11c` (**284**, the `ERR_raise` line in
+  `crypto/evp/pmeth_lib.c`) / `ERR_set_error(0x6, 0xc0103, 0)` -- `ERR_LIB_EVP` and
+  `ERR_R_INTERNAL_ERROR` -- / `EVP_KEYMGMT_free` / a jump to the NULL-return epilogue. The crate
+  writes `raise_site(&err_sites::PMETH_LIB_284)`, `EVP_KEYMGMT_free`, `return NULL`. The two are
+  the same call, the same library, the same reason and the same cleanup.
+- **How the error was produced:** the claim was written from the macro's *text* rather than from
+  its expansion. `(x) != 0` is the identity function, and the comment stopped there -- but the
+  guard is `!ossl_assert(C)`, and the identity function applied to `C` and then negated is `!C`,
+  which fires. The one thing `NDEBUG` removes is the abort, not the refusal. Five other sites in
+  the crate carried the same premise and the same conclusion; all six are corrected in
+  `docs/DECISIONS.md` D167.
+- **Candidate:** unchanged, and correct. It refuses exactly where the authority refuses.
+- **Claim removed:** the claim of divergence, which was never made in the register -- only cited
+  from `src/evp/pkey_ctx.rs`. That citation is gone; the site now states the authority's
+  behaviour, and cites D167 for the measurement.

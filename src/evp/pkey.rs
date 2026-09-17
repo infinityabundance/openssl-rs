@@ -410,9 +410,12 @@ pub unsafe extern "C" fn EVP_PKEY_free(x: *mut EvpPkey) {
 ///
 /// Three things that look like details and are not:
 ///
-///   * the two `ossl_assert`s are **not** errors in a released build — they are the identity
-///     function under `NDEBUG` — so the provider path never takes them, and the crate follows the
-///     released build because that is the profile the authority is built with;
+///   * `ossl_assert(x)` under `NDEBUG` is `(x) != 0`, which is the identity on a boolean, so the
+///     authority's opening guard is `if (!C)` — a **refusal**, not a no-op: a caller supplying both
+///     a legacy type and a provider method gets `ERR_R_INTERNAL_ERROR` and a 0 return. Both clauses
+///     are unsatisifiable here — there is no `ENGINE` in this crate and every caller passes
+///     `EVP_PKEY_NONE` — so the guard is deliberately not transcribed. That is a documented
+///     simplification, not a released-build behaviour (`docs/DECISIONS.md` D167);
 ///   * `free_it` is true when the key is **assigned**, in either half, and it releases the key data
 ///     *before* the new type is looked up: reassigning is destructive even if the new type turns
 ///     out not to exist;
@@ -430,10 +433,11 @@ unsafe fn pkey_set_type(pkey: *mut EvpPkey, type_: c_int, keymgmt: *mut EvpKeyMg
         }
     }
 
-    /* The check the authority writes as two `ossl_assert`s: a key cannot be both legacy and
-     * provider-side. With no ameth and no ENGINE available the first clause is the only one this
-     * crate can violate, and a caller that passes both a type and a method has made a mistake the
-     * authority refuses in a debug build and proceeds from in a released one. */
+    /* The authority's `check`, not its opening `ossl_assert` guard: `ameth == NULL && keymgmt ==
+     * NULL` refuses with `EVP_R_UNSUPPORTED_ALGORITHM`. This crate's `ameth` is always NULL --
+     * `EVP_PKEY_asn1_find_str` and `EVP_PKEY_asn1_find` are Phase 8's (D163, D165) -- so the pair
+     * collapses to `keymgmt == NULL`, which is exactly this test. The guard above it refuses with
+     * `ERR_R_INTERNAL_ERROR` and is unreachable here; see this function's doc comment (D167). */
     if keymgmt.is_null() {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::P_LIB_1601) };
@@ -1157,10 +1161,10 @@ pub unsafe extern "C" fn EVP_PKEY_set_size_t_param(
 /// buffer, which writes the magnitude **little-endian in the host's word order** — the "native" in the
 /// name — and it is what a provider's `set_params` expects for a `BN` parameter.
 ///
-/// `ossl_assert(bsize <= sizeof(buffer))` is the identity function under `NDEBUG`, so in the released
-/// authority an oversized `BIGNUM` writes past the buffer; the crate follows the released build's
-/// *acceptance* and refuses the oversized case instead of reproducing the overflow, which is the same
-/// class as `D-GF2M-1`.
+/// `ossl_assert(bsize <= sizeof(buffer))` is `(bsize <= sizeof(buffer)) != 0` under `NDEBUG`, so the
+/// released authority **refuses** an oversized `BIGNUM` — `xor %eax,%eax; ret` — and never writes
+/// past the buffer. The crate refuses for the same reason, by the same test, so the two agree; the
+/// measurement is in `docs/DECISIONS.md` D167.
 ///
 /// # Safety
 /// `pkey` NULL or live; `key_name` NULL or NUL-terminated; `bn` NULL or live.
@@ -1488,8 +1492,9 @@ unsafe fn evp_pkey_cmp_any(a: *const EvpPkey, b: *const EvpPkey, selection: c_in
     // SAFETY: both keys are live per the contract.
     let (a_provided, b_provided) = unsafe { (!(*a).keymgmt.is_null(), !(*b).keymgmt.is_null()) };
 
-    /* The authority writes this as `ossl_assert`, which is the identity function under `NDEBUG`, so
-     * the released build *does* take the -2. The crate follows the released build. */
+    /* `ossl_assert(C)` under `NDEBUG` is `C`, so `!ossl_assert(C)` is `!C` and the released build
+     * *does* take the -2 here. The crate's test is that same negation, so the two agree
+     * (`docs/DECISIONS.md` D167). */
     if !a_provided && !b_provided {
         return -2;
     }

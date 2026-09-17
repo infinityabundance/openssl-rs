@@ -308,11 +308,13 @@ pub(crate) unsafe fn evp_pkey_ctx_state(ctx: *const EvpPkeyCtx) -> c_int {
 ///   2. the fetch is **`EVP_KEYMGMT_fetch(libctx, keytype, propquery)`**, and a failure returns
 ///      immediately — `EVP_KEYMGMT_fetch` has already recorded the error, and this function adds
 ///      none.
-///   3. `ossl_assert(id == tmp_id)` is the identity function under `NDEBUG`, so in the released
-///      authority a disagreement between the caller's `id` and the method's `legacy_alg` is
-///      **accepted**. The crate follows the released build and keeps the comparison as a *refusal*,
-///      which is the one place here where a plausible reading and the authority differ: see
-///      `docs/SECURITY_DIVERGENCE_POLICY.md` D-PKEYCTX-LEGACY-ALG-1.
+///   3. `ossl_assert(id == tmp_id)` is `(id == tmp_id) != 0` under `NDEBUG`, so the released
+///      authority **refuses** a disagreement between the caller's `id` and the method's
+///      `legacy_alg`: `ERR_raise(ERR_LIB_EVP, ERR_R_INTERNAL_ERROR)`, the method freed, NULL. The
+///      crate raises the same site and takes the same cleanup, so the two agree. An earlier
+///      revision of this comment claimed the released authority *accepted* the disagreement and
+///      that the crate diverged; the authority binary disagrees, and the measurement is in
+///      `docs/DECISIONS.md` D167.
 ///
 /// # Safety
 /// `libctx` NULL or live; `pkey` NULL or live; `keytype` and `propquery` NULL or NUL-terminated.
@@ -383,9 +385,10 @@ unsafe fn int_ctx_new(
             if id == -1 {
                 id = tmp_id;
             } else if id != tmp_id {
-                /* The authority writes `ossl_assert(id == tmp_id)`, which is the identity function
-                 * under `NDEBUG` -- so the released build *accepts* the disagreement. The crate
-                 * refuses it, which is D-PKEYCTX-LEGACY-ALG-1. */
+                /* `!ossl_assert(id == tmp_id)` under `NDEBUG` is `id != tmp_id`, so the released
+                 * authority refuses here too: this raise, then the free below, then NULL. It is
+                 * the authority's behaviour and not a divergence from it (`docs/DECISIONS.md`
+                 * D167). */
                 // SAFETY: a compile-time-constant site.
                 unsafe { raise_site(&err_sites::PMETH_LIB_284) };
                 // SAFETY: `keymgmt` is live and holds the reference taken above.
@@ -757,9 +760,9 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_dup(pctx: *const EvpPkeyCtx) -> *mut EvpPk
             }
         }
         if !src.op_kex_algctx.is_null() {
-            /* The authority writes `ossl_assert(pctx->op.kex.exchange != NULL)`, which is the
-             * identity function under `NDEBUG`; with `exchange` NULL the duplicator cannot be
-             * reached, so the crate refuses here rather than dereferencing. */
+            /* `!ossl_assert(pctx->op.kex.exchange != NULL)` under `NDEBUG` is `exchange == NULL`,
+             * so the authority refuses here -- `goto err` -- and never reaches the duplicator. The
+             * crate refuses at the same point, with the same result (`docs/DECISIONS.md` D167). */
             if src.op_kex_exchange.is_null() {
                 // SAFETY: `rctx` is this call's own object.
                 unsafe { EVP_PKEY_CTX_free(rctx) };
