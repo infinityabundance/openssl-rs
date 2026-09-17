@@ -9987,3 +9987,56 @@ caller has arrived, which is what the comment on it said to wait for.
 
 **Still open in 7.4b-iii:** `kem.c`'s six, `exchange.c`'s six, and `signature.c`'s eighteen — the last
 of which is where `EVP_PKEY_CTX_set_signature` and the four `*_message_*` pairs live.
+
+## D169 — `pmeth_check.c` lands early, because 7.4b-iii reaches into it
+
+7.4b-iii's remaining unit is `exchange.c`, and `EVP_PKEY_derive_set_peer`'s `validate_peer` arm is
+
+```c
+check_ctx = EVP_PKEY_CTX_new_from_pkey(ctx->libctx, peer, ctx->propquery);
+check = EVP_PKEY_public_check(check_ctx);
+```
+
+`EVP_PKEY_public_check` and its six siblings are `crypto/evp/pmeth_check.c`'s, and the plan puts that
+unit in **7.4c-ii**. So the exchange family cannot be completed in the plan's order without one of the
+later subphase's units. This is a **plan edge, not a reordering**: the owning subphase is unchanged,
+its row is not moved, and 7.4c-ii will find the unit already landed. The module doc says so at the
+top, so the edge is visible from the code rather than only from this entry.
+
+**What the unit is.** One provider probe and six wrappers that differ only in a selection and a
+checktype:
+
+```text
+try_provided_check(ctx, selection, checktype)
+  1. ctx is legacy (keymgmt == NULL)   -> -1   "ask someone else"
+  2. the key cannot be exported        -> 0    with EVP_R_INITIALIZATION_ERROR
+  3. evp_keymgmt_validate(keymgmt, keydata, selection, checktype)
+```
+
+The `-1` is the only one of the three that is not an answer, and the distinction is load-bearing: a
+transcription that returned **0** for a legacy context would turn "not mine to answer" into "the key
+is invalid", and `EVP_PKEY_public_check` would report a valid provider key as bad. `-1` is produced
+before anything is raised, so a caller that falls through leaves the error queue clean.
+
+**`EVP_PKEY_check` is not a seventh behaviour.** It is `EVP_PKEY_pairwise_check` under another name —
+no key test, no selection, no error of its own — and it is written as the call rather than as a copy
+of the body so the two cannot drift.
+
+**`EVP_PKEY_private_check` is the one wrapper with no legacy half at all.** After `try_provided_check`
+answers `-1` the authority refuses without consulting `ameth`, because no legacy key type implements a
+private-key check. So that refusal is the authority's own answer and not this crate's gap, and it is
+transcribed as the authority writes it rather than folded into the other five.
+
+**The `pkey->type == EVP_PKEY_NONE` test is written even though it is false for every provider key.**
+A provider key is typed `EVP_PKEY_KEYMGMT`, so `try_provided_check` answers with a validation result or
+a 0 and the test is never reached; a context that *would* reach it has `keymgmt == NULL`, which is the
+case that returned `-1`, and a legacy context carries a `pmeth` this crate cannot represent. Reading
+the test as dead because "there are no legacy keys here" would be D168's mistake seen from the other
+side — dropping a live branch because its name suggested it could not fire. So the test stays, and the
+legacy arm that follows it is transcribed as a refusal at the recorded `not_supported` site with the
+reason it cannot be taken here.
+
+**Cost:** seven exports, and one shared helper hoisted while landing them: `evp_pkey_ctx_is_legacy` is
+the header macro `keymgmt == NULL` (D168), and it now lives on `EvpPkeyCtx` as `is_legacy()` rather
+than as a private function in `asymcipher.rs`, because `pmeth_check.c` and `exchange.c` both need it
+and neither is the cipher's.

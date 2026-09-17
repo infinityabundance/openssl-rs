@@ -58,6 +58,7 @@ pub mod mac;
 pub mod method_store;
 pub mod pkey;
 pub mod pkey_ctx;
+pub mod pmeth_check;
 pub mod rand;
 pub mod signature;
 pub mod skeymgmt;

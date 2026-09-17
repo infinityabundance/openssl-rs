@@ -230,7 +230,7 @@ impl EvpPkeyCtx {
     }
 
     /// `EVP_PKEY_CTX_IS_DERIVE_OP(ctx)`.
-    fn is_derive_op(&self) -> bool {
+    pub(crate) fn is_derive_op(&self) -> bool {
         (self.operation & EVP_PKEY_OP_TYPE_DERIVE) != 0
     }
 
@@ -245,8 +245,20 @@ impl EvpPkeyCtx {
     }
 
     /// `EVP_PKEY_CTX_IS_KEM_OP(ctx)`.
-    fn is_kem_op(&self) -> bool {
+    pub(crate) fn is_kem_op(&self) -> bool {
         (self.operation & EVP_PKEY_OP_TYPE_KEM) != 0
+    }
+
+    /// `#define evp_pkey_ctx_is_legacy(ctx)` — `include/crypto/evp.h:35`.
+    ///
+    /// **A header macro, and not what its name suggests**: its body is `((ctx)->keymgmt == NULL)`,
+    /// not `pmeth != NULL`. That distinction is what makes the test *reachable* in this crate, whose
+    /// `pmeth` is always NULL while its `keymgmt` is not always set — so a branch guarded by this
+    /// macro is live here even though the label it jumps to, which builds a legacy `EVP_PKEY_CTX`,
+    /// is not representable at all. `docs/DECISIONS.md` D168 records what reading it by its name
+    /// would have cost.
+    pub(crate) fn is_legacy(&self) -> bool {
+        self.keymgmt.is_null()
     }
 
     /// `EVP_PKEY_CTX_IS_FROMDATA_OP(ctx)`.
