@@ -174,7 +174,7 @@ or a named half of one:
 | 7.4a | the `EVP_PKEY` object's provider attributes and lifetime (`p_lib.c`'s provider paths), `keymgmt_lib.c` whole, the rows above | `pkey_set_type`/`find_ameth`, `evp_pkey_get_legacy`/`_free_legacy`/`_copy_downgraded`/`get0_DH_int`, `evp_pkey_export_to_provider` (7.4c), both registries |
 | 7.4b | the five method-object families — `signature.c`, `asymcipher.c`, `kem.c`, `exchange.c`, `keymgmt_meth.c` — with their `EVP_PKEY_*` operations, minus `keymgmt_meth.c`'s `legacy_alg` fill | `keymgmt_meth.c`'s `get_legacy_alg_type_from_keymgmt` (→ `evp_pkey_name2type` → `EVP_PKEY_type`) |
 | 7.4c | `pmeth_lib.c`'s `EVP_PKEY_CTX` object and its accessors, `pmeth_check.c`, `pmeth_gn.c`, `m_sigver.c`, `evp_pbe.c` and the five `p5_*`/`pbe_*` units | `EVP_PKEY_meth_*`, `EVP_PKEY_asn1_*`, `EVP_PKEY_CTX_new`/`_new_id` (the legacy-typed constructors) |
-| 7.4e | **`p_lib.c`'s provider half, the five `EVP_PKEY_CTX_*` accessors beside it, and `EVP_PKEY_Q_keygen`** — the four cache-backed getters, `missing_parameters`/`copy_parameters`/`can_sign`/`get_base_id`/`get0`, both type setters, `get_group_name`, both encoded-public-key halves, `new_CMAC_key`, both default-digest accessors, the variadic generator with its C shim, and `evp_lib.c`'s `set_group_name`/`get_group_name`/`set_algor_params`/`get_algor_params` with `signature.c`'s `set_signature` (**LANDED, D190**) | `EVP_PKEY_digestsign_supports_digest` (→ `EVP_DigestSignInit_ex`, `m_sigver.c`, 7.4's own remaining work), `EVP_PKEY_type` (7.4l), the six `print_*` (→ `encoder.h`, Phase 10), the twenty legacy key accessors (→ Phase 8's key types), the two engine accessors (→ Phase 13), `EVP_PKEY_CTX_get_algor` (→ `d2i_X509_ALGOR`, Phase 11) |
+| 7.4e | **`p_lib.c`'s provider half, the five `EVP_PKEY_CTX_*` accessors beside it, and `EVP_PKEY_Q_keygen`** — the four cache-backed getters, `missing_parameters`/`copy_parameters`/`can_sign`/`get_base_id`/`get0`, both type setters, `get_group_name`, both encoded-public-key halves, the four `EVP_PKEY_new_raw_*` constructors with the shared `new_raw_key_int` under them, `new_CMAC_key`, both default-digest accessors, the variadic generator with its C shim, and `evp_lib.c`'s `set_group_name`/`get_group_name`/`set_algor_params`/`get_algor_params` with `signature.c`'s `set_signature` (**LANDED, D190**) | `EVP_PKEY_digestsign_supports_digest` (→ `EVP_DigestSignInit_ex`, `m_sigver.c`, 7.4's own remaining work), `EVP_PKEY_type` (7.4l), the six `print_*` (→ `encoder.h`, Phase 10), the twenty legacy key accessors (→ Phase 8's key types), the two engine accessors (→ Phase 13), `EVP_PKEY_CTX_get_algor` (→ `d2i_X509_ALGOR`, Phase 11) |
 | 7.4l | — **the two `standard_methods[]` tables and the exports that read them**, per symbol and not per unit (D165): `EVP_PKEY_type`, the six in `p_legacy.c`, the twelve in the `i2d_*`/`d2i_*` units, the `asn1_find`/`asn1_get0`/`asn1_get_count` half of `ameth_lib.c`, and `EVP_PKEY_meth_find`/`_get0`/`_get_count` in `pmeth_lib.c` | — |
 | 7.4n | `evp_cnf.c` — **held for Phase 11** (`X509V3_get_value_bool`) | — |
 
@@ -213,15 +213,32 @@ entry points reachable from the public API. The remaining 7.4b work is `keymgmt_
 `legacy_alg` fill, which is blocked on `evp_pkey_name2type` and therefore on Phase 8.
 
 **7.4e is the provider half of `p_lib.c` plus the six names that live outside it (D190).**
-Twenty-four names were in its row and twenty-three landed; the twenty-fourth,
-`EVP_PKEY_digestsign_supports_digest`, is blocked on `EVP_DigestSignInit_ex` (`m_sigver.c:371`),
-which is this stratum's own remaining work rather than another stratum's, so it stays in the
-ledger's `open` list with no deferral row — a hand-off row would misname its owner. The slice also
-found, and the court measured, that `int_ctx_new` rewrites a caller's `"EC"` to
+Twenty-four names were in its row; twenty-three landed in the first pass and the four
+`EVP_PKEY_new_raw_*` constructors it had declined landed in the second, so **twenty-seven exports**
+are in. The one name that does not land, `EVP_PKEY_digestsign_supports_digest`, is blocked on
+`EVP_DigestSignInit_ex` (`m_sigver.c:371`), which is this stratum's own remaining work rather than
+another stratum's, so it stays in the ledger's `open` list with no deferral row — a hand-off row
+would misname its owner.
+
+**The four declined constructors were declined on a wrong reading, and the correction is recorded
+rather than folded away.** The first pass said they were blocked on `EVP_PKEY_asn1_find_str`
+(`ameth_lib.c:114`, Phase 8). That is wrong as stated: `new_raw_key_int` (`p_lib.c:416`) calls that
+lookup only inside its `#ifndef OPENSSL_NO_ENGINE` block, sets `*pe` from the **engine registry**,
+and then **discards** the method the lookup may have returned via `if (tmpe == NULL) ameth = NULL;`.
+No ENGINE can be obtained in this crate (`ENGINE` is Phase 13), so `tmpe` is NULL on every path and
+`ameth` is NULL for every input — the provider branch is unconditional. The mechanism is Phase 8's;
+its *answer* here is the one D181 already sanctions for `EVP_PKEY_get0_asn1`, and the transcription
+names it at the site. What the first reading got wrong is the difference between a symbol being
+absent and a symbol's answer being constant, and that is the class of finding this project collects.
+
+The slice also found, and the court measured, that `int_ctx_new` rewrites a caller's `"EC"` to
 `OBJ_nid2sn(EVP_PKEY_EC)` before fetching, which the authority resolves because its namemap is
 pre-populated from the legacy method database (`standard_methods[]`, D109) and the candidate's is
 not; the probe publishes its generation key types under the object spellings so that the
-`EVP_PKEY_Q_keygen` arms exercise the `va_arg` walk rather than that gap.
+`EVP_PKEY_Q_keygen` arms exercise the `va_arg` walk rather than that gap. The same default-context
+question decided the two entry points that hardcode `libctx = NULL` (`EVP_PKEY_new_CMAC_key` and the
+legacy-type raw constructors): the probe registers its provider in the **default** library context as
+well, and the measurement is that the authority's default provider never competes for those names.
 
 **The ledger still owes 7.4l, and D165 measured why it is not a table yet.** `EVP_PKEY_type` sits in
 `forensics/phase7-obligations.json`'s `open` list while this table hands `evp_pkey_type.c` to Phase 8:

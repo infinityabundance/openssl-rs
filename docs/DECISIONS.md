@@ -11297,7 +11297,7 @@ covers that, the prototype court, the prerequisite gate at zero findings and the
 
 ## D190 — `p_lib.c`'s provider half lands whole, and the one name it cannot reach is `EVP_DigestSignInit_ex`'s
 
-Twenty-four exports were named for this slice and **twenty-three landed**: the four cache-backed
+Twenty-four exports were named for this slice; its **first pass landed twenty-three**: the four cache-backed
 accessors (`EVP_PKEY_get_bits`, `_get_security_bits`, `_get_security_category`, and
 `EVP_PKEY_save_parameters` beside them), the parameter-presence and parameter-copy pair
 (`EVP_PKEY_missing_parameters`, `_copy_parameters`), `EVP_PKEY_can_sign`, `EVP_PKEY_get_base_id`,
@@ -11309,9 +11309,13 @@ with the two statics under them (`evp_pkey_asn1_ctrl`, `legacy_asn1_ctrl_to_para
 and in `src/evp/pkey_ctx.rs` the five `EVP_PKEY_CTX_*` accessors `evp_lib.c` and `signature.c` declare
 beside the entry points — `EVP_PKEY_CTX_set_signature`, `_set_group_name`, `_get_group_name`,
 `_set_algor_params`, `_get_algor_params`. `EVP_PKEY_Q_keygen` lands with the static `evp_pkey_keygen`
-it is a thin wrapper over, in a new C shim. `implemented[libcrypto]` moves **1709 → 1732** and phase 7
-to **597 implemented and 189 open** (from 574 and 212) — read from `forensics/phase7-obligations.json`
-after the pipeline ran, not predicted here.
+it is a thin wrapper over, in a new C shim. A second pass then landed four more —
+`EVP_PKEY_new_raw_private_key_ex`, `_new_raw_public_key_ex`, `EVP_PKEY_new_raw_private_key` and
+`_new_raw_public_key`, over the `new_raw_key_int` transcribed with them — so **twenty-seven exports**
+are in, and the marked correction below records why the first pass declined those four and what that
+reading got wrong. `implemented[libcrypto]` moves **1709 → 1736** and phase 7 to **601 implemented
+and 185 open** (from 574 and 212) — read from `forensics/phase7-obligations.json` after the pipeline
+ran, not predicted here.
 
 **The twenty-fourth does not land, and the blocker is a symbol rather than a stratum boundary.**
 `EVP_PKEY_digestsign_supports_digest` (`crypto/evp/p_lib.c:1398`) is three statements: `EVP_MD_CTX_new`,
@@ -11326,10 +11330,54 @@ answer would be worse than the absence: the function's whole observable is wheth
 succeeds, so every reachable input would have to be answered from something else. There is no
 `forensics/prerequisites.json` row for it and there should not be one: a *deferral* row moves a name
 to another stratum, and this name is 7.4's own remaining work, so the row would be a false statement
-about ownership. The name therefore stays in the ledger, and `RT-EVP-PKEY` prints
-`digestsign_supports_digest=NOT_MEASURED_BLOCKED_ON_EVP_DigestSignInit_ex_m_sigver_c_371` rather than
-driving a stub. **This is a deviation from the slice's own instruction, which says all twenty-four
-land, and it is recorded rather than quietly delivered as twenty-four.**
+about ownership. **It is owed to 7.4 itself, `m_sigver.c`**: the stratum owns the name *and* the slice
+that will fill it, so it cannot close with the name unresolved, which is why the owner is written
+down here rather than left implicit in an `open` list. The name therefore stays in the ledger, and
+`RT-EVP-PKEY` prints `digestsign_supports_digest=NOT_MEASURED_OWED_TO_7_4_ITSELF_m_sigver_c_371`
+rather than driving a stub. (That line first read
+`NOT_MEASURED_BLOCKED_ON_EVP_DigestSignInit_ex_m_sigver_c_371`; "blocked on" suggests another
+stratum, and the replacement names the owner. The same word appears to have done the same damage
+four times over — see the marked correction below.) **This is a deviation from the slice's own
+instruction, which says all twenty-four land, and it is recorded rather than quietly delivered as
+twenty-four.**
+
+**Correction, marked inside this entry rather than folded away, the way commits `211ba2bb` and
+`bd487c5b` correct D189 (this entry is recent).** The slice's report declined four more names —
+`EVP_PKEY_new_raw_private_key_ex`, `_new_raw_public_key_ex`, `EVP_PKEY_new_raw_private_key` and
+`_new_raw_public_key` — with the reason "*blocked on* `EVP_PKEY_asn1_find_str` (`ameth_lib.c:114`,
+Phase 8)". **That reason is wrong as stated: they were blocked on nothing.** The wrong reasoning was
+recorded in the probe's `NOT_MEASURED` lines and **not** in this entry's do-not-land list, which is
+the second thing this correction repairs — the record of what did not land has to name every name
+that did not land, or its arithmetic cannot be checked by a reader. So: the wrong reading is kept
+here, and it is worth keeping, because the mistake it makes is between two things that look alike.
+
+The mechanism is Phase 8's; its **answer** here is `ameth = NULL`, for every input.
+`new_raw_key_int` (`crypto/evp/p_lib.c:416`) calls `EVP_PKEY_asn1_find_str`/`_find` only inside its
+`#ifndef OPENSSL_NO_ENGINE` block (`p_lib.c:432-445`), and those functions set `*pe` from the
+**engine registry**. No ENGINE can be obtained in this crate (`ENGINE` is `engine.h`, Phase 13), so
+that registry is empty, `ENGINE_pkey_asn1_find_str` answers NULL, `*pe = NULL` runs, and the method
+the lookup goes on to return by walking `standard_methods[]` is **discarded** — the caller keeps
+only `tmpe` and throws the return value away. `if (tmpe == NULL) ameth = NULL;` therefore fires on
+every path, `ameth` is always NULL, and `if (e == NULL && ameth == NULL)` — the condition of the
+provider branch — is true for every call this crate can make. The method table being Phase 8's is
+real; the *reachability* of that table from here is nil, and those are different facts. This is
+exactly what **D181** already sanctions for `EVP_PKEY_get0_asn1` ("the crate writes the same
+`*pe = NULL` and the answers are identical") and what **D167**'s rule — transcribe the *answer*, name
+the mechanism at the site — is for.
+
+So `new_raw_key_int` (`p_lib.c:416-530`) is transcribed in full into `src/evp/pkey.rs`: the engine
+block written as the single answer it produces, with a site comment naming `p_lib.c:432-445`, D181,
+D167 and `docs/SECURITY_DIVERGENCE_POLICY.md`'s `D-PKEY-AMETH-1`; the provider branch with its
+`ERR_set_mark`/`ERR_clear_last_mark`/`ERR_pop_to_mark` bracket and the `EVP_R_KEY_SETUP_FAILED`
+raise (`p_lib.c:471`); and the legacy fallback — `EVP_PKEY_new`, `pkey_set_type`, the
+`ossl_assert(ameth != NULL)` gate, the two `set_priv_key`/`set_pub_key` arms with their
+`p_lib.c:487/501/506/511/516` raises, and the `err:`/`result` bookkeeping — written and
+**unreachable**, each site naming the stratum that fills it, the same treatment the legacy arms get
+everywhere else in that file. The two legacy-type spellings pass `strtype = NULL` and
+`nidtype = type`, so their `EVP_PKEY_CTX_new_from_name` argument is `OBJ_nid2sn(nidtype)` and the
+fetch happens in the **default** library context; the two `_ex` spellings take the caller's name in
+the caller's context. Those are different strings reaching the same provider by different roads, and
+the court drives both rather than conflating them.
 
 **What was *not* landed is the rest of the list, and each has a blocker that can be checked rather
 than believed.** Four groups, all named in the probe's comment and printed as `NOT_MEASURED` lines:
@@ -11401,7 +11449,7 @@ here is only that it is reachable through `int_ctx_new`'s name rewrite as well a
 error message's data. It is not registered in `docs/SECURITY_DIVERGENCE_POLICY.md`, for D109's reason:
 it is a distribution gap with a named future owner, not a safety-versus-compatibility choice.
 
-**The court's arms, and the four it cannot drive.** `RT-EVP-PKEY` goes from **178 to 330
+**The court's arms, and the arms it cannot drive.** `RT-EVP-PKEY` goes from **178 to 354
 observations**, all passing on both sides. The new block is grouped by question: the three states a
 provider can leave the cache in (published values, a success with nothing filled — which is the only
 way `security_category` is `-1` on a key that exists — and a failing `get_params`, which leaves the
@@ -11417,17 +11465,54 @@ provider publishes; the raw key pair exported back from the bytes it was built f
 `EVP_PKEY_new_CMAC_key` refusal; three `EVP_PKEY_Q_keygen` names plus the lowercase spelling and the
 case with no such type; `set_signature`'s parameter reaching a `set_ctx_params` that counts it; and
 the two `X509_ALGOR` codecs as a DER round trip with the decoded value compared against the probe's
-three bytes. Four arms are named rather than driven, with their coordinates: `new_CMAC_key` with a
-cipher (its second arm needs the **default** library context's CMAC keymgmt, and this crate has no
-default provider — Phase 9), `set_type` with a legacy NID (`D-PKEY-AMETH-1` reached publicly: the
-authority answers 1, the candidate 0, so it is a divergence and not an observation), and the four
-`get_base_id(NULL)` / `get_default_digest_name(blank)` / `set_algor_params(NULL)` /
-`get_algor_params(NULL)` calls, where the authority **faults** and the candidate's NULL-context
-answers are the recorded `EVP_PKEY_CTX_set_params` divergence. The `X509_ALGOR`-with-an-existing-
-`parameter` arm is also named and not driven, because the decoder owns that slot and freeing a
-probe-held object afterwards would be that object's second free.
+three bytes.
+
+The second pass adds two sections. **23** is the four raw-key constructors: each driven once through
+its `_ex` spelling (the caller's context and the caller's name) and once through its legacy-type
+spelling (no context, and `OBJ_nid2sn` in the **default** context), each successful construction
+followed by the exported-bytes round trip against the probe's own four bytes, plus the
+`keymgmt`-not-found refusal and the `EVP_R_KEY_SETUP_FAILED` arm from a provider whose `import`
+answers 0. `EVP_PKEY_X448` is the arm that turns the correction above from an argument into an
+observation: the authority's `EVP_PKEY_asn1_find` **does** find `ossl_ecx448_asn1_meth` for NID 1035,
+and the provider branch is still the one taken — so the method that lookup found was discarded
+exactly as `if (tmpe == NULL) ameth = NULL;` says it is. `EVP_PKEY_NONE`'s `OBJ_nid2sn` is `"UNDEF"`,
+which nothing but this probe publishes. **24** is `EVP_PKEY_new_CMAC_key` with a cipher.
+
+**`EVP_PKEY_new_CMAC_key`'s success arm was re-examined on the reviewer's instruction and it is
+measurable; the first pass left it unexamined, which is not the same as unmeasurable.** The function
+passes `libctx = NULL`, so it resolves `"CMAC"` in the **default** library context, and the first
+pass recorded the arm as needing "the default library context's CMAC keymgmt, and this crate has no
+default provider — Phase 9". The second clause is true of the *crate* and false of the *court*: the
+probe can register its own provider in the default context
+(`OSSL_PROVIDER_add_builtin(NULL, …)` + `OSSL_PROVIDER_load(NULL, …)`), and it now does. The
+determinism question is real — the authority's own default provider also publishes `CMAC`, so which
+one the store resolves is not obvious — and it was **measured rather than argued**: the probe's
+provider wins, because the authority's default provider is activated lazily and has no competing
+keymgmt registered for that name at the moment of the fetch. That is the same measurement that
+decides the legacy-type raw-key spellings' `OBJ_nid2sn` fetches (`UNDEF` and `X448`), and it is made
+in the same place. The arm prints `cmac.with_cipher=nonnull` with its round trip, identically on both
+sides.
+
+The arms named rather than driven, with their coordinates: `set_type` with a legacy NID
+(`D-PKEY-AMETH-1` reached publicly: the authority answers 1, the candidate 0, so it is a divergence
+and not an observation), and the four `get_base_id(NULL)` / `get_default_digest_name(blank)` /
+`set_algor_params(NULL)` / `get_algor_params(NULL)` calls, where the authority **faults** and the
+candidate's NULL-context answers are the recorded `EVP_PKEY_CTX_set_params` divergence. The
+`X509_ALGOR`-with-an-existing-`parameter` arm is also named and not driven, because the decoder owns
+that slot and freeing a probe-held object afterwards would be that object's second free.
+
+Two stale statements in the probe's own header are repaired with it, because a court's comment is
+part of the record it is evidence for: its subject line named only `signature.c`'s entry-point half
+although the file has driven `p_lib.c`'s provider half since the first pass, and its
+`Deliberately not observed` list still carried `EVP_PKEY_CTX_set_signature` as "`pmeth_lib.c`'s and
+another slice's" while the `ctxsig.*` arms drive it. Both are corrections of the record rather than
+code changes, and neither alters a single observation.
 
 No new function-pointer type alias was added, so `forensics/tools/dispatch_court.py`'s
 `NOT_A_DISPATCH` table is untouched; the pipeline's `PIPELINE OK` covers that, the prototype court,
 the prerequisite gate and the FRF declarations, and the regression guard reports no movement that
-needs an `ownership-transitions.json` row (the phase-7 open count moves *down*, 212 → 189).
+needs an `ownership-transitions.json` row (the phase-7 open count moves *down*, 212 → 185). Both
+guard pairs were run and are clean: against the branch's own previous head (`3f268689`:
+`implemented[libcrypto] 1732 → 1736`, `open_obligations[phase7] 189 → 185`,
+`court[RT-EVP-PKEY] observations 330 → 354`) and against the merge base with `origin/main`
+(`c2fdcae4`).
