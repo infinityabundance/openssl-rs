@@ -169,7 +169,7 @@
       "verdict": "pass"
     },
     "RT-FETCH": {
-      "observations": 60,
+      "observations": 103,
       "verdict": "pass"
     },
     "RT-LHASH": {
@@ -249,7 +249,7 @@
     "phase7": 0
   },
   "implemented": {
-    "libcrypto": 1252,
+    "libcrypto": 1287,
     "libssl": 0
   },
   "open_obligations": {
@@ -257,7 +257,7 @@
     "phase4": 0,
     "phase5": 0,
     "phase6": 0,
-    "phase7": 833
+    "phase7": 798
   },
   "owned_obligations": {
     "phase3": 294,
@@ -291,10 +291,10 @@
     "9": "not-started"
   },
   "prerequisites": {
-    "blocking_dependencies": 6,
+    "blocking_dependencies": 5,
     "divergence_names_covered": 32,
     "findings": 0,
-    "language_census": 2177,
+    "language_census": 2147,
     "sealed_census": 59
   }
 }

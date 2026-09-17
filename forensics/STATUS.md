@@ -27,7 +27,7 @@ renderer does not know any phase status.
 | 4 | BIO + CONF + object database | `complete` |  |
 | 5 | BN + ASN.1 + DER/PEM | `complete` |  |
 | 6 | OSSL_LIB_CTX + provider core | `complete` |  |
-| 7 | EVP framework | `in-progress` | 833 open obligation(s) of this stratum recorded in forensics/phase7-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
+| 7 | EVP framework | `in-progress` | 798 open obligation(s) of this stratum recorded in forensics/phase7-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
 
 Not started: strata 8-21 (14 total).
 
@@ -82,9 +82,9 @@ that name is defined, nothing more.
 
 | library | exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 1252 | 4644 |
+| libcrypto | 5896 | 1287 | 4609 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **1252** | **5247** |
+| **total** | **6499** | **1287** | **5212** |
 
 ### Phase 3 obligation ledger
 
@@ -184,9 +184,9 @@ handed it, that is neither implemented, deferred to a named later
 phase, nor recorded as open in the stratum is an error, not a warning.
 
 * authority exports in the Phase 7 working set: 950
-* implemented: 117
+* implemented: 152
 * deferred to a later phase with a stated reason: 0
-* open in this stratum: 833
+* open in this stratum: 798
 
 Hand-offs from phase 5 discharged by this stratum: `ASN1_item_sign_ex`, `ASN1_item_verify_ex`, `PEM_ASN1_read`, `PEM_ASN1_read_bio`, `PEM_ASN1_write`, `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx`, `PEM_SignFinal`, `PEM_SignInit`, `PEM_SignUpdate`, `PEM_bytes_read_bio`, `PEM_bytes_read_bio_secmem`, `PEM_def_callback`, `PEM_do_header`, `PEM_read`, `PEM_read_bio`, `PEM_read_bio_Parameters`, `PEM_read_bio_Parameters_ex`, `PEM_read_bio_ex`, `PEM_write`, `PEM_write_PKCS8PrivateKey_nid`, `PEM_write_bio`, `PEM_write_bio_ASN1_stream`, `PEM_write_bio_PKCS8PrivateKey_nid`, `PEM_write_bio_Parameters`, `PEM_write_bio_PrivateKey_traditional`
 
