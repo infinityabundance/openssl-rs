@@ -317,10 +317,10 @@ pub(crate) unsafe fn evp_keymgmt_util_export(
 ///      the cached keydata;
 ///   4. the origin publishes no `export` → NULL;
 ///   5. the two methods do not name the same type, which the authority tests with **`ossl_assert`**
-///      and therefore only in a debug build → NULL. In the released authority the assertion is the
-///      identity function and the round trip proceeds; the crate follows the released build, which is
-///      the profile the authority was built with, and calls `match_type` regardless so that the two
-///      sides agree on the *result* rather than on the check;
+///      and a `return NULL`. `ossl_assert(C)` under `NDEBUG` is `C`, so `!ossl_assert(...)` is
+///      `match_type(...) == 0` and the *released* authority refuses a mismatch — what `NDEBUG`
+///      removes is the debug build's abort, not the guard. The crate's `match_type(...) == 0` test
+///      is that same negation (`docs/DECISIONS.md` D167);
 ///   6. a failed export/import round trip → NULL with the destination's own error on the queue.
 ///
 /// The write-lock re-check is the seventh path and returns the *other* thread's keydata, freeing its

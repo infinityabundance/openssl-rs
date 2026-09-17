@@ -9779,3 +9779,145 @@ entry concludes is negative and worth as much: **no deferral row was added for t
 two rules available today give opposite answers on evidence I can check, and 7.4l as written would have
 deferred work that belongs here. The plan's row 7.4l is corrected to say so, and the artefact that
 makes the rule writable is landed.
+
+## D166 — 7.4c-i's prerequisite movement is recorded once per compared ref, and the guard needed a row for the push baseline
+
+The 7.4c-i commit (`e03d81e5`) was red on CI, and on the regression guard alone:
+
+```text
+REGRESSION: prerequisites[blocking_dependencies]: 14 -> 18 (+4)
+```
+
+The movement itself was already recorded. `forensics/ownership-transitions.json` carried two
+rows for it, `8 -> 18` and `15 -> 18`, and `regression_guard.py`'s `prerequisite_transition_for`
+matched the second of them for the comparison the *branch* makes locally. What failed was a third
+comparison.
+
+**Why three rows for one movement.** `prerequisite_transition_for` matches `before` and `after`
+**exactly** -- a row blesses one described change and nothing else -- while the project compares
+against more than one authority. `.github/workflows/ci.yml`'s two guarded jobs each resolve the
+trusted ref as:
+
+* `git merge-base HEAD FETCH_HEAD`, when `GITHUB_BASE_REF` is set (a pull request) -- the merge
+  base with `main`;
+* `github.event.before` otherwise (a push) -- the tip of the branch **before** the push;
+* and locally, `--baseline-ref origin/main`, a third value again.
+
+Those baselines sit at different points in the history of this one metric, so one movement
+appears as `8 -> 18`, `14 -> 18` and `15 -> 18` depending on which is consulted. `14` is the
+commit before `e03d81e5` on `phase7-evp` (`ee87f232`), which is exactly what a push compares
+against, and it had no row. The commit therefore failed a comparison whose change had already
+been approved, from a baseline the file had not been told about.
+
+**What actually moved.** Four authority-internal names became visible to the prerequisite gate
+when `crypto/evp/pmeth_lib.c` got a module. None of them is new work:
+
+| name | defining unit | owed to |
+|---|---|---|
+| `evp_pkey_ctx_get_params_strict` | `crypto/evp/pmeth_lib.c` | 7.4c-ii, inside this stratum |
+| `evp_pkey_ctx_set_params_strict` | `crypto/evp/pmeth_lib.c` | 7.4c-ii, inside this stratum |
+| `evp_pkey_ctx_use_cached_data` | `crypto/evp/pmeth_lib.c` | 7.4c-ii, inside this stratum |
+| `evp_app_cleanup_int` | `crypto/evp/pmeth_lib.c` | Phase 8 (D163, D165) |
+
+All four are rows in `forensics/prerequisites.json` naming the stratum that will build them. The
+count rose because the names became *visible* -- the class D132 (11 -> 12), D134 (12 -> 15) and
+D141 already recorded -- and each row now states the arithmetic its own baseline implies.
+
+**The record defect this exposed.** The two rows written before this one said "six names" and
+"the movement is three" while naming baselines of `8` and `15`, neither of which is a movement of
+three. `reason` is prose the guard never reads, so nothing failed -- but a number typed by hand
+into a record, contradicting the arithmetic of the row it sits in, is the class this project's
+generated artefacts exist to prevent. Both rows' prose is corrected, together with the honest
+general statement the three rows now share: a baseline further back already counts fewer of the
+names, so one visibility event is recorded once per compared ref rather than once.
+
+**What did not change:** the metric, the ledger, and every `after` value. `after` is `18` on all
+three rows because that is what the working tree measures.
+
+## D167 — `ossl_assert` under `NDEBUG` is a live refusal, and six doc comments said the released authority proceeds
+
+`src/evp/pkey_ctx.rs` cited a divergence register entry that did not exist,
+`D-PKEYCTX-LEGACY-ALG-1`. Writing the entry required stating what the authority does, and stating
+what the authority does falsified the premise the citation rested on. The entry is **withdrawn**
+and the premise is corrected here, because the same premise appears at six sites.
+
+**The macro.** `include/internal/common.h`:
+
+```c
+#ifdef NDEBUG
+#define ossl_assert(x) ossl_likely((x) != 0)
+#else
+#define ossl_assert(x) ossl_assert_int((x) != 0, "Assertion failed: " #x, __FILE__, __LINE__)
+#endif
+```
+
+Under `NDEBUG`, `ossl_likely((x) != 0)` is the identity on a boolean, so `ossl_assert(C)`
+evaluates to `C`. The consequence that matters is that **`if (!ossl_assert(C))` is `if (!C)` -- a
+guard that fires in every build.** What `NDEBUG` removes is the *abort*: `ossl_assert_int` calls
+`OPENSSL_die` on a false expression and the released macro does not. It does not remove the
+refusal. The crate states this correctly in `src/provider/init.rs` ("`ossl_assert` under NDEBUG is
+an `if`"), in `src/property/store.rs`, in `src/evp/fetch.rs` and elsewhere.
+
+**What six sites said instead.** Each asserted that in the released authority the guard does not
+fire, and each used that to describe a deliberate divergence:
+
+| site | the claim | what the authority does |
+|---|---|---|
+| `pkey.rs` `EVP_PKEY_set_bn_param` | an oversized `BIGNUM` "writes past the buffer" | returns 0 |
+| `pkey.rs` `pkey_set_type` | a check "the authority refuses in a debug build and proceeds from in a released one" | `ERR_raise(ERR_LIB_EVP, ERR_R_INTERNAL_ERROR); return 0` |
+| `pkey.rs` `evp_pkey_cmp_any` | the released build "does take the -2" | takes the -2 -- **this one is right** |
+| `pkey_ctx.rs` `int_ctx_new` | a disagreement is "**accepted**" | raises `ERR_R_INTERNAL_ERROR`, frees the keymgmt, returns NULL |
+| `pkey_ctx.rs` `EVP_PKEY_CTX_dup` | with `exchange` NULL the duplicator "cannot be reached" | `ossl_assert` false, `goto err` |
+| `keymgmt_lib.rs` `evp_keymgmt_util_export_to_provider` | "the round trip proceeds" | returns NULL |
+
+**Measured, not read.** Two of the six are reachable in the authority binary, and both were
+disassembled rather than argued about.
+
+`EVP_PKEY_set_bn_param` compares the bit count and branches to the return-0 path:
+
+```text
+228e79:	cmp    $0x4000,%eax        ; BN_num_bits(bn) vs 16384 = 2048 bytes
+228e7e:	jg     228f2b
+...
+228f2b:	add    $0x880,%rsp
+228f32:	xor    %eax,%eax
+228f34:	ret
+```
+
+`int_ctx_new` raises the error the crate's site names, at the line that site names:
+
+```text
+22bcb5:	cmp    %r12d,%eax          ; tmp_id vs id
+22bcb8:	jne    22c07d
+...
+22c07d:	call   ERR_new
+22c089:	mov    $0x11c,%esi        ; 284 -- pmeth_lib.c's ERR_raise line
+22c09c:	mov    $0xc0103,%esi      ; 0x6 = ERR_LIB_EVP, ERR_R_INTERNAL_ERROR
+22c0a8:	call   ERR_set_error
+22c0b2:	call   EVP_KEYMGMT_free
+22c0b7:	jmp    22bfa0             ; the NULL-return epilogue
+```
+
+So the authority refuses when `tmp_id != id`, with `ERR_R_INTERNAL_ERROR`, after freeing the
+method -- exactly what the crate does at `err_sites::PMETH_LIB_284`. There is no divergence at
+that site, which is why `D-PKEYCTX-LEGACY-ALG-1` is withdrawn rather than written.
+
+**The crate's code was right at all six sites.** Every one refuses where the authority refuses.
+What was wrong was the *record*: each comment placed the crate further from the authority than it
+is, and did so in the direction that makes not reproducing a fault look like a decision.
+`D-GF2M-1` does record a real divergence of that shape, so the shape is not itself the error --
+but a claim of divergence is a claim, and it has to survive the same measurement as any other.
+Here one `objdump` was enough. The comments now state what the authority does.
+
+**One reachability left as a documented simplification.** `pkey_set_type`'s guard is
+`if (!ossl_assert(type == EVP_PKEY_NONE || keymgmt == NULL) || !ossl_assert(e == NULL ||
+keymgmt == NULL))`. The crate's signature has no `ENGINE` and every one of its callers passes
+`EVP_PKEY_NONE`, so both clauses are unsatisifiable here and the crate does not transcribe the
+guard. The branch the crate *does* take on a NULL `keymgmt` is the authority's later `check`
+(`ameth == NULL && keymgmt == NULL`), which raises `EVP_R_UNSUPPORTED_ALGORITHM` -- and since
+this crate's `ameth` is always NULL, that pair collapses to `keymgmt == NULL` exactly. The
+comment at that site said it was the assertion guard, which was both wrong and contradicted by
+the error the site raises. It now says what it is.
+
+**What this does not change:** no behaviour, no courtroom, no obligation. `D-GF2M-1`'s divergence
+is unaffected -- it is about blinding, not about `ossl_assert`.
