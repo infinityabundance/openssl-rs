@@ -9085,3 +9085,70 @@ algorithm context instead of duplicating it, or that reused one instead of relea
 produce those vectors.
 
 SPDX-License-Identifier: Apache-2.0
+
+---
+
+## D157 — 7.3e-i: the first class with no legacy half, and a fault found by transcribing `EVP_MAC_CTX_dup`
+
+**What landed.** The MAC half of 7.3e: `crypto/evp/mac_meth.c` and `crypto/evp/mac_lib.c`, the
+`EVP_MAC` method object and the `EVP_MAC_CTX` it is run through. **28 exports**, and the class that
+proves the stratum's machinery generalises past the two classes it was built for.
+
+**`EVP_MAC` is the first class with no legacy half**, and that is not a documentation detail — three
+consequences follow from it and each is a place a reader who had internalised `EVP_MD` would guess
+wrong. There is no `EVP_MAC_meth_new`, so a method cannot be built by hand and `EVP_MAC_free` has no
+`origin` test to make; a method whose callbacks are missing is **refused at fetch time** rather than
+tolerated, because there is no legacy arm to fall back to; and `EVP_MAC_CTX_get_mac_size` has no
+cached constant to fall back on — it asks the *context* every time, which is why a MAC's size can
+depend on parameters set after the fetch. `EVP_MAC_get_params` answers **1** for a missing callback
+where `EVP_MD_get_params` answers 0, and the authority's own comment says why: a parameter list
+nothing recognised and a list with no handler are the same answer to a caller.
+
+**The structural check is an arithmetic, not a list.** `fnmaccnt == 3 && fnctxcnt == 2`, where the 3
+counts `update`, `final`, and **either** `init` **or** `init_skey` through one `mac_init_found` flag,
+and the 2 counts `newctx` and `freectx` and **not** `dupctx`. Both asymmetries are load-bearing and
+both are observable from outside: a provider publishing only the symmetric-key initialiser is
+fetchable, and a method with no duplicator is fetchable and usable right up to the moment it is
+duplicated. `RT-EVP-MAC` publishes five algorithms, one for each arm, and the two negative ones are
+the reason the court exists rather than a single happy-path probe.
+
+**A fault found by transcribing, not guessed at.** `EVP_MAC_CTX_dup` reaches
+`src->meth->dupctx(src->algctx)` with no test — and because `dupctx` is the callback the structural
+check does not count, a method without one is perfectly legal right up to that call. Measured in a
+process of its own against the pinned authority: a provider publishing a MAC without `dupctx`, a
+fetch, a context, a duplicate — `add_builtin=1 load=1 fetch=1 ctx_new=1` then **exit 139**. It is
+recorded as `D-MAC-DUPCTX-NULL-1` and the crate answers the NULL the authority's *own next
+statement* would have produced, so the boundary is one step wide and the reference the duplicate
+took on the method is given back on the way out. Two other boundaries are printed by the court
+rather than executed: `EVP_MAC_do_all_provided` with a NULL visitor (D-MD-DOALL-NULL-1, the same
+class) and `EVP_MAC_init_SKEY`, which is 7.3f's and is a scaffold today.
+
+**The court's most interesting observation is the `do_all` count.** Five algorithms are published
+and one cannot be constructed, so a walk that enumerated the *published* arrays would count five and
+the authority counts four — which is `evp_generic_do_all`'s construct-then-enumerate order, visible
+from outside the library for the first time. The provider also counts its own callbacks as one
+vector, so the transcript says which of the thirteen ran and how many times:
+`after_new=1,0,0,0,0,0,0,0,0` (the constructor only), `after_update=1,0,0,1,2,0,0,0,0`,
+`after_final=1,0,0,1,2,2,1,7,0` (one `set_ctx_params` and seven `get_ctx_params`, of which four are
+the size question asked four times), `after_ctx_free=1,1,0,1,2,2,3,8,0`. A transcription that took
+the method-level `get_params` where the authority takes the context-level `get_ctx_params`, or that
+skipped the `xof` parameter before an XOF final, cannot produce those vectors — and the XOF one is
+visible in the *bytes* as well, because the provider writes the flag it was handed into `out[4]`.
+
+**`OSSL_MAC_PARAM_BLOCK_SIZE` is `"block-size"`.** The digest and cipher classes both spell the same
+notion `"blocksize"`; this one has a hyphen. A reader who pattern-matched would build a descriptor no
+provider recognises, and `EVP_MAC_CTX_get_block_size` would answer 0 for every MAC in existence
+without a single error anywhere. It is named in the code where its one reader is, with that reason.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 7 implemented / open | 186 / 764 | **214 / 736** |
+| `implemented[libcrypto]` | 1321 | **1349** |
+| courts | 58 | **59** |
+| RT-EVP-MAC observations | — | **96** |
+| prototype court: checked / mismatch / unreadable | 1274 / 0 / 0 | **1302 / 0 / 0** |
+| unit tests | 348 | **356** |
+
+SPDX-License-Identifier: Apache-2.0

@@ -917,3 +917,28 @@ authority and the candidate for this function, and there was never supposed to b
   `do_all` whose visitor is forwarded rather than tested — and it is a separate entry because the
   two are reached through different exported entry points and a future reader of either should not
   have to find the other first.
+
+### D-MAC-DUPCTX-NULL-1 — `EVP_MAC_CTX_dup` calls through a NULL `dupctx`
+
+- **Obligation:** `EVP_MAC_CTX_dup` on a method that publishes no `OSSL_FUNC_MAC_DUPCTX`.
+- **Authority:** **measured**. `crypto/evp/mac_lib.c` reaches
+  `dst->algctx = src->meth->dupctx(src->algctx)` with no test on the pointer, and `dupctx` is
+  deliberately **not** counted by `evp_mac_from_algorithm`'s structural check — so a method without
+  a duplicator is perfectly fetchable and perfectly usable until it is duplicated. A program that
+  registers a builtin provider publishing a MAC without `dupctx`, loads it, fetches it, makes a
+  context and duplicates it prints `add_builtin=1`, `load=1`, `fetch=1`, `ctx_new=1` and dies with
+  **exit 139** (SIGSEGV). The fault is the measurement, so there is nothing to compare past it.
+  `RT-EVP-MAC` prints `NOT_MEASURED_AUTHORITY_FAULTS` at the boundary.
+- **Crate:** answers **NULL**, which is not an invented answer: it is what the authority's own next
+  statement does when a duplicator answers NULL (`if (dst->algctx == NULL) { EVP_MAC_CTX_free(dst);
+  return NULL; }`). So the divergence is exactly one step wide — a missing duplicator is treated as
+  a duplicator that could not duplicate — and the reference the duplicate took on the method is
+  given back through `EVP_MAC_CTX_free` on the way out.
+- **Reason:** an indirect call through a null pointer is not a contract to reproduce. This one is
+  worth its own entry rather than being folded into D-MD-NULL-CALLBACK-1 because the *shape* is
+  different in a way that matters to a reader: the digest class's faults are on a method a caller
+  had to build by hand, whereas this one is on a method the library itself fetched from a provider
+  whose dispatch table simply omitted an optional callback.
+- **Claim removed:** `EVP_MAC_CTX_dup` on a method with no `dupctx` is not claimed compatible. It is
+  claimed *safe*. On a method that publishes one — `RT-EVP-MAC`'s `court-mac5` — the call is
+  compared normally, including the reference count it leaves behind.

@@ -281,7 +281,7 @@
         "truncf128",
         "truncf16"
       ],
-      "compiler_emitted_count": 7129,
+      "compiler_emitted_count": 5425,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -289,7 +289,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 1321,
+        "implemented": 1349,
         "implemented_symbols": [
           "ASN1_ANY_it",
           "ASN1_BIT_STRING_check",
@@ -1184,6 +1184,33 @@
           "EVP_EncryptInit_ex",
           "EVP_EncryptInit_ex2",
           "EVP_EncryptUpdate",
+          "EVP_MAC_CTX_dup",
+          "EVP_MAC_CTX_free",
+          "EVP_MAC_CTX_get0_mac",
+          "EVP_MAC_CTX_get_block_size",
+          "EVP_MAC_CTX_get_mac_size",
+          "EVP_MAC_CTX_get_params",
+          "EVP_MAC_CTX_gettable_params",
+          "EVP_MAC_CTX_new",
+          "EVP_MAC_CTX_set_params",
+          "EVP_MAC_CTX_settable_params",
+          "EVP_MAC_do_all_provided",
+          "EVP_MAC_fetch",
+          "EVP_MAC_final",
+          "EVP_MAC_finalXOF",
+          "EVP_MAC_free",
+          "EVP_MAC_get0_description",
+          "EVP_MAC_get0_name",
+          "EVP_MAC_get0_provider",
+          "EVP_MAC_get_params",
+          "EVP_MAC_gettable_ctx_params",
+          "EVP_MAC_gettable_params",
+          "EVP_MAC_init",
+          "EVP_MAC_is_a",
+          "EVP_MAC_names_do_all",
+          "EVP_MAC_settable_ctx_params",
+          "EVP_MAC_up_ref",
+          "EVP_MAC_update",
           "EVP_MD_CTX_clear_flags",
           "EVP_MD_CTX_copy",
           "EVP_MD_CTX_copy_ex",
@@ -1250,6 +1277,7 @@
           "EVP_MD_up_ref",
           "EVP_MD_xof",
           "EVP_Q_digest",
+          "EVP_Q_mac",
           "EVP_default_properties_enable_fips",
           "EVP_default_properties_is_fips_enabled",
           "EVP_enc_null",
@@ -1613,7 +1641,7 @@
           "i2d_DISPLAYTEXT",
           "i2t_ASN1_OBJECT"
         ],
-        "scaffolded": 4575
+        "scaffolded": 4547
       },
       "libssl": {
         "authority_exports": 603,
@@ -1624,18 +1652,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 1321,
-      "scaffolded": 5178
+      "implemented": 1349,
+      "scaffolded": 5150
     }
   },
-  "body_hash": "fdb66c12e7edd6160fb4c648b1d936a4e75d50ef897098873319bacdcc95ac8c",
+  "body_hash": "68e9244f2f4959ef80da4e4bb500ea54f2c71fb79282a03d856ae678b23a5921",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "283677e2337c32dd322f2904abbf1a083fe4361aab768852e6dbb990f3af14bb"
+      "sha256": "bb46f38fcab943b06dc76ae67a5cc2ff6e90a0600c269cc4e662fa285732e0d0"
     },
     {
       "name": "authority-exports",
