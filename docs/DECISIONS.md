@@ -10556,3 +10556,31 @@ the unit and not a substitute for it.
   are function-pointer types, none of which `ABI-PROTOTYPE` can see, and D170 records two real defects
   of exactly that shape. So the `OSSL_CORE_MAKE_FUNC` type-plane generator is not a nice-to-have before
   this family — it is the check that makes forty-one hand-transcribed types credible.
+
+## D178 — the mutators' signatures need named aliases, and the type plane is why
+
+The fifteen `EVP_PKEY_asn1_set_*` mutators were written and the pipeline refused them: `type plane:
+mismatches=0 unmapped=5`, on exactly the five whose parameter lists are longest — `set_public`,
+`set_private`, `set_param`, `set_item` and `set_siginf`. Everything else canonicalised, including the
+four-parameter `set_ctrl` and the one-parameter `set_check`.
+
+The lesson is D173's, restated for a *parameter* rather than a return: `ABI-PROTOTYPE`'s Rust-side
+reader resolves a function-pointer type through a **named alias** it can look up, and an inline
+`Option<unsafe extern "C" fn(...) -> c_int>` — however correct as Rust — has nothing to look up. In
+7.4c-i the fix was `EvpPkeyGenCb` for a return; here it is seventeen aliases for parameters. The five
+that failed are the five that name, between them, `*const X509Pubkey`, `*mut X509Pubkey`,
+`*const/*mut Pkcs8PrivKeyInfo`, `*mut X509SigInfo`, `*const X509Algor`, `*const Asn1String`,
+`*mut/*const Asn1BitString`, `*mut EvpMdCtx`, `*const Asn1Item`, and the double pointers
+`*mut *const u8` and `*mut *mut u8`.
+
+**A wrong hypothesis, recorded so it is not retried.** The first guess was that `cargo fmt` reflowing
+the long signatures across lines was what broke the parse, and `#[rustfmt::skip]` was added to the
+five. It changed nothing: the failure is the type, not the layout. The marker is left off the tree
+because it was not the cause.
+
+**The work is written and deliberately not landed.** The mutators are the rest of a unit that is
+otherwise complete, and landing them behind a red type plane would have traded a green invariant for
+fifteen exports — the trade this project's constitution exists to refuse. What was landed instead is
+the finding, and the shape of the fix is exact: seventeen names for seventeen parameter types, each
+declared beside the struct, and the same discipline D177 already imposed on the struct's
+thirty-six function-pointer *members*.
