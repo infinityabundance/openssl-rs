@@ -760,6 +760,62 @@ pub(crate) unsafe fn evp_pkey_ctx_free_all_cached_data(ctx: *mut EvpPkeyCtx) {
     unsafe { evp_pkey_ctx_free_cached_data(ctx) };
 }
 
+/// `int evp_pkey_ctx_use_cached_data(EVP_PKEY_CTX *ctx)` — `crypto/evp/pmeth_lib.c:1534`.
+///
+/// The **replay** half of the cached-data trio: `evp_pkey_ctx_store_cached_data` remembers what a
+/// `ctrl_str` could not deliver, and this hands it to the operation once the operation exists. Its
+/// only two authority callers are the `end:` labels of `evp_pkey_signature_init`
+/// (`crypto/evp/signature.c`) and of `evp_digest_signverify_init` (`crypto/evp/m_sigver.c`), and
+/// both guard the call with `ret > 0`, so an init that refused does not replay. The row this
+/// discharges in `forensics/prerequisites.json` named three callers — `signature.c`, `exchange.c`
+/// and `pmeth_gn.c` — and **only the first of the three calls it**; `exchange.c`'s derive init and
+/// `pmeth_gn.c` have no cached-data step at all. That is recorded in `docs/DECISIONS.md` D189.
+///
+/// Two things are the authority's shape rather than an obvious choice:
+///
+///   * `ret` starts at **1** and the test is `ret && dist_id_set`, so a context with no cached
+///     identifier answers 1: "nothing to replay" and "the replay succeeded" are the same answer,
+///     which is what lets each caller use this as a suffix rather than as a step;
+///   * the two arms are chosen by `dist_id_name`, not by the command. A name exists when the
+///     identifier arrived through `ctrl_str` and is replayed as a *string*; a nameless store (the
+///     `ctrl` path) replays through the numeric ctrl, with the **live** `ctx->operation` rather
+///     than a stored one — the operation is only ever read at replay time because the store time
+///     had no operation to record.
+///
+/// # Safety
+/// `ctx` must be live.
+pub(crate) unsafe fn evp_pkey_ctx_use_cached_data(ctx: *mut EvpPkeyCtx) -> c_int {
+    let mut ret = 1;
+
+    // SAFETY: `ctx` is live per the contract.
+    let c = unsafe { &*ctx };
+    if ret != 0 && c.cached_parameters.dist_id_set != 0 {
+        let name = c.cached_parameters.dist_id_name;
+        let val = c.cached_parameters.dist_id;
+        let len = c.cached_parameters.dist_id_len;
+
+        if !name.is_null() {
+            // SAFETY: `name` is NUL-terminated, and `val` is the NUL-terminated string the
+            // `ctrl_str` path duplicated into `dist_id`.
+            ret = unsafe { evp_pkey_ctx_ctrl_str_int(ctx, name, val.cast()) };
+        } else {
+            // SAFETY: `ctx` is live and `val` is NULL or `len` readable bytes.
+            ret = unsafe {
+                evp_pkey_ctx_ctrl_int(
+                    ctx,
+                    -1,
+                    c.operation,
+                    EVP_PKEY_CTRL_SET1_ID,
+                    len as c_int,
+                    val,
+                )
+            };
+        }
+    }
+
+    ret
+}
+
 /// `void EVP_PKEY_CTX_free(EVP_PKEY_CTX *ctx)`.
 ///
 /// The release order is the authority's and two of its steps are load-bearing:
