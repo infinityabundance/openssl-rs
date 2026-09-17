@@ -9152,3 +9152,74 @@ without a single error anywhere. It is named in the code where its one reader is
 | unit tests | 348 | **356** |
 
 SPDX-License-Identifier: Apache-2.0
+
+---
+
+## D158 — 7.3e closes: the `EVP_KDF` class, and a reference leak in the MAC class that its twin found
+
+**What landed.** `crypto/evp/kdf_meth.c` and `crypto/evp/kdf_lib.c`, and with them **7.3e is
+complete**: 26 exports, 24 implemented here and two handed forward. The subphase's own arithmetic is
+now closed — `EVP_MAC` and `EVP_KDF`, four translation units, 55 rows of the plan, two courts.
+
+**The two classes are twins and are written out separately, and this subphase is the argument for
+that.** Four differences matter, and each is one a shared helper would have had to be told about:
+
+  * **`EVP_KDF_CTX_dup` tests its duplicator and `EVP_MAC_CTX_dup` does not.** The KDF form is
+    `src == NULL || src->algctx == NULL || src->meth->dupctx == NULL`; the MAC form reaches
+    `src->meth->dupctx(...)` and faults — measured, D-MAC-DUPCTX-NULL-1. `RT-EVP-KDF` observes the
+    two methods that differ in that one entry and gets a NULL from one and a context from the other;
+    `RT-EVP-MAC` prints the boundary it cannot enter.
+  * **the structural check is `1` and `2` against the MAC class's `3` and `2`**, with no fold:
+    `fnkdfcnt` counts `derive` alone. `RT-EVP-KDF` publishes a KDF with no `derive` and one with no
+    `freectx`, and both fetches must fail.
+  * **a KDF has a `reset` and a MAC has none**, and the KDF's is a provider callback rather than a
+    re-initialise: `EVP_KDF_CTX_reset` answers `void`, does not touch `algctx`, and a method without
+    one is a silent success.
+  * **`EVP_KDF_CTX_new` refuses a NULL method up front**, where `EVP_MAC_CTX_new` dereferences it.
+
+**The finding: a reference leak in `EVP_MAC_CTX_new`, found by its KDF twin.** Both constructors are
+the same `||` chain, and in both the authority's short-circuit is load-bearing:
+
+```c
+if ((ctx->algctx = kdf->newctx(...)) == NULL || !EVP_KDF_up_ref(kdf)) { ... release ... }
+```
+
+A NULL from the provider's `newctx` means `EVP_KDF_up_ref` is **never called**. Transcribing the two
+operands as two statements evaluates both, so a provider that refuses its own context had a
+reference taken on its method and never given back — a leak, silent, on a path no court could reach
+because every court's provider succeeds. It was written that way in `EVP_MAC_CTX_new`, shipped in
+`c2d496ab`, and stayed invisible for a whole commit; the KDF class's copy of the same function was
+given a unit test asserting the reference count on the refusal path, the test failed on the KDF copy,
+and the same defect was then found in the MAC copy by reading it. Both now take the reference only
+when the constructor succeeded, both carry the unit test, and the comment at each site says why the
+shape is two statements rather than one expression. **This is the second time in this stratum that a
+defect in a class already sealed was found by writing its sibling**, and it is the reason the plan
+does not factor the symmetric classes into one helper.
+
+**`RT-EVP-KDF` lands with 68 observations and zero residuals on the first run.** The derived key is a
+function of the length asked for, the key set on the context and a fold of the salt, so the
+transcript shows that the implementation ran and which of its inputs changed: the two derivations
+around the reset differ in the salt's fold and agree in the key, which is the observation that the
+reset is the provider's own and the context is the same object. The nine-callback activity vector
+says which of the thirteen ran and how many times. The `do_all` counts **two** where four algorithms
+are published, because two cannot be constructed — the same construct-then-enumerate observation the
+MAC court makes with a different arithmetic.
+
+**One more thing the probe learned the hard way.** `EVP_KDF_*` is declared in `<openssl/kdf.h>` and
+**not** in `<openssl/evp.h>`, so a probe that included only `evp.h` read `EVP_KDF_fetch`'s pointer
+return as an `int`. `-Werror=implicit-function-declaration` turned that into a compile failure rather
+than a silent truncation, which is exactly why the flag is in the court's compile line — and the note
+is in the probe's own include block so the next probe does not have to rediscover it.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 7 implemented / open | 214 / 736 | **238 / 712** |
+| `implemented[libcrypto]` | 1349 | **1373** |
+| courts | 59 | **60** |
+| RT-EVP-KDF observations | — | **68** |
+| prototype court: checked / mismatch / unreadable | 1302 / 0 / 0 | **1326 / 0 / 0** |
+| unit tests | 356 | **365** |
+
+SPDX-License-Identifier: Apache-2.0

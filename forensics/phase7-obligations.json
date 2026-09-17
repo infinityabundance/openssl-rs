@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 924,
       "deferred_to_later_phase": 0,
-      "implemented": 214,
-      "open_in_this_stratum": 736,
+      "implemented": 238,
+      "open_in_this_stratum": 712,
       "owned": 950,
       "received_by_handoff": 26
     },
@@ -317,6 +317,30 @@
       "EVP_EncryptInit_ex",
       "EVP_EncryptInit_ex2",
       "EVP_EncryptUpdate",
+      "EVP_KDF_CTX_dup",
+      "EVP_KDF_CTX_free",
+      "EVP_KDF_CTX_get_kdf_size",
+      "EVP_KDF_CTX_get_params",
+      "EVP_KDF_CTX_gettable_params",
+      "EVP_KDF_CTX_kdf",
+      "EVP_KDF_CTX_new",
+      "EVP_KDF_CTX_reset",
+      "EVP_KDF_CTX_set_params",
+      "EVP_KDF_CTX_settable_params",
+      "EVP_KDF_derive",
+      "EVP_KDF_do_all_provided",
+      "EVP_KDF_fetch",
+      "EVP_KDF_free",
+      "EVP_KDF_get0_description",
+      "EVP_KDF_get0_name",
+      "EVP_KDF_get0_provider",
+      "EVP_KDF_get_params",
+      "EVP_KDF_gettable_ctx_params",
+      "EVP_KDF_gettable_params",
+      "EVP_KDF_is_a",
+      "EVP_KDF_names_do_all",
+      "EVP_KDF_settable_ctx_params",
+      "EVP_KDF_up_ref",
       "EVP_MAC_CTX_dup",
       "EVP_MAC_CTX_free",
       "EVP_MAC_CTX_get0_mac",
@@ -1006,157 +1030,13 @@
         "declaring_header": "kdf.h",
         "module": "src/evp/kdf.rs",
         "received_from_phase": null,
-        "symbol": "EVP_KDF_CTX_dup"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/kdf.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KDF_CTX_free"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/kdf.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KDF_CTX_get_kdf_size"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/kdf.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KDF_CTX_get_params"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/kdf.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KDF_CTX_gettable_params"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/kdf.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KDF_CTX_kdf"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/kdf.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KDF_CTX_new"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/kdf.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KDF_CTX_reset"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/kdf.rs",
-        "received_from_phase": null,
         "symbol": "EVP_KDF_CTX_set_SKEY"
       },
       {
         "declaring_header": "kdf.h",
         "module": "src/evp/kdf.rs",
         "received_from_phase": null,
-        "symbol": "EVP_KDF_CTX_set_params"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/kdf.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KDF_CTX_settable_params"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/kdf.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KDF_derive"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/kdf.rs",
-        "received_from_phase": null,
         "symbol": "EVP_KDF_derive_SKEY"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/kdf.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KDF_do_all_provided"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/kdf.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KDF_fetch"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/kdf.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KDF_free"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/kdf.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KDF_get0_description"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/kdf.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KDF_get0_name"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/kdf.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KDF_get0_provider"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/kdf.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KDF_get_params"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/kdf.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KDF_gettable_ctx_params"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/kdf.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KDF_gettable_params"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/kdf.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KDF_is_a"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/kdf.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KDF_names_do_all"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/kdf.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KDF_settable_ctx_params"
-      },
-      {
-        "declaring_header": "kdf.h",
-        "module": "src/evp/kdf.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KDF_up_ref"
       },
       {
         "declaring_header": "evp.h",
@@ -5148,12 +5028,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "68e9244f2f4959ef80da4e4bb500ea54f2c71fb79282a03d856ae678b23a5921"
+      "sha256": "350385b4cc9e4a102e05bd0028985c3f65a8454c8f595ed5c3cad2fa8fceb39a"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "15823e77067007502efdc7c65d38fc102c5c1c7d25d37db3beee91bea7ee861e"
+      "sha256": "825d2b0ab707afdf8f59a8c6464abecdcdf6fd43365fd7b2e1926fb5dea13c99"
     }
   ],
   "kind": "phase7-obligations",

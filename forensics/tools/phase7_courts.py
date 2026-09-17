@@ -84,6 +84,7 @@ COURTS = [
     ("RT-FETCH", "rt_fetch_probe.c"),
     ("RT-EVP-CIPHER", "rt_evp_cipher_probe.c"),
     ("RT-EVP-MAC", "rt_evp_mac_probe.c"),
+    ("RT-EVP-KDF", "rt_evp_kdf_probe.c"),
 ]
 
 
