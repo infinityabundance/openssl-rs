@@ -143,9 +143,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 178,
+        "authority_observations": 330,
         "candidate_exit_code": 0,
-        "candidate_observations": 178,
+        "candidate_observations": 330,
         "candidate_stderr_tail": [],
         "court": "RT-EVP-PKEY",
         "crashed": false,
@@ -215,7 +215,7 @@
     {
       "name": "probe",
       "path": "courts/phase7/rt_evp_pkey_probe.c",
-      "sha256": "701afa4ad7a0b20d7c9dc61424ff9d50846d2c1313fe7e9c023a6ce096bb66c2"
+      "sha256": "1ebc05c490c87491952f6b7ec6f1a93e398aea238f5b96ff3b2d39a91e2ab531"
     }
   ],
   "kind": "phase7-courts",

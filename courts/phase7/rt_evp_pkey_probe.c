@@ -67,6 +67,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <openssl/asn1.h>
 #include <openssl/core.h>
 #include <openssl/core_dispatch.h>
 #include <openssl/core_names.h>
@@ -75,6 +76,7 @@
 #include <openssl/evp.h>
 #include <openssl/params.h>
 #include <openssl/provider.h>
+#include <openssl/x509.h>
 
 /* ------------------------------------------------------------------ transcript helpers */
 
@@ -526,6 +528,521 @@ static const OSSL_DISPATCH kmgm_fns[] = {
     { 0, NULL }
 };
 
+/* ==================================================================== 7.4e: the provider */
+/*
+ * The 7.4e surface is about *parameters*: the four cache properties, the group name, the encoded
+ * public key, the raw key pair, the default digest and the generation parameter walk. So the
+ * provider gains three things beside `COURT-SIGKEY`, and each exists for the arms below rather
+ * than for symmetry:
+ *
+ *   `COURT-PKEY`     a key type that publishes every one of those parameters. Each answer is a
+ *                    *global*, so "the provider does not answer" is one assignment away rather
+ *                    than a second key type -- which is what makes the refusal arms reachable.
+ *   `EC`/`RSA`/       three generation-only key types. `EC` and `RSA` are the two names
+ *   `COURT-GEN`      `EVP_PKEY_Q_keygen`'s `va_arg` walk reads an argument for, and the third is
+ *                    the control: a name it reads **nothing** for.
+ *   `SHA256`         a digest, so `legacy_asn1_ctrl_to_param`'s fetch-namemap-NID path has
+ *                    something to find. Only its *name* matters; no callback is ever called.
+ *
+ * `SIG-SetParams` is the fourth and the smallest: a signature method with a `set_ctx_params`, so
+ * `EVP_PKEY_CTX_set_signature`'s parameter is observable at the provider instead of vanishing.
+ */
+
+static int pn_new_calls, pn_free_calls, pn_get_calls, pn_set_calls, pn_import_calls;
+static int pn_export_calls, pn_has_calls, pn_match_calls, pn_qon_calls;
+static int g_pn_get_fails;      /* answer 0 from `get_params` */
+static int g_pn_get_silent;     /* answer 1 from `get_params` without filling anything */
+static int g_pn_has_data = 1;   /* `has(DOMAIN_PARAMETERS)` for a key **with** key data */
+static int g_pn_has_empty;      /* ... and for a typed key with none */
+static int g_pn_match = 1;      /* what `match` answers */
+static int g_pn_no_encpub;      /* do not publish `encoded-pub-key` at all */
+static const char *g_pn_group;
+static const char *g_pn_default_digest;
+static const char *g_pn_mandatory_digest;
+static const char *g_pn_qon = "COURT-SIG";
+static unsigned char g_pn_encpub[16];
+static size_t g_pn_encpub_len;
+static unsigned char g_pn_priv[16], g_pn_pub[16];
+static size_t g_pn_priv_len, g_pn_pub_len;
+
+static void reset_pn(void)
+{
+    pn_new_calls = pn_free_calls = pn_get_calls = pn_set_calls = pn_import_calls = 0;
+    pn_export_calls = pn_has_calls = pn_match_calls = pn_qon_calls = 0;
+    ERR_clear_error();
+}
+
+static void say_pn(const char *key)
+{
+    printf("%s=new:%d,free:%d,get:%d,set:%d,import:%d,export:%d,has:%d,match:%d,qon:%d\n",
+           key, pn_new_calls, pn_free_calls, pn_get_calls, pn_set_calls, pn_import_calls,
+           pn_export_calls, pn_has_calls, pn_match_calls, pn_qon_calls);
+    ERR_clear_error();
+}
+
+static void *pn_new(void *provctx)
+{
+    (void) provctx;
+    pn_new_calls++;
+    return malloc(1);
+}
+
+static void pn_free(void *keydata)
+{
+    pn_free_calls++;
+    free(keydata);
+}
+
+static int pn_has(const void *keydata, int selection)
+{
+    pn_has_calls++;
+    if (selection == OSSL_KEYMGMT_SELECT_DOMAIN_PARAMETERS)
+        return keydata != NULL ? g_pn_has_data : g_pn_has_empty;
+    return 1;
+}
+
+static int pn_match(const void *keydata1, const void *keydata2, int selection)
+{
+    (void) keydata1;
+    (void) keydata2;
+    (void) selection;
+    pn_match_calls++;
+    return g_pn_match;
+}
+
+static const char *pn_qon(int operation_id)
+{
+    (void) operation_id;
+    pn_qon_calls++;
+    return g_pn_qon;
+}
+
+static int pn_get_params(void *keydata, OSSL_PARAM params[])
+{
+    OSSL_PARAM *p;
+
+    (void) keydata;
+    pn_get_calls++;
+    if (g_pn_get_fails)
+        return 0;
+    if (g_pn_get_silent)
+        return 1;
+
+    p = OSSL_PARAM_locate(params, "bits");
+    if (p != NULL)
+        OSSL_PARAM_set_int(p, 1234);
+    p = OSSL_PARAM_locate(params, "security-bits");
+    if (p != NULL)
+        OSSL_PARAM_set_int(p, 99);
+    p = OSSL_PARAM_locate(params, "security-category");
+    if (p != NULL)
+        OSSL_PARAM_set_int(p, 3);
+    p = OSSL_PARAM_locate(params, "max-size");
+    if (p != NULL)
+        OSSL_PARAM_set_int(p, 7);
+    p = OSSL_PARAM_locate(params, "group");
+    if (p != NULL && g_pn_group != NULL)
+        OSSL_PARAM_set_utf8_string(p, g_pn_group);
+    p = OSSL_PARAM_locate(params, "default-digest");
+    if (p != NULL && g_pn_default_digest != NULL)
+        OSSL_PARAM_set_utf8_string(p, g_pn_default_digest);
+    p = OSSL_PARAM_locate(params, "mandatory-digest");
+    if (p != NULL && g_pn_mandatory_digest != NULL)
+        OSSL_PARAM_set_utf8_string(p, g_pn_mandatory_digest);
+    p = OSSL_PARAM_locate(params, "encoded-pub-key");
+    if (p != NULL && !g_pn_no_encpub)
+        OSSL_PARAM_set_octet_string(p, g_pn_encpub, g_pn_encpub_len);
+    return 1;
+}
+
+static int pn_set_params(void *keydata, const OSSL_PARAM params[])
+{
+    const OSSL_PARAM *p;
+    const void *data = NULL;
+    size_t len = 0;
+
+    (void) keydata;
+    pn_set_calls++;
+    p = OSSL_PARAM_locate_const(params, "encoded-pub-key");
+    if (p != NULL && OSSL_PARAM_get_octet_string_ptr(p, &data, &len) && data != NULL) {
+        if (len > sizeof g_pn_encpub)
+            len = sizeof g_pn_encpub;
+        memcpy(g_pn_encpub, data, len);
+        g_pn_encpub_len = len;
+    }
+    return 1;
+}
+
+static int pn_import(void *keydata, int selection, const OSSL_PARAM params[])
+{
+    const OSSL_PARAM *p;
+    const void *data = NULL;
+    size_t len = 0;
+
+    (void) keydata;
+    (void) selection;
+    pn_import_calls++;
+    p = OSSL_PARAM_locate_const(params, "priv");
+    if (p != NULL && OSSL_PARAM_get_octet_string_ptr(p, &data, &len) && data != NULL) {
+        if (len > sizeof g_pn_priv)
+            len = sizeof g_pn_priv;
+        memcpy(g_pn_priv, data, len);
+        g_pn_priv_len = len;
+    }
+    p = OSSL_PARAM_locate_const(params, "pub");
+    if (p != NULL && OSSL_PARAM_get_octet_string_ptr(p, &data, &len) && data != NULL) {
+        if (len > sizeof g_pn_pub)
+            len = sizeof g_pn_pub;
+        memcpy(g_pn_pub, data, len);
+        g_pn_pub_len = len;
+    }
+    return 1;
+}
+
+/*
+ * The exporter `EVP_PKEY_get_raw_private_key`/`_public_key` reach through
+ * `evp_keymgmt_util_export`, and the reason it publishes **both** halves is that
+ * `get_raw_key_details` locates only the one the caller selected: publishing one and not the other
+ * would make the other arm a refusal for a reason the probe invented.
+ */
+static int pn_export(const void *keydata, int selection, OSSL_CALLBACK *param_cb, void *cbarg)
+{
+    OSSL_PARAM params[3];
+
+    (void) keydata;
+    (void) selection;
+    pn_export_calls++;
+    params[0] = OSSL_PARAM_construct_octet_string("priv", g_pn_priv, g_pn_priv_len);
+    params[1] = OSSL_PARAM_construct_octet_string("pub", g_pn_pub, g_pn_pub_len);
+    params[2] = OSSL_PARAM_construct_end();
+    return param_cb(params, cbarg);
+}
+
+static const OSSL_PARAM pn_gettable[] = {
+    OSSL_PARAM_int("bits", NULL),
+    OSSL_PARAM_int("security-bits", NULL),
+    OSSL_PARAM_int("security-category", NULL),
+    OSSL_PARAM_int("max-size", NULL),
+    OSSL_PARAM_utf8_string("group", NULL, 0),
+    OSSL_PARAM_utf8_string("default-digest", NULL, 0),
+    OSSL_PARAM_utf8_string("mandatory-digest", NULL, 0),
+    OSSL_PARAM_octet_string("encoded-pub-key", NULL, 0),
+    OSSL_PARAM_END
+};
+
+static const OSSL_PARAM *pn_gettable_params(void)
+{
+    return pn_gettable;
+}
+
+static const OSSL_PARAM pn_settable[] = {
+    OSSL_PARAM_octet_string("encoded-pub-key", NULL, 0),
+    OSSL_PARAM_END
+};
+
+static const OSSL_PARAM *pn_settable_params(void)
+{
+    return pn_settable;
+}
+
+static const OSSL_PARAM pn_export_tab[] = {
+    OSSL_PARAM_octet_string("priv", NULL, 0),
+    OSSL_PARAM_octet_string("pub", NULL, 0),
+    OSSL_PARAM_END
+};
+
+static const OSSL_PARAM *pn_export_types(int selection)
+{
+    (void) selection;
+    return pn_export_tab;
+}
+
+static const OSSL_PARAM pn_import_tab[] = {
+    OSSL_PARAM_octet_string("priv", NULL, 0),
+    OSSL_PARAM_octet_string("pub", NULL, 0),
+    OSSL_PARAM_END
+};
+
+static const OSSL_PARAM *pn_import_types(int selection)
+{
+    (void) selection;
+    return pn_import_tab;
+}
+
+static const OSSL_DISPATCH pn_fns[] = {
+    { OSSL_FUNC_KEYMGMT_NEW, (void (*)(void)) pn_new },
+    { OSSL_FUNC_KEYMGMT_FREE, (void (*)(void)) pn_free },
+    { OSSL_FUNC_KEYMGMT_HAS, (void (*)(void)) pn_has },
+    { OSSL_FUNC_KEYMGMT_MATCH, (void (*)(void)) pn_match },
+    { OSSL_FUNC_KEYMGMT_QUERY_OPERATION_NAME, (void (*)(void)) pn_qon },
+    { OSSL_FUNC_KEYMGMT_GET_PARAMS, (void (*)(void)) pn_get_params },
+    { OSSL_FUNC_KEYMGMT_GETTABLE_PARAMS, (void (*)(void)) pn_gettable_params },
+    { OSSL_FUNC_KEYMGMT_SET_PARAMS, (void (*)(void)) pn_set_params },
+    { OSSL_FUNC_KEYMGMT_SETTABLE_PARAMS, (void (*)(void)) pn_settable_params },
+    { OSSL_FUNC_KEYMGMT_IMPORT, (void (*)(void)) pn_import },
+    { OSSL_FUNC_KEYMGMT_IMPORT_TYPES, (void (*)(void)) pn_import_types },
+    { OSSL_FUNC_KEYMGMT_EXPORT, (void (*)(void)) pn_export },
+    { OSSL_FUNC_KEYMGMT_EXPORT_TYPES, (void (*)(void)) pn_export_types },
+    { 0, NULL }
+};
+
+/* ---------------------------------------------------------------- the generation-only key types */
+
+static int gn_init_calls, gn_cleanup_calls, gn_set_calls, gn_get_calls, gn_gen_calls, gn_free_calls;
+static int gn_saw_bits, gn_saw_group, gn_saw_nothing, gn_saw_aid;
+static size_t g_gen_bits;
+static char g_gen_group[64];
+static unsigned char g_gen_aid[64];
+static size_t g_gen_aid_len;
+
+static void reset_gen(void)
+{
+    gn_init_calls = gn_cleanup_calls = gn_set_calls = gn_get_calls = gn_gen_calls = 0;
+    gn_free_calls = 0;
+    gn_saw_bits = gn_saw_group = gn_saw_nothing = gn_saw_aid = 0;
+    g_gen_bits = 0;
+    g_gen_group[0] = '\0';
+    g_gen_aid_len = 0;
+    ERR_clear_error();
+}
+
+static void say_gen(const char *key)
+{
+    printf("%s=init:%d,cleanup:%d,set:%d,get:%d,gen:%d,free:%d,"
+           "bits:%d,saw_bits:%d,saw_group:%d,saw_nothing:%d,saw_aid:%d\n",
+           key, gn_init_calls, gn_cleanup_calls, gn_set_calls, gn_get_calls, gn_gen_calls,
+           gn_free_calls, (int) g_gen_bits, gn_saw_bits, gn_saw_group, gn_saw_nothing,
+           gn_saw_aid);
+    ERR_clear_error();
+}
+
+static void *pk_gen_init(void *provctx, int selection, const OSSL_PARAM params[])
+{
+    (void) provctx;
+    (void) selection;
+    (void) params;
+    gn_init_calls++;
+    return malloc(1);
+}
+
+static void pk_gen_cleanup(void *genctx)
+{
+    gn_cleanup_calls++;
+    free(genctx);
+}
+
+static int pk_gen_set_params(void *genctx, const OSSL_PARAM params[])
+{
+    const OSSL_PARAM *p;
+    const void *data = NULL;
+    const char *s = NULL;
+    size_t len = 0;
+
+    (void) genctx;
+    gn_set_calls++;
+
+    /* The control arm: `EVP_PKEY_Q_keygen` read **nothing** for this name, so the first parameter
+     * is the array's own terminator. */
+    if (params == NULL || params[0].key == NULL) {
+        gn_saw_nothing++;
+        return 1;
+    }
+
+    p = OSSL_PARAM_locate_const(params, "bits");
+    if (p != NULL && OSSL_PARAM_get_size_t(p, &g_gen_bits))
+        gn_saw_bits++;
+    p = OSSL_PARAM_locate_const(params, "group");
+    if (p != NULL && OSSL_PARAM_get_utf8_string_ptr(p, &s) && s != NULL) {
+        strncpy(g_gen_group, s, sizeof g_gen_group - 1);
+        g_gen_group[sizeof g_gen_group - 1] = '\0';
+        gn_saw_group++;
+    }
+    p = OSSL_PARAM_locate_const(params, "algorithm-id-params");
+    if (p != NULL && OSSL_PARAM_get_octet_string_ptr(p, &data, &len) && data != NULL) {
+        if (len > sizeof g_gen_aid)
+            len = sizeof g_gen_aid;
+        memcpy(g_gen_aid, data, len);
+        g_gen_aid_len = len;
+        gn_saw_aid++;
+    }
+    return 1;
+}
+
+static const OSSL_PARAM pk_gen_settable[] = {
+    OSSL_PARAM_size_t("bits", NULL),
+    OSSL_PARAM_utf8_string("group", NULL, 0),
+    OSSL_PARAM_octet_string("algorithm-id-params", NULL, 0),
+    OSSL_PARAM_END
+};
+
+static const OSSL_PARAM *pk_gen_settable_params(void *genctx, void *provctx)
+{
+    (void) genctx;
+    (void) provctx;
+    return pk_gen_settable;
+}
+
+static void *pk_gen(void *genctx, OSSL_CALLBACK *cb, void *cbarg)
+{
+    (void) genctx;
+    (void) cb;
+    (void) cbarg;
+    gn_gen_calls++;
+    return malloc(1);
+}
+
+static int pk_gen_get_params(void *genctx, OSSL_PARAM params[])
+{
+    OSSL_PARAM *p;
+
+    (void) genctx;
+    gn_get_calls++;
+    p = OSSL_PARAM_locate(params, "group");
+    if (p != NULL && g_gen_group[0] != '\0')
+        OSSL_PARAM_set_utf8_string(p, g_gen_group);
+    p = OSSL_PARAM_locate(params, "algorithm-id-params");
+    if (p != NULL && g_gen_aid_len != 0)
+        OSSL_PARAM_set_octet_string(p, g_gen_aid, g_gen_aid_len);
+    return 1;
+}
+
+static const OSSL_PARAM pk_gen_gettable[] = {
+    OSSL_PARAM_utf8_string("group", NULL, 0),
+    OSSL_PARAM_octet_string("algorithm-id-params", NULL, 0),
+    OSSL_PARAM_END
+};
+
+static const OSSL_PARAM *pk_gen_gettable_params(void *genctx, void *provctx)
+{
+    (void) genctx;
+    (void) provctx;
+    return pk_gen_gettable;
+}
+
+static int pk_gen_free(void *keydata)
+{
+    gn_free_calls++;
+    free(keydata);
+    return 1;
+}
+
+static int pk_gen_has(const void *keydata, int selection)
+{
+    (void) keydata;
+    (void) selection;
+    return 1;
+}
+
+static const OSSL_DISPATCH pk_gen_fns[] = {
+    { OSSL_FUNC_KEYMGMT_FREE, (void (*)(void)) pk_gen_free },
+    { OSSL_FUNC_KEYMGMT_HAS, (void (*)(void)) pk_gen_has },
+    { OSSL_FUNC_KEYMGMT_GEN_INIT, (void (*)(void)) pk_gen_init },
+    { OSSL_FUNC_KEYMGMT_GEN_CLEANUP, (void (*)(void)) pk_gen_cleanup },
+    { OSSL_FUNC_KEYMGMT_GEN_SET_PARAMS, (void (*)(void)) pk_gen_set_params },
+    { OSSL_FUNC_KEYMGMT_GEN_SETTABLE_PARAMS, (void (*)(void)) pk_gen_settable_params },
+    { OSSL_FUNC_KEYMGMT_GEN_GET_PARAMS, (void (*)(void)) pk_gen_get_params },
+    { OSSL_FUNC_KEYMGMT_GEN_GETTABLE_PARAMS, (void (*)(void)) pk_gen_gettable_params },
+    { OSSL_FUNC_KEYMGMT_GEN, (void (*)(void)) pk_gen },
+    { 0, NULL }
+};
+
+/* ---------------------------------------------------------------- the digest, and `SIG-SetParams` */
+
+static void *dg_newctx(void *provctx)
+{
+    (void) provctx;
+    return malloc(1);
+}
+
+static void dg_freectx(void *vctx)
+{
+    free(vctx);
+}
+
+static int dg_init(void *vctx, const OSSL_PARAM params[])
+{
+    (void) vctx;
+    (void) params;
+    return 1;
+}
+
+static int dg_update(void *vctx, const unsigned char *in, size_t inl)
+{
+    (void) vctx;
+    (void) in;
+    (void) inl;
+    return 1;
+}
+
+static int dg_final(void *vctx, unsigned char *out, size_t *outl, size_t outsz)
+{
+    (void) vctx;
+    (void) out;
+    (void) outsz;
+    if (outl != NULL)
+        *outl = 0;
+    return 1;
+}
+
+static const OSSL_DISPATCH dg_fns[] = {
+    { OSSL_FUNC_DIGEST_NEWCTX, (void (*)(void)) dg_newctx },
+    { OSSL_FUNC_DIGEST_FREECTX, (void (*)(void)) dg_freectx },
+    { OSSL_FUNC_DIGEST_INIT, (void (*)(void)) dg_init },
+    { OSSL_FUNC_DIGEST_UPDATE, (void (*)(void)) dg_update },
+    { OSSL_FUNC_DIGEST_FINAL, (void (*)(void)) dg_final },
+    { 0, NULL }
+};
+
+static int ssp_calls, ssp_saw, ssp_len;
+static unsigned char ssp_bytes[16];
+
+static void reset_ssp(void)
+{
+    ssp_calls = ssp_saw = ssp_len = 0;
+    ERR_clear_error();
+}
+
+static int ssp_set_ctx_params(void *vctx, const OSSL_PARAM params[])
+{
+    const OSSL_PARAM *p;
+    const void *data = NULL;
+    size_t len = 0;
+
+    (void) vctx;
+    ssp_calls++;
+    p = OSSL_PARAM_locate_const(params, "signature");
+    if (p != NULL && OSSL_PARAM_get_octet_string_ptr(p, &data, &len) && data != NULL) {
+        ssp_saw++;
+        ssp_len = (int) len;
+        if (len > sizeof ssp_bytes)
+            len = sizeof ssp_bytes;
+        memcpy(ssp_bytes, data, len);
+    }
+    return 1;
+}
+
+static const OSSL_PARAM ssp_tab[] = {
+    OSSL_PARAM_octet_string("signature", NULL, 0),
+    OSSL_PARAM_END
+};
+
+static const OSSL_PARAM *ssp_settable_ctx_params(void *vctx, void *provctx)
+{
+    (void) vctx;
+    (void) provctx;
+    return ssp_tab;
+}
+
+static const OSSL_DISPATCH sig_setparams_fns[] = {
+    { OSSL_FUNC_SIGNATURE_NEWCTX, (void (*)(void)) sig_newctx },
+    { OSSL_FUNC_SIGNATURE_FREECTX, (void (*)(void)) sig_freectx },
+    { OSSL_FUNC_SIGNATURE_SIGN_INIT, (void (*)(void)) sig_sign_init },
+    { OSSL_FUNC_SIGNATURE_SIGN, (void (*)(void)) sig_sign },
+    { OSSL_FUNC_SIGNATURE_SET_CTX_PARAMS, (void (*)(void)) ssp_set_ctx_params },
+    { OSSL_FUNC_SIGNATURE_SETTABLE_CTX_PARAMS, (void (*)(void)) ssp_settable_ctx_params },
+    { 0, NULL }
+};
+
 /* ------------------------------------------------------------------ the two bodies of algorithms */
 
 #define COURT_PROV "provider=court-pkey"
@@ -533,6 +1050,14 @@ static const OSSL_DISPATCH kmgm_fns[] = {
 static const OSSL_ALGORITHM court_keymgmts[] = {
     { "COURT-SIGKEY:courtsigkey", COURT_PROV, kmgm_fns,
       "the probe's key type, and the one the key's preferred-signature name comes from" },
+    { "COURT-PKEY:courtpkey", COURT_PROV, pn_fns,
+      "the 7.4e key type: every parameter the accessors of this subphase read" },
+    { "id-ecPublicKey:courtec", COURT_PROV, pk_gen_fns,
+      "a generation-only key type under the object spelling `int_ctx_new` derives from `EC`" },
+    { "rsaEncryption:courtrsa", COURT_PROV, pk_gen_fns,
+      "the same for `RSA`, whose argument is a size_t" },
+    { "COURT-GEN:courtgen", COURT_PROV, pk_gen_fns,
+      "the control: a name the walk reads nothing for" },
     { NULL, NULL, NULL, NULL }
 };
 
@@ -591,6 +1116,17 @@ static const OSSL_ALGORITHM court_sigs[] = {
       "refused: sign_message_init without update or final" },
     { "SIG-VerifyMsgHalf:QON-VMH:courtsigvmh", COURT_PROV, sig_verifymsghalf_fns,
       "refused: verify_message_init without update or final" },
+    { "SIG-SetParams:QON-SSP:courtsigssp", COURT_PROV, sig_setparams_fns,
+      "publishes set_ctx_params, so `EVP_PKEY_CTX_set_signature`'s parameter is observable" },
+    { NULL, NULL, NULL, NULL }
+};
+
+/* The digest whose **name** is all that matters: it is what `legacy_asn1_ctrl_to_param` fetches so
+ * that the namemap learns `SHA256`, and it is never called. Five of the six counted callbacks are
+ * present, which is what the structural check admits. */
+static const OSSL_ALGORITHM court_digests[] = {
+    { "SHA256:court-sha256", COURT_PROV, dg_fns,
+      "a digest name, so the namemap can resolve one back to a NID" },
     { NULL, NULL, NULL, NULL }
 };
 
@@ -602,6 +1138,8 @@ static const OSSL_ALGORITHM *court_query(void *provctx, int operation_id, int *n
         return court_keymgmts;
     if (operation_id == OSSL_OP_SIGNATURE)
         return court_sigs;
+    if (operation_id == OSSL_OP_DIGEST)
+        return court_digests;
     return NULL;
 }
 
@@ -1090,6 +1628,453 @@ int main(void)
     /* Nothing dereferences a `pmeth` this crate does not have, so nothing is claimed about it. */
     printf("legacy_pmeth_switch=NOT_MEASURED_PMETH_IS_PHASE_8\n");
     printf("verify_recover_null_callback=NOT_MEASURED_UNREACHABLE_STRUCTURAL_CHECK\n");
+
+    /*
+     * ============================ 7.4e: `p_lib.c`'s provider half ============================
+     *
+     * The arms below are grouped by the question each answers, and every one of them is a
+     * relation, a presence answer, a counter vector or a bounded byte comparison. Two structural
+     * facts shape the whole block:
+     *
+     *   * **`COURT-PKEY`'s answers are globals**, so "the provider publishes this parameter" and
+     *     "it does not" are two states of one key type rather than two key types. The cache arms
+     *     are the ones that need this most: `EVP_PKEY_get_bits` answers `0` because the *cache* was
+     *     never filled, and the cache is filled once per assignment from four parameters, so the
+     *     three answers a provider can give (values, silence with a success, a failure) are three
+     *     distinct cache states.
+     *   * **a key's method is immutable once assigned**, so every arm that needs a different
+     *     provider answer builds its own key. That is why there is more than one `np`.
+     */
+    {
+        EVP_PKEY *np = NULL, *np_silent = NULL, *np_fail = NULL, *rk = NULL;
+        EVP_PKEY *nblank = EVP_PKEY_new();
+        EVP_PKEY *ntarget = EVP_PKEY_new();
+        EVP_PKEY *nparam = EVP_PKEY_new();
+        EVP_PKEY_CTX *nctx = EVP_PKEY_CTX_new_from_name(ctx, "COURT-PKEY", NULL);
+        EVP_PKEY_CTX *ngctx;
+        EVP_PKEY *qk = NULL;
+        EVP_SIGNATURE *ssig;
+        OSSL_PARAM np_params[2], rk_params[3];
+        unsigned char raw_priv[4] = { 1, 2, 3, 4 };
+        unsigned char raw_pub[4] = { 5, 6, 7, 8 };
+        unsigned char raw_out[8];
+        size_t raw_len;
+        unsigned char enc_in[4] = { 'e', 'n', 'c', '1' };
+        unsigned char *enc_out;
+        unsigned char sig_in[4] = { 's', 'i', 'g', '1' };
+        char grp[80];
+        size_t grp_len;
+        int nid;
+        X509_ALGOR alg_in, alg_out;
+        ASN1_STRING alg_str;
+        ASN1_TYPE alg_type;
+
+        sayp("pkey.new_ctx", nctx);
+        /*
+         * The generation context is asked for by the name `EVP_PKEY_Q_keygen`'s walk reads an
+         * argument for, and `int_ctx_new` rewrites that name before fetching: `evp_pkey_name2type(
+         * "EC")` is `EVP_PKEY_EC`, so the fetch is for `OBJ_nid2sn(EVP_PKEY_EC)` -- which is why the
+         * probe's generation key type is published under the *object* spelling rather than under
+         * the name the caller used. A transcript that got this wrong would compare a fetch that
+         * succeeded against one that failed, which is exactly what the first run of this court did.
+         */
+        ngctx = EVP_PKEY_CTX_new_from_name(ctx, "EC", NULL);
+        sayp("pkey.new_gen_ctx", ngctx);
+        sayp("pkey.blank", nblank);
+
+        /*
+         * ---- 10. the cache, and the three states a provider can leave it in ----
+         */
+        np_params[0] = OSSL_PARAM_construct_octet_string("priv", raw_priv, sizeof raw_priv);
+        np_params[1] = OSSL_PARAM_construct_end();
+        reset_pn();
+        sayr("parms.fromdata_init", EVP_PKEY_fromdata_init(nctx));
+        sayr("parms.fromdata", EVP_PKEY_fromdata(nctx, &np, EVP_PKEY_KEYPAIR, np_params));
+        sayp("parms.key", np);
+        say_pn("parms.vec");
+        sayr("cache.bits", EVP_PKEY_get_bits(np));
+        sayr("cache.security_bits", EVP_PKEY_get_security_bits(np));
+        sayr("cache.security_category", EVP_PKEY_get_security_category(np));
+        sayr("cache.size", EVP_PKEY_get_size(np));
+
+        /* The three "there is no key" answers; the two NULL ones are the same shape as the blank
+         * one only where the authority says so, which is why all three are here. */
+        sayr("cache.null.bits", EVP_PKEY_get_bits(NULL));
+        sayr("cache.null.security_bits", EVP_PKEY_get_security_bits(NULL));
+        sayr("cache.null.security_category", EVP_PKEY_get_security_category(NULL));
+        sayr("cache.blank.bits", EVP_PKEY_get_bits(nblank));
+        sayr("cache.blank.security_bits", EVP_PKEY_get_security_bits(nblank));
+        sayr("cache.blank.security_category", EVP_PKEY_get_security_category(nblank));
+
+        /* A provider that answers `get_params` with **success and nothing filled**: the cache is
+         * written with the function's own initial values, which is the only way `security_category`
+         * can be -1 on a key that exists. */
+        g_pn_get_silent = 1;
+        sayr("parms.silent_fromdata_init", EVP_PKEY_fromdata_init(nctx));
+        sayr("parms.silent_fromdata", EVP_PKEY_fromdata(nctx, &np_silent, EVP_PKEY_KEYPAIR, np_params));
+        g_pn_get_silent = 0;
+        sayr("cache.silent.bits", EVP_PKEY_get_bits(np_silent));
+        sayr("cache.silent.security_bits", EVP_PKEY_get_security_bits(np_silent));
+        sayr("cache.silent.security_category", EVP_PKEY_get_security_category(np_silent));
+        sayr("cache.silent.size", EVP_PKEY_get_size(np_silent));
+
+        /* A provider that **fails** `get_params`: the cache keeps the zeros it was allocated with,
+         * so `security_category` is 0 rather than -1. The two are the same refusal from the
+         * accessor and different observations of the cache. */
+        g_pn_get_fails = 1;
+        sayr("parms.fail_fromdata_init", EVP_PKEY_fromdata_init(nctx));
+        sayr("parms.fail_fromdata", EVP_PKEY_fromdata(nctx, &np_fail, EVP_PKEY_KEYPAIR, np_params));
+        g_pn_get_fails = 0;
+        sayr("cache.fail.bits", EVP_PKEY_get_bits(np_fail));
+        sayr("cache.fail.security_category", EVP_PKEY_get_security_category(np_fail));
+
+        /*
+         * ---- 11. `EVP_PKEY_get_id`, `_get_base_id` and `_get0` ----
+         *
+         * The `-1` is `EVP_PKEY_KEYMGMT`, the pseudo-NID that says "provider side"; `get_base_id`
+         * answers `EVP_PKEY_type(-1)`, which is `NID_undef` because no method table names it. The
+         * blank key's `type` is `EVP_PKEY_NONE` and its `get_base_id` is `NID_undef` too -- so the
+         * two differ in `get_id` and agree in `get_base_id`, which is the observation.
+         */
+        sayr("obj.provider_id", EVP_PKEY_get_id(np));
+        sayr("obj.provider_base_id", EVP_PKEY_get_base_id(np));
+        sayr("obj.blank_id", EVP_PKEY_get_id(nblank));
+        sayr("obj.blank_base_id", EVP_PKEY_get_base_id(nblank));
+        sayp("obj.provider_get0", EVP_PKEY_get0(np));
+        sayp("obj.blank_get0", EVP_PKEY_get0(nblank));
+        sayp("obj.null_get0", EVP_PKEY_get0(NULL));
+
+        /*
+         * ---- 12. parameters present, copied and compared ----
+         */
+        sayr("miss.provider", EVP_PKEY_missing_parameters(np));
+        g_pn_has_data = 0;
+        sayr("miss.provider_absent", EVP_PKEY_missing_parameters(np));
+        g_pn_has_data = 1;
+        sayr("miss.blank", EVP_PKEY_missing_parameters(nblank));
+        sayr("miss.null", EVP_PKEY_missing_parameters(NULL));
+
+        /* A blank target whose *empty* key data reports no parameters takes the copy. */
+        g_pn_has_empty = 0;
+        reset_pn();
+        sayr("copy.to_blank", EVP_PKEY_copy_parameters(ntarget, np));
+        say_pn("copy.to_blank.vec");
+        /* It has key data now, so the same call takes the comparison arm. */
+        reset_pn();
+        sayr("copy.agree", EVP_PKEY_copy_parameters(ntarget, np));
+        say_pn("copy.agree.vec");
+        g_pn_match = 0;
+        sayr("copy.disagree", EVP_PKEY_copy_parameters(ntarget, np));
+        g_pn_match = 1;
+        g_pn_has_data = 0;
+        sayr("copy.from_missing", EVP_PKEY_copy_parameters(ntarget, np));
+        g_pn_has_data = 1;
+        sayr("copy.from_blank", EVP_PKEY_copy_parameters(ntarget, nblank));
+        /* A blank target whose empty key data *does* report parameters goes the other way. */
+        g_pn_has_empty = 1;
+        sayr("copy.to_blank_params_present", EVP_PKEY_copy_parameters(nparam, np));
+        g_pn_has_empty = 0;
+
+        /* `can_sign` is about the *provider*, not the key: the name the key type prefers decides
+         * whether a signature can be fetched at all. */
+        g_pn_qon = "COURT-SIG";
+        sayr("cansign.provider", EVP_PKEY_can_sign(np));
+        g_pn_qon = "NO-SUCH-SIGNATURE";
+        sayr("cansign.no_signature", EVP_PKEY_can_sign(np));
+        g_pn_qon = "COURT-SIG";
+        sayr("cansign.blank", EVP_PKEY_can_sign(nblank));
+
+        /*
+         * ---- 13. the encoded public key, as a round trip and as four refusals ----
+         */
+        sayr("enc.set1", EVP_PKEY_set1_encoded_public_key(np, enc_in, sizeof enc_in));
+        enc_out = NULL;
+        raw_len = EVP_PKEY_get1_encoded_public_key(np, &enc_out);
+        sayn("enc.get1_len", (long long) raw_len);
+        sayn("enc.get1_match",
+             enc_out != NULL && raw_len == sizeof enc_in
+             && memcmp(enc_out, enc_in, sizeof enc_in) == 0);
+        OPENSSL_free(enc_out);
+
+        g_pn_no_encpub = 1;
+        enc_out = enc_in; /* a pointer this probe holds, so "untouched" is a relation */
+        raw_len = EVP_PKEY_get1_encoded_public_key(np, &enc_out);
+        sayn("enc.get1_unpublished_len", (long long) raw_len);
+        sayn("enc.get1_unpublished_untouched", enc_out == enc_in ? 1 : 0);
+        g_pn_no_encpub = 0;
+
+        sayr("enc.set1_null_key", EVP_PKEY_set1_encoded_public_key(NULL, enc_in, sizeof enc_in));
+        sayr("enc.set1_blank_key", EVP_PKEY_set1_encoded_public_key(nblank, enc_in, sizeof enc_in));
+        enc_out = NULL;
+        sayn("enc.get1_null_key", (long long) EVP_PKEY_get1_encoded_public_key(NULL, &enc_out));
+        enc_out = NULL;
+        sayn("enc.get1_blank_key", (long long) EVP_PKEY_get1_encoded_public_key(nblank, &enc_out));
+
+        /*
+         * ---- 14. `EVP_PKEY_get_group_name` ----
+         */
+        grp[0] = '\0';
+        sayr("group.null_key", EVP_PKEY_get_group_name(NULL, grp, sizeof grp, &grp_len));
+        grp[0] = '\0';
+        sayr("group.blank_key", EVP_PKEY_get_group_name(nblank, grp, sizeof grp, &grp_len));
+        g_pn_group = NULL;
+        grp[0] = '\0';
+        grp_len = 0;
+        sayr("group.unpublished", EVP_PKEY_get_group_name(np, grp, sizeof grp, &grp_len));
+        sayn("group.unpublished_len", (long long) grp_len);
+        g_pn_group = "COURT-GROUP";
+        grp[0] = '\0';
+        grp_len = 0;
+        sayr("group.published", EVP_PKEY_get_group_name(np, grp, sizeof grp, &grp_len));
+        sayn("group.published_match", strcmp(grp, "COURT-GROUP") == 0);
+        sayn("group.published_len", (long long) grp_len);
+        g_pn_group = NULL;
+
+        /*
+         * ---- 15. the two type setters, on the two inputs they agree about ----
+         *
+         * `EVP_PKEY_set_type(nblank, EVP_PKEY_RSA)` is the third input and it is **not** here: the
+         * authority finds `ossl_rsa_asn1_meth` and answers 1, this crate answers 0, and that is
+         * `D-PKEY-AMETH-1` reached through a public door rather than a behaviour under test.
+         */
+        sayr("settype.pseudo_nid", EVP_PKEY_set_type(nblank, EVP_PKEY_KEYMGMT));
+        sayr("settype.none", EVP_PKEY_set_type(nblank, EVP_PKEY_NONE));
+        sayr("settype_str.measured", EVP_PKEY_set_type_str(nblank, "COURT-PKEY", 10));
+        sayr("settype_str.measured_lower", EVP_PKEY_set_type_str(nblank, "court-pkey", 10));
+        sayr("settype_str.whole_name", EVP_PKEY_set_type_str(nblank, "COURT-PKEY", -1));
+
+        /*
+         * ---- 16. `EVP_PKEY_get_default_digest_name` / `_nid` ----
+         *
+         * The provider's `default-digest` names a **digest the provider publishes**, so the two
+         * halves of `legacy_asn1_ctrl_to_param` are both reachable: the name comes back, and the
+         * fetch registers it in the namemap so the name can be mapped back to an object NID.
+         */
+        g_pn_default_digest = NULL;
+        g_pn_mandatory_digest = NULL;
+        grp[0] = '\0';
+        sayr("deflt.none.name", EVP_PKEY_get_default_digest_name(np, grp, sizeof grp));
+        nid = -7;
+        sayr("deflt.none.nid", EVP_PKEY_get_default_digest_nid(np, &nid));
+        sayn("deflt.none.nid_out", nid);
+        sayr("deflt.none.null_key", EVP_PKEY_get_default_digest_nid(NULL, &nid));
+
+        g_pn_default_digest = "SHA256";
+        grp[0] = '\0';
+        sayr("deflt.default.name", EVP_PKEY_get_default_digest_name(np, grp, sizeof grp));
+        sayn("deflt.default.match", strcmp(grp, "SHA256") == 0);
+        nid = -7;
+        sayr("deflt.default.nid", EVP_PKEY_get_default_digest_nid(np, &nid));
+        sayn("deflt.default.nid_out", nid);
+
+        g_pn_mandatory_digest = "SHA256";
+        grp[0] = '\0';
+        sayr("deflt.mandatory.name", EVP_PKEY_get_default_digest_name(np, grp, sizeof grp));
+        sayn("deflt.mandatory.match", strcmp(grp, "SHA256") == 0);
+        g_pn_default_digest = NULL;
+        g_pn_mandatory_digest = NULL;
+
+        /*
+         * ---- 17. the raw key pair, exported back from the bytes it was built from ----
+         */
+        rk_params[0] = OSSL_PARAM_construct_octet_string("priv", raw_priv, sizeof raw_priv);
+        rk_params[1] = OSSL_PARAM_construct_octet_string("pub", raw_pub, sizeof raw_pub);
+        rk_params[2] = OSSL_PARAM_construct_end();
+        sayr("raw.fromdata_init", EVP_PKEY_fromdata_init(nctx));
+        sayr("raw.fromdata", EVP_PKEY_fromdata(nctx, &rk, EVP_PKEY_KEYPAIR, rk_params));
+        sayp("raw.key", rk);
+        raw_len = sizeof raw_out;
+        sayr("raw.priv", EVP_PKEY_get_raw_private_key(rk, raw_out, &raw_len));
+        sayn("raw.priv_len", (long long) raw_len);
+        sayn("raw.priv_match", memcmp(raw_out, raw_priv, sizeof raw_priv) == 0);
+        raw_len = sizeof raw_out;
+        sayr("raw.pub", EVP_PKEY_get_raw_public_key(rk, raw_out, &raw_len));
+        sayn("raw.pub_len", (long long) raw_len);
+        sayn("raw.pub_match", memcmp(raw_out, raw_pub, sizeof raw_pub) == 0);
+        raw_len = sizeof raw_out;
+        sayr("raw.priv_length_query", EVP_PKEY_get_raw_private_key(rk, NULL, &raw_len));
+        sayn("raw.priv_length_query_len", (long long) raw_len);
+        raw_len = sizeof raw_out;
+        sayr("raw.no_export_callback", EVP_PKEY_get_raw_private_key(pkey, raw_out, &raw_len));
+
+        /*
+         * ---- 18. `EVP_PKEY_new_CMAC_key` ----
+         *
+         * Only the first refusal is drivable: `cipher_name == NULL` is the same statement on both
+         * sides, while the arm that gets past it needs the **default** library context's CMAC
+         * keymgmt, and this crate has no default provider (Phase 9). See the block below.
+         */
+        {
+            unsigned char cmac_in[4] = { 9, 8, 7, 6 };
+
+            sayp("cmac.no_cipher_name",
+                 EVP_PKEY_new_CMAC_key(NULL, cmac_in, sizeof cmac_in, NULL));
+        }
+
+        /*
+         * ---- 19. `EVP_PKEY_Q_keygen`, one arm per name the walk reads ----
+         *
+         * The three names are the whole of the `va_arg` walk: `"EC"` reads a `char *`, `"RSA"` a
+         * `size_t`, and `"COURT-GEN"` **nothing at all** -- which is the arm a transcription that
+         * ended its `if`/`else` chain with an `else` would fail, because the provider would then
+         * see a parameter the caller never passed.
+         */
+        reset_gen();
+        qk = EVP_PKEY_Q_keygen(ctx, NULL, "EC", (char *) "COURT-GROUP");
+        sayp("qkeygen.ec", qk);
+        say_gen("qkeygen.ec.vec");
+        sayn("qkeygen.ec.group_match", strcmp(g_gen_group, "COURT-GROUP") == 0);
+        EVP_PKEY_free(qk);
+
+        reset_gen();
+        qk = EVP_PKEY_Q_keygen(ctx, NULL, "ec", (char *) "LOWER-CASE");
+        sayp("qkeygen.ec_lower", qk);
+        sayn("qkeygen.ec_lower.group_match", strcmp(g_gen_group, "LOWER-CASE") == 0);
+        EVP_PKEY_free(qk);
+
+        reset_gen();
+        qk = EVP_PKEY_Q_keygen(ctx, NULL, "RSA", (size_t) 512);
+        sayp("qkeygen.rsa", qk);
+        say_gen("qkeygen.rsa.vec");
+        EVP_PKEY_free(qk);
+
+        reset_gen();
+        qk = EVP_PKEY_Q_keygen(ctx, NULL, "COURT-GEN");
+        sayp("qkeygen.other", qk);
+        say_gen("qkeygen.other.vec");
+        EVP_PKEY_free(qk);
+
+        sayp("qkeygen.no_such_type", EVP_PKEY_Q_keygen(ctx, NULL, "NO-SUCH-TYPE"));
+
+        /*
+         * ---- 20. `EVP_PKEY_CTX_set_group_name` / `_get_group_name` ----
+         *
+         * The refusal is about the **operation bit**, not about the key: a context with no method
+         * at all is refused for the same reason a signature context is, and the `-1` an absent
+         * name gets sits between the refusal and the delegation.
+         */
+        sayr("ctxgrp.set_on_non_gen", EVP_PKEY_CTX_set_group_name(nctx, "P-256"));
+        grp[0] = '\0';
+        sayr("ctxgrp.get_on_non_gen", EVP_PKEY_CTX_get_group_name(nctx, grp, sizeof grp));
+        sayr("ctxgrp.set_null_ctx", EVP_PKEY_CTX_set_group_name(NULL, "P-256"));
+        grp[0] = '\0';
+        sayr("ctxgrp.get_null_ctx", EVP_PKEY_CTX_get_group_name(NULL, grp, sizeof grp));
+
+        reset_gen();
+        sayr("ctxgrp.keygen_init", EVP_PKEY_keygen_init(ngctx));
+        say_gen("ctxgrp.keygen_init.vec");
+        sayr("ctxgrp.set_on_gen", EVP_PKEY_CTX_set_group_name(ngctx, "COURT-GROUP"));
+        sayn("ctxgrp.gen_saw_group", strcmp(g_gen_group, "COURT-GROUP") == 0);
+        sayr("ctxgrp.set_null_name", EVP_PKEY_CTX_set_group_name(ngctx, NULL));
+        grp[0] = '\0';
+        sayr("ctxgrp.get_on_gen", EVP_PKEY_CTX_get_group_name(ngctx, grp, sizeof grp));
+        sayn("ctxgrp.get_match", strcmp(grp, "COURT-GROUP") == 0);
+        grp[0] = '\0';
+        sayr("ctxgrp.get_null_name", EVP_PKEY_CTX_get_group_name(ngctx, NULL, 0));
+        say_gen("ctxgrp.vec");
+
+        /*
+         * ---- 21. `EVP_PKEY_CTX_set_signature` ----
+         *
+         * The parameter reaches the **provider** and nothing else happens: the context's method is
+         * not replaced, which is why the arm arms the context first and reads the counter after.
+         * `SIG-SetParams` exists only so that a `set_ctx_params` is there to receive it.
+         */
+        ssig = EVP_SIGNATURE_fetch(ctx, "SIG-SetParams", NULL);
+        sayp("ctxsig.algo", ssig);
+        g_qon = "QON-SSP";
+        sayr("ctxsig.sign_init_ex2", EVP_PKEY_sign_init_ex2(sctx, ssig, NULL));
+        reset_ssp();
+        sayr("ctxsig.set_signature", EVP_PKEY_CTX_set_signature(sctx, sig_in, sizeof sig_in));
+        sayn("ctxsig.calls", ssp_calls);
+        sayn("ctxsig.saw_signature", ssp_saw);
+        sayn("ctxsig.len", ssp_len);
+        sayn("ctxsig.match", memcmp(ssp_bytes, sig_in, sizeof sig_in) == 0);
+        sayr("ctxsig.null_ctx", EVP_PKEY_CTX_set_signature(NULL, sig_in, sizeof sig_in));
+        EVP_SIGNATURE_free(ssig);
+        g_qon = "COURT-SIG";
+
+        /*
+         * ---- 22. `EVP_PKEY_CTX_set_algor_params` / `_get_algor_params`, as a round trip ----
+         *
+         * The caller's `X509_ALGOR` is a stack object with the header's own two fields; the value
+         * it carries is an `ASN1_TYPE` holding a UTF-8 string, and the comparison afterwards is
+         * against those three bytes rather than against the DER, so a transcription that encoded
+         * or decoded the wrong wrapper is visible.
+         */
+        memset(&alg_str, 0, sizeof alg_str);
+        alg_str.length = 3;
+        alg_str.type = V_ASN1_UTF8STRING;
+        alg_str.data = (unsigned char *) "abc";
+        memset(&alg_type, 0, sizeof alg_type);
+        alg_type.type = V_ASN1_UTF8STRING;
+        alg_type.value.asn1_string = &alg_str;
+        alg_in.algorithm = NULL;
+        alg_in.parameter = &alg_type;
+
+        reset_gen();
+        sayr("algor.set", EVP_PKEY_CTX_set_algor_params(ngctx, &alg_in));
+        say_gen("algor.set.vec");
+        alg_out.algorithm = NULL;
+        alg_out.parameter = NULL;
+        sayr("algor.get", EVP_PKEY_CTX_get_algor_params(ngctx, &alg_out));
+        sayp("algor.get.parameter", alg_out.parameter);
+        sayn("algor.get.type", alg_out.parameter != NULL ? alg_out.parameter->type : -1);
+        sayn("algor.get.match",
+             alg_out.parameter != NULL
+             && alg_out.parameter->value.asn1_string != NULL
+             && alg_out.parameter->value.asn1_string->length == 3
+             && memcmp(alg_out.parameter->value.asn1_string->data, "abc", 3) == 0);
+        ASN1_TYPE_free(alg_out.parameter);
+        alg_out.parameter = NULL;
+
+        /* A provider that answers nothing: `ret` stays -1 and `alg->parameter` is untouched. */
+        g_gen_aid_len = 0;
+        sayr("algor.get_unpublished", EVP_PKEY_CTX_get_algor_params(ngctx, &alg_out));
+        sayp("algor.get_unpublished.parameter", alg_out.parameter);
+
+        /* `i2d_ASN1_TYPE(NULL, &der)` writes nothing, so a NULL parameter is sent as zero bytes
+         * rather than refused. */
+        alg_in.parameter = NULL;
+        reset_gen();
+        sayr("algor.set_null_parameter", EVP_PKEY_CTX_set_algor_params(ngctx, &alg_in));
+        say_gen("algor.set_null_parameter.vec");
+        alg_in.parameter = &alg_type;
+
+        EVP_PKEY_CTX_free(ngctx);
+        EVP_PKEY_free(np);
+        EVP_PKEY_free(np_silent);
+        EVP_PKEY_free(np_fail);
+        EVP_PKEY_free(rk);
+        EVP_PKEY_free(nblank);
+        EVP_PKEY_free(ntarget);
+        EVP_PKEY_free(nparam);
+        reset_pn();
+        EVP_PKEY_CTX_free(nctx);
+        say_pn("pkey.release.vec");
+
+        /*
+         * Named refusals, with the authority file and line, for the exports and the arms this
+         * probe cannot drive. Each is a *statement about a boundary* rather than a silent omission.
+         */
+        printf("digestsign_supports_digest=NOT_MEASURED_BLOCKED_ON_EVP_DigestSignInit_ex_m_sigver_c_371\n");
+        printf("new_raw_private_key_ex=NOT_MEASURED_BLOCKED_ON_EVP_PKEY_asn1_find_str_ameth_lib_c_114\n");
+        printf("new_raw_public_key_ex=NOT_MEASURED_BLOCKED_ON_EVP_PKEY_asn1_find_str_ameth_lib_c_114\n");
+        printf("new_raw_private_key=NOT_MEASURED_BLOCKED_ON_EVP_PKEY_asn1_find_str_ameth_lib_c_114\n");
+        printf("new_raw_public_key=NOT_MEASURED_BLOCKED_ON_EVP_PKEY_asn1_find_str_ameth_lib_c_114\n");
+        printf("set_type_legacy_nid=NOT_MEASURED_DIVERGENCE_D_PKEY_AMETH_1\n");
+        printf("new_CMAC_key_with_cipher=NOT_MEASURED_DEFAULT_PROVIDER_IS_PHASE_9\n");
+        printf("get_base_id_null_key=NOT_MEASURED_AUTHORITY_FAULTS\n");
+        printf("get_default_digest_name_blank_key=NOT_MEASURED_AUTHORITY_FAULTS\n");
+        printf("set_algor_params_null_ctx=NOT_MEASURED_AUTHORITY_FAULTS\n");
+        printf("get_algor_params_null_ctx=NOT_MEASURED_AUTHORITY_FAULTS\n");
+        printf("get_algor_params_existing_parameter=NOT_MEASURED_DECODER_OWNS_THE_SLOT\n");
+        printf("print_public_family=NOT_MEASURED_NEEDS_OSSL_ENCODER_CTX_PHASE_10\n");
+        printf("legacy_low_level_key_accessors=NOT_MEASURED_NEED_PHASE_8_KEY_TYPES\n");
+        printf("set1_engine_and_get0_engine=NOT_MEASURED_ENGINE_IS_PHASE_13\n");
+        printf("EVP_PKEY_type=NOT_MEASURED_STANDARD_METHODS_IS_PHASE_8\n");
+        printf("EVP_PKEY_CTX_get_algor=NOT_MEASURED_NEEDS_d2i_X509_ALGOR_PHASE_11\n");
+    }
 
     /*
      * ---- release ----

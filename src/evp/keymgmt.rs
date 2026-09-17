@@ -1284,7 +1284,6 @@ pub unsafe extern "C" fn EVP_KEYMGMT_settable_params(
 ///
 /// # Safety
 /// `keymgmt` must be a live `EvpKeyMgmt` whose `has` is non-NULL.
-#[allow(dead_code)] // the `EVP_PKEY` accessors that call it are 7.4a's next slice
 pub(crate) unsafe fn evp_keymgmt_has(
     keymgmt: *const EvpKeyMgmt,
     keydata: *mut c_void,

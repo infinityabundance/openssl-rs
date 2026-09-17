@@ -698,7 +698,6 @@ pub(crate) unsafe fn evp_keymgmt_util_fromdata(
     keydata
 }
 
-#[allow(dead_code)] // 7.4a-iii: the `EVP_PKEY_get_bits`-adjacent accessors and the `EVP_PKEY_check` family read it
 /// `int evp_keymgmt_util_has(EVP_PKEY *pk, int selection)`.
 ///
 /// One guard, then the method's own answer — and the guard is on `keymgmt`, not on `keydata`, so an
@@ -944,7 +943,6 @@ pub(crate) unsafe fn evp_keymgmt_util_gen(
     keydata
 }
 
-#[allow(dead_code)] // 7.4a-iii: `EVP_PKEY_get_default_digest_name` is `p_lib.c`'s and is the first to read it
 /// `int evp_keymgmt_util_get_deflt_digest_name(EVP_KEYMGMT *keymgmt, void *keydata, char *mdname,
 /// size_t mdname_sz)`.
 ///
@@ -1021,8 +1019,6 @@ pub(crate) unsafe fn evp_keymgmt_util_get_deflt_digest_name(
     rv
 }
 
-#[allow(dead_code)]
-// 7.4a-iii: `EVP_PKEY_can_sign` is its first live caller; 7.4b's four method classes then use it for every operation
 /// `const char *evp_keymgmt_util_query_operation_name(EVP_KEYMGMT *keymgmt, int op_id)`.
 ///
 /// Ask the method for the operation's name, and **fall back to the key type's own name** when it has

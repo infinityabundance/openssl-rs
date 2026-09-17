@@ -51,12 +51,15 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_void, CStr};
+use core::ffi::{c_char, c_int, c_uchar, c_void, CStr};
 use core::ptr;
 
+use crate::asn1::a_type::{d2i_ASN1_TYPE, i2d_ASN1_TYPE};
+use crate::asn1::layout::Asn1Type;
 use crate::bn::bignum::{BN_bn2nativepad, BN_num_bits, BigNum};
 use crate::evp::asymcipher::{EVP_ASYM_CIPHER_get0_provider, EvpAsymCipher};
 use crate::evp::cipher::{EVP_CIPHER_get0_name, EvpCipher};
+use crate::evp::cipher_ctx::X509Algor;
 use crate::evp::digest::{EVP_MD_get0_name, EvpMd, EvpMdCtx};
 use crate::evp::exchange::{EVP_KEYEXCH_get0_provider, EvpKeyExch};
 use crate::evp::kdf::OSSL_KDF_PARAM_KEY;
@@ -86,8 +89,9 @@ use crate::params::{
     OSSL_PARAM_construct_uint64, OSSL_PARAM_construct_utf8_ptr, OSSL_PARAM_construct_utf8_string,
     OSSL_PARAM_get_BN, OSSL_PARAM_get_int, OSSL_PARAM_get_octet_ptr, OSSL_PARAM_get_octet_string,
     OSSL_PARAM_get_uint, OSSL_PARAM_get_utf8_string, OSSL_PARAM_get_utf8_string_ptr,
-    OSSL_PARAM_locate_const, OSSL_PARAM_set_BN, OSSL_PARAM_set_int, OSSL_PARAM_set_octet_ptr,
-    OSSL_PARAM_set_octet_string, OSSL_PARAM_set_uint, OSSL_PARAM_set_utf8_string, OsslParam,
+    OSSL_PARAM_locate_const, OSSL_PARAM_modified, OSSL_PARAM_set_BN, OSSL_PARAM_set_int,
+    OSSL_PARAM_set_octet_ptr, OSSL_PARAM_set_octet_string, OSSL_PARAM_set_uint,
+    OSSL_PARAM_set_utf8_string, OsslParam,
 };
 use crate::params::{
     OSSL_PARAM_INTEGER, OSSL_PARAM_OCTET_PTR, OSSL_PARAM_OCTET_STRING, OSSL_PARAM_UNMODIFIED,
@@ -10377,6 +10381,304 @@ pub unsafe extern "C" fn EVP_PKEY_CTX_md(
     }
     // SAFETY: `ctx` is live or NULL and `m` is a live digest method.
     unsafe { EVP_PKEY_CTX_ctrl(ctx, -1, optype, cmd, 0, m.cast_mut().cast::<c_void>()) }
+}
+
+// ---------------------------------------------------------------------------------------------
+// 7.4e — the five `EVP_PKEY_CTX_*` accessors that `evp_lib.c` and `signature.c` declare beside the
+// entry points: two group-name accessors, the two `X509_ALGOR` codecs, and the one-line setter that
+// hands a signature to an armed context.
+//
+// The `X509Algor` these take is `cipher_ctx.rs`'s, and the choice is worth stating: that one is the
+// only definition in this crate that carries the authority's **layout** (`algorithm` then
+// `parameter`), which `EVP_PKEY_CTX_get_algor_params` must read and write. `pkey_asn1.rs`'s
+// same-named struct is the opaque placeholder the fifteen `EVP_PKEY_asn1_set_*` signatures name,
+// and nothing ever dereferences one — a type that is only passed through does not need a body.
+// ---------------------------------------------------------------------------------------------
+
+/// `OSSL_SIGNATURE_PARAM_SIGNATURE` — `include/openssl/core_names.h:569`, and **confirmed from the
+/// generated header rather than assumed**: it is `"signature"`.
+const OSSL_SIGNATURE_PARAM_SIGNATURE: *const c_char = c"signature".as_ptr();
+/// `OSSL_PKEY_PARAM_ALGORITHM_ID_PARAMS` = `OSSL_ALG_PARAM_ALGORITHM_ID_PARAMS` —
+/// `include/openssl/core_names.h:365`, value `"algorithm-id-params"`.
+const OSSL_PKEY_PARAM_ALGORITHM_ID_PARAMS: *const c_char = c"algorithm-id-params".as_ptr();
+
+/// The authority's translation unit for `evp_lib.c`, which is where the two `X509_ALGOR` codecs
+/// live and therefore what a failing allocation records.
+const FILE_EVP_LIB: *const c_char = c"../../src/openssl-3.6.4/crypto/evp/evp_lib.c".as_ptr();
+/// `EVP_PKEY_CTX_set_algor_params`'s `OPENSSL_free(der)` (line 1393).
+const LINE_FREE_ALGOR_SET: c_int = 1393;
+/// `EVP_PKEY_CTX_get_algor_params`'s `OPENSSL_malloc(derl)` (line 1433).
+const LINE_MALLOC_ALGOR_GET: c_int = 1433;
+/// Its `OPENSSL_free(der)` (line 1451).
+const LINE_FREE_ALGOR_GET: c_int = 1451;
+
+/// `int EVP_PKEY_CTX_set_signature(EVP_PKEY_CTX *ctx, const unsigned char *sig, size_t siglen)` —
+/// `crypto/evp/signature.c:1058`.
+///
+/// One parameter and one delegation, and the thing worth writing down is what it does **not** do:
+/// it does **not** replace `ctx->op.sig.signature`. The method stays where it was, so a caller who
+/// means to *use* the signature it has just set must already have armed the context for that
+/// method — which is why a probe that observes this entry point must read the parameter at the
+/// provider rather than a field of the context.
+///
+/// The cast away from `const sig` is the authority's, with its own comment: the parameter is read
+/// only, and the constructor's parameter is not `const`.
+///
+/// # Safety
+/// `ctx` NULL or live; `sig` NULL or readable for `siglen`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_CTX_set_signature(
+    ctx: *mut EvpPkeyCtx,
+    sig: *const u8,
+    siglen: usize,
+) -> c_int {
+    let mut sig_params = [OSSL_PARAM_construct_end(); 2];
+
+    if ctx.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::SIGNATURE_1064) };
+        return 0;
+    }
+
+    // SAFETY: each constructor writes one entry of this frame's array, and `sig` is readable for
+    // `siglen` bytes.
+    unsafe {
+        sig_params[0] = OSSL_PARAM_construct_octet_string(
+            OSSL_SIGNATURE_PARAM_SIGNATURE,
+            sig.cast_mut().cast(),
+            siglen,
+        );
+        sig_params[1] = OSSL_PARAM_construct_end();
+    }
+    // SAFETY: `ctx` is live and `sig_params` is this frame's terminated array.
+    unsafe { EVP_PKEY_CTX_set_params(ctx, sig_params.as_ptr()) }
+}
+
+/// `int EVP_PKEY_CTX_set_group_name(EVP_PKEY_CTX *ctx, const char *name)` —
+/// `crypto/evp/evp_lib.c:1154`.
+///
+/// Three answers and they are three different things: `-2` with `EVP_R_COMMAND_NOT_SUPPORTED` for a
+/// context that is NULL or **not armed for a generation operation**, `-1` for an absent name, and
+/// the provider's answer for the parameter. The operation test is
+/// `EVP_PKEY_CTX_IS_GEN_OP`, i.e. the `EVP_PKEY_OP_TYPE_GEN` bit — so the same context answers `-2`
+/// before `EVP_PKEY_keygen_init` and something else after it, which is the state a probe has to
+/// drive both of.
+///
+/// The two `-2` clauses are one condition in the authority and two statements here, for the reason
+/// every other raise site in this file is: each needs its `// SAFETY:` comment directly above it.
+/// A call takes exactly one of the two, so the queue is the same either way.
+///
+/// # Safety
+/// `ctx` NULL or live; `name` NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_CTX_set_group_name(
+    ctx: *mut EvpPkeyCtx,
+    name: *const c_char,
+) -> c_int {
+    let mut params = [OSSL_PARAM_construct_end(); 2];
+
+    if ctx.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_LIB_1159) };
+        return -2;
+    }
+    // SAFETY: `ctx` is live.
+    if !unsafe { &*ctx }.is_gen_op() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_LIB_1159) };
+        return -2;
+    }
+
+    if name.is_null() {
+        return -1;
+    }
+
+    // SAFETY: each constructor writes one entry of this frame's array, and `name` is
+    // NUL-terminated, which is what a size of 0 means for a UTF8 string parameter.
+    unsafe {
+        params[0] =
+            OSSL_PARAM_construct_utf8_string(OSSL_PKEY_PARAM_GROUP_NAME, name.cast_mut(), 0);
+        params[1] = OSSL_PARAM_construct_end();
+    }
+    // SAFETY: `ctx` is live and `params` is this frame's terminated array.
+    unsafe { EVP_PKEY_CTX_set_params(ctx, params.as_ptr()) }
+}
+
+/// `int EVP_PKEY_CTX_get_group_name(EVP_PKEY_CTX *ctx, char *name, size_t namelen)` —
+/// `crypto/evp/evp_lib.c:1172`.
+///
+/// The same three-way shape as the setter, and the same `-2`: a context that is not a generation
+/// operation cannot answer a group name, and the authority's comment says why there is no legacy
+/// fallback — "there is no legacy support for this". Unlike the setter this one gets the length
+/// from the caller, so the parameter's `data_size` is the caller's buffer size and a name that does
+/// not fit is the *delegation's* refusal (`EVP_PKEY_CTX_get_params` returning 0) rather than this
+/// function's.
+///
+/// # Safety
+/// `ctx` NULL or live; `name` NULL or writable for `namelen` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_CTX_get_group_name(
+    ctx: *mut EvpPkeyCtx,
+    name: *mut c_char,
+    namelen: usize,
+) -> c_int {
+    let mut params = [OSSL_PARAM_construct_end(); 2];
+
+    if ctx.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_LIB_1179) };
+        return -2;
+    }
+    // SAFETY: `ctx` is live.
+    if !unsafe { &*ctx }.is_gen_op() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::EVP_LIB_1179) };
+        return -2;
+    }
+
+    if name.is_null() {
+        return -1;
+    }
+
+    // SAFETY: each constructor writes one entry of this frame's array, and `name` is writable for
+    // `namelen` bytes.
+    unsafe {
+        params[0] = OSSL_PARAM_construct_utf8_string(OSSL_PKEY_PARAM_GROUP_NAME, name, namelen);
+        params[1] = OSSL_PARAM_construct_end();
+    }
+    // SAFETY: `ctx` is live and `params` is this frame's terminated array.
+    if unsafe { EVP_PKEY_CTX_get_params(ctx, params.as_mut_ptr()) } == 0 {
+        return -1;
+    }
+    1
+}
+
+/// `int EVP_PKEY_CTX_set_algor_params(EVP_PKEY_CTX *ctx, const X509_ALGOR *alg)` —
+/// `crypto/evp/evp_lib.c:1375`.
+///
+/// The value is encoded to DER and sent under the **one** parameter name a `EVP_PKEY_CTX` uses,
+/// `algorithm-id-params` — where its `EVP_CIPHER_CTX` sibling sends the same bytes under two names.
+/// There is no second name to fall back to here, and the authority's comment about "both the old
+/// and the new AlgID parameters" applies to the *deprecated* `alg_id_param` key that only the
+/// cipher context knows.
+///
+/// `ret` starts at `-1` and stays there when the encode fails, so an unencodable parameter is a
+/// silent `-1`. The free is unconditional.
+///
+/// # Safety
+/// `ctx` NULL or live; `alg` must be a live `X509Algor`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_CTX_set_algor_params(
+    ctx: *mut EvpPkeyCtx,
+    alg: *const X509Algor,
+) -> c_int {
+    let mut ret = -1;
+    let mut der: *mut c_uchar = ptr::null_mut();
+
+    // SAFETY: `alg` is live per the contract and `der` is this frame's slot.
+    let derl = unsafe { i2d_ASN1_TYPE((*alg).parameter, &mut der) };
+    if derl >= 0 {
+        let mut params = [OSSL_PARAM_construct_end(); 2];
+
+        // SAFETY: each constructor writes one entry of this frame's array, and `der` holds `derl`
+        // bytes.
+        unsafe {
+            params[0] = OSSL_PARAM_construct_octet_string(
+                OSSL_PKEY_PARAM_ALGORITHM_ID_PARAMS,
+                der.cast::<c_void>(),
+                derl as usize,
+            );
+            params[1] = OSSL_PARAM_construct_end();
+        }
+        // SAFETY: `ctx` is live and `params` is this frame's terminated array.
+        ret = unsafe { EVP_PKEY_CTX_set_params(ctx, params.as_ptr()) };
+    }
+    // SAFETY: `der` is NULL or the block `i2d_ASN1_TYPE` allocated for this call.
+    unsafe { CRYPTO_free(der.cast::<c_void>(), FILE_EVP_LIB, LINE_FREE_ALGOR_SET) };
+    ret
+}
+
+/// `int EVP_PKEY_CTX_get_algor_params(EVP_PKEY_CTX *ctx, X509_ALGOR *alg)` —
+/// `crypto/evp/evp_lib.c:1397`.
+///
+/// **Two passes**, exactly as the cipher sibling is: the first asks for the length, the second for
+/// the bytes, and `d2i_ASN1_TYPE` turns them back into a value. Four conditions gate the second
+/// pass and each is a different kind of "no": the parameter was not modified, its length is zero,
+/// its length does not fit a `long`, or the allocation failed. All four leave `ret` at `-1` with
+/// nothing raised.
+///
+/// The caller's existing `alg->parameter` is what the decoder starts from and what it is assigned
+/// back to, and the authority's comment is explicit that the old value is **not** freed — so a
+/// decode that succeeds replaces it and a decode that fails leaves the caller's pointer alone.
+///
+/// # Safety
+/// `ctx` NULL or live; `alg` must be a live `X509Algor`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_CTX_get_algor_params(
+    ctx: *mut EvpPkeyCtx,
+    alg: *mut X509Algor,
+) -> c_int {
+    let mut ret = -1;
+    let mut params = [OSSL_PARAM_construct_end(); 2];
+    let mut der: *mut c_uchar = ptr::null_mut();
+
+    // SAFETY: the constructor writes one entry of this frame's array.
+    unsafe {
+        params[0] = OSSL_PARAM_construct_octet_string(
+            OSSL_PKEY_PARAM_ALGORITHM_ID_PARAMS,
+            ptr::null_mut(),
+            0,
+        );
+        params[1] = OSSL_PARAM_construct_end();
+    }
+    // SAFETY: `ctx` is live and `params` is this frame's terminated array.
+    if unsafe { EVP_PKEY_CTX_get_params(ctx, params.as_mut_ptr()) } == 0 {
+        /* The authority's `goto err` with `der` still NULL; `OPENSSL_free(NULL)` is a no-op and so
+         * this early return is the same statement. */
+        return ret;
+    }
+
+    /* "If alg->parameter is non-NULL, it will be changed by d2i_ASN1_TYPE() below. If it is NULL,
+     * the d2i_ASN1_TYPE() call will allocate new space for it." */
+    // SAFETY: `alg` is live per the contract.
+    let mut type_: *mut Asn1Type = unsafe { (*alg).parameter };
+    let derl = params[0].return_size;
+
+    // SAFETY: `params` is the array the provider just answered into.
+    if unsafe { OSSL_PARAM_modified(params.as_ptr()) } != 0
+        && derl != 0
+        && derl <= c_long::MAX as usize
+    {
+        // This allocates `derl` bytes, which is the authority's `OPENSSL_malloc`.
+        der = CRYPTO_malloc(derl, FILE_EVP_LIB, LINE_MALLOC_ALGOR_GET).cast::<c_uchar>();
+        if !der.is_null() {
+            let mut derp: *const c_uchar = der;
+            // SAFETY: the constructor writes one entry of this frame's array, and `der` holds
+            // `derl` bytes.
+            unsafe {
+                params[0] = OSSL_PARAM_construct_octet_string(
+                    OSSL_PKEY_PARAM_ALGORITHM_ID_PARAMS,
+                    der.cast::<c_void>(),
+                    derl,
+                );
+            }
+            // SAFETY: `ctx` is live, `params` is this frame's array, `derp` is this frame's slot,
+            // and `type_` is the caller's saved pointer.
+            unsafe {
+                if EVP_PKEY_CTX_get_params(ctx, params.as_mut_ptr()) != 0
+                    && OSSL_PARAM_modified(params.as_ptr()) != 0
+                    && !d2i_ASN1_TYPE(&mut type_, &mut derp, derl as c_long).is_null()
+                {
+                    /* "Don't free alg->parameter, see comment further up." */
+                    (*alg).parameter = type_;
+                    ret = 1;
+                }
+            }
+        }
+    }
+    // SAFETY: `der` is NULL or the block allocated above, released exactly once.
+    unsafe { CRYPTO_free(der.cast::<c_void>(), FILE_EVP_LIB, LINE_FREE_ALGOR_GET) };
+    ret
 }
 
 #[cfg(test)]

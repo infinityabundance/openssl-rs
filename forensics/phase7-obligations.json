@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 924,
       "deferred_to_later_phase": 164,
-      "implemented": 574,
-      "open_in_this_stratum": 212,
+      "implemented": 597,
+      "open_in_this_stratum": 189,
       "owned": 950,
       "received_by_handoff": 26
     },
@@ -1490,9 +1490,11 @@
       "EVP_PKEY_CTX_get0_provider",
       "EVP_PKEY_CTX_get1_id",
       "EVP_PKEY_CTX_get1_id_len",
+      "EVP_PKEY_CTX_get_algor_params",
       "EVP_PKEY_CTX_get_app_data",
       "EVP_PKEY_CTX_get_cb",
       "EVP_PKEY_CTX_get_data",
+      "EVP_PKEY_CTX_get_group_name",
       "EVP_PKEY_CTX_get_keygen_info",
       "EVP_PKEY_CTX_get_operation",
       "EVP_PKEY_CTX_get_params",
@@ -1512,9 +1514,11 @@
       "EVP_PKEY_CTX_set1_pbe_pass",
       "EVP_PKEY_CTX_set1_scrypt_salt",
       "EVP_PKEY_CTX_set1_tls1_prf_secret",
+      "EVP_PKEY_CTX_set_algor_params",
       "EVP_PKEY_CTX_set_app_data",
       "EVP_PKEY_CTX_set_cb",
       "EVP_PKEY_CTX_set_data",
+      "EVP_PKEY_CTX_set_group_name",
       "EVP_PKEY_CTX_set_hkdf_md",
       "EVP_PKEY_CTX_set_hkdf_mode",
       "EVP_PKEY_CTX_set_kem_op",
@@ -1524,10 +1528,12 @@
       "EVP_PKEY_CTX_set_scrypt_maxmem_bytes",
       "EVP_PKEY_CTX_set_scrypt_p",
       "EVP_PKEY_CTX_set_scrypt_r",
+      "EVP_PKEY_CTX_set_signature",
       "EVP_PKEY_CTX_set_signature_md",
       "EVP_PKEY_CTX_set_tls1_prf_md",
       "EVP_PKEY_CTX_settable_params",
       "EVP_PKEY_CTX_str2ctrl",
+      "EVP_PKEY_Q_keygen",
       "EVP_PKEY_asn1_add0",
       "EVP_PKEY_asn1_add_alias",
       "EVP_PKEY_asn1_copy",
@@ -1555,9 +1561,11 @@
       "EVP_PKEY_asn1_set_siginf",
       "EVP_PKEY_auth_decapsulate_init",
       "EVP_PKEY_auth_encapsulate_init",
+      "EVP_PKEY_can_sign",
       "EVP_PKEY_check",
       "EVP_PKEY_cmp",
       "EVP_PKEY_cmp_parameters",
+      "EVP_PKEY_copy_parameters",
       "EVP_PKEY_decapsulate",
       "EVP_PKEY_decapsulate_init",
       "EVP_PKEY_decrypt",
@@ -1582,18 +1590,27 @@
       "EVP_PKEY_fromdata_init",
       "EVP_PKEY_fromdata_settable",
       "EVP_PKEY_generate",
+      "EVP_PKEY_get0",
       "EVP_PKEY_get0_asn1",
       "EVP_PKEY_get0_description",
       "EVP_PKEY_get0_provider",
       "EVP_PKEY_get0_type_name",
+      "EVP_PKEY_get1_encoded_public_key",
+      "EVP_PKEY_get_base_id",
+      "EVP_PKEY_get_bits",
       "EVP_PKEY_get_bn_param",
+      "EVP_PKEY_get_default_digest_name",
+      "EVP_PKEY_get_default_digest_nid",
       "EVP_PKEY_get_ex_data",
+      "EVP_PKEY_get_group_name",
       "EVP_PKEY_get_id",
       "EVP_PKEY_get_int_param",
       "EVP_PKEY_get_octet_string_param",
       "EVP_PKEY_get_params",
       "EVP_PKEY_get_raw_private_key",
       "EVP_PKEY_get_raw_public_key",
+      "EVP_PKEY_get_security_bits",
+      "EVP_PKEY_get_security_category",
       "EVP_PKEY_get_size",
       "EVP_PKEY_get_size_t_param",
       "EVP_PKEY_get_utf8_string_param",
@@ -1647,7 +1664,9 @@
       "EVP_PKEY_meth_set_verify",
       "EVP_PKEY_meth_set_verify_recover",
       "EVP_PKEY_meth_set_verifyctx",
+      "EVP_PKEY_missing_parameters",
       "EVP_PKEY_new",
+      "EVP_PKEY_new_CMAC_key",
       "EVP_PKEY_pairwise_check",
       "EVP_PKEY_param_check",
       "EVP_PKEY_param_check_quick",
@@ -1657,13 +1676,17 @@
       "EVP_PKEY_private_check",
       "EVP_PKEY_public_check",
       "EVP_PKEY_public_check_quick",
+      "EVP_PKEY_save_parameters",
+      "EVP_PKEY_set1_encoded_public_key",
       "EVP_PKEY_set_bn_param",
       "EVP_PKEY_set_ex_data",
       "EVP_PKEY_set_int_param",
       "EVP_PKEY_set_octet_string_param",
       "EVP_PKEY_set_params",
       "EVP_PKEY_set_size_t_param",
+      "EVP_PKEY_set_type",
       "EVP_PKEY_set_type_by_keymgmt",
+      "EVP_PKEY_set_type_str",
       "EVP_PKEY_set_utf8_string_param",
       "EVP_PKEY_settable_params",
       "EVP_PKEY_sign",
@@ -2333,57 +2356,9 @@
       },
       {
         "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_get_algor_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_get_group_name"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_set_algor_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_set_group_name"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_CTX_set_signature"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_Q_keygen"
-      },
-      {
-        "declaring_header": "evp.h",
         "module": "src/evp/pkey.rs",
         "received_from_phase": null,
         "symbol": "EVP_PKEY_assign"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_can_sign"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_copy_parameters"
       },
       {
         "declaring_header": "evp.h",
@@ -2402,12 +2377,6 @@
         "module": "src/evp/pkey.rs",
         "received_from_phase": null,
         "symbol": "EVP_PKEY_encrypt_old"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_get0"
       },
       {
         "declaring_header": "evp.h",
@@ -2485,36 +2454,6 @@
         "declaring_header": "evp.h",
         "module": "src/evp/pkey.rs",
         "received_from_phase": null,
-        "symbol": "EVP_PKEY_get1_encoded_public_key"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_get_base_id"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_get_bits"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_get_default_digest_name"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_get_default_digest_nid"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
         "symbol": "EVP_PKEY_get_ec_point_conv_form"
       },
       {
@@ -2522,24 +2461,6 @@
         "module": "src/evp/pkey.rs",
         "received_from_phase": null,
         "symbol": "EVP_PKEY_get_field_type"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_get_group_name"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_get_security_bits"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_get_security_category"
       },
       {
         "declaring_header": "evp.h",
@@ -2558,18 +2479,6 @@
         "module": "src/evp/pkey_ctx.rs",
         "received_from_phase": null,
         "symbol": "EVP_PKEY_meth_get_count"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_missing_parameters"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_new_CMAC_key"
       },
       {
         "declaring_header": "evp.h",
@@ -2641,12 +2550,6 @@
         "declaring_header": "evp.h",
         "module": "src/evp/pkey.rs",
         "received_from_phase": null,
-        "symbol": "EVP_PKEY_save_parameters"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
         "symbol": "EVP_PKEY_set1_DH"
       },
       {
@@ -2671,25 +2574,7 @@
         "declaring_header": "evp.h",
         "module": "src/evp/pkey.rs",
         "received_from_phase": null,
-        "symbol": "EVP_PKEY_set1_encoded_public_key"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
         "symbol": "EVP_PKEY_set1_engine"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_set_type"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKEY_set_type_str"
       },
       {
         "declaring_header": "evp.h",
@@ -3351,12 +3236,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "e9b83ebc238b65dfec8bab8a91a9d952449bdb5d60787cbf82343d524bff4a11"
+      "sha256": "c8404ad4238fb70c18caff6299e74303948b5890602a0708f5ddb7e65f850282"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "0935f4a1a8437e9b28ae1d29fda2b5970ccd65ca3043394c44f7bf63dcc7480d"
+      "sha256": "3d6152316634673bea99b1d39cd5cfdc49b8cde9452cc4726ef57d05e420b95f"
     }
   ],
   "kind": "phase7-obligations",

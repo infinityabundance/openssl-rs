@@ -1069,3 +1069,27 @@ pub unsafe extern "C" fn EVP_PKEY_get0_asn1(pkey: *const EvpPkey) -> *const EvpP
     // SAFETY: `pkey` is live per the contract.
     unsafe { (*pkey).ameth }
 }
+
+/// The body of `EVP_PKEY_type` — `crypto/evp/evp_pkey_type.c:73`.
+///
+/// **The export is 7.4l's and is deliberately withheld; this is its body**, because
+/// `EVP_PKEY_get_base_id` is `EVP_PKEY_type(pkey->type)` and `p_lib.c` lands here while
+/// `evp_pkey_type.c` waits for the twelve `ossl_<alg>_asn1_meth` objects (D163, D165). Splitting it
+/// this way keeps one copy of the resolution: the day 7.4l lands, `EVP_PKEY_type` is a
+/// `#[no_mangle]` wrapper over this function and nothing else moves.
+///
+/// The alias walk is `EVP_PKEY_asn1_find`'s, and the fallback is `NID_undef` — which is what makes
+/// the withheld export *not* correct yet for the twelve legacy types, and what makes it correct for
+/// every value `pkey->type` can take here (`EVP_PKEY_KEYMGMT` and `EVP_PKEY_NONE`).
+///
+/// # Safety
+/// Nothing: the lookup is over this module's own tables and touches no pointer argument.
+pub(crate) unsafe fn evp_pkey_type(type_: c_int) -> c_int {
+    // SAFETY: no preconditions.
+    let ameth = unsafe { EVP_PKEY_asn1_find(ptr::null_mut(), type_) };
+    if ameth.is_null() {
+        return crate::runtime::obj::NID_undef;
+    }
+    // SAFETY: `ameth` is a live method.
+    unsafe { (*ameth).pkey_id }
+}

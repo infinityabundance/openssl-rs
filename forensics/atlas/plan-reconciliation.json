@@ -89,7 +89,7 @@
         "docs/PHASE-6-SUBPHASES.md",
         "docs/PHASE-7-SUBPHASES.md"
       ],
-      "rows_judged": 61,
+      "rows_judged": 62,
       "symbols_named_by_a_row": 69,
       "symbols_reached": 69,
       "unit_records": 10,
@@ -815,7 +815,8 @@
         "subphases": [
           "7.3",
           "7.3b",
-          "7.3d"
+          "7.3d",
+          "7.4e"
         ],
         "transcribed_by": [
           "src/evp/digest.rs"
@@ -1074,7 +1075,8 @@
         "subphases": [
           "7.3d",
           "7.4",
-          "7.4c"
+          "7.4c",
+          "7.4e"
         ],
         "transcribed_by": []
       },
@@ -1182,7 +1184,8 @@
         "recorded_by": null,
         "subphases": [
           "7.4",
-          "7.4a"
+          "7.4a",
+          "7.4e"
         ],
         "transcribed_by": [
           "src/evp/pkey.rs"
@@ -1292,7 +1295,8 @@
         "recorded_by": null,
         "subphases": [
           "7.4",
-          "7.4b"
+          "7.4b",
+          "7.4e"
         ],
         "transcribed_by": [
           "src/evp/signature.rs"
@@ -1791,7 +1795,7 @@
       "transcribed_units": 134
     }
   },
-  "body_hash": "6224ad7e649fd1df6379e912079fbd2aedcb1c67923488a614e52726a9aa69fd",
+  "body_hash": "1e1812fe96306369338ad1df493fd8d76f67430821e8e7463fba8edf22ef2f41",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -1802,17 +1806,17 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "b4d1dd4ec093f8f9fd5939928eaa2fd1b5fe88a750d4611fe7fe19ac742dddd0"
+      "sha256": "cfd8e980e3cf3ca96b6f965d76cf9e355da7083ca8aaa500b4597c1d5ed468fa"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "f5eb0c6ae0f985fec25fc3b493f4c70071ae61518cce443f3ff5e9ed861c4735"
+      "sha256": "720884fc319a444d9e160d4c0a689f078c38168fc6ea34f08e7a1634257534ca"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "7b7fcff3519a55a4452c04398dc5cfb1b4ebf49c2979c4800096915ac98e0603"
+      "sha256": "f0812b36dfb4cdb1243e00a88d9e5b644ff988871ccfb9b41e2a19c8af02b86b"
     },
     {
       "name": "prerequisites",
@@ -1837,7 +1841,7 @@
     {
       "name": "plan-PHASE-7-SUBPHASES",
       "path": "docs/PHASE-7-SUBPHASES.md",
-      "sha256": "8dff8d305a255a8b346d41c4c76200764f9ed734a60b1c8f7eb1c19fe73415ae"
+      "sha256": "c6142979190f66e315114847c458b0aed2b288635f5023b42608606ba648ecfe"
     }
   ],
   "kind": "plan-reconciliation",

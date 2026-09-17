@@ -435,7 +435,7 @@
         "module": "src/evp/pkey.rs",
         "phase": 7,
         "phase_source": "module-declaration",
-        "share": "36/38",
+        "share": "53/55",
         "translation_unit": "crypto/evp/p_lib.c"
       },
       {
@@ -449,7 +449,7 @@
         "module": "src/evp/pkey_ctx.rs",
         "phase": 7,
         "phase_source": "module-declaration",
-        "share": "100/106",
+        "share": "100/111",
         "translation_unit": "crypto/evp/pmeth_lib.c"
       },
       {

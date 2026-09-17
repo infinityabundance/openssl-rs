@@ -3,15 +3,15 @@
   "body": {
     "canonical_form": "both sides are reduced to one grammar: `void`; `int:<bytes>:<s|u>`; `float:<bytes>`; `ptr(<inner>)`; `const(<inner>)`; `fn(<ret>; <args>)`; `opaque`. A struct pointee's *name* is deliberately discarded -- `*mut Asn1String` and `*mut c_void` are the same to a caller -- while pointer depth, pointee constness, integer width and signedness, and function-pointer argument shape are kept. A type the table cannot canonicalise is reported under `type_unmapped` and never counted as a pass",
     "counts": {
-      "checked": 1662,
+      "checked": 1684,
       "declaration_is_generated": 0,
-      "implementation_is_c": 8,
+      "implementation_is_c": 9,
       "implementation_is_c_mismatches": 0,
-      "implemented": 1709,
+      "implemented": 1732,
       "mismatches": 0,
       "no_prototype_in_atlas": 22,
       "not_found": 0,
-      "type_checked": 1679,
+      "type_checked": 1701,
       "type_mismatches": 0,
       "type_unmapped": 0,
       "unclassified": 0,
@@ -26,7 +26,8 @@
       "ERR_add_error_data",
       "ERR_add_error_vdata",
       "ERR_set_error",
-      "ERR_vset_error"
+      "ERR_vset_error",
+      "EVP_PKEY_Q_keygen"
     ],
     "implementation_is_c_mismatches": [],
     "mismatches": [],
@@ -140,7 +141,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "f5eb0c6ae0f985fec25fc3b493f4c70071ae61518cce443f3ff5e9ed861c4735"
+      "sha256": "720884fc319a444d9e160d4c0a689f078c38168fc6ea34f08e7a1634257534ca"
     }
   ],
   "kind": "prototype-court",
