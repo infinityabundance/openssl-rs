@@ -22,7 +22,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 56,
-      "language_surface_not_modelled_by_name": 2714,
+      "language_surface_not_modelled_by_name": 2716,
       "planned_prerequisites": 19
     },
     "census_by_unit": {
@@ -156,9 +156,10 @@
         "crypto/evp/mac_lib.c": 14,
         "crypto/evp/names.c": 10,
         "crypto/evp/p_lib.c": 147,
+        "crypto/evp/pbe_scrypt.c": 8,
         "crypto/evp/pmeth_check.c": 7,
         "crypto/evp/pmeth_gn.c": 18,
-        "crypto/evp/pmeth_lib.c": 145,
+        "crypto/evp/pmeth_lib.c": 139,
         "crypto/evp/signature.c": 42,
         "crypto/evp/skeymgmt_meth.c": 12,
         "crypto/ex_data.c": 21,
@@ -320,8 +321,8 @@
       ]
     },
     "checked": {
-      "authority_units": 132,
-      "crate_modules": 176,
+      "authority_units": 133,
+      "crate_modules": 177,
       "deferrals_recorded": 17,
       "divergence_names_covered": 32,
       "divergence_rows": 5,
@@ -446,7 +447,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "743492243d766fa42c70375132ca430cf494ccdd5981afe5c5f59183c981ffcb",
+  "body_hash": "aaf082c345061e501f3280fafa9e245c5ebd90e2f1e034137eed2b77a632c339",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -467,7 +468,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "f7cce03d77d1a66939e93c1e417f445261a10df137a36f295e8e27e9bfe47230"
+      "sha256": "98c7f24cf482ef894733a55cc80f3671c0d28ee454133a998afdfe76e6fdf690"
     },
     {
       "name": "symbol-ownership",
@@ -477,12 +478,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "12611996017762d3b498d370c7f84bf4b57fd3c2d46b8b6bd56bab65432f17a5"
+      "sha256": "530b40ca016299b58c4d5e980009c007352b46443adda51ae5fed709adee7429"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "ba0cc5a9b74b10e8646f6bc20196a1692ea702c25b516585c639ac0e9b972194"
+      "sha256": "0a37f693ab66e8335ce3c6d0d7b584986dd6141561112dd32ae392a2ee754c99"
     },
     {
       "name": "prerequisites",
