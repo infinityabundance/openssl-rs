@@ -1360,6 +1360,92 @@ pub unsafe extern "C" fn EVP_PKEY_get_params(
     0
 }
 
+/// `void *evp_pkey_export_to_provider(EVP_PKEY *pk, OSSL_LIB_CTX *libctx, EVP_KEYMGMT **keymgmt,
+/// const char *propquery)`.
+///
+/// The **outer** half of the export/import protocol whose inner half is
+/// `evp_keymgmt_util_export_to_provider`. The two differ in what they do about *finding* a destination:
+/// the inner one is handed a method and exports into it, and this one can find one when the caller has
+/// none, caches what it found nowhere, and has a **legacy-origin arm** that this crate cannot reach.
+///
+/// The `*keymgmt` argument is an **in/out** parameter and the nulling is the contract: the caller's
+/// method is taken and cleared on entry, and written back only if something was exported. The reason is
+/// the authority's own comment at the end — "if nothing was exported, `tmp_keymgmt` might point at a
+/// freed `EVP_KEYMGMT`, so we clear it to be safe" — and it makes the two failure modes
+/// distinguishable to the caller: `*keymgmt == NULL` on return means "this call could not use your
+/// method", and a non-NULL `*keymgmt` with a non-NULL return means it did.
+///
+/// **What is absent: the default-method lookup and the legacy-origin arm, and they are different
+/// kinds of absence.** The legacy arm — `pk->pkey.ptr != NULL`, `pk->ameth->dirty_cnt`, and the
+/// `ameth->export_to` call with its own cache dance — needs a legacy origin key, which this crate
+/// cannot construct. The default-method lookup is reachable in principle and is **7.4c's**: it is
+/// `EVP_PKEY_CTX_new_from_pkey`, which `pmeth_lib.c` owns, and the authority uses it to let the
+/// construction path find a method, steal it from the context, and let the context be freed. Until
+/// 7.4c a caller must supply one, which every caller in the crate does.
+///
+/// # Safety
+/// `pk` NULL or live; `keymgmt` NULL or a live `EVP_KEYMGMT **`; `propquery` NULL or NUL-terminated.
+#[allow(dead_code)] // first live caller is 7.4b's method classes and `EVP_PKEY_dup`'s cross-method arm
+pub(crate) unsafe fn evp_pkey_export_to_provider(
+    pk: *mut EvpPkey,
+    libctx: *mut c_void,
+    keymgmt: *mut *mut EvpKeyMgmt,
+    propquery: *const c_char,
+) -> *mut c_void {
+    let selection = OSSL_KEYMGMT_SELECT_ALL;
+    let mut tmp_keymgmt: *mut EvpKeyMgmt = ptr::null_mut();
+
+    if pk.is_null() {
+        return ptr::null_mut();
+    }
+
+    /* No key data => nothing to export. The authority's `check` is two clauses with the legacy one
+     * compiled in and always true here; with no legacy origin it reduces to this. */
+    // SAFETY: `pk` is live.
+    if unsafe { (*pk).keydata.is_null() } {
+        return ptr::null_mut();
+    }
+
+    if !keymgmt.is_null() {
+        // SAFETY: `keymgmt` is a live out-parameter per the contract.
+        tmp_keymgmt = unsafe { *keymgmt };
+        // SAFETY: as above.
+        unsafe { *keymgmt = ptr::null_mut() };
+    }
+
+    /* Phase 7.4c: when no method was given, the authority calls `EVP_PKEY_CTX_new_from_pkey(libctx,
+     * pk, propquery)` -- which `pmeth_lib.c` owns -- takes `ctx->keymgmt`, clears the context's copy
+     * and frees the context. `libctx` and `propquery` are read only by that call, which is why they
+     * are named here and unused: the parameters are part of the contract even where the call is not
+     * yet written. */
+    let _ = (libctx, propquery);
+    if tmp_keymgmt.is_null() {
+        return ptr::null_mut();
+    }
+
+    /* The legacy-origin arm -- `pk->pkey.ptr != NULL` and the whole `ameth->export_to` cache dance --
+     * is absent for the reason `evp_pkey_cmp_any`'s is: a legacy origin cannot be constructed here. */
+
+    // SAFETY: `pk` is live and `tmp_keymgmt` is live.
+    let keydata = unsafe {
+        crate::evp::keymgmt_lib::evp_keymgmt_util_export_to_provider(pk, tmp_keymgmt, selection)
+    };
+
+    /* `end:` -- the temporary is cleared when nothing was exported, because the caller must not be
+     * handed a method this call could not use. `allocated_keymgmt` is always NULL here: it is set
+     * only by the 7.4c lookup above. */
+    if keydata.is_null() {
+        tmp_keymgmt = ptr::null_mut();
+    }
+
+    if !keymgmt.is_null() && !tmp_keymgmt.is_null() {
+        // SAFETY: `keymgmt` is a live out-parameter per the contract.
+        unsafe { *keymgmt = tmp_keymgmt };
+    }
+
+    keydata
+}
+
 // ---------------------------------------------------------------------------------------------
 // Equality, and the four answers it can give
 // ---------------------------------------------------------------------------------------------

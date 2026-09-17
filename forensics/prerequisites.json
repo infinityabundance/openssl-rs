@@ -92,12 +92,6 @@
         "owner_phase": 8,
         "reason": "The fourth of the seven and the one that makes the other three wait. Its body exports the provider keydata through `evp_keymgmt_export` -- this stratum's -- and then imports it with `(*dest)->ameth->import_from`, synchronising `(*dest)->ameth->dirty_cnt`. Two fields of an `EVP_PKEY_ASN1_METHOD` and one of that struct's function pointers are read directly, so the function cannot be written before an ameth object exists, and the ameth objects are the twelve `crypto/asn1/ameth_lib.c` builds from Phase 8's `standard_methods[]`. It also needs `EVP_PKEY_CTX_new_from_pkey`, which is `pmeth_lib.c`'s and lands in 7.4c *inside* this stratum -- so the order is 7.4c, then Phase 8, then this row.",
         "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.4a, 7.4c and 7.4l; docs/DECISIONS.md D163; src/evp/pkey.rs module doc, section \"What is not here\""
-      },
-      {
-        "symbol": "evp_pkey_export_to_provider",
-        "owner_phase": 7,
-        "reason": "The seventh of the seven, the provider half rather than the legacy half, and **owed to a later subphase of this stratum** -- the `evp_cleanup_int` precedent, which is why it appears here with `owner_phase` 7 rather than 8. Its first blocker is `EVP_PKEY_CTX_new_from_pkey`, which `pmeth_lib.c` owns and 7.4c lands: with no `keymgmt` argument the function asks that constructor for a default one and steals it. Its second is `pk->ameth->export_to` and `pk->ameth->dirty_cnt`, read directly to decide whether a legacy origin key can be exported at all, which is Phase 8's under D163. So this row is retired at 7.4c and its remark about the ameth fields moves to the Phase-8 half of the same record; the gate reports it `stale_deferral` the moment `src/evp/pkey.rs` defines it, which is what makes retiring it mechanical rather than a thing to remember.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4c (`EVP_PKEY_CTX_new`/`_new_id`); the `evp_cleanup_int` row above for the same-stratum precedent; src/evp/pkey.rs module doc, section \"What is not here\""
       }
     ],
     "divergences": [
