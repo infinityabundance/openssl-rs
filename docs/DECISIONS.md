@@ -8927,3 +8927,51 @@ written where it can be read against the authority's own comment:
 | unit tests | 334 | 334 |
 
 SPDX-License-Identifier: Apache-2.0
+
+---
+
+## D155 — 7.3d's first half, and the prototype court refusing a macro-generated export
+
+**What landed.** 7.3d-i: `evp_lib.c`'s eleven remaining `EVP_MD_*` accessors (`EVP_MD_is_a`,
+`EVP_MD_get0_description`, `EVP_MD_names_do_all`, `EVP_MD_get0_provider`, `EVP_MD_get_pkey_type`,
+`EVP_MD_xof`, `EVP_MD_get_flags` and the four parameter entry points `digest.c` owns),
+`evp_md_get_number`, the whole `EVP_MD_meth_*` constructor family, and `crypto/evp/m_null.c`'s
+`EVP_md_null`. **36 exports**, and **the last `crypto/evp/evp_lib.c` deferral row is discharged**:
+the file that 7.3a opened for one releaser is now closed across three subphases.
+
+`RT-FETCH` goes **60 → 103 observations**, with zero residuals on the first run: the accessors read
+on a *fetched* method (the only kind whose provider half is live), the constructors exercised on a
+method built by hand (the only kind whose legacy half is), and `EVP_md_null` as the one global with
+neither. `EVP_MD_meth_new` is also where the digest class meets the two contracts the cipher
+constructors taught in 7.3b: every setter refuses a second write, and the two functions that test
+their subject are `meth_dup` and `meth_free`.
+
+**The prototype court refused nineteen of these functions, and it was right.** The first pass
+generated the ten `meth_set_*`/`meth_get_*` pairs with `macro_rules!`, which is compact and is what
+the cipher class did not do. `ABI-PROTOTYPE` reported every one as `UNREADABLE`: *"its macro fills
+a type position in the signature"*. That is not a limitation of the reader — it is the plane's
+**own sensitivity case**, which its self-test states explicitly: a `macro_rules!` return type
+perturbed from `c_int` to `c_long` must be **refused rather than read**, because a signature no
+plane can see is a signature no plane can check, and nineteen unchecked signatures is exactly the
+hole D98 added the plane to close. The generation is gone; all thirty functions are written out.
+The reading is the lesson: **a macro-generated export is an export this crate cannot make a claim
+about**, and the court says so at build time rather than leaving a silent gap.
+
+**Nine of the eighty names 7.3d's row lists are not 7.3d's, and the plan now says so.** The
+`EVP_DigestSign*` and `EVP_DigestVerify*` families take an `EVP_PKEY_CTX`, and their translation
+unit is `crypto/evp/m_sigver.c` — which 7.4's row already names. The ledger assigns them here
+because the atlas owns a symbol by its *header* and they are declared in `evp.h`, so the plan
+records the move rather than the ledger being bent to match it.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 7 implemented / open | 117 / 833 | **152 / 798** |
+| `implemented[libcrypto]` | 1252 | **1287** |
+| recorded deferrals | 6 | **5** |
+| RT-FETCH observations | 60 | **103** |
+| prototype court: checked / mismatches / unreadable | 1193 / 0 / 0 | **1240 / 0 / 0** |
+| unit tests | 334 | 334 |
+
+SPDX-License-Identifier: Apache-2.0

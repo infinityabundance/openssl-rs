@@ -11,8 +11,8 @@
     ],
     "census": {
       "covered_by_a_divergence": 56,
-      "language_surface_not_modelled_by_name": 2177,
-      "planned_prerequisites": 6
+      "language_surface_not_modelled_by_name": 2147,
+      "planned_prerequisites": 5
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
@@ -133,7 +133,7 @@
         "crypto/err/err_save.c": 2,
         "crypto/evp/cmeth_lib.c": 6,
         "crypto/evp/evp_fetch.c": 19,
-        "crypto/evp/evp_lib.c": 102,
+        "crypto/evp/evp_lib.c": 72,
         "crypto/ex_data.c": 21,
         "crypto/getenv.c": 2,
         "crypto/indicator_core.c": 5,
@@ -167,7 +167,6 @@
         "crypto/trace.c": 25
       },
       "planned_prerequisites": {
-        "evp_md_get_number": 1,
         "ossl_get_enginesdir": 2,
         "ossl_get_openssldir": 2,
         "ossl_get_wininstallcontext": 1
@@ -260,7 +259,6 @@
         "crypto/asn1/a_i2d_fp.c:ERR_raise"
       ],
       "planned_prerequisites": [
-        "evp_md_get_number",
         "ossl_get_enginesdir",
         "ossl_get_enginesdir",
         "ossl_get_openssldir",
@@ -277,8 +275,20 @@
       "names_referenced_and_not_built": 17
     },
     "claim": "A structural gate, not a parity claim. It answers whether a dependency has an owner and whether the owner arrives in time; it says nothing about whether the dependency behaves as the authority's does.",
-    "counts": {},
-    "findings": [],
+    "counts": {
+      "stale_deferral": 1
+    },
+    "findings": [
+      {
+        "defined_in": [
+          "src/evp/digest.rs"
+        ],
+        "detail": "recorded as owed to a later stratum, but the crate defines it; retire the record so a real future gap is not hidden behind a stale one",
+        "direction": "A",
+        "kind": "stale_deferral",
+        "name": "evp_md_get_number"
+      }
+    ],
     "rule": "every authority-internal name a crate module references must be built by the crate or recorded with the stratum that owns it; every internal function a transcribed authority unit calls must exist, unless a divergence record covering exactly that name says why not; and a divergence record may not cover a name the gate did not observe",
     "sealed_stratum_census": {
       "by_defining_unit": {
@@ -395,7 +405,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "91d2b344ba9510a895d117cef7c21b2eb56e135e3c1cafc1b6b2f26b06c22927",
+  "body_hash": "66ad776603ec7ba5e1c2a1dffe0a50e7b094da1b0495a69ceb4f26843b461497",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -416,7 +426,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "1b759bedd371219fc42b3b87b7c2548bd3ac6e8bb256b2a3611c01a010ebd80e"
+      "sha256": "370964550f3be738e6fed51cc4bb182b188a2dd71c77d3e3ed8a2628d3e2b07d"
     },
     {
       "name": "symbol-ownership",
@@ -426,12 +436,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "32a86108fe5d43f47ad874cf5083a88fe8ee2ff10a80546d35bd8e8f84880faf"
+      "sha256": "e9d8c3ccfeec12e11f974b0cf38f901b90b869137bf2c82176adfd99a13a6935"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "70b88ec829b607552d6df83495c32f4fe5ead68542b846aaa2d9d3bb42f320c8"
+      "sha256": "be83c2d2e0baacfe0d0972cb5c60296773ebffbe47ddb04b9f43ace47117deba"
     },
     {
       "name": "prerequisites",

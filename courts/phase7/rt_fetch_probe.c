@@ -82,6 +82,7 @@
 
 #include <openssl/core.h>
 #include <openssl/core_dispatch.h>
+#include <openssl/core_names.h>
 #include <openssl/crypto.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
@@ -195,6 +196,34 @@ static int court_digest(void *provctx, const unsigned char *in, size_t inl,
     for (i = 0; i < COURT_MD_SIZE; i++)
         out[i] = (unsigned char)(i + 1);
     *outl = COURT_MD_SIZE;
+    return 1;
+}
+
+/* The namemap visitor both a `METH` method's and a fetched method's name list are walked with.
+ * It records *which* names arrived rather than how many in what order, because the order is the
+ * namemap's insertion order and this court's business is the set. */
+struct name_seen {
+    int saw_identity;
+    int saw_alias;
+    int count;
+};
+
+static void name_visitor(const char *name, void *data)
+{
+    struct name_seen *s = data;
+
+    s->count++;
+    if (strcmp(name, "court-md") == 0)
+        s->saw_identity = 1;
+    if (strcmp(name, "courtmd") == 0)
+        s->saw_alias = 1;
+}
+
+/* A `METH` digest's `init`, so the hand-built method has something to store and the getter has
+ * something to answer. It is never called by this probe: `EVP_MD_CTX` is 7.3d's second half. */
+static int meth_md_init(EVP_MD_CTX *ctx)
+{
+    (void) ctx;
     return 1;
 }
 
@@ -493,6 +522,117 @@ int main(void)
      * from the block above would make it about the fetch instead, which is the class of accident
      * that hid the reason-code divergence until the block was given a name.
      */
+    /*
+     * ---- 7.3d: the `EVP_MD` accessors, the method constructors, and `EVP_md_null` ----
+     *
+     * The accessors are read on a *fetched* method, which is the only kind whose provider half is
+     * live; the constructors are exercised on a method built by hand, which is the only kind whose
+     * legacy half is; and `EVP_md_null` is the one global with neither.
+     */
+    {
+        EVP_MD *fetched = EVP_MD_fetch(ctx, "court-md", NULL);
+        EVP_MD *byhand;
+        const EVP_MD *global;
+
+        sayp("md.fetch.for_accessors", fetched);
+        if (fetched != NULL) {
+            const char *desc = EVP_MD_get0_description(fetched);
+
+            printf("md.description_matches=%d\n",
+                   desc != NULL && strcmp(desc, "court digest") == 0 ? 1 : 0);
+            sayp("md.provider", (const void *) EVP_MD_get0_provider(fetched));
+            sayn("md.flags", (long long) EVP_MD_get_flags(fetched));
+            sayn("md.pkey_type", EVP_MD_get_pkey_type(fetched));
+            sayn("md.xof", EVP_MD_xof(fetched));
+            sayn("md.is_a.name", EVP_MD_is_a(fetched, "court-md"));
+            sayn("md.is_a.alias", EVP_MD_is_a(fetched, "courtmd"));
+            sayn("md.is_a.other", EVP_MD_is_a(fetched, "sha256"));
+            sayp("md.gettable_params", (const void *) EVP_MD_gettable_params(fetched));
+            sayp("md.gettable_ctx_params", (const void *) EVP_MD_gettable_ctx_params(fetched));
+            sayp("md.settable_ctx_params", (const void *) EVP_MD_settable_ctx_params(fetched));
+            {
+                size_t sz = 0;
+                OSSL_PARAM p[2] = { OSSL_PARAM_END, OSSL_PARAM_END };
+
+                p[0] = OSSL_PARAM_construct_size_t(OSSL_DIGEST_PARAM_SIZE, &sz);
+                sayn("md.get_params.ret", EVP_MD_get_params(fetched, p));
+                sayn("md.get_params.size", (long long) sz);
+            }
+            {
+                struct name_seen s;
+
+                memset(&s, 0, sizeof s);
+                sayn("md.names_do_all.ret", EVP_MD_names_do_all(fetched, name_visitor, &s));
+                sayn("md.names.count", s.count);
+                sayn("md.names.saw_identity", s.saw_identity);
+                sayn("md.names.saw_alias", s.saw_alias);
+            }
+            EVP_MD_free(fetched);
+        }
+
+        byhand = EVP_MD_meth_new(4, 5);
+        sayp("md.meth.new", byhand);
+        if (byhand != NULL) {
+            sayn("md.meth.new.type", EVP_MD_get_type(byhand));
+            sayn("md.meth.new.pkey_type", EVP_MD_get_pkey_type(byhand));
+            sayn("md.meth.new.provider_null", EVP_MD_get0_provider(byhand) == NULL ? 1 : 0);
+            sayn("md.meth.set_result_size.first", EVP_MD_meth_set_result_size(byhand, 32));
+            sayn("md.meth.set_result_size.second", EVP_MD_meth_set_result_size(byhand, 64));
+            sayn("md.meth.get_result_size", EVP_MD_meth_get_result_size(byhand));
+            sayn("md.meth.set_input_blocksize", EVP_MD_meth_set_input_blocksize(byhand, 64));
+            sayn("md.meth.get_input_blocksize", EVP_MD_meth_get_input_blocksize(byhand));
+            sayn("md.meth.set_app_datasize", EVP_MD_meth_set_app_datasize(byhand, 16));
+            sayn("md.meth.get_app_datasize", EVP_MD_meth_get_app_datasize(byhand));
+            sayn("md.meth.set_flags.first", EVP_MD_meth_set_flags(byhand, EVP_MD_FLAG_XOF));
+            sayn("md.meth.set_flags.second", EVP_MD_meth_set_flags(byhand, 0));
+            sayn("md.meth.get_flags", (long long) EVP_MD_meth_get_flags(byhand));
+            sayn("md.meth.xof_after_set", EVP_MD_xof(byhand));
+            sayn("md.meth.set_init", EVP_MD_meth_set_init(byhand, meth_md_init));
+            sayn("md.meth.set_init.second", EVP_MD_meth_set_init(byhand, meth_md_init));
+            printf("md.meth.get_init_matches=%d\n",
+                   EVP_MD_meth_get_init(byhand) == meth_md_init ? 1 : 0);
+            sayn("md.meth.get_update_null", EVP_MD_meth_get_update(byhand) == NULL ? 1 : 0);
+            sayn("md.meth.get_final_null", EVP_MD_meth_get_final(byhand) == NULL ? 1 : 0);
+            sayn("md.meth.get_copy_null", EVP_MD_meth_get_copy(byhand) == NULL ? 1 : 0);
+            sayn("md.meth.get_cleanup_null", EVP_MD_meth_get_cleanup(byhand) == NULL ? 1 : 0);
+            sayn("md.meth.get_ctrl_null", EVP_MD_meth_get_ctrl(byhand) == NULL ? 1 : 0);
+
+            EVP_MD_free(byhand);
+            sayn("md.meth.after_public_free.result_size", EVP_MD_meth_get_result_size(byhand));
+            {
+                EVP_MD *dup = EVP_MD_fetch(ctx, "court-md", NULL);
+
+                sayp("md.meth.dup_of_provider", dup);
+                EVP_MD_meth_free(dup);
+                sayn("md.meth.fetched_survives_meth_free", EVP_MD_get_size(dup));
+                EVP_MD_free(dup);
+            }
+            EVP_MD_meth_free(byhand);
+        }
+
+        global = EVP_md_null();
+        sayp("md_null.nonnull", (const void *) global);
+        if (global != NULL) {
+            sayn("md_null.type", EVP_MD_get_type(global));
+            sayn("md_null.block_size", EVP_MD_get_block_size(global));
+            sayn("md_null.size", EVP_MD_get_size(global));
+            sayn("md_null.flags", (long long) EVP_MD_get_flags(global));
+            sayn("md_null.xof", EVP_MD_xof(global));
+            sayn("md_null.provider_null", EVP_MD_get0_provider(global) == NULL ? 1 : 0);
+            printf("md_null.stable=%d\n", EVP_md_null() == EVP_md_null() ? 1 : 0);
+            sayn("md_null.up_ref", EVP_MD_up_ref((EVP_MD *) global));
+            EVP_MD_free((EVP_MD *) global);
+            sayn("md_null.block_size_after_free", EVP_MD_get_block_size(global));
+        }
+
+        /* The accessors' NULL arms, and the two that deliberately have none are absent. */
+        sayn("md.null.xof", EVP_MD_xof(NULL));
+        sayn("md.null.is_a", EVP_MD_is_a(NULL, "court-md"));
+        sayp("md.null.gettable_params", (const void *) EVP_MD_gettable_params(NULL));
+        sayp("md.null.gettable_ctx_params", (const void *) EVP_MD_gettable_ctx_params(NULL));
+        sayp("md.null.settable_ctx_params", (const void *) EVP_MD_settable_ctx_params(NULL));
+        sayn("md.null.get_params", EVP_MD_get_params(NULL, NULL));
+    }
     ERR_clear_error();
     printf("after.store.stable=%d err=%lu\n",
            store == OSSL_LIB_CTX_get_data(ctx, IDX_EVP_METHOD_STORE) ? 1 : 0,
