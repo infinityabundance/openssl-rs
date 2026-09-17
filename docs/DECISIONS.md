@@ -10808,3 +10808,26 @@ crate's documented idiom for a type that appears in a signature before its body.
 `implemented[libcrypto]` moves 1611 → 1614, phase 7 to 479 implemented and 307 open. `cargo fmt`,
 clippy `-D warnings`, 423 unit tests, the full ordered pipeline, the determinism and portability gates
 and the regression guard all pass.
+
+## D182 — the seal must require the dispatch plane, and the plane is not a subphase
+
+Two record corrections, both for the class the reviewer of `22bef991` named: a record that omits or
+mislabels what the evidence actually requires.
+
+**The plan's 7.7 exit criterion named three instruments and not the plane D180 added.** It said "zero
+open obligations, every court passing, the prototype court clean, the prerequisite gate and the plan
+reconciliation at zero findings". The dispatch plane is none of those — it is not a stratum, it has no
+obligation rows and no court manifest — and it is the only instrument that reaches the `OSSL_FUNC_*`
+dispatch identities and callback signatures at all. Its first run found thirteen disagreeing
+declarations in landed code, four of them in the `SignatureDigest*` family with a parameter order that
+would mis-call a provider. A seal that did not require it would be a seal that could be earned by a tree
+this plane is red on. `docs/PHASE-7-SUBPHASES.md`'s 7.7 row now names it, with its path and D180.
+
+**D180's commit was labelled `7.6a`, and the plan's 7.6 is something else.** `7.6` is "the MAC, KDF and
+HPKE header surfaces" — `crypto/hmac/hmac.c`, `crypto/cmac/cmac.c`, `crypto/hpke/hpke.c` and the
+`kdf.h` remainder. The dispatch plane is an *evidence plane* rather than a work unit: it adds no crate
+source, no obligation row and no court manifest. It has no subphase number, and the commit subject's
+`7.6a` was a scheduling label that reads as a plan reference. The label is recorded here rather than
+rewritten, because the commit is pushed and this file is append-only; the plan document is the record
+that matters and it does not carry the label. Its two correct names are
+`forensics/tools/dispatch_court.py` and `forensics/atlas/dispatch-court.json`.
