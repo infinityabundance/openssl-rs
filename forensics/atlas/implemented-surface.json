@@ -281,7 +281,7 @@
         "truncf128",
         "truncf16"
       ],
-      "compiler_emitted_count": 5425,
+      "compiler_emitted_count": 7096,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -289,7 +289,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 1349,
+        "implemented": 1373,
         "implemented_symbols": [
           "ASN1_ANY_it",
           "ASN1_BIT_STRING_check",
@@ -1184,6 +1184,30 @@
           "EVP_EncryptInit_ex",
           "EVP_EncryptInit_ex2",
           "EVP_EncryptUpdate",
+          "EVP_KDF_CTX_dup",
+          "EVP_KDF_CTX_free",
+          "EVP_KDF_CTX_get_kdf_size",
+          "EVP_KDF_CTX_get_params",
+          "EVP_KDF_CTX_gettable_params",
+          "EVP_KDF_CTX_kdf",
+          "EVP_KDF_CTX_new",
+          "EVP_KDF_CTX_reset",
+          "EVP_KDF_CTX_set_params",
+          "EVP_KDF_CTX_settable_params",
+          "EVP_KDF_derive",
+          "EVP_KDF_do_all_provided",
+          "EVP_KDF_fetch",
+          "EVP_KDF_free",
+          "EVP_KDF_get0_description",
+          "EVP_KDF_get0_name",
+          "EVP_KDF_get0_provider",
+          "EVP_KDF_get_params",
+          "EVP_KDF_gettable_ctx_params",
+          "EVP_KDF_gettable_params",
+          "EVP_KDF_is_a",
+          "EVP_KDF_names_do_all",
+          "EVP_KDF_settable_ctx_params",
+          "EVP_KDF_up_ref",
           "EVP_MAC_CTX_dup",
           "EVP_MAC_CTX_free",
           "EVP_MAC_CTX_get0_mac",
@@ -1641,7 +1665,7 @@
           "i2d_DISPLAYTEXT",
           "i2t_ASN1_OBJECT"
         ],
-        "scaffolded": 4547
+        "scaffolded": 4523
       },
       "libssl": {
         "authority_exports": 603,
@@ -1652,18 +1676,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 1349,
-      "scaffolded": 5150
+      "implemented": 1373,
+      "scaffolded": 5126
     }
   },
-  "body_hash": "68e9244f2f4959ef80da4e4bb500ea54f2c71fb79282a03d856ae678b23a5921",
+  "body_hash": "350385b4cc9e4a102e05bd0028985c3f65a8454c8f595ed5c3cad2fa8fceb39a",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "bb46f38fcab943b06dc76ae67a5cc2ff6e90a0600c269cc4e662fa285732e0d0"
+      "sha256": "4c7319cb3b09ceed9a02803333be42cad885d7e436580622f19eef1a79183746"
     },
     {
       "name": "authority-exports",

@@ -47,6 +47,7 @@ pub mod cipher;
 pub mod cipher_ctx;
 pub mod digest;
 pub mod fetch;
+pub mod kdf;
 pub mod mac;
 pub mod method_store;
 pub mod pkey_ctx;

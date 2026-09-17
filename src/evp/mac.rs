@@ -828,9 +828,19 @@ pub unsafe extern "C" fn EVP_MAC_CTX_new(mac: *mut EvpMac) -> *mut EvpMacCtx {
     // SAFETY: `ctx` is live.
     unsafe { (*ctx).algctx = algctx };
 
-    // SAFETY: `mac` is live per the contract.
-    let refd = unsafe { EVP_MAC_up_ref(mac) };
-    if algctx.is_null() || refd == 0 {
+    // **The reference is taken only when the constructor succeeded.** The authority's chain is
+    // `(ctx->algctx = mac->newctx(...)) == NULL || !EVP_MAC_up_ref(mac)`, and `||` short-circuits --
+    // so a provider that refuses its own context never has a reference taken on the method. A
+    // transcription that evaluated both operands up front leaks one reference per refused
+    // constructor; this bug was in this crate until the KDF class's copy of the same function was
+    // given the unit test that catches it, which is why both are written this way.
+    let ok = if algctx.is_null() {
+        false
+    } else {
+        // SAFETY: `mac` is live per the contract.
+        (unsafe { EVP_MAC_up_ref(mac) }) != 0
+    };
+    if !ok {
         // The release is the method's own, and `algctx` is what its constructor left -- NULL or a
         // live context, both of which it is contracted to accept.
         if let Some(freectx) = freectx {
@@ -1635,6 +1645,50 @@ mod tests {
                 mac.refcnt.load(Ordering::Acquire),
                 1,
                 "the reference the duplicate took came back"
+            );
+        }
+    }
+
+    /// The failure path of `EVP_MAC_CTX_new`, which is reachable because a provider's `newctx` is
+    /// allowed to answer NULL: the refusal is raised at the constructor's own coordinate, the
+    /// method's `freectx` is **still called** — with the NULL the constructor left — and **no
+    /// reference is taken on the method**, which is the part the authority's `||` short-circuit
+    /// decides and the part a transcription that evaluated both operands up front gets wrong.
+    ///
+    /// The same test exists in `src/evp/kdf.rs` for the same function's twin, and it was written
+    /// there first: this one is here because the defect it caught was in *both* files.
+    #[test]
+    fn a_provider_that_cannot_make_a_context_is_refused_and_released() {
+        static FREES: AtomicI32 = AtomicI32::new(0);
+
+        /// `static void *newctx(void *provctx)` — refuses.
+        ///
+        /// # Safety
+        /// The ABI is the authority's; no argument is read.
+        unsafe extern "C" fn no_context(_provctx: *mut c_void) -> *mut c_void {
+            ptr::null_mut()
+        }
+
+        /// `static void freectx(void *mctx)` — counts.
+        ///
+        /// # Safety
+        /// The ABI is the authority's; no argument is read.
+        unsafe extern "C" fn counting_freectx(_mctx: *mut c_void) {
+            FREES.fetch_add(1, Ordering::AcqRel);
+        }
+
+        let mut mac = a_hand_built_mac();
+        mac.newctx = Some(no_context);
+        mac.freectx = Some(counting_freectx);
+        // SAFETY: the method is this frame's own live object.
+        unsafe {
+            assert!(EVP_MAC_CTX_new(ptr::addr_of_mut!(mac)).is_null());
+            assert_coordinate(&err_sites::MAC_LIB_31);
+            assert_eq!(FREES.load(Ordering::Acquire), 1, "the release ran");
+            assert_eq!(
+                mac.refcnt.load(Ordering::Acquire),
+                1,
+                "and no reference was taken"
             );
         }
     }
