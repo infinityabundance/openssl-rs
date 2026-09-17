@@ -161,6 +161,13 @@ XLAT = ("not a provider dispatch: one of `ctrl_params_translate.c`'s two functio
         "`fixup_args_fn` and `cleanup_args_fn`, which the translation tables store as function "
         "pointers and which the authority declares as bare typedefs rather than through "
         "`OSSL_CORE_MAKE_FUNC`")
+# `crypto/evp/ctrl_params_translate.c:748-751` -- `fix_cipher_md`'s two function-pointer
+# parameters, which the authority spells inline in its own signature rather than as typedefs, and
+# which the crate names in order to parameterise that one function over the cipher and the digest.
+XLAT_GET = ("not a provider dispatch: the type of `fix_cipher_md`'s two function-pointer "
+            "parameters (`ctrl_params_translate.c:748-751`), which the authority spells inline in "
+            "its own signature rather than as typedefs; the crate names them to parameterise one "
+            "function over `EVP_CIPHER` and `EVP_MD`")
 CRATE_LOCAL = "not an authority type: a crate-local callback shape with no header counterpart"
 
 
@@ -335,6 +342,8 @@ NOT_A_DISPATCH: dict[str, str] = {
     "PkeyMethDigestCustomFn": PKEY_METHOD,
     "FixupArgsFn": XLAT,
     "CleanupArgsFn": XLAT,
+    "XlatGetNameFn": XLAT_GET,
+    "XlatGetByNameFn": XLAT_GET,
     "Rfunc": CRATE_LOCAL,
     "CharIo": CRATE_LOCAL,
     "NistReduce": CRATE_LOCAL,

@@ -54,6 +54,7 @@
 use core::ffi::{c_char, c_int, c_void, CStr};
 use core::ptr;
 
+use crate::bn::bignum::{BN_bn2nativepad, BN_num_bits, BigNum};
 use crate::evp::asymcipher::{EVP_ASYM_CIPHER_get0_provider, EvpAsymCipher};
 use crate::evp::cipher::{EVP_CIPHER_get0_name, EvpCipher};
 use crate::evp::digest::{EVP_MD_get0_name, EvpMdCtx};
@@ -67,10 +68,24 @@ use crate::evp::legacy_evp::{evp_get_cipherbyname_ex, evp_get_digestbyname_ex};
 use crate::evp::pkey::{evp_pkey_name2type, EVP_PKEY_free, EVP_PKEY_up_ref, EvpPkey};
 use crate::evp::pkey_asn1::Engine;
 use crate::evp::signature::{EVP_SIGNATURE_get0_provider, EvpSignature};
-use crate::params::OsslParam;
+use crate::params::from_text::OSSL_PARAM_allocate_from_text;
+use crate::params::{
+    OSSL_PARAM_construct_BN, OSSL_PARAM_construct_int, OSSL_PARAM_construct_octet_ptr,
+    OSSL_PARAM_construct_octet_string, OSSL_PARAM_construct_uint, OSSL_PARAM_construct_utf8_ptr,
+    OSSL_PARAM_construct_utf8_string, OSSL_PARAM_get_BN, OSSL_PARAM_get_int,
+    OSSL_PARAM_get_octet_ptr, OSSL_PARAM_get_octet_string, OSSL_PARAM_get_uint,
+    OSSL_PARAM_get_utf8_string, OSSL_PARAM_set_BN, OSSL_PARAM_set_int, OSSL_PARAM_set_octet_ptr,
+    OSSL_PARAM_set_octet_string, OSSL_PARAM_set_uint, OSSL_PARAM_set_utf8_string, OsslParam,
+};
+use crate::params::{
+    OSSL_PARAM_INTEGER, OSSL_PARAM_OCTET_PTR, OSSL_PARAM_OCTET_STRING, OSSL_PARAM_UNSIGNED_INTEGER,
+    OSSL_PARAM_UTF8_PTR, OSSL_PARAM_UTF8_STRING,
+};
 use crate::provider::{ossl_provider_ctx, OsslProvider};
 use crate::runtime::bio::sys::strlen;
+use crate::runtime::err::raise_site_data;
 use crate::runtime::err::{err_sites, raise_site};
+use crate::runtime::mem::CRYPTO_malloc;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
 use crate::runtime::obj::{NID_undef, OBJ_nid2sn};
 use crate::runtime::obj::{OBJ_obj2txt, OBJ_txt2obj};
@@ -79,6 +94,7 @@ use crate::runtime::stack::{
     OPENSSL_sk_value, OpenSslStack,
 };
 use crate::runtime::str::OPENSSL_strcasecmp;
+use crate::runtime::str::OPENSSL_strlcat;
 use core::ffi::c_uint;
 
 // ---------------------------------------------------------------------------------------------
@@ -1598,8 +1614,15 @@ static mut APP_PKEY_METHODS: *mut OpenSslStack = ptr::null_mut();
 const LINE_ZALLOC_PMETH: c_int = 128;
 /// `EVP_PKEY_meth_free`'s `OPENSSL_free(pmeth)` (line 439).
 const LINE_FREE_PMETH: c_int = 439;
+/// A slice-(4) coordinate: `default_fixup_args`'s BIGNUM buffer is allocated here and freed by
+/// `cleanup_translation_ctx`.
+#[allow(dead_code)] // slice (3)-(4): the `PRE_CTRL_TO_PARAMS` BIGNUM arm is in `default_fixup_args`
 /// `cleanup_translation_ctx`'s `OPENSSL_free(ctx->allocated_buf)` — the authority's line 718.
 const LINE_FREE_XLAT_CTX: c_int = 718;
+/// `default_fixup_args`'s `OPENSSL_malloc(ctx->buflen)` for the BIGNUM buffer — the authority's
+/// lines 473 and 480, which is one allocation site and one free of it.
+#[allow(dead_code)] // WIP 7.4c-v slices (3)-(5): the two translation tables and the seven entry points are the callers
+const LINE_XLAT_BN_BUF: c_int = 473;
 
 /// `static int pmeth_cmp(const EVP_PKEY_METHOD *const *a, const EVP_PKEY_METHOD *const *b)` —
 /// `crypto/asn1/ameth_lib.c:31`'s counterpart in `crypto/evp/pmeth_lib.c:86`.
@@ -2829,6 +2852,7 @@ pub(crate) unsafe fn cleanup_translation_ctx(
 ///
 /// # Safety
 /// `cipher` must be NULL or a live `EVP_CIPHER`.
+#[allow(dead_code)] // slices (3)-(5): `fix_cipher` is the caller, and the tables name it in slice (4)
 unsafe extern "C" fn get_cipher_name(cipher: *mut c_void) -> *const c_char {
     // SAFETY: `cipher` is NULL or live per the contract.
     unsafe { EVP_CIPHER_get0_name(cipher.cast::<EvpCipher>()) }
@@ -2838,6 +2862,7 @@ unsafe extern "C" fn get_cipher_name(cipher: *mut c_void) -> *const c_char {
 ///
 /// # Safety
 /// `md` must be NULL or a live `EVP_MD`.
+#[allow(dead_code)] // as above, for `fix_md`
 unsafe extern "C" fn get_md_name(md: *mut c_void) -> *const c_char {
     // SAFETY: `md` is NULL or live per the contract.
     unsafe { EVP_MD_get0_name(md.cast::<crate::evp::digest::EvpMd>()) }
@@ -2848,6 +2873,7 @@ unsafe extern "C" fn get_md_name(md: *mut c_void) -> *const c_char {
 ///
 /// # Safety
 /// `libctx` NULL or live; `name` NULL or NUL-terminated.
+#[allow(dead_code)] // as above, for `fix_cipher`
 unsafe extern "C" fn get_cipher_by_name(libctx: *mut c_void, name: *const c_char) -> *const c_void {
     // SAFETY: both are forwarded under this function's contract.
     unsafe { evp_get_cipherbyname_ex(libctx, name) }.cast::<c_void>()
@@ -2858,14 +2884,17 @@ unsafe extern "C" fn get_cipher_by_name(libctx: *mut c_void, name: *const c_char
 ///
 /// # Safety
 /// `libctx` NULL or live; `name` NULL or NUL-terminated.
+#[allow(dead_code)] // as above, for `fix_md`
 unsafe extern "C" fn get_md_by_name(libctx: *mut c_void, name: *const c_char) -> *const c_void {
     // SAFETY: both are forwarded under this function's contract.
     unsafe { evp_get_digestbyname_ex(libctx, name) }.cast::<c_void>()
 }
 
 /// The shape of the authority's `(*get_name)(void *algo)` parameter of `fix_cipher_md`.
+#[allow(dead_code)] // slices (3)-(4): `fix_cipher_md`'s parameter, and the tables' instantiations
 pub(crate) type XlatGetNameFn = unsafe extern "C" fn(*mut c_void) -> *const c_char;
 /// The shape of its `(*get_algo_by_name)(OSSL_LIB_CTX *, const char *)` parameter.
+#[allow(dead_code)] // WIP 7.4c-v slices (3)-(5): the two translation tables and the seven entry points are the callers
 pub(crate) type XlatGetByNameFn = unsafe extern "C" fn(*mut c_void, *const c_char) -> *const c_void;
 
 /// `static int fix_cipher_md(enum state state, const struct translation_st *translation,
@@ -2891,6 +2920,7 @@ pub(crate) type XlatGetByNameFn = unsafe extern "C" fn(*mut c_void, *const c_cha
 /// # Safety
 /// `translation` NULL or live; `ctx` live with a live `pctx`; `get_name` and `get_algo_by_name` are the
 /// authority's own helpers, which is what their contract is.
+#[allow(dead_code)] // WIP 7.4c-v slices (3)-(5): the two translation tables and the seven entry points are the callers
 pub(crate) unsafe fn fix_cipher_md(
     state: XlatState,
     translation: *const XlatEntry,
@@ -2984,6 +3014,7 @@ pub(crate) unsafe fn fix_cipher_md(
 ///
 /// # Safety
 /// As [`fix_cipher_md`].
+#[allow(dead_code)] // WIP 7.4c-v slices (3)-(5): the two translation tables and the seven entry points are the callers
 pub(crate) unsafe fn fix_cipher(
     state: XlatState,
     translation: *const XlatEntry,
@@ -2997,6 +3028,7 @@ pub(crate) unsafe fn fix_cipher(
 ///
 /// # Safety
 /// As [`fix_cipher_md`].
+#[allow(dead_code)] // WIP 7.4c-v slices (3)-(5): the two translation tables and the seven entry points are the callers
 pub(crate) unsafe fn fix_md(
     state: XlatState,
     translation: *const XlatEntry,
@@ -3015,6 +3047,7 @@ pub(crate) unsafe fn fix_md(
 ///
 /// # Safety
 /// `translation` NULL or live; `ctx` live with a writable `p2` in the two `POST_*` `GET` arms.
+#[allow(dead_code)] // WIP 7.4c-v slices (3)-(5): the two translation tables and the seven entry points are the callers
 pub(crate) unsafe fn fix_distid_len(
     state: XlatState,
     translation: *const XlatEntry,
@@ -3048,7 +3081,8 @@ pub(crate) unsafe fn fix_distid_len(
 /// `Sync`, which a bare `*const c_char` is not, so a `static` table of this shape would not compile
 /// with the authority's spelling. `ErrSite` carries its strings the same way.
 #[repr(C)]
-struct KdfTypeMap {
+#[allow(dead_code)] // WIP 7.4c-v slices (3)-(5): the two translation tables and the seven entry points are the callers
+pub(crate) struct KdfTypeMap {
     /// `int kdf_type_num`.
     kdf_type_num: c_int,
     /// `const char *kdf_type_str` — NULL terminates the table.
@@ -3056,15 +3090,20 @@ struct KdfTypeMap {
 }
 
 /// `EVP_PKEY_DH_KDF_NONE` — `include/openssl/dh.h:83`.
+#[allow(dead_code)] // WIP 7.4c-v slices (3)-(5): the two translation tables and the seven entry points are the callers
 const EVP_PKEY_DH_KDF_NONE: c_int = 1;
 /// `EVP_PKEY_DH_KDF_X9_42` — `include/openssl/dh.h:84`.
+#[allow(dead_code)] // WIP 7.4c-v slices (3)-(5): the two translation tables and the seven entry points are the callers
 const EVP_PKEY_DH_KDF_X9_42: c_int = 2;
 /// `EVP_PKEY_ECDH_KDF_NONE` — `include/openssl/ec.h:66`.
+#[allow(dead_code)] // WIP 7.4c-v slices (3)-(5): the two translation tables and the seven entry points are the callers
 const EVP_PKEY_ECDH_KDF_NONE: c_int = 1;
 /// `EVP_PKEY_ECDH_KDF_X9_63` — `include/openssl/ec.h:67`.
+#[allow(dead_code)] // WIP 7.4c-v slices (3)-(5): the two translation tables and the seven entry points are the callers
 const EVP_PKEY_ECDH_KDF_X9_63: c_int = 2;
 
 /// `fix_dh_kdf_type`'s table — `crypto/evp/ctrl_params_translate.c:927`.
+#[allow(dead_code)] // WIP 7.4c-v slices (3)-(5): the two translation tables and the seven entry points are the callers
 static KDF_TYPE_MAP_DH: [KdfTypeMap; 3] = [
     KdfTypeMap {
         kdf_type_num: EVP_PKEY_DH_KDF_NONE,
@@ -3081,6 +3120,7 @@ static KDF_TYPE_MAP_DH: [KdfTypeMap; 3] = [
 ];
 
 /// `fix_ec_kdf_type`'s table — `crypto/evp/ctrl_params_translate.c:941`.
+#[allow(dead_code)] // WIP 7.4c-v slices (3)-(5): the two translation tables and the seven entry points are the callers
 static KDF_TYPE_MAP_EC: [KdfTypeMap; 3] = [
     KdfTypeMap {
         kdf_type_num: EVP_PKEY_ECDH_KDF_NONE,
@@ -3116,16 +3156,15 @@ static KDF_TYPE_MAP_EC: [KdfTypeMap; 3] = [
 /// # Safety
 /// `translation` NULL or live; `ctx` live; `kdf_type_map` points at a NULL-terminated table of live
 /// entries.
+#[allow(dead_code)] // WIP 7.4c-v slices (3)-(5): the two translation tables and the seven entry points are the callers
 pub(crate) unsafe fn fix_kdf_type(
     state: XlatState,
     translation: *const XlatEntry,
     ctx: *mut XlatCtx,
     kdf_type_map: *const KdfTypeMap,
 ) -> c_int {
-    let mut ret = 0;
-
     // SAFETY: `translation` and `ctx` are as the contract states.
-    ret = unsafe { default_check(state, translation, ctx) };
+    let mut ret = unsafe { default_check(state, translation, ctx) };
     if ret <= 0 {
         return ret;
     }
@@ -3169,6 +3208,7 @@ pub(crate) unsafe fn fix_kdf_type(
         ret = -2;
         // SAFETY: `map` walks a NULL-terminated table of live entries.
         loop {
+            // SAFETY: `map` walks a NULL-terminated table of live entries.
             let entry = unsafe { &*map };
             let Some(s) = entry.kdf_type_str else {
                 break;
@@ -3209,6 +3249,7 @@ pub(crate) unsafe fn fix_kdf_type(
         ret = -1;
         // SAFETY: `map` walks the same NULL-terminated table.
         loop {
+            // SAFETY: `map` walks a NULL-terminated table of live entries.
             let entry = unsafe { &*map };
             let Some(s) = entry.kdf_type_str else {
                 break;
@@ -3237,6 +3278,7 @@ pub(crate) unsafe fn fix_kdf_type(
 ///
 /// # Safety
 /// As [`fix_kdf_type`]; the table is this module's own static.
+#[allow(dead_code)] // WIP 7.4c-v slices (3)-(5): the two translation tables and the seven entry points are the callers
 pub(crate) unsafe fn fix_dh_kdf_type(
     state: XlatState,
     translation: *const XlatEntry,
@@ -3250,6 +3292,7 @@ pub(crate) unsafe fn fix_dh_kdf_type(
 ///
 /// # Safety
 /// As [`fix_kdf_type`]; the table is this module's own static.
+#[allow(dead_code)] // WIP 7.4c-v slices (3)-(5): the two translation tables and the seven entry points are the callers
 pub(crate) unsafe fn fix_ec_kdf_type(
     state: XlatState,
     translation: *const XlatEntry,
@@ -3270,6 +3313,7 @@ pub(crate) unsafe fn fix_ec_kdf_type(
 /// # Safety
 /// `translation` NULL or live; `ctx` live, with `p2` an `ASN1_OBJECT` in the first arm and a
 /// NUL-terminated name in the second.
+#[allow(dead_code)] // WIP 7.4c-v slices (3)-(5): the two translation tables and the seven entry points are the callers
 pub(crate) unsafe fn fix_oid(
     state: XlatState,
     translation: *const XlatEntry,
@@ -3321,6 +3365,620 @@ pub(crate) unsafe fn fix_oid(
         }
     }
 
+    ret
+}
+
+// ---------------------------------------------------------------------------------------------
+// Error data text — the `"[action:%d, state:%d]"` prefix the eight data-carrying sites share
+// ---------------------------------------------------------------------------------------------
+
+/// Append a decimal `int` to `m`, the way `%d` does — sign, then digits, with no leading zeros and
+/// no plus sign.
+#[allow(dead_code)] // WIP 7.4c-v slices (3)-(5): the two translation tables and the seven entry points are the callers
+fn push_int(m: &mut Vec<u8>, v: c_int) {
+    if v < 0 {
+        m.push(b'-');
+    }
+    /* `unsigned_abs` so that `i32::MIN` does not overflow, which the C does not have to think about
+     * because it formats an `int` through a widened conversion. */
+    let mut digits = [0u8; 10];
+    let mut n = 0;
+    let mut u = v.unsigned_abs();
+    loop {
+        digits[n] = b'0' + (u % 10) as u8;
+        n += 1;
+        u /= 10;
+        if u == 0 {
+            break;
+        }
+    }
+    while n > 0 {
+        n -= 1;
+        m.push(digits[n]);
+    }
+}
+
+/// The authority's `ERR_raise_data(..., "[action:%d, state:%d]...", ...)` text.
+///
+/// `tail` is the site's own suffix, which differs at all eight of them — one of them says "trying to
+/// get a BIGNUM via ctrl call", one "only setting allowed", one "name=%s, value=%s", and two differ
+/// only in that one says "unknown" where the other says "unsupported". Reproducing the whole of each
+/// string is what makes the message text the authority's rather than approximate, which is why the
+/// two near-identical ones are two constants rather than one.
+#[allow(dead_code)] // WIP 7.4c-v slices (3)-(5): the two translation tables and the seven entry points are the callers
+fn action_state_prefix(action: XlatAction, state: XlatState) -> Vec<u8> {
+    let mut m = b"[action:".to_vec();
+    push_int(&mut m, action as c_int);
+    m.extend_from_slice(b", state:");
+    push_int(&mut m, state as c_int);
+    m.push(b']');
+    m
+}
+
+/// Raise at `site` with the prefix and nothing else.
+///
+/// # Safety
+/// The site is a compile-time constant whose pointers are static.
+#[allow(dead_code)] // WIP 7.4c-v slices (3)-(5): the two translation tables and the seven entry points are the callers
+unsafe fn raise_action_state(site: &err_sites::ErrSite, action: XlatAction, state: XlatState) {
+    let mut m = action_state_prefix(action, state);
+    m.push(0);
+    // SAFETY: `m` is NUL-terminated and outlives the call.
+    unsafe { raise_site_data(site, m.as_ptr().cast()) };
+}
+
+/// `default_fixup_args`'s BIGNUM arm is the one data site whose text stops before a `%d`, so it is
+/// built from the prefix plus a literal.
+///
+/// # Safety
+/// As [`raise_action_state`].
+#[allow(dead_code)] // WIP 7.4c-v slices (3)-(5): the two translation tables and the seven entry points are the callers
+unsafe fn raise_action_state_tail(
+    site: &err_sites::ErrSite,
+    action: XlatAction,
+    state: XlatState,
+    tail: &[u8],
+) {
+    let mut m = action_state_prefix(action, state);
+    m.push(b' ');
+    m.extend_from_slice(tail);
+    m.push(0);
+    // SAFETY: `m` is NUL-terminated and outlives the call.
+    unsafe { raise_site_data(site, m.as_ptr().cast()) };
+}
+
+/// The two `%d`-terminated data sites, whose text ends in the offending `param_data_type`.
+///
+/// # Safety
+/// As [`raise_action_state`].
+#[allow(dead_code)] // WIP 7.4c-v slices (3)-(5): the two translation tables and the seven entry points are the callers
+unsafe fn raise_action_state_tail_int(
+    site: &err_sites::ErrSite,
+    action: XlatAction,
+    state: XlatState,
+    tail: &[u8],
+    value: c_int,
+) {
+    let mut m = action_state_prefix(action, state);
+    m.push(b' ');
+    m.extend_from_slice(tail);
+    m.push(b' ');
+    push_int(&mut m, value);
+    m.push(0);
+    // SAFETY: `m` is NUL-terminated and outlives the call.
+    unsafe { raise_site_data(site, m.as_ptr().cast()) };
+}
+
+/// `default_fixup_args`'s `name=%s, value=%s` site.
+///
+/// # Safety
+/// Both arguments must be NULL or NUL-terminated.
+#[allow(dead_code)] // WIP 7.4c-v slices (3)-(5): the two translation tables and the seven entry points are the callers
+unsafe fn raise_action_state_names(
+    site: &err_sites::ErrSite,
+    action: XlatAction,
+    state: XlatState,
+    name: *const c_char,
+    value: *const c_char,
+) {
+    let mut m = action_state_prefix(action, state);
+    m.extend_from_slice(b" name=");
+    if !name.is_null() {
+        // SAFETY: `name` is NUL-terminated per the contract.
+        m.extend_from_slice(unsafe { CStr::from_ptr(name) }.to_bytes());
+    }
+    m.extend_from_slice(b", value=");
+    if !value.is_null() {
+        // SAFETY: `value` is NUL-terminated per the contract.
+        m.extend_from_slice(unsafe { CStr::from_ptr(value) }.to_bytes());
+    }
+    m.push(0);
+    // SAFETY: `m` is NUL-terminated and outlives the call.
+    unsafe { raise_site_data(site, m.as_ptr().cast()) };
+}
+
+// ---------------------------------------------------------------------------------------------
+// `default_fixup_args` — the file's core
+// ---------------------------------------------------------------------------------------------
+
+/// The `PRE_PARAMS_TO_CTRL` body, reached by `PKEY` and `POST_PARAMS_TO_CTRL` too.
+///
+/// The authority reaches it by **fallthrough** — `case PKEY: case POST_PARAMS_TO_CTRL: ret = ctx->p1;`
+/// then straight into `case PRE_PARAMS_TO_CTRL:` — and Rust has no fallthrough, so the shared body is
+/// one function called from all three arms. `ret` is a parameter because the `PKEY` arm seeds it from
+/// `ctx->p1` and `PRE_PARAMS_TO_CTRL` leaves it at `default_check`'s 1.
+///
+/// # Safety
+/// As [`default_fixup_args`].
+#[allow(dead_code)] // WIP 7.4c-v slices (3)-(5): the two translation tables and the seven entry points are the callers
+unsafe fn default_fixup_args_params_to_ctrl(
+    state: XlatState,
+    translation: *const XlatEntry,
+    ctx: *mut XlatCtx,
+    ret: c_int,
+) -> c_int {
+    // SAFETY: `ctx` is live and `translation` is live — both checked by `default_check`.
+    let action_type = unsafe { (*ctx).action_type };
+
+    if state == XlatState::PreParamsToCtrl && action_type == XlatAction::Set {
+        /* Setting is the only direction that needs work in the `PRE` state: `p1` and `p2` are
+         * populated from `*params`. */
+        // SAFETY: `translation` is live.
+        let param_data_type = unsafe { (*translation).param_data_type };
+        match param_data_type {
+            OSSL_PARAM_INTEGER => {
+                // SAFETY: `ctx` is live and its `params` is the caller's element.
+                return unsafe { OSSL_PARAM_get_int((*ctx).params, ptr::addr_of_mut!((*ctx).p1)) };
+            }
+            OSSL_PARAM_UNSIGNED_INTEGER => {
+                // SAFETY: `ctx` is live.
+                if !unsafe { (*ctx).p2 }.is_null() {
+                    /* A BIGNUM was passed down with `p2`. */
+                    // SAFETY: `params` is the caller's element and `p2` is the BIGNUM slot.
+                    if unsafe { OSSL_PARAM_get_BN((*ctx).params, (*ctx).p2.cast::<*mut BigNum>()) }
+                        == 0
+                    {
+                        return 0;
+                    }
+                } else {
+                    /* A plain C unsigned int was passed down. */
+                    // SAFETY: `params` is the caller's element.
+                    if unsafe {
+                        OSSL_PARAM_get_uint((*ctx).params, ptr::addr_of_mut!((*ctx).p1).cast())
+                    } == 0
+                    {
+                        return 0;
+                    }
+                }
+                return 1;
+            }
+            OSSL_PARAM_UTF8_STRING => {
+                // SAFETY: `params` is the caller's element and `p2`/`sz` are the caller's buffer.
+                return unsafe {
+                    OSSL_PARAM_get_utf8_string(
+                        (*ctx).params,
+                        (*ctx).p2.cast::<*mut c_char>(),
+                        (*ctx).sz,
+                    )
+                };
+            }
+            OSSL_PARAM_OCTET_STRING => {
+                // SAFETY: as above, with `p1` receiving the length.
+                return unsafe {
+                    OSSL_PARAM_get_octet_string(
+                        (*ctx).params,
+                        (*ctx).p2.cast::<*mut c_void>(),
+                        (*ctx).sz,
+                        ptr::addr_of_mut!((*ctx).p1).cast::<usize>(),
+                    )
+                };
+            }
+            OSSL_PARAM_OCTET_PTR => {
+                // SAFETY: `params` is the caller's element and `sz` is its writable length slot.
+                return unsafe {
+                    OSSL_PARAM_get_octet_ptr(
+                        (*ctx).params,
+                        (*ctx).p2.cast::<*const c_void>(),
+                        ptr::addr_of_mut!((*ctx).sz),
+                    )
+                };
+            }
+            _ => {
+                // SAFETY: a compile-time-constant site; the `%d` is the offending data type.
+                unsafe {
+                    raise_action_state_tail_int(
+                        &err_sites::CTRL_PARAMS_TRANSLATE_649,
+                        action_type,
+                        state,
+                        b"unknown OSSL_PARAM data type",
+                        param_data_type as c_int,
+                    )
+                };
+                return 0;
+            }
+        }
+    } else if (state == XlatState::PostParamsToCtrl || state == XlatState::Pkey)
+        && action_type == XlatAction::Get
+    {
+        /* Getting is the only direction that needs work in the `POST` state: `*params` is populated
+         * from `p1` and `p2`. */
+        // SAFETY: `translation` is live.
+        let mut param_data_type = unsafe { (*translation).param_data_type };
+        // SAFETY: `ctx` is live.
+        let mut size = unsafe { (*ctx).p1 } as usize;
+
+        if state == XlatState::Pkey {
+            // SAFETY: `ctx` is live.
+            size = unsafe { (*ctx).sz };
+        }
+        if param_data_type == 0 {
+            /* No declared type means the entry must carry a fixup function to have decided one. */
+            // SAFETY: `translation` is live.
+            if unsafe { (*translation).fixup_args }.is_none() {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::CTRL_PARAMS_TRANSLATE_667) };
+                return 0;
+            }
+            // SAFETY: `ctx` is live and `params` is the caller's element.
+            param_data_type = unsafe { (*(*ctx).params).data_type };
+        }
+        match param_data_type {
+            OSSL_PARAM_INTEGER => {
+                // SAFETY: `ctx` is live and `params` is the caller's element.
+                return unsafe { OSSL_PARAM_set_int((*ctx).params, (*ctx).p1) };
+            }
+            OSSL_PARAM_UNSIGNED_INTEGER => {
+                // SAFETY: `ctx` is live.
+                if !unsafe { (*ctx).p2 }.is_null() {
+                    /* A BIGNUM is passed back. */
+                    // SAFETY: `params` is the caller's element and `p2` is the BIGNUM.
+                    return unsafe { OSSL_PARAM_set_BN((*ctx).params, (*ctx).p2.cast::<BigNum>()) };
+                }
+                /* A plain C unsigned int is passed back. */
+                // SAFETY: `params` is the caller's element.
+                return unsafe { OSSL_PARAM_set_uint((*ctx).params, (*ctx).p1 as c_uint) };
+            }
+            OSSL_PARAM_UTF8_STRING => {
+                // SAFETY: `params` is the caller's element and `p2` is the string.
+                return unsafe { OSSL_PARAM_set_utf8_string((*ctx).params, (*ctx).p2.cast()) };
+            }
+            OSSL_PARAM_OCTET_STRING => {
+                // SAFETY: as above, with the length the caller's own return value carries.
+                return unsafe { OSSL_PARAM_set_octet_string((*ctx).params, (*ctx).p2, size) };
+            }
+            OSSL_PARAM_OCTET_PTR => {
+                // SAFETY: `params` is the caller's element; `p2` is a pointer *to* the pointer the
+                // authority hands on, which is what the deref is.
+                return unsafe {
+                    OSSL_PARAM_set_octet_ptr(
+                        (*ctx).params,
+                        *(*ctx).p2.cast::<*const c_void>(),
+                        size,
+                    )
+                };
+            }
+            _ => {
+                // SAFETY: a compile-time-constant site.
+                unsafe {
+                    raise_action_state_tail_int(
+                        &err_sites::CTRL_PARAMS_TRANSLATE_695,
+                        action_type,
+                        state,
+                        b"unsupported OSSL_PARAM data type",
+                        // SAFETY: `translation` is live.
+                        (*translation).param_data_type as c_int,
+                    )
+                };
+                return 0;
+            }
+        }
+    } else if state == XlatState::PreParamsToCtrl && action_type == XlatAction::Get {
+        // SAFETY: `translation` is live.
+        if unsafe { (*translation).param_data_type } == OSSL_PARAM_OCTET_PTR {
+            // SAFETY: `ctx` is live; `bufp` is the indirection slot the `POST` arm reads.
+            unsafe { (*ctx).p2 = ptr::addr_of_mut!((*ctx).bufp).cast::<c_void>() };
+        }
+    }
+    ret
+}
+
+/// `static int default_fixup_args(enum state state, const struct translation_st *translation,
+/// struct translation_ctx_st *ctx)` — `crypto/evp/ctrl_params_translate.c:395`.
+///
+/// The file's core: every table entry that does not name a fixup of its own names this one, and every
+/// fixup that does name its own calls this one in the middle. Three states do real work for a `SET`,
+/// two for a `GET`, and the rest are pass-through.
+///
+/// **`ret` is the function's own return value and is not reset by the middle arms.** It starts as
+/// `default_check`'s 1, becomes `ctx->p1` in the `PKEY`/`POST_PARAMS_TO_CTRL` arm — which is how a
+/// ctrl's return value becomes this function's — and every other arm returns directly instead of
+/// falling out. So a transcription that returned a fresh 1 at the end would lose the ctrl's own
+/// answer on the `PKEY` path, which is the path `EVP_PKEY_get_params` uses.
+///
+/// **`PRE_CTRL_STR_TO_PARAMS` is the only arm that can be entered with `translation == NULL`**, and
+/// the comment in the authority says why: a ctrl_str key may *be* an `OSSL_PARAM` key, in which case
+/// there is no table entry at all and the string is passed through unmodified. That is also why
+/// `default_check` allows NULL there and nowhere else.
+///
+/// The `ishex` arm builds `"hex"` + the parameter key into `name_buf` and checks
+/// `OPENSSL_strlcat(...) <= 3` — a *truncation* test, not a failure test: `strlcat` returns the total
+/// length it would have written, so `<= 3` means the buffer could not even hold `"hex"` plus the
+/// terminator, which is an internal error rather than a caller error.
+///
+/// # Safety
+/// `ctx` must be live; `translation` NULL or live, and non-NULL except in
+/// `PRE_CTRL_STR_TO_PARAMS`; every pointer `ctx` carries must be valid for the state and action.
+#[allow(dead_code)] // WIP 7.4c-v slices (3)-(5): the two translation tables and the seven entry points are the callers
+pub(crate) unsafe fn default_fixup_args(
+    state: XlatState,
+    translation: *const XlatEntry,
+    ctx: *mut XlatCtx,
+) -> c_int {
+    // SAFETY: `state`, `translation` and `ctx` are as the contract states.
+    let ret = unsafe { default_check(state, translation, ctx) };
+    if ret <= 0 {
+        return ret;
+    }
+
+    // SAFETY: `ctx` is live.
+    let action_type = unsafe { (*ctx).action_type };
+
+    match state {
+        XlatState::PreCtrlToParams => {
+            if action_type == XlatAction::None_ {
+                /* No action type here is an error: that case belongs to a special fixup function. */
+                // SAFETY: a compile-time-constant site.
+                unsafe {
+                    raise_action_state(&err_sites::CTRL_PARAMS_TRANSLATE_424, action_type, state)
+                };
+                return 0;
+            }
+
+            // SAFETY: `translation` is live.
+            if unsafe { (*translation).optype } != 0 {
+                // SAFETY: `ctx` is live and `pctx` is live per the contract.
+                let missing = unsafe {
+                    let c = &*(*ctx).pctx;
+                    (c.is_signature_op() && c.op_sig_algctx.is_null())
+                        || (c.is_derive_op() && c.op_kex_algctx.is_null())
+                        || (c.is_asym_cipher_op() && c.op_ciph_algctx.is_null())
+                        || (c.is_kem_op() && c.op_encap_algctx.is_null())
+                        /* The last two are the authority's "for good measure" pair. */
+                        || (c.is_gen_op() && c.op_keymgmt_genctx.is_null())
+                        || (c.is_fromdata_op() && c.op_keymgmt_genctx.is_null())
+                };
+                if missing {
+                    // SAFETY: a compile-time-constant site.
+                    unsafe { raise_site(&err_sites::CTRL_PARAMS_TRANSLATE_446) };
+                    /* The same return values `EVP_PKEY_CTX_ctrl` uses. */
+                    return -2;
+                }
+            }
+
+            /* `OSSL_PARAM_construct_TYPE` works equally well for `SET` and `GET`. */
+            // SAFETY: `translation` is live, and `ctx`'s pointers are the caller's.
+            unsafe {
+                let key = (*translation).param_key;
+                match (*translation).param_data_type {
+                    OSSL_PARAM_INTEGER => {
+                        *(*ctx).params =
+                            OSSL_PARAM_construct_int(key, ptr::addr_of_mut!((*ctx).p1));
+                    }
+                    OSSL_PARAM_UNSIGNED_INTEGER => {
+                        if !(*ctx).p2.is_null() {
+                            if action_type == XlatAction::Set {
+                                /* BIGNUMs travel in `p2`; the buffer this allocates is the cleanup's.
+                                 * `BN_num_bytes(a)` is a macro in the authority --
+                                 * `((BN_num_bits(a) + 7) / 8)` -- so it is that expression here, as
+                                 * `params/build.rs` writes it. */
+                                let bits = BN_num_bits((*ctx).p2.cast::<BigNum>()) as usize;
+                                (*ctx).buflen = bits.div_ceil(8);
+                                let buf = CRYPTO_malloc((*ctx).buflen, FILE, LINE_XLAT_BN_BUF);
+                                if buf.is_null() {
+                                    return 0;
+                                }
+                                (*ctx).allocated_buf = buf;
+                                if BN_bn2nativepad(
+                                    (*ctx).p2.cast(),
+                                    buf.cast::<u8>(),
+                                    (*ctx).buflen as c_int,
+                                ) < 0
+                                {
+                                    CRYPTO_free((*ctx).allocated_buf, FILE, LINE_XLAT_BN_BUF);
+                                    (*ctx).allocated_buf = ptr::null_mut();
+                                    return 0;
+                                }
+                                *(*ctx).params =
+                                    OSSL_PARAM_construct_BN(key, buf.cast::<u8>(), (*ctx).buflen);
+                            } else {
+                                /* Getting a BIGNUM through a ctrl needs a fixup function's help. */
+                                raise_action_state_tail(
+                                    &err_sites::CTRL_PARAMS_TRANSLATE_492,
+                                    action_type,
+                                    state,
+                                    b"trying to get a BIGNUM via ctrl call",
+                                );
+                                return 0;
+                            }
+                        } else {
+                            *(*ctx).params = OSSL_PARAM_construct_uint(
+                                key,
+                                ptr::addr_of_mut!((*ctx).p1).cast::<c_uint>(),
+                            );
+                        }
+                    }
+                    OSSL_PARAM_UTF8_STRING => {
+                        *(*ctx).params = OSSL_PARAM_construct_utf8_string(
+                            key,
+                            (*ctx).p2.cast::<c_char>(),
+                            (*ctx).p1 as usize,
+                        );
+                    }
+                    OSSL_PARAM_UTF8_PTR => {
+                        *(*ctx).params = OSSL_PARAM_construct_utf8_ptr(
+                            key,
+                            (*ctx).p2.cast::<*mut c_char>(),
+                            (*ctx).p1 as usize,
+                        );
+                    }
+                    OSSL_PARAM_OCTET_STRING => {
+                        *(*ctx).params =
+                            OSSL_PARAM_construct_octet_string(key, (*ctx).p2, (*ctx).p1 as usize);
+                    }
+                    OSSL_PARAM_OCTET_PTR => {
+                        *(*ctx).params = OSSL_PARAM_construct_octet_ptr(
+                            key,
+                            (*ctx).p2.cast(),
+                            (*ctx).p1 as usize,
+                        );
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        XlatState::PostCtrlToParams => {
+            /* The ctrl returns the length of certain objects, so this arm copies the parameter's
+             * own `return_size` back into `p1` for the data types where that makes sense. */
+            if action_type == XlatAction::Get {
+                // SAFETY: `translation` is live.
+                let param_data_type = unsafe { (*translation).param_data_type };
+                if matches!(
+                    param_data_type,
+                    OSSL_PARAM_UTF8_STRING
+                        | OSSL_PARAM_UTF8_PTR
+                        | OSSL_PARAM_OCTET_STRING
+                        | OSSL_PARAM_OCTET_PTR
+                ) {
+                    // SAFETY: `ctx` is live and `params` points at the caller's element.
+                    unsafe { (*ctx).p1 = (*(*ctx).params).return_size as c_int };
+                }
+            }
+        }
+
+        XlatState::PreCtrlStrToParams => {
+            /* Only setting is supported here. */
+            if action_type != XlatAction::Set {
+                // SAFETY: a compile-time-constant site.
+                unsafe {
+                    raise_action_state_tail(
+                        &err_sites::CTRL_PARAMS_TRANSLATE_555,
+                        action_type,
+                        state,
+                        b"only setting allowed",
+                    )
+                };
+                return 0;
+            }
+
+            // SAFETY: `ctx` is live.
+            let orig_ctrl_str = unsafe { (*ctx).ctrl_str };
+            // SAFETY: `ctx` is live.
+            let orig_value = unsafe { (*ctx).p2 };
+            let mut tmp_ctrl_str = orig_ctrl_str;
+
+            /* With no table entry the control string is passed through unmodified. */
+            if !translation.is_null() {
+                // SAFETY: `translation` is non-null here.
+                let param_key = unsafe { (*translation).param_key };
+                // SAFETY: `ctx` is live.
+                unsafe { (*ctx).ctrl_str = param_key };
+                tmp_ctrl_str = param_key;
+
+                // SAFETY: `ctx` is live.
+                if unsafe { (*ctx).ishex } != 0 {
+                    // SAFETY: `ctx` is live and `name_buf` is its own array.
+                    unsafe {
+                        (*ctx).name_buf[0] = b'h' as c_char;
+                        (*ctx).name_buf[1] = b'e' as c_char;
+                        (*ctx).name_buf[2] = b'x' as c_char;
+                        (*ctx).name_buf[3] = 0;
+                        if OPENSSL_strlcat(
+                            (*ctx).name_buf.as_mut_ptr(),
+                            tmp_ctrl_str,
+                            OSSL_MAX_NAME_SIZE,
+                        ) <= 3
+                        {
+                            raise_site(&err_sites::CTRL_PARAMS_TRANSLATE_573);
+                            return -1;
+                        }
+                        tmp_ctrl_str = (*ctx).name_buf.as_ptr();
+                    }
+                }
+            }
+
+            // SAFETY: `ctx` is live and `pctx` is live per the contract.
+            let settable = unsafe { EVP_PKEY_CTX_settable_params((*ctx).pctx) };
+            let mut exists: c_int = 0;
+            // SAFETY: `ctx`'s `params`, `settable` and `tmp_ctrl_str` are the caller's element and
+            // this context's own strings; `p2` is the NUL-terminated value.
+            let ok = unsafe {
+                OSSL_PARAM_allocate_from_text(
+                    (*ctx).params,
+                    settable,
+                    tmp_ctrl_str,
+                    (*ctx).p2.cast::<c_char>(),
+                    strlen((*ctx).p2.cast::<c_char>()),
+                    ptr::addr_of_mut!(exists),
+                )
+            };
+            if ok == 0 {
+                if exists == 0 {
+                    /* The name is not an `OSSL_PARAM` key either: a caller error, and the text
+                     * carries which name and which value. */
+                    // SAFETY: a compile-time-constant site.
+                    unsafe {
+                        raise_action_state_names(
+                            &err_sites::CTRL_PARAMS_TRANSLATE_586,
+                            action_type,
+                            state,
+                            orig_ctrl_str,
+                            orig_value.cast::<c_char>(),
+                        )
+                    };
+                    return -2;
+                }
+                return 0;
+            }
+            // SAFETY: `ctx` is live and `params` now points at the element built for us.
+            unsafe {
+                (*ctx).allocated_buf = (*(*ctx).params).data;
+                (*ctx).buflen = (*(*ctx).params).data_size;
+            }
+        }
+
+        XlatState::PostCtrlStrToParams => {
+            /* Nothing to be done: there is no support for getting data through ctrl_str. */
+        }
+
+        XlatState::Pkey | XlatState::PostParamsToCtrl => {
+            /* The authority falls through into `PRE_PARAMS_TO_CTRL` from here with `ret` seeded from
+             * the ctrl's own return value. */
+            // SAFETY: `ctx` is live.
+            let seeded = unsafe { (*ctx).p1 };
+            // SAFETY: `state`, `translation` and `ctx` are as the contract states.
+            return unsafe { default_fixup_args_params_to_ctrl(state, translation, ctx, seeded) };
+        }
+
+        XlatState::PreParamsToCtrl => {
+            // SAFETY: `state`, `translation` and `ctx` are as the contract states.
+            return unsafe { default_fixup_args_params_to_ctrl(state, translation, ctx, ret) };
+        }
+
+        XlatState::CleanupCtrlToParams
+        | XlatState::CleanupCtrlStrToParams
+        | XlatState::CleanupParamsToCtrl => {
+            /* The three cleanup states never reach this function: `default_check` passes them and
+             * the table installs `cleanup_translation_ctx` in their slot. The authority's switch has
+             * no case for them either, so they reach its `default:` arm -- which raises. Reproduced
+             * rather than silently passed. */
+            // SAFETY: a compile-time-constant site.
+            unsafe {
+                raise_action_state(&err_sites::CTRL_PARAMS_TRANSLATE_407, action_type, state)
+            };
+            return 0;
+        }
+    }
     ret
 }
 
