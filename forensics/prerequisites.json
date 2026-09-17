@@ -40,6 +40,27 @@
         "authority_unit": "providers/legacy-dso-legacyprov.c",
         "reason": "providers/legacy/legacyprov.c's entry point, and the name a third-party provider's own entry point is declared with -- which is why subphase rows 6.8d and 6.12 name it, since the `providers` configuration module needs a module path and RT-PROVIDER-3P compiles its own. The authority symbol is the legacy provider's, so it is Phase 13's.",
         "evidence": "docs/PHASE-6-SUBPHASES.md rows 6.8d and 6.12"
+      },
+      {
+        "symbol": "evp_rand_can_seed",
+        "owner_phase": 9,
+        "authority_unit": "crypto/evp/evp_rand.c",
+        "reason": "Internal: declared in `include/crypto/evp.h`, which is not installed, and its only caller in the whole authority is `crypto/rand/rand_lib.c`, already recorded in this file's `units` section as Phase 9's. 7.3f transcribes `evp_rand.c` and deliberately stops at the dispatch walk that fills the `get_seed` and `clear_seed` *fields*: the fields are this file's, the three callers are the stratum that needs the DRBG plumbing. Recording the name here is what makes that boundary visible to the gate rather than only to a reader.",
+        "evidence": "src/evp/rand.rs module doc, section \"What is not here\"; forensics/prerequisites.json units row crypto/rand/rand_lib.c"
+      },
+      {
+        "symbol": "evp_rand_get_seed",
+        "owner_phase": 9,
+        "authority_unit": "crypto/evp/evp_rand.c",
+        "reason": "The same boundary as its `can_seed` sibling: internal to `crypto/evp/evp_rand.c`, declared in the uninstalled `include/crypto/evp.h`, called only by `crypto/rand/rand_lib.c`. It answers entropy to the DRBG, so it cannot be written before the thing that asks for entropy exists.",
+        "evidence": "src/evp/rand.rs module doc, section \"What is not here\"; forensics/prerequisites.json units row crypto/rand/rand_lib.c"
+      },
+      {
+        "symbol": "evp_rand_clear_seed",
+        "owner_phase": 9,
+        "authority_unit": "crypto/evp/evp_rand.c",
+        "reason": "The third of the seed trio, and the same boundary again: internal, declared in the uninstalled `include/crypto/evp.h`, called only by `crypto/rand/rand_lib.c`, and the releasing half of the pair whose acquiring half is `evp_rand_get_seed`. Neither half has a caller before Phase 9.",
+        "evidence": "src/evp/rand.rs module doc, section \"What is not here\"; forensics/prerequisites.json units row crypto/rand/rand_lib.c"
       }
     ],
     "divergences": [

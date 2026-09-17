@@ -281,7 +281,7 @@
         "truncf128",
         "truncf16"
       ],
-      "compiler_emitted_count": 7096,
+      "compiler_emitted_count": 7142,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -289,7 +289,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 1373,
+        "implemented": 1403,
         "implemented_symbols": [
           "ASN1_ANY_it",
           "ASN1_BIT_STRING_check",
@@ -1302,6 +1302,36 @@
           "EVP_MD_xof",
           "EVP_Q_digest",
           "EVP_Q_mac",
+          "EVP_RAND_CTX_free",
+          "EVP_RAND_CTX_get0_rand",
+          "EVP_RAND_CTX_get_params",
+          "EVP_RAND_CTX_gettable_params",
+          "EVP_RAND_CTX_new",
+          "EVP_RAND_CTX_set_params",
+          "EVP_RAND_CTX_settable_params",
+          "EVP_RAND_CTX_up_ref",
+          "EVP_RAND_do_all_provided",
+          "EVP_RAND_enable_locking",
+          "EVP_RAND_fetch",
+          "EVP_RAND_free",
+          "EVP_RAND_generate",
+          "EVP_RAND_get0_description",
+          "EVP_RAND_get0_name",
+          "EVP_RAND_get0_provider",
+          "EVP_RAND_get_params",
+          "EVP_RAND_get_state",
+          "EVP_RAND_get_strength",
+          "EVP_RAND_gettable_ctx_params",
+          "EVP_RAND_gettable_params",
+          "EVP_RAND_instantiate",
+          "EVP_RAND_is_a",
+          "EVP_RAND_names_do_all",
+          "EVP_RAND_nonce",
+          "EVP_RAND_reseed",
+          "EVP_RAND_settable_ctx_params",
+          "EVP_RAND_uninstantiate",
+          "EVP_RAND_up_ref",
+          "EVP_RAND_verify_zeroization",
           "EVP_default_properties_enable_fips",
           "EVP_default_properties_is_fips_enabled",
           "EVP_enc_null",
@@ -1665,7 +1695,7 @@
           "i2d_DISPLAYTEXT",
           "i2t_ASN1_OBJECT"
         ],
-        "scaffolded": 4523
+        "scaffolded": 4493
       },
       "libssl": {
         "authority_exports": 603,
@@ -1676,18 +1706,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 1373,
-      "scaffolded": 5126
+      "implemented": 1403,
+      "scaffolded": 5096
     }
   },
-  "body_hash": "350385b4cc9e4a102e05bd0028985c3f65a8454c8f595ed5c3cad2fa8fceb39a",
+  "body_hash": "75bf26003bb16eb91f503404d9f1033a5aded4c315dd64809fdb84df45661d64",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "4c7319cb3b09ceed9a02803333be42cad885d7e436580622f19eef1a79183746"
+      "sha256": "c6ddb0a2df8b37d8842eece996395b078a187693e94882809d494e1088c7ee81"
     },
     {
       "name": "authority-exports",

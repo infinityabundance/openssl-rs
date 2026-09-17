@@ -51,3 +51,4 @@ pub mod kdf;
 pub mod mac;
 pub mod method_store;
 pub mod pkey_ctx;
+pub mod rand;
