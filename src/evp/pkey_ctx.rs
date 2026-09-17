@@ -63,6 +63,7 @@ use crate::evp::keymgmt::{
     EVP_KEYMGMT_is_a, EvpKeyMgmt,
 };
 use crate::evp::pkey::{evp_pkey_name2type, EVP_PKEY_free, EVP_PKEY_up_ref, EvpPkey};
+use crate::evp::pkey_asn1::Engine;
 use crate::evp::signature::{EVP_SIGNATURE_get0_provider, EvpSignature};
 use crate::params::OsslParam;
 use crate::provider::{ossl_provider_ctx, OsslProvider};
@@ -484,6 +485,53 @@ unsafe fn int_ctx_new(
 
     /* `if (pmeth != NULL && pmeth->init != NULL)` is 7.4l's: `pmeth` is always NULL here. */
     ret
+}
+
+/// `EVP_PKEY_CTX *EVP_PKEY_CTX_new(EVP_PKEY *pkey, ENGINE *e)` —
+/// `crypto/evp/pmeth_lib.c:442`.
+///
+/// `int_ctx_new(NULL, pkey, e, NULL, NULL, -1)` — the authority's own six arguments, three of them
+/// NULL and the id `-1`, which is the "take the method from the key" case. The `-1` is the
+/// authority's and not a stand-in: `int_ctx_new` reads it as "no explicit id" and falls through to
+/// the key's own type.
+///
+/// `e` **is not forwarded**, because there is no engine: `ENGINE` is Phase 13's, so nothing in this
+/// crate can pass a non-NULL one, and the authority's own `int_ctx_new` reaches the same state with
+/// NULL. See the module doc's note on the engine arm of the two `asn1_find` functions for the same
+/// argument.
+///
+/// # Safety
+/// `pkey` NULL or live; `e` NULL.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_CTX_new(pkey: *mut EvpPkey, e: *mut Engine) -> *mut EvpPkeyCtx {
+    /* `e` is read only to be discarded, which is what keeps the signature the authority's. A
+     * non-NULL engine cannot occur: nothing in this crate can construct an `ENGINE`. */
+    let _ = e;
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { int_ctx_new(ptr::null_mut(), pkey, ptr::null(), ptr::null(), -1) }
+}
+
+/// `EVP_PKEY_CTX *EVP_PKEY_CTX_new_id(int id, ENGINE *e)` — `crypto/evp/pmeth_lib.c:447`.
+///
+/// `int_ctx_new(NULL, NULL, e, NULL, NULL, id)` — a NULL key and an explicit id, which is the
+/// "build the method from the type" case. The engine arm is absent for the reason `EVP_PKEY_CTX_new`
+/// gives.
+///
+/// # Safety
+/// `e` NULL.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_CTX_new_id(id: c_int, e: *mut Engine) -> *mut EvpPkeyCtx {
+    let _ = e;
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe {
+        int_ctx_new(
+            ptr::null_mut(),
+            ptr::null_mut(),
+            ptr::null(),
+            ptr::null(),
+            id,
+        )
+    }
 }
 
 /// `EVP_PKEY_CTX *EVP_PKEY_CTX_new_from_name(OSSL_LIB_CTX *libctx, const char *name,
