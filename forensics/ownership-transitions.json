@@ -165,6 +165,22 @@
       "reason": "The blocking-dependency census moves **down**, from 18 to 17, because `evp_pkey_free_legacy`'s deferral row was retired rather than discharged: 7.4c-ii's `pmeth_gn.c` (D173) needs the name, the crate now defines it, and the gate's `stale_deferral` rule refuses a row whose symbol the crate defines -- so the row had to go. That name was one of the four whose *visibility* D166 recorded when `crypto/evp/pmeth_lib.c` got a module, which is why the movement is visible against these three baselines at all. The Phase-8 record of the function's missing half -- every statement its body has is `ameth` or `ENGINE` work -- now lives in the site's doc and in `docs/DECISIONS.md` D173 rather than in the ledger, which is the `evp_pkey_name2type` precedent (D163): a partially defined name cannot carry a deferral. The rows for `-> 18` are kept because they record the step before this one. Each baseline is a different ref and the guard matches `before` and `after` exactly, so each is recorded separately.",
       "authority_artifact": "forensics/prerequisites.json",
       "recorded_by": "docs/DECISIONS.md D166 and D173"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 15,
+      "after": 23,
+      "reason": "7.4l withholds thirteen exports whose answers depend on a later stratum, and each withheld name is recorded in `forensics/prerequisites.json` as a deferral naming the *dependency* that blocks it rather than as a row for itself (D165 refused a deferral for a Phase-7-owned export). Nine dependency names are new: `ossl_rsa_asn1_meths` and `ossl_rsa_pkey_method` (Phase 8's two `standard_methods[]` tables, which block `EVP_PKEY_type`, `EVP_PKEY_meth_find`/`_get0`/`_get_count`, the twelve `d2i_*`/`i2d_*` legacy paths and `d2i_PublicKey`), `OSSL_ENCODER_CTX_new_for_pkey` and `OSSL_DECODER_CTX_new_for_pkey` (Phase 10's encoder and decoder, which a provider key takes *first*), `ASN1_item_sign_ctx` and `ASN1_item_verify_ctx` (Phase 11's `x509.h` delegates of the two Phase-5 hand-offs), `d2i_X509_ALGOR` (Phase 11's, for `EVP_PKEY_CTX_get_algor`), `RAND_priv_bytes_ex` (Phase 9's, for `EVP_SealInit`) and `UI_new` (Phase 13's, for `EVP_read_pw_string`/`_min`). All nine name strata that have not started, so all nine are blocking by the gate's rule. The count rises because the blockers became *recorded*, not because the work appeared: every one of the nine was already the reason the export was open, and the same class D132's 11 -> 12 and D134's 12 -> 15 recorded -- an invariant that cannot tell a legitimate change from a hidden omission. Each baseline is a different ref and the guard matches `before` and `after` exactly, so each is recorded separately.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D193"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 14,
+      "after": 23,
+      "reason": "7.4l withholds thirteen exports whose answers depend on a later stratum, and each withheld name is recorded in `forensics/prerequisites.json` as a deferral naming the *dependency* that blocks it rather than as a row for itself (D165 refused a deferral for a Phase-7-owned export). Nine dependency names are new: `ossl_rsa_asn1_meths` and `ossl_rsa_pkey_method` (Phase 8's two `standard_methods[]` tables, which block `EVP_PKEY_type`, `EVP_PKEY_meth_find`/`_get0`/`_get_count`, the twelve `d2i_*`/`i2d_*` legacy paths and `d2i_PublicKey`), `OSSL_ENCODER_CTX_new_for_pkey` and `OSSL_DECODER_CTX_new_for_pkey` (Phase 10's encoder and decoder, which a provider key takes *first*), `ASN1_item_sign_ctx` and `ASN1_item_verify_ctx` (Phase 11's `x509.h` delegates of the two Phase-5 hand-offs), `d2i_X509_ALGOR` (Phase 11's, for `EVP_PKEY_CTX_get_algor`), `RAND_priv_bytes_ex` (Phase 9's, for `EVP_SealInit`) and `UI_new` (Phase 13's, for `EVP_read_pw_string`/`_min`). All nine name strata that have not started, so all nine are blocking by the gate's rule. The count rises because the blockers became *recorded*, not because the work appeared: every one of the nine was already the reason the export was open, and the same class D132's 11 -> 12 and D134's 12 -> 15 recorded -- an invariant that cannot tell a legitimate change from a hidden omission. Each baseline is a different ref and the guard matches `before` and `after` exactly, so each is recorded separately.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D193"
     }
   ]
 }

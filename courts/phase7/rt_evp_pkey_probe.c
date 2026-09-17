@@ -428,6 +428,13 @@ static const OSSL_PARAM *dsg_settable_md_params(void *ctx)
 static int g_fail_ops;
 static const char *g_qon = "COURT-SIG";
 
+/* 7.4l. The name the keymgmt answers for `OSSL_OP_ASYM_CIPHER`. It is separate from `g_qon`
+ * because `km_qon` is asked once per operation and `EVP_OpenInit` needs a name the *cipher*
+ * lookup can use: `evp_keymgmt_util_query_operation_name` falls back to the keymgmt's own name
+ * when the callback answers NULL, so the default here is the type name the asym cipher is
+ * published under. */
+static const char *g_acqon = "COURT-SIGKEY";
+
 /* The three arrays `SIG-Qkt` can answer. The empty one is a refusal rather than a vacuous success,
  * and the non-matching one takes the *same* path as the empty one -- the walk's terminator is what
  * reports both. */
@@ -658,6 +665,8 @@ static const char *km_qon(int operation_id)
     n_km_qon++;
     if (operation_id == OSSL_OP_SIGNATURE)
         return g_qon;
+    if (operation_id == OSSL_OP_ASYM_CIPHER)
+        return g_acqon;
     return NULL;
 }
 
@@ -1401,6 +1410,292 @@ static const OSSL_DISPATCH sig_setparams_fns[] = {
     { 0, NULL }
 };
 
+/* ------------------------------------------------------------------ 7.4l's provider surfaces
+ *
+ * `p_open.c`, `p_seal.c`, `p_sign.c` and `p_verify.c` are all written over *methods*, so every one
+ * of them is observable only if the key and the cipher it names exist. Three surfaces are added
+ * for them, each with a counter so the arms below are counter vectors rather than return codes:
+ *
+ *   * `LEG-SIG` is a signature method with `sign`/`verify` **and** a `set_ctx_params` that accepts
+ *     `OSSL_SIGNATURE_PARAM_DIGEST` -- the pair `EVP_SignFinal` needs, because it calls
+ *     `EVP_PKEY_CTX_set_signature_md` between the init and the one-shot. `COURT-SIG` has no
+ *     `set_ctx_params`, which is why the plain `p_sign.c` body cannot use it.
+ *   * `LEG-CIPH`/`LEG-CIPH8` are the ciphers `EVP_OpenInit` names: sixteen-byte key and IV for the
+ *     success arm (so `EVP_CIPHER_CTX_set_key_length(ctx, 16)` matches the asymmetric cipher's
+ *     answer) and eight-byte for the mismatch refusal, where the requested length cannot be set on
+ *     a provider cipher whose `settable_ctx_params` does not publish `keylen`.
+ *   * `LEG-ACIPH` is the asymmetric cipher `EVP_OpenInit` drives through
+ *     `EVP_PKEY_decrypt_init`/`EVP_PKEY_decrypt`. `g_lac_fail` makes its `decrypt` answer 0, which
+ *     is the arm that refuses after the method was found.
+ */
+static int n_lsig_setparams, n_lsig_md;
+static char lsig_md[64];
+
+static int lsig_set_ctx_params(void *vctx, const OSSL_PARAM params[])
+{
+    const OSSL_PARAM *p;
+    const char *s = NULL;
+
+    (void) vctx;
+    n_lsig_setparams++;
+    p = OSSL_PARAM_locate_const(params, OSSL_SIGNATURE_PARAM_DIGEST);
+    if (p != NULL && OSSL_PARAM_get_utf8_string_ptr(p, &s) && s != NULL) {
+        n_lsig_md++;
+        snprintf(lsig_md, sizeof lsig_md, "%s", s);
+    }
+    return 1;
+}
+
+static const OSSL_PARAM lsig_tab[] = {
+    OSSL_PARAM_utf8_string(OSSL_SIGNATURE_PARAM_DIGEST, NULL, 0),
+    OSSL_PARAM_END
+};
+
+static const OSSL_PARAM *lsig_settable(void *vctx, void *provctx)
+{
+    (void) vctx;
+    (void) provctx;
+    return lsig_tab;
+}
+
+static const OSSL_DISPATCH leg_sig_fns[] = {
+    { OSSL_FUNC_SIGNATURE_NEWCTX, (void (*)(void)) sig_newctx },
+    { OSSL_FUNC_SIGNATURE_FREECTX, (void (*)(void)) sig_freectx },
+    { OSSL_FUNC_SIGNATURE_SIGN_INIT, (void (*)(void)) sig_sign_init },
+    { OSSL_FUNC_SIGNATURE_SIGN, (void (*)(void)) sig_sign },
+    { OSSL_FUNC_SIGNATURE_VERIFY_INIT, (void (*)(void)) sig_vi },
+    { OSSL_FUNC_SIGNATURE_VERIFY, (void (*)(void)) sig_verify },
+    { OSSL_FUNC_SIGNATURE_SET_CTX_PARAMS, (void (*)(void)) lsig_set_ctx_params },
+    { OSSL_FUNC_SIGNATURE_SETTABLE_CTX_PARAMS, (void (*)(void)) lsig_settable },
+    { 0, NULL }
+};
+
+static int lc_einit, lc_dinit, lc_final_calls;
+static unsigned char lc_key[16], lc_iv[16];
+static size_t lc_keylen, lc_ivlen;
+static int lc_key_null, lc_iv_null;
+
+/* The context carries its cipher's own lengths, because `EVP_CIPHER_CTX_get_key_length` reads the
+ * *ctx* parameter: a table that hardcoded sixteen would make the eight-byte cipher report sixteen
+ * and the mismatch arm unreachable. */
+struct lc_ctx {
+    int keylen;
+    int ivlen;
+};
+
+static void lc_record(const unsigned char *key, size_t keylen, const unsigned char *iv, size_t ivlen)
+{
+    lc_key_null = key == NULL;
+    lc_iv_null = iv == NULL;
+    lc_keylen = keylen < sizeof lc_key ? keylen : sizeof lc_key;
+    if (key != NULL)
+        memcpy(lc_key, key, lc_keylen);
+    lc_ivlen = ivlen < sizeof lc_iv ? ivlen : sizeof lc_iv;
+    if (iv != NULL)
+        memcpy(lc_iv, iv, lc_ivlen);
+}
+
+static void *lc_newctx_tag(void *provctx, int keylen, int ivlen)
+{
+    struct lc_ctx *d;
+
+    (void) provctx;
+    d = malloc(sizeof *d);
+    if (d == NULL)
+        return NULL;
+    d->keylen = keylen;
+    d->ivlen = ivlen;
+    return d;
+}
+
+static void *lc16_newctx(void *provctx)
+{
+    return lc_newctx_tag(provctx, 16, 16);
+}
+
+static void *lc8_newctx(void *provctx)
+{
+    return lc_newctx_tag(provctx, 8, 8);
+}
+
+static void lc_freectx(void *cctx)
+{
+    free(cctx);
+}
+
+static int lc_encrypt_init(void *cctx, const unsigned char *key, size_t keylen,
+                           const unsigned char *iv, size_t ivlen, const OSSL_PARAM params[])
+{
+    (void) cctx;
+    (void) params;
+    lc_einit++;
+    lc_record(key, keylen, iv, ivlen);
+    return 1;
+}
+
+static int lc_decrypt_init(void *cctx, const unsigned char *key, size_t keylen,
+                           const unsigned char *iv, size_t ivlen, const OSSL_PARAM params[])
+{
+    (void) cctx;
+    (void) params;
+    lc_dinit++;
+    lc_record(key, keylen, iv, ivlen);
+    return 1;
+}
+
+static int lc_update(void *cctx, unsigned char *out, size_t *outl, size_t outsize,
+                     const unsigned char *in, size_t inl)
+{
+    (void) cctx;
+    (void) out;
+    (void) outsize;
+    (void) in;
+    if (outl != NULL)
+        *outl = inl;
+    return 1;
+}
+
+static int lc_final(void *cctx, unsigned char *out, size_t *outl, size_t outsize)
+{
+    (void) cctx;
+    (void) out;
+    (void) outsize;
+    lc_final_calls++;
+    if (outl != NULL)
+        *outl = 0;
+    return 1;
+}
+
+static int lc_get_params_common(OSSL_PARAM params[], size_t keylen)
+{
+    OSSL_PARAM *p;
+
+    p = OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_BLOCK_SIZE);
+    if (p != NULL && !OSSL_PARAM_set_size_t(p, 16))
+        return 0;
+    p = OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_IVLEN);
+    if (p != NULL && !OSSL_PARAM_set_size_t(p, 16))
+        return 0;
+    p = OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_KEYLEN);
+    if (p != NULL && !OSSL_PARAM_set_size_t(p, keylen))
+        return 0;
+    p = OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_MODE);
+    if (p != NULL && !OSSL_PARAM_set_uint(p, EVP_CIPH_CBC_MODE))
+        return 0;
+    return 1;
+}
+
+static int lc_get_params_16(OSSL_PARAM params[])
+{
+    return lc_get_params_common(params, 16);
+}
+
+static int lc_get_params_8(OSSL_PARAM params[])
+{
+    return lc_get_params_common(params, 8);
+}
+
+static int lc_get_ctx_params(void *cctx, OSSL_PARAM params[])
+{
+    struct lc_ctx *d = cctx;
+    OSSL_PARAM *p;
+
+    if (d == NULL)
+        return 0;
+    p = OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_KEYLEN);
+    if (p != NULL && !OSSL_PARAM_set_size_t(p, (size_t) d->keylen))
+        return 0;
+    p = OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_IVLEN);
+    if (p != NULL && !OSSL_PARAM_set_size_t(p, (size_t) d->ivlen))
+        return 0;
+    return 1;
+}
+
+static const OSSL_PARAM *lc_gettable_ctx_params(void *cctx, void *provctx)
+{
+    static const OSSL_PARAM gettable[] = {
+        OSSL_PARAM_size_t(OSSL_CIPHER_PARAM_KEYLEN, NULL),
+        OSSL_PARAM_size_t(OSSL_CIPHER_PARAM_IVLEN, NULL),
+        OSSL_PARAM_END
+    };
+
+    (void) cctx;
+    (void) provctx;
+    return gettable;
+}
+
+#define LC_FNS(newctx, getp)                                                  \
+    { OSSL_FUNC_CIPHER_NEWCTX, (void (*)(void)) (newctx) },                   \
+    { OSSL_FUNC_CIPHER_FREECTX, (void (*)(void)) lc_freectx },                \
+    { OSSL_FUNC_CIPHER_ENCRYPT_INIT, (void (*)(void)) lc_encrypt_init },      \
+    { OSSL_FUNC_CIPHER_DECRYPT_INIT, (void (*)(void)) lc_decrypt_init },      \
+    { OSSL_FUNC_CIPHER_UPDATE, (void (*)(void)) lc_update },                  \
+    { OSSL_FUNC_CIPHER_FINAL, (void (*)(void)) lc_final },                    \
+    { OSSL_FUNC_CIPHER_GET_PARAMS, (void (*)(void)) (getp) },                 \
+    { OSSL_FUNC_CIPHER_GET_CTX_PARAMS, (void (*)(void)) lc_get_ctx_params },  \
+    { OSSL_FUNC_CIPHER_GETTABLE_CTX_PARAMS, (void (*)(void)) lc_gettable_ctx_params }
+
+static const OSSL_DISPATCH legc16_fns[] = { LC_FNS(lc16_newctx, lc_get_params_16), { 0, NULL } };
+static const OSSL_DISPATCH legc8_fns[] = { LC_FNS(lc8_newctx, lc_get_params_8), { 0, NULL } };
+
+static int n_lac_dinit, n_lac_decrypt, n_lac_null_out;
+static int g_lac_fail;
+static unsigned char lac_plain[16];
+
+static void *lac_newctx(void *provctx)
+{
+    (void) provctx;
+    return malloc(1);
+}
+
+static void lac_freectx(void *cctx)
+{
+    free(cctx);
+}
+
+static int lac_decrypt_init(void *cctx, void *provkey, const OSSL_PARAM params[])
+{
+    (void) cctx;
+    (void) provkey;
+    (void) params;
+    n_lac_dinit++;
+    return 1;
+}
+
+static int lac_decrypt(void *cctx, unsigned char *out, size_t *outlen, size_t outsize,
+                       const unsigned char *in, size_t inlen)
+{
+    (void) cctx;
+    (void) in;
+    (void) inlen;
+    n_lac_decrypt++;
+    if (g_lac_fail)
+        return 0;
+    if (out == NULL) {
+        n_lac_null_out++;
+        if (outlen != NULL)
+            *outlen = sizeof lac_plain;
+        return 1;
+    }
+    if (outsize < sizeof lac_plain) {
+        if (outlen != NULL)
+            *outlen = sizeof lac_plain;
+        return 0;
+    }
+    memcpy(out, lac_plain, sizeof lac_plain);
+    if (outlen != NULL)
+        *outlen = sizeof lac_plain;
+    return 1;
+}
+
+static const OSSL_DISPATCH legac_fns[] = {
+    { OSSL_FUNC_ASYM_CIPHER_NEWCTX, (void (*)(void)) lac_newctx },
+    { OSSL_FUNC_ASYM_CIPHER_FREECTX, (void (*)(void)) lac_freectx },
+    { OSSL_FUNC_ASYM_CIPHER_DECRYPT_INIT, (void (*)(void)) lac_decrypt_init },
+    { OSSL_FUNC_ASYM_CIPHER_DECRYPT, (void (*)(void)) lac_decrypt },
+    { 0, NULL }
+};
+
 /* ------------------------------------------------------------------ the two bodies of algorithms */
 
 #define COURT_PROV "provider=court-pkey"
@@ -1512,6 +1807,10 @@ static const OSSL_ALGORITHM court_sigs[] = {
       "no dupctx, so a final with a buffer runs on the original" },
     { "DSG-SETMD:QON-DSM:courtdsgsetsmd", COURT_PROV, dsg_setmd_fns,
       "the md-parameter pair, for the EVP_MD_CTX_set_params redirect" },
+    /* 7.4l: `EVP_SignFinal`/`EVP_VerifyFinal` need `sign`/`verify` *and* a settable digest, which
+     * is the one combination no table above carries. */
+    { "LEG-SIG:QON-LSIG:courtsigleg", COURT_PROV, leg_sig_fns,
+      "the pair `p_sign.c`/`p_verify.c` drive, with set_ctx_params" },
     { NULL, NULL, NULL, NULL }
 };
 
@@ -1521,6 +1820,28 @@ static const OSSL_ALGORITHM court_sigs[] = {
 static const OSSL_ALGORITHM court_digests[] = {
     { "SHA256:court-sha256", COURT_PROV, dg_fns,
       "a digest name, so the namemap can resolve one back to a NID" },
+    { NULL, NULL, NULL, NULL }
+};
+
+/* 7.4l's two ciphers: `EVP_OpenInit`'s success arm needs the key length the asymmetric cipher
+ * answers (16), and the mismatch refusal needs a cipher that cannot be retuned to it. */
+static const OSSL_ALGORITHM court_ciphers[] = {
+    { "LEG-CIPH:courtsiglc16", COURT_PROV, legc16_fns,
+      "a 16/16 cipher whose key length matches the asymmetric cipher" },
+    { "LEG-CIPH8:courtsiglc8", COURT_PROV, legc8_fns,
+      "an 8/8 cipher, so `set_key_length(16)` cannot be satisfied" },
+    { NULL, NULL, NULL, NULL }
+};
+
+/* The asymmetric cipher, under the two fetches `EVP_OpenInit` can make: the keymgmt's own
+ * `OSSL_OP_ASYM_CIPHER` answer (`g_acqon`) and that name -- the second registered name exists so
+ * that the *same* table is reachable under either spelling, which keeps the refusal arm a data
+ * question rather than a second implementation. */
+static const OSSL_ALGORITHM court_asymciphers[] = {
+    { "QON-LAC:COURT-SIGKEY:COURT-SIGKEY:courtsiglac", COURT_PROV, legac_fns,
+      "the asymmetric cipher `EVP_OpenInit` drives" },
+    { "QON-LAC-BAD:COURT-SIGKEY-BAD:courtsiglacbad", COURT_PROV, legac_fns,
+      "the same table; `g_lac_fail` is what refuses" },
     { NULL, NULL, NULL, NULL }
 };
 
@@ -1534,6 +1855,10 @@ static const OSSL_ALGORITHM *court_query(void *provctx, int operation_id, int *n
         return court_sigs;
     if (operation_id == OSSL_OP_DIGEST)
         return court_digests;
+    if (operation_id == OSSL_OP_CIPHER)
+        return court_ciphers;
+    if (operation_id == OSSL_OP_ASYM_CIPHER)
+        return court_asymciphers;
     return NULL;
 }
 
@@ -2961,6 +3286,230 @@ int main(void)
         EVP_MD_free(sha);
         g_qon = "COURT-SIG";
     }
+
+    /*
+     * ---- 7.4l: `p_sign.c`, `p_verify.c`, `p_open.c`, `p_seal.c` ---------------------------
+     *
+     * The signature pair is driven through `LEG-SIG`, the one method that publishes `sign`,
+     * `verify` *and* a settable digest: `EVP_SignFinal` calls `EVP_PKEY_CTX_set_signature_md`
+     * between the init and the one-shot, so a method without `set_ctx_params` cannot reach the
+     * success arm. The digest is the probe's own `SHA256`, so the name that arrives at
+     * `lsig_set_ctx_params` is the probe's input rather than the library's.
+     */
+    {
+        EVP_MD *lmd = EVP_MD_fetch(ctx, "SHA256", NULL);
+        EVP_CIPHER *lc16 = EVP_CIPHER_fetch(ctx, "LEG-CIPH", NULL);
+        EVP_CIPHER *lc8 = EVP_CIPHER_fetch(ctx, "LEG-CIPH8", NULL);
+        EVP_CIPHER_CTX *cctx = EVP_CIPHER_CTX_new();
+        EVP_MD_CTX *mctx = EVP_MD_CTX_new();
+        unsigned char sig[64], oseal[64];
+        unsigned int siglen;
+        unsigned char ek[32], ivbuf[16], key16[16];
+        int outl;
+        int i;
+
+        for (i = 0; i < (int) sizeof ek; i++)
+            ek[i] = (unsigned char) (0x30 + i);
+        for (i = 0; i < (int) sizeof ivbuf; i++)
+            ivbuf[i] = (unsigned char) (0x60 + i);
+        for (i = 0; i < (int) sizeof key16; i++)
+            key16[i] = (unsigned char) (0x10 + i);
+        memset(lac_plain, 0x5A, sizeof lac_plain);
+
+        printf("l7.setup=%d,%d,%d,%d,%d err=", lmd != NULL, lc16 != NULL, lc8 != NULL,
+               cctx != NULL, mctx != NULL);
+        drain();
+
+        /* The digest context every arm starts from: initialised and fed three bytes. */
+        g_qon = "QON-LSIG";
+        reset_c();
+        n_lsig_setparams = n_lsig_md = 0;
+        memset(lsig_md, 0, sizeof lsig_md);
+        EVP_DigestInit_ex(mctx, lmd, NULL);
+        EVP_DigestUpdate(mctx, msg, 3);
+        siglen = 0;
+        sayr("sigfinal.plain", EVP_SignFinal(mctx, sig, &siglen, pkey));
+        sayn("sigfinal.plain.len", (long long) siglen);
+        say_c("sigfinal.plain.vec");
+        printf("sigfinal.plain.md=%s,%d err=", lsig_md, n_lsig_md);
+        drain();
+
+        EVP_DigestInit_ex(mctx, lmd, NULL);
+        EVP_DigestUpdate(mctx, msg, 3);
+        sayr("sigfinal.ex", EVP_SignFinal_ex(mctx, sig, &siglen, pkey, ctx, NULL));
+        sayn("sigfinal.ex.len", (long long) siglen);
+
+        EVP_DigestInit_ex(mctx, lmd, NULL);
+        EVP_DigestUpdate(mctx, msg, 3);
+        sayr("verifyfinal.plain", EVP_VerifyFinal(mctx, sig, siglen, pkey));
+
+        EVP_DigestInit_ex(mctx, lmd, NULL);
+        EVP_DigestUpdate(mctx, msg, 3);
+        sayr("verifyfinal.ex", EVP_VerifyFinal_ex(mctx, sig, siglen, pkey, ctx, NULL));
+
+        /* The verification refusal: `verify` answers 0, so the answer is 0 rather than -1. */
+        g_fail_ops = 1;
+        EVP_DigestInit_ex(mctx, lmd, NULL);
+        EVP_DigestUpdate(mctx, msg, 3);
+        sayr("verifyfinal.bad_sig", EVP_VerifyFinal(mctx, sig, siglen, pkey));
+        g_fail_ops = 0;
+
+        /* The signature refusal: the method the key prefers has no `sign_init`, so the init
+         * refuses before the digest is ever signed. */
+        g_qon = "QON-NSI";
+        EVP_DigestInit_ex(mctx, lmd, NULL);
+        EVP_DigestUpdate(mctx, msg, 3);
+        sayr("sigfinal.no_sign_init", EVP_SignFinal(mctx, sig, &siglen, pkey));
+
+        /* The `FINALISE` door: the caller's context is finalised in place instead of a copy. */
+        g_qon = "QON-LSIG";
+        EVP_DigestInit_ex(mctx, lmd, NULL);
+        EVP_DigestUpdate(mctx, msg, 3);
+        EVP_MD_CTX_set_flags(mctx, EVP_MD_CTX_FLAG_FINALISE);
+        sayr("sigfinal.finalise", EVP_SignFinal(mctx, sig, &siglen, pkey));
+        EVP_MD_CTX_clear_flags(mctx, EVP_MD_CTX_FLAG_FINALISE);
+        sayr("sigfinal.finalised_again", EVP_SignFinal(mctx, sig, &siglen, pkey));
+
+        /*
+         * `EVP_OpenInit`. The first arm needs no key at all (`priv == NULL` answers 1 with the
+         * cipher set up); the second is the whole path; the third and fourth are the two
+         * refusals the asymmetric cipher can produce; the fifth is a `type == NULL` call with
+         * nothing to do.
+         */
+        g_acqon = "QON-LAC";
+        n_lac_dinit = n_lac_decrypt = n_lac_null_out = 0;
+        lc_einit = lc_dinit = lc_final_calls = 0;
+        EVP_CIPHER_CTX_reset(cctx);
+        sayr("open.null_priv", EVP_OpenInit(cctx, lc16, ek, (int) sizeof ek, ivbuf, NULL));
+
+        n_lac_dinit = n_lac_decrypt = n_lac_null_out = 0;
+        lc_einit = lc_dinit = lc_final_calls = 0;
+        EVP_CIPHER_CTX_reset(cctx);
+        sayr("open.ok", EVP_OpenInit(cctx, lc16, ek, (int) sizeof ek, ivbuf, pkey));
+        printf("open.ok.vec=dinit:%d,decrypt:%d,null_out:%d,keylen:%lu,ivlen:%lu,key_null:%d,iv_null:%d err=\n",
+               n_lac_dinit, n_lac_decrypt, n_lac_null_out, (unsigned long) lc_keylen,
+               (unsigned long) lc_ivlen, lc_key_null, lc_iv_null);
+        ERR_clear_error();
+        printf("open.ok.key16=%d err=", memcmp(lc_key, lac_plain, 16) == 0);
+        drain();
+        outl = -1;
+        sayr("openfinal.ok", EVP_OpenFinal(cctx, sig, &outl));
+        printf("openfinal.ok.outl=%d err=", outl);
+        drain();
+
+        /* The cipher's key length cannot be set to the asymmetric cipher's answer. */
+        n_lac_dinit = n_lac_decrypt = n_lac_null_out = 0;
+        EVP_CIPHER_CTX_reset(cctx);
+        sayr("open.cipher_mismatch", EVP_OpenInit(cctx, lc8, ek, (int) sizeof ek, ivbuf, pkey));
+
+        /* The asymmetric cipher's `decrypt` answers 0, after a successful size query. */
+        g_lac_fail = 1;
+        n_lac_dinit = n_lac_decrypt = n_lac_null_out = 0;
+        EVP_CIPHER_CTX_reset(cctx);
+        sayr("open.decrypt_fails", EVP_OpenInit(cctx, lc16, ek, (int) sizeof ek, ivbuf, pkey));
+        printf("open.decrypt_fails.vec=dinit:%d,decrypt:%d,null_out:%d err=\n",
+               n_lac_dinit, n_lac_decrypt, n_lac_null_out);
+        ERR_clear_error();
+        g_lac_fail = 0;
+
+        /* No asymmetric cipher is published under the name the key answers. */
+        g_acqon = "QON-NO-SUCH-ACIPH";
+        n_lac_dinit = n_lac_decrypt = n_lac_null_out = 0;
+        EVP_CIPHER_CTX_reset(cctx);
+        sayr("open.no_asym_cipher", EVP_OpenInit(cctx, lc16, ek, (int) sizeof ek, ivbuf, pkey));
+        g_acqon = "COURT-SIGKEY";
+
+        /* `type == NULL` and `priv == NULL`: no cipher to set up and no key to unwrap. */
+        sayr("open.nothing", EVP_OpenInit(cctx, NULL, NULL, 0, NULL, NULL));
+
+        /* `EVP_SealFinal` is the encrypt-side twin, on a context armed for encryption. */
+        sayr("seal.init", EVP_EncryptInit_ex(cctx, lc16, NULL, key16, ivbuf));
+        outl = -1;
+        sayr("sealfinal.ok", EVP_SealFinal(cctx, oseal, &outl));
+        printf("sealfinal.ok.outl=%d,einit:%d err=", outl, lc_einit);
+        drain();
+
+        EVP_CIPHER_CTX_free(cctx);
+        EVP_MD_CTX_free(mctx);
+        EVP_MD_free(lmd);
+        EVP_CIPHER_free(lc16);
+        EVP_CIPHER_free(lc8);
+        g_qon = "COURT-SIG";
+    }
+
+    /*
+     * ---- 7.4l: the `EVP_PKEY_METHOD` registry's application stack ---------------------------
+     *
+     * `EVP_PKEY_meth_find` cannot be defined (see the boundaries below), so what *is* courted is
+     * the application half of the registry, through the exports that do not read the Phase-8
+     * table: the constructor, both mutators, the app stack's two lookups and the count-changing
+     * calls. Everything here is a return code or a field the probe supplied.
+     */
+    {
+        EVP_PKEY_METHOD *m = EVP_PKEY_meth_new(50001, 0);
+        EVP_PKEY_METHOD *m2 = EVP_PKEY_meth_new(50002, 4);
+        EVP_PKEY_METHOD *cpy = EVP_PKEY_meth_new(50003, 0);
+        int id = -1, flags = -1;
+
+        printf("pmeth.new=%d,%d,%d err=", m != NULL, m2 != NULL, cpy != NULL);
+        drain();
+        EVP_PKEY_meth_get0_info(&id, &flags, m);
+        printf("pmeth.new.info=%d,%d err=", id, flags);
+        drain();
+        EVP_PKEY_meth_get0_info(&id, &flags, m2);
+        printf("pmeth.new2.info=%d,%d err=", id, flags);
+        drain();
+        /* `add0` has no duplicate check, and `remove` compares *pointer identity*, so the same
+         * method pushed twice is removed twice before the third call answers 0. */
+        sayr("pmeth.add0.m", EVP_PKEY_meth_add0(m));
+        sayr("pmeth.add0.m2", EVP_PKEY_meth_add0(m2));
+        sayr("pmeth.add0.m_twice", EVP_PKEY_meth_add0(m));
+        sayr("pmeth.remove.m_1", EVP_PKEY_meth_remove(m));
+        sayr("pmeth.remove.m_2", EVP_PKEY_meth_remove(m));
+        sayr("pmeth.remove.m_3", EVP_PKEY_meth_remove(m));
+
+        /* `copy` takes the callbacks and restores the destination's own id and flags. */
+        EVP_PKEY_meth_copy(cpy, m2);
+        EVP_PKEY_meth_get0_info(&id, &flags, cpy);
+        printf("pmeth.copy.info=%d,%d err=", id, flags);
+        drain();
+
+        sayr("pmeth.remove.m2", EVP_PKEY_meth_remove(m2));
+        sayr("pmeth.remove.m2_again", EVP_PKEY_meth_remove(m2));
+        EVP_PKEY_meth_free(m);
+        EVP_PKEY_meth_free(m2);
+        EVP_PKEY_meth_free(cpy);
+    }
+
+    /*
+     * ---- 7.4l: the boundary this slice cannot cross -----------------------------------------
+     *
+     * Every name below is a `forensics/phase7-obligations.json` `open` row whose answer depends on
+     * a later stratum, so the export is withheld rather than stubbed with a divergent answer. Each
+     * line names the missing thing and the authority's own coordinate for it. `EVP_PKEY_type` and
+     * `EVP_PKEY_CTX_get_algor` already have lines in the 7.4e block above.
+     */
+    printf("EVP_PKEY_meth_find=NOT_MEASURED_STANDARD_METHODS_IS_PHASE_8_pmeth_lib_c_54\n");
+    printf("EVP_PKEY_meth_get_count=NOT_MEASURED_STANDARD_METHODS_IS_PHASE_8_pmeth_lib_c_54\n");
+    printf("EVP_PKEY_meth_get0=NOT_MEASURED_STANDARD_METHODS_IS_PHASE_8_pmeth_lib_c_54\n");
+    printf("evp_pkey_meth_find_added_by_application=NOT_MEASURED_NO_PUBLIC_DOOR_WITHOUT_PMETH_FIELD\n");
+    printf("ASN1_item_sign_ex=NOT_MEASURED_NEEDS_ASN1_item_sign_ctx_PHASE_11_a_sign_c_138\n");
+    printf("ASN1_item_verify_ex=NOT_MEASURED_NEEDS_ASN1_item_verify_ctx_PHASE_11_a_verify_c_104\n");
+    printf("d2i_PrivateKey=NOT_MEASURED_NEEDS_OSSL_DECODER_AND_AMETH_PHASE_8_10_d2i_pr_c_179\n");
+    printf("d2i_PrivateKey_ex=NOT_MEASURED_NEEDS_OSSL_DECODER_AND_AMETH_PHASE_8_10_d2i_pr_c_166\n");
+    printf("d2i_AutoPrivateKey=NOT_MEASURED_NEEDS_OSSL_DECODER_AND_AMETH_PHASE_8_10_d2i_pr_c_254\n");
+    printf("d2i_AutoPrivateKey_ex=NOT_MEASURED_NEEDS_OSSL_DECODER_AND_AMETH_PHASE_8_10_d2i_pr_c_241\n");
+    printf("d2i_PublicKey=NOT_MEASURED_NEEDS_EVP_PKEY_set_type_PHASE_8_d2i_pu_c_28\n");
+    printf("d2i_KeyParams=NOT_MEASURED_NEEDS_THE_AMETH_TABLE_PHASE_8_d2i_param_c_18\n");
+    printf("d2i_KeyParams_bio=NOT_MEASURED_NEEDS_d2i_KeyParams_PHASE_8_d2i_param_c_49\n");
+    printf("i2d_KeyParams=NOT_MEASURED_NEEDS_OSSL_ENCODER_PHASE_10_i2d_evp_c_73\n");
+    printf("i2d_KeyParams_bio=NOT_MEASURED_NEEDS_i2d_KeyParams_PHASE_10_i2d_evp_c_91\n");
+    printf("i2d_PrivateKey=NOT_MEASURED_NEEDS_OSSL_ENCODER_PHASE_10_i2d_evp_c_131\n");
+    printf("i2d_PKCS8PrivateKey=NOT_MEASURED_NEEDS_OSSL_ENCODER_PHASE_10_i2d_evp_c_136\n");
+    printf("i2d_PublicKey=NOT_MEASURED_NEEDS_OSSL_ENCODER_PHASE_10_i2d_evp_c_141\n");
+    printf("EVP_SealInit=NOT_MEASURED_NEEDS_RAND_priv_bytes_ex_PHASE_9_p_seal_c_46\n");
+    printf("EVP_read_pw_string=NOT_MEASURED_NEEDS_UI_PHASE_13_evp_key_c_47\n");
+    printf("EVP_read_pw_string_min=NOT_MEASURED_NEEDS_UI_PHASE_13_evp_key_c_52\n");
 
     /*
      * ---- release ----

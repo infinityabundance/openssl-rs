@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 924,
       "deferred_to_later_phase": 164,
-      "implemented": 629,
-      "open_in_this_stratum": 157,
+      "implemented": 639,
+      "open_in_this_stratum": 147,
       "owned": 950,
       "received_by_handoff": 26
     },
@@ -1201,6 +1201,7 @@
       "EVP_ASYM_CIPHER_names_do_all",
       "EVP_ASYM_CIPHER_settable_ctx_params",
       "EVP_ASYM_CIPHER_up_ref",
+      "EVP_BytesToKey",
       "EVP_CIPHER_CTX_buf_noconst",
       "EVP_CIPHER_CTX_cipher",
       "EVP_CIPHER_CTX_clear_flags",
@@ -1484,6 +1485,8 @@
       "EVP_MD_settable_ctx_params",
       "EVP_MD_up_ref",
       "EVP_MD_xof",
+      "EVP_OpenFinal",
+      "EVP_OpenInit",
       "EVP_PBE_CipherInit",
       "EVP_PBE_CipherInit_ex",
       "EVP_PBE_alg_add",
@@ -1800,6 +1803,11 @@
       "EVP_SKEY_is_a",
       "EVP_SKEY_to_provider",
       "EVP_SKEY_up_ref",
+      "EVP_SealFinal",
+      "EVP_SignFinal",
+      "EVP_SignFinal_ex",
+      "EVP_VerifyFinal",
+      "EVP_VerifyFinal_ex",
       "EVP_add_cipher",
       "EVP_add_digest",
       "EVP_default_properties_enable_fips",
@@ -1808,8 +1816,10 @@
       "EVP_get1_default_properties",
       "EVP_get_cipherbyname",
       "EVP_get_digestbyname",
+      "EVP_get_pw_prompt",
       "EVP_md_null",
       "EVP_set_default_properties",
+      "EVP_set_pw_prompt",
       "PKCS5_PBE_add",
       "PKCS5_PBE_keyivgen",
       "PKCS5_PBE_keyivgen_ex",
@@ -2172,12 +2182,6 @@
       },
       {
         "declaring_header": "evp.h",
-        "module": "src/evp/p_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_BytesToKey"
-      },
-      {
-        "declaring_header": "evp.h",
         "module": "src/evp/cipher.rs",
         "received_from_phase": null,
         "symbol": "EVP_CIPHER_CTX_get_algor"
@@ -2259,18 +2263,6 @@
         "module": "src/evp/encode.rs",
         "received_from_phase": null,
         "symbol": "EVP_EncodeUpdate"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/p_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_OpenFinal"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/p_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_OpenInit"
       },
       {
         "declaring_header": "evp.h",
@@ -2480,49 +2472,13 @@
         "declaring_header": "evp.h",
         "module": "src/evp/p_legacy.rs",
         "received_from_phase": null,
-        "symbol": "EVP_SealFinal"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/p_legacy.rs",
-        "received_from_phase": null,
         "symbol": "EVP_SealInit"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/p_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SignFinal"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/p_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_SignFinal_ex"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/p_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_VerifyFinal"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/p_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_VerifyFinal_ex"
       },
       {
         "declaring_header": "evp.h",
         "module": "src/evp/legacy_evp.rs",
         "received_from_phase": null,
         "symbol": "EVP_add_alg_module"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/p_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_get_pw_prompt"
       },
       {
         "declaring_header": "evp.h",
@@ -2535,12 +2491,6 @@
         "module": "src/evp/p_legacy.rs",
         "received_from_phase": null,
         "symbol": "EVP_read_pw_string_min"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/p_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_set_pw_prompt"
       },
       {
         "declaring_header": "hmac.h",
@@ -3076,12 +3026,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "2c632d87e17236ad9fc0045f48621911a8edafcb8c6fa42d172352d113cc1711"
+      "sha256": "016f8952ef32d823b0ee86b5c031efc37fa6c681561ba815f58debc028a0fadd"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "4d66f17755bc92cad05ab8a5c10fa739011667d0377040705962dd043b3c83af"
+      "sha256": "3add07c2f047e3fbc878cad9643a79fd339c1a495cbf18af04968d4c3910f20e"
     }
   ],
   "kind": "phase7-obligations",

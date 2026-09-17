@@ -175,7 +175,7 @@ or a named half of one:
 | 7.4b | the five method-object families — `signature.c`, `asymcipher.c`, `kem.c`, `exchange.c`, `keymgmt_meth.c` — with their `EVP_PKEY_*` operations, minus `keymgmt_meth.c`'s `legacy_alg` fill | `keymgmt_meth.c`'s `get_legacy_alg_type_from_keymgmt` (→ `evp_pkey_name2type` → `EVP_PKEY_type`) |
 | 7.4c | `pmeth_lib.c`'s `EVP_PKEY_CTX` object and its accessors, `pmeth_check.c`, `pmeth_gn.c`, `m_sigver.c` (**LANDED, D191**), `evp_pbe.c` and the five `p5_*`/`pbe_*` units (**LANDED, D192**) | `EVP_PKEY_meth_*`, `EVP_PKEY_asn1_*`, `EVP_PKEY_CTX_new`/`_new_id` (the legacy-typed constructors) |
 | 7.4e | **`p_lib.c`'s provider half, the five `EVP_PKEY_CTX_*` accessors beside it, and `EVP_PKEY_Q_keygen`** — the four cache-backed getters, `missing_parameters`/`copy_parameters`/`can_sign`/`get_base_id`/`get0`, both type setters, `get_group_name`, both encoded-public-key halves, the four `EVP_PKEY_new_raw_*` constructors with the shared `new_raw_key_int` under them, `new_CMAC_key`, both default-digest accessors, the variadic generator with its C shim, and `evp_lib.c`'s `set_group_name`/`get_group_name`/`set_algor_params`/`get_algor_params` with `signature.c`'s `set_signature` (**LANDED, D190**) | `EVP_PKEY_digestsign_supports_digest` (→ `EVP_DigestSignInit_ex`, `m_sigver.c`, 7.4's own remaining work), `EVP_PKEY_type` (7.4l), the six `print_*` (→ `encoder.h`, Phase 10), the twenty legacy key accessors (→ Phase 8's key types), the two engine accessors (→ Phase 13), `EVP_PKEY_CTX_get_algor` (→ `d2i_X509_ALGOR`, Phase 11) |
-| 7.4l | — **the two `standard_methods[]` tables and the exports that read them**, per symbol and not per unit (D165): `EVP_PKEY_type`, the six in `p_legacy.c`, the twelve in the `i2d_*`/`d2i_*` units, the `asn1_find`/`asn1_get0`/`asn1_get_count` half of `ameth_lib.c`, and `EVP_PKEY_meth_find`/`_get0`/`_get_count` in `pmeth_lib.c` | — |
+| 7.4l | — **the two `standard_methods[]` tables and the exports that read them**, per symbol and not per unit (D165): `EVP_PKEY_type`, the six in `p_legacy.c`, the twelve in the `i2d_*`/`d2i_*` units, the `asn1_find`/`asn1_get0`/`asn1_get_count` half of `ameth_lib.c`, and `EVP_PKEY_meth_find`/`_get0`/`_get_count` in `pmeth_lib.c` (**PARTIAL, D193** — the *ten* that read no table land in `src/evp/p_legacy.rs`) | `EVP_PKEY_type`, `EVP_PKEY_meth_find`/`_get0`/`_get_count` (→ the two `standard_methods[]` tables, Phase 8); the twelve `d2i_*`/`i2d_*` (→ `OSSL_DECODER_*`/`OSSL_ENCODER_*`, Phase 10, and the ameth table, Phase 8); `ASN1_item_sign_ex`/`_verify_ex` (→ `ASN1_item_sign_ctx`/`_verify_ctx`, Phase 11); `EVP_SealInit` (→ `RAND_priv_bytes_ex`, Phase 9); `EVP_read_pw_string`/`_min` (→ `UI`, Phase 13) |
 | 7.4n | `evp_cnf.c` — **held for Phase 11** (`X509V3_get_value_bool`) | — |
 
 **`ctrl_params_translate.c` is one unit and it is sliced by its own structure, not by size (D187).**
@@ -269,6 +269,21 @@ and `OSSL_NELEM(standard_methods)` leaves no relocation at all. The row above is
 symbol, and the tool that generalises it is the next step. A stratum with an `open` symbol it can never
 build can never close; a stratum that *defers* what it can build never finishes either, and this is the
 direction that would have been silent.
+
+**7.4l executed that per-symbol reading, and ten of the twenty-three landed (D193).** The ten that
+read no table are `crypto/evp/evp_key.c`'s three (`EVP_BytesToKey` and the two prompt accessors),
+`p_sign.c`'s two, `p_verify.c`'s two, `p_open.c`'s two and `p_seal.c`'s `EVP_SealFinal`; they are in
+`src/evp/p_legacy.rs`, which is the ledger's own module name for the eleven `EVP_Sign`/`EVP_Verify`/
+`EVP_Open`/`EVP_Seal`/`EVP_BytesToKey`/`EVP_read_pw_string*`/`EVP_get_pw_prompt`/`EVP_set_pw_prompt`
+symbols. The thirteen that did not are held with their blockers named, and the families are read
+rather than assumed: the two `ASN1_item_*_ex` hand-offs from Phase 5 do not build **because their
+delegates** `ASN1_item_sign_ctx`/`ASN1_item_verify_ctx` are `x509.h`'s and Phase 11's, not because
+`EVP_DigestSignInit` was missing; the twelve `d2i_*`/`i2d_*` names take the `OSSL_DECODER_*`/
+`OSSL_ENCODER_*` branch **first** for a provider key, so Phase 10 blocks them before Phase 8's ameth
+table does; `EVP_read_pw_string` is withheld with its `_min` because its whole body is the call, while
+`EVP_get_pw_prompt`/`EVP_set_pw_prompt` land because they touch the file's own static and no `UI` at
+all. Each withheld name has a `forensics/prerequisites.json` row naming the stratum and the name that
+blocks it, a `NOT_MEASURED_…` line in `RT-EVP-PKEY` or `RT-EVP-PBE`, and a paragraph in D193.
 
 
 ### 7.3, split — recorded when it was needed, not performed silently
