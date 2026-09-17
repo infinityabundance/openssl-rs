@@ -1064,3 +1064,70 @@ between the authority and the candidate at this site.**
   project's rule is the opposite — define the symbol, answer correctly for every reachable state, and
   record the divergence — and that is what `EVP_PKEY_asn1_get_count` and `_get0` already did for the
   same table.
+
+### D-PBE-PKCS12-KEYGEN-1 — the six `PKCS12_PBE_keyivgen` rows of `builtin_pbe[]` carry no keygen
+
+- **Obligation:** `EVP_PBE_find` and `EVP_PBE_find_ex` for the six NIDs `NID_pbe_WithSHA1And128BitRC4`
+  (144), `NID_pbe_WithSHA1And40BitRC4` (145), `NID_pbe_WithSHA1And3_Key_TripleDES_CBC` (146),
+  `NID_pbe_WithSHA1And2_Key_TripleDES_CBC` (147), `NID_pbe_WithSHA1And128BitRC2_CBC` (148) and
+  `NID_pbe_WithSHA1And40BitRC2_CBC` (149) under `EVP_PBE_TYPE_OUTER`, and `EVP_PBE_CipherInit_ex`
+  on an `ASN1_OBJECT` whose `OBJ_obj2nid` is one of the six.
+- **Authority:** the six rows of `crypto/evp/evp_pbe.c:46-57` name `PKCS12_PBE_keyivgen` in the
+  `keygen` column and `&PKCS12_PBE_keyivgen_ex` in the `keygen_ex` column, so `EVP_PBE_find_ex`
+  answers **1** for each with both `cipher_nid` and `md_nid` set (`NID_rc4`/`NID_sha1`,
+  `NID_rc4_40`/`NID_sha1`, `NID_des_ede3_cbc`/`NID_sha1`, `NID_des_ede_cbc`/`NID_sha1`,
+  `NID_rc2_cbc`/`NID_sha1`, `NID_rc2_40_cbc`/`NID_sha1`) and both pointers **non-NULL**, and
+  `EVP_PBE_CipherInit_ex` reaches `PKCS12_PBE_keyivgen_ex` (`crypto/pkcs12/p12_crpt.c:23`).
+- **Crate:** the six rows are **present and in place**, so the return code and both NIDs are the
+  authority's for all six; the two keygen columns are `None`, so `EVP_PBE_find`/`_ex` answers 1 with
+  `*pkeygen == NULL` and `*pkeygen_ex == NULL`, and `EVP_PBE_CipherInit_ex` answers **0** without
+  calling through either. Measured by `RT-EVP-PBE`: its `pbe.find.04`…`pbe.find.09` arms print
+  `1,0,144,5,64`…`1,0,149,98,64` — the return code, the type, the NID and both NIDs — on both
+  sides, and `pbe.find_plain.04`…`pbe.find_plain.09` print `1,5,64`…`1,98,64`, followed in each
+  case by a fixed marker in place of the two presence answers, because the two libraries' answers
+  there differ (non-NULL on the authority, `NULL` here) and printing them would report a registered
+  difference as a residual.
+- **Reason:** `PKCS12_PBE_keyivgen` and `PKCS12_PBE_keyivgen_ex` are declared in `pkcs12.h` and
+  `forensics/atlas/symbol-ownership.json` gives both `owner_phase: 10`. A Rust `static` is fully
+  initialised or it does not exist, so a row whose keygen column is another stratum's function
+  cannot be written at all, and a placeholder would change `EVP_PBE_find`'s answer — which is the
+  thing the table exists to give. The alternative the project's per-symbol rule would normally reach
+  for, deferring the *readers* (`EVP_PBE_find`, `_ex`, `EVP_PBE_CipherInit*`), was measured and
+  does not build: `PKCS5_v2_PBE_keyivgen_ex` calls `EVP_PBE_find_ex` at `p5_crpt2.c:133` and
+  `PKCS5_v2_PBKDF2_keyivgen_ex` calls `EVP_PBE_find` at `:230`, so deferring the readers would take
+  four of this slice's own mandated exports with them and leave the court unable to observe the
+  table at all. `docs/DECISIONS.md` D192 carries the argument and the cost.
+- **Claim removed:** `EVP_PBE_find`/`_ex`'s two keygen out-parameters, and
+  `EVP_PBE_CipherInit_ex`'s behaviour as a whole, are not claimed compatible for these six NIDs.
+  The return code and both NID out-parameters **are** claimed compatible, for all thirty-four rows.
+  The same record covers the guard in `EVP_PBE_CipherInit_ex` and in `PKCS5_v2_PBE_keyivgen_ex` that
+  answers 0 where the authority would call a NULL pointer: the authority's eighteen `PRF` rows carry
+  no keygen in either column, so `EVP_PBE_CipherInit_ex` on one of those objects — and on a KDF row
+  a caller added with `EVP_PBE_alg_add_type`, which leaves `keygen_ex` empty — faults there.
+- **Trigger:** Phase 10's first commit that lands `crypto/pkcs12/p12_crpt.c`. At that point the six
+  rows take the two function addresses and this entry is removed with them; `RT-EVP-PBE`'s
+  `pbe.find.04`…`pbe.find.09` arms would gain the two presence answers, which is the measurement.
+
+### D-EVP-CIPHER-LEGACY-NID-1 — a fetched provider cipher's legacy NID is `NID_undef`, because the legacy table is Phase 13's
+
+- **Obligation:** `EVP_CIPHER_get_nid` on a method returned by `EVP_CIPHER_fetch` whose name is a
+  legacy name, and every caller that reads the result — measured here through `EVP_PBE_alg_add`,
+  whose cipher argument is converted with `EVP_CIPHER_get_nid` (`crypto/evp/evp_pbe.c:238`).
+- **Authority:** `evp_cipher_from_algorithm` calls `set_legacy_nid` over the method's names, which
+  looks each one up in the `OBJ_NAME` table under `OBJ_NAME_TYPE_CIPHER_METH`. That table is
+  populated by the legacy wrappers (`EVP_des_cbc` and its hundred and sixty siblings), so a fetch of
+  `"DES-CBC"` answers `nid == NID_des_cbc` (**31**) and `EVP_PBE_alg_add` stores `31`.
+- **Crate:** answers `NID_undef` (**0**), because those wrappers are Phase 13's and the table is
+  empty. Measured by `RT-EVP-PBE`: the `EVP_PBE_alg_add` arm's stored `pcnid` is 31 on the authority
+  and 0 here, while the *digest* half of the same arm agrees — `EVP_MD_get_type` answers 0 on both
+  sides, which is the observation `docs/DECISIONS.md` D148 already recorded from `RT-FETCH`.
+- **Reason:** the dependency is a contents boundary and not a choice: `set_legacy_nid`'s *code* is
+  7.3b's and landed, and what it finds is Phase 13's. Recording it as a divergence rather than a
+  deferral is what the gate's rule forces, as in D-PKEY-AMETH-1 and D-PKEY-AMETH-2.
+- **Claim removed:** the legacy NID of a fetched provider method is not claimed compatible. Every
+  other observable of the fetch — the name, the description, the parameters, the two length
+  constants and the provider — is, and the *fetch* itself is unchanged: this is a value the method
+  carries, not a refusal.
+- **Trigger:** Phase 13's first legacy cipher wrapper. `RT-EVP-PBE`'s
+  `pbe.cipher_nid.legacy` marker is where the difference would be measured, and
+  `pbe.alg_add.methods_nids` is the arm it holds back.

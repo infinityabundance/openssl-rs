@@ -173,7 +173,7 @@ or a named half of one:
 |---|---|---|
 | 7.4a | the `EVP_PKEY` object's provider attributes and lifetime (`p_lib.c`'s provider paths), `keymgmt_lib.c` whole, the rows above | `pkey_set_type`/`find_ameth`, `evp_pkey_get_legacy`/`_free_legacy`/`_copy_downgraded`/`get0_DH_int`, `evp_pkey_export_to_provider` (7.4c), both registries |
 | 7.4b | the five method-object families — `signature.c`, `asymcipher.c`, `kem.c`, `exchange.c`, `keymgmt_meth.c` — with their `EVP_PKEY_*` operations, minus `keymgmt_meth.c`'s `legacy_alg` fill | `keymgmt_meth.c`'s `get_legacy_alg_type_from_keymgmt` (→ `evp_pkey_name2type` → `EVP_PKEY_type`) |
-| 7.4c | `pmeth_lib.c`'s `EVP_PKEY_CTX` object and its accessors, `pmeth_check.c`, `pmeth_gn.c`, `m_sigver.c`, `evp_pbe.c` and the five `p5_*`/`pbe_*` units | `EVP_PKEY_meth_*`, `EVP_PKEY_asn1_*`, `EVP_PKEY_CTX_new`/`_new_id` (the legacy-typed constructors) |
+| 7.4c | `pmeth_lib.c`'s `EVP_PKEY_CTX` object and its accessors, `pmeth_check.c`, `pmeth_gn.c`, `m_sigver.c` (**LANDED, D191**), `evp_pbe.c` and the five `p5_*`/`pbe_*` units (**LANDED, D192**) | `EVP_PKEY_meth_*`, `EVP_PKEY_asn1_*`, `EVP_PKEY_CTX_new`/`_new_id` (the legacy-typed constructors) |
 | 7.4e | **`p_lib.c`'s provider half, the five `EVP_PKEY_CTX_*` accessors beside it, and `EVP_PKEY_Q_keygen`** — the four cache-backed getters, `missing_parameters`/`copy_parameters`/`can_sign`/`get_base_id`/`get0`, both type setters, `get_group_name`, both encoded-public-key halves, the four `EVP_PKEY_new_raw_*` constructors with the shared `new_raw_key_int` under them, `new_CMAC_key`, both default-digest accessors, the variadic generator with its C shim, and `evp_lib.c`'s `set_group_name`/`get_group_name`/`set_algor_params`/`get_algor_params` with `signature.c`'s `set_signature` (**LANDED, D190**) | `EVP_PKEY_digestsign_supports_digest` (→ `EVP_DigestSignInit_ex`, `m_sigver.c`, 7.4's own remaining work), `EVP_PKEY_type` (7.4l), the six `print_*` (→ `encoder.h`, Phase 10), the twenty legacy key accessors (→ Phase 8's key types), the two engine accessors (→ Phase 13), `EVP_PKEY_CTX_get_algor` (→ `d2i_X509_ALGOR`, Phase 11) |
 | 7.4l | — **the two `standard_methods[]` tables and the exports that read them**, per symbol and not per unit (D165): `EVP_PKEY_type`, the six in `p_legacy.c`, the twelve in the `i2d_*`/`d2i_*` units, the `asn1_find`/`asn1_get0`/`asn1_get_count` half of `ameth_lib.c`, and `EVP_PKEY_meth_find`/`_get0`/`_get_count` in `pmeth_lib.c` | — |
 | 7.4n | `evp_cnf.c` — **held for Phase 11** (`X509V3_get_value_bool`) | — |
@@ -239,6 +239,21 @@ not; the probe publishes its generation key types under the object spellings so 
 question decided the two entry points that hardcode `libctx = NULL` (`EVP_PKEY_new_CMAC_key` and the
 legacy-type raw constructors): the probe registers its provider in the **default** library context as
 well, and the measurement is that the authority's default provider never competes for those names.
+
+**7.4c is closed by D192, and the five `p5_*`/`pbe_*` units are four files plus a whole table.** The
+units are `crypto/evp/evp_pbe.c` (eight exports), `crypto/evp/p5_crpt.c` (three, one of them empty),
+`crypto/evp/p5_crpt2.c` (six exports and two internals), `crypto/evp/pbe_scrypt.c` (two, landed in
+7.4c-ii) and `crypto/asn1/p5_scrypt.c`'s two keygen exports — the fifth unit is not `pbe_scrypt.c`
+as the row read, it is `p5_scrypt.c`, whose `PKCS5_v2_scrypt_keyivgen`/`_ex` are declared in `evp.h`
+and therefore this stratum's while `PKCS5_pbe2_set_scrypt` and the `SCRYPT_PARAMS_*` accessors in the
+same file are Phase 11's. Seventeen exports and two internals land in four new modules
+(`src/evp/evp_pbe.rs`, `src/evp/p5_crpt.rs`, `src/evp/p5_crpt2.rs`, `src/evp/p5_scrypt.rs`), the
+court is `RT-EVP-PBE` (420 observations, zero residuals), and the one row of the thirty-four-row
+`builtin_pbe[]` that cannot name its keygen — the six `PKCS12_PBE_keyivgen` rows — is
+`docs/SECURITY_DIVERGENCE_POLICY.md` **D-PBE-PKCS12-KEYGEN-1** rather than an approximation. The
+same slice measured **D-EVP-CIPHER-LEGACY-NID-1**, a pre-existing contents boundary in
+`EVP_CIPHER_get_nid`, and found a mis-recorded `ERR_raise` line in Phase 5's
+`asn1_template_noexp_d2i` that it reports and did not repair.
 
 **The ledger still owes 7.4l, and D165 measured why it is not a table yet.** `EVP_PKEY_type` sits in
 `forensics/phase7-obligations.json`'s `open` list while this table hands `evp_pkey_type.c` to Phase 8:
