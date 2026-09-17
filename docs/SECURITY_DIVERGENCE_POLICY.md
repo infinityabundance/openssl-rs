@@ -68,8 +68,11 @@ are recorded as *compatibility boundaries* (see `docs/RELEASE_GATES.md`
 
 ## 6. Register of recorded safety divergences
 
-Every entry below was found by running a Phase 3 probe against the authority
-(`courts/phase3/`) and observing a fault. A probe cannot compare a crash, so in
+Every entry below was found by running a probe against the authority and observing a fault -- the
+Phase 3 entries from `courts/phase3/`, and the Phase 7 ones from `RT-FETCH`'s provider plus, where
+the entry says so, a measurement program compiled against the pinned prefix in a process of its own,
+because a fault cannot be *compared* and so is measured once and printed as a boundary from then
+on. A probe cannot compare a crash, so in
 each case the probe prints a `NOT_MEASURED_AUTHORITY_FAULTS` marker: the boundary
 is visible in the transcript rather than silently absent from it. The
 observations that *can* be made around each boundary are compared normally.

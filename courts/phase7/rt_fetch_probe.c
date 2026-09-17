@@ -44,6 +44,15 @@
  *     the reference count surviving a free, the context's own default properties rejecting and
  *     then releasing, and finally the same fetch with the provider **unloaded** -- where the
  *     error *reason* is the observation rather than the NULL.
+ *   * **the context path**, added by 7.3d-ii. The resolver's own digest publishes no structural
+ *     functions, so the first `EVP_MD_CTX` observations in the project needed an algorithm with
+ *     them: two more names are published, one with all six structural callbacks and one without
+ *     `squeeze`, and the provider **counts its own callbacks** so the transcript says which arm of
+ *     the initialise ran, how many times, and in what order. The digest value is a function of what
+ *     was fed, so "the implementation ran" is distinguishable from "some implementation ran"; the
+ *     method's size and the context's size are deliberately different, so that
+ *     `EVP_MD_CTX_get_size_ex`'s choice between the two questions is observable rather than
+ *     invisible; and every refusal is compared with the reason the authority raises.
  *
  * What the resolver is, and why it is shaped the way it is
  * --------------------------------------------------------
@@ -66,8 +75,13 @@
  *   * **a child context's store.** `OSSL_LIB_CTX_new_child` needs a core handle and a
  *     `OSSL_DISPATCH` table, which `RT-PROVIDER-3P` is the court that builds; a child's slot 0
  *     is a real observation and is available there, and it is still deferred: a fetch against a
- *     child's scope needs a *provider* published into that child, which is `RT-PROVIDER-3P`'s
- *     to build, not this court's to approximate.
+ *     child's scope needs a *provider* published into that child, which `RT-PROVIDER-3P`'s is to
+ *     build, not this court's to approximate.
+ *   * **four authority faults**, each printed as `NOT_MEASURED_AUTHORITY_FAULTS` rather than
+ *     executed: the three NULL method callbacks `docs/SECURITY_DIVERGENCE_POLICY.md`
+ *     D-MD-NULL-CALLBACK-1 measures, and `EVP_MD_do_all_provided` with a NULL visitor
+ *     (D-MD-DOALL-NULL-1). Each is reachable through a documented entry point, so the boundary is
+ *     visible in the transcript instead of absent from it.
  *
  * Addresses are never printed. Every observation is a relation between two pointers this probe
  * holds (`same` / `different`), a presence answer (`NULL` / `nonnull`), or a return code,
@@ -78,6 +92,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <openssl/core.h>
@@ -86,6 +101,7 @@
 #include <openssl/crypto.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
+#include <openssl/params.h>
 #include <openssl/provider.h>
 
 /* The index numbers, from `include/internal/cryptlib.h` of the admitted authority. They are
@@ -199,6 +215,257 @@ static int court_digest(void *provctx, const unsigned char *in, size_t inl,
     return 1;
 }
 
+/* ---- the context-path algorithm, and why there are two of them ---- */
+
+/*
+ * `evp_md_from_algorithm` counts the *structural* functions it finds and accepts a count of 5 or
+ * 6, or a count of 0 when a standalone one-shot is present. The digest above exercises the 0 arm
+ * and is the smallest legal shape. These two exercise the other two arms, and they are the only
+ * reason `EVP_MD_CTX` has anything to run on:
+ *
+ *   * `court-md-ctx`  publishes all six -- `newctx`, `init`, `update`, `final`, `squeeze` and
+ *     `freectx` -- so the squeeze path is reachable;
+ *   * `court-md-ctx5` publishes the same five **without** `squeeze`, so the count-5 arm is
+ *     exercised and `EVP_DigestSqueeze` is a refusal with its own reason rather than a call.
+ *
+ * The two differ in one more place, and it is deliberate: the **context's** `size` parameter.
+ * `get_params` answers 32 for both, which `evp_md_cache_constants` stores as `md_size`, so
+ * `EVP_MD_get_size` says 32 either way. `court-md-ctx`'s context answers **24**, which is what
+ * makes `EVP_MD_CTX_get_size_ex`'s two paths distinguishable from outside the library: it asks
+ * the *context* first, and a provider whose two answers agree would make the choice invisible.
+ *
+ * The **counters below are the observation**. A probe can see which of the twenty-five
+ * `OSSL_FUNC_DIGEST_*` callbacks ran, in what order and how many times, by counting them in its
+ * own address space -- and the digest value is a function of what was fed, so the transcript also
+ * distinguishes "the implementation ran" from "some implementation ran". Neither is a security
+ * claim and neither is printed as one.
+ */
+#define COURT_CTX_MD_SIZE 32
+#define COURT_CTX_SIZE 24
+#define COURT_CTX_BLOCK 64
+
+struct court_dctx {
+    unsigned char buf[COURT_CTX_BLOCK];
+    size_t len;
+    unsigned long sum;
+};
+
+static int ctx_new_calls, ctx_free_calls, ctx_dup_calls;
+static int ctx_init_calls, ctx_update_calls, ctx_final_calls, ctx_squeeze_calls;
+static int ctx_setparams_calls, ctx_getparams_calls;
+
+static void *ctx_newctx(void *provctx)
+{
+    struct court_dctx *d;
+
+    (void) provctx;
+    ctx_new_calls++;
+    d = malloc(sizeof *d);
+    if (d == NULL)
+        return NULL;
+    memset(d, 0, sizeof *d);
+    return d;
+}
+
+static void ctx_freectx(void *dctx)
+{
+    ctx_free_calls++;
+    free(dctx);
+}
+
+static void *ctx_dupctx(void *dctx)
+{
+    struct court_dctx *to;
+
+    ctx_dup_calls++;
+    if (dctx == NULL)
+        return NULL;
+    to = malloc(sizeof *to);
+    if (to == NULL)
+        return NULL;
+    memcpy(to, dctx, sizeof *to);
+    return to;
+}
+
+static int ctx_init(void *dctx, const OSSL_PARAM *params)
+{
+    struct court_dctx *d = dctx;
+
+    (void) params;
+    ctx_init_calls++;
+    d->len = 0;
+    d->sum = 0;
+    return 1;
+}
+
+static int ctx_update(void *dctx, const unsigned char *in, size_t inl)
+{
+    struct court_dctx *d = dctx;
+    size_t i;
+
+    ctx_update_calls++;
+    for (i = 0; i < inl && d->len < COURT_CTX_BLOCK; i++, d->len++)
+        d->buf[d->len] = in[i];
+    for (i = 0; i < inl; i++)
+        d->sum = (d->sum * 31 + in[i]) & 0xffff;
+    return 1;
+}
+
+/* The emitted value is a function of what was fed: the first byte is the length, the next two are
+ * a running hash of the bytes fed, and the fourth is the first byte retained. `outsz` is the
+ * caller's buffer size and the answer is exactly that long, which is what a XOF does. */
+static int ctx_emit(struct court_dctx *d, unsigned char *out, size_t *outl, size_t outsz)
+{
+    size_t i;
+
+    if (outsz < 4) {
+        *outl = 0;
+        return 0;
+    }
+    out[0] = (unsigned char) (d->len & 0xff);
+    out[1] = (unsigned char) (d->sum & 0xff);
+    out[2] = (unsigned char) ((d->sum >> 8) & 0xff);
+    out[3] = d->buf[0];
+    for (i = 4; i < outsz; i++)
+        out[i] = (unsigned char) ((i * 7) & 0xff);
+    *outl = outsz;
+    return 1;
+}
+
+static int ctx_final(void *dctx, unsigned char *out, size_t *outl, size_t outsz)
+{
+    ctx_final_calls++;
+    return ctx_emit(dctx, out, outl, outsz);
+}
+
+/* Squeeze is the repeatable read: it writes the same bytes and touches nothing, which is what
+ * makes a second call on the same context an observation rather than a repeat. */
+static int ctx_squeeze(void *dctx, unsigned char *out, size_t *outl, size_t outsz)
+{
+    ctx_squeeze_calls++;
+    return ctx_emit(dctx, out, outl, outsz);
+}
+
+static int ctx_get_params(OSSL_PARAM params[])
+{
+    OSSL_PARAM *p;
+    size_t size = COURT_CTX_MD_SIZE;
+    size_t blocksize = COURT_CTX_BLOCK;
+
+    p = OSSL_PARAM_locate(params, OSSL_DIGEST_PARAM_SIZE);
+    if (p != NULL && !OSSL_PARAM_set_size_t(p, size))
+        return 0;
+    p = OSSL_PARAM_locate(params, "blocksize");
+    if (p != NULL && !OSSL_PARAM_set_size_t(p, blocksize))
+        return 0;
+    return 1;
+}
+
+/* The context-level parameter read, and the one place the two algorithms differ. `micalg` is
+ * answered as a string so `EVP_MD_CTX_ctrl`'s *get* direction has something to read. */
+static int ctx_get_ctx_params_of(void *dctx, OSSL_PARAM params[], size_t size)
+{
+    OSSL_PARAM *p;
+
+    (void) dctx;
+    ctx_getparams_calls++;
+    p = OSSL_PARAM_locate(params, OSSL_DIGEST_PARAM_SIZE);
+    if (p != NULL && !OSSL_PARAM_set_size_t(p, size))
+        return 0;
+    p = OSSL_PARAM_locate(params, OSSL_DIGEST_PARAM_MICALG);
+    if (p != NULL && !OSSL_PARAM_set_utf8_string(p, "court-micalg"))
+        return 0;
+    return 1;
+}
+
+static int ctx_get_ctx_params(void *dctx, OSSL_PARAM params[])
+{
+    return ctx_get_ctx_params_of(dctx, params, COURT_CTX_SIZE);
+}
+
+static int ctx5_get_ctx_params(void *dctx, OSSL_PARAM params[])
+{
+    return ctx_get_ctx_params_of(dctx, params, COURT_CTX_MD_SIZE);
+}
+
+static int ctx_set_ctx_params(void *dctx, const OSSL_PARAM *params)
+{
+    (void) dctx;
+    (void) params;
+    ctx_setparams_calls++;
+    return 1;
+}
+
+static const OSSL_PARAM *ctx_gettable_ctx_params(void *dctx, void *provctx)
+{
+    static const OSSL_PARAM gettable[] = {
+        OSSL_PARAM_size_t(OSSL_DIGEST_PARAM_SIZE, NULL),
+        OSSL_PARAM_utf8_string(OSSL_DIGEST_PARAM_MICALG, NULL, 0),
+        OSSL_PARAM_END
+    };
+
+    (void) dctx;
+    (void) provctx;
+    return gettable;
+}
+
+static const OSSL_PARAM *ctx_settable_ctx_params(void *dctx, void *provctx)
+{
+    static const OSSL_PARAM settable[] = {
+        OSSL_PARAM_size_t(OSSL_DIGEST_PARAM_XOFLEN, NULL),
+        OSSL_PARAM_END
+    };
+
+    (void) dctx;
+    (void) provctx;
+    return settable;
+}
+
+/* The six-function dispatch table and the five-function one, sharing every callback. A copy
+ * rather than a macro because a probe is read line by line and a table is the thing being read. */
+static const OSSL_DISPATCH court_ctx_fns[] = {
+    { OSSL_FUNC_DIGEST_NEWCTX, (void (*)(void)) ctx_newctx },
+    { OSSL_FUNC_DIGEST_INIT, (void (*)(void)) ctx_init },
+    { OSSL_FUNC_DIGEST_UPDATE, (void (*)(void)) ctx_update },
+    { OSSL_FUNC_DIGEST_FINAL, (void (*)(void)) ctx_final },
+    { OSSL_FUNC_DIGEST_SQUEEZE, (void (*)(void)) ctx_squeeze },
+    { OSSL_FUNC_DIGEST_FREECTX, (void (*)(void)) ctx_freectx },
+    { OSSL_FUNC_DIGEST_DUPCTX, (void (*)(void)) ctx_dupctx },
+    { OSSL_FUNC_DIGEST_GET_PARAMS, (void (*)(void)) ctx_get_params },
+    { OSSL_FUNC_DIGEST_SET_CTX_PARAMS, (void (*)(void)) ctx_set_ctx_params },
+    { OSSL_FUNC_DIGEST_GET_CTX_PARAMS, (void (*)(void)) ctx_get_ctx_params },
+    { OSSL_FUNC_DIGEST_GETTABLE_CTX_PARAMS, (void (*)(void)) ctx_gettable_ctx_params },
+    { OSSL_FUNC_DIGEST_SETTABLE_CTX_PARAMS, (void (*)(void)) ctx_settable_ctx_params },
+    { 0, NULL }
+};
+
+static const OSSL_DISPATCH court_ctx5_fns[] = {
+    { OSSL_FUNC_DIGEST_NEWCTX, (void (*)(void)) ctx_newctx },
+    { OSSL_FUNC_DIGEST_INIT, (void (*)(void)) ctx_init },
+    { OSSL_FUNC_DIGEST_UPDATE, (void (*)(void)) ctx_update },
+    { OSSL_FUNC_DIGEST_FINAL, (void (*)(void)) ctx_final },
+    { OSSL_FUNC_DIGEST_FREECTX, (void (*)(void)) ctx_freectx },
+    { OSSL_FUNC_DIGEST_DUPCTX, (void (*)(void)) ctx_dupctx },
+    { OSSL_FUNC_DIGEST_GET_PARAMS, (void (*)(void)) ctx_get_params },
+    { OSSL_FUNC_DIGEST_SET_CTX_PARAMS, (void (*)(void)) ctx_set_ctx_params },
+    { OSSL_FUNC_DIGEST_GET_CTX_PARAMS, (void (*)(void)) ctx5_get_ctx_params },
+    { OSSL_FUNC_DIGEST_GETTABLE_CTX_PARAMS, (void (*)(void)) ctx_gettable_ctx_params },
+    { OSSL_FUNC_DIGEST_SETTABLE_CTX_PARAMS, (void (*)(void)) ctx_settable_ctx_params },
+    { 0, NULL }
+};
+
+/* The nine counters as one observation. A caller that printed them one per line would make an
+ * accidental reordering of two of them a residual; one vector makes the whole call path one
+ * comparable fact, which is what it is. */
+static void say_ctx_activity(const char *key)
+{
+    printf("%s=%d,%d,%d,%d,%d,%d,%d,%d,%d err=%lu\n", key,
+           ctx_new_calls, ctx_free_calls, ctx_dup_calls, ctx_init_calls,
+           ctx_update_calls, ctx_final_calls, ctx_squeeze_calls,
+           ctx_setparams_calls, ctx_getparams_calls, ERR_peek_error());
+    ERR_clear_error();
+}
+
 /* The namemap visitor both a `METH` method's and a fetched method's name list are walked with.
  * It records *which* names arrived rather than how many in what order, because the order is the
  * namemap's insertion order and this court's business is the set. */
@@ -220,10 +487,13 @@ static void name_visitor(const char *name, void *data)
 }
 
 /* A `METH` digest's `init`, so the hand-built method has something to store and the getter has
- * something to answer. It is never called by this probe: `EVP_MD_CTX` is 7.3d's second half. */
+ * something to answer. The accessor block below stores it and then **calls it through a context**,
+ * which is what makes the legacy arm of `evp_md_init_internal` observable from a probe at all. */
+static int meth_init_calls;
 static int meth_md_init(EVP_MD_CTX *ctx)
 {
     (void) ctx;
+    meth_init_calls++;
     return 1;
 }
 
@@ -234,9 +504,14 @@ static const OSSL_DISPATCH court_digest_fns[] = {
 };
 
 /* The published name list: three aliases, the first of which is the identity. The provider's
- * property definition is what the *negative* selection below rejects. */
+ * property definition is what the *negative* selection below rejects. Two more algorithms follow
+ * for the context path -- see the note above `court_ctx_fns`. */
 static const OSSL_ALGORITHM court_digests[] = {
     { "court-md:Court-MD:courtmd", "provider=court", court_digest_fns, "court digest" },
+    { "court-md-ctx:Court-MD-ctx:courtmdctx", "provider=court", court_ctx_fns,
+      "court digest with a context" },
+    { "court-md-ctx5:Court-MD-ctx5:courtmdctx5", "provider=court", court_ctx5_fns,
+      "court digest without squeeze" },
     { NULL, NULL, NULL, NULL }
 };
 
@@ -482,6 +757,244 @@ int main(void)
         }
     }
 
+    /*
+     * ---- 7.3d-ii: the context path, which is what the two context algorithms made reachable ----
+     *
+     * `EVP_MD_CTX` is the object every digest call is actually made on, and until this subphase no
+     * probe could reach one: the context half was not transcribed, and the resolver above publishes
+     * a method with no structural functions at all -- so `EVP_DigestInit_ex` on it would have
+     * reached a NULL `newctx`. The two context algorithms are the ones that give a context
+     * something to run, and the observations below are of three kinds:
+     *
+     *   * **the call path.** The provider counts its own callbacks, so the transcript says which of
+     *     them ran, how many times -- a transcription that took the wrong arm of any of the
+     *     initialise's four branches, or that reused an algorithm context where the authority
+     *     duplicates one, cannot produce the same vector;
+     *   * **the value.** The digest is a function of what was fed (the length, a running hash of
+     *     the bytes, and the first retained byte), so "the implementation ran" is distinguishable
+     *     from "some implementation ran";
+     *   * **the refusals**, each with the reason the authority raises: a second final, a squeeze on
+     *     a method that publishes five structural functions, and the two size answers that differ
+     *     between the method and the context.
+     *
+     * The block runs **before** the provider is unloaded, unlike the accessor block below it, which
+     * is why it is here and not at the end: a fetch of an unloaded provider's algorithm fails on
+     * both sides and would make every observation in it vacuous.
+     */
+    {
+        EVP_MD *cmd = EVP_MD_fetch(ctx, "court-md-ctx", NULL);
+        EVP_MD *cmd5 = EVP_MD_fetch(ctx, "court-md-ctx5", NULL);
+        EVP_MD_CTX *c, *copyc, *dupc;
+        unsigned char out[64];
+        unsigned int outl;
+        size_t xoflen;
+        EVP_MD *owned;
+        char micalg[64];
+
+        sayp("ctxmd.fetch", cmd);
+        sayp("ctxmd5.fetch", cmd5);
+        /* The method-level size, from the fetch-time `get_params` answer of 32. */
+        sayn("ctxmd.method_size", EVP_MD_get_size(cmd));
+        say_ctx_activity("ctx.activity.pristine");
+
+        /* -- a fresh context, and the five accessors that read one -- */
+        c = EVP_MD_CTX_new();
+        sayp("ctx.new", c);
+        printf("ctx.new.reqdigest_null=%d\n", EVP_MD_CTX_get0_md(c) == NULL ? 1 : 0);
+        printf("ctx.new.md_data_null=%d\n", EVP_MD_CTX_get0_md_data(c) == NULL ? 1 : 0);
+        printf("ctx.new.update_null=%d\n", EVP_MD_CTX_update_fn(c) == NULL ? 1 : 0);
+        printf("ctx.new.pkey_null=%d\n", EVP_MD_CTX_get_pkey_ctx(c) == NULL ? 1 : 0);
+        printf("ctx.new.get1_md_null=%d\n", EVP_MD_CTX_get1_md(c) == NULL ? 1 : 0);
+        /* -1 **with an error**, because the fall-through asks `EVP_MD_get_size(NULL)`. */
+        sayn("ctx.new.get_size", EVP_MD_CTX_get_size_ex(c));
+
+        /* -- the initialise, and the two size questions that have two different answers -- */
+        sayn("ctx.init", EVP_DigestInit_ex(c, cmd, NULL));
+        printf("ctx.init.reqdigest_is_method=%d\n", EVP_MD_CTX_get0_md(c) == cmd ? 1 : 0);
+        printf("ctx.init.deprecated_is_method=%d\n", EVP_MD_CTX_md(c) == cmd ? 1 : 0);
+        owned = EVP_MD_CTX_get1_md(c);
+        printf("ctx.init.get1_is_method=%d\n", owned == cmd ? 1 : 0);
+        EVP_MD_free(owned);
+        /* The context's own `size` is 24 where the method's is 32: `get_size_ex` asks the context
+         * first, so the two being different is what makes the choice observable from outside. */
+        sayn("ctx.init.context_size", EVP_MD_CTX_get_size_ex(c));
+        printf("ctx.init.md_data_null=%d\n", EVP_MD_CTX_get0_md_data(c) == NULL ? 1 : 0);
+        printf("ctx.init.update_null=%d\n", EVP_MD_CTX_update_fn(c) == NULL ? 1 : 0);
+        sayp("ctx.init.gettable_params", (const void *) EVP_MD_CTX_gettable_params(c));
+        sayp("ctx.init.settable_params", (const void *) EVP_MD_CTX_settable_params(c));
+        /* The same two questions asked of the *method*, which is the other entry point. */
+        sayp("ctxmd.gettable_ctx_params", (const void *) EVP_MD_gettable_ctx_params(cmd));
+        sayp("ctxmd.settable_ctx_params", (const void *) EVP_MD_settable_ctx_params(cmd));
+        say_ctx_activity("ctx.activity.after_init");
+
+        /* -- update, and the final -- */
+        sayn("ctx.update", EVP_DigestUpdate(c, "abcd", 4));
+        sayn("ctx.update.zero", EVP_DigestUpdate(c, NULL, 0));
+        memset(out, 0xEE, sizeof out);
+        outl = 0;
+        sayn("ctx.final.return", EVP_DigestFinal_ex(c, out, &outl));
+        sayn("ctx.final.outl", (long long) outl);
+        /* The four leading bytes are the length, the two halves of a running hash of what was fed,
+         * and the first retained byte -- so these say *which* implementation ran. */
+        sayn("ctx.final.byte0", out[0]);
+        sayn("ctx.final.byte1", out[1]);
+        sayn("ctx.final.byte2", out[2]);
+        sayn("ctx.final.byte3", out[3]);
+        sayn("ctx.final.byte23", out[23]);
+        /* And nothing past the provider's answer was written. */
+        sayn("ctx.final.beyond_outl_untouched", out[24] == 0xEE ? 1 : 0);
+        /* A second final is a refusal **with a reason**: the flag the first one set. */
+        sayn("ctx.final.second", EVP_DigestFinal_ex(c, out, &outl));
+        printf("ctx.final.second.err=%lu\n", ERR_peek_error());
+        ERR_clear_error();
+        say_ctx_activity("ctx.activity.after_final");
+
+        /* -- `EVP_DigestFinal` is the destructive one: it finalises and then resets -- */
+        EVP_DigestInit_ex(c, cmd, NULL);
+        EVP_DigestUpdate(c, "abcd", 4);
+        memset(out, 0xEE, sizeof out);
+        sayn("ctx.destructive_final", EVP_DigestFinal(c, out, &outl));
+        sayn("ctx.destructive_final.outl", (long long) outl);
+        printf("ctx.destructive_final.reqdigest_null_after=%d\n",
+               EVP_MD_CTX_get0_md(c) == NULL ? 1 : 0);
+        say_ctx_activity("ctx.activity.after_destructive_final");
+
+        /* -- the copy, which duplicates the algorithm context rather than sharing it -- */
+        EVP_DigestInit_ex(c, cmd, NULL);
+        EVP_DigestUpdate(c, "abcd", 4);
+        copyc = EVP_MD_CTX_new();
+        sayn("ctx.copy_ex", EVP_MD_CTX_copy_ex(copyc, c));
+        printf("ctx.copy_ex.distinct=%d\n", copyc != c ? 1 : 0);
+        printf("ctx.copy_ex.reqdigest_is_method=%d\n",
+               EVP_MD_CTX_get0_md(copyc) == cmd ? 1 : 0);
+        say_ctx_activity("ctx.activity.after_copy");
+        /* Both contexts finalise to the same bytes; the copy took its own snapshot. */
+        memset(out, 0xEE, sizeof out);
+        sayn("ctx.copy_ex.final", EVP_DigestFinal_ex(copyc, out, &outl));
+        sayn("ctx.copy_ex.outl", (long long) outl);
+        sayn("ctx.copy_ex.byte0", out[0]);
+        sayn("ctx.copy_ex.byte1", out[1]);
+        memset(out, 0xEE, sizeof out);
+        sayn("ctx.copy_ex.original_final", EVP_DigestFinal_ex(c, out, &outl));
+        sayn("ctx.copy_ex.original_byte0", out[0]);
+        sayn("ctx.copy_ex.original_byte1", out[1]);
+
+        dupc = EVP_MD_CTX_dup(c);
+        sayp("ctx.dup", dupc);
+        printf("ctx.dup.distinct=%d\n", dupc != c ? 1 : 0);
+        printf("ctx.dup.reqdigest_is_method=%d\n",
+               dupc != NULL && EVP_MD_CTX_get0_md(dupc) == cmd ? 1 : 0);
+        say_ctx_activity("ctx.activity.after_dup");
+        sayn("ctx.reset", EVP_MD_CTX_reset(copyc));
+        printf("ctx.reset.reqdigest_null=%d\n", EVP_MD_CTX_get0_md(copyc) == NULL ? 1 : 0);
+        say_ctx_activity("ctx.activity.after_reset");
+        EVP_MD_CTX_free(dupc);
+        EVP_MD_CTX_free(copyc);
+
+        /* -- the ctrl commands: two that *set* a parameter and one that *gets* one -- */
+        sayn("ctx.ctrl.xoflen", EVP_MD_CTX_ctrl(c, EVP_MD_CTRL_XOF_LEN, 24, NULL));
+        memset(micalg, 0, sizeof micalg);
+        sayn("ctx.ctrl.micalg", EVP_MD_CTX_ctrl(c, EVP_MD_CTRL_MICALG, sizeof micalg, micalg));
+        says("ctx.ctrl.micalg.text", micalg);
+        sayn("ctx.ctrl.ssl3_ms", EVP_MD_CTX_ctrl(c, EVP_CTRL_SSL3_MASTER_SECRET, 4, micalg));
+        /* No arm for this one and no error either: an unsupported command is not a failure. */
+        sayn("ctx.ctrl.unknown", EVP_MD_CTX_ctrl(c, 0x1234, 0, NULL));
+        say_ctx_activity("ctx.activity.after_ctrl");
+
+        /* -- the XOF path: one shot, and then the repeatable read -- */
+        EVP_DigestInit_ex(c, cmd, NULL);
+        EVP_DigestUpdate(c, "abcd", 4);
+        memset(out, 0xEE, sizeof out);
+        sayn("ctx.final_xof.return", EVP_DigestFinalXOF(c, out, 24));
+        sayn("ctx.final_xof.byte0", out[0]);
+        sayn("ctx.final_xof.byte1", out[1]);
+        sayn("ctx.final_xof.byte23", out[23]);
+        /* The one-shot XOF set `FINALISED`, so the next squeeze is the *repeatable* path and is
+         * not gated by it -- which is the whole difference between the two entry points. */
+        memset(out, 0xEE, sizeof out);
+        sayn("ctx.squeeze.first", EVP_DigestSqueeze(c, out, 24));
+        sayn("ctx.squeeze.first.byte0", out[0]);
+        memset(out, 0xEE, sizeof out);
+        sayn("ctx.squeeze.second", EVP_DigestSqueeze(c, out, 24));
+        sayn("ctx.squeeze.second.byte0", out[0]);
+        say_ctx_activity("ctx.activity.after_squeeze");
+
+        /* A method with five structural functions has no `dsqueeze`, and that is a **refusal with
+         * its own reason** -- `EVP_R_METHOD_NOT_SUPPORTED` rather than a silent zero. */
+        if (cmd5 != NULL) {
+            EVP_MD_CTX *c5 = EVP_MD_CTX_new();
+            sayn("ctx5.init", EVP_DigestInit_ex(c5, cmd5, NULL));
+            sayn("ctx5.context_size", EVP_MD_CTX_get_size_ex(c5));
+            memset(out, 0xEE, sizeof out);
+            sayn("ctx5.squeeze", EVP_DigestSqueeze(c5, out, 24));
+            printf("ctx5.squeeze.err=%lu\n", ERR_peek_error());
+            ERR_clear_error();
+            EVP_MD_CTX_free(c5);
+        }
+
+        /* -- the direct parameter entry points, which is the surface the ctrl commands sit on -- */
+        {
+            OSSL_PARAM p[2] = { OSSL_PARAM_END, OSSL_PARAM_END };
+            xoflen = 20;
+            p[0] = OSSL_PARAM_construct_size_t(OSSL_DIGEST_PARAM_XOFLEN, &xoflen);
+            sayn("ctx.set_params", EVP_MD_CTX_set_params(c, p));
+            sayn("ctx.get_params", EVP_MD_CTX_get_params(c, p));
+            sayn("ctx.get_params.xoflen", (long long) xoflen);
+            say_ctx_activity("ctx.activity.after_params");
+        }
+
+        /* -- the two one-shots, which are the whole reason a consumer uses this at all -- */
+        memset(out, 0xEE, sizeof out);
+        sayn("ctx.oneshot.return", EVP_Digest("abcd", 4, out, &outl, cmd, NULL));
+        sayn("ctx.oneshot.outl", (long long) outl);
+        sayn("ctx.oneshot.byte0", out[0]);
+        sayn("ctx.oneshot.byte1", out[1]);
+        say_ctx_activity("ctx.activity.after_oneshot");
+        {
+            size_t qlen = 0;
+            memset(out, 0xEE, sizeof out);
+            sayn("ctx.q_digest.return",
+                 EVP_Q_digest(ctx, "court-md-ctx", NULL, "abcd", 4, out, &qlen));
+            sayn("ctx.q_digest.len", (long long) qlen);
+            sayn("ctx.q_digest.byte0", out[0]);
+            say_ctx_activity("ctx.activity.after_q_digest");
+        }
+
+        /* -- the pcontext seam and the flag word, on a real context -- */
+        EVP_MD_CTX_set_pkey_ctx(c, NULL);
+        printf("ctx.pkey.after_null_is_null=%d\n", EVP_MD_CTX_get_pkey_ctx(c) == NULL ? 1 : 0);
+        /* `EVP_MD_CTX_FLAG_FINALISED` is in `include/crypto/evp.h`, which is not installed, so a
+         * consumer passes the bare value -- the same choice the index numbers above make. */
+        printf("ctx.flags.initial=%d\n", EVP_MD_CTX_test_flags(c, 0x0800));
+        EVP_MD_CTX_set_flags(c, EVP_MD_CTX_FLAG_NO_INIT);
+        printf("ctx.flags.after_set=%d\n", EVP_MD_CTX_test_flags(c, EVP_MD_CTX_FLAG_NO_INIT));
+        EVP_MD_CTX_clear_flags(c, EVP_MD_CTX_FLAG_NO_INIT);
+        printf("ctx.flags.after_clear=%d\n", EVP_MD_CTX_test_flags(c, EVP_MD_CTX_FLAG_NO_INIT));
+        EVP_MD_CTX_set_update_fn(c, NULL);
+        printf("ctx.update_fn.after_null_set_null=%d\n", EVP_MD_CTX_update_fn(c) == NULL ? 1 : 0);
+        say_ctx_activity("ctx.activity.final");
+
+        EVP_MD_CTX_free(c);
+        say_ctx_activity("ctx.activity.after_free");
+        EVP_MD_free(cmd);
+        EVP_MD_free(cmd5);
+        ERR_clear_error();
+
+        /*
+         * The four boundaries a probe cannot compare, each measured against the authority in a
+         * process of its own and each therefore printed rather than skipped --
+         * `docs/SECURITY_DIVERGENCE_POLICY.md` D-MD-NULL-CALLBACK-1 and D-MD-DOALL-NULL-1.
+         *
+         * Each of the three NULL-callback calls is reachable through the documented entry points
+         * below it, so a reader of this transcript should see the edge rather than infer from the
+         * silence that it was overlooked.
+         */
+        printf("ctx.meth_no_init=NOT_MEASURED_AUTHORITY_FAULTS\n");
+        printf("ctx.meth_no_final=NOT_MEASURED_AUTHORITY_FAULTS\n");
+        printf("ctx.one_shot_only_newctx=NOT_MEASURED_AUTHORITY_FAULTS\n");
+        printf("ctx.do_all_null_visitor=NOT_MEASURED_AUTHORITY_FAULTS\n");
+    }
+
     /* One unload takes the count back to 1, where the authority answers 1 without removing
      * anything; the second reaches `provider_remove_store_methods`, and that reaches
      * `evp_method_store_remove_all_provided`. Both are compared by return code. */
@@ -596,6 +1109,47 @@ int main(void)
             sayn("md.meth.get_copy_null", EVP_MD_meth_get_copy(byhand) == NULL ? 1 : 0);
             sayn("md.meth.get_cleanup_null", EVP_MD_meth_get_cleanup(byhand) == NULL ? 1 : 0);
             sayn("md.meth.get_ctrl_null", EVP_MD_meth_get_ctrl(byhand) == NULL ? 1 : 0);
+
+            /*
+             * ---- the **legacy** arm of the initialise, through a context ----
+             *
+             * This is the one place the other half of `evp_md_init_internal` is reachable from a
+             * probe. The method's origin is `EVP_ORIG_METH`, so the legacy arm is taken whatever
+             * else is true; its `init` was set above, so the call is made and the counter moves;
+             * and its `app_datasize` is 16, so the context allocated a data block for it -- which
+             * is the difference between the two halves of the object that the accessors can see.
+             *
+             * Its `update` is NULL, so `EVP_DigestUpdate` refuses rather than faulting (the
+             * authority tests that pointer), and its `final` is NULL, which the authority does
+             * **not** test -- so the final is one of the four boundaries printed below instead of
+             * executed.
+             */
+            {
+                EVP_MD_CTX *mc = EVP_MD_CTX_new();
+
+                printf("md.meth.ctx.md_data_null_before=%d\n",
+                       EVP_MD_CTX_get0_md_data(mc) == NULL ? 1 : 0);
+                sayn("md.meth.ctx.init", EVP_DigestInit_ex(mc, byhand, NULL));
+                sayn("md.meth.ctx.init_calls", meth_init_calls);
+                printf("md.meth.ctx.md_data_nonnull=%d\n",
+                       EVP_MD_CTX_get0_md_data(mc) != NULL ? 1 : 0);
+                printf("md.meth.ctx.reqdigest_is_method=%d\n",
+                       EVP_MD_CTX_get0_md(mc) == byhand ? 1 : 0);
+                sayn("md.meth.ctx.size", EVP_MD_CTX_get_size_ex(mc));
+                /* `update` is copied from the method, and the method has none. */
+                printf("md.meth.ctx.update_null=%d\n", EVP_MD_CTX_update_fn(mc) == NULL ? 1 : 0);
+                sayn("md.meth.ctx.update", EVP_DigestUpdate(mc, "ab", 2));
+                /* A re-init on the same method keeps the block it already has. */
+                sayn("md.meth.ctx.reinit", EVP_DigestInit_ex(mc, byhand, NULL));
+                sayn("md.meth.ctx.reinit_calls", meth_init_calls);
+                /* A NULL `type` means "the method this context already has", which the legacy arm
+                 * reads back out of `ctx->digest` rather than re-resolving. */
+                sayn("md.meth.ctx.reinit_null_type", EVP_DigestInit_ex(mc, NULL, NULL));
+                sayn("md.meth.ctx.reinit_null_type_calls", meth_init_calls);
+                /* And a final would be the third boundary; measured, not executed. */
+                printf("md.meth.ctx.final=NOT_MEASURED_AUTHORITY_FAULTS\n");
+                EVP_MD_CTX_free(mc);
+            }
 
             EVP_MD_free(byhand);
             sayn("md.meth.after_public_free.result_size", EVP_MD_meth_get_result_size(byhand));
