@@ -61,6 +61,13 @@
         "authority_unit": "crypto/evp/evp_rand.c",
         "reason": "The third of the seed trio, and the same boundary again: internal, declared in the uninstalled `include/crypto/evp.h`, called only by `crypto/rand/rand_lib.c`, and the releasing half of the pair whose acquiring half is `evp_rand_get_seed`. Neither half has a caller before Phase 9.",
         "evidence": "src/evp/rand.rs module doc, section \"What is not here\"; forensics/prerequisites.json units row crypto/rand/rand_lib.c"
+      },
+      {
+        "symbol": "evp_cleanup_int",
+        "owner_phase": 7,
+        "authority_unit": "crypto/evp/names.c",
+        "reason": "Internal, called only by `OPENSSL_cleanup`, and **owed to 7.4 inside this stratum**. Its body is seven calls: four `OBJ_NAME_cleanup`, then `EVP_PBE_cleanup` -- which is `crypto/evp/evp_pbe.c`'s, a 7.4 unit that does not exist yet -- then `OBJ_sigid_free`, then `evp_app_cleanup_int`. So half of it cannot be written, and the half that could would have to omit the other half. `owner_phase` is 7 rather than a later stratum because the dependency is a later *subphase* of the same stratum, which is why it appears in the blocking census rather than in a hand-off edge.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4 (which names `evp_pbe.c`); src/evp/legacy_evp.rs module doc, section \"What is not here\""
       }
     ],
     "divergences": [

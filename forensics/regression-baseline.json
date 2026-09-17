@@ -172,6 +172,10 @@
       "observations": 96,
       "verdict": "pass"
     },
+    "RT-EVP-NAMES": {
+      "observations": 25,
+      "verdict": "pass"
+    },
     "RT-EVP-RAND": {
       "observations": 168,
       "verdict": "pass"
@@ -262,10 +266,10 @@
     "phase4": 23,
     "phase5": 91,
     "phase6": 0,
-    "phase7": 0
+    "phase7": 164
   },
   "implemented": {
-    "libcrypto": 1431,
+    "libcrypto": 1439,
     "libssl": 0
   },
   "open_obligations": {
@@ -273,7 +277,7 @@
     "phase4": 0,
     "phase5": 0,
     "phase6": 0,
-    "phase7": 654
+    "phase7": 482
   },
   "owned_obligations": {
     "phase3": 294,
@@ -307,10 +311,10 @@
     "9": "not-started"
   },
   "prerequisites": {
-    "blocking_dependencies": 8,
+    "blocking_dependencies": 9,
     "divergence_names_covered": 32,
     "findings": 0,
-    "language_census": 2262,
+    "language_census": 2271,
     "sealed_census": 59
   }
 }

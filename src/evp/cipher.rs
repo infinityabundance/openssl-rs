@@ -63,9 +63,11 @@ use crate::property::store::{MethodFreeFn, MethodUpRefFn};
 use crate::provider::activate::OsslAlgorithm;
 use crate::provider::{ossl_provider_ctx, ossl_provider_free, ossl_provider_up_ref, OsslProvider};
 use crate::runtime::err::{err_sites, raise_site};
+use crate::runtime::init::{OPENSSL_init_crypto, OPENSSL_INIT_ADD_ALL_CIPHERS};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 use crate::runtime::obj::{
-    NID_undef, OBJ_NAME_get, OBJ_get0_data, OBJ_nid2ln, OBJ_nid2obj, OBJ_nid2sn,
+    NID_undef, OBJ_NAME_do_all, OBJ_NAME_do_all_sorted, OBJ_NAME_get, OBJ_get0_data, OBJ_nid2ln,
+    OBJ_nid2obj, OBJ_nid2sn, ObjName,
 };
 
 /// `EVP_CTRL_RET_UNSUPPORTED`, from `crypto/evp/evp_local.h`.
@@ -94,7 +96,7 @@ const OSSL_OP_CIPHER: c_int = 2;
 /// `OBJ_NAME_TYPE_CIPHER_METH` — `include/openssl/objects.h`. **0x02**, and the sibling of the
 /// type `digest.rs` uses. The legacy table's `EVP_CIPHER` entries, which is what `set_legacy_nid`
 /// asks about.
-const OBJ_NAME_TYPE_CIPHER_METH: c_int = 0x02;
+pub(crate) const OBJ_NAME_TYPE_CIPHER_METH: c_int = 0x02;
 
 // ---------------------------------------------------------------------------------------------
 // `EVP_CIPH_*` — `include/openssl/evp.h`
@@ -1830,6 +1832,124 @@ unsafe extern "C" fn null_cipher(
         unsafe { ptr::copy_nonoverlapping(in_, out, inl) };
     }
     1
+}
+
+// ---------------------------------------------------------------------------------------------
+// `names.c`'s two cipher walkers
+//
+// The legacy table, not the providers: `EVP_CIPHER_do_all` visits every entry a caller could reach
+// through `EVP_get_cipherbyname`, which is the `OBJ_NAME` database the *adders* fill. The two
+// providers' algorithms are `EVP_CIPHER_do_all_provided`'s and are a different walk over a
+// different structure -- a distinction the name does not make and the implementation does.
+//
+// Both take the same shape, and the shape is the observation: an entry that is an alias is
+// reported with a **NULL cipher** and its target in `to`, where a real entry is reported with its
+// cipher in `from` and a NULL `to`. A transcription that passed the alias's data as the cipher
+// would hand the caller a `char *` where an `EVP_CIPHER *` belongs.
+// ---------------------------------------------------------------------------------------------
+
+/// `struct doall_cipher { void *arg; void (*fn)(const EVP_CIPHER *ciph, const char *from,
+/// const char *to, void *arg); }`.
+#[repr(C)]
+struct DoAllCipher {
+    /// `void *arg` — the caller's argument, passed through unchanged.
+    arg: *mut c_void,
+    /// The caller's visitor.
+    fn_: Option<CipherDoAllFn>,
+}
+
+/// `void (*)(const EVP_CIPHER *ciph, const char *from, const char *to, void *x)`.
+pub(crate) type CipherDoAllFn =
+    unsafe extern "C" fn(*const EvpCipher, *const c_char, *const c_char, *mut c_void);
+
+/// `static void do_all_cipher_fn(const OBJ_NAME *nm, void *arg)`.
+///
+/// The `OBJ_NAME` callback both walkers install, and the whole of the two-pass story: an alias row
+/// has `alias` set and its `data` is the *name* of what it points at, a real row has `data` as the
+/// method. The two are reported through different arguments of the caller's visitor.
+///
+/// # Safety
+/// `nm` must be a live `ObjName` and `arg` must point at a live `DoAllCipher`.
+unsafe extern "C" fn do_all_cipher_fn(nm: *const ObjName, arg: *mut c_void) {
+    let dc = arg.cast::<DoAllCipher>();
+    if nm.is_null() || dc.is_null() {
+        return;
+    }
+    // SAFETY: `dc` is live per the contract.
+    let (fn_, dc_arg) = unsafe { ((*dc).fn_, (*dc).arg) };
+    let Some(f) = fn_ else {
+        return;
+    };
+    // SAFETY: `nm` is live per the contract.
+    let (alias, name, data) = unsafe { ((*nm).alias, (*nm).name, (*nm).data) };
+    if alias != 0 {
+        // SAFETY: `f` is the caller's visitor; an alias row reports a NULL cipher and the target
+        // name in `to`, which is `data`.
+        unsafe { f(ptr::null(), name, data, dc_arg) };
+    } else {
+        // SAFETY: `f` is the caller's visitor and `data` is the method the adder stored.
+        unsafe { f(data.cast::<EvpCipher>(), name, ptr::null(), dc_arg) };
+    }
+}
+
+/// The shared body of the two walkers: arm the legacy table, then visit it in the order asked for.
+///
+/// `OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS, NULL)` is called and its **answer is
+/// ignored**, which is the authority's own `/* Ignore errors */` comment: a table that could not be
+/// populated is a walk that visits nothing, not a failure the caller can do anything about.
+///
+/// # Safety
+/// `fn_` may be NULL, in which case nothing happens; otherwise it must be a valid visitor for the
+/// signature it is declared with.
+unsafe fn cipher_names_do_all(fn_: Option<CipherDoAllFn>, arg: *mut c_void, sorted: bool) {
+    // SAFETY: `arg` is the caller's own and is passed through unchanged.
+    let mut dc = DoAllCipher { arg, fn_ };
+    OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS, ptr::null());
+    if sorted {
+        // SAFETY: `dc` is this frame's own live object and `do_all_cipher_fn` is the visitor the
+        // table's contract asks for.
+        unsafe {
+            OBJ_NAME_do_all_sorted(
+                OBJ_NAME_TYPE_CIPHER_METH,
+                Some(do_all_cipher_fn),
+                ptr::addr_of_mut!(dc).cast::<c_void>(),
+            )
+        };
+    } else {
+        // SAFETY: as above.
+        unsafe {
+            OBJ_NAME_do_all(
+                OBJ_NAME_TYPE_CIPHER_METH,
+                Some(do_all_cipher_fn),
+                ptr::addr_of_mut!(dc).cast::<c_void>(),
+            )
+        };
+    }
+}
+
+/// `void EVP_CIPHER_do_all(void (*fn)(const EVP_CIPHER *ciph, const char *from, const char *to,
+/// void *x), void *arg)`.
+///
+/// # Safety
+/// `fn_` NULL or a valid visitor; `arg` is the visitor's own argument.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_CIPHER_do_all(fn_: Option<CipherDoAllFn>, arg: *mut c_void) {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { cipher_names_do_all(fn_, arg, false) };
+}
+
+/// `void EVP_CIPHER_do_all_sorted(void (*fn)(const EVP_CIPHER *ciph, const char *from,
+/// const char *to, void *x), void *arg)`.
+///
+/// The same walk with the names ordered by `strcmp` -- the only difference, and the reason the
+/// authority has two entry points rather than a flag.
+///
+/// # Safety
+/// `fn_` NULL or a valid visitor; `arg` is the visitor's own argument.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_CIPHER_do_all_sorted(fn_: Option<CipherDoAllFn>, arg: *mut c_void) {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { cipher_names_do_all(fn_, arg, true) };
 }
 
 #[cfg(test)]
