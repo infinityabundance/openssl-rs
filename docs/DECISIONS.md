@@ -11610,8 +11610,9 @@ raises `NO_DEFAULT_DIGEST` then `PROVIDER_SIGNATURE_FAILURE`; and
 
 **Arms named rather than driven, with their coordinates.** The `ctx == NULL` arm of all ten exports
 does not exist: `m_sigver.c` has no NULL test on `ctx`, so `do_sigver_init`'s first statement
-(`:53`) and the six operate entry points' `ctx->pctx` read (`:407`, `:457`, `:506`, `:676`)
-dereference it. The boundary is one printed line, not a call — a call would abort the harness on
+(`:53`) and the six operate entry points' `ctx->pctx` read (`:407`, `:457`, `:506`, `:624`, `:676`,
+`:761`) dereference it. The boundary is one printed line, not a call — a call would abort the
+harness on
 *both* sides, which is not agreement, exactly as D189 recorded for the four stream arms.
 `EVP_PKEY_digestsign_supports_digest`'s `-1` (`p_lib.c:1404`) is the `EVP_MD_CTX_new` failure and has
 no injectable seam; faking one would measure the seam. Inside `do_sigver_init`, three raises are
