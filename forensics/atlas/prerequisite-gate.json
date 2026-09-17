@@ -3,6 +3,9 @@
   "body": {
     "blocking_dependencies": [
       "OSSL_provider_init -> phase 13 (providers/legacy/legacyprov.c's entry point, and the name a third-party provider's own entry point is declared with -- which is why subphase rows 6.8d and 6.12 name it, since the `providers` configuration module needs a module path and RT-PROVIDER-3P compiles its own. The authority symbol is the legacy provider's, so it is Phase 13's.)",
+      "evp_rand_can_seed -> phase 9 (Internal: declared in `include/crypto/evp.h`, which is not installed, and its only caller in the whole authority is `crypto/rand/rand_lib.c`, already recorded in this file's `units` section as Phase 9's. 7.3f transcribes `evp_rand.c` and deliberately stops at the dispatch walk that fills the `get_seed` and `clear_seed` *fields*: the fields are this file's, the three callers are the stratum that needs the DRBG plumbing. Recording the name here is what makes that boundary visible to the gate rather than only to a reader.)",
+      "evp_rand_clear_seed -> phase 9 (The third of the seed trio, and the same boundary again: internal, declared in the uninstalled `include/crypto/evp.h`, called only by `crypto/rand/rand_lib.c`, and the releasing half of the pair whose acquiring half is `evp_rand_get_seed`. Neither half has a caller before Phase 9.)",
+      "evp_rand_get_seed -> phase 9 (The same boundary as its `can_seed` sibling: internal to `crypto/evp/evp_rand.c`, declared in the uninstalled `include/crypto/evp.h`, called only by `crypto/rand/rand_lib.c`. It answers entropy to the DRBG, so it cannot be written before the thing that asks for entropy exists.)",
       "ossl_get_enginesdir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads)",
       "ossl_get_openssldir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads; so is its sibling)",
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)",
@@ -10,8 +13,8 @@
     ],
     "census": {
       "covered_by_a_divergence": 56,
-      "language_surface_not_modelled_by_name": 2170,
-      "planned_prerequisites": 5
+      "language_surface_not_modelled_by_name": 2204,
+      "planned_prerequisites": 8
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
@@ -133,6 +136,7 @@
         "crypto/evp/cmeth_lib.c": 6,
         "crypto/evp/evp_fetch.c": 19,
         "crypto/evp/evp_lib.c": 56,
+        "crypto/evp/evp_rand.c": 34,
         "crypto/evp/kdf_lib.c": 25,
         "crypto/evp/mac_lib.c": 15,
         "crypto/ex_data.c": 21,
@@ -168,6 +172,9 @@
         "crypto/trace.c": 25
       },
       "planned_prerequisites": {
+        "evp_rand_can_seed": 1,
+        "evp_rand_clear_seed": 1,
+        "evp_rand_get_seed": 1,
         "ossl_get_enginesdir": 2,
         "ossl_get_openssldir": 2,
         "ossl_get_wininstallcontext": 1
@@ -260,6 +267,9 @@
         "crypto/asn1/a_i2d_fp.c:ERR_raise"
       ],
       "planned_prerequisites": [
+        "evp_rand_can_seed",
+        "evp_rand_clear_seed",
+        "evp_rand_get_seed",
         "ossl_get_enginesdir",
         "ossl_get_enginesdir",
         "ossl_get_openssldir",
@@ -268,9 +278,9 @@
       ]
     },
     "checked": {
-      "authority_units": 118,
-      "crate_modules": 164,
-      "deferrals_recorded": 5,
+      "authority_units": 119,
+      "crate_modules": 165,
+      "deferrals_recorded": 8,
       "divergence_names_covered": 32,
       "divergence_rows": 5,
       "names_referenced_and_not_built": 17
@@ -394,7 +404,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "38873d1e6dd0cc0223cec583f3cf20a188e223917d9be57462d5ecb6c5ab75f9",
+  "body_hash": "83b8e01ba8c918973cac995c3b1064cfc367ea848479955b043fff5af59f9f64",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -415,7 +425,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "b537f646054e0a406c797afc5e72acc887ba87e8d75855b0af349d17407a072a"
+      "sha256": "31464c46ccf83a8dcdf34201bb0ab2cecd1bb21ee4e6b3160cb058ed7a31cee4"
     },
     {
       "name": "symbol-ownership",
@@ -425,17 +435,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "caf9de1df25b5378b18c063bbb89101c48988deb40063a6020544f76ce72b467"
+      "sha256": "0eed899ba1b393689c1fd6e9962e0834dcc22f2f536b3683d61f961eb67f4b6c"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "25448a2b4913b4f65ad780292fd902ff6e88eb826eec6f49d48ea17a85cf6eb3"
+      "sha256": "c7c94f5478c8796fffd03399f1b66e74fdcec6fa56f72069e8f38c3e89ce3387"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "7332839bd9b4b7647c42848b76ba2346623390ef5449dff0ab4ef9178b498739"
+      "sha256": "4e7e2abb1f85ba3c190d25a25f1bd37c9090afa5339dc8b0049ba61292628cc1"
     },
     {
       "name": "crate-source-tree",

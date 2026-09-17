@@ -9223,3 +9223,107 @@ is in the probe's own include block so the next probe does not have to rediscove
 | unit tests | 356 | **365** |
 
 SPDX-License-Identifier: Apache-2.0
+
+---
+
+## D159 — 7.3f's first half: `EVP_RAND`, the class whose constructor has three arguments and whose release is a chain
+
+**What landed.** `crypto/evp/evp_rand.c`, whole — `src/evp/rand.rs`, **30 exports**, the third of the
+provider-only classes and the first that does not follow the shape `EVP_MAC` and `EVP_KDF`
+established. `RT-EVP-RAND` lands with **168 observations and zero residuals on the first run**.
+
+**Three structural breaks, each of which a reader who had internalised the other two classes would
+get wrong.**
+
+  * **The constructor takes three arguments and the third is a dispatch table.**
+    `OSSL_FUNC_rand_newctx_fn` is `void *(*)(void *provctx, void *parent, const OSSL_DISPATCH
+    *parent_calls)`. The authority hands the child the parent's **algorithm context** and the parent
+    method's **own `OSSL_DISPATCH` table**, so that a child DRBG calls *through* its parent rather
+    than through a copy — which is the whole mechanism by which one provider's DRBG chains onto
+    another's. `EvpRand` therefore keeps a `dispatch` field that no other class in this stratum has.
+    The probe pins all three relations without printing an address: with no parent, both are NULL;
+    with a parent, the second is the algorithm context *this probe's own provider allocated* (so the
+    probe can tell it apart from the `EVP_RAND_CTX`), and the third is a table whose entry count and
+    first id are read, and whose pointer the second child is compared against the first. "The child
+    was handed the parent's `EVP_RAND_CTX`" is a wrong answer that only this observation
+    distinguishes.
+  * **A context is reference counted and its release is recursive.** `EVP_RAND_CTX_new` takes a
+    reference on the parent *before* the provider's constructor is called; `EVP_RAND_CTX_free` on the
+    last reference releases the algorithm context, then the method, then the parent — which may be
+    the last reference to *its* parent. A transcription that freed one level would leak an entire
+    tree of provider contexts. The court's observation is the provider's own `freectx` vector across
+    a chain of calls: freeing two children of a live parent leaves the count unchanged, and the
+    parent's own release is the next increment.
+  * **Every operation is wrapped in the provider's lock, and the lock is optional.** `EVP_RAND_CTX_get_params`
+    and its eleven siblings each take a lock, call a `_locked` helper, and release; a method with no
+    `lock` answers 1 for every acquisition, so the pair is free. `EVP_RAND_enable_locking` is the one
+    entry point that is *not* wrapped, because it is the call that enables the thing — and the court
+    observes the same call producing `lock=0,unlock=0` on the plain method and a lock pair on the
+    locked one.
+
+**The two locking counters are independent conditions, and that is observable.** The structural
+check is
+
+```c
+if (fnrandcnt != 3
+    || fnctxcnt != 3
+    || (fnenablelockcnt != 0 && fnenablelockcnt != 1)
+    || (fnlockcnt != 0 && fnlockcnt != 2)
+```
+
+— two separate disjunctions, not one. So a method that publishes `enable_locking` and **no** `lock`
+is fetchable, while one that publishes `lock` and no `unlock` is refused. A transcription that folded
+the pair into a single counter would refuse the first; nothing else in the API would notice, because
+the only entry point that consults `enable_locking` does not consult `lock`. `RT-EVP-RAND`
+publishes both and asserts the asymmetry: `court-rand-enableonly` is *constructed* and its callback
+runs, `court-rand-nolockpair` is refused.
+
+**`fnctxcnt` counting `get_ctx_params` is the same requirement as the runtime one.** The fetch-time
+check counts `newctx`, `freectx` and `get_ctx_params` as the three context functions, which looks
+arbitrary until `evp_rand_generate_locked` is read: it **asks** for `OSSL_RAND_PARAM_MAX_REQUEST` and
+refuses the whole generation when the answer is missing or zero, because the loop it drives is
+chunked by it. So a method that cannot report its own parameters is a method whose `generate` cannot
+run, and the class says so at fetch time. The court observes all four arms of that: the chunked
+generation (twenty bytes over a `max_request` of seven is three callbacks of 7, 7, 6, and *where*
+each landed is in the bytes and in the advanced buffer), `outlen == 0` (a success with no callback at
+all, because the loop's condition is checked before the body), `max_request == 0`, and a
+`get_ctx_params` that refuses.
+
+**Two NULL contracts that differ, both measured.** `EVP_RAND_CTX_new(NULL, NULL)` raises
+`EVP_R_INVALID_NULL_ALGORITHM`; `EVP_RAND_up_ref(NULL)` answers **1** without raising, because the
+authority's static helper guards and the exported wrapper is one line over it; and
+`EVP_RAND_CTX_free(NULL)` returns. One class refuses a NULL, the other is a no-op for it, and the
+court pins both because a transcription that made them consistent would be wrong in one direction or
+the other.
+
+**The deferral the gate found, and why a deferral is the honest answer.**
+`evp_rand_can_seed`, `evp_rand_get_seed` and `evp_rand_clear_seed` are internal, are declared in
+`include/crypto/evp.h` — which is not installed in this profile — and their only caller in the whole
+authority is `crypto/rand/rand_lib.c`, which is Phase 9's. This file transcribes `evp_rand.c` and
+deliberately stops at the dispatch walk that fills the `get_seed` and `clear_seed` **fields**: the
+fields are this file's, the three callers are the stratum that needs the DRBG plumbing. The
+`prerequisite_gate` fired the moment `src/evp/rand.rs` became a module of that authority unit and
+reported exactly those three names as unwired in an open stratum. The three rows added to
+`forensics/prerequisites.json` are the recorded answer, and the mechanism is worth noting: the gate
+found an omission **because registering a module is what makes a unit's identifiers owed**, which is
+the boundary being visible to a tool rather than only to a reader. Stubbing them was the alternative,
+and it was rejected for the reason this project always rejects it — a stub would have made the three
+names look built, and the gate would have stopped asking.
+
+**Deliberately not measured.** `EVP_RAND_do_all_provided` with a NULL visitor faults the authority
+(`D-MD-DOALL-NULL-1`); the probe prints the boundary rather than entering it. `EVP_RAND_get0_name` and
+its siblings on a NULL method dereference, so they are not called either.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 7 implemented / open | 238 / 712 | **268 / 682** |
+| `implemented[libcrypto]` | 1373 | **1403** |
+| courts | 60 | **61** |
+| RT-EVP-RAND observations | — | **168** |
+| prototype court: checked / mismatch / unreadable | 1326 / 0 / 0 | **1356 / 0 / 0** |
+| unit tests | 365 | **374** |
+| prerequisite deferrals | 5 | **8** |
+
+SPDX-License-Identifier: Apache-2.0

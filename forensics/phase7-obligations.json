@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 924,
       "deferred_to_later_phase": 0,
-      "implemented": 238,
-      "open_in_this_stratum": 712,
+      "implemented": 268,
+      "open_in_this_stratum": 682,
       "owned": 950,
       "received_by_handoff": 26
     },
@@ -435,6 +435,36 @@
       "EVP_MD_xof",
       "EVP_Q_digest",
       "EVP_Q_mac",
+      "EVP_RAND_CTX_free",
+      "EVP_RAND_CTX_get0_rand",
+      "EVP_RAND_CTX_get_params",
+      "EVP_RAND_CTX_gettable_params",
+      "EVP_RAND_CTX_new",
+      "EVP_RAND_CTX_set_params",
+      "EVP_RAND_CTX_settable_params",
+      "EVP_RAND_CTX_up_ref",
+      "EVP_RAND_do_all_provided",
+      "EVP_RAND_enable_locking",
+      "EVP_RAND_fetch",
+      "EVP_RAND_free",
+      "EVP_RAND_generate",
+      "EVP_RAND_get0_description",
+      "EVP_RAND_get0_name",
+      "EVP_RAND_get0_provider",
+      "EVP_RAND_get_params",
+      "EVP_RAND_get_state",
+      "EVP_RAND_get_strength",
+      "EVP_RAND_gettable_ctx_params",
+      "EVP_RAND_gettable_params",
+      "EVP_RAND_instantiate",
+      "EVP_RAND_is_a",
+      "EVP_RAND_names_do_all",
+      "EVP_RAND_nonce",
+      "EVP_RAND_reseed",
+      "EVP_RAND_settable_ctx_params",
+      "EVP_RAND_uninstantiate",
+      "EVP_RAND_up_ref",
+      "EVP_RAND_verify_zeroization",
       "EVP_default_properties_enable_fips",
       "EVP_default_properties_is_fips_enabled",
       "EVP_enc_null",
@@ -2978,186 +3008,6 @@
       },
       {
         "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_CTX_free"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_CTX_get0_rand"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_CTX_get_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_CTX_gettable_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_CTX_new"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_CTX_set_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_CTX_settable_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_CTX_up_ref"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_do_all_provided"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_enable_locking"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_fetch"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_free"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_generate"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_get0_description"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_get0_name"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_get0_provider"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_get_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_get_state"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_get_strength"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_gettable_ctx_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_gettable_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_instantiate"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_is_a"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_names_do_all"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_nonce"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_reseed"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_settable_ctx_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_uninstantiate"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_up_ref"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/rand.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_RAND_verify_zeroization"
-      },
-      {
-        "declaring_header": "evp.h",
         "module": "src/evp/signature.rs",
         "received_from_phase": null,
         "symbol": "EVP_SIGNATURE_do_all_provided"
@@ -5028,12 +4878,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "350385b4cc9e4a102e05bd0028985c3f65a8454c8f595ed5c3cad2fa8fceb39a"
+      "sha256": "75bf26003bb16eb91f503404d9f1033a5aded4c315dd64809fdb84df45661d64"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "825d2b0ab707afdf8f59a8c6464abecdcdf6fd43365fd7b2e1926fb5dea13c99"
+      "sha256": "d1dbdddc57a6d9462b65ba56f3bf230a72a36956b28e5ba3cdf198aee4528c46"
     }
   ],
   "kind": "phase7-obligations",
