@@ -4,6 +4,11 @@
     "blocking_dependencies": [
       "OSSL_provider_init -> phase 13 (providers/legacy/legacyprov.c's entry point, and the name a third-party provider's own entry point is declared with -- which is why subphase rows 6.8d and 6.12 name it, since the `providers` configuration module needs a module path and RT-PROVIDER-3P compiles its own. The authority symbol is the legacy provider's, so it is Phase 13's.)",
       "evp_cleanup_int -> phase 7 (Internal, called only by `OPENSSL_cleanup`, and **owed to 7.4 inside this stratum**. Its body is seven calls: four `OBJ_NAME_cleanup`, then `EVP_PBE_cleanup` -- which is `crypto/evp/evp_pbe.c`'s, a 7.4 unit that does not exist yet -- then `OBJ_sigid_free`, then `evp_app_cleanup_int`. So half of it cannot be written, and the half that could would have to omit the other half. `owner_phase` is 7 rather than a later stratum because the dependency is a later *subphase* of the same stratum, which is why it appears in the blocking census rather than in a hand-off edge.)",
+      "evp_pkey_copy_downgraded -> phase 8 (The fourth of the seven and the one that makes the other three wait. Its body exports the provider keydata through `evp_keymgmt_export` -- this stratum's -- and then imports it with `(*dest)->ameth->import_from`, synchronising `(*dest)->ameth->dirty_cnt`. Two fields of an `EVP_PKEY_ASN1_METHOD` and one of that struct's function pointers are read directly, so the function cannot be written before an ameth object exists, and the ameth objects are the twelve `crypto/asn1/ameth_lib.c` builds from Phase 8's `standard_methods[]`. It also needs `EVP_PKEY_CTX_new_from_pkey`, which is `pmeth_lib.c`'s and lands in 7.4c *inside* this stratum -- so the order is 7.4c, then Phase 8, then this row.)",
+      "evp_pkey_export_to_provider -> phase 7 (The seventh of the seven, the provider half rather than the legacy half, and **owed to a later subphase of this stratum** -- the `evp_cleanup_int` precedent, which is why it appears here with `owner_phase` 7 rather than 8. Its first blocker is `EVP_PKEY_CTX_new_from_pkey`, which `pmeth_lib.c` owns and 7.4c lands: with no `keymgmt` argument the function asks that constructor for a default one and steals it. Its second is `pk->ameth->export_to` and `pk->ameth->dirty_cnt`, read directly to decide whether a legacy origin key can be exported at all, which is Phase 8's under D163. So this row is retired at 7.4c and its remark about the ameth fields moves to the Phase-8 half of the same record; the gate reports it `stale_deferral` the moment `src/evp/pkey.rs` defines it, which is what makes retiring it mechanical rather than a thing to remember.)",
+      "evp_pkey_free_legacy -> phase 8 (One of the seven functions `include/crypto/evp.h` declares for `crypto/evp/p_lib.c`, and so one the gate owes the moment the crate has a module for that unit (D163, the `a2d_ASN1_OBJECT` class in the other direction). Its body needs `x->ameth`, an `EVP_PKEY_ASN1_METHOD *`, and the branch that finds one when the key has only a legacy cache entry calls `EVP_PKEY_asn1_find` -- the registry `crypto/asn1/ameth_lib.c` builds from `standard_methods[]`, whose twelve objects are the algorithm strata's and are Phase 8's contents. There is also an `ameth->pkey_free` call through the found method, so the free path is not merely gated on the table's existence: it *is* the table.)",
+      "evp_pkey_get0_DH_int -> phase 8 (The third of the seven, and the shortest: it is `pkey->type == EVP_PKEY_DH ? evp_pkey_get_legacy(pkey) : NULL`. It is therefore blocked by nothing of its own and inherited entirely from its sibling above -- the DH *type* it compares against is real now, the downgrade it calls is not. Recorded separately rather than folded into `evp_pkey_get_legacy` because the gate owes names, not call graphs, and a reader of the blocking census should see all four rather than three and an implication.)",
+      "evp_pkey_get_legacy -> phase 8 (The second of the seven. It downgrades a provider key to a legacy one, so its whole body past the fast paths is `evp_pkey_copy_downgraded`, and the cache it then holds is keyed on `ameth` being non-NULL (`EVP_PKEY_asn1_find` for the type). Both halves are Phase 8's, which is why this name waits on the same registry as its sibling rather than on anything in this stratum.)",
       "evp_rand_can_seed -> phase 9 (Internal: declared in `include/crypto/evp.h`, which is not installed, and its only caller in the whole authority is `crypto/rand/rand_lib.c`, already recorded in this file's `units` section as Phase 9's. 7.3f transcribes `evp_rand.c` and deliberately stops at the dispatch walk that fills the `get_seed` and `clear_seed` *fields*: the fields are this file's, the three callers are the stratum that needs the DRBG plumbing. Recording the name here is what makes that boundary visible to the gate rather than only to a reader.)",
       "evp_rand_clear_seed -> phase 9 (The third of the seed trio, and the same boundary again: internal, declared in the uninstalled `include/crypto/evp.h`, called only by `crypto/rand/rand_lib.c`, and the releasing half of the pair whose acquiring half is `evp_rand_get_seed`. Neither half has a caller before Phase 9.)",
       "evp_rand_get_seed -> phase 9 (The same boundary as its `can_seed` sibling: internal to `crypto/evp/evp_rand.c`, declared in the uninstalled `include/crypto/evp.h`, called only by `crypto/rand/rand_lib.c`. It answers entropy to the DRBG, so it cannot be written before the thing that asks for entropy exists.)",
@@ -14,8 +19,8 @@
     ],
     "census": {
       "covered_by_a_divergence": 56,
-      "language_surface_not_modelled_by_name": 2271,
-      "planned_prerequisites": 9
+      "language_surface_not_modelled_by_name": 2477,
+      "planned_prerequisites": 14
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
@@ -140,8 +145,10 @@
         "crypto/evp/evp_lib.c": 56,
         "crypto/evp/evp_rand.c": 34,
         "crypto/evp/kdf_lib.c": 15,
+        "crypto/evp/keymgmt_meth.c": 14,
         "crypto/evp/mac_lib.c": 14,
         "crypto/evp/names.c": 10,
+        "crypto/evp/p_lib.c": 192,
         "crypto/evp/skeymgmt_meth.c": 12,
         "crypto/ex_data.c": 21,
         "crypto/getenv.c": 2,
@@ -177,6 +184,11 @@
       },
       "planned_prerequisites": {
         "evp_cleanup_int": 1,
+        "evp_pkey_copy_downgraded": 1,
+        "evp_pkey_export_to_provider": 1,
+        "evp_pkey_free_legacy": 1,
+        "evp_pkey_get0_DH_int": 1,
+        "evp_pkey_get_legacy": 1,
         "evp_rand_can_seed": 1,
         "evp_rand_clear_seed": 1,
         "evp_rand_get_seed": 1,
@@ -273,6 +285,11 @@
       ],
       "planned_prerequisites": [
         "evp_cleanup_int",
+        "evp_pkey_copy_downgraded",
+        "evp_pkey_export_to_provider",
+        "evp_pkey_free_legacy",
+        "evp_pkey_get0_DH_int",
+        "evp_pkey_get_legacy",
         "evp_rand_can_seed",
         "evp_rand_clear_seed",
         "evp_rand_get_seed",
@@ -284,9 +301,9 @@
       ]
     },
     "checked": {
-      "authority_units": 122,
-      "crate_modules": 167,
-      "deferrals_recorded": 9,
+      "authority_units": 124,
+      "crate_modules": 169,
+      "deferrals_recorded": 14,
       "divergence_names_covered": 32,
       "divergence_rows": 5,
       "names_referenced_and_not_built": 17
@@ -410,7 +427,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "ddf407e5e13ada2ad380a140adb4deb0993fd35ec30d12f003618c12c46a7283",
+  "body_hash": "9a43ddb093d256c3820e30dbaa5758d2491b56f5a09fd4e13ae8cd85d9d2713e",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -431,7 +448,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "54c639950ac6135db9c715726ed9b4b411a3fb328a75cf6716c100f0fae9fa4d"
+      "sha256": "bbe01601d0de85b520e546b6b05a6dea0e97d98184c76b5bc511010a2f9e0833"
     },
     {
       "name": "symbol-ownership",
@@ -441,17 +458,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "d5e063c62e9bf3c568fb574d0a6ddd70ce1b6a23e4736cab926a23391480efb6"
+      "sha256": "69aaf90e189e395989189906229005da7541a71ba62ec0cd0565645b8d1038c2"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "7cc76e0da69e9c76add3317b2ad5653a489dc2635b2d25b95c5c205e6269ba61"
+      "sha256": "2b2b9ac4d4c6ee8bc539afd4bd485bf520f792e4243ecdc1bfe2dad7d417897a"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "a68b881d4739537e3796ad634127dcef46c38b06fc46cbb53217ce7bc0c6e049"
+      "sha256": "cc9c2d47c45ae2fe6c015d833c6f4e9a1d41baedafb281620a9d1ffd780d5212"
     },
     {
       "name": "crate-source-tree",

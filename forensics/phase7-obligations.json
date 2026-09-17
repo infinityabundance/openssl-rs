@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 924,
       "deferred_to_later_phase": 164,
-      "implemented": 304,
-      "open_in_this_stratum": 482,
+      "implemented": 317,
+      "open_in_this_stratum": 469,
       "owned": 950,
       "received_by_handoff": 26
     },
@@ -1333,6 +1333,19 @@
       "EVP_KDF_names_do_all",
       "EVP_KDF_settable_ctx_params",
       "EVP_KDF_up_ref",
+      "EVP_KEYMGMT_do_all_provided",
+      "EVP_KEYMGMT_fetch",
+      "EVP_KEYMGMT_free",
+      "EVP_KEYMGMT_gen_gettable_params",
+      "EVP_KEYMGMT_gen_settable_params",
+      "EVP_KEYMGMT_get0_description",
+      "EVP_KEYMGMT_get0_name",
+      "EVP_KEYMGMT_get0_provider",
+      "EVP_KEYMGMT_gettable_params",
+      "EVP_KEYMGMT_is_a",
+      "EVP_KEYMGMT_names_do_all",
+      "EVP_KEYMGMT_settable_params",
+      "EVP_KEYMGMT_up_ref",
       "EVP_MAC_CTX_dup",
       "EVP_MAC_CTX_free",
       "EVP_MAC_CTX_get0_mac",
@@ -2192,84 +2205,6 @@
         "module": "src/evp/exchange.rs",
         "received_from_phase": null,
         "symbol": "EVP_KEYEXCH_up_ref"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/keymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEYMGMT_do_all_provided"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/keymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEYMGMT_fetch"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/keymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEYMGMT_free"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/keymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEYMGMT_gen_gettable_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/keymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEYMGMT_gen_settable_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/keymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEYMGMT_get0_description"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/keymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEYMGMT_get0_name"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/keymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEYMGMT_get0_provider"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/keymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEYMGMT_gettable_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/keymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEYMGMT_is_a"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/keymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEYMGMT_names_do_all"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/keymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEYMGMT_settable_params"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/keymgmt.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_KEYMGMT_up_ref"
       },
       {
         "declaring_header": "evp.h",
@@ -4701,12 +4636,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "e7706ffb09fb2831e8a149fc5a61086e4cfd0b81898f85344c50059b34f40630"
+      "sha256": "c54dec9d902f17e95afd88cb718001f0f5d3c81104bbd73c7764ef040b6b9e71"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "2af5069c21f1f2ffa1dc75a181b0a624555200257a29390b6dae8393e36e979c"
+      "sha256": "1a2ea8b1bd0de31b672f2676f3a364760b2a47907400f3b6e84ac137727fd86a"
     }
   ],
   "kind": "phase7-obligations",

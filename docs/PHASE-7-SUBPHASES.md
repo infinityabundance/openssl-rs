@@ -157,25 +157,38 @@ evp_pkey_get0_DH_int       evp_pkey_get_legacy           evp_pkey_name2type
 evp_pkey_type2name
 ```
 
-Six of those seven are the legacy half and are Phase 8's; the seventh,
-`evp_pkey_export_to_provider`, is `keymgmt_lib.c`'s and lands here. So the provider half of `p_lib.c`
-lands with **six recorded rows naming Phase 8**, and the gate's blocking census then *says* what is
-owed instead of hiding it. That is the disposition 7.3g used for its one hundred and sixty-four
-legacy statics, at the granularity of the names a header promises.
+Six of those seven are the legacy half and are Phase 8's at the granularity of their *callers*; the
+seventh, `evp_pkey_export_to_provider`, is the provider half. **Executing that disposition is
+D164**, and it came out at four rows naming Phase 8, one owed to 7.4c inside this stratum, and two
+landed: `evp_pkey_type2name` is complete outright, and `evp_pkey_name2type` has its table half
+landed with the `EVP_PKEY_type` fallback waiting on the same Phase-8 hand-off row 7.4l already
+names. So the provider half of `p_lib.c` lands with the rows recorded, and the gate's blocking
+census then *says* what is owed instead of hiding it. That is the disposition 7.3g used for its one
+hundred and sixty-four legacy statics, at the granularity of the names a header promises.
 
 **What this means for the order.** 7.4 lands provider-side first and in this order, each row a unit
 or a named half of one:
 
 | # | Land | Blocked half |
 |---|---|---|
-| 7.4a | the `EVP_PKEY` object's provider attributes and lifetime (`p_lib.c`'s provider paths), `keymgmt_lib.c` whole, the six rows above | `pkey_set_type`/`find_ameth`, `evp_pkey_get_legacy`/`_free_legacy`/`_copy_downgraded`/`get0_DH_int`, `evp_pkey_name2type`/`type2name` |
+| 7.4a | the `EVP_PKEY` object's provider attributes and lifetime (`p_lib.c`'s provider paths), `keymgmt_lib.c` whole, the rows above | `pkey_set_type`/`find_ameth`, `evp_pkey_get_legacy`/`_free_legacy`/`_copy_downgraded`/`get0_DH_int`, `evp_pkey_export_to_provider` (7.4c), both registries |
 | 7.4b | the five method-object families — `signature.c`, `asymcipher.c`, `kem.c`, `exchange.c`, `keymgmt_meth.c` — with their `EVP_PKEY_*` operations, minus `keymgmt_meth.c`'s `legacy_alg` fill | `keymgmt_meth.c`'s `get_legacy_alg_type_from_keymgmt` (→ `evp_pkey_name2type` → `EVP_PKEY_type`) |
 | 7.4c | `pmeth_lib.c`'s `EVP_PKEY_CTX` object and its accessors, `pmeth_check.c`, `pmeth_gn.c`, `m_sigver.c`, `evp_pbe.c` and the five `p5_*`/`pbe_*` units | `EVP_PKEY_meth_*`, `EVP_PKEY_asn1_*`, `EVP_PKEY_CTX_new`/`_new_id` (the legacy-typed constructors) |
 | 7.4l | — **handed to Phase 8 with the dependency named**: the two registries, `evp_pkey_type.c`, `p_legacy.c`, `ec_support.c`, `dh_support.c`, `ameth_lib.c`, `i2d_evp.c`, `d2i_pr.c`, `d2i_param.c`, `d2i_pu.c` | — |
 | 7.4n | `evp_cnf.c` — **held for Phase 11** (`X509V3_get_value_bool`) | — |
 
 7.4a is not a size boundary either: it is the whole of `keymgmt_lib.c` plus the provider paths of
-`p_lib.c`, and the six rows are what keeps it honest while the rest of that unit waits.
+`p_lib.c`, and the rows above are what keep it honest while the rest of that unit waits. Its first
+slice — `keymgmt_meth.c` whole and `p_lib.c`'s two name walkers — is landed and pushed to the
+staging branch, awaiting its court (`RT-EVP-KEYMGMT`) and the `EVP_PKEY` object itself (D164).
+
+**The ledger still owes 7.4l.** `EVP_PKEY_type` sits in `forensics/phase7-obligations.json`'s
+`open` list while this table hands `evp_pkey_type.c` to Phase 8: the atlas decides ownership by the
+declaring header (`evp.h` is this stratum's) and this table decides when the work can be done. The
+`deferred` list is where the second fact belongs, with an `owning_phase` and a reason, and the
+mechanical step is a second hand-off table in `phase7_obligations.py` beside `LEGACY_HANDOFFS`
+whose rows are the eleven units 7.4l names. It is outstanding on purpose and recorded here (D164):
+a stratum with an `open` symbol it can never build is a stratum that can never close.
 
 
 ### 7.3, split — recorded when it was needed, not performed silently

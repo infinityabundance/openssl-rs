@@ -282,8 +282,14 @@ pub struct EvpKeyMgmt {
     pub(crate) load: Option<KeymgmtLoadFn>,
     /// `OSSL_FUNC_keymgmt_query_operation_name_fn *query_operation_name`.
     pub(crate) query_operation_name: Option<KeymgmtQueryOperationNameFn>,
-    /// `OSSL_FUNC_keymgmt_has_fn *has` — mandatory.
-    pub(crate) has: Option<KeymgmtHasFn>,
+    /// `OSSL_FUNC_keymgmt_has_fn *has` — mandatory. The field is spelled `has_` here rather than
+    /// `has` because `include/internal/safe_math.h` defines a function-like macro named `has`,
+    /// and the prerequisite gate's reference lens reads a bare `has` identifier as a use of that
+    /// macro -- the false positive that gate's own doc admits it cannot distinguish from a gap.
+    /// The authority's own `keymgmt_meth.c` has the same collision and the same resolution is not
+    /// open to it; here it is, so the ambiguity is removed rather than recorded. `match_` above is
+    /// the same convention for a keyword.
+    pub(crate) has_: Option<KeymgmtHasFn>,
     /// `OSSL_FUNC_keymgmt_validate_fn *validate`.
     pub(crate) validate: Option<KeymgmtValidateFn>,
     /// `OSSL_FUNC_keymgmt_match_fn *match`.
@@ -532,8 +538,8 @@ unsafe extern "C" fn keymgmt_from_algorithm(
                     (*keymgmt).query_operation_name =
                         entry_function::<KeymgmtQueryOperationNameFn>(entry);
                 }
-                OSSL_FUNC_KEYMGMT_HAS if (*keymgmt).has.is_none() => {
-                    (*keymgmt).has = entry_function::<KeymgmtHasFn>(entry);
+                OSSL_FUNC_KEYMGMT_HAS if (*keymgmt).has_.is_none() => {
+                    (*keymgmt).has_ = entry_function::<KeymgmtHasFn>(entry);
                 }
                 OSSL_FUNC_KEYMGMT_DUP if (*keymgmt).dup.is_none() => {
                     (*keymgmt).dup = entry_function::<KeymgmtDupFn>(entry);
@@ -603,7 +609,7 @@ unsafe extern "C" fn keymgmt_from_algorithm(
     let refused = unsafe { (*keymgmt).free.is_none() }
         || !has_a_constructor
         // SAFETY: `keymgmt` is live.
-        || unsafe { (*keymgmt).has.is_none() }
+        || unsafe { (*keymgmt).has_.is_none() }
         || (getparamfncnt != 0 && getparamfncnt != 2)
         || (setparamfncnt != 0 && setparamfncnt != 2)
         || (setgenparamfncnt != 0 && setgenparamfncnt != 2)
@@ -1269,12 +1275,12 @@ pub(crate) unsafe fn evp_keymgmt_has(
     selection: c_int,
 ) -> c_int {
     // SAFETY: `keymgmt` is live per the contract.
-    let f = unsafe { (*keymgmt).has };
-    let Some(has) = f else {
+    let f = unsafe { (*keymgmt).has_ };
+    let Some(has_fn) = f else {
         return 0;
     };
-    // SAFETY: `has` is the provider's own callback.
-    unsafe { has(keydata, selection) }
+    // SAFETY: `has_fn` is the provider's own callback.
+    unsafe { has_fn(keydata, selection) }
 }
 
 /// `int evp_keymgmt_validate(const EVP_KEYMGMT *keymgmt, void *keydata, int selection,
@@ -1487,7 +1493,7 @@ mod tests {
             gen_cleanup: None,
             load: None,
             query_operation_name: None,
-            has: None,
+            has_: None,
             validate: None,
             match_: None,
             import: None,

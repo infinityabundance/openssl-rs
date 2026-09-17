@@ -9635,3 +9635,60 @@ and would have printed both tables. It is not written here — this entry record
 mechanism that would generalise it, rather than claiming a tool that does not exist.
 
 SPDX-License-Identifier: Apache-2.0
+
+## D164 — 7.4a's first slice lands `keymgmt_meth.c` whole, and the seven `p_lib.c` names are disposed of one at a time
+
+D163 found that a unit is not atomic for the prerequisite gate — implementing one export of
+`crypto/evp/p_lib.c` owes exactly the seven functions `include/crypto/evp.h` declares for it — and
+predicted the disposition: six rows naming Phase 8. Executing it turned up three things the
+prediction did not cover, and all three are the kind of thing that is cheap now and expensive once
+the surface is bigger.
+
+**One: two of the seven were already landed, and one of them is complete.** `evp_pkey_type2name`'s
+authority body is a scan of `standard_name2type` followed by `return OBJ_nid2sn(type)`, and
+`OBJ_nid2sn` is Phase 4's and safe to call, so it is finished and never needed a row.
+`evp_pkey_name2type` is a scan of the same table followed by two `EVP_PKEY_type` calls, and
+`EVP_PKEY_type` is `evp_pkey_type.c`'s — which the plan's row **7.4l already hands to Phase 8**,
+because the profile defines no `OPENSSL_NO_DEPRECATED_3_6` and the ameth branch is therefore the one
+compiled. So that name is *partially* landed: the table half answers, and the fallback answers
+`NID_undef` where the authority answers through an ameth object. A deferral row cannot record it —
+the gate refuses a row whose symbol the crate defines, which is the `stale_deferral` rule and it is
+right — so the gap is recorded where it can be acted on: `src/evp/pkey.rs`'s module doc, its section
+"What is not here", and the site comment on the fallback. **It is not observable through any
+implemented export yet**, because the export that would expose it — `EVP_PKEY_is_a`, whose last
+statement is `pkey->type == evp_pkey_name2type(name)` — is still open in the ledger. When it lands,
+`RT-EVP-PKEY` will measure the difference against the authority and it will have to be either fixed
+by Phase 8 or entered in `docs/SECURITY_DIVERGENCE_POLICY.md`. Saying that here is the point: a
+latent gap with a named trigger is a different object from a latent gap.
+
+**Two: `evp_pkey_export_to_provider` is not one of Phase 8's six.** D163 called it `keymgmt_lib.c`'s
+and landed-with-7.4a; reading its body says its first blocker is `EVP_PKEY_CTX_new_from_pkey`, which
+is `pmeth_lib.c`'s and lands in **7.4c** inside this stratum, and its second is `pk->ameth->export_to`
+and `pk->ameth->dirty_cnt`, which are Phase 8's. So it is recorded with `owner_phase` **7** — the
+`evp_cleanup_int` precedent for an internal owed to a later subphase of its own stratum — rather than
+with the other four, and the row says which of its two blockers comes first. That is four rows
+naming Phase 8, one row naming 7.4c, and two names already landed: seven accounted for, where D163
+predicted six rows and no explanation for the other two.
+
+**Three: `has` is a macro, and a struct field is not a use of it.** `include/internal/safe_math.h`
+defines a function-like macro `has(func)`, and the gate's reference lens reads a bare `has`
+identifier as a reference to it — a name in the universe, built nowhere, with no record agreeing to
+build it, so it is an `undefined_prerequisite`. The reference came from `EvpKeyMgmt`'s field for
+`OSSL_FUNC_keymgmt_has_fn *has`, which the authority's own `struct evp_keymgmt_st` spells the same
+way. The authority cannot resolve this ambiguity and the crate can, so the field is spelled `has_`
+here, beside `match_` which is spelled that way for a keyword, and the field's doc says why. The
+gate's doc already admits a lexical scan cannot tell a rename from a gap; this is that admission
+paying for itself, and the repair is to remove the ambiguity rather than to suppress the finding.
+
+**What is outstanding, recorded rather than lived with.** `EVP_PKEY_type` appears in the Phase-7
+ledger's `open` list, because the global ownership atlas assigns it to this stratum — it is declared
+in `evp.h` — while the plan's row 7.4l hands `evp_pkey_type.c` to Phase 8. Both are true and they
+disagree: the atlas decides *ownership* by the declaring header, and the plan decides *when the work
+can be done*. The ledger has a `deferred` list with an `owning_phase` and a reason per row, and 7.4l
+belongs in it. It is not in it yet, and this entry records that rather than leaving the next reader
+to notice — the mechanical step is a second hand-off table in `phase7_obligations.py` beside
+`LEGACY_HANDOFFS`, whose rows are the eleven units 7.4l names, and it must land before 7.4a can be
+called done, because a stratum with an open symbol it can never build is a stratum that can never
+close.
+
+SPDX-License-Identifier: Apache-2.0

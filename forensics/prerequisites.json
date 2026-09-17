@@ -68,6 +68,36 @@
         "authority_unit": "crypto/evp/names.c",
         "reason": "Internal, called only by `OPENSSL_cleanup`, and **owed to 7.4 inside this stratum**. Its body is seven calls: four `OBJ_NAME_cleanup`, then `EVP_PBE_cleanup` -- which is `crypto/evp/evp_pbe.c`'s, a 7.4 unit that does not exist yet -- then `OBJ_sigid_free`, then `evp_app_cleanup_int`. So half of it cannot be written, and the half that could would have to omit the other half. `owner_phase` is 7 rather than a later stratum because the dependency is a later *subphase* of the same stratum, which is why it appears in the blocking census rather than in a hand-off edge.",
         "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4 (which names `evp_pbe.c`); src/evp/legacy_evp.rs module doc, section \"What is not here\""
+      },
+      {
+        "symbol": "evp_pkey_free_legacy",
+        "owner_phase": 8,
+        "reason": "One of the seven functions `include/crypto/evp.h` declares for `crypto/evp/p_lib.c`, and so one the gate owes the moment the crate has a module for that unit (D163, the `a2d_ASN1_OBJECT` class in the other direction). Its body needs `x->ameth`, an `EVP_PKEY_ASN1_METHOD *`, and the branch that finds one when the key has only a legacy cache entry calls `EVP_PKEY_asn1_find` -- the registry `crypto/asn1/ameth_lib.c` builds from `standard_methods[]`, whose twelve objects are the algorithm strata's and are Phase 8's contents. There is also an `ameth->pkey_free` call through the found method, so the free path is not merely gated on the table's existence: it *is* the table.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4a (the dependency column names `_free_legacy`); row 7.4l (the unit handed to Phase 8); src/evp/pkey.rs module doc, section \"What is not here\""
+      },
+      {
+        "symbol": "evp_pkey_get_legacy",
+        "owner_phase": 8,
+        "reason": "The second of the seven. It downgrades a provider key to a legacy one, so its whole body past the fast paths is `evp_pkey_copy_downgraded`, and the cache it then holds is keyed on `ameth` being non-NULL (`EVP_PKEY_asn1_find` for the type). Both halves are Phase 8's, which is why this name waits on the same registry as its sibling rather than on anything in this stratum.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4a (the dependency column names `_get_legacy`); row 7.4l; src/evp/pkey.rs module doc, section \"What is not here\""
+      },
+      {
+        "symbol": "evp_pkey_get0_DH_int",
+        "owner_phase": 8,
+        "reason": "The third of the seven, and the shortest: it is `pkey->type == EVP_PKEY_DH ? evp_pkey_get_legacy(pkey) : NULL`. It is therefore blocked by nothing of its own and inherited entirely from its sibling above -- the DH *type* it compares against is real now, the downgrade it calls is not. Recorded separately rather than folded into `evp_pkey_get_legacy` because the gate owes names, not call graphs, and a reader of the blocking census should see all four rather than three and an implication.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4a (the dependency column names `get0_DH_int`); row 7.4l; src/evp/pkey.rs module doc, section \"What is not here\""
+      },
+      {
+        "symbol": "evp_pkey_copy_downgraded",
+        "owner_phase": 8,
+        "reason": "The fourth of the seven and the one that makes the other three wait. Its body exports the provider keydata through `evp_keymgmt_export` -- this stratum's -- and then imports it with `(*dest)->ameth->import_from`, synchronising `(*dest)->ameth->dirty_cnt`. Two fields of an `EVP_PKEY_ASN1_METHOD` and one of that struct's function pointers are read directly, so the function cannot be written before an ameth object exists, and the ameth objects are the twelve `crypto/asn1/ameth_lib.c` builds from Phase 8's `standard_methods[]`. It also needs `EVP_PKEY_CTX_new_from_pkey`, which is `pmeth_lib.c`'s and lands in 7.4c *inside* this stratum -- so the order is 7.4c, then Phase 8, then this row.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.4a, 7.4c and 7.4l; docs/DECISIONS.md D163; src/evp/pkey.rs module doc, section \"What is not here\""
+      },
+      {
+        "symbol": "evp_pkey_export_to_provider",
+        "owner_phase": 7,
+        "reason": "The seventh of the seven, the provider half rather than the legacy half, and **owed to a later subphase of this stratum** -- the `evp_cleanup_int` precedent, which is why it appears here with `owner_phase` 7 rather than 8. Its first blocker is `EVP_PKEY_CTX_new_from_pkey`, which `pmeth_lib.c` owns and 7.4c lands: with no `keymgmt` argument the function asks that constructor for a default one and steals it. Its second is `pk->ameth->export_to` and `pk->ameth->dirty_cnt`, read directly to decide whether a legacy origin key can be exported at all, which is Phase 8's under D163. So this row is retired at 7.4c and its remark about the ameth fields moves to the Phase-8 half of the same record; the gate reports it `stale_deferral` the moment `src/evp/pkey.rs` defines it, which is what makes retiring it mechanical rather than a thing to remember.",
+        "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4c (`EVP_PKEY_CTX_new`/`_new_id`); the `evp_cleanup_int` row above for the same-stratum precedent; src/evp/pkey.rs module doc, section \"What is not here\""
       }
     ],
     "divergences": [
