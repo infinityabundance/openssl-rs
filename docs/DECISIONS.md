@@ -12421,3 +12421,207 @@ same commit as the source.
 
 The two guard pairs were run: against this branch's previous head (`34c68191`:
 `implemented[libcrypto] 1800 -> 1840`, `open_obligations[phase7] 121 -> 81`) and against `origin/main`.
+
+## D196 — Phase 7 closes: eighty reasoned deferrals, one name that turned out not to be blocked at all, four readings corrected, and the fifty-six unit records that let the plan reconciliation read zero
+
+This entry is the deciding record for `docs/PHASE-7-EVP-SEAL.md`. Phase 7's content subphases
+7.0–7.6 had landed; this slice is the closure — the last eighty open obligations disposed of, the
+seal written from the ledgers, and the four readings the earlier subphases left behind corrected.
+The stratum reads `open_in_this_stratum: 0` and `complete: true` in
+`forensics/phase7-obligations.json`, and `forensics/phase-state.json` derives `complete` for it.
+
+**The eighty are deferrals with a callee named, not stubs.** `forensics/tools/phase7_obligations.py`
+gained `BLOCKED_HANDOFFS`, a second deferral table beside 7.3g's `LEGACY_HANDOFFS`: twenty-five
+groups, one reason each, every reason naming the callee, the authority file and line the call sits
+on, and the stratum that owns the callee. The ledger's `deferred_to_later_phase` moves **164 -> 244**
+and its `deferred_by_phase` reads `{8: 27, 9: 4, 10: 15, 11: 5, 13: 193}`. The group structure is
+worth stating because it is what makes the reasons checkable rather than repetitive:
+
+* **Phase 8 (27).** One reason covers the twelve `EVP_PKEY_get0_/get1_/set1_` accessors of the four
+  low-level key types, because they share one cause and it is a single call: their file's own
+  `evp_pkey_get0_<TYPE>_int` (`crypto/evp/p_legacy.c:40`, `:76`; `crypto/evp/p_lib.c:887`, `:998`)
+  reaches `evp_pkey_get_legacy` (`p_lib.c:2154`), and its body past the fast paths is
+  `evp_pkey_copy_downgraded` (`:2066`), which **constructs** an `RSA`/`DH`/`DSA`/`EC_KEY`. The rest
+  are five groups of one to three: the three `get0_hmac`/`_poly1305`/`_siphash` getters through the
+  same call; `EVP_PKEY_assign` (`p_lib.c:791`, which also reads `EVP_PKEY_type`,
+  `EC_KEY_get0_group`/`EC_GROUP_get_curve_name` and `ossl_dh_is_foreign`);
+  `EVP_PKEY_encrypt_old`/`_decrypt_old` (`p_enc.c:32`/`p_dec.c:32`, `RSA_public_encrypt` and
+  `RSA_private_decrypt`); `EVP_PKEY_get_ec_point_conv_form`/`get_field_type` (`p_lib.c:2460`,
+  `:2500`, their legacy arms); `EVP_PKEY_type` (`evp_pkey_type.c:63`, whose answer is the
+  `standard_methods[]` table `crypto/asn1/ameth_lib.c:54` fills); `d2i_PublicKey`, `d2i_KeyParams`
+  and `d2i_KeyParams_bio`; and the three `EVP_PKEY_meth_find`/`_get0`/`_get_count` readers of
+  `crypto/evp/pmeth_lib.c:54`'s table.
+* **Phase 10 (15).** The six `EVP_PKEY_print_*`/`_fp` names reach `print_pkey` (`p_lib.c:1196`),
+  whose first statement is `OSSL_ENCODER_CTX_new_for_pkey` (`:1211`); the four
+  `d2i_PrivateKey*`/`d2i_AutoPrivateKey*` spellings run `d2i_PrivateKey_decoder`
+  (`crypto/asn1/d2i_pr.c:172`, `:247`) first and `ossl_d2i_PrivateKey_legacy` (`:102`) second; the
+  five `i2d_*` names all reach `i2d_provided` (`crypto/asn1/i2d_evp.c:33`).
+* **Phase 11 (5).** `ASN1_item_sign_ex`/`_verify_ex` delegate to `ASN1_item_sign_ctx`/
+  `_verify_ctx` (`a_sign.c:138`, `a_verify.c:104`); `EVP_PKEY_CTX_get_algor` and its cipher twin
+  `EVP_CIPHER_CTX_get_algor` both decode with `d2i_X509_ALGOR` (`evp_lib.c:1490`, `:1372`);
+  `EVP_add_alg_module`'s handler reads `X509V3_get_value_bool` (`crypto/evp/evp_cnf.c:46`).
+* **Phase 9 (4).** `EVP_SealInit` and `EVP_CIPHER_CTX_rand_key` (`RAND_priv_bytes_ex`),
+  `BIO_f_reliable` (`bio_ok.c:456`), and `OSSL_HPKE_get_grease_value` (`hpke.c:1433`).
+* **Phase 13 (29 new, 193 with 7.3g's).** Eight `EVP_md5`-blocked PEM names, `PEM_def_callback`
+  (`UI`), the fifteen reader/writer spellings, `PEM_write_bio_PrivateKey_traditional`, the two
+  password readers and the engine pair.
+
+**Two rules the table enforces**, both in the generator and both fail-closed, because a table that
+can keep covering a landed symbol can hide the next real gap: a symbol in `BLOCKED_HANDOFFS` that
+the crate defines is a fatal error, and so is one that is not in the stratum's working set. That is
+the same discipline `forensics/prerequisites.json` uses, and it is what retires the table by
+*landing* a name rather than by editing a reason.
+
+**What `owning_phase` means, and it is not the subphase row's reading.** A row's phase is the
+**latest stratum the symbol is blocked on**, because that is the first phase whose completion
+retires the row. The plan's rows and the probes' `NOT_MEASURED` lines instead name the blocker a
+symbol is *reached through first*, and for the PEM families those two readings differ: the six
+readers and nine writers are reached through `OSSL_DECODER_CTX_new_for_pkey`/
+`OSSL_ENCODER_CTX_new_for_pkey` (Phase 10) **first**, and cannot be written until
+`PEM_bytes_read_bio`/`PEM_def_callback` (Phase 13) exist too, because the fallback legs are compiled
+in and an export cannot be half-written. Every one of those reasons names both phases and says which
+is binding. The convention is the earlier strata's —
+`forensics/tools/phase5_obligations.py`'s `ASN1_add_stable_module` row, "the later of the two
+dependencies is the binding one" — and it is restated in the new table's header comment.
+
+### The name that was not blocked: `EVP_PKEY_new_mac_key`
+
+D193's sweep put `EVP_PKEY_new_mac_key` in the twelve-name legacy-accessor group with the reason
+"all read a legacy key through `evp_pkey_get_legacy` (`p_legacy.c:43`)". **Its call list contains no
+such call.** `crypto/evp/pmeth_gn.c:313` is `EVP_PKEY_CTX_new_id`, `EVP_PKEY_keygen_init`,
+`EVP_PKEY_CTX_set_mac_key`, `EVP_PKEY_keygen` and `EVP_PKEY_CTX_free`, and D173 had already recorded
+that the first two gated it — which was true when D173 was written and stopped being true when
+`EVP_PKEY_CTX_new_id` landed (D186) and the ctrl plane landed (D188). So the name had been swept
+into a list whose reason does not hold for it, and the reason had been copied from its neighbours
+rather than measured. This is the class the project's rules exist to catch, and it is worth more
+than the deferral it replaced: it is implemented, in `src/evp/pmeth_gn.rs` with its thirteen
+siblings, and `RT-EVP-PKEY` drives it. The arm publishes an `HMAC` key type in the **default**
+library context — `OBJ_nid2sn(EVP_PKEY_HMAC)` is `"HMAC"`, and `EVP_PKEY_CTX_new_id` passes no
+property query, so nothing but a default-context publisher can answer it — and it observes the
+authority's own provider chain rather than the pointer: `mac_key.null_engine=nonnull`,
+`mac_key.null_engine.vec=init:1,cleanup:1,set:1,get:0,gen:1,free:0,...,saw_nothing:0,saw_aid:0`, and
+`mac_key.null_engine.saw_priv=1` with `priv_len=6`. The last two are the point: a transcription that
+dropped `EVP_PKEY_CTX_set_mac_key` would still answer non-NULL, and the `priv` octet string would
+never reach the provider's generation context. `RT-EVP-PKEY` moves 498 -> 502 observations, and
+`implemented[libcrypto]` 1840 -> 1841.
+
+### Two more names the stratum owed itself
+
+* **`evp_pkey_decrypt_alloc` is implemented.** Its `forensics/prerequisites.json` row said 7.4b's
+  operation half would land it "directly beside" `EVP_PKEY_decrypt`; that half landed and this did
+  not. It is now in `src/evp/asymcipher.rs`, transcribed from `crypto/evp/asymcipher.c:332` with the
+  first `||` arm written as its own `if` — it returns `-1` with `*outp` untouched, because the
+  allocation is what failed — and with `#[allow(dead_code)]` naming `crypto/pkcs7/pk7_doit.c` as its
+  first caller (Phase 12's). Its prerequisite row is **retired**, which is a *decrease* in
+  `blocking_dependencies` and therefore a movement the guard reports rather than refuses.
+* **`evp_cleanup_int` is retargeted from this stratum to Phase 8, and not discharged.** Its row
+  named `EVP_PBE_cleanup` as the blocker, and that landed with 7.4c's PBE remainder (D192). Six of
+  the function's seven calls are now landed; the seventh, `evp_app_cleanup_int`, pops the
+  application-supplied `EVP_PKEY_METHOD` registry and is Phase 8's because `EVP_PKEY_meth_find`
+  searches `standard_methods[]` (D165, D193). Retargeting rather than discharging is D173's
+  precedent — a deferral that had to move — and leaving it pinned to this stratum would have turned
+  a Phase-8 dependency into a Phase-7 gap on the day the stratum sealed.
+  `src/evp/legacy_evp.rs`'s module doc says the same, and D195's note that no row names a
+  Phase-7-owned export still holds.
+
+### The three evidence-list entries that named files nothing ever created
+
+`forensics/tools/phase_state.py`'s phase-7 module list carried `src/evp/legacy_cipher.rs`,
+`src/evp/legacy_digest.rs` and `src/evp/params_translate.rs`. The first two were the destinations
+`phase7_obligations.py`'s `MODULE_PREFIXES` labels the legacy `EVP_CIPHER`/`EVP_MD` statics with, and
+7.3g handed every one of them to Phase 13 with its primitive unit named, so no file was written and
+none should be. The third was the expected home of `ctrl_params_translate.c`, whose work landed in
+`src/evp/pkey_ctx.rs` (D188). Because `evidence_for` treats an absent evidence file as
+`in-progress`, those three entries are what held this stratum off `complete` — and the fix is to
+remove them rather than to create empty modules that satisfy a list, which is the failure mode
+`docs/NON_CLAIMS.md` is about. The `MODULE_PREFIXES` labels stay: a label is not a claim about a
+file, which is D193's `p_legacy.rs` reading and D194's for the `PKCS5_` half of the `pem_bridge.rs`
+label. `docs/PHASE-7-EVP-SEAL.md` is **added** to the same list in the commit that writes it,
+because a stratum may not report `complete` without a seal.
+
+### Fifty-six unit records, split 42/14, because a complete stratum's plan is judged
+
+`plan_reconciliation.py`'s `JUDGED` is `("complete",)`: a unit a **complete** stratum's row names that
+nothing reaches is a finding. This stratum's plan names fifty-six such units, and they are not
+omissions — they are reached or handed on, and invisible to the tool's three mechanical signals
+(`transcription-edges.json` attributes a module to its **dominant** unit, so `bio_b64.c` and
+`e_null.c` hide behind `bio_enc.c` and `e_aes.c`; `kdf_meth.c`, `mac_meth.c` and `m_sigver.c` are
+exports and define no internal function at all; `c_allc.c` and `e_old.c` define only internals that
+nothing references). The mechanism the tool reads for exactly this case is
+`forensics/prerequisites.json`'s `units` block, whose own rule is "*an authority translation unit a
+subphase plan names, which no transcription edge, no built internal function, no referenced
+identifier and no symbol record reaches*", and every one of the fifty-six now has a record:
+
+* **42 `deferred_to_later_stratum`** — 31 to Phase 13 (the twenty-five legacy wrapper families of
+  7.3g, `c_allc.c`, `c_alld.c`, `e_old.c` and the three PEM units), 7 to Phase 8 (`evp_pkey_type.c`,
+  `ec_support.c`, `d2i_param.c`, `d2i_pu.c`, `p_dec.c`, `p_enc.c`, `p_legacy.c`), 2 to Phase 10
+  (`d2i_pr.c`, `i2d_evp.c`), 1 to Phase 9 (`bio_ok.c`) and 1 to Phase 11 (`evp_cnf.c`).
+* **14 `reached_by_a_named_construct`** — `bio_b64.c`, `bio_md.c`, `e_null.c`, `m_null.c`,
+  `kdf_meth.c`, `mac_meth.c`, `m_sigver.c`, `evp_err.c`, `p_open.c`, `p_seal.c`, `p_sign.c`,
+  `p_verify.c`, `pem_sign.c` and `evp_pkey.c`. Each names the crate module and the built names that
+  reach it, and the tool checks that every one of those names **is** built, so a wrong record fails
+  rather than reads plausibly.
+
+**No change was needed to `plan_reconciliation.py`, and none was made to
+`phase7_obligations.py`'s completion rule.** The ledger's rule is phases 3–6's — `complete` iff
+`open == 0`, with every symbol either implemented or deferred with a reason — and it is unchanged.
+`plan-reconciliation.json`'s `findings` is 0 and its `units_named_by_a_row` and `units_reached` are
+both 134; its `units_not_reached` census moves **56 -> 0**, which is the recorded work stopping being
+invisible rather than a check being relaxed. `evp_pkey.c`'s record is the one worth singling out:
+two of its fourteen exports are this stratum's and are built, and the other twelve are
+`EVP_PKCS82PKEY*`/`EVP_PKEY2PKCS8`/the attribute accessors, which the atlas gives to **Phase 11**
+because they take or return an `X509_ATTRIBUTE` or a `PKCS8_PRIV_KEY_INFO`. They were never Phase
+7's rows, so their absence is that stratum's ledger's business and the record says so.
+
+### The seal, and the two instruments it had to run rather than assume
+
+`docs/PHASE-7-EVP-SEAL.md` follows the shape of `docs/PHASE-6-PROVIDER-SEAL.md` and
+`docs/PHASE-5-BN-ASN1-PEM-SEAL.md`: what the stratum owns and how that was decided, what was built,
+the evidence, what the courts found (a one-line table of D139–D196 as the register), the fault
+boundaries, what is *not* claimed, the exit criteria checked against generated artefacts, and the
+FRF/Gemel sections. Every count in it is either `docs/SEAL-CENSUS.md`'s or copied from the file
+named beside it; the one table it types is the per-court list, which is
+`artifacts/phase7/COURTS.json`'s. It states explicitly that `implemented` and passing bounded courts
+are not `PARITY_VERIFIED`.
+
+Two of the criterion's clauses are vacuous or near-vacuous here and the seal says so with its
+evidence rather than by omitting them:
+
+* **FRF.** Phase 7 has no FRF declarations, so it has no FRF receipts — and that is the landed
+  convention rather than a gap. `forensics/tools/gen_frf_courts.py`'s `COURTS` table *is* the
+  registry of declarations (D58), its entries are the Phase 3–6 runtime courts, and
+  `forensics/frf/run_courts.sh` derives the courts it runs from the declarations directory, so a
+  court with no declaration produces no receipt by construction. `gen_frf_courts.py --check` prints
+  `ok: 86 file(s) match the table (43 courts)` and exits 0, which is the whole of what can be said:
+  the declarations that exist are consistent, and this stratum adds none.
+* **Gemel.** The stratum's change and checkpoint are recorded through `gemel change begin` /
+  `change finish` / `checkpoint` and projected by `forensics/tools/render_gemel_trajectory.sh`, whose
+  output is `forensics/GEMEL_TRAJECTORY.md`; the identities are read back from the store there rather
+  than quoted in the seal, because a derived name is not an identity (D17, and the K-numbering is
+  the same).
+
+### The guard, the pipeline and what moved
+
+`court/pipeline.sh` ends `PIPELINE OK` with the prerequisite gate, the plan reconciliation, the
+prototype court and the dispatch plane all at zero findings, `probe_hygiene` clean,
+`evidence_determinism.py` reproducing 21 artefacts, `check_evidence_portability.py` reproducing the
+same 21 with `nm`/`objdump`/`readelf`/`ar`/`file` unavailable, and `gen_frf_courts.py --check`
+reporting `86 file(s) match the table (43 courts)`. The movements the guard reports rather than
+refuses, against this branch's previous head (`9fab32e3`), are: `implemented[libcrypto]`
+**1840 -> 1841**, `open_obligations[phase7]` **81 -> 0**, `deferred[phase7]` **164 -> 244**,
+`court[RT-EVP-PKEY]` observations **498 -> 502**, `phase[7]` **in-progress -> complete**,
+`prerequisites[blocking_dependencies]` **26 -> 25** (`evp_pkey_decrypt_alloc`'s row retired and
+`evp_cleanup_int` retargeted from Phase 7 to Phase 8, with the two Phase-7 rows leaving the
+blocking census because the stratum is complete), and `prerequisites[language_census]`
+**2673 -> 2672**. Neither `prerequisites[sealed_census]` (57 names over 20 defining units, read from
+the gate's `sealed_stratum_census` line) nor `prerequisites[findings]` (0) moves, so no
+`prerequisites` transition row is needed and none is added. Against `origin/main` the same run also
+prints `UNCERTIFIED: obligation ledger 'phase7' exists now but not in the authority`, which is the
+guard saying that Phase 7's ledger did not exist at the merge base and the phase-7 numbers therefore
+cannot be certified against it — the whole stratum's movement shows in that pair, which is why the
+per-slice reading is the previous head's.
+
+`docs/PHASE-7-SUBPHASES.md`'s row 7.7 is marked landed with this entry as its record, and the 7.3g
+note that said `evp_cleanup_int` and `EVP_add_alg_module` were "owed to 7.4" is corrected in place
+with a pointer to this entry rather than rewritten silently — the reading it recorded was right when
+it was written and the two facts under it have since changed.

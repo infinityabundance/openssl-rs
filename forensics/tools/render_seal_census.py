@@ -57,6 +57,7 @@ SEALS = {
     4: "docs/PHASE-4-BIO-CONF-SEAL.md",
     5: "docs/PHASE-5-BN-ASN1-PEM-SEAL.md",
     6: "docs/PHASE-6-PROVIDER-SEAL.md",
+    7: "docs/PHASE-7-EVP-SEAL.md",
 }
 
 

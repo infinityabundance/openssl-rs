@@ -66,7 +66,7 @@ use crate::runtime::err::{
     err_sites, raise_site, raise_site_data, ERR_clear_last_mark, ERR_count_to_mark,
     ERR_pop_to_mark, ERR_set_mark,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
 
 /// `OSSL_OP_ASYM_CIPHER` — `include/openssl/core_dispatch.h`.
 pub(crate) const OSSL_OP_ASYM_CIPHER: c_int = 13;
@@ -82,6 +82,10 @@ const LINE_ZALLOC_CIPHER: c_int = 352;
 const LINE_FREE_TYPE_NAME: c_int = 494;
 /// `EVP_ASYM_CIPHER_free`'s `OPENSSL_free(cipher)` (line 497).
 const LINE_FREE_CIPHER: c_int = 497;
+/// `evp_pkey_decrypt_alloc`'s `OPENSSL_malloc(*outlenp)` (line 337).
+const LINE_MALLOC_DECRYPT_ALLOC: c_int = 337;
+/// `evp_pkey_decrypt_alloc`'s `OPENSSL_clear_free(*outp, *outlenp)` (line 343).
+const LINE_CLEAR_FREE_DECRYPT_ALLOC: c_int = 343;
 
 // ---------------------------------------------------------------------------------------------
 // The dispatch ids and the eleven function-pointer types.
@@ -1054,11 +1058,71 @@ pub unsafe extern "C" fn EVP_PKEY_decrypt(
     }
 }
 
+/// `int evp_pkey_decrypt_alloc(EVP_PKEY_CTX *ctx, unsigned char **outp, size_t *outlenp,
+/// size_t expected_outlen, const unsigned char *in, size_t inlen)` —
+/// `crypto/evp/asymcipher.c:332`.
+///
+/// The two-pass auto-allocating decrypt: the authority asks `EVP_PKEY_decrypt(ctx, NULL, outlenp,
+/// in, inlen)` for the length, allocates it, calls again with the buffer, and refuses if the second
+/// call failed, if the length came back zero, or if a non-zero `expected_outlen` disagrees with it.
+/// **Two of its three failure arms free the buffer and null the caller's slot and one does not** —
+/// the first `||` arm returns `-1` with `*outp` untouched, because the allocation is what failed and
+/// there is nothing to free. That is why the first test is written as its own `if` here and not
+/// folded into one condition.
+///
+/// It is declared in `include/crypto/evp.h`, so it is this stratum's internal and lands with the
+/// operation half it sits in. Nothing in this crate reaches it yet: its two callers are
+/// `crypto/pkcs7/pk7_doit.c` and `crypto/cms/cms_env.c`, both Phase 12's, which is why the
+/// `#[allow(dead_code)]` names the stratum that will reference it rather than leaving a warning.
+///
+/// # Safety
+/// `ctx` NULL or live and armed for `EVP_PKEY_OP_DECRYPT`; `outp` and `outlenp` writable; `in`
+/// `inlen` readable bytes.
+#[allow(dead_code)] // the first caller is `crypto/pkcs7/pk7_doit.c`'s, which is Phase 12's
+pub(crate) unsafe fn evp_pkey_decrypt_alloc(
+    ctx: *mut EvpPkeyCtx,
+    outp: *mut *mut u8,
+    outlenp: *mut usize,
+    expected_outlen: usize,
+    input: *const u8,
+    inlen: usize,
+) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    if unsafe { EVP_PKEY_decrypt(ctx, ptr::null_mut(), outlenp, input, inlen) } <= 0 {
+        return -1;
+    }
+    // SAFETY: `outlenp` is writable and the first call wrote the required length into it.
+    let buffer = unsafe { CRYPTO_malloc(*outlenp, FILE, LINE_MALLOC_DECRYPT_ALLOC) }.cast::<u8>();
+    if buffer.is_null() {
+        return -1;
+    }
+    // SAFETY: `outp` is writable and this call's own allocation is `*outlenp` bytes.
+    unsafe { *outp = buffer };
+    // SAFETY: `buffer` is `*outlenp` writable bytes and `input` is `inlen` readable ones.
+    if unsafe { EVP_PKEY_decrypt(ctx, buffer, outlenp, input, inlen) } <= 0
+        // SAFETY: the second call wrote the produced length into `outlenp`.
+        || unsafe { *outlenp } == 0
+        // SAFETY: as above.
+        || (expected_outlen != 0 && unsafe { *outlenp } != expected_outlen)
+    {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::ASYMCIPHER_342) };
+        // SAFETY: `buffer` is this call's own allocation of `*outlenp` bytes.
+        unsafe {
+            let produced = *outlenp;
+            CRYPTO_clear_free(buffer.cast(), produced, FILE, LINE_CLEAR_FREE_DECRYPT_ALLOC);
+        }
+        // SAFETY: `outp` is writable and its value is this call's own allocation.
+        unsafe { *outp = ptr::null_mut() };
+        return 0;
+    }
+    1
+}
+
 /// The shared body of `EVP_PKEY_encrypt` and `EVP_PKEY_decrypt`, which differ in four constants
 /// and one callback. Written as one function because the authority writes them as two functions of
 /// thirteen lines each that are the same thirteen lines — and because the *marks* have to be the
 /// same three calls in the same order for the error queue to match.
-///
 /// # Safety
 /// `ctx` NULL or live; `out` NULL or `*outlen` writable bytes; `in` `inlen` readable bytes.
 #[allow(clippy::too_many_arguments)] // mirrors the authority's two signatures exactly

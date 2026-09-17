@@ -1139,6 +1139,12 @@ static size_t g_gen_bits;
 static char g_gen_group[64];
 static unsigned char g_gen_aid[64];
 static size_t g_gen_aid_len;
+/* The octet string `EVP_PKEY_CTX_set_mac_key` hands the generation context as `OSSL_PKEY_PARAM_PRIV_KEY`.
+ * Tracked separately from the three parameters above because it is the only one whose *arrival* is
+ * the observation: `EVP_PKEY_new_mac_key`'s answer is non-NULL whether or not the key bytes were
+ * delivered, so a transcription that dropped that call would pass a pointer-only arm. */
+static int gn_saw_priv;
+static size_t g_gen_priv_len;
 
 static void reset_gen(void)
 {
@@ -1148,6 +1154,8 @@ static void reset_gen(void)
     g_gen_bits = 0;
     g_gen_group[0] = '\0';
     g_gen_aid_len = 0;
+    gn_saw_priv = 0;
+    g_gen_priv_len = 0;
     ERR_clear_error();
 }
 
@@ -1209,6 +1217,11 @@ static int pk_gen_set_params(void *genctx, const OSSL_PARAM params[])
         memcpy(g_gen_aid, data, len);
         g_gen_aid_len = len;
         gn_saw_aid++;
+    }
+    p = OSSL_PARAM_locate_const(params, OSSL_PKEY_PARAM_PRIV_KEY);
+    if (p != NULL && OSSL_PARAM_get_octet_string_ptr(p, &data, &len) && data != NULL) {
+        gn_saw_priv++;
+        g_gen_priv_len = len;
     }
     return 1;
 }
@@ -1731,6 +1744,9 @@ static const OSSL_ALGORITHM court_keymgmts[] = {
       "the name the two `_ex` spellings are handed" },
     { "CMAC:courtrcmac", COURT_PROV, pn_fns,
       "`EVP_PKEY_new_CMAC_key`'s hardcoded name; its success arm needs the default context" },
+    { "HMAC:courthmac", COURT_PROV, pk_gen_fns,
+      "`EVP_PKEY_new_mac_key`'s hardcoded name -- `OBJ_nid2sn(EVP_PKEY_HMAC)` -- whose whole chain "
+      "is a generation, so the entry carries the generation callbacks rather than `pn_fns`" },
     { NULL, NULL, NULL, NULL }
 };
 
@@ -2886,6 +2902,34 @@ int main(void)
             sayn("cmac.with_cipher.round_trip",
                  memcmp(back, cmac_in, sizeof cmac_in) == 0);
             EVP_PKEY_free(ck);
+        }
+
+        /*
+         * ---- 25. `EVP_PKEY_new_mac_key` ----
+         *
+         * `EVP_PKEY_CTX_new_id(EVP_PKEY_HMAC, NULL)` resolves `OBJ_nid2sn(EVP_PKEY_HMAC)` --
+         * `"HMAC"` -- in the **default** context, which is why the probe publishes an `HMAC` key
+         * type there, and the whole chain then runs through `pk_gen_fns`: the context, the keygen
+         * init, the generation itself, and the `priv` octet string `EVP_PKEY_CTX_set_mac_key`
+         * hands the generation context. Both engines are NULL here, so no engine is consulted and
+         * the authority's `int_ctx_new` takes its provider branch (`app_pmeth` is NULL because the
+         * probe registers no application method).
+         *
+         * The counters and the arrived length are the observation and not the pointer alone: a
+         * transcription that dropped `EVP_PKEY_CTX_set_mac_key` would still answer non-NULL, and
+         * the `priv` octet string would never reach the provider.
+         */
+        {
+            unsigned char mac_in[6] = { 'm', 'a', 'c', 'k', 'e', 'y' };
+            EVP_PKEY *mk;
+
+            reset_gen();
+            mk = EVP_PKEY_new_mac_key(EVP_PKEY_HMAC, NULL, mac_in, sizeof mac_in);
+            sayp("mac_key.null_engine", mk);
+            say_gen("mac_key.null_engine.vec");
+            sayn("mac_key.null_engine.saw_priv", gn_saw_priv);
+            sayn("mac_key.null_engine.priv_len", (long long) g_gen_priv_len);
+            EVP_PKEY_free(mk);
         }
 
         EVP_PKEY_CTX_free(ngctx);

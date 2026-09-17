@@ -337,7 +337,7 @@
         "module": "src/evp/asymcipher.rs",
         "phase": 7,
         "phase_source": "module-declaration",
-        "share": "19/19",
+        "share": "20/20",
         "translation_unit": "crypto/evp/asymcipher.c"
       },
       {
@@ -519,7 +519,7 @@
         "module": "src/evp/pmeth_gn.rs",
         "phase": 7,
         "phase_source": "module-declaration",
-        "share": "14/14",
+        "share": "15/15",
         "translation_unit": "crypto/evp/pmeth_gn.c"
       },
       {

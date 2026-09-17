@@ -1,9 +1,14 @@
 //! Phase 7.4c-ii — `crypto/evp/pmeth_gn.c`: the generation family and the data family.
 //!
-//! Thirteen of the file's fourteen exports; the fourteenth, `EVP_PKEY_new_mac_key`, is
-//! `EVP_PKEY_CTX_new_id` (7.4c-ii, unlanded) plus `EVP_PKEY_CTX_set_mac_key`
-//! (`ctrl_params_translate.c`), so it is gated the way `signature.c`'s operation half is
-//! (`docs/DECISIONS.md` D171, D172).
+//! All fourteen of the file's exports. The fourteenth, `EVP_PKEY_new_mac_key`, was withheld by
+//! 7.4c-ii and D173 as "gated the way `signature.c`'s operation half is" (`docs/DECISIONS.md`
+//! D171, D172): it is `EVP_PKEY_CTX_new_id` (then 7.4c-ii's own, unlanded) plus
+//! `EVP_PKEY_CTX_set_mac_key` (`ctrl_params_translate.c`, then unlanded). Both landed in 7.4c's
+//! later slices -- `EVP_PKEY_CTX_new_id` in D186, the ctrl plane in D188 -- so the gate D173
+//! named is gone and D193's sweep folded the name into the legacy-accessor group with a reason
+//! that does not hold for it (its call list is `EVP_PKEY_CTX_new_id`, `EVP_PKEY_keygen_init`,
+//! `EVP_PKEY_CTX_set_mac_key`, `EVP_PKEY_keygen`, `EVP_PKEY_CTX_free` and nothing else). It lands
+//! here, with its thirteen siblings, and D196 records the measurement.
 //!
 //! ## One init, two operations, and the two answers it can give
 //!
@@ -66,9 +71,11 @@ use crate::evp::keymgmt_lib::{
 use crate::evp::pkey::{
     evp_pkey_export_to_provider, evp_pkey_free_legacy, EVP_PKEY_free, EVP_PKEY_new, EvpPkey,
 };
+use crate::evp::pkey_asn1::Engine;
 use crate::evp::pkey_ctx::{
-    evp_pkey_ctx_free_old_ops, EvpPkeyCtx, EvpPkeyGenCb, EVP_PKEY_OP_FROMDATA, EVP_PKEY_OP_KEYGEN,
-    EVP_PKEY_OP_PARAMGEN, EVP_PKEY_OP_TYPE_GEN, EVP_PKEY_OP_UNDEFINED,
+    evp_pkey_ctx_free_old_ops, EVP_PKEY_CTX_free, EVP_PKEY_CTX_new_id, EVP_PKEY_CTX_set_mac_key,
+    EvpPkeyCtx, EvpPkeyGenCb, EVP_PKEY_OP_FROMDATA, EVP_PKEY_OP_KEYGEN, EVP_PKEY_OP_PARAMGEN,
+    EVP_PKEY_OP_TYPE_GEN, EVP_PKEY_OP_UNDEFINED,
 };
 use crate::params::dup::OSSL_PARAM_dup;
 use crate::params::{OSSL_PARAM_get_int, OSSL_PARAM_locate_const, OsslParam};
@@ -762,4 +769,46 @@ pub unsafe extern "C" fn EVP_PKEY_export(
     }
     // SAFETY: `pkey` is live and `export_cb` is the caller's own.
     unsafe { evp_keymgmt_util_export(pkey, selection, export_cb, export_cbarg) }
+}
+
+/// `EVP_PKEY *EVP_PKEY_new_mac_key(int type, ENGINE *e, const unsigned char *key, int keylen)` —
+/// `crypto/evp/pmeth_gn.c:313`.
+///
+/// The authority's four calls and one label: `EVP_PKEY_CTX_new_id`, then `EVP_PKEY_keygen_init`,
+/// `EVP_PKEY_CTX_set_mac_key` and `EVP_PKEY_keygen`, each of which jumps to the same `merr:` -- so
+/// the `EVP_PKEY_CTX_free` runs whether the chain succeeded or was abandoned, and the answer is the
+/// key the last call wrote. Three of those calls are landed in `src/evp/pkey_ctx.rs` and two are
+/// this file's, which is the whole of why D173 could not land it and D193's reason for withholding
+/// it does not apply: there is no legacy key here, no `evp_pkey_get_legacy` and no `ameth` read.
+///
+/// The engine parameter is passed through to `EVP_PKEY_CTX_new_id`, which reads and discards it
+/// (D186), so the crate inherits that call's recorded behaviour rather than introducing one.
+///
+/// # Safety
+/// `e` NULL or a live `ENGINE`; `key` NULL or `keylen` readable bytes.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_new_mac_key(
+    type_: c_int,
+    e: *mut Engine,
+    key: *const u8,
+    keylen: c_int,
+) -> *mut EvpPkey {
+    let mut mac_key: *mut EvpPkey = ptr::null_mut();
+    // SAFETY: the arguments are forwarded under this function's contract.
+    let mac_ctx = unsafe { EVP_PKEY_CTX_new_id(type_, e) };
+    if mac_ctx.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `mac_ctx` is live and this call's own; `key` is NULL or `keylen` readable bytes.
+    unsafe {
+        if EVP_PKEY_keygen_init(mac_ctx) > 0
+            && EVP_PKEY_CTX_set_mac_key(mac_ctx, key, keylen) > 0
+            && EVP_PKEY_keygen(mac_ctx, ptr::addr_of_mut!(mac_key)) > 0
+        {
+            /* The authority's `merr:` is reached on both paths; the chain above is its three
+             * `goto merr` tests, short-circuited the way the labels are. */
+        }
+        EVP_PKEY_CTX_free(mac_ctx);
+    }
+    mac_key
 }

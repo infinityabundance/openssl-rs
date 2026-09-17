@@ -200,6 +200,359 @@ LEGACY_HANDOFFS: list[tuple[tuple[str, ...], str, str]] = [
 
 
 
+# ---------------------------------------------------------------------------------------------
+# The blocked hand-offs: a symbol whose declaring header is this stratum's but whose **body**
+# needs a name no module of this crate defines.
+#
+# The 7.3g table above is one mechanism -- a legacy method static whose callbacks call a primitive
+# unit -- and this table is the other. They are kept apart because a reason that says "the
+# callbacks call AES" is a statement about a whole subsystem, whereas the reasons below name the
+# callee, the authority file and line the call sits on, and the stratum that owns the callee. That
+# is the difference between a reason a reader can check and one a reader can only believe.
+#
+# What `owning_phase` means, in one sentence: **the latest stratum the symbol is blocked on**,
+# because that is the first phase whose completion retires the row. A row naming an earlier phase
+# would promise a landing that cannot happen -- `PEM_read_bio_PrivateKey` is reached through
+# `OSSL_DECODER_CTX_new_for_pkey` (Phase 10) *first* and through `PEM_bytes_read_bio` (Phase 13)
+# on its fallback, and it cannot be written until both exist. Where a symbol is blocked on more
+# than one phase, its reason names every one of them and says which is the binding one.
+# `forensics/tools/phase5_obligations.py` records this convention for the earlier strata
+# ("the later of the two dependencies is the binding one", its `ASN1_add_stable_module` row), and
+# `docs/DECISIONS.md` D196 records that this stratum follows it rather than reading it off the
+# subphase row, which lists the blocker a symbol is reached through **first**.
+#
+# A row here is retired by landing the symbol: `main` fails if a symbol in this table is already
+# implemented, so the table cannot quietly cover a name the crate defines. That is the same
+# discipline `forensics/prerequisites.json` uses, and it is what stops a real future gap hiding
+# behind a stale row.
+# ---------------------------------------------------------------------------------------------
+
+BLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
+    # (1) The four low-level key types' accessors -- twelve, one cause.
+    (
+        ("EVP_PKEY_get0_RSA", "EVP_PKEY_get1_RSA", "EVP_PKEY_set1_RSA",
+         "EVP_PKEY_get0_DSA", "EVP_PKEY_get1_DSA", "EVP_PKEY_set1_DSA",
+         "EVP_PKEY_get0_DH", "EVP_PKEY_get1_DH", "EVP_PKEY_set1_DH",
+         "EVP_PKEY_get0_EC_KEY", "EVP_PKEY_get1_EC_KEY", "EVP_PKEY_set1_EC_KEY"),
+        8,
+        "all twelve reach `evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) through their file's "
+        "own `evp_pkey_get0_<TYPE>_int` (`crypto/evp/p_legacy.c:40`, `:76`; "
+        "`crypto/evp/p_lib.c:887`, `:998`), and that function's body past its fast paths is "
+        "`evp_pkey_copy_downgraded` (`crypto/evp/p_lib.c:2066`), which **constructs** an "
+        "`RSA`/`DH`/`DSA`/`EC_KEY` and imports into its `ameth`. Neither the four types nor the "
+        "ameth objects exist yet, so every one of the twelve is blocked on Phase 8 -- and so are "
+        "the `RSA_up_ref`/`RSA_free` (`p_legacy.c:29`, `:35`), `EC_KEY_up_ref`/`EC_KEY_free` "
+        "(`:67`, `:70`), `DSA_up_ref`/`DSA_free` (`p_lib.c:905`, `:911`) and "
+        "`ossl_dh_is_named_safe_prime_group`/`DH_get0_q`/`DH_up_ref`/`DH_free` (`p_lib.c:982`, "
+        "`:985`, `:987`, `:993`) names the `set1_*` and `get1_*` spellings call directly. "
+        "`evp_pkey_get_legacy` carries its own `forensics/prerequisites.json` row (Phase 8, "
+        "D193); this row is the twelve exports that sit behind it.",
+    ),
+    # (2) The MAC-key getters, which read an ASN1_OCTET_STRING out of the downgraded key.
+    (
+        ("EVP_PKEY_get0_hmac", "EVP_PKEY_get0_poly1305", "EVP_PKEY_get0_siphash"),
+        8,
+        "each is `pkey->type == <type> ? evp_pkey_get_legacy(pkey) : NULL` and then reads "
+        "`os->length`/`os->data` off the answer (`crypto/evp/p_lib.c:843`, `:859`, `:877`). "
+        "`evp_pkey_get_legacy` (`crypto/evp/p_lib.c:2154`) is the whole dependency and it is "
+        "Phase 8's: it constructs a legacy key with `evp_pkey_copy_downgraded` (`:2066`) and "
+        "caches it against an `ameth` the crate cannot find. Same row in "
+        "`forensics/prerequisites.json`, same stratum.",
+    ),
+    # (3) The one assign, which is three Phase-8 calls in five lines.
+    (
+        ("EVP_PKEY_assign",),
+        8,
+        "`crypto/evp/p_lib.c:791` calls `EVP_PKEY_type` (`:797`, the `standard_methods[]` walk "
+        "`crypto/evp/evp_pkey_type.c:63` is the export for), `EC_KEY_get0_group` and "
+        "`EC_GROUP_get_curve_name` (`:801`, `:803`) on the incoming key, and then "
+        "`detect_foreign_key` -> `ossl_dh_is_foreign` (`:819`, `:782`). Every one is Phase 8's; "
+        "the `EVP_PKEY_set_type` call between them is landed. `EVP_PKEY_assign_RSA`/`_DSA`/`_DH`/"
+        "`_EC_KEY` are `#define`s over this function (`include/openssl/evp.h`), so the four "
+        "`set1_*` names in the first row wait on it too.",
+    ),
+    # (4) The two `_old` RSA helpers.
+    (
+        ("EVP_PKEY_encrypt_old", "EVP_PKEY_decrypt_old"),
+        8,
+        "`crypto/evp/p_enc.c:32` and `crypto/evp/p_dec.c:32` both take the low-level key with "
+        "`evp_pkey_get0_RSA_int` (`crypto/evp/p_legacy.c:40`, which is `evp_pkey_get_legacy` "
+        "behind a type test) and then call the primitive -- `RSA_public_encrypt` (`p_enc.c:36`) "
+        "and `RSA_private_decrypt` (`p_dec.c:36`). Both the accessor and the two primitives are "
+        "Phase 8's.",
+    ),
+    # (5) The two EC parameter getters, which take the legacy route for a non-provider key.
+    (
+        ("EVP_PKEY_get_ec_point_conv_form", "EVP_PKEY_get_field_type"),
+        8,
+        "each opens with `pkey->keymgmt == NULL || pkey->keydata == NULL` and answers its "
+        "legacy arm -- `EVP_PKEY_get0_EC_KEY` then `EC_KEY_get_conv_form` "
+        "(`crypto/evp/p_lib.c:2472`, `:2477`) or `EC_KEY_get0_group` then "
+        "`EC_GROUP_get_field_type` (`:2512`, `:2517`, `:2521`). The provider arm above those "
+        "needs nothing foreign, but the legacy arm is compiled in and the crate's "
+        "`EVP_PKEY_get0_EC_KEY` is itself withheld in this stratum, so both are Phase 8's.",
+    ),
+    # (6) `EVP_PKEY_type`.
+    (
+        ("EVP_PKEY_type",),
+        8,
+        "`crypto/evp/evp_pkey_type.c:63` is `EVP_PKEY_asn1_find(&e, type)` and then "
+        "`ameth->pkey_id`. The function is landed -- `src/evp/pkey_asn1.rs` holds it as the "
+        "`pub(crate) evp_pkey_type` helper `EVP_PKEY_get_base_id` calls (D193) -- and the export "
+        "is withheld because its whole answer is the `standard_methods[]` table "
+        "`crypto/asn1/ameth_lib.c:54` fills from `crypto/asn1/standard_methods.h`, whose twelve "
+        "`ossl_<alg>_asn1_meth` objects are Phase 8's. The `ENGINE_finish(e)` at `:75` is the "
+        "`*pe = NULL` mechanism D181 records, not a second blocker.",
+    ),
+    # (7) The six print entry points, which are `print_pkey` and its encoder.
+    (
+        ("EVP_PKEY_print_public", "EVP_PKEY_print_private", "EVP_PKEY_print_params",
+         "EVP_PKEY_print_public_fp", "EVP_PKEY_print_private_fp",
+         "EVP_PKEY_print_params_fp"),
+        10,
+        "the three `_fp` twins are `BIO_new_fp` around the three others, and all six reach "
+        "`print_pkey` (`crypto/evp/p_lib.c:1196`), whose first statement is "
+        "`OSSL_ENCODER_CTX_new_for_pkey` (`:1211`) followed by "
+        "`OSSL_ENCODER_CTX_get_num_encoders` (`:1213`) and `OSSL_ENCODER_to_bio` (`:1214`). "
+        "Those three are `encoder.h`'s and Phase 10's, and the call is unconditional -- it is "
+        "not the legacy fallback that decides whether the export can be written. The fallback "
+        "arm below it (`pkey->ameth->pub_print`/`priv_print`/`param_print`, at `:1233`, `:1241`, "
+        "`:1249`) is Phase 8's ameth *contents*, so Phase 8 also feeds these six; the struct "
+        "and its three function-pointer fields are already declared, which is why Phase 10 is "
+        "the binding one.",
+    ),
+    # (8) The engine pair.
+    (
+        ("EVP_PKEY_set1_engine", "EVP_PKEY_get0_engine"),
+        13,
+        "`crypto/evp/p_lib.c:732` calls `ENGINE_init` (`:735`), `ENGINE_get_pkey_meth` (`:739`) "
+        "and `ENGINE_finish` (`:736`, `:745`) and writes `pkey->pmeth_engine`; `:750` reads "
+        "`pkey->engine`. `ENGINE` is `engine.h`'s and Phase 13's, and this crate's `EvpPkey` "
+        "has neither field -- they are absent with the rest of the legacy attribute block "
+        "(`src/evp/pkey.rs` module doc), so the pair is blocked on Phase 13 and on nothing else.",
+    ),
+    # (9) The three `d2i` spellings that are Phase 8 alone.
+    (
+        ("d2i_PublicKey", "d2i_KeyParams", "d2i_KeyParams_bio"),
+        8,
+        "`d2i_PublicKey` (`crypto/asn1/d2i_pu.c:28`) is a `switch` on "
+        "`EVP_PKEY_get_base_id(ret)` whose three arms call `d2i_RSAPublicKey` (`:52`), "
+        "`d2i_DSAPublicKey` (`:59`) and `o2i_ECPublicKey` (`:71`), plus "
+        "`evp_pkey_copy_downgraded` (`:42`) for the provided-EC input. `d2i_KeyParams` "
+        "(`crypto/asn1/d2i_param.c:18`) refuses unless `ret->ameth != NULL && "
+        "ret->ameth->param_decode != NULL` (`:31`) and then calls it, and `d2i_KeyParams_bio` "
+        "(`:49`) is a `BUF_MEM` read around it. Every one of those names is Phase 8's; the "
+        "`asn1_d2i_read_bio`/`EVP_PKEY_set_type` calls are landed.",
+    ),
+    # (10) The four private-key decoders: the codec first, the ameth second.
+    (
+        ("d2i_PrivateKey", "d2i_PrivateKey_ex", "d2i_AutoPrivateKey",
+         "d2i_AutoPrivateKey_ex"),
+        10,
+        "all four are `d2i_PrivateKey_decoder` then, if it answered NULL, "
+        "`ossl_d2i_PrivateKey_legacy` (`crypto/asn1/d2i_pr.c:172`-`:175`, `:247`-`:250`). The "
+        "decoder builds an `OSSL_DECODER_CTX` with `OSSL_DECODER_CTX_new_for_pkey` (`:78`), "
+        "which is `decoder.h`'s and Phase 10's and is called **first**; the fallback reads "
+        "`ret->ameth->old_priv_decode`/`priv_decode`/`priv_decode_ex` (`:130`, `:132`) and calls "
+        "`evp_pkcs82pkey_legacy` (`crypto/evp/evp_pkey.c:52`-`:59` is the same fields again), "
+        "which is Phase 8's. So both phases feed these four and Phase 10 is the binding one: "
+        "an export cannot be half-written, and the half that runs first is the decoder.",
+    ),
+    # (11) The five encoders.
+    (
+        ("i2d_PrivateKey", "i2d_PKCS8PrivateKey", "i2d_PublicKey", "i2d_KeyParams",
+         "i2d_KeyParams_bio"),
+        10,
+        "all five reach `i2d_provided` (`crypto/asn1/i2d_evp.c:33`) whenever the key is "
+        "provided, and that function is `OSSL_ENCODER_CTX_new_for_pkey` (`:53`) + "
+        "`OSSL_ENCODER_to_data` (`:59`) + `OSSL_ENCODER_CTX_free` (`:64`), `encoder.h`'s and "
+        "Phase 10's. Their non-provided arms are Phase 8's as well -- `i2d_PublicKey`'s "
+        "`switch` calls `i2d_RSAPublicKey`/`i2d_DSAPublicKey`/`i2o_ECPublicKey` (`:159`, "
+        "`:162`, `:165`) through `EVP_PKEY_get0_RSA`/`_DSA`/`_EC_KEY`, and "
+        "`i2d_PrivateKey_impl`'s calls `a->ameth->old_priv_encode` (`:106`) and "
+        "`EVP_PKEY2PKCS8` (`crypto/evp/evp_pkey.c:129`, itself an encoder context) -- so Phase 8 "
+        "feeds these five too and Phase 10 is the binding one.",
+    ),
+    # (12) The two Phase-5 hand-offs whose delegate is Phase 11's.
+    (
+        ("ASN1_item_sign_ex", "ASN1_item_verify_ex"),
+        11,
+        "`ASN1_item_sign_ex` (`crypto/asn1/a_sign.c:121`) builds its digest context and then "
+        "hands it to `ASN1_item_sign_ctx` (`:138`); `ASN1_item_verify_ex` "
+        "(`crypto/asn1/a_verify.c:95`) is the same shape around `ASN1_item_verify_ctx` (`:104`). "
+        "Both delegates are declared in `x509.h`, are defined in those same two files "
+        "(`a_sign.c:146`, `a_verify.c:111`) and are Phase 11's exports, so the Phase 5 -> 7 "
+        "hand-off cannot be completed here; `forensics/prerequisites.json` carries the pair "
+        "with this reason and `RT-EVP-PKEY`'s `NOT_MEASURED` lines name them. "
+        "`evp_md_ctx_new_ex`, the other callee, is `crypto/evp/digest.c`'s own internal and "
+        "belongs with this stratum.",
+    ),
+    # (13) The three registry readers.
+    (
+        ("EVP_PKEY_meth_find", "EVP_PKEY_meth_get_count", "EVP_PKEY_meth_get0"),
+        8,
+        "`EVP_PKEY_meth_find` (`crypto/evp/pmeth_lib.c:106`) searches `standard_methods[]` "
+        "(`:54`) with `OBJ_bsearch_pmeth_func` (`:114`); `EVP_PKEY_meth_get_count` (`:646`) "
+        "answers `OSSL_NELEM(standard_methods)` plus the application stack; "
+        "`EVP_PKEY_meth_get0` (`:655`) indexes the table outright before it touches that "
+        "stack. The ten `ossl_<alg>_pkey_method` objects the table holds are Phase 8's "
+        "contents (D163, D165, D184), and the application half of the registry is already "
+        "landed and courted -- so Phase 8 is the only phase that retires these three, and a "
+        "stub would answer the application count where the authority answers twelve more.",
+    ),
+    # (14) `EVP_PKEY_CTX_get_algor` -- the same `d2i_X509_ALGOR` as its cipher sibling.
+    (
+        ("EVP_PKEY_CTX_get_algor",),
+        11,
+        "`crypto/evp/evp_lib.c:1455` decodes the provider's `OSSL_SIGNATURE_PARAM_ALGORITHM_ID` "
+        "answer with `d2i_X509_ALGOR` (`:1490`), which is `crypto/asn1/x_algor.c:26`'s generated "
+        "`IMPLEMENT_ASN1_FUNCTIONS` export and Phase 11's. `forensics/prerequisites.json` "
+        "carries `d2i_X509_ALGOR` with this coordinate; D190 recorded the withholding and "
+        "D193 restated it.",
+    ),
+    # (15) `EVP_SealInit`.
+    (
+        ("EVP_SealInit",),
+        9,
+        "`crypto/evp/p_seal.c:42` takes the session key from `EVP_CIPHER_CTX_rand_key` and "
+        "`:46` fills the IV with `RAND_priv_bytes_ex(libctx, iv, len, 0)`; `rand.h` is Phase "
+        "9's, and `EVP_CIPHER_CTX_rand_key` (`crypto/evp/evp_enc.c:1751`, `:1764`) is itself "
+        "withheld in this stratum on the same call -- which is why the deferral is Phase 9 and "
+        "not a same-stratum one. `forensics/prerequisites.json`'s `RAND_priv_bytes_ex` row is "
+        "this dependency.",
+    ),
+    # (16) The two password readers, which are a `UI` program.
+    (
+        ("EVP_read_pw_string", "EVP_read_pw_string_min"),
+        13,
+        "`EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`) is `UI_new` (`:56`), "
+        "`UI_add_input_string` (`:62`), `UI_add_verify_string` (`:70`), `UI_process` (`:78`) "
+        "and `UI_free` (`:84`), and `ui.h` is Phase 13's. `EVP_read_pw_string` (`:47`) is its "
+        "one-line spelling. `EVP_get_pw_prompt`/`EVP_set_pw_prompt` are this file's too and did "
+        "land: they touch the file's own eighty-byte static and no `UI` at all.",
+    ),
+    # (17) `EVP_CIPHER_CTX_get_algor`.
+    (
+        ("EVP_CIPHER_CTX_get_algor",),
+        11,
+        "`crypto/evp/evp_lib.c:1337` is `EVP_PKEY_CTX_get_algor`'s cipher-side twin and decodes "
+        "the same `OSSL_SIGNATURE_PARAM_ALGORITHM_ID` octet string with the same "
+        "`d2i_X509_ALGOR` (`:1372`), `crypto/asn1/x_algor.c:26`'s and Phase 11's. One "
+        "`forensics/prerequisites.json` row covers both accessors.",
+    ),
+    # (18) `EVP_CIPHER_CTX_rand_key`.
+    (
+        ("EVP_CIPHER_CTX_rand_key",),
+        9,
+        "`crypto/evp/evp_enc.c:1751` falls through to "
+        "`RAND_priv_bytes_ex(libctx, key, kl, 0)` (`:1764`) for every cipher without "
+        "`EVP_CIPH_RAND_KEY`, which is every provider cipher; `rand.h` is Phase 9's. "
+        "`EVP_SealInit` above is the caller that made this visible, and the "
+        "`RAND_priv_bytes_ex` row in `forensics/prerequisites.json` names both.",
+    ),
+    # (19) `BIO_f_reliable`.
+    (
+        ("BIO_f_reliable",),
+        9,
+        "`crypto/evp/bio_ok.c:127` is `return &methods_ok`, and `methods_ok` (`:112`) is a "
+        "`BIO_METHOD` whose write path is `ok_write` (`:254`) -> `sig_out` -- and `sig_out` "
+        "fills the record's digest half with `RAND_bytes(md_data, md_size)` (`:456`). "
+        "`rand.h` is Phase 9's, and the method struct cannot be published with a callback that "
+        "has no callee, so the export is withheld rather than the table partial.",
+    ),
+    # (20) `EVP_add_alg_module`.
+    (
+        ("EVP_add_alg_module",),
+        11,
+        "`crypto/evp/evp_cnf.c:69` registers `alg_module_init` (`:24`), whose `fips_mode` arm "
+        "reads the section value with `X509V3_get_value_bool` (`:46`, defined at "
+        "`crypto/x509/v3_utl.c:266` and declared in `x509v3.h`, Phase 11's). The other three "
+        "calls in the handler -- `CONF_imodule_get_value`, `NCONF_get_section`, "
+        "`evp_set_default_properties_int` -- are landed, so Phase 11 is the only blocker, and "
+        "it is the same one the subphase plan names for this name.",
+    ),
+    # (21) The HPKE GREASE value.
+    (
+        ("OSSL_HPKE_get_grease_value",),
+        9,
+        "`crypto/hpke/hpke.c:1377`'s only observable is whether the GREASE ciphertext gets "
+        "filled, and it is filled by `RAND_bytes_ex(libctx, ct, ctlen, 0)` (`:1433`) -- "
+        "`rand.h`, Phase 9. Its random-suite arm additionally reaches "
+        "`ossl_rand_uniform_uint32` (`crypto/hpke/hpke_util.c:198`, `:220`, `:243`), the same "
+        "stratum. D195 recorded the withholding and `forensics/prerequisites.json`'s "
+        "`RAND_bytes_ex` row names both coordinates.",
+    ),
+    # (22) The eight PEM names `EVP_md5` blocks, three of which RAND_bytes also blocks.
+    (
+        ("PEM_do_header", "PEM_bytes_read_bio", "PEM_bytes_read_bio_secmem",
+         "PEM_ASN1_read", "PEM_ASN1_read_bio", "PEM_ASN1_write",
+         "PEM_ASN1_write_bio", "PEM_ASN1_write_bio_ctx"),
+        13,
+        "`PEM_do_header` (`crypto/pem/pem_lib.c:445`) derives the block key with "
+        "`EVP_BytesToKey(cipher->cipher, EVP_md5(), ...)` (`:479`), and `EVP_md5` is "
+        "`crypto/evp/legacy_md5.c:36`'s legacy `EVP_MD` over `MD5_Init`/`_Update`/`_Final` -- "
+        "which 7.3g handed to Phase 13 with its primitive unit named, so it is Phase 13's and "
+        "not this stratum's even though `evp.h` declares it. The other seven reach it through "
+        "one or two calls: `PEM_bytes_read_bio` (`:286`) and its `_secmem` spelling (`:294`) "
+        "call `PEM_do_header` from `pem_bytes_read_bio_flags`, `PEM_ASN1_read_bio` "
+        "(`crypto/pem/pem_oth.c:20`) calls `PEM_bytes_read_bio` (`:28`), `PEM_ASN1_read` "
+        "(`pem_lib.c:111`) calls `PEM_ASN1_read_bio`, and the `PEM_ASN1_write*` trio "
+        "(`:303`, `:428`, `:436`) shares `PEM_ASN1_write_bio_internal`, whose encrypted arm "
+        "calls `EVP_md5` (`:392`) as well as `RAND_bytes` for the DEK salt (`:386`, Phase 9). "
+        "So Phase 9 also feeds the write trio and Phase 13 is the binding phase for all eight.",
+    ),
+    # (23) `PEM_def_callback`.
+    (
+        ("PEM_def_callback",),
+        13,
+        "`crypto/pem/pem_lib.c:36`'s `userdata == NULL` arm is "
+        "`EVP_read_pw_string_min(buf, min_len, num, prompt, rwflag)` (`:62`), the `UI` "
+        "program two rows above, and `ui.h` is Phase 13's. The `userdata != NULL` arm is a "
+        "`strlen`/`memcpy` with `num` as the clamp and needs nothing foreign, but an export "
+        "cannot be half-written and the arm every `PEM_write_*PrivateKey*` caller reaches is "
+        "the other one. D194 recorded this and kept `forensics/prerequisites.json`'s `UI_new` "
+        "row rather than adding one naming `EVP_read_pw_string_min`, which is a Phase-7-owned "
+        "export and may not appear there.",
+    ),
+    # (24) The fifteen reader/writer spellings the codec is reached through first.
+    (
+        ("PEM_read_bio_PrivateKey", "PEM_read_bio_PrivateKey_ex", "PEM_read_PrivateKey",
+         "PEM_read_PrivateKey_ex", "PEM_read_bio_Parameters", "PEM_read_bio_Parameters_ex",
+         "PEM_write_bio_PrivateKey", "PEM_write_bio_PrivateKey_ex", "PEM_write_PrivateKey",
+         "PEM_write_PrivateKey_ex", "PEM_write_bio_Parameters",
+         "PEM_write_bio_PKCS8PrivateKey", "PEM_write_bio_PKCS8PrivateKey_nid",
+         "PEM_write_PKCS8PrivateKey", "PEM_write_PKCS8PrivateKey_nid"),
+        13,
+        "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first "
+        "attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` "
+        "(`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` "
+        "(`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- "
+        "which is the eighth name of the row above and therefore Phase 13. The six writers "
+        "expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder "
+        "call is Phase 10 and whose `legacy:` label reaches "
+        "`PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and "
+        "10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose "
+        "`OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose "
+        "`cb = PEM_def_callback` (`:91`) is Phase 13. So Phase 10 is what these fifteen are "
+        "reached through **first** -- which is what 7.5's `NOT_MEASURED` lines say -- and Phase "
+        "13 is the phase that retires them, because the fallback legs cannot be omitted.",
+    ),
+    # (25) `PEM_write_bio_PrivateKey_traditional`.
+    (
+        ("PEM_write_bio_PrivateKey_traditional",),
+        13,
+        "`crypto/pem/pem_pkey.c:342` needs `evp_pkey_copy_downgraded` (`:356`, Phase 8, for the "
+        "provided-key copy), `x->ameth->old_priv_encode`/`x->ameth->pem_str` (`:359`, `:364`, "
+        "Phase 8's ameth contents), the `i2d_PrivateKey` function pointer (`:365`, Phase 10) and "
+        "`PEM_ASN1_write_bio` (`:365`, Phase 13 behind `EVP_md5` and Phase 9 behind "
+        "`RAND_bytes`). Four strata feed it and Phase 13 is the latest, so Phase 13 retires it. "
+        "D194 named this as the one name of the private-key family that needs the ameth "
+        "*before* it needs the encoder, and this row is the four-dependency version of that "
+        "sentence.",
+    ),
+]
+
+
 def load(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))["body"]
 
@@ -336,21 +689,51 @@ def main(argv: list[str]) -> int:
                     ),
                 }
     handed_on_names = set(handed_on)
-    deferred: list[dict] = list(handed_on.values())
 
-    implemented_here = sorted(s for s in owned if s in done and s not in handed_on_names)
+    # The second deferral mechanism, and the fail-closed one: a symbol in `BLOCKED_HANDOFFS` that
+    # the crate now defines is a stale row rather than a harmless one, because a table that can
+    # keep covering a landed symbol can hide the next real gap behind it. Same rule
+    # `forensics/prerequisites.json` uses, same reason.
+    blocked: dict[str, dict] = {}
+    for symbols, phase, reason in BLOCKED_HANDOFFS:
+        for sym in symbols:
+            if sym not in owned:
+                raise SystemExit(
+                    f"phase7-obligations: BLOCKED_HANDOFFS names {sym}, which is not in this "
+                    f"stratum's working set (or is not an authority export at all)"
+                )
+            if sym in done:
+                raise SystemExit(
+                    f"phase7-obligations: BLOCKED_HANDOFFS records {sym} as blocked on phase "
+                    f"{phase}, but the crate defines it; retire the row"
+                )
+            if sym in handed_on:
+                raise SystemExit(
+                    f"phase7-obligations: {sym} is in both LEGACY_HANDOFFS and BLOCKED_HANDOFFS; "
+                    f"one cause per symbol, or the two reasons will disagree"
+                )
+            blocked[sym] = {
+                "symbol": sym,
+                "owning_phase": phase,
+                "declaring_header": owned[sym]["declaring_header"],
+                "reason": reason,
+            }
+    deferred_names = handed_on_names | set(blocked)
+    deferred: list[dict] = list(handed_on.values()) + list(blocked.values())
+
+    implemented_here = sorted(s for s in owned if s in done and s not in deferred_names)
     open_rows = [
         {"symbol": s, "module": owned[s]["module"],
          "declaring_header": owned[s]["declaring_header"],
          "received_from_phase": owned[s]["from"]}
-        for s in sorted(owned) if s not in done and s not in handed_on_names
+        for s in sorted(owned) if s not in done and s not in deferred_names
     ]
 
-    if len(owned) != len(implemented_here) + len(handed_on_names) + len(open_rows):
+    if len(owned) != len(implemented_here) + len(deferred_names) + len(open_rows):
         raise SystemExit(
             "phase7-obligations: the ledger does not account for exactly its own working "
             f"set: owned={len(owned)} implemented={len(implemented_here)} "
-            f"deferred={len(handed_on_names)} open={len(open_rows)}"
+            f"deferred={len(deferred_names)} open={len(open_rows)}"
         )
 
     body = {
