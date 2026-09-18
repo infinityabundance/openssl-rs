@@ -14776,3 +14776,75 @@ work establishes their stratum before the entry is corrected.
 plan's two anchored status clauses were updated in the same commit: the four wrap exports
 join the landed clause and `CRYPTO_gcm128_init`/`CRYPTO_xts128_encrypt` stay in the open
 one.
+
+## D225 — GCM lands with both planes, and the GHASH-IV counter extraction was a court-visible defect
+
+`src/modes/gcm.rs` lands the eleven `CRYPTO_gcm128_*` exports of
+`crypto/modes/gcm128.c`: `new`/`release`/`init`, `setiv`, `aad`, `encrypt`/`decrypt`,
+`encrypt_ctr32`/`decrypt_ctr32`, `finish` and `tag`. `implemented[libcrypto]` **2005 → 2016**
+and Phase 8 **164/606/16 → 175/595/16**, read from `forensics/phase8-obligations.json` rather
+than typed.
+
+**The host-selected GHASH dispatch is inside the same class as D213, and the court declines to
+compare it.** `gcm_get_funcs` (`crypto/modes/gcm128.c:428-560`) selects `ginit`/`gmult`/`ghash`
+at run time from `OPENSSL_ia32cap_P`: the C 4-bit Shoup table by default, and the
+pclmulqdq/AVX arm when the PCLMULQDQ and AVX+MOVBE bits are set. That is a **host CPU
+property**, not a build property, exactly as `RC4_options` was. It is also unobservable:
+`GCM128_CONTEXT` is opaque, `ctx->funcs` is file-static, and the header's `ossl_gcm_*_4bit`
+entry points are not in this stratum's export set. So `RT-CIPHER` compares no function pointer
+and no table; it compares the ciphertext and the tag, which every arm defines identically. The
+field representation here is the standard big-endian one and the multiply is SP 800-38D
+Algorithm 1 rather than Shoup's descent — the same function on the same field.
+
+**The authority's own internal entry points are still wired, under their authority names.**
+Declining to *compare* the host-selected dispatch is not declining to *name* it:
+`prerequisite_gate.py` observes that `crypto/modes/gcm128.c` publishes
+`ossl_gcm_init_4bit`/`ossl_gcm_gmult_4bit`/`ossl_gcm_ghash_4bit` (the dispatcher's non-static
+wrappers at `:563-593`, which `crypto/modes/aes-gcm-avx512.c` calls) and that this crate's
+module for the unit did not mention them — three `unwired_function_in_the_current_stratum`
+findings, which is exactly the debt D201 recorded for the digest block functions. The module now
+implements all three under those identifiers as its field primitives (`init` builds `H` from the
+block cipher's `E(K, 0^128)`, `gmult` is the per-block `(Xi ^ block) * H`, `ghash` is the
+whole-block run), and every call site goes through them. The bodies are the SP 800-38D field
+function the module already carries, not a transcription of the 4-bit table, because the table is
+the host-selected arm the court declines — the wiring makes the unit's internal surface real
+without making a host property into a comparison.
+
+**A real defect, found before either plane was published, in `setiv`'s non-96-bit-IV
+counter.** `crypto/modes/gcm128.c:700` computes `ctr = BSWAP4(ctx->Xi.d[3])`, i.e. bytes 12..16
+of `J0` as a big-endian `u32`; the first transcription extracted `(xi >> 32) as u32`, which is
+the *middle* word (bytes 8..12), so the counter was wrong for every IV that is not twelve bytes
+long. Two independent instruments saw it: the `RT-CIPHER` arm's `gcm.iv16`/`gcm.iv1`
+observations differed while every 96-bit-IV arm agreed, and the NIST `gcm-spec.pdf` test case 5
+(a 64-bit IV) failed in the crate's own unit test. The fix is `xi as u32`. Nothing in the
+96-bit-IV path was wrong, which is why the original unit tests and the earlier probe arms all
+passed — the defect was reachable only through a GHASH-derived `J0`.
+
+**Both planes, and the CT schema grew to carry an AEAD's tag.** `RT-CIPHER` **494 → 530
+observations**: a new `rt_gcm128` arm observes the ciphertext and tag for AAD plus a partial
+final block, the same message split three ways (5+28, 16+1+16, and 4000 bytes through both
+`CRYPTO_gcm128_encrypt` and the `ctr32` entry point with a probe-local AES-CTR `ctr128_f`),
+in-place decryption, empty plaintext, AAD-only, a 12-byte truncated tag, 16-, 8- and 1-byte
+IVs, `aad` after a message (`-2`), a NULL tag (`-1`), a 17-byte tag (`-1`), and the tag
+accept **and** reject answers. `CT-CIPHER` **426 → 584 vectors**: `forensics/vectors/gcm.json`
+mirrors **158** corpus blocks from `test/recipes/30-test_evp_data/evpciph_aes_common.txt`
+(NIST SP 800-38D's own test cases and the boringssl set). The `CipherVector` schema gained
+`aad`, `tag` and a calls-file tag length, because an AEAD's expected value is a ciphertext
+**and** a tag and the corpus's single-byte-IV cases use 12-, 13-, 14- and 15-byte tags. The
+probe's AEAD path prints `ciphertext || tag || accept || reject`, so a **rejected tag** is a
+committed expectation on every one of the 158 vectors rather than a claim; the corpus's own
+negative block (`Result = CIPHERFINAL_ERROR`) is skipped by the generator's existing
+`result`-key rule, and `RT-CIPHER` observes the refusal directly. AEAD decrypt vectors and
+`NextIV` blocks are skipped, named in the family's note.
+
+**No independent GCM vector, recorded rather than hidden (D208).** No independent AES/GCM
+implementation is present in the pinned court image, so no boundary vector carries an
+independent oracle; the corpus's own empty-plaintext, one-block, one-block-plus-a-byte and
+multi-block cases are the boundary coverage, and the accept/reject self-check is the
+independent-of-corpus answer. The family's `note` says this rather than implying an oracle that
+does not exist.
+
+**What this entry does not do.** CCM, OCB, XTS, SIV, ChaCha20-Poly1305 and the CTS rows, and
+every AEAD row of `providers/defltprov.c`'s `deflt_ciphers[]`, remain open. The plan's
+anchored clauses moved in the same commit: the eleven GCM exports joined the landed clause and
+`CRYPTO_gcm128_init` left the open one, which now names only `CRYPTO_xts128_encrypt`.

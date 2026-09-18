@@ -15,6 +15,7 @@
     "standard": "RFC 3713 (NTT Camellia)",
     "vectors": [
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-128-ECB",
         "expected_hex": "67673138549669730857065648eabe43",
         "id": "camellia-1",
@@ -32,9 +33,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-192-ECB",
         "expected_hex": "b4993401b3e996f84ee5cee7d79b09b9",
         "id": "camellia-2",
@@ -52,9 +55,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-256-ECB",
         "expected_hex": "9acc237dff16d76c20ef7c919e3a7509",
         "id": "camellia-3",
@@ -72,9 +77,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-128-ECB",
         "expected_hex": "77cf412067af8270613529149919546f",
         "id": "camellia-4",
@@ -92,9 +99,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-192-ECB",
         "expected_hex": "b22f3c36b72d31329eee8addc2906c68",
         "id": "camellia-5",
@@ -112,9 +121,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-256-ECB",
         "expected_hex": "2edf1f3418d53b88841fc8985fb1ecf2",
         "id": "camellia-6",
@@ -132,9 +143,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-128-ECB",
         "expected_hex": "432fc5dcd628115b7c388d770b270c96",
         "id": "camellia-7",
@@ -152,9 +165,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-128-ECB",
         "expected_hex": "0be1f14023782a22e8384c5abb7fab2b",
         "id": "camellia-8",
@@ -172,9 +187,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-128-ECB",
         "expected_hex": "a0a1abcd1893ab6fe0fe5b65df5f8636",
         "id": "camellia-9",
@@ -192,9 +209,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-128-ECB",
         "expected_hex": "e61925e0d5dfaa9bb29f815b3076e51a",
         "id": "camellia-10",
@@ -212,9 +231,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-192-ECB",
         "expected_hex": "cccc6c4e138b45848514d48d0d3439d3",
         "id": "camellia-11",
@@ -232,9 +253,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-192-ECB",
         "expected_hex": "5713c62c14b2ec0f8393b6afd6f5785a",
         "id": "camellia-12",
@@ -252,9 +275,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-192-ECB",
         "expected_hex": "b40ed2b60eb54d09d030cf511feef366",
         "id": "camellia-13",
@@ -272,9 +297,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-192-ECB",
         "expected_hex": "909dbd95799096748cb27357e73e1d26",
         "id": "camellia-14",
@@ -292,9 +319,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-256-ECB",
         "expected_hex": "befd219b112fa00098919cd101c9ccfa",
         "id": "camellia-15",
@@ -312,9 +341,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-256-ECB",
         "expected_hex": "c91d3a8f1aea08a9386cf4b66c0169ea",
         "id": "camellia-16",
@@ -332,9 +363,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-256-ECB",
         "expected_hex": "a623d711dc5f25a51bb8a80d56397d28",
         "id": "camellia-17",
@@ -352,9 +385,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-256-ECB",
         "expected_hex": "7960109fb6dc42947fcfe59ea3c5eb6b",
         "id": "camellia-18",
@@ -372,9 +407,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-128-CBC",
         "expected_hex": "1607cf494b36bbf00daeb0b503c831ab",
         "id": "camellia-19",
@@ -392,9 +429,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-128-CBC",
         "expected_hex": "a2f2cf671629ef7840c5a5dfb5074887",
         "id": "camellia-20",
@@ -412,9 +451,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-128-CBC",
         "expected_hex": "0f06165008cf8b8b5a63586362543e54",
         "id": "camellia-21",
@@ -432,9 +473,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-128-CBC",
         "expected_hex": "74c64268cdb8b8faf5b34e8af3732980",
         "id": "camellia-22",
@@ -452,9 +495,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-192-CBC",
         "expected_hex": "2a4830ab5ac4a1a2405955fd2195cf93",
         "id": "camellia-23",
@@ -472,9 +517,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-192-CBC",
         "expected_hex": "5d5a869bd14ce54264f892a6dd2ec3d5",
         "id": "camellia-24",
@@ -492,9 +539,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-192-CBC",
         "expected_hex": "37d359c3349836d884e310addf68c449",
         "id": "camellia-25",
@@ -512,9 +561,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-192-CBC",
         "expected_hex": "01faaa930b4ab9916e9668e1428c6b08",
         "id": "camellia-26",
@@ -532,9 +583,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-256-CBC",
         "expected_hex": "e6cfa35fc02b134a4d2c0b6737ac3eda",
         "id": "camellia-27",
@@ -552,9 +605,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-256-CBC",
         "expected_hex": "36cbeb73bd504b4070b1b7de2b21eb50",
         "id": "camellia-28",
@@ -572,9 +627,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-256-CBC",
         "expected_hex": "e31a6055297d96ca3330cdf1b1860a83",
         "id": "camellia-29",
@@ -592,9 +649,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-256-CBC",
         "expected_hex": "5d563f6d1cccf236051c0c5c1c58f28f",
         "id": "camellia-30",
@@ -612,9 +671,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-128-CFB",
         "expected_hex": "14f7646187817eb586599146b82bd719",
         "id": "camellia-31",
@@ -632,9 +693,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-128-CFB",
         "expected_hex": "a53d28bb82df741103ea4f921a44880b",
         "id": "camellia-32",
@@ -652,9 +715,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-128-CFB",
         "expected_hex": "9c2157a664626d1def9ea420fde69b96",
         "id": "camellia-33",
@@ -672,9 +737,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-128-CFB",
         "expected_hex": "742a25f0542340c7baef24ca8482bb09",
         "id": "camellia-34",
@@ -692,9 +759,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-128-CFB",
         "expected_hex": "6bc1bee22e409f96e93d7e117393172a",
         "id": "camellia-35",
@@ -712,9 +781,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-128-CFB",
         "expected_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
         "id": "camellia-36",
@@ -732,9 +803,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-128-CFB",
         "expected_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
         "id": "camellia-37",
@@ -752,9 +825,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-128-CFB",
         "expected_hex": "f69f2445df4f9b17ad2b417be66c3710",
         "id": "camellia-38",
@@ -772,9 +847,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-192-CFB",
         "expected_hex": "c832bb9780677daa82d9b6860dcd565e",
         "id": "camellia-39",
@@ -792,9 +869,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-192-CFB",
         "expected_hex": "86f8491627906d780c7a6d46ea331f98",
         "id": "camellia-40",
@@ -812,9 +891,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-192-CFB",
         "expected_hex": "69511cce594cf710cb98bb63d7221f01",
         "id": "camellia-41",
@@ -832,9 +913,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-192-CFB",
         "expected_hex": "d5b5378a3abed55803f25565d8907b84",
         "id": "camellia-42",
@@ -852,9 +935,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-192-CFB",
         "expected_hex": "6bc1bee22e409f96e93d7e117393172a",
         "id": "camellia-43",
@@ -872,9 +957,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-192-CFB",
         "expected_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
         "id": "camellia-44",
@@ -892,9 +979,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-192-CFB",
         "expected_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
         "id": "camellia-45",
@@ -912,9 +1001,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-192-CFB",
         "expected_hex": "f69f2445df4f9b17ad2b417be66c3710",
         "id": "camellia-46",
@@ -932,9 +1023,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-256-CFB",
         "expected_hex": "cf6107bb0cea7d7fb1bd31f5e7b06c93",
         "id": "camellia-47",
@@ -952,9 +1045,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-256-CFB",
         "expected_hex": "89bedb4ccdd864ea11ba4cbe849b5e2b",
         "id": "camellia-48",
@@ -972,9 +1067,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-256-CFB",
         "expected_hex": "555fc3f34bdd2d54c62d9e3bf338c1c4",
         "id": "camellia-49",
@@ -992,9 +1089,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-256-CFB",
         "expected_hex": "5953adce14db8c7f39f1bd39f359bffa",
         "id": "camellia-50",
@@ -1012,9 +1111,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-256-CFB",
         "expected_hex": "6bc1bee22e409f96e93d7e117393172a",
         "id": "camellia-51",
@@ -1032,9 +1133,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-256-CFB",
         "expected_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
         "id": "camellia-52",
@@ -1052,9 +1155,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-256-CFB",
         "expected_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
         "id": "camellia-53",
@@ -1072,9 +1177,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-256-CFB",
         "expected_hex": "f69f2445df4f9b17ad2b417be66c3710",
         "id": "camellia-54",
@@ -1092,9 +1199,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-128-OFB",
         "expected_hex": "14f7646187817eb586599146b82bd719",
         "id": "camellia-55",
@@ -1112,9 +1221,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-128-OFB",
         "expected_hex": "25623db569ca51e01482649977e28d84",
         "id": "camellia-56",
@@ -1132,9 +1243,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-128-OFB",
         "expected_hex": "c776634a60729dc657d12b9fca801e98",
         "id": "camellia-57",
@@ -1152,9 +1265,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-128-OFB",
         "expected_hex": "d776379be0e50825e681da1a4c980e8e",
         "id": "camellia-58",
@@ -1172,9 +1287,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-128-OFB",
         "expected_hex": "6bc1bee22e409f96e93d7e117393172a",
         "id": "camellia-59",
@@ -1192,9 +1309,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-128-OFB",
         "expected_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
         "id": "camellia-60",
@@ -1212,9 +1331,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-128-OFB",
         "expected_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
         "id": "camellia-61",
@@ -1232,9 +1353,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-128-OFB",
         "expected_hex": "f69f2445df4f9b17ad2b417be66c3710",
         "id": "camellia-62",
@@ -1252,9 +1375,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-192-OFB",
         "expected_hex": "c832bb9780677daa82d9b6860dcd565e",
         "id": "camellia-63",
@@ -1272,9 +1397,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-192-OFB",
         "expected_hex": "8eceb7d0350d72c7f78562aebdf99339",
         "id": "camellia-64",
@@ -1292,9 +1419,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-192-OFB",
         "expected_hex": "bdd62dbbb9700846c53b507f544696f0",
         "id": "camellia-65",
@@ -1312,9 +1441,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-192-OFB",
         "expected_hex": "e28014e046b802f385c4c2e13ead4a72",
         "id": "camellia-66",
@@ -1332,9 +1463,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-192-OFB",
         "expected_hex": "6bc1bee22e409f96e93d7e117393172a",
         "id": "camellia-67",
@@ -1352,9 +1485,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-192-OFB",
         "expected_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
         "id": "camellia-68",
@@ -1372,9 +1507,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-192-OFB",
         "expected_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
         "id": "camellia-69",
@@ -1392,9 +1529,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-192-OFB",
         "expected_hex": "f69f2445df4f9b17ad2b417be66c3710",
         "id": "camellia-70",
@@ -1412,9 +1551,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-256-OFB",
         "expected_hex": "cf6107bb0cea7d7fb1bd31f5e7b06c93",
         "id": "camellia-71",
@@ -1432,9 +1573,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-256-OFB",
         "expected_hex": "127ad97e8e3994e4820027d7ba109368",
         "id": "camellia-72",
@@ -1452,9 +1595,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-256-OFB",
         "expected_hex": "6bff6265a6a6b7a535bc65a80b17214e",
         "id": "camellia-73",
@@ -1472,9 +1617,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-256-OFB",
         "expected_hex": "0a4a0404e26aa78a27cb271e8bf3cf20",
         "id": "camellia-74",
@@ -1492,9 +1639,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-256-OFB",
         "expected_hex": "6bc1bee22e409f96e93d7e117393172a",
         "id": "camellia-75",
@@ -1512,9 +1661,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-256-OFB",
         "expected_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
         "id": "camellia-76",
@@ -1532,9 +1683,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-256-OFB",
         "expected_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
         "id": "camellia-77",
@@ -1552,9 +1705,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-256-OFB",
         "expected_hex": "f69f2445df4f9b17ad2b417be66c3710",
         "id": "camellia-78",
@@ -1572,9 +1727,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-128-CTR",
         "expected_hex": "d09dc29a8214619a20877c76db1f0b3f",
         "id": "camellia-79",
@@ -1592,9 +1749,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-128-CTR",
         "expected_hex": "dbf3c78dc08396d4da7c907765bbcb442b8e8e0f31f0dca72c7417e35360e048",
         "id": "camellia-80",
@@ -1612,9 +1771,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-128-CTR",
         "expected_hex": "b19d1fcdcb75eb882f849ce24d85cf739ce64b2b5c9d73f14f2d5d9dce9889cddf508696",
         "id": "camellia-81",
@@ -1632,9 +1793,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-192-CTR",
         "expected_hex": "2379399e8a8d2b2b16702fc78b9e9696",
         "id": "camellia-82",
@@ -1652,9 +1815,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-192-CTR",
         "expected_hex": "7def34f7a5d0e415674b7ffcae67c75dd018b86ff23051e056392a99f35a4ced",
         "id": "camellia-83",
@@ -1672,9 +1837,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-192-CTR",
         "expected_hex": "5710e556e1487a20b5ac0e73f19e4e7876f37fdc91b1ef4d4dade8e666a64d0ed557ab57",
         "id": "camellia-84",
@@ -1692,9 +1859,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-256-CTR",
         "expected_hex": "3401f9c8247effcebd6994714c1bbb11",
         "id": "camellia-85",
@@ -1712,9 +1881,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-256-CTR",
         "expected_hex": "d6c30392246f7808a83c2b22a8839e45e51cd48a1cdf406ebc9cc2d3ab834108",
         "id": "camellia-86",
@@ -1732,9 +1903,11 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAMELLIA-256-CTR",
         "expected_hex": "a4da23fce6a5ffaa6d64ae9a0652a42cd161a34b65f9679f75c01f101f71276f15ef0d8d",
         "id": "camellia-87",
@@ -1752,7 +1925,8 @@
           "primary_source": "RFC 3713 (NTT Camellia)",
           "title": "Camellia tests from RFC3713"
         },
-        "standard": "RFC 3713 (NTT Camellia)"
+        "standard": "RFC 3713 (NTT Camellia)",
+        "tag_hex": ""
       },
       {
         "cipher": "CAMELLIA-128-ECB",

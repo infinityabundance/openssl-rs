@@ -15,6 +15,7 @@
     "standard": "Ascom IDEA (Lai-Massey)",
     "vectors": [
       {
+        "aad_hex": "",
         "cipher": "IDEA-CBC",
         "expected_hex": "2cb10d22ac22a375c0021ab6732936c1",
         "id": "idea-1",
@@ -32,9 +33,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CBC",
         "expected_hex": "4af8370c69ae4e45cc5a395e790272d5a5a0895dee1f336f0067963bd9ed55c7",
         "id": "idea-2",
@@ -52,9 +55,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CBC",
         "expected_hex": "09738cbc8c7764dd63206892eca29fbc3a67f7fe44ded6b128a0350426776ea71d0c9a1b6d627e1e3d014837dd82f11a",
         "id": "idea-3",
@@ -72,9 +77,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CBC",
         "expected_hex": "956c2993f77485da8f50b09ea7aa532f7c0aa1f63af0ac998680514a16c99d143261f7434f9a9c0fcb26a02175fde4b4093e1efe672cfe12509cf3d455c3ab01",
         "id": "idea-4",
@@ -92,9 +99,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CBC",
         "expected_hex": "3831f1265df609c006a15c2b963465e8a0d77bbec6e6d332f0b384479f0f34d2a7ed722607e077170a97ca9cdf526602972823c562c87187b8dc5f5d7de27a80c58bcaa95f5f7cae9c5b70938bb7de9f",
         "id": "idea-5",
@@ -112,9 +121,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CBC",
         "expected_hex": "5ee0a43a2dd9d14eee83d99e51598870a3b4221f28a2eb77b3612fec3c92037ff9eccab303d225d89f313a8894d1de97f3e87a93684290a17622766eda764308e1abe6153f638a3e8e1e6e0f36cca66ee06fa21457266c4291d8456fa84aaa09",
         "id": "idea-6",
@@ -132,9 +143,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CBC",
         "expected_hex": "1c1fa2b32f704963913dd890dc5504d9a4562587f60e15dcf5351bc89ebf4467679ba38d6febb3063745c88e53c4e2866b7fdfe0916cb6196da3f96d0d69dd605d603a80e8da4782f6458f65a0ab55541a0cdac68095b4835ffa0d119cf5d4e40dbf19731cddcfd57cb5cf6250abfa0d",
         "id": "idea-7",
@@ -152,9 +165,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CBC",
         "expected_hex": "5b15322d02a4de6ee0847b029fa88eb39db00697113260bb5834128ed2201ec2c5e22f50bd274b5ae8dc24e4b721c3e5cb905d96595c869ca1db7cbe6389c8553b36f635a1fbbece6b1aba3ba9d0c6cb361aeb5708b61b99a2812b23f16ca0bc602f5dcb77a1eec677399a47b6ce5f9ebb90c32b2ff3c181a0ebcde94c46ff41",
         "id": "idea-8",
@@ -172,9 +187,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CBC",
         "expected_hex": "c2725ddb784b9cffe46543af4ac9f0e64edcd1678f26b3ee652af6d00ae164f7c07afd0fb773277401c2137070a6a59e39de429c032711756ce6b0c9b9dc69a0a1caaabff9da5855f7410656f8e09e00cee6f44c0fc93f9419d13ccfe63517a1c74afc3dabfd1b43171bfe097cf28ca5674fbd0fa58b0698289a92eb57cf1ff74b1d756ff113252a379f2bae8dd9cd3d",
         "id": "idea-9",
@@ -192,9 +209,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CBC",
         "expected_hex": "d9ab48c7195d8dd8860860688b8b66a74b3798a97647d8106352d1e3d8bb6c353e2e561478d396fb432ab07392f5fdd39d610c8e046ffc5fe5eb8736ce87f43a05ec4f4bfb0142a1d32fde8bea7af6b9e22a3fe3823a979f73cd4f4eacc145e5e043dd1a3e2183d0ae3a1aa5d8fe78d9dd867c4bd54ab149bfaefc66647f8948881f712ed7b1eabdab62b71caea6f0face592ab5fcb668752bfa7cbc39a00d05",
         "id": "idea-10",
@@ -212,9 +231,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CBC",
         "expected_hex": "05a31cd129886c6458ec0739472556de",
         "id": "idea-11",
@@ -232,9 +253,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CBC",
         "expected_hex": "b046b49207973f946668d49d3cd93a13bc9cf50bab20f40cca024e2fc3dd17ea",
         "id": "idea-12",
@@ -252,9 +275,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CBC",
         "expected_hex": "c25cbe4acc9e6909ed195e257a5f28beb77ceb614c538ef531b18778bbbfe1d25d70e4c9b37c4d1d9cde4361206f6173",
         "id": "idea-13",
@@ -272,9 +297,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CBC",
         "expected_hex": "08186d727f2bf0eee50e52f98775ae222b67b037f40f8a803aa6196fb200ee45a5183ccd4942677d4abe617a6c41c9c565dd79d44de12d9291f434939639e59c",
         "id": "idea-14",
@@ -292,9 +319,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CBC",
         "expected_hex": "0b13ebbec3b66a240dc11cecb1b3a6d5cf2770d529f852a405da596170fa6067a28f07f41c9d520b6d7c3163395dbe875995809f24a4243e0e80e735d3d92307e07775300e10ee57ab916a043c29d3cc",
         "id": "idea-15",
@@ -312,9 +341,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CBC",
         "expected_hex": "d3ed4e4fc32dc0342ec301817899967f3a47737e2691fecf6799fa9c8d41362107be6fa674320befc87ccf9fecbf03dec5be160433f450bfd89d8fc3312232efae95661ee55f10eb2a52f9590c4d7e2c656f6779f6f677190c7349273daebab4",
         "id": "idea-16",
@@ -332,9 +363,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CBC",
         "expected_hex": "7ca59cefd0c1f0190af2c8b85d00b7e5838aee42274f26cf08fd0b4ae539c1966367960b0600425e50c802dc94427f0ccf713de467a61319ce05d23c5a5db4d43ac0b0762b2f6ad9e7076df190c50f41788a02317ecfb2e59c42b31c151f9c93f4b1cac3c37e2aafa00ba2d27dbf6b63",
         "id": "idea-17",
@@ -352,9 +385,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CBC",
         "expected_hex": "41bc04fb50553959c10d20550d54280f56b33e988b674dee1112631d18d6f79efe3067d8133bdc8ce334929537d9d19a9f5e05f626e56b45daab02fa58a027a759573f363d995e2a5fc779476bf009accc44435c044d481acf9c8c3228b9a69052ef228d64640ca4dd19352ce6257bc5658084f96fdc99790b676a0556f92c51",
         "id": "idea-18",
@@ -372,9 +407,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CBC",
         "expected_hex": "52392c00281497aea7e057bd31ee71ad818674c2dd10782e395f9a59ca7b191331cb8576f0f38db240fef904d52ca9181f309e43525e5f2f2a9dc2083360cdef4bd92f61d0b54c1955429df1f3dea48edce637f33c94ce8bd1bd2dbcaa929f3a1d184753238794c585e81cfe5ade7fe86ece0d6a196d8db0282cbadc40913c3973e0c1437ab94cd59370504e9fbc5511",
         "id": "idea-19",
@@ -392,9 +429,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CBC",
         "expected_hex": "0100f7adc870bedd878236fa1d6c23b5a0343546a18567b80ce4d8413854aa1e1633e8ef3c4ed53e90de2a4f11940ea6b6d59321235a6b08aba07339c9b645796729d8c18e23f0ce9e8010f0b3da765a47cbbf9635a40b0f3e56e76748290f83fdf8d1452f91d6ca2cc6d1ab2b967d51f3a9a47e0f0a51d00be2eec0f3da2aa7c06793fda880a93284e7ab3009a52f7d34b76592b3d5bdbe6332505af816a1a4",
         "id": "idea-20",
@@ -412,9 +451,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "b1f5f7f87901370f",
         "id": "idea-21",
@@ -432,9 +473,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "dededededededede",
         "id": "idea-22",
@@ -452,9 +495,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "dfdfdfdfdfdfdfdf",
         "id": "idea-23",
@@ -472,9 +517,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "e0e0e0e0e0e0e0e0",
         "id": "idea-24",
@@ -492,9 +539,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "e1e1e1e1e1e1e1e1",
         "id": "idea-25",
@@ -512,9 +561,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "e2e2e2e2e2e2e2e2",
         "id": "idea-26",
@@ -532,9 +583,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "e3e3e3e3e3e3e3e3",
         "id": "idea-27",
@@ -552,9 +605,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "e4e4e4e4e4e4e4e4",
         "id": "idea-28",
@@ -572,9 +627,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "e5e5e5e5e5e5e5e5",
         "id": "idea-29",
@@ -592,9 +649,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "e6e6e6e6e6e6e6e6",
         "id": "idea-30",
@@ -612,9 +671,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "e7e7e7e7e7e7e7e7",
         "id": "idea-31",
@@ -632,9 +693,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "e8e8e8e8e8e8e8e8",
         "id": "idea-32",
@@ -652,9 +715,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "e9e9e9e9e9e9e9e9",
         "id": "idea-33",
@@ -672,9 +737,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "eaeaeaeaeaeaeaea",
         "id": "idea-34",
@@ -692,9 +759,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "ebebebebebebebeb",
         "id": "idea-35",
@@ -712,9 +781,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "ecececececececec",
         "id": "idea-36",
@@ -732,9 +803,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "edededededededed",
         "id": "idea-37",
@@ -752,9 +825,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "eeeeeeeeeeeeeeee",
         "id": "idea-38",
@@ -772,9 +847,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "efefefefefefefef",
         "id": "idea-39",
@@ -792,9 +869,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "f0f0f0f0f0f0f0f0",
         "id": "idea-40",
@@ -812,9 +891,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "f1f1f1f1f1f1f1f1",
         "id": "idea-41",
@@ -832,9 +913,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "f2f2f2f2f2f2f2f2",
         "id": "idea-42",
@@ -852,9 +935,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "f3f3f3f3f3f3f3f3",
         "id": "idea-43",
@@ -872,9 +957,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "f4f4f4f4f4f4f4f4",
         "id": "idea-44",
@@ -892,9 +979,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "f5f5f5f5f5f5f5f5",
         "id": "idea-45",
@@ -912,9 +1001,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "f6f6f6f6f6f6f6f6",
         "id": "idea-46",
@@ -932,9 +1023,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "f7f7f7f7f7f7f7f7",
         "id": "idea-47",
@@ -952,9 +1045,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "f8f8f8f8f8f8f8f8",
         "id": "idea-48",
@@ -972,9 +1067,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "f9f9f9f9f9f9f9f9",
         "id": "idea-49",
@@ -992,9 +1089,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "fafafafafafafafa",
         "id": "idea-50",
@@ -1012,9 +1111,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "fbfbfbfbfbfbfbfb",
         "id": "idea-51",
@@ -1032,9 +1133,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "fcfcfcfcfcfcfcfc",
         "id": "idea-52",
@@ -1052,9 +1155,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "fdfdfdfdfdfdfdfd",
         "id": "idea-53",
@@ -1072,9 +1177,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "fefefefefefefefe",
         "id": "idea-54",
@@ -1092,9 +1199,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "ffffffffffffffff",
         "id": "idea-55",
@@ -1112,9 +1221,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "0011223344556677",
         "id": "idea-56",
@@ -1132,9 +1243,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-ECB",
         "expected_hex": "ea024714ad5c4d84",
         "id": "idea-57",
@@ -1152,9 +1265,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-OFB",
         "expected_hex": "770e7b0eacc089b7eef410d98d886e9e",
         "id": "idea-58",
@@ -1172,9 +1287,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-OFB",
         "expected_hex": "7debe39a58066a7994150d910060b127582de612ff58f9564a92ab45591bec49",
         "id": "idea-59",
@@ -1192,9 +1309,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-OFB",
         "expected_hex": "ab6e0f15cedf272c78fbc7fadcc4ba1ded256668b9bc8302dc3312c0149e656e8fea632b8e20f5ae8675106d7761a366",
         "id": "idea-60",
@@ -1212,9 +1331,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-OFB",
         "expected_hex": "f2175634137d76347f4cd8f44a00282f6144dfc0cde4929457f8f180f62aabd180249d4568405d9d596be34802ded7d2e390d77384677c45575eb6865cca7cb2",
         "id": "idea-61",
@@ -1232,9 +1353,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-OFB",
         "expected_hex": "b5241fefa40b2f9f015387b0e648843e35549d891702d66c1bf440aeb07432e3299badcc1d56b9ca8c45abcd677cfda10de93e2f3b05b2da1086e4070301989eac95cd7ed311b7de208bf66a59f64d1f",
         "id": "idea-62",
@@ -1252,9 +1375,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-OFB",
         "expected_hex": "f0decc26c48676592200ae619f0b5111d629733f23a34ce888c862e9ae0886b5e8f93e2c2832d3cde6cccc5499801e7b8790b61e8a13add9da593981e8ba4ec08e46226eb77f8fb40105e040c7a5d84e4df6ee05f3e29832f80db65bc03fd4b6",
         "id": "idea-63",
@@ -1272,9 +1397,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-OFB",
         "expected_hex": "b0464ff22110d71452ab1b6c8064b706268a2d849607c734ae20c1d4f55c2b98a4abb7db1759205cd0f870f6dfbc7d4fdd72e60c4e9a4143dc76408340dd6d2c6ce86381511930997a304cf890eec337176c95b834186a9191fbb17b8548e3dc7b10c8b7cb8d0b6bbb26ceac0111477c",
         "id": "idea-64",
@@ -1292,9 +1419,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-OFB",
         "expected_hex": "59cb49f6193b7a8c728049be0a804b3a2ea9c0dfbe84f82b5b0439e33e073168f90053094c37ab3ce34b7abfb6386b23003e73e275ea2fa8da8c2acc18314ffdcd8c0512bed2472e5d82e7e27a0af1d01aecf4a14ad8bb031ad968ec0aacc9d759aa76c58c74400fed536c7482474ce23cb798cc8885713d1a32c174ef6827da",
         "id": "idea-65",
@@ -1312,9 +1441,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-OFB",
         "expected_hex": "dd12abdb3d5ec0e56565f9c9d281095cd97b8dc05f230d23ef0ed671abfe5eb9cfa9b5b7acaad4f2e00f0319de2fa90baa757b3f9f96df735233e433c0b8451dbf84465cf6d26e30198cbb1c6e100822aed49690db1638efb1a3e94039b83de7e1ab9339fa31e93440da61c4a814914c16742470428858336dd2944eaf81e2b93bb279454a4a1e02de7f82657ef32904",
         "id": "idea-66",
@@ -1332,9 +1463,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-OFB",
         "expected_hex": "3ce172ca82e0a649e182b3c4bd235f55936d343810bcbb6e53f6f6934c6cae8cd54212e9acb4379c99d83c6ecb72d915400b86f984d67f394b72fcdad6eafb56298da8ede4ceea5c1cc3e54d6d6505fddb2857470184adf50b287bd3db64b73da05584f78689b6d1215a26ebf18ef83fe38970bb23346a0a6380f77afd206333821646463a9e72124bdaf8c9b3046cfb5a48db37686859f79098cb806135bea0",
         "id": "idea-67",
@@ -1352,9 +1485,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-OFB",
         "expected_hex": "93e074da165bb361804f9183fccf09a7",
         "id": "idea-68",
@@ -1372,9 +1507,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-OFB",
         "expected_hex": "4876980c4401aad16b3e1eabff960769a1bc8405a985dadc08282d0ff674e4f2",
         "id": "idea-69",
@@ -1392,9 +1529,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-OFB",
         "expected_hex": "948a59cd4ac292743708e7309b9893fbeba832a9996ecccc13a8cc17a7711f00858e5e3d04c0635371191356eb58f78d",
         "id": "idea-70",
@@ -1412,9 +1551,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-OFB",
         "expected_hex": "26c746d831f5f7ea08686075d0f180f52b0fcc105494943bc0179fdb01fc437ae60fe3dee725902f11fb3dbbc42184f52b1d5207c71d1e6fe0e83b3dc2767227",
         "id": "idea-71",
@@ -1432,9 +1573,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-OFB",
         "expected_hex": "d5f99a34f86f6de38e10712f306add36cfef67ed3bd8dbf0cb32f5ffc1832037cba7168e2249e1c635de1577797898d2573aa6fd61e766cbd0e4e5bc87c5d85fc95dbdc78c26d51a7228515b342f94cf",
         "id": "idea-72",
@@ -1452,9 +1595,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-OFB",
         "expected_hex": "7b853c47f4e39a069415f5fe34f857b9b7e846b45999c12a496ce5550834cc26376a90235ae20983c31129b108ffc3cf4431bf379a5907b16c7248df9d40fa5b8e9888bd1c2a45a0812e4bcf71d40bb8a064279d5f3f214eca8bf193b6144bec",
         "id": "idea-73",
@@ -1472,9 +1617,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-OFB",
         "expected_hex": "6130cd5cc68d4bd6055cca1c51281de12652e6df9ac9a24b39d5d2bb3876cc76e7e85f72efbdd9b7d55d8e1a84e17ad3292ba5bd071f39f7b373c807153a4fe553fb44872cb2a7b80d6c97f78eaea3824d501792456667f335e8f33e29f6ffe7736a5b46786c78b3cd9e8bd3498e7c4c",
         "id": "idea-74",
@@ -1492,9 +1639,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-OFB",
         "expected_hex": "cada42aeaf73266caa8537f853fbc710df59f6e7809ca07e6131ba41c3cd413433c3f26faf5fbceb50238e150f6d613cf4bcf79416abada400a827dcfd2320a5d19ac7ff6fd725a30ae3c739ed9f6d9495f36ce414abc338cf52e7a351de4dfa54b52660370678529dbd7c36770399ab90a44f95dd5a837dde12b28da8a06ee7",
         "id": "idea-75",
@@ -1512,9 +1661,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-OFB",
         "expected_hex": "14ba2c1e1fc015568184c1346b09469366db7d1dc151d08a8f99ffa22115a30a5a6dd5c2d6fbd09e03134710f1902ceab86069551630d3f614e67d195a7422b2c70225c5ebbecf7fbabf8db05c21025102225cdf2093fba3bd4ba1f1674c305a99cde36e1d112467466489c4f04a55fa495b610ee616749dc5c9f7ca3eb4ee35989402a91ff0085128077eb03e5d6ac1",
         "id": "idea-76",
@@ -1532,9 +1683,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-OFB",
         "expected_hex": "fc1991515ffef84ce1074d0f7e7ce9a2dd0b56facbaf4b5f2c617963c6df3ea9c6d1242abbab76160cc159a81e51fef33835546429b6bc026e4f091c89a8a9e0707747fc85083c776e5603ef2383c3e5e5ae493013b4940df54c9a050bc2b696f03a234fad58506b10aacbb48de0c91ef39ebe76a9e5540ec6284eed13cc17c72dad54555aed4ae60359dfa8b1c4e8bdcea6abc458dc1452a623d8f3fe13e2ae",
         "id": "idea-77",
@@ -1552,9 +1705,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CFB",
         "expected_hex": "5d9c48bf7dc115f28e153dc93dfcff96",
         "id": "idea-78",
@@ -1572,9 +1727,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CFB",
         "expected_hex": "4ec6f34be3335024cbfbbf80f3e7501b8c9f7a6cbd630cf8debba4a4c3f1daa4",
         "id": "idea-79",
@@ -1592,9 +1749,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CFB",
         "expected_hex": "a562b606f716af7fd9641b5ebc66e4cad7e9422200a83b07e5341814b33590d26dba38db01c19bac669dc469f4c2eb9b",
         "id": "idea-80",
@@ -1612,9 +1771,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CFB",
         "expected_hex": "5294eb7f0f7872e20a2012675a1fbcb059a9c2bec5231dfe72e6dd7826b86af365b6beb33a23ebfec6184e790d3002b8ff81eedd84b73edc3ac539230e23c65b",
         "id": "idea-81",
@@ -1632,9 +1793,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CFB",
         "expected_hex": "4fb93afc260b40f575f1fe95609737f158c61c40f23b13845cda507f5baf20c31c3d3c85726fbb0b89751498ef29f123fe0767fc550e71e38e0db5d52b507f7e2321a37bc0959410ffb785bcdaede128",
         "id": "idea-82",
@@ -1652,9 +1815,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CFB",
         "expected_hex": "800a13afd1ccd50aaada08a18ed61674aa9b9cc84d6fe1220bc0acc19f973ad5414da099359ef259b2d63e8b1e5cc0ba6258ab48f1603252199f7631a513330fcbf383d8de82a6b2a2c2870f8c06a635076c40c8f98dbc35f09f372db8fd3834",
         "id": "idea-83",
@@ -1672,9 +1837,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CFB",
         "expected_hex": "4dc8bbf26235b8858157cf03165ce61bdb25f3a2773b27db0c5e23dd14f7c4971f8b8ca65f61ef6ed7f348da0201d1e6ac2c45d431a31116ca89beb0e503f0c078848e5f982981406d0d72a46cc9e48da09cd5fca0aa8b97b8120f798a1f6f8316e677023028b219d844619e269608ff",
         "id": "idea-84",
@@ -1692,9 +1859,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CFB",
         "expected_hex": "1777835b641860aae245fe67750d514ba3f0ebd1c9a1179f258999cf5e1a6f850db6dc5cb3088cb262fe5086ca4b75be1cf4ad8d795c99a6d392da940c41a190d0eb38c3ea6b54c771a382d0969b2f1975c9e6d22f4c651eab379302e656d3d316424fda315128462c49364cdac824673883b06ac67781f1ca7c80b5cad92e97",
         "id": "idea-85",
@@ -1712,9 +1881,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CFB",
         "expected_hex": "9ceb25ce05eeee39452995468321c2b73c39f60082d7c91d129304f5802d3e559c099ccb00aeab4e274d47397268ab7367d055a336a52dd314402e2accb0925372028157a3ef60bd97427855117379bd70e05a3cbafe9acfc19e5ce78262011d1f2dfa1e67ec214469fab9a9e1a92e2591acfcfbb2376559433de491217260996637856930b57cec36f3f091940370a3",
         "id": "idea-86",
@@ -1732,9 +1903,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CFB",
         "expected_hex": "e0456318fb7a2318181f4b847e3952cdc5f09e6f12631a89d7d86c108a9d14e49368bdc65366cf4c42c98e31641bb63439314010bafb88f83a300f8ca107e95d689738f29ce399348a8418baa2cc57b935640d574ea7b2f0205b62a68b0c7aca3c58f3181c5892c21036acdb241d933e1bd05e764fe8297131b9c7c7a99d2aa202f07312b4d48df43b973cf51b9fbc895284a304dc7eabde4eafa58325b984e4",
         "id": "idea-87",
@@ -1752,9 +1925,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CFB",
         "expected_hex": "1a68dff188262ef7525fe051199fb940",
         "id": "idea-88",
@@ -1772,9 +1947,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CFB",
         "expected_hex": "eb5d94d1d12b97ae3814ddf3b9c8c9aab689ce912334b3054f14e8082334cd1c",
         "id": "idea-89",
@@ -1792,9 +1969,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CFB",
         "expected_hex": "bbe775751f4b704f3cb0dbb43441111675f63c54668d34c1fc50d3a6c428217a009a167d9162f4d93dca391979002164",
         "id": "idea-90",
@@ -1812,9 +1991,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CFB",
         "expected_hex": "e1ad6de3d5ed15b7fd560482478f5e5e7673657eab175e03d71cb1f80d8e476e7b976c4b0a6c2a6a2d5fd2b20f4f6cc8b56b46adb9a97db56deba7e9d2b8d817",
         "id": "idea-91",
@@ -1832,9 +2013,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CFB",
         "expected_hex": "5424e2c3d2e00cf2ccefd1ee8ae552ef8122c2bda3624b3e4cbfb23abc309e103e485a8ff677a5ad908ffc72b9e70b4ccf0794a3be537aadd59a30bf5905fa6702d0ba12238f705c20884443ba921c91",
         "id": "idea-92",
@@ -1852,9 +2035,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CFB",
         "expected_hex": "50d3ec47a14c6ac19dc5c8820520c8265e4e0265816e753792ef759ff523aceb904a02e8b10259c9e1d019bb684417f05e431e02541adaec98d725fd1bf11365fca4b97d7c0bfd8294bcc9d72f235899ee7c110dc4ca53fd4974d0cd20055834",
         "id": "idea-93",
@@ -1872,9 +2057,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CFB",
         "expected_hex": "d0dc50553bbc0248e6f8b1d5f7c31aa93fda2addb2cd184a13d0adeb7f2ef8f611d92479bd8b61cf029b406f09921a972f2f0e14a3d790256cff4e812c40b822821c71ba6cb21a3a2c1b463f598d1d5a626d5c9fb85f0aafa1f6bf18aef0db18c9872c0e8588e9646f237be9f32a7550",
         "id": "idea-94",
@@ -1892,9 +2079,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CFB",
         "expected_hex": "935458de3bc1a090a7a85eb79a12a3e48defcae8581c59233ce0b2a8b7ad999a99d1858e5e513680a9cb7558b0706ec0be122a33964c4c6d4c880b4e953810ae111f6d3f8e89e8b3a708b199ce6a7476f177fea627eca43439df5c98a414dd8dde088cc380bc10e43a9341114787fa80c7dae515d6a21af4f2d3619a200b9ca0",
         "id": "idea-95",
@@ -1912,9 +2101,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CFB",
         "expected_hex": "d357c276cc6961fa627b0edf66ec8e5baf035cf19980e53d6be5f3e5fa67de668bc1e27ef04cd2efc216783c4b955f8072af265aa96cc99dcf53ab3ab0fa024efca1087f0851a6b392f4aef1ac946fdd0fc1320a395df4d3ce596332aa5a0628b5f8e2aac4cf677a4b3d804a1503bfc879040f90b3a0530f49eb3d8c67d1cb00dad36f6f3a98328984258eae6fab1e6b",
         "id": "idea-96",
@@ -1932,9 +2123,11 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "IDEA-CFB",
         "expected_hex": "11690969c6b2bf0f1c42a42d44049062c885499eadcb350e81d22c6caf7d499502e706ca3137e3a5d8cfb56354003aa8a1fb3c30767d6f8e5255b4e31c3325924b95494144fb02c257995e2e59f9017d5a32e1d2bf285bf404554dd6bf7077ba1d48d0c08ebe10ad110e66148b17d43f341d72da027033cd0b75bb3ca3a046557b39bed024e9ff5b08725d357ed22aede4a33dfcc4b61b34ba0d32230e572f6f",
         "id": "idea-97",
@@ -1952,7 +2145,8 @@
           "primary_source": "Ascom IDEA (Lai-Massey)",
           "title": "IDEA Tests (from https://github.com/pyca/cryptography)"
         },
-        "standard": "Ascom IDEA (Lai-Massey)"
+        "standard": "Ascom IDEA (Lai-Massey)",
+        "tag_hex": ""
       },
       {
         "cipher": "IDEA-ECB",

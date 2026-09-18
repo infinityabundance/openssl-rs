@@ -618,6 +618,8 @@ class CipherVector:
     standard: str
     primary_source: str
     provenance: dict
+    aad: bytes = b""
+    tag: bytes = b""
 
 
 @dataclass
@@ -678,12 +680,15 @@ def load_cipher_vector_set(path: Path) -> CipherVectorSet:
             iv = bytes.fromhex(str(raw.get("iv_hex", "")))
             input_bytes = bytes.fromhex(str(raw.get("input_hex", "")))
             expected = bytes.fromhex(str(raw.get("expected_hex", "")))
+            aad = bytes.fromhex(str(raw.get("aad_hex", "")))
+            tag = bytes.fromhex(str(raw.get("tag_hex", "")))
         except ValueError as exc:
             raise VectorError(f"{where}: not hex ({exc})") from exc
         vectors.append(CipherVector(
             vid, cipher, operation, key, iv, input_bytes, expected,
             str(raw.get("standard", standard)),
-            str(provenance.get("primary_source", primary_source)), provenance))
+            str(provenance.get("primary_source", primary_source)), provenance,
+            aad=aad, tag=tag))
 
     return CipherVectorSet(path=path, algorithm=algorithm, standard=standard,
                            primary_source=primary_source,
@@ -746,7 +751,8 @@ def run_cipher_court(
     work_dir.mkdir(parents=True, exist_ok=True)
     call_path = work_dir / f"{name.lower()}.calls.tsv"
     call_path.write_text("".join(
-        f"{i}\t{v.cipher}\t{v.operation}\t{v.key.hex()}\t{v.iv.hex()}\t{v.input.hex()}\n"
+        f"{i}\t{v.cipher}\t{v.operation}\t{v.key.hex()}\t{v.iv.hex()}\t{v.input.hex()}"
+        f"\t{v.aad.hex()}\t{len(v.tag)}\n"
         for i, _vs, v in calls), encoding="utf-8")
 
     binary = work_dir / f"{name.lower()}.candidate"
@@ -779,11 +785,15 @@ def run_cipher_court(
     for index, vs, v in calls:
         calls_checked += 1
         status, value = produced.get(index, ("err", "no-result-line"))
-        good = status == "ok" and value == v.expected.hex()
+        # An AEAD vector's answer is the ciphertext followed by its tag and then the probe's
+        # own accept and reject answers; a non-AEAD vector's tag is empty, so the same
+        # comparison serves both.
+        want = (v.expected + v.tag).hex() + ("0101" if v.tag else "")
+        good = status == "ok" and value == want
         results.append({"algorithm": vs.algorithm, "id": v.id,
                         "cipher": v.cipher, "operation": v.operation,
                         "passed": good,
-                        "input_hex": v.input.hex(), "expected_hex": v.expected.hex(),
+                        "input_hex": v.input.hex(), "expected_hex": want,
                         "actual_hex": value if status == "ok" else None})
         if good:
             continue
@@ -791,7 +801,7 @@ def run_cipher_court(
         failures.append({"algorithm": vs.algorithm, "id": v.id, "cipher": v.cipher,
                          "operation": v.operation, "standard": v.standard,
                          "primary_source": v.primary_source,
-                         "input_hex": v.input.hex(), "expected_hex": v.expected.hex(),
+                         "input_hex": v.input.hex(), "expected_hex": want,
                          "actual_hex": value if status == "ok" else None,
                          "probe_status": status,
                          "probe_detail": None if status == "ok" else value,
@@ -1679,7 +1689,8 @@ def emit_ciphers(authority_id: str, vector_dir: Path = VECTOR_DIR) -> list[dict]
 class CipherRecipeFamily:
     def __init__(self, algorithm: str, source: str, cipher_re: str, standard: str,
                  openssl_cipher: str, independent_modes: tuple[str, ...],
-                 empty_key_hex: str, empty_iv_hex: str, note: str | None = None):
+                 empty_key_hex: str, empty_iv_hex: str, note: str | None = None,
+                 aead: bool = False):
         self.algorithm = algorithm
         self.source = source
         self.cipher_re = re.compile(cipher_re)
@@ -1689,6 +1700,7 @@ class CipherRecipeFamily:
         self.empty_key_hex = empty_key_hex
         self.empty_iv_hex = empty_iv_hex
         self.note = note
+        self.aead = aead
 
 
 CIPHER_RECIPE_FAMILIES: list[CipherRecipeFamily] = [
@@ -1747,6 +1759,27 @@ CIPHER_RECIPE_FAMILIES: list[CipherRecipeFamily] = [
             "output is already a published value. This is the recorded cost of D208, not an "
             "omission."
         )),
+    # 8.3 -- GCM. The corpus is NIST SP 800-38D's own test cases plus the boringssl set; every
+    # block carries an `AAD` and a `Tag`, and the probe's AEAD path prints the ciphertext, the
+    # tag, and its own accept/reject answers, so a rejected tag is a committed expectation
+    # rather than an unchecked claim. Only the encrypt direction is mirrored (an AEAD decrypt
+    # vector's tag is an input, not an output). `aes-*-gcm` is matched case-sensitively, which
+    # excludes the corpus's `AES-128-GcM` case-spelling test.
+    CipherRecipeFamily(
+        "gcm", "test/recipes/30-test_evp_data/evpciph_aes_common.txt",
+        r"^aes-(128|192|256)-gcm$", "NIST SP 800-38D",
+        "aes-{128,192,256}-gcm", (),
+        "", "",
+        note=(
+            "Candidate-only construction verification: the primary source is NIST SP 800-38D, "
+            "and the bytes are mirrored through the pinned corpus (`corpus_sha256`), whose "
+            "identity is fixed. Every vector's expected tail is `accept || reject`, the "
+            "probe's own tag-verification arms, so the reject path is checked on every vector "
+            "rather than asserted once. No independent GCM implementation is present in the "
+            "pinned court image, so no boundary vector carries an independent oracle beyond "
+            "the corpus's own empty-plaintext, one-block and multi-block cases; that is the "
+            "recorded cost of D208."
+        ), aead=True),
 ]
 
 
@@ -1775,6 +1808,16 @@ def _emit_recipe_family(authority_id: str, family: CipherRecipeFamily,
             # a value the probe cannot produce. `RT-CIPHER` observes the refusal arms directly.
             skipped += 1
             continue
+        if family.aead and block.get("operation", "ENCRYPT").strip().upper() == "DECRYPT":
+            # An AEAD decrypt vector's expected value is the plaintext and its tag is an
+            # input to be verified, not an output; the driver's record has one output field,
+            # so only the encrypt direction is mirrored. The reject arm is exercised by the
+            # probe's own accept/reject self-check (see below) and by `RT-CIPHER`.
+            skipped += 1
+            continue
+        if family.aead and "tag" not in block:
+            skipped += 1
+            continue
         if "keybits" in block:
             # The effective-key-bits parameter is an observable, but this driver's record has no
             # field for it; `RT-CIPHER` compares the 40/64/128 schedules directly instead.
@@ -1795,6 +1838,8 @@ def _emit_recipe_family(authority_id: str, family: CipherRecipeFamily,
             "iv_hex": block.get("iv", "").lower(),
             "input_hex": input_hex,
             "expected_hex": expected_hex,
+            "aad_hex": block.get("aad", "").lower(),
+            "tag_hex": block.get("tag", "").lower(),
             "standard": family.standard,
             "provenance": {
                 "primary_source": family.standard,

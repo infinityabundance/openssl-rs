@@ -643,14 +643,96 @@ static int ct_wrap(const char *cipher, int enc_op,
     return 0;
 }
 
+/*
+ * GCM: the AEAD arm. The output is `ciphertext || tag || accept || reject`, where the last
+ * two bytes are the probe's own tag-verification answers (0x01 for the expected outcome).
+ * Checking both arms on every vector is what makes a rejected tag a committed expectation
+ * rather than a claim: the corpus's negative blocks carry `Result = CIPHERFINAL_ERROR` and are
+ * skipped by the generator, so the reject path has to come from here.
+ */
+static int ct_gcm(const char *cipher, int enc_op,
+                  const unsigned char *key, size_t keylen,
+                  const unsigned char *iv, size_t ivlen,
+                  const unsigned char *aad, size_t aadlen,
+                  const unsigned char *in, size_t inlen,
+                  unsigned char *out, size_t *outlen, size_t taglen)
+{
+    AES_KEY ek;
+    GCM128_CONTEXT *ctx;
+    unsigned char tag[16];
+    unsigned char bad[16];
+    unsigned char tmp[CT_MAX];
+    int bits;
+    int accept;
+    int reject;
+
+    if (enc_op != 1 || strncmp(cipher, "aes-", 4) != 0)
+        return -1;
+    if (strncmp(cipher + 4, "128-gcm", 7) == 0)
+        bits = 128;
+    else if (strncmp(cipher + 4, "192-gcm", 7) == 0)
+        bits = 192;
+    else if (strncmp(cipher + 4, "256-gcm", 7) == 0)
+        bits = 256;
+    else
+        return -1;
+    if (keylen != (size_t)bits / 8 || inlen > sizeof(tmp) || taglen > 16)
+        return -1;
+    if (AES_set_encrypt_key(key, bits, &ek) != 0)
+        return -1;
+
+    ctx = CRYPTO_gcm128_new(&ek, (block128_f)AES_encrypt);
+    if (ctx == NULL)
+        return -1;
+    CRYPTO_gcm128_setiv(ctx, iv, ivlen);
+    if (aadlen != 0)
+        CRYPTO_gcm128_aad(ctx, aad, aadlen);
+    if (CRYPTO_gcm128_encrypt(ctx, in, out, inlen) != 0) {
+        CRYPTO_gcm128_release(ctx);
+        return -1;
+    }
+    CRYPTO_gcm128_tag(ctx, tag, sizeof(tag));
+    CRYPTO_gcm128_release(ctx);
+
+    ctx = CRYPTO_gcm128_new(&ek, (block128_f)AES_encrypt);
+    CRYPTO_gcm128_setiv(ctx, iv, ivlen);
+    if (aadlen != 0)
+        CRYPTO_gcm128_aad(ctx, aad, aadlen);
+    CRYPTO_gcm128_decrypt(ctx, out, tmp, inlen);
+    accept = CRYPTO_gcm128_finish(ctx, tag, sizeof(tag)) == 0;
+    CRYPTO_gcm128_release(ctx);
+
+    memcpy(bad, tag, sizeof(bad));
+    bad[0] ^= 0x01;
+    ctx = CRYPTO_gcm128_new(&ek, (block128_f)AES_encrypt);
+    CRYPTO_gcm128_setiv(ctx, iv, ivlen);
+    if (aadlen != 0)
+        CRYPTO_gcm128_aad(ctx, aad, aadlen);
+    CRYPTO_gcm128_decrypt(ctx, out, tmp, inlen);
+    reject = CRYPTO_gcm128_finish(ctx, bad, sizeof(bad)) != 0;
+    CRYPTO_gcm128_release(ctx);
+
+    if (memcmp(tmp, in, inlen) != 0)
+        return -1;
+    memcpy(out + inlen, tag, taglen);
+    out[inlen + taglen] = accept ? 1u : 0u;
+    out[inlen + taglen + 1] = reject ? 1u : 0u;
+    *outlen = inlen + taglen + 2;
+    return 0;
+}
+
 static int ct_cipher(const char *cipher, const char *operation,
                      const unsigned char *key, size_t keylen,
                      const unsigned char *iv, size_t ivlen,
+                     const unsigned char *aad, size_t aadlen,
                      const unsigned char *in, size_t inlen,
-                     unsigned char *out, size_t *outlen)
+                     unsigned char *out, size_t *outlen, size_t taglen)
 {
     int enc_op = strcmp(operation, "ENCRYPT") == 0;
 
+    if (ct_gcm(cipher, enc_op, key, keylen, iv, ivlen, aad, aadlen,
+               in, inlen, out, outlen, taglen) == 0)
+        return 0;
     if (ct_wrap(cipher, enc_op, key, keylen, iv, ivlen, in, inlen, out, outlen) == 0)
         return 0;
     if (ct_aes_rc4(cipher, enc_op, key, keylen, iv, ivlen, in, inlen, out, outlen) == 0)
@@ -678,12 +760,13 @@ int main(int argc, char **argv)
         char *fields[8];
         int nf = 0;
         char *p = line;
-        unsigned char key[64], iv[64], in[CT_MAX], out[CT_MAX + 64];
-        size_t keylen = 0, ivlen = 0, inlen = 0, outlen = 0;
+        unsigned char key[64], iv[64], aad[CT_MAX], in[CT_MAX], out[CT_MAX + 64];
+        size_t keylen = 0, ivlen = 0, aadlen = 0, inlen = 0, outlen = 0;
+        size_t taglen = 0;
         long index;
         int rc;
 
-        while (nf < 5) {
+        while (nf < 7) {
             char *tab = strchr(p, '\t');
 
             if (tab == NULL)
@@ -692,26 +775,28 @@ int main(int argc, char **argv)
             fields[nf++] = p;
             p = tab + 1;
         }
-        if (nf < 5)
+        if (nf < 7)
             continue;
         fields[nf++] = p;
-        if (nf < 6)
+        if (nf < 8)
             continue;
         {
-            char *nl = strchr(fields[5], '\n');
+            char *nl = strchr(fields[7], '\n');
 
             if (nl != NULL)
                 *nl = '\0';
         }
         index = strtol(fields[0], NULL, 10);
+        taglen = (size_t)strtol(fields[7], NULL, 10);
         if (ct_unhex(fields[3], key, sizeof(key), &keylen) != 0
             || ct_unhex(fields[4], iv, sizeof(iv), &ivlen) != 0
-            || ct_unhex(fields[5], in, sizeof(in), &inlen) != 0) {
+            || ct_unhex(fields[5], in, sizeof(in), &inlen) != 0
+            || ct_unhex(fields[6], aad, sizeof(aad), &aadlen) != 0) {
             printf("%ld\terr\tbad-hex\n", index);
             continue;
         }
-        rc = ct_cipher(fields[1], fields[2], key, keylen, iv, ivlen, in, inlen,
-                       out, &outlen);
+        rc = ct_cipher(fields[1], fields[2], key, keylen, iv, ivlen, aad, aadlen,
+                       in, inlen, out, &outlen, taglen);
         if (rc != 0) {
             printf("%ld\terr\trefused\n", index);
             continue;

@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 16,
-      "implemented": 164,
-      "open_in_this_stratum": 606,
+      "implemented": 175,
+      "open_in_this_stratum": 595,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -1210,6 +1210,17 @@
       "CRYPTO_cts128_decrypt_block",
       "CRYPTO_cts128_encrypt",
       "CRYPTO_cts128_encrypt_block",
+      "CRYPTO_gcm128_aad",
+      "CRYPTO_gcm128_decrypt",
+      "CRYPTO_gcm128_decrypt_ctr32",
+      "CRYPTO_gcm128_encrypt",
+      "CRYPTO_gcm128_encrypt_ctr32",
+      "CRYPTO_gcm128_finish",
+      "CRYPTO_gcm128_init",
+      "CRYPTO_gcm128_new",
+      "CRYPTO_gcm128_release",
+      "CRYPTO_gcm128_setiv",
+      "CRYPTO_gcm128_tag",
       "CRYPTO_nistcts128_decrypt",
       "CRYPTO_nistcts128_decrypt_block",
       "CRYPTO_nistcts128_encrypt",
@@ -1593,72 +1604,6 @@
         "module": "src/modes/mod.rs",
         "received_from_phase": null,
         "symbol": "CRYPTO_ccm128_tag"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_gcm128_aad"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_gcm128_decrypt"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_gcm128_decrypt_ctr32"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_gcm128_encrypt"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_gcm128_encrypt_ctr32"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_gcm128_finish"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_gcm128_init"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_gcm128_new"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_gcm128_release"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_gcm128_setiv"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_gcm128_tag"
       },
       {
         "declaring_header": "modes.h",
@@ -5254,12 +5199,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "6e3a5016409450210115beecaacaf0530e335b4f480528ae6231cbc53d802cfb"
+      "sha256": "4194a4897c411f1a05fda51f7191fe5ddf2e9725e460992d21a115dc1a78feb4"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "d306fcabf060bb0d74626e2724b4b5ee0355bc8f1e8a64ba3c0b4af440a90cdd"
+      "sha256": "1ec33e134ddeef03d0e500c1a6c30c03ab67b7c2c9cbda7f26c36d3c38e4211b"
     }
   ],
   "kind": "phase8-obligations",

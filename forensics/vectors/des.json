@@ -15,6 +15,7 @@
     "standard": "FIPS 46-3 / FIPS PUB 81",
     "vectors": [
       {
+        "aad_hex": "",
         "cipher": "DES-ECB",
         "expected_hex": "8ca64de9c1b123a7",
         "id": "des-1",
@@ -32,9 +33,11 @@
           "primary_source": "FIPS 46-3 / FIPS PUB 81",
           "title": "DES ECB Tests (from destest)"
         },
-        "standard": "FIPS 46-3 / FIPS PUB 81"
+        "standard": "FIPS 46-3 / FIPS PUB 81",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "DES-ECB",
         "expected_hex": "7359b2163e4edc58",
         "id": "des-2",
@@ -52,9 +55,11 @@
           "primary_source": "FIPS 46-3 / FIPS PUB 81",
           "title": "DES ECB Tests (from destest)"
         },
-        "standard": "FIPS 46-3 / FIPS PUB 81"
+        "standard": "FIPS 46-3 / FIPS PUB 81",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "DES-ECB",
         "expected_hex": "958e6e627a05557b",
         "id": "des-3",
@@ -72,9 +77,11 @@
           "primary_source": "FIPS 46-3 / FIPS PUB 81",
           "title": "DES ECB Tests (from destest)"
         },
-        "standard": "FIPS 46-3 / FIPS PUB 81"
+        "standard": "FIPS 46-3 / FIPS PUB 81",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "DES-ECB",
         "expected_hex": "f40379ab9e0ec533",
         "id": "des-4",
@@ -92,9 +99,11 @@
           "primary_source": "FIPS 46-3 / FIPS PUB 81",
           "title": "DES ECB Tests (from destest)"
         },
-        "standard": "FIPS 46-3 / FIPS PUB 81"
+        "standard": "FIPS 46-3 / FIPS PUB 81",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "DES-ECB",
         "expected_hex": "17668dfc7292532d",
         "id": "des-5",
@@ -112,9 +121,11 @@
           "primary_source": "FIPS 46-3 / FIPS PUB 81",
           "title": "DES ECB Tests (from destest)"
         },
-        "standard": "FIPS 46-3 / FIPS PUB 81"
+        "standard": "FIPS 46-3 / FIPS PUB 81",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "DES-ECB",
         "expected_hex": "8a5ae1f81ab8f2dd",
         "id": "des-6",
@@ -132,9 +143,11 @@
           "primary_source": "FIPS 46-3 / FIPS PUB 81",
           "title": "DES ECB Tests (from destest)"
         },
-        "standard": "FIPS 46-3 / FIPS PUB 81"
+        "standard": "FIPS 46-3 / FIPS PUB 81",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "DES-ECB",
         "expected_hex": "ed39d950fa74bcc4",
         "id": "des-7",
@@ -152,9 +165,11 @@
           "primary_source": "FIPS 46-3 / FIPS PUB 81",
           "title": "DES ECB Tests (from destest)"
         },
-        "standard": "FIPS 46-3 / FIPS PUB 81"
+        "standard": "FIPS 46-3 / FIPS PUB 81",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "DES-CBC",
         "expected_hex": "e5c7cdde872bf27c",
         "id": "des-8",
@@ -172,9 +187,11 @@
           "primary_source": "FIPS 46-3 / FIPS PUB 81",
           "title": "DES Tests (from FIPS PUB 81)"
         },
-        "standard": "FIPS 46-3 / FIPS PUB 81"
+        "standard": "FIPS 46-3 / FIPS PUB 81",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "DES-CFB",
         "expected_hex": "f3096249c7f46e51a69e839b1a92f78403467133898ea622",
         "id": "des-9",
@@ -192,7 +209,8 @@
           "primary_source": "FIPS 46-3 / FIPS PUB 81",
           "title": "DES Tests (from FIPS PUB 81)"
         },
-        "standard": "FIPS 46-3 / FIPS PUB 81"
+        "standard": "FIPS 46-3 / FIPS PUB 81",
+        "tag_hex": ""
       },
       {
         "cipher": "DES-ECB",

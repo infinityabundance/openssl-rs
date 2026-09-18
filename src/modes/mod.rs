@@ -53,6 +53,7 @@
 use core::ffi::{c_int, c_uint, c_void};
 use core::ptr;
 
+pub mod gcm;
 pub mod wrap;
 
 /// `block128_f` — `include/openssl/modes.h:25-26`: one block cipher call, `in` and `out` each

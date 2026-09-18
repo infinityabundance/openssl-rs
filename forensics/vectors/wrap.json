@@ -15,6 +15,7 @@
     "standard": "RFC 3394; RFC 5649",
     "vectors": [
       {
+        "aad_hex": "",
         "cipher": "id-aes128-wrap",
         "expected_hex": "1fa68b0a8112b447aef34bd8fb5a7b829d3e862371d2cfe5",
         "id": "wrap-1",
@@ -32,9 +33,11 @@
           "primary_source": "RFC 3394; RFC 5649",
           "title": ""
         },
-        "standard": "RFC 3394; RFC 5649"
+        "standard": "RFC 3394; RFC 5649",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "id-aes192-wrap",
         "expected_hex": "96778b25ae6ca435f92b5b97c050aed2468ab8a17ad84e5d",
         "id": "wrap-2",
@@ -52,9 +55,11 @@
           "primary_source": "RFC 3394; RFC 5649",
           "title": ""
         },
-        "standard": "RFC 3394; RFC 5649"
+        "standard": "RFC 3394; RFC 5649",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "id-aes256-wrap",
         "expected_hex": "64e8c3f9ce0f5ba263e9777905818a2a93c8191e7d6e8ae7",
         "id": "wrap-3",
@@ -72,9 +77,11 @@
           "primary_source": "RFC 3394; RFC 5649",
           "title": ""
         },
-        "standard": "RFC 3394; RFC 5649"
+        "standard": "RFC 3394; RFC 5649",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "id-aes192-wrap",
         "expected_hex": "031d33264e15d33268f24ec260743edce1c6c7ddee725a936ba814915c6762d2",
         "id": "wrap-4",
@@ -92,9 +99,11 @@
           "primary_source": "RFC 3394; RFC 5649",
           "title": ""
         },
-        "standard": "RFC 3394; RFC 5649"
+        "standard": "RFC 3394; RFC 5649",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "id-aes256-wrap",
         "expected_hex": "a8f9bc1612c68b3ff6e6f4fbe30e71e4769c8b80a32cb8958cd5d17d6b254da1",
         "id": "wrap-5",
@@ -112,9 +121,11 @@
           "primary_source": "RFC 3394; RFC 5649",
           "title": ""
         },
-        "standard": "RFC 3394; RFC 5649"
+        "standard": "RFC 3394; RFC 5649",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "id-aes192-wrap-pad",
         "expected_hex": "138bdeaa9b8fa7fc61f97742e72248ee5ae6ae5360d1ae6a5f54f373fa543b6a",
         "id": "wrap-6",
@@ -132,9 +143,11 @@
           "primary_source": "RFC 3394; RFC 5649",
           "title": ""
         },
-        "standard": "RFC 3394; RFC 5649"
+        "standard": "RFC 3394; RFC 5649",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "id-aes192-wrap-pad",
         "expected_hex": "afbeb0f07dfbf5419200f2ccb50bb24f",
         "id": "wrap-7",
@@ -152,7 +165,8 @@
           "primary_source": "RFC 3394; RFC 5649",
           "title": ""
         },
-        "standard": "RFC 3394; RFC 5649"
+        "standard": "RFC 3394; RFC 5649",
+        "tag_hex": ""
       }
     ]
   },

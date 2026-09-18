@@ -15,6 +15,7 @@
     "standard": "RFC 4269 (KISA SEED)",
     "vectors": [
       {
+        "aad_hex": "",
         "cipher": "SEED-CBC",
         "expected_hex": "f072c5b1a0588c105af8301adcd91dd067f6822155304bf3aad75ceb44341c25",
         "id": "seed-1",
@@ -32,9 +33,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED CBC Test vectors (from RFC 4196)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-CBC",
         "expected_hex": "a293eae9d9aebfac37ba714bd774e427e8b706d7e7d9a097228639e0b62b3b34ced11609cef2abaaec2edf979308f379c31527a8267783e5cba3538982b48d06",
         "id": "seed-2",
@@ -52,9 +55,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED CBC Test vectors (from RFC 4196)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-ECB",
         "expected_hex": "000102030405060708090a0b0c0d0e0f",
         "id": "seed-3",
@@ -72,9 +77,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED ECB Test vectors (from RFC4269)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-ECB",
         "expected_hex": "00000000000000000000000000000000",
         "id": "seed-4",
@@ -92,9 +99,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED ECB Test vectors (from RFC4269)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-ECB",
         "expected_hex": "83a2f8a288641fb9a4e9a5cc2f131c7d",
         "id": "seed-5",
@@ -112,9 +121,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED ECB Test vectors (from RFC4269)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-ECB",
         "expected_hex": "b41e6be2eba84a148e2eed84593c5ec7",
         "id": "seed-6",
@@ -132,9 +143,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED ECB Test vectors (from RFC4269)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-ECB",
         "expected_hex": "5ebac6e0054e166819aff1cc6d346cdb",
         "id": "seed-7",
@@ -152,9 +165,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED ECB Test vectors (from RFC4269)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-ECB",
         "expected_hex": "c11f22f20140505084483597e4370f43",
         "id": "seed-8",
@@ -172,9 +187,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED ECB Test vectors (from RFC4269)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-ECB",
         "expected_hex": "ee54d13ebcae706d226bc3142cd40d4a",
         "id": "seed-9",
@@ -192,9 +209,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED ECB Test vectors (from RFC4269)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-ECB",
         "expected_hex": "9b9b7bfcd1813cb95d0b3618f40f5122",
         "id": "seed-10",
@@ -212,9 +231,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED ECB Test vectors (from RFC4269)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-CFB",
         "expected_hex": "5c460dc6a83060ee36ec55c5ce6448c1",
         "id": "seed-11",
@@ -232,9 +253,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-CFB",
         "expected_hex": "a6841e5e4dea28f28d7a83031442c86e5b68d1048cda42452964df577d3c0abc",
         "id": "seed-12",
@@ -252,9 +275,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-CFB",
         "expected_hex": "4081ec9257303ae208eea0411d7977eb82e3b8d4f2d03d299f98fbddd519812c2bbe7af6d5c13b8fa5b15f233911eaaf",
         "id": "seed-13",
@@ -272,9 +297,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-CFB",
         "expected_hex": "d9add2885d52163ff04060b8ee46a6e02374af2f895e28ac6d2a964ca8e78bcc9e4e2d4a7a4a11cce7a605a5c0b79c7b8f546ce9159014cb4b462454de902646",
         "id": "seed-14",
@@ -292,9 +319,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-CFB",
         "expected_hex": "48af72fe5b7449786965500fe685b9ebbebd15b0afcc9ecc8ce424a931d55462c52dc2cfb41eb17f3cedce1ad1546c348a190846510a427216230575245462b61161c1ef7515e209bc809b66309521d1",
         "id": "seed-15",
@@ -312,9 +341,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-CFB",
         "expected_hex": "b343343a7f0fd1c0874c8c43cb4078c6da6b6691d1747a6c583f0b93e77d0b1b58e605f80d2f9e0f06d61f75cb03b81f543f5f309aa5cfe3c1d39359be074383d9159bb0b3e51e7b7742cd439b355926589fabfc7b45bbcbb81d84828dc81947",
         "id": "seed-16",
@@ -332,9 +363,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-CFB",
         "expected_hex": "e5f75f794db9d60f1a8f64dcb241c4463b0bd8ecc57b4aea8f87db1478debdb02b9fb9a9f159b24a2b292681683394bd067fe07026043557391aa59f77421497205a44896bde4e74af04ac231f7918f66d65bf5211e3ff9d7628feee17331a9260b7412b561b1f8eaece42532bff6de7",
         "id": "seed-17",
@@ -352,9 +385,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-CFB",
         "expected_hex": "9775a5c6dab170473a48e938e4bb036533476535c545ba27e149a2efc4f37dd4d8d45f769e74b080122077bf6d049cc146040bd56da957d644cc37abd2a20d795ad0b4a31f44f94e8b2bdeef0b7507c05a4b12dc84986d8e6c2beb1e5f6b16a057df782da903fd4bcc913e3ffc5fc75145a329e57528be7c34a92542cb80eab8",
         "id": "seed-18",
@@ -372,9 +407,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-CFB",
         "expected_hex": "d43fe04c874d091a7953ed15589f7b4b6b509c21746a366b0c32f135a9e84c6c2a1bb8d2f6a3a389f95b903db62030b1ab54ff45b1a837ada720977944707fe8ea159714f8e7cfd5299227249aec14920ab5a877a57e4b23a951bda95b8f98b908a55f73792f86944de919b0a18cc50e13c549b6d7da8806062afb125c388f02d914548f5747b1bd227520018d97066e",
         "id": "seed-19",
@@ -392,9 +429,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-CFB",
         "expected_hex": "87fbc595b52e0c299420338f422fabd264665e5457f1df907c5a2c95fc2ed4d04c29296467123223414b0e0223dcab3d93d5740f2e498acf20f50a59d267a734733c946597c2e1e54d5d76a6cb552b264f86b1b2e135cb601f73c5ec3237d2d341f09064e3e68cf08e9e770ced087c94e54b9aba36f01cd10596615cd02f1008b3701084cddfa659fc2b7293a605c1c273f54662894d6d6ca86256d915d4fb3f",
         "id": "seed-20",
@@ -412,9 +451,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-CFB",
         "expected_hex": "b8d5730f28bb21d79345e2668f9b4a91",
         "id": "seed-21",
@@ -432,9 +473,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-CFB",
         "expected_hex": "6bacb9856757883e22e04085deb6dd3ed3694dc6a6ea4445dd2f2684e465e6d5",
         "id": "seed-22",
@@ -452,9 +495,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-CFB",
         "expected_hex": "8871858efc277d3033d1c95c53a3fda31ba8d17b9f641922ef69de0277c80e914f25a8f3366106b22efef2a5c5355504",
         "id": "seed-23",
@@ -472,9 +517,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-CFB",
         "expected_hex": "676537bc02ad0fc270ba547f5640bcdb125bc95d9db54029b4ef32b83da838773c0750300b4384fec116732b76f654228f6c942f54839a5a2101c1fed1eb62b3",
         "id": "seed-24",
@@ -492,9 +539,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-CFB",
         "expected_hex": "1898807204f12402a0ca6f11c2ff2a929123c3c18e02149740d6bc91f6a626e79b827d3fb877e1821c861b3e7a361c0fae457340692425b0b8f21447e3fadf95e60819789f2964fda844bd3c508d06c9",
         "id": "seed-25",
@@ -512,9 +561,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-CFB",
         "expected_hex": "d5d73ef41aea9daa98d04b309299809408eeebc8de56b2258ba97155dc0bf54150b5338be0aac01ec9a93f49c3aa193d9c74ea5fd0dd4efb9030eca445dd52784cf5f18bd4e0f5facd56620df9d66ead9de1b6fc86f8c3d87f69866a490f5ed4",
         "id": "seed-26",
@@ -532,9 +583,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-CFB",
         "expected_hex": "0be12d90fd8536ef7fa415f0322dc833891e97d4e6c5427e743bae14fb2776177ad9bb8198d344e74b2c9fe720b67c35965acac1436c5f8e328fe86b4b65d389d8e060295a1c48c6de9a06835e677adea60d3ccc589754593bae6ac9f847b8f0c39253db2e863d5ce1df024f504cecf0",
         "id": "seed-27",
@@ -552,9 +605,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-CFB",
         "expected_hex": "7b8b2a3a38328276e2739ecac4c876633e5cc8835a46053fdbbe0bc828450bc6b2e9cb31515edbbccf74a1128213d64577eec37eff3377528dafdd14bcfe2d8cc988f7705622893d3691126ed1de20a1ae7397e3dfe78464c2d310a452608799b024e7725394b309b9def5b2840e8ffa9fb2b9da92fe2df24769c5250167f4f2",
         "id": "seed-28",
@@ -572,9 +627,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-CFB",
         "expected_hex": "18d65e3fd66b6aef76354325c323f0cd45f6c280335b890ba6822437125b86baf0f8576039e074aeb557f73dcacedd94fe134219fda1b5fac5e4d02f5b582496e97350926902a43dec11b09d12d294b7cc815eb98c4b5f693dd341a7d47a71f6c1a9af3981c97bb13ef4abc8a54aaa0fd601e2cd981d3f49bd8e958b3fe5769a76264784116038c8086af3d49d9429bf",
         "id": "seed-29",
@@ -592,9 +649,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-CFB",
         "expected_hex": "da97a99e4734c2dfe541642e30b9cea9263f5ee2055d468fc519585c4072f3163eda6cfa5014ed6b2293bf6d296cc7406530657b960072fa8aeafb6a7192c782e73dc4bcb02e621ca6a375d318ec98e7998339060650940d7d9d5e89f95a15e1d673b4c7132be9875bb339a30a61b57050b2c91e57a4b11f7f00c0df906edc508a5a54d218e62de114e89b6e1c137c3a40b55130343a3527dd85d8f9c87a1fc6",
         "id": "seed-30",
@@ -612,9 +671,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-OFB",
         "expected_hex": "78aa827fca58956065e1dc0ce17bfb80",
         "id": "seed-31",
@@ -632,9 +693,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-OFB",
         "expected_hex": "814d987a07282f950fa9a6559e5443f0826243a630458327e5c20440d2a50a0d",
         "id": "seed-32",
@@ -652,9 +715,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-OFB",
         "expected_hex": "edeae6665592ab617f52e495e9177108399a2d073e0e7d9e4ede0545bdf9294f32a1ac2f4c915b1432024b5ca05cf91d",
         "id": "seed-33",
@@ -672,9 +737,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-OFB",
         "expected_hex": "eb97edb484801398304d27fa5512417cf63fa76c3860c738cf4866dd9a024bdd2e4029fe1bc83587b452686edf971dae2390ef0af2a00deef79216b1104e43f6",
         "id": "seed-34",
@@ -692,9 +759,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-OFB",
         "expected_hex": "ecee4794867f81ee0ab465481f160521a918121e02308744e65cbacc4c369ef0b98ff6feaca41a8979045c4bd49487b4f3437376c4b6f43536973ba54bdd2b7170c7136f92e87cba79b892616b80fe10",
         "id": "seed-35",
@@ -712,9 +781,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-OFB",
         "expected_hex": "6207d66ce45fa32922bc75c14bd1a2d44a8daf4e655f9b9934f7f41de98337d3f6aa6175f43d056b6be3decb791a324c80a84983b026dcdabdcd1cf93059a238e14ff5c952b740802cd11171f5275c12adb6564532de13194c66532c0cc17663",
         "id": "seed-36",
@@ -732,9 +803,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-OFB",
         "expected_hex": "22632b7abf711ad0e66f1834e5984609df0fdf0903a7180c713e1c084812913c31d1fb3469c777a94e5115fc1c4a081283fa2d28a9aec1b6f46738d8bf04ab6b82505b2063153a12dace49000aa9ac41ff3cdf9510a20183f934d364f52cd72cc6b5deb192ca5bacbff471565ae2d563",
         "id": "seed-37",
@@ -752,9 +825,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-OFB",
         "expected_hex": "d9a5d3bc0a558b86046877a9030a09c537c2830b93dd9f56df91233f3b403fa39dc820d5eadf46ca016ad130018310a4e31e0974bb233085236340e057cac0d6968f0fcceea780b9da7bfb297e8593abd242e382e7482e9c4679b7cb720798c17522c5cf4db9004368f609b5280b5421f30a39a6659d51ef8feafed739959441",
         "id": "seed-38",
@@ -772,9 +847,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-OFB",
         "expected_hex": "1dc92191514c65141edb04acc655cf3c664ff5727d569b636787332ef1e34b1afd4b8e9acf4b745530fa7b3094f45a32d82b0e2be7cc035a1dded75f4033bcc4727dd14303761a9061b8365a8893e2569d045f08d2b447c35d2f927ac6103730e3aa4e81aef54c426320d657e2aa169bf8884ef0541074e9c08793364646a9a99df0e5022ea3740361096c3790707b3d",
         "id": "seed-39",
@@ -792,9 +869,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-OFB",
         "expected_hex": "5bf691be73fa80ebdfcf9ab0657729c9017505cb7163afb35c120915e111d2a2978e373164579c9ffc66bfe189ffe1fbe641d45c8d91a2bab418d8b549eb027721d241a9d80e298c79c75d7db8dec3a8d56cf27d33431c07ac4128b1068684e1d99b1ff23f83e8badb704600de7ae95cbef8029f101bfa852ef5f69cc7a7427d0fa3abd7de68db07de0ba4c17fd579ffcf1be3ad9e5f724c8e9c87c079f2afec",
         "id": "seed-40",
@@ -812,9 +891,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-OFB",
         "expected_hex": "03f102dbfb29bcde9e7d16825de64228",
         "id": "seed-41",
@@ -832,9 +913,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-OFB",
         "expected_hex": "841cca2b58abd8d0b68fa2d3949bc943a105427f2deb117572de28cd0581c54a",
         "id": "seed-42",
@@ -852,9 +935,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-OFB",
         "expected_hex": "c9123902ac5cfd3f0151b4e95185815ddf4ea92baadd91215007c98ab3dcbae14ca5cfcb5aafeea9939b998e3f4ec276",
         "id": "seed-43",
@@ -872,9 +957,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-OFB",
         "expected_hex": "d6592ec2f649ea123bce88818ebbbb74d3b6b55a987ab01db21b5ef91cf8a9fff6851a6ce523d2607da048d9e0897ff672d787433cd54b6c9c25a7a5aeea1538",
         "id": "seed-44",
@@ -892,9 +979,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-OFB",
         "expected_hex": "a91c4fb4f9e05adab087db1fd125b1f42dd26953bb3b3d722adb443c0a4b927ef83c62ae3ef8e1f83ef8e6b50a3b8caf7a623fa9d23685cda5851139a69c449d8b94877c3547c37e8c246738c6183b50",
         "id": "seed-45",
@@ -912,9 +1001,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-OFB",
         "expected_hex": "e77614bed3d8fc7a22355efc2d1401cd1386fcd6585b472a500278c56108123af13bbfffdd87bc963634f28ab8355061f23c6d943fd226360685b5fda3eee847d64154af7f48732f37c3a4f740ed73dd276dafc9a2e3a22f381a61501dd89b73",
         "id": "seed-46",
@@ -932,9 +1023,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-OFB",
         "expected_hex": "6a64fccc9e7f00bc696e09761c1a059557e02d16b6d407931b1abde227b6c42e512eeabcf5d01d7a662da46c1c87ffb7575607e1b88a755c7d469c55f7cc98d4ccf9f3fc3a29e22b7e16052cfe90c61132311853547885d7a78cbcdc1a26c05953d3f45735901d44dad6710d67712c20",
         "id": "seed-47",
@@ -952,9 +1045,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-OFB",
         "expected_hex": "63e2f4b237b0635709ed42bf7ce29a0a828fd52f157dbed5a7b78d5afb8cc780f009c7982a31eb4db2a2d30d80622fa84c430fd69c68652a2876f984a3a795d952a8ed540d6ef936ba85ce7932523e47ec6e9865ffc4f8805232039b79c5fbfbfa8c18d7b4aa655c247357b5b3b2e960e0eac46a13f52c5646c396887500b6ad",
         "id": "seed-48",
@@ -972,9 +1067,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-OFB",
         "expected_hex": "40396cb65cc8eda8c591e671cbf92889588fe593fbe6e8e884a9d58f90df8505025cd0e268c368fc4aed1e8a5be2359a72d087775f85f6944b0cf731e8051cf80f0b9aac8073f82c01e0306077bfbf547d9074b8cf2a844d778371b0db8c7d8358596404a4047bafc3e4c9bd424860dbe3b1a54bb68f0461e8612940695b795a1e5aad72befb79ea8c5336d01758d077",
         "id": "seed-49",
@@ -992,9 +1089,11 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "SEED-OFB",
         "expected_hex": "6328ab2e9039edcd034499d13561b8866ff4f528a375365e84e1a2de9d2e58cd6b6e9cad7215d105e0653a480dbc3e69d8ba496d4333515e879b20df1bc9f77382b81db4d846fbb9e93b60b80558322c6b7e1936076295c842e262f84dff7b47e406a62c44900e6d1383199deee77215ed4c27397d4f01acdbd4d54328e538770e87d9e4900602a129f405cc1f8800ea723cdb109afffc9d04da2b1403a8d3e7",
         "id": "seed-50",
@@ -1012,7 +1111,8 @@
           "primary_source": "RFC 4269 (KISA SEED)",
           "title": "SEED Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 4269 (KISA SEED)"
+        "standard": "RFC 4269 (KISA SEED)",
+        "tag_hex": ""
       },
       {
         "cipher": "SEED-ECB",
