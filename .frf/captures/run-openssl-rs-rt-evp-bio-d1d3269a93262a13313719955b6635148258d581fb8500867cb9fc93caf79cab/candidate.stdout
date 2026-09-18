@@ -1,0 +1,155 @@
+transcript.sha256=56ed8f76132cd4851e87a146ab28d916f91679c1aaa365c4205ce2c762dcc3da
+provider.loaded=1 err=0
+provider.md=nonnull err=0
+provider.ciph=nonnull err=0
+encode.block.0.len=0 dec=0 roundtrip=1 err=0
+encode.block.1.len=4 dec=3 roundtrip=1 err=0
+encode.block.2.len=4 dec=3 roundtrip=1 err=0
+encode.block.3.len=4 dec=3 roundtrip=1 err=0
+encode.block.4.len=8 dec=6 roundtrip=1 err=0
+encode.block.5.len=8 dec=6 roundtrip=1 err=0
+encode.block.6.len=8 dec=6 roundtrip=1 err=0
+encode.block.7.len=12 dec=9 roundtrip=1 err=0
+encode.block.8.len=12 dec=9 roundtrip=1 err=0
+encode.block.9.len=12 dec=9 roundtrip=1 err=0
+encode.block.64.len=88 err=0
+encode.block.64.dec=66 err=0
+encode.block.64.roundtrip=1 err=0
+encode.block.64.text=AwoRGB8mLTQ7QklQV15lbHN6gYiPlp2kq7K5wMfO1dzj6vH4/wYNFBsiKTA3PkVMU1phaG92fYSLkpmgp661vA== err=0
+decode.block.garbage=-1 err=0
+decode.block.partial=-1 err=0
+decode.block.empty=0 err=0
+decode.block.leading_ws=-1 err=0
+decode.block.inner_ws=-1 err=0
+decode.block.high_bit=-1 err=0
+decode.block.padding_with_data=6 err=0
+encode.stream.1.bytes=6773 ok=1 num_first=0 num_last=7 err=0
+decode.stream.1.rv=0 bytes=5000 roundtrip=1 err=0
+encode.copy.1.rv=1 src_num=5 dst_num=5 err=0
+encode.stream.47.bytes=6773 ok=1 num_first=0 num_last=41 err=0
+decode.stream.47.rv=0 bytes=5000 roundtrip=1 err=0
+encode.copy.47.rv=1 src_num=5 dst_num=5 err=0
+encode.stream.48.bytes=6773 ok=1 num_first=0 num_last=0 err=0
+decode.stream.48.rv=0 bytes=5000 roundtrip=1 err=0
+encode.copy.48.rv=1 src_num=5 dst_num=5 err=0
+encode.stream.49.bytes=6773 ok=1 num_first=0 num_last=7 err=0
+decode.stream.49.rv=0 bytes=5000 roundtrip=1 err=0
+encode.copy.49.rv=1 src_num=5 dst_num=5 err=0
+encode.stream.96.bytes=6773 ok=1 num_first=0 num_last=0 err=0
+decode.stream.96.rv=0 bytes=5000 roundtrip=1 err=0
+encode.copy.96.rv=1 src_num=5 dst_num=5 err=0
+encode.stream.5000.bytes=6773 ok=1 num_first=0 num_last=8 err=0
+decode.stream.5000.rv=0 bytes=5000 roundtrip=1 err=0
+encode.copy.5000.rv=1 src_num=5 dst_num=5 err=0
+encode.update.neg=0 err=0
+encode.update.neg.outl=0 err=0
+encode.update.zero=0 err=0
+encode.update.zero.outl=0 err=0
+encode.final.empty.outl=0 err=0
+decode.update.zero=0 err=0
+decode.update.zero.outl=0 err=0
+decode.tail.0.update=0 outl=4 num=0 final=1 err=0
+decode.tail.1.update=1 outl=0 num=7 final=-1 err=0
+decode.tail.2.update=1 outl=0 num=6 final=-1 err=0
+decode.tail.3.update=1 outl=0 num=5 final=-1 err=0
+decode.ws.update=0 err=0
+decode.ws.outl=4 err=0
+decode.boundary.update=0 err=0
+decode.boundary.outl=4 err=0
+decode.boundary.num=0 err=0
+decode.partial.first=1 err=0
+decode.partial.num=3 err=0
+decode.partial.then_eof=-1 err=0
+decode.after_pad.update=-1 err=0
+decode.after_pad.outl=0 err=0
+decode.high_bit.update=-1 err=0
+decode.seof_after_group.update=0 err=0
+decode.seof_after_group.outl=4 err=0
+decode.reset64.first63=1 err=0
+decode.reset64.num=63 err=0
+decode.reset64.plus1=1 err=0
+decode.reset64.outl=48 err=0
+decode.reset64.num_after=0 err=0
+decode.reset64.enc_len=64 err=0
+decode.num_ge_64=NOT_MEASURED_CONTEXT_IS_OPAQUE_encode_c_348
+b64.type=1 err=0
+b64.write1=17 err=0
+b64.write2=23 err=0
+b64.wpending=1 err=0
+b64.flush=1 err=0
+b64.gets=-2 err=268435577
+b64.produced.len=57 matches_block=1 err=0
+b64.parts.first=16 total=40 roundtrip=1 eof=1 err=0
+b64.reset=1 err=0
+b64.pending_after_reset=0 err=0
+b64.nonl.type=1 err=0
+b64.nonl.write1=17 err=0
+b64.nonl.write2=23 err=0
+b64.nonl.wpending=0 err=0
+b64.nonl.flush=1 err=0
+b64.nonl.gets=-2 err=268435577
+b64.nonl.produced.len=56 matches_block=1 err=0
+b64.nonl.parts.first=16 total=40 roundtrip=1 eof=1 err=0
+b64.nonl.reset=1 err=0
+b64.nonl.pending_after_reset=0 err=0
+b64.leading_invalid.bytes=4 value=abcd err=0
+b64.leading_mixed.bytes=-1 err=0
+b64.nonl.tail.write1=1 err=0
+b64.nonl.tail.write2=2 err=0
+b64.nonl.tail.write3=3 err=0
+b64.nonl.tail.wpending=0 err=0
+b64.nonl.tail.flush=1 err=0
+b64.nonl.tail.produced.len=8 matches_block=1 err=0
+md.puts=-2 err=268435577
+md.unarmed.write=0 err=0
+md.unarmed.gets=-1 err=50331807
+md.get_md.unarmed=1 err=0
+md.get_md.unarmed.null=1 err=0
+md.set_md=1 chain=<empty>
+md.write1=17 err=0
+md.write2=23 err=0
+md.gets.n=32 own=32 agree=1 err=0
+md.gets.short=0 err=0
+md.get_md_ctx=1 err=0
+md.get_md_ctx.nonnull=1 err=0
+md.reset=1 err=0
+md.after_reset.write=23 err=0
+md.after_reset.gets.n=32 own=32 agree=1 err=0
+md.dup_chain.nonnull=1
+md.dup_chain.write=0 err=50331837
+md.dup_chain.gets=-1 err=50331836
+md.dup_ctl=1 err=0
+md.dup_ctl.gets.n=-1 copies_the_finalised_flag=1 err=0
+md.pending=23 err=0
+provider.md.new_calls=2 err=0
+provider.md.init_calls=4 err=0
+provider.md.update_calls=6 err=0
+provider.md.final_calls=4 err=0
+cipher.set.null_cipher=0 chain=no cipher set[]@evp_cipher_init_internal/118
+cipher.set.encrypt=1 chain=<empty>
+cipher.cb.calls=2 err=0
+cipher.cb.direction=1 err=0
+cipher.set.zero_key=0 chain=<empty>
+cipher.set.zero_key.calls=1 err=0
+cipher.write=40 err=0
+cipher.wpending=0 err=0
+cipher.flush=1 err=0
+cipher.status_after_encrypt=1 err=0
+cipher.produced.len=40 err=0
+cipher.dec.set=1 chain=<empty>
+cipher.read_300.bytes=40 roundtrip=1 err=0
+cipher.get_ctx=1 err=0
+cipher.get_ctx.nonnull=1 err=0
+cipher.status_after_decrypt=1 err=0
+cipher.dec.reset=1 err=0
+cipher.dec.wrong_key.set=1 chain=<empty>
+cipher.read_wrong_key.bytes=40 roundtrip=0 err=0
+cipher.puts=-2 err=268435577
+cipher.gets=-2 err=268435577
+cipher.pending=40 err=0
+provider.ciph.new_calls=4 err=0
+provider.ciph.init_calls=5 err=0
+provider.ciph.update_calls=3 err=0
+provider.ciph.final_calls=1 err=0
+BIO_f_reliable=NOT_MEASURED_RAND_bytes_IS_PHASE_9_bio_ok_c_456
+BIO_f_reliable.table=NOT_MEASURED_RAND_bytes_IS_PHASE_9_bio_ok_c_112

@@ -1,0 +1,74 @@
+FRF-MUTANT:stdout-first-line:transcript.sha256=982b2927bb034c5085a030cfa448e97b90aa445a4478530a9676a965d3467dd0
+add_builtin.a=1 err=0
+add_builtin.b=1 err=0
+load.a=1 err=0
+load.b=1 err=0
+fetch.full=nonnull err=50331841
+fetch.load_only=nonnull err=0
+fetch.gen_only=nonnull err=0
+fetch.get_pair=nonnull err=0
+fetch.import_both_spellings=nonnull err=0
+fetch.export_both_spellings=nonnull err=0
+fetch.no_free=NULL err=50856204
+fetch.no_has=NULL err=50856204
+fetch.no_constructor=NULL err=50856204
+fetch.no_gen_init=NULL err=50856204
+fetch.no_gen_cleanup=NULL err=50856204
+fetch.get_half=NULL err=50856204
+fetch.set_half=NULL err=50856204
+fetch.gen_get_half=NULL err=50856204
+fetch.gen_set_half=NULL err=50856204
+fetch.import_no_descriptor=NULL err=50856204
+fetch.descriptor_no_importer=NULL err=50856204
+fetch.export_no_descriptor=NULL err=50856204
+fetch.descriptor_arm_twice=NULL err=50856204
+fetch.importer_arm_twice=NULL err=50856204
+fetch.unknown_name=NULL err=50856204
+fetch.rejected_property=NULL err=50856204
+fetch.same_object_for_a_second_fetch=1
+fetch.alias_resolves_to_the_same_object=1
+fetch.second_provider_distinct_object=1
+fetch.second_provider_has_its_own_description=1
+method.name_matches=1
+method.description_matches=1
+method.provider=nonnull err=0
+method.up_ref=1 err=0
+method.is_a.identity=1 err=0
+method.is_a.alias=1 err=0
+method.is_a.other=0 err=0
+method.is_a.unknown=0 err=0
+method.is_a.null_method=0 err=0
+method.names_do_all.ret=1 err=0
+method.names.count=2 err=0
+method.names.saw_identity=1 err=0
+method.names.saw_alias=1 err=0
+params.gettable=nonnull err=0
+params.settable=nonnull err=0
+params.gen_settable=nonnull err=0
+params.gen_gettable=nonnull err=0
+params.vec=1,1,1,1 err=0
+params.gettable_is_the_first_table=1
+params.settable_is_its_own_table=1
+params.gen_settable_is_its_own_table=1
+params.gen_gettable_is_its_own_table=1
+params.vec.after_identity_calls=2,2,2,2 err=0
+params.gettable.gen_only=NULL err=0
+params.settable.gen_only=NULL err=0
+params.gen_settable.gen_only=NULL err=0
+params.gen_gettable.gen_only=NULL err=0
+params.vec.gen_only=0,0,0,0 err=0
+params.gettable.null_method=NOT_MEASURED_AUTHORITY_FAULTS
+params.settable.null_method=NOT_MEASURED_AUTHORITY_FAULTS
+params.gen_settable.null_method=NOT_MEASURED_AUTHORITY_FAULTS
+params.gen_gettable.null_method=NOT_MEASURED_AUTHORITY_FAULTS
+do_all.count=12 err=0
+do_all.saw_full=1 err=0
+do_all.saw_load_only=1 err=0
+do_all.saw_a_refused_one=0 err=0
+do_all.null_visitor=NOT_MEASURED_AUTHORITY_FAULTS
+legacy_alg_fill=NOT_MEASURED_NO_EXPORT_READS_IT_BEFORE_7.4c
+final.vec=0,0,0,0 err=0
+final.provider_free_calls=0 err=0
+unload.a=1 err=0
+unload.b=1 err=0
+done=1

@@ -1,0 +1,503 @@
+FRF-MUTANT:stdout-first-line:transcript.sha256=a15183163ea6087292eae68ae92a2137a6d478a662b3b2db68b07323e5428acb
+add_builtin=1 err=<empty>
+load=1 err=<empty>
+add_builtin_default=1 err=<empty>
+load_default=1 err=<empty>
+key.keymgmt=nonnull err=<empty>
+key.fromdata_ctx=nonnull err=<empty>
+key.fromdata_init=1 err=<empty>
+key.fromdata=1 err=<empty>
+key.pkey=1 err=<empty>
+key.vec=new:1,free:0,has:0,get_params:1,import:1,qon:0
+key.op_ctx=nonnull err=<empty>
+empty.set_type=1 err=<empty>
+empty.op_ctx=nonnull err=<empty>
+keyless.op_ctx=nonnull err=<empty>
+null.sign_init=-1 err=passed a null parameter[]@evp_pkey_signature_init/580
+null.sign_init_ex=-1 err=passed a null parameter[]@evp_pkey_signature_init/580
+null.sign_init_ex2=-1 err=passed a null parameter[]@evp_pkey_signature_init/580
+null.sign_message_init=-1 err=passed a null parameter[]@evp_pkey_signature_init/580
+null.sign_message_update=-1 err=passed a null parameter[]@EVP_PKEY_sign_message_update/933
+null.sign_message_final=-1 err=passed a null parameter[]@EVP_PKEY_sign_message_final/965
+null.sign=-1 err=passed a null parameter[]@EVP_PKEY_sign/999
+null.verify_init=-1 err=passed a null parameter[]@evp_pkey_signature_init/580
+null.verify_init_ex=-1 err=passed a null parameter[]@evp_pkey_signature_init/580
+null.verify_init_ex2=-1 err=passed a null parameter[]@evp_pkey_signature_init/580
+null.verify_message_init=-1 err=passed a null parameter[]@evp_pkey_signature_init/580
+null.verify_message_update=-1 err=passed a null parameter[]@EVP_PKEY_verify_message_update/1087
+null.verify_message_final=-1 err=passed a null parameter[]@EVP_PKEY_verify_message_final/1118
+null.verify=-1 err=passed a null parameter[]@EVP_PKEY_verify/1152
+null.verify_recover_init=-1 err=passed a null parameter[]@evp_pkey_signature_init/580
+null.verify_recover_init_ex=-1 err=passed a null parameter[]@evp_pkey_signature_init/580
+null.verify_recover_init_ex2=-1 err=passed a null parameter[]@evp_pkey_signature_init/580
+null.verify_recover=-1 err=passed a null parameter[]@EVP_PKEY_verify_recover/1215
+opguard.sign=-1 err=operation not initialized[]@EVP_PKEY_sign/1005
+opguard.sign_message_update=-1 err=operation not initialized[]@EVP_PKEY_sign_message_update/938
+opguard.sign_message_final=-1 err=operation not initialized[]@EVP_PKEY_sign_message_final/970
+opguard.verify=-1 err=operation not initialized[]@EVP_PKEY_verify/1158
+opguard.verify_message_update=-1 err=operation not initialized[]@EVP_PKEY_verify_message_update/1092
+opguard.verify_message_final=-1 err=operation not initialized[]@EVP_PKEY_verify_message_final/1123
+opguard.verify_recover=-1 err=operation not initialized[]@EVP_PKEY_verify_recover/1220
+opguard.sign_init=1 err=<empty>
+opguard.sign_on_armed=1 err=<empty>
+opguard.sign_message_update_on_sign=-1 err=operation not initialized[]@EVP_PKEY_sign_message_update/938
+opguard.sign_message_final_on_sign=-1 err=operation not initialized[]@EVP_PKEY_sign_message_final/970
+opguard.verify_on_sign=-1 err=operation not initialized[]@EVP_PKEY_verify/1158
+opguard.verify_message_update_on_sign=-1 err=operation not initialized[]@EVP_PKEY_verify_message_update/1092
+opguard.verify_message_final_on_sign=-1 err=operation not initialized[]@EVP_PKEY_verify_message_final/1123
+opguard.verify_recover_on_sign=-1 err=operation not initialized[]@EVP_PKEY_verify_recover/1220
+opguard.sign_on_signmsg_later=1 err=<empty>
+opguard.sign_on_signmsg=1 err=<empty>
+nokey.sign_init=0 err=no key set[]@evp_pkey_signature_init/681
+nokey.algo=nonnull err=<empty>
+nokey.sign_init_ex2=0 err=no key set[]@evp_pkey_signature_init/596
+full.sign_init=1 err=<empty>
+full.sign_init.vec=newctx:1,no_propq:1,free:1,dup:0,sign_init:1,sign:0,sign_null_out:0,sign_zero_len:0,smi:0,smu:0,smf:0,smf_zero_len:0,vi:0,v:0,vmi:0,vmu:0,vmf:0,vri:0,vr:0,vr_zero_len:0,qkt:0,init_params:0
+full.sign=1 err=<empty>
+full.sign.len_out=8 err=<empty>
+full.sign.vec=newctx:0,no_propq:0,free:0,dup:0,sign_init:0,sign:1,sign_null_out:0,sign_zero_len:0,smi:0,smu:0,smf:0,smf_zero_len:0,vi:0,v:0,vmi:0,vmu:0,vmf:0,vri:0,vr:0,vr_zero_len:0,qkt:0,init_params:0
+full.sign_no_out=1 err=<empty>
+full.sign_no_out.vec=newctx:0,no_propq:0,free:0,dup:0,sign_init:0,sign:1,sign_null_out:1,sign_zero_len:1,smi:0,smu:0,smf:0,smf_zero_len:0,vi:0,v:0,vmi:0,vmu:0,vmf:0,vri:0,vr:0,vr_zero_len:0,qkt:0,init_params:0
+full.sign_init_ex_params=1 err=<empty>
+full.sign_init_ex_params.vec=newctx:1,no_propq:1,free:1,dup:0,sign_init:1,sign:0,sign_null_out:0,sign_zero_len:0,smi:0,smu:0,smf:0,smf_zero_len:0,vi:0,v:0,vmi:0,vmu:0,vmf:0,vri:0,vr:0,vr_zero_len:0,qkt:0,init_params:1
+full.verify_init=1 err=<empty>
+full.verify=1 err=<empty>
+full.verify.vec=newctx:1,no_propq:1,free:1,dup:0,sign_init:0,sign:0,sign_null_out:0,sign_zero_len:0,smi:0,smu:0,smf:0,smf_zero_len:0,vi:1,v:1,vmi:0,vmu:0,vmf:0,vri:0,vr:0,vr_zero_len:0,qkt:0,init_params:0
+full.verify_recover_init=1 err=<empty>
+full.verify_recover=1 err=<empty>
+full.verify_recover.len_out=8 err=<empty>
+full.verify_recover.vec=newctx:1,no_propq:1,free:1,dup:0,sign_init:0,sign:0,sign_null_out:0,sign_zero_len:0,smi:0,smu:0,smf:0,smf_zero_len:0,vi:0,v:0,vmi:0,vmu:0,vmf:0,vri:1,vr:1,vr_zero_len:0,qkt:0,init_params:0
+full.sign_message_init=1 err=<empty>
+full.sign_message_update=1 err=<empty>
+full.sign_message_final=1 err=<empty>
+full.sign_message.vec=newctx:1,no_propq:1,free:1,dup:0,sign_init:0,sign:0,sign_null_out:0,sign_zero_len:0,smi:1,smu:1,smf:1,smf_zero_len:0,vi:0,v:0,vmi:0,vmu:0,vmf:0,vri:0,vr:0,vr_zero_len:0,qkt:0,init_params:0
+full.verify_message_init=1 err=<empty>
+full.verify_message_update=1 err=<empty>
+full.verify_message_final=1 err=<empty>
+full.verify_message.vec=newctx:1,no_propq:1,free:1,dup:0,sign_init:0,sign:0,sign_null_out:0,sign_zero_len:0,smi:0,smu:0,smf:0,smf_zero_len:0,vi:0,v:0,vmi:1,vmu:1,vmf:1,vri:0,vr:0,vr_zero_len:0,qkt:0,init_params:0
+prefetched.algo=nonnull err=<empty>
+prefetched.sign_init_ex2=1 err=<empty>
+prefetched.sign_init_ex2.vec=newctx:1,no_propq:1,free:1,dup:0,sign_init:1,sign:0,sign_null_out:0,sign_zero_len:0,smi:0,smu:0,smf:0,smf_zero_len:0,vi:0,v:0,vmi:0,vmu:0,vmf:0,vri:0,vr:0,vr_zero_len:0,qkt:0,init_params:0
+prefetched.sign=1 err=<empty>
+prefetched.sign.vec=newctx:0,no_propq:0,free:0,dup:0,sign_init:0,sign:1,sign_null_out:0,sign_zero_len:0,smi:0,smu:0,smf:0,smf_zero_len:0,vi:0,v:0,vmi:0,vmu:0,vmf:0,vri:0,vr:0,vr_zero_len:0,qkt:0,init_params:0
+prefetched.verify_init_ex2=1 err=<empty>
+prefetched.verify=1 err=<empty>
+prefetched.verify.vec=newctx:1,no_propq:1,free:1,dup:0,sign_init:0,sign:0,sign_null_out:0,sign_zero_len:0,smi:0,smu:0,smf:0,smf_zero_len:0,vi:1,v:1,vmi:0,vmu:0,vmf:0,vri:0,vr:0,vr_zero_len:0,qkt:0,init_params:0
+prefetched.verify_recover_init_ex2=1 err=<empty>
+prefetched.verify_recover=1 err=<empty>
+prefetched.verify_recover.vec=newctx:1,no_propq:1,free:1,dup:0,sign_init:0,sign:0,sign_null_out:0,sign_zero_len:0,smi:0,smu:0,smf:0,smf_zero_len:0,vi:0,v:0,vmi:0,vmu:0,vmf:0,vri:1,vr:1,vr_zero_len:0,qkt:0,init_params:0
+prefetched.sign_message_init=1 err=<empty>
+prefetched.sign_message_update=1 err=<empty>
+prefetched.sign_message_final=1 err=<empty>
+prefetched.sign_message.vec=newctx:1,no_propq:1,free:1,dup:0,sign_init:0,sign:0,sign_null_out:0,sign_zero_len:0,smi:1,smu:1,smf:1,smf_zero_len:0,vi:0,v:0,vmi:0,vmu:0,vmf:0,vri:0,vr:0,vr_zero_len:0,qkt:0,init_params:0
+prefetched.verify_message_init=1 err=<empty>
+prefetched.verify_message_update=1 err=<empty>
+prefetched.verify_message_final=1 err=<empty>
+prefetched.verify_message.vec=newctx:1,no_propq:1,free:1,dup:0,sign_init:0,sign:0,sign_null_out:0,sign_zero_len:0,smi:0,smu:0,smf:0,smf_zero_len:0,vi:0,v:0,vmi:1,vmu:1,vmf:1,vri:0,vr:0,vr_zero_len:0,qkt:0,init_params:0
+failing.sign_init=1 err=<empty>
+failing.sign=0 err=provider signature failure[COURT-SIG sign:every callback]@EVP_PKEY_sign/1023
+failing.verify_init=1 err=<empty>
+failing.verify=0 err=provider signature failure[COURT-SIG verify:every callback]@EVP_PKEY_verify/1176
+failing.verify_recover_init=1 err=<empty>
+failing.verify_recover=0 err=provider signature failure[COURT-SIG verify_recover:every callback]@EVP_PKEY_verify_recover/1238
+failing.sign_message_init=1 err=<empty>
+failing.sign_message_update=1 err=<empty>
+failing.sign_message_final=0 err=provider signature failure[COURT-SIG sign_message_final:every callback]@EVP_PKEY_sign_message_final/985
+failing.verify_message_init=1 err=<empty>
+failing.verify_message_update=1 err=<empty>
+failing.verify_message_final=0 err=provider signature failure[COURT-SIG verify_message_final:every callback]@EVP_PKEY_verify_message_final/1138
+failing.vec=newctx:5,no_propq:5,free:5,dup:0,sign_init:1,sign:1,sign_null_out:0,sign_zero_len:0,smi:1,smu:1,smf:1,smf_zero_len:0,vi:1,v:1,vmi:1,vmu:1,vmf:1,vri:1,vr:1,vr_zero_len:0,qkt:0,init_params:0
+missing.no_sign_init.algo=nonnull err=<empty>
+missing.sign_init=-2 err=provider signature not supported[SIG-NoSignInit sign_init:refused: no sign_init]@evp_pkey_signature_init/793
+missing.sign_init.vec=newctx:1,no_propq:1,free:2,dup:0,sign_init:0,sign:0,sign_null_out:0,sign_zero_len:0,smi:0,smu:0,smf:0,smf_zero_len:0,vi:0,v:0,vmi:0,vmu:0,vmf:0,vri:0,vr:0,vr_zero_len:0,qkt:0,init_params:0
+missing.sign_message_init=-2 err=provider signature not supported[SIG-NoSmi sign_message_init:refused: no sign_message_init]@evp_pkey_signature_init/802
+missing.sign_message_init.vec=newctx:1,no_propq:1,free:1,dup:0,sign_init:0,sign:0,sign_null_out:0,sign_zero_len:0,smi:0,smu:0,smf:0,smf_zero_len:0,vi:0,v:0,vmi:0,vmu:0,vmf:0,vri:0,vr:0,vr_zero_len:0,qkt:0,init_params:0
+missing.verify_init=-2 err=provider signature not supported[SIG-NoVerifyInit verify_init:refused: no verify_init]@evp_pkey_signature_init/811
+missing.verify_init.vec=newctx:1,no_propq:1,free:1,dup:0,sign_init:0,sign:0,sign_null_out:0,sign_zero_len:0,smi:0,smu:0,smf:0,smf_zero_len:0,vi:0,v:0,vmi:0,vmu:0,vmf:0,vri:0,vr:0,vr_zero_len:0,qkt:0,init_params:0
+missing.verify_message_init=-2 err=provider signature not supported[SIG-NoVmi verify_message_init:refused: no verify_message_init]@evp_pkey_signature_init/820
+missing.verify_message_init.vec=newctx:1,no_propq:1,free:1,dup:0,sign_init:0,sign:0,sign_null_out:0,sign_zero_len:0,smi:0,smu:0,smf:0,smf_zero_len:0,vi:0,v:0,vmi:0,vmu:0,vmf:0,vri:0,vr:0,vr_zero_len:0,qkt:0,init_params:0
+missing.verify_recover_init=-2 err=provider signature not supported[SIG-NoVri verify_recover_init:refused: no verify_recover_init]@evp_pkey_signature_init/829
+missing.verify_recover_init.vec=newctx:1,no_propq:1,free:1,dup:0,sign_init:0,sign:0,sign_null_out:0,sign_zero_len:0,smi:0,smu:0,smf:0,smf_zero_len:0,vi:0,v:0,vmi:0,vmu:0,vmf:0,vri:0,vr:0,vr_zero_len:0,qkt:0,init_params:0
+missing.msg_sign_init=1 err=<empty>
+missing.msg_sign_update=1 err=<empty>
+missing.msg_sign_final=1 err=<empty>
+missing.sign_after_msg_init=-2 err=provider signature not supported[SIG-MsgSign sign:refused: a message signer with no sign]@EVP_PKEY_sign/1015
+missing.msg_sign.vec=newctx:1,no_propq:1,free:0,dup:0,sign_init:0,sign:0,sign_null_out:0,sign_zero_len:0,smi:1,smu:1,smf:1,smf_zero_len:0,vi:0,v:0,vmi:0,vmu:0,vmf:0,vri:0,vr:0,vr_zero_len:0,qkt:0,init_params:0
+missing.msg_verify_init=1 err=<empty>
+missing.msg_verify_update=1 err=<empty>
+missing.msg_verify_final=1 err=<empty>
+missing.verify_after_msg_init=-2 err=provider signature not supported[SIG-MsgVerify verify:refused: a message verifier with no verify]@EVP_PKEY_verify/1168
+missing.msg_verify.vec=newctx:1,no_propq:1,free:1,dup:0,sign_init:0,sign:0,sign_null_out:0,sign_zero_len:0,smi:0,smu:0,smf:0,smf_zero_len:0,vi:0,v:0,vmi:1,vmu:1,vmf:1,vri:0,vr:0,vr_zero_len:0,qkt:0,init_params:0
+missing.signmsg_half_init=1 err=<empty>
+missing.signmsg_half_update=-2 err=provider signature not supported[SIG-SignMsgHalf sign_message_update:refused: sign_message_init without update or final]@EVP_PKEY_sign_message_update/945
+missing.signmsg_half_final=-2 err=provider signature not supported[SIG-SignMsgHalf sign_message_final:refused: sign_message_init without update or final]@EVP_PKEY_sign_message_final/977
+missing.signmsg_half.vec=newctx:1,no_propq:1,free:1,dup:0,sign_init:0,sign:0,sign_null_out:0,sign_zero_len:0,smi:1,smu:0,smf:0,smf_zero_len:0,vi:0,v:0,vmi:0,vmu:0,vmf:0,vri:0,vr:0,vr_zero_len:0,qkt:0,init_params:0
+missing.verifymsg_half_init=1 err=<empty>
+missing.verifymsg_half_update=-2 err=provider signature not supported[SIG-VerifyMsgHalf verify_message_update:refused: verify_message_init without update or final]@EVP_PKEY_verify_message_update/1099
+missing.verifymsg_half_final=-2 err=provider signature not supported[SIG-VerifyMsgHalf verify_message_final:refused: verify_message_init without update or final]@EVP_PKEY_verify_message_final/1130
+missing.verifymsg_half.vec=newctx:1,no_propq:1,free:1,dup:0,sign_init:0,sign:0,sign_null_out:0,sign_zero_len:0,smi:0,smu:0,smf:0,smf_zero_len:0,vi:0,v:0,vmi:1,vmu:0,vmf:0,vri:0,vr:0,vr_zero_len:0,qkt:0,init_params:0
+qkt.algo=nonnull err=<empty>
+qkt.match=1 err=<empty>
+qkt.match.vec=newctx:1,no_propq:1,free:1,dup:0,sign_init:1,sign:0,sign_null_out:0,sign_zero_len:0,smi:0,smu:0,smf:0,smf_zero_len:0,vi:0,v:0,vmi:0,vmu:0,vmf:0,vri:0,vr:0,vr_zero_len:0,qkt:1,init_params:0
+qkt.no_match=-2 err=signature type and key type incompatible[]@evp_pkey_signature_init/637
+qkt.no_match.vec=newctx:0,no_propq:0,free:1,dup:0,sign_init:0,sign:0,sign_null_out:0,sign_zero_len:0,smi:0,smu:0,smf:0,smf_zero_len:0,vi:0,v:0,vmi:0,vmu:0,vmf:0,vri:0,vr:0,vr_zero_len:0,qkt:1,init_params:0
+qkt.empty=-2 err=signature type and key type incompatible[]@evp_pkey_signature_init/637
+qkt.empty.vec=newctx:0,no_propq:0,free:0,dup:0,sign_init:0,sign:0,sign_null_out:0,sign_zero_len:0,smi:0,smu:0,smf:0,smf_zero_len:0,vi:0,v:0,vmi:0,vmu:0,vmf:0,vri:0,vr:0,vr_zero_len:0,qkt:1,init_params:0
+fallback.by_key_type_name=1 err=<empty>
+fallback.by_key_type_name.vec=newctx:1,no_propq:1,free:0,dup:0,sign_init:1,sign:0,sign_null_out:0,sign_zero_len:0,smi:0,smu:0,smf:0,smf_zero_len:0,vi:0,v:0,vmi:0,vmu:0,vmf:0,vri:0,vr:0,vr_zero_len:0,qkt:0,init_params:0
+fallback.by_preferred_name=1 err=<empty>
+fallback.by_preferred_name.vec=newctx:1,no_propq:1,free:1,dup:0,sign_init:1,sign:0,sign_null_out:0,sign_zero_len:0,smi:0,smu:0,smf:0,smf_zero_len:0,vi:0,v:0,vmi:0,vmu:0,vmf:0,vri:0,vr:0,vr_zero_len:0,qkt:0,init_params:0
+fallback.neither=-2 err=signature type and key type incompatible[]@evp_pkey_signature_init/664
+fallback.neither.vec=newctx:0,no_propq:0,free:1,dup:0,sign_init:0,sign:0,sign_null_out:0,sign_zero_len:0,smi:0,smu:0,smf:0,smf_zero_len:0,vi:0,v:0,vmi:0,vmu:0,vmf:0,vri:0,vr:0,vr_zero_len:0,qkt:0,init_params:0
+fallback.qon_answers_null=1 err=<empty>
+fallback.qon_answers_null.vec=newctx:1,no_propq:1,free:0,dup:0,sign_init:1,sign:0,sign_null_out:0,sign_zero_len:0,smi:0,smu:0,smf:0,smf_zero_len:0,vi:0,v:0,vmi:0,vmu:0,vmf:0,vri:0,vr:0,vr_zero_len:0,qkt:0,init_params:0
+legacy.sign_init=-2 err=operation not supported for this keytype[]@evp_pkey_signature_init/862
+legacy.sign_init.vec=newctx:0,no_propq:0,free:1,dup:0,sign_init:0,sign:0,sign_null_out:0,sign_zero_len:0,smi:0,smu:0,smf:0,smf_zero_len:0,vi:0,v:0,vmi:0,vmu:0,vmf:0,vri:0,vr:0,vr_zero_len:0,qkt:0,init_params:0
+legacy.armed_then_sign=-2 err=operation not supported for this keytype[]@EVP_PKEY_sign/1029
+legacy.verify_init=-2 err=operation not supported for this keytype[]@evp_pkey_signature_init/862
+legacy.armed_then_verify=-2 err=operation not supported for this keytype[]@EVP_PKEY_verify/1182
+legacy.verify_recover_init=-2 err=operation not supported for this keytype[]@evp_pkey_signature_init/862
+legacy.armed_then_verify_recover=-2 err=operation not supported for this keytype[]@EVP_PKEY_verify_recover/1243
+legacy.sign_init_again=-2 err=operation not supported for this keytype[]@evp_pkey_signature_init/862
+legacy.armed_then_sign_once_more=-2 err=operation not supported for this keytype[]@EVP_PKEY_sign/1029
+legacy.empty_key_init=-2 err=operation not supported for this keytype[]@evp_pkey_signature_init/862
+legacy.empty_key_init.vec=newctx:0,no_propq:0,free:0,dup:0,sign_init:0,sign:0,sign_null_out:0,sign_zero_len:0,smi:0,smu:0,smf:0,smf_zero_len:0,vi:0,v:0,vmi:0,vmu:0,vmf:0,vri:0,vr:0,vr_zero_len:0,qkt:0,init_params:0
+legacy.empty_key_then_sign=-2 err=operation not supported for this keytype[]@EVP_PKEY_sign/1029
+prefetched.end_no_export=0 err=<empty>
+prefetched.end_no_export_then_sign=-2 err=operation not supported for this keytype[]@EVP_PKEY_sign/1029
+prefetched.end_no_export.vec=newctx:0,no_propq:0,free:0,dup:0,sign_init:0,sign:0,sign_null_out:0,sign_zero_len:0,smi:0,smu:0,smf:0,smf_zero_len:0,vi:0,v:0,vmi:0,vmu:0,vmf:0,vri:0,vr:0,vr_zero_len:0,qkt:0,init_params:0
+stream_update_on_legacy_armed=NOT_MEASURED_AUTHORITY_FAULTS
+stream_final_on_legacy_armed=NOT_MEASURED_AUTHORITY_FAULTS
+stream_verify_update_on_legacy_armed=NOT_MEASURED_AUTHORITY_FAULTS
+stream_verify_final_on_legacy_armed=NOT_MEASURED_AUTHORITY_FAULTS
+legacy_pmeth_switch=NOT_MEASURED_PMETH_IS_PHASE_8
+verify_recover_null_callback=NOT_MEASURED_UNREACHABLE_STRUCTURAL_CHECK
+pkey.new_ctx=nonnull err=<empty>
+pkey.new_gen_ctx=nonnull err=<empty>
+pkey.blank=nonnull err=<empty>
+parms.fromdata_init=1 err=<empty>
+parms.fromdata=1 err=<empty>
+parms.key=nonnull err=<empty>
+parms.vec=new:1,free:0,get:1,set:0,import:1,export:0,has:0,match:0,qon:0
+cache.bits=1234 err=<empty>
+cache.security_bits=99 err=<empty>
+cache.security_category=3 err=<empty>
+cache.size=7 err=<empty>
+cache.null.bits=0 err=unknown bits[]@EVP_PKEY_get_bits/71
+cache.null.security_bits=0 err=unknown security bits[]@EVP_PKEY_get_security_bits/87
+cache.null.security_category=-1 err=<empty>
+cache.blank.bits=0 err=unknown bits[]@EVP_PKEY_get_bits/71
+cache.blank.security_bits=0 err=unknown security bits[]@EVP_PKEY_get_security_bits/87
+cache.blank.security_category=0 err=<empty>
+parms.silent_fromdata_init=1 err=<empty>
+parms.silent_fromdata=1 err=<empty>
+cache.silent.bits=0 err=unknown bits[]@EVP_PKEY_get_bits/71
+cache.silent.security_bits=0 err=unknown security bits[]@EVP_PKEY_get_security_bits/87
+cache.silent.security_category=-1 err=<empty>
+cache.silent.size=0 err=unknown max size[]@EVP_PKEY_get_size/1866
+parms.fail_fromdata_init=1 err=<empty>
+parms.fail_fromdata=1 err=<empty>
+cache.fail.bits=0 err=unknown bits[]@EVP_PKEY_get_bits/71
+cache.fail.security_category=0 err=<empty>
+obj.provider_id=-1 err=<empty>
+obj.provider_base_id=0 err=<empty>
+obj.blank_id=0 err=<empty>
+obj.blank_base_id=0 err=<empty>
+obj.provider_get0=NULL err=<empty>
+obj.blank_get0=NULL err=<empty>
+obj.null_get0=NULL err=<empty>
+miss.provider=0 err=<empty>
+miss.provider_absent=1 err=<empty>
+miss.blank=0 err=<empty>
+miss.null=0 err=<empty>
+copy.to_blank=1 err=<empty>
+copy.to_blank.vec=new:1,free:0,get:1,set:0,import:1,export:1,has:2,match:0,qon:0
+copy.agree=1 err=<empty>
+copy.agree.vec=new:0,free:0,get:0,set:0,import:0,export:0,has:2,match:1,qon:0
+copy.disagree=0 err=different parameters[]@EVP_PKEY_copy_parameters/195
+copy.from_missing=0 err=missing parameters[]@EVP_PKEY_copy_parameters/187
+copy.from_blank=0 err=different parameters[]@EVP_PKEY_copy_parameters/195
+copy.to_blank_params_present=0 err=different parameters[]@EVP_PKEY_copy_parameters/195
+cansign.provider=1 err=<empty>
+cansign.no_signature=0 err=unsupported[Non-default library context, Algorithm (NO-SUCH-SIGNATURE : 0), Properties (<null>)]@inner_evp_generic_fetch/376
+cansign.blank=0 err=<empty>
+enc.set1=1 err=<empty>
+enc.get1_len=4 err=<empty>
+enc.get1_match=1 err=<empty>
+enc.get1_unpublished_len=0 err=<empty>
+enc.get1_unpublished_untouched=1 err=<empty>
+enc.set1_null_key=0 err=<empty>
+enc.set1_blank_key=0 err=<empty>
+enc.get1_null_key=0 err=<empty>
+enc.get1_blank_key=0 err=<empty>
+group.null_key=0 err=invalid key[]@EVP_PKEY_get_params/2455
+group.blank_key=0 err=invalid key[]@EVP_PKEY_get_params/2455
+group.unpublished=0 err=<empty>
+group.unpublished_len=0 err=<empty>
+group.published=1 err=<empty>
+group.published_match=1 err=<empty>
+group.published_len=11 err=<empty>
+settype.pseudo_nid=0 err=unsupported algorithm[]@pkey_set_type/1601
+settype.none=0 err=unsupported algorithm[]@pkey_set_type/1601
+settype_str.measured=0 err=unsupported algorithm[]@pkey_set_type/1601
+settype_str.measured_lower=0 err=unsupported algorithm[]@pkey_set_type/1601
+settype_str.whole_name=0 err=unsupported algorithm[]@pkey_set_type/1601
+deflt.none.name=-2 err=<empty>
+deflt.none.nid=-2 err=<empty>
+deflt.none.nid_out=-7 err=<empty>
+deflt.none.null_key=0 err=<empty>
+deflt.default.name=1 err=<empty>
+deflt.default.match=1 err=<empty>
+deflt.default.nid=1 err=<empty>
+deflt.default.nid_out=672 err=<empty>
+deflt.mandatory.name=2 err=<empty>
+deflt.mandatory.match=1 err=<empty>
+raw.fromdata_init=1 err=<empty>
+raw.fromdata=1 err=<empty>
+raw.key=nonnull err=<empty>
+raw.priv=1 err=<empty>
+raw.priv_len=4 err=<empty>
+raw.priv_match=1 err=<empty>
+raw.pub=1 err=<empty>
+raw.pub_len=4 err=<empty>
+raw.pub_match=1 err=<empty>
+raw.priv_length_query=1 err=<empty>
+raw.priv_length_query_len=4 err=<empty>
+raw.no_export_callback=0 err=<empty>
+cmac.no_cipher_name=NULL err=key setup failed[]@new_cmac_key_int/673
+qkeygen.ec=nonnull err=<empty>
+qkeygen.ec.vec=init:1,cleanup:1,set:1,get:0,gen:1,free:0,bits:0,saw_bits:0,saw_group:1,saw_nothing:0,saw_aid:0
+qkeygen.ec.group_match=1 err=<empty>
+qkeygen.ec_lower=nonnull err=<empty>
+qkeygen.ec_lower.group_match=1 err=<empty>
+qkeygen.rsa=nonnull err=<empty>
+qkeygen.rsa.vec=init:1,cleanup:1,set:1,get:0,gen:1,free:0,bits:512,saw_bits:1,saw_group:0,saw_nothing:0,saw_aid:0
+qkeygen.other=nonnull err=<empty>
+qkeygen.other.vec=init:1,cleanup:1,set:1,get:0,gen:1,free:0,bits:0,saw_bits:0,saw_group:0,saw_nothing:1,saw_aid:0
+qkeygen.no_such_type=NULL err=unsupported[Non-default library context, Algorithm (NO-SUCH-TYPE : 0), Properties (<null>)]@inner_evp_generic_fetch/376
+ctxgrp.set_on_non_gen=-2 err=command not supported[]@EVP_PKEY_CTX_set_group_name/1159
+ctxgrp.get_on_non_gen=-2 err=command not supported[]@EVP_PKEY_CTX_get_group_name/1179
+ctxgrp.set_null_ctx=-2 err=command not supported[]@EVP_PKEY_CTX_set_group_name/1159
+ctxgrp.get_null_ctx=-2 err=command not supported[]@EVP_PKEY_CTX_get_group_name/1179
+ctxgrp.keygen_init=1 err=<empty>
+ctxgrp.keygen_init.vec=init:1,cleanup:0,set:0,get:0,gen:0,free:0,bits:0,saw_bits:0,saw_group:0,saw_nothing:0,saw_aid:0
+ctxgrp.set_on_gen=1 err=<empty>
+ctxgrp.gen_saw_group=1 err=<empty>
+ctxgrp.set_null_name=-1 err=<empty>
+ctxgrp.get_on_gen=1 err=<empty>
+ctxgrp.get_match=1 err=<empty>
+ctxgrp.get_null_name=-1 err=<empty>
+ctxgrp.vec=init:1,cleanup:0,set:1,get:1,gen:0,free:0,bits:0,saw_bits:0,saw_group:1,saw_nothing:0,saw_aid:0
+ctxsig.algo=nonnull err=<empty>
+ctxsig.sign_init_ex2=1 err=<empty>
+ctxsig.set_signature=1 err=<empty>
+ctxsig.calls=1 err=<empty>
+ctxsig.saw_signature=1 err=<empty>
+ctxsig.len=4 err=<empty>
+ctxsig.match=1 err=<empty>
+ctxsig.null_ctx=0 err=passed a null parameter[]@EVP_PKEY_CTX_set_signature/1064
+algor.set=1 err=<empty>
+algor.set.vec=init:0,cleanup:0,set:1,get:0,gen:0,free:0,bits:0,saw_bits:0,saw_group:0,saw_nothing:0,saw_aid:1
+algor.get=1 err=<empty>
+algor.get.parameter=nonnull err=<empty>
+algor.get.type=12 err=<empty>
+algor.get.match=1 err=<empty>
+algor.get_unpublished=-1 err=<empty>
+algor.get_unpublished.parameter=NULL err=<empty>
+algor.set_null_parameter=1 err=<empty>
+algor.set_null_parameter.vec=init:0,cleanup:0,set:1,get:0,gen:0,free:0,bits:0,saw_bits:0,saw_group:0,saw_nothing:0,saw_aid:0
+rawkey.ex.priv=nonnull err=<empty>
+rawkey.ex.priv.vec=new:1,free:0,get:1,set:0,import:1,export:0,has:0,match:0,qon:0
+rawkey.ex.priv.get=1 err=<empty>
+rawkey.ex.priv.len=4 err=<empty>
+rawkey.ex.priv.round_trip=1 err=<empty>
+rawkey.ex.pub=nonnull err=<empty>
+rawkey.ex.pub.get=1 err=<empty>
+rawkey.ex.pub.round_trip=1 err=<empty>
+rawkey.ex.no_type=NULL err=unsupported[Non-default library context, Algorithm (NO-SUCH-RAWTYPE : 0), Properties (<null>)]@inner_evp_generic_fetch/376
+rawkey.ex.import_fails=NULL err=key setup failed[]@new_raw_key_int/471
+rawkey.undef.priv=nonnull err=<empty>
+rawkey.undef.priv.get=1 err=<empty>
+rawkey.undef.priv.round_trip=1 err=<empty>
+rawkey.undef.pub=nonnull err=<empty>
+rawkey.undef.pub.get=1 err=<empty>
+rawkey.undef.pub.round_trip=1 err=<empty>
+rawkey.x448.priv=nonnull err=<empty>
+rawkey.x448.priv.get=1 err=<empty>
+rawkey.x448.priv.round_trip=1 err=<empty>
+rawkey.x448.pub=nonnull err=<empty>
+rawkey.x448.pub.get=1 err=<empty>
+rawkey.x448.pub.round_trip=1 err=<empty>
+cmac.with_cipher=nonnull err=<empty>
+cmac.with_cipher.vec=new:1,free:0,get:1,set:0,import:1,export:0,has:0,match:0,qon:0
+cmac.with_cipher.get=1 err=<empty>
+cmac.with_cipher.round_trip=1 err=<empty>
+mac_key.null_engine=nonnull err=<empty>
+mac_key.null_engine.vec=init:1,cleanup:1,set:1,get:0,gen:1,free:0,bits:0,saw_bits:0,saw_group:0,saw_nothing:0,saw_aid:0
+mac_key.null_engine.saw_priv=1 err=<empty>
+mac_key.null_engine.priv_len=6 err=<empty>
+pkey.release.vec=new:0,free:0,get:0,set:0,import:0,export:0,has:0,match:0,qon:0
+digestsign_supports_digest=NOT_MEASURED_OWED_TO_7_4_ITSELF_m_sigver_c_371
+set_type_legacy_nid=NOT_MEASURED_DIVERGENCE_D_PKEY_AMETH_1
+get_base_id_null_key=NOT_MEASURED_AUTHORITY_FAULTS
+get_default_digest_name_blank_key=NOT_MEASURED_AUTHORITY_FAULTS
+set_algor_params_null_ctx=NOT_MEASURED_AUTHORITY_FAULTS
+get_algor_params_null_ctx=NOT_MEASURED_AUTHORITY_FAULTS
+get_algor_params_existing_parameter=NOT_MEASURED_DECODER_OWNS_THE_SLOT
+print_public_family=NOT_MEASURED_NEEDS_OSSL_ENCODER_CTX_PHASE_10
+legacy_low_level_key_accessors=NOT_MEASURED_NEED_PHASE_8_KEY_TYPES
+set1_engine_and_get0_engine=NOT_MEASURED_ENGINE_IS_PHASE_13
+EVP_PKEY_type=NOT_MEASURED_STANDARD_METHODS_IS_PHASE_8
+EVP_PKEY_CTX_get_algor=NOT_MEASURED_NEEDS_d2i_X509_ALGOR_PHASE_11
+dsg.null_ctx=NOT_MEASURED_AUTHORITY_DEREFERENCES_NULL_CTX_m_sigver_c_53
+dsg.null_pctx.sign_update=0 err=<empty>
+dsg.null_pctx.verify_update=0 err=<empty>
+dsg.null_pctx.sign_final=0 err=initialization error[]@EVP_DigestSignFinal/549
+dsg.null_pctx.verify_final=0 err=initialization error[]@EVP_DigestVerifyFinal/718
+dsg.null_pctx.sign=0 err=initialization error[]@EVP_DigestSign/628
+dsg.null_pctx.verify=-1 err=initialization error[]@EVP_DigestVerify/764
+dsg.sign_init_ex.named=1 err=<empty>
+dsg.sign_init_ex.pctx_is_ctx_pctx=1 err=<empty>
+dsg.sign_init_ex.named.vec=dsi:1,dsi_named:1,dsi_sha256:1,dsi_nomd:0,dsi_params:0,dsu:0,dsf:0,dsf_query:0,dsf_short:0,ds:0,ds_null_out:0,ds_short:0,dvi:0,dvi_named:0,dvi_sha256:0,dvi_nomd:0,dvu:0,dvf:0,dvf_short:0,dv:0,dv_short:0
+dsg.sign_update.armed=1 err=<empty>
+dsg.sign_update.armed.vec=dsi:0,dsi_named:0,dsi_sha256:0,dsi_nomd:0,dsi_params:0,dsu:1,dsf:0,dsf_query:0,dsf_short:0,ds:0,ds_null_out:0,ds_short:0,dvi:0,dvi_named:0,dvi_sha256:0,dvi_nomd:0,dvu:0,dvf:0,dvf_short:0,dv:0,dv_short:0
+dsg.sign_init_ex.reinit=1 err=<empty>
+dsg.sign_init_ex.reinit_same_pctx=1 err=<empty>
+dsg.sign_init_ex.reinit.vec=dsi:1,dsi_named:1,dsi_sha256:1,dsi_nomd:0,dsi_params:0,dsu:1,dsf:0,dsf_query:0,dsf_short:0,ds:0,ds_null_out:0,ds_short:0,dvi:0,dvi_named:0,dvi_sha256:0,dvi_nomd:0,dvu:0,dvf:0,dvf_short:0,dv:0,dv_short:0
+dsg.digest_update_redirects_sign=1 err=<empty>
+dsg.digest_update_redirects_sign.vec=dsi:0,dsi_named:0,dsi_sha256:0,dsi_nomd:0,dsi_params:0,dsu:1,dsf:0,dsf_query:0,dsf_short:0,ds:0,ds_null_out:0,ds_short:0,dvi:0,dvi_named:0,dvi_sha256:0,dvi_nomd:0,dvu:0,dvf:0,dvf_short:0,dv:0,dv_short:0
+dsg.type_override.algo=nonnull err=<empty>
+dsg.type_override.sign_init=1 err=<empty>
+dsg.type_override.sign_init.vec=dsi:1,dsi_named:1,dsi_sha256:1,dsi_nomd:0,dsi_params:0,dsu:0,dsf:0,dsf_query:0,dsf_short:0,ds:0,ds_null_out:0,ds_short:0,dvi:0,dvi_named:0,dvi_sha256:0,dvi_nomd:0,dvu:0,dvf:0,dvf_short:0,dv:0,dv_short:0
+dsg.sign_final.query=1 err=<empty>
+dsg.sign_final.query_len=8 err=<empty>
+dsg.sign_final.value=1 err=<empty>
+dsg.sign_final.value_len=8 err=<empty>
+dsg.sign_final.short=0 err=provider signature failure[DSG-FULL digest_sign_final:every digest callback]@EVP_DigestSignFinal/538
+dsg.sign_final.vec=dsi:0,dsi_named:0,dsi_sha256:0,dsi_nomd:0,dsi_params:0,dsu:0,dsf:3,dsf_query:1,dsf_short:1,ds:0,ds_null_out:0,ds_short:0,dvi:0,dvi_named:0,dvi_sha256:0,dvi_nomd:0,dvu:0,dvf:0,dvf_short:0,dv:0,dv_short:0
+dsg.sign.oneshot=1 err=<empty>
+dsg.sign.oneshot.vec=dsi:0,dsi_named:0,dsi_sha256:0,dsi_nomd:0,dsi_params:0,dsu:0,dsf:0,dsf_query:0,dsf_short:0,ds:1,ds_null_out:0,ds_short:0,dvi:0,dvi_named:0,dvi_sha256:0,dvi_nomd:0,dvu:0,dvf:0,dvf_short:0,dv:0,dv_short:0
+dsg.nostream.sign_init=1 err=<empty>
+dsg.nostream.sign_update=0 err=provider signature not supported[DSG-NOSTREAM digest_sign_update:a one-shot: no digest_sign_update/final, no digest_verify_update/final]@EVP_DigestSignUpdate/424
+dsg.nostream.sign_final=0 err=provider signature not supported[DSG-NOSTREAM digest_sign_final:a one-shot: no digest_sign_update/final, no digest_verify_update/final]@EVP_DigestSignFinal/522
+dsg.nostream.sign_oneshot=1 err=<empty>
+dsg.nostream.vec=dsi:1,dsi_named:1,dsi_sha256:1,dsi_nomd:0,dsi_params:0,dsu:0,dsf:0,dsf_query:0,dsf_short:0,ds:1,ds_null_out:0,ds_short:0,dvi:0,dvi_named:0,dvi_sha256:0,dvi_nomd:0,dvu:0,dvf:0,dvf_short:0,dv:0,dv_short:0
+dsg.signonly.sign_init=1 err=<empty>
+dsg.signonly.verify_init=0 err=provider signature not supported[DSG-SIGNONLY digest_verify_init:refused by digest_verify_init's absence]@do_sigver_init/258
+dsg.verifyonly.verify_init=1 err=<empty>
+dsg.verifyonly.sign_init=0 err=provider signature not supported[DSG-VERIFYONLY digest_sign_init:refused by digest_sign_init's absence]@do_sigver_init/266
+dsg.nonewctx.sign_init=0 err=initialization error[]@do_sigver_init/201
+dsg.nonewctx.pctx_not_filled=1 err=<empty>
+dsg.bad_digest.sign_init=0 err=unsupported[Non-default library context, Algorithm (COURT-NO-SUCH-DIGEST : 0), Properties (<null>)]@inner_evp_generic_fetch/376,initialization error[]@do_sigver_init/247
+dsg.bad_digest.pctx_filled=1 err=<empty>
+dsg.null_mdname.sign_init=1 err=<empty>
+dsg.null_mdname.vec=dsi:1,dsi_named:0,dsi_sha256:0,dsi_nomd:1,dsi_params:0,dsu:0,dsf:0,dsf_query:0,dsf_short:0,ds:0,ds_null_out:0,ds_short:0,dvi:0,dvi_named:0,dvi_sha256:0,dvi_nomd:0,dvu:0,dvf:0,dvf_short:0,dv:0,dv_short:0
+dsg.null_pkey.sign_init=0 err=unsupported algorithm[]@int_ctx_new/295
+dsg.null_pkey.pctx_not_filled=1 err=<empty>
+dsg.legacy.no_such_sig=0 err=operation not supported for this keytype[]@do_sigver_init/305
+dsg.legacy.pctx_not_filled=1 err=<empty>
+dsg.empty_key.sign_init=0 err=initialization error[]@do_sigver_init/187
+dsg.empty_key.pctx_not_filled=1 err=<empty>
+dsg.nokey.pre_ctx=nonnull err=<empty>
+dsg.nokey.sign_init=0 err=no key set[]@do_sigver_init/87
+dsg.nokey.pctx_not_filled=1 err=<empty>
+dsg.verify_init_ex.named=1 err=<empty>
+dsg.verify_init_ex.pctx_is_ctx_pctx=1 err=<empty>
+dsg.verify_update.armed=1 err=<empty>
+dsg.verify_final.good=1 err=<empty>
+dsg.verify_final.short=0 err=provider signature failure[DSG-FULL digest_verify_final:every digest callback]@EVP_DigestVerifyFinal/707
+dsg.verify_final.vec=dsi:0,dsi_named:0,dsi_sha256:0,dsi_nomd:0,dsi_params:0,dsu:0,dsf:0,dsf_query:0,dsf_short:0,ds:0,ds_null_out:0,ds_short:0,dvi:1,dvi_named:1,dvi_sha256:1,dvi_nomd:0,dvu:1,dvf:2,dvf_short:1,dv:0,dv_short:0
+dsg.verify.oneshot_init=1 err=<empty>
+dsg.verify.oneshot=1 err=<empty>
+dsg.verify.oneshot_again=0 err=final error[]@EVP_DigestVerify/769
+dsg.verify.oneshot.vec=dsi:0,dsi_named:0,dsi_sha256:0,dsi_nomd:0,dsi_params:0,dsu:0,dsf:0,dsf_query:0,dsf_short:0,ds:0,ds_null_out:0,ds_short:0,dvi:1,dvi_named:1,dvi_sha256:1,dvi_nomd:0,dvu:0,dvf:0,dvf_short:0,dv:1,dv_short:0
+dsg.nostream.verify_init=1 err=<empty>
+dsg.nostream.verify_update=0 err=provider signature not supported[DSG-NOSTREAM digest_verify_update:a one-shot: no digest_sign_update/final, no digest_verify_update/final]@EVP_DigestVerifyUpdate/474
+dsg.nostream.verify_final=0 err=provider signature not supported[DSG-NOSTREAM digest_verify_final:a one-shot: no digest_sign_update/final, no digest_verify_update/final]@EVP_DigestVerifyFinal/692
+dsg.nostream.verify.vec=dsi:0,dsi_named:0,dsi_sha256:0,dsi_nomd:0,dsi_params:0,dsu:0,dsf:0,dsf_query:0,dsf_short:0,ds:0,ds_null_out:0,ds_short:0,dvi:1,dvi_named:1,dvi_sha256:1,dvi_nomd:0,dvu:0,dvf:0,dvf_short:0,dv:0,dv_short:0
+dsg.nodup.sign_init=1 err=<empty>
+dsg.nodup.sign_final=1 err=<empty>
+dsg.nodup.sign_final_again=0 err=final error[]@EVP_DigestSignFinal/509
+dsg.init_fails.null_mdname=0 err=no default digest[]@do_sigver_init/281,provider signature failure[DSG-FULL digest_sign_init:every digest callback]@do_sigver_init/282
+dsg.init_fails.named=0 err=<empty>
+dsg.setmd.sign_init=1 err=<empty>
+dsg.setmd.mdctx_set_params=1 err=<empty>
+dsg.setmd.set_redirected=1 err=<empty>
+dsg.setmd.mdctx_settable_params=nonnull err=<empty>
+dsg.setmd.get_redirected=0 err=<empty>
+dsg.setmd.mdctx_get_params=1 err=<empty>
+dsg.setmd.get_redirected_after=1 err=<empty>
+dsg.setmd.mdctx_gettable_params=nonnull err=<empty>
+dsg.supports.named=1 err=<empty>
+dsg.supports.bad_name=0 err=<empty>
+dsg.supports.null_key=0 err=<empty>
+dsg.supports.vec=dsi:1,dsi_named:1,dsi_sha256:1,dsi_nomd:0,dsi_params:0,dsu:0,dsf:0,dsf_query:0,dsf_short:0,ds:0,ds_null_out:0,ds_short:0,dvi:0,dvi_named:0,dvi_sha256:0,dvi_nomd:0,dvu:0,dvf:0,dvf_short:0,dv:0,dv_short:0
+dsg.supports.new_ctx_fails=NOT_MEASURED_NO_INJECTABLE_ALLOC_SEAM_p_lib_c_1404
+l7.setup=1,1,1,1,1 err=<empty>
+sigfinal.plain=1 err=not able to copy ctx[]@EVP_MD_CTX_copy_ex/616,unknown max size[]@EVP_PKEY_get_size/1866
+sigfinal.plain.len=8 err=<empty>
+sigfinal.plain.vec=newctx:1,no_propq:1,free:1,dup:0,sign_init:1,sign:1,sign_null_out:0,sign_zero_len:1,smi:0,smu:0,smf:0,smf_zero_len:0,vi:0,v:0,vmi:0,vmu:0,vmf:0,vri:0,vr:0,vr_zero_len:0,qkt:0,init_params:0
+sigfinal.plain.md=SHA256,1 err=<empty>
+sigfinal.ex=1 err=not able to copy ctx[]@EVP_MD_CTX_copy_ex/616,unknown max size[]@EVP_PKEY_get_size/1866
+sigfinal.ex.len=8 err=<empty>
+verifyfinal.plain=1 err=not able to copy ctx[]@EVP_MD_CTX_copy_ex/616
+verifyfinal.ex=1 err=not able to copy ctx[]@EVP_MD_CTX_copy_ex/616
+verifyfinal.bad_sig=0 err=not able to copy ctx[]@EVP_MD_CTX_copy_ex/616,provider signature failure[LEG-SIG verify:the pair `p_sign.c`/`p_verify.c` drive, with set_ctx_params]@EVP_PKEY_verify/1176
+sigfinal.no_sign_init=0 err=not able to copy ctx[]@EVP_MD_CTX_copy_ex/616,unknown max size[]@EVP_PKEY_get_size/1866,provider signature not supported[SIG-NoSignInit sign_init:refused: no sign_init]@evp_pkey_signature_init/793
+sigfinal.finalise=1 err=unknown max size[]@EVP_PKEY_get_size/1866
+sigfinal.finalised_again=0 err=not able to copy ctx[]@EVP_MD_CTX_copy_ex/616,final error[]@EVP_DigestFinal_ex/464
+open.null_priv=1 err=<empty>
+open.ok=1 err=<empty>
+open.ok.vec=dinit:1,decrypt:2,null_out:1,keylen:16,ivlen:16,key_null:0,iv_null:0 err=
+open.ok.key16=1 err=<empty>
+openfinal.ok=1 err=<empty>
+openfinal.ok.outl=0 err=<empty>
+open.cipher_mismatch=0 err=invalid key length[]@EVP_CIPHER_CTX_set_key_length/1382
+open.decrypt_fails=0 err=provider asym cipher failure[QON-LAC decrypt:the asymmetric cipher `EVP_OpenInit` drives]@EVP_PKEY_decrypt/317
+open.decrypt_fails.vec=dinit:1,decrypt:1,null_out:0 err=
+open.no_asym_cipher=0 err=operation not supported for this keytype[]@evp_pkey_asym_cipher_init/204
+open.nothing=1 err=<empty>
+seal.init=1 err=<empty>
+sealfinal.ok=1 err=<empty>
+sealfinal.ok.outl=0,einit:2 err=<empty>
+pmeth.new=1,1,1 err=<empty>
+pmeth.new.info=50001,1 err=<empty>
+pmeth.new2.info=50002,5 err=<empty>
+pmeth.add0.m=1 err=<empty>
+pmeth.add0.m2=1 err=<empty>
+pmeth.add0.m_twice=1 err=<empty>
+pmeth.remove.m_1=1 err=<empty>
+pmeth.remove.m_2=1 err=<empty>
+pmeth.remove.m_3=0 err=<empty>
+pmeth.copy.info=50003,1 err=<empty>
+pmeth.remove.m2=1 err=<empty>
+pmeth.remove.m2_again=0 err=<empty>
+EVP_PKEY_meth_find=NOT_MEASURED_STANDARD_METHODS_IS_PHASE_8_pmeth_lib_c_54
+EVP_PKEY_meth_get_count=NOT_MEASURED_STANDARD_METHODS_IS_PHASE_8_pmeth_lib_c_54
+EVP_PKEY_meth_get0=NOT_MEASURED_STANDARD_METHODS_IS_PHASE_8_pmeth_lib_c_54
+evp_pkey_meth_find_added_by_application=NOT_MEASURED_NO_PUBLIC_DOOR_WITHOUT_PMETH_FIELD
+ASN1_item_sign_ex=NOT_MEASURED_NEEDS_ASN1_item_sign_ctx_PHASE_11_a_sign_c_138
+ASN1_item_verify_ex=NOT_MEASURED_NEEDS_ASN1_item_verify_ctx_PHASE_11_a_verify_c_104
+d2i_PrivateKey=NOT_MEASURED_NEEDS_OSSL_DECODER_AND_AMETH_PHASE_8_10_d2i_pr_c_179
+d2i_PrivateKey_ex=NOT_MEASURED_NEEDS_OSSL_DECODER_AND_AMETH_PHASE_8_10_d2i_pr_c_166
+d2i_AutoPrivateKey=NOT_MEASURED_NEEDS_OSSL_DECODER_AND_AMETH_PHASE_8_10_d2i_pr_c_254
+d2i_AutoPrivateKey_ex=NOT_MEASURED_NEEDS_OSSL_DECODER_AND_AMETH_PHASE_8_10_d2i_pr_c_241
+d2i_PublicKey=NOT_MEASURED_NEEDS_EVP_PKEY_set_type_PHASE_8_d2i_pu_c_28
+d2i_KeyParams=NOT_MEASURED_NEEDS_THE_AMETH_TABLE_PHASE_8_d2i_param_c_18
+d2i_KeyParams_bio=NOT_MEASURED_NEEDS_d2i_KeyParams_PHASE_8_d2i_param_c_49
+i2d_KeyParams=NOT_MEASURED_NEEDS_OSSL_ENCODER_PHASE_10_i2d_evp_c_73
+i2d_KeyParams_bio=NOT_MEASURED_NEEDS_i2d_KeyParams_PHASE_10_i2d_evp_c_91
+i2d_PrivateKey=NOT_MEASURED_NEEDS_OSSL_ENCODER_PHASE_10_i2d_evp_c_131
+i2d_PKCS8PrivateKey=NOT_MEASURED_NEEDS_OSSL_ENCODER_PHASE_10_i2d_evp_c_136
+i2d_PublicKey=NOT_MEASURED_NEEDS_OSSL_ENCODER_PHASE_10_i2d_evp_c_141
+EVP_SealInit=NOT_MEASURED_NEEDS_RAND_priv_bytes_ex_PHASE_9_p_seal_c_46
+EVP_read_pw_string=NOT_MEASURED_NEEDS_UI_PHASE_13_evp_key_c_47
+EVP_read_pw_string_min=NOT_MEASURED_NEEDS_UI_PHASE_13_evp_key_c_52
+release.keymgmt_same_object=1 err=<empty>
+release.vec.before=new:0,free:0,has:0,get_params:0,import:0,qon:0
+release.vec.after_empty_pkey=new:0,free:0,has:0,get_params:0,import:0,qon:0
+release.vec.after_pkey=new:0,free:0,has:0,get_params:0,import:0,qon:0
+release.vec.after_all=new:0,free:2,has:0,get_params:0,import:0,qon:0
+unload=1 err=<empty>
+unload_default=1 err=<empty>
+done=1
