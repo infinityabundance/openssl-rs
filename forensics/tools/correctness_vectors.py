@@ -1679,7 +1679,7 @@ def emit_ciphers(authority_id: str, vector_dir: Path = VECTOR_DIR) -> list[dict]
 class CipherRecipeFamily:
     def __init__(self, algorithm: str, source: str, cipher_re: str, standard: str,
                  openssl_cipher: str, independent_modes: tuple[str, ...],
-                 empty_key_hex: str, empty_iv_hex: str):
+                 empty_key_hex: str, empty_iv_hex: str, note: str | None = None):
         self.algorithm = algorithm
         self.source = source
         self.cipher_re = re.compile(cipher_re)
@@ -1688,6 +1688,7 @@ class CipherRecipeFamily:
         self.independent_modes = independent_modes
         self.empty_key_hex = empty_key_hex
         self.empty_iv_hex = empty_iv_hex
+        self.note = note
 
 
 CIPHER_RECIPE_FAMILIES: list[CipherRecipeFamily] = [
@@ -1727,6 +1728,25 @@ CIPHER_RECIPE_FAMILIES: list[CipherRecipeFamily] = [
         "CAMELLIA-{128,192,256}-{ECB,CBC,CFB,OFB,CTR}",
         ("CAMELLIA-128-ECB", "CAMELLIA-128-CBC"),
         "0123456789abcdeffedcba9876543210", "00000000000000000000000000000000"),
+    # 8.3 -- the key-wrap family. The `id-aes*-wrap` names are RFC 3394's and RFC 5649's own;
+    # the corpus also carries alias spellings (`aes256-WRAP`, `ID-aes256-WRAP`) and the CAVP
+    # `*-WRAP-INV` negative set, which are excluded by the regex rather than half-modelled. There
+    # is no empty-input boundary: both constructions refuse a zero-length input, so the
+    # independent-oracle list is empty and the note says why (D208: no oracle in the pinned image).
+    CipherRecipeFamily(
+        "wrap", "test/recipes/30-test_evp_data/evpciph_aes_wrap.txt",
+        r"^id-aes(128|192|256)-wrap(-pad)?$", "RFC 3394; RFC 5649",
+        "id-aes{128,192,256}-{wrap,wrap-pad}", (),
+        "", "",
+        note=(
+            "Candidate-only construction verification: the primary sources are RFC 3394 (KW) "
+            "and RFC 5649 (KWP), and the bytes are mirrored through the pinned corpus "
+            "(`corpus_sha256`), whose identity is fixed. No independent key-wrap implementation "
+            "is present in the pinned court image, so no boundary vector carries an independent "
+            "oracle here: both constructions refuse a zero-length input and every legal input's "
+            "output is already a published value. This is the recorded cost of D208, not an "
+            "omission."
+        )),
 ]
 
 
@@ -1748,6 +1768,12 @@ def _emit_recipe_family(authority_id: str, family: CipherRecipeFamily,
         if not family.cipher_re.match(cipher):
             continue
         if any(k not in block for k in ("key", "plaintext", "ciphertext")):
+            continue
+        if "result" in block:
+            # A block that names an expected error result is a *rejection* test; this driver's
+            # record models outputs, not diagnostics, so it is skipped rather than recorded as
+            # a value the probe cannot produce. `RT-CIPHER` observes the refusal arms directly.
+            skipped += 1
             continue
         if "keybits" in block:
             # The effective-key-bits parameter is an observable, but this driver's record has no
@@ -1821,6 +1847,7 @@ def _emit_recipe_family(authority_id: str, family: CipherRecipeFamily,
             "authority": authority_id,
             "primary_source": family.standard,
             "note": (
+                family.note if family.note is not None else
                 "Candidate-only construction verification: the primary source is named, the "
                 "bytes are mirrored through the pinned corpus (`corpus_sha256`), and the "
                 "mirror's identity is fixed. This does NOT establish that the mirror is "

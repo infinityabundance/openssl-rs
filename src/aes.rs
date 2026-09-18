@@ -1002,4 +1002,81 @@ mod tests {
             assert_eq!(unwrapped, plain);
         }
     }
+
+    /// RFC 5649 §6's two worked examples, exercised through the exported wrappers that
+    /// `crypto/modes/wrap128.c` provides and `AES_wrap_key` does not.
+    #[test]
+    fn rfc5649_wrap_pad_vectors() {
+        const KEK: [u8; 24] = [
+            0x58, 0x40, 0xdf, 0x6e, 0x29, 0xb0, 0x2a, 0xf1, 0xab, 0x49, 0x3b, 0x70, 0x5b, 0xf1,
+            0x6e, 0xa1, 0xae, 0x83, 0x38, 0xf4, 0xdc, 0xc1, 0x76, 0xa8,
+        ];
+        const PT20: [u8; 20] = [
+            0xc3, 0x7b, 0x7e, 0x64, 0x92, 0x58, 0x43, 0x40, 0xbe, 0xd1, 0x22, 0x07, 0x80, 0x89,
+            0x41, 0x15, 0x50, 0x68, 0xf7, 0x38,
+        ];
+        const PT7: [u8; 7] = [0x46, 0x6f, 0x72, 0x50, 0x61, 0x73, 0x69];
+
+        fn hex_of(b: &[u8]) -> String {
+            b.iter().map(|x| format!("{x:02x}")).collect()
+        }
+
+        let k = schedule(&KEK, 192);
+        let mut dk = AesKey {
+            rd_key: [0; 60],
+            rounds: 0,
+        };
+        // SAFETY: live locals.
+        unsafe {
+            assert_eq!(AES_set_decrypt_key(KEK.as_ptr(), 192, &mut dk), 0);
+
+            let mut wrapped = [0u8; 32];
+            let n = crate::modes::wrap::CRYPTO_128_wrap_pad(
+                &k as *const AesKey as *mut c_void,
+                ptr::null(),
+                wrapped.as_mut_ptr(),
+                PT20.as_ptr(),
+                PT20.len(),
+                aes_encrypt_block,
+            );
+            assert_eq!(n, 32);
+            assert_eq!(
+                hex_of(&wrapped[..n]),
+                "138bdeaa9b8fa7fc61f97742e72248ee5ae6ae5360d1ae6a5f54f373fa543b6a"
+            );
+            let mut back = [0u8; 20];
+            let m = crate::modes::wrap::CRYPTO_128_unwrap_pad(
+                &dk as *const AesKey as *mut c_void,
+                ptr::null(),
+                back.as_mut_ptr(),
+                wrapped.as_ptr(),
+                n,
+                aes_decrypt_block,
+            );
+            assert_eq!(m, 20);
+            assert_eq!(back, PT20);
+
+            let n = crate::modes::wrap::CRYPTO_128_wrap_pad(
+                &k as *const AesKey as *mut c_void,
+                ptr::null(),
+                wrapped.as_mut_ptr(),
+                PT7.as_ptr(),
+                PT7.len(),
+                aes_encrypt_block,
+            );
+            assert_eq!(n, 16);
+            assert_eq!(hex_of(&wrapped[..n]), "afbeb0f07dfbf5419200f2ccb50bb24f");
+            let mut back7 = [0u8; 8];
+            let m = crate::modes::wrap::CRYPTO_128_unwrap_pad(
+                &dk as *const AesKey as *mut c_void,
+                ptr::null(),
+                back7.as_mut_ptr(),
+                wrapped.as_ptr(),
+                n,
+                aes_decrypt_block,
+            );
+            assert_eq!(m, 7);
+            assert_eq!(back7[..7], PT7);
+        }
+    }
 }

@@ -1503,10 +1503,171 @@ static void rt_modes_blocks(void)
     printf("mode.nistcts.cbc.short_ret=%u\n", (unsigned)CRYPTO_nistcts128_encrypt(in, out, 15, &key, iv, rt_cbc));
 }
 
+/*
+ * The key-wrap family (RFC 3394 and RFC 5649). The block function is the probe's own
+ * permutation, so the observation is the wrapping arithmetic and nothing else.
+ *
+ * What it observes
+ * ----------------
+ *   * the wrapped bytes, as hex, for each legal length (n = 2..5 64-bit blocks), with the
+ *     default IV and with a caller-supplied one;
+ *   * the returned length, which is `inlen + 8` for a wrap and `inlen - 8` for an unwrap;
+ *   * the refusal arms: a length that is not a multiple of eight, an out-of-range length,
+ *     a mismatched IV, and a corrupted AIV or padding. On every refusal the authority
+ *     returns 0 and **cleanses** the destination over the length it would have written,
+ *     so the destination is pre-filled with a sentinel and printed whole: the zeroed
+ *     region and the untouched sentinel are both evidence.
+ *   * the RFC 5649 single-block special case, where a padded plaintext of exactly eight
+ *     octets takes the ECB path rather than the wrap loop.
+ */
+static void rt_modes_wrap(void)
+{
+    unsigned char key = RT_KEY;
+    unsigned char in[48];
+    unsigned char out[64];
+    unsigned char wrapped[64];
+    unsigned char iv[8];
+    size_t i;
+
+    rt_fill(in, sizeof(in), 21);
+
+    /* ---- RFC 3394 wrap with the default IV, for every legal block count. ---- */
+    for (i = 2; i <= 5; i++) {
+        size_t ret;
+        char name[48];
+
+        memset(out, 0, sizeof(out));
+        ret = CRYPTO_128_wrap(&key, NULL, out, in, i * 8, rt_block);
+        snprintf(name, sizeof(name), "wrap.wrap.n%u.ret", (unsigned)i);
+        printf("%s=%u\n", name, (unsigned)ret);
+        snprintf(name, sizeof(name), "wrap.wrap.n%u.ct", (unsigned)i);
+        rt_hex(name, out, ret ? ret : 0);
+    }
+
+    /* ---- The lengths the authority refuses. ---- */
+    {
+        static const size_t bad[] = { 0, 7, 8, 15, 17 };
+
+        for (i = 0; i < sizeof(bad) / sizeof(bad[0]); i++) {
+            char name[48];
+
+            memset(out, 0xcc, sizeof(out));
+            printf("wrap.wrap.bad%u.ret=%u\n", (unsigned)bad[i],
+                   (unsigned)CRYPTO_128_wrap(&key, NULL, out, in, bad[i], rt_block));
+            snprintf(name, sizeof(name), "wrap.wrap.bad%u.out", (unsigned)bad[i]);
+            rt_hex(name, out, 32);
+        }
+    }
+
+    /* ---- A caller-supplied IV, and the mismatched-IV refusal. ---- */
+    rt_fill(iv, sizeof(iv), 22);
+    memset(wrapped, 0, sizeof(wrapped));
+    {
+        size_t ret = CRYPTO_128_wrap(&key, iv, wrapped, in, 24, rt_block);
+
+        printf("wrap.wrap.iv.ret=%u\n", (unsigned)ret);
+        rt_hex("wrap.wrap.iv.ct", wrapped, ret ? ret : 0);
+    }
+    {
+        unsigned char got[64];
+        size_t ret;
+
+        memset(got, 0xcc, sizeof(got));
+        ret = CRYPTO_128_unwrap(&key, NULL, got, wrapped, 32, rt_block);
+        printf("wrap.unwrap.wrongiv.ret=%u\n", (unsigned)ret);
+        rt_hex("wrap.unwrap.wrongiv.out", got, 32);
+
+        memset(got, 0xcc, sizeof(got));
+        ret = CRYPTO_128_unwrap(&key, iv, got, wrapped, 32, rt_block);
+        printf("wrap.unwrap.rightiv.ret=%u\n", (unsigned)ret);
+        rt_hex("wrap.unwrap.rightiv.out", got, ret ? ret : 0);
+    }
+
+    /* ---- RFC 5649 wrap_pad, including the eight-octet single-block special case. ---- */
+    {
+        static const size_t lens[] = { 0, 1, 7, 8, 9, 16, 17, 20, 24 };
+
+        for (i = 0; i < sizeof(lens) / sizeof(lens[0]); i++) {
+            size_t ret;
+            char name[48];
+
+            memset(out, 0, sizeof(out));
+            ret = CRYPTO_128_wrap_pad(&key, NULL, out, in, lens[i], rt_block);
+            snprintf(name, sizeof(name), "wrap.pad%u.ret", (unsigned)lens[i]);
+            printf("%s=%u\n", name, (unsigned)ret);
+            snprintf(name, sizeof(name), "wrap.pad%u.ct", (unsigned)lens[i]);
+            rt_hex(name, out, ret ? ret : 0);
+
+            if (ret == 0)
+                continue;
+            memcpy(wrapped, out, ret);
+
+            memset(out, 0xcc, sizeof(out));
+            {
+                size_t back = CRYPTO_128_unwrap_pad(&key, NULL, out, wrapped, ret, rt_block);
+
+                snprintf(name, sizeof(name), "wrap.pad%u.roundtrip.ret", (unsigned)lens[i]);
+                printf("%s=%u\n", name, (unsigned)back);
+                snprintf(name, sizeof(name), "wrap.pad%u.roundtrip.pt", (unsigned)lens[i]);
+                rt_hex(name, out, back ? back : 0);
+            }
+
+            /* Corrupt the AIV: the check must fail and the destination be cleansed. */
+            wrapped[0] ^= 0x01;
+            memset(out, 0xcc, sizeof(out));
+            {
+                size_t back = CRYPTO_128_unwrap_pad(&key, NULL, out, wrapped, ret, rt_block);
+
+                snprintf(name, sizeof(name), "wrap.pad%u.badaiv.ret", (unsigned)lens[i]);
+                printf("%s=%u\n", name, (unsigned)back);
+                snprintf(name, sizeof(name), "wrap.pad%u.badaiv.out", (unsigned)lens[i]);
+                rt_hex(name, out, 32);
+            }
+            wrapped[0] ^= 0x01;
+
+            /* Corrupt the final padding octet: the padding check must fail. */
+            wrapped[ret - 1] ^= 0x01;
+            memset(out, 0xcc, sizeof(out));
+            {
+                size_t back = CRYPTO_128_unwrap_pad(&key, NULL, out, wrapped, ret, rt_block);
+
+                snprintf(name, sizeof(name), "wrap.pad%u.badpad.ret", (unsigned)lens[i]);
+                printf("%s=%u\n", name, (unsigned)back);
+            }
+            wrapped[ret - 1] ^= 0x01;
+        }
+    }
+
+    /* ---- A caller-supplied RFC 5649 ICV, and its mismatch. ---- */
+    {
+        unsigned char icv[4];
+        unsigned char got[64];
+        size_t ret;
+
+        rt_fill(icv, sizeof(icv), 23);
+        rt_fill(iv, sizeof(iv), 22);
+        memset(wrapped, 0, sizeof(wrapped));
+        ret = CRYPTO_128_wrap_pad(&key, icv, wrapped, in, 9, rt_block);
+        printf("wrap.pad.icv.ret=%u\n", (unsigned)ret);
+        rt_hex("wrap.pad.icv.ct", wrapped, ret ? ret : 0);
+
+        memset(got, 0xcc, sizeof(got));
+        ret = CRYPTO_128_unwrap_pad(&key, iv, got, wrapped, 16, rt_block);
+        printf("wrap.pad.badicv.ret=%u\n", (unsigned)ret);
+        rt_hex("wrap.pad.badicv.out", got, 32);
+
+        memset(got, 0xcc, sizeof(got));
+        ret = CRYPTO_128_unwrap_pad(&key, icv, got, wrapped, 16, rt_block);
+        printf("wrap.pad.righticv.ret=%u\n", (unsigned)ret);
+        rt_hex("wrap.pad.righticv.out", got, ret ? ret : 0);
+    }
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IOLBF, 0);
     rt_modes_blocks();
+    rt_modes_wrap();
     rt_aes();
     rt_rc4();
     rt_des();

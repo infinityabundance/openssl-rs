@@ -14723,3 +14723,56 @@ lexical scan cannot see a macro-generated `const`; they are written longhand now
 then reported `cbc`, a field name colliding with the authority's C language surface; the field is
 `cbc_fn`. None of the three was a behavioural difference, and all three are recorded because a
 pipeline that got green by luck is not evidence.
+
+## D224 — the key-wrap family lands, and the 8.2 AES arms already delegated to it
+
+`src/modes/wrap.rs` gains RFC 5649 and the four exported entry points, so the `modes.h`
+key-wrap family is complete: `CRYPTO_128_wrap`/`_unwrap` are the exported spellings of the
+`pub(crate)` `wrap128`/`unwrap128` that 8.2 landed, and `CRYPTO_128_wrap_pad`/`_unwrap_pad`
+(`crypto/modes/wrap128.c:188-327`, RFC 5649 §4.1/§4.2) are new, including the eight-octet
+single-block ECB arm, the four AIV/padding checks and the cleanse-on-every-refusal the
+authority performs. `implemented[libcrypto]` **2001 → 2005** and Phase 8
+**160/610/16 → 164/606/16**, read from `forensics/phase8-obligations.json`.
+
+**The 8.2 arm was written against the layer, not duplicated over it, and that is checked
+rather than asserted.** `crypto/aes/aes_wrap.c:28-41` is two one-line delegates to
+`CRYPTO_128_wrap`/`_unwrap`; 8.2's `AES_wrap_key`/`AES_unwrap_key` (`src/aes.rs:854,880`)
+call `crate::modes::wrap::wrap128`/`unwrap128` — the same functions the new exports now
+call — so there is exactly one implementation of RFC 3394 in the crate, and the private
+`wrap128`/`unwrap128` were the algorithm waiting for their export rather than a second copy.
+The reconciliation was therefore to *name* the existing functions, not to merge anything.
+
+**Both planes.** `RT-CIPHER` **419 → 494 observations**: a new `rt_modes_wrap` arm drives all
+four exports with the probe-local block function, observing the wrapped bytes for n = 2..5,
+the returned lengths, the refusal arms (length not a multiple of eight, out of range,
+mismatched IV, corrupted AIV, corrupted padding) with the destination pre-filled with a
+sentinel so the authority's cleanse is visible, and the RFC 5649 single-block special case.
+`CT-CIPHER` **419 → 426**: seven corpus-mirrored vectors in the new `forensics/vectors/wrap.json`
+from `test/recipes/30-test_evp_data/evpciph_aes_wrap.txt` (RFC 3394 §4's three key lengths
+and a 24-octet plaintext at two of them; RFC 5649 §6's twenty- and seven-octet examples),
+provenance naming **RFC 3394** and **RFC 5649** as the primary sources with the mirror's
+`line` and `mirror_sha256`. The corpus's alias spellings (`aes256-WRAP`, `ID-aes256-WRAP`),
+its CAVP `*-WRAP-INV` negative set and its one `Result = CIPHERUPDATE_ERROR` block are
+excluded by the family's regex and a new `result`-key skip rather than half-modelled.
+
+**No independent key-wrap vector, and the reason is recorded not hidden (D208).** Both
+constructions refuse a zero-length input and every legal input's output is already a
+published value, so the family's `independent_modes` is empty and the vector set's `note`
+says why: no independent key-wrap implementation is present in the pinned court image. This
+is the rHash cost D208 records, not an omission — the refusal arms that a published vector
+cannot carry are observed by `RT-CIPHER` instead.
+
+**A plan-side observation, not a code defect.** The `CT-MODES` pending entry
+(`forensics/tools/phase8_courts.py:135`) is phrased as needing "the GCM/CCM/XTS/Poly1305/
+ChaCha20-Poly1305 constructions", but Poly1305 and ChaCha20 are not in Phase 8's
+`aes.h`/`modes.h`/`evp.h` header set — `forensics/atlas/symbol-ownership.json` assigns them
+elsewhere — so the entry names primitives this stratum does not own. It is left unedited in
+this commit because the ledger, not this sentence, decides ownership; item 7 of the 8.3
+work establishes their stratum before the entry is corrected.
+
+**What this entry does not do.** GCM, CCM, OCB and XTS, and every AEAD row of
+`providers/defltprov.c`'s `deflt_ciphers[]` (`cipher_aes_gcm.c`, `_ccm.c`, `_ocb.c`,
+`_xts.c`, `_siv.c`, `_wrp.c`, `cipher_cts.c` and `cipher_chacha20.c`), remain open. The
+plan's two anchored status clauses were updated in the same commit: the four wrap exports
+join the landed clause and `CRYPTO_gcm128_init`/`CRYPTO_xts128_encrypt` stay in the open
+one.
