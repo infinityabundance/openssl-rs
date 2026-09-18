@@ -39,6 +39,7 @@
 #include <string.h>
 
 #include <openssl/aes.h>
+#include <openssl/blowfish.h>
 #include <openssl/des.h>
 #include <openssl/modes.h>
 #include <openssl/rc2.h>
@@ -745,6 +746,79 @@ static void rt_rc2(void)
     }
 }
 
+static void rt_bf(void)
+{
+    BF_KEY k;
+    unsigned char key[16];
+    unsigned char in[24];
+    unsigned char out[48];
+    unsigned char iv[8];
+    int num;
+
+    rt_fill(key, sizeof(key), 1);
+    rt_fill(in, sizeof(in), 2);
+    printf("bf.sizeof_key=%u\n", (unsigned)sizeof(BF_KEY));
+    printf("bf.options=%s\n", BF_options());
+
+    memset(&k, 0, sizeof(k));
+    BF_set_key(&k, 16, key);
+    rt_hex("bf.ks", (const unsigned char *)&k, sizeof(k));
+
+    memset(out, 0, sizeof(out));
+    BF_ecb_encrypt(in, out, &k, BF_ENCRYPT);
+    rt_hex("bf.ecb.enc", out, 8);
+    BF_ecb_encrypt(out, out + 8, &k, BF_DECRYPT);
+    rt_hex("bf.ecb.dec", out + 8, 8);
+
+    /* The corpus's own first BF-ECB block, so both sides see the recipe value. */
+    {
+        static const unsigned char rkey[16] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+                                                0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f };
+        static const unsigned char rpt[16] = { 0x0f, 0x0e, 0x0c, 0x0d, 0x0b, 0x0a, 0x09, 0x08,
+                                               0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00 };
+        BF_KEY rk;
+
+        memset(&rk, 0, sizeof(rk));
+        BF_set_key(&rk, 16, rkey);
+        memset(out, 0, sizeof(out));
+        BF_ecb_encrypt(rpt, out, &rk, BF_ENCRYPT);
+        BF_ecb_encrypt(rpt + 8, out + 8, &rk, BF_ENCRYPT);
+        rt_hex("bf.recipe.ecb", out, 16);
+    }
+
+    rt_fill(iv, 8, 3);
+    memset(out, 0, sizeof(out));
+    BF_cbc_encrypt(in, out, 24, &k, iv, BF_ENCRYPT);
+    rt_hex("bf.cbc.enc", out, 24);
+    rt_hex("bf.cbc.enc.iv", iv, 8);
+    BF_cbc_encrypt(out, out + 24, 24, &k, iv, BF_DECRYPT);
+    rt_hex("bf.cbc.dec", out + 24, 24);
+
+    rt_fill(iv, 8, 4);
+    num = 3;
+    memset(out, 0, sizeof(out));
+    BF_cfb64_encrypt(in, out, 24, &k, iv, &num, BF_ENCRYPT);
+    rt_hex("bf.cfb64.enc", out, 24);
+    printf("bf.cfb64.num=%d\n", num);
+
+    rt_fill(iv, 8, 5);
+    num = 0;
+    memset(out, 0, sizeof(out));
+    BF_ofb64_encrypt(in, out, 24, &k, iv, &num);
+    rt_hex("bf.ofb64.enc", out, 24);
+    rt_hex("bf.ofb64.enc.iv", iv, 8);
+
+    /* BF_encrypt/BF_decrypt directly, on a DES_LONG pair. */
+    {
+        unsigned int d[2] = { 0x01234567u, 0x89abcdefu };
+
+        BF_encrypt(d, &k);
+        rt_hex("bf.encrypt", (const unsigned char *)d, 8);
+        BF_decrypt(d, &k);
+        rt_hex("bf.decrypt", (const unsigned char *)d, 8);
+    }
+}
+
 static void rt_modes_blocks(void)
 {
     const unsigned char key = RT_KEY;
@@ -1004,5 +1078,6 @@ int main(void)
     rt_rc4();
     rt_des();
     rt_rc2();
+    rt_bf();
     return 0;
 }
