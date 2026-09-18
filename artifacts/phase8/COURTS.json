@@ -24,9 +24,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 721,
+        "authority_observations": 805,
         "candidate_exit_code": 0,
-        "candidate_observations": 721,
+        "candidate_observations": 805,
         "candidate_stderr_tail": [],
         "court": "RT-CIPHER",
         "crashed": false,
@@ -5628,6 +5628,14 @@
             "standard": "NIST SP 800-38C; RFC 3610",
             "total": 2388
           },
+          "cts": {
+            "failed": 0,
+            "passed": 35,
+            "primary_source": "NIST SP 800-38A Addendum (CS1/CS2); RFC 2040 (CS3)",
+            "source": "forensics/vectors/cts.json",
+            "standard": "NIST SP 800-38A Addendum (CS1/CS2); RFC 2040 (CS3)",
+            "total": 35
+          },
           "des": {
             "failed": 0,
             "passed": 11,
@@ -5702,20 +5710,20 @@
           }
         },
         "authority": "openssl-3.6.4-production",
-        "calls_checked": 3048,
+        "calls_checked": 3083,
         "candidate_shared_object": "artifacts/phase2/libcrypto.so.3",
-        "claim": "A correctness-vector PASS means candidate-only construction verification: the candidate's low-level cipher produced the committed expected bytes for every vector. Of the 3048 committed vectors, 3031 are published standard values mirrored through the pinned OpenSSL test corpus and 17 are independently-derived boundary vectors with named oracles (2 by the construction's definition (FIPS-197 §5.1, SP 800-38A §6.1): an empty message has no blocks and emits no bytes; 1 by the construction's definition: RC4 over a zero-byte input emits no bytes and leaves its state unchanged; 14 by the construction's definition: a block or feedback mode over a zero-byte input emits no bytes) -- these counts are read from the 14 committed `forensics/vectors/*.json` cipher sets by `correctness_vectors.py`, not typed. It is NOT OpenSSL parity and NOT formal validation. See D201/D208 and docs/PHASE-8-SUBPHASES.md.",
+        "claim": "A correctness-vector PASS means candidate-only construction verification: the candidate's low-level cipher produced the committed expected bytes for every vector. Of the 3083 committed vectors, 3066 are published standard values mirrored through the pinned OpenSSL test corpus and 17 are independently-derived boundary vectors with named oracles (2 by the construction's definition (FIPS-197 §5.1, SP 800-38A §6.1): an empty message has no blocks and emits no bytes; 1 by the construction's definition: RC4 over a zero-byte input emits no bytes and leaves its state unchanged; 14 by the construction's definition: a block or feedback mode over a zero-byte input emits no bytes) -- these counts are read from the 15 committed `forensics/vectors/*.json` cipher sets by `correctness_vectors.py`, not typed. It is NOT OpenSSL parity and NOT formal validation. See D201/D208 and docs/PHASE-8-SUBPHASES.md.",
         "court": "CT-CIPHER",
         "derivation_census": {
-          "corpus": 3031,
-          "files": 14,
+          "corpus": 3066,
+          "files": 15,
           "independent": 17,
           "oracles": {
             "the construction's definition (FIPS-197 §5.1, SP 800-38A §6.1): an empty message has no blocks and emits no bytes": 2,
             "the construction's definition: RC4 over a zero-byte input emits no bytes and leaves its state unchanged": 1,
             "the construction's definition: a block or feedback mode over a zero-byte input emits no bytes": 14
           },
-          "vectors": 3048
+          "vectors": 3083
         },
         "failures": [],
         "kind": "cipher-vectors",
@@ -31973,6 +31981,356 @@
             "passed": true
           },
           {
+            "actual_hex": "97c6353568f2bf8cb4d8a580362da7ff7f",
+            "algorithm": "cts",
+            "cipher": "AES-128-CBC-CTS",
+            "expected_hex": "97c6353568f2bf8cb4d8a580362da7ff7f",
+            "id": "cts-1",
+            "input_hex": "4920776f756c64206c696b652074686520",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "97687268d6ecccc0c07b25e25ecfe5fc00783e0efdb2c1d445d4c8eff7ed22",
+            "algorithm": "cts",
+            "cipher": "AES-128-CBC-CTS",
+            "expected_hex": "97687268d6ecccc0c07b25e25ecfe5fc00783e0efdb2c1d445d4c8eff7ed22",
+            "id": "cts-2",
+            "input_hex": "4920776f756c64206c696b65207468652047656e6572616c20476175277320",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "97687268d6ecccc0c07b25e25ecfe58439312523a78662d5be7fcbcc98ebf5a8",
+            "algorithm": "cts",
+            "cipher": "AES-128-CBC-CTS",
+            "expected_hex": "97687268d6ecccc0c07b25e25ecfe58439312523a78662d5be7fcbcc98ebf5a8",
+            "id": "cts-3",
+            "input_hex": "4920776f756c64206c696b65207468652047656e6572616c2047617527732043",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "97687268d6ecccc0c07b25e25ecfe58439312523a78662d5be7fcbcc98ebf5b3fffd940c16a18c1b5549d2f838029e",
+            "algorithm": "cts",
+            "cipher": "AES-128-CBC-CTS",
+            "expected_hex": "97687268d6ecccc0c07b25e25ecfe58439312523a78662d5be7fcbcc98ebf5b3fffd940c16a18c1b5549d2f838029e",
+            "id": "cts-4",
+            "input_hex": "4920776f756c64206c696b65207468652047656e6572616c20476175277320436869636b656e2c20706c656173652c",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "97687268d6ecccc0c07b25e25ecfe58439312523a78662d5be7fcbcc98ebf5a89dad8bbb96c4cdc03bc103e1a194bbd84807efe836ee89a526730dbc2f7bc840",
+            "algorithm": "cts",
+            "cipher": "AES-128-CBC-CTS",
+            "expected_hex": "97687268d6ecccc0c07b25e25ecfe58439312523a78662d5be7fcbcc98ebf5a89dad8bbb96c4cdc03bc103e1a194bbd84807efe836ee89a526730dbc2f7bc840",
+            "id": "cts-5",
+            "input_hex": "4920776f756c64206c696b65207468652047656e6572616c20476175277320436869636b656e2c20706c656173652c20616e6420776f6e746f6e20736f75702e",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "5432a630742dee7beb70f9f1400ee6a0b557cfb581949a4bdf3bb67dedd472426da5c54a9990f5ae0b7825f51f0060",
+            "algorithm": "cts",
+            "cipher": "AES-128-CBC-CTS",
+            "expected_hex": "5432a630742dee7beb70f9f1400ee6a0b557cfb581949a4bdf3bb67dedd472426da5c54a9990f5ae0b7825f51f0060",
+            "id": "cts-6",
+            "input_hex": "4920776f756c64206c696b65207468652047656e6572616c20476175277320436869636b656e2c20706c656173652c",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "5432a630742dee7beb70f9f1400ee6a0b557cfb581949a4bdf3bb67dedd472b9fc50e4e7dacf9e3d94b6cc031f9997a22d2fea7e6ef4aba2b717b0fa3f150e5e86e46b9e51c6ea5091a92aa791ce826b2e4fbaaf0e0314939625434b9530ce56f299891a48d26bdc287f54b230340d652a4721bf0f082ede80b6399800a92f",
+            "algorithm": "cts",
+            "cipher": "AES-128-CBC-CTS",
+            "expected_hex": "5432a630742dee7beb70f9f1400ee6a0b557cfb581949a4bdf3bb67dedd472b9fc50e4e7dacf9e3d94b6cc031f9997a22d2fea7e6ef4aba2b717b0fa3f150e5e86e46b9e51c6ea5091a92aa791ce826b2e4fbaaf0e0314939625434b9530ce56f299891a48d26bdc287f54b230340d652a4721bf0f082ede80b6399800a92f",
+            "id": "cts-7",
+            "input_hex": "4920776f756c64206c696b65207468652047656e6572616c20476175277320436869636b656e2c20706c656173652c20616e6420776f6e746f6e20736f75702e4920776f756c64206c696b65207468652047656e6572616c20476175277320436869636b656e2c20706c656173652c20616e6420776f6e746f6e20736f7570",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "5432a630742dee7beb70f9f1400ee6a0b557cfb581949a4bdf3bb67dedd472b9fc50e4e7dacf9e3d94b6cc031f9997a22d2fea7e6ef4aba2b717b0fa3f150e5e86e46b9e51c6ea5091a92aa791ce826b2e4fbaaf0e0314939625434b9530ce56f299891a48d26bdc287f54b230340d14fde9fd1098b9b1db788b5868a8d009eeef",
+            "algorithm": "cts",
+            "cipher": "AES-128-CBC-CTS",
+            "expected_hex": "5432a630742dee7beb70f9f1400ee6a0b557cfb581949a4bdf3bb67dedd472b9fc50e4e7dacf9e3d94b6cc031f9997a22d2fea7e6ef4aba2b717b0fa3f150e5e86e46b9e51c6ea5091a92aa791ce826b2e4fbaaf0e0314939625434b9530ce56f299891a48d26bdc287f54b230340d14fde9fd1098b9b1db788b5868a8d009eeef",
+            "id": "cts-8",
+            "input_hex": "4920776f756c64206c696b65207468652047656e6572616c20476175277320436869636b656e2c20706c656173652c20616e6420776f6e746f6e20736f75702e4920776f756c64206c696b65207468652047656e6572616c20476175277320436869636b656e2c20706c656173652c20616e6420776f6e746f6e20736f75702e49",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "e9de1b402de8f79f947cc6b5880588d9b6",
+            "algorithm": "cts",
+            "cipher": "AES-192-CBC-CTS",
+            "expected_hex": "e9de1b402de8f79f947cc6b5880588d9b6",
+            "id": "cts-9",
+            "input_hex": "4920776f756c64206c696b652074686520",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "e9de17d6248fb492bdea1fb2e09c8edea2b610546f3b1e1d231821e283e153",
+            "algorithm": "cts",
+            "cipher": "AES-192-CBC-CTS",
+            "expected_hex": "e9de17d6248fb492bdea1fb2e09c8edea2b610546f3b1e1d231821e283e153",
+            "id": "cts-10",
+            "input_hex": "4920776f756c64206c696b65207468652047656e6572616c20476175277320",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "e9de17d6248fb492bdea1fb2e09c8e8e31d005cc9fea948fed1ba6308dad9dd1",
+            "algorithm": "cts",
+            "cipher": "AES-192-CBC-CTS",
+            "expected_hex": "e9de17d6248fb492bdea1fb2e09c8e8e31d005cc9fea948fed1ba6308dad9dd1",
+            "id": "cts-11",
+            "input_hex": "4920776f756c64206c696b65207468652047656e6572616c2047617527732043",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "c6353568f2bf8cb4d8a580362da7ff7f97",
+            "algorithm": "cts",
+            "cipher": "AES-128-CBC-CTS",
+            "expected_hex": "c6353568f2bf8cb4d8a580362da7ff7f97",
+            "id": "cts-12",
+            "input_hex": "4920776f756c64206c696b652074686520",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "fc00783e0efdb2c1d445d4c8eff7ed2297687268d6ecccc0c07b25e25ecfe5",
+            "algorithm": "cts",
+            "cipher": "AES-128-CBC-CTS",
+            "expected_hex": "fc00783e0efdb2c1d445d4c8eff7ed2297687268d6ecccc0c07b25e25ecfe5",
+            "id": "cts-13",
+            "input_hex": "4920776f756c64206c696b65207468652047656e6572616c20476175277320",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "97687268d6ecccc0c07b25e25ecfe58439312523a78662d5be7fcbcc98ebf5a8",
+            "algorithm": "cts",
+            "cipher": "AES-128-CBC-CTS",
+            "expected_hex": "97687268d6ecccc0c07b25e25ecfe58439312523a78662d5be7fcbcc98ebf5a8",
+            "id": "cts-14",
+            "input_hex": "4920776f756c64206c696b65207468652047656e6572616c2047617527732043",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "97687268d6ecccc0c07b25e25ecfe584b3fffd940c16a18c1b5549d2f838029e39312523a78662d5be7fcbcc98ebf5",
+            "algorithm": "cts",
+            "cipher": "AES-128-CBC-CTS",
+            "expected_hex": "97687268d6ecccc0c07b25e25ecfe584b3fffd940c16a18c1b5549d2f838029e39312523a78662d5be7fcbcc98ebf5",
+            "id": "cts-15",
+            "input_hex": "4920776f756c64206c696b65207468652047656e6572616c20476175277320436869636b656e2c20706c656173652c",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "97687268d6ecccc0c07b25e25ecfe58439312523a78662d5be7fcbcc98ebf5a89dad8bbb96c4cdc03bc103e1a194bbd84807efe836ee89a526730dbc2f7bc840",
+            "algorithm": "cts",
+            "cipher": "AES-128-CBC-CTS",
+            "expected_hex": "97687268d6ecccc0c07b25e25ecfe58439312523a78662d5be7fcbcc98ebf5a89dad8bbb96c4cdc03bc103e1a194bbd84807efe836ee89a526730dbc2f7bc840",
+            "id": "cts-16",
+            "input_hex": "4920776f756c64206c696b65207468652047656e6572616c20476175277320436869636b656e2c20706c656173652c20616e6420776f6e746f6e20736f75702e",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "de1b402de8f79f947cc6b5880588d9b6e9",
+            "algorithm": "cts",
+            "cipher": "AES-192-CBC-CTS",
+            "expected_hex": "de1b402de8f79f947cc6b5880588d9b6e9",
+            "id": "cts-17",
+            "input_hex": "4920776f756c64206c696b652074686520",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "dea2b610546f3b1e1d231821e283e153e9de17d6248fb492bdea1fb2e09c8e",
+            "algorithm": "cts",
+            "cipher": "AES-192-CBC-CTS",
+            "expected_hex": "dea2b610546f3b1e1d231821e283e153e9de17d6248fb492bdea1fb2e09c8e",
+            "id": "cts-18",
+            "input_hex": "4920776f756c64206c696b65207468652047656e6572616c20476175277320",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "e9de17d6248fb492bdea1fb2e09c8e8e31d005cc9fea948fed1ba6308dad9dd1",
+            "algorithm": "cts",
+            "cipher": "AES-192-CBC-CTS",
+            "expected_hex": "e9de17d6248fb492bdea1fb2e09c8e8e31d005cc9fea948fed1ba6308dad9dd1",
+            "id": "cts-19",
+            "input_hex": "4920776f756c64206c696b65207468652047656e6572616c2047617527732043",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "c6353568f2bf8cb4d8a580362da7ff7f97",
+            "algorithm": "cts",
+            "cipher": "AES-128-CBC-CTS",
+            "expected_hex": "c6353568f2bf8cb4d8a580362da7ff7f97",
+            "id": "cts-20",
+            "input_hex": "4920776f756c64206c696b652074686520",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "fc00783e0efdb2c1d445d4c8eff7ed2297687268d6ecccc0c07b25e25ecfe5",
+            "algorithm": "cts",
+            "cipher": "AES-128-CBC-CTS",
+            "expected_hex": "fc00783e0efdb2c1d445d4c8eff7ed2297687268d6ecccc0c07b25e25ecfe5",
+            "id": "cts-21",
+            "input_hex": "4920776f756c64206c696b65207468652047656e6572616c20476175277320",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "39312523a78662d5be7fcbcc98ebf5a897687268d6ecccc0c07b25e25ecfe584",
+            "algorithm": "cts",
+            "cipher": "AES-128-CBC-CTS",
+            "expected_hex": "39312523a78662d5be7fcbcc98ebf5a897687268d6ecccc0c07b25e25ecfe584",
+            "id": "cts-22",
+            "input_hex": "4920776f756c64206c696b65207468652047656e6572616c2047617527732043",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "97687268d6ecccc0c07b25e25ecfe584b3fffd940c16a18c1b5549d2f838029e39312523a78662d5be7fcbcc98ebf5",
+            "algorithm": "cts",
+            "cipher": "AES-128-CBC-CTS",
+            "expected_hex": "97687268d6ecccc0c07b25e25ecfe584b3fffd940c16a18c1b5549d2f838029e39312523a78662d5be7fcbcc98ebf5",
+            "id": "cts-23",
+            "input_hex": "4920776f756c64206c696b65207468652047656e6572616c20476175277320436869636b656e2c20706c656173652c",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "97687268d6ecccc0c07b25e25ecfe5849dad8bbb96c4cdc03bc103e1a194bbd839312523a78662d5be7fcbcc98ebf5a8",
+            "algorithm": "cts",
+            "cipher": "AES-128-CBC-CTS",
+            "expected_hex": "97687268d6ecccc0c07b25e25ecfe5849dad8bbb96c4cdc03bc103e1a194bbd839312523a78662d5be7fcbcc98ebf5a8",
+            "id": "cts-24",
+            "input_hex": "4920776f756c64206c696b65207468652047656e6572616c20476175277320436869636b656e2c20706c656173652c20",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "97687268d6ecccc0c07b25e25ecfe58439312523a78662d5be7fcbcc98ebf5a84807efe836ee89a526730dbc2f7bc8409dad8bbb96c4cdc03bc103e1a194bbd8",
+            "algorithm": "cts",
+            "cipher": "AES-128-CBC-CTS",
+            "expected_hex": "97687268d6ecccc0c07b25e25ecfe58439312523a78662d5be7fcbcc98ebf5a84807efe836ee89a526730dbc2f7bc8409dad8bbb96c4cdc03bc103e1a194bbd8",
+            "id": "cts-25",
+            "input_hex": "4920776f756c64206c696b65207468652047656e6572616c20476175277320436869636b656e2c20706c656173652c20616e6420776f6e746f6e20736f75702e",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "5432a630742dee7beb70f9f1400ee6a0426da5c54a9990f5ae0b7825f51f0060b557cfb581949a4bdf3bb67dedd472",
+            "algorithm": "cts",
+            "cipher": "AES-128-CBC-CTS",
+            "expected_hex": "5432a630742dee7beb70f9f1400ee6a0426da5c54a9990f5ae0b7825f51f0060b557cfb581949a4bdf3bb67dedd472",
+            "id": "cts-26",
+            "input_hex": "4920776f756c64206c696b65207468652047656e6572616c20476175277320436869636b656e2c20706c656173652c",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "de1b402de8f79f947cc6b5880588d9b6e9",
+            "algorithm": "cts",
+            "cipher": "AES-192-CBC-CTS",
+            "expected_hex": "de1b402de8f79f947cc6b5880588d9b6e9",
+            "id": "cts-27",
+            "input_hex": "4920776f756c64206c696b652074686520",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "dea2b610546f3b1e1d231821e283e153e9de17d6248fb492bdea1fb2e09c8e",
+            "algorithm": "cts",
+            "cipher": "AES-192-CBC-CTS",
+            "expected_hex": "dea2b610546f3b1e1d231821e283e153e9de17d6248fb492bdea1fb2e09c8e",
+            "id": "cts-28",
+            "input_hex": "4920776f756c64206c696b65207468652047656e6572616c20476175277320",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "31d005cc9fea948fed1ba6308dad9dd1e9de17d6248fb492bdea1fb2e09c8e8e",
+            "algorithm": "cts",
+            "cipher": "AES-192-CBC-CTS",
+            "expected_hex": "31d005cc9fea948fed1ba6308dad9dd1e9de17d6248fb492bdea1fb2e09c8e8e",
+            "id": "cts-29",
+            "input_hex": "4920776f756c64206c696b65207468652047656e6572616c2047617527732043",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "6b5f5abc21c4d04156c73850da3bba29e9",
+            "algorithm": "cts",
+            "cipher": "AES-256-CBC-CTS",
+            "expected_hex": "6b5f5abc21c4d04156c73850da3bba29e9",
+            "id": "cts-30",
+            "input_hex": "4920776f756c64206c696b652074686520",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "f22553af78ee4f468f02fbe6f0f2168ee954e79fae9310dc75b6070e1d6253",
+            "algorithm": "cts",
+            "cipher": "AES-256-CBC-CTS",
+            "expected_hex": "f22553af78ee4f468f02fbe6f0f2168ee954e79fae9310dc75b6070e1d6253",
+            "id": "cts-31",
+            "input_hex": "4920776f756c64206c696b65207468652047656e6572616c20476175277320",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "2c0463982174df10baa9d8f782c5a5b3e954e79fae9310dc75b6070e1d625346",
+            "algorithm": "cts",
+            "cipher": "AES-256-CBC-CTS",
+            "expected_hex": "2c0463982174df10baa9d8f782c5a5b3e954e79fae9310dc75b6070e1d625346",
+            "id": "cts-32",
+            "input_hex": "4920776f756c64206c696b65207468652047656e6572616c2047617527732043",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "011ca8de3bd20ebc2f8701d56dcf768e",
+            "algorithm": "cts",
+            "cipher": "AES-128-CBC-CTS",
+            "expected_hex": "011ca8de3bd20ebc2f8701d56dcf768e",
+            "id": "cts-33",
+            "input_hex": "0102030405060708090a0b0c0d0e0f00",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "011ca8de3bd20ebc2f8701d56dcf768e",
+            "algorithm": "cts",
+            "cipher": "AES-128-CBC-CTS",
+            "expected_hex": "011ca8de3bd20ebc2f8701d56dcf768e",
+            "id": "cts-34",
+            "input_hex": "0102030405060708090a0b0c0d0e0f00",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "011ca8de3bd20ebc2f8701d56dcf768e",
+            "algorithm": "cts",
+            "cipher": "AES-128-CBC-CTS",
+            "expected_hex": "011ca8de3bd20ebc2f8701d56dcf768e",
+            "id": "cts-35",
+            "input_hex": "0102030405060708090a0b0c0d0e0f00",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
             "actual_hex": "8ca64de9c1b123a7",
             "algorithm": "des",
             "cipher": "DES-ECB",
@@ -36204,9 +36562,9 @@
           }
         ],
         "stage": "compare",
-        "vectors_checked": 3048,
+        "vectors_checked": 3083,
         "vectors_failed": 0,
-        "vectors_passed": 3048,
+        "vectors_passed": 3083,
         "verdict": "pass"
       }
     ],
@@ -36231,7 +36589,7 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_cipher_probe.c",
-      "sha256": "7e613bb870d1cbaf903776bb5767a3c3bd6aed651d2b4dc822c06ce6efc894dc"
+      "sha256": "1e64a1b473f7512cd1960e241d2feb3b82d53e21608020148a7bcca7da73c20c"
     },
     {
       "name": "correctness-probe",
@@ -36346,7 +36704,7 @@
     {
       "name": "cipher-correctness-probe",
       "path": "courts/phase8/ct_cipher.c",
-      "sha256": "2c9ea831bb50f0420870076d2023c5714212bbf51152e6023278f0a678b54ff4"
+      "sha256": "b0c043807a3769d7d1191d602704f8bfc4be8716af9368c8194d132aaced8c09"
     },
     {
       "name": "cipher-correctness-vectors:aes",
@@ -36417,6 +36775,11 @@
       "name": "cipher-correctness-vectors:ocb",
       "path": "forensics/vectors/ocb.json",
       "sha256": "953723e3946404587bb19c363d3b83186fd40d7e710486aaa21478525db6f106"
+    },
+    {
+      "name": "cipher-correctness-vectors:cts",
+      "path": "forensics/vectors/cts.json",
+      "sha256": "4213379ea7b57c79670006474435fb04c6817950c178c17737efdceede6ff181"
     }
   ],
   "kind": "phase8-courts",

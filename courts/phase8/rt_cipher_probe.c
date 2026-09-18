@@ -42,10 +42,12 @@
 #include <openssl/blowfish.h>
 #include <openssl/camellia.h>
 #include <openssl/cast.h>
+#include <openssl/core_names.h>
 #include <openssl/des.h>
 #include <openssl/evp.h>
 #include <openssl/idea.h>
 #include <openssl/modes.h>
+#include <openssl/params.h>
 #include <openssl/rc2.h>
 #include <openssl/rc4.h>
 #include <openssl/seed.h>
@@ -2533,6 +2535,169 @@ static void rt_deflt_wrap(void)
     }
 }
 
+/*
+ * The default provider's CBC-CTS rows (AES and Camellia). Ciphertext stealing is not an AEAD:
+ * there is no tag and no AAD, and the message is not a stream of block-mode calls. What the arm
+ * observes is therefore the row's shape (`keylen`/`ivlen`/`blocksize`), the three variants
+ * (`CS1`/`CS2`/`CS3`) applied to a one-block-plus-a-partial-block message, the round trip in
+ * each, the empty-message and short-message refusals, and the one-shot rule (a second update is
+ * refused). The variants are the construction, so all three are driven for every row.
+ */
+static void rt_deflt_cts(void)
+{
+    static const char *names[] = {
+        "AES-128-CBC-CTS", "AES-192-CBC-CTS", "AES-256-CBC-CTS",
+        "CAMELLIA-128-CBC-CTS", "CAMELLIA-192-CBC-CTS", "CAMELLIA-256-CBC-CTS"
+    };
+    static const char *cmode_names[] = { "CS1", "CS2", "CS3" };
+    unsigned char key[32];
+    unsigned char iv[16];
+    unsigned char in[48];
+    unsigned char out[64];
+    unsigned char back[64];
+    char buf[160];
+    size_t n, m;
+
+    rt_fill(key, sizeof(key), 81);
+    rt_fill(iv, sizeof(iv), 82);
+    rt_fill(in, sizeof(in), 83);
+
+    for (n = 0; n < sizeof(names) / sizeof(names[0]); n++) {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, names[n], NULL);
+
+        snprintf(buf, sizeof(buf), "defltcts.%s", names[n]);
+        printf("%s.fetched=%d\n", buf, c != NULL);
+        if (c == NULL)
+            continue;
+        printf("%s.keylen=%d\n", buf, EVP_CIPHER_get_key_length(c));
+        printf("%s.ivlen=%d\n", buf, EVP_CIPHER_get_iv_length(c));
+        printf("%s.blocksize=%d\n", buf, EVP_CIPHER_get_block_size(c));
+        EVP_CIPHER_free(c);
+    }
+
+    /* The three variants, on a 31-byte message (one full block plus fifteen octets). */
+    for (n = 0; n < sizeof(names) / sizeof(names[0]); n++) {
+        for (m = 0; m < 3; m++) {
+            EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, names[n], NULL);
+            EVP_CIPHER_CTX *ctx;
+            OSSL_PARAM params[2];
+            int outl = 0, finl = 0;
+
+            snprintf(buf, sizeof(buf), "defltcts.%s.%s", names[n], cmode_names[m]);
+            if (c == NULL) {
+                printf("%s.fetched=0\n", buf);
+                continue;
+            }
+            params[0] = OSSL_PARAM_construct_utf8_string(OSSL_CIPHER_PARAM_CTS_MODE,
+                                                         (char *)cmode_names[m], 0);
+            params[1] = OSSL_PARAM_construct_end();
+            ctx = EVP_CIPHER_CTX_new();
+            if (ctx == NULL || EVP_EncryptInit_ex2(ctx, c, key, iv, params) != 1) {
+                printf("%s.init=0\n", buf);
+            } else if (EVP_EncryptUpdate(ctx, out, &outl, in, 31) != 1
+                       || EVP_EncryptFinal_ex(ctx, out + outl, &finl) != 1) {
+                printf("%s.enc=0\n", buf);
+            } else {
+                rt_hex(buf, out, (size_t)(outl + finl));
+                /* The getter must answer the variant that was set. */
+                {
+                    char mode[8] = { 0 };
+                    OSSL_PARAM gp[2];
+
+                    gp[0] = OSSL_PARAM_construct_utf8_string(OSSL_CIPHER_PARAM_CTS_MODE, mode, sizeof(mode));
+                    gp[1] = OSSL_PARAM_construct_end();
+                    printf("%s.getmode=%s\n", buf,
+                           EVP_CIPHER_CTX_get_params(ctx, gp) == 1 ? mode : "?");
+                }
+            }
+            if (ctx != NULL)
+                EVP_CIPHER_CTX_free(ctx);
+
+            /* The round trip, through the same variant. */
+            ctx = EVP_CIPHER_CTX_new();
+            if (ctx != NULL && EVP_DecryptInit_ex2(ctx, c, key, iv, params) == 1) {
+                int decl = 0, defl = 0;
+
+                if (EVP_DecryptUpdate(ctx, back, &decl, out, outl + finl) == 1
+                    && EVP_DecryptFinal_ex(ctx, back + decl, &defl) == 1) {
+                    printf("%s.roundtrip=%d\n", buf,
+                           (size_t)(decl + defl) == 31 && memcmp(back, in, 31) == 0);
+                } else {
+                    printf("%s.roundtrip=0\n", buf);
+                }
+            } else {
+                printf("%s.roundtrip=0\n", buf);
+            }
+            if (ctx != NULL)
+                EVP_CIPHER_CTX_free(ctx);
+            EVP_CIPHER_free(c);
+        }
+    }
+
+    /* The refusals: a message shorter than one block, and a second update on a one-shot row. */
+    {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, "AES-128-CBC-CTS", NULL);
+        EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+        int outl = 0;
+
+        if (c != NULL && ctx != NULL && EVP_EncryptInit_ex2(ctx, c, key, iv, NULL) == 1) {
+            printf("defltcts.short=%d\n", EVP_EncryptUpdate(ctx, out, &outl, in, 15));
+            printf("defltcts.empty=%d\n", EVP_EncryptUpdate(ctx, out, &outl, in, 0));
+            printf("defltcts.first=%d\n", EVP_EncryptUpdate(ctx, out, &outl, in, 31));
+            printf("defltcts.second=%d\n", EVP_EncryptUpdate(ctx, out, &outl, in, 31));
+        } else {
+            printf("defltcts.short=0\n");
+        }
+        if (ctx != NULL)
+            EVP_CIPHER_CTX_free(ctx);
+        if (c != NULL)
+            EVP_CIPHER_free(c);
+    }
+
+    /* The provider's answer is the landed low-level answer, for the CS1 and CS3 variants. */
+    {
+        AES_KEY ek;
+        unsigned char low[64];
+        unsigned char ivec[16];
+        static const struct { const char *mode; int nist; } arms[2] = {
+            { "CS1", 1 }, { "CS3", 0 }
+        };
+        size_t k;
+
+        if (AES_set_encrypt_key(key, 128, &ek) == 0) {
+            for (k = 0; k < 2; k++) {
+                EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, "AES-128-CBC-CTS", NULL);
+                EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+                OSSL_PARAM params[2];
+                int outl = 0, finl = 0;
+                size_t lowlen;
+
+                memcpy(ivec, iv, 16);
+                if (arms[k].nist)
+                    lowlen = CRYPTO_nistcts128_encrypt(in, low, 31, &ek, ivec, rt_cbc);
+                else
+                    lowlen = CRYPTO_cts128_encrypt(in, low, 31, &ek, ivec, rt_cbc);
+                params[0] = OSSL_PARAM_construct_utf8_string(OSSL_CIPHER_PARAM_CTS_MODE,
+                                                             (char *)arms[k].mode, 0);
+                params[1] = OSSL_PARAM_construct_end();
+                snprintf(buf, sizeof(buf), "defltcts.eq%s", arms[k].mode);
+                if (c == NULL || ctx == NULL || lowlen != 31
+                    || EVP_EncryptInit_ex2(ctx, c, key, iv, params) != 1
+                    || EVP_EncryptUpdate(ctx, out, &outl, in, 31) != 1
+                    || EVP_EncryptFinal_ex(ctx, out + outl, &finl) != 1)
+                    printf("%s.same=0\n", buf);
+                else
+                    printf("%s.same=%d\n", buf,
+                           (size_t)(outl + finl) == lowlen && memcmp(out, low, lowlen) == 0);
+                if (ctx != NULL)
+                    EVP_CIPHER_CTX_free(ctx);
+                if (c != NULL)
+                    EVP_CIPHER_free(c);
+            }
+        }
+    }
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IOLBF, 0);
@@ -2553,5 +2718,6 @@ int main(void)
     rt_camellia();
     rt_deflt_cipher();
     rt_deflt_wrap();
+    rt_deflt_cts();
     return 0;
 }

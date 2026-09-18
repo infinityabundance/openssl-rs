@@ -15136,3 +15136,114 @@ do `deflt_get_params`/`deflt_gettable_params`/`ossl_prov_get_capabilities`/`prov
 None of these is claimed by this entry, and none is half-modelled: the rows that are absent are
 absent from `DEFLT_CIPHERS`, so a fetch of `AES-128-GCM` answers NULL on the candidate rather than
 a row with unimplemented arms.
+
+## D231 — the default provider's CBC-CTS rows land, and the CTS construction is three
+constructions under one name
+
+The 8.3 provider work continues with the CTS rows, because like the key-wrap rows they are a
+self-contained engine over a landed primitive: `cipher_cts.c` reuses the generic engine's CBC
+hardware and replaces only the **update** and **final**, so nothing of
+`ciphercommon_gcm.c.in`/`ciphercommon_ccm.c.in` has to land first. `src/provider/cipher.rs` now
+transcribes `cts_mode_id2name`/`name2id`, the six `cts128_cs{1,2,3}_{encrypt,decrypt}` arms,
+`ossl_cipher_cbc_cts_block_update`/`_final`, the shared `einit`/`dinit`, the `cts_mode` ctx-param
+pair and its two lists, and `IMPLEMENT_cts_cipher`'s six rows. `DEFLT_CIPHERS` goes from 65 rows
+to **71**: the six AES/Camellia CBC-CTS rows join NULL, AES, Camellia, 3DES and the twelve AES
+key-wrap rows. No export moves: `implemented[libcrypto]` stays **2035** and Phase 8 stays
+**194/576/16**, read from `forensics/phase8-obligations.json`, because every item here is
+provider-internal.
+
+**The rows are the default provider's, checked against both tables, and every alias is verbatim
+from `names.h`.** `providers/defltprov.c:169-171` publishes `AES-128-CBC-CTS`, `AES-192-CBC-CTS`
+and `AES-256-CBC-CTS` (in that order, between CBC and OFB), and `defltprov.c:282-284` publishes
+`CAMELLIA-128-CBC-CTS`, `CAMELLIA-192-CBC-CTS` and `CAMELLIA-256-CBC-CTS` (between Camellia CBC
+and OFB). `providers/legacyprov.c` publishes none of them. The alias strings are copied from
+`providers/implementations/include/prov/names.h:54-56` and `:141-143`; unlike the wrap rows these
+rows have **one spelling each** — no OID alias and no second name — so the name the fetch resolves
+is the name the table carries.
+
+**The construction is the row, and the three variants are a parameter rather than three rows.**
+`AES-128-CBC-CTS` is CS1 (the NIST variant), CS2 and CS3 (the Kerberos variant) under one name;
+`cipher_cts.c:33-46` is the normative description, and `cts_mode` selects the arm. The row's
+`get_params` answers `cts = 1` (`PROV_CIPHER_FLAG_CTS`), which
+`evp_cipher_cache_constants` (`crypto/evp/evp_lib.c:355`) turns into
+`EVP_CIPH_FLAG_CTS`; because the row also publishes a one-shot `CIPHER` dispatch entry, the EVP
+layer takes its provider arm and hands the whole call to `cupdate`, so the one-shot rule
+(`cipher_cts.c:347`) is observable rather than hidden behind EVP's partial-block buffer. Both of
+those are properties of the authority's own wiring, and both were checked in the source before the
+rows were published.
+
+**Both planes.** `RT-CIPHER` **721 → 805 observations**: the new `rt_deflt_cts` arm fetches all six
+rows and observes `keylen`, `ivlen` (16) and `blocksize` (16) for each; then, for each row and each
+of the three variants, a 31-octet message (one full block plus fifteen octets, so the stealing arm
+is taken) through `EVP_EncryptInit_ex2`/`Update`/`Final`, the ciphertext as hex, the `cts_mode`
+getback, and a decrypt round trip; then the refusals — a 15-octet message (shorter than one block,
+`-1`), an empty message, a first update that succeeds and a second that is refused by the one-shot
+rule; and finally, for CS1 and CS3, the provider's answer is required to equal the landed
+low-level `CRYPTO_nistcts128_encrypt`/`CRYPTO_cts128_encrypt` answer byte for byte
+(`defltcts.eqCS1.same=1`, `defltcts.eqCS3.same=1`), which is the same reconciliation D230 made for
+key wrap. `CT-CIPHER` **3048 → 3083 vectors**: the new `forensics/vectors/cts.json` mirrors **35**
+blocks from `test/recipes/30-test_evp_data/evpciph_aes_cts.txt` (CS1, CS2 and CS3, spanning 17-,
+31-, 32-, 47-, 48-, 64- and 254-octet messages), provenance naming **NIST SP 800-38A Addendum**
+(CS1/CS2) and **RFC 2040** (CS3) as the primary sources with the mirror's `line` and
+`mirror_sha256`. The corpus's `Result = CIPHERUPDATE_ERROR` rejection blocks and its bare
+`AES-128-CBC` blocks (the aligned-length CBC comparison the file also carries) are excluded by the
+existing result-key rule and the family's regex rather than half-modelled, and every block's
+`NextIV` is skipped because the vector record has no field for the updated IV.
+
+**A schema addition, and it travels with the generator.** The vector schema grew a `ctsmode`
+field (`correctness_vectors.py`) because the variant is a property of the vector and not of the
+family. It is written only when non-empty, so every other family's committed vector file is
+byte-identical and the change is 35 new lines in one new file. The driver's calls file grew a
+ninth column carrying it, and `courts/phase8/ct_cipher.c` parses that column and gained a
+`ct_cts` arm. The arm drives the **landed low-level** `CRYPTO_nistcts128_*` (CS1) and
+`CRYPTO_cts128_*` (CS3), with CS2 expressed as the standard defines it — plain CBC for an aligned
+message and CS3 for a partial one (`cipher_cts.c:301-325`) — so the correctness plane tests the
+primitive the rows are built on, exactly as the wrap family's does (D230); the new provider rows
+themselves are what `RT-CIPHER` compares, differentially, against the authority.
+
+**No independent CTS vector, recorded rather than hidden (D208).** No independent CTS
+implementation is present in the pinned court image, so no boundary vector carries an independent
+oracle; the aligned-length CS1/CS2 blocks, which the standard defines as plain CBC, are the
+boundary coverage, and the family's `note` says so.
+
+**One lint, not a defect.** The first `cargo clippy -D warnings` run of the new code failed on
+`len % CTS_BLOCK_SIZE == 0` (`manual_is_multiple_of`); the four sites now use
+`usize::is_multiple_of`, which is the same predicate. Nothing about the authority's arithmetic
+changed, and no court observation moved.
+
+**What the default provider now provides, in the exact words.** It is the default provider's
+digest-query half **and** cipher-query half, with `deflt_ciphers[]` publishing **71 rows**: NULL,
+AES (ECB/CBC/OFB/CFB/CFB1/CFB8/CTR at three key lengths, 21), the six AES/Camellia CBC-CTS rows,
+the twelve AES key-wrap rows, Camellia (the ECB/CBC/OFB/CFB/CFB1/CFB8/CTR set, 21) and 3DES (EDE3
+ECB/CBC/OFB/CFB/CFB1/CFB8 and EDE2 ECB/CBC/OFB/CFB, 10). It is **not** default-provider parity:
+the GCM, CCM, OCB, XTS and SIV rows, ARIA/SM4, ChaCha20 and the asm-selected
+`cipher_aes_cbc_hmac_*` TLS ciphers stay absent, as do
+`deflt_get_params`/`deflt_gettable_params`/`ossl_prov_get_capabilities`/`provctx` and the
+`base`/`null` providers.
+
+**What 8.3's provider half still has open, with coordinates.** Each is a reading of
+`providers/defltprov.c` against `legacyprov.c`; legacy publishes none of them.
+
+* **GCM** — `defltprov.c:202-204`, `cipher_aes_gcm.c` plus `ciphercommon_gcm.c.in`,
+  `ciphercommon_gcm_hw.c` and `cipher_aes_gcm_hw.c`. Its primitive (`crypto/modes/gcm128.c`) is
+  landed (D225); the open work is the generic AEAD engine.
+* **CCM** — `defltprov.c:205-207`, `cipher_aes_ccm.c` plus `ciphercommon_ccm.c.in` and
+  `cipher_aes_ccm_hw.c`. Primitive landed (D226); the generic AEAD engine is the open work.
+* **OCB** — `defltprov.c:190-192`, `cipher_aes_ocb.c` and `cipher_aes_ocb_hw.c`. Primitive landed
+  (D229).
+* **XTS** — `defltprov.c:187-188`, `cipher_aes_xts.c` and `cipher_aes_xts_hw.c`. Primitive landed
+  (D227).
+* **SIV / GCM-SIV** — `defltprov.c:195-200`, `cipher_aes_siv.c`, `cipher_aes_siv_hw.c`,
+  `cipher_aes_gcm_siv.c` and `cipher_aes_gcm_siv_polyval.c`. Its primitive is **not** landed and is
+  not a `libcrypto` export: `crypto/modes/siv128.c` is declared in `include/crypto/siv.h`, and
+  `util/libcrypto.num` has no `CRYPTO_siv128_` entry. It is not among `forensics/prerequisites.json`'s
+  units either, so it is a new internal transcription rather than a missing export.
+* **ChaCha20 / ChaCha20-Poly1305** — `defltprov.c:324-329`, `cipher_chacha20.c`,
+  `cipher_chacha20_hw.c` and `cipher_chacha20_poly1305.c.in`, over the internal
+  `crypto/chacha/chacha_enc.c` and `crypto/poly1305/poly1305.c` (D228). No `libcrypto` export and
+  no dependency this stratum owns.
+
+None of these is claimed by this entry, and none is half-modelled: the rows that are absent are
+absent from `DEFLT_CIPHERS`, so a fetch of `AES-128-GCM` answers NULL on the candidate rather than
+a row with unimplemented arms. The plan's 8.3 row moved in the same commit; its two anchored
+status clauses did not, because this entry lands no export.

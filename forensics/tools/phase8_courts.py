@@ -125,7 +125,7 @@ CORRECTNESS_COURTS: list[tuple[str, tuple[str, ...]]] = [
 # and its sets are the `cipher-vectors-*` files under `forensics/vectors/`.
 CIPHER_CORRECTNESS_COURTS: list[tuple[str, tuple[str, ...]]] = [
     ("CT-CIPHER", ("aes", "rc4", "des", "rc2", "bf", "cast5", "idea", "seed", "camellia",
-                   "wrap", "gcm", "ccm", "xts", "ocb")),
+                   "wrap", "gcm", "ccm", "xts", "ocb", "cts")),
 ]
 
 # A `CT-*` court the plan names but whose primitive is not implemented yet. It is not a

@@ -78,7 +78,7 @@ use crate::modes::{
 };
 use crate::params::{
     OsslParam, END, OSSL_PARAM_INTEGER, OSSL_PARAM_OCTET_PTR, OSSL_PARAM_OCTET_STRING,
-    OSSL_PARAM_UNMODIFIED, OSSL_PARAM_UNSIGNED_INTEGER,
+    OSSL_PARAM_UNMODIFIED, OSSL_PARAM_UNSIGNED_INTEGER, OSSL_PARAM_UTF8_STRING,
 };
 use crate::provider::activate::OsslAlgorithm;
 use crate::runtime::mem::{
@@ -3055,6 +3055,745 @@ wrap_row!(
     WRAP_FLAGS_INV
 );
 
+// ---------------------------------------------------------------------------------------------
+// `cipher_cts.c` — the CBC ciphertext-stealing rows (AES and Camellia)
+// ---------------------------------------------------------------------------------------------
+//
+// `cipher_cts.c` is not a mode of its own: its rows reuse the generic engine's CBC hardware
+// (`ossl_cipher_hw_generic_cbc`) and replace only the **update** and **final**, because ciphertext
+// stealing is not a stream of block-mode calls — the last two blocks are processed together, so
+// the whole message is one call. What makes the EVP layer hand this engine the whole call rather
+// than its own partial-block buffer is `cts = 1` from `ossl_cipher_generic_get_params`, which
+// `evp_cipher_cache_constants` (`crypto/evp/evp_lib.c:355`) turns into `EVP_CIPH_FLAG_CTS`.
+
+/// `CTS_BLOCK_SIZE` — `cipher_cts.c:59`.
+const CTS_BLOCK_SIZE: usize = 16;
+/// `CTS_CS1` — `cipher_cts.c:55`. The value assigned to 0 is the default.
+const CTS_CS1: c_uint = 0;
+/// `CTS_CS2` — `cipher_cts.c:56`.
+const CTS_CS2: c_uint = 1;
+/// `CTS_CS3` — `cipher_cts.c:57`.
+const CTS_CS3: c_uint = 2;
+/// `OSSL_CIPHER_PARAM_CTS_MODE` — `include/openssl/core_names.h:191`.
+const OSSL_CIPHER_PARAM_CTS_MODE: *const c_char = c"cts_mode".as_ptr();
+/// `OSSL_CIPHER_CTS_MODE_CS1`/`_CS2`/`_CS3` — `include/openssl/core_names.h:25-27`, in `cts_modes`'
+/// order (`cipher_cts.c:71-75`).
+const CTS_MODE_NAMES: [*const c_char; 3] = [c"CS1".as_ptr(), c"CS2".as_ptr(), c"CS3".as_ptr()];
+
+/// `ossl_cipher_cbc_cts_mode_id2name` — `cipher_cts.c:77-86`.
+fn cts_mode_id2name(id: c_uint) -> *const c_char {
+    let mut i = 0usize;
+    while i < CTS_MODE_NAMES.len() {
+        if id == i as c_uint {
+            return CTS_MODE_NAMES[i];
+        }
+        i += 1;
+    }
+    ptr::null()
+}
+
+/// `ossl_cipher_cbc_cts_mode_name2id` — `cipher_cts.c:88-97`.
+///
+/// # Safety
+/// `name` is NUL-terminated.
+unsafe fn cts_mode_name2id(name: *const c_char) -> c_int {
+    // SAFETY: the caller's contract; `OPENSSL_strcasecmp` reads both strings to their NUL.
+    unsafe {
+        let mut i = 0usize;
+        while i < CTS_MODE_NAMES.len() {
+            if crate::runtime::str::OPENSSL_strcasecmp(name, CTS_MODE_NAMES[i]) == 0 {
+                return i as c_int;
+            }
+            i += 1;
+        }
+        -1
+    }
+}
+
+/// `ctx->hw->cipher(ctx, out, in, len)` — the one call every CTS arm makes.
+///
+/// # Safety
+/// `ctx` is live and the buffers hold `len` bytes.
+#[inline]
+unsafe fn cts_hw_cipher(
+    ctx: *mut ProvCipherCtx,
+    out: *mut c_uchar,
+    in_: *const c_uchar,
+    len: usize,
+) -> bool {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let hw = (*ctx).hw;
+        ((*hw).cipher)(ctx, out, in_, len) != 0
+    }
+}
+
+/// `do_xor` — `cipher_cts.c:124-131`.
+///
+/// # Safety
+/// The three buffers hold `len` bytes.
+unsafe fn cts_do_xor(in1: *const c_uchar, in2: *const c_uchar, len: usize, out: *mut c_uchar) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut i = 0usize;
+        while i < len {
+            *out.add(i) = *in1.add(i) ^ *in2.add(i);
+            i += 1;
+        }
+    }
+}
+
+/// `cts128_cs1_encrypt` — `cipher_cts.c:99-122`.
+///
+/// # Safety
+/// The buffers hold `len` bytes and `ctx` is live.
+unsafe fn cts128_cs1_encrypt(
+    ctx: *mut ProvCipherCtx,
+    in_: *const c_uchar,
+    out: *mut c_uchar,
+    len: usize,
+) -> usize {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut tmp_in = [0u8; CTS_BLOCK_SIZE];
+        let residue = len % CTS_BLOCK_SIZE;
+        let aligned = len - residue;
+        if !cts_hw_cipher(ctx, out, in_, aligned) {
+            return 0;
+        }
+        if residue == 0 {
+            return aligned;
+        }
+        let in_ = in_.add(aligned);
+        let out = out.add(aligned);
+        ptr::copy_nonoverlapping(in_, tmp_in.as_mut_ptr(), residue);
+        if !cts_hw_cipher(
+            ctx,
+            out.sub(CTS_BLOCK_SIZE).add(residue),
+            tmp_in.as_ptr(),
+            CTS_BLOCK_SIZE,
+        ) {
+            return 0;
+        }
+        aligned + residue
+    }
+}
+
+/// `cts128_cs1_decrypt` — `cipher_cts.c:133-193`.
+///
+/// # Safety
+/// The buffers hold `len` bytes and `ctx` is live.
+unsafe fn cts128_cs1_decrypt(
+    ctx: *mut ProvCipherCtx,
+    in_: *const c_uchar,
+    out: *mut c_uchar,
+    len: usize,
+) -> usize {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut mid_iv = [0u8; CTS_BLOCK_SIZE];
+        let mut ct_mid = [0u8; CTS_BLOCK_SIZE];
+        let mut cn = [0u8; CTS_BLOCK_SIZE];
+        let mut pt_last = [0u8; CTS_BLOCK_SIZE];
+        let residue = len % CTS_BLOCK_SIZE;
+        if residue == 0 {
+            // If there are no partial blocks then it is the same as CBC mode.
+            return if cts_hw_cipher(ctx, out, in_, len) {
+                len
+            } else {
+                0
+            };
+        }
+        // Process blocks at the start - but leave the last 2 blocks.
+        let head = len - CTS_BLOCK_SIZE - residue;
+        let (in_, out) = if head > 0 {
+            if !cts_hw_cipher(ctx, out, in_, head) {
+                return 0;
+            }
+            (in_.add(head), out.add(head))
+        } else {
+            (in_, out)
+        };
+        // Save the iv that will be used by the second last block, and the C(n) block.
+        ptr::copy_nonoverlapping((*ctx).iv.as_ptr(), mid_iv.as_mut_ptr(), CTS_BLOCK_SIZE);
+        ptr::copy_nonoverlapping(in_.add(residue), cn.as_mut_ptr(), CTS_BLOCK_SIZE);
+        // Decrypt the last block first using an iv of zero.
+        (*ctx).iv = [0u8; CTS_BLOCK_SIZE];
+        if !cts_hw_cipher(ctx, pt_last.as_mut_ptr(), in_.add(residue), CTS_BLOCK_SIZE) {
+            return 0;
+        }
+        // Rebuild the ciphertext of the second last block from the decrypted last block plus the
+        // ciphertext bytes of the partial second last block.
+        ptr::copy_nonoverlapping(in_, ct_mid.as_mut_ptr(), residue);
+        ptr::copy_nonoverlapping(
+            pt_last.as_ptr().add(residue),
+            ct_mid.as_mut_ptr().add(residue),
+            CTS_BLOCK_SIZE - residue,
+        );
+        cts_do_xor(
+            ct_mid.as_ptr(),
+            pt_last.as_ptr(),
+            residue,
+            out.add(CTS_BLOCK_SIZE),
+        );
+        // Restore the iv needed by the second last block and decrypt it.
+        ptr::copy_nonoverlapping(mid_iv.as_ptr(), (*ctx).iv.as_mut_ptr(), CTS_BLOCK_SIZE);
+        if !cts_hw_cipher(ctx, out, ct_mid.as_ptr(), CTS_BLOCK_SIZE) {
+            return 0;
+        }
+        // The returned iv is the C(n) block.
+        ptr::copy_nonoverlapping(cn.as_ptr(), (*ctx).iv.as_mut_ptr(), CTS_BLOCK_SIZE);
+        head + CTS_BLOCK_SIZE + residue
+    }
+}
+
+/// `cts128_cs3_encrypt` — `cipher_cts.c:195-225`.
+///
+/// # Safety
+/// The buffers hold `len` bytes and `ctx` is live.
+unsafe fn cts128_cs3_encrypt(
+    ctx: *mut ProvCipherCtx,
+    in_: *const c_uchar,
+    out: *mut c_uchar,
+    len: usize,
+) -> usize {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if len < CTS_BLOCK_SIZE {
+            // CS3 requires at least one block.
+            return 0;
+        }
+        if len == CTS_BLOCK_SIZE {
+            return if cts_hw_cipher(ctx, out, in_, len) {
+                len
+            } else {
+                0
+            };
+        }
+        let residue = if len.is_multiple_of(CTS_BLOCK_SIZE) {
+            CTS_BLOCK_SIZE
+        } else {
+            len % CTS_BLOCK_SIZE
+        };
+        let aligned = len - residue;
+        if !cts_hw_cipher(ctx, out, in_, aligned) {
+            return 0;
+        }
+        let in_ = in_.add(aligned);
+        let out = out.add(aligned);
+        let mut tmp_in = [0u8; CTS_BLOCK_SIZE];
+        ptr::copy_nonoverlapping(in_, tmp_in.as_mut_ptr(), residue);
+        ptr::copy_nonoverlapping(out.sub(CTS_BLOCK_SIZE), out, residue);
+        if !cts_hw_cipher(
+            ctx,
+            out.sub(CTS_BLOCK_SIZE),
+            tmp_in.as_ptr(),
+            CTS_BLOCK_SIZE,
+        ) {
+            return 0;
+        }
+        aligned + residue
+    }
+}
+
+/// `cts128_cs3_decrypt` — `cipher_cts.c:235-299`.
+///
+/// # Safety
+/// The buffers hold `len` bytes and `ctx` is live.
+unsafe fn cts128_cs3_decrypt(
+    ctx: *mut ProvCipherCtx,
+    in_: *const c_uchar,
+    out: *mut c_uchar,
+    len: usize,
+) -> usize {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut mid_iv = [0u8; CTS_BLOCK_SIZE];
+        let mut ct_mid = [0u8; CTS_BLOCK_SIZE];
+        let mut cn = [0u8; CTS_BLOCK_SIZE];
+        let mut pt_last = [0u8; CTS_BLOCK_SIZE];
+        if len < CTS_BLOCK_SIZE {
+            // CS3 requires at least one block.
+            return 0;
+        }
+        if len == CTS_BLOCK_SIZE {
+            return if cts_hw_cipher(ctx, out, in_, len) {
+                len
+            } else {
+                0
+            };
+        }
+        let residue = if len.is_multiple_of(CTS_BLOCK_SIZE) {
+            CTS_BLOCK_SIZE
+        } else {
+            len % CTS_BLOCK_SIZE
+        };
+        // Process blocks at the start - but leave the last 2 blocks.
+        let head = len - CTS_BLOCK_SIZE - residue;
+        let (in_, out) = if head > 0 {
+            if !cts_hw_cipher(ctx, out, in_, head) {
+                return 0;
+            }
+            (in_.add(head), out.add(head))
+        } else {
+            (in_, out)
+        };
+        // Save the iv for the second last block and the C(n) block. For CS3 the input is
+        // C(1)||...||C(n-2)||C(n)||C(n-1)*, so C(n) is at `in`.
+        ptr::copy_nonoverlapping((*ctx).iv.as_ptr(), mid_iv.as_mut_ptr(), CTS_BLOCK_SIZE);
+        ptr::copy_nonoverlapping(in_, cn.as_mut_ptr(), CTS_BLOCK_SIZE);
+        // Decrypt the C(n) block first using an iv of zero.
+        (*ctx).iv = [0u8; CTS_BLOCK_SIZE];
+        if !cts_hw_cipher(ctx, pt_last.as_mut_ptr(), in_, CTS_BLOCK_SIZE) {
+            return 0;
+        }
+        // Rebuild the ciphertext of C(n-1) from the decrypted C(n) plus the partial last block.
+        ptr::copy_nonoverlapping(in_.add(CTS_BLOCK_SIZE), ct_mid.as_mut_ptr(), residue);
+        if residue != CTS_BLOCK_SIZE {
+            ptr::copy_nonoverlapping(
+                pt_last.as_ptr().add(residue),
+                ct_mid.as_mut_ptr().add(residue),
+                CTS_BLOCK_SIZE - residue,
+            );
+        }
+        cts_do_xor(
+            ct_mid.as_ptr(),
+            pt_last.as_ptr(),
+            residue,
+            out.add(CTS_BLOCK_SIZE),
+        );
+        // Restore the iv for the second last block and decrypt it.
+        ptr::copy_nonoverlapping(mid_iv.as_ptr(), (*ctx).iv.as_mut_ptr(), CTS_BLOCK_SIZE);
+        if !cts_hw_cipher(ctx, out, ct_mid.as_ptr(), CTS_BLOCK_SIZE) {
+            return 0;
+        }
+        // The returned iv is the C(n) block.
+        ptr::copy_nonoverlapping(cn.as_ptr(), (*ctx).iv.as_mut_ptr(), CTS_BLOCK_SIZE);
+        head + CTS_BLOCK_SIZE + residue
+    }
+}
+
+/// `cts128_cs2_encrypt` — `cipher_cts.c:301-312`. For partial blocks CS2 is CS3.
+///
+/// # Safety
+/// As [`cts128_cs3_encrypt`].
+unsafe fn cts128_cs2_encrypt(
+    ctx: *mut ProvCipherCtx,
+    in_: *const c_uchar,
+    out: *mut c_uchar,
+    len: usize,
+) -> usize {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if len.is_multiple_of(CTS_BLOCK_SIZE) {
+            return if cts_hw_cipher(ctx, out, in_, len) {
+                len
+            } else {
+                0
+            };
+        }
+        cts128_cs3_encrypt(ctx, in_, out, len)
+    }
+}
+
+/// `cts128_cs2_decrypt` — `cipher_cts.c:314-325`.
+///
+/// # Safety
+/// As [`cts128_cs3_decrypt`].
+unsafe fn cts128_cs2_decrypt(
+    ctx: *mut ProvCipherCtx,
+    in_: *const c_uchar,
+    out: *mut c_uchar,
+    len: usize,
+) -> usize {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if len.is_multiple_of(CTS_BLOCK_SIZE) {
+            return if cts_hw_cipher(ctx, out, in_, len) {
+                len
+            } else {
+                0
+            };
+        }
+        cts128_cs3_decrypt(ctx, in_, out, len)
+    }
+}
+
+/// `ossl_cipher_cbc_cts_block_update` — `cipher_cts.c:327-370`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn ossl_cipher_cbc_cts_block_update(
+    vctx: *mut c_void,
+    out: *mut c_uchar,
+    outl: *mut usize,
+    outsize: usize,
+    in_: *const c_uchar,
+    inl: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvCipherCtx>();
+        if inl < CTS_BLOCK_SIZE {
+            // There must be at least one block for CTS mode.
+            return fail();
+        }
+        if outsize < inl {
+            return fail();
+        }
+        if out.is_null() {
+            *outl = inl;
+            return 1;
+        }
+        // Only one shot is supported.
+        if bits(ctx) & CTX_UPDATED != 0 {
+            return fail();
+        }
+        let sz = if bits(ctx) & CTX_ENC != 0 {
+            match (*ctx).cts_mode {
+                CTS_CS1 => cts128_cs1_encrypt(ctx, in_, out, inl),
+                CTS_CS2 => cts128_cs2_encrypt(ctx, in_, out, inl),
+                CTS_CS3 => cts128_cs3_encrypt(ctx, in_, out, inl),
+                _ => 0,
+            }
+        } else {
+            match (*ctx).cts_mode {
+                CTS_CS1 => cts128_cs1_decrypt(ctx, in_, out, inl),
+                CTS_CS2 => cts128_cs2_decrypt(ctx, in_, out, inl),
+                CTS_CS3 => cts128_cs3_decrypt(ctx, in_, out, inl),
+                _ => 0,
+            }
+        };
+        if sz == 0 {
+            return fail();
+        }
+        bits_set(ctx, CTX_UPDATED, true);
+        *outl = sz;
+        1
+    }
+}
+
+/// `ossl_cipher_cbc_cts_block_final` — `cipher_cts.c:372-377`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn ossl_cipher_cbc_cts_block_final(
+    _vctx: *mut c_void,
+    _out: *mut c_uchar,
+    outl: *mut usize,
+    _outsize: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe { *outl = 0 };
+    1
+}
+
+/// `aes_cbc_cts_einit` / `camellia_cbc_cts_einit` — `cipher_aes_cts.inc:28-35` and
+/// `cipher_camellia_cts.inc:28-35`, whose bodies are identical: the generic init with no params,
+/// then the row's `set_ctx_params` so a `cts_mode` passed to the init call is applied.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn cts_einit(
+    vctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    iv: *const c_uchar,
+    ivlen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract; the generic init reads `params` only if non-NULL.
+    unsafe {
+        if ossl_cipher_generic_einit(vctx, key, keylen, iv, ivlen, ptr::null()) == 0 {
+            return fail();
+        }
+        cts_set_ctx_params(vctx, params)
+    }
+}
+
+/// `aes_cbc_cts_dinit` / `camellia_cbc_cts_dinit` — the pair's decrypt arm.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn cts_dinit(
+    vctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    iv: *const c_uchar,
+    ivlen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if ossl_cipher_generic_dinit(vctx, key, keylen, iv, ivlen, ptr::null()) == 0 {
+            return fail();
+        }
+        cts_set_ctx_params(vctx, params)
+    }
+}
+
+/// `aes_cbc_cts_get_ctx_params` / `camellia_cbc_cts_get_ctx_params` — `cipher_aes_cts.inc:46-61`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn cts_get_ctx_params(vctx: *mut c_void, params: *mut OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvCipherCtx>();
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_CTS_MODE);
+        if !p.is_null() {
+            let name = cts_mode_id2name((*ctx).cts_mode);
+            if name.is_null() || crate::params::OSSL_PARAM_set_utf8_string(p, name) == 0 {
+                return fail();
+            }
+        }
+        ossl_cipher_generic_get_ctx_params(vctx, params)
+    }
+}
+
+/// `aes_cbc_cts_set_ctx_params` / `camellia_cbc_cts_set_ctx_params` — `cipher_aes_cts.inc:67-87`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn cts_set_ctx_params(vctx: *mut c_void, params: *const OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvCipherCtx>();
+        let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_CTS_MODE);
+        if !p.is_null() {
+            if (*p).data_type != OSSL_PARAM_UTF8_STRING {
+                return fail();
+            }
+            let id = cts_mode_name2id((*p).data.cast());
+            if id < 0 {
+                return fail();
+            }
+            (*ctx).cts_mode = id as c_uint;
+        }
+        ossl_cipher_generic_set_ctx_params(vctx, params)
+    }
+}
+
+/// `CIPHER_DEFAULT_GETTABLE_CTX_PARAMS_*` with the `cts_mode` row — `cipher_aes_cts.inc:24-26`.
+static CTS_GETTABLE_CTX_PARAMS: [OsslParam; 9] = [
+    param(OSSL_CIPHER_PARAM_KEYLEN, OSSL_PARAM_UNSIGNED_INTEGER),
+    param(OSSL_CIPHER_PARAM_IVLEN, OSSL_PARAM_UNSIGNED_INTEGER),
+    param(OSSL_CIPHER_PARAM_PADDING, OSSL_PARAM_UNSIGNED_INTEGER),
+    param(OSSL_CIPHER_PARAM_NUM, OSSL_PARAM_UNSIGNED_INTEGER),
+    param(OSSL_CIPHER_PARAM_IV, OSSL_PARAM_OCTET_STRING),
+    param(OSSL_CIPHER_PARAM_UPDATED_IV, OSSL_PARAM_OCTET_STRING),
+    param(OSSL_CIPHER_PARAM_TLS_MAC, OSSL_PARAM_OCTET_PTR),
+    param(OSSL_CIPHER_PARAM_CTS_MODE, OSSL_PARAM_UTF8_STRING),
+    END,
+];
+
+/// `aes_cbc_cts_gettable_ctx_params` / `camellia_cbc_cts_gettable_ctx_params`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn cts_gettable_ctx_params(
+    _cctx: *mut c_void,
+    _provctx: *mut c_void,
+) -> *const OsslParam {
+    CTS_GETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `CIPHER_DEFAULT_SETTABLE_CTX_PARAMS_*` with the `cts_mode` row — `cipher_aes_cts.inc:63-65`.
+static CTS_SETTABLE_CTX_PARAMS: [OsslParam; 7] = [
+    param(OSSL_CIPHER_PARAM_PADDING, OSSL_PARAM_UNSIGNED_INTEGER),
+    param(OSSL_CIPHER_PARAM_NUM, OSSL_PARAM_UNSIGNED_INTEGER),
+    param(OSSL_CIPHER_PARAM_USE_BITS, OSSL_PARAM_UNSIGNED_INTEGER),
+    param(OSSL_CIPHER_PARAM_TLS_VERSION, OSSL_PARAM_UNSIGNED_INTEGER),
+    param(OSSL_CIPHER_PARAM_TLS_MAC_SIZE, OSSL_PARAM_UNSIGNED_INTEGER),
+    param(OSSL_CIPHER_PARAM_CTS_MODE, OSSL_PARAM_UTF8_STRING),
+    END,
+];
+
+/// `aes_cbc_cts_settable_ctx_params` / `camellia_cbc_cts_settable_ctx_params`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn cts_settable_ctx_params(
+    _cctx: *mut c_void,
+    _provctx: *mut c_void,
+) -> *const OsslParam {
+    CTS_SETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `IMPLEMENT_cts_cipher` — `cipher_cts.h:13-46`. The table has fourteen entries and, unlike
+/// `IMPLEMENT_generic_cipher`'s, publishes **no** `skey` init pair; it does publish the one-shot
+/// `CIPHER`, which is what makes the EVP layer's provider arm hand this engine the whole call.
+///
+/// The output is `pub(crate)` items and a `'static` table — **no exported symbol** — so the ban
+/// on `macro_rules!`-generated exports is not engaged (the note above `cipher_row!` has the
+/// reasoning). One direct invocation per row, so `prototype_court.py`'s macro plane can read
+/// every `fn $newctx(`.
+macro_rules! cts_row {
+    ($newctx:ident, $getparams:ident, $table:ident, $ctx:ty, $hw:path, $kbits:expr,
+     $freectx:path, $dupctx:path) => {
+        unsafe extern "C" fn $newctx(provctx: *mut c_void) -> *mut c_void {
+            if is_running() == 0 {
+                return ptr::null_mut();
+            }
+            let ctx = CRYPTO_zalloc(core::mem::size_of::<$ctx>(), FILE, LINE);
+            if !ctx.is_null() {
+                // SAFETY: `ctx` is a fresh zeroed context of this row's type.
+                unsafe {
+                    ossl_cipher_generic_initkey(
+                        ctx,
+                        $kbits,
+                        128,
+                        128,
+                        EVP_CIPH_CBC_MODE,
+                        PROV_CIPHER_FLAG_CTS,
+                        ptr::addr_of!($hw),
+                        provctx,
+                    );
+                }
+            }
+            ctx
+        }
+
+        unsafe extern "C" fn $getparams(params: *mut OsslParam) -> c_int {
+            // SAFETY: the dispatch contract.
+            unsafe {
+                ossl_cipher_generic_get_params(
+                    params,
+                    EVP_CIPH_CBC_MODE,
+                    PROV_CIPHER_FLAG_CTS,
+                    $kbits,
+                    128,
+                    128,
+                )
+            }
+        }
+
+        pub(crate) static $table: [OsslDispatch; 15] = [
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_NEWCTX,
+                function: $newctx as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_FREECTX,
+                function: $freectx as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: crate::evp::cipher::OSSL_FUNC_CIPHER_DUPCTX,
+                function: $dupctx as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_ENCRYPT_INIT,
+                function: cts_einit as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_DECRYPT_INIT,
+                function: cts_dinit as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_UPDATE,
+                function: ossl_cipher_cbc_cts_block_update as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_FINAL,
+                function: ossl_cipher_cbc_cts_block_final as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: crate::evp::cipher::OSSL_FUNC_CIPHER_CIPHER,
+                function: ossl_cipher_generic_cipher as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GET_PARAMS,
+                function: $getparams as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GETTABLE_PARAMS,
+                function: ossl_cipher_generic_gettable_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GET_CTX_PARAMS,
+                function: cts_get_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_SET_CTX_PARAMS,
+                function: cts_set_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GETTABLE_CTX_PARAMS,
+                function: cts_gettable_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS,
+                function: cts_settable_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_DISPATCH_END,
+                function: ptr::null_mut(),
+            },
+        ];
+    };
+}
+
+cts_row!(
+    aes128cbc_cts_newctx,
+    aes128cbc_cts_get_params,
+    AES128CBCCTS_FUNCTIONS,
+    ProvAesCtx,
+    AES_CBC_HW,
+    128,
+    aes_freectx,
+    aes_dupctx
+);
+cts_row!(
+    aes192cbc_cts_newctx,
+    aes192cbc_cts_get_params,
+    AES192CBCCTS_FUNCTIONS,
+    ProvAesCtx,
+    AES_CBC_HW,
+    192,
+    aes_freectx,
+    aes_dupctx
+);
+cts_row!(
+    aes256cbc_cts_newctx,
+    aes256cbc_cts_get_params,
+    AES256CBCCTS_FUNCTIONS,
+    ProvAesCtx,
+    AES_CBC_HW,
+    256,
+    aes_freectx,
+    aes_dupctx
+);
+cts_row!(
+    camellia128cbc_cts_newctx,
+    camellia128cbc_cts_get_params,
+    CAMELLIA128CBCCTS_FUNCTIONS,
+    ProvCamelliaCtx,
+    CAMELLIA_CBC_HW,
+    128,
+    camellia_freectx,
+    camellia_dupctx
+);
+cts_row!(
+    camellia192cbc_cts_newctx,
+    camellia192cbc_cts_get_params,
+    CAMELLIA192CBCCTS_FUNCTIONS,
+    ProvCamelliaCtx,
+    CAMELLIA_CBC_HW,
+    192,
+    camellia_freectx,
+    camellia_dupctx
+);
+cts_row!(
+    camellia256cbc_cts_newctx,
+    camellia256cbc_cts_get_params,
+    CAMELLIA256CBCCTS_FUNCTIONS,
+    ProvCamelliaCtx,
+    CAMELLIA_CBC_HW,
+    256,
+    camellia_freectx,
+    camellia_dupctx
+);
+
 // One direct `cipher_row!` per row: no wrapper macro, so `prototype_court.py`'s macro plane
 // can read every `fn $newctx(` and substitute the identifier this invocation supplies.
 cipher_row!(
@@ -4502,6 +5241,9 @@ alias!(N_AES_128_ECB, "AES-128-ECB:2.16.840.1.101.3.4.1.1");
 alias!(N_AES_256_CBC, "AES-256-CBC:AES256:2.16.840.1.101.3.4.1.42");
 alias!(N_AES_192_CBC, "AES-192-CBC:AES192:2.16.840.1.101.3.4.1.22");
 alias!(N_AES_128_CBC, "AES-128-CBC:AES128:2.16.840.1.101.3.4.1.2");
+alias!(N_AES_128_CBC_CTS, "AES-128-CBC-CTS");
+alias!(N_AES_192_CBC_CTS, "AES-192-CBC-CTS");
+alias!(N_AES_256_CBC_CTS, "AES-256-CBC-CTS");
 alias!(N_AES_256_OFB, "AES-256-OFB:2.16.840.1.101.3.4.1.43");
 alias!(N_AES_192_OFB, "AES-192-OFB:2.16.840.1.101.3.4.1.23");
 alias!(N_AES_128_OFB, "AES-128-OFB:2.16.840.1.101.3.4.1.3");
@@ -4532,6 +5274,9 @@ alias!(
     N_CAMELLIA_128_CBC,
     "CAMELLIA-128-CBC:CAMELLIA128:1.2.392.200011.61.1.1.1.2"
 );
+alias!(N_CAMELLIA_128_CBC_CTS, "CAMELLIA-128-CBC-CTS");
+alias!(N_CAMELLIA_192_CBC_CTS, "CAMELLIA-192-CBC-CTS");
+alias!(N_CAMELLIA_256_CBC_CTS, "CAMELLIA-256-CBC-CTS");
 alias!(N_CAMELLIA_256_OFB, "CAMELLIA-256-OFB:0.3.4401.5.3.1.9.43");
 alias!(N_CAMELLIA_192_OFB, "CAMELLIA-192-OFB:0.3.4401.5.3.1.9.23");
 alias!(N_CAMELLIA_128_OFB, "CAMELLIA-128-OFB:0.3.4401.5.3.1.9.3");
@@ -4609,7 +5354,7 @@ const fn row(names: *const c_char, implementation: *const c_void) -> OsslAlgorit
 
 /// `static const OSSL_ALGORITHM_CAPABLE deflt_ciphers[]` — `providers/defltprov.c:161-330`,
 /// restricted to the rows this half implements, in the authority's order.
-pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 66] = [
+pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 72] = [
     row(N_NULL, NULL_FUNCTIONS.as_ptr().cast()),
     row(N_AES_256_ECB, AES256ECB_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_ECB, AES192ECB_FUNCTIONS.as_ptr().cast()),
@@ -4617,6 +5362,9 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 66] = [
     row(N_AES_256_CBC, AES256CBC_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_CBC, AES192CBC_FUNCTIONS.as_ptr().cast()),
     row(N_AES_128_CBC, AES128CBC_FUNCTIONS.as_ptr().cast()),
+    row(N_AES_128_CBC_CTS, AES128CBCCTS_FUNCTIONS.as_ptr().cast()),
+    row(N_AES_192_CBC_CTS, AES192CBCCTS_FUNCTIONS.as_ptr().cast()),
+    row(N_AES_256_CBC_CTS, AES256CBCCTS_FUNCTIONS.as_ptr().cast()),
     row(N_AES_256_OFB, AES256OFB_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_OFB, AES192OFB_FUNCTIONS.as_ptr().cast()),
     row(N_AES_128_OFB, AES128OFB_FUNCTIONS.as_ptr().cast()),
@@ -4659,6 +5407,18 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 66] = [
     row(N_CAMELLIA_256_CBC, CAMELLIA256CBC_FUNCTIONS.as_ptr().cast()),
     row(N_CAMELLIA_192_CBC, CAMELLIA192CBC_FUNCTIONS.as_ptr().cast()),
     row(N_CAMELLIA_128_CBC, CAMELLIA128CBC_FUNCTIONS.as_ptr().cast()),
+    row(
+        N_CAMELLIA_128_CBC_CTS,
+        CAMELLIA128CBCCTS_FUNCTIONS.as_ptr().cast(),
+    ),
+    row(
+        N_CAMELLIA_192_CBC_CTS,
+        CAMELLIA192CBCCTS_FUNCTIONS.as_ptr().cast(),
+    ),
+    row(
+        N_CAMELLIA_256_CBC_CTS,
+        CAMELLIA256CBCCTS_FUNCTIONS.as_ptr().cast(),
+    ),
     row(N_CAMELLIA_256_OFB, CAMELLIA256OFB_FUNCTIONS.as_ptr().cast()),
     row(N_CAMELLIA_192_OFB, CAMELLIA192OFB_FUNCTIONS.as_ptr().cast()),
     row(N_CAMELLIA_128_OFB, CAMELLIA128OFB_FUNCTIONS.as_ptr().cast()),
@@ -4717,9 +5477,9 @@ mod tests {
 
     #[test]
     fn the_cipher_table_terminates_and_names_the_rows() {
-        assert_eq!(DEFLT_CIPHERS.len(), 66);
+        assert_eq!(DEFLT_CIPHERS.len(), 72);
         // SAFETY: every entry up to the terminator is initialised.
-        let last = DEFLT_CIPHERS[65].algorithm_names;
+        let last = DEFLT_CIPHERS[71].algorithm_names;
         assert!(last.is_null(), "the table is NULL-name terminated");
         // SAFETY: the first row's name is a `'static` C string.
         let first = unsafe { core::ffi::CStr::from_ptr(DEFLT_CIPHERS[0].algorithm_names) };

@@ -942,12 +942,102 @@ static int ct_ocb(const char *cipher, int enc_op,
     return 0;
 }
 
+/*
+ * CTS: `AES-*-CBC-CTS` is three constructions under one name. CS1 is the NIST variant
+ * (`CRYPTO_nistcts128_*`), CS3 the Kerberos one (`CRYPTO_cts128_*`), and CS2 is CS3 for a
+ * partial block and plain CBC for an aligned one (`cipher_cts.c:301-325`). The corpus's
+ * `CTSMode` line chooses the variant. A sixteen-byte CS3 message is the one-block special
+ * case, which the authority handles with a plain CBC block.
+ */
+static int ct_cts(const char *cipher, const char *ctsmode, int enc_op,
+                  const unsigned char *key, size_t keylen,
+                  const unsigned char *iv, size_t ivlen,
+                  const unsigned char *in, size_t inlen,
+                  unsigned char *out, size_t *outlen)
+{
+    AES_KEY aenc, adck;
+    CAMELLIA_KEY ckey;
+    unsigned char ivec[16];
+    const char *mode = (ctsmode != NULL && ctsmode[0] != '\0') ? ctsmode : "CS1";
+    int is_aes, bits;
+    size_t n;
+
+    if (ivlen != 16 || inlen < 16)
+        return -1;
+    if (strncmp(cipher, "AES-", 4) == 0 && strstr(cipher, "-CBC-CTS") != NULL) {
+        is_aes = 1;
+        bits = atoi(cipher + 4);
+    } else if (strncmp(cipher, "CAMELLIA-", 9) == 0 && strstr(cipher, "-CBC-CTS") != NULL) {
+        is_aes = 0;
+        bits = atoi(cipher + 9);
+    } else {
+        return -1;
+    }
+    if (bits != 128 && bits != 192 && bits != 256)
+        return -1;
+    if (keylen != (size_t)bits / 8)
+        return -1;
+    memcpy(ivec, iv, 16);
+
+    if (is_aes) {
+        if (enc_op) {
+            if (AES_set_encrypt_key(key, bits, &aenc) != 0)
+                return -1;
+        } else if (AES_set_decrypt_key(key, bits, &adck) != 0) {
+            return -1;
+        }
+    } else if (Camellia_set_key(key, bits, &ckey) != 0) {
+        return -1;
+    }
+
+    if (is_aes) {
+        cbc128_f cbc = (cbc128_f)AES_cbc_encrypt;
+        const void *keyp = enc_op ? (const void *)&aenc : (const void *)&adck;
+
+        if (strcmp(mode, "CS1") == 0) {
+            n = enc_op ? CRYPTO_nistcts128_encrypt(in, out, inlen, keyp, ivec, cbc)
+                       : CRYPTO_nistcts128_decrypt(in, out, inlen, keyp, ivec, cbc);
+        } else if (strcmp(mode, "CS3") == 0 && inlen == 16) {
+            AES_cbc_encrypt(in, out, 16, keyp, ivec, enc_op);
+            n = 16;
+        } else if (strcmp(mode, "CS2") == 0 && inlen % 16 == 0) {
+            AES_cbc_encrypt(in, out, inlen, keyp, ivec, enc_op);
+            n = inlen;
+        } else {
+            n = enc_op ? CRYPTO_cts128_encrypt(in, out, inlen, keyp, ivec, cbc)
+                       : CRYPTO_cts128_decrypt(in, out, inlen, keyp, ivec, cbc);
+        }
+    } else {
+        cbc128_f cbc = (cbc128_f)Camellia_cbc_encrypt;
+        const void *keyp = (const void *)&ckey;
+
+        if (strcmp(mode, "CS1") == 0) {
+            n = enc_op ? CRYPTO_nistcts128_encrypt(in, out, inlen, keyp, ivec, cbc)
+                       : CRYPTO_nistcts128_decrypt(in, out, inlen, keyp, ivec, cbc);
+        } else if (strcmp(mode, "CS3") == 0 && inlen == 16) {
+            Camellia_cbc_encrypt(in, out, 16, &ckey, ivec, enc_op);
+            n = 16;
+        } else if (strcmp(mode, "CS2") == 0 && inlen % 16 == 0) {
+            Camellia_cbc_encrypt(in, out, inlen, &ckey, ivec, enc_op);
+            n = inlen;
+        } else {
+            n = enc_op ? CRYPTO_cts128_encrypt(in, out, inlen, keyp, ivec, cbc)
+                       : CRYPTO_cts128_decrypt(in, out, inlen, keyp, ivec, cbc);
+        }
+    }
+    if (n == 0)
+        return -1;
+    *outlen = n;
+    return 0;
+}
+
 static int ct_cipher(const char *cipher, const char *operation,
                      const unsigned char *key, size_t keylen,
                      const unsigned char *iv, size_t ivlen,
                      const unsigned char *aad, size_t aadlen,
                      const unsigned char *in, size_t inlen,
-                     unsigned char *out, size_t *outlen, size_t taglen)
+                     unsigned char *out, size_t *outlen, size_t taglen,
+                     const char *ctsmode)
 {
     int enc_op = strcmp(operation, "ENCRYPT") == 0;
 
@@ -962,6 +1052,9 @@ static int ct_cipher(const char *cipher, const char *operation,
         return 0;
     if (ct_ocb(cipher, enc_op, key, keylen, iv, ivlen, aad, aadlen,
                in, inlen, out, outlen, taglen) == 0)
+        return 0;
+    if (ct_cts(cipher, ctsmode, enc_op, key, keylen, iv, ivlen,
+               in, inlen, out, outlen) == 0)
         return 0;
     if (ct_wrap(cipher, enc_op, key, keylen, iv, ivlen, in, inlen, out, outlen) == 0)
         return 0;
@@ -993,6 +1086,7 @@ int main(int argc, char **argv)
         unsigned char key[64], iv[64], aad[CT_MAX], in[CT_MAX], out[CT_MAX + 64];
         size_t keylen = 0, ivlen = 0, aadlen = 0, inlen = 0, outlen = 0;
         size_t taglen = 0;
+        const char *ctsmode = "";
         long index;
         int rc;
 
@@ -1011,8 +1105,15 @@ int main(int argc, char **argv)
         if (nf < 8)
             continue;
         {
-            char *nl = strchr(fields[7], '\n');
+            /* field[7] is `taglen`, and the optional ninth column is the CTS mode. */
+            char *tab = strchr(fields[7], '\t');
+            char *nl;
 
+            if (tab != NULL) {
+                *tab = '\0';
+                ctsmode = tab + 1;
+            }
+            nl = strchr(tab != NULL ? ctsmode : fields[7], '\n');
             if (nl != NULL)
                 *nl = '\0';
         }
@@ -1026,7 +1127,7 @@ int main(int argc, char **argv)
             continue;
         }
         rc = ct_cipher(fields[1], fields[2], key, keylen, iv, ivlen, aad, aadlen,
-                       in, inlen, out, &outlen, taglen);
+                       in, inlen, out, &outlen, taglen, ctsmode);
         if (rc != 0) {
             printf("%ld\terr\trefused\n", index);
             continue;
