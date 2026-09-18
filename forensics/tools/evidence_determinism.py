@@ -91,6 +91,13 @@ GENERATORS_BEFORE_LEDGERS = [
     # doing only one of the two would have replaced one silent gap with two.
     "forensics/tools/gen_err_raise_sites.py",
     "forensics/tools/gen_bn_primes.py",
+    # The provider algorithm-row census (D237). It reads the authority's provider tables and
+    # the crate's two provider modules, and nothing else, so it has no position dependence
+    # beyond being after the crate's sources are final; it is listed here so a stale
+    # committed copy is a failure rather than a silent divergence. The whole point of the
+    # census is that `DES3-WRAP` was invisible, so a generator nothing re-runs would
+    # reintroduce exactly that.
+    "forensics/tools/gen_provider_algorithms.py",
 ]
 GENERATORS_AFTER_LEDGERS = [
     # The court coverage atlas (D199). It consumes the ledgers and the staged court
