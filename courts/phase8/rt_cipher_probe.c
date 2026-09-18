@@ -39,6 +39,7 @@
 #include <string.h>
 
 #include <openssl/aes.h>
+#include <openssl/des.h>
 #include <openssl/modes.h>
 #include <openssl/rc4.h>
 
@@ -387,6 +388,274 @@ static void rt_rc4(void)
     printf("rc4.zero_len.state.x=%u\n", (unsigned)k.x);
 }
 
+static void rt_des(void)
+{
+    unsigned char key[24];
+    unsigned char in[48];
+    unsigned char out[64];
+    unsigned char iv[8];
+    DES_key_schedule ks1, ks2, ks3;
+    DES_cblock ck;
+    int num;
+
+    printf("des.sizeof_schedule=%u\n", (unsigned)sizeof(DES_key_schedule));
+    /*
+     * `DES_options` is host-independent here: the portable arm is compiled because this
+     * profile's asm_arch has no `des-586` object, and it answers the constant
+     * `des(int)` (`crypto/des/ecb_enc.c:20-33`).
+     */
+    printf("des.options=%s\n", DES_options());
+
+    rt_fill(key, 8, 1);
+    /* Build a parity-correct key so `DES_set_key` can answer 0 rather than -1. */
+    memcpy(ck, key, 8);
+    DES_set_odd_parity(&ck);
+    printf("des.check_parity=%d\n", DES_check_key_parity(&ck));
+    printf("des.set_key=%d\n", DES_set_key(&ck, &ks1));
+    printf("des.key_sched=%d\n", DES_key_sched(&ck, &ks1));
+    printf("des.set_key_checked=%d\n", DES_set_key_checked(&ck, &ks1));
+    /* The whole 128-byte schedule is the strongest observation: a wrong PC1, shift or S-box
+     * changes it, and a wrong round-order transcription changes it too. */
+    rt_hex("des.ks1", (const unsigned char *)&ks1, sizeof(ks1));
+
+    /* Weak and semi-weak keys, and a wrong-parity key. */
+    {
+        DES_cblock w1 = { 1, 1, 1, 1, 1, 1, 1, 1 };
+        DES_cblock w2 = { 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE };
+        DES_cblock s1 = { 0x01, 0xFE, 0x01, 0xFE, 0x01, 0xFE, 0x01, 0xFE };
+        DES_cblock silly = { 0, 0, 0, 0, 0, 0, 0, 0 };
+        DES_key_schedule wk;
+
+        printf("des.weak.0101=%d\n", DES_is_weak_key(&w1));
+        printf("des.weak.fefe=%d\n", DES_is_weak_key(&w2));
+        printf("des.weak.semi=%d\n", DES_is_weak_key(&s1));
+        printf("des.set_key.weak=%d\n", DES_set_key(&w1, &wk));
+        printf("des.set_key.wrongparity=%d\n", DES_set_key(&silly, &wk));
+        printf("des.check_parity.zero=%d\n", DES_check_key_parity(&silly));
+    }
+
+    /* `DES_encrypt1`/`DES_encrypt2`, and the 3DES entry points. */
+    {
+        DES_LONG d1[2], d2[2];
+
+        d1[0] = 0x01234567u;
+        d1[1] = 0x89abcdefu;
+        d2[0] = d1[0];
+        d2[1] = d1[1];
+        DES_encrypt1(d1, &ks1, DES_ENCRYPT);
+        rt_hex("des.encrypt1.enc", (const unsigned char *)d1, 8);
+        DES_encrypt1(d1, &ks1, DES_DECRYPT);
+        rt_hex("des.encrypt1.dec", (const unsigned char *)d1, 8);
+        DES_encrypt2(d2, &ks1, DES_ENCRYPT);
+        rt_hex("des.encrypt2.enc", (const unsigned char *)d2, 8);
+    }
+
+    rt_fill(key, 24, 2);
+    memcpy(ck, key, 8);
+    DES_set_odd_parity(&ck);
+    DES_set_key_unchecked(&ck, &ks1);
+    memcpy(ck, key + 8, 8);
+    DES_set_odd_parity(&ck);
+    DES_set_key_unchecked(&ck, &ks2);
+    memcpy(ck, key + 16, 8);
+    DES_set_odd_parity(&ck);
+    DES_set_key_unchecked(&ck, &ks3);
+
+    rt_fill(in, sizeof(in), 3);
+    memset(out, 0, sizeof(out));
+    rt_fill(iv, 8, 4);
+    DES_ecb3_encrypt((const_DES_cblock *)in, (DES_cblock *)out, &ks1, &ks2, &ks3, DES_ENCRYPT);
+    rt_hex("des.ecb3.enc", out, 8);
+    DES_ecb3_encrypt((const_DES_cblock *)out, (DES_cblock *)out + 8, &ks1, &ks2, &ks3, DES_DECRYPT);
+    rt_hex("des.ecb3.dec", out + 8, 8);
+
+    {
+        DES_LONG e3[2];
+
+        e3[0] = 0x11223344u;
+        e3[1] = 0x55667788u;
+        DES_encrypt3(e3, &ks1, &ks2, &ks3);
+        rt_hex("des.encrypt3", (const unsigned char *)e3, 8);
+        DES_decrypt3(e3, &ks1, &ks2, &ks3);
+        rt_hex("des.decrypt3", (const unsigned char *)e3, 8);
+    }
+
+    /* ECB through the public entry point. */
+    memset(out, 0, sizeof(out));
+    rt_fill(iv, 8, 4);
+    DES_ecb_encrypt((const_DES_cblock *)in, (DES_cblock *)out, &ks1, DES_ENCRYPT);
+    rt_hex("des.ecb.enc", out, 8);
+    DES_ecb_encrypt((const_DES_cblock *)out, (DES_cblock *)out + 8, &ks1, DES_DECRYPT);
+    rt_hex("des.ecb.dec", out + 8, 8);
+
+    /* `DES_cbc_encrypt` does NOT update the IV; `DES_ncbc_encrypt` does. */
+    rt_fill(iv, 8, 5);
+    memset(out, 0, sizeof(out));
+    DES_cbc_encrypt(in, out, 24, &ks1, &iv, DES_ENCRYPT);
+    rt_hex("des.cbc.enc.ct", out, 24);
+    rt_hex("des.cbc.enc.iv", iv, 8);
+
+    rt_fill(iv, 8, 5);
+    memset(out, 0, sizeof(out));
+    DES_ncbc_encrypt(in, out, 24, &ks1, &iv, DES_ENCRYPT);
+    rt_hex("des.ncbc.enc.ct", out, 24);
+    rt_hex("des.ncbc.enc.iv", iv, 8);
+
+    rt_fill(iv, 8, 5);
+    memset(out, 0, sizeof(out));
+    DES_ncbc_encrypt(in, out, 24, &ks1, &iv, DES_DECRYPT);
+    rt_hex("des.ncbc.dec", out, 24);
+    rt_hex("des.ncbc.dec.iv", iv, 8);
+
+    /* A partial final block, which the `c2ln`/`l2cn` arms take. */
+    rt_fill(iv, 8, 6);
+    memset(out, 0, sizeof(out));
+    DES_ncbc_encrypt(in, out, 20, &ks1, &iv, DES_ENCRYPT);
+    rt_hex("des.ncbc.partial", out, 24);
+
+    /* EDE3-CBC. */
+    rt_fill(iv, 8, 7);
+    memset(out, 0, sizeof(out));
+    DES_ede3_cbc_encrypt(in, out, 24, &ks1, &ks2, &ks3, &iv, DES_ENCRYPT);
+    rt_hex("des.ede3cbc.enc", out, 24);
+    rt_hex("des.ede3cbc.enc.iv", iv, 8);
+    DES_ede3_cbc_encrypt(out, out + 24, 24, &ks1, &ks2, &ks3, &iv, DES_DECRYPT);
+    rt_hex("des.ede3cbc.dec", out + 24, 24);
+
+    /* PCBC and XCBC. */
+    rt_fill(iv, 8, 8);
+    memset(out, 0, sizeof(out));
+    DES_pcbc_encrypt(in, out, 24, &ks1, &iv, DES_ENCRYPT);
+    rt_hex("des.pcbc.enc", out, 24);
+    DES_pcbc_encrypt(out, out + 24, 24, &ks1, &iv, DES_DECRYPT);
+    rt_hex("des.pcbc.dec", out + 24, 24);
+
+    rt_fill(iv, 8, 9);
+    memset(out, 0, sizeof(out));
+    DES_xcbc_encrypt(in, out, 24, &ks1, &iv, (const_DES_cblock *)(key + 8),
+                     (const_DES_cblock *)(key + 16), DES_ENCRYPT);
+    rt_hex("des.xcbc.enc", out, 24);
+    rt_hex("des.xcbc.enc.iv", iv, 8);
+    DES_xcbc_encrypt(out, out + 24, 24, &ks1, &iv, (const_DES_cblock *)(key + 8),
+                     (const_DES_cblock *)(key + 16), DES_DECRYPT);
+    rt_hex("des.xcbc.dec", out + 24, 24);
+
+    /* CFB-64 with a resumed `num`, and the EDE3 spelling. */
+    rt_fill(iv, 8, 10);
+    num = 3;
+    memset(out, 0, sizeof(out));
+    DES_cfb64_encrypt(in, out, 24, &ks1, &iv, &num, DES_ENCRYPT);
+    rt_hex("des.cfb64.enc", out, 24);
+    rt_hex("des.cfb64.enc.iv", iv, 8);
+    printf("des.cfb64.enc.num=%d\n", num);
+
+    rt_fill(iv, 8, 10);
+    num = 3;
+    memset(out, 0, sizeof(out));
+    DES_cfb64_encrypt(in, out, 24, &ks1, &iv, &num, DES_DECRYPT);
+    rt_hex("des.cfb64.dec", out, 24);
+    printf("des.cfb64.dec.num=%d\n", num);
+
+    rt_fill(iv, 8, 11);
+    num = 0;
+    memset(out, 0, sizeof(out));
+    DES_ede3_cfb64_encrypt(in, out, 24, &ks1, &ks2, &ks3, &iv, &num, DES_ENCRYPT);
+    rt_hex("des.ede3cfb64.enc", out, 24);
+
+    /* OFB-64 with `num`, and the EDE3 spelling. */
+    rt_fill(iv, 8, 12);
+    num = 5;
+    memset(out, 0, sizeof(out));
+    DES_ofb64_encrypt(in, out, 24, &ks1, &iv, &num);
+    rt_hex("des.ofb64.enc", out, 24);
+    rt_hex("des.ofb64.enc.iv", iv, 8);
+    printf("des.ofb64.enc.num=%d\n", num);
+
+    rt_fill(iv, 8, 12);
+    num = 5;
+    memset(out, 0, sizeof(out));
+    DES_ede3_ofb64_encrypt(in, out, 24, &ks1, &ks2, &ks3, &iv, &num);
+    rt_hex("des.ede3ofb64.enc", out, 24);
+
+    /* The bit-oriented CFB-r and OFB-r spellings. */
+    rt_fill(iv, 8, 13);
+    memset(out, 0, sizeof(out));
+    DES_cfb_encrypt(in, out, 12, 12, &ks1, &iv, DES_ENCRYPT);
+    rt_hex("des.cfb12.enc", out, 12);
+    rt_hex("des.cfb12.enc.iv", iv, 8);
+
+    rt_fill(iv, 8, 13);
+    memset(out, 0, sizeof(out));
+    DES_cfb_encrypt(in, out, 12, 12, &ks1, &iv, DES_DECRYPT);
+    rt_hex("des.cfb12.dec", out, 12);
+
+    rt_fill(iv, 8, 14);
+    memset(out, 0, sizeof(out));
+    DES_ofb_encrypt(in, out, 12, 12, &ks1, &iv);
+    rt_hex("des.ofb12.enc", out, 12);
+    rt_hex("des.ofb12.enc.iv", iv, 8);
+
+    rt_fill(iv, 8, 15);
+    memset(out, 0, sizeof(out));
+    DES_ede3_cfb_encrypt(in, out, 12, 12, &ks1, &ks2, &ks3, &iv, DES_ENCRYPT);
+    rt_hex("des.ede3cfb12.enc", out, 12);
+
+    /* CBC checksum: the returned word and the optional output block. */
+    {
+        DES_cblock cksum;
+        DES_LONG r;
+
+        rt_fill(iv, 8, 16);
+        memset(&cksum, 0, sizeof(cksum));
+        r = DES_cbc_cksum(in, &cksum, 20, &ks1, &iv);
+        printf("des.cbc_cksum.ret=%08x\n", (unsigned)r);
+        rt_hex("des.cbc_cksum.out", (const unsigned char *)&cksum, 8);
+    }
+
+    /* QUAD checksum, with its four-output-count loop. */
+    {
+        DES_cblock outb[4];
+        DES_cblock seed;
+        DES_LONG r;
+
+        rt_fill(seed, 8, 17);
+        memset(outb, 0, sizeof(outb));
+        r = DES_quad_cksum(in, outb, 12, 4, &seed);
+        printf("des.quad_cksum.ret=%08x\n", (unsigned)r);
+        rt_hex("des.quad_cksum.out", (const unsigned char *)outb, 32);
+    }
+
+    /* The string-key helpers. */
+    {
+        DES_cblock k1, k2;
+
+        DES_string_to_key("The quick brown fox", &k1);
+        rt_hex("des.string_to_key", (const unsigned char *)&k1, 8);
+        DES_string_to_2keys("abcdefghijklmnopq", &k1, &k2);
+        rt_hex("des.string_to_2keys.k1", (const unsigned char *)&k1, 8);
+        rt_hex("des.string_to_2keys.k2", (const unsigned char *)&k2, 8);
+    }
+
+    /* The crypt(3) spelling, whose `fcrypt_body` is a distinct 25-iteration loop. */
+    {
+        char ret[14];
+
+        memset(ret, 0, sizeof(ret));
+        printf("des.fcrypt.null=%d\n", DES_fcrypt("password", "\0x", ret) == NULL);
+        memset(ret, 0, sizeof(ret));
+        printf("des.fcrypt.ret=%d\n", DES_fcrypt("password", "ab", ret) != NULL);
+        printf("des.fcrypt=%s\n", ret);
+        printf("des.crypt=%s\n", DES_crypt("password", "ab"));
+    }
+
+    /* A second key schedule, so the diff sees two distinct 128-byte schedules. */
+    rt_fill(key, 8, 18);
+    memcpy(ck, key, 8);
+    DES_set_odd_parity(&ck);
+    DES_set_key_unchecked(&ck, &ks2);
+    rt_hex("des.ks2", (const unsigned char *)&ks2, sizeof(ks2));
+}
+
 static void rt_modes_blocks(void)
 {
     const unsigned char key = RT_KEY;
@@ -644,5 +913,6 @@ int main(void)
     rt_modes_blocks();
     rt_aes();
     rt_rc4();
+    rt_des();
     return 0;
 }

@@ -316,6 +316,20 @@ def canon_c_type(
     if t.startswith("const "):
         const = True
         t = t[len("const "):].strip()
+    if t.endswith("]") and "[" in t:
+        # An *array* type, reached here almost always through a typedef -- `DES_cblock`
+        # is `unsigned char[8]`, so `DES_cblock *` resolves to a pointer to an array.
+        # Until this branch existed the type plane could not read it and reported a
+        # *correct* declaration as `type_unmapped`, which is a failure, not a gap: the
+        # first implementation whose prototype mentions `DES_cblock` was blocked by the
+        # instrument rather than by the authority. The element type and the length are
+        # both kept, so `DES_cblock *` and `unsigned char *` remain distinguishable.
+        idx = t.rfind("[")
+        elem = canon_c_type(t[:idx].strip(), typedefs, depth + 1, pointee)
+        if elem is None:
+            return None
+        base = f"arr({elem};{t[idx + 1:-1].strip()})"
+        return f"const({base})" if (const and pointee) else base
     if t.startswith("enum ") or t.startswith("struct ") or t.startswith("union "):
         base = "int:4:s" if t.startswith("enum ") else "opaque"
         return f"const({base})" if (const and pointee) else base
@@ -416,6 +430,15 @@ def canon_rust_type(text: str, aliases: dict[str, str], depth: int = 0) -> str |
     if t.startswith("Option<") and t.endswith(">"):
         # A nullable function pointer and a bare one are the same to the ABI.
         return canon_rust_type(t[len("Option<"):-1], aliases, depth + 1)
+    if t.startswith("[") and t.endswith("]") and ";" in t:
+        # An array type. This is the Rust side of the array branch in `canon_c_type`:
+        # `*mut [u8; 8]` and `DES_cblock *` must canonicalise alike, and the element
+        # type and length are both kept so the two do not become a wildcard.
+        elem_text, _, len_text = t[1:-1].rpartition(";")
+        elem = canon_rust_type(elem_text.strip(), aliases, depth + 1)
+        if elem is None:
+            return None
+        return f"arr({elem};{len_text.strip()})"
     if t.startswith("*mut "):
         inner = canon_rust_type(t[len("*mut "):], aliases, depth + 1)
         return None if inner is None else f"ptr({inner})"

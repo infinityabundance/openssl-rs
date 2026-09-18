@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include <openssl/aes.h>
+#include <openssl/des.h>
 #include <openssl/rc4.h>
 
 #define CT_LINE 8192
@@ -56,19 +57,17 @@ static void ct_hex(char *dst, const unsigned char *p, size_t n)
     dst[2 * n] = '\0';
 }
 
-/* Run one vector. Returns 0 on success with the output in `out`/`outlen`. */
-static int ct_cipher(const char *cipher, const char *operation,
-                     const unsigned char *key, size_t keylen,
-                     const unsigned char *iv, size_t ivlen,
-                     const unsigned char *in, size_t inlen,
-                     unsigned char *out, size_t *outlen)
+/* Run the AES and RC4 arms; return 0 with the output in `out`/`outlen`, -1 to refuse. */
+static int ct_aes_rc4(const char *cipher, int enc_op,
+                      const unsigned char *key, size_t keylen,
+                      const unsigned char *iv, size_t ivlen,
+                      const unsigned char *in, size_t inlen,
+                      unsigned char *out, size_t *outlen)
 {
     AES_KEY enc, dck;
     unsigned char ivec[32];
     int bits;
-    int enc_op = strcmp(operation, "ENCRYPT") == 0;
 
-    /* RC4 is a stream cipher: no block, no IV, and one call transforms any number of bytes. */
     if (strcmp(cipher, "RC4") == 0) {
         RC4_KEY rk;
 
@@ -88,11 +87,9 @@ static int ct_cipher(const char *cipher, const char *operation,
         return -1;
     if (keylen != (size_t)bits / 8)
         return -1;
-
     if (ivlen > sizeof(ivec))
         return -1;
     memcpy(ivec, iv, ivlen);
-
     if (AES_set_encrypt_key(key, bits, &enc) != 0)
         return -1;
 
@@ -139,6 +136,185 @@ static int ct_cipher(const char *cipher, const char *operation,
         return 0;
     }
     return -1;
+}
+
+/* The mode suffix, one of "ECB", "CBC", "CFB", "OFB", "CTR", or NULL. */
+static const char *ct_mode(const char *cipher)
+{
+    static const char *modes[] = { "ECB", "CBC", "CFB", "OFB", "CTR" };
+    char needle[8];
+    size_t i;
+
+    for (i = 0; i < sizeof(modes) / sizeof(modes[0]); i++) {
+        snprintf(needle, sizeof(needle), "-%s", modes[i]);
+        if (strstr(cipher, needle) != NULL)
+            return modes[i];
+    }
+    return NULL;
+}
+
+/*
+ * The 8-byte-block and 16-byte-block legacy ciphers. Each returns 0 with the output in
+ * `out`/`outlen` or -1 to refuse, exactly as the AES arm does.
+ */
+static int ct_legacy(const char *cipher, int enc_op,
+                     const unsigned char *key, size_t keylen,
+                     const unsigned char *iv, size_t ivlen,
+                     const unsigned char *in, size_t inlen,
+                     unsigned char *out, size_t *outlen)
+{
+    const char *mode = ct_mode(cipher);
+    unsigned char ivec[32];
+    size_t block;
+
+    if (mode == NULL)
+        return -1;
+
+    if (strncmp(cipher, "DES-EDE3-", 9) == 0) {
+        DES_key_schedule k1, k2, k3;
+        DES_cblock ck;
+        int num = 0;
+
+        if (keylen != 24 || ivlen > sizeof(ivec))
+            return -1;
+        memcpy(ivec, iv, ivlen);
+        memcpy(ck, key, 8);
+        DES_set_key_unchecked(&ck, &k1);
+        memcpy(ck, key + 8, 8);
+        DES_set_key_unchecked(&ck, &k2);
+        memcpy(ck, key + 16, 8);
+        DES_set_key_unchecked(&ck, &k3);
+        if (strcmp(mode, "ECB") == 0) {
+            size_t i;
+
+            if (inlen % 8 != 0)
+                return -1;
+            for (i = 0; i < inlen; i += 8)
+                DES_ecb3_encrypt((const_DES_cblock *)(in + i), (DES_cblock *)(out + i),
+                                 &k1, &k2, &k3, enc_op ? DES_ENCRYPT : DES_DECRYPT);
+            *outlen = inlen;
+            return 0;
+        }
+        if (strcmp(mode, "CBC") == 0) {
+            if (inlen % 8 != 0 || ivlen != 8)
+                return -1;
+            DES_ede3_cbc_encrypt(in, out, (long)inlen, &k1, &k2, &k3, ivec,
+                                 enc_op ? DES_ENCRYPT : DES_DECRYPT);
+            *outlen = inlen;
+            return 0;
+        }
+        if (strcmp(mode, "CFB") == 0) {
+            DES_ede3_cfb64_encrypt(in, out, (long)inlen, &k1, &k2, &k3, ivec, &num,
+                                   enc_op ? DES_ENCRYPT : DES_DECRYPT);
+            *outlen = inlen;
+            return 0;
+        }
+        if (strcmp(mode, "OFB") == 0) {
+            DES_ede3_ofb64_encrypt(in, out, (long)inlen, &k1, &k2, &k3, ivec, &num);
+            *outlen = inlen;
+            return 0;
+        }
+        return -1;
+    }
+
+    if (strncmp(cipher, "DES-EDE-", 8) == 0) {
+        /* Two-key EDE, which the low-level spells as EDE3 with ks1 for ks3. */
+        DES_key_schedule k1, k2;
+        DES_cblock ck;
+        int num = 0;
+
+        if ((keylen != 16 && keylen != 24) || ivlen > sizeof(ivec))
+            return -1;
+        memcpy(ivec, iv, ivlen);
+        memcpy(ck, key, 8);
+        DES_set_key_unchecked(&ck, &k1);
+        memcpy(ck, key + 8, 8);
+        DES_set_key_unchecked(&ck, &k2);
+        if (strcmp(mode, "ECB") == 0) {
+            size_t i;
+
+            if (inlen % 8 != 0)
+                return -1;
+            for (i = 0; i < inlen; i += 8)
+                DES_ecb3_encrypt((const_DES_cblock *)(in + i), (DES_cblock *)(out + i),
+                                 &k1, &k2, &k1, enc_op ? DES_ENCRYPT : DES_DECRYPT);
+            *outlen = inlen;
+            return 0;
+        }
+        if (strcmp(mode, "CBC") == 0) {
+            if (inlen % 8 != 0 || ivlen != 8)
+                return -1;
+            DES_ede3_cbc_encrypt(in, out, (long)inlen, &k1, &k2, &k1, ivec,
+                                 enc_op ? DES_ENCRYPT : DES_DECRYPT);
+            *outlen = inlen;
+            return 0;
+        }
+        if (strcmp(mode, "CFB") == 0) {
+            DES_ede3_cfb64_encrypt(in, out, (long)inlen, &k1, &k2, &k1, ivec, &num,
+                                   enc_op ? DES_ENCRYPT : DES_DECRYPT);
+            *outlen = inlen;
+            return 0;
+        }
+        return -1;
+    }
+
+    if (strncmp(cipher, "DES-", 4) == 0) {
+        DES_key_schedule k1;
+        DES_cblock ck;
+        int num = 0;
+
+        if (keylen != 8 || ivlen > sizeof(ivec))
+            return -1;
+        memcpy(ivec, iv, ivlen);
+        memcpy(ck, key, 8);
+        DES_set_key_unchecked(&ck, &k1);
+        if (strcmp(mode, "ECB") == 0) {
+            size_t i;
+
+            if (inlen % 8 != 0)
+                return -1;
+            for (i = 0; i < inlen; i += 8)
+                DES_ecb_encrypt((const_DES_cblock *)(in + i), (DES_cblock *)(out + i), &k1,
+                                enc_op ? DES_ENCRYPT : DES_DECRYPT);
+            *outlen = inlen;
+            return 0;
+        }
+        if (strcmp(mode, "CBC") == 0) {
+            if (inlen % 8 != 0 || ivlen != 8)
+                return -1;
+            DES_ncbc_encrypt(in, out, (long)inlen, &k1, ivec,
+                             enc_op ? DES_ENCRYPT : DES_DECRYPT);
+            *outlen = inlen;
+            return 0;
+        }
+        if (strcmp(mode, "CFB") == 0) {
+            DES_cfb64_encrypt(in, out, (long)inlen, &k1, ivec, &num,
+                              enc_op ? DES_ENCRYPT : DES_DECRYPT);
+            *outlen = inlen;
+            return 0;
+        }
+        if (strcmp(mode, "OFB") == 0) {
+            DES_ofb64_encrypt(in, out, (long)inlen, &k1, ivec, &num);
+            *outlen = inlen;
+            return 0;
+        }
+        return -1;
+    }
+
+    return -1;
+}
+
+static int ct_cipher(const char *cipher, const char *operation,
+                     const unsigned char *key, size_t keylen,
+                     const unsigned char *iv, size_t ivlen,
+                     const unsigned char *in, size_t inlen,
+                     unsigned char *out, size_t *outlen)
+{
+    int enc_op = strcmp(operation, "ENCRYPT") == 0;
+
+    if (ct_aes_rc4(cipher, enc_op, key, keylen, iv, ivlen, in, inlen, out, outlen) == 0)
+        return 0;
+    return ct_legacy(cipher, enc_op, key, keylen, iv, ivlen, in, inlen, out, outlen);
 }
 
 int main(int argc, char **argv)

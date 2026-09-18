@@ -65,7 +65,12 @@
 pub mod aes;
 pub mod asn1;
 pub mod bn;
+// The generated cipher tables (Phase 8.2). `gen_phase8_cipher_tables.py` derives every
+// number from the pinned authority's `crypto/` tree; the modules that read them carry the
+// structure.
+pub(crate) mod cipher_tables;
 pub mod context;
+pub mod des;
 pub mod digest;
 pub mod dso;
 pub mod evp;

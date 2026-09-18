@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 16,
-      "implemented": 77,
-      "open_in_this_stratum": 693,
+      "implemented": 109,
+      "open_in_this_stratum": 661,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -1196,6 +1196,38 @@
       "CRYPTO_nistcts128_encrypt",
       "CRYPTO_nistcts128_encrypt_block",
       "CRYPTO_ofb128_encrypt",
+      "DES_cbc_cksum",
+      "DES_cbc_encrypt",
+      "DES_cfb64_encrypt",
+      "DES_cfb_encrypt",
+      "DES_check_key_parity",
+      "DES_crypt",
+      "DES_decrypt3",
+      "DES_ecb3_encrypt",
+      "DES_ecb_encrypt",
+      "DES_ede3_cbc_encrypt",
+      "DES_ede3_cfb64_encrypt",
+      "DES_ede3_cfb_encrypt",
+      "DES_ede3_ofb64_encrypt",
+      "DES_encrypt1",
+      "DES_encrypt2",
+      "DES_encrypt3",
+      "DES_fcrypt",
+      "DES_is_weak_key",
+      "DES_key_sched",
+      "DES_ncbc_encrypt",
+      "DES_ofb64_encrypt",
+      "DES_ofb_encrypt",
+      "DES_options",
+      "DES_pcbc_encrypt",
+      "DES_quad_cksum",
+      "DES_set_key",
+      "DES_set_key_checked",
+      "DES_set_key_unchecked",
+      "DES_set_odd_parity",
+      "DES_string_to_2keys",
+      "DES_string_to_key",
+      "DES_xcbc_encrypt",
       "MD4",
       "MD4_Final",
       "MD4_Init",
@@ -1812,198 +1844,6 @@
         "module": "src/camellia.rs",
         "received_from_phase": null,
         "symbol": "Camellia_set_key"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_cbc_cksum"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_cbc_encrypt"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_cfb64_encrypt"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_cfb_encrypt"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_check_key_parity"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_crypt"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_decrypt3"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_ecb3_encrypt"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_ecb_encrypt"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_ede3_cbc_encrypt"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_ede3_cfb64_encrypt"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_ede3_cfb_encrypt"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_ede3_ofb64_encrypt"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_encrypt1"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_encrypt2"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_encrypt3"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_fcrypt"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_is_weak_key"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_key_sched"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_ncbc_encrypt"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_ofb64_encrypt"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_ofb_encrypt"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_options"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_pcbc_encrypt"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_quad_cksum"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_set_key"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_set_key_checked"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_set_key_unchecked"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_set_odd_parity"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_string_to_2keys"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_string_to_key"
-      },
-      {
-        "declaring_header": "des.h",
-        "module": "src/des/mod.rs",
-        "received_from_phase": null,
-        "symbol": "DES_xcbc_encrypt"
       },
       {
         "declaring_header": "dh.h",
@@ -5689,12 +5529,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "3a671912046b912502ca75e41f343ee79b52c456a25b220a3bbef81ef7a38166"
+      "sha256": "bc4367dceac9269d695de1096267ab442f83f344c4c71daf43da02fe2a6bc861"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "d43071d8fdceb7c559d25bef3994af29da1ce960f08d950bd3a38968bd7e9930"
+      "sha256": "e58ba310754c9a7037571d63f6ef4b331e1eed132628d147256eb5d2e26b4d19"
     }
   ],
   "kind": "phase8-obligations",

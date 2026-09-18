@@ -346,10 +346,18 @@ here is. (`forensics/phase8-obligations.json` remains the only complete list.)
 `CRYPTO_nistcts128_decrypt_block`, `AES_set_encrypt_key`, `AES_set_decrypt_key`, `AES_encrypt`,
 `AES_decrypt`, `AES_ecb_encrypt`, `AES_cbc_encrypt`, `AES_cfb128_encrypt`, `AES_cfb1_encrypt`,
 `AES_cfb8_encrypt`, `AES_ofb128_encrypt`, `AES_ige_encrypt`, `AES_bi_ige_encrypt`,
-`AES_wrap_key`, `AES_unwrap_key`, `AES_options`, `RC4_set_key`, `RC4`, `RC4_options`.
+`AES_wrap_key`, `AES_unwrap_key`, `AES_options`, `RC4_set_key`, `RC4`, `RC4_options`,
+`DES_set_key`, `DES_set_key_checked`, `DES_set_key_unchecked`, `DES_key_sched`,
+`DES_set_odd_parity`, `DES_check_key_parity`, `DES_is_weak_key`, `DES_options`,
+`DES_encrypt1`, `DES_encrypt2`, `DES_encrypt3`, `DES_decrypt3`, `DES_ecb_encrypt`,
+`DES_ecb3_encrypt`, `DES_cbc_encrypt`, `DES_ncbc_encrypt`, `DES_pcbc_encrypt`,
+`DES_xcbc_encrypt`, `DES_cfb64_encrypt`, `DES_ede3_cfb64_encrypt`, `DES_ede3_cfb_encrypt`,
+`DES_cfb_encrypt`, `DES_ofb_encrypt`, `DES_ofb64_encrypt`, `DES_ede3_ofb64_encrypt`,
+`DES_ede3_cbc_encrypt`, `DES_cbc_cksum`, `DES_quad_cksum`, `DES_string_to_key`,
+`DES_string_to_2keys`, `DES_fcrypt`, `DES_crypt`.
 
 **Open exports (checked against the ledger):** `MDC2`, `MDC2_Init`, `MDC2_Update`, `MDC2_Final`,
-`DES_set_key`, `DES_encrypt1`, `Camellia_set_key`, `BF_set_key`,
+`RC2_set_key`, `Camellia_set_key`, `BF_set_key`,
 `CAST_set_key`, `IDEA_set_encrypt_key`, `SEED_set_key`.
 
 ### The sixteen recorded hand-offs, and why the four key types are not hand-offs
