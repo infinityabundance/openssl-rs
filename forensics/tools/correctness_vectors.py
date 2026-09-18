@@ -1711,6 +1711,11 @@ CIPHER_RECIPE_FAMILIES: list[CipherRecipeFamily] = [
         r"^CAST5-(ECB|CBC|CFB|OFB)$", "RFC 2144",
         "CAST5-{ECB,CBC,CFB,OFB}", ("CAST5-ECB", "CAST5-CBC"),
         "0123456712345678234567893456789a", "0000000000000000"),
+    CipherRecipeFamily(
+        "idea", "test/recipes/30-test_evp_data/evpciph_idea.txt",
+        r"^IDEA-(ECB|CBC|CFB|OFB)$", "Ascom IDEA (Lai-Massey)",
+        "IDEA-{ECB,CBC,CFB,OFB}", ("IDEA-ECB", "IDEA-CBC"),
+        "00010002000300040005000600070008", "0000000000000000"),
 ]
 
 

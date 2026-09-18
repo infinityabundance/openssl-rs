@@ -649,6 +649,13 @@
         "translation_unit": "crypto/hpke/hpke.c"
       },
       {
+        "module": "src/idea.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "2/8",
+        "translation_unit": "crypto/idea/i_cbc.c"
+      },
+      {
         "module": "src/mac/cmac.rs",
         "phase": 7,
         "phase_source": "module-declaration",
@@ -19795,6 +19802,64 @@
           "src/hpke/mod.rs"
         ],
         "tu": "crypto/hpke/hpke.c"
+      },
+      {
+        "identifiers": [
+          "E_IDEA",
+          "IDEA_INT",
+          "IDEA_KEY_SCHEDULE",
+          "IDEA_cbc_encrypt",
+          "IDEA_encrypt",
+          "char",
+          "const",
+          "d",
+          "data",
+          "else",
+          "encrypt",
+          "for",
+          "h",
+          "idea",
+          "idea_mul",
+          "if",
+          "in",
+          "include",
+          "int",
+          "iv",
+          "key",
+          "ks",
+          "l",
+          "l2n",
+          "l2nn",
+          "length",
+          "long",
+          "n2l",
+          "n2ln",
+          "openssl",
+          "out",
+          "p",
+          "register",
+          "t0",
+          "t1",
+          "tin",
+          "tin0",
+          "tin1",
+          "tout0",
+          "tout1",
+          "ul",
+          "unsigned",
+          "void",
+          "x1",
+          "x2",
+          "x3",
+          "x4",
+          "xffff",
+          "xor0",
+          "xor1"
+        ],
+        "modules": [
+          "src/idea.rs"
+        ],
+        "tu": "crypto/idea/i_cbc.c"
       },
       {
         "identifiers": [

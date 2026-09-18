@@ -30,7 +30,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 56,
-      "language_surface_not_modelled_by_name": 3095,
+      "language_surface_not_modelled_by_name": 3099,
       "planned_prerequisites": 14
     },
     "census_by_unit": {
@@ -186,6 +186,7 @@
         "crypto/getenv.c": 2,
         "crypto/hmac/hmac.c": 7,
         "crypto/hpke/hpke.c": 25,
+        "crypto/idea/i_cbc.c": 4,
         "crypto/indicator_core.c": 5,
         "crypto/initthread.c": 18,
         "crypto/lhash/lhash.c": 16,
@@ -346,8 +347,8 @@
       ]
     },
     "checked": {
-      "authority_units": 159,
-      "crate_modules": 214,
+      "authority_units": 160,
+      "crate_modules": 215,
       "deferral_blocker_rows": 5,
       "deferrals_recorded": 25,
       "divergence_names_covered": 32,
@@ -469,7 +470,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "9d652c6d1de3ec38ee8d297d4bbef89b71351524ff39474ea2be9e584ef022fd",
+  "body_hash": "34064f9cd59db31ecc20f544696da3fb21fb17ce7c5961652a53eec3ef4d8911",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -490,7 +491,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "dd336a3b03ca7d9be4337481392fcde062232b30c3709ff4bf9ec066bc24ed7a"
+      "sha256": "1e9f7225f28e497b1ff2b62c93ef6e6f9b3f06547613b86d889425c297135f53"
     },
     {
       "name": "symbol-ownership",
@@ -505,12 +506,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "897ccff1cffa7e8737a9e716e8d9c6d23ec41a710778ddd0a0595d314e4937eb"
+      "sha256": "61b93df9c99149d6f9f21d82ca7f03790187df87499e723cd820da4a64a8a35b"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "29e71e5beaf0312a18cc12586db6bfe778da0ddde3e705675b4752569ce3bdbb"
+      "sha256": "d89b4a91889fafd89cb8c2139860c62ff5e1f5852969771a084cdddd57e381ce"
     },
     {
       "name": "prerequisites",

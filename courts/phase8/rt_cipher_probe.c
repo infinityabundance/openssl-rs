@@ -42,6 +42,7 @@
 #include <openssl/blowfish.h>
 #include <openssl/cast.h>
 #include <openssl/des.h>
+#include <openssl/idea.h>
 #include <openssl/modes.h>
 #include <openssl/rc2.h>
 #include <openssl/rc4.h>
@@ -899,6 +900,84 @@ static void rt_cast5(void)
     }
 }
 
+static void rt_idea(void)
+{
+    IDEA_KEY_SCHEDULE ek, dk;
+    unsigned char key[16];
+    unsigned char in[24];
+    unsigned char out[48];
+    unsigned char iv[8];
+    int num;
+
+    rt_fill(key, sizeof(key), 1);
+    rt_fill(in, sizeof(in), 2);
+    printf("idea.sizeof_key=%u\n", (unsigned)sizeof(IDEA_KEY_SCHEDULE));
+    printf("idea.options=%s\n", IDEA_options());
+
+    memset(&ek, 0, sizeof(ek));
+    IDEA_set_encrypt_key(key, &ek);
+    rt_hex("idea.ek", (const unsigned char *)&ek, sizeof(ek));
+    memset(&dk, 0, sizeof(dk));
+    IDEA_set_decrypt_key(&ek, &dk);
+    rt_hex("idea.dk", (const unsigned char *)&dk, sizeof(dk));
+
+    memset(out, 0, sizeof(out));
+    IDEA_ecb_encrypt(in, out, &ek);
+    rt_hex("idea.ecb.enc", out, 8);
+    IDEA_ecb_encrypt(out, out + 8, &dk);
+    rt_hex("idea.ecb.dec", out + 8, 8);
+
+    /* The corpus's classic vector. */
+    {
+        static const unsigned char rkey[16] = { 0x00, 0x01, 0x00, 0x02, 0x00, 0x03, 0x00, 0x04,
+                                                0x00, 0x05, 0x00, 0x06, 0x00, 0x07, 0x00, 0x08 };
+        static const unsigned char rpt[8] = { 0x00, 0x00, 0x00, 0x01, 0x00, 0x02, 0x00, 0x03 };
+        IDEA_KEY_SCHEDULE rk;
+
+        memset(&rk, 0, sizeof(rk));
+        IDEA_set_encrypt_key(rkey, &rk);
+        memset(out, 0, sizeof(out));
+        IDEA_ecb_encrypt(rpt, out, &rk);
+        rt_hex("idea.recipe.ecb", out, 8);
+    }
+
+    rt_fill(iv, 8, 3);
+    memset(out, 0, sizeof(out));
+    IDEA_cbc_encrypt(in, out, 24, &ek, iv, IDEA_ENCRYPT);
+    rt_hex("idea.cbc.enc", out, 24);
+    rt_hex("idea.cbc.enc.iv", iv, 8);
+    IDEA_cbc_encrypt(out, out + 24, 24, &dk, iv, IDEA_DECRYPT);
+    rt_hex("idea.cbc.dec", out + 24, 24);
+
+    rt_fill(iv, 8, 4);
+    num = 3;
+    memset(out, 0, sizeof(out));
+    IDEA_cfb64_encrypt(in, out, 24, &ek, iv, &num, IDEA_ENCRYPT);
+    rt_hex("idea.cfb64.enc", out, 24);
+    printf("idea.cfb64.num=%d\n", num);
+
+    rt_fill(iv, 8, 5);
+    num = 0;
+    memset(out, 0, sizeof(out));
+    IDEA_ofb64_encrypt(in, out, 24, &ek, iv, &num);
+    rt_hex("idea.ofb64.enc", out, 24);
+    rt_hex("idea.ofb64.enc.iv", iv, 8);
+
+    /* IDEA's own poison arm: a negative `*num` is preserved and nothing is written. */
+    num = -1;
+    rt_fill(iv, 8, 6);
+    memset(out, 0xcc, sizeof(out));
+    IDEA_cfb64_encrypt(in, out, 8, &ek, iv, &num, IDEA_ENCRYPT);
+    printf("idea.cfb64.poison_num=%d\n", num);
+    rt_hex("idea.cfb64.poison_out", out, 8);
+
+    num = -1;
+    memset(out, 0xcc, sizeof(out));
+    IDEA_ofb64_encrypt(in, out, 8, &ek, iv, &num);
+    printf("idea.ofb64.poison_num=%d\n", num);
+    rt_hex("idea.ofb64.poison_out", out, 8);
+}
+
 static void rt_modes_blocks(void)
 {
     const unsigned char key = RT_KEY;
@@ -1160,5 +1239,6 @@ int main(void)
     rt_rc2();
     rt_bf();
     rt_cast5();
+    rt_idea();
     return 0;
 }
