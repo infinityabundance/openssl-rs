@@ -15453,3 +15453,54 @@ ChaCha20 and the asm-selected `cipher_aes_cbc_hmac_*` TLS ciphers stay absent, a
 None of these is claimed by this entry, and none is half-modelled: the rows that are absent are
 absent from `DEFLT_CIPHERS`, so a fetch of `AES-128-GCM` answers NULL on the candidate rather than
 a row with unimplemented arms.
+
+## D234 — the AES-GCM rows are a Phase 9 hand-off, not merely an unlanded engine
+
+8.3's provider half has four rows still absent after D233 — GCM, CCM, SIV and ChaCha20 — and the
+plan's 8.3 row and each D-entry since D231 has described the first of them as "the open work is the
+generic AEAD engine". Reading `ciphercommon_gcm.c.in` before transcribing it turns up a second and
+harder dependency, which changes what can honestly be done in this stratum.
+
+* `gcm_iv_generate` (`ciphercommon_gcm.c.in:414-428`) ends in
+  `RAND_bytes_ex(ctx->libctx, ctx->iv + offset, sz, 0)` (`:423`), and it is reached from
+  `gcm_cipher_internal` (`:450-453`) whenever an **encrypting** context is used with
+  `iv_state == IV_STATE_UNINITIALISED` — that is, when `EVP_CipherInit` was called with a NULL `iv`,
+  which is the documented way to let the provider choose the GCM nonce. It is not a context
+  parameter a caller has to opt into, and `gcm_cipher_internal` is the one path both
+  `ossl_gcm_stream_update`/`_final` and `ossl_gcm_cipher` take.
+* `gcm_tls_iv_set_fixed` (`:519-543`) calls it again (`:536`) for the encrypting TLS arm.
+
+`RAND_bytes_ex` is declared in `include/openssl/rand.h` and implemented in
+`crypto/rand/rand_lib.c`. It is not in `forensics/phase8-obligations.json`'s `open` list, not in its
+`implemented` list, and `src/` has no `RAND_*` definition at all: `rand.h` is Phase 9's, which is
+why `DES_random_key` and `RSA_blinding_on`/`RSA_setup_blinding` are among the sixteen recorded
+hand-offs. So the AES-GCM rows sit in the same position as those: a **complete** transcription
+cannot be written this stratum, and a transcription that omitted `gcm_iv_generate` would not be a
+named unreachable arm of D223's class — it is reachable with no parameter at all — but a
+behavioural gap. Both rows therefore stay **absent** from `DEFLT_CIPHERS`: a fetch of
+`AES-128-GCM` answers NULL on the candidate rather than a row whose no-IV encrypting arm faults,
+and no stub is written. The coordinate is `ciphercommon_gcm.c.in:423` and `:536`, `RAND_bytes_ex`
+→ `crypto/rand/rand_lib.c` (Phase 9's `rand.h`).
+
+**CCM is a different case and stays open as work rather than as a hand-off.**
+`ciphercommon_ccm.c.in` and `cipher_aes_ccm_hw.c` make no `RAND` call, and neither does
+`crypto/modes/ccm128.c` (D226); the engine's pieces — `ossl_ccm_set_ctx_params`/`_get_ctx_params`,
+`ccm_init`, `ossl_ccm_einit`/`_dinit`, `ossl_ccm_stream_update`/`_final`, `ossl_ccm_cipher`,
+`ccm_set_iv`, `ccm_cipher_internal` and the TLS arms — are transcribable from the landed
+`CRYPTO_ccm128_*` plus `ossl_cipher_generic_*`. What it needs is the work, not a dependency: 487
+lines of C whose observable centre is the length-before-AAD rule D226 recorded, plus the two
+generated `produce_param_decoder` tables, which have to be written longhand because
+`prototype_court.py` cannot read a generated declaration (D223).
+
+**SIV stands as D229 recorded it.** `crypto/modes/siv128.c` is internal
+(`include/crypto/siv.h`), has no `CRYPTO_siv128_` entry in `util/libcrypto.num`, and is not among
+`forensics/prerequisites.json`'s units, so it is a new internal transcription rather than a
+handed-on export.
+
+**What the default provider provides is unchanged by this entry.** It remains the default
+provider's digest-query half **and** cipher-query half, with `deflt_ciphers[]` publishing **76
+rows** (D233): NULL, AES (ECB/CBC/OFB/CFB/CFB1/CFB8/CTR at three key lengths, 21), the six
+AES/Camellia CBC-CTS rows, the two AES-XTS rows, the three AES-OCB rows, the twelve AES key-wrap
+rows, Camellia (21) and 3DES (10). `implemented[libcrypto]` stays **2035** and Phase 8 stays
+**194/576/16**, and neither `RT-CIPHER` nor `CT-CIPHER` moves, because this entry lands no code.
+The two anchored status clauses in `docs/PHASE-8-SUBPHASES.md` do not move either.
