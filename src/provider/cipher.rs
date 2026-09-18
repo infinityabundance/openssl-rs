@@ -53,6 +53,7 @@ use core::ptr;
 
 use crate::aes::{
     AES_cbc_encrypt, AES_decrypt, AES_encrypt, AES_set_decrypt_key, AES_set_encrypt_key, AesKey,
+    AES_BLOCK_SIZE,
 };
 use crate::camellia::{CamelliaKey, Camellia_set_key};
 use crate::context::dispatch::{OsslDispatch, OSSL_DISPATCH_END};
@@ -67,6 +68,11 @@ use crate::evp::cipher::{
     OSSL_FUNC_CIPHER_GETTABLE_PARAMS, OSSL_FUNC_CIPHER_GET_CTX_PARAMS, OSSL_FUNC_CIPHER_GET_PARAMS,
     OSSL_FUNC_CIPHER_NEWCTX, OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS, OSSL_FUNC_CIPHER_SET_CTX_PARAMS,
     OSSL_FUNC_CIPHER_UPDATE,
+};
+use crate::modes::ocb::{
+    CRYPTO_ocb128_aad, CRYPTO_ocb128_cleanup, CRYPTO_ocb128_copy_ctx, CRYPTO_ocb128_decrypt,
+    CRYPTO_ocb128_encrypt, CRYPTO_ocb128_finish, CRYPTO_ocb128_init, CRYPTO_ocb128_setiv,
+    CRYPTO_ocb128_tag, OcbCtx,
 };
 use crate::modes::wrap::{
     CRYPTO_128_unwrap, CRYPTO_128_unwrap_pad, CRYPTO_128_wrap, CRYPTO_128_wrap_pad,
@@ -4305,6 +4311,960 @@ xts_row!(
     128
 );
 
+// ---------------------------------------------------------------------------------------------
+// `cipher_aes_ocb.c` / `cipher_aes_ocb_hw.c` — the three AES-OCB rows
+// ---------------------------------------------------------------------------------------------
+
+// OCB is a self-contained engine over the landed `crypto/modes/ocb128.c` (D229): it buffers both
+// the data and the AAD one block at a time, sets the IV lazily on the first data or AAD call, and
+// ends by emitting or verifying the tag. The row publishes a one-shot `CIPHER` (`aes_ocb_cipher`),
+// so `EVP_CipherUpdate` with a NULL input reaches the same `final`; and because the AAD arm is
+// selected by `out == NULL`, the provider's update function is where both are observable.
+
+/// `AES_OCB_FLAGS` — `cipher_aes_ocb.c:23`, which is `AEAD_FLAGS` (`ciphercommon_aead.h:17`).
+const AES_OCB_FLAGS: u64 = PROV_CIPHER_FLAG_AEAD | PROV_CIPHER_FLAG_CUSTOM_IV;
+/// `OCB_DEFAULT_TAG_LEN` — `cipher_aes_ocb.c:25`.
+const OCB_DEFAULT_TAG_LEN: usize = 16;
+/// `OCB_DEFAULT_IV_LEN` — `cipher_aes_ocb.c:26`.
+const OCB_DEFAULT_IV_LEN: usize = 12;
+/// `OCB_MIN_IV_LEN` — `cipher_aes_ocb.c:27`.
+const OCB_MIN_IV_LEN: usize = 1;
+/// `OCB_MAX_IV_LEN` — `cipher_aes_ocb.c:28`.
+const OCB_MAX_IV_LEN: usize = 15;
+/// `OCB_MAX_TAG_LEN` — `cipher_aes_ocb.h:14`.
+const OCB_MAX_TAG_LEN: usize = 16;
+/// `OCB_MAX_DATA_LEN` — `cipher_aes_ocb.h:15`.
+const OCB_MAX_DATA_LEN: usize = 16;
+/// `OCB_MAX_AAD_LEN` — `cipher_aes_ocb.h:16`.
+const OCB_MAX_AAD_LEN: usize = 16;
+/// `EVP_CIPH_OCB_MODE` — `include/openssl/evp.h:320`.
+const EVP_CIPH_OCB_MODE: c_uint = 0x10003;
+/// The OCB rows' `blkbits` — `cipher_aes_ocb.c:579-581`, the third `IMPLEMENT_cipher` argument.
+const AES_OCB_BLOCK_BITS: usize = 128;
+
+/// `IV_STATE_UNINITIALISED` — `prov/ciphercommon.h:25`.
+const IV_STATE_UNINITIALISED: c_uint = 0;
+/// `IV_STATE_BUFFERED` — `prov/ciphercommon.h:26`.
+const IV_STATE_BUFFERED: c_uint = 1;
+/// `IV_STATE_COPIED` — `prov/ciphercommon.h:27`.
+const IV_STATE_COPIED: c_uint = 2;
+/// `IV_STATE_FINISHED` — `prov/ciphercommon.h:28`.
+const IV_STATE_FINISHED: c_uint = 3;
+
+/// `OSSL_CIPHER_PARAM_AEAD_TAG` — `core_names.h:179` (`"tag"`).
+const OSSL_CIPHER_PARAM_AEAD_TAG: *const c_char = c"tag".as_ptr();
+/// `OSSL_CIPHER_PARAM_AEAD_TAGLEN` — `core_names.h:180` (`"taglen"`).
+const OSSL_CIPHER_PARAM_AEAD_TAGLEN: *const c_char = c"taglen".as_ptr();
+
+/// `PROV_AES_OCB_CTX` — `cipher_aes_ocb.h:18-37`, without the platform union on the `AES_KEY`
+/// members (that arm is not compiled in this profile). `key_set` is the `unsigned int : 1`
+/// bitfield, which occupies a whole `unsigned int` allocation unit after the named `iv_state`.
+#[repr(C)]
+pub(crate) struct ProvAesOcbCtx {
+    /// `PROV_CIPHER_CTX base`.
+    pub base: ProvCipherCtx,
+    /// `union { OSSL_UNION_ALIGN; AES_KEY ks; } ksenc` — the encryption/AAD schedule.
+    pub ksenc: AesKey,
+    /// `union { OSSL_UNION_ALIGN; AES_KEY ks; } ksdec` — the decryption schedule.
+    pub ksdec: AesKey,
+    /// `OCB128_CONTEXT ocb`.
+    pub ocb: OcbCtx,
+    /// `unsigned int iv_state` — one of `IV_STATE_*`.
+    pub iv_state: c_uint,
+    /// `unsigned int key_set : 1`.
+    pub key_set: c_uint,
+    /// `size_t taglen`.
+    pub taglen: usize,
+    /// `size_t data_buf_len`.
+    pub data_buf_len: usize,
+    /// `size_t aad_buf_len`.
+    pub aad_buf_len: usize,
+    /// `unsigned char tag[OCB_MAX_TAG_LEN]`.
+    pub tag: [c_uchar; OCB_MAX_TAG_LEN],
+    /// `unsigned char data_buf[OCB_MAX_DATA_LEN]`.
+    pub data_buf: [c_uchar; OCB_MAX_DATA_LEN],
+    /// `unsigned char aad_buf[OCB_MAX_AAD_LEN]`.
+    pub aad_buf: [c_uchar; OCB_MAX_AAD_LEN],
+}
+
+/// `OSSL_ocb_cipher_fn` — `cipher_aes_ocb.c:30`'s `PROV_CIPHER_FUNC(int, ocb_cipher, ...)`.
+type OcbCipherFn = unsafe fn(*mut ProvAesOcbCtx, *const c_uchar, *mut c_uchar, usize) -> c_int;
+
+/// `aes_generic_ocb_setiv` — `cipher_aes_ocb.c:48-53`.
+///
+/// # Safety
+/// The `PROV_AES_OCB_CTX` contract; `iv` is readable for `ivlen` bytes.
+unsafe fn aes_generic_ocb_setiv(
+    ctx: *mut ProvAesOcbCtx,
+    iv: *const c_uchar,
+    ivlen: usize,
+    taglen: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        c_int::from(CRYPTO_ocb128_setiv(ptr::addr_of_mut!((*ctx).ocb), iv, ivlen, taglen) == 1)
+    }
+}
+
+/// `aes_generic_ocb_setaad` — `cipher_aes_ocb.c:55-60`.
+///
+/// # Safety
+/// `aad` is readable for `alen` bytes.
+unsafe fn aes_generic_ocb_setaad(
+    ctx: *mut ProvAesOcbCtx,
+    aad: *const c_uchar,
+    alen: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe { c_int::from(CRYPTO_ocb128_aad(ptr::addr_of_mut!((*ctx).ocb), aad, alen) == 1) }
+}
+
+/// `aes_generic_ocb_gettag` — `cipher_aes_ocb.c:62-66`.
+///
+/// # Safety
+/// `tag` is writable for `tlen` bytes.
+unsafe fn aes_generic_ocb_gettag(ctx: *mut ProvAesOcbCtx, tag: *mut c_uchar, tlen: usize) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe { c_int::from(CRYPTO_ocb128_tag(ptr::addr_of_mut!((*ctx).ocb), tag, tlen) > 0) }
+}
+
+/// `aes_generic_ocb_final` — `cipher_aes_ocb.c:68-71`. The answer is the *negation* of
+/// `CRYPTO_ocb128_finish`'s: the provider wants true when the tag verifies.
+///
+/// # Safety
+/// The `PROV_AES_OCB_CTX` contract.
+unsafe fn aes_generic_ocb_final(ctx: *mut ProvAesOcbCtx) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        c_int::from(
+            CRYPTO_ocb128_finish(
+                ptr::addr_of_mut!((*ctx).ocb),
+                ptr::addr_of!((*ctx).tag).cast(),
+                (*ctx).taglen,
+            ) == 0,
+        )
+    }
+}
+
+/// `aes_generic_ocb_cipher` — `cipher_aes_ocb.c:78-90`.
+///
+/// # Safety
+/// `in_` readable and `out` writable for `len` bytes.
+unsafe fn aes_generic_ocb_cipher(
+    ctx: *mut ProvAesOcbCtx,
+    in_: *const c_uchar,
+    out: *mut c_uchar,
+    len: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if (*ctx).base.enc_int() != 0 {
+            if CRYPTO_ocb128_encrypt(ptr::addr_of_mut!((*ctx).ocb), in_, out, len) == 0 {
+                return 0;
+            }
+        } else if CRYPTO_ocb128_decrypt(ptr::addr_of_mut!((*ctx).ocb), in_, out, len) == 0 {
+            return 0;
+        }
+        1
+    }
+}
+
+/// `aes_generic_ocb_copy_ctx` — `cipher_aes_ocb.c:92-97`.
+///
+/// # Safety
+/// `dst`/`src` are live `PROV_AES_OCB_CTX`es; the copy points `dst`'s OCB context at `dst`'s own
+/// schedules.
+unsafe fn aes_generic_ocb_copy_ctx(dst: *mut ProvAesOcbCtx, src: *mut ProvAesOcbCtx) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        CRYPTO_ocb128_copy_ctx(
+            ptr::addr_of_mut!((*dst).ocb),
+            ptr::addr_of_mut!((*src).ocb),
+            ptr::addr_of_mut!((*dst).ksenc).cast(),
+            ptr::addr_of_mut!((*dst).ksdec).cast(),
+        )
+    }
+}
+
+/// `cipher_hw_aes_ocb_generic_initkey` — `cipher_aes_ocb_hw.c:30-58`, the portable arm. The
+/// authority's `OCB_SET_KEY_FN` macro cleans up the OCB context first, sets **both** schedules
+/// (decryption needs both, because AAD uses encryption), and leaves `key_set` set.
+///
+/// # Safety
+/// The `PROV_CIPHER_HW::init` contract; `ctx` is a `PROV_AES_OCB_CTX` and `key` is readable for
+/// `keylen` bytes.
+unsafe extern "C" fn cipher_hw_aes_ocb_generic_initkey(
+    vctx: *mut ProvCipherCtx,
+    key: *const c_uchar,
+    keylen: usize,
+) -> c_int {
+    // SAFETY: the caller's contract; `vctx` is a `PROV_AES_OCB_CTX`.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesOcbCtx>();
+        let bits = (keylen * 8) as c_int;
+        let ksenc = ptr::addr_of_mut!((*ctx).ksenc);
+        let ksdec = ptr::addr_of_mut!((*ctx).ksdec);
+
+        CRYPTO_ocb128_cleanup(ptr::addr_of_mut!((*ctx).ocb));
+        AES_set_encrypt_key(key, bits, ksenc);
+        AES_set_decrypt_key(key, bits, ksdec);
+        if CRYPTO_ocb128_init(
+            ptr::addr_of_mut!((*ctx).ocb),
+            ksenc.cast(),
+            ksdec.cast(),
+            aes_block_encrypt,
+            aes_block_decrypt,
+            None,
+        ) == 0
+        {
+            return 0;
+        }
+        (*ctx).key_set = 1;
+        1
+    }
+}
+
+/// `PROV_CIPHER_HW::cipher` is `NULL` for the OCB rows (`cipher_aes_ocb_hw.c:196-199`), because
+/// the row's own `aes_generic_ocb_cipher` drives the mode. The crate's `ProvCipherHw::cipher` is
+/// a plain function pointer rather than an `Option`, so a never-called stub stands in for the
+/// authority's `NULL`.
+///
+/// # Safety
+/// Never called.
+unsafe extern "C" fn cipher_hw_aes_ocb_cipher_unused(
+    _ctx: *mut ProvCipherCtx,
+    _out: *mut c_uchar,
+    _in_: *const c_uchar,
+    _len: usize,
+) -> c_int {
+    fail()
+}
+
+static AES_OCB_HW: ProvCipherHw = ProvCipherHw {
+    init: cipher_hw_aes_ocb_generic_initkey,
+    cipher: cipher_hw_aes_ocb_cipher_unused,
+    copyctx: cipher_hw_aes_ocb_copyctx_unused,
+};
+
+/// `aes_ocb_dupctx` does the copy itself, through `aes_generic_ocb_copy_ctx`
+/// (`cipher_aes_ocb.c:332-349`), so the hw table has no `copyctx` to offer. The never-called stub
+/// stands in for the authority's `NULL` field.
+///
+/// # Safety
+/// Never called.
+unsafe extern "C" fn cipher_hw_aes_ocb_copyctx_unused(
+    _dst: *mut ProvCipherCtx,
+    _src: *const ProvCipherCtx,
+) {
+}
+
+/// `aes_ocb_init` — `cipher_aes_ocb.c:102-137`.
+///
+/// # Safety
+/// The dispatch contract; `vctx` is a `PROV_AES_OCB_CTX`.
+unsafe fn aes_ocb_init(
+    vctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    iv: *const c_uchar,
+    ivlen: usize,
+    params: *const OsslParam,
+    enc: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesOcbCtx>();
+
+        if is_running() == 0 {
+            return fail();
+        }
+
+        (*ctx).aad_buf_len = 0;
+        (*ctx).data_buf_len = 0;
+        bits_set(ptr::addr_of_mut!((*ctx).base), CTX_ENC, enc != 0);
+
+        if !iv.is_null() {
+            if ivlen != (*ctx).base.ivlen {
+                /* IV len must be 1 to 15 */
+                if !(OCB_MIN_IV_LEN..=OCB_MAX_IV_LEN).contains(&ivlen) {
+                    return fail();
+                }
+                (*ctx).base.ivlen = ivlen;
+            }
+            if ossl_cipher_generic_initiv(ptr::addr_of_mut!((*ctx).base), iv, ivlen) == 0 {
+                return fail();
+            }
+            (*ctx).iv_state = IV_STATE_BUFFERED;
+        }
+        if !key.is_null() {
+            if keylen != (*ctx).base.keylen {
+                return fail();
+            }
+            let hw = (*ctx).base.hw;
+            if ((*hw).init)(ptr::addr_of_mut!((*ctx).base), key, keylen) == 0 {
+                return fail();
+            }
+        }
+        aes_ocb_set_ctx_params(vctx, params)
+    }
+}
+
+/// `aes_ocb_einit` — `cipher_aes_ocb.c:139-144`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_ocb_einit(
+    vctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    iv: *const c_uchar,
+    ivlen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe { aes_ocb_init(vctx, key, keylen, iv, ivlen, params, 1) }
+}
+
+/// `aes_ocb_dinit` — `cipher_aes_ocb.c:146-151`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_ocb_dinit(
+    vctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    iv: *const c_uchar,
+    ivlen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe { aes_ocb_init(vctx, key, keylen, iv, ivlen, params, 0) }
+}
+
+/// `aes_ocb_block_update_internal` — `cipher_aes_ocb.c:157-206`. Because of the way OCB works,
+/// the AAD and the data are buffered identically; only the last block can be partial.
+///
+/// # Safety
+/// Every pointer follows the caller's contract; `ciph` is one of the two local wrappers.
+#[allow(clippy::too_many_arguments)]
+unsafe fn aes_ocb_block_update_internal(
+    ctx: *mut ProvAesOcbCtx,
+    buf: *mut c_uchar,
+    bufsz: *mut usize,
+    out: *mut c_uchar,
+    outl: *mut usize,
+    outsize: usize,
+    in_: *const c_uchar,
+    inl: usize,
+    ciph: OcbCipherFn,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut outlint = 0usize;
+        let mut out = out;
+        let mut in_ = in_;
+        let mut inl = inl;
+
+        let nextblocks = if *bufsz != 0 {
+            ossl_cipher_fillblock(buf, bufsz, AES_BLOCK_SIZE, &mut in_, &mut inl)
+        } else {
+            inl & !(AES_BLOCK_SIZE - 1)
+        };
+
+        if *bufsz == AES_BLOCK_SIZE {
+            if outsize < AES_BLOCK_SIZE {
+                return fail();
+            }
+            if ciph(ctx, buf, out, AES_BLOCK_SIZE) == 0 {
+                return fail();
+            }
+            *bufsz = 0;
+            outlint = AES_BLOCK_SIZE;
+            if !out.is_null() {
+                out = out.add(AES_BLOCK_SIZE);
+            }
+        }
+        if nextblocks > 0 {
+            outlint += nextblocks;
+            if outsize < outlint {
+                return fail();
+            }
+            if ciph(ctx, in_, out, nextblocks) == 0 {
+                return fail();
+            }
+            in_ = in_.add(nextblocks);
+            inl -= nextblocks;
+        }
+        if inl != 0 && ossl_cipher_trailingdata(buf, bufsz, AES_BLOCK_SIZE, &mut in_, &mut inl) == 0
+        {
+            /* PROVerr already called */
+            return fail();
+        }
+
+        *outl = outlint;
+        c_int::from(inl == 0)
+    }
+}
+
+/// `cipher_updateaad` — `cipher_aes_ocb.c:209-213`, a wrapper with the same signature as `cipher`.
+///
+/// # Safety
+/// `in_` is readable for `len` bytes; `out` is ignored.
+unsafe fn cipher_updateaad(
+    ctx: *mut ProvAesOcbCtx,
+    in_: *const c_uchar,
+    _out: *mut c_uchar,
+    len: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe { aes_generic_ocb_setaad(ctx, in_, len) }
+}
+
+/// `update_iv` — `cipher_aes_ocb.c:215-227`. The buffered IV is pushed into the OCB context once,
+/// on the first data or AAD call, and a used or never-armed IV is a refusal.
+///
+/// # Safety
+/// The `PROV_AES_OCB_CTX` contract.
+unsafe fn update_iv(ctx: *mut ProvAesOcbCtx) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if (*ctx).iv_state == IV_STATE_FINISHED || (*ctx).iv_state == IV_STATE_UNINITIALISED {
+            return 0;
+        }
+        if (*ctx).iv_state == IV_STATE_BUFFERED {
+            if aes_generic_ocb_setiv(
+                ctx,
+                (*ctx).base.iv.as_ptr(),
+                (*ctx).base.ivlen,
+                (*ctx).taglen,
+            ) == 0
+            {
+                return 0;
+            }
+            (*ctx).iv_state = IV_STATE_COPIED;
+        }
+        1
+    }
+}
+
+/// `aes_ocb_block_update` — `cipher_aes_ocb.c:229-258`.
+///
+/// # Safety
+/// The dispatch contract; a NULL `out` selects the AAD arm.
+unsafe extern "C" fn aes_ocb_block_update(
+    vctx: *mut c_void,
+    out: *mut c_uchar,
+    outl: *mut usize,
+    outsize: usize,
+    in_: *const c_uchar,
+    inl: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesOcbCtx>();
+
+        if (*ctx).key_set == 0 || update_iv(ctx) == 0 {
+            return fail();
+        }
+
+        if inl == 0 {
+            *outl = 0;
+            return 1;
+        }
+
+        /* Are we dealing with AAD or normal data here? */
+        let (buf, buflen, fn_) = if out.is_null() {
+            (
+                ptr::addr_of_mut!((*ctx).aad_buf).cast::<c_uchar>(),
+                ptr::addr_of_mut!((*ctx).aad_buf_len),
+                cipher_updateaad as OcbCipherFn,
+            )
+        } else {
+            (
+                ptr::addr_of_mut!((*ctx).data_buf).cast::<c_uchar>(),
+                ptr::addr_of_mut!((*ctx).data_buf_len),
+                aes_generic_ocb_cipher as OcbCipherFn,
+            )
+        };
+        aes_ocb_block_update_internal(ctx, buf, buflen, out, outl, outsize, in_, inl, fn_)
+    }
+}
+
+/// `aes_ocb_block_final` — `cipher_aes_ocb.c:260-302`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_ocb_block_final(
+    vctx: *mut c_void,
+    out: *mut c_uchar,
+    outl: *mut usize,
+    _outsize: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesOcbCtx>();
+
+        if is_running() == 0 {
+            return fail();
+        }
+
+        /* If no block_update has run then the iv still needs to be set */
+        if (*ctx).key_set == 0 || update_iv(ctx) == 0 {
+            return fail();
+        }
+
+        *outl = 0;
+        if (*ctx).data_buf_len > 0 {
+            if aes_generic_ocb_cipher(ctx, (*ctx).data_buf.as_ptr(), out, (*ctx).data_buf_len) == 0
+            {
+                return fail();
+            }
+            *outl = (*ctx).data_buf_len;
+            (*ctx).data_buf_len = 0;
+        }
+        if (*ctx).aad_buf_len > 0 {
+            if aes_generic_ocb_setaad(ctx, (*ctx).aad_buf.as_ptr(), (*ctx).aad_buf_len) == 0 {
+                return fail();
+            }
+            (*ctx).aad_buf_len = 0;
+        }
+        if (*ctx).base.enc_int() != 0 {
+            /* If encrypting then just get the tag */
+            if aes_generic_ocb_gettag(ctx, (*ctx).tag.as_mut_ptr(), (*ctx).taglen) == 0 {
+                return fail();
+            }
+        } else {
+            /* If decrypting then verify */
+            if (*ctx).taglen == 0 {
+                return fail();
+            }
+            if aes_generic_ocb_final(ctx) == 0 {
+                return fail();
+            }
+        }
+        /* Don't reuse the IV */
+        (*ctx).iv_state = IV_STATE_FINISHED;
+        1
+    }
+}
+
+/// `aes_ocb_newctx` — `cipher_aes_ocb.c:304-319`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe fn aes_ocb_newctx(
+    provctx: *mut c_void,
+    kbits: usize,
+    blkbits: usize,
+    ivbits: usize,
+    mode: c_uint,
+    flags: u64,
+) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+
+        let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvAesOcbCtx>(), FILE, LINE);
+        if !ctx.is_null() {
+            ossl_cipher_generic_initkey(
+                ctx,
+                kbits,
+                blkbits,
+                ivbits,
+                mode,
+                flags,
+                ptr::addr_of!(AES_OCB_HW),
+                ptr::null_mut(),
+            );
+            (*ctx.cast::<ProvAesOcbCtx>()).taglen = OCB_DEFAULT_TAG_LEN;
+        }
+        let _ = provctx;
+        ctx
+    }
+}
+
+/// `aes_ocb_freectx` — `cipher_aes_ocb.c:321-330`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_ocb_freectx(vctx: *mut c_void) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if !vctx.is_null() {
+            let ctx = vctx.cast::<ProvAesOcbCtx>();
+            CRYPTO_ocb128_cleanup(ptr::addr_of_mut!((*ctx).ocb));
+            ossl_cipher_generic_reset_ctx(vctx.cast());
+            CRYPTO_clear_free(vctx, core::mem::size_of::<ProvAesOcbCtx>(), FILE, LINE);
+        }
+    }
+}
+
+/// `aes_ocb_dupctx` — `cipher_aes_ocb.c:332-349`. The shallow copy is repaired by
+/// `aes_generic_ocb_copy_ctx`, which re-points the copy's OCB context at the copy's own
+/// schedules and duplicates the L-table.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_ocb_dupctx(vctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+
+        let in_ = vctx.cast::<ProvAesOcbCtx>();
+        let ret = CRYPTO_malloc(core::mem::size_of::<ProvAesOcbCtx>(), FILE, LINE);
+        if ret.is_null() {
+            return ptr::null_mut();
+        }
+        ptr::copy_nonoverlapping(in_, ret.cast::<ProvAesOcbCtx>(), 1);
+        if aes_generic_ocb_copy_ctx(ret.cast::<ProvAesOcbCtx>(), in_) == 0 {
+            CRYPTO_free(ret, FILE, LINE);
+            return ptr::null_mut();
+        }
+        ret
+    }
+}
+
+/// `aes_ocb_set_ctx_params` — `cipher_aes_ocb.c:351-413`. The tag, the IV length and the key
+/// length are the three keys; the IV-length arm resets `iv_state` when the length moves, so the
+/// next update refuses until a new IV is supplied.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_ocb_set_ctx_params(vctx: *mut c_void, params: *const OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesOcbCtx>();
+
+        if ossl_param_is_empty(params) {
+            return 1;
+        }
+
+        let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_AEAD_TAG);
+        if !p.is_null() {
+            if (*p).data_type != OSSL_PARAM_OCTET_STRING {
+                return fail();
+            }
+            if (*p).data.is_null() {
+                /* Tag len must be 0 to 16 */
+                if (*p).data_size > OCB_MAX_TAG_LEN {
+                    return fail();
+                }
+                (*ctx).taglen = (*p).data_size;
+            } else {
+                if (*ctx).base.enc_int() != 0 {
+                    return fail();
+                }
+                if (*p).data_size != (*ctx).taglen {
+                    return fail();
+                }
+                ptr::copy_nonoverlapping(
+                    (*p).data.cast::<c_uchar>(),
+                    (*ctx).tag.as_mut_ptr(),
+                    (*p).data_size,
+                );
+            }
+        }
+        let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_IVLEN);
+        if !p.is_null() {
+            let mut sz = 0usize;
+            if crate::params::OSSL_PARAM_get_size_t(p, &mut sz) == 0 {
+                return fail();
+            }
+            /* IV len must be 1 to 15 */
+            if !(OCB_MIN_IV_LEN..=OCB_MAX_IV_LEN).contains(&sz) {
+                return fail();
+            }
+            if (*ctx).base.ivlen != sz {
+                (*ctx).base.ivlen = sz;
+                (*ctx).iv_state = IV_STATE_UNINITIALISED;
+            }
+        }
+        let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_KEYLEN);
+        if !p.is_null() {
+            let mut keylen = 0usize;
+            if crate::params::OSSL_PARAM_get_size_t(p, &mut keylen) == 0 {
+                return fail();
+            }
+            if (*ctx).base.keylen != keylen {
+                return fail();
+            }
+        }
+        1
+    }
+}
+
+/// `aes_ocb_get_ctx_params` — `cipher_aes_ocb.c:415-473`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_ocb_get_ctx_params(vctx: *mut c_void, params: *mut OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesOcbCtx>();
+
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_IVLEN);
+        if !p.is_null() && crate::params::OSSL_PARAM_set_size_t(p, (*ctx).base.ivlen) == 0 {
+            return fail();
+        }
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_KEYLEN);
+        if !p.is_null() && crate::params::OSSL_PARAM_set_size_t(p, (*ctx).base.keylen) == 0 {
+            return fail();
+        }
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_AEAD_TAGLEN);
+        if !p.is_null() && crate::params::OSSL_PARAM_set_size_t(p, (*ctx).taglen) == 0 {
+            return fail();
+        }
+
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_IV);
+        if !p.is_null() {
+            if (*ctx).base.ivlen > (*p).data_size {
+                return fail();
+            }
+            if crate::params::OSSL_PARAM_set_octet_string_or_ptr(
+                p,
+                (*ctx).base.oiv.as_ptr().cast(),
+                (*ctx).base.ivlen,
+            ) == 0
+            {
+                return fail();
+            }
+        }
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_UPDATED_IV);
+        if !p.is_null() {
+            if (*ctx).base.ivlen > (*p).data_size {
+                return fail();
+            }
+            if crate::params::OSSL_PARAM_set_octet_string_or_ptr(
+                p,
+                (*ctx).base.iv.as_ptr().cast(),
+                (*ctx).base.ivlen,
+            ) == 0
+            {
+                return fail();
+            }
+        }
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_AEAD_TAG);
+        if !p.is_null() {
+            if (*p).data_type != OSSL_PARAM_OCTET_STRING {
+                return fail();
+            }
+            if (*ctx).base.enc_int() == 0 || (*p).data_size != (*ctx).taglen {
+                return fail();
+            }
+            ptr::copy_nonoverlapping(
+                (*ctx).tag.as_ptr(),
+                (*p).data.cast::<c_uchar>(),
+                (*ctx).taglen,
+            );
+        }
+        1
+    }
+}
+
+/// `cipher_ocb_known_gettable_ctx_params` — `cipher_aes_ocb.c:475-483`.
+static OCB_GETTABLE_CTX_PARAMS: [OsslParam; 7] = [
+    param(OSSL_CIPHER_PARAM_KEYLEN, OSSL_PARAM_UNSIGNED_INTEGER),
+    param(OSSL_CIPHER_PARAM_IVLEN, OSSL_PARAM_UNSIGNED_INTEGER),
+    param(OSSL_CIPHER_PARAM_AEAD_TAGLEN, OSSL_PARAM_UNSIGNED_INTEGER),
+    param(OSSL_CIPHER_PARAM_IV, OSSL_PARAM_OCTET_STRING),
+    param(OSSL_CIPHER_PARAM_UPDATED_IV, OSSL_PARAM_OCTET_STRING),
+    param(OSSL_CIPHER_PARAM_AEAD_TAG, OSSL_PARAM_OCTET_STRING),
+    END,
+];
+
+/// `cipher_ocb_gettable_ctx_params` — `cipher_aes_ocb.c:484-488`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn cipher_ocb_gettable_ctx_params(
+    _cctx: *mut c_void,
+    _provctx: *mut c_void,
+) -> *const OsslParam {
+    OCB_GETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `cipher_ocb_known_settable_ctx_params` — `cipher_aes_ocb.c:490-495`.
+static OCB_SETTABLE_CTX_PARAMS: [OsslParam; 4] = [
+    param(OSSL_CIPHER_PARAM_KEYLEN, OSSL_PARAM_UNSIGNED_INTEGER),
+    param(OSSL_CIPHER_PARAM_IVLEN, OSSL_PARAM_UNSIGNED_INTEGER),
+    param(OSSL_CIPHER_PARAM_AEAD_TAG, OSSL_PARAM_OCTET_STRING),
+    END,
+];
+
+/// `cipher_ocb_settable_ctx_params` — `cipher_aes_ocb.c:496-500`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn cipher_ocb_settable_ctx_params(
+    _cctx: *mut c_void,
+    _provctx: *mut c_void,
+) -> *const OsslParam {
+    OCB_SETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `aes_ocb_cipher` — `cipher_aes_ocb.c:502-539`. A NULL input is `Final`, which generates or
+/// checks the tag; otherwise the key and IV are checked before the mode runs.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_ocb_cipher(
+    vctx: *mut c_void,
+    out: *mut c_uchar,
+    outl: *mut usize,
+    outsize: usize,
+    in_: *const c_uchar,
+    inl: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesOcbCtx>();
+
+        if is_running() == 0 {
+            return fail();
+        }
+
+        /* NULL input indicates Final, which must generate or check the tag. */
+        if in_.is_null() {
+            return aes_ocb_block_final(vctx, out, outl, outsize);
+        }
+
+        if outsize < inl {
+            return fail();
+        }
+
+        if (*ctx).key_set == 0 || update_iv(ctx) == 0 {
+            return fail();
+        }
+
+        if aes_generic_ocb_cipher(ctx, in_, out, inl) == 0 {
+            return fail();
+        }
+
+        *outl = inl;
+        1
+    }
+}
+
+/// `IMPLEMENT_cipher` — `cipher_aes_ocb.c:541-578`, the three rows' dispatch tables. Each has
+/// fourteen entries; the one-shot `CIPHER` is this row's own `aes_ocb_cipher`.
+macro_rules! ocb_row {
+    ($newctx:ident, $getparams:ident, $table:ident, $kbits:expr) => {
+        unsafe extern "C" fn $newctx(provctx: *mut c_void) -> *mut c_void {
+            // SAFETY: the dispatch contract.
+            unsafe {
+                aes_ocb_newctx(
+                    provctx,
+                    $kbits,
+                    AES_OCB_BLOCK_BITS,
+                    OCB_DEFAULT_IV_LEN * 8,
+                    EVP_CIPH_OCB_MODE,
+                    AES_OCB_FLAGS,
+                )
+            }
+        }
+
+        unsafe extern "C" fn $getparams(params: *mut OsslParam) -> c_int {
+            // SAFETY: the dispatch contract.
+            unsafe {
+                ossl_cipher_generic_get_params(
+                    params,
+                    EVP_CIPH_OCB_MODE,
+                    AES_OCB_FLAGS,
+                    $kbits,
+                    AES_OCB_BLOCK_BITS,
+                    OCB_DEFAULT_IV_LEN * 8,
+                )
+            }
+        }
+
+        pub(crate) static $table: [OsslDispatch; 15] = [
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_NEWCTX,
+                function: $newctx as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_ENCRYPT_INIT,
+                function: aes_ocb_einit as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_DECRYPT_INIT,
+                function: aes_ocb_dinit as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_UPDATE,
+                function: aes_ocb_block_update as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_FINAL,
+                function: aes_ocb_block_final as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: crate::evp::cipher::OSSL_FUNC_CIPHER_CIPHER,
+                function: aes_ocb_cipher as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_FREECTX,
+                function: aes_ocb_freectx as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: crate::evp::cipher::OSSL_FUNC_CIPHER_DUPCTX,
+                function: aes_ocb_dupctx as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GET_PARAMS,
+                function: $getparams as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GET_CTX_PARAMS,
+                function: aes_ocb_get_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_SET_CTX_PARAMS,
+                function: aes_ocb_set_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GETTABLE_PARAMS,
+                function: ossl_cipher_generic_gettable_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GETTABLE_CTX_PARAMS,
+                function: cipher_ocb_gettable_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS,
+                function: cipher_ocb_settable_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_DISPATCH_END,
+                function: ptr::null_mut(),
+            },
+        ];
+    };
+}
+
+ocb_row!(
+    aes256ocb_newctx,
+    aes256ocb_get_params,
+    AES256OCB_FUNCTIONS,
+    256
+);
+ocb_row!(
+    aes192ocb_newctx,
+    aes192ocb_get_params,
+    AES192OCB_FUNCTIONS,
+    192
+);
+ocb_row!(
+    aes128ocb_newctx,
+    aes128ocb_get_params,
+    AES128OCB_FUNCTIONS,
+    128
+);
+
 // One direct `cipher_row!` per row: no wrapper macro, so `prototype_court.py`'s macro plane
 // can read every `fn $newctx(` and substitute the identifier this invocation supplies.
 cipher_row!(
@@ -5772,6 +6732,9 @@ alias!(N_AES_192_CTR, "AES-192-CTR");
 alias!(N_AES_128_CTR, "AES-128-CTR");
 alias!(N_AES_256_XTS, "AES-256-XTS:1.3.111.2.1619.0.1.2");
 alias!(N_AES_128_XTS, "AES-128-XTS:1.3.111.2.1619.0.1.1");
+alias!(N_AES_256_OCB, "AES-256-OCB");
+alias!(N_AES_192_OCB, "AES-192-OCB");
+alias!(N_AES_128_OCB, "AES-128-OCB");
 alias!(N_CAMELLIA_256_ECB, "CAMELLIA-256-ECB:0.3.4401.5.3.1.9.41");
 alias!(N_CAMELLIA_192_ECB, "CAMELLIA-192-ECB:0.3.4401.5.3.1.9.21");
 alias!(N_CAMELLIA_128_ECB, "CAMELLIA-128-ECB:0.3.4401.5.3.1.9.1");
@@ -5867,7 +6830,7 @@ const fn row(names: *const c_char, implementation: *const c_void) -> OsslAlgorit
 
 /// `static const OSSL_ALGORITHM_CAPABLE deflt_ciphers[]` — `providers/defltprov.c:161-330`,
 /// restricted to the rows this half implements, in the authority's order.
-pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 74] = [
+pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 77] = [
     row(N_NULL, NULL_FUNCTIONS.as_ptr().cast()),
     row(N_AES_256_ECB, AES256ECB_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_ECB, AES192ECB_FUNCTIONS.as_ptr().cast()),
@@ -5895,6 +6858,9 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 74] = [
     row(N_AES_128_CTR, AES128CTR_FUNCTIONS.as_ptr().cast()),
     row(N_AES_256_XTS, AES256XTS_FUNCTIONS.as_ptr().cast()),
     row(N_AES_128_XTS, AES128XTS_FUNCTIONS.as_ptr().cast()),
+    row(N_AES_256_OCB, AES256OCB_FUNCTIONS.as_ptr().cast()),
+    row(N_AES_192_OCB, AES192OCB_FUNCTIONS.as_ptr().cast()),
+    row(N_AES_128_OCB, AES128OCB_FUNCTIONS.as_ptr().cast()),
     row(N_AES_256_WRAP, AES256WRAP_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_WRAP, AES192WRAP_FUNCTIONS.as_ptr().cast()),
     row(N_AES_128_WRAP, AES128WRAP_FUNCTIONS.as_ptr().cast()),
@@ -5992,9 +6958,9 @@ mod tests {
 
     #[test]
     fn the_cipher_table_terminates_and_names_the_rows() {
-        assert_eq!(DEFLT_CIPHERS.len(), 74);
+        assert_eq!(DEFLT_CIPHERS.len(), 77);
         // SAFETY: every entry up to the terminator is initialised.
-        let last = DEFLT_CIPHERS[73].algorithm_names;
+        let last = DEFLT_CIPHERS[76].algorithm_names;
         assert!(last.is_null(), "the table is NULL-name terminated");
         // SAFETY: the first row's name is a `'static` C string.
         let first = unsafe { core::ffi::CStr::from_ptr(DEFLT_CIPHERS[0].algorithm_names) };

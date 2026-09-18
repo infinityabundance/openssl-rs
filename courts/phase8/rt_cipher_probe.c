@@ -2841,6 +2841,225 @@ static void rt_deflt_xts(void)
     }
 }
 
+/*
+ * The default provider's AES-OCB rows. OCB buffers AAD and data identically and sets the IV
+ * lazily on the first data or AAD call, so the observations are: each row's shape; a 33-byte
+ * message (two full blocks plus one octet, so the partial-final-block arm is taken) with 13 bytes
+ * of AAD, the ciphertext and the tag; the decrypt round trip; the tag rejection; the
+ * empty-plaintext and AAD-only arms; the IV-length window (1..15) from both sides and the tag
+ * length's own window; and finally the provider answer against the landed low-level
+ * `CRYPTO_ocb128_*`. `prov/names.h` publishes one spelling per row and no OID, so the name the
+ * fetch resolves is the name the table carries.
+ */
+static void rt_deflt_ocb(void)
+{
+    static const char *names[] = { "AES-256-OCB", "AES-192-OCB", "AES-128-OCB" };
+    unsigned char key[32];
+    unsigned char iv[12];
+    unsigned char in[48];
+    unsigned char aad[20];
+    unsigned char out[80];
+    unsigned char back[80];
+    unsigned char tag[16];
+    unsigned char bad[16];
+    char buf[160];
+    char nbuf[176];
+    size_t n;
+
+    rt_fill(key, sizeof(key), 101);
+    rt_fill(iv, sizeof(iv), 102);
+    rt_fill(in, sizeof(in), 103);
+    rt_fill(aad, sizeof(aad), 104);
+
+    for (n = 0; n < sizeof(names) / sizeof(names[0]); n++) {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, names[n], NULL);
+
+        snprintf(buf, sizeof(buf), "defltocb.%s", names[n]);
+        printf("%s.fetched=%d\n", buf, c != NULL);
+        if (c == NULL)
+            continue;
+        printf("%s.keylen=%d\n", buf, EVP_CIPHER_get_key_length(c));
+        printf("%s.ivlen=%d\n", buf, EVP_CIPHER_get_iv_length(c));
+        printf("%s.blocksize=%d\n", buf, EVP_CIPHER_get_block_size(c));
+        EVP_CIPHER_free(c);
+    }
+
+    /* The 33-byte message with 13 bytes of AAD, per row: ciphertext, tag, round trip, reject. */
+    for (n = 0; n < sizeof(names) / sizeof(names[0]); n++) {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, names[n], NULL);
+        EVP_CIPHER_CTX *ectx = EVP_CIPHER_CTX_new();
+        EVP_CIPHER_CTX *dctx = NULL;
+        int outl = 0, finl = 0, aadl = 0, decl = 0, defl = 0;
+
+        snprintf(buf, sizeof(buf), "defltocb.%s", names[n]);
+        if (c == NULL || ectx == NULL || EVP_EncryptInit_ex2(ectx, c, key, iv, NULL) != 1
+            || EVP_EncryptUpdate(ectx, NULL, &aadl, aad, 13) != 1
+            || EVP_EncryptUpdate(ectx, out, &outl, in, 33) != 1
+            || EVP_EncryptFinal_ex(ectx, out + outl, &finl) != 1
+            || EVP_CIPHER_CTX_ctrl(ectx, EVP_CTRL_AEAD_GET_TAG, 16, tag) != 1) {
+            printf("%s.enc=0\n", buf);
+        } else {
+            printf("%s.aad=%d\n", buf, aadl);
+            printf("%s.ctlen=%d\n", buf, outl + finl);
+            snprintf(nbuf, sizeof(nbuf), "%s.ct", buf);
+            rt_hex(nbuf, out, (size_t)(outl + finl));
+            snprintf(nbuf, sizeof(nbuf), "%s.tag", buf);
+            rt_hex(nbuf, tag, 16);
+        }
+        if (ectx != NULL)
+            EVP_CIPHER_CTX_free(ectx);
+
+        /* The round trip, and then the same bytes with one tag bit flipped. */
+        dctx = EVP_CIPHER_CTX_new();
+        if (c != NULL && dctx != NULL && EVP_DecryptInit_ex2(dctx, c, key, iv, NULL) == 1
+            && EVP_CIPHER_CTX_ctrl(dctx, EVP_CTRL_AEAD_SET_TAG, 16, tag) == 1
+            && EVP_DecryptUpdate(dctx, NULL, &aadl, aad, 13) == 1
+            && EVP_DecryptUpdate(dctx, back, &decl, out, outl + finl) == 1) {
+            printf("%s.accept=%d\n", buf,
+                   EVP_DecryptFinal_ex(dctx, back + decl, &defl) == 1
+                   && (size_t)(decl + defl) == 33 && memcmp(back, in, 33) == 0);
+        } else {
+            printf("%s.accept=0\n", buf);
+        }
+        if (dctx != NULL)
+            EVP_CIPHER_CTX_free(dctx);
+
+        memcpy(bad, tag, 16);
+        bad[0] ^= 0x80;
+        dctx = EVP_CIPHER_CTX_new();
+        if (c != NULL && dctx != NULL && EVP_DecryptInit_ex2(dctx, c, key, iv, NULL) == 1
+            && EVP_CIPHER_CTX_ctrl(dctx, EVP_CTRL_AEAD_SET_TAG, 16, bad) == 1
+            && EVP_DecryptUpdate(dctx, NULL, &aadl, aad, 13) == 1
+            && EVP_DecryptUpdate(dctx, back, &decl, out, outl + finl) == 1) {
+            printf("%s.reject=%d\n", buf,
+                   EVP_DecryptFinal_ex(dctx, back + decl, &defl) == 0);
+        } else {
+            printf("%s.reject=0\n", buf);
+        }
+        if (dctx != NULL)
+            EVP_CIPHER_CTX_free(dctx);
+        if (c != NULL)
+            EVP_CIPHER_free(c);
+    }
+
+    /* The empty-plaintext and AAD-only arms, both with 13 bytes of AAD. */
+    {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, "AES-128-OCB", NULL);
+        EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+        int outl = 0, finl = 0, aadl = 0;
+
+        if (c == NULL || ctx == NULL || EVP_EncryptInit_ex2(ctx, c, key, iv, NULL) != 1
+            || EVP_EncryptUpdate(ctx, NULL, &aadl, aad, 13) != 1
+            || EVP_EncryptUpdate(ctx, out, &outl, in, 0) != 1
+            || EVP_EncryptFinal_ex(ctx, out + outl, &finl) != 1
+            || EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, 16, tag) != 1) {
+            printf("defltocb.empty=0\n");
+        } else {
+            printf("defltocb.empty.len=%d\n", outl + finl);
+            rt_hex("defltocb.empty.tag", tag, 16);
+        }
+        if (ctx != NULL)
+            EVP_CIPHER_CTX_free(ctx);
+        if (c != NULL)
+            EVP_CIPHER_free(c);
+    }
+    {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, "AES-128-OCB", NULL);
+        EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+        int outl = 0, finl = 0, aadl = 0;
+
+        if (c == NULL || ctx == NULL || EVP_EncryptInit_ex2(ctx, c, key, iv, NULL) != 1
+            || EVP_EncryptUpdate(ctx, NULL, &aadl, aad, 20) != 1
+            || EVP_EncryptFinal_ex(ctx, out, &finl) != 1
+            || EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, 16, tag) != 1) {
+            printf("defltocb.aadonly=0\n");
+        } else {
+            printf("defltocb.aadonly.len=%d\n", finl);
+            rt_hex("defltocb.aadonly.tag", tag, 16);
+        }
+        if (ctx != NULL)
+            EVP_CIPHER_CTX_free(ctx);
+        if (c != NULL)
+            EVP_CIPHER_free(c);
+    }
+
+    /* The IV-length window: 0 and 16 are outside 1..15; 15 is the top of it. */
+    {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, "AES-128-OCB", NULL);
+        EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+
+        if (c != NULL && ctx != NULL && EVP_EncryptInit_ex2(ctx, c, key, iv, NULL) == 1) {
+            printf("defltocb.iv0=%d\n", EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_IVLEN, 0, NULL));
+            printf("defltocb.iv16=%d\n", EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_IVLEN, 16, NULL));
+            printf("defltocb.iv15=%d\n", EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_IVLEN, 15, NULL));
+        } else {
+            printf("defltocb.iv0=0\n");
+        }
+        if (ctx != NULL)
+            EVP_CIPHER_CTX_free(ctx);
+        if (c != NULL)
+            EVP_CIPHER_free(c);
+    }
+
+    /* The tag-length window: 16 is the maximum, 17 is refused. */
+    {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, "AES-128-OCB", NULL);
+        EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+
+        if (c != NULL && ctx != NULL && EVP_EncryptInit_ex2(ctx, c, key, iv, NULL) == 1) {
+            printf("defltocb.taglen16=%d\n",
+                   EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 16, NULL));
+            printf("defltocb.taglen17=%d\n",
+                   EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 17, NULL));
+        } else {
+            printf("defltocb.taglen16=0\n");
+        }
+        if (ctx != NULL)
+            EVP_CIPHER_CTX_free(ctx);
+        if (c != NULL)
+            EVP_CIPHER_free(c);
+    }
+
+    /* The provider's answer is the landed low-level answer, ciphertext and tag. */
+    {
+        AES_KEY ek, dk;
+        OCB128_CONTEXT *octx;
+        unsigned char low[80], lowtag[16];
+
+        if (AES_set_encrypt_key(key, 128, &ek) != 0 || AES_set_decrypt_key(key, 128, &dk) != 0) {
+            printf("defltocb.eq.ct=0\n");
+        } else {
+            EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, "AES-128-OCB", NULL);
+            EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+            int outl = 0, finl = 0, aadl = 0;
+
+            octx = CRYPTO_ocb128_new(&ek, &dk, (block128_f)AES_encrypt,
+                                     (block128_f)AES_decrypt, NULL);
+            CRYPTO_ocb128_setiv(octx, iv, sizeof(iv), 16);
+            CRYPTO_ocb128_aad(octx, aad, 13);
+            CRYPTO_ocb128_encrypt(octx, in, low, 33);
+            CRYPTO_ocb128_tag(octx, lowtag, 16);
+            CRYPTO_ocb128_cleanup(octx);
+
+            if (c == NULL || ctx == NULL || EVP_EncryptInit_ex2(ctx, c, key, iv, NULL) != 1
+                || EVP_EncryptUpdate(ctx, NULL, &aadl, aad, 13) != 1
+                || EVP_EncryptUpdate(ctx, out, &outl, in, 33) != 1
+                || EVP_EncryptFinal_ex(ctx, out + outl, &finl) != 1
+                || EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, 16, tag) != 1) {
+                printf("defltocb.eq.ct=0\n");
+            } else {
+                printf("defltocb.eq.ct=%d\n",
+                       (size_t)(outl + finl) == 33 && memcmp(out, low, 33) == 0);
+                printf("defltocb.eq.tag=%d\n", memcmp(tag, lowtag, 16) == 0);
+            }
+            if (ctx != NULL)
+                EVP_CIPHER_CTX_free(ctx);
+            if (c != NULL)
+                EVP_CIPHER_free(c);
+        }
+    }
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IOLBF, 0);
@@ -2863,5 +3082,6 @@ int main(void)
     rt_deflt_wrap();
     rt_deflt_cts();
     rt_deflt_xts();
+    rt_deflt_ocb();
     return 0;
 }
