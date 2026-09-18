@@ -366,9 +366,13 @@ here is. (`forensics/phase8-obligations.json` remains the only complete list.)
 `Camellia_set_key`, `Camellia_encrypt`, `Camellia_decrypt`, `Camellia_ecb_encrypt`,
 `Camellia_cbc_encrypt`, `Camellia_cfb128_encrypt`, `Camellia_cfb1_encrypt`,
 `Camellia_cfb8_encrypt`, `Camellia_ofb128_encrypt`, `Camellia_ctr128_encrypt`,
-`CRYPTO_128_wrap`, `CRYPTO_128_unwrap`, `CRYPTO_128_wrap_pad`, `CRYPTO_128_unwrap_pad`.
+`CRYPTO_128_wrap`, `CRYPTO_128_unwrap`, `CRYPTO_128_wrap_pad`, `CRYPTO_128_unwrap_pad`,
+`CRYPTO_gcm128_new`, `CRYPTO_gcm128_init`, `CRYPTO_gcm128_setiv`, `CRYPTO_gcm128_aad`,
+`CRYPTO_gcm128_encrypt`, `CRYPTO_gcm128_decrypt`, `CRYPTO_gcm128_encrypt_ctr32`,
+`CRYPTO_gcm128_decrypt_ctr32`, `CRYPTO_gcm128_finish`, `CRYPTO_gcm128_tag`,
+`CRYPTO_gcm128_release`.
 
-**Open exports (checked against the ledger):** `CRYPTO_gcm128_init`, `CRYPTO_xts128_encrypt`.
+**Open exports (checked against the ledger):** `CRYPTO_xts128_encrypt`.
 Phase 8.2's last cipher family has landed, so the next cipher-adjacent work is 8.3's AEAD/XTS
 layer rather than another low-level block cipher.
 

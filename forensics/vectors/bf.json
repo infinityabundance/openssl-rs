@@ -15,6 +15,7 @@
     "standard": "Schneier's Blowfish (self-generated corpus)",
     "vectors": [
       {
+        "aad_hex": "",
         "cipher": "BF-ECB",
         "expected_hex": "079590e0010626685653b9b6c2a406e0",
         "id": "bf-1",
@@ -32,9 +33,11 @@
           "primary_source": "Schneier's Blowfish (self-generated corpus)",
           "title": "Self generated BF test vectors"
         },
-        "standard": "Schneier's Blowfish (self-generated corpus)"
+        "standard": "Schneier's Blowfish (self-generated corpus)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "BF-ECB",
         "expected_hex": "7a0fe3734ad4785b49e59296b7861789",
         "id": "bf-2",
@@ -52,9 +55,11 @@
           "primary_source": "Schneier's Blowfish (self-generated corpus)",
           "title": "Self generated BF test vectors"
         },
-        "standard": "Schneier's Blowfish (self-generated corpus)"
+        "standard": "Schneier's Blowfish (self-generated corpus)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "BF-CBC",
         "expected_hex": "39c65006742b62a49f7a40ff69749c0a",
         "id": "bf-3",
@@ -72,9 +77,11 @@
           "primary_source": "Schneier's Blowfish (self-generated corpus)",
           "title": "Self generated BF test vectors"
         },
-        "standard": "Schneier's Blowfish (self-generated corpus)"
+        "standard": "Schneier's Blowfish (self-generated corpus)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "BF-CBC",
         "expected_hex": "3a5cefdb91e56e7aab45e7ea562bd465",
         "id": "bf-4",
@@ -92,9 +99,11 @@
           "primary_source": "Schneier's Blowfish (self-generated corpus)",
           "title": "Self generated BF test vectors"
         },
-        "standard": "Schneier's Blowfish (self-generated corpus)"
+        "standard": "Schneier's Blowfish (self-generated corpus)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "BF-OFB",
         "expected_hex": "27be8331cdc52dc61724029d302b9358",
         "id": "bf-5",
@@ -112,9 +121,11 @@
           "primary_source": "Schneier's Blowfish (self-generated corpus)",
           "title": "Self generated BF test vectors"
         },
-        "standard": "Schneier's Blowfish (self-generated corpus)"
+        "standard": "Schneier's Blowfish (self-generated corpus)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "BF-OFB",
         "expected_hex": "f108f229cc1cbe228aa3b2407979289a",
         "id": "bf-6",
@@ -132,9 +143,11 @@
           "primary_source": "Schneier's Blowfish (self-generated corpus)",
           "title": "Self generated BF test vectors"
         },
-        "standard": "Schneier's Blowfish (self-generated corpus)"
+        "standard": "Schneier's Blowfish (self-generated corpus)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "BF-CFB",
         "expected_hex": "27be8331cdc52dc675a93625f90f5db4",
         "id": "bf-7",
@@ -152,9 +165,11 @@
           "primary_source": "Schneier's Blowfish (self-generated corpus)",
           "title": "Self generated BF test vectors"
         },
-        "standard": "Schneier's Blowfish (self-generated corpus)"
+        "standard": "Schneier's Blowfish (self-generated corpus)",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "BF-CFB",
         "expected_hex": "f108f229cc1cbe2214f00c3a8611cb46",
         "id": "bf-8",
@@ -172,7 +187,8 @@
           "primary_source": "Schneier's Blowfish (self-generated corpus)",
           "title": "Self generated BF test vectors"
         },
-        "standard": "Schneier's Blowfish (self-generated corpus)"
+        "standard": "Schneier's Blowfish (self-generated corpus)",
+        "tag_hex": ""
       },
       {
         "cipher": "BF-ECB",

@@ -15,6 +15,7 @@
     "standard": "RFC 2268",
     "vectors": [
       {
+        "aad_hex": "",
         "cipher": "RC2-ECB",
         "expected_hex": "a4085a9f3e710563ae3b1e8c4339122b",
         "id": "rc2-1",
@@ -32,9 +33,11 @@
           "primary_source": "RFC 2268",
           "title": "RC2 Test vectors"
         },
-        "standard": "RFC 2268"
+        "standard": "RFC 2268",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "RC2-CBC",
         "expected_hex": "a4085a9f3e710563d1091a1552ba8962",
         "id": "rc2-2",
@@ -52,9 +55,11 @@
           "primary_source": "RFC 2268",
           "title": "RC2 Test vectors"
         },
-        "standard": "RFC 2268"
+        "standard": "RFC 2268",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "RC2-40-CBC",
         "expected_hex": "61ae28bcf59d1f6f",
         "id": "rc2-3",
@@ -72,9 +77,11 @@
           "primary_source": "RFC 2268",
           "title": "RC2 Test vectors"
         },
-        "standard": "RFC 2268"
+        "standard": "RFC 2268",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "RC2-40-CBC",
         "expected_hex": "b3ddf36b5c81b0db",
         "id": "rc2-4",
@@ -92,9 +99,11 @@
           "primary_source": "RFC 2268",
           "title": "RC2 Test vectors"
         },
-        "standard": "RFC 2268"
+        "standard": "RFC 2268",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "RC2-64-CBC",
         "expected_hex": "191d1abf767bfbe7",
         "id": "rc2-5",
@@ -112,9 +121,11 @@
           "primary_source": "RFC 2268",
           "title": "RC2 Test vectors"
         },
-        "standard": "RFC 2268"
+        "standard": "RFC 2268",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "RC2-CFB",
         "expected_hex": "81b5cc4d43119e987a2b526ea152f3fe",
         "id": "rc2-6",
@@ -132,9 +143,11 @@
           "primary_source": "RFC 2268",
           "title": "RC2 Test vectors"
         },
-        "standard": "RFC 2268"
+        "standard": "RFC 2268",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "RC2-OFB",
         "expected_hex": "81b5cc4d43119e9849bdb7ef7fb35eb7",
         "id": "rc2-7",
@@ -152,9 +165,11 @@
           "primary_source": "RFC 2268",
           "title": "RC2 Test vectors"
         },
-        "standard": "RFC 2268"
+        "standard": "RFC 2268",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "RC2-OFB",
         "expected_hex": "1df8d70bb9c66ffc37869d8ed80d796b",
         "id": "rc2-8",
@@ -172,7 +187,8 @@
           "primary_source": "RFC 2268",
           "title": "RC2 Test vectors"
         },
-        "standard": "RFC 2268"
+        "standard": "RFC 2268",
+        "tag_hex": ""
       },
       {
         "cipher": "RC2-ECB",

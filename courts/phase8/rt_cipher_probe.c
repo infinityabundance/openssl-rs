@@ -1663,11 +1663,237 @@ static void rt_modes_wrap(void)
     }
 }
 
+/*
+ * GCM. The context is opaque and is only ever obtained from `CRYPTO_gcm128_new`, so the
+ * observation is the whole reachable contract: the ciphertext, the tag, the return codes, the
+ * buffered-partial-block behaviour under three different call splits, the in-place arm, the
+ * AAD-only and empty-plaintext arms, and both tag-verification answers.
+ *
+ * `CRYPTO_gcm128_encrypt_ctr32`'s `ctr128_f` is the probe's own AES-CTR, which is the same
+ * function on both sides; the authority calls it only for its 3 KiB chunk, and the candidate
+ * (and the authority's non-chunk path) generate the same keystream, so a long message
+ * exercises both.
+ */
+static void rt_gcm_ctr32(const unsigned char *in, unsigned char *out, size_t blocks,
+                         const void *key, const unsigned char ivec[16])
+{
+    unsigned char ctr[16];
+    unsigned char ks[16];
+    unsigned int c;
+    size_t b;
+    int i;
+
+    memcpy(ctr, ivec, 16);
+    c = ((unsigned int)ctr[12] << 24) | ((unsigned int)ctr[13] << 16)
+        | ((unsigned int)ctr[14] << 8) | (unsigned int)ctr[15];
+    for (b = 0; b < blocks; b++) {
+        AES_encrypt(ctr, ks, (const AES_KEY *)key);
+        for (i = 0; i < 16; i++)
+            out[16 * b + i] = in[16 * b + i] ^ ks[i];
+        c++;
+        ctr[12] = (unsigned char)(c >> 24);
+        ctr[13] = (unsigned char)(c >> 16);
+        ctr[14] = (unsigned char)(c >> 8);
+        ctr[15] = (unsigned char)c;
+    }
+}
+
+static void rt_gcm128(void)
+{
+    static const unsigned char gkey[16] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
+    };
+    static const unsigned char iv12[12] = {
+        0xca, 0xfe, 0xba, 0xbe, 0xfa, 0xce, 0xdb, 0xad, 0xde, 0xca, 0xf8, 0x88
+    };
+    AES_KEY aeskey;
+    unsigned char in[4096];
+    unsigned char out[4096];
+    unsigned char ct[4096];
+    unsigned char tag[16];
+    unsigned char aad[64];
+    GCM128_CONTEXT *ctx;
+
+    rt_fill(in, sizeof(in), 31);
+    rt_fill(aad, sizeof(aad), 32);
+
+    if (AES_set_encrypt_key(gkey, 128, &aeskey) != 0) {
+        printf("gcm.setup=0\n");
+        return;
+    }
+    printf("gcm.setup=1\n");
+
+    /* ---- Encrypt one partial block plus a tail, with AAD, then tag. ---- */
+    ctx = CRYPTO_gcm128_new(&aeskey, (block128_f)AES_encrypt);
+    CRYPTO_gcm128_setiv(ctx, iv12, sizeof(iv12));
+    printf("gcm.enc.aad_ret=%d\n", CRYPTO_gcm128_aad(ctx, aad, 13));
+    printf("gcm.enc.ret=%d\n", CRYPTO_gcm128_encrypt(ctx, in, out, 33));
+    rt_hex("gcm.enc.ct", out, 33);
+    CRYPTO_gcm128_tag(ctx, tag, 16);
+    rt_hex("gcm.enc.tag", tag, 16);
+    CRYPTO_gcm128_release(ctx);
+
+    /* ---- The same bytes split 5 + 28 and 16 + 1 + 16: one tag, one ciphertext. ---- */
+    ctx = CRYPTO_gcm128_new(&aeskey, (block128_f)AES_encrypt);
+    CRYPTO_gcm128_setiv(ctx, iv12, sizeof(iv12));
+    CRYPTO_gcm128_aad(ctx, aad, 13);
+    CRYPTO_gcm128_encrypt(ctx, in, ct, 5);
+    CRYPTO_gcm128_encrypt(ctx, in + 5, ct + 5, 28);
+    rt_hex("gcm.split.a.ct", ct, 33);
+    CRYPTO_gcm128_tag(ctx, tag, 16);
+    rt_hex("gcm.split.a.tag", tag, 16);
+    CRYPTO_gcm128_release(ctx);
+
+    ctx = CRYPTO_gcm128_new(&aeskey, (block128_f)AES_encrypt);
+    CRYPTO_gcm128_setiv(ctx, iv12, sizeof(iv12));
+    CRYPTO_gcm128_aad(ctx, aad, 13);
+    CRYPTO_gcm128_encrypt(ctx, in, ct, 16);
+    CRYPTO_gcm128_encrypt(ctx, in + 16, ct + 16, 1);
+    CRYPTO_gcm128_encrypt(ctx, in + 17, ct + 17, 16);
+    rt_hex("gcm.split.b.ct", ct, 33);
+    CRYPTO_gcm128_tag(ctx, tag, 16);
+    rt_hex("gcm.split.b.tag", tag, 16);
+    CRYPTO_gcm128_release(ctx);
+
+    /* ---- Empty plaintext, and AAD-only. ---- */
+    ctx = CRYPTO_gcm128_new(&aeskey, (block128_f)AES_encrypt);
+    CRYPTO_gcm128_setiv(ctx, iv12, sizeof(iv12));
+    CRYPTO_gcm128_aad(ctx, aad, 13);
+    printf("gcm.empty.ret=%d\n", CRYPTO_gcm128_encrypt(ctx, in, out, 0));
+    CRYPTO_gcm128_tag(ctx, tag, 16);
+    rt_hex("gcm.empty.tag", tag, 16);
+    CRYPTO_gcm128_release(ctx);
+
+    ctx = CRYPTO_gcm128_new(&aeskey, (block128_f)AES_encrypt);
+    CRYPTO_gcm128_setiv(ctx, iv12, sizeof(iv12));
+    CRYPTO_gcm128_aad(ctx, aad, 64);
+    CRYPTO_gcm128_tag(ctx, tag, 16);
+    rt_hex("gcm.aadonly.tag", tag, 16);
+    CRYPTO_gcm128_release(ctx);
+
+    /* ---- In-place decryption of a full block plus a tail. ---- */
+    ctx = CRYPTO_gcm128_new(&aeskey, (block128_f)AES_encrypt);
+    CRYPTO_gcm128_setiv(ctx, iv12, sizeof(iv12));
+    CRYPTO_gcm128_aad(ctx, aad, 13);
+    CRYPTO_gcm128_encrypt(ctx, in, ct, 33);
+    CRYPTO_gcm128_release(ctx);
+
+    ctx = CRYPTO_gcm128_new(&aeskey, (block128_f)AES_encrypt);
+    CRYPTO_gcm128_setiv(ctx, iv12, sizeof(iv12));
+    CRYPTO_gcm128_aad(ctx, aad, 13);
+    memcpy(out, ct, 33);
+    printf("gcm.dec_inplace.ret=%d\n", CRYPTO_gcm128_decrypt(ctx, out, out, 33));
+    rt_hex("gcm.dec_inplace.pt", out, 33);
+    CRYPTO_gcm128_tag(ctx, tag, 16);
+    rt_hex("gcm.dec_inplace.tag", tag, 16);
+    CRYPTO_gcm128_release(ctx);
+
+    /* ---- Tag verification: accept, reject, a NULL tag, and an over-long tag. ---- */
+    ctx = CRYPTO_gcm128_new(&aeskey, (block128_f)AES_encrypt);
+    CRYPTO_gcm128_setiv(ctx, iv12, sizeof(iv12));
+    CRYPTO_gcm128_encrypt(ctx, in, ct, 33);
+    CRYPTO_gcm128_tag(ctx, tag, 16);
+    CRYPTO_gcm128_release(ctx);
+
+    ctx = CRYPTO_gcm128_new(&aeskey, (block128_f)AES_encrypt);
+    CRYPTO_gcm128_setiv(ctx, iv12, sizeof(iv12));
+    CRYPTO_gcm128_decrypt(ctx, ct, out, 33);
+    printf("gcm.verify.accept=%d\n", CRYPTO_gcm128_finish(ctx, tag, 16) == 0);
+    CRYPTO_gcm128_release(ctx);
+
+    ctx = CRYPTO_gcm128_new(&aeskey, (block128_f)AES_encrypt);
+    CRYPTO_gcm128_setiv(ctx, iv12, sizeof(iv12));
+    CRYPTO_gcm128_decrypt(ctx, ct, out, 33);
+    tag[0] ^= 0x01;
+    printf("gcm.verify.reject=%d\n", CRYPTO_gcm128_finish(ctx, tag, 16) == 0);
+    CRYPTO_gcm128_release(ctx);
+    tag[0] ^= 0x01;
+
+    ctx = CRYPTO_gcm128_new(&aeskey, (block128_f)AES_encrypt);
+    CRYPTO_gcm128_setiv(ctx, iv12, sizeof(iv12));
+    printf("gcm.finish.nulltag=%d\n", CRYPTO_gcm128_finish(ctx, NULL, 0));
+    CRYPTO_gcm128_release(ctx);
+
+    ctx = CRYPTO_gcm128_new(&aeskey, (block128_f)AES_encrypt);
+    CRYPTO_gcm128_setiv(ctx, iv12, sizeof(iv12));
+    printf("gcm.finish.longtag=%d\n", CRYPTO_gcm128_finish(ctx, tag, 17));
+    CRYPTO_gcm128_release(ctx);
+
+    /* A truncated tag of 12 bytes. */
+    ctx = CRYPTO_gcm128_new(&aeskey, (block128_f)AES_encrypt);
+    CRYPTO_gcm128_setiv(ctx, iv12, sizeof(iv12));
+    CRYPTO_gcm128_encrypt(ctx, in, ct, 33);
+    CRYPTO_gcm128_tag(ctx, tag, 12);
+    rt_hex("gcm.tag12", tag, 12);
+    CRYPTO_gcm128_release(ctx);
+
+    /* ---- A non-96-bit IV: the GHASH-derived J0. ---- */
+    ctx = CRYPTO_gcm128_new(&aeskey, (block128_f)AES_encrypt);
+    CRYPTO_gcm128_setiv(ctx, iv12, 16);
+    CRYPTO_gcm128_encrypt(ctx, in, out, 16);
+    rt_hex("gcm.iv16.ct", out, 16);
+    CRYPTO_gcm128_tag(ctx, tag, 16);
+    rt_hex("gcm.iv16.tag", tag, 16);
+    CRYPTO_gcm128_release(ctx);
+
+    ctx = CRYPTO_gcm128_new(&aeskey, (block128_f)AES_encrypt);
+    CRYPTO_gcm128_setiv(ctx, iv12, 1);
+    CRYPTO_gcm128_encrypt(ctx, in, out, 16);
+    rt_hex("gcm.iv1.ct", out, 16);
+    CRYPTO_gcm128_tag(ctx, tag, 16);
+    rt_hex("gcm.iv1.tag", tag, 16);
+    CRYPTO_gcm128_release(ctx);
+
+    /* ---- AAD after the message has begun is refused with -2. ---- */
+    ctx = CRYPTO_gcm128_new(&aeskey, (block128_f)AES_encrypt);
+    CRYPTO_gcm128_setiv(ctx, iv12, sizeof(iv12));
+    CRYPTO_gcm128_encrypt(ctx, in, out, 1);
+    printf("gcm.aad.late=%d\n", CRYPTO_gcm128_aad(ctx, aad, 1));
+    CRYPTO_gcm128_release(ctx);
+
+    /* ---- The ctr32 entry points, including a message past the authority's 3 KiB chunk. ---- */
+    ctx = CRYPTO_gcm128_new(&aeskey, (block128_f)AES_encrypt);
+    CRYPTO_gcm128_setiv(ctx, iv12, sizeof(iv12));
+    printf("gcm.ctr32.ret=%d\n",
+           CRYPTO_gcm128_encrypt_ctr32(ctx, in, out, 33, rt_gcm_ctr32));
+    rt_hex("gcm.ctr32.ct", out, 33);
+    CRYPTO_gcm128_tag(ctx, tag, 16);
+    rt_hex("gcm.ctr32.tag", tag, 16);
+    CRYPTO_gcm128_release(ctx);
+
+    ctx = CRYPTO_gcm128_new(&aeskey, (block128_f)AES_encrypt);
+    CRYPTO_gcm128_setiv(ctx, iv12, sizeof(iv12));
+    printf("gcm.ctr32.long.ret=%d\n",
+           CRYPTO_gcm128_encrypt_ctr32(ctx, in, out, 4000, rt_gcm_ctr32));
+    rt_hex("gcm.ctr32.long.ct", out, 4000);
+    CRYPTO_gcm128_tag(ctx, tag, 16);
+    rt_hex("gcm.ctr32.long.tag", tag, 16);
+    CRYPTO_gcm128_release(ctx);
+
+    ctx = CRYPTO_gcm128_new(&aeskey, (block128_f)AES_encrypt);
+    CRYPTO_gcm128_setiv(ctx, iv12, sizeof(iv12));
+    printf("gcm.plain.long.ret=%d\n", CRYPTO_gcm128_encrypt(ctx, in, ct, 4000));
+    rt_hex("gcm.plain.long.ct", ct, 4000);
+    CRYPTO_gcm128_tag(ctx, tag, 16);
+    rt_hex("gcm.plain.long.tag", tag, 16);
+    CRYPTO_gcm128_release(ctx);
+
+    /* The ctr32 decrypt direction, over a long message produced above. */
+    ctx = CRYPTO_gcm128_new(&aeskey, (block128_f)AES_encrypt);
+    CRYPTO_gcm128_setiv(ctx, iv12, sizeof(iv12));
+    printf("gcm.ctr32.dec.ret=%d\n",
+           CRYPTO_gcm128_decrypt_ctr32(ctx, ct, out, 4000, rt_gcm_ctr32));
+    rt_hex("gcm.ctr32.dec.pt", out, 4000);
+    CRYPTO_gcm128_release(ctx);
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IOLBF, 0);
     rt_modes_blocks();
     rt_modes_wrap();
+    rt_gcm128();
     rt_aes();
     rt_rc4();
     rt_des();

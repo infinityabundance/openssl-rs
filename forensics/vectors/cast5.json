@@ -15,6 +15,7 @@
     "standard": "RFC 2144",
     "vectors": [
       {
+        "aad_hex": "",
         "cipher": "CAST5-CBC",
         "expected_hex": "327c198b9d0a59456a2194bd21fc3ff0",
         "id": "cast5-1",
@@ -32,9 +33,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CBC",
         "expected_hex": "f5ce00a3ba73e5a289789783c34787e11d27859beac26bb53dc732f03c80c548",
         "id": "cast5-2",
@@ -52,9 +55,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CBC",
         "expected_hex": "3c033e10fad0c4ce1e62e2a91488090947c5e0ac0dd5f55c1b15b0b02fa7cfd20f61b02d67ea9f326c5475447dee69bf",
         "id": "cast5-3",
@@ -72,9 +77,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CBC",
         "expected_hex": "219e4a20d3fcffa9c5d3b74038f2147ff3baf9c828bff134dfc1655ddec01120dc59069682e1fea35ce4dc2d1ee7e15929bdcaeddb0e2894fd21e1a95cff853f",
         "id": "cast5-4",
@@ -92,9 +99,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CBC",
         "expected_hex": "9a489a104fece86017fa9e8bfa66322a07c940dc2709f4ed7aa85343449a774880b977eb3a95c797593f38a52009095f4792ce957ec95866739ab7ee520938d11f6601036691aea9a83948c00c1a2fb3",
         "id": "cast5-5",
@@ -112,9 +121,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CBC",
         "expected_hex": "3cc5a34d2592daa6d8bda161a349b52a1dcb8899654bb15ff295ab05ff666c1b31184801033e374e1f0f4f08f745a9af688f3d869ca8362d7e3b34c6dca259a3c14033f1c4f15c106552ac2cd3e953234bafefac74df0cb8757ab1d46e4b8914",
         "id": "cast5-6",
@@ -132,9 +143,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CBC",
         "expected_hex": "ab1d2225e541a27a00e8e7a698f12d5044eac004b5c1362dd9df4c484ec1e7f22be8946f5a1c8450c5a7e3fd319af94c17dd3472ec8c0a52a5cbcb112bb5fb467511afb58e9f4b5fdbbb0c64f39b31c968582d06b980f05dac45ee0f6b30144bf41aa1582db3d669c0061eba42f591f1",
         "id": "cast5-7",
@@ -152,9 +165,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CBC",
         "expected_hex": "37fbb13aedae35151641acb2db6df6044e7c860320a1e9ee4977ba9ebbecbcaa995ea76cdbb9d3ea017ff3d9d650befdb4b35c98ae444b762432b5fd2a172b30ed879044bd870f9bd9f1e90aa89fe08b8c39b06890e816f5d21069f591cc2f656694d1acb0de7273f5c16a6dd69d3c77789b11b7450eb524d9f98640ac855f8a",
         "id": "cast5-8",
@@ -172,9 +187,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CBC",
         "expected_hex": "2edff012cd4cb447f58c00391c86e187d0d9a70b800f12bcb0436e423c21adb7eafcae0833b74228e01784b02de552e10a89fbd272b89aadf4316b9fe10917e8fb9c959fb00b920c1bce4517cd37458ef3f51a6c27366339051adc47147f375b5ec63d84c1e5cc386babc24fc4ee4dec507c5e9f5d6631adad59b7464b4950abf2c7af2f9599b2a371616469a55e0ffb",
         "id": "cast5-9",
@@ -192,9 +209,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CBC",
         "expected_hex": "cc16f1685b309c380fa0a6556a604040a3e6eb326f1884b7c5d85d5bfdf925c96d0621e69b1f601463d23efdee60d531211c638ffca1134ddd70fa21d65b30fb462af045d32547acafbfb9c9c40e5e66bbcd23abf7adb3239da666a220a6b79dc335c2adb11559de7077348af3dd551374d95a800bed393cc3d12b220eca16564100373f6d4c422e1f94d6f82b38431a7bb8e13750e7f09afdf6677fb9cb2077",
         "id": "cast5-10",
@@ -212,9 +231,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CBC",
         "expected_hex": "431c2991b6388feb25ac695408c0b5ab",
         "id": "cast5-11",
@@ -232,9 +253,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CBC",
         "expected_hex": "6da475bb7ca9345d9d321c2e523a4c42f281df4529264da2e95d3616037a8b7a",
         "id": "cast5-12",
@@ -252,9 +275,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CBC",
         "expected_hex": "ca71fa129c94f5f67ad8928b70b788b4d621fef07aead8ae5aecbfc9027651bf1888cc4459627ff8c7a5383f56f95b87",
         "id": "cast5-13",
@@ -272,9 +297,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CBC",
         "expected_hex": "5570f2e5fc0390d718adbed7e3ef74bf390317936846438190e9cc8424ba6c6f026ba29a6980a15fd090a8b6ee4a182e3de0817862b05b9cf2202ed6421fe0b6",
         "id": "cast5-14",
@@ -292,9 +319,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CBC",
         "expected_hex": "551db27bab09919fbb3f257080c1972e4297a37cb5c77b14c2622a476914b95e726b0814172e3189bf3b93adef6ef8eedddd2917793e04f4ba0d57503f426503d624f65d0b1e8b9f62d2bf08c752c90c",
         "id": "cast5-15",
@@ -312,9 +341,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CBC",
         "expected_hex": "cb373a6d2f2463b81b4bfece800c6a0d1afebbf5dff76c67cab44844b6c2569c59770f569efa6dd26d74aa1f24999edcfb979db7a34a4155367dab091d9306c4a89acf932d442bb4ca70bef3b6c0866fc79f29d24af40e1e5f9626d13f752fa8",
         "id": "cast5-16",
@@ -332,9 +363,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CBC",
         "expected_hex": "3580a9b62d3ac4798ad351a53efdc98b5f4e2eb04e19d0328ee0931a0647172cb9596ff7441c78625fcccfa1c0e579c811142441253a169914b3435f2e4d47ccca4151d6d0c9399071e23879cb5f355659bdca594c9c59039c9ec90f87bfed3c830d624298681e5523d537ab58a0f340",
         "id": "cast5-17",
@@ -352,9 +385,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CBC",
         "expected_hex": "be790efc9fb2fd205402cb355ecf881ee7dc7d4cf19441374c37c3cb4fedd6a1996a703bc42b88c2c93adb0628b39483cc8f6e26a1f1fbcef685f6c4640b85922540ae5c263428e531847f7fc5cd8c8ed069b4dc3c0f23f89edebaee567c4268cb78710803b263832ef74259885470bbee6fe6f1997f84fb88dbe17860b52dce",
         "id": "cast5-18",
@@ -372,9 +407,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CBC",
         "expected_hex": "b1793ca5c3b6ad612d5616841d9c281ed4ba2a8355caffb122184cb01f18102c5b0837d316e76dbcd93b70fa3dc6b741aa1262f976afa5807832f87e77156a6c9eadf2b986d3cd29a6452948ad818d2c864faf352d0002e2b824de9a00dc230cb530fb6b19195aeae9d2f6b032bff28f5cf483f7835310f880afa6d9210666b6c2c121a51abc86cbe9468ba423944409",
         "id": "cast5-19",
@@ -392,9 +429,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CBC",
         "expected_hex": "78b56a69ffcb77d3a848ad2ccb9b67263d9d9668936b040d5a0fb514013fa4dc012f7ccb54c0d30b764d96ff5edf70d4c90d95015c2555656581bfbf7c13a86b8254ffd177246938cb706abdb9ff6e752a763e36c6102a124683695dba4bab2bd8fc2100b99734f2bf4de56c0a3f3b701593b9efdbcb1cc4bc220d2ecbbf5d8a5a13aab7fd35d923cefc87e5a97587e5903a5af0b00e3d747435ad495c55155b",
         "id": "cast5-20",
@@ -412,9 +451,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CFB",
         "expected_hex": "453d00cb11e1cf4e52ee11c1c22cd6b6",
         "id": "cast5-21",
@@ -432,9 +473,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CFB",
         "expected_hex": "0cb41e41b55c3aa4f7a002e7ffbe438897769b9cb77e7a8ff9237d8e066fc64f",
         "id": "cast5-22",
@@ -452,9 +495,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CFB",
         "expected_hex": "8feace1e2d6aedf53e779ee3d62e3635a2d1234802665bc34c8be46f397e04aecaea6045f3d0194ea9002dfa358ed390",
         "id": "cast5-23",
@@ -472,9 +517,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CFB",
         "expected_hex": "6774ade6984392eaf670dc2f8c2397e87af5c850325376d9230cf622d7f0a0fd0a4a0c68565c9efdaf58c2aec18e352a315a0f9ca6beeb8e1bf4dfb673768f0e",
         "id": "cast5-24",
@@ -492,9 +539,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CFB",
         "expected_hex": "f15a5b0a9f323931149fa5549f98a2cd14995a177910644dbb10fc1f6cfb281d4cf09958a5bcb23931640ca932ec50fd67e85532fe5a89a736b1027cc0423a4b5d609d6ee91fddd8b0921fc8cb6f2044",
         "id": "cast5-25",
@@ -512,9 +561,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CFB",
         "expected_hex": "a03ddffb19dbfae5dc4190382c88b57ece48a562adb1d2a97554475430c30c174cd58cb05f04d4ca6ca07b1413735e4c192157af2738de438fd4e8544e32e5476645a9eae06b097ae624100f1294c1870bb48910929166d200bd12f4b0b34a6e",
         "id": "cast5-26",
@@ -532,9 +583,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CFB",
         "expected_hex": "ae27a1f299072d0bf7ea533d6ef2b490b78fa926bc5e7195300a2676b8e8a54bacac00d91c1f734ec959c2260dcb123e22b4d10cb810625dff0810f570755cdc520c3eaaa86412b1b382f4ca6c25953144d8a959ee9db4771aad2a1dfc812e3f0016d75d95168629be284adf3734c0b6",
         "id": "cast5-27",
@@ -552,9 +605,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CFB",
         "expected_hex": "0fa7effeec07717c49fc5bfa2e0dcd96b3bb5ed3080171621c67bbaf795a06bc4aa8fcb82217ff3f164a8abe0a92f9f9baf05809962b2a684eb6acdaa3a0935e298c8e23e1f1a19cd3cf174c92ff07df0541bc2fedbedcf721f11e398dabbcd3cd1b5842e8a8a117b7f97ee7d17b4a7c7a9126eefb45ca7d3e76d8240f64fa92",
         "id": "cast5-28",
@@ -572,9 +627,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CFB",
         "expected_hex": "eea7b5280a023d240e01e428eb566ef6ce709de1e961fb45256f453b4c63a8adcb3cd22fb58c6d091bcc91bf57e2d09f3290658a4a72af2427d338e4b559a0598a0983edbcf5c441540ca8d43a91c3623f2cfa604ac002c7e95e9ca4e3d685ba62b862a6de78724074261fe6e5094dc18db65b64b914f5125ba52b92a55719ab66e9fb4d1032419ede1d51123277dd43",
         "id": "cast5-29",
@@ -592,9 +649,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CFB",
         "expected_hex": "f24802e7d3d3fc2f487a48caa63d3b1c97856aff1f25ebe2a5579422fb75c0eff313ad93e21f667048479646b547716ec00de0686c7fcaa7352175034e4347f4552872f38c0339a70538226a0155ea26cb46bc98d0341122bfaeff3ed23eb003824e239717de4088441b5abd780bc9f10570d36e5123a6adfad601845005a7b0ee80e7de92991f931e2a52379da40ba40e6c79ff6817de63191e31570722d7d7",
         "id": "cast5-30",
@@ -612,9 +671,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CFB",
         "expected_hex": "3f08c279175f0eb1b66c991c650735c7",
         "id": "cast5-31",
@@ -632,9 +693,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CFB",
         "expected_hex": "cba9c6b7a6672071031aa237a602996896e31a110bae1870d000768a79f661aa",
         "id": "cast5-32",
@@ -652,9 +715,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CFB",
         "expected_hex": "c0401a8557096e02ff58f62634eb39b8894735f6e1d735eee0cbd97804987a6d1f123100e2be26089fb40708b48854ce",
         "id": "cast5-33",
@@ -672,9 +737,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CFB",
         "expected_hex": "18c2127028579828ce13a8636ba7d666ace80c0b392bf3be4f5f97ff94d081e4174afd85de006c0affbb244149f9d2efd5f50ae7791f4ca061979f0e80a1790f",
         "id": "cast5-34",
@@ -692,9 +759,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CFB",
         "expected_hex": "ea2913d6d9f3906403ae86fa34fb185e333cf4991ab5f27d58abbc4d4bbf14165fbbf7da164401b4ff856807141fbc4d5ad550beb5d8c708eda610a5af801e27d68945ded441f2ff85206e5c3e52e786",
         "id": "cast5-35",
@@ -712,9 +781,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CFB",
         "expected_hex": "c4fd34b698c5908a37eab83859317b9961e7e741bfef9060595fcee55c73f6c93bdbc5b80c73798c15efb29207e958e975cb77b4cbe5e5b329d50e86fb43dd3a234aa23fb5c9d38dae78c5de99b5e3f8a00d0bb00208ceaf2ede8f8b99f19223",
         "id": "cast5-36",
@@ -732,9 +803,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CFB",
         "expected_hex": "63c415bd42ee6097485e023ff9c4a29e04fb4ab3254bbe1dba5b85c844184d64550dd2ed4f3dc30aa75e987363343b4db154bb0a5a250fc7049ccd8a507083f5ebd76e34f87f8b23a4540ef1e77c094ab1e0afeacfe04116aa33e2df1e505d0d788065288d57570977feb304ab432bbf",
         "id": "cast5-37",
@@ -752,9 +825,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CFB",
         "expected_hex": "12c322b65b8296f7f88030ddbe64f2fbcb39beea0165f7633e1cc5e1cbe939bd52b0ddae37603a14bb85faf130ccf34492ed3e41d0092878d96eb09c3a5c6e09e0ba38a60ae0fdd855e1b236e69bf2e6ec6e80e4bd620826419788409524debead5430142da648144ab11746f6a4b40f357e570d8f645767bcf10fd1e1cc3286",
         "id": "cast5-38",
@@ -772,9 +847,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CFB",
         "expected_hex": "c4b350d70801419909077a2218b855d2e4cd3ad47063618009d216fb5bed38f2c161ab1d02fa62fa87371e3975b4e4786617636351e56c294d1a56c43644f54a3566173e18a5ba48964cfb314817219efa9d22b61364b7f1d2c4f38e0a6ad04bc1aee05f5f6061c3f93697125ad29c9a9b39b3640a61f3873f1327fe104fc3d2009052fb9cb356853a6f1e81feebc88f",
         "id": "cast5-39",
@@ -792,9 +869,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-CFB",
         "expected_hex": "cda6dcfc1e0103192673cf18f67939eabe1011b94764ddc809f7d4fac4521ed72ee66629220ef29aec006c82e31432030480589f9fe35600939609a0c6f9252ec8ad7f96540236d3dcb4a53433b6759b218da8a37cde43aadcbc517c12811e27db1870d78c874e5f81492b47245cc48c6761998f1fb8cbc6848ff40f0d27adf519bb3645b4d3ca6e35a1979aa5685976375298822dbbb072856312eb30232b97",
         "id": "cast5-40",
@@ -812,9 +891,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-OFB",
         "expected_hex": "afd1a6abb87a4a12ccfb63b91868b734",
         "id": "cast5-41",
@@ -832,9 +913,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-OFB",
         "expected_hex": "834fc0990736575be34b56f7af26a1cc4d801cfd36eb0d0830c5264a7050db77",
         "id": "cast5-42",
@@ -852,9 +935,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-OFB",
         "expected_hex": "3552cb60d8b3a9d8a6458d20e70250ef67ff90a1767cd61597a18a28dfc354d810f30b8949a8a13a111393ba08bc9e6f",
         "id": "cast5-43",
@@ -872,9 +957,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-OFB",
         "expected_hex": "20310bbe52bdde7725da64a30e428654a2ab9c2506ea89499b04782038a29c3712915328380e785a660e378dba714a3598ab4a6612cd8350d608a8cf598bea7a",
         "id": "cast5-44",
@@ -892,9 +979,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-OFB",
         "expected_hex": "0cefd22109f262103018037c3821c3bb1d43b5ff45dba0de243a915bdd2e7e9a4b847dcfb23baf1b7c42cc62bf33ffb0e9e8edf31b2ad9545074b5c6c57721f1b3b6d85f343aeddc72591de1f7d4fc7c",
         "id": "cast5-45",
@@ -912,9 +1001,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-OFB",
         "expected_hex": "2e7514b53c534a7d443757a1f071cd9b6e3b79764134c202717bef1f633807b42a3e34b1c6e8b233d2436ec61fa642cc48ef653de35ae84298c380652f2633e5180d35a28f0e8876693a0e92e47a4076ddd9f56d3145564c880dd98adb77e6c2",
         "id": "cast5-46",
@@ -932,9 +1023,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-OFB",
         "expected_hex": "71497485f2deb55dfb1f6f77230e98c34faa185a9de4fbd5a2d065c50de8978f9aacec1e4e55c69b72ec581a7acdb9795233d7c40506d9599346a71f2ba14c2f6b7e678efa3cc4e0a30453be14794fd121db985a5b2639a2719e2b771195ad742e60ae9d17ab8c6466676e77f61032b3",
         "id": "cast5-47",
@@ -952,9 +1045,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-OFB",
         "expected_hex": "5e37c2fac52455a124fdbb84a7627e3480f672907ee82b2830c2d26f12da8a5edfcc6ef0305de040c2a998b968b2e1e66a586887d1ba77076b661a09b01108c0f6bfcae40ae5441e16cc2b2b32f391e2e88f245325003226802093d33dd676d4591e60a17a958939ef898b20482a99cf79187f6f56f9d1e53f77a6c895730a89",
         "id": "cast5-48",
@@ -972,9 +1067,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-OFB",
         "expected_hex": "5cc3f00892f8ac87d5794965f43540ac36965e8122c2cbe8bbc68621739ddb0d28c9086a58c157e7bbdab4bf3e70988a9d2913445776771557bc3e6c6f7f803bfef5085441763b24e266a995b7db60239990202c946aa89750adbf35ebd089b6897a3ca6efa0b4f505dac03c5c2e93cddc3fd7b8ceb419a72d2512330e2cbc99d7b3f3e4eee8b315d3e761c93a08c67a",
         "id": "cast5-49",
@@ -992,9 +1089,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-OFB",
         "expected_hex": "e04d62785f1d6a05df1ad002c5c81f1e511d4317d674278b0fd35ba16fc4de739d0fc6429df9de7b12fc4f2f9903efe47b5974f7b727d58f919bd198249eac42fdd0d09d741ad6a37b34203c4a7b2f7b22df0edcc263ca3d245387a6fca88937d762820e5c6a820fa26f7dcb6b1346deb7bd60cd61db8a272667bbc03fe2e88d9d69492eab0c6bdd5184bbe82121232e9340fd1d7a5a4b8b304a88137842954c",
         "id": "cast5-50",
@@ -1012,9 +1111,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-OFB",
         "expected_hex": "3f530c7c373723d7d06695e6782f14e0",
         "id": "cast5-51",
@@ -1032,9 +1133,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-OFB",
         "expected_hex": "8ce4e3661b442f508f7016fdbb69f7dcf4609cf6be2a9854533aa450e0638dc9",
         "id": "cast5-52",
@@ -1052,9 +1155,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-OFB",
         "expected_hex": "7994f1beec7126aa62694e2b6e0874ba8d2da96f5bfc52059d27af0f93ee47798a894a2d6cb793667ca4b308c46b4dd7",
         "id": "cast5-53",
@@ -1072,9 +1177,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-OFB",
         "expected_hex": "8f3f08ab74d80edad7b7008e122050ec8b0af8d0b0b4d107a9d74d701bc367296ea0feefbb7106c7d752757be37f4e19c2178c12ea6d68dfdd8e96a301937223",
         "id": "cast5-54",
@@ -1092,9 +1199,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-OFB",
         "expected_hex": "182462c882bb5a0251542567a92b58e28dc0895891da88befaa0c2d3aae0870ed76b62ba146e4a97a28dc34f83f83bbc29000298028ac646399fdb35c5428b86759c181a8f663d099e33aca6918c3d2c",
         "id": "cast5-55",
@@ -1112,9 +1221,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-OFB",
         "expected_hex": "d441ffecd27fdb3172cb38e462e2b6420cb85db892a6073fe1741bc119815079134582238bf47bff2cf2287f7e9fe6617041177da1675e74a15e2e6b183b6148bbf88bb7aecc0161d497f838a85071425a945fdaf0ac8fc3a1d9a405915dd115",
         "id": "cast5-56",
@@ -1132,9 +1243,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-OFB",
         "expected_hex": "faa5133fcad1830f7ea3ab6c6266e0ec7ef25643dd5680a433952ed87a433bbab85392f37edbdab44878b337121bf8b37e8b4cd1980ae59bcd8b34191ffffc5f08850f910f3c2c26a4d32fc460d845ed09995cf172b6338728b3aa17b041122e52c4cd9bc036ff5e7a0c3fb1ca82cca5",
         "id": "cast5-57",
@@ -1152,9 +1265,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-OFB",
         "expected_hex": "a03127978305f8e500061bf108157a5e2e4db5e405f130efab2ef5c9d190d15e2bc87c235b6c123de066b447ed506d03d433c12642e8b86ebcfd9077a1e76adf1f79614a28fe92f49c482b6bc3119ab364426236a4aee7920194d0a77ce7d0061c5d254b11f72c6fed02c07a187f945f18818ce31d82fe867153a725525dc11b",
         "id": "cast5-58",
@@ -1172,9 +1287,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-OFB",
         "expected_hex": "685e4aa88c350e10125a108a6cdbb38baf3c0fc5c5fdc8b36f0f788ed80ce3dd4e21dd3c0c56f7f2ba399270c80e9f106c7cef715d78c1bdcb3841363afc1c27a65f68bfa2e58b9bf8ccced2e99349fb208116ae2ec176351fdeca19060edec12348590496abb943160075a8408a9d4d51e25e147d1e4045cd76e77ee192bbe411241a3013070ee071c08450ed61bd0f",
         "id": "cast5-59",
@@ -1192,9 +1309,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-OFB",
         "expected_hex": "e1d258d7b885417ba27c3d00ee9fc9247ee7aec53b1647f1d5250db8f358b7f0da34d3ba595c0f9480815ad7dc5a46aaee41f1478ee302f5a068ca7bf2a123e5a6359f1d85a07ce1415b17f1fa03d1b233f4922ae981120ad919b70822cf68b3597ea080d7688eaab85c17b31dfa2fed465a3f272ad9d97362c3ff4c06bad8db4b548ef263c810094d927fc85ef2f90fb6258245024ad9acc2175aeb73015381",
         "id": "cast5-60",
@@ -1212,9 +1331,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 Test vectors (from https://github.com/pyca/cryptography)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-ECB",
         "expected_hex": "238b4fe5847e44b2",
         "id": "cast5-61",
@@ -1232,9 +1353,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 ECB Test vectors (from RFC 2144)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-ECB",
         "expected_hex": "eb6a711a2c02271b",
         "id": "cast5-62",
@@ -1252,9 +1375,11 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 ECB Test vectors (from RFC 2144)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
+        "aad_hex": "",
         "cipher": "CAST5-ECB",
         "expected_hex": "7ac816d16e9b302e",
         "id": "cast5-63",
@@ -1272,7 +1397,8 @@
           "primary_source": "RFC 2144",
           "title": "CAST5 ECB Test vectors (from RFC 2144)"
         },
-        "standard": "RFC 2144"
+        "standard": "RFC 2144",
+        "tag_hex": ""
       },
       {
         "cipher": "CAST5-ECB",
