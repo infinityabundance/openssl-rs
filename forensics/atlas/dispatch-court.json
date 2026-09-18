@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 219,
+      "crate_files_read": 220,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -12,12 +12,12 @@
       "identities_authority_only": 82,
       "identities_checked": 195,
       "identities_mismatches": 0,
-      "links_convention": 201,
+      "links_convention": 202,
       "links_documented": 8,
       "links_explicit": 14,
       "problems": 0,
-      "signatures_authority_only": 407,
-      "signatures_checked": 226,
+      "signatures_authority_only": 406,
+      "signatures_checked": 227,
       "signatures_mismatches": 0,
       "signatures_not_a_dispatch": 104,
       "signatures_unlinked": 0,
@@ -1533,7 +1533,6 @@
         "X509_STORE_CTX_verify_cb",
         "X509_STORE_CTX_verify_fn",
         "bio_info_cb",
-        "ccm128_f",
         "conf_finish_func",
         "custom_ext_add_cb",
         "custom_ext_free_cb",
@@ -3329,6 +3328,14 @@
           "authority": "ctr128_f",
           "authority_signature": "fptr(void; ptr(const(int:1:u)), ptr(int:1:u), int:8:u, ptr(const(opaque)), ptr(const(int:1:u)))",
           "crate_signature": "fptr(void; ptr(const(int:1:u)), ptr(int:1:u), int:8:u, ptr(const(opaque)), ptr(const(int:1:u)))",
+          "how": "convention"
+        },
+        {
+          "alias": "Ccm128F",
+          "at": "src/modes/mod.rs",
+          "authority": "ccm128_f",
+          "authority_signature": "fptr(void; ptr(const(int:1:u)), ptr(int:1:u), int:8:u, ptr(const(opaque)), ptr(const(int:1:u)), ptr(int:1:u))",
+          "crate_signature": "fptr(void; ptr(const(int:1:u)), ptr(int:1:u), int:8:u, ptr(const(opaque)), ptr(const(int:1:u)), ptr(int:1:u))",
           "how": "convention"
         },
         {

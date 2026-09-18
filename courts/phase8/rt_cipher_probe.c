@@ -1888,12 +1888,219 @@ static void rt_gcm128(void)
     CRYPTO_gcm128_release(ctx);
 }
 
+/*
+ * CCM. `CCM128_CONTEXT` is opaque in the public header and this API has no library allocator
+ * (`_new`), so the probe supplies the storage itself: a 128-byte aligned buffer is handed to the
+ * library, which writes its own 56-byte context into it, and the probe never reads it back. The
+ * observation therefore stays at the caller's boundary.
+ *
+ * The substance is the plan's trap: the message length is fixed before the AAD. `setiv` writes
+ * `mlen` into B0's length octets and each body refuses with -1 unless it reconstructs the same
+ * length, so the arm observes that refusal and the corrupted tag it leaves behind (the flags
+ * byte is not restored), the three AAD-length encodings, the `tag` length refusal, and the
+ * `_ccm64` entry points against the plain path through the probe's own CCM stream.
+ */
+typedef union {
+    unsigned char bytes[128];
+    unsigned long long align;
+} rt_ccm_ctx;
+
+/* The caller's `ccm128_f`: encrypt each block under the 64-bit counter in `ivec`, then fold the
+ * ciphertext block into `cmac`. `ivec` already carries the counter (B0's last octet is 1 by the
+ * time the body calls this), so the first block uses it as-is and increments afterwards — the
+ * same convention the non-streamed path uses. */
+static void rt_ccm_stream(const unsigned char *in, unsigned char *out, size_t blocks,
+                          const void *key, const unsigned char ivec[16],
+                          unsigned char cmac[16])
+{
+    unsigned char ctr[16];
+    unsigned char ks[16];
+    size_t b;
+    int i;
+
+    memcpy(ctr, ivec, 16);
+    for (b = 0; b < blocks; b++) {
+        AES_encrypt(ctr, ks, (const AES_KEY *)key);
+        for (i = 0; i < 16; i++) {
+            out[16 * b + i] = in[16 * b + i] ^ ks[i];
+            cmac[i] ^= out[16 * b + i];
+        }
+        for (i = 15; i >= 8; i--) {
+            ctr[i] = (unsigned char)(ctr[i] + 1);
+            if (ctr[i] != 0)
+                break;
+        }
+    }
+}
+
+static void rt_ccm128(void)
+{
+    static const unsigned char ckey[16] = {
+        0x19, 0xeb, 0xfd, 0xe2, 0xd5, 0x46, 0x8b, 0xa0,
+        0xa3, 0x03, 0x1b, 0xde, 0x62, 0x9b, 0x11, 0xfd
+    };
+    static const unsigned char nonce13[13] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x08, 0x09, 0x0a, 0x0b, 0x0c
+    };
+    static const unsigned char nonce7[7] = {
+        0x5a, 0x8a, 0xa4, 0x85, 0xc3, 0x16, 0xe9
+    };
+    static unsigned char bigaad[70000];
+    AES_KEY aeskey;
+    rt_ccm_ctx c1, c2;
+    unsigned char in[64], out[64], ct[64], back[64], tag[16], tag8[16], aad[80];
+    CCM128_CONTEXT *ctx;
+
+    rt_fill(in, sizeof(in), 41);
+    rt_fill(aad, sizeof(aad), 42);
+    rt_fill(bigaad, sizeof(bigaad), 43);
+
+    if (AES_set_encrypt_key(ckey, 128, &aeskey) != 0) {
+        printf("ccm.setup=0\n");
+        return;
+    }
+    printf("ccm.setup=1\n");
+
+    /* ---- 7-octet nonce (L=8), 16-octet tag, AAD, a partial final block. ---- */
+    memset(&c1, 0, sizeof(c1));
+    ctx = (CCM128_CONTEXT *)&c1;
+    CRYPTO_ccm128_init(ctx, 16, 8, &aeskey, (block128_f)AES_encrypt);
+    printf("ccm.enc.setiv=%d\n", CRYPTO_ccm128_setiv(ctx, nonce7, sizeof(nonce7), 21));
+    CRYPTO_ccm128_aad(ctx, aad, 13);
+    printf("ccm.enc.ret=%d\n", CRYPTO_ccm128_encrypt(ctx, in, ct, 21));
+    rt_hex("ccm.enc.ct", ct, 21);
+    printf("ccm.enc.tag=%u\n", (unsigned)CRYPTO_ccm128_tag(ctx, tag, 16));
+    rt_hex("ccm.enc.tagv", tag, 16);
+
+    /* ---- `tag` refuses any length but M. ---- */
+    printf("ccm.tag.short=%u\n", (unsigned)CRYPTO_ccm128_tag(ctx, tag, 15));
+    printf("ccm.tag.long=%u\n", (unsigned)CRYPTO_ccm128_tag(ctx, tag, 17));
+
+    /* ---- Decrypt round trip, the same tag, and in place. ---- */
+    memset(&c2, 0, sizeof(c2));
+    ctx = (CCM128_CONTEXT *)&c2;
+    CRYPTO_ccm128_init(ctx, 16, 8, &aeskey, (block128_f)AES_encrypt);
+    CRYPTO_ccm128_setiv(ctx, nonce7, sizeof(nonce7), 21);
+    CRYPTO_ccm128_aad(ctx, aad, 13);
+    printf("ccm.dec.ret=%d\n", CRYPTO_ccm128_decrypt(ctx, ct, back, 21));
+    printf("ccm.dec.match=%d\n", memcmp(back, in, 21) == 0);
+    CRYPTO_ccm128_tag(ctx, tag8, 16);
+    printf("ccm.dec.tagsame=%d\n", memcmp(tag8, tag, 16) == 0);
+
+    memset(&c2, 0, sizeof(c2));
+    memcpy(out, ct, 21);
+    ctx = (CCM128_CONTEXT *)&c2;
+    CRYPTO_ccm128_init(ctx, 16, 8, &aeskey, (block128_f)AES_encrypt);
+    CRYPTO_ccm128_setiv(ctx, nonce7, sizeof(nonce7), 21);
+    CRYPTO_ccm128_aad(ctx, aad, 13);
+    printf("ccm.dec.inplace=%d\n", CRYPTO_ccm128_decrypt(ctx, out, out, 21));
+    printf("ccm.dec.inplace.match=%d\n", memcmp(out, in, 21) == 0);
+
+    /* ---- L=2 (13-octet nonce), 8-octet tag, and `aad(0)` as a no-op. ---- */
+    memset(&c1, 0, sizeof(c1));
+    ctx = (CCM128_CONTEXT *)&c1;
+    CRYPTO_ccm128_init(ctx, 8, 2, &aeskey, (block128_f)AES_encrypt);
+    printf("ccm2.setiv=%d\n", CRYPTO_ccm128_setiv(ctx, nonce13, sizeof(nonce13), 32));
+    CRYPTO_ccm128_aad(ctx, aad, 0);
+    CRYPTO_ccm128_aad(ctx, aad, 20);
+    printf("ccm2.enc.ret=%d\n", CRYPTO_ccm128_encrypt(ctx, in, out, 32));
+    rt_hex("ccm2.enc.ct", out, 32);
+    printf("ccm2.tag=%u\n", (unsigned)CRYPTO_ccm128_tag(ctx, tag8, 8));
+    rt_hex("ccm2.tagv", tag8, 8);
+
+    memset(&c2, 0, sizeof(c2));
+    ctx = (CCM128_CONTEXT *)&c2;
+    CRYPTO_ccm128_init(ctx, 8, 2, &aeskey, (block128_f)AES_encrypt);
+    CRYPTO_ccm128_setiv(ctx, nonce13, sizeof(nonce13), 32);
+    CRYPTO_ccm128_aad(ctx, aad, 20);
+    CRYPTO_ccm128_encrypt(ctx, in, ct, 32);
+    CRYPTO_ccm128_tag(ctx, tag, 8);
+    printf("ccm2.aad0.same=%d\n", memcmp(tag, tag8, 8) == 0);
+
+    /* ---- Empty message with AAD only. ---- */
+    memset(&c1, 0, sizeof(c1));
+    ctx = (CCM128_CONTEXT *)&c1;
+    CRYPTO_ccm128_init(ctx, 16, 2, &aeskey, (block128_f)AES_encrypt);
+    printf("ccm.empty.setiv=%d\n", CRYPTO_ccm128_setiv(ctx, nonce13, sizeof(nonce13), 0));
+    CRYPTO_ccm128_aad(ctx, aad, 20);
+    printf("ccm.empty.ret=%d\n", CRYPTO_ccm128_encrypt(ctx, in, out, 0));
+    CRYPTO_ccm128_tag(ctx, tag, 16);
+    rt_hex("ccm.empty.tagv", tag, 16);
+
+    /* ---- The length mismatch, and the corrupted tag the refusal leaves behind. ---- */
+    memset(&c1, 0, sizeof(c1));
+    ctx = (CCM128_CONTEXT *)&c1;
+    CRYPTO_ccm128_init(ctx, 16, 8, &aeskey, (block128_f)AES_encrypt);
+    CRYPTO_ccm128_setiv(ctx, nonce7, sizeof(nonce7), 16);
+    printf("ccm.mismatch.ret=%d\n", CRYPTO_ccm128_encrypt(ctx, in, out, 15));
+    printf("ccm.mismatch.tag=%u\n", (unsigned)CRYPTO_ccm128_tag(ctx, tag, 16));
+
+    /* ---- A nonce shorter than L allows. ---- */
+    memset(&c1, 0, sizeof(c1));
+    ctx = (CCM128_CONTEXT *)&c1;
+    CRYPTO_ccm128_init(ctx, 16, 8, &aeskey, (block128_f)AES_encrypt);
+    printf("ccm.short.setiv=%d\n", CRYPTO_ccm128_setiv(ctx, nonce7, 5, 16));
+
+    /* ---- The `_ccm64` entry points, against the plain path. ---- */
+    memset(&c1, 0, sizeof(c1));
+    ctx = (CCM128_CONTEXT *)&c1;
+    CRYPTO_ccm128_init(ctx, 16, 2, &aeskey, (block128_f)AES_encrypt);
+    CRYPTO_ccm128_setiv(ctx, nonce13, sizeof(nonce13), 48);
+    CRYPTO_ccm128_aad(ctx, aad, 20);
+    printf("ccm64.enc.ret=%d\n",
+           CRYPTO_ccm128_encrypt_ccm64(ctx, in, out, 48, rt_ccm_stream));
+    rt_hex("ccm64.enc.ct", out, 48);
+    CRYPTO_ccm128_tag(ctx, tag, 16);
+    rt_hex("ccm64.enc.tagv", tag, 16);
+
+    memset(&c2, 0, sizeof(c2));
+    ctx = (CCM128_CONTEXT *)&c2;
+    CRYPTO_ccm128_init(ctx, 16, 2, &aeskey, (block128_f)AES_encrypt);
+    CRYPTO_ccm128_setiv(ctx, nonce13, sizeof(nonce13), 48);
+    CRYPTO_ccm128_aad(ctx, aad, 20);
+    CRYPTO_ccm128_encrypt(ctx, in, ct, 48);
+    printf("ccm64.plain.same=%d\n", memcmp(ct, out, 48) == 0);
+    CRYPTO_ccm128_tag(ctx, tag8, 16);
+    printf("ccm64.tag.same=%d\n", memcmp(tag8, tag, 16) == 0);
+
+    memset(&c2, 0, sizeof(c2));
+    ctx = (CCM128_CONTEXT *)&c2;
+    CRYPTO_ccm128_init(ctx, 16, 2, &aeskey, (block128_f)AES_encrypt);
+    CRYPTO_ccm128_setiv(ctx, nonce13, sizeof(nonce13), 48);
+    CRYPTO_ccm128_aad(ctx, aad, 20);
+    printf("ccm64.dec.ret=%d\n",
+           CRYPTO_ccm128_decrypt_ccm64(ctx, out, back, 48, rt_ccm_stream));
+    printf("ccm64.dec.match=%d\n", memcmp(back, in, 48) == 0);
+
+    /* ---- The AAD-length encodings: 65279 (two octets), 65280 and 70000 (six octets). ---- */
+    {
+        static const size_t lens[3] = {65279, 65280, 70000};
+        int k;
+
+        for (k = 0; k < 3; k++) {
+            char name[48];
+
+            memset(&c1, 0, sizeof(c1));
+            ctx = (CCM128_CONTEXT *)&c1;
+            CRYPTO_ccm128_init(ctx, 16, 2, &aeskey, (block128_f)AES_encrypt);
+            CRYPTO_ccm128_setiv(ctx, nonce13, sizeof(nonce13), 0);
+            CRYPTO_ccm128_aad(ctx, bigaad, lens[k]);
+            CRYPTO_ccm128_encrypt(ctx, in, out, 0);
+            CRYPTO_ccm128_tag(ctx, tag, 16);
+            snprintf(name, sizeof(name), "ccm.aadlen.%u", (unsigned)lens[k]);
+            rt_hex(name, tag, 16);
+        }
+    }
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IOLBF, 0);
     rt_modes_blocks();
     rt_modes_wrap();
     rt_gcm128();
+    rt_ccm128();
     rt_aes();
     rt_rc4();
     rt_des();

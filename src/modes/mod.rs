@@ -53,6 +53,7 @@
 use core::ffi::{c_int, c_uint, c_void};
 use core::ptr;
 
+pub mod ccm;
 pub mod gcm;
 pub mod wrap;
 
@@ -78,6 +79,18 @@ pub type Ctr128F = unsafe extern "C" fn(
     blocks: usize,
     key: *const c_void,
     ivec: *const u8,
+);
+
+/// `ccm128_f` — `include/openssl/modes.h:40-43`: `blocks` CCM blocks from the 64-bit counter,
+/// updating the CBC-MAC in `cmac` as it goes. The counter is advanced by the callee through the
+/// `ctr64_add` in [`ccm::CRYPTO_ccm128_encrypt_ccm64`].
+pub type Ccm128F = unsafe extern "C" fn(
+    inp: *const u8,
+    out: *mut u8,
+    blocks: usize,
+    key: *const c_void,
+    ivec: *const u8,
+    cmac: *mut u8,
 );
 
 /// `ctr128_inc` — `crypto/modes/ctr128.c:28-38`: increment a 128-bit big-endian counter.

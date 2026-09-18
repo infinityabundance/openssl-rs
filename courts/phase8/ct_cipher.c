@@ -721,6 +721,92 @@ static int ct_gcm(const char *cipher, int enc_op,
     return 0;
 }
 
+/*
+ * CCM: the second AEAD arm, with the same `ciphertext || tag || accept || reject` answer as
+ * `ct_gcm`. `M` is the vector's tag length and `L = 15 - ivlen`; the CAVS corpus uses every even
+ * `M` in [4,16] and every `L` in [2,8], so both are read from the vector rather than fixed.
+ * `CCM128_CONTEXT` is opaque in the public header, so the storage is a 128-byte aligned buffer
+ * which the library fills with its own context and the probe never reads back.
+ */
+static int ct_ccm(const char *cipher, int enc_op,
+                  const unsigned char *key, size_t keylen,
+                  const unsigned char *iv, size_t ivlen,
+                  const unsigned char *aad, size_t aadlen,
+                  const unsigned char *in, size_t inlen,
+                  unsigned char *out, size_t *outlen, size_t taglen)
+{
+    AES_KEY ek;
+    union {
+        unsigned char bytes[128];
+        unsigned long long align;
+    } store;
+    CCM128_CONTEXT *ctx = (CCM128_CONTEXT *)&store;
+    unsigned char tag[16], bad[16], got[16];
+    unsigned char tmp[CT_MAX];
+    int bits;
+    size_t m = taglen, l;
+    int accept, reject;
+
+    if (enc_op != 1 || strncmp(cipher, "aes-", 4) != 0)
+        return -1;
+    if (strncmp(cipher + 4, "128-ccm", 7) == 0)
+        bits = 128;
+    else if (strncmp(cipher + 4, "192-ccm", 7) == 0)
+        bits = 192;
+    else if (strncmp(cipher + 4, "256-ccm", 7) == 0)
+        bits = 256;
+    else
+        return -1;
+    if (keylen != (size_t)bits / 8 || inlen > sizeof(tmp))
+        return -1;
+    if (m < 4 || m > 16 || (m & 1) != 0)
+        return -1;
+    if (ivlen < 7 || ivlen > 13)
+        return -1;
+    l = 15 - ivlen;
+    if (AES_set_encrypt_key(key, bits, &ek) != 0)
+        return -1;
+
+    memset(&store, 0, sizeof(store));
+    CRYPTO_ccm128_init(ctx, (unsigned)m, (unsigned)l, &ek, (block128_f)AES_encrypt);
+    if (CRYPTO_ccm128_setiv(ctx, iv, ivlen, inlen) != 0)
+        return -1;
+    if (aadlen != 0)
+        CRYPTO_ccm128_aad(ctx, aad, aadlen);
+    if (CRYPTO_ccm128_encrypt(ctx, in, out, inlen) != 0)
+        return -1;
+    if (CRYPTO_ccm128_tag(ctx, tag, m) != m)
+        return -1;
+
+    memset(&store, 0, sizeof(store));
+    CRYPTO_ccm128_init(ctx, (unsigned)m, (unsigned)l, &ek, (block128_f)AES_encrypt);
+    CRYPTO_ccm128_setiv(ctx, iv, ivlen, inlen);
+    if (aadlen != 0)
+        CRYPTO_ccm128_aad(ctx, aad, aadlen);
+    if (CRYPTO_ccm128_decrypt(ctx, out, tmp, inlen) != 0)
+        return -1;
+    accept = CRYPTO_ccm128_tag(ctx, got, m) == m && memcmp(got, tag, m) == 0;
+
+    memcpy(bad, tag, m);
+    bad[0] ^= 0x01;
+    memset(&store, 0, sizeof(store));
+    CRYPTO_ccm128_init(ctx, (unsigned)m, (unsigned)l, &ek, (block128_f)AES_encrypt);
+    CRYPTO_ccm128_setiv(ctx, iv, ivlen, inlen);
+    if (aadlen != 0)
+        CRYPTO_ccm128_aad(ctx, aad, aadlen);
+    if (CRYPTO_ccm128_decrypt(ctx, out, tmp, inlen) != 0)
+        return -1;
+    reject = CRYPTO_ccm128_tag(ctx, got, m) == m && memcmp(got, bad, m) != 0;
+
+    if (memcmp(tmp, in, inlen) != 0)
+        return -1;
+    memcpy(out + inlen, tag, m);
+    out[inlen + m] = accept ? 1u : 0u;
+    out[inlen + m + 1] = reject ? 1u : 0u;
+    *outlen = inlen + m + 2;
+    return 0;
+}
+
 static int ct_cipher(const char *cipher, const char *operation,
                      const unsigned char *key, size_t keylen,
                      const unsigned char *iv, size_t ivlen,
@@ -731,6 +817,9 @@ static int ct_cipher(const char *cipher, const char *operation,
     int enc_op = strcmp(operation, "ENCRYPT") == 0;
 
     if (ct_gcm(cipher, enc_op, key, keylen, iv, ivlen, aad, aadlen,
+               in, inlen, out, outlen, taglen) == 0)
+        return 0;
+    if (ct_ccm(cipher, enc_op, key, keylen, iv, ivlen, aad, aadlen,
                in, inlen, out, outlen, taglen) == 0)
         return 0;
     if (ct_wrap(cipher, enc_op, key, keylen, iv, ivlen, in, inlen, out, outlen) == 0)

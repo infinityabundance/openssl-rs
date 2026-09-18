@@ -1780,6 +1780,26 @@ CIPHER_RECIPE_FAMILIES: list[CipherRecipeFamily] = [
             "the corpus's own empty-plaintext, one-block and multi-block cases; that is the "
             "recorded cost of D208."
         ), aead=True),
+    # 8.3 -- CCM. The corpus is NIST SP 800-38C's CAVS decryption-verification set, so its
+    # negative blocks carry `Result = CIPHERUPDATE_ERROR` (skipped by the result-key rule) and
+    # only the encrypt direction is mirrored. What remains covers every even tag length in
+    # [4,16] and every L in [2,8], and every vector's expected tail is `accept || reject`.
+    CipherRecipeFamily(
+        "ccm", "test/recipes/30-test_evp_data/evpciph_aes_ccm_cavs.txt",
+        r"^aes-(128|192|256)-ccm$", "NIST SP 800-38C; RFC 3610",
+        "aes-{128,192,256}-ccm", (),
+        "", "",
+        note=(
+            "Candidate-only construction verification: the primary sources are NIST SP 800-38C "
+            "and RFC 3610, and the bytes are mirrored through the pinned corpus "
+            "(`corpus_sha256`), whose identity is fixed. The corpus is the CAVS "
+            "decryption-verification set, so its `Result = CIPHERUPDATE_ERROR` negative blocks "
+            "are skipped by the result-key rule and every mirrored block is an encryption; each "
+            "vector's expected tail is `accept || reject`, the probe's own tag-verification "
+            "arms, so the reject path is a committed expectation on every vector. No "
+            "independent CCM implementation is present in the pinned court image, so no "
+            "boundary vector carries an independent oracle; that is the recorded cost of D208."
+        ), aead=True),
 ]
 
 
