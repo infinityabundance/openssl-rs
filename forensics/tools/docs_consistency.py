@@ -256,6 +256,9 @@ CHECKS: list[Check] = [
     Check("frf_readme_phase_breakdown", "forensics/frf/README.md", SRC_FRF,
           frf_phase_breakdown),
     Check("ci_baseline", "docs/CI.md", SRC_BASELINE, ci_baseline),
+    regex_check("ci_c_style_count", "docs/CI.md", SRC_SURFACE,
+                r"the (?P<n>\d+) plain C identifiers",
+                len(SURFACE["internal_symbols"]["c_style"])),
     regex_check("release_gates_manifest_count", "docs/RELEASE_GATES.md", SRC_FRF,
                 r"the alternative is (?P<n>\d+) YAML", FRF_RUNTIME_COURTS),
     multi_check("phase1_census", "docs/PHASE-1-ARCHAEOLOGY-SEAL.md", SRC_P1, [
