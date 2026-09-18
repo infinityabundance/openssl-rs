@@ -66,6 +66,7 @@ pub mod aes;
 pub mod asn1;
 pub mod blowfish;
 pub mod bn;
+pub mod camellia;
 pub mod cast;
 // The generated cipher tables (Phase 8.2). `gen_phase8_cipher_tables.py` derives every
 // number from the pinned authority's `crypto/` tree; the modules that read them carry the

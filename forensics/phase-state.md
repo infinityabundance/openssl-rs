@@ -16,7 +16,7 @@ enforced here:
 | 5 | BN + ASN.1 + DER/PEM | `complete` |  |
 | 6 | OSSL_LIB_CTX + provider core | `complete` |  |
 | 7 | EVP framework | `complete` |  |
-| 8 | Native cryptographic primitives | `in-progress` | 620 open obligation(s) of this stratum recorded in forensics/phase8-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
+| 8 | Native cryptographic primitives | `in-progress` | 610 open obligation(s) of this stratum recorded in forensics/phase8-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
 | 9 | RAND / DRBG + entropy | `not-started` | not started |
 | 10 | Key formats + PKCS + STORE | `not-started` | not started |
 | 11 | X.509 + verification | `not-started` | not started |

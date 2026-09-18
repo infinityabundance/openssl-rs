@@ -24,9 +24,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 294,
+        "authority_observations": 335,
         "candidate_exit_code": 0,
-        "candidate_observations": 294,
+        "candidate_observations": 335,
         "candidate_stderr_tail": [],
         "court": "RT-CIPHER",
         "crashed": false,
@@ -5604,6 +5604,14 @@
             "standard": "Schneier's Blowfish (self-generated corpus)",
             "total": 10
           },
+          "camellia": {
+            "failed": 0,
+            "passed": 89,
+            "primary_source": "RFC 3713 (NTT Camellia)",
+            "source": "forensics/vectors/camellia.json",
+            "standard": "RFC 3713 (NTT Camellia)",
+            "total": 89
+          },
           "cast5": {
             "failed": 0,
             "passed": 65,
@@ -5654,20 +5662,20 @@
           }
         },
         "authority": "openssl-3.6.4-production",
-        "calls_checked": 330,
+        "calls_checked": 419,
         "candidate_shared_object": "artifacts/phase2/libcrypto.so.3",
-        "claim": "A correctness-vector PASS means candidate-only construction verification: the candidate's low-level cipher produced the committed expected bytes for every vector. Of the 330 committed vectors, 315 are published standard values mirrored through the pinned OpenSSL test corpus and 15 are independently-derived boundary vectors with named oracles (2 by the construction's definition (FIPS-197 §5.1, SP 800-38A §6.1): an empty message has no blocks and emits no bytes; 1 by the construction's definition: RC4 over a zero-byte input emits no bytes and leaves its state unchanged; 12 by the construction's definition: a block or feedback mode over a zero-byte input emits no bytes) -- these counts are read from the 8 committed `forensics/vectors/*.json` cipher sets by `correctness_vectors.py`, not typed. It is NOT OpenSSL parity and NOT formal validation. See D201/D208 and docs/PHASE-8-SUBPHASES.md.",
+        "claim": "A correctness-vector PASS means candidate-only construction verification: the candidate's low-level cipher produced the committed expected bytes for every vector. Of the 419 committed vectors, 402 are published standard values mirrored through the pinned OpenSSL test corpus and 17 are independently-derived boundary vectors with named oracles (2 by the construction's definition (FIPS-197 §5.1, SP 800-38A §6.1): an empty message has no blocks and emits no bytes; 1 by the construction's definition: RC4 over a zero-byte input emits no bytes and leaves its state unchanged; 14 by the construction's definition: a block or feedback mode over a zero-byte input emits no bytes) -- these counts are read from the 9 committed `forensics/vectors/*.json` cipher sets by `correctness_vectors.py`, not typed. It is NOT OpenSSL parity and NOT formal validation. See D201/D208 and docs/PHASE-8-SUBPHASES.md.",
         "court": "CT-CIPHER",
         "derivation_census": {
-          "corpus": 315,
-          "files": 8,
-          "independent": 15,
+          "corpus": 402,
+          "files": 9,
+          "independent": 17,
           "oracles": {
             "the construction's definition (FIPS-197 §5.1, SP 800-38A §6.1): an empty message has no blocks and emits no bytes": 2,
             "the construction's definition: RC4 over a zero-byte input emits no bytes and leaves its state unchanged": 1,
-            "the construction's definition: a block or feedback mode over a zero-byte input emits no bytes": 12
+            "the construction's definition: a block or feedback mode over a zero-byte input emits no bytes": 14
           },
-          "vectors": 330
+          "vectors": 419
         },
         "failures": [],
         "kind": "cipher-vectors",
@@ -6500,6 +6508,896 @@
             "cipher": "BF-CBC",
             "expected_hex": "",
             "id": "bf-bf-cbc-empty-10",
+            "input_hex": "",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "67673138549669730857065648eabe43",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-ECB",
+            "expected_hex": "67673138549669730857065648eabe43",
+            "id": "camellia-1",
+            "input_hex": "0123456789abcdeffedcba9876543210",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "b4993401b3e996f84ee5cee7d79b09b9",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-192-ECB",
+            "expected_hex": "b4993401b3e996f84ee5cee7d79b09b9",
+            "id": "camellia-2",
+            "input_hex": "0123456789abcdeffedcba9876543210",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "9acc237dff16d76c20ef7c919e3a7509",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-256-ECB",
+            "expected_hex": "9acc237dff16d76c20ef7c919e3a7509",
+            "id": "camellia-3",
+            "input_hex": "0123456789abcdeffedcba9876543210",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "77cf412067af8270613529149919546f",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-ECB",
+            "expected_hex": "77cf412067af8270613529149919546f",
+            "id": "camellia-4",
+            "input_hex": "00112233445566778899aabbccddeeff",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "b22f3c36b72d31329eee8addc2906c68",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-192-ECB",
+            "expected_hex": "b22f3c36b72d31329eee8addc2906c68",
+            "id": "camellia-5",
+            "input_hex": "00112233445566778899aabbccddeeff",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "2edf1f3418d53b88841fc8985fb1ecf2",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-256-ECB",
+            "expected_hex": "2edf1f3418d53b88841fc8985fb1ecf2",
+            "id": "camellia-6",
+            "input_hex": "00112233445566778899aabbccddeeff",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "432fc5dcd628115b7c388d770b270c96",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-ECB",
+            "expected_hex": "432fc5dcd628115b7c388d770b270c96",
+            "id": "camellia-7",
+            "input_hex": "6bc1bee22e409f96e93d7e117393172a",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "0be1f14023782a22e8384c5abb7fab2b",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-ECB",
+            "expected_hex": "0be1f14023782a22e8384c5abb7fab2b",
+            "id": "camellia-8",
+            "input_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "a0a1abcd1893ab6fe0fe5b65df5f8636",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-ECB",
+            "expected_hex": "a0a1abcd1893ab6fe0fe5b65df5f8636",
+            "id": "camellia-9",
+            "input_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "e61925e0d5dfaa9bb29f815b3076e51a",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-ECB",
+            "expected_hex": "e61925e0d5dfaa9bb29f815b3076e51a",
+            "id": "camellia-10",
+            "input_hex": "f69f2445df4f9b17ad2b417be66c3710",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "cccc6c4e138b45848514d48d0d3439d3",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-192-ECB",
+            "expected_hex": "cccc6c4e138b45848514d48d0d3439d3",
+            "id": "camellia-11",
+            "input_hex": "6bc1bee22e409f96e93d7e117393172a",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "5713c62c14b2ec0f8393b6afd6f5785a",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-192-ECB",
+            "expected_hex": "5713c62c14b2ec0f8393b6afd6f5785a",
+            "id": "camellia-12",
+            "input_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "b40ed2b60eb54d09d030cf511feef366",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-192-ECB",
+            "expected_hex": "b40ed2b60eb54d09d030cf511feef366",
+            "id": "camellia-13",
+            "input_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "909dbd95799096748cb27357e73e1d26",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-192-ECB",
+            "expected_hex": "909dbd95799096748cb27357e73e1d26",
+            "id": "camellia-14",
+            "input_hex": "f69f2445df4f9b17ad2b417be66c3710",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "befd219b112fa00098919cd101c9ccfa",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-256-ECB",
+            "expected_hex": "befd219b112fa00098919cd101c9ccfa",
+            "id": "camellia-15",
+            "input_hex": "6bc1bee22e409f96e93d7e117393172a",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "c91d3a8f1aea08a9386cf4b66c0169ea",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-256-ECB",
+            "expected_hex": "c91d3a8f1aea08a9386cf4b66c0169ea",
+            "id": "camellia-16",
+            "input_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "a623d711dc5f25a51bb8a80d56397d28",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-256-ECB",
+            "expected_hex": "a623d711dc5f25a51bb8a80d56397d28",
+            "id": "camellia-17",
+            "input_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "7960109fb6dc42947fcfe59ea3c5eb6b",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-256-ECB",
+            "expected_hex": "7960109fb6dc42947fcfe59ea3c5eb6b",
+            "id": "camellia-18",
+            "input_hex": "f69f2445df4f9b17ad2b417be66c3710",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "1607cf494b36bbf00daeb0b503c831ab",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-CBC",
+            "expected_hex": "1607cf494b36bbf00daeb0b503c831ab",
+            "id": "camellia-19",
+            "input_hex": "6bc1bee22e409f96e93d7e117393172a",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "a2f2cf671629ef7840c5a5dfb5074887",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-CBC",
+            "expected_hex": "a2f2cf671629ef7840c5a5dfb5074887",
+            "id": "camellia-20",
+            "input_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "0f06165008cf8b8b5a63586362543e54",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-CBC",
+            "expected_hex": "0f06165008cf8b8b5a63586362543e54",
+            "id": "camellia-21",
+            "input_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "74c64268cdb8b8faf5b34e8af3732980",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-CBC",
+            "expected_hex": "74c64268cdb8b8faf5b34e8af3732980",
+            "id": "camellia-22",
+            "input_hex": "f69f2445df4f9b17ad2b417be66c3710",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "2a4830ab5ac4a1a2405955fd2195cf93",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-192-CBC",
+            "expected_hex": "2a4830ab5ac4a1a2405955fd2195cf93",
+            "id": "camellia-23",
+            "input_hex": "6bc1bee22e409f96e93d7e117393172a",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "5d5a869bd14ce54264f892a6dd2ec3d5",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-192-CBC",
+            "expected_hex": "5d5a869bd14ce54264f892a6dd2ec3d5",
+            "id": "camellia-24",
+            "input_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "37d359c3349836d884e310addf68c449",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-192-CBC",
+            "expected_hex": "37d359c3349836d884e310addf68c449",
+            "id": "camellia-25",
+            "input_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "01faaa930b4ab9916e9668e1428c6b08",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-192-CBC",
+            "expected_hex": "01faaa930b4ab9916e9668e1428c6b08",
+            "id": "camellia-26",
+            "input_hex": "f69f2445df4f9b17ad2b417be66c3710",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "e6cfa35fc02b134a4d2c0b6737ac3eda",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-256-CBC",
+            "expected_hex": "e6cfa35fc02b134a4d2c0b6737ac3eda",
+            "id": "camellia-27",
+            "input_hex": "6bc1bee22e409f96e93d7e117393172a",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "36cbeb73bd504b4070b1b7de2b21eb50",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-256-CBC",
+            "expected_hex": "36cbeb73bd504b4070b1b7de2b21eb50",
+            "id": "camellia-28",
+            "input_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "e31a6055297d96ca3330cdf1b1860a83",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-256-CBC",
+            "expected_hex": "e31a6055297d96ca3330cdf1b1860a83",
+            "id": "camellia-29",
+            "input_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "5d563f6d1cccf236051c0c5c1c58f28f",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-256-CBC",
+            "expected_hex": "5d563f6d1cccf236051c0c5c1c58f28f",
+            "id": "camellia-30",
+            "input_hex": "f69f2445df4f9b17ad2b417be66c3710",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "14f7646187817eb586599146b82bd719",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-CFB",
+            "expected_hex": "14f7646187817eb586599146b82bd719",
+            "id": "camellia-31",
+            "input_hex": "6bc1bee22e409f96e93d7e117393172a",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "a53d28bb82df741103ea4f921a44880b",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-CFB",
+            "expected_hex": "a53d28bb82df741103ea4f921a44880b",
+            "id": "camellia-32",
+            "input_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "9c2157a664626d1def9ea420fde69b96",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-CFB",
+            "expected_hex": "9c2157a664626d1def9ea420fde69b96",
+            "id": "camellia-33",
+            "input_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "742a25f0542340c7baef24ca8482bb09",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-CFB",
+            "expected_hex": "742a25f0542340c7baef24ca8482bb09",
+            "id": "camellia-34",
+            "input_hex": "f69f2445df4f9b17ad2b417be66c3710",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "6bc1bee22e409f96e93d7e117393172a",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-CFB",
+            "expected_hex": "6bc1bee22e409f96e93d7e117393172a",
+            "id": "camellia-35",
+            "input_hex": "14f7646187817eb586599146b82bd719",
+            "operation": "DECRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-CFB",
+            "expected_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
+            "id": "camellia-36",
+            "input_hex": "a53d28bb82df741103ea4f921a44880b",
+            "operation": "DECRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-CFB",
+            "expected_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
+            "id": "camellia-37",
+            "input_hex": "9c2157a664626d1def9ea420fde69b96",
+            "operation": "DECRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "f69f2445df4f9b17ad2b417be66c3710",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-CFB",
+            "expected_hex": "f69f2445df4f9b17ad2b417be66c3710",
+            "id": "camellia-38",
+            "input_hex": "742a25f0542340c7baef24ca8482bb09",
+            "operation": "DECRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "c832bb9780677daa82d9b6860dcd565e",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-192-CFB",
+            "expected_hex": "c832bb9780677daa82d9b6860dcd565e",
+            "id": "camellia-39",
+            "input_hex": "6bc1bee22e409f96e93d7e117393172a",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "86f8491627906d780c7a6d46ea331f98",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-192-CFB",
+            "expected_hex": "86f8491627906d780c7a6d46ea331f98",
+            "id": "camellia-40",
+            "input_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "69511cce594cf710cb98bb63d7221f01",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-192-CFB",
+            "expected_hex": "69511cce594cf710cb98bb63d7221f01",
+            "id": "camellia-41",
+            "input_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "d5b5378a3abed55803f25565d8907b84",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-192-CFB",
+            "expected_hex": "d5b5378a3abed55803f25565d8907b84",
+            "id": "camellia-42",
+            "input_hex": "f69f2445df4f9b17ad2b417be66c3710",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "6bc1bee22e409f96e93d7e117393172a",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-192-CFB",
+            "expected_hex": "6bc1bee22e409f96e93d7e117393172a",
+            "id": "camellia-43",
+            "input_hex": "c832bb9780677daa82d9b6860dcd565e",
+            "operation": "DECRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-192-CFB",
+            "expected_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
+            "id": "camellia-44",
+            "input_hex": "86f8491627906d780c7a6d46ea331f98",
+            "operation": "DECRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-192-CFB",
+            "expected_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
+            "id": "camellia-45",
+            "input_hex": "69511cce594cf710cb98bb63d7221f01",
+            "operation": "DECRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "f69f2445df4f9b17ad2b417be66c3710",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-192-CFB",
+            "expected_hex": "f69f2445df4f9b17ad2b417be66c3710",
+            "id": "camellia-46",
+            "input_hex": "d5b5378a3abed55803f25565d8907b84",
+            "operation": "DECRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "cf6107bb0cea7d7fb1bd31f5e7b06c93",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-256-CFB",
+            "expected_hex": "cf6107bb0cea7d7fb1bd31f5e7b06c93",
+            "id": "camellia-47",
+            "input_hex": "6bc1bee22e409f96e93d7e117393172a",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "89bedb4ccdd864ea11ba4cbe849b5e2b",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-256-CFB",
+            "expected_hex": "89bedb4ccdd864ea11ba4cbe849b5e2b",
+            "id": "camellia-48",
+            "input_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "555fc3f34bdd2d54c62d9e3bf338c1c4",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-256-CFB",
+            "expected_hex": "555fc3f34bdd2d54c62d9e3bf338c1c4",
+            "id": "camellia-49",
+            "input_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "5953adce14db8c7f39f1bd39f359bffa",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-256-CFB",
+            "expected_hex": "5953adce14db8c7f39f1bd39f359bffa",
+            "id": "camellia-50",
+            "input_hex": "f69f2445df4f9b17ad2b417be66c3710",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "6bc1bee22e409f96e93d7e117393172a",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-256-CFB",
+            "expected_hex": "6bc1bee22e409f96e93d7e117393172a",
+            "id": "camellia-51",
+            "input_hex": "cf6107bb0cea7d7fb1bd31f5e7b06c93",
+            "operation": "DECRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-256-CFB",
+            "expected_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
+            "id": "camellia-52",
+            "input_hex": "89bedb4ccdd864ea11ba4cbe849b5e2b",
+            "operation": "DECRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-256-CFB",
+            "expected_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
+            "id": "camellia-53",
+            "input_hex": "555fc3f34bdd2d54c62d9e3bf338c1c4",
+            "operation": "DECRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "f69f2445df4f9b17ad2b417be66c3710",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-256-CFB",
+            "expected_hex": "f69f2445df4f9b17ad2b417be66c3710",
+            "id": "camellia-54",
+            "input_hex": "5953adce14db8c7f39f1bd39f359bffa",
+            "operation": "DECRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "14f7646187817eb586599146b82bd719",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-OFB",
+            "expected_hex": "14f7646187817eb586599146b82bd719",
+            "id": "camellia-55",
+            "input_hex": "6bc1bee22e409f96e93d7e117393172a",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "25623db569ca51e01482649977e28d84",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-OFB",
+            "expected_hex": "25623db569ca51e01482649977e28d84",
+            "id": "camellia-56",
+            "input_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "c776634a60729dc657d12b9fca801e98",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-OFB",
+            "expected_hex": "c776634a60729dc657d12b9fca801e98",
+            "id": "camellia-57",
+            "input_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "d776379be0e50825e681da1a4c980e8e",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-OFB",
+            "expected_hex": "d776379be0e50825e681da1a4c980e8e",
+            "id": "camellia-58",
+            "input_hex": "f69f2445df4f9b17ad2b417be66c3710",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "6bc1bee22e409f96e93d7e117393172a",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-OFB",
+            "expected_hex": "6bc1bee22e409f96e93d7e117393172a",
+            "id": "camellia-59",
+            "input_hex": "14f7646187817eb586599146b82bd719",
+            "operation": "DECRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-OFB",
+            "expected_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
+            "id": "camellia-60",
+            "input_hex": "25623db569ca51e01482649977e28d84",
+            "operation": "DECRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-OFB",
+            "expected_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
+            "id": "camellia-61",
+            "input_hex": "c776634a60729dc657d12b9fca801e98",
+            "operation": "DECRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "f69f2445df4f9b17ad2b417be66c3710",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-OFB",
+            "expected_hex": "f69f2445df4f9b17ad2b417be66c3710",
+            "id": "camellia-62",
+            "input_hex": "d776379be0e50825e681da1a4c980e8e",
+            "operation": "DECRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "c832bb9780677daa82d9b6860dcd565e",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-192-OFB",
+            "expected_hex": "c832bb9780677daa82d9b6860dcd565e",
+            "id": "camellia-63",
+            "input_hex": "6bc1bee22e409f96e93d7e117393172a",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "8eceb7d0350d72c7f78562aebdf99339",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-192-OFB",
+            "expected_hex": "8eceb7d0350d72c7f78562aebdf99339",
+            "id": "camellia-64",
+            "input_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "bdd62dbbb9700846c53b507f544696f0",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-192-OFB",
+            "expected_hex": "bdd62dbbb9700846c53b507f544696f0",
+            "id": "camellia-65",
+            "input_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "e28014e046b802f385c4c2e13ead4a72",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-192-OFB",
+            "expected_hex": "e28014e046b802f385c4c2e13ead4a72",
+            "id": "camellia-66",
+            "input_hex": "f69f2445df4f9b17ad2b417be66c3710",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "6bc1bee22e409f96e93d7e117393172a",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-192-OFB",
+            "expected_hex": "6bc1bee22e409f96e93d7e117393172a",
+            "id": "camellia-67",
+            "input_hex": "c832bb9780677daa82d9b6860dcd565e",
+            "operation": "DECRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-192-OFB",
+            "expected_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
+            "id": "camellia-68",
+            "input_hex": "8eceb7d0350d72c7f78562aebdf99339",
+            "operation": "DECRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-192-OFB",
+            "expected_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
+            "id": "camellia-69",
+            "input_hex": "bdd62dbbb9700846c53b507f544696f0",
+            "operation": "DECRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "f69f2445df4f9b17ad2b417be66c3710",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-192-OFB",
+            "expected_hex": "f69f2445df4f9b17ad2b417be66c3710",
+            "id": "camellia-70",
+            "input_hex": "e28014e046b802f385c4c2e13ead4a72",
+            "operation": "DECRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "cf6107bb0cea7d7fb1bd31f5e7b06c93",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-256-OFB",
+            "expected_hex": "cf6107bb0cea7d7fb1bd31f5e7b06c93",
+            "id": "camellia-71",
+            "input_hex": "6bc1bee22e409f96e93d7e117393172a",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "127ad97e8e3994e4820027d7ba109368",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-256-OFB",
+            "expected_hex": "127ad97e8e3994e4820027d7ba109368",
+            "id": "camellia-72",
+            "input_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "6bff6265a6a6b7a535bc65a80b17214e",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-256-OFB",
+            "expected_hex": "6bff6265a6a6b7a535bc65a80b17214e",
+            "id": "camellia-73",
+            "input_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "0a4a0404e26aa78a27cb271e8bf3cf20",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-256-OFB",
+            "expected_hex": "0a4a0404e26aa78a27cb271e8bf3cf20",
+            "id": "camellia-74",
+            "input_hex": "f69f2445df4f9b17ad2b417be66c3710",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "6bc1bee22e409f96e93d7e117393172a",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-256-OFB",
+            "expected_hex": "6bc1bee22e409f96e93d7e117393172a",
+            "id": "camellia-75",
+            "input_hex": "cf6107bb0cea7d7fb1bd31f5e7b06c93",
+            "operation": "DECRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-256-OFB",
+            "expected_hex": "ae2d8a571e03ac9c9eb76fac45af8e51",
+            "id": "camellia-76",
+            "input_hex": "127ad97e8e3994e4820027d7ba109368",
+            "operation": "DECRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-256-OFB",
+            "expected_hex": "30c81c46a35ce411e5fbc1191a0a52ef",
+            "id": "camellia-77",
+            "input_hex": "6bff6265a6a6b7a535bc65a80b17214e",
+            "operation": "DECRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "f69f2445df4f9b17ad2b417be66c3710",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-256-OFB",
+            "expected_hex": "f69f2445df4f9b17ad2b417be66c3710",
+            "id": "camellia-78",
+            "input_hex": "0a4a0404e26aa78a27cb271e8bf3cf20",
+            "operation": "DECRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "d09dc29a8214619a20877c76db1f0b3f",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-CTR",
+            "expected_hex": "d09dc29a8214619a20877c76db1f0b3f",
+            "id": "camellia-79",
+            "input_hex": "53696e676c6520626c6f636b206d7367",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "dbf3c78dc08396d4da7c907765bbcb442b8e8e0f31f0dca72c7417e35360e048",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-CTR",
+            "expected_hex": "dbf3c78dc08396d4da7c907765bbcb442b8e8e0f31f0dca72c7417e35360e048",
+            "id": "camellia-80",
+            "input_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "b19d1fcdcb75eb882f849ce24d85cf739ce64b2b5c9d73f14f2d5d9dce9889cddf508696",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-CTR",
+            "expected_hex": "b19d1fcdcb75eb882f849ce24d85cf739ce64b2b5c9d73f14f2d5d9dce9889cddf508696",
+            "id": "camellia-81",
+            "input_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20212223",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "2379399e8a8d2b2b16702fc78b9e9696",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-192-CTR",
+            "expected_hex": "2379399e8a8d2b2b16702fc78b9e9696",
+            "id": "camellia-82",
+            "input_hex": "53696e676c6520626c6f636b206d7367",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "7def34f7a5d0e415674b7ffcae67c75dd018b86ff23051e056392a99f35a4ced",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-192-CTR",
+            "expected_hex": "7def34f7a5d0e415674b7ffcae67c75dd018b86ff23051e056392a99f35a4ced",
+            "id": "camellia-83",
+            "input_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "5710e556e1487a20b5ac0e73f19e4e7876f37fdc91b1ef4d4dade8e666a64d0ed557ab57",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-192-CTR",
+            "expected_hex": "5710e556e1487a20b5ac0e73f19e4e7876f37fdc91b1ef4d4dade8e666a64d0ed557ab57",
+            "id": "camellia-84",
+            "input_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20212223",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "3401f9c8247effcebd6994714c1bbb11",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-256-CTR",
+            "expected_hex": "3401f9c8247effcebd6994714c1bbb11",
+            "id": "camellia-85",
+            "input_hex": "53696e676c6520626c6f636b206d7367",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "d6c30392246f7808a83c2b22a8839e45e51cd48a1cdf406ebc9cc2d3ab834108",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-256-CTR",
+            "expected_hex": "d6c30392246f7808a83c2b22a8839e45e51cd48a1cdf406ebc9cc2d3ab834108",
+            "id": "camellia-86",
+            "input_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "a4da23fce6a5ffaa6d64ae9a0652a42cd161a34b65f9679f75c01f101f71276f15ef0d8d",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-256-CTR",
+            "expected_hex": "a4da23fce6a5ffaa6d64ae9a0652a42cd161a34b65f9679f75c01f101f71276f15ef0d8d",
+            "id": "camellia-87",
+            "input_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20212223",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-ECB",
+            "expected_hex": "",
+            "id": "camellia-camellia-128-ecb-empty-88",
+            "input_hex": "",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "",
+            "algorithm": "camellia",
+            "cipher": "CAMELLIA-128-CBC",
+            "expected_hex": "",
+            "id": "camellia-camellia-128-cbc-empty-89",
             "input_hex": "",
             "operation": "ENCRYPT",
             "passed": true
@@ -8976,9 +9874,9 @@
           }
         ],
         "stage": "compare",
-        "vectors_checked": 330,
+        "vectors_checked": 419,
         "vectors_failed": 0,
-        "vectors_passed": 330,
+        "vectors_passed": 419,
         "verdict": "pass"
       }
     ],
@@ -9003,7 +9901,7 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_cipher_probe.c",
-      "sha256": "4c0a033bd0e4490607fdd06e6eef4d85eca1c104302f6376cc2d7836d7b6a88b"
+      "sha256": "5a1b1de7bcf530da73d3a9b22de4e725cf1bceb61d6c3210d0063e28e9144815"
     },
     {
       "name": "correctness-probe",
@@ -9118,7 +10016,7 @@
     {
       "name": "cipher-correctness-probe",
       "path": "courts/phase8/ct_cipher.c",
-      "sha256": "0e7f4ea42dbd8ffb32c6a659a50fb3564a43857bf860326c6b2f2f5bb8a7407a"
+      "sha256": "350853953f0ac4d78968fcf89814e755b5cce2d9a5d2fd37d93f8f4bb99e8307"
     },
     {
       "name": "cipher-correctness-vectors:aes",
@@ -9159,6 +10057,11 @@
       "name": "cipher-correctness-vectors:seed",
       "path": "forensics/vectors/seed.json",
       "sha256": "7884ae3e45ada0152fa462a902e4e3ef73c5a4b9c99dd9fab38441aaf5ff5cad"
+    },
+    {
+      "name": "cipher-correctness-vectors:camellia",
+      "path": "forensics/vectors/camellia.json",
+      "sha256": "c396093ea04530a464876424d6b4061776717af5cfbb9b4ce0f65830b0d4639f"
     }
   ],
   "kind": "phase8-courts",
