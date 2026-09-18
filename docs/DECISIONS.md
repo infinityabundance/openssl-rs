@@ -14349,3 +14349,33 @@ cannot answer is *named and not compared*, never printed as agreement.
 line replaces the compared one), `PIPELINE OK` at 83 courts / 23,538 observations, and the
 structural repair for `RC4_options` is Phase 19's CPU dispatch. The empty-`RC4_options`
 question is now recorded in `src/rc4.rs`'s module doc, in the probe, and here.
+
+## D214 — the evidence pipeline moves out of an untracked scratch path, and a generator that had to run first now does
+
+D212 found a real ordering defect and recorded it rather than fixing it in a family commit: the
+pipeline ran the ledgers **before** `gen_prerequisite_atlas.py`, and `forensics/phase7-obligations.json`
+records `forensics/atlas/internal-symbols.json`'s sha256 among its eleven inputs. Since that
+generator is what writes `internal-symbols.json`, the first pipeline run after any source change
+recorded the **previous** generation's hash — `evidence_determinism.py` failed, the second run
+passed, and the difference was invisible because a compared artefact's own recorded hash is
+normalised away. Every session paid that false alarm once, and it is exactly the class D96's
+neighbour and the `prerequisite_gate.py` comment already document.
+
+**The order is fixed, and the reason it could not be fixed durably is the larger finding: the
+pipeline lived in `court/pipeline.sh`, which `.gitignore` excludes with the rest of `court/`.**
+So no reviewer could see the order, no CI job could rely on it, and a correction there would have
+been lost the next time a session recreated the scratch file. The pipeline is now
+**`forensics/tools/pipeline.sh`**, tracked, with `gen_prerequisite_atlas.py` moved ahead of the
+ledger loop and each ordering constraint written at the step that carries it; `court/pipeline.sh`
+is a one-line forwarder so both paths work and there is one source of truth.
+
+**Verified directly rather than inferred.** After the reorder, every one of
+`forensics/phase7-obligations.json`'s eleven recorded inputs matches the file it names — including
+`forensics/atlas/internal-symbols.json`, the one that was moving. That is the invariant the
+ordering exists to hold, checked by hashing rather than by noticing that a failure stopped.
+
+**The lesson generalises, and it is why this is an entry rather than a one-line commit:** a
+generator's *order* is evidence, so it belongs in a tracked, reviewable artefact. The pipeline was
+the only place in this repository where load-bearing sequencing lived outside version control
+while the CI workflow that mirrors it did not — `.github/workflows/ci.yml` remains the other
+expression of the order, and a change in one should be reflected in the other.
