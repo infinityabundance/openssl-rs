@@ -14553,3 +14553,31 @@ the **legacy** provider's (`providers/legacyprov.c:114-117`,
 
 **What this entry does not do.** CAST5, IDEA, SEED and Camellia (32 open) remain, and with them
 the provider cipher rows and the cipher half of `ossl_default_provider_init`.
+
+## D219 — CAST5 lands, and the schedule's two-pass body is the part that has to be transcribed exactly
+
+`src/cast.rs` lands the seven `cast.h` exports over the generated eight 256-word S-boxes
+(`crypto/cast/cast_s.h`), the schedule's `x`/`z` byte-and-word mixing from `c_skey.c`, and the
+twelve-or-sixteen round structure with the `short_key` flag it records. `implemented[libcrypto]`
+**1969 → 1976** and Phase 8 **128/642/16 → 135/635/16**; `RT-CIPHER` **248 → 264 observations**;
+`CT-CIPHER` **114 → 179 vectors** (the RFC 2144 corpus is large: 63 corpus blocks over four
+modes); baseline 83 courts / 23,650 → **83 courts / 23,666 observations**. PIPELINE OK.
+
+**Two transcription traps, both caught before the court.** First, `c_skey.c:58-117`'s `for(;;)`
+runs its whole body **twice** — `K += 16` after the first, then `if (K != k) break` — so the
+second pass rewrites all sixteen `k[16..31]` from the state the first pass left, not just the
+second half. Writing only `k[0..15]` and `k[16..31]`'s first group would still produce a plausible
+schedule and the wrong ciphertext. Second, `CAST_exp` writes a word into `Z[n/4]` **and** its
+four big-endian bytes into `z[n..n+3]`, and the S-box lookups index the *bytes* while `Z`/`X`
+hold the words; treating `z` as a word array is the plausible wrong reading. `RT-CIPHER` observes
+the whole 132-byte `CAST_KEY` for a 16-byte and an 8-byte key, so both the schedule and the
+`short_key` flag are compared.
+
+**The corpus settles a vector a hand-picked example could not.** RFC 2144's first `CAST5-ECB`
+block (key `0123456712345678234567893456789A`, plaintext `0123456789ABCDEF`, ciphertext
+`238B4FE5847E44B2`) is mirrored from `evpciph_cast5.txt` and asserted in the unit test on the
+corpus's own bytes. CAST5 is the **legacy** provider's (`providers/legacyprov.c:108-111`), so no
+default-provider row is written.
+
+**What this entry does not do.** IDEA, SEED and Camellia (25 open) remain, and with them the
+provider cipher rows and the cipher half of `ossl_default_provider_init`.

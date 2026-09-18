@@ -299,6 +299,13 @@
         "translation_unit": "crypto/bn/bn_recp.c"
       },
       {
+        "module": "src/cast.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "3/7",
+        "translation_unit": "crypto/cast/c_enc.c"
+      },
+      {
         "module": "src/context/core_bio.rs",
         "phase": 6,
         "phase_source": "module-declaration",
@@ -10534,6 +10541,59 @@
           "src/runtime/buffer.rs"
         ],
         "tu": "crypto/buffer/buffer.c"
+      },
+      {
+        "identifiers": [
+          "CAST_KEY",
+          "CAST_LONG",
+          "CAST_cbc_encrypt",
+          "CAST_decrypt",
+          "CAST_encrypt",
+          "E_CAST",
+          "cast",
+          "char",
+          "const",
+          "data",
+          "else",
+          "enc",
+          "for",
+          "h",
+          "if",
+          "in",
+          "include",
+          "int",
+          "iv",
+          "k",
+          "key",
+          "ks",
+          "l",
+          "l2n",
+          "l2nn",
+          "length",
+          "long",
+          "n2l",
+          "n2ln",
+          "openssl",
+          "out",
+          "r",
+          "register",
+          "short_key",
+          "t",
+          "tin",
+          "tin0",
+          "tin1",
+          "tout0",
+          "tout1",
+          "unsigned",
+          "void",
+          "xffffffffL",
+          "xor0",
+          "xor1"
+        ],
+        "modules": [
+          "src/cast.rs"
+        ],
+        "tu": "crypto/cast/c_enc.c"
       },
       {
         "identifiers": [
