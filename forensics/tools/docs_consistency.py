@@ -83,14 +83,11 @@ CANDIDATE_VERSION = gen_frf_courts.CANDIDATE_VERSION
 
 SURFACE = load_json("forensics/atlas/implemented-surface.json")["body"]
 LIBCRYPTO = SURFACE["libraries"]["libcrypto"]
-IMPLEMENTED_TOTAL = int(LIBCRYPTO["implemented"])
-AUTHORITY_EXPORTS = int(LIBCRYPTO["authority_exports"])
-
-BASELINE = load_json("forensics/regression-baseline.json")
-BASELINE_IMPL = int(BASELINE["implemented"]["libcrypto"])
-BASELINE_OPEN_P4 = int(BASELINE["open_obligations"]["phase4"])
-BASELINE_COURTS = len(BASELINE["courts"])
-BASELINE_OBS = sum(int(c["observations"]) for c in BASELINE["courts"].values())
+# `LIBCRYPTO["implemented"]` and `["authority_exports"]` had constants here for the two seals'
+# typed counts. D205 removed those anchors -- a seal defers to the census rather than naming a
+# number -- and D205's CI.md half removed the baseline-snapshot tuple, so `BASELINE`'s four
+# derived figures are gone too. The module-level `LIBCRYPTO` is kept because the C-identifier
+# count below still reads it.
 
 P1 = load_json("forensics/atlas/phase1-completeness.json")["body"]
 P7 = load_json("forensics/phase7-obligations.json")["body"]
@@ -194,29 +191,23 @@ def frf_phase_breakdown(text: str) -> list[tuple[str, str, str]]:
     return []
 
 
-def ci_baseline(text: str) -> list[tuple[str, str, str]]:
-    rx = re.compile(
-        r"snapshot of it\):\s*(?P<impl>[\d,]+) implemented `libcrypto` symbols,"
-        r"\s*(?P<open>[\d,]+) open\s+Phase 4 obligations,\s*(?P<courts>[\d,]+) courts"
-        r" all passing,\s*(?P<obs>[\d,]+) observations",
-        re.S,
-    )
-    m = rx.search(text)
-    if m is None:
-        raise ClaimMissing("the baseline-snapshot sentence")
-    expected = {
-        "implemented `libcrypto` symbols": BASELINE_IMPL,
-        "open Phase 4 obligations": BASELINE_OPEN_P4,
-        "courts all passing": BASELINE_COURTS,
-        "observations": BASELINE_OBS,
-    }
-    found = {
-        "implemented `libcrypto` symbols": as_int(m.group("impl")),
-        "open Phase 4 obligations": as_int(m.group("open")),
-        "courts all passing": as_int(m.group("courts")),
-        "observations": as_int(m.group("obs")),
-    }
-    return [(k, str(found[k]), str(v)) for k, v in expected.items() if found[k] != v]
+def defers_to_baseline(text: str) -> list[tuple[str, str, str]]:
+    """`docs/CI.md` must not type the regression baseline's figures.
+
+    Worse than the seals' case (D205): `regression_guard.py --update` **rewrites the baseline at
+    the end of every run**, so a typed snapshot in this document is stale by construction rather
+    than merely late -- the pipeline itself proved it, by passing a comparison made against the
+    pre-update file and then failing the same comparison one run later. So this fails if the
+    deferral is removed, and if the snapshot tuple is typed back in. `docs/CI.md`'s own subject is
+    the baseline, so there is no moment for it to bind: it defers, or it lies.
+    """
+    if "`forensics/regression-baseline.json`" not in text:
+        raise ClaimMissing("the deferral to `forensics/regression-baseline.json`")
+    m = re.search(r"[\d,]+ implemented `libcrypto` symbols", text)
+    if m is not None:
+        return [(m.group(0), "a typed snapshot",
+                 "no numbers: the generated baseline carries them")]
+    return []
 
 
 def phase7_headers(text: str) -> list[tuple[str, str, str]]:
@@ -246,6 +237,25 @@ def readme_status_narrative(text: str) -> list[tuple[str, str, str]]:
     return []
 
 
+def defers_to_census(text: str) -> list[tuple[str, str, str]]:
+    """A seal whose own preamble sends the reader to the census must not type a count.
+
+    D203 replaced these documents' historical figure (932, which was correct for the moment
+    each seal records) with the figure current at the time (1841), which turned a *record* into
+    a *live* claim and put it on a treadmill: it read stale two slices later, at 1879. The
+    seal's preamble already says `docs/SEAL-CENSUS.md` is authoritative and "cannot go stale",
+    so the honest shape is a deferral with no numeral -- and what is worth checking is the
+    deferral, not a number. So this fails in two directions: if the deferral is removed, and
+    if a `<n> of <m> `libcrypto`` count is reintroduced beside it.
+    """
+    if "`docs/SEAL-CENSUS.md`" not in text:
+        raise ClaimMissing("the deferral to `docs/SEAL-CENSUS.md`")
+    m = re.search(r"[\d,]+ of [\d,]+ `libcrypto`", text)
+    if m is not None:
+        return [(m.group(0), "a typed count", "no count: the generated census carries it")]
+    return []
+
+
 CHECKS: list[Check] = [
     regex_check("readme_runtime_courts", "README.md", SRC_FRF,
                 r"(?P<n>\d+) generated runtime courts", FRF_RUNTIME_COURTS),
@@ -255,7 +265,7 @@ CHECKS: list[Check] = [
                 r"runtime count is (?P<n>\d+) as of this revision", FRF_RUNTIME_COURTS),
     Check("frf_readme_phase_breakdown", "forensics/frf/README.md", SRC_FRF,
           frf_phase_breakdown),
-    Check("ci_baseline", "docs/CI.md", SRC_BASELINE, ci_baseline),
+    Check("ci_defers_to_baseline", "docs/CI.md", SRC_BASELINE, defers_to_baseline),
     regex_check("ci_c_style_count", "docs/CI.md", SRC_SURFACE,
                 r"the (?P<n>\d+) plain C identifiers",
                 len(SURFACE["internal_symbols"]["c_style"])),
@@ -275,16 +285,10 @@ CHECKS: list[Check] = [
         ("OPEN UNKNOWNS", r"OPEN UNKNOWNS:\s*(?P<n>\d+)", P1["open_unknown_count"]),
         ("DEFERRED PLANES", r"DEFERRED PLANES:\s*(?P<n>\d+)", P1["deferred_count"]),
     ]),
-    regex_check("phase45_libcrypto_implemented", "docs/PHASE-4-BIO-CONF-SEAL.md", SRC_SURFACE,
-                r"(?P<n>[\d,]+) of [\d,]+ `libcrypto`\s+exports are implemented",
-                IMPLEMENTED_TOTAL),
-    regex_check("phase45_libcrypto_total", "docs/PHASE-4-BIO-CONF-SEAL.md", SRC_SURFACE,
-                r"[\d,]+ of (?P<n>[\d,]+) `libcrypto`\s+exports are implemented",
-                AUTHORITY_EXPORTS),
-    regex_check("phase5_libcrypto_implemented", "docs/PHASE-5-BN-ASN1-PEM-SEAL.md",
-                SRC_SURFACE,
-                r"(?P<n>[\d,]+) of [\d,]+ `libcrypto`\s+exports are implemented",
-                IMPLEMENTED_TOTAL),
+    Check("phase4_defers_to_census", "docs/PHASE-4-BIO-CONF-SEAL.md", SRC_SURFACE,
+          defers_to_census),
+    Check("phase5_defers_to_census", "docs/PHASE-5-BN-ASN1-PEM-SEAL.md", SRC_SURFACE,
+          defers_to_census),
     Check("phase7_headers", "docs/PHASE-7-SUBPHASES.md", SRC_P7, phase7_headers),
     Check("readme_status_narrative_strata", "README.md", SRC_STATE,
           readme_status_narrative),

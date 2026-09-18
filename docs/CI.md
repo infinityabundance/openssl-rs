@@ -36,9 +36,13 @@ rule the loss would be invisible.
 `forensics/regression-baseline.json` is the statement "the evidence moved, and here
 is where", and it is reviewed like any other change.
 
-Current baseline (`forensics/regression-baseline.json` is authoritative; these
-numbers are a snapshot of it): 1841 implemented `libcrypto` symbols, 0 open
-Phase 4 obligations, 79 courts all passing, 23,105 observations.
+Every figure in this section is in `forensics/regression-baseline.json`, which is
+**authoritative and generated**, and this document types none of them. It used to: the
+sentence below carried an implemented-symbol count, an open-obligation count, a court count
+and an observation count. A hand-written number that a generator can move cannot keep up —
+and this one is worse than the seals' case (D205), because the regression guard **rewrites the
+baseline at the end of every run**, so a typed snapshot is stale by construction rather than
+merely late. Read the file.
 
 ## The jobs
 

@@ -4,7 +4,7 @@
 
 **For every count in this document, read `docs/SEAL-CENSUS.md`**, which is generated from the ledgers and the court results by `forensics/tools/render_seal_census.py`.
 
-This is **not** a claim that openssl-rs is a usable OpenSSL. `docs/SEAL-CENSUS.md` carries the current figures: 1841 of 5,896 `libcrypto` exports are implemented, and all 603 `libssl` exports remain `SCAFFOLDED` and abort when called.
+This is **not** a claim that openssl-rs is a usable OpenSSL. `docs/SEAL-CENSUS.md` carries the current figures: the `libcrypto` exports implemented against the authority's 5,896, and the `libssl` exports, which remain `SCAFFOLDED` and abort when called.
 
 - Authority: `openssl-3.6.4-production` (with `openssl-3.6.3-historical` admitted for
   the oracle-versus-oracle trajectory in `docs/SECURITY_DIVERGENCE_POLICY.md`)
