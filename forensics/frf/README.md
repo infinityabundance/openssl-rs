@@ -290,23 +290,18 @@ Both were re-taken at this release's store generation, so their identities in
 The `local-*`/`list-*` trajectory courts are still refused rather than passed, because
 FRF cannot isolate an axis on them (D13).
 
-### Phase 3 claim
+### The compiled claims
 
-`forensics/frf/run_courts.sh` compiles the whole set. The Phase 3 runtime claim is
-
-```
-ffd0d7b3b15bf8fd97f70f023ace973577e4b79b723ce1fe23cfb2ef9a31d87d
-```
-
-from the seven runtime receipts, at `--policy sensitivity-backed`. The other
-claims in the store are the Phase 2 ABI court
-(`1d9f93df30b87fc87c2899abb74b014b5a9ccc21274b3af4ae8f865a8c04e4d7`), the two
-Phase 1 trajectory courts compiled individually at `sensitivity-backed`
-(`590ddff04c3480cd71b54487e9be9907f49912b0e2cc894056c82630a211f60e` for the
-digest court and
-`2be01424768b3a566baa7784fe25208948bb38acd73aff6bb9fc56a8a4543ac8` for the
-inventory court), and the digest+version pair at `--policy baseline`
-(`bdc8ab134293990afe9e4a002b0c0c95357e1add33fc2acc746d97f77ea10c3a`), because the
+`forensics/frf/run_courts.sh` compiles the whole set. A claim identity is a property of
+the store generation rather than a stable name — FRF run identities do not vary with
+the rebuilt candidate's hash, so a release recreates the store and every identity
+moves — and the identities are read from `.frf/claims/` rather than quoted here, which
+is the rule `docs/PHASE-6-PROVIDER-SEAL.md` §8 states for the same reason. The Phase 3
+runtime claim was `ffd0d7b3b15bf8fd97f70f023ace973577e4b79b723ce1fe23cfb2ef9a31d87d`
+over the seven runtime receipts at that boundary; it is superseded, as
+`docs/PHASE-4-BIO-CONF-SEAL.md` §8 records. The store also holds the Phase 2 ABI
+court's claim, the two Phase 1 trajectory courts compiled individually at `--policy
+sensitivity-backed`, and the digest+version pair at `--policy baseline` — because the
 version court's axis is the release banner and diverges by design.
 
 **Read the scope literally.** FRF extracts the `stdout` observable as
