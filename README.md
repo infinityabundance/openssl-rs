@@ -42,8 +42,9 @@ later strata stand on is real code rather than scaffolding: `OSSL_LIB_CTX` and i
 parameter descriptor, the property grammar, the method stores, the provider registry and its
 message-format table, the core dispatch table a third-party provider is handed, RCU, sparse arrays
 and per-context thread-local state. What is *not* implemented is the algorithms — AES, SHA, RSA,
-the KDFs, the MACs and the signature schemes are later strata's, and the EVP layer that will reach
-them is where the current work is.
+the KDFs, the MACs and the signature schemes are later strata's — while the EVP layer that reaches
+them is complete and sealed. The algorithms are the next stratum's work, and that is where the work
+is.
 
 **Every symbol is `SCAFFOLDED` or `IMPLEMENTED`, and none is `PARITY_VERIFIED`.** That
 distinction is the whole point of the project's evidence model and it is not a formality:
@@ -146,7 +147,7 @@ FRF claims and Gemel memory:
 
 ```
 .frf/                     FRF store: authorities, captures, residuals, receipts, claims
-forensics/frf/courts/     four 3.6.3 -> 3.6.4 oracle-vs-oracle trajectory courts
+forensics/frf/courts/     the CLI trajectory courts and the 62 generated runtime courts (phases 3-7)
 forensics/frf/refs/       authority/candidate reference wrappers
 ```
 

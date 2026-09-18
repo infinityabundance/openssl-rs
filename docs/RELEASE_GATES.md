@@ -149,7 +149,7 @@ that a gate is not a procedure.
    the second file was found.
 3. Re-run every generator whose output carries the version:
    `python3 forensics/tools/gen_frf_courts.py`. Each court's `version_or_commit` comes
-   from `Cargo.toml` through this tool, deliberately — the alternative is 43 YAML
+   from `Cargo.toml` through this tool, deliberately — the alternative is 62 YAML
    files edited by hand at every release, and the tool's `--check` is the guard that
    makes skipping it a failure rather than a silent lie. `grep -rl "$(cargo metadata
    --format-version 1 --no-deps | python3 -c 'import json,sys;
