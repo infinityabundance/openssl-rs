@@ -114,7 +114,9 @@ COURTS: list[tuple[str, str]] = [
 # `correctness_vectors.py --emit`. (name, algorithms)
 CORRECTNESS_COURTS: list[tuple[str, tuple[str, ...]]] = [
     ("CT-DIGEST", ("md4", "md5", "ripemd160", "sha1", "sha224", "sha256", "sha384",
-                   "sha512", "whirlpool")),
+                   "sha512", "whirlpool", "sha256_192", "sha512_224", "sha512_256",
+                   "sha3_224", "sha3_256", "sha3_384", "sha3_512", "blake2s256",
+                   "blake2b512", "sm3", "md5_sha1")),
 ]
 
 # A `CT-*` court the plan names but whose primitive is not implemented yet. It is not a

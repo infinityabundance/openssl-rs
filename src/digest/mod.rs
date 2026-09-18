@@ -44,6 +44,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
+pub mod blake2;
 pub mod md32;
 pub mod md4;
 pub mod md5;
@@ -51,5 +52,7 @@ pub mod md5_sha1;
 pub mod ripemd;
 pub mod sha1;
 pub mod sha2;
+pub mod sha3;
+pub mod sm3;
 pub mod tables;
 pub mod wp;

@@ -174,6 +174,12 @@ class EmitSource:
     standard: str
     primary_source: str
     source_file: str
+    # Some corpora carry a construction at an output length other than its default (BLAKE2's
+    # `Size` parameter, for instance). This plane's driver is fixed-length, so a block whose
+    # output length is not `digest_bytes` is skipped rather than raising -- but only when the
+    # source says so, and the count is reported. A fixed-width source still fails closed on a
+    # mismatch, which is D206's contract.
+    variable_output: bool = False
 
 
 EMIT_SOURCES: tuple[EmitSource, ...] = (
@@ -204,6 +210,46 @@ EMIT_SOURCES: tuple[EmitSource, ...] = (
     EmitSource("whirlpool", "WHIRLPOOL", 64, "ISO/IEC 10118-3 (Whirlpool)",
                "ISO/IEC 10118-3 (Whirlpool); Rijmen–Barreto submission, test vectors",
                "test/recipes/30-test_evp_data/evpmd_whirlpool.txt"),
+    # 8.1b's constructions. `NULL` (zero-length output) and the raw `KECCAK-*`/`KECCAK-KMAC-*`
+    # spellings have no entry here: `NULL` cannot satisfy the schema's positive `digest_bytes`, and
+    # no oracle for raw Keccak (the NIST `hashlib` sha3 names are the pad-0x06 sponge, not the
+    # pad-0x01 Keccak spellings) is available offline. `SHAKE-128`/`SHAKE-256` are absent because
+    # their corpus outputs are variable-length and the single-`digest_bytes` schema cannot hold a
+    # variable-length XOF vector; D207 records all three exclusions.
+    EmitSource("sha256_192", "SHA256-192", 24,
+               "SHA2-256/192 (SHA-256 with a 24-byte output)",
+               "UNKNOWN",
+               "test/recipes/30-test_evp_data/evpmd_sha.txt"),
+    EmitSource("sha512_224", "SHA512-224", 28, "FIPS 180-4",
+               "FIPS 180-4",
+               "test/recipes/30-test_evp_data/evpmd_sha.txt"),
+    EmitSource("sha512_256", "SHA512-256", 32, "FIPS 180-4",
+               "FIPS 180-4",
+               "test/recipes/30-test_evp_data/evpmd_sha.txt"),
+    EmitSource("sha3_224", "SHA3-224", 28, "FIPS 202",
+               "FIPS 202",
+               "test/recipes/30-test_evp_data/evpmd_sha.txt"),
+    EmitSource("sha3_256", "SHA3-256", 32, "FIPS 202",
+               "FIPS 202",
+               "test/recipes/30-test_evp_data/evpmd_sha.txt"),
+    EmitSource("sha3_384", "SHA3-384", 48, "FIPS 202",
+               "FIPS 202",
+               "test/recipes/30-test_evp_data/evpmd_sha.txt"),
+    EmitSource("sha3_512", "SHA3-512", 64, "FIPS 202",
+               "FIPS 202",
+               "test/recipes/30-test_evp_data/evpmd_sha.txt"),
+    EmitSource("blake2s256", "BLAKE2s256", 32, "RFC 7693 (BLAKE2)",
+               "RFC 7693; BLAKE2 reference implementation",
+               "test/recipes/30-test_evp_data/evpmd_blake.txt", variable_output=True),
+    EmitSource("blake2b512", "BLAKE2b512", 64, "RFC 7693 (BLAKE2)",
+               "RFC 7693; BLAKE2 reference implementation",
+               "test/recipes/30-test_evp_data/evpmd_blake.txt", variable_output=True),
+    EmitSource("sm3", "SM3", 32, "GB/T 32905-2016 (SM3)",
+               "GB/T 32905-2016; ISO/IEC 10118-3 (SM3)",
+               "test/recipes/30-test_evp_data/evpmd_sm3.txt"),
+    EmitSource("md5_sha1", "MD5-SHA1", 36, "MD5||SHA-1 concatenation (no standard)",
+               "UNKNOWN",
+               "test/recipes/30-test_evp_data/evpmd_md.txt"),
 )
 
 # The primary sources the plan names but whose constructions 8.1a has not transcribed. They are
@@ -246,6 +292,16 @@ _HASHLIB_NAMES: dict[str, str] = {
     "sha256": "sha256",
     "sha384": "sha384",
     "sha512": "sha512",
+    "sha512_224": "sha512_224",
+    "sha512_256": "sha512_256",
+    "sha3_224": "sha3_224",
+    "sha3_256": "sha3_256",
+    "sha3_384": "sha3_384",
+    "sha3_512": "sha3_512",
+    "blake2s256": "blake2s",
+    "blake2b512": "blake2b",
+    "sm3": "sm3",
+    "md5_sha1": "md5-sha1",
 }
 
 _REFERENCE_DIGESTS: dict[str, dict[str, str]] = {
@@ -306,6 +362,14 @@ def _oracle_digest(algorithm: str, label: str, data: bytes) -> tuple[bytes, str]
     name = _HASHLIB_NAMES.get(algorithm)
     if name is not None:
         return hashlib.new(name, data).digest(), _HASHLIB_ORACLE
+    if algorithm == "sha256_192":
+        # SHA-256/192 is SHA-256 with a 24-byte output, and this is that definition rather than a
+        # guess: FIPS 180-4's SHA-256 truncated. `hashlib` carries no `sha256_192`, so the
+        # derivation is named on the vector rather than left implicit.
+        return hashlib.sha256(data).digest()[:24], (
+            _HASHLIB_ORACLE
+            + " (sha256 truncated to 192 bits; the construction is SHA-256 with a 24-byte output)"
+        )
     table = _REFERENCE_DIGESTS.get(algorithm)
     if table is not None and label in table:
         return bytes.fromhex(table[label]), _REFERENCE_ORACLE
@@ -832,6 +896,7 @@ def _emit_one(source: EmitSource, auth_source: Path, authority_id: str,
         return prov
 
     vectors: list[dict] = []
+    skipped: int = 0
 
     # (1) The single-message corpus vectors, as before.
     for title, digest_line, fields in _parse_evpmd(text):
@@ -849,6 +914,9 @@ def _emit_one(source: EmitSource, auth_source: Path, authority_id: str,
             form = "hex"
         expected = bytes.fromhex(fields["Output"])
         if len(expected) != source.digest_bytes:
+            if source.variable_output:
+                skipped += 1
+                continue
             raise VectorError(
                 f"{rel(src_path)}:{digest_line}: {fields['Digest']} output is "
                 f"{len(expected)} bytes, expected {source.digest_bytes}"
@@ -876,6 +944,9 @@ def _emit_one(source: EmitSource, auth_source: Path, authority_id: str,
             continue
         expected = bytes.fromhex(output_hex)
         if len(expected) != source.digest_bytes:
+            if source.variable_output:
+                skipped += 1
+                continue
             raise VectorError(
                 f"{rel(src_path)}:{digest_line}: {digest} repeated output is "
                 f"{len(expected)} bytes, expected {source.digest_bytes}"
@@ -958,7 +1029,7 @@ def _emit_one(source: EmitSource, auth_source: Path, authority_id: str,
     out = vector_dir / f"{source.algorithm}.json"
     write_json(out, doc)
     return {"algorithm": source.algorithm, "path": rel(out), "vectors": len(vectors),
-            "source": rel(src_path)}
+            "skipped": skipped, "source": rel(src_path)}
 
 
 def emit_all(authority_id: str, vector_dir: Path = VECTOR_DIR) -> list[dict]:
@@ -1040,8 +1111,10 @@ def main(argv: list[str]) -> int:
 
     if args.emit:
         for row in emit_all(args.authority):
+            skipped = row.get("skipped", 0)
             print(f"  emitted {row['path']:<40} {row['vectors']:>3} vectors "
-                  f"from {row['source']}")
+                  + (f"({skipped} skipped: non-default output length) " if skipped else "")
+                  + f"from {row['source']}")
         return 0
 
     if args.self_check:
