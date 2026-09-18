@@ -30,7 +30,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 56,
-      "language_surface_not_modelled_by_name": 3091,
+      "language_surface_not_modelled_by_name": 3095,
       "planned_prerequisites": 14
     },
     "census_by_unit": {
@@ -134,6 +134,7 @@
         "crypto/bn/bn_recp.c": 10,
         "crypto/bsearch.c": 1,
         "crypto/buffer/buffer.c": 12,
+        "crypto/cast/c_enc.c": 4,
         "crypto/cmac/cmac.c": 8,
         "crypto/comp/comp_lib.c": 7,
         "crypto/conf/conf_api.c": 22,
@@ -345,8 +346,8 @@
       ]
     },
     "checked": {
-      "authority_units": 158,
-      "crate_modules": 213,
+      "authority_units": 159,
+      "crate_modules": 214,
       "deferral_blocker_rows": 5,
       "deferrals_recorded": 25,
       "divergence_names_covered": 32,
@@ -468,7 +469,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "1dba709d65331837991080eabf443236e023be902917e2eab047dd950a071f99",
+  "body_hash": "9d652c6d1de3ec38ee8d297d4bbef89b71351524ff39474ea2be9e584ef022fd",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -489,7 +490,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "90f5cc8cb9bcbb28e80d42aa474e4cbb4bd3521f65ec538f95131317109c8364"
+      "sha256": "dd336a3b03ca7d9be4337481392fcde062232b30c3709ff4bf9ec066bc24ed7a"
     },
     {
       "name": "symbol-ownership",
@@ -504,12 +505,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "ef04725197543b1ff0f1b7acc99639e13f0e5e4926690faaec51d8d053b4ad54"
+      "sha256": "897ccff1cffa7e8737a9e716e8d9c6d23ec41a710778ddd0a0595d314e4937eb"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "35af3b5255ac73ee426b3898e98905e180432d2d066ff966120657b8496f8eca"
+      "sha256": "29e71e5beaf0312a18cc12586db6bfe778da0ddde3e705675b4752569ce3bdbb"
     },
     {
       "name": "prerequisites",

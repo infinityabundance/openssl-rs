@@ -72,7 +72,7 @@ _SOURCES = (DES_SPR, DES_SETKEY, DES_FCRYPT, RC2_SKEY, BF_PI, CAST_S, SEED_C, CA
 # The families the generator emits. Each family's extraction is a function of the
 # authority's source; extending this tuple is how a later family's tables join the file,
 # and `evidence_determinism.py` recomputes the whole file.
-FAMILIES = ("des", "rc2", "bf")
+FAMILIES = ("des", "rc2", "bf", "cast")
 
 
 def read(authority, relpath: str) -> str:

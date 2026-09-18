@@ -1706,6 +1706,11 @@ CIPHER_RECIPE_FAMILIES: list[CipherRecipeFamily] = [
         r"^BF-(ECB|CBC|CFB|OFB)$", "Schneier's Blowfish (self-generated corpus)",
         "BF-{ECB,CBC,CFB,OFB}", ("BF-ECB", "BF-CBC"),
         "000102030405060708090a0b0c0d0e0f", "0000000000000000"),
+    CipherRecipeFamily(
+        "cast5", "test/recipes/30-test_evp_data/evpciph_cast5.txt",
+        r"^CAST5-(ECB|CBC|CFB|OFB)$", "RFC 2144",
+        "CAST5-{ECB,CBC,CFB,OFB}", ("CAST5-ECB", "CAST5-CBC"),
+        "0123456712345678234567893456789a", "0000000000000000"),
 ]
 
 

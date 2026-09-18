@@ -40,6 +40,7 @@
 
 #include <openssl/aes.h>
 #include <openssl/blowfish.h>
+#include <openssl/cast.h>
 #include <openssl/des.h>
 #include <openssl/modes.h>
 #include <openssl/rc2.h>
@@ -819,6 +820,85 @@ static void rt_bf(void)
     }
 }
 
+static void rt_cast5(void)
+{
+    CAST_KEY k, shortk;
+    unsigned char key[16];
+    unsigned char in[24];
+    unsigned char out[48];
+    unsigned char iv[8];
+    int num;
+
+    rt_fill(key, sizeof(key), 1);
+    rt_fill(in, sizeof(in), 2);
+    printf("cast.sizeof_key=%u\n", (unsigned)sizeof(CAST_KEY));
+
+    memset(&k, 0, sizeof(k));
+    CAST_set_key(&k, 16, key);
+    rt_hex("cast.ks16", (const unsigned char *)&k, sizeof(k));
+
+    memset(out, 0, sizeof(out));
+    CAST_ecb_encrypt(in, out, &k, CAST_ENCRYPT);
+    rt_hex("cast.ecb.enc", out, 8);
+    CAST_ecb_encrypt(out, out + 8, &k, CAST_DECRYPT);
+    rt_hex("cast.ecb.dec", out + 8, 8);
+
+    /* RFC 2144's CAST5-ECB vector, from the corpus. */
+    {
+        static const unsigned char rkey[16] = { 0x01, 0x23, 0x45, 0x67, 0x12, 0x34, 0x56, 0x78,
+                                                0x23, 0x45, 0x67, 0x89, 0x34, 0x56, 0x78, 0x9a };
+        static const unsigned char rpt[8] = { 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef };
+        CAST_KEY rk;
+
+        memset(&rk, 0, sizeof(rk));
+        CAST_set_key(&rk, 16, rkey);
+        memset(out, 0, sizeof(out));
+        CAST_ecb_encrypt(rpt, out, &rk, CAST_ENCRYPT);
+        rt_hex("cast.recipe.ecb", out, 8);
+    }
+
+    /* An eight-byte key sets `short_key`, which removes four rounds; the flag is at the tail of
+     * the 132-byte CAST_KEY and the schedule differs too. */
+    memset(&shortk, 0, sizeof(shortk));
+    CAST_set_key(&shortk, 8, key);
+    rt_hex("cast.ks8", (const unsigned char *)&shortk, sizeof(shortk));
+    memset(out, 0, sizeof(out));
+    CAST_ecb_encrypt(in, out, &shortk, CAST_ENCRYPT);
+    rt_hex("cast.ecb8.enc", out, 8);
+
+    rt_fill(iv, 8, 3);
+    memset(out, 0, sizeof(out));
+    CAST_cbc_encrypt(in, out, 24, &k, iv, CAST_ENCRYPT);
+    rt_hex("cast.cbc.enc", out, 24);
+    rt_hex("cast.cbc.enc.iv", iv, 8);
+    CAST_cbc_encrypt(out, out + 24, 24, &k, iv, CAST_DECRYPT);
+    rt_hex("cast.cbc.dec", out + 24, 24);
+
+    rt_fill(iv, 8, 4);
+    num = 3;
+    memset(out, 0, sizeof(out));
+    CAST_cfb64_encrypt(in, out, 24, &k, iv, &num, CAST_ENCRYPT);
+    rt_hex("cast.cfb64.enc", out, 24);
+    printf("cast.cfb64.num=%d\n", num);
+
+    rt_fill(iv, 8, 5);
+    num = 0;
+    memset(out, 0, sizeof(out));
+    CAST_ofb64_encrypt(in, out, 24, &k, iv, &num);
+    rt_hex("cast.ofb64.enc", out, 24);
+    rt_hex("cast.ofb64.enc.iv", iv, 8);
+
+    /* CAST_encrypt/BF-like direct call on a word pair. */
+    {
+        unsigned int w[2] = { 0x01234567u, 0x89abcdefu };
+
+        CAST_encrypt(w, &k);
+        rt_hex("cast.encrypt", (const unsigned char *)w, 8);
+        CAST_decrypt(w, &k);
+        rt_hex("cast.decrypt", (const unsigned char *)w, 8);
+    }
+}
+
 static void rt_modes_blocks(void)
 {
     const unsigned char key = RT_KEY;
@@ -1079,5 +1159,6 @@ int main(void)
     rt_des();
     rt_rc2();
     rt_bf();
+    rt_cast5();
     return 0;
 }
