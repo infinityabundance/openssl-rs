@@ -14051,7 +14051,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "02c9a3507f7630a8a274087929bec3172252272e9b382e793159374402212b23"
+      "sha256": "55079b106c8bba0e7e594d1ed1ae85aa647a6982e36dc614c2843c89dccd10ce"
     },
     {
       "name": "symbol-ownership",
@@ -14106,7 +14106,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "308a36a8c721ddeb1ebe8b89ea0d06b066c5a9d98fbeac9898d28b80b57eec1a"
+      "sha256": "295a6b564f52ec791569f4f27916a66ddf0dbccb67e50c026bfaeb2891379d15"
     },
     {
       "name": "phase7-courts",

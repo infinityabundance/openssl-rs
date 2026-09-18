@@ -13776,3 +13776,107 @@ records the digest half as partly landed.
 - **Reading the primary sources.** Nothing here has read an RFC or an ISO standard; the primary
   source is a name and a section, and the mirror is content-addressed. What that does and does not
   establish is quoted in §2 and carried in every vector file.
+
+## D207 — subphase 8.1 closes: SHA-3/Keccak/SHAKE, SM3, BLAKE2, `md5_sha1` and the truncated SHA-2 spellings land as provider rows, the five `sha.h` one-shots move the export count, and three findings are recorded
+
+D206 named what 8.1 still owed and that list was this slice's mandate. All seven items are now
+in, on both planes, and the subphase's construction work is complete: the constructions that had
+no exported low-level entry point (`crypto/sha/sha3.c`'s sponge, `crypto/sm3/sm3.c`, the
+`blake2b_prov.c`/`blake2s_prov.c` pair, `crypto/md5/md5_sha1.c`) are transcribed as internals,
+their `defltprov.c` rows are published from `src/provider/digest.rs`, and the five `sha.h`
+one-shots — the only *exports* in this slice — move `implemented[libcrypto]` **1879 → 1884** and
+Phase 8 to **43 implemented / 727 open / 16 deferred**, read from
+`forensics/atlas/implemented-surface.json` and `forensics/phase8-obligations.json` at this
+commit.
+
+**What landed, by construction.** Each row is stated with the authority unit it was transcribed
+from, which provider publishes it, and where its alias list comes from. Every alias string is
+`providers/implementations/include/prov/names.h` verbatim, per D206's rule.
+
+| construction | authority unit | published from | alias list (`names.h`) |
+|---|---|---|---|
+| SHA3-224/256/384/512 | `crypto/sha/sha3.c` + `keccak1600.c` | `default` (`defltprov.c:109-112`) | `PROV_NAMES_SHA3_*` |
+| KECCAK-224/256/384/512 | same (pad `0x01`) | `default` (`:114-117`) | `PROV_NAMES_KECCAK_*` |
+| KECCAK-KMAC-128/256 | same (pad `0x04`) | `default` (`:123-126`) | `PROV_NAMES_KECCAK_KMAC_*` |
+| SHAKE-128/256 | same (pad `0x1f`, XOF) | `default` (`:129-130`) | `PROV_NAMES_SHAKE_*` |
+| SM3 | `crypto/sm3/sm3.c` + `sm3_local.h` | `default` (`:145`) | `PROV_NAMES_SM3` |
+| BLAKE2S-256 / BLAKE2B-512 | `blake2{s,b}_prov.c` (+ `blake2_impl.h`) | `default` (`:140-141`) | `PROV_NAMES_BLAKE2*` |
+| SHA2-256/192, SHA2-512/224, SHA2-512/256 | `sha2_prov.c:74-96` over `ossl_sha256_192_init`/`sha512_224_init`/`sha512_256_init` | `default` (`:102`, `:105-106`) | `PROV_NAMES_SHA2_*` |
+| MD5-SHA1 | `crypto/md5/md5_sha1.c` | `default` (`:150`) | `PROV_NAMES_MD5_SHA1` |
+| NULL | `null_prov.c` | `default` (`:157`) | `PROV_NAMES_NULL` |
+| SHA1/SHA224/SHA256/SHA384/SHA512 | `crypto/sha/sha1_one.c:36-70` | **exports** | `sha.h` |
+
+The default provider's digest table is now twenty-seven rows plus the terminator
+(`src/provider/digest.rs`'s `DEFLT_DIGESTS: [OsslAlgorithm; 28]`), every one checked against
+`defltprov.c`'s `deflt_digests[]` and not against the constructions that happen to exist. **MD4
+and Whirlpool remain absent** for the reason D206 recorded: their constructions exist here but
+`legacyprov.c:92`/`:98` publishes them, and a default row would make `EVP_MD_fetch(NULL, "MD4",
+NULL)` succeed where the authority answers NULL.
+
+**Both planes.** `RT-DIGEST` grows from **98 to 247 observations** and `CT-DIGEST` from **119
+vectors over 263 calls** (D206) to **270 vectors over 590 calls**. `RT-DIGEST` observes the new
+rows through the provider — the fetch, the size, the block size and the `abc` digest for each —
+plus the five one-shots directly and, for the XOF rows, `EVP_MD_xof` and a two-slice
+`EVP_DigestSqueeze`. `CT-DIGEST` gains committed vectors for eleven constructions
+(`sha256_192`, `sha512_224`, `sha512_256`, `sha3_224/256/384/512`, `blake2s256`, `blake2b512`,
+`sm3`, `md5_sha1`), each carrying the D206 provenance schema: corpus-mirrored vectors name the
+recipe file, line and `mirror_sha256` and a `primary_source` (FIPS 180-4, FIPS 202, RFC 7693,
+GB/T 32905-2016), and the boundary vectors are `derivation: independent` with the oracle named
+(`hashlib`, and for SHA-256/192 the explicitly-named SHA-256 truncation). Every one of those
+eleven covers the empty message, one byte, 55/56/63/64/65, a 1000-byte message, and all three
+update modes (`one`, `two`, `byte`), plus the corpus's repeated-message `count:<n>` cases.
+
+**Finding 1 — the authority refuses `EVP_DigestSqueeze` on the `KECCAK-KMAC` rows, and the
+candidate did not.** The first `RT-DIGEST` run of the new rows failed on
+`provider.keccak_kmac_{128,256}.squeeze_first`: authority 0, candidate 1. The reason is in
+`sha3_prov.c`: `SHAKE_SET_MD` installs `shake_generic_md` (`:180-185`), whose `squeeze` member is
+`generic_sha3_squeeze`, while `KMAC_SET_MD` installs `sha3_generic_md` (`:174-178`), whose
+`squeeze` member is **NULL** — and `shake_squeeze` (`:142-143`) refuses when it is NULL. The
+provider now transcribes that refusal for the two `KECCAK-KMAC` rows and only those; the SHAKE
+rows keep the non-NULL squeeze. This is exactly the class of defect a differential court catches
+and a vector set cannot.
+
+**Finding 2 — D197 is missing from the working tree, dropped by a merge.** `docs/DECISIONS.md`
+on this branch does not contain the Phase 8 bootstrap entry that `docs/PHASE-8-SUBPHASES.md`
+§2 cites twice ("D197 recorded", "D197 says"). It was present at `bd4c9914` and removed by
+`8ec62de8` ("Merge branch 'main' into phase8-digests"), whose first parent's copy has it and
+whose result does not: the merge resolved the decision-log region to `main`'s D198..D196 text and
+lost the bootstrap entry. The text survives in the commit that added it, `c207f25b`. Re-inserting
+it would edit an append-only file out of order, so it is recorded here instead, with the
+coordinate a reader can recover it from. `subphase 8.1`'s plan references remain correct.
+
+**Finding 3 — an earlier BLAKE2 deferral named a directory the authority does not have.** D198
+already recorded this for a deferral row; it is restated here because the 8.1b module doc's
+citation of `blake2*_prov.c` is the correction: there is no `crypto/blake2/` in the pinned tree,
+and the algorithm including its IV, `SIGMA`, parameter block and compression lives in
+`providers/implementations/digests/blake2b_prov.c` and `blake2s_prov.c`.
+
+**What could not be done, with the reason and the authority coordinate.** Four constructions get
+`RT-DIGEST` coverage but no `CT-DIGEST` vectors, and the second plane's record says so rather
+than letting the table imply uniformity:
+
+- **`null` (`null_prov.c`).** Its digest is the empty string, and the vector schema requires
+  `digest_bytes > 0` (`correctness_vectors.py`'s `load_vector_set`). The provider row and its
+  `EVP_MD_fetch`/`EVP_DigestFinal_ex` behaviour are observed by `RT-DIGEST`; a zero-length-output
+  vector kind is unbuilt work.
+- **Raw `KECCAK-224/256/384/512`.** No offline independent oracle exists: `hashlib`'s `sha3_*`
+  names are the pad-`0x06` NIST sponge, not the pad-`0x01` Keccak spellings, and no other
+  independent implementation is available in the court image. Their corpus vectors are in
+  `evpmd_sha.txt`, but the boundary oracle would be `UNKNOWN`, which `--emit` refuses rather than
+  guesses. They share the permutation and absorb/squeeze with the SHA-3 rows that are CT-covered;
+  `RT-DIGEST` covers them end to end.
+- **`KECCAK-KMAC-128/256`.** No corpus vectors (`evpmd_sha.txt` carries none) and no oracle.
+- **`SHAKE-128/256`.** The corpus's outputs are variable-length (`evpmd_sha.txt:250-266` has
+  512-byte and 16-byte outputs for the same name) and the schema's single `digest_bytes` cannot
+  hold a variable-length XOF vector; a variable-length vector kind is deferred. `RT-DIGEST`
+  observes the squeeze and `EVP_MD_xof` for both.
+
+The primary sources for the non-standard constructions are recorded as `UNKNOWN` rather than
+guessed — `md5_sha1` (an OpenSSL concatenation) and `sha256_192` (SHA-256 with a 24-byte output)
+— as the project prefers.
+
+**Not claimed.** The constructions are candidate-only construction verification over
+standard-derived vectors mirrored in the pinned corpus, exactly as D206 restated it; the mirror is
+"a pointer, not a checked citation". The assembly fast paths are Phase 19's and the portable arms
+here are proven equal by `RT-DIGEST`, not assumed. The two `RT-DIGEST` and `CT-DIGEST` counts are
+the values in `artifacts/phase8/COURTS.json` at this commit.

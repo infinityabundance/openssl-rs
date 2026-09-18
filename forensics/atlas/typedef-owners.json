@@ -4,9 +4,9 @@
     "counts": {
       "installed_headers": 139,
       "internal_only": 402,
-      "owned": 749,
+      "owned": 754,
       "records": 1568,
-      "unowned": 819
+      "unowned": 814
     },
     "definition": "every typedef name the authority's installed and internal headers introduce, with the header that introduces it and that header's owning stratum",
     "installed_headers": [
@@ -2462,7 +2462,7 @@
         ],
         "kind": "typedef",
         "name": "KECCAK1600_CTX",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -7543,7 +7543,7 @@
         ],
         "kind": "typedef",
         "name": "PROV_SHA3_METHOD",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -8247,7 +8247,7 @@
         ],
         "kind": "typedef",
         "name": "SM3_CTX",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -10056,7 +10056,7 @@
         ],
         "kind": "typedef",
         "name": "inlen",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -10329,7 +10329,7 @@
         ],
         "kind": "typedef",
         "name": "outlen",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -12861,7 +12861,6 @@
       "INFOPAIR",
       "ISSUING_DIST_POINT",
       "KDF_DATA",
-      "KECCAK1600_CTX",
       "MAC_KEY",
       "MATRIX",
       "MIME_HEADER",
@@ -13224,7 +13223,8 @@
       "OSSL_HPKE_KEM_INFO",
       "OSSL_HTTP_REQ_CTX",
       "OSSL_INOUT_CALLBACK",
-      "OSSL_ITEM"
+      "OSSL_ITEM",
+      "OSSL_JSON_ENC"
     ]
   },
   "generator": "forensics/tools/gen_prerequisite_atlas.py",

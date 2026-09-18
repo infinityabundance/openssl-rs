@@ -4,9 +4,9 @@
     "counts": {
       "installed_headers": 139,
       "internal_only": 2993,
-      "owned": 9548,
+      "owned": 9562,
       "records": 19839,
-      "unowned": 10291
+      "unowned": 10277
     },
     "definition": "every macro and enum member the authority's installed and internal headers define, with the header that defines it and that header's owning stratum",
     "installed_headers": [
@@ -31435,7 +31435,7 @@
         ],
         "kind": "macro",
         "name": "KECCAK1600_WIDTH",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -31571,7 +31571,7 @@
         ],
         "kind": "macro",
         "name": "KMAC_MDSIZE",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -73653,7 +73653,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_INTERNAL_SHA3_H",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -73669,7 +73669,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_INTERNAL_SM3_H",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -93498,7 +93498,7 @@
         ],
         "kind": "macro",
         "name": "SHA3_BLOCKSIZE",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -93506,7 +93506,7 @@
         ],
         "kind": "macro",
         "name": "SHA3_MDSIZE",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94530,7 +94530,7 @@
         ],
         "kind": "macro",
         "name": "SM3_CBLOCK",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94546,7 +94546,7 @@
         ],
         "kind": "macro",
         "name": "SM3_DIGEST_LENGTH",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94586,7 +94586,7 @@
         ],
         "kind": "macro",
         "name": "SM3_LBLOCK",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -94594,7 +94594,7 @@
         ],
         "kind": "macro",
         "name": "SM3_WORD",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -138736,7 +138736,7 @@
         ],
         "kind": "macro",
         "name": "XOF_STATE_ABSORB",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -138744,7 +138744,7 @@
         ],
         "kind": "macro",
         "name": "XOF_STATE_FINAL",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -138752,7 +138752,7 @@
         ],
         "kind": "macro",
         "name": "XOF_STATE_INIT",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -138760,7 +138760,7 @@
         ],
         "kind": "macro",
         "name": "XOF_STATE_SQUEEZE",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [

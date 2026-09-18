@@ -374,6 +374,48 @@ static void rt_provider_digest(const char *name, const char *label)
     EVP_MD_free(md);
 }
 
+/* Fetch an XOF by name and squeeze two slices. `EVP_MD_xof` says the fetched method claims to be
+ * extendable; the two slice lengths are coprime with every rate in `sha3_prov.c`, so a loop that
+ * permuted at the wrong boundary would show in the concatenated bytes. */
+static void rt_provider_xof(const char *name, const char *label, size_t first, size_t second)
+{
+    EVP_MD *md = EVP_MD_fetch(NULL, name, NULL);
+    EVP_MD_CTX *ctx;
+    unsigned char out[64];
+    int s1 = 0, s2 = 0;
+
+    printf("provider.fetch.%s=%s\n", label, md != NULL ? "yes" : "no");
+    if (md == NULL) {
+        printf("provider.%s.squeeze=no-fetch\n", label);
+        return;
+    }
+    printf("provider.%s.xof=%d\n", label, EVP_MD_xof(md));
+    printf("provider.%s.size=%d\n", label, EVP_MD_get_size(md));
+    printf("provider.%s.blocksize=%d\n", label, EVP_MD_get_block_size(md));
+    ctx = EVP_MD_CTX_new();
+    memset(out, 0, sizeof(out));
+    if (EVP_DigestInit_ex(ctx, md, NULL) == 1 && EVP_DigestUpdate(ctx, "abc", 3) == 1) {
+        s1 = EVP_DigestSqueeze(ctx, out, first);
+        s2 = EVP_DigestSqueeze(ctx, out + first, second);
+    } else {
+        printf("provider.%s.squeeze=error\n", label);
+        EVP_MD_CTX_free(ctx);
+        EVP_MD_free(md);
+        return;
+    }
+    printf("provider.%s.squeeze_first=%d\n", label, s1);
+    printf("provider.%s.squeeze_second=%d\n", label, s2);
+    if (s1 == 1 && s2 == 1) {
+        printf("provider.%s.squeeze=", label);
+        rt_print_hex(out, first + second);
+        printf("\n");
+    } else {
+        printf("provider.%s.squeeze=refused\n", label);
+    }
+    EVP_MD_CTX_free(ctx);
+    EVP_MD_free(md);
+}
+
 static void rt_provider_section(void)
 {
     OSSL_PROVIDER *def;
@@ -418,8 +460,66 @@ static void rt_provider_section(void)
     rt_provider_digest("RMD160", "rmd160");
     rt_provider_digest("MD4", "md4");
     rt_provider_digest("WHIRLPOOL", "whirlpool");
+    /* The rows 8.1's second half adds: the SHA-2 alternates, the SHA-3 and Keccak fixed widths,
+     * BLAKE2, SM3, the MD5||SHA-1 concatenation and the NULL digest. Each is provider-only --
+     * none of these constructions has an exported low-level entry point (D197) -- so the fetch
+     * *is* the surface, and the digest bytes are what say the fetched method is the right one. */
+    rt_provider_digest("SHA2-256/192", "sha2_256_192");
+    rt_provider_digest("SHA2-512/224", "sha2_512_224");
+    rt_provider_digest("SHA2-512/256", "sha2_512_256");
+    rt_provider_digest("SHA3-224", "sha3_224");
+    rt_provider_digest("SHA3-256", "sha3_256");
+    rt_provider_digest("SHA3-384", "sha3_384");
+    rt_provider_digest("SHA3-512", "sha3_512");
+    rt_provider_digest("KECCAK-224", "keccak_224");
+    rt_provider_digest("KECCAK-256", "keccak_256");
+    rt_provider_digest("KECCAK-384", "keccak_384");
+    rt_provider_digest("KECCAK-512", "keccak_512");
+    rt_provider_digest("BLAKE2S-256", "blake2s256");
+    rt_provider_digest("BLAKE2B-512", "blake2b512");
+    rt_provider_digest("SM3", "sm3");
+    rt_provider_digest("MD5-SHA1", "md5_sha1");
+    rt_provider_digest("NULL", "null");
+    /* The XOF rows: the squeeze is the surface `EVP_MD_xof`/`EVP_DigestSqueeze` reach, and a
+     * two-slice squeeze is where a transcription of the loop stops agreeing. */
+    rt_provider_xof("SHAKE-128", "shake128", 17, 15);
+    rt_provider_xof("SHAKE-256", "shake256", 17, 15);
+    rt_provider_xof("KECCAK-KMAC-128", "keccak_kmac_128", 17, 15);
+    rt_provider_xof("KECCAK-KMAC-256", "keccak_kmac_256", 17, 15);
     if (def != NULL)
         OSSL_PROVIDER_unload(def);
+}
+
+/* The five `sha.h` one-shots are exported (`crypto/sha/sha1_one.c:36-70`), so they are observed
+ * directly rather than through the provider. Each is `EVP_Q_digest(NULL, <name>, NULL, d, n, md,
+ * NULL)` in the authority, and each answers NULL when the fetch cannot resolve -- which is what a
+ * missing default provider would show. `rt_msg` is the probe's own input, so the two transcripts
+ * can only differ where the two libraries differ. */
+static void rt_one_shot_exports(void)
+{
+    unsigned char out[64];
+    const char *labels[5] = {"sha1", "sha224", "sha256", "sha384", "sha512"};
+    size_t sizes[5] = {20u, 28u, 32u, 48u, 64u};
+    size_t i;
+
+    for (i = 0; i < 5; i++) {
+        unsigned char *ret = NULL;
+
+        memset(out, 0, sizeof(out));
+        switch (i) {
+        case 0: ret = SHA1(rt_msg, 1000, out); break;
+        case 1: ret = SHA224(rt_msg, 1000, out); break;
+        case 2: ret = SHA256(rt_msg, 1000, out); break;
+        case 3: ret = SHA384(rt_msg, 1000, out); break;
+        default: ret = SHA512(rt_msg, 1000, out); break;
+        }
+        printf("oneshot.%s=%s\n", labels[i], ret == NULL ? "null" : "ok");
+        if (ret != NULL) {
+            printf("oneshot.%s.digest=", labels[i]);
+            rt_print_hex(out, sizes[i]);
+            printf("\n");
+        }
+    }
 }
 
 int main(void)
@@ -432,6 +532,7 @@ int main(void)
     for (i = 0; i < sizeof(RT_ALGORITHMS) / sizeof(RT_ALGORITHMS[0]); i++)
         rt_run(&RT_ALGORITHMS[i]);
 
+    rt_one_shot_exports();
     rt_provider_section();
 
     return 0;

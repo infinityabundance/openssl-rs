@@ -54,7 +54,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_uchar, c_ulong, c_void};
+use core::ffi::{c_char, c_int, c_uchar, c_uint, c_ulong, c_void};
 use core::ptr;
 
 use crate::context::dispatch::{OsslDispatch, OSSL_DISPATCH_END};
@@ -70,12 +70,16 @@ use crate::digest::sha2::{
     SHA224_Update, SHA256_Final, SHA256_Init, SHA256_Update, SHA384_Final, SHA384_Init,
     SHA384_Update, SHA512_Final, SHA512_Init, SHA512_Update, Sha256Ctx, Sha512Ctx,
 };
+use crate::digest::sm3::{
+    ossl_sm3_final, ossl_sm3_init, ossl_sm3_update, Sm3Ctx, SM3_CBLOCK, SM3_DIGEST_LENGTH,
+};
 use crate::evp::algorithm::OSSL_OP_DIGEST;
 use crate::evp::digest::{
     OSSL_FUNC_DIGEST_COPYCTX, OSSL_FUNC_DIGEST_DUPCTX, OSSL_FUNC_DIGEST_FINAL,
-    OSSL_FUNC_DIGEST_FREECTX, OSSL_FUNC_DIGEST_GETTABLE_PARAMS, OSSL_FUNC_DIGEST_GET_PARAMS,
+    OSSL_FUNC_DIGEST_FREECTX, OSSL_FUNC_DIGEST_GETTABLE_CTX_PARAMS,
+    OSSL_FUNC_DIGEST_GETTABLE_PARAMS, OSSL_FUNC_DIGEST_GET_CTX_PARAMS, OSSL_FUNC_DIGEST_GET_PARAMS,
     OSSL_FUNC_DIGEST_INIT, OSSL_FUNC_DIGEST_NEWCTX, OSSL_FUNC_DIGEST_SETTABLE_CTX_PARAMS,
-    OSSL_FUNC_DIGEST_SET_CTX_PARAMS, OSSL_FUNC_DIGEST_UPDATE,
+    OSSL_FUNC_DIGEST_SET_CTX_PARAMS, OSSL_FUNC_DIGEST_SQUEEZE, OSSL_FUNC_DIGEST_UPDATE,
 };
 use crate::params::{
     OsslParam, END, OSSL_PARAM_INTEGER, OSSL_PARAM_OCTET_STRING, OSSL_PARAM_UNMODIFIED,
@@ -677,6 +681,20 @@ digest_impl!(
     PROV_DIGEST_FLAG_ALGID_ABSENT
 );
 
+// `sm3_prov.c:16-18` — `IMPLEMENT_digest_functions(sm3, SM3_CTX, SM3_CBLOCK, SM3_DIGEST_LENGTH, 0,
+// ossl_sm3_init, ossl_sm3_update, ossl_sm3_final)`. Flags 0: SM3 carries no `ALGID_ABSENT` and
+// the header gives it a real OID.
+digest_impl!(
+    sm3,
+    Sm3Ctx,
+    ossl_sm3_init,
+    ossl_sm3_update,
+    ossl_sm3_final,
+    SM3_CBLOCK,
+    SM3_DIGEST_LENGTH,
+    0u64 as c_ulong
+);
+
 /// `NULLMD_CTX` — `null_prov.c:14-16`. One byte, because the authority's three entry points are
 /// no-ops and only the allocation's existence is observable.
 ///
@@ -1043,13 +1061,819 @@ mod md5_sha1 {
     ];
 }
 
+/// `sha3_prov.c`'s twelve rows — the fixed-width `SHA3`/`KECCAK` eight and the `SHAKE`/
+/// `KECCAK-KMAC` XOF four. `PROV_FUNC_SHA3_DIGEST` and `PROV_FUNC_SHAKE_DIGEST` differ only in the
+/// `squeeze` entry and the `xoflen` ctx-param entries, which is what the two macros transcribe.
+mod sha3 {
+    use super::*;
+    use crate::digest::sha3::{
+        kmac_mdsize, ossl_keccak_init, ossl_sha3_final, ossl_sha3_init, ossl_sha3_reset,
+        ossl_sha3_squeeze, ossl_sha3_update, sha3_blocksize, sha3_mdsize, KeccakCtx,
+    };
+
+    /// `OSSL_DIGEST_PARAM_XOFLEN` — `include/openssl/core_names.h`.
+    const OSSL_DIGEST_PARAM_XOFLEN: *const c_char = c"xoflen".as_ptr();
+
+    /// `SHA3_FLAGS` — `sha3_prov.c:27`.
+    const SHA3_FLAGS: c_ulong = PROV_DIGEST_FLAG_ALGID_ABSENT;
+    /// `SHAKE_FLAGS` — `sha3_prov.c:28`.
+    const SHAKE_FLAGS: c_ulong = PROV_DIGEST_FLAG_XOF | PROV_DIGEST_FLAG_ALGID_ABSENT;
+    /// `KMAC_FLAGS` — `sha3_prov.c:29`.
+    const KMAC_FLAGS: c_ulong = PROV_DIGEST_FLAG_XOF;
+
+    /// `SHA3_newctx`/`SHAKE_newctx`/`KMAC_newctx` — one body, differing in what `mdlen` is.
+    unsafe fn new_keccak(pad: u8, bitlen: usize, mdlen: Option<usize>) -> *mut c_void {
+        if ossl_prov_is_running() == 0 {
+            return ptr::null_mut();
+        }
+        let raw = CRYPTO_zalloc(core::mem::size_of::<KeccakCtx>(), FILE, LINE);
+        if raw.is_null() {
+            return raw;
+        }
+        let c = raw.cast::<KeccakCtx>();
+        // SAFETY: `c` is a freshly zeroed `KeccakCtx` the provider owns.
+        unsafe {
+            match mdlen {
+                None => {
+                    ossl_sha3_init(c, pad, bitlen);
+                }
+                Some(m) => {
+                    ossl_keccak_init(c, pad, bitlen, m);
+                    if m == 0 {
+                        (*c).md_size = usize::MAX;
+                    }
+                }
+            }
+        }
+        raw
+    }
+
+    unsafe extern "C" fn freectx(vctx: *mut c_void) {
+        // SAFETY: `vctx` is what `new_keccak` allocated or NULL.
+        unsafe {
+            CRYPTO_clear_free(vctx, core::mem::size_of::<KeccakCtx>(), FILE, LINE);
+        }
+    }
+
+    unsafe extern "C" fn dupctx(ctx: *mut c_void) -> *mut c_void {
+        if ossl_prov_is_running() == 0 || ctx.is_null() {
+            return ptr::null_mut();
+        }
+        let ret = CRYPTO_malloc(core::mem::size_of::<KeccakCtx>(), FILE, LINE);
+        if !ret.is_null() {
+            // SAFETY: both regions are `size_of::<KeccakCtx>()` bytes and distinct.
+            unsafe {
+                ptr::copy_nonoverlapping(
+                    ctx.cast::<u8>(),
+                    ret.cast::<u8>(),
+                    core::mem::size_of::<KeccakCtx>(),
+                );
+            }
+        }
+        ret
+    }
+
+    unsafe extern "C" fn copyctx(outctx: *mut c_void, inctx: *mut c_void) {
+        // SAFETY: both regions are `size_of::<KeccakCtx>()` bytes and distinct.
+        unsafe {
+            ptr::copy_nonoverlapping(
+                inctx.cast::<u8>(),
+                outctx.cast::<u8>(),
+                core::mem::size_of::<KeccakCtx>(),
+            );
+        }
+    }
+
+    unsafe extern "C" fn init(ctx: *mut c_void, _params: *const OsslParam) -> c_int {
+        if ossl_prov_is_running() == 0 {
+            return 0;
+        }
+        // `keccak_init` — `sha3_prov.c:63-70`: `newctx` fixed the rate and the pad, so INIT only
+        // resets the state.
+        // SAFETY: `ctx` is the provider's `KeccakCtx`.
+        unsafe { ossl_sha3_reset(ctx.cast::<KeccakCtx>()) };
+        1
+    }
+
+    unsafe extern "C" fn update(ctx: *mut c_void, in_: *const c_uchar, inl: usize) -> c_int {
+        // SAFETY: `ctx` is the provider's context; `in_` is readable for `inl` bytes.
+        unsafe { ossl_sha3_update(ctx.cast::<KeccakCtx>(), in_, inl) }
+    }
+
+    /// `keccak_final` — `sha3_prov.c:115-132`.
+    unsafe extern "C" fn keccak_final(
+        ctx: *mut c_void,
+        out: *mut u8,
+        outl: *mut usize,
+        outlen: usize,
+    ) -> c_int {
+        if ossl_prov_is_running() == 0 {
+            return 0;
+        }
+        let c = ctx.cast::<KeccakCtx>();
+        // SAFETY: `c` is the provider's context.
+        if unsafe { (*c).md_size } == usize::MAX {
+            return 0;
+        }
+        let mut ret = 1;
+        // SAFETY: `c` is live and `out` is writable for `outlen`.
+        unsafe {
+            if outlen > 0 {
+                ret = ossl_sha3_final(c, out, (*c).md_size);
+            }
+            *outl = (*c).md_size;
+        }
+        ret
+    }
+
+    /// `shake_squeeze` — `sha3_prov.c:134-149`.
+    unsafe extern "C" fn shake_squeeze(
+        ctx: *mut c_void,
+        out: *mut u8,
+        outl: *mut usize,
+        outlen: usize,
+    ) -> c_int {
+        if ossl_prov_is_running() == 0 {
+            return 0;
+        }
+        let mut ret = 1;
+        // SAFETY: `ctx` is the provider's context and `out` is writable for `outlen`.
+        unsafe {
+            if outlen > 0 {
+                ret = ossl_sha3_squeeze(ctx.cast::<KeccakCtx>(), out, outlen);
+            }
+            *outl = outlen;
+        }
+        ret
+    }
+
+    /// The `KECCAK-KMAC` rows' squeeze callback — the authority's `shake_squeeze` when the
+    /// selected `PROV_SHA3_METHOD` has no `squeeze`. `KMAC_SET_MD` installs `sha3_generic_md`,
+    /// whose third member is NULL (`sha3_prov.c:174-178`), while `SHAKE_SET_MD` installs
+    /// `shake_generic_md`, whose third member is `generic_sha3_squeeze` (`:180-185`). So a
+    /// `EVP_DigestSqueeze` on a `KECCAK-KMAC-*` method is refused, and this is that refusal.
+    unsafe extern "C" fn refuse_squeeze(
+        _ctx: *mut c_void,
+        _out: *mut u8,
+        _outl: *mut usize,
+        _outlen: usize,
+    ) -> c_int {
+        if ossl_prov_is_running() == 0 {
+            return 0;
+        }
+        0
+    }
+
+    /// `shake_set_ctx_params` — `sha3_prov.c:726-740` with its generated decoder collapsed to
+    /// the two keys the decoder accepts. Both map to `ctx->md_size`; a repeated key is refused.
+    unsafe extern "C" fn shake_set_ctx_params(
+        vctx: *mut c_void,
+        params: *const OsslParam,
+    ) -> c_int {
+        let c = vctx.cast::<KeccakCtx>();
+        if c.is_null() {
+            return 0;
+        }
+        // SAFETY: `params` is the caller's array, NULL or key-terminated.
+        if unsafe { ossl_param_is_empty(params) } {
+            return 1;
+        }
+        // SAFETY: `params` is key-terminated and both keys are literals.
+        let xoflen =
+            unsafe { crate::params::OSSL_PARAM_locate_const(params, OSSL_DIGEST_PARAM_XOFLEN) };
+        // SAFETY: as above.
+        let size =
+            unsafe { crate::params::OSSL_PARAM_locate_const(params, OSSL_DIGEST_PARAM_SIZE) };
+        if !xoflen.is_null() && !size.is_null() {
+            return 0;
+        }
+        let p = if !xoflen.is_null() { xoflen } else { size };
+        if !p.is_null() {
+            let mut v: usize = 0;
+            // SAFETY: `p` is a live entry of the caller's array; `v` is this frame's slot.
+            if unsafe { crate::params::OSSL_PARAM_get_size_t(p, &mut v) } == 0 {
+                return 0;
+            }
+            // SAFETY: `c` is the provider's context.
+            unsafe { (*c).md_size = v };
+        }
+        1
+    }
+
+    /// `shake_get_ctx_params` — `sha3_prov.c:644-662`.
+    unsafe extern "C" fn shake_get_ctx_params(vctx: *mut c_void, params: *mut OsslParam) -> c_int {
+        let c = vctx.cast::<KeccakCtx>();
+        if c.is_null() {
+            return 0;
+        }
+        // SAFETY: `params` is key-terminated and both keys are literals.
+        let xoflen =
+            unsafe { crate::params::OSSL_PARAM_locate_const(params, OSSL_DIGEST_PARAM_XOFLEN) };
+        // SAFETY: as above.
+        let size =
+            unsafe { crate::params::OSSL_PARAM_locate_const(params, OSSL_DIGEST_PARAM_SIZE) };
+        if !xoflen.is_null() && !size.is_null() {
+            return 0;
+        }
+        let p = if !xoflen.is_null() { xoflen } else { size };
+        if !p.is_null() {
+            // SAFETY: `p` is the caller's own writable entry.
+            if unsafe { crate::params::OSSL_PARAM_set_size_t(p.cast_mut(), (*c).md_size) } == 0 {
+                return 0;
+            }
+        }
+        1
+    }
+
+    /// `shake_get_ctx_params_list` / `shake_set_ctx_params_list` — `sha3_prov.c:584-588`.
+    static CTX_PARAMS: [OsslParam; 3] = [
+        OsslParam {
+            key: c"xoflen".as_ptr(),
+            data_type: OSSL_PARAM_UNSIGNED_INTEGER,
+            data: ptr::null_mut(),
+            data_size: 0,
+            return_size: OSSL_PARAM_UNMODIFIED,
+        },
+        OsslParam {
+            key: c"size".as_ptr(),
+            data_type: OSSL_PARAM_UNSIGNED_INTEGER,
+            data: ptr::null_mut(),
+            data_size: 0,
+            return_size: OSSL_PARAM_UNMODIFIED,
+        },
+        END,
+    ];
+
+    unsafe extern "C" fn settable_ctx_params(
+        _ctx: *mut c_void,
+        _provctx: *mut c_void,
+    ) -> *const OsslParam {
+        CTX_PARAMS.as_ptr()
+    }
+
+    /// `keccak_init_params` — `sha3_prov.c:72-76`.
+    unsafe extern "C" fn keccak_init_params(vctx: *mut c_void, params: *const OsslParam) -> c_int {
+        if ossl_prov_is_running() == 0 {
+            return 0;
+        }
+        // SAFETY: `vctx` is the provider's context.
+        unsafe { ossl_sha3_reset(vctx.cast::<KeccakCtx>()) };
+        // SAFETY: `vctx` is the provider's context and `params` the caller's array.
+        unsafe { shake_set_ctx_params(vctx, params) }
+    }
+
+    macro_rules! sha3_fixed_row {
+        ($module:ident, $pad:expr, $bitlen:expr, $blksz:expr, $dgstsz:expr, $flags:expr) => {
+            pub(super) mod $module {
+                use super::*;
+
+                unsafe extern "C" fn newctx(_provctx: *mut c_void) -> *mut c_void {
+                    // SAFETY: `super` is the `sha3` provider module.
+                    unsafe { super::new_keccak($pad, $bitlen, None) }
+                }
+
+                unsafe extern "C" fn get_params(params: *mut OsslParam) -> c_int {
+                    // SAFETY: the caller's contract is `ossl_digest_default_get_params`'s.
+                    unsafe { ossl_digest_default_get_params(params, $blksz, $dgstsz, $flags) }
+                }
+
+                pub(crate) static FUNCTIONS: [OsslDispatch; 10] = [
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_NEWCTX,
+                        function: newctx as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_UPDATE,
+                        function: super::update as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_FINAL,
+                        function: super::keccak_final as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_FREECTX,
+                        function: super::freectx as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_DUPCTX,
+                        function: super::dupctx as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_COPYCTX,
+                        function: super::copyctx as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_GET_PARAMS,
+                        function: get_params as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_GETTABLE_PARAMS,
+                        function: ossl_digest_default_gettable_params as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_INIT,
+                        function: super::init as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_DISPATCH_END,
+                        function: ptr::null_mut(),
+                    },
+                ];
+            }
+        };
+    }
+
+    macro_rules! sha3_xof_row {
+        ($module:ident, $pad:expr, $bitlen:expr, $mdlen:expr, $blksz:expr, $dgstsz:expr,
+         $flags:expr, $squeeze:ident) => {
+            pub(super) mod $module {
+                use super::*;
+
+                unsafe extern "C" fn newctx(_provctx: *mut c_void) -> *mut c_void {
+                    // SAFETY: `super` is the `sha3` provider module.
+                    unsafe { super::new_keccak($pad, $bitlen, Some($mdlen)) }
+                }
+
+                unsafe extern "C" fn get_params(params: *mut OsslParam) -> c_int {
+                    // SAFETY: the caller's contract is `ossl_digest_default_get_params`'s.
+                    unsafe { ossl_digest_default_get_params(params, $blksz, $dgstsz, $flags) }
+                }
+
+                pub(crate) static FUNCTIONS: [OsslDispatch; 15] = [
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_NEWCTX,
+                        function: newctx as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_UPDATE,
+                        function: super::update as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_FINAL,
+                        function: super::keccak_final as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_FREECTX,
+                        function: super::freectx as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_DUPCTX,
+                        function: super::dupctx as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_COPYCTX,
+                        function: super::copyctx as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_GET_PARAMS,
+                        function: get_params as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_GETTABLE_PARAMS,
+                        function: ossl_digest_default_gettable_params as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_SQUEEZE,
+                        function: super::$squeeze as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_INIT,
+                        function: super::keccak_init_params as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_SET_CTX_PARAMS,
+                        function: super::shake_set_ctx_params as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_SETTABLE_CTX_PARAMS,
+                        function: super::settable_ctx_params as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_GET_CTX_PARAMS,
+                        function: super::shake_get_ctx_params as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_GETTABLE_CTX_PARAMS,
+                        function: super::settable_ctx_params as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_DISPATCH_END,
+                        function: ptr::null_mut(),
+                    },
+                ];
+            }
+        };
+    }
+
+    // `IMPLEMENT_SHA3_functions` / `IMPLEMENT_KECCAK_functions` / `IMPLEMENT_SHAKE_functions` /
+    // `IMPLEMENT_KMAC_functions` — `sha3_prov.c:742-790`, with `SHA3_BLOCKSIZE(bitlen)`
+    // expanded.
+    sha3_fixed_row!(
+        sha3_224,
+        0x06,
+        224,
+        sha3_blocksize(224),
+        sha3_mdsize(224),
+        SHA3_FLAGS
+    );
+    sha3_fixed_row!(
+        sha3_256,
+        0x06,
+        256,
+        sha3_blocksize(256),
+        sha3_mdsize(256),
+        SHA3_FLAGS
+    );
+    sha3_fixed_row!(
+        sha3_384,
+        0x06,
+        384,
+        sha3_blocksize(384),
+        sha3_mdsize(384),
+        SHA3_FLAGS
+    );
+    sha3_fixed_row!(
+        sha3_512,
+        0x06,
+        512,
+        sha3_blocksize(512),
+        sha3_mdsize(512),
+        SHA3_FLAGS
+    );
+    sha3_fixed_row!(
+        keccak_224,
+        0x01,
+        224,
+        sha3_blocksize(224),
+        sha3_mdsize(224),
+        SHA3_FLAGS
+    );
+    sha3_fixed_row!(
+        keccak_256,
+        0x01,
+        256,
+        sha3_blocksize(256),
+        sha3_mdsize(256),
+        SHA3_FLAGS
+    );
+    sha3_fixed_row!(
+        keccak_384,
+        0x01,
+        384,
+        sha3_blocksize(384),
+        sha3_mdsize(384),
+        SHA3_FLAGS
+    );
+    sha3_fixed_row!(
+        keccak_512,
+        0x01,
+        512,
+        sha3_blocksize(512),
+        sha3_mdsize(512),
+        SHA3_FLAGS
+    );
+    sha3_xof_row!(
+        shake_128,
+        0x1f,
+        128,
+        0,
+        sha3_blocksize(128),
+        0,
+        SHAKE_FLAGS,
+        shake_squeeze
+    );
+    sha3_xof_row!(
+        shake_256,
+        0x1f,
+        256,
+        0,
+        sha3_blocksize(256),
+        0,
+        SHAKE_FLAGS,
+        shake_squeeze
+    );
+    sha3_xof_row!(
+        keccak_kmac_128,
+        0x04,
+        128,
+        2 * 128,
+        sha3_blocksize(128),
+        kmac_mdsize(128),
+        KMAC_FLAGS,
+        refuse_squeeze
+    );
+    sha3_xof_row!(
+        keccak_kmac_256,
+        0x04,
+        256,
+        2 * 256,
+        sha3_blocksize(256),
+        kmac_mdsize(256),
+        KMAC_FLAGS,
+        refuse_squeeze
+    );
+}
+
+/// `blake2_prov.c`'s `IMPLEMENT_BLAKE_functions` body — the two rows `defltprov.c:140-141`
+/// publishes. The `size` ctx parameter is the one the provider's `blake_get_ctx_params`/
+/// `blake_set_ctx_params` carry; everything else is the default-parameter path.
+mod blake2 {
+    use super::*;
+    use crate::digest::blake2::{blake2b, blake2s};
+
+    /// `blake_get_ctx_params_list` — `blake2_prov.c:29-32`.
+    static CTX_PARAMS: [OsslParam; 2] = [
+        OsslParam {
+            key: OSSL_DIGEST_PARAM_SIZE,
+            data_type: OSSL_PARAM_UNSIGNED_INTEGER,
+            data: ptr::null_mut(),
+            data_size: 0,
+            return_size: OSSL_PARAM_UNMODIFIED,
+        },
+        END,
+    ];
+
+    unsafe extern "C" fn settable_ctx_params(
+        _ctx: *mut c_void,
+        _provctx: *mut c_void,
+    ) -> *const OsslParam {
+        CTX_PARAMS.as_ptr()
+    }
+
+    macro_rules! blake_row {
+        ($row:ident, $flavour:ident, $blksz:expr, $outbytes:expr, $dgstsz:expr) => {
+            pub(super) mod $row {
+                use super::*;
+
+                unsafe extern "C" fn newctx(_provctx: *mut c_void) -> *mut c_void {
+                    if ossl_prov_is_running() == 0 {
+                        return ptr::null_mut();
+                    }
+                    CRYPTO_zalloc(core::mem::size_of::<$flavour::MdData>(), FILE, LINE)
+                }
+
+                unsafe extern "C" fn freectx(vctx: *mut c_void) {
+                    // SAFETY: `vctx` is what `newctx` allocated or NULL.
+                    unsafe {
+                        CRYPTO_clear_free(
+                            vctx,
+                            core::mem::size_of::<$flavour::MdData>(),
+                            FILE,
+                            LINE,
+                        );
+                    }
+                }
+
+                unsafe extern "C" fn dupctx(ctx: *mut c_void) -> *mut c_void {
+                    if ossl_prov_is_running() == 0 || ctx.is_null() {
+                        return ptr::null_mut();
+                    }
+                    let ret = CRYPTO_malloc(core::mem::size_of::<$flavour::MdData>(), FILE, LINE);
+                    if !ret.is_null() {
+                        // SAFETY: both regions are the same size and distinct.
+                        unsafe {
+                            ptr::copy_nonoverlapping(
+                                ctx.cast::<u8>(),
+                                ret.cast::<u8>(),
+                                core::mem::size_of::<$flavour::MdData>(),
+                            );
+                        }
+                    }
+                    ret
+                }
+
+                unsafe extern "C" fn copyctx(outctx: *mut c_void, inctx: *mut c_void) {
+                    // SAFETY: both regions are the same size and distinct.
+                    unsafe {
+                        ptr::copy_nonoverlapping(
+                            inctx.cast::<u8>(),
+                            outctx.cast::<u8>(),
+                            core::mem::size_of::<$flavour::MdData>(),
+                        );
+                    }
+                }
+
+                /// `blake_set_ctx_params` — `blake2_prov.c:136-160`'s generated body, collapsed
+                /// to the one key the decoder accepts.
+                unsafe extern "C" fn set_ctx_params(
+                    ctx: *mut c_void,
+                    params: *const OsslParam,
+                ) -> c_int {
+                    if ctx.is_null() {
+                        return 0;
+                    }
+                    // SAFETY: `params` is NULL or key-terminated per the caller's contract.
+                    if params.is_null() || unsafe { ossl_param_is_empty(params) } {
+                        return 1;
+                    }
+                    // SAFETY: `params` is key-terminated and the key is a literal.
+                    let p = unsafe {
+                        crate::params::OSSL_PARAM_locate_const(params, OSSL_DIGEST_PARAM_SIZE)
+                    };
+                    if !p.is_null() {
+                        let mut size: c_uint = 0;
+                        // SAFETY: `p` is a live entry of the caller's array.
+                        if unsafe { crate::params::OSSL_PARAM_get_uint(p, &mut size) } == 0 {
+                            return 0;
+                        }
+                        if size < 1 || size as usize > $outbytes {
+                            return 0;
+                        }
+                        // SAFETY: `ctx` is the provider's context.
+                        unsafe {
+                            $flavour::param_set_digest_length(
+                                &mut *ptr::addr_of_mut!((*ctx.cast::<$flavour::MdData>()).params),
+                                size as u8,
+                            );
+                        }
+                    }
+                    1
+                }
+
+                /// `blake_get_ctx_params` — `blake2_prov.c:117-134`.
+                unsafe extern "C" fn get_ctx_params(
+                    ctx: *mut c_void,
+                    params: *mut OsslParam,
+                ) -> c_int {
+                    if ctx.is_null() {
+                        return 0;
+                    }
+                    // SAFETY: `params` is NULL or key-terminated.
+                    let p = unsafe {
+                        crate::params::OSSL_PARAM_locate_const(params, OSSL_DIGEST_PARAM_SIZE)
+                    };
+                    if !p.is_null() {
+                        // SAFETY: `ctx` is the provider's context.
+                        let size = unsafe { (*ctx.cast::<$flavour::MdData>()).params.b[0] };
+                        // SAFETY: `p` is the caller's own writable entry.
+                        if unsafe {
+                            crate::params::OSSL_PARAM_set_uint(p.cast_mut(), size as c_uint)
+                        } == 0
+                        {
+                            return 0;
+                        }
+                    }
+                    1
+                }
+
+                /// `blake_init` — `blake2_prov.c:162-171`: re-initialise the parameters but keep
+                /// a `size` the caller set before `init`.
+                unsafe extern "C" fn internal_init(
+                    ctx: *mut c_void,
+                    params: *const OsslParam,
+                ) -> c_int {
+                    if ossl_prov_is_running() == 0 {
+                        return 0;
+                    }
+                    // SAFETY: `ctx` is the provider's context and `params` the caller's array.
+                    if unsafe { set_ctx_params(ctx, params) } == 0 {
+                        return 0;
+                    }
+                    let md = ctx.cast::<$flavour::MdData>();
+                    // SAFETY: `md` is the provider's context.
+                    let digest_length = unsafe { (*md).params.b[0] };
+                    // SAFETY: `md` is the provider's context.
+                    unsafe {
+                        $flavour::param_init(&mut (*md).params);
+                        if digest_length != 0 {
+                            (*md).params.b[0] = digest_length;
+                        }
+                        $flavour::init(ptr::addr_of_mut!((*md).ctx), ptr::addr_of!((*md).params));
+                    }
+                    1
+                }
+
+                unsafe extern "C" fn update(
+                    ctx: *mut c_void,
+                    in_: *const c_uchar,
+                    inl: usize,
+                ) -> c_int {
+                    // SAFETY: the md-data struct's `ctx` field is first, so the provider pointer
+                    // is the context pointer, as the authority's cast assumes.
+                    c_int::from(unsafe {
+                        $flavour::update(ctx.cast::<$flavour::Ctx>(), in_, inl) != 0
+                    })
+                }
+
+                /// `blake_internal_final` — `blake2_prov.c:222-243`.
+                unsafe extern "C" fn internal_final(
+                    ctx: *mut c_void,
+                    out: *mut u8,
+                    outl: *mut usize,
+                    outsz: usize,
+                ) -> c_int {
+                    if ossl_prov_is_running() == 0 {
+                        return 0;
+                    }
+                    let md = ctx.cast::<$flavour::MdData>();
+                    // SAFETY: `md` is the provider's context and `outl` the caller's slot.
+                    let outlen = unsafe {
+                        let outlen = (*md).ctx.outlen;
+                        *outl = outlen;
+                        outlen
+                    };
+                    if outsz == 0 {
+                        return 1;
+                    }
+                    if outsz < outlen {
+                        return 0;
+                    }
+                    // SAFETY: `out` is writable for `outsz >= outlen`.
+                    unsafe { $flavour::final_(out, ctx.cast::<$flavour::Ctx>()) }
+                }
+
+                unsafe extern "C" fn get_params(params: *mut OsslParam) -> c_int {
+                    // SAFETY: the caller's contract is `ossl_digest_default_get_params`'s.
+                    unsafe { ossl_digest_default_get_params(params, $blksz, $dgstsz, 0) }
+                }
+
+                pub(crate) static FUNCTIONS: [OsslDispatch; 14] = [
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_NEWCTX,
+                        function: newctx as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_UPDATE,
+                        function: update as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_FINAL,
+                        function: internal_final as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_FREECTX,
+                        function: freectx as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_DUPCTX,
+                        function: dupctx as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_COPYCTX,
+                        function: copyctx as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_GET_PARAMS,
+                        function: get_params as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_GETTABLE_PARAMS,
+                        function: ossl_digest_default_gettable_params as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_INIT,
+                        function: internal_init as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_GETTABLE_CTX_PARAMS,
+                        function: settable_ctx_params as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_SETTABLE_CTX_PARAMS,
+                        function: settable_ctx_params as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_GET_CTX_PARAMS,
+                        function: get_ctx_params as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_FUNC_DIGEST_SET_CTX_PARAMS,
+                        function: set_ctx_params as *mut c_void,
+                    },
+                    OsslDispatch {
+                        function_id: OSSL_DISPATCH_END,
+                        function: ptr::null_mut(),
+                    },
+                ];
+            }
+        };
+    }
+
+    // `IMPLEMENT_BLAKE_functions(blake2s256, s, s)` and `(blake2b512, b, b)` — the two rows
+    // `defltprov.c:140-141` publishes.
+    blake_row!(
+        blake2s256,
+        blake2s,
+        blake2s::BLOCKBYTES,
+        blake2s::OUTBYTES,
+        blake2s::OUTBYTES
+    );
+    blake_row!(
+        blake2b512,
+        blake2b,
+        blake2b::BLOCKBYTES,
+        blake2b::OUTBYTES,
+        blake2b::OUTBYTES
+    );
+}
+
 /// The property string every row of `deflt_digests[]` carries.
 const DEFAULT_PROPERTIES: *const c_char = c"provider=default".as_ptr();
 
 /// `static const OSSL_ALGORITHM deflt_digests[]` — `providers/defltprov.c`, restricted to the
 /// constructions 8.1 has landed **and** that file publishes. The alias lists are `prov/names.h`'s,
 /// verbatim.
-static DEFLT_DIGESTS: [OsslAlgorithm; 13] = [
+static DEFLT_DIGESTS: [OsslAlgorithm; 28] = [
     OsslAlgorithm {
         algorithm_names: c"SHA1:SHA-1:SSL3-SHA1:1.3.14.3.2.26".as_ptr(),
         property_definition: DEFAULT_PROPERTIES,
@@ -1096,6 +1920,96 @@ static DEFLT_DIGESTS: [OsslAlgorithm; 13] = [
         algorithm_names: c"SHA2-512/256:SHA-512/256:SHA512-256:2.16.840.1.101.3.4.2.6".as_ptr(),
         property_definition: DEFAULT_PROPERTIES,
         implementation: sha512_256::FUNCTIONS.as_ptr() as *const c_void,
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SHA3-224:2.16.840.1.101.3.4.2.7".as_ptr(),
+        property_definition: DEFAULT_PROPERTIES,
+        implementation: sha3::sha3_224::FUNCTIONS.as_ptr() as *const c_void,
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SHA3-256:2.16.840.1.101.3.4.2.8".as_ptr(),
+        property_definition: DEFAULT_PROPERTIES,
+        implementation: sha3::sha3_256::FUNCTIONS.as_ptr() as *const c_void,
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SHA3-384:2.16.840.1.101.3.4.2.9".as_ptr(),
+        property_definition: DEFAULT_PROPERTIES,
+        implementation: sha3::sha3_384::FUNCTIONS.as_ptr() as *const c_void,
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SHA3-512:2.16.840.1.101.3.4.2.10".as_ptr(),
+        property_definition: DEFAULT_PROPERTIES,
+        implementation: sha3::sha3_512::FUNCTIONS.as_ptr() as *const c_void,
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"KECCAK-224".as_ptr(),
+        property_definition: DEFAULT_PROPERTIES,
+        implementation: sha3::keccak_224::FUNCTIONS.as_ptr() as *const c_void,
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"KECCAK-256".as_ptr(),
+        property_definition: DEFAULT_PROPERTIES,
+        implementation: sha3::keccak_256::FUNCTIONS.as_ptr() as *const c_void,
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"KECCAK-384".as_ptr(),
+        property_definition: DEFAULT_PROPERTIES,
+        implementation: sha3::keccak_384::FUNCTIONS.as_ptr() as *const c_void,
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"KECCAK-512".as_ptr(),
+        property_definition: DEFAULT_PROPERTIES,
+        implementation: sha3::keccak_512::FUNCTIONS.as_ptr() as *const c_void,
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"KECCAK-KMAC-128:KECCAK-KMAC128".as_ptr(),
+        property_definition: DEFAULT_PROPERTIES,
+        implementation: sha3::keccak_kmac_128::FUNCTIONS.as_ptr() as *const c_void,
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"KECCAK-KMAC-256:KECCAK-KMAC256".as_ptr(),
+        property_definition: DEFAULT_PROPERTIES,
+        implementation: sha3::keccak_kmac_256::FUNCTIONS.as_ptr() as *const c_void,
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SHAKE-128:SHAKE128:2.16.840.1.101.3.4.2.11".as_ptr(),
+        property_definition: DEFAULT_PROPERTIES,
+        implementation: sha3::shake_128::FUNCTIONS.as_ptr() as *const c_void,
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SHAKE-256:SHAKE256:2.16.840.1.101.3.4.2.12".as_ptr(),
+        property_definition: DEFAULT_PROPERTIES,
+        implementation: sha3::shake_256::FUNCTIONS.as_ptr() as *const c_void,
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"BLAKE2S-256:BLAKE2s256:1.3.6.1.4.1.1722.12.2.2.8".as_ptr(),
+        property_definition: DEFAULT_PROPERTIES,
+        implementation: blake2::blake2s256::FUNCTIONS.as_ptr() as *const c_void,
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"BLAKE2B-512:BLAKE2b512:1.3.6.1.4.1.1722.12.2.1.16".as_ptr(),
+        property_definition: DEFAULT_PROPERTIES,
+        implementation: blake2::blake2b512::FUNCTIONS.as_ptr() as *const c_void,
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SM3:1.2.156.10197.1.401".as_ptr(),
+        property_definition: DEFAULT_PROPERTIES,
+        implementation: sm3::FUNCTIONS.as_ptr() as *const c_void,
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
@@ -1216,8 +2130,8 @@ mod tests {
             n += 1;
         }
         assert_eq!(
-            n, 12,
-            "the twelve default-provider digest rows 8.1 has landed"
+            n, 27,
+            "the twenty-seven default-provider digest rows 8.1 has landed"
         );
 
         // SAFETY: the query's contract; an operation this half does not answer.
@@ -1273,7 +2187,7 @@ mod tests {
     #[test]
     fn the_added_rows_publish_the_names_and_sizes() {
         // (full algorithm_names string, blocksize, size)
-        let want: [(&str, usize, usize); 12] = [
+        let want: [(&str, usize, usize); 27] = [
             ("SHA1:SHA-1:SSL3-SHA1:1.3.14.3.2.26", 64, 20),
             ("SHA2-224:SHA-224:SHA224:2.16.840.1.101.3.4.2.4", 64, 28),
             ("SHA2-256:SHA-256:SHA256:2.16.840.1.101.3.4.2.1", 64, 32),
@@ -1290,6 +2204,21 @@ mod tests {
                 128,
                 32,
             ),
+            ("SHA3-224:2.16.840.1.101.3.4.2.7", 144, 28),
+            ("SHA3-256:2.16.840.1.101.3.4.2.8", 136, 32),
+            ("SHA3-384:2.16.840.1.101.3.4.2.9", 104, 48),
+            ("SHA3-512:2.16.840.1.101.3.4.2.10", 72, 64),
+            ("KECCAK-224", 144, 28),
+            ("KECCAK-256", 136, 32),
+            ("KECCAK-384", 104, 48),
+            ("KECCAK-512", 72, 64),
+            ("KECCAK-KMAC-128:KECCAK-KMAC128", 168, 32),
+            ("KECCAK-KMAC-256:KECCAK-KMAC256", 136, 64),
+            ("SHAKE-128:SHAKE128:2.16.840.1.101.3.4.2.11", 168, 0),
+            ("SHAKE-256:SHAKE256:2.16.840.1.101.3.4.2.12", 136, 0),
+            ("BLAKE2S-256:BLAKE2s256:1.3.6.1.4.1.1722.12.2.2.8", 64, 32),
+            ("BLAKE2B-512:BLAKE2b512:1.3.6.1.4.1.1722.12.2.1.16", 128, 64),
+            ("SM3:1.2.156.10197.1.401", 64, 32),
             ("MD5:SSL3-MD5:1.2.840.113549.2.5", 64, 16),
             ("MD5-SHA1", 64, 36),
             ("RIPEMD-160:RIPEMD160:RIPEMD:RMD160:1.3.36.3.2.1", 64, 20),

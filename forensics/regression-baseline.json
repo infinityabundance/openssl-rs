@@ -166,7 +166,7 @@
       "verdict": "pass"
     },
     "RT-DIGEST": {
-      "observations": 129,
+      "observations": 247,
       "verdict": "pass"
     },
     "RT-DSO": {
@@ -390,7 +390,7 @@
     "blocking_dependencies": 25,
     "divergence_names_covered": 32,
     "findings": 0,
-    "language_census": 3046,
+    "language_census": 3067,
     "sealed_census": 57
   }
 }

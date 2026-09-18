@@ -51,6 +51,7 @@
 #include <openssl/ripemd.h>
 #include <openssl/sha.h>
 #include <openssl/whrlpool.h>
+#include <openssl/evp.h>
 
 #define CT_MAX_INPUT (1u << 16)
 
@@ -102,6 +103,45 @@ static const struct ct_algorithm CT_ALGORITHMS[] = {
     {"sha512", sha512_init, sha512_update, sha512_final, 64u},
     {"whirlpool", whirlpool_init, whirlpool_update, whirlpool_final, 64u},
 };
+
+/* The provider-only constructions. None of these has an exported low-level `X_Init`/`X_Update`
+ * entry point -- D197 read that from `include/openssl/sha.h` and the symbol inventory -- so the
+ * fetch *is* the surface, exactly as it is in `rt_digest_probe.c`'s provider section. `xof` rows
+ * are finalised with `EVP_DigestFinalXOF` at `out_len`; the fixed rows use `EVP_DigestFinal_ex`
+ * and the digest length must match `out_len`. */
+struct ct_evp_algorithm {
+    const char *name;
+    const char *fetch;
+    size_t out_len;
+    int xof;
+};
+
+static const struct ct_evp_algorithm CT_EVP_ALGORITHMS[] = {
+    {"sha256_192", "SHA2-256/192", 24u, 0},
+    {"sha512_224", "SHA2-512/224", 28u, 0},
+    {"sha512_256", "SHA2-512/256", 32u, 0},
+    {"sha3_224", "SHA3-224", 28u, 0},
+    {"sha3_256", "SHA3-256", 32u, 0},
+    {"sha3_384", "SHA3-384", 48u, 0},
+    {"sha3_512", "SHA3-512", 64u, 0},
+    {"shake128", "SHAKE-128", 32u, 1},
+    {"shake256", "SHAKE-256", 64u, 1},
+    {"blake2s256", "BLAKE2S-256", 32u, 0},
+    {"blake2b512", "BLAKE2B-512", 64u, 0},
+    {"sm3", "SM3", 32u, 0},
+    {"md5_sha1", "MD5-SHA1", 36u, 0},
+};
+
+static const struct ct_evp_algorithm *ct_evp_lookup(const char *name)
+{
+    size_t i;
+
+    for (i = 0; i < sizeof(CT_EVP_ALGORITHMS) / sizeof(CT_EVP_ALGORITHMS[0]); i++) {
+        if (strcmp(CT_EVP_ALGORITHMS[i].name, name) == 0)
+            return &CT_EVP_ALGORITHMS[i];
+    }
+    return NULL;
+}
 
 static const struct ct_algorithm *ct_lookup(const char *name)
 {
@@ -189,6 +229,69 @@ static int ct_compute(const struct ct_algorithm *algo, const unsigned char *data
     return 0;
 }
 
+/* Apply one update shape to an EVP digest context. Answers 1 on success. */
+static int ct_evp_updates(EVP_MD_CTX *ctx, const unsigned char *data, size_t len,
+                          const char *mode)
+{
+    size_t i;
+
+    if (strncmp(mode, "count:", 6) == 0 && mode[6] != '\0') {
+        unsigned long reps = strtoul(mode + 6, NULL, 10);
+        unsigned long r;
+
+        if (reps == 0)
+            return 0;
+        for (r = 0; r < reps; r++) {
+            if (EVP_DigestUpdate(ctx, data, len) != 1)
+                return 0;
+        }
+        return 1;
+    }
+    if (strcmp(mode, "one") == 0)
+        return EVP_DigestUpdate(ctx, data, len) == 1;
+    if (strcmp(mode, "two") == 0) {
+        size_t half = len / 2;
+
+        return EVP_DigestUpdate(ctx, data, half) == 1
+               && EVP_DigestUpdate(ctx, data + half, len - half) == 1;
+    }
+    if (strcmp(mode, "byte") == 0) {
+        for (i = 0; i < len; i++) {
+            if (EVP_DigestUpdate(ctx, data + i, 1) != 1)
+                return 0;
+        }
+        return 1;
+    }
+    return 0;
+}
+
+/* One provider-mediated (algorithm, mode) call. Answers 0 only when a fetch or a call refused. */
+static int ct_evp_compute(const struct ct_evp_algorithm *algo, const unsigned char *data,
+                          size_t len, const char *mode, unsigned char *out)
+{
+    EVP_MD *md = EVP_MD_fetch(NULL, algo->fetch, NULL);
+    EVP_MD_CTX *ctx = NULL;
+    int ok = 0;
+
+    if (md == NULL)
+        return 0;
+    ctx = EVP_MD_CTX_new();
+    if (ctx != NULL && EVP_DigestInit_ex(ctx, md, NULL) == 1
+        && ct_evp_updates(ctx, data, len, mode)) {
+        if (algo->xof) {
+            ok = EVP_DigestFinalXOF(ctx, out, algo->out_len);
+        } else {
+            unsigned int outl = 0;
+
+            if (EVP_DigestFinal_ex(ctx, out, &outl) == 1 && outl == algo->out_len)
+                ok = 1;
+        }
+    }
+    EVP_MD_CTX_free(ctx);
+    EVP_MD_free(md);
+    return ok;
+}
+
 static void ct_print_hex(const unsigned char *bytes, size_t n)
 {
     size_t i;
@@ -236,7 +339,24 @@ int main(int argc, char **argv)
 
         algo = ct_lookup(name);
         if (algo == NULL) {
-            printf("%s\terr\tunknown-algorithm\n", index);
+            const struct ct_evp_algorithm *ealgo = ct_evp_lookup(name);
+
+            if (ealgo == NULL) {
+                printf("%s\terr\tunknown-algorithm\n", index);
+                continue;
+            }
+            if (!ct_hexdecode(hex, input, &len)) {
+                printf("%s\terr\tbad-hex\n", index);
+                continue;
+            }
+            memset(out, 0, sizeof(out));
+            if (!ct_evp_compute(ealgo, input, len, mode, out)) {
+                printf("%s\terr\tinit-update-final-failed\n", index);
+                continue;
+            }
+            printf("%s\tok\t", index);
+            ct_print_hex(out, ealgo->out_len);
+            printf("\n");
             continue;
         }
         if (!ct_hexdecode(hex, input, &len)) {
