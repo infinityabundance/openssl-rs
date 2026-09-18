@@ -1,0 +1,13 @@
+{
+  "schema": "openssl-rs/court-coverage-rows/v1",
+  "note": "Sets 2 and 3 of the court coverage atlas, plus the list of reference-basis probes. Authored data rather than a table inside forensics/tools/court_coverage.py, because each row is an auditable claim and a change to one reads as a data diff. The generator validates every row: an indirect `entry` must be an implemented export that the named court directly courts, and a non-observable row must carry a reason and an authority citation. A court named in `reference_probes` contributes basis `referenced` rather than `called`, which the atlas states in its own `claim`. See docs/DECISIONS.md D199.",
+  "reference_probes": [
+    "RT-RUNTIME-REF",
+    "RT-BIO-CONF-REF",
+    "RT-BN-ASN1-REF",
+    "RT-PROVIDER-REF",
+    "RT-EVP-REF"
+  ],
+  "indirect": [],
+  "non_observable": []
+}

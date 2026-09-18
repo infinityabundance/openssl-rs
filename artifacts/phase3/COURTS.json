@@ -176,15 +176,32 @@
           "candidate": "artifacts/phase3/probes/rt_runtime_ext_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 89,
+        "candidate_exit_code": 0,
+        "candidate_observations": 89,
+        "candidate_stderr_tail": [],
+        "court": "RT-RUNTIME-REF",
+        "crashed": false,
+        "probe": "court/phase3/rt_coverage_ref_probe.candidate",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase3/probes/rt_coverage_ref_probe.authority",
+          "candidate": "artifacts/phase3/probes/rt_coverage_ref_probe.candidate"
+        },
+        "verdict": "pass"
       }
     ],
     "summary": {
       "fail": 0,
-      "pass": 10,
-      "total": 10
+      "pass": 11,
+      "total": 11
     }
   },
-  "body_hash": "7b086d8704c4c48c068889dadd629ba06c4cad62e74712b4f409c8d0cdb4b1aa",
+  "body_hash": "2aab21d5c1775bae16b748cd92b24f4eccb01408833508d84966905a16076b84",
   "generator": "forensics/tools/phase3_courts.py",
   "inputs": [],
   "kind": "phase3-courts",

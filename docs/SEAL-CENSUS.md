@@ -68,7 +68,7 @@ Deferred out, by receiving stratum:
 * to phase 13: 22 symbol(s)
   `ASYNC_WAIT_CTX_clear_fd`, `ASYNC_WAIT_CTX_free`, `ASYNC_WAIT_CTX_get_all_fds`, `ASYNC_WAIT_CTX_get_callback`, `ASYNC_WAIT_CTX_get_changed_fds`, `ASYNC_WAIT_CTX_get_fd`, `ASYNC_WAIT_CTX_get_status`, `ASYNC_WAIT_CTX_new`, `ASYNC_WAIT_CTX_set_callback`, `ASYNC_WAIT_CTX_set_status`, `ASYNC_WAIT_CTX_set_wait_fd`, `ASYNC_block_pause`, `ASYNC_cleanup_thread`, `ASYNC_get_current_job`, `ASYNC_get_mem_functions`, `ASYNC_get_wait_ctx`, `ASYNC_init_thread`, `ASYNC_is_capable`, `ASYNC_pause_job`, `ASYNC_set_mem_functions`, `ASYNC_start_job`, `ASYNC_unblock_pause`
 
-Courts: `all pass`, 10 court(s), **4412** authority observation(s) over 10 transcript court(s).
+Courts: `all pass`, 11 court(s), **4501** authority observation(s) over 11 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
@@ -82,6 +82,7 @@ Courts: `all pass`, 10 court(s), **4412** authority observation(s) over 10 trans
 | RT-SECURE | `pass` | 32 |
 | RT-LHASH | `pass` | 56 |
 | RT-RUNTIME-EXT | `pass` | 94 |
+| RT-RUNTIME-REF | `pass` | 89 |
 
 ## Phase 4 — BIO + CONF + object database
 
@@ -107,7 +108,7 @@ Hand-offs received and discharged:
 
 * from phase 3: 16 symbol(s) — `ERR_add_error_mem_bio`, `ERR_print_errors`, `ERR_print_errors_cb`, `ERR_print_errors_fp`, `OBJ_create_objects`, `OPENSSL_INIT_free`, `OPENSSL_INIT_new`, `OPENSSL_INIT_set_config_appname`, `OPENSSL_INIT_set_config_file_flags`, `OPENSSL_INIT_set_config_filename`, `OPENSSL_LH_node_stats`, `OPENSSL_LH_node_stats_bio`, `OPENSSL_LH_node_usage_stats`, `OPENSSL_LH_node_usage_stats_bio`, `OPENSSL_LH_stats`, `OPENSSL_LH_stats_bio`
 
-Courts: `all pass`, 17 court(s), **3244** authority observation(s) over 17 transcript court(s).
+Courts: `all pass`, 18 court(s), **3280** authority observation(s) over 18 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
@@ -128,6 +129,7 @@ Courts: `all pass`, 17 court(s), **3244** authority observation(s) over 17 trans
 | RT-OBJ-STREAM | `pass` | 91 |
 | RT-CONF | `pass` | 736 |
 | RT-COMP | `pass` | 27 |
+| RT-BIO-CONF-REF | `pass` | 36 |
 
 ## Phase 5 — BN + ASN.1 + DER/PEM
 
@@ -159,7 +161,7 @@ Hand-offs received and discharged:
 
 * from phase 4: 4 symbol(s) — `BIO_asn1_get_prefix`, `BIO_asn1_get_suffix`, `BIO_asn1_set_prefix`, `BIO_asn1_set_suffix`
 
-Courts: `all pass`, 9 court(s), **10529** authority observation(s) over 9 transcript court(s).
+Courts: `all pass`, 10 court(s), **10623** authority observation(s) over 10 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
@@ -172,6 +174,7 @@ Courts: `all pass`, 9 court(s), **10529** authority observation(s) over 9 transc
 | RT-ASN1-PRINT | `pass` | 275 |
 | RT-ASN1-MIME | `pass` | 188 |
 | RT-PEM | `pass` | 37 |
+| RT-BN-ASN1-REF | `pass` | 94 |
 
 ## Phase 6 — OSSL_LIB_CTX + provider core
 
@@ -190,7 +193,7 @@ Hand-offs received and discharged:
 * from phase 4: 18 symbol(s) — `BIO_new_from_core_bio`, `BIO_s_core`, `CONF_imodule_get_flags`, `CONF_imodule_get_module`, `CONF_imodule_get_name`, `CONF_imodule_get_usr_data`, `CONF_imodule_get_value`, `CONF_imodule_set_flags`, `CONF_imodule_set_usr_data`, `CONF_module_add`, `CONF_module_get_usr_data`, `CONF_module_set_usr_data`, `CONF_modules_finish`, `CONF_modules_load`, `CONF_modules_load_file`, `CONF_modules_load_file_ex`, `CONF_modules_unload`, `OPENSSL_load_builtin_modules`
 * from phase 5: 1 symbol(s) — `ASN1_add_oid_module`
 
-Courts: `all pass`, 9 court(s), **2032** authority observation(s) over 9 transcript court(s).
+Courts: `all pass`, 10 court(s), **2037** authority observation(s) over 10 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
@@ -203,6 +206,7 @@ Courts: `all pass`, 9 court(s), **2032** authority observation(s) over 9 transcr
 | RT-PROVIDER | `pass` | 80 |
 | RT-PROVIDER-3P | `pass` | 40 |
 | RT-CONF-MOD | `pass` | 247 |
+| RT-PROVIDER-REF | `pass` | 5 |
 
 ## Phase 7 — EVP framework
 
@@ -232,7 +236,7 @@ Hand-offs received and discharged:
 
 * from phase 5: 26 symbol(s) — `ASN1_item_sign_ex`, `ASN1_item_verify_ex`, `PEM_ASN1_read`, `PEM_ASN1_read_bio`, `PEM_ASN1_write`, `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx`, `PEM_SignFinal`, `PEM_SignInit`, `PEM_SignUpdate`, `PEM_bytes_read_bio`, `PEM_bytes_read_bio_secmem`, `PEM_def_callback`, `PEM_do_header`, `PEM_read`, `PEM_read_bio`, `PEM_read_bio_Parameters`, `PEM_read_bio_Parameters_ex`, `PEM_read_bio_ex`, `PEM_write`, `PEM_write_PKCS8PrivateKey_nid`, `PEM_write_bio`, `PEM_write_bio_ASN1_stream`, `PEM_write_bio_PKCS8PrivateKey_nid`, `PEM_write_bio_Parameters`, `PEM_write_bio_PrivateKey_traditional`
 
-Courts: `all pass`, 15 court(s), **2230** authority observation(s) over 15 transcript court(s).
+Courts: `all pass`, 19 court(s), **2664** authority observation(s) over 19 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
@@ -251,6 +255,28 @@ Courts: `all pass`, 15 court(s), **2230** authority observation(s) over 15 trans
 | RT-HMAC | `pass` | 32 |
 | RT-CMAC | `pass` | 26 |
 | RT-HPKE | `pass` | 65 |
+| RT-EVP-REF | `pass` | 264 |
+| RT-EVP-INTROSPECT | `pass` | 48 |
+| RT-EVP-CLASS | `pass` | 22 |
+| RT-EVP-PKEY-OPS | `pass` | 100 |
+
+## Court coverage
+
+From `forensics/atlas/court-coverage.json`, generated by
+`forensics/tools/court_coverage.py`. Every implemented export of a
+completed stratum is in exactly one of the three sets. **`directly_courted`
+means referenced by a staged candidate probe that ran; it does not mean
+every arm of the symbol was driven**, and the `referenced` column is how many
+are proofs of reference only. See `docs/DECISIONS.md` D199.
+
+| phase | implemented | directly courted | of which called | of which referenced | indirect | non-observable | unmatched |
+|---|---|---|---|---|---|---|---|
+| 3 | 251 | 251 | 162 | 89 | 0 | 0 | 0 |
+| 4 | 249 | 249 | 213 | 36 | 0 | 0 | 0 |
+| 5 | 474 | 474 | 380 | 94 | 0 | 0 | 0 |
+| 6 | 161 | 161 | 156 | 5 | 0 | 0 | 0 |
+| 7 | 706 | 706 | 643 | 63 | 0 | 0 | 0 |
+| **total** | **1841** | **1841** | **1554** | **287** | **0** | **0** | **0** |
 
 ## Phase 8 — Native cryptographic primitives
 

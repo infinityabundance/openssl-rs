@@ -80,6 +80,10 @@ COURTS = [
     ("RT-SECURE", "rt_secure_probe.c"),
     ("RT-LHASH", "rt_lhash_probe.c"),
     ("RT-RUNTIME-EXT", "rt_runtime_ext_probe.c"),
+    # Reference basis for the runtime exports no behavioural court drives. See the probe's
+    # own header and docs/DECISIONS.md D199: it references, it does not call, and the atlas
+    # records those names at basis `referenced`, never `called`.
+    ("RT-RUNTIME-REF", "rt_coverage_ref_probe.c"),
 ]
 
 # Per-probe compile flags. An entry is a decision with a reason, never a

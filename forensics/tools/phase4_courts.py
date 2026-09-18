@@ -80,6 +80,9 @@ COURTS = [
     ("RT-OBJ-STREAM", "rt_obj_stream_probe.c"),
     ("RT-CONF", "rt_conf_probe.c"),
     ("RT-COMP", "rt_comp_probe.c"),
+    # Reference basis for the BIO/CONF exports no behavioural court drives. It references,
+    # it does not call; see the probe header and docs/DECISIONS.md D199.
+    ("RT-BIO-CONF-REF", "rt_coverage_ref_probe.c"),
 ]
 
 
