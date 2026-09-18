@@ -99,6 +99,7 @@ from atlas_common import (  # noqa: E402
 )
 from prototype_court import (  # noqa: E402
     RUST_ALIAS_RE,
+    alias_target,
     blank_comments,
     canon_c_type,
     canon_rust_type,
@@ -431,7 +432,7 @@ def read_crate():
         files.append(file)
         per_file: dict[str, str] = {}
         for m in RUST_ALIAS_RE.finditer(text):
-            per_file.setdefault(m.group(1), m.group(2).strip())
+            per_file.setdefault(m.group(1), alias_target(text, m.end()).strip())
         scope_by_file[file] = per_file
         for m in IDENTITY_RE.finditer(text):
             identities.setdefault(m.group(1), (int(m.group(2)), file))

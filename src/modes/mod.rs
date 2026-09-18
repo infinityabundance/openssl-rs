@@ -55,6 +55,7 @@ use core::ptr;
 
 pub mod ccm;
 pub mod gcm;
+pub mod ocb;
 pub mod wrap;
 pub mod xts;
 
@@ -92,6 +93,21 @@ pub type Ccm128F = unsafe extern "C" fn(
     key: *const c_void,
     ivec: *const u8,
     cmac: *mut u8,
+);
+
+/// `ocb128_f` — `include/openssl/modes.h:186-191`: `blocks` OCB data blocks starting at
+/// `start_block_num`, updating `offset_i` and `checksum` as it goes, with the L-table passed as
+/// a pointer to sixteen-byte rows. The caller supplies it; OCB falls back to the per-block loop
+/// when it is NULL.
+pub type Ocb128F = unsafe extern "C" fn(
+    inp: *const u8,
+    out: *mut u8,
+    blocks: usize,
+    key: *const c_void,
+    start_block_num: usize,
+    offset_i: *mut u8,
+    l_: *const [u8; 16],
+    checksum: *mut u8,
 );
 
 /// `ctr128_inc` — `crypto/modes/ctr128.c:28-38`: increment a 128-bit big-endian counter.

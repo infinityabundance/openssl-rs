@@ -17,9 +17,9 @@ name is defined; `open` means the stratum owns it and has not built it;
 
 | library | authority exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 2025 | 3871 |
+| libcrypto | 5896 | 2035 | 3861 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **2025** | **4474** |
+| **total** | **6499** | **2035** | **4464** |
 
 ## Ownership atlas, by stratum
 
@@ -33,7 +33,7 @@ declared owner; this is that assignment.
 | 5 | BN + ASN.1 + DER/PEM | `complete` | 561 | 565 | 474 | 91 | 0 |
 | 6 | OSSL_LIB_CTX + provider core | `complete` | 137 | 161 | 161 | 0 | 0 |
 | 7 | EVP framework | `complete` | 924 | 950 | 706 | 244 | 0 |
-| 8 | Native cryptographic primitives | `in-progress` | 759 | 786 | 184 | 16 | 586 |
+| 8 | Native cryptographic primitives | `in-progress` | 759 | 786 | 194 | 16 | 576 |
 | 9 | RAND / DRBG + entropy | `not-started` | 25 | — | — | — | — |
 | 10 | Key formats + PKCS + STORE | `not-started` | 272 | — | — | — | — |
 | 11 | X.509 + verification | `not-started` | 1455 | — | — | — | — |
@@ -263,14 +263,14 @@ Courts: `all pass`, 19 court(s), **2664** authority observation(s) over 19 trans
 ## Phase 8 — Native cryptographic primitives
 
 * state: `in-progress`
-* blocking: 586 open obligation(s) of this stratum recorded in forensics/phase8-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase
+* blocking: 576 open obligation(s) of this stratum recorded in forensics/phase8-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase
 * seal: none written yet (`unnamed`)
 * ledger: `forensics/phase8-obligations.json`
 * atlas-owned: 759
 * owned working set: 786
-* implemented: 184
+* implemented: 194
 * deferred to a later stratum with a stated reason: 16
-* **open in this stratum: 586**
+* **open in this stratum: 576**
 
 Deferred out, by receiving stratum:
 
@@ -281,14 +281,14 @@ Hand-offs received and discharged:
 
 * from phase 7: 27 symbol(s) — `EVP_PKEY_assign`, `EVP_PKEY_decrypt_old`, `EVP_PKEY_encrypt_old`, `EVP_PKEY_get0_DH`, `EVP_PKEY_get0_DSA`, `EVP_PKEY_get0_EC_KEY`, `EVP_PKEY_get0_RSA`, `EVP_PKEY_get0_hmac`, `EVP_PKEY_get0_poly1305`, `EVP_PKEY_get0_siphash`, `EVP_PKEY_get1_DH`, `EVP_PKEY_get1_DSA`, `EVP_PKEY_get1_EC_KEY`, `EVP_PKEY_get1_RSA`, `EVP_PKEY_get_ec_point_conv_form`, `EVP_PKEY_get_field_type`, `EVP_PKEY_meth_find`, `EVP_PKEY_meth_get0`, `EVP_PKEY_meth_get_count`, `EVP_PKEY_set1_DH`, `EVP_PKEY_set1_DSA`, `EVP_PKEY_set1_EC_KEY`, `EVP_PKEY_set1_RSA`, `EVP_PKEY_type`, `d2i_KeyParams`, `d2i_KeyParams_bio`, `d2i_PublicKey`
 
-Courts: `all pass`, 4 court(s), **890** authority observation(s) over 2 transcript court(s).
+Courts: `all pass`, 4 court(s), **936** authority observation(s) over 2 transcript court(s).
 
 The other 2 compare ELF structure rather than a transcript and observe nothing line-wise; they are counted as zero for that reason and not by default.
 
 | court | verdict | observations |
 |---|---|---|
 | RT-DIGEST | `pass` | 294 |
-| RT-CIPHER | `pass` | 596 |
+| RT-CIPHER | `pass` | 642 |
 | CT-DIGEST | `pass` | — (structural) |
 | CT-CIPHER | `pass` | — (structural) |
 

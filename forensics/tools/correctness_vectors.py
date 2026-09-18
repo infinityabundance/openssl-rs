@@ -1808,6 +1808,26 @@ CIPHER_RECIPE_FAMILIES: list[CipherRecipeFamily] = [
         r"^aes-(128|256)-xts$", "IEEE 1619-2007; NIST SP 800-38E",
         "aes-{128,256}-xts", (),
         "", ""),
+    # 8.3 -- OCB. The corpus is RFC 7253's own AES-128 vectors: every block carries an `AAD`
+    # (one is empty) and a `Tag`, and one block is the RFC's `Result = CIPHERFINAL_ERROR`
+    # forgery, skipped by the result-key rule. The nonce length varies (the corpus uses 12 and
+    # 15 octets) and the tag length is the vector's own, so `M` and the nonce are read from the
+    # block rather than fixed.
+    CipherRecipeFamily(
+        "ocb", "test/recipes/30-test_evp_data/evpciph_aes_ocb.txt",
+        r"^aes-(128|192|256)-ocb$", "RFC 7253",
+        "aes-{128,192,256}-ocb", (),
+        "", "",
+        note=(
+            "Candidate-only construction verification: the primary source is RFC 7253, and the "
+            "bytes are mirrored through the pinned corpus (`corpus_sha256`), whose identity is "
+            "fixed. Every vector's expected tail is `accept || reject`, the probe's own "
+            "tag-verification arms, so the reject path is a committed expectation on every "
+            "vector rather than an unchecked claim. No independent OCB implementation is present "
+            "in the pinned court image, so no boundary vector carries an independent oracle "
+            "beyond the corpus's own empty-plaintext, AAD-only and partial-block cases; that is "
+            "the recorded cost of D208."
+        ), aead=True),
 ]
 
 

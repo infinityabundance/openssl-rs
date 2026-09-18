@@ -14993,3 +14993,59 @@ the last two, and the entry is corrected in this commit to name only OCB, the la
 construction this stratum owns. Second, no ChaCha20 or Poly1305 vector set is added under
 `forensics/vectors/`, because a correctness court for a construction this stratum does not export
 would be a claim about code some later stratum owns.
+
+## D229 — OCB lands, and two instrument defects had to be fixed before its exports could be declared
+
+`src/modes/ocb.rs` lands the ten `CRYPTO_ocb128_*` exports (`crypto/modes/ocb128.c`), the last
+`modes.h` construction this stratum owns: the L-table (`L_* = E(K, 0^128)`, `L_$ = double(L_*)`,
+`L_i = double(L_{i-1})` with the `0x87` OCB doubling), the lazily grown `ocb_lookup_l` indexed by
+`ntz(i)`, the AAD and data offset chains, the checksum, the partial-final-block `Offset_*`/`L_*`
+handling, `ocb_finish`'s write/compare split, and the allocation through the crate's
+`CRYPTO_malloc_array`/`CRYPTO_realloc_array`/`CRYPTO_clear_free`. `implemented[libcrypto]`
+**2025 → 2035** and Phase 8 **184/586/16 → 194/576/16**, read from
+`forensics/phase8-obligations.json`.
+
+**The streamed arm is comparable, and the court compares it.** The authority's bulk loop has two
+arms: a NULL `stream` takes the per-block path, and a non-NULL one calls the caller's `ocb128_f`.
+Unlike GCM's `gcm_get_funcs` (D225), the `stream` is a **caller-supplied pointer**, not a host
+dispatch, so `RT-CIPHER`'s new `rt_ocb128` arm supplies its own per-block `ocb128_f` and requires
+the streamed ciphertext and tag to equal the per-block ones byte for byte. Nothing was declined
+from comparison for host dependence here.
+
+**Both planes.** `RT-CIPHER` **596 → 642 observations**: the `rt_ocb128` arm observes the 33-byte
+partial-block arm's ciphertext and tag, the 16 + 17 split, the empty-plaintext and AAD-only tags,
+the tag lengths 1 and 8 and the refusals at 0 and 17, `finish`'s accept and reject, in-place
+decryption, the `setiv` refusals (len 0, len 16, taglen 0, taglen 17), both streamed directions,
+`copy_ctx` into caller storage, and re-initialisation between messages. `CT-CIPHER`
+**3018 → 3048 vectors**: thirty corpus-mirrored RFC 7253 vectors in the new
+`forensics/vectors/ocb.json` from `test/recipes/30-test_evp_data/evpciph_aes_ocb.txt`, provenance
+naming **RFC 7253** as the primary source with the mirror's `line` and `mirror_sha256`. The
+corpus's one `Operation = DECRYPT` / `Result = CIPHERFINAL_ERROR` forgery is skipped by the
+existing result-key rule.
+
+**Two defects in `prototype_court.py`, found because two correct declarations were refused.** The
+first run of the new code reported `TYPE-UNMAPPED CRYPTO_ocb128_new`/`_init`: the alias regex
+`RUST_ALIAS_RE` captured an alias body with `[^;]+`, and `Ocb128F`'s `l_: *const [u8; 16]`
+carries a `;` inside the array type, so the alias was truncated to `*const [u8` and the whole
+function-pointer type failed to canonicalise. `[^;]+` was replaced by `alias_target`, a
+bracket-aware scan to the terminating `;` at depth zero; `dispatch_court.py` shares the regex and
+was updated to the same helper in the same commit. With the alias readable, the type plane then
+reported a mismatch whose authority side canonicalised `const unsigned char (*)[16]` to
+`fptr(int:1:u; )`: `canon_c_type` treated any `(`-group starting with `*` as a function pointer,
+and `T (*)[N]` is a pointer to an array. The branch now distinguishes them by what follows the
+declarator — an argument list `(` is a function pointer, a subscript `[` is a pointer to an
+array — and neither defect was in the crate. `prototype_court.py`'s sensitivity controls remain
+6/6, so the two fixes did not cost the court its ability to fail.
+
+**The CT-MODES pending entry is gone, and the plan row is corrected.** With OCB landed, the
+`forensics/tools/phase8_courts.py` entry that said 8.3 "needs OCB" has no remaining subject (D228
+had already removed Poly1305 and ChaCha20 from it), so it is deleted; the 8.3 row of
+`docs/PHASE-8-SUBPHASES.md` named courts `RT-MODES`/`CT-MODES` that were never registered, and
+now names the `RT-CIPHER`/`CT-CIPHER` families where the mode evidence actually lives.
+
+**What is not claimed.** No independent OCB implementation exists in the pinned court image, so no
+boundary vector carries an independent oracle and the vector set's `note` says so — the D208 cost,
+not an omission. The two allocation-failure arms (`_new`'s malloc failure and `ocb_lookup_l`'s
+realloc failure) return NULL rather than a value, so the court cannot observe them; they are
+transcribed from source and not claimed. `OcbCtx` is opaque and has no public size accessor, so
+the arm observes values rather than the context's state size.
