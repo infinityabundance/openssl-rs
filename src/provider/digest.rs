@@ -14,9 +14,12 @@
 //!   `ossl_digest_default_get_params`/`ossl_digest_default_gettable_params`;
 //! * the `IMPLEMENT_digest_functions` dispatch shape from `prov/digestcommon.h`, one table per
 //!   construction, in the order the macro publishes;
-//! * `deflt_digests[]`'s rows for the constructions 8.1a transcribed **and** that the default
-//!   provider actually publishes — SHA-1, the four SHA-2 `sha.h` widths, MD5 and RIPEMD-160;
-//!   **not** MD4 or Whirlpool, which are `legacyprov.c`'s rows (see below) — and
+//! * `deflt_digests[]`'s rows for every construction this crate has: SHA-1, the four `sha.h`
+//!   SHA-2 widths, the truncated SHA-2 spellings (`SHA2-256/192`, `SHA2-512/224`, `SHA2-512/256`),
+//!   SHA-3/KECCAK/SHAKE, SM3, BLAKE2S-256/BLAKE2B-512, `MD5`, `MD5-SHA1`, `RIPEMD-160` and
+//!   `NULL` — every row `providers/defltprov.c` publishes. **MD4 and Whirlpool are the
+//!   exception**, and they are the reason the table is reviewed against `defltprov.c` rather
+//!   than against the constructions that happen to exist: see below — and
 //! * `ossl_default_provider_init` itself, with the `deflt_query` arm for `OSSL_OP_DIGEST`.
 //!
 //! Everything else the authority's default provider publishes is **other halves of other
@@ -27,22 +30,21 @@
 //! build — the digest query needs none of them, so `provctx` is NULL and `deflt_query` ignores
 //! it exactly as the authority's answer for `OSSL_OP_DIGEST` does.
 //!
-//! The authority's `deflt_digests[]` carries rows this half does not, and each absence is a
-//! statement rather than an omission: SHA3/KECCAK/SHAKE (`sha3_prov.c`'s 693-line template),
-//! SHA2-256/192 and the two truncated SHA-512 spellings (`sha2_prov.c`), BLAKE2
-//! (`blake2*_prov.c`, handed to Phase 13 by 7.3g), SM3 (`sm3_prov.c`) and the two
-//! combined/NULL digests (`md5_sha1_prov.c`, `null_prov.c`). None of their constructions exists
-//! in this crate, so a row naming one could only publish a table with no body. **MD4 and
-//! Whirlpool are the other case, and they are why the table was reviewed against
-//! `defltprov.c` rather than against the constructions 8.1a had landed:** their constructions
-//! do exist here, but the authority publishes them from `legacyprov.c` — Phase 13's, per
-//! `forensics/prerequisites.json` — and *not* from the default provider, so a default-provider
-//! row would make `EVP_MD_fetch(NULL, "MD4", NULL)` and `EVP_MD_fetch(NULL, "WHIRLPOOL", NULL)`
-//! succeed where the authority answers NULL. Their two provider tables are not written here
-//! either, so no `digest_impl!` invocation is left unused. An earlier revision of this file
-//! carried those two rows; the `RT-DIGEST` provider section now observes the pair and fails on
-//! both sides' disagreement. The plan's §3.5 requires exactly this to be said out loud;
-//! `docs/DECISIONS.md` D204 and D206 record it.
+//! **The rows `deflt_digests[]` carries and this half does not, restated after 8.1c.** There are
+//! none left that this crate has a construction for. The eleven 8.1c landed — SHA-3/KECCAK/SHAKE
+//! (`sha3_prov.c`), SM3 (`sm3_prov.c`), BLAKE2 (`blake2s_prov.c`/`blake2b_prov.c`), the two
+//! truncated SHA-512 spellings and SHA2-256/192 (`sha2_prov.c`), and the combined/NULL digests
+//! (`md5_sha1_prov.c`, `null_prov.c`) — each publishes its `defltprov.c` row now (`docs/DECISIONS.md`
+//! D207). **MD4 and Whirlpool are the other case, and they are why the table was reviewed
+//! against `defltprov.c` rather than against the constructions 8.1a had landed:** their
+//! constructions do exist here, but the authority publishes them from `legacyprov.c` — Phase
+//! 13's, per `forensics/prerequisites.json` — and *not* from the default provider, so a
+//! default-provider row would make `EVP_MD_fetch(NULL, "MD4", NULL)` and
+//! `EVP_MD_fetch(NULL, "WHIRLPOOL", NULL)` succeed where the authority answers NULL. Their two
+//! provider tables are not written here either, so no `digest_impl!` invocation is left unused.
+//! The `RT-DIGEST` provider section observes the pair and fails on both sides' disagreement. The
+//! plan's §3.5 requires exactly this to be said out loud; `docs/DECISIONS.md` D204, D206 and
+//! D207 record it.
 //!
 //! ## Why the source is a macro here when the constructions were not
 //!

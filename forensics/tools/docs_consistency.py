@@ -256,6 +256,75 @@ def defers_to_census(text: str) -> list[tuple[str, str, str]]:
     return []
 
 
+# ---------------------------------------------------------------------------
+# The active-stratum status gate (D208)
+# ---------------------------------------------------------------------------
+#
+# D203's checks are all against *settled* artefacts -- a seal, a census, a court table -- and
+# an **active** stratum's status prose is the one thing that moves every slice. The Phase-8 plan
+# said the five `sha.h` one-shots and the truncated SHA-2 rows were "Still open" long after the
+# ledger recorded them implemented, because nothing compared the plan's status sentences with
+# `forensics/phase8-obligations.json`.
+#
+# The mechanism is stratum-generic: an active stratum is discovered from `forensics/phase-state.json`
+# (so the next one inherits this without a code change), its plan is `docs/PHASE-<n>-SUBPHASES.md`
+# and its ledger is `forensics/phase<n>-obligations.json`. Two clause headings in the plan are the
+# anchors, and the symbols inside them are compared per symbol with the ledger:
+#
+#   * a symbol in the **landed** clause must be in the ledger's `implemented` list;
+#   * a symbol in the **open** clause must be in the ledger's `open` list.
+#
+# That fails in both directions on purpose: a symbol claimed open while implemented, and a symbol
+# claimed landed while open, are each a finding. A missing clause is a `ClaimMissing` failure, so
+# the gate cannot be dropped by deleting the anchor, and a symbol in neither ledger list is also a
+# finding rather than a silent pass.
+LANDED_CLAUSE = "**Landed exports (checked against the ledger):**"
+OPEN_CLAUSE = "**Open exports (checked against the ledger):**"
+
+
+def active_phases() -> list[int]:
+    """The phases `forensics/phase-state.json` currently reports as `in-progress`."""
+    return [int(p["phase"]) for p in STATE["phases"] if p.get("state") == "in-progress"]
+
+
+def _clause_symbols(text: str, heading: str) -> list[str]:
+    """The backticked symbols of the paragraph that starts at `heading`."""
+    at = text.find(heading)
+    if at < 0:
+        raise ClaimMissing(f"the anchored status clause {heading!r}")
+    segment = text[at + len(heading):]
+    stop = segment.find("\n\n")
+    if stop >= 0:
+        segment = segment[:stop]
+    return re.findall(r"`([A-Za-z_][A-Za-z0-9_]*)`", segment)
+
+
+def active_status_check(phase: int, path: str) -> Check:
+    """The active stratum's plan status sentences against its obligation ledger."""
+    ledger = load_json(f"forensics/phase{phase}-obligations.json")["body"]
+    implemented = set(ledger["implemented"])
+    open_symbols = {row["symbol"] for row in ledger["open"]}
+    source = f"forensics/phase{phase}-obligations.json"
+
+    def verify(text: str) -> list[tuple[str, str, str]]:
+        findings: list[tuple[str, str, str]] = []
+        clauses = (
+            (LANDED_CLAUSE, "landed", implemented, open_symbols),
+            (OPEN_CLAUSE, "open", open_symbols, implemented),
+        )
+        for heading, claimed, pool, other in clauses:
+            for symbol in _clause_symbols(text, heading):
+                claim = f"the status clause {heading!r} names `{symbol}` as {claimed}"
+                if symbol in other:
+                    actual = "open" if claimed == "landed" else "implemented"
+                    findings.append((claim, claimed, actual))
+                elif symbol not in pool:
+                    findings.append((claim, claimed, "in neither ledger list"))
+        return findings
+
+    return Check(f"phase{phase}_active_status", path, source, verify)
+
+
 CHECKS: list[Check] = [
     regex_check("readme_runtime_courts", "README.md", SRC_FRF,
                 r"(?P<n>\d+) generated runtime courts", FRF_RUNTIME_COURTS),
@@ -296,6 +365,14 @@ CHECKS: list[Check] = [
                 r"candidate `openssl-rs (?P<n>\d+\.\d+\.\d+)",
                 CANDIDATE_VERSION, transform=str),
 ]
+
+# Every active stratum's plan, discovered rather than listed: the next stratum to move to
+# `in-progress` inherits this gate by carrying the two anchored clause headings in its plan, and
+# a plan that has them removed fails `ClaimMissing` rather than passing silently.
+for _phase in active_phases():
+    _plan = f"docs/PHASE-{_phase}-SUBPHASES.md"
+    if (REPO_ROOT / _plan).is_file():
+        CHECKS.append(active_status_check(_phase, _plan))
 
 # A `(check id, document)` pair here is exempt from the numeric comparison, and the
 # reason is printed with every run. The two entries are both quantities a document

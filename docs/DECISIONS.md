@@ -13880,3 +13880,152 @@ standard-derived vectors mirrored in the pinned corpus, exactly as D206 restated
 "a pointer, not a checked citation". The assembly fast paths are Phase 19's and the portable arms
 here are proven equal by `RT-DIGEST`, not assumed. The two `RT-DIGEST` and `CT-DIGEST` counts are
 the values in `artifacts/phase8/COURTS.json` at this commit.
+
+## D208 — the three review fixes before 8.1b: `RT-DIGEST` reaches the exported one-shots and the `md == NULL` arm, the `CT-DIGEST` claim is generated from its derivation census, and the docs gate gains an active-stratum status check
+
+D207 closed subphase 8.1 but recorded three fixes the review required before 8.1b could be called
+complete: the newest arms had outrun the differential court, the generated `CT` claim had gone
+stale when D206 added independently-derived vectors, and the docs-consistency gate had no check on
+an **active** stratum's status prose. Each is a commit, in that order, and this entry records all
+three with the measurements that decided them.
+
+### 1. `RT-DIGEST`: 247 → 282 observations, all passing, zero residuals
+
+The five exported `sha.h` one-shots (`crypto/sha/sha1_one.c:36-70`) were driven with the caller's
+buffer and then again with `md == NULL`, which selects each file's own
+`static unsigned char m[<len>]` (`:40-43` and the four siblings). The authority does **not** fault
+on the `NULL` arm — it returns the static buffer — so it is compared rather than skipped:
+`oneshot.<name>.static=ok` and `oneshot.<name>.static_matches=same` for all five, each static digest
+byte-equal to the caller-buffer digest the same loop computed. A returned pointer is never printed;
+the bytes it points at are, per this probe's rule.
+
+Every row `providers/defltprov.c`'s `deflt_digests[]` publishes is now fetched **by its primary
+name** and run (`EVP_MD_fetch` + `EVP_DigestInit_ex`/`_Update`/`_Final_ex` through the fetched
+method), and the table's edge is observed from the other side: `MD4` and `WHIRLPOOL`, which
+`providers/legacyprov.c:92`/`:98` publish and no loaded provider answers, still fetch `no`.
+
+| row | authority coordinate | fetched + run |
+|---|---|---|
+| SHA1 | `defltprov.c:99` | yes |
+| SHA2-224 | `defltprov.c:100` | yes |
+| SHA2-256 | `defltprov.c:101` | yes (`provider.fetch_sha256`) |
+| SHA2-256/192 | `defltprov.c:102` | yes (size 24, block 64) |
+| SHA2-384 | `defltprov.c:103` | yes |
+| SHA2-512 | `defltprov.c:104` | yes |
+| SHA2-512/224 | `defltprov.c:105` | yes (size 28, block 128) |
+| SHA2-512/256 | `defltprov.c:106` | yes (size 32, block 128) |
+| SHA3-224/256/384/512 | `defltprov.c:109-112` | yes |
+| KECCAK-224/256/384/512 | `defltprov.c:114-117` | yes |
+| KECCAK-KMAC-128/256 | `defltprov.c:123-126` | yes, squeeze refused (`sha3_prov.c:174-178`, D207) |
+| SHAKE-128/256 | `defltprov.c:129-130` | yes, `EVP_MD_xof` + two-slice squeeze |
+| BLAKE2S-256 / BLAKE2B-512 | `defltprov.c:140-141` | yes |
+| SM3 | `defltprov.c:145` | yes |
+| MD5 | `defltprov.c:149` | yes |
+| MD5-SHA1 | `defltprov.c:150` | yes (size 36, block 64) |
+| RIPEMD-160 / RMD160 | `defltprov.c:154`, alias `names.h:273` | yes |
+| NULL | `defltprov.c:157` | yes (below) |
+| MD4 | `legacyprov.c:92` (Phase 13) | **no**, as the authority's default context |
+| WHIRLPOOL | `legacyprov.c:98` (Phase 13) | **no**, as the authority's default context |
+
+`NULL`'s semantics are observed and not assumed: `EVP_MD_get_size` 0, `EVP_MD_get_block_size` 0, a
+successful `Final` whose `*outl` is 0 and which writes nothing (`provider.null.abc=` with
+`provider.null.outl=0`).
+
+`MD5-SHA1`'s `OSSL_DIGEST_PARAM_SSL3_MS` arm (`md5_sha1_prov.c:40-55`, over
+`crypto/md5/md5_sha1.c:41-107`) is driven through the fetched method's `EVP_MD_CTX_set_params`, not
+the low-level ctrl. A 47-byte parameter answers 0 (`ssl3_short=0`); a 48-byte one answers 1
+(`ssl3_set=1`), and the digest that follows is the RFC 6101 §5.6.8 construction, not
+`md5(ms)||sha1(ms)`: `44cd226f4ba9baea0bdbd6336bdbec8e1abbce88ebcce2293a10918e20503bd9
+1c41e127` over `abc`, against the plain concatenation's
+`900150983cd24fb0d6963f7d28e17f72a9993e364706816aba3e25717850c26c9cd0d89d`.
+
+Three arms were added to `courts/phase8/rt_digest_probe.c`, thirty-five observations in total: the
+five `md == NULL` triples (static / static_digest / static_matches, 15), `SHA1`, `SHA2-224` and
+`SHA2-384`'s fetch-and-run (15), and the five `MD5-SHA1` SSL3 observations. `RT-DIGEST` is **282
+observations**, and the baseline moves 23,237 → **23,390** over 81 courts.
+
+### 2. The `CT-DIGEST` claim is generated from its derivation census, and the `rhash` oracle names its version and command
+
+The claim `correctness_vectors.py` attaches to each `CT-*` record was a fixed sentence saying the
+vectors are "standard-derived values mirrored in the pinned OpenSSL test corpus", which stopped
+being true when D206 added `derivation: independent` vectors while every individual record stayed
+honest. A claim a generator owns must be generated (D205), so the sentence is now built from a
+census of the vectors the court just ran, and `derivation_census` is recorded on the record beside
+it. Measured at this commit: **270 vectors over 590 calls**, `110 corpus` + `160 independent`,
+oracles `144 hashlib` + `16 rhash`, across **20** committed vector files.
+
+The census is read from the vector files, and the claim now reads:
+
+> A correctness-vector PASS means candidate-only construction verification: the candidate's
+> construction produced the committed expected bytes for every vector and every update mode. Of the
+> 270 committed vectors, 110 are published standard values mirrored through the pinned OpenSSL test
+> corpus and 160 are independently-derived boundary vectors with named oracles (144 by hashlib; 16
+> by rhash v1.4.6) -- these counts are read from the 20 committed
+> `forensics/vectors/<algorithm>.json` files by `correctness_vectors.py`, not typed. …
+
+The `rhash`-derived rows now record the tool, its version and the invocation: the oracle string is
+`rhash v1.4.6 (…); \`rhash --<alg> --simple -\` over the vector's input bytes, first
+whitespace-separated field of stdout`, and each such vector's provenance carries a `generation`
+object (`tool`/`version`/`command`/`environment`). The version was measured and the sixteen
+committed table entries were re-derived and confirmed against **RHash v1.4.6**. The `environment`
+field records the cost honestly: `rhash` is **not in the pinned court image**, so the derivation is
+reproducible from the recorded command and version but not re-runnable inside the court;
+`--self-check` is what remains checkable in-court, and it compares the table against the corpus's
+published MD4/Whirlpool values wherever they overlap. `forensics/vectors/md4.json` and
+`whirlpool.json` are the only vector files whose bytes moved, and only their `provenance`.
+
+### 3. The docs gate: an active stratum's status sentences against its ledger
+
+`docs_consistency.py`'s fourteen checks were all against settled artefacts, so `docs/PHASE-8-SUBPHASES.md`
+could still say the five `sha.h` one-shots and the truncated SHA-2 rows were "Still open" long after
+`forensics/phase8-obligations.json` recorded them implemented. The gate gains one stratum-generic
+check: it discovers the `in-progress` phases from `forensics/phase-state.json` (so the next active
+stratum inherits it with no code change), reads each plan's ledger `forensics/phase<n>-obligations.json`,
+and compares the symbols in two anchored clauses per symbol.
+
+The plan now carries, in §2,
+`**Landed exports (checked against the ledger):** …` and
+`**Open exports (checked against the ledger):** …`; a symbol in the landed clause must be in the
+ledger's `implemented` list and a symbol in the open clause must be in its `open` list. It fails in
+both directions and both were seen to fail. Listing `SHA1` under the open clause produced
+
+```text
+[docs-consistency] FAIL: 1 stale hand-written claim(s)
+  STALE: docs/PHASE-8-SUBPHASES.md: "the status clause '**Open exports (checked against the ledger):**' names `SHA1` as open" asserts open, but forensics/phase8-obligations.json holds implemented
+```
+
+and listing `MDC2` under the landed clause produced
+
+```text
+[docs-consistency] FAIL: 1 stale hand-written claim(s)
+  STALE: docs/PHASE-8-SUBPHASES.md: "the status clause '**Landed exports (checked against the ledger):**' names `MDC2` as landed" asserts landed, but forensics/phase8-obligations.json holds open
+```
+
+Rewording an anchor away fails too — moving `(checked against the ledger)` to `(compare with the
+ledger)` produced `the claim for 'phase8_active_status' is not found (the anchored status clause …)`,
+so the gate cannot be silently disabled by a reword. The gate holds **15** checked claims.
+
+The other stale passage was corrected by hand, because it is a source module doc and not a plan
+claim: `src/provider/digest.rs`'s header no longer says the SHA-2 truncated spellings, SHA-3,
+BLAKE2, SM3, `md5_sha1` and `null` rows are absent — D207 landed them, and the header now says the
+only `deflt_digests[]` rows this half does not carry are `MD4` and `WHIRLPOOL`, for the
+`legacyprov.c` reason D206 recorded.
+
+The plan's 8.1b row now reads **LANDED (D207)**, with the "Still open" sentence removed.
+
+### Not claimed, and unchanged
+
+What exists is the default provider's **digest-query half**, exactly as D206 stated: `base`/`null`
+absent, `deflt_get_params`/`deflt_gettable_params`/`ossl_prov_get_capabilities`/`provctx` absent,
+and the D117 residual partly retired, not closed. Nothing here is default-provider parity. The
+digest rows are candidate-only construction verification over standard-derived vectors mirrored in
+the pinned corpus plus the named independent oracles; the mirror is "a pointer, not a checked
+citation". `implemented[libcrypto]` remains **1884** and Phase 8 at **43 implemented / 727 open /
+16 deferred** — this entry moved evidence and prose, not the export count. The pipeline ends
+`PIPELINE OK` at **23,390 observations** over 81 courts.
+
+**What could not be done.** `CT-DIGEST` still has no vectors for `null` (`digest_bytes > 0` is the
+schema's rule), the raw Keccak spellings, `KECCAK-KMAC-*` or the variable-length SHAKE outputs, for
+the reasons D207 recorded; `RT-DIGEST` covers them end to end. `rhash` is not installed in the
+pinned court image and cannot be added without a new dependency, so its rows' derivation is a
+recorded host-side reproduction rather than an in-court one.
