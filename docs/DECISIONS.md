@@ -12625,3 +12625,198 @@ per-slice reading is the previous head's.
 note that said `evp_cleanup_int` and `EVP_add_alg_module` were "owed to 7.4" is corrected in place
 with a pointer to this entry rather than rewritten silently — the reading it recorded was right when
 it was written and the two facts under it have since changed.
+
+---
+
+## D198 — every deferral's reason becomes a structured, fail-closed claim: blocker liveness joins the two ledgers, the machinery catches the `EVP_PKEY_new_mac_key` class, and the 7.3g unit check finds two stale units
+
+This entry is numbered against the highest entry in either `docs/DECISIONS.md` that is
+reachable here: this branch is cut from `main`, whose file ends at D196, while
+`origin/phase8-digests`'s ends at D197 (the Phase 8 bootstrap). D198 is the next free number and
+does not collide with the bootstrap entry the merge will bring.
+
+### The defect, stated as D196 found it
+
+`phase7_obligations.py`'s `BLOCKED_HANDOFFS` and `forensics/prerequisites.json`'s `deferrals`
+both proved only half of what a deferral claims: that the deferred symbol is **still absent**.
+Neither could see the mirror image — that the **blocker named in the reason has since landed** — so
+a row could prove "this export is still absent" while the truth was "it is absent for a reason that
+is no longer true." D193 swept `EVP_PKEY_new_mac_key` into a group whose reason named
+`evp_pkey_get_legacy`; the symbol stayed absent and the row stayed valid while its actual blockers,
+`EVP_PKEY_CTX_new_id` (D186) and the ctrl plane (D188), had already landed. D196 found it by
+reading the call chain. With 244 deferrals in the sealed ledger that is too much surface to leave
+to prose freshness.
+
+### The fix: a structured blocker, and one checker both mechanisms share
+
+`forensics/tools/blocker_liveness.py` is new. A deferral is now a structured claim, and the
+checker proves it before either generator writes anything:
+
+```python
+@dataclass(frozen=True)
+class Blocker:
+    """A name whose absence is why a deferred symbol cannot be written yet."""
+    name: str
+    authority_unit: str   # the .c/.h it is defined in, relative to the authority tree
+    line: int             # the definition site
+    kind: str             # "exported" | "internal" | "type"
+    owning_phase: int     # the stratum that lands it
+
+@dataclass(frozen=True)
+class BlockedHandoff:
+    """One deferral: its symbols, the phase that retires it, and its blockers."""
+    symbols: tuple[str, ...]
+    binding_phase: int              # the old `owning_phase`
+    blocked_by: tuple[Blocker, ...]
+    reason: str                     # prose, kept
+    note: str = ""                  # why this is the smallest honest blocker set
+    label: str = ""
+```
+
+`check_row` proves five things for every row, each fail-closed:
+
+1. **the blocker is real** — it resolves against `export-defining-units.json`, the
+   `internal-symbols.json` atlas or the `typedef-owners.json` atlas; a name no record contains is a
+   typo, not a reason;
+2. **the blocker is currently absent** — the invariant that was missing;
+3. **`owning_phase` is the phase the record assigns** — the export/typedef atlas, or the
+   `prerequisites.json` deferral that lands it (which is why `EVP_md5` resolves to 13, not the 7
+   its declaring header would give) — and `binding_phase` is the latest of them, so a row that
+   says "blocked on Phase 8" while a blocker is Phase 10 is a lie rather than a sentence;
+4. **if every blocker has landed the deferral is invalid**, naming the landed blockers and the
+   decision that landed them when the caller can supply it;
+5. **if the binding phase is complete and a blocker is still absent**, the completed stratum did
+   not produce the name it owed.
+
+A `Blocker` whose `authority_unit` is not a unit any committed atlas records is a failure, so
+the path evidence is not decorative. The authority's 55 MB source tree lives only in the court,
+so the checks have two tiers and print which one ran, the pattern `gen_ctype_table.py` already
+uses: with the tree present, a `Blocker`'s `authority_unit:line` is proved to be a real line
+inside a real file; with it absent (CI's `evidence_determinism`), the unit is still checked against
+the committed atlases and the line range is not claimed. The two tiers produce byte-identical
+artifacts -- the strong tier only ever *adds* failures -- and both were run: CI's `Evidence
+determinism` step failed on the first push precisely because the strong tier had been assumed, and
+it is green after the tier was made explicit.
+
+A type declared only in the weak `types.h` has no authority phase of its own. It is accepted only
+when another blocker in the same row carries the row's `binding_phase`; the twelve low-level-key
+accessors' row is the worked example, and its `note` says so. That is a check on the type's phase
+rather than an assertion of it.
+
+### The sensitivity control: a check that has never been seen to fail is not evidence
+
+The shared module carries `--self-test`. It reconstructs `EVP_PKEY_new_mac_key` as D193's group
+reason worded it, with the blockers its body actually calls — `EVP_PKEY_CTX_new_id`
+(`crypto/evp/pmeth_lib.c:447`) and `EVP_PKEY_CTX_set_mac_key` (`:1252`), landed in D186 and D188 —
+and refuses to pass unless the finding comes back. The exact output, from
+`python3 forensics/tools/blocker_liveness.py --self-test`:
+
+```text
+[blocker-liveness] the reconstructed EVP_PKEY_new_mac_key row:
+  BLOCKED_HANDOFFS (reconstructed: D193's EVP_PKEY_new_mac_key row, as D196 found it): every blocker of EVP_PKEY_new_mac_key has landed (EVP_PKEY_CTX_new_id (phase 7, landed in D186), EVP_PKEY_CTX_set_mac_key (phase 7, landed in D188)); the deferral is invalid -- retire it rather than leave a stale reason covering the name
+[blocker-liveness] self-test ok: the stale row is caught without a human
+```
+
+### The re-audit: 244 deferrals and 25 prerequisites
+
+`phase7-obligations.json`'s `deferred` is still 244: **80** `BLOCKED_HANDOFFS` exports in **25**
+rows now carry **60** structured blockers, and **164** are 7.3g's `LEGACY_HANDOFFS`, whose cause is
+a whole primitive unit rather than a name. The generator reports
+`blocker liveness: 25 structured rows / 60 blockers checked, 164 legacy rows over 21 unit claims,
+findings=0`; its `blocker_liveness` body block records the same counts. No structured blocker set
+was routed around because its phase could not be checked: where an honest blocker had no recorded
+owner phase the row names a different, checkable name and says why in its `note` (see the exception
+list below).
+
+**Every row that changed, and what changed.**
+
+* **All 80 `BLOCKED_HANDOFFS` deferred rows** gained `binding_phase` and `blocked_by`, and 7 of the
+  25 groups gained a `note`. Their `owning_phase` values are unchanged, `deferred_by_phase` is still
+  `{8: 27, 9: 4, 10: 15, 11: 5, 13: 193}`, and the 80 reason strings are **byte-identical** to the
+  ones D196 wrote (verified by importing the previous revision through `git show` and comparing).
+* **Three 7.3g rows changed their stated authority unit**, because the new unit check found the old
+  ones do not exist: `EVP_blake2b512` and `EVP_blake2s256` said `crypto/blake2/`, which the
+  authority does not contain — their callbacks call the provider BLAKE2 implementation in
+  `providers/implementations/digests/` — and `EVP_whirlpool` said `crypto/whirlpool/`, which is
+  spelled `crypto/whrlpool/`. Both are corrected, and the corrections are stated in the row's own
+  note rather than applied silently.
+* **Five `prerequisites.json` deferral rows** gained `blocked_by`: `evp_cleanup_int` (blocked by
+  `evp_app_cleanup_int`, `crypto/evp/pmeth_lib.c:631`), `evp_pkey_get_legacy` (by
+  `evp_pkey_copy_downgraded`, `crypto/evp/p_lib.c:2066`), `evp_pkey_get0_DH_int` (by
+  `evp_pkey_get_legacy`, `:2154`), `evp_pkey_copy_downgraded` (by `ossl_rsa_asn1_meths`,
+  `crypto/rsa/rsa_ameth.c:968`) and `evp_app_cleanup_int` (by `ossl_rsa_pkey_method`,
+  `crypto/rsa/rsa_pmeth.c:851`). Their `owner_phase` values are unchanged and `blocking_dependencies`
+  is still 25.
+* `forensics/atlas/ownership-audit.json` and `forensics/atlas/plan-reconciliation.json` moved two
+  lines each (their recorded input hash for `phase7-obligations.json`), and
+  `forensics/atlas/prerequisite-gate.json` carries the new `deferral_blocker_rows` count. All are
+  regenerated, not hand-edited.
+
+### `forensics/prerequisites.json` gained the same check, through the same checker
+
+The two mechanisms share `blocker_liveness.py` rather than each growing a copy: the checks are
+facts about the same atlases and two copies would be two things to keep true. `prerequisite_gate.py`
+builds a `BlockedHandoff` for every deferral row that carries `blocked_by` and reports each failure
+as a `deferral_blocker_is_stale` finding, so the gate fails rather than reads. It checked 5 rows in
+this run. The integration is honest about its reach: a deferral that names a *name* as its blocker
+must now carry `blocked_by`, but a deferral that is simply a stratum's own work ("this name is
+owned by Phase 10") has no blocker to prove, and no mechanical rule can tell the two apart from
+prose, so the gate applies the liveness check where the row states one and the existing
+`stale_deferral`/`deferral_target_not_ahead` checks where it does not.
+
+### What could not be made machine-checkable, and why
+
+Each is recorded rather than asserted, and each is kept to the smallest set that has to be.
+
+* **The 164 `LEGACY_HANDOFFS` deferrals.** Their reason is a whole primitive unit — `crypto/aes/`,
+  `crypto/des/`, `crypto/chacha/` and `crypto/poly1305/`, and so on — not a name, so there is no
+  blocker whose landing proves the deferral stale. Inventing a per-family name would be false:
+  `MD5_Init` (`crypto/md5/md5_dgst.c:29`) is Phase 8's in the atlas while `EVP_md5`
+  (`crypto/evp/legacy_md5.c:31`) is Phase 13's by the hand-off, so a per-name phase would either
+  lie or force the phase. The claim that *can* be checked is the one the reason actually makes —
+  that the unit exists in this authority — and that is the new check in `phase7_obligations.py`,
+  which is what found the two defects above.
+* **Weak types have no independently recorded phase.** `RSA`, `DSA`, `DH` and `EC_KEY` are declared
+  only in `include/openssl/types.h` (`:155`, `:150`, `:146`, `:163`), which declares no export, so
+  `typedef-owners.json` gives them `owner_phase: null`. The checker accepts their declared phase
+  only when another blocker in the same row has that authority phase; the type's phase is therefore
+  *inherited from a checked name*, not recorded in its own right.
+* **Internal blockers with no recorded owner phase.** `ossl_dh_is_foreign`
+  (`crypto/dh/dh_backend.c:122`), `evp_pkey_get0_RSA_int` (`crypto/evp/p_legacy.c:40`) and
+  `ossl_rand_uniform_uint32` (`crypto/rand/rand_uniform.c:25`) are real callers' names but no
+  atlas or `prerequisites.json` row gives a stratum for them, and a translation unit's phase is not
+  a safe substitute — `evp_pkey_get_legacy` lives in `crypto/evp/p_lib.c`, whose exports are Phase
+  7's, and is nonetheless Phase 8's. Rows 3, 4 and 21 therefore name the checkable names that carry
+  the same claim and say so in their `note`.
+* **Two Phase-7-owned exports that cannot be their own row's blocker.** `EVP_PKEY_type`
+  (`crypto/evp/evp_pkey_type.c:63`) and `EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`) are
+  this stratum's, withheld by rows 6 and 16; using them as blockers of a row owned by this stratum
+  would make the claim circular. Rows 3 and 23 name the root blockers instead.
+* **`line` is range-checked only with the tree present.** A macro-generated export does not
+  contain its own name at its definition site — `d2i_X509_ALGOR` is
+  `IMPLEMENT_ASN1_FUNCTIONS(X509_ALGOR)` at `crypto/asn1/x_algor.c:26` — so the checker proves the
+  file exists and the line is inside it when the authority tree is available, and otherwise
+  defers to the reader; the unit itself is checked against the committed atlases either way. A
+  general C declaration parser is out of scope and would be wrong more often than this.
+* **Decision-entry attribution in proof 4.** No artifact in the repository maps a landed symbol to
+  the decision that landed it, so the running generator's message names the blocker and its phase
+  ("the crate defines it") and the `--self-test` supplies `D186`/`D188` explicitly. The message
+  format is the one shown above; only the decision text is caller-supplied.
+* **Prerequisite deferrals that name no blocker.** `ossl_get_enginesdir`,
+  `ossl_get_openssldir` and `ossl_get_wininstallcontext` (`src/runtime/defaults.rs`),
+  `ossl_random_add_conf_module` (`crypto/rand/rand_lib.c`), `OSSL_provider_init`
+  (`providers/legacy/legacyprov.c`), the seed trio (called only by `crypto/rand/rand_lib.c`),
+  `OSSL_ENCODER_CTX_new_for_pkey`/`OSSL_DECODER_CTX_new_for_pkey` (`crypto/encode_decode/`),
+  `ASN1_item_sign_ctx`/`ASN1_item_verify_ctx` (`crypto/asn1/a_sign.c:146`,
+  `crypto/asn1/a_verify.c:111`), `d2i_X509_ALGOR` (`crypto/asn1/x_algor.c:26`),
+  `RAND_priv_bytes_ex`/`RAND_bytes`/`RAND_bytes_ex` (`crypto/rand/rand_lib.c:420`, `:500`, `:463`),
+  `UI_new` (`crypto/ui/ui_lib.c:18`) and `EVP_md5` (`crypto/evp/legacy_md5.c:31`) are names a
+  stratum *owns* rather than names blocked by another name. There is no blocker to leave unproved;
+  the gate's `stale_deferral` and `deferral_target_not_ahead` checks are the ones that apply.
+
+### What did not change
+
+No obligation count moved (`complete=True`, `open=0`, `deferred=244`), no phase moved, no court
+moved, `implemented[libcrypto]` stays 1841, and the privilege of a deferral is exactly what it was:
+a symbol leaves the ledger by being **landed**, not by editing a reason. What changed is that the
+reason itself is now a claim the machinery can falsify — and it did falsify two.

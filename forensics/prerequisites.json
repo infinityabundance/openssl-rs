@@ -65,6 +65,15 @@
       {
         "symbol": "evp_cleanup_int",
         "owner_phase": 8,
+        "blocked_by": [
+          {
+            "name": "evp_app_cleanup_int",
+            "authority_unit": "crypto/evp/pmeth_lib.c",
+            "line": 631,
+            "kind": "internal",
+            "owning_phase": 8
+          }
+        ],
         "authority_unit": "crypto/evp/names.c",
         "reason": "Internal, called only by `OPENSSL_cleanup`, and **owed to Phase 8 through `evp_app_cleanup_int`**. Its body is seven calls -- four `OBJ_NAME_cleanup`, then `EVP_PBE_cleanup`, then `OBJ_sigid_free`, then `evp_app_cleanup_int` -- and the first six are landed: `EVP_PBE_cleanup` is `crypto/evp/evp_pbe.c`'s and landed with 7.4c's PBE remainder (D192), which is the dependency this row was written against. What is left is the seventh, and `evp_app_cleanup_int` (`crypto/evp/pmeth_lib.c`) is Phase 8's because its whole body pops the **application-supplied `EVP_PKEY_METHOD` registry** against `EVP_PKEY_meth_free`, and `EVP_PKEY_meth_find` searches `standard_methods[]` (D165, D193). So the row is retargeted rather than discharged: the name cannot be written before Phase 8, and leaving it pinned to this stratum would have made a Phase-7 gap out of a Phase-8 dependency on the day this stratum sealed.",
         "evidence": "docs/DECISIONS.md D196; docs/DECISIONS.md D165 and D193; src/evp/legacy_evp.rs module doc, section \"What is not here\""
@@ -72,24 +81,60 @@
       {
         "symbol": "evp_pkey_get_legacy",
         "owner_phase": 8,
+        "blocked_by": [
+          {
+            "name": "evp_pkey_copy_downgraded",
+            "authority_unit": "crypto/evp/p_lib.c",
+            "line": 2066,
+            "kind": "internal",
+            "owning_phase": 8
+          }
+        ],
         "reason": "The second of the seven. It downgrades a provider key to a legacy one, so its whole body past the fast paths is `evp_pkey_copy_downgraded`, and the cache it then holds is keyed on `ameth` being non-NULL (`EVP_PKEY_asn1_find` for the type). Both halves are Phase 8's, which is why this name waits on the same registry as its sibling rather than on anything in this stratum.",
         "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4a (the dependency column names `_get_legacy`); row 7.4l; src/evp/pkey.rs module doc, section \"What is not here\""
       },
       {
         "symbol": "evp_pkey_get0_DH_int",
         "owner_phase": 8,
+        "blocked_by": [
+          {
+            "name": "evp_pkey_get_legacy",
+            "authority_unit": "crypto/evp/p_lib.c",
+            "line": 2154,
+            "kind": "internal",
+            "owning_phase": 8
+          }
+        ],
         "reason": "The third of the seven, and the shortest: it is `pkey->type == EVP_PKEY_DH ? evp_pkey_get_legacy(pkey) : NULL`. It is therefore blocked by nothing of its own and inherited entirely from its sibling above -- the DH *type* it compares against is real now, the downgrade it calls is not. Recorded separately rather than folded into `evp_pkey_get_legacy` because the gate owes names, not call graphs, and a reader of the blocking census should see all four rather than three and an implication.",
         "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4a (the dependency column names `get0_DH_int`); row 7.4l; src/evp/pkey.rs module doc, section \"What is not here\""
       },
       {
         "symbol": "evp_pkey_copy_downgraded",
         "owner_phase": 8,
+        "blocked_by": [
+          {
+            "name": "ossl_rsa_asn1_meths",
+            "authority_unit": "crypto/rsa/rsa_ameth.c",
+            "line": 968,
+            "kind": "internal",
+            "owning_phase": 8
+          }
+        ],
         "reason": "The fourth of the seven and the one that makes the other three wait. Its body exports the provider keydata through `evp_keymgmt_export` -- this stratum's -- and then imports it with `(*dest)->ameth->import_from`, synchronising `(*dest)->ameth->dirty_cnt`. Two fields of an `EVP_PKEY_ASN1_METHOD` and one of that struct's function pointers are read directly, so the function cannot be written before an ameth object exists, and the ameth objects are the twelve `crypto/asn1/ameth_lib.c` builds from Phase 8's `standard_methods[]`. It also needs `EVP_PKEY_CTX_new_from_pkey`, which is `pmeth_lib.c`'s and lands in 7.4c *inside* this stratum -- so the order is 7.4c, then Phase 8, then this row.",
         "evidence": "docs/PHASE-7-SUBPHASES.md rows 7.4a, 7.4c and 7.4l; docs/DECISIONS.md D163; src/evp/pkey.rs module doc, section \"What is not here\""
       },
       {
         "symbol": "evp_app_cleanup_int",
         "owner_phase": 8,
+        "blocked_by": [
+          {
+            "name": "ossl_rsa_pkey_method",
+            "authority_unit": "crypto/rsa/rsa_pmeth.c",
+            "line": 851,
+            "kind": "internal",
+            "owning_phase": 8
+          }
+        ],
         "reason": "Defined in `crypto/evp/pmeth_lib.c` and called from `crypto/evp/names.c`'s `EVP_cleanup_int`, so two transcribed units now owe it. Its whole body is `sk_EVP_PKEY_METHOD_pop_free(app_pkey_methods, EVP_PKEY_meth_free)`: both the stack and the destructor belong to the **application-supplied `EVP_PKEY_METHOD` registry**, which is 7.4l's because `EVP_PKEY_meth_find`'s lookup searches `standard_methods[]` -- the table whose contents are Phase 8's objects under D163 and D165. So this is Phase 8's with its sibling rows rather than a same-subphase deferral: there is no 7.4c-ii or 7.4d that could land it, because the two symbols it needs do not exist until Phase 8 does.",
         "evidence": "docs/PHASE-7-SUBPHASES.md row 7.4l; docs/DECISIONS.md D165; src/evp/pkey_ctx.rs module doc, section on the absent registry"
       },
