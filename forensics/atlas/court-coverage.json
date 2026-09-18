@@ -8092,6 +8092,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-DIGEST",
               "RT-EVP-KDF",
               "RT-EVP-PKEY",
@@ -9121,6 +9122,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-CIPHER"
             ],
             "symbol": "EVP_CIPHER_CTX_get_iv_length"
@@ -9128,6 +9130,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-CIPHER"
             ],
             "symbol": "EVP_CIPHER_CTX_get_key_length"
@@ -9164,6 +9167,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-CIPHER"
             ],
             "symbol": "EVP_CIPHER_CTX_get_tag_length"
@@ -15477,7 +15481,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "38dc9093ac49845e59e97ff15b30c35e2186c47b72ec4cac95a20475852f7d3c"
+      "sha256": "006bfa624e80fbf9493c85ae08b51d25f350653cb20b96d67b92ffda87c8d820"
     },
     {
       "name": "symbol-ownership",
@@ -15547,7 +15551,7 @@
     {
       "name": "phase8-courts",
       "path": "artifacts/phase8/COURTS.json",
-      "sha256": "4bbc4b3009d36353f674de5383190002019f1ab5031cf99b07b4fe9c7c17d863"
+      "sha256": "2ab1b1481f889a8cf74d4f8058ea31ef012c7f9b30cad5335da4ec6e768c0e2f"
     }
   ],
   "kind": "court-coverage",

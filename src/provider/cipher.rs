@@ -16,20 +16,29 @@
 //! * the `IMPLEMENT_generic_cipher`/`IMPLEMENT_tdes_cipher` dispatch shape, one table per row,
 //!   with the per-algorithm `*_initkey` (`cipher_aes_hw.c`, `cipher_camellia_hw.c`,
 //!   `cipher_tdes_hw.c`, `cipher_tdes_default_hw.c`) and `cipher_null.c` whole;
-//! * `deflt_ciphers[]`'s rows for AES, Camellia, 3DES and the `NULL` cipher, with each row's
-//!   alias string taken verbatim from `providers/implementations/include/prov/names.h` and each
-//!   row's provider checked against `providers/defltprov.c` (**not** `legacyprov.c`): AES,
-//!   Camellia and 3DES are the default provider's (`defltprov.c:163-186`, `:275-300`,
-//!   `:301-313`), while **single** DES, RC2, RC4, Blowfish, CAST5, IDEA and SEED are the legacy
-//!   provider's (`legacyprov.c:108-159`) and get no row here. That per-row check is the defect
-//!   D206 found for MD4 and D213 for RC4, restated for ciphers.
+//! * `deflt_ciphers[]`'s rows for AES (including the CTS, XTS, OCB, CCM and key-wrap spellings),
+//!   Camellia, 3DES and the `NULL` cipher, with each row's alias string taken verbatim from
+//!   `providers/implementations/include/prov/names.h` and each row's provider checked against
+//!   `providers/defltprov.c` (**not** `legacyprov.c`): AES, Camellia and 3DES are the default
+//!   provider's (`defltprov.c:163-186`, `:275-300`, `:301-313`), while **single** DES, RC2, RC4,
+//!   Blowfish, CAST5, IDEA and SEED are the legacy provider's (`legacyprov.c:108-159`) and get no
+//!   row here. That per-row check is the defect D206 found for MD4 and D213 for RC4, restated for
+//!   ciphers.
+//! * the AEAD engines the rows select: `cipher_aes_xts.c`, `cipher_aes_ocb.c`,
+//!   `cipher_aes_ccm.c` + `ciphercommon_ccm.c`, `cipher_aes_wrp.c` and `cipher_cts.c`;
 //! * the `OSSL_OP_CIPHER` arm of `deflt_query`.
 //!
 //! What is **absent by design**: `deflt_get_params`/`deflt_gettable_params`/
-//! `ossl_prov_get_capabilities`/`provctx` and the `base`/`null` *providers*; the AEAD modes
-//! (GCM/CCM/XTS/OCB/SIV/wrap), the CTS rows, ARIA/SM4 (whose constructions do not exist here;
-//! D209 §2), ChaCha20, and the asm-selected `cipher_aes_cbc_hmac_*` TLS ciphers. `deflt_ciphers[]`
-//! in the authority carries those rows too; this half carries the subset the crate can back.
+//! `ossl_prov_get_capabilities`/`provctx` and the `base`/`null` *providers*; the `AES-*-GCM` rows
+//! (`defltprov.c:202-204`, deferred to Phase 9 on `RAND_bytes_ex` -- D234); the
+//! `AES-*-SIV`/`AES-*-GCM-SIV` rows (`defltprov.c:194-201`, whose construction is
+//! `crypto/modes/siv128.c`); the thirteen capability-gated `ALGC(...)` `AES-*-CBC-HMAC` rows
+//! (`defltprov.c:220-...`), which cannot land before D237's filtering is built; ARIA and SM4
+//! (whose low-level constructions do not exist in this profile; D209 §2); ChaCha20
+//! (`cipher_chacha20.c`'s units publish no `libcrypto` symbol); and the asm-selected
+//! `cipher_aes_cbc_hmac_*` TLS dispatch. `deflt_ciphers[]` in the authority carries those rows
+//! too; this half carries the subset the crate can back, and `forensics/atlas/provider-algorithms.json`
+//! (D237) is the census that says so row by row.
 //!
 //! Two arms the authority has are not transcribed because they are unreachable for these rows
 //! without a caller setting the corresponding context parameter, and each is named rather than
@@ -69,6 +78,10 @@ use crate::evp::cipher::{
     OSSL_FUNC_CIPHER_NEWCTX, OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS, OSSL_FUNC_CIPHER_SET_CTX_PARAMS,
     OSSL_FUNC_CIPHER_UPDATE,
 };
+use crate::modes::ccm::{
+    CRYPTO_ccm128_aad, CRYPTO_ccm128_decrypt, CRYPTO_ccm128_encrypt, CRYPTO_ccm128_init,
+    CRYPTO_ccm128_setiv, CRYPTO_ccm128_tag, CcmCtx,
+};
 use crate::modes::ocb::{
     CRYPTO_ocb128_aad, CRYPTO_ocb128_cleanup, CRYPTO_ocb128_copy_ctx, CRYPTO_ocb128_decrypt,
     CRYPTO_ocb128_encrypt, CRYPTO_ocb128_finish, CRYPTO_ocb128_init, CRYPTO_ocb128_setiv,
@@ -91,6 +104,7 @@ use crate::provider::activate::OsslAlgorithm;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{
     CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_memcmp, CRYPTO_memdup, CRYPTO_zalloc,
+    OPENSSL_cleanse,
 };
 
 /// The authority translation unit the generic engine is `ciphercommon.c.in`'s, for the
@@ -6576,6 +6590,1197 @@ cipher_row!(
 );
 
 // ---------------------------------------------------------------------------------------------
+// `ciphercommon_ccm.c` / `cipher_aes_ccm.c` / `cipher_aes_ccm_hw.c` — the three AES-CCM rows
+// ---------------------------------------------------------------------------------------------
+
+// CCM is a self-contained engine over the landed `crypto/modes/ccm128.c` (`src/modes/ccm.rs`):
+// the row owns the AEAD length bookkeeping that CCM's construction requires -- the message length
+// is fixed *before* the AAD, so `L` and `M` and `len` are context state rather than call
+// arguments -- the TLS-record arm, and the tag emit/verify. `ciphercommon_ccm.c` is one of the
+// build-generated `.c.in` templates (`produce_param_decoder` expands its two decoders into ~130
+// lines), so the hand-written locate-each-key form stands in for them exactly as it does for
+// `ciphercommon.c`'s and `cipher_aes_ocb.c`'s.
+//
+// **The AESNI hardware arm is declined, not compared.** `ossl_prov_aes_hw_ccm`
+// (`cipher_aes_ccm_hw.c:70-73`) answers `AESNI_CAPABLE ? &aesni_ccm : &aes_ccm`, and
+// `AESNI_CAPABLE` is `OPENSSL_ia32cap_P[1] & (1 << 25)` (`include/crypto/aes_platform.h:185`) --
+// a property of the host CPU, which is D213's class exactly. The two arms differ in one place:
+// `AES_HW_CCM_SET_KEY_FN` stores `ctx->str`, and the AESNI arm stores
+// `aesni_ccm64_encrypt_blocks`/`_decrypt_blocks` there while the portable arm stores the `NULL`
+// it is handed. `str` selects `CRYPTO_ccm128_encrypt_ccm64` over `CRYPTO_ccm128_encrypt` in
+// `ossl_ccm_generic_auth_encrypt`/`_decrypt`; those two functions differ only in *how* the counter
+// advances (`n` calls to `ctr64_inc` versus one `ctr64_add(..., n)`) and in nothing else -- the
+// CMAC, the keystream, the `blocks` accounting, the tag and every refusal are identical, so the
+// selection is not observable through any surface. This transcription is the portable arm;
+// `RT-CIPHER` compares the provider's ciphertext and tag against the authority running the AESNI
+// arm, which is what proves the choice unobservable rather than assuming it.
+
+/// `EVP_AEAD_TLS1_AAD_LEN` — `include/openssl/evp.h:461`.
+const EVP_AEAD_TLS1_AAD_LEN: usize = 13;
+/// `EVP_CCM_TLS_FIXED_IV_LEN` — `include/openssl/evp.h:480`.
+const EVP_CCM_TLS_FIXED_IV_LEN: usize = 4;
+/// `EVP_CCM_TLS_EXPLICIT_IV_LEN` — `include/openssl/evp.h:482`.
+const EVP_CCM_TLS_EXPLICIT_IV_LEN: usize = 8;
+/// `AES_CCM_FLAGS` — `cipher_aes_ccm.c:68-72`'s `AEAD_FLAGS`, which is `prov/ciphercommon_aead.h:16`.
+const AES_CCM_FLAGS: u64 = PROV_CIPHER_FLAG_AEAD | PROV_CIPHER_FLAG_CUSTOM_IV;
+/// `EVP_CIPH_CCM_MODE` — `include/openssl/evp.h:317`.
+const EVP_CIPH_CCM_MODE: c_uint = 0x7;
+/// The CCM rows' `blkbits` — `cipher_aes_ccm.c:68-72`'s sixth `IMPLEMENT_aead_cipher` argument.
+const AES_CCM_BLOCK_BITS: usize = 8;
+/// The CCM rows' `ivbits` — `cipher_aes_ccm.c:68-72`'s seventh argument.
+const AES_CCM_IV_BITS: usize = 96;
+/// `UNINITIALISED_SIZET` — `prov/ciphercommon_aead.h:14`.
+const UNINITIALISED_SIZET: usize = usize::MAX;
+/// `OSSL_CIPHER_PARAM_AEAD_TLS1_AAD` — `core_names.h:181` (`"tlsaad"`).
+const OSSL_CIPHER_PARAM_AEAD_TLS1_AAD: *const c_char = c"tlsaad".as_ptr();
+/// `OSSL_CIPHER_PARAM_AEAD_TLS1_AAD_PAD` — `core_names.h:182` (`"tlsaadpad"`).
+const OSSL_CIPHER_PARAM_AEAD_TLS1_AAD_PAD: *const c_char = c"tlsaadpad".as_ptr();
+/// `OSSL_CIPHER_PARAM_AEAD_TLS1_IV_FIXED` — `core_names.h:184` (`"tlsivfixed"`).
+const OSSL_CIPHER_PARAM_AEAD_TLS1_IV_FIXED: *const c_char = c"tlsivfixed".as_ptr();
+
+/// `PROV_CCM_CTX` — `prov/ciphercommon_ccm.h:34-57`, the base shared by the AES and ARIA CCM rows.
+///
+/// The authority declares the five state flags as a run of `unsigned int : 1` bitfields, which the
+/// compiler packs into a single allocation unit; they are modelled as one `c_uint` each, as
+/// `ProvAesOcbCtx`'s `key_set` is, because the layout is internal (no exported signature carries
+/// this type) and the field's *meaning* is what the transcription has to keep.
+#[repr(C)]
+pub(crate) struct ProvCcmCtx {
+    /// `unsigned int enc : 1`.
+    pub enc: c_uint,
+    /// `unsigned int key_set : 1` — set if the key was initialised.
+    pub key_set: c_uint,
+    /// `unsigned int iv_set : 1` — set if an IV is set.
+    pub iv_set: c_uint,
+    /// `unsigned int tag_set : 1` — set if the tag is valid.
+    pub tag_set: c_uint,
+    /// `unsigned int len_set : 1` — set if the message length is set.
+    pub len_set: c_uint,
+    /// `size_t l` — the RFC 3610 `L` parameter.
+    pub l: usize,
+    /// `size_t m` — the RFC 3610 `M` parameter, the tag length.
+    pub m: usize,
+    /// `size_t keylen`.
+    pub keylen: usize,
+    /// `size_t tls_aad_len` — `UNINITIALISED_SIZET` until a TLS AAD arrives.
+    pub tls_aad_len: usize,
+    /// `size_t tls_aad_pad_sz`.
+    pub tls_aad_pad_sz: usize,
+    /// `unsigned char iv[GENERIC_BLOCK_SIZE]`.
+    pub iv: [c_uchar; GENERIC_BLOCK_SIZE],
+    /// `unsigned char buf[GENERIC_BLOCK_SIZE]` — the tag buffer, and the saved TLS AAD.
+    pub buf: [c_uchar; GENERIC_BLOCK_SIZE],
+    /// `CCM128_CONTEXT ccm_ctx` — the landed `crypto/modes/ccm128.c` context.
+    pub ccm_ctx: CcmCtx,
+    /// `const PROV_CCM_HW *hw`.
+    pub hw: *const ProvCcmHw,
+}
+
+/// `PROV_AES_CCM_CTX` — `cipher_aes_ccm.h:15-46`. The union's leading `unsigned char pad[16]`
+/// exists only so that the s390x arm's `kmac.k`/`fc` overlap `ks.ks`/`ks.ks.rounds` (the header
+/// says so); this profile compiles neither that arm nor its union member, so the schedule stands
+/// alone.
+#[repr(C)]
+pub(crate) struct ProvAesCcmCtx {
+    /// `PROV_CCM_CTX base` — must be first.
+    pub base: ProvCcmCtx,
+    /// `union { OSSL_UNION_ALIGN; AES_KEY ks; }` — `ccm.ks.ks`.
+    pub ks: AesKey,
+}
+
+/// `PROV_CIPHER_FUNC(int, CCM_setkey, ...)` — `prov/ciphercommon_ccm.h:59`.
+type CcmSetkeyFn = unsafe fn(*mut ProvCcmCtx, *const c_uchar, usize) -> c_int;
+/// `PROV_CIPHER_FUNC(int, CCM_setiv, ...)` — `prov/ciphercommon_ccm.h:61`.
+type CcmSetivFn = unsafe fn(*mut ProvCcmCtx, *const c_uchar, usize, usize) -> c_int;
+/// `PROV_CIPHER_FUNC(int, CCM_setaad, ...)` — `prov/ciphercommon_ccm.h:62`.
+type CcmSetaadFn = unsafe fn(*mut ProvCcmCtx, *const c_uchar, usize) -> c_int;
+/// `PROV_CIPHER_FUNC(int, CCM_auth_encrypt, ...)` / `..._auth_decrypt` — the two share a shape.
+type CcmAuthFn =
+    unsafe fn(*mut ProvCcmCtx, *const c_uchar, *mut c_uchar, usize, *mut c_uchar, usize) -> c_int;
+/// `PROV_CIPHER_FUNC(int, CCM_gettag, ...)` — `prov/ciphercommon_ccm.h:66`.
+type CcmGettagFn = unsafe fn(*mut ProvCcmCtx, *mut c_uchar, usize) -> c_int;
+
+/// `struct prov_ccm_hw_st` — `prov/ciphercommon_ccm.h:69-76`, the per-algorithm method table.
+///
+/// The authority also carries a `ccm128_f str` field on the *context* rather than here; it is
+/// absent because both arms this profile can select leave it `NULL` (see the section note above).
+pub(crate) struct ProvCcmHw {
+    /// `OSSL_CCM_setkey_fn setkey`.
+    pub setkey: CcmSetkeyFn,
+    /// `OSSL_CCM_setiv_fn setiv`.
+    pub setiv: CcmSetivFn,
+    /// `OSSL_CCM_setaad_fn setaad`.
+    pub setaad: CcmSetaadFn,
+    /// `OSSL_CCM_auth_encrypt_fn auth_encrypt`.
+    pub auth_encrypt: CcmAuthFn,
+    /// `OSSL_CCM_auth_decrypt_fn auth_decrypt`.
+    pub auth_decrypt: CcmAuthFn,
+    /// `OSSL_CCM_gettag_fn gettag`.
+    pub gettag: CcmGettagFn,
+}
+
+// ---------------------------------------------------------------------------------------------
+// `ciphercommon_ccm.c` — the shared engine
+// ---------------------------------------------------------------------------------------------
+
+/// `ccm_get_ivlen` — `ciphercommon_ccm.c:68-71`: the nonce length `15 - L`.
+///
+/// # Safety
+/// `ctx` is a live context.
+unsafe fn ccm_get_ivlen(ctx: *const ProvCcmCtx) -> usize {
+    // SAFETY: the caller's contract.
+    // `l` is only ever written inside `ossl_ccm_set_ctx_params`'s validated `[2, 8]` window and
+    // by `ossl_ccm_initctx`, so this cannot wrap; `wrapping_sub` states the authority's `size_t`
+    // semantics rather than relying on that invariant, and `overflow-checks` is on in this
+    // profile so a plain `-` would be a panic rather than a wrong number if it ever changed.
+    unsafe { 15usize.wrapping_sub((*ctx).l) }
+}
+
+/// `ccm_tls_init` — `ciphercommon_ccm.c:26-55`.
+///
+/// # Safety
+/// `ctx` is live; `aad` is readable for `alen` bytes.
+unsafe fn ccm_tls_init(ctx: *mut ProvCcmCtx, aad: *const c_uchar, alen: usize) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 || alen != EVP_AEAD_TLS1_AAD_LEN {
+            return 0;
+        }
+
+        /* Save the aad for later use. */
+        ptr::copy_nonoverlapping(aad, (*ctx).buf.as_mut_ptr(), alen);
+        (*ctx).tls_aad_len = alen;
+
+        let mut len = ((*ctx).buf[alen - 2] as usize) << 8 | (*ctx).buf[alen - 1] as usize;
+        if len < EVP_CCM_TLS_EXPLICIT_IV_LEN {
+            return 0;
+        }
+
+        /* Correct length for explicit iv. */
+        len -= EVP_CCM_TLS_EXPLICIT_IV_LEN;
+
+        if (*ctx).enc == 0 {
+            if len < (*ctx).m {
+                return 0;
+            }
+            /* Correct length for tag. */
+            len -= (*ctx).m;
+        }
+        (*ctx).buf[alen - 2] = (len >> 8) as c_uchar;
+        (*ctx).buf[alen - 1] = (len & 0xff) as c_uchar;
+
+        /* Extra padding: tag appended to record. */
+        (*ctx).m as c_int
+    }
+}
+
+/// `ccm_tls_iv_set_fixed` — `ciphercommon_ccm.c:57-66`.
+///
+/// # Safety
+/// `ctx` is live; `fixed` is readable for `flen` bytes.
+unsafe fn ccm_tls_iv_set_fixed(ctx: *mut ProvCcmCtx, fixed: *const c_uchar, flen: usize) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if flen != EVP_CCM_TLS_FIXED_IV_LEN {
+            return 0;
+        }
+
+        /* Copy to first part of the iv. */
+        ptr::copy_nonoverlapping(fixed, (*ctx).iv.as_mut_ptr(), flen);
+        1
+    }
+}
+
+/// The four keys `ossl_cipher_ccm_set_ctx_params_decoder` locates, each with the site of its own
+/// repeated-parameter raise (`ciphercommon_ccm.c:108-153`). The first row's key is
+/// `OSSL_CIPHER_PARAM_AEAD_IVLEN`, which `core_names.h:176` aliases to
+/// `OSSL_CIPHER_PARAM_IVLEN` (`"ivlen"`) -- it is that alias rather than a second spelling, so
+/// that is the constant used here.
+const CCM_SET_CTX_PARAMS_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char); 4] = [
+    (
+        &err_sites::PROV_CIPHERCOMMON_CCM_108,
+        OSSL_CIPHER_PARAM_IVLEN,
+    ),
+    (
+        &err_sites::PROV_CIPHERCOMMON_CCM_123,
+        OSSL_CIPHER_PARAM_AEAD_TAG,
+    ),
+    (
+        &err_sites::PROV_CIPHERCOMMON_CCM_142,
+        OSSL_CIPHER_PARAM_AEAD_TLS1_AAD,
+    ),
+    (
+        &err_sites::PROV_CIPHERCOMMON_CCM_153,
+        OSSL_CIPHER_PARAM_AEAD_TLS1_IV_FIXED,
+    ),
+];
+
+/// The seven keys `ossl_cipher_ccm_get_ctx_params_decoder` locates, each with its raise site
+/// (`ciphercommon_ccm.c:298-375`).
+const CCM_GET_CTX_PARAMS_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char); 7] = [
+    (
+        &err_sites::PROV_CIPHERCOMMON_CCM_298,
+        OSSL_CIPHER_PARAM_IVLEN,
+    ),
+    (&err_sites::PROV_CIPHERCOMMON_CCM_307, OSSL_CIPHER_PARAM_IV),
+    (
+        &err_sites::PROV_CIPHERCOMMON_CCM_319,
+        OSSL_CIPHER_PARAM_KEYLEN,
+    ),
+    (
+        &err_sites::PROV_CIPHERCOMMON_CCM_342,
+        OSSL_CIPHER_PARAM_AEAD_TAGLEN,
+    ),
+    (
+        &err_sites::PROV_CIPHERCOMMON_CCM_351,
+        OSSL_CIPHER_PARAM_AEAD_TAG,
+    ),
+    (
+        &err_sites::PROV_CIPHERCOMMON_CCM_363,
+        OSSL_CIPHER_PARAM_AEAD_TLS1_AAD_PAD,
+    ),
+    (
+        &err_sites::PROV_CIPHERCOMMON_CCM_375,
+        OSSL_CIPHER_PARAM_UPDATED_IV,
+    ),
+];
+
+/// `ossl_ccm_settable_ctx_params` — `ciphercommon_ccm.c:169-173`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn ossl_ccm_settable_ctx_params(
+    _cctx: *mut c_void,
+    _provctx: *mut c_void,
+) -> *const OsslParam {
+    CCM_SETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `ossl_ccm_set_ctx_params` — `ciphercommon_ccm.c:175-247`.
+///
+/// The tag arm is where CCM's ordering shows: on the encryption side a *tag value* is refused
+/// (`PROV_R_TAG_NOT_NEEDED`) because the tag is an output, while a *tag length* with a `NULL`
+/// data pointer is how the caller sets `M`. The IV-length arm is the L window: the parameter
+/// carries the nonce length and the context keeps `L = 15 - sz`, refused outside `L in [2, 8]`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn ossl_ccm_set_ctx_params(vctx: *mut c_void, params: *const OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if vctx.is_null() {
+            return 0;
+        }
+        if let Some(site) = repeated_param_site(params, &CCM_SET_CTX_PARAMS_DECODER_KEYS) {
+            return fail_at(site);
+        }
+        let ctx = vctx.cast::<ProvCcmCtx>();
+
+        let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_AEAD_TAG);
+        if !p.is_null() {
+            if (*p).data_type != OSSL_PARAM_OCTET_STRING {
+                return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_186);
+            }
+            if (*p).data_size & 1 != 0 || (*p).data_size < 4 || (*p).data_size > 16 {
+                return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_190);
+            }
+
+            if !(*p).data.is_null() {
+                if (*ctx).enc != 0 {
+                    return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_196);
+                }
+                ptr::copy_nonoverlapping(
+                    (*p).data.cast::<c_uchar>(),
+                    (*ctx).buf.as_mut_ptr(),
+                    (*p).data_size,
+                );
+                (*ctx).tag_set = 1;
+            }
+            (*ctx).m = (*p).data_size;
+        }
+
+        let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_IVLEN);
+        if !p.is_null() {
+            let mut sz = 0usize;
+            if crate::params::OSSL_PARAM_get_size_t(p, &mut sz) == 0 {
+                return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_207);
+            }
+            let ivlen = 15usize.wrapping_sub(sz);
+            if !(2..=8).contains(&ivlen) {
+                return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_212);
+            }
+            if (*ctx).l != ivlen {
+                (*ctx).l = ivlen;
+                (*ctx).iv_set = 0;
+            }
+        }
+
+        let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_AEAD_TLS1_AAD);
+        if !p.is_null() {
+            if (*p).data_type != OSSL_PARAM_OCTET_STRING {
+                return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_223);
+            }
+            let sz = ccm_tls_init(ctx, (*p).data.cast::<c_uchar>(), (*p).data_size);
+            if sz == 0 {
+                return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_228);
+            }
+            (*ctx).tls_aad_pad_sz = sz as usize;
+        }
+
+        let p =
+            crate::params::OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_AEAD_TLS1_IV_FIXED);
+        if !p.is_null() {
+            if (*p).data_type != OSSL_PARAM_OCTET_STRING {
+                return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_236);
+            }
+            if ccm_tls_iv_set_fixed(ctx, (*p).data.cast::<c_uchar>(), (*p).data_size) == 0 {
+                return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_240);
+            }
+        }
+        1
+    }
+}
+
+/// `ossl_ccm_gettable_ctx_params` — `ciphercommon_ccm.c:388-392`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn ossl_ccm_gettable_ctx_params(
+    _cctx: *mut c_void,
+    _provctx: *mut c_void,
+) -> *const OsslParam {
+    CCM_GETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `ossl_ccm_get_ctx_params` — `ciphercommon_ccm.c:394-461`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn ossl_ccm_get_ctx_params(vctx: *mut c_void, params: *mut OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if vctx.is_null() {
+            return 0;
+        }
+        if let Some(site) = repeated_param_site(params, &CCM_GET_CTX_PARAMS_DECODER_KEYS) {
+            return fail_at(site);
+        }
+        let ctx = vctx.cast::<ProvCcmCtx>();
+
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_IVLEN);
+        if !p.is_null() && crate::params::OSSL_PARAM_set_size_t(p, ccm_get_ivlen(ctx)) == 0 {
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_403);
+        }
+
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_AEAD_TAGLEN);
+        if !p.is_null() && crate::params::OSSL_PARAM_set_size_t(p, (*ctx).m) == 0 {
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_408);
+        }
+
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_IV);
+        if !p.is_null() {
+            if ccm_get_ivlen(ctx) > (*p).data_size {
+                return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_414);
+            }
+            if crate::params::OSSL_PARAM_set_octet_string_or_ptr(
+                p,
+                (*ctx).iv.as_ptr().cast(),
+                (*p).data_size,
+            ) == 0
+            {
+                return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_418);
+            }
+        }
+
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_UPDATED_IV);
+        if !p.is_null() {
+            if ccm_get_ivlen(ctx) > (*p).data_size {
+                return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_425);
+            }
+            if crate::params::OSSL_PARAM_set_octet_string_or_ptr(
+                p,
+                (*ctx).iv.as_ptr().cast(),
+                (*p).data_size,
+            ) == 0
+            {
+                return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_429);
+            }
+        }
+
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_KEYLEN);
+        if !p.is_null() && crate::params::OSSL_PARAM_set_size_t(p, (*ctx).keylen) == 0 {
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_435);
+        }
+
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_AEAD_TLS1_AAD_PAD);
+        if !p.is_null() && crate::params::OSSL_PARAM_set_size_t(p, (*ctx).tls_aad_pad_sz) == 0 {
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_440);
+        }
+
+        let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_AEAD_TAG);
+        if !p.is_null() {
+            if (*ctx).enc == 0 || (*ctx).tag_set == 0 {
+                return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_446);
+            }
+            if (*p).data_type != OSSL_PARAM_OCTET_STRING {
+                return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_450);
+            }
+            let hw = (*ctx).hw;
+            if ((*hw).gettag)(ctx, (*p).data.cast::<c_uchar>(), (*p).data_size) == 0 {
+                return fail();
+            }
+            (*ctx).tag_set = 0;
+            (*ctx).iv_set = 0;
+            (*ctx).len_set = 0;
+        }
+
+        1
+    }
+}
+
+/// `ccm_init` — `ciphercommon_ccm.c:463-491`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe fn ccm_init(
+    vctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    iv: *const c_uchar,
+    ivlen: usize,
+    params: *const OsslParam,
+    enc: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvCcmCtx>();
+
+        if is_running() == 0 {
+            return 0;
+        }
+
+        (*ctx).enc = c_uint::from(enc != 0);
+
+        if !iv.is_null() {
+            if ivlen != ccm_get_ivlen(ctx) {
+                return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_476);
+            }
+            ptr::copy_nonoverlapping(iv, (*ctx).iv.as_mut_ptr(), ivlen);
+            (*ctx).iv_set = 1;
+        }
+        if !key.is_null() {
+            if keylen != (*ctx).keylen {
+                return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_484);
+            }
+            let hw = (*ctx).hw;
+            if ((*hw).setkey)(ctx, key, keylen) == 0 {
+                return 0;
+            }
+        }
+        ossl_ccm_set_ctx_params(ctx.cast(), params)
+    }
+}
+
+/// `ossl_ccm_einit` — `ciphercommon_ccm.c:493-498`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn ossl_ccm_einit(
+    vctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    iv: *const c_uchar,
+    ivlen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe { ccm_init(vctx, key, keylen, iv, ivlen, params, 1) }
+}
+
+/// `ossl_ccm_dinit` — `ciphercommon_ccm.c:500-505`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn ossl_ccm_dinit(
+    vctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    iv: *const c_uchar,
+    ivlen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe { ccm_init(vctx, key, keylen, iv, ivlen, params, 0) }
+}
+
+/// `ossl_ccm_stream_update` — `ciphercommon_ccm.c:507-523`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn ossl_ccm_stream_update(
+    vctx: *mut c_void,
+    out: *mut c_uchar,
+    outl: *mut usize,
+    outsize: usize,
+    in_: *const c_uchar,
+    inl: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if outsize < inl {
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_514);
+        }
+
+        if ccm_cipher_internal(vctx.cast(), out, outl, in_, inl) == 0 {
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_519);
+        }
+        1
+    }
+}
+
+/// `ossl_ccm_stream_final` — `ciphercommon_ccm.c:525-546`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn ossl_ccm_stream_final(
+    vctx: *mut c_void,
+    _out: *mut c_uchar,
+    outl: *mut usize,
+    _outsize: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvCcmCtx>();
+        let dummy_in: c_uchar = 0;
+        let mut dummy_out: c_uchar = 0;
+
+        if is_running() == 0 {
+            return 0;
+        }
+
+        /*
+         * Encryption sets tag_set after processing the payload, while successful
+         * decryption clears iv_set. Use those transitions to avoid processing an
+         * operation twice.
+         */
+        if (*ctx).key_set == 0
+            || ((*ctx).iv_set != 0
+                && ((*ctx).enc == 0 || (*ctx).tag_set == 0)
+                && ccm_cipher_internal(
+                    ctx,
+                    ptr::addr_of_mut!(dummy_out),
+                    outl,
+                    ptr::addr_of!(dummy_in),
+                    0,
+                ) <= 0)
+        {
+            return 0;
+        }
+
+        *outl = 0;
+        1
+    }
+}
+
+/// `ossl_ccm_cipher` — `ciphercommon_ccm.c:548-570`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn ossl_ccm_cipher(
+    vctx: *mut c_void,
+    out: *mut c_uchar,
+    outl: *mut usize,
+    outsize: usize,
+    in_: *const c_uchar,
+    inl: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvCcmCtx>();
+
+        if is_running() == 0 {
+            return 0;
+        }
+
+        if in_.is_null() {
+            return ossl_ccm_stream_final(vctx, out, outl, outsize);
+        }
+
+        if outsize < inl {
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_CCM_560);
+        }
+
+        if ccm_cipher_internal(ctx, out, outl, in_, inl) <= 0 {
+            return 0;
+        }
+
+        *outl = inl;
+        1
+    }
+}
+
+/// `ccm_set_iv` — `ciphercommon_ccm.c:572-580`.
+///
+/// # Safety
+/// `ctx` is a live context.
+unsafe fn ccm_set_iv(ctx: *mut ProvCcmCtx, mlen: usize) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let hw = (*ctx).hw;
+
+        if ((*hw).setiv)(ctx, (*ctx).iv.as_ptr(), ccm_get_ivlen(ctx), mlen) == 0 {
+            return 0;
+        }
+        (*ctx).len_set = 1;
+        1
+    }
+}
+
+/// `ccm_tls_cipher` — `ciphercommon_ccm.c:582-626`.
+///
+/// # Safety
+/// `ctx` is live; `in`/`out` follow the dispatch contract.
+unsafe fn ccm_tls_cipher(
+    ctx: *mut ProvCcmCtx,
+    out: *mut c_uchar,
+    padlen: *mut usize,
+    in_: *const c_uchar,
+    len: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut rv = 0;
+        let mut olen = 0usize;
+        let mut in_ = in_;
+        let mut out = out;
+
+        'arm: {
+            if is_running() == 0 {
+                break 'arm;
+            }
+
+            /* Encrypt/decrypt must be performed in place */
+            if in_.is_null()
+                || out != in_.cast_mut()
+                || len < EVP_CCM_TLS_EXPLICIT_IV_LEN + (*ctx).m
+            {
+                break 'arm;
+            }
+
+            /* If encrypting set explicit IV from sequence number (start of AAD) */
+            if (*ctx).enc != 0 {
+                ptr::copy_nonoverlapping((*ctx).buf.as_ptr(), out, EVP_CCM_TLS_EXPLICIT_IV_LEN);
+            }
+            /* Get rest of IV from explicit IV */
+            ptr::copy_nonoverlapping(
+                in_,
+                (*ctx).iv.as_mut_ptr().add(EVP_CCM_TLS_FIXED_IV_LEN),
+                EVP_CCM_TLS_EXPLICIT_IV_LEN,
+            );
+            /* Correct length value */
+            let len = len - (EVP_CCM_TLS_EXPLICIT_IV_LEN + (*ctx).m);
+            if ccm_set_iv(ctx, len) == 0 {
+                break 'arm;
+            }
+
+            /* Use saved AAD */
+            let hw = (*ctx).hw;
+            if ((*hw).setaad)(ctx, (*ctx).buf.as_ptr(), (*ctx).tls_aad_len) == 0 {
+                break 'arm;
+            }
+
+            /* Fix buffer to point to payload */
+            in_ = in_.add(EVP_CCM_TLS_EXPLICIT_IV_LEN);
+            out = out.add(EVP_CCM_TLS_EXPLICIT_IV_LEN);
+            if (*ctx).enc != 0 {
+                if ((*hw).auth_encrypt)(ctx, in_, out, len, out.add(len), (*ctx).m) == 0 {
+                    break 'arm;
+                }
+                olen = len + EVP_CCM_TLS_EXPLICIT_IV_LEN + (*ctx).m;
+            } else {
+                if ((*hw).auth_decrypt)(ctx, in_, out, len, in_.add(len).cast_mut(), (*ctx).m) == 0
+                {
+                    break 'arm;
+                }
+                olen = len;
+            }
+            rv = 1;
+            break 'arm;
+        }
+
+        *padlen = olen;
+        rv
+    }
+}
+
+/// `ccm_cipher_internal` — `ciphercommon_ccm.c:629-...`.
+///
+/// # Safety
+/// `ctx` is live; `out`/`in_` follow the dispatch contract.
+unsafe fn ccm_cipher_internal(
+    ctx: *mut ProvCcmCtx,
+    out: *mut c_uchar,
+    padlen: *mut usize,
+    in_: *const c_uchar,
+    len: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut rv = 0;
+        let mut olen = 0usize;
+        let hw = (*ctx).hw;
+
+        /* If no key set, return error */
+        if (*ctx).key_set == 0 {
+            return 0;
+        }
+
+        if (*ctx).tls_aad_len != UNINITIALISED_SIZET {
+            return ccm_tls_cipher(ctx, out, padlen, in_, len);
+        }
+
+        'arm: {
+            /* EVP_*Final() doesn't return any data */
+            if in_.is_null() && !out.is_null() {
+                break 'arm;
+            }
+
+            if (*ctx).iv_set == 0 {
+                break 'arm;
+            }
+
+            if out.is_null() {
+                if in_.is_null() {
+                    if ccm_set_iv(ctx, len) == 0 {
+                        break 'arm;
+                    }
+                } else {
+                    /* If we have AAD, we need a message length */
+                    if (*ctx).len_set == 0 && len != 0 {
+                        break 'arm;
+                    }
+                    if ((*hw).setaad)(ctx, in_, len) == 0 {
+                        break 'arm;
+                    }
+                }
+            } else {
+                /* If not set length yet do it */
+                if (*ctx).len_set == 0 && ccm_set_iv(ctx, len) == 0 {
+                    break 'arm;
+                }
+
+                if (*ctx).enc != 0 {
+                    if ((*hw).auth_encrypt)(ctx, in_, out, len, ptr::null_mut(), 0) == 0 {
+                        break 'arm;
+                    }
+                    (*ctx).tag_set = 1;
+                } else {
+                    /* The tag must be set before actually decrypting data */
+                    if (*ctx).tag_set == 0 {
+                        break 'arm;
+                    }
+
+                    if ((*hw).auth_decrypt)(ctx, in_, out, len, (*ctx).buf.as_mut_ptr(), (*ctx).m)
+                        == 0
+                    {
+                        break 'arm;
+                    }
+                    /* Finished - reset flags so calling this method again will fail */
+                    (*ctx).iv_set = 0;
+                    (*ctx).tag_set = 0;
+                    (*ctx).len_set = 0;
+                }
+            }
+            olen = len;
+            rv = 1;
+            break 'arm;
+        }
+
+        *padlen = olen;
+        rv
+    }
+}
+
+/// `ossl_ccm_initctx` — `ciphercommon_ccm.c:476-487`.
+///
+/// # Safety
+/// `ctx` is a live, zeroed context.
+unsafe fn ossl_ccm_initctx(ctx: *mut ProvCcmCtx, keybits: usize, hw: *const ProvCcmHw) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        (*ctx).keylen = keybits / 8;
+        (*ctx).key_set = 0;
+        (*ctx).iv_set = 0;
+        (*ctx).tag_set = 0;
+        (*ctx).len_set = 0;
+        (*ctx).l = 8;
+        (*ctx).m = 12;
+        (*ctx).tls_aad_len = UNINITIALISED_SIZET;
+        (*ctx).hw = hw;
+    }
+}
+
+/// `cipher_ccm_known_settable_ctx_params` — `ciphercommon_ccm.c:74-79`.
+static CCM_SETTABLE_CTX_PARAMS: [OsslParam; 5] = [
+    param(OSSL_CIPHER_PARAM_IVLEN, OSSL_PARAM_UNSIGNED_INTEGER),
+    param(OSSL_CIPHER_PARAM_AEAD_TAG, OSSL_PARAM_OCTET_STRING),
+    param(OSSL_CIPHER_PARAM_AEAD_TLS1_AAD, OSSL_PARAM_OCTET_STRING),
+    param(
+        OSSL_CIPHER_PARAM_AEAD_TLS1_IV_FIXED,
+        OSSL_PARAM_OCTET_STRING,
+    ),
+    END,
+];
+
+/// `cipher_ccm_known_gettable_ctx_params` — `ciphercommon_ccm.c:250-258`.
+static CCM_GETTABLE_CTX_PARAMS: [OsslParam; 8] = [
+    param(OSSL_CIPHER_PARAM_KEYLEN, OSSL_PARAM_UNSIGNED_INTEGER),
+    param(OSSL_CIPHER_PARAM_IVLEN, OSSL_PARAM_UNSIGNED_INTEGER),
+    param(OSSL_CIPHER_PARAM_AEAD_TAGLEN, OSSL_PARAM_UNSIGNED_INTEGER),
+    param(OSSL_CIPHER_PARAM_IV, OSSL_PARAM_OCTET_STRING),
+    param(OSSL_CIPHER_PARAM_UPDATED_IV, OSSL_PARAM_OCTET_STRING),
+    param(OSSL_CIPHER_PARAM_AEAD_TAG, OSSL_PARAM_OCTET_STRING),
+    param(
+        OSSL_CIPHER_PARAM_AEAD_TLS1_AAD_PAD,
+        OSSL_PARAM_UNSIGNED_INTEGER,
+    ),
+    END,
+];
+
+// ---------------------------------------------------------------------------------------------
+// `cipher_aes_ccm.c` / `cipher_aes_ccm_hw.c` — the AES-specific arm
+// ---------------------------------------------------------------------------------------------
+
+/// `ccm_generic_aes_initkey` — `cipher_aes_ccm_hw.c:28-48`'s portable arm, which is the
+/// `AES_HW_CCM_SET_KEY_FN(AES_set_encrypt_key, AES_encrypt, NULL, NULL)` expansion: set the
+/// encryption schedule, initialise the CCM context over it, store `ctx->str = enc ? NULL : NULL`
+/// (see the section note on the declined AESNI arm), and mark the key set.
+///
+/// # Safety
+/// `ctx` is a `PROV_AES_CCM_CTX`; `key` is readable for `keylen` bytes.
+unsafe fn ccm_generic_aes_initkey(
+    ctx: *mut ProvCcmCtx,
+    key: *const c_uchar,
+    keylen: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let actx = ctx.cast::<ProvAesCcmCtx>();
+        let ks = ptr::addr_of_mut!((*actx).ks);
+
+        AES_set_encrypt_key(key, (keylen * 8) as c_int, ks);
+        CRYPTO_ccm128_init(
+            ptr::addr_of_mut!((*ctx).ccm_ctx),
+            (*ctx).m as c_uint,
+            (*ctx).l as c_uint,
+            ks.cast(),
+            aes_block_encrypt,
+        );
+        (*ctx).key_set = 1;
+        1
+    }
+}
+
+/// `int ossl_ccm_generic_setiv(PROV_CCM_CTX *, const unsigned char *, size_t, size_t)` —
+/// `ciphercommon_ccm_hw.c:13-17`.
+///
+/// # Safety
+/// The `PROV_CCM_HW::setiv` contract.
+unsafe fn ossl_ccm_generic_setiv(
+    ctx: *mut ProvCcmCtx,
+    nonce: *const c_uchar,
+    nlen: usize,
+    mlen: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        c_int::from(CRYPTO_ccm128_setiv(ptr::addr_of_mut!((*ctx).ccm_ctx), nonce, nlen, mlen) == 0)
+    }
+}
+
+/// `int ossl_ccm_generic_setaad(PROV_CCM_CTX *, const unsigned char *, size_t)` —
+/// `ciphercommon_ccm_hw.c:19-24`. `CRYPTO_ccm128_aad` returns nothing, so this always answers 1.
+///
+/// # Safety
+/// The `PROV_CCM_HW::setaad` contract.
+unsafe fn ossl_ccm_generic_setaad(ctx: *mut ProvCcmCtx, aad: *const c_uchar, alen: usize) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        CRYPTO_ccm128_aad(ptr::addr_of_mut!((*ctx).ccm_ctx), aad, alen);
+        1
+    }
+}
+
+/// `int ossl_ccm_generic_gettag(PROV_CCM_CTX *, unsigned char *, size_t)` —
+/// `ciphercommon_ccm_hw.c:26-29`.
+///
+/// # Safety
+/// The `PROV_CCM_HW::gettag` contract.
+unsafe fn ossl_ccm_generic_gettag(ctx: *mut ProvCcmCtx, tag: *mut c_uchar, tlen: usize) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe { c_int::from(CRYPTO_ccm128_tag(ptr::addr_of_mut!((*ctx).ccm_ctx), tag, tlen) > 0) }
+}
+
+/// `int ossl_ccm_generic_auth_encrypt(...)` — `ciphercommon_ccm_hw.c:31-47`. The `ctx->str != NULL`
+/// arm is the declined AESNI one, so the `CRYPTO_ccm128_encrypt` arm is the whole function here.
+///
+/// # Safety
+/// The `PROV_CCM_HW::auth_encrypt` contract.
+unsafe fn ossl_ccm_generic_auth_encrypt(
+    ctx: *mut ProvCcmCtx,
+    in_: *const c_uchar,
+    out: *mut c_uchar,
+    len: usize,
+    tag: *mut c_uchar,
+    taglen: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut rv = c_int::from(
+            CRYPTO_ccm128_encrypt(ptr::addr_of_mut!((*ctx).ccm_ctx), in_, out, len) == 0,
+        );
+
+        if rv == 1 && !tag.is_null() {
+            rv = c_int::from(CRYPTO_ccm128_tag(ptr::addr_of_mut!((*ctx).ccm_ctx), tag, taglen) > 0);
+        }
+        rv
+    }
+}
+
+/// `int ossl_ccm_generic_auth_decrypt(...)` — `ciphercommon_ccm_hw.c:49-71`. A tag mismatch
+/// **cleanses the output** before answering 0, which is an observable side effect the court sees.
+///
+/// # Safety
+/// The `PROV_CCM_HW::auth_decrypt` contract.
+unsafe fn ossl_ccm_generic_auth_decrypt(
+    ctx: *mut ProvCcmCtx,
+    in_: *const c_uchar,
+    out: *mut c_uchar,
+    len: usize,
+    expected_tag: *mut c_uchar,
+    taglen: usize,
+) -> c_int {
+    // SAFETY: the caller's contract, plus the local tag buffer below.
+    unsafe {
+        let mut rv = c_int::from(
+            CRYPTO_ccm128_decrypt(ptr::addr_of_mut!((*ctx).ccm_ctx), in_, out, len) == 0,
+        );
+
+        if rv != 0 {
+            let mut tag = [0u8; 16];
+
+            if CRYPTO_ccm128_tag(ptr::addr_of_mut!((*ctx).ccm_ctx), tag.as_mut_ptr(), taglen) == 0
+                || CRYPTO_memcmp(tag.as_ptr().cast(), expected_tag.cast(), taglen) != 0
+            {
+                rv = 0;
+            }
+        }
+        if rv == 0 {
+            OPENSSL_cleanse(out.cast(), len);
+        }
+        rv
+    }
+}
+
+/// `static const PROV_CCM_HW aes_ccm` — `cipher_aes_ccm_hw.c:50-57`.
+static AES_CCM_HW: ProvCcmHw = ProvCcmHw {
+    setkey: ccm_generic_aes_initkey,
+    setiv: ossl_ccm_generic_setiv,
+    setaad: ossl_ccm_generic_setaad,
+    auth_encrypt: ossl_ccm_generic_auth_encrypt,
+    auth_decrypt: ossl_ccm_generic_auth_decrypt,
+    gettag: ossl_ccm_generic_gettag,
+};
+
+/// `const PROV_CCM_HW *ossl_prov_aes_hw_ccm(size_t keybits)` — `cipher_aes_ccm_hw.c:70-73`, the
+/// portable arm. The AESNI arm's selection is declined (see the section note); its
+/// `ossl_ccm_generic_*` methods are the same five, so only `setkey` differs.
+///
+/// # Safety
+/// Always safe; the parameter is unused on this arm.
+unsafe fn ossl_prov_aes_hw_ccm(_keybits: usize) -> *const ProvCcmHw {
+    ptr::addr_of!(AES_CCM_HW)
+}
+
+/// `aes_ccm_newctx` — `cipher_aes_ccm.c:23-34`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe fn aes_ccm_newctx(_provctx: *mut c_void, keybits: usize) -> *mut c_void {
+    // SAFETY: the caller's contract; `ossl_ccm_initctx` writes only within the allocation.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+
+        let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvAesCcmCtx>(), FILE_CCM, LINE);
+        if !ctx.is_null() {
+            ossl_ccm_initctx(ctx.cast(), keybits, ossl_prov_aes_hw_ccm(keybits));
+        }
+        ctx
+    }
+}
+
+/// `aes_ccm_dupctx` — `cipher_aes_ccm.c:36-57`. The shallow copy's `ccm_ctx.key` still points at
+/// the *original* schedule, so it is re-pointed at the copy's own.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_ccm_dupctx(provctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+
+        let ctx = provctx.cast::<ProvAesCcmCtx>();
+        if ctx.is_null() {
+            return ptr::null_mut();
+        }
+        let dupctx = CRYPTO_memdup(
+            provctx,
+            core::mem::size_of::<ProvAesCcmCtx>(),
+            FILE_CCM,
+            LINE,
+        );
+        if dupctx.is_null() {
+            return ptr::null_mut();
+        }
+        let dup = dupctx.cast::<ProvAesCcmCtx>();
+        (*dup)
+            .base
+            .ccm_ctx
+            .repoint_key(ptr::addr_of_mut!((*dup).ks).cast());
+
+        dupctx
+    }
+}
+
+/// `aes_ccm_freectx` — `cipher_aes_ccm.c:59-65`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_ccm_freectx(vctx: *mut c_void) {
+    // SAFETY: the context is the one `aes_ccm_newctx` allocated.
+    unsafe { CRYPTO_clear_free(vctx, core::mem::size_of::<ProvAesCcmCtx>(), FILE_CCM, LINE) };
+}
+
+/// The allocation-tracking `file` argument for this section's allocations: `cipher_aes_ccm.c`.
+const FILE_CCM: *const c_char =
+    c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ccm.c".as_ptr();
+
+/// `IMPLEMENT_aead_cipher` — `prov/ciphercommon_aead.h:18-67`, the three AES-CCM rows' dispatch
+/// tables. Each has fourteen entries; `CIPHER` is the shared `ossl_ccm_cipher`, `UPDATE` and
+/// `FINAL` the shared stream pair, and `GET_PARAMS` is the row's own `blkbits`/`ivbits` triple.
+///
+/// The expansion writes only `pub(crate)` function items and a `'static` table — no exported
+/// symbol — so the project's ban on `macro_rules!`-generated exports is not engaged.
+macro_rules! ccm_row {
+    ($newctx:ident, $getparams:ident, $table:ident, $kbits:expr) => {
+        unsafe extern "C" fn $newctx(provctx: *mut c_void) -> *mut c_void {
+            // SAFETY: the dispatch contract.
+            unsafe { aes_ccm_newctx(provctx, $kbits) }
+        }
+
+        unsafe extern "C" fn $getparams(params: *mut OsslParam) -> c_int {
+            // SAFETY: the dispatch contract.
+            unsafe {
+                ossl_cipher_generic_get_params(
+                    params,
+                    EVP_CIPH_CCM_MODE,
+                    AES_CCM_FLAGS,
+                    $kbits,
+                    AES_CCM_BLOCK_BITS,
+                    AES_CCM_IV_BITS,
+                )
+            }
+        }
+
+        pub(crate) static $table: [OsslDispatch; 15] = [
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_NEWCTX,
+                function: $newctx as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_FREECTX,
+                function: aes_ccm_freectx as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: crate::evp::cipher::OSSL_FUNC_CIPHER_DUPCTX,
+                function: aes_ccm_dupctx as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_ENCRYPT_INIT,
+                function: ossl_ccm_einit as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_DECRYPT_INIT,
+                function: ossl_ccm_dinit as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_UPDATE,
+                function: ossl_ccm_stream_update as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_FINAL,
+                function: ossl_ccm_stream_final as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: crate::evp::cipher::OSSL_FUNC_CIPHER_CIPHER,
+                function: ossl_ccm_cipher as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GET_PARAMS,
+                function: $getparams as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GET_CTX_PARAMS,
+                function: ossl_ccm_get_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_SET_CTX_PARAMS,
+                function: ossl_ccm_set_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GETTABLE_PARAMS,
+                function: ossl_cipher_generic_gettable_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GETTABLE_CTX_PARAMS,
+                function: ossl_ccm_gettable_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS,
+                function: ossl_ccm_settable_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_DISPATCH_END,
+                function: ptr::null_mut(),
+            },
+        ];
+    };
+}
+
+ccm_row!(
+    aes128ccm_newctx,
+    aes128ccm_get_params,
+    AES128CCM_FUNCTIONS,
+    128
+);
+ccm_row!(
+    aes192ccm_newctx,
+    aes192ccm_get_params,
+    AES192CCM_FUNCTIONS,
+    192
+);
+ccm_row!(
+    aes256ccm_newctx,
+    aes256ccm_get_params,
+    AES256CCM_FUNCTIONS,
+    256
+);
+
+// ---------------------------------------------------------------------------------------------
 // `cipher_null.c`
 // ---------------------------------------------------------------------------------------------
 
@@ -6943,6 +8148,18 @@ alias!(N_DES_EDE_CBC, "DES-EDE-CBC");
 alias!(N_DES_EDE_OFB, "DES-EDE-OFB");
 alias!(N_DES_EDE_CFB, "DES-EDE-CFB");
 alias!(
+    N_AES_256_CCM,
+    "AES-256-CCM:id-aes256-CCM:2.16.840.1.101.3.4.1.47"
+);
+alias!(
+    N_AES_192_CCM,
+    "AES-192-CCM:id-aes192-CCM:2.16.840.1.101.3.4.1.27"
+);
+alias!(
+    N_AES_128_CCM,
+    "AES-128-CCM:id-aes128-CCM:2.16.840.1.101.3.4.1.7"
+);
+alias!(
     N_AES_256_WRAP,
     "AES-256-WRAP:id-aes256-wrap:AES256-WRAP:2.16.840.1.101.3.4.1.45"
 );
@@ -6994,7 +8211,7 @@ const fn row(names: *const c_char, implementation: *const c_void) -> OsslAlgorit
 
 /// `static const OSSL_ALGORITHM_CAPABLE deflt_ciphers[]` — `providers/defltprov.c:161-330`,
 /// restricted to the rows this half implements, in the authority's order.
-pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 77] = [
+pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 80] = [
     row(N_NULL, NULL_FUNCTIONS.as_ptr().cast()),
     row(N_AES_256_ECB, AES256ECB_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_ECB, AES192ECB_FUNCTIONS.as_ptr().cast()),
@@ -7025,6 +8242,9 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 77] = [
     row(N_AES_256_OCB, AES256OCB_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_OCB, AES192OCB_FUNCTIONS.as_ptr().cast()),
     row(N_AES_128_OCB, AES128OCB_FUNCTIONS.as_ptr().cast()),
+    row(N_AES_256_CCM, AES256CCM_FUNCTIONS.as_ptr().cast()),
+    row(N_AES_192_CCM, AES192CCM_FUNCTIONS.as_ptr().cast()),
+    row(N_AES_128_CCM, AES128CCM_FUNCTIONS.as_ptr().cast()),
     row(N_AES_256_WRAP, AES256WRAP_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_WRAP, AES192WRAP_FUNCTIONS.as_ptr().cast()),
     row(N_AES_128_WRAP, AES128WRAP_FUNCTIONS.as_ptr().cast()),
@@ -7122,9 +8342,9 @@ mod tests {
 
     #[test]
     fn the_cipher_table_terminates_and_names_the_rows() {
-        assert_eq!(DEFLT_CIPHERS.len(), 77);
+        assert_eq!(DEFLT_CIPHERS.len(), 80);
         // SAFETY: every entry up to the terminator is initialised.
-        let last = DEFLT_CIPHERS[76].algorithm_names;
+        let last = DEFLT_CIPHERS[79].algorithm_names;
         assert!(last.is_null(), "the table is NULL-name terminated");
         // SAFETY: the first row's name is a `'static` C string.
         let first = unsafe { core::ffi::CStr::from_ptr(DEFLT_CIPHERS[0].algorithm_names) };

@@ -5,18 +5,19 @@
       "in-progress"
     ],
     "census": {
-      "names_a_file_the_authority_does_not_have": 2,
+      "names_a_file_the_authority_does_not_have": 3,
       "symbols_not_reached": 2,
       "units_not_reached": 4
     },
     "census_by_stratum": {
-      "8": 8
+      "8": 9
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
     "census_samples": {
       "names_a_file_the_authority_does_not_have": [
         "docs/PHASE-8-SUBPHASES.md:8.1b:_prov.c",
-        "docs/PHASE-8-SUBPHASES.md:8.1b:digestcommon.c"
+        "docs/PHASE-8-SUBPHASES.md:8.1b:digestcommon.c",
+        "docs/PHASE-8-SUBPHASES.md:8.3:ciphercommon_ccm.c"
       ],
       "symbols_not_reached": [
         "ossl_dh_asn1_meth",
@@ -2132,7 +2133,7 @@
       "transcribed_units": 167
     }
   },
-  "body_hash": "88f660a9e169d869831a31759d796b2250af9ed7a700054d9b398df4cce21c1d",
+  "body_hash": "d37d09723813ef53ebbc87d23967141d41762465f372d1d48c83b5863f42c928",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -2143,12 +2144,12 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "02026175f3d116553aaad756b9ab4759d4c43f8e75c470092ed03f91d35c88b5"
+      "sha256": "0104ac71c2c296f0d4ecf5219cbf54e38c877e17ea04426de6a652915b930c62"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "38dc9093ac49845e59e97ff15b30c35e2186c47b72ec4cac95a20475852f7d3c"
+      "sha256": "006bfa624e80fbf9493c85ae08b51d25f350653cb20b96d67b92ffda87c8d820"
     },
     {
       "name": "phase-state",
@@ -2183,7 +2184,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "f98f6307e953a8e782f87d4371d433d8d27ab251be47d2dfb8bd8b28b4f46e30"
+      "sha256": "ec7ffc5db4e53e72eb1f9a446bb3c528bbf9f36adb3fea215b53a53716e7365e"
     }
   ],
   "kind": "plan-reconciliation",
