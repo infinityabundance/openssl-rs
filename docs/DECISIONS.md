@@ -15247,3 +15247,98 @@ None of these is claimed by this entry, and none is half-modelled: the rows that
 absent from `DEFLT_CIPHERS`, so a fetch of `AES-128-GCM` answers NULL on the candidate rather than
 a row with unimplemented arms. The plan's 8.3 row moved in the same commit; its two anchored
 status clauses did not, because this entry lands no export.
+
+## D232 — the default provider's AES-XTS rows land, and the data unit is the whole message
+
+The 8.3 provider work continues with the two AES-XTS rows, the last self-contained engine group
+here: `cipher_aes_xts.c` drives `CRYPTO_xts128_encrypt` directly rather than instantiating a block
+mode, so nothing of `ciphercommon_gcm.c.in`/`ciphercommon_ccm.c.in` is needed first.
+`src/provider/cipher.rs` now transcribes `PROV_AES_XTS_CTX`, `aes_xts_check_keys_differ`,
+`cipher_hw_aes_xts_generic_initkey`/`copyctx`, `aes_xts_newctx`/`_freectx`/`_dupctx`,
+`aes_xts_init`/`_einit`/`_dinit`, `aes_xts_cipher`/`_stream_update`/`_stream_final`,
+`aes_xts_set_ctx_params` and its settable list, and `IMPLEMENT_cipher`'s two rows.
+`DEFLT_CIPHERS` goes from 71 rows to **73**: `AES-256-XTS` and `AES-128-XTS` join after the AES
+CTR rows. No export moves: `implemented[libcrypto]` stays **2035** and Phase 8 stays
+**194/576/16**, read from `forensics/phase8-obligations.json`.
+
+**The rows are the default provider's, checked against both tables, and every alias is verbatim
+from `names.h`.** `providers/defltprov.c:187-188` publishes `AES-256-XTS` then `AES-128-XTS`,
+between CTR and OCB. `providers/legacyprov.c` publishes neither. The alias strings are copied from
+`providers/implementations/include/prov/names.h:72-73`, OIDs included, so
+`AES-128-XTS:1.3.111.2.1619.0.1.1` resolves under the name and under the OID — and `RT-CIPHER`
+fetches both spellings of both rows to say so.
+
+**The shape is a stream of one-byte blocks, and that is the design rather than a shortcut.**
+XTS is defined over a data unit, so the row declares `AES_XTS_BLOCK_BITS` = 8 (a one-byte stream
+block) and `AES_XTS_IV_BITS` = 128, with a key length of twice the AES key. Because the row
+publishes a one-shot `CIPHER` and `IV_BITS` = 128 with `PROV_CIPHER_FLAG_CUSTOM_IV`, the EVP layer
+takes its provider arm and hands the whole call to `aes_xts_stream_update`, so the data unit is the
+whole message and the `inl < 16` refusal is observable. The duplicated-key check
+(`cipher_aes_xts.c:54-63`) is not waived for decryption outside the FIPS module
+(`ossl_aes_xts_allow_insecure_decrypt` is 0), and the data-unit limit is IEEE Std 1619-2018's
+2^20 blocks.
+
+**The data cipher's direction is chosen at key time, which is D227's rule at the provider layer.**
+`cipher_hw_aes_xts_generic_initkey` sets `xts.block1` to `AES_encrypt` for encryption and to
+`AES_decrypt` for decryption, while `xts.block2` (the tweak cipher) is always `AES_encrypt`. The
+crate's `XtsCtx` fields became `pub(crate)` for this — a visibility change, not an ABI change,
+because the struct is still `#[repr(C)]` and field-for-field the authority's `xts128_context`.
+
+**One recorded non-comparison, of the D213/D225 class.** On a host where the AESNI/AVX stream is
+available the authority's `cipher_hw_aes_xts_generic_initkey` sets the row's `stream` to
+`aesni_xts_encrypt`/`_decrypt` and `aes_xts_cipher` calls it instead of
+`CRYPTO_xts128_encrypt`. That is a **host CPU property**, not a build property, and it is
+unobservable through the public surface; the crate always drives `CRYPTO_xts128_encrypt`. The two
+produce the same bytes by construction (both implement IEEE 1619), which is why `RT-CIPHER`'s
+observations agree on both sides, and this note records the choice rather than leaving it implicit.
+
+**Both planes.** `RT-CIPHER` **805 → 849 observations**: the new `rt_deflt_xts` arm fetches both
+rows by name and by OID and observes `keylen` (32/64), `ivlen` (16) and `blocksize` (1); then, for
+data-unit lengths 16, 17, 31, 32, 48 and 49 — so the tweak is doubled up to three times and both
+ciphertext-stealing arms are taken — the ciphertext as hex with a decrypt round trip; then the
+refusals (a 15-byte data unit, and a 32-byte key whose two halves are equal); and finally the
+provider's answer is required to equal the landed low-level `CRYPTO_xts128_encrypt` for a 32- and a
+33-byte data unit (`defltxts.eq32.same=1`, `defltxts.eq33.same=1`). `CT-CIPHER` stays **3083**:
+`forensics/vectors/xts.json`'s 46 IEEE 1619 vectors already land through
+`CRYPTO_xts128_encrypt` (D227), so a provider row adds no vector — the same pattern as D230's key
+wrap.
+
+**An instrument defect, not a crate one.** The first `rt_deflt_xts` draft declared `XTS128_CONTEXT`
+by value to build the low-level comparison and the authority's installed `openssl/modes.h` only
+forward-declares it, so the authority-side compile failed on an incomplete type. The probe already
+had a field-for-field mirror (`rt_xts_ctx`) from the low-level arm, and the comparison now uses it
+with the same cast. Nothing about the crate was involved.
+
+**What the default provider now provides, in the exact words.** It is the default provider's
+digest-query half **and** cipher-query half, with `deflt_ciphers[]` publishing **73 rows**: NULL,
+AES (ECB/CBC/OFB/CFB/CFB1/CFB8/CTR at three key lengths, 21), the six AES/Camellia CBC-CTS rows,
+the two AES-XTS rows, the twelve AES key-wrap rows, Camellia (the ECB/CBC/OFB/CFB/CFB1/CFB8/CTR
+set, 21) and 3DES (EDE3 ECB/CBC/OFB/CFB/CFB1/CFB8 and EDE2 ECB/CBC/OFB/CFB, 10). It is **not**
+default-provider parity: the GCM, CCM, OCB and SIV rows, ARIA/SM4, ChaCha20 and the asm-selected
+`cipher_aes_cbc_hmac_*` TLS ciphers stay absent, as do
+`deflt_get_params`/`deflt_gettable_params`/`ossl_prov_get_capabilities`/`provctx` and the
+`base`/`null` providers.
+
+**What 8.3's provider half still has open, with coordinates.** Each is a reading of
+`providers/defltprov.c` against `legacyprov.c`; legacy publishes none of them.
+
+* **GCM** — `defltprov.c:202-204`, `cipher_aes_gcm.c` plus `ciphercommon_gcm.c.in`,
+  `ciphercommon_gcm_hw.c` and `cipher_aes_gcm_hw.c`. Its primitive (`crypto/modes/gcm128.c`) is
+  landed (D225); the open work is the generic AEAD engine.
+* **CCM** — `defltprov.c:205-207`, `cipher_aes_ccm.c` plus `ciphercommon_ccm.c.in` and
+  `cipher_aes_ccm_hw.c`. Primitive landed (D226); the generic AEAD engine is the open work.
+* **OCB** — `defltprov.c:190-192`, `cipher_aes_ocb.c` and `cipher_aes_ocb_hw.c`. Primitive landed
+  (D229).
+* **SIV / GCM-SIV** — `defltprov.c:195-200`, `cipher_aes_siv.c`, `cipher_aes_siv_hw.c`,
+  `cipher_aes_gcm_siv.c` and `cipher_aes_gcm_siv_polyval.c`. Its primitive is **not** landed and is
+  not a `libcrypto` export: `crypto/modes/siv128.c` is declared in `include/crypto/siv.h`, and
+  `util/libcrypto.num` has no `CRYPTO_siv128_` entry. It is not among `forensics/prerequisites.json`'s
+  units either, so it is a new internal transcription rather than a missing export.
+* **ChaCha20 / ChaCha20-Poly1305** — `defltprov.c:324-329`, `cipher_chacha20.c`,
+  `cipher_chacha20_hw.c` and `cipher_chacha20_poly1305.c.in`, over the internal
+  `crypto/chacha/chacha_enc.c` and `crypto/poly1305/poly1305.c` (D228). No `libcrypto` export and
+  no dependency this stratum owns.
+
+None of these is claimed by this entry, and none is half-modelled: the rows that are absent are
+absent from `DEFLT_CIPHERS`, so a fetch of `AES-128-GCM` answers NULL on the candidate rather than
+a row with unimplemented arms.

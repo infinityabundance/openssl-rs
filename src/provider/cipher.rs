@@ -71,6 +71,7 @@ use crate::evp::cipher::{
 use crate::modes::wrap::{
     CRYPTO_128_unwrap, CRYPTO_128_unwrap_pad, CRYPTO_128_wrap, CRYPTO_128_wrap_pad,
 };
+use crate::modes::xts::{CRYPTO_xts128_encrypt, XtsCtx};
 use crate::modes::{
     Block128F, CRYPTO_cbc128_decrypt, CRYPTO_cbc128_encrypt, CRYPTO_cfb128_1_encrypt,
     CRYPTO_cfb128_8_encrypt, CRYPTO_cfb128_encrypt, CRYPTO_ctr128_encrypt, CRYPTO_ofb128_encrypt,
@@ -82,7 +83,7 @@ use crate::params::{
 };
 use crate::provider::activate::OsslAlgorithm;
 use crate::runtime::mem::{
-    CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup, CRYPTO_zalloc,
+    CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_memcmp, CRYPTO_memdup, CRYPTO_zalloc,
 };
 
 /// The authority translation unit the generic engine is `ciphercommon.c.in`'s, for the
@@ -3794,6 +3795,516 @@ cts_row!(
     camellia_dupctx
 );
 
+// ---------------------------------------------------------------------------------------------
+// `cipher_aes_xts.c` — the IEEE 1619 AES-XTS rows
+// ---------------------------------------------------------------------------------------------
+//
+// XTS is defined over a **data unit**, not over a block stream, so the row declares a stream
+// block size of one byte (`AES_XTS_BLOCK_BITS`) and drives `CRYPTO_xts128_encrypt` directly from
+// its own `cipher`. The data cipher's direction is chosen at key time: `block1` is the encrypt
+// function for encryption and the **decrypt** function for decryption, while `block2` (the tweak
+// cipher) is always the encrypt function (D227).
+
+/// `AES_XTS_FLAGS` — `cipher_aes_xts.c:23`.
+const AES_XTS_FLAGS: u64 = PROV_CIPHER_FLAG_CUSTOM_IV;
+/// `AES_XTS_IV_BITS` — `cipher_aes_xts.c:24`.
+const AES_XTS_IV_BITS: usize = 128;
+/// `AES_XTS_BLOCK_BITS` — `cipher_aes_xts.c:25`.
+const AES_XTS_BLOCK_BITS: usize = 8;
+/// `XTS_MAX_BLOCKS_PER_DATA_UNIT` — `cipher_aes_xts.c:201` (one million blocks).
+const XTS_MAX_BLOCKS_PER_DATA_UNIT: usize = 1 << 20;
+/// `EVP_CIPH_XTS_MODE` — `include/openssl/evp.h:318`.
+const EVP_CIPH_XTS_MODE: c_uint = 0x10001;
+/// `ossl_aes_xts_allow_insecure_decrypt` — `cipher_fips.c:?` is **0** outside the FIPS module, so
+/// the duplicated-key check is applied to encryption **and** decryption.
+const AES_XTS_ALLOW_INSECURE_DECRYPT: c_int = 0;
+
+/// `PROV_AES_XTS_CTX` — `cipher_aes_xts.h:33-58`, without the s390x platform union (that arm is
+/// not compiled in this profile).
+#[repr(C)]
+pub(crate) struct ProvAesXtsCtx {
+    /// `PROV_CIPHER_CTX base`.
+    pub base: ProvCipherCtx,
+    /// `union { OSSL_UNION_ALIGN; AES_KEY ks; } ks1` — the data-unit schedule.
+    pub ks1: AesKey,
+    /// `union { OSSL_UNION_ALIGN; AES_KEY ks; } ks2` — the tweak schedule.
+    pub ks2: AesKey,
+    /// `XTS128_CONTEXT xts` — the caller-populated four-field context.
+    pub xts: XtsCtx,
+}
+
+/// `aes_xts_check_keys_differ` — `cipher_aes_xts.c:54-63`.
+///
+/// # Safety
+/// `key` is readable for `2 * bytes`.
+unsafe fn aes_xts_check_keys_differ(key: *const c_uchar, bytes: usize, enc: c_int) -> c_int {
+    // SAFETY: the caller's contract; `CRYPTO_memcmp` reads both halves.
+    unsafe {
+        if (AES_XTS_ALLOW_INSECURE_DECRYPT == 0 || enc != 0)
+            && CRYPTO_memcmp(key.cast(), key.add(bytes).cast(), bytes) == 0
+        {
+            return fail();
+        }
+        1
+    }
+}
+
+/// `cipher_hw_aes_xts_generic_initkey` — `cipher_aes_xts_hw.c:39-88`, the portable arm. The
+/// authority's `XTS_SET_KEY_FN` ignores the schedule setters' return values, and so does this.
+///
+/// # Safety
+/// The `PROV_CIPHER_HW::init` contract; `ctx` is a `PROV_AES_XTS_CTX`.
+unsafe extern "C" fn cipher_hw_aes_xts_generic_initkey(
+    ctx: *mut ProvCipherCtx,
+    key: *const c_uchar,
+    keylen: usize,
+) -> c_int {
+    // SAFETY: the caller's contract; `ctx` is a `PROV_AES_XTS_CTX`.
+    unsafe {
+        let xctx = ctx.cast::<ProvAesXtsCtx>();
+        let bytes = keylen / 2;
+        let bits = (bytes * 8) as c_int;
+        let ks1 = ptr::addr_of_mut!((*xctx).ks1);
+        let ks2 = ptr::addr_of_mut!((*xctx).ks2);
+
+        if (*ctx).enc_int() != 0 {
+            AES_set_encrypt_key(key, bits, ks1);
+            (*xctx).xts.block1 = Some(aes_block_encrypt);
+        } else {
+            AES_set_decrypt_key(key, bits, ks1);
+            (*xctx).xts.block1 = Some(aes_block_decrypt);
+        }
+        AES_set_encrypt_key(key.add(bytes), bits, ks2);
+        (*xctx).xts.block2 = Some(aes_block_encrypt);
+        (*xctx).xts.key1 = ks1.cast();
+        (*xctx).xts.key2 = ks2.cast();
+        1
+    }
+}
+
+/// `cipher_hw_aes_xts_copyctx` — `cipher_aes_xts_hw.c:90-99`.
+///
+/// # Safety
+/// The `PROV_CIPHER_HW::copyctx` contract; both are `PROV_AES_XTS_CTX`.
+unsafe extern "C" fn cipher_hw_aes_xts_copyctx(dst: *mut ProvCipherCtx, src: *const ProvCipherCtx) {
+    // SAFETY: the caller's contract; both are `PROV_AES_XTS_CTX`.
+    unsafe {
+        ptr::copy_nonoverlapping(src.cast::<ProvAesXtsCtx>(), dst.cast::<ProvAesXtsCtx>(), 1);
+        let d = dst.cast::<ProvAesXtsCtx>();
+        (*d).xts.key1 = ptr::addr_of_mut!((*d).ks1).cast();
+        (*d).xts.key2 = ptr::addr_of_mut!((*d).ks2).cast();
+    }
+}
+
+/// `PROV_CIPHER_HW::cipher` is `NULL` for the XTS rows (`cipher_aes_xts_hw.c:322-326`): the row's
+/// own `aes_xts_cipher` drives `CRYPTO_xts128_encrypt`. The crate's `ProvCipherHw::cipher` is a
+/// plain function pointer rather than an `Option`, so a never-called stub stands in for the
+/// authority's `NULL`.
+///
+/// # Safety
+/// Never called.
+unsafe extern "C" fn cipher_hw_aes_xts_cipher_unused(
+    _ctx: *mut ProvCipherCtx,
+    _out: *mut c_uchar,
+    _in_: *const c_uchar,
+    _len: usize,
+) -> c_int {
+    fail()
+}
+
+static AES_XTS_HW: ProvCipherHw = ProvCipherHw {
+    init: cipher_hw_aes_xts_generic_initkey,
+    cipher: cipher_hw_aes_xts_cipher_unused,
+    copyctx: cipher_hw_aes_xts_copyctx,
+};
+
+/// `AES-*-XTS`'s one settable parameter — `cipher_aes_xts.c:244-247`.
+static AES_XTS_SETTABLE_CTX_PARAMS: [OsslParam; 2] = [
+    param(OSSL_CIPHER_PARAM_KEYLEN, OSSL_PARAM_UNSIGNED_INTEGER),
+    END,
+];
+
+/// `aes_xts_settable_ctx_params` — `cipher_aes_xts.c:249-253`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_xts_settable_ctx_params(
+    _cctx: *mut c_void,
+    _provctx: *mut c_void,
+) -> *const OsslParam {
+    AES_XTS_SETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `aes_xts_set_ctx_params` — `cipher_aes_xts.c:255-277`. The key length is a check, not a knob.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_xts_set_ctx_params(vctx: *mut c_void, params: *const OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if ossl_param_is_empty(params) {
+            return 1;
+        }
+        let ctx = vctx.cast::<ProvCipherCtx>();
+        let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_KEYLEN);
+        if !p.is_null() {
+            let mut keylen = 0usize;
+            if crate::params::OSSL_PARAM_get_size_t(p, &mut keylen) == 0 {
+                return fail();
+            }
+            if keylen != (*ctx).keylen {
+                return fail();
+            }
+        }
+        1
+    }
+}
+
+/// `aes_xts_newctx` — `cipher_aes_xts.c:123-138`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe fn aes_xts_newctx(
+    provctx: *mut c_void,
+    mode: c_uint,
+    flags: u64,
+    kbits: usize,
+    blkbits: usize,
+    ivbits: usize,
+) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+        let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvAesXtsCtx>(), FILE, LINE);
+        if !ctx.is_null() {
+            ossl_cipher_generic_initkey(
+                ctx,
+                kbits,
+                blkbits,
+                ivbits,
+                mode,
+                flags,
+                ptr::addr_of!(AES_XTS_HW),
+                ptr::null_mut(),
+            );
+        }
+        let _ = provctx;
+        ctx
+    }
+}
+
+/// `aes_xts_freectx` — `cipher_aes_xts.c:140-146`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_xts_freectx(vctx: *mut c_void) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        ossl_cipher_generic_reset_ctx(vctx.cast());
+        CRYPTO_clear_free(vctx, core::mem::size_of::<ProvAesXtsCtx>(), FILE, LINE);
+    }
+}
+
+/// `aes_xts_dupctx` — `cipher_aes_xts.c:148-174`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_xts_dupctx(vctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+        let in_ = vctx.cast::<ProvAesXtsCtx>();
+        let ks1 = ptr::addr_of!((*in_).ks1).cast_mut().cast::<c_void>();
+        let ks2 = ptr::addr_of!((*in_).ks2).cast_mut().cast::<c_void>();
+        if !(*in_).xts.key1.is_null() && (*in_).xts.key1 != ks1 {
+            return ptr::null_mut();
+        }
+        if !(*in_).xts.key2.is_null() && (*in_).xts.key2 != ks2 {
+            return ptr::null_mut();
+        }
+        let ret = CRYPTO_malloc(core::mem::size_of::<ProvAesXtsCtx>(), FILE, LINE);
+        if ret.is_null() {
+            return ptr::null_mut();
+        }
+        let hw = (*in_).base.hw;
+        ((*hw).copyctx)(ret.cast(), vctx.cast());
+        ret
+    }
+}
+
+/// `aes_xts_init` — `cipher_aes_xts.c:72-99`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe fn aes_xts_init(
+    vctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    iv: *const c_uchar,
+    ivlen: usize,
+    params: *const OsslParam,
+    enc: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvCipherCtx>();
+        if is_running() == 0 {
+            return fail();
+        }
+        bits_set(ctx, CTX_ENC, enc != 0);
+        if !iv.is_null() && ossl_cipher_generic_initiv(ctx, iv, ivlen) == 0 {
+            return fail();
+        }
+        if !key.is_null() {
+            if keylen != (*ctx).keylen {
+                return fail();
+            }
+            if aes_xts_check_keys_differ(key, keylen / 2, enc) == 0 {
+                return fail();
+            }
+            let hw = (*ctx).hw;
+            if ((*hw).init)(ctx, key, keylen) == 0 {
+                return fail();
+            }
+        }
+        aes_xts_set_ctx_params(vctx, params)
+    }
+}
+
+/// `aes_xts_einit` — `cipher_aes_xts.c:101-110`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_xts_einit(
+    vctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    iv: *const c_uchar,
+    ivlen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe { aes_xts_init(vctx, key, keylen, iv, ivlen, params, 1) }
+}
+
+/// `aes_xts_dinit` — `cipher_aes_xts.c:112-121`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_xts_dinit(
+    vctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    iv: *const c_uchar,
+    ivlen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe { aes_xts_init(vctx, key, keylen, iv, ivlen, params, 0) }
+}
+
+/// `aes_xts_cipher` — `cipher_aes_xts.c:176-214`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_xts_cipher(
+    vctx: *mut c_void,
+    out: *mut c_uchar,
+    outl: *mut usize,
+    _outsize: usize,
+    in_: *const c_uchar,
+    inl: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let xctx = vctx.cast::<ProvAesXtsCtx>();
+        let ctx = vctx.cast::<ProvCipherCtx>();
+        if is_running() == 0
+            || (*xctx).xts.key1.is_null()
+            || (*xctx).xts.key2.is_null()
+            || bits(ctx) & CTX_IV_SET == 0
+            || out.is_null()
+            || in_.is_null()
+            || inl < GENERIC_BLOCK_SIZE
+        {
+            return fail();
+        }
+        // IEEE Std 1619-2018's data-unit limit, which SP 800-38E also mandates.
+        if inl > XTS_MAX_BLOCKS_PER_DATA_UNIT * GENERIC_BLOCK_SIZE {
+            return fail();
+        }
+        if CRYPTO_xts128_encrypt(
+            ptr::addr_of!((*xctx).xts),
+            (*ctx).iv.as_ptr(),
+            in_,
+            out,
+            inl,
+            (*ctx).enc_int(),
+        ) != 0
+        {
+            return fail();
+        }
+        *outl = inl;
+        1
+    }
+}
+
+/// `aes_xts_stream_update` — `cipher_aes_xts.c:216-233`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_xts_stream_update(
+    vctx: *mut c_void,
+    out: *mut c_uchar,
+    outl: *mut usize,
+    outsize: usize,
+    in_: *const c_uchar,
+    inl: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if outsize < inl {
+            return fail();
+        }
+        aes_xts_cipher(vctx, out, outl, outsize, in_, inl)
+    }
+}
+
+/// `aes_xts_stream_final` — `cipher_aes_xts.c:235-242`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_xts_stream_final(
+    _vctx: *mut c_void,
+    _out: *mut c_uchar,
+    outl: *mut usize,
+    _outsize: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return fail();
+        }
+        *outl = 0;
+        1
+    }
+}
+
+/// `IMPLEMENT_cipher` — `cipher_aes_xts.c:279-315`. The table has fourteen entries; the one-shot
+/// `CIPHER` is this row's own, and the block size is one byte, so the EVP layer treats it as a
+/// stream.
+macro_rules! xts_row {
+    ($newctx:ident, $getparams:ident, $table:ident, $kbits:expr) => {
+        unsafe extern "C" fn $newctx(provctx: *mut c_void) -> *mut c_void {
+            // SAFETY: the dispatch contract.
+            unsafe {
+                aes_xts_newctx(
+                    provctx,
+                    EVP_CIPH_XTS_MODE,
+                    AES_XTS_FLAGS,
+                    2 * $kbits,
+                    AES_XTS_BLOCK_BITS,
+                    AES_XTS_IV_BITS,
+                )
+            }
+        }
+
+        unsafe extern "C" fn $getparams(params: *mut OsslParam) -> c_int {
+            // SAFETY: the dispatch contract.
+            unsafe {
+                ossl_cipher_generic_get_params(
+                    params,
+                    EVP_CIPH_XTS_MODE,
+                    AES_XTS_FLAGS,
+                    2 * $kbits,
+                    AES_XTS_BLOCK_BITS,
+                    AES_XTS_IV_BITS,
+                )
+            }
+        }
+
+        pub(crate) static $table: [OsslDispatch; 15] = [
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_NEWCTX,
+                function: $newctx as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_ENCRYPT_INIT,
+                function: aes_xts_einit as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_DECRYPT_INIT,
+                function: aes_xts_dinit as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_UPDATE,
+                function: aes_xts_stream_update as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_FINAL,
+                function: aes_xts_stream_final as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: crate::evp::cipher::OSSL_FUNC_CIPHER_CIPHER,
+                function: aes_xts_cipher as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_FREECTX,
+                function: aes_xts_freectx as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: crate::evp::cipher::OSSL_FUNC_CIPHER_DUPCTX,
+                function: aes_xts_dupctx as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GET_PARAMS,
+                function: $getparams as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GETTABLE_PARAMS,
+                function: ossl_cipher_generic_gettable_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GET_CTX_PARAMS,
+                function: ossl_cipher_generic_get_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GETTABLE_CTX_PARAMS,
+                function: ossl_cipher_generic_gettable_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_SET_CTX_PARAMS,
+                function: aes_xts_set_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS,
+                function: aes_xts_settable_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_DISPATCH_END,
+                function: ptr::null_mut(),
+            },
+        ];
+    };
+}
+
+xts_row!(
+    aes256xts_newctx,
+    aes256xts_get_params,
+    AES256XTS_FUNCTIONS,
+    256
+);
+xts_row!(
+    aes128xts_newctx,
+    aes128xts_get_params,
+    AES128XTS_FUNCTIONS,
+    128
+);
+
 // One direct `cipher_row!` per row: no wrapper macro, so `prototype_court.py`'s macro plane
 // can read every `fn $newctx(` and substitute the identifier this invocation supplies.
 cipher_row!(
@@ -5259,6 +5770,8 @@ alias!(N_AES_128_CFB8, "AES-128-CFB8");
 alias!(N_AES_256_CTR, "AES-256-CTR");
 alias!(N_AES_192_CTR, "AES-192-CTR");
 alias!(N_AES_128_CTR, "AES-128-CTR");
+alias!(N_AES_256_XTS, "AES-256-XTS:1.3.111.2.1619.0.1.2");
+alias!(N_AES_128_XTS, "AES-128-XTS:1.3.111.2.1619.0.1.1");
 alias!(N_CAMELLIA_256_ECB, "CAMELLIA-256-ECB:0.3.4401.5.3.1.9.41");
 alias!(N_CAMELLIA_192_ECB, "CAMELLIA-192-ECB:0.3.4401.5.3.1.9.21");
 alias!(N_CAMELLIA_128_ECB, "CAMELLIA-128-ECB:0.3.4401.5.3.1.9.1");
@@ -5354,7 +5867,7 @@ const fn row(names: *const c_char, implementation: *const c_void) -> OsslAlgorit
 
 /// `static const OSSL_ALGORITHM_CAPABLE deflt_ciphers[]` — `providers/defltprov.c:161-330`,
 /// restricted to the rows this half implements, in the authority's order.
-pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 72] = [
+pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 74] = [
     row(N_NULL, NULL_FUNCTIONS.as_ptr().cast()),
     row(N_AES_256_ECB, AES256ECB_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_ECB, AES192ECB_FUNCTIONS.as_ptr().cast()),
@@ -5380,6 +5893,8 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 72] = [
     row(N_AES_256_CTR, AES256CTR_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_CTR, AES192CTR_FUNCTIONS.as_ptr().cast()),
     row(N_AES_128_CTR, AES128CTR_FUNCTIONS.as_ptr().cast()),
+    row(N_AES_256_XTS, AES256XTS_FUNCTIONS.as_ptr().cast()),
+    row(N_AES_128_XTS, AES128XTS_FUNCTIONS.as_ptr().cast()),
     row(N_AES_256_WRAP, AES256WRAP_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_WRAP, AES192WRAP_FUNCTIONS.as_ptr().cast()),
     row(N_AES_128_WRAP, AES128WRAP_FUNCTIONS.as_ptr().cast()),
@@ -5477,9 +5992,9 @@ mod tests {
 
     #[test]
     fn the_cipher_table_terminates_and_names_the_rows() {
-        assert_eq!(DEFLT_CIPHERS.len(), 72);
+        assert_eq!(DEFLT_CIPHERS.len(), 74);
         // SAFETY: every entry up to the terminator is initialised.
-        let last = DEFLT_CIPHERS[71].algorithm_names;
+        let last = DEFLT_CIPHERS[73].algorithm_names;
         assert!(last.is_null(), "the table is NULL-name terminated");
         // SAFETY: the first row's name is a `'static` C string.
         let first = unsafe { core::ffi::CStr::from_ptr(DEFLT_CIPHERS[0].algorithm_names) };
