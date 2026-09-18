@@ -193,7 +193,7 @@ Hand-offs received and discharged:
 * from phase 4: 18 symbol(s) — `BIO_new_from_core_bio`, `BIO_s_core`, `CONF_imodule_get_flags`, `CONF_imodule_get_module`, `CONF_imodule_get_name`, `CONF_imodule_get_usr_data`, `CONF_imodule_get_value`, `CONF_imodule_set_flags`, `CONF_imodule_set_usr_data`, `CONF_module_add`, `CONF_module_get_usr_data`, `CONF_module_set_usr_data`, `CONF_modules_finish`, `CONF_modules_load`, `CONF_modules_load_file`, `CONF_modules_load_file_ex`, `CONF_modules_unload`, `OPENSSL_load_builtin_modules`
 * from phase 5: 1 symbol(s) — `ASN1_add_oid_module`
 
-Courts: `all pass`, 10 court(s), **2037** authority observation(s) over 10 transcript court(s).
+Courts: `all pass`, 10 court(s), **2040** authority observation(s) over 10 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
@@ -203,7 +203,7 @@ Courts: `all pass`, 10 court(s), **2037** authority observation(s) over 10 trans
 | RT-THREADDATA | `pass` | 54 |
 | RT-BIO-CORE | `pass` | 109 |
 | RT-DSO | `pass` | 145 |
-| RT-PROVIDER | `pass` | 80 |
+| RT-PROVIDER | `pass` | 83 |
 | RT-PROVIDER-3P | `pass` | 40 |
 | RT-CONF-MOD | `pass` | 247 |
 | RT-PROVIDER-REF | `pass` | 5 |
@@ -281,13 +281,13 @@ Hand-offs received and discharged:
 
 * from phase 7: 27 symbol(s) — `EVP_PKEY_assign`, `EVP_PKEY_decrypt_old`, `EVP_PKEY_encrypt_old`, `EVP_PKEY_get0_DH`, `EVP_PKEY_get0_DSA`, `EVP_PKEY_get0_EC_KEY`, `EVP_PKEY_get0_RSA`, `EVP_PKEY_get0_hmac`, `EVP_PKEY_get0_poly1305`, `EVP_PKEY_get0_siphash`, `EVP_PKEY_get1_DH`, `EVP_PKEY_get1_DSA`, `EVP_PKEY_get1_EC_KEY`, `EVP_PKEY_get1_RSA`, `EVP_PKEY_get_ec_point_conv_form`, `EVP_PKEY_get_field_type`, `EVP_PKEY_meth_find`, `EVP_PKEY_meth_get0`, `EVP_PKEY_meth_get_count`, `EVP_PKEY_set1_DH`, `EVP_PKEY_set1_DSA`, `EVP_PKEY_set1_EC_KEY`, `EVP_PKEY_set1_RSA`, `EVP_PKEY_type`, `d2i_KeyParams`, `d2i_KeyParams_bio`, `d2i_PublicKey`
 
-Courts: `all pass`, 2 court(s), **98** authority observation(s) over 1 transcript court(s).
+Courts: `all pass`, 2 court(s), **129** authority observation(s) over 1 transcript court(s).
 
 The other 1 compare ELF structure rather than a transcript and observe nothing line-wise; they are counted as zero for that reason and not by default.
 
 | court | verdict | observations |
 |---|---|---|
-| RT-DIGEST | `pass` | 98 |
+| RT-DIGEST | `pass` | 129 |
 | CT-DIGEST | `pass` | — (structural) |
 
 ## Court coverage

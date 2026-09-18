@@ -14,8 +14,9 @@
 //!   `ossl_digest_default_get_params`/`ossl_digest_default_gettable_params`;
 //! * the `IMPLEMENT_digest_functions` dispatch shape from `prov/digestcommon.h`, one table per
 //!   construction, in the order the macro publishes;
-//! * `deflt_digests[]`'s rows for the constructions 8.1a transcribed — SHA-1, the four SHA-2
-//!   `sha.h` widths, MD5, RIPEMD-160, MD4 and Whirlpool — and
+//! * `deflt_digests[]`'s rows for the constructions 8.1a transcribed **and** that the default
+//!   provider actually publishes — SHA-1, the four SHA-2 `sha.h` widths, MD5 and RIPEMD-160;
+//!   **not** MD4 or Whirlpool, which are `legacyprov.c`'s rows (see below) — and
 //! * `ossl_default_provider_init` itself, with the `deflt_query` arm for `OSSL_OP_DIGEST`.
 //!
 //! Everything else the authority's default provider publishes is **other halves of other
@@ -26,12 +27,22 @@
 //! build — the digest query needs none of them, so `provctx` is NULL and `deflt_query` ignores
 //! it exactly as the authority's answer for `OSSL_OP_DIGEST` does.
 //!
-//! Three rows of the authority's `deflt_digests[]` are also absent, and their absence is a
+//! The authority's `deflt_digests[]` carries rows this half does not, and each absence is a
 //! statement rather than an omission: SHA3/KECCAK/SHAKE (`sha3_prov.c`'s 693-line template),
-//! BLAKE2 (`blake2*_prov.c`, handed to Phase 13 by 7.3g), SM3 (`sm3_prov.c`) and the two
+//! SHA2-256/192 and the two truncated SHA-512 spellings (`sha2_prov.c`), BLAKE2
+//! (`blake2*_prov.c`, handed to Phase 13 by 7.3g), SM3 (`sm3_prov.c`) and the two
 //! combined/NULL digests (`md5_sha1_prov.c`, `null_prov.c`). None of their constructions exists
-//! in this crate, so a row naming one could only publish a table with no body. The plan's §3.5
-//! requires exactly this to be said out loud; `docs/DECISIONS.md` D204 records it.
+//! in this crate, so a row naming one could only publish a table with no body. **MD4 and
+//! Whirlpool are the other case, and they are why the table was reviewed against
+//! `defltprov.c` rather than against the constructions 8.1a had landed:** their constructions
+//! do exist here, but the authority publishes them from `legacyprov.c` — Phase 13's, per
+//! `forensics/prerequisites.json` — and *not* from the default provider, so a default-provider
+//! row would make `EVP_MD_fetch(NULL, "MD4", NULL)` and `EVP_MD_fetch(NULL, "WHIRLPOOL", NULL)`
+//! succeed where the authority answers NULL. Their two provider tables are not written here
+//! either, so no `digest_impl!` invocation is left unused. An earlier revision of this file
+//! carried those two rows; the `RT-DIGEST` provider section now observes the pair and fails on
+//! both sides' disagreement. The plan's §3.5 requires exactly this to be said out loud;
+//! `docs/DECISIONS.md` D204 and D206 record it.
 //!
 //! ## Why the source is a macro here when the constructions were not
 //!
@@ -47,7 +58,6 @@ use core::ffi::{c_char, c_int, c_uchar, c_ulong, c_void};
 use core::ptr;
 
 use crate::context::dispatch::{OsslDispatch, OSSL_DISPATCH_END};
-use crate::digest::md4::{MD4_Final, MD4_Init, MD4_Update, Md4Ctx};
 use crate::digest::md5::{MD5_Final, MD5_Init, MD5_Update, Md5Ctx};
 use crate::digest::ripemd::{RIPEMD160_Final, RIPEMD160_Init, RIPEMD160_Update, Ripemd160Ctx};
 use crate::digest::sha1::{ossl_sha1_ctrl, SHA1_Final, SHA1_Init, SHA1_Update, ShaCtx};
@@ -56,7 +66,6 @@ use crate::digest::sha2::{
     SHA384_Final, SHA384_Init, SHA384_Update, SHA512_Final, SHA512_Init, SHA512_Update, Sha256Ctx,
     Sha512Ctx,
 };
-use crate::digest::wp::{WHIRLPOOL_Final, WHIRLPOOL_Init, WHIRLPOOL_Update, WhirlpoolCtx};
 use crate::evp::algorithm::OSSL_OP_DIGEST;
 use crate::evp::digest::{
     OSSL_FUNC_DIGEST_COPYCTX, OSSL_FUNC_DIGEST_DUPCTX, OSSL_FUNC_DIGEST_FINAL,
@@ -114,7 +123,12 @@ fn ossl_prov_is_running() -> c_int {
 /// # Safety
 /// `params` must be NULL or a key-terminated `OSSL_PARAM` array.
 unsafe fn ossl_param_is_empty(params: *const OsslParam) -> bool {
-    params.is_null() || unsafe { (*params).key.is_null() }
+    if params.is_null() {
+        return true;
+    }
+    // SAFETY: `params` is non-NULL and, per the contract, points at a key-terminated array, so
+    // its first entry is readable.
+    unsafe { (*params).key.is_null() }
 }
 
 /// `digest_default_get_params_list` — the four keys `digestcommon.c`'s generated decoder
@@ -292,6 +306,7 @@ macro_rules! digest_impl {
                 // SAFETY: `ctx` is this construction's, `out` is writable for `outsz >= dgstsz`,
                 // and `outl` is the caller's output slot.
                 if unsafe { $final(out, ctx.cast::<$ctx>()) } != 0 {
+                    // SAFETY: `outl` is the caller's output slot, writable per the contract.
                     unsafe { *outl = $dgstsz };
                     return 1;
                 }
@@ -503,10 +518,6 @@ mod sha1 {
         DIGEST_DEFAULT_GETTABLE_PARAMS.as_ptr()
     }
 
-    unsafe extern "C" fn gettable_params(_provctx: *mut c_void) -> *const OsslParam {
-        DIGEST_DEFAULT_GETTABLE_PARAMS.as_ptr()
-    }
-
     /// `SHA_DIGEST_LENGTH` — `include/openssl/sha.h`.
     const SHA_DIGEST_LENGTH: usize = 20;
     /// `SHA_CBLOCK` — `include/openssl/sha.h`.
@@ -567,16 +578,6 @@ mod sha1 {
 }
 
 digest_impl!(
-    md4,
-    Md4Ctx,
-    MD4_Init,
-    MD4_Update,
-    MD4_Final,
-    64usize,
-    16usize,
-    0u64 as c_ulong
-);
-digest_impl!(
     md5,
     Md5Ctx,
     MD5_Init,
@@ -636,23 +637,14 @@ digest_impl!(
     64usize,
     PROV_DIGEST_FLAG_ALGID_ABSENT
 );
-digest_impl!(
-    whirlpool,
-    WhirlpoolCtx,
-    WHIRLPOOL_Init,
-    WHIRLPOOL_Update,
-    WHIRLPOOL_Final,
-    64usize,
-    64usize,
-    0u64 as c_ulong
-);
 
 /// The property string every row of `deflt_digests[]` carries.
 const DEFAULT_PROPERTIES: *const c_char = c"provider=default".as_ptr();
 
 /// `static const OSSL_ALGORITHM deflt_digests[]` — `providers/defltprov.c`, restricted to the
-/// constructions 8.1a transcribed. The alias lists are `prov/names.h`'s, verbatim.
-static DEFLT_DIGESTS: [OsslAlgorithm; 10] = [
+/// constructions 8.1a transcribed **and** that file publishes. The alias lists are `prov/names.h`'s,
+/// verbatim.
+static DEFLT_DIGESTS: [OsslAlgorithm; 8] = [
     OsslAlgorithm {
         algorithm_names: c"SHA1:SHA-1:SSL3-SHA1:1.3.14.3.2.26".as_ptr(),
         property_definition: DEFAULT_PROPERTIES,
@@ -690,21 +682,9 @@ static DEFLT_DIGESTS: [OsslAlgorithm; 10] = [
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
-        algorithm_names: c"RIPEMD-160:RIPEMD160:RIPEMD:1.3.36.3.2.1".as_ptr(),
+        algorithm_names: c"RIPEMD-160:RIPEMD160:RIPEMD:RMD160:1.3.36.3.2.1".as_ptr(),
         property_definition: DEFAULT_PROPERTIES,
         implementation: ripemd160::FUNCTIONS.as_ptr() as *const c_void,
-        algorithm_description: ptr::null(),
-    },
-    OsslAlgorithm {
-        algorithm_names: c"MD4:1.2.840.113549.2.4".as_ptr(),
-        property_definition: DEFAULT_PROPERTIES,
-        implementation: md4::FUNCTIONS.as_ptr() as *const c_void,
-        algorithm_description: ptr::null(),
-    },
-    OsslAlgorithm {
-        algorithm_names: c"WHIRLPOOL:1.0.10118.3.0.55".as_ptr(),
-        property_definition: DEFAULT_PROPERTIES,
-        implementation: whirlpool::FUNCTIONS.as_ptr() as *const c_void,
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
@@ -789,13 +769,18 @@ mod tests {
         assert!(!table.is_null());
         assert_eq!(no_cache, 0, "the digest arm caches");
         // SAFETY: the returned table is `DEFLT_DIGESTS`, terminated by a NULL name.
-        assert!(unsafe { (*table).algorithm_names.is_null() } == false);
-        // SAFETY: every entry up to the terminator is initialised.
+        assert!(!unsafe { (*table).algorithm_names.is_null() });
         let mut n = 0usize;
-        while !unsafe { (*table.add(n)).algorithm_names }.is_null() {
+        loop {
+            // SAFETY: every entry up to the terminator is initialised, and `n` walks in bounds
+            // until the terminator is read.
+            let names = unsafe { (*table.add(n)).algorithm_names };
+            if names.is_null() {
+                break;
+            }
             n += 1;
         }
-        assert_eq!(n, 9, "the nine constructions 8.1a transcribed");
+        assert_eq!(n, 7, "the seven default-provider rows 8.1a transcribed");
 
         // SAFETY: the query's contract; an operation this half does not answer.
         let none = unsafe { deflt_query(ptr::null_mut(), 14, &mut no_cache) };
@@ -805,7 +790,8 @@ mod tests {
     #[test]
     fn the_default_init_publishes_the_query_entry() {
         let mut out: *const OsslDispatch = ptr::null();
-        let mut provctx: *mut c_void = 0x1 as *mut c_void;
+        let mut sentinel: c_int = 1;
+        let mut provctx: *mut c_void = ptr::addr_of_mut!(sentinel).cast::<c_void>();
         // SAFETY: both slots are this frame's and writable.
         let ok =
             unsafe { ossl_default_provider_init(ptr::null(), ptr::null(), &mut out, &mut provctx) };
@@ -822,9 +808,11 @@ mod tests {
         let mut size: usize = 0;
         let mut block: usize = 0;
         let mut params: [OsslParam; 3] = [END; 3];
+        // SAFETY: `size` is this frame's own slot and the constructor only records its address.
         params[0] = unsafe {
             crate::params::OSSL_PARAM_construct_size_t(OSSL_DIGEST_PARAM_SIZE, &mut size)
         };
+        // SAFETY: `block` is this frame's own slot and the constructor only records its address.
         params[1] = unsafe {
             crate::params::OSSL_PARAM_construct_size_t(OSSL_DIGEST_PARAM_BLOCK_SIZE, &mut block)
         };

@@ -122,6 +122,13 @@ pub struct OsslParam {
     pub return_size: usize,
 }
 
+// SAFETY: a descriptor is a C value with no interior mutability the type system needs to see;
+// the raw pointers either point at `'static` literals (the digest tables) or at a caller's
+// buffer the caller owns. A shared static of descriptors is read-only, and every entry point
+// that writes a descriptor's `data` does so through a pointer the caller supplied. The same
+// reasoning the crate already applies to `OsslDispatch` and `StaticMd`.
+unsafe impl Sync for OsslParam {}
+
 /// Read a `*const OsslParam` as a reference.
 ///
 /// # Safety

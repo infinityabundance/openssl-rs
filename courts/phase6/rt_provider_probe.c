@@ -19,20 +19,19 @@
  * published) and `strcmp`-against-the-input. A pointer printed would be a difference in the
  * *load address*, which is not a difference in the contract.
  *
- * **The fallback walk is observed only in its disabled state.** `provider_activate_fallbacks`
- * loads the table's `is_fallback` rows through their compiled-in entry points, and the
- * candidate has none of them yet: `ossl_default_provider_init` (807 lines),
- * `ossl_base_provider_init` and `ossl_null_provider_init` are 7/8's, so `provider_init` takes
- * the *module* branch, `DSO_load("libdefault.so")` fails, and the walk answers 0 where the
- * authority answers 1. That divergence is real, it is recorded in
- * `docs/PHASE-6-SUBPHASES.md` (6.8c, residual 1) and in `docs/SECURITY_DIVERGENCE_POLICY.md`,
- * and this probe **never puts the flag in its enabled state**: the first public call it makes
- * is `OSSL_PROVIDER_load`, which sets `store->use_fallbacks = 0` before it looks anything up.
- * From that point on the walk's early return is what both sides take, so `available`,
- * `do_all` and the enumeration below *are* compared -- they would not be if the walk had run.
- * The disabled path is therefore courted, the enabled path is named rather than hidden, and
- * the day 7/8 lands the entry points this comment stops being true and the omission must be
- * revisited with it.
+ * **The fallback walk is observed in both states now.** The main flow below still observes its
+ * disabled state: the first public call it makes on its own context is `OSSL_PROVIDER_load`,
+ * which sets `store->use_fallbacks = 0` before it looks anything up, so `available`, `do_all`
+ * and the enumeration are compared on the walk's early return. But `default`'s entry point
+ * (`ossl_default_provider_init`) landed with 8.1b, so the walk's *enabled* arm is now reachable,
+ * and the private-context section at the end of `main` observes it: before any load can
+ * disable it, `OSSL_PROVIDER_available(enabled, "default")` runs the walk. Only the values
+ * that are equal on both sides by construction are printed -- presence, the name, the load's
+ * NULL-ness. The provider's `provctx` is deliberately not printed: the authority's default
+ * provider has one and this crate's digest half has none. `base` and `null` still have no
+ * entry point and are not fallbacks in this profile, so the walk does not reach them; that
+ * and the default provider's non-digest halves are what remains of D117's residual, and
+ * D206 records the measurement.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -491,16 +490,13 @@ int main(void)
          * activation's answer is the `ok >= 0` collapse described above rather than a
          * statement that the provider loaded.
          *
-         * **`OSSL_PROVIDER_available` is deliberately not observed here**, and this is
-         * the same exclusion the header already makes for the fallback walk, arriving
-         * through a second door. `default`'s `OSSL_provider_init` --
-         * `ossl_default_provider_init` -- is 7/8's and does not exist in this crate, so
-         * the activation succeeds at the registry level and the provider is not
-         * activated, and `available` answers 0 where the authority answers 1. That is a
-         * *recorded residual* of 6.8c (`docs/PHASE-6-SUBPHASES.md`, residual 1) and not a
-         * defect in this module: what 6.8d owns is the configuration walk, and the walk's
-         * own observables -- the flag grammar, the two section errors, the recursion
-         * refusal and the wrapper's return -- are all below and all in scope. */
+         * **`OSSL_PROVIDER_available` is deliberately not observed on this path.** The
+         * configuration walk activates a named provider and answers whether the *walk*
+         * succeeded, but `available` additionally answers whether the provider is active, and
+         * the two sides reach that through different provider halves. The walk's own
+         * observables -- the flag grammar, the two section errors, the recursion refusal and
+         * the wrapper's return -- are all below and all in scope. The fallback walk's enabled
+         * arm *is* observed, in the private-context section at the end of `main`. */
         ret = OSSL_LIB_CTX_load_config(ctx, p_template);
         printf("cmod.template.load=%d err=%lu\n", ret, ERR_peek_last_error());
         ERR_clear_error();
@@ -539,6 +535,31 @@ int main(void)
         ret = OSSL_LIB_CTX_load_config(ctx, p_nosect);
         printf("cmod.missing_file.load=%d err=%lu\n", ret, ERR_peek_last_error());
         ERR_clear_error();
+    }
+
+    /* ---- the enabled fallback walk, in a context of its own ----
+     *
+     * `OSSL_PROVIDER_available` runs the walk before any `load` can set `use_fallbacks` to 0,
+     * so on this fresh context the enabled arm is what answers. `default`'s entry point landed
+     * with 8.1b, so both sides answer 1 and load a provider named `default`. */
+    {
+        OSSL_LIB_CTX *enabled = OSSL_LIB_CTX_new();
+        if (enabled == NULL) {
+            printf("fallback.ctx=0\n");
+        } else {
+            OSSL_PROVIDER *d;
+
+            printf("fallback.available_default=%d\n",
+                   OSSL_PROVIDER_available(enabled, "default"));
+            d = OSSL_PROVIDER_load(enabled, "default");
+            printf("fallback.load_default_nonnull=%d\n", d != NULL ? 1 : 0);
+            printf("fallback.load_default_name=%s\n",
+                   d != NULL && OSSL_PROVIDER_get0_name(d) != NULL
+                       ? OSSL_PROVIDER_get0_name(d) : "<null>");
+            if (d != NULL)
+                OSSL_PROVIDER_unload(d);
+            OSSL_LIB_CTX_free(enabled);
+        }
     }
 
     OSSL_LIB_CTX_free(ctx);

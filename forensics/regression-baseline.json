@@ -166,7 +166,7 @@
       "verdict": "pass"
     },
     "RT-DIGEST": {
-      "observations": 98,
+      "observations": 129,
       "verdict": "pass"
     },
     "RT-DSO": {
@@ -290,7 +290,7 @@
       "verdict": "pass"
     },
     "RT-PROVIDER": {
-      "observations": 80,
+      "observations": 83,
       "verdict": "pass"
     },
     "RT-PROVIDER-3P": {
