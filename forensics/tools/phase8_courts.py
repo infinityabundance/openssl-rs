@@ -106,6 +106,7 @@ RUN_TIMEOUT_S = "60"
 # not exist cannot be committed. (name, probe filename)
 COURTS: list[tuple[str, str]] = [
     ("RT-DIGEST", "rt_digest_probe.c"),
+    ("RT-CIPHER", "rt_cipher_probe.c"),
 ]
 
 # The correctness courts, and the committed vector sets each checks. `CT-DIGEST` is the

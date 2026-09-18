@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 204,
+      "crate_files_read": 205,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -12,12 +12,12 @@
       "identities_authority_only": 82,
       "identities_checked": 195,
       "identities_mismatches": 0,
-      "links_convention": 197,
+      "links_convention": 200,
       "links_documented": 8,
       "links_explicit": 14,
       "problems": 0,
-      "signatures_authority_only": 411,
-      "signatures_checked": 222,
+      "signatures_authority_only": 408,
+      "signatures_checked": 225,
       "signatures_mismatches": 0,
       "signatures_not_a_dispatch": 104,
       "signatures_unlinked": 0,
@@ -1533,11 +1533,8 @@
         "X509_STORE_CTX_verify_cb",
         "X509_STORE_CTX_verify_fn",
         "bio_info_cb",
-        "block128_f",
-        "cbc128_f",
         "ccm128_f",
         "conf_finish_func",
-        "ctr128_f",
         "custom_ext_add_cb",
         "custom_ext_free_cb",
         "custom_ext_parse_cb",
@@ -3309,6 +3306,30 @@
           "authority": "OSSL_FUNC_skeymgmt_get_key_id_fn",
           "authority_signature": "fptr(ptr(const(int:1:s)); ptr(opaque))",
           "crate_signature": "fptr(ptr(const(int:1:s)); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "Block128F",
+          "at": "src/modes/mod.rs",
+          "authority": "block128_f",
+          "authority_signature": "fptr(void; ptr(const(int:1:u)), ptr(int:1:u), ptr(const(opaque)))",
+          "crate_signature": "fptr(void; ptr(const(int:1:u)), ptr(int:1:u), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "Cbc128F",
+          "at": "src/modes/mod.rs",
+          "authority": "cbc128_f",
+          "authority_signature": "fptr(void; ptr(const(int:1:u)), ptr(int:1:u), int:8:u, ptr(const(opaque)), ptr(int:1:u), int:4:s)",
+          "crate_signature": "fptr(void; ptr(const(int:1:u)), ptr(int:1:u), int:8:u, ptr(const(opaque)), ptr(int:1:u), int:4:s)",
+          "how": "convention"
+        },
+        {
+          "alias": "Ctr128F",
+          "at": "src/modes/mod.rs",
+          "authority": "ctr128_f",
+          "authority_signature": "fptr(void; ptr(const(int:1:u)), ptr(int:1:u), int:8:u, ptr(const(opaque)), ptr(const(int:1:u)))",
+          "crate_signature": "fptr(void; ptr(const(int:1:u)), ptr(int:1:u), int:8:u, ptr(const(opaque)), ptr(const(int:1:u)))",
           "how": "convention"
         },
         {
