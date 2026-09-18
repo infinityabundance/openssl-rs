@@ -38,6 +38,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <openssl/aes.h>
 #include <openssl/modes.h>
 
 #define RT_KEY 0xa7u
@@ -51,6 +52,14 @@ static void rt_hex(const char *name, const unsigned char *p, size_t n)
     for (i = 0; i < n; i++)
         printf("%02x", p[i]);
     printf("\n");
+}
+
+static void rt_hexf(const char *name, int which, const unsigned char *p, size_t n)
+{
+    char buf[64];
+
+    snprintf(buf, sizeof(buf), "%s.%d", name, which);
+    rt_hex(buf, p, n);
 }
 
 /* A probe-local block function: a sixteen-byte permutation that depends only on the key
@@ -106,6 +115,209 @@ static void rt_fill(unsigned char *p, size_t n, unsigned int seed)
 
     for (i = 0; i < n; i++)
         p[i] = (unsigned char)((i * 13u + seed * 29u + 7u) & 0xffu);
+}
+
+/* The `block128_f` views of AES, so the generic mode functions are exercised through the
+ * cipher the corpus's mode vectors use as well as through the probe-local permutation. */
+static void rt_aes_block(const unsigned char *in, unsigned char *out, const void *key)
+{
+    AES_encrypt(in, out, (const AES_KEY *)key);
+}
+
+static void rt_aes_dec_block(const unsigned char *in, unsigned char *out, const void *key)
+{
+    AES_decrypt(in, out, (const AES_KEY *)key);
+}
+
+static void rt_aes(void)
+{
+    unsigned char key[32];
+    unsigned char iv[64];
+    unsigned char in[64];
+    unsigned char out[96];
+    unsigned char dec[64];
+    AES_KEY enc, dck;
+    int n;
+
+    rt_fill(key, sizeof(key), 1);
+    rt_fill(in, sizeof(in), 2);
+
+    /* The schedule sizes are part of the ABI the caller allocates, so they are observed. */
+    printf("aes.sizeof_key=%u\n", (unsigned)sizeof(AES_KEY));
+    for (n = 0; n < 3; n++) {
+        int bits = 128 + 64 * n;
+        int rc;
+
+        memset(&enc, 0, sizeof(enc));
+        rc = AES_set_encrypt_key(key, bits, &enc);
+        printf("aes.set_encrypt_key.%d=%d\n", bits, rc);
+        printf("aes.rounds.%d=%d\n", bits, enc.rounds);
+        rt_hexf("aes.rk.0", bits, (const unsigned char *)enc.rd_key, 16);
+        rt_hexf("aes.rk.last", bits, (const unsigned char *)&enc.rd_key[4 * enc.rounds], 16);
+
+        memset(&dck, 0, sizeof(dck));
+        rc = AES_set_decrypt_key(key, bits, &dck);
+        printf("aes.set_decrypt_key.%d=%d\n", bits, rc);
+        rt_hexf("aes.drk.0", bits, (const unsigned char *)dck.rd_key, 16);
+        rt_hexf("aes.drk.last", bits, (const unsigned char *)&dck.rd_key[4 * dck.rounds], 16);
+
+        AES_encrypt(in, out, &enc);
+        rt_hexf("aes.encrypt", bits, out, 16);
+        AES_decrypt(out, dec, &dck);
+        rt_hexf("aes.decrypt", bits, dec, 16);
+
+        AES_ecb_encrypt(in, out, &enc, AES_ENCRYPT);
+        rt_hexf("aes.ecb.enc", bits, out, 16);
+        AES_ecb_encrypt(out, dec, &dck, AES_DECRYPT);
+        rt_hexf("aes.ecb.dec", bits, dec, 16);
+    }
+
+    /* The invalid-bits arms return the authority's negative codes. */
+    printf("aes.set_encrypt_key.bad=%d\n", AES_set_encrypt_key(key, 64, &enc));
+    printf("aes.set_encrypt_key.null=%d\n", AES_set_encrypt_key(NULL, 128, &enc));
+
+    /* CBC, out of place, with the advanced IV observed. */
+    memset(&enc, 0, sizeof(enc));
+    AES_set_encrypt_key(key, 128, &enc);
+    memset(&dck, 0, sizeof(dck));
+    AES_set_decrypt_key(key, 128, &dck);
+
+    rt_fill(iv, 32, 3);
+    memset(out, 0, sizeof(out));
+    AES_cbc_encrypt(in, out, 33, &enc, iv, AES_ENCRYPT);
+    rt_hex("aes.cbc.enc", out, 48);
+    rt_hex("aes.cbc.enc.iv", iv, 16);
+
+    {
+        unsigned char iv2[16];
+        rt_fill(iv2, 16, 3);
+        memset(dec, 0, sizeof(dec));
+        AES_cbc_encrypt(in, out, 48, &enc, iv2, AES_ENCRYPT);
+        {
+            unsigned char civ[16];
+            memcpy(civ, iv2, 16);
+            rt_fill(civ, 16, 3);
+            AES_cbc_encrypt(out, dec, 48, &dck, civ, AES_DECRYPT);
+            rt_hex("aes.cbc.roundtrip", dec, 48);
+            rt_hex("aes.cbc.dec.iv", civ, 16);
+        }
+    }
+
+    /* CFB-128 / CFB-8 / CFB-1 / OFB, with the `num` round trip. */
+    {
+        int num = 0;
+
+        rt_fill(iv, 32, 4);
+        memset(out, 0, sizeof(out));
+        AES_cfb128_encrypt(in, out, 35, &enc, iv, &num, AES_ENCRYPT);
+        rt_hex("aes.cfb128.enc", out, 35);
+        rt_hex("aes.cfb128.iv", iv, 16);
+        printf("aes.cfb128.num=%d\n", num);
+
+        num = 0;
+        rt_fill(iv, 32, 4);
+        memset(out, 0, sizeof(out));
+        AES_cfb128_encrypt(in, out, 35, &enc, iv, &num, AES_DECRYPT);
+        rt_hex("aes.cfb128.dec", out, 35);
+
+        num = 0;
+        rt_fill(iv, 32, 4);
+        memset(out, 0, sizeof(out));
+        AES_cfb8_encrypt(in, out, 20, &enc, iv, &num, AES_ENCRYPT);
+        rt_hex("aes.cfb8.enc", out, 20);
+        rt_hex("aes.cfb8.iv", iv, 16);
+
+        num = 0;
+        rt_fill(iv, 32, 4);
+        memset(out, 0x55, sizeof(out));
+        AES_cfb1_encrypt(in, out, 9, &enc, iv, &num, AES_ENCRYPT);
+        rt_hex("aes.cfb1.bits9", out, 2);
+
+        num = 0;
+        rt_fill(iv, 32, 4);
+        memset(out, 0, sizeof(out));
+        AES_ofb128_encrypt(in, out, 40, &enc, iv, &num);
+        rt_hex("aes.ofb.enc", out, 40);
+        rt_hex("aes.ofb.iv", iv, 16);
+        printf("aes.ofb.num=%d\n", num);
+    }
+
+    /* IGE: the IV is two blocks, and the authority writes both back. */
+    {
+        unsigned char igev[32];
+        unsigned char bigev[64];
+
+        rt_fill(igev, sizeof(igev), 5);
+        memset(out, 0, sizeof(out));
+        AES_ige_encrypt(in, out, 64, &enc, igev, AES_ENCRYPT);
+        rt_hex("aes.ige.enc", out, 64);
+        rt_hex("aes.ige.enc.iv", igev, 32);
+        AES_ige_encrypt(out, dec, 64, &dck, igev, AES_DECRYPT);
+        rt_hex("aes.ige.dec", dec, 64);
+        rt_hex("aes.ige.dec.iv", igev, 32);
+
+        rt_fill(bigev, sizeof(bigev), 6);
+        memset(out, 0, sizeof(out));
+        AES_bi_ige_encrypt(in, out, 64, &enc, &enc, bigev, AES_ENCRYPT);
+        rt_hex("aes.bi_ige.enc", out, 64);
+        AES_bi_ige_encrypt(out, dec, 64, &dck, &dck, bigev, AES_DECRYPT);
+        rt_hex("aes.bi_ige.dec", dec, 64);
+    }
+
+    /* Key wrap: RFC 3394's own vector, plus the non-multiple-of-8 and short-input refusals. */
+    {
+        static const unsigned char kek[16] = {
+            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+            0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
+        };
+        static const unsigned char kd[16] = {
+            0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
+            0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff
+        };
+        AES_KEY wk, uk;
+        unsigned char wrapped[64];
+        unsigned char unwrapped[64];
+        int m;
+
+        memset(&wk, 0, sizeof(wk));
+        AES_set_encrypt_key(kek, 128, &wk);
+        memset(&uk, 0, sizeof(uk));
+        AES_set_decrypt_key(kek, 128, &uk);
+
+        memset(wrapped, 0, sizeof(wrapped));
+        m = AES_wrap_key(&wk, NULL, wrapped, kd, 16);
+        printf("aes.wrap.ret=%d\n", m);
+        rt_hex("aes.wrap.ct", wrapped, 24);
+
+        memset(unwrapped, 0, sizeof(unwrapped));
+        m = AES_unwrap_key(&uk, NULL, unwrapped, wrapped, 24);
+        printf("aes.unwrap.ret=%d\n", m);
+        rt_hex("aes.unwrap.pt", unwrapped, 16);
+
+        printf("aes.wrap.nonmultiple=%d\n", AES_wrap_key(&wk, NULL, wrapped, kd, 17));
+        printf("aes.wrap.short=%d\n", AES_wrap_key(&wk, NULL, wrapped, kd, 8));
+        printf("aes.unwrap.bad_iv=%d\n", AES_unwrap_key(&uk, kd, unwrapped, wrapped, 24));
+    }
+
+    /* An explicit IV is observed too, and must not be replaced by the default. */
+    {
+        static const unsigned char iv8[8] = { 1, 2, 3, 4, 5, 6, 7, 8 };
+        static const unsigned char kd[16] = { 0 };
+        AES_KEY wk, uk;
+        unsigned char wrapped[64];
+        unsigned char unwrapped[16];
+
+        memset(&wk, 0, sizeof(wk));
+        AES_set_encrypt_key(key, 128, &wk);
+        memset(&uk, 0, sizeof(uk));
+        AES_set_decrypt_key(key, 128, &uk);
+        memset(wrapped, 0, sizeof(wrapped));
+        printf("aes.wrap.explicit_iv=%d\n", AES_wrap_key(&wk, iv8, wrapped, kd, 16));
+        rt_hex("aes.wrap.explicit_iv.ct", wrapped, 24);
+        printf("aes.unwrap.wrong_iv=%d\n", AES_unwrap_key(&uk, NULL, unwrapped, wrapped, 24));
+    }
+
+    printf("aes.options=%s\n", AES_options());
 }
 
 static void rt_modes_blocks(void)
@@ -363,5 +575,6 @@ int main(void)
 {
     setvbuf(stdout, NULL, _IOLBF, 0);
     rt_modes_blocks();
+    rt_aes();
     return 0;
 }

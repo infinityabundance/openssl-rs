@@ -53,6 +53,8 @@
 use core::ffi::{c_int, c_uint, c_void};
 use core::ptr;
 
+pub mod wrap;
+
 /// `block128_f` — `include/openssl/modes.h:25-26`: one block cipher call, `in` and `out` each
 /// sixteen bytes, `key` the caller's key schedule.
 pub type Block128F = unsafe extern "C" fn(input: *const u8, out: *mut u8, key: *const c_void);

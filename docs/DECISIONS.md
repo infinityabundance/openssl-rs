@@ -14127,3 +14127,80 @@ Blowfish, CAST5, IDEA, SEED and Camellia are open (their `open` rows name each s
 them `CT-CIPHER` and every provider cipher row. `CT-CIPHER`'s vectors need a named block cipher
 and the provider rows need `deflt_ciphers[]` reviewed against `providers/legacyprov.c` as D206
 did for digests; both arrive with the family that makes them checkable.
+
+## D210 — AES lands as the portable arm, and the differential plane finds the authority's key schedule is byte-swapped relative to the C convention
+
+The second slice of 8.2: `src/aes.rs` lands the fifteen `aes.h` exports plus the RFC 3394
+wrap the authority delegates to, and `RT-CIPHER` grows from the mode helpers to the cipher
+itself. `implemented[libcrypto]` **1900 → 1915** and Phase 8 **59/711/16 → 74/696/16**;
+`RT-CIPHER` **66 → 133 observations**, all passing; the baseline moves 82 courts /
+23,456 → 82 courts / **23,523 observations**. The pipeline ends `PIPELINE OK`.
+
+**Why this is a portable arm and what proves it.** The authority's build selects the perlasm
+arm: `crypto/aes/asm/aes-x86_64.pl`'s object defines `AES_cbc_encrypt`, `AES_decrypt`,
+`AES_encrypt`, `AES_set_decrypt_key` and `AES_set_encrypt_key`, and no `aes_core.o` is linked
+(plan §0/§3.1). `src/aes.rs` is the FIPS-197 byte-oriented round over the generated S-box,
+inverse S-box and round constants (`gen_phase8_tables.py` now derives them from
+`crypto/aes/aes_core.c`'s `Te4`, `Td4` and `rcon`), and `RT-CIPHER` is the only instrument
+that can say it is *this* implementation's observable function.
+
+### 1. The defect the differential plane found: `AES_KEY.rd_key` is byte-swapped
+
+The first `RT-CIPHER` run after AES landed left **twelve residuals, all of them the key
+schedule**, and none of them a ciphertext: `aes.rk.0.128`, `aes.rk.last.*`, `aes.drk.0.*` and
+`aes.drk.last.*`. Every value differed from the authority's by a **per-word byte reversal**:
+
+```text
+aes.rk.0.128:     authority='24313e4b5865727f...'  candidate='4b3e31247f726558...'
+aes.drk.last.128: authority='24313e4b5865727f...'  candidate='4b3e31247f726558...'
+```
+
+The key bytes are `24 31 3e 4b 58 65 72 7f …`, so the authority's `rd_key[0]` holds those
+bytes **in memory order** while the C `GETU32` convention (`0x24313e4b`) stores them
+little-endian as `4b 3e 31 24`. The perlasm key schedule works entirely in memory order and
+byte-swaps at the cipher boundary; the C `aes_core.c` schedule uses `GETU32` throughout. The
+two are never mixed in the authority, so nothing in the authority notices — but a caller that
+allocates `AES_KEY` from the installed header and inspects `rd_key` (or hands it between an
+asm-built schedule and a C-built one) sees the difference.
+
+**This is exactly the blind spot a correctness-vector court cannot cover.** Every AES
+plaintext/ciphertext observation matched on the first run — FIPS-197's three vectors, all
+five modes, IGE, the wrap vectors — because the ciphertext is the standard's. Only the
+differential plane, comparing *this* authority's `AES_KEY` bytes, could see it. It is the
+same class D204 recorded for the SHA-512 `Update` pointer: correct-by-its-own-lights, and not
+this implementation's observable behaviour.
+
+The fix is `aes_expand` (the logical expansion) plus `bswap_schedule` at the two public entry
+points, and `add_round_key` un-swapping on read. Both the FIPS vectors and the differential
+court are green after it.
+
+### 2. The scope of the slice
+
+Landed: `AES_set_encrypt_key`/`AES_set_decrypt_key`, `AES_encrypt`/`AES_decrypt`,
+`AES_ecb_encrypt`, `AES_cbc_encrypt`, `AES_cfb128_encrypt`, `AES_cfb1_encrypt`,
+`AES_cfb8_encrypt`, `AES_ofb128_encrypt`, `AES_ige_encrypt`, `AES_bi_ige_encrypt`,
+`AES_wrap_key`/`AES_unwrap_key`, and `AES_options` (measured: the authority answers
+`aes(partial)`). `AES_bi_ige_encrypt` reproduces the authority's documented one-key bug
+(`crypto/aes/aes_ige.c:169-173`): `key2` is accepted and ignored, because "fixing" it would
+be a divergence. `AES_wrap_key`/`AES_unwrap_key` delegate to the RFC 3394 algorithm in
+`src/modes/wrap.rs` as `pub(crate)` functions — the exported `CRYPTO_128_wrap`/`_unwrap` are
+8.3's, so the algorithm is written once and 8.3's wrappers will call it.
+
+`RT-CIPHER` observes, for AES: `sizeof(AES_KEY)`, the rounds and the first/last schedule word
+of the encrypt and decrypt schedules for 128/192/256, the `-1`/`-2` refusal arms,
+`AES_encrypt`/`AES_decrypt`/`AES_ecb_encrypt` both directions, CBC in and out of place with
+its IV write-back, CFB-128/8/1, OFB with `num`, IGE and bi-IGE with their IV write-backs, the
+RFC 3394 vector `1FA68B0A8112B447AEF34BD8FB5A7B829D3E862371D2CFE5` for KEK
+`000102…0F`/data `001122…FF`, the explicit-IV arm, the non-multiple-of-8 and short-input
+refusals, `AES_unwrap_key`'s IV check, and `AES_options`.
+
+### 3. What this entry does not do, with the reason and the coordinate
+
+**`CT-CIPHER` is still PENDING.** It is the general correctness court for 8.2 and it needs a
+cipher-shaped driver: `correctness_vectors.py`'s schema and `courts/phase8/ct_digest.c`'s
+one-message-per-line protocol are digest-shaped (a vector carries a message and a digest),
+where a cipher vector carries a key, an IV, an operation and a mode. That driver and the
+committed `forensics/vectors/<alg>.json` sets are the next slice, in the shape D206/D208
+established; until it exists, `CT-CIPHER` stays named in `PENDING_CORRECTNESS_COURTS` rather
+than registered as passing. DES/3DES, RC2, RC4, Blowfish, CAST5, IDEA, SEED and Camellia
+remain open, and the provider cipher rows are unwritten.

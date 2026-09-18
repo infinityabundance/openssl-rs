@@ -2092,22 +2092,22 @@
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "d6e3fdbaaac481d9aa7f4e5463c47a9246c70254c1cd3b2b24d5cc014e7ea5e2"
+      "sha256": "8e7d7633fe2258ad4045a61e025a0865c93be5cc9b24b7dac40067a19634ceb5"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "076f73bf4fa5dda0ed3e59904d1e8a03cf4d58b652f705ed0ed4c7b93c110071"
+      "sha256": "f682fe65bfb96ca36650924eea917543627ecbb8a3538bbb9227069b03c9cf6d"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "1080d4bfb4977575b46702d284834c2fb8f4979b473c863e26534e1da2d9626c"
+      "sha256": "de1ee62ecb1c841a495eac484660aab768cf1c2a28f50408eabf20b38139f850"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "a581525c8318b473a89f77a3cdd5719215ef19c3076b1c5aac52c109e98fbf44"
+      "sha256": "f0ea12edd179bc9a1320bc544e4ba15d536e5b83ee2b3b95119a8763b6e9dd0e"
     },
     {
       "name": "prerequisites",
@@ -2137,7 +2137,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "8d0a49b301b12fb6d01114743c607647a8fd55d853b423f15e67d2dd60fe8fe6"
+      "sha256": "c5e0a2265c775c51d711bee0fa290e99afd64d1ecf619ab20aa6f1eb5bb10c81"
     }
   ],
   "kind": "plan-reconciliation",
