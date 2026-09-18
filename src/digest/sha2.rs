@@ -653,10 +653,16 @@ pub unsafe extern "C" fn SHA512_Update(
         // authority takes this arm and the byte-copying arm is not compiled; this crate's
         // block function reads its input byte-wise, so both arms would be correct here anyway.
         // SAFETY: `data` is readable for `len >= 128` bytes, so `len / 128` blocks are.
-        unsafe { sha512_block(&mut *c, data, len / 128) };
-        // The authority's `data += len, len %= sizeof(c->u), data -= len`, which leaves
-        // `data` at the start of the trailing partial block.
-        len %= 128;
+        let blocks = len / 128;
+        unsafe { sha512_block(&mut *c, data, blocks) };
+        // The authority's `data += len, len %= sizeof(c->u), data -= len`: `data` ends at the
+        // start of the trailing partial block. Without the `data` advance, the partial bytes
+        // staged below were the *first* block's, so every message long enough to take this arm
+        // was wrong past the first block.
+        let consumed = blocks * 128;
+        // SAFETY: `consumed <= len`, and `data` is readable for `len` bytes.
+        data = unsafe { data.add(consumed) };
+        len -= consumed;
     }
 
     if len != 0 {

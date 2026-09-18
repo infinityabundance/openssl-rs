@@ -104,7 +104,9 @@ RUN_TIMEOUT_S = "60"
 # arrives in the subphase that gives it something to observe. `RT-DIGEST` lands with 8.1 and
 # is declared here in the same commit as its probe, so a runner that names a probe which does
 # not exist cannot be committed. (name, probe filename)
-COURTS: list[tuple[str, str]] = []
+COURTS: list[tuple[str, str]] = [
+    ("RT-DIGEST", "rt_digest_probe.c"),
+]
 
 # The correctness courts, and the committed vector sets each checks. `CT-DIGEST` is the
 # exemplar for 8.1a's low-level constructions: one file per algorithm under
