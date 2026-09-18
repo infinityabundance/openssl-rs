@@ -14204,3 +14204,55 @@ committed `forensics/vectors/<alg>.json` sets are the next slice, in the shape D
 established; until it exists, `CT-CIPHER` stays named in `PENDING_CORRECTNESS_COURTS` rather
 than registered as passing. DES/3DES, RC2, RC4, Blowfish, CAST5, IDEA, SEED and Camellia
 remain open, and the provider cipher rows are unwritten.
+
+## D211 — `CT-CIPHER` lands: the cipher-shaped correctness plane, 73 AES vectors, and the oracle the court image does not carry
+
+The two-plane requirement is 8.2-wide and `CT-CIPHER` is its correctness half. `CT-DIGEST`'s
+driver was digest-shaped — a vector is a message and a digest, and the probe protocol is
+`index<TAB>algorithm<TAB>mode<TAB>message` — so a cipher vector, which is a key, an IV, an
+operation, an input and an output, needed its own schema, its own loader and its own driver.
+All three land here, in the same tool and the same envelope, with the same provenance
+contract:
+
+- `correctness_vectors.py` gains `CipherVector`/`CipherVectorSet`,
+  `load_cipher_vector_set`/`load_all_ciphers`, `run_cipher_court`, and an
+  `--emit-ciphers` mode. The digest loader skips a file whose `kind` starts with
+  `cipher-vectors-`, so the two schemas share a directory without either reading the other's
+  files as malformed.
+- `courts/phase8/ct_cipher.c` is the candidate-only probe. Its record is
+  `index<TAB>cipher<TAB>operation<TAB>key<TAB>iv<TAB>input`, all hex, and it prints
+  `index<TAB>ok<TAB><hex>` or `index<TAB>err<TAB><reason>`. It drives `AES_set_encrypt_key`/
+  `AES_set_decrypt_key` and `AES_ecb_encrypt`/`AES_cbc_encrypt`/`AES_cfb128_encrypt`/
+  `AES_ofb128_encrypt`.
+- `phase8_courts.py` gains a second handler registry, `CIPHER_CORRECTNESS_COURTS`, beside the
+  digest one, because the two call different drivers. `CT-CIPHER` is removed from
+  `PENDING_CORRECTNESS_COURTS`.
+
+**The vectors.** `forensics/vectors/aes.json` is emitted by `--emit-ciphers` from the pinned
+corpus's keyed blocks in
+`test/recipes/30-test_evp_data/evpciph_aes_common.txt` — FIPS-197's three `AES-*-ECB` vectors
+and NIST SP 800-38A's `AES-{128,192,256}-{ECB,CBC,CFB,OFB}` sets. Measured: **73 vectors over
+73 calls, 71 corpus-mirrored and 2 independently derived**, across the twelve
+width/mode spellings the candidate has a low-level arm for. The two independent vectors are
+the empty-message arms for `AES-128-ECB` and `AES-128-CBC`, whose expected bytes are the
+construction's own definition rather than a published value.
+
+**The limit, stated with the record rather than hidden.** The pinned court image carries no
+independent AES implementation: `hashlib` is a digest library and `rhash` is not an AES
+oracle, so there is no in-court way to derive a ciphertext for an input no standard publishes
+— a non-block-multiple length, a boundary block count. That is the same cost D208 recorded for
+`rhash` being absent from the image, and it is recorded in the vector file's
+`body.provenance.note` and here rather than papered over with a value the crate or the
+authority produced. A cipher boundary vector needs a recorded external oracle, and that is
+the follow-up.
+
+**What moved.** `implemented[libcrypto]` is unchanged at **1915** and Phase 8 at
+**74/696/16** — this entry lands evidence, not exports. The baseline moves 82 courts /
+23,523 observations → **83 courts / 23,523 observations** (`CT-*` records carry vector counts,
+not the differential observation count), and the pipeline ends `PIPELINE OK`.
+
+**What this does not do, with the coordinate.** The DES/3DES, RC2, RC4, Blowfish, CAST5,
+IDEA, SEED and Camellia low-level arms are still open, and with them their `RT-CIPHER`
+sections and their `CT-CIPHER` vector sets; the provider cipher rows and the cipher half of
+`deflt_query`/`deflt_ciphers[]` are unwritten. The error arm for a cipher whose key schedule
+refuses is observed by `RT-CIPHER` for AES already and will be repeated per family.
