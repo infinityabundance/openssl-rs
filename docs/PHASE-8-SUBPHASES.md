@@ -235,11 +235,11 @@ would have hidden which of the two comparisons a green verdict came from.
 
 **The exemplar, and its first result is a failure.** `CT-DIGEST` is wired for the nine digest
 constructions 8.1a implements, over committed vectors extracted from the pinned authority's own
-`test/recipes/30-test_evp_data/evpmd_*.txt` (`forensics/vectors/*.json`: 7 MD4, 7 MD5, 8
-RIPEMD-160, 2 SHA-1, 2 each SHA-224/256/384, 3 SHA-512 and 8 Whirlpool vectors, as those files
-record). Against the 8.1a tree this amendment lands with, `artifacts/phase8/COURTS.json`
-records **24 of 41 vectors passing and 17 failing**: MD4 0/7, SHA-1 0/2 and Whirlpool 0/8 fail,
-while MD5 7/7, RIPEMD-160 8/8 and the SHA-2 family 9/9 pass. That is the independent plane
+`test/recipes/30-test_evp_data/evpmd_*.txt` (the per-construction counts and update modes live
+in `forensics/vectors/*.json`, and the plane has since grown past this first one-message shape --
+D206). Against the 8.1a tree this amendment lands with, `artifacts/phase8/COURTS.json` recorded
+**24 of 41 vectors passing and 17 failing**: MD4 0/7, SHA-1 0/2 and Whirlpool 0/8 failed, while
+MD5 7/7, RIPEMD-160 8/8 and the SHA-2 family 9/9 passed. That is the independent plane
 doing its job: the same three constructions this stratum's WIP commit (`bd4c9914`) records as
 failing are the three the vectors find, per input. The failing vectors are recorded in full in
 `docs/DECISIONS.md` D201, and fixing the implementation is the next content slice — deliberately
@@ -322,7 +322,7 @@ split is recorded here rather than performed silently:
 | # | Land | Open at the split |
 |---|---|---|
 | 8.1a | the low-level constructions and their collector: `MD4`, `MD5`, `RIPEMD160`, `WHIRLPOOL` whole (Init/Update/Final/Transform and the one-shot), `SHA1`/`SHA224`/`SHA256`/`SHA384`/`SHA512`'s `Init`/`Update`/`Final`/`Transform` — **thirty-eight exports** — and its two courts, `RT-DIGEST` and `CT-DIGEST` | 38 |
-| 8.1b | the provider half: `PROV_DIGEST` and `digestcommon.c`'s `ossl_digest_default_get_params`/`_gettable_params`, the `*_prov.c` dispatch tables, the `sm3`/`sha3`/`keccak1600` internals, the five `sha.h` one-shots, and the digest half of `ossl_default_provider_init` with `providers/defltprov.c`'s `deflt_digests[]`. MDC2's four labels are **not** here: they are 8.2's, per the DES inversion above | 5 |
+| 8.1b | the provider half: `PROV_DIGEST` and `digestcommon.c`'s `ossl_digest_default_get_params`/`_gettable_params`, the `*_prov.c` dispatch tables, the `sm3`/`sha3`/`keccak1600` internals, the five `sha.h` one-shots, and the digest half of `ossl_default_provider_init` with `providers/defltprov.c`'s `deflt_digests[]`. MDC2's four labels are **not** here: they are 8.2's, per the DES inversion above. **PARTLY LANDED (D206):** the digest half of `ossl_default_provider_init` is declared and reachable — `src/provider/digest.rs` publishes the seven default-provider rows whose constructions 8.1a built (`SHA1`/`SHA224`/`SHA256`/`SHA384`/`SHA512`, `MD5`, `RIPEMD160`) and the fallback walk now activates `default`, so `EVP_MD_fetch(NULL, "SHA256", NULL)` resolves and `EVP_DigestInit_ex`/`_Update`/`_Final_ex` operate through it. `MD4` and `WHIRLPOOL` are deliberately **not** among the rows: the author's constructions exist, but the authority publishes them from the legacy provider (Phase 13's, per `forensics/prerequisites.json`) and not from the default provider, so `EVP_MD_fetch(NULL, "MD4", NULL)` answers NULL without a legacy provider and `RT-DIGEST` observes the pair. Still open: the `sm3`/`sha3`/`keccak1600` internals, the SHA-3/SHAKE/SM3/BLAKE2/md5_sha1/null digest rows, the two truncated SHA-512 spellings and SHA2-256/192, the five `sha.h` one-shots, and the provider's non-digest halves | 5 |
 
 ### The sixteen recorded hand-offs, and why the four key types are not hand-offs
 

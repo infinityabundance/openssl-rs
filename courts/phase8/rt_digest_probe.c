@@ -26,6 +26,18 @@
  *   * a bounded `memcmp` of the one-call and split transcripts, so the collector's partial
  *     block is compared as bytes and never reported as a pointer.
  *
+ * The provider-mediated path
+ * --------------------------
+ * After the low-level loop this probe also drives the *provider* path, which is the half 8.1b
+ * lands: `OSSL_PROVIDER_load(NULL, "default")` and `OSSL_PROVIDER_available`, then
+ * `EVP_MD_fetch(NULL, "SHA256", NULL)` and `EVP_DigestInit_ex`/`EVP_DigestUpdate`/
+ * `EVP_DigestFinal_ex` through the fetched method. Those are the observations that D117's
+ * residual is about — before 8.1b the candidate's fallback walk failed at `DSO_load`, so the
+ * load and the fetch both answered 0 while the authority answered 1. The digest bytes are the
+ * point: a fetch that resolves to a method whose callbacks are wrong is worse than no fetch.
+ * The table's edge is observed too: the seven rows `defltprov.c` carries resolve, and `MD4` and
+ * `WHIRLPOOL`, which are `legacyprov.c`'s rows and which no loaded provider answers, do not.
+ *
  * No address is ever printed, stdout is line-buffered, and no NULL-dereferencing entry point
  * is called — a probe that aborts the harness compares nothing.
  *
@@ -41,6 +53,8 @@
 #include <openssl/ripemd.h>
 #include <openssl/sha.h>
 #include <openssl/whrlpool.h>
+#include <openssl/evp.h>
+#include <openssl/provider.h>
 
 #define RT_MSG_MAX 2048u
 
@@ -326,6 +340,88 @@ static void rt_run(const struct rt_algo *a)
         printf("%s.digest.transform_then_update=error\n", a->name);
 }
 
+/* Fetch `name` through the default library context and, if it resolves, run `abc` through the
+ * fetched method. The presence and the digest are both observed: the first pins which rows the
+ * default provider publishes, and the second pins that the name resolved to the right
+ * construction. `label` is a key-safe spelling of the algorithm. */
+static void rt_provider_digest(const char *name, const char *label)
+{
+    EVP_MD *md = EVP_MD_fetch(NULL, name, NULL);
+    unsigned char out[64];
+    unsigned int outl = 0;
+    EVP_MD_CTX *ctx;
+
+    printf("provider.fetch.%s=%s\n", label, md != NULL ? "yes" : "no");
+    if (md == NULL) {
+        printf("provider.%s.abc=no-fetch\n", label);
+        return;
+    }
+    printf("provider.%s.size=%d\n", label, EVP_MD_get_size(md));
+    printf("provider.%s.blocksize=%d\n", label, EVP_MD_get_block_size(md));
+    ctx = EVP_MD_CTX_new();
+    memset(out, 0, sizeof(out));
+    if (EVP_DigestInit_ex(ctx, md, NULL) == 1
+        && EVP_DigestUpdate(ctx, "abc", 3) == 1
+        && EVP_DigestFinal_ex(ctx, out, &outl) == 1) {
+        printf("provider.%s.abc=", label);
+        rt_print_hex(out, outl);
+        printf("\n");
+        printf("provider.%s.outl=%u\n", label, outl);
+    } else {
+        printf("provider.%s.abc=error\n", label);
+    }
+    EVP_MD_CTX_free(ctx);
+    EVP_MD_free(md);
+}
+
+static void rt_provider_section(void)
+{
+    OSSL_PROVIDER *def;
+    EVP_MD *md;
+    EVP_MD_CTX *ctx;
+    unsigned char out[64];
+    unsigned int outl = 0;
+
+    def = OSSL_PROVIDER_load(NULL, "default");
+    printf("provider.load_default=%s\n", def != NULL ? "yes" : "no");
+    printf("provider.available_default=%d\n", OSSL_PROVIDER_available(NULL, "default"));
+
+    md = EVP_MD_fetch(NULL, "SHA256", NULL);
+    printf("provider.fetch_sha256=%s\n", md != NULL ? "yes" : "no");
+    if (md == NULL) {
+        printf("provider.sha256.abc=no-fetch\n");
+    } else {
+        printf("provider.sha256.size=%d\n", EVP_MD_get_size(md));
+        printf("provider.sha256.blocksize=%d\n", EVP_MD_get_block_size(md));
+        ctx = EVP_MD_CTX_new();
+        memset(out, 0, sizeof(out));
+        if (EVP_DigestInit_ex(ctx, md, NULL) == 1
+            && EVP_DigestUpdate(ctx, "abc", 3) == 1
+            && EVP_DigestFinal_ex(ctx, out, &outl) == 1) {
+            printf("provider.sha256.abc=");
+            rt_print_hex(out, outl);
+            printf("\n");
+            printf("provider.sha256.outl=%u\n", outl);
+        } else {
+            printf("provider.sha256.abc=error\n");
+        }
+        EVP_MD_CTX_free(ctx);
+        EVP_MD_free(md);
+    }
+    /* The default provider publishes the seven rows 8.1a built **and** that `defltprov.c`
+     * carries. MD4 and Whirlpool are `legacyprov.c`'s rows and no legacy provider is loaded, so
+     * both must answer NULL here, exactly as the authority does; `RMD160` is one of
+     * `PROV_NAMES_RIPEMD_160`'s four aliases. */
+    rt_provider_digest("MD5", "md5");
+    rt_provider_digest("SHA512", "sha512");
+    rt_provider_digest("RIPEMD160", "ripemd160");
+    rt_provider_digest("RMD160", "rmd160");
+    rt_provider_digest("MD4", "md4");
+    rt_provider_digest("WHIRLPOOL", "whirlpool");
+    if (def != NULL)
+        OSSL_PROVIDER_unload(def);
+}
+
 int main(void)
 {
     size_t i;
@@ -335,6 +431,8 @@ int main(void)
 
     for (i = 0; i < sizeof(RT_ALGORITHMS) / sizeof(RT_ALGORITHMS[0]); i++)
         rt_run(&RT_ALGORITHMS[i]);
+
+    rt_provider_section();
 
     return 0;
 }

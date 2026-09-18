@@ -2887,9 +2887,9 @@
               "-O2"
             ],
             "observations": {
-              "-O0": 80,
-              "-O1": 80,
-              "-O2": 80
+              "-O0": 83,
+              "-O1": 83,
+              "-O2": 83
             },
             "side": "authority",
             "verdict": "clean"
@@ -2915,9 +2915,9 @@
               "-O2"
             ],
             "observations": {
-              "-O0": 80,
-              "-O1": 80,
-              "-O2": 80
+              "-O0": 83,
+              "-O1": 83,
+              "-O2": 83
             },
             "side": "candidate",
             "verdict": "clean"
@@ -4251,9 +4251,9 @@
               "-O2"
             ],
             "observations": {
-              "-O0": 98,
-              "-O1": 98,
-              "-O2": 98
+              "-O0": 129,
+              "-O1": 129,
+              "-O2": 129
             },
             "side": "authority",
             "verdict": "clean"
@@ -4279,9 +4279,9 @@
               "-O2"
             ],
             "observations": {
-              "-O0": 98,
-              "-O1": 98,
-              "-O2": 98
+              "-O0": 129,
+              "-O1": 129,
+              "-O2": 129
             },
             "side": "candidate",
             "verdict": "clean"
@@ -4532,7 +4532,7 @@
     {
       "name": "probe",
       "path": "courts/phase6/rt_provider_probe.c",
-      "sha256": "f9aa25cc12690565daccc316df88baa46ac5ff16936a5e2a92df31f416d34de1"
+      "sha256": "49347e07900c41c5dd6260dd383b7d8c37d5a777f65342b0bdc99aed1608c0fa"
     },
     {
       "name": "probe",
@@ -4642,7 +4642,7 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_digest_probe.c",
-      "sha256": "cae2905c2c18bdb1c2efbf3de9c7c20d264e517089daecbefc9b5782d85e06ed"
+      "sha256": "17a0caabc20b34a8ddd5768eb92fc4b2ec0c1388e3fd19aa7fb3ad0f17c195fe"
     }
   ],
   "kind": "probe-hygiene",

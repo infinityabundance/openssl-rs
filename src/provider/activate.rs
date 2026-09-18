@@ -599,6 +599,12 @@ pub struct OsslAlgorithm {
     pub algorithm_description: *const c_char,
 }
 
+// SAFETY: a table row points at `'static` literals and `'static` dispatch tables; it has no
+// interior mutability, and the authority shares rows between the compiled-in table and every
+// query result. A `static` array of rows is therefore safe to share, which is what the default
+// provider's `deflt_digests[]` is.
+unsafe impl Sync for OsslAlgorithm {}
+
 /// `typedef int (*OSSL_provider_random_bytes_fn)(void *provctx, int which, void *buf,
 /// size_t n, unsigned int strength)` — the provider-side dispatch entry point.
 type ProviderRandomBytesFn =
@@ -629,14 +635,13 @@ type ProviderRandomBytesFn =
 /// caller who registered `default` through `OSSL_PROVIDER_add_builtin` with parameters has
 /// those parameters applied to the instance the walk creates.
 ///
-/// **Registered residual.** The three `init` pointers in
-/// [`crate::provider::PREDEFINED_PROVIDERS`] are 7/8's, so `provider_new` here receives
-/// `None` for each of them and `provider_activate` therefore takes `provider_init` down the
-/// *module* branch, where `DSO_load` fails. The walk consequently answers 0 where the
-/// authority answers 1. That is a real divergence, observable through
-/// `OSSL_PROVIDER_available` and `OSSL_PROVIDER_do_all`, and it is recorded rather than
-/// smoothed over: it is D116's third residual and it is named in `docs/PHASE-6-SUBPHASES.md`'s
-/// 6.8c row.
+/// **Residual, and now partly retired.** `default`'s entry point
+/// ([`crate::provider::digest::ossl_default_provider_init`]) landed with 8.1b, so this walk
+/// activates `default` with its digest half and answers 1 as the authority does. `base` and
+/// `null` still name `None`, so had they been fallbacks they would take `provider_init` down
+/// the *module* branch and fail at `DSO_load`; they are not fallbacks in this profile, so the
+/// walk does not reach them. What remains open is `OSSL_PROVIDER_load(NULL, "base")` /
+/// `"null"`, and the default provider's non-digest halves. D206 records the measurement.
 ///
 /// # Safety
 /// `store` must be a live store.
@@ -680,8 +685,8 @@ unsafe fn provider_activate_fallbacks(store: *mut ProviderStore) -> c_int {
         let params = unsafe { find_registered_params(store, row.name.as_ptr()) };
         // SAFETY: `row.name` is a `'static` NUL-terminated literal; `params` is NULL or the
         // store's own list, which outlives the object this creates because `provider_new`
-        // deep-copies it.
-        let prov = unsafe { provider_new(row.name.as_ptr(), None, params) };
+        // deep-copies it. `row.init` is the authority's `p->init`.
+        let prov = unsafe { provider_new(row.name.as_ptr(), row.init, params) };
         if prov.is_null() {
             failed = true;
             break;
