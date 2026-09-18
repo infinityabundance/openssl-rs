@@ -14256,3 +14256,66 @@ IDEA, SEED and Camellia low-level arms are still open, and with them their `RT-C
 sections and their `CT-CIPHER` vector sets; the provider cipher rows and the cipher half of
 `deflt_query`/`deflt_ciphers[]` are unwritten. The error arm for a cipher whose key schedule
 refuses is observed by `RT-CIPHER` for AES already and will be repeated per family.
+
+## D212 — RC4 lands as a stream cipher with both planes, and a pipeline-ordering defect is recorded rather than worked around silently
+
+The next slice of 8.2 after AES: `src/rc4.rs` lands the three `rc4.h` exports —
+`RC4_set_key`, `RC4`, `RC4_options` — with `RT-CIPHER` and `CT-CIPHER` both green.
+`implemented[libcrypto]` **1915 → 1918** and Phase 8 **74/696/16 → 77/693/16**;
+`RT-CIPHER` **133 → 148 observations** and `CT-CIPHER` **73 → 83 vectors over 83 calls**;
+the baseline moves 83 courts / 23,523 → **83 courts / 23,538 observations**. PIPELINE OK.
+
+**RC4 is a stream cipher, and the module says what that changes.** It has no block and no IV:
+one call transforms an arbitrary number of bytes and leaves the 256-byte permutation and the
+two indices in the caller's `RC4_KEY`. `RT-CIPHER` therefore observes the key schedule as
+**bytes** (the first 64 bytes of `data`, and `x`/`y`), the state after a run, and a **second
+call resuming the same keystream** — the observable a transcription that re-initialised per
+call would get plausibly and wrongly. `CT-CIPHER` adds `forensics/vectors/rc4.json`: **10
+vectors, 9 corpus-mirrored** from `test/recipes/30-test_evp_data/evpciph_rc4.txt` and **1
+independently derived** — the empty input, whose answer is the construction's own. The
+census is now **83 vectors: 80 corpus, 3 independent**.
+
+`RC4_options` is measured, not recalled. The perlasm object selects among `rc4(16x,int)`,
+`rc4(8x,char)` and the default `rc4(8x,int)` by two `OPENSSL_ia32cap` bits; on the pinned
+court host the answer is the default, and the dispatch is Phase 19's
+(`docs/RELEASE_GATES.md`), so the arm answers the measured string and the dispatch is recorded
+in the module doc rather than silently assumed.
+
+**RC4's provider row is not this stratum's, and the coordinate says why.**
+`providers/legacyprov.c:139-145` publishes `PROV_NAMES_RC4`, `PROV_NAMES_RC4_40` and
+`PROV_NAMES_RC4_HMAC_MD5`; `providers/defltprov.c`'s `deflt_ciphers[]` carries none of them.
+The legacy provider is Phase 13's, so — exactly as D206 found for MD4 and Whirlpool — no
+default-provider row is written here, and `EVP_CIPHER_fetch(NULL, "RC4", NULL)` answers NULL
+without it. The alias string `PROV_NAMES_RC4` is
+`providers/implementations/include/prov/names.h:200`, `"RC4:1.2.840.113549.3.4"`.
+
+### The defect: one pipeline run is not enough after a change that moves `internal-symbols.json`
+
+`gen_prerequisite_atlas.py` runs **after** `phase7_obligations.py` in `court/pipeline.sh`
+("prerequisite atlases" follows "ledgers"), and `phase7-obligations.json` records
+`forensics/atlas/internal-symbols.json`'s sha256 as an input. A source change that alters the
+crate's c_style internal-symbol population therefore rewrites `internal-symbols.json` *after*
+the ledger has recorded the previous generation's hash, and `evidence_determinism.py` fails
+with
+
+```text
+STALE: forensics/phase7-obligations.json: .inputs[5].sha256:
+  committed '8e7d…' vs regenerated 'b92b…'
+```
+
+on the first run and passes on the second. **This was seen twice in this subphase — on the AES
+commit and on the RC4 commit — and both times it was the same ordering, not a stale hand-typed
+number.** The disposition taken here is the pipeline's own rule (`regression_guard`/CI compare
+the committed artefacts), so the fix is to run the pipeline twice after such a change and
+commit the second run; the structural repair is to move `gen_prerequisite_atlas.py` before the
+ledgers, which is a pipeline-ordering change with its own consumers and is recorded here rather
+than made in a family commit.
+
+### What this entry does not do, with the reason and the coordinate
+
+DES/3DES (32 open, `crypto/des/`, `des.h`), MDC2 (4 open, `crypto/mdc2/mdc2dgst.c`, which needs
+DES's key schedule and round function per D197), RC2/Blowfish/CAST5/IDEA/SEED/Camellia (47
+open), and the provider cipher rows and the cipher half of `deflt_query`/`deflt_ciphers[]`
+remain open. The CT and RT machinery this entry and D210/D211 built is the template they land
+through: a `block128_f`-shaped family adds a `src/<alg>.rs`, an `RT-CIPHER` arm and an
+`--emit-ciphers` source, and a stream family follows `src/rc4.rs`.

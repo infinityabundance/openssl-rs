@@ -282,7 +282,7 @@
         "truncf128",
         "truncf16"
       ],
-      "compiler_emitted_count": 7619,
+      "compiler_emitted_count": 7616,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -290,7 +290,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 1915,
+        "implemented": 1918,
         "implemented_symbols": [
           "AES_bi_ige_encrypt",
           "AES_cbc_encrypt",
@@ -2102,6 +2102,9 @@
           "PKCS5_v2_PBE_keyivgen_ex",
           "PKCS5_v2_scrypt_keyivgen",
           "PKCS5_v2_scrypt_keyivgen_ex",
+          "RC4",
+          "RC4_options",
+          "RC4_set_key",
           "RIPEMD160",
           "RIPEMD160_Final",
           "RIPEMD160_Init",
@@ -2208,7 +2211,7 @@
           "i2d_DISPLAYTEXT",
           "i2t_ASN1_OBJECT"
         ],
-        "scaffolded": 3981
+        "scaffolded": 3978
       },
       "libssl": {
         "authority_exports": 603,
@@ -2219,18 +2222,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 1915,
-      "scaffolded": 4584
+      "implemented": 1918,
+      "scaffolded": 4581
     }
   },
-  "body_hash": "28651355a403fcc72e2e0b79d048330e1c3f6fa45497f071acfa6b0e42d36170",
+  "body_hash": "3a671912046b912502ca75e41f343ee79b52c456a25b220a3bbef81ef7a38166",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "ad54c06f7ecd0cfdbe86181f9a3e3840fda6a7829d8b705c494e905aac9890a0"
+      "sha256": "d73c9f82e2a874a7fe2d5ed6c65e17d207eb8f41b20c77d7d92a0026fd297c92"
     },
     {
       "name": "authority-exports",

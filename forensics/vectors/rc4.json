@@ -1,0 +1,226 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "algorithm": "rc4",
+    "court": "CT-CIPHER",
+    "openssl_cipher": "RC4",
+    "primary_source": "UNKNOWN",
+    "provenance": {
+      "authority": "openssl-3.6.4-production",
+      "corpus": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_rc4.txt",
+      "corpus_sha256": "a0f12c93fea9ae447f438ba2e916bbbcb0fc0bf92b635a889d56b1b05a389479",
+      "note": "Candidate-only construction verification. The primary source is recorded as UNKNOWN rather than guessed: the corpus's title is 'RC4 tests' and no standard publishes these bytes; the bytes are mirrored through the pinned corpus and their identity fixed. A CT pass is not OpenSSL parity and not formal validation. No independent RC4 oracle exists in the pinned court image, so only the empty-input boundary carries an independent oracle.",
+      "primary_source": "UNKNOWN"
+    },
+    "standard": "RC4",
+    "vectors": [
+      {
+        "cipher": "RC4",
+        "expected_hex": "75b7878099e0c596",
+        "id": "rc4-1",
+        "input_hex": "0123456789abcdef",
+        "iv_hex": "",
+        "key_hex": "0123456789abcdef0123456789abcdef",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_rc4.txt",
+          "form": "keyed-block",
+          "line": 12,
+          "mirror_sha256": "a0f12c93fea9ae447f438ba2e916bbbcb0fc0bf92b635a889d56b1b05a389479",
+          "primary_source": "UNKNOWN",
+          "title": "RC4 tests"
+        },
+        "standard": "RC4 (as published in the sci.crypt posting OpenSSL transcribes)"
+      },
+      {
+        "cipher": "RC4",
+        "expected_hex": "7494c2e7104b0879",
+        "id": "rc4-2",
+        "input_hex": "0000000000000000",
+        "iv_hex": "",
+        "key_hex": "0123456789abcdef0123456789abcdef",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_rc4.txt",
+          "form": "keyed-block",
+          "line": 18,
+          "mirror_sha256": "a0f12c93fea9ae447f438ba2e916bbbcb0fc0bf92b635a889d56b1b05a389479",
+          "primary_source": "UNKNOWN",
+          "title": "RC4 tests"
+        },
+        "standard": "RC4 (as published in the sci.crypt posting OpenSSL transcribes)"
+      },
+      {
+        "cipher": "RC4",
+        "expected_hex": "de188941a3375d3a",
+        "id": "rc4-3",
+        "input_hex": "0000000000000000",
+        "iv_hex": "",
+        "key_hex": "00000000000000000000000000000000",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_rc4.txt",
+          "form": "keyed-block",
+          "line": 24,
+          "mirror_sha256": "a0f12c93fea9ae447f438ba2e916bbbcb0fc0bf92b635a889d56b1b05a389479",
+          "primary_source": "UNKNOWN",
+          "title": "RC4 tests"
+        },
+        "standard": "RC4 (as published in the sci.crypt posting OpenSSL transcribes)"
+      },
+      {
+        "cipher": "RC4",
+        "expected_hex": "d6a141a7ec3c38dfbd615a1162e1c7ba36b67858",
+        "id": "rc4-4",
+        "input_hex": "0000000000000000000000000000000000000000",
+        "iv_hex": "",
+        "key_hex": "ef012345ef012345ef012345ef012345",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_rc4.txt",
+          "form": "keyed-block",
+          "line": 30,
+          "mirror_sha256": "a0f12c93fea9ae447f438ba2e916bbbcb0fc0bf92b635a889d56b1b05a389479",
+          "primary_source": "UNKNOWN",
+          "title": "RC4 tests"
+        },
+        "standard": "RC4 (as published in the sci.crypt posting OpenSSL transcribes)"
+      },
+      {
+        "cipher": "RC4",
+        "expected_hex": "66a0949f8af7d6891f7f832ba833c00c892ebe30143ce28740011ecf",
+        "id": "rc4-5",
+        "input_hex": "123456789abcdef0123456789abcdef0123456789abcdef012345678",
+        "iv_hex": "",
+        "key_hex": "0123456789abcdef0123456789abcdef",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_rc4.txt",
+          "form": "keyed-block",
+          "line": 36,
+          "mirror_sha256": "a0f12c93fea9ae447f438ba2e916bbbcb0fc0bf92b635a889d56b1b05a389479",
+          "primary_source": "UNKNOWN",
+          "title": "RC4 tests"
+        },
+        "standard": "RC4 (as published in the sci.crypt posting OpenSSL transcribes)"
+      },
+      {
+        "cipher": "RC4",
+        "expected_hex": "d6a141a7ec3c38dfbd61",
+        "id": "rc4-6",
+        "input_hex": "00000000000000000000",
+        "iv_hex": "",
+        "key_hex": "ef012345ef012345ef012345ef012345",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_rc4.txt",
+          "form": "keyed-block",
+          "line": 42,
+          "mirror_sha256": "a0f12c93fea9ae447f438ba2e916bbbcb0fc0bf92b635a889d56b1b05a389479",
+          "primary_source": "UNKNOWN",
+          "title": "RC4 tests"
+        },
+        "standard": "RC4 (as published in the sci.crypt posting OpenSSL transcribes)"
+      },
+      {
+        "cipher": "RC4",
+        "expected_hex": "9ac7cc9a609d1ef7b2932899cde41b97",
+        "id": "rc4-7",
+        "input_hex": "00000000000000000000000000000000",
+        "iv_hex": "",
+        "key_hex": "0102030405060708090a0b0c0d0e0f10",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_rc4.txt",
+          "form": "keyed-block",
+          "line": 62,
+          "mirror_sha256": "a0f12c93fea9ae447f438ba2e916bbbcb0fc0bf92b635a889d56b1b05a389479",
+          "primary_source": "UNKNOWN",
+          "title": "RC4 tests (From RFC6229)"
+        },
+        "standard": "RC4 (as published in the sci.crypt posting OpenSSL transcribes)"
+      },
+      {
+        "cipher": "RC4",
+        "expected_hex": "720c94b63edf44e131d950ca211a5a30",
+        "id": "rc4-8",
+        "input_hex": "00000000000000000000000000000000",
+        "iv_hex": "",
+        "key_hex": "ebb46227c6cc8b37641910833222772a",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_rc4.txt",
+          "form": "keyed-block",
+          "line": 68,
+          "mirror_sha256": "a0f12c93fea9ae447f438ba2e916bbbcb0fc0bf92b635a889d56b1b05a389479",
+          "primary_source": "UNKNOWN",
+          "title": "RC4 tests (From RFC6229)"
+        },
+        "standard": "RC4 (as published in the sci.crypt posting OpenSSL transcribes)"
+      },
+      {
+        "cipher": "RC4",
+        "expected_hex": "358b23dba47770e72c7ea8ce5bd68da3",
+        "id": "rc4-9",
+        "input_hex": "00000000000000000000000000000000",
+        "iv_hex": "",
+        "key_hex": "ebb46227c6cc8b37641910833222772a00000000",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_rc4.txt",
+          "form": "keyed-block",
+          "line": 75,
+          "mirror_sha256": "a0f12c93fea9ae447f438ba2e916bbbcb0fc0bf92b635a889d56b1b05a389479",
+          "primary_source": "UNKNOWN",
+          "title": "RC4 tests (From RFC6229)"
+        },
+        "standard": "RC4 (as published in the sci.crypt posting OpenSSL transcribes)"
+      },
+      {
+        "cipher": "RC4",
+        "expected_hex": "",
+        "id": "rc4-empty-10",
+        "input_hex": "",
+        "iv_hex": "",
+        "key_hex": "0123456789abcdef0123456789abcdef",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "derivation": "independent",
+          "label": "empty",
+          "note": "the expected bytes are the construction's own answer, not a published test value",
+          "oracle": "the construction's definition: RC4 over a zero-byte input emits no bytes and leaves its state unchanged",
+          "primary_source": "UNKNOWN"
+        },
+        "standard": "RC4"
+      }
+    ]
+  },
+  "generator": "forensics/tools/correctness_vectors.py",
+  "inputs": [
+    {
+      "name": "authority-evp-vector-file",
+      "path": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_rc4.txt",
+      "sha256": "a0f12c93fea9ae447f438ba2e916bbbcb0fc0bf92b635a889d56b1b05a389479"
+    }
+  ],
+  "kind": "cipher-vectors-rc4",
+  "schema": "openssl-rs/atlas/cipher-vectors-rc4/v1"
+}

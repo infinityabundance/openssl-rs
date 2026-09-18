@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include <openssl/aes.h>
+#include <openssl/rc4.h>
 
 #define CT_LINE 8192
 #define CT_MAX 4096
@@ -66,6 +67,19 @@ static int ct_cipher(const char *cipher, const char *operation,
     unsigned char ivec[32];
     int bits;
     int enc_op = strcmp(operation, "ENCRYPT") == 0;
+
+    /* RC4 is a stream cipher: no block, no IV, and one call transforms any number of bytes. */
+    if (strcmp(cipher, "RC4") == 0) {
+        RC4_KEY rk;
+
+        if (keylen == 0 || ivlen != 0)
+            return -1;
+        memset(&rk, 0, sizeof(rk));
+        RC4_set_key(&rk, (int)keylen, key);
+        RC4(&rk, inlen, in, out);
+        *outlen = inlen;
+        return 0;
+    }
 
     if (strncmp(cipher, "AES-", 4) != 0)
         return -1;

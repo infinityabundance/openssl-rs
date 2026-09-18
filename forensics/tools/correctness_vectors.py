@@ -1402,6 +1402,7 @@ def emit_all(authority_id: str, vector_dir: Path = VECTOR_DIR) -> list[dict]:
 # candidate has a low-level arm for are emitted (`AES-{128,192,256}-{ECB,CBC,CFB,OFB}`); GCM
 # and the other AEAD spellings are 8.3's and are skipped rather than half-modelled.
 AES_CIPHER_SOURCE = "test/recipes/30-test_evp_data/evpciph_aes_common.txt"
+RC4_CIPHER_SOURCE = "test/recipes/30-test_evp_data/evpciph_rc4.txt"
 _AES_CIPHER_RE = re.compile(r"^AES-(128|192|256)-(ECB|CBC|CFB|OFB)$")
 
 
@@ -1435,8 +1436,8 @@ def _parse_cipher_blocks(text: str) -> list[dict]:
     return blocks
 
 
-def emit_ciphers(authority_id: str, vector_dir: Path = VECTOR_DIR) -> dict:
-    """Regenerate `forensics/vectors/aes.json` from the pinned cipher corpus."""
+def emit_ciphers(authority_id: str, vector_dir: Path = VECTOR_DIR) -> list[dict]:
+    """Regenerate the cipher vector sets (`forensics/vectors/aes.json`, `rc4.json`)."""
     auth = resolve_authority(authority_id)
     src_path = auth.source / AES_CIPHER_SOURCE
     if not src_path.is_file():
@@ -1541,7 +1542,99 @@ def emit_ciphers(authority_id: str, vector_dir: Path = VECTOR_DIR) -> dict:
     )
     out = vector_dir / "aes.json"
     write_json(out, doc)
-    return {"path": rel(out), "vectors": len(vectors), "source": rel(src_path)}
+    rows = [{"path": rel(out), "vectors": len(vectors), "source": rel(src_path)}]
+
+    # RC4 is a stream cipher in the same corpus format: `Cipher = RC4`, a key, a plaintext and
+    # a ciphertext, with no IV. It is emitted into its own set so the census is per cipher.
+    rc4_path = auth.source / RC4_CIPHER_SOURCE
+    if not rc4_path.is_file():
+        raise VectorError(f"correctness-vectors: {rel(rc4_path)} is absent")
+    rc4_text = rc4_path.read_text(encoding="utf-8")
+    rc4_mirror = hashlib.sha256(rc4_path.read_bytes()).hexdigest()
+    rc4_vectors: list[dict] = []
+    n = 0
+    for block in _parse_cipher_blocks(rc4_text):
+        if block.get("cipher", "").strip().upper() != "RC4":
+            continue
+        if any(k not in block for k in ("key", "plaintext", "ciphertext")):
+            continue
+        n += 1
+        rc4_vectors.append({
+            "id": f"rc4-{n}",
+            "cipher": "RC4",
+            "operation": "ENCRYPT",
+            "key_hex": block["key"].lower(),
+            "iv_hex": "",
+            "input_hex": block["plaintext"].lower(),
+            "expected_hex": block["ciphertext"].lower(),
+            "standard": "RC4 (as published in the sci.crypt posting OpenSSL transcribes)",
+            "provenance": {
+                "primary_source": "UNKNOWN",
+                "derivation": "corpus",
+                "file": rel(rc4_path),
+                "line": block["line"],
+                "title": block.get("title", ""),
+                "form": "keyed-block",
+                "authority": authority_id,
+                "mirror_sha256": rc4_mirror,
+            },
+        })
+    # The empty input is the one boundary whose answer needs no oracle: a stream cipher over
+    # zero bytes emits zero bytes and leaves the state unadvanced.
+    n += 1
+    rc4_vectors.append({
+        "id": f"rc4-empty-{n}",
+        "cipher": "RC4",
+        "operation": "ENCRYPT",
+        "key_hex": "0123456789abcdef0123456789abcdef",
+        "iv_hex": "",
+        "input_hex": "",
+        "expected_hex": "",
+        "standard": "RC4",
+        "provenance": {
+            "primary_source": "UNKNOWN",
+            "derivation": "independent",
+            "label": "empty",
+            "oracle": ("the construction's definition: RC4 over a zero-byte input emits no "
+                       "bytes and leaves its state unchanged"),
+            "note": "the expected bytes are the construction's own answer, not a published "
+                    "test value",
+        },
+    })
+    rc4_body = {
+        "algorithm": "rc4",
+        "court": "CT-CIPHER",
+        "openssl_cipher": "RC4",
+        "standard": "RC4",
+        "primary_source": "UNKNOWN",
+        "provenance": {
+            "corpus": rel(rc4_path),
+            "corpus_sha256": rc4_mirror,
+            "authority": authority_id,
+            "primary_source": "UNKNOWN",
+            "note": (
+                "Candidate-only construction verification. The primary source is recorded as "
+                "UNKNOWN rather than guessed: the corpus's title is 'RC4 tests' and no standard "
+                "publishes these bytes; the bytes are mirrored through the pinned corpus and "
+                "their identity fixed. A CT pass is not OpenSSL parity and not formal "
+                "validation. No independent RC4 oracle exists in the pinned court image, so "
+                "only the empty-input boundary carries an independent oracle."
+            ),
+        },
+        "vectors": rc4_vectors,
+    }
+    rc4_doc = envelope(
+        kind=f"{CIPHER_KIND_PREFIX}rc4",
+        generator=GENERATOR,
+        inputs=[InputRef(name="authority-evp-vector-file", path=rc4_path)],
+        body=rc4_body,
+        authority=authority_id,
+    )
+    rc4_out = vector_dir / "rc4.json"
+    write_json(rc4_out, rc4_doc)
+    rows.append({"path": rel(rc4_out), "vectors": len(rc4_vectors),
+                 "source": rel(rc4_path)})
+    return rows
 
 
 # ---------------------------------------------------------------------------
@@ -1626,8 +1719,8 @@ def main(argv: list[str]) -> int:
         return 0
 
     if args.emit_ciphers:
-        row = emit_ciphers(args.authority)
-        print(f"  emitted {row['path']:<40} {row['vectors']:>3} vectors from {row['source']}")
+        for row in emit_ciphers(args.authority):
+            print(f"  emitted {row['path']:<40} {row['vectors']:>3} vectors from {row['source']}")
         return 0
 
     if args.self_check:
