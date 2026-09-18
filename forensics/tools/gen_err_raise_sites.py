@@ -405,6 +405,51 @@ COVERED_FILES = [
     ("crypto/pem/pem_oth.c", "PEM_OTH"),
     ("crypto/pem/pem_pkey.c", "PEM_PKEY"),
     ("crypto/pem/pem_pk8.c", "PEM_PK8"),
+    # Phase 8: the providers' own translation units. Until this block existed the
+    # `PROV_R_*` family had exactly one covered file (`crypto/hpke/hpke_util.c`, added
+    # by 7.6 for the shared helpers), so the provider half of the cipher and digest
+    # surface had no coordinates at all -- while the authority raises from every
+    # failure arm the crate transcribes. `src/provider/cipher.rs` therefore returned 0
+    # where the authority *also* queued a specific error, which `RT-CIPHER` could not
+    # see because it did not drain the queue. The rule is Phase 4/5/6's: the list is
+    # the *subsystem* set of the stratum, not a selection of convenient files, and a
+    # site nobody calls yet is a coordinate rather than a claim.
+    #
+    # Two of the four files here are build-generated (`.c.in`) and are resolved from
+    # the build tree by `resolve_site_source`; the generated text is what the compiler
+    # saw, and its `__FILE__` carries no source-tree prefix. The other two spellings
+    # are the source tree's and its prefix is the usual `relpath` one. The difference
+    # is measured, not assumed: `ciphercommon.c`'s records read
+    # `providers/implementations/ciphers/ciphercommon.c` while
+    # `ciphercommon_block.c`'s read `../../src/openssl-3.6.4/.../ciphercommon_block.c`.
+    ("providers/implementations/ciphers/ciphercommon.c", "PROV_CIPHERCOMMON"),
+    ("providers/implementations/ciphers/ciphercommon_block.c", "PROV_CIPHERCOMMON_BLOCK"),
+    ("providers/implementations/ciphers/cipher_aes_hw.c", "PROV_CIPHER_AES_HW"),
+    ("providers/implementations/ciphers/cipher_camellia_hw.c", "PROV_CIPHER_CAMELLIA_HW"),
+    ("providers/implementations/ciphers/cipher_tdes_common.c", "PROV_CIPHER_TDES_COMMON"),
+    ("providers/implementations/ciphers/cipher_null.c", "PROV_CIPHER_NULL"),
+    ("providers/implementations/ciphers/cipher_aes_ocb.c", "PROV_CIPHER_AES_OCB"),
+    ("providers/implementations/ciphers/cipher_aes_wrp.c", "PROV_CIPHER_AES_WRP"),
+    ("providers/implementations/ciphers/cipher_aes_xts.c", "PROV_CIPHER_AES_XTS"),
+    # Phase 8's digest half. `digestcommon.c` is generated and shared by every digest
+    # row the *default* provider publishes. The other `*_prov.c` units raise nothing in
+    # this profile and are deliberately absent (an entry that can never change would read
+    # as coverage that does not exist). `mdc2_prov.c` is one of the exceptions that proves
+    # D206's rule again at the provider-file level: it *does* raise
+    # (`mdc2_set_ctx_params` at `:51`), but MDC2 is a **legacy** provider row
+    # (`providers/legacyprov.c:95`, beside MD4 at `:92` and WHIRLPOOL at `:98`), so no
+    # translation unit this crate transcribes reaches it. It is named here rather than
+    # listed, and it joins the covered set in the legacy provider's stratum.
+    ("providers/implementations/digests/digestcommon.c", "PROV_DIGESTCOMMON"),
+    # Deliberately *not* covered yet, with the stratum that owns each: the AEAD
+    # templates `ciphercommon_gcm.c.in` and `ciphercommon_ccm.c.in` (9: no row
+    # reaches them, because `deflt_ciphers[]` carries no GCM/CCM row -- D234);
+    # `cipher_chacha20*.c`, `cipher_aes_siv.c`, `cipher_aes_gcm_siv.c` (9);
+    # `cipher_cts.c` and the `cipher_*_cts.inc` pair raise nothing and are absent for
+    # that reason; `cipher_aria_hw.c`, `cipher_sm4_xts.c`, `cipher_des.c`,
+    # `cipher_rc2.c`, `cipher_rc4_hmac_md5.c`, `cipher_rc5.c` and the
+    # `cipher_aes_cbc_hmac_*` family are not this profile's rows. Their raises stay
+    # visible as uncovered sites until those strata land.
 ]
 
 # Raise macros, in the forms the authority actually spells them. `ERR_raise`
@@ -501,15 +546,71 @@ def definition_name(line: str) -> str | None:
 
 
 def relpath_prefix(source: Path, build_dir: Path) -> str:
-    """The `__FILE__` prefix the authority's compiler would have used."""
+    """The `__FILE__` prefix the authority's compiler would have used.
+
+    Files the build compiles from the *source tree* are passed to the compiler with a
+    path under that tree, so the compiler records `relpath(source_tree, build_dir)` in
+    front of the source-relative path. Files the build *generates* into the build tree
+    (the `.c.in` templates: `ciphercommon.c`, `ciphercommon_gcm.c`,
+    `ciphercommon_ccm.c`, `digestcommon.c`) are compiled from the build directory and
+    record only their build-relative path. Both are derived from the admitted build
+    record by `resolve_site_source`, never hand-typed: the spellings differ and the ERR
+    record carries the compiler's, so getting this wrong is a contract divergence.
+    """
     return os.path.relpath(str(source.resolve()), str(build_dir.resolve())) + "/"
+
+
+def resolve_site_source(auth, build_dir: Path, rel_source: str) -> tuple[Path, bool]:
+    """Where a covered translation unit's text actually lives, and whether it is generated.
+
+    Returns `(path, generated)`. A unit present in the admitted source tree is read from
+    there and its `__FILE__` carries the source-tree prefix. A unit the build generates
+    into the build tree (the `.c.in` templates) is read from the build tree and its
+    `__FILE__` is the bare build-relative path -- `ciphercommon.c` is the first of these,
+    and the authority's own ERR records show the two spellings differ. Reading the `.in`
+    instead would attribute every site to a line number the compiler never saw, because
+    the template expands `produce_param_decoder` into ~130 generated lines before the
+    first real function.
+    """
+    path = auth.source / rel_source
+    if path.is_file():
+        return path, False
+    generated = build_dir / rel_source
+    if generated.is_file():
+        return generated, True
+    raise SystemExit(f"authority file missing: {path} (and not generated at {generated})")
+
+
+def definition_name_joined(lines: list[str], i: int) -> str | None:
+    """`definition_name` for a definition whose parameter list wraps to the next line.
+
+    `produce_param_decoder` emits
+
+        static int ossl_cipher_generic_get_params_decoder
+            (const OSSL_PARAM *p, struct ..._st *r)
+
+    so the name sits at the end of one line and the `(` opens the next. Scanning the
+    single line finds no parameter list and the whole generated decoder, and every
+    `ERR_raise_data` inside it, appears to have no enclosing function. Joining exactly
+    one continuation line when the first holds no `(` recovers the name. It is the
+    authority's `__func__`, so it is contract.
+    """
+    got = definition_name(lines[i])
+    if got is not None:
+        return got
+    if i + 1 >= len(lines) or "(" in lines[i]:
+        return None
+    nxt = lines[i + 1].lstrip()
+    if not nxt.startswith("("):
+        return None
+    return definition_name(lines[i].rstrip() + " " + nxt)
 
 
 def enclosing_function(lines: list[str], lineno: int) -> str:
     """Name of the function whose body contains `lineno` (1-based)."""
     best = None
     for i in range(lineno - 1):
-        got = definition_name(lines[i])
+        got = definition_name_joined(lines, i)
         if got:
             best = got
     if best is None:
@@ -1090,13 +1191,19 @@ def main(argv: list[str]) -> int:
 
     all_sites: list[dict] = []
     unattributed: list[dict] = []
+    input_paths: dict[str, Path] = {}
     for rel_source, stem in COVERED_FILES:
-        path = auth.source / rel_source
-        if not path.is_file():
-            raise SystemExit(f"authority file missing: {path}")
+        path, generated = resolve_site_source(auth, build_dir, rel_source)
         found, skipped = scan(path)
+        input_paths[rel_source] = path
         for s in found:
             s["rel_source"] = rel_source
+            # The `__FILE__` the authority's compiler saw. A source-tree file is spelled
+            # with the `relpath(source_tree, build_dir)` prefix; a build-generated file
+            # is spelled with only its build-relative path. Derived from which tree the
+            # file is actually in, not typed.
+            s["file"] = rel_source if generated else prefix + rel_source
+            s["generated"] = generated
             s["const_name"] = const_name(stem, s["line"])
             all_sites.append(s)
         for s in skipped:
@@ -1117,8 +1224,6 @@ def main(argv: list[str]) -> int:
     for s in all_sites:
         s["lib"] = values[s["lib_symbol"]]
         s["reason"] = values[s["reason_symbol"]] if s["reason_symbol"] else 0
-        # The `__FILE__` the authority's compiler saw.
-        s["file"] = prefix + s["rel_source"]
 
     body = {
         "prefix": prefix,
@@ -1147,7 +1252,7 @@ def main(argv: list[str]) -> int:
     }
 
     inputs = [
-        InputRef(name=f"authority:{rel_source}", path=auth.source / rel_source)
+        InputRef(name=f"authority:{rel_source}", path=input_paths[rel_source])
         for rel_source, _ in COVERED_FILES
     ]
     build_records = REPO_ROOT / "forensics" / "authorities" / "BUILD_RECORDS.json"

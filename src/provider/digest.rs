@@ -89,6 +89,7 @@ use crate::params::{
 };
 use crate::provider::activate::OsslAlgorithm;
 use crate::provider::init::FUNC_PROVIDER_QUERY_OPERATION;
+use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_malloc, CRYPTO_zalloc};
 
 /// The authority's translation unit, for the allocation-tracking `file` argument.
@@ -187,45 +188,123 @@ pub(crate) unsafe extern "C" fn ossl_digest_default_get_params(
     paramsz: usize,
     flags: c_ulong,
 ) -> c_int {
-    let mut key = OSSL_DIGEST_PARAM_BLOCK_SIZE;
-    for i in 0..4 {
-        let value: Option<(usize, bool)> = match i {
-            0 => Some((blksz, false)),
-            1 => Some((paramsz, false)),
-            2 => Some((usize::from(flags & PROV_DIGEST_FLAG_XOF != 0), true)),
-            _ => Some((
-                usize::from(flags & PROV_DIGEST_FLAG_ALGID_ABSENT != 0),
-                true,
-            )),
-        };
-        let Some((v, is_int)) = value else { continue };
+    // `digest_default_get_params_decoder` runs first in the authority, and its repeated-key
+    // refusal is a coordinate of its own (`digestcommon.c:56-89`). This crate locates the keys
+    // directly instead of transcribing the generated decoder, so the scan is kept here and
+    // reports the decoder's site.
+    // SAFETY: `params` is a key-terminated array per this function's caller contract, which is
+    // exactly what `repeated_digest_param_site` walks.
+    if let Some(site) = unsafe { repeated_digest_param_site(params) } {
+        return fail_at(site);
+    }
+
+    // The body, in the authority's order, one recorded coordinate per arm.
+    let arms: [(*const c_char, usize, bool, &err_sites::ErrSite); 4] = [
+        (
+            OSSL_DIGEST_PARAM_BLOCK_SIZE,
+            blksz,
+            false,
+            &err_sites::PROV_DIGESTCOMMON_111,
+        ),
+        (
+            OSSL_DIGEST_PARAM_SIZE,
+            paramsz,
+            false,
+            &err_sites::PROV_DIGESTCOMMON_115,
+        ),
+        (
+            OSSL_DIGEST_PARAM_XOF,
+            usize::from(flags & PROV_DIGEST_FLAG_XOF != 0),
+            true,
+            &err_sites::PROV_DIGESTCOMMON_120,
+        ),
+        (
+            OSSL_DIGEST_PARAM_ALGID_ABSENT,
+            usize::from(flags & PROV_DIGEST_FLAG_ALGID_ABSENT != 0),
+            true,
+            &err_sites::PROV_DIGESTCOMMON_125,
+        ),
+    ];
+    for (key, v, is_int, site) in arms {
         // SAFETY: `params` is a key-terminated array per the contract and `key` is a literal
         // with a terminator.
         let p = unsafe { crate::params::OSSL_PARAM_locate_const(params, key) };
-        if !p.is_null() {
-            // SAFETY: the array entry was found through `params`, which the caller guaranteed
-            // writable, and the setter's contract is the entry's own `data_size`.
-            let ok = unsafe {
-                if is_int {
-                    crate::params::OSSL_PARAM_set_int(p.cast_mut(), v as c_int)
-                } else {
-                    crate::params::OSSL_PARAM_set_size_t(p.cast_mut(), v)
-                }
-            };
-            if ok == 0 {
-                // The authority raises `PROV_R_FAILED_TO_SET_PARAMETER`. That error string is
-                // the default provider's, which this half does not carry; the refusal is the
-                // observable, and it is returned.
-                return 0;
-            }
+        if p.is_null() {
+            continue;
         }
-        key = match i {
-            0 => OSSL_DIGEST_PARAM_SIZE,
-            1 => OSSL_DIGEST_PARAM_XOF,
-            _ => OSSL_DIGEST_PARAM_ALGID_ABSENT,
+        // SAFETY: the array entry was found through `params`, which the caller guaranteed
+        // writable, and the setter's contract is the entry's own `data_size`.
+        let ok = unsafe {
+            if is_int {
+                crate::params::OSSL_PARAM_set_int(p.cast_mut(), v as c_int)
+            } else {
+                crate::params::OSSL_PARAM_set_size_t(p.cast_mut(), v)
+            }
         };
+        if ok == 0 {
+            return fail_at(site);
+        }
     }
     1
+}
+
+/// `ERR_raise(lib, reason)` at a recorded authority site: the refusal *and* the queued error.
+///
+/// A path where the authority raises and this crate does not is an `ERROR_PASS` failure
+/// (`docs/PARITY_MODEL.md` §3.5), so the digest provider's refusals queue the authority's own
+/// coordinate rather than returning bare.
+#[inline]
+fn fail_at(site: &err_sites::ErrSite) -> c_int {
+    // SAFETY: `site` is a generated compile-time constant whose three string pointers are
+    // `'static`; no caller state is touched.
+    unsafe { raise_site(site) };
+    0
+}
+
+/// `digest_default_get_params_decoder`'s repeated-key refusal, in the authority's own order.
+///
+/// The four keys and their raise sites are `digestcommon.c:56-89`: `algid-absent`, `blocksize`,
+/// `size`, `xof`. The first repeated key in array order is the one the decoder reports.
+///
+/// # Safety
+/// `params` is NULL or a key-terminated array.
+unsafe fn repeated_digest_param_site(
+    params: *mut OsslParam,
+) -> Option<&'static err_sites::ErrSite> {
+    const KEYS: [(*const c_char, &err_sites::ErrSite); 4] = [
+        (
+            OSSL_DIGEST_PARAM_ALGID_ABSENT,
+            &err_sites::PROV_DIGESTCOMMON_56,
+        ),
+        (
+            OSSL_DIGEST_PARAM_BLOCK_SIZE,
+            &err_sites::PROV_DIGESTCOMMON_67,
+        ),
+        (OSSL_DIGEST_PARAM_SIZE, &err_sites::PROV_DIGESTCOMMON_78),
+        (OSSL_DIGEST_PARAM_XOF, &err_sites::PROV_DIGESTCOMMON_89),
+    ];
+    if params.is_null() {
+        return None;
+    }
+    // SAFETY: the caller guarantees a key-terminated array; the walk stops at the NULL key.
+    unsafe {
+        let mut seen: u32 = 0;
+        let mut p = params;
+        while !(*p).key.is_null() {
+            let k = core::ffi::CStr::from_ptr((*p).key).to_bytes();
+            for (i, (name, site)) in KEYS.iter().enumerate() {
+                if core::ffi::CStr::from_ptr(*name).to_bytes() == k {
+                    if seen & (1u32 << i) != 0 {
+                        return Some(site);
+                    }
+                    seen |= 1u32 << i;
+                    break;
+                }
+            }
+            p = p.add(1);
+        }
+    }
+    None
 }
 
 /// `const OSSL_PARAM *ossl_digest_default_gettable_params(void *provctx)`.
