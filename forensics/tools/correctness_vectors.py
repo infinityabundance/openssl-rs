@@ -6,7 +6,7 @@ Two independent evidence planes, and this is the second
 For a *compatibility* port the authority oracle dominates: the question "does the candidate
 behave like the admitted authority?" is answered by compiling one program twice and diffing
 the transcripts, and that is what every `RT-*` court does. A **cryptographic primitive** is
-the one place where a second, independent plane answers a different question:
+the one place where a second plane answers a different question:
 
     RT-DIGEST   OpenSSL differential      -> "does it behave like the admitted authority?"
     CT-DIGEST   construction/spec vectors -> "does it satisfy the underlying construction?"
@@ -19,13 +19,15 @@ Neither implies the other, and the two failures are different defects:
     vector set does not contain the authority's behaviour; the differential transcript does.
   * an **RT pass is not independent cryptographic correctness.** Two implementations can
     agree with each other, byte for byte, and both be wrong against the standard — a shared
-    transcription error, a wrong table read from the same wrong place. The only thing that
-    rules that out is an external vector.
-  * and a CT pass is **not formal validation**. The corpora below are published for informal
-    verification, not certification: NIST publishes the CAVP vectors for informal
-    verification and warns that using them is not itself validation, and Project Wycheproof
-    is maintained as an implementation-independent corpus of known-attack and edge cases that
-    its maintainers recommend integrating into CI rather than treating as a certificate.
+    transcription error, a wrong table read from the same wrong place. What that is ruled out
+    by is a *second, independent statement of the expected bytes*: a value the standard
+    itself publishes, which no transcription of the implementation can move. That is what this
+    plane carries, and its precise scope is the next section.
+  * and a CT pass is **not formal validation**. The corpora considered below are published for
+    informal verification, not certification: NIST publishes the CAVP vectors for informal
+    verification and warns that using them is not itself validation, and Project Wycheproof is
+    maintained as an implementation-independent corpus of known-attack and edge cases that its
+    maintainers recommend integrating into CI rather than treating as a certificate.
 
 So a `CT-*` court runs the crate **only** — there is no differential comparison, which is why
 it is a different driver shape from the `RT-*` courts and why `phase8_courts.py` carries a
@@ -34,19 +36,60 @@ vector fails the court, and the input, the expected bytes and the actual bytes a
 for every mismatch. There is no partial-credit summary and no "mostly passed" verdict,
 because a check that hides which vector failed is not evidence.
 
+What this plane's independence actually is, stated precisely
+-----------------------------------------------------------
+This is **candidate-only construction verification using standard-derived vectors mirrored in
+the pinned OpenSSL test corpus**. Each part of that is meant literally:
+
+  * **candidate-only** — the probe is compiled against the candidate distribution shell alone;
+    no authority transcript is produced or compared;
+  * **standard-derived** — every vector's expected bytes are a value a *standard* publishes
+    (RFC 1320 §A.5, RFC 1321 §A.5, FIPS 180-4 / RFC 6234 §8.5, ISO/IEC 10118-3, the
+    Rijmen–Barreto Whirlpool submission), named per algorithm and per vector below;
+  * **mirrored in the pinned OpenSSL test corpus** — the bytes are read out of the pinned
+    authority's own `test/recipes/30-test_evp_data/evpmd_*.txt`, each of which cites the
+    standard in its `Title`, and each mirror file is content-addressed.
+
+That is a claim about **data independence**, and it is weaker than "an external corpus". The
+vectors are independent of the implementation *code* — a transcription error in `src/digest/`
+cannot move them, which is the blind spot of the differential plane. They are **not**
+independent of the pinned tree, because the pinned tree is where this repository reads the
+mirrored bytes. A reader who wants an oracle this repository never read must supply one.
+
+A second kind of vector is marked `derivation: independent`: the standard publishes the
+*construction* but not a test for that exact input (the 55/56/63/64/65-byte padding
+boundaries, in particular), so the expected bytes are computed by an implementation that is
+neither the crate nor the pinned authority build, the oracle is named in the vector's
+provenance, and what that establishes is stated with it. `UNKNOWN` is a valid provenance
+value here and is preferred to a guess.
+
 Where the committed vectors come from
 -------------------------------------
 `forensics/vectors/<algorithm>.json` is committed data in the atlas envelope
 (`schema`/`kind`/`generator`/`inputs`/`body`, `forensics/tools/atlas_common.py:envelope`).
-Each file records, for its algorithm, the standard it is drawn from, the authority file it was
-extracted from with that file's sha256, and **per vector** the source file, the line, the
-section title and whether the bytes were written as a quoted string or as hex. The bytes are
-the bytes OpenSSL's own test suite already ships in
-`test/recipes/30-test_evp_data/evpmd_*.txt` inside the pinned authority source tree, for the
-reason the task's plan amendment gives: they are already in the pinned tree and their
-provenance is checkable offline. They were extracted with this tool's `--emit` mode, not
-typed by hand, so a transcription of the corpus into this file is not itself a transcription
-error.
+Each file records, for its algorithm, the standard it is drawn from, its **primary source**
+(identifier and section), the authority file the bytes were mirrored from with that file's
+sha256 in `inputs[]`, and **per vector** the source file, the line, the section title, the
+form the bytes were written in, and the derivation. The bytes are the bytes OpenSSL's own
+test suite already ships in `test/recipes/30-test_evp_data/evpmd_*.txt` inside the pinned
+authority source tree — they are already in the pinned tree and their provenance is checkable
+offline, and no network is used and nothing is vendored. They were extracted with this tool's
+`--emit` mode, not typed by hand, so a transcription of the corpus into this file is not
+itself a transcription error.
+
+What the primary-source layer does and does not establish
+---------------------------------------------------------
+Naming a primary source and content-addressing the mirror establishes two things and no more:
+
+  * that the **primary source is named** — a reader can see which standard's values these are
+    meant to be; and
+  * that the **mirrored bytes' identity is fixed** — a changed mirror is detectable, because
+    each mirror file's sha256 is committed in the envelope's `inputs[]` and each vector's line
+    is committed per vector.
+
+It does **not** establish that the mirror is faithful to a primary source nobody in this
+repository has read. No RFC and no ISO standard is vendored here, and the tool fetches
+nothing; the name is a pointer, not a checked citation.
 
 Corpora considered and declined
 -------------------------------
@@ -423,14 +466,17 @@ def run_court(
         "stage": "vector-mismatch" if failures else "compare",
         "verdict": "pass" if not failures else "fail",
         "claim": (
-            "A correctness-vector PASS means the candidate's low-level construction produced "
-            "the committed expected bytes for every vector in the named corpus. It is NOT "
-            "OpenSSL parity: the corpus does not contain the authority's observable "
-            "behaviour, and that is RT-DIGEST's question. It is NOT independent "
-            "cryptographic validation: the corpora are published for informal verification "
-            "(NIST CAVP) or maintained as an implementation-independent known-attack corpus "
-            "(Project Wycheproof), and passing them is not a validation certificate. See "
-            "docs/DECISIONS.md D201 and docs/PHASE-8-SUBPHASES.md."
+            "A correctness-vector PASS means candidate-only construction verification: the "
+            "candidate's construction produced the committed expected bytes for every "
+            "vector and every update mode, where the vectors are standard-derived values "
+            "mirrored in the pinned OpenSSL test corpus. It is NOT OpenSSL parity: the "
+            "corpus does not contain the authority's observable behaviour, and that is "
+            "RT-DIGEST's question. It is NOT independent cryptographic validation and NOT "
+            "formal validation: the vectors are the standards' published values, and "
+            "published test vectors are informal verification, not a certificate. NIST CAVP "
+            "and Project Wycheproof are corpora this plane does NOT use; they are recorded as "
+            "declined-with-reason in correctness_vectors.py's header. See docs/DECISIONS.md "
+            "D201 and docs/PHASE-8-SUBPHASES.md."
         ),
     }
 
