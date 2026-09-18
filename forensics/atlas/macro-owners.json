@@ -4,9 +4,9 @@
     "counts": {
       "installed_headers": 139,
       "internal_only": 2993,
-      "owned": 9545,
+      "owned": 9548,
       "records": 19839,
-      "unowned": 10294
+      "unowned": 10291
     },
     "definition": "every macro and enum member the authority's installed and internal headers define, with the header that defines it and that header's owning stratum",
     "installed_headers": [
@@ -39220,7 +39220,7 @@
         ],
         "kind": "macro",
         "name": "MD5_SHA1_CBLOCK",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -39228,7 +39228,7 @@
         ],
         "kind": "macro",
         "name": "MD5_SHA1_DIGEST_LENGTH",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -77301,7 +77301,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_PROV_MD5_SHA1_H",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [

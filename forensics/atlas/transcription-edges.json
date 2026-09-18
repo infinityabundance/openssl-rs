@@ -327,6 +327,13 @@
         "translation_unit": "crypto/md5/md5_dgst.c"
       },
       {
+        "module": "src/digest/md5_sha1.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "4/4",
+        "translation_unit": "crypto/md5/md5_sha1.c"
+      },
+      {
         "module": "src/digest/ripemd.rs",
         "phase": 8,
         "phase_source": "module-declaration",
@@ -337,14 +344,14 @@
         "module": "src/digest/sha1.rs",
         "phase": 8,
         "phase_source": "module-declaration",
-        "share": "5/5",
+        "share": "5/6",
         "translation_unit": "crypto/sha/sha1dgst.c"
       },
       {
         "module": "src/digest/sha2.rs",
         "phase": 8,
         "phase_source": "module-declaration",
-        "share": "9/17",
+        "share": "9/21",
         "translation_unit": "crypto/sha/sha512.c"
       },
       {
@@ -19546,6 +19553,59 @@
           "src/digest/md5.rs"
         ],
         "tu": "crypto/md5/md5_dgst.c"
+      },
+      {
+        "identifiers": [
+          "EVP_CTRL_SSL3_MASTER_SECRET",
+          "MD5_DIGEST_LENGTH",
+          "MD5_Final",
+          "MD5_Init",
+          "MD5_SHA1_CTX",
+          "MD5_Update",
+          "NULL",
+          "OPENSSL_cleanse",
+          "SHA1_Final",
+          "SHA1_Init",
+          "SHA1_Update",
+          "SHA_DIGEST_LENGTH",
+          "char",
+          "cmd",
+          "const",
+          "count",
+          "data",
+          "evp",
+          "h",
+          "if",
+          "include",
+          "int",
+          "mctx",
+          "md",
+          "md5",
+          "md5tmp",
+          "memset",
+          "ms",
+          "mslen",
+          "openssl",
+          "ossl_md5_sha1_ctrl",
+          "ossl_md5_sha1_final",
+          "ossl_md5_sha1_init",
+          "ossl_md5_sha1_update",
+          "padtmp",
+          "return",
+          "sha1",
+          "sha1tmp",
+          "size_t",
+          "sizeof",
+          "string",
+          "unsigned",
+          "void",
+          "x36",
+          "x5c"
+        ],
+        "modules": [
+          "src/digest/md5_sha1.rs"
+        ],
+        "tu": "crypto/md5/md5_sha1.c"
       },
       {
         "identifiers": [
