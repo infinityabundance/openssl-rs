@@ -87,6 +87,9 @@ COURTS = [
     ("RT-PROVIDER", "rt_provider_probe.c"),
     ("RT-PROVIDER-3P", "rt_provider_3p_probe.c"),
     ("RT-CONF-MOD", "rt_conf_mod_probe.c"),
+    # Reference basis for the libctx/provider exports no behavioural court drives. It
+    # references, it does not call; see the probe header and docs/DECISIONS.md D199.
+    ("RT-PROVIDER-REF", "rt_coverage_ref_probe.c"),
 ]
 
 

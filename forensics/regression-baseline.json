@@ -88,6 +88,10 @@
       "observations": 45,
       "verdict": "pass"
     },
+    "RT-BIO-CONF-REF": {
+      "observations": 36,
+      "verdict": "pass"
+    },
     "RT-BIO-CONN": {
       "observations": 296,
       "verdict": "pass"
@@ -136,6 +140,10 @@
       "observations": 1510,
       "verdict": "pass"
     },
+    "RT-BN-ASN1-REF": {
+      "observations": 94,
+      "verdict": "pass"
+    },
     "RT-CMAC": {
       "observations": 26,
       "verdict": "pass"
@@ -172,6 +180,14 @@
       "observations": 185,
       "verdict": "pass"
     },
+    "RT-EVP-CLASS": {
+      "observations": 22,
+      "verdict": "pass"
+    },
+    "RT-EVP-INTROSPECT": {
+      "observations": 48,
+      "verdict": "pass"
+    },
     "RT-EVP-KDF": {
       "observations": 68,
       "verdict": "pass"
@@ -200,8 +216,16 @@
       "observations": 502,
       "verdict": "pass"
     },
+    "RT-EVP-PKEY-OPS": {
+      "observations": 100,
+      "verdict": "pass"
+    },
     "RT-EVP-RAND": {
       "observations": 168,
+      "verdict": "pass"
+    },
+    "RT-EVP-REF": {
+      "observations": 264,
       "verdict": "pass"
     },
     "RT-EVP-SKEY": {
@@ -264,8 +288,16 @@
       "observations": 40,
       "verdict": "pass"
     },
+    "RT-PROVIDER-REF": {
+      "observations": 5,
+      "verdict": "pass"
+    },
     "RT-RUNTIME-EXT": {
       "observations": 94,
+      "verdict": "pass"
+    },
+    "RT-RUNTIME-REF": {
+      "observations": 89,
       "verdict": "pass"
     },
     "RT-SECURE": {
