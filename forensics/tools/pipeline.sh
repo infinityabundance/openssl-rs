@@ -57,6 +57,21 @@ echo "== prerequisite atlases =="
 # the hash move across two runs of the AES and RC4 commits; D214 is the reorder.
 python3 forensics/tools/gen_prerequisite_atlas.py
 
+echo "== provider algorithm census =="
+# The provider-algorithm ownership atlas (D237). It derives every algorithm *registration
+# row* of the default, legacy, base and null providers from the pinned tables, with the
+# profile's own `configuration.h` guards applied, and checks the crate's published rows
+# against it. It sits here, beside the other authority-derived atlas and **before** the
+# ledgers, for three reasons that are each about the order being evidence: it reads only the
+# authority's provider tables and the crate's two provider modules, so its inputs are final
+# once `cargo fmt`/`cargo build` have run and the courts have not changed a source; the
+# obligation ledgers are written after it and must not record a hash of an atlas that is
+# about to change under them; and `evidence_determinism.py` re-runs it later and compares, so
+# a stale copy is a failure rather than a silent divergence. It is here rather than with the
+# Phase 8 table generators above because those run *before* `cargo fmt` (their renderers are
+# not rustfmt-stable) while this one must read the crate's final text.
+python3 forensics/tools/gen_provider_algorithms.py
+
 echo "== ledgers =="
 # Discovery-driven, the way `evidence_determinism.py` already is: a stratum is a file
 # matching the glob, not an entry in a list somebody has to remember to extend.
