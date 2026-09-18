@@ -99,7 +99,7 @@
         },
         "authority": "openssl-3.6.4-production",
         "candidate_shared_object": "artifacts/phase2/libcrypto.so.3",
-        "claim": "A correctness-vector PASS means the candidate's low-level construction produced the committed expected bytes for every vector in the named corpus. It is NOT OpenSSL parity: the corpus does not contain the authority's observable behaviour, and that is RT-DIGEST's question. It is NOT independent cryptographic validation: the corpora are published for informal verification (NIST CAVP) or maintained as an implementation-independent known-attack corpus (Project Wycheproof), and passing them is not a validation certificate. See docs/DECISIONS.md D201 and docs/PHASE-8-SUBPHASES.md.",
+        "claim": "A correctness-vector PASS means candidate-only construction verification: the candidate's construction produced the committed expected bytes for every vector and every update mode, where the vectors are standard-derived values mirrored in the pinned OpenSSL test corpus. It is NOT OpenSSL parity: the corpus does not contain the authority's observable behaviour, and that is RT-DIGEST's question. It is NOT independent cryptographic validation and NOT formal validation: the vectors are the standards' published values, and published test vectors are informal verification, not a certificate. NIST CAVP and Project Wycheproof are corpora this plane does NOT use; they are recorded as declined-with-reason in correctness_vectors.py's header. See docs/DECISIONS.md D201 and docs/PHASE-8-SUBPHASES.md.",
         "court": "CT-DIGEST",
         "failures": [],
         "kind": "construction-vectors",

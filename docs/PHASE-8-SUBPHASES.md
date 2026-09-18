@@ -179,19 +179,33 @@ verdict is per-vector and loud. It decides **correctness against a published con
   same wrong place, a message-word order transcribed the same wrong way. The differential
   compares the candidate with *the authority*, and a transcription error in a shared reading
   of the authority's own text makes the two agree on the wrong answer. What rules that out is
-  an external vector.
+  a *second, independent statement of the expected bytes* — a value the standard publishes,
+  which no transcription of the implementation can move.
 * **A `CT-*` pass is not OpenSSL parity.** A portable arm can satisfy every published vector
   and still differ from the authority in an observable way — a `Transform` that advances a
   different number of bytes, a context field the authority leaves and this one clears, an
   error return the vector set never exercises. The vector set does not contain the
   authority's behaviour; the differential transcript does.
 
+**What the second plane's independence is, said precisely.** It is **candidate-only
+construction verification using standard-derived vectors mirrored in the pinned OpenSSL test
+corpus**. The probe is compiled against the candidate alone; the expected bytes are values
+the standards publish (RFC 1320 §A.5, RFC 1321 §A.5, FIPS 180-4 / RFC 6234 §8.5,
+ISO/IEC 10118-3, the Rijmen–Barreto Whirlpool submission); and the bytes are mirrored through
+the pinned authority's own `test/recipes/30-test_evp_data/evpmd_*.txt`. That is *data
+independence*: a transcription error in the implementation cannot move the vectors. It is
+**not** independence from the pinned tree, because that tree is where this repository reads
+the mirror — a reader who wants an oracle this repository never read must supply one. For a
+vector whose input no standard publishes (the padding boundaries), the expected bytes come
+from an implementation that is neither the crate nor the pinned authority build, the oracle
+is named in the vector's provenance, and `UNKNOWN` is a valid provenance value.
+
 **What each does *not* establish, stated so neither is read as the other.**
 
 | plane | establishes | does **not** establish |
 |---|---|---|
 | `RT-DIGEST` and its siblings | that the candidate's observable transcript matches the authority's for the behaviours the probe exercises | cryptographic correctness — a shared transcription error agrees with itself — and any behaviour the probe does not touch |
-| `CT-DIGEST` and its siblings | that the candidate's construction produces the committed expected bytes for every vector, over the inputs those vectors cover | OpenSSL parity; and it is **not formal validation** — the corpora are published for informal verification (NIST CAVP) or maintained as an implementation-independent known-attack corpus (Project Wycheproof), and their maintainers say using them is not a certificate |
+| `CT-DIGEST` and its siblings | that the candidate's construction produces the committed expected bytes for every vector and update mode, over the inputs those vectors cover | OpenSSL parity; and it is **not formal validation** — published test vectors are informal verification, not a certificate. NIST CAVP and Project Wycheproof are **declined with reason** (they need the network, and the vectors here are already in the pinned tree with a primary source named), not relied on |
 
 **What this changes, and what it does not.** The `RT-*` requirement is not weakened: it is
 still the only instrument that can say the candidate is *this* implementation's observable
