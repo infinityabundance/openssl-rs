@@ -28,7 +28,7 @@ renderer does not know any phase status.
 | 5 | BN + ASN.1 + DER/PEM | `complete` |  |
 | 6 | OSSL_LIB_CTX + provider core | `complete` |  |
 | 7 | EVP framework | `complete` |  |
-| 8 | Native cryptographic primitives | `in-progress` | Phase 8 courts not passing: ['CT-DIGEST'] |
+| 8 | Native cryptographic primitives | `in-progress` | 732 open obligation(s) of this stratum recorded in forensics/phase8-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
 
 Not started: strata 9-21 (13 total).
 

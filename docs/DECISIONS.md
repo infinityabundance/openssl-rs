@@ -13353,3 +13353,121 @@ are court declarations rather than documents and are outside the corpus this gat
 `openssl-abi-surface` manifest's `candidate.version_or_commit` still reads `0.0.2` at this
 revision, which is noted here rather than silently edited, because changing a court declaration
 is a re-observation and not a prose fix.
+
+## D204 — the digest primitives compute the authority's function again, and the second plane found a fourth defect the first could not
+
+Phase 8.1's digests were landed as a deliberately-red WIP (`bd4c9914`) with three constructions
+known wrong. Both planes are now green: **`CT-DIGEST` 41/41 vectors**, **`RT-DIGEST` 98
+observations, 0 residuals**, `prototype_court.py` 0 mismatches, `prerequisite_gate.py` 0
+findings. `implemented[libcrypto]` 1841 → **1879**; Phase 8 at **38 implemented / 732 open / 16
+deferred**.
+
+**The three the correctness plane caught, each a transcription defect rather than a padding arm.**
+They failed at *every* boundary, including the empty message, which is what distinguishes a wrong
+construction from a wrong collector:
+
+- **MD4** (`crypto/md4/md4_local.h:65-83`): the crate reused MD5's `ROUND` shape and added `b`
+  back after the rotate. MD4's `R0`/`R1`/`R2` are
+  `a = ROTATE(a + (k) + (t) + F((b),(c),(d)), s)` and **stop there**. Every round was wrong; the
+  reviewer's reading of the failing expression named it exactly.
+- **SHA-1** (`crypto/sha/sha_local.h:99-123`): the message schedule was expanded in a pass of its
+  own *before* the round loop, overwriting `x[0..16]` — the words rounds 0..15 read — with the
+  words rounds 64..79 read. The authority's `BODY_16_19`..`BODY_60_79` compute the ring slot and
+  consume it **in the same step**; the expansion is interleaved now.
+- **Whirlpool** (`crypto/whrlpool/wp_block.c:213-220`, the `ROTATE` arm at `:182-189`): `Ck(K, i)`
+  reads the row from byte `k` onward through an unaligned `u64`, which wraps the row's low bytes
+  to the top — a rotate **left** by `8k`. The crate rotated right, so every lookup selected the
+  wrong table entry. All eight vectors failed on one direction bit.
+
+MD5 and RIPEMD-160 share `include/crypto/md32_common.h` with MD4 and SHA-1 and passed throughout,
+which localised all three to the construction bodies rather than the collector — a measurement
+that mattered more than the hint, because it also excluded the padding arms.
+
+**The fourth defect is the one that justifies the *differential* plane, and no vector set would
+have found it.** `RT-DIGEST` failed on its first run on SHA-384 and SHA-512's multi-block path.
+`SHA512_Update` (`crypto/sha/sha512.c:306-326`) ends the whole-block arm with
+`data += len, len %= sizeof(c->u), data -= len`, so `data` lands on the trailing partial block.
+The crate reduced `len` but never advanced `data`, so the partial bytes it staged afterwards were
+the **first** block's. Every message shorter than one block was right — which is exactly why
+`CT-DIGEST`'s vectors and the empty/`abc`/55/56/64 cases passed. Only a message long enough to
+take the multi-block arm exposed it, and only a comparison against *this* authority's observable
+behaviour could, because a correct-by-its-own-lights implementation passes every published vector
+here. It is the same class D197 recorded for the assembly arms: the portable C arm must be proven
+to be *this* implementation's behaviour, not merely *a* correct one.
+
+**Signatures and names.** The authority declares `MD5_Update`, `RIPEMD160_Update`, the four SHA-2
+`_Update`s and Whirlpool's three entry points with `const void *data`; the crate had `*const u8`,
+and `prototype_court.py`'s type plane is the authority's canonical grammar, so each now takes
+`*const c_void` and casts once into the collector. `md4_block_data_order`,
+`ripemd160_block_data_order` and `ossl_sha1_ctrl` are the names the authority gives its
+`HASH_BLOCK_DATA_ORDER` and `SHA1_CTRL`, which is what `prerequisite_gate.py` was asking for when
+it reported three unwired functions of the current stratum; naming them the authority's way is the
+fix rather than an exemption.
+
+The lint and `// SAFETY:` defects are recorded where they were found rather than here: a
+`// SAFETY:` comment separated from its `unsafe` block by another statement is the project's
+documented failure mode, and the fix is to move the comment, not to widen the lint.
+
+## D205 — a seal types no count, and the check is the deferral rather than the number
+
+D203 audited the hand-written corpus and, for `docs/PHASE-4-BIO-CONF-SEAL.md` and
+`docs/PHASE-5-BN-ASN1-PEM-SEAL.md`, replaced each seal's own figure — `932 of 5,896` — with the
+figure current at the time, `1841`. **That was wrong, and it is this entry's whole subject.** It
+converted a *record of a moment* into a *live claim*, and a live claim about a moving quantity goes
+stale on its own schedule: this one read stale two slices later, at `1879`, and the gate D203 had
+just written is what said so.
+
+The right shape was already in both documents. Each seal opens with *"For every count in this
+document, read `docs/SEAL-CENSUS.md`, which is generated … and cannot go stale"* — and then typed a
+count, contradicting its own preamble. So:
+
+- both sentences now defer to the census and **type no number**, which is what the preamble always
+  said they would do;
+- the three numeric anchors that bound those sentences (`phase45_libcrypto_implemented`,
+  `phase45_libcrypto_total`, `phase5_libcrypto_implemented`) are replaced by two `Check`s,
+  `phase4_defers_to_census` and `phase5_defers_to_census`, which assert the **deferral** instead.
+
+The replacement check fails in two directions on purpose, and both were seen to fail: it raises
+`ClaimMissing` if the deferral is removed, and it fails if a `<n> of <m> `libcrypto`` count is
+reintroduced beside it — demonstrated by putting `1879 of 5,896` back into the Phase-4 seal, which
+produced
+
+```text
+[docs-consistency] FAIL: 1 stale hand-written claim(s)
+  STALE: docs/PHASE-4-BIO-CONF-SEAL.md: '1879 of 5,896 `libcrypto`' asserts a typed count, but
+         forensics/atlas/implemented-surface.json holds no count: the generated census carries it
+```
+
+That is the general lesson, and it is why this entry exists rather than a quiet edit: **a gate that
+compares a hand-written number against a generated one turns every content slice into a
+documentation chore, and a document whose count is compared will eventually be "fixed" to a number
+that is right today and wrong tomorrow.** The project's rule is that generated quantities live in
+generated files; a hand-written document should either state its own moment and be exempt with a
+reason, or state none. `docs/CI.md`'s baseline tuple is the one place in this corpus where a
+hand-written number is genuinely live — CI compares against that baseline — so it keeps its
+numbers and keeps being checked; it reads `1879` implemented and `80` courts now.
+
+`docs_consistency.py` holds **14** checked claims after the change, and each of the two exemptions
+carries the moment it binds.
+
+**The same defect was in `docs/CI.md`, and the pipeline is what proved it rather than a reading.**
+Its baseline tuple typed an implemented count, an open-obligation count, a court count and an
+observation count — and `regression_guard.py --update` **rewrites `forensics/regression-baseline.json`
+at the end of every run**. So a typed snapshot there is not merely late, it is stale by
+construction: the run that added `RT-DIGEST` and `CT-DIGEST` passed its `docs consistency` step
+against the *pre-update* baseline (80 courts, 23,105 observations) and then wrote a baseline of 81
+and 23,203, so the very next run failed the same comparison. A gate whose verdict depends on where
+in the pipeline it sits is not a gate.
+
+`docs/CI.md`'s tuple is therefore removed and the document defers to
+`forensics/regression-baseline.json`, exactly as the seals defer to the census; `ci_baseline` is
+replaced by `ci_defers_to_baseline`, which fails if the deferral is removed and if
+`<n> implemented \`libcrypto\` symbols` is typed back in. The six constants that fed the three
+removed anchors (`IMPLEMENTED_TOTAL`, `AUTHORITY_EXPORTS`, `BASELINE_IMPL`, `BASELINE_OPEN_P4`,
+`BASELINE_COURTS`, `BASELINE_OBS`) are deleted with them, because a constant that exists to compare
+a number nobody states is how the next one gets written.
+
+The rule this leaves, and it is the one worth carrying into Phase 8: **a hand-written document
+defers to a generated file, or binds its quantity to a stated moment and is exempt with that reason
+— it does not type a value a generator owns.** The corpus is now one place (a seal's own observed
+counts) where that is honoured the second way rather than the first.

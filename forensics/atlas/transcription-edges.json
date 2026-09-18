@@ -316,7 +316,7 @@
         "module": "src/digest/md4.rs",
         "phase": 8,
         "phase_source": "module-declaration",
-        "share": "4/5",
+        "share": "5/6",
         "translation_unit": "crypto/md4/md4_dgst.c"
       },
       {
@@ -330,14 +330,14 @@
         "module": "src/digest/ripemd.rs",
         "phase": 8,
         "phase_source": "module-declaration",
-        "share": "4/5",
+        "share": "5/6",
         "translation_unit": "crypto/ripemd/rmd_dgst.c"
       },
       {
         "module": "src/digest/sha1.rs",
         "phase": 8,
         "phase_source": "module-declaration",
-        "share": "4/4",
+        "share": "5/5",
         "translation_unit": "crypto/sha/sha1dgst.c"
       },
       {
@@ -710,6 +710,13 @@
         "phase_source": "module-declaration",
         "share": "1/2",
         "translation_unit": "crypto/bio/bio_print.c"
+      },
+      {
+        "module": "src/provider/digest.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "2/4",
+        "translation_unit": "providers/implementations/digests/libcommon-lib-digestcommon.c"
       },
       {
         "module": "src/provider/init.rs",

@@ -51,7 +51,7 @@
     },
     "CT-DIGEST": {
       "observations": 0,
-      "verdict": "fail"
+      "verdict": "pass"
     },
     "RT-ASN1": {
       "observations": 1403,
@@ -163,6 +163,10 @@
     },
     "RT-CONF-MOD": {
       "observations": 247,
+      "verdict": "pass"
+    },
+    "RT-DIGEST": {
+      "observations": 98,
       "verdict": "pass"
     },
     "RT-DSO": {
@@ -385,8 +389,8 @@
   "prerequisites": {
     "blocking_dependencies": 25,
     "divergence_names_covered": 32,
-    "findings": 3,
-    "language_census": 3045,
+    "findings": 0,
+    "language_census": 3044,
     "sealed_census": 57
   }
 }

@@ -4,23 +4,37 @@
     "censed_states": [
       "in-progress"
     ],
-    "census": {},
-    "census_by_stratum": {},
+    "census": {
+      "names_a_file_the_authority_does_not_have": 2,
+      "symbols_not_reached": 1
+    },
+    "census_by_stratum": {
+      "8": 3
+    },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
-    "census_samples": {},
+    "census_samples": {
+      "names_a_file_the_authority_does_not_have": [
+        "docs/PHASE-8-SUBPHASES.md:8.1b:_prov.c",
+        "docs/PHASE-8-SUBPHASES.md:8.1b:digestcommon.c"
+      ],
+      "symbols_not_reached": [
+        "ossl_dh_asn1_meth"
+      ]
+    },
     "checked": {
       "plans_read": [
         "docs/PHASE-5-SUBPHASES.md",
         "docs/PHASE-6-SUBPHASES.md",
-        "docs/PHASE-7-SUBPHASES.md"
+        "docs/PHASE-7-SUBPHASES.md",
+        "docs/PHASE-8-SUBPHASES.md"
       ],
-      "rows_judged": 62,
-      "symbols_named_by_a_row": 71,
-      "symbols_reached": 71,
+      "rows_judged": 75,
+      "symbols_named_by_a_row": 74,
+      "symbols_reached": 73,
       "unit_records": 67,
       "units_named_by_a_record": 70,
-      "units_named_by_a_row": 135,
-      "units_reached": 135
+      "units_named_by_a_row": 136,
+      "units_reached": 136
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -34,7 +48,8 @@
         "recorded_by": null,
         "subphases": [
           "7.4",
-          "7.4l"
+          "7.4l",
+          "8.8"
         ],
         "transcribed_by": [
           "src/evp/pkey_asn1.rs"
@@ -1715,6 +1730,16 @@
           "7.3f"
         ],
         "transcribed_by": []
+      },
+      "providers/defltprov.c": {
+        "defines": [
+          "ossl_default_provider_init"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.1b"
+        ],
+        "transcribed_by": []
       }
     },
     "rule": "every authority translation unit and every authority-internal function named by a subphase row of a **complete** stratum must be transcribed by a crate module or named by an explicit record field; and an explicit record field naming an authority unit must have a subphase row behind it. An `in-progress` stratum's unreached names are published as a census and are not a failure, because a plan names the work a stratum will do",
@@ -2058,31 +2083,31 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 144
+      "transcribed_units": 150
     }
   },
-  "body_hash": "39ec542a39b80912da70b7a8f2277b26e8e73a1cd20e039319378f6dd8757d33",
+  "body_hash": "747def79f7efba3c21f7a2308d5e6589205f3faf25772d20e01f4bd867c7197f",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "c129e2181d6c1f696c8ddb6f0035a4d00adcf7e9d07a771a3b825163dc0fe7c6"
+      "sha256": "d6e3fdbaaac481d9aa7f4e5463c47a9246c70254c1cd3b2b24d5cc014e7ea5e2"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "8ddb00bcaf90ba6356356cdd70fb8cd5b2a86af0a665e2627cd8cf9e5ce5dcf4"
+      "sha256": "128b3a849882310b690010f5ab4cffb454a4e88859868f5897c3e5eaf8fc37f6"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "e5406e2563746d31e6ffe97b24d2c6732f5a5800e32107abb4ae7d509ae8c9d9"
+      "sha256": "a52163d98d0c3baf13992fafd66e25f283cb79a502938939dc754465bdf904d0"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "ddd30bde27af7756e09f4c5ccddb7226657c5645194d877ade42ab95afb8436a"
+      "sha256": "c6a00054d0f1b7bd7c0e483138eb2f01e70fd1ef1738eaad5abcb073e8335a41"
     },
     {
       "name": "prerequisites",
@@ -2108,6 +2133,11 @@
       "name": "plan-PHASE-7-SUBPHASES",
       "path": "docs/PHASE-7-SUBPHASES.md",
       "sha256": "d35a9ce9a483e60a24e8ac581687386e706699a995b8cccfeb35d42f7d28d061"
+    },
+    {
+      "name": "plan-PHASE-8-SUBPHASES",
+      "path": "docs/PHASE-8-SUBPHASES.md",
+      "sha256": "1afc226b8b65fca14b636532ad176e5eac24dbbc7e8c43b71bb8b1737b25de61"
     }
   ],
   "kind": "plan-reconciliation",
