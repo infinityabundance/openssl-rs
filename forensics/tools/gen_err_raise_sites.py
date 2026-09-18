@@ -445,7 +445,9 @@ COVERED_FILES = [
     # Deliberately *not* covered yet, with the stratum that owns each: the AEAD
     # template `ciphercommon_gcm.c.in` (9: no row reaches it, because
     # `deflt_ciphers[]` carries no GCM row in this crate -- D234); the
-    # `cipher_chacha20*.c`, `cipher_aes_siv.c`, `cipher_aes_gcm_siv.c` quartet (9,
+    # `cipher_chacha20*.c`, `cipher_aes_siv.c`, `cipher_aes_gcm_siv.c` (9, or
+    # 8.3's blocked rows: `cipher_aes_siv.c`'s three rows need the `OSSL_OP_MAC`
+    # CMAC row, which is not this stratum's -- D239);
     # whose `ciphercommon_ccm.c.in` sibling *is* covered above, because the three
     # AES-CCM rows land in 8.3);
     # `cipher_cts.c` and the `cipher_*_cts.inc` pair raise nothing and are absent for

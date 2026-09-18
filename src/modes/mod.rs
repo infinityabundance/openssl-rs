@@ -56,6 +56,7 @@ use core::ptr;
 pub mod ccm;
 pub mod gcm;
 pub mod ocb;
+pub mod siv128;
 pub mod wrap;
 pub mod xts;
 
