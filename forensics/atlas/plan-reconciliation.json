@@ -5,19 +5,20 @@
       "in-progress"
     ],
     "census": {
-      "names_a_file_the_authority_does_not_have": 3,
+      "names_a_file_the_authority_does_not_have": 4,
       "symbols_not_reached": 2,
       "units_not_reached": 4
     },
     "census_by_stratum": {
-      "8": 9
+      "8": 10
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
     "census_samples": {
       "names_a_file_the_authority_does_not_have": [
         "docs/PHASE-8-SUBPHASES.md:8.1b:_prov.c",
         "docs/PHASE-8-SUBPHASES.md:8.1b:digestcommon.c",
-        "docs/PHASE-8-SUBPHASES.md:8.3:ciphercommon_ccm.c"
+        "docs/PHASE-8-SUBPHASES.md:8.3:ciphercommon_ccm.c",
+        "docs/PHASE-8-SUBPHASES.md:8.3:providers/implementations/macs/cmac_prov.c"
       ],
       "symbols_not_reached": [
         "ossl_dh_asn1_meth",
@@ -42,8 +43,8 @@
       "symbols_reached": 73,
       "unit_records": 67,
       "units_named_by_a_record": 70,
-      "units_named_by_a_row": 140,
-      "units_reached": 136
+      "units_named_by_a_row": 141,
+      "units_reached": 137
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -1324,6 +1325,28 @@
           "src/selftest/indicator.rs"
         ]
       },
+      "crypto/modes/siv128.c": {
+        "defines": [
+          "ossl_siv128_aad",
+          "ossl_siv128_cleanup",
+          "ossl_siv128_copy_ctx",
+          "ossl_siv128_decrypt",
+          "ossl_siv128_encrypt",
+          "ossl_siv128_finish",
+          "ossl_siv128_get_tag",
+          "ossl_siv128_init",
+          "ossl_siv128_new",
+          "ossl_siv128_set_tag",
+          "ossl_siv128_speed"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "8.3"
+        ],
+        "transcribed_by": [
+          "src/modes/siv128.rs"
+        ]
+      },
       "crypto/o_time.c": {
         "defines": [],
         "recorded_by": null,
@@ -2130,10 +2153,10 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 167
+      "transcribed_units": 168
     }
   },
-  "body_hash": "d37d09723813ef53ebbc87d23967141d41762465f372d1d48c83b5863f42c928",
+  "body_hash": "1163726c12e676a99629328f1344ec1d618a4fa0e35f8330aaa175eed98233b3",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -2144,12 +2167,12 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "0104ac71c2c296f0d4ecf5219cbf54e38c877e17ea04426de6a652915b930c62"
+      "sha256": "d916ac359f406cd58ff0d67d598599291a767d8095087c6491846e18a1beda1f"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "006bfa624e80fbf9493c85ae08b51d25f350653cb20b96d67b92ffda87c8d820"
+      "sha256": "4c71a427fe948ac0b82ffc9d33621dae6293cb11ab77f7bdd852caac3953f2fb"
     },
     {
       "name": "phase-state",
@@ -2159,7 +2182,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "227ba400c6ec650caec475ac30e5ab020bda95d79d5d0402cc706b1ef85cc5ec"
+      "sha256": "113d55cc270b7e23ddd3421ac63b33029f7062ef34510c9ed181da318ce75b87"
     },
     {
       "name": "source-manifest",
@@ -2184,7 +2207,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "ec7ffc5db4e53e72eb1f9a446bb3c528bbf9f36adb3fea215b53a53716e7365e"
+      "sha256": "cf9dc4951c7b07a4bc377c0f0ffb723dd43c254caa997d71e6cde513162e1a93"
     }
   ],
   "kind": "plan-reconciliation",

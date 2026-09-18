@@ -15855,3 +15855,79 @@ which is correct while no row reaches it.
 neither anchored status clause in `docs/PHASE-8-SUBPHASES.md` changes its symbol set — only its
 prose. What moves is the evidence: `RT-CIPHER` goes from **962 to 1055 observations**, all
 passing, and the provider-algorithm census from 103 to 106 implemented rows.
+
+## D239 — the SIV rows are open on a measured in-stratum prerequisite, and `ossl_siv128_new` is transcribed with the one memory-safety line the policy forbids copying
+
+D238 closed with the CCM rows and named the SIV rows as the rest of 8.3's row work. This entry
+records what happened when those rows were actually written: the mode is landed, and the rows are
+**not**, because a measurement says they cannot be.
+
+**The measurement.** The SIV engine is a composition, not a construction. `crypto/modes/siv128.c`
+implements RFC 5297's S2V with **CMAC-AES** and encrypts the payload with **AES-CTR** under the
+SIV, and it obtains both through the EVP layer: `EVP_MAC_fetch(libctx, "CMAC", propq)` and the
+row's own two cipher fetches. `src/modes/siv128.rs` is a faithful transcription of that unit, and
+the first run of the probe against it produced this, with a one-line C program compiled against
+both trees rather than inferred from a residual:
+
+```text
+authority:  fetch.mac.CMAC=1  fetch.mac.HMAC=1  fetch.mac.GMAC=1  fetch.ciph.AES-128-CTR=1
+candidate:  fetch.mac.CMAC=0  fetch.mac.HMAC=0  fetch.mac.GMAC=0  fetch.ciph.AES-128-CTR=1
+```
+
+The candidate publishes no `OSSL_OP_MAC` row at all. `EVP_MAC`'s `"CMAC"` is
+`providers/implementations/macs/cmac_prov.c`'s, and `forensics/atlas/provider-algorithms.json`
+already lists it — under `owning_phase: 8`, `state: open`, because D237's census reads
+`defltprov.c`'s `deflt_macs[]` too. So this is **not** a cross-stratum hand-off: nine `OSSL_OP_MAC`
+rows are Phase 8's own open work (`CMAC`, `GMAC`, `HMAC`, `KMAC-128`, `KMAC-256`, `POLY1305`,
+`SIPHASH`, `BLAKE2BMAC`, `BLAKE2SMAC`), and the CMAC one is the six SIV rows' prerequisite.
+
+The right response was therefore to hold the rows rather than to stub the fetch, and to keep the
+mode's transcription — which is a complete unit, unit-tested, and the thing the rows will drive.
+The transcript is preserved at `court/siv-rows-blocked-on-cmac-provider.patch` so the row code is
+not retyped from scratch; the patch is untracked, which is where a work-in-progress fragment
+belongs.
+
+**`ossl_siv128_new` is transcribed, with one line of memory-safety divergence.** The authority's
+`ossl_siv128_new` is `OPENSSL_malloc` — not `zalloc` — followed immediately by
+`ossl_siv128_init`, whose first four statements `EVP_CIPHER_CTX_free`, `EVP_MAC_CTX_free` and
+`EVP_MAC_free` three pointers **read from that uninitialised block**. Nothing in the profile calls
+the function, so the read is unreachable; but §3 of `docs/SECURITY_DIVERGENCE_POLICY.md` prohibits
+copying a known memory-safety defect to obtain parity, so there is nothing to copy *to* either.
+The transcription allocates with `CRYPTO_zalloc`, which is the state `ossl_siv128_init` requires
+of its caller and the state every other caller reaches it in (`aes_siv_newctx`'s zalloc). No
+observable changes: the function returns the same pointer holding the same contents on both
+paths, because `ossl_siv128_init` assigns `d`, frees-and-nulls the three pointers and sets
+`final_ret`/`crypto_ok` whether it succeeds or fails. This is D238's `wrapping_sub` in its other
+form — the authority's arithmetic and allocation discipline are contract, and a transcription that
+substitutes Rust's is a divergence to be named, not a convenience.
+
+**The prerequisite gate named both of this unit's loose ends, and neither was suppressed.**
+
+* `unwired_function_in_the_current_stratum: crypto/modes/siv128.c -> ossl_siv128_new`. The gate's
+  rule for this class is that every internal function a transcribed unit's own text mentions must
+  exist in the crate; it does not require a *caller*, so the mode could land before its rows. The
+  finding is what made the omission above visible — an earlier draft of this module left
+  `ossl_siv128_new` out entirely — and the resolution is to transcribe it, not to record an
+  exception;
+* `undefined_prerequisite: cbc`. `cbc` is a **parameter name** in the non-installed
+  `include/crypto/siv.h`'s declaration of `ossl_siv128_new`, and `src/modes/siv128.rs` uses it for
+  the same parameter and for its own local bindings. That is a lexical collision, which is what
+  `shadowed_by_a_crate_identifier` records; it joins that row's `covers` list with its reason. A
+  matcher tuned to ignore a two- or three-letter parameter name would also drop the next real
+  collision, which is why the list is held exact.
+
+**The RFC 5297 vector is reachable, and the first probe arm had it wrong.** The first draft fed
+Appendix A.1's associated data as two `EVP_EncryptUpdate` pieces and read the authority's answer as
+a failure of the RFC vector. It is not: A.1's AD is a **single 24-octet** component (the RFC
+prints it wrapped), while A.2 is the case with two pieces. OpenSSL's own
+`test/recipes/30-test_evp_data/evpciph_aes_siv.txt` carries the vector with one `AAD =`
+line and the published tag, which is what settles it. SIV's S2V is
+`D = dbl(D) xor CMAC(S_i)` per component, so the two spellings are genuinely different inputs —
+a mistake worth recording because it is the shape a reader is most likely to make too.
+
+**No export moves and no court changes.** `implemented[libcrypto]` stays **2035 / 5896**, Phase 8
+stays **194 implemented / 576 open / 16 deferred**, `RT-CIPHER` stays at **1055 observations**, and
+the provider-algorithm census stays at **106 implemented / 205 open** — the SIV rows and the nine
+MAC rows were already `open` and remain so. What moves is `prerequisites.divergence_names_covered`
+(32 -> 33, the `cbc` collision) and the language census, because a crate module for
+`crypto/modes/siv128.c` now exists and its unit's names enter the atlas.
