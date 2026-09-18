@@ -157,12 +157,29 @@
           "candidate": "artifacts/phase5/probes/rt_pem_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 94,
+        "candidate_exit_code": 0,
+        "candidate_observations": 94,
+        "candidate_stderr_tail": [],
+        "court": "RT-BN-ASN1-REF",
+        "crashed": false,
+        "probe": "courts/phase5/rt_coverage_ref_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase5/probes/rt_coverage_ref_probe.authority",
+          "candidate": "artifacts/phase5/probes/rt_coverage_ref_probe.candidate"
+        },
+        "verdict": "pass"
       }
     ],
     "summary": {
       "fail": 0,
-      "pass": 9,
-      "total": 9
+      "pass": 10,
+      "total": 10
     }
   },
   "generator": "forensics/tools/phase5_courts.py",
@@ -216,6 +233,11 @@
       "name": "probe",
       "path": "courts/phase5/rt_pem_probe.c",
       "sha256": "e9d71d79c2a62d387bcb32fe7c6d8146619ac2e19dfeb1d08978b31dfb72e7cf"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase5/rt_coverage_ref_probe.c",
+      "sha256": "be6ebd7b653ae0ecfdc03869a01e1d4030125987e9865fae581177a53faac264"
     }
   ],
   "kind": "phase5-courts",

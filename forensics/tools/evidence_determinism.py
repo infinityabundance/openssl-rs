@@ -93,6 +93,12 @@ GENERATORS_BEFORE_LEDGERS = [
     "forensics/tools/gen_bn_primes.py",
 ]
 GENERATORS_AFTER_LEDGERS = [
+    # The court coverage atlas (D199). It consumes the ledgers and the staged court
+    # results, and `phase_state.py` consumes *it*, so it sits first in this block. It
+    # is listed here so a stale committed copy is a failure and not a silent
+    # divergence -- the whole point of the atlas is that the coverage claim is a fact a
+    # reader can recompute.
+    "forensics/tools/court_coverage.py",
     "forensics/tools/ownership_audit.py",
     "forensics/tools/prototype_court.py",
     # The provider dispatch plane (D180). It reads only the atlas's `macros.json` and
@@ -148,6 +154,7 @@ GENERATORS = (
 COMPARED = [
     "forensics/atlas/symbol-ownership.json",
     "forensics/atlas/implemented-surface.json",
+    "forensics/atlas/court-coverage.json",
     "forensics/atlas/ownership-audit.json",
     "forensics/atlas/prototype-court.json",
     "forensics/atlas/dispatch-court.json",

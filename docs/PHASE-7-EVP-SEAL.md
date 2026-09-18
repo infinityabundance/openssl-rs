@@ -1,10 +1,17 @@
 # Phase 7 — the EVP framework: seal
 
-**STATUS: complete.** Every export this stratum owns is either implemented and observed by a
-differential court, or handed to a named later stratum with the dependency it is waiting on:
-`open_in_this_stratum` in `forensics/phase7-obligations.json` is **zero**, and
-`forensics/phase-state.json` derives `complete` only because every earlier stratum is complete and
-this one's obligations are closed.
+**STATUS: complete.** Every export this stratum owns is either handed to a named later stratum
+with the dependency it is waiting on, or **referenced by a differential court that ran**. That
+second phrase is deliberately the weaker one. `forensics/atlas/court-coverage.json` -- generated
+by `forensics/tools/court_coverage.py` and required for `complete` by `forensics/tools/phase_state.py`
+-- partitions every implemented export into `directly_courted`, `indirectly_courted` and
+`non_observable` with no unmatched symbol, and defines `directly_courted` as *an undefined
+dynamic symbol of a staged candidate probe that ran and produced a transcript*. That is a proof
+of **reference**, not a proof that every arm of the symbol was driven; the atlas's own `claim`
+says so, and it is the reading this seal adopts. `open_in_this_stratum` in
+`forensics/phase7-obligations.json` is **zero**, and `forensics/phase-state.json` derives
+`complete` only because every earlier stratum is complete, this one's obligations are closed, and
+its coverage join is clean. The coverage counts are `docs/SEAL-CENSUS.md` §Court coverage.
 
 **For every count in this document, read `docs/SEAL-CENSUS.md`**, which is generated from the
 ledgers and the court results by `forensics/tools/render_seal_census.py`. This seal cites that
@@ -23,6 +30,10 @@ carries the current figures. All `libssl` exports remain `SCAFFOLDED` and abort 
 - Court results: `artifacts/phase7/COURTS.json` — fifteen courts, all pass, zero residuals. **The
   totals are `docs/SEAL-CENSUS.md`'s**; the per-court table is §3.
 - Obligation ledger: `forensics/phase7-obligations.json` — **0 open in this stratum**
+- Court coverage: `forensics/atlas/court-coverage.json` — every implemented export in exactly
+  one of `directly_courted` / `indirectly_courted` / `non_observable`; the counts are
+  `docs/SEAL-CENSUS.md` §Court coverage, and the weaker meaning of `directly_courted` is stated
+  there and above (D199)
 - Derived state: `forensics/phase-state.json`
 - Deciding record: `docs/DECISIONS.md` **D139–D196** (§4's table), with D132 and D134 being the two
   entries Phase 6 wrote for this stratum's prerequisites; and `docs/PHASE-7-SUBPHASES.md` for the
@@ -156,6 +167,35 @@ signals, and the file it reads for exactly that case is `forensics/prerequisites
 block. §10 records the split; `plan-reconciliation.json`'s `units_named_by_a_row` and
 `units_reached` are now equal, and its phase-7 census is the two entries that are records about the
 plan itself rather than omissions.
+
+**6. The coverage claim in this seal was not machine-checked, and now it is** (D199). The opening
+paragraph used to say every implemented export is "observed by a differential court", but the two
+exit criteria that were checked -- `open_in_this_stratum == 0` and `every court passes` -- do not
+imply it: nothing joined the 706 implemented exports to the courts that ran. The join now exists.
+On its first run it found **264** of this stratum's implemented exports referenced by no staged
+candidate probe (and 488 across the completed strata 3-7). The remedy was to make them observable,
+in this order:
+
+* `RT-EVP-INTROSPECT` calls the `EVP_PKEY_METHOD`/`EVP_PKEY_ASN1_METHOD` setter-getter pairs, the
+  `EVP_MD_meth_*` and `EVP_CIPHER_meth_*` pairs, `EVP_MD_CTX_copy` and the password-prompt pair,
+  and moves **75** exports to basis `called`;
+* `RT-EVP-CLASS` publishes one `EVP_ASYM_CIPHER`/`EVP_KEM`/`EVP_KEYEXCH`/`EVP_SIGNATURE` method
+  from a provider inside the probe and calls each class' accessors, moving **42**;
+* `RT-EVP-PKEY-OPS` publishes a keymgmt, generates a key, and drives the `EVP_PKEY_CTX_*` and
+  `EVP_PKEY_*` accessors, moving **84**;
+* the remaining **63** are recorded at basis `referenced` by `RT-EVP-REF`, which takes their
+  address and prints `nonnull` and nothing more. They are listed in the atlas; the largest groups
+  are the `EVP_CIPHER_CTX_*` accessors and the legacy `EVP_*Init*` wrappers (which need an armed
+  cipher context), the `EVP_PKEY` operation entry points (`EVP_PKEY_encrypt_init` and its siblings,
+  which fault the released authority for a provider key with no operation), the `EVP_*_SKEY`
+  family, and the `EVP_PKEY_asn1_find`/`get0`/`get_count` readers (Phase 8's `standard_methods[]`).
+
+The atlas records `indirectly_courted` 0 and `non_observable` 0: no symbol was excused. What it
+does **not** claim, and this seal does not either, is that the 63 referenced-only names were
+driven; `directly_courted` is a reference-level result and the atlas says so in its own `claim`.
+The same join runs for strata 3-6, where 224 further exports are covered at basis `referenced` by
+`RT-RUNTIME-REF`, `RT-BIO-CONF-REF`, `RT-BN-ASN1-REF` and `RT-PROVIDER-REF`; moving those to
+`called` is the follow-up those strata's seals now cite rather than the thing this slice did.
 
 ## 4. What the courts found
 
@@ -298,6 +338,7 @@ against a generated artefact rather than asserted.
 |---|---|
 | zero open obligations | `forensics/phase7-obligations.json`: `counts.open_in_this_stratum` = 0, and `implemented + deferred + open == owned` is asserted by the generator |
 | every court passing | `artifacts/phase7/COURTS.json`: `all_pass` true, zero residuals (the per-court table is §3) |
+| every implemented export is in a court coverage set | `forensics/atlas/court-coverage.json`: `unmatched` 0 for this stratum, enforced for `complete` by `forensics/tools/phase_state.py` |
 | the prototype court clean | `forensics/atlas/prototype-court.json`: `mismatches` 0 |
 | the dispatch plane clean | `forensics/atlas/dispatch-court.json`: `problems` 0 |
 | the prerequisite gate at zero findings | `forensics/atlas/prerequisite-gate.json`: `findings` 0 |

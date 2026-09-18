@@ -96,6 +96,19 @@ COURTS = [
     ("RT-HMAC", "rt_hmac_probe.c"),
     ("RT-CMAC", "rt_cmac_probe.c"),
     ("RT-HPKE", "rt_hpke_probe.c"),
+    # Reference basis for the EVP exports no behavioural court drives. It references, it
+    # does not call; the atlas records those names at basis `referenced`, never `called`.
+    # See the probe header and docs/DECISIONS.md D199.
+    ("RT-EVP-REF", "rt_coverage_ref_probe.c"),
+    # The call arms for the method-table and legacy-header surface the behavioural probes
+    # did not reach. See docs/DECISIONS.md D199; `RT-EVP-REF` keeps the safety net, and the
+    # atlas records which names moved from basis `referenced` to `called`.
+    ("RT-EVP-INTROSPECT", "rt_evp_introspect_probe.c"),
+    # The provider-backed arms for the four provider-only method classes no behavioural probe
+    # fetched. See docs/DECISIONS.md D199.
+    ("RT-EVP-CLASS", "rt_evp_class_probe.c"),
+    # The context/key accessor and operation arms; see docs/DECISIONS.md D199.
+    ("RT-EVP-PKEY-OPS", "rt_evp_pkey_ops_probe.c"),
 ]
 
 

@@ -74,6 +74,9 @@ COURTS = [
     ("RT-ASN1-PRINT", "rt_asn1_print_probe.c"),
     ("RT-ASN1-MIME", "rt_asn1_mime_probe.c"),
     ("RT-PEM", "rt_pem_probe.c"),
+    # Reference basis for the BN/ASN.1 exports no behavioural court drives. It references,
+    # it does not call; see the probe header and docs/DECISIONS.md D199.
+    ("RT-BN-ASN1-REF", "rt_coverage_ref_probe.c"),
 ]
 
 
