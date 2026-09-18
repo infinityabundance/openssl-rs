@@ -41,6 +41,7 @@
 #include <openssl/aes.h>
 #include <openssl/des.h>
 #include <openssl/modes.h>
+#include <openssl/rc2.h>
 #include <openssl/rc4.h>
 
 #define RT_KEY 0xa7u
@@ -656,6 +657,94 @@ static void rt_des(void)
     rt_hex("des.ks2", (const unsigned char *)&ks2, sizeof(ks2));
 }
 
+static void rt_rc2(void)
+{
+    RC2_KEY k;
+    unsigned char key[16];
+    unsigned char in[32];
+    unsigned char out[64];
+    unsigned char iv[8];
+    unsigned long d[2];
+    int num;
+
+    rt_fill(key, sizeof(key), 1);
+    rt_fill(in, sizeof(in), 2);
+    printf("rc2.sizeof_key=%u\n", (unsigned)sizeof(RC2_KEY));
+
+    memset(&k, 0, sizeof(k));
+    RC2_set_key(&k, 16, key, 128);
+    rt_hex("rc2.ks", (const unsigned char *)&k, sizeof(k));
+
+    d[0] = 0x01234567UL;
+    d[1] = 0x89abcdefUL;
+    RC2_encrypt(d, &k);
+    rt_hex("rc2.encrypt", (const unsigned char *)d, 8);
+    RC2_decrypt(d, &k);
+    rt_hex("rc2.decrypt", (const unsigned char *)d, 8);
+
+    memset(out, 0, sizeof(out));
+    RC2_ecb_encrypt(in, out, &k, RC2_ENCRYPT);
+    rt_hex("rc2.ecb.enc", out, 8);
+    RC2_ecb_encrypt(out, out + 8, &k, RC2_DECRYPT);
+    rt_hex("rc2.ecb.dec", out + 8, 8);
+
+    rt_fill(iv, 8, 3);
+    memset(out, 0, sizeof(out));
+    RC2_cbc_encrypt(in, out, 24, &k, iv, RC2_ENCRYPT);
+    rt_hex("rc2.cbc.enc", out, 24);
+    rt_hex("rc2.cbc.enc.iv", iv, 8);
+    RC2_cbc_encrypt(out, out + 24, 24, &k, iv, RC2_DECRYPT);
+    rt_hex("rc2.cbc.dec", out + 24, 24);
+
+    rt_fill(iv, 8, 4);
+    num = 3;
+    memset(out, 0, sizeof(out));
+    RC2_cfb64_encrypt(in, out, 24, &k, iv, &num, RC2_ENCRYPT);
+    rt_hex("rc2.cfb64.enc", out, 24);
+    printf("rc2.cfb64.num=%d\n", num);
+    rt_fill(iv, 8, 5);
+    num = 0;
+    memset(out, 0, sizeof(out));
+    RC2_ofb64_encrypt(in, out, 24, &k, iv, &num);
+    rt_hex("rc2.ofb64.enc", out, 24);
+    rt_hex("rc2.ofb64.enc.iv", iv, 8);
+    printf("rc2.ofb64.num=%d\n", num);
+
+    /* The corpus's own first vector, so the recipe value is seen on both sides. */
+    {
+        unsigned char zkey[16] = { 0 };
+        unsigned char pt[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+        unsigned char ct[8];
+        RC2_KEY zk;
+
+        memset(&zk, 0, sizeof(zk));
+        RC2_set_key(&zk, 16, zkey, 128);
+        rt_hex("rc2.zero.ks", (const unsigned char *)&zk, sizeof(zk));
+        memset(ct, 0, sizeof(ct));
+        RC2_ecb_encrypt(pt, ct, &zk, RC2_ENCRYPT);
+        rt_hex("rc2.zero.ecb", ct, 8);
+    }
+
+    /* The BSAFE-style effective-key-bits reduction is an observable: 40 and 64 bits, and the
+     * default 128, build three different schedules from the same key. */
+    {
+        RC2_KEY k40, k64;
+
+        memset(&k40, 0, sizeof(k40));
+        RC2_set_key(&k40, 16, key, 40);
+        rt_hex("rc2.ks40", (const unsigned char *)&k40, sizeof(k40));
+        memset(&k64, 0, sizeof(k64));
+        RC2_set_key(&k64, 16, key, 64);
+        rt_hex("rc2.ks64", (const unsigned char *)&k64, sizeof(k64));
+        memset(out, 0, sizeof(out));
+        RC2_ecb_encrypt(in, out, &k40, RC2_ENCRYPT);
+        rt_hex("rc2.ecb40.enc", out, 8);
+        memset(out, 0, sizeof(out));
+        RC2_ecb_encrypt(in, out, &k64, RC2_ENCRYPT);
+        rt_hex("rc2.ecb64.enc", out, 8);
+    }
+}
+
 static void rt_modes_blocks(void)
 {
     const unsigned char key = RT_KEY;
@@ -914,5 +1003,6 @@ int main(void)
     rt_aes();
     rt_rc4();
     rt_des();
+    rt_rc2();
     return 0;
 }

@@ -1696,6 +1696,11 @@ CIPHER_RECIPE_FAMILIES: list[CipherRecipeFamily] = [
         r"^DES-(ECB|CBC|CFB|OFB)$", "FIPS 46-3 / FIPS PUB 81",
         "DES-{ECB,CBC,CFB,OFB}", ("DES-ECB", "DES-CBC"),
         "133457799bbcdff1", "0000000000000000"),
+    CipherRecipeFamily(
+        "rc2", "test/recipes/30-test_evp_data/evpciph_rc2.txt",
+        r"^RC2-(40-|64-)?(ECB|CBC|CFB|OFB)$", "RFC 2268",
+        "RC2-{40-,64-,}{ECB,CBC,CFB,OFB}", ("RC2-ECB", "RC2-CBC"),
+        "00000000000000000000000000000000", "0000000000000000"),
 ]
 
 
@@ -1711,11 +1716,17 @@ def _emit_recipe_family(authority_id: str, family: CipherRecipeFamily,
 
     vectors: list[dict] = []
     n = 0
+    skipped = 0
     for block in _parse_cipher_blocks(text):
         cipher = block.get("cipher", "")
         if not family.cipher_re.match(cipher):
             continue
         if any(k not in block for k in ("key", "plaintext", "ciphertext")):
+            continue
+        if "keybits" in block:
+            # The effective-key-bits parameter is an observable, but this driver's record has no
+            # field for it; `RT-CIPHER` compares the 40/64/128 schedules directly instead.
+            skipped += 1
             continue
         operation = block.get("operation", "ENCRYPT").strip().upper()
         if operation == "DECRYPT":
@@ -1800,7 +1811,8 @@ def _emit_recipe_family(authority_id: str, family: CipherRecipeFamily,
                    body=body, authority=authority_id)
     out = vector_dir / f"{family.algorithm}.json"
     write_json(out, doc)
-    return {"path": rel(out), "vectors": len(vectors), "source": rel(src_path)}
+    return {"path": rel(out), "vectors": len(vectors), "skipped": skipped,
+            "source": rel(src_path)}
 
 
 # ---------------------------------------------------------------------------

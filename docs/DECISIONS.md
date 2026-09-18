@@ -14487,3 +14487,41 @@ implementation — and the only implementation in reach is the authority it is s
 `boundary_vectors_skipped` in the vector file's provenance with that reason, so the CT claim's
 independence census is not inflated by bytes the authority produced (D208's disposition for
 `rhash`, applied to a construction neither oracle can reach).
+
+## D217 — RC2 lands, and the effective-key-bits parameter costs one differential defect that a unit test had hidden
+
+`src/rc2.rs` lands the seven `rc2.h` exports over the generated `RC2_KEY_TABLE` — the PITABLE
+expansion, read from `crypto/rc2/rc2_skey.c` — and the three passes of sixteen 16-bit rounds.
+`implemented[libcrypto]` **1954 → 1961** and Phase 8 **113/657/16 → 120/650/16**; `RT-CIPHER`
+**213 → 233 observations**; `CT-CIPHER` **94 → 104 vectors**; baseline 83 courts / 23,615 →
+**83 courts / 23,635 observations**. PIPELINE OK.
+
+**The first defect was found by the test, not the court, and it was the test that was wrong.**
+A hand-picked vector used a sixteen-byte key where the recipe block's key field is eight bytes;
+RC2's schedule depends on the *key length* as well as the effective-key-bits parameter, so the
+expectation was wrong for a correct implementation. The differential plane is what settled it:
+`RT-CIPHER` matched the authority on the whole 256-byte schedule and on `RC2_encrypt` for the
+probe's own key, and the added `rc2.zero` observation carried the corpus's exact input. This is
+the reason a unit test is not evidence in this repository (D33's argument) — it took the corpus
+value, not the recalled RFC example, to pin the expectation.
+
+**The second defect was a real one, and only the decrypt path had it.** `rc2_cbc.c`'s decrypt
+loop walks `p0` down from `data[63]` and decrements it *past the array start* on the final group;
+the C pointer simply moves, but a `usize` underflows and panics. The differential plane found it
+loudly: the candidate aborted with `non-unwinding panic` at the first `RC2_decrypt`, so every
+observation from `rc2.decrypt` onward was `missing`. The fix is an `isize` index, and the
+`rc2.zero.ks`/`rc2.zero.ecb` observations now pin the corpus's exact input on both sides.
+
+**The effective-key-bits parameter is an observable, and it is compared where it is reachable.**
+`RC2_set_key`'s fourth argument is not `len * 8`; `rc2_skey.c:87-98` uses it to choose the
+reduction's start index and mask. `RT-CIPHER` observes three schedules built from one key at 40,
+64 and 128 effective bits, and the corpus's `RC2-40-CBC`/`RC2-64-CBC` blocks are driven by
+`CT-CIPHER` through the same parameter (the probe derives it from the cipher spelling, which is
+where the provider takes it from too, `cipher_rc2.c:283-295`). Corpus blocks that carry an
+explicit `KeyBits = 63` are **skipped and counted**, because this driver's record has no field for
+it; `RT-CIPHER` is where that arm is compared. Single-key RC2 is the **legacy** provider's
+(`providers/legacyprov.c:132-137`, `RC2-{ECB,CBC,40-CBC,64-CBC,CFB,OFB}`), so no default-provider
+row is written; `providers/defltprov.c`'s `deflt_ciphers[]` carries none of them.
+
+**What this entry does not do.** Blowfish, CAST5, IDEA, SEED and Camellia (39 open) remain, and
+with them the provider cipher rows and the cipher half of `ossl_default_provider_init`.

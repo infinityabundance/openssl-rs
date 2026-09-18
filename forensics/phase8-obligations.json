@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 16,
-      "implemented": 113,
-      "open_in_this_stratum": 657,
+      "implemented": 120,
+      "open_in_this_stratum": 650,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -1242,6 +1242,13 @@
       "MDC2_Final",
       "MDC2_Init",
       "MDC2_Update",
+      "RC2_cbc_encrypt",
+      "RC2_cfb64_encrypt",
+      "RC2_decrypt",
+      "RC2_ecb_encrypt",
+      "RC2_encrypt",
+      "RC2_ofb64_encrypt",
+      "RC2_set_key",
       "RC4",
       "RC4_options",
       "RC4_set_key",
@@ -4466,48 +4473,6 @@
         "symbol": "PKCS1_MGF1"
       },
       {
-        "declaring_header": "rc2.h",
-        "module": "src/rc2.rs",
-        "received_from_phase": null,
-        "symbol": "RC2_cbc_encrypt"
-      },
-      {
-        "declaring_header": "rc2.h",
-        "module": "src/rc2.rs",
-        "received_from_phase": null,
-        "symbol": "RC2_cfb64_encrypt"
-      },
-      {
-        "declaring_header": "rc2.h",
-        "module": "src/rc2.rs",
-        "received_from_phase": null,
-        "symbol": "RC2_decrypt"
-      },
-      {
-        "declaring_header": "rc2.h",
-        "module": "src/rc2.rs",
-        "received_from_phase": null,
-        "symbol": "RC2_ecb_encrypt"
-      },
-      {
-        "declaring_header": "rc2.h",
-        "module": "src/rc2.rs",
-        "received_from_phase": null,
-        "symbol": "RC2_encrypt"
-      },
-      {
-        "declaring_header": "rc2.h",
-        "module": "src/rc2.rs",
-        "received_from_phase": null,
-        "symbol": "RC2_ofb64_encrypt"
-      },
-      {
-        "declaring_header": "rc2.h",
-        "module": "src/rc2.rs",
-        "received_from_phase": null,
-        "symbol": "RC2_set_key"
-      },
-      {
         "declaring_header": "rsa.h",
         "module": "src/rsa/mod.rs",
         "received_from_phase": null,
@@ -5509,12 +5474,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "3d2c3843f3e55c8be4cd17d721003c7a8d9abaafd3b75d0f934e23c64992bd73"
+      "sha256": "c032d8c1c5a2eb34c69b4d91efb840a508e3b070c034185bab58908272b4116b"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "655c745154c4ac58d6076ea93342020863ce602903cf9882f3055fdddb8afe8d"
+      "sha256": "2842743d7eeb1a3b586a5b16772c1b0f6faa5427323369c8c45ddc59aedd9c66"
     }
   ],
   "kind": "phase8-obligations",

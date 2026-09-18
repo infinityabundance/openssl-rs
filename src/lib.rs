@@ -82,6 +82,7 @@ pub mod params;
 pub mod pem;
 pub mod property;
 pub mod provider;
+pub mod rc2;
 pub mod rc4;
 pub mod runtime;
 pub mod selftest;

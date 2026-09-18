@@ -30,7 +30,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 56,
-      "language_surface_not_modelled_by_name": 3084,
+      "language_surface_not_modelled_by_name": 3087,
       "planned_prerequisites": 14
     },
     "census_by_unit": {
@@ -211,6 +211,7 @@
         "crypto/provider_child.c": 19,
         "crypto/provider_conf.c": 28,
         "crypto/provider_core.c": 151,
+        "crypto/rc2/rc2_cbc.c": 3,
         "crypto/ripemd/rmd_dgst.c": 342,
         "crypto/self_test_core.c": 17,
         "crypto/sha/sha1dgst.c": 2,
@@ -343,8 +344,8 @@
       ]
     },
     "checked": {
-      "authority_units": 156,
-      "crate_modules": 211,
+      "authority_units": 157,
+      "crate_modules": 212,
       "deferral_blocker_rows": 5,
       "deferrals_recorded": 25,
       "divergence_names_covered": 32,
@@ -466,7 +467,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "b122e009ca4a5fa6f5a3fa852d6303a0707353ddea6deff254bf0d9dc1cf6a26",
+  "body_hash": "b8b396ba15bae181aa064cdebc60c7c8641d6c2f3e799ce95e521aec05671bce",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -487,7 +488,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "a50e201c14bee4fea8271cf49ca6a2134f70bff01159db2afd270b08a478e422"
+      "sha256": "6eda1da6f6a2f2b5132eecc7ab2e47a54a2bee95f538ce21f230f9735bdadc4c"
     },
     {
       "name": "symbol-ownership",
@@ -502,12 +503,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "e5b019012c3117b4bad98bcae56d1d2a3c42c0abdc4e9bc848ad53124cfed73d"
+      "sha256": "cba7bf1999cc5a22a0723641f45062592e97f816aefbba859b490f08e43b5bd2"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "9ae656409f6459072860826f6f1cebdf06c6262b8b856db7d962fe950d721c55"
+      "sha256": "3883d34e0ed86fd4a54cd9545418b8f2450b9da4f36a14c77530fe95ded1b45b"
     },
     {
       "name": "prerequisites",
