@@ -322,7 +322,28 @@ split is recorded here rather than performed silently:
 | # | Land | Open at the split |
 |---|---|---|
 | 8.1a | the low-level constructions and their collector: `MD4`, `MD5`, `RIPEMD160`, `WHIRLPOOL` whole (Init/Update/Final/Transform and the one-shot), `SHA1`/`SHA224`/`SHA256`/`SHA384`/`SHA512`'s `Init`/`Update`/`Final`/`Transform` — **thirty-eight exports** — and its two courts, `RT-DIGEST` and `CT-DIGEST` | 38 |
-| 8.1b | the provider half: `PROV_DIGEST` and `digestcommon.c`'s `ossl_digest_default_get_params`/`_gettable_params`, the `*_prov.c` dispatch tables, the `sm3`/`sha3`/`keccak1600` internals, the five `sha.h` one-shots, and the digest half of `ossl_default_provider_init` with `providers/defltprov.c`'s `deflt_digests[]`. MDC2's four labels are **not** here: they are 8.2's, per the DES inversion above. **PARTLY LANDED (D206):** the digest half of `ossl_default_provider_init` is declared and reachable — `src/provider/digest.rs` publishes the seven default-provider rows whose constructions 8.1a built (`SHA1`/`SHA224`/`SHA256`/`SHA384`/`SHA512`, `MD5`, `RIPEMD160`) and the fallback walk now activates `default`, so `EVP_MD_fetch(NULL, "SHA256", NULL)` resolves and `EVP_DigestInit_ex`/`_Update`/`_Final_ex` operate through it. `MD4` and `WHIRLPOOL` are deliberately **not** among the rows: the author's constructions exist, but the authority publishes them from the legacy provider (Phase 13's, per `forensics/prerequisites.json`) and not from the default provider, so `EVP_MD_fetch(NULL, "MD4", NULL)` answers NULL without a legacy provider and `RT-DIGEST` observes the pair. Still open: the `sm3`/`sha3`/`keccak1600` internals, the SHA-3/SHAKE/SM3/BLAKE2/md5_sha1/null digest rows, the two truncated SHA-512 spellings and SHA2-256/192, the five `sha.h` one-shots, and the provider's non-digest halves | 5 |
+| 8.1b | the provider half: `PROV_DIGEST` and `digestcommon.c`'s `ossl_digest_default_get_params`/`_gettable_params`, the `*_prov.c` dispatch tables, the `sm3`/`sha3`/`keccak1600` internals, the five `sha.h` one-shots, and the digest half of `ossl_default_provider_init` with `providers/defltprov.c`'s `deflt_digests[]`. MDC2's four labels are **not** here: they are 8.2's, per the DES inversion above. **PARTLY LANDED (D206):** the digest half of `ossl_default_provider_init` is declared and reachable — `src/provider/digest.rs` publishes the seven default-provider rows whose constructions 8.1a built (`SHA1`/`SHA224`/`SHA256`/`SHA384`/`SHA512`, `MD5`, `RIPEMD160`) and the fallback walk now activates `default`, so `EVP_MD_fetch(NULL, "SHA256", NULL)` resolves and `EVP_DigestInit_ex`/`_Update`/`_Final_ex` operate through it. `MD4` and `WHIRLPOOL` are deliberately **not** among the rows: the author's constructions exist, but the authority publishes them from the legacy provider (Phase 13's, per `forensics/prerequisites.json`) and not from the default provider, so `EVP_MD_fetch(NULL, "MD4", NULL)` answers NULL without a legacy provider and `RT-DIGEST` observes the pair. **LANDED (D207, and checked against the ledger by D208's gate).** The `sm3`/`sha3`/`keccak1600` internals, the SHA-3/SHAKE/SM3/BLAKE2/`md5_sha1`/`null` digest rows, the two truncated SHA-512 spellings and SHA2-256/192, and the five `sha.h` one-shots are all in; what remains of Phase 8 is its other subphases' work, not 8.1's. | 5 |
+
+### 8.1's status, checked against the ledger
+
+`forensics/phase8-obligations.json` is the arithmetic for what a stratum has landed, and this
+subphase's status is stated against it rather than in prose that can outrun it. The two clauses
+below are anchored: `docs_consistency.py` reads the symbols out of them and compares each with the
+ledger, in **both** directions -- a symbol claimed landed must be in `implemented`, and a symbol
+claimed open must be in `open`. They are a *sample* that spans the subphase and not an
+enumeration, so a symbol landing without being added here is not a failure; a symbol *misstated*
+here is. (`forensics/phase8-obligations.json` remains the only complete list.)
+
+**Landed exports (checked against the ledger):** `SHA1`, `SHA224`, `SHA256`, `SHA384`, `SHA512`,
+`MD4_Init`, `MD4_Update`, `MD4_Final`, `MD4_Transform`, `MD4`, `MD5_Init`, `MD5_Update`,
+`MD5_Final`, `MD5_Transform`, `MD5`, `RIPEMD160_Init`, `RIPEMD160_Update`, `RIPEMD160_Final`,
+`RIPEMD160_Transform`, `RIPEMD160`, `WHIRLPOOL_Init`, `WHIRLPOOL_Update`, `WHIRLPOOL_Final`,
+`WHIRLPOOL`.
+
+**Open exports (checked against the ledger):** `MDC2`, `MDC2_Init`, `MDC2_Update`, `MDC2_Final`,
+`AES_set_encrypt_key`, `AES_set_decrypt_key`, `AES_encrypt`, `AES_decrypt`, `AES_cbc_encrypt`,
+`RC4_set_key`, `RC4`, `DES_set_key`, `DES_encrypt1`, `Camellia_set_key`, `BF_set_key`,
+`CAST_set_key`, `IDEA_set_encrypt_key`, `SEED_set_key`.
 
 ### The sixteen recorded hand-offs, and why the four key types are not hand-offs
 
