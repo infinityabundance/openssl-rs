@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 16,
-      "implemented": 120,
-      "open_in_this_stratum": 650,
+      "implemented": 128,
+      "open_in_this_stratum": 642,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -1180,6 +1180,14 @@
       "AES_set_encrypt_key",
       "AES_unwrap_key",
       "AES_wrap_key",
+      "BF_cbc_encrypt",
+      "BF_cfb64_encrypt",
+      "BF_decrypt",
+      "BF_ecb_encrypt",
+      "BF_encrypt",
+      "BF_ofb64_encrypt",
+      "BF_options",
+      "BF_set_key",
       "CRYPTO_cbc128_decrypt",
       "CRYPTO_cbc128_encrypt",
       "CRYPTO_cfb128_1_encrypt",
@@ -1502,54 +1510,6 @@
     ],
     "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum, and it starts at the whole working set, which is the honest starting state. Nothing here is a parity claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-8-SUBPHASES.md §4 decides when the stratum may be called complete.",
     "open": [
-      {
-        "declaring_header": "blowfish.h",
-        "module": "src/blowfish.rs",
-        "received_from_phase": null,
-        "symbol": "BF_cbc_encrypt"
-      },
-      {
-        "declaring_header": "blowfish.h",
-        "module": "src/blowfish.rs",
-        "received_from_phase": null,
-        "symbol": "BF_cfb64_encrypt"
-      },
-      {
-        "declaring_header": "blowfish.h",
-        "module": "src/blowfish.rs",
-        "received_from_phase": null,
-        "symbol": "BF_decrypt"
-      },
-      {
-        "declaring_header": "blowfish.h",
-        "module": "src/blowfish.rs",
-        "received_from_phase": null,
-        "symbol": "BF_ecb_encrypt"
-      },
-      {
-        "declaring_header": "blowfish.h",
-        "module": "src/blowfish.rs",
-        "received_from_phase": null,
-        "symbol": "BF_encrypt"
-      },
-      {
-        "declaring_header": "blowfish.h",
-        "module": "src/blowfish.rs",
-        "received_from_phase": null,
-        "symbol": "BF_ofb64_encrypt"
-      },
-      {
-        "declaring_header": "blowfish.h",
-        "module": "src/blowfish.rs",
-        "received_from_phase": null,
-        "symbol": "BF_options"
-      },
-      {
-        "declaring_header": "blowfish.h",
-        "module": "src/blowfish.rs",
-        "received_from_phase": null,
-        "symbol": "BF_set_key"
-      },
       {
         "declaring_header": "cast.h",
         "module": "src/cast.rs",
@@ -5474,12 +5434,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "c032d8c1c5a2eb34c69b4d91efb840a508e3b070c034185bab58908272b4116b"
+      "sha256": "137ba897c55817beeeb15243e5bc6e54daea35c0c09012d382d6a71abdf82666"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "2842743d7eeb1a3b586a5b16772c1b0f6faa5427323369c8c45ddc59aedd9c66"
+      "sha256": "b25e8da090244da2528eb5d8b910e1af41f0e465907bf6bb30bd3f4f138ecc9d"
     }
   ],
   "kind": "phase8-obligations",

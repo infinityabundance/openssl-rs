@@ -14525,3 +14525,31 @@ row is written; `providers/defltprov.c`'s `deflt_ciphers[]` carries none of them
 
 **What this entry does not do.** Blowfish, CAST5, IDEA, SEED and Camellia (39 open) remain, and
 with them the provider cipher rows and the cipher half of `ossl_default_provider_init`.
+
+## D218 — Blowfish lands, and one masking shortcut that is not one
+
+`src/blowfish.rs` lands the eight `blowfish.h` exports over the generated `BF_P`/`BF_S` — the
+π-derived P array and the four S-boxes, read from `crypto/bf/bf_pi.h` — and the big-endian
+`n2l`/`l2n` byte order that differs from DES's. `implemented[libcrypto]` **1961 → 1969** and
+Phase 8 **120/650/16 → 128/642/16**; `RT-CIPHER` **233 → 248 observations**; `CT-CIPHER`
+**104 → 114 vectors**; baseline 83 courts / 23,635 → **83 courts / 23,650 observations**.
+PIPELINE OK.
+
+**The defect was an overflow the authority does not have, and it was found by the unit test
+first and the court second.** `BF_ENC`'s `(S[a] + S[b]) ^ S[c] + S[d]` is `unsigned int`
+arithmetic in C, so the two additions wrap; the first Rust transcription used `+` on `u32`,
+which panics on overflow under `debug_assertions` while the release court build wrapped and
+passed. The fix is explicit `wrapping_add` at both additions. That the two planes disagree
+about a defect of this class is exactly why the crate's unit tests and the court's release
+build are not substitutes: the court would have shipped it.
+
+**What is observed.** The whole 4168-byte `BF_KEY` as hex after `BF_set_key` (the self-referential
+schedule — XOR the P array with the key cyclically, then repeatedly encrypt the zero block to
+fill P and S — so a wrong π word, a wrong round order or a wrong key wrap all move it), the
+corpus's own first `BF-ECB` block, `BF_encrypt`/`BF_decrypt`, all four modes with their IV and
+`num` write-backs, and `BF_options` (`blowfish(ptr)`, a constant on this profile). Blowfish is
+the **legacy** provider's (`providers/legacyprov.c:114-117`,
+`BF-{ECB,CBC,OFB,CFB}`), so no default-provider row is written.
+
+**What this entry does not do.** CAST5, IDEA, SEED and Camellia (32 open) remain, and with them
+the provider cipher rows and the cipher half of `ossl_default_provider_init`.

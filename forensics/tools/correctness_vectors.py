@@ -1701,6 +1701,11 @@ CIPHER_RECIPE_FAMILIES: list[CipherRecipeFamily] = [
         r"^RC2-(40-|64-)?(ECB|CBC|CFB|OFB)$", "RFC 2268",
         "RC2-{40-,64-,}{ECB,CBC,CFB,OFB}", ("RC2-ECB", "RC2-CBC"),
         "00000000000000000000000000000000", "0000000000000000"),
+    CipherRecipeFamily(
+        "bf", "test/recipes/30-test_evp_data/evpciph_bf.txt",
+        r"^BF-(ECB|CBC|CFB|OFB)$", "Schneier's Blowfish (self-generated corpus)",
+        "BF-{ECB,CBC,CFB,OFB}", ("BF-ECB", "BF-CBC"),
+        "000102030405060708090a0b0c0d0e0f", "0000000000000000"),
 ]
 
 

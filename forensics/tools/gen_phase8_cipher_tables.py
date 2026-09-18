@@ -72,7 +72,7 @@ _SOURCES = (DES_SPR, DES_SETKEY, DES_FCRYPT, RC2_SKEY, BF_PI, CAST_S, SEED_C, CA
 # The families the generator emits. Each family's extraction is a function of the
 # authority's source; extending this tuple is how a later family's tables join the file,
 # and `evidence_determinism.py` recomputes the whole file.
-FAMILIES = ("des", "rc2")
+FAMILIES = ("des", "rc2", "bf")
 
 
 def read(authority, relpath: str) -> str:
@@ -184,7 +184,7 @@ def bf_tables(authority) -> dict:
         raise SystemExit(
             f"gen-phase8-cipher-tables: bf_init read {len(vals)} entries, expected 1042"
         )
-    return {"p": vals[:18], "s": [vals[18 + i * 256:18 + (i + 1) * 256] for i in range(4)]}
+    return {"p": vals[:18], "s": vals[18:]}
 
 
 def cast_tables(authority) -> dict:
@@ -301,8 +301,8 @@ def render(t: dict) -> str:
         A("/// `bf_init`, which is the fractional part of π.")
         A(f"pub(crate) static BF_P: [u32; 18] = {fmt_u32(b['p'])};")
         A("/// Blowfish's four S-boxes — the remaining thousand-and-twenty-four words of")
-        A("/// `bf_init`.")
-        A(f"pub(crate) static BF_S: [[u32; 256]; 4] = {fmt_u32_matrix(b['s'])};")
+        A("/// `bf_init`, flat as the authority's `BF_LONG S[4 * 256]` is.")
+        A(f"pub(crate) static BF_S: [u32; 1024] = {fmt_u32(b['s'])};")
         A("")
 
     if "cast" in t:
@@ -335,7 +335,7 @@ def render(t: dict) -> str:
     A("    fn the_tables_have_the_shapes_the_constructions_read_them_with() {")
     for name, (sym, shape) in {
         "des": ("DES_SPTRANS", "8"), "rc2": ("RC2_KEY_TABLE", "256"),
-        "bf": ("BF_S", "4"), "cast": ("CAST_S", "8"),
+        "bf": ("BF_S", "1024"), "cast": ("CAST_S", "8"),
         "seed": ("SEED_SS", "4"), "camellia": ("CAMELLIA_SBOX", "4"),
     }.items():
         if name in t:
