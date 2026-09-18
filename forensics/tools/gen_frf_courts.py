@@ -321,6 +321,59 @@ COURTS: list[tuple[str, int, str, str]] = [
      "name that cannot be resolved; and the unload, teardown, reload and second "
      "unload that show initialisation happening exactly once and the teardown "
      "waiting for the last reference"),
+    # Phase 7 — the fetch core, the method store and the EVP object families.
+    #
+    # Each description is the court's own one-line subject, the line its probe
+    # header opens with. That is the same line `forensics/tools/phase7_courts.py`
+    # carries beside the probe filename and the same line the Phase-7 seal's
+    # evidence table carries, so the three tables can be read against each other.
+    # Before D200 `phase7_courts.py` named the probe but not the subject, and the
+    # seal's sentence claiming that table held the one-liners was false; D200
+    # records the reconciliation.
+    ("rt-fetch", 7, "rt_fetch_probe",
+     "the fetch core, from the one angle a probe can be asked in 7.1"),
+    ("rt-evp-cipher", 7, "rt_evp_cipher_probe",
+     "the `EVP_CIPHER` method object, from the angle 7.3b can be asked in"),
+    ("rt-evp-mac", 7, "rt_evp_mac_probe",
+     "the `EVP_MAC` method object and the context it is run through"),
+    ("rt-evp-kdf", 7, "rt_evp_kdf_probe",
+     "the `EVP_KDF` method object and the context it is run through"),
+    ("rt-evp-rand", 7, "rt_evp_rand_probe",
+     "the `EVP_RAND` method object and the context it is run through"),
+    ("rt-evp-skey", 7, "rt_evp_skey_probe",
+     "the `EVP_SKEYMGMT` method object and the `EVP_SKEY` it manages"),
+    ("rt-evp-keymgmt", 7, "rt_evp_keymgmt_probe",
+     "the `EVP_KEYMGMT` method object, and the structural check that admits it"),
+    ("rt-evp-names", 7, "rt_evp_names_probe",
+     "`names.c`'s four walkers and the two adders"),
+    ("rt-evp-pkey", 7, "rt_evp_pkey_probe",
+     "`crypto/evp/signature.c`'s entry-point half and `p_lib.c`'s provider "
+     "half, differentially"),
+    ("rt-evp-pbe", 7, "rt_evp_pbe_probe",
+     "the PBE registry, the PBKDF2 facade and the three v2 keygens"),
+    ("rt-evp-bio", 7, "rt_evp_encode_probe",
+     "`crypto/evp/encode.c`'s four base64 contexts and the four filter BIOs "
+     "of `crypto/evp/` that 7.5 lands"),
+    ("rt-evp-pem", 7, "rt_evp_pem_probe",
+     "the `pem.h` surface 7.5 can build, and the twenty-five names it cannot"),
+    ("rt-hmac", 7, "rt_hmac_probe",
+     "the legacy one-shot interface `crypto/hmac/hmac.c`"),
+    ("rt-cmac", 7, "rt_cmac_probe",
+     "the legacy CMAC interface `crypto/cmac/cmac.c`"),
+    ("rt-hpke", 7, "rt_hpke_probe",
+     "the RFC 9180 `OSSL_HPKE_*` surface, `crypto/hpke/hpke.c`"),
+    ("rt-evp-ref", 7, "rt_coverage_ref_probe",
+     "reference basis for the EVP plane's unexercised entries, and nothing more"),
+    ("rt-evp-introspect", 7, "rt_evp_introspect_probe",
+     "the method-table and legacy-header surfaces the behavioural probes did "
+     "not reach"),
+    ("rt-evp-class", 7, "rt_evp_class_probe",
+     "the four provider-only method classes the behavioural probes never "
+     "fetched: `EVP_ASYM_CIPHER`, `EVP_KEM`, `EVP_KEYEXCH` and "
+     "`EVP_SIGNATURE`"),
+    ("rt-evp-pkey-ops", 7, "rt_evp_pkey_ops_probe",
+     "the `EVP_PKEY_CTX` accessor surface and the `EVP_PKEY` operation entry "
+     "points, driven through a keymgmt this probe publishes"),
 ]
 
 

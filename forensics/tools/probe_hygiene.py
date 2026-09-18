@@ -131,7 +131,14 @@ def discover_court_defs(src: Path, libdir: Path) -> list[str]:
         extra = getattr(mod, "extra_defs", None)
         if not courts or extra is None:
             continue
-        for name, filename in courts:
+        for row in courts:
+            # A runner's `COURTS` rows are `(court, probe)` and may carry a third
+            # descriptive field: Phase 7's do, because `docs/DECISIONS.md` D200
+            # requires the FRF declaration, the stratum's court table and the seal
+            # to carry the same one-line subject. Discovery needs the first two
+            # fields, so it reads them by position and tolerates the rest rather
+            # than pinning every runner's table to an arity.
+            name, filename = row[0], row[1]
             if filename == src.name:
                 return list(extra(name, libdir))
     return []

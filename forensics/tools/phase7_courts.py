@@ -80,35 +80,70 @@ PHASE2 = REPO_ROOT / "artifacts" / "phase2"
 STAGED = REPO_ROOT / "artifacts" / "phase7" / "probes"
 RUN_TIMEOUT_S = "60"
 
+# (court id, probe filename, the one-line subject)
+#
+# The third element is the court's own one-line subject and it is deliberately the
+# same text that `forensics/tools/gen_frf_courts.py` carries for the court's FRF
+# declaration and that `docs/PHASE-7-EVP-SEAL.md`'s evidence table carries. Before
+# D200 this table named the probe but not the subject, while the seal's §3 said the
+# subject was "in one line" here — a sentence about a field that did not exist. The
+# field now exists, so the three tables can be read against each other rather than
+# one of them pointing at another that is silent. The text is each probe header's
+# own opening line; nothing here is paraphrase.
 COURTS = [
-    ("RT-FETCH", "rt_fetch_probe.c"),
-    ("RT-EVP-CIPHER", "rt_evp_cipher_probe.c"),
-    ("RT-EVP-MAC", "rt_evp_mac_probe.c"),
-    ("RT-EVP-KDF", "rt_evp_kdf_probe.c"),
-    ("RT-EVP-RAND", "rt_evp_rand_probe.c"),
-    ("RT-EVP-SKEY", "rt_evp_skey_probe.c"),
-    ("RT-EVP-KEYMGMT", "rt_evp_keymgmt_probe.c"),
-    ("RT-EVP-NAMES", "rt_evp_names_probe.c"),
-    ("RT-EVP-PKEY", "rt_evp_pkey_probe.c"),
-    ("RT-EVP-PBE", "rt_evp_pbe_probe.c"),
-    ("RT-EVP-BIO", "rt_evp_encode_probe.c"),
-    ("RT-EVP-PEM", "rt_evp_pem_probe.c"),
-    ("RT-HMAC", "rt_hmac_probe.c"),
-    ("RT-CMAC", "rt_cmac_probe.c"),
-    ("RT-HPKE", "rt_hpke_probe.c"),
+    ("RT-FETCH", "rt_fetch_probe.c",
+     "the fetch core, from the one angle a probe can be asked in 7.1"),
+    ("RT-EVP-CIPHER", "rt_evp_cipher_probe.c",
+     "the `EVP_CIPHER` method object, from the angle 7.3b can be asked in"),
+    ("RT-EVP-MAC", "rt_evp_mac_probe.c",
+     "the `EVP_MAC` method object and the context it is run through"),
+    ("RT-EVP-KDF", "rt_evp_kdf_probe.c",
+     "the `EVP_KDF` method object and the context it is run through"),
+    ("RT-EVP-RAND", "rt_evp_rand_probe.c",
+     "the `EVP_RAND` method object and the context it is run through"),
+    ("RT-EVP-SKEY", "rt_evp_skey_probe.c",
+     "the `EVP_SKEYMGMT` method object and the `EVP_SKEY` it manages"),
+    ("RT-EVP-KEYMGMT", "rt_evp_keymgmt_probe.c",
+     "the `EVP_KEYMGMT` method object, and the structural check that admits it"),
+    ("RT-EVP-NAMES", "rt_evp_names_probe.c",
+     "`names.c`'s four walkers and the two adders"),
+    ("RT-EVP-PKEY", "rt_evp_pkey_probe.c",
+     "`crypto/evp/signature.c`'s entry-point half and `p_lib.c`'s provider "
+     "half, differentially"),
+    ("RT-EVP-PBE", "rt_evp_pbe_probe.c",
+     "the PBE registry, the PBKDF2 facade and the three v2 keygens"),
+    ("RT-EVP-BIO", "rt_evp_encode_probe.c",
+     "`crypto/evp/encode.c`'s four base64 contexts and the four filter BIOs "
+     "of `crypto/evp/` that 7.5 lands"),
+    ("RT-EVP-PEM", "rt_evp_pem_probe.c",
+     "the `pem.h` surface 7.5 can build, and the twenty-five names it cannot"),
+    ("RT-HMAC", "rt_hmac_probe.c",
+     "the legacy one-shot interface `crypto/hmac/hmac.c`"),
+    ("RT-CMAC", "rt_cmac_probe.c",
+     "the legacy CMAC interface `crypto/cmac/cmac.c`"),
+    ("RT-HPKE", "rt_hpke_probe.c",
+     "the RFC 9180 `OSSL_HPKE_*` surface, `crypto/hpke/hpke.c`"),
     # Reference basis for the EVP exports no behavioural court drives. It references, it
     # does not call; the atlas records those names at basis `referenced`, never `called`.
     # See the probe header and docs/DECISIONS.md D199.
-    ("RT-EVP-REF", "rt_coverage_ref_probe.c"),
+    ("RT-EVP-REF", "rt_coverage_ref_probe.c",
+     "reference basis for the EVP plane's unexercised entries, and nothing more"),
     # The call arms for the method-table and legacy-header surface the behavioural probes
-    # did not reach. See docs/DECISIONS.md D199; `RT-EVP-REF` keeps the safety net, and the
-    # atlas records which names moved from basis `referenced` to `called`.
-    ("RT-EVP-INTROSPECT", "rt_evp_introspect_probe.c"),
+    # did not reach. See docs/DECISIONS.md D199; `RT-EVP-REF` keeps the safety net, and
+    # the atlas records which names moved from basis `referenced` to `called`.
+    ("RT-EVP-INTROSPECT", "rt_evp_introspect_probe.c",
+     "the method-table and legacy-header surfaces the behavioural probes did "
+     "not reach"),
     # The provider-backed arms for the four provider-only method classes no behavioural probe
     # fetched. See docs/DECISIONS.md D199.
-    ("RT-EVP-CLASS", "rt_evp_class_probe.c"),
+    ("RT-EVP-CLASS", "rt_evp_class_probe.c",
+     "the four provider-only method classes the behavioural probes never "
+     "fetched: `EVP_ASYM_CIPHER`, `EVP_KEM`, `EVP_KEYEXCH` and "
+     "`EVP_SIGNATURE`"),
     # The context/key accessor and operation arms; see docs/DECISIONS.md D199.
-    ("RT-EVP-PKEY-OPS", "rt_evp_pkey_ops_probe.c"),
+    ("RT-EVP-PKEY-OPS", "rt_evp_pkey_ops_probe.c",
+     "the `EVP_PKEY_CTX` accessor surface and the `EVP_PKEY` operation entry "
+     "points, driven through a keymgmt this probe publishes"),
 ]
 
 
@@ -258,7 +293,7 @@ def main(argv: list[str]) -> int:
     work.mkdir(parents=True, exist_ok=True)
 
     records = []
-    for name, filename in COURTS:
+    for name, filename, _subject in COURTS:
         src = PROBE_DIR / filename
         if not src.is_file():
             records.append({"court": name, "verdict": "fail",
@@ -286,7 +321,7 @@ def main(argv: list[str]) -> int:
         InputRef(name="authority-symbols", path=REPO_ROOT / "forensics" / "atlas"
                  / auth.id / "symbols-libcrypto.json"),
     ]
-    for _name, filename in COURTS:
+    for _name, filename, _subject in COURTS:
         inputs.append(InputRef(name="probe", path=PROBE_DIR / filename))
     doc = envelope(kind="phase7-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)

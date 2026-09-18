@@ -1,0 +1,98 @@
+transcript.sha256=bd016bcdb6119f4d403654721d50c61a1cddc703322bd2aaef5d6a5b19889ec3
+add_builtin.a=1 err=0
+add_builtin.b=1 err=0
+load.a=1
+load.b=1
+fetch.full=nonnull err=50331841
+fetch.minimal=nonnull err=0
+fetch.duplicate_importer=nonnull err=0
+fetch.refusing_importer=nonnull err=0
+fetch.no_export=NULL err=50856204
+fetch.no_export.err=0
+fetch.no_free=NULL err=50856204
+fetch.no_free.err=0
+fetch.no_import=NULL err=50856204
+fetch.no_import.err=0
+fetch.unknown=NULL err=50856204
+fetch.unknown.err=0
+fetch.rejected=NULL err=50856204
+fetch.rejected.err=0
+fetch.alias_same_object=1
+method.name_matches=1
+method.description_matches=1
+method.provider=nonnull err=0
+method.is_a.identity=1 err=0
+method.is_a.alias=1 err=0
+method.is_a.other=0 err=0
+method.is_a.null_method=0 err=0
+method.gen_settable=nonnull err=0
+method.imp_settable=nonnull err=0
+method.params.vec=0,0,0,0,0,1,1 err=0
+method.gen_settable.null_method=NULL err=0
+method.gen_settable.minimal=NULL err=0
+method.imp_settable.minimal=NULL err=0
+method.names_do_all.ret=1 err=0
+method.names.count=4 err=0
+method.names.saw_identity=1 err=0
+method.names.saw_alias=1 err=0
+key.import=nonnull err=0
+key.import.vec=1,0,0,0,0,0,0 err=0
+key.import.args=import:2/5/170 export:0/0 gen:0/0 err=0
+key.skeymgmt_name=SKEY-Court err=0
+key.provider_name=court-skey err=0
+key.key_id=id1-aa err=0
+key.is_a.identity=1 err=0
+key.is_a.alias=1 err=0
+key.is_a.other=0 err=0
+key.is_a.null_key=0 err=0
+key.get0_raw_key.ret=1 err=0
+key.get0_raw_key.len=5 err=0
+key.get0_raw_key.byte0=170 err=0
+key.get0_raw_key.byte4=238 err=0
+key.get0_raw_key.round_trip=1
+key.export.vec=0,1,0,0,0,0,0 err=0
+key.export.args=import:0/0/0 export:2/5 gen:0/0 err=0
+key.up_ref.1=1 err=0
+key.up_ref.2=1 err=0
+key.free.after_one.vec=0,0,0,0,0,0,0 err=0
+key.free.after_two.vec=0,0,0,0,0,0,0 err=0
+key.free.after_three.vec=0,0,0,1,0,0,0 err=0
+key.free_null=returned err=0
+fallback.import=nonnull err=50856204
+fallback.skeymgmt_name=GENERIC-SECRET err=0
+fallback.provider_name=court-skey err=0
+fallback.vec=1,0,0,1,0,0,0 err=0
+refused.import=NULL err=0
+refused.vec=1,0,0,1,0,0,0 err=0
+import_skeymgmt.with_params_only=nonnull err=0
+import_skeymgmt.vec=1,0,0,0,0,0,0 err=0
+import_skeymgmt.null_method=NULL err=0
+generate.import=nonnull err=0
+generate.vec=0,0,1,0,0,0,0 err=0
+generate.args=import:0/0/0 export:0/0 gen:1/1 err=0
+generate.get0_raw_key.ret=1 err=0
+generate.get0_raw_key.len=4 err=0
+generate.get0_raw_key.byte0=16 err=0
+generate.key_id=id1-10 err=0
+generate.no_callback=NULL err=0
+generate.no_callback.vec=0,0,0,1,0,0,0 err=0
+to_provider.default_same_object=1
+to_provider.default.vec=0,0,0,0,0,0,0 err=0
+to_provider.same_provider_same_object=1
+to_provider.same_provider.vec=0,0,0,0,0,0,0 err=0
+to_provider.other_provider=nonnull err=0
+to_provider.other_provider_distinct=1
+to_provider.other_provider.provider_name=court-skey-b err=0
+to_provider.other_provider.skeymgmt_name=SKEY-Court err=0
+to_provider.other_provider.key_id=id2-aa err=0
+to_provider.other_provider.round_trip=1
+to_provider.other_provider.vec=1,2,0,1,1,0,0 err=0
+to_provider.null_key=NULL err=51118338
+to_provider.null_key.err=0
+do_all.count=6 err=0
+do_all.saw_full=1 err=0
+do_all.saw_a_refused_one=0 err=0
+do_all.null_visitor=NOT_MEASURED_AUTHORITY_FAULTS
+final.vec=0,0,0,0,0,0,0 err=0
+unload.a=1 err=0
+unload.b=1 err=0
