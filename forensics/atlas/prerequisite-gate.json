@@ -30,7 +30,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 56,
-      "language_surface_not_modelled_by_name": 3107,
+      "language_surface_not_modelled_by_name": 3111,
       "planned_prerequisites": 14
     },
     "census_by_unit": {
@@ -197,6 +197,7 @@
         "crypto/mdc2/mdc2dgst.c": 4,
         "crypto/mem.c": 12,
         "crypto/mem_sec.c": 10,
+        "crypto/modes/ccm128.c": 4,
         "crypto/modes/cts128.c": 4,
         "crypto/modes/gcm128.c": 14,
         "crypto/modes/wrap128.c": 2,
@@ -351,8 +352,8 @@
       ]
     },
     "checked": {
-      "authority_units": 164,
-      "crate_modules": 219,
+      "authority_units": 165,
+      "crate_modules": 220,
       "deferral_blocker_rows": 5,
       "deferrals_recorded": 25,
       "divergence_names_covered": 32,
@@ -474,7 +475,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "d97329644f9ca8bd4bd02441705a221c04e7a8713428c8668c41a8f5c2723abb",
+  "body_hash": "3f34dc386602736049bd3a8dc59d098773cdad95f275b3ecfbf4e6fff6dfad33",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -495,7 +496,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "ebc5ca1c550fd1b60167e62c7955252c8e0d077a07d3ed190c690afc04466df9"
+      "sha256": "c7ab5dd995e093e03952bbc842ba84e1acdfbf27e6482fbb8a18d6304e1b8f23"
     },
     {
       "name": "symbol-ownership",
@@ -510,12 +511,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "0e2e8c8f04a106e4812b145fd0a4cee49547d3029ce44804f2feb17080421ec7"
+      "sha256": "b599fda139fca430f21edb69030c62c725d84366419e36d5e5ef0cbd5ca623b2"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "a215f2ef99cab5e46a1617cdaf3b62257ffc4e4219857f6ce8b1c087ae2182eb"
+      "sha256": "8a0dbbb68eb7bc02a742e859d0e3fd73309aca7a585b8a4fc30ca8ee67616cf1"
     },
     {
       "name": "prerequisites",

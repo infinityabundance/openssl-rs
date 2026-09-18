@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 16,
-      "implemented": 175,
-      "open_in_this_stratum": 595,
+      "implemented": 183,
+      "open_in_this_stratum": 587,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -1201,6 +1201,14 @@
       "CRYPTO_128_wrap_pad",
       "CRYPTO_cbc128_decrypt",
       "CRYPTO_cbc128_encrypt",
+      "CRYPTO_ccm128_aad",
+      "CRYPTO_ccm128_decrypt",
+      "CRYPTO_ccm128_decrypt_ccm64",
+      "CRYPTO_ccm128_encrypt",
+      "CRYPTO_ccm128_encrypt_ccm64",
+      "CRYPTO_ccm128_init",
+      "CRYPTO_ccm128_setiv",
+      "CRYPTO_ccm128_tag",
       "CRYPTO_cfb128_1_encrypt",
       "CRYPTO_cfb128_8_encrypt",
       "CRYPTO_cfb128_encrypt",
@@ -1557,54 +1565,6 @@
     ],
     "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum, and it starts at the whole working set, which is the honest starting state. Nothing here is a parity claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-8-SUBPHASES.md §4 decides when the stratum may be called complete.",
     "open": [
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_ccm128_aad"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_ccm128_decrypt"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_ccm128_decrypt_ccm64"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_ccm128_encrypt"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_ccm128_encrypt_ccm64"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_ccm128_init"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_ccm128_setiv"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_ccm128_tag"
-      },
       {
         "declaring_header": "modes.h",
         "module": "src/modes/mod.rs",
@@ -5199,12 +5159,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "4194a4897c411f1a05fda51f7191fe5ddf2e9725e460992d21a115dc1a78feb4"
+      "sha256": "1fb027d188db51557fcdaf0ebb0c255049311d14bdede2d138041653c599f4b9"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "1ec33e134ddeef03d0e500c1a6c30c03ab67b7c2c9cbda7f26c36d3c38e4211b"
+      "sha256": "6551a7df50cfa9dae06cda1779d1a0eefff4945942f3e12b23051454eadea2ea"
     }
   ],
   "kind": "phase8-obligations",

@@ -370,7 +370,9 @@ here is. (`forensics/phase8-obligations.json` remains the only complete list.)
 `CRYPTO_gcm128_new`, `CRYPTO_gcm128_init`, `CRYPTO_gcm128_setiv`, `CRYPTO_gcm128_aad`,
 `CRYPTO_gcm128_encrypt`, `CRYPTO_gcm128_decrypt`, `CRYPTO_gcm128_encrypt_ctr32`,
 `CRYPTO_gcm128_decrypt_ctr32`, `CRYPTO_gcm128_finish`, `CRYPTO_gcm128_tag`,
-`CRYPTO_gcm128_release`.
+`CRYPTO_gcm128_release`, `CRYPTO_ccm128_init`, `CRYPTO_ccm128_setiv`, `CRYPTO_ccm128_aad`,
+`CRYPTO_ccm128_encrypt`, `CRYPTO_ccm128_decrypt`, `CRYPTO_ccm128_encrypt_ccm64`,
+`CRYPTO_ccm128_decrypt_ccm64`, `CRYPTO_ccm128_tag`.
 
 **Open exports (checked against the ledger):** `CRYPTO_xts128_encrypt`.
 Phase 8.2's last cipher family has landed, so the next cipher-adjacent work is 8.3's AEAD/XTS

@@ -14848,3 +14848,64 @@ does not exist.
 every AEAD row of `providers/defltprov.c`'s `deflt_ciphers[]`, remain open. The plan's
 anchored clauses moved in the same commit: the eleven GCM exports joined the landed clause and
 `CRYPTO_gcm128_init` left the open one, which now names only `CRYPTO_xts128_encrypt`.
+
+## D226 — CCM lands with both planes, and the message length is fixed before the AAD
+
+`src/modes/ccm.rs` lands the eight `CRYPTO_ccm128_*` exports of `crypto/modes/ccm128.c`:
+`init`, `setiv`, `aad`, `encrypt`/`decrypt`, `encrypt_ccm64`/`decrypt_ccm64` and `tag`.
+`implemented[libcrypto]` **2016 → 2024** and Phase 8 **175/595/16 → 183/587/16**, read from
+`forensics/phase8-obligations.json` rather than typed.
+
+**The plan's trap is the whole state machine, and it is transcribed literally.** `setiv` writes
+`mlen` into B0's last `L+1` octets and each body reconstructs the length from those octets and
+refuses with `-1` unless it equals `len`; there is no way to stream a message of unknown length.
+The arm drives every message through a fresh `init`/`setiv`/`aad`/`encrypt`, and `RT-CIPHER`
+observes both the accept and the refusal.
+
+**A real authority quirk, transcribed rather than corrected, and now observed.** The refusal
+returns *after* `nonce.c[0]` has been overwritten with `L = flags0 & 7`, so the flags byte is
+left with its `M` bits cleared. A subsequent `tag` therefore reads `M` as `2` and answers `0`
+rather than a tag. The crate matches the authority (bug-compatible), and `RT-CIPHER`'s
+`ccm.mismatch.tag` observation pins it. Two further asymmetries are the authority's and are kept:
+`encrypt` adds `((len+15)>>3)|1` to `blocks` and refuses past `2^61` with `-2`, while `decrypt`
+never touches `blocks` at all; the `-2` arm is transcribed from the source but is not reachable
+with a real buffer, so the court cannot observe it and does not claim to.
+
+**`CCM128_CONTEXT` is opaque and has no allocator, so the probe supplies the storage.** Unlike
+GCM there is no `_new`; the public header only forward-declares the struct, and the definition
+lives in the uninstalled `include/crypto/modes.h`, which neither the authority prefix nor the
+candidate install tree ships. The RT and CT probes therefore pass a 128-byte aligned buffer
+(the authority's context is 56 bytes) and never read it back, so the observation stays at the
+caller's boundary. This is an ABI-shape decision and it is recorded here rather than left for a
+reader to infer.
+
+**The `_ccm64` entry points are exercised through the caller's stream.** The probe supplies its
+own `ccm128_f` (the 64-bit-counter CCM stream) and compares the `_ccm64` answer with the plain
+path's on the same inputs; the authority's own asm stream is not reachable from the probe, so it
+is not compared — the entry point's loop is. The five AAD-length cases the corpus actually uses
+plus both encodings the arm can build are observed: `65279` (two octets) and `65280`/`70000`
+(six octets). The ten-octet encoding (`alen >= 2^32`) is transcribed but cannot be built in the
+court, and is not claimed.
+
+**Both planes.** `RT-CIPHER` **530 → 565 observations**: the new `rt_ccm128` arm observes the
+ciphertext and tag for AAD plus a partial final block, `L=8` and `L=2` nonces, the empty message
+with AAD only, an in-place decrypt, `aad(0)` as a no-op, the `tag`-length refusal, the
+length-mismatch refusal and the corrupted-tag quirk it leaves, the `_ccm64` pair against the
+plain path, and the three AAD-length encodings. `CT-CIPHER` **584 → 2972 vectors**:
+`forensics/vectors/ccm.json` mirrors **2388** corpus blocks from
+`test/recipes/30-test_evp_data/evpciph_aes_ccm_cavs.txt`, covering every even tag length in
+`[4,16]` and every `L` in `[2,8]`. The corpus is the CAVS *decryption-verification* set, so its
+477 `Result = CIPHERUPDATE_ERROR` blocks are skipped by the generator's existing `result`-key
+rule and every mirrored block is an encryption whose expected tail is the probe's own
+`accept || reject` answers. The probe's `ct_ccm` reads `M` from the vector's tag length and
+`L = 15 - ivlen` from the IV, rather than fixing either.
+
+**No independent CCM vector, recorded rather than hidden (D208).** No independent AES/CCM
+implementation is present in the pinned court image, so no boundary vector carries an
+independent oracle; the accept/reject self-check is the independent-of-corpus answer, and the
+family's `note` says so.
+
+**What this entry does not do.** OCB, XTS, SIV, ChaCha20-Poly1305 and the CTS rows, and every
+AEAD row of `providers/defltprov.c`'s `deflt_ciphers[]`, remain open. The plan's anchored
+clauses moved in the same commit: the eight CCM exports joined the landed clause, and the open
+one still names only `CRYPTO_xts128_encrypt`.
