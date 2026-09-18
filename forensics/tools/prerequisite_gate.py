@@ -84,6 +84,15 @@ from atlas_common import (  # noqa: E402
     write_json,
 )
 
+# The structured blocker claim and its fail-closed proof, shared with
+# `phase7_obligations.py` rather than duplicated. See docs/DECISIONS.md D198.
+from blocker_liveness import (  # noqa: E402
+    BlockerAtlas,
+    BlockedHandoff,
+    blockers_from_json,
+    check_rows,
+)
+
 GENERATOR = "forensics/tools/prerequisite_gate.py"
 OUT = ATLAS / "prerequisite-gate.json"
 
@@ -378,6 +387,33 @@ def main(argv: list[str]) -> int:
     def finding(kind: str, **kw: object) -> None:
         findings.append({"kind": kind, **kw})
 
+    # --- E: the liveness of a deferral's *reason* ---------------------------
+    # A deferral row above proves its symbol is still absent; it does not prove the
+    # blocker its reason names is. This is the missing half (D198): every `blocked_by`
+    # name must resolve against the authority, be absent from the crate, and be owned by
+    # the phase the row declares, and a row whose blockers have all landed is stale by
+    # definition rather than valid. The same checker `phase7_obligations.py` uses.
+    blocker_claims: list[BlockedHandoff] = []
+    for row in body["deferrals"]:
+        if "blocked_by" not in row:
+            continue
+        blocker_claims.append(
+            BlockedHandoff(
+                label=f"prerequisites.json deferral {row['symbol']}",
+                symbols=(row["symbol"],),
+                binding_phase=int(row["owner_phase"]),
+                blocked_by=blockers_from_json(row["blocked_by"]),
+                reason=row["reason"],
+            )
+        )
+    blocker_atlas = BlockerAtlas.from_repo(
+        implemented=implemented,
+        implemented_internal=set(surface["internal_symbols"]["c_style"]),
+        crate_defs=set(defs),
+    )
+    for msg in check_rows(blocker_atlas, blocker_claims, phase_state=states):
+        finding("deferral_blocker_is_stale", direction="E", detail=msg)
+
     # --- A: what the crate references and does not build --------------------
     referenced: dict[str, set[str]] = defaultdict(set)
     for module, names in refs.items():
@@ -547,6 +583,7 @@ def main(argv: list[str]) -> int:
             "authority_units": len(units),
             "names_referenced_and_not_built": checked_a,
             "deferrals_recorded": len(deferrals),
+            "deferral_blocker_rows": len(blocker_claims),
             "divergence_rows": len(divergences),
             "divergence_names_covered": len(covered),
         },
@@ -628,6 +665,8 @@ def main(argv: list[str]) -> int:
                 InputRef(name="typedef-owners", path=TYPEDEFS),
                 InputRef(name="transcription-edges", path=EDGES),
                 InputRef(name="symbol-ownership", path=OWNERSHIP),
+                InputRef(name="export-defining-units",
+                         path=ATLAS / "export-defining-units.json"),
                 InputRef(name="implemented-surface", path=SURFACE),
                 InputRef(name="phase-state", path=PHASE_STATE),
                 InputRef(name="prerequisites", path=PREREQUISITES),
