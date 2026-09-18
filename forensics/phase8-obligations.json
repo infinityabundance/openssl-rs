@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 16,
-      "implemented": 109,
-      "open_in_this_stratum": 661,
+      "implemented": 113,
+      "open_in_this_stratum": 657,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -1238,6 +1238,10 @@
       "MD5_Init",
       "MD5_Transform",
       "MD5_Update",
+      "MDC2",
+      "MDC2_Final",
+      "MDC2_Init",
+      "MDC2_Update",
       "RC4",
       "RC4_options",
       "RC4_set_key",
@@ -4270,30 +4274,6 @@
         "symbol": "IDEA_set_encrypt_key"
       },
       {
-        "declaring_header": "mdc2.h",
-        "module": "src/digest/mdc2.rs",
-        "received_from_phase": null,
-        "symbol": "MDC2"
-      },
-      {
-        "declaring_header": "mdc2.h",
-        "module": "src/digest/mdc2.rs",
-        "received_from_phase": null,
-        "symbol": "MDC2_Final"
-      },
-      {
-        "declaring_header": "mdc2.h",
-        "module": "src/digest/mdc2.rs",
-        "received_from_phase": null,
-        "symbol": "MDC2_Init"
-      },
-      {
-        "declaring_header": "mdc2.h",
-        "module": "src/digest/mdc2.rs",
-        "received_from_phase": null,
-        "symbol": "MDC2_Update"
-      },
-      {
         "declaring_header": "ec.h",
         "module": "src/ec/mod.rs",
         "received_from_phase": null,
@@ -5529,12 +5509,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "bc4367dceac9269d695de1096267ab442f83f344c4c71daf43da02fe2a6bc861"
+      "sha256": "3d2c3843f3e55c8be4cd17d721003c7a8d9abaafd3b75d0f934e23c64992bd73"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "e58ba310754c9a7037571d63f6ef4b331e1eed132628d147256eb5d2e26b4d19"
+      "sha256": "655c745154c4ac58d6076ea93342020863ce602903cf9882f3055fdddb8afe8d"
     }
   ],
   "kind": "phase8-obligations",

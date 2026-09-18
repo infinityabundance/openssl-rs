@@ -203,6 +203,16 @@ class EmitSource:
     # source says so, and the count is reported. A fixed-width source still fails closed on a
     # mismatch, which is D206's contract.
     variable_output: bool = False
+    # MDC2's corpus carries `Padding = 1` and `Padding = 2` blocks, which select the context's
+    # `pad_type`. This plane's driver calls the one-shot `MDC2`, whose `pad_type` is 1, so only
+    # the default-padding blocks are mirrored here; the second padding arm is observed by
+    # `RT-DIGEST`'s explicit `pad_type = 2` call instead (D215).
+    fixed_padding_only: bool = False
+    # Some constructions have no oracle in the pinned image at all. MDC2 is not in `hashlib` and
+    # RHash has no MDC2 implementation, so no independent implementation within reach can answer
+    # a boundary input. Skipping the boundary set is recorded on the file rather than filled
+    # with the authority's own answer, which would be no oracle at all (D208/D215).
+    boundary_oracle: bool = True
 
 
 EMIT_SOURCES: tuple[EmitSource, ...] = (
@@ -273,6 +283,12 @@ EMIT_SOURCES: tuple[EmitSource, ...] = (
     EmitSource("md5_sha1", "MD5-SHA1", 36, "MD5||SHA-1 concatenation (no standard)",
                "UNKNOWN",
                "test/recipes/30-test_evp_data/evpmd_md.txt"),
+    # MDC2 is the DES-based digest D197 moved from 8.1 to 8.2. Its observable is a digest, so it
+    # belongs in this plane; its two-padding corpus is filtered to the default padding (D215).
+    EmitSource("mdc2", "MDC2", 16, "ISO/IEC 10118-2 (MDC-2)",
+               "ISO/IEC 10118-2 (MDC-2)",
+               "test/recipes/30-test_evp_data/evpmd_mdc2.txt",
+               fixed_padding_only=True, boundary_oracle=False),
 )
 
 # The primary sources the plan names but whose constructions 8.1a has not transcribed. They are
@@ -1252,6 +1268,11 @@ def _emit_one(source: EmitSource, auth_source: Path, authority_id: str,
     for title, digest_line, fields in _parse_evpmd(text):
         if fields["Digest"].upper() != wanted:
             continue
+        if source.fixed_padding_only and fields.get("Padding", "1") not in ("", "1"):
+            # A non-default padding arm the one-shot driver cannot select; `RT-DIGEST`
+            # observes `pad_type = 2` directly instead (D215).
+            skipped += 1
+            continue
         raw_input = fields["Input"]
         if raw_input == "":
             input_bytes = b""
@@ -1313,7 +1334,15 @@ def _emit_one(source: EmitSource, auth_source: Path, authority_id: str,
     # (3) The boundary vectors. The expected bytes are the oracle's, because the standard
     # publishes the construction but not a vector for these exact inputs; each vector names the
     # oracle and says so. A missing oracle is `UNKNOWN`, never a guess.
-    for label, data in BOUNDARY_INPUTS:
+    boundary_skipped: str | None = None
+    if not source.boundary_oracle:
+        boundary_skipped = (
+            "no independent oracle for this construction is present in the pinned court image "
+            "(`hashlib` has no MDC2, and RHash has no MDC2 implementation), so no boundary "
+            "vector is emitted rather than one whose expected bytes came from the authority "
+            "it is supposed to check. Recorded, not guessed (D208, D215)."
+        )
+    for label, data in (() if boundary_skipped else BOUNDARY_INPUTS):
         got = _oracle_digest(source.algorithm, label, data)
         if got is None:
             raise VectorError(
@@ -1378,6 +1407,8 @@ def _emit_one(source: EmitSource, auth_source: Path, authority_id: str,
         },
         "vectors": vectors,
     }
+    if boundary_skipped:
+        body["provenance"]["boundary_vectors_skipped"] = boundary_skipped
     doc = envelope(
         kind=f"{KIND_PREFIX}{source.algorithm}",
         generator=GENERATOR,

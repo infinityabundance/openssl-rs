@@ -49,6 +49,7 @@ pub mod md32;
 pub mod md4;
 pub mod md5;
 pub mod md5_sha1;
+pub mod mdc2;
 pub mod ripemd;
 pub mod sha1;
 pub mod sha2;

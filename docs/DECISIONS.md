@@ -14454,3 +14454,36 @@ provider's (`providers/legacyprov.c:154-159`, `DES-{ECB,CBC,OFB,CFB,CFB1,CFB8}`)
 for RC4. No default-provider cipher row is written by this entry; the cipher half of
 `ossl_default_provider_init` is the next slice, and it will have to carry 3DES and Camellia and
 not single DES.
+
+## D216 — MDC2 lands with DES, and its evidence goes where its observable is
+
+MDC2 is the four-label family D197 held out of 8.1 because its body is DES's **low-level** API,
+and D215's slice landed DES. `src/digest/mdc2.rs` lands `MDC2_Init`/`MDC2_Update`/`MDC2_Final`/
+`MDC2` over `crate::des`'s `DES_set_odd_parity`/`DES_set_key_unchecked`/`DES_encrypt1`, exactly
+as `crypto/mdc2/mdc2dgst.c:94-100` calls them. `implemented[libcrypto]` **1950 → 1954** and
+Phase 8 **109/661/16 → 113/657/16**; `RT-DIGEST` **282 → 294 observations**; `CT-DIGEST`
+**270 → 272 vectors**; baseline 83 courts / 23,603 → **83 courts / 23,615 observations**. PIPELINE
+OK.
+
+**It is a hash, so its evidence is `CT-DIGEST`'s.** A vector for MDC2 is a message and a digest;
+the key and the IV are internal, and `CT-CIPHER`'s schema carries them. `forensics/vectors/mdc2.json`
+is therefore a `digest-vectors-` file on the `CT-DIGEST` registry, and `RT-DIGEST` carries its
+differential arm. Putting it in the cipher plane would have been a schema that does not describe
+the observable.
+
+**Both padding arms are observed, and one of them is only reachable through the context.**
+`MDC2_Init` sets `pad_type = 1`; the one-shot `MDC2` is therefore always the default. The corpus
+publishes a second value for `Padding = 2`, which a caller selects by setting `c->pad_type = 2`
+between `Init` and `Final`. The emitter mirrors only the default-padding blocks (the one-shot
+driver cannot select the other), and `rt_digest_probe.c` gains `rt_mdc2_padding`, which drives
+both arms through the context and prints both digests: **the differential plane is where the
+second arm is compared**, and both matched the authority on the first run.
+
+**The boundary plane has no oracle for MDC2, and that is recorded rather than filled.** Every
+other `CT-DIGEST` construction carries independent boundary vectors from `hashlib` or the
+committed RHash table. MDC2 is in neither — `hashlib` has no MDC2 and RHash has no MDC2
+implementation — and the only implementation in reach is the authority it is supposed to check.
+`EmitSource.boundary_oracle = False` therefore skips the boundary set for MDC2 and records
+`boundary_vectors_skipped` in the vector file's provenance with that reason, so the CT claim's
+independence census is not inflated by bytes the authority produced (D208's disposition for
+`rhash`, applied to a construction neither oracle can reach).

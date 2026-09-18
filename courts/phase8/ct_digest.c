@@ -48,6 +48,7 @@
 
 #include <openssl/md4.h>
 #include <openssl/md5.h>
+#include <openssl/mdc2.h>
 #include <openssl/ripemd.h>
 #include <openssl/sha.h>
 #include <openssl/whrlpool.h>
@@ -91,6 +92,7 @@ CT_DEFINE(sha256, SHA256_CTX, SHA256_Init, SHA256_Update, SHA256_Final)
 CT_DEFINE(sha384, SHA512_CTX, SHA384_Init, SHA384_Update, SHA384_Final)
 CT_DEFINE(sha512, SHA512_CTX, SHA512_Init, SHA512_Update, SHA512_Final)
 CT_DEFINE(whirlpool, WHIRLPOOL_CTX, WHIRLPOOL_Init, WHIRLPOOL_Update, WHIRLPOOL_Final)
+CT_DEFINE(mdc2, MDC2_CTX, MDC2_Init, MDC2_Update, MDC2_Final)
 
 static const struct ct_algorithm CT_ALGORITHMS[] = {
     {"md4", md4_init, md4_update, md4_final, 16u},
@@ -102,6 +104,7 @@ static const struct ct_algorithm CT_ALGORITHMS[] = {
     {"sha384", sha384_init, sha384_update, sha384_final, 48u},
     {"sha512", sha512_init, sha512_update, sha512_final, 64u},
     {"whirlpool", whirlpool_init, whirlpool_update, whirlpool_final, 64u},
+    {"mdc2", mdc2_init, mdc2_update, mdc2_final, 16u},
 };
 
 /* The provider-only constructions. None of these has an exported low-level `X_Init`/`X_Update`

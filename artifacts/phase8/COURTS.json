@@ -7,9 +7,9 @@
     "courts": [
       {
         "authority_exit_code": 0,
-        "authority_observations": 282,
+        "authority_observations": 294,
         "candidate_exit_code": 0,
-        "candidate_observations": 282,
+        "candidate_observations": 294,
         "candidate_stderr_tail": [],
         "court": "RT-DIGEST",
         "crashed": false,
@@ -85,6 +85,15 @@
             "source": "forensics/vectors/md5_sha1.json",
             "standard": "MD5||SHA-1 concatenation (no standard)",
             "total": 11
+          },
+          "mdc2": {
+            "digest_bytes": 16,
+            "failed": 0,
+            "passed": 2,
+            "primary_source": "ISO/IEC 10118-2 (MDC-2)",
+            "source": "forensics/vectors/mdc2.json",
+            "standard": "ISO/IEC 10118-2 (MDC-2)",
+            "total": 2
           },
           "ripemd160": {
             "digest_bytes": 20,
@@ -223,19 +232,19 @@
           }
         },
         "authority": "openssl-3.6.4-production",
-        "calls_checked": 590,
+        "calls_checked": 592,
         "candidate_shared_object": "artifacts/phase2/libcrypto.so.3",
-        "claim": "A correctness-vector PASS means candidate-only construction verification: the candidate's construction produced the committed expected bytes for every vector and every update mode. Of the 270 committed vectors, 110 are published standard values mirrored through the pinned OpenSSL test corpus and 160 are independently-derived boundary vectors with named oracles (144 by hashlib; 16 by rhash v1.4.6) -- these counts are read from the 20 committed `forensics/vectors/<algorithm>.json` files by `correctness_vectors.py`, not typed. It is NOT OpenSSL parity: the corpus does not contain the authority's observable behaviour, and that is RT-DIGEST's question. It is NOT independent cryptographic validation and NOT formal validation: the mirrored vectors are the standards' published values, and published test vectors are informal verification, not a certificate. NIST CAVP and Project Wycheproof are corpora this plane does NOT use; they are recorded as declined-with-reason in correctness_vectors.py's header. See docs/DECISIONS.md D201 and D208 and docs/PHASE-8-SUBPHASES.md.",
+        "claim": "A correctness-vector PASS means candidate-only construction verification: the candidate's construction produced the committed expected bytes for every vector and every update mode. Of the 272 committed vectors, 112 are published standard values mirrored through the pinned OpenSSL test corpus and 160 are independently-derived boundary vectors with named oracles (144 by hashlib; 16 by rhash v1.4.6) -- these counts are read from the 21 committed `forensics/vectors/<algorithm>.json` files by `correctness_vectors.py`, not typed. It is NOT OpenSSL parity: the corpus does not contain the authority's observable behaviour, and that is RT-DIGEST's question. It is NOT independent cryptographic validation and NOT formal validation: the mirrored vectors are the standards' published values, and published test vectors are informal verification, not a certificate. NIST CAVP and Project Wycheproof are corpora this plane does NOT use; they are recorded as declined-with-reason in correctness_vectors.py's header. See docs/DECISIONS.md D201 and D208 and docs/PHASE-8-SUBPHASES.md.",
         "court": "CT-DIGEST",
         "derivation_census": {
-          "corpus": 110,
-          "files": 20,
+          "corpus": 112,
+          "files": 21,
           "independent": 160,
           "oracles": {
             "hashlib": 144,
             "rhash v1.4.6": 16
           },
-          "vectors": 270
+          "vectors": 272
         },
         "failures": [],
         "kind": "construction-vectors",
@@ -1635,6 +1644,24 @@
             "id": "md5_sha1-boundary-multi1000",
             "input_hex": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb020910171e252c333a41484f565d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f0f7fe050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4ebf2f900070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb020910171e252c333a41484f565d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f0f7fe050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4ebf2f900070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb020910171e252c333a41484f565d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f0f7fe050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4ebf2f900070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb020910171e252c333a41484f565d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f0f7fe050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4ebf2f900070e151c232a31383f464d54",
             "mode": "byte",
+            "passed": true
+          },
+          {
+            "actual_hex": "42e50cd224baceba760bdd2bd409281a",
+            "algorithm": "mdc2",
+            "expected_hex": "42e50cd224baceba760bdd2bd409281a",
+            "id": "mdc2-evpmd_mdc2-12",
+            "input_hex": "4e6f77206973207468652074696d6520666f7220616c6c20",
+            "mode": "one",
+            "passed": true
+          },
+          {
+            "actual_hex": "42e50cd224baceba760bdd2bd409281a",
+            "algorithm": "mdc2",
+            "expected_hex": "42e50cd224baceba760bdd2bd409281a",
+            "id": "mdc2-evpmd_mdc2-17",
+            "input_hex": "4e6f77206973207468652074696d6520666f7220616c6c20",
+            "mode": "one",
             "passed": true
           },
           {
@@ -5554,9 +5581,9 @@
           }
         ],
         "stage": "compare",
-        "vectors_checked": 270,
+        "vectors_checked": 272,
         "vectors_failed": 0,
-        "vectors_passed": 270,
+        "vectors_passed": 272,
         "verdict": "pass"
       },
       {
@@ -6571,7 +6598,7 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_digest_probe.c",
-      "sha256": "e27a2e96ebc9e30f03695207a5d4b46fcdf7e80c7e31af92bbd93b30bce152bd"
+      "sha256": "5fb62075d112bcc30ba10468bfd00501f820e88900e385e71b1752d0331d7307"
     },
     {
       "name": "probe",
@@ -6581,7 +6608,7 @@
     {
       "name": "correctness-probe",
       "path": "courts/phase8/ct_digest.c",
-      "sha256": "e19d1ee9e3a9a3a63c832f413d2ae76897c93e48af3ec54769eab4fb898c346e"
+      "sha256": "4dc42cf9575837327728700eddac8ec3f1da61330d1e1103dbfb3408ae6be883"
     },
     {
       "name": "correctness-vectors:md4",
@@ -6592,6 +6619,11 @@
       "name": "correctness-vectors:md5",
       "path": "forensics/vectors/md5.json",
       "sha256": "73f6456402ff7ca3d229ef29df3a52f1356dcefd67bc051932e3e7f22932646b"
+    },
+    {
+      "name": "correctness-vectors:mdc2",
+      "path": "forensics/vectors/mdc2.json",
+      "sha256": "3905205b02c637ed35d46321db74778847dbbae202c6cc5fd451a96eb07790e6"
     },
     {
       "name": "correctness-vectors:ripemd160",
