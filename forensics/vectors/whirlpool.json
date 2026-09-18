@@ -198,9 +198,15 @@
         ],
         "provenance": {
           "derivation": "independent",
+          "generation": {
+            "command": "rhash --whirlpool --simple -",
+            "environment": "developer host (RHash v1.4.6); rhash is NOT present in the pinned court image, so this derivation is reproducible from the tool, version and command recorded here but not inside the court. --self-check is the in-court check against the corpus's published values.",
+            "tool": "rhash",
+            "version": "v1.4.6"
+          },
           "label": "empty",
           "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
-          "oracle": "rhash (independent implementation, neither the crate nor the authority build)",
+          "oracle": "rhash v1.4.6 (independent implementation, neither the crate nor the authority build); `rhash --whirlpool --simple -` over the vector's input bytes, first whitespace-separated field of stdout",
           "primary_source": "ISO/IEC 10118-3 (Whirlpool); Rijmen–Barreto submission, test vectors"
         },
         "standard": "ISO/IEC 10118-3 (Whirlpool)"
@@ -216,9 +222,15 @@
         ],
         "provenance": {
           "derivation": "independent",
+          "generation": {
+            "command": "rhash --whirlpool --simple -",
+            "environment": "developer host (RHash v1.4.6); rhash is NOT present in the pinned court image, so this derivation is reproducible from the tool, version and command recorded here but not inside the court. --self-check is the in-court check against the corpus's published values.",
+            "tool": "rhash",
+            "version": "v1.4.6"
+          },
           "label": "one",
           "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
-          "oracle": "rhash (independent implementation, neither the crate nor the authority build)",
+          "oracle": "rhash v1.4.6 (independent implementation, neither the crate nor the authority build); `rhash --whirlpool --simple -` over the vector's input bytes, first whitespace-separated field of stdout",
           "primary_source": "ISO/IEC 10118-3 (Whirlpool); Rijmen–Barreto submission, test vectors"
         },
         "standard": "ISO/IEC 10118-3 (Whirlpool)"
@@ -234,9 +246,15 @@
         ],
         "provenance": {
           "derivation": "independent",
+          "generation": {
+            "command": "rhash --whirlpool --simple -",
+            "environment": "developer host (RHash v1.4.6); rhash is NOT present in the pinned court image, so this derivation is reproducible from the tool, version and command recorded here but not inside the court. --self-check is the in-court check against the corpus's published values.",
+            "tool": "rhash",
+            "version": "v1.4.6"
+          },
           "label": "len55",
           "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
-          "oracle": "rhash (independent implementation, neither the crate nor the authority build)",
+          "oracle": "rhash v1.4.6 (independent implementation, neither the crate nor the authority build); `rhash --whirlpool --simple -` over the vector's input bytes, first whitespace-separated field of stdout",
           "primary_source": "ISO/IEC 10118-3 (Whirlpool); Rijmen–Barreto submission, test vectors"
         },
         "standard": "ISO/IEC 10118-3 (Whirlpool)"
@@ -252,9 +270,15 @@
         ],
         "provenance": {
           "derivation": "independent",
+          "generation": {
+            "command": "rhash --whirlpool --simple -",
+            "environment": "developer host (RHash v1.4.6); rhash is NOT present in the pinned court image, so this derivation is reproducible from the tool, version and command recorded here but not inside the court. --self-check is the in-court check against the corpus's published values.",
+            "tool": "rhash",
+            "version": "v1.4.6"
+          },
           "label": "len56",
           "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
-          "oracle": "rhash (independent implementation, neither the crate nor the authority build)",
+          "oracle": "rhash v1.4.6 (independent implementation, neither the crate nor the authority build); `rhash --whirlpool --simple -` over the vector's input bytes, first whitespace-separated field of stdout",
           "primary_source": "ISO/IEC 10118-3 (Whirlpool); Rijmen–Barreto submission, test vectors"
         },
         "standard": "ISO/IEC 10118-3 (Whirlpool)"
@@ -270,9 +294,15 @@
         ],
         "provenance": {
           "derivation": "independent",
+          "generation": {
+            "command": "rhash --whirlpool --simple -",
+            "environment": "developer host (RHash v1.4.6); rhash is NOT present in the pinned court image, so this derivation is reproducible from the tool, version and command recorded here but not inside the court. --self-check is the in-court check against the corpus's published values.",
+            "tool": "rhash",
+            "version": "v1.4.6"
+          },
           "label": "len63",
           "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
-          "oracle": "rhash (independent implementation, neither the crate nor the authority build)",
+          "oracle": "rhash v1.4.6 (independent implementation, neither the crate nor the authority build); `rhash --whirlpool --simple -` over the vector's input bytes, first whitespace-separated field of stdout",
           "primary_source": "ISO/IEC 10118-3 (Whirlpool); Rijmen–Barreto submission, test vectors"
         },
         "standard": "ISO/IEC 10118-3 (Whirlpool)"
@@ -288,9 +318,15 @@
         ],
         "provenance": {
           "derivation": "independent",
+          "generation": {
+            "command": "rhash --whirlpool --simple -",
+            "environment": "developer host (RHash v1.4.6); rhash is NOT present in the pinned court image, so this derivation is reproducible from the tool, version and command recorded here but not inside the court. --self-check is the in-court check against the corpus's published values.",
+            "tool": "rhash",
+            "version": "v1.4.6"
+          },
           "label": "len64",
           "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
-          "oracle": "rhash (independent implementation, neither the crate nor the authority build)",
+          "oracle": "rhash v1.4.6 (independent implementation, neither the crate nor the authority build); `rhash --whirlpool --simple -` over the vector's input bytes, first whitespace-separated field of stdout",
           "primary_source": "ISO/IEC 10118-3 (Whirlpool); Rijmen–Barreto submission, test vectors"
         },
         "standard": "ISO/IEC 10118-3 (Whirlpool)"
@@ -306,9 +342,15 @@
         ],
         "provenance": {
           "derivation": "independent",
+          "generation": {
+            "command": "rhash --whirlpool --simple -",
+            "environment": "developer host (RHash v1.4.6); rhash is NOT present in the pinned court image, so this derivation is reproducible from the tool, version and command recorded here but not inside the court. --self-check is the in-court check against the corpus's published values.",
+            "tool": "rhash",
+            "version": "v1.4.6"
+          },
           "label": "len65",
           "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
-          "oracle": "rhash (independent implementation, neither the crate nor the authority build)",
+          "oracle": "rhash v1.4.6 (independent implementation, neither the crate nor the authority build); `rhash --whirlpool --simple -` over the vector's input bytes, first whitespace-separated field of stdout",
           "primary_source": "ISO/IEC 10118-3 (Whirlpool); Rijmen–Barreto submission, test vectors"
         },
         "standard": "ISO/IEC 10118-3 (Whirlpool)"
@@ -324,9 +366,15 @@
         ],
         "provenance": {
           "derivation": "independent",
+          "generation": {
+            "command": "rhash --whirlpool --simple -",
+            "environment": "developer host (RHash v1.4.6); rhash is NOT present in the pinned court image, so this derivation is reproducible from the tool, version and command recorded here but not inside the court. --self-check is the in-court check against the corpus's published values.",
+            "tool": "rhash",
+            "version": "v1.4.6"
+          },
           "label": "multi1000",
           "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
-          "oracle": "rhash (independent implementation, neither the crate nor the authority build)",
+          "oracle": "rhash v1.4.6 (independent implementation, neither the crate nor the authority build); `rhash --whirlpool --simple -` over the vector's input bytes, first whitespace-separated field of stdout",
           "primary_source": "ISO/IEC 10118-3 (Whirlpool); Rijmen–Barreto submission, test vectors"
         },
         "standard": "ISO/IEC 10118-3 (Whirlpool)"

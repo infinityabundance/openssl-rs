@@ -7,9 +7,9 @@
     "courts": [
       {
         "authority_exit_code": 0,
-        "authority_observations": 247,
+        "authority_observations": 282,
         "candidate_exit_code": 0,
-        "candidate_observations": 247,
+        "candidate_observations": 282,
         "candidate_stderr_tail": [],
         "court": "RT-DIGEST",
         "crashed": false,
@@ -208,8 +208,18 @@
         "authority": "openssl-3.6.4-production",
         "calls_checked": 590,
         "candidate_shared_object": "artifacts/phase2/libcrypto.so.3",
-        "claim": "A correctness-vector PASS means candidate-only construction verification: the candidate's construction produced the committed expected bytes for every vector and every update mode, where the vectors are standard-derived values mirrored in the pinned OpenSSL test corpus. It is NOT OpenSSL parity: the corpus does not contain the authority's observable behaviour, and that is RT-DIGEST's question. It is NOT independent cryptographic validation and NOT formal validation: the vectors are the standards' published values, and published test vectors are informal verification, not a certificate. NIST CAVP and Project Wycheproof are corpora this plane does NOT use; they are recorded as declined-with-reason in correctness_vectors.py's header. See docs/DECISIONS.md D201 and docs/PHASE-8-SUBPHASES.md.",
+        "claim": "A correctness-vector PASS means candidate-only construction verification: the candidate's construction produced the committed expected bytes for every vector and every update mode. Of the 270 committed vectors, 110 are published standard values mirrored through the pinned OpenSSL test corpus and 160 are independently-derived boundary vectors with named oracles (144 by hashlib; 16 by rhash v1.4.6) -- these counts are read from the 20 committed `forensics/vectors/<algorithm>.json` files by `correctness_vectors.py`, not typed. It is NOT OpenSSL parity: the corpus does not contain the authority's observable behaviour, and that is RT-DIGEST's question. It is NOT independent cryptographic validation and NOT formal validation: the mirrored vectors are the standards' published values, and published test vectors are informal verification, not a certificate. NIST CAVP and Project Wycheproof are corpora this plane does NOT use; they are recorded as declined-with-reason in correctness_vectors.py's header. See docs/DECISIONS.md D201 and D208 and docs/PHASE-8-SUBPHASES.md.",
         "court": "CT-DIGEST",
+        "derivation_census": {
+          "corpus": 110,
+          "files": 20,
+          "independent": 160,
+          "oracles": {
+            "hashlib": 144,
+            "rhash v1.4.6": 16
+          },
+          "vectors": 270
+        },
         "failures": [],
         "kind": "construction-vectors",
         "plane": "correctness",
@@ -5549,7 +5559,7 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_digest_probe.c",
-      "sha256": "d3a0bce92865148f7e8176a641106e622b795e564d18a0a55c0732b69e7c2f76"
+      "sha256": "e27a2e96ebc9e30f03695207a5d4b46fcdf7e80c7e31af92bbd93b30bce152bd"
     },
     {
       "name": "correctness-probe",
@@ -5559,7 +5569,7 @@
     {
       "name": "correctness-vectors:md4",
       "path": "forensics/vectors/md4.json",
-      "sha256": "e485388690d019c6c0f9f669f85e7c43aba22b3e047634abf0f700816bff2d11"
+      "sha256": "e684112c23db54baa3a686c5bae99b724dcf1f093aaef094c7e310acc1dc4631"
     },
     {
       "name": "correctness-vectors:md5",
@@ -5599,7 +5609,7 @@
     {
       "name": "correctness-vectors:whirlpool",
       "path": "forensics/vectors/whirlpool.json",
-      "sha256": "92de0c6c930f33cf05845484a77dbb23b86e60ff3910799aaeb5a2135a21ed02"
+      "sha256": "389cb03fe04838916a94b231a76f0848efaed0a5af0f893c04dd73ccfcedbacf"
     },
     {
       "name": "correctness-vectors:sha256_192",

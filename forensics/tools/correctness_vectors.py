@@ -63,6 +63,15 @@ neither the crate nor the pinned authority build, the oracle is named in the vec
 provenance, and what that establishes is stated with it. `UNKNOWN` is a valid provenance
 value here and is preferred to a guess.
 
+Because the corpus contains both kinds, the claim `run_court` attaches to a `CT-*` record is
+**generated from the census of the vectors it just ran** -- how many are mirrored and how many
+independently derived, and by which oracle -- rather than a fixed sentence. A claim a generator
+owns must be generated (D205), and a fixed "every vector is mirrored" sentence went false the
+moment the first `derivation: independent` vector landed while every individual record stayed
+honest (D208). The `rhash` oracle additionally records its tool, version and exact command, so
+the bytes can be reproduced rather than trusted; `rhash` is not in the pinned court image, and
+that cost is stated with the record.
+
 Where the committed vectors come from
 -------------------------------------
 `forensics/vectors/<algorithm>.json` is committed data in the atlas envelope
@@ -281,6 +290,17 @@ DECLARED_PRIMARY_SOURCES: dict[str, str] = {
 #     expectations are the committed table below, derived once with `rhash` (an independent
 #     implementation, not the crate and not the pinned authority build).
 #
+# The `rhash` derivation is recorded rather than implied, because an oracle whose environment is
+# not recorded is not reproducible: the tool, its version and the invocation are named below, and
+# `forensics/vectors/md4.json`/`whirlpool.json` carry a `provenance.generation` object with the
+# same record per vector. **`rhash` is not present in the pinned court image**, so this is a
+# host-side derivation reproduced from the command and version and not an in-court one; the cost
+# is that `--self-check` cannot re-derive the table inside the court. What it *can* do, and does,
+# is compare the table against the corpus's published MD4/Whirlpool values wherever they overlap,
+# which is the in-court check that a changed table is caught. The version recorded is the one the
+# table was verified against; any other version is a different oracle and would need its own
+# record.
+#
 # The table is keyed by the boundary label, and the label maps to a deterministic input
 # (`BOUNDARY_INPUTS`), so the input is not a free parameter. A missing entry is reported as
 # `UNKNOWN` rather than guessed.
@@ -327,9 +347,36 @@ _REFERENCE_DIGESTS: dict[str, dict[str, str]] = {
     },
 }
 
-# `rhash`'s own name for the two constructions it supplies, for the provenance string.
-_REFERENCE_ORACLE = "rhash (independent implementation, neither the crate nor the authority build)"
+# `rhash`'s own name for the two constructions it supplies, for the provenance string, with the
+# version and invocation recorded per D208: an oracle that does not name its version and command
+# is not reproducible. `rhash` is absent from the pinned court image, so the record is what makes
+# the derivation checkable rather than an in-court rerun.
+_REFERENCE_ORACLE_VERSION = "rhash v1.4.6"
+_REFERENCE_ORACLE_GENERATION = {
+    "tool": "rhash",
+    "version": "v1.4.6",
+    "environment": (
+        "developer host (RHash v1.4.6); rhash is NOT present in the pinned court image, so this "
+        "derivation is reproducible from the tool, version and command recorded here but not "
+        "inside the court. --self-check is the in-court check against the corpus's published "
+        "values."
+    ),
+}
 _HASHLIB_ORACLE = "hashlib (Python standard library)"
+
+
+def _reference_oracle(algorithm: str) -> str:
+    """The `rhash` oracle string for one construction, version and command named.
+
+    `rhash` spells both of these as its own algorithm name (`--md4`, `--whirlpool`), and
+    `--simple` prints `<hex>  (stdin)`; the first whitespace-separated field is the digest. The
+    command is the one the committed table was produced with.
+    """
+    return (
+        f"{_REFERENCE_ORACLE_VERSION} (independent implementation, neither the crate nor the "
+        f"authority build); `rhash --{algorithm} --simple -` over the vector's input bytes, "
+        f"first whitespace-separated field of stdout"
+    )
 
 
 def _pattern(n: int) -> bytes:
@@ -372,7 +419,7 @@ def _oracle_digest(algorithm: str, label: str, data: bytes) -> tuple[bytes, str]
         )
     table = _REFERENCE_DIGESTS.get(algorithm)
     if table is not None and label in table:
-        return bytes.fromhex(table[label]), _REFERENCE_ORACLE
+        return bytes.fromhex(table[label]), _reference_oracle(algorithm)
     return None
 
 
@@ -549,6 +596,40 @@ def _parse_probe(stdout: str) -> dict[int, tuple[str, str]]:
     return results
 
 
+def _oracle_family(oracle: str) -> str:
+    """The short family name of an oracle string, for the census (e.g. `hashlib`, `rhash`)."""
+    return oracle.split(" (", 1)[0].strip() or "UNKNOWN"
+
+
+def _derivation_census(sets: list[VectorSet]) -> dict:
+    """Count the committed vectors by derivation, and the independent ones by oracle family.
+
+    This is the census the `CT-DIGEST` claim is **generated from** rather than typing a fixed
+    sentence: when D206 added independently-derived boundary vectors, a claim that said every
+    vector was mirrored went stale while every individual vector record stayed honest (D205's
+    rule, applied to a generated claim rather than a hand-written one).
+    """
+    corpus = 0
+    independent = 0
+    oracles: dict[str, int] = {}
+    for vs in sets:
+        for v in vs.vectors:
+            derivation = str(v.provenance.get("derivation", ""))
+            if derivation == "corpus":
+                corpus += 1
+            elif derivation == "independent":
+                independent += 1
+                family = _oracle_family(str(v.provenance.get("oracle", "")))
+                oracles[family] = oracles.get(family, 0) + 1
+    return {
+        "vectors": corpus + independent,
+        "corpus": corpus,
+        "independent": independent,
+        "oracles": dict(sorted(oracles.items())),
+        "files": len(sets),
+    }
+
+
 def run_court(
     name: str,
     algorithms: tuple[str, ...],
@@ -685,6 +766,11 @@ def run_court(
         summary["failed"] = len(vs.vectors) - passed
         total += len(vs.vectors)
 
+    # The claim is generated from the census of the very vectors this court just ran, so a later
+    # slice that adds a derivation the sentence does not mention cannot leave it stale. See D205
+    # (a generator owns its quantity) and D208.
+    census = _derivation_census(sets)
+    oracle_parts = "; ".join(f"{n} by {name}" for name, n in census["oracles"].items())
     passed_vectors = total - len(vector_failed_ids)
 
     return {
@@ -698,6 +784,7 @@ def run_court(
         "vectors_passed": passed_vectors,
         "vectors_failed": total - passed_vectors,
         "calls_checked": calls_checked,
+        "derivation_census": census,
         "algorithms": per_algorithm,
         "results": results,
         "failures": failures,
@@ -706,15 +793,20 @@ def run_court(
         "claim": (
             "A correctness-vector PASS means candidate-only construction verification: the "
             "candidate's construction produced the committed expected bytes for every "
-            "vector and every update mode, where the vectors are standard-derived values "
-            "mirrored in the pinned OpenSSL test corpus. It is NOT OpenSSL parity: the "
-            "corpus does not contain the authority's observable behaviour, and that is "
-            "RT-DIGEST's question. It is NOT independent cryptographic validation and NOT "
-            "formal validation: the vectors are the standards' published values, and "
+            "vector and every update mode. Of the "
+            f"{census['vectors']} committed vectors, {census['corpus']} are published standard "
+            "values mirrored through the pinned OpenSSL test corpus and "
+            f"{census['independent']} are independently-derived boundary vectors with named "
+            f"oracles ({oracle_parts}) -- these counts are read from the "
+            f"{census['files']} committed `forensics/vectors/<algorithm>.json` files by "
+            "`correctness_vectors.py`, not typed. It is NOT OpenSSL parity: the corpus does "
+            "not contain the authority's observable behaviour, and that is RT-DIGEST's "
+            "question. It is NOT independent cryptographic validation and NOT formal "
+            "validation: the mirrored vectors are the standards' published values, and "
             "published test vectors are informal verification, not a certificate. NIST CAVP "
             "and Project Wycheproof are corpora this plane does NOT use; they are recorded as "
             "declined-with-reason in correctness_vectors.py's header. See docs/DECISIONS.md "
-            "D201 and docs/PHASE-8-SUBPHASES.md."
+            "D201 and D208 and docs/PHASE-8-SUBPHASES.md."
         ),
     }
 
@@ -976,25 +1068,34 @@ def _emit_one(source: EmitSource, auth_source: Path, authority_id: str,
                 f"correctness-vectors: oracle for {source.algorithm}/{label} answered "
                 f"{len(expected)} bytes, expected {source.digest_bytes}"
             )
+        prov = {
+            "primary_source": source.primary_source,
+            "derivation": "independent",
+            "oracle": oracle,
+            "label": label,
+            "note": (
+                "The primary source publishes the construction but not a vector for this "
+                "input; the expected bytes are the named oracle's answer. The oracle is "
+                "data-independent of the crate and of the pinned authority build, but this "
+                "is NOT a primary-source published value. Run --self-check to compare the "
+                "oracle against the primary-source values the corpus mirrors."
+            ),
+        }
+        # An oracle that is not the in-court `hashlib` carries its own generation record: tool,
+        # version and the exact command, so the bytes can be reproduced rather than trusted. The
+        # `hashlib` oracle needs none -- `--self-check` re-runs it in the court.
+        if oracle.startswith("rhash"):
+            prov["generation"] = {
+                **_REFERENCE_ORACLE_GENERATION,
+                "command": f"rhash --{source.algorithm} --simple -",
+            }
         vectors.append({
             "id": f"{source.algorithm}-boundary-{label}",
             "standard": source.standard,
             "input_hex": data.hex(),
             "expected_hex": expected.hex(),
             "modes": list(BOUNDARY_MODES),
-            "provenance": {
-                "primary_source": source.primary_source,
-                "derivation": "independent",
-                "oracle": oracle,
-                "label": label,
-                "note": (
-                    "The primary source publishes the construction but not a vector for this "
-                    "input; the expected bytes are the named oracle's answer. The oracle is "
-                    "data-independent of the crate and of the pinned authority build, but this "
-                    "is NOT a primary-source published value. Run --self-check to compare the "
-                    "oracle against the primary-source values the corpus mirrors."
-                ),
-            },
+            "provenance": prov,
         })
 
     body = {
