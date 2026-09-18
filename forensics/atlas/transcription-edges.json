@@ -705,6 +705,13 @@
         "translation_unit": "crypto/modes/wrap128.c"
       },
       {
+        "module": "src/modes/xts.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "1/1",
+        "translation_unit": "crypto/modes/xts128.c"
+      },
+      {
         "module": "src/params/build.rs",
         "phase": 6,
         "phase_source": "module-declaration",
@@ -21415,6 +21422,68 @@
           "src/modes/wrap.rs"
         ],
         "tu": "crypto/modes/wrap128.c"
+      },
+      {
+        "identifiers": [
+          "CRYPTO_xts128_encrypt",
+          "DECLARE_IS_ENDIAN",
+          "IS_LITTLE_ENDIAN",
+          "STRICT_ALIGNMENT",
+          "XTS128_CONTEXT",
+          "__GNUC__",
+          "__aligned__",
+          "__attribute",
+          "block1",
+          "block2",
+          "c",
+          "carry",
+          "char",
+          "const",
+          "crypto",
+          "ctx",
+          "d",
+          "defined",
+          "else",
+          "enc",
+          "endif",
+          "for",
+          "h",
+          "i",
+          "if",
+          "ifdef",
+          "ifndef",
+          "include",
+          "inp",
+          "int",
+          "iv",
+          "key1",
+          "key2",
+          "len",
+          "memcpy",
+          "openssl",
+          "out",
+          "res",
+          "return",
+          "scratch",
+          "size_t",
+          "string",
+          "tweak",
+          "tweak1",
+          "typedef",
+          "u",
+          "u32",
+          "u64",
+          "u64_a1",
+          "u8",
+          "union",
+          "unsigned",
+          "while",
+          "x87"
+        ],
+        "modules": [
+          "src/modes/xts.rs"
+        ],
+        "tu": "crypto/modes/xts128.c"
       },
       {
         "identifiers": [

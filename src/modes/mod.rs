@@ -56,6 +56,7 @@ use core::ptr;
 pub mod ccm;
 pub mod gcm;
 pub mod wrap;
+pub mod xts;
 
 /// `block128_f` — `include/openssl/modes.h:25-26`: one block cipher call, `in` and `out` each
 /// sixteen bytes, `key` the caller's key schedule.

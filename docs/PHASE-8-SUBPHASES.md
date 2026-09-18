@@ -372,11 +372,11 @@ here is. (`forensics/phase8-obligations.json` remains the only complete list.)
 `CRYPTO_gcm128_decrypt_ctr32`, `CRYPTO_gcm128_finish`, `CRYPTO_gcm128_tag`,
 `CRYPTO_gcm128_release`, `CRYPTO_ccm128_init`, `CRYPTO_ccm128_setiv`, `CRYPTO_ccm128_aad`,
 `CRYPTO_ccm128_encrypt`, `CRYPTO_ccm128_decrypt`, `CRYPTO_ccm128_encrypt_ccm64`,
-`CRYPTO_ccm128_decrypt_ccm64`, `CRYPTO_ccm128_tag`.
+`CRYPTO_ccm128_decrypt_ccm64`, `CRYPTO_ccm128_tag`, `CRYPTO_xts128_encrypt`.
 
-**Open exports (checked against the ledger):** `CRYPTO_xts128_encrypt`.
-Phase 8.2's last cipher family has landed, so the next cipher-adjacent work is 8.3's AEAD/XTS
-layer rather than another low-level block cipher.
+**Open exports (checked against the ledger):** `CRYPTO_ocb128_init`.
+Phase 8.2's last cipher family and 8.3's GCM, CCM and XTS have landed, so what remains open
+here is OCB and the AEAD rows of the default provider's `deflt_ciphers[]`.
 
 ### The sixteen recorded hand-offs, and why the four key types are not hand-offs
 

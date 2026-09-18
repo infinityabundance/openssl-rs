@@ -2094,6 +2094,91 @@ static void rt_ccm128(void)
     }
 }
 
+/*
+ * XTS. The context is caller-populated — the public header only forward-declares
+ * `XTS128_CONTEXT` — so the probe supplies the four fields itself. `block1` is the data-unit
+ * cipher and, for decryption, the caller hands it the *decrypt* function
+ * (`crypto/evp/e_aes.c:303`); `block2` is always the tweak cipher's encrypt. The arm observes
+ * the tweak advance over several blocks, both ciphertext-stealing directions, the round trip and
+ * the short-data-unit refusal.
+ */
+typedef struct {
+    void *key1;
+    void *key2;
+    block128_f block1;
+    block128_f block2;
+} rt_xts_ctx;
+
+static void rt_xts128(void)
+{
+    static const unsigned char xk1[16] = {
+        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11
+    };
+    static const unsigned char xk2[16] = {
+        0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22,
+        0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22
+    };
+    static const unsigned char xiv[16] = {
+        0x33, 0x33, 0x33, 0x33, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+    static const size_t lens[6] = {16, 17, 31, 32, 48, 49};
+    AES_KEY ek1, ek2, dk1;
+    rt_xts_ctx xe, xd;
+    unsigned char in[64], ct[64], back[64], out[64];
+    int k;
+
+    rt_fill(in, sizeof(in), 51);
+
+    if (AES_set_encrypt_key(xk1, 128, &ek1) != 0 || AES_set_encrypt_key(xk2, 128, &ek2) != 0
+        || AES_set_decrypt_key(xk1, 128, &dk1) != 0) {
+        printf("xts.setup=0\n");
+        return;
+    }
+    printf("xts.setup=1\n");
+
+    xe.key1 = &ek1;
+    xe.key2 = &ek2;
+    xe.block1 = (block128_f)AES_encrypt;
+    xe.block2 = (block128_f)AES_encrypt;
+    xd.key1 = &dk1;
+    xd.key2 = &ek2;
+    xd.block1 = (block128_f)rt_aes_dec_block;
+    xd.block2 = (block128_f)AES_encrypt;
+
+    printf("xts.short.enc=%d\n",
+           CRYPTO_xts128_encrypt((const XTS128_CONTEXT *)&xe, xiv, in, out, 15, 1));
+    printf("xts.short.dec=%d\n",
+           CRYPTO_xts128_encrypt((const XTS128_CONTEXT *)&xd, xiv, in, out, 15, 0));
+
+    for (k = 0; k < 6; k++) {
+        char name[48];
+        size_t n = lens[k];
+        int r;
+
+        r = CRYPTO_xts128_encrypt((const XTS128_CONTEXT *)&xe, xiv, in, ct, n, 1);
+        snprintf(name, sizeof(name), "xts.enc%u.ret", (unsigned)n);
+        printf("%s=%d\n", name, r);
+        snprintf(name, sizeof(name), "xts.enc%u.ct", (unsigned)n);
+        rt_hex(name, ct, n);
+
+        r = CRYPTO_xts128_encrypt((const XTS128_CONTEXT *)&xd, xiv, ct, back, n, 0);
+        snprintf(name, sizeof(name), "xts.dec%u.ret", (unsigned)n);
+        printf("%s=%d\n", name, r);
+        printf("xts.dec%u.match=%d\n", (unsigned)n, memcmp(back, in, n) == 0);
+    }
+
+    /* A three-block data unit encrypted and decrypted in place. */
+    memcpy(out, in, 48);
+    printf("xts.inplace.enc=%d\n",
+           CRYPTO_xts128_encrypt((const XTS128_CONTEXT *)&xe, xiv, out, out, 48, 1));
+    rt_hex("xts.inplace.ct", out, 48);
+    printf("xts.inplace.dec=%d\n",
+           CRYPTO_xts128_encrypt((const XTS128_CONTEXT *)&xd, xiv, out, out, 48, 0));
+    printf("xts.inplace.match=%d\n", memcmp(out, in, 48) == 0);
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IOLBF, 0);
@@ -2101,6 +2186,7 @@ int main(void)
     rt_modes_wrap();
     rt_gcm128();
     rt_ccm128();
+    rt_xts128();
     rt_aes();
     rt_rc4();
     rt_des();

@@ -807,6 +807,64 @@ static int ct_ccm(const char *cipher, int enc_op,
     return 0;
 }
 
+/*
+ * XTS: a data unit of one block or more, with a caller-populated context. The vector's key is
+ * the two concatenated AES keys, the IV is the sixteen-byte initial tweak, and the ciphertext is
+ * the whole answer (no tag). The direction comes from the vector, and for decryption the caller
+ * hands `block1` the data cipher's *decrypt* function (`crypto/evp/e_aes.c:303`).
+ */
+typedef struct {
+    void *key1;
+    void *key2;
+    block128_f block1;
+    block128_f block2;
+} ct_xts_ctx;
+
+static void ct_xts_dec_block(const unsigned char *in, unsigned char *out, const void *key)
+{
+    AES_decrypt(in, out, (const AES_KEY *)key);
+}
+
+static int ct_xts(const char *cipher, int enc_op,
+                  const unsigned char *key, size_t keylen,
+                  const unsigned char *iv, size_t ivlen,
+                  const unsigned char *aad, size_t aadlen,
+                  const unsigned char *in, size_t inlen,
+                  unsigned char *out, size_t *outlen, size_t taglen)
+{
+    AES_KEY ek1, ek2, dk1;
+    ct_xts_ctx x;
+    int bits;
+
+    (void)aad;
+    (void)aadlen;
+    if (strncmp(cipher, "aes-", 4) != 0)
+        return -1;
+    if (strncmp(cipher + 4, "128-xts", 7) == 0)
+        bits = 128;
+    else if (strncmp(cipher + 4, "256-xts", 7) == 0)
+        bits = 256;
+    else
+        return -1;
+    if (ivlen != 16 || taglen != 0 || inlen < 16)
+        return -1;
+    if (keylen != 2 * (size_t)bits / 8)
+        return -1;
+    if (AES_set_encrypt_key(key, bits, &ek1) != 0
+        || AES_set_encrypt_key(key + bits / 8, bits, &ek2) != 0
+        || AES_set_decrypt_key(key, bits, &dk1) != 0)
+        return -1;
+
+    x.key1 = enc_op ? (void *)&ek1 : (void *)&dk1;
+    x.key2 = (void *)&ek2;
+    x.block1 = enc_op ? (block128_f)AES_encrypt : (block128_f)ct_xts_dec_block;
+    x.block2 = (block128_f)AES_encrypt;
+    if (CRYPTO_xts128_encrypt((const XTS128_CONTEXT *)&x, iv, in, out, inlen, enc_op) != 0)
+        return -1;
+    *outlen = inlen;
+    return 0;
+}
+
 static int ct_cipher(const char *cipher, const char *operation,
                      const unsigned char *key, size_t keylen,
                      const unsigned char *iv, size_t ivlen,
@@ -820,6 +878,9 @@ static int ct_cipher(const char *cipher, const char *operation,
                in, inlen, out, outlen, taglen) == 0)
         return 0;
     if (ct_ccm(cipher, enc_op, key, keylen, iv, ivlen, aad, aadlen,
+               in, inlen, out, outlen, taglen) == 0)
+        return 0;
+    if (ct_xts(cipher, enc_op, key, keylen, iv, ivlen, aad, aadlen,
                in, inlen, out, outlen, taglen) == 0)
         return 0;
     if (ct_wrap(cipher, enc_op, key, keylen, iv, ivlen, in, inlen, out, outlen) == 0)

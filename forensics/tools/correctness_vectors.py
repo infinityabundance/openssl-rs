@@ -1800,6 +1800,14 @@ CIPHER_RECIPE_FAMILIES: list[CipherRecipeFamily] = [
             "independent CCM implementation is present in the pinned court image, so no "
             "boundary vector carries an independent oracle; that is the recorded cost of D208."
         ), aead=True),
+    # 8.3 -- XTS. `evpciph_aes_common.txt`'s XTS section is IEEE Std 1619-2007's own vectors;
+    # both directions are mirrored (a mode, not an AEAD, so a decrypt vector's output is the
+    # plaintext). The two `Result = KEY_SET_ERROR` blocks are skipped by the result-key rule.
+    CipherRecipeFamily(
+        "xts", "test/recipes/30-test_evp_data/evpciph_aes_common.txt",
+        r"^aes-(128|256)-xts$", "IEEE 1619-2007; NIST SP 800-38E",
+        "aes-{128,256}-xts", (),
+        "", ""),
 ]
 
 

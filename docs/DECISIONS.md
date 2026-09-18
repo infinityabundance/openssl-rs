@@ -14909,3 +14909,59 @@ family's `note` says so.
 AEAD row of `providers/defltprov.c`'s `deflt_ciphers[]`, remain open. The plan's anchored
 clauses moved in the same commit: the eight CCM exports joined the landed clause, and the open
 one still names only `CRYPTO_xts128_encrypt`.
+
+## D227 — XTS lands, and the direction is the caller's choice of block function
+
+`src/modes/xts.rs` lands the one `CRYPTO_xts128_encrypt` export of `crypto/modes/xts128.c`.
+`implemented[libcrypto]` **2024 → 2025** and Phase 8 **183/587/16 → 184/586/16**, read from
+`forensics/phase8-obligations.json` rather than typed.
+
+**The direction of the operation is not an argument the body branches on — it is which block
+function the caller installed.** `CRYPTO_xts128_encrypt` runs the same field and block arithmetic
+for `enc == 1` and `enc == 0`; what differs is that the caller hands `block1` the data cipher's
+*encrypt* function for encryption and its *decrypt* function for decryption
+(`crypto/evp/e_aes.c:303`), while `block2` is always the tweak cipher's encrypt. A transcription
+that used one function for both directions produces the right ciphertext and a wrong plaintext,
+which is exactly what the crate's first unit test did before the court-side shape was copied
+from the authority's own caller. It is recorded because it is the trap this construction has that
+GCM and CCM do not.
+
+**The two rules the plan names are both transcribed.** The tweak is the IV encrypted under the
+second key and is advanced between blocks by multiplication by `x` in `GF(2^128)`, with the
+`0x87` reduction applied when the high word's top bit was set: that is the little-endian arm of
+`IS_LITTLE_ENDIAN`, the one this profile's build compiles (x86-64). The big-endian arm is the
+identical arithmetic on the byte string and is dead here, so the crate implements the
+little-endian form and this note records the choice rather than leaving it implicit. Ciphertext
+stealing is transcribed in both directions: encryption replaces the tail of the output with the
+stolen prefix of the previous ciphertext block and re-encrypts the mixed block into `out - 16`;
+decryption steals in the opposite direction and writes the last full block and the recovered tail
+separately. The IV is `const` and is never written back through the caller's pointer.
+
+**The context is caller-populated, so the courts supply it.** The public header only
+forward-declares `XTS128_CONTEXT` and the four fields (`key1`, `key2`, `block1`, `block2`) are set
+by the caller before the call, exactly as `e_aes.c` does. Both probes therefore define a
+field-for-field mirror struct and pass its address; the Rust struct is `#[repr(C)]` with the same
+fields in the same order, which is a layout contract the caller owns. This is the XTS counterpart
+of D226's opaque-buffer note.
+
+**Both planes.** `RT-CIPHER` **565 → 596 observations**: the new `rt_xts128` arm observes
+encryption and decryption round trips for data-unit lengths 16, 17, 31, 32, 48 and 49 — so the
+tweak is doubled up to three times and both stealing arms are taken — the ciphertext and both
+return codes at each length, an in-place three-block unit, and the `len < 16` refusal. It uses
+`AES_encrypt`/`AES_decrypt` with the authority's block-function convention as the data cipher and
+`AES_encrypt` as the tweak cipher. `CT-CIPHER` **2972 → 3018 vectors**: `forensics/vectors/xts.json`
+mirrors **46** blocks of IEEE Std 1619-2007's own vectors from
+`test/recipes/30-test_evp_data/evpciph_aes_common.txt` (38 `aes-128-xts` and 10 `aes-256-xts`,
+minus the two `Result = KEY_SET_ERROR` blocks the generator's `result`-key rule skips), both
+directions. The probe reads the two concatenated keys and the sixteen-byte IV from the vector and
+selects `block1` from the vector's direction.
+
+**No independent XTS vector, recorded rather than hidden (D208).** No independent XTS
+implementation is present in the pinned court image, so no boundary vector carries an independent
+oracle; the corpus's own one-block, multi-block and ciphertext-stealing lengths are the coverage,
+and `RT-CIPHER`'s round trips are the independent-of-corpus answer.
+
+**What this entry does not do.** OCB, SIV, ChaCha20-Poly1305 and the CTS rows, and every AEAD row
+of `providers/defltprov.c`'s `deflt_ciphers[]`, remain open. The plan's anchored clauses moved in
+the same commit: `CRYPTO_xts128_encrypt` joined the landed clause, and the open one now names
+`CRYPTO_ocb128_init` rather than XTS.
