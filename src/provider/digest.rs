@@ -2047,10 +2047,12 @@ static DEFLT_DIGESTS: [OsslAlgorithm; 28] = [
 ];
 
 /// `static const OSSL_ALGORITHM *deflt_query(void *provctx, int operation_id, int *no_cache)` —
-/// `providers/defltprov.c`, with every arm but `OSSL_OP_DIGEST` absent.
+/// `providers/defltprov.c`, with the `OSSL_OP_DIGEST` and `OSSL_OP_CIPHER` arms.
+///
+/// The other operations the authority answers are other subphases' and are absent, not stubbed.
 ///
 /// # Safety
-/// `no_cache` must be writable; `provctx` is ignored by this arm.
+/// `no_cache` must be writable; `provctx` is ignored by both arms.
 unsafe extern "C" fn deflt_query(
     _provctx: *mut c_void,
     operation_id: c_int,
@@ -2061,19 +2063,22 @@ unsafe extern "C" fn deflt_query(
     if operation_id == OSSL_OP_DIGEST {
         return DEFLT_DIGESTS.as_ptr();
     }
+    if operation_id == crate::provider::cipher::OSSL_OP_CIPHER {
+        return crate::provider::cipher::DEFLT_CIPHERS.as_ptr();
+    }
     ptr::null()
 }
 
 /// `int ossl_default_provider_init(const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in,
 /// const OSSL_DISPATCH **out, void **provctx)` — `providers/defltprov.c`.
 ///
-/// **The digest half only.** The authority's body walks `in` for `CORE_GET_LIBCTX` and
+/// **The digest and cipher halves.** The authority's body walks `in` for `CORE_GET_LIBCTX` and
 /// `CORE_GET_PARAMS`, builds a `provctx` with `ossl_prov_ctx_new` and a core BIO method, stores
 /// the handle in it, publishes `deflt_get_params`/`deflt_gettable_params` and
 /// `ossl_prov_get_capabilities`, and caches the exported cipher algorithm table. None of that
-/// is reachable from `OSSL_OP_DIGEST`: the digest query ignores `provctx`, so this init
-/// publishes the two entries the digest half uses — `QUERY_OPERATION`, and nothing else — and
-/// leaves `provctx` NULL.
+/// is reachable from `OSSL_OP_DIGEST` or `OSSL_OP_CIPHER`: both queries ignore `provctx`, so
+/// this init publishes the one entry both halves use — `QUERY_OPERATION` — and leaves `provctx`
+/// NULL.
 ///
 /// # Safety
 /// `out` and `provctx` must be writable; `handle` and `in_` are unused by this half.
@@ -2136,9 +2141,27 @@ mod tests {
             "the twenty-seven default-provider digest rows 8.1 has landed"
         );
 
-        // SAFETY: the query's contract; an operation this half does not answer.
+        // SAFETY: the query's contract; an operation neither half answers. There are fifteen
+        // `OSSL_OP_*` values (1..=13 plus the two max sentinels); 14 is the max sentinel.
         let none = unsafe { deflt_query(ptr::null_mut(), 14, &mut no_cache) };
-        assert!(none.is_null(), "only OSSL_OP_DIGEST is answered");
+        assert!(
+            none.is_null(),
+            "only OSSL_OP_DIGEST and OSSL_OP_CIPHER are answered"
+        );
+
+        // The cipher half answers too, and its table starts at `deflt_ciphers[]`'s first row.
+        // SAFETY: the query's contract; `provctx` is NULL and this arm ignores it.
+        let ciphers = unsafe {
+            deflt_query(
+                ptr::null_mut(),
+                crate::provider::cipher::OSSL_OP_CIPHER,
+                &mut no_cache,
+            )
+        };
+        assert!(!ciphers.is_null());
+        // SAFETY: the returned table's first row is initialised.
+        let first = unsafe { core::ffi::CStr::from_ptr((*ciphers).algorithm_names) };
+        assert_eq!(first.to_bytes(), b"NULL");
     }
 
     #[test]

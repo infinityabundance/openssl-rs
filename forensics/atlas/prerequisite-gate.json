@@ -30,7 +30,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 56,
-      "language_surface_not_modelled_by_name": 3109,
+      "language_surface_not_modelled_by_name": 3091,
       "planned_prerequisites": 14
     },
     "census_by_unit": {
@@ -161,10 +161,10 @@
         "crypto/evp/bio_enc.c": 14,
         "crypto/evp/cmeth_lib.c": 6,
         "crypto/evp/encode.c": 6,
-        "crypto/evp/evp_enc.c": 56,
+        "crypto/evp/evp_enc.c": 52,
         "crypto/evp/evp_fetch.c": 19,
         "crypto/evp/evp_key.c": 14,
-        "crypto/evp/evp_lib.c": 42,
+        "crypto/evp/evp_lib.c": 28,
         "crypto/evp/evp_pbe.c": 23,
         "crypto/evp/evp_rand.c": 33,
         "crypto/evp/exchange.c": 22,
@@ -350,7 +350,7 @@
     },
     "checked": {
       "authority_units": 162,
-      "crate_modules": 217,
+      "crate_modules": 218,
       "deferral_blocker_rows": 5,
       "deferrals_recorded": 25,
       "divergence_names_covered": 32,
@@ -472,13 +472,13 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "d86dcb80371a94e8cbb80d1c167f150a2dfb8902a1ef50d3d254f5ee97fd5ff5",
+  "body_hash": "5326bc0bbd8b7655908a0f938fbea708a7c90e0f3f7bdda64f58abde12ad7a53",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "b92bf9699c7bf6c35e4b89bba11b200c0eb0471fc669a953f8cd233e48b8de98"
+      "sha256": "d6bda3aaefdc527b51aa3498d200b8f8d87991a4e9514f62377509118c645d51"
     },
     {
       "name": "macro-owners",
@@ -493,7 +493,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "9abc2eba4d3cbf81df72a9357e56d91f862687b10a56fc11c6392a0371f5b125"
+      "sha256": "e3b955983253a1503c2e0be464a23f1f626ae97d657c644735af49fba09de1f6"
     },
     {
       "name": "symbol-ownership",
@@ -508,7 +508,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "f48d8ab5eb01ce7dc282bc9f60628880de3554cf79cb9734f1d9c8cf43b32a07"
+      "sha256": "77655d0973ed538430e99c2fc6a38d7c5900c5d87a4a88803df24e3257e9d246"
     },
     {
       "name": "phase-state",

@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 217,
+      "crate_files_read": 218,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -12,12 +12,12 @@
       "identities_authority_only": 82,
       "identities_checked": 195,
       "identities_mismatches": 0,
-      "links_convention": 200,
+      "links_convention": 201,
       "links_documented": 8,
       "links_explicit": 14,
       "problems": 0,
-      "signatures_authority_only": 408,
-      "signatures_checked": 225,
+      "signatures_authority_only": 407,
+      "signatures_checked": 226,
       "signatures_mismatches": 0,
       "signatures_not_a_dispatch": 104,
       "signatures_unlinked": 0,
@@ -1543,7 +1543,6 @@
         "dyn_MEM_realloc_fn",
         "dynamic_bind_engine",
         "dynamic_v_check_fn",
-        "ecb128_f",
         "lh_CONF_VALUE_compfunc",
         "lh_CONF_VALUE_doallfunc",
         "lh_CONF_VALUE_hashfunc",
@@ -3403,6 +3402,14 @@
           "authority_signature": "fptr(int:4:s; ptr(const(opaque)), int:4:s)",
           "crate_signature": "fptr(int:4:s; ptr(const(opaque)), int:4:s)",
           "how": "documented"
+        },
+        {
+          "alias": "Ecb128F",
+          "at": "src/provider/cipher.rs",
+          "authority": "ecb128_f",
+          "authority_signature": "fptr(void; ptr(const(int:1:u)), ptr(int:1:u), int:8:u, ptr(const(opaque)), int:4:s)",
+          "crate_signature": "fptr(void; ptr(const(int:1:u)), ptr(int:1:u), int:8:u, ptr(const(opaque)), int:4:s)",
+          "how": "convention"
         },
         {
           "alias": "GetReasonStringsFn",

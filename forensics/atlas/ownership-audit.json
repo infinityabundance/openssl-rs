@@ -4988,7 +4988,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "f48d8ab5eb01ce7dc282bc9f60628880de3554cf79cb9734f1d9c8cf43b32a07"
+      "sha256": "77655d0973ed538430e99c2fc6a38d7c5900c5d87a4a88803df24e3257e9d246"
     },
     {
       "name": "authority-symbols",
@@ -5023,12 +5023,12 @@
     {
       "name": "ledger-7",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "a8acac63c5aaf285eafdb510ab78dc72b95ea0c3849f18f6da793a84c1d224fb"
+      "sha256": "518e746ef6f43b4459b89950def4706a371b8ff17c68869f6c4381c45f309117"
     },
     {
       "name": "ledger-8",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "69b40c43052ec1a9634dbf0a656bcf4049a790025871cb48ac0f7f53e1156762"
+      "sha256": "e30f75376f901a595909103f4218c6529883c1c1c6313c2784f4362ebc5f8a30"
     }
   ],
   "kind": "ownership-audit",
