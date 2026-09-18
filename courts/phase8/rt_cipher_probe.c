@@ -43,6 +43,7 @@
 #include <openssl/camellia.h>
 #include <openssl/cast.h>
 #include <openssl/des.h>
+#include <openssl/evp.h>
 #include <openssl/idea.h>
 #include <openssl/modes.h>
 #include <openssl/rc2.h>
@@ -1196,6 +1197,61 @@ static void rt_camellia(void)
     printf("camellia.ctr.resume.num=%d\n", num);
 }
 
+static void rt_deflt_cipher(void)
+{
+    static const char *names[] = {
+        "NULL", "AES-128-ECB", "AES-128-CBC", "AES-128-OFB", "AES-128-CFB",
+        "AES-128-CTR", "AES-192-CBC", "AES-256-ECB", "CAMELLIA-128-CBC",
+        "CAMELLIA-256-CTR", "CAMELLIA-192-ECB", "DES-EDE3-CBC", "DES-EDE-CBC",
+        /* The legacy provider's, and absent from the default one: this must answer 0. */
+        "DES-CBC", "RC4", "BF-CBC", "CAST5-CBC", "IDEA-CBC", "SEED-CBC"
+    };
+    unsigned char key[32];
+    unsigned char iv[16];
+    unsigned char in[32];
+    unsigned char out[64];
+    char buf[128];
+    size_t n;
+
+    rt_fill(key, sizeof(key), 21);
+    rt_fill(iv, sizeof(iv), 22);
+    rt_fill(in, sizeof(in), 23);
+
+    for (n = 0; n < sizeof(names) / sizeof(names[0]); n++) {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, names[n], NULL);
+
+        snprintf(buf, sizeof(buf), "deflt.%s", names[n]);
+        printf("%s.fetched=%d\n", buf, c != NULL);
+        if (c == NULL)
+            continue;
+        printf("%s.keylen=%d\n", buf, EVP_CIPHER_get_key_length(c));
+        printf("%s.ivlen=%d\n", buf, EVP_CIPHER_get_iv_length(c));
+        printf("%s.blocksize=%d\n", buf, EVP_CIPHER_get_block_size(c));
+        {
+            EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+            int outl = 0, finl = 0;
+
+            if (ctx == NULL) {
+                printf("%s.ctx=0\n", buf);
+                EVP_CIPHER_free(c);
+                continue;
+            }
+            /* The key is passed at the row's own length; the provider rejects any other. */
+            if (EVP_EncryptInit_ex(ctx, c, NULL, key, iv) != 1) {
+                printf("%s.init=0\n", buf);
+            } else if (EVP_EncryptUpdate(ctx, out, &outl, in, 32) != 1) {
+                printf("%s.update=0\n", buf);
+            } else if (EVP_EncryptFinal_ex(ctx, out + outl, &finl) != 1) {
+                printf("%s.final=0\n", buf);
+            } else {
+                rt_hex(buf, out, (size_t)(outl + finl));
+            }
+            EVP_CIPHER_CTX_free(ctx);
+        }
+        EVP_CIPHER_free(c);
+    }
+}
+
 static void rt_modes_blocks(void)
 {
     const unsigned char key = RT_KEY;
@@ -1460,5 +1516,6 @@ int main(void)
     rt_idea();
     rt_seed();
     rt_camellia();
+    rt_deflt_cipher();
     return 0;
 }

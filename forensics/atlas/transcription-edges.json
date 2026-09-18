@@ -775,6 +775,13 @@
         "translation_unit": "crypto/provider_child.c"
       },
       {
+        "module": "src/provider/cipher.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "20/38",
+        "translation_unit": "providers/implementations/ciphers/libcommon-lib-ciphercommon.c"
+      },
+      {
         "module": "src/provider/conf.rs",
         "phase": 6,
         "phase_source": "module-declaration",

@@ -14678,3 +14678,48 @@ default-provider row to write for Camellia; it is not written here.
 `providers/legacyprov.c` first — and the cipher half of `deflt_query` remain. `deflt_get_params`,
 `deflt_gettable_params`, `ossl_prov_get_capabilities`, `provctx` and the `base`/`null` rows
 remain absent, and are not claimed.
+
+## D223 — the cipher half of the default provider lands, with `deflt_ciphers[]` reviewed row by row
+
+`src/provider/cipher.rs` lands the default provider's `OSSL_OP_CIPHER` half: a transcription of
+`ciphercommon.c.in`'s generic block/stream engine, `ciphercommon_block.c`'s buffering and PKCS#7
+padding, `ciphercommon_hw.c`'s mode functions and the four per-algorithm `*_initkey`s, with
+`deflt_ciphers[]` publishing 53 rows — `NULL`, AES (ECB/CBC/OFB/CFB/CFB1/CFB8/CTR at three key
+lengths, 21), Camellia (the same 21) and 3DES (EDE3 ECB/CBC/OFB/CFB/CFB1/CFB8 and EDE2
+ECB/CBC/OFB/CFB, 10) — each alias taken verbatim from `prov/names.h`, and a new `OSSL_OP_CIPHER`
+arm in `deflt_query`. No export moves: `implemented[libcrypto]` stays **2001** and Phase 8 stays
+**160/610/16**, because every item here is provider-internal. `RT-CIPHER` **335 → 406
+observations** (its new `rt_deflt_cipher` arm fetches each row through the default library context
+and prints the ciphertext); `CT-CIPHER` stays **419**; baseline 83 courts / 23,737 → **83 courts /
+23,808 observations**. PIPELINE OK.
+
+**The per-row provider check is the one D206 and D213 insist on, and the probe observes both
+directions.** AES, Camellia and 3DES are the **default** provider's (`defltprov.c:163-186`,
+`:275-300`, `:301-313`) and get rows; single DES, RC2, RC4, Blowfish, CAST5, IDEA and SEED are
+the **legacy** provider's (`legacyprov.c:108-159`) and get none. The probe also fetches
+`DES-CBC`, `RC4`, `BF-CBC`, `CAST5-CBC`, `IDEA-CBC` and `SEED-CBC` and requires each to answer 0
+on both sides — publishing any of them from the default provider would make a name resolve on
+the candidate that the authority answers NULL for.
+
+**What this half is, in the exact words the plan uses.** It is the default provider's
+digest-query half **and** cipher-query half — **not** default-provider parity. The AEAD
+(GCM/CCM/XTS/OCB/SIV/wrap) and CTS rows, ARIA and SM4 (whose low-level API does not exist here;
+D209 §2), ChaCha20 and the asm-selected `cipher_aes_cbc_hmac_*` TLS ciphers stay absent;
+`deflt_get_params`/`deflt_gettable_params`/`ossl_prov_get_capabilities`/`provctx` and the
+`base`/`null` providers stay absent. Two arms are named rather than stubbed:
+`ossl_cipher_generic_block_update`/`_final`'s TLS-record arm (`ciphercommon.c.in:297-370`,
+reached only through `OSSL_CIPHER_PARAM_TLS_VERSION`) and `des_get_ctx_params`/
+`ossl_tdes_get_ctx_params`'s `randkey` arm, whose body is `RAND_priv_bytes_ex` and `rand.h` is
+Phase 9's.
+
+**Two instruments caught defects in this module's first shape, which is the point of them.**
+`prototype_court.py` reported six `UNREADABLE` rows: the rows were declared through
+`aes_row! → cipher_row!`, and the macro plane substitutes a macro's `fn $param(` arguments at
+each *invocation*, so a `cipher_row!` reached only from another macro's body cannot be named.
+Expanding the three wrappers into direct `cipher_row!` invocations took `unreadable` to 0.
+`prerequisite_gate.py` then reported twenty-one `undefined_prerequisite` names — the
+`OSSL_CIPHER_PARAM_*` constants — because a `param_name!` macro generated them and the gate's
+lexical scan cannot see a macro-generated `const`; they are written longhand now. The same gate
+then reported `cbc`, a field name colliding with the authority's C language surface; the field is
+`cbc_fn`. None of the three was a behavioural difference, and all three are recorded because a
+pipeline that got green by luck is not evidence.
