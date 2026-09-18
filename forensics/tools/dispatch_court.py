@@ -170,6 +170,13 @@ XLAT_GET = ("not a provider dispatch: the type of `fix_cipher_md`'s two function
             "its own signature rather than as typedefs; the crate names them to parameterise one "
             "function over `EVP_CIPHER` and `EVP_MD`")
 CRATE_LOCAL = "not an authority type: a crate-local callback shape with no header counterpart"
+# `cipher_aes_wrp.c:28-30` -- the wrap rows' `aeswrap_fn`, a typedef local to a provider
+# implementation file. The atlas's universe is the installed public surface, so it records no
+# typedef for it, and unlike `block128_f`/`cbc128_f` its name is not declared in a header the
+# convention rule can reach. `crypto/modes/wrap128.c`'s `CRYPTO_128_*` have the same shape.
+WRAP_FN = ("not a provider dispatch: `cipher_aes_wrp.c:28-30`'s `aeswrap_fn`, a typedef local to a "
+           "provider implementation file, which the atlas -- whose universe is the installed "
+           "public surface -- records no typedef for")
 
 
 def _inline(fn: str, spelling: str) -> str:
@@ -292,6 +299,7 @@ NOT_A_DISPATCH: dict[str, str] = {
     "SkCompFn": SK_MACRO,
     "SkCopyFn": SK_MACRO,
     "SkFreeFn": SK_MACRO,
+    "AesWrapFn@src/provider/cipher.rs": WRAP_FN,
     "ConfInitFn@src/runtime/conf/types.rs": CONF_METHOD,
     "ConfFinishFn": ("not a provider dispatch: the crate's `conf_finish_func` equivalent for the "
                      "`CONF_METHOD` vtable; the authority declares the module finish callback "

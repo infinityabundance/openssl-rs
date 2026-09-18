@@ -2406,6 +2406,133 @@ static void rt_ocb128(void)
     CRYPTO_ocb128_cleanup(ctx);
 }
 
+/*
+ * The default provider's AES key-wrap rows. D223's `rt_deflt_cipher` arm drives the generic rows
+ * through `EVP_CIPHER_fetch`; the wrap rows are their own engine (`cipher_aes_wrp.c`), so this arm
+ * observes them: the four properties `get_params` publishes, the wrapped bytes through the
+ * provider, the refusal of a length the construction rejects, the padding row's rounding, and —
+ * the point of having one RFC 3394 implementation in the crate — that the provider's answer is the
+ * low-level `CRYPTO_128_wrap` answer byte for byte. The alias spellings are taken verbatim from
+ * `prov/names.h` and must resolve to the same row.
+ */
+static void rt_deflt_wrap(void)
+{
+    static const char *names[] = {
+        "AES-128-WRAP", "AES-192-WRAP", "AES-256-WRAP",
+        "AES-128-WRAP-PAD", "AES-192-WRAP-PAD", "AES-256-WRAP-PAD",
+        "AES-128-WRAP-INV", "AES-192-WRAP-INV", "AES-256-WRAP-INV",
+        "AES-128-WRAP-PAD-INV", "AES-192-WRAP-PAD-INV", "AES-256-WRAP-PAD-INV",
+        /* The three alias spellings `prov/names.h` publishes for these rows. */
+        "id-aes128-wrap", "AES256-WRAP-PAD", "AES128-WRAP-INV"
+    };
+    unsigned char key[32];
+    unsigned char iv[16];
+    unsigned char in[32];
+    unsigned char out[64];
+    unsigned char low[64];
+    char buf[128];
+    AES_KEY aeskey;
+    size_t n;
+
+    rt_fill(key, sizeof(key), 71);
+    rt_fill(iv, sizeof(iv), 72);
+    rt_fill(in, sizeof(in), 73);
+
+    for (n = 0; n < sizeof(names) / sizeof(names[0]); n++) {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, names[n], NULL);
+
+        snprintf(buf, sizeof(buf), "defltwrap.%s", names[n]);
+        printf("%s.fetched=%d\n", buf, c != NULL);
+        if (c == NULL)
+            continue;
+        printf("%s.keylen=%d\n", buf, EVP_CIPHER_get_key_length(c));
+        printf("%s.ivlen=%d\n", buf, EVP_CIPHER_get_iv_length(c));
+        printf("%s.blocksize=%d\n", buf, EVP_CIPHER_get_block_size(c));
+        {
+            EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+            int outl = 0, finl = 0;
+
+            if (ctx == NULL) {
+                printf("%s.ctx=0\n", buf);
+                EVP_CIPHER_free(c);
+                continue;
+            }
+            if (EVP_EncryptInit_ex(ctx, c, NULL, key, iv) != 1) {
+                printf("%s.init=0\n", buf);
+            } else if (EVP_EncryptUpdate(ctx, out, &outl, in, 24) != 1) {
+                printf("%s.update=0\n", buf);
+            } else if (EVP_EncryptFinal_ex(ctx, out + outl, &finl) != 1) {
+                printf("%s.final=0\n", buf);
+            } else {
+                rt_hex(buf, out, (size_t)(outl + finl));
+            }
+            EVP_CIPHER_CTX_free(ctx);
+        }
+        EVP_CIPHER_free(c);
+    }
+
+    /* The provider's answer is the low-level answer, for both directions and both constructions. */
+    if (AES_set_encrypt_key(key, 128, &aeskey) == 0) {
+        static const size_t lens[2] = {16, 24};
+        int k;
+
+        for (k = 0; k < 2; k++) {
+            size_t m = lens[k];
+            size_t lowlen = CRYPTO_128_wrap(&aeskey, iv, low, in, m, (block128_f)AES_encrypt);
+            EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, "AES-128-WRAP", NULL);
+            EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+            int outl = 0;
+
+            snprintf(buf, sizeof(buf), "defltwrap.eq%u", (unsigned)m);
+            if (c == NULL || ctx == NULL) {
+                printf("%s.fetched=0\n", buf);
+            } else if (EVP_EncryptInit_ex(ctx, c, NULL, key, iv) != 1
+                       || EVP_EncryptUpdate(ctx, out, &outl, in, (int)m) != 1) {
+                printf("%s.init=0\n", buf);
+            } else {
+                printf("%s.same=%d\n", buf, (size_t)outl == lowlen && memcmp(out, low, lowlen) == 0);
+            }
+            if (ctx != NULL)
+                EVP_CIPHER_CTX_free(ctx);
+            if (c != NULL)
+                EVP_CIPHER_free(c);
+        }
+    }
+
+    /* The padding row rounds a 21-byte input up, and the plain row refuses a length that is not
+     * a multiple of eight. */
+    {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, "AES-128-WRAP-PAD", NULL);
+        EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+        int outl = 0;
+
+        if (c != NULL && ctx != NULL && EVP_EncryptInit_ex(ctx, c, NULL, key, iv) == 1
+            && EVP_EncryptUpdate(ctx, out, &outl, in, 21) == 1) {
+            rt_hex("defltwrap.pad21", out, (size_t)outl);
+        } else {
+            printf("defltwrap.pad21=0\n");
+        }
+        if (ctx != NULL)
+            EVP_CIPHER_CTX_free(ctx);
+        if (c != NULL)
+            EVP_CIPHER_free(c);
+    }
+    {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, "AES-128-WRAP", NULL);
+        EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+        int outl = 0;
+
+        if (c != NULL && ctx != NULL && EVP_EncryptInit_ex(ctx, c, NULL, key, iv) == 1)
+            printf("defltwrap.badlen=%d\n", EVP_EncryptUpdate(ctx, out, &outl, in, 21));
+        else
+            printf("defltwrap.badlen=0\n");
+        if (ctx != NULL)
+            EVP_CIPHER_CTX_free(ctx);
+        if (c != NULL)
+            EVP_CIPHER_free(c);
+    }
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IOLBF, 0);
@@ -2425,5 +2552,6 @@ int main(void)
     rt_seed();
     rt_camellia();
     rt_deflt_cipher();
+    rt_deflt_wrap();
     return 0;
 }

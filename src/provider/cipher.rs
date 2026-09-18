@@ -68,6 +68,9 @@ use crate::evp::cipher::{
     OSSL_FUNC_CIPHER_NEWCTX, OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS, OSSL_FUNC_CIPHER_SET_CTX_PARAMS,
     OSSL_FUNC_CIPHER_UPDATE,
 };
+use crate::modes::wrap::{
+    CRYPTO_128_unwrap, CRYPTO_128_unwrap_pad, CRYPTO_128_wrap, CRYPTO_128_wrap_pad,
+};
 use crate::modes::{
     Block128F, CRYPTO_cbc128_decrypt, CRYPTO_cbc128_encrypt, CRYPTO_cfb128_1_encrypt,
     CRYPTO_cfb128_8_encrypt, CRYPTO_cfb128_encrypt, CRYPTO_ctr128_encrypt, CRYPTO_ofb128_encrypt,
@@ -78,7 +81,9 @@ use crate::params::{
     OSSL_PARAM_UNMODIFIED, OSSL_PARAM_UNSIGNED_INTEGER,
 };
 use crate::provider::activate::OsslAlgorithm;
-use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_malloc, CRYPTO_zalloc};
+use crate::runtime::mem::{
+    CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup, CRYPTO_zalloc,
+};
 
 /// The authority translation unit the generic engine is `ciphercommon.c.in`'s, for the
 /// allocation-tracking `file` argument.
@@ -120,6 +125,8 @@ const TDES_FLAGS: u64 = PROV_CIPHER_FLAG_RAND_KEY;
 const EVP_CIPH_ECB_MODE: c_uint = 0x1;
 /// `EVP_CIPH_CBC_MODE` — `include/openssl/evp.h:312`.
 const EVP_CIPH_CBC_MODE: c_uint = 0x2;
+/// `EVP_CIPH_WRAP_MODE` — `include/openssl/evp.h:319`.
+const EVP_CIPH_WRAP_MODE: c_uint = 0x10002;
 /// `EVP_CIPH_CFB_MODE` — `include/openssl/evp.h:313`.
 const EVP_CIPH_CFB_MODE: c_uint = 0x3;
 /// `EVP_CIPH_OFB_MODE` — `include/openssl/evp.h:314`.
@@ -2508,6 +2515,546 @@ hw_static!(
     cipher_hw_tdes_copyctx
 );
 
+// ---------------------------------------------------------------------------------------------
+// `cipher_aes_wrp.c` — the RFC 3394 (WRAP) and RFC 5649 (WRAP-PAD) provider rows
+// ---------------------------------------------------------------------------------------------
+//
+// The wrap rows are their own engine rather than instantiations of the generic one: a wrapped
+// message is not a stream of block-mode operations, so `IMPLEMENT_cipher` here supplies its own
+// `init`/`update`/`final`. The four `CRYPTO_128_*` entry points this module drives are the ones
+// 8.2's `AES_wrap_key`/`AES_unwrap_key` already delegate to (D224), so there is still exactly one
+// RFC 3394 implementation in the crate.
+
+/// `AES_WRAP_PAD_IVLEN` — `cipher_aes_wrp.c:22`.
+const AES_WRAP_PAD_IVLEN: usize = 4;
+/// `AES_WRAP_NOPAD_IVLEN` — `cipher_aes_wrp.c:23`.
+const AES_WRAP_NOPAD_IVLEN: usize = 8;
+/// `WRAP_FLAGS` — `cipher_aes_wrp.c:25`.
+const WRAP_FLAGS: u64 = PROV_CIPHER_FLAG_CUSTOM_IV;
+/// `WRAP_FLAGS_INV` — `cipher_aes_wrp.c:26`.
+const WRAP_FLAGS_INV: u64 = WRAP_FLAGS | PROV_CIPHER_FLAG_INVERSE_CIPHER;
+
+/// `aeswrap_fn` — `cipher_aes_wrp.c:28-30`.
+type AesWrapFn = unsafe extern "C" fn(
+    key: *mut c_void,
+    iv: *const c_uchar,
+    out: *mut c_uchar,
+    input: *const c_uchar,
+    inlen: usize,
+    block: Block128F,
+) -> usize;
+
+/// `PROV_AES_WRAP_CTX` — `cipher_aes_wrp.c:39-47`. The anonymous union is flattened to the
+/// `AES_KEY`, which is the only member this row reads.
+#[repr(C)]
+pub(crate) struct ProvAesWrapCtx {
+    /// `PROV_CIPHER_CTX base`.
+    pub base: ProvCipherCtx,
+    /// `union { OSSL_UNION_ALIGN; AES_KEY ks; } ks`.
+    pub ks: AesKey,
+    /// `aeswrap_fn wrapfn`.
+    pub wrapfn: Option<AesWrapFn>,
+}
+
+/// `aes_wrap_newctx` — `cipher_aes_wrp.c:49-66`.
+///
+/// # Safety
+/// The returned context is owned by the caller and released by [`aes_wrap_freectx`].
+unsafe fn aes_wrap_newctx(
+    kbits: usize,
+    blkbits: usize,
+    ivbits: usize,
+    mode: c_uint,
+    flags: u64,
+) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+        let wctx = CRYPTO_zalloc(core::mem::size_of::<ProvAesWrapCtx>(), FILE, LINE);
+        if !wctx.is_null() {
+            ossl_cipher_generic_initkey(
+                wctx,
+                kbits,
+                blkbits,
+                ivbits,
+                mode,
+                flags,
+                ptr::null(),
+                ptr::null_mut(),
+            );
+            // `ctx->pad = (ctx->ivlen == AES_WRAP_PAD_IVLEN)` — the generic `initkey` had set
+            // padding on unconditionally.
+            let ctx = wctx.cast::<ProvCipherCtx>();
+            bits_set(ctx, CTX_PAD, (*ctx).ivlen == AES_WRAP_PAD_IVLEN);
+        }
+        wctx
+    }
+}
+
+/// `aes_wrap_dupctx` — `cipher_aes_wrp.c:68-89`.
+///
+/// # Safety
+/// `wctx` is NULL or a live wrap context.
+unsafe extern "C" fn aes_wrap_dupctx(wctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 || wctx.is_null() {
+            return ptr::null_mut();
+        }
+        let dctx = CRYPTO_memdup(wctx, core::mem::size_of::<ProvAesWrapCtx>(), FILE, LINE);
+        if !dctx.is_null() {
+            let d = dctx.cast::<ProvAesWrapCtx>();
+            if !(*d).base.tlsmac.is_null() && (*d).base.alloced != 0 {
+                let tm = CRYPTO_memdup((*d).base.tlsmac.cast(), (*d).base.tlsmacsize, FILE, LINE);
+                if tm.is_null() {
+                    CRYPTO_free(dctx, FILE, LINE);
+                    return ptr::null_mut();
+                }
+                (*d).base.tlsmac = tm.cast();
+            }
+        }
+        dctx
+    }
+}
+
+/// `aes_wrap_freectx` — `cipher_aes_wrp.c:91-97`.
+///
+/// # Safety
+/// `vctx` is a context from [`aes_wrap_newctx`] or NULL.
+unsafe extern "C" fn aes_wrap_freectx(vctx: *mut c_void) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        ossl_cipher_generic_reset_ctx(vctx.cast());
+        CRYPTO_clear_free(vctx, core::mem::size_of::<ProvAesWrapCtx>(), FILE, LINE);
+    }
+}
+
+/// `aes_wrap_init` — `cipher_aes_wrp.c:99-148`.
+///
+/// # Safety
+/// `vctx` is live; `key`/`iv` are the caller's buffers of the stated lengths.
+unsafe fn aes_wrap_init(
+    vctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    iv: *const c_uchar,
+    ivlen: usize,
+    params: *const OsslParam,
+    enc: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvCipherCtx>();
+        let wctx = vctx.cast::<ProvAesWrapCtx>();
+
+        if is_running() == 0 {
+            return 0;
+        }
+
+        bits_set(ctx, CTX_ENC, enc != 0);
+        (*wctx).wrapfn = Some(if bits(ctx) & CTX_PAD != 0 {
+            if enc != 0 {
+                CRYPTO_128_wrap_pad
+            } else {
+                CRYPTO_128_unwrap_pad
+            }
+        } else if enc != 0 {
+            CRYPTO_128_wrap
+        } else {
+            CRYPTO_128_unwrap
+        });
+
+        if !iv.is_null() && ossl_cipher_generic_initiv(ctx, iv, ivlen) == 0 {
+            return 0;
+        }
+        if !key.is_null() {
+            if keylen != (*ctx).keylen {
+                return fail();
+            }
+            // SP800-38F §5.1: an inverse-cipher row's forward transform is the *decryption*
+            // function, so the wrap direction swaps which AES key schedule is built.
+            let use_forward = if bits(ctx) & CTX_INVERSE_CIPHER == 0 {
+                enc != 0
+            } else {
+                enc == 0
+            };
+            let ks = ptr::addr_of_mut!((*wctx).ks);
+            if use_forward {
+                AES_set_encrypt_key(key, (keylen * 8) as c_int, ks);
+                (*ctx).block = Some(aes_block_encrypt);
+            } else {
+                AES_set_decrypt_key(key, (keylen * 8) as c_int, ks);
+                (*ctx).block = Some(aes_block_decrypt);
+            }
+        }
+        aes_wrap_set_ctx_params(vctx, params)
+    }
+}
+
+/// `aes_wrap_einit` — `cipher_aes_wrp.c:150-155`.
+///
+/// # Safety
+/// As [`aes_wrap_init`].
+unsafe extern "C" fn aes_wrap_einit(
+    ctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    iv: *const c_uchar,
+    ivlen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe { aes_wrap_init(ctx, key, keylen, iv, ivlen, params, 1) }
+}
+
+/// `aes_wrap_dinit` — `cipher_aes_wrp.c:157-162`.
+///
+/// # Safety
+/// As [`aes_wrap_init`].
+unsafe extern "C" fn aes_wrap_dinit(
+    ctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    iv: *const c_uchar,
+    ivlen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe { aes_wrap_init(ctx, key, keylen, iv, ivlen, params, 0) }
+}
+
+/// `aes_wrap_cipher_internal` — `cipher_aes_wrp.c:164-222`.
+///
+/// # Safety
+/// `vctx` is live; `out`/`input` as the caller's contract.
+unsafe fn aes_wrap_cipher_internal(
+    vctx: *mut c_void,
+    out: *mut c_uchar,
+    input: *const c_uchar,
+    inlen: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvCipherCtx>();
+        let wctx = vctx.cast::<ProvAesWrapCtx>();
+
+        /* No final operation so always return zero length */
+        if input.is_null() {
+            return 0;
+        }
+        if inlen == 0 || inlen > c_int::MAX as usize {
+            return -1;
+        }
+        if bits(ctx) & CTX_ENC == 0 && (inlen < 16 || inlen & 0x7 != 0) {
+            return -1;
+        }
+        if bits(ctx) & CTX_PAD == 0 && inlen & 0x7 != 0 {
+            return -1;
+        }
+        if out.is_null() {
+            if bits(ctx) & CTX_ENC != 0 {
+                let n = if bits(ctx) & CTX_PAD != 0 {
+                    inlen.div_ceil(8) * 8
+                } else {
+                    inlen
+                };
+                return (n + 8) as c_int;
+            }
+            return (inlen - 8) as c_int;
+        }
+        let Some(block) = (*ctx).block else {
+            // The authority calls the wrap function with a NULL `block128_f` and faults; a
+            // probe cannot compare a crash, so the crate refuses where the authority would
+            // call through the null. Recorded in docs/DECISIONS.md D230.
+            return -1;
+        };
+        let Some(wrapfn) = (*wctx).wrapfn else {
+            return -1;
+        };
+        let iv = if bits(ctx) & CTX_IV_SET != 0 {
+            (*ctx).iv.as_ptr()
+        } else {
+            ptr::null()
+        };
+        let rv = wrapfn(
+            ptr::addr_of_mut!((*wctx).ks).cast(),
+            iv,
+            out,
+            input,
+            inlen,
+            block,
+        );
+        if rv == 0 || rv > c_int::MAX as usize {
+            return -1;
+        }
+        rv as c_int
+    }
+}
+
+/// `aes_wrap_final` — `cipher_aes_wrp.c:224-232`.
+///
+/// # Safety
+/// `outl` is the caller's slot per the dispatch contract.
+unsafe extern "C" fn aes_wrap_final(
+    _vctx: *mut c_void,
+    _out: *mut c_uchar,
+    outl: *mut usize,
+    _outsize: usize,
+) -> c_int {
+    if is_running() == 0 {
+        return 0;
+    }
+    // SAFETY: `outl` is the caller's slot.
+    unsafe { *outl = 0 };
+    1
+}
+
+/// `aes_wrap_cipher` — `cipher_aes_wrp.c:234-260`.
+///
+/// # Safety
+/// As the dispatch's `update`: `out` is writable for `outsize` bytes and `input` readable for
+/// `inl`.
+unsafe extern "C" fn aes_wrap_cipher(
+    vctx: *mut c_void,
+    out: *mut c_uchar,
+    outl: *mut usize,
+    outsize: usize,
+    input: *const c_uchar,
+    inl: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return 0;
+        }
+        if inl == 0 {
+            *outl = 0;
+            return 1;
+        }
+        if outsize < inl {
+            return 0;
+        }
+        let len = aes_wrap_cipher_internal(vctx, out, input, inl);
+        if len <= 0 {
+            return 0;
+        }
+        *outl = len as usize;
+        1
+    }
+}
+
+/// `aes_wrap_set_ctx_params` — `cipher_aes_wrp.c:262-283`.
+///
+/// # Safety
+/// `vctx` is live; `params` is NULL or a key-terminated array.
+unsafe extern "C" fn aes_wrap_set_ctx_params(vctx: *mut c_void, params: *const OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvCipherCtx>();
+        if ossl_param_is_empty(params) {
+            return 1;
+        }
+        let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_KEYLEN);
+        if !p.is_null() {
+            let mut keylen = 0usize;
+            if crate::params::OSSL_PARAM_get_size_t(p, &mut keylen) == 0 {
+                return 0;
+            }
+            if (*ctx).keylen != keylen {
+                return 0;
+            }
+        }
+        1
+    }
+}
+
+/// `IMPLEMENT_cipher` — `cipher_aes_wrp.c:285-320`, one row's dispatch table.
+///
+/// A Rust macro here for the same reason `cipher_row!` is one: the authority's `IMPLEMENT_cipher`
+/// is itself a macro, and the twelve rows differ only in their parameters. The output is
+/// `pub(crate)`/private items and a `'static` table — **no exported symbol** — so the project's
+/// ban on `macro_rules!`-generated exports is not engaged.
+macro_rules! wrap_row {
+    ($newctx:ident, $getparams:ident, $table:ident, $kbits:expr, $ivbits:expr, $flags:expr) => {
+        unsafe extern "C" fn $newctx(_provctx: *mut c_void) -> *mut c_void {
+            // SAFETY: this row's own parameters; the context is returned to the dispatch.
+            unsafe { aes_wrap_newctx($kbits, 64, $ivbits, EVP_CIPH_WRAP_MODE, $flags) }
+        }
+
+        unsafe extern "C" fn $getparams(params: *mut OsslParam) -> c_int {
+            // SAFETY: the dispatch contract.
+            unsafe {
+                ossl_cipher_generic_get_params(
+                    params,
+                    EVP_CIPH_WRAP_MODE,
+                    $flags,
+                    $kbits,
+                    64,
+                    $ivbits,
+                )
+            }
+        }
+
+        static $table: [OsslDispatch; 14] = [
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_NEWCTX,
+                function: $newctx as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_ENCRYPT_INIT,
+                function: aes_wrap_einit as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_DECRYPT_INIT,
+                function: aes_wrap_dinit as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_UPDATE,
+                function: aes_wrap_cipher as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_FINAL,
+                function: aes_wrap_final as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_FREECTX,
+                function: aes_wrap_freectx as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: crate::evp::cipher::OSSL_FUNC_CIPHER_DUPCTX,
+                function: aes_wrap_dupctx as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GET_PARAMS,
+                function: $getparams as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GETTABLE_PARAMS,
+                function: ossl_cipher_generic_gettable_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GET_CTX_PARAMS,
+                function: ossl_cipher_generic_get_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_SET_CTX_PARAMS,
+                function: aes_wrap_set_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GETTABLE_CTX_PARAMS,
+                function: ossl_cipher_generic_gettable_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS,
+                function: ossl_cipher_generic_settable_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_DISPATCH_END,
+                function: ptr::null_mut(),
+            },
+        ];
+    };
+}
+
+wrap_row!(
+    aes256wrap_newctx,
+    aes256wrap_get_params,
+    AES256WRAP_FUNCTIONS,
+    256,
+    AES_WRAP_NOPAD_IVLEN * 8,
+    WRAP_FLAGS
+);
+wrap_row!(
+    aes192wrap_newctx,
+    aes192wrap_get_params,
+    AES192WRAP_FUNCTIONS,
+    192,
+    AES_WRAP_NOPAD_IVLEN * 8,
+    WRAP_FLAGS
+);
+wrap_row!(
+    aes128wrap_newctx,
+    aes128wrap_get_params,
+    AES128WRAP_FUNCTIONS,
+    128,
+    AES_WRAP_NOPAD_IVLEN * 8,
+    WRAP_FLAGS
+);
+wrap_row!(
+    aes256wrappad_newctx,
+    aes256wrappad_get_params,
+    AES256WRAPPAD_FUNCTIONS,
+    256,
+    AES_WRAP_PAD_IVLEN * 8,
+    WRAP_FLAGS
+);
+wrap_row!(
+    aes192wrappad_newctx,
+    aes192wrappad_get_params,
+    AES192WRAPPAD_FUNCTIONS,
+    192,
+    AES_WRAP_PAD_IVLEN * 8,
+    WRAP_FLAGS
+);
+wrap_row!(
+    aes128wrappad_newctx,
+    aes128wrappad_get_params,
+    AES128WRAPPAD_FUNCTIONS,
+    128,
+    AES_WRAP_PAD_IVLEN * 8,
+    WRAP_FLAGS
+);
+wrap_row!(
+    aes256wrapinv_newctx,
+    aes256wrapinv_get_params,
+    AES256WRAPINV_FUNCTIONS,
+    256,
+    AES_WRAP_NOPAD_IVLEN * 8,
+    WRAP_FLAGS_INV
+);
+wrap_row!(
+    aes192wrapinv_newctx,
+    aes192wrapinv_get_params,
+    AES192WRAPINV_FUNCTIONS,
+    192,
+    AES_WRAP_NOPAD_IVLEN * 8,
+    WRAP_FLAGS_INV
+);
+wrap_row!(
+    aes128wrapinv_newctx,
+    aes128wrapinv_get_params,
+    AES128WRAPINV_FUNCTIONS,
+    128,
+    AES_WRAP_NOPAD_IVLEN * 8,
+    WRAP_FLAGS_INV
+);
+wrap_row!(
+    aes256wrappadinv_newctx,
+    aes256wrappadinv_get_params,
+    AES256WRAPPADINV_FUNCTIONS,
+    256,
+    AES_WRAP_PAD_IVLEN * 8,
+    WRAP_FLAGS_INV
+);
+wrap_row!(
+    aes192wrappadinv_newctx,
+    aes192wrappadinv_get_params,
+    AES192WRAPPADINV_FUNCTIONS,
+    192,
+    AES_WRAP_PAD_IVLEN * 8,
+    WRAP_FLAGS_INV
+);
+wrap_row!(
+    aes128wrappadinv_newctx,
+    aes128wrappadinv_get_params,
+    AES128WRAPPADINV_FUNCTIONS,
+    128,
+    AES_WRAP_PAD_IVLEN * 8,
+    WRAP_FLAGS_INV
+);
+
 // One direct `cipher_row!` per row: no wrapper macro, so `prototype_court.py`'s macro plane
 // can read every `fn $newctx(` and substitute the identifier this invocation supplies.
 cipher_row!(
@@ -4010,6 +4557,45 @@ alias!(N_DES_EDE_ECB, "DES-EDE-ECB:DES-EDE:1.3.14.3.2.17");
 alias!(N_DES_EDE_CBC, "DES-EDE-CBC");
 alias!(N_DES_EDE_OFB, "DES-EDE-OFB");
 alias!(N_DES_EDE_CFB, "DES-EDE-CFB");
+alias!(
+    N_AES_256_WRAP,
+    "AES-256-WRAP:id-aes256-wrap:AES256-WRAP:2.16.840.1.101.3.4.1.45"
+);
+alias!(
+    N_AES_192_WRAP,
+    "AES-192-WRAP:id-aes192-wrap:AES192-WRAP:2.16.840.1.101.3.4.1.25"
+);
+alias!(
+    N_AES_128_WRAP,
+    "AES-128-WRAP:id-aes128-wrap:AES128-WRAP:2.16.840.1.101.3.4.1.5"
+);
+alias!(
+    N_AES_256_WRAP_PAD,
+    "AES-256-WRAP-PAD:id-aes256-wrap-pad:AES256-WRAP-PAD:2.16.840.1.101.3.4.1.48"
+);
+alias!(
+    N_AES_192_WRAP_PAD,
+    "AES-192-WRAP-PAD:id-aes192-wrap-pad:AES192-WRAP-PAD:2.16.840.1.101.3.4.1.28"
+);
+alias!(
+    N_AES_128_WRAP_PAD,
+    "AES-128-WRAP-PAD:id-aes128-wrap-pad:AES128-WRAP-PAD:2.16.840.1.101.3.4.1.8"
+);
+alias!(N_AES_256_WRAP_INV, "AES-256-WRAP-INV:AES256-WRAP-INV");
+alias!(N_AES_192_WRAP_INV, "AES-192-WRAP-INV:AES192-WRAP-INV");
+alias!(N_AES_128_WRAP_INV, "AES-128-WRAP-INV:AES128-WRAP-INV");
+alias!(
+    N_AES_256_WRAP_PAD_INV,
+    "AES-256-WRAP-PAD-INV:AES256-WRAP-PAD-INV"
+);
+alias!(
+    N_AES_192_WRAP_PAD_INV,
+    "AES-192-WRAP-PAD-INV:AES192-WRAP-PAD-INV"
+);
+alias!(
+    N_AES_128_WRAP_PAD_INV,
+    "AES-128-WRAP-PAD-INV:AES128-WRAP-PAD-INV"
+);
 
 /// A `deflt_ciphers[]` row.
 const fn row(names: *const c_char, implementation: *const c_void) -> OsslAlgorithm {
@@ -4023,7 +4609,7 @@ const fn row(names: *const c_char, implementation: *const c_void) -> OsslAlgorit
 
 /// `static const OSSL_ALGORITHM_CAPABLE deflt_ciphers[]` — `providers/defltprov.c:161-330`,
 /// restricted to the rows this half implements, in the authority's order.
-pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 54] = [
+pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 66] = [
     row(N_NULL, NULL_FUNCTIONS.as_ptr().cast()),
     row(N_AES_256_ECB, AES256ECB_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_ECB, AES192ECB_FUNCTIONS.as_ptr().cast()),
@@ -4046,6 +4632,27 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithm; 54] = [
     row(N_AES_256_CTR, AES256CTR_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_CTR, AES192CTR_FUNCTIONS.as_ptr().cast()),
     row(N_AES_128_CTR, AES128CTR_FUNCTIONS.as_ptr().cast()),
+    row(N_AES_256_WRAP, AES256WRAP_FUNCTIONS.as_ptr().cast()),
+    row(N_AES_192_WRAP, AES192WRAP_FUNCTIONS.as_ptr().cast()),
+    row(N_AES_128_WRAP, AES128WRAP_FUNCTIONS.as_ptr().cast()),
+    row(N_AES_256_WRAP_PAD, AES256WRAPPAD_FUNCTIONS.as_ptr().cast()),
+    row(N_AES_192_WRAP_PAD, AES192WRAPPAD_FUNCTIONS.as_ptr().cast()),
+    row(N_AES_128_WRAP_PAD, AES128WRAPPAD_FUNCTIONS.as_ptr().cast()),
+    row(N_AES_256_WRAP_INV, AES256WRAPINV_FUNCTIONS.as_ptr().cast()),
+    row(N_AES_192_WRAP_INV, AES192WRAPINV_FUNCTIONS.as_ptr().cast()),
+    row(N_AES_128_WRAP_INV, AES128WRAPINV_FUNCTIONS.as_ptr().cast()),
+    row(
+        N_AES_256_WRAP_PAD_INV,
+        AES256WRAPPADINV_FUNCTIONS.as_ptr().cast(),
+    ),
+    row(
+        N_AES_192_WRAP_PAD_INV,
+        AES192WRAPPADINV_FUNCTIONS.as_ptr().cast(),
+    ),
+    row(
+        N_AES_128_WRAP_PAD_INV,
+        AES128WRAPPADINV_FUNCTIONS.as_ptr().cast(),
+    ),
     row(N_CAMELLIA_256_ECB, CAMELLIA256ECB_FUNCTIONS.as_ptr().cast()),
     row(N_CAMELLIA_192_ECB, CAMELLIA192ECB_FUNCTIONS.as_ptr().cast()),
     row(N_CAMELLIA_128_ECB, CAMELLIA128ECB_FUNCTIONS.as_ptr().cast()),
@@ -4110,9 +4717,9 @@ mod tests {
 
     #[test]
     fn the_cipher_table_terminates_and_names_the_rows() {
-        assert_eq!(DEFLT_CIPHERS.len(), 54);
+        assert_eq!(DEFLT_CIPHERS.len(), 66);
         // SAFETY: every entry up to the terminator is initialised.
-        let last = DEFLT_CIPHERS[53].algorithm_names;
+        let last = DEFLT_CIPHERS[65].algorithm_names;
         assert!(last.is_null(), "the table is NULL-name terminated");
         // SAFETY: the first row's name is a `'static` C string.
         let first = unsafe { core::ffi::CStr::from_ptr(DEFLT_CIPHERS[0].algorithm_names) };
