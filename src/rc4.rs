@@ -14,10 +14,11 @@
 //!
 //! The perlasm's `RC4_options` selects among three strings by two `OPENSSL_ia32cap` bits:
 //! `rc4(16x,int)` when bit 30 is set, `rc4(8x,char)` when bit 20 is set, and otherwise the
-//! default `rc4(8x,int)`. Measured against the pinned authority on this profile's host, the
-//! answer is the default, `rc4(8x,int)`; the dispatch itself is Phase 19's
-//! (`docs/RELEASE_GATES.md`, "Performance / CPU dispatch"), so this arm answers the measured
-//! string and the dispatch is recorded rather than silently assumed.
+//! default `rc4(8x,int)`. **The string is a property of the host CPU, not of the
+//! implementation.** This arm answers the default, and the CPU dispatch is Phase 19's
+//! (`docs/RELEASE_GATES.md`, "Performance / CPU dispatch"); the differential court therefore
+//! does not compare the two strings, because a portable arm without the dispatch cannot match
+//! a host-dependent answer. The coord/coordinate is recorded in D213 rather than left implicit.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -43,8 +44,9 @@ const _: () = {
     assert!(core::mem::size_of::<Rc4Key>() == 1032);
 };
 
-/// `const char *RC4_options(void)` — the authority's perlasm object, measured as the default
-/// arm `rc4(8x,int)` (see the module doc).
+/// `const char *RC4_options(void)` — `crypto/rc4/asm/rc4-x86_64.pl`'s, whose answer is selected
+/// at run time from two `OPENSSL_ia32cap` bits. This arm answers the default `rc4(8x,int)`;
+/// the CPU dispatch is Phase 19's. See the module doc and D213.
 ///
 /// # Safety
 /// None; the pointer is a `'static` C string.
