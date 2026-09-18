@@ -14965,3 +14965,31 @@ and `RT-CIPHER`'s round trips are the independent-of-corpus answer.
 of `providers/defltprov.c`'s `deflt_ciphers[]`, remain open. The plan's anchored clauses moved in
 the same commit: `CRYPTO_xts128_encrypt` joined the landed clause, and the open one now names
 `CRYPTO_ocb128_init` rather than XTS.
+
+## D228 — Poly1305 and ChaCha20 are not this stratum's exports, and the CT-MODES entry named them in error
+
+The 8.3 work list says to establish Poly1305's and ChaCha20's stratum before publishing anything
+that mentions them. The answer is that **neither is a libcrypto export at all**, so neither is
+any stratum's obligation:
+
+* `util/libcrypto.num` has no `Poly1305_*` and no `ChaCha20_*` entry. The only names in their
+  neighbourhood are `EVP_chacha20`, `EVP_chacha20_poly1305` and `EVP_PKEY_get0_poly1305`, and all
+  three are `evp.h`'s by the declaring-header rule, which puts them in Phase 7.
+* 3.6.4 ships no `include/openssl/poly1305.h` or `include/openssl/chacha.h`. The primitives live
+  in the **internal** headers `include/crypto/poly1305.h` and `include/crypto/chacha.h` (units
+  `crypto/poly1305/poly1305.c` and `crypto/chacha/chacha_enc.c`), which the provider
+  implementations consume. They are prerequisites in the prerequisite gate's census, not exports
+  the ownership atlas assigns to a phase.
+* `EVP_PKEY_get0_poly1305` does reach this stratum, but as a recorded hand-off from Phase 7
+  (`received_from_phase: 7`, module `src/asn1/ameth.rs`) — it is a legacy `EVP_PKEY_ASN1_METHOD`
+  accessor and belongs with the ameth registry, not with a mode or a cipher row.
+
+So item 7 of 8.3 lands **no primitive**: what Poly1305 and ChaCha20 contribute to this stratum is
+confined to the default provider's cipher rows (`providers/implementations/ciphers/cipher_chacha20.c`
+and the Poly1305 provider MAC), which are item 6's. Two consequences are recorded rather than
+left implicit. First, `forensics/tools/phase8_courts.py`'s pending `CT-MODES` entry said this
+subphase needed "the GCM/CCM/XTS/Poly1305/ChaCha20-Poly1305 constructions"; that was wrong about
+the last two, and the entry is corrected in this commit to name only OCB, the last `modes.h`
+construction this stratum owns. Second, no ChaCha20 or Poly1305 vector set is added under
+`forensics/vectors/`, because a correctness court for a construction this stratum does not export
+would be a claim about code some later stratum owns.

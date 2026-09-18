@@ -134,9 +134,10 @@ CIPHER_CORRECTNESS_COURTS: list[tuple[str, tuple[str, ...]]] = [
 # the prerequisite in one line; the vectors themselves arrive in the subphase that lands the
 # primitive, in the same commit, exactly as `RT-*` probes do.
 PENDING_CORRECTNESS_COURTS: dict[str, str] = {
-    "CT-MODES": "8.3 -- needs the GCM/CCM/XTS/Poly1305/ChaCha20-Poly1305 constructions; "
-                "the authority ships SP 800-38x vectors in its evp_test data and CAVP sets "
-                "are the recorded follow-up (see correctness_vectors.py header).",
+    "CT-MODES": "8.3 -- needs OCB, the last `modes.h` construction this stratum owns (GCM, CCM "
+                "and XTS landed as `CT-CIPHER` vector families). Poly1305 and ChaCha20 are "
+                "named here in error: they are internal units and provider rows, not libcrypto "
+                "exports of this stratum (docs/DECISIONS.md D228).",
     "CT-RSA": "8.4 -- needs the RSA object and its decode/verify paths; the recorded corpus "
               "is PKCS#1's own test vectors, with Project Wycheproof's RSA known-attack set "
               "as the stated follow-up.",
