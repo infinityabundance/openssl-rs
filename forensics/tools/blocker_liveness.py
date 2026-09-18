@@ -169,8 +169,14 @@ class BlockerAtlas:
         implemented_internal: set[str],
         crate_defs: set[str],
         authority_source: Path,
+        known_units: set[str],
     ) -> None:
         self.authority_source = authority_source
+        # Every authority translation unit any committed atlas knows about. The 21 legacy
+        # primitive units are checked against this rather than against the source tree, so
+        # the check is as strong in CI (which has no 55 MB authority checkout) as it is in
+        # the court.
+        self.known_units = known_units
         self._index: dict[str, Resolved] = {}
 
         def landed(name: str) -> bool:
@@ -211,6 +217,11 @@ class BlockerAtlas:
     def resolve(self, name: str) -> Resolved | None:
         return self._index.get(name)
 
+    def unit_is_known(self, unit: str) -> bool:
+        """True when some authority translation unit any atlas records lives under `unit`."""
+        prefix = unit.rstrip("/") + "/"
+        return any(u.startswith(prefix) for u in self.known_units)
+
     @classmethod
     def from_repo(
         cls,
@@ -230,14 +241,19 @@ class BlockerAtlas:
             implemented_internal = set(surface["internal_symbols"]["c_style"])
         if crate_defs is None:
             crate_defs = crate_definitions(repo_root / "src")
+        export_body = load_body(repo_root / EXPORT_UNITS)
         exports = {
             r["symbol"]: (r["translation_unit"], int(r["owner_phase"]))
-            for r in load_body(repo_root / EXPORT_UNITS)["records"]
+            for r in export_body["records"]
             if r.get("owner_phase") is not None
         }
+        internal_records = load_body(repo_root / INTERNAL_SYMBOLS)["records"]
         internals = {
             r["symbol"]: (r["translation_unit"], tuple(r.get("declared_in") or ()))
-            for r in load_body(repo_root / INTERNAL_SYMBOLS)["records"]
+            for r in internal_records
+        }
+        known_units = set(export_body["by_translation_unit"].keys()) | {
+            r["translation_unit"] for r in internal_records
         }
         types = {
             r["name"]: (tuple(r.get("defined_in") or ()), r.get("owner_phase"))
@@ -257,6 +273,7 @@ class BlockerAtlas:
             implemented_internal=implemented_internal,
             crate_defs=crate_defs,
             authority_source=authority_source,
+            known_units=known_units,
         )
 
 
@@ -292,7 +309,14 @@ def _line_in_range(atlas: BlockerAtlas, unit: str, line: int) -> str | None:
     A `unit` is a translation unit's path (`crypto/evp/p_lib.c`) or a header's basename
     (`types.h`, as the typedef atlas records it); the latter is resolved against the
     installed include directories.
+
+    The authority's source tree lives only in the court, so this check has two tiers: with
+    the tree present it proves the line is inside the file, and with the tree absent
+    (CI's `evidence_determinism`) it proves nothing and does not fail. The unit itself is
+    checked against the committed atlases either way, so a wrong path is still caught.
     """
+    if not atlas.authority_source.is_dir():
+        return None
     candidates = [
         atlas.authority_source / unit,
         atlas.authority_source / "include" / "openssl" / unit,

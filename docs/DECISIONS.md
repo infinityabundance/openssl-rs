@@ -12688,8 +12688,15 @@ class BlockedHandoff:
 5. **if the binding phase is complete and a blocker is still absent**, the completed stratum did
    not produce the name it owed.
 
-A `Blocker` whose `authority_unit:line` is not a real file:line in the authority tree is a
-failure too, so the path evidence is not decorative.
+A `Blocker` whose `authority_unit` is not a unit any committed atlas records is a failure, so
+the path evidence is not decorative. The authority's 55 MB source tree lives only in the court,
+so the checks have two tiers and print which one ran, the pattern `gen_ctype_table.py` already
+uses: with the tree present, a `Blocker`'s `authority_unit:line` is proved to be a real line
+inside a real file; with it absent (CI's `evidence_determinism`), the unit is still checked against
+the committed atlases and the line range is not claimed. The two tiers produce byte-identical
+artifacts -- the strong tier only ever *adds* failures -- and both were run: CI's `Evidence
+determinism` step failed on the first push precisely because the strong tier had been assumed, and
+it is green after the tier was made explicit.
 
 A type declared only in the weak `types.h` has no authority phase of its own. It is accepted only
 when another blocker in the same row carries the row's `binding_phase`; the twelve low-level-key
@@ -12785,10 +12792,11 @@ Each is recorded rather than asserted, and each is kept to the smallest set that
   (`crypto/evp/evp_pkey_type.c:63`) and `EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`) are
   this stratum's, withheld by rows 6 and 16; using them as blockers of a row owned by this stratum
   would make the claim circular. Rows 3 and 23 name the root blockers instead.
-* **`line` is range-checked, not resolved to a definition.** A macro-generated export does not
+* **`line` is range-checked only with the tree present.** A macro-generated export does not
   contain its own name at its definition site — `d2i_X509_ALGOR` is
   `IMPLEMENT_ASN1_FUNCTIONS(X509_ALGOR)` at `crypto/asn1/x_algor.c:26` — so the checker proves the
-  file exists and the line is inside it, and leaves the definition-site claim to the reader. A
+  file exists and the line is inside it when the authority tree is available, and otherwise
+  defers to the reader; the unit itself is checked against the committed atlases either way. A
   general C declaration parser is out of scope and would be wrong more often than this.
 * **Decision-entry attribution in proof 4.** No artifact in the repository maps a landed symbol to
   the decision that landed it, so the running generator's message names the blocker and its phase

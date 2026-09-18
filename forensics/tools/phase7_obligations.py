@@ -941,13 +941,16 @@ def main(argv: list[str]) -> int:
         # The 7.3g claim is about a whole primitive **unit**, not a name, so it cannot be a
         # `Blocker`. What can be checked is that the unit the reason names is really in the
         # authority: a typo in `crypto/md5/` would otherwise hand a family to a stratum for a
-        # reason nothing corroborates. This is the unit-level half of the same liveness idea.
+        # reason nothing corroborates. The check reads the committed atlases, not the 55 MB
+        # source tree, so it is as strong in CI as in the court. This is the unit-level half
+        # of the same liveness idea.
         units = [u.strip().rstrip("/") for u in primitive.split(" and ")]
-        missing = [u for u in units if not (auth.source / u).is_dir()]
-        if missing:
+        unknown = [u for u in units if not blocker_atlas.unit_is_known(u)]
+        if unknown:
             raise SystemExit(
-                f"phase7-obligations: LEGACY_HANDOFFS names {primitive!r}, but "
-                f"{', '.join(missing)} is not in the authority tree"
+                f"phase7-obligations: LEGACY_HANDOFFS names {primitive!r}, but no authority "
+                f"translation unit any atlas records lives under "
+                f"{', '.join(unknown)}; the unit is a typo or the atlas is stale"
             )
         for sym in owned:
             if sym in done or sym in handed_on:
