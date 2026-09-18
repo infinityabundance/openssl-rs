@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 16,
-      "implemented": 160,
-      "open_in_this_stratum": 610,
+      "implemented": 164,
+      "open_in_this_stratum": 606,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -1195,6 +1195,10 @@
       "CAST_encrypt",
       "CAST_ofb64_encrypt",
       "CAST_set_key",
+      "CRYPTO_128_unwrap",
+      "CRYPTO_128_unwrap_pad",
+      "CRYPTO_128_wrap",
+      "CRYPTO_128_wrap_pad",
       "CRYPTO_cbc128_decrypt",
       "CRYPTO_cbc128_encrypt",
       "CRYPTO_cfb128_1_encrypt",
@@ -1542,30 +1546,6 @@
     ],
     "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum, and it starts at the whole working set, which is the honest starting state. Nothing here is a parity claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-8-SUBPHASES.md §4 decides when the stratum may be called complete.",
     "open": [
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_128_unwrap"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_128_unwrap_pad"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_128_wrap"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_128_wrap_pad"
-      },
       {
         "declaring_header": "modes.h",
         "module": "src/modes/mod.rs",
@@ -5274,12 +5254,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "c6464ab9db51a5371f6bd6f21c5fe9a73274135248a1a28ec39312a3e4d3b193"
+      "sha256": "6e3a5016409450210115beecaacaf0530e335b4f480528ae6231cbc53d802cfb"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "518e746ef6f43b4459b89950def4706a371b8ff17c68869f6c4381c45f309117"
+      "sha256": "d306fcabf060bb0d74626e2724b4b5ee0355bc8f1e8a64ba3c0b4af440a90cdd"
     }
   ],
   "kind": "phase8-obligations",

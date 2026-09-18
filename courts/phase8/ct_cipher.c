@@ -27,6 +27,7 @@
 #include <openssl/cast.h>
 #include <openssl/des.h>
 #include <openssl/idea.h>
+#include <openssl/modes.h>
 #include <openssl/rc2.h>
 #include <openssl/rc4.h>
 #include <openssl/seed.h>
@@ -585,6 +586,63 @@ static int ct_legacy(const char *cipher, int enc_op,
     return -1;
 }
 
+/*
+ * The key-wrap family: RFC 3394 (`id-aes*-wrap`) and RFC 5649 (`id-aes*-wrap-pad`). The
+ * wrapping is driven through `CRYPTO_128_wrap`/`_unwrap`/`_wrap_pad`/`_unwrap_pad` with the
+ * AES block cipher as the `block128_f`, which is exactly how the authority's own
+ * `AES_wrap_key`/`AES_unwrap_key` are spelled over the same functions.
+ */
+static int ct_wrap(const char *cipher, int enc_op,
+                   const unsigned char *key, size_t keylen,
+                   const unsigned char *iv, size_t ivlen,
+                   const unsigned char *in, size_t inlen,
+                   unsigned char *out, size_t *outlen)
+{
+    AES_KEY enc, dck;
+    int bits;
+    size_t n;
+
+    if (ivlen != 0 || strncmp(cipher, "id-aes", 6) != 0)
+        return -1;
+    if (strncmp(cipher + 6, "128", 3) == 0)
+        bits = 128;
+    else if (strncmp(cipher + 6, "192", 3) == 0)
+        bits = 192;
+    else if (strncmp(cipher + 6, "256", 3) == 0)
+        bits = 256;
+    else
+        return -1;
+    if (keylen != (size_t)bits / 8)
+        return -1;
+
+    if (strcmp(cipher + 9, "-wrap") != 0 && strcmp(cipher + 9, "-wrap-pad") != 0)
+        return -1;
+
+    if (enc_op) {
+        if (AES_set_encrypt_key(key, bits, &enc) != 0)
+            return -1;
+        if (strcmp(cipher + 9, "-wrap") == 0)
+            n = CRYPTO_128_wrap(&enc, NULL, out, in, inlen,
+                                (block128_f)AES_encrypt);
+        else
+            n = CRYPTO_128_wrap_pad(&enc, NULL, out, in, inlen,
+                                    (block128_f)AES_encrypt);
+    } else {
+        if (AES_set_decrypt_key(key, bits, &dck) != 0)
+            return -1;
+        if (strcmp(cipher + 9, "-wrap") == 0)
+            n = CRYPTO_128_unwrap(&dck, NULL, out, in, inlen,
+                                  (block128_f)AES_decrypt);
+        else
+            n = CRYPTO_128_unwrap_pad(&dck, NULL, out, in, inlen,
+                                      (block128_f)AES_decrypt);
+    }
+    if (n == 0)
+        return -1;
+    *outlen = n;
+    return 0;
+}
+
 static int ct_cipher(const char *cipher, const char *operation,
                      const unsigned char *key, size_t keylen,
                      const unsigned char *iv, size_t ivlen,
@@ -593,6 +651,8 @@ static int ct_cipher(const char *cipher, const char *operation,
 {
     int enc_op = strcmp(operation, "ENCRYPT") == 0;
 
+    if (ct_wrap(cipher, enc_op, key, keylen, iv, ivlen, in, inlen, out, outlen) == 0)
+        return 0;
     if (ct_aes_rc4(cipher, enc_op, key, keylen, iv, ivlen, in, inlen, out, outlen) == 0)
         return 0;
     return ct_legacy(cipher, enc_op, key, keylen, iv, ivlen, in, inlen, out, outlen);

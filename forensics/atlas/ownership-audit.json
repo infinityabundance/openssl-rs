@@ -1095,7 +1095,7 @@
     },
     "implemented_by_two_strata": [],
     "implemented_exports": {
-      "libcrypto": 2001,
+      "libcrypto": 2005,
       "libssl": 0
     },
     "invariant": "every authority export has exactly one declared owner in forensics/atlas/symbol-ownership.json; every export the atlas gives a stratum appears in that stratum's ledger; every row a stratum's ledger carries for another stratum's export is a hand-off that stratum recorded",
@@ -1201,7 +1201,7 @@
       {
         "atlas": 759,
         "deferred": 16,
-        "implemented": 160,
+        "implemented": 164,
         "ledger": 786,
         "only_in_atlas": 0,
         "only_in_atlas_examples": [],
@@ -1218,7 +1218,7 @@
           "EVP_PKEY_get0_poly1305",
           "EVP_PKEY_get0_siphash"
         ],
-        "open": 610,
+        "open": 606,
         "phase": 8
       }
     ],
@@ -4988,7 +4988,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "77655d0973ed538430e99c2fc6a38d7c5900c5d87a4a88803df24e3257e9d246"
+      "sha256": "9a4dbeca472c1fd2fd9ffc70f67117b99666940506db71ba5f2bf3c0b3bc5517"
     },
     {
       "name": "authority-symbols",
@@ -5003,32 +5003,32 @@
     {
       "name": "ledger-3",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "892a04005f9b0202d87cf43e8a17b5844b55a78199960c8f2a23f81dea01c089"
+      "sha256": "2b5539330f52a2f5008ae9434d98b399ee25bb50b3eb78220e74a50c3163b7f6"
     },
     {
       "name": "ledger-4",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "f01c4d66f9e89f2e7439c290a01855dae5a555fe64efcd2233a7651e9c19da34"
+      "sha256": "b52508e556173fe0980fc7099c5e1310ce0ab5ded9dadc82670dcf03025efae0"
     },
     {
       "name": "ledger-5",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "73dfad9b4f3eef520705eb091aaf5fcc5ded72bdca788687a5fbc9718d801799"
+      "sha256": "72d6dcbbe38b6c3d4978bc4fa43cdc5de7e729eddbd56b00f35c9b5b4e9ad4fe"
     },
     {
       "name": "ledger-6",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "b2727f7bf36877237a3168fac538072246558f8caee592036badb8c08bf7484f"
+      "sha256": "df97ce078be72282a4657ea6c983d09539aaa6b5239cb4cf91e05471841bc69a"
     },
     {
       "name": "ledger-7",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "518e746ef6f43b4459b89950def4706a371b8ff17c68869f6c4381c45f309117"
+      "sha256": "d306fcabf060bb0d74626e2724b4b5ee0355bc8f1e8a64ba3c0b4af440a90cdd"
     },
     {
       "name": "ledger-8",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "e30f75376f901a595909103f4218c6529883c1c1c6313c2784f4362ebc5f8a30"
+      "sha256": "0e4c08150bc273a5de3c649ca691146402ddaef519dc237d1963e7206a6eee1f"
     }
   ],
   "kind": "ownership-audit",
