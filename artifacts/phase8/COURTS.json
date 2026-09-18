@@ -7,9 +7,9 @@
     "courts": [
       {
         "authority_exit_code": 0,
-        "authority_observations": 305,
+        "authority_observations": 330,
         "candidate_exit_code": 0,
-        "candidate_observations": 305,
+        "candidate_observations": 330,
         "candidate_stderr_tail": [],
         "court": "RT-DIGEST",
         "crashed": false,
@@ -24,9 +24,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 959,
+        "authority_observations": 962,
         "candidate_exit_code": 0,
-        "candidate_observations": 959,
+        "candidate_observations": 962,
         "candidate_stderr_tail": [],
         "court": "RT-CIPHER",
         "crashed": false,
@@ -36584,12 +36584,12 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_digest_probe.c",
-      "sha256": "c493fdb8c762e969726913898569c5d33b73945941e3b23858033d465d1786e4"
+      "sha256": "b288ab71fc49a7014e41c472ce624fa470dcee7a26ea34350521e0315a309c24"
     },
     {
       "name": "probe",
       "path": "courts/phase8/rt_cipher_probe.c",
-      "sha256": "49d56117a978eac30f980b0764669639124b2d6d29d615552e32c890f8e61693"
+      "sha256": "7ccc55127da58642949549a45ec2018f6fb761877b4cc1cb77ddb829d5565fa3"
     },
     {
       "name": "correctness-probe",

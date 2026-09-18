@@ -2,8 +2,18 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority": "openssl-3.6.4-production",
-    "claim": "`directly_courted` means the symbol is an undefined dynamic symbol of a staged candidate probe that ran and produced a transcript. It does NOT mean every arm of the symbol was driven: a name that is only address-taken, or stored in a dispatch table, is imported exactly as a direct call is. `indirectly_courted` is an explicit, checked edge -- the named entry is itself directly courted by a probe of the named court. `non_observable` is a symbol whose effect no probe can isolate, with the reason and the court that observes its downstream effect. A symbol in none of the three fails this generator by name.",
-    "definition": "a completed stratum is one whose obligation ledger records `complete`; every export that ledger implements is partitioned below",
+    "claim": "`directly_courted` means the symbol is an undefined dynamic symbol of a staged candidate probe that ran and produced a transcript. It does NOT mean every arm of the symbol was driven: a name that is only address-taken, or stored in a dispatch table, is imported exactly as a direct call is. `indirectly_courted` is an explicit, checked edge -- the named entry is itself directly courted by a probe of the named court. `non_observable` is a symbol whose effect no probe can isolate, with the reason and the court that observes its downstream effect. A symbol in none of the three fails this generator by name -- for every stratum that has begun, in-progress or complete, so an export cannot be landed without an edge.",
+    "completed": [
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "definition": "a stratum that has begun is one with an obligation ledger on disk; `complete` records whether it has sealed. Every export a begun stratum implements is partitioned below, whether the stratum is in-progress or complete",
+    "in_progress": [
+      8
+    ],
     "strata": [
       {
         "completed": true,
@@ -508,9 +518,11 @@
               "RT-BIO-RESOLVE",
               "RT-BIO-SOCK",
               "RT-BN",
+              "RT-CIPHER",
               "RT-CMAC",
               "RT-COMP",
               "RT-CONF-MOD",
+              "RT-DIGEST",
               "RT-DSO",
               "RT-ERR",
               "RT-ERR-BIO",
@@ -599,9 +611,11 @@
               "RT-ASN1-PRINT",
               "RT-ASN1-STR",
               "RT-BIO-ASN1",
+              "RT-CIPHER",
               "RT-CMAC",
               "RT-CONF",
               "RT-CONF-MOD",
+              "RT-DIGEST",
               "RT-DSO",
               "RT-ERR",
               "RT-EVP-BIO",
@@ -8027,6 +8041,8 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
+              "RT-DIGEST",
               "RT-EVP-PKEY",
               "RT-EVP-PKEY-OPS",
               "RT-EVP-SKEY",
@@ -8076,6 +8092,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DIGEST",
               "RT-EVP-KDF",
               "RT-EVP-PKEY",
               "RT-EVP-SKEY",
@@ -8087,6 +8104,8 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
+              "RT-DIGEST",
               "RT-EVP-CIPHER",
               "RT-EVP-KDF",
               "RT-EVP-MAC",
@@ -8144,6 +8163,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-PKEY-OPS",
               "RT-PARAM",
               "RT-PROVIDER-3P"
@@ -8557,6 +8577,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DIGEST",
               "RT-PROVIDER",
               "RT-PROVIDER-3P"
             ],
@@ -8600,6 +8621,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-PROVIDER"
             ],
             "symbol": "OSSL_PROVIDER_get0_provider_ctx"
@@ -8635,7 +8657,9 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-CMAC",
+              "RT-DIGEST",
               "RT-EVP-BIO",
               "RT-EVP-CIPHER",
               "RT-EVP-CLASS",
@@ -8666,6 +8690,8 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
+              "RT-DIGEST",
               "RT-PROVIDER"
             ],
             "symbol": "OSSL_PROVIDER_query_operation"
@@ -8701,7 +8727,9 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-CMAC",
+              "RT-DIGEST",
               "RT-EVP-BIO",
               "RT-EVP-CIPHER",
               "RT-EVP-KDF",
@@ -8801,8 +8829,8 @@
         "completed": true,
         "counts": {
           "directly_courted": 706,
-          "directly_courted_called": 643,
-          "directly_courted_referenced": 63,
+          "directly_courted_called": 645,
+          "directly_courted_referenced": 61,
           "implemented": 706,
           "indirectly_courted": 0,
           "non_observable": 0,
@@ -9026,6 +9054,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-CIPHER"
             ],
             "symbol": "EVP_CIPHER_CTX_ctrl"
@@ -9040,6 +9069,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-CIPHER",
               "RT-EVP-PBE",
               "RT-EVP-PKEY"
@@ -9126,6 +9156,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-CIPHER"
             ],
             "symbol": "EVP_CIPHER_CTX_get_params"
@@ -9175,6 +9206,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-CIPHER",
               "RT-EVP-PBE",
               "RT-EVP-PKEY"
@@ -9304,6 +9336,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-CMAC",
               "RT-EVP-BIO",
               "RT-EVP-CIPHER",
@@ -9316,6 +9349,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-CMAC",
               "RT-EVP-BIO",
               "RT-EVP-CIPHER",
@@ -9356,6 +9390,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-CIPHER"
             ],
             "symbol": "EVP_CIPHER_get_block_size"
@@ -9370,6 +9405,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-CIPHER"
             ],
             "symbol": "EVP_CIPHER_get_iv_length"
@@ -9377,6 +9413,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-CIPHER"
             ],
             "symbol": "EVP_CIPHER_get_key_length"
@@ -9731,6 +9768,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-CIPHER"
             ],
             "symbol": "EVP_DecryptFinal_ex"
@@ -9745,13 +9783,15 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-CIPHER"
             ],
             "symbol": "EVP_DecryptInit_ex"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-REF"
             ],
             "symbol": "EVP_DecryptInit_ex2"
@@ -9759,6 +9799,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-CIPHER"
             ],
             "symbol": "EVP_DecryptUpdate"
@@ -9787,6 +9828,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DIGEST",
               "RT-EVP-BIO",
               "RT-EVP-PEM",
               "RT-FETCH"
@@ -9803,6 +9845,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DIGEST",
               "RT-EVP-BIO",
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
@@ -9855,6 +9898,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DIGEST",
               "RT-FETCH"
             ],
             "symbol": "EVP_DigestSqueeze"
@@ -9862,6 +9906,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DIGEST",
               "RT-EVP-BIO",
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
@@ -9971,6 +10016,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-CIPHER"
             ],
             "symbol": "EVP_EncryptFinal_ex"
@@ -9985,14 +10031,16 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-CIPHER",
               "RT-EVP-PKEY"
             ],
             "symbol": "EVP_EncryptInit_ex"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-REF"
             ],
             "symbol": "EVP_EncryptInit_ex2"
@@ -10000,6 +10048,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-CIPHER"
             ],
             "symbol": "EVP_EncryptUpdate"
@@ -10691,6 +10740,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DIGEST",
               "RT-EVP-BIO",
               "RT-EVP-INTROSPECT",
               "RT-EVP-PEM",
@@ -10762,6 +10812,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DIGEST",
               "RT-EVP-BIO",
               "RT-EVP-INTROSPECT",
               "RT-EVP-PEM",
@@ -10788,6 +10839,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DIGEST",
               "RT-EVP-PKEY",
               "RT-FETCH"
             ],
@@ -10854,6 +10906,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DIGEST",
               "RT-EVP-BIO",
               "RT-EVP-PBE",
               "RT-EVP-PEM",
@@ -10866,6 +10919,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DIGEST",
               "RT-EVP-BIO",
               "RT-EVP-PBE",
               "RT-EVP-PEM",
@@ -10899,6 +10953,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DIGEST",
               "RT-FETCH"
             ],
             "symbol": "EVP_MD_get_block_size"
@@ -10927,6 +10982,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DIGEST",
               "RT-FETCH"
             ],
             "symbol": "EVP_MD_get_size"
@@ -11152,6 +11208,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DIGEST",
               "RT-FETCH"
             ],
             "symbol": "EVP_MD_xof"
@@ -14034,14 +14091,1383 @@
         "non_observable": [],
         "phase": 7,
         "staged_candidate_probes": 19
+      },
+      {
+        "completed": false,
+        "counts": {
+          "directly_courted": 186,
+          "directly_courted_called": 186,
+          "directly_courted_referenced": 0,
+          "implemented": 194,
+          "indirectly_courted": 8,
+          "non_observable": 0,
+          "unmatched": 0
+        },
+        "directly_courted": [
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "AES_bi_ige_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "AES_cbc_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "AES_cfb128_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "AES_cfb1_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "AES_cfb8_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "AES_decrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "AES_ecb_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "AES_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "AES_ige_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "AES_ofb128_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "AES_options"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "AES_set_decrypt_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "AES_set_encrypt_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "AES_unwrap_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "AES_wrap_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "BF_cbc_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "BF_cfb64_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "BF_decrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "BF_ecb_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "BF_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "BF_ofb64_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "BF_options"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "BF_set_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CAST_cbc_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CAST_cfb64_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CAST_decrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CAST_ecb_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CAST_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CAST_ofb64_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CAST_set_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_128_unwrap"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_128_unwrap_pad"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_128_wrap"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_128_wrap_pad"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_cbc128_decrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_cbc128_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_ccm128_aad"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_ccm128_decrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_ccm128_decrypt_ccm64"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_ccm128_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_ccm128_encrypt_ccm64"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_ccm128_init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_ccm128_setiv"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_ccm128_tag"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_cfb128_1_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_cfb128_8_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_cfb128_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_ctr128_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_ctr128_encrypt_ctr32"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_cts128_decrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_cts128_decrypt_block"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_cts128_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_cts128_encrypt_block"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_gcm128_aad"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_gcm128_decrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_gcm128_decrypt_ctr32"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_gcm128_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_gcm128_encrypt_ctr32"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_gcm128_finish"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_gcm128_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_gcm128_release"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_gcm128_setiv"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_gcm128_tag"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_nistcts128_decrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_nistcts128_decrypt_block"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_nistcts128_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_nistcts128_encrypt_block"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_ocb128_aad"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_ocb128_cleanup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_ocb128_copy_ctx"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_ocb128_decrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_ocb128_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_ocb128_finish"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_ocb128_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_ocb128_setiv"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_ocb128_tag"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_ofb128_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "CRYPTO_xts128_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "Camellia_cbc_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "Camellia_cfb128_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "Camellia_cfb1_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "Camellia_cfb8_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "Camellia_ctr128_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "Camellia_ecb_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "Camellia_ofb128_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "Camellia_set_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_cbc_cksum"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_cbc_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_cfb64_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_cfb_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_check_key_parity"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_crypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_decrypt3"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_ecb3_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_ecb_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_ede3_cbc_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_ede3_cfb64_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_ede3_cfb_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_ede3_ofb64_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_encrypt1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_encrypt2"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_encrypt3"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_fcrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_is_weak_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_key_sched"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_ncbc_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_ofb64_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_ofb_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_options"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_pcbc_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_quad_cksum"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_set_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_set_key_checked"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_set_key_unchecked"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_set_odd_parity"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_string_to_2keys"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_string_to_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "DES_xcbc_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "IDEA_cbc_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "IDEA_cfb64_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "IDEA_ecb_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "IDEA_ofb64_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "IDEA_options"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "IDEA_set_decrypt_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "IDEA_set_encrypt_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "MD4"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "MD4_Final"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "MD4_Init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "MD4_Transform"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "MD4_Update"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "MD5"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "MD5_Final"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "MD5_Init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "MD5_Transform"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "MD5_Update"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "MDC2"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "MDC2_Final"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "MDC2_Init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "MDC2_Update"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "RC2_cbc_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "RC2_cfb64_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "RC2_decrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "RC2_ecb_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "RC2_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "RC2_ofb64_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "RC2_set_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "RC4"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "RC4_options"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "RC4_set_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "RIPEMD160"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "RIPEMD160_Final"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "RIPEMD160_Init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "RIPEMD160_Transform"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "RIPEMD160_Update"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "SEED_cbc_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "SEED_cfb128_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "SEED_ecb_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "SEED_ofb128_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CIPHER"
+            ],
+            "symbol": "SEED_set_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "SHA1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "SHA1_Final"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "SHA1_Init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "SHA1_Transform"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "SHA1_Update"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "SHA224"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "SHA224_Final"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "SHA224_Init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "SHA224_Update"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "SHA256"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "SHA256_Final"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "SHA256_Init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "SHA256_Transform"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "SHA256_Update"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "SHA384"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "SHA384_Final"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "SHA384_Init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "SHA384_Update"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "SHA512"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "SHA512_Final"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "SHA512_Init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "SHA512_Transform"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "SHA512_Update"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "WHIRLPOOL"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "WHIRLPOOL_Final"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "WHIRLPOOL_Init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DIGEST"
+            ],
+            "symbol": "WHIRLPOOL_Update"
+          }
+        ],
+        "indirectly_courted": [
+          {
+            "authority": "crypto/modes/gcm128.c:1619 -- CRYPTO_gcm128_new allocates the context and calls CRYPTO_gcm128_init on it, which is the only way a caller obtains a GCM context. The probe drives GCM entirely through CRYPTO_gcm128_new, so the initialiser is exercised on every GCM observation.",
+            "court": "RT-CIPHER",
+            "entry": "CRYPTO_gcm128_new",
+            "symbol": "CRYPTO_gcm128_init"
+          },
+          {
+            "authority": "crypto/modes/ocb128.c:138 -- CRYPTO_ocb128_new calls CRYPTO_ocb128_init and frees the context when it refuses, so the initialiser runs before any OCB observation.",
+            "court": "RT-CIPHER",
+            "entry": "CRYPTO_ocb128_new",
+            "symbol": "CRYPTO_ocb128_init"
+          },
+          {
+            "authority": "crypto/camellia/cmll_ecb.c:25 -- the decrypt arm of the same facade.",
+            "court": "RT-CIPHER",
+            "entry": "Camellia_ecb_encrypt",
+            "symbol": "Camellia_decrypt"
+          },
+          {
+            "authority": "crypto/camellia/cmll_ecb.c:23 -- Camellia_ecb_encrypt's encrypt arm is Camellia_encrypt, and the probe drives Camellia ECB (and every Camellia mode, through the generic engine's block function) directly.",
+            "court": "RT-CIPHER",
+            "entry": "Camellia_ecb_encrypt",
+            "symbol": "Camellia_encrypt"
+          },
+          {
+            "authority": "crypto/idea/i_ecb.c:35 -- IDEA_ecb_encrypt calls IDEA_encrypt on the two 32-bit halves it loads from the block; IDEA_decrypt is directly courted because the probe also calls it by name, and this is its sibling only for IDEA_encrypt.",
+            "court": "RT-CIPHER",
+            "entry": "IDEA_ecb_encrypt",
+            "symbol": "IDEA_encrypt"
+          },
+          {
+            "authority": "crypto/seed/seed_ecb.c:24 -- the decrypt arm of the same facade.",
+            "court": "RT-CIPHER",
+            "entry": "SEED_ecb_encrypt",
+            "symbol": "SEED_decrypt"
+          },
+          {
+            "authority": "crypto/seed/seed_ecb.c:22 -- SEED_ecb_encrypt's encrypt arm.",
+            "court": "RT-CIPHER",
+            "entry": "SEED_ecb_encrypt",
+            "symbol": "SEED_encrypt"
+          },
+          {
+            "authority": "crypto/whrlpool/wp_dgst.c:82 and :87 -- WHIRLPOOL_Update hands the byte count to WHIRLPOOL_BitUpdate, which is the construction's only update path, so the probe's 1000-byte message drives it.",
+            "court": "RT-DIGEST",
+            "entry": "WHIRLPOOL_Update",
+            "symbol": "WHIRLPOOL_BitUpdate"
+          }
+        ],
+        "non_observable": [],
+        "phase": 8,
+        "staged_candidate_probes": 2
       }
     ],
     "totals": {
-      "directly_courted": 1841,
-      "directly_courted_called": 1554,
-      "directly_courted_referenced": 287,
-      "implemented": 1841,
-      "indirectly_courted": 0,
+      "directly_courted": 2027,
+      "directly_courted_called": 1742,
+      "directly_courted_referenced": 285,
+      "implemented": 2035,
+      "indirectly_courted": 8,
       "non_observable": 0
     },
     "unmatched": 0
@@ -14061,7 +15487,7 @@
     {
       "name": "coverage-rows",
       "path": "forensics/atlas/court-coverage-rows.json",
-      "sha256": "f855cafad2d0b24a4a3c184d7547a776fcf79a999adf0085f62a92539409a170"
+      "sha256": "785c4ff1ffb4c32143e659e5a05443896a65236188079ff25944f3c1ba7b0115"
     },
     {
       "name": "phase3-obligations",
@@ -14112,6 +15538,16 @@
       "name": "phase7-courts",
       "path": "artifacts/phase7/COURTS.json",
       "sha256": "d2fd46f011467dd9a39390af0aae349d2ab7970ede23e80c0a781b8a3e4fa0e0"
+    },
+    {
+      "name": "phase8-obligations",
+      "path": "forensics/phase8-obligations.json",
+      "sha256": "9c19022768d3b76921a3be2223e2fec6685d56d257d3bc63b6403772c6cc0d00"
+    },
+    {
+      "name": "phase8-courts",
+      "path": "artifacts/phase8/COURTS.json",
+      "sha256": "4bbc4b3009d36353f674de5383190002019f1ab5031cf99b07b4fe9c7c17d863"
     }
   ],
   "kind": "court-coverage",

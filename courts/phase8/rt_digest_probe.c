@@ -643,6 +643,51 @@ static void rt_one_shot_exports(void)
     }
 }
 
+/* The five one-shot exports of `md4.h`, `md5.h`, `mdc2.h`, `ripemd.h` and `whrlpool.h`.
+ *
+ * They are a different shape from the `sha.h` five above: nothing else in this probe calls them,
+ * so they were neither directly nor indirectly courted and the court-coverage atlas -- which now
+ * covers the in-progress stratum -- named them the moment its invariant moved off
+ * completed-only. They are driven exactly as the SHA five are: the caller's buffer, then
+ * `md == NULL`, which is the file's own `static` buffer. `MDC2`'s one-shot is the `pad_type = 1`
+ * arm the context loop below also drives through the context. */
+static void rt_one_shot_exports_legacy(void)
+{
+    typedef unsigned char *(*rt_oneshot_fn)(const unsigned char *, size_t, unsigned char *);
+    static const char *labels[5] = {"md4", "md5", "mdc2", "ripemd160", "whirlpool"};
+    static const size_t sizes[5] = {16u, 16u, 16u, 20u, 64u};
+    static rt_oneshot_fn const fns[5] = {
+        (rt_oneshot_fn)MD4, (rt_oneshot_fn)MD5, (rt_oneshot_fn)MDC2,
+        (rt_oneshot_fn)RIPEMD160, (rt_oneshot_fn)WHIRLPOOL
+    };
+    unsigned char out[64];
+    size_t i;
+
+    for (i = 0; i < 5; i++) {
+        unsigned char *ret = NULL;
+        unsigned char *stat = NULL;
+
+        memset(out, 0, sizeof(out));
+        ret = fns[i](rt_msg, 1000, out);
+        printf("oneshot.%s=%s\n", labels[i], ret == NULL ? "null" : "ok");
+        if (ret != NULL) {
+            printf("oneshot.%s.digest=", labels[i]);
+            rt_print_hex(out, sizes[i]);
+            printf("\n");
+        }
+
+        stat = fns[i](rt_msg, 1000, NULL);
+        printf("oneshot.%s.static=%s\n", labels[i], stat == NULL ? "null" : "ok");
+        if (stat != NULL) {
+            printf("oneshot.%s.static_digest=", labels[i]);
+            rt_print_hex(stat, sizes[i]);
+            printf("\n");
+            printf("oneshot.%s.static_matches=%s\n", labels[i],
+                   ret != NULL && memcmp(stat, out, sizes[i]) == 0 ? "same" : "differ");
+        }
+    }
+}
+
 static void rt_mdc2_padding(void)
 {
     static const unsigned char msg[] = "Now is the time for all ";
@@ -786,6 +831,7 @@ int main(void)
 
     rt_mdc2_padding();
     rt_one_shot_exports();
+    rt_one_shot_exports_legacy();
     rt_provider_section();
     rt_disp_errors();
 
