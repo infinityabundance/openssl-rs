@@ -5,103 +5,148 @@
     "court": "CT-DIGEST",
     "digest_bytes": 16,
     "openssl_digest": "MD4",
+    "primary_source": "RFC 1320 (MD4) §A.5",
     "provenance": {
       "authority": "openssl-3.6.4-production",
       "corpus": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_md.txt",
-      "note": "Extracted from the pinned authority's own test data with `correctness_vectors.py --emit`; the bytes and the expected digest are verbatim from that file. A CT pass is not formal validation."
+      "corpus_sha256": "d803585d182f78d932d306ce21dad8754897d854a3346501605851a45c047148",
+      "note": "Candidate-only construction verification: the primary source is named above, the bytes are mirrored through the pinned corpus (`corpus_sha256`), and the mirror's identity is fixed. This does NOT establish that the mirror is faithful to a primary source nobody in this repository has read. A CT pass is not formal validation. See D206.",
+      "primary_source": "RFC 1320 (MD4) §A.5"
     },
-    "standard": "RFC 1320 (MD4) §A.5",
+    "standard": "RFC 1320 (MD4)",
     "vectors": [
       {
         "expected_hex": "31d6cfe0d16ae931b73c59d7e0c089c0",
         "id": "md4-evpmd_md-49",
         "input_hex": "",
+        "modes": [
+          "one"
+        ],
         "provenance": {
           "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
           "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_md.txt",
           "form": "quoted-string",
           "line": 49,
+          "mirror_sha256": "d803585d182f78d932d306ce21dad8754897d854a3346501605851a45c047148",
+          "primary_source": "RFC 1320 (MD4) §A.5",
           "title": "MD4 tests"
         },
-        "standard": "RFC 1320 (MD4) §A.5"
+        "standard": "RFC 1320 (MD4)"
       },
       {
         "expected_hex": "bde52cb31de33e46245e05fbdbd6fb24",
         "id": "md4-evpmd_md-54",
         "input_hex": "61",
+        "modes": [
+          "one"
+        ],
         "provenance": {
           "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
           "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_md.txt",
           "form": "quoted-string",
           "line": 54,
+          "mirror_sha256": "d803585d182f78d932d306ce21dad8754897d854a3346501605851a45c047148",
+          "primary_source": "RFC 1320 (MD4) §A.5",
           "title": "MD4 tests"
         },
-        "standard": "RFC 1320 (MD4) §A.5"
+        "standard": "RFC 1320 (MD4)"
       },
       {
         "expected_hex": "a448017aaf21d8525fc10ae87aa6729d",
         "id": "md4-evpmd_md-59",
         "input_hex": "616263",
+        "modes": [
+          "one"
+        ],
         "provenance": {
           "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
           "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_md.txt",
           "form": "quoted-string",
           "line": 59,
+          "mirror_sha256": "d803585d182f78d932d306ce21dad8754897d854a3346501605851a45c047148",
+          "primary_source": "RFC 1320 (MD4) §A.5",
           "title": "MD4 tests"
         },
-        "standard": "RFC 1320 (MD4) §A.5"
+        "standard": "RFC 1320 (MD4)"
       },
       {
         "expected_hex": "d9130a8164549fe818874806e1c7014b",
         "id": "md4-evpmd_md-64",
         "input_hex": "6d65737361676520646967657374",
+        "modes": [
+          "one"
+        ],
         "provenance": {
           "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
           "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_md.txt",
           "form": "quoted-string",
           "line": 64,
+          "mirror_sha256": "d803585d182f78d932d306ce21dad8754897d854a3346501605851a45c047148",
+          "primary_source": "RFC 1320 (MD4) §A.5",
           "title": "MD4 tests"
         },
-        "standard": "RFC 1320 (MD4) §A.5"
+        "standard": "RFC 1320 (MD4)"
       },
       {
         "expected_hex": "d79e1c308aa5bbcdeea8ed63df412da9",
         "id": "md4-evpmd_md-69",
         "input_hex": "6162636465666768696a6b6c6d6e6f707172737475767778797a",
+        "modes": [
+          "one"
+        ],
         "provenance": {
           "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
           "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_md.txt",
           "form": "quoted-string",
           "line": 69,
+          "mirror_sha256": "d803585d182f78d932d306ce21dad8754897d854a3346501605851a45c047148",
+          "primary_source": "RFC 1320 (MD4) §A.5",
           "title": "MD4 tests"
         },
-        "standard": "RFC 1320 (MD4) §A.5"
+        "standard": "RFC 1320 (MD4)"
       },
       {
         "expected_hex": "043f8582f241db351ce627e153e7f0e4",
         "id": "md4-evpmd_md-74",
         "input_hex": "4142434445464748494a4b4c4d4e4f505152535455565758595a6162636465666768696a6b6c6d6e6f707172737475767778797a30313233343536373839",
+        "modes": [
+          "one"
+        ],
         "provenance": {
           "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
           "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_md.txt",
           "form": "quoted-string",
           "line": 74,
+          "mirror_sha256": "d803585d182f78d932d306ce21dad8754897d854a3346501605851a45c047148",
+          "primary_source": "RFC 1320 (MD4) §A.5",
           "title": "MD4 tests"
         },
-        "standard": "RFC 1320 (MD4) §A.5"
+        "standard": "RFC 1320 (MD4)"
       },
       {
         "expected_hex": "e33b4ddc9c38f2199c3e7b164fcc0536",
         "id": "md4-evpmd_md-79",
         "input_hex": "3132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930",
+        "modes": [
+          "one"
+        ],
         "provenance": {
           "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
           "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_md.txt",
           "form": "quoted-string",
           "line": 79,
+          "mirror_sha256": "d803585d182f78d932d306ce21dad8754897d854a3346501605851a45c047148",
+          "primary_source": "RFC 1320 (MD4) §A.5",
           "title": "MD4 tests"
         },
-        "standard": "RFC 1320 (MD4) §A.5"
+        "standard": "RFC 1320 (MD4)"
       }
     ]
   },
