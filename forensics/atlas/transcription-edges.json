@@ -789,6 +789,13 @@
         "translation_unit": "crypto/evp/evp_fetch.c"
       },
       {
+        "module": "src/rc2.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "3/7",
+        "translation_unit": "crypto/rc2/rc2_cbc.c"
+      },
+      {
         "module": "src/rc4.rs",
         "phase": 8,
         "phase_source": "module-declaration",
@@ -23752,6 +23759,67 @@
           "src/provider/mod.rs"
         ],
         "tu": "crypto/provider_core.c"
+      },
+      {
+        "identifiers": [
+          "L",
+          "RC2_INT",
+          "RC2_KEY",
+          "RC2_cbc_encrypt",
+          "RC2_decrypt",
+          "RC2_encrypt",
+          "break",
+          "c2l",
+          "c2ln",
+          "char",
+          "const",
+          "d",
+          "data",
+          "else",
+          "encrypt",
+          "for",
+          "h",
+          "i",
+          "if",
+          "in",
+          "include",
+          "int",
+          "iv",
+          "key",
+          "ks",
+          "l",
+          "l2c",
+          "l2cn",
+          "length",
+          "long",
+          "n",
+          "openssl",
+          "out",
+          "p0",
+          "p1",
+          "rc2",
+          "register",
+          "t",
+          "tin",
+          "tin0",
+          "tin1",
+          "tout0",
+          "tout1",
+          "unsigned",
+          "void",
+          "x0",
+          "x1",
+          "x2",
+          "x3",
+          "x3f",
+          "xffff",
+          "xor0",
+          "xor1"
+        ],
+        "modules": [
+          "src/rc2.rs"
+        ],
+        "tu": "crypto/rc2/rc2_cbc.c"
       },
       {
         "identifiers": [

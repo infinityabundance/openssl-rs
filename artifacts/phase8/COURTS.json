@@ -24,9 +24,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 213,
+        "authority_observations": 233,
         "candidate_exit_code": 0,
-        "candidate_observations": 213,
+        "candidate_observations": 233,
         "candidate_stderr_tail": [],
         "court": "RT-CIPHER",
         "crashed": false,
@@ -5604,6 +5604,14 @@
             "standard": "FIPS 46-3 / FIPS PUB 81",
             "total": 11
           },
+          "rc2": {
+            "failed": 0,
+            "passed": 10,
+            "primary_source": "RFC 2268",
+            "source": "forensics/vectors/rc2.json",
+            "standard": "RFC 2268",
+            "total": 10
+          },
           "rc4": {
             "failed": 0,
             "passed": 10,
@@ -5614,20 +5622,20 @@
           }
         },
         "authority": "openssl-3.6.4-production",
-        "calls_checked": 94,
+        "calls_checked": 104,
         "candidate_shared_object": "artifacts/phase2/libcrypto.so.3",
-        "claim": "A correctness-vector PASS means candidate-only construction verification: the candidate's low-level cipher produced the committed expected bytes for every vector. Of the 94 committed vectors, 89 are published standard values mirrored through the pinned OpenSSL test corpus and 5 are independently-derived boundary vectors with named oracles (2 by the construction's definition (FIPS-197 §5.1, SP 800-38A §6.1): an empty message has no blocks and emits no bytes; 1 by the construction's definition: RC4 over a zero-byte input emits no bytes and leaves its state unchanged; 2 by the construction's definition: a block or feedback mode over a zero-byte input emits no bytes) -- these counts are read from the 3 committed `forensics/vectors/*.json` cipher sets by `correctness_vectors.py`, not typed. It is NOT OpenSSL parity and NOT formal validation. See D201/D208 and docs/PHASE-8-SUBPHASES.md.",
+        "claim": "A correctness-vector PASS means candidate-only construction verification: the candidate's low-level cipher produced the committed expected bytes for every vector. Of the 104 committed vectors, 97 are published standard values mirrored through the pinned OpenSSL test corpus and 7 are independently-derived boundary vectors with named oracles (2 by the construction's definition (FIPS-197 §5.1, SP 800-38A §6.1): an empty message has no blocks and emits no bytes; 1 by the construction's definition: RC4 over a zero-byte input emits no bytes and leaves its state unchanged; 4 by the construction's definition: a block or feedback mode over a zero-byte input emits no bytes) -- these counts are read from the 4 committed `forensics/vectors/*.json` cipher sets by `correctness_vectors.py`, not typed. It is NOT OpenSSL parity and NOT formal validation. See D201/D208 and docs/PHASE-8-SUBPHASES.md.",
         "court": "CT-CIPHER",
         "derivation_census": {
-          "corpus": 89,
-          "files": 3,
-          "independent": 5,
+          "corpus": 97,
+          "files": 4,
+          "independent": 7,
           "oracles": {
             "the construction's definition (FIPS-197 §5.1, SP 800-38A §6.1): an empty message has no blocks and emits no bytes": 2,
             "the construction's definition: RC4 over a zero-byte input emits no bytes and leaves its state unchanged": 1,
-            "the construction's definition: a block or feedback mode over a zero-byte input emits no bytes": 2
+            "the construction's definition: a block or feedback mode over a zero-byte input emits no bytes": 4
           },
-          "vectors": 94
+          "vectors": 104
         },
         "failures": [],
         "kind": "cipher-vectors",
@@ -6475,6 +6483,106 @@
             "passed": true
           },
           {
+            "actual_hex": "a4085a9f3e710563ae3b1e8c4339122b",
+            "algorithm": "rc2",
+            "cipher": "RC2-ECB",
+            "expected_hex": "a4085a9f3e710563ae3b1e8c4339122b",
+            "id": "rc2-1",
+            "input_hex": "000102030405060708090a0b0c0d0e0f",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "a4085a9f3e710563d1091a1552ba8962",
+            "algorithm": "rc2",
+            "cipher": "RC2-CBC",
+            "expected_hex": "a4085a9f3e710563d1091a1552ba8962",
+            "id": "rc2-2",
+            "input_hex": "000102030405060708090a0b0c0d0e0f",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "61ae28bcf59d1f6f",
+            "algorithm": "rc2",
+            "cipher": "RC2-40-CBC",
+            "expected_hex": "61ae28bcf59d1f6f",
+            "id": "rc2-3",
+            "input_hex": "0102030405060708",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "b3ddf36b5c81b0db",
+            "algorithm": "rc2",
+            "cipher": "RC2-40-CBC",
+            "expected_hex": "b3ddf36b5c81b0db",
+            "id": "rc2-4",
+            "input_hex": "0102030405060708",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "191d1abf767bfbe7",
+            "algorithm": "rc2",
+            "cipher": "RC2-64-CBC",
+            "expected_hex": "191d1abf767bfbe7",
+            "id": "rc2-5",
+            "input_hex": "0102030405060708",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "81b5cc4d43119e987a2b526ea152f3fe",
+            "algorithm": "rc2",
+            "cipher": "RC2-CFB",
+            "expected_hex": "81b5cc4d43119e987a2b526ea152f3fe",
+            "id": "rc2-6",
+            "input_hex": "000102030405060708090a0b0c0d0e0f",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "81b5cc4d43119e9849bdb7ef7fb35eb7",
+            "algorithm": "rc2",
+            "cipher": "RC2-OFB",
+            "expected_hex": "81b5cc4d43119e9849bdb7ef7fb35eb7",
+            "id": "rc2-7",
+            "input_hex": "000102030405060708090a0b0c0d0e0f",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "1df8d70bb9c66ffc37869d8ed80d796b",
+            "algorithm": "rc2",
+            "cipher": "RC2-OFB",
+            "expected_hex": "1df8d70bb9c66ffc37869d8ed80d796b",
+            "id": "rc2-8",
+            "input_hex": "000102030405060708090a0b0c0d0e0f",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "",
+            "algorithm": "rc2",
+            "cipher": "RC2-ECB",
+            "expected_hex": "",
+            "id": "rc2-rc2-ecb-empty-9",
+            "input_hex": "",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "",
+            "algorithm": "rc2",
+            "cipher": "RC2-CBC",
+            "expected_hex": "",
+            "id": "rc2-rc2-cbc-empty-10",
+            "input_hex": "",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
             "actual_hex": "75b7878099e0c596",
             "algorithm": "rc4",
             "cipher": "RC4",
@@ -6576,9 +6684,9 @@
           }
         ],
         "stage": "compare",
-        "vectors_checked": 94,
+        "vectors_checked": 104,
         "vectors_failed": 0,
-        "vectors_passed": 94,
+        "vectors_passed": 104,
         "verdict": "pass"
       }
     ],
@@ -6603,7 +6711,7 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_cipher_probe.c",
-      "sha256": "04cc7c11ac767abfd10d0235f9c3828d049bb267e03601deb8985b7099517720"
+      "sha256": "cc8d55dd5fa4db430f2c898b07f039886ea5c201bc820281399b962548f51b31"
     },
     {
       "name": "correctness-probe",
@@ -6718,7 +6826,7 @@
     {
       "name": "cipher-correctness-probe",
       "path": "courts/phase8/ct_cipher.c",
-      "sha256": "4cfca8f4d34dbe09561499d6e419cf7c16903971626d0e6f28fc87bd2445287c"
+      "sha256": "ccde880bab5dc2a9fb346130da4f9722664664f50e3104d2942aab1285bb6bf2"
     },
     {
       "name": "cipher-correctness-vectors:aes",
@@ -6734,6 +6842,11 @@
       "name": "cipher-correctness-vectors:des",
       "path": "forensics/vectors/des.json",
       "sha256": "07c23bf197ae4e1c80fced1ecf87be1ea78b1b290a67b049545b03002f0f05e7"
+    },
+    {
+      "name": "cipher-correctness-vectors:rc2",
+      "path": "forensics/vectors/rc2.json",
+      "sha256": "17f3f91926a8df26468fbaeb6a2b66f83cca6ca3f61fd25b6b9ae9d97ac0b76d"
     }
   ],
   "kind": "phase8-courts",

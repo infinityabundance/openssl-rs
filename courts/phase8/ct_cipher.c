@@ -23,6 +23,7 @@
 
 #include <openssl/aes.h>
 #include <openssl/des.h>
+#include <openssl/rc2.h>
 #include <openssl/rc4.h>
 
 #define CT_LINE 8192
@@ -295,6 +296,51 @@ static int ct_legacy(const char *cipher, int enc_op,
         }
         if (strcmp(mode, "OFB") == 0) {
             DES_ofb64_encrypt(in, out, (long)inlen, &k1, ivec, &num);
+            *outlen = inlen;
+            return 0;
+        }
+        return -1;
+    }
+
+    if (strncmp(cipher, "RC2-", 4) == 0) {
+        RC2_KEY rk;
+        int num = 0;
+        int bits = 128;
+
+        if (strstr(cipher, "RC2-40-") != NULL)
+            bits = 40;
+        else if (strstr(cipher, "RC2-64-") != NULL)
+            bits = 64;
+        if (ivlen > sizeof(ivec))
+            return -1;
+        memcpy(ivec, iv, ivlen);
+        RC2_set_key(&rk, (int)keylen, key, bits);
+        if (strcmp(mode, "ECB") == 0) {
+            size_t i;
+
+            if (inlen % 8 != 0)
+                return -1;
+            for (i = 0; i < inlen; i += 8)
+                RC2_ecb_encrypt(in + i, out + i, &rk, enc_op ? RC2_ENCRYPT : RC2_DECRYPT);
+            *outlen = inlen;
+            return 0;
+        }
+        if (strcmp(mode, "CBC") == 0) {
+            if (inlen % 8 != 0 || ivlen != 8)
+                return -1;
+            RC2_cbc_encrypt(in, out, (long)inlen, &rk, ivec,
+                            enc_op ? RC2_ENCRYPT : RC2_DECRYPT);
+            *outlen = inlen;
+            return 0;
+        }
+        if (strcmp(mode, "CFB") == 0) {
+            RC2_cfb64_encrypt(in, out, (long)inlen, &rk, ivec, &num,
+                              enc_op ? RC2_ENCRYPT : RC2_DECRYPT);
+            *outlen = inlen;
+            return 0;
+        }
+        if (strcmp(mode, "OFB") == 0) {
+            RC2_ofb64_encrypt(in, out, (long)inlen, &rk, ivec, &num);
             *outlen = inlen;
             return 0;
         }

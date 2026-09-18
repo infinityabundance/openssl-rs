@@ -1,0 +1,223 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "algorithm": "rc2",
+    "court": "CT-CIPHER",
+    "openssl_cipher": "RC2-{40-,64-,}{ECB,CBC,CFB,OFB}",
+    "primary_source": "RFC 2268",
+    "provenance": {
+      "authority": "openssl-3.6.4-production",
+      "corpus": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_rc2.txt",
+      "corpus_sha256": "e9b95437db02237c1ae6421d23a5e6db7368a961b7f81d006fc878408f04090f",
+      "note": "Candidate-only construction verification: the primary source is named, the bytes are mirrored through the pinned corpus (`corpus_sha256`), and the mirror's identity is fixed. This does NOT establish that the mirror is faithful to a primary source nobody here has read, and a CT pass is not formal validation. No independent implementation of this cipher is present in the pinned court image, so only the empty-input boundary carries an independent oracle, whose answer is the construction's own (D211/D215).",
+      "primary_source": "RFC 2268"
+    },
+    "standard": "RFC 2268",
+    "vectors": [
+      {
+        "cipher": "RC2-ECB",
+        "expected_hex": "a4085a9f3e710563ae3b1e8c4339122b",
+        "id": "rc2-1",
+        "input_hex": "000102030405060708090a0b0c0d0e0f",
+        "iv_hex": "",
+        "key_hex": "0000000000000000",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_rc2.txt",
+          "form": "keyed-block",
+          "line": 15,
+          "mirror_sha256": "e9b95437db02237c1ae6421d23a5e6db7368a961b7f81d006fc878408f04090f",
+          "primary_source": "RFC 2268",
+          "title": "RC2 Test vectors"
+        },
+        "standard": "RFC 2268"
+      },
+      {
+        "cipher": "RC2-CBC",
+        "expected_hex": "a4085a9f3e710563d1091a1552ba8962",
+        "id": "rc2-2",
+        "input_hex": "000102030405060708090a0b0c0d0e0f",
+        "iv_hex": "0000000000000000",
+        "key_hex": "0000000000000000",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_rc2.txt",
+          "form": "keyed-block",
+          "line": 28,
+          "mirror_sha256": "e9b95437db02237c1ae6421d23a5e6db7368a961b7f81d006fc878408f04090f",
+          "primary_source": "RFC 2268",
+          "title": "RC2 Test vectors"
+        },
+        "standard": "RFC 2268"
+      },
+      {
+        "cipher": "RC2-40-CBC",
+        "expected_hex": "61ae28bcf59d1f6f",
+        "id": "rc2-3",
+        "input_hex": "0102030405060708",
+        "iv_hex": "0000000000000000",
+        "key_hex": "0000000000",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_rc2.txt",
+          "form": "keyed-block",
+          "line": 44,
+          "mirror_sha256": "e9b95437db02237c1ae6421d23a5e6db7368a961b7f81d006fc878408f04090f",
+          "primary_source": "RFC 2268",
+          "title": "RC2 Test vectors"
+        },
+        "standard": "RFC 2268"
+      },
+      {
+        "cipher": "RC2-40-CBC",
+        "expected_hex": "b3ddf36b5c81b0db",
+        "id": "rc2-4",
+        "input_hex": "0102030405060708",
+        "iv_hex": "0000000000000000",
+        "key_hex": "000000000001",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_rc2.txt",
+          "form": "keyed-block",
+          "line": 60,
+          "mirror_sha256": "e9b95437db02237c1ae6421d23a5e6db7368a961b7f81d006fc878408f04090f",
+          "primary_source": "RFC 2268",
+          "title": "RC2 Test vectors"
+        },
+        "standard": "RFC 2268"
+      },
+      {
+        "cipher": "RC2-64-CBC",
+        "expected_hex": "191d1abf767bfbe7",
+        "id": "rc2-5",
+        "input_hex": "0102030405060708",
+        "iv_hex": "0000000000000000",
+        "key_hex": "0000000000000000",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_rc2.txt",
+          "form": "keyed-block",
+          "line": 67,
+          "mirror_sha256": "e9b95437db02237c1ae6421d23a5e6db7368a961b7f81d006fc878408f04090f",
+          "primary_source": "RFC 2268",
+          "title": "RC2 Test vectors"
+        },
+        "standard": "RFC 2268"
+      },
+      {
+        "cipher": "RC2-CFB",
+        "expected_hex": "81b5cc4d43119e987a2b526ea152f3fe",
+        "id": "rc2-6",
+        "input_hex": "000102030405060708090a0b0c0d0e0f",
+        "iv_hex": "0000000000000000",
+        "key_hex": "0000000000000000",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_rc2.txt",
+          "form": "keyed-block",
+          "line": 82,
+          "mirror_sha256": "e9b95437db02237c1ae6421d23a5e6db7368a961b7f81d006fc878408f04090f",
+          "primary_source": "RFC 2268",
+          "title": "RC2 Test vectors"
+        },
+        "standard": "RFC 2268"
+      },
+      {
+        "cipher": "RC2-OFB",
+        "expected_hex": "81b5cc4d43119e9849bdb7ef7fb35eb7",
+        "id": "rc2-7",
+        "input_hex": "000102030405060708090a0b0c0d0e0f",
+        "iv_hex": "0000000000000000",
+        "key_hex": "0000000000000000",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_rc2.txt",
+          "form": "keyed-block",
+          "line": 98,
+          "mirror_sha256": "e9b95437db02237c1ae6421d23a5e6db7368a961b7f81d006fc878408f04090f",
+          "primary_source": "RFC 2268",
+          "title": "RC2 Test vectors"
+        },
+        "standard": "RFC 2268"
+      },
+      {
+        "cipher": "RC2-OFB",
+        "expected_hex": "1df8d70bb9c66ffc37869d8ed80d796b",
+        "id": "rc2-8",
+        "input_hex": "000102030405060708090a0b0c0d0e0f",
+        "iv_hex": "0000000000000000",
+        "key_hex": "0000000000000000000000000000000000",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_rc2.txt",
+          "form": "keyed-block",
+          "line": 122,
+          "mirror_sha256": "e9b95437db02237c1ae6421d23a5e6db7368a961b7f81d006fc878408f04090f",
+          "primary_source": "RFC 2268",
+          "title": "RC2 Test vectors"
+        },
+        "standard": "RFC 2268"
+      },
+      {
+        "cipher": "RC2-ECB",
+        "expected_hex": "",
+        "id": "rc2-rc2-ecb-empty-9",
+        "input_hex": "",
+        "iv_hex": "",
+        "key_hex": "00000000000000000000000000000000",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "derivation": "independent",
+          "label": "empty",
+          "note": "the expected bytes are the construction's own answer, not a published test value",
+          "oracle": "the construction's definition: a block or feedback mode over a zero-byte input emits no bytes",
+          "primary_source": "UNKNOWN"
+        },
+        "standard": "RFC 2268"
+      },
+      {
+        "cipher": "RC2-CBC",
+        "expected_hex": "",
+        "id": "rc2-rc2-cbc-empty-10",
+        "input_hex": "",
+        "iv_hex": "0000000000000000",
+        "key_hex": "00000000000000000000000000000000",
+        "operation": "ENCRYPT",
+        "provenance": {
+          "derivation": "independent",
+          "label": "empty",
+          "note": "the expected bytes are the construction's own answer, not a published test value",
+          "oracle": "the construction's definition: a block or feedback mode over a zero-byte input emits no bytes",
+          "primary_source": "UNKNOWN"
+        },
+        "standard": "RFC 2268"
+      }
+    ]
+  },
+  "generator": "forensics/tools/correctness_vectors.py",
+  "inputs": [
+    {
+      "name": "authority-evp-vector-file",
+      "path": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpciph_rc2.txt",
+      "sha256": "e9b95437db02237c1ae6421d23a5e6db7368a961b7f81d006fc878408f04090f"
+    }
+  ],
+  "kind": "cipher-vectors-rc2",
+  "schema": "openssl-rs/atlas/cipher-vectors-rc2/v1"
+}
