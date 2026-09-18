@@ -24,7 +24,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::c_int;
+use core::ffi::{c_int, c_void};
 use core::ptr;
 
 use crate::digest::md32::{self, load_word, Md32, MD32_CBLOCK};
@@ -83,8 +83,12 @@ const DESTINATION: [usize; 4] = [0, 3, 2, 1];
 /// `F`, `G`, `H` by round.
 const ROUND: [fn(u32, u32, u32) -> u32; 3] = [f_round, g_round, h_round];
 
-/// `md4_block_data_order` — `crypto/md4/md4_dgst.c:41-130`.
-fn md4_block(ctx: &mut Md4Ctx, mut data: *const u8, mut num: usize) {
+/// `void md4_block_data_order(MD4_CTX *c, const void *data_, size_t num)` —
+/// `crypto/md4/md4_dgst.c:41-130`, the `HASH_BLOCK_DATA_ORDER` the collector's `HASH_UPDATE`
+/// calls. The Rust shape takes `&mut Md4Ctx` where the authority takes `MD4_CTX *`, because the
+/// context's methods are the only way the collector reaches it; the name is the authority's so
+/// that `prerequisite_gate.py`'s `unwired_function_in_the_current_stratum` sees it wired.
+fn md4_block_data_order(ctx: &mut Md4Ctx, mut data: *const u8, mut num: usize) {
     while num > 0 {
         let mut x = [0u32; 16];
         for (i, word) in x.iter_mut().enumerate() {
@@ -98,11 +102,14 @@ fn md4_block(ctx: &mut Md4Ctx, mut data: *const u8, mut num: usize) {
             let b = v[(dst + 1) % 4];
             let c = v[(dst + 2) % 4];
             let d = v[(dst + 3) % 4];
+            // `R0/R1/R2` in `crypto/md4/md4_local.h` end at the rotate: unlike MD5's
+            // `ROUND`, which adds `b` back afterwards, MD4's macro is
+            // `a = ROTATE(a + k + t + F(b,c,d), s)` and nothing more.
             let mixed = v[dst]
                 .wrapping_add(ROUND[i / 16](b, c, d))
                 .wrapping_add(x[MD4_WORD[i]])
                 .wrapping_add(MD4_K[i]);
-            v[dst] = mixed.rotate_left(MD4_ROT[i]).wrapping_add(b);
+            v[dst] = mixed.rotate_left(MD4_ROT[i]);
         }
         ctx.a = ctx.a.wrapping_add(v[0]);
         ctx.b = ctx.b.wrapping_add(v[1]);
@@ -140,7 +147,7 @@ impl Md32 for Md4Ctx {
     }
 
     unsafe fn block(&mut self, data: *const u8, num: usize) {
-        md4_block(self, data, num);
+        md4_block_data_order(self, data, num);
     }
 
     unsafe fn make_string(&self, md: *mut u8) -> c_int {
@@ -179,9 +186,9 @@ pub unsafe extern "C" fn MD4_Init(c: *mut Md4Ctx) -> c_int {
 /// # Safety
 /// `c` must be a live initialised context; `data` readable for `len` bytes.
 #[no_mangle]
-pub unsafe extern "C" fn MD4_Update(c: *mut Md4Ctx, data: *const u8, len: usize) -> c_int {
+pub unsafe extern "C" fn MD4_Update(c: *mut Md4Ctx, data: *const c_void, len: usize) -> c_int {
     // SAFETY: the caller's contract.
-    unsafe { md32::update(c, data, len) }
+    unsafe { md32::update(c, data.cast::<u8>(), len) }
 }
 
 /// `int MD4_Final(unsigned char *md, MD4_CTX *c)`.
@@ -233,7 +240,7 @@ pub unsafe extern "C" fn MD4(d: *const u8, n: usize, md: *mut u8) -> *mut u8 {
         if MD4_Init(ptr::addr_of_mut!(c)) == 0 {
             return ptr::null_mut();
         }
-        MD4_Update(ptr::addr_of_mut!(c), d, n);
+        MD4_Update(ptr::addr_of_mut!(c), d.cast(), n);
         MD4_Final(md, ptr::addr_of_mut!(c));
         ptr::write_bytes(
             ptr::addr_of_mut!(c).cast::<u8>(),
@@ -289,13 +296,13 @@ mod tests {
             assert_eq!(MD4_Init(&mut c), 1);
             match split {
                 Some(at) => {
-                    assert_eq!(MD4_Update(&mut c, data.as_ptr(), at), 1);
+                    assert_eq!(MD4_Update(&mut c, data.as_ptr().cast(), at), 1);
                     assert_eq!(
-                        MD4_Update(&mut c, data.as_ptr().add(at), data.len() - at),
+                        MD4_Update(&mut c, data.as_ptr().add(at).cast(), data.len() - at),
                         1
                     );
                 }
-                None => assert_eq!(MD4_Update(&mut c, data.as_ptr(), data.len()), 1),
+                None => assert_eq!(MD4_Update(&mut c, data.as_ptr().cast(), data.len()), 1),
             }
             assert_eq!(MD4_Final(out.as_mut_ptr(), &mut c), 1);
         }

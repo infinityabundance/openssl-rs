@@ -19,7 +19,7 @@
 //! one-byte shifts, through an unaligned `u64` view of a row that the source's own `LL` macro
 //! duplicates for exactly that purpose. The source calls this its "endian-neutral
 //! representation". On this profile's little-endian host, `Ck(K, i)` is the table entry
-//! indexed by byte `k` of word `i`, rotated right by `8k`; that identity is what
+//! indexed by byte `k` of word `i`, rotated **left** by `8k`; that identity is what
 //! [`ck`] reproduces, and it is the source's device written out rather than an assumption
 //! about the host, because a rotate is the same operation on either endianness.
 //!
@@ -41,7 +41,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::c_int;
+use core::ffi::{c_int, c_void};
 use core::ptr;
 
 use crate::digest::tables::{WP_RC, WP_TABLE};
@@ -81,12 +81,14 @@ const _: () = {
     assert!(core::mem::size_of::<WhirlpoolCtx>() == 168);
 };
 
-/// `Ck(K, i)` — the table entry selected by byte `k` of word `i`, rotated right by `8k`.
+/// `Ck(K, i)` — the table entry selected by byte `k` of word `i`, rotated left by `8k`.
 ///
-/// See the module doc for why this is the `Cx.c + k` unaligned read.
+/// See the module doc for why this is the `Cx.c + (8 - k)` unaligned read. The direction is
+/// the authority's: reading the row from byte `k` onward wraps the row's low bytes to the
+/// top, which is a rotate *left* by `8k` (`crypto/whrlpool/wp_block.c:213-220`).
 #[inline]
 fn ck(k: usize, i: usize, word: &[u8; 64]) -> u64 {
-    WP_TABLE[word[i * 8 + k] as usize].rotate_right(8 * k as u32)
+    WP_TABLE[word[i * 8 + k] as usize].rotate_left(8 * k as u32)
 }
 
 /// `whirlpool_block` — `crypto/whrlpool/wp_block.c:496`, its `OPENSSL_SMALL_FOOTPRINT` arm.
@@ -94,40 +96,40 @@ fn whirlpool_block(ctx: &mut WhirlpoolCtx, mut p: *const u8, mut n: usize) {
     while n > 0 {
         let mut s = [0u8; 64];
         let mut k = [0u8; 64];
-        for i in 0..64 {
+        for (i, (sb, kb)) in s.iter_mut().zip(k.iter_mut()).enumerate() {
             // SAFETY: the caller guaranteed `n` readable blocks, so `p` is readable for 64
             // bytes on every iteration.
             let input = unsafe { *p.add(i) };
-            s[i] = ctx.h[i] ^ input;
-            k[i] = ctx.h[i];
+            *sb = ctx.h[i] ^ input;
+            *kb = ctx.h[i];
         }
 
-        for round in 0..10 {
+        for &rc in WP_RC.iter() {
             let mut l = [0u64; 8];
-            for i in 0..8 {
-                let mut v = if i == 0 { WP_RC[round] } else { 0 };
+            for (i, li) in l.iter_mut().enumerate() {
+                let mut v = if i == 0 { rc } else { 0 };
                 for kk in 0..8 {
                     v ^= ck(kk, (i + 8 - kk) % 8, &k);
                 }
-                l[i] = v;
+                *li = v;
             }
-            for i in 0..8 {
-                k[i * 8..i * 8 + 8].copy_from_slice(&l[i].to_le_bytes());
+            for (i, li) in l.iter().enumerate() {
+                k[i * 8..i * 8 + 8].copy_from_slice(&li.to_le_bytes());
             }
-            for i in 0..8 {
+            for (i, li) in l.iter_mut().enumerate() {
                 for kk in 0..8 {
-                    l[i] ^= ck(kk, (i + 8 - kk) % 8, &s);
+                    *li ^= ck(kk, (i + 8 - kk) % 8, &s);
                 }
             }
-            for i in 0..8 {
-                s[i * 8..i * 8 + 8].copy_from_slice(&l[i].to_le_bytes());
+            for (i, li) in l.iter().enumerate() {
+                s[i * 8..i * 8 + 8].copy_from_slice(&li.to_le_bytes());
             }
         }
 
-        for i in 0..64 {
+        for (i, hb) in ctx.h.iter_mut().enumerate() {
             // SAFETY: as above.
             let input = unsafe { *p.add(i) };
-            ctx.h[i] ^= s[i] ^ input;
+            *hb ^= s[i] ^ input;
         }
 
         // SAFETY: `n >= 1`, so advancing one block stays inside the caller's region.
@@ -156,24 +158,24 @@ pub unsafe extern "C" fn WHIRLPOOL_Init(c: *mut WhirlpoolCtx) -> c_int {
 #[no_mangle]
 pub unsafe extern "C" fn WHIRLPOOL_Update(
     c: *mut WhirlpoolCtx,
-    inp: *const u8,
+    inp: *const c_void,
     bytes: usize,
 ) -> c_int {
     /// `((size_t)1) << (sizeof(size_t) * 8 - 4)` — the authority's chunk, `1 << 60` here.
     const CHUNK: usize = 1usize << (core::mem::size_of::<usize>() * 8 - 4);
 
-    let mut inp = inp;
+    let mut inp = inp.cast::<u8>();
     let mut bytes = bytes;
     while bytes >= CHUNK {
         // SAFETY: the caller's contract, and the chunk is within the readable region.
-        unsafe { WHIRLPOOL_BitUpdate(c, inp, CHUNK * 8) };
+        unsafe { WHIRLPOOL_BitUpdate(c, inp.cast::<c_void>(), CHUNK * 8) };
         bytes -= CHUNK;
         // SAFETY: `CHUNK <= bytes` before the subtraction.
         inp = unsafe { inp.add(CHUNK) };
     }
     if bytes != 0 {
         // SAFETY: `bytes < CHUNK` and `inp` is readable for `bytes`.
-        unsafe { WHIRLPOOL_BitUpdate(c, inp, bytes * 8) };
+        unsafe { WHIRLPOOL_BitUpdate(c, inp.cast::<c_void>(), bytes * 8) };
     }
     1
 }
@@ -193,8 +195,12 @@ pub unsafe extern "C" fn WHIRLPOOL_Update(
 /// # Safety
 /// `c` must be a live initialised context; `inp` readable for the bytes `bits` touches.
 #[no_mangle]
-pub unsafe extern "C" fn WHIRLPOOL_BitUpdate(c: *mut WhirlpoolCtx, inp: *const u8, bits: usize) {
-    let mut inp = inp;
+pub unsafe extern "C" fn WHIRLPOOL_BitUpdate(
+    c: *mut WhirlpoolCtx,
+    inp: *const c_void,
+    bits: usize,
+) {
+    let mut inp = inp.cast::<u8>();
     let mut bits = bits;
     // SAFETY: `c` is live.
     let mut bitoff = unsafe { (*c).bitoff } as usize;
@@ -411,6 +417,8 @@ pub unsafe extern "C" fn WHIRLPOOL_Final(md: *mut u8, c: *mut WhirlpoolCtx) -> c
     // "smash 256-bit c->bitlen in big-endian order": the authority walks the counter
     // little-endian *within* each `size_t` and writes the words from the block's last byte
     // backwards.
+    // SAFETY: `data` is the staging block, valid for `WHIRLPOOL_BBLOCK / 8` bytes, so the
+    // address of its last byte is in bounds.
     let mut p = unsafe { data.add(WHIRLPOOL_BBLOCK / 8 - 1) };
     for i in 0..WHIRLPOOL_COUNTER / core::mem::size_of::<usize>() {
         // SAFETY: `c` is live.
@@ -445,7 +453,7 @@ pub unsafe extern "C" fn WHIRLPOOL_Final(md: *mut u8, c: *mut WhirlpoolCtx) -> c
 /// # Safety
 /// `inp` readable for `bytes` bytes; `md` NULL or writable for 64 bytes.
 #[no_mangle]
-pub unsafe extern "C" fn WHIRLPOOL(inp: *const u8, bytes: usize, md: *mut u8) -> *mut u8 {
+pub unsafe extern "C" fn WHIRLPOOL(inp: *const c_void, bytes: usize, md: *mut u8) -> *mut u8 {
     static mut STATIC_MD: [u8; WHIRLPOOL_DIGEST_LENGTH] = [0; WHIRLPOOL_DIGEST_LENGTH];
     // SAFETY: the address of a `static mut` in this file, as in `MD5`.
     let md = if md.is_null() {
@@ -512,9 +520,12 @@ mod tests {
         unsafe {
             assert_eq!(WHIRLPOOL_Init(&mut ctx), 1);
             match bits {
-                Some(b) => WHIRLPOOL_BitUpdate(&mut ctx, data.as_ptr(), b),
+                Some(b) => WHIRLPOOL_BitUpdate(&mut ctx, data.as_ptr().cast(), b),
                 None => {
-                    assert_eq!(WHIRLPOOL_Update(&mut ctx, data.as_ptr(), data.len()), 1);
+                    assert_eq!(
+                        WHIRLPOOL_Update(&mut ctx, data.as_ptr().cast(), data.len()),
+                        1
+                    );
                 }
             }
             assert_eq!(WHIRLPOOL_Final(out.as_mut_ptr(), &mut ctx), 1);
