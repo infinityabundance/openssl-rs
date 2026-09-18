@@ -30,7 +30,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 56,
-      "language_surface_not_modelled_by_name": 3115,
+      "language_surface_not_modelled_by_name": 3124,
       "planned_prerequisites": 14
     },
     "census_by_unit": {
@@ -200,6 +200,7 @@
         "crypto/modes/ccm128.c": 4,
         "crypto/modes/cts128.c": 4,
         "crypto/modes/gcm128.c": 14,
+        "crypto/modes/ocb128.c": 9,
         "crypto/modes/wrap128.c": 2,
         "crypto/modes/xts128.c": 4,
         "crypto/o_dir.c": 2,
@@ -353,8 +354,8 @@
       ]
     },
     "checked": {
-      "authority_units": 166,
-      "crate_modules": 221,
+      "authority_units": 167,
+      "crate_modules": 222,
       "deferral_blocker_rows": 5,
       "deferrals_recorded": 25,
       "divergence_names_covered": 32,
@@ -476,7 +477,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "f6a54b79cba2d7926896a793eba120c8ab68e47a4cbcd8b5336e85d4cb4975e8",
+  "body_hash": "226394539135513efb0907be1c00ba35debd4609648eb5f8b749e6b0c6495c13",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -497,7 +498,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "b2fda18a9f51c6a3878486dea8f481851085ee3ddb4dc222cfe32c797cc7728f"
+      "sha256": "510620dd45b702f5e9afd5b63204d6f1726ced22a08458439b2ff4292d7fa6d9"
     },
     {
       "name": "symbol-ownership",
@@ -512,12 +513,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "85a4e70bbe2772c3421c50f13a99b623ebfd7fdd37b86c498275e4a788ebd42d"
+      "sha256": "30073c94668c97cd6a7c23f62f65f4a1b3688f04e63bf7919540a8830e1f47a4"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "941dcaf007edfab2b062534f3c9b8d57a910a902cef171859444181f6ad3bff9"
+      "sha256": "e133c5bf5366204961ea1dd15d8e2b6b7c01507ea3bb9922a15b7d75e980d014"
     },
     {
       "name": "prerequisites",

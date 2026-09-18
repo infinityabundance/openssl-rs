@@ -139,7 +139,7 @@ then and not a claim about the present; the ledger is what says what is open now
 | 8.0 | **Bootstrap** | nothing in the crate — evidence: `docs/PHASE-8-SUBPHASES.md`, `forensics/tools/phase8_obligations.py`, `forensics/tools/phase8_courts.py`, `courts/phase8/`, and this stratum's row in `forensics/tools/phase_state.py`'s `STRATUM_EVIDENCE` | 7 | — | 770 |
 | 8.1 | **The digest primitives** | MD4, MD5, MDC2, RIPEMD-160, Whirlpool, SM3, SHA-1, SHA-2 (224/256/384/512/512-224/512-256), SHA-3 (224/256/384/512) and SHAKE-128/256: the low-level `X_Init`/`_Update`/`_Final`/`_Transform` API **and** the provider `OSSL_OP_DIGEST` implementations, plus the digest half of `ossl_default_provider_init`. Forty-seven labels: `src/digest/{md4,md5,mdc2,ripemd,wp,sha1,sha2}.rs` | 8.0 | `RT-DIGEST`, `CT-DIGEST` | 47 |
 | 8.2 | **The symmetric cipher primitives** | AES (all modes), DES/3DES, RC2, RC4, Blowfish, CAST5, IDEA, SEED, Camellia, SM4, ARIA, and `modes.h`'s `CRYPTO_*` helpers; the low-level API **and** the provider `OSSL_OP_CIPHER` implementations + the cipher half of the default provider. Ninety-eight labels across `src/des/mod.rs`, `src/aes.rs`, `src/camellia.rs`, `src/blowfish.rs`, `src/cast.rs`, `src/idea.rs`, `src/rc2.rs`, `src/rc4.rs`, `src/seed.rs`. **LANDED (D209–D223), and checked against the ledger by D208's gate.** Every low-level export this row names is in, and the cipher half of `ossl_default_provider_init` now answers `OSSL_OP_CIPHER`: `src/provider/cipher.rs` publishes `deflt_ciphers[]`'s AES, Camellia, 3DES and `NULL` rows (each alias verbatim from `prov/names.h`, each row's provider checked against `defltprov.c`), driven by a transcription of `ciphercommon.c.in`/`ciphercommon_hw.c`/`ciphercommon_block.c`. **SM4 and ARIA have no low-level API and no `src/sm4.rs`/`src/aria.rs`** (D209 §2: the authority exports no `SM4_*`/`ARIA_*`), so their rows are provider-only and are not among this row's labels. The AEAD (GCM/CCM/XTS/OCB/SIV/wrap), CTS, `ChaCha20`, ARIA/SM4 and asm-selected `cipher_aes_cbc_hmac_*` rows are 8.3's or absent by design; `deflt_get_params`/`deflt_gettable_params`/`ossl_prov_get_capabilities`/`provctx` and the `base`/`null` providers are still absent. | 8.1 | `RT-CIPHER`, `CT-CIPHER` | 97 |
-| 8.3 | **The AEAD and mode primitives** | GCM, CCM, XTS, key wrap, Poly1305, ChaCha20-Poly1305, and the remaining `CRYPTO_*` mode functions. Fifty labels, all of them `src/modes/mod.rs`'s | 8.2 | `RT-MODES`, `CT-MODES` | 50 |
+| 8.3 | **The AEAD and mode primitives** | GCM, CCM, XTS, key wrap, Poly1305, ChaCha20-Poly1305, and the remaining `CRYPTO_*` mode functions. Fifty labels, all of them `src/modes/mod.rs`'s. **The low-level half is LANDED (D224–D229):** all fifty `modes.h` exports are in — key wrap (D224), GCM (D225), CCM (D226), XTS (D227) and OCB (D229) — and their evidence is the `RT-CIPHER`/`CT-CIPHER` families this row names. Poly1305 and ChaCha20-Poly1305 are **not** this stratum's exports (D228): they are internal units (`crypto/poly1305/poly1305.c`, `crypto/chacha/chacha_enc.c`) and provider rows, with no `libcrypto` symbol. What remains open is the AEAD half of the default provider's `deflt_ciphers[]`. | 8.2 | `RT-CIPHER`, `CT-CIPHER` | 50 |
 | 8.4 | **RSA** | the `RSA` object and `RSA_*`, `ossl_rsa_asn1_meth`, and the RSA provider keymgmt/signature/asymcipher/asym-kem. One hundred and fifty-seven labels: `src/rsa/mod.rs` | 8.1 (the RSA provider's `SHA`-named digests), 8.3 (its OAEP/PSS modes) | `RT-RSA`, `CT-RSA` | 150 |
 | 8.5 | **DH and DHX** | the `DH` object, `DH_*`, `ossl_dh_asn1_meth`, the FFC groups, and the DH provider surfaces. Ninety-seven labels: `src/dh/mod.rs` | 8.4 (the shared BN/param idiom) | `RT-DH`, `CT-DH` | 93 |
 | 8.6 | **DSA** | the `DSA` object, `DSA_*`, `ossl_dsa_asn1_meth`, and the DSA provider surfaces. Ninety labels: `src/dsa/mod.rs` | 8.5 | `RT-DSA`, `CT-DSA` | 88 |
@@ -372,11 +372,16 @@ here is. (`forensics/phase8-obligations.json` remains the only complete list.)
 `CRYPTO_gcm128_decrypt_ctr32`, `CRYPTO_gcm128_finish`, `CRYPTO_gcm128_tag`,
 `CRYPTO_gcm128_release`, `CRYPTO_ccm128_init`, `CRYPTO_ccm128_setiv`, `CRYPTO_ccm128_aad`,
 `CRYPTO_ccm128_encrypt`, `CRYPTO_ccm128_decrypt`, `CRYPTO_ccm128_encrypt_ccm64`,
-`CRYPTO_ccm128_decrypt_ccm64`, `CRYPTO_ccm128_tag`, `CRYPTO_xts128_encrypt`.
+`CRYPTO_ccm128_decrypt_ccm64`, `CRYPTO_ccm128_tag`, `CRYPTO_xts128_encrypt`,
+`CRYPTO_ocb128_new`, `CRYPTO_ocb128_init`, `CRYPTO_ocb128_copy_ctx`, `CRYPTO_ocb128_setiv`,
+`CRYPTO_ocb128_aad`, `CRYPTO_ocb128_encrypt`, `CRYPTO_ocb128_decrypt`, `CRYPTO_ocb128_finish`,
+`CRYPTO_ocb128_tag`, `CRYPTO_ocb128_cleanup`.
 
-**Open exports (checked against the ledger):** `CRYPTO_ocb128_init`.
-Phase 8.2's last cipher family and 8.3's GCM, CCM and XTS have landed, so what remains open
-here is OCB and the AEAD rows of the default provider's `deflt_ciphers[]`.
+**Open exports (checked against the ledger):** `RSA_new`.
+Phase 8.2's cipher families and 8.3's `modes.h` constructions all have their low-level exports in,
+so what remains open for 8.3 is the AEAD rows of the default provider's `deflt_ciphers[]`
+(provider-internal, so no export moves there) and then 8.4's RSA object, whose constructor is
+`RSA_new`.
 
 ### The sixteen recorded hand-offs, and why the four key types are not hand-offs
 

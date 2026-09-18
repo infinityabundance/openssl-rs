@@ -2179,6 +2179,233 @@ static void rt_xts128(void)
     printf("xts.inplace.match=%d\n", memcmp(out, in, 48) == 0);
 }
 
+/*
+ * OCB. The context is opaque and allocated by the library, so the probe only ever holds the
+ * pointer `CRYPTO_ocb128_new` returns (and caller storage for `copy_ctx`). OCB has no `num`
+ * parameter; the partial-final-block accounting is observable through the tag. The arm drives
+ * both arms of the bulk loop: with a NULL `stream` the per-block path runs, and with the
+ * probe's own `ocb128_f` the streamed path runs — the stream is a caller-supplied pointer, not
+ * a host-selected dispatch like GCM's `gcm_get_funcs`, so the two are comparable and must agree.
+ * It also exercises `setiv`'s refusals, the `finish`/`tag` length refusals, the empty and
+ * AAD-only arms, in-place decryption, `copy_ctx`, and re-initialisation between messages.
+ */
+static unsigned rt_ocb_ntz(size_t n)
+{
+    unsigned cnt = 0;
+
+    while ((n & 1) == 0) {
+        n >>= 1;
+        cnt++;
+    }
+    return cnt;
+}
+
+/* The probe-local `ocb128_f`, encrypt direction: the authority's own per-block body, so the
+ * streamed and per-block arms are the same arithmetic and must agree byte for byte. */
+static void rt_ocb_stream_enc(const unsigned char *in, unsigned char *out, size_t blocks,
+                              const void *key, size_t start_block_num,
+                              unsigned char offset_i[16], const unsigned char L_[][16],
+                              unsigned char checksum[16])
+{
+    size_t b, i;
+
+    for (b = 0; b < blocks; b++) {
+        const unsigned char *lookup = L_[rt_ocb_ntz(start_block_num + b)];
+        unsigned char tmp[16];
+
+        for (i = 0; i < 16; i++) {
+            offset_i[i] ^= lookup[i];
+            tmp[i] = in[16 * b + i];
+            checksum[i] ^= tmp[i];
+            tmp[i] ^= offset_i[i];
+        }
+        AES_encrypt(tmp, tmp, (const AES_KEY *)key);
+        for (i = 0; i < 16; i++) {
+            tmp[i] ^= offset_i[i];
+            out[16 * b + i] = tmp[i];
+        }
+    }
+}
+
+/* The decrypt direction: the same offsets, the data cipher inverted. */
+static void rt_ocb_stream_dec(const unsigned char *in, unsigned char *out, size_t blocks,
+                              const void *key, size_t start_block_num,
+                              unsigned char offset_i[16], const unsigned char L_[][16],
+                              unsigned char checksum[16])
+{
+    size_t b, i;
+
+    for (b = 0; b < blocks; b++) {
+        const unsigned char *lookup = L_[rt_ocb_ntz(start_block_num + b)];
+        unsigned char tmp[16];
+
+        for (i = 0; i < 16; i++) {
+            offset_i[i] ^= lookup[i];
+            tmp[i] = in[16 * b + i] ^ offset_i[i];
+        }
+        AES_decrypt(tmp, tmp, (const AES_KEY *)key);
+        for (i = 0; i < 16; i++) {
+            tmp[i] ^= offset_i[i];
+            checksum[i] ^= tmp[i];
+            out[16 * b + i] = tmp[i];
+        }
+    }
+}
+
+static void rt_ocb128(void)
+{
+    static const unsigned char okey[16] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
+    };
+    static const unsigned char iv12[12] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x08, 0x09, 0x0a, 0x0b
+    };
+    union {
+        unsigned char bytes[320];
+        unsigned long long align;
+    } store;
+    AES_KEY ek, dk;
+    OCB128_CONTEXT *ctx;
+    unsigned char in[64], out[64], ct[64], back[64], tag[16], tag2[16], aad[32];
+
+    rt_fill(in, sizeof(in), 61);
+    rt_fill(aad, sizeof(aad), 62);
+
+    if (AES_set_encrypt_key(okey, 128, &ek) != 0 || AES_set_decrypt_key(okey, 128, &dk) != 0) {
+        printf("ocb.setup=0\n");
+        return;
+    }
+    printf("ocb.setup=1\n");
+
+    /* ---- `setiv`'s refusals: len 0 and 16, taglen 0 and 17, then the accepted call. ---- */
+    ctx = CRYPTO_ocb128_new(&ek, &dk, (block128_f)AES_encrypt, (block128_f)AES_decrypt, NULL);
+    printf("ocb.setiv.len0=%d\n", CRYPTO_ocb128_setiv(ctx, iv12, 0, 16));
+    printf("ocb.setiv.len16=%d\n", CRYPTO_ocb128_setiv(ctx, iv12, 16, 16));
+    printf("ocb.setiv.tag0=%d\n", CRYPTO_ocb128_setiv(ctx, iv12, 12, 0));
+    printf("ocb.setiv.tag17=%d\n", CRYPTO_ocb128_setiv(ctx, iv12, 12, 17));
+    printf("ocb.setiv.ok=%d\n", CRYPTO_ocb128_setiv(ctx, iv12, sizeof(iv12), 16));
+
+    /* ---- AAD and a partial final block, then the tag. ---- */
+    printf("ocb.enc.aad=%d\n", CRYPTO_ocb128_aad(ctx, aad, 13));
+    printf("ocb.enc.ret=%d\n", CRYPTO_ocb128_encrypt(ctx, in, out, 33));
+    rt_hex("ocb.enc.ct", out, 33);
+    printf("ocb.tag.ret=%d\n", CRYPTO_ocb128_tag(ctx, tag, 16));
+    rt_hex("ocb.enc.tag", tag, 16);
+    CRYPTO_ocb128_cleanup(ctx);
+
+    /* ---- The same bytes split 16 + 17: one ciphertext, one tag. ---- */
+    ctx = CRYPTO_ocb128_new(&ek, &dk, (block128_f)AES_encrypt, (block128_f)AES_decrypt, NULL);
+    printf("ocb.split.setiv=%d\n", CRYPTO_ocb128_setiv(ctx, iv12, sizeof(iv12), 16));
+    CRYPTO_ocb128_aad(ctx, aad, 13);
+    CRYPTO_ocb128_encrypt(ctx, in, ct, 16);
+    printf("ocb.split.ret=%d\n", CRYPTO_ocb128_encrypt(ctx, in + 16, ct + 16, 17));
+    rt_hex("ocb.split.ct", ct, 33);
+    CRYPTO_ocb128_tag(ctx, tag2, 16);
+    printf("ocb.split.same=%d\n", memcmp(ct, out, 33) == 0 && memcmp(tag2, tag, 16) == 0);
+    CRYPTO_ocb128_cleanup(ctx);
+
+    /* ---- Empty plaintext (AAD present), and AAD-only. ---- */
+    ctx = CRYPTO_ocb128_new(&ek, &dk, (block128_f)AES_encrypt, (block128_f)AES_decrypt, NULL);
+    CRYPTO_ocb128_setiv(ctx, iv12, sizeof(iv12), 16);
+    CRYPTO_ocb128_aad(ctx, aad, 13);
+    printf("ocb.empty.ret=%d\n", CRYPTO_ocb128_encrypt(ctx, in, out, 0));
+    CRYPTO_ocb128_tag(ctx, tag, 16);
+    rt_hex("ocb.empty.tag", tag, 16);
+    CRYPTO_ocb128_cleanup(ctx);
+
+    ctx = CRYPTO_ocb128_new(&ek, &dk, (block128_f)AES_encrypt, (block128_f)AES_decrypt, NULL);
+    CRYPTO_ocb128_setiv(ctx, iv12, sizeof(iv12), 16);
+    CRYPTO_ocb128_aad(ctx, aad, 32);
+    CRYPTO_ocb128_tag(ctx, tag, 16);
+    rt_hex("ocb.aadonly.tag", tag, 16);
+    CRYPTO_ocb128_cleanup(ctx);
+
+    /* ---- Tag lengths 1 and 8, and the refusals at 0 and 17; `finish` shares the guard. ---- */
+    ctx = CRYPTO_ocb128_new(&ek, &dk, (block128_f)AES_encrypt, (block128_f)AES_decrypt, NULL);
+    CRYPTO_ocb128_setiv(ctx, iv12, sizeof(iv12), 16);
+    CRYPTO_ocb128_encrypt(ctx, in, out, 33);
+    CRYPTO_ocb128_tag(ctx, tag, 16);
+    printf("ocb.tag.1=%d\n", CRYPTO_ocb128_tag(ctx, tag2, 1));
+    rt_hex("ocb.tag.1v", tag2, 1);
+    printf("ocb.tag.8=%d\n", CRYPTO_ocb128_tag(ctx, tag2, 8));
+    rt_hex("ocb.tag.8v", tag2, 8);
+    printf("ocb.tag.0=%d\n", CRYPTO_ocb128_tag(ctx, tag2, 0));
+    printf("ocb.tag.17=%d\n", CRYPTO_ocb128_tag(ctx, tag2, 17));
+    printf("ocb.finish.0=%d\n", CRYPTO_ocb128_finish(ctx, tag2, 0));
+    printf("ocb.finish.17=%d\n", CRYPTO_ocb128_finish(ctx, tag2, 17));
+    printf("ocb.finish.accept=%d\n", CRYPTO_ocb128_finish(ctx, tag, 16));
+    memcpy(tag2, tag, 16);
+    tag2[0] ^= 0x80;
+    printf("ocb.finish.reject=%d\n", CRYPTO_ocb128_finish(ctx, tag2, 16) != 0);
+    CRYPTO_ocb128_cleanup(ctx);
+
+    /* ---- In-place decryption of the 33-byte arm, then tag verification. ---- */
+    ctx = CRYPTO_ocb128_new(&ek, &dk, (block128_f)AES_encrypt, (block128_f)AES_decrypt, NULL);
+    CRYPTO_ocb128_setiv(ctx, iv12, sizeof(iv12), 16);
+    CRYPTO_ocb128_aad(ctx, aad, 13);
+    printf("ocb.inplace.enc=%d\n", CRYPTO_ocb128_encrypt(ctx, in, ct, 33));
+    CRYPTO_ocb128_tag(ctx, tag, 16);
+    CRYPTO_ocb128_cleanup(ctx);
+
+    ctx = CRYPTO_ocb128_new(&ek, &dk, (block128_f)AES_encrypt, (block128_f)AES_decrypt, NULL);
+    CRYPTO_ocb128_setiv(ctx, iv12, sizeof(iv12), 16);
+    CRYPTO_ocb128_aad(ctx, aad, 13);
+    memcpy(back, ct, 33);
+    printf("ocb.inplace.dec=%d\n", CRYPTO_ocb128_decrypt(ctx, back, back, 33));
+    rt_hex("ocb.inplace.pt", back, 33);
+    printf("ocb.inplace.match=%d\n", memcmp(back, in, 33) == 0);
+    printf("ocb.verify.accept=%d\n", CRYPTO_ocb128_finish(ctx, tag, 16) == 0);
+    CRYPTO_ocb128_cleanup(ctx);
+
+    /* ---- The streamed arm (a caller-supplied `ocb128_f`), both directions. ---- */
+    ctx = CRYPTO_ocb128_new(&ek, &dk, (block128_f)AES_encrypt, (block128_f)AES_decrypt,
+                            rt_ocb_stream_enc);
+    printf("ocb.stream.setiv=%d\n", CRYPTO_ocb128_setiv(ctx, iv12, sizeof(iv12), 16));
+    CRYPTO_ocb128_aad(ctx, aad, 13);
+    printf("ocb.stream.enc=%d\n", CRYPTO_ocb128_encrypt(ctx, in, out, 33));
+    rt_hex("ocb.stream.ct", out, 33);
+    CRYPTO_ocb128_tag(ctx, tag2, 16);
+    rt_hex("ocb.stream.tag", tag2, 16);
+    printf("ocb.stream.same=%d\n", memcmp(out, ct, 33) == 0 && memcmp(tag2, tag, 16) == 0);
+    CRYPTO_ocb128_cleanup(ctx);
+
+    ctx = CRYPTO_ocb128_new(&ek, &dk, (block128_f)AES_encrypt, (block128_f)AES_decrypt,
+                            rt_ocb_stream_dec);
+    CRYPTO_ocb128_setiv(ctx, iv12, sizeof(iv12), 16);
+    CRYPTO_ocb128_aad(ctx, aad, 13);
+    printf("ocb.stream.dec=%d\n", CRYPTO_ocb128_decrypt(ctx, ct, back, 33));
+    printf("ocb.stream.dec.match=%d\n", memcmp(back, in, 33) == 0);
+    printf("ocb.stream.dec.accept=%d\n", CRYPTO_ocb128_finish(ctx, tag, 16) == 0);
+    CRYPTO_ocb128_cleanup(ctx);
+
+    /* ---- `copy_ctx` carries the L-table to caller storage. ---- */
+    ctx = CRYPTO_ocb128_new(&ek, &dk, (block128_f)AES_encrypt, (block128_f)AES_decrypt, NULL);
+    CRYPTO_ocb128_setiv(ctx, iv12, sizeof(iv12), 16);
+    CRYPTO_ocb128_aad(ctx, aad, 13);
+    CRYPTO_ocb128_encrypt(ctx, in, out, 33);
+    CRYPTO_ocb128_tag(ctx, tag2, 16);
+    memset(&store, 0, sizeof(store));
+    printf("ocb.copy.ret=%d\n",
+           CRYPTO_ocb128_copy_ctx((OCB128_CONTEXT *)&store, ctx, &ek, &dk));
+    printf("ocb.copy.tag=%d\n", CRYPTO_ocb128_tag((OCB128_CONTEXT *)&store, tag, 16));
+    printf("ocb.copy.same=%d\n", memcmp(tag, tag2, 16) == 0);
+    CRYPTO_ocb128_cleanup((OCB128_CONTEXT *)&store);
+    CRYPTO_ocb128_cleanup(ctx);
+
+    /* ---- Re-initialisation between messages on one context. ---- */
+    ctx = CRYPTO_ocb128_new(&ek, &dk, (block128_f)AES_encrypt, (block128_f)AES_decrypt, NULL);
+    CRYPTO_ocb128_setiv(ctx, iv12, sizeof(iv12), 16);
+    CRYPTO_ocb128_encrypt(ctx, in, out, 16);
+    CRYPTO_ocb128_tag(ctx, tag, 16);
+    printf("ocb.reinit.setiv=%d\n", CRYPTO_ocb128_setiv(ctx, iv12, sizeof(iv12), 16));
+    CRYPTO_ocb128_encrypt(ctx, in, out, 16);
+    CRYPTO_ocb128_tag(ctx, tag2, 16);
+    printf("ocb.reinit.same=%d\n", memcmp(tag, tag2, 16) == 0);
+    CRYPTO_ocb128_cleanup(ctx);
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IOLBF, 0);
@@ -2187,6 +2414,7 @@ int main(void)
     rt_gcm128();
     rt_ccm128();
     rt_xts128();
+    rt_ocb128();
     rt_aes();
     rt_rc4();
     rt_des();

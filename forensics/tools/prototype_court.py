@@ -153,7 +153,7 @@ DECL_RE = re.compile(
     r"([A-Za-z_][A-Za-z0-9_]*)\s*\("
 )
 RUST_ALIAS_RE = re.compile(
-    r"^(?:pub(?:\s*\([a-z]+\s*\))?\s+)?type\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([^;]+);",
+    r"^(?:pub(?:\s*\([a-z]+\s*\))?\s+)?type\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*",
     re.MULTILINE,
 )
 C_DEF_RE_TEMPLATE = r"(?m)^[A-Za-z_][A-Za-z0-9_ \t*]*\b{name}\s*\("
@@ -256,6 +256,34 @@ def canon_c_type(
         g0 = groups[0]
         inner = t[g0[0] + 1:g0[1]].strip()
         if inner.startswith("*"):
+            tail = t[g0[1] + 1:].lstrip()
+            if not tail.startswith("("):
+                # `T (*)[N]` is a *pointer to an array*, and it shares the `(*` spelling
+                # with a function pointer; what separates them is what follows the
+                # declarator. Reading it as a function pointer made the authority's own
+                # `ocb128_f` canonicalise `const unsigned char (*)[16]` to
+                # `fptr(int:1:u; )` -- the argument list it never had. The instrument was
+                # the suspect, not the declaration: see docs/DECISIONS.md D229.
+                stars = 0
+                for ch in inner:
+                    if ch != "*":
+                        break
+                    stars += 1
+                # `const` is read further down, after the group branches, so it is
+                # recomputed here rather than reordered: moving the strip above them
+                # would drop the pointee `const` of `const T *`.
+                cst = t.startswith("const ")
+                elem_src = t[:g0[0]].strip()
+                if cst:
+                    elem_src = elem_src[len("const "):].strip()
+                elem = canon_c_type(elem_src, typedefs, depth + 1)
+                if elem is None:
+                    return None
+                idx = t.rfind("[")
+                base = f"arr({elem};{t[idx + 1:-1].strip()})"
+                if cst:
+                    base = f"const({base})"
+                return "ptr(" * stars + base + ")" * stars
             return canon_c_fnptr(t, typedefs, depth)
         if "*" in t[:g0[0]] and not t[g0[1] + 1:].strip():
             # `RET *(...)`: a function type whose return is a pointer. The regex branch
@@ -651,6 +679,33 @@ def _scan_balanced(text: str, open_at: int) -> int:
                 return i
         i += 1
     return -1
+
+
+def alias_target(text: str, start: int) -> str:
+    """An alias body from `start` to the `;` that terminates it at bracket depth zero.
+
+    The regex that used to capture this body was `[^;]+`, which stops at the *first*
+    semicolon -- and an array type inside a function-pointer alias carries its own
+    (`l_: *const [u8; 16]`). The alias was therefore truncated to `*const [u8`, the
+    function-pointer canonicaliser answered None, and the two exports that take an
+    `ocb128_f` were reported `type_unmapped` while their declarations were correct.
+    The instrument dropped the detail, not the code: see docs/DECISIONS.md D229.
+    """
+    depth = 0
+    i = start
+    while i < len(text):
+        ch = text[i]
+        if ch == "-" and text[i + 1:i + 2] == ">":
+            i += 2
+            continue
+        if ch in "(<[":
+            depth += 1
+        elif ch in ")>]":
+            depth -= 1
+        elif ch == ";" and depth == 0:
+            return text[start:i]
+        i += 1
+    return text[start:]
 
 
 def top_level_groups(text: str) -> list[tuple[int, int]]:
@@ -1214,7 +1269,7 @@ aliases, all Rust text, all C text, and every macro the court could not read.
             rust_files.append((key, text))
             file_aliases: dict[str, str] = {}
             for m in RUST_ALIAS_RE.finditer(text):
-                file_aliases.setdefault(m.group(1), m.group(2).strip())
+                file_aliases.setdefault(m.group(1), alias_target(text, m.end()).strip())
             aliases_by_file[key] = file_aliases
         elif path.suffix == ".c":
             try:
