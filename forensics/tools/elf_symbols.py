@@ -45,6 +45,7 @@ ELF_MAGIC = b"\x7fELF"
 ELFCLASS64 = 2
 ELFDATA2LSB = 1
 SHT_SYMTAB = 2
+SHT_DYNSYM = 11
 SHN_UNDEF = 0
 STB_GLOBAL = 1
 STB_WEAK = 2
@@ -205,6 +206,85 @@ def _ar_member_payloads(data: bytes):
         yield body
 
 
+def _elf_undefined_from(data: bytes, section_type: int) -> set[str]:
+    """Undefined global/weak names in one symbol-table section kind of an ELF64 object.
+
+    The two tables are read by the same code and differ only in which section type is
+    selected, because `.symtab` and `.dynsym` have identical entry layouts and the same
+    binding/shndx filters apply. Keeping one reader means the two cannot drift apart in
+    the way two hand-copied readers would.
+    """
+    if len(data) < 64 or not data.startswith(ELF_MAGIC):
+        raise ElfError("not an ELF object")
+    if data[4] != ELFCLASS64:
+        raise ElfError("only ELFCLASS64 is supported")
+    if data[5] != ELFDATA2LSB:
+        raise ElfError("only little-endian ELF objects are supported")
+
+    (e_shoff,) = struct.unpack_from("<Q", data, 0x28)
+    (e_shentsize, e_shnum, _e_shstrndx) = struct.unpack_from("<HHH", data, 0x3A)
+    if e_shoff == 0 or e_shnum == 0 or e_shentsize != SHEntSize:
+        raise ElfError(f"unusable section table (off={e_shoff} num={e_shnum})")
+
+    sections = []
+    for i in range(e_shnum):
+        base = e_shoff + i * e_shentsize
+        if base + SHEntSize > len(data):
+            raise ElfError("section table runs past the end of the object")
+        (sh_type,) = struct.unpack_from("<I", data, base + 0x04)
+        (sh_offset, sh_size) = struct.unpack_from("<QQ", data, base + 0x18)
+        (sh_link,) = struct.unpack_from("<I", data, base + 0x28)
+        (sh_entsize,) = struct.unpack_from("<Q", data, base + 0x38)
+        sections.append((sh_type, sh_offset, sh_size, sh_link, sh_entsize))
+
+    names: set[str] = set()
+    found = False
+    for sh_type, sh_offset, sh_size, sh_link, sh_entsize in sections:
+        if sh_type != section_type:
+            continue
+        found = True
+        if sh_entsize != SYMENT_SIZE:
+            raise ElfError(f"unexpected symbol entry size {sh_entsize}")
+        if sh_link >= len(sections):
+            raise ElfError("symbol table links to a missing string table")
+        _, str_off, str_size = sections[sh_link][:3]
+        strtab = data[str_off : str_off + str_size]
+        for j in range(sh_size // SYMENT_SIZE):
+            ent = sh_offset + j * SYMENT_SIZE
+            (st_name, st_info, _st_other, st_shndx) = struct.unpack_from("<IBBH", data, ent)
+            if st_shndx != SHN_UNDEF:
+                continue
+            if (st_info >> 4) not in (STB_GLOBAL, STB_WEAK, STB_GNU_UNIQUE):
+                continue
+            name = _cstring(strtab, st_name)
+            if name:
+                names.add(name)
+    if not found:
+        raise ElfError(f"no section of type {section_type} in the object")
+    return names
+
+
+def elf_undefined_dynamic_symbols(data: bytes) -> set[str]:
+    """Global/weak symbols an ELF64 object *imports through its dynamic table*.
+
+    This is the answer to a different question than `elf_undefined_symbols` asks.
+    That function reads `.symtab`, the link-time view, which a `-c` object has and a
+    fully-linked executable also keeps unless stripped. This one reads `.dynsym`, the
+    **loader's** view: the exact names the dynamic linker must resolve from the shared
+    objects the binary names in `DT_NEEDED`. For a probe linked against `libcrypto.so`,
+    that set is precisely the candidate exports the probe's code calls, takes the
+    address of, or stores in a function-pointer table -- which is what makes a probe
+    binary evidence of which symbols its transcript exercised.
+
+    Names here are unversioned; the version is a separate `.gnu.version_r` fact. That
+    is why this reader, not `elf_undefined_symbols`, is the one the coverage atlas
+    intersects with the export universe: a `.symtab` reader on this toolchain sees
+    `HMAC@OPENSSL_3.0.0` where `.dynsym` carries `HMAC`, and only the latter can be
+    intersected with the authority's symbol names.
+    """
+    return _elf_undefined_from(data, SHT_DYNSYM)
+
+
 def defined_external_symbols(path: Path | str) -> set[str]:
     """Global/weak symbols defined by an ELF64 object or an `ar` archive of them."""
     data = Path(path).read_bytes() if not isinstance(path, bytes) else path
@@ -214,3 +294,13 @@ def defined_external_symbols(path: Path | str) -> set[str]:
             names |= elf_defined_external_symbols(payload)
         return names
     return elf_defined_external_symbols(data)
+
+
+def undefined_dynamic_symbols(path: Path | str) -> set[str]:
+    """The dynamic imports of an ELF64 executable or shared object, by name.
+
+    Deliberately no `ar` branch: an archive has no `.dynsym`, and a caller that passed
+    one would be asking a question with no answer. Raising is the honest outcome.
+    """
+    data = Path(path).read_bytes() if not isinstance(path, bytes) else path
+    return elf_undefined_dynamic_symbols(data)

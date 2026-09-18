@@ -140,8 +140,10 @@
           "courts/phase3/rt_secure_probe.c",
           "courts/phase3/rt_lhash_probe.c",
           "courts/phase3/rt_runtime_ext_probe.c",
+          "courts/phase3/rt_coverage_ref_probe.c",
           "forensics/phase3-obligations.json",
-          "artifacts/phase3/COURTS.json"
+          "artifacts/phase3/COURTS.json",
+          "forensics/atlas/court-coverage.json"
         ],
         "name": "core-runtime",
         "phase": 3,
@@ -223,8 +225,10 @@
           "courts/phase4/discover_comp.c",
           "forensics/tools/phase4_courts.py",
           "forensics/tools/phase4_obligations.py",
+          "courts/phase4/rt_coverage_ref_probe.c",
           "forensics/phase4-obligations.json",
-          "artifacts/phase4/COURTS.json"
+          "artifacts/phase4/COURTS.json",
+          "forensics/atlas/court-coverage.json"
         ],
         "name": "bio-conf-objects",
         "phase": 4,
@@ -246,8 +250,10 @@
           "courts/phase5/rt_bn_probe.c",
           "forensics/tools/phase5_courts.py",
           "forensics/tools/phase5_obligations.py",
+          "courts/phase5/rt_coverage_ref_probe.c",
           "forensics/phase5-obligations.json",
-          "artifacts/phase5/COURTS.json"
+          "artifacts/phase5/COURTS.json",
+          "forensics/atlas/court-coverage.json"
         ],
         "name": "bn-asn1-der-pem",
         "phase": 5,
@@ -309,8 +315,10 @@
           "courts/phase6/rt_conf_mod_probe.c",
           "forensics/tools/phase6_courts.py",
           "forensics/tools/phase6_obligations.py",
+          "courts/phase6/rt_coverage_ref_probe.c",
           "forensics/phase6-obligations.json",
-          "artifacts/phase6/COURTS.json"
+          "artifacts/phase6/COURTS.json",
+          "forensics/atlas/court-coverage.json"
         ],
         "name": "libctx-provider",
         "phase": 6,
@@ -358,8 +366,13 @@
           "forensics/tools/phase7_courts.py",
           "forensics/tools/phase7_obligations.py",
           "courts/phase7/rt_fetch_probe.c",
+          "courts/phase7/rt_coverage_ref_probe.c",
+          "courts/phase7/rt_evp_introspect_probe.c",
+          "courts/phase7/rt_evp_class_probe.c",
+          "courts/phase7/rt_evp_pkey_ops_probe.c",
           "forensics/phase7-obligations.json",
-          "artifacts/phase7/COURTS.json"
+          "artifacts/phase7/COURTS.json",
+          "forensics/atlas/court-coverage.json"
         ],
         "name": "evp",
         "phase": 7,
@@ -529,7 +542,7 @@
       "not_started": 14
     }
   },
-  "body_hash": "578bb770b6c10ad0d594cb55a2eeb9715be0a619596ba895034083dae51c2f96",
+  "body_hash": "9539f8becb3004cfb1a6017a54370b478e54e45c5b1fd8277c14d693fd9211fb",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",
