@@ -594,6 +594,12 @@ PHASE8_MODULES = [
     "docs/PHASE-8-SUBPHASES.md",
     "forensics/tools/phase8_courts.py",
     "forensics/tools/phase8_obligations.py",
+    # 8.1a adds the second evidence plane: the correctness courts' driver and the
+    # candidate-only probe. The committed vector sets under `forensics/vectors/` are that
+    # driver's data and are recorded per court by `phase8_courts.py`; naming the code here
+    # is what makes the plane's absence a blocking reason rather than a silent one.
+    "forensics/tools/correctness_vectors.py",
+    "courts/phase8/ct_digest.c",
 ]
 
 STRATUM_EVIDENCE: dict[int, StratumEvidence] = {

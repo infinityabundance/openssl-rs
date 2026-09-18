@@ -10,6 +10,29 @@ author wrote believes the contract is, whereas a probe measures what the authori
 does, and the comparison is between two *executions* of the same program, so the expectation
 cannot drift.
 
+Two registries, because a primitive has two questions
+------------------------------------------------------
+Every primitive-bearing subphase of this stratum carries **two** courts, and they are not
+substitutes for one another (`docs/PHASE-8-SUBPHASES.md` §3.5, `docs/DECISIONS.md` D201):
+
+    RT-DIGEST   the differential court  -> "does the candidate behave like the authority?"
+    CT-DIGEST   the correctness court   -> "does the candidate satisfy the construction?"
+
+The `RT-*` shape is this module's own: a probe compiled twice, against the authority and
+against the candidate distribution shell, and the two `key=value` transcripts diffed. It
+answers *compatibility*, and it cannot answer correctness: two implementations can agree
+byte for byte and both be wrong. So the `CT-*` shape is deliberately different and is driven
+by `forensics/tools/correctness_vectors.py`: the probe is compiled **once**, against the
+candidate alone, and its output is compared with committed expected bytes whose provenance is
+recorded per vector. There is no authority transcript in a correctness court, so there is
+nothing to diff; a single mismatched vector fails the court loudly.
+
+The two registries below are separate for that reason. A name in `COURTS` must have a probe in
+`courts/phase8/`; a name in `CORRECTNESS_COURTS` must have committed vectors in
+`forensics/vectors/`. A `CT-*` court whose primitive is not implemented yet is **not**
+registered as passing; it is named in `PENDING_CORRECTNESS_COURTS` with what it needs, so the
+absence is a statement rather than an omission.
+
 What this stratum's first court has to observe, and why it can observe it at all
 ----------------------------------------------------------------------------------
 Phase 7's first court had to *decide* what a court could see, because its subject — the
@@ -56,6 +79,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import correctness_vectors as cv  # noqa: E402
+
 from atlas_common import (  # noqa: E402
     PRODUCTION_AUTHORITY,
     REPO_ROOT,
@@ -74,12 +99,43 @@ PHASE2 = REPO_ROOT / "artifacts" / "phase2"
 STAGED = REPO_ROOT / "artifacts" / "phase8" / "probes"
 RUN_TIMEOUT_S = "60"
 
-# The courts, in the order they landed. 8.0 lands the runner with none of them, which is
-# the shape 7.0 had: the ledger and the stratum's wiring are evidence, and a court arrives
-# in the subphase that gives it something to observe. `RT-DIGEST` lands with 8.1 and is
-# declared here in the same commit as its probe, so a runner that names a probe which does
-# not exist cannot be committed.
+# The differential courts, in the order they landed. 8.0 lands the runner with none of them,
+# which is the shape 7.0 had: the ledger and the stratum's wiring are evidence, and a court
+# arrives in the subphase that gives it something to observe. `RT-DIGEST` lands with 8.1 and
+# is declared here in the same commit as its probe, so a runner that names a probe which does
+# not exist cannot be committed. (name, probe filename)
 COURTS: list[tuple[str, str]] = []
+
+# The correctness courts, and the committed vector sets each checks. `CT-DIGEST` is the
+# exemplar for 8.1a's low-level constructions: one file per algorithm under
+# `forensics/vectors/`, extracted from the pinned authority's own `evp_test` data by
+# `correctness_vectors.py --emit`. (name, algorithms)
+CORRECTNESS_COURTS: list[tuple[str, tuple[str, ...]]] = [
+    ("CT-DIGEST", ("md4", "md5", "ripemd160", "sha1", "sha224", "sha256", "sha384",
+                   "sha512", "whirlpool")),
+]
+
+# A `CT-*` court the plan names but whose primitive is not implemented yet. It is not a
+# registered court: nothing here can pass, and the runner prints each one as PENDING with what
+# it needs so that "not run yet" cannot be read as "passed". Each entry names the subphase and
+# the prerequisite in one line; the vectors themselves arrive in the subphase that lands the
+# primitive, in the same commit, exactly as `RT-*` probes do.
+PENDING_CORRECTNESS_COURTS: dict[str, str] = {
+    "CT-CIPHER": "8.2 -- needs the AES/DES/RC2/RC4/... low-level Init/Cipher arms to exist "
+                 "and committed vectors for each; runs the crate only (no differential).",
+    "CT-MODES": "8.3 -- needs the GCM/CCM/XTS/Poly1305/ChaCha20-Poly1305 constructions; "
+                "the authority ships SP 800-38x vectors in its evp_test data and CAVP sets "
+                "are the recorded follow-up (see correctness_vectors.py header).",
+    "CT-RSA": "8.4 -- needs the RSA object and its decode/verify paths; the recorded corpus "
+              "is PKCS#1's own test vectors, with Project Wycheproof's RSA known-attack set "
+              "as the stated follow-up.",
+    "CT-DH": "8.5 -- needs the DH object and the FFC group arithmetic; PKCS#3 and the "
+             "authority's own group vectors are the recorded corpus.",
+    "CT-DSA": "8.6 -- needs the DSA object; FIPS 186-4 and the authority's own vectors are "
+              "the recorded corpus.",
+    "CT-EC": "8.7 -- needs EC_KEY/EC_GROUP/EC_POINT; the recorded corpus is the authority's "
+             "own curve vectors plus Project Wycheproof's EC set as a follow-up.",
+}
 
 
 def extra_defs(name: str, libdir: Path) -> list[str]:
@@ -231,6 +287,11 @@ def main(argv: list[str]) -> int:
             continue
         records.append(court(name, src, auth, work))
 
+    for name, algorithms in CORRECTNESS_COURTS:
+        work.mkdir(parents=True, exist_ok=True)
+        records.append(cv.run_court(name, algorithms, work_dir=work,
+                                    authority_id=auth.id))
+
     passed = sum(1 for r in records if r["verdict"] == "pass")
     body = {
         "all_pass": passed == len(records),
@@ -239,11 +300,13 @@ def main(argv: list[str]) -> int:
         "summary": {"total": len(records), "pass": passed,
                     "fail": len(records) - passed},
         "claim": (
-            "A passing court means the candidate produced the same observable "
+            "A passing RT-* court means the candidate produced the same observable "
             "transcript as the authority for the behaviours this probe exercises. "
             "It is a differential-compatibility result, NOT cryptographic or "
             "security correctness, and NOT evidence for any behaviour the probe "
-            "does not touch (docs/PARITY_MODEL.md)."
+            "does not touch (docs/PARITY_MODEL.md). A passing CT-* court means the "
+            "candidate's construction produced the committed expected bytes; it is "
+            "NOT OpenSSL parity and NOT formal validation (docs/DECISIONS.md D201)."
         ),
     }
 
@@ -253,11 +316,39 @@ def main(argv: list[str]) -> int:
     ]
     for _name, filename in COURTS:
         inputs.append(InputRef(name="probe", path=PROBE_DIR / filename))
+    for _name, algorithms in CORRECTNESS_COURTS:
+        inputs.append(InputRef(name="correctness-probe", path=cv.PROBE))
+        for algorithm in algorithms:
+            inputs.append(InputRef(name=f"correctness-vectors:{algorithm}",
+                                   path=cv.VECTOR_DIR / f"{algorithm}.json"))
     doc = envelope(kind="phase8-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
     write_json(OUT, doc)
 
     for r in records:
+        if r.get("plane") == "correctness":
+            if r["verdict"] == "pass":
+                print(f"  {r['court']:<12} pass   "
+                      f"({r['vectors_passed']}/{r['vectors_checked']} vectors)")
+            else:
+                print(f"  {r['court']:<12} FAIL   stage={r.get('stage', 'vector-mismatch')} "
+                      f"({r.get('vectors_failed', '?')} vector(s) failed)")
+                detail = r.get("detail")
+                if isinstance(detail, dict):
+                    print(f"      exit_code={detail.get('exit_code')}")
+                    for line in detail.get("stderr", []):
+                        print(f"      {line}")
+                elif isinstance(detail, list):
+                    for line in detail[:8]:
+                        print(f"      {line}")
+                if r.get("needs"):
+                    print(f"      needs: {r['needs']}")
+                for f in r.get("failures", []):
+                    print(f"      FAIL {f['algorithm']} {f['id']}")
+                    print(f"        input    = {f['input_hex'] or '<empty>'}")
+                    print(f"        expected = {f['expected_hex']}")
+                    print(f"        actual   = {f['actual_hex'] or f['probe_detail']}")
+            continue
         if r["verdict"] == "pass":
             print(f"  {r['court']:<12} pass   ({r['authority_observations']} observations)")
         else:
@@ -273,6 +364,8 @@ def main(argv: list[str]) -> int:
             for res in r.get("residuals", [])[:12]:
                 print(f"      {res['observation']}: authority={res['authority']!r} "
                       f"candidate={res['candidate']!r} ({res['class']})")
+    for name, needs in PENDING_CORRECTNESS_COURTS.items():
+        print(f"  {name:<12} PENDING (not registered as passing) -- {needs}")
     print(f"  -> {rel(OUT)} all_pass={body['all_pass']}")
     return 0 if body["all_pass"] else 1
 

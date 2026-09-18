@@ -1,0 +1,53 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "algorithm": "sha256",
+    "court": "CT-DIGEST",
+    "digest_bytes": 32,
+    "openssl_digest": "SHA256",
+    "provenance": {
+      "authority": "openssl-3.6.4-production",
+      "corpus": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_sha.txt",
+      "note": "Extracted from the pinned authority's own test data with `correctness_vectors.py --emit`; the bytes and the expected digest are verbatim from that file. A CT pass is not formal validation."
+    },
+    "standard": "FIPS 180-4; RFC 6234 §8.5",
+    "vectors": [
+      {
+        "expected_hex": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+        "id": "sha256-evpmd_sha-45",
+        "input_hex": "616263",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_sha.txt",
+          "form": "quoted-string",
+          "line": 45,
+          "title": "SHA tests from (RFC6234 section 8.5 and others)"
+        },
+        "standard": "FIPS 180-4; RFC 6234 §8.5"
+      },
+      {
+        "expected_hex": "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1",
+        "id": "sha256-evpmd_sha-49",
+        "input_hex": "6162636462636465636465666465666765666768666768696768696a68696a6b696a6b6c6a6b6c6d6b6c6d6e6c6d6e6f6d6e6f706e6f7071",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_sha.txt",
+          "form": "quoted-string",
+          "line": 49,
+          "title": "SHA tests from (RFC6234 section 8.5 and others)"
+        },
+        "standard": "FIPS 180-4; RFC 6234 §8.5"
+      }
+    ]
+  },
+  "generator": "forensics/tools/correctness_vectors.py",
+  "inputs": [
+    {
+      "name": "authority-evp-vector-file",
+      "path": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_sha.txt",
+      "sha256": "1cdaa355477300fd3c0ad453d2f6c13f528f3b127af83ff03dbfbf2bf33029c4"
+    }
+  ],
+  "kind": "correctness-vectors-sha256",
+  "schema": "openssl-rs/atlas/correctness-vectors-sha256/v1"
+}
