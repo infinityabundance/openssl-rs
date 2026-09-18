@@ -2143,12 +2143,12 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "510620dd45b702f5e9afd5b63204d6f1726ced22a08458439b2ff4292d7fa6d9"
+      "sha256": "02026175f3d116553aaad756b9ab4759d4c43f8e75c470092ed03f91d35c88b5"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "8bef784d2bc1a1d267c5987a650e3fc015442e730b7f9fbd7b60a1c1a2ebaec2"
+      "sha256": "93544b538f38ac0198de1382581161094ba7c410c7fd04ca6bfd258ed89225ed"
     },
     {
       "name": "phase-state",
@@ -2183,7 +2183,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "a1d59ae747ef0f099539d03150efd9cdeffb86308ba143f7d798ae37469b2973"
+      "sha256": "153cbdd239099dc724bdf6fb3b76f7d93c9882e997bdcf5af115b2c060be9bc6"
     }
   ],
   "kind": "plan-reconciliation",
