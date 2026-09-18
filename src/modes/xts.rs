@@ -30,13 +30,13 @@ use crate::modes::Block128F;
 #[repr(C)]
 pub struct XtsCtx {
     /// `void *key1` — the data-unit cipher's key schedule.
-    key1: *mut c_void,
+    pub(crate) key1: *mut c_void,
     /// `void *key2` — the tweak cipher's key schedule.
-    key2: *mut c_void,
+    pub(crate) key2: *mut c_void,
     /// `block128_f block1` — the data-unit cipher (encrypt direction for both operations).
-    block1: Option<Block128F>,
+    pub(crate) block1: Option<Block128F>,
     /// `block128_f block2` — the tweak cipher.
-    block2: Option<Block128F>,
+    pub(crate) block2: Option<Block128F>,
 }
 
 /// The little-endian doubling, `IS_LITTLE_ENDIAN`'s arm of `crypto/modes/xts128.c:71-77`: the

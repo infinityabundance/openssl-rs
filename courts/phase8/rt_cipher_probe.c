@@ -2698,6 +2698,149 @@ static void rt_deflt_cts(void)
     }
 }
 
+/*
+ * The default provider's AES-XTS rows. XTS is defined over a data unit, so the row's block size is
+ * one and the EVP layer treats it as a stream; the observations are therefore the row's shape
+ * (`keylen` 32/64, `ivlen` 16, `blocksize` 1), the ciphertext at the lengths that exercise the
+ * tweak doubling and both ciphertext-stealing arms, the round trip in each direction, the
+ * duplicated-key refusal, the short-data-unit refusal, and finally the provider answer against
+ * the landed low-level `CRYPTO_xts128_encrypt`.
+ */
+static void rt_deflt_xts(void)
+{
+    static const char *names[] = {
+        "AES-128-XTS", "AES-256-XTS",
+        /* The OID spellings `prov/names.h` publishes second. */
+        "1.3.111.2.1619.0.1.1", "1.3.111.2.1619.0.1.2"
+    };
+    static const size_t lens[] = { 16, 17, 31, 32, 48, 49 };
+    unsigned char key[64];
+    unsigned char iv[16];
+    unsigned char in[64];
+    unsigned char out[80];
+    unsigned char back[80];
+    unsigned char low[80];
+    char buf[160];
+    size_t n, k;
+
+    rt_fill(key, sizeof(key), 91);
+    rt_fill(iv, sizeof(iv), 92);
+    rt_fill(in, sizeof(in), 93);
+
+    for (n = 0; n < sizeof(names) / sizeof(names[0]); n++) {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, names[n], NULL);
+
+        snprintf(buf, sizeof(buf), "defltxts.%s", names[n]);
+        printf("%s.fetched=%d\n", buf, c != NULL);
+        if (c == NULL)
+            continue;
+        printf("%s.keylen=%d\n", buf, EVP_CIPHER_get_key_length(c));
+        printf("%s.ivlen=%d\n", buf, EVP_CIPHER_get_iv_length(c));
+        printf("%s.blocksize=%d\n", buf, EVP_CIPHER_get_block_size(c));
+        EVP_CIPHER_free(c);
+    }
+
+    for (n = 0; n < 2; n++) {
+        for (k = 0; k < sizeof(lens) / sizeof(lens[0]); k++) {
+            EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, names[n], NULL);
+            EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+            int outl = 0, finl = 0, decl = 0, defl = 0;
+            size_t len = lens[k];
+
+            snprintf(buf, sizeof(buf), "defltxts.%s.len%u", names[n], (unsigned)len);
+            if (c == NULL || ctx == NULL || EVP_EncryptInit_ex2(ctx, c, key, iv, NULL) != 1
+                || EVP_EncryptUpdate(ctx, out, &outl, in, (int)len) != 1
+                || EVP_EncryptFinal_ex(ctx, out + outl, &finl) != 1) {
+                printf("%s.enc=0\n", buf);
+            } else {
+                rt_hex(buf, out, (size_t)(outl + finl));
+            }
+            if (ctx != NULL)
+                EVP_CIPHER_CTX_free(ctx);
+            ctx = EVP_CIPHER_CTX_new();
+            if (c != NULL && ctx != NULL && EVP_DecryptInit_ex2(ctx, c, key, iv, NULL) == 1
+                && EVP_DecryptUpdate(ctx, back, &decl, out, outl + finl) == 1
+                && EVP_DecryptFinal_ex(ctx, back + decl, &defl) == 1)
+                printf("%s.roundtrip=%d\n", buf,
+                       (size_t)(decl + defl) == len && memcmp(back, in, len) == 0);
+            else
+                printf("%s.roundtrip=0\n", buf);
+            if (ctx != NULL)
+                EVP_CIPHER_CTX_free(ctx);
+            if (c != NULL)
+                EVP_CIPHER_free(c);
+        }
+    }
+
+    /* The refusals: a data unit shorter than one block, and two equal key halves. */
+    {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, "AES-128-XTS", NULL);
+        EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+        int outl = 0;
+
+        if (c != NULL && ctx != NULL && EVP_EncryptInit_ex2(ctx, c, key, iv, NULL) == 1)
+            printf("defltxts.short=%d\n", EVP_EncryptUpdate(ctx, out, &outl, in, 15));
+        else
+            printf("defltxts.short=0\n");
+        if (ctx != NULL)
+            EVP_CIPHER_CTX_free(ctx);
+        if (c != NULL)
+            EVP_CIPHER_free(c);
+    }
+    {
+        unsigned char dup[32];
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, "AES-128-XTS", NULL);
+        EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+
+        memcpy(dup, key, 16);
+        memcpy(dup + 16, key, 16);
+        if (c != NULL && ctx != NULL)
+            printf("defltxts.dupkeys=%d\n", EVP_EncryptInit_ex2(ctx, c, dup, iv, NULL));
+        else
+            printf("defltxts.dupkeys=0\n");
+        if (ctx != NULL)
+            EVP_CIPHER_CTX_free(ctx);
+        if (c != NULL)
+            EVP_CIPHER_free(c);
+    }
+
+    /* The provider's answer is the landed low-level answer, for two data units. */
+    {
+        AES_KEY k1, k2;
+        rt_xts_ctx x;
+        static const size_t eq[] = { 32, 33 };
+
+        if (AES_set_encrypt_key(key, 128, &k1) == 0
+            && AES_set_encrypt_key(key + 16, 128, &k2) == 0) {
+            x.key1 = &k1;
+            x.key2 = &k2;
+            x.block1 = (block128_f)rt_aes_block;
+            x.block2 = (block128_f)rt_aes_block;
+            for (k = 0; k < 2; k++) {
+                EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, "AES-128-XTS", NULL);
+                EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+                int outl = 0, finl = 0;
+                size_t len = eq[k];
+
+                CRYPTO_xts128_encrypt((const XTS128_CONTEXT *)&x, iv, in, low, len, 1);
+                snprintf(buf, sizeof(buf), "defltxts.eq%u", (unsigned)len);
+                if (c == NULL || ctx == NULL
+                    || EVP_EncryptInit_ex2(ctx, c, key, iv, NULL) != 1
+                    || EVP_EncryptUpdate(ctx, out, &outl, in, (int)len) != 1
+                    || EVP_EncryptFinal_ex(ctx, out + outl, &finl) != 1)
+                    printf("%s.same=0\n", buf);
+                else
+                    printf("%s.same=%d\n", buf,
+                           (size_t)(outl + finl) == len && memcmp(out, low, len) == 0);
+                if (ctx != NULL)
+                    EVP_CIPHER_CTX_free(ctx);
+                if (c != NULL)
+                    EVP_CIPHER_free(c);
+            }
+        }
+    }
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IOLBF, 0);
@@ -2719,5 +2862,6 @@ int main(void)
     rt_deflt_cipher();
     rt_deflt_wrap();
     rt_deflt_cts();
+    rt_deflt_xts();
     return 0;
 }
