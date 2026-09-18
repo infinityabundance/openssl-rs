@@ -78,6 +78,7 @@ pub mod dso;
 pub mod evp;
 pub mod ffi;
 pub mod hpke;
+pub mod idea;
 pub mod mac;
 pub mod modes;
 pub mod params;

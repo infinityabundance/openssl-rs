@@ -124,7 +124,7 @@ CORRECTNESS_COURTS: list[tuple[str, tuple[str, ...]]] = [
 # rather than a message and a digest. It is driven by `correctness_vectors.run_cipher_court`
 # and its sets are the `cipher-vectors-*` files under `forensics/vectors/`.
 CIPHER_CORRECTNESS_COURTS: list[tuple[str, tuple[str, ...]]] = [
-    ("CT-CIPHER", ("aes", "rc4", "des", "rc2", "bf", "cast5")),
+    ("CT-CIPHER", ("aes", "rc4", "des", "rc2", "bf", "cast5", "idea")),
 ]
 
 # A `CT-*` court the plan names but whose primitive is not implemented yet. It is not a

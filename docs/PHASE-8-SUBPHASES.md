@@ -359,10 +359,11 @@ here is. (`forensics/phase8-obligations.json` remains the only complete list.)
 `RC2_cfb64_encrypt`, `RC2_ofb64_encrypt`, `BF_set_key`, `BF_encrypt`, `BF_decrypt`,
 `BF_ecb_encrypt`, `BF_cbc_encrypt`, `BF_cfb64_encrypt`, `BF_ofb64_encrypt`, `BF_options`,
 `CAST_set_key`, `CAST_encrypt`, `CAST_decrypt`, `CAST_ecb_encrypt`, `CAST_cbc_encrypt`,
-`CAST_cfb64_encrypt`, `CAST_ofb64_encrypt`.
+`CAST_cfb64_encrypt`, `CAST_ofb64_encrypt`, `IDEA_set_encrypt_key`, `IDEA_set_decrypt_key`,
+`IDEA_encrypt`, `IDEA_ecb_encrypt`, `IDEA_cbc_encrypt`, `IDEA_cfb64_encrypt`,
+`IDEA_ofb64_encrypt`, `IDEA_options`.
 
-**Open exports (checked against the ledger):** `Camellia_set_key`,
-`IDEA_set_encrypt_key`, `SEED_set_key`.
+**Open exports (checked against the ledger):** `Camellia_set_key`, `SEED_set_key`.
 
 ### The sixteen recorded hand-offs, and why the four key types are not hand-offs
 

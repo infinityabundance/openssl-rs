@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 16,
-      "implemented": 135,
-      "open_in_this_stratum": 635,
+      "implemented": 143,
+      "open_in_this_stratum": 627,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -1243,6 +1243,14 @@
       "DES_string_to_2keys",
       "DES_string_to_key",
       "DES_xcbc_encrypt",
+      "IDEA_cbc_encrypt",
+      "IDEA_cfb64_encrypt",
+      "IDEA_ecb_encrypt",
+      "IDEA_encrypt",
+      "IDEA_ofb64_encrypt",
+      "IDEA_options",
+      "IDEA_set_decrypt_key",
+      "IDEA_set_encrypt_key",
       "MD4",
       "MD4_Final",
       "MD4_Init",
@@ -4158,54 +4166,6 @@
         "symbol": "EVP_PKEY_type"
       },
       {
-        "declaring_header": "idea.h",
-        "module": "src/idea.rs",
-        "received_from_phase": null,
-        "symbol": "IDEA_cbc_encrypt"
-      },
-      {
-        "declaring_header": "idea.h",
-        "module": "src/idea.rs",
-        "received_from_phase": null,
-        "symbol": "IDEA_cfb64_encrypt"
-      },
-      {
-        "declaring_header": "idea.h",
-        "module": "src/idea.rs",
-        "received_from_phase": null,
-        "symbol": "IDEA_ecb_encrypt"
-      },
-      {
-        "declaring_header": "idea.h",
-        "module": "src/idea.rs",
-        "received_from_phase": null,
-        "symbol": "IDEA_encrypt"
-      },
-      {
-        "declaring_header": "idea.h",
-        "module": "src/idea.rs",
-        "received_from_phase": null,
-        "symbol": "IDEA_ofb64_encrypt"
-      },
-      {
-        "declaring_header": "idea.h",
-        "module": "src/idea.rs",
-        "received_from_phase": null,
-        "symbol": "IDEA_options"
-      },
-      {
-        "declaring_header": "idea.h",
-        "module": "src/idea.rs",
-        "received_from_phase": null,
-        "symbol": "IDEA_set_decrypt_key"
-      },
-      {
-        "declaring_header": "idea.h",
-        "module": "src/idea.rs",
-        "received_from_phase": null,
-        "symbol": "IDEA_set_encrypt_key"
-      },
-      {
         "declaring_header": "ec.h",
         "module": "src/ec/mod.rs",
         "received_from_phase": null,
@@ -5399,12 +5359,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "ab2f6129a0f068cee24d033d702fd85d03874217fd5a6e8b4252f4d8f5496e17"
+      "sha256": "4bc9ee15f9d0a7edfc9bba6feac4c212931fb81f67c574152fc5f83dd10b7ed5"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "cffb506d04068c0dd02dd0a4f7a7ff5c37e016f4a08d4c8a946d775d40912458"
+      "sha256": "a1a1924aa6e025452882e4223138c842f6d65bc9a15aeca55bbb37d411cc19dc"
     }
   ],
   "kind": "phase8-obligations",

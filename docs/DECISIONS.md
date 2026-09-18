@@ -14581,3 +14581,30 @@ default-provider row is written.
 
 **What this entry does not do.** IDEA, SEED and Camellia (25 open) remain, and with them the
 provider cipher rows and the cipher half of `ossl_default_provider_init`.
+
+## D220 — IDEA lands, and the arithmetic is 64-bit because the authority's variables are `unsigned long`
+
+`src/idea.rs` lands the eight `idea.h` exports. There is **no generated table** for IDEA: the
+multiplicative inverse is computed at key-schedule time by `i_skey.c:91-118`'s `inverse`, so the
+module is pure structure. `implemented[libcrypto]` **1976 → 1984** and Phase 8
+**135/635/16 → 143/627/16**; `RT-CIPHER` **264 → 282 observations**; `CT-CIPHER`
+**179 → 278 vectors** (the IDEA corpus is the largest in the stratum); baseline 83 courts /
+23,666 → **83 courts / 23,684 observations**. PIPELINE OK.
+
+**`unsigned long` is sixty-four bits on this profile, and that is observable.** `i_cbc.c`'s
+`IDEA_encrypt` declares `x1`…`x4`, `t0`, `t1` and `ul` as `unsigned long`, and `idea_mul`
+multiplies two of them into an `unsigned long` before reducing modulo `2^16 + 1`. A transcription
+that used `u32` would still pass many vectors and would differ in the `ul == 0` arm, where the
+authority computes `-(int)a - b + 1` with C's implicit conversion to `unsigned long`; the module
+uses `u64` and reproduces that conversion. `RT-CIPHER` observes the whole 216-byte encryption
+schedule and the 216-byte decryption schedule, so a wrong `inverse` or a wrong sub-key rotation
+is a residual.
+
+**The poison arm is IDEA's, and the differential plane is where it is seen.** `i_cfb64.c:36-39`
+and `i_ofb64.c:38-41` set `*num = -1` and return when the incoming value is negative — the only
+mode pair in the stratum that does — so `rt_idea` drives `num = -1` through both and observes
+that nothing was written and `*num` stayed `-1`. IDEA is the **legacy** provider's
+(`providers/legacyprov.c:120-123`), so no default-provider row is written.
+
+**What this entry does not do.** SEED and Camellia (17 open) remain, and with them the provider
+cipher rows and the cipher half of `ossl_default_provider_init`.
