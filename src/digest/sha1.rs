@@ -28,7 +28,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::c_int;
+use core::ffi::{c_int, c_void};
 use core::ptr;
 
 use crate::digest::md32::{self, load_word, Md32, MD32_CBLOCK};
@@ -100,18 +100,21 @@ fn sha1_block(ctx: &mut ShaCtx, mut data: *const u8, mut num: usize) {
             // SAFETY: the caller guaranteed `num * MD32_CBLOCK` readable bytes.
             *word = unsafe { load_word(data.add(i * 4), false) };
         }
-        // `Xupdate`'s recurrence, applied to the ring the macro indexes by `& 15`.
-        for i in 16..80 {
-            x[i & 15] =
-                (x[(i + 13) & 15] ^ x[(i + 8) & 15] ^ x[(i + 2) & 15] ^ x[i & 15]).rotate_left(1);
-        }
-
         let mut a = ctx.h0;
         let mut b = ctx.h1;
         let mut c = ctx.h2;
         let mut d = ctx.h3;
         let mut e = ctx.h4;
         for i in 0..80 {
+            // `Xupdate`'s recurrence, interleaved with the round that consumes it: the
+            // authority writes it inside `BODY_16_19`..`BODY_60_79`, which computes the
+            // ring slot and then reads it in the same step. Expanding the whole ring in a
+            // separate pass first would overwrite `x[0..16]` — the words rounds 0..15
+            // read — with the words rounds 64..79 read.
+            if i >= 16 {
+                x[i & 15] = (x[(i + 13) & 15] ^ x[(i + 8) & 15] ^ x[(i + 2) & 15] ^ x[i & 15])
+                    .rotate_left(1);
+            }
             let temp = a
                 .rotate_left(5)
                 .wrapping_add(ROUND[i / 20](b, c, d))
@@ -202,9 +205,9 @@ pub unsafe extern "C" fn SHA1_Init(c: *mut ShaCtx) -> c_int {
 /// # Safety
 /// `c` must be a live initialised context; `data` readable for `len` bytes.
 #[no_mangle]
-pub unsafe extern "C" fn SHA1_Update(c: *mut ShaCtx, data: *const u8, len: usize) -> c_int {
+pub unsafe extern "C" fn SHA1_Update(c: *mut ShaCtx, data: *const c_void, len: usize) -> c_int {
     // SAFETY: the caller's contract.
-    unsafe { md32::update(c, data, len) }
+    unsafe { md32::update(c, data.cast::<u8>(), len) }
 }
 
 /// `int SHA1_Final(unsigned char *md, SHA_CTX *c)`.
@@ -225,6 +228,92 @@ pub unsafe extern "C" fn SHA1_Final(md: *mut u8, c: *mut ShaCtx) -> c_int {
 pub unsafe extern "C" fn SHA1_Transform(c: *mut ShaCtx, data: *const u8) {
     // SAFETY: the caller's contract.
     unsafe { md32::transform(c, data) };
+}
+
+/// `int ossl_sha1_ctrl(SHA_CTX *sha1, int cmd, int mslen, void *ms)` —
+/// `crypto/sha/sha1dgst.c:28-85`, declared in `include/crypto/sha.h:20`.
+///
+/// This is `SHA1_CTRL`, the SSLv3 master-secret arm: it hashes the master secret with `pad_1`
+/// (0x36), finalises to the intermediate digest, reinitialises, and hashes the master secret
+/// with `pad_2` (0x5c) and the intermediate — so a later `SHA1_Final` answers the RFC 6101
+/// §5.6.8 value. Its callers are the provider's `sha1_set_ctx_params` and Phase 13's legacy
+/// `EVP_MD` ctrl, which is why it is `pub(crate)` internal and carries the authority's name.
+///
+/// It is not `#[no_mangle]`: the authority declares it in an uninstalled header
+/// (`include/crypto/sha.h`) and it is not in the exported symbol set.
+///
+/// # Safety
+/// `sha1` must be a live initialised context and `ms` readable for `mslen` bytes when `mslen`
+/// is 48; a NULL `sha1` answers 0 without being dereferenced, as the authority's guard does.
+// The provider's `sha1_set_ctx_params` and Phase 13's `legacy_sha.c` are the two callers the
+// authority has; the provider half lands in this same commit, and the legacy one is Phase 13's.
+#[allow(dead_code)]
+pub(crate) unsafe fn ossl_sha1_ctrl(
+    sha1: *mut ShaCtx,
+    cmd: c_int,
+    mslen: c_int,
+    ms: *mut c_void,
+) -> c_int {
+    /// `SHA_DIGEST_LENGTH` — `include/openssl/sha.h:28`.
+    const SHA_DIGEST_LENGTH: usize = 20;
+    /// `EVP_CTRL_SSL3_MASTER_SECRET` — `include/openssl/evp.h:1221`.
+    const EVP_CTRL_SSL3_MASTER_SECRET: c_int = 0x1d;
+    /// The authority's `unsigned char padtmp[40]` — `2 * SHA_DIGEST_LENGTH`, because the arm
+    /// pads the master secret with a full digest's worth of bytes on each side of the outer hash.
+    const PAD_LENGTH: usize = 40;
+
+    let mut padtmp = [0u8; PAD_LENGTH];
+    let mut sha1tmp = [0u8; SHA_DIGEST_LENGTH];
+
+    if cmd != EVP_CTRL_SSL3_MASTER_SECRET {
+        return -2;
+    }
+    if sha1.is_null() {
+        return 0;
+    }
+    if mslen != 48 {
+        return 0;
+    }
+
+    // SAFETY: `sha1` is live and `ms` is readable for `mslen == 48` bytes per the caller.
+    if unsafe { SHA1_Update(sha1, ms.cast_const(), mslen as usize) } <= 0 {
+        return 0;
+    }
+
+    padtmp.fill(0x36);
+    // SAFETY: `sha1` is live and `padtmp` is a live local of forty bytes.
+    if unsafe { SHA1_Update(sha1, padtmp.as_ptr().cast(), PAD_LENGTH) } == 0 {
+        return 0;
+    }
+    // SAFETY: `sha1` is live and `sha1tmp` is a live local of the digest length.
+    if unsafe { SHA1_Final(sha1tmp.as_mut_ptr(), sha1) } == 0 {
+        return 0;
+    }
+    // SAFETY: `sha1` is live.
+    if unsafe { SHA1_Init(sha1) } == 0 {
+        return 0;
+    }
+
+    // SAFETY: as the first update above.
+    if unsafe { SHA1_Update(sha1, ms.cast_const(), mslen as usize) } <= 0 {
+        return 0;
+    }
+
+    padtmp.fill(0x5c);
+    // SAFETY: `sha1` is live and `padtmp` is a live local of forty bytes.
+    if unsafe { SHA1_Update(sha1, padtmp.as_ptr().cast(), PAD_LENGTH) } == 0 {
+        return 0;
+    }
+    // SAFETY: `sha1` is live and `sha1tmp` is a live local of the digest length.
+    if unsafe { SHA1_Update(sha1, sha1tmp.as_ptr().cast(), SHA_DIGEST_LENGTH) } == 0 {
+        return 0;
+    }
+
+    // `OPENSSL_cleanse(sha1tmp, sizeof(sha1tmp))`.
+    // SAFETY: `sha1tmp` is a live local of the digest length.
+    unsafe { ptr::write_bytes(sha1tmp.as_mut_ptr(), 0, SHA_DIGEST_LENGTH) };
+
+    1
 }
 
 #[cfg(test)]
@@ -267,13 +356,13 @@ mod tests {
             assert_eq!(SHA1_Init(&mut c), 1);
             match split {
                 Some(at) => {
-                    assert_eq!(SHA1_Update(&mut c, data.as_ptr(), at), 1);
+                    assert_eq!(SHA1_Update(&mut c, data.as_ptr().cast(), at), 1);
                     assert_eq!(
-                        SHA1_Update(&mut c, data.as_ptr().add(at), data.len() - at),
+                        SHA1_Update(&mut c, data.as_ptr().add(at).cast(), data.len() - at),
                         1
                     );
                 }
-                None => assert_eq!(SHA1_Update(&mut c, data.as_ptr(), data.len()), 1),
+                None => assert_eq!(SHA1_Update(&mut c, data.as_ptr().cast(), data.len()), 1),
             }
             assert_eq!(SHA1_Final(out.as_mut_ptr(), &mut c), 1);
         }
