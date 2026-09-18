@@ -150,7 +150,7 @@
       "verdict": "pass"
     },
     "RT-CIPHER": {
-      "observations": 66,
+      "observations": 133,
       "verdict": "pass"
     },
     "RT-CMAC": {
@@ -347,7 +347,7 @@
     "phase8": 16
   },
   "implemented": {
-    "libcrypto": 1900,
+    "libcrypto": 1915,
     "libssl": 0
   },
   "open_obligations": {
@@ -356,7 +356,7 @@
     "phase5": 0,
     "phase6": 0,
     "phase7": 0,
-    "phase8": 711
+    "phase8": 696
   },
   "owned_obligations": {
     "phase3": 294,

@@ -34235,6 +34235,7 @@
       }
     ],
     "translation_units_without_a_source_file": [
+      "src/aes.rs: crypto/aes/aes-x86_64.c",
       "src/provider/digest.rs: providers/implementations/digests/libcommon-lib-digestcommon.c",
       "src/runtime/ctype.rs: crypto/legacy-dso-ctype.c",
       "src/runtime/rdtsc.rs: crypto/legacy-dso-x86_64cpuid.c"

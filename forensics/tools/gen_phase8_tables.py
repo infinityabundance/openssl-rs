@@ -73,8 +73,9 @@ RMDLOCAL = "crypto/ripemd/rmd_local.h"
 SHA256 = "crypto/sha/sha256.c"
 SHA512 = "crypto/sha/sha512.c"
 WP = "crypto/whrlpool/wp_block.c"
+AES = "crypto/aes/aes_core.c"
 
-_SOURCES = (MD5, MD4, RMDCONST, RMDLOCAL, SHA256, SHA512, WP)
+_SOURCES = (MD5, MD4, RMDCONST, RMDLOCAL, SHA256, SHA512, WP, AES)
 
 # `R0(A, B, C, D, X(0), 7, 0xd76aa478L);` — the round letter, the message word, the
 # rotation and the constant. The authority writes the same invocation four times per round
@@ -178,10 +179,40 @@ def whirlpool(authority) -> tuple[list[int], list[int]]:
     return table, rc
 
 
+def aes_tables(authority) -> dict:
+    """AES's S-box, inverse S-box and round constants, from `crypto/aes/aes_core.c`.
+
+    The authority's build selects the perlasm arm, so `aes_core.c` is not compiled; the
+    tables below it are still the cipher's published constants, and the crate's portable arm
+    reads them from here rather than from a recalled S-box. `Te4` is the S-box (it is the one
+    table the `AES_ASM` branch keeps, for the key schedule); `Td4` is the inverse S-box, which
+    the const-time branch carries; `rcon` is the ten round constants. `src/aes.rs` is the
+    byte-oriented Rijndael round, which is the same function the T-table arm computes and is
+    what `RT-CIPHER` proves against the authority's perlasm.
+    """
+    text = read(authority, AES)
+
+    def u8_table(name: str) -> list[int]:
+        body = text.split(f"{name}[256] = {{")[1].split("};", 1)[0]
+        values = [int(v, 16) for v in re.findall(r"0x([0-9a-fA-F]+)", body)]
+        if len(values) != 256:
+            raise SystemExit(
+                f"gen-phase8-tables: {name} read {len(values)} entries, expected 256"
+            )
+        return values
+
+    body = text.split("rcon[] = {", 1)[1].split("};", 1)[0]
+    rcon = [int(v, 16) for v in re.findall(r"0x([0-9a-fA-F]+)", body)]
+    if len(rcon) != 10:
+        raise SystemExit(f"gen-phase8-tables: rcon read {len(rcon)} entries, expected 10")
+    return {"sbox": u8_table("Te4"), "inv_sbox": u8_table("Td4"), "rcon": rcon}
+
+
 def render(t: dict) -> str:
     L: list[str] = []
     A = L.append
-    A("//! Phase 8's digest constant tables, generated from the authority's own source.")
+    A("//! Phase 8's constant tables (the digests and the AES S-boxes), generated from the")
+    A("//! authority's own source.")
     A("//!")
     A("//! **Generated. Do not edit.** `forensics/tools/gen_phase8_tables.py` derives every")
     A("//! number here from the pinned authority's `crypto/` tree, and")
@@ -242,6 +273,19 @@ def render(t: dict) -> str:
     A("];")
     A("/// Whirlpool's ten round constants — the last eighty bytes of `Cx`, read the same way.")
     A(f"pub(crate) static WP_RC: [u64; 10] = {fmt_hex64(t['wp']['rc'])};")
+    A("")
+    A("/// AES's S-box — `crypto/aes/aes_core.c`'s `Te4`.")
+    A("pub(crate) static AES_SBOX: [u8; 256] = [")
+    for i in range(0, 256, 16):
+        A("    " + " ".join(f"0x{v:02x}," for v in t["aes"]["sbox"][i:i + 16]))
+    A("];")
+    A("/// AES's inverse S-box — `crypto/aes/aes_core.c`'s `Td4`.")
+    A("pub(crate) static AES_INV_SBOX: [u8; 256] = [")
+    for i in range(0, 256, 16):
+        A("    " + " ".join(f"0x{v:02x}," for v in t["aes"]["inv_sbox"][i:i + 16]))
+    A("];")
+    A("/// AES's round constants — `crypto/aes/aes_core.c`'s `rcon`.")
+    A(f"pub(crate) static AES_RCON: [u32; 10] = {fmt_hex32(t['aes']['rcon'])};")
     A("")
     A("#[cfg(test)]")
     A("mod tests {")
@@ -317,6 +361,7 @@ def build(authority) -> dict:
         "sha2": {"k256": sha2_k(read(authority, SHA256), "K256", 64),
                  "k512": sha2_k(read(authority, SHA512), "K512", 80)},
         "wp": {"table": table, "rc": rc},
+        "aes": aes_tables(authority),
     }
 
 

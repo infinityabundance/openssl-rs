@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 16,
-      "implemented": 59,
-      "open_in_this_stratum": 711,
+      "implemented": 74,
+      "open_in_this_stratum": 696,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -1165,6 +1165,21 @@
       ]
     },
     "implemented": [
+      "AES_bi_ige_encrypt",
+      "AES_cbc_encrypt",
+      "AES_cfb128_encrypt",
+      "AES_cfb1_encrypt",
+      "AES_cfb8_encrypt",
+      "AES_decrypt",
+      "AES_ecb_encrypt",
+      "AES_encrypt",
+      "AES_ige_encrypt",
+      "AES_ofb128_encrypt",
+      "AES_options",
+      "AES_set_decrypt_key",
+      "AES_set_encrypt_key",
+      "AES_unwrap_key",
+      "AES_wrap_key",
       "CRYPTO_cbc128_decrypt",
       "CRYPTO_cbc128_encrypt",
       "CRYPTO_cfb128_1_encrypt",
@@ -1441,96 +1456,6 @@
     ],
     "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum, and it starts at the whole working set, which is the honest starting state. Nothing here is a parity claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-8-SUBPHASES.md §4 decides when the stratum may be called complete.",
     "open": [
-      {
-        "declaring_header": "aes.h",
-        "module": "src/aes.rs",
-        "received_from_phase": null,
-        "symbol": "AES_bi_ige_encrypt"
-      },
-      {
-        "declaring_header": "aes.h",
-        "module": "src/aes.rs",
-        "received_from_phase": null,
-        "symbol": "AES_cbc_encrypt"
-      },
-      {
-        "declaring_header": "aes.h",
-        "module": "src/aes.rs",
-        "received_from_phase": null,
-        "symbol": "AES_cfb128_encrypt"
-      },
-      {
-        "declaring_header": "aes.h",
-        "module": "src/aes.rs",
-        "received_from_phase": null,
-        "symbol": "AES_cfb1_encrypt"
-      },
-      {
-        "declaring_header": "aes.h",
-        "module": "src/aes.rs",
-        "received_from_phase": null,
-        "symbol": "AES_cfb8_encrypt"
-      },
-      {
-        "declaring_header": "aes.h",
-        "module": "src/aes.rs",
-        "received_from_phase": null,
-        "symbol": "AES_decrypt"
-      },
-      {
-        "declaring_header": "aes.h",
-        "module": "src/aes.rs",
-        "received_from_phase": null,
-        "symbol": "AES_ecb_encrypt"
-      },
-      {
-        "declaring_header": "aes.h",
-        "module": "src/aes.rs",
-        "received_from_phase": null,
-        "symbol": "AES_encrypt"
-      },
-      {
-        "declaring_header": "aes.h",
-        "module": "src/aes.rs",
-        "received_from_phase": null,
-        "symbol": "AES_ige_encrypt"
-      },
-      {
-        "declaring_header": "aes.h",
-        "module": "src/aes.rs",
-        "received_from_phase": null,
-        "symbol": "AES_ofb128_encrypt"
-      },
-      {
-        "declaring_header": "aes.h",
-        "module": "src/aes.rs",
-        "received_from_phase": null,
-        "symbol": "AES_options"
-      },
-      {
-        "declaring_header": "aes.h",
-        "module": "src/aes.rs",
-        "received_from_phase": null,
-        "symbol": "AES_set_decrypt_key"
-      },
-      {
-        "declaring_header": "aes.h",
-        "module": "src/aes.rs",
-        "received_from_phase": null,
-        "symbol": "AES_set_encrypt_key"
-      },
-      {
-        "declaring_header": "aes.h",
-        "module": "src/aes.rs",
-        "received_from_phase": null,
-        "symbol": "AES_unwrap_key"
-      },
-      {
-        "declaring_header": "aes.h",
-        "module": "src/aes.rs",
-        "received_from_phase": null,
-        "symbol": "AES_wrap_key"
-      },
       {
         "declaring_header": "blowfish.h",
         "module": "src/blowfish.rs",
@@ -5779,12 +5704,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "dd906a179a371d6684bff8f25270bb3ab668caa3e0f47c98467b9f248b7a7e7a"
+      "sha256": "28651355a403fcc72e2e0b79d048330e1c3f6fa45497f071acfa6b0e42d36170"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "9e70abbe8052f1e44fd9b747ed98d36cc4c12f442a3050499b64ed270b2a15c6"
+      "sha256": "5327221bf6327d55c3d8597be1d2e9cbace0ec80d1b1cf0f5496345856a86477"
     }
   ],
   "kind": "phase8-obligations",

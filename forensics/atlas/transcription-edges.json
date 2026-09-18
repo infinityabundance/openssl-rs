@@ -26,6 +26,13 @@
     "definition": "for each authority translation unit a crate module transcribes, the identifiers that unit references, and the module-to-unit map itself",
     "modules": [
       {
+        "module": "src/aes.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "5/15",
+        "translation_unit": "crypto/aes/aes-x86_64.c"
+      },
+      {
         "module": "src/asn1/a_d2i_fp.rs",
         "phase": 5,
         "phase_source": "module-declaration",
