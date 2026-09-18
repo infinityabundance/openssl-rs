@@ -40,6 +40,7 @@
 
 #include <openssl/aes.h>
 #include <openssl/blowfish.h>
+#include <openssl/camellia.h>
 #include <openssl/cast.h>
 #include <openssl/des.h>
 #include <openssl/idea.h>
@@ -1039,6 +1040,162 @@ static void rt_seed(void)
     rt_hex("seed.ofb128.enc.iv", iv, 16);
 }
 
+static void rt_camellia(void)
+{
+    CAMELLIA_KEY ck;
+    unsigned char key[32];
+    unsigned char in[48];
+    unsigned char out[64];
+    unsigned char iv[16];
+    unsigned char ecount[16];
+    int num;
+
+    printf("camellia.sizeof_key=%u\n", (unsigned)sizeof(CAMELLIA_KEY));
+
+    /* The three key lengths, each with the recipe's own ECB vector. The schedule's KL/KB/KR
+     * limbs mean a wrong rotation or complement shows up in the 272-byte table. */
+    {
+        static const struct {
+            int bits;
+            unsigned char key[32];
+        } cases[3] = {
+            { 128, { 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
+                     0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10 } },
+            { 192, { 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
+                     0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10,
+                     0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77 } },
+            { 256, { 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
+                     0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10,
+                     0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
+                     0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff } },
+        };
+        static const unsigned char pt[16] = {
+            0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
+            0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10 };
+        int i;
+
+        for (i = 0; i < 3; i++) {
+            memset(&ck, 0, sizeof(ck));
+            printf("camellia.set_key.%d=%d\n", cases[i].bits,
+                   Camellia_set_key(cases[i].key, cases[i].bits, &ck));
+            /*
+             * `camellia.ks.*` is deliberately NOT printed. On x86_64 the authority builds
+             * the perlasm arm (`crypto/camellia/build.info:6` selects
+             * `cmll-x86_64.s cmll_misc.c`, so `camellia.c` is not compiled), and that arm
+             * supplies its own `Camellia_Ekeygen` (`crypto/camellia/asm/cmll-x86_64.pl:443`)
+             * whose `CAMELLIA_KEY` layout is a different arrangement built for its own round
+             * function. The bytes are therefore an arm-specific internal representation, not
+             * part of the externally observable contract; comparing the asm authority's table
+             * with the portable arm's would report a representation difference as a residual.
+             * The schedule is observed through everything it determines instead: the recipe
+             * ECB vectors and every mode below. See D222.
+             */
+            printf("camellia.ks.skipped=%d\n", cases[i].bits);
+            printf("camellia.grand_rounds.%d=%d\n", cases[i].bits, ck.grand_rounds);
+            memset(out, 0, sizeof(out));
+            Camellia_ecb_encrypt(pt, out, &ck, CAMELLIA_ENCRYPT);
+            rt_hexf("camellia.recipe.ecb", cases[i].bits, out, 16);
+        }
+    }
+
+    /* A refused length and a NULL key, both before the table is touched. */
+    {
+        CAMELLIA_KEY bad;
+
+        memset(&bad, 0, sizeof(bad));
+        printf("camellia.set_key.64=%d\n", Camellia_set_key(key, 64, &bad));
+        printf("camellia.set_key.nullkey=%d\n", Camellia_set_key(NULL, 128, &bad));
+    }
+
+    /* One deterministic key, the block round trip, and every mode. */
+    rt_fill(key, 32, 1);
+    rt_fill(in, sizeof(in), 2);
+    memset(&ck, 0, sizeof(ck));
+    Camellia_set_key(key, 128, &ck);
+    memset(out, 0, sizeof(out));
+    Camellia_ecb_encrypt(in, out, &ck, CAMELLIA_ENCRYPT);
+    rt_hex("camellia.ecb.enc", out, 16);
+    Camellia_ecb_encrypt(out, out + 16, &ck, CAMELLIA_DECRYPT);
+    rt_hex("camellia.ecb.dec", out + 16, 16);
+
+    rt_fill(iv, 16, 3);
+    memset(out, 0, sizeof(out));
+    Camellia_cbc_encrypt(in, out, 32, &ck, iv, 1);
+    rt_hex("camellia.cbc.enc", out, 32);
+    rt_hex("camellia.cbc.enc.iv", iv, 16);
+    Camellia_cbc_encrypt(out, out + 32, 32, &ck, iv, 0);
+    rt_hex("camellia.cbc.dec", out + 32, 32);
+
+    rt_fill(iv, 16, 4);
+    num = 5;
+    memset(out, 0, sizeof(out));
+    Camellia_cfb128_encrypt(in, out, 20, &ck, iv, &num, 1);
+    rt_hex("camellia.cfb128.enc", out, 20);
+    rt_hex("camellia.cfb128.enc.iv", iv, 16);
+    printf("camellia.cfb128.num=%d\n", num);
+
+    rt_fill(iv, 16, 5);
+    num = 0;
+    memset(out, 0, sizeof(out));
+    Camellia_cfb8_encrypt(in, out, 20, &ck, iv, &num, 1);
+    rt_hex("camellia.cfb8.enc", out, 20);
+    rt_hex("camellia.cfb8.enc.iv", iv, 16);
+
+    /* CFB-1's `length` is a bit count and the input is packed MS bit first. */
+    rt_fill(iv, 16, 6);
+    num = 0;
+    memset(out, 0x55, sizeof(out));
+    Camellia_cfb1_encrypt(in, out, 1, &ck, iv, &num, 1);
+    rt_hex("camellia.cfb1.one_bit", out, 1);
+    rt_fill(iv, 16, 6);
+    num = 0;
+    memset(out, 0, sizeof(out));
+    Camellia_cfb1_encrypt(in, out, 8, &ck, iv, &num, 1);
+    rt_hex("camellia.cfb1.eight_bits", out, 1);
+    rt_fill(iv, 16, 6);
+    num = 0;
+    memset(out, 0, sizeof(out));
+    Camellia_cfb1_encrypt(in, out, 24, &ck, iv, &num, 0);
+    rt_hex("camellia.cfb1.dec", out, 3);
+
+    rt_fill(iv, 16, 7);
+    num = 0;
+    memset(out, 0, sizeof(out));
+    Camellia_ofb128_encrypt(in, out, 20, &ck, iv, &num);
+    rt_hex("camellia.ofb128.enc", out, 20);
+    rt_hex("camellia.ofb128.enc.iv", iv, 16);
+    printf("camellia.ofb128.num=%d\n", num);
+
+    /* CTR: exact block, partial tail, and a resumed counter. */
+    rt_fill(iv, 16, 8);
+    num = 0;
+    memset(ecount, 0, sizeof(ecount));
+    memset(out, 0, sizeof(out));
+    Camellia_ctr128_encrypt(in, out, 16, &ck, iv, ecount, (unsigned int *)&num);
+    rt_hex("camellia.ctr.oneblock.ct", out, 16);
+    rt_hex("camellia.ctr.oneblock.iv", iv, 16);
+    printf("camellia.ctr.oneblock.num=%d\n", num);
+
+    rt_fill(iv, 16, 8);
+    num = 0;
+    memset(ecount, 0, sizeof(ecount));
+    memset(out, 0, sizeof(out));
+    Camellia_ctr128_encrypt(in, out, 35, &ck, iv, ecount, (unsigned int *)&num);
+    rt_hex("camellia.ctr.partial.ct", out, 35);
+    rt_hex("camellia.ctr.partial.iv", iv, 16);
+    rt_hex("camellia.ctr.partial.ecount", ecount, 16);
+    printf("camellia.ctr.partial.num=%d\n", num);
+
+    rt_fill(iv, 16, 8);
+    num = 4;
+    rt_fill(ecount, 16, 11);
+    memset(out, 0, sizeof(out));
+    Camellia_ctr128_encrypt(in, out, 20, &ck, iv, ecount, (unsigned int *)&num);
+    rt_hex("camellia.ctr.resume.ct", out, 20);
+    rt_hex("camellia.ctr.resume.ecount", ecount, 16);
+    printf("camellia.ctr.resume.num=%d\n", num);
+}
+
 static void rt_modes_blocks(void)
 {
     const unsigned char key = RT_KEY;
@@ -1302,5 +1459,6 @@ int main(void)
     rt_cast5();
     rt_idea();
     rt_seed();
+    rt_camellia();
     return 0;
 }

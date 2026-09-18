@@ -23,6 +23,7 @@
 
 #include <openssl/aes.h>
 #include <openssl/blowfish.h>
+#include <openssl/camellia.h>
 #include <openssl/cast.h>
 #include <openssl/des.h>
 #include <openssl/idea.h>
@@ -509,6 +510,72 @@ static int ct_legacy(const char *cipher, int enc_op,
             if (ivlen != 16)
                 return -1;
             SEED_ofb128_encrypt(in, out, inlen, &sk, ivec, &num);
+            *outlen = inlen;
+            return 0;
+        }
+        return -1;
+    }
+
+    if (strncmp(cipher, "CAMELLIA-", 9) == 0) {
+        CAMELLIA_KEY ck;
+        int num = 0;
+        int bits;
+
+        if (strncmp(cipher + 9, "128-", 4) == 0)
+            bits = 128;
+        else if (strncmp(cipher + 9, "192-", 4) == 0)
+            bits = 192;
+        else if (strncmp(cipher + 9, "256-", 4) == 0)
+            bits = 256;
+        else
+            return -1;
+        if (keylen != (size_t)bits / 8 || ivlen > sizeof(ivec))
+            return -1;
+        memcpy(ivec, iv, ivlen);
+        if (Camellia_set_key(key, bits, &ck) != 0)
+            return -1;
+        if (strcmp(mode, "ECB") == 0) {
+            size_t i;
+
+            if (inlen % 16 != 0)
+                return -1;
+            for (i = 0; i < inlen; i += 16)
+                Camellia_ecb_encrypt(in + i, out + i, &ck,
+                                     enc_op ? CAMELLIA_ENCRYPT : CAMELLIA_DECRYPT);
+            *outlen = inlen;
+            return 0;
+        }
+        if (strcmp(mode, "CBC") == 0) {
+            if (inlen % 16 != 0 || ivlen != 16)
+                return -1;
+            Camellia_cbc_encrypt(in, out, inlen, &ck, ivec,
+                                 enc_op ? CAMELLIA_ENCRYPT : CAMELLIA_DECRYPT);
+            *outlen = inlen;
+            return 0;
+        }
+        if (strcmp(mode, "CFB") == 0) {
+            if (ivlen != 16)
+                return -1;
+            Camellia_cfb128_encrypt(in, out, inlen, &ck, ivec, &num,
+                                    enc_op ? CAMELLIA_ENCRYPT : CAMELLIA_DECRYPT);
+            *outlen = inlen;
+            return 0;
+        }
+        if (strcmp(mode, "OFB") == 0) {
+            if (ivlen != 16)
+                return -1;
+            Camellia_ofb128_encrypt(in, out, inlen, &ck, ivec, &num);
+            *outlen = inlen;
+            return 0;
+        }
+        if (strcmp(mode, "CTR") == 0) {
+            unsigned char ecount[16];
+            unsigned int ctr = 0;
+
+            if (ivlen != 16)
+                return -1;
+            memset(ecount, 0, sizeof(ecount));
+            Camellia_ctr128_encrypt(in, out, inlen, &ck, ivec, ecount, &ctr);
             *outlen = inlen;
             return 0;
         }

@@ -299,6 +299,13 @@
         "translation_unit": "crypto/bn/bn_recp.c"
       },
       {
+        "module": "src/camellia.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "3/10",
+        "translation_unit": "crypto/camellia/cmll_cfb.c"
+      },
+      {
         "module": "src/cast.rs",
         "phase": 8,
         "phase_source": "module-declaration",
@@ -10555,6 +10562,41 @@
           "src/runtime/buffer.rs"
         ],
         "tu": "crypto/buffer/buffer.c"
+      },
+      {
+        "identifiers": [
+          "CAMELLIA_KEY",
+          "CRYPTO_cfb128_1_encrypt",
+          "CRYPTO_cfb128_8_encrypt",
+          "CRYPTO_cfb128_encrypt",
+          "Camellia_cfb128_encrypt",
+          "Camellia_cfb1_encrypt",
+          "Camellia_cfb8_encrypt",
+          "Camellia_encrypt",
+          "block128_f",
+          "camellia",
+          "char",
+          "const",
+          "enc",
+          "h",
+          "in",
+          "include",
+          "int",
+          "ivec",
+          "key",
+          "length",
+          "modes",
+          "num",
+          "openssl",
+          "out",
+          "size_t",
+          "unsigned",
+          "void"
+        ],
+        "modules": [
+          "src/camellia.rs"
+        ],
+        "tu": "crypto/camellia/cmll_cfb.c"
       },
       {
         "identifiers": [

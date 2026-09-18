@@ -362,9 +362,14 @@ here is. (`forensics/phase8-obligations.json` remains the only complete list.)
 `CAST_cfb64_encrypt`, `CAST_ofb64_encrypt`, `IDEA_set_encrypt_key`, `IDEA_set_decrypt_key`,
 `IDEA_encrypt`, `IDEA_ecb_encrypt`, `IDEA_cbc_encrypt`, `IDEA_cfb64_encrypt`,
 `IDEA_ofb64_encrypt`, `IDEA_options`, `SEED_set_key`, `SEED_encrypt`, `SEED_decrypt`,
-`SEED_ecb_encrypt`, `SEED_cbc_encrypt`, `SEED_cfb128_encrypt`, `SEED_ofb128_encrypt`.
+`SEED_ecb_encrypt`, `SEED_cbc_encrypt`, `SEED_cfb128_encrypt`, `SEED_ofb128_encrypt`,
+`Camellia_set_key`, `Camellia_encrypt`, `Camellia_decrypt`, `Camellia_ecb_encrypt`,
+`Camellia_cbc_encrypt`, `Camellia_cfb128_encrypt`, `Camellia_cfb1_encrypt`,
+`Camellia_cfb8_encrypt`, `Camellia_ofb128_encrypt`, `Camellia_ctr128_encrypt`.
 
-**Open exports (checked against the ledger):** `Camellia_set_key`.
+**Open exports (checked against the ledger):** `CRYPTO_gcm128_init`, `CRYPTO_xts128_encrypt`.
+Phase 8.2's last cipher family has landed, so the next cipher-adjacent work is 8.3's AEAD/XTS
+layer rather than another low-level block cipher.
 
 ### The sixteen recorded hand-offs, and why the four key types are not hand-offs
 

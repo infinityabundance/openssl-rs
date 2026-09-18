@@ -14635,3 +14635,46 @@ mode wrappers delegate to `crate::modes`' `CRYPTO_*` functions with a `block128_
 **What this entry does not do.** Camellia (10 open) remains, and with it the provider cipher
 rows and the cipher half of `ossl_default_provider_init` — of which Camellia is the **default**
 provider's, unlike every family from this entry back.
+
+## D222 — Camellia lands, and the authority's asm arm makes the key table an arm-specific observable
+
+`src/camellia.rs` lands the ten `camellia.h` exports over the generated `CAMELLIA_SBOX[4][256]`
+rows and the twelve `SIGMA` constants (`crypto/camellia/camellia.c`), with the `RotLeft128`
+sixty-eight-word schedule, the six-round `Camellia_Feistel`, the `FL`/`FL⁻¹` layer, and the seven
+mode entry points that delegate to `crate::modes` exactly as `cmll_{ecb,cbc,cfb,ctr,ofb}.c` do.
+`implemented[libcrypto]` **1991 → 2001** and Phase 8 **150/620/16 → 160/610/16**; `RT-CIPHER`
+**294 → 335 observations**; `CT-CIPHER` **330 → 419 vectors**; baseline 83 courts / 23,696 →
+**83 courts / 23,737 observations**. PIPELINE OK.
+
+**A defect the corpus caught, and a hand-written round-trip would not.** The draft's 192/256-bit
+schedule formed the last `KL <<< 111` limb as `r2 = [r[2], r[3], r[0], r[1]]`, but the
+authority's `RotLeft128(s2, s3, s0, s1, 2)` names the tuple one word on from `r`'s `(s1,s2,s3,s0)`
+order, so the correct read is `[r[1], r[2], r[3], r[0]]` (`camellia.c:398-401`). The 128-bit
+vector passed the whole time, because that limb is not reached on the 128-bit path; the test now
+pins the corpus's own `CAMELLIA-{128,192,256}-ECB` ciphertexts, so all three key lengths are
+asserted and not just a round trip.
+
+**The key table is an arm-specific internal representation, and `RT-CIPHER` declines it.**
+`crypto/camellia/build.info:6` selects `$CMLLASM_x86_64 = cmll-x86_64.s cmll_misc.c` on this
+profile, so `camellia.c` is **not compiled** and the asm supplies its own `Camellia_Ekeygen`
+(`crypto/camellia/asm/cmll-x86_64.pl:443`), `Camellia_EncryptBlock_Rounds` (`:138`) and
+`Camellia_DecryptBlock_Rounds` (`:265`). Its `CAMELLIA_KEY` layout is a different arrangement
+built for the asm round function, so the 280 bytes of `key->u.rd_key` are not part of the
+externally observable contract across arms. This is D213's class exactly — an observation that
+depends on which arm was built rather than on the contract — and the probe prints
+`camellia.ks.skipped=<bits>` instead, with the schedule observed through everything it
+determines: the three recipe ECB vectors and every mode below. `CT-CIPHER`'s 89 Camellia vectors
+(87 corpus-mirrored, 2 independent empty-input boundaries) are what actually establish the
+portable arm equal.
+
+**Camellia is the default provider's family, not the legacy provider's.**
+`providers/defltprov.c:275-300` carries twenty-four rows (`CAMELLIA-{128,192,256}-` ×
+{ECB, CBC, CBC-CTS, OFB, CFB, CFB1, CFB8, CTR}), while every family from D215 to D221 is the
+legacy provider's (`legacyprov.c:108-159`). The provider half of this slice therefore has a
+default-provider row to write for Camellia; it is not written here.
+
+**What this entry does not do.** The provider cipher rows — `providers/defltprov.c`'s
+`deflt_ciphers[]` from `providers/implementations/include/prov/names.h`, each checked against
+`providers/legacyprov.c` first — and the cipher half of `deflt_query` remain. `deflt_get_params`,
+`deflt_gettable_params`, `ossl_prov_get_capabilities`, `provctx` and the `base`/`null` rows
+remain absent, and are not claimed.

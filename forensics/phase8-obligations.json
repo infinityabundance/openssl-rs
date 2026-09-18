@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 16,
-      "implemented": 150,
-      "open_in_this_stratum": 620,
+      "implemented": 160,
+      "open_in_this_stratum": 610,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -1211,6 +1211,16 @@
       "CRYPTO_nistcts128_encrypt",
       "CRYPTO_nistcts128_encrypt_block",
       "CRYPTO_ofb128_encrypt",
+      "Camellia_cbc_encrypt",
+      "Camellia_cfb128_encrypt",
+      "Camellia_cfb1_encrypt",
+      "Camellia_cfb8_encrypt",
+      "Camellia_ctr128_encrypt",
+      "Camellia_decrypt",
+      "Camellia_ecb_encrypt",
+      "Camellia_encrypt",
+      "Camellia_ofb128_encrypt",
+      "Camellia_set_key",
       "DES_cbc_cksum",
       "DES_cbc_encrypt",
       "DES_cfb64_encrypt",
@@ -1735,66 +1745,6 @@
         "module": "src/modes/mod.rs",
         "received_from_phase": null,
         "symbol": "CRYPTO_xts128_encrypt"
-      },
-      {
-        "declaring_header": "camellia.h",
-        "module": "src/camellia.rs",
-        "received_from_phase": null,
-        "symbol": "Camellia_cbc_encrypt"
-      },
-      {
-        "declaring_header": "camellia.h",
-        "module": "src/camellia.rs",
-        "received_from_phase": null,
-        "symbol": "Camellia_cfb128_encrypt"
-      },
-      {
-        "declaring_header": "camellia.h",
-        "module": "src/camellia.rs",
-        "received_from_phase": null,
-        "symbol": "Camellia_cfb1_encrypt"
-      },
-      {
-        "declaring_header": "camellia.h",
-        "module": "src/camellia.rs",
-        "received_from_phase": null,
-        "symbol": "Camellia_cfb8_encrypt"
-      },
-      {
-        "declaring_header": "camellia.h",
-        "module": "src/camellia.rs",
-        "received_from_phase": null,
-        "symbol": "Camellia_ctr128_encrypt"
-      },
-      {
-        "declaring_header": "camellia.h",
-        "module": "src/camellia.rs",
-        "received_from_phase": null,
-        "symbol": "Camellia_decrypt"
-      },
-      {
-        "declaring_header": "camellia.h",
-        "module": "src/camellia.rs",
-        "received_from_phase": null,
-        "symbol": "Camellia_ecb_encrypt"
-      },
-      {
-        "declaring_header": "camellia.h",
-        "module": "src/camellia.rs",
-        "received_from_phase": null,
-        "symbol": "Camellia_encrypt"
-      },
-      {
-        "declaring_header": "camellia.h",
-        "module": "src/camellia.rs",
-        "received_from_phase": null,
-        "symbol": "Camellia_ofb128_encrypt"
-      },
-      {
-        "declaring_header": "camellia.h",
-        "module": "src/camellia.rs",
-        "received_from_phase": null,
-        "symbol": "Camellia_set_key"
       },
       {
         "declaring_header": "dh.h",
@@ -5324,12 +5274,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "43ac02edb31d4f0de0c01dee584316590a112039690e35e007ba7f1621c1d82f"
+      "sha256": "c6464ab9db51a5371f6bd6f21c5fe9a73274135248a1a28ec39312a3e4d3b193"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "fdc0079620a500737801a29ed7554e0b34286c6ccc1f50b5f1468ff8eee7a2b8"
+      "sha256": "a8acac63c5aaf285eafdb510ab78dc72b95ea0c3849f18f6da793a84c1d224fb"
     }
   ],
   "kind": "phase8-obligations",
