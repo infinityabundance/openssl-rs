@@ -35,8 +35,21 @@
  * residual is about — before 8.1b the candidate's fallback walk failed at `DSO_load`, so the
  * load and the fetch both answered 0 while the authority answered 1. The digest bytes are the
  * point: a fetch that resolves to a method whose callbacks are wrong is worse than no fetch.
- * The table's edge is observed too: the seven rows `defltprov.c` carries resolve, and `MD4` and
+ * The table's edge is observed too: the rows `defltprov.c` carries resolve, and `MD4` and
  * `WHIRLPOOL`, which are `legacyprov.c`'s rows and which no loaded provider answers, do not.
+ *
+ * Since 8.1c every row `defltprov.c`'s `deflt_digests[]` publishes is fetched **by its primary
+ * name** and run, so a row present in the table but not fetchable or runnable is a residual rather
+ * than an assumption. The fixed-width SHA-2 alternates, SHA-3, Keccak, BLAKE2, SM3, `MD5-SHA1`
+ * and `NULL` are provider-only constructions (no exported low-level entry point), so the fetch
+ * *is* the surface. `NULL`'s answers are observed rather than assumed: size 0, block size 0, and
+ * a `Final` that succeeds with `*outl == 0` and writes nothing. `MD5-SHA1`'s
+ * `OSSL_DIGEST_PARAM_SSL3_MS` arm is driven through the fetched method's `set_ctx_params`, since
+ * that switch is the only interesting thing about the construction. The XOF rows are driven
+ * through `EVP_MD_xof` and a two-slice `EVP_DigestSqueeze`.
+ *
+ * The five exported `sha.h` one-shots are observed directly, once with the caller's buffer and
+ * once with `md == NULL` (the file's shared `static` buffer). See `rt_one_shot_exports`.
  *
  * No address is ever printed, stdout is line-buffered, and no NULL-dereferencing entry point
  * is called — a probe that aborts the harness compares nothing.
@@ -55,6 +68,8 @@
 #include <openssl/whrlpool.h>
 #include <openssl/evp.h>
 #include <openssl/provider.h>
+#include <openssl/params.h>
+#include <openssl/core_names.h>
 
 #define RT_MSG_MAX 2048u
 
@@ -416,6 +431,68 @@ static void rt_provider_xof(const char *name, const char *label, size_t first, s
     EVP_MD_free(md);
 }
 
+/* `MD5-SHA1`'s only interesting property is its `set_ctx_params`
+ * `OSSL_DIGEST_PARAM_SSL3_MS` arm (`md5_sha1_prov.c:40-55`). A 48-byte master secret switches
+ * the context to the RFC 6101 §5.6.8 construction (`crypto/md5/md5_sha1.c:41-107`), so the digest
+ * that follows is not `md5(ms)||sha1(ms)`; a length other than 48 answers 0 and leaves the
+ * context untouched. Both are observed, on the fetched method rather than the low-level ctrl. */
+static void rt_provider_md5_sha1_ssl3(void)
+{
+    EVP_MD *md = EVP_MD_fetch(NULL, "MD5-SHA1", NULL);
+    EVP_MD_CTX *ctx;
+    unsigned char out[80];
+    unsigned int outl = 0;
+    unsigned char ms[48];
+    unsigned char ms_short[47];
+    OSSL_PARAM params[2];
+    size_t i;
+    int ok;
+
+    printf("provider.md5_sha1.ssl3_fetch=%s\n", md != NULL ? "yes" : "no");
+    if (md == NULL) {
+        printf("provider.md5_sha1.ssl3=no-fetch\n");
+        return;
+    }
+    for (i = 0; i < sizeof(ms); i++)
+        ms[i] = (unsigned char)((i * 13u + 1u) & 0xffu);
+    memset(ms_short, 0x11, sizeof(ms_short));
+
+    /* A master secret that is not 48 bytes is refused (`mslen != 48` -> 0). */
+    ctx = EVP_MD_CTX_new();
+    if (EVP_DigestInit_ex(ctx, md, NULL) == 1 && EVP_DigestUpdate(ctx, "abc", 3) == 1) {
+        params[0] = OSSL_PARAM_construct_octet_string(OSSL_DIGEST_PARAM_SSL3_MS, ms_short,
+                                                      sizeof(ms_short));
+        params[1] = OSSL_PARAM_construct_end();
+        printf("provider.md5_sha1.ssl3_short=%d\n", EVP_MD_CTX_set_params(ctx, params));
+    } else {
+        printf("provider.md5_sha1.ssl3_short=init-error\n");
+    }
+    EVP_MD_CTX_free(ctx);
+
+    /* The 48-byte arm rewrites the state, so the digest that follows is the SSLv3 one. */
+    ctx = EVP_MD_CTX_new();
+    memset(out, 0, sizeof(out));
+    if (EVP_DigestInit_ex(ctx, md, NULL) == 1 && EVP_DigestUpdate(ctx, "abc", 3) == 1) {
+        params[0] = OSSL_PARAM_construct_octet_string(OSSL_DIGEST_PARAM_SSL3_MS, ms,
+                                                      sizeof(ms));
+        params[1] = OSSL_PARAM_construct_end();
+        ok = EVP_MD_CTX_set_params(ctx, params);
+        printf("provider.md5_sha1.ssl3_set=%d\n", ok);
+        if (ok == 1 && EVP_DigestFinal_ex(ctx, out, &outl) == 1) {
+            printf("provider.md5_sha1.ssl3_digest=");
+            rt_print_hex(out, outl);
+            printf("\n");
+            printf("provider.md5_sha1.ssl3_outl=%u\n", outl);
+        } else {
+            printf("provider.md5_sha1.ssl3_digest=error\n");
+        }
+    } else {
+        printf("provider.md5_sha1.ssl3_set=init-error\n");
+    }
+    EVP_MD_CTX_free(ctx);
+    EVP_MD_free(md);
+}
+
 static void rt_provider_section(void)
 {
     OSSL_PROVIDER *def;
@@ -455,7 +532,10 @@ static void rt_provider_section(void)
      * both must answer NULL here, exactly as the authority does; `RMD160` is one of
      * `PROV_NAMES_RIPEMD_160`'s four aliases. */
     rt_provider_digest("MD5", "md5");
+    rt_provider_digest("SHA1", "sha1");
     rt_provider_digest("SHA512", "sha512");
+    rt_provider_digest("SHA2-224", "sha2_224");
+    rt_provider_digest("SHA2-384", "sha2_384");
     rt_provider_digest("RIPEMD160", "ripemd160");
     rt_provider_digest("RMD160", "rmd160");
     rt_provider_digest("MD4", "md4");
@@ -480,6 +560,9 @@ static void rt_provider_section(void)
     rt_provider_digest("SM3", "sm3");
     rt_provider_digest("MD5-SHA1", "md5_sha1");
     rt_provider_digest("NULL", "null");
+    /* `MD5-SHA1` is the one row whose `set_ctx_params` changes the construction, so its SSLv3
+     * master-secret arm is driven separately after the digest above. */
+    rt_provider_md5_sha1_ssl3();
     /* The XOF rows: the squeeze is the surface `EVP_MD_xof`/`EVP_DigestSqueeze` reach, and a
      * two-slice squeeze is where a transcription of the loop stops agreeing. */
     rt_provider_xof("SHAKE-128", "shake128", 17, 15);
@@ -494,7 +577,13 @@ static void rt_provider_section(void)
  * directly rather than through the provider. Each is `EVP_Q_digest(NULL, <name>, NULL, d, n, md,
  * NULL)` in the authority, and each answers NULL when the fetch cannot resolve -- which is what a
  * missing default provider would show. `rt_msg` is the probe's own input, so the two transcripts
- * can only differ where the two libraries differ. */
+ * can only differ where the two libraries differ.
+ *
+ * Each construction is driven **twice**: once with the caller's `out` buffer, and once with
+ * `md == NULL`, which selects the file's own `static unsigned char m[<len>]` (`sha1_one.c:38-45`
+ * and its four siblings). The returned pointer is never printed; the bytes it points at are, and
+ * the two answers are compared as bytes because the whole point of the static arm is that it is
+ * the same construction reached through a different buffer. */
 static void rt_one_shot_exports(void)
 {
     unsigned char out[64];
@@ -504,6 +593,7 @@ static void rt_one_shot_exports(void)
 
     for (i = 0; i < 5; i++) {
         unsigned char *ret = NULL;
+        unsigned char *stat = NULL;
 
         memset(out, 0, sizeof(out));
         switch (i) {
@@ -518,6 +608,24 @@ static void rt_one_shot_exports(void)
             printf("oneshot.%s.digest=", labels[i]);
             rt_print_hex(out, sizes[i]);
             printf("\n");
+        }
+
+        /* `md == NULL`: the authority's static-buffer arm. Reading the returned pointer is
+         * what the authority itself does with it, and the bytes are the observation. */
+        switch (i) {
+        case 0: stat = SHA1(rt_msg, 1000, NULL); break;
+        case 1: stat = SHA224(rt_msg, 1000, NULL); break;
+        case 2: stat = SHA256(rt_msg, 1000, NULL); break;
+        case 3: stat = SHA384(rt_msg, 1000, NULL); break;
+        default: stat = SHA512(rt_msg, 1000, NULL); break;
+        }
+        printf("oneshot.%s.static=%s\n", labels[i], stat == NULL ? "null" : "ok");
+        if (stat != NULL) {
+            printf("oneshot.%s.static_digest=", labels[i]);
+            rt_print_hex(stat, sizes[i]);
+            printf("\n");
+            printf("oneshot.%s.static_matches=%s\n", labels[i],
+                   ret != NULL && memcmp(stat, out, sizes[i]) == 0 ? "same" : "differ");
         }
     }
 }
