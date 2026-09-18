@@ -14379,3 +14379,78 @@ generator's *order* is evidence, so it belongs in a tracked, reviewable artefact
 the only place in this repository where load-bearing sequencing lived outside version control
 while the CI workflow that mirrors it did not — `.github/workflows/ci.yml` remains the other
 expression of the order, and a change in one should be reflected in the other.
+
+## D215 — DES/3DES lands as the portable arm, and two instruments needed a correction before the export could be declared
+
+The DES slice of 8.2: `src/des/mod.rs` lands the **thirty-two** `des.h` exports (the whole
+header but `DES_random_key`, which is Phase 9's per D197), and with them `crypto/des/`'s key
+schedule, round function, modes and the two `crypt(3)` helpers. `implemented[libcrypto]`
+**1918 → 1950** and Phase 8 **77/693/16 → 109/661/16** (`forensics/phase8-obligations.json`);
+`RT-CIPHER` **148 → 213 observations**; `CT-CIPHER` **83 → 94 vectors over 94 calls**; the
+baseline moves 83 courts / 23,538 → **83 courts / 23,603 observations**. PIPELINE OK.
+
+**This is the authority's own arm, not a portable substitute for one.** `crypto/des/build.info`
+substitutes `$DESASM_x86` (`des-586.S`) only when `asm_arch` is `x86`; this profile's is
+`x86_64`, so `$DESASM` stays `des_enc.c fcrypt_b.c` and the authority links the C round function
+and `spr.h`'s `DES_SPtrans`. The distinction from AES matters: there `RT-CIPHER` had to prove a
+portable arm equal to a perlasm one (D210); here it proves the transcription is the arm.
+
+### 1. Two instrument defects the first `prototype_court.py` run would have reported as declaration failures
+
+1. **The type plane could not canonicalise an array typedef.** `include/openssl/des.h:35-36`
+   declares `DES_cblock` and `const_DES_cblock` as `unsigned char[8]`, so `DES_set_key`'s
+   `const_DES_cblock *` resolves to a pointer to an array. `canon_c_type` had no array branch and
+   returned `None`, which puts the symbol in `type_unmapped` — a **failure**, not a gap
+   (`prototype_court.py` returns 1 on `type_unmapped`). A correct declaration would have been
+   refused by the instrument. Fixed by adding an `arr(<element>;<length>)` canonical form to both
+   `canon_c_type` and `canon_rust_type`, so the element type and the length are still compared and
+   `DES_cblock *` does not become a wildcard for `unsigned char *`. The Rust parameters are
+   `*mut [u8; 8]`: the `const` in `const_DES_cblock` is *inside a comment*, so the authority's
+   pointee is genuinely non-const and `*const` would be the divergence.
+2. **`gen_phase8_tables.py` was never wired into `evidence_determinism.py`.** D210 says the AES
+   tables "are caught by the differential court" and that this tool "recomputes" them; the second
+   claim was false — the generator is in neither `GENERATORS` nor `COMPARED`. Wiring it found a
+   real drift: the committed `src/digest/tables.rs` carried the *previous* renderer's module doc
+   ("Phase 8's digest constant tables") while the generator emits the current one. Regenerated and
+   committed here. **The wiring was then reverted, deliberately, and this is the finding:** the
+   generators render Rust in a layout `cargo fmt` rewrites (single-line `MD5_WORD`, four-per-line
+   `WP_TABLE`, and so on), and `evidence_determinism.py` compares committed text with a fresh
+   generation *before* any formatter runs, so a non-rustfmt-stable renderer can never reproduce
+   there. The two generators therefore get an ordered step at the **top of
+   `forensics/tools/pipeline.sh`, before `cargo fmt`**, so their output is normalised by the same
+   pass as the rest of the crate; a rustfmt-stable renderer is the follow-up that would let them
+   join `COMPARED`.
+
+### 2. The defect the differential plane found
+
+The first `RT-CIPHER` run left **one** residual: `des.string_to_key`, differing only in the parity
+bit of five of the eight bytes. The cause was a dropped line — `crypto/des/str2key.c:46` calls
+`DES_set_odd_parity` a **second** time, after `DES_cbc_cksum` has overwritten the key. Without it
+the checksum's raw bytes are returned and the parity bit is whatever the cipher left. `RT-CIPHER`
+found it, not the corpus: no published vector is involved.
+
+### 3. What moved, read from the generated files
+
+`forensics/phase8-obligations.json`'s `counts`: **implemented 77 → 109, open 693 → 661, deferred
+16** (the `des.h` module is still `src/des/mod.rs`, which is the ledger's and the plan's own
+coordinate). `courts/phase8/rt_cipher_probe.c` gains `rt_des`, which observes the whole
+**128-byte key schedule** as hex (the strongest single observation, since a wrong PC1, shift,
+S-box or round order moves it), the weak/semi-weak lists, the `DES_set_key` `-1`/`-2` precedence,
+`DES_encrypt1`/`2`/`3`/`decrypt3`, all eight modes including the IV-write-back difference between
+`DES_cbc_encrypt` (no write-back) and `DES_ncbc_encrypt`, the `cbc_cksum`/`quad_cksum` returns, the
+string-key helpers and `DES_fcrypt`/`DES_crypt`. `forensics/vectors/des.json` mirrors the keyed
+blocks of `evpciph_des.txt` (`DES-{ECB,CBC,CFB,OFB}`) — **9 corpus-mirrored and 2 independently
+derived** (the empty message for ECB and CBC, whose answer is the construction's own), plus one
+deliberate exclusion: `DES-EDE3-CFB1`/`DES-CFB8` are bit-oriented `-CFB1`/`-CFB8` arms with their
+own entry points and are not mirrored into a `-CFB` set.
+
+### 4. What this entry does not do, with the reason and the coordinate
+
+MDC2 (4 open, `crypto/mdc2/mdc2dgst.c`), RC2, Blowfish, CAST5, IDEA, SEED and Camellia (47 open)
+remain, and with them the provider cipher rows. The provider boundary is **not** one row: 3DES is
+published from the **default** provider (`providers/defltprov.c:302-311`, `DES-EDE3-{ECB,CBC,OFB,
+CFB,CFB8,CFB1}`, `DES3-WRAP` and `DES-EDE-{ECB,CBC,OFB,CFB}`), while **single** DES is the legacy
+provider's (`providers/legacyprov.c:154-159`, `DES-{ECB,CBC,OFB,CFB,CFB1,CFB8}`), as D212 found
+for RC4. No default-provider cipher row is written by this entry; the cipher half of
+`ossl_default_provider_init` is the next slice, and it will have to carry 3DES and Camellia and
+not single DES.

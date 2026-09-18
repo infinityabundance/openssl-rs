@@ -1634,7 +1634,142 @@ def emit_ciphers(authority_id: str, vector_dir: Path = VECTOR_DIR) -> list[dict]
     write_json(rc4_out, rc4_doc)
     rows.append({"path": rel(rc4_out), "vectors": len(rc4_vectors),
                  "source": rel(rc4_path)})
+
+    for family in CIPHER_RECIPE_FAMILIES:
+        rows.append(_emit_recipe_family(authority_id, family, vector_dir))
     return rows
+
+
+# The recipe-backed cipher families. Each is a plain keyed-block `evp_test` file whose blocks
+# name a `Cipher`; only the spellings the low-level probe can drive are emitted (the `-CFB1`,
+# `-CFB8` and `-CTS` spellings are bit- or construction-specific arms with their own entry
+# points and are skipped rather than half-modelled). This list grows with the subphase, one
+# entry per family commit.
+class CipherRecipeFamily:
+    def __init__(self, algorithm: str, source: str, cipher_re: str, standard: str,
+                 openssl_cipher: str, independent_modes: tuple[str, ...],
+                 empty_key_hex: str, empty_iv_hex: str):
+        self.algorithm = algorithm
+        self.source = source
+        self.cipher_re = re.compile(cipher_re)
+        self.standard = standard
+        self.openssl_cipher = openssl_cipher
+        self.independent_modes = independent_modes
+        self.empty_key_hex = empty_key_hex
+        self.empty_iv_hex = empty_iv_hex
+
+
+CIPHER_RECIPE_FAMILIES: list[CipherRecipeFamily] = [
+    CipherRecipeFamily(
+        "des", "test/recipes/30-test_evp_data/evpciph_des.txt",
+        r"^DES-(ECB|CBC|CFB|OFB)$", "FIPS 46-3 / FIPS PUB 81",
+        "DES-{ECB,CBC,CFB,OFB}", ("DES-ECB", "DES-CBC"),
+        "133457799bbcdff1", "0000000000000000"),
+]
+
+
+def _emit_recipe_family(authority_id: str, family: CipherRecipeFamily,
+                        vector_dir: Path) -> dict:
+    """Mirror one recipe file's keyed blocks into a cipher vector set."""
+    auth = resolve_authority(authority_id)
+    src_path = auth.source / family.source
+    if not src_path.is_file():
+        raise VectorError(f"correctness-vectors: {rel(src_path)} is absent")
+    text = src_path.read_text(encoding="utf-8")
+    mirror = hashlib.sha256(src_path.read_bytes()).hexdigest()
+
+    vectors: list[dict] = []
+    n = 0
+    for block in _parse_cipher_blocks(text):
+        cipher = block.get("cipher", "")
+        if not family.cipher_re.match(cipher):
+            continue
+        if any(k not in block for k in ("key", "plaintext", "ciphertext")):
+            continue
+        operation = block.get("operation", "ENCRYPT").strip().upper()
+        if operation == "DECRYPT":
+            input_hex, expected_hex = block["ciphertext"].lower(), block["plaintext"].lower()
+        else:
+            operation = "ENCRYPT"
+            input_hex, expected_hex = block["plaintext"].lower(), block["ciphertext"].lower()
+        n += 1
+        vectors.append({
+            "id": f"{family.algorithm}-{n}",
+            "cipher": cipher,
+            "operation": operation,
+            "key_hex": block["key"].lower(),
+            "iv_hex": block.get("iv", "").lower(),
+            "input_hex": input_hex,
+            "expected_hex": expected_hex,
+            "standard": family.standard,
+            "provenance": {
+                "primary_source": family.standard,
+                "derivation": "corpus",
+                "file": rel(src_path),
+                "line": block["line"],
+                "title": block.get("title", ""),
+                "form": "keyed-block",
+                "authority": authority_id,
+                "mirror_sha256": mirror,
+            },
+        })
+
+    # One independently-derived boundary per family: the empty message. No standard publishes
+    # a value for an empty input, and none is needed -- a block cipher over zero blocks emits
+    # nothing, and a feedback mode over zero bytes emits nothing and leaves the IV untouched.
+    empty_oracle = ("the construction's definition: a block or feedback mode over a zero-byte "
+                    "input emits no bytes")
+    for cipher in family.independent_modes:
+        n += 1
+        vectors.append({
+            "id": f"{family.algorithm}-{cipher.lower()}-empty-{n}",
+            "cipher": cipher,
+            "operation": "ENCRYPT",
+            "key_hex": family.empty_key_hex,
+            "iv_hex": family.empty_iv_hex if (cipher.endswith("CBC") or cipher.endswith("CTS"))
+                     else "",
+            "input_hex": "",
+            "expected_hex": "",
+            "standard": family.standard,
+            "provenance": {
+                "primary_source": "UNKNOWN",
+                "derivation": "independent",
+                "label": "empty",
+                "oracle": empty_oracle,
+                "note": "the expected bytes are the construction's own answer, not a "
+                        "published test value",
+            },
+        })
+
+    body = {
+        "algorithm": family.algorithm,
+        "court": "CT-CIPHER",
+        "openssl_cipher": family.openssl_cipher,
+        "standard": family.standard,
+        "primary_source": family.standard,
+        "provenance": {
+            "corpus": rel(src_path),
+            "corpus_sha256": mirror,
+            "authority": authority_id,
+            "primary_source": family.standard,
+            "note": (
+                "Candidate-only construction verification: the primary source is named, the "
+                "bytes are mirrored through the pinned corpus (`corpus_sha256`), and the "
+                "mirror's identity is fixed. This does NOT establish that the mirror is "
+                "faithful to a primary source nobody here has read, and a CT pass is not "
+                "formal validation. No independent implementation of this cipher is present "
+                "in the pinned court image, so only the empty-input boundary carries an "
+                "independent oracle, whose answer is the construction's own (D211/D215)."
+            ),
+        },
+        "vectors": vectors,
+    }
+    doc = envelope(kind=f"{CIPHER_KIND_PREFIX}{family.algorithm}", generator=GENERATOR,
+                   inputs=[InputRef(name="authority-evp-vector-file", path=src_path)],
+                   body=body, authority=authority_id)
+    out = vector_dir / f"{family.algorithm}.json"
+    write_json(out, doc)
+    return {"path": rel(out), "vectors": len(vectors), "source": rel(src_path)}
 
 
 # ---------------------------------------------------------------------------

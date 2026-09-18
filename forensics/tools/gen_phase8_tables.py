@@ -373,13 +373,29 @@ def main(argv: list[str]) -> int:
     args = ap.parse_args(argv)
 
     auth = resolve_authority(args.authority)
-    tables = build(auth)
-    rendered = render(tables)
+    strong = (auth.source / AES).is_file()
 
-    inputs = [InputRef(name="authority-source", path=auth.source / r) for r in _SOURCES]
-    doc = envelope(kind="digest-tables", authority=auth.id, inputs=inputs,
-                   body={"tables": tables, "source_files": list(_SOURCES)},
-                   generator=GENERATOR)
+    if strong:
+        tables = build(auth)
+        rendered = render(tables)
+        inputs = [InputRef(name="authority-source", path=auth.source / r) for r in _SOURCES]
+        doc = envelope(kind="digest-tables", authority=auth.id, inputs=inputs,
+                       body={"tables": tables, "source_files": list(_SOURCES)},
+                       generator=GENERATOR)
+        tier = "strong (authority source present)"
+    else:
+        # Weak tier: the authority's source is not committed, so re-render the Rust from the
+        # committed JSON's own recorded tables. This still catches a hand-edited
+        # `src/digest/tables.rs`; it cannot catch a wrong committed table, which is what the
+        # court's strong tier is for. `gen_ctype_table.py` is the pattern (D215).
+        if not OUT_JSON.is_file():
+            raise SystemExit(
+                f"gen-phase8-tables: neither the authority source nor {rel(OUT_JSON)} is "
+                f"present; cannot verify the tables"
+            )
+        doc = json.loads(OUT_JSON.read_text(encoding="utf-8"))
+        rendered = render(doc["body"]["tables"])
+        tier = "weak (authority source absent: re-rendered from the committed artefact)"
 
     if args.check:
         if not OUT_RS.is_file() or OUT_RS.read_text(encoding="utf-8") != rendered:
@@ -387,19 +403,23 @@ def main(argv: list[str]) -> int:
                 f"gen-phase8-tables: {rel(OUT_RS)} differs from a fresh derivation; "
                 f"run `python3 {GENERATOR}`"
             )
-        print(f"[gen-phase8-tables] ok: {rel(OUT_RS)} matches the authority")
+        print(f"[gen-phase8-tables] ok ({tier}): {rel(OUT_RS)} matches the authority")
         return 0
 
     OUT_RS.parent.mkdir(parents=True, exist_ok=True)
     OUT_RS.write_text(rendered, encoding="utf-8")
-    write_json(OUT_JSON, doc)
-    n = sum(len(v) for v in tables.values())
-    print(f"[gen-phase8-tables] {n} table group(s) from {len(_SOURCES)} authority file(s)")
-    for name, group in tables.items():
-        sizes = {k: (len(v) if isinstance(v, (list, dict)) else v) for k, v in group.items()}
-        print(f"  {name}: {sizes}")
+    if strong:
+        write_json(OUT_JSON, doc)
+    n = sum(len(v) for v in tables.values()) if strong else 0
+    print(f"[gen-phase8-tables] tier: {tier}")
+    if strong:
+        print(f"  {n} table group(s) from {len(_SOURCES)} authority file(s)")
+        for name, group in tables.items():
+            sizes = {k: (len(v) if isinstance(v, (list, dict)) else v) for k, v in group.items()}
+            print(f"  {name}: {sizes}")
     print(f"  -> {rel(OUT_RS)}")
-    print(f"  -> {rel(OUT_JSON)}")
+    if strong:
+        print(f"  -> {rel(OUT_JSON)}")
     return 0
 
 

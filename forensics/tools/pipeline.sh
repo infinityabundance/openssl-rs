@@ -15,6 +15,18 @@
 set -eu
 cd /work
 
+echo "== phase 8 constant tables =="
+# **Before `cargo fmt`, not after it.** The two Phase 8 table generators read the authority's
+# `crypto/` tree and write `src/digest/tables.rs` and `src/cipher_tables.rs` (and their atlas
+# JSON). Their renderers lay the numbers out in a way `cargo fmt` rewrites, so the steps have to
+# run *before* the formatting pass that normalises the working tree; running them after would
+# leave two unformatted files behind on every run. They are deliberately **not** entries in
+# `evidence_determinism.py`'s `GENERATORS`/`COMPARED`: that tool compares committed text with a
+# fresh generation *before* any formatter runs, so a non-rustfmt-stable renderer can never match
+# there. Its `cipher-tables.json`/`digest-tables.json` remain the content record. See D215.
+python3 forensics/tools/gen_phase8_tables.py
+python3 forensics/tools/gen_phase8_cipher_tables.py
+
 echo "== fmt =="
 cargo fmt --all
 

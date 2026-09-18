@@ -1,4 +1,5 @@
-//! Phase 8's digest constant tables, generated from the authority's own source.
+//! Phase 8's constant tables (the digests and the AES S-boxes), generated from the
+//! authority's own source.
 //!
 //! **Generated. Do not edit.** `forensics/tools/gen_phase8_tables.py` derives every
 //! number here from the pinned authority's `crypto/` tree, and
