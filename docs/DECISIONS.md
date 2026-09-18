@@ -12820,3 +12820,104 @@ No obligation count moved (`complete=True`, `open=0`, `deferred=244`), no phase 
 moved, `implemented[libcrypto]` stays 1841, and the privilege of a deferral is exactly what it was:
 a symbol leaves the ledger by being **landed**, not by editing a reason. What changed is that the
 reason itself is now a claim the machinery can falsify — and it did falsify two.
+
+## D199 — the court coverage atlas: the Phase-7 seal's “observed by a differential court” becomes a checked join, and the 488 completed-stratum exports no probe referenced become observable
+
+### The gap, as the reviewer stated it
+
+`docs/PHASE-7-EVP-SEAL.md` opened by claiming that every implemented Phase-7 export is
+“implemented **and observed by a differential court**”. The two exit criteria the machinery
+checked — `open_in_this_stratum == 0` and `every court passes` — do not imply that. They imply that
+*some* set of exports has a court and that every court which exists passes; nothing joined the 706
+implemented exports to the courts that ran. At that scale it was an unproven claim in a project
+whose discipline is that a claim is a fact a reader can recompute.
+
+### The design
+
+`forensics/tools/court_coverage.py` generates `forensics/atlas/court-coverage.json` and partitions
+every implemented export of every **completed** stratum into exactly three disjoint sets:
+
+* **directly_courted** — the name is an undefined dynamic symbol of a staged candidate probe.
+  Derived mechanically: the `.dynsym` of each `artifacts/phase<N>/probes/*.candidate` is read by
+  `forensics/tools/elf_symbols.py` (which gained `undefined_dynamic_symbols` for it, reading the
+  dynamic table directly rather than shelling out to `nm`, for the reason that module’s header
+  gives) and intersected with the ledger’s implemented set. The court names are the reason.
+* **indirectly_courted** — an authored edge `(symbol, public entry, court)` whose entry the
+  generator checks is itself directly courted by that court, so an edge cannot name a path no
+  transcript drives.
+* **non_observable** — an authored row `(symbol, reason, court, authority citation)`.
+
+The sets 2 and 3 rows live in `forensics/atlas/court-coverage-rows.json`, a committed data file
+rather than a table inside the generator, because each row is an auditable claim and a change to
+one reads as a data diff. The generator fails, naming them, if any implemented export of a
+completed stratum is in none of the three. `phase_state.py` now requires the atlas to show
+`unmatched == 0` for every stratum it would derive `complete`, and `court/pipeline.sh` runs the
+generator after the ledgers and the courts and before `phase_state.py`. The atlas covers strata
+3–7 — all the currently complete export-bearing strata — so the completion rule holds for all five
+rather than being scoped to Phase 7; a future stratum is drawn in by the same ledger-complete test
+and fails the join until its exports are accounted for.
+
+**What `directly_courted` claims, and what it does not.** An undefined dynamic symbol is a
+*reference*: a probe that takes a symbol’s address, or stores it in a dispatch table it later
+calls through, imports it exactly as a direct call does. So `directly_courted` means “referenced by
+a staged candidate probe that ran and produced a transcript”, **not** “every arm of the symbol was
+driven”. The atlas’s `claim` says so, and this is why the seal now says the weaker, true thing.
+
+### The first-run gap, and the remedy
+
+The first run of the join found **488** implemented exports of strata 3–7 referenced by no staged
+candidate probe: 89 in Phase 3, 36 in Phase 4, 94 in Phase 5, 5 in Phase 6 and **264 in Phase 7**.
+The remedy was to make them observable, not to record an excuse. The atlas now records **1,554**
+exports `directly_courted` at basis `called`, **287** at basis `referenced`, **0**
+`indirectly_courted`, **0** `non_observable` and **0** unmatched.
+
+For Phase 7, of the 264 that no court referenced:
+
+* `RT-EVP-INTROSPECT` (`courts/phase7/rt_evp_introspect_probe.c`) calls the twenty
+  `EVP_PKEY_METHOD` setter/getter pairs, the fifteen `EVP_PKEY_ASN1_METHOD` setters plus
+  `get0_info`/`copy`/`free`, the five `EVP_MD_meth_*`, the five `EVP_CIPHER_meth_*` and their two
+  getters, `EVP_MD_CTX_copy`, and the password-prompt pair — **75** exports to basis `called` (the
+  forty-eight observations its transcript carries).
+* `RT-EVP-CLASS` (`courts/phase7/rt_evp_class_probe.c`) publishes one
+  `EVP_ASYM_CIPHER`/`EVP_KEM`/`EVP_KEYEXCH`/`EVP_SIGNATURE` method from a provider defined inside
+  the probe, fetches each, and calls every class’ `free`/`up_ref`/`get0_name`/`get0_description`/
+  `get0_provider`/`is_a`/`names_do_all`/`do_all_provided`/`gettable_ctx_params`/
+  `settable_ctx_params` (and `fetch`, where it was not already courted) — **42**.
+* `RT-EVP-PKEY-OPS` (`courts/phase7/rt_evp_pkey_ops_probe.c`) publishes a keymgmt, generates a key
+  from it, and calls the `EVP_PKEY_CTX_*` accessor surface and the `EVP_PKEY_*` accessors — **84**.
+* The remaining **63** are recorded at basis `referenced` by `RT-EVP-REF`
+  (`courts/phase7/rt_coverage_ref_probe.c`), which address-takes each and prints `nonnull` and
+  nothing more. `forensics/atlas/court-coverage.json` lists them by name; they are, in groups:
+  the eleven `EVP_CIPHER_CTX_*` accessors, `EVP_CIPHER_get_asn1_iv`/`set_asn1_iv`, the eleven legacy
+  `EVP_*Init*` wrappers and `EVP_CipherInit_SKEY`, `EVP_DigestVerifyInit` (they need an armed
+  cipher/MAC context); `EVP_PKEY_encrypt_init`/`_init_ex`/`encrypt`, `EVP_PKEY_decrypt_init`/
+  `_init_ex`/`decrypt`, `EVP_PKEY_derive_init`/`_init_ex`/`derive`/`derive_set_peer`/`_ex`,
+  `EVP_PKEY_encapsulate`/`_init`, `EVP_PKEY_decapsulate`/`_init`,
+  `EVP_PKEY_auth_encapsulate_init`/`auth_decapsulate_init` (the operation inits fault the released
+  authority for a generated provider key with no such operation — `EVP_PKEY_encrypt_init` is the
+  first, and every arm after it is hidden by that crash, so the boundary is printed); the
+  `EVP_*_SKEY` family (`EVP_MAC_init_SKEY`, `EVP_KDF_CTX_set_SKEY`, `EVP_KDF_derive_SKEY`,
+  `EVP_PKEY_derive_SKEY`, `EVP_SKEY_export`, `EVP_SKEYMGMT_up_ref`) which needs an `EVP_SKEY`;
+  `EVP_PKEY_asn1_find`/`_find_str`/`get0`/`get_count` and `add0`/`add_alias` (Phase 8’s
+  `standard_methods[]`, and a process-global registry this stratum does not own);
+  `EVP_PBE_scrypt`/`_ex` (Phase 8’s primitive), `EVP_KDF_up_ref`/`EVP_MAC_up_ref`,
+  `EVP_MD_do_all_provided` (later strata’s contents), `EVP_PKEY_CTX_new`/`_new_id`,
+  `EVP_PKEY_CTX_str2ctrl`/`hex2ctrl` (a NULL translation), `EVP_PKEY_CTX_md` (keyless-context
+  divergence) and `EVP_PKEY_cmp_parameters`/`parameters_eq` (legacy `ameth`).
+
+  Each is a finding with a named stratum, and each is recorded rather than excused: they are the
+  work items that would move the last 63 from `referenced` to `called`.
+
+For strata 3–6 the 224 exports with no reference are covered at basis `referenced` by
+`RT-RUNTIME-REF`, `RT-BIO-CONF-REF`, `RT-BN-ASN1-REF` and `RT-PROVIDER-REF`, one per stratum, each
+listing its names in `forensics/atlas/court-coverage.json`. Moving those to `called` is the
+follow-up; none was recorded as non-observable.
+
+### What did not change
+
+No obligation count moved (`open_in_this_stratum` stays 0), no phase state moved,
+`implemented[libcrypto]` stays 1841, and no existing court’s transcript changed — the new courts
+are additive, so `regression_guard.py` reads them as new keys and the proposed baseline is
+regenerated. `gen_frf_courts.py --check` still passes because the new courts declare no FRF
+receipt, exactly as the rest of Phase 7 does. What changed is that the seal’s central claim is now
+a join a reader can rerun, and it says the weaker true thing the join actually establishes.
