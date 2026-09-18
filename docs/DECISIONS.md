@@ -13143,6 +13143,7 @@ evidence. The stale **live** claims were:
 | `README.md` | the EVP layer "is where the current work is", with the algorithms still "later strata's" — inverted; stratum 7 is complete and sealed, stratum 8 is next | `forensics/phase-state.json` |
 | `README.md` | `forensics/frf/courts/` held "four 3.6.3 -> 3.6.4 oracle-vs-oracle trajectory courts" | `gen_frf_courts.py`'s `COURTS`: 62 generated runtime courts plus the CLI courts |
 | `docs/CI.md` | "369 implemented `libcrypto` symbols, 85 open Phase 4 obligations, 22 courts all passing, 5,085 observations" | `forensics/regression-baseline.json`: 1841 / 0 / 79 / 23,105 |
+| `docs/CI.md` | the compared `internal_symbols.c_style` subset was "the 260 plain C identifiers" | `implemented-surface.json`: 274 |
 | `docs/CI.md` | portability "requires all six compared artefacts to be byte-identical" | the tool's `COMPARED` set, referenced rather than typed |
 | `docs/CI.md` | the court scripts stood at "`phase3_courts.py` (the 7 runtime differential courts) ... and `phase5_courts.py` (the 9 ...)" — strata 6 and 7 were missing | `forensics/phase-state.json`'s active strata, 3-7 |
 | `docs/RELEASE_GATES.md` | "the alternative is 43 YAML files edited by hand at every release" | `gen_frf_courts.py`'s `COURTS` table: 62 |
@@ -13174,7 +13175,7 @@ still names `ffd0b7b3` explicitly as the superseded boundary identity.
 `forensics/tools/docs_consistency.py` is wired into `court/pipeline.sh` (after `status`, before
 `evidence determinism`), into a new `CHECKS` registry in `evidence_determinism.py` (so its
 independence from the host's binutils is exercised by `check_evidence_portability.py` through the
-same mechanism as the generators), and it is designed **precise rather than broad**: fourteen
+same mechanism as the generators), and it is designed **precise rather than broad**: fifteen
 anchored claims, each an exact phrase in one named document compared against one named generated
 file. It does not scan free-form prose for numbers. A failure names the file and both values:
 
