@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 16,
-      "implemented": 43,
-      "open_in_this_stratum": 727,
+      "implemented": 59,
+      "open_in_this_stratum": 711,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -1165,6 +1165,22 @@
       ]
     },
     "implemented": [
+      "CRYPTO_cbc128_decrypt",
+      "CRYPTO_cbc128_encrypt",
+      "CRYPTO_cfb128_1_encrypt",
+      "CRYPTO_cfb128_8_encrypt",
+      "CRYPTO_cfb128_encrypt",
+      "CRYPTO_ctr128_encrypt",
+      "CRYPTO_ctr128_encrypt_ctr32",
+      "CRYPTO_cts128_decrypt",
+      "CRYPTO_cts128_decrypt_block",
+      "CRYPTO_cts128_encrypt",
+      "CRYPTO_cts128_encrypt_block",
+      "CRYPTO_nistcts128_decrypt",
+      "CRYPTO_nistcts128_decrypt_block",
+      "CRYPTO_nistcts128_encrypt",
+      "CRYPTO_nistcts128_encrypt_block",
+      "CRYPTO_ofb128_encrypt",
       "MD4",
       "MD4_Final",
       "MD4_Init",
@@ -1633,18 +1649,6 @@
         "declaring_header": "modes.h",
         "module": "src/modes/mod.rs",
         "received_from_phase": null,
-        "symbol": "CRYPTO_cbc128_decrypt"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_cbc128_encrypt"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
         "symbol": "CRYPTO_ccm128_aad"
       },
       {
@@ -1688,60 +1692,6 @@
         "module": "src/modes/mod.rs",
         "received_from_phase": null,
         "symbol": "CRYPTO_ccm128_tag"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_cfb128_1_encrypt"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_cfb128_8_encrypt"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_cfb128_encrypt"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_ctr128_encrypt"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_ctr128_encrypt_ctr32"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_cts128_decrypt"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_cts128_decrypt_block"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_cts128_encrypt"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_cts128_encrypt_block"
       },
       {
         "declaring_header": "modes.h",
@@ -1813,30 +1763,6 @@
         "declaring_header": "modes.h",
         "module": "src/modes/mod.rs",
         "received_from_phase": null,
-        "symbol": "CRYPTO_nistcts128_decrypt"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_nistcts128_decrypt_block"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_nistcts128_encrypt"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_nistcts128_encrypt_block"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
         "symbol": "CRYPTO_ocb128_aad"
       },
       {
@@ -1892,12 +1818,6 @@
         "module": "src/modes/mod.rs",
         "received_from_phase": null,
         "symbol": "CRYPTO_ocb128_tag"
-      },
-      {
-        "declaring_header": "modes.h",
-        "module": "src/modes/mod.rs",
-        "received_from_phase": null,
-        "symbol": "CRYPTO_ofb128_encrypt"
       },
       {
         "declaring_header": "modes.h",
@@ -5859,12 +5779,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "d38bc1f53c21b9ed36d3ddc1ce33a941c590ea6d498c41f173b1dfed84d2ae1c"
+      "sha256": "dd906a179a371d6684bff8f25270bb3ab668caa3e0f47c98467b9f248b7a7e7a"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "295a6b564f52ec791569f4f27916a66ddf0dbccb67e50c026bfaeb2891379d15"
+      "sha256": "9e70abbe8052f1e44fd9b747ed98d36cc4c12f442a3050499b64ed270b2a15c6"
     }
   ],
   "kind": "phase8-obligations",

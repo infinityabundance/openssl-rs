@@ -338,7 +338,12 @@ here is. (`forensics/phase8-obligations.json` remains the only complete list.)
 `MD4_Init`, `MD4_Update`, `MD4_Final`, `MD4_Transform`, `MD4`, `MD5_Init`, `MD5_Update`,
 `MD5_Final`, `MD5_Transform`, `MD5`, `RIPEMD160_Init`, `RIPEMD160_Update`, `RIPEMD160_Final`,
 `RIPEMD160_Transform`, `RIPEMD160`, `WHIRLPOOL_Init`, `WHIRLPOOL_Update`, `WHIRLPOOL_Final`,
-`WHIRLPOOL`.
+`WHIRLPOOL`, `CRYPTO_cbc128_encrypt`, `CRYPTO_cbc128_decrypt`, `CRYPTO_ctr128_encrypt`,
+`CRYPTO_ctr128_encrypt_ctr32`, `CRYPTO_ofb128_encrypt`, `CRYPTO_cfb128_encrypt`,
+`CRYPTO_cfb128_8_encrypt`, `CRYPTO_cfb128_1_encrypt`, `CRYPTO_cts128_encrypt`,
+`CRYPTO_cts128_encrypt_block`, `CRYPTO_cts128_decrypt`, `CRYPTO_cts128_decrypt_block`,
+`CRYPTO_nistcts128_encrypt`, `CRYPTO_nistcts128_encrypt_block`, `CRYPTO_nistcts128_decrypt`,
+`CRYPTO_nistcts128_decrypt_block`.
 
 **Open exports (checked against the ledger):** `MDC2`, `MDC2_Init`, `MDC2_Update`, `MDC2_Final`,
 `AES_set_encrypt_key`, `AES_set_decrypt_key`, `AES_encrypt`, `AES_decrypt`, `AES_cbc_encrypt`,

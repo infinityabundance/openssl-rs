@@ -14029,3 +14029,101 @@ schema's rule), the raw Keccak spellings, `KECCAK-KMAC-*` or the variable-length
 the reasons D207 recorded; `RT-DIGEST` covers them end to end. `rhash` is not installed in the
 pinned court image and cannot be added without a new dependency, so its rows' derivation is a
 recorded host-side reproduction rather than an in-court one.
+
+## D209 — 8.2's first slice: the non-AEAD `modes.h` helpers land, `RT-CIPHER` opens the cipher plane, and the plan's 8.2/8.3 boundary is found to contradict itself about `modes.h`
+
+Phase 8.2 is the symmetric-cipher subphase, and it is large: the ledger's 8.2-facing `open`
+set is **147 exports** (`modes.h` 50, `des.h` 32, `aes.h` 15, `camellia.h` 10, `blowfish.h` 8,
+`idea.h` 8, `cast.h` 7, `rc2.h` 7, `seed.h` 7, `rc4.h` 3, `mdc2.h` 4). The plan asks for one
+commit per family with both evidence planes, so this entry records the **first** slice and the
+plan defects the reading of that slice turned up; the remaining families are later entries.
+
+### 1. The non-AEAD `modes.h` helpers, and what was deliberately left to 8.3
+
+`src/modes/mod.rs` lands the sixteen `modes.h` functions that are **mode transforms over a
+caller-supplied block function** rather than authenticated constructions: `CRYPTO_cbc128_encrypt`,
+`CRYPTO_cbc128_decrypt`, `CRYPTO_ctr128_encrypt`, `CRYPTO_ctr128_encrypt_ctr32`,
+`CRYPTO_ofb128_encrypt`, `CRYPTO_cfb128_encrypt`, `CRYPTO_cfb128_8_encrypt`,
+`CRYPTO_cfb128_1_encrypt`, and the two ciphertext-stealing families in both spellings —
+`CRYPTO_cts128_{encrypt,decrypt}[_block]` and
+`CRYPTO_nistcts128_{encrypt,decrypt}[_block]`.
+
+**Left to 8.3, with the coordinate.** The other thirty-four `modes.h` exports are the ones that
+carry a keyed authenticator: `CRYPTO_gcm128_*` (eleven, `crypto/modes/gcm128.c`), the
+`CRYPTO_ccm128_*` family (eight, `crypto/modes/ccm128.c`), `CRYPTO_xts128_encrypt`
+(`crypto/modes/xts128.c`), the `CRYPTO_128_{wrap,unwrap,wrap_pad,unwrap_pad}` key-wrap family
+(`crypto/modes/wrap128.c`) and `CRYPTO_ocb128_*` (ten, `crypto/modes/ocb128.c`). They are 8.3's
+because each needs arithmetic this slice does not land — GHASH, the CBC-MAC, the XTS tweak,
+OCB's doubling — and the plan's 8.3 row is where those constructions live. The split is a
+reading of `crypto/modes/`'s own file list plus the plan's two rows, and it is named here so the
+next slice does not have to re-derive it.
+
+The authority's own fast arms (`size_t_aX` block copies, `ctr128_inc_aligned`'s word-at-a-time
+carry) are endian/alignment optimisations of a byte sequence and are written as byte loops here;
+that is the same value on this profile's little-endian host. What is *not* simplified away is
+every observable side effect: the IV write-back through the caller's pointer, the `num` round
+trip, the `*num = -1` poison arm in `CRYPTO_ofb128_encrypt`/`CRYPTO_cfb128_encrypt`, and the CBC
+partial-final-block arm that fills the tail from the IV.
+
+### 2. `RT-CIPHER` is registered, and `CT-CIPHER` stays PENDING for this slice
+
+`courts/phase8/rt_cipher_probe.c` is registered in `forensics/tools/phase8_courts.py`'s `COURTS`
+as `RT-CIPHER`, compiled twice and diffed. It drives every function above through a
+**probe-local block function** — a sixteen-byte permutation that depends only on the key byte,
+so both compilations run the same "cipher" and the only thing the diff can see is the mode
+arithmetic — and observes, per mode: the ciphertext as hex for a one-block-plus-partial input;
+the advanced IV, as hex (the authority writes it back through the pointer); the `num` round trip;
+the `-1` poison arm; `CRYPTO_cfb128_1_encrypt`'s bit-oriented length (one bit processed leaves
+the other seven bits of the destination byte untouched); the CTS return value; and the
+short-input arms that return zero. **66 observations, all passing, zero residuals.**
+
+`CT-CIPHER` is **not** registered by this commit. A mode transform with no named block cipher has
+no published vector: the corpus values in
+`test/recipes/30-test_evp_data/evpciph_aes_common.txt` are AES-mode vectors, so the construction
+plane arrives with AES in the next commit, in the same shape D206/D208 established for digests.
+It stays named in `PENDING_CORRECTNESS_COURTS` with that reason, which is the plan's own rule
+that "not run yet" must not read as "passed".
+
+### 3. Two plan/brief defects the slice found, with the coordinate
+
+1. **`modes.h`'s ownership is stated twice, and the two statements disagree.** The 8.2 row
+   (`docs/PHASE-8-SUBPHASES.md`'s subphase table) owns "`modes.h`'s `CRYPTO_*` helpers", while
+   the 8.3 row says **"Fifty labels, all of them `src/modes/mod.rs`'s"**
+   (`docs/PHASE-8-SUBPHASES.md:142`) — but the ledger assigns all fifty `modes.h` exports to
+   `src/modes/mod.rs` (`forensics/phase8-obligations.json`'s `owned_by_module`), and this slice
+   moved sixteen of them to `implemented`, which leaves thirty-four open and not fifty. The
+   boundary the *task* gives — non-AEAD to 8.2, GCM/CCM/XTS/key-wrap to 8.3 — is the one the
+   ledger's `open` list can express; the plan's 8.3 sentence cannot, because a module prefix is
+   not divisible. Recorded rather than silently repaired: the fix is to reword 8.3's row to name
+   the thirty-four constructions by family, which is a plan edit the seal's owner should make
+   with the whole row in view.
+2. **The 8.2 row names SM4 and ARIA as if they were exports.** `docs/PHASE-8-SUBPHASES.md:141`
+   ends "…, SM4, ARIA, and `modes.h`'s `CRYPTO_*` helpers; the low-level API **and** the provider
+   `OSSL_OP_CIPHER` implementations". The authority exports **no `SM4_*` and no `ARIA_*`
+   symbol**: `include/openssl/` has no `sm4.h` and no `aria.h` (`ls` of the authority's
+   `include/openssl/`), and `forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json`'s
+   record set holds none. `crypto/sm4/` and `crypto/aria/` are real authority units, but their
+   API is the provider's `EVP_sm4_*`/`EVP_aria_*` — Phase 7's names — and the cipher provider
+   rows. This is the same class of finding as D197's SHA-3/SHAKE reading for 8.1: a plan names a
+   low-level API the authority never had. What 8.2 owes for SM4/ARIA is therefore **provider rows
+   with no exported low-level entry point**, and no `src/sm4.rs`/`src/aria.rs` export module.
+3. **The task brief's `CRYPTO_ecb_*` and `CRYPTO_ncb128_*` do not exist in this authority's
+   `modes.h`.** `include/openssl/modes.h` declares no `CRYPTO_ecb*` and no `CRYPTO_ncb*`; the
+   only ECB entry point is `AES_ecb_encrypt` (`aes.h`), which is a cipher arm and not a generic
+   mode helper. The `ecb128_f` typedef (`modes.h:32`) is consumed only by the AEAD/XTS/key-wrap
+   family, not by an exported generic ECB function. Recorded so the omission does not read as a
+   missed export.
+
+### 4. What moved, read from the generated files
+
+`implemented[libcrypto]` **1884 → 1900** and Phase 8 **43 implemented / 727 open / 16 deferred →
+59 implemented / 711 open / 16 deferred** (`forensics/phase8-obligations.json`'s `counts`).
+`RT-CIPHER` is 66 observations; the baseline moves 81 courts / 23,390 observations → **82 courts
+/ 23,456 observations** (`forensics/regression-baseline.json`). The plan's anchored status
+clauses name the sixteen new symbols in the landed clause, and the pipeline ends `PIPELINE OK`.
+
+**What this entry does not do, with the reason and the coordinate.** AES, DES/3DES, RC2, RC4,
+Blowfish, CAST5, IDEA, SEED and Camellia are open (their `open` rows name each symbol), and with
+them `CT-CIPHER` and every provider cipher row. `CT-CIPHER`'s vectors need a named block cipher
+and the provider rows need `deflt_ciphers[]` reviewed against `providers/legacyprov.c` as D206
+did for digests; both arrive with the family that makes them checkable.

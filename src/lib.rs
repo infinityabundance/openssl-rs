@@ -71,6 +71,7 @@ pub mod evp;
 pub mod ffi;
 pub mod hpke;
 pub mod mac;
+pub mod modes;
 pub mod params;
 pub mod pem;
 pub mod property;

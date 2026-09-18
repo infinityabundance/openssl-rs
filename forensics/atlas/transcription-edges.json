@@ -628,6 +628,13 @@
         "translation_unit": "crypto/hmac/hmac.c"
       },
       {
+        "module": "src/modes/mod.rs",
+        "phase": 8,
+        "phase_source": "module-declaration",
+        "share": "8/16",
+        "translation_unit": "crypto/modes/cts128.c"
+      },
+      {
         "module": "src/params/build.rs",
         "phase": 6,
         "phase_source": "module-declaration",
@@ -19990,6 +19997,59 @@
           "src/runtime/secure.rs"
         ],
         "tu": "crypto/mem_sec.c"
+      },
+      {
+        "identifiers": [
+          "CBC_HANDLES_TRUNCATED_IO",
+          "CRYPTO_cbc128_decrypt",
+          "CRYPTO_cbc128_encrypt",
+          "CRYPTO_cts128_decrypt",
+          "CRYPTO_cts128_decrypt_block",
+          "CRYPTO_cts128_encrypt",
+          "CRYPTO_cts128_encrypt_block",
+          "CRYPTO_nistcts128_decrypt",
+          "CRYPTO_nistcts128_decrypt_block",
+          "CRYPTO_nistcts128_encrypt",
+          "CRYPTO_nistcts128_encrypt_block",
+          "align",
+          "block",
+          "block128_f",
+          "c",
+          "cbc",
+          "cbc128_f",
+          "char",
+          "const",
+          "crypto",
+          "defined",
+          "else",
+          "endif",
+          "for",
+          "h",
+          "if",
+          "in",
+          "include",
+          "ivec",
+          "key",
+          "len",
+          "memcpy",
+          "memset",
+          "n",
+          "openssl",
+          "out",
+          "residue",
+          "return",
+          "size_t",
+          "sizeof",
+          "string",
+          "tmp",
+          "union",
+          "unsigned",
+          "void"
+        ],
+        "modules": [
+          "src/modes/mod.rs"
+        ],
+        "tu": "crypto/modes/cts128.c"
       },
       {
         "identifiers": [
