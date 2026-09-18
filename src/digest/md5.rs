@@ -25,7 +25,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::c_int;
+use core::ffi::{c_int, c_void};
 use core::ptr;
 
 use crate::digest::md32::{self, load_word, Md32, MD32_CBLOCK};
@@ -192,9 +192,9 @@ pub unsafe extern "C" fn MD5_Init(c: *mut Md5Ctx) -> c_int {
 /// # Safety
 /// `c` must be a live initialised context; `data` readable for `len` bytes.
 #[no_mangle]
-pub unsafe extern "C" fn MD5_Update(c: *mut Md5Ctx, data: *const u8, len: usize) -> c_int {
+pub unsafe extern "C" fn MD5_Update(c: *mut Md5Ctx, data: *const c_void, len: usize) -> c_int {
     // SAFETY: the caller's contract.
-    unsafe { md32::update(c, data, len) }
+    unsafe { md32::update(c, data.cast::<u8>(), len) }
 }
 
 /// `int MD5_Final(unsigned char *md, MD5_CTX *c)`.
@@ -251,7 +251,7 @@ pub unsafe extern "C" fn MD5(d: *const u8, n: usize, md: *mut u8) -> *mut u8 {
         if MD5_Init(ptr::addr_of_mut!(c)) == 0 {
             return ptr::null_mut();
         }
-        MD5_Update(ptr::addr_of_mut!(c), d, n);
+        MD5_Update(ptr::addr_of_mut!(c), d.cast(), n);
         MD5_Final(md, ptr::addr_of_mut!(c));
         // `OPENSSL_cleanse(&c, sizeof(c))` — the context is a local, and the cleanse is what
         // stops a stack copy holding the last block.
@@ -310,13 +310,13 @@ mod tests {
             assert_eq!(MD5_Init(&mut c), 1);
             match split {
                 Some(at) => {
-                    assert_eq!(MD5_Update(&mut c, data.as_ptr(), at), 1);
+                    assert_eq!(MD5_Update(&mut c, data.as_ptr().cast(), at), 1);
                     assert_eq!(
-                        MD5_Update(&mut c, data.as_ptr().add(at), data.len() - at),
+                        MD5_Update(&mut c, data.as_ptr().add(at).cast(), data.len() - at),
                         1
                     );
                 }
-                None => assert_eq!(MD5_Update(&mut c, data.as_ptr(), data.len()), 1),
+                None => assert_eq!(MD5_Update(&mut c, data.as_ptr().cast(), data.len()), 1),
             }
             assert_eq!(MD5_Final(out.as_mut_ptr(), &mut c), 1);
         }
