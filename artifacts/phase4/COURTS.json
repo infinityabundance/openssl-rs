@@ -1,0 +1,326 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "all_pass": true,
+    "authority": "openssl-3.6.4-production",
+    "claim": "A passing court means the candidate produced the same observable transcript as the authority for the behaviours this probe exercises. It is a differential-compatibility result, NOT cryptographic or security correctness, and NOT evidence for any behaviour the probe does not touch (docs/PARITY_MODEL.md).",
+    "courts": [
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 212,
+        "candidate_exit_code": 0,
+        "candidate_observations": 212,
+        "candidate_stderr_tail": [],
+        "court": "RT-BIO",
+        "crashed": false,
+        "probe": "courts/phase4/rt_bio_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase4/probes/rt_bio_probe.authority",
+          "candidate": "artifacts/phase4/probes/rt_bio_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 17,
+        "candidate_exit_code": 0,
+        "candidate_observations": 17,
+        "candidate_stderr_tail": [],
+        "court": "RT-ERR-BIO",
+        "crashed": false,
+        "probe": "courts/phase4/rt_err_bio_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase4/probes/rt_err_bio_probe.authority",
+          "candidate": "artifacts/phase4/probes/rt_err_bio_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 98,
+        "candidate_exit_code": 0,
+        "candidate_observations": 98,
+        "candidate_stderr_tail": [],
+        "court": "RT-BIO-ADDR",
+        "crashed": false,
+        "probe": "courts/phase4/rt_bio_addr_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase4/probes/rt_bio_addr_probe.authority",
+          "candidate": "artifacts/phase4/probes/rt_bio_addr_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 501,
+        "candidate_exit_code": 0,
+        "candidate_observations": 501,
+        "candidate_stderr_tail": [],
+        "court": "RT-BIO-RESOLVE",
+        "crashed": false,
+        "probe": "courts/phase4/rt_bio_resolve_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase4/probes/rt_bio_resolve_probe.authority",
+          "candidate": "artifacts/phase4/probes/rt_bio_resolve_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 157,
+        "candidate_exit_code": 0,
+        "candidate_observations": 157,
+        "candidate_stderr_tail": [],
+        "court": "RT-BIO-SOCK",
+        "crashed": false,
+        "probe": "courts/phase4/rt_bio_sock_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase4/probes/rt_bio_sock_probe.authority",
+          "candidate": "artifacts/phase4/probes/rt_bio_sock_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 45,
+        "candidate_exit_code": 0,
+        "candidate_observations": 45,
+        "candidate_stderr_tail": [],
+        "court": "RT-BIO-COMP",
+        "crashed": false,
+        "probe": "courts/phase4/rt_bio_comp_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase4/probes/rt_bio_comp_probe.authority",
+          "candidate": "artifacts/phase4/probes/rt_bio_comp_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 57,
+        "candidate_exit_code": 0,
+        "candidate_observations": 57,
+        "candidate_stderr_tail": [],
+        "court": "RT-BIO-DEBUG",
+        "crashed": false,
+        "probe": "courts/phase4/rt_bio_debug_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase4/probes/rt_bio_debug_probe.authority",
+          "candidate": "artifacts/phase4/probes/rt_bio_debug_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 213,
+        "candidate_exit_code": 0,
+        "candidate_observations": 213,
+        "candidate_stderr_tail": [],
+        "court": "RT-BIO-PRINT",
+        "crashed": false,
+        "probe": "courts/phase4/rt_bio_print_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase4/probes/rt_bio_print_probe.authority",
+          "candidate": "artifacts/phase4/probes/rt_bio_print_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 134,
+        "candidate_exit_code": 0,
+        "candidate_observations": 134,
+        "candidate_stderr_tail": [],
+        "court": "RT-BIO-FILE",
+        "crashed": false,
+        "probe": "courts/phase4/rt_bio_file_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase4/probes/rt_bio_file_probe.authority",
+          "candidate": "artifacts/phase4/probes/rt_bio_file_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 114,
+        "candidate_exit_code": 0,
+        "candidate_observations": 114,
+        "candidate_stderr_tail": [],
+        "court": "RT-BIO-FILTER",
+        "crashed": false,
+        "probe": "courts/phase4/rt_bio_filter_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase4/probes/rt_bio_filter_probe.authority",
+          "candidate": "artifacts/phase4/probes/rt_bio_filter_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 111,
+        "candidate_exit_code": 0,
+        "candidate_observations": 111,
+        "candidate_stderr_tail": [],
+        "court": "RT-BIO-PAIR",
+        "crashed": false,
+        "probe": "courts/phase4/rt_bio_pair_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase4/probes/rt_bio_pair_probe.authority",
+          "candidate": "artifacts/phase4/probes/rt_bio_pair_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 141,
+        "candidate_exit_code": 0,
+        "candidate_observations": 141,
+        "candidate_stderr_tail": [],
+        "court": "RT-BIO-DGRAM-PAIR",
+        "crashed": false,
+        "probe": "courts/phase4/rt_bio_dgram_pair_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase4/probes/rt_bio_dgram_pair_probe.authority",
+          "candidate": "artifacts/phase4/probes/rt_bio_dgram_pair_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 294,
+        "candidate_exit_code": 0,
+        "candidate_observations": 294,
+        "candidate_stderr_tail": [],
+        "court": "RT-BIO-DGRAM",
+        "crashed": false,
+        "probe": "courts/phase4/rt_bio_dgram_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase4/probes/rt_bio_dgram_probe.authority",
+          "candidate": "artifacts/phase4/probes/rt_bio_dgram_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 296,
+        "candidate_exit_code": 0,
+        "candidate_observations": 296,
+        "candidate_stderr_tail": [],
+        "court": "RT-BIO-CONN",
+        "crashed": false,
+        "probe": "courts/phase4/rt_bio_conn_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase4/probes/rt_bio_conn_probe.authority",
+          "candidate": "artifacts/phase4/probes/rt_bio_conn_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 91,
+        "candidate_exit_code": 0,
+        "candidate_observations": 91,
+        "candidate_stderr_tail": [],
+        "court": "RT-OBJ-STREAM",
+        "crashed": false,
+        "probe": "courts/phase4/rt_obj_stream_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase4/probes/rt_obj_stream_probe.authority",
+          "candidate": "artifacts/phase4/probes/rt_obj_stream_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 736,
+        "candidate_exit_code": 0,
+        "candidate_observations": 736,
+        "candidate_stderr_tail": [],
+        "court": "RT-CONF",
+        "crashed": false,
+        "probe": "courts/phase4/rt_conf_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase4/probes/rt_conf_probe.authority",
+          "candidate": "artifacts/phase4/probes/rt_conf_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 27,
+        "candidate_exit_code": 0,
+        "candidate_observations": 27,
+        "candidate_stderr_tail": [],
+        "court": "RT-COMP",
+        "crashed": false,
+        "probe": "courts/phase4/rt_comp_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase4/probes/rt_comp_probe.authority",
+          "candidate": "artifacts/phase4/probes/rt_comp_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 36,
+        "candidate_exit_code": 0,
+        "candidate_observations": 36,
+        "candidate_stderr_tail": [],
+        "court": "RT-BIO-CONF-REF",
+        "crashed": false,
+        "probe": "courts/phase4/rt_coverage_ref_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase4/probes/rt_coverage_ref_probe.authority",
+          "candidate": "artifacts/phase4/probes/rt_coverage_ref_probe.candidate"
+        },
+        "verdict": "pass"
+      }
+    ],
+    "summary": {
+      "fail": 0,
+      "pass": 18,
+      "total": 18
+    }
+  },
+  "body_hash": "618d80a289c2309ae9de86d9d5d7d820d3e007f6e39d48eab15834822c47d2f3",
+  "generator": "forensics/tools/phase4_courts.py",
+  "inputs": [],
+  "kind": "phase4-courts",
+  "schema": "openssl-rs/atlas/phase4-courts/v1"
+}
