@@ -772,6 +772,123 @@ pub unsafe extern "C" fn SHA512_Transform(c: *mut Sha512Ctx, data: *const u8) {
     unsafe { sha512_block(&mut *c, data, 1) };
 }
 
+/// One of the five `sha.h` one-shots — `crypto/sha/sha1_one.c:47-81`. Each is
+/// `EVP_Q_digest(NULL, <name>, NULL, d, n, md, NULL)` over the default library context, with
+/// the file's own `static unsigned char m[<len>]` selected when `md` is NULL. They are 8.1b's
+/// for that reason: the fetch resolves only once the default provider publishes the row.
+///
+/// # Safety
+/// `d` readable for `n` bytes; `md` NULL or writable for the digest's length.
+unsafe fn sha2_one_shot(
+    name: *const core::ffi::c_char,
+    d: *const u8,
+    n: usize,
+    md: *mut u8,
+    fallback: *mut u8,
+) -> *mut u8 {
+    // SAFETY: `fallback` is the caller's own `static mut` buffer and is NULL only if that
+    // address was NULL, which it cannot be.
+    let md = if md.is_null() { fallback } else { md };
+    // SAFETY: `d`/`md` are the caller's contract; `name` is a NUL-terminated literal passed by
+    // the wrappers below, and the libctx is the default one.
+    let ok = unsafe {
+        crate::evp::digest::EVP_Q_digest(
+            ptr::null_mut(),
+            name,
+            ptr::null(),
+            d.cast(),
+            n,
+            md,
+            ptr::null_mut(),
+        )
+    };
+    if ok != 0 {
+        md
+    } else {
+        ptr::null_mut()
+    }
+}
+
+/// `unsigned char *SHA224(const unsigned char *d, size_t n, unsigned char *md)` —
+/// `crypto/sha/sha1_one.c:47-54`.
+///
+/// # Safety
+/// `d` readable for `n` bytes; `md` NULL or writable for 28 bytes.
+#[no_mangle]
+pub unsafe extern "C" fn SHA224(d: *const u8, n: usize, md: *mut u8) -> *mut u8 {
+    static mut STATIC_MD: [u8; 28] = [0; 28];
+    // SAFETY: the caller's contract, and a `static mut` in this file as the authority's is.
+    unsafe {
+        sha2_one_shot(
+            c"SHA224".as_ptr(),
+            d,
+            n,
+            md,
+            ptr::addr_of_mut!(STATIC_MD).cast(),
+        )
+    }
+}
+
+/// `unsigned char *SHA256(const unsigned char *d, size_t n, unsigned char *md)` —
+/// `crypto/sha/sha1_one.c:56-63`.
+///
+/// # Safety
+/// `d` readable for `n` bytes; `md` NULL or writable for 32 bytes.
+#[no_mangle]
+pub unsafe extern "C" fn SHA256(d: *const u8, n: usize, md: *mut u8) -> *mut u8 {
+    static mut STATIC_MD: [u8; 32] = [0; 32];
+    // SAFETY: the caller's contract, and a `static mut` in this file as the authority's is.
+    unsafe {
+        sha2_one_shot(
+            c"SHA256".as_ptr(),
+            d,
+            n,
+            md,
+            ptr::addr_of_mut!(STATIC_MD).cast(),
+        )
+    }
+}
+
+/// `unsigned char *SHA384(const unsigned char *d, size_t n, unsigned char *md)` —
+/// `crypto/sha/sha1_one.c:65-72`.
+///
+/// # Safety
+/// `d` readable for `n` bytes; `md` NULL or writable for 48 bytes.
+#[no_mangle]
+pub unsafe extern "C" fn SHA384(d: *const u8, n: usize, md: *mut u8) -> *mut u8 {
+    static mut STATIC_MD: [u8; 48] = [0; 48];
+    // SAFETY: the caller's contract, and a `static mut` in this file as the authority's is.
+    unsafe {
+        sha2_one_shot(
+            c"SHA384".as_ptr(),
+            d,
+            n,
+            md,
+            ptr::addr_of_mut!(STATIC_MD).cast(),
+        )
+    }
+}
+
+/// `unsigned char *SHA512(const unsigned char *d, size_t n, unsigned char *md)` —
+/// `crypto/sha/sha1_one.c:74-81`.
+///
+/// # Safety
+/// `d` readable for `n` bytes; `md` NULL or writable for 64 bytes.
+#[no_mangle]
+pub unsafe extern "C" fn SHA512(d: *const u8, n: usize, md: *mut u8) -> *mut u8 {
+    static mut STATIC_MD: [u8; 64] = [0; 64];
+    // SAFETY: the caller's contract, and a `static mut` in this file as the authority's is.
+    unsafe {
+        sha2_one_shot(
+            c"SHA512".as_ptr(),
+            d,
+            n,
+            md,
+            ptr::addr_of_mut!(STATIC_MD).cast(),
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -958,6 +1075,48 @@ mod tests {
                     assert_eq!(SHA512_Final(out.as_mut_ptr(), &mut c), 1);
                     assert_eq!(hex(&out), want, "sha512 {input:?} split at {at}");
                 }
+            }
+        }
+    }
+
+    /// The four `sha.h` one-shots are `EVP_Q_digest` over the default library context, so this
+    /// test is the crate's own statement that the fetched default provider's rows answer the
+    /// same bytes as the constructions they call.
+    #[test]
+    fn the_one_shots_resolve_through_the_default_provider() {
+        let cases: [(&[u8], &str, usize); 4] = [
+            (b"abc", "23097d223405d8228642a477bda255b32aadbce4bda0b3f7e36c9da7", 28),
+            (
+                b"abc",
+                "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+                32,
+            ),
+            (
+                b"abc",
+                "cb00753f45a35e8bb5a03d699ac65007272c32ab0eded1631a8b605a43ff5bed8086072ba1e7cc2358baeca134c825a7",
+                48,
+            ),
+            (
+                b"abc",
+                "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f",
+                64,
+            ),
+        ];
+        // SAFETY: every pointer below is a live local of this test.
+        unsafe {
+            let mut out = [0u8; 64];
+            for (i, (input, want, len)) in cases.iter().enumerate() {
+                let want = *want;
+                let len = *len;
+                out[..len].fill(0);
+                let ret = match i {
+                    0 => SHA224(input.as_ptr(), input.len(), out.as_mut_ptr()),
+                    1 => SHA256(input.as_ptr(), input.len(), out.as_mut_ptr()),
+                    2 => SHA384(input.as_ptr(), input.len(), out.as_mut_ptr()),
+                    _ => SHA512(input.as_ptr(), input.len(), out.as_mut_ptr()),
+                };
+                assert!(!ret.is_null(), "one-shot {i} answered NULL");
+                assert_eq!(hex(&out[..len]), want, "one-shot {i}");
             }
         }
     }

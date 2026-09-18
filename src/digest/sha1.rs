@@ -230,6 +230,48 @@ pub unsafe extern "C" fn SHA1_Transform(c: *mut ShaCtx, data: *const u8) {
     unsafe { md32::transform(c, data) };
 }
 
+/// `unsigned char *SHA1(const unsigned char *d, size_t n, unsigned char *md)` —
+/// `crypto/sha/sha1_one.c:38-45`.
+///
+/// The authority writes this as `EVP_Q_digest(NULL, "SHA1", NULL, d, n, md, NULL)` — a fetch
+/// through the **default library context** — and answers `md` or NULL from the fetch's own
+/// verdict. That is why it is 8.1b's rather than a construction: before
+/// `src/provider/digest.rs` published the default provider's `SHA1` row, the fetch could not
+/// resolve. `md` NULL selects the file's `static unsigned char m[20]`, which the authority
+/// shares between calls (the crate's sibling one-shots do the same).
+///
+/// # Safety
+/// `d` readable for `n` bytes; `md` NULL or writable for 20 bytes.
+#[no_mangle]
+pub unsafe extern "C" fn SHA1(d: *const u8, n: usize, md: *mut u8) -> *mut u8 {
+    static mut STATIC_MD: [u8; 20] = [0; 20];
+    // SAFETY: the address of a `static mut` in this file, exactly as `MD5` takes it; the
+    // authority's object is the same single buffer.
+    let md = if md.is_null() {
+        ptr::addr_of_mut!(STATIC_MD).cast::<u8>()
+    } else {
+        md
+    };
+    // SAFETY: `d` is readable for `n` bytes and `md` writable for 20 per the contract; the two
+    // C literals are NUL-terminated and the libctx is the default one the authority names.
+    let ok = unsafe {
+        crate::evp::digest::EVP_Q_digest(
+            ptr::null_mut(),
+            c"SHA1".as_ptr(),
+            ptr::null(),
+            d.cast(),
+            n,
+            md,
+            ptr::null_mut(),
+        )
+    };
+    if ok != 0 {
+        md
+    } else {
+        ptr::null_mut()
+    }
+}
+
 /// `int ossl_sha1_ctrl(SHA_CTX *sha1, int cmd, int mslen, void *ms)` —
 /// `crypto/sha/sha1dgst.c:28-85`, declared in `include/crypto/sha.h:20`.
 ///
@@ -396,5 +438,18 @@ mod tests {
             assert_eq!(digest(msg, None).len(), 40);
             assert_eq!(digest(msg, None), digest(msg, Some(len / 2)));
         }
+    }
+
+    /// The `SHA1` one-shot is `EVP_Q_digest` over the default library context; the crate's own
+    /// statement that the fetched default provider's `SHA1` row answers `abc` as FIPS 180-4 does.
+    #[test]
+    fn the_one_shot_resolves_through_the_default_provider() {
+        let mut out = [0u8; 20];
+        // SAFETY: every pointer below is a live local of this test.
+        unsafe {
+            let ret = SHA1(b"abc".as_ptr(), 3, out.as_mut_ptr());
+            assert!(!ret.is_null());
+        }
+        assert_eq!(hex(&out), "a9993e364706816aba3e25717850c26c9cd0d89d");
     }
 }

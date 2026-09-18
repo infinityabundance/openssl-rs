@@ -4,9 +4,9 @@
     "counts": {
       "installed_headers": 139,
       "internal_only": 402,
-      "owned": 748,
+      "owned": 749,
       "records": 1568,
-      "unowned": 820
+      "unowned": 819
     },
     "definition": "every typedef name the authority's installed and internal headers introduce, with the header that introduces it and that header's owning stratum",
     "installed_headers": [
@@ -2510,7 +2510,7 @@
         ],
         "kind": "typedef",
         "name": "MD5_SHA1_CTX",
-        "owner_phase": null
+        "owner_phase": 8
       },
       {
         "defined_in": [
@@ -12864,7 +12864,6 @@
       "KECCAK1600_CTX",
       "MAC_KEY",
       "MATRIX",
-      "MD5_SHA1_CTX",
       "MIME_HEADER",
       "MIME_PARAM",
       "MLX_KEY",
@@ -13224,7 +13223,8 @@
       "OSSL_HPKE_KDF_INFO",
       "OSSL_HPKE_KEM_INFO",
       "OSSL_HTTP_REQ_CTX",
-      "OSSL_INOUT_CALLBACK"
+      "OSSL_INOUT_CALLBACK",
+      "OSSL_ITEM"
     ]
   },
   "generator": "forensics/tools/gen_prerequisite_atlas.py",

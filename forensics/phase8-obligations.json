@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 16,
-      "implemented": 38,
-      "open_in_this_stratum": 732,
+      "implemented": 43,
+      "open_in_this_stratum": 727,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -1180,20 +1180,25 @@
       "RIPEMD160_Init",
       "RIPEMD160_Transform",
       "RIPEMD160_Update",
+      "SHA1",
       "SHA1_Final",
       "SHA1_Init",
       "SHA1_Transform",
       "SHA1_Update",
+      "SHA224",
       "SHA224_Final",
       "SHA224_Init",
       "SHA224_Update",
+      "SHA256",
       "SHA256_Final",
       "SHA256_Init",
       "SHA256_Transform",
       "SHA256_Update",
+      "SHA384",
       "SHA384_Final",
       "SHA384_Init",
       "SHA384_Update",
+      "SHA512",
       "SHA512_Final",
       "SHA512_Init",
       "SHA512_Transform",
@@ -5585,36 +5590,6 @@
         "symbol": "SEED_set_key"
       },
       {
-        "declaring_header": "sha.h",
-        "module": "src/digest/sha1.rs",
-        "received_from_phase": null,
-        "symbol": "SHA1"
-      },
-      {
-        "declaring_header": "sha.h",
-        "module": "src/digest/sha2.rs",
-        "received_from_phase": null,
-        "symbol": "SHA224"
-      },
-      {
-        "declaring_header": "sha.h",
-        "module": "src/digest/sha2.rs",
-        "received_from_phase": null,
-        "symbol": "SHA256"
-      },
-      {
-        "declaring_header": "sha.h",
-        "module": "src/digest/sha2.rs",
-        "received_from_phase": null,
-        "symbol": "SHA384"
-      },
-      {
-        "declaring_header": "sha.h",
-        "module": "src/digest/sha2.rs",
-        "received_from_phase": null,
-        "symbol": "SHA512"
-      },
-      {
         "declaring_header": "dh.h",
         "module": "src/dh/mod.rs",
         "received_from_phase": null,
@@ -5884,12 +5859,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "2ab6642204ff79cf0e9e67df1508167d31f1c68185d48d38814cb5a740e997e2"
+      "sha256": "d38bc1f53c21b9ed36d3ddc1ce33a941c590ea6d498c41f173b1dfed84d2ae1c"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "e1662aab2b19aca01de3ab9ce255d5800ee0973356a99052f83c9da011bd13ba"
+      "sha256": "308a36a8c721ddeb1ebe8b89ea0d06b066c5a9d98fbeac9898d28b80b57eec1a"
     }
   ],
   "kind": "phase8-obligations",

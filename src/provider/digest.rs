@@ -59,12 +59,16 @@ use core::ptr;
 
 use crate::context::dispatch::{OsslDispatch, OSSL_DISPATCH_END};
 use crate::digest::md5::{MD5_Final, MD5_Init, MD5_Update, Md5Ctx};
+use crate::digest::md5_sha1::{
+    ossl_md5_sha1_ctrl, ossl_md5_sha1_final, ossl_md5_sha1_init, ossl_md5_sha1_update, Md5Sha1Ctx,
+    MD5_SHA1_CBLOCK, MD5_SHA1_DIGEST_LENGTH,
+};
 use crate::digest::ripemd::{RIPEMD160_Final, RIPEMD160_Init, RIPEMD160_Update, Ripemd160Ctx};
 use crate::digest::sha1::{ossl_sha1_ctrl, SHA1_Final, SHA1_Init, SHA1_Update, ShaCtx};
 use crate::digest::sha2::{
-    SHA224_Final, SHA224_Init, SHA224_Update, SHA256_Final, SHA256_Init, SHA256_Update,
-    SHA384_Final, SHA384_Init, SHA384_Update, SHA512_Final, SHA512_Init, SHA512_Update, Sha256Ctx,
-    Sha512Ctx,
+    ossl_sha256_192_init, sha512_224_init, sha512_256_init, SHA224_Final, SHA224_Init,
+    SHA224_Update, SHA256_Final, SHA256_Init, SHA256_Update, SHA384_Final, SHA384_Init,
+    SHA384_Update, SHA512_Final, SHA512_Init, SHA512_Update, Sha256Ctx, Sha512Ctx,
 };
 use crate::evp::algorithm::OSSL_OP_DIGEST;
 use crate::evp::digest::{
@@ -638,13 +642,414 @@ digest_impl!(
     PROV_DIGEST_FLAG_ALGID_ABSENT
 );
 
+// The three `sha2_prov.c` rows 8.1a left out because their constructions had no exported
+// spelling: SHA2-256/192 (`ossl_sha256_192_init`), SHA2-512/224 (`sha512_224_init`) and
+// SHA2-512/256 (`sha512_256_init`). Each is the width's own `_Update`/`_Final` with the truncating
+// init, exactly as `sha2_prov.c:74-96` spells them.
+digest_impl!(
+    sha256_192_internal,
+    Sha256Ctx,
+    ossl_sha256_192_init,
+    SHA256_Update,
+    SHA256_Final,
+    64usize,
+    24usize,
+    PROV_DIGEST_FLAG_ALGID_ABSENT
+);
+digest_impl!(
+    sha512_224,
+    Sha512Ctx,
+    sha512_224_init,
+    SHA512_Update,
+    SHA512_Final,
+    128usize,
+    28usize,
+    PROV_DIGEST_FLAG_ALGID_ABSENT
+);
+digest_impl!(
+    sha512_256,
+    Sha512Ctx,
+    sha512_256_init,
+    SHA512_Update,
+    SHA512_Final,
+    128usize,
+    32usize,
+    PROV_DIGEST_FLAG_ALGID_ABSENT
+);
+
+/// `NULLMD_CTX` — `null_prov.c:14-16`. One byte, because the authority's three entry points are
+/// no-ops and only the allocation's existence is observable.
+///
+/// `null_prov.c` is the one digest construction whose provider row is written by hand rather than
+/// through `IMPLEMENT_digest_functions`: with `dgstsize == 0`, the macro's `outsz < dgstsize`
+/// guard is a comparison the compiler can fold away (the authority's file says so at `:33-48`),
+/// and the final there is overridden to drop it. `digest_impl!` cannot express that removal, so
+/// this module is the override's own transcription.
+mod nullmd {
+    use super::*;
+
+    /// `NULLMD_CTX` — `null_prov.c:14-16`.
+    #[repr(C)]
+    struct NullMdCtx {
+        /// `unsigned char nothing`.
+        nothing: u8,
+    }
+
+    /// `static int null_init(NULLMD_CTX *ctx)` — `null_prov.c:18-21`.
+    unsafe extern "C" fn ctx_init(_ctx: *mut NullMdCtx) -> c_int {
+        1
+    }
+    /// `static int null_update(NULLMD_CTX *ctx, const void *data, size_t datalen)` —
+    /// `null_prov.c:23-26`.
+    unsafe extern "C" fn ctx_update(
+        _ctx: *mut NullMdCtx,
+        _data: *const c_void,
+        _datalen: usize,
+    ) -> c_int {
+        1
+    }
+    /// `static int null_final(unsigned char *md, NULLMD_CTX *ctx)` — `null_prov.c:28-31`.
+    unsafe extern "C" fn ctx_final(_md: *mut u8, _ctx: *mut NullMdCtx) -> c_int {
+        1
+    }
+
+    unsafe extern "C" fn newctx(_provctx: *mut c_void) -> *mut c_void {
+        if ossl_prov_is_running() == 0 {
+            return ptr::null_mut();
+        }
+        CRYPTO_zalloc(core::mem::size_of::<NullMdCtx>(), FILE, LINE)
+    }
+
+    unsafe extern "C" fn freectx(vctx: *mut c_void) {
+        // SAFETY: `vctx` is what `newctx` allocated or NULL.
+        unsafe {
+            CRYPTO_clear_free(vctx, core::mem::size_of::<NullMdCtx>(), FILE, LINE);
+        }
+    }
+
+    unsafe extern "C" fn dupctx(ctx: *mut c_void) -> *mut c_void {
+        if ossl_prov_is_running() == 0 || ctx.is_null() {
+            return ptr::null_mut();
+        }
+        let ret = CRYPTO_malloc(core::mem::size_of::<NullMdCtx>(), FILE, LINE);
+        if !ret.is_null() {
+            // SAFETY: both regions are `size_of::<NullMdCtx>()` bytes and distinct.
+            unsafe {
+                ptr::copy_nonoverlapping(
+                    ctx.cast::<u8>(),
+                    ret.cast::<u8>(),
+                    core::mem::size_of::<NullMdCtx>(),
+                );
+            }
+        }
+        ret
+    }
+
+    unsafe extern "C" fn copyctx(outctx: *mut c_void, inctx: *mut c_void) {
+        // SAFETY: both regions are `size_of::<NullMdCtx>()` bytes and distinct.
+        unsafe {
+            ptr::copy_nonoverlapping(
+                inctx.cast::<u8>(),
+                outctx.cast::<u8>(),
+                core::mem::size_of::<NullMdCtx>(),
+            );
+        }
+    }
+
+    unsafe extern "C" fn internal_init(ctx: *mut c_void, _params: *const OsslParam) -> c_int {
+        if ossl_prov_is_running() == 0 {
+            return 0;
+        }
+        // SAFETY: `ctx` is the context the provider allocated.
+        c_int::from(unsafe { ctx_init(ctx.cast::<NullMdCtx>()) } != 0)
+    }
+
+    /// `null_prov.c`'s overridden `PROV_FUNC_DIGEST_FINAL`: no `outsz` comparison, because
+    /// `dgstsize` is zero and the guard the shared macro writes is vacuous.
+    unsafe extern "C" fn internal_final(
+        ctx: *mut c_void,
+        out: *mut u8,
+        outl: *mut usize,
+        _outsz: usize,
+    ) -> c_int {
+        if ossl_prov_is_running() == 0 {
+            return 0;
+        }
+        // SAFETY: `ctx` is the context the provider allocated; `outl` is the caller's slot.
+        if unsafe { ctx_final(out, ctx.cast::<NullMdCtx>()) } != 0 {
+            // SAFETY: `outl` is the caller's output slot.
+            unsafe { *outl = 0 };
+            return 1;
+        }
+        0
+    }
+
+    unsafe extern "C" fn update(ctx: *mut c_void, in_: *const c_uchar, inl: usize) -> c_int {
+        // SAFETY: `ctx` is the context the provider allocated; the authority ignores the bytes.
+        c_int::from(unsafe { ctx_update(ctx.cast::<NullMdCtx>(), in_.cast::<c_void>(), inl) } != 0)
+    }
+
+    unsafe extern "C" fn get_params(params: *mut OsslParam) -> c_int {
+        // SAFETY: the caller's contract is `ossl_digest_default_get_params`'s.
+        unsafe { ossl_digest_default_get_params(params, 0, 0, 0) }
+    }
+
+    unsafe extern "C" fn gettable_params(_provctx: *mut c_void) -> *const OsslParam {
+        DIGEST_DEFAULT_GETTABLE_PARAMS.as_ptr()
+    }
+
+    pub(super) static FUNCTIONS: [OsslDispatch; 10] = [
+        OsslDispatch {
+            function_id: OSSL_FUNC_DIGEST_NEWCTX,
+            function: newctx as *mut c_void,
+        },
+        OsslDispatch {
+            function_id: OSSL_FUNC_DIGEST_UPDATE,
+            function: update as *mut c_void,
+        },
+        OsslDispatch {
+            function_id: OSSL_FUNC_DIGEST_FINAL,
+            function: internal_final as *mut c_void,
+        },
+        OsslDispatch {
+            function_id: OSSL_FUNC_DIGEST_FREECTX,
+            function: freectx as *mut c_void,
+        },
+        OsslDispatch {
+            function_id: OSSL_FUNC_DIGEST_DUPCTX,
+            function: dupctx as *mut c_void,
+        },
+        OsslDispatch {
+            function_id: OSSL_FUNC_DIGEST_COPYCTX,
+            function: copyctx as *mut c_void,
+        },
+        OsslDispatch {
+            function_id: OSSL_FUNC_DIGEST_GET_PARAMS,
+            function: get_params as *mut c_void,
+        },
+        OsslDispatch {
+            function_id: OSSL_FUNC_DIGEST_GETTABLE_PARAMS,
+            function: gettable_params as *mut c_void,
+        },
+        OsslDispatch {
+            function_id: OSSL_FUNC_DIGEST_INIT,
+            function: internal_init as *mut c_void,
+        },
+        OsslDispatch {
+            function_id: OSSL_DISPATCH_END,
+            function: ptr::null_mut(),
+        },
+    ];
+}
+
+/// `md5_sha1_prov.c`'s `IMPLEMENT_digest_functions_with_settable_ctx` body — the concatenated
+/// `MD5-SHA1` row, with the SSLv3 master-secret `set_ctx_params` arm.
+mod md5_sha1 {
+    use super::*;
+
+    /// `known_md5_sha1_settable_ctx_params` — `md5_sha1_prov.c:28-31`.
+    static SETTABLE: [OsslParam; 2] = [
+        OsslParam {
+            key: OSSL_DIGEST_PARAM_SSL3_MS,
+            data_type: OSSL_PARAM_OCTET_STRING,
+            data: ptr::null_mut(),
+            data_size: 0,
+            return_size: OSSL_PARAM_UNMODIFIED,
+        },
+        END,
+    ];
+
+    unsafe extern "C" fn settable_ctx_params(
+        _ctx: *mut c_void,
+        _provctx: *mut c_void,
+    ) -> *const OsslParam {
+        SETTABLE.as_ptr()
+    }
+
+    /// `static int md5_sha1_set_ctx_params(void *vctx, const OSSL_PARAM params[])` —
+    /// `md5_sha1_prov.c:40-55`.
+    unsafe extern "C" fn set_ctx_params(vctx: *mut c_void, params: *const OsslParam) -> c_int {
+        if vctx.is_null() {
+            return 0;
+        }
+        // SAFETY: `params` is the caller's array, NULL or key-terminated.
+        if unsafe { ossl_param_is_empty(params) } {
+            return 1;
+        }
+        // SAFETY: `params` is key-terminated per the contract and the key is a literal.
+        let p =
+            unsafe { crate::params::OSSL_PARAM_locate_const(params, OSSL_DIGEST_PARAM_SSL3_MS) };
+        if !p.is_null() {
+            // SAFETY: `p` is a live entry of the caller's array.
+            let is_octet = unsafe { (*p).data_type } == OSSL_PARAM_OCTET_STRING;
+            if is_octet {
+                // SAFETY: the entry is an octet string, so `data`/`data_size` describe bytes.
+                let (data, size) = unsafe { ((*p).data, (*p).data_size) };
+                // SAFETY: `vctx` is the context the provider allocated and `data` is readable for
+                // `size` bytes per the parameter's own contract.
+                return unsafe {
+                    ossl_md5_sha1_ctrl(
+                        vctx.cast::<Md5Sha1Ctx>(),
+                        EVP_CTRL_SSL3_MASTER_SECRET,
+                        size as c_int,
+                        data,
+                    )
+                };
+            }
+        }
+        1
+    }
+
+    unsafe extern "C" fn newctx(_provctx: *mut c_void) -> *mut c_void {
+        if ossl_prov_is_running() == 0 {
+            return ptr::null_mut();
+        }
+        CRYPTO_zalloc(core::mem::size_of::<Md5Sha1Ctx>(), FILE, LINE)
+    }
+
+    unsafe extern "C" fn freectx(vctx: *mut c_void) {
+        // SAFETY: `vctx` is what `newctx` allocated or NULL.
+        unsafe {
+            CRYPTO_clear_free(vctx, core::mem::size_of::<Md5Sha1Ctx>(), FILE, LINE);
+        }
+    }
+
+    unsafe extern "C" fn dupctx(ctx: *mut c_void) -> *mut c_void {
+        if ossl_prov_is_running() == 0 || ctx.is_null() {
+            return ptr::null_mut();
+        }
+        let ret = CRYPTO_malloc(core::mem::size_of::<Md5Sha1Ctx>(), FILE, LINE);
+        if !ret.is_null() {
+            // SAFETY: both regions are `size_of::<Md5Sha1Ctx>()` bytes and distinct.
+            unsafe {
+                ptr::copy_nonoverlapping(
+                    ctx.cast::<u8>(),
+                    ret.cast::<u8>(),
+                    core::mem::size_of::<Md5Sha1Ctx>(),
+                );
+            }
+        }
+        ret
+    }
+
+    unsafe extern "C" fn copyctx(outctx: *mut c_void, inctx: *mut c_void) {
+        // SAFETY: both regions are `size_of::<Md5Sha1Ctx>()` bytes and distinct.
+        unsafe {
+            ptr::copy_nonoverlapping(
+                inctx.cast::<u8>(),
+                outctx.cast::<u8>(),
+                core::mem::size_of::<Md5Sha1Ctx>(),
+            );
+        }
+    }
+
+    unsafe extern "C" fn internal_init(ctx: *mut c_void, params: *const OsslParam) -> c_int {
+        if ossl_prov_is_running() == 0 {
+            return 0;
+        }
+        // SAFETY: `ctx` is the context the provider allocated.
+        if unsafe { ossl_md5_sha1_init(ctx.cast::<Md5Sha1Ctx>()) } == 0 {
+            return 0;
+        }
+        // SAFETY: `params` is the caller's array, NULL or key-terminated.
+        unsafe { set_ctx_params(ctx, params) }
+    }
+
+    unsafe extern "C" fn internal_final(
+        ctx: *mut c_void,
+        out: *mut u8,
+        outl: *mut usize,
+        outsz: usize,
+    ) -> c_int {
+        if ossl_prov_is_running() == 0 || outsz < MD5_SHA1_DIGEST_LENGTH {
+            return 0;
+        }
+        // SAFETY: `ctx` is a live context and `out` is writable for `outsz >= 36`.
+        if unsafe { ossl_md5_sha1_final(out, ctx.cast::<Md5Sha1Ctx>()) } != 0 {
+            // SAFETY: `outl` is the caller's output slot.
+            unsafe { *outl = MD5_SHA1_DIGEST_LENGTH };
+            return 1;
+        }
+        0
+    }
+
+    unsafe extern "C" fn update(ctx: *mut c_void, in_: *const c_uchar, inl: usize) -> c_int {
+        // SAFETY: `ctx` is the context the provider allocated; `in_` is readable for `inl` bytes.
+        c_int::from(unsafe {
+            ossl_md5_sha1_update(ctx.cast::<Md5Sha1Ctx>(), in_.cast::<c_void>(), inl) != 0
+        })
+    }
+
+    unsafe extern "C" fn get_params(params: *mut OsslParam) -> c_int {
+        // SAFETY: the caller's contract is `ossl_digest_default_get_params`'s.
+        unsafe {
+            ossl_digest_default_get_params(params, MD5_SHA1_CBLOCK, MD5_SHA1_DIGEST_LENGTH, 0)
+        }
+    }
+
+    unsafe extern "C" fn gettable_params(_provctx: *mut c_void) -> *const OsslParam {
+        DIGEST_DEFAULT_GETTABLE_PARAMS.as_ptr()
+    }
+
+    pub(super) static FUNCTIONS: [OsslDispatch; 12] = [
+        OsslDispatch {
+            function_id: OSSL_FUNC_DIGEST_NEWCTX,
+            function: newctx as *mut c_void,
+        },
+        OsslDispatch {
+            function_id: OSSL_FUNC_DIGEST_UPDATE,
+            function: update as *mut c_void,
+        },
+        OsslDispatch {
+            function_id: OSSL_FUNC_DIGEST_FINAL,
+            function: internal_final as *mut c_void,
+        },
+        OsslDispatch {
+            function_id: OSSL_FUNC_DIGEST_FREECTX,
+            function: freectx as *mut c_void,
+        },
+        OsslDispatch {
+            function_id: OSSL_FUNC_DIGEST_DUPCTX,
+            function: dupctx as *mut c_void,
+        },
+        OsslDispatch {
+            function_id: OSSL_FUNC_DIGEST_COPYCTX,
+            function: copyctx as *mut c_void,
+        },
+        OsslDispatch {
+            function_id: OSSL_FUNC_DIGEST_GET_PARAMS,
+            function: get_params as *mut c_void,
+        },
+        OsslDispatch {
+            function_id: OSSL_FUNC_DIGEST_GETTABLE_PARAMS,
+            function: gettable_params as *mut c_void,
+        },
+        OsslDispatch {
+            function_id: OSSL_FUNC_DIGEST_INIT,
+            function: internal_init as *mut c_void,
+        },
+        OsslDispatch {
+            function_id: OSSL_FUNC_DIGEST_SETTABLE_CTX_PARAMS,
+            function: settable_ctx_params as *mut c_void,
+        },
+        OsslDispatch {
+            function_id: OSSL_FUNC_DIGEST_SET_CTX_PARAMS,
+            function: set_ctx_params as *mut c_void,
+        },
+        OsslDispatch {
+            function_id: OSSL_DISPATCH_END,
+            function: ptr::null_mut(),
+        },
+    ];
+}
+
 /// The property string every row of `deflt_digests[]` carries.
 const DEFAULT_PROPERTIES: *const c_char = c"provider=default".as_ptr();
 
 /// `static const OSSL_ALGORITHM deflt_digests[]` — `providers/defltprov.c`, restricted to the
-/// constructions 8.1a transcribed **and** that file publishes. The alias lists are `prov/names.h`'s,
+/// constructions 8.1 has landed **and** that file publishes. The alias lists are `prov/names.h`'s,
 /// verbatim.
-static DEFLT_DIGESTS: [OsslAlgorithm; 8] = [
+static DEFLT_DIGESTS: [OsslAlgorithm; 13] = [
     OsslAlgorithm {
         algorithm_names: c"SHA1:SHA-1:SSL3-SHA1:1.3.14.3.2.26".as_ptr(),
         property_definition: DEFAULT_PROPERTIES,
@@ -664,6 +1069,12 @@ static DEFLT_DIGESTS: [OsslAlgorithm; 8] = [
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
+        algorithm_names: c"SHA2-256/192:SHA-256/192:SHA256-192".as_ptr(),
+        property_definition: DEFAULT_PROPERTIES,
+        implementation: sha256_192_internal::FUNCTIONS.as_ptr() as *const c_void,
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
         algorithm_names: c"SHA2-384:SHA-384:SHA384:2.16.840.1.101.3.4.2.2".as_ptr(),
         property_definition: DEFAULT_PROPERTIES,
         implementation: sha384::FUNCTIONS.as_ptr() as *const c_void,
@@ -676,15 +1087,39 @@ static DEFLT_DIGESTS: [OsslAlgorithm; 8] = [
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
+        algorithm_names: c"SHA2-512/224:SHA-512/224:SHA512-224:2.16.840.1.101.3.4.2.5".as_ptr(),
+        property_definition: DEFAULT_PROPERTIES,
+        implementation: sha512_224::FUNCTIONS.as_ptr() as *const c_void,
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SHA2-512/256:SHA-512/256:SHA512-256:2.16.840.1.101.3.4.2.6".as_ptr(),
+        property_definition: DEFAULT_PROPERTIES,
+        implementation: sha512_256::FUNCTIONS.as_ptr() as *const c_void,
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
         algorithm_names: c"MD5:SSL3-MD5:1.2.840.113549.2.5".as_ptr(),
         property_definition: DEFAULT_PROPERTIES,
         implementation: md5::FUNCTIONS.as_ptr() as *const c_void,
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
+        algorithm_names: c"MD5-SHA1".as_ptr(),
+        property_definition: DEFAULT_PROPERTIES,
+        implementation: md5_sha1::FUNCTIONS.as_ptr() as *const c_void,
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
         algorithm_names: c"RIPEMD-160:RIPEMD160:RIPEMD:RMD160:1.3.36.3.2.1".as_ptr(),
         property_definition: DEFAULT_PROPERTIES,
         implementation: ripemd160::FUNCTIONS.as_ptr() as *const c_void,
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"NULL".as_ptr(),
+        property_definition: DEFAULT_PROPERTIES,
+        implementation: nullmd::FUNCTIONS.as_ptr() as *const c_void,
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
@@ -780,7 +1215,10 @@ mod tests {
             }
             n += 1;
         }
-        assert_eq!(n, 7, "the seven default-provider rows 8.1a transcribed");
+        assert_eq!(
+            n, 12,
+            "the twelve default-provider digest rows 8.1 has landed"
+        );
 
         // SAFETY: the query's contract; an operation this half does not answer.
         let none = unsafe { deflt_query(ptr::null_mut(), 14, &mut no_cache) };
@@ -820,5 +1258,84 @@ mod tests {
         let ok = unsafe { ossl_digest_default_get_params(params.as_mut_ptr(), 64, 32, 2) };
         assert_eq!(ok, 1);
         assert_eq!((size, block), (32, 64));
+    }
+
+    /// A `GET_PARAMS` stand-in that answers 0, so a row missing the callback fails the
+    /// assertion below rather than the test panicking (which the crate's lints forbid).
+    unsafe extern "C" fn no_get_params(_params: *mut OsslParam) -> c_int {
+        0
+    }
+
+    /// The rows 8.1's second half adds must carry `prov/names.h`'s alias list verbatim and
+    /// report the sizes the header constants give them. This reads `DEFLT_DIGESTS` directly
+    /// rather than fetching, because a fetch sweeps every activated provider in the default
+    /// context and a unit test that does so depends on which sibling test ran before it.
+    #[test]
+    fn the_added_rows_publish_the_names_and_sizes() {
+        // (full algorithm_names string, blocksize, size)
+        let want: [(&str, usize, usize); 12] = [
+            ("SHA1:SHA-1:SSL3-SHA1:1.3.14.3.2.26", 64, 20),
+            ("SHA2-224:SHA-224:SHA224:2.16.840.1.101.3.4.2.4", 64, 28),
+            ("SHA2-256:SHA-256:SHA256:2.16.840.1.101.3.4.2.1", 64, 32),
+            ("SHA2-256/192:SHA-256/192:SHA256-192", 64, 24),
+            ("SHA2-384:SHA-384:SHA384:2.16.840.1.101.3.4.2.2", 128, 48),
+            ("SHA2-512:SHA-512:SHA512:2.16.840.1.101.3.4.2.3", 128, 64),
+            (
+                "SHA2-512/224:SHA-512/224:SHA512-224:2.16.840.1.101.3.4.2.5",
+                128,
+                28,
+            ),
+            (
+                "SHA2-512/256:SHA-512/256:SHA512-256:2.16.840.1.101.3.4.2.6",
+                128,
+                32,
+            ),
+            ("MD5:SSL3-MD5:1.2.840.113549.2.5", 64, 16),
+            ("MD5-SHA1", 64, 36),
+            ("RIPEMD-160:RIPEMD160:RIPEMD:RMD160:1.3.36.3.2.1", 64, 20),
+            ("NULL", 0, 0),
+        ];
+        for (i, (names, block, size)) in want.iter().enumerate() {
+            let row = &DEFLT_DIGESTS[i];
+            // SAFETY: every row's `algorithm_names` is a NUL-terminated literal and the loop runs
+            // over the eleven rows the terminator does not end.
+            let got = unsafe { core::ffi::CStr::from_ptr(row.algorithm_names) };
+            assert_eq!(got.to_str(), Ok(*names), "row {i}");
+
+            // Locate `OSSL_FUNC_DIGEST_GET_PARAMS` in the row's dispatch table and call it.
+            let mut disp = row.implementation.cast::<OsslDispatch>();
+            let mut get_params: Option<unsafe extern "C" fn(*mut OsslParam) -> c_int> = None;
+            // SAFETY: the table is terminated; every entry before the terminator is readable.
+            unsafe {
+                while (*disp).function_id != OSSL_DISPATCH_END {
+                    if (*disp).function_id == OSSL_FUNC_DIGEST_GET_PARAMS {
+                        get_params = Some(core::mem::transmute::<
+                            *mut c_void,
+                            unsafe extern "C" fn(*mut OsslParam) -> c_int,
+                        >((*disp).function));
+                    }
+                    disp = disp.add(1);
+                }
+            }
+            let mut got_size: usize = 0;
+            let mut got_block: usize = 0;
+            let mut params: [OsslParam; 3] = [END; 3];
+            // SAFETY: both slots are this frame's and the constructor records their addresses.
+            unsafe {
+                params[0] = crate::params::OSSL_PARAM_construct_size_t(
+                    OSSL_DIGEST_PARAM_SIZE,
+                    &mut got_size,
+                );
+                params[1] = crate::params::OSSL_PARAM_construct_size_t(
+                    OSSL_DIGEST_PARAM_BLOCK_SIZE,
+                    &mut got_block,
+                );
+            }
+            let f = get_params.unwrap_or(no_get_params);
+            // SAFETY: the callback's contract is `ossl_digest_default_get_params`'s, and the
+            // params array is terminated with this frame's buffers.
+            assert_eq!(unsafe { f(params.as_mut_ptr()) }, 1, "row {i} GET_PARAMS");
+            assert_eq!((got_block, got_size), (*block, *size), "row {i} sizes");
+        }
     }
 }

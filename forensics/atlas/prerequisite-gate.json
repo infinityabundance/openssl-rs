@@ -30,7 +30,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 56,
-      "language_surface_not_modelled_by_name": 3044,
+      "language_surface_not_modelled_by_name": 3046,
       "planned_prerequisites": 14
     },
     "census_by_unit": {
@@ -188,6 +188,7 @@
         "crypto/lhash/lhash.c": 16,
         "crypto/md4/md4_dgst.c": 8,
         "crypto/md5/md5_dgst.c": 10,
+        "crypto/md5/md5_sha1.c": 2,
         "crypto/mem.c": 12,
         "crypto/mem_sec.c": 10,
         "crypto/o_dir.c": 2,
@@ -337,8 +338,8 @@
       ]
     },
     "checked": {
-      "authority_units": 150,
-      "crate_modules": 200,
+      "authority_units": 151,
+      "crate_modules": 201,
       "deferral_blocker_rows": 5,
       "deferrals_recorded": 25,
       "divergence_names_covered": 32,
@@ -460,7 +461,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "b26e55d03a31b820d874aab76ccebf61350fd229466913da79b1d68623368dba",
+  "body_hash": "5fd99c58897f374dbfbe23c50c50b315568c696f31509ba9aa58e20e59daf1d0",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -471,17 +472,17 @@
     {
       "name": "macro-owners",
       "path": "forensics/atlas/macro-owners.json",
-      "sha256": "b738aa29c48ab176f87af05c829849ad7bd3c6b6987e49715a8cbfbeeb929877"
+      "sha256": "8f2bae5b291caf13d3c088a204fe0dd96258b45da69f42b1cc7b28135eab1c72"
     },
     {
       "name": "typedef-owners",
       "path": "forensics/atlas/typedef-owners.json",
-      "sha256": "ffc8babb89e4f13b765eecc3e2aa5ebf7742c7e18a6d9f49363b890eb5742fa4"
+      "sha256": "1c0337452451a2118a6ba8ef5da6d1bfd2f5a465ac881de4a375120d1bd78304"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "128b3a849882310b690010f5ab4cffb454a4e88859868f5897c3e5eaf8fc37f6"
+      "sha256": "35443f47c65b9c82881862bc077b8f5dd58004b558b1b279f38666a4ee3aad15"
     },
     {
       "name": "symbol-ownership",
@@ -496,12 +497,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "21003aa02ca3247c2cf41cee1bbe95b13ec47cdf0ffd764acdf5105604e45120"
+      "sha256": "02c9a3507f7630a8a274087929bec3172252272e9b382e793159374402212b23"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "c6a00054d0f1b7bd7c0e483138eb2f01e70fd1ef1738eaad5abcb073e8335a41"
+      "sha256": "80f4838b02ffa6a93f2d8f40ed5f261f7b473c066db29e4e60b661579e36f1a0"
     },
     {
       "name": "prerequisites",

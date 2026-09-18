@@ -343,7 +343,7 @@
     "phase8": 16
   },
   "implemented": {
-    "libcrypto": 1879,
+    "libcrypto": 1884,
     "libssl": 0
   },
   "open_obligations": {
@@ -352,7 +352,7 @@
     "phase5": 0,
     "phase6": 0,
     "phase7": 0,
-    "phase8": 732
+    "phase8": 727
   },
   "owned_obligations": {
     "phase3": 294,
@@ -390,7 +390,7 @@
     "blocking_dependencies": 25,
     "divergence_names_covered": 32,
     "findings": 0,
-    "language_census": 3044,
+    "language_census": 3046,
     "sealed_census": 57
   }
 }
