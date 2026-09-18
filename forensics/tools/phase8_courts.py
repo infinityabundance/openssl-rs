@@ -120,14 +120,19 @@ CORRECTNESS_COURTS: list[tuple[str, tuple[str, ...]]] = [
                    "blake2b512", "sm3", "md5_sha1")),
 ]
 
+# The cipher correctness court, whose vector schema carries a key, an IV and an operation
+# rather than a message and a digest. It is driven by `correctness_vectors.run_cipher_court`
+# and its sets are the `cipher-vectors-*` files under `forensics/vectors/`.
+CIPHER_CORRECTNESS_COURTS: list[tuple[str, tuple[str, ...]]] = [
+    ("CT-CIPHER", ("aes",)),
+]
+
 # A `CT-*` court the plan names but whose primitive is not implemented yet. It is not a
 # registered court: nothing here can pass, and the runner prints each one as PENDING with what
 # it needs so that "not run yet" cannot be read as "passed". Each entry names the subphase and
 # the prerequisite in one line; the vectors themselves arrive in the subphase that lands the
 # primitive, in the same commit, exactly as `RT-*` probes do.
 PENDING_CORRECTNESS_COURTS: dict[str, str] = {
-    "CT-CIPHER": "8.2 -- needs the AES/DES/RC2/RC4/... low-level Init/Cipher arms to exist "
-                 "and committed vectors for each; runs the crate only (no differential).",
     "CT-MODES": "8.3 -- needs the GCM/CCM/XTS/Poly1305/ChaCha20-Poly1305 constructions; "
                 "the authority ships SP 800-38x vectors in its evp_test data and CAVP sets "
                 "are the recorded follow-up (see correctness_vectors.py header).",
@@ -297,6 +302,11 @@ def main(argv: list[str]) -> int:
         records.append(cv.run_court(name, algorithms, work_dir=work,
                                     authority_id=auth.id))
 
+    for name, algorithms in CIPHER_CORRECTNESS_COURTS:
+        work.mkdir(parents=True, exist_ok=True)
+        records.append(cv.run_cipher_court(name, algorithms, work_dir=work,
+                                           authority_id=auth.id))
+
     passed = sum(1 for r in records if r["verdict"] == "pass")
     body = {
         "all_pass": passed == len(records),
@@ -326,6 +336,10 @@ def main(argv: list[str]) -> int:
         for algorithm in algorithms:
             inputs.append(InputRef(name=f"correctness-vectors:{algorithm}",
                                    path=cv.VECTOR_DIR / f"{algorithm}.json"))
+    for _name, algorithms in CIPHER_CORRECTNESS_COURTS:
+        inputs.append(InputRef(name="cipher-correctness-probe", path=cv.CIPHER_PROBE))
+        inputs.append(InputRef(name="cipher-correctness-vectors",
+                               path=cv.VECTOR_DIR / "aes.json"))
     doc = envelope(kind="phase8-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
     write_json(OUT, doc)

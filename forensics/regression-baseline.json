@@ -49,6 +49,10 @@
       "observations": 0,
       "verdict": "pass"
     },
+    "CT-CIPHER": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "CT-DIGEST": {
       "observations": 0,
       "verdict": "pass"

@@ -124,7 +124,16 @@ fetches, vendors or shells out for a corpus.
 Outputs
 -------
   forensics/vectors/<algorithm>.json     (with `--emit`, from the pinned authority tree)
+  forensics/vectors/aes.json             (with `--emit-ciphers`, the cipher-shaped set below)
   artifacts/phase8/COURTS.json           (the `CT-*` records, via `phase8_courts.py`)
+
+A cipher vector is a different record from a digest vector -- a key, an IV, an operation, an
+input and an output rather than a message and a digest -- so it has its own schema
+(`cipher-vectors-*`), its own loader and its own driver (`run_cipher_court`, probed by
+`courts/phase8/ct_cipher.c`), while the provenance rules above apply unchanged. The pinned
+court image carries no independent cipher implementation, so a cipher boundary vector cannot
+carry an independent oracle the way a digest boundary can; the cipher sets record that cost
+the way D208 records `rhash`'s absence.
 
 SPDX-License-Identifier: Apache-2.0"""
 
@@ -133,6 +142,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -159,6 +169,10 @@ GENERATOR = "forensics/tools/correctness_vectors.py"
 # implementation through the same distribution shell a consumer would load.
 CANDIDATE_DIR = REPO_ROOT / "artifacts" / "phase2"
 PROBE = REPO_ROOT / "courts" / "phase8" / "ct_digest.c"
+# The cipher correctness probe: the same candidate-only shape, with a cipher-shaped record
+# (key, IV, operation, input) rather than a digest-shaped one.
+CIPHER_PROBE = REPO_ROOT / "courts" / "phase8" / "ct_cipher.c"
+CIPHER_KIND_PREFIX = "cipher-vectors-"
 
 # The committed vectors' schema/kind prefix. `envelope` writes
 # `openssl-rs/atlas/correctness-vectors-<algorithm>/v1`.
@@ -557,7 +571,251 @@ def load_all(vector_dir: Path = VECTOR_DIR) -> list[VectorSet]:
             f"correctness-vectors: no vector files under {rel(vector_dir)}; a CT-* court "
             "with no committed vectors would be a court that checks nothing"
         )
-    return [load_vector_set(p) for p in paths]
+    sets = []
+    for p in paths:
+        kind = str(json.loads(p.read_text(encoding="utf-8")).get("kind", ""))
+        if kind.startswith(CIPHER_KIND_PREFIX):
+            continue
+        sets.append(load_vector_set(p))
+    return sets
+
+
+# ---------------------------------------------------------------------------
+# The cipher vector set: a different schema, because a cipher has a key
+# ---------------------------------------------------------------------------
+#
+# A digest vector is (message, digest); a cipher vector is (key, IV, operation, input,
+# output). Folding them into one schema would have made every digest field optional and
+# every cipher field a stringly-typed extra, so the cipher set is its own loader and its own
+# driver, in the same envelope and with the same provenance contract.
+
+
+@dataclass
+class CipherVector:
+    id: str
+    cipher: str
+    operation: str
+    key: bytes
+    iv: bytes
+    input: bytes
+    expected: bytes
+    standard: str
+    primary_source: str
+    provenance: dict
+
+
+@dataclass
+class CipherVectorSet:
+    path: Path
+    algorithm: str
+    standard: str
+    primary_source: str
+    provenance: dict
+    vectors: list[CipherVector] = field(default_factory=list)
+
+
+def load_cipher_vector_set(path: Path) -> CipherVectorSet:
+    """Load one committed cipher vector file, validating envelope and provenance."""
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    _require(isinstance(doc, dict), f"{rel(path)} is not a JSON object")
+    kind = str(doc.get("kind", ""))
+    _require(kind.startswith(CIPHER_KIND_PREFIX),
+             f"{rel(path)}: kind {kind!r} does not start with {CIPHER_KIND_PREFIX!r}")
+    body = doc.get("body")
+    _require(isinstance(body, dict), f"{rel(path)}: body is missing")
+    algorithm = str(body.get("algorithm", ""))
+    _require(algorithm != "", f"{rel(path)}: body.algorithm is missing")
+    standard = str(body.get("standard", ""))
+    _require(standard != "", f"{rel(path)}: body.standard is missing")
+    primary_source = str(body.get("primary_source", "UNKNOWN"))
+    raw_vectors = body.get("vectors")
+    _require(isinstance(raw_vectors, list) and raw_vectors,
+             f"{rel(path)}: body.vectors must be a non-empty list")
+
+    vectors: list[CipherVector] = []
+    seen: set[str] = set()
+    for i, raw in enumerate(raw_vectors):
+        where = f"{rel(path)}: vectors[{i}]"
+        _require(isinstance(raw, dict), f"{where} is not an object")
+        vid = str(raw.get("id", ""))
+        _require(vid != "", f"{where}.id is missing")
+        _require(vid not in seen, f"{where}.id {vid!r} is duplicated")
+        seen.add(vid)
+        cipher = str(raw.get("cipher", ""))
+        operation = str(raw.get("operation", "")).upper()
+        _require(cipher != "", f"{where}.cipher is missing")
+        _require(operation in ("ENCRYPT", "DECRYPT"),
+                 f"{where}.operation must be ENCRYPT or DECRYPT")
+        provenance = raw.get("provenance")
+        _require(isinstance(provenance, dict), f"{where}: provenance must be an object")
+        derivation = str(provenance.get("derivation", ""))
+        _require(derivation in ("corpus", "independent"),
+                 f"{where}: provenance.derivation must be 'corpus' or 'independent'")
+        if derivation == "corpus":
+            _require(provenance.get("file") and provenance.get("line") is not None,
+                     f"{where}: a mirrored vector must name the mirror file and line")
+        else:
+            _require(provenance.get("oracle"),
+                     f"{where}: an independent vector must name its oracle")
+        try:
+            key = bytes.fromhex(str(raw.get("key_hex", "")))
+            iv = bytes.fromhex(str(raw.get("iv_hex", "")))
+            input_bytes = bytes.fromhex(str(raw.get("input_hex", "")))
+            expected = bytes.fromhex(str(raw.get("expected_hex", "")))
+        except ValueError as exc:
+            raise VectorError(f"{where}: not hex ({exc})") from exc
+        vectors.append(CipherVector(
+            vid, cipher, operation, key, iv, input_bytes, expected,
+            str(raw.get("standard", standard)),
+            str(provenance.get("primary_source", primary_source)), provenance))
+
+    return CipherVectorSet(path=path, algorithm=algorithm, standard=standard,
+                           primary_source=primary_source,
+                           provenance=body.get("provenance", {}), vectors=vectors)
+
+
+def load_all_ciphers(vector_dir: Path = VECTOR_DIR) -> list[CipherVectorSet]:
+    sets = []
+    for p in sorted(vector_dir.glob("*.json")):
+        kind = str(json.loads(p.read_text(encoding="utf-8")).get("kind", ""))
+        if kind.startswith(CIPHER_KIND_PREFIX):
+            sets.append(load_cipher_vector_set(p))
+    return sets
+
+
+def _cipher_derivation_census(sets: list[CipherVectorSet]) -> dict:
+    corpus = independent = 0
+    oracles: dict[str, int] = {}
+    for vs in sets:
+        for v in vs.vectors:
+            if str(v.provenance.get("derivation")) == "corpus":
+                corpus += 1
+            else:
+                independent += 1
+                name = str(v.provenance.get("oracle", "UNKNOWN"))
+                oracles[name] = oracles.get(name, 0) + 1
+    return {"vectors": corpus + independent, "corpus": corpus,
+            "independent": independent, "oracles": dict(sorted(oracles.items())),
+            "files": len(sets)}
+
+
+def run_cipher_court(
+    name: str,
+    algorithms: tuple[str, ...],
+    *,
+    vector_dir: Path = VECTOR_DIR,
+    candidate_dir: Path = CANDIDATE_DIR,
+    probe: Path = CIPHER_PROBE,
+    work_dir: Path,
+    authority_id: str = PRODUCTION_AUTHORITY,
+) -> dict:
+    """Run one cipher correctness court (`CT-CIPHER`): candidate-only, per-vector and loud."""
+    all_sets = {s.algorithm: s for s in load_all_ciphers(vector_dir)}
+    wanted = sorted(set(algorithms))
+    missing = [a for a in wanted if a not in all_sets]
+    if missing:
+        return {
+            "court": name, "plane": "correctness", "verdict": "fail",
+            "stage": "vectors-missing",
+            "detail": [f"no committed cipher vectors for algorithm {a!r} under "
+                       f"{rel(vector_dir)}" for a in missing],
+        }
+    sets = [all_sets[a] for a in wanted]
+
+    calls: list[tuple[int, CipherVectorSet, CipherVector]] = []
+    for vs in sets:
+        for v in vs.vectors:
+            calls.append((len(calls), vs, v))
+
+    work_dir.mkdir(parents=True, exist_ok=True)
+    call_path = work_dir / f"{name.lower()}.calls.tsv"
+    call_path.write_text("".join(
+        f"{i}\t{v.cipher}\t{v.operation}\t{v.key.hex()}\t{v.iv.hex()}\t{v.input.hex()}\n"
+        for i, _vs, v in calls), encoding="utf-8")
+
+    binary = work_dir / f"{name.lower()}.candidate"
+    ok, err = compile_probe(probe, binary, candidate_dir / "include", candidate_dir)
+    if not ok:
+        return {"court": name, "plane": "correctness", "verdict": "fail",
+                "stage": "compile-candidate", "probe": rel(probe),
+                "detail": err.splitlines()[:16],
+                "needs": ("the candidate distribution shell to export the low-level "
+                          "cipher entry points; run forensics/tools/build_phase2.sh")}
+
+    res = run([str(binary), str(call_path)])
+    if res.returncode != 0:
+        return {"court": name, "plane": "correctness", "verdict": "fail",
+                "stage": "candidate-run",
+                "detail": {"exit_code": res.returncode,
+                           "stderr": res.stderr.splitlines()[:16]}}
+
+    produced = _parse_probe(res.stdout)
+    failures: list[dict] = []
+    results: list[dict] = []
+    per_algorithm: dict[str, dict] = {}
+    vector_failed: set[tuple[str, str]] = set()
+    for vs in sets:
+        per_algorithm[vs.algorithm] = {
+            "standard": vs.standard, "primary_source": vs.primary_source,
+            "source": rel(vs.path), "total": len(vs.vectors), "passed": 0, "failed": 0}
+
+    calls_checked = 0
+    for index, vs, v in calls:
+        calls_checked += 1
+        status, value = produced.get(index, ("err", "no-result-line"))
+        good = status == "ok" and value == v.expected.hex()
+        results.append({"algorithm": vs.algorithm, "id": v.id,
+                        "cipher": v.cipher, "operation": v.operation,
+                        "passed": good,
+                        "input_hex": v.input.hex(), "expected_hex": v.expected.hex(),
+                        "actual_hex": value if status == "ok" else None})
+        if good:
+            continue
+        vector_failed.add((vs.algorithm, v.id))
+        failures.append({"algorithm": vs.algorithm, "id": v.id, "cipher": v.cipher,
+                         "operation": v.operation, "standard": v.standard,
+                         "primary_source": v.primary_source,
+                         "input_hex": v.input.hex(), "expected_hex": v.expected.hex(),
+                         "actual_hex": value if status == "ok" else None,
+                         "probe_status": status,
+                         "probe_detail": None if status == "ok" else value,
+                         "provenance": v.provenance})
+
+    total = 0
+    for vs in sets:
+        summary = per_algorithm[vs.algorithm]
+        passed = sum(1 for v in vs.vectors
+                     if (vs.algorithm, v.id) not in vector_failed)
+        summary["passed"] = passed
+        summary["failed"] = len(vs.vectors) - passed
+        total += len(vs.vectors)
+
+    census = _cipher_derivation_census(sets)
+    oracle_parts = "; ".join(f"{n} by {name}" for name, n in census["oracles"].items())
+    passed_vectors = total - len(vector_failed)
+    return {
+        "court": name, "plane": "correctness", "kind": "cipher-vectors",
+        "probe": rel(probe),
+        "candidate_shared_object": rel(candidate_dir / "libcrypto.so.3"),
+        "authority": authority_id,
+        "vectors_checked": total, "vectors_passed": passed_vectors,
+        "vectors_failed": total - passed_vectors, "calls_checked": calls_checked,
+        "derivation_census": census, "algorithms": per_algorithm,
+        "results": results, "failures": failures,
+        "stage": "vector-mismatch" if failures else "compare",
+        "verdict": "pass" if not failures else "fail",
+        "claim": (
+            "A correctness-vector PASS means candidate-only construction verification: the "
+            "candidate's low-level cipher produced the committed expected bytes for every "
+            f"vector. Of the {census['vectors']} committed vectors, {census['corpus']} are "
+            "published standard values mirrored through the pinned OpenSSL test corpus and "
+            f"{census['independent']} are independently-derived boundary vectors with named "
+            f"oracles ({oracle_parts}) -- these counts are read from the {census['files']} "
+            "committed `forensics/vectors/*.json` cipher sets by `correctness_vectors.py`, "
+            "not typed. It is NOT OpenSSL parity and NOT formal validation. See D201/D208 "
+            "and docs/PHASE-8-SUBPHASES.md."
+        ),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -1139,6 +1397,153 @@ def emit_all(authority_id: str, vector_dir: Path = VECTOR_DIR) -> list[dict]:
     return [_emit_one(s, auth_source, authority_id, vector_dir) for s in EMIT_SOURCES]
 
 
+# The one cipher corpus this plane emits from. It is a plain keyed-block `evp_test` file: each
+# block names a `Cipher`, and CBC/CFB/OFB blocks carry an `IV`. Only the constructions the
+# candidate has a low-level arm for are emitted (`AES-{128,192,256}-{ECB,CBC,CFB,OFB}`); GCM
+# and the other AEAD spellings are 8.3's and are skipped rather than half-modelled.
+AES_CIPHER_SOURCE = "test/recipes/30-test_evp_data/evpciph_aes_common.txt"
+_AES_CIPHER_RE = re.compile(r"^AES-(128|192|256)-(ECB|CBC|CFB|OFB)$")
+
+
+def _parse_cipher_blocks(text: str) -> list[dict]:
+    """The keyed `Cipher =` blocks, each with the line its `Cipher` line sits on."""
+    blocks: list[dict] = []
+    cur: dict | None = None
+    title = ""
+    for lineno, line in enumerate(text.splitlines(), 1):
+        s = line.strip()
+        if not s or s.startswith("#"):
+            if cur is not None:
+                blocks.append(cur)
+                cur = None
+            continue
+        if "=" not in s:
+            continue
+        key, _, value = s.partition("=")
+        key = key.strip()
+        value = value.strip()
+        if key == "Title":
+            title = value
+        elif key == "Cipher":
+            if cur is not None:
+                blocks.append(cur)
+            cur = {"cipher": value, "line": lineno, "title": title}
+        elif cur is not None:
+            cur[key.lower()] = value
+    if cur is not None:
+        blocks.append(cur)
+    return blocks
+
+
+def emit_ciphers(authority_id: str, vector_dir: Path = VECTOR_DIR) -> dict:
+    """Regenerate `forensics/vectors/aes.json` from the pinned cipher corpus."""
+    auth = resolve_authority(authority_id)
+    src_path = auth.source / AES_CIPHER_SOURCE
+    if not src_path.is_file():
+        raise VectorError(f"correctness-vectors: {rel(src_path)} is absent")
+    text = src_path.read_text(encoding="utf-8")
+    mirror_sha256 = hashlib.sha256(src_path.read_bytes()).hexdigest()
+
+    vectors: list[dict] = []
+    n = 0
+    for block in _parse_cipher_blocks(text):
+        cipher = block.get("cipher", "")
+        if not _AES_CIPHER_RE.match(cipher):
+            continue
+        needed = ("key", "plaintext", "ciphertext")
+        if any(k not in block for k in needed):
+            continue
+        # `evp_test`'s default operation is ENCRYPT, and the SP 800-38A sections spell only
+        # the encrypt direction for most blocks.
+        operation = block.get("operation", "ENCRYPT").strip().upper()
+        if operation not in ("ENCRYPT", "DECRYPT"):
+            continue
+        n += 1
+        vectors.append({
+            "id": f"aes-{cipher.lower()}-{n}",
+            "cipher": cipher,
+            "operation": operation,
+            "key_hex": block["key"].lower(),
+            "iv_hex": block.get("iv", "").lower(),
+            "input_hex": block["plaintext"].lower(),
+            "expected_hex": block["ciphertext"].lower(),
+            "standard": "FIPS-197; NIST SP 800-38A",
+            "provenance": {
+                "primary_source": "FIPS-197; NIST SP 800-38A",
+                "derivation": "corpus",
+                "file": rel(src_path),
+                "line": block["line"],
+                "title": block.get("title", ""),
+                "form": "keyed-block",
+                "authority": authority_id,
+                "mirror_sha256": mirror_sha256,
+            },
+        })
+
+    # One independently-derived boundary: the empty message. No standard publishes a value for
+    # an empty ECB/CBC input, and none is needed -- the construction emits nothing for no input
+    # blocks -- so the oracle is the construction's own definition.
+    empty_oracle = ("the construction's definition (FIPS-197 §5.1, SP 800-38A §6.1): an empty "
+                    "message has no blocks and emits no bytes")
+    for cipher in ("AES-128-ECB", "AES-128-CBC"):
+        n += 1
+        vectors.append({
+            "id": f"aes-{cipher.lower()}-empty-{n}",
+            "cipher": cipher,
+            "operation": "ENCRYPT",
+            "key_hex": "000102030405060708090a0b0c0d0e0f",
+            "iv_hex": ("00000000000000000000000000000000"
+                       if cipher.endswith("CBC") else ""),
+            "input_hex": "",
+            "expected_hex": "",
+            "standard": "FIPS-197; NIST SP 800-38A",
+            "provenance": {
+                "primary_source": "UNKNOWN",
+                "derivation": "independent",
+                "label": "empty",
+                "oracle": empty_oracle,
+                "note": "the expected bytes are the construction's own answer, not a "
+                        "published test value",
+            },
+        })
+
+    body = {
+        "algorithm": "aes",
+        "court": "CT-CIPHER",
+        "openssl_cipher": "AES-{128,192,256}-{ECB,CBC,CFB,OFB}",
+        "standard": "FIPS-197; NIST SP 800-38A",
+        "primary_source": "FIPS-197; NIST SP 800-38A",
+        "provenance": {
+            "corpus": rel(src_path),
+            "corpus_sha256": mirror_sha256,
+            "authority": authority_id,
+            "primary_source": "FIPS-197; NIST SP 800-38A",
+            "note": (
+                "Candidate-only construction verification: the primary source is named, the "
+                "bytes are mirrored through the pinned corpus (`corpus_sha256`), and the "
+                "mirror's identity is fixed. This does NOT establish that the mirror is "
+                "faithful to a primary source nobody here has read, and a CT pass is not "
+                "formal validation. An independent implementation of AES is not present in "
+                "the pinned court image (there is no `hashlib` for ciphers), so no cipher "
+                "boundary can carry an independent oracle beyond the empty-message one, "
+                "whose answer is the construction's own. See D208 on the same kind of "
+                "recorded cost for `rhash`."
+            ),
+        },
+        "vectors": vectors,
+    }
+    doc = envelope(
+        kind=f"{CIPHER_KIND_PREFIX}aes",
+        generator=GENERATOR,
+        inputs=[InputRef(name="authority-evp-vector-file", path=src_path)],
+        body=body,
+        authority=authority_id,
+    )
+    out = vector_dir / "aes.json"
+    write_json(out, doc)
+    return {"path": rel(out), "vectors": len(vectors), "source": rel(src_path)}
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
@@ -1199,6 +1604,8 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
     ap.add_argument("--emit", action="store_true",
                     help="regenerate forensics/vectors/*.json from the pinned authority tree")
+    ap.add_argument("--emit-ciphers", action="store_true",
+                    help="regenerate forensics/vectors/aes.json from the pinned cipher corpus")
     ap.add_argument("--list", action="store_true",
                     help="list the committed vector sets and their vector counts")
     ap.add_argument("--self-check", action="store_true",
@@ -1216,6 +1623,11 @@ def main(argv: list[str]) -> int:
             print(f"  emitted {row['path']:<40} {row['vectors']:>3} vectors "
                   + (f"({skipped} skipped: non-default output length) " if skipped else "")
                   + f"from {row['source']}")
+        return 0
+
+    if args.emit_ciphers:
+        row = emit_ciphers(args.authority)
+        print(f"  emitted {row['path']:<40} {row['vectors']:>3} vectors from {row['source']}")
         return 0
 
     if args.self_check:
