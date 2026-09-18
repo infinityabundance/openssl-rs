@@ -5,10 +5,13 @@
     "court": "CT-DIGEST",
     "digest_bytes": 20,
     "openssl_digest": "RIPEMD160",
+    "primary_source": "ISO/IEC 10118-3 (RIPEMD-160); Bosselaers' RIPEMD-160 publication, test vectors",
     "provenance": {
       "authority": "openssl-3.6.4-production",
       "corpus": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_ripemd.txt",
-      "note": "Extracted from the pinned authority's own test data with `correctness_vectors.py --emit`; the bytes and the expected digest are verbatim from that file. A CT pass is not formal validation."
+      "corpus_sha256": "dee31e0dd95b07c04e8dddebc6889c6cb41d9f4ce2906da36c2bb979046456da",
+      "note": "Candidate-only construction verification: the primary source is named above, the bytes are mirrored through the pinned corpus (`corpus_sha256`), and the mirror's identity is fixed. This does NOT establish that the mirror is faithful to a primary source nobody in this repository has read. A CT pass is not formal validation. See D206.",
+      "primary_source": "ISO/IEC 10118-3 (RIPEMD-160); Bosselaers' RIPEMD-160 publication, test vectors"
     },
     "standard": "ISO/IEC 10118-3 (RIPEMD-160)",
     "vectors": [
@@ -16,11 +19,17 @@
         "expected_hex": "9c1185a5c5e9fc54612808977ee8f548b2258d31",
         "id": "ripemd160-evpmd_ripemd-17",
         "input_hex": "",
+        "modes": [
+          "one"
+        ],
         "provenance": {
           "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
           "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_ripemd.txt",
           "form": "quoted-string",
           "line": 17,
+          "mirror_sha256": "dee31e0dd95b07c04e8dddebc6889c6cb41d9f4ce2906da36c2bb979046456da",
+          "primary_source": "ISO/IEC 10118-3 (RIPEMD-160); Bosselaers' RIPEMD-160 publication, test vectors",
           "title": "RIPEMD160 tests"
         },
         "standard": "ISO/IEC 10118-3 (RIPEMD-160)"
@@ -29,11 +38,17 @@
         "expected_hex": "0bdc9d2d256b3ee9daae347be6f4dc835a467ffe",
         "id": "ripemd160-evpmd_ripemd-22",
         "input_hex": "61",
+        "modes": [
+          "one"
+        ],
         "provenance": {
           "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
           "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_ripemd.txt",
           "form": "quoted-string",
           "line": 22,
+          "mirror_sha256": "dee31e0dd95b07c04e8dddebc6889c6cb41d9f4ce2906da36c2bb979046456da",
+          "primary_source": "ISO/IEC 10118-3 (RIPEMD-160); Bosselaers' RIPEMD-160 publication, test vectors",
           "title": "RIPEMD160 tests"
         },
         "standard": "ISO/IEC 10118-3 (RIPEMD-160)"
@@ -42,11 +57,17 @@
         "expected_hex": "8eb208f7e05d987a9b044a8e98c6b087f15a0bfc",
         "id": "ripemd160-evpmd_ripemd-27",
         "input_hex": "616263",
+        "modes": [
+          "one"
+        ],
         "provenance": {
           "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
           "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_ripemd.txt",
           "form": "quoted-string",
           "line": 27,
+          "mirror_sha256": "dee31e0dd95b07c04e8dddebc6889c6cb41d9f4ce2906da36c2bb979046456da",
+          "primary_source": "ISO/IEC 10118-3 (RIPEMD-160); Bosselaers' RIPEMD-160 publication, test vectors",
           "title": "RIPEMD160 tests"
         },
         "standard": "ISO/IEC 10118-3 (RIPEMD-160)"
@@ -55,11 +76,17 @@
         "expected_hex": "5d0689ef49d2fae572b881b123a85ffa21595f36",
         "id": "ripemd160-evpmd_ripemd-32",
         "input_hex": "6d65737361676520646967657374",
+        "modes": [
+          "one"
+        ],
         "provenance": {
           "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
           "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_ripemd.txt",
           "form": "quoted-string",
           "line": 32,
+          "mirror_sha256": "dee31e0dd95b07c04e8dddebc6889c6cb41d9f4ce2906da36c2bb979046456da",
+          "primary_source": "ISO/IEC 10118-3 (RIPEMD-160); Bosselaers' RIPEMD-160 publication, test vectors",
           "title": "RIPEMD160 tests"
         },
         "standard": "ISO/IEC 10118-3 (RIPEMD-160)"
@@ -68,11 +95,17 @@
         "expected_hex": "f71c27109c692c1b56bbdceb5b9d2865b3708dbc",
         "id": "ripemd160-evpmd_ripemd-37",
         "input_hex": "6162636465666768696a6b6c6d6e6f707172737475767778797a",
+        "modes": [
+          "one"
+        ],
         "provenance": {
           "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
           "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_ripemd.txt",
           "form": "quoted-string",
           "line": 37,
+          "mirror_sha256": "dee31e0dd95b07c04e8dddebc6889c6cb41d9f4ce2906da36c2bb979046456da",
+          "primary_source": "ISO/IEC 10118-3 (RIPEMD-160); Bosselaers' RIPEMD-160 publication, test vectors",
           "title": "RIPEMD160 tests"
         },
         "standard": "ISO/IEC 10118-3 (RIPEMD-160)"
@@ -81,11 +114,17 @@
         "expected_hex": "12a053384a9c0c88e405a06c27dcf49ada62eb2b",
         "id": "ripemd160-evpmd_ripemd-42",
         "input_hex": "6162636462636465636465666465666765666768666768696768696a68696a6b696a6b6c6a6b6c6d6b6c6d6e6c6d6e6f6d6e6f706e6f7071",
+        "modes": [
+          "one"
+        ],
         "provenance": {
           "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
           "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_ripemd.txt",
           "form": "quoted-string",
           "line": 42,
+          "mirror_sha256": "dee31e0dd95b07c04e8dddebc6889c6cb41d9f4ce2906da36c2bb979046456da",
+          "primary_source": "ISO/IEC 10118-3 (RIPEMD-160); Bosselaers' RIPEMD-160 publication, test vectors",
           "title": "RIPEMD160 tests"
         },
         "standard": "ISO/IEC 10118-3 (RIPEMD-160)"
@@ -94,11 +133,17 @@
         "expected_hex": "b0e20b6e3116640286ed3a87a5713079b21f5189",
         "id": "ripemd160-evpmd_ripemd-47",
         "input_hex": "4142434445464748494a4b4c4d4e4f505152535455565758595a6162636465666768696a6b6c6d6e6f707172737475767778797a30313233343536373839",
+        "modes": [
+          "one"
+        ],
         "provenance": {
           "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
           "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_ripemd.txt",
           "form": "quoted-string",
           "line": 47,
+          "mirror_sha256": "dee31e0dd95b07c04e8dddebc6889c6cb41d9f4ce2906da36c2bb979046456da",
+          "primary_source": "ISO/IEC 10118-3 (RIPEMD-160); Bosselaers' RIPEMD-160 publication, test vectors",
           "title": "RIPEMD160 tests"
         },
         "standard": "ISO/IEC 10118-3 (RIPEMD-160)"
@@ -107,11 +152,17 @@
         "expected_hex": "9b752e45573d4b39f4dbd3323cab82bf63326bfb",
         "id": "ripemd160-evpmd_ripemd-52",
         "input_hex": "3132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930",
+        "modes": [
+          "one"
+        ],
         "provenance": {
           "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
           "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_ripemd.txt",
           "form": "quoted-string",
           "line": 52,
+          "mirror_sha256": "dee31e0dd95b07c04e8dddebc6889c6cb41d9f4ce2906da36c2bb979046456da",
+          "primary_source": "ISO/IEC 10118-3 (RIPEMD-160); Bosselaers' RIPEMD-160 publication, test vectors",
           "title": "RIPEMD160 tests"
         },
         "standard": "ISO/IEC 10118-3 (RIPEMD-160)"

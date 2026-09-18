@@ -5,10 +5,13 @@
     "court": "CT-DIGEST",
     "digest_bytes": 20,
     "openssl_digest": "SHA1",
+    "primary_source": "FIPS 180-4; RFC 6234 §8.5",
     "provenance": {
       "authority": "openssl-3.6.4-production",
       "corpus": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_sha.txt",
-      "note": "Extracted from the pinned authority's own test data with `correctness_vectors.py --emit`; the bytes and the expected digest are verbatim from that file. A CT pass is not formal validation."
+      "corpus_sha256": "1cdaa355477300fd3c0ad453d2f6c13f528f3b127af83ff03dbfbf2bf33029c4",
+      "note": "Candidate-only construction verification: the primary source is named above, the bytes are mirrored through the pinned corpus (`corpus_sha256`), and the mirror's identity is fixed. This does NOT establish that the mirror is faithful to a primary source nobody in this repository has read. A CT pass is not formal validation. See D206.",
+      "primary_source": "FIPS 180-4; RFC 6234 §8.5"
     },
     "standard": "FIPS 180-4; RFC 6234 §8.5",
     "vectors": [
@@ -16,11 +19,17 @@
         "expected_hex": "a9993e364706816aba3e25717850c26c9cd0d89d",
         "id": "sha1-evpmd_sha-17",
         "input_hex": "616263",
+        "modes": [
+          "one"
+        ],
         "provenance": {
           "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
           "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_sha.txt",
           "form": "quoted-string",
           "line": 17,
+          "mirror_sha256": "1cdaa355477300fd3c0ad453d2f6c13f528f3b127af83ff03dbfbf2bf33029c4",
+          "primary_source": "FIPS 180-4; RFC 6234 §8.5",
           "title": "SHA tests from (RFC6234 section 8.5 and others)"
         },
         "standard": "FIPS 180-4; RFC 6234 §8.5"
@@ -29,11 +38,17 @@
         "expected_hex": "84983e441c3bd26ebaae4aa1f95129e5e54670f1",
         "id": "sha1-evpmd_sha-21",
         "input_hex": "6162636462636465636465666465666765666768666768696768696a68696a6b696a6b6c6a6b6c6d6b6c6d6e6c6d6e6f6d6e6f706e6f7071",
+        "modes": [
+          "one"
+        ],
         "provenance": {
           "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
           "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_sha.txt",
           "form": "quoted-string",
           "line": 21,
+          "mirror_sha256": "1cdaa355477300fd3c0ad453d2f6c13f528f3b127af83ff03dbfbf2bf33029c4",
+          "primary_source": "FIPS 180-4; RFC 6234 §8.5",
           "title": "SHA tests from (RFC6234 section 8.5 and others)"
         },
         "standard": "FIPS 180-4; RFC 6234 §8.5"

@@ -17,7 +17,19 @@
  *
  * and a call-file line is
  *
- *     <index>\t<algorithm>\t<input-hex>
+ *     <index>\t<algorithm>\t<mode>\t<input-hex>
+ *
+ * The **mode** is the update shape, and it is what makes the collector part of the check
+ * rather than only the compression function:
+ *
+ *     one        one `Update` over the whole input
+ *     two        two `Update`s, split at `len / 2`
+ *     byte       one `Update` per byte
+ *     count:<n>  the input repeated `n` times, one `Update` per copy
+ *
+ * Every mode must answer the same committed expected bytes. Self-consistency alone is not
+ * enough — three equally wrong splits agree with each other — so the tool compares each mode
+ * to the expected bytes, not to another mode's answer.
  *
  * `forensics/tools/correctness_vectors.py` owns the call file, the expected bytes and the
  * comparison. The probe only computes: it never compares and never decides a verdict, so a
@@ -42,7 +54,65 @@
 
 #define CT_MAX_INPUT (1u << 16)
 
-typedef int (*digest_fn)(const unsigned char *data, size_t len, unsigned char *out);
+/* Large enough for every context in the table below and aligned for any of them. */
+typedef union {
+    unsigned char bytes[512];
+    unsigned long long align;
+    void *ptr;
+} ct_ctx;
+
+typedef int (*ct_init_fn)(void *ctx);
+typedef int (*ct_update_fn)(void *ctx, const void *data, size_t len);
+typedef int (*ct_final_fn)(void *ctx, unsigned char *out);
+
+struct ct_algorithm {
+    const char *name;
+    ct_init_fn init;
+    ct_update_fn update;
+    ct_final_fn final;
+    size_t out_len;
+};
+
+#define CT_DEFINE(lc, CTX, INIT, UPDATE, FINAL)                                    \
+    static int lc##_init(void *c) { return INIT((CTX *)c); }                       \
+    static int lc##_update(void *c, const void *d, size_t n)                       \
+    {                                                                              \
+        return UPDATE((CTX *)c, d, n);                                             \
+    }                                                                              \
+    static int lc##_final(void *c, unsigned char *o) { return FINAL(o, (CTX *)c); }
+
+CT_DEFINE(md4, MD4_CTX, MD4_Init, MD4_Update, MD4_Final)
+CT_DEFINE(md5, MD5_CTX, MD5_Init, MD5_Update, MD5_Final)
+CT_DEFINE(ripemd160, RIPEMD160_CTX, RIPEMD160_Init, RIPEMD160_Update, RIPEMD160_Final)
+CT_DEFINE(sha1, SHA_CTX, SHA1_Init, SHA1_Update, SHA1_Final)
+CT_DEFINE(sha224, SHA256_CTX, SHA224_Init, SHA224_Update, SHA224_Final)
+CT_DEFINE(sha256, SHA256_CTX, SHA256_Init, SHA256_Update, SHA256_Final)
+CT_DEFINE(sha384, SHA512_CTX, SHA384_Init, SHA384_Update, SHA384_Final)
+CT_DEFINE(sha512, SHA512_CTX, SHA512_Init, SHA512_Update, SHA512_Final)
+CT_DEFINE(whirlpool, WHIRLPOOL_CTX, WHIRLPOOL_Init, WHIRLPOOL_Update, WHIRLPOOL_Final)
+
+static const struct ct_algorithm CT_ALGORITHMS[] = {
+    {"md4", md4_init, md4_update, md4_final, 16u},
+    {"md5", md5_init, md5_update, md5_final, 16u},
+    {"ripemd160", ripemd160_init, ripemd160_update, ripemd160_final, 20u},
+    {"sha1", sha1_init, sha1_update, sha1_final, 20u},
+    {"sha224", sha224_init, sha224_update, sha224_final, 28u},
+    {"sha256", sha256_init, sha256_update, sha256_final, 32u},
+    {"sha384", sha384_init, sha384_update, sha384_final, 48u},
+    {"sha512", sha512_init, sha512_update, sha512_final, 64u},
+    {"whirlpool", whirlpool_init, whirlpool_update, whirlpool_final, 64u},
+};
+
+static const struct ct_algorithm *ct_lookup(const char *name)
+{
+    size_t i;
+
+    for (i = 0; i < sizeof(CT_ALGORITHMS) / sizeof(CT_ALGORITHMS[0]); i++) {
+        if (strcmp(CT_ALGORITHMS[i].name, name) == 0)
+            return &CT_ALGORITHMS[i];
+    }
+    return NULL;
+}
 
 static int ct_hexval(int ch)
 {
@@ -75,87 +145,48 @@ static int ct_hexdecode(const char *hex, unsigned char *out, size_t *out_len)
     return 1;
 }
 
-static int ct_md4(const unsigned char *d, size_t n, unsigned char *o)
+/* Run one (algorithm, mode) call. Answers 0 only when an entry point refused. */
+static int ct_compute(const struct ct_algorithm *algo, const unsigned char *data,
+                      size_t len, const char *mode, unsigned char *out)
 {
-    MD4_CTX c;
-    return MD4_Init(&c) && MD4_Update(&c, d, n) && MD4_Final(o, &c);
-}
-
-static int ct_md5(const unsigned char *d, size_t n, unsigned char *o)
-{
-    MD5_CTX c;
-    return MD5_Init(&c) && MD5_Update(&c, d, n) && MD5_Final(o, &c);
-}
-
-static int ct_ripemd160(const unsigned char *d, size_t n, unsigned char *o)
-{
-    RIPEMD160_CTX c;
-    return RIPEMD160_Init(&c) && RIPEMD160_Update(&c, d, n) && RIPEMD160_Final(o, &c);
-}
-
-static int ct_sha1(const unsigned char *d, size_t n, unsigned char *o)
-{
-    SHA_CTX c;
-    return SHA1_Init(&c) && SHA1_Update(&c, d, n) && SHA1_Final(o, &c);
-}
-
-static int ct_sha224(const unsigned char *d, size_t n, unsigned char *o)
-{
-    SHA256_CTX c;
-    return SHA224_Init(&c) && SHA224_Update(&c, d, n) && SHA224_Final(o, &c);
-}
-
-static int ct_sha256(const unsigned char *d, size_t n, unsigned char *o)
-{
-    SHA256_CTX c;
-    return SHA256_Init(&c) && SHA256_Update(&c, d, n) && SHA256_Final(o, &c);
-}
-
-static int ct_sha384(const unsigned char *d, size_t n, unsigned char *o)
-{
-    SHA512_CTX c;
-    return SHA384_Init(&c) && SHA384_Update(&c, d, n) && SHA384_Final(o, &c);
-}
-
-static int ct_sha512(const unsigned char *d, size_t n, unsigned char *o)
-{
-    SHA512_CTX c;
-    return SHA512_Init(&c) && SHA512_Update(&c, d, n) && SHA512_Final(o, &c);
-}
-
-static int ct_whirlpool(const unsigned char *d, size_t n, unsigned char *o)
-{
-    WHIRLPOOL_CTX c;
-    return WHIRLPOOL_Init(&c) && WHIRLPOOL_Update(&c, d, n) && WHIRLPOOL_Final(o, &c);
-}
-
-struct ct_algorithm {
-    const char *name;
-    digest_fn fn;
-    size_t out_len;
-};
-
-static const struct ct_algorithm CT_ALGORITHMS[] = {
-    {"md4", ct_md4, 16u},
-    {"md5", ct_md5, 16u},
-    {"ripemd160", ct_ripemd160, 20u},
-    {"sha1", ct_sha1, 20u},
-    {"sha224", ct_sha224, 28u},
-    {"sha256", ct_sha256, 32u},
-    {"sha384", ct_sha384, 48u},
-    {"sha512", ct_sha512, 64u},
-    {"whirlpool", ct_whirlpool, 64u},
-};
-
-static const struct ct_algorithm *ct_lookup(const char *name)
-{
+    ct_ctx ctx;
     size_t i;
 
-    for (i = 0; i < sizeof(CT_ALGORITHMS) / sizeof(CT_ALGORITHMS[0]); i++) {
-        if (strcmp(CT_ALGORITHMS[i].name, name) == 0)
-            return &CT_ALGORITHMS[i];
+    if (strncmp(mode, "count:", 6) == 0 && mode[6] != '\0') {
+        unsigned long reps = strtoul(mode + 6, NULL, 10);
+        unsigned long r;
+
+        if (reps == 0)
+            return 0;
+        if (!algo->init(ctx.bytes))
+            return 0;
+        for (r = 0; r < reps; r++) {
+            if (!algo->update(ctx.bytes, data, len))
+                return 0;
+        }
+        return algo->final(ctx.bytes, out);
     }
-    return NULL;
+    if (strcmp(mode, "one") == 0) {
+        return algo->init(ctx.bytes) && algo->update(ctx.bytes, data, len)
+               && algo->final(ctx.bytes, out);
+    }
+    if (strcmp(mode, "two") == 0) {
+        size_t half = len / 2;
+
+        return algo->init(ctx.bytes) && algo->update(ctx.bytes, data, half)
+               && algo->update(ctx.bytes, data + half, len - half)
+               && algo->final(ctx.bytes, out);
+    }
+    if (strcmp(mode, "byte") == 0) {
+        if (!algo->init(ctx.bytes))
+            return 0;
+        for (i = 0; i < len; i++) {
+            if (!algo->update(ctx.bytes, data + i, 1))
+                return 0;
+        }
+        return algo->final(ctx.bytes, out);
+    }
+    return 0;
 }
 
 static void ct_print_hex(const unsigned char *bytes, size_t n)
@@ -173,7 +204,7 @@ int main(int argc, char **argv)
     unsigned char out[64];
     FILE *calls;
     const struct ct_algorithm *algo;
-    char *index, *name, *hex, *cursor;
+    char *index, *name, *mode, *hex, *cursor;
     size_t len;
 
     if (argc != 2) {
@@ -196,8 +227,9 @@ int main(int argc, char **argv)
         cursor = line;
         index = strsep(&cursor, "\t");
         name = strsep(&cursor, "\t");
+        mode = strsep(&cursor, "\t");
         hex = strsep(&cursor, "\t");
-        if (index == NULL || name == NULL || hex == NULL) {
+        if (index == NULL || name == NULL || mode == NULL || hex == NULL) {
             printf("%s\terr\tmalformed-call\n", index == NULL ? "?" : index);
             continue;
         }
@@ -212,7 +244,7 @@ int main(int argc, char **argv)
             continue;
         }
         memset(out, 0, sizeof(out));
-        if (!algo->fn(input, len, out)) {
+        if (!ct_compute(algo, input, len, mode, out)) {
             printf("%s\terr\tinit-update-final-failed\n", index);
             continue;
         }

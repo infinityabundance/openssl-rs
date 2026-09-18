@@ -28,22 +28,25 @@
             "digest_bytes": 16,
             "failed": 0,
             "passed": 7,
+            "primary_source": "RFC 1320 (MD4) §A.5",
             "source": "forensics/vectors/md4.json",
-            "standard": "RFC 1320 (MD4) §A.5",
+            "standard": "RFC 1320 (MD4)",
             "total": 7
           },
           "md5": {
             "digest_bytes": 16,
             "failed": 0,
             "passed": 7,
+            "primary_source": "RFC 1321 (MD5) §A.5",
             "source": "forensics/vectors/md5.json",
-            "standard": "RFC 1321 (MD5) §A.5",
+            "standard": "RFC 1321 (MD5)",
             "total": 7
           },
           "ripemd160": {
             "digest_bytes": 20,
             "failed": 0,
             "passed": 8,
+            "primary_source": "ISO/IEC 10118-3 (RIPEMD-160); Bosselaers' RIPEMD-160 publication, test vectors",
             "source": "forensics/vectors/ripemd160.json",
             "standard": "ISO/IEC 10118-3 (RIPEMD-160)",
             "total": 8
@@ -52,6 +55,7 @@
             "digest_bytes": 20,
             "failed": 0,
             "passed": 2,
+            "primary_source": "FIPS 180-4; RFC 6234 §8.5",
             "source": "forensics/vectors/sha1.json",
             "standard": "FIPS 180-4; RFC 6234 §8.5",
             "total": 2
@@ -60,6 +64,7 @@
             "digest_bytes": 28,
             "failed": 0,
             "passed": 2,
+            "primary_source": "FIPS 180-4; RFC 6234 §8.5",
             "source": "forensics/vectors/sha224.json",
             "standard": "FIPS 180-4; RFC 6234 §8.5",
             "total": 2
@@ -68,6 +73,7 @@
             "digest_bytes": 32,
             "failed": 0,
             "passed": 2,
+            "primary_source": "FIPS 180-4; RFC 6234 §8.5",
             "source": "forensics/vectors/sha256.json",
             "standard": "FIPS 180-4; RFC 6234 §8.5",
             "total": 2
@@ -76,6 +82,7 @@
             "digest_bytes": 48,
             "failed": 0,
             "passed": 2,
+            "primary_source": "FIPS 180-4; RFC 6234 §8.5",
             "source": "forensics/vectors/sha384.json",
             "standard": "FIPS 180-4; RFC 6234 §8.5",
             "total": 2
@@ -84,6 +91,7 @@
             "digest_bytes": 64,
             "failed": 0,
             "passed": 3,
+            "primary_source": "FIPS 180-4; RFC 6234 §8.5",
             "source": "forensics/vectors/sha512.json",
             "standard": "FIPS 180-4; RFC 6234 §8.5",
             "total": 3
@@ -92,12 +100,14 @@
             "digest_bytes": 64,
             "failed": 0,
             "passed": 8,
+            "primary_source": "ISO/IEC 10118-3 (Whirlpool); Rijmen–Barreto submission, test vectors",
             "source": "forensics/vectors/whirlpool.json",
             "standard": "ISO/IEC 10118-3 (Whirlpool)",
             "total": 8
           }
         },
         "authority": "openssl-3.6.4-production",
+        "calls_checked": 41,
         "candidate_shared_object": "artifacts/phase2/libcrypto.so.3",
         "claim": "A correctness-vector PASS means candidate-only construction verification: the candidate's construction produced the committed expected bytes for every vector and every update mode, where the vectors are standard-derived values mirrored in the pinned OpenSSL test corpus. It is NOT OpenSSL parity: the corpus does not contain the authority's observable behaviour, and that is RT-DIGEST's question. It is NOT independent cryptographic validation and NOT formal validation: the vectors are the standards' published values, and published test vectors are informal verification, not a certificate. NIST CAVP and Project Wycheproof are corpora this plane does NOT use; they are recorded as declined-with-reason in correctness_vectors.py's header. See docs/DECISIONS.md D201 and docs/PHASE-8-SUBPHASES.md.",
         "court": "CT-DIGEST",
@@ -112,6 +122,7 @@
             "expected_hex": "31d6cfe0d16ae931b73c59d7e0c089c0",
             "id": "md4-evpmd_md-49",
             "input_hex": "",
+            "mode": "one",
             "passed": true
           },
           {
@@ -120,6 +131,7 @@
             "expected_hex": "bde52cb31de33e46245e05fbdbd6fb24",
             "id": "md4-evpmd_md-54",
             "input_hex": "61",
+            "mode": "one",
             "passed": true
           },
           {
@@ -128,6 +140,7 @@
             "expected_hex": "a448017aaf21d8525fc10ae87aa6729d",
             "id": "md4-evpmd_md-59",
             "input_hex": "616263",
+            "mode": "one",
             "passed": true
           },
           {
@@ -136,6 +149,7 @@
             "expected_hex": "d9130a8164549fe818874806e1c7014b",
             "id": "md4-evpmd_md-64",
             "input_hex": "6d65737361676520646967657374",
+            "mode": "one",
             "passed": true
           },
           {
@@ -144,6 +158,7 @@
             "expected_hex": "d79e1c308aa5bbcdeea8ed63df412da9",
             "id": "md4-evpmd_md-69",
             "input_hex": "6162636465666768696a6b6c6d6e6f707172737475767778797a",
+            "mode": "one",
             "passed": true
           },
           {
@@ -152,6 +167,7 @@
             "expected_hex": "043f8582f241db351ce627e153e7f0e4",
             "id": "md4-evpmd_md-74",
             "input_hex": "4142434445464748494a4b4c4d4e4f505152535455565758595a6162636465666768696a6b6c6d6e6f707172737475767778797a30313233343536373839",
+            "mode": "one",
             "passed": true
           },
           {
@@ -160,6 +176,7 @@
             "expected_hex": "e33b4ddc9c38f2199c3e7b164fcc0536",
             "id": "md4-evpmd_md-79",
             "input_hex": "3132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930",
+            "mode": "one",
             "passed": true
           },
           {
@@ -168,6 +185,7 @@
             "expected_hex": "d41d8cd98f00b204e9800998ecf8427e",
             "id": "md5-evpmd_md-85",
             "input_hex": "",
+            "mode": "one",
             "passed": true
           },
           {
@@ -176,6 +194,7 @@
             "expected_hex": "0cc175b9c0f1b6a831c399e269772661",
             "id": "md5-evpmd_md-89",
             "input_hex": "61",
+            "mode": "one",
             "passed": true
           },
           {
@@ -184,6 +203,7 @@
             "expected_hex": "900150983cd24fb0d6963f7d28e17f72",
             "id": "md5-evpmd_md-93",
             "input_hex": "616263",
+            "mode": "one",
             "passed": true
           },
           {
@@ -192,6 +212,7 @@
             "expected_hex": "f96b697d7cb7938d525a2f31aaf161d0",
             "id": "md5-evpmd_md-97",
             "input_hex": "6d65737361676520646967657374",
+            "mode": "one",
             "passed": true
           },
           {
@@ -200,6 +221,7 @@
             "expected_hex": "c3fcd3d76192e4007dfb496cca67e13b",
             "id": "md5-evpmd_md-101",
             "input_hex": "6162636465666768696a6b6c6d6e6f707172737475767778797a",
+            "mode": "one",
             "passed": true
           },
           {
@@ -208,6 +230,7 @@
             "expected_hex": "d174ab98d277d9f5a5611c2c9f419d9f",
             "id": "md5-evpmd_md-105",
             "input_hex": "4142434445464748494a4b4c4d4e4f505152535455565758595a6162636465666768696a6b6c6d6e6f707172737475767778797a30313233343536373839",
+            "mode": "one",
             "passed": true
           },
           {
@@ -216,6 +239,7 @@
             "expected_hex": "57edf4a22be3c955ac49da2e2107b67a",
             "id": "md5-evpmd_md-109",
             "input_hex": "3132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930",
+            "mode": "one",
             "passed": true
           },
           {
@@ -224,6 +248,7 @@
             "expected_hex": "9c1185a5c5e9fc54612808977ee8f548b2258d31",
             "id": "ripemd160-evpmd_ripemd-17",
             "input_hex": "",
+            "mode": "one",
             "passed": true
           },
           {
@@ -232,6 +257,7 @@
             "expected_hex": "0bdc9d2d256b3ee9daae347be6f4dc835a467ffe",
             "id": "ripemd160-evpmd_ripemd-22",
             "input_hex": "61",
+            "mode": "one",
             "passed": true
           },
           {
@@ -240,6 +266,7 @@
             "expected_hex": "8eb208f7e05d987a9b044a8e98c6b087f15a0bfc",
             "id": "ripemd160-evpmd_ripemd-27",
             "input_hex": "616263",
+            "mode": "one",
             "passed": true
           },
           {
@@ -248,6 +275,7 @@
             "expected_hex": "5d0689ef49d2fae572b881b123a85ffa21595f36",
             "id": "ripemd160-evpmd_ripemd-32",
             "input_hex": "6d65737361676520646967657374",
+            "mode": "one",
             "passed": true
           },
           {
@@ -256,6 +284,7 @@
             "expected_hex": "f71c27109c692c1b56bbdceb5b9d2865b3708dbc",
             "id": "ripemd160-evpmd_ripemd-37",
             "input_hex": "6162636465666768696a6b6c6d6e6f707172737475767778797a",
+            "mode": "one",
             "passed": true
           },
           {
@@ -264,6 +293,7 @@
             "expected_hex": "12a053384a9c0c88e405a06c27dcf49ada62eb2b",
             "id": "ripemd160-evpmd_ripemd-42",
             "input_hex": "6162636462636465636465666465666765666768666768696768696a68696a6b696a6b6c6a6b6c6d6b6c6d6e6c6d6e6f6d6e6f706e6f7071",
+            "mode": "one",
             "passed": true
           },
           {
@@ -272,6 +302,7 @@
             "expected_hex": "b0e20b6e3116640286ed3a87a5713079b21f5189",
             "id": "ripemd160-evpmd_ripemd-47",
             "input_hex": "4142434445464748494a4b4c4d4e4f505152535455565758595a6162636465666768696a6b6c6d6e6f707172737475767778797a30313233343536373839",
+            "mode": "one",
             "passed": true
           },
           {
@@ -280,6 +311,7 @@
             "expected_hex": "9b752e45573d4b39f4dbd3323cab82bf63326bfb",
             "id": "ripemd160-evpmd_ripemd-52",
             "input_hex": "3132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930",
+            "mode": "one",
             "passed": true
           },
           {
@@ -288,6 +320,7 @@
             "expected_hex": "a9993e364706816aba3e25717850c26c9cd0d89d",
             "id": "sha1-evpmd_sha-17",
             "input_hex": "616263",
+            "mode": "one",
             "passed": true
           },
           {
@@ -296,6 +329,7 @@
             "expected_hex": "84983e441c3bd26ebaae4aa1f95129e5e54670f1",
             "id": "sha1-evpmd_sha-21",
             "input_hex": "6162636462636465636465666465666765666768666768696768696a68696a6b696a6b6c6a6b6c6d6b6c6d6e6c6d6e6f6d6e6f706e6f7071",
+            "mode": "one",
             "passed": true
           },
           {
@@ -304,6 +338,7 @@
             "expected_hex": "23097d223405d8228642a477bda255b32aadbce4bda0b3f7e36c9da7",
             "id": "sha224-evpmd_sha-31",
             "input_hex": "616263",
+            "mode": "one",
             "passed": true
           },
           {
@@ -312,6 +347,7 @@
             "expected_hex": "75388b16512776cc5dba5da1fd890150b0c6455cb4f58b1952522525",
             "id": "sha224-evpmd_sha-35",
             "input_hex": "6162636462636465636465666465666765666768666768696768696a68696a6b696a6b6c6a6b6c6d6b6c6d6e6c6d6e6f6d6e6f706e6f7071",
+            "mode": "one",
             "passed": true
           },
           {
@@ -320,6 +356,7 @@
             "expected_hex": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
             "id": "sha256-evpmd_sha-45",
             "input_hex": "616263",
+            "mode": "one",
             "passed": true
           },
           {
@@ -328,6 +365,7 @@
             "expected_hex": "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1",
             "id": "sha256-evpmd_sha-49",
             "input_hex": "6162636462636465636465666465666765666768666768696768696a68696a6b696a6b6c6a6b6c6d6b6c6d6e6c6d6e6f6d6e6f706e6f7071",
+            "mode": "one",
             "passed": true
           },
           {
@@ -336,6 +374,7 @@
             "expected_hex": "cb00753f45a35e8bb5a03d699ac65007272c32ab0eded1631a8b605a43ff5bed8086072ba1e7cc2358baeca134c825a7",
             "id": "sha384-evpmd_sha-80",
             "input_hex": "616263",
+            "mode": "one",
             "passed": true
           },
           {
@@ -344,6 +383,7 @@
             "expected_hex": "09330c33f71147e83d192fc782cd1b4753111b173b3b05d22fa08086e3b0f712fcc7c71a557e2db966c3e9fa91746039",
             "id": "sha384-evpmd_sha-84",
             "input_hex": "61626364656667686263646566676869636465666768696a6465666768696a6b65666768696a6b6c666768696a6b6c6d6768696a6b6c6d6e68696a6b6c6d6e6f696a6b6c6d6e6f706a6b6c6d6e6f70716b6c6d6e6f7071726c6d6e6f707172736d6e6f70717273746e6f707172737475",
+            "mode": "one",
             "passed": true
           },
           {
@@ -352,6 +392,7 @@
             "expected_hex": "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f",
             "id": "sha512-evpmd_sha-94",
             "input_hex": "616263",
+            "mode": "one",
             "passed": true
           },
           {
@@ -360,6 +401,7 @@
             "expected_hex": "8e959b75dae313da8cf4f72814fc143f8f7779c6eb9f7fa17299aeadb6889018501d289e4900f7e4331b99dec4b5433ac7d329eeb6dd26545e96e55b874be909",
             "id": "sha512-evpmd_sha-98",
             "input_hex": "61626364656667686263646566676869636465666768696a6465666768696a6b65666768696a6b6c666768696a6b6c6d6768696a6b6c6d6e68696a6b6c6d6e6f696a6b6c6d6e6f706a6b6c6d6e6f70716b6c6d6e6f7071726c6d6e6f707172736d6e6f70717273746e6f707172737475",
+            "mode": "one",
             "passed": true
           },
           {
@@ -368,6 +410,7 @@
             "expected_hex": "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f",
             "id": "sha512-evpmd_sha-395",
             "input_hex": "616263",
+            "mode": "one",
             "passed": true
           },
           {
@@ -376,6 +419,7 @@
             "expected_hex": "19fa61d75522a4669b44e39c1d2e1726c530232130d407f89afee0964997f7a73e83be698b288febcf88e3e03c4f0757ea8964e59b63d93708b138cc42a66eb3",
             "id": "whirlpool-evpmd_whirlpool-17",
             "input_hex": "",
+            "mode": "one",
             "passed": true
           },
           {
@@ -384,6 +428,7 @@
             "expected_hex": "8aca2602792aec6f11a67206531fb7d7f0dff59413145e6973c45001d0087b42d11bc645413aeff63a42391a39145a591a92200d560195e53b478584fdae231a",
             "id": "whirlpool-evpmd_whirlpool-22",
             "input_hex": "61",
+            "mode": "one",
             "passed": true
           },
           {
@@ -392,6 +437,7 @@
             "expected_hex": "4e2448a4c6f486bb16b6562c73b4020bf3043e3a731bce721ae1b303d97e6d4c7181eebdb6c57e277d0e34957114cbd6c797fc9d95d8b582d225292076d4eef5",
             "id": "whirlpool-evpmd_whirlpool-27",
             "input_hex": "616263",
+            "mode": "one",
             "passed": true
           },
           {
@@ -400,6 +446,7 @@
             "expected_hex": "378c84a4126e2dc6e56dcc7458377aac838d00032230f53ce1f5700c0ffb4d3b8421557659ef55c106b4b52ac5a4aaa692ed920052838f3362e86dbd37a8903e",
             "id": "whirlpool-evpmd_whirlpool-32",
             "input_hex": "6d65737361676520646967657374",
+            "mode": "one",
             "passed": true
           },
           {
@@ -408,6 +455,7 @@
             "expected_hex": "f1d754662636ffe92c82ebb9212a484a8d38631ead4238f5442ee13b8054e41b08bf2a9251c30b6a0b8aae86177ab4a6f68f673e7207865d5d9819a3dba4eb3b",
             "id": "whirlpool-evpmd_whirlpool-37",
             "input_hex": "6162636465666768696a6b6c6d6e6f707172737475767778797a",
+            "mode": "one",
             "passed": true
           },
           {
@@ -416,6 +464,7 @@
             "expected_hex": "dc37e008cf9ee69bf11f00ed9aba26901dd7c28cdec066cc6af42e40f82f3a1e08eba26629129d8fb7cb57211b9281a65517cc879d7b962142c65f5a7af01467",
             "id": "whirlpool-evpmd_whirlpool-42",
             "input_hex": "4142434445464748494a4b4c4d4e4f505152535455565758595a6162636465666768696a6b6c6d6e6f707172737475767778797a30313233343536373839",
+            "mode": "one",
             "passed": true
           },
           {
@@ -424,6 +473,7 @@
             "expected_hex": "466ef18babb0154d25b9d38a6414f5c08784372bccb204d6549c4afadb6014294d5bd8df2a6c44e538cd047b2681a51a2c60481e88c5a20b2c2a80cf3a9a083b",
             "id": "whirlpool-evpmd_whirlpool-47",
             "input_hex": "3132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930",
+            "mode": "one",
             "passed": true
           },
           {
@@ -432,6 +482,7 @@
             "expected_hex": "2a987ea40f917061f5d6f0a0e4644f488a7a5a52deee656207c562f988e95c6916bdc8031bc5be1b7b947639fe050b56939baaa0adff9ae6745b7b181c3be3fd",
             "id": "whirlpool-evpmd_whirlpool-52",
             "input_hex": "6162636462636465636465666465666765666768666768696768696a68696a6b",
+            "mode": "one",
             "passed": true
           }
         ],
@@ -463,52 +514,52 @@
     {
       "name": "correctness-probe",
       "path": "courts/phase8/ct_digest.c",
-      "sha256": "ba9aa0c2a09dd066b3ae63957b622b4ba734cfe0528bd03f4356725d2020b90c"
+      "sha256": "aa4f241b41ebfd071a359115dad5dfbdfc67b6dbb70209c4235bc644f610c255"
     },
     {
       "name": "correctness-vectors:md4",
       "path": "forensics/vectors/md4.json",
-      "sha256": "0fafbe43b0fc562d82cbbadfb8c3280df1b51fbb44d5fbaa91c52b0cf743de21"
+      "sha256": "1f93fd6ab5cc2be615ec2e6a6b9baed79bf794c1e9d13b1faff36704a72bb0a9"
     },
     {
       "name": "correctness-vectors:md5",
       "path": "forensics/vectors/md5.json",
-      "sha256": "b7d17db9b16f14533e9ee46867167b2f951337b3e78a1ea39f9c9c7cb51afee6"
+      "sha256": "3991b82f680b9d2d4a57c2a1bcab66741bd8f95aad7f5def4632e49009f3e9ab"
     },
     {
       "name": "correctness-vectors:ripemd160",
       "path": "forensics/vectors/ripemd160.json",
-      "sha256": "1b1575e4d6e5203ec47d0ad1a75976790caff928db8b53175e96efa879a8ad4c"
+      "sha256": "1a0b119bd18872841fb21162ea3b06071c2a3fc85501f80627b236dd76e14e6a"
     },
     {
       "name": "correctness-vectors:sha1",
       "path": "forensics/vectors/sha1.json",
-      "sha256": "515d0e321d7aa6994b98fcea64c89d3fd09c0ef970b3be6a8adad39e3d453a8c"
+      "sha256": "72272b276b484f8c400fbb887ffc6160f22ae6009ea7c012fe2abab2e740ff7e"
     },
     {
       "name": "correctness-vectors:sha224",
       "path": "forensics/vectors/sha224.json",
-      "sha256": "ff36dd315ae14dcd8d7ed7ef00e212d236bf2b53f48218e8b713d71f25f9953a"
+      "sha256": "4a0ab6a1fdee8cb6edac0a1f5614f7f551c1e4bef7336118ee469cee17c9c509"
     },
     {
       "name": "correctness-vectors:sha256",
       "path": "forensics/vectors/sha256.json",
-      "sha256": "a294d46fbd6323a16940e2330a39fd739e785f3c823dd268bcde2f450362023f"
+      "sha256": "4c5c09ee450c31349461964640338e15908369a965a82b61eb6ba25285e1dd98"
     },
     {
       "name": "correctness-vectors:sha384",
       "path": "forensics/vectors/sha384.json",
-      "sha256": "209e50e05c827d60656499343c9dfea4044fce685805c83351a2a21a17490769"
+      "sha256": "8710cb1a8847a13adc437a6cf1501016b6b03df744e3a21f1ebaced520442375"
     },
     {
       "name": "correctness-vectors:sha512",
       "path": "forensics/vectors/sha512.json",
-      "sha256": "9e57403ab7ead597beae037f6491c318c3a51dc146d75fba5af26e451d147226"
+      "sha256": "d520e28ae759f771dfc01fa272d80d225648e66697cc681dd7405fb84c903226"
     },
     {
       "name": "correctness-vectors:whirlpool",
       "path": "forensics/vectors/whirlpool.json",
-      "sha256": "19510b0f1576b717f42441a259efc084f20cdf965138c7f24a442bf756695d02"
+      "sha256": "45152b46d38dfbcfaea4b0a5f2459ed4852683a6fdaef17d00ee68698c120d78"
     }
   ],
   "kind": "phase8-courts",
