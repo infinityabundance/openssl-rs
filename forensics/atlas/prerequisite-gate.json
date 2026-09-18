@@ -30,7 +30,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 56,
-      "language_surface_not_modelled_by_name": 3124,
+      "language_surface_not_modelled_by_name": 3122,
       "planned_prerequisites": 14
     },
     "census_by_unit": {
@@ -161,10 +161,10 @@
         "crypto/evp/bio_enc.c": 14,
         "crypto/evp/cmeth_lib.c": 6,
         "crypto/evp/encode.c": 6,
-        "crypto/evp/evp_enc.c": 52,
+        "crypto/evp/evp_enc.c": 51,
         "crypto/evp/evp_fetch.c": 19,
         "crypto/evp/evp_key.c": 14,
-        "crypto/evp/evp_lib.c": 28,
+        "crypto/evp/evp_lib.c": 27,
         "crypto/evp/evp_pbe.c": 23,
         "crypto/evp/evp_rand.c": 33,
         "crypto/evp/exchange.c": 22,
@@ -477,7 +477,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "226394539135513efb0907be1c00ba35debd4609648eb5f8b749e6b0c6495c13",
+  "body_hash": "0d68dda14db6ccacbe269c9a7e2c458b1f12a198fe3f58d3ba36c6b4516c45e9",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -513,7 +513,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "b6a9de8dcbf3c44587a931575cd10ad621f25c4988b54a682967134a56c53ad1"
+      "sha256": "c335744088ce51d7bacffb41924d6b7878f516f64cb14e9235634329216b1d3a"
     },
     {
       "name": "phase-state",
