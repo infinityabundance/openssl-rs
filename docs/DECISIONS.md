@@ -15504,3 +15504,100 @@ AES/Camellia CBC-CTS rows, the two AES-XTS rows, the three AES-OCB rows, the twe
 rows, Camellia (21) and 3DES (10). `implemented[libcrypto]` stays **2035** and Phase 8 stays
 **194/576/16**, and neither `RT-CIPHER` nor `CT-CIPHER` moves, because this entry lands no code.
 The two anchored status clauses in `docs/PHASE-8-SUBPHASES.md` do not move either.
+
+## D235 — the provider cipher and digest failure arms queue the authority's error, and `RT-CIPHER`/`RT-DIGEST` drain the queue (the `ERROR_PASS` hole)
+
+`src/provider/cipher.rs` carried one hundred and forty `fail()` arms and its helper returned bare
+`0`. The authority's provider rows do not: the same refusals raise a specific `PROV_R_*` error at a
+specific coordinate, and `docs/PARITY_MODEL.md` §3.5 makes `ERR` queue state, ordering,
+library/reason information and additional error data part of the contract. `RT-CIPHER` never drained
+the queue, so `authority: return 0 + error queued` and `candidate: return 0 + nothing` compared
+**equal**. That is a candidate suppressing an observable side effect and it is fixed here, in both
+provider halves, with the court extended so it cannot recur silently.
+
+**The coordinates are generated, not typed.** `forensics/tools/gen_err_raise_sites.py` gains the ten
+provider translation units the 8.1–8.3 rows actually raise from: `ciphercommon.c` (81 sites),
+`cipher_aes_ocb.c` (25), `cipher_aes_wrp.c` (9), `cipher_aes_xts.c` (6), `ciphercommon_block.c` (4),
+`cipher_null.c` (4), `cipher_tdes_common.c` (3), `cipher_aes_hw.c` (1), `cipher_camellia_hw.c` (1)
+and `digests/digestcommon.c` (8) — one hundred and forty-two new sites, taking the table from 1686 to
+1828. Every `PROV_R_*` reason they name was already in `src/runtime/err_reasons.rs` (the whole
+`proverr.h` table is generated); what was missing was the **site** table, and `ERR_LIB_PROV`'s value
+(57) is now reached through it. Two generator defects had to be fixed for the coordinates to be the
+authority's rather than a plausible spelling, and both are recorded because each would have produced
+confident wrong evidence:
+
+  * `ciphercommon.c` and `digestcommon.c` are **build-generated** from `.c.in` templates, and the
+    compiler spells them with only their build-relative path — `providers/.../ciphercommon.c`, with
+    **no** `../../src/openssl-3.6.4/` prefix, while `ciphercommon_block.c` next to it has one. The
+    generator now resolves each covered unit from whichever tree actually holds it and derives the
+    `__FILE__` from that, rather than prefixing every `rel_source` uniformly.
+  * `produce_param_decoder` emits `static int NAME` on one line and `(const OSSL_PARAM *p, ...)` on
+    the next, so single-line function attribution found no enclosing function for the whole decoder
+    and the generator refused the file. `definition_name_joined` joins exactly one continuation line;
+    without it the ten `PROV_R_REPEATED_PARAMETER` sites in `ciphercommon.c` and the four in
+    `digestcommon.c` have no `OPENSSL_FUNC` at all.
+
+`mdc2_prov.c` was added and then **removed**: its `mdc2_set_ctx_params` raises at `:51`, but MDC2 is
+a **legacy** provider row (`providers/legacyprov.c:95`, beside MD4 at `:92` and WHIRLPOOL at `:98`),
+so no unit this crate transcribes reaches it. That is D206's per-row rule applied one level down, to
+provider files rather than to names, and the file joins the covered set in the legacy provider's
+stratum.
+
+**What the crate now raises, and at which of the authority's lines.** `fail()` is kept for the arms
+whose authority counterpart returns `0` without raising — the propagation arms (an inner function
+already queued the error), the `ossl_prov_is_running` refusals, and the arms reached only through a
+`NULL` function pointer — and `fail_at(&err_sites::…)/raise_prov(…)` carries the rest: 92 call sites
+across `src/provider/cipher.rs` and 8 in `src/provider/digest.rs`. Every one was read from the
+authority, and the review's six named paths do not all raise what a reasonable guess would pick:
+
+| Path | Authority's actual answer | Plausible guess |
+|---|---|---|
+| invalid key length | `PROV_R_INVALID_KEY_LENGTH` (105) at `ciphercommon.c:719` in `cipher_generic_init_internal` | right reason, but the line is the **generated** file's, not `.c.in:229`; and the path is unreachable through EVP |
+| no-key update | `PROV_R_NO_KEY_SET` (114) at `ciphercommon.c:783` in `ossl_cipher_generic_block_update` | as guessed |
+| output buffer too small | `PROV_R_OUTPUT_BUFFER_TOO_SMALL` (106) at `ciphercommon.c:896` in the `outsize < outlint` arm | the `outsize < blksz` arm at `:875`; same reason, different line |
+| bad padding | `PROV_R_BAD_DECRYPT` (100) at `ciphercommon_block.c:107` in `ossl_cipher_unpadblock` | as guessed; the `len != blocksize` guard at `:97` is `ERR_R_INTERNAL_ERROR` |
+| XTS duplicated keys | `PROV_R_XTS_DUPLICATED_KEYS` (149) at `cipher_aes_xts.c:59` **in the helper** `aes_xts_check_keys_differ` | `aes_xts_init`'s call site at `:93` |
+| XTS short input | `PROV_R_CIPHER_OPERATION_FAILED` (102) at `cipher_aes_xts.c:228` in `aes_xts_stream_update` | `PROV_R_INVALID_INPUT_LENGTH` or `…_XTS_DATA_UNIT_IS_TOO_LARGE`; the short-input guard in `aes_xts_cipher` (`:192`) raises **nothing** and the wrapper's catch-all names it |
+
+Two further authority behaviours came out of the same reading and would each have been a silent
+divergence under the old court:
+
+  * `aes_wrap_cipher` stores `aes_wrap_cipher_internal`'s `int` in a **`size_t len`**, so the
+    helper's `-1` refusals become `SIZE_MAX`, `len <= 0` is false, and the row answers **success**
+    with `*outl = 18446744073709551615` while the error sits in the queue. The `wrapinlen`
+    observation records both the return code and the oversized length, and the crate reproduces the
+    wrapping rather than "fixing" it: through `EVP_CipherUpdate` the oversized length is what
+    produces `EVP_R_UPDATE_ERROR`, which is the authority's own downstream observable.
+  * `null_cipher`'s `outsize < inl` returns `0` with **no** raise; the `nullsmall` observation pins
+    the empty queue as a positive fact rather than an untested assumption.
+  * The generated decoders' repeated-key refusal (`PROV_R_REPEATED_PARAMETER`, 252) is real and
+    observable: the crate hand-writes the locate-each-key form, so it now scans for a repeated key
+    among the keys each decoder knows and raises at that **decoder's** coordinate. The
+    `dupparams`/`dupsize` observations exercise it.
+
+**The digest half had the same hole.** `src/provider/digest.rs`'s `ossl_digest_default_get_params`
+returned a single bare `0` for the four `PROV_R_FAILED_TO_SET_PARAMETER` arms and did not run the
+generated decoder at all. Both are landed, and the digest probe gained a dispatch arm; its
+`badbsize` observation is a two-entry queue — `crypto/params.c:1010`'s `OSSL_PARAM_set_uint64`
+refusal followed by `digestcommon.c:111` — which is exactly the ordering the model's `ERROR_PASS`
+names.
+
+**The courts hold the relation.** `RT-CIPHER` gains two arms: `rt_deflt_errors()` reaches four of
+the six paths through `EVP_*`, and `rt_disp_failures()` drives the default provider's own
+`OSSL_DISPATCH` through `OSSL_PROVIDER_query_operation` — the surface those errors belong to — for
+all six, because `EVP_EncryptInit_ex` derives the key length from the fetched cipher and the
+provider's `outsize` from `inl + blocksize` and therefore cannot reach two of them at all. Each
+scenario clears the queue, records the return code, and drains the queue as
+`lib:reason:file:line:func` plus a count, so a side that raises nothing is a difference and not a
+silence. `RT-DIGEST` gains `rt_disp_errors()`. `RT-CIPHER`'s observation count in
+`artifacts/phase8/COURTS.json` moves from 890 to **959** and `RT-DIGEST`'s from 294 to **305**, on
+both sides; `CT-CIPHER` (3083 vectors) and `CT-DIGEST` (272) do not move, because this entry lands
+no construction. `implemented[libcrypto]` stays **2035**, Phase 8 stays **194/576/16**, and the two
+anchored status clauses in `docs/PHASE-8-SUBPHASES.md` do not move.
+
+**One class is deliberately left out of the raised set and named rather than implied.** The TLS-arm
+refusals of `ossl_cipher_generic_block_update` (`ciphercommon.c:798-856`) are `PROV_R_CIPHER_OPERATION_FAILED`
+in the authority, but that whole arm is untranscribed here (the module doc's "TLS-record arm"), so
+the crate's refusal at that guard is a standing divergence rather than a missing raise. It is
+reachable only by a caller that sets `tls-version` on a landed row, and closing it is the work of
+the subphase that transcribes the arm, not of this repair.

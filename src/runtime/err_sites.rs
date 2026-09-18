@@ -16892,6 +16892,1426 @@ pub(crate) const PEM_PK8_258: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ossl_cipher_generic_get_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:80` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_80: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 80,
+    func: c"ossl_cipher_generic_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:91` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_91: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 91,
+    func: c"ossl_cipher_generic_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:106` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_106: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 106,
+    func: c"ossl_cipher_generic_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:117` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_117: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 117,
+    func: c"ossl_cipher_generic_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:129` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_129: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 129,
+    func: c"ossl_cipher_generic_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:140` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_140: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 140,
+    func: c"ossl_cipher_generic_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:151` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_151: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 151,
+    func: c"ossl_cipher_generic_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:162` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_162: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 162,
+    func: c"ossl_cipher_generic_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:173` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_173: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 173,
+    func: c"ossl_cipher_generic_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:184` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_184: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 184,
+    func: c"ossl_cipher_generic_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params` at `providers/implementations/ciphers/ciphercommon.c:212` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_212: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 212,
+    func: c"ossl_cipher_generic_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params` at `providers/implementations/ciphers/ciphercommon.c:217` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_217: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 217,
+    func: c"ossl_cipher_generic_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params` at `providers/implementations/ciphers/ciphercommon.c:222` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_222: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 222,
+    func: c"ossl_cipher_generic_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params` at `providers/implementations/ciphers/ciphercommon.c:227` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_227: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 227,
+    func: c"ossl_cipher_generic_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params` at `providers/implementations/ciphers/ciphercommon.c:232` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_232: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 232,
+    func: c"ossl_cipher_generic_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params` at `providers/implementations/ciphers/ciphercommon.c:237` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_237: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 237,
+    func: c"ossl_cipher_generic_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params` at `providers/implementations/ciphers/ciphercommon.c:242` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_242: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 242,
+    func: c"ossl_cipher_generic_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params` at `providers/implementations/ciphers/ciphercommon.c:246` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_246: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 246,
+    func: c"ossl_cipher_generic_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params` at `providers/implementations/ciphers/ciphercommon.c:250` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_250: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 250,
+    func: c"ossl_cipher_generic_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_get_params` at `providers/implementations/ciphers/ciphercommon.c:254` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_254: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 254,
+    func: c"ossl_cipher_generic_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `cipher_generic_get_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:313` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_313: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 313,
+    func: c"cipher_generic_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_generic_get_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:322` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_322: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 322,
+    func: c"cipher_generic_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_generic_get_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:334` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_334: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 334,
+    func: c"cipher_generic_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_generic_get_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:345` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_345: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 345,
+    func: c"cipher_generic_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_generic_get_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:356` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_356: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 356,
+    func: c"cipher_generic_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_generic_get_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:367` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_367: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 367,
+    func: c"cipher_generic_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_generic_get_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:378` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_378: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 378,
+    func: c"cipher_generic_get_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_generic_set_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:437` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_437: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 437,
+    func: c"cipher_generic_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_generic_set_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:448` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_448: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 448,
+    func: c"cipher_generic_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_generic_set_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:475` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_475: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 475,
+    func: c"cipher_generic_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_generic_set_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:486` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_486: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 486,
+    func: c"cipher_generic_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_generic_set_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:501` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_501: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 501,
+    func: c"cipher_generic_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_var_keylen_set_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:565` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_565: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 565,
+    func: c"cipher_var_keylen_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_var_keylen_set_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:576` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_576: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 576,
+    func: c"cipher_var_keylen_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_var_keylen_set_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:587` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_587: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 587,
+    func: c"cipher_var_keylen_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_var_keylen_set_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:614` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_614: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 614,
+    func: c"cipher_var_keylen_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_var_keylen_set_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:625` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_625: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 625,
+    func: c"cipher_var_keylen_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `cipher_var_keylen_set_ctx_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:640` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_640: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 640,
+    func: c"cipher_var_keylen_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_var_keylen_set_ctx_params` at `providers/implementations/ciphers/ciphercommon.c:672` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_672: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 672,
+    func: c"ossl_cipher_var_keylen_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `cipher_generic_init_internal` at `providers/implementations/ciphers/ciphercommon.c:719` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_CIPHERCOMMON_719: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 719,
+    func: c"cipher_generic_init_internal",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_update` at `providers/implementations/ciphers/ciphercommon.c:783` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_CIPHERCOMMON_783: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 783,
+    func: c"ossl_cipher_generic_block_update",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_update` at `providers/implementations/ciphers/ciphercommon.c:798` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHERCOMMON_798: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 798,
+    func: c"ossl_cipher_generic_block_update",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_update` at `providers/implementations/ciphers/ciphercommon.c:811` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHERCOMMON_811: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 811,
+    func: c"ossl_cipher_generic_block_update",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_update` at `providers/implementations/ciphers/ciphercommon.c:816` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHERCOMMON_816: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 816,
+    func: c"ossl_cipher_generic_block_update",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_update` at `providers/implementations/ciphers/ciphercommon.c:833` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHERCOMMON_833: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 833,
+    func: c"ossl_cipher_generic_block_update",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_update` at `providers/implementations/ciphers/ciphercommon.c:839` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHERCOMMON_839: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 839,
+    func: c"ossl_cipher_generic_block_update",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_update` at `providers/implementations/ciphers/ciphercommon.c:856` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHERCOMMON_856: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 856,
+    func: c"ossl_cipher_generic_block_update",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_update` at `providers/implementations/ciphers/ciphercommon.c:875` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHERCOMMON_875: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 875,
+    func: c"ossl_cipher_generic_block_update",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_update` at `providers/implementations/ciphers/ciphercommon.c:879` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHERCOMMON_879: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 879,
+    func: c"ossl_cipher_generic_block_update",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_update` at `providers/implementations/ciphers/ciphercommon.c:889` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHERCOMMON_889: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 889,
+    func: c"ossl_cipher_generic_block_update",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_update` at `providers/implementations/ciphers/ciphercommon.c:896` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHERCOMMON_896: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 896,
+    func: c"ossl_cipher_generic_block_update",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_update` at `providers/implementations/ciphers/ciphercommon.c:902` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHERCOMMON_902: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 902,
+    func: c"ossl_cipher_generic_block_update",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_final` at `providers/implementations/ciphers/ciphercommon.c:928` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_CIPHERCOMMON_928: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 928,
+    func: c"ossl_cipher_generic_block_final",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_final` at `providers/implementations/ciphers/ciphercommon.c:934` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHERCOMMON_934: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 934,
+    func: c"ossl_cipher_generic_block_final",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_final` at `providers/implementations/ciphers/ciphercommon.c:945` (PROV_R_WRONG_FINAL_BLOCK_LENGTH).
+pub(crate) const PROV_CIPHERCOMMON_945: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 945,
+    func: c"ossl_cipher_generic_block_final",
+    lib: 57,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_final` at `providers/implementations/ciphers/ciphercommon.c:950` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHERCOMMON_950: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 950,
+    func: c"ossl_cipher_generic_block_final",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_final` at `providers/implementations/ciphers/ciphercommon.c:954` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHERCOMMON_954: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 954,
+    func: c"ossl_cipher_generic_block_final",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_final` at `providers/implementations/ciphers/ciphercommon.c:968` (PROV_R_WRONG_FINAL_BLOCK_LENGTH).
+pub(crate) const PROV_CIPHERCOMMON_968: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 968,
+    func: c"ossl_cipher_generic_block_final",
+    lib: 57,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_final` at `providers/implementations/ciphers/ciphercommon.c:973` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHERCOMMON_973: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 973,
+    func: c"ossl_cipher_generic_block_final",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_block_final` at `providers/implementations/ciphers/ciphercommon.c:983` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHERCOMMON_983: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 983,
+    func: c"ossl_cipher_generic_block_final",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_stream_update` at `providers/implementations/ciphers/ciphercommon.c:999` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_CIPHERCOMMON_999: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 999,
+    func: c"ossl_cipher_generic_stream_update",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_stream_update` at `providers/implementations/ciphers/ciphercommon.c:1009` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHERCOMMON_1009: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1009,
+    func: c"ossl_cipher_generic_stream_update",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_stream_update` at `providers/implementations/ciphers/ciphercommon.c:1014` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHERCOMMON_1014: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1014,
+    func: c"ossl_cipher_generic_stream_update",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_stream_final` at `providers/implementations/ciphers/ciphercommon.c:1063` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_CIPHERCOMMON_1063: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1063,
+    func: c"ossl_cipher_generic_stream_final",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_cipher` at `providers/implementations/ciphers/ciphercommon.c:1081` (PROV_R_NO_KEY_SET).
+pub(crate) const PROV_CIPHERCOMMON_1081: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1081,
+    func: c"ossl_cipher_generic_cipher",
+    lib: 57,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_cipher` at `providers/implementations/ciphers/ciphercommon.c:1086` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHERCOMMON_1086: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1086,
+    func: c"ossl_cipher_generic_cipher",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_cipher` at `providers/implementations/ciphers/ciphercommon.c:1091` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHERCOMMON_1091: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1091,
+    func: c"ossl_cipher_generic_cipher",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_common_get_ctx_params` at `providers/implementations/ciphers/ciphercommon.c:1102` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_1102: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1102,
+    func: c"ossl_cipher_common_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_common_get_ctx_params` at `providers/implementations/ciphers/ciphercommon.c:1107` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_1107: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1107,
+    func: c"ossl_cipher_common_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_common_get_ctx_params` at `providers/implementations/ciphers/ciphercommon.c:1113` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_1113: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1113,
+    func: c"ossl_cipher_common_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_common_get_ctx_params` at `providers/implementations/ciphers/ciphercommon.c:1119` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_1119: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1119,
+    func: c"ossl_cipher_common_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_common_get_ctx_params` at `providers/implementations/ciphers/ciphercommon.c:1124` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_1124: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1124,
+    func: c"ossl_cipher_common_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_common_get_ctx_params` at `providers/implementations/ciphers/ciphercommon.c:1129` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_1129: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1129,
+    func: c"ossl_cipher_common_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_common_get_ctx_params` at `providers/implementations/ciphers/ciphercommon.c:1135` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_1135: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1135,
+    func: c"ossl_cipher_common_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_common_set_ctx_params` at `providers/implementations/ciphers/ciphercommon.c:1157` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_1157: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1157,
+    func: c"ossl_cipher_common_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_common_set_ctx_params` at `providers/implementations/ciphers/ciphercommon.c:1167` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_1167: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1167,
+    func: c"ossl_cipher_common_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_common_set_ctx_params` at `providers/implementations/ciphers/ciphercommon.c:1175` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_1175: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1175,
+    func: c"ossl_cipher_common_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_common_set_ctx_params` at `providers/implementations/ciphers/ciphercommon.c:1182` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_1182: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1182,
+    func: c"ossl_cipher_common_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_common_set_ctx_params` at `providers/implementations/ciphers/ciphercommon.c:1191` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_1191: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1191,
+    func: c"ossl_cipher_common_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_common_set_ctx_params` at `providers/implementations/ciphers/ciphercommon.c:1195` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHERCOMMON_1195: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1195,
+    func: c"ossl_cipher_common_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_generic_initiv` at `providers/implementations/ciphers/ciphercommon.c:1221` (PROV_R_INVALID_IV_LENGTH).
+pub(crate) const PROV_CIPHERCOMMON_1221: ErrSite = ErrSite {
+    file: c"providers/implementations/ciphers/ciphercommon.c",
+    line: 1221,
+    func: c"ossl_cipher_generic_initiv",
+    lib: 57,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_trailingdata` at `providers/implementations/ciphers/ciphercommon_block.c:70` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_CIPHERCOMMON_BLOCK_70: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/ciphercommon_block.c",
+    line: 70,
+    func: c"ossl_cipher_trailingdata",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_unpadblock` at `providers/implementations/ciphers/ciphercommon_block.c:97` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PROV_CIPHERCOMMON_BLOCK_97: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/ciphercommon_block.c",
+    line: 97,
+    func: c"ossl_cipher_unpadblock",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_unpadblock` at `providers/implementations/ciphers/ciphercommon_block.c:107` (PROV_R_BAD_DECRYPT).
+pub(crate) const PROV_CIPHERCOMMON_BLOCK_107: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/ciphercommon_block.c",
+    line: 107,
+    func: c"ossl_cipher_unpadblock",
+    lib: 57,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `ossl_cipher_unpadblock` at `providers/implementations/ciphers/ciphercommon_block.c:112` (PROV_R_BAD_DECRYPT).
+pub(crate) const PROV_CIPHERCOMMON_BLOCK_112: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/ciphercommon_block.c",
+    line: 112,
+    func: c"ossl_cipher_unpadblock",
+    lib: 57,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `cipher_hw_aes_initkey` at `providers/implementations/ciphers/cipher_aes_hw.c:121` (PROV_R_KEY_SETUP_FAILED).
+pub(crate) const PROV_CIPHER_AES_HW_121: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_hw.c",
+    line: 121,
+    func: c"cipher_hw_aes_initkey",
+    lib: 57,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `cipher_hw_camellia_initkey` at `providers/implementations/ciphers/cipher_camellia_hw.c:30` (PROV_R_KEY_SETUP_FAILED).
+pub(crate) const PROV_CIPHER_CAMELLIA_HW_30: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_camellia_hw.c",
+    line: 30,
+    func: c"cipher_hw_camellia_initkey",
+    lib: 57,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `tdes_init` at `providers/implementations/ciphers/cipher_tdes_common.c:101` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_CIPHER_TDES_COMMON_101: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_tdes_common.c",
+    line: 101,
+    func: c"tdes_init",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `ossl_tdes_get_ctx_params` at `providers/implementations/ciphers/cipher_tdes_common.c:162` (PROV_R_FAILED_TO_GENERATE_KEY).
+pub(crate) const PROV_CIPHER_TDES_COMMON_162: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_tdes_common.c",
+    line: 162,
+    func: c"ossl_tdes_get_ctx_params",
+    lib: 57,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `ossl_tdes_get_params` at `providers/implementations/ciphers/cipher_tdes_common.c:195` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_TDES_COMMON_195: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_tdes_common.c",
+    line: 195,
+    func: c"ossl_tdes_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `null_get_ctx_params` at `providers/implementations/ciphers/cipher_null.c:130` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_NULL_130: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_null.c",
+    line: 130,
+    func: c"null_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `null_get_ctx_params` at `providers/implementations/ciphers/cipher_null.c:135` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_NULL_135: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_null.c",
+    line: 135,
+    func: c"null_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `null_get_ctx_params` at `providers/implementations/ciphers/cipher_null.c:141` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_NULL_141: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_null.c",
+    line: 141,
+    func: c"null_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `null_set_ctx_params` at `providers/implementations/ciphers/cipher_null.c:168` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_NULL_168: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_null.c",
+    line: 168,
+    func: c"null_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_init` at `providers/implementations/ciphers/cipher_aes_ocb.c:119` (PROV_R_INVALID_IV_LENGTH).
+pub(crate) const PROV_CIPHER_AES_OCB_119: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 119,
+    func: c"aes_ocb_init",
+    lib: 57,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_init` at `providers/implementations/ciphers/cipher_aes_ocb.c:130` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_CIPHER_AES_OCB_130: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 130,
+    func: c"aes_ocb_init",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_block_update_internal` at `providers/implementations/ciphers/cipher_aes_ocb.c:173` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHER_AES_OCB_173: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 173,
+    func: c"aes_ocb_block_update_internal",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_block_update_internal` at `providers/implementations/ciphers/cipher_aes_ocb.c:177` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHER_AES_OCB_177: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 177,
+    func: c"aes_ocb_block_update_internal",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_block_update_internal` at `providers/implementations/ciphers/cipher_aes_ocb.c:188` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHER_AES_OCB_188: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 188,
+    func: c"aes_ocb_block_update_internal",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_block_update_internal` at `providers/implementations/ciphers/cipher_aes_ocb.c:192` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHER_AES_OCB_192: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 192,
+    func: c"aes_ocb_block_update_internal",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:363` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_OCB_363: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 363,
+    func: c"aes_ocb_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:369` (PROV_R_INVALID_TAG_LENGTH).
+pub(crate) const PROV_CIPHER_AES_OCB_369: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 369,
+    func: c"aes_ocb_set_ctx_params",
+    lib: 57,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:375` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PROV_CIPHER_AES_OCB_375: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 375,
+    func: c"aes_ocb_set_ctx_params",
+    lib: 57,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:379` (PROV_R_INVALID_TAG_LENGTH).
+pub(crate) const PROV_CIPHER_AES_OCB_379: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 379,
+    func: c"aes_ocb_set_ctx_params",
+    lib: 57,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:388` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_OCB_388: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 388,
+    func: c"aes_ocb_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:404` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_OCB_404: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 404,
+    func: c"aes_ocb_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:408` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_CIPHER_AES_OCB_408: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 408,
+    func: c"aes_ocb_set_ctx_params",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:422` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_OCB_422: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 422,
+    func: c"aes_ocb_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:427` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_OCB_427: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 427,
+    func: c"aes_ocb_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:433` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_OCB_433: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 433,
+    func: c"aes_ocb_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:441` (PROV_R_INVALID_IV_LENGTH).
+pub(crate) const PROV_CIPHER_AES_OCB_441: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 441,
+    func: c"aes_ocb_get_ctx_params",
+    lib: 57,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:445` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_OCB_445: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 445,
+    func: c"aes_ocb_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:452` (PROV_R_INVALID_IV_LENGTH).
+pub(crate) const PROV_CIPHER_AES_OCB_452: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 452,
+    func: c"aes_ocb_get_ctx_params",
+    lib: 57,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:456` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_OCB_456: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 456,
+    func: c"aes_ocb_get_ctx_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:463` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_OCB_463: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 463,
+    func: c"aes_ocb_get_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_get_ctx_params` at `providers/implementations/ciphers/cipher_aes_ocb.c:467` (PROV_R_INVALID_TAG_LENGTH).
+pub(crate) const PROV_CIPHER_AES_OCB_467: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 467,
+    func: c"aes_ocb_get_ctx_params",
+    lib: 57,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_cipher` at `providers/implementations/ciphers/cipher_aes_ocb.c:515` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHER_AES_OCB_515: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 515,
+    func: c"aes_ocb_cipher",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_cipher` at `providers/implementations/ciphers/cipher_aes_ocb.c:528` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHER_AES_OCB_528: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 528,
+    func: c"aes_ocb_cipher",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `aes_ocb_cipher` at `providers/implementations/ciphers/cipher_aes_ocb.c:533` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHER_AES_OCB_533: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_ocb.c",
+    line: 533,
+    func: c"aes_ocb_cipher",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `aes_wrap_init` at `providers/implementations/ciphers/cipher_aes_wrp.c:123` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_CIPHER_AES_WRP_123: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_wrp.c",
+    line: 123,
+    func: c"aes_wrap_init",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `aes_wrap_cipher_internal` at `providers/implementations/ciphers/cipher_aes_wrp.c:178` (PROV_R_INVALID_INPUT_LENGTH).
+pub(crate) const PROV_CIPHER_AES_WRP_178: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_wrp.c",
+    line: 178,
+    func: c"aes_wrap_cipher_internal",
+    lib: 57,
+    reason: 230,
+    dynamic_reason: false,
+};
+
+/// `aes_wrap_cipher_internal` at `providers/implementations/ciphers/cipher_aes_wrp.c:184` (PROV_R_INVALID_INPUT_LENGTH).
+pub(crate) const PROV_CIPHER_AES_WRP_184: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_wrp.c",
+    line: 184,
+    func: c"aes_wrap_cipher_internal",
+    lib: 57,
+    reason: 230,
+    dynamic_reason: false,
+};
+
+/// `aes_wrap_cipher_internal` at `providers/implementations/ciphers/cipher_aes_wrp.c:190` (PROV_R_INVALID_INPUT_LENGTH).
+pub(crate) const PROV_CIPHER_AES_WRP_190: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_wrp.c",
+    line: 190,
+    func: c"aes_wrap_cipher_internal",
+    lib: 57,
+    reason: 230,
+    dynamic_reason: false,
+};
+
+/// `aes_wrap_cipher_internal` at `providers/implementations/ciphers/cipher_aes_wrp.c:214` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHER_AES_WRP_214: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_wrp.c",
+    line: 214,
+    func: c"aes_wrap_cipher_internal",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `aes_wrap_cipher_internal` at `providers/implementations/ciphers/cipher_aes_wrp.c:218` (PROV_R_INVALID_OUTPUT_LENGTH).
+pub(crate) const PROV_CIPHER_AES_WRP_218: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_wrp.c",
+    line: 218,
+    func: c"aes_wrap_cipher_internal",
+    lib: 57,
+    reason: 217,
+    dynamic_reason: false,
+};
+
+/// `aes_wrap_cipher` at `providers/implementations/ciphers/cipher_aes_wrp.c:250` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHER_AES_WRP_250: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_wrp.c",
+    line: 250,
+    func: c"aes_wrap_cipher",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `aes_wrap_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_wrp.c:274` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_WRP_274: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_wrp.c",
+    line: 274,
+    func: c"aes_wrap_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `aes_wrap_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_wrp.c:278` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_CIPHER_AES_WRP_278: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_wrp.c",
+    line: 278,
+    func: c"aes_wrap_set_ctx_params",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `aes_xts_check_keys_differ` at `providers/implementations/ciphers/cipher_aes_xts.c:59` (PROV_R_XTS_DUPLICATED_KEYS).
+pub(crate) const PROV_CIPHER_AES_XTS_59: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_xts.c",
+    line: 59,
+    func: c"aes_xts_check_keys_differ",
+    lib: 57,
+    reason: 149,
+    dynamic_reason: false,
+};
+
+/// `aes_xts_init` at `providers/implementations/ciphers/cipher_aes_xts.c:90` (PROV_R_INVALID_KEY_LENGTH).
+pub(crate) const PROV_CIPHER_AES_XTS_90: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_xts.c",
+    line: 90,
+    func: c"aes_xts_init",
+    lib: 57,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `aes_xts_cipher` at `providers/implementations/ciphers/cipher_aes_xts.c:202` (PROV_R_XTS_DATA_UNIT_IS_TOO_LARGE).
+pub(crate) const PROV_CIPHER_AES_XTS_202: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_xts.c",
+    line: 202,
+    func: c"aes_xts_cipher",
+    lib: 57,
+    reason: 148,
+    dynamic_reason: false,
+};
+
+/// `aes_xts_stream_update` at `providers/implementations/ciphers/cipher_aes_xts.c:223` (PROV_R_OUTPUT_BUFFER_TOO_SMALL).
+pub(crate) const PROV_CIPHER_AES_XTS_223: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_xts.c",
+    line: 223,
+    func: c"aes_xts_stream_update",
+    lib: 57,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `aes_xts_stream_update` at `providers/implementations/ciphers/cipher_aes_xts.c:228` (PROV_R_CIPHER_OPERATION_FAILED).
+pub(crate) const PROV_CIPHER_AES_XTS_228: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_xts.c",
+    line: 228,
+    func: c"aes_xts_stream_update",
+    lib: 57,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `aes_xts_set_ctx_params` at `providers/implementations/ciphers/cipher_aes_xts.c:268` (PROV_R_FAILED_TO_GET_PARAMETER).
+pub(crate) const PROV_CIPHER_AES_XTS_268: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_xts.c",
+    line: 268,
+    func: c"aes_xts_set_ctx_params",
+    lib: 57,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `digest_default_get_params_decoder` at `providers/implementations/digests/digestcommon.c:56` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DIGESTCOMMON_56: ErrSite = ErrSite {
+    file: c"providers/implementations/digests/digestcommon.c",
+    line: 56,
+    func: c"digest_default_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `digest_default_get_params_decoder` at `providers/implementations/digests/digestcommon.c:67` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DIGESTCOMMON_67: ErrSite = ErrSite {
+    file: c"providers/implementations/digests/digestcommon.c",
+    line: 67,
+    func: c"digest_default_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `digest_default_get_params_decoder` at `providers/implementations/digests/digestcommon.c:78` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DIGESTCOMMON_78: ErrSite = ErrSite {
+    file: c"providers/implementations/digests/digestcommon.c",
+    line: 78,
+    func: c"digest_default_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `digest_default_get_params_decoder` at `providers/implementations/digests/digestcommon.c:89` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DIGESTCOMMON_89: ErrSite = ErrSite {
+    file: c"providers/implementations/digests/digestcommon.c",
+    line: 89,
+    func: c"digest_default_get_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_digest_default_get_params` at `providers/implementations/digests/digestcommon.c:111` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_DIGESTCOMMON_111: ErrSite = ErrSite {
+    file: c"providers/implementations/digests/digestcommon.c",
+    line: 111,
+    func: c"ossl_digest_default_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_digest_default_get_params` at `providers/implementations/digests/digestcommon.c:115` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_DIGESTCOMMON_115: ErrSite = ErrSite {
+    file: c"providers/implementations/digests/digestcommon.c",
+    line: 115,
+    func: c"ossl_digest_default_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_digest_default_get_params` at `providers/implementations/digests/digestcommon.c:120` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_DIGESTCOMMON_120: ErrSite = ErrSite {
+    file: c"providers/implementations/digests/digestcommon.c",
+    line: 120,
+    func: c"ossl_digest_default_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `ossl_digest_default_get_params` at `providers/implementations/digests/digestcommon.c:125` (PROV_R_FAILED_TO_SET_PARAMETER).
+pub(crate) const PROV_DIGESTCOMMON_125: ErrSite = ErrSite {
+    file: c"providers/implementations/digests/digestcommon.c",
+    line: 125,
+    func: c"ossl_digest_default_get_params",
+    lib: 57,
+    reason: 104,
+    dynamic_reason: false,
+};
+
 /// Every recorded raise site, in authority source order.
 ///
 /// This is the complete inventory for the covered files, including the
@@ -18589,4 +20009,146 @@ pub(crate) static ALL: &[ErrSite] = &[
     PEM_PK8_185,
     PEM_PK8_243,
     PEM_PK8_258,
+    PROV_CIPHERCOMMON_80,
+    PROV_CIPHERCOMMON_91,
+    PROV_CIPHERCOMMON_106,
+    PROV_CIPHERCOMMON_117,
+    PROV_CIPHERCOMMON_129,
+    PROV_CIPHERCOMMON_140,
+    PROV_CIPHERCOMMON_151,
+    PROV_CIPHERCOMMON_162,
+    PROV_CIPHERCOMMON_173,
+    PROV_CIPHERCOMMON_184,
+    PROV_CIPHERCOMMON_212,
+    PROV_CIPHERCOMMON_217,
+    PROV_CIPHERCOMMON_222,
+    PROV_CIPHERCOMMON_227,
+    PROV_CIPHERCOMMON_232,
+    PROV_CIPHERCOMMON_237,
+    PROV_CIPHERCOMMON_242,
+    PROV_CIPHERCOMMON_246,
+    PROV_CIPHERCOMMON_250,
+    PROV_CIPHERCOMMON_254,
+    PROV_CIPHERCOMMON_313,
+    PROV_CIPHERCOMMON_322,
+    PROV_CIPHERCOMMON_334,
+    PROV_CIPHERCOMMON_345,
+    PROV_CIPHERCOMMON_356,
+    PROV_CIPHERCOMMON_367,
+    PROV_CIPHERCOMMON_378,
+    PROV_CIPHERCOMMON_437,
+    PROV_CIPHERCOMMON_448,
+    PROV_CIPHERCOMMON_475,
+    PROV_CIPHERCOMMON_486,
+    PROV_CIPHERCOMMON_501,
+    PROV_CIPHERCOMMON_565,
+    PROV_CIPHERCOMMON_576,
+    PROV_CIPHERCOMMON_587,
+    PROV_CIPHERCOMMON_614,
+    PROV_CIPHERCOMMON_625,
+    PROV_CIPHERCOMMON_640,
+    PROV_CIPHERCOMMON_672,
+    PROV_CIPHERCOMMON_719,
+    PROV_CIPHERCOMMON_783,
+    PROV_CIPHERCOMMON_798,
+    PROV_CIPHERCOMMON_811,
+    PROV_CIPHERCOMMON_816,
+    PROV_CIPHERCOMMON_833,
+    PROV_CIPHERCOMMON_839,
+    PROV_CIPHERCOMMON_856,
+    PROV_CIPHERCOMMON_875,
+    PROV_CIPHERCOMMON_879,
+    PROV_CIPHERCOMMON_889,
+    PROV_CIPHERCOMMON_896,
+    PROV_CIPHERCOMMON_902,
+    PROV_CIPHERCOMMON_928,
+    PROV_CIPHERCOMMON_934,
+    PROV_CIPHERCOMMON_945,
+    PROV_CIPHERCOMMON_950,
+    PROV_CIPHERCOMMON_954,
+    PROV_CIPHERCOMMON_968,
+    PROV_CIPHERCOMMON_973,
+    PROV_CIPHERCOMMON_983,
+    PROV_CIPHERCOMMON_999,
+    PROV_CIPHERCOMMON_1009,
+    PROV_CIPHERCOMMON_1014,
+    PROV_CIPHERCOMMON_1063,
+    PROV_CIPHERCOMMON_1081,
+    PROV_CIPHERCOMMON_1086,
+    PROV_CIPHERCOMMON_1091,
+    PROV_CIPHERCOMMON_1102,
+    PROV_CIPHERCOMMON_1107,
+    PROV_CIPHERCOMMON_1113,
+    PROV_CIPHERCOMMON_1119,
+    PROV_CIPHERCOMMON_1124,
+    PROV_CIPHERCOMMON_1129,
+    PROV_CIPHERCOMMON_1135,
+    PROV_CIPHERCOMMON_1157,
+    PROV_CIPHERCOMMON_1167,
+    PROV_CIPHERCOMMON_1175,
+    PROV_CIPHERCOMMON_1182,
+    PROV_CIPHERCOMMON_1191,
+    PROV_CIPHERCOMMON_1195,
+    PROV_CIPHERCOMMON_1221,
+    PROV_CIPHERCOMMON_BLOCK_70,
+    PROV_CIPHERCOMMON_BLOCK_97,
+    PROV_CIPHERCOMMON_BLOCK_107,
+    PROV_CIPHERCOMMON_BLOCK_112,
+    PROV_CIPHER_AES_HW_121,
+    PROV_CIPHER_CAMELLIA_HW_30,
+    PROV_CIPHER_TDES_COMMON_101,
+    PROV_CIPHER_TDES_COMMON_162,
+    PROV_CIPHER_TDES_COMMON_195,
+    PROV_CIPHER_NULL_130,
+    PROV_CIPHER_NULL_135,
+    PROV_CIPHER_NULL_141,
+    PROV_CIPHER_NULL_168,
+    PROV_CIPHER_AES_OCB_119,
+    PROV_CIPHER_AES_OCB_130,
+    PROV_CIPHER_AES_OCB_173,
+    PROV_CIPHER_AES_OCB_177,
+    PROV_CIPHER_AES_OCB_188,
+    PROV_CIPHER_AES_OCB_192,
+    PROV_CIPHER_AES_OCB_363,
+    PROV_CIPHER_AES_OCB_369,
+    PROV_CIPHER_AES_OCB_375,
+    PROV_CIPHER_AES_OCB_379,
+    PROV_CIPHER_AES_OCB_388,
+    PROV_CIPHER_AES_OCB_404,
+    PROV_CIPHER_AES_OCB_408,
+    PROV_CIPHER_AES_OCB_422,
+    PROV_CIPHER_AES_OCB_427,
+    PROV_CIPHER_AES_OCB_433,
+    PROV_CIPHER_AES_OCB_441,
+    PROV_CIPHER_AES_OCB_445,
+    PROV_CIPHER_AES_OCB_452,
+    PROV_CIPHER_AES_OCB_456,
+    PROV_CIPHER_AES_OCB_463,
+    PROV_CIPHER_AES_OCB_467,
+    PROV_CIPHER_AES_OCB_515,
+    PROV_CIPHER_AES_OCB_528,
+    PROV_CIPHER_AES_OCB_533,
+    PROV_CIPHER_AES_WRP_123,
+    PROV_CIPHER_AES_WRP_178,
+    PROV_CIPHER_AES_WRP_184,
+    PROV_CIPHER_AES_WRP_190,
+    PROV_CIPHER_AES_WRP_214,
+    PROV_CIPHER_AES_WRP_218,
+    PROV_CIPHER_AES_WRP_250,
+    PROV_CIPHER_AES_WRP_274,
+    PROV_CIPHER_AES_WRP_278,
+    PROV_CIPHER_AES_XTS_59,
+    PROV_CIPHER_AES_XTS_90,
+    PROV_CIPHER_AES_XTS_202,
+    PROV_CIPHER_AES_XTS_223,
+    PROV_CIPHER_AES_XTS_228,
+    PROV_CIPHER_AES_XTS_268,
+    PROV_DIGESTCOMMON_56,
+    PROV_DIGESTCOMMON_67,
+    PROV_DIGESTCOMMON_78,
+    PROV_DIGESTCOMMON_89,
+    PROV_DIGESTCOMMON_111,
+    PROV_DIGESTCOMMON_115,
+    PROV_DIGESTCOMMON_120,
+    PROV_DIGESTCOMMON_125,
 ];

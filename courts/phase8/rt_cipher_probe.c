@@ -42,12 +42,15 @@
 #include <openssl/blowfish.h>
 #include <openssl/camellia.h>
 #include <openssl/cast.h>
+#include <openssl/core_dispatch.h>
 #include <openssl/core_names.h>
 #include <openssl/des.h>
+#include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/idea.h>
 #include <openssl/modes.h>
 #include <openssl/params.h>
+#include <openssl/provider.h>
 #include <openssl/rc2.h>
 #include <openssl/rc4.h>
 #include <openssl/seed.h>
@@ -3060,6 +3063,364 @@ static void rt_deflt_ocb(void)
     }
 }
 
+/* The drained queue, normalised the one way both sides can hold: library and reason as numbers,
+ * the authority's three debug strings verbatim, and the entry count. Declared here because the
+ * EVP arm below uses it and `rt_errq` is defined with the dispatch arm. */
+static void rt_errq(const char *tag);
+
+/* The same refusals reached the way an application reaches them, through `EVP_*`. Four of the
+ * six named paths are reachable here (the invalid key length and the too-small output buffer are
+ * not, because EVP chooses those arguments), and what this arm adds is the EVP layer's own
+ * contribution to the queue -- including the `EVP_R_UPDATE_ERROR` a wrap row's oversized `outl`
+ * produces when EVP checks the length it was handed. */
+static void rt_deflt_errors(void)
+{
+    unsigned char key[32], iv[16], in[32], out[64];
+    int outl = 0, finl = 0;
+    EVP_CIPHER *c;
+    EVP_CIPHER_CTX *ctx;
+
+    memset(key, 0x11, sizeof(key));
+    memset(iv, 0x22, sizeof(iv));
+    memset(in, 0x33, sizeof(in));
+
+    /* No key set. */
+    c = EVP_CIPHER_fetch(NULL, "AES-128-CBC", NULL);
+    ctx = EVP_CIPHER_CTX_new();
+    ERR_clear_error();
+    printf("evp.nokey.init=%d\n", EVP_EncryptInit_ex(ctx, c, NULL, NULL, NULL));
+    printf("evp.nokey.update=%d\n", EVP_EncryptUpdate(ctx, out, &outl, in, 16));
+    rt_errq("evp_nokey");
+    EVP_CIPHER_CTX_free(ctx);
+    EVP_CIPHER_free(c);
+
+    /* A failed decrypt: one block of padding that does not verify. */
+    c = EVP_CIPHER_fetch(NULL, "AES-128-CBC", NULL);
+    ctx = EVP_CIPHER_CTX_new();
+    ERR_clear_error();
+    printf("evp.badpad.init=%d\n", EVP_DecryptInit_ex(ctx, c, NULL, key, iv));
+    outl = 0;
+    printf("evp.badpad.update=%d\n", EVP_DecryptUpdate(ctx, out, &outl, in, 16));
+    finl = 0;
+    printf("evp.badpad.final=%d\n", EVP_DecryptFinal_ex(ctx, out + outl, &finl));
+    rt_errq("evp_badpad");
+    EVP_CIPHER_CTX_free(ctx);
+    EVP_CIPHER_free(c);
+
+    /* XTS with both halves of the key equal. */
+    c = EVP_CIPHER_fetch(NULL, "AES-128-XTS", NULL);
+    ctx = EVP_CIPHER_CTX_new();
+    ERR_clear_error();
+    printf("evp.xtsdup.init=%d\n", EVP_EncryptInit_ex(ctx, c, NULL, key, iv));
+    rt_errq("evp_xtsdup");
+    EVP_CIPHER_CTX_free(ctx);
+    EVP_CIPHER_free(c);
+
+    /* XTS with eight bytes of input. */
+    memset(key, 0x44, 16);
+    memset(key + 16, 0x55, 16);
+    c = EVP_CIPHER_fetch(NULL, "AES-128-XTS", NULL);
+    ctx = EVP_CIPHER_CTX_new();
+    ERR_clear_error();
+    printf("evp.xtsshort.init=%d\n", EVP_EncryptInit_ex(ctx, c, NULL, key, iv));
+    outl = 0;
+    printf("evp.xtsshort.update=%d\n", EVP_EncryptUpdate(ctx, out, &outl, in, 8));
+    rt_errq("evp_xtsshort");
+    EVP_CIPHER_CTX_free(ctx);
+    EVP_CIPHER_free(c);
+}
+
+/* ------------------------------------------------------------------------------------------
+ * The provider-dispatch failure arm (`ERROR_PASS`)
+ * ------------------------------------------------------------------------------------------
+ *
+ * `docs/PARITY_MODEL.md` §3.5 makes the `ERR` queue part of the contract: library, reason,
+ * ordering and count. The authority's provider cipher rows answer most refusals by raising a
+ * `PROV_R_*` error *and* returning 0, and two of the review's named paths -- an invalid key
+ * length and an output buffer that is too small -- are not reachable through `EVP_EncryptInit_ex`
+ * at all: the EVP layer derives the key length from the fetched cipher and the provider's
+ * `outsize` from `inl + blocksize`. So this arm drives the provider's own `OSSL_DISPATCH`
+ * through `OSSL_PROVIDER_query_operation`, which is the surface those errors actually belong to,
+ * and lets the probe choose every argument.
+ *
+ * Every observation is a return code, an output length, or a drained queue entry spelled
+ * `<lib>:<reason>:<file>:<line>:<func>` -- all of which the authority's own records carry. The
+ * queue is cleared before each scenario so the transcript is the scenario's own errors, and the
+ * count is printed as well, so a side that raises nothing is a difference rather than a silence.
+ */
+
+static const OSSL_DISPATCH *rt_disp(const OSSL_ALGORITHM *algs, const char *name)
+{
+    for (; algs != NULL && algs->algorithm_names != NULL; algs++) {
+        const char *s = algs->algorithm_names;
+        size_t n = strlen(name);
+
+        while (*s != '\0') {
+            const char *e = strchr(s, ':');
+            size_t len = e == NULL ? strlen(s) : (size_t)(e - s);
+
+            if (len == n && strncmp(s, name, n) == 0)
+                return algs->implementation;
+            if (e == NULL)
+                break;
+            s = e + 1;
+        }
+    }
+    return NULL;
+}
+
+static void *rt_fn(const OSSL_DISPATCH *d, int id)
+{
+    for (; d != NULL && d->function_id != 0; d++)
+        if (d->function_id == id)
+            return d->function;
+    return NULL;
+}
+
+/* The drained queue, normalised the one way both sides can hold: library and reason as
+ * numbers, the authority's three debug strings verbatim, and the entry count. `ERR_get_error_all`
+ * is the reader `ERR_print_errors` uses, so nothing here is a private accessor. */
+static void rt_errq(const char *tag)
+{
+    unsigned long e;
+    const char *file = NULL, *func = NULL, *data = NULL;
+    int line = 0, flags = 0;
+    int n = 0;
+
+    while ((e = ERR_get_error_all(&file, &line, &func, &data, &flags)) != 0) {
+        printf("q.%s.%d=lib%d:reason%d:%s:%d:%s\n", tag, n, ERR_GET_LIB(e),
+               ERR_GET_REASON(e), file != NULL ? file : "", line,
+               func != NULL ? func : "");
+        n++;
+    }
+    printf("q.%s.count=%d\n", tag, n);
+}
+
+typedef void *(*rt_newctx_fn)(void *);
+typedef int (*rt_init_fn)(void *, const unsigned char *, size_t, const unsigned char *,
+                          size_t, const OSSL_PARAM *);
+typedef int (*rt_update_fn)(void *, unsigned char *, size_t *, size_t,
+                            const unsigned char *, size_t);
+typedef int (*rt_final_fn)(void *, unsigned char *, size_t *, size_t);
+typedef int (*rt_getparams_fn)(OSSL_PARAM *);
+typedef void (*rt_free_fn)(void *);
+
+static void rt_disp_failures(void)
+{
+    OSSL_PROVIDER *prov;
+    const OSSL_ALGORITHM *algs;
+    const OSSL_DISPATCH *d;
+    void *pctx;
+    void *ctx;
+    unsigned char key[32], iv[16], in[48], out[96];
+    size_t outl;
+    int r;
+    rt_newctx_fn newctx;
+    rt_init_fn einit, dinit;
+    rt_update_fn update;
+    rt_final_fn final;
+    rt_free_fn freectx;
+    int nocache = 0;
+
+    memset(key, 0x11, sizeof(key));
+    memset(iv, 0x22, sizeof(iv));
+    memset(in, 0x33, sizeof(in));
+
+    prov = OSSL_PROVIDER_load(NULL, "default");
+    printf("disp.provider=%d\n", prov != NULL);
+    if (prov == NULL)
+        return;
+    algs = OSSL_PROVIDER_query_operation(prov, OSSL_OP_CIPHER, &nocache);
+    printf("disp.algorithms=%d\n", algs != NULL);
+    pctx = OSSL_PROVIDER_get0_provider_ctx(prov);
+
+    /* ---- AES-128-CBC: the four reachable generic-engine refusals ---- */
+    d = rt_disp(algs, "AES-128-CBC");
+    printf("disp.cbc=%d\n", d != NULL);
+    newctx = (rt_newctx_fn)rt_fn(d, OSSL_FUNC_CIPHER_NEWCTX);
+    einit = (rt_init_fn)rt_fn(d, OSSL_FUNC_CIPHER_ENCRYPT_INIT);
+    dinit = (rt_init_fn)rt_fn(d, OSSL_FUNC_CIPHER_DECRYPT_INIT);
+    update = (rt_update_fn)rt_fn(d, OSSL_FUNC_CIPHER_UPDATE);
+    final = (rt_final_fn)rt_fn(d, OSSL_FUNC_CIPHER_FINAL);
+    freectx = (rt_free_fn)rt_fn(d, OSSL_FUNC_CIPHER_FREECTX);
+
+    /* An invalid key length: 17 bytes for a 16-byte row. EVP derives the length from the
+     * cipher and so cannot reach this; the provider's einit can. */
+    ctx = newctx(pctx);
+    ERR_clear_error();
+    r = einit(ctx, key, 17, iv, 16, NULL);
+    printf("disp.badkeylen.ret=%d\n", r);
+    rt_errq("badkeylen");
+    freectx(ctx);
+
+    /* No key set: init without a key, then update. */
+    ctx = newctx(pctx);
+    ERR_clear_error();
+    r = einit(ctx, NULL, 0, NULL, 0, NULL);
+    printf("disp.nokey.init=%d\n", r);
+    outl = 0;
+    r = update(ctx, out, &outl, sizeof(out), in, 32);
+    printf("disp.nokey.update=%d\n", r);
+    rt_errq("nokey");
+    freectx(ctx);
+
+    /* An output buffer that is too small: 8 bytes of room for 32 bytes of input. EVP always
+     * offers `inl + blocksize`, so this too is dispatch-only. */
+    ctx = newctx(pctx);
+    ERR_clear_error();
+    r = einit(ctx, key, 16, iv, 16, NULL);
+    printf("disp.outsmall.init=%d\n", r);
+    outl = 0;
+    r = update(ctx, out, &outl, 8, in, 32);
+    printf("disp.outsmall.ret=%d\n", r);
+    rt_errq("outsmall");
+    freectx(ctx);
+
+    /* Bad padding: decrypt one block of zeros and finalise. */
+    ctx = newctx(pctx);
+    ERR_clear_error();
+    r = dinit(ctx, key, 16, iv, 16, NULL);
+    printf("disp.badpad.init=%d\n", r);
+    outl = 0;
+    r = update(ctx, out, &outl, sizeof(out), in, 16);
+    printf("disp.badpad.update=%d\n", r);
+    outl = 0;
+    r = final(ctx, out, &outl, sizeof(out));
+    printf("disp.badpad.final=%d\n", r);
+    rt_errq("badpad");
+    freectx(ctx);
+
+    /* ---- AES-128-XTS ---- */
+    memset(key, 0x11, sizeof(key));
+    d = rt_disp(algs, "AES-128-XTS");
+    printf("disp.xts=%d\n", d != NULL);
+    newctx = (rt_newctx_fn)rt_fn(d, OSSL_FUNC_CIPHER_NEWCTX);
+    einit = (rt_init_fn)rt_fn(d, OSSL_FUNC_CIPHER_ENCRYPT_INIT);
+    update = (rt_update_fn)rt_fn(d, OSSL_FUNC_CIPHER_UPDATE);
+    freectx = (rt_free_fn)rt_fn(d, OSSL_FUNC_CIPHER_FREECTX);
+
+    /* Duplicated keys: both halves of the 32-byte XTS key are equal. */
+    ctx = newctx(pctx);
+    ERR_clear_error();
+    r = einit(ctx, key, 32, iv, 16, NULL);
+    printf("disp.xtsdup.ret=%d\n", r);
+    rt_errq("xtsdup");
+    freectx(ctx);
+
+    /* A short input: 8 bytes, below the AES block size. The row's `aes_xts_cipher` returns 0
+     * without raising and the row's stream update turns that into CIPHER_OPERATION_FAILED. */
+    memset(key, 0x44, 16);
+    memset(key + 16, 0x55, 16);
+    ctx = newctx(pctx);
+    ERR_clear_error();
+    r = einit(ctx, key, 32, iv, 16, NULL);
+    printf("disp.xtsshort.init=%d\n", r);
+    outl = 0;
+    r = update(ctx, out, &outl, sizeof(out), in, 8);
+    printf("disp.xtsshort.update=%d\n", r);
+    rt_errq("xtsshort");
+    freectx(ctx);
+
+    /* The XTS stream update's own outsize check, which EVP also cannot reach. */
+    ctx = newctx(pctx);
+    ERR_clear_error();
+    r = einit(ctx, key, 32, iv, 16, NULL);
+    outl = 0;
+    r = update(ctx, out, &outl, 8, in, 32);
+    printf("disp.xtssmall.update=%d\n", r);
+    rt_errq("xtssmall");
+    freectx(ctx);
+
+    /* ---- AES-128-OCB ---- */
+    d = rt_disp(algs, "AES-128-OCB");
+    printf("disp.ocb=%d\n", d != NULL);
+    newctx = (rt_newctx_fn)rt_fn(d, OSSL_FUNC_CIPHER_NEWCTX);
+    einit = (rt_init_fn)rt_fn(d, OSSL_FUNC_CIPHER_ENCRYPT_INIT);
+    freectx = (rt_free_fn)rt_fn(d, OSSL_FUNC_CIPHER_FREECTX);
+    /* An IV length outside the row's 1..15 window. */
+    ctx = newctx(pctx);
+    ERR_clear_error();
+    r = einit(ctx, key, 16, iv, 16, NULL);
+    printf("disp.ocbivlen.ret=%d\n", r);
+    rt_errq("ocbivlen");
+    freectx(ctx);
+
+    /* ---- AES-128-WRAP ---- */
+    d = rt_disp(algs, "AES-128-WRAP");
+    printf("disp.wrap=%d\n", d != NULL);
+    newctx = (rt_newctx_fn)rt_fn(d, OSSL_FUNC_CIPHER_NEWCTX);
+    einit = (rt_init_fn)rt_fn(d, OSSL_FUNC_CIPHER_ENCRYPT_INIT);
+    update = (rt_update_fn)rt_fn(d, OSSL_FUNC_CIPHER_UPDATE);
+    freectx = (rt_free_fn)rt_fn(d, OSSL_FUNC_CIPHER_FREECTX);
+
+    /* An invalid key length, checked before anything else in the row's init. */
+    ctx = newctx(pctx);
+    ERR_clear_error();
+    r = einit(ctx, key, 17, iv, 8, NULL);
+    printf("disp.wrapkeylen.ret=%d\n", r);
+    rt_errq("wrapkeylen");
+    freectx(ctx);
+
+    /* An input length that is not a multiple of eight: the internal helper refuses and the
+     * row *reports success* with an enormous `outl`, because the authority stores an
+     * `int`-returning helper's `-1` in a `size_t`. Both are printed. */
+    ctx = newctx(pctx);
+    ERR_clear_error();
+    r = einit(ctx, key, 16, iv, 8, NULL);
+    outl = 0;
+    r = update(ctx, out, &outl, sizeof(out), in, 7);
+    printf("disp.wrapinlen.update=%d\n", r);
+    printf("disp.wrapinlen.outl=%llu\n", (unsigned long long)outl);
+    rt_errq("wrapinlen");
+    freectx(ctx);
+
+    /* An output buffer that is too small, which the row checks before the helper. */
+    ctx = newctx(pctx);
+    ERR_clear_error();
+    r = einit(ctx, key, 16, iv, 8, NULL);
+    outl = 0;
+    r = update(ctx, out, &outl, 4, in, 16);
+    printf("disp.wrapsmall.update=%d\n", r);
+    rt_errq("wrapsmall");
+    freectx(ctx);
+
+    /* ---- NULL cipher: a refusal that raises *nothing*, which the queue must also show ---- */
+    d = rt_disp(algs, "NULL");
+    printf("disp.null=%d\n", d != NULL);
+    newctx = (rt_newctx_fn)rt_fn(d, OSSL_FUNC_CIPHER_NEWCTX);
+    einit = (rt_init_fn)rt_fn(d, OSSL_FUNC_CIPHER_ENCRYPT_INIT);
+    update = (rt_update_fn)rt_fn(d, OSSL_FUNC_CIPHER_UPDATE);
+    freectx = (rt_free_fn)rt_fn(d, OSSL_FUNC_CIPHER_FREECTX);
+    ctx = newctx(pctx);
+    ERR_clear_error();
+    r = einit(ctx, NULL, 0, NULL, 0, NULL);
+    printf("disp.null.init=%d\n", r);
+    outl = 0;
+    r = update(ctx, out, &outl, 2, in, 8);
+    printf("disp.nullsmall.update=%d\n", r);
+    rt_errq("nullsmall");
+    freectx(ctx);
+
+    /* ---- the generated decoders' repeated-key refusal ---- */
+    d = rt_disp(algs, "AES-128-ECB");
+    printf("disp.ecb=%d\n", d != NULL);
+    {
+        rt_getparams_fn getparams = (rt_getparams_fn)rt_fn(d, OSSL_FUNC_CIPHER_GET_PARAMS);
+        size_t sz = 0;
+        OSSL_PARAM dup[3];
+
+        dup[0] = OSSL_PARAM_construct_size_t(OSSL_CIPHER_PARAM_BLOCK_SIZE, &sz);
+        dup[1] = OSSL_PARAM_construct_size_t(OSSL_CIPHER_PARAM_BLOCK_SIZE, &sz);
+        dup[2] = OSSL_PARAM_construct_end();
+        ERR_clear_error();
+        r = getparams(dup);
+        printf("disp.dupparams.ret=%d\n", r);
+        rt_errq("dupparams");
+    }
+
+    OSSL_PROVIDER_unload(prov);
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IOLBF, 0);
@@ -3083,5 +3444,7 @@ int main(void)
     rt_deflt_cts();
     rt_deflt_xts();
     rt_deflt_ocb();
+    rt_deflt_errors();
+    rt_disp_failures();
     return 0;
 }

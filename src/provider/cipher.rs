@@ -88,6 +88,7 @@ use crate::params::{
     OSSL_PARAM_UNMODIFIED, OSSL_PARAM_UNSIGNED_INTEGER, OSSL_PARAM_UTF8_STRING,
 };
 use crate::provider::activate::OsslAlgorithm;
+use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{
     CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_memcmp, CRYPTO_memdup, CRYPTO_zalloc,
 };
@@ -321,12 +322,140 @@ fn is_running() -> c_int {
     1
 }
 
-/// Every failure arm. The authority raises an error whose string belongs to a half this module
-/// does not carry; the refusal is what the caller observes.
+/// Every failure arm whose authority counterpart returns `0` **without** raising: the
+/// propagation arms (an inner function already queued the error), the `ossl_prov_is_running`
+/// refusals, and the arms the authority reaches only through a `NULL` function pointer, which
+/// no correct transcription arrives at.
 #[inline]
 fn fail() -> c_int {
     0
 }
+
+/// `ERR_raise(lib, reason)` at a recorded authority site, for a refusal whose value is not `0`.
+///
+/// The coordinate is generated (`forensics/tools/gen_err_raise_sites.py`) from the pinned
+/// source, so the file, line and function a caller reads back through `ERR_get_error_all` are
+/// the authority's rather than a plausible spelling.
+#[inline]
+fn raise_prov(site: &err_sites::ErrSite) {
+    // SAFETY: `site` is a generated compile-time constant whose three string pointers are
+    // `'static`; no caller state is touched.
+    unsafe { raise_site(site) };
+}
+
+/// The authority's `ERR_raise(...); return 0;` pair: the refusal *and* the queued error.
+///
+/// A path where the authority raises and this crate does not is an `ERROR_PASS` failure
+/// (`docs/PARITY_MODEL.md` §3.5), not a harmless omission -- which is exactly why `RT-CIPHER`
+/// now drains and compares the queue.
+#[inline]
+fn fail_at(site: &err_sites::ErrSite) -> c_int {
+    raise_prov(site);
+    0
+}
+
+/// `produce_param_decoder`'s repeated-key refusal, in one place.
+///
+/// The authority's generated decoders walk the caller's array and raise
+/// `PROV_R_REPEATED_PARAMETER` at the **second** occurrence of any key they know, before a
+/// value is read or written. This crate hand-writes the locate-each-key form instead, which
+/// is identical for every array without duplicates and silently different for one with them,
+/// so the scan is kept here and reports the *decoder's own* recorded coordinate rather than
+/// the get/set body's.
+///
+/// # Safety
+/// `params` is NULL or a key-terminated array; the keys in `keys` are `'static` C strings.
+unsafe fn repeated_param_site(
+    params: *const OsslParam,
+    keys: &[(&'static err_sites::ErrSite, *const c_char)],
+) -> Option<&'static err_sites::ErrSite> {
+    if params.is_null() {
+        return None;
+    }
+    // SAFETY: the caller guarantees a key-terminated array; the walk stops at the NULL key.
+    unsafe {
+        let mut seen: u32 = 0;
+        let mut p = params;
+        while !(*p).key.is_null() {
+            let k = core::ffi::CStr::from_ptr((*p).key).to_bytes();
+            for (i, (site, name)) in keys.iter().enumerate() {
+                if !name.is_null() && core::ffi::CStr::from_ptr(*name).to_bytes() == k {
+                    if seen & (1u32 << i) != 0 {
+                        return Some(site);
+                    }
+                    seen |= 1u32 << i;
+                    break;
+                }
+            }
+            p = p.add(1);
+        }
+    }
+    None
+}
+
+/// The ten keys `ossl_cipher_generic_get_params_decoder` locates, each with the site of its own
+/// repeated-parameter raise (`ciphercommon.c:80-184`).
+const GET_PARAMS_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char); 10] = [
+    (&err_sites::PROV_CIPHERCOMMON_80, OSSL_CIPHER_PARAM_AEAD),
+    (
+        &err_sites::PROV_CIPHERCOMMON_91,
+        OSSL_CIPHER_PARAM_BLOCK_SIZE,
+    ),
+    (&err_sites::PROV_CIPHERCOMMON_106, OSSL_CIPHER_PARAM_CTS),
+    (
+        &err_sites::PROV_CIPHERCOMMON_117,
+        OSSL_CIPHER_PARAM_CUSTOM_IV,
+    ),
+    (
+        &err_sites::PROV_CIPHERCOMMON_129,
+        OSSL_CIPHER_PARAM_ENCRYPT_THEN_MAC,
+    ),
+    (
+        &err_sites::PROV_CIPHERCOMMON_140,
+        OSSL_CIPHER_PARAM_HAS_RAND_KEY,
+    ),
+    (&err_sites::PROV_CIPHERCOMMON_151, OSSL_CIPHER_PARAM_IVLEN),
+    (&err_sites::PROV_CIPHERCOMMON_162, OSSL_CIPHER_PARAM_KEYLEN),
+    (&err_sites::PROV_CIPHERCOMMON_173, OSSL_CIPHER_PARAM_MODE),
+    (
+        &err_sites::PROV_CIPHERCOMMON_184,
+        OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK,
+    ),
+];
+
+/// The seven keys `cipher_generic_get_ctx_params_decoder` locates, each with its raise site
+/// (`ciphercommon.c:313-378`).
+const GET_CTX_PARAMS_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char); 7] = [
+    (&err_sites::PROV_CIPHERCOMMON_313, OSSL_CIPHER_PARAM_IVLEN),
+    (&err_sites::PROV_CIPHERCOMMON_322, OSSL_CIPHER_PARAM_IV),
+    (&err_sites::PROV_CIPHERCOMMON_334, OSSL_CIPHER_PARAM_KEYLEN),
+    (&err_sites::PROV_CIPHERCOMMON_345, OSSL_CIPHER_PARAM_NUM),
+    (&err_sites::PROV_CIPHERCOMMON_356, OSSL_CIPHER_PARAM_PADDING),
+    (&err_sites::PROV_CIPHERCOMMON_367, OSSL_CIPHER_PARAM_TLS_MAC),
+    (
+        &err_sites::PROV_CIPHERCOMMON_378,
+        OSSL_CIPHER_PARAM_UPDATED_IV,
+    ),
+];
+
+/// The five keys `cipher_generic_set_ctx_params_decoder` locates, each with its raise site
+/// (`ciphercommon.c:437-501`).
+const SET_CTX_PARAMS_DECODER_KEYS: [(&err_sites::ErrSite, *const c_char); 5] = [
+    (&err_sites::PROV_CIPHERCOMMON_437, OSSL_CIPHER_PARAM_NUM),
+    (&err_sites::PROV_CIPHERCOMMON_448, OSSL_CIPHER_PARAM_PADDING),
+    (
+        &err_sites::PROV_CIPHERCOMMON_475,
+        OSSL_CIPHER_PARAM_TLS_MAC_SIZE,
+    ),
+    (
+        &err_sites::PROV_CIPHERCOMMON_486,
+        OSSL_CIPHER_PARAM_TLS_VERSION,
+    ),
+    (
+        &err_sites::PROV_CIPHERCOMMON_501,
+        OSSL_CIPHER_PARAM_USE_BITS,
+    ),
+];
 
 /// The block function an `initkey` stored, or a refusal if it stored none — the authority would
 /// call through a NULL pointer, which no correct transcription reaches.
@@ -383,7 +512,7 @@ unsafe fn ossl_cipher_trailingdata(
             return 1;
         }
         if *buflen + *inlen > blocksize {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_BLOCK_70);
         }
         ptr::copy_nonoverlapping(*in_, buf.add(*buflen), *inlen);
         *buflen += *inlen;
@@ -417,17 +546,17 @@ unsafe fn ossl_cipher_unpadblock(buf: *mut c_uchar, buflen: *mut usize, blocksiz
     unsafe {
         let mut len = *buflen;
         if len != blocksize {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_BLOCK_97);
         }
         let pad = *buf.add(blocksize - 1) as usize;
         if pad == 0 || pad > blocksize {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_BLOCK_107);
         }
         let mut i = 0usize;
         while i < pad {
             len -= 1;
             if *buf.add(len) as usize != pad {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHERCOMMON_BLOCK_112);
             }
             i += 1;
         }
@@ -496,7 +625,7 @@ unsafe fn cipher_generic_init_internal(
         if !key.is_null() {
             if bits(ctx) & CTX_VARIABLE_KEYLENGTH == 0 {
                 if keylen != (*ctx).keylen {
-                    return fail();
+                    return fail_at(&err_sites::PROV_CIPHERCOMMON_719);
                 }
             } else {
                 (*ctx).keylen = keylen;
@@ -601,7 +730,7 @@ pub(crate) unsafe extern "C" fn ossl_cipher_generic_block_update(
         let blksz = (*ctx).blocksize;
 
         if bits(ctx) & CTX_KEY_SET == 0 {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_783);
         }
         if (*ctx).tlsversion > 0 {
             return fail();
@@ -624,11 +753,11 @@ pub(crate) unsafe extern "C" fn ossl_cipher_generic_block_update(
             && (bits(ctx) & CTX_ENC != 0 || inl > 0 || bits(ctx) & CTX_PAD == 0)
         {
             if outsize < blksz {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHERCOMMON_875);
             }
             let hw = (*ctx).hw;
             if ((*hw).cipher)(ctx, out, (*ctx).buf.as_ptr(), blksz) == 0 {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHERCOMMON_879);
             }
             (*ctx).bufsz = 0;
             outlint = blksz;
@@ -637,19 +766,19 @@ pub(crate) unsafe extern "C" fn ossl_cipher_generic_block_update(
         if nextblocks > 0 {
             if bits(ctx) & CTX_ENC == 0 && bits(ctx) & CTX_PAD != 0 && nextblocks == inl {
                 if inl < blksz {
-                    return fail();
+                    return fail_at(&err_sites::PROV_CIPHERCOMMON_889);
                 }
                 nextblocks -= blksz;
             }
             outlint += nextblocks;
             if outsize < outlint {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHERCOMMON_896);
             }
         }
         if nextblocks > 0 {
             let hw = (*ctx).hw;
             if ((*hw).cipher)(ctx, out, in_, nextblocks) == 0 {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHERCOMMON_902);
             }
             in_ = in_.add(nextblocks);
             inl -= nextblocks;
@@ -693,10 +822,10 @@ pub(crate) unsafe extern "C" fn ossl_cipher_generic_block_final(
             return fail();
         }
         if bits(ctx) & CTX_KEY_SET == 0 {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_928);
         }
         if (*ctx).tlsversion > 0 {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_934);
         }
         if bits(ctx) & CTX_ENC != 0 {
             if bits(ctx) & CTX_PAD != 0 {
@@ -709,14 +838,14 @@ pub(crate) unsafe extern "C" fn ossl_cipher_generic_block_final(
                 *outl = 0;
                 return 1;
             } else if (*ctx).bufsz != blksz {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHERCOMMON_945);
             }
             if outsize < blksz {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHERCOMMON_950);
             }
             let hw = (*ctx).hw;
             if ((*hw).cipher)(ctx, out, (*ctx).buf.as_ptr(), blksz) == 0 {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHERCOMMON_954);
             }
             (*ctx).bufsz = 0;
             *outl = blksz;
@@ -727,11 +856,11 @@ pub(crate) unsafe extern "C" fn ossl_cipher_generic_block_final(
                 *outl = 0;
                 return 1;
             }
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_968);
         }
         let hw = (*ctx).hw;
         if ((*hw).cipher)(ctx, (*ctx).buf.as_mut_ptr(), (*ctx).buf.as_ptr(), blksz) == 0 {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_973);
         }
         if bits(ctx) & CTX_PAD != 0
             && ossl_cipher_unpadblock(
@@ -743,7 +872,7 @@ pub(crate) unsafe extern "C" fn ossl_cipher_generic_block_final(
             return fail();
         }
         if outsize < (*ctx).bufsz {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_983);
         }
         ptr::copy_nonoverlapping((*ctx).buf.as_ptr(), out, (*ctx).bufsz);
         *outl = (*ctx).bufsz;
@@ -768,18 +897,18 @@ pub(crate) unsafe extern "C" fn ossl_cipher_generic_stream_update(
     unsafe {
         let ctx = vctx.cast::<ProvCipherCtx>();
         if bits(ctx) & CTX_KEY_SET == 0 {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_999);
         }
         if inl == 0 {
             *outl = 0;
             return 1;
         }
         if outsize < inl {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_1009);
         }
         let hw = (*ctx).hw;
         if ((*hw).cipher)(ctx, out, in_, inl) == 0 {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_1014);
         }
         *outl = inl;
         1
@@ -803,7 +932,7 @@ pub(crate) unsafe extern "C" fn ossl_cipher_generic_stream_final(
             return fail();
         }
         if bits(ctx) & CTX_KEY_SET == 0 {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_1063);
         }
         *outl = 0;
         1
@@ -829,14 +958,14 @@ pub(crate) unsafe extern "C" fn ossl_cipher_generic_cipher(
             return fail();
         }
         if bits(ctx) & CTX_KEY_SET == 0 {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_1081);
         }
         if outsize < inl {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_1086);
         }
         let hw = (*ctx).hw;
         if ((*hw).cipher)(ctx, out, in_, inl) == 0 {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_1091);
         }
         *outl = inl;
         1
@@ -855,13 +984,13 @@ unsafe fn ossl_cipher_common_get_ctx_params(
     unsafe {
         let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_IVLEN);
         if !p.is_null() && crate::params::OSSL_PARAM_set_size_t(p, (*ctx).ivlen) == 0 {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_1102);
         }
         let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_PADDING);
         if !p.is_null()
             && crate::params::OSSL_PARAM_set_uint(p, c_uint::from(bits(ctx) & CTX_PAD != 0)) == 0
         {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_1107);
         }
         let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_IV);
         if !p.is_null()
@@ -871,7 +1000,7 @@ unsafe fn ossl_cipher_common_get_ctx_params(
                 (*ctx).ivlen,
             ) == 0
         {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_1113);
         }
         let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_UPDATED_IV);
         if !p.is_null()
@@ -881,22 +1010,22 @@ unsafe fn ossl_cipher_common_get_ctx_params(
                 (*ctx).ivlen,
             ) == 0
         {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_1119);
         }
         let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_NUM);
         if !p.is_null() && crate::params::OSSL_PARAM_set_uint(p, (*ctx).num) == 0 {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_1124);
         }
         let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_KEYLEN);
         if !p.is_null() && crate::params::OSSL_PARAM_set_size_t(p, (*ctx).keylen) == 0 {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_1129);
         }
         let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_TLS_MAC);
         if !p.is_null()
             && crate::params::OSSL_PARAM_set_octet_ptr(p, (*ctx).tlsmac.cast(), (*ctx).tlsmacsize)
                 == 0
         {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_1135);
         }
         1
     }
@@ -914,6 +1043,11 @@ pub(crate) unsafe extern "C" fn ossl_cipher_generic_get_ctx_params(
     unsafe {
         if vctx.is_null() {
             return fail();
+        }
+        // `ossl_cipher_generic_get_ctx_params` runs the generated decoder before the body: a
+        // key the decoder knows, seen twice, is a refusal at the decoder's own coordinate.
+        if let Some(site) = repeated_param_site(params, &GET_CTX_PARAMS_DECODER_KEYS) {
+            return fail_at(site);
         }
         ossl_cipher_common_get_ctx_params(vctx.cast(), params)
     }
@@ -933,7 +1067,7 @@ unsafe fn ossl_cipher_common_set_ctx_params(
         if !p.is_null() {
             let mut pad: c_uint = 0;
             if crate::params::OSSL_PARAM_get_uint(p, &mut pad) == 0 {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHERCOMMON_1157);
             }
             bits_set(ctx, CTX_PAD, pad != 0);
         }
@@ -941,26 +1075,26 @@ unsafe fn ossl_cipher_common_set_ctx_params(
         if !p.is_null() {
             let mut b: c_uint = 0;
             if crate::params::OSSL_PARAM_get_uint(p, &mut b) == 0 {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHERCOMMON_1167);
             }
             bits_set(ctx, CTX_USE_BITS, b != 0);
         }
         let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_TLS_VERSION);
         if !p.is_null() && crate::params::OSSL_PARAM_get_uint(p, &mut (*ctx).tlsversion) == 0 {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_1175);
         }
         let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_TLS_MAC_SIZE);
         if !p.is_null() && crate::params::OSSL_PARAM_get_size_t(p, &mut (*ctx).tlsmacsize) == 0 {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_1182);
         }
         let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_NUM);
         if !p.is_null() {
             let mut num: c_uint = 0;
             if crate::params::OSSL_PARAM_get_uint(p, &mut num) == 0 {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHERCOMMON_1191);
             }
             if (*ctx).blocksize > 0 && num >= (*ctx).blocksize as c_uint {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHERCOMMON_1195);
             }
             (*ctx).num = num;
         }
@@ -983,6 +1117,10 @@ pub(crate) unsafe extern "C" fn ossl_cipher_generic_set_ctx_params(
         }
         if vctx.is_null() {
             return fail();
+        }
+        // `ossl_cipher_generic_set_ctx_params` runs the generated decoder before the body.
+        if let Some(site) = repeated_param_site(params, &SET_CTX_PARAMS_DECODER_KEYS) {
+            return fail_at(site);
         }
         ossl_cipher_common_set_ctx_params(vctx.cast(), params)
     }
@@ -1012,7 +1150,7 @@ unsafe fn ossl_cipher_generic_initiv(
     // SAFETY: the caller's contract.
     unsafe {
         if ivlen != (*ctx).ivlen || ivlen > GENERIC_BLOCK_SIZE {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_1221);
         }
         bits_set(ctx, CTX_IV_SET, true);
         ptr::copy_nonoverlapping(iv, (*ctx).iv.as_mut_ptr(), ivlen);
@@ -1150,59 +1288,64 @@ pub(crate) unsafe extern "C" fn ossl_cipher_generic_get_params(
 ) -> c_int {
     // SAFETY: the caller's contract.
     unsafe {
+        // `ossl_cipher_generic_get_params` calls its generated decoder first; a key the decoder
+        // knows, seen twice, is a refusal there rather than here.
+        if let Some(site) = repeated_param_site(params, &GET_PARAMS_DECODER_KEYS) {
+            return fail_at(site);
+        }
         if !set_uint_flag(params, OSSL_CIPHER_PARAM_MODE, md) {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_212);
         }
         if !set_int_flag(
             params,
             OSSL_CIPHER_PARAM_AEAD,
             flags & PROV_CIPHER_FLAG_AEAD != 0,
         ) {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_217);
         }
         if !set_int_flag(
             params,
             OSSL_CIPHER_PARAM_CUSTOM_IV,
             flags & PROV_CIPHER_FLAG_CUSTOM_IV != 0,
         ) {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_222);
         }
         if !set_int_flag(
             params,
             OSSL_CIPHER_PARAM_CTS,
             flags & PROV_CIPHER_FLAG_CTS != 0,
         ) {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_227);
         }
         if !set_int_flag(
             params,
             OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK,
             flags & PROV_CIPHER_FLAG_TLS1_MULTIBLOCK != 0,
         ) {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_232);
         }
         if !set_int_flag(
             params,
             OSSL_CIPHER_PARAM_HAS_RAND_KEY,
             flags & PROV_CIPHER_FLAG_RAND_KEY != 0,
         ) {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_237);
         }
         if !set_int_flag(
             params,
             OSSL_CIPHER_PARAM_ENCRYPT_THEN_MAC,
             flags & EVP_CIPH_FLAG_ENC_THEN_MAC != 0,
         ) {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_242);
         }
         if !set_size_param(params, OSSL_CIPHER_PARAM_KEYLEN, kbits / 8) {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_246);
         }
         if !set_size_param(params, OSSL_CIPHER_PARAM_BLOCK_SIZE, blkbits / 8) {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_250);
         }
         if !set_size_param(params, OSSL_CIPHER_PARAM_IVLEN, ivbits / 8) {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHERCOMMON_254);
         }
         1
     }
@@ -1647,7 +1790,7 @@ unsafe extern "C" fn cipher_hw_aes_initkey(
             None
         };
         if ret < 0 {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHER_AES_HW_121);
         }
         1
     }
@@ -1680,7 +1823,7 @@ unsafe extern "C" fn cipher_hw_camellia_initkey(
         let ks = ptr::addr_of_mut!((*adat).ks);
         (*dat).ks = ks.cast();
         if Camellia_set_key(key, (keylen * 8) as c_int, ks) < 0 {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHER_CAMELLIA_HW_30);
         }
         let mode = (*dat).mode;
         if bits(dat) & CTX_ENC != 0 || (mode != EVP_CIPH_ECB_MODE && mode != EVP_CIPH_CBC_MODE) {
@@ -2176,7 +2319,7 @@ unsafe extern "C" fn ossl_tdes_get_params(
         // `decrypt_only` is 0 outside `FIPS_MODULE`, and this build is not the FIPS module.
         let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_DECRYPT_ONLY);
         if !p.is_null() && crate::params::OSSL_PARAM_set_int(p, 0) == 0 {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHER_TDES_COMMON_195);
         }
         ossl_cipher_generic_get_params(params, md, flags, kbits, blkbits, ivbits)
     }
@@ -2678,7 +2821,7 @@ unsafe fn aes_wrap_init(
         }
         if !key.is_null() {
             if keylen != (*ctx).keylen {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHER_AES_WRP_123);
             }
             // SP800-38F §5.1: an inverse-cipher row's forward transform is the *decryption*
             // function, so the wrap direction swaps which AES key schedule is built.
@@ -2752,12 +2895,15 @@ unsafe fn aes_wrap_cipher_internal(
             return 0;
         }
         if inlen == 0 || inlen > c_int::MAX as usize {
+            raise_prov(&err_sites::PROV_CIPHER_AES_WRP_178);
             return -1;
         }
         if bits(ctx) & CTX_ENC == 0 && (inlen < 16 || inlen & 0x7 != 0) {
+            raise_prov(&err_sites::PROV_CIPHER_AES_WRP_184);
             return -1;
         }
         if bits(ctx) & CTX_PAD == 0 && inlen & 0x7 != 0 {
+            raise_prov(&err_sites::PROV_CIPHER_AES_WRP_190);
             return -1;
         }
         if out.is_null() {
@@ -2793,7 +2939,12 @@ unsafe fn aes_wrap_cipher_internal(
             inlen,
             block,
         );
-        if rv == 0 || rv > c_int::MAX as usize {
+        if rv == 0 {
+            raise_prov(&err_sites::PROV_CIPHER_AES_WRP_214);
+            return -1;
+        }
+        if rv > c_int::MAX as usize {
+            raise_prov(&err_sites::PROV_CIPHER_AES_WRP_218);
             return -1;
         }
         rv as c_int
@@ -2841,13 +2992,19 @@ unsafe extern "C" fn aes_wrap_cipher(
             return 1;
         }
         if outsize < inl {
+            return fail_at(&err_sites::PROV_CIPHER_AES_WRP_250);
+        }
+        // `size_t len` in the authority, assigned from an `int`-returning callee: a refusal
+        // that returns `-1` becomes `SIZE_MAX`, `len <= 0` is then false, and the row answers
+        // **success** with `*outl = SIZE_MAX` while the error sits in the queue. It is not a
+        // transcription slip to reproduce -- a divergence here is observable through
+        // `EVP_CipherUpdate`, which turns the oversized `*outl` into `EVP_R_UPDATE_ERROR`. The
+        // only zero `aes_wrap_cipher_internal` can still produce is its `in == NULL` arm.
+        let len = aes_wrap_cipher_internal(vctx, out, input, inl) as usize;
+        if len == 0 {
             return 0;
         }
-        let len = aes_wrap_cipher_internal(vctx, out, input, inl);
-        if len <= 0 {
-            return 0;
-        }
-        *outl = len as usize;
+        *outl = len;
         1
     }
 }
@@ -2867,10 +3024,10 @@ unsafe extern "C" fn aes_wrap_set_ctx_params(vctx: *mut c_void, params: *const O
         if !p.is_null() {
             let mut keylen = 0usize;
             if crate::params::OSSL_PARAM_get_size_t(p, &mut keylen) == 0 {
-                return 0;
+                return fail_at(&err_sites::PROV_CIPHER_AES_WRP_274);
             }
             if (*ctx).keylen != keylen {
-                return 0;
+                return fail_at(&err_sites::PROV_CIPHER_AES_WRP_278);
             }
         }
         1
@@ -3849,7 +4006,7 @@ unsafe fn aes_xts_check_keys_differ(key: *const c_uchar, bytes: usize, enc: c_in
         if (AES_XTS_ALLOW_INSECURE_DECRYPT == 0 || enc != 0)
             && CRYPTO_memcmp(key.cast(), key.add(bytes).cast(), bytes) == 0
         {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHER_AES_XTS_59);
         }
         1
     }
@@ -3956,7 +4113,7 @@ unsafe extern "C" fn aes_xts_set_ctx_params(vctx: *mut c_void, params: *const Os
         if !p.is_null() {
             let mut keylen = 0usize;
             if crate::params::OSSL_PARAM_get_size_t(p, &mut keylen) == 0 {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHER_AES_XTS_268);
             }
             if keylen != (*ctx).keylen {
                 return fail();
@@ -4067,7 +4224,7 @@ unsafe fn aes_xts_init(
         }
         if !key.is_null() {
             if keylen != (*ctx).keylen {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHER_AES_XTS_90);
             }
             if aes_xts_check_keys_differ(key, keylen / 2, enc) == 0 {
                 return fail();
@@ -4141,7 +4298,7 @@ unsafe extern "C" fn aes_xts_cipher(
         }
         // IEEE Std 1619-2018's data-unit limit, which SP 800-38E also mandates.
         if inl > XTS_MAX_BLOCKS_PER_DATA_UNIT * GENERIC_BLOCK_SIZE {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHER_AES_XTS_202);
         }
         if CRYPTO_xts128_encrypt(
             ptr::addr_of!((*xctx).xts),
@@ -4174,9 +4331,16 @@ unsafe extern "C" fn aes_xts_stream_update(
     // SAFETY: the caller's contract.
     unsafe {
         if outsize < inl {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHER_AES_XTS_223);
         }
-        aes_xts_cipher(vctx, out, outl, outsize, in_, inl)
+        if aes_xts_cipher(vctx, out, outl, outsize, in_, inl) == 0 {
+            // `aes_xts_cipher` itself raises only for the data-unit limit; every other refusal
+            // there is a bare `return 0`, and this wrapper is what turns it into an observable
+            // error. A short input takes exactly this path: the inner guard returns 0 with no
+            // raise and the caller sees `PROV_R_CIPHER_OPERATION_FAILED` at `:228`.
+            return fail_at(&err_sites::PROV_CIPHER_AES_XTS_228);
+        }
+        1
     }
 }
 
@@ -4587,7 +4751,7 @@ unsafe fn aes_ocb_init(
             if ivlen != (*ctx).base.ivlen {
                 /* IV len must be 1 to 15 */
                 if !(OCB_MIN_IV_LEN..=OCB_MAX_IV_LEN).contains(&ivlen) {
-                    return fail();
+                    return fail_at(&err_sites::PROV_CIPHER_AES_OCB_119);
                 }
                 (*ctx).base.ivlen = ivlen;
             }
@@ -4598,7 +4762,7 @@ unsafe fn aes_ocb_init(
         }
         if !key.is_null() {
             if keylen != (*ctx).base.keylen {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHER_AES_OCB_130);
             }
             let hw = (*ctx).base.hw;
             if ((*hw).init)(ptr::addr_of_mut!((*ctx).base), key, keylen) == 0 {
@@ -4673,10 +4837,10 @@ unsafe fn aes_ocb_block_update_internal(
 
         if *bufsz == AES_BLOCK_SIZE {
             if outsize < AES_BLOCK_SIZE {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHER_AES_OCB_173);
             }
             if ciph(ctx, buf, out, AES_BLOCK_SIZE) == 0 {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHER_AES_OCB_177);
             }
             *bufsz = 0;
             outlint = AES_BLOCK_SIZE;
@@ -4687,10 +4851,10 @@ unsafe fn aes_ocb_block_update_internal(
         if nextblocks > 0 {
             outlint += nextblocks;
             if outsize < outlint {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHER_AES_OCB_188);
             }
             if ciph(ctx, in_, out, nextblocks) == 0 {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHER_AES_OCB_192);
             }
             in_ = in_.add(nextblocks);
             inl -= nextblocks;
@@ -4946,20 +5110,20 @@ unsafe extern "C" fn aes_ocb_set_ctx_params(vctx: *mut c_void, params: *const Os
         let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_AEAD_TAG);
         if !p.is_null() {
             if (*p).data_type != OSSL_PARAM_OCTET_STRING {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHER_AES_OCB_363);
             }
             if (*p).data.is_null() {
                 /* Tag len must be 0 to 16 */
                 if (*p).data_size > OCB_MAX_TAG_LEN {
-                    return fail();
+                    return fail_at(&err_sites::PROV_CIPHER_AES_OCB_369);
                 }
                 (*ctx).taglen = (*p).data_size;
             } else {
                 if (*ctx).base.enc_int() != 0 {
-                    return fail();
+                    return fail_at(&err_sites::PROV_CIPHER_AES_OCB_375);
                 }
                 if (*p).data_size != (*ctx).taglen {
-                    return fail();
+                    return fail_at(&err_sites::PROV_CIPHER_AES_OCB_379);
                 }
                 ptr::copy_nonoverlapping(
                     (*p).data.cast::<c_uchar>(),
@@ -4972,7 +5136,7 @@ unsafe extern "C" fn aes_ocb_set_ctx_params(vctx: *mut c_void, params: *const Os
         if !p.is_null() {
             let mut sz = 0usize;
             if crate::params::OSSL_PARAM_get_size_t(p, &mut sz) == 0 {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHER_AES_OCB_388);
             }
             /* IV len must be 1 to 15 */
             if !(OCB_MIN_IV_LEN..=OCB_MAX_IV_LEN).contains(&sz) {
@@ -4987,10 +5151,10 @@ unsafe extern "C" fn aes_ocb_set_ctx_params(vctx: *mut c_void, params: *const Os
         if !p.is_null() {
             let mut keylen = 0usize;
             if crate::params::OSSL_PARAM_get_size_t(p, &mut keylen) == 0 {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHER_AES_OCB_404);
             }
             if (*ctx).base.keylen != keylen {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHER_AES_OCB_408);
             }
         }
         1
@@ -5008,21 +5172,21 @@ unsafe extern "C" fn aes_ocb_get_ctx_params(vctx: *mut c_void, params: *mut Ossl
 
         let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_IVLEN);
         if !p.is_null() && crate::params::OSSL_PARAM_set_size_t(p, (*ctx).base.ivlen) == 0 {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHER_AES_OCB_422);
         }
         let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_KEYLEN);
         if !p.is_null() && crate::params::OSSL_PARAM_set_size_t(p, (*ctx).base.keylen) == 0 {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHER_AES_OCB_427);
         }
         let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_AEAD_TAGLEN);
         if !p.is_null() && crate::params::OSSL_PARAM_set_size_t(p, (*ctx).taglen) == 0 {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHER_AES_OCB_433);
         }
 
         let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_IV);
         if !p.is_null() {
             if (*ctx).base.ivlen > (*p).data_size {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHER_AES_OCB_441);
             }
             if crate::params::OSSL_PARAM_set_octet_string_or_ptr(
                 p,
@@ -5030,13 +5194,13 @@ unsafe extern "C" fn aes_ocb_get_ctx_params(vctx: *mut c_void, params: *mut Ossl
                 (*ctx).base.ivlen,
             ) == 0
             {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHER_AES_OCB_445);
             }
         }
         let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_UPDATED_IV);
         if !p.is_null() {
             if (*ctx).base.ivlen > (*p).data_size {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHER_AES_OCB_452);
             }
             if crate::params::OSSL_PARAM_set_octet_string_or_ptr(
                 p,
@@ -5044,16 +5208,16 @@ unsafe extern "C" fn aes_ocb_get_ctx_params(vctx: *mut c_void, params: *mut Ossl
                 (*ctx).base.ivlen,
             ) == 0
             {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHER_AES_OCB_456);
             }
         }
         let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_AEAD_TAG);
         if !p.is_null() {
             if (*p).data_type != OSSL_PARAM_OCTET_STRING {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHER_AES_OCB_463);
             }
             if (*ctx).base.enc_int() == 0 || (*p).data_size != (*ctx).taglen {
-                return fail();
+                return fail_at(&err_sites::PROV_CIPHER_AES_OCB_467);
             }
             ptr::copy_nonoverlapping(
                 (*ctx).tag.as_ptr(),
@@ -5133,15 +5297,15 @@ unsafe extern "C" fn aes_ocb_cipher(
         }
 
         if outsize < inl {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHER_AES_OCB_515);
         }
 
         if (*ctx).key_set == 0 || update_iv(ctx) == 0 {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHER_AES_OCB_528);
         }
 
         if aes_generic_ocb_cipher(ctx, in_, out, inl) == 0 {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHER_AES_OCB_533);
         }
 
         *outl = inl;
@@ -6581,18 +6745,18 @@ unsafe extern "C" fn null_get_ctx_params(vctx: *mut c_void, params: *mut OsslPar
         let ctx = vctx.cast::<ProvNullCtx>();
         let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_IVLEN);
         if !p.is_null() && crate::params::OSSL_PARAM_set_size_t(p, 0) == 0 {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHER_NULL_130);
         }
         let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_KEYLEN);
         if !p.is_null() && crate::params::OSSL_PARAM_set_size_t(p, 0) == 0 {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHER_NULL_135);
         }
         let p = crate::params::OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_TLS_MAC);
         if !p.is_null()
             && crate::params::OSSL_PARAM_set_octet_ptr(p, (*ctx).tlsmac.cast(), (*ctx).tlsmacsize)
                 == 0
         {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHER_NULL_141);
         }
         1
     }
@@ -6625,7 +6789,7 @@ unsafe extern "C" fn null_set_ctx_params(vctx: *mut c_void, params: *const OsslP
         let ctx = vctx.cast::<ProvNullCtx>();
         let p = crate::params::OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_TLS_MAC_SIZE);
         if !p.is_null() && crate::params::OSSL_PARAM_get_size_t(p, &mut (*ctx).tlsmacsize) == 0 {
-            return fail();
+            return fail_at(&err_sites::PROV_CIPHER_NULL_168);
         }
         1
     }

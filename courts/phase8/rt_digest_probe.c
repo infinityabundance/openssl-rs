@@ -71,6 +71,8 @@
 #include <openssl/provider.h>
 #include <openssl/params.h>
 #include <openssl/core_names.h>
+#include <openssl/core_dispatch.h>
+#include <openssl/err.h>
 
 #define RT_MSG_MAX 2048u
 
@@ -668,6 +670,110 @@ static void rt_mdc2_padding(void)
     printf("\n");
 }
 
+/* ------------------------------------------------------------------------------------------
+ * The provider-dispatch failure arm (`ERROR_PASS`)
+ * ------------------------------------------------------------------------------------------
+ *
+ * `providers/implementations/digests/digestcommon.c` is generated and every default-provider
+ * digest row shares it. Its `get_params` answers two refusals that raise `PROV_R_*` errors: the
+ * generated decoder's repeated-key refusal, and a parameter whose setter cannot write the value.
+ * Neither is reachable through `EVP_MD_get_params`, which builds its own single-key arrays, so
+ * the arm drives the row's `OSSL_DISPATCH` through `OSSL_PROVIDER_query_operation` and chooses
+ * the arrays itself. The queue is drained and printed; a refusal the candidate answers without
+ * the authority's error is then a difference rather than a silence.
+ */
+static const OSSL_DISPATCH *rt_disp(const OSSL_ALGORITHM *algs, const char *name)
+{
+    for (; algs != NULL && algs->algorithm_names != NULL; algs++) {
+        const char *s = algs->algorithm_names;
+        size_t n = strlen(name);
+
+        while (*s != '\0') {
+            const char *e = strchr(s, ':');
+            size_t len = e == NULL ? strlen(s) : (size_t)(e - s);
+
+            if (len == n && strncmp(s, name, n) == 0)
+                return algs->implementation;
+            if (e == NULL)
+                break;
+            s = e + 1;
+        }
+    }
+    return NULL;
+}
+
+static void *rt_fn(const OSSL_DISPATCH *d, int id)
+{
+    for (; d != NULL && d->function_id != 0; d++)
+        if (d->function_id == id)
+            return d->function;
+    return NULL;
+}
+
+static void rt_errq(const char *tag)
+{
+    unsigned long e;
+    const char *file = NULL, *func = NULL, *data = NULL;
+    int line = 0, flags = 0;
+    int n = 0;
+
+    while ((e = ERR_get_error_all(&file, &line, &func, &data, &flags)) != 0) {
+        printf("q.%s.%d=lib%d:reason%d:%s:%d:%s\n", tag, n, ERR_GET_LIB(e),
+               ERR_GET_REASON(e), file != NULL ? file : "", line,
+               func != NULL ? func : "");
+        n++;
+    }
+    printf("q.%s.count=%d\n", tag, n);
+}
+
+static void rt_disp_errors(void)
+{
+    OSSL_PROVIDER *prov;
+    const OSSL_ALGORITHM *algs;
+    const OSSL_DISPATCH *d;
+    int (*getparams)(OSSL_PARAM *) = NULL;
+    OSSL_PARAM dup[3];
+    unsigned char octet[8];
+    size_t sz = 0;
+    int nocache = 0;
+    int r;
+
+    prov = OSSL_PROVIDER_load(NULL, "default");
+    printf("disp.provider=%d\n", prov != NULL);
+    if (prov == NULL)
+        return;
+    algs = OSSL_PROVIDER_query_operation(prov, OSSL_OP_DIGEST, &nocache);
+    printf("disp.algorithms=%d\n", algs != NULL);
+    d = rt_disp(algs, "SHA256");
+    printf("disp.sha256=%d\n", d != NULL);
+    getparams = (int (*)(OSSL_PARAM *))rt_fn(d, OSSL_FUNC_DIGEST_GET_PARAMS);
+    printf("disp.getparams=%d\n", getparams != NULL);
+    if (getparams == NULL)
+        return;
+
+    /* A key the generated decoder knows, supplied twice: `digestcommon.c:78` for `size`. */
+    dup[0] = OSSL_PARAM_construct_size_t(OSSL_DIGEST_PARAM_SIZE, &sz);
+    dup[1] = OSSL_PARAM_construct_size_t(OSSL_DIGEST_PARAM_SIZE, &sz);
+    dup[2] = OSSL_PARAM_construct_end();
+    ERR_clear_error();
+    r = getparams(dup);
+    printf("disp.dupsize.ret=%d\n", r);
+    rt_errq("dupsize");
+
+    /* `blocksize` with a type `OSSL_PARAM_set_size_t` cannot write: the setter refuses and the
+     * body raises (`digestcommon.c:111`, the first arm). */
+    memset(octet, 0, sizeof(octet));
+    dup[0] = OSSL_PARAM_construct_octet_string(OSSL_DIGEST_PARAM_BLOCK_SIZE, octet,
+                                               sizeof(octet));
+    dup[1] = OSSL_PARAM_construct_end();
+    ERR_clear_error();
+    r = getparams(dup);
+    printf("disp.badbsize.ret=%d\n", r);
+    rt_errq("badbsize");
+
+    OSSL_PROVIDER_unload(prov);
+}
+
 int main(void)
 {
     size_t i;
@@ -681,6 +787,7 @@ int main(void)
     rt_mdc2_padding();
     rt_one_shot_exports();
     rt_provider_section();
+    rt_disp_errors();
 
     return 0;
 }
