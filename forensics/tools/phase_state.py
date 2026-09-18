@@ -42,6 +42,13 @@ from atlas_common import (  # noqa: E402
 
 OUT = REPO_ROOT / "forensics" / "phase-state.json"
 
+# The court coverage atlas (docs/DECISIONS.md D199). A stratum that claims `complete` must
+# have every one of its implemented exports in one of the atlas's three sets, or the claim
+# "implemented and observed by a differential court" is not machine-checked. The atlas is
+# generated before this tool in `court/pipeline.sh`, and it derives the completed strata
+# from the ledgers rather than from this file, so there is no cycle.
+COVERAGE = "forensics/atlas/court-coverage.json"
+
 # The conservation strata, in dependency order (docs/RELEASE_GATES.md §1).
 STRATA: list[tuple[int, str, str]] = [
     (0, "constitution", "Constitution, authorities, claim algebra"),
@@ -172,6 +179,27 @@ def evidence_for(phase: int) -> tuple[list[str], list[str], str]:
         # understates a stratum whose modules have landed, which is the mistake the Phase 4,
         # 5 and 6 comments each record being made once by hand.
         blocking = blocking or f"no Phase {phase} courts yet ({ev.courts} absent)"
+
+    # Coverage (D199). **This is the join the Phase-7 seal leaned on without checking**:
+    # `open == 0` and `every court passes` do not imply that every implemented export has
+    # a court. The atlas performs that join; a `complete` stratum must appear in it with no
+    # unmatched export, or the state it would otherwise reach is not one the evidence
+    # supports. The atlas covers strata 3-7 (all currently complete export-bearing strata),
+    # so this rule holds for each of them rather than being scoped to Phase 7.
+    coverage = read_json(COVERAGE)
+    if coverage:
+        present.append(COVERAGE)
+        row = next((s for s in coverage["body"]["strata"] if s["phase"] == phase), None)
+        if row is None:
+            blocking = blocking or (
+                f"phase {phase} has no row in {COVERAGE}; the court coverage join has not "
+                f"been performed for it")
+        elif row["counts"]["unmatched"]:
+            blocking = blocking or (
+                f"{row['counts']['unmatched']} implemented export(s) of this stratum are "
+                f"in no court coverage set ({COVERAGE})")
+    else:
+        absent.append(COVERAGE)
     return present, absent, blocking
 
     return present, absent, "not started"
@@ -236,6 +264,9 @@ PHASE3_MODULES = [
     "courts/phase3/rt_secure_probe.c",
     "courts/phase3/rt_lhash_probe.c",
     "courts/phase3/rt_runtime_ext_probe.c",
+    # The reference-basis probe the court coverage atlas (D199) added for the runtime
+    # exports no behavioural court drives. It references, it does not call.
+    "courts/phase3/rt_coverage_ref_probe.c",
 ]
 # Whether anything in the Phase 3 families is unaccounted for is decided by the
 # ledger (`phase3_obligations.py` fails closed), not by a string here.
@@ -333,6 +364,8 @@ PHASE4_MODULES = [
     "courts/phase4/discover_comp.c",
     "forensics/tools/phase4_courts.py",
     "forensics/tools/phase4_obligations.py",
+    # The reference-basis probe the court coverage atlas (D199) added.
+    "courts/phase4/rt_coverage_ref_probe.c",
 ]
 
 
@@ -357,6 +390,8 @@ PHASE5_MODULES = [
     "courts/phase5/rt_bn_probe.c",
     "forensics/tools/phase5_courts.py",
     "forensics/tools/phase5_obligations.py",
+    # The reference-basis probe the court coverage atlas (D199) added.
+    "courts/phase5/rt_coverage_ref_probe.c",
 ]
 
 # Phase 6 evidence: the parameter surface and the provider core, the differential
@@ -449,6 +484,8 @@ PHASE6_MODULES = [
     "courts/phase6/rt_conf_mod_probe.c",
     "forensics/tools/phase6_courts.py",
     "forensics/tools/phase6_obligations.py",
+    # The reference-basis probe the court coverage atlas (D199) added.
+    "courts/phase6/rt_coverage_ref_probe.c",
 ]
 
 
@@ -536,6 +573,12 @@ PHASE7_MODULES = [
     "forensics/tools/phase7_courts.py",
     "forensics/tools/phase7_obligations.py",
     "courts/phase7/rt_fetch_probe.c",
+    # The reference-basis probe the court coverage atlas (D199) added for the EVP exports
+    # no behavioural court drives. It references, it does not call.
+    "courts/phase7/rt_coverage_ref_probe.c",
+    "courts/phase7/rt_evp_introspect_probe.c",
+    "courts/phase7/rt_evp_class_probe.c",
+    "courts/phase7/rt_evp_pkey_ops_probe.c",
 ]
 
 

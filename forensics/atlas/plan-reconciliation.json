@@ -4,42 +4,22 @@
     "censed_states": [
       "in-progress"
     ],
-    "census": {
-      "names_a_file_the_authority_does_not_have": 2,
-      "symbols_not_reached": 3,
-      "units_not_reached": 1
-    },
-    "census_by_stratum": {
-      "8": 6
-    },
+    "census": {},
+    "census_by_stratum": {},
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
-    "census_samples": {
-      "names_a_file_the_authority_does_not_have": [
-        "docs/PHASE-8-SUBPHASES.md:8.1b:_prov.c",
-        "docs/PHASE-8-SUBPHASES.md:8.1b:digestcommon.c"
-      ],
-      "symbols_not_reached": [
-        "ossl_default_provider_init",
-        "ossl_dh_asn1_meth",
-        "ossl_digest_default_get_params"
-      ],
-      "units_not_reached": [
-        "providers/defltprov.c"
-      ]
-    },
+    "census_samples": {},
     "checked": {
       "plans_read": [
         "docs/PHASE-5-SUBPHASES.md",
         "docs/PHASE-6-SUBPHASES.md",
-        "docs/PHASE-7-SUBPHASES.md",
-        "docs/PHASE-8-SUBPHASES.md"
+        "docs/PHASE-7-SUBPHASES.md"
       ],
-      "rows_judged": 75,
-      "symbols_named_by_a_row": 74,
+      "rows_judged": 62,
+      "symbols_named_by_a_row": 71,
       "symbols_reached": 71,
       "unit_records": 67,
       "units_named_by_a_record": 70,
-      "units_named_by_a_row": 136,
+      "units_named_by_a_row": 135,
       "units_reached": 135
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
@@ -54,8 +34,7 @@
         "recorded_by": null,
         "subphases": [
           "7.4",
-          "7.4l",
-          "8.8"
+          "7.4l"
         ],
         "transcribed_by": [
           "src/evp/pkey_asn1.rs"
@@ -1736,16 +1715,6 @@
           "7.3f"
         ],
         "transcribed_by": []
-      },
-      "providers/defltprov.c": {
-        "defines": [
-          "ossl_default_provider_init"
-        ],
-        "recorded_by": null,
-        "subphases": [
-          "8.1b"
-        ],
-        "transcribed_by": []
       }
     },
     "rule": "every authority translation unit and every authority-internal function named by a subphase row of a **complete** stratum must be transcribed by a crate module or named by an explicit record field; and an explicit record field naming an authority unit must have a subphase row behind it. An `in-progress` stratum's unreached names are published as a census and are not a failure, because a plan names the work a stratum will do",
@@ -2092,7 +2061,7 @@
       "transcribed_units": 144
     }
   },
-  "body_hash": "0374a0c5a830f0730aa75fc7b5177b20e151728f95dd47d2ad856a4ed2d1703a",
+  "body_hash": "39ec542a39b80912da70b7a8f2277b26e8e73a1cd20e039319378f6dd8757d33",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -2113,12 +2082,12 @@
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "53953b3afbafff7da191025e8642ba576bdd2e5e2374948583bb9b451fb3dd3c"
+      "sha256": "ebd9987bc331b0c44562f2622c3b17f57798301a1b4c7b0ddf16eaa924744bbb"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "835e4ca93f2c82febeb4158c3f9b40790a1be38dbacebb19b9eeeb99b24a59bd"
+      "sha256": "227ba400c6ec650caec475ac30e5ab020bda95d79d5d0402cc706b1ef85cc5ec"
     },
     {
       "name": "source-manifest",
@@ -2139,11 +2108,6 @@
       "name": "plan-PHASE-7-SUBPHASES",
       "path": "docs/PHASE-7-SUBPHASES.md",
       "sha256": "b815480fb32f646133c267051c5e8858691cac5ca2275a62fd0f95fedb1a3a04"
-    },
-    {
-      "name": "plan-PHASE-8-SUBPHASES",
-      "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "6be02fa44cad4bac31d9efa3fb1cf429f1889f55552536487f8841cae91270a4"
     }
   ],
   "kind": "plan-reconciliation",

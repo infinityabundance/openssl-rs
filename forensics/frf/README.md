@@ -157,21 +157,16 @@ requires each mutation to be seen on its targeted axis **and on no other**.
 | `openssl-cli-dgst` | seen on stdout only | seen on exit only | **has** sensitivity evidence |
 | `openssl-cli-inventory` | seen on stdout only | seen on exit only | **has** sensitivity evidence |
 | `openssl-cli-version` | refused | refused | observations only |
-| `openssl-rs-rt-*` (all 40 runtime courts) | seen on stdout only | seen on exit only | **have** sensitivity evidence |
+| `openssl-rs-rt-*` (all 62 runtime courts) | seen on stdout only | seen on exit only | **have** sensitivity evidence |
 
-The runtime count is 40 as of the Phase 6.11 boundary: ten Phase 3 courts, seventeen
-Phase 4, nine Phase 5, and four Phase 6 (`openssl-rs-rt-param`,
-`openssl-rs-rt-libctx`, `openssl-rs-rt-threaddata` and `openssl-rs-rt-selftest`). The
-number is not asserted from
-memory — `python3
-forensics/tools/gen_frf_courts.py --check` prints that breakdown, and that is where this
-line's arithmetic comes from. It is the count of manifests
-`forensics/frf/courts/openssl-rs-rt-*` holds, which is also what
-`forensics/frf/run_courts.sh` derives its court list from — so the *runner* cannot fall
+The runtime count is 62 as of this revision: ten Phase 3 courts, seventeen Phase 4, nine
+Phase 5, seven Phase 6, and nineteen Phase 7 (D200). The number is not asserted from
+memory — it is the count of manifests `forensics/frf/courts/openssl-rs-rt-*` holds, which is also
+what `forensics/frf/run_courts.sh` derives its court list from — so the *runner* cannot fall
 behind a new court. This line can: it is prose rather than a projection, and it was wrong
-before this revision (it said 25 while the store held 37). The authoritative counts are
-`frf --root .frf evidence status` and `forensics/STATUS.md`; a discrepancy here is a
-stale sentence, not a missing court.
+before this revision (it said 25 while the store held 37, then 40 while it held 43). The
+authoritative counts are `frf --root .frf evidence status` and `forensics/STATUS.md`; a
+discrepancy here is a stale sentence, not a missing court.
 
 ### The cause of the refusals, and the remedy that was applied
 
@@ -335,11 +330,30 @@ Phase 17 signal — a real, unmodified downstream consumer — arriving early. I
 recorded here because it was observed, not because SHA-2 is in scope: Phase 8
 owns the digest algorithms.
 
+## Phase 7 — the EVP strata
+
+The Phase 7 runtime courts (D200) are the first ones whose subject is `evp.h`'s object families
+rather than a runtime substrate: the fetch core and the method store, the `EVP_MD`/`EVP_CIPHER`/
+`EVP_MAC`/`EVP_KDF`/`EVP_RAND`/`EVP_SKEY`/`EVP_KEYMGMT` method objects and their contexts, the
+`EVP_PKEY` layer, the PBE registry, the encode and PEM bridges, the legacy `HMAC`/`CMAC`/HPKE
+headers, and the three D199 coverage courts (`RT-EVP-REF`, `RT-EVP-INTROSPECT`, `RT-EVP-CLASS`,
+`RT-EVP-PKEY-OPS`) that reference or call the exports no behavioural probe reached. They are
+declared the same way as the Phase 3–6 courts — nineteen rows in `gen_frf_courts.py`'s `COURTS`
+table, whose one-line subject is each probe header's own opening line — and their declarations are
+`forensics/frf/courts/openssl-rs-rt-{fetch,evp-*,hmac,cmac,hpke}`.
+
+Their chain is complete and lives in `.frf/`: nineteen receipts (zero residuals each), thirty-eight
+challenge records (both declared axes on every court, all adjudicated), and the claim compiled from
+the nineteen receipts at `--policy sensitivity-backed`, whose id and per-court receipt ids are cited
+in `docs/PHASE-7-EVP-SEAL.md` §8 and D200. The claim's scope is the runtime courts' usual narrow
+one — it preserves each fixture family's first stdout line and exit class — and is subject to the
+same harness note above about the first line being a digest of the whole transcript.
+
 ## Not yet represented
 
-These courts exercise the CLI surface and the Phase 3 runtime substrate. They do
-**not** yet constitute a claim about `libcrypto`/`libssl` ABI or semantics beyond
-the seven runtime families above — that requires the later strata, and Phase 3
+These courts exercise the CLI surface, the Phase 3 runtime substrate and the Phase 7 `EVP_*` object
+families. They do **not** yet constitute a claim about `libcrypto`/`libssl` ABI or semantics beyond
+the runtime families listed above — that requires the later strata, and Phase 3
 expressly excludes cryptographic behaviour. The `.num`/version-script/DSO
 reconciliation in `forensics/atlas/*/symbols-*.json` is the corresponding *atlas*
 evidence, and `forensics/frf/courts/openssl-abi-surface` is its FRF counterpart.

@@ -1,0 +1,186 @@
+FRF-MUTANT:stdout-first-line:transcript.sha256=6879cf960511ecfd2cfde29009b67e47bd2ad74a016f1fb1555ab90cd49e38f2
+add_builtin.ret=1 err=0
+load.nonnull=1
+fetch.one.nonnull=nonnull err=50331841
+fetch.one.name_matches=1
+fetch.one.description_matches=1
+one.block_size=16 err=0
+one.iv_length=12 err=0
+one.key_length=32 err=0
+one.nid=0 err=0
+one.type=0 err=0
+one.impl_ctx_size=0 err=0
+one.flags=0x11300016
+one.mode=6 err=0
+one.is_a.name=1 err=0
+one.is_a.alias=1 err=0
+one.is_a.other=0 err=0
+one.is_a.unknown=0 err=0
+one.provider=nonnull err=0
+one.gettable_params=NULL err=0
+one.settable_ctx_params=NULL err=0
+one.gettable_ctx_params=nonnull err=0
+one.gettable_ctx.alg_id=nonnull err=0
+one.get_params.ret=1 err=0
+one.get_params.keylen=32 err=0
+one.names_do_all.ret=1 err=0
+one.names.count=2 err=0
+one.names.saw_first=1 err=0
+one.names.saw_alias=1 err=0
+one.names.saw_upper=0 err=0
+one.can_pipeline.enc=0
+one.can_pipeline.dec=0
+one.up_ref=1 err=0
+one.after_free.key_length=32 err=0
+fetch.enc.nonnull=nonnull err=0
+enc.flags_equal_one_shot=0
+enc.block_size=16
+enc.key_length=32
+enc.can_pipeline.enc=0
+enc.can_pipeline.dec=0
+fetch.pipe.nonnull=nonnull err=0
+pipe.can_pipeline.enc=1
+pipe.can_pipeline.dec=0
+fetch.bad_null=1
+fetch.bad.err=50856204
+fetch.rejected_null=1
+fetch.rejected.err=50856204
+do_all.ours=4 err=0
+meth.new=nonnull err=0
+meth.new.nid=0 err=0
+meth.new.block_size=8 err=0
+meth.new.key_length=16 err=0
+meth.new.provider=1 err=0
+meth.new.is_a=1 err=0
+meth.set_iv_length.first=1 err=0
+meth.set_iv_length.second=0 err=0
+meth.iv_length=8 err=0
+meth.set_flags.first=1 err=0
+meth.set_flags.second=0 err=0
+meth.mode=2 err=0
+meth.set_impl_ctx_size.first=1 err=0
+meth.set_impl_ctx_size.second=0 err=0
+meth.impl_ctx_size=32 err=0
+meth.set_do_cipher.first=1 err=0
+meth.set_do_cipher.second=0 err=0
+meth.get_do_cipher_matches=1
+meth.get_init_is_null=1
+meth.get_cleanup_is_null=1
+meth.get_ctrl_is_null=1
+meth.still_live_after_public_free=8 err=0
+meth.dup_of_provider=NULL err=0
+meth.fetched_survives_meth_free=16 err=0
+enc_null.nonnull=nonnull err=0
+enc_null.nid=0 err=0
+enc_null.block_size=1 err=0
+enc_null.key_length=0 err=0
+enc_null.iv_length=0 err=0
+enc_null.flags=0x0
+enc_null.provider_present=0 err=0
+enc_null.stable=1
+enc_null.up_ref=1 err=0
+enc_null.block_size_after_free=1 err=0
+enc_null.gettable_params=NULL err=0
+ctx.new=nonnull err=0
+ctx.fetched_for_init=nonnull err=0
+ctx.empty.cipher=NULL err=0
+ctx.empty.block_size=0 err=0
+ctx.empty.iv_length=0 err=0
+ctx.empty.key_length=0 err=0
+ctx.empty.nid=0 err=0
+ctx.empty.tag_length=0 err=0
+ctx.empty.is_encrypting=0 err=0
+ctx.empty.num=-1 err=0
+ctx.empty.app_data_null=1 err=0
+ctx.empty.cipher_data_null=1 err=0
+ctx.empty.ctrl_init=0 err=50331779
+ctx.empty.ctrl_init.err=0 err=0
+ctx.empty.set_padding=0 err=0
+ctx.copy_unarmed=0 err=50331759
+ctx.copy_unarmed.err=0 err=0
+ctx.dup_unarmed=NULL err=50331759
+ctx.flags.after_set=256 err=0
+ctx.flags.after_clear=0 err=0
+ctx.init.encrypt=1 err=50331845
+ctx.armed.is_encrypting=1 err=0
+ctx.armed.cipher_is_the_fetched_one=1
+ctx.armed.block_size=16 err=0
+ctx.armed.iv_length=12 err=0
+ctx.armed.key_length=-1 err=50331845
+ctx.armed.nid=0 err=0
+ctx.armed.mode=6 err=0
+ctx.armed.set_key_length_same=0 err=50331845
+ctx.armed.set_key_length_other=0 err=50331845
+ctx.armed.set_key_length_other.err=0 err=0
+ctx.armed.set_padding=0 err=50331846
+ctx.armed.get_num=-1 err=50331845
+ctx.armed.set_num=0 err=50331846
+ctx.armed.get_updated_iv=0 err=50331845
+ctx.armed.get_original_iv=0 err=50331845
+ctx.armed.set_params_empty=0 err=0
+ctx.armed.get_params_empty=0 err=0
+ctx.armed.gettable_ctx_params=NULL err=0
+ctx.armed.settable_ctx_params=NULL err=0
+ctx.armed.algor_id_in_list=NULL err=0
+ctx.armed.param_to_asn1_null=0 err=50331770
+ctx.armed.asn1_to_param_null=0 err=50331770
+ctx.dup=nonnull err=0
+ctx.dup.same_cipher=1
+ctx.dup.is_encrypting=1 err=0
+ctx.dup.key_length=-1 err=50331845
+ctx.after_dup_free.key_length=-1 err=50331845
+ctx.after_dup_free.is_encrypting=1 err=0
+ctx.copy_armed=1 err=0
+ctx.copy_armed.is_encrypting=1 err=0
+ctx.copy_armed.key_length=-1 err=50331845
+ctx.init.decrypt=0 err=50331846
+ctx.after_decrypt_init.is_encrypting=0 err=0
+ctx.reset=1 err=0
+ctx.after_reset.cipher=NULL err=0
+ctx.after_reset.key_length=0 err=0
+ctx.after_reset.is_encrypting=0 err=0
+ctx.pipeline.too_many=0 err=50331879
+ctx.pipeline.too_many.err=0 err=0
+ctx.pipeline.no_impl=0 err=50331878
+ctx.pipeline.no_impl.err=0 err=0
+ctx.pipeline.decrypt.no_impl=0 err=50331878
+path.fetched.enc=nonnull err=0
+path.fetched.both=nonnull err=0
+path.update.before_init=0 err=50331796
+path.update.before_init.err=0 err=0
+path.update.null_outl=0 err=51118338
+path.update.negative_inl=0 err=50331869
+path.init.encrypt=1 err=50331845
+path.decrypt_update.while_encrypting=0 err=50331796
+path.decrypt_update.while_encrypting.err=0 err=0
+path.encrypt_update=1 err=0
+path.encrypt_update.outl=16 err=0
+path.encrypt_final=1 err=0
+path.encrypt_final.outl=0 err=0
+path.encrypt_final_alias=1 err=0
+path.cipher_final_ex=1 err=0
+path.cipher_final=1 err=0
+path.cipher_update.while_encrypting=1 err=0
+path.init.decrypt=0 err=50331782
+path.encrypt_update.while_decrypting=0 err=50331796
+path.decrypt_update=1 err=0
+path.decrypt_update.outl=16 err=0
+path.cipher_update.while_decrypting=1 err=0
+path.decrypt_final=1 err=0
+path.decrypt_final.outl=0 err=0
+path.decrypt_final_alias=1 err=0
+path.pipeline_update.not_a_pipeline=0 err=51118338
+path.pipeline_final.not_a_pipeline=0 err=51118338
+path.init.both=1 err=50331845
+path.cipher.oneshot=16 err=0
+path.cipher.final=16 err=0
+path.cipher.unarmed=16 err=0
+null.block_size=0 err=0
+null.iv_length=0 err=0
+null.nid=0 err=0
+null.flags=0 err=0
+null.is_a=0 err=0
+null.gettable_params=NULL err=0
+null.settable_ctx_params=NULL err=0
+null.gettable_ctx_params=NULL err=0
+null.free_survived=1 err=0

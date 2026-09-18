@@ -1,0 +1,27 @@
+FRF-MUTANT:stdout-first-line:transcript.sha256=824a6bd331f4cae5af86f5fd8dd0987547ba3a68ec558241c969eba67e326652
+provider.loaded=1 err=0
+cipher.fetched=1 err=0
+kat.empty.self=1 rv=111 len=16 vec=1 own=1
+kat.m16.self=1 rv=111 len=16 vec=1 own=1
+kat.m40.self=1 rv=111 len=16 vec=1 own=1
+kat.m64.self=1 rv=111 len=16 vec=1 own=1
+fresh.get0_same=1 upd=0 fin=0 resume=0
+cipher_only.init=1 err=0
+cipher_only.upd=0 fin=0 err=<empty>
+neither_block.init=1 err=0
+complete.init=1 err=0
+complete.fin_len=1 err=<empty>
+complete.outlen=16 err=<empty>
+null_cases.fin_out_null=1 fin_len_null=1 err=<empty>
+restart.init=1 err=0
+restart.upd=1 err=<empty>
+cleanup.upd=0 fin=0 err=<empty>
+copy.uninit=0 err=<empty>
+copy.src_init=1 err=0
+copy.rv=1 err=0
+copy.get0_distinct=1
+copy.independent=1 own_a=1 own_b=1 la=16 lb=16 err=<empty>
+resume.rv=1 err=0
+resume.fin=16 err=<empty>
+CMAC_Final=NOT_MEASURED_CIPHER_FAILURE_ARM_cmac_c_272
+CMAC_Update=NOT_MEASURED_BLOCK_GT_LOCAL_BUF_cmac_c_215

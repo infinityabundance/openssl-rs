@@ -12626,131 +12626,465 @@ note that said `evp_cleanup_int` and `EVP_add_alg_module` were "owed to 7.4" is 
 with a pointer to this entry rather than rewritten silently — the reading it recorded was right when
 it was written and the two facts under it have since changed.
 
-## D197 — Phase 8 opens: 786 rows, sixteen recorded hand-offs, and four readings the plan had to correct before any of it could be written
+---
 
-**8.0 lands the plan, the ledger, the runner and the registration, and it found four things
-about the stratum that no amount of reading the subphase table would have produced.** Phase 8
-is the native primitives — 759 exports the atlas assigns it plus 27 Phase 7 handed over, 786
-rows across the nine working subphases — and the arithmetic is a *projection* of
-`forensics/atlas/symbol-ownership.json` exactly as every stratum since Phase 3's is. This
-entry records the bootstrap and the four readings; the digest work is D198.
+## D198 — every deferral's reason becomes a structured, fail-closed claim: blocker liveness joins the two ledgers, the machinery catches the `EVP_PKEY_new_mac_key` class, and the 7.3g unit check finds two stale units
 
-**The measurement, and it is the strongest one this project has produced for a stratum.**
-Intersecting every `libcrypto-shlib-*.o` in the authority's build tree — 845 objects — with
-the atlas's Phase 8 set places **759 of 759** across **143 units**. No export in this stratum
-is unaccounted for by a translation unit, and unlike Phase 7's the accounting is *complete*
-rather than nearly so. The largest units are `crypto/ec/ec_lib.c` (69), `crypto/rsa/rsa_lib.c`
-(57), `crypto/ec/ec_key.c` (34), `crypto/rsa/rsa_meth.c` (33) and `crypto/pem/pem_all.c` (30).
-By declaring header the stratum is 22 headers, led by `ec.h` 199, `rsa.h` 154, `dh.h` 94,
-`dsa.h` 87 and `modes.h` 50.
+This entry is numbered against the highest entry in either `docs/DECISIONS.md` that is
+reachable here: this branch is cut from `main`, whose file ends at D196, while
+`origin/phase8-digests`'s ends at D197 (the Phase 8 bootstrap). D198 is the next free number and
+does not collide with the bootstrap entry the merge will bring.
 
-**Reading one: nine of this stratum's exports are perlasm's in the authority, and none of the
-digests' are.** The same object-by-object measurement says which units define which exports,
-and among them are `crypto/aes/asm/aes-x86_64.pl`'s object with **five** Phase-8 exports
-(`AES_cbc_encrypt`, `AES_decrypt`, `AES_encrypt`, `AES_set_decrypt_key`,
-`AES_set_encrypt_key`), `crypto/rc4/asm/rc4-x86_64.pl`'s with **three** (`RC4`, `RC4_options`,
-`RC4_set_key`) and `crypto/camellia/asm/cmll-x86_64.pl`'s with **one**
-(`Camellia_cbc_encrypt`). The digest objects — `md5-x86_64`, `sha1-x86_64`, `sha256-x86_64`,
-`sha512-x86_64`, `wp-x86_64`, `sm3-x86_64`, `keccak1600-x86_64` — define **zero** Phase-8
-exports: what they provide is `sha256_block_data_order` and its siblings, which the version
-script hides. This is not a curiosity, it is what decides how each subphase must be verified.
-For 8.1 the portable arm reproduces an *internal* alternative implementation, and a discrepancy
-would show only as a wrong digest byte. For 8.2 the portable arm reproduces **the symbol
-itself**, and a published test vector would prove that the crate computes AES correctly while
-saying nothing about whether it is the same observable function the authority publishes. Both
-are the same requirement — a differential court, the same program compiled twice — and the plan
-records the distinction so that neither subphase is verified by a weaker instrument than its
-authority demands. `docs/PHASE-8-SUBPHASES.md` §0 and §3.1 carry it, and the assembly fast
-paths themselves are Phase 19's, which `docs/RELEASE_GATES.md` already says.
+### The defect, stated as D196 found it
 
-**Reading two: 8.1's row names MDC2, and MDC2 cannot be written before 8.2.** The plan's
-subphase table is dependency-ordered, and reading 8.1's own units against each other says one
-of them is on the wrong side of the boundary. MD4, MD5, RIPEMD-160, Whirlpool, SHA-1 and SHA-2
-are self-contained — a message schedule, a compression function, and the collector
-`include/crypto/md32_common.h` implements. `crypto/mdc2/mdc2dgst.c`'s `mdc2_body` is not: lines
-79-85 are `DES_set_odd_parity`, `DES_set_key_unchecked` and `DES_encrypt1`, twice, and those
-three are 8.2's `des.h` exports. MDC2 is DES-based by construction, which is what its name
-says. The row is not rewritten and MDC2 is not silently moved: the inversion is recorded in the
-plan and MDC2's four labels stay in the ledger's `open` list until 8.2 lands the DES key
-schedule. Landing the three DES functions early was rejected because it would put 8.2's first
-work in 8.1's commit for a reason 8.1's row does not name, and writing MDC2 over a private DES
-was rejected because this stratum exports `DES_encrypt1` once. It is the disposition D163 gave
-7.4's own inversion, reached from the same direction.
+`phase7_obligations.py`'s `BLOCKED_HANDOFFS` and `forensics/prerequisites.json`'s `deferrals`
+both proved only half of what a deferral claims: that the deferred symbol is **still absent**.
+Neither could see the mirror image — that the **blocker named in the reason has since landed** — so
+a row could prove "this export is still absent" while the truth was "it is absent for a reason that
+is no longer true." D193 swept `EVP_PKEY_new_mac_key` into a group whose reason named
+`evp_pkey_get_legacy`; the symbol stayed absent and the row stayed valid while its actual blockers,
+`EVP_PKEY_CTX_new_id` (D186) and the ctrl plane (D188), had already landed. D196 found it by
+reading the call chain. With 244 deferrals in the sealed ledger that is too much surface to leave
+to prose freshness.
 
-**Reading three: the brief's SHA-3, SHAKE, SHA-512/224 and SM3 "low-level API" does not exist
-in this authority.** The authority's `include/openssl/sha.h` is 139 lines and declares no
-`SHA3_*`, no `SHAKE*`, no `SHA512_224`/`SHA512_256` and no `SHA256_192` function;
-`forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json` has no record for
-`SHA3_absorb`, `SHA3_squeeze` or `SHA3_256` either. `crypto/sha/sha3.c`'s entry points are
-`ossl_sha3_reset`, `_init`, `_update`, `_final`, `_squeeze`, of which none is exported, and
-`crypto/sm3/sm3.c`'s are `ossl_sm3_init` and `ossl_sm3_block_data_order`. What the authority
-*does* export for those constructions is the `EVP_MD` name — `EVP_sha3_224`…`EVP_sha3_512`,
-`EVP_shake128`, `EVP_shake256`, `EVP_sha512_224`, `EVP_sha512_256`, `EVP_sm3` — and all of
-those are Phase 7's and already implemented. So that part of 8.1 is **provider work with no
-low-level export to land**, and the internal entry points it needs are the `ossl_*` names above
-plus `sha512_224_init`/`sha512_256_init`/`ossl_sha256_192_init` and `ossl_sm3_*`, which carry no
-`#[no_mangle]` because the authority keeps them local. This is the same class as D195's
-`EVP_AEAD`: a name in the plan that the pinned source does not have, found by reading the
-header and the symbol inventory rather than by trusting the plan.
+### The fix: a structured blocker, and one checker both mechanisms share
 
-**Reading four: five of the seven digest one-shots are `EVP_Q_digest`, so they are the provider
-half's and not the construction's.** `crypto/sha/sha1_one.c` implements `SHA1`, `SHA224`,
-`SHA256`, `SHA384` and `SHA512` as `EVP_Q_digest(NULL, "SHA256", NULL, d, n, md, NULL)` — a
-fetch through the **default library context**. `EVP_Q_digest` is Phase 7's and is implemented,
-but the candidate has no default provider, because `ossl_default_provider_init` does not exist;
-that is the residual D117 records and the reason Phase 6's `RT-PROVIDER` deliberately never
-enables the fallback walk. `MD4`, `MD5`, `RIPEMD160`, `MDC2` and `WHIRLPOOL` are one-shots in
-the older sense — `crypto/md5/md5_one.c` calls `MD5_Init`/`_Update`/`_Final` directly — so they
-land with their construction. **That split is the plan's reason for slicing 8.1 into 8.1a and
-8.1b**: thirty-eight exports land as constructions, five wait on the provider half, and MDC2's
-four wait on 8.2. The provider half is not an appendix to this subphase; it is the half that
-makes the public spellings of SHA-1 and SHA-2 work at all, and the plan says so in the slice
-table rather than leaving it to be discovered when the one-shots are attempted.
+`forensics/tools/blocker_liveness.py` is new. A deferral is now a structured claim, and the
+checker proves it before either generator writes anything:
 
-**The twenty-seven hand-offs are one mechanism and one subphase.** Every row Phase 7 deferred
-to this stratum is `evp.h`'s, and every one takes the legacy route — a downgraded
-`RSA`/`DH`/`DSA`/`EC_KEY`, or a search of `standard_methods[]` — so **8.8 is what retires all
-twenty-seven**, plus the `EVP_PKEY_type`, `d2i_PublicKey`/`d2i_KeyParams*` and
-`EVP_PKEY_meth_find`/`_get0`/`_get_count` blockers 7.4l and 7.7 left open. Three of the twelve
-`EVP_PKEY_get0_*`/`get1_*`/`set1_*` spellings per key type are labelled with that key type's
-module and the fifteen remaining are `src/asn1/ameth.rs`'s, which is the ledger's answer to
-"which module is expected to hold it" and not a claim about which file will be written first.
+```python
+@dataclass(frozen=True)
+class Blocker:
+    """A name whose absence is why a deferred symbol cannot be written yet."""
+    name: str
+    authority_unit: str   # the .c/.h it is defined in, relative to the authority tree
+    line: int             # the definition site
+    kind: str             # "exported" | "internal" | "type"
+    owning_phase: int     # the stratum that lands it
 
-**The sixteen recorded hand-offs are all Phase 9's and all verified call by call.** `DES_random_key`
-(`crypto/des/rand_key.c:22`, `RAND_priv_bytes`), the two RSA blinding names
-(`crypto/rsa/rsa_crpt.c:104` → `BN_BLINDING_create_param` → `BN_rand_range_ex` → `RAND_bytes_ex`
-at `crypto/bn/bn_rand.c:50`), eleven key and parameter generators across the four key types
-(`BN_generate_prime_ex2` at `crypto/rsa/rsa_gen.c:388` and `crypto/dh/dh_gen.c:217`,
-`BN_priv_rand_ex` at `crypto/dh/dh_key.c:336`, and the DSA and EC equivalents), and the two X9
-KDF wrappers (`crypto/dh/dh_kdf.c:40` and `crypto/ec/ecdh_kdf.c:34`, each an `EVP_KDF` fetch of
-a provider KDF). **The four key types themselves are not hand-offs**: `RSA_get0_key` needs the
-`RSA` object `RSA_new` allocates, which is 8.4's own work, and a stratum cannot hand a symbol to
-itself — so those rows are `open`, not `deferred`, and the plan says so because the opposite
-reading is the tempting one. The one phase number that is an inference rather than a reading is
-the X9 KDF pair's "Phase 9": no plan names the provider KDF family yet, and the row says it is
-the one to correct if a later plan says otherwise.
+@dataclass(frozen=True)
+class BlockedHandoff:
+    """One deferral: its symbols, the phase that retires it, and its blockers."""
+    symbols: tuple[str, ...]
+    binding_phase: int              # the old `owning_phase`
+    blocked_by: tuple[Blocker, ...]
+    reason: str                     # prose, kept
+    note: str = ""                  # why this is the smallest honest blocker set
+    label: str = ""
+```
+
+`check_row` proves five things for every row, each fail-closed:
+
+1. **the blocker is real** — it resolves against `export-defining-units.json`, the
+   `internal-symbols.json` atlas or the `typedef-owners.json` atlas; a name no record contains is a
+   typo, not a reason;
+2. **the blocker is currently absent** — the invariant that was missing;
+3. **`owning_phase` is the phase the record assigns** — the export/typedef atlas, or the
+   `prerequisites.json` deferral that lands it (which is why `EVP_md5` resolves to 13, not the 7
+   its declaring header would give) — and `binding_phase` is the latest of them, so a row that
+   says "blocked on Phase 8" while a blocker is Phase 10 is a lie rather than a sentence;
+4. **if every blocker has landed the deferral is invalid**, naming the landed blockers and the
+   decision that landed them when the caller can supply it;
+5. **if the binding phase is complete and a blocker is still absent**, the completed stratum did
+   not produce the name it owed.
+
+A `Blocker` whose `authority_unit` is not a unit any committed atlas records is a failure, so
+the path evidence is not decorative. The authority's 55 MB source tree lives only in the court,
+so the checks have two tiers and print which one ran, the pattern `gen_ctype_table.py` already
+uses: with the tree present, a `Blocker`'s `authority_unit:line` is proved to be a real line
+inside a real file; with it absent (CI's `evidence_determinism`), the unit is still checked against
+the committed atlases and the line range is not claimed. The two tiers produce byte-identical
+artifacts -- the strong tier only ever *adds* failures -- and both were run: CI's `Evidence
+determinism` step failed on the first push precisely because the strong tier had been assumed, and
+it is green after the tier was made explicit.
+
+A type declared only in the weak `types.h` has no authority phase of its own. It is accepted only
+when another blocker in the same row carries the row's `binding_phase`; the twelve low-level-key
+accessors' row is the worked example, and its `note` says so. That is a check on the type's phase
+rather than an assertion of it.
+
+### The sensitivity control: a check that has never been seen to fail is not evidence
+
+The shared module carries `--self-test`. It reconstructs `EVP_PKEY_new_mac_key` as D193's group
+reason worded it, with the blockers its body actually calls — `EVP_PKEY_CTX_new_id`
+(`crypto/evp/pmeth_lib.c:447`) and `EVP_PKEY_CTX_set_mac_key` (`:1252`), landed in D186 and D188 —
+and refuses to pass unless the finding comes back. The exact output, from
+`python3 forensics/tools/blocker_liveness.py --self-test`:
+
+```text
+[blocker-liveness] the reconstructed EVP_PKEY_new_mac_key row:
+  BLOCKED_HANDOFFS (reconstructed: D193's EVP_PKEY_new_mac_key row, as D196 found it): every blocker of EVP_PKEY_new_mac_key has landed (EVP_PKEY_CTX_new_id (phase 7, landed in D186), EVP_PKEY_CTX_set_mac_key (phase 7, landed in D188)); the deferral is invalid -- retire it rather than leave a stale reason covering the name
+[blocker-liveness] self-test ok: the stale row is caught without a human
+```
+
+### The re-audit: 244 deferrals and 25 prerequisites
+
+`phase7-obligations.json`'s `deferred` is still 244: **80** `BLOCKED_HANDOFFS` exports in **25**
+rows now carry **60** structured blockers, and **164** are 7.3g's `LEGACY_HANDOFFS`, whose cause is
+a whole primitive unit rather than a name. The generator reports
+`blocker liveness: 25 structured rows / 60 blockers checked, 164 legacy rows over 21 unit claims,
+findings=0`; its `blocker_liveness` body block records the same counts. No structured blocker set
+was routed around because its phase could not be checked: where an honest blocker had no recorded
+owner phase the row names a different, checkable name and says why in its `note` (see the exception
+list below).
+
+**Every row that changed, and what changed.**
+
+* **All 80 `BLOCKED_HANDOFFS` deferred rows** gained `binding_phase` and `blocked_by`, and 7 of the
+  25 groups gained a `note`. Their `owning_phase` values are unchanged, `deferred_by_phase` is still
+  `{8: 27, 9: 4, 10: 15, 11: 5, 13: 193}`, and the 80 reason strings are **byte-identical** to the
+  ones D196 wrote (verified by importing the previous revision through `git show` and comparing).
+* **Three 7.3g rows changed their stated authority unit**, because the new unit check found the old
+  ones do not exist: `EVP_blake2b512` and `EVP_blake2s256` said `crypto/blake2/`, which the
+  authority does not contain — their callbacks call the provider BLAKE2 implementation in
+  `providers/implementations/digests/` — and `EVP_whirlpool` said `crypto/whirlpool/`, which is
+  spelled `crypto/whrlpool/`. Both are corrected, and the corrections are stated in the row's own
+  note rather than applied silently.
+* **Five `prerequisites.json` deferral rows** gained `blocked_by`: `evp_cleanup_int` (blocked by
+  `evp_app_cleanup_int`, `crypto/evp/pmeth_lib.c:631`), `evp_pkey_get_legacy` (by
+  `evp_pkey_copy_downgraded`, `crypto/evp/p_lib.c:2066`), `evp_pkey_get0_DH_int` (by
+  `evp_pkey_get_legacy`, `:2154`), `evp_pkey_copy_downgraded` (by `ossl_rsa_asn1_meths`,
+  `crypto/rsa/rsa_ameth.c:968`) and `evp_app_cleanup_int` (by `ossl_rsa_pkey_method`,
+  `crypto/rsa/rsa_pmeth.c:851`). Their `owner_phase` values are unchanged and `blocking_dependencies`
+  is still 25.
+* `forensics/atlas/ownership-audit.json` and `forensics/atlas/plan-reconciliation.json` moved two
+  lines each (their recorded input hash for `phase7-obligations.json`), and
+  `forensics/atlas/prerequisite-gate.json` carries the new `deferral_blocker_rows` count. All are
+  regenerated, not hand-edited.
+
+### `forensics/prerequisites.json` gained the same check, through the same checker
+
+The two mechanisms share `blocker_liveness.py` rather than each growing a copy: the checks are
+facts about the same atlases and two copies would be two things to keep true. `prerequisite_gate.py`
+builds a `BlockedHandoff` for every deferral row that carries `blocked_by` and reports each failure
+as a `deferral_blocker_is_stale` finding, so the gate fails rather than reads. It checked 5 rows in
+this run. The integration is honest about its reach: a deferral that names a *name* as its blocker
+must now carry `blocked_by`, but a deferral that is simply a stratum's own work ("this name is
+owned by Phase 10") has no blocker to prove, and no mechanical rule can tell the two apart from
+prose, so the gate applies the liveness check where the row states one and the existing
+`stale_deferral`/`deferral_target_not_ahead` checks where it does not.
+
+### What could not be made machine-checkable, and why
+
+Each is recorded rather than asserted, and each is kept to the smallest set that has to be.
+
+* **The 164 `LEGACY_HANDOFFS` deferrals.** Their reason is a whole primitive unit — `crypto/aes/`,
+  `crypto/des/`, `crypto/chacha/` and `crypto/poly1305/`, and so on — not a name, so there is no
+  blocker whose landing proves the deferral stale. Inventing a per-family name would be false:
+  `MD5_Init` (`crypto/md5/md5_dgst.c:29`) is Phase 8's in the atlas while `EVP_md5`
+  (`crypto/evp/legacy_md5.c:31`) is Phase 13's by the hand-off, so a per-name phase would either
+  lie or force the phase. The claim that *can* be checked is the one the reason actually makes —
+  that the unit exists in this authority — and that is the new check in `phase7_obligations.py`,
+  which is what found the two defects above.
+* **Weak types have no independently recorded phase.** `RSA`, `DSA`, `DH` and `EC_KEY` are declared
+  only in `include/openssl/types.h` (`:155`, `:150`, `:146`, `:163`), which declares no export, so
+  `typedef-owners.json` gives them `owner_phase: null`. The checker accepts their declared phase
+  only when another blocker in the same row has that authority phase; the type's phase is therefore
+  *inherited from a checked name*, not recorded in its own right.
+* **Internal blockers with no recorded owner phase.** `ossl_dh_is_foreign`
+  (`crypto/dh/dh_backend.c:122`), `evp_pkey_get0_RSA_int` (`crypto/evp/p_legacy.c:40`) and
+  `ossl_rand_uniform_uint32` (`crypto/rand/rand_uniform.c:25`) are real callers' names but no
+  atlas or `prerequisites.json` row gives a stratum for them, and a translation unit's phase is not
+  a safe substitute — `evp_pkey_get_legacy` lives in `crypto/evp/p_lib.c`, whose exports are Phase
+  7's, and is nonetheless Phase 8's. Rows 3, 4 and 21 therefore name the checkable names that carry
+  the same claim and say so in their `note`.
+* **Two Phase-7-owned exports that cannot be their own row's blocker.** `EVP_PKEY_type`
+  (`crypto/evp/evp_pkey_type.c:63`) and `EVP_read_pw_string_min` (`crypto/evp/evp_key.c:52`) are
+  this stratum's, withheld by rows 6 and 16; using them as blockers of a row owned by this stratum
+  would make the claim circular. Rows 3 and 23 name the root blockers instead.
+* **`line` is range-checked only with the tree present.** A macro-generated export does not
+  contain its own name at its definition site — `d2i_X509_ALGOR` is
+  `IMPLEMENT_ASN1_FUNCTIONS(X509_ALGOR)` at `crypto/asn1/x_algor.c:26` — so the checker proves the
+  file exists and the line is inside it when the authority tree is available, and otherwise
+  defers to the reader; the unit itself is checked against the committed atlases either way. A
+  general C declaration parser is out of scope and would be wrong more often than this.
+* **Decision-entry attribution in proof 4.** No artifact in the repository maps a landed symbol to
+  the decision that landed it, so the running generator's message names the blocker and its phase
+  ("the crate defines it") and the `--self-test` supplies `D186`/`D188` explicitly. The message
+  format is the one shown above; only the decision text is caller-supplied.
+* **Prerequisite deferrals that name no blocker.** `ossl_get_enginesdir`,
+  `ossl_get_openssldir` and `ossl_get_wininstallcontext` (`src/runtime/defaults.rs`),
+  `ossl_random_add_conf_module` (`crypto/rand/rand_lib.c`), `OSSL_provider_init`
+  (`providers/legacy/legacyprov.c`), the seed trio (called only by `crypto/rand/rand_lib.c`),
+  `OSSL_ENCODER_CTX_new_for_pkey`/`OSSL_DECODER_CTX_new_for_pkey` (`crypto/encode_decode/`),
+  `ASN1_item_sign_ctx`/`ASN1_item_verify_ctx` (`crypto/asn1/a_sign.c:146`,
+  `crypto/asn1/a_verify.c:111`), `d2i_X509_ALGOR` (`crypto/asn1/x_algor.c:26`),
+  `RAND_priv_bytes_ex`/`RAND_bytes`/`RAND_bytes_ex` (`crypto/rand/rand_lib.c:420`, `:500`, `:463`),
+  `UI_new` (`crypto/ui/ui_lib.c:18`) and `EVP_md5` (`crypto/evp/legacy_md5.c:31`) are names a
+  stratum *owns* rather than names blocked by another name. There is no blocker to leave unproved;
+  the gate's `stale_deferral` and `deferral_target_not_ahead` checks are the ones that apply.
+
+### What did not change
+
+No obligation count moved (`complete=True`, `open=0`, `deferred=244`), no phase moved, no court
+moved, `implemented[libcrypto]` stays 1841, and the privilege of a deferral is exactly what it was:
+a symbol leaves the ledger by being **landed**, not by editing a reason. What changed is that the
+reason itself is now a claim the machinery can falsify — and it did falsify two.
+
+## D199 — the court coverage atlas: the Phase-7 seal's “observed by a differential court” becomes a checked join, and the 488 completed-stratum exports no probe referenced become observable
+
+### The gap, as the reviewer stated it
+
+`docs/PHASE-7-EVP-SEAL.md` opened by claiming that every implemented Phase-7 export is
+“implemented **and observed by a differential court**”. The two exit criteria the machinery
+checked — `open_in_this_stratum == 0` and `every court passes` — do not imply that. They imply that
+*some* set of exports has a court and that every court which exists passes; nothing joined the 706
+implemented exports to the courts that ran. At that scale it was an unproven claim in a project
+whose discipline is that a claim is a fact a reader can recompute.
+
+### The design
+
+`forensics/tools/court_coverage.py` generates `forensics/atlas/court-coverage.json` and partitions
+every implemented export of every **completed** stratum into exactly three disjoint sets:
+
+* **directly_courted** — the name is an undefined dynamic symbol of a staged candidate probe.
+  Derived mechanically: the `.dynsym` of each `artifacts/phase<N>/probes/*.candidate` is read by
+  `forensics/tools/elf_symbols.py` (which gained `undefined_dynamic_symbols` for it, reading the
+  dynamic table directly rather than shelling out to `nm`, for the reason that module’s header
+  gives) and intersected with the ledger’s implemented set. The court names are the reason.
+* **indirectly_courted** — an authored edge `(symbol, public entry, court)` whose entry the
+  generator checks is itself directly courted by that court, so an edge cannot name a path no
+  transcript drives.
+* **non_observable** — an authored row `(symbol, reason, court, authority citation)`.
+
+The sets 2 and 3 rows live in `forensics/atlas/court-coverage-rows.json`, a committed data file
+rather than a table inside the generator, because each row is an auditable claim and a change to
+one reads as a data diff. The generator fails, naming them, if any implemented export of a
+completed stratum is in none of the three. `phase_state.py` now requires the atlas to show
+`unmatched == 0` for every stratum it would derive `complete`, and `court/pipeline.sh` runs the
+generator after the ledgers and the courts and before `phase_state.py`. The atlas covers strata
+3–7 — all the currently complete export-bearing strata — so the completion rule holds for all five
+rather than being scoped to Phase 7; a future stratum is drawn in by the same ledger-complete test
+and fails the join until its exports are accounted for.
+
+**What `directly_courted` claims, and what it does not.** An undefined dynamic symbol is a
+*reference*: a probe that takes a symbol’s address, or stores it in a dispatch table it later
+calls through, imports it exactly as a direct call does. So `directly_courted` means “referenced by
+a staged candidate probe that ran and produced a transcript”, **not** “every arm of the symbol was
+driven”. The atlas’s `claim` says so, and this is why the seal now says the weaker, true thing.
+
+### The first-run gap, and the remedy
+
+The first run of the join found **488** implemented exports of strata 3–7 referenced by no staged
+candidate probe: 89 in Phase 3, 36 in Phase 4, 94 in Phase 5, 5 in Phase 6 and **264 in Phase 7**.
+The remedy was to make them observable, not to record an excuse. The atlas now records **1,554**
+exports `directly_courted` at basis `called`, **287** at basis `referenced`, **0**
+`indirectly_courted`, **0** `non_observable` and **0** unmatched.
+
+For Phase 7, of the 264 that no court referenced:
+
+* `RT-EVP-INTROSPECT` (`courts/phase7/rt_evp_introspect_probe.c`) calls the twenty
+  `EVP_PKEY_METHOD` setter/getter pairs, the fifteen `EVP_PKEY_ASN1_METHOD` setters plus
+  `get0_info`/`copy`/`free`, the five `EVP_MD_meth_*`, the five `EVP_CIPHER_meth_*` and their two
+  getters, `EVP_MD_CTX_copy`, and the password-prompt pair — **75** exports to basis `called` (the
+  forty-eight observations its transcript carries).
+* `RT-EVP-CLASS` (`courts/phase7/rt_evp_class_probe.c`) publishes one
+  `EVP_ASYM_CIPHER`/`EVP_KEM`/`EVP_KEYEXCH`/`EVP_SIGNATURE` method from a provider defined inside
+  the probe, fetches each, and calls every class’ `free`/`up_ref`/`get0_name`/`get0_description`/
+  `get0_provider`/`is_a`/`names_do_all`/`do_all_provided`/`gettable_ctx_params`/
+  `settable_ctx_params` (and `fetch`, where it was not already courted) — **42**.
+* `RT-EVP-PKEY-OPS` (`courts/phase7/rt_evp_pkey_ops_probe.c`) publishes a keymgmt, generates a key
+  from it, and calls the `EVP_PKEY_CTX_*` accessor surface and the `EVP_PKEY_*` accessors — **84**.
+* The remaining **63** are recorded at basis `referenced` by `RT-EVP-REF`
+  (`courts/phase7/rt_coverage_ref_probe.c`), which address-takes each and prints `nonnull` and
+  nothing more. `forensics/atlas/court-coverage.json` lists them by name; they are, in groups:
+  the eleven `EVP_CIPHER_CTX_*` accessors, `EVP_CIPHER_get_asn1_iv`/`set_asn1_iv`, the eleven legacy
+  `EVP_*Init*` wrappers and `EVP_CipherInit_SKEY`, `EVP_DigestVerifyInit` (they need an armed
+  cipher/MAC context); `EVP_PKEY_encrypt_init`/`_init_ex`/`encrypt`, `EVP_PKEY_decrypt_init`/
+  `_init_ex`/`decrypt`, `EVP_PKEY_derive_init`/`_init_ex`/`derive`/`derive_set_peer`/`_ex`,
+  `EVP_PKEY_encapsulate`/`_init`, `EVP_PKEY_decapsulate`/`_init`,
+  `EVP_PKEY_auth_encapsulate_init`/`auth_decapsulate_init` (the operation inits fault the released
+  authority for a generated provider key with no such operation — `EVP_PKEY_encrypt_init` is the
+  first, and every arm after it is hidden by that crash, so the boundary is printed); the
+  `EVP_*_SKEY` family (`EVP_MAC_init_SKEY`, `EVP_KDF_CTX_set_SKEY`, `EVP_KDF_derive_SKEY`,
+  `EVP_PKEY_derive_SKEY`, `EVP_SKEY_export`, `EVP_SKEYMGMT_up_ref`) which needs an `EVP_SKEY`;
+  `EVP_PKEY_asn1_find`/`_find_str`/`get0`/`get_count` and `add0`/`add_alias` (Phase 8’s
+  `standard_methods[]`, and a process-global registry this stratum does not own);
+  `EVP_PBE_scrypt`/`_ex` (Phase 8’s primitive), `EVP_KDF_up_ref`/`EVP_MAC_up_ref`,
+  `EVP_MD_do_all_provided` (later strata’s contents), `EVP_PKEY_CTX_new`/`_new_id`,
+  `EVP_PKEY_CTX_str2ctrl`/`hex2ctrl` (a NULL translation), `EVP_PKEY_CTX_md` (keyless-context
+  divergence) and `EVP_PKEY_cmp_parameters`/`parameters_eq` (legacy `ameth`).
+
+  Each is a finding with a named stratum, and each is recorded rather than excused: they are the
+  work items that would move the last 63 from `referenced` to `called`.
+
+For strata 3–6 the 224 exports with no reference are covered at basis `referenced` by
+`RT-RUNTIME-REF`, `RT-BIO-CONF-REF`, `RT-BN-ASN1-REF` and `RT-PROVIDER-REF`, one per stratum, each
+listing its names in `forensics/atlas/court-coverage.json`. Moving those to `called` is the
+follow-up; none was recorded as non-observable.
+
+### What did not change
+
+No obligation count moved (`open_in_this_stratum` stays 0), no phase state moved,
+`implemented[libcrypto]` stays 1841, and no existing court’s transcript changed — the new courts
+are additive, so `regression_guard.py` reads them as new keys and the proposed baseline is
+regenerated. `gen_frf_courts.py --check` still passes because the new courts declare no FRF
+receipt, exactly as the rest of Phase 7 does. What changed is that the seal’s central claim is now
+a join a reader can rerun, and it says the weaker true thing the join actually establishes.
+
+## D200 — the Phase 7 FRF courts: the stratum joins the FRF chain with nineteen receipts, thirty-eight challenge records and a compiled claim, and the seal's “vacuous” FRF criterion is replaced by ids a reader can check
+
+### The gap, as the reviewer stated it
+
+`forensics/tools/gen_frf_courts.py`'s `COURTS` table stopped at Phase 6. Phases 3–6 therefore have the full chain — court → FRF declaration → challenge/sensitivity → receipt → compiled claim — while Phase 7 had only `artifacts/phase7/COURTS.json` plus `court/pipeline.sh`. The seal said so honestly: “**Phase 7 declares no FRF courts, and therefore has no FRF receipts.**” That is internally consistent, but it is a *weaker evidence class* than the earlier strata's, and the project's method is built on keeping “differential court evidence” and “FRF-compiled claim” distinct rather than letting the first stand in for the second.
+
+### The mechanism
+
+**Declarations.** Nineteen `(id, phase, probe, description)` rows were added to `COURTS`. The ids are the lower-case spelling the Phase 3–6 rows use (`openssl-rs-rt-<id>`), and the probe stems are the exact names `artifacts/phase7/probes/` stages, so the runner's table and the staging directory agree by construction. `python3 forensics/tools/gen_frf_courts.py` wrote 124 declaration files for 62 courts (43 of them the Phase 3–6 runtime courts) and `--check` then passed. The 19 rows:
+
+| court | probe stem | subject |
+|---|---|---|
+| `openssl-rs-rt-fetch` | `rt_fetch_probe` | the fetch core, from the one angle a probe can be asked in 7.1 |
+| `openssl-rs-rt-evp-cipher` | `rt_evp_cipher_probe` | the `EVP_CIPHER` method object, from the angle 7.3b can be asked in |
+| `openssl-rs-rt-evp-mac` | `rt_evp_mac_probe` | the `EVP_MAC` method object and the context it is run through |
+| `openssl-rs-rt-evp-kdf` | `rt_evp_kdf_probe` | the `EVP_KDF` method object and the context it is run through |
+| `openssl-rs-rt-evp-rand` | `rt_evp_rand_probe` | the `EVP_RAND` method object and the context it is run through |
+| `openssl-rs-rt-evp-skey` | `rt_evp_skey_probe` | the `EVP_SKEYMGMT` method object and the `EVP_SKEY` it manages |
+| `openssl-rs-rt-evp-keymgmt` | `rt_evp_keymgmt_probe` | the `EVP_KEYMGMT` method object, and the structural check that admits it |
+| `openssl-rs-rt-evp-names` | `rt_evp_names_probe` | `names.c`'s four walkers and the two adders |
+| `openssl-rs-rt-evp-pkey` | `rt_evp_pkey_probe` | `crypto/evp/signature.c`'s entry-point half and `p_lib.c`'s provider half, differentially |
+| `openssl-rs-rt-evp-pbe` | `rt_evp_pbe_probe` | the PBE registry, the PBKDF2 facade and the three v2 keygens |
+| `openssl-rs-rt-evp-bio` | `rt_evp_encode_probe` | `crypto/evp/encode.c`'s four base64 contexts and the four filter BIOs of `crypto/evp/` that 7.5 lands |
+| `openssl-rs-rt-evp-pem` | `rt_evp_pem_probe` | the `pem.h` surface 7.5 can build, and the twenty-five names it cannot |
+| `openssl-rs-rt-hmac` | `rt_hmac_probe` | the legacy one-shot interface `crypto/hmac/hmac.c` |
+| `openssl-rs-rt-cmac` | `rt_cmac_probe` | the legacy CMAC interface `crypto/cmac/cmac.c` |
+| `openssl-rs-rt-hpke` | `rt_hpke_probe` | the RFC 9180 `OSSL_HPKE_*` surface, `crypto/hpke/hpke.c` |
+| `openssl-rs-rt-evp-ref` | `rt_coverage_ref_probe` | reference basis for the EVP plane's unexercised entries, and nothing more |
+| `openssl-rs-rt-evp-introspect` | `rt_evp_introspect_probe` | the method-table and legacy-header surfaces the behavioural probes did not reach |
+| `openssl-rs-rt-evp-class` | `rt_evp_class_probe` | the four provider-only method classes the behavioural probes never fetched: `EVP_ASYM_CIPHER`, `EVP_KEM`, `EVP_KEYEXCH` and `EVP_SIGNATURE` |
+| `openssl-rs-rt-evp-pkey-ops` | `rt_evp_pkey_ops_probe` | the `EVP_PKEY_CTX` accessor surface and the `EVP_PKEY` operation entry points, driven through a keymgmt this probe publishes |
+
+`--check` is what CI and `court/pipeline.sh` run; it re-derives all 124 declaration files from the table and requires byte equality.
+
+**Venue.** The FRF courts execute authority binaries, so they ran in the FRF tooling container (`bash docker/openssl-rs-frf-court.sh up` / `exec`), never on the host. Its base image was not touched.
+
+**Incremental, not a recreation.** `forensics/frf/run_courts.sh` begins with `rm -rf "$ROOT"` because a release re-observes a rebuilt candidate from clean and the store is per-release. This change is not a release: `.frf/` is committed evidence and the instruction was to add, never rewrite. So the same `frf` invocations `run_courts.sh` makes were run *without* the recreation, over the existing store:
+
+```
+frf --root .frf court run   forensics/frf/courts/<court>/manifest.yaml
+frf --root .frf receipt emit <run-id>
+frf --root .frf court challenge forensics/frf/courts/<court>/manifest.yaml
+frf --root .frf claim compile --policy sensitivity-backed <19 receipt ids>
+```
+
+No existing capture, residual, receipt or claim was modified: `git status --short .frf` reports only additions, and the `evidence status` graph verdict stayed `graph_verified: yes` with `object_closure: complete`. At the next store recreation the derived `RUNTIME_COURTS` glob picks the nineteen up and `run_courts.sh` compiles them into the runtime claim with the Phase 3–6 receipts, so no runner change is needed.
+
+### What the receipts claim
+
+Nineteen receipts, one per court, each with **0 residuals** and no open residual whose surface intersects its observables. The claim compiled from them is:
+
+```
+96750dc60a30653471714fdb2164206dc541333371468238b98ca3d84e8cc7f8
+```
+
+at `--policy sensitivity-backed`, binding authority `openssl-rt-3.6.4-r2` and candidate `openssl-rs 0.0.10 (e4f60d8b)`, with `relation = eq(stdout-first-line), eq(exit-code)` and `observable_scope = [stdout, exit]` over 19 premises. Its wording is the runtime courts' convention and is deliberately narrow:
+
+> For reference openssl-rt-3.6.4-r2, fixture family rt-fetch, and environment x86_64-linux, candidate openssl-rs 0.0.10 preserves rt-fetch first stdout line and rt-fetch exit class for the rt-fetch cases in court openssl-rs-rt-fetch.
+
+Every receipt also carries the non-claim “does not establish byte-identical stderr, full CLI compatibility, or a drop-in replacement claim”. Because the harness's first stdout line is a digest of every following line, the claimed `stdout` axis covers the whole transcript; the claim's wording does not say so, which is why the mapping is recorded in `forensics/frf/README.md` and the seal.
+
+| court | run | receipt id | residuals |
+|---|---|---|---|
+| `rt-fetch` | `run-openssl-rs-rt-fetch-9eb67370588b2404ca8f185cc4e251cd8ccedfaf443085e8d62d47bfee2941c0` | `receipt-run-openssl-rs-rt-fetch-9eb67370588b2404ca8f185cc4e251cd8ccedfaf443085e8d62d47bfee2941c0-66dd6662dba68503a4ed45141cf93b86d15e41283549423169c5c71aa88e73de` | 0 |
+| `rt-evp-cipher` | `run-openssl-rs-rt-evp-cipher-1672c1098d74206edae1699be5e14b58b57ee4940ed06459372ccf8268e1f612` | `receipt-run-openssl-rs-rt-evp-cipher-1672c1098d74206edae1699be5e14b58b57ee4940ed06459372ccf8268e1f612-2897dd09982cc42849b74ac79bb8cd40c4d3fc7ea87a5c170fd0b51b4bb2ac1c` | 0 |
+| `rt-evp-mac` | `run-openssl-rs-rt-evp-mac-ce5afa0935ea9ce8d6bee240cc960c7adeb9edf02104d0c8d93f06dda1df0abf` | `receipt-run-openssl-rs-rt-evp-mac-ce5afa0935ea9ce8d6bee240cc960c7adeb9edf02104d0c8d93f06dda1df0abf-4332281138d3f7bf9b04aca052b42c496f920e605dae826ae0ff7d8b07095559` | 0 |
+| `rt-evp-kdf` | `run-openssl-rs-rt-evp-kdf-7c0b45f8e93c67e630ce85a8606f12358bb4bc0fb82e05ea3c2f69357e7b8507` | `receipt-run-openssl-rs-rt-evp-kdf-7c0b45f8e93c67e630ce85a8606f12358bb4bc0fb82e05ea3c2f69357e7b8507-d7e8cb75adbd3a3625e460884bc7e29cc4ebf2182275bc9c48a596e8bc6e7a75` | 0 |
+| `rt-evp-rand` | `run-openssl-rs-rt-evp-rand-b50cd73fb478dc3cd1cbb1bec799b63cffbb03dbd565de45ae46f59b7cb553b0` | `receipt-run-openssl-rs-rt-evp-rand-b50cd73fb478dc3cd1cbb1bec799b63cffbb03dbd565de45ae46f59b7cb553b0-38508384bf82143c60b764663492e2cbc84d5d9aab39014844e3abe58b1d1de3` | 0 |
+| `rt-evp-skey` | `run-openssl-rs-rt-evp-skey-0203418e986784ae1ae2d1e1627d5458b0cc75dcc37326ab55e38db716f5907f` | `receipt-run-openssl-rs-rt-evp-skey-0203418e986784ae1ae2d1e1627d5458b0cc75dcc37326ab55e38db716f5907f-0c2944c1bab147aec76a0c5a8f0700df902fbf364348ba731a738444aeafaef6` | 0 |
+| `rt-evp-keymgmt` | `run-openssl-rs-rt-evp-keymgmt-ed7b626c27dc4e26064ae660e89bd91180494e1c29636c270ec8ad61117948db` | `receipt-run-openssl-rs-rt-evp-keymgmt-ed7b626c27dc4e26064ae660e89bd91180494e1c29636c270ec8ad61117948db-a096d2894fa1439bcc0e5d9ee3732cf03fa11bfb599c0f274d5f871a50696793` | 0 |
+| `rt-evp-names` | `run-openssl-rs-rt-evp-names-c2c1024763a6507791e6710e53fb1b522114a7ece1f4ddf23f0318eb51833453` | `receipt-run-openssl-rs-rt-evp-names-c2c1024763a6507791e6710e53fb1b522114a7ece1f4ddf23f0318eb51833453-d75d5641ad95507f0c82dda207c44a929d22591ecb72ac4fe39ef171cca61e93` | 0 |
+| `rt-evp-pkey` | `run-openssl-rs-rt-evp-pkey-631febec3d62260e765aa8a3674e4e8ae0530d62201b420241d20932d42edfbe` | `receipt-run-openssl-rs-rt-evp-pkey-631febec3d62260e765aa8a3674e4e8ae0530d62201b420241d20932d42edfbe-ecd9c2c16e1562cdd97b6cffd903344d394c9ecc9fbf1406b3cbbe84bf80936f` | 0 |
+| `rt-evp-pbe` | `run-openssl-rs-rt-evp-pbe-c178451128d6beff772977f8a5dd55a37a2a692b77dce279ac826dd7d2179626` | `receipt-run-openssl-rs-rt-evp-pbe-c178451128d6beff772977f8a5dd55a37a2a692b77dce279ac826dd7d2179626-646bc6e2ffca16f22c698a312a14118c004cfb09be4cd68a805499d748f9db32` | 0 |
+| `rt-evp-bio` | `run-openssl-rs-rt-evp-bio-511353fc2843fdb9110bf2efa7b863337a3f08f8ba10ac0a691b18c0d370f7f4` | `receipt-run-openssl-rs-rt-evp-bio-511353fc2843fdb9110bf2efa7b863337a3f08f8ba10ac0a691b18c0d370f7f4-fbb3a5993d6673fdfcb71a2bb7f888e95dc4ca03d02e90caa164b930cdbdd89f` | 0 |
+| `rt-evp-pem` | `run-openssl-rs-rt-evp-pem-0fe064683f22b7e336b99095482127a28ef1cbd39ebcd8c3b973becac29cb59c` | `receipt-run-openssl-rs-rt-evp-pem-0fe064683f22b7e336b99095482127a28ef1cbd39ebcd8c3b973becac29cb59c-3a5134ea1e1b3233d01a7026f771ff3a257f33ce966c75bbe93c4ecd238e3b46` | 0 |
+| `rt-hmac` | `run-openssl-rs-rt-hmac-812c859e3c5cc8249b6c5b319431f6497e9d37999f4e10bac03b2e42e3523476` | `receipt-run-openssl-rs-rt-hmac-812c859e3c5cc8249b6c5b319431f6497e9d37999f4e10bac03b2e42e3523476-aec47a38037f604b07af3fa1599016397a743edd1f46ea4ffc914134269350fa` | 0 |
+| `rt-cmac` | `run-openssl-rs-rt-cmac-d1f1004af6b162761e81082691b0f45712825a3f6460db0b8d1575b0eac7028a` | `receipt-run-openssl-rs-rt-cmac-d1f1004af6b162761e81082691b0f45712825a3f6460db0b8d1575b0eac7028a-41b9f6e0edf7d8cb4c5c60438d5302f54198bd9339f5759d087b40c3d3e12ba4` | 0 |
+| `rt-hpke` | `run-openssl-rs-rt-hpke-68e053f22f810a521e89908026a70340a3ca242ee7f5535f86e0542ef0b122f0` | `receipt-run-openssl-rs-rt-hpke-68e053f22f810a521e89908026a70340a3ca242ee7f5535f86e0542ef0b122f0-d984ada00f651e5a7c78c693bb68f2b079740c123356b1bbeda85cf3d4e24264` | 0 |
+| `rt-evp-ref` | `run-openssl-rs-rt-evp-ref-f036186fc277e05265c0d4ca53cfeb4e6885b7538f36b29f71b8d59530d5de05` | `receipt-run-openssl-rs-rt-evp-ref-f036186fc277e05265c0d4ca53cfeb4e6885b7538f36b29f71b8d59530d5de05-51d4beb9a232b80ca89d82b4c5a7e7ac2d43d203f1329960cc7335ed3571ee56` | 0 |
+| `rt-evp-introspect` | `run-openssl-rs-rt-evp-introspect-510c38e180ccd570ac61fb920c146e8f7ce925c49fc64d7493b9a5ff5b312e8f` | `receipt-run-openssl-rs-rt-evp-introspect-510c38e180ccd570ac61fb920c146e8f7ce925c49fc64d7493b9a5ff5b312e8f-ecf9fa822af589138a932e586a15825c73ddf966674a3cd7a758b27c93c36e92` | 0 |
+| `rt-evp-class` | `run-openssl-rs-rt-evp-class-42e192c3cfb49eea050a85bc0d9a66e9521b67a4684c148936a7b169dcaffec2` | `receipt-run-openssl-rs-rt-evp-class-42e192c3cfb49eea050a85bc0d9a66e9521b67a4684c148936a7b169dcaffec2-c6c67eb565f1d978e9a96115409ca1588183ff5aac2bcc8360f6544877ddd277` | 0 |
+| `rt-evp-pkey-ops` | `run-openssl-rs-rt-evp-pkey-ops-eaa7ce42cdf2d17b15cd650107f4b8f5ba457fc1557a53a70a0719aaf70aa1b2` | `receipt-run-openssl-rs-rt-evp-pkey-ops-eaa7ce42cdf2d17b15cd650107f4b8f5ba457fc1557a53a70a0719aaf70aa1b2-ef111a83558c0e2bd6ebc893806385e45ab3f0e8698f11d5979077181ccfe87f` | 0 |
+
+### The controlled vocabulary
+
+**No new term was needed.** The chain used `--policy sensitivity-backed`, which the Phase 3–6 runtime claim already uses, and no residual required a disposition: every court's real run produced zero residuals, so the `--disposition`, `--claim subject|predicate|kind`, `--evidence subject|outcome|kind` and `--residual summary|severity|classification` vocabularies documented in `forensics/frf/README.md` were not exercised beyond the existing `sensitivity-backed` policy. The 38 open residuals in the store after this change are the *mutant* runs' divergences — a challenge record's evidence, not a court's — and are disposed nowhere for the same reason the Phase 3–6 mutant residuals are not.
+
+### The sensitivity evidence, and how it was obtained
+
+`docs/DECISIONS.md` D13 requires a trajectory court to reference its fixture, because a court whose arguments do not reference the fixture cannot be challenged. Every Phase-7 manifest's `fixture.arguments` is `["{fixture}", "phase7"]` and its `fixtures/probe-list.txt` names the probe, so every court is fixture-driven. `frf court challenge` then ran each court against a mutant candidate altering exactly one observable dimension and required the defect to be seen on the targeted axis and on no other. All nineteen adjudicated, none refused:
+
+| court | `stdout-first-line` (target → unaffected) | `exit-class` (target → unaffected) |
+|---|---|---|
+| `rt-fetch` | `297124ba97de0d89471cdaf26ab0d5f3529a55119b8a2e5d9ce04b8ce6acdcb2` (stdout → exit) | `16ff0fd700c48c182b4d31a82aaa1fe2ad6b164ffe2183d49a68f2cbf237afb5` (exit → stdout) |
+| `rt-evp-cipher` | `66fca2fda30f891a1196d25ba9a89aa532ce77e12d68165d307bf9ea075aa3f9` (stdout → exit) | `8d3b51f4f3d15469b377997d718de9bc0692a94fb40b7becf6d18f2d382f549f` (exit → stdout) |
+| `rt-evp-mac` | `1214f6842ed6d2c8f9710ffd6f6b16cf51f6e77b7a803b6f6b92d36541e7101c` (stdout → exit) | `565fe8afdf271eff35f9f702e292ce4f8d4f20dd28155a4e90a2f6b761ddce65` (exit → stdout) |
+| `rt-evp-kdf` | `f9c25c8ecba058415432d82fefd49d736e8485f54832d07181c041d210cb9d09` (stdout → exit) | `cff90dab76bc6df2f40f271a3ecf6f2c06287b67ad60aaed21d5aabc48802485` (exit → stdout) |
+| `rt-evp-rand` | `c4447ecfab527507da7e089f16afa14e5716bc71cc9e31c85d9903fe8ae25ddc` (stdout → exit) | `d555fa4aab561ffb4ebad017acdab4ba752c17da17453d035d3bb9645b2bda9a` (exit → stdout) |
+| `rt-evp-skey` | `128ce42ffdef5c050582fad4ed67ed371e18317273349d513d532d5931f47117` (stdout → exit) | `f0f65321862acaea78a54b6276820f1c97dbabcef98de6c2dc6cb8f307a0a3d2` (exit → stdout) |
+| `rt-evp-keymgmt` | `62e2cb1b31fdbd21cf29c997cb3e442f23c579eb1cab9f1d843509d798375cfc` (stdout → exit) | `91d165e9fc7a0a7006d301732c53ea86e5c1b9e7e2f136aa85fbaa8164bbe26c` (exit → stdout) |
+| `rt-evp-names` | `b94c4236439ddc821b3cec0bf80f191d5b976fc7b62862d3941631a8aa685679` (stdout → exit) | `641e9a42598c671294396e4b3a774976df57ae573aaf41a7db59d5032a8e91c0` (exit → stdout) |
+| `rt-evp-pkey` | `73caa164a3806d56480553b3dfc08d5c4ba6ae819bb913ecf3d620038c72584a` (stdout → exit) | `906344cd8e3c6ac724d80daecd70c32415f1f3af2a77d44702076129fcca4c1f` (exit → stdout) |
+| `rt-evp-pbe` | `6f7b6d2824d19d4c9b587fbf0ddce6d58550300eae168f1e32cc6a1b6afa44eb` (stdout → exit) | `79877f0ac4c9f3effd4e0c41980f1b1d7fac190beaba2d7355f5c5eba7d2e8ee` (exit → stdout) |
+| `rt-evp-bio` | `827367cefdca859ba81c537b2e7a63d651c6e9ed054014cb6782b7641e612cfe` (stdout → exit) | `5d176448ddc20a3341079f192e84003d4a7e5dc2210e82d3bbde5e983efe0b36` (exit → stdout) |
+| `rt-evp-pem` | `e8801b161799d7a712add3f08820c38120e79087b61dd5cb0412ff91dca35db9` (stdout → exit) | `e474327d4c6e778f992c7da10476b705801373544065c813855347027cfccc91` (exit → stdout) |
+| `rt-hmac` | `6d5ac207a5248fc6acf4893a2b0f6833992d5d611ee2aa00c086ddbb1c7c2b46` (stdout → exit) | `27cc8fc0ae5368d5dee1adbdccf1035cef0aa20a3e7a9d613bdbd3785f31a15d` (exit → stdout) |
+| `rt-cmac` | `966aba92b441c33ed44ea10136078ab824bbd266cd97abecdeea8db68926224a` (stdout → exit) | `3c8dd8a075ce105ea70d5a39fb7ab8fac4479e7f9cb7e63b1ce61708413098e4` (exit → stdout) |
+| `rt-hpke` | `5643f9335a4435ae6495ff971df47aea8d4dcdc2eb15a2ec1f00ffc0873fb20b` (stdout → exit) | `8f7dd9dd45895cd8dfb920e86f9c78c4dc3f8fa5edca64bd6771c002ae42c92b` (exit → stdout) |
+| `rt-evp-ref` | `c78d208ac0a4a2033630eb344891a57cdcc399adc0317bb7f7bd488aaa2053b5` (stdout → exit) | `e1c69744e9892a3eea684cc9d08e9362c86cedce562650b0980788ba2309078a` (exit → stdout) |
+| `rt-evp-introspect` | `f1fe99f2dd737f120889005944aa391d327c2bc08c32eb42e8be743f8fa2dc8b` (stdout → exit) | `981cc9c11d21a810f8e77569c0345ae520dd560755395b7a582472bbb8414c30` (exit → stdout) |
+| `rt-evp-class` | `abb4d44e840cdf9e8439608419564667f0b83584d43e6d016e747b2e7f944f46` (stdout → exit) | `09a7ab1870769aafb73b44f0a0f1b99097395d1cb15cec02196dc1ebef41476d` (exit → stdout) |
+| `rt-evp-pkey-ops` | `c811d5cb886fb99be45e052352074628bd88b092ba850646e2ce48dfa3c28bb4` (stdout → exit) | `47436726efbf31532f3a91fcbb0fb1cbbe3aed1983df20c99fcc1768fd1335cd` (exit → stdout) |
+
+Every record carries `saw_defect: true` and `specificity_clean: true`; the 38 new challenge records are exactly 2 × 19.
+
+### The description reconciliation — a finding
+
+The task required each FRF `description` to be “the same one line that appears in `forensics/tools/phase7_courts.py` and in the Phase-7 seal”, and to report a disagreement. There was one, and it is the seal that was wrong:
+
+* `phase7_courts.py`'s `COURTS` carried `(court id, probe filename)` and **no description field at all**, for any of the nineteen.
+* the seal's §3 said “What each covers, in one line, is `forensics/tools/phase7_courts.py`'s table” and then gave a *compressed* eleven-clause summary over fifteen courts — so it pointed at a field that did not exist, and the summary did not name the four D199 courts at all.
+* the seal's §3 court table and its opening bullet said **fifteen** courts while `artifacts/phase7/COURTS.json` held **19**.
+
+The reconciliation is the probe's own opening line: each probe header already states the court's subject in one line, so that line is now carried in all three places — the `description` of each `phase7_courts.py` row, the `COURTS` description in `gen_frf_courts.py`, and the seal's §3 table (which was also corrected to 19 rows). The same inaccuracy exists in `gen_frf_courts.py`'s own comment for Phases 3–6, whose descriptions are not verbatim in `phase3_courts.py`…`phase6_courts.py` or the seals either; fixing those texts is not this change, but the comment is now accurate for Phase 7 and the general claim is flagged here rather than left to be rediscovered.
+
+### The store, before and after
+
+Both rows read from `frf --root <store> evidence status`; the “before” store is the committed one at `main` (`183df3f1`) extracted from Git, not a remembered transcript.
+
+| | objects | captures | challenges | claims | receipts | residuals |
+|---|---|---|---|---|---|---|
+| before | 389 | 141 | 94 | 5 | 47 | 97 |
+| after | 542 | 198 | 132 | 6 | 66 | 135 |
+
+The 57 new captures are 19 court runs plus 38 mutant runs; the 38 new residuals are exactly those mutant runs' divergences; the real runs added none. The object total moves by 153 (captures + challenges + claims + receipts + residuals), and authorities is unchanged at 5.
+
+### What could not be completed
+
+**Nothing.** All nineteen courts ran, all nineteen receipts emitted with zero residuals, all thirty-eight challenges adjudicated rather than refused, and the nineteen-premise claim compiled at `sensitivity-backed` on the first attempt.
+
+One command in the batch **was** refused, and it is recorded here because the output is the reason the batch is shaped as it is. `openssl-rs-rt-fetch` had already been run and challenged by hand while establishing the procedure, so the batch's own run of it hit:
+
+```
+$ frf --root .frf court run forensics/frf/courts/openssl-rs-rt-fetch/manifest.yaml
+frf: run 'run-openssl-rs-rt-fetch-9eb67370588b2404ca8f185cc4e251cd8ccedfaf443085e8d62d47bfee2941c0' already exists and verifies (identical evidence was already captured); raw captures are immutable — refusing to re-capture (use a series axis to re-observe deliberately)
+$ frf --root .frf court challenge forensics/frf/courts/openssl-rs-rt-fetch/manifest.yaml
+frf: court challenge of openssl-rs-rt-fetch FAILED: the court did not prove it can see every defect class it declares (the challenge records remain as evidence):
+  operator stdout-first-line: the mutant run failed: run 'run-openssl-rs-rt-fetch-509559096c89f09e7aefb186a77e3b2525d417d0a92a07d18df3ea06dadeab9e' already exists and verifies (identical evidence was already captured); raw captures are immutable — refusing to re-capture (use a series axis to re-observe deliberately)
+  operator exit-class: the mutant run failed: run 'run-openssl-rs-rt-fetch-c7022f31833cad41d2da4f03b2e03cc7038a4d05699b9e53258ee3df04a2490e' already exists and verifies (identical evidence was already captured); raw captures are immutable — refusing to re-capture (use a series axis to re-observe deliberately)
+```
+
+This is the immutability rule working, not a missing step: the first manual run and challenge produced the receipt and the two challenge records, and they are the ones in the store and in the claim. The batch driver counted the refusal message as a run id for that one court, so its `receipt emit` failed with `invalid run id`; the receipt from the first run was used instead. The two commands and their output are above verbatim.
 
 ### Arithmetic
 
 | | before | after |
 |---|---|---|
-| Phase 8 working set / implemented / deferred / open | — | **786 / 0 / 16 / 770** |
-| `libcrypto` implemented / 5896 | 1841 | **1841** |
-| phase-state `complete` / `in-progress` | 8 / 0 | **8 / 1** |
-| obligation ledgers / court result files | 7 / 6 | **8 / 6** |
-| `prerequisite-gate` findings / blocking / planned | 0 / 25 / — | **0 / 25 / 14** |
-| `plan-reconciliation` findings / phase-8 census | 0 / — | **0 / 6** |
-| `evidence_determinism` artefacts | 21 | **22** |
-| `ownership-audit` hand-off edges | 6 | **7** (the Phase 7 → 8 edge, 27 symbols, `mismatched: 0`) |
+| `COURTS` rows (all phases) | 43 | 62 |
+| generated declaration files | 86 | 124 |
+| Phase 7 FRF courts | 0 | 19 |
+| Phase 7 FRF receipts | 0 | 19 |
+| Phase 7 FRF challenge records | 0 | 38 |
+| Phase 7 compiled claims | 0 | 1 |
+| `.frf/receipts` | 47 | 66 |
+| `.frf/claims` | 5 | 6 |
 
-The guard reports two movements against this branch's previous head: `phase[8]`
-`not-started -> in-progress`, and the new `open[phase8] = 770` it cannot certify against
-`origin/main` because the ledger did not exist there — `UNCERTIFIED: obligation ledger 'phase8'
-exists now but not in the authority`, which is the mechanism working rather than a finding.
-
-**What 8.0 does not claim.** The registry row, the ledger, the runner and the plan are evidence,
-and evidence is not implementation: this commit moves `implemented[libcrypto]` by zero and the
-stratum from `not-started` to `in-progress`. `forensics/tools/phase8_courts.py` lands with an
-**empty** court list — the shape 7.0 had — because a runner that names a probe which does not
-exist cannot be committed, and `RT-DIGEST` arrives in D198 with its probe in the same commit as
-the symbols it observes.
