@@ -37,7 +37,7 @@
         ],
         "name": "archaeology",
         "phase": 1,
-        "seal_sha256": "8618c8cec42fc1e27b5b560cfa7a31f2016582cdefe317e47e61a098df522ebe",
+        "seal_sha256": "ecd5c0e019d1c02959cce72ca014cb559b06c9cc947c90450b3f243296d35063",
         "state": "complete",
         "stratum": "Complete archaeology / API / ABI atlas"
       },
@@ -52,7 +52,7 @@
         ],
         "name": "distribution-shell",
         "phase": 2,
-        "seal_sha256": "e74ec387955be2bc5bf2822ebdeae52b531987fe68e4d48b3d8228146670cfb3",
+        "seal_sha256": "c14af3ffaa2bb5b1cc0765efe5f2a06477732f11eb8344b07e10dc220f2db836",
         "state": "complete",
         "stratum": "Distribution / ABI shell"
       },
@@ -381,23 +381,14 @@
         "stratum": "EVP framework"
       },
       {
-        "blocking": "Phase 8 courts not passing: ['CT-DIGEST']",
+        "blocking": "not started",
         "deferred": [],
         "evidence_absent": [],
-        "evidence_present": [
-          "docs/PHASE-8-SUBPHASES.md",
-          "forensics/tools/phase8_courts.py",
-          "forensics/tools/phase8_obligations.py",
-          "forensics/tools/correctness_vectors.py",
-          "courts/phase8/ct_digest.c",
-          "forensics/phase8-obligations.json",
-          "artifacts/phase8/COURTS.json",
-          "forensics/atlas/court-coverage.json"
-        ],
+        "evidence_present": [],
         "name": "algorithms",
         "phase": 8,
         "seal_sha256": null,
-        "state": "in-progress",
+        "state": "not-started",
         "stratum": "Native cryptographic primitives"
       },
       {
@@ -547,11 +538,11 @@
     "rule": "a phase may be complete only if every earlier phase is complete",
     "summary": {
       "complete": 8,
-      "in_progress": 1,
-      "not_started": 13
+      "in_progress": 0,
+      "not_started": 14
     }
   },
-  "body_hash": "403d37663c68ba9bfaf4a69189389608b015c0521243e6a049984524ba1c2816",
+  "body_hash": "a51f111243cd7396018cea08e111a46a7d45075c42a6ebb1ee842d1d18f30e16",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

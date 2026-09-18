@@ -70,10 +70,17 @@ disabled-feature set and cipher inventory unchanged).
 `forensics/atlas/phase1-completeness.json` — generated, and it fails if any
 listed artefact is absent.
 
-- **22** planes complete and content-addressed
+- **28** planes complete and content-addressed
 - **0** missing
-- **6** deliberately deferred, each naming its owning phase
-- **4** open unknowns, each with a reason
+- **5** deliberately deferred, each naming its owning phase
+- **2** residual classes dispositioned, each with its `why`
+- **0** open unknowns
+
+The five figures are `forensics/atlas/phase1-completeness.json`'s fields
+(`complete_count`, `missing_count`, `deferred_count`, the length of
+`residual_dispositions`, and `open_unknown_count`), not this seal's arithmetic:
+the census grew with the atlas, so a numeral typed here in the 22/6/4 form went
+stale while the file it summarised did not.
 
 ## 6. FRF evidence
 
@@ -125,6 +132,14 @@ corrects it. This is the canonical wording:
 
 Recorded rather than resolved. A seal that hides its unknowns is not a seal.
 
+These four were the seal's carried unknowns. The generated census has since
+dispositioned them: the first two are its two closed `residual_dispositions`
+classes, the third was remedied by the fixture-driven `openssl-cli-inventory`
+court (`forensics/frf/README.md` §"The courts"), and the fourth is the
+`panic-payload-surfacing-at-ffi` plane deferred to Phase 3 and landed there
+(`docs/DECISIONS.md` D16). The list is kept as the record of what was carried at
+seal time, which is why the section is not retitled.
+
 1. **11 symbols declared in public headers but absent from the ABI inventory.**
    Not defects, not yet explained; each needs a per-symbol disposition.
 2. **26 exported symbols with no installed declaration** (the `DSO_*` family;
@@ -153,8 +168,9 @@ bash docker/openssl-rs-frf-court.sh exec bash forensics/frf/run_courts.sh
 PHASE 1 ARCHAEOLOGY: SEALED
 CANDIDATE PARITY:    NONE CLAIMED
 OBLIGATIONS:         33,823 (0 PARITY_VERIFIED)
-OPEN UNKNOWNS:       4
-DEFERRED PLANES:     6
+OPEN UNKNOWNS:       0
+DISPOSITIONED:       2 residual classes
+DEFERRED PLANES:     5
 ```
 
 Issued under `docs/RELEASE_GATES.md` §2. Phase 2 (distribution / ABI shell) is
