@@ -28,7 +28,7 @@ renderer does not know any phase status.
 | 5 | BN + ASN.1 + DER/PEM | `complete` |  |
 | 6 | OSSL_LIB_CTX + provider core | `complete` |  |
 | 7 | EVP framework | `complete` |  |
-| 8 | Native cryptographic primitives | `in-progress` | 587 open obligation(s) of this stratum recorded in forensics/phase8-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
+| 8 | Native cryptographic primitives | `in-progress` | 586 open obligation(s) of this stratum recorded in forensics/phase8-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase |
 
 Not started: strata 9-21 (13 total).
 
@@ -83,9 +83,9 @@ that name is defined, nothing more.
 
 | library | exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 2024 | 3872 |
+| libcrypto | 5896 | 2025 | 3871 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **2024** | **4475** |
+| **total** | **6499** | **2025** | **4474** |
 
 ### Phase 3 obligation ledger
 
@@ -209,9 +209,9 @@ handed it, that is neither implemented, deferred to a named later
 phase, nor recorded as open in the stratum is an error, not a warning.
 
 * authority exports in the Phase 8 working set: 786
-* implemented: 183
+* implemented: 184
 * deferred to a later phase with a stated reason: 16
-* open in this stratum: 587
+* open in this stratum: 586
 
 Deferred to phase 9: `DES_random_key`, `DH_KDF_X9_42`, `DH_generate_key`, `DH_generate_parameters`, `DH_generate_parameters_ex`, `DSA_generate_key`, `DSA_generate_parameters_ex`, `ECDH_KDF_X9_62`, `EC_KEY_generate_key`, `RSA_X931_derive_ex`, `RSA_X931_generate_key_ex`, `RSA_blinding_on`, `RSA_generate_key`, `RSA_generate_key_ex`, `RSA_generate_multi_prime_key`, `RSA_setup_blinding`
 
