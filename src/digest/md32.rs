@@ -41,7 +41,7 @@
 //! loop, which the project's own configure flag selects. The loop form is used here for all
 //! three 32-bit constructions with a round table rather than an unrolled body, because it is
 //! the *same arithmetic* and a differential court is what decides whether it is the same
-//! function; `RT-DIGEST` observes every one of them, and `docs/DECISIONS.md` D198 records the
+//! function; `RT-DIGEST` observes every one of them, and `docs/DECISIONS.md` D201 records the
 //! choice. An unrolled transcription would have been longer without being more faithful.
 //!
 //! SPDX-License-Identifier: Apache-2.0

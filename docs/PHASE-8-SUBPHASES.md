@@ -134,16 +134,16 @@ subphase's module labels hold in `forensics/phase8-obligations.json`'s `open` li
 day the split was made, which is the bootstrap commit. It is a census of what was open
 then and not a claim about the present; the ledger is what says what is open now.
 
-| # | Subphase | Owns | Depends on | Court | Open at the split |
+| # | Subphase | Owns | Depends on | Courts | Open at the split |
 |---|---|---|---|---|---|
 | 8.0 | **Bootstrap** | nothing in the crate — evidence: `docs/PHASE-8-SUBPHASES.md`, `forensics/tools/phase8_obligations.py`, `forensics/tools/phase8_courts.py`, `courts/phase8/`, and this stratum's row in `forensics/tools/phase_state.py`'s `STRATUM_EVIDENCE` | 7 | — | 770 |
-| 8.1 | **The digest primitives** | MD4, MD5, MDC2, RIPEMD-160, Whirlpool, SM3, SHA-1, SHA-2 (224/256/384/512/512-224/512-256), SHA-3 (224/256/384/512) and SHAKE-128/256: the low-level `X_Init`/`_Update`/`_Final`/`_Transform` API **and** the provider `OSSL_OP_DIGEST` implementations, plus the digest half of `ossl_default_provider_init`. Forty-seven labels: `src/digest/{md4,md5,mdc2,ripemd,wp,sha1,sha2}.rs` | 8.0 | `RT-DIGEST` | 47 |
-| 8.2 | **The symmetric cipher primitives** | AES (all modes), DES/3DES, RC2, RC4, Blowfish, CAST5, IDEA, SEED, Camellia, SM4, ARIA, and `modes.h`'s `CRYPTO_*` helpers; the low-level API **and** the provider `OSSL_OP_CIPHER` implementations + the cipher half of the default provider. Ninety-eight labels across `src/des/mod.rs`, `src/aes.rs`, `src/camellia.rs`, `src/blowfish.rs`, `src/cast.rs`, `src/idea.rs`, `src/rc2.rs`, `src/rc4.rs`, `src/seed.rs` | 8.1 | `RT-CIPHER` | 97 |
-| 8.3 | **The AEAD and mode primitives** | GCM, CCM, XTS, key wrap, Poly1305, ChaCha20-Poly1305, and the remaining `CRYPTO_*` mode functions. Fifty labels, all of them `src/modes/mod.rs`'s | 8.2 | `RT-MODES` | 50 |
-| 8.4 | **RSA** | the `RSA` object and `RSA_*`, `ossl_rsa_asn1_meth`, and the RSA provider keymgmt/signature/asymcipher/asym-kem. One hundred and fifty-seven labels: `src/rsa/mod.rs` | 8.1 (the RSA provider's `SHA`-named digests), 8.3 (its OAEP/PSS modes) | `RT-RSA` | 150 |
-| 8.5 | **DH and DHX** | the `DH` object, `DH_*`, `ossl_dh_asn1_meth`, the FFC groups, and the DH provider surfaces. Ninety-seven labels: `src/dh/mod.rs` | 8.4 (the shared BN/param idiom) | `RT-DH` | 93 |
-| 8.6 | **DSA** | the `DSA` object, `DSA_*`, `ossl_dsa_asn1_meth`, and the DSA provider surfaces. Ninety labels: `src/dsa/mod.rs` | 8.5 | `RT-DSA` | 88 |
-| 8.7 | **EC** | `EC_KEY`, `EC_GROUP`, `EC_POINT`, the curve tables, `ossl_ec_asn1_meth`, and the EC provider surfaces. Two hundred and two labels: `src/ec/mod.rs` | 8.6 | `RT-EC` | 200 |
+| 8.1 | **The digest primitives** | MD4, MD5, MDC2, RIPEMD-160, Whirlpool, SM3, SHA-1, SHA-2 (224/256/384/512/512-224/512-256), SHA-3 (224/256/384/512) and SHAKE-128/256: the low-level `X_Init`/`_Update`/`_Final`/`_Transform` API **and** the provider `OSSL_OP_DIGEST` implementations, plus the digest half of `ossl_default_provider_init`. Forty-seven labels: `src/digest/{md4,md5,mdc2,ripemd,wp,sha1,sha2}.rs` | 8.0 | `RT-DIGEST`, `CT-DIGEST` | 47 |
+| 8.2 | **The symmetric cipher primitives** | AES (all modes), DES/3DES, RC2, RC4, Blowfish, CAST5, IDEA, SEED, Camellia, SM4, ARIA, and `modes.h`'s `CRYPTO_*` helpers; the low-level API **and** the provider `OSSL_OP_CIPHER` implementations + the cipher half of the default provider. Ninety-eight labels across `src/des/mod.rs`, `src/aes.rs`, `src/camellia.rs`, `src/blowfish.rs`, `src/cast.rs`, `src/idea.rs`, `src/rc2.rs`, `src/rc4.rs`, `src/seed.rs` | 8.1 | `RT-CIPHER`, `CT-CIPHER` | 97 |
+| 8.3 | **The AEAD and mode primitives** | GCM, CCM, XTS, key wrap, Poly1305, ChaCha20-Poly1305, and the remaining `CRYPTO_*` mode functions. Fifty labels, all of them `src/modes/mod.rs`'s | 8.2 | `RT-MODES`, `CT-MODES` | 50 |
+| 8.4 | **RSA** | the `RSA` object and `RSA_*`, `ossl_rsa_asn1_meth`, and the RSA provider keymgmt/signature/asymcipher/asym-kem. One hundred and fifty-seven labels: `src/rsa/mod.rs` | 8.1 (the RSA provider's `SHA`-named digests), 8.3 (its OAEP/PSS modes) | `RT-RSA`, `CT-RSA` | 150 |
+| 8.5 | **DH and DHX** | the `DH` object, `DH_*`, `ossl_dh_asn1_meth`, the FFC groups, and the DH provider surfaces. Ninety-seven labels: `src/dh/mod.rs` | 8.4 (the shared BN/param idiom) | `RT-DH`, `CT-DH` | 93 |
+| 8.6 | **DSA** | the `DSA` object, `DSA_*`, `ossl_dsa_asn1_meth`, and the DSA provider surfaces. Ninety labels: `src/dsa/mod.rs` | 8.5 | `RT-DSA`, `CT-DSA` | 88 |
+| 8.7 | **EC** | `EC_KEY`, `EC_GROUP`, `EC_POINT`, the curve tables, `ossl_ec_asn1_meth`, and the EC provider surfaces. Two hundred and two labels: `src/ec/mod.rs` | 8.6 | `RT-EC`, `CT-EC` | 200 |
 | 8.8 | **The ASN.1 method objects and `standard_methods[]`** | `crypto/asn1/ameth_lib.c`'s table and the `ossl_*_asn1_meth` objects — **this is what retires the 27 Phase-8 rows in Phase 7's `deferred_by_phase` and the `EVP_PKEY_type`/`d2i_*`/`EVP_PKEY_meth_*` blockers**. Fifteen labels, the fifteen `evp.h` hand-offs that are not a key type's accessor: `src/asn1/ameth.rs` | 8.4, 8.5, 8.6, 8.7 | `RT-AMETH` | 15 |
 | 8.9 | **The `pem.h` helpers Phase 8 owns** and the `*_asn1_meth` bodies that unblock Phase 7's remaining Phase-8 deferrals | the thirty `pem.h` names — the `PEM_read_*`/`PEM_write_*` family for `DHparams`, `RSA`, `DSA` and `EC` keys. Thirty labels: `src/pem/key_legacy.rs` | 8.8 | `RT-PEM-KEY` | 30 |
 | 8.10 | **The seal** | nothing in the crate — evidence: `docs/PHASE-8-CRYPTO-SEAL.md` | 8.0–8.9 | — | 0 |
@@ -153,6 +153,83 @@ The nine rows above the seal hold 786 rows between them — 47 + 98 + 50 + 157 +
 hand-offs below. Eight of the subphases will split as they land (8.4 and 8.7 are each over
 one hundred and fifty exports), and the precedent from Phase 6 and Phase 7 is that a split
 is recorded here with the reason it was needed rather than performed silently.
+
+### Every primitive-bearing row carries two courts, because a primitive has two questions
+
+**Doctrine.** For a compatibility port the authority oracle dominates, and for most of this
+stratum's surface one differential court is the strongest instrument there is. A
+**cryptographic primitive** is the one place where a second, independent plane answers a
+different question, and neither plane implies the other:
+
+```text
+RT-<X>   OpenSSL differential      -> "does it behave like the admitted authority?"
+CT-<X>   construction/spec vectors -> "does it satisfy the underlying construction?"
+```
+
+`RT-*` is the differential court §0's "the method" describes: one probe compiled twice, the
+two `key=value` transcripts diffed. It decides **compatibility**. `CT-*` is the
+correctness-vector court: the crate's implementation, through the same candidate distribution
+shell, is run against committed vectors whose provenance is recorded per vector, and the
+verdict is per-vector and loud. It decides **correctness against a published construction**.
+
+**Why two planes are needed.** Each plane has a blind spot the other covers.
+
+* **An `RT-*` pass is not independent cryptographic correctness.** Two implementations can
+  agree byte for byte and both be wrong against the standard: a round constant read from the
+  same wrong place, a message-word order transcribed the same wrong way. The differential
+  compares the candidate with *the authority*, and a transcription error in a shared reading
+  of the authority's own text makes the two agree on the wrong answer. What rules that out is
+  an external vector.
+* **A `CT-*` pass is not OpenSSL parity.** A portable arm can satisfy every published vector
+  and still differ from the authority in an observable way — a `Transform` that advances a
+  different number of bytes, a context field the authority leaves and this one clears, an
+  error return the vector set never exercises. The vector set does not contain the
+  authority's behaviour; the differential transcript does.
+
+**What each does *not* establish, stated so neither is read as the other.**
+
+| plane | establishes | does **not** establish |
+|---|---|---|
+| `RT-DIGEST` and its siblings | that the candidate's observable transcript matches the authority's for the behaviours the probe exercises | cryptographic correctness — a shared transcription error agrees with itself — and any behaviour the probe does not touch |
+| `CT-DIGEST` and its siblings | that the candidate's construction produces the committed expected bytes for every vector, over the inputs those vectors cover | OpenSSL parity; and it is **not formal validation** — the corpora are published for informal verification (NIST CAVP) or maintained as an implementation-independent known-attack corpus (Project Wycheproof), and their maintainers say using them is not a certificate |
+
+**What this changes, and what it does not.** The `RT-*` requirement is not weakened: it is
+still the only instrument that can say the candidate is *this* implementation's observable
+behaviour, which §3's first row says a portable arm over perlasm needs. What changes is that
+it is no longer stated as *instead of* vectors. §3's first row and §4's second gate are amended
+to say both. And a `CT-*` court that cannot run yet is **not** registered as passing: it is
+named in `forensics/tools/phase8_courts.py`'s `PENDING_CORRECTNESS_COURTS` with what it needs,
+which is what "not run yet" has to look like in a runner whose only other states are pass and
+fail.
+
+**The courts, named.** `RT-DIGEST`/`CT-DIGEST` (8.1), `RT-CIPHER`/`CT-CIPHER` (8.2),
+`RT-MODES`/`CT-MODES` (8.3), `RT-RSA`/`CT-RSA` (8.4), `RT-DH`/`CT-DH` (8.5),
+`RT-DSA`/`CT-DSA` (8.6), `RT-EC`/`CT-EC` (8.7). 8.8 (`RT-AMETH`) and 8.9 (`RT-PEM-KEY`) are
+not given a `CT-*` court, and the reason is a boundary rather than an omission: they are the
+ASN.1 method objects and the `PEM_*` key helpers, and what a *method object* must do is
+*defined* by the authority's own behaviour — the version node, the callback wiring — not by a
+construction vector over a value. If a later slice gives one of them a construction with a
+published vector, the court arrives with it.
+
+**The driver shape, and why it is a second registry.** A correctness court runs the crate
+**only**: there is no authority transcript, so there is nothing to diff and the differential
+runner's shape does not apply. `forensics/tools/correctness_vectors.py` owns the vector schema
+and the per-vector comparison, and `forensics/tools/phase8_courts.py` carries a second
+registry (`CORRECTNESS_COURTS`) beside its differential one (`COURTS`). The two are separate
+because they are different shapes; folding a candidate-only court into the differential list
+would have hidden which of the two comparisons a green verdict came from.
+
+**The exemplar, and its first result is a failure.** `CT-DIGEST` is wired for the nine digest
+constructions 8.1a implements, over committed vectors extracted from the pinned authority's own
+`test/recipes/30-test_evp_data/evpmd_*.txt` (`forensics/vectors/*.json`: 7 MD4, 7 MD5, 8
+RIPEMD-160, 2 SHA-1, 2 each SHA-224/256/384, 3 SHA-512 and 8 Whirlpool vectors, as those files
+record). Against the 8.1a tree this amendment lands with, `artifacts/phase8/COURTS.json`
+records **24 of 41 vectors passing and 17 failing**: MD4 0/7, SHA-1 0/2 and Whirlpool 0/8 fail,
+while MD5 7/7, RIPEMD-160 8/8 and the SHA-2 family 9/9 pass. That is the independent plane
+doing its job: the same three constructions this stratum's WIP commit (`bd4c9914`) records as
+failing are the three the vectors find, per input. The failing vectors are recorded in full in
+`docs/DECISIONS.md` D201, and fixing the implementation is the next content slice — deliberately
+not the slice that added the plane.
 
 ### 8.1's row names MDC2, and MDC2 cannot be written before 8.2
 
@@ -230,7 +307,7 @@ split is recorded here rather than performed silently:
 
 | # | Land | Open at the split |
 |---|---|---|
-| 8.1a | the low-level constructions and their collector: `MD4`, `MD5`, `RIPEMD160`, `WHIRLPOOL` whole (Init/Update/Final/Transform and the one-shot), `SHA1`/`SHA224`/`SHA256`/`SHA384`/`SHA512`'s `Init`/`Update`/`Final`/`Transform` — **thirty-eight exports** — and `RT-DIGEST` | 38 |
+| 8.1a | the low-level constructions and their collector: `MD4`, `MD5`, `RIPEMD160`, `WHIRLPOOL` whole (Init/Update/Final/Transform and the one-shot), `SHA1`/`SHA224`/`SHA256`/`SHA384`/`SHA512`'s `Init`/`Update`/`Final`/`Transform` — **thirty-eight exports** — and its two courts, `RT-DIGEST` and `CT-DIGEST` | 38 |
 | 8.1b | the provider half: `PROV_DIGEST` and `digestcommon.c`'s `ossl_digest_default_get_params`/`_gettable_params`, the `*_prov.c` dispatch tables, the `sm3`/`sha3`/`keccak1600` internals, the five `sha.h` one-shots, and the digest half of `ossl_default_provider_init` with `providers/defltprov.c`'s `deflt_digests[]`. MDC2's four labels are **not** here: they are 8.2's, per the DES inversion above | 5 |
 
 ### The sixteen recorded hand-offs, and why the four key types are not hand-offs
@@ -269,10 +346,14 @@ Recorded so they are not re-derived per subphase.
    (`AES_cbc_encrypt`, `AES_decrypt`, `AES_encrypt`, `AES_set_decrypt_key`,
    `AES_set_encrypt_key`, `RC4`, `RC4_options`, `RC4_set_key`, `Camellia_cbc_encrypt`) and
    none of the digests' are. **A portable arm is a legitimate reconstruction of a perlasm
-   implementation only when a differential court says so**, which is why `RT-DIGEST` is
-   differential rather than a set of known-answer vectors: a published vector proves the
-   construction is *some* correct implementation, and the court proves it is *this*
-   implementation's observable behaviour.
+   implementation only when a differential court says so**, and §2's two-plane subsection
+   amends the reading that used to follow from this: `RT-DIGEST` is the court that proves the
+   portable arm is *this* implementation's observable behaviour, and `CT-DIGEST` is the
+   *separate* court that proves the construction satisfies the published vectors. The
+   differential court is not replaced by vectors, and vectors are not replaced by the
+   differential court: a published vector proves the construction is *some* correct
+   implementation, and the court proves it is *this* implementation's observable behaviour,
+   which is why a primitive-bearing row carries both.
 2. **`OPENSSL_NO_DEPRECATED` is not defined.** `configdata.pm`'s `%disabled` does not
    contain `deprecated`, so every `OSSL_DEPRECATEDIN_3_0` declaration in `md4.h`, `md5.h`,
    `sha.h`, `ripemd.h`, `whrlpool.h`, `mdc2.h`, `rsa.h`, `dh.h`, `dsa.h` and `ec.h` is
@@ -311,10 +392,16 @@ Recorded so they are not re-derived per subphase.
 1. **Every export is implemented or handed on with the dependency named.** The ledger is the
    arithmetic; `ownership_audit.py` is the cross-check, and for this stratum it must read the
    Phase 7 → 8 edge in both directions.
-2. **Every implemented export is observed by a differential court**, compiled twice and
-   diffed on `key=value`. For a primitive whose authority implementation is perlasm, the
-   court is the *only* evidence that the portable arm is the same function — §3's first row
-   says why a published test vector is not a substitute.
+2. **Every implemented export is observed by a differential court, and every primitive's
+   construction by a correctness court.** The differential half: each probe is compiled twice
+   and diffed on `key=value`, and for a primitive whose authority implementation is perlasm,
+   it is the *only* evidence that the portable arm is the same observable function — §3's
+   first row says why a published test vector cannot stand in for it. The correctness half:
+   every primitive-bearing subphase's construction is run against committed vectors whose
+   provenance is recorded per vector, and a single mismatch fails the court loudly. Neither
+   substitutes for the other — an `RT-*` pass is not independent cryptographic correctness and
+   a `CT-*` pass is not OpenSSL parity, nor formal validation — and the two are stated
+   separately wherever a verdict is reported (§2's two-plane subsection, D201).
 3. **No authority fault is reproduced.** Where a construction dereferences a NULL or relies
    on an uninitialised field — `MDC2_Update`'s `c->num` past `MDC2_BLOCK`,
    `WHIRLPOOL_BitUpdate`'s bit offset — the court does not call it and

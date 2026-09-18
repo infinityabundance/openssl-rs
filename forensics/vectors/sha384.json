@@ -1,0 +1,53 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "algorithm": "sha384",
+    "court": "CT-DIGEST",
+    "digest_bytes": 48,
+    "openssl_digest": "SHA384",
+    "provenance": {
+      "authority": "openssl-3.6.4-production",
+      "corpus": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_sha.txt",
+      "note": "Extracted from the pinned authority's own test data with `correctness_vectors.py --emit`; the bytes and the expected digest are verbatim from that file. A CT pass is not formal validation."
+    },
+    "standard": "FIPS 180-4; RFC 6234 §8.5",
+    "vectors": [
+      {
+        "expected_hex": "cb00753f45a35e8bb5a03d699ac65007272c32ab0eded1631a8b605a43ff5bed8086072ba1e7cc2358baeca134c825a7",
+        "id": "sha384-evpmd_sha-80",
+        "input_hex": "616263",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_sha.txt",
+          "form": "quoted-string",
+          "line": 80,
+          "title": "SHA tests from (RFC6234 section 8.5 and others)"
+        },
+        "standard": "FIPS 180-4; RFC 6234 §8.5"
+      },
+      {
+        "expected_hex": "09330c33f71147e83d192fc782cd1b4753111b173b3b05d22fa08086e3b0f712fcc7c71a557e2db966c3e9fa91746039",
+        "id": "sha384-evpmd_sha-84",
+        "input_hex": "61626364656667686263646566676869636465666768696a6465666768696a6b65666768696a6b6c666768696a6b6c6d6768696a6b6c6d6e68696a6b6c6d6e6f696a6b6c6d6e6f706a6b6c6d6e6f70716b6c6d6e6f7071726c6d6e6f707172736d6e6f70717273746e6f707172737475",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_sha.txt",
+          "form": "quoted-string",
+          "line": 84,
+          "title": "SHA tests from (RFC6234 section 8.5 and others)"
+        },
+        "standard": "FIPS 180-4; RFC 6234 §8.5"
+      }
+    ]
+  },
+  "generator": "forensics/tools/correctness_vectors.py",
+  "inputs": [
+    {
+      "name": "authority-evp-vector-file",
+      "path": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_sha.txt",
+      "sha256": "1cdaa355477300fd3c0ad453d2f6c13f528f3b127af83ff03dbfbf2bf33029c4"
+    }
+  ],
+  "kind": "correctness-vectors-sha384",
+  "schema": "openssl-rs/atlas/correctness-vectors-sha384/v1"
+}

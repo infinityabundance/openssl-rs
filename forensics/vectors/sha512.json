@@ -1,0 +1,66 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "algorithm": "sha512",
+    "court": "CT-DIGEST",
+    "digest_bytes": 64,
+    "openssl_digest": "SHA512",
+    "provenance": {
+      "authority": "openssl-3.6.4-production",
+      "corpus": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_sha.txt",
+      "note": "Extracted from the pinned authority's own test data with `correctness_vectors.py --emit`; the bytes and the expected digest are verbatim from that file. A CT pass is not formal validation."
+    },
+    "standard": "FIPS 180-4; RFC 6234 §8.5",
+    "vectors": [
+      {
+        "expected_hex": "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f",
+        "id": "sha512-evpmd_sha-94",
+        "input_hex": "616263",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_sha.txt",
+          "form": "quoted-string",
+          "line": 94,
+          "title": "SHA tests from (RFC6234 section 8.5 and others)"
+        },
+        "standard": "FIPS 180-4; RFC 6234 §8.5"
+      },
+      {
+        "expected_hex": "8e959b75dae313da8cf4f72814fc143f8f7779c6eb9f7fa17299aeadb6889018501d289e4900f7e4331b99dec4b5433ac7d329eeb6dd26545e96e55b874be909",
+        "id": "sha512-evpmd_sha-98",
+        "input_hex": "61626364656667686263646566676869636465666768696a6465666768696a6b65666768696a6b6c666768696a6b6c6d6768696a6b6c6d6e68696a6b6c6d6e6f696a6b6c6d6e6f706a6b6c6d6e6f70716b6c6d6e6f7071726c6d6e6f707172736d6e6f70717273746e6f707172737475",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_sha.txt",
+          "form": "quoted-string",
+          "line": 98,
+          "title": "SHA tests from (RFC6234 section 8.5 and others)"
+        },
+        "standard": "FIPS 180-4; RFC 6234 §8.5"
+      },
+      {
+        "expected_hex": "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f",
+        "id": "sha512-evpmd_sha-395",
+        "input_hex": "616263",
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_sha.txt",
+          "form": "quoted-string",
+          "line": 395,
+          "title": "Case insensitive digest tests"
+        },
+        "standard": "FIPS 180-4; RFC 6234 §8.5"
+      }
+    ]
+  },
+  "generator": "forensics/tools/correctness_vectors.py",
+  "inputs": [
+    {
+      "name": "authority-evp-vector-file",
+      "path": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_sha.txt",
+      "sha256": "1cdaa355477300fd3c0ad453d2f6c13f528f3b127af83ff03dbfbf2bf33029c4"
+    }
+  ],
+  "kind": "correctness-vectors-sha512",
+  "schema": "openssl-rs/atlas/correctness-vectors-sha512/v1"
+}

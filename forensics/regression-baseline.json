@@ -5,7 +5,8 @@
     "phase4",
     "phase5",
     "phase6",
-    "phase7"
+    "phase7",
+    "phase8"
   ],
   "courts": {
     "ABI-CONSTANTS": {
@@ -47,6 +48,10 @@
     "ABI-VERSION": {
       "observations": 0,
       "verdict": "pass"
+    },
+    "CT-DIGEST": {
+      "observations": 0,
+      "verdict": "fail"
     },
     "RT-ASN1": {
       "observations": 1403,
@@ -334,7 +339,7 @@
     "phase8": 16
   },
   "implemented": {
-    "libcrypto": 1841,
+    "libcrypto": 1879,
     "libssl": 0
   },
   "open_obligations": {
@@ -343,7 +348,7 @@
     "phase5": 0,
     "phase6": 0,
     "phase7": 0,
-    "phase8": 770
+    "phase8": 732
   },
   "owned_obligations": {
     "phase3": 294,
@@ -380,8 +385,8 @@
   "prerequisites": {
     "blocking_dependencies": 25,
     "divergence_names_covered": 32,
-    "findings": 0,
-    "language_census": 2672,
+    "findings": 3,
+    "language_census": 3045,
     "sealed_census": 57
   }
 }

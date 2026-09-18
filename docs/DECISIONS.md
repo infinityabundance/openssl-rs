@@ -13088,3 +13088,155 @@ This is the immutability rule working, not a missing step: the first manual run 
 | `.frf/receipts` | 47 | 66 |
 | `.frf/claims` | 5 | 6 |
 
+
+---
+
+## D201 — Phase 8 gets a second, independent evidence plane: every primitive-bearing subphase carries a `CT-*` correctness court beside its `RT-*` differential one, and `CT-DIGEST`'s first run fails exactly the three digest constructions the WIP already knew were wrong
+
+**The plan said `RT-DIGEST` is "differential rather than a set of known-answer vectors". That is
+wrong for a cryptographic primitive and is corrected here.** The differential court and the
+vector court answer two different questions and neither implies the other:
+
+```text
+RT-DIGEST   OpenSSL differential      -> "does it behave like the admitted authority?"
+CT-DIGEST   construction/spec vectors -> "does it satisfy the underlying construction?"
+```
+
+Two implementations can agree byte for byte and both be wrong against the standard — a round
+constant read from the same wrong place, a message-word order transcribed the same wrong way —
+so an `RT-*` pass is **not** independent cryptographic correctness. And a portable arm can
+satisfy every published vector and still differ from the authority observably — a `Transform`
+boundary, a cleared context field, an error path the vectors never drive — so a `CT-*` pass is
+**not** OpenSSL parity. A `CT-*` pass is also **not formal validation**: the corpora are
+published for informal verification (NIST CAVP, whose own documentation warns that using them
+is not validation) or maintained as an implementation-independent known-attack corpus (Project
+Wycheproof). Both statements are now in `docs/PHASE-8-SUBPHASES.md` §2's "Every
+primitive-bearing row carries two courts" subsection, in §3's first row, in §4's second gate,
+in `forensics/tools/phase8_courts.py`'s court `claim`, and in
+`forensics/tools/correctness_vectors.py`'s header.
+
+### Why this entry is D201, and not D198
+
+This branch was cut from `main` at D196; the bootstrap commit `c207f25b` added D197, and its
+text says "the digest work is D198" and "`RT-DIGEST` arrives in D198". Before this entry the
+branch was rebased-in-substance onto `main` (merged, `8ec62de8`), which had meanwhile taken
+D198 (blocker liveness), D199 (court coverage) and D200 (Phase 7 FRF), so **D198, D199 and D200
+were not free**. The next free number read from `docs/DECISIONS.md` after the merge is **D201**,
+which is the number this entry takes. D197's forward reference is *stale* — it names the number
+the digest work was expected to take before another branch took it — and it is left uncorrected
+because `docs/DECISIONS.md` is append-only; this paragraph is the correction. The only
+in-tree reference that *was* corrected is `src/digest/md32.rs:44`, which now cites D201 for the
+loop-form choice rather than D198.
+
+### The tool, its data, and the provenance recorded per vector
+
+`forensics/tools/correctness_vectors.py` owns the vector schema and the per-vector comparison.
+It writes nothing into the plan's arithmetic; it loads `forensics/vectors/<algorithm>.json` —
+committed data in the atlas envelope (`schema`/`kind`/`generator`/`inputs`/`body`, via
+`atlas_common.envelope`) — validates every vector, compiles the candidate-only probe
+`courts/phase8/ct_digest.c` against the candidate distribution shell, runs it once over all
+calls, and compares. A mismatch is loud: the court is `fail`, and the record carries the
+input, expected and actual bytes for every failing vector, plus a per-vector `results` list for
+*every* vector. A malformed or missing vector set is a hard failure, not a skipped corpus.
+
+Provenance is recorded at three levels: the file (`body.provenance.corpus`,
+`body.standard`, and the `inputs[]` entry with the authority source file's sha256), and per
+vector (`provenance.file`, `provenance.line`, `provenance.title`, `provenance.form`,
+`provenance.authority`). The bytes were not typed: `correctness_vectors.py --emit` extracts
+them from the pinned authority's own `test/recipes/30-test_evp_data/evpmd_*.txt`, which is the
+reason the task's preference names — they are already in the pinned tree and checkable offline.
+The nine committed sets are `forensics/vectors/{md4,md5,ripemd160,sha1,sha224,sha256,sha384,sha512,whirlpool}.json`
+with 7/7/8/2/2/2/2/3/8 vectors, **41 in total**, read from those files.
+
+**Corpora used: only the authority's own `evp_test` data.** **Declined, with the reason:**
+NIST CAVP (the vectors needed here are already in the authority's files with a section title
+naming the standard, and fetching CAVP needs the network; its use is informal verification, not
+validation) and Project Wycheproof (a known-attack corpus for signature/AEAD *verification*
+surfaces, the right corpus for a later RSA/DSA/ECDSA `CT-*` court, and it needs the network).
+Both are recorded in the tool's header so the later courts do not rediscover the reason.
+
+### The driver shape, and the runner's second registry
+
+A correctness court runs the crate **only** — there is no authority transcript, so the
+differential runner's compile-twice-and-diff shape does not apply. `phase8_courts.py` was
+extended with a second registry, `CORRECTNESS_COURTS`, beside `COURTS`, and delegates to
+`correctness_vectors.run_court`. A `CT-*` court whose primitive is not implemented is **not**
+registered as passing: the six later courts are named in `PENDING_CORRECTNESS_COURTS` with what
+each needs, and the runner prints each as `PENDING (not registered as passing)`. Only
+`CT-DIGEST` is registered, for the nine constructions 8.1a implements.
+
+### The exemplar's result: 24 of 41 vectors pass, 17 fail — and that failure is the point
+
+`CT-DIGEST`'s first run against 8.1a, read from `artifacts/phase8/COURTS.json` (committed),
+reports `vectors_checked: 41`, `vectors_passed: 24`, `vectors_failed: 17`:
+
+| algorithm | vectors | pass | fail |
+|---|---|---|---|
+| MD4 | 7 | 0 | 7 |
+| MD5 | 7 | 7 | 0 |
+| RIPEMD-160 | 8 | 8 | 0 |
+| SHA-1 | 2 | 0 | 2 |
+| SHA-224 / 256 / 384 / 512 | 2 / 2 / 2 / 3 | 9 | 0 |
+| Whirlpool | 8 | 0 | 8 |
+
+The failing constructions are **MD4, SHA-1 and Whirlpool**, per vector, with input, expected and
+actual bytes recorded in full in `artifacts/phase8/COURTS.json`'s `failures` list (the empty
+message for each is enough to see it: MD4 answers `8345ec84…` for the RFC 1320 empty-message
+`31d6cfe0…`, SHA-1 answers `f353a3d4…` for `da39a3ee…`, Whirlpool answers `7e47e0ca…` for
+`19fa61d7…`). This is the independent plane doing the one thing it exists to do: the WIP
+commit `bd4c9914` already recorded those three as wrong, and a *different instrument* — an
+external vector set, not the same tests — reaches the same conclusion, per input. **The
+implementation is not fixed in this slice**: fixing it is the next content slice, and a plane
+whose first demonstration is a clean pass would have demonstrated nothing.
+
+### What is not done, and why
+
+* **The digest implementation is not fixed, deliberately.** The six lib tests
+  (`digest::{md4,sha1,wp}::tests::{the_authoritys_vectors, …}`) and `CT-DIGEST`'s 17 failures
+  are the same three defects and are the next slice's work.
+* **The branch's pre-existing clippy red state is not fixed.** `cargo clippy --all-targets --
+  -D warnings` fails with five errors in `src/digest/wp.rs` (four `needless_range_loop` at
+  `:105`, `:107`, `:117`, `:127` and the missing `// SAFETY:` at `:414`). Touching those would
+  be editing the implementation this entry deliberately leaves alone.
+* **Two more gates are red for the same reason, and they are new only because this slice is
+  the first to regenerate the atlases with 8.1a's symbols visible.** `prototype_court.py`
+  reports **11 type mismatches** — the digest `*_Update`/`WHIRLPOOL*` prototypes declare
+  `*const u8` where the authority's is `const void *` (`type_mismatches: 11` in
+  `forensics/atlas/prototype-court.json`) — and exits 1, which is also why
+  `evidence_determinism.py` and `check_evidence_portability.py` fail: they run it as a
+  generator and it fails. `prerequisite_gate.py` reports **3 findings**
+  (`unwired_function_in_the_current_stratum`: `md4_block_data_order`,
+  `ripemd160_block_data_order` and `ossl_sha1_ctrl` are authority-internal functions the
+  transcribed modules do not yet name). Both are 8.1a's implementation debt and are the next
+  slice's work; neither is caused by the correctness plane, and `run_courts.py` fails on
+  `CT-DIGEST` besides.
+* **`RT-DIGEST` is not landed.** This slice adds the second plane and the runner that can
+  express both; the differential probe arrives in the same commit as the 8.1a symbols it
+  observes, which is the rule `phase8_courts.py` already stated, and is the next slice.
+* **The other six `CT-*` courts are named, not registered** (`PENDING_CORRECTNESS_COURTS`),
+  because their primitives do not exist yet; each names its subphase and its intended corpus.
+* **The vector sets are committed data, not a registered generator.** `--emit` reproduces them
+  from the pinned authority, but the tool is not in `evidence_determinism.py`'s generator list,
+  because its default mode is a court rather than a generator; wiring a `gen_*` extraction into
+  the determinism gate is a recorded follow-up, not a claim made here.
+* **No CAVP or Wycheproof corpus was fetched or vendored**, per the constraints and the
+  provenance note above.
+
+### Arithmetic
+
+| | before | after |
+|---|---|---|
+| Phase 8 courts registered | 0 | 1 (`CT-DIGEST`, 41 vectors) |
+| `CT-*` courts named as pending | — | 6 |
+| committed vector sets / vectors | 0 / 0 | **9 / 41** |
+| `docs/PHASE-8-SUBPHASES.md` rows with two courts | 0 | 7 (8.1–8.7) |
+| `implemented` exports (surface totals) | 1841 | **1879** — 8.1a's 38 exports become visible when the surface is regenerated |
+| `open[phase8]` / `implemented[phase8]` | 770 / 0 | **732 / 38** (the same 38) |
+| `prototype-court` type mismatches | 0 | **11** (the digest signatures) |
+| `prerequisite-gate` findings | 0 | **3** (unwired internals) |
+| `evidence_determinism` / `check_evidence_portability` | pass | **fail** (`prototype_court.py` exits 1) |
+
+The movements that are not numbers: the plan's `RT-DIGEST`-instead-of-vectors reading is
+corrected in three places, the runner grows a second registry, and `phase_state.py`'s
+`PHASE8_MODULES` gains `correctness_vectors.py` and `courts/phase8/ct_digest.c` so that the
+plane's absence is a blocking reason rather than a silent one.
