@@ -27,7 +27,7 @@ carries the current figures. All `libssl` exports remain `SCAFFOLDED` and abort 
 
 - Authority: `openssl-3.6.4-production` (with `openssl-3.6.3-historical` admitted for the
   oracle-versus-oracle trajectory in `docs/SECURITY_DIVERGENCE_POLICY.md`)
-- Court results: `artifacts/phase7/COURTS.json` — fifteen courts, all pass, zero residuals. **The
+- Court results: `artifacts/phase7/COURTS.json` — nineteen courts, all pass, zero residuals. **The
   totals are `docs/SEAL-CENSUS.md`'s**; the per-court table is §3.
 - Obligation ledger: `forensics/phase7-obligations.json` — **0 open in this stratum**
 - Court coverage: `forensics/atlas/court-coverage.json` — every implemented export in exactly
@@ -121,30 +121,35 @@ The table below is **copied from `artifacts/phase7/COURTS.json`** (`courts[].cou
 `.authority_observations`), which is the file the pipeline re-derives on every push. The totals are
 `docs/SEAL-CENSUS.md`'s and are not typed here (D97).
 
-| court | verdict | observations |
-|---|---|---|
-| `RT-FETCH` | pass | 217 |
-| `RT-EVP-CIPHER` | pass | 185 |
-| `RT-EVP-MAC` | pass | 96 |
-| `RT-EVP-KDF` | pass | 68 |
-| `RT-EVP-RAND` | pass | 168 |
-| `RT-EVP-SKEY` | pass | 97 |
-| `RT-EVP-KEYMGMT` | pass | 73 |
-| `RT-EVP-NAMES` | pass | 25 |
-| `RT-EVP-PKEY` | pass | 502 |
-| `RT-EVP-PBE` | pass | 442 |
-| `RT-EVP-BIO` | pass | 154 |
-| `RT-EVP-PEM` | pass | 80 |
-| `RT-HMAC` | pass | 32 |
-| `RT-CMAC` | pass | 26 |
-| `RT-HPKE` | pass | 65 |
+| court | one-line subject | verdict | observations |
+|---|---|---|---|
+| `RT-FETCH` | the fetch core, from the one angle a probe can be asked in 7.1 | pass | 217 |
+| `RT-EVP-CIPHER` | the `EVP_CIPHER` method object, from the angle 7.3b can be asked in | pass | 185 |
+| `RT-EVP-MAC` | the `EVP_MAC` method object and the context it is run through | pass | 96 |
+| `RT-EVP-KDF` | the `EVP_KDF` method object and the context it is run through | pass | 68 |
+| `RT-EVP-RAND` | the `EVP_RAND` method object and the context it is run through | pass | 168 |
+| `RT-EVP-SKEY` | the `EVP_SKEYMGMT` method object and the `EVP_SKEY` it manages | pass | 97 |
+| `RT-EVP-KEYMGMT` | the `EVP_KEYMGMT` method object, and the structural check that admits it | pass | 73 |
+| `RT-EVP-NAMES` | `names.c`'s four walkers and the two adders | pass | 25 |
+| `RT-EVP-PKEY` | `crypto/evp/signature.c`'s entry-point half and `p_lib.c`'s provider half, differentially | pass | 502 |
+| `RT-EVP-PBE` | the PBE registry, the PBKDF2 facade and the three v2 keygens | pass | 442 |
+| `RT-EVP-BIO` | `crypto/evp/encode.c`'s four base64 contexts and the four filter BIOs of `crypto/evp/` that 7.5 lands | pass | 154 |
+| `RT-EVP-PEM` | the `pem.h` surface 7.5 can build, and the twenty-five names it cannot | pass | 80 |
+| `RT-HMAC` | the legacy one-shot interface `crypto/hmac/hmac.c` | pass | 32 |
+| `RT-CMAC` | the legacy CMAC interface `crypto/cmac/cmac.c` | pass | 26 |
+| `RT-HPKE` | the RFC 9180 `OSSL_HPKE_*` surface, `crypto/hpke/hpke.c` | pass | 65 |
+| `RT-EVP-REF` | reference basis for the EVP plane's unexercised entries, and nothing more | pass | 264 |
+| `RT-EVP-INTROSPECT` | the method-table and legacy-header surfaces the behavioural probes did not reach | pass | 48 |
+| `RT-EVP-CLASS` | the four provider-only method classes the behavioural probes never fetched: `EVP_ASYM_CIPHER`, `EVP_KEM`, `EVP_KEYEXCH` and `EVP_SIGNATURE` | pass | 22 |
+| `RT-EVP-PKEY-OPS` | the `EVP_PKEY_CTX` accessor surface and the `EVP_PKEY` operation entry points, driven through a keymgmt this probe publishes | pass | 100 |
 
-What each covers, in one line, is `forensics/tools/phase7_courts.py`'s table: the fetch store's shape
-and the property engine; the cipher object and its context; the MAC and KDF classes; `EVP_RAND` and
-`EVP_SKEY`; the five asymmetric method classes; the `names.c` walkers and the two lookups; the
-`EVP_PKEY` layer, its method registry and its ASN.1 glue; the PBE registry and the ctrl/params
-translation; the encode/BIO filters; the PEM framing, headers and wrappers; and the three legacy
-header surfaces of 7.6.
+Each court's one-line subject is the same line `forensics/tools/phase7_courts.py` carries beside
+its probe filename and `forensics/tools/gen_frf_courts.py` carries in its Phase 7 `COURTS` rows
+(D200). Before D200 the generator's table named the probe but not the subject, so the sentence that
+used to stand here — that what each court covers "in one line" was that table — pointed at a field
+that did not exist; the field now exists in all three places and this table carries it. The table
+is also the correct count: it was fifteen rows while `artifacts/phase7/COURTS.json` held nineteen
+after the four D199 courts landed.
 
 `RT-EVP-PKEY` is also the only probe that drives an export this seal added: `EVP_PKEY_new_mac_key`
 (§10). Its arm publishes an `HMAC` key type in the **default** library context, because
@@ -347,28 +352,93 @@ against a generated artefact rather than asserted.
 | the stratum's own structure is reconciled against its ledger | `forensics/atlas/ownership-audit.json`: `problems` 0, `implemented_by_two_strata` 0 |
 | the courts are re-derived on every push, not trusted from a committed file | the `courts` job in `.github/workflows/ci.yml` runs `court/pipeline.sh` |
 | a commit may not undo an earlier commit's evidence | `forensics/tools/regression_guard.py` against the branch's previous head and against `origin/main` |
-| the FRF receipts | §8: vacuous for this stratum by the convention the FRF table records |
+| the FRF receipts and the compiled claim | §8: nineteen Phase-7 receipts and the `sensitivity-backed` claim `96750dc60a30653471714fdb2164206dc541333371468238b98ca3d84e8cc7f8`, read from `.frf/` |
 | the Gemel checkpoint | §8: the change and checkpoint the store answered |
 
 ## 8. FRF and Gemel
 
 ### FRF
 
-**Phase 7 declares no FRF courts, and therefore has no FRF receipts.** That is a property of the
-landed convention rather than a gap in this stratum's evidence, and the convention is readable in
-one place: `forensics/tools/gen_frf_courts.py`'s `COURTS` table is *the* registry of FRF court
-declarations (D58: "the FRF court declarations are generated from one table"), and its entries are
-the Phase 3–6 runtime courts. There is no `openssl-rs-rt-fetch`, `-rt-evp-cipher`, `-rt-evp-pkey`,
-`-rt-hmac`, `-rt-cmac` or `-rt-hpke` directory under `forensics/frf/courts/`, and
-`forensics/frf/run_courts.sh` derives the courts it runs from that directory rather than from a
-list, so a court with no declaration produces no receipt by construction.
+Phase 7 declares **nineteen** FRF runtime courts — the fifteen of 7.1–7.6 and the four D199
+coverage courts — and the chain the Phase 3–6 strata have is now complete for this stratum too:
+`court → FRF declaration → challenge/sensitivity → receipt → compiled claim` (D200).
 
-What that costs is stated rather than glossed: the Phase 3–6 strata each have a claim compiled from
-their receipts, and this stratum does not. Its claim-bearing evidence is
-`artifacts/phase7/COURTS.json` plus `court/pipeline.sh`, which re-derives it on every push, and the
-prerequisite/dispatch/prototype courts over the same tree. `gen_frf_courts.py --check` is run by the
-pipeline and by CI, and it passes — it verifies the declarations that exist, and this stratum adds
-none, so the check is unaffected either way.
+**The declarations.** `forensics/tools/gen_frf_courts.py`'s `COURTS` table is *the* registry of
+FRF court declarations (D58), and it now carries a Phase 7 row for every court in §3, each naming
+the `artifacts/phase7/probes/<probe>.{authority,candidate}` pair the court executes and the
+`courts/phase7/<probe>.c` it was compiled from. `python3 forensics/tools/gen_frf_courts.py
+--check` regenerates all 124 declaration files from the table and passes; `--check` runs in CI and
+in `court/pipeline.sh`. The declarations live at `forensics/frf/courts/openssl-rs-rt-*`, which is
+also where `forensics/frf/run_courts.sh` derives the courts it runs, so a declaration added here is
+run by construction rather than by a list someone has to remember.
+
+**The venue.** The courts execute authority binaries, so they ran in the FRF tooling container
+(`bash docker/openssl-rs-frf-court.sh up` / `exec`) and never on the host. Because `.frf/` is
+committed, already-captured evidence, this stratum's courts were **added** to the existing store
+rather than by `run_courts.sh`, whose first act is `rm -rf "$ROOT"`: a release re-observes a
+rebuilt candidate from clean, and this was not a release. The `frf` invocations are the same ones
+`run_courts.sh` makes (`court run`, `receipt emit`, `court challenge`, `claim compile`), without
+the recreation. At the next store recreation the derived `RUNTIME_COURTS` glob picks these courts
+up and compiles them into the runtime claim with the Phase 3–6 receipts, as before.
+
+**The receipts.** Nineteen, one per court, each with **0 residuals** and no open residual whose
+surface intersects its observables:
+
+```
+receipt-run-openssl-rs-rt-fetch-9eb67370588b2404ca8f185cc4e251cd8ccedfaf443085e8d62d47bfee2941c0-66dd6662dba68503a4ed45141cf93b86d15e41283549423169c5c71aa88e73de
+receipt-run-openssl-rs-rt-evp-cipher-1672c1098d74206edae1699be5e14b58b57ee4940ed06459372ccf8268e1f612-2897dd09982cc42849b74ac79bb8cd40c4d3fc7ea87a5c170fd0b51b4bb2ac1c
+receipt-run-openssl-rs-rt-evp-mac-ce5afa0935ea9ce8d6bee240cc960c7adeb9edf02104d0c8d93f06dda1df0abf-4332281138d3f7bf9b04aca052b42c496f920e605dae826ae0ff7d8b07095559
+receipt-run-openssl-rs-rt-evp-kdf-7c0b45f8e93c67e630ce85a8606f12358bb4bc0fb82e05ea3c2f69357e7b8507-d7e8cb75adbd3a3625e460884bc7e29cc4ebf2182275bc9c48a596e8bc6e7a75
+receipt-run-openssl-rs-rt-evp-rand-b50cd73fb478dc3cd1cbb1bec799b63cffbb03dbd565de45ae46f59b7cb553b0-38508384bf82143c60b764663492e2cbc84d5d9aab39014844e3abe58b1d1de3
+receipt-run-openssl-rs-rt-evp-skey-0203418e986784ae1ae2d1e1627d5458b0cc75dcc37326ab55e38db716f5907f-0c2944c1bab147aec76a0c5a8f0700df902fbf364348ba731a738444aeafaef6
+receipt-run-openssl-rs-rt-evp-keymgmt-ed7b626c27dc4e26064ae660e89bd91180494e1c29636c270ec8ad61117948db-a096d2894fa1439bcc0e5d9ee3732cf03fa11bfb599c0f274d5f871a50696793
+receipt-run-openssl-rs-rt-evp-names-c2c1024763a6507791e6710e53fb1b522114a7ece1f4ddf23f0318eb51833453-d75d5641ad95507f0c82dda207c44a929d22591ecb72ac4fe39ef171cca61e93
+receipt-run-openssl-rs-rt-evp-pkey-631febec3d62260e765aa8a3674e4e8ae0530d62201b420241d20932d42edfbe-ecd9c2c16e1562cdd97b6cffd903344d394c9ecc9fbf1406b3cbbe84bf80936f
+receipt-run-openssl-rs-rt-evp-pbe-c178451128d6beff772977f8a5dd55a37a2a692b77dce279ac826dd7d2179626-646bc6e2ffca16f22c698a312a14118c004cfb09be4cd68a805499d748f9db32
+receipt-run-openssl-rs-rt-evp-bio-511353fc2843fdb9110bf2efa7b863337a3f08f8ba10ac0a691b18c0d370f7f4-fbb3a5993d6673fdfcb71a2bb7f888e95dc4ca03d02e90caa164b930cdbdd89f
+receipt-run-openssl-rs-rt-evp-pem-0fe064683f22b7e336b99095482127a28ef1cbd39ebcd8c3b973becac29cb59c-3a5134ea1e1b3233d01a7026f771ff3a257f33ce966c75bbe93c4ecd238e3b46
+receipt-run-openssl-rs-rt-hmac-812c859e3c5cc8249b6c5b319431f6497e9d37999f4e10bac03b2e42e3523476-aec47a38037f604b07af3fa1599016397a743edd1f46ea4ffc914134269350fa
+receipt-run-openssl-rs-rt-cmac-d1f1004af6b162761e81082691b0f45712825a3f6460db0b8d1575b0eac7028a-41b9f6e0edf7d8cb4c5c60438d5302f54198bd9339f5759d087b40c3d3e12ba4
+receipt-run-openssl-rs-rt-hpke-68e053f22f810a521e89908026a70340a3ca242ee7f5535f86e0542ef0b122f0-d984ada00f651e5a7c78c693bb68f2b079740c123356b1bbeda85cf3d4e24264
+receipt-run-openssl-rs-rt-evp-ref-f036186fc277e05265c0d4ca53cfeb4e6885b7538f36b29f71b8d59530d5de05-51d4beb9a232b80ca89d82b4c5a7e7ac2d43d203f1329960cc7335ed3571ee56
+receipt-run-openssl-rs-rt-evp-introspect-510c38e180ccd570ac61fb920c146e8f7ce925c49fc64d7493b9a5ff5b312e8f-ecf9fa822af589138a932e586a15825c73ddf966674a3cd7a758b27c93c36e92
+receipt-run-openssl-rs-rt-evp-class-42e192c3cfb49eea050a85bc0d9a66e9521b67a4684c148936a7b169dcaffec2-c6c67eb565f1d978e9a96115409ca1588183ff5aac2bcc8360f6544877ddd277
+receipt-run-openssl-rs-rt-evp-pkey-ops-eaa7ce42cdf2d17b15cd650107f4b8f5ba457fc1557a53a70a0719aaf70aa1b2-ef111a83558c0e2bd6ebc893806385e45ab3f0e8698f11d5979077181ccfe87f
+```
+
+**The compiled claim.** From those nineteen receipts at `--policy sensitivity-backed`, the same
+policy `run_courts.sh` uses for the Phase 3–6 runtime receipts:
+
+```
+96750dc60a30653471714fdb2164206dc541333371468238b98ca3d84e8cc7f8
+```
+
+It binds authority `openssl-rt-3.6.4-r2` and candidate `openssl-rs 0.0.10 (e4f60d8b)`, asserts
+`eq(stdout-first-line), eq(exit-code)` per fixture family, and — like every runtime claim — is
+explicit that it "does not establish byte-identical stderr, full CLI compatibility, or a drop-in
+replacement claim". That narrowness is deliberate and the Phase 3 note above is why it is not the
+whole transcript by accident: the harness's first stdout line is a digest of every following line,
+so the claimed axis covers the transcript, and the claim's own wording does not say so.
+
+**The sensitivity evidence.** D13 requires a court whose arguments reference the fixture to be
+challengeable, and FRF's `court challenge` runs it against a mutant candidate that alters exactly
+one observable dimension, requiring the defect to be seen on the targeted axis *and no other*. For
+a Phase-7 court the evidence is therefore two adjudicated challenge records per court: the
+`stdout-first-line` operator seen on `stdout` only, and the `exit-class` operator seen on `exit`
+only. All nineteen courts produced both — 38 challenge records, each with `saw_defect: true` and
+`specificity_clean: true` — and none was refused. The pair for `RT-FETCH` is
+`297124ba97de0d89471cdaf26ab0d5f3529a55119b8a2e5d9ce04b8ce6acdcb2` (`stdout-first-line`) and
+`16ff0fd700c48c182b4d31a82aaa1fe2ad6b164ffe2183d49a68f2cbf237afb5` (`exit-class`); the other
+seventeen courts' pairs are in `.frf/challenges/` and are listed in D200. The challenge runs'
+mutant residuals are open by design — a mutant's divergence is the evidence — and the compiled
+claim is admitted over the real runs' clean surface.
+
+**The store, before and after.** Read from `frf --root .frf evidence status`, this change moved
+captures 141 → **198**, residuals 97 → **135**, receipts 47 → **66** and claims 5 → **6**; the
+object closure is `complete` and the graph verdict is `graph_verified: yes` afterwards. The 57 new
+captures are 19 court runs plus 38 mutant runs; the 38 new residuals are exactly the mutant runs'
+divergences, one per challenge; the 19 real runs contributed none. No existing capture, residual,
+receipt or claim was rewritten.
 
 ### Gemel
 

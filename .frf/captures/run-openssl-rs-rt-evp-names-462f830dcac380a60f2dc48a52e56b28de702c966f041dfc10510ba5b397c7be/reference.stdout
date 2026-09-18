@@ -1,0 +1,26 @@
+transcript.sha256=b4b469dd0fcc18e388276eab9cc768656131f948b7a1c7741785d0a4df4e517d
+add_cipher.null=0 err=0
+add_cipher.null.err=0
+add_cipher.null_method_pointer=nonnull err=0
+add_cipher.enc_null=1 err=0
+add_cipher.enc_null_again=1 err=0
+add_cipher.registered=1
+get_cipherbyname.added=1
+get_cipherbyname.missing=NULL err=0
+get_cipherbyname.missing.err=0
+get_digestbyname.added=0
+get_digestbyname.missing=NULL err=0
+get_digestbyname.missing.err=0
+cipher_do_all=saw_wanted:1 alias_without_a_target:0 real_with_a_target:0 out_of_order:0 err=0
+cipher_do_all_sorted=saw_wanted:1 alias_without_a_target:0 real_with_a_target:0 out_of_order:0 err=0
+add_digest.md_null=1 err=0
+add_digest.md_null_again=1 err=0
+add_digest.registered=1
+md_do_all=saw_wanted:1 alias_without_a_target:0 real_with_a_target:0 out_of_order:0 err=0
+md_do_all_sorted=saw_wanted:1 alias_without_a_target:0 real_with_a_target:0 out_of_order:0 err=0
+add_digest.null=NOT_MEASURED_AUTHORITY_FAULTS
+cipher_do_all.null_visitor=NOT_MEASURED_AUTHORITY_FAULTS
+cipher_do_all_sorted.null_visitor=NOT_MEASURED_AUTHORITY_FAULTS
+md_do_all.null_visitor=NOT_MEASURED_AUTHORITY_FAULTS
+md_do_all_sorted.null_visitor=NOT_MEASURED_AUTHORITY_FAULTS
+add_digest.pkey_alias_arm=NOT_MEASURED_NO_WAY_TO_BUILD_AN_EVP_MD_FROM_C

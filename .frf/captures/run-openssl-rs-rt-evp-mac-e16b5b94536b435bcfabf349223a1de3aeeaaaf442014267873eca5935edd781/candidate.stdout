@@ -1,0 +1,97 @@
+FRF-MUTANT:stdout-first-line:transcript.sha256=2d07463a89f0fd334ba39aca34cdc51f05b9bc5a9b56841f94ddcd7ce6f1d611
+add_builtin=1 err=0
+load=1
+mac.activity.pristine=0,0,0,0,0,0,0,0,0 err=0
+fetch.plain=nonnull err=50331841
+fetch.with_dupctx=nonnull err=0
+fetch.init_skey_only=nonnull err=0
+fetch.one_function_short=NULL err=0
+fetch.one_function_short.err=0
+fetch.no_subalg_key=nonnull err=0
+fetch.unknown=NULL err=50856204
+fetch.unknown.err=0
+fetch.rejected=NULL err=50856204
+fetch.rejected.err=0
+fetch.alias_same_object=1
+md.name_matches=1
+md.description_matches=1
+md.provider=nonnull err=0
+md.is_a.identity=1 err=0
+md.is_a.alias=1 err=0
+md.is_a.other=0 err=0
+md.is_a.null_mac=0 err=0
+md.gettable_params=nonnull err=0
+md.gettable_ctx_params=nonnull err=0
+md.settable_ctx_params=nonnull err=0
+md.get_params.ret=1 err=0
+md.get_params.size=16 err=0
+md.names_do_all.ret=1 err=0
+md.names.count=2 err=0
+md.names.saw_identity=1 err=0
+md.names.saw_alias=1 err=0
+ctx.new=nonnull err=0
+ctx.new.get0_mac_is_method=1
+ctx.new.mac_size=16 err=0
+ctx.new.block_size=0 err=0
+ctx.gettable_params=nonnull err=0
+ctx.settable_params=nonnull err=0
+mac.activity.after_new=1,0,0,0,0,0,0,2,0 err=0
+ctx.init=1 err=0
+ctx.update=1 err=0
+ctx.update.zero=1 err=0
+mac.activity.after_update=1,0,0,1,2,0,0,2,0 err=0
+ctx.final.return=1 err=0
+ctx.final.outl=16 err=0
+ctx.final.byte0=5 err=0
+ctx.final.byte1=19 err=0
+ctx.final.byte2=234 err=0
+ctx.final.byte3=107 err=0
+ctx.final.byte4_xof=0 err=0
+ctx.final.byte5_digest_seen=0 err=0
+ctx.final.byte15=105 err=0
+ctx.final.beyond_outl_untouched=1 err=0
+ctx.final.size_query=1 err=0
+ctx.final.size_query.outl=16 err=0
+ctx.final.too_small=0 err=50331803
+ctx.final.too_small.err=0
+ctx.final.size_query_no_length=0 err=51118338
+ctx.final.size_query_no_length.err=0
+ctx.finalXOF.return=1 err=0
+ctx.finalXOF.byte4_xof=1 err=0
+mac.activity.after_final=1,0,0,1,2,2,1,7,0 err=0
+ctx.get_params.ret=1 err=0
+ctx.get_params.size=16 err=0
+ctx.set_params.ret=1 err=0
+ctx.set_params.xof=1 err=0
+ctx.set_params.null=1 err=0
+mac.activity.after_params=1,0,0,1,2,2,3,8,0 err=0
+mac.activity.after_ctx_free=1,1,0,1,2,2,3,8,0 err=0
+dup.with_dupctx=nonnull err=0
+dup.distinct=1
+dup.method_is_source_method=1
+dup.mac_size=16 err=0
+dup.without_dupctx=NOT_MEASURED_AUTHORITY_FAULTS
+mac.activity.after_dup=3,4,1,1,2,2,3,9,0 err=0
+skey.ctx_new=nonnull err=0
+skey.init=0 err=50856204
+skey.init.err=0
+skey.update=1 err=0
+skey.final=1 err=0
+skey.init_SKEY=NOT_MEASURED_CANDIDATE_SCAFFOLD=0 err=0
+qmac.into_caller_buffer=nonnull err=0
+qmac.caller_buffer.len=16 err=0
+qmac.caller_buffer.byte5_digest_seen=1 err=0
+qmac.allocated=nonnull err=0
+qmac.allocated.len=16 err=0
+qmac.allocated.byte0=5 err=0
+qmac.no_subalg_key=NULL err=50856198
+qmac.no_subalg_key.err=0
+qmac.no_subalg_key.len=0 err=0
+qmac.unknown_algorithm=NULL err=50856204
+qmac.unknown_algorithm.len=0 err=0
+do_all.count=4 err=0
+do_all.saw_court_mac=1 err=0
+do_all.saw_the_refused_one=0 err=0
+do_all.null_visitor=NOT_MEASURED_AUTHORITY_FAULTS
+mac.activity.after_all_free=6,7,1,3,5,5,7,12,0 err=0
+unload=1 err=0

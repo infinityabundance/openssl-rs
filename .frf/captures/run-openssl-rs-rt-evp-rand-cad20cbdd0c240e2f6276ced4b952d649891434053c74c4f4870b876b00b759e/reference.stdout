@@ -1,0 +1,169 @@
+transcript.sha256=9afb1133be210ac35851e920b8648e4d45104bfd02bd6cea1ddbcc551087297b
+add_builtin=1 err=0
+load=1
+fetch.plain=nonnull err=50331841
+fetch.full=nonnull err=0
+fetch.no_verify=nonnull err=0
+fetch.enable_locking_without_lock=nonnull err=0
+fetch.enable_locking_without_lock.err=0
+fetch.child=nonnull err=0
+fetch.smallmax=nonnull err=0
+fetch.zeromax=nonnull err=0
+fetch.badparams=nonnull err=0
+fetch.no_generate=NULL err=50856204
+fetch.no_generate.err=0
+fetch.no_get_ctx_params=NULL err=50856204
+fetch.no_get_ctx_params.err=0
+fetch.no_freectx=NULL err=50856204
+fetch.no_freectx.err=0
+fetch.half_a_lock=NULL err=50856204
+fetch.half_a_lock.err=0
+fetch.unknown=NULL err=50856204
+fetch.unknown.err=0
+fetch.rejected=NULL err=50856204
+fetch.rejected.err=0
+fetch.alias_same_object=1
+method.name_matches=1
+method.description_matches=1
+method.provider=nonnull err=0
+method.is_a.identity=1 err=0
+method.is_a.alias=1 err=0
+method.is_a.other=0 err=0
+method.is_a.null_method=0 err=0
+method.gettable_params=nonnull err=0
+method.gettable_ctx_params=nonnull err=0
+method.settable_ctx_params=nonnull err=0
+method.get_params.ret=1 err=0
+method.get_params.size=0 err=0
+method.get_params.vec=0,0,0,0,0,0,0,0,0,0,0,0,0,0 err=0
+full.get_params.ret=1 err=0
+full.get_params.size=16 err=0
+full.get_params.vec=0,0,0,0,0,0,0,0,0,0,0,0,0,1 err=0
+method.names_do_all.ret=1 err=0
+method.names.count=2 err=0
+method.names.saw_identity=1 err=0
+method.names.saw_alias=1 err=0
+ctx.new.null_method=NULL err=50331866
+ctx.new.null_method.err=0
+method.up_ref_null=1 err=0
+method.null_contracts.vec=0,0,0,0,0,0,0,0,0,0,0,0,0,0 err=0
+ctx.new.plain=nonnull err=0
+plain.new.vec=1,0,0,0,0,0,0,0,0,0,0,0,0,0 err=0
+ctx.new.rand_is_method=1
+ctx.gettable_params=nonnull err=0
+ctx.settable_params=nonnull err=0
+ctx.instantiate.ret=1 err=0
+plain.instantiate.vec=0,0,1,0,0,0,0,0,0,0,0,0,0,0 err=0
+plain.instantiate.obs=chunks:0 n:0 pred:0x0 inst:1048579 reseed:0 nonce:0 err=0
+ctx.generate.16.ret=1 err=0
+ctx.generate.16.byte0=32 err=0
+ctx.generate.16.byte15=47 err=0
+ctx.generate.16.beyond_untouched=1 err=0
+plain.generate.16.obs=chunks:16 n:1 pred:0x1 inst:0 reseed:0 nonce:0 err=0
+plain.generate.16.vec=0,0,0,0,1,0,0,1,0,0,0,0,0,0 err=0
+ctx.generate.0.ret=1 err=0
+ctx.generate.0.buffer_untouched=1 err=0
+plain.generate.0.obs=chunks:0 n:0 pred:0x0 inst:0 reseed:0 nonce:0 err=0
+plain.generate.0.vec=0,0,0,0,0,0,0,1,0,0,0,0,0,0 err=0
+ctx.get_params_after_generate.ret=1 err=0
+ctx.set_params.null=1 err=0
+ctx.get_strength=128 err=0
+ctx.get_state=1 err=0
+ctx.reseed.no_callback=1 err=0
+ctx.verify_zeroization=0 err=0
+ctx.enable_locking.no_callback=0 err=50331861
+ctx.enable_locking.no_callback.err=0
+plain.misc.vec=0,0,0,0,0,0,0,3,1,0,0,0,1,0 err=0
+ctx.nonce.fallback.ret=1 err=0
+ctx.nonce.fallback.byte0=32 err=0
+ctx.nonce.fallback.byte7=39 err=0
+ctx.nonce.fallback.beyond_untouched=1 err=0
+plain.nonce.fallback.obs=chunks:8 n:1 pred:0x0 inst:0 reseed:0 nonce:0 err=0
+plain.nonce.fallback.vec=0,0,0,0,1,0,0,2,0,0,0,0,0,0 err=0
+ctx.nonce.null_ctx=0 err=51118338
+ctx.nonce.null_ctx.err=0
+ctx.nonce.null_out=0 err=51118338
+ctx.nonce.null_out.err=0
+ctx.nonce.zero_len=0 err=51118338
+ctx.nonce.zero_len.err=0
+plain.nonce.nullarms.vec=0,0,0,0,0,0,0,0,0,0,0,0,0,0 err=0
+ctx.verify_zeroization.after_fold=0 err=0
+ctx.uninstantiate.ret=1 err=0
+ctx.verify_zeroization.zeroized=1 err=0
+plain.uninstantiate.vec=0,0,0,1,0,0,0,0,0,0,0,0,2,0 err=0
+ctx.up_ref=1 err=0
+plain.up_ref_once.vec=0,0,0,0,0,0,0,0,0,0,0,0,0,0 err=0
+plain.up_ref_twice.vec=0,1,0,0,0,0,0,0,0,0,0,0,0,0 err=0
+ctx.free_null=returned err=0
+noverify.verify_zeroization=0 err=0
+noverify.verify.vec=0,0,0,0,0,0,0,0,0,0,0,0,0,0 err=0
+full.ctx.new=1
+full.new.vec=1,0,0,0,0,0,0,0,0,0,0,0,0,0 err=0
+full.instantiate.ret=1 err=0
+full.get_params.ret=1 err=0
+full.set_params.ret=1 err=0
+full.get_strength=128 err=0
+full.get_state=1 err=0
+full.reseed.ret=1 err=0
+full.verify_zeroization=1 err=0
+full.uninstantiate.ret=1 err=0
+full.enable_locking.ret=1 err=0
+full.misc.obs=chunks:0 n:0 pred:0x0 inst:786432 reseed:5242881 nonce:0 err=0
+full.misc.vec=0,0,1,1,0,1,0,3,1,8,8,1,1,0 err=0
+full.nonce.ret=1 err=0
+full.nonce.byte0=160 err=0
+full.nonce.byte7=167 err=0
+full.nonce.beyond_untouched=1 err=0
+full.nonce.obs=chunks:0 n:0 pred:0x0 inst:0 reseed:0 nonce:524305 err=0
+full.nonce.vec=0,0,0,0,0,0,1,1,0,1,1,0,0,0 err=0
+enableonly.enable_locking.ret=1 err=0
+enableonly.get_params.ret=1 err=0
+enableonly.vec=0,0,0,0,0,0,0,1,0,0,0,1,0,0 err=0
+child.new.no_parent=nonnull err=0
+child.no_parent.was_null=1 err=0
+child.no_parent.dispatch_was_null=1 err=0
+child.no_parent.vec=1,0,0,0,0,0,0,0,0,0,0,0,0,0 err=0
+child.parent=nonnull err=0
+child.new=nonnull err=0
+child.parent_was_algctx=1 err=0
+child.parent_was_ctxstruct=0 err=0
+child.dispatch_was_null=0 err=0
+child.dispatch_entries=17 err=0
+child.dispatch_first_id=1 err=0
+child.rand_is_child_method=1
+child.new.vec=3,0,0,0,0,0,0,0,0,0,0,0,0,0 err=0
+child.second.dispatch_same_as_first=1 err=0
+child.second.distinct_ctx=1
+child.after_first_free.vec=0,1,0,0,0,0,0,0,0,0,0,0,0,0 err=0
+child.after_second_free.vec=0,2,0,0,0,0,0,0,0,0,0,0,0,0 err=0
+child.parent_still_usable=1 err=0
+child.after_parent_free.vec=0,3,0,0,0,0,0,1,0,1,1,0,0,0 err=0
+smallmax.ctx.new=1
+smallmax.generate.20.ret=1 err=0
+smallmax.generate.20.byte0=32 err=0
+smallmax.generate.20.byte6=38 err=0
+smallmax.generate.20.byte7=64 err=0
+smallmax.generate.20.byte13=70 err=0
+smallmax.generate.20.byte14=96 err=0
+smallmax.generate.20.byte19=101 err=0
+smallmax.generate.20.byte20_untouched=1 err=0
+smallmax.generate.20.obs=chunks:460550 n:3 pred:0x4 inst:0 reseed:0 nonce:0 err=0
+smallmax.generate.20.vec=0,0,0,0,3,0,0,1,0,0,0,0,0,0 err=0
+zeromax.generate.ret=0 err=50331863
+zeromax.generate.err=0
+zeromax.generate.buffer_untouched=1 err=0
+zeromax.generate.vec=0,0,0,0,0,0,0,1,0,0,0,0,0,0 err=0
+badparams.generate.ret=0 err=50331863
+badparams.generate.err=0
+badparams.generate.buffer_untouched=1 err=0
+badparams.get_strength=0 err=0
+badparams.get_state=2 err=0
+badparams.vec=0,0,0,0,0,0,0,3,0,0,0,0,0,0 err=0
+do_all.count=8 err=0
+do_all.saw_court_rand=1 err=0
+do_all.saw_a_refused_one=0 err=0
+do_all.null_visitor=NOT_MEASURED_AUTHORITY_FAULTS
+get_seed=NOT_MEASURED_INTERNAL_TO_PHASE_9
+clear_seed=NOT_MEASURED_INTERNAL_TO_PHASE_9
+can_seed=NOT_MEASURED_INTERNAL_TO_PHASE_9
+unload=1 err=0

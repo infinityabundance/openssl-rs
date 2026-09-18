@@ -1,0 +1,1 @@
+{"authority":"openssl-rt-3.6.4-r2","blocks_claims":["rt-hmac exit parity"],"disposition":"open","kind":"exit","magnitude":"class-change","next_court":"cli-exit-minimize","residual_id":"389b77c8caf5f8b6b3e39ef5cfc4681d5c40b46fcfe77c213b83213242ead835","schema_version":"frf-token-v1","scope":"rt-hmac","surface":"exit-class","token":"exit/exit-class/class-change/open"}
