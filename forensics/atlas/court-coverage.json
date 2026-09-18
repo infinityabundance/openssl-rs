@@ -14051,7 +14051,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "de1ee62ecb1c841a495eac484660aab768cf1c2a28f50408eabf20b38139f850"
+      "sha256": "266fa995e6bf25c9d88c39ca1a933c977023ead167ced2f1af655ab0365069cd"
     },
     {
       "name": "symbol-ownership",
@@ -14066,7 +14066,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "4d20c27b175b579f3ab93acf66d3eef0a8b2e596563faa20754553da78b5e1ca"
+      "sha256": "4e8be8d9f7aee38bff20c8c8dfc5645c1441c873820483ef4e2f2090ef71aae5"
     },
     {
       "name": "phase3-courts",
@@ -14076,7 +14076,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "ac9dca2b4c1ef254f392a8b0c8de67175af8e62ddb37dd8770dacd02ce24a279"
+      "sha256": "c31bc498a7bcd6502ffae8e6107539ef87086228663e16fe8523697ee711f048"
     },
     {
       "name": "phase4-courts",
@@ -14086,7 +14086,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "90a4b093a3d3cad566add40f2a2c58b30693296a34f3ed1b0f9b8fd4a2599c70"
+      "sha256": "3209ca66adebe688e2a80468e4a587ee040c04e3d443a43b8133dca0327d9f41"
     },
     {
       "name": "phase5-courts",
@@ -14096,7 +14096,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "40421f21f7020844ab532f979db2b0ca4772188fa291c33c30ea3172a08f16f9"
+      "sha256": "eec654c359c2a0b54ebb3093e10e415d4dcb9bb8fb7856c80edf0314e1cb4ca7"
     },
     {
       "name": "phase6-courts",
@@ -14106,7 +14106,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "5327221bf6327d55c3d8597be1d2e9cbace0ec80d1b1cf0f5496345856a86477"
+      "sha256": "d43071d8fdceb7c559d25bef3994af29da1ce960f08d950bd3a38968bd7e9930"
     },
     {
       "name": "phase7-courts",

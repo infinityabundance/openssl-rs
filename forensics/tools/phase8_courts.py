@@ -124,7 +124,7 @@ CORRECTNESS_COURTS: list[tuple[str, tuple[str, ...]]] = [
 # rather than a message and a digest. It is driven by `correctness_vectors.run_cipher_court`
 # and its sets are the `cipher-vectors-*` files under `forensics/vectors/`.
 CIPHER_CORRECTNESS_COURTS: list[tuple[str, tuple[str, ...]]] = [
-    ("CT-CIPHER", ("aes",)),
+    ("CT-CIPHER", ("aes", "rc4")),
 ]
 
 # A `CT-*` court the plan names but whose primitive is not implemented yet. It is not a
@@ -338,8 +338,9 @@ def main(argv: list[str]) -> int:
                                    path=cv.VECTOR_DIR / f"{algorithm}.json"))
     for _name, algorithms in CIPHER_CORRECTNESS_COURTS:
         inputs.append(InputRef(name="cipher-correctness-probe", path=cv.CIPHER_PROBE))
-        inputs.append(InputRef(name="cipher-correctness-vectors",
-                               path=cv.VECTOR_DIR / "aes.json"))
+        for algorithm in algorithms:
+            inputs.append(InputRef(name=f"cipher-correctness-vectors:{algorithm}",
+                                   path=cv.VECTOR_DIR / f"{algorithm}.json"))
     doc = envelope(kind="phase8-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
     write_json(OUT, doc)

@@ -40,6 +40,7 @@
 
 #include <openssl/aes.h>
 #include <openssl/modes.h>
+#include <openssl/rc4.h>
 
 #define RT_KEY 0xa7u
 #define RT_BLOCK 16u
@@ -320,6 +321,64 @@ static void rt_aes(void)
     printf("aes.options=%s\n", AES_options());
 }
 
+static void rt_rc4(void)
+{
+    RC4_KEY k;
+    unsigned char key[16];
+    unsigned char in[64];
+    unsigned char out[64];
+    unsigned char out2[64];
+
+    rt_fill(key, sizeof(key), 1);
+    rt_fill(in, sizeof(in), 2);
+
+    printf("rc4.sizeof_key=%u\n", (unsigned)sizeof(RC4_KEY));
+    printf("rc4.options=%s\n", RC4_options());
+
+    /* The key schedule is a byte permutation, so it is observed as bytes -- and the two
+     * indices after a run are part of the state a resumed call depends on. */
+    memset(&k, 0, sizeof(k));
+    RC4_set_key(&k, 16, key);
+    printf("rc4.set_key.x=%u\n", (unsigned)k.x);
+    printf("rc4.set_key.y=%u\n", (unsigned)k.y);
+    rt_hex("rc4.set_key.data", (const unsigned char *)k.data, 64);
+
+    memset(out, 0, sizeof(out));
+    RC4(&k, 32, in, out);
+    rt_hex("rc4.ct", out, 32);
+    printf("rc4.state.x=%u\n", (unsigned)k.x);
+    printf("rc4.state.y=%u\n", (unsigned)k.y);
+
+    /* A second call resumes the keystream from the retained state, which is the observable a
+     * transcription that re-initialises would get wrong. */
+    memset(out2, 0, sizeof(out2));
+    RC4(&k, 32, in + 32, out2);
+    rt_hex("rc4.ct2", out2, 32);
+    printf("rc4.state2.x=%u\n", (unsigned)k.x);
+    printf("rc4.state2.y=%u\n", (unsigned)k.y);
+
+    /* The classic `Key`/`Plaintext` vector. */
+    memset(&k, 0, sizeof(k));
+    RC4_set_key(&k, 3, (const unsigned char *)"Key");
+    memset(out, 0, sizeof(out));
+    RC4(&k, 9, (const unsigned char *)"Plaintext", out);
+    rt_hex("rc4.classic", out, 9);
+
+    /* Different key lengths exercise the wrap in the KSA. */
+    memset(&k, 0, sizeof(k));
+    RC4_set_key(&k, 1, (const unsigned char *)"a");
+    memset(out, 0, sizeof(out));
+    RC4(&k, 16, in, out);
+    rt_hex("rc4.keylen1", out, 16);
+
+    memset(&k, 0, sizeof(k));
+    RC4_set_key(&k, 32, key);
+    memset(out, 0, sizeof(out));
+    RC4(&k, 0, in, out);
+    rt_hex("rc4.zero_len", out, 4);
+    printf("rc4.zero_len.state.x=%u\n", (unsigned)k.x);
+}
+
 static void rt_modes_blocks(void)
 {
     const unsigned char key = RT_KEY;
@@ -576,5 +635,6 @@ int main(void)
     setvbuf(stdout, NULL, _IOLBF, 0);
     rt_modes_blocks();
     rt_aes();
+    rt_rc4();
     return 0;
 }

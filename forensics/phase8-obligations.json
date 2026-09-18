@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 16,
-      "implemented": 74,
-      "open_in_this_stratum": 696,
+      "implemented": 77,
+      "open_in_this_stratum": 693,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -1206,6 +1206,9 @@
       "MD5_Init",
       "MD5_Transform",
       "MD5_Update",
+      "RC4",
+      "RC4_options",
+      "RC4_set_key",
       "RIPEMD160",
       "RIPEMD160_Final",
       "RIPEMD160_Init",
@@ -4685,24 +4688,6 @@
         "symbol": "RC2_set_key"
       },
       {
-        "declaring_header": "rc4.h",
-        "module": "src/rc4.rs",
-        "received_from_phase": null,
-        "symbol": "RC4"
-      },
-      {
-        "declaring_header": "rc4.h",
-        "module": "src/rc4.rs",
-        "received_from_phase": null,
-        "symbol": "RC4_options"
-      },
-      {
-        "declaring_header": "rc4.h",
-        "module": "src/rc4.rs",
-        "received_from_phase": null,
-        "symbol": "RC4_set_key"
-      },
-      {
         "declaring_header": "rsa.h",
         "module": "src/rsa/mod.rs",
         "received_from_phase": null,
@@ -5704,12 +5689,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "28651355a403fcc72e2e0b79d048330e1c3f6fa45497f071acfa6b0e42d36170"
+      "sha256": "3a671912046b912502ca75e41f343ee79b52c456a25b220a3bbef81ef7a38166"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "5327221bf6327d55c3d8597be1d2e9cbace0ec80d1b1cf0f5496345856a86477"
+      "sha256": "d43071d8fdceb7c559d25bef3994af29da1ce960f08d950bd3a38968bd7e9930"
     }
   ],
   "kind": "phase8-obligations",
