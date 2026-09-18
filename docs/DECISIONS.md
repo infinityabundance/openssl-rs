@@ -15049,3 +15049,90 @@ not an omission. The two allocation-failure arms (`_new`'s malloc failure and `o
 realloc failure) return NULL rather than a value, so the court cannot observe them; they are
 transcribed from source and not claimed. `OcbCtx` is opaque and has no public size accessor, so
 the arm observes values rather than the context's state size.
+
+## D230 — the default provider's AES key-wrap rows land, and the dispatch court needed the file-local wrap typedef named
+
+The 8.3 provider work starts with the key-wrap rows, because they are the one AEAD group whose
+engine is self-contained: `cipher_aes_wrp.c` supplies its own `init`/`update`/`final` rather than
+instantiating the generic block-mode engine, so no part of `ciphercommon_gcm.c.in` or
+`ciphercommon_ccm.c.in` has to land first. `src/provider/cipher.rs` now transcribes
+`PROV_AES_WRAP_CTX`, `aes_wrap_newctx`/`_dupctx`/`_freectx`, `aes_wrap_init`/`_einit`/`_dinit`
+(including SP800-38F §5.1's inverse-cipher schedule swap), `aes_wrap_cipher_internal`'s length
+rules, `aes_wrap_final`/`_cipher`, `aes_wrap_set_ctx_params`, and `IMPLEMENT_cipher`'s twelve
+rows. `DEFLT_CIPHERS` goes from 53 rows to **65**: the twelve AES wrap rows
+(`WRAP`/`WRAP-PAD`/`WRAP-INV`/`WRAP-PAD-INV` at 128/192/256) join NULL, AES, Camellia and 3DES.
+No export moves: `implemented[libcrypto]` stays **2035** and Phase 8 stays **194/576/16**,
+because every item here is provider-internal.
+
+**The rows are the default provider's, checked against both tables, and every alias is verbatim
+from `names.h`.** `providers/defltprov.c:208-219` publishes all twelve; `providers/legacyprov.c`
+publishes none of them (its only wrap row is `DES3-WRAP`, `legacyprov.c:163`, which is not this
+crate's construction). The alias strings are copied from
+`providers/implementations/include/prov/names.h:80-91`, OIDs and all, so
+`AES-128-WRAP:id-aes128-wrap:AES128-WRAP:2.16.840.1.101.3.4.1.5` is one row and resolves under
+each of its four spellings.
+
+**The reconciliation item 1 asked for, checked rather than asserted.** `cipher_aes_wrp.c:111-113`
+sets `wrapfn` to the `CRYPTO_128_wrap`/`_unwrap`/`_wrap_pad`/`_unwrap_pad` family, and 8.2's
+`AES_wrap_key`/`AES_unwrap_key` already call the same four functions (D224). There is therefore
+still exactly one RFC 3394 and one RFC 5649 implementation in the crate, and `RT-CIPHER`'s new
+`rt_deflt_wrap` arm proves the provider and the low-level entry point agree byte for byte for both
+a 16- and a 24-octet input (`defltwrap.eq16.same=1`, `defltwrap.eq24.same=1`).
+
+**Both planes, and what the arm observes.** `RT-CIPHER` **642 → 721 observations**: for each of
+the twelve rows `rt_deflt_wrap` observes the fetch, `keylen`, `ivlen` (8 for the plain rows, 4 for
+the padded ones) and `blocksize` (8), then the wrapped bytes through `EVP_EncryptUpdate`; it
+re-fetches three rows under their other `names.h` spellings (`id-aes128-wrap`, `AES256-WRAP-PAD`,
+`AES128-WRAP-INV`) and requires the same bytes; it observes the padded row's 21-octet rounding and
+the plain row's refusal of a length that is not a multiple of eight. `CT-CIPHER` stays **3048**:
+the construction's vectors are RFC 3394's and RFC 5649's and already land through the low-level
+entry points, so a provider row adds no vector. Baseline 83 courts / 24,044 → **83 courts / 24,123
+observations**.
+
+**One instrument defect, and it is the designed mechanism rather than a widening.**
+`dispatch_court.py` reported the new `AesWrapFn` alias `unlinked` (and exited 1): that court links
+every Rust function-type alias to an authority dispatch typedef by name convention or by an
+explicit `NOT_A_DISPATCH` reason. `aeswrap_fn` (`cipher_aes_wrp.c:28-30`) is a typedef local to a
+provider implementation file, so the atlas — whose universe is the installed public surface —
+records no typedef for it and the convention rule cannot reach a name that appears in no header.
+The alias is added to `NOT_A_DISPATCH` with that reason, which is the table's stated purpose, and
+the court's both-directions check confirms the entry names an alias the crate actually declares.
+`signatures_unlinked` returns to 0 and the sensitivity controls remain green.
+
+**What the default provider now provides, in the exact words.** It is the default provider's
+digest-query half **and** cipher-query half, with `deflt_ciphers[]` publishing **65 rows**: NULL,
+AES (ECB/CBC/OFB/CFB/CFB1/CFB8/CTR at three key lengths, 21), the twelve AES key-wrap rows, Camellia
+(the ECB/CBC/OFB/CFB/CFB1/CFB8/CTR set, 21) and 3DES (EDE3 ECB/CBC/OFB/CFB/CFB1/CFB8 and EDE2
+ECB/CBC/OFB/CFB, 10). It is **not** default-provider parity: the GCM, CCM, OCB, XTS, SIV and CTS
+rows, ARIA/SM4, ChaCha20 and the asm-selected `cipher_aes_cbc_hmac_*` TLS ciphers stay absent, as
+do `deflt_get_params`/`deflt_gettable_params`/`ossl_prov_get_capabilities`/`provctx` and the
+`base`/`null` providers.
+
+**What 8.3's provider half still has open, with coordinates.** Each is a reading of
+`providers/defltprov.c` against `legacyprov.c`; legacy publishes none of them.
+
+* **GCM** — `defltprov.c:202-204`, `cipher_aes_gcm.c` plus `ciphercommon_gcm.c.in`,
+  `ciphercommon_gcm_hw.c` and `cipher_aes_gcm_hw.c`. Its primitive (`crypto/modes/gcm128.c`) is
+  landed (D225); the open work is the generic AEAD engine.
+* **CCM** — `defltprov.c:205-207`, `cipher_aes_ccm.c` plus `ciphercommon_ccm.c.in` and
+  `cipher_aes_ccm_hw.c`. Primitive landed (D226); the generic AEAD engine is the open work.
+* **OCB** — `defltprov.c:190-192`, `cipher_aes_ocb.c` and `cipher_aes_ocb_hw.c`. Primitive landed
+  (D229).
+* **XTS** — `defltprov.c:187-188`, `cipher_aes_xts.c` and `cipher_aes_xts_hw.c`. Primitive landed
+  (D227).
+* **CTS** — `defltprov.c:169-171` and the Camellia CTS rows, `cipher_cts.c`/`cipher_cts.h` with
+  `cipher_aes_cts.inc`/`cipher_camellia_cts.inc`. Primitive (`crypto/modes/cts128.c`) landed in
+  8.2; D222 deferred these rows to 8.3 and they remain open.
+* **SIV / GCM-SIV** — `defltprov.c:195-200`, `cipher_aes_siv.c`, `cipher_aes_siv_hw.c`,
+  `cipher_aes_gcm_siv.c` and `cipher_aes_gcm_siv_polyval.c`. Its primitive is **not** landed and is
+  not a `libcrypto` export: `crypto/modes/siv128.c` is declared in `include/crypto/siv.h`, and
+  `util/libcrypto.num` has no `CRYPTO_siv128_` entry. It is not among `forensics/prerequisites.json`'s
+  units either, so it is a new internal transcription rather than a missing export.
+* **ChaCha20 / ChaCha20-Poly1305** — `defltprov.c:324-329`, `cipher_chacha20.c`,
+  `cipher_chacha20_hw.c` and `cipher_chacha20_poly1305.c.in`, over the internal
+  `crypto/chacha/chacha_enc.c` and `crypto/poly1305/poly1305.c` (D228). No `libcrypto` export and
+  no dependency this stratum owns.
+
+None of these is claimed by this entry, and none is half-modelled: the rows that are absent are
+absent from `DEFLT_CIPHERS`, so a fetch of `AES-128-GCM` answers NULL on the candidate rather than
+a row with unimplemented arms.

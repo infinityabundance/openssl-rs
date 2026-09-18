@@ -19,7 +19,7 @@
       "signatures_authority_only": 406,
       "signatures_checked": 227,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 104,
+      "signatures_not_a_dispatch": 105,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -3861,6 +3861,11 @@
           "alias": "GlobalPropsCbFn",
           "at": "src/provider/child.rs",
           "why": "not a provider dispatch: the type of a parameter of `OSSL_FUNC_provider_register_child_cb_fn`, spelled `int (*global_props_cb)(const void *, const OSSL_PARAM *)` inline in the header rather than as a typedef"
+        },
+        {
+          "alias": "AesWrapFn",
+          "at": "src/provider/cipher.rs",
+          "why": "not a provider dispatch: `cipher_aes_wrp.c:28-30`'s `aeswrap_fn`, a typedef local to a provider implementation file, which the atlas -- whose universe is the installed public surface -- records no typedef for"
         },
         {
           "alias": "SkCompFn",
