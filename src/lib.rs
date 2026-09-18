@@ -88,5 +88,6 @@ pub mod provider;
 pub mod rc2;
 pub mod rc4;
 pub mod runtime;
+pub mod seed;
 pub mod selftest;
 pub mod status;

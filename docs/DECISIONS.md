@@ -14608,3 +14608,30 @@ that nothing was written and `*num` stayed `-1`. IDEA is the **legacy** provider
 
 **What this entry does not do.** SEED and Camellia (17 open) remain, and with them the provider
 cipher rows and the cipher half of `ossl_default_provider_init`.
+
+## D221 — SEED lands, and the CT driver's IV precondition was wrong for ECB
+
+`src/seed.rs` lands the seven `seed.h` exports over the generated `SS[4][256]` rows and the
+sixteen `KC` constants (`crypto/seed/seed.c`). `implemented[libcrypto]` **1984 → 1991** and
+Phase 8 **143/627/16 → 150/620/16**; `RT-CIPHER` **282 → 294 observations**; `CT-CIPHER`
+**278 → 330 vectors**; baseline 83 courts / 23,684 → **83 courts / 23,696 observations**.
+PIPELINE OK.
+
+**The defect was in the driver, not the cipher.** The first `CT-CIPHER` run refused all nine
+`SEED-ECB` blocks: the new branch checked `ivlen == 16` *before* dispatching on the mode, and an
+ECB corpus block carries no IV, so every one was refused as malformed. Only CBC/CFB/OFB need the
+IV, and the check belongs in those arms. `RT-CIPHER` passed the whole time, which is the point —
+the two planes fail for different reasons, and a driver precondition is invisible to the
+differential plane.
+
+**Two SEED-specific observables.** `word2char` is big-endian, and `SEED_encrypt` writes
+`x3,x4,x1,x2` to the output rather than `x1..x4` (`seed.c:533-536`), with `SEED_decrypt` the
+same; the round structure is symmetric enough that dropping the permutation still passes a
+round-trip, so `RT-CIPHER` observes both directions and the whole 128-byte schedule. The four
+mode wrappers delegate to `crate::modes`' `CRYPTO_*` functions with a `block128_f` view of
+`SEED_encrypt`, exactly as `seed_cbc.c:24-25` casts it. SEED is the **legacy** provider's
+(`providers/legacyprov.c:126-129`), so no default-provider row is written.
+
+**What this entry does not do.** Camellia (10 open) remains, and with it the provider cipher
+rows and the cipher half of `ossl_default_provider_init` — of which Camellia is the **default**
+provider's, unlike every family from this entry back.

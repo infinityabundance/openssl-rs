@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 16,
-      "implemented": 143,
-      "open_in_this_stratum": 627,
+      "implemented": 150,
+      "open_in_this_stratum": 620,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -1280,6 +1280,13 @@
       "RIPEMD160_Init",
       "RIPEMD160_Transform",
       "RIPEMD160_Update",
+      "SEED_cbc_encrypt",
+      "SEED_cfb128_encrypt",
+      "SEED_decrypt",
+      "SEED_ecb_encrypt",
+      "SEED_encrypt",
+      "SEED_ofb128_encrypt",
+      "SEED_set_key",
       "SHA1",
       "SHA1_Final",
       "SHA1_Init",
@@ -5048,48 +5055,6 @@
         "symbol": "RSA_verify_PKCS1_PSS_mgf1"
       },
       {
-        "declaring_header": "seed.h",
-        "module": "src/seed.rs",
-        "received_from_phase": null,
-        "symbol": "SEED_cbc_encrypt"
-      },
-      {
-        "declaring_header": "seed.h",
-        "module": "src/seed.rs",
-        "received_from_phase": null,
-        "symbol": "SEED_cfb128_encrypt"
-      },
-      {
-        "declaring_header": "seed.h",
-        "module": "src/seed.rs",
-        "received_from_phase": null,
-        "symbol": "SEED_decrypt"
-      },
-      {
-        "declaring_header": "seed.h",
-        "module": "src/seed.rs",
-        "received_from_phase": null,
-        "symbol": "SEED_ecb_encrypt"
-      },
-      {
-        "declaring_header": "seed.h",
-        "module": "src/seed.rs",
-        "received_from_phase": null,
-        "symbol": "SEED_encrypt"
-      },
-      {
-        "declaring_header": "seed.h",
-        "module": "src/seed.rs",
-        "received_from_phase": null,
-        "symbol": "SEED_ofb128_encrypt"
-      },
-      {
-        "declaring_header": "seed.h",
-        "module": "src/seed.rs",
-        "received_from_phase": null,
-        "symbol": "SEED_set_key"
-      },
-      {
         "declaring_header": "dh.h",
         "module": "src/dh/mod.rs",
         "received_from_phase": null,
@@ -5359,12 +5324,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "4bc9ee15f9d0a7edfc9bba6feac4c212931fb81f67c574152fc5f83dd10b7ed5"
+      "sha256": "43ac02edb31d4f0de0c01dee584316590a112039690e35e007ba7f1621c1d82f"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "a1a1924aa6e025452882e4223138c842f6d65bc9a15aeca55bbb37d411cc19dc"
+      "sha256": "fdc0079620a500737801a29ed7554e0b34286c6ccc1f50b5f1468ff8eee7a2b8"
     }
   ],
   "kind": "phase8-obligations",

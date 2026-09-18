@@ -46,6 +46,7 @@
 #include <openssl/modes.h>
 #include <openssl/rc2.h>
 #include <openssl/rc4.h>
+#include <openssl/seed.h>
 
 #define RT_KEY 0xa7u
 #define RT_BLOCK 16u
@@ -978,6 +979,66 @@ static void rt_idea(void)
     rt_hex("idea.ofb64.poison_out", out, 8);
 }
 
+static void rt_seed(void)
+{
+    SEED_KEY_SCHEDULE ks;
+    unsigned char key[16];
+    unsigned char in[32];
+    unsigned char out[64];
+    unsigned char iv[16];
+    int num;
+
+    rt_fill(key, sizeof(key), 1);
+    rt_fill(in, sizeof(in), 2);
+    printf("seed.sizeof_key=%u\n", (unsigned)sizeof(SEED_KEY_SCHEDULE));
+
+    memset(&ks, 0, sizeof(ks));
+    SEED_set_key(key, &ks);
+    rt_hex("seed.ks", (const unsigned char *)&ks, sizeof(ks));
+
+    memset(out, 0, sizeof(out));
+    SEED_ecb_encrypt(in, out, &ks, 1);
+    rt_hex("seed.ecb.enc", out, 16);
+    SEED_ecb_encrypt(out, out + 16, &ks, 0);
+    rt_hex("seed.ecb.dec", out + 16, 16);
+
+    /* The corpus's SEED-ECB vector. */
+    {
+        static const unsigned char rkey[16] = { 0 };
+        static const unsigned char rpt[16] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+                                               0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f };
+        SEED_KEY_SCHEDULE rk;
+
+        memset(&rk, 0, sizeof(rk));
+        SEED_set_key(rkey, &rk);
+        memset(out, 0, sizeof(out));
+        SEED_ecb_encrypt(rpt, out, &rk, 1);
+        rt_hex("seed.recipe.ecb", out, 16);
+    }
+
+    rt_fill(iv, 16, 3);
+    memset(out, 0, sizeof(out));
+    SEED_cbc_encrypt(in, out, 32, &ks, iv, 1);
+    rt_hex("seed.cbc.enc", out, 32);
+    rt_hex("seed.cbc.enc.iv", iv, 16);
+    SEED_cbc_encrypt(out, out + 32, 32, &ks, iv, 0);
+    rt_hex("seed.cbc.dec", out + 32, 32);
+
+    rt_fill(iv, 16, 4);
+    num = 5;
+    memset(out, 0, sizeof(out));
+    SEED_cfb128_encrypt(in, out, 20, &ks, iv, &num, 1);
+    rt_hex("seed.cfb128.enc", out, 20);
+    printf("seed.cfb128.num=%d\n", num);
+
+    rt_fill(iv, 16, 5);
+    num = 0;
+    memset(out, 0, sizeof(out));
+    SEED_ofb128_encrypt(in, out, 20, &ks, iv, &num);
+    rt_hex("seed.ofb128.enc", out, 20);
+    rt_hex("seed.ofb128.enc.iv", iv, 16);
+}
+
 static void rt_modes_blocks(void)
 {
     const unsigned char key = RT_KEY;
@@ -1240,5 +1301,6 @@ int main(void)
     rt_bf();
     rt_cast5();
     rt_idea();
+    rt_seed();
     return 0;
 }
