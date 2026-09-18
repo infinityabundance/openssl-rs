@@ -14319,3 +14319,33 @@ open), and the provider cipher rows and the cipher half of `deflt_query`/`deflt_
 remain open. The CT and RT machinery this entry and D210/D211 built is the template they land
 through: a `block128_f`-shaped family adds a `src/<alg>.rs`, an `RT-CIPHER` arm and an
 `--emit-ciphers` source, and a stream family follows `src/rc4.rs`.
+
+## D213 — `RC4_options` is a host property, not an implementation one: the differential court stops comparing it, and the CI failure that found it is recorded
+
+D212's RC4 commit passed the local pipeline and **failed CI's courts job** on
+`RT-CIPHER`, with exactly one residual:
+
+```text
+rc4.options: authority='rc4(16x,int)' candidate='rc4(8x,int)' (value)
+```
+
+The cause is not a transcription error. `crypto/rc4/asm/rc4-x86_64.pl`'s `RC4_options`
+selects its string at run time from two `OPENSSL_ia32cap` bits: `rc4(16x,int)` when bit 30 is
+set, `rc4(8x,char)` when bit 20 is set, and the default `rc4(8x,int)` otherwise. The string is
+therefore a property of the **host CPU**, and the development host and the CI runner disagree
+about it. The candidate has no CPU dispatch — that is Phase 19's
+(`docs/RELEASE_GATES.md`, "Performance / CPU dispatch") — so it answers the default, and any
+differential over this string reports the host, not the implementation. D212 measured the
+string on one host and treated it as a property of the build; that reading was wrong.
+
+`courts/phase8/rt_cipher_probe.c` no longer prints `rc4.options`; the observation is replaced
+by `rc4.options.skipped=1` with the reason in the probe, so the transcript records that the
+comparison was declined rather than forgetting it. `AES_options` **is** host-independent
+(the perlasm returns the constant `aes(partial)` in this profile) and is still compared. The
+disposition is D206's for the default provider's `provctx`: an observable the candidate
+cannot answer is *named and not compared*, never printed as agreement.
+
+`RT-CIPHER` is **148 observations** after the change (the same count as before — the skipped
+line replaces the compared one), `PIPELINE OK` at 83 courts / 23,538 observations, and the
+structural repair for `RC4_options` is Phase 19's CPU dispatch. The empty-`RC4_options`
+question is now recorded in `src/rc4.rs`'s module doc, in the probe, and here.
