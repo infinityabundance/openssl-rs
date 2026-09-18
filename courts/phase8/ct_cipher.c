@@ -28,6 +28,7 @@
 #include <openssl/idea.h>
 #include <openssl/rc2.h>
 #include <openssl/rc4.h>
+#include <openssl/seed.h>
 
 #define CT_LINE 8192
 #define CT_MAX 4096
@@ -466,6 +467,48 @@ static int ct_legacy(const char *cipher, int enc_op,
         }
         if (strcmp(mode, "OFB") == 0) {
             IDEA_ofb64_encrypt(in, out, (long)inlen, &ek, ivec, &num);
+            *outlen = inlen;
+            return 0;
+        }
+        return -1;
+    }
+
+    if (strncmp(cipher, "SEED-", 5) == 0) {
+        SEED_KEY_SCHEDULE sk;
+        int num = 0;
+
+        if (keylen != 16 || ivlen > sizeof(ivec))
+            return -1;
+        memcpy(ivec, iv, ivlen);
+        SEED_set_key(key, &sk);
+        if (strcmp(mode, "ECB") == 0) {
+            size_t i;
+
+            if (inlen % 16 != 0)
+                return -1;
+            for (i = 0; i < inlen; i += 16)
+                SEED_ecb_encrypt(in + i, out + i, &sk, enc_op ? 1 : 0);
+            *outlen = inlen;
+            return 0;
+        }
+        if (strcmp(mode, "CBC") == 0) {
+            if (inlen % 16 != 0 || ivlen != 16)
+                return -1;
+            SEED_cbc_encrypt(in, out, inlen, &sk, ivec, enc_op ? 1 : 0);
+            *outlen = inlen;
+            return 0;
+        }
+        if (strcmp(mode, "CFB") == 0) {
+            if (ivlen != 16)
+                return -1;
+            SEED_cfb128_encrypt(in, out, inlen, &sk, ivec, &num, enc_op ? 1 : 0);
+            *outlen = inlen;
+            return 0;
+        }
+        if (strcmp(mode, "OFB") == 0) {
+            if (ivlen != 16)
+                return -1;
+            SEED_ofb128_encrypt(in, out, inlen, &sk, ivec, &num);
             *outlen = inlen;
             return 0;
         }

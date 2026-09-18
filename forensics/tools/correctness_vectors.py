@@ -1716,6 +1716,11 @@ CIPHER_RECIPE_FAMILIES: list[CipherRecipeFamily] = [
         r"^IDEA-(ECB|CBC|CFB|OFB)$", "Ascom IDEA (Lai-Massey)",
         "IDEA-{ECB,CBC,CFB,OFB}", ("IDEA-ECB", "IDEA-CBC"),
         "00010002000300040005000600070008", "0000000000000000"),
+    CipherRecipeFamily(
+        "seed", "test/recipes/30-test_evp_data/evpciph_seed.txt",
+        r"^SEED-(ECB|CBC|CFB|OFB)$", "RFC 4269 (KISA SEED)",
+        "SEED-{ECB,CBC,CFB,OFB}", ("SEED-ECB", "SEED-CBC"),
+        "00000000000000000000000000000000", "00000000000000000000000000000000"),
 ]
 
 

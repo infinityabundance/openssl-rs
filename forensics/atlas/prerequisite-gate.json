@@ -30,7 +30,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 56,
-      "language_surface_not_modelled_by_name": 3099,
+      "language_surface_not_modelled_by_name": 3106,
       "planned_prerequisites": 14
     },
     "census_by_unit": {
@@ -216,6 +216,7 @@
         "crypto/provider_core.c": 151,
         "crypto/rc2/rc2_cbc.c": 3,
         "crypto/ripemd/rmd_dgst.c": 342,
+        "crypto/seed/seed.c": 7,
         "crypto/self_test_core.c": 17,
         "crypto/sha/sha1dgst.c": 2,
         "crypto/sha/sha3.c": 5,
@@ -347,8 +348,8 @@
       ]
     },
     "checked": {
-      "authority_units": 160,
-      "crate_modules": 215,
+      "authority_units": 161,
+      "crate_modules": 216,
       "deferral_blocker_rows": 5,
       "deferrals_recorded": 25,
       "divergence_names_covered": 32,
@@ -470,7 +471,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "34064f9cd59db31ecc20f544696da3fb21fb17ce7c5961652a53eec3ef4d8911",
+  "body_hash": "b0de2e1275aab6367fb2660107eb61125e0476a0c1200962057eaf395d095f5a",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -491,7 +492,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "1e9f7225f28e497b1ff2b62c93ef6e6f9b3f06547613b86d889425c297135f53"
+      "sha256": "0c483e94029e18ed6e48c91a85e9c526ce509202b1dec4d239882b429c5a5cfd"
     },
     {
       "name": "symbol-ownership",
@@ -506,12 +507,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "61b93df9c99149d6f9f21d82ca7f03790187df87499e723cd820da4a64a8a35b"
+      "sha256": "53cdb10d783646929ea9bc0626506e3d5b7310582c5c49be325c96fa07164dd5"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "d89b4a91889fafd89cb8c2139860c62ff5e1f5852969771a084cdddd57e381ce"
+      "sha256": "bd3e133bb292162e2b666ce239d3b644f0143d582533e5a6a4bf8b1cf21f5301"
     },
     {
       "name": "prerequisites",
