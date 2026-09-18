@@ -52,6 +52,18 @@ pub struct CcmCtx {
     key: *mut c_void,
 }
 
+impl CcmCtx {
+    /// Re-point `key` at a caller's schedule.
+    ///
+    /// The one writer outside this module is the provider's CCM `dupctx`
+    /// (`cipher_aes_ccm.c:54`): a shallow copy of a `PROV_AES_CCM_CTX` carries the *original's*
+    /// key pointer, and the authority repairs it to the copy's own `AES_KEY` before returning.
+    /// The field stays private so that repair is the only way in.
+    pub(crate) fn repoint_key(&mut self, key: *mut c_void) {
+        self.key = key;
+    }
+}
+
 /// `static void ctr64_inc(unsigned char *counter)` — `crypto/modes/ccm128.c:121-135`: increment
 /// the low sixty-four bits of the sixteen-byte `nonce`.
 ///

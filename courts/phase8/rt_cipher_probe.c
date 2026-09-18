@@ -3082,6 +3082,350 @@ static void rt_deflt_ocb(void)
     }
 }
 
+/*
+ * The default provider's AES-CCM rows. CCM differs from every other AEAD row here in that its
+ * parameters are context state rather than call arguments: `L` and `M` come from the IV-length and
+ * tag controls, and the message length must be fixed *before* the AAD. So the observations are:
+ * each row's shape; the `ivlen` a live context reports (the provider's `15 - L`, which is 7 by
+ * default and therefore *not* `EVP_CIPHER_get_iv_length`'s `ivbits`); the IV-length window from
+ * both ends; the standard flow -- length, AAD, payload, tag -- for a 21-octet message with 13
+ * octets of AAD, per row; the decrypt round trip and the tag rejection; the empty-message and
+ * AAD-only arms; the tag-length window and the encrypt-side refusal of a supplied tag *value*;
+ * the TLS-record arm with its 13-octet AAD; and finally the provider answer against the landed
+ * low-level `CRYPTO_ccm128_*` over the same L, M, AAD and message. The payload is split 21 + 0
+ * in one arm and 0 + 33 in another so the `len`-before-AAD ordering is exercised in both.
+ */
+static void rt_deflt_ccm(void)
+{
+    static const char *names[] = { "AES-256-CCM", "AES-192-CCM", "AES-128-CCM" };
+    unsigned char key[32];
+    unsigned char iv[16];
+    unsigned char in[48];
+    unsigned char aad[20];
+    unsigned char out[96];
+    unsigned char back[96];
+    unsigned char tag[16];
+    unsigned char bad[16];
+    char buf[160];
+    char nbuf[176];
+    size_t n;
+
+    rt_fill(key, sizeof(key), 111);
+    rt_fill(iv, sizeof(iv), 112);
+    rt_fill(in, sizeof(in), 113);
+    rt_fill(aad, sizeof(aad), 114);
+
+    /* Each row's shape. `blocksize` is 1 (`blkbits = 8`): CCM is a stream. */
+    for (n = 0; n < sizeof(names) / sizeof(names[0]); n++) {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, names[n], NULL);
+
+        snprintf(buf, sizeof(buf), "defltccm.%s", names[n]);
+        printf("%s.fetched=%d\n", buf, c != NULL);
+        if (c == NULL)
+            continue;
+        printf("%s.keylen=%d\n", buf, EVP_CIPHER_get_key_length(c));
+        printf("%s.ivlen=%d\n", buf, EVP_CIPHER_get_iv_length(c));
+        printf("%s.blocksize=%d\n", buf, EVP_CIPHER_get_block_size(c));
+        EVP_CIPHER_free(c);
+    }
+
+    /* The live context's own IV length: `ossl_ccm_initctx` sets `l = 8`, so the provider answers
+     * 7 while `get_params` publishes 12. Both numbers are printed, because the difference is the
+     * observable and the reason every arm below sets the IV length first. */
+    {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, "AES-128-CCM", NULL);
+        EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+
+        if (c == NULL || ctx == NULL || EVP_EncryptInit_ex2(ctx, c, NULL, NULL, NULL) != 1) {
+            printf("defltccm.live=0\n");
+        } else {
+            printf("defltccm.live.ivlen=%d\n", EVP_CIPHER_CTX_get_iv_length(ctx));
+            printf("defltccm.live.taglen=%d\n", EVP_CIPHER_CTX_get_tag_length(ctx));
+            printf("defltccm.live.keylen=%d\n", EVP_CIPHER_CTX_get_key_length(ctx));
+            /* The IV-length window: 7..13 octets is `L in [2, 8]`; 6 and 14 are outside. */
+            printf("defltccm.live.set12=%d\n",
+                   EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_IVLEN, 12, NULL));
+            printf("defltccm.live.ivlen12=%d\n", EVP_CIPHER_CTX_get_iv_length(ctx));
+            printf("defltccm.live.setl3=%d\n",
+                   EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_L, 3, NULL));
+            printf("defltccm.live.ivlen13=%d\n", EVP_CIPHER_CTX_get_iv_length(ctx));
+            printf("defltccm.live.set13=%d\n",
+                   EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_IVLEN, 13, NULL));
+            printf("defltccm.live.set7=%d\n",
+                   EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_IVLEN, 7, NULL));
+            printf("defltccm.live.set6=%d\n",
+                   EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_IVLEN, 6, NULL));
+            printf("defltccm.live.set14=%d\n",
+                   EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_IVLEN, 14, NULL));
+            printf("defltccm.live.set255=%d\n",
+                   EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_IVLEN, 255, NULL));
+        }
+        if (ctx != NULL)
+            EVP_CIPHER_CTX_free(ctx);
+        if (c != NULL)
+            EVP_CIPHER_free(c);
+    }
+
+    /* The standard flow, per row: length, AAD, payload, final, tag; then the round trip and the
+     * reject with one tag bit flipped. */
+    for (n = 0; n < sizeof(names) / sizeof(names[0]); n++) {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, names[n], NULL);
+        EVP_CIPHER_CTX *ectx = EVP_CIPHER_CTX_new();
+        EVP_CIPHER_CTX *dctx = NULL;
+        int outl = 0, finl = 0, aadl = 0, decl = 0, defl = 0;
+
+        snprintf(buf, sizeof(buf), "defltccm.%s", names[n]);
+        if (c == NULL || ectx == NULL
+            || EVP_EncryptInit_ex2(ectx, c, NULL, NULL, NULL) != 1
+            || EVP_CIPHER_CTX_ctrl(ectx, EVP_CTRL_CCM_SET_IVLEN, 12, NULL) != 1
+            || EVP_CIPHER_CTX_ctrl(ectx, EVP_CTRL_AEAD_SET_TAG, 16, NULL) != 1
+            || EVP_EncryptInit_ex2(ectx, NULL, key, iv, NULL) != 1
+            || EVP_EncryptUpdate(ectx, NULL, &aadl, NULL, 21) != 1
+            || EVP_EncryptUpdate(ectx, NULL, &aadl, aad, 13) != 1
+            || EVP_EncryptUpdate(ectx, out, &outl, in, 21) != 1
+            || EVP_EncryptFinal_ex(ectx, out + outl, &finl) != 1
+            || EVP_CIPHER_CTX_ctrl(ectx, EVP_CTRL_AEAD_GET_TAG, 16, tag) != 1) {
+            printf("%s.enc=0\n", buf);
+        } else {
+            printf("%s.ctlen=%d\n", buf, outl + finl);
+            snprintf(nbuf, sizeof(nbuf), "%s.ct", buf);
+            rt_hex(nbuf, out, (size_t)(outl + finl));
+            snprintf(nbuf, sizeof(nbuf), "%s.tag", buf);
+            rt_hex(nbuf, tag, 16);
+        }
+        if (ectx != NULL)
+            EVP_CIPHER_CTX_free(ectx);
+
+        dctx = EVP_CIPHER_CTX_new();
+        if (c != NULL && dctx != NULL
+            && EVP_DecryptInit_ex2(dctx, c, NULL, NULL, NULL) == 1
+            && EVP_CIPHER_CTX_ctrl(dctx, EVP_CTRL_CCM_SET_IVLEN, 12, NULL) == 1
+            && EVP_CIPHER_CTX_ctrl(dctx, EVP_CTRL_AEAD_SET_TAG, 16, tag) == 1
+            && EVP_DecryptInit_ex2(dctx, NULL, key, iv, NULL) == 1
+            && EVP_DecryptUpdate(dctx, NULL, &aadl, NULL, 21) == 1
+            && EVP_DecryptUpdate(dctx, NULL, &aadl, aad, 13) == 1
+            && EVP_DecryptUpdate(dctx, back, &decl, out, 21) == 1) {
+            printf("%s.accept=%d\n", buf,
+                   EVP_DecryptFinal_ex(dctx, back + decl, &defl) == 1
+                   && (size_t)(decl + defl) == 21 && memcmp(back, in, 21) == 0);
+        } else {
+            printf("%s.accept=0\n", buf);
+        }
+        if (dctx != NULL)
+            EVP_CIPHER_CTX_free(dctx);
+
+        memcpy(bad, tag, 16);
+        bad[0] ^= 0x80;
+        dctx = EVP_CIPHER_CTX_new();
+        if (c != NULL && dctx != NULL
+            && EVP_DecryptInit_ex2(dctx, c, NULL, NULL, NULL) == 1
+            && EVP_CIPHER_CTX_ctrl(dctx, EVP_CTRL_CCM_SET_IVLEN, 12, NULL) == 1
+            && EVP_CIPHER_CTX_ctrl(dctx, EVP_CTRL_AEAD_SET_TAG, 16, bad) == 1
+            && EVP_DecryptInit_ex2(dctx, NULL, key, iv, NULL) == 1
+            && EVP_DecryptUpdate(dctx, NULL, &aadl, NULL, 21) == 1
+            && EVP_DecryptUpdate(dctx, NULL, &aadl, aad, 13) == 1
+            && EVP_DecryptUpdate(dctx, back, &decl, out, 21) == 1) {
+            printf("%s.reject=%d\n", buf,
+                   EVP_DecryptFinal_ex(dctx, back + decl, &defl) == 0);
+            /* The refusal cleanses the payload the decrypt already wrote. */
+            snprintf(nbuf, sizeof(nbuf), "%s.rejectbuf", buf);
+            rt_hex(nbuf, back, 21);
+        } else {
+            printf("%s.reject=0\n", buf);
+        }
+        if (dctx != NULL)
+            EVP_CIPHER_CTX_free(dctx);
+        if (c != NULL)
+            EVP_CIPHER_free(c);
+    }
+
+    /* The empty message with AAD only, and a 33-octet message with no AAD at all. */
+    {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, "AES-128-CCM", NULL);
+        EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+        int outl = 0, finl = 0, aadl = 0;
+
+        if (c == NULL || ctx == NULL
+            || EVP_EncryptInit_ex2(ctx, c, NULL, NULL, NULL) != 1
+            || EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_IVLEN, 12, NULL) != 1
+            || EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 16, NULL) != 1
+            || EVP_EncryptInit_ex2(ctx, NULL, key, iv, NULL) != 1
+            || EVP_EncryptUpdate(ctx, NULL, &aadl, NULL, 0) != 1
+            || EVP_EncryptUpdate(ctx, NULL, &aadl, aad, 13) != 1
+            || EVP_EncryptUpdate(ctx, out, &outl, in, 0) != 1
+            || EVP_EncryptFinal_ex(ctx, out + outl, &finl) != 1
+            || EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, 16, tag) != 1) {
+            printf("defltccm.empty=0\n");
+        } else {
+            printf("defltccm.empty.len=%d\n", outl + finl);
+            rt_hex("defltccm.empty.tag", tag, 16);
+        }
+        if (ctx != NULL)
+            EVP_CIPHER_CTX_free(ctx);
+        if (c != NULL)
+            EVP_CIPHER_free(c);
+    }
+    {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, "AES-128-CCM", NULL);
+        EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+        int outl = 0, finl = 0, aadl = 0;
+
+        if (c == NULL || ctx == NULL
+            || EVP_EncryptInit_ex2(ctx, c, NULL, NULL, NULL) != 1
+            || EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_IVLEN, 12, NULL) != 1
+            || EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 16, NULL) != 1
+            || EVP_EncryptInit_ex2(ctx, NULL, key, iv, NULL) != 1
+            || EVP_EncryptUpdate(ctx, NULL, &aadl, NULL, 33) != 1
+            || EVP_EncryptUpdate(ctx, out, &outl, in, 33) != 1
+            || EVP_EncryptFinal_ex(ctx, out + outl, &finl) != 1
+            || EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, 16, tag) != 1) {
+            printf("defltccm.noaad=0\n");
+        } else {
+            printf("defltccm.noaad.len=%d\n", outl + finl);
+            rt_hex("defltccm.noaad.ct", out, 33);
+            rt_hex("defltccm.noaad.tag", tag, 16);
+        }
+        if (ctx != NULL)
+            EVP_CIPHER_CTX_free(ctx);
+        if (c != NULL)
+            EVP_CIPHER_free(c);
+    }
+
+    /* The tag-length window -- even and in 4..16 -- and the encrypt-side refusal of a tag
+     * *value* (the tag is an output there, so only a NULL data pointer is a length). */
+    {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, "AES-128-CCM", NULL);
+        EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+
+        if (c != NULL && ctx != NULL && EVP_EncryptInit_ex2(ctx, c, NULL, NULL, NULL) == 1) {
+            printf("defltccm.tl.4=%d\n",
+                   EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 4, NULL));
+            printf("defltccm.tl.16=%d\n",
+                   EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 16, NULL));
+            printf("defltccm.tl.2=%d\n",
+                   EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 2, NULL));
+            printf("defltccm.tl.3=%d\n",
+                   EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 3, NULL));
+            printf("defltccm.tl.18=%d\n",
+                   EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 18, NULL));
+            printf("defltccm.tl.value=%d\n",
+                   EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 16, tag));
+            printf("defltccm.tl.taglen=%d\n", EVP_CIPHER_CTX_get_tag_length(ctx));
+        } else {
+            printf("defltccm.tl.4=0\n");
+        }
+        if (ctx != NULL)
+            EVP_CIPHER_CTX_free(ctx);
+        if (c != NULL)
+            EVP_CIPHER_free(c);
+    }
+
+    /* The TLS-record arm: 13 octets of AAD whose last two octets carry the length, then one
+     * in-place record of 8 explicit-IV octets, 21 payload octets and the 16-octet tag. The
+     * control's answer is `M`, and the payload length it encodes must be corrected by both the
+     * explicit IV and (for decryption) the tag. */
+    {
+        unsigned char tlsaad[13];
+        unsigned char rec[64];
+        unsigned char rec2[64];
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, "AES-128-CCM", NULL);
+        EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+        int outl = 0, finl = 0;
+
+        rt_fill(tlsaad, sizeof(tlsaad), 115);
+        tlsaad[11] = 0;
+        tlsaad[12] = 21;
+        memcpy(rec, in, 45);
+        memcpy(rec2, in, 45);
+
+        if (c == NULL || ctx == NULL
+            || EVP_EncryptInit_ex2(ctx, c, NULL, NULL, NULL) != 1
+            || EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_IVLEN, 12, NULL) != 1
+            || EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 16, NULL) != 1
+            || EVP_EncryptInit_ex2(ctx, NULL, key, iv, NULL) != 1) {
+            printf("defltccm.tls.pad=0\n");
+        } else {
+            printf("defltccm.tls.pad=%d\n",
+                   EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_TLS1_AAD, 13, tlsaad));
+            printf("defltccm.tls.update=%d\n",
+                   EVP_EncryptUpdate(ctx, rec, &outl, rec, 45));
+            printf("defltccm.tls.outl=%d\n", outl);
+            rt_hex("defltccm.tls.rec", rec, 45);
+        }
+        if (ctx != NULL)
+            EVP_CIPHER_CTX_free(ctx);
+        if (c != NULL)
+            EVP_CIPHER_free(c);
+
+        /* A record shorter than the explicit IV plus the tag is refused in place. */
+        c = EVP_CIPHER_fetch(NULL, "AES-128-CCM", NULL);
+        ctx = EVP_CIPHER_CTX_new();
+        if (c == NULL || ctx == NULL
+            || EVP_EncryptInit_ex2(ctx, c, NULL, NULL, NULL) != 1
+            || EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_IVLEN, 12, NULL) != 1
+            || EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 16, NULL) != 1
+            || EVP_EncryptInit_ex2(ctx, NULL, key, iv, NULL) != 1) {
+            printf("defltccm.tlsshort=0\n");
+        } else {
+            EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_TLS1_AAD, 13, tlsaad);
+            outl = 0;
+            printf("defltccm.tlsshort.update=%d\n",
+                   EVP_EncryptUpdate(ctx, rec2, &outl, rec2, 23));
+            printf("defltccm.tlsshort.outl=%d\n", outl);
+        }
+        if (ctx != NULL)
+            EVP_CIPHER_CTX_free(ctx);
+        if (c != NULL)
+            EVP_CIPHER_free(c);
+    }
+
+    /* The provider's answer is the landed low-level answer: same L (12-octet nonce), same M,
+     * same 13-octet AAD, same 21-octet message. */
+    {
+        AES_KEY aeskey;
+        rt_ccm_ctx c1;
+        CCM128_CONTEXT *low;
+        unsigned char lowct[64], lowtag[16];
+
+        if (AES_set_encrypt_key(key, 128, &aeskey) != 0) {
+            printf("defltccm.eq.ct=0\n");
+        } else {
+            EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, "AES-128-CCM", NULL);
+            EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+            int outl = 0, finl = 0, aadl = 0;
+
+            memset(&c1, 0, sizeof(c1));
+            low = (CCM128_CONTEXT *)&c1;
+            CRYPTO_ccm128_init(low, 16, 3, &aeskey, (block128_f)AES_encrypt);
+            CRYPTO_ccm128_setiv(low, iv, 12, 21);
+            CRYPTO_ccm128_aad(low, aad, 13);
+            CRYPTO_ccm128_encrypt(low, in, lowct, 21);
+            CRYPTO_ccm128_tag(low, lowtag, 16);
+
+            if (c == NULL || ctx == NULL
+                || EVP_EncryptInit_ex2(ctx, c, NULL, NULL, NULL) != 1
+                || EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_IVLEN, 12, NULL) != 1
+                || EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 16, NULL) != 1
+                || EVP_EncryptInit_ex2(ctx, NULL, key, iv, NULL) != 1
+                || EVP_EncryptUpdate(ctx, NULL, &aadl, NULL, 21) != 1
+                || EVP_EncryptUpdate(ctx, NULL, &aadl, aad, 13) != 1
+                || EVP_EncryptUpdate(ctx, out, &outl, in, 21) != 1
+                || EVP_EncryptFinal_ex(ctx, out + outl, &finl) != 1
+                || EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, 16, tag) != 1) {
+                printf("defltccm.eq.ct=0\n");
+            } else {
+                printf("defltccm.eq.ct=%d\n",
+                       (size_t)(outl + finl) == 21 && memcmp(out, lowct, 21) == 0);
+                printf("defltccm.eq.tag=%d\n", memcmp(tag, lowtag, 16) == 0);
+            }
+            if (ctx != NULL)
+                EVP_CIPHER_CTX_free(ctx);
+            if (c != NULL)
+                EVP_CIPHER_free(c);
+        }
+    }
+}
+
 /* The drained queue, normalised the one way both sides can hold: library and reason as numbers,
  * the authority's three debug strings verbatim, and the entry count. Declared here because the
  * EVP arm below uses it and `rt_errq` is defined with the dispatch arm. */
@@ -3222,6 +3566,8 @@ typedef int (*rt_update_fn)(void *, unsigned char *, size_t *, size_t,
                             const unsigned char *, size_t);
 typedef int (*rt_final_fn)(void *, unsigned char *, size_t *, size_t);
 typedef int (*rt_getparams_fn)(OSSL_PARAM *);
+typedef int (*rt_getctxparams_fn)(void *, OSSL_PARAM *);
+typedef int (*rt_setctxparams_fn)(void *, const OSSL_PARAM *);
 typedef void (*rt_free_fn)(void *);
 
 static void rt_disp_failures(void)
@@ -3364,6 +3710,102 @@ static void rt_disp_failures(void)
     rt_errq("ocbivlen");
     freectx(ctx);
 
+    /* ---- AES-128-CCM: the provider error-queue paths EVP cannot reach ---- */
+    {
+        rt_getctxparams_fn getctxparams;
+        rt_setctxparams_fn setctxparams;
+        OSSL_PARAM params[4];
+        size_t sz = 12;
+        unsigned char ctag[16];
+
+        d = rt_disp(algs, "AES-128-CCM");
+        printf("disp.ccm=%d\n", d != NULL);
+        newctx = (rt_newctx_fn)rt_fn(d, OSSL_FUNC_CIPHER_NEWCTX);
+        einit = (rt_init_fn)rt_fn(d, OSSL_FUNC_CIPHER_ENCRYPT_INIT);
+        update = (rt_update_fn)rt_fn(d, OSSL_FUNC_CIPHER_UPDATE);
+        freectx = (rt_free_fn)rt_fn(d, OSSL_FUNC_CIPHER_FREECTX);
+        getctxparams = (rt_getctxparams_fn)rt_fn(d, OSSL_FUNC_CIPHER_GET_CTX_PARAMS);
+        setctxparams = (rt_setctxparams_fn)rt_fn(d, OSSL_FUNC_CIPHER_SET_CTX_PARAMS);
+        memset(ctag, 0x5a, sizeof(ctag));
+
+        /* An IV length outside the row's 7..13 window: the default `l = 8` makes `15 - 8` the
+         * only length bare `EVP_EncryptInit_ex2` can supply, and 16 is not it. */
+        ctx = newctx(pctx);
+        ERR_clear_error();
+        r = einit(ctx, key, 16, iv, 16, NULL);
+        printf("disp.ccmivlen.ret=%d\n", r);
+        rt_errq("ccmivlen");
+        freectx(ctx);
+
+        /* A key length the row does not have, after the IV passed its own check. */
+        ctx = newctx(pctx);
+        ERR_clear_error();
+        r = einit(ctx, key, 17, iv, 7, NULL);
+        printf("disp.ccmkeylen.ret=%d\n", r);
+        rt_errq("ccmkeylen");
+        freectx(ctx);
+
+        /* An output buffer that is too small, checked before any state is consulted. */
+        ctx = newctx(pctx);
+        ERR_clear_error();
+        r = einit(ctx, key, 16, iv, 7, NULL);
+        outl = 0;
+        r = update(ctx, out, &outl, 8, in, 32);
+        printf("disp.ccmsmall.update=%d\n", r);
+        rt_errq("ccmsmall");
+        freectx(ctx);
+
+        /* No key: the stream update's own CIPHER_OPERATION_FAILED, which is a *raised* refusal
+         * even though `ccm_cipher_internal` itself returns 0 without raising. */
+        ctx = newctx(pctx);
+        ERR_clear_error();
+        r = einit(ctx, NULL, 0, NULL, 0, NULL);
+        outl = 0;
+        r = update(ctx, out, &outl, sizeof(out), in, 32);
+        printf("disp.ccmnokey.update=%d\n", r);
+        rt_errq("ccmnokey");
+        freectx(ctx);
+
+        /* The tag-length window from `set_ctx_params`: 3 is odd, 18 is over the top. */
+        ctx = newctx(pctx);
+        ERR_clear_error();
+        einit(ctx, NULL, 0, NULL, 0, NULL);
+        params[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG, NULL, 3);
+        params[1] = OSSL_PARAM_construct_end();
+        printf("disp.ccmtag3.ret=%d\n", setctxparams(ctx, params));
+        rt_errq("ccmtag3");
+        params[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG, NULL, 18);
+        printf("disp.ccmtag18.ret=%d\n", setctxparams(ctx, params));
+        rt_errq("ccmtag18");
+
+        /* A tag *value* on the encryption side is refused: the tag is an output there. */
+        params[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG, ctag, 16);
+        printf("disp.ccmtagval.ret=%d\n", setctxparams(ctx, params));
+        rt_errq("ccmtagval");
+
+        /* The TLS AAD arm's two length checks: a 12-octet AAD, and a fixed IV that is not four. */
+        params[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_AEAD_TLS1_AAD, ctag, 12);
+        printf("disp.ccmaadlen.ret=%d\n", setctxparams(ctx, params));
+        rt_errq("ccmaadlen");
+        params[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_AEAD_TLS1_IV_FIXED, ctag, 5);
+        printf("disp.ccmfixedlen.ret=%d\n", setctxparams(ctx, params));
+        rt_errq("ccmfixedlen");
+
+        /* The generated decoder's repeated-parameter refusal, at the decoder's own site. */
+        params[0] = OSSL_PARAM_construct_size_t(OSSL_CIPHER_PARAM_IVLEN, &sz);
+        params[1] = OSSL_PARAM_construct_size_t(OSSL_CIPHER_PARAM_IVLEN, &sz);
+        params[2] = OSSL_PARAM_construct_end();
+        printf("disp.ccmdup.ret=%d\n", setctxparams(ctx, params));
+        rt_errq("ccmdup");
+
+        /* `get_ctx_params`' tag arm on a context whose encryption side has no tag yet. */
+        params[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG, ctag, 16);
+        params[1] = OSSL_PARAM_construct_end();
+        printf("disp.ccmnotset.ret=%d\n", getctxparams(ctx, params));
+        rt_errq("ccmnotset");
+        freectx(ctx);
+    }
+
     /* ---- AES-128-WRAP ---- */
     d = rt_disp(algs, "AES-128-WRAP");
     printf("disp.wrap=%d\n", d != NULL);
@@ -3463,6 +3905,7 @@ int main(void)
     rt_deflt_cts();
     rt_deflt_xts();
     rt_deflt_ocb();
+    rt_deflt_ccm();
     rt_deflt_errors();
     rt_disp_failures();
     return 0;

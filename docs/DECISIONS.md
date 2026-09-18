@@ -15759,3 +15759,99 @@ rustfmt-stable) while this one must read the crate's final text. It is registere
 No export moves: `implemented[libcrypto]` stays **2035**, Phase 8 stays **194/576/16**, and
 neither the two anchored status clauses in `docs/PHASE-8-SUBPHASES.md` nor any court's
 observation count changes. This entry lands an atlas, not code.
+
+## D238 — the default provider's AES-CCM rows land, with the whole of `ciphercommon_ccm.c`'s engine, and the `ivlen` parameter's `size_t` arithmetic is C's rather than Rust's
+
+D237 closed with the provider-algorithm census naming the rows the export atlas cannot see, and
+the first AEAD engine 8.3 still owed was the one whose parameters are **context state** rather
+than call arguments. CCM requires the message length to be fixed *before* the AAD, and its `L`/`M`
+come from the IV-length and tag controls; it is the first row here whose `deflt_query` dispatch
+reaches an engine this stratum owns end to end.
+
+**What landed.** `src/provider/cipher.rs` gains a `ciphercommon_ccm.c` section transcribed whole —
+`ccm_get_ivlen`, `ccm_tls_init`, `ccm_tls_iv_set_fixed`, `ccm_init`/`ossl_ccm_einit`/`_dinit`,
+`ossl_ccm_stream_update`/`_final`, `ossl_ccm_cipher`, `ccm_set_iv`, `ccm_tls_cipher`,
+`ccm_cipher_internal`, `ossl_ccm_initctx`, both parameter decoders' locate-each-key form, and the
+two settable/gettable lists — beside the AES-specific half from `cipher_aes_ccm.c` and
+`cipher_aes_ccm_hw.c`: `ccm_generic_aes_initkey`, the five `ossl_ccm_generic_*` methods, the
+`PROV_CCM_HW` table, `aes_ccm_newctx`/`_dupctx`/`_freectx`, and one `ccm_row!` invocation per row.
+`deflt_ciphers[]` grows from 77 to 80 rows (the three `AES-{128,192,256}-CCM` rows, in the
+authority's position between the OCB and key-wrap runs — `defltprov.c:205-207`), and
+`forensics/atlas/provider-algorithms.json` records the three which were `open` as `implemented`
+(103 → 106 implemented, 208 → 205 open).
+
+**Every raise site in the engine is reached, and that is the check.** The generated
+`ciphercommon_ccm.c` has **35** `ERR_raise`/`ERR_raise_data` statements; the transcription
+references all 35 by coordinate, and `gen_err_raise_sites.py` now covers the translation unit
+(`providers/implementations/ciphers/ciphercommon_ccm.c`, prefix `PROV_CIPHERCOMMON_CCM`, read from
+the build tree because it is a `produce_param_decoder` template). That the file's every failure
+arm has a caller is a *measured* property, not a claim: an uncovered site would have shown up as
+a coordinate no code names.
+
+**The `ivlen` parameter is the nonce length, and the local `ivlen` is not.** `EVP_CTRL_AEAD_SET_IVLEN`
+and `EVP_CTRL_CCM_SET_L` both send the *nonce* length as `OSSL_CIPHER_PARAM_AEAD_IVLEN`
+(`evp_enc.c:1485-1493`), and `ossl_ccm_set_ctx_params` computes `L` as `15 - sz` and refuses
+outside `L in [2, 8]` — a 7..13-octet nonce window. Two observable consequences the court now
+pins, because both are places a reader would reasonably guess wrong:
+
+* `ossl_ccm_initctx` sets `l = 8`, so the provider's own `get_ctx_params` answers **7** while
+  `ossl_cipher_generic_get_params` publishes `ivbits = 96` and `EVP_CIPHER_get_iv_length` answers
+  **12**. `EVP_CIPHER_CTX_get_iv_length` therefore changes from 12 to 7 the moment a context is
+  initialised, and the differential court observes both numbers;
+* `EVP_CTRL_CCM_SET_IVLEN` with **255** is a refusal, not an error. `size_t ivlen = 15 - sz`
+  underflows to `SIZE_MAX`, the `[2, 8]` test rejects it, and the provider raises
+  `PROV_R_INVALID_IV_LENGTH`.
+
+That second point is where the new probe arm found a real defect in this transcription *before it
+was committed*: the first version wrote `15 - sz` in Rust, and this profile sets
+`overflow-checks = true` in `Cargo.toml` deliberately ("courts must be able to reason about
+overflow"). The probe's `set255` arm aborted the candidate with `attempt to subtract with
+overflow` inside `ossl_ccm_set_ctx_params` — a panic across an `extern "C"` boundary, where the
+authority answers 0 and queues an error. The fix is `wrapping_sub`, which *is* C's `size_t`
+semantics, and the arm stays in the probe. This is D213's class in its sharpest form: the
+authority's arithmetic is modular and its refusal is a refusal, and a transcription that inherits
+Rust's checked subtraction changes an observable from "0 + queued error" to "the caller's process
+dies".
+
+**The AESNI arm is declined, and the reason is that it is not observable.** `ossl_prov_aes_hw_ccm`
+(`cipher_aes_ccm_hw.c:70-73`) answers `AESNI_CAPABLE ? &aesni_ccm : &aes_ccm`, and `AESNI_CAPABLE`
+is `OPENSSL_ia32cap_P[1] & (1 << 25)` — a host property, D213's class again. The two arms differ
+in exactly one field: `AES_HW_CCM_SET_KEY_FN` stores `ctx->str`, and the AESNI arm stores
+`aesni_ccm64_encrypt_blocks`/`_decrypt_blocks` where the portable arm stores the `NULL` it is
+handed. `ctx->str` selects `CRYPTO_ccm128_encrypt_ccm64` over `CRYPTO_ccm128_encrypt`, and the two
+functions differ only in how the counter advances — `n` calls to `ctr64_inc` versus one
+`ctr64_add(..., n)`; `crypto/modes/ccm128.c:137-219` and `:310-372` share the length check, the
+`blocks` accounting, the CMAC, the partial-tail handling and the tag. So the choice is unobservable
+through every surface, this transcription is the portable arm, and the `RT-CIPHER` arm that
+compares the provider's ciphertext and tag against the authority — which on the court machine
+*is* running the AESNI arm — is what makes that a measurement rather than an assumption. The
+`ctx->str` field is therefore absent from `ProvCcmCtx` and the arm is named at the section head.
+
+**The TLS-record arm is reachable here and is exercised.** Unlike the generic cipher rows, CCM's
+TLS arm is *not* dispatch-only: `ccm_tls_init` is what `EVP_CTRL_AEAD_TLS1_AAD` reaches, and
+`ccm_tls_cipher` takes the in-place record whose first eight octets are the explicit IV and whose
+last `M` are the tag. The probe sets the 13-octet AAD (its last two octets encoding the payload
+length), reads the control's answer back (`M`, via `tlsaadpad`), runs one 45-octet in-place
+record, and separately feeds a record shorter than `8 + M` to reach the refusal.
+
+**The provider error-queue plane D235 built is what this slice is tested by.** Ten new
+`rt_disp_failures` arms drive the CCM dispatch directly and drain the queue at each: an IV length
+outside the window, a key length the row does not have, a too-small output buffer, no key at all
+(the stream update's own `PROV_R_CIPHER_OPERATION_FAILED`, raised even though
+`ccm_cipher_internal` returns 0 without raising), the tag-length window's odd and over-long
+refusals, a tag *value* on the encryption side (`PROV_R_TAG_NOT_NEEDED`), the TLS AAD's two length
+checks, the generated decoder's repeated-parameter refusal at the decoder's own coordinate, and
+`get_ctx_params`' tag arm on a context with no tag yet (`PROV_R_TAG_NOT_SET`). None of these is
+reachable through `EVP_*`, which is why they are in the dispatch arm.
+
+**What this does *not* land, stated so it is not read as an omission.** The `AES-*-SIV` and
+`AES-*-GCM-SIV` rows stay open (their construction is `crypto/modes/siv128.c`, which has no
+`libcrypto.num` entry and is not yet transcribed); the `AES-*-GCM` rows stay the recorded Phase 9
+hand-off D234 made them. `ciphercommon_gcm.c.in` is therefore still outside the err-site set,
+which is correct while no row reaches it.
+
+**No export moves.** `implemented[libcrypto]` stays **2035 / 5896**, Phase 8's ledger stays
+**194 implemented / 576 open / 16 deferred** (a provider registration row is not a symbol), and
+neither anchored status clause in `docs/PHASE-8-SUBPHASES.md` changes its symbol set — only its
+prose. What moves is the evidence: `RT-CIPHER` goes from **962 to 1055 observations**, all
+passing, and the provider-algorithm census from 103 to 106 implemented rows.

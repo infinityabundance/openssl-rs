@@ -154,7 +154,7 @@
       "verdict": "pass"
     },
     "RT-CIPHER": {
-      "observations": 962,
+      "observations": 1055,
       "verdict": "pass"
     },
     "RT-CMAC": {
@@ -398,7 +398,7 @@
     "blocking_dependencies": 25,
     "divergence_names_covered": 32,
     "findings": 0,
-    "language_census": 3122,
+    "language_census": 3119,
     "sealed_census": 57
   }
 }

@@ -1631,12 +1631,12 @@
         "operation": "OSSL_OP_CIPHER",
         "operation_id": 2,
         "owning_phase": 8,
-        "plan_match": "operation-default",
+        "plan_match": "crate-table",
         "property_definition": "provider=default",
         "provider": "default",
         "row_order": 39,
         "source": "providers/defltprov.c",
-        "state": "open",
+        "state": "implemented",
         "table_symbol": "deflt_ciphers"
       },
       {
@@ -1653,12 +1653,12 @@
         "operation": "OSSL_OP_CIPHER",
         "operation_id": 2,
         "owning_phase": 8,
-        "plan_match": "operation-default",
+        "plan_match": "crate-table",
         "property_definition": "provider=default",
         "provider": "default",
         "row_order": 40,
         "source": "providers/defltprov.c",
-        "state": "open",
+        "state": "implemented",
         "table_symbol": "deflt_ciphers"
       },
       {
@@ -1675,12 +1675,12 @@
         "operation": "OSSL_OP_CIPHER",
         "operation_id": 2,
         "owning_phase": 8,
-        "plan_match": "operation-default",
+        "plan_match": "crate-table",
         "property_definition": "provider=default",
         "provider": "default",
         "row_order": 41,
         "source": "providers/defltprov.c",
-        "state": "open",
+        "state": "implemented",
         "table_symbol": "deflt_ciphers"
       },
       {
