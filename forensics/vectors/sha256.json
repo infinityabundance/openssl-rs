@@ -52,6 +52,170 @@
           "title": "SHA tests from (RFC6234 section 8.5 and others)"
         },
         "standard": "FIPS 180-4; RFC 6234 §8.5"
+      },
+      {
+        "expected_hex": "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0",
+        "id": "sha256-repeat-1000000",
+        "input_hex": "61",
+        "modes": [
+          "count:1000000"
+        ],
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_sha.txt",
+          "form": "repeat",
+          "line": 53,
+          "mirror_sha256": "1cdaa355477300fd3c0ad453d2f6c13f528f3b127af83ff03dbfbf2bf33029c4",
+          "primary_source": "FIPS 180-4; RFC 6234 §8.5",
+          "repeats": 1000000,
+          "title": "SHA tests from (RFC6234 section 8.5 and others)"
+        },
+        "standard": "FIPS 180-4; RFC 6234 §8.5"
+      },
+      {
+        "expected_hex": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "id": "sha256-boundary-empty",
+        "input_hex": "",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "empty",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "FIPS 180-4; RFC 6234 §8.5"
+        },
+        "standard": "FIPS 180-4; RFC 6234 §8.5"
+      },
+      {
+        "expected_hex": "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb",
+        "id": "sha256-boundary-one",
+        "input_hex": "61",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "one",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "FIPS 180-4; RFC 6234 §8.5"
+        },
+        "standard": "FIPS 180-4; RFC 6234 §8.5"
+      },
+      {
+        "expected_hex": "e7313d333c272e639f790978283f9eb392e843d0f29b7016828bb1daa4aac70b",
+        "id": "sha256-boundary-len55",
+        "input_hex": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "len55",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "FIPS 180-4; RFC 6234 §8.5"
+        },
+        "standard": "FIPS 180-4; RFC 6234 §8.5"
+      },
+      {
+        "expected_hex": "4324d65f3c103567f5589c710bc08f8523f929a9272e3af36fc968e52abc6c27",
+        "id": "sha256-boundary-len56",
+        "input_hex": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d84",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "len56",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "FIPS 180-4; RFC 6234 §8.5"
+        },
+        "standard": "FIPS 180-4; RFC 6234 §8.5"
+      },
+      {
+        "expected_hex": "81c80242132f230c3bd41b3e63bbcff16107339549214a99614ff26664625055",
+        "id": "sha256-boundary-len63",
+        "input_hex": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "len63",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "FIPS 180-4; RFC 6234 §8.5"
+        },
+        "standard": "FIPS 180-4; RFC 6234 §8.5"
+      },
+      {
+        "expected_hex": "39e3d7b6b5d075d37d053ad89b24b41bef4f3c29760c84447cab3f3be1882241",
+        "id": "sha256-boundary-len64",
+        "input_hex": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bc",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "len64",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "FIPS 180-4; RFC 6234 §8.5"
+        },
+        "standard": "FIPS 180-4; RFC 6234 §8.5"
+      },
+      {
+        "expected_hex": "aacca6ff74fdbb296d165a45cecfa04e5127bc008770fbbdd48006f2d2fae95e",
+        "id": "sha256-boundary-len65",
+        "input_hex": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "len65",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "FIPS 180-4; RFC 6234 §8.5"
+        },
+        "standard": "FIPS 180-4; RFC 6234 §8.5"
+      },
+      {
+        "expected_hex": "1e9bc38cbf860b9ec31918b065f9b52476c549a782e0e7990bed8ce3868d2371",
+        "id": "sha256-boundary-multi1000",
+        "input_hex": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb020910171e252c333a41484f565d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f0f7fe050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4ebf2f900070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb020910171e252c333a41484f565d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f0f7fe050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4ebf2f900070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb020910171e252c333a41484f565d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f0f7fe050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4ebf2f900070e151c232a31383f464d545b626970777e858c939aa1a8afb6bdc4cbd2d9e0e7eef5fc030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3cad1d8dfe6edf4fb020910171e252c333a41484f565d646b727980878e959ca3aab1b8bfc6cdd4dbe2e9f0f7fe050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4ebf2f900070e151c232a31383f464d54",
+        "modes": [
+          "one",
+          "two",
+          "byte"
+        ],
+        "provenance": {
+          "derivation": "independent",
+          "label": "multi1000",
+          "note": "The primary source publishes the construction but not a vector for this input; the expected bytes are the named oracle's answer. The oracle is data-independent of the crate and of the pinned authority build, but this is NOT a primary-source published value. Run --self-check to compare the oracle against the primary-source values the corpus mirrors.",
+          "oracle": "hashlib (Python standard library)",
+          "primary_source": "FIPS 180-4; RFC 6234 §8.5"
+        },
+        "standard": "FIPS 180-4; RFC 6234 §8.5"
       }
     ]
   },
