@@ -652,8 +652,8 @@ pub unsafe extern "C" fn SHA512_Update(
         // `SHA512_BLOCK_CAN_MANAGE_UNALIGNED_DATA` is defined for this profile's host, so the
         // authority takes this arm and the byte-copying arm is not compiled; this crate's
         // block function reads its input byte-wise, so both arms would be correct here anyway.
-        // SAFETY: `data` is readable for `len >= 128` bytes, so `len / 128` blocks are.
         let blocks = len / 128;
+        // SAFETY: `data` is readable for `len >= 128` bytes, so `len / 128` blocks are.
         unsafe { sha512_block(&mut *c, data, blocks) };
         // The authority's `data += len, len %= sizeof(c->u), data -= len`: `data` ends at the
         // start of the trailing partial block. Without the `data` advance, the partial bytes
