@@ -1,0 +1,69 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "algorithm": "mdc2",
+    "court": "CT-DIGEST",
+    "digest_bytes": 16,
+    "openssl_digest": "MDC2",
+    "primary_source": "ISO/IEC 10118-2 (MDC-2)",
+    "provenance": {
+      "authority": "openssl-3.6.4-production",
+      "boundary_vectors_skipped": "no independent oracle for this construction is present in the pinned court image (`hashlib` has no MDC2, and RHash has no MDC2 implementation), so no boundary vector is emitted rather than one whose expected bytes came from the authority it is supposed to check. Recorded, not guessed (D208, D215).",
+      "corpus": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_mdc2.txt",
+      "corpus_sha256": "7d4fab47472c5af869a6ef04e51da2f4968a32dfe973969f6203ec881a209e20",
+      "note": "Candidate-only construction verification: the primary source is named above, the bytes are mirrored through the pinned corpus (`corpus_sha256`), and the mirror's identity is fixed. This does NOT establish that the mirror is faithful to a primary source nobody in this repository has read. A CT pass is not formal validation. See D206.",
+      "primary_source": "ISO/IEC 10118-2 (MDC-2)"
+    },
+    "standard": "ISO/IEC 10118-2 (MDC-2)",
+    "vectors": [
+      {
+        "expected_hex": "42e50cd224baceba760bdd2bd409281a",
+        "id": "mdc2-evpmd_mdc2-12",
+        "input_hex": "4e6f77206973207468652074696d6520666f7220616c6c20",
+        "modes": [
+          "one"
+        ],
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_mdc2.txt",
+          "form": "quoted-string",
+          "line": 12,
+          "mirror_sha256": "7d4fab47472c5af869a6ef04e51da2f4968a32dfe973969f6203ec881a209e20",
+          "primary_source": "ISO/IEC 10118-2 (MDC-2)",
+          "title": "MDC2 test vectors"
+        },
+        "standard": "ISO/IEC 10118-2 (MDC-2)"
+      },
+      {
+        "expected_hex": "42e50cd224baceba760bdd2bd409281a",
+        "id": "mdc2-evpmd_mdc2-17",
+        "input_hex": "4e6f77206973207468652074696d6520666f7220616c6c20",
+        "modes": [
+          "one"
+        ],
+        "provenance": {
+          "authority": "openssl-3.6.4-production",
+          "derivation": "corpus",
+          "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_mdc2.txt",
+          "form": "quoted-string",
+          "line": 17,
+          "mirror_sha256": "7d4fab47472c5af869a6ef04e51da2f4968a32dfe973969f6203ec881a209e20",
+          "primary_source": "ISO/IEC 10118-2 (MDC-2)",
+          "title": "MDC2 test vectors"
+        },
+        "standard": "ISO/IEC 10118-2 (MDC-2)"
+      }
+    ]
+  },
+  "generator": "forensics/tools/correctness_vectors.py",
+  "inputs": [
+    {
+      "name": "authority-evp-vector-file",
+      "path": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_mdc2.txt",
+      "sha256": "7d4fab47472c5af869a6ef04e51da2f4968a32dfe973969f6203ec881a209e20"
+    }
+  ],
+  "kind": "correctness-vectors-mdc2",
+  "schema": "openssl-rs/atlas/correctness-vectors-mdc2/v1"
+}

@@ -63,6 +63,7 @@
 
 #include <openssl/md4.h>
 #include <openssl/md5.h>
+#include <openssl/mdc2.h>
 #include <openssl/ripemd.h>
 #include <openssl/sha.h>
 #include <openssl/whrlpool.h>
@@ -86,6 +87,7 @@ union rt_ctx {
     SHA256_CTX sha256;
     SHA512_CTX sha512;
     WHIRLPOOL_CTX wp;
+    MDC2_CTX mdc2;
 };
 
 struct rt_algo {
@@ -203,6 +205,13 @@ static int rt_w_wp_final(void *o, void *c)
     return WHIRLPOOL_Final((unsigned char *)o, (WHIRLPOOL_CTX *)c);
 }
 
+static int rt_w_mdc2_init(void *c) { return MDC2_Init((MDC2_CTX *)c); }
+static int rt_w_mdc2_update(void *c, const void *d, size_t n)
+{
+    return MDC2_Update((MDC2_CTX *)c, d, n);
+}
+static int rt_w_mdc2_final(void *o, void *c) { return MDC2_Final((unsigned char *)o, (MDC2_CTX *)c); }
+
 static const struct rt_algo RT_ALGORITHMS[] = {
     {"md4", MD4_CBLOCK, MD4_DIGEST_LENGTH, 1, rt_w_md4_init, rt_w_md4_update, rt_w_md4_final,
      rt_w_md4_transform},
@@ -222,6 +231,8 @@ static const struct rt_algo RT_ALGORITHMS[] = {
      rt_w_sha512_final, rt_w_sha512_transform},
     {"whirlpool", WHIRLPOOL_BBLOCK / 8, WHIRLPOOL_DIGEST_LENGTH, 0, rt_w_wp_init, rt_w_wp_update,
      rt_w_wp_final, NULL},
+    {"mdc2", MDC2_BLOCK, MDC2_DIGEST_LENGTH, 0, rt_w_mdc2_init, rt_w_mdc2_update,
+     rt_w_mdc2_final, NULL},
 };
 
 /* The message is the probe's own; every observation below is derived from it, so the two
@@ -630,6 +641,33 @@ static void rt_one_shot_exports(void)
     }
 }
 
+static void rt_mdc2_padding(void)
+{
+    static const unsigned char msg[] = "Now is the time for all ";
+    MDC2_CTX c;
+    unsigned char md[MDC2_DIGEST_LENGTH];
+
+    /* The context's two padding arms. `MDC2` (the one-shot) is `pad_type = 1`; the second arm
+     * is reachable only through the context, so the differential plane is where it is seen. */
+    memset(&c, 0, sizeof(c));
+    MDC2_Init(&c);
+    c.pad_type = 1;
+    MDC2_Update(&c, msg, sizeof(msg) - 1);
+    MDC2_Final(md, &c);
+    printf("mdc2.pad1=");
+    rt_print_hex(md, MDC2_DIGEST_LENGTH);
+    printf("\n");
+
+    memset(&c, 0, sizeof(c));
+    MDC2_Init(&c);
+    c.pad_type = 2;
+    MDC2_Update(&c, msg, sizeof(msg) - 1);
+    MDC2_Final(md, &c);
+    printf("mdc2.pad2=");
+    rt_print_hex(md, MDC2_DIGEST_LENGTH);
+    printf("\n");
+}
+
 int main(void)
 {
     size_t i;
@@ -640,6 +678,7 @@ int main(void)
     for (i = 0; i < sizeof(RT_ALGORITHMS) / sizeof(RT_ALGORITHMS[0]); i++)
         rt_run(&RT_ALGORITHMS[i]);
 
+    rt_mdc2_padding();
     rt_one_shot_exports();
     rt_provider_section();
 
