@@ -13122,3 +13122,84 @@ file are already precedented (D144 and D150 do not exist, as the Phase-7 seal re
 
 Nothing about the crate's behaviour or its evidence changes: no source line, no court, no
 observation, no receipt, no claim. `implemented[libcrypto]` stays 1841 and every court passes.
+
+
+## D203 — the hand-written documents get a consistency gate, and the audit that made it necessary
+
+The generated projections cannot go stale: `evidence_determinism.py` regenerates
+`docs/SEAL-CENSUS.md`, `forensics/STATUS.md` and `forensics/phase-state.md` from their
+generators and fails on any drift, and `check_evidence_portability.py` shows the derivation
+does not depend on the host's binutils. The **hand-written** documents had no such protection,
+and they had accumulated claims the evidence contradicts.
+
+### What the audit found and changed
+
+Every hand-written document outside `docs/DECISIONS.md` (append-only), `.frf/`, `.gemel/`,
+`forensics/receipts/` and `forensics/atlas/*.json` (evidence) was read against the generated
+evidence. The stale **live** claims were:
+
+| document | stale claim (before) | now read from |
+|---|---|---|
+| `README.md` | the EVP layer "is where the current work is", with the algorithms still "later strata's" — inverted; stratum 7 is complete and sealed, stratum 8 is next | `forensics/phase-state.json` |
+| `README.md` | `forensics/frf/courts/` held "four 3.6.3 -> 3.6.4 oracle-vs-oracle trajectory courts" | `gen_frf_courts.py`'s `COURTS`: 62 generated runtime courts plus the CLI courts |
+| `docs/CI.md` | "369 implemented `libcrypto` symbols, 85 open Phase 4 obligations, 22 courts all passing, 5,085 observations" | `forensics/regression-baseline.json`: 1841 / 0 / 79 / 23,105 |
+| `docs/CI.md` | portability "requires all six compared artefacts to be byte-identical" | the tool's `COMPARED` set, referenced rather than typed |
+| `docs/CI.md` | the court scripts stood at "`phase3_courts.py` (the 7 runtime differential courts) ... and `phase5_courts.py` (the 9 ...)" — strata 6 and 7 were missing | `forensics/phase-state.json`'s active strata, 3-7 |
+| `docs/RELEASE_GATES.md` | "the alternative is 43 YAML files edited by hand at every release" | `gen_frf_courts.py`'s `COURTS` table: 62 |
+| `docs/PHASE-1-ARCHAEOLOGY-SEAL.md` | "22 planes complete ... 6 deferred ... 4 open unknowns", and the same two figures in §10's status block | `forensics/atlas/phase1-completeness.json`: 28 / 5 / 2 dispositioned / 0 |
+| `docs/PHASE-2-DISTRIBUTION-SEAL.md` | §8 "Phase 1 remains open ... STRATUM STATUS: InProgress" | `forensics/phase-state.json`: both `complete` |
+| `docs/PHASE-3-CORE-RUNTIME-SEAL.md` | header "Status: reopened, `in-progress`" — contradicted by the same document's §11 | §11 (D99) and `phase-state.json` |
+| `docs/PHASE-4-BIO-CONF-SEAL.md` | header `in-progress`; body "932 of 5,896 `libcrypto` exports are implemented" | D99; `implemented-surface.json`: 1841 |
+| `docs/PHASE-5-BN-ASN1-PEM-SEAL.md` | header "derived `in-progress`"; the same 932 | D99; `implemented-surface.json` |
+| `docs/PHASE-7-SUBPHASES.md` | row 7.7 "no Phase-7 court is declared, so this stratum has no FRF receipts" | D200's nineteen declarations |
+| `docs/PHASE-7-SUBPHASES.md` | row 7.0's exit criterion named `forensics/phase7-obligations.py`, which does not exist | the ledger `forensics/phase7-obligations.json` |
+| `docs/PHASE-7-SUBPHASES.md` | `evp.h` 843, and no `pem.h`/`asn1.h` row | the ledger's `owned_by_header`: `evp.h` 832, `pem.h` 34, `asn1.h` 3 |
+| `docs/REPRODUCIBILITY.md` | determinism "verified" with `atlas_symbols.py --all`, which generates and does not verify | `atlas_receipt.py --verify` |
+| `forensics/frf/README.md` | "The Phase 3 runtime claim is `ffd0b7b3…` from the seven runtime receipts" — a superseded identity quoted as current | `.frf/claims/`, read rather than quoted, per the rule the Phase 6 seal states |
+
+Statements that are **records of a past moment** were deliberately left, because the project's
+seals exist to be that record: the per-court observation counts and FRF store counts inside the
+Phase 3-7 seals' evidence narratives (the Phase 3, 4, 5 and 6 seals each declare that every
+count is historical and to read `docs/SEAL-CENSUS.md`); the Phase 3 seal's §2 court table and
+§6's 5,685 scaffolds; the Phase 4 seal's "twenty-three FRF courts" and its Gemel change ids;
+the Phase 5 seal's 301-object store snapshot; D58's `version_or_commit` → 0.0.7; the Phase 2
+seal's §4 "10 version nodes" for the two libraries (libcrypto genuinely has 10; libssl has 5,
+and the row is about the common namespace); the `README.md` sentence "well past the point where
+six strata had sealed and a thousand exports were implemented" (past tense, describing when the
+old Status section went stale); and the FRF README's §"The compiled claims" after the fix, which
+still names `ffd0b7b3` explicitly as the superseded boundary identity.
+
+### The gate
+
+`forensics/tools/docs_consistency.py` is wired into `court/pipeline.sh` (after `status`, before
+`evidence determinism`), into a new `CHECKS` registry in `evidence_determinism.py` (so its
+independence from the host's binutils is exercised by `check_evidence_portability.py` through the
+same mechanism as the generators), and it is designed **precise rather than broad**: fourteen
+anchored claims, each an exact phrase in one named document compared against one named generated
+file. It does not scan free-form prose for numbers. A failure names the file and both values:
+
+```
+$ python3 forensics/tools/docs_consistency.py   # after seeding README.md with "61"
+[docs-consistency] FAIL: 1 stale hand-written claim(s)
+  STALE: README.md: '61 generated runtime courts' asserts 61, but forensics/tools/gen_frf_courts.py's COURTS table holds 62
+```
+
+Three properties keep it from being disabled or ignored: an anchor that has been reworded away is
+a **failure** ("the claim ... is not found"), not a silent pass; an exemption is a per-`(check,
+document)` statement with a reason string; and an exemption that has become unnecessary, or that
+names a claim no longer present, is itself a failure. The two entries are the only claims in the
+audited corpus that bind a quantity to a past moment: `README.md`'s "six strata had sealed"
+(past-tense narrative about the stale Status section, not a count of strata complete now) and
+`docs/PHASE-7-EVP-SEAL.md`'s "candidate `openssl-rs 0.0.10`" (the stored FRF claim's version,
+which D202 already records is a property of the capture and not of the crate). "It is historical"
+is therefore not an escape hatch that can be widened without editing this tool.
+
+### What it does not cover
+
+`docs/DECISIONS.md` (append-only), the generated documents (compared byte-for-byte elsewhere),
+and `.frf/`, `.gemel/`, `forensics/receipts/` and `forensics/atlas/*.json` (evidence, never
+edited). The hand-written `forensics/frf/courts/openssl-{abi-surface,cli-*}/manifest.yaml` files
+are court declarations rather than documents and are outside the corpus this gate audits; the
+`openssl-abi-surface` manifest's `candidate.version_or_commit` still reads `0.0.2` at this
+revision, which is noted here rather than silently edited, because changing a court declaration
+is a re-observation and not a prose fix.

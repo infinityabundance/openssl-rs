@@ -37,7 +37,7 @@
         ],
         "name": "archaeology",
         "phase": 1,
-        "seal_sha256": "8618c8cec42fc1e27b5b560cfa7a31f2016582cdefe317e47e61a098df522ebe",
+        "seal_sha256": "ecd5c0e019d1c02959cce72ca014cb559b06c9cc947c90450b3f243296d35063",
         "state": "complete",
         "stratum": "Complete archaeology / API / ABI atlas"
       },
@@ -52,7 +52,7 @@
         ],
         "name": "distribution-shell",
         "phase": 2,
-        "seal_sha256": "e74ec387955be2bc5bf2822ebdeae52b531987fe68e4d48b3d8228146670cfb3",
+        "seal_sha256": "c14af3ffaa2bb5b1cc0765efe5f2a06477732f11eb8344b07e10dc220f2db836",
         "state": "complete",
         "stratum": "Distribution / ABI shell"
       },
@@ -542,7 +542,7 @@
       "not_started": 14
     }
   },
-  "body_hash": "9539f8becb3004cfb1a6017a54370b478e54e45c5b1fd8277c14d693fd9211fb",
+  "body_hash": "a51f111243cd7396018cea08e111a46a7d45075c42a6ebb1ee842d1d18f30e16",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

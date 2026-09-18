@@ -98,23 +98,23 @@ Change `C5`, trajectory `T5`, continuation checkpoint. Projection in
 - `lib/cmake/` and `lib/engines-3/` are not reproduced; reported as optional
   differences by `ABI-INSTALL-LAYOUT`.
 
-## 8. Phase status, and why it is not `Complete`
+## 8. Phase status
 
-Phase 2's work and exit criteria are satisfied. It is nevertheless recorded as
-`InProgress`, and the reason is the dependency-order invariant in
-`docs/RELEASE_GATES.md` §1: **Phase 1 remains open** (its FRF sensitivity gap for
-the two non-fixture-driven courts is recorded, not papered over), and a later
-stratum may not claim completion while an earlier one is open.
+Phase 2's work and exit criteria are satisfied. It was sealed as `InProgress`
+rather than `complete` because the dependency-order invariant in
+`docs/RELEASE_GATES.md` §1 held then: **Phase 1 was open** (its FRF sensitivity
+gap for the two non-fixture-driven courts was recorded, not papered over), and a
+later stratum may not claim completion while an earlier one is open.
 
-That invariant is a feature. It is what stops a tidy-looking Phase 2 from hiding
-an open Phase 1. Phase 1 closes when the fixture-driven replacement courts land
-and the remaining archaeology unknowns are disposed — which the user's own
-instruction defers until the implementation phases make it honest.
+That invariant is a feature. It is what stopped a tidy-looking Phase 2 from
+hiding an open Phase 1. Phase 1 closed when the fixture-driven replacement court
+landed — `openssl-cli-inventory`, described in `forensics/frf/README.md` §"The
+courts" — and `forensics/phase-state.json` now derives both strata `complete`.
 
 ```
 PHASE 2 DISTRIBUTION SHELL: WORK COMPLETE, EXIT CRITERIA MET
 CANDIDATE PARITY:           NONE CLAIMED (all symbols SCAFFOLDED)
-STRATUM STATUS:             InProgress (blocked by the open Phase 1 stratum)
+STRATUM STATUS:             complete (forensics/phase-state.json)
 ```
 
 ## 10. Phase 2.1 — structural closure
@@ -184,7 +184,7 @@ everything.
 ```
 PHASE 2 DISTRIBUTION SHELL: WORK COMPLETE, EXIT CRITERIA MET (11 courts)
 CANDIDATE PARITY:           NONE CLAIMED (all symbols SCAFFOLDED)
-STRATUM STATUS:             InProgress (blocked by the open Phase 1 stratum)
+STRATUM STATUS:             complete (forensics/phase-state.json)
 ```
 
 ## 9. Reproduction

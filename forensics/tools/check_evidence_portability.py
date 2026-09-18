@@ -130,9 +130,16 @@ def generators_need_no_stubbed_tool(generators: list[str], stub: StubEnvironment
         if res.returncode != 0:
             restore()
             stub_named = next(
-                (t for t in STUBBED_TOOLS if f"{t}:" in (res.stderr or "")), "?")
-            return False, (f"{generator} needs a stubbed tool ({stub_named}); "
-                           f"exit {res.returncode}")
+                (t for t in STUBBED_TOOLS if f"{t}:" in (res.stderr or "")), None)
+            if stub_named is not None:
+                return False, (f"{generator} needs a stubbed tool ({stub_named}); "
+                               f"exit {res.returncode}")
+            # A non-stub failure -- a prose check that now disagrees with the evidence, for
+            # instance. Report it as itself rather than blaming a binutils stub.
+            first = next(iter((res.stdout or res.stderr or "").strip().splitlines()),
+                         "(no output)")
+            return False, (f"{generator} failed with exit {res.returncode} under the stubs: "
+                           f"{first}")
 
     fired: set[str] = set()
     drifted: list[str] = []
@@ -153,7 +160,10 @@ def main() -> int:
 
     stub = StubEnvironment()
     try:
-        ok, detail = generators_need_no_stubbed_tool(ed.GENERATORS, stub)
+        # The prose checks are not generators, but they read the same generated evidence
+        # and must be as independent of the host's binutils as the generators are, so they
+        # run through the same mechanism with the stubs in PATH.
+        ok, detail = generators_need_no_stubbed_tool(ed.GENERATORS + ed.CHECKS, stub)
         if not ok:
             print(f"[evidence-portability] FAIL: {detail}")
             print("  The generators must derive facts from committed inputs and "
