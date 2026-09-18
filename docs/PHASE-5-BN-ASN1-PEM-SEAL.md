@@ -1,10 +1,10 @@
 # Phase 5 — `BIGNUM`, ASN.1 and PEM: seal
 
-**STATUS: closed within itself, derived `in-progress` (docs/DECISIONS.md D97).** Every export this stratum owns is either implemented and observed by a differential court, or handed to a named later stratum with the dependency it is waiting on: `open_in_this_stratum` in `forensics/phase5-obligations.json` is zero. The stratum nonetheless derives `in-progress`, and not because of anything it did: `forensics/tools/phase_state.py` enforces that a phase may be complete only if every earlier phase is, and D97 reopened Phases 3 and 4. That is the rule doing what it was written for.
+**STATUS: complete (docs/DECISIONS.md D99).** Every export this stratum owns is either implemented and observed by a differential court, or handed to a named later stratum with the dependency it is waiting on: `open_in_this_stratum` in `forensics/phase5-obligations.json` is zero. At the seal it derived `in-progress`, and not because of anything it did: `forensics/tools/phase_state.py` enforces that a phase may be complete only if every earlier phase is, and D97 had reopened Phases 3 and 4. D99 re-closed them, which is the rule doing what it was written for.
 
 **For every count in this document, read `docs/SEAL-CENSUS.md`**, which is generated from the ledgers and the court results by `forensics/tools/render_seal_census.py`.
 
-This is **not** a claim that openssl-rs is a usable OpenSSL. `docs/SEAL-CENSUS.md` carries the current figures: 932 of 5,896 `libcrypto` exports are implemented, and all 603 `libssl` exports remain `SCAFFOLDED` and abort when called.
+This is **not** a claim that openssl-rs is a usable OpenSSL. `docs/SEAL-CENSUS.md` carries the current figures: 1841 of 5,896 `libcrypto` exports are implemented, and all 603 `libssl` exports remain `SCAFFOLDED` and abort when called.
 
 - Authority: `openssl-3.6.4-production` (with `openssl-3.6.3-historical` admitted for
   the oracle-versus-oracle trajectory in `docs/SECURITY_DIVERGENCE_POLICY.md`)

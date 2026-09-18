@@ -1,13 +1,15 @@
 # Phase 3 — Core runtime: seal
 
-Status: **reopened, `in-progress` (docs/DECISIONS.md D97). Not parity.** This
-stratum was sealed as `complete` on the premise that its obligation ledger's symbol
+Status: **complete (docs/DECISIONS.md D99; §12's correction does not reopen it). Not parity.** This
+stratum was first sealed as `complete` on the premise that its obligation ledger's symbol
 families were its universe. They were prefix lists, and a prefix that matches nothing
 reports nothing: sixty-nine exports the global ownership atlas assigns this stratum
-were in no ledger at all. Twenty-nine of them are now recorded `open`, so the
-stratum is genuinely unfinished and `forensics/phase-state.json` derives it as
-`in-progress`. See §10 for the correction, which is appended rather than folded into
-the sections above it.
+were in no ledger at all. Twenty-nine of them were recorded `open`, and
+`forensics/phase-state.json` derived the stratum `in-progress` until §11 (D99)
+implemented the twenty-four that were its own and handed five to Phase 6 with the
+dependency named, which took the ledger to zero open and the derived state back to
+`complete`. See §10, §11 and §12 for the corrections, which are appended rather than
+folded into the sections above them.
 
 Completion here means every obligation in the stratum's universe is either proved by
 a differential court or recorded as a hand-off to a later phase; it does not mean any
