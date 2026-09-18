@@ -1,0 +1,218 @@
+FRF-MUTANT:stdout-first-line:transcript.sha256=247cc94142281bc51293a348b3164dbe65a34f628fddf26d5db08d542d318798
+slot.live=18 err=0
+slot.filled_here=1 err=0
+slot.phase10_unfilled=4 err=0
+slot.evp_store=nonnull err=0
+slot.evp_store.stable=1 err=0
+slot.other_ctx=nonnull err=0
+slot.ctx.vs.other=1 err=0
+slot.default=nonnull err=0
+slot.default.vs.ctx=1 err=0
+slot.default.stable=1 err=0
+slot.dead.-1=NULL err=0
+slot.dead.7=NULL err=0
+slot.dead.8=NULL err=0
+slot.dead.9=NULL err=0
+slot.dead.13=NULL err=0
+slot.dead.23=NULL err=0
+slot.dead.24=NULL err=0
+slot.dead.31=NULL err=0
+slot.dead.255=NULL err=0
+props.set=1 err=0
+props.get=fips=yes err=0
+props.fips_after_set=1 err=0
+props.enable_fips_off=1 err=0
+props.get_after_disable=-fips err=0
+props.fips_after_disable=0 err=0
+props.set_bad=0 err=461373543
+props.bad.err=0
+props.get_after_bad=-fips err=0
+props.set_null=1 err=0
+props.get_null.is_empty=1
+add_builtin.ret=1 err=0
+load.nonnull=1
+load.store.stable=1 err=0
+load_again.same_object=1
+fetch.plain_nonnull=1
+fetch.plain_name_matches=1
+fetch.plain_size=32
+fetch.plain_block_size=64
+fetch.plain_type=0
+fetch.cached_same_object=1
+fetch.cached_nonnull=1
+fetch.alias_same_object=1
+fetch.alias_name_matches=1
+fetch.selected_nonnull=1
+fetch.rejected_null=1
+fetch.rejected.err=50856204
+fetch.unknown_null=1
+fetch.unknown.err=50856204
+fetch.up_ref=1
+fetch.after_up_ref_free_size=32
+defaults.set=1
+defaults.rejects_null=1
+defaults.clear=1
+defaults.cleared_nonnull=1
+ctxmd.fetch=nonnull err=0
+ctxmd5.fetch=nonnull err=0
+ctxmd.method_size=32 err=0
+ctx.activity.pristine=0,0,0,0,0,0,0,0,0 err=0
+ctx.new=nonnull err=0
+ctx.new.reqdigest_null=1
+ctx.new.md_data_null=1
+ctx.new.update_null=1
+ctx.new.pkey_null=1
+ctx.new.get1_md_null=1
+ctx.new.get_size=-1 err=50331807
+ctx.init=1 err=0
+ctx.init.reqdigest_is_method=1
+ctx.init.deprecated_is_method=1
+ctx.init.get1_is_method=1
+ctx.init.context_size=24 err=0
+ctx.init.md_data_null=1
+ctx.init.update_null=1
+ctx.init.gettable_params=nonnull err=0
+ctx.init.settable_params=nonnull err=0
+ctxmd.gettable_ctx_params=nonnull err=0
+ctxmd.settable_ctx_params=nonnull err=0
+ctx.activity.after_init=1,0,0,1,0,0,0,0,1 err=0
+ctx.update=1 err=0
+ctx.update.zero=1 err=0
+ctx.final.return=1 err=0
+ctx.final.outl=24 err=0
+ctx.final.byte0=4 err=0
+ctx.final.byte1=66 err=0
+ctx.final.byte2=148 err=0
+ctx.final.byte3=97 err=0
+ctx.final.byte23=161 err=0
+ctx.final.beyond_outl_untouched=1 err=0
+ctx.final.second=0 err=50331836
+ctx.final.second.err=0
+ctx.activity.after_final=1,0,0,1,1,1,0,0,3 err=0
+ctx.destructive_final=1 err=0
+ctx.destructive_final.outl=24 err=0
+ctx.destructive_final.reqdigest_null_after=1
+ctx.activity.after_destructive_final=1,1,0,2,2,2,0,0,4 err=0
+ctx.copy_ex=1 err=0
+ctx.copy_ex.distinct=1
+ctx.copy_ex.reqdigest_is_method=1
+ctx.activity.after_copy=2,1,1,3,3,2,0,0,4 err=0
+ctx.copy_ex.final=1 err=0
+ctx.copy_ex.outl=24 err=0
+ctx.copy_ex.byte0=4 err=0
+ctx.copy_ex.byte1=66 err=0
+ctx.copy_ex.original_final=1 err=0
+ctx.copy_ex.original_byte0=4 err=0
+ctx.copy_ex.original_byte1=66 err=0
+ctx.dup=nonnull err=0
+ctx.dup.distinct=1
+ctx.dup.reqdigest_is_method=1
+ctx.activity.after_dup=2,1,2,3,3,4,0,0,6 err=0
+ctx.reset=1 err=0
+ctx.reset.reqdigest_null=1
+ctx.activity.after_reset=2,2,2,3,3,4,0,0,6 err=0
+ctx.ctrl.xoflen=1 err=0
+ctx.ctrl.micalg=1 err=0
+ctx.ctrl.micalg.text=court-micalg err=0
+ctx.ctrl.ssl3_ms=1 err=0
+ctx.ctrl.unknown=0 err=0
+ctx.activity.after_ctrl=2,3,2,3,3,4,0,2,7 err=0
+ctx.final_xof.return=1 err=0
+ctx.final_xof.byte0=4 err=0
+ctx.final_xof.byte1=66 err=0
+ctx.final_xof.byte23=161 err=0
+ctx.squeeze.first=1 err=0
+ctx.squeeze.first.byte0=4 err=0
+ctx.squeeze.second=1 err=0
+ctx.squeeze.second.byte0=4 err=0
+ctx.activity.after_squeeze=2,3,2,4,4,5,2,3,7 err=0
+ctx5.init=1 err=0
+ctx5.context_size=32 err=0
+ctx5.squeeze=0 err=50331792
+ctx5.squeeze.err=0
+ctx.set_params=1 err=0
+ctx.get_params=1 err=0
+ctx.get_params.xoflen=20 err=0
+ctx.activity.after_params=3,4,2,5,4,5,2,4,9 err=0
+ctx.oneshot.return=1 err=0
+ctx.oneshot.outl=24 err=0
+ctx.oneshot.byte0=4 err=0
+ctx.oneshot.byte1=66 err=0
+ctx.activity.after_oneshot=4,5,2,6,5,6,2,4,10 err=0
+ctx.q_digest.return=1 err=0
+ctx.q_digest.len=24 err=0
+ctx.q_digest.byte0=4 err=0
+ctx.activity.after_q_digest=5,6,2,7,6,7,2,4,11 err=0
+ctx.pkey.after_null_is_null=1
+ctx.flags.initial=2048
+ctx.flags.after_set=256
+ctx.flags.after_clear=0
+ctx.update_fn.after_null_set_null=1
+ctx.activity.final=5,6,2,7,6,7,2,4,11 err=0
+ctx.activity.after_free=5,7,2,7,6,7,2,4,11 err=0
+ctx.meth_no_init=NOT_MEASURED_AUTHORITY_FAULTS
+ctx.meth_no_final=NOT_MEASURED_AUTHORITY_FAULTS
+ctx.one_shot_only_newctx=NOT_MEASURED_AUTHORITY_FAULTS
+ctx.do_all_null_visitor=NOT_MEASURED_AUTHORITY_FAULTS
+unload.first=1 err=0
+unload.last=1 err=0
+fetch.unloaded_null=1
+fetch.unloaded.err=50856204
+md.fetch.for_accessors=NULL err=50856204
+md.meth.new=nonnull err=0
+md.meth.new.type=4 err=0
+md.meth.new.pkey_type=5 err=0
+md.meth.new.provider_null=1 err=0
+md.meth.set_result_size.first=1 err=0
+md.meth.set_result_size.second=0 err=0
+md.meth.get_result_size=32 err=0
+md.meth.set_input_blocksize=1 err=0
+md.meth.get_input_blocksize=64 err=0
+md.meth.set_app_datasize=1 err=0
+md.meth.get_app_datasize=16 err=0
+md.meth.set_flags.first=1 err=0
+md.meth.set_flags.second=0 err=0
+md.meth.get_flags=2 err=0
+md.meth.xof_after_set=1 err=0
+md.meth.set_init=1 err=0
+md.meth.set_init.second=0 err=0
+md.meth.get_init_matches=1
+md.meth.get_update_null=1 err=0
+md.meth.get_final_null=1 err=0
+md.meth.get_copy_null=1 err=0
+md.meth.get_cleanup_null=1 err=0
+md.meth.get_ctrl_null=1 err=0
+md.meth.ctx.md_data_null_before=1
+md.meth.ctx.init=1 err=0
+md.meth.ctx.init_calls=1 err=0
+md.meth.ctx.md_data_nonnull=1
+md.meth.ctx.reqdigest_is_method=1
+md.meth.ctx.size=32 err=0
+md.meth.ctx.update_null=1
+md.meth.ctx.update=0 err=0
+md.meth.ctx.reinit=1 err=0
+md.meth.ctx.reinit_calls=2 err=0
+md.meth.ctx.reinit_null_type=1 err=0
+md.meth.ctx.reinit_null_type_calls=3 err=0
+md.meth.ctx.final=NOT_MEASURED_AUTHORITY_FAULTS
+md.meth.after_public_free.result_size=32 err=0
+md.meth.dup_of_provider=NULL err=50856204
+md.meth.fetched_survives_meth_free=-1 err=50331807
+md_null.nonnull=nonnull err=0
+md_null.type=0 err=0
+md_null.block_size=0 err=0
+md_null.size=0 err=0
+md_null.flags=0 err=0
+md_null.xof=0 err=0
+md_null.provider_null=1 err=0
+md_null.stable=1
+md_null.up_ref=1 err=0
+md_null.block_size_after_free=0 err=0
+md.null.xof=0 err=0
+md.null.is_a=0 err=0
+md.null.gettable_params=NULL err=0
+md.null.gettable_ctx_params=NULL err=0
+md.null.settable_ctx_params=NULL err=0
+md.null.get_params=0 err=0
+after.store.stable=1 err=0
+after.store=nonnull err=0

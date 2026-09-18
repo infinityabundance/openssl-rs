@@ -1,0 +1,33 @@
+FRF-MUTANT:stdout-first-line:transcript.sha256=6278c6abe0be1baad5abc296293d2e223faebc348d227568cd289152273424c0
+provider.loaded=1 err=0
+md.fetched=1 err=0
+kat.tc1.self=1 rv=111 len=32 vec=1 own=1
+kat.tc2.self=1 rv=111 len=32 vec=1 own=1
+kat.tc5.self=1 rv=111 len=32 vec=1 own=1
+kat.tc6.self=1 rv=111 len=32 vec=1 own=1
+fresh.size=0 md_null=1 upd=0 fin=0 err=message digest is null@EVP_MD_get_size/812
+both_null=0 err=0
+reuse_key.init=1 err=0
+reuse_key.size=32 md_is_md=1
+reuse_key.reinit=1 err=0
+reuse_key.same=1 len=32 err=<empty>
+reuse_md.init=1 err=0
+reuse_md.md_is_md=1
+reuse_md.own=1 len=32 err=<empty>
+changing_md.setup=1 err=0
+changing_md.nullkey=0 err=0
+changing_md.md_unchanged=1 err=<empty>
+hmac_init.spelling=1 err=0
+hmac_init.own=1 len=32 err=<empty>
+copy.src_init=1 err=0
+copy.rv=1 err=0
+copy.independent=1 own_a=1 own_b=1 la=32 lb=32 err=<empty>
+reset.rv=1 err=0
+reset.size=0 md_null=1
+reset.reused=1 len=32 err=message digest is null@EVP_MD_get_size/812
+flags.zero.final=1 len=32 err=<empty>
+flags.finalise.final=1 len=32 err=<empty>
+flags.finalised.final=0 len=32 err=update error@EVP_DigestUpdate/391,final error@EVP_DigestFinal_ex/464
+oneshot.null_md=1 outlen=0 err=message digest is null@EVP_MD_get_size/812
+HMAC=NOT_MEASURED_DEFAULT_LIBCTX_HMAC_FETCH_hmac_c_260
+HMAC_Init_ex=NOT_MEASURED_XOF_REFUSAL_hmac_c_49
