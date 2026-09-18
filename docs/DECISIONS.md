@@ -13471,3 +13471,308 @@ The rule this leaves, and it is the one worth carrying into Phase 8: **a hand-wr
 defers to a generated file, or binds its quantity to a stated moment and is exempt with that reason
 — it does not type a value a generator owns.** The corpus is now one place (a seal's own observed
 counts) where that is honoured the second way rather than the first.
+
+## D206 — the second plane's provenance becomes checkable offline, `CT-DIGEST` reaches the collector's boundaries, and the default provider's digest half lands with two defects the review found
+
+D201 built a second evidence plane for Phase 8's primitives and 8.1a's `CT-DIGEST` rode it over
+the nine constructions that had landed. Three things were wrong or unfinished with that plane, and
+this entry records the repair of all three in the order it was done:
+
+1. the plane's **prose claim about its own independence was false** — it named NIST CAVP and
+   Project Wycheproof as the corpora that made it independent while the same tool recorded that
+   neither is used;
+2. the plane had **no primary-source layer**, so "independence" was true of execution but not of
+   provenance, and 41 one-message vectors said nothing about the collector where a digest bug
+   actually hides; and
+3. `src/provider/digest.rs` — 8.1b's digest half — was saved as WIP in `7d086943`, was never
+   declared in `src/provider/mod.rs`, and therefore was never compiled, while D117's residual
+   recorded that the candidate cannot load `default`.
+
+Each is a commit; the SHAs are `442014b8`, `72ac6752`, `636293ce` and `2daff2e7`.
+D205 was the last entry, so this is D206.
+
+### 1. An evidence claim has to be true before anything stands on it
+
+The tool, the claim it generates and the plan's §2 two-plane subsection each described the second
+plane as independent *because* an external corpus was used. The tool's own text said otherwise:
+the vectors are extracted from the pinned tree's own
+`test/recipes/30-test_evp_data/evpmd_{md,sha,ripemd,whirlpool}.txt`, and CAVP and Wycheproof are
+recorded as *not used*. The plane is not worthless — that corpus contains the standards' published
+values and is independent **data** of the implementation code — but the prose was wrong, and a claim
+about evidence is exactly the thing that must not be.
+
+The three places, before and after, verbatim:
+
+- **the tool header** (`forensics/tools/correctness_vectors.py`). Before, the RT section ended
+  *"and an **RT pass is not independent cryptographic correctness.** … The only thing that rules
+  that out is an external vector."* After, a new section states *"This is **candidate-only
+  construction verification using standard-derived vectors mirrored in the pinned OpenSSL test
+  corpus**"* and then decomposes the phrase — candidate-only, standard-derived, mirrored — with
+  what each word does and does not buy.
+- **the generated claim** (assembled by `correctness_vectors.py`'s `run_court`). Before: *"A
+  correctness-vector PASS means the candidate's low-level construction produced the committed
+  expected bytes for every vector in the named corpus. … It is NOT independent cryptographic
+  validation: the corpora are published for informal verification (NIST CAVP) or maintained as an
+  implementation-independent known-attack corpus (Project Wycheproof), and passing them is not a
+  validation certificate."* After: *"A correctness-vector PASS means candidate-only construction
+  verification: the candidate's construction produced the committed expected bytes for every vector
+  and every update mode, where the vectors are standard-derived values mirrored in the pinned
+  OpenSSL test corpus. … NIST CAVP and Project Wycheproof are corpora this plane does NOT use; they
+  are recorded as declined-with-reason in `correctness_vectors.py`'s header."*
+- **the plan** (`docs/PHASE-8-SUBPHASES.md` §2). Before, the `CT-*` row of the "what each does not
+  establish" table read *"… it is **not formal validation** — the corpora are published for
+  informal verification (NIST CAVP) or maintained as an implementation-independent known-attack
+  corpus (Project Wycheproof), and their maintainers say using them is not a certificate"*, and
+  there was no statement of what the independence *is*. After, the row reads *"… NIST CAVP and
+  Project Wycheproof are **declined with reason** (they need the network, and the vectors here are
+  already in the pinned tree with a primary source named), not relied on"*, and a new subsection,
+  **"What the second plane's independence is, said precisely"**, states the adopted phrase and adds
+  that it is *data independence* rather than independence from the pinned tree.
+
+D201's doctrine is untouched: **an `RT-*` pass is not independent cryptographic correctness, and a
+`CT-*` pass is not OpenSSL parity, nor formal validation.** CAVP and Wycheproof stay in the text as
+*declined with reason*, which is what they are.
+
+### 2. The primary-source layer: named, mirrored, content-addressed
+
+Independence has to be true of provenance as well as of execution, so every vector is now bound to
+the standard it comes from. Per algorithm the primary source is: MD4 → RFC 1320 §A.5; MD5 → RFC
+1321 §A.5; SHA-1 and the SHA-2 widths → FIPS 180-4 / RFC 6234 §8.5; RIPEMD-160 → ISO/IEC 10118-3
+and Bosselaers' publication; Whirlpool → ISO/IEC 10118-3 and the Rijmen–Barreto submission.
+(RIPEMD-160 and Whirlpool carry two names because the standard and the submission both publish the
+vectors and the corpus's own section titles name the submission.) SHA-3/SHAKE's FIPS 202 is the
+same layer for the constructions 8.1a has not landed yet.
+
+**No network is used and nothing is vendored.** `check_forbidden_dependencies.py` applies and the
+project fetches nothing at runtime, so an RFC is not downloaded. The achievable shape is the one
+built: the primary source is **named** (identifier and section), the bytes are **mirrored** through
+the pinned corpus, and the mirror is **content-addressed** — the corpus file's sha256 in the
+envelope's `inputs[]` and each vector's `file` and `line` in its own provenance. The provenance is
+therefore checkable offline, and a changed mirror is detectable.
+
+Where the standards publish no vector for an input — the padding boundaries below — the vector is
+marked `derivation: independent`, its oracle is named, and a `UNKNOWN` primary source is *valid and
+preferred to a guess*; none of the nine needed one.
+
+**The schema.** Each `forensics/vectors/<algorithm>.json` keeps D201's atlas envelope
+(`schema` / `kind` / `generator` / `inputs` / `authority` / `body`) and `body` carries
+`algorithm`, `court`, `digest_bytes`, `openssl_digest`, `primary_source`, `standard`,
+`provenance` (`authority`, `corpus`, `corpus_sha256`, `primary_source`, `note`) and `vectors[]`.
+A **corpus-mirrored** vector records, per vector:
+
+```json
+{
+  "id": "sha256-evpmd_sha-45",
+  "input_hex": "616263",
+  "expected_hex": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+  "modes": ["one"],
+  "standard": "FIPS 180-4; RFC 6234 §8.5",
+  "provenance": {
+    "authority": "openssl-3.6.4-production",
+    "derivation": "corpus",
+    "file": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evpmd_sha.txt",
+    "form": "quoted-string",
+    "line": 45,
+    "mirror_sha256": "1cdaa355477300fd3c0ad453d2f6c13f528f3b127af83ff03dbfbf2bf33029c4",
+    "primary_source": "FIPS 180-4; RFC 6234 §8.5",
+    "title": "SHA tests from (RFC6234 section 8.5 and others)"
+  }
+}
+```
+
+and an **independently-derived** vector records `derivation: independent`, a `label`, the named
+`oracle`, and a `note` that says the expected bytes are the oracle's answer rather than a
+primary-source published value.
+
+**What that establishes, and what it does not, in the tool's own words:** *"It does **not**
+establish that the mirror is faithful to a primary source nobody in this repository has read. No
+RFC and no ISO standard is vendored here, and the tool fetches nothing; the name is a pointer, not
+a checked citation."* The same sentence is carried in each vector file's `body.provenance.note`, so
+the limitation travels with the data rather than only with the tool.
+
+**The corpus files' recorded sha256** (read from the files and committed in `inputs[]`):
+
+| corpus file | sha256 |
+|---|---|
+| `evpmd_md.txt` | `d803585d182f78d932d306ce21dad8754897d854a3346501605851a45c047148` |
+| `evpmd_ripemd.txt` | `dee31e0dd95b07c04e8dddebc6889c6cb41d9f4ce2906da36c2bb979046456da` |
+| `evpmd_sha.txt` | `1cdaa355477300fd3c0ad453d2f6c13f528f3b127af83ff03dbfbf2bf33029c4` |
+| `evpmd_whirlpool.txt` | `24adf1327c3520657c412f386a5d77d4ba78275460a827babe73808b2597b6f2` |
+
+### 3. `CT-DIGEST` grows from 41 one-message vectors to 119 over 263 calls
+
+The old court called one `Update` per vector, so it could not see the collector at all, and it
+excluded the corpus's `Count`/`Ncopy` cases. The new one, per implemented construction, adds
+**known expected digests** — never a value the crate or the authority build produced — at exactly
+the places a collector bug hides:
+
+- the empty message, 1 byte, and the five padding boundaries **55, 56, 63, 64, 65** — 64 and 65
+  straddle the block edge, where the two-block padding arm is first taken;
+- a **1000-byte** multi-block message, which is the arm `RT-DIGEST` caught SHA-512 on, so it is now
+  covered by a known value and not only by differential agreement;
+- **split-update equivalence**: every one of those vectors runs three modes — one `Update`, two
+  `Update`s split at `len/2`, and one byte per `Update` — and each mode is compared to the
+  committed expected bytes, *not* to another split, because three equally wrong splits agree with
+each other; and
+- the corpus's **repeated-message** cases, whose expected bytes are the corpus's published ones.
+
+Measured over the committed files, before → after:
+
+| algorithm | vectors before | vectors after | corpus | independent | calls |
+|---|---:|---:|---:|---:|---:|
+| MD4 | 7 | 15 | 7 | 8 | 31 |
+| MD5 | 7 | 15 | 7 | 8 | 31 |
+| RIPEMD-160 | 8 | 16 | 8 | 8 | 32 |
+| SHA-1 | 2 | 11 | 3 | 8 | 27 |
+| SHA-224 | 2 | 11 | 3 | 8 | 27 |
+| SHA-256 | 2 | 11 | 3 | 8 | 27 |
+| SHA-384 | 2 | 11 | 3 | 8 | 27 |
+| SHA-512 | 3 | 12 | 4 | 8 | 28 |
+| Whirlpool | 8 | 17 | 9 | 8 | 33 |
+| **total** | **41** | **119** | **47** | **72** | **263** |
+
+So of the 78 new vectors, **6 are corpus-mirrored standards values** (one 1,000,000-byte
+`count:<reps>` case each for SHA-1/224/256/384/512 and Whirlpool — the corpus has none for MD4, MD5
+or RIPEMD-160) and **72 are independently derived** oracle values for inputs no standard publishes.
+The remaining coverage and mode columns are the ledger's, not this entry's: `--list` prints them
+per algorithm and `forensics/vectors/*.json` is where the vectors live.
+
+The oracle is `hashlib` (Python standard library) for MD5, RIPEMD-160, SHA-1 and SHA-2, and a
+committed `rhash`-derived table for MD4 and Whirlpool, which `hashlib` does not carry. The
+`--self-check` mode compares the oracle against the primary-source values the corpus mirrors:
+**35 verified, 12 unverified (no oracle entry), 0 mismatches.** The 12 are the MD4/Whirlpool corpus
+vectors the reference table does not overlap, and a mismatch there passes `--self-check` untouched
+rather than silently: a change to the oracle that disagreed with a published value is a failure.
+
+### 4. The provider digest half: declared, reachable, and reviewed against the authority
+
+`src/provider/digest.rs` is declared (`pub(crate) mod digest;` in `src/provider/mod.rs`), so it
+compiles, and the fallback walk now activates `default` through its compiled-in entry point
+(`ossl_default_provider_init`) instead of taking `provider_init` down the `DSO_load` branch. The
+whole path was measured on both prefixes, not inferred:
+
+```text
+provider.load_default=yes        provider.available_default=1
+provider.fetch_sha256=yes        provider.sha256.size=32   provider.sha256.blocksize=64
+provider.sha256.abc=ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad
+provider.sha256.outl=32
+```
+
+`EVP_MD_fetch(NULL, "SHA256", NULL)` resolves, and `EVP_DigestInit_ex` / `EVP_DigestUpdate` /
+`EVP_DigestFinal_ex` operate through the fetched method and answer the same bytes as the authority.
+
+**The review found two defects the WIP carried, and both were confirmed on both prefixes before
+being fixed.** This is the part worth carrying forward: the module had been written against the
+constructions 8.1a had landed, and that is not the same table as the default provider's.
+
+1. **MD4 and Whirlpool were published from the default provider.** The authority publishes them
+   from the *legacy* provider and **not** from `providers/defltprov.c`:
+   `providers/legacyprov.c:92` is `ALG(PROV_NAMES_MD4, ossl_md4_functions)` and `:98` is
+   `ALG(PROV_NAMES_WHIRLPOOL, ossl_wp_functions)`, while `defltprov.c`'s `deflt_digests[]`
+   (`:97`–`:159`) has neither. Measured: `EVP_MD_fetch(NULL, "MD4", NULL)` and
+   `EVP_MD_fetch(NULL, "WHIRLPOOL", NULL)` answered **non-NULL** on the candidate and **NULL** on
+   the authority without a legacy provider loaded. Both rows are removed, with their now-unused
+   `digest_impl!` invocations; the legacy provider is Phase 13's (`forensics/prerequisites.json`'s
+   `OSSL_provider_init` row, owner phase 13, from `providers/legacy/legacyprov.c`).
+2. **The RIPEMD-160 row's alias list was missing `RMD160`.**
+   `providers/implementations/include/prov/names.h:273` is
+   `"RIPEMD-160:RIPEMD160:RIPEMD:RMD160:1.3.36.3.2.1"`; the WIP's string stopped at
+   `RIPEMD:1.3.36.3.2.1`, so `EVP_MD_fetch(NULL, "RMD160", NULL)` failed on the candidate where
+   the authority resolves it. The string is now `PROV_NAMES_RIPEMD_160` verbatim.
+
+The default provider's digest table is therefore the **seven** rows whose constructions 8.1a built
+*and* that `defltprov.c` carries: `SHA1`, `SHA2-224`, `SHA2-256`, `SHA2-384`, `SHA2-512`, `MD5`,
+`RIPEMD-160`. The absent rows are named with their owners in the module doc: SHA-3/KECCAK/SHAKE
+(`sha3_prov.c`), the truncated SHA-512 spellings and SHA2-256/192 (`sha2_prov.c`), BLAKE2
+(Phase 13 by 7.3g), SM3 (`sm3_prov.c`), and md5_sha1/null (`md5_sha1_prov.c`, `null_prov.c`) —
+all rows whose constructions this crate does not have yet.
+
+**How much of D117's residual is retired.** D117 records that the candidate cannot load `default`
+because `ossl_default_provider_init` does not exist, and that `RT-PROVIDER` deliberately never
+enables the fallback walk because of it. Exactly:
+
+- **Now works:** the fallback walk activates `default` through its compiled-in entry point;
+  `OSSL_PROVIDER_available(NULL, "default")` answers 1; `OSSL_PROVIDER_load(NULL, "default")` is
+  non-NULL and named `default`; `EVP_MD_fetch(NULL, "SHA256", NULL)` resolves to the provider
+  method; `EVP_DigestInit_ex`/`EVP_DigestUpdate`/`EVP_DigestFinal_ex` operate through it and agree
+  with the authority. `RT-PROVIDER`'s probe **can** be and **was** extended to cover the enabled
+  path, which is the answer to D117's "can the probe be extended": it observes the walk on a fresh
+  private context, before any load can set `use_fallbacks` to 0.
+- **Still does not work:** `base` and `null` name `None`, so `provider_init` would take the module
+  branch for either and fail at `DSO_load`; neither is a fallback in this profile so the walk never
+  reaches them, but `OSSL_PROVIDER_load(NULL, "base")` and `OSSL_PROVIDER_load(NULL, "null")`
+  still cannot succeed. Their entry points are `providers/baseprov.c:133` and
+  `providers/nullprov.c:70`. The default provider also publishes only its digest half — the cipher,
+  MAC, KDF, RAND, keymgmt, signature, asym-cipher, KEM, encoder, decoder, store and skeymgmt tables
+  are other subphases', and `deflt_get_params`/`deflt_gettable_params`,
+  `ossl_prov_get_capabilities` and the `provctx` are absent. **D117's residual is therefore partly
+  retired, not closed**, and this is recorded rather than rounded up.
+
+**A discrepancy in D117 itself, found by looking for the test it names.** D117 says the failure is
+*"measured rather than guessed — `a_builtin_without_an_entry_point_cannot_activate` pins `-1`, `0`
+and `0` for the three entry points"*, and that the test *"is written to **fail when 7/8 lands the
+pointers**"*. No such test is in the tree: `git grep` finds the name only in `docs/DECISIONS.md` and
+in the 6.8c row of `docs/PHASE-6-SUBPHASES.md`, never in `src/`, and it was never in `src/` at
+`3679e7ff` or `803e7247` either. So landing `default`'s pointer moved no pinned expectation, and
+D117's claim that a test would notice it is a record defect. D117 is append-only and is not edited;
+the 6.8c and 6.8d rows and the 8.1b split row are corrected instead, and this paragraph is the
+record of why.
+
+### 5. The courts, and the evidence they moved
+
+- `RT-DIGEST` **98 → 129 observations**, all passing, zero residuals. The provider section walks the
+table's edge: it fetches `MD5`, `SHA512`, `RIPEMD160`, `RMD160`, `MD4` and `WHIRLPOOL` through the
+default context, runs `"abc"` through every method that resolves, and confirms that the two
+legacy-only names do not. `RMD160`, `MD4` and `WHIRLPOOL` are the two defects above, observed.
+- `RT-PROVIDER` **80 → 83 observations**, all passing. The fallback walk's *enabled* arm is observed
+  for the first time, on a fresh private context: `fallback.available_default`,
+  `fallback.load_default_nonnull` and `fallback.load_default_name`. The provider's `provctx` is
+  deliberately **not** printed — the authority's default provider has one and this digest half has
+  none, and that difference is a recorded residual rather than an observation to compare.
+- `CT-DIGEST` **41 → 119 vectors, 41 → 263 calls**, 119/119 passing.
+
+Both probe headers say what they now observe and why, and `courts/phase6/rt_provider_probe.c`'s
+header no longer claims the walk is observed only disabled. The baseline moves from 23,203 to
+**23,237 observations** over 81 courts (`forensics/regression-baseline.json`); the pipeline's tail is
+
+```text
+[regression-guard] ok: no regression (81 court(s), 23237 observations)
+PIPELINE OK
+```
+
+and the movement against `origin/main` is `implemented[libcrypto]: 1841 -> 1879`,
+`court[RT-PROVIDER]: observations 80 -> 83`, `phase[8]: not-started -> in-progress` and
+`prerequisites[language_census]: 2672 -> 3044`, which `regression_guard.py --baseline-ref
+origin/main --require-current` certifies.
+
+Two plan corrections ride with the source that made them stale, because D205's rule applies to
+plan claims too: `docs/PHASE-6-SUBPHASES.md`'s 6.8c row no longer says the walk is entered only
+disabled and 6.8d's no longer says `default`'s entry point is 7/8's (both now name the partial
+retirement and this entry), and `docs/PHASE-8-SUBPHASES.md`'s exemplar paragraph no longer types the
+per-algorithm vector counts — they live in `forensics/vectors/*.json` — and its 8.1b split row
+records the digest half as partly landed.
+
+### 6. What this entry does not do, with the reason and the coordinate
+
+- **The rest of 8.1b.** SHA-3/KECCAK/SHAKE (`providers/implementations/digests/sha3_prov.c`), SM3
+  (`sm3_prov.c`), BLAKE2 (`blake2_prov.c`, `blake2s_prov.c`, `blake2b_prov.c`), md5_sha1
+  (`md5_sha1_prov.c`) and null (`null_prov.c`) have no construction in this crate yet, so no row
+  could be published for them; the truncated SHA-512 spellings and SHA2-256/192
+  (`sha2_prov.c`'s `sha512_224`/`sha512_256`/`sha256_192_internal` macros) need their low-level
+  `*_init` functions, and the five `sha.h` one-shots (`crypto/sha/sha1_one.c:36`-`:70`) need the
+  fetch to be reachable through every entry point, not only `EVP_Q_digest`. All are named in the
+  module doc and the plan's 8.1b row.
+- **A legacy provider, and therefore any `EVP_MD_fetch` of MD4/Whirlpool.** `providers/legacyprov.c`
+  is Phase 13's (`forensics/prerequisites.json`'s `OSSL_provider_init` row), so the two tables are
+  not written here either; removing them rather than leaving them unused is what keeps the default
+  provider's row set equal to `deflt_digests[]`'s restriction to landed constructions.
+- **`OSSL_PROVIDER_load(NULL, "base")` and `"null"`.** Their entry points
+  (`providers/baseprov.c:133`, `providers/nullprov.c:70`) are not written; the walk does not reach
+  them because neither is a fallback, so the residual is observable only through an explicit load.
+- **NIST CAVP and Project Wycheproof as corpora.** Declined with reason: they need the network, this
+  project fetches nothing at runtime, and the vectors these nine constructions need are already in
+  the pinned corpus with a primary source named. A later `CT-*` court for a construction the
+  authority ships no vectors for is where a recorded corpus with its retrieval belongs.
+- **Reading the primary sources.** Nothing here has read an RFC or an ISO standard; the primary
+  source is a name and a section, and the mirror is content-addressed. What that does and does not
+  establish is quoted in §2 and carried in every vector file.
