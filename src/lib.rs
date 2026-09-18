@@ -65,6 +65,7 @@
 pub mod asn1;
 pub mod bn;
 pub mod context;
+pub mod digest;
 pub mod dso;
 pub mod evp;
 pub mod ffi;
