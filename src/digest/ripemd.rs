@@ -31,7 +31,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::c_int;
+use core::ffi::{c_int, c_void};
 use core::ptr;
 
 use crate::digest::md32::{self, load_word, Md32, MD32_CBLOCK};
@@ -127,8 +127,11 @@ fn step(
     v[c_index] = v[c_index].rotate_left(10);
 }
 
-/// `ripemd160_block_data_order` — `crypto/ripemd/rmd_dgst.c:41-260`.
-fn ripemd160_block(ctx: &mut Ripemd160Ctx, mut data: *const u8, mut num: usize) {
+/// `void ripemd160_block_data_order(RIPEMD160_CTX *c, const void *data, size_t num)` —
+/// `crypto/ripemd/rmd_dgst.c:41-260`, the `HASH_BLOCK_DATA_ORDER` the collector's `HASH_UPDATE`
+/// calls. The Rust shape takes `&mut Ripemd160Ctx` for `md4_block_data_order`'s reason, and
+/// the name is the authority's so the prerequisite gate sees it wired.
+fn ripemd160_block_data_order(ctx: &mut Ripemd160Ctx, mut data: *const u8, mut num: usize) {
     while num > 0 {
         let mut x = [0u32; 16];
         for (i, word) in x.iter_mut().enumerate() {
@@ -206,7 +209,7 @@ impl Md32 for Ripemd160Ctx {
     }
 
     unsafe fn block(&mut self, data: *const u8, num: usize) {
-        ripemd160_block(self, data, num);
+        ripemd160_block_data_order(self, data, num);
     }
 
     unsafe fn make_string(&self, md: *mut u8) -> c_int {
@@ -249,11 +252,11 @@ pub unsafe extern "C" fn RIPEMD160_Init(c: *mut Ripemd160Ctx) -> c_int {
 #[no_mangle]
 pub unsafe extern "C" fn RIPEMD160_Update(
     c: *mut Ripemd160Ctx,
-    data: *const u8,
+    data: *const c_void,
     len: usize,
 ) -> c_int {
     // SAFETY: the caller's contract.
-    unsafe { md32::update(c, data, len) }
+    unsafe { md32::update(c, data.cast::<u8>(), len) }
 }
 
 /// `int RIPEMD160_Final(unsigned char *md, RIPEMD160_CTX *c)`.
@@ -306,7 +309,7 @@ pub unsafe extern "C" fn RIPEMD160(d: *const u8, n: usize, md: *mut u8) -> *mut 
         if RIPEMD160_Init(ptr::addr_of_mut!(c)) == 0 {
             return ptr::null_mut();
         }
-        RIPEMD160_Update(ptr::addr_of_mut!(c), d, n);
+        RIPEMD160_Update(ptr::addr_of_mut!(c), d.cast(), n);
         RIPEMD160_Final(md, ptr::addr_of_mut!(c));
         ptr::write_bytes(
             ptr::addr_of_mut!(c).cast::<u8>(),
@@ -367,13 +370,18 @@ mod tests {
             assert_eq!(RIPEMD160_Init(&mut c), 1);
             match split {
                 Some(at) => {
-                    assert_eq!(RIPEMD160_Update(&mut c, data.as_ptr(), at), 1);
+                    assert_eq!(RIPEMD160_Update(&mut c, data.as_ptr().cast(), at), 1);
                     assert_eq!(
-                        RIPEMD160_Update(&mut c, data.as_ptr().add(at), data.len() - at),
+                        RIPEMD160_Update(&mut c, data.as_ptr().add(at).cast(), data.len() - at),
                         1
                     );
                 }
-                None => assert_eq!(RIPEMD160_Update(&mut c, data.as_ptr(), data.len()), 1),
+                None => {
+                    assert_eq!(
+                        RIPEMD160_Update(&mut c, data.as_ptr().cast(), data.len()),
+                        1
+                    );
+                }
             }
             assert_eq!(RIPEMD160_Final(out.as_mut_ptr(), &mut c), 1);
         }

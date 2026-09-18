@@ -47,7 +47,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::c_int;
+use core::ffi::{c_int, c_void};
 use core::ptr;
 
 use crate::digest::md32::{self, Md32, MD32_CBLOCK};
@@ -492,7 +492,11 @@ pub unsafe extern "C" fn SHA256_Init(c: *mut Sha256Ctx) -> c_int {
 /// # Safety
 /// `c` must be a live initialised context; `data` readable for `len` bytes.
 #[no_mangle]
-pub unsafe extern "C" fn SHA224_Update(c: *mut Sha256Ctx, data: *const u8, len: usize) -> c_int {
+pub unsafe extern "C" fn SHA224_Update(
+    c: *mut Sha256Ctx,
+    data: *const c_void,
+    len: usize,
+) -> c_int {
     // SAFETY: the caller's contract.
     unsafe { SHA256_Update(c, data, len) }
 }
@@ -502,9 +506,13 @@ pub unsafe extern "C" fn SHA224_Update(c: *mut Sha256Ctx, data: *const u8, len: 
 /// # Safety
 /// `c` must be a live initialised context; `data` readable for `len` bytes.
 #[no_mangle]
-pub unsafe extern "C" fn SHA256_Update(c: *mut Sha256Ctx, data: *const u8, len: usize) -> c_int {
+pub unsafe extern "C" fn SHA256_Update(
+    c: *mut Sha256Ctx,
+    data: *const c_void,
+    len: usize,
+) -> c_int {
     // SAFETY: the caller's contract.
-    unsafe { md32::update(c, data, len) }
+    unsafe { md32::update(c, data.cast::<u8>(), len) }
 }
 
 /// `int SHA224_Final(unsigned char *md, SHA256_CTX *c)` — `SHA256_Final`.
@@ -591,7 +599,11 @@ pub unsafe extern "C" fn SHA512_Init(c: *mut Sha512Ctx) -> c_int {
 /// # Safety
 /// `c` must be a live initialised context; `data` readable for `len` bytes.
 #[no_mangle]
-pub unsafe extern "C" fn SHA512_Update(c: *mut Sha512Ctx, data: *const u8, len: usize) -> c_int {
+pub unsafe extern "C" fn SHA512_Update(
+    c: *mut Sha512Ctx,
+    data: *const c_void,
+    len: usize,
+) -> c_int {
     if len == 0 {
         return 1;
     }
@@ -613,7 +625,7 @@ pub unsafe extern "C" fn SHA512_Update(c: *mut Sha512Ctx, data: *const u8, len: 
     let p = unsafe { (*c).block_bytes() };
     // SAFETY: `c` is live.
     let num = unsafe { (*c).num } as usize;
-    let mut data = data;
+    let mut data = data.cast::<u8>();
     let mut len = len;
 
     if num != 0 {
@@ -661,7 +673,11 @@ pub unsafe extern "C" fn SHA512_Update(c: *mut Sha512Ctx, data: *const u8, len: 
 /// # Safety
 /// `c` must be a live initialised context; `data` readable for `len` bytes.
 #[no_mangle]
-pub unsafe extern "C" fn SHA384_Update(c: *mut Sha512Ctx, data: *const u8, len: usize) -> c_int {
+pub unsafe extern "C" fn SHA384_Update(
+    c: *mut Sha512Ctx,
+    data: *const c_void,
+    len: usize,
+) -> c_int {
     // SAFETY: the caller's contract.
     unsafe { SHA512_Update(c, data, len) }
 }
@@ -807,7 +823,7 @@ mod tests {
         // SAFETY: every pointer below is a live local of this test.
         unsafe {
             assert_eq!(init(&mut c), 1);
-            assert_eq!(SHA256_Update(&mut c, data.as_ptr(), data.len()), 1);
+            assert_eq!(SHA256_Update(&mut c, data.as_ptr().cast(), data.len()), 1);
             assert_eq!(SHA256_Final(out.as_mut_ptr(), &mut c), 1);
         }
         hex(&out[..c.md_len as usize])
@@ -826,7 +842,7 @@ mod tests {
         // SAFETY: every pointer below is a live local of this test.
         unsafe {
             assert_eq!(init(&mut c), 1);
-            assert_eq!(SHA512_Update(&mut c, data.as_ptr(), data.len()), 1);
+            assert_eq!(SHA512_Update(&mut c, data.as_ptr().cast(), data.len()), 1);
             assert_eq!(SHA512_Final(out.as_mut_ptr(), &mut c), 1);
         }
         hex(&out[..c.md_len as usize])
@@ -866,7 +882,7 @@ mod tests {
             // SAFETY: `c` and `out` are live locals.
             unsafe {
                 assert_eq!(sha512_224_init(&mut c), 1);
-                assert_eq!(SHA512_Update(&mut c, data.as_ptr(), data.len()), 1);
+                assert_eq!(SHA512_Update(&mut c, data.as_ptr().cast(), data.len()), 1);
                 assert_eq!(SHA512_Final(out.as_mut_ptr(), &mut c), 1);
                 assert_eq!(c.md_len, SHA224_DIGEST_LENGTH);
             }
@@ -883,7 +899,7 @@ mod tests {
             // SAFETY: `c` and `out` are live locals.
             unsafe {
                 assert_eq!(ossl_sha256_192_init(&mut c), 1);
-                assert_eq!(SHA256_Update(&mut c, data.as_ptr(), data.len()), 1);
+                assert_eq!(SHA256_Update(&mut c, data.as_ptr().cast(), data.len()), 1);
                 assert_eq!(SHA256_Final(out.as_mut_ptr(), &mut c), 1);
                 assert_eq!(c.md_len, SHA256_192_DIGEST_LENGTH);
             }
@@ -907,9 +923,9 @@ mod tests {
                     };
                     let mut out = [0u8; 32];
                     assert_eq!(SHA256_Init(&mut c), 1);
-                    assert_eq!(SHA256_Update(&mut c, input.as_ptr(), at), 1);
+                    assert_eq!(SHA256_Update(&mut c, input.as_ptr().cast(), at), 1);
                     assert_eq!(
-                        SHA256_Update(&mut c, input.as_ptr().add(at), input.len() - at),
+                        SHA256_Update(&mut c, input.as_ptr().add(at).cast(), input.len() - at),
                         1
                     );
                     assert_eq!(SHA256_Final(out.as_mut_ptr(), &mut c), 1);
@@ -928,9 +944,9 @@ mod tests {
                     };
                     let mut out = [0u8; 64];
                     assert_eq!(SHA512_Init(&mut c), 1);
-                    assert_eq!(SHA512_Update(&mut c, input.as_ptr(), at), 1);
+                    assert_eq!(SHA512_Update(&mut c, input.as_ptr().cast(), at), 1);
                     assert_eq!(
-                        SHA512_Update(&mut c, input.as_ptr().add(at), input.len() - at),
+                        SHA512_Update(&mut c, input.as_ptr().add(at).cast(), input.len() - at),
                         1
                     );
                     assert_eq!(SHA512_Final(out.as_mut_ptr(), &mut c), 1);
