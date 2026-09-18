@@ -1,16 +1,18 @@
 # Phase 4 — BIO, CONF and the buffer object: seal
 
-**STATUS: reopened, `in-progress` (docs/DECISIONS.md D97).** Phase 4's own surface
+**STATUS: complete (docs/DECISIONS.md D99).** Phase 4's own surface
 was sealed as closed, and all sixteen courts pass with no residual — that is
 unchanged. What D97 found is that the ledger's *universe* was a prefix list, and a
 prefix that matches nothing reports nothing: nineteen exports the global ownership
-atlas assigns this stratum were in no ledger at all, eighteen of which are now
-recorded `open`. `forensics/phase-state.json` therefore derives `in-progress`. See §10.
+atlas assigns this stratum were in no ledger at all, eighteen of which were recorded
+`open`. `forensics/phase-state.json` derived `in-progress` until §11 (D99)
+implemented all eighteen, with `RT-COMP` observing them, which took the ledger to
+the zero open it reports now and the derived state back to `complete`. See §10 and §11.
 
 **For every count in this document, read `docs/SEAL-CENSUS.md`**, which is generated
 from the ledgers and the court results and cannot go stale.
 
-This is **not** a claim that openssl-rs is a usable OpenSSL. 932 of 5,896 `libcrypto`
+This is **not** a claim that openssl-rs is a usable OpenSSL. 1841 of 5,896 `libcrypto`
 exports are implemented and all 603 `libssl` exports are still `SCAFFOLDED` and abort
 when called.
 

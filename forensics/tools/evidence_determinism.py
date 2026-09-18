@@ -148,6 +148,19 @@ GENERATORS = (
     + GENERATORS_AFTER_LEDGERS
 )
 
+# The hand-written-document consistency gate (`forensics/tools/docs_consistency.py`,
+# docs/DECISIONS.md D203). It writes no artefact and compares no artefact: it asserts that
+# the prose in the audited documents does not contradict the generated evidence, which is
+# the one staleness `evidence_determinism.py` cannot see because the prose is not a
+# generator's output. It is a separate registry rather than an entry in `GENERATORS` for a
+# reason: a generator whose output nothing compares would be a silent no-op here, whereas
+# this tool's whole job is to fail. It is listed at all so that `check_evidence_portability.py`
+# exercises it under the binutils stubs through the same mechanism as the generators -- a
+# gate that needed the host's `nm` would not be evidence either.
+CHECKS = [
+    "forensics/tools/docs_consistency.py",
+]
+
 # Derived artefacts that are compared. Anything not listed is not this tool's
 # business (court transcripts, staged probe binaries and the ABI shell are
 # produced by the court venue, not by these generators).
@@ -345,6 +358,16 @@ def main(argv: list[str]) -> int:
         if res.returncode != 0:
             raise SystemExit(
                 f"[evidence-determinism] {gen} failed with {res.returncode}:\n"
+                f"{res.stdout}\n{res.stderr}")
+
+    # The prose checks run against the freshly regenerated evidence, so a document that
+    # contradicts the *current* generator output fails here rather than one release later.
+    for check in CHECKS:
+        res = subprocess.run([sys.executable, check], cwd=REPO_ROOT,
+                             capture_output=True, text=True, check=False)
+        if res.returncode != 0:
+            raise SystemExit(
+                f"[evidence-determinism] {check} failed with {res.returncode}:\n"
                 f"{res.stdout}\n{res.stderr}")
 
     problems: list[str] = []

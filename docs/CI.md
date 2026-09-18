@@ -37,8 +37,8 @@ rule the loss would be invisible.
 is where", and it is reviewed like any other change.
 
 Current baseline (`forensics/regression-baseline.json` is authoritative; these
-numbers are a snapshot of it): 369 implemented `libcrypto` symbols, 85 open
-Phase 4 obligations, 22 courts all passing, 5,085 observations.
+numbers are a snapshot of it): 1841 implemented `libcrypto` symbols, 0 open
+Phase 4 obligations, 79 courts all passing, 23,105 observations.
 
 ## The jobs
 
@@ -101,7 +101,7 @@ record the **build product** rather than a committed input:
 Those two are normalised, and the tool **prints exactly which of them it
 normalised** so the exception is visible rather than silent. Everything else —
 every count, every symbol name, every phase state, every obligation — is compared
-exactly. The `internal_symbols.c_style` subset (the 260 plain C identifiers a
+exactly. The `internal_symbols.c_style` subset (the 274 plain C identifiers a
 consumer's own symbols could collide with) *is* compared exactly; only the
 compiler-emitted population is not, which is why it is recorded as a count and not
 as names.
@@ -117,8 +117,8 @@ function of the archive alone. See `docs/DECISIONS.md` D30 and D33.
 Determinism cannot catch a generator that depends on the host's binutils: on any
 one machine both sides use whatever `nm` that machine has and agree. So
 `check_evidence_portability.py` stubs `nm`, `objdump`, `readelf`, `ar` and `file`
-out of `PATH`, re-runs the whole generator chain, and requires all six compared
-artefacts to be byte-identical anyway.
+out of `PATH`, re-runs the whole generator chain, and requires every artefact in
+that tool's `COMPARED` set to be byte-identical anyway.
 
 The gate then tests itself, along both axes on which it can fail: it runs a seeded
 generator that *does* call `nm`, and a seeded generator that *does* edit an
@@ -148,12 +148,12 @@ re-runs every court from scratch:
    contamination).
 2. the active strata's court scripts, in numeric order, **discovered** by
    `run_courts.py` from `forensics/phase-state.json` rather than named here: today
-   `phase3_courts.py` (the 7 runtime differential courts), `phase4_courts.py` (the
-   BIO courts `RT-BIO`, `RT-ERR-BIO`, `RT-BIO-ADDR`, `RT-BIO-RESOLVE`) and
-   `phase5_courts.py` (the 9 BN/ASN.1/PEM courts). D94 records why the list is
-   derived: it was a workflow step list nobody owned, and Phase 5's nine courts were
-   never re-run by any green CI job while their committed `COURTS.json` was read as
-   evidence.
+   `phase3_courts.py` through `phase7_courts.py`, the runtime differential courts of
+   strata 3-7 (the core runtime; BIO, CONF and the compression API; BN/ASN.1/PEM; the
+   library context, provider core and DSO; and the EVP framework). D94 records why
+   the list is derived: it was a workflow step list nobody owned, and Phase 5's
+   courts were never re-run by any green CI job while their committed `COURTS.json`
+   was read as evidence.
 3. `regression_guard.py` — run again over the **freshly derived** results.
 
 Step 3 is what makes the gate behavioural rather than a claim about a file: the

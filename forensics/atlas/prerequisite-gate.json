@@ -30,7 +30,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 56,
-      "language_surface_not_modelled_by_name": 3045,
+      "language_surface_not_modelled_by_name": 2672,
       "planned_prerequisites": 14
     },
     "census_by_unit": {
@@ -186,8 +186,6 @@
         "crypto/indicator_core.c": 5,
         "crypto/initthread.c": 18,
         "crypto/lhash/lhash.c": 16,
-        "crypto/md4/md4_dgst.c": 8,
-        "crypto/md5/md5_dgst.c": 10,
         "crypto/mem.c": 12,
         "crypto/mem_sec.c": 10,
         "crypto/o_dir.c": 2,
@@ -207,17 +205,13 @@
         "crypto/provider_child.c": 19,
         "crypto/provider_conf.c": 28,
         "crypto/provider_core.c": 151,
-        "crypto/ripemd/rmd_dgst.c": 342,
         "crypto/self_test_core.c": 17,
-        "crypto/sha/sha1dgst.c": 3,
-        "crypto/sha/sha512.c": 7,
         "crypto/sparse_array.c": 7,
         "crypto/stack/stack.c": 18,
         "crypto/thread/api.c": 4,
         "crypto/threads_common.c": 9,
         "crypto/threads_pthread.c": 26,
-        "crypto/trace.c": 25,
-        "crypto/whrlpool/wp_dgst.c": 3
+        "crypto/trace.c": 25
       },
       "planned_prerequisites": {
         "evp_app_cleanup_int": 2,
@@ -337,8 +331,8 @@
       ]
     },
     "checked": {
-      "authority_units": 150,
-      "crate_modules": 199,
+      "authority_units": 144,
+      "crate_modules": 190,
       "deferral_blocker_rows": 5,
       "deferrals_recorded": 25,
       "divergence_names_covered": 32,
@@ -346,53 +340,8 @@
       "names_referenced_and_not_built": 17
     },
     "claim": "A structural gate, not a parity claim. It answers whether a dependency has an owner and whether the owner arrives in time; it says nothing about whether the dependency behaves as the authority's does.",
-    "counts": {
-      "unwired_function_in_the_current_stratum": 3
-    },
-    "findings": [
-      {
-        "authority_unit": "crypto/md4/md4_dgst.c",
-        "defines_it": "crypto/md4/md4_dgst.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/md4/md4_dgst.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "md4_block_data_order",
-        "owner_module": "src/digest/md4.rs",
-        "owner_phase": 8,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/digest/md4.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/ripemd/rmd_dgst.c",
-        "defines_it": "crypto/ripemd/rmd_dgst.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/ripemd/rmd_dgst.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "ripemd160_block_data_order",
-        "owner_module": "src/digest/ripemd.rs",
-        "owner_phase": 8,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/digest/ripemd.rs"
-        ]
-      },
-      {
-        "authority_unit": "crypto/sha/sha1dgst.c",
-        "defines_it": "crypto/sha/sha1dgst.c",
-        "detail": "the authority's unit calls this; the crate has a module for crypto/sha/sha1dgst.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
-        "direction": "B",
-        "kind": "unwired_function_in_the_current_stratum",
-        "name": "ossl_sha1_ctrl",
-        "owner_module": "src/digest/sha1.rs",
-        "owner_phase": 8,
-        "owner_state": "in-progress",
-        "transcribed_by": [
-          "src/digest/sha1.rs"
-        ]
-      }
-    ],
+    "counts": {},
+    "findings": [],
     "rule": "every authority-internal name a crate module references must be built by the crate or recorded with the stratum that owns it; every internal function a transcribed authority unit calls must exist, unless a divergence record covering exactly that name says why not; and a divergence record may not cover a name the gate did not observe",
     "sealed_stratum_census": {
       "by_defining_unit": {
@@ -505,7 +454,7 @@
       "typedefs": 1568
     }
   },
-  "body_hash": "73893d19de64550e5c0b63919c4247c109eda0a39ecb436aed7b1a5d1122fbc1",
+  "body_hash": "a23ef2e03bcff4b3a792b457e69002218655ed464c4c13e66de358b56b83168f",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -526,7 +475,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "be2c4d98233cff19a55947da21d7165e0fb252a69b0203746130b156d7e2ee4e"
+      "sha256": "8ddb00bcaf90ba6356356cdd70fb8cd5b2a86af0a665e2627cd8cf9e5ce5dcf4"
     },
     {
       "name": "symbol-ownership",
@@ -541,12 +490,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "50ebea4976890eeb0db95902e251b416a4f106f564a1b564561638132ea0cf04"
+      "sha256": "e5406e2563746d31e6ffe97b24d2c6732f5a5800e32107abb4ae7d509ae8c9d9"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "e4bea0942d15ea71f4c8b27586bdfbe60d82482b92bea2f8b6f9f31533a2f618"
+      "sha256": "ddd30bde27af7756e09f4c5ccddb7226657c5645194d877ade42ab95afb8436a"
     },
     {
       "name": "prerequisites",

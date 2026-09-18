@@ -104,7 +104,7 @@ an execution *event*), never in the derived atlas.
 Determinism is verified by regeneration, not asserted:
 
 ```
-python3 forensics/tools/atlas_symbols.py --all
+python3 forensics/tools/atlas_receipt.py --verify
 # hash every atlas file, regenerate, hash again, require byte equality
 ```
 
