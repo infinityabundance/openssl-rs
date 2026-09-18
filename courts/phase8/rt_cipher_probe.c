@@ -347,14 +347,33 @@ static void rt_rc4(void)
 
     printf("rc4.sizeof_key=%u\n", (unsigned)sizeof(RC4_KEY));
     /*
-     * `RC4_options` is deliberately NOT printed: its answer is selected at run time from two
-     * `OPENSSL_ia32cap` bits (`crypto/rc4/asm/rc4-x86_64.pl`'s `RC4_options`), so the
+     * `RC4_options`'s *value* is deliberately not compared: its answer is selected at run time
+     * from two `OPENSSL_ia32cap` bits (`crypto/rc4/asm/rc4-x86_64.pl`'s `RC4_options`), so the
      * authority's string is a property of the CPU and not of the implementation. The candidate
      * has no CPU dispatch yet -- that is Phase 19's (`docs/RELEASE_GATES.md`) -- so it answers
-     * the default arm, and comparing the two would report a host difference as a residual.
-     * The authority's value on this host was measured when the string was chosen; see D213.
+     * the default arm, and comparing the two would report a host difference as a residual
+     * (docs/DECISIONS.md D213).
+     *
+     * The symbol is nevertheless courted, because a host-selected *value* is not a reason to
+     * leave an export without any edge: the probe calls it and records the facts about its
+     * answer that are the same on every host -- that it is non-NULL, that it has the one shape
+     * the perlasm can produce, and that it is one of the three spellings that file can return.
+     * Which of the three is what the host decides, and that choice is declined rather than
+     * forgotten.
      */
-    printf("rc4.options.skipped=1\n");
+    {
+        const char *o = RC4_options();
+        size_t n = o == NULL ? 0u : strlen(o);
+
+        printf("rc4.options.present=%d\n", o != NULL);
+        printf("rc4.options.shape=%d\n",
+               o != NULL && n >= 6u && strncmp(o, "rc4(", 4) == 0 && o[n - 1] == ')');
+        printf("rc4.options.known_spelling=%d\n",
+               o != NULL
+                   && (strcmp(o, "rc4(16x,int)") == 0 || strcmp(o, "rc4(8x,int)") == 0
+                       || strcmp(o, "rc4(8x,char)") == 0));
+        printf("rc4.options.value_compared=0\n");
+    }
 
     /* The key schedule is a byte permutation, so it is observed as bytes -- and the two
      * indices after a run are part of the state a resumed call depends on. */

@@ -15601,3 +15601,63 @@ in the authority, but that whole arm is untranscribed here (the module doc's "TL
 the crate's refusal at that guard is a standing divergence rather than a missing raise. It is
 reachable only by a caller that sets `tls-version` on a landed row, and closing it is the work of
 the subphase that transcribes the arm, not of this repair.
+
+## D236 — the court-coverage atlas covers the in-progress stratum, and the first run names fourteen exports with no edge
+
+`forensics/tools/court_coverage.py` partitioned "every **completed** stratum", so its universe was
+built from ledgers whose `body.complete` is true. It therefore held Phases 3–7 and **no Phase 8 at
+all**: the one hundred and ninety-four exports Phase 8 has landed had no required court edge *while
+they were being written*, and became subject only on the day the stratum seals. That is backwards
+for the stratum under the pen, and it had already bitten once — the five `sha.h` one-shot exports
+landed in 8.1 with no probe arm and no edge, and a hand audit found them rather than this generator.
+The invariant is now **every implemented export of every stratum that has begun** — every ledger on
+disk, `in-progress` or `complete` — is exactly one of `directly_courted`, `indirectly_courted` or
+`explicitly_non_observable`, so landing an export without evidence fails on the commit that lands
+it. The per-stratum record keeps a `completed` flag and the body records the two phase lists, so the
+difference is still visible rather than flattened.
+
+**The first run named fourteen exports.** Eight are the ones the review found named nowhere in the
+four Phase-8 probe sources; six more are named in the probe sources but only as strings, comments or
+`_Init`/`_Update`/`_Final` siblings, so they were no more courted than the eight:
+
+| export | remedy | edge or arm |
+|---|---|---|
+| `CRYPTO_gcm128_init` | indirect | entry `CRYPTO_gcm128_new`, court `RT-CIPHER` (`crypto/modes/gcm128.c:1619`) |
+| `CRYPTO_ocb128_init` | indirect | entry `CRYPTO_ocb128_new`, court `RT-CIPHER` (`crypto/modes/ocb128.c:138`) |
+| `Camellia_encrypt` | indirect | entry `Camellia_ecb_encrypt`, court `RT-CIPHER` (`crypto/camellia/cmll_ecb.c:23`) |
+| `Camellia_decrypt` | indirect | entry `Camellia_ecb_encrypt`, court `RT-CIPHER` (`:25`) |
+| `IDEA_encrypt` | indirect | entry `IDEA_ecb_encrypt`, court `RT-CIPHER` (`crypto/idea/i_ecb.c:35`) |
+| `SEED_encrypt` | indirect | entry `SEED_ecb_encrypt`, court `RT-CIPHER` (`crypto/seed/seed_ecb.c:22`) |
+| `SEED_decrypt` | indirect | entry `SEED_ecb_encrypt`, court `RT-CIPHER` (`:24`) |
+| `WHIRLPOOL_BitUpdate` | indirect | entry `WHIRLPOOL_Update`, court `RT-DIGEST` (`crypto/whrlpool/wp_dgst.c:82`, `:87`) |
+| `MD4` | probe arm | `rt_digest_probe.c`'s `rt_one_shot_exports_legacy`, court `RT-DIGEST` |
+| `MD5` | probe arm | as `MD4` |
+| `MDC2` | probe arm | as `MD4` (its one-shot is the `pad_type = 1` arm) |
+| `RIPEMD160` | probe arm | as `MD4` |
+| `WHIRLPOOL` | probe arm | as `MD4` |
+| `RC4_options` | probe arm | `rt_cipher_probe.c`'s `rc4.options.*`, court `RT-CIPHER` |
+
+The eight `indirect` rows are the first this table has ever carried. Each names a low-level entry
+point that no probe calls by name but that a courted public entry calls, with the authority's own
+call site cited: the atlas checks that the named *entry* is directly courted by the named court, and
+the citation is what makes the caller-to-callee claim auditable. Where a direct arm was as easy it
+was added instead — the five one-shot digest exports are driven exactly as the `sha.h` five already
+were, with the caller's buffer and with `md == NULL`.
+
+**`RC4_options` is courted, and its value is still declined.** The bucket the task warns against
+using lazily is `explicitly_non_observable`, and `RC4_options` is *not* put there: D213 established
+that its string is selected from two `OPENSSL_ia32cap` bits, so the authority's own answer is a
+property of the host and no differential can hold it. The probe now calls the export and records the
+facts about its answer that are host-independent — non-NULL, the one shape the perlasm can produce,
+membership in the three spellings that file can return — and keeps `rc4.options.value_compared=0`
+so the declined comparison is a statement rather than an omission. The symbol therefore has a real
+direct edge without a host-dependent residual; the `non_observable` set stays empty, because nothing
+has been shown to have no observable at all.
+
+`court_coverage.json` now reports Phase 8 as 186 `directly_courted`, 8 `indirectly_courted`, 0
+`non_observable`, `unmatched` 0, over the same 194 implemented exports; the totals are 2035, 2027, 8
+and 0. `RT-CIPHER`'s observation count moves from 959 to **962** (`RC4_options`'s three shape facts
+replace its one `skipped` line) and `RT-DIGEST`'s from 305 to **330** (the five one-shots, each with
+its caller-buffer digest, its `md == NULL` digest and the agreement between them).
+`implemented[libcrypto]` stays **2035**, Phase 8 stays **194/576/16**, and the two anchored status
+clauses in `docs/PHASE-8-SUBPHASES.md` do not move.

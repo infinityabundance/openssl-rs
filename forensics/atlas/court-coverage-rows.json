@@ -1,6 +1,6 @@
 {
   "schema": "openssl-rs/court-coverage-rows/v1",
-  "note": "Sets 2 and 3 of the court coverage atlas, plus the list of reference-basis probes. Authored data rather than a table inside forensics/tools/court_coverage.py, because each row is an auditable claim and a change to one reads as a data diff. The generator validates every row: an indirect `entry` must be an implemented export that the named court directly courts, and a non-observable row must carry a reason and an authority citation. A court named in `reference_probes` contributes basis `referenced` rather than `called`, which the atlas states in its own `claim`. See docs/DECISIONS.md D199.",
+  "note": "Sets 2 and 3 of the court coverage atlas, plus the list of reference-basis probes. Authored data rather than a table inside forensics/tools/court_coverage.py, because each row is an auditable claim and a change to one reads as a data diff. The generator validates every row: an indirect `entry` must be an implemented export that the named court directly courts, and a non-observable row must carry a reason and an authority citation. A court named in `reference_probes` contributes basis `referenced` rather than `called`, which the atlas states in its own `claim`. See docs/DECISIONS.md D199.\n\nThe eight `indirect` rows below are the first rows this table has ever carried, and they exist because the atlas's universe moved from the completed strata to every stratum that has begun (docs/DECISIONS.md D236). Each is a low-level entry point that no probe calls by name but that a courted public entry calls, with the authority's own call site cited: a `*_ecb_encrypt`/`*_cbc_encrypt` facade for the block ciphers, `CRYPTO_gcm128_new`/`CRYPTO_ocb128_new` for the two mode initialisers, and `WHIRLPOOL_Update` for the bit-oriented update. The edge is checked in one direction only -- the named entry must be directly courted by the named court -- so the authority citation is what makes the call itself auditable.",
   "reference_probes": [
     "RT-RUNTIME-REF",
     "RT-BIO-CONF-REF",
@@ -8,6 +8,55 @@
     "RT-PROVIDER-REF",
     "RT-EVP-REF"
   ],
-  "indirect": [],
+  "indirect": [
+    {
+      "symbol": "CRYPTO_gcm128_init",
+      "entry": "CRYPTO_gcm128_new",
+      "court": "RT-CIPHER",
+      "authority": "crypto/modes/gcm128.c:1619 -- CRYPTO_gcm128_new allocates the context and calls CRYPTO_gcm128_init on it, which is the only way a caller obtains a GCM context. The probe drives GCM entirely through CRYPTO_gcm128_new, so the initialiser is exercised on every GCM observation."
+    },
+    {
+      "symbol": "CRYPTO_ocb128_init",
+      "entry": "CRYPTO_ocb128_new",
+      "court": "RT-CIPHER",
+      "authority": "crypto/modes/ocb128.c:138 -- CRYPTO_ocb128_new calls CRYPTO_ocb128_init and frees the context when it refuses, so the initialiser runs before any OCB observation."
+    },
+    {
+      "symbol": "Camellia_encrypt",
+      "entry": "Camellia_ecb_encrypt",
+      "court": "RT-CIPHER",
+      "authority": "crypto/camellia/cmll_ecb.c:23 -- Camellia_ecb_encrypt's encrypt arm is Camellia_encrypt, and the probe drives Camellia ECB (and every Camellia mode, through the generic engine's block function) directly."
+    },
+    {
+      "symbol": "Camellia_decrypt",
+      "entry": "Camellia_ecb_encrypt",
+      "court": "RT-CIPHER",
+      "authority": "crypto/camellia/cmll_ecb.c:25 -- the decrypt arm of the same facade."
+    },
+    {
+      "symbol": "IDEA_encrypt",
+      "entry": "IDEA_ecb_encrypt",
+      "court": "RT-CIPHER",
+      "authority": "crypto/idea/i_ecb.c:35 -- IDEA_ecb_encrypt calls IDEA_encrypt on the two 32-bit halves it loads from the block; IDEA_decrypt is directly courted because the probe also calls it by name, and this is its sibling only for IDEA_encrypt."
+    },
+    {
+      "symbol": "SEED_encrypt",
+      "entry": "SEED_ecb_encrypt",
+      "court": "RT-CIPHER",
+      "authority": "crypto/seed/seed_ecb.c:22 -- SEED_ecb_encrypt's encrypt arm."
+    },
+    {
+      "symbol": "SEED_decrypt",
+      "entry": "SEED_ecb_encrypt",
+      "court": "RT-CIPHER",
+      "authority": "crypto/seed/seed_ecb.c:24 -- the decrypt arm of the same facade."
+    },
+    {
+      "symbol": "WHIRLPOOL_BitUpdate",
+      "entry": "WHIRLPOOL_Update",
+      "court": "RT-DIGEST",
+      "authority": "crypto/whrlpool/wp_dgst.c:82 and :87 -- WHIRLPOOL_Update hands the byte count to WHIRLPOOL_BitUpdate, which is the construction's only update path, so the probe's 1000-byte message drives it."
+    }
+  ],
   "non_observable": []
 }

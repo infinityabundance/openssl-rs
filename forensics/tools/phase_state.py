@@ -184,8 +184,9 @@ def evidence_for(phase: int) -> tuple[list[str], list[str], str]:
     # `open == 0` and `every court passes` do not imply that every implemented export has
     # a court. The atlas performs that join; a `complete` stratum must appear in it with no
     # unmatched export, or the state it would otherwise reach is not one the evidence
-    # supports. The atlas covers strata 3-7 (all currently complete export-bearing strata),
-    # so this rule holds for each of them rather than being scoped to Phase 7.
+    # supports. The atlas covers every stratum that has begun -- phases 3-8 -- so this rule
+    # holds for each of them rather than being scoped to Phase 7, and Phase 8 is subject to it
+    # while it is being written rather than only on the day it seals (docs/DECISIONS.md D236).
     coverage = read_json(COVERAGE)
     if coverage:
         present.append(COVERAGE)

@@ -11,8 +11,9 @@ court that exists* passes; nothing joins the two. At seven hundred and six expor
 that is an unproven assertion in a project whose whole discipline is that a claim is
 a fact a reader can recompute.
 
-This tool performs the missing join. For every **completed** stratum it partitions
-every export that stratum owns into exactly three disjoint sets:
+This tool performs the missing join. For every stratum that has **begun** -- every ledger on
+disk, whether it is still `in-progress` or already `complete` -- it partitions every export
+that stratum owns into exactly three disjoint sets:
 
   1. **directly courted** -- the name is an undefined dynamic symbol of a staged
      candidate probe that ran and produced a transcript. The court names are the
@@ -24,8 +25,19 @@ every export that stratum owns into exactly three disjoint sets:
   3. **explicitly non-observable** -- a reason, and the court that observes the
      symbol's downstream effect. "No observable" is only admissible when it is true.
 
-and it **fails, naming them**, if any implemented export of a completed stratum is in
-none of the three.
+and it **fails, naming them**, if any implemented export of a begun stratum is in none of the
+three.
+
+Why the invariant covers the in-progress stratum too
+----------------------------------------------------
+It used to read "for every **completed** stratum", which meant an in-progress stratum's
+exports could be landed one commit at a time with no court edge at all, and became subject
+only on the day the stratum sealed. That is exactly backwards for the stratum being written:
+the moment to require evidence for an export is the commit that lands it, not the seal. It
+already bit once -- the five `sha.h` one-shot exports landed in 8.1 with no probe arm and no
+edge, and a hand audit found them rather than this generator. So the universe is now every
+ledger on disk, and the per-stratum record keeps `completed` so the difference between the
+two is still visible.
 
 How set 1 is derived, and precisely what it claims
 --------------------------------------------------
@@ -97,7 +109,8 @@ CLAIM = (
     "an explicit, checked edge -- the named entry is itself directly courted by a probe "
     "of the named court. `non_observable` is a symbol whose effect no probe can isolate, "
     "with the reason and the court that observes its downstream effect. A symbol in none "
-    "of the three fails this generator by name."
+    "of the three fails this generator by name -- for every stratum that has begun, "
+    "in-progress or complete, so an export cannot be landed without an edge."
 )
 
 
@@ -199,12 +212,18 @@ def main() -> int:
     completed = sorted(
         phase for phase, (_p, doc) in ledgers.items() if doc["body"].get("complete")
     )
+    # The atlas universe is every stratum that has begun, not every stratum that has
+    # sealed: a ledger's existence is the claim that its exports are being implemented,
+    # and `complete` is the separate claim that the stratum has closed. See the module
+    # doc; the SHA one-shots are the precedent this closes.
+    active = sorted(ledgers)
+    in_progress = sorted(set(active) - set(completed))
 
     # ---- set 1, from the staged candidate ELF dynamic tables ----
     courts_for: dict[str, set[str]] = {}
     court_index: dict[str, dict] = {}
     per_stratum_probe_count: dict[int, int] = {}
-    for phase in completed:
+    for phase in active:
         binaries, rows = court_binaries(phase)
         court_index.update(rows)
         n = 0
@@ -242,7 +261,7 @@ def main() -> int:
     if unknown_ref:
         raise CoverageError(
             f"[court-coverage] fatal: reference_probes names {unknown_ref}, which is not "
-            f"a court in any completed stratum's COURTS.json"
+            f"a court in any begun stratum's COURTS.json"
         )
 
     # ---- the partition, and the join that fails closed ----
@@ -257,10 +276,10 @@ def main() -> int:
         if sym not in owner:
             problems.append(f"indirect row names {sym}, which no stratum implements")
             continue
-        if owner[sym] not in completed:
+        if owner[sym] not in active:
             problems.append(
-                f"indirect row names {sym}, owned by phase {owner[sym]}, which is not "
-                f"complete"
+                f"indirect row names {sym}, owned by phase {owner[sym]}, which has not "
+                f"begun"
             )
             continue
         entry = r.get("entry")
@@ -285,10 +304,10 @@ def main() -> int:
         if sym not in owner:
             problems.append(f"non-observable row names {sym}, which no stratum implements")
             continue
-        if owner[sym] not in completed:
+        if owner[sym] not in active:
             problems.append(
-                f"non-observable row names {sym}, owned by phase {owner[sym]}, which is "
-                f"not complete"
+                f"non-observable row names {sym}, owned by phase {owner[sym]}, which has "
+                f"not begun"
             )
             continue
         if not r.get("reason") or not r.get("court") or not r.get("authority"):
@@ -301,7 +320,7 @@ def main() -> int:
                 f"court in this atlas"
             )
 
-    for phase in completed:
+    for phase in active:
         direct, ind, non = [], [], []
         for sym in sorted(impl[phase]):
             if sym in courts_for:
@@ -339,7 +358,7 @@ def main() -> int:
             totals[k] += counts[k]
         strata.append({
             "phase": phase,
-            "completed": True,
+            "completed": phase in completed,
             "staged_candidate_probes": per_stratum_probe_count.get(phase, 0),
             "counts": counts,
             "directly_courted": direct,
@@ -355,7 +374,7 @@ def main() -> int:
     if unmatched:
         raise CoverageError(
             f"[court-coverage] fatal: {len(unmatched)} implemented export(s) of a "
-            "completed stratum are in none of directly-courted, indirectly-courted or "
+            "stratum that has begun is in none of directly-courted, indirectly-courted or "
             "non-observable; add a probe arm that makes each observable, an explicit "
             "indirect edge, or a truthful non-observable row:\n  "
             + "\n  ".join(unmatched)
@@ -366,7 +385,7 @@ def main() -> int:
         InputRef(name="symbol-ownership", path=OWNERSHIP),
         InputRef(name="coverage-rows", path=ROWS),
     ]
-    for phase in completed:
+    for phase in active:
         inputs.append(InputRef(name=f"phase{phase}-obligations",
                                path=REPO_ROOT / f"forensics/phase{phase}-obligations.json"))
         inputs.append(InputRef(name=f"phase{phase}-courts",
@@ -376,9 +395,12 @@ def main() -> int:
         "authority": surface["authority"],
         "claim": CLAIM,
         "definition": (
-            "a completed stratum is one whose obligation ledger records `complete`; "
-            "every export that ledger implements is partitioned below"
+            "a stratum that has begun is one with an obligation ledger on disk; `complete` "
+            "records whether it has sealed. Every export a begun stratum implements is "
+            "partitioned below, whether the stratum is in-progress or complete"
         ),
+        "completed": completed,
+        "in_progress": in_progress,
         "strata": strata,
         "totals": totals,
         "unmatched": 0,
