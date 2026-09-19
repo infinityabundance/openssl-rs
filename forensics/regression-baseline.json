@@ -154,6 +154,10 @@
       "observations": 94,
       "verdict": "pass"
     },
+    "RT-BN-RAND": {
+      "observations": 173,
+      "verdict": "pass"
+    },
     "RT-CIPHER": {
       "observations": 6939,
       "verdict": "pass"
@@ -369,7 +373,7 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 2122,
+    "libcrypto": 2133,
     "libssl": 0
   },
   "open_obligations": {
@@ -379,7 +383,7 @@
     "phase6": 0,
     "phase7": 0,
     "phase8": 524,
-    "phase9": 68
+    "phase9": 57
   },
   "owned_obligations": {
     "phase3": 294,
@@ -418,8 +422,8 @@
     "blocking_dependencies": 17,
     "divergence_names_covered": 30,
     "findings": 0,
-    "language_census": 3179,
-    "sealed_census": 56
+    "language_census": 3187,
+    "sealed_census": 57
   },
   "provider_implemented": [
     "default/OSSL_OP_CIPHER/AES-128-CBC",

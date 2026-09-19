@@ -30,6 +30,14 @@ pub struct BnCtx {
     /// A `BIGNUM` reserved for Montgomery state, which the authority keeps in the
     /// context rather than in the pool.
     mont: *mut BigNum,
+    /// The library context the authority's `struct bignum_ctx` carries (`bn_ctx.c:77`),
+    /// stored by `BN_CTX_new_ex` and read back by
+    /// [`ossl_bn_get_libctx`].
+    ///
+    /// It is *stored and read*, which is the half D-`OBL-BN-CTX-LIBCTX-SELECTION` did
+    /// not have: the remaining half of that obligation is using it to select a provider
+    /// for the context's operations, which is Phase 6's.
+    libctx: *mut c_void,
 }
 
 /// Read a `*mut BnCtx` as a mutable reference.
@@ -47,14 +55,33 @@ pub(crate) unsafe fn as_mut_ctx<'a>(p: *mut BnCtx) -> Option<&'a mut BnCtx> {
     }
 }
 
-/// A fresh context.
-fn new_ctx() -> *mut BnCtx {
+/// A fresh context carrying `libctx`, the way the authority's `BN_CTX_new_ex` does.
+fn new_ctx(libctx: *mut c_void) -> *mut BnCtx {
     Box::into_raw(Box::new(BnCtx {
         pool: Vec::new(),
         used: 0,
         marks: Vec::new(),
         mont: core::ptr::null_mut(),
+        libctx,
     }))
+}
+
+/// `OSSL_LIB_CTX *ossl_bn_get_libctx(BN_CTX *ctx)` — `crypto/bn/bn_ctx.c:243`, declared
+/// in `include/crypto/bn.h`.
+///
+/// A null context answers null, which is the authority's own first line. It is what lets
+/// `bnrand` hand the context's library context to `RAND_bytes_ex`.
+///
+/// # Safety
+///
+/// `ctx` must be null or a live `BN_CTX` this library allocated.
+#[allow(dead_code)] // the landing caller is `bnrand` (`src/bn/rand.rs`)
+pub(crate) unsafe fn ossl_bn_get_libctx(ctx: *mut BnCtx) -> *mut c_void {
+    if ctx.is_null() {
+        return core::ptr::null_mut();
+    }
+    // SAFETY: the caller's contract is that a non-null `ctx` is live.
+    unsafe { (*ctx).libctx }
 }
 
 /// `BN_CTX *BN_CTX_new(void)`
@@ -64,27 +91,30 @@ fn new_ctx() -> *mut BnCtx {
 /// Takes no pointers.
 #[no_mangle]
 pub unsafe extern "C" fn BN_CTX_new() -> *mut BnCtx {
-    guard_ffi(core::ptr::null_mut(), new_ctx)
+    guard_ffi(core::ptr::null_mut(), || new_ctx(core::ptr::null_mut()))
 }
 
 /// `BN_CTX *BN_CTX_new_ex(OSSL_LIB_CTX *libctx)`
 ///
-/// The library context selects a provider for the operations the context performs.
-/// That belongs to Phase 6, so this creates a context that uses this implementation
-/// directly. Recorded as `OBL-BN-CTX-LIBCTX-SELECTION` rather than claimed as parity.
+/// The authority stores `libctx` in the context (`bn_ctx.c:131`) and reads it back with
+/// `ossl_bn_get_libctx`, which is what `bnrand` passes to `RAND_bytes_ex`. That is
+/// reproduced here. The *selection* half of the obligation -- using the context to pick
+/// a provider for the context's operations -- belongs to Phase 6 and is recorded as
+/// `OBL-BN-CTX-LIBCTX-SELECTION` rather than claimed as parity.
 ///
 /// The signature is the authority's: **one** parameter. An earlier version of this
 /// declaration carried a second `propq` argument the authority does not have, and the
-/// prototype court caught it (`forensics/atlas/prototype-court.json`, D65) — an extra
+/// prototype court caught it (`forensics/atlas/prototype-court.json`, D65) -- an extra
 /// unused parameter is harmless at the call site on this ABI, which is exactly why
 /// only a prototype comparison finds it.
 ///
 /// # Safety
 ///
-/// `libctx` is accepted and unused; a caller may pass null.
+/// `libctx` must be null or a live `OSSL_LIB_CTX`, and must outlive the returned
+/// context the way it does in the authority.
 #[no_mangle]
-pub unsafe extern "C" fn BN_CTX_new_ex(_libctx: *mut c_void) -> *mut BnCtx {
-    guard_ffi(core::ptr::null_mut(), new_ctx)
+pub unsafe extern "C" fn BN_CTX_new_ex(libctx: *mut c_void) -> *mut BnCtx {
+    guard_ffi(core::ptr::null_mut(), || new_ctx(libctx))
 }
 
 /// `BN_CTX *BN_CTX_secure_new(void)`
@@ -100,7 +130,7 @@ pub unsafe extern "C" fn BN_CTX_new_ex(_libctx: *mut c_void) -> *mut BnCtx {
 /// Takes no pointers.
 #[no_mangle]
 pub unsafe extern "C" fn BN_CTX_secure_new() -> *mut BnCtx {
-    guard_ffi(core::ptr::null_mut(), new_ctx)
+    guard_ffi(core::ptr::null_mut(), || new_ctx(core::ptr::null_mut()))
 }
 
 /// `BN_CTX *BN_CTX_secure_new_ex(OSSL_LIB_CTX *libctx)`
@@ -112,8 +142,8 @@ pub unsafe extern "C" fn BN_CTX_secure_new() -> *mut BnCtx {
 ///
 /// As `BN_CTX_new_ex`.
 #[no_mangle]
-pub unsafe extern "C" fn BN_CTX_secure_new_ex(_libctx: *mut c_void) -> *mut BnCtx {
-    guard_ffi(core::ptr::null_mut(), new_ctx)
+pub unsafe extern "C" fn BN_CTX_secure_new_ex(libctx: *mut c_void) -> *mut BnCtx {
+    guard_ffi(core::ptr::null_mut(), || new_ctx(libctx))
 }
 
 /// `void BN_CTX_free(BN_CTX *c)`

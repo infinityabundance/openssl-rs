@@ -43,4 +43,5 @@ pub mod mont;
 pub mod nist;
 pub(crate) mod prime_data;
 pub mod primes;
+pub mod rand;
 pub mod recp;

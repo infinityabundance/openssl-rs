@@ -20386,3 +20386,64 @@ under `language_surface_not_modelled_by_name` -- a census, not a failure -- befo
 `divergence_record_does_not_match`, and the gate would refuse the commit. The reduction's record is
 therefore the authority's own code transcribed at each of the three sites, D312's argument, and
 this entry.
+
+## D314 -- the BN random family lands, and its court observes properties rather than values
+
+### What landed
+
+`src/bn/rand.rs` is `crypto/bn/bn_rand.c:19-239`: the `BNRAND_FLAG` enum, `bnrand`, `bnrand_range`,
+and eleven of Phase 9's twelve `src/bn/rand.rs` obligations -- `BN_rand_ex`, `BN_rand`,
+`BN_bntest_rand`, `BN_priv_rand_ex`, `BN_priv_rand`, `BN_rand_range_ex`, `BN_rand_range`,
+`BN_priv_rand_range_ex`, `BN_priv_rand_range`, `BN_pseudo_rand` and `BN_pseudo_rand_range`. The
+transcription was staged as `court/bn-rand.rs` in D311 and needed exactly the two callees D311
+named, both of which D313 supplied; **not one line was weakened to make it compile**, which is
+what the staging note promised and this commit is the proof of.
+
+`BN_generate_dsa_nonce` remains **open**, and deliberately: `ossl_bn_priv_rand_range_fixed_top`
+needs `ossl_bn_mask_bits_fixed_top` and the fixed-top representation, and the DSA-nonce pair needs
+the EVP digest front and `SHA512`. `phase9-obligations` therefore reads
+`implemented=36 open=57` rather than 37 and 56.
+
+### `ossl_bn_get_libctx`, and the field `BN_CTX_new_ex` used to discard
+
+`bnrand` does not draw from the global RNG: it reads `ossl_bn_get_libctx(ctx)`
+(`crypto/bn/bn_ctx.c:243`) and hands that library context to `RAND_bytes_ex`. The crate's
+`BN_CTX_new_ex` accepted `libctx` and threw it away, documented as
+`OBL-BN-CTX-LIBCTX-SELECTION`. It now stores it in a new `BnCtx::libctx` field, exactly as the
+authority's `bn_ctx.c:131` does, and `ossl_bn_get_libctx` reads it back. **That discharges the
+storage half of the obligation and not the selection half**: nothing yet uses the context to pick
+a provider, which is Phase 6's, and the doc comment now says which half is which rather than
+calling the whole thing deferred. `BN_CTX_new` and `BN_CTX_secure_new` pass NULL, as the
+authority's do through `BN_CTX_new_ex(NULL)`.
+
+### RT-BN-RAND, and the observation a random draw cannot make
+
+The drawn values cannot be compared -- the two sides seed from different pools -- so
+`courts/phase9/rt_bn_rand_probe.c` compares each arm's **contract**: the return code, the error
+queue, `BN_num_bits(rnd) <= bits`, the pinned top and bottom bits, `BN_cmp(rnd, range) < 0` for the
+range family, and that the result is never negative. At `bits = 1` and `bits = 2` the authority's
+masks pin the value exactly, so those two arms are observed as equalities
+(`BN_rand(rnd, 2, BN_RAND_TOP_TWO, BN_RAND_BOTTOM_ANY)` is 3 on every RNG) rather than as
+properties. Every draw is made twice, once with no `BN_CTX` and once with a live one, because the
+libctx path above is only exercised by the second.
+
+It passes with **173 observations** and zero residuals, and the run that produced that number is
+the second one. **The first run aborted the authority**, which is why the probe does not call
+`BN_rand_range(rnd, NULL)`: the authority dereferences `range->neg` at `bn_rand.c:135` before any
+null test, so that arm is a null dereference there. The diff reported it as sixteen `extra`
+residuals -- every observation after the crash was missing from the authority side -- because a
+probe that dies mid-transcript compares only its prefix. The candidate refuses the same call with
+`BN_R_INVALID_RANGE` under the crate's `as_ref` convention, which `src/bn/rand.rs`'s module note
+records as a **graceful extension, not a parity claim**; a differential court cannot measure a
+side that crashes, so the arm is not in the probe and the divergence lives in the module note.
+That is the same shape as `RT-HPKE`'s excluded entry points: an observation that would kill one
+side is not an observation.
+
+### Numbers
+
+`implemented[libcrypto]` 2122 -> 2133; `phase9-obligations` `implemented=25 open=68` ->
+`implemented=36 open=57`; `RT-BN-RAND` 173 observations; `PIPELINE OK` over 88 courts and 32132
+observations. `forensics/prerequisites.json` needed no change and that is a measurement rather
+than an omission: `ossl_bn_get_libctx` had no deferral row to retire, because the crate never
+referenced it until this commit -- the module was the first caller, and it defines it in the same
+commit.

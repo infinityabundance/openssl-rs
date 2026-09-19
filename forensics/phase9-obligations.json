@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 25,
       "deferred_to_later_phase": 0,
-      "implemented": 25,
-      "open_in_this_stratum": 68,
+      "implemented": 36,
+      "open_in_this_stratum": 57,
       "owned": 93,
       "received_by_handoff": 68
     },
@@ -535,6 +535,17 @@
       ]
     },
     "implemented": [
+      "BN_bntest_rand",
+      "BN_priv_rand",
+      "BN_priv_rand_ex",
+      "BN_priv_rand_range",
+      "BN_priv_rand_range_ex",
+      "BN_pseudo_rand",
+      "BN_pseudo_rand_range",
+      "BN_rand",
+      "BN_rand_ex",
+      "BN_rand_range",
+      "BN_rand_range_ex",
       "RAND_OpenSSL",
       "RAND_add",
       "RAND_bytes",
@@ -737,12 +748,6 @@
       },
       {
         "declaring_header": "bn.h",
-        "module": "src/bn/rand.rs",
-        "received_from_phase": 5,
-        "symbol": "BN_bntest_rand"
-      },
-      {
-        "declaring_header": "bn.h",
         "module": "src/bn/primes.rs",
         "received_from_phase": 5,
         "symbol": "BN_check_prime"
@@ -794,66 +799,6 @@
         "module": "src/bn/primes.rs",
         "received_from_phase": 5,
         "symbol": "BN_is_prime_fasttest_ex"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/rand.rs",
-        "received_from_phase": 5,
-        "symbol": "BN_priv_rand"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/rand.rs",
-        "received_from_phase": 5,
-        "symbol": "BN_priv_rand_ex"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/rand.rs",
-        "received_from_phase": 5,
-        "symbol": "BN_priv_rand_range"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/rand.rs",
-        "received_from_phase": 5,
-        "symbol": "BN_priv_rand_range_ex"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/rand.rs",
-        "received_from_phase": 5,
-        "symbol": "BN_pseudo_rand"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/rand.rs",
-        "received_from_phase": 5,
-        "symbol": "BN_pseudo_rand_range"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/rand.rs",
-        "received_from_phase": 5,
-        "symbol": "BN_rand"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/rand.rs",
-        "received_from_phase": 5,
-        "symbol": "BN_rand_ex"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/rand.rs",
-        "received_from_phase": 5,
-        "symbol": "BN_rand_range"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/rand.rs",
-        "received_from_phase": 5,
-        "symbol": "BN_rand_range_ex"
       },
       {
         "declaring_header": "des.h",
@@ -1117,27 +1062,27 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "efb0c8b9683355294b21722f12acac3a69301e6b7b62f3c62f8b9692b55bf81c"
+      "sha256": "5ffb96d7c38129063c53361d47442a77f12ee8293996d9f53daec65428b1b73f"
     },
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "d7a14af42b58c8c904b57ba9b46efa9e44e9ff212f7ca8cbfe6c6b97ba2cfde7"
+      "sha256": "4bb660b41c964673c7adde7b333482b7d4f29af672bc1133ee7fd86507f68552"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "789ac8c70fed671045c4620f59c2a9792c24c8b57f2da003aa551f558f80f195"
+      "sha256": "1200cbe9ffcae3cadfb8027c91843c1f5db34612a77408a3b9083bbfb2a9b4d6"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "2963998fef25b6bfb50b068a61e5001da815cc8fc78dffe13d878e4554843a99"
+      "sha256": "b014c70d184b2011cfba610f146316a824b303c38982c41e4f8c5be20ee2c1a9"
     },
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "7a0006ea0211671c57a4000e707d53fd1392230169aafb71a8363a101a9ba84b"
+      "sha256": "d91219e308c5163316c3c6656797af0269d2401c85aad22e83b06c5c90f5274c"
     }
   ],
   "kind": "phase9-obligations",
