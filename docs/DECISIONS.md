@@ -19628,3 +19628,45 @@ invisible to `plan_reconciliation` either.
 **What this entry does not claim.** Nothing in the crate calls the pool, no Phase 9 export is
 implemented, and the four Phase 9 courts remain pending. The pool is `IMPLEMENTED` in
 `docs/PARITY_MODEL.md`'s sense and nothing stronger.
+
+## D301 -- the platform layer and the file/uniform units are staged, and five more facts about D287's table
+
+Three more Phase 9 transcriptions, staged and deliberately not integrated: `court/phase9/
+rand_sys.rs.txt` (364 lines, the platform bindings the seeding arm needs), `court/phase9/
+randfile.rs.txt` (509 lines, `crypto/rand/randfile.c` -- `RAND_file_name`, `RAND_load_file`,
+`RAND_write_file`) and `court/phase9/rand_uniform.rs.txt` (273 lines,
+`crypto/rand/rand_uniform.c`).
+
+**The platform layer is the one worth reading, because every value in it was checked rather than
+recalled.** `__NR_getrandom` is **318**, read from `/usr/include/asm/unistd_64.h:322` and
+corroborated by the authority's own `#if` at `rand_unix.c:283` -- not the asm-generic 278, not the
+x32 `BIT+318`. `struct stat` is **144 bytes** with `st_dev` at 0, `st_ino` at 8 and `st_mode` at
+24, read from `bits/struct_stat.h`'s `__x86_64__` arm. `dev_t`/`ino_t`/`mode_t` are 8/8/4 from
+`bits/typesizes.h`. `fd_set` is sixteen 64-bit words with `__FD_SETSIZE` 1024, from `sys/select.h`
+and `bits/select.h`. `ENOSYS` is 38 from `asm-generic/errno.h`. This is an ABI module, so a wrong
+layout would be a memory-safety defect rather than a wrong answer, and the staging file cites the
+header each value came from for that reason.
+
+**Five corrections and measurements, all from reading the tree.**
+
+1. **There is no `RAND_FILE_NAME_MAX` and no `RANDFILE` constant anywhere in 3.6.4.** `"RANDFILE"`
+   exists only as the literal environment-variable *name*. The seeding of the default RNG from
+   `$RANDFILE` is `apps/lib/app_rand.c`, not `randfile.c`. A transcription written from D287's
+   description would have invented a constant and looked for the seeding in the wrong unit.
+2. **`rand_uniform.c` has no `_uint64` variant.** It has exactly two functions, both `uint32`.
+3. **`randfile.c` needs `sys::{stat, fstat, fdopen, chmod, setbuf, clearerr}` and the three-argument
+   `open`** -- so D298's list of what this stratum needs from the platform was short by six names.
+4. **The authority probes `getentropy` as a *weak* symbol.** Rust has no weak-symbol mechanism, so
+   the binding is strong and the divergence is stated on the declaration: the authority links on a
+   host without `getentropy`, this crate would not. That is a real portability difference and the
+   alternative -- inventing a weak mechanism that does not work -- would have been worse than
+   recording it.
+5. **`open` is declared variadic**, because that is the `<fcntl.h>` prototype and it serves the
+   two-argument `/dev/*` call sites and the three-argument `randfile.c` site with one honest
+   signature. Integration must therefore replace the crate's existing two-argument `open` rather
+   than add beside it, which the binding's own documentation says.
+
+**What this entry does not claim.** No export is implemented, no court has landed, and none of the
+three files is compiled by the crate yet. The staging set for this stratum is now seven files and
+about 8,000 lines; the integration order is the platform layer, then the seeding arm, then the
+front, then the DRBGs.
