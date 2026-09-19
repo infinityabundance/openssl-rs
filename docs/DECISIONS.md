@@ -18364,3 +18364,83 @@ row, and every derived artefact they feed. Measured: `RT-CIPHER-MEM` **382** obs
 D276's entry names for those rows. Then 8.4 (RSA), which is the first block whose rows are
 `OSSL_OP_SIGNATURE`, `OSSL_OP_KEYMGMT`, `OSSL_OP_KDF`, `OSSL_OP_KEM`, `OSSL_OP_KEYEXCH` and
 `OSSL_OP_ASYM_CIPHER`'s.
+
+## D281 — the stitched rows' corpus arm lands, and the calling convention it needed
+
+D276 named two arms for the four published `AES-*-CBC-HMAC-*` rows: a *decomposition* it called the
+primary plane, and the pinned corpus's `evpciph_aes_stitched.txt` as a second arm. This is the
+second. It is recorded separately from the first rather than folded together because the two have
+different provenance and only one of them is independent — and the family's own note now says
+which is which.
+
+**The calling convention had to be measured, and the authority's own driver is where it is
+written.** The corpus block is
+
+```
+Cipher = AES-128-CBC-HMAC-SHA1
+Key = feffe9928665731c6d6a8f9467308308      <- the cipher key
+MACKey = cafebabefacedbaddecaf88801020304   <- a *separate* HMAC key
+IV = 101112131415161718191a1b1c1d1e1f
+TLSAAD = 90a1b2c3e4f506172803010050          <- 13 octets, last two = 0x0050 = 80
+TLSVersion = 0x0301
+Plaintext = <112 octets>
+Ciphertext = <112 octets>
+NextIV = 4dbacd1405a7b3871c3a2ab7c71c663d
+```
+
+and the two lengths being **equal** is the whole shape: this is not a record that grows. The caller
+reserves `[payload][MAC space][padding space]` itself and `EVP_CipherUpdate` carries the lot, so
+`input` and `expected` are the same 112 (and 288, and 112 …) octets and the payload length is not a
+column at all — it is the TLS AAD's last two octets, big-endian, which is where `tls1_mac` reads it.
+Passing the payload length as `inl` would produce a record with nowhere for the MAC.
+
+`test/evp_test.c` is the authority's own driver of this file, so it is the authoritative statement of
+the sequence, and the arm follows it: `EVP_CipherInit_ex2` with the key and IV, then
+`EVP_CIPHER_CTX_ctrl(EVP_CTRL_AEAD_SET_MAC_KEY)`, then `OSSL_CIPHER_PARAM_TLS_VERSION`, then
+`OSSL_CIPHER_PARAM_AEAD_TLS1_AAD` **from a copy** (the implementation rewrites the length octets and
+`evp_test.c` duplicates the AAD for exactly that reason), then `EVP_CIPHER_CTX_set_padding(ctx, 0)`,
+then one `EVP_CipherUpdate` and a final. The version parameter is load-bearing rather than
+decorative: the same `TLSAAD` appears under `0x0301` and `0x0302` in this file, and the version is
+what makes the 1.1 record carry an explicit IV.
+
+**Three new schema columns, recorded only where the corpus has them.** `correctness_vectors.py`'s
+cipher set gained `mackey_hex`, `tlsaad_hex` and `tlsversion`, and the calls TSV grew the matching
+three columns; every other family carries an empty (or zero) column, exactly as `ctsmode` and
+`xtsstandard` already work, so their committed files stay byte-identical. The TSV parser in
+`ct_cipher.c` was rewritten from nested `strchr`s to a six-column loop with the newline stripped from
+the line once, because three more columns made the nested form the kind of thing that works until a
+family leaves a middle column empty.
+
+**The family is `aead=False`, deliberately.** `aead=True` means the harness appends
+`accept || reject` to the expected value; for these rows the tag is *inside* the ciphertext and the
+driving side is a single encrypt, so there is nothing to append. And the six `-ETM` sections are
+excluded by the anchored regex `^AES-(128|256)-CBC-HMAC-SHA(1|256)$` as well as by the arm's own name
+test: their predicates are the aarch64-only `AES_CBC_HMAC_SHA_ETM_CAPABLE`, so `EVP_CIPHER_fetch`
+answers NULL for them on this host and a vector they could not answer would be a failure rather than
+a coverage gap (D276's finding, reused).
+
+**The negative control.** `CT-CIPHER` passing 3190/3190 is not by itself evidence that this arm is
+the one answering: the probe's last-resort `ct_evp` arm also drives a provider row. Disabling the
+arm's name test so the twelve fall through to `ct_evp` was run and **fails exactly those twelve and
+nothing else** — so the pass is the stitched construction's own bytes, produced with a MAC key and a
+TLS AAD that the last-resort arm cannot supply, and not a coincidental match.
+
+**What this entry does not claim.** The corpus's own title is `AES-128-CBC-HMAC-SHA1 test vectors`
+and it names no standard, so this set establishes that the candidate reproduces the mirror and not
+that the mirror reproduces a primary source. D276's decomposition arm — re-derive the record from
+the generic `AES-CBC` cipher and the `HMAC` facility, both separately courted, and compare — remains
+the primary plane and remains outstanding; the family's `note` says so where a reader of the vectors
+will meet it, not only here.
+
+**What this entry moves.** `forensics/tools/correctness_vectors.py` (the three fields, the loader,
+the TSV emitter, the emitter's three columns and the `cbchmac` family),
+`forensics/tools/phase8_courts.py`, `courts/phase8/ct_cipher.c` (the arm, the dispatcher and the
+column parser), `forensics/vectors/cbchmac.json` (12 vectors), `docs/PHASE-8-SUBPHASES.md`'s 8.3 row,
+and every derived artefact they feed. Measured: `CT-CIPHER` 3178 -> **3190/3190**; `RT-CIPHER`
+unchanged at 6939; `RT-CIPHER-MEM` unchanged at 382; `CT-DIGEST` 272/272; `libcrypto` unchanged at
+**2035 implemented**, because the family is provider registrations and no export moved.
+
+**What remains of 8.3.** The multiblock *encrypt* parameter of the four published rows — the
+family's one recorded narrowing, on `RAND_bytes_ex`
+(`docs/SECURITY_DIVERGENCE_POLICY.md` D-CBCHMAC-MULTIBLOCK-ENC-1) — and D276's decomposition arm.
+Then 8.4 (RSA).

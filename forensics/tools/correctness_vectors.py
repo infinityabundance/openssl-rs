@@ -631,6 +631,21 @@ class CipherVector:
     # plaintext twice with different expected ciphertext, once under each standard, so a driver
     # that ignored the field would have two vectors that cannot both pass.
     xtsstandard: str = ""
+    # The three columns the `AES-*-CBC-HMAC-*` "stitched" rows need, and nothing else does. They
+    # are the corpus's `MACKey`, `TLSAAD` and `TLSVersion` lines: the HMAC key is separate from
+    # the cipher key, the TLS AAD is **not** the AEAD `aad` parameter (it carries a record length
+    # the implementation rewrites), and the protocol version is what decides whether the record
+    # has an explicit IV. Empty/zero for every other family, so a family without them keeps its
+    # committed file byte-identical.
+    #
+    # **`input` for this family is the caller's whole buffer, not the payload.** The stitched
+    # calling convention is that the caller reserves `[payload][MAC space][padding]` itself and
+    # `EVP_CipherUpdate` carries the lot, so `input` and `expected` are the same length and the
+    # payload length lives in `tlsaad`'s last two bytes -- which is exactly what `evp_test.c` does
+    # (`EVP_CIPHER_CTX_set_padding(ctx, 0)` then one update over the whole vector).
+    mackey: bytes = b""
+    tlsaad: bytes = b""
+    tlsversion: int = 0
 
 
 @dataclass
@@ -693,6 +708,8 @@ def load_cipher_vector_set(path: Path) -> CipherVectorSet:
             expected = bytes.fromhex(str(raw.get("expected_hex", "")))
             aad = bytes.fromhex(str(raw.get("aad_hex", "")))
             tag = bytes.fromhex(str(raw.get("tag_hex", "")))
+            mackey = bytes.fromhex(str(raw.get("mackey_hex", "")))
+            tlsaad = bytes.fromhex(str(raw.get("tlsaad_hex", "")))
         except ValueError as exc:
             raise VectorError(f"{where}: not hex ({exc})") from exc
         vectors.append(CipherVector(
@@ -700,7 +717,9 @@ def load_cipher_vector_set(path: Path) -> CipherVectorSet:
             str(raw.get("standard", standard)),
             str(provenance.get("primary_source", primary_source)), provenance,
             aad=aad, tag=tag, ctsmode=str(raw.get("ctsmode", "")).upper(),
-            xtsstandard=str(raw.get("xtsstandard", "")).upper()))
+            xtsstandard=str(raw.get("xtsstandard", "")).upper(),
+            mackey=mackey, tlsaad=tlsaad,
+            tlsversion=int(raw.get("tlsversion", 0) or 0)))
 
     return CipherVectorSet(path=path, algorithm=algorithm, standard=standard,
                            primary_source=primary_source,
@@ -764,7 +783,8 @@ def run_cipher_court(
     call_path = work_dir / f"{name.lower()}.calls.tsv"
     call_path.write_text("".join(
         f"{i}\t{v.cipher}\t{v.operation}\t{v.key.hex()}\t{v.iv.hex()}\t{v.input.hex()}"
-        f"\t{v.aad.hex()}\t{len(v.tag)}\t{v.ctsmode}\t{v.xtsstandard}\n"
+        f"\t{v.aad.hex()}\t{len(v.tag)}\t{v.ctsmode}\t{v.xtsstandard}"
+        f"\t{v.mackey.hex()}\t{v.tlsaad.hex()}\t{v.tlsversion}\n"
         for i, _vs, v in calls), encoding="utf-8")
 
     binary = work_dir / f"{name.lower()}.candidate"
@@ -1862,6 +1882,39 @@ CIPHER_RECIPE_FAMILIES: list[CipherRecipeFamily] = [
             "inventing a construction's answer. `RT-CIPHER`'s `chachapoly.*` arms carry the "
             "record shape and the TLS path, which no corpus vector reaches."
         )),
+    # 8.3 -- the four published `AES-*-CBC-HMAC-*` "stitched" rows, and the family whose
+    # provenance needs the most care. The corpus's own title is `AES-128-CBC-HMAC-SHA1 test
+    # vectors` with no standard named, so this is **not** a published known-answer set: the
+    # construction is OpenSSL's stitched MAC-then-encrypt record, and the honest oracle is the
+    # *decomposition* -- re-derive the record from the generic `AES-CBC` cipher and the `HMAC`
+    # facility, both of which are separately courted -- with the corpus as a second arm whose
+    # provenance is stated as the mirror it is. **The six `-ETM` sections are excluded by the
+    # anchored regex**, deliberately: their capability predicates are the aarch64-only
+    # `AES_CBC_HMAC_SHA_ETM_CAPABLE`, so `EVP_CIPHER_fetch` answers NULL for them on this host and
+    # a vector they could not answer would be a failure rather than a coverage gap (D276).
+    #
+    # `aead=False` on purpose: the corpus's tag is *inside* the ciphertext for these rows and its
+    # length equals the plaintext's, so appending `accept || reject` (which `aead=True` means)
+    # would compare a tail the driver never produces.
+    CipherRecipeFamily(
+        "cbchmac", "test/recipes/30-test_evp_data/evpciph_aes_stitched.txt",
+        r"^AES-(128|256)-CBC-HMAC-SHA(1|256)$",
+        "OpenSSL's stitched MAC-then-encrypt TLS record (no published standard)",
+        "AES-{128,256}-CBC-HMAC-SHA{1,256}", (),
+        "", "",
+        note=(
+            "Candidate-only construction verification: **the corpus is the only source of these "
+            "values and it names no standard**, so this set establishes that the candidate "
+            "reproduces the mirror and not that the mirror reproduces a primary source nobody here "
+            "has read. The corpus has no `Result` line on any admitted block and no `Operation`, so "
+            "every one is an encrypt-direction known answer. The caller's buffer convention -- "
+            "`[payload][MAC space][padding]`, with the payload length in the TLS AAD's last two "
+            "bytes -- is `evp_test.c`'s, and the driver follows it including "
+            "`EVP_CIPHER_CTX_set_padding(ctx, 0)`. No independent implementation of the stitched "
+            "construction exists in the pinned court image, so no boundary vector carries an "
+            "independent oracle. `RT-CIPHER`'s `cbchmac.*` arms carry the refusal and multiblock "
+            "halves, which no corpus vector reaches."
+        )),
     # 8.3 -- GCM. The corpus is NIST SP 800-38D's own test cases plus the boringssl set; every
     # block carries an `AAD` and a `Tag`, and the probe's AEAD path prints the ciphertext, the
     # tag, and its own accept/reject answers, so a rejected tag is a committed expectation
@@ -2072,6 +2125,16 @@ def _emit_recipe_family(authority_id: str, family: CipherRecipeFamily,
         xtsstandard = block.get("xtsstandard", "").strip().upper()
         if xtsstandard:
             vec["xtsstandard"] = xtsstandard
+        # The stitched rows' three columns, recorded only where the corpus has them.
+        mackey = block.get("mackey", "").strip().lower()
+        if mackey:
+            vec["mackey_hex"] = mackey
+        tlsaad = block.get("tlsaad", "").strip().lower()
+        if tlsaad:
+            vec["tlsaad_hex"] = tlsaad
+        tlsversion = block.get("tlsversion", "").strip()
+        if tlsversion:
+            vec["tlsversion"] = int(tlsversion, 0)
         vectors.append(vec)
 
     # One independently-derived boundary per family: the empty message. No standard publishes

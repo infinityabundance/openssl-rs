@@ -7,10 +7,10 @@
     "census": {
       "names_a_file_the_authority_does_not_have": 10,
       "symbols_not_reached": 4,
-      "units_not_reached": 12
+      "units_not_reached": 13
     },
     "census_by_stratum": {
-      "8": 26
+      "8": 27
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
     "census_samples": {
@@ -44,7 +44,8 @@
         "providers/implementations/ciphers/cipher_sm4.c",
         "providers/implementations/ciphers/cipher_tdes_common.c",
         "providers/implementations/ciphers/ciphercommon_block.c",
-        "providers/implementations/ciphers/ciphercommon_hw.c"
+        "providers/implementations/ciphers/ciphercommon_hw.c",
+        "test/evp_test.c"
       ]
     },
     "checked": {
@@ -59,7 +60,7 @@
       "symbols_reached": 75,
       "unit_records": 67,
       "units_named_by_a_record": 70,
-      "units_named_by_a_row": 149,
+      "units_named_by_a_row": 150,
       "units_reached": 137
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
@@ -1878,6 +1879,14 @@
           "8.2"
         ],
         "transcribed_by": []
+      },
+      "test/evp_test.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "8.3"
+        ],
+        "transcribed_by": []
       }
     },
     "rule": "every authority translation unit and every authority-internal function named by a subphase row of a **complete** stratum must be transcribed by a crate module or named by an explicit record field; and an explicit record field naming an authority unit must have a subphase row behind it. An `in-progress` stratum's unreached names are published as a census and are not a failure, because a plan names the work a stratum will do",
@@ -2224,7 +2233,7 @@
       "transcribed_units": 172
     }
   },
-  "body_hash": "78cea9ac29f56ddfa5055e4d48d7af9859f0332eb8d9f40bb7175d3c1740b431",
+  "body_hash": "53b5232a61f05e3fc9209bd110260ca0da8b69fdddaafe9f432be378cebf4094",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -2275,7 +2284,7 @@
     {
       "name": "plan-PHASE-8-SUBPHASES",
       "path": "docs/PHASE-8-SUBPHASES.md",
-      "sha256": "97a19de00ba312546ec02f87980ba879afb0315d456817af1da6a44455eb4516"
+      "sha256": "6aaaa6eea2d6710c43a553f10860cbcc1041f09c6ff182fe8a7613669af79988"
     }
   ],
   "kind": "plan-reconciliation",

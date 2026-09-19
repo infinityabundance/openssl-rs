@@ -132,7 +132,7 @@ CORRECTNESS_COURTS: list[tuple[str, tuple[str, ...]]] = [
 CIPHER_CORRECTNESS_COURTS: list[tuple[str, tuple[str, ...]]] = [
     ("CT-CIPHER", ("aes", "rc4", "des", "rc2", "bf", "cast5", "idea", "seed", "camellia",
                    "aria", "aria_ccm", "sm4", "sm4_ccm", "sm4_xts", "wrap", "gcm", "gcm_siv",
-                   "chacha20_poly1305", "ccm", "xts", "ocb", "cts")),
+                   "chacha20_poly1305", "cbchmac", "ccm", "xts", "ocb", "cts")),
 ]
 
 # A `CT-*` court the plan names but whose primitive is not implemented yet. It is not a
