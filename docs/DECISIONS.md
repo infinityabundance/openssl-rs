@@ -16543,3 +16543,51 @@ moves **1546 -> 1576** and the pipeline reaches **25014** observations; `err-rai
 **1889 -> 1896**; the unit tests move **548 -> 558 passed, 0 failed**. `implemented[libcrypto]` stays
 **2035 / 5896** and Phase 8 stays **194 implemented / 576 open / 16 deferred** — the row and the
 primitive are not exported symbols.
+
+## D249 — `PROV_DIGEST` lands as HMAC's prerequisite, and a unit test that fetched through a poisoned store found a latent hazard
+
+HMAC is this stratum's next `OSSL_OP_MAC` row, and it is bigger than it looks: `hmac_prov.c` resolves
+a digest **name** through `provider_util.c`'s `PROV_DIGEST` half, and its TLS arm calls
+`ssl3_cbc_digest_record` from an internal libcrypto unit. Landing it in three commits rather than one
+keeps each pushable, and this is the first: the layer, without the row.
+
+**`PROV_DIGEST`, in `src/provider/util.rs`.** `ossl_prov_digest_reset`/`_copy`/`_fetch`/`_load`/
+`_load_from_params`/`_set_md`/`_md`/`_engine`, plus the `OSSL_ALG_PARAM_DIGEST` key. It is the same
+shape as D241's cipher half, and it differs in one way that matters: a digest has a **legacy
+fallback** taken only when the fetch failed *and* the looked-up method's `origin` is not
+`EVP_ORIG_GLOBAL`. A global `EVP_MD` belongs to the built-in table, and handing it out would make the
+row's behaviour depend on the process-wide table rather than on the fetch -- the authority's own
+comment on that line is `Do not use global EVP_MDs`. The `md`/`alloc_md` split is the other: only a
+*fetched* method may be freed, so `_set_md` takes ownership by writing both fields and `_load` writes
+`alloc_md` only through `_fetch`.
+
+It sits in its own `prov_digest` module with one `#[allow(dead_code)]` whose comment names the caller
+that will land, because nothing calls it yet and repeating that attribute on nine items would bury
+the reason. **The next commit removes it**, and the row is what makes the layer worth having.
+
+**A latent hazard, found by being the first test to fetch through the store.** The four new unit
+tests call `EVP_MD_fetch`, which is the first time a *unit test* has performed a provider-backed
+fetch after `src/provider/activate.rs`'s fake provider was registered. That fake's
+`p_query_operation` returned `table_marker()`, which was `(&PROVCTX as *const u8).cast::<OsslParam>()`
+-- **misaligned** for `OsslAlgorithm` and with **no terminating row** -- on the stated argument that
+nothing dereferenced it. `evp_generic_fetch` walked that address as an algorithm table and the test
+binary aborted:
+
+```text
+misaligned pointer dereference: address must be a multiple of 0x8 but is 0x55825780f799
+```
+
+The four tests passed in isolation and the whole suite passed before them, so this was invisible
+until a fetch followed the fake provider in the same process. It is repaired at the fake rather than
+at the consumer: the marker is now a one-row `OsslAlgorithm` table whose first pointer is NULL, which
+is still a distinguishable address for every assertion -- they compare it and never read it -- and
+which terminates an algorithm-table walk *and* a params walk, because `OsslAlgorithm`'s first field
+is a NULL `algorithm_names` for a terminator and `OsslParam`'s is a NULL `key` for one. That is the
+second time this project has found a test double that was safe only as long as nothing looked at it,
+and the lesson is the same as D240's: an invariant that holds because nothing has tried is not an
+invariant.
+
+**What this entry moves.** Nothing that counts work: `implemented[libcrypto]` stays **2035 / 5896**,
+Phase 8 stays **194 implemented / 576 open / 16 deferred**, the provider census stays **996 rows /
+111 implemented / 199 open / 686 deferred**, the coverage atlas stays **111 / 111 / 0**, and no court
+observation moves. The unit tests move **558 -> 562 passed, 0 failed**.
