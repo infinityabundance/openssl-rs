@@ -10543,6 +10543,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-MAC"
             ],
             "symbol": "EVP_MAC_CTX_get_block_size"
@@ -10550,6 +10551,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-MAC"
             ],
             "symbol": "EVP_MAC_CTX_get_mac_size"
@@ -10620,6 +10622,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CIPHER",
               "RT-EVP-MAC"
             ],
             "symbol": "EVP_MAC_finalXOF"
@@ -15508,7 +15511,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "35ef37b4704a2a6aef3e8ce197568d1942a6068b0b5d88d73ecbd7670081e935"
+      "sha256": "a3e326ac46ff950cbde94afc5191831e447b58e869f8a8c2a044f2606f0a5aab"
     },
     {
       "name": "symbol-ownership",
@@ -15563,7 +15566,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "85c3efa49384d15e665617a4591058ac1b0bb785e34cc491de811602e32060e4"
+      "sha256": "701d9f4051e921ba32cd4ae31f620bbfcdfe3cdd9c98c77822d029d14fa21b88"
     },
     {
       "name": "phase7-courts",
@@ -15573,12 +15576,12 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "a8bb76761c0ee2742a678d381e02614bf319c6d388c60b58e1d86f7a71a87017"
+      "sha256": "8bc5142e36a3a7c43ddc2553a09587f7ff4209b7c517de27fcd2eb33ed2e17a4"
     },
     {
       "name": "phase8-courts",
       "path": "artifacts/phase8/COURTS.json",
-      "sha256": "a1688f7fde6691d02944b269ea661d172c4308f996f9c67ed7d409c7e22070cf"
+      "sha256": "c657b543b752be0a848775fc498664e63413472e3796df4950929ac4296976a1"
     }
   ],
   "kind": "court-coverage",

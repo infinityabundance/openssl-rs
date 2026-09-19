@@ -17143,3 +17143,78 @@ Rustifying an authority name for internal style silently converts a *present* de
 row order and the two probe arms are part of `RT-CIPHER`'s **4251** and the provider census's **115**,
 and the rename changes no count at all. Recorded because each is a class, and because the next row will
 meet all three.
+
+## D260 — the `KMAC-128` and `KMAC-256` rows land, and four of their raise sites are unreachable by arithmetic
+
+Two rows for one implementation, exactly as the authority builds them: `kmac_prov.c`'s
+`IMPLEMENT_KMAC_TABLE(size, funcname, newname)` is invoked twice, and the only difference between
+`ossl_kmac128_functions` and `ossl_kmac256_functions` is the `NEWCTX` entry, which selects the digest
+the row resolves its `KECCAK-KMAC-*` method from. With them, `deflt_macs[]`'s nine rows are eight
+landed and one -- GMAC -- a measured Phase 9 hand-off. The provider census moves **115 -> 117**
+implemented / **195 -> 193** open, coverage stays **117 / 117 / 0**, the err-site table moves
+**1922 -> 1943** (the twenty-one sites in `kmac_prov.c`), `RT-CIPHER` moves **4251 -> 4501** and the
+pipeline total **27827 -> 28077**. Nothing else moves: this unit has no `libcrypto` symbol, so
+`implemented[libcrypto]` stays 2035/5896 and Phase 8 stays 194/576/16. Unit tests 577 -> 582.
+
+**The row is a shell over the digest layer, not over Keccak.** The file's own comment says KMAC is
+"implemented as a hash, which we can use instead of reimplementing the EVP functionality with direct
+use of keccak_mac_init() and friends" -- so `kmac_init` runs `EVP_DigestInit_ex` on the
+`KECCAK-KMAC-128`/`-256` digest this crate already publishes, and the whole SP 800-185 construction
+rides on that digest's cSHAKE parameter block and its XOF squeeze. What the unit adds is the encoding
+layer (`encode_string`, `right_encode`, `bytepad`), the state machine, and the parameterisation. It is
+the first MAC row in the crate to drive an `EVP_MD_CTX` from a provider row, which is why
+`ossl_prov_digest_load_from_params` -- landed in Phase 7 with no caller -- retires its `dead_code`
+allow here.
+
+**Four rows of `deflt_macs[]` are now absent-or-present with the table's order intact.** The census is
+what caught the transposition D259 records, so the two new rows were added *between* HMAC and SIPHASH
+rather than appended, and the unit test's expected sequence is read off `defltprov.c:334-353` rather
+than off the array.
+
+**Five of the unit's twenty-one raise sites are unreachable by configuration** (288, 446, 574, 598,
+682), because `FIPS_MODULE` is undefined and the generated decoders guard the `fips-indicator`,
+`fips-key-check` and `fips-no-short-mac` keys behind `# if defined(FIPS_MODULE)`. The consequence a
+caller can see is asymmetric and worth stating: passing `fips-key-check` twice is **silently ignored**
+on both sides rather than refused, so `repeated_param_site` must *not* list those keys -- listing them
+would invent a raise the authority does not make.
+
+**And four more are unreachable by arithmetic**, which is a different claim and is why they are
+recorded rather than left as a transcribed `ERR_raise` nobody can reach:
+
+- `:351`'s `ERR_R_INTERNAL_ERROR` needs `bytepad(NULL, out_len, ...)` to fail, and the NULL-`out`
+  branch fails only when `out_len` is NULL, which it never is here.
+- `:741`'s `PROV_R_LENGTH_TOO_LARGE` in `right_encode` needs `get_encode_size(bits) >= 4`, and `size`
+  is capped at `KMAC_MAX_OUTPUT_LEN` = 2097151, whose bit length times eight is 16777208 < 2^24, so
+  the encoder never leaves three bytes into a four-byte buffer.
+- `:778`'s in `encode_string` needs `1 + len + in_len > 516`, and both callers bound `in_len` first --
+  `custom` over `KMAC_MAX_CUSTOM` = 512 and the key over `KMAC_MAX_KEY` = 512 -- giving a maximum of
+  `1 + 2 + 512` = 515. The authority leaves exactly one byte of slack here, and its own comment
+  explains why: the header was sized for a length that the byte-counting encoder never produces.
+- `:811`'s `ERR_R_PASSED_NULL_PARAMETER` needs both pointers NULL, and every call site passes one.
+
+**The declared parameter types and the setters disagree in two places, and both are transcribed.**
+The gettable list declares `block-size` as `OSSL_PARAM_size_t` while `kmac_get_ctx_params` writes it
+with `OSSL_PARAM_set_int` -- HMAC's row's mismatch, in the same direction -- and the settable list
+declares `xof` as `OSSL_PARAM_int` where every other numeric key in the row is `size_t`. The second is
+observable: an `xof` descriptor of any other numeric type is refused by the params layer, with
+`ERR_LIB_CRYPTO`'s error and not the provider's, so a caller that hands a `size_t` gets a refusal from
+a different library than it would for `size`. The probe observes that arm, and the queue, in both
+directions.
+
+## D261 — the probe's `custom` arm was inert, and it is the third instance of one class
+
+**Separately: the probe's customisation-string arm was inert when it was written.** It called
+`EVP_MAC_CTX_set_params(custom)` *after* `EVP_MAC_init`, and `kmac_init` consumes the custom when it
+bytepads the digest's prefix -- so nothing after the init can change the tag. Every "different custom"
+case came out byte-identical to the default one, which *looked* like coverage and was not; the only
+difference on the transcript was the message length. The authority states the rule in words at
+`kmac_prov.c:441-447` ("All other params should be set before init()"), so the source was readable;
+what made this the **third** appearance of the class after D259's two is that the observation still
+looked like an observation. The arm now passes the descriptor to `EVP_MAC_init`, the three SP 800-185
+fixed-output samples now produce their published tags, and the post-init set is kept as an *inverted*
+arm that asserts the tag is unchanged. The general rule this crate now has three instances of: **an
+arm must be checked against the authority's own text for which call reaches the code it names, not
+merely for whether it compiles and produces a value.** The stronger form is what the NIST vectors
+below supply: an inert arm against a *published* expected value fails loudly instead of silently, and
+that is the argument for a construction-vector plane beside the differential one rather than for
+more differential arms.

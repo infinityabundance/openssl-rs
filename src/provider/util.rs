@@ -400,13 +400,13 @@ pub(crate) mod prov_digest {
     /// `int ossl_prov_digest_load_from_params(PROV_DIGEST *pd, const OSSL_PARAM params[],
     /// OSSL_LIB_CTX *ctx)` — `provider_util.c:215-224`.
     ///
-    /// **No caller in this profile yet.** Its four authority callers are `kmac_prov.c` (this
-    /// stratum's, still `open`) and the three KDF rows `hkdf.c`, `pvkkdf.c` and `pbkdf2.c` (Phase
-    /// 10's).
+    /// **Its first caller in this profile is the `KMAC-128`/`KMAC-256` row**, which uses it in
+    /// `kmac_fetch_new` to resolve the digest the row is defined over from a one-entry `digest`
+    /// descriptor; the remaining callers are the three KDF rows `hkdf.c`, `pvkkdf.c` and `pbkdf2.c`
+    /// (Phase 10's).
     ///
     /// # Safety
     /// `pd` is writable; `params` is a terminated array; `ctx` is NULL or live.
-    #[allow(dead_code)] // caller: the `KMAC-128`/`KMAC-256` rows, and the Phase 10 KDF rows
     pub(crate) unsafe fn ossl_prov_digest_load_from_params(
         pd: *mut ProvDigest,
         params: *const OsslParam,
