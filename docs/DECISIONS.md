@@ -19237,3 +19237,70 @@ through the fetch-replacement path D290 established, not merely field-compared. 
 prove is that the underlying digest primitives are correct, which is 8.1's `CT-DIGEST` and already
 has its own corpus. The distinction matters here more than usual: thirteen of these arms would pass
 on a correct `EVP_MD` object over a broken SHA-3, and the point of the arm is the object.
+
+## D294 -- Phase 9's census is measured, and it is 95 exports spanning ten earlier strata's modules
+
+Phase 9.0, the plan and the census. The plan is written and is carried on this branch in the
+staging area at `court/phase9/PHASE-9-SUBPHASES.md.txt`; it is not landed under `docs/` yet, and
+the reason is 4.4 below -- `phase_state.py`'s gate refuses any stratum that has a plan, a ledger or
+a court file on disk without a `STRATUM_EVIDENCE` row, and a row cannot be added before the
+provider-state projection is fixed. This entry records the measurement the plan rests on and three
+corrections to D287's scope, which was written from the dependency chain rather than from the atlas.
+
+**The working set is 95 exports, and only 25 of them are `rand.h`'s.** The ownership atlas assigns
+phase 9 exactly 25 exports, every one of them declaring `rand.h`. The other **70 are incoming
+hand-offs**, read from the other ledgers' `owning_phase == 9` rows rather than listed by hand: one
+from phase 4 (`BIO_f_nbio_test`), thirty-one from phase 5 (the BN random, blinding, prime-generator
+and primality families), twelve from phase 7 (`EVP_SealInit`, `EVP_CIPHER_CTX_rand_key`, the five
+`PEM_*` file-encryption helpers, and four more), and twenty-six from phase 8 (the four key types'
+constructors and generators, the RSA blinding pair, and the six RSA padding functions whose bytes
+are random). The shape is the finding: **Phase 9's work lives in ten earlier strata's modules**, so
+there is no `src/rand/`-only reading of this stratum. This is the same mechanism D193's `received_from_phase`
+already carries in every ledger, applied to a stratum whose receipts outnumber its own header four
+to one.
+
+**Fifteen provider registration rows, counted by `(provider, operation)`:** default/cipher 8 (the
+three AES-GCM, the three ARIA-GCM, SM4-GCM and DES3-WRAP), default/RAND 5 (the three DRBGs, SEED-SRC
+and TEST-RAND), default/MAC 1 (GMAC), base/RAND 1 (SEED-SRC).
+
+**Three corrections to D287, each measured against the admitted tree rather than argued.**
+
+1. **There is no `providers/implementations/rands/crngt.c`.** D287 named it as 9.5's unit. The file
+does not exist in 3.6.4; the continuous random number generator test is
+`providers/implementations/rands/fips_crng_test.c` (`RCT_test`/`APT_test`, dispatch symbol
+`ossl_crng_test_functions`), and `implementations.h` keeps only a dead `extern` for the old name.
+   Recorded rather than silently substituted, because a later reader following D287 to that path
+   would conclude a unit had gone missing.
+2. **The `base` provider's single RAND row is SEED-SRC, not the test RNG.** D287 says "the `base`
+   provider's single RAND row is the test RNG". `baseprov.c`'s `base_rands[]` publishes SEED-SRC and
+   nothing else; TEST-RAND is `defltprov.c`'s. The census's own count agrees, which is what makes
+   this a correction rather than a second opinion.
+3. **None of the six RAND rows carries an alias or an OID.** Each declares one `algorithm_names`
+   string and nothing else, so the census's alias-sequence identity check is trivially satisfied
+   for them and their exactness rests on the dispatch association and the subsequence-order checks
+   instead. That is worth writing down because those two checks are the ones a reader would skip.
+
+**The plan, staged rather than landed, and the precondition 9.1's commit carries.**
+`gen_provider_algorithms.py` derives each row's state as `"open" if owning_phase == 8 else
+"deferred"` -- a stratum-8-relative statement. Adding phase 9 to `phase_state.py`'s
+`STRATUM_EVIDENCE` with that line unchanged would reclassify **phase 8's eleven open cipher rows as
+`deferred`**, letting phase 8 reach `open_in_this_stratum == 0` with eleven provider rows
+never published. So 9.0 lands the census and stages the plan; the state must first become a
+projection over the stratum being judged (an `implementation_state` of
+`implemented`/`unimplemented` beside `owning_phase`, with `open` and `deferred` derived), and that
+refactor lands in 9.1's commit, the one that activates the stratum. This is the third instance of
+the class D237 and D245 each recorded from a different direction: a stored phase-relative state is
+a statement about the day it was written.
+
+**Staged and preserved, not landed.** Three transcriptions were prepared for 9.2-9.5 and are
+carried on this branch force-added out of the ignored `court/` scratch path
+(`court/phase9/rand_lib.rs.txt` 2,185 lines, `court/phase9/drbg.rs.txt` 4,795,
+`court/phase9/seed_src.rs.txt` 2,389). They are deliberately **not** integrated and **not**
+watered down to compile: the DRBG rows cannot be courted before the framework they dispatch into
+exists, and `RAND_bytes_ex` cannot be written before the DRBG it fetches. They are also the
+measurement D287 could not make -- the seed-source transcription is what found 4.1 and 4.2 above.
+
+**What this entry does not claim.** No export is implemented. No Phase 9 court exists, and
+`phase-state.json` reports the stratum `not-started`, which is correct until 9.1's commit activates
+it. The subphase table in the staged plan is derived from the dependency chain and the census, and
+the census is what will correct it as each subphase lands -- the way D285 corrected D283's.
