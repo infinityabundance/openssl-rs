@@ -148,6 +148,24 @@ pub(crate) const S_IRWXG: mode_t = 0o70;
 /// `S_IRWXO` — `<sys/stat.h>`, `07` octal.
 pub(crate) const S_IRWXO: mode_t = 0o7;
 
+// The file-type mask and the regular-file bit, added by D312 with `randfile.c`. `S_ISREG(m)` is
+// `((m) & S_IFMT) == S_IFREG` in `<sys/stat.h>`; `randfile.c:57-58` defines exactly that fallback
+// itself when the platform has no macro, so the crate's `s_isreg` below is the header's own test
+// spelled once rather than a second interpretation of it.
+
+/// `S_IFMT` — `<sys/stat.h>`, `0170000` octal: the file-type bits of `st_mode`.
+pub(crate) const S_IFMT: mode_t = 0o170000;
+/// `S_IFREG` — the type bit of a regular file.
+pub(crate) const S_IFREG: mode_t = 0o100000;
+/// `S_IFDIR` — the type bit of a directory.
+pub(crate) const S_IFDIR: mode_t = 0o040000;
+
+/// `S_ISREG(m)` — `<sys/stat.h>`.
+#[inline]
+pub(crate) const fn s_isreg(mode: mode_t) -> bool {
+    mode & S_IFMT == S_IFREG
+}
+
 /// `FD_SETSIZE` — `<sys/select.h>`'s alias of `__FD_SETSIZE`, `1024`
 /// (`<bits/typesizes.h>`). `c_int` because the call site compares a descriptor
 /// to it directly: `fd < FD_SETSIZE` (`rand_unix.c:470`).
@@ -327,6 +345,18 @@ extern "C" {
     #[link_name = "fstat"]
     fn fstat_raw(fd: c_int, buf: *mut Stat) -> c_int;
 
+    /// `int stat(const char *, struct stat *)` — `<sys/stat.h>`, the path form of the same entry
+    /// point. Added by D312 for `randfile.c`'s `RAND_write_file`, which refuses to overwrite a
+    /// path that exists and is not a regular file. Called through the safe wrapper below.
+    #[link_name = "stat"]
+    fn stat_raw(path: *const c_char, buf: *mut Stat) -> c_int;
+
+    /// `int chmod(const char *, mode_t)` — `<sys/stat.h>`. Added by D312: `RAND_write_file`
+    /// tightens a new seed file to `0600` **after** writing it, and the authority's own comment
+    /// says why the order matters rather than the call.
+    #[link_name = "chmod"]
+    fn chmod_raw(path: *const c_char, mode: mode_t) -> c_int;
+
     /// `int shmget(key_t, size_t, int)` — `<sys/shm.h>`. `key_t` is
     /// `__S32_TYPE`, i.e. `int` (`<bits/typesizes.h>`), which is why the key is
     /// declared `c_int` rather than a distinct alias. Called through the safe
@@ -390,6 +420,25 @@ pub(crate) fn fstat(fd: c_int, buf: &mut Stat) -> c_int {
     unsafe { fstat_raw(fd, buf) }
 }
 
+/// `int stat(const char *, struct stat *)`, with the buffer as a reference.
+///
+/// # Safety
+/// `path` must be NUL-terminated and live for the call; the kernel reads it and writes only
+/// through `buf`.
+pub(crate) unsafe fn stat(path: *const c_char, buf: &mut Stat) -> c_int {
+    // SAFETY: `path` is NUL-terminated per the contract and `buf` is live and exclusive.
+    unsafe { stat_raw(path, buf) }
+}
+
+/// `int chmod(const char *, mode_t)`.
+///
+/// # Safety
+/// `path` must be NUL-terminated and live for the call.
+pub(crate) unsafe fn chmod(path: *const c_char, mode: mode_t) -> c_int {
+    // SAFETY: `path` is NUL-terminated per the contract; `mode` is a scalar.
+    unsafe { chmod_raw(path, mode) }
+}
+
 /// `int shmget(key_t, size_t, int)`.
 pub(crate) fn shmget(key: c_int, size: size_t, shmflg: c_int) -> c_int {
     // SAFETY: every argument is a scalar; no pointer is passed to the kernel.
@@ -449,6 +498,51 @@ mod tests {
     //! to the header or the call site it came from.
 
     use super::*;
+
+    /// `stat` fills the layout this module declares, and `S_ISREG` reads the type bits out of it.
+    ///
+    /// **This is the runtime half of the layout proof.** `the_stat_layout_is_the_platforms` below
+    /// pins the offsets against a table measured from the container's own headers; this test makes
+    /// the *kernel* write through them, so a struct whose field types disagree with the kernel's
+    /// would show up as a mode that is not a directory rather than as a plausible number. The path
+    /// form (`stat`) is used rather than `fstat` alone because D312 landed exactly that call for
+    /// `randfile.c`, and a declaration of `stat` that never ran would be an unverified ABI.
+    #[test]
+    fn stat_reads_the_file_type_through_the_declared_layout() {
+        let mut sb = Stat {
+            st_dev: 0,
+            st_ino: 0,
+            __pad_nlink: 0,
+            st_mode: 0,
+            __pad_uid_gid: [0; 12],
+            st_rdev: 0,
+            st_size: 0,
+            __pad_tail: [0; 88],
+        };
+        // SAFETY: the path is a NUL-terminated literal and `sb` is a live, exclusively borrowed
+        // `Stat`, which is the whole precondition.
+        assert_eq!(unsafe { stat(c"/".as_ptr(), &mut sb) }, 0, "stat(\"/\")");
+        assert!(sb.st_mode & S_IFMT == S_IFDIR, "/ is a directory");
+        assert!(!s_isreg(sb.st_mode), "and not a regular file");
+
+        // SAFETY: as above.
+        if unsafe { stat(c"/etc/hostname".as_ptr(), &mut sb) } == 0 {
+            assert!(s_isreg(sb.st_mode), "/etc/hostname is a regular file");
+            assert!(sb.st_size > 0, "st_size reads through the declared offset");
+        }
+    }
+
+    /// `S_ISREG` is the header's test, and the permission bits are not part of the type.
+    #[test]
+    fn the_file_type_test_is_the_headers() {
+        assert_eq!(S_IFMT, 0o170000);
+        assert_eq!(S_IFREG, 0o100000);
+        assert_eq!(S_IFDIR, 0o040000);
+        assert!(s_isreg(S_IFREG));
+        assert!(s_isreg(S_IFREG | 0o600));
+        assert!(!s_isreg(S_IFDIR));
+        assert!(!s_isreg(S_IFDIR | 0o777));
+    }
 
     /// The constants are the headers' values, not plausible ones. A single wrong octal in
     /// `shmget`'s flag word would create a segment with the wrong permissions and still succeed.

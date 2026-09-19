@@ -85,6 +85,22 @@ extern "C" {
     pub fn ferror(f: *mut FILE) -> c_int;
     /// `int setvbuf(FILE *, char *, int, size_t)`.
     pub fn setvbuf(f: *mut FILE, buf: *mut c_char, mode: c_int, size: size_t) -> c_int;
+    /// `void setbuf(FILE *, char *)`.
+    ///
+    /// `randfile.c` calls `setbuf(in, NULL)` before reading a seed file, which is the short form of
+    /// `setvbuf(in, NULL, _IONBF, 0)`. Declared because the authority calls the short form and the
+    /// observable is the buffering change, not the spelling.
+    pub fn setbuf(f: *mut FILE, buf: *mut c_char);
+    /// `void clearerr(FILE *)`.
+    ///
+    /// `RAND_load_file` clears the sticky end-of-file/error flags after a short read so a second
+    /// call re-reads rather than returning immediately.
+    pub fn clearerr(f: *mut FILE);
+    /// `FILE *fdopen(int, const char *)`.
+    ///
+    /// `RAND_write_file` opens with `open(2)` so it can pass `O_CREAT` mode bits, then wraps the
+    /// descriptor -- which is why the file is never created world-readable even briefly.
+    pub fn fdopen(fd: c_int, mode: *const c_char) -> *mut FILE;
 
     /// `ssize_t read(int, void *, size_t)`.
     pub fn read(fd: c_int, buf: *mut c_void, n: size_t) -> isize;
