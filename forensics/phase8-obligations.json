@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 759,
       "deferred_to_later_phase": 26,
-      "implemented": 235,
-      "open_in_this_stratum": 525,
+      "implemented": 236,
+      "open_in_this_stratum": 524,
       "owned": 786,
       "received_by_handoff": 27
     },
@@ -1369,6 +1369,7 @@
       "MDC2_Final",
       "MDC2_Init",
       "MDC2_Update",
+      "PKCS1_MGF1",
       "RC2_cbc_encrypt",
       "RC2_cfb64_encrypt",
       "RC2_decrypt",
@@ -4243,12 +4244,6 @@
         "declaring_header": "rsa.h",
         "module": "src/rsa/mod.rs",
         "received_from_phase": null,
-        "symbol": "PKCS1_MGF1"
-      },
-      {
-        "declaring_header": "rsa.h",
-        "module": "src/rsa/mod.rs",
-        "received_from_phase": null,
         "symbol": "RSAPrivateKey_dup"
       },
       {
@@ -4899,12 +4894,12 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "c42602a63a813563b377f8f3564f46fa04273f4e9ecf44fb4e7f34fa9545d3b1"
+      "sha256": "e4113297707c56799a6f4c06373525fdd2979459e12a128702ef7861b882e832"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "42476b8121fef1e7340a5aafd9f90609ef0e9e31fc4b44aac1b09de139f6c6ee"
+      "sha256": "ad42d3215afea8e28de956c74c9655d9d09dc38810f80c65633c6caf0b1097b7"
     }
   ],
   "kind": "phase8-obligations",
