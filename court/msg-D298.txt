@@ -1,0 +1,40 @@
+rand: the pool and the provider seeding units are staged, and four more of D287's unit names are corrected (D298)
+
+Two more transcriptions for Phase 9's stack, staged and not integrated, force-added out
+of the ignored court/ scratch path so the preparation survives:
+
+  court/phase9/rand_pool.rs.txt       1,256 lines   crypto/rand/rand_pool.c and the
+                                                    seeding arm that holds the pool's
+                                                    acquisition
+  court/phase9/provider_common.rs.txt   660 lines   providers/common/provider_seeding.c
+                                                    and provider_util.c's MAC half
+
+Neither is watered down to compile, and neither is integrated: the pool cannot be
+courted before the front that calls it exists.
+
+Four corrections to D287's unit names, all measured against the admitted tree:
+
+1. `ossl_pool_acquire_entropy`, `ossl_rand_pool_init`, `_cleanup` and
+   `_keep_random_devices_open` are NOT in crypto/rand/rand_pool.c. They live in
+   providers/implementations/rands/seeding/rand_unix.c, and the acquisition function
+   there has two build arms on this profile (OPENSSL_RAND_SEED_OS -> GETRANDOM +
+   DEVRANDOM). D287 named the pool's file for the whole unit.
+2. There is no `ossl_rand_pool_add_additional_data` in 3.6.4, and no fork-id or
+   discriminator logic in the nonce function. The real name is
+   `ossl_pool_add_nonce_data` and its content is pid, tid and time; fork safety lives
+   in drbg.c's `drbg->fork_id` comparison against `openssl_get_fork_id()`.
+3. `providers/common/provider_seeding.c` is the unit that holds the four up-calls
+   (`ossl_prov_get_entropy`/`_cleanup_entropy`/`_get_nonce`/`_cleanup_nonce`) the DRBG
+   framework reaches through the provider context. D287's table names neither this file
+   nor those four names, and the framework cannot be written without them.
+4. `src/provider/util.rs` already transcribes thirteen of provider_util.c's functions
+   and was missing exactly two that the MAC row needs: `ossl_prov_set_macctx` and
+   `ossl_prov_macctx_load`. Recorded because the file looked complete.
+
+Also measured: the eight `OSSL_FUNC_{GET,CLEANUP}_{USER_,}ENTROPY` and `_NONCE`
+dispatch ids are unpublished, and `src/context/core_dispatch.rs`'s own module note
+already records them as Phase 9's. Neither `provider_seeding.c` nor
+seeding/rand_unix.c calls ERR_raise, so neither joins the error-coordinate covered set
+that D297 extended -- the rule the list already states for rand_uniform.c.
+
+Staged only. No export is implemented and no court has landed.

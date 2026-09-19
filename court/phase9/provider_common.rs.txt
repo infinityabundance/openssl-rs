@@ -1,0 +1,660 @@
+//! Phase 9 staging — the two `providers/common/` units the RAND work reaches, transcribed from
+//! the admitted authority `openssl-3.6.4-production` (profile: `FIPS_MODULE` undefined,
+//! `OPENSSL_NO_ENGINE` undefined, `OPENSSL_NO_CRYPTO_MDEBUG` undefined, `no-trace`).
+//!
+//! **This is a `.rs.txt` hand-integration staging file, not a compiled module.** It is written to
+//! the crate's conventions so that integration is a move rather than a rewrite. It deliberately
+//! does *not* compile: the handful of types and dispatch ids the crate does not yet have are
+//! declared locally and listed in the `MISSING` inventory at the bottom. Nothing here defines a
+//! crate symbol that is supposed to exist elsewhere.
+//!
+//! ## Sources read, in full
+//!
+//! * `providers/common/provider_seeding.c` (131 lines) — **Section 1**. The four up-calls a
+//!   provider's seed source uses to reach the core's entropy, plus
+//!   `ossl_prov_seeding_from_dispatch`, which installs them from the core's `OSSL_DISPATCH`.
+//! * `providers/common/provider_util.c` (365 lines) — **Section 2**, the MAC-context half only.
+//!   The cipher and digest halves are already transcribed in `src/provider/util.rs`; this file
+//!   transcribes `ossl_prov_set_macctx` and `ossl_prov_macctx_load`, which that file does not
+//!   have, because `drbg_hmac.c` calls `ossl_prov_macctx_load` directly.
+//! * `providers/common/include/prov/provider_util.h` and
+//!   `providers/implementations/include/prov/seeding.h` — signatures only; both are reproduced
+//!   verbatim below.
+//! * `include/crypto/evp.h:987-995` — `evp_rand_can_seed` / `evp_rand_get_seed` /
+//!   `evp_rand_clear_seed`. These are the *consumers* the seeding up-calls exist to feed: the
+//!   DRBG's outbound seed path. They live in `crypto/evp/evp_rand.c`, are internal, and are
+//!   deliberately absent from `src/evp/rand.rs` (see its module doc, "What is not here"); they
+//!   are recorded as Phase 9 deferrals in `forensics/prerequisites.json`. They are **not** part
+//!   of either unit transcribed here and are not restated.
+//!
+//! ## What is *not* re-transcribed, and why
+//!
+//! `src/provider/util.rs` already contains every other function `provider_util.c` defines that
+//! has a caller in this crate:
+//!
+//! | `provider_util.c` | in `src/provider/util.rs` |
+//! |---|---|
+//! | `ossl_prov_cipher_reset`, `_copy`, `_load`, `_load_from_params`, `_cipher`, `_engine` | yes |
+//! | `set_propq`, `set_engine` (file statics) | yes |
+//! | `ossl_prov_digest_reset`, `_copy`, `_fetch`, `_load`, `_load_from_params`, `_set_md`, `_md`, `_engine` | yes (`prov_digest` submodule) |
+//! | `ossl_prov_macctx_load`, `ossl_prov_set_macctx` | **no — Section 2 below** |
+//! | `ossl_prov_macctx_load_from_params` | no — not reached by the RAND work (see below) |
+//! | `ossl_prov_cache_exported_algorithms`, `ossl_prov_memdup` | no — D117 residual |
+//!
+//! `ossl_prov_macctx_load_from_params` is a sibling *caller* of `ossl_prov_macctx_load`, not a
+//! helper of it, and no RAND unit calls it: `drbg_hmac.c.in:525,533` passes the located `mac`
+//! descriptor to `ossl_prov_macctx_load` directly. It is therefore out of scope here, and with
+//! it goes `OSSL_ALG_PARAM_MAC`, which only it needs.
+//!
+//! SPDX-License-Identifier: Apache-2.0
+
+use core::ffi::{c_char, c_int, c_uchar, c_void};
+use core::ptr;
+
+// ---- Section 1 imports -----------------------------------------------------------------------
+use crate::context::dispatch::{entry_function, OsslDispatch, OSSL_DISPATCH_END};
+use crate::provider::ctx::{ossl_prov_ctx_get0_handle, ProvCtx};
+
+// ---- Section 2 imports -----------------------------------------------------------------------
+use crate::evp::mac::{
+    EVP_MAC_CTX_free, EVP_MAC_CTX_new, EVP_MAC_CTX_set_params, EVP_MAC_fetch, EVP_MAC_free,
+    EvpMacCtx,
+};
+use crate::params::{
+    OSSL_PARAM_construct_end, OSSL_PARAM_construct_utf8_string, OSSL_PARAM_get_utf8_string_ptr,
+    OsslParam,
+};
+// The MAC keys are the algorithm keys under different spellings (`core_names.h:339,342,351`), so
+// the crate already publishes all four. The aliases are named rather than repeated:
+//   `OSSL_MAC_PARAM_DIGEST`     == `OSSL_ALG_PARAM_DIGEST`
+//   `OSSL_MAC_PARAM_CIPHER`     == `OSSL_ALG_PARAM_CIPHER`
+//   `OSSL_MAC_PARAM_PROPERTIES` == `OSSL_ALG_PARAM_PROPERTIES`
+use crate::provider::util::{
+    OSSL_ALG_PARAM_CIPHER, OSSL_ALG_PARAM_DIGEST, OSSL_ALG_PARAM_ENGINE, OSSL_ALG_PARAM_PROPERTIES,
+};
+
+// =============================================================================================
+// SECTION 1 — `providers/common/provider_seeding.c`
+// =============================================================================================
+//
+// The core hands a provider its entropy and nonce through eight callbacks in the provider's `in`
+// table. `ossl_prov_seeding_from_dispatch` records them in file statics; the four up-calls below
+// are what a seed source (`seed_src.c`, `test_rng.c`, `fips_crng_test.c`) calls to obtain and
+// return a buffer. The *asymmetry* is the whole shape: entropy and nonce are acquired through
+// one call and released through another, and the release must reach the same callback family the
+// acquire used, which is why each family has its own pair of statics rather than one.
+//
+// The delegation order is contract and is the reason a "user" callback shadows a plain one:
+// `c_get_user_entropy` is consulted *first*, then `c_get_entropy`; the same for nonces. The
+// cleanup pair follows the same precedence, so a buffer handed out by `get_user_entropy` is
+// returned to `cleanup_user_entropy`. The `set_func` check below is what refuses a second
+// dispatch table that names the same id with a *different* function — the "one fips.so shared by
+// two libcryptos" sanity check the authority's comment describes.
+
+/// `OSSL_FUNC_GET_USER_ENTROPY` — `core_dispatch.h:179`, id 98.
+const OSSL_FUNC_GET_USER_ENTROPY: c_int = 98;
+/// `OSSL_FUNC_GET_USER_NONCE` — `core_dispatch.h:180`, id 99.
+const OSSL_FUNC_GET_USER_NONCE: c_int = 99;
+/// `OSSL_FUNC_GET_ENTROPY` — `core_dispatch.h:188`, id 101.
+const OSSL_FUNC_GET_ENTROPY: c_int = 101;
+/// `OSSL_FUNC_CLEANUP_ENTROPY` — `core_dispatch.h:189`, id 102.
+const OSSL_FUNC_CLEANUP_ENTROPY: c_int = 102;
+/// `OSSL_FUNC_GET_NONCE` — `core_dispatch.h:190`, id 103.
+const OSSL_FUNC_GET_NONCE: c_int = 103;
+/// `OSSL_FUNC_CLEANUP_NONCE` — `core_dispatch.h:191`, id 104.
+const OSSL_FUNC_CLEANUP_NONCE: c_int = 104;
+/// `OSSL_FUNC_CLEANUP_USER_ENTROPY` — `core_dispatch.h:177`, id 96.
+const OSSL_FUNC_CLEANUP_USER_ENTROPY: c_int = 96;
+/// `OSSL_FUNC_CLEANUP_USER_NONCE` — `core_dispatch.h:178`, id 97.
+const OSSL_FUNC_CLEANUP_USER_NONCE: c_int = 97;
+
+/// `OSSL_FUNC_get_entropy_fn` / `OSSL_FUNC_get_user_entropy_fn` — `core_dispatch.h:192-193`,
+/// `size_t (*)(const OSSL_CORE_HANDLE *, unsigned char **, int, size_t, size_t)`. The two C
+/// typedefs are the same type; one Rust alias covers both arms. `OSSL_CORE_HANDLE` is
+/// `*const c_void`, as `src/provider/child.rs` already spells it.
+pub(crate) type CoreGetEntropyFn =
+    unsafe extern "C" fn(*const c_void, *mut *mut c_uchar, c_int, usize, usize) -> usize;
+
+/// `OSSL_FUNC_cleanup_entropy_fn` / `OSSL_FUNC_cleanup_user_entropy_fn` —
+/// `core_dispatch.h:194-195`, `void (*)(const OSSL_CORE_HANDLE *, unsigned char *, size_t)`.
+pub(crate) type CoreCleanupEntropyFn = unsafe extern "C" fn(*const c_void, *mut c_uchar, usize);
+
+/// `OSSL_FUNC_get_nonce_fn` / `OSSL_FUNC_get_user_nonce_fn` — `core_dispatch.h:196-197`,
+/// `size_t (*)(const OSSL_CORE_HANDLE *, unsigned char **, size_t, size_t, const void *,
+/// size_t)`.
+pub(crate) type CoreGetNonceFn = unsafe extern "C" fn(
+    *const c_void,
+    *mut *mut c_uchar,
+    usize,
+    usize,
+    *const c_void,
+    usize,
+) -> usize;
+
+/// `OSSL_FUNC_cleanup_nonce_fn` / `OSSL_FUNC_cleanup_user_nonce_fn` — `core_dispatch.h:198-199`,
+/// the same shape as [`CoreCleanupEntropyFn`]. Declared separately because the authority's names
+/// are separate, not because the width differs.
+pub(crate) type CoreCleanupNonceFn = unsafe extern "C" fn(*const c_void, *mut c_uchar, usize);
+
+// `provider_seeding.c:14-21` — the eight file statics. The authority stores a bare function
+// pointer with NULL meaning "not offered"; `Option<fn>` is that state in Rust, and it is
+// `Copy`, so a read below copies the pointer without forming a reference to mutable static
+// storage (the `static_mut_refs` lint).
+static mut C_GET_ENTROPY: Option<CoreGetEntropyFn> = None;
+static mut C_GET_USER_ENTROPY: Option<CoreGetEntropyFn> = None;
+static mut C_CLEANUP_ENTROPY: Option<CoreCleanupEntropyFn> = None;
+static mut C_CLEANUP_USER_ENTROPY: Option<CoreCleanupEntropyFn> = None;
+static mut C_GET_NONCE: Option<CoreGetNonceFn> = None;
+static mut C_GET_USER_NONCE: Option<CoreGetNonceFn> = None;
+static mut C_CLEANUP_NONCE: Option<CoreCleanupNonceFn> = None;
+static mut C_CLEANUP_USER_NONCE: Option<CoreCleanupNonceFn> = None;
+
+/// `CORE_HANDLE(provctx)` — `provider_seeding.c:30-38`.
+///
+/// The authority has two arms. The `FIPS_MODULE` arm converts the FIPS provider's internal
+/// library context to the *core* handle, because the seed source is external to the FIPS
+/// provider and the passed provider context references the wrong one. That arm is compiled out in
+/// this profile; the non-FIPS arm is `ossl_prov_ctx_get0_handle`, which the authority's own
+/// comment says "should be unused" for a full DRBG chain but is retained for third-party
+/// providers. `FIPS_get_core_handle` therefore has no caller here and is listed as missing only
+/// so the FIPS arm is not silently forgotten.
+///
+/// # Safety
+/// `prov_ctx` is the `PROV_CTX` the owning provider published, or NULL.
+#[inline]
+unsafe fn core_handle(prov_ctx: *mut ProvCtx) -> *const c_void {
+    // SAFETY: the accessor accepts NULL and answers NULL, which is the macro's own behaviour.
+    unsafe { ossl_prov_ctx_get0_handle(prov_ctx) }
+}
+
+/// The authority's `set_func(c, f)` macro — `provider_seeding.c:49-55`.
+///
+/// `if (c == NULL) c = f; else if (c != f) return 0;`. Transcribed as a function returning the
+/// macro's implicit `1`/`0`, so each arm of the walk below propagates with a plain test. The
+/// equality is pointer identity, which is what `Option<fn>`'s `PartialEq` compares, so a second
+/// table naming the same id with the same function is accepted and one naming a *different*
+/// function is refused.
+///
+/// # Safety
+/// `slot` is the address of one of this unit's own file statics.
+unsafe fn set_func<T: Copy + PartialEq>(slot: *mut Option<T>, f: Option<T>) -> c_int {
+    // SAFETY: `slot` points at this unit's own file static per the caller's contract.
+    unsafe {
+        if (*slot).is_none() {
+            *slot = f;
+            1
+        } else if *slot != f {
+            0
+        } else {
+            1
+        }
+    }
+}
+
+/// `int ossl_prov_seeding_from_dispatch(const OSSL_DISPATCH *fns)` —
+/// `provider_seeding.c:41-85`.
+///
+/// The walk stops at the terminating id and records each of the eight seeding ids in its static.
+/// An id the table does not carry is left NULL. The `set_func` refusal propagates as `0`.
+///
+/// # Safety
+/// `fns` is a `OSSL_DISPATCH_END`-terminated array of entries that stay live for the call.
+pub(crate) unsafe fn ossl_prov_seeding_from_dispatch(fns: *const OsslDispatch) -> c_int {
+    let mut fns = fns;
+    // SAFETY: `fns` walks a terminated table per the caller's contract; every read is inside it.
+    unsafe {
+        while (*fns).function_id != OSSL_DISPATCH_END {
+            match (*fns).function_id {
+                OSSL_FUNC_GET_ENTROPY => {
+                    if set_func(
+                        ptr::addr_of_mut!(C_GET_ENTROPY),
+                        entry_function::<CoreGetEntropyFn>(fns),
+                    ) == 0
+                    {
+                        return 0;
+                    }
+                }
+                OSSL_FUNC_GET_USER_ENTROPY => {
+                    if set_func(
+                        ptr::addr_of_mut!(C_GET_USER_ENTROPY),
+                        entry_function::<CoreGetEntropyFn>(fns),
+                    ) == 0
+                    {
+                        return 0;
+                    }
+                }
+                OSSL_FUNC_CLEANUP_ENTROPY => {
+                    if set_func(
+                        ptr::addr_of_mut!(C_CLEANUP_ENTROPY),
+                        entry_function::<CoreCleanupEntropyFn>(fns),
+                    ) == 0
+                    {
+                        return 0;
+                    }
+                }
+                OSSL_FUNC_CLEANUP_USER_ENTROPY => {
+                    if set_func(
+                        ptr::addr_of_mut!(C_CLEANUP_USER_ENTROPY),
+                        entry_function::<CoreCleanupEntropyFn>(fns),
+                    ) == 0
+                    {
+                        return 0;
+                    }
+                }
+                OSSL_FUNC_GET_NONCE => {
+                    if set_func(
+                        ptr::addr_of_mut!(C_GET_NONCE),
+                        entry_function::<CoreGetNonceFn>(fns),
+                    ) == 0
+                    {
+                        return 0;
+                    }
+                }
+                OSSL_FUNC_GET_USER_NONCE => {
+                    if set_func(
+                        ptr::addr_of_mut!(C_GET_USER_NONCE),
+                        entry_function::<CoreGetNonceFn>(fns),
+                    ) == 0
+                    {
+                        return 0;
+                    }
+                }
+                OSSL_FUNC_CLEANUP_NONCE => {
+                    if set_func(
+                        ptr::addr_of_mut!(C_CLEANUP_NONCE),
+                        entry_function::<CoreCleanupNonceFn>(fns),
+                    ) == 0
+                    {
+                        return 0;
+                    }
+                }
+                OSSL_FUNC_CLEANUP_USER_NONCE => {
+                    if set_func(
+                        ptr::addr_of_mut!(C_CLEANUP_USER_NONCE),
+                        entry_function::<CoreCleanupNonceFn>(fns),
+                    ) == 0
+                    {
+                        return 0;
+                    }
+                }
+                _ => {}
+            }
+            fns = fns.add(1);
+        }
+    }
+    1
+}
+
+/// `size_t ossl_prov_get_entropy(PROV_CTX *prov_ctx, unsigned char **pout, int entropy,
+/// size_t min_len, size_t max_len)` — `provider_seeding.c:87-97`.
+///
+/// The precedence is contract: a user-supplied entropy callback shadows the plain one. When
+/// neither was installed the answer is `0`, and `pout` is not touched — a caller that sees `0`
+/// must not read the buffer.
+///
+/// # Safety
+/// `prov_ctx` is NULL or live; `pout` is writable for one `unsigned char *` and the callback, if
+/// called, treats it as such.
+pub(crate) unsafe fn ossl_prov_get_entropy(
+    prov_ctx: *mut ProvCtx,
+    pout: *mut *mut c_uchar,
+    entropy: c_int,
+    min_len: usize,
+    max_len: usize,
+) -> usize {
+    // SAFETY: the caller's contract; the non-FIPS `CORE_HANDLE` arm.
+    let handle = unsafe { core_handle(prov_ctx) };
+
+    // SAFETY: copies this unit's own file static; a function pointer is `Copy`.
+    let user = unsafe { C_GET_USER_ENTROPY };
+    if let Some(f) = user {
+        // SAFETY: the core published this callback with exactly this signature.
+        return unsafe { f(handle, pout, entropy, min_len, max_len) };
+    }
+    // SAFETY: copies this unit's own file static.
+    let plain = unsafe { C_GET_ENTROPY };
+    if let Some(f) = plain {
+        // SAFETY: the core published this callback with exactly this signature.
+        return unsafe { f(handle, pout, entropy, min_len, max_len) };
+    }
+    0
+}
+
+/// `void ossl_prov_cleanup_entropy(PROV_CTX *prov_ctx, unsigned char *buf, size_t len)` —
+/// `provider_seeding.c:99-108`.
+///
+/// Silent when no callback is installed, which is the authority's `else if` chain with no final
+/// arm. The user callback is preferred, mirroring the acquire side so a buffer is returned to
+/// the family that handed it out.
+///
+/// # Safety
+/// `prov_ctx` is NULL or live; `buf` is NULL or a buffer an acquire call returned.
+pub(crate) unsafe fn ossl_prov_cleanup_entropy(
+    prov_ctx: *mut ProvCtx,
+    buf: *mut c_uchar,
+    len: usize,
+) {
+    // SAFETY: the caller's contract; the non-FIPS `CORE_HANDLE` arm.
+    let handle = unsafe { core_handle(prov_ctx) };
+
+    // SAFETY: copies this unit's own file static; a function pointer is `Copy`.
+    let user = unsafe { C_CLEANUP_USER_ENTROPY };
+    if let Some(f) = user {
+        // SAFETY: the core published this callback with exactly this signature.
+        unsafe { f(handle, buf, len) };
+        return;
+    }
+    // SAFETY: copies this unit's own file static.
+    let plain = unsafe { C_CLEANUP_ENTROPY };
+    if let Some(f) = plain {
+        // SAFETY: the core published this callback with exactly this signature.
+        unsafe { f(handle, buf, len) };
+    }
+}
+
+/// `size_t ossl_prov_get_nonce(PROV_CTX *prov_ctx, unsigned char **pout, size_t min_len,
+/// size_t max_len, const void *salt, size_t salt_len)` — `provider_seeding.c:110-121`.
+///
+/// The nonce call carries the `salt`/`salt_len` pair the entropy call does not; that pair is
+/// forwarded untouched, and the delegation order is otherwise the same.
+///
+/// # Safety
+/// As [`ossl_prov_get_entropy`], with `salt` NULL or readable for `salt_len` bytes.
+pub(crate) unsafe fn ossl_prov_get_nonce(
+    prov_ctx: *mut ProvCtx,
+    pout: *mut *mut c_uchar,
+    min_len: usize,
+    max_len: usize,
+    salt: *const c_void,
+    salt_len: usize,
+) -> usize {
+    // SAFETY: the caller's contract; the non-FIPS `CORE_HANDLE` arm.
+    let handle = unsafe { core_handle(prov_ctx) };
+
+    // SAFETY: copies this unit's own file static; a function pointer is `Copy`.
+    let user = unsafe { C_GET_USER_NONCE };
+    if let Some(f) = user {
+        // SAFETY: the core published this callback with exactly this signature.
+        return unsafe { f(handle, pout, min_len, max_len, salt, salt_len) };
+    }
+    // SAFETY: copies this unit's own file static.
+    let plain = unsafe { C_GET_NONCE };
+    if let Some(f) = plain {
+        // SAFETY: the core published this callback with exactly this signature.
+        return unsafe { f(handle, pout, min_len, max_len, salt, salt_len) };
+    }
+    0
+}
+
+/// `void ossl_prov_cleanup_nonce(PROV_CTX *prov_ctx, unsigned char *buf, size_t len)` —
+/// `provider_seeding.c:123-131`.
+///
+/// # Safety
+/// As [`ossl_prov_cleanup_entropy`].
+pub(crate) unsafe fn ossl_prov_cleanup_nonce(
+    prov_ctx: *mut ProvCtx,
+    buf: *mut c_uchar,
+    len: usize,
+) {
+    // SAFETY: the caller's contract; the non-FIPS `CORE_HANDLE` arm.
+    let handle = unsafe { core_handle(prov_ctx) };
+
+    // SAFETY: copies this unit's own file static; a function pointer is `Copy`.
+    let user = unsafe { C_CLEANUP_USER_NONCE };
+    if let Some(f) = user {
+        // SAFETY: the core published this callback with exactly this signature.
+        unsafe { f(handle, buf, len) };
+        return;
+    }
+    // SAFETY: copies this unit's own file static.
+    let plain = unsafe { C_CLEANUP_NONCE };
+    if let Some(f) = plain {
+        // SAFETY: the core published this callback with exactly this signature.
+        unsafe { f(handle, buf, len) };
+    }
+}
+
+// =============================================================================================
+// SECTION 2 — `providers/common/provider_util.c`, the MAC-context half
+// =============================================================================================
+//
+// `ossl_prov_macctx_load` is the layer a provider row runs when it has a **mac name** and wants an
+// `EVP_MAC_CTX`. Its authority caller in the RAND stratum is `drbg_hmac.c.in:525,533`, which
+// passes the located `mac`, `digest`, `properties` and `engine` descriptors and lets the function
+// resolve them. `ossl_prov_set_macctx` is its helper: it turns the resolved *strings* into the
+// `OSSL_PARAM` array the MAC method's `set_ctx_params` consumes.
+//
+// Two arms are contract rather than detail. First, a NULL `macname` with a `mac` descriptor
+// **locates and reuses the existing context** (the "if there is no MAC yet, we ignore all other
+// parameters" comment): the function can be called repeatedly to hand new digest/cipher
+// parameters to a context that already exists. Second, when a new MAC *is* named the old context
+// is released **before** the new one is built, and the fetched method is released immediately
+// after `EVP_MAC_CTX_new` because the context holds its own reference. Third, a
+// `set_ctx_params` refusal releases the context and NULLs it, so the caller cannot be left with a
+// half-parameterised context.
+
+/// `int ossl_prov_set_macctx(EVP_MAC_CTX *macctx, const char *ciphername, const char *mdname,
+/// const char *engine, const char *properties)` — `provider_util.c:242-269`.
+///
+/// The array is `OSSL_PARAM mac_params[5]`: at most `digest`, `cipher`, `properties` and
+/// `engine`, plus the terminator. Only non-NULL names are appended, and the `engine` arm **is**
+/// compiled in this profile (`OPENSSL_NO_ENGINE` and `FIPS_MODULE` are both undefined). The
+/// descriptors borrow the caller's strings, so they must outlive the call — which they do,
+/// because they are the parameters' own data.
+///
+/// # Safety
+/// `macctx` is NULL or live; each name pointer is NULL or NUL-terminated and stays live for the
+/// call.
+pub(crate) unsafe fn ossl_prov_set_macctx(
+    macctx: *mut EvpMacCtx,
+    ciphername: *const c_char,
+    mdname: *const c_char,
+    engine: *const c_char,
+    properties: *const c_char,
+) -> c_int {
+    let mut mac_params: [OsslParam; 5] = [crate::params::END; 5];
+    let mut mp = 0usize;
+
+    // SAFETY: each descriptor is built from a caller string that is NUL-terminated per the
+    // contract, and `mp` stays below the array's length (four conditional entries at most).
+    unsafe {
+        if !mdname.is_null() {
+            mac_params[mp] = OSSL_PARAM_construct_utf8_string(
+                OSSL_ALG_PARAM_DIGEST,
+                mdname.cast_mut(),
+                0,
+            );
+            mp += 1;
+        }
+        if !ciphername.is_null() {
+            mac_params[mp] = OSSL_PARAM_construct_utf8_string(
+                OSSL_ALG_PARAM_CIPHER,
+                ciphername.cast_mut(),
+                0,
+            );
+            mp += 1;
+        }
+        if !properties.is_null() {
+            mac_params[mp] = OSSL_PARAM_construct_utf8_string(
+                OSSL_ALG_PARAM_PROPERTIES,
+                properties.cast_mut(),
+                0,
+            );
+            mp += 1;
+        }
+        // `#if !defined(OPENSSL_NO_ENGINE) && !defined(FIPS_MODULE)` — both undefined here.
+        if !engine.is_null() {
+            mac_params[mp] = OSSL_PARAM_construct_utf8_string(
+                OSSL_ALG_PARAM_ENGINE,
+                engine.cast_mut(),
+                0,
+            );
+            mp += 1;
+        }
+        mac_params[mp] = OSSL_PARAM_construct_end();
+
+        // The authority returns the setter's value directly; `1` is its "no set_ctx_params
+        // callback" answer, which is this crate's too.
+        EVP_MAC_CTX_set_params(macctx, mac_params.as_ptr())
+    }
+}
+
+/// `int ossl_prov_macctx_load(EVP_MAC_CTX **macctx, const OSSL_PARAM *pmac,
+/// const OSSL_PARAM *pcipher, const OSSL_PARAM *pdigest, const OSSL_PARAM *propq,
+/// const OSSL_PARAM *pengine, const char *macname, const char *ciphername, const char *mdname,
+/// OSSL_LIB_CTX *libctx)` — `provider_util.c:271-321`.
+///
+/// The explicit arguments are consulted only when the corresponding descriptor is absent, and the
+/// descriptor only when the argument is NULL. `macname` is `mut` because the authority
+/// reassigns it from the `mac` descriptor; so are `ciphername` and `mdname`.
+///
+/// # Safety
+/// `macctx` is writable for one context pointer; the five descriptors are NULL or live; the
+/// three names are NULL or NUL-terminated; `libctx` is NULL or a live library context.
+pub(crate) unsafe fn ossl_prov_macctx_load(
+    macctx: *mut *mut EvpMacCtx,
+    pmac: *const OsslParam,
+    pcipher: *const OsslParam,
+    pdigest: *const OsslParam,
+    propq: *const OsslParam,
+    pengine: *const OsslParam,
+    mut macname: *const c_char,
+    mut ciphername: *const c_char,
+    mut mdname: *const c_char,
+    libctx: *mut c_void,
+) -> c_int {
+    let mut properties: *const c_char = ptr::null();
+    let mut engine: *const c_char = ptr::null();
+
+    // SAFETY: the descriptors are NULL or live and the out-parameters are this frame's own; every
+    // string read is NUL-terminated by the descriptor's own type check inside
+    // `OSSL_PARAM_get_utf8_string_ptr`.
+    unsafe {
+        if macname.is_null() && !pmac.is_null() {
+            if OSSL_PARAM_get_utf8_string_ptr(pmac, ptr::addr_of_mut!(macname)) == 0 {
+                return 0;
+            }
+        }
+        if !propq.is_null() && OSSL_PARAM_get_utf8_string_ptr(propq, ptr::addr_of_mut!(properties)) == 0
+        {
+            return 0;
+        }
+
+        // If we got a new MAC name, we make a new `EVP_MAC_CTX`.
+        if !macname.is_null() {
+            let mac = EVP_MAC_fetch(libctx, macname, properties);
+
+            EVP_MAC_CTX_free(*macctx);
+            *macctx = if mac.is_null() {
+                ptr::null_mut()
+            } else {
+                EVP_MAC_CTX_new(mac)
+            };
+            // The context holds on to the MAC.
+            EVP_MAC_free(mac);
+            if (*macctx).is_null() {
+                return 0;
+            }
+        }
+
+        // If there is no MAC yet (and therefore no context), all other parameters are ignored.
+        if (*macctx).is_null() {
+            return 1;
+        }
+
+        if ciphername.is_null() && !pcipher.is_null() {
+            if OSSL_PARAM_get_utf8_string_ptr(pcipher, ptr::addr_of_mut!(ciphername)) == 0 {
+                return 0;
+            }
+        }
+        if mdname.is_null() && !pdigest.is_null() {
+            if OSSL_PARAM_get_utf8_string_ptr(pdigest, ptr::addr_of_mut!(mdname)) == 0 {
+                return 0;
+            }
+        }
+        if !pengine.is_null() && OSSL_PARAM_get_utf8_string_ptr(pengine, ptr::addr_of_mut!(engine)) == 0
+        {
+            return 0;
+        }
+
+        if ossl_prov_set_macctx(*macctx, ciphername, mdname, engine, properties) != 0 {
+            return 1;
+        }
+
+        // The parameters were refused, so the context is released rather than left half-set.
+        EVP_MAC_CTX_free(*macctx);
+        *macctx = ptr::null_mut();
+        0
+    }
+}
+
+// =============================================================================================
+// MISSING / NEEDED INVENTORY
+//
+// Every name below is referenced above and does not exist in this crate yet. None is defined by
+// a crate symbol here: the types and ids are declared locally *in this staging file*, and the
+// list is what integration must supply or re-home.
+// =============================================================================================
+
+// ---- 1. Types declared locally because the crate has no home for them -----------------------
+//
+// `src/provider/core_dispatch.rs` publishes the *core-offered* callbacks and its module doc
+// reserves the eight seed ids for Phase 9, but no `OSSL_FUNC_get_entropy_fn`-shaped Rust alias
+// exists anywhere. The four declared above are the authority's typedefs transliterated, named
+// the way `src/provider/child.rs` names `CoreGetLibCtxFn`:
+//   * `CoreGetEntropyFn`      — `OSSL_FUNC_get_entropy_fn` / `_get_user_entropy_fn`
+//   * `CoreCleanupEntropyFn`  — `OSSL_FUNC_cleanup_entropy_fn` / `_cleanup_user_entropy_fn`
+//   * `CoreGetNonceFn`        — `OSSL_FUNC_get_nonce_fn` / `_get_user_nonce_fn`
+//   * `CoreCleanupNonceFn`    — `OSSL_FUNC_cleanup_nonce_fn` / `_cleanup_user_nonce_fn`
+// A home in `src/context/dispatch.rs` (beside the `OsslDispatch` type) or in
+// `src/provider/core_dispatch.rs` is the integration decision.
+
+// ---- 2. Dispatch ids declared locally --------------------------------------------------------
+//
+// The eight `OSSL_FUNC_*` seeding ids (96-99, 101-104) are absent from the crate.
+// `src/provider/core_dispatch.rs`'s module doc already records them as Phase 9's, and
+// `artifacts/phase2/install/include/openssl/core_dispatch.h:177-191` is the source of the
+// numbers reproduced above. They are declared here with the `OSSL_FUNC_*` spelling that
+// `src/evp/rand.rs` and `src/provider/child.rs` use.
+
+// ---- 3. Section 2 needs nothing new ----------------------------------------------------------
+//
+// `ossl_prov_set_macctx` and `ossl_prov_macctx_load` reach only symbols the crate already
+// publishes: `EVP_MAC_fetch`, `EVP_MAC_free`, `EVP_MAC_CTX_new`, `EVP_MAC_CTX_free`,
+// `EVP_MAC_CTX_set_params`, `EvpMacCtx` (`src/evp/mac.rs`); `OsslParam`,
+// `OSSL_PARAM_construct_utf8_string`, `OSSL_PARAM_construct_end`,
+// `OSSL_PARAM_get_utf8_string_ptr` (`src/params/mod.rs`); and the four
+// `OSSL_ALG_PARAM_*` keys (`src/provider/util.rs`). `OSSL_ALG_PARAM_MAC` is needed only by
+// `ossl_prov_macctx_load_from_params`, which is out of scope.
+
+// ---- 4. Named but not transcribed, and why -----------------------------------------------------
+//
+//   * `FIPS_get_core_handle` (`providers/common/include/prov/providercommon.h:13`) — the
+//     `FIPS_MODULE` arm of `CORE_HANDLE`. `FIPS_MODULE` is undefined in this profile, so the arm
+//     is compiled out; the name is listed only so the narrowing is visible.
+//   * `evp_rand_can_seed` / `evp_rand_get_seed` / `evp_rand_clear_seed`
+//     (`include/crypto/evp.h:987-995`, defined in `crypto/evp/evp_rand.c`) — the DRBG's outbound
+//     seed path that these up-calls feed. Internal, declared in an uninstalled header, and
+//     deliberately absent from `src/evp/rand.rs`; recorded as Phase 9 deferrals in
+//     `forensics/prerequisites.json`. Not part of either unit here.
+//   * `ossl_prov_macctx_load_from_params` (`provider_util.c:323-336`) — a sibling caller of
+//     `ossl_prov_macctx_load`, not reached by any RAND unit. Transcribing it would also require
+//     `OSSL_ALG_PARAM_MAC`, which the crate does not publish.
+//   * `ossl_prov_cache_exported_algorithms` (`provider_util.c:338-350`) and `ossl_prov_memdup`
+//     (`provider_util.c:352-365`) — the D117 residual named by `src/provider/digest.rs`; no RAND
+//     path reaches either.
+//   * `ossl_prov_acquire_entropy_from_tsc` / `_from_cpu` (`seeding.h:14-15`) — declared in the
+//     same header but **defined in `provider_seeding.c`'s siblings, not in the unit transcribed
+//     here**; they are not among this file's authority. Their callers (`rand_pool.c`) are
+//     Phase 9.5's.
+
+// ---- 5. Faithfulness notes ---------------------------------------------------------------------
+//
+//   * `set_func` compares `Option<fn>` values, which is pointer identity — the C macro's `c != f`
+//     is the same comparison.
+//   * `entry_function` is the crate's existing transcription of the `OSSL_CORE_MAKE_FUNC` cast,
+//     including its NULL-entry/NULL-function answer; the C macro is an unchecked cast, so a
+//     malformed table answers differently (a cast NULL rather than a skipped id). No correct
+//     provider reaches that difference.
+//   * No `err_sites` constant is used, and none is missing: neither `provider_seeding.c` nor the
+//     transcribed half of `provider_util.c` calls `ERR_raise`. Both return `0` without queueing.
