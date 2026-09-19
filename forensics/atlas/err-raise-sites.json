@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 1917,
+      "sites": 1922,
       "unattributed": 0
     },
     "covered_files": [
@@ -190,6 +190,7 @@
       "providers/implementations/macs/hmac_prov.c",
       "providers/implementations/include/prov/blake2_params.inc",
       "providers/implementations/macs/blake2_mac_impl.c",
+      "providers/implementations/macs/poly1305_prov.c",
       "providers/implementations/macs/siphash_prov.c",
       "providers/implementations/digests/digestcommon.c"
     ],
@@ -28826,6 +28827,81 @@
         "rel_source": "providers/implementations/macs/blake2_mac_impl.c"
       },
       {
+        "const_name": "PROV_POLY1305_PROV_92",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "providers/implementations/macs/poly1305_prov.c",
+        "function": "poly1305_setkey",
+        "generated": true,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 92,
+        "macro": "ERR_raise",
+        "reason": 105,
+        "reason_symbol": "PROV_R_INVALID_KEY_LENGTH",
+        "rel_source": "providers/implementations/macs/poly1305_prov.c"
+      },
+      {
+        "const_name": "PROV_POLY1305_PROV_121",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "providers/implementations/macs/poly1305_prov.c",
+        "function": "poly1305_update",
+        "generated": true,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 121,
+        "macro": "ERR_raise",
+        "reason": 114,
+        "reason_symbol": "PROV_R_NO_KEY_SET",
+        "rel_source": "providers/implementations/macs/poly1305_prov.c"
+      },
+      {
+        "const_name": "PROV_POLY1305_PROV_141",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "providers/implementations/macs/poly1305_prov.c",
+        "function": "poly1305_final",
+        "generated": true,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 141,
+        "macro": "ERR_raise",
+        "reason": 114,
+        "reason_symbol": "PROV_R_NO_KEY_SET",
+        "rel_source": "providers/implementations/macs/poly1305_prov.c"
+      },
+      {
+        "const_name": "PROV_POLY1305_PROV_177",
+        "data_format": "\"param %s is repeated\"",
+        "dynamic_reason": false,
+        "file": "providers/implementations/macs/poly1305_prov.c",
+        "function": "poly1305_get_params_decoder",
+        "generated": true,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 177,
+        "macro": "ERR_raise_data",
+        "reason": 252,
+        "reason_symbol": "PROV_R_REPEATED_PARAMETER",
+        "rel_source": "providers/implementations/macs/poly1305_prov.c"
+      },
+      {
+        "const_name": "PROV_POLY1305_PROV_234",
+        "data_format": "\"param %s is repeated\"",
+        "dynamic_reason": false,
+        "file": "providers/implementations/macs/poly1305_prov.c",
+        "function": "poly1305_set_ctx_params_decoder",
+        "generated": true,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 234,
+        "macro": "ERR_raise_data",
+        "reason": 252,
+        "reason_symbol": "PROV_R_REPEATED_PARAMETER",
+        "rel_source": "providers/implementations/macs/poly1305_prov.c"
+      },
+      {
         "const_name": "PROV_SIPHASH_PROV_190",
         "data_format": "\"param %s is repeated\"",
         "dynamic_reason": false,
@@ -29975,6 +30051,11 @@
       "name": "authority:providers/implementations/macs/blake2_mac_impl.c",
       "path": "forensics/authorities/src/openssl-3.6.4/providers/implementations/macs/blake2_mac_impl.c",
       "sha256": "00b6d972ea1da10484cb42c85e1496c95be11210a00cbe5c9510302708ef9037"
+    },
+    {
+      "name": "authority:providers/implementations/macs/poly1305_prov.c",
+      "path": "forensics/authorities/build/openssl-3.6.4-production/providers/implementations/macs/poly1305_prov.c",
+      "sha256": "705073f922d71e0efacb3dc477ab9ec66a14c1c10d1225acc86b9a0023e82b8f"
     },
     {
       "name": "authority:providers/implementations/macs/siphash_prov.c",

@@ -15,5 +15,6 @@
 
 pub mod cmac;
 pub mod hmac;
+pub mod poly1305;
 pub mod siphash;
 pub mod ssl3_cbc;
