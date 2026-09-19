@@ -17679,3 +17679,46 @@ over 83 courts**. The err-site table stays at **1951**: neither `cipher_aria_ccm
 answer 1 unconditionally — which is itself the difference between them and `cipher_aria_hw.c` (D270).
 `RT-DIGEST` (468) and `CT-DIGEST` (272 / 272) do not move; unit tests stay **604**. Full pipeline to
 `PIPELINE OK`.
+
+## D272 — the README's algorithm paragraph was stale, and D271 committed a stale `plan-reconciliation.json`
+
+Two documentation-integrity defects, both found by reading rather than by a gate, and the second one
+is the more serious because it is an evidence defect rather than a prose one.
+
+**The README claimed the algorithms were not implemented.** Its Status section deliberately types no
+counts — it points at the generated `forensics/STATUS.md` and `docs/SEAL-CENSUS.md` and says so — but
+one paragraph about the crate still said that "AES, SHA, RSA, the KDFs, the MACs and the signature
+schemes are later strata's" and that "the algorithms are the next stratum's work". AES, the digests
+and the MACs had all landed; RSA, the KDFs and the signature schemes had not. The paragraph is now
+**shape-only**: it names the families that have landed and the families still ahead, and it says
+explicitly that which of them have landed, and how far, is what `forensics/STATUS.md` renders. A
+family-level list survives a cipher landing and changes only when the plan does, which is the only
+kind of prose this section can carry.
+
+It is worth being plain about what did *not* catch this: nothing. `docs_consistency.py`'s README
+check reads *counts* and anchored claim sentences, and this was a hand-written shape claim about
+which families exist. A gate for it would have to be a generated paragraph, or the paragraph removed
+altogether; what this entry does is narrow the class the prose can belong to. The paragraphs the gate
+does read are the reason the rest of the README is current at all.
+
+**D271 committed `forensics/atlas/plan-reconciliation.json` with a hash that no longer matched its
+input.** The sequence was: run the pipeline; then edit `docs/PHASE-8-SUBPHASES.md`'s 8.3 row to
+record that the CCM rows had landed; then run only `docs_consistency.py`, see it pass, and commit.
+`plan_reconciliation.py` records the sha256 of each `docs/PHASE-*-SUBSPHASES.md` as an input, so the
+committed artefact described a file that no longer existed in that form. `evidence_determinism.py`
+and `check_evidence_portability.py` both fail on exactly that, and both pass once the pipeline is
+re-run — so the guard is doing its job, and the defect is that the guard is not what a committer
+runs first.
+
+That is the class the pipeline's own header warns about for D96 and D214: several steps record the
+sha256 of a file another step writes, so order is evidence. The rule this entry adds is the one it
+paid for: **the pipeline is the last thing to run before a commit, not the thing that ran before the
+last edit.** Prose edits that land in a file another generator hashes are source changes like any
+other, and `docs/PHASE-*-SUBPHASES.md` are exactly such files.
+
+**What this entry moves.** Nothing: no source, no artefact content other than the regenerated input
+hashes, and no court. The README paragraph and `docs/DECISIONS.md` are hand-written, and
+`plan-reconciliation.json`, `court-coverage.json`, `ownership-audit.json`, `phase7-obligations.json`
+and `phase8-obligations.json` move only in their recorded input hashes. `check_evidence_portability`
+and `evidence_determinism` both return 0, and the full pipeline is `PIPELINE OK` at the same **29710
+observations over 83 courts**.

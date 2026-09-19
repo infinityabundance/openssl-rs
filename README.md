@@ -41,10 +41,17 @@ The **implementation crate** is one Cargo package with no dependencies, and the 
 later strata stand on is real code rather than scaffolding: `OSSL_LIB_CTX` and its index slots, the
 parameter descriptor, the property grammar, the method stores, the provider registry and its
 message-format table, the core dispatch table a third-party provider is handed, RCU, sparse arrays
-and per-context thread-local state. What is *not* implemented is the algorithms — AES, SHA, RSA,
-the KDFs, the MACs and the signature schemes are later strata's — while the EVP layer that reaches
-them is complete and sealed. The algorithms are the next stratum's work, and that is where the work
-is.
+and per-context thread-local state. The EVP framework that reaches the algorithms is complete and
+sealed, and the algorithm stratum is the one in progress: the symmetric ciphers, the digests, the
+AEAD modes and the MACs have landed, and the asymmetric families, RAND, the key formats, X.509, the
+protocol families and the CLI are ahead of them.
+
+**That list is the shape of the stratum, not its state.** It names families rather than symbols, so
+it survives a cipher landing and only changes when the *plan* does — which is the only kind of prose
+this section can carry without going stale. Which families have landed, and how far, is what
+`forensics/STATUS.md` renders from the phase states, and the per-stratum detail is in the court
+manifests under `artifacts/` and `forensics/atlas/`. Where this prose and those disagree, they are
+right.
 
 **Every symbol is `SCAFFOLDED` or `IMPLEMENTED`, and none is `PARITY_VERIFIED`.** That
 distinction is the whole point of the project's evidence model and it is not a formality:
