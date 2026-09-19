@@ -18295,3 +18295,72 @@ rows — the family's one recorded narrowing, on `RAND_bytes_ex`
 (`docs/SECURITY_DIVERGENCE_POLICY.md` D-CBCHMAC-MULTIBLOCK-ENC-1) — and the CT-CIPHER construction
 arm D276's entry names for those rows. The `file` repair above is a prerequisite of *closing* 8.3
 rather than of continuing it. Then 8.4 (RSA).
+
+## D280 — the allocator `file` argument is per-row, and a court now observes it
+
+D279's second finding, discharged. The repair is small in behaviour and wide in surface: every provider
+cipher row's allocations now carry the authority translation unit the authority's own compiler recorded,
+instead of one constant naming `providers/implementations/ciphers/ciphercommon.c`.
+
+**What was wrong.** `ciphercommon.c` is the header-only generic engine — `ciphercommon.c.in`'s
+transcription — and `courts/layout/oracle-mem-file.c` shows it appears in the authority's allocation
+traffic for **exactly one** site in the whole crate: `ossl_cipher_generic_reset_ctx`'s `tlsmac` release.
+Every *row's* `newctx` is somewhere else, because `IMPLEMENT_generic_cipher` is only **defined** by
+`providers/implementations/include/prov/ciphercommon.h:194-225` and is **invoked** by `cipher_aes.c`,
+`cipher_camellia.c`, `cipher_tdes_common.c`, `cipher_sm4.c`, `cipher_aria.c` and `cipher_idea.c` — so
+`__FILE__` inside an expanded body is the invoking file. A single constant was therefore wrong at all 23
+of the call sites it served, and `file` reaches an application: `CRYPTO_set_mem_functions`'s callbacks take
+it and an embedder that installs an allocator receives it. It is the same class as `num`, which the crate
+had already made contract; the string had simply never been asked about.
+
+**The repair.** `FILE` became `FILE_CIPHERCOMMON`, kept for the one generic-engine site and corrected to
+the **unprefixed** `providers/implementations/ciphers/ciphercommon.c` — because `ciphercommon.c` is a
+`.c.in` template the build expands into the build tree, which the same oracle reproduces end to end
+(`cipher_chacha20_poly1305.c` unprefixed beside its source-tree sibling `cipher_chacha20.c` prefixed).
+Seven per-row constants were added — `FILE_AES`, `FILE_CAMELLIA`, `FILE_TDES`, `FILE_AES_WRAP`,
+`FILE_AES_XTS`, `FILE_AES_OCB`, `FILE_NULL` — and the two row macros, `cipher_row!` and `cts_row!`, now
+take the file as a parameter, so **a new row cannot be added without naming one**. All 84 macro
+invocations and the eight hand-written sites (the shared per-family `freectx`/`dupctx` helpers, whose
+duplicate path allocates too) were updated from their own context type.
+
+**The one mapping that is not what a reader would guess.** The six CTS rows share `FILE_AES` and
+`FILE_CAMELLIA` rather than having a `FILE_CTS`: `cipher_cts.c`'s own comment says "the function dispatch
+tables are embedded into `cipher_aes.c` and `cipher_camellia.c` using `cipher_aes_cts.inc` and
+`cipher_camellia_cts.inc`", and `cipher_cts.c`'s object contains no allocator `file` at all — it holds only
+the `ossl_cipher_cbc_cts_block_update`/`_final` helpers and the mode-name mapping, none of which allocate.
+That is the `.inc` half of the same rule the `.c.in` half states.
+
+**The court, and why it is a court of its own.** `RT-CIPHER-MEM` runs
+`courts/phase8/rt_cipher_mem_probe.c`, whose first act is `CRYPTO_set_mem_functions`. That ordering is
+forced: the first non-zero allocation through the default path clears `allow_customize` for the life of the
+process, so a later install answers 0 — and `rt_cipher_probe.c` allocates long before any cipher arm of its
+own would run. The observation cannot therefore be an arm of `RT-CIPHER`, which is why it took an oracle
+first and a separate probe second. The transcript is the **set of distinct `file` strings that name a
+`providers/implementations/ciphers/` translation unit**, in first-seen order, per row, inside a window that
+opens after the fetch and closes after the context is released: **382 observations over all 131 rows**.
+Everything else in the window — `crypto/evp/`, `crypto/property/`, `crypto/lhash/` and the rest — is
+excluded by construction, and that exclusion is the claim's scope rather than a convenience: what the
+court proves is that each row's own provider allocation is attributed to the authority's own translation
+unit for that row. **No counts and no sizes are printed**, because a count would compare allocation
+strategy rather than allocation origin and the sizes are already `courts/layout/measure-*.c`'s subject.
+
+**What the transcript contains that is more than the fix.** Six rows report **two** files rather than one —
+the three `AES-*-SIV` and the three `AES-*-GCM-SIV` — and the second is `cipher_aes.c`. That is the
+`AES-*-ECB` sub-fetch `aes_siv_initkey`/`aes_gcm_siv_initkey` makes through `ctx->libctx`, observed here
+from the allocator rather than from the fetch: the same fact D241 recorded from the library-context side,
+now seen from the other end. And the nine `AES-*-CBC-HMAC-*-ETM` rows appear with `fetched=0` and no file
+at all, which is D276's capability predicate reproduced in a second, independent observable.
+
+**What this entry moves.** `src/provider/cipher.rs` (the eight file constants, both row macros, 84
+invocations and eight hand-written sites), `courts/phase8/rt_cipher_mem_probe.c` (new),
+`forensics/tools/phase8_courts.py` (the `RT-CIPHER-MEM` registration), `docs/PHASE-8-SUBPHASES.md`'s 8.3
+row, and every derived artefact they feed. Measured: `RT-CIPHER-MEM` **382** observations, all matching;
+`RT-CIPHER` unchanged at 6939; Phase 8's court count 4 -> 5. No export changed, so `libcrypto` remains at
+**2035 implemented**.
+
+**What remains of 8.3.** The multiblock *encrypt* parameter of the four published `AES-*-CBC-HMAC-*` rows
+— the family's one recorded narrowing, on `RAND_bytes_ex`
+(`docs/SECURITY_DIVERGENCE_POLICY.md` D-CBCHMAC-MULTIBLOCK-ENC-1) — and the CT-CIPHER construction arm
+D276's entry names for those rows. Then 8.4 (RSA), which is the first block whose rows are
+`OSSL_OP_SIGNATURE`, `OSSL_OP_KEYMGMT`, `OSSL_OP_KDF`, `OSSL_OP_KEM`, `OSSL_OP_KEYEXCH` and
+`OSSL_OP_ASYM_CIPHER`'s.

@@ -40,6 +40,23 @@
         "verdict": "pass"
       },
       {
+        "authority_exit_code": 0,
+        "authority_observations": 382,
+        "candidate_exit_code": 0,
+        "candidate_observations": 382,
+        "candidate_stderr_tail": [],
+        "court": "RT-CIPHER-MEM",
+        "crashed": false,
+        "probe": "courts/phase8/rt_cipher_mem_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase8/probes/rt_cipher_mem_probe.authority",
+          "candidate": "artifacts/phase8/probes/rt_cipher_mem_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
         "algorithms": {
           "blake2b512": {
             "digest_bytes": 64,
@@ -37576,8 +37593,8 @@
     ],
     "summary": {
       "fail": 0,
-      "pass": 4,
-      "total": 4
+      "pass": 5,
+      "total": 5
     }
   },
   "generator": "forensics/tools/phase8_courts.py",
@@ -37596,6 +37613,11 @@
       "name": "probe",
       "path": "courts/phase8/rt_cipher_probe.c",
       "sha256": "ef2ab23265f12492907b9db5028d4136fd96f0b93499ba718e819379fb2f86eb"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase8/rt_cipher_mem_probe.c",
+      "sha256": "25dfc8a2e129ce08d98f12cc71f87af4606da60e24c01935917e6137dc793e36"
     },
     {
       "name": "correctness-probe",

@@ -107,6 +107,12 @@ RUN_TIMEOUT_S = "60"
 COURTS: list[tuple[str, str]] = [
     ("RT-DIGEST", "rt_digest_probe.c"),
     ("RT-CIPHER", "rt_cipher_probe.c"),
+    # The allocator-attribution court, and a court of its own because
+    # `CRYPTO_set_mem_functions` latches: the first non-zero allocation through the default path
+    # clears `allow_customize` for the life of the process, so an installation that is not the
+    # first thing a program does answers 0. `rt_cipher_probe.c` allocates long before any cipher
+    # arm of its own would run, so the observation cannot be an arm of `RT-CIPHER` (D280).
+    ("RT-CIPHER-MEM", "rt_cipher_mem_probe.c"),
 ]
 
 # The correctness courts, and the committed vector sets each checks. `CT-DIGEST` is the
