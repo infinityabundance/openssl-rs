@@ -239,6 +239,28 @@ pub(crate) struct Stat {
     __pad_tail: [u8; 88],
 }
 
+impl Stat {
+    /// A zeroed `struct stat`, as the authority's `struct stat sb;` on a function's stack frame.
+    ///
+    /// Written as a struct literal so that every field is accounted for at compile time: a field
+    /// added later cannot be forgotten here, which a `MaybeUninit` zeroing would not catch. This is
+    /// `OsslLibCtx::ZEROED`'s shape and its reason.
+    ///
+    /// The landing callers are `RAND_load_file` and `RAND_write_file`, which declare
+    /// `struct stat sb;` on their stack frames; they land with the RAND front (D312).
+    #[allow(dead_code)] // the landing callers are `RAND_load_file`/`RAND_write_file` (the RAND front)
+    pub(crate) const ZEROED: Stat = Stat {
+        st_dev: 0,
+        st_ino: 0,
+        __pad_nlink: 0,
+        st_mode: 0,
+        __pad_uid_gid: [0; 12],
+        st_rdev: 0,
+        st_size: 0,
+        __pad_tail: [0; 88],
+    };
+}
+
 // ---------------------------------------------------------------------------
 // struct utsname
 // ---------------------------------------------------------------------------
