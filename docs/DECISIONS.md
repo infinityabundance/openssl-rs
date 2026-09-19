@@ -17547,3 +17547,73 @@ stays **468** and `CT-DIGEST` stays **272 / 272** — every one unchanged, which
 repair is invisible to every behavioural court and is only reachable through an application's own
 allocator. Unit tests move **603 -> 604**. The pipeline total stays **28463 over 83 courts**. Full
 pipeline to `PIPELINE OK`.
+
+## D270 — the `ARIA` rows land on a chunked-hw prerequisite, and the census found an accounting gap in the GCM family
+
+The twenty-one `ARIA-256/192/128` × `ECB/CBC/OFB/CFB/CFB1/CFB8/CTR` provider rows land on the
+primitive D268 transcribed, and they needed one prerequisite the SM4 rows did not.
+
+**`cipher_aria_hw.c` uses `ossl_cipher_hw_chunked_*`, not `ossl_cipher_hw_generic_*`.** Its
+`PROV_CIPHER_HW_aria_mode` macro spells `ossl_cipher_hw_chunked_##mode` (`:35-44`), and
+`prov/ciphercommon.h:241-243` `#define`s three of those onto the generic functions — so ECB, CTR and
+CFB1 install the generic function itself while CBC, OFB, CFB and CFB8 take a chunking wrapper, and
+`ciphercommon_hw.c:126-193` had to be transcribed before the rows could exist. SM4's hw uses the
+generic functions directly, which is why D266's rows did not need it.
+
+**Two of those four wrappers pass `inl`, not `chunk`, to the generic function**, and that reads like
+a transcription slip rather than authority behaviour. `ciphercommon_hw.c:153` and `:171` both forward
+`inl`: for an input shorter than `MAXCHUNK` the two are equal, and for a longer one the first call
+covers the whole buffer while the loop's later iterations rewrite a suffix of what it already wrote.
+Transcribing `chunk` would be *safer* code and a difference from the authority on any single update
+of a gibibyte or more, so what is transcribed is what the authority does, and the block comment above
+the four functions says why.
+
+**The arm checks all three published key widths, because a wrong `kbits` is invisible otherwise.**
+RFC 5794 A gives 128-, 192- and 256-bit ciphertext for one plaintext, and a row that passed the wrong
+`bits` to `ossl_aria_set_encrypt_key` would still fetch, still round-trip against itself and still
+agree with its own split update — only the published block would disagree. So each ECB row is checked
+against the vector of its own width, in both directions: a decrypt schedule is a *different* schedule
+that the same forward function walks, so a row that built the encrypt schedule for both directions
+would pass a round trip and fail here. All three match on both sides.
+
+**The first version of that arm silently did not run, which is D261's class a fifth time.**
+`is_ecb` was `strncmp(row + 8, "ECB", 3) == 0`, and index 8 of `ARIA-128-ECB` is the **second
+hyphen**, not the mode — so the standard-vector block was skipped for all twenty-one rows while the
+round trips and split checks still passed and the arm looked healthy. It is now a suffix comparison,
+and the arm's own comment records the mis-count. The lesson is the same one D261, D265 and D259 each
+paid for: an arm that compiles, runs and prints cannot be assumed to have reached the code its
+comment names.
+
+**The census found a real accounting gap while the rows landed.** `ARIA-128/192/256-GCM` and
+`SM4-GCM` were `open` owning Phase 8, because the plan's operation default says an `OSSL_OP_CIPHER`
+row is Phase 8's and only `AES-*-GCM` and `DES3-WRAP` carried a name override. But
+`cipher_aria_gcm.c:18-28` and `cipher_sm4_gcm.c:18-30` both reach the shared `ossl_gcm_initctx`, and
+so do both RAND sites at `ciphercommon_gcm.c.in:423` and `:536` — the same unit and the same two
+sites that defer `AES-*-GCM`. The four rows are now Phase 9 hand-offs on that blocker. This is the
+`DES3-WRAP` class one more time: a dependency that is real, that nothing in the export ledger can
+see, and that only the provider census's own plan can record. `ARIA-*-CCM` and `SM4-CCM` are **not**
+blocked (`ciphercommon_ccm.c` has no RAND call at all) and stay 8.3's work, as does `SM4-XTS`.
+
+**`cipher_aria_hw.c` is the stratum's first ARIA raise, and the err-site generator's note said
+otherwise.** `cipher_hw_aria_initkey` raises `PROV_R_KEY_SETUP_FAILED` at `cipher_aria_hw.c:25` when
+the schedule function answers negative, and both schedule functions answer `-1` rather than `0` when
+the key pointer is NULL or `bits` is not 128/192/256. The generator's covered-set comment had
+recorded that "`cipher_aria*.c` raises nothing" — true of `cipher_aria.c`, false of its hw — so the
+file is now covered and the note is corrected in place. The err-site table moves **1950 -> 1951**.
+
+**`CT-CIPHER` gains a twenty-one-vector ARIA family from the pinned corpus**, whose own title is
+`ARIA test vectors from RFC5794 (and others)`; the regex admits the six modes RFC 5794 A publishes
+and the note states the two things it deliberately does not reach: the `GCM`/`CCM` sections belong to
+rows that have not landed, and **`CFB1` has no vector in the corpus at all**, so its only evidence is
+the differential arm. `cfb1` is exercised there in byte mode, which is a claim the arm measures
+rather than assumes: with `use_bits` clear the generic CFB1 path multiplies by eight.
+
+**What this entry moves.** `implemented[libcrypto]` stays **2035 / 5896** — ARIA is provider-only and
+exports nothing, exactly as SM4 does not — so Phase 8 stays **194 implemented / 576 open / 16
+deferred**. The provider census moves **123 -> 144 implemented / 187 -> 162 open / 686 -> 690
+deferred**, and its coverage join stays exact at **144 / 144 / 0 unmatched**: all twenty-one new rows
+are named by the `rt_deflt_row_census` list and exercised by `rt_deflt_aria`, in authority order. The
+export-coverage atlas stays **0 unmatched**. `RT-CIPHER` moves **4887 -> 5931** observations,
+`CT-CIPHER` **3090 -> 3111 / 3111** vectors, and the pipeline total **28463 -> 29507 over 83
+courts**. `RT-DIGEST` (468) and `CT-DIGEST` (272 / 272) do not move. Unit tests stay **604**. Full
+pipeline to `PIPELINE OK`.

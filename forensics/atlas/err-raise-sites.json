@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 1950,
+      "sites": 1951,
       "unattributed": 0
     },
     "covered_files": [
@@ -186,6 +186,7 @@
       "providers/implementations/ciphers/ciphercommon_ccm.c",
       "providers/implementations/ciphers/cipher_aes_siv.c",
       "providers/implementations/ciphers/cipher_chacha20.c",
+      "providers/implementations/ciphers/cipher_aria_hw.c",
       "providers/implementations/macs/cmac_prov.c",
       "providers/implementations/macs/gmac_prov.c",
       "providers/implementations/macs/hmac_prov.c",
@@ -28349,6 +28350,21 @@
         "rel_source": "providers/implementations/ciphers/cipher_chacha20.c"
       },
       {
+        "const_name": "PROV_CIPHER_ARIA_HW_25",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aria_hw.c",
+        "function": "cipher_hw_aria_initkey",
+        "generated": false,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 25,
+        "macro": "ERR_raise",
+        "reason": 101,
+        "reason_symbol": "PROV_R_KEY_SETUP_FAILED",
+        "rel_source": "providers/implementations/ciphers/cipher_aria_hw.c"
+      },
+      {
         "const_name": "PROV_CMAC_PROV_245",
         "data_format": "\"param %s is repeated\"",
         "dynamic_reason": false,
@@ -30453,6 +30469,11 @@
       "name": "authority:providers/implementations/ciphers/cipher_chacha20.c",
       "path": "forensics/authorities/src/openssl-3.6.4/providers/implementations/ciphers/cipher_chacha20.c",
       "sha256": "964cded86b620feae3bafe920cbd27462e037329d6f07bc620f1f03c47b09e4b"
+    },
+    {
+      "name": "authority:providers/implementations/ciphers/cipher_aria_hw.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/providers/implementations/ciphers/cipher_aria_hw.c",
+      "sha256": "564e3e04ea2c67c27c9b5e942c2ffcd4fefa469eb505d92f50023e2c519ade08"
     },
     {
       "name": "authority:providers/implementations/macs/cmac_prov.c",

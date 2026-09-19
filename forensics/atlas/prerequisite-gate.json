@@ -506,7 +506,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "ac90c0ddf01d154deeff396fa6c356b70294460597876ee022f95136d6018ad4"
+      "sha256": "4268824100da7451ebc0ff6274c3f44b231c46ee1c9cc88b4f900fc4d9b75010"
     },
     {
       "name": "symbol-ownership",
@@ -521,12 +521,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "f554dde3fae44b72fc9a92e5de0246dce48e1e5f387f1fb88fc0626e9da9ee3e"
+      "sha256": "a5d6a74e7bfbb616b808807307bdb6937e363ab2d2d17a4b127d99c26e7b2aaf"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "8e691dc7af5106ff94ad0e24ba6a3f2f968b1d0a81316447c094bc9cc44d8a09"
+      "sha256": "680243eb24d84dbed2304cd2bd16f8b7294eb2d2a030874522d60855ad33f0fc"
     },
     {
       "name": "prerequisites",

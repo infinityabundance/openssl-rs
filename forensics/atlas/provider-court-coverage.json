@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "8": {
-        "implemented": 123,
+        "implemented": 144,
         "unmatched": 0
       }
     },
@@ -20,8 +20,8 @@
         "probe": "courts/phase8/rt_cipher_probe.c"
       }
     ],
-    "directly_courted": 123,
-    "implemented_rows": 123,
+    "directly_courted": 144,
+    "implemented_rows": 144,
     "rows": [
       {
         "algorithm_names": "AES-128-CBC",
@@ -672,6 +672,297 @@
         "aliases": [
           "AES-256-XTS",
           "1.3.111.2.1619.0.1.2"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ARIA-128-CBC",
+        "aliases": [
+          "ARIA-128-CBC",
+          "ARIA128",
+          "1.2.410.200046.1.1.2"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ARIA-128-CFB",
+        "aliases": [
+          "ARIA-128-CFB",
+          "1.2.410.200046.1.1.3"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ARIA-128-CFB1",
+        "aliases": [
+          "ARIA-128-CFB1"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ARIA-128-CFB8",
+        "aliases": [
+          "ARIA-128-CFB8"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ARIA-128-CTR",
+        "aliases": [
+          "ARIA-128-CTR",
+          "1.2.410.200046.1.1.5"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ARIA-128-ECB",
+        "aliases": [
+          "ARIA-128-ECB",
+          "1.2.410.200046.1.1.1"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ARIA-128-OFB",
+        "aliases": [
+          "ARIA-128-OFB",
+          "1.2.410.200046.1.1.4"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ARIA-192-CBC",
+        "aliases": [
+          "ARIA-192-CBC",
+          "ARIA192",
+          "1.2.410.200046.1.1.7"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ARIA-192-CFB",
+        "aliases": [
+          "ARIA-192-CFB",
+          "1.2.410.200046.1.1.8"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ARIA-192-CFB1",
+        "aliases": [
+          "ARIA-192-CFB1"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ARIA-192-CFB8",
+        "aliases": [
+          "ARIA-192-CFB8"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ARIA-192-CTR",
+        "aliases": [
+          "ARIA-192-CTR",
+          "1.2.410.200046.1.1.10"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ARIA-192-ECB",
+        "aliases": [
+          "ARIA-192-ECB",
+          "1.2.410.200046.1.1.6"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ARIA-192-OFB",
+        "aliases": [
+          "ARIA-192-OFB",
+          "1.2.410.200046.1.1.9"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ARIA-256-CBC",
+        "aliases": [
+          "ARIA-256-CBC",
+          "ARIA256",
+          "1.2.410.200046.1.1.12"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ARIA-256-CFB",
+        "aliases": [
+          "ARIA-256-CFB",
+          "1.2.410.200046.1.1.13"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ARIA-256-CFB1",
+        "aliases": [
+          "ARIA-256-CFB1"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ARIA-256-CFB8",
+        "aliases": [
+          "ARIA-256-CFB8"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ARIA-256-CTR",
+        "aliases": [
+          "ARIA-256-CTR",
+          "1.2.410.200046.1.1.15"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ARIA-256-ECB",
+        "aliases": [
+          "ARIA-256-ECB",
+          "1.2.410.200046.1.1.11"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ARIA-256-OFB",
+        "aliases": [
+          "ARIA-256-OFB",
+          "1.2.410.200046.1.1.14"
         ],
         "courts": [
           "RT-CIPHER"
@@ -1764,7 +2055,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "bd98902adf104ebe8c3044f470349642b80f8002f6e440f87f865d9f166cf9a0"
+      "sha256": "14f1352ed48cd57ad5af16115c0b30d70b29b050935e3e8414d1594916c4c69e"
     },
     {
       "name": "court:RT-DIGEST",
@@ -1774,7 +2065,7 @@
     {
       "name": "court:RT-CIPHER",
       "path": "courts/phase8/rt_cipher_probe.c",
-      "sha256": "98122bb1b8b8fa23bb63aa6dd2bd044cdd3dda7ec7839606c09efdc050f7ebbc"
+      "sha256": "dbc5aaba7ea20a2f8ecd18ee7f4b074bf7ec5455ab9c7f7540143039329c2c0d"
     }
   ],
   "kind": "provider-court-coverage",

@@ -441,10 +441,16 @@ COVERED_FILES = [
     # is absent for the reason `cipher_cts.c` is: an entry that can never change would read as
     # coverage that does not exist.
     ("providers/implementations/ciphers/cipher_chacha20.c", "PROV_CIPHER_CHACHA20"),
+    # `cipher_aria_hw.c` is a **source-tree** file, and unlike `cipher_sm4.c` and `cipher_sm4_hw.c`
+    # it *does* have a failure arm: `cipher_hw_aria_initkey` raises `PROV_R_KEY_SETUP_FAILED` at
+    # line 25 when the schedule function answers negative. The note this entry replaces said
+    # `cipher_aria*.c` raised nothing, which was true of the primitive and false of the row's hw --
+    # and it was the ARIA rows landing that made the difference visible (D270). `cipher_aria.c`
+    # itself still raises nothing and is absent for `cipher_chacha20_hw.c`'s reason.
+    ("providers/implementations/ciphers/cipher_aria_hw.c", "PROV_CIPHER_ARIA_HW"),
     # Deliberately *not* covered, with the reason: `cipher_sm4.c` and `cipher_sm4_hw.c` raise
     # nothing at all in this profile -- there is no failure arm in either -- so an entry would read
-    # as coverage that does not exist. `cipher_aria*.c` is the same and joins the covered set only
-    # if its rows ever grow a raise; the SM4 *primitive* `crypto/sm4/sm4.c` has no failure path
+    # as coverage that does not exist. The SM4 *primitive* `crypto/sm4/sm4.c` has no failure path
     # either, `ossl_sm4_set_key` always answering 1.
     ("providers/implementations/macs/cmac_prov.c", "PROV_CMAC_PROV"),
     ("providers/implementations/macs/gmac_prov.c", "PROV_GMAC_PROV"),

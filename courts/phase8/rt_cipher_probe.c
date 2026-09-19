@@ -3842,6 +3842,16 @@ static void rt_deflt_row_census(void)
         "AES-256-WRAP", "AES-192-WRAP", "AES-128-WRAP", "AES-256-WRAP-PAD",
         "AES-192-WRAP-PAD", "AES-128-WRAP-PAD", "AES-256-WRAP-INV", "AES-192-WRAP-INV",
         "AES-128-WRAP-INV", "AES-256-WRAP-PAD-INV", "AES-192-WRAP-PAD-INV", "AES-128-WRAP-PAD-INV",
+        /* The authority's `deflt_ciphers[]` order again: the `ARIA-*` twenty-one land between the
+         * AES-CBC-HMAC `ALGC` rows (not landed) and `CAMELLIA`, and the six `ARIA-*-GCM`/`-CCM` rows
+         * that precede them in `defltprov.c` are a separate unit. */
+        "ARIA-256-ECB", "ARIA-192-ECB", "ARIA-128-ECB",
+        "ARIA-256-CBC", "ARIA-192-CBC", "ARIA-128-CBC",
+        "ARIA-256-OFB", "ARIA-192-OFB", "ARIA-128-OFB",
+        "ARIA-256-CFB", "ARIA-192-CFB", "ARIA-128-CFB",
+        "ARIA-256-CFB1", "ARIA-192-CFB1", "ARIA-128-CFB1",
+        "ARIA-256-CFB8", "ARIA-192-CFB8", "ARIA-128-CFB8",
+        "ARIA-256-CTR", "ARIA-192-CTR", "ARIA-128-CTR",
         "CAMELLIA-256-ECB", "CAMELLIA-192-ECB", "CAMELLIA-128-ECB", "CAMELLIA-256-CBC",
         "CAMELLIA-192-CBC", "CAMELLIA-128-CBC", "CAMELLIA-128-CBC-CTS", "CAMELLIA-192-CBC-CTS",
         "CAMELLIA-256-CBC-CTS", "CAMELLIA-256-OFB", "CAMELLIA-192-OFB", "CAMELLIA-128-OFB",
@@ -5588,6 +5598,164 @@ static void rt_deflt_sm4(void)
     }
 }
 /*
+ * The twenty-one `ARIA-*` block and stream rows. Like SM4 these have **no low-level public API at
+ * all** in this authority -- the provider rows are the entire surface -- so the arm is the only
+ * differential evidence their wiring has.
+ *
+ * The arm is per-**key-size** rather than per-row alone, because that is what a wrong `kbits`
+ * argument to `ossl_aria_set_*_key` looks like: the row would still fetch and still round-trip with
+ * itself, and only the standard vector would disagree. RFC 5794 A gives all three widths for the
+ * same plaintext, so the ECB rows are checked against the published block of their own width:
+ *
+ *   key = 000102...0f (16) / ...17 (24) / ...1f (32), plaintext = 00112233445566778899aabbccddeeff
+ *   ciphertext = d718fbd6ab644c739da95f3be6451778 / 26449c1805dbe7aa25a468ce263a9e79
+ *                                    / f92bd7c79fb72e2f2b8f80c1972d24fc
+ *
+ * The decrypt direction is checked for the same rows: an ARIA decrypt schedule is a *different*
+ * schedule that the same forward function walks, so a row that built the encrypt schedule for both
+ * directions would round-trip against itself and fail only here.
+ *
+ * CFB1 is included rather than skipped. In byte mode the authority's `use_bits` is clear, so the
+ * generic CFB1 path multiplies by eight and the row behaves as a byte-oriented stream; that is
+ * exactly the sort of claim an arm should measure rather than assume.
+ */
+static void rt_deflt_aria(void)
+{
+    static const char *rows[] = {
+        "ARIA-256-ECB", "ARIA-192-ECB", "ARIA-128-ECB",
+        "ARIA-256-CBC", "ARIA-192-CBC", "ARIA-128-CBC",
+        "ARIA-256-OFB", "ARIA-192-OFB", "ARIA-128-OFB",
+        "ARIA-256-CFB", "ARIA-192-CFB", "ARIA-128-CFB",
+        "ARIA-256-CFB1", "ARIA-192-CFB1", "ARIA-128-CFB1",
+        "ARIA-256-CFB8", "ARIA-192-CFB8", "ARIA-128-CFB8",
+        "ARIA-256-CTR", "ARIA-192-CTR", "ARIA-128-CTR",
+    };
+    static const unsigned char key256[32] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+        0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+        0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f
+    };
+    static const unsigned char pt[16] = {
+        0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
+        0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff
+    };
+    static const unsigned char vec128[16] = {
+        0xd7, 0x18, 0xfb, 0xd6, 0xab, 0x64, 0x4c, 0x73,
+        0x9d, 0xa9, 0x5f, 0x3b, 0xe6, 0x45, 0x17, 0x78
+    };
+    static const unsigned char vec192[16] = {
+        0x26, 0x44, 0x9c, 0x18, 0x05, 0xdb, 0xe7, 0xaa,
+        0x25, 0xa4, 0x68, 0xce, 0x26, 0x3a, 0x9e, 0x79
+    };
+    static const unsigned char vec256[16] = {
+        0xf9, 0x2b, 0xd7, 0xc7, 0x9f, 0xb7, 0x2e, 0x2f,
+        0x2b, 0x8f, 0x80, 0xc1, 0x97, 0x2d, 0x24, 0xfc
+    };
+    static const unsigned char iv[16] = {
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
+    };
+    unsigned char in[64], out[128], dec[128];
+    size_t r, i;
+
+    for (i = 0; i < sizeof(in); i++)
+        in[i] = (unsigned char)(i * 3 + 1);
+
+    for (r = 0; r < sizeof(rows) / sizeof(rows[0]); r++) {
+        const char *row = rows[r];
+        int bits = (row[5] == '2' && row[6] == '5') ? 256
+                 : (row[5] == '1' && row[6] == '9') ? 192 : 128;
+        /* RFC 5794's three keys are prefixes of one another, and the row's own key length decides
+         * how much of `key256` the provider reads -- which is the whole point of checking all three
+         * widths against their own published block. */
+        const unsigned char *key = key256;
+        const unsigned char *vec = bits == 256 ? vec256 : bits == 192 ? vec192 : vec128;
+        int is_ecb = strcmp(row + strlen(row) - 3, "ECB") == 0;
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, row, NULL);
+        EVP_CIPHER_CTX *e, *d;
+        int l1, l2;
+        size_t olen = 0, dlen = 0;
+
+        printf("aria.%s.fetched=%d\n", row, c != NULL);
+        if (c == NULL)
+            continue;
+        printf("aria.%s.keylen=%d\n", row, EVP_CIPHER_get_key_length(c));
+        printf("aria.%s.ivlen=%d\n", row, EVP_CIPHER_get_iv_length(c));
+        printf("aria.%s.blocksize=%d\n", row, EVP_CIPHER_get_block_size(c));
+
+        /* The published block of this row's own key width, through ECB with no padding. */
+        if (is_ecb) {
+            EVP_CIPHER_CTX *k = EVP_CIPHER_CTX_new();
+            unsigned char one[16], kout[16];
+            int n = 0;
+
+            EVP_EncryptInit_ex(k, c, NULL, key, NULL);
+            EVP_CIPHER_CTX_set_padding(k, 0);
+            printf("aria.%s.vector.update=%d\n", row,
+                   EVP_EncryptUpdate(k, kout, &n, pt, 16));
+            rt_hex_w("aria", row, kout, (size_t)n);
+            printf("aria.%s.vector.matches=%d\n", row,
+                   n == 16 && memcmp(kout, vec, 16) == 0);
+            memset(one, 0, sizeof(one));
+            EVP_DecryptInit_ex(k, c, NULL, key, NULL);
+            EVP_CIPHER_CTX_set_padding(k, 0);
+            printf("aria.%s.vector.dec=%d\n", row,
+                   EVP_DecryptUpdate(k, one, &n, vec, 16));
+            printf("aria.%s.vector.rt=%d\n", row, n == 16 && memcmp(one, pt, 16) == 0);
+            EVP_CIPHER_CTX_free(k);
+        }
+
+        /* The 64-byte round trip, with the IV only where the row takes one. */
+        e = EVP_CIPHER_CTX_new();
+        d = EVP_CIPHER_CTX_new();
+        printf("aria.%s.enc.init=%d\n", row,
+               EVP_EncryptInit_ex(e, c, NULL, key, is_ecb ? NULL : iv));
+        EVP_CIPHER_CTX_set_padding(e, 0);
+        printf("aria.%s.enc.update=%d\n", row, EVP_EncryptUpdate(e, out, &l1, in, 64));
+        olen += (size_t)l1;
+        printf("aria.%s.enc.final=%d\n", row, EVP_EncryptFinal_ex(e, out + olen, &l2));
+        olen += (size_t)l2;
+        printf("aria.%s.enc.len=%zu\n", row, olen);
+        rt_hex_w("aria", row, out, olen);
+
+        printf("aria.%s.dec.init=%d\n", row,
+               EVP_DecryptInit_ex(d, c, NULL, key, is_ecb ? NULL : iv));
+        EVP_CIPHER_CTX_set_padding(d, 0);
+        printf("aria.%s.dec.update=%d\n", row, EVP_DecryptUpdate(d, dec, &l1, out, (int)olen));
+        dlen += (size_t)l1;
+        printf("aria.%s.dec.final=%d\n", row, EVP_DecryptFinal_ex(d, dec + dlen, &l2));
+        dlen += (size_t)l2;
+        printf("aria.%s.roundtrip=%d\n", row, dlen == 64 && memcmp(dec, in, 64) == 0);
+
+        /* A three-way split must agree with the one-shot: the partial-block and counter paths. */
+        {
+            EVP_CIPHER_CTX *s = EVP_CIPHER_CTX_new();
+            unsigned char split[128];
+            size_t slen = 0;
+
+            EVP_EncryptInit_ex(s, c, NULL, key, is_ecb ? NULL : iv);
+            EVP_CIPHER_CTX_set_padding(s, 0);
+            EVP_EncryptUpdate(s, split, &l1, in, 13);
+            slen += (size_t)l1;
+            EVP_EncryptUpdate(s, split + slen, &l1, in + 13, 30);
+            slen += (size_t)l1;
+            EVP_EncryptUpdate(s, split + slen, &l1, in + 43, 21);
+            slen += (size_t)l1;
+            EVP_EncryptFinal_ex(s, split + slen, &l2);
+            slen += (size_t)l2;
+            printf("aria.%s.split.len=%zu\n", row, slen);
+            printf("aria.%s.split.agrees=%d\n", row,
+                   slen == olen && memcmp(split, out, olen) == 0);
+            EVP_CIPHER_CTX_free(s);
+        }
+
+        EVP_CIPHER_CTX_free(e);
+        EVP_CIPHER_CTX_free(d);
+        EVP_CIPHER_free(c);
+    }
+}
+/*
  * The `BLAKE2BMAC` and `BLAKE2SMAC` rows. One implementation instantiated twice, so the arm takes
  * the four widths as parameters rather than being written twice -- and the widths are the whole
  * difference between the rows, which is why they are printed rather than assumed.
@@ -6919,6 +7087,7 @@ int main(void)
     rt_deflt_kmac();
     rt_deflt_chacha20();
     rt_deflt_sm4();
+    rt_deflt_aria();
     rt_deflt_errors();
     rt_disp_failures();
     return 0;
