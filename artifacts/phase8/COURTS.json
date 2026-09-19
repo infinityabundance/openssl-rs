@@ -24,9 +24,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 6505,
+        "authority_observations": 6772,
         "candidate_exit_code": 0,
-        "candidate_observations": 6505,
+        "candidate_observations": 6772,
         "candidate_stderr_tail": [],
         "court": "RT-CIPHER",
         "crashed": false,
@@ -5668,6 +5668,14 @@
             "standard": "NIST SP 800-38D",
             "total": 158
           },
+          "gcm_siv": {
+            "failed": 0,
+            "passed": 50,
+            "primary_source": "RFC 8452",
+            "source": "forensics/vectors/gcm_siv.json",
+            "standard": "RFC 8452",
+            "total": 50
+          },
           "idea": {
             "failed": 0,
             "passed": 99,
@@ -5750,20 +5758,20 @@
           }
         },
         "authority": "openssl-3.6.4-production",
-        "calls_checked": 3123,
+        "calls_checked": 3173,
         "candidate_shared_object": "artifacts/phase2/libcrypto.so.3",
-        "claim": "A correctness-vector PASS means candidate-only construction verification: the candidate's low-level cipher produced the committed expected bytes for every vector. Of the 3123 committed vectors, 3106 are published standard values mirrored through the pinned OpenSSL test corpus and 17 are independently-derived boundary vectors with named oracles (2 by the construction's definition (FIPS-197 §5.1, SP 800-38A §6.1): an empty message has no blocks and emits no bytes; 1 by the construction's definition: RC4 over a zero-byte input emits no bytes and leaves its state unchanged; 14 by the construction's definition: a block or feedback mode over a zero-byte input emits no bytes) -- these counts are read from the 20 committed `forensics/vectors/*.json` cipher sets by `correctness_vectors.py`, not typed. It is NOT OpenSSL parity and NOT formal validation. See D201/D208 and docs/PHASE-8-SUBPHASES.md.",
+        "claim": "A correctness-vector PASS means candidate-only construction verification: the candidate's low-level cipher produced the committed expected bytes for every vector. Of the 3173 committed vectors, 3156 are published standard values mirrored through the pinned OpenSSL test corpus and 17 are independently-derived boundary vectors with named oracles (2 by the construction's definition (FIPS-197 §5.1, SP 800-38A §6.1): an empty message has no blocks and emits no bytes; 1 by the construction's definition: RC4 over a zero-byte input emits no bytes and leaves its state unchanged; 14 by the construction's definition: a block or feedback mode over a zero-byte input emits no bytes) -- these counts are read from the 21 committed `forensics/vectors/*.json` cipher sets by `correctness_vectors.py`, not typed. It is NOT OpenSSL parity and NOT formal validation. See D201/D208 and docs/PHASE-8-SUBPHASES.md.",
         "court": "CT-CIPHER",
         "derivation_census": {
-          "corpus": 3106,
-          "files": 20,
+          "corpus": 3156,
+          "files": 21,
           "independent": 17,
           "oracles": {
             "the construction's definition (FIPS-197 §5.1, SP 800-38A §6.1): an empty message has no blocks and emits no bytes": 2,
             "the construction's definition: RC4 over a zero-byte input emits no bytes and leaves its state unchanged": 1,
             "the construction's definition: a block or feedback mode over a zero-byte input emits no bytes": 14
           },
-          "vectors": 3123
+          "vectors": 3173
         },
         "failures": [],
         "kind": "cipher-vectors",
@@ -34341,6 +34349,506 @@
             "passed": true
           },
           {
+            "actual_hex": "dc20e2d83f25705bb49e439eca56de250101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-128-gcm-siv",
+            "expected_hex": "dc20e2d83f25705bb49e439eca56de250101",
+            "id": "gcm_siv-1",
+            "input_hex": "",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "a4194b79071b01a87d65f706e39495780101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-128-gcm-siv",
+            "expected_hex": "a4194b79071b01a87d65f706e39495780101",
+            "id": "gcm_siv-2",
+            "input_hex": "",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "b5d839330ac7b786578782fff6013b815b287c22493a364c0101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-128-gcm-siv",
+            "expected_hex": "b5d839330ac7b786578782fff6013b815b287c22493a364c0101",
+            "id": "gcm_siv-3",
+            "input_hex": "0100000000000000",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "7323ea61d05932260047d942a4978db357391a0bc4fdec8b0d1066390101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-128-gcm-siv",
+            "expected_hex": "7323ea61d05932260047d942a4978db357391a0bc4fdec8b0d1066390101",
+            "id": "gcm_siv-4",
+            "input_hex": "010000000000000000000000",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "743f7c8077ab25f8624e2e948579cf77303aaf90f6fe21199c6068577437a0c40101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-128-gcm-siv",
+            "expected_hex": "743f7c8077ab25f8624e2e948579cf77303aaf90f6fe21199c6068577437a0c40101",
+            "id": "gcm_siv-5",
+            "input_hex": "01000000000000000000000000000000",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "84e07e62ba83a6585417245d7ec413a9fe427d6315c09b57ce45f2e3936a94451a8e45dcd4578c667cd86847bf6155ff0101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-128-gcm-siv",
+            "expected_hex": "84e07e62ba83a6585417245d7ec413a9fe427d6315c09b57ce45f2e3936a94451a8e45dcd4578c667cd86847bf6155ff0101",
+            "id": "gcm_siv-6",
+            "input_hex": "0100000000000000000000000000000002000000000000000000000000000000",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "3fd24ce1f5a67b75bf2351f181a475c7b800a5b4d3dcf70106b1eea82fa1d64df42bf7226122fa92e17a40eeaac1201b5e6e311dbf395d35b0fe39c2714388f80101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-128-gcm-siv",
+            "expected_hex": "3fd24ce1f5a67b75bf2351f181a475c7b800a5b4d3dcf70106b1eea82fa1d64df42bf7226122fa92e17a40eeaac1201b5e6e311dbf395d35b0fe39c2714388f80101",
+            "id": "gcm_siv-7",
+            "input_hex": "010000000000000000000000000000000200000000000000000000000000000003000000000000000000000000000000",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "2433668f1058190f6d43e360f4f35cd8e475127cfca7028ea8ab5c20f7ab2af02516a2bdcbc08d521be37ff28c152bba36697f25b4cd169c6590d1dd39566d3f8a263dd317aa88d56bdf3936dba75bb80101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-128-gcm-siv",
+            "expected_hex": "2433668f1058190f6d43e360f4f35cd8e475127cfca7028ea8ab5c20f7ab2af02516a2bdcbc08d521be37ff28c152bba36697f25b4cd169c6590d1dd39566d3f8a263dd317aa88d56bdf3936dba75bb80101",
+            "id": "gcm_siv-8",
+            "input_hex": "01000000000000000000000000000000020000000000000000000000000000000300000000000000000000000000000004000000000000000000000000000000",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "1e6daba35669f4273b0a1a2560969cdf790d99759abd15080101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-128-gcm-siv",
+            "expected_hex": "1e6daba35669f4273b0a1a2560969cdf790d99759abd15080101",
+            "id": "gcm_siv-9",
+            "input_hex": "0200000000000000",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "296c7889fd99f41917f4462008299c5102745aaa3a0c469fad9e075a0101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-128-gcm-siv",
+            "expected_hex": "296c7889fd99f41917f4462008299c5102745aaa3a0c469fad9e075a0101",
+            "id": "gcm_siv-10",
+            "input_hex": "020000000000000000000000",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "e2b0c5da79a901c1745f700525cb335b8f8936ec039e4e4bb97ebd8c4457441f0101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-128-gcm-siv",
+            "expected_hex": "e2b0c5da79a901c1745f700525cb335b8f8936ec039e4e4bb97ebd8c4457441f0101",
+            "id": "gcm_siv-11",
+            "input_hex": "02000000000000000000000000000000",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "620048ef3c1e73e57e02bb8562c416a319e73e4caac8e96a1ecb2933145a1d71e6af6a7f87287da059a71684ed3498e10101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-128-gcm-siv",
+            "expected_hex": "620048ef3c1e73e57e02bb8562c416a319e73e4caac8e96a1ecb2933145a1d71e6af6a7f87287da059a71684ed3498e10101",
+            "id": "gcm_siv-12",
+            "input_hex": "0200000000000000000000000000000003000000000000000000000000000000",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "50c8303ea93925d64090d07bd109dfd9515a5a33431019c17d93465999a8b0053201d723120a8562b838cdff25bf9d1e6a8cc3865f76897c2e4b245cf31c51f20101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-128-gcm-siv",
+            "expected_hex": "50c8303ea93925d64090d07bd109dfd9515a5a33431019c17d93465999a8b0053201d723120a8562b838cdff25bf9d1e6a8cc3865f76897c2e4b245cf31c51f20101",
+            "id": "gcm_siv-13",
+            "input_hex": "020000000000000000000000000000000300000000000000000000000000000004000000000000000000000000000000",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "2f5c64059db55ee0fb847ed513003746aca4e61c711b5de2e7a77ffd02da42feec601910d3467bb8b36ebbaebce5fba30d36c95f48a3e7980f0e7ac299332a80cdc46ae475563de037001ef84ae217440101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-128-gcm-siv",
+            "expected_hex": "2f5c64059db55ee0fb847ed513003746aca4e61c711b5de2e7a77ffd02da42feec601910d3467bb8b36ebbaebce5fba30d36c95f48a3e7980f0e7ac299332a80cdc46ae475563de037001ef84ae217440101",
+            "id": "gcm_siv-14",
+            "input_hex": "02000000000000000000000000000000030000000000000000000000000000000400000000000000000000000000000005000000000000000000000000000000",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "a8fe3e8707eb1f84fb28f8cb73de8e99e2f48a140101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-128-gcm-siv",
+            "expected_hex": "a8fe3e8707eb1f84fb28f8cb73de8e99e2f48a140101",
+            "id": "gcm_siv-15",
+            "input_hex": "02000000",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "6bb0fecf5ded9b77f902c7d5da236a4391dd029724afc9805e976f451e6d87f6fe1065140101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-128-gcm-siv",
+            "expected_hex": "6bb0fecf5ded9b77f902c7d5da236a4391dd029724afc9805e976f451e6d87f6fe1065140101",
+            "id": "gcm_siv-16",
+            "input_hex": "0300000000000000000000000000000004000000",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "44d0aaf6fb2f1f34add5e8064e83e12a2adabff9b2ef00fb47920cc72a0c0f13b9fd0101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-128-gcm-siv",
+            "expected_hex": "44d0aaf6fb2f1f34add5e8064e83e12a2adabff9b2ef00fb47920cc72a0c0f13b9fd0101",
+            "id": "gcm_siv-17",
+            "input_hex": "030000000000000000000000000000000400",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "af60eb711bd85bc1e4d3e0a462e074eea428a80101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-128-gcm-siv",
+            "expected_hex": "af60eb711bd85bc1e4d3e0a462e074eea428a80101",
+            "id": "gcm_siv-18",
+            "input_hex": "7a806c",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "bb93a3e34d3cd6a9c45545cfc11f03ad743dba20f9660101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-128-gcm-siv",
+            "expected_hex": "bb93a3e34d3cd6a9c45545cfc11f03ad743dba20f9660101",
+            "id": "gcm_siv-19",
+            "input_hex": "bdc66f146545",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "4f37281f7ad12949d01d02fd0cd174c84fc5dae2f60f52fd2b0101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-128-gcm-siv",
+            "expected_hex": "4f37281f7ad12949d01d02fd0cd174c84fc5dae2f60f52fd2b0101",
+            "id": "gcm_siv-20",
+            "input_hex": "1177441f195495860f",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "f54673c5ddf710c745641c8bc1dc2f871fb7561da1286e655e24b7b00101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-128-gcm-siv",
+            "expected_hex": "f54673c5ddf710c745641c8bc1dc2f871fb7561da1286e655e24b7b00101",
+            "id": "gcm_siv-21",
+            "input_hex": "9f572c614b4745914474e7c7",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "c9ff545e07b88a015f05b274540aa183b3449b9f39552de99dc214a1190b0b0101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-128-gcm-siv",
+            "expected_hex": "c9ff545e07b88a015f05b274540aa183b3449b9f39552de99dc214a1190b0b0101",
+            "id": "gcm_siv-22",
+            "input_hex": "0d8c8451178082355c9e940fea2f58",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "6298b296e24e8cc35dce0bed484b7f30d5803e377094f04709f64d7b985310a4db840101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-128-gcm-siv",
+            "expected_hex": "6298b296e24e8cc35dce0bed484b7f30d5803e377094f04709f64d7b985310a4db840101",
+            "id": "gcm_siv-23",
+            "input_hex": "6b3db4da3d57aa94842b9803a96e07fb6de7",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "391cc328d484a4f46406181bcd62efd9b3ee197d052d15506c84a9edd65e13e9d24a2a6e700101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-128-gcm-siv",
+            "expected_hex": "391cc328d484a4f46406181bcd62efd9b3ee197d052d15506c84a9edd65e13e9d24a2a6e700101",
+            "id": "gcm_siv-24",
+            "input_hex": "e42a3c02c25b64869e146d7b233987bddfc240871d",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "07f5f4169bbf55a8400cd47ea6fd400f0101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-256-gcm-siv",
+            "expected_hex": "07f5f4169bbf55a8400cd47ea6fd400f0101",
+            "id": "gcm_siv-25",
+            "input_hex": "",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "169fbb2fbf389a995f6390af22228a620101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-256-gcm-siv",
+            "expected_hex": "169fbb2fbf389a995f6390af22228a620101",
+            "id": "gcm_siv-26",
+            "input_hex": "",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "c2ef328e5c71c83b843122130f7364b761e0b97427e3df280101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-256-gcm-siv",
+            "expected_hex": "c2ef328e5c71c83b843122130f7364b761e0b97427e3df280101",
+            "id": "gcm_siv-27",
+            "input_hex": "0100000000000000",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "9aab2aeb3faa0a34aea8e2b18ca50da9ae6559e48fd10f6e5c9ca17e0101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-256-gcm-siv",
+            "expected_hex": "9aab2aeb3faa0a34aea8e2b18ca50da9ae6559e48fd10f6e5c9ca17e0101",
+            "id": "gcm_siv-28",
+            "input_hex": "010000000000000000000000",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "85a01b63025ba19b7fd3ddfc033b3e76c9eac6fa700942702e90862383c6c3660101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-256-gcm-siv",
+            "expected_hex": "85a01b63025ba19b7fd3ddfc033b3e76c9eac6fa700942702e90862383c6c3660101",
+            "id": "gcm_siv-29",
+            "input_hex": "01000000000000000000000000000000",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "4a6a9db4c8c6549201b9edb53006cba821ec9cf850948a7c86c68ac7539d027fe819e63abcd020b006a976397632eb5d0101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-256-gcm-siv",
+            "expected_hex": "4a6a9db4c8c6549201b9edb53006cba821ec9cf850948a7c86c68ac7539d027fe819e63abcd020b006a976397632eb5d0101",
+            "id": "gcm_siv-30",
+            "input_hex": "0100000000000000000000000000000002000000000000000000000000000000",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "c00d121893a9fa603f48ccc1ca3c57ce7499245ea0046db16c53c7c66fe717e39cf6c748837b61f6ee3adcee17534ed5790bc96880a99ba804bd12c0e6a22cc40101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-256-gcm-siv",
+            "expected_hex": "c00d121893a9fa603f48ccc1ca3c57ce7499245ea0046db16c53c7c66fe717e39cf6c748837b61f6ee3adcee17534ed5790bc96880a99ba804bd12c0e6a22cc40101",
+            "id": "gcm_siv-31",
+            "input_hex": "010000000000000000000000000000000200000000000000000000000000000003000000000000000000000000000000",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "c2d5160a1f8683834910acdafc41fbb1632d4a353e8b905ec9a5499ac34f96c7e1049eb080883891a4db8caaa1f99dd004d80487540735234e3744512c6f90ce112864c269fc0d9d88c61fa47e39aa080101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-256-gcm-siv",
+            "expected_hex": "c2d5160a1f8683834910acdafc41fbb1632d4a353e8b905ec9a5499ac34f96c7e1049eb080883891a4db8caaa1f99dd004d80487540735234e3744512c6f90ce112864c269fc0d9d88c61fa47e39aa080101",
+            "id": "gcm_siv-32",
+            "input_hex": "01000000000000000000000000000000020000000000000000000000000000000300000000000000000000000000000004000000000000000000000000000000",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "1de22967237a813291213f267e3b452f02d01ae33e4ec8540101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-256-gcm-siv",
+            "expected_hex": "1de22967237a813291213f267e3b452f02d01ae33e4ec8540101",
+            "id": "gcm_siv-33",
+            "input_hex": "0200000000000000",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "163d6f9cc1b346cd453a2e4cc1a4a19ae800941ccdc57cc8413c277f0101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-256-gcm-siv",
+            "expected_hex": "163d6f9cc1b346cd453a2e4cc1a4a19ae800941ccdc57cc8413c277f0101",
+            "id": "gcm_siv-34",
+            "input_hex": "020000000000000000000000",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "c91545823cc24f17dbb0e9e807d5ec17b292d28ff61189e8e49f3875ef91aff70101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-256-gcm-siv",
+            "expected_hex": "c91545823cc24f17dbb0e9e807d5ec17b292d28ff61189e8e49f3875ef91aff70101",
+            "id": "gcm_siv-35",
+            "input_hex": "02000000000000000000000000000000",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "07dad364bfc2b9da89116d7bef6daaaf6f255510aa654f920ac81b94e8bad365aea1bad12702e1965604374aab96dbbc0101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-256-gcm-siv",
+            "expected_hex": "07dad364bfc2b9da89116d7bef6daaaf6f255510aa654f920ac81b94e8bad365aea1bad12702e1965604374aab96dbbc0101",
+            "id": "gcm_siv-36",
+            "input_hex": "0200000000000000000000000000000003000000000000000000000000000000",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "c67a1f0f567a5198aa1fcc8e3f21314336f7f51ca8b1af61feac35a86416fa47fbca3b5f749cdf564527f2314f42fe2503332742b228c647173616cfd44c54eb0101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-256-gcm-siv",
+            "expected_hex": "c67a1f0f567a5198aa1fcc8e3f21314336f7f51ca8b1af61feac35a86416fa47fbca3b5f749cdf564527f2314f42fe2503332742b228c647173616cfd44c54eb0101",
+            "id": "gcm_siv-37",
+            "input_hex": "020000000000000000000000000000000300000000000000000000000000000004000000000000000000000000000000",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "67fd45e126bfb9a79930c43aad2d36967d3f0e4d217c1e551f59727870beefc98cb933a8fce9de887b1e40799988db1fc3f91880ed405b2dd298318858467c895bde0285037c5de81e5b570a049b62a00101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-256-gcm-siv",
+            "expected_hex": "67fd45e126bfb9a79930c43aad2d36967d3f0e4d217c1e551f59727870beefc98cb933a8fce9de887b1e40799988db1fc3f91880ed405b2dd298318858467c895bde0285037c5de81e5b570a049b62a00101",
+            "id": "gcm_siv-38",
+            "input_hex": "02000000000000000000000000000000030000000000000000000000000000000400000000000000000000000000000005000000000000000000000000000000",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "22b3f4cd1835e517741dfddccfa07fa4661b74cf0101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-256-gcm-siv",
+            "expected_hex": "22b3f4cd1835e517741dfddccfa07fa4661b74cf0101",
+            "id": "gcm_siv-39",
+            "input_hex": "02000000",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "43dd0163cdb48f9fe3212bf61b201976067f342bb879ad976d8242acc188ab59cabfe3070101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-256-gcm-siv",
+            "expected_hex": "43dd0163cdb48f9fe3212bf61b201976067f342bb879ad976d8242acc188ab59cabfe3070101",
+            "id": "gcm_siv-40",
+            "input_hex": "0300000000000000000000000000000004000000",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "462401724b5ce6588d5a54aae5375513a075cfcdf5042112aa29685c912fc20565430101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-256-gcm-siv",
+            "expected_hex": "462401724b5ce6588d5a54aae5375513a075cfcdf5042112aa29685c912fc20565430101",
+            "id": "gcm_siv-41",
+            "input_hex": "030000000000000000000000000000000400",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "0eaccb93da9bb81333aee0c785b240d319719d0101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-256-gcm-siv",
+            "expected_hex": "0eaccb93da9bb81333aee0c785b240d319719d0101",
+            "id": "gcm_siv-42",
+            "input_hex": "671fdd",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "a254dad4f3f96b62b84dc40c84636a5ec12020ec8c2c0101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-256-gcm-siv",
+            "expected_hex": "a254dad4f3f96b62b84dc40c84636a5ec12020ec8c2c0101",
+            "id": "gcm_siv-43",
+            "input_hex": "195495860f04",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "0df9e308678244c44bc0fd3dc6628dfe55ebb0b9fb2295c8c20101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-256-gcm-siv",
+            "expected_hex": "0df9e308678244c44bc0fd3dc6628dfe55ebb0b9fb2295c8c20101",
+            "id": "gcm_siv-44",
+            "input_hex": "c9882e5386fd9f92ec",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "8dbeb9f7255bf5769dd56692404099c2587f64979f21826706d497d50101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-256-gcm-siv",
+            "expected_hex": "8dbeb9f7255bf5769dd56692404099c2587f64979f21826706d497d50101",
+            "id": "gcm_siv-45",
+            "input_hex": "1db2316fd568378da107b52b",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "793576dfa5c0f88729a7ed3c2f1bffb3080d28f6ebb5d3648ce97bd5ba67fd0101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-256-gcm-siv",
+            "expected_hex": "793576dfa5c0f88729a7ed3c2f1bffb3080d28f6ebb5d3648ce97bd5ba67fd0101",
+            "id": "gcm_siv-46",
+            "input_hex": "21702de0de18baa9c9596291b08466",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "857e16a64915a787637687db4a9519635cdd454fc2a154fea91f8363a39fec7d0a490101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-256-gcm-siv",
+            "expected_hex": "857e16a64915a787637687db4a9519635cdd454fc2a154fea91f8363a39fec7d0a490101",
+            "id": "gcm_siv-47",
+            "input_hex": "b202b370ef9768ec6561c4fe6b7e7296fa85",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "626660c26ea6612fb17ad91e8e767639edd6c9faee9d6c7029675b89eaf4ba1ded1a2865940101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-256-gcm-siv",
+            "expected_hex": "626660c26ea6612fb17ad91e8e767639edd6c9faee9d6c7029675b89eaf4ba1ded1a2865940101",
+            "id": "gcm_siv-48",
+            "input_hex": "ced532ce4159b035277d4dfbb7db62968b13cd4eec",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "f3f80f2cf0cb2dd9c5984fcda908456cc537703b5ba70324a6793a7bf218d3eaffffffff0000000000000000000000000101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-256-gcm-siv",
+            "expected_hex": "f3f80f2cf0cb2dd9c5984fcda908456cc537703b5ba70324a6793a7bf218d3eaffffffff0000000000000000000000000101",
+            "id": "gcm_siv-49",
+            "input_hex": "000000000000000000000000000000004db923dc793ee6497c76dcc03a98e108",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
+            "actual_hex": "18ce4f0b8cb4d0cac65fea8f79257b20888e53e72299e56dffffffff0000000000000000000000000101",
+            "algorithm": "gcm_siv",
+            "cipher": "aes-256-gcm-siv",
+            "expected_hex": "18ce4f0b8cb4d0cac65fea8f79257b20888e53e72299e56dffffffff0000000000000000000000000101",
+            "id": "gcm_siv-50",
+            "input_hex": "eb3640277c7ffd1303c7a542d02d3e4c0000000000000000",
+            "operation": "ENCRYPT",
+            "passed": true
+          },
+          {
             "actual_hex": "2cb10d22ac22a375c0021ab6732936c1",
             "algorithm": "idea",
             "cipher": "IDEA-CBC",
@@ -37002,9 +37510,9 @@
           }
         ],
         "stage": "compare",
-        "vectors_checked": 3123,
+        "vectors_checked": 3173,
         "vectors_failed": 0,
-        "vectors_passed": 3123,
+        "vectors_passed": 3173,
         "verdict": "pass"
       }
     ],
@@ -37029,7 +37537,7 @@
     {
       "name": "probe",
       "path": "courts/phase8/rt_cipher_probe.c",
-      "sha256": "7e5da92b372248e10d1cc412bb657fb1e9fa0bfe9f19e8952939727a70218aa3"
+      "sha256": "0e3b3e2465557a5cbbbe4dac349a963379e60bf977f0f34b150865d4bac0a17b"
     },
     {
       "name": "correctness-probe",
@@ -37144,7 +37652,7 @@
     {
       "name": "cipher-correctness-probe",
       "path": "courts/phase8/ct_cipher.c",
-      "sha256": "9184d447574364e453b7cf6c6667500fe1421b0c9233a46fe8c062a623948aad"
+      "sha256": "6578b8cfe20f00e026318891d4e46dd9af2506bcb0459fc915580ddf68e46f4a"
     },
     {
       "name": "cipher-correctness-vectors:aes",
@@ -37225,6 +37733,11 @@
       "name": "cipher-correctness-vectors:gcm",
       "path": "forensics/vectors/gcm.json",
       "sha256": "ca557628fd532eb92b2ba709474be63cabd97e6f9e2cc08162472773d4e9bb68"
+    },
+    {
+      "name": "cipher-correctness-vectors:gcm_siv",
+      "path": "forensics/vectors/gcm_siv.json",
+      "sha256": "afd55b961d6c5fd1856fb83ab0fecdfef4cea240480794fa9265beb8f69d2dbd"
     },
     {
       "name": "cipher-correctness-vectors:ccm",

@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "8": {
-        "implemented": 162,
+        "implemented": 165,
         "unmatched": 0
       }
     },
@@ -20,8 +20,8 @@
         "probe": "courts/phase8/rt_cipher_probe.c"
       }
     ],
-    "directly_courted": 162,
-    "implemented_rows": 162,
+    "directly_courted": 165,
+    "implemented_rows": 165,
     "rows": [
       {
         "algorithm_names": "AES-128-CBC",
@@ -189,6 +189,19 @@
         "aliases": [
           "AES-128-ECB",
           "2.16.840.1.101.3.4.1.1"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "AES-128-GCM-SIV",
+        "aliases": [
+          "AES-128-GCM-SIV"
         ],
         "courts": [
           "RT-CIPHER"
@@ -452,6 +465,19 @@
         "aliases": [
           "AES-192-ECB",
           "2.16.840.1.101.3.4.1.21"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "AES-192-GCM-SIV",
+        "aliases": [
+          "AES-192-GCM-SIV"
         ],
         "courts": [
           "RT-CIPHER"
@@ -727,6 +753,19 @@
         "aliases": [
           "AES-256-ECB",
           "2.16.840.1.101.3.4.1.41"
+        ],
+        "courts": [
+          "RT-CIPHER"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "AES-256-GCM-SIV",
+        "aliases": [
+          "AES-256-GCM-SIV"
         ],
         "courts": [
           "RT-CIPHER"
@@ -2294,7 +2333,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "476012b02d640608a69f12a6646903c9c72f2d6aac53e674431d12eb2b1a84d0"
+      "sha256": "a265b8479954a34b0549293e7fb7d1a556d61cec45796b91f81030f69c9aa1a9"
     },
     {
       "name": "court:RT-DIGEST",
@@ -2304,7 +2343,7 @@
     {
       "name": "court:RT-CIPHER",
       "path": "courts/phase8/rt_cipher_probe.c",
-      "sha256": "7e5da92b372248e10d1cc412bb657fb1e9fa0bfe9f19e8952939727a70218aa3"
+      "sha256": "0e3b3e2465557a5cbbbe4dac349a963379e60bf977f0f34b150865d4bac0a17b"
     }
   ],
   "kind": "provider-court-coverage",

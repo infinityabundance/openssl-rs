@@ -1811,6 +1811,31 @@ CIPHER_RECIPE_FAMILIES: list[CipherRecipeFamily] = [
             "output is already a published value. This is the recorded cost of D208, not an "
             "omission."
         )),
+    # 8.3 -- GCM-SIV. The corpus's own title is "RFC8452 AES-GCM-SIV", so the primary source is
+    # the RFC that defines the construction and the bytes are mirrored through the pinned corpus
+    # rather than fetched. Every block in the AES-128 and AES-256 sections carries a `Tag`, the
+    # tag length is fixed at sixteen, and the IV lines are twelve bytes -- the nonce the row
+    # publishes -- so the regex admits all three key sizes and the driver's AEAD record fits
+    # without a variant column.
+    CipherRecipeFamily(
+        "gcm_siv", "test/recipes/30-test_evp_data/evpciph_aes_gcm_siv.txt",
+        r"^aes-(128|192|256)-gcm-siv$", "RFC 8452",
+        "aes-{128,192,256}-gcm-siv", (),
+        "", "",
+        aead=True,
+        note=(
+            "Candidate-only construction verification: the primary source is RFC 8452, whose "
+            "Appendix C publishes the AES-128 and AES-256 vectors the corpus mirrors, and the "
+            "bytes are mirrored through the pinned corpus (`corpus_sha256`) rather than fetched. "
+            "Every expected tail is `accept || reject`, the probe's own tag-verification arms, so "
+            "a rejected tag is a committed expectation on every vector rather than an assertion "
+            "made once. No independent AES-GCM-SIV implementation is present in the pinned court "
+            "image, so no boundary vector carries an independent oracle: the empty-message case "
+            "has a *real* tag here rather than the empty answer a feedback mode gives it, and "
+            "inventing one would be inventing a construction's value. `RT-CIPHER`'s "
+            "`gcm_siv.*` arms and the unit test `the_polyval_helpers_match_the_authority_oracle` "
+            "carry the other half."
+        )),
     # 8.3 -- GCM. The corpus is NIST SP 800-38D's own test cases plus the boringssl set; every
     # block carries an `AAD` and a `Tag`, and the probe's AEAD path prints the ciphertext, the
     # tag, and its own accept/reject answers, so a rejected tag is a committed expectation

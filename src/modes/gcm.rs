@@ -78,7 +78,13 @@ pub struct GcmCtx {
 }
 
 /// SP 800-38D Algorithm 1: multiply two field elements, both in the big-endian convention.
-fn gf_mul(x: u128, y: u128) -> u128 {
+///
+/// `pub(crate)` because `src/provider/cipher.rs`'s AES-GCM-SIV section reaches the same field
+/// multiply through `ossl_polyval_ghash_init`/`_hash`: POLYVAL is this multiply with both operands
+/// byte-reversed and `H` halved once (`cipher_aes_gcm_siv_polyval.c:22-95`), and the crate's GCM
+/// model carries the field key rather than the authority's Shoup table, so those two helpers are
+/// written against this function rather than against a table lookup.
+pub(crate) fn gf_mul(x: u128, y: u128) -> u128 {
     let mut z: u128 = 0;
     let mut v = y;
     let mut i = 0u32;

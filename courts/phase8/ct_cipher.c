@@ -653,6 +653,132 @@ static int ct_wrap(const char *cipher, int enc_op,
  * rather than a claim: the corpus's negative blocks carry `Result = CIPHERFINAL_ERROR` and are
  * skipped by the generator, so the reject path has to come from here.
  */
+/*
+ * GCM-SIV: the fourth AEAD arm, with the same `ciphertext || tag || accept || reject` answer as
+ * `ct_gcm`, `ct_ccm` and `ct_ocb`. RFC 8452 is the primary source and
+ * `test/recipes/30-test_evp_data/evpciph_aes_gcm_siv.txt` -- whose own title is "RFC8452
+ * AES-GCM-SIV" -- is the corpus it is mirrored through.
+ *
+ * The EVP usage is **not** `ct_gcm`'s, and the difference is not cosmetic. GCM's arm declares its
+ * tag length with `EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, m, NULL)`, which reaches the
+ * provider as a `tag` parameter whose `data` is NULL; GCM-SIV's setter checks the type and the
+ * length and then copies sixteen bytes from it, so that call is a read of NULL rather than the
+ * harmless declaration it is for GCM. Here the tag length is fixed at sixteen, the IV is the
+ * caller's twelve-byte nonce, and the decrypting side supplies the tag as a **value**.
+ */
+static int ct_gcm_siv(const char *cipher, int enc_op,
+                      const unsigned char *key, size_t keylen,
+                      const unsigned char *iv, size_t ivlen,
+                      const unsigned char *aad, size_t aadlen,
+                      const unsigned char *in, size_t inlen,
+                      unsigned char *out, size_t *outlen, size_t taglen)
+{
+    EVP_CIPHER *c = NULL;
+    EVP_CIPHER_CTX *ctx = NULL;
+    unsigned char tag[16], bad[16];
+    unsigned char tmp[CT_MAX];
+    const char *name;
+    size_t want;
+    int outl = 0, finl = 0, i, accept = 0, reject = 0, ret = -1;
+
+    if (enc_op != 1 || ivlen != 12 || taglen != 16 || inlen > sizeof(tmp))
+        return -1;
+    if (strcmp(cipher, "aes-128-gcm-siv") == 0) {
+        name = "AES-128-GCM-SIV";
+        want = 16;
+    } else if (strcmp(cipher, "aes-192-gcm-siv") == 0) {
+        name = "AES-192-GCM-SIV";
+        want = 24;
+    } else if (strcmp(cipher, "aes-256-gcm-siv") == 0) {
+        name = "AES-256-GCM-SIV";
+        want = 32;
+    } else {
+        return -1;
+    }
+    if (keylen != want)
+        return -1;
+
+    c = EVP_CIPHER_fetch(NULL, name, NULL);
+    if (c == NULL)
+        return -1;
+
+    /* Encrypt, and read the tag the construction produced. */
+    ctx = EVP_CIPHER_CTX_new();
+    if (ctx == NULL)
+        goto done;
+    if (EVP_EncryptInit_ex2(ctx, c, key, iv, NULL) != 1)
+        goto done;
+    if (aadlen != 0 && EVP_EncryptUpdate(ctx, NULL, &outl, aad, (int)aadlen) != 1)
+        goto done;
+    if (inlen != 0) {
+        outl = 0;
+        if (EVP_EncryptUpdate(ctx, out, &outl, in, (int)inlen) != 1)
+            goto done;
+    } else {
+        outl = 0;
+    }
+    finl = 0;
+    if (EVP_EncryptFinal_ex(ctx, out + outl, &finl) != 1)
+        goto done;
+    if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, 16, tag) != 1)
+        goto done;
+    EVP_CIPHER_CTX_free(ctx);
+    ctx = NULL;
+
+    /*
+     * `accept`: re-run the decryption under the tag and require both the plaintext and the answer.
+     * `reject`: the same with one bit of the tag flipped, which must be refused at the final.
+     */
+    for (i = 0; i < 2; i++) {
+        int got_accept;
+
+        memcpy(bad, tag, sizeof(bad));
+        bad[0] ^= 0x01;
+
+        ctx = EVP_CIPHER_CTX_new();
+        if (ctx == NULL)
+            goto done;
+        if (EVP_DecryptInit_ex2(ctx, c, key, iv, NULL) != 1)
+            goto done;
+        if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, 16,
+                                i == 0 ? (void *)tag : (void *)bad) != 1)
+            goto done;
+        if (aadlen != 0 && EVP_DecryptUpdate(ctx, NULL, &outl, aad, (int)aadlen) != 1)
+            goto done;
+        memset(tmp, 0, sizeof(tmp));
+        if (inlen != 0) {
+            outl = 0;
+            if (EVP_DecryptUpdate(ctx, tmp, &outl, out, (int)inlen) != 1)
+                goto done;
+        } else {
+            outl = 0;
+        }
+        finl = 0;
+        got_accept = EVP_DecryptFinal_ex(ctx, tmp + outl, &finl) == 1;
+        EVP_CIPHER_CTX_free(ctx);
+        ctx = NULL;
+        if (i == 0) {
+            accept = got_accept;
+            if (memcmp(tmp, in, inlen) != 0)
+                goto done;
+        } else {
+            reject = !got_accept;
+        }
+    }
+
+    memcpy(out + inlen, tag, 16);
+    out[inlen + 16] = accept ? 1u : 0u;
+    out[inlen + 17] = reject ? 1u : 0u;
+    *outlen = inlen + 18;
+    ret = 0;
+
+done:
+    if (ctx != NULL)
+        EVP_CIPHER_CTX_free(ctx);
+    EVP_CIPHER_free(c);
+    return ret;
+}
+
 static int ct_gcm(const char *cipher, int enc_op,
                   const unsigned char *key, size_t keylen,
                   const unsigned char *iv, size_t ivlen,
@@ -671,11 +797,18 @@ static int ct_gcm(const char *cipher, int enc_op,
 
     if (enc_op != 1 || strncmp(cipher, "aes-", 4) != 0)
         return -1;
-    if (strncmp(cipher + 4, "128-gcm", 7) == 0)
+    /*
+     * The name test is a **whole-name** test, not a prefix: `strncmp(cipher + 4, "128-gcm", 7)`
+     * also matches `aes-128-gcm-siv`, so a prefix test would let this arm claim the GCM-SIV
+     * vectors and answer them with the plain GCM construction -- a wrong answer that *succeeds*,
+     * which is the worst kind here. `ct_gcm_siv` below is dispatched first and this test now
+     * refuses the longer name, so the two orders cannot disagree.
+     */
+    if (strcmp(cipher + 4, "128-gcm") == 0)
         bits = 128;
-    else if (strncmp(cipher + 4, "192-gcm", 7) == 0)
+    else if (strcmp(cipher + 4, "192-gcm") == 0)
         bits = 192;
-    else if (strncmp(cipher + 4, "256-gcm", 7) == 0)
+    else if (strcmp(cipher + 4, "256-gcm") == 0)
         bits = 256;
     else
         return -1;
@@ -1292,6 +1425,9 @@ static int ct_cipher(const char *cipher, const char *operation,
 {
     int enc_op = strcmp(operation, "ENCRYPT") == 0;
 
+    if (ct_gcm_siv(cipher, enc_op, key, keylen, iv, ivlen, aad, aadlen,
+                   in, inlen, out, outlen, taglen) == 0)
+        return 0;
     if (ct_gcm(cipher, enc_op, key, keylen, iv, ivlen, aad, aadlen,
                in, inlen, out, outlen, taglen) == 0)
         return 0;

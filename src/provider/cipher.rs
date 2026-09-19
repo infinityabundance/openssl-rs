@@ -30,16 +30,16 @@
 //!
 //! What is **absent by design**: `deflt_get_params`/`deflt_gettable_params`/
 //! `ossl_prov_get_capabilities`/`provctx` and the `base`/`null` *providers*; the `AES-*-GCM` three
-//! (`defltprov.c:202-204`) and the `AES-*-GCM-SIV` three (`:198-200`), all six deferred to Phase 9
-//! on `RAND_bytes_ex` (D234, D237); and the multiblock *encrypt* parameter of the four published
-//! `AES-*-CBC-HMAC-*` rows, which is this module's one recorded narrowing
-//! (`docs/SECURITY_DIVERGENCE_POLICY.md` D-CBCHMAC-MULTIBLOCK-ENC-1). The thirteen CBC-HMAC rows
-//! themselves **are** here -- the four the AES-NI bit publishes with their whole record
-//! construction, and the nine ETM rows as the capability filter's rows with empty dispatch tables,
-//! which is what this profile's `AES_CBC_HMAC_SHA_ETM_CAPABLE` makes them (D276).
-//! `deflt_ciphers[]` in the authority carries those rows too; this half carries the subset the
-//! crate can back, and `forensics/atlas/provider-algorithms.json` (D237) is the census that says
-//! so row by row.
+//! (`defltprov.c:202-204`), deferred to Phase 9 on `RAND_bytes_ex` (D234, D237); and the multiblock
+//! *encrypt* parameter of the four published `AES-*-CBC-HMAC-*` rows, which is this module's one
+//! recorded narrowing (`docs/SECURITY_DIVERGENCE_POLICY.md` D-CBCHMAC-MULTIBLOCK-ENC-1). Everything
+//! else in `deflt_ciphers[]` that this profile compiles is here: the thirteen CBC-HMAC rows (the
+//! four the AES-NI bit publishes with their whole record construction, and the nine ETM rows as the
+//! capability filter's rows with empty dispatch tables, which is what this profile's
+//! `AES_CBC_HMAC_SHA_ETM_CAPABLE` makes them -- D276), and the `AES-*-GCM-SIV` three with their
+//! whole construction (D278). `deflt_ciphers[]` in the authority carries those rows too; this half
+//! carries the subset the crate can back, and `forensics/atlas/provider-algorithms.json` (D237) is
+//! the census that says so row by row.
 //!
 //! Two arms the authority has are not transcribed because they are unreachable for these rows
 //! without a caller setting the corresponding context parameter, and each is named rather than
@@ -12139,6 +12139,1317 @@ cbchmac_etm_table!(AES128CBC_HMAC_SHA512_ETM_FUNCTIONS);
 cbchmac_etm_table!(AES192CBC_HMAC_SHA512_ETM_FUNCTIONS);
 cbchmac_etm_table!(AES256CBC_HMAC_SHA512_ETM_FUNCTIONS);
 
+// =============================================================================================
+// The `AES-*-GCM-SIV` rows — `cipher_aes_gcm_siv.c`, `cipher_aes_gcm_siv.h`,
+// `cipher_aes_gcm_siv_hw.c` and `cipher_aes_gcm_siv_polyval.c` (D278)
+// =============================================================================================
+//
+// `defltprov.c:198-200` publishes three rows inside `#ifndef OPENSSL_NO_SIV`, all of them `ALG(...)`
+// rather than `ALGC(...)`, so no capability predicate is involved and they are published
+// unconditionally. This section is the whole block; D277 recorded why it is landable rather than a
+// Phase 9 hand-off -- there is no `RAND` call anywhere in the four units.
+//
+// ## The construction is driven through a fetched `AES-ECB` context, not a key schedule
+//
+// `aes_gcm_siv_initkey` derives the per-message authentication key and encryption key by *fetching*
+// `AES-{128,192,256}-ECB` and encrypting a sequence of counter blocks with it (`EVP_CIPHER_fetch`,
+// `EVP_EncryptInit_ex2`, `EVP_EncryptUpdate` -- three Phase 7 exports), then re-inits the same
+// context under `msg_enc_key` for the ciphertext. So the row's dependency is on the *provider* half
+// of 8.2 rather than on any internal, and the crate calls the same three exports.
+//
+// ## The POLYVAL multiply is GHASH's, byte-reversed, with `H` halved once
+//
+// RFC 8452's POLYVAL differs from GHASH's field convention by a factor of `x^-128`, which is what
+// `ossl_polyval_ghash_init`'s single `mulx_ghash` expresses: it byte-reverses the authentication
+// key, halves it in the field, and then hands the result to the *GHASH* table builder.
+// `ossl_polyval_ghash_hash` then byte-reverses the accumulator and each input block, multiplies in
+// the GHASH convention, and reverses the result. This crate's GCM model carries the field key
+// rather than the authority's sixteen-entry Shoup table (`src/modes/gcm.rs` records that descent
+// and why it is not transcribed), so both helpers are written against `gf_mul` and the same three
+// reversals. `RT-CIPHER`'s `cbchsiv.*.tag` arm is what verifies the byte-order bridging: the tag is
+// the whole observable.
+
+use crate::evp::cipher_ctx::{
+    EVP_CIPHER_CTX_copy, EVP_CIPHER_CTX_free, EVP_CIPHER_CTX_new, EVP_EncryptInit_ex2,
+    EVP_EncryptUpdate, EvpCipherCtx,
+};
+use crate::modes::gcm::gf_mul;
+use crate::params::OSSL_PARAM_set_octet_string;
+use crate::runtime::mem::CRYPTO_realloc;
+
+/// `EVP_CIPH_GCM_SIV_MODE` — `include/openssl/evp.h:322`.
+const EVP_CIPH_GCM_SIV_MODE: c_uint = 0x10005;
+
+/// `BLOCK_SIZE` — `cipher_aes_gcm_siv.h:15`.
+const GCM_SIV_BLOCK_SIZE: usize = 16;
+/// `NONCE_SIZE` — `cipher_aes_gcm_siv.h:16`.
+const GCM_SIV_NONCE_SIZE: usize = 12;
+/// `TAG_SIZE` — `cipher_aes_gcm_siv.h:17`.
+const GCM_SIV_TAG_SIZE: usize = 16;
+/// `AEAD_FLAGS` — `prov/ciphercommon_aead.h:16`:
+/// `PROV_CIPHER_FLAG_AEAD | PROV_CIPHER_FLAG_CUSTOM_IV`. The custom-IV flag is why the IV is the
+/// caller's own twelve-byte nonce rather than a block, and `get_params` publishes it.
+const GCM_SIV_AEAD_FLAGS: u64 = PROV_CIPHER_FLAG_AEAD | PROV_CIPHER_FLAG_CUSTOM_IV;
+
+/// `__FILE__` for this row's unit, as `CRYPTO_zalloc`/`CRYPTO_clear_free` report it.
+const FILE_GCM_SIV: *const c_char =
+    c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_gcm_siv.c".as_ptr();
+
+/// `UP16(x)` — `cipher_aes_gcm_siv.h:19`.
+#[inline]
+fn up16(x: usize) -> usize {
+    (x + 15) & !0x0f
+}
+/// `DOWN16(x)` — `cipher_aes_gcm_siv.h:20`.
+#[inline]
+fn down16(x: usize) -> usize {
+    x & !0x0f
+}
+/// `REMAINDER16(x)` — `cipher_aes_gcm_siv.h:21`.
+#[inline]
+fn remainder16(x: usize) -> usize {
+    x & 0x0f
+}
+/// `IS16(x)` — `cipher_aes_gcm_siv.h:22`.
+#[inline]
+fn is16(x: usize) -> bool {
+    x & 0x0f == 0
+}
+
+/// `GSWAP4` — `cipher_aes_gcm_siv.h:66-70`.
+#[inline]
+fn gswap4(n: u32) -> u32 {
+    n.swap_bytes()
+}
+
+/// `GSWAP8` — `cipher_aes_gcm_siv.h:71-76`, a swap of each 32-bit half in turn; not `swap_bytes`
+/// on 64-bit machines only by accident of it being the same permutation.
+#[inline]
+fn gswap8(n: u64) -> u64 {
+    n.swap_bytes()
+}
+
+/// `mulx_ghash` — `cipher_aes_gcm_siv_polyval.c:22-44`, the little-endian arm.
+///
+/// `mask = -(int64_t)(t[1] & 1) & 0xe1; mask <<= 56;` is the reduction constant folded in when the
+/// value's low bit is set, which is the `x^-1` step POLYVAL needs and GHASH's multiply does not.
+#[inline]
+fn mulx_ghash(a: &mut [u64; 2]) {
+    let t0 = gswap8(a[0]);
+    let t1 = gswap8(a[1]);
+    let mask = if t1 & 1 == 1 { 0xe1u64 << 56 } else { 0 };
+    a[1] = gswap8((t1 >> 1) ^ (t0 << 63));
+    a[0] = gswap8((t0 >> 1) ^ mask);
+}
+
+/// `byte_reverse16` — `cipher_aes_gcm_siv_polyval.c:47-58`, the unaligned arm.
+///
+/// The authority branches on both pointers' eight-byte alignment for a two-`u64` swap; the result
+/// is the same sixteen bytes either way, so the branch is not observable and the byte loop is the
+/// whole function here.
+#[inline]
+fn byte_reverse16(out: &mut [u8; 16], in_: &[u8; 16]) {
+    for i in 0..16 {
+        out[i] = in_[15 - i];
+    }
+}
+
+/// `void ossl_polyval_ghash_init(u128 Htable[16], const uint64_t H[2])` —
+/// `cipher_aes_gcm_siv_polyval.c:61-75`.
+///
+/// **One entry is written, not sixteen.** The authority builds a Shoup multiplication table; this
+/// crate's GCM model carries the field key instead (`src/modes/gcm.rs`'s `ossl_gcm_init_4bit`
+/// records that descent), so the value `gf_mul` needs is what lands in `htable[0]`. The member's
+/// *width* is contract -- see [`ProvAesGcmSivCtx::htable`] -- and its contents are read by nothing
+/// outside this module.
+fn polyval_ghash_init(htable: &mut [u64; 32], h: &[u8; 16]) {
+    let mut rev = [0u8; 16];
+    byte_reverse16(&mut rev, h);
+    let mut t = [
+        u64::from_ne_bytes([
+            rev[0], rev[1], rev[2], rev[3], rev[4], rev[5], rev[6], rev[7],
+        ]),
+        u64::from_ne_bytes([
+            rev[8], rev[9], rev[10], rev[11], rev[12], rev[13], rev[14], rev[15],
+        ]),
+    ];
+    mulx_ghash(&mut t);
+    // The authority's `IS_LITTLE_ENDIAN` arm -- `:68-72` -- swaps both words before handing them to
+    // `ossl_gcm_init_4bit`, and the crate's model reads the pair as `H_arg[0] << 64 | H_arg[1]`.
+    // **The two swaps are in the same direction and do not cancel**, which is what this line gets
+    // wrong if it is reasoned rather than measured: `courts/layout/oracle-polyval.c` calls the
+    // authority's own helpers out of the pinned static archive, and without the two `gswap8` calls
+    // the tag is `e4361d75d58d2c8e8d707433bccbc599` where the authority's is
+    // `60ae5488532667200d8e39a83e060a00`. The unit test pinning both is
+    // `the_polyval_helpers_match_the_authority_oracle`.
+    htable[0] = gswap8(t[0]);
+    htable[1] = gswap8(t[1]);
+}
+
+/// `void ossl_polyval_ghash_hash(const u128 Htable[16], uint8_t *tag, const uint8_t *inp,
+/// size_t len)` — `cipher_aes_gcm_siv_polyval.c:78-95`.
+///
+/// `len` is a multiple of sixteen; every caller rounds up or down first.
+fn polyval_ghash_hash(htable: &[u64; 32], tag: &mut [u8; 16], inp: &[u8]) {
+    let h = ((htable[0] as u128) << 64) | htable[1] as u128;
+    let mut rev = [0u8; 16];
+    byte_reverse16(&mut rev, tag);
+    let mut out = u128::from_be_bytes(rev);
+    let mut i = 0usize;
+    while i + 16 <= inp.len() {
+        let mut block = [0u8; 16];
+        block.copy_from_slice(&inp[i..i + 16]);
+        byte_reverse16(&mut rev, &block);
+        out = gf_mul(out ^ u128::from_be_bytes(rev), h);
+        i += 16;
+    }
+    let be = out.to_be_bytes();
+    byte_reverse16(tag, &be);
+}
+
+/// `PROV_CIPHER_HW_AES_GCM_SIV` — `cipher_aes_gcm_siv.h:24-29`. Measured **32** bytes.
+#[repr(C)]
+pub(crate) struct ProvCipherHwAesGcmSiv {
+    /// `int (*initkey)(void *vctx)`.
+    pub initkey: unsafe extern "C" fn(*mut c_void) -> c_int,
+    /// `int (*cipher)(void *vctx, unsigned char *out, const unsigned char *in, size_t len)`.
+    pub cipher: unsafe extern "C" fn(*mut c_void, *mut c_uchar, *const c_uchar, usize) -> c_int,
+    /// `int (*dup_ctx)(void *vdst, void *vsrc)`.
+    pub dup_ctx: unsafe extern "C" fn(*mut c_void, *mut c_void) -> c_int,
+    /// `void (*clean_ctx)(void *vctx)`.
+    pub clean_ctx: unsafe extern "C" fn(*mut c_void),
+}
+
+/// The six one-bit fields of `PROV_AES_GCM_SIV_CTX`, which C packs into one `unsigned int`.
+const GCM_SIV_F_ENC: c_uint = 1 << 0;
+const GCM_SIV_F_HAVE_USER_TAG: c_uint = 1 << 1;
+const GCM_SIV_F_GENERATED_TAG: c_uint = 1 << 2;
+const GCM_SIV_F_USED_ENC: c_uint = 1 << 3;
+const GCM_SIV_F_USED_DEC: c_uint = 1 << 4;
+const GCM_SIV_F_SPEED: c_uint = 1 << 5;
+
+/// `PROV_AES_GCM_SIV_CTX` — `cipher_aes_gcm_siv.h:32-52`.
+///
+/// Measured by `courts/layout/measure-gcm-siv-ctx.c`: **448** bytes, eight-aligned, with `Htable`
+/// at **184**. `Htable` is the one member that cannot be written as its declared type: the
+/// authority's `u128` is `unsigned __int128`, which this profile's ABI aligns to **eight** bytes,
+/// while Rust's `u128` is sixteen-aligned — so `[u128; 16]` would put the table at 192 and make the
+/// whole context 464. The table is therefore carried as its thirty-two `u64`s, which is the same
+/// 256 bytes at the same offset. `RT-CIPHER`'s context-size assertion is what holds the total.
+#[repr(C)]
+pub(crate) struct ProvAesGcmSivCtx {
+    /// `EVP_CIPHER_CTX *ecb_ctx`.
+    pub ecb_ctx: *mut EvpCipherCtx,
+    /// `const PROV_CIPHER_HW_AES_GCM_SIV *hw`.
+    pub hw: *const ProvCipherHwAesGcmSiv,
+    /// `uint8_t *aad` — allocated `UP16(aad_len)` bytes for `aad_len` used.
+    pub aad: *mut c_uchar,
+    /// `OSSL_LIB_CTX *libctx` — `PROV_LIBCTX_OF(provctx)`, the acquisition D240 identified.
+    pub libctx: *mut c_void,
+    /// `OSSL_PROVIDER *provctx`.
+    pub provctx: *mut c_void,
+    /// `size_t aad_len`.
+    pub aad_len: usize,
+    /// `size_t key_len`.
+    pub key_len: usize,
+    /// `uint8_t key_gen_key[32]`.
+    pub key_gen_key: [c_uchar; 32],
+    /// `uint8_t msg_enc_key[32]`.
+    pub msg_enc_key: [c_uchar; 32],
+    /// `uint8_t msg_auth_key[BLOCK_SIZE]`.
+    pub msg_auth_key: [c_uchar; GCM_SIV_BLOCK_SIZE],
+    /// `uint8_t tag[TAG_SIZE]` — the generated tag.
+    pub tag: [c_uchar; GCM_SIV_TAG_SIZE],
+    /// `uint8_t user_tag[TAG_SIZE]`.
+    pub user_tag: [c_uchar; GCM_SIV_TAG_SIZE],
+    /// `uint8_t nonce[NONCE_SIZE]`.
+    pub nonce: [c_uchar; GCM_SIV_NONCE_SIZE],
+    /// `u128 Htable[16]`, as its thirty-two `u64`s; see this struct's note.
+    pub htable: [u64; 32],
+    /// The `enc`/`have_user_tag`/`generated_tag`/`used_enc`/`used_dec`/`speed` bitfields.
+    pub flags: c_uint,
+}
+
+const _: () = {
+    assert!(core::mem::size_of::<ProvAesGcmSivCtx>() == 448);
+    assert!(core::mem::offset_of!(ProvAesGcmSivCtx, ecb_ctx) == 0);
+    assert!(core::mem::offset_of!(ProvAesGcmSivCtx, key_len) == 48);
+    assert!(core::mem::offset_of!(ProvAesGcmSivCtx, msg_auth_key) == 120);
+    assert!(core::mem::offset_of!(ProvAesGcmSivCtx, nonce) == 168);
+    assert!(core::mem::offset_of!(ProvAesGcmSivCtx, htable) == 184);
+    assert!(core::mem::offset_of!(ProvAesGcmSivCtx, flags) == 440);
+    assert!(core::mem::size_of::<ProvCipherHwAesGcmSiv>() == 32);
+};
+
+/// The six bit accessors, so the bodies below read the way the authority's do.
+#[inline]
+fn gsiv_flag(ctx: *const ProvAesGcmSivCtx, mask: c_uint) -> bool {
+    // SAFETY: the caller holds a live context.
+    unsafe { (*ctx).flags & mask != 0 }
+}
+/// Set one bitfield.
+#[inline]
+fn gsiv_set(ctx: *mut ProvAesGcmSivCtx, mask: c_uint, on: bool) {
+    // SAFETY: the caller holds a live context.
+    unsafe {
+        if on {
+            (*ctx).flags |= mask;
+        } else {
+            (*ctx).flags &= !mask;
+        }
+    }
+}
+
+/// The authority's `err:` label in `aes_gcm_siv_initkey` — `cipher_aes_gcm_siv_hw.c:103-107`.
+///
+/// # Safety
+/// `ctx` is a live context and `ecb` is NULL or a fetched cipher.
+unsafe fn gcm_siv_initkey_err(
+    ctx: *mut ProvAesGcmSivCtx,
+    ecb: *mut crate::evp::cipher::EvpCipher,
+) -> c_int {
+    // SAFETY: the caller's contract; both frees accept NULL.
+    unsafe {
+        EVP_CIPHER_CTX_free((*ctx).ecb_ctx);
+        EVP_CIPHER_free(ecb);
+        (*ctx).ecb_ctx = ptr::null_mut();
+    }
+    0
+}
+
+/// `static int aes_gcm_siv_initkey(void *vctx)` — `cipher_aes_gcm_siv_hw.c:25-108`.
+///
+/// The two derived keys come from encrypting counter blocks `0,1` (for the authentication key) and
+/// then `2..` (for the encryption key) with `AES-*-ECB` under the caller's `key_gen_key`. Every one
+/// of those calls is one of the three Phase 7 exports this row depends on.
+///
+/// # Safety
+/// The `PROV_CIPHER_HW_AES_GCM_SIV::initkey` contract.
+unsafe extern "C" fn aes_gcm_siv_initkey(vctx: *mut c_void) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesGcmSivCtx>();
+        let mut output = [0u8; GCM_SIV_BLOCK_SIZE];
+        let mut counter: u32 = 0;
+        let mut out_len: c_int;
+
+        let ecb = match (*ctx).key_len {
+            16 => EVP_CIPHER_fetch((*ctx).libctx, c"AES-128-ECB".as_ptr(), ptr::null()),
+            24 => EVP_CIPHER_fetch((*ctx).libctx, c"AES-192-ECB".as_ptr(), ptr::null()),
+            32 => EVP_CIPHER_fetch((*ctx).libctx, c"AES-256-ECB".as_ptr(), ptr::null()),
+            // The authority's `default: goto err`.
+            _ => return gcm_siv_initkey_err(ctx, ptr::null_mut()),
+        };
+
+        if (*ctx).ecb_ctx.is_null() {
+            (*ctx).ecb_ctx = EVP_CIPHER_CTX_new();
+            if (*ctx).ecb_ctx.is_null() {
+                return gcm_siv_initkey_err(ctx, ecb);
+            }
+        }
+        if EVP_EncryptInit_ex2(
+            (*ctx).ecb_ctx,
+            ecb,
+            (*ctx).key_gen_key.as_ptr(),
+            ptr::null(),
+            ptr::null(),
+        ) == 0
+        {
+            return gcm_siv_initkey_err(ctx, ecb);
+        }
+
+        // `union { uint32_t counter; uint8_t block[16]; }` — `data.block[4..16]` carries the nonce
+        // and `data.counter` the counter for the low four bytes.
+        let mut data = [0u8; GCM_SIV_BLOCK_SIZE];
+        data[4..16].copy_from_slice(&(*ctx).nonce);
+
+        gsiv_set(ctx, GCM_SIV_F_GENERATED_TAG, false);
+        (*ctx).tag = [0u8; GCM_SIV_TAG_SIZE];
+
+        // `msg_auth_key` is always sixteen bytes, whatever the AES key size.
+        let mut i = 0usize;
+        while i < GCM_SIV_BLOCK_SIZE {
+            data[0..4].copy_from_slice(&counter.to_ne_bytes());
+            out_len = GCM_SIV_BLOCK_SIZE as c_int;
+            if EVP_EncryptUpdate(
+                (*ctx).ecb_ctx,
+                output.as_mut_ptr(),
+                &mut out_len,
+                data.as_ptr(),
+                GCM_SIV_BLOCK_SIZE as c_int,
+            ) == 0
+            {
+                return gcm_siv_initkey_err(ctx, ecb);
+            }
+            ptr::copy_nonoverlapping(
+                output.as_ptr(),
+                core::ptr::addr_of_mut!((*ctx).msg_auth_key)
+                    .cast::<u8>()
+                    .add(i),
+                8,
+            );
+            counter = counter.wrapping_add(1);
+            i += 8;
+        }
+
+        // `msg_enc_key` is tied to the key size.
+        let mut i = 0usize;
+        while i < (*ctx).key_len {
+            data[0..4].copy_from_slice(&counter.to_ne_bytes());
+            out_len = GCM_SIV_BLOCK_SIZE as c_int;
+            if EVP_EncryptUpdate(
+                (*ctx).ecb_ctx,
+                output.as_mut_ptr(),
+                &mut out_len,
+                data.as_ptr(),
+                GCM_SIV_BLOCK_SIZE as c_int,
+            ) == 0
+            {
+                return gcm_siv_initkey_err(ctx, ecb);
+            }
+            ptr::copy_nonoverlapping(
+                output.as_ptr(),
+                core::ptr::addr_of_mut!((*ctx).msg_enc_key)
+                    .cast::<u8>()
+                    .add(i),
+                8,
+            );
+            counter = counter.wrapping_add(1);
+            i += 8;
+        }
+
+        if EVP_EncryptInit_ex2(
+            (*ctx).ecb_ctx,
+            ecb,
+            (*ctx).msg_enc_key.as_ptr(),
+            ptr::null(),
+            ptr::null(),
+        ) == 0
+        {
+            return gcm_siv_initkey_err(ctx, ecb);
+        }
+
+        // Freshen up the state.
+        gsiv_set(ctx, GCM_SIV_F_USED_ENC, false);
+        gsiv_set(ctx, GCM_SIV_F_USED_DEC, false);
+        EVP_CIPHER_free(ecb);
+        1
+    }
+}
+
+/// `static int aes_gcm_siv_aad(PROV_AES_GCM_SIV_CTX *ctx, const unsigned char *aad, size_t len)` —
+/// `cipher_aes_gcm_siv_hw.c:110-138`.
+///
+/// # Safety
+/// `ctx` is a live context; `aad` is readable for `len` bytes.
+unsafe fn aes_gcm_siv_aad(ctx: *mut ProvAesGcmSivCtx, aad: *const c_uchar, len: usize) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        // A length of zero resets the AAD.
+        if len == 0 {
+            CRYPTO_free((*ctx).aad.cast(), FILE_GCM_SIV, LINE);
+            (*ctx).aad = ptr::null_mut();
+            (*ctx).aad_len = 0;
+            return 1;
+        }
+        let to_alloc = up16((*ctx).aad_len + len);
+        // RFC 8452's limit on the AAD.
+        if (to_alloc as u64) > (1u64 << 36) {
+            return 0;
+        }
+        let p = CRYPTO_realloc((*ctx).aad.cast(), to_alloc, FILE_GCM_SIV, LINE).cast::<c_uchar>();
+        if p.is_null() {
+            return 0;
+        }
+        (*ctx).aad = p;
+        ptr::copy_nonoverlapping(aad, p.add((*ctx).aad_len), len);
+        (*ctx).aad_len += len;
+        if to_alloc > (*ctx).aad_len {
+            ptr::write_bytes(p.add((*ctx).aad_len), 0, to_alloc - (*ctx).aad_len);
+        }
+        1
+    }
+}
+
+/// `static int aes_gcm_siv_encrypt(PROV_AES_GCM_SIV_CTX *ctx, const unsigned char *in,
+/// unsigned char *out, size_t len)` — `cipher_aes_gcm_siv_hw.c:140-199`.
+///
+/// # Safety
+/// `ctx` is a live context; `in` is readable for `len` bytes and `out` writable for `len`.
+unsafe fn aes_gcm_siv_encrypt(
+    ctx: *mut ProvAesGcmSivCtx,
+    in_: *const c_uchar,
+    out: *mut c_uchar,
+    len: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut len_blk = [0u64; 2];
+        let mut counter_block = [0u8; GCM_SIV_TAG_SIZE];
+        let mut out_len: c_int;
+        let mut error = false;
+
+        gsiv_set(ctx, GCM_SIV_F_GENERATED_TAG, false);
+        if !gsiv_flag(ctx, GCM_SIV_F_SPEED) && gsiv_flag(ctx, GCM_SIV_F_USED_ENC) {
+            return 0;
+        }
+        // The authority's `int64_t` test, which a length above 2^36 takes.
+        if len > (1usize << 36) {
+            return 0;
+        }
+
+        len_blk[0] = ((*ctx).aad_len as u64).wrapping_mul(8);
+        len_blk[1] = (len as u64).wrapping_mul(8);
+        let mut s_s = [0u8; GCM_SIV_TAG_SIZE];
+        polyval_ghash_init(&mut (*ctx).htable, &(*ctx).msg_auth_key);
+
+        if !(*ctx).aad.is_null() {
+            // The AAD is allocated with padding, rounded up.
+            let n = up16((*ctx).aad_len);
+            let src = core::slice::from_raw_parts((*ctx).aad, n);
+            polyval_ghash_hash(&(*ctx).htable, &mut s_s, src);
+        }
+        if down16(len) > 0 {
+            let src = core::slice::from_raw_parts(in_, down16(len));
+            polyval_ghash_hash(&(*ctx).htable, &mut s_s, src);
+        }
+        if !is16(len) {
+            let mut padding = [0u8; GCM_SIV_BLOCK_SIZE];
+            ptr::copy_nonoverlapping(in_.add(down16(len)), padding.as_mut_ptr(), remainder16(len));
+            polyval_ghash_hash(&(*ctx).htable, &mut s_s, &padding);
+        }
+        // The two length words, whose byte order is the authority's native one.
+        let mut len_bytes = [0u8; 16];
+        len_bytes[0..8].copy_from_slice(&len_blk[0].to_ne_bytes());
+        len_bytes[8..16].copy_from_slice(&len_blk[1].to_ne_bytes());
+        polyval_ghash_hash(&(*ctx).htable, &mut s_s, &len_bytes);
+
+        for (b, n) in s_s.iter_mut().zip((*ctx).nonce.iter()) {
+            *b ^= *n;
+        }
+        s_s[GCM_SIV_TAG_SIZE - 1] &= 0x7f;
+
+        out_len = GCM_SIV_TAG_SIZE as c_int;
+        if EVP_EncryptUpdate(
+            (*ctx).ecb_ctx,
+            (*ctx).tag.as_mut_ptr(),
+            &mut out_len,
+            s_s.as_ptr(),
+            GCM_SIV_TAG_SIZE as c_int,
+        ) == 0
+        {
+            error = true;
+        }
+        counter_block.copy_from_slice(&(*ctx).tag);
+        counter_block[GCM_SIV_TAG_SIZE - 1] |= 0x80;
+
+        if aes_gcm_siv_ctr32(ctx, counter_block.as_ptr(), out, in_, len) == 0 {
+            error = true;
+        }
+
+        gsiv_set(ctx, GCM_SIV_F_GENERATED_TAG, !error);
+        // Regardless of error.
+        gsiv_set(ctx, GCM_SIV_F_USED_ENC, true);
+        if error {
+            0
+        } else {
+            1
+        }
+    }
+}
+
+/// `static int aes_gcm_siv_decrypt(PROV_AES_GCM_SIV_CTX *ctx, const unsigned char *in,
+/// unsigned char *out, size_t len)` — `cipher_aes_gcm_siv_hw.c:201-264`.
+///
+/// # Safety
+/// As `aes_gcm_siv_encrypt`.
+unsafe fn aes_gcm_siv_decrypt(
+    ctx: *mut ProvAesGcmSivCtx,
+    in_: *const c_uchar,
+    out: *mut c_uchar,
+    len: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut counter_block = [0u8; GCM_SIV_TAG_SIZE];
+        let mut len_blk = [0u64; 2];
+        let mut out_len: c_int;
+        let mut error = false;
+
+        gsiv_set(ctx, GCM_SIV_F_GENERATED_TAG, false);
+        if !gsiv_flag(ctx, GCM_SIV_F_SPEED) && gsiv_flag(ctx, GCM_SIV_F_USED_DEC) {
+            return 0;
+        }
+        if len > (1usize << 36) {
+            return 0;
+        }
+
+        counter_block.copy_from_slice(&(*ctx).user_tag);
+        counter_block[GCM_SIV_TAG_SIZE - 1] |= 0x80;
+
+        if aes_gcm_siv_ctr32(ctx, counter_block.as_ptr(), out, in_, len) == 0 {
+            error = true;
+        }
+
+        len_blk[0] = ((*ctx).aad_len as u64).wrapping_mul(8);
+        len_blk[1] = (len as u64).wrapping_mul(8);
+        let mut s_s = [0u8; GCM_SIV_TAG_SIZE];
+        polyval_ghash_init(&mut (*ctx).htable, &(*ctx).msg_auth_key);
+        if !(*ctx).aad.is_null() {
+            let n = up16((*ctx).aad_len);
+            let src = core::slice::from_raw_parts((*ctx).aad, n);
+            polyval_ghash_hash(&(*ctx).htable, &mut s_s, src);
+        }
+        if down16(len) > 0 {
+            // The *decrypted* text, which is what makes this arm different from the encrypting one.
+            let src = core::slice::from_raw_parts(out, down16(len));
+            polyval_ghash_hash(&(*ctx).htable, &mut s_s, src);
+        }
+        if !is16(len) {
+            let mut padding = [0u64; 2];
+            ptr::copy_nonoverlapping(
+                out.add(down16(len)),
+                padding.as_mut_ptr().cast::<c_uchar>(),
+                remainder16(len),
+            );
+            let mut pb = [0u8; 16];
+            pb[0..8].copy_from_slice(&padding[0].to_ne_bytes());
+            pb[8..16].copy_from_slice(&padding[1].to_ne_bytes());
+            polyval_ghash_hash(&(*ctx).htable, &mut s_s, &pb);
+        }
+        let mut len_bytes = [0u8; 16];
+        len_bytes[0..8].copy_from_slice(&len_blk[0].to_ne_bytes());
+        len_bytes[8..16].copy_from_slice(&len_blk[1].to_ne_bytes());
+        polyval_ghash_hash(&(*ctx).htable, &mut s_s, &len_bytes);
+
+        for (b, n) in s_s.iter_mut().zip((*ctx).nonce.iter()) {
+            *b ^= *n;
+        }
+        s_s[GCM_SIV_TAG_SIZE - 1] &= 0x7f;
+
+        out_len = GCM_SIV_TAG_SIZE as c_int;
+        if EVP_EncryptUpdate(
+            (*ctx).ecb_ctx,
+            (*ctx).tag.as_mut_ptr(),
+            &mut out_len,
+            s_s.as_ptr(),
+            GCM_SIV_TAG_SIZE as c_int,
+        ) == 0
+        {
+            error = true;
+        }
+        gsiv_set(ctx, GCM_SIV_F_GENERATED_TAG, !error);
+        // Regardless of error.
+        gsiv_set(ctx, GCM_SIV_F_USED_DEC, true);
+        if error {
+            0
+        } else {
+            1
+        }
+    }
+}
+
+/// `static int aes_gcm_siv_finish(PROV_AES_GCM_SIV_CTX *ctx)` —
+/// `cipher_aes_gcm_siv_hw.c:266-283`.
+///
+/// # Safety
+/// `ctx` is a live context.
+unsafe fn aes_gcm_siv_finish(ctx: *mut ProvAesGcmSivCtx) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if gsiv_flag(ctx, GCM_SIV_F_ENC) {
+            // Generate the tag when Final is the first, empty-message operation.
+            if !gsiv_flag(ctx, GCM_SIV_F_GENERATED_TAG)
+                && aes_gcm_siv_encrypt(ctx, ptr::null(), ptr::null_mut(), 0) == 0
+            {
+                return 0;
+            }
+            return gsiv_flag(ctx, GCM_SIV_F_GENERATED_TAG) as c_int;
+        }
+        if !gsiv_flag(ctx, GCM_SIV_F_GENERATED_TAG)
+            && aes_gcm_siv_decrypt(ctx, ptr::null(), ptr::null_mut(), 0) == 0
+        {
+            return 0;
+        }
+        let same = CRYPTO_memcmp(
+            (*ctx).tag.as_ptr().cast(),
+            (*ctx).user_tag.as_ptr().cast(),
+            GCM_SIV_TAG_SIZE,
+        ) == 0;
+        (same && gsiv_flag(ctx, GCM_SIV_F_HAVE_USER_TAG)) as c_int
+    }
+}
+
+/// `static int aes_gcm_siv_cipher(void *vctx, unsigned char *out, const unsigned char *in,
+/// size_t len)` — `cipher_aes_gcm_siv_hw.c:285-302`.
+///
+/// Three-way on the two pointers, which is how the row layer routes AAD, payload and final through
+/// one function.
+///
+/// # Safety
+/// As `aes_gcm_siv_encrypt`.
+unsafe extern "C" fn aes_gcm_siv_cipher(
+    vctx: *mut c_void,
+    out: *mut c_uchar,
+    in_: *const c_uchar,
+    len: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesGcmSivCtx>();
+        // `EncryptFinal`/`DecryptFinal`.
+        if in_.is_null() {
+            return aes_gcm_siv_finish(ctx);
+        }
+        // The associated data.
+        if out.is_null() {
+            return aes_gcm_siv_aad(ctx, in_, len);
+        }
+        if gsiv_flag(ctx, GCM_SIV_F_ENC) {
+            return aes_gcm_siv_encrypt(ctx, in_, out, len);
+        }
+        aes_gcm_siv_decrypt(ctx, in_, out, len)
+    }
+}
+
+/// `static void aes_gcm_siv_clean_ctx(void *vctx)` — `cipher_aes_gcm_siv_hw.c:304-310`.
+///
+/// # Safety
+/// `vctx` is a live context.
+unsafe extern "C" fn aes_gcm_siv_clean_ctx(vctx: *mut c_void) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesGcmSivCtx>();
+        if !(*ctx).ecb_ctx.is_null() {
+            EVP_CIPHER_CTX_free((*ctx).ecb_ctx);
+            (*ctx).ecb_ctx = ptr::null_mut();
+        }
+    }
+}
+
+/// `static int aes_gcm_siv_dup_ctx(void *vdst, void *vsrc)` — `cipher_aes_gcm_siv_hw.c:312-330`.
+///
+/// # Safety
+/// `vdst` and `vsrc` are live, distinct contexts.
+unsafe extern "C" fn aes_gcm_siv_dup_ctx(vdst: *mut c_void, vsrc: *mut c_void) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let dst = vdst.cast::<ProvAesGcmSivCtx>();
+        let src = vsrc.cast::<ProvAesGcmSivCtx>();
+
+        (*dst).ecb_ctx = ptr::null_mut();
+        if !(*src).ecb_ctx.is_null() {
+            (*dst).ecb_ctx = EVP_CIPHER_CTX_new();
+            if (*dst).ecb_ctx.is_null() {
+                return 0;
+            }
+            if EVP_CIPHER_CTX_copy((*dst).ecb_ctx, (*src).ecb_ctx) == 0 {
+                EVP_CIPHER_CTX_free((*dst).ecb_ctx);
+                (*dst).ecb_ctx = ptr::null_mut();
+                return 0;
+            }
+        }
+        1
+    }
+}
+
+/// `static const PROV_CIPHER_HW_AES_GCM_SIV aes_gcm_siv_hw` —
+/// `cipher_aes_gcm_siv_hw.c:332-337`.
+static AES_GCM_SIV_HW: ProvCipherHwAesGcmSiv = ProvCipherHwAesGcmSiv {
+    initkey: aes_gcm_siv_initkey,
+    cipher: aes_gcm_siv_cipher,
+    dup_ctx: aes_gcm_siv_dup_ctx,
+    clean_ctx: aes_gcm_siv_clean_ctx,
+};
+
+/// `const PROV_CIPHER_HW_AES_GCM_SIV *ossl_prov_cipher_hw_aes_gcm_siv(size_t keybits)` —
+/// `cipher_aes_gcm_siv_hw.c:339-342`. The argument is ignored: one vtable serves all three rows.
+///
+/// # Safety
+/// None: the pointer is `'static`.
+unsafe fn ossl_prov_cipher_hw_aes_gcm_siv(_keybits: usize) -> *const ProvCipherHwAesGcmSiv {
+    &AES_GCM_SIV_HW
+}
+
+/// `static int aes_gcm_siv_ctr32(PROV_AES_GCM_SIV_CTX *ctx, const unsigned char *init_counter,
+/// unsigned char *out, const unsigned char *in, size_t len)` —
+/// `cipher_aes_gcm_siv_hw.c:345-383`.
+///
+/// AES-CTR with a *native* little-endian counter word, which is why the row says it "needs
+/// AES-CTR32, which is different than the AES-CTR implementation": the increment is on
+/// `block.x32[0]` in host byte order, so a big-endian machine takes the other branch.
+///
+/// # Safety
+/// As `aes_gcm_siv_encrypt`.
+unsafe fn aes_gcm_siv_ctr32(
+    ctx: *mut ProvAesGcmSivCtx,
+    init_counter: *const c_uchar,
+    out: *mut c_uchar,
+    in_: *const c_uchar,
+    len: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut keystream = [0u8; GCM_SIV_BLOCK_SIZE];
+        let mut block = [0u8; GCM_SIV_BLOCK_SIZE];
+        let mut out_len: c_int;
+        let mut error = false;
+        let mut counter: u32 = 0;
+
+        ptr::copy_nonoverlapping(init_counter, block.as_mut_ptr(), GCM_SIV_BLOCK_SIZE);
+        if cfg!(target_endian = "big") {
+            counter = gswap4(u32::from_ne_bytes([block[0], block[1], block[2], block[3]]));
+        }
+
+        let mut i = 0usize;
+        while i < len {
+            out_len = GCM_SIV_BLOCK_SIZE as c_int;
+            if EVP_EncryptUpdate(
+                (*ctx).ecb_ctx,
+                keystream.as_mut_ptr(),
+                &mut out_len,
+                block.as_ptr(),
+                GCM_SIV_BLOCK_SIZE as c_int,
+            ) == 0
+            {
+                error = true;
+            }
+            if cfg!(target_endian = "little") {
+                let w = u32::from_ne_bytes([block[0], block[1], block[2], block[3]]);
+                block[0..4].copy_from_slice(&w.wrapping_add(1).to_ne_bytes());
+            } else {
+                counter = counter.wrapping_add(1);
+                block[0..4].copy_from_slice(&gswap4(counter).to_ne_bytes());
+            }
+            let mut todo = len - i;
+            if todo > keystream.len() {
+                todo = keystream.len();
+            }
+            for (j, k) in keystream.iter().enumerate().take(todo) {
+                *out.add(i + j) = *in_.add(i + j) ^ *k;
+            }
+            i += GCM_SIV_BLOCK_SIZE;
+        }
+        if error {
+            0
+        } else {
+            1
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// The `AES-*-GCM-SIV` row layer — `cipher_aes_gcm_siv.c`
+// ---------------------------------------------------------------------------------------------
+
+/// `static void *ossl_aes_gcm_siv_newctx(void *provctx, size_t keybits)` —
+/// `cipher_aes_gcm_siv.c:27-42`.
+///
+/// **The `PROV_LIBCTX_OF(provctx)` line is the one D240 identified.** `aes_gcm_siv_initkey` fetches
+/// `AES-*-ECB` through `ctx->libctx`, so this row's sub-fetches resolve in the library context of
+/// the provider that created it. `src/provider/ctx.rs`'s `prov_libctx_of` is the crate's own
+/// transcription of that macro, and it answers NULL for the NULL `provctx` this crate's
+/// `ossl_default_provider_init` still publishes -- the D117 residual D240 records, whose observable
+/// difference is a private-`OSSL_LIB_CTX` fetch and which `RT-CIPHER`'s private-context arm is what
+/// measures.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe fn ossl_aes_gcm_siv_newctx(provctx: *mut c_void, keybits: usize) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+        let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvAesGcmSivCtx>(), FILE_GCM_SIV, LINE)
+            .cast::<ProvAesGcmSivCtx>();
+        if !ctx.is_null() {
+            (*ctx).key_len = keybits / 8;
+            (*ctx).hw = ossl_prov_cipher_hw_aes_gcm_siv(keybits);
+            (*ctx).libctx = crate::provider::ctx::prov_libctx_of(provctx);
+            (*ctx).provctx = provctx;
+        }
+        ctx.cast()
+    }
+}
+
+/// `static void ossl_aes_gcm_siv_freectx(void *vctx)` — `cipher_aes_gcm_siv.c:44-54`.
+///
+/// The `aad` free passes **`aad_len`**, the used length, not the `UP16(...)` the allocation
+/// rounded up to -- the authority's own line, and the number reaches a caller's allocator through
+/// `CRYPTO_set_mem_functions`, so it is transcribed rather than tidied.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn ossl_aes_gcm_siv_freectx(vctx: *mut c_void) {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if vctx.is_null() {
+            return;
+        }
+        let ctx = vctx.cast::<ProvAesGcmSivCtx>();
+        CRYPTO_clear_free((*ctx).aad.cast(), (*ctx).aad_len, FILE_GCM_SIV, LINE);
+        ((*(*ctx).hw).clean_ctx)(vctx);
+        CRYPTO_clear_free(
+            vctx,
+            core::mem::size_of::<ProvAesGcmSivCtx>(),
+            FILE_GCM_SIV,
+            LINE,
+        );
+    }
+}
+
+/// `static void *ossl_aes_gcm_siv_dupctx(void *vctx)` — `cipher_aes_gcm_siv.c:56-89`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn ossl_aes_gcm_siv_dupctx(vctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+        let in_ = vctx.cast::<ProvAesGcmSivCtx>();
+        if (*in_).hw.is_null() {
+            return ptr::null_mut();
+        }
+        let ret = CRYPTO_memdup(
+            vctx,
+            core::mem::size_of::<ProvAesGcmSivCtx>(),
+            FILE_GCM_SIV,
+            LINE,
+        )
+        .cast::<ProvAesGcmSivCtx>();
+        if ret.is_null() {
+            return ptr::null_mut();
+        }
+        // NULL-out the things created later.
+        (*ret).aad = ptr::null_mut();
+        (*ret).ecb_ctx = ptr::null_mut();
+
+        if !(*in_).aad.is_null() {
+            (*ret).aad = CRYPTO_memdup((*in_).aad.cast(), up16((*ret).aad_len), FILE_GCM_SIV, LINE)
+                .cast::<c_uchar>();
+            if (*ret).aad.is_null() {
+                return gcm_siv_dupctx_err(ret);
+            }
+        }
+        if ((*(*in_).hw).dup_ctx)(ret.cast(), in_.cast()) == 0 {
+            return gcm_siv_dupctx_err(ret);
+        }
+        ret.cast()
+    }
+}
+
+/// The authority's `err:` label in `ossl_aes_gcm_siv_dupctx` — `cipher_aes_gcm_siv.c:83-88`.
+///
+/// # Safety
+/// `ret` is a context this module allocated.
+unsafe fn gcm_siv_dupctx_err(ret: *mut ProvAesGcmSivCtx) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        CRYPTO_clear_free((*ret).aad.cast(), (*ret).aad_len, FILE_GCM_SIV, LINE);
+        CRYPTO_free(ret.cast(), FILE_GCM_SIV, LINE);
+    }
+    ptr::null_mut()
+}
+
+/// `static int ossl_aes_gcm_siv_init(void *vctx, const unsigned char *key, size_t keylen,
+/// const unsigned char *iv, size_t ivlen, const OSSL_PARAM params[], int enc)` —
+/// `cipher_aes_gcm_siv.c:91-121`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe fn ossl_aes_gcm_siv_init(
+    vctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    iv: *const c_uchar,
+    ivlen: usize,
+    params: *const OsslParam,
+    enc: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return 0;
+        }
+        let ctx = vctx.cast::<ProvAesGcmSivCtx>();
+
+        gsiv_set(ctx, GCM_SIV_F_ENC, enc != 0);
+
+        if !key.is_null() {
+            if keylen != (*ctx).key_len {
+                return fail_at(&err_sites::PROV_CIPHER_AES_GCM_SIV_104);
+            }
+            ptr::copy_nonoverlapping(key, (*ctx).key_gen_key.as_mut_ptr(), (*ctx).key_len);
+        }
+        if !iv.is_null() {
+            if ivlen != GCM_SIV_NONCE_SIZE {
+                return fail_at(&err_sites::PROV_CIPHER_AES_GCM_SIV_111);
+            }
+            ptr::copy_nonoverlapping(iv, (*ctx).nonce.as_mut_ptr(), GCM_SIV_NONCE_SIZE);
+        }
+
+        if ((*(*ctx).hw).initkey)(vctx) == 0 {
+            return 0;
+        }
+
+        aes_gcm_siv_set_ctx_params(vctx, params)
+    }
+}
+
+/// `static int ossl_aes_gcm_siv_einit(...)` — `cipher_aes_gcm_siv.c:123-128`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn ossl_aes_gcm_siv_einit(
+    vctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    iv: *const c_uchar,
+    ivlen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe { ossl_aes_gcm_siv_init(vctx, key, keylen, iv, ivlen, params, 1) }
+}
+
+/// `static int ossl_aes_gcm_siv_dinit(...)` — `cipher_aes_gcm_siv.c:130-135`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn ossl_aes_gcm_siv_dinit(
+    vctx: *mut c_void,
+    key: *const c_uchar,
+    keylen: usize,
+    iv: *const c_uchar,
+    ivlen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe { ossl_aes_gcm_siv_init(vctx, key, keylen, iv, ivlen, params, 0) }
+}
+
+/// `ossl_aes_gcm_siv_stream_update`, which `cipher_aes_gcm_siv.c:137` defines as
+/// `ossl_aes_gcm_siv_cipher`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn ossl_aes_gcm_siv_cipher(
+    vctx: *mut c_void,
+    out: *mut c_uchar,
+    outl: *mut usize,
+    outsize: usize,
+    in_: *const c_uchar,
+    inl: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesGcmSivCtx>();
+
+        if is_running() == 0 {
+            return 0;
+        }
+        if outsize < inl {
+            return fail_at(&err_sites::PROV_CIPHER_AES_GCM_SIV_148);
+        }
+
+        let error = ((*(*ctx).hw).cipher)(vctx, out, in_, inl) == 0;
+
+        if !outl.is_null() && !error {
+            *outl = inl;
+        }
+        if error {
+            0
+        } else {
+            1
+        }
+    }
+}
+
+/// `static int ossl_aes_gcm_siv_stream_final(void *vctx, unsigned char *out, size_t *outl,
+/// size_t outsize)` — `cipher_aes_gcm_siv.c:159-173`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn ossl_aes_gcm_siv_stream_final(
+    vctx: *mut c_void,
+    out: *mut c_uchar,
+    outl: *mut usize,
+    _outsize: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesGcmSivCtx>();
+
+        if is_running() == 0 {
+            return 0;
+        }
+
+        let error = ((*(*ctx).hw).cipher)(vctx, out, ptr::null(), 0) == 0;
+
+        if !outl.is_null() && !error {
+            *outl = 0;
+        }
+        if error {
+            0
+        } else {
+            1
+        }
+    }
+}
+
+/// `static int ossl_aes_gcm_siv_get_ctx_params(void *vctx, OSSL_PARAM params[])` —
+/// `cipher_aes_gcm_siv.c:175-200`.
+///
+/// The `tag` arm's guard is the row's own: the tag is only readable when the context is
+/// **encrypting** and a tag has actually been produced, and the caller's buffer must be exactly
+/// sixteen bytes. A decrypting context answering its `get_params` with a tag is a refusal, not an
+/// empty string.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn ossl_aes_gcm_siv_get_ctx_params(
+    vctx: *mut c_void,
+    params: *mut OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesGcmSivCtx>();
+
+        let p = OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_AEAD_TAG);
+        if !p.is_null()
+            && (*p).data_type == OSSL_PARAM_OCTET_STRING
+            && (!gsiv_flag(ctx, GCM_SIV_F_ENC)
+                || !gsiv_flag(ctx, GCM_SIV_F_GENERATED_TAG)
+                || (*p).data_size != GCM_SIV_TAG_SIZE
+                || OSSL_PARAM_set_octet_string(p, (*ctx).tag.as_ptr().cast(), GCM_SIV_TAG_SIZE)
+                    == 0)
+        {
+            return fail_at(&err_sites::PROV_CIPHER_AES_GCM_SIV_185);
+        }
+        let p = OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_AEAD_TAGLEN);
+        if !p.is_null() && OSSL_PARAM_set_size_t(p, GCM_SIV_TAG_SIZE) == 0 {
+            return fail_at(&err_sites::PROV_CIPHER_AES_GCM_SIV_191);
+        }
+        let p = OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_KEYLEN);
+        if !p.is_null() && OSSL_PARAM_set_size_t(p, (*ctx).key_len) == 0 {
+            return fail_at(&err_sites::PROV_CIPHER_AES_GCM_SIV_196);
+        }
+        1
+    }
+}
+
+/// `aes_gcm_siv_known_gettable_ctx_params` — `cipher_aes_gcm_siv.c:202-207`.
+static GCM_SIV_GETTABLE_CTX_PARAMS: [OsslParam; 4] = [
+    param_size_t(OSSL_CIPHER_PARAM_KEYLEN),
+    param_size_t(OSSL_CIPHER_PARAM_AEAD_TAGLEN),
+    param_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG),
+    END,
+];
+
+/// `ossl_aes_gcm_siv_gettable_ctx_params` — `cipher_aes_gcm_siv.c:209-213`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn ossl_aes_gcm_siv_gettable_ctx_params(
+    _cctx: *mut c_void,
+    _provctx: *mut c_void,
+) -> *const OsslParam {
+    GCM_SIV_GETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `static int ossl_aes_gcm_siv_set_ctx_params(void *vctx, const OSSL_PARAM params[])` —
+/// `cipher_aes_gcm_siv.c:215-259`.
+///
+/// Three arms, and the tag one is asymmetric on purpose: it is **only** consumed while decrypting,
+/// because an encrypting context's tag is produced rather than supplied.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn aes_gcm_siv_set_ctx_params(
+    vctx: *mut c_void,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesGcmSivCtx>();
+        let mut speed: c_uint = 0;
+
+        if ossl_param_is_empty(params) {
+            return 1;
+        }
+
+        let p = OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_AEAD_TAG);
+        if !p.is_null() {
+            if (*p).data_type != OSSL_PARAM_OCTET_STRING || (*p).data_size != GCM_SIV_TAG_SIZE {
+                return fail_at(&err_sites::PROV_CIPHER_AES_GCM_SIV_228);
+            }
+            if !gsiv_flag(ctx, GCM_SIV_F_ENC) {
+                ptr::copy_nonoverlapping(
+                    (*p).data.cast::<c_uchar>(),
+                    (*ctx).user_tag.as_mut_ptr(),
+                    GCM_SIV_TAG_SIZE,
+                );
+                gsiv_set(ctx, GCM_SIV_F_HAVE_USER_TAG, true);
+            }
+        }
+        let p = OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_SPEED);
+        if !p.is_null() {
+            if OSSL_PARAM_get_uint(p, &mut speed) == 0 {
+                return fail_at(&err_sites::PROV_CIPHER_AES_GCM_SIV_239);
+            }
+            gsiv_set(ctx, GCM_SIV_F_SPEED, speed != 0);
+        }
+        let p = OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_KEYLEN);
+        if !p.is_null() {
+            let mut key_len: usize = 0;
+            if OSSL_PARAM_get_size_t(p, &mut key_len) == 0 {
+                return fail_at(&err_sites::PROV_CIPHER_AES_GCM_SIV_249);
+            }
+            // The key length cannot be modified.
+            if key_len != (*ctx).key_len {
+                return fail_at(&err_sites::PROV_CIPHER_AES_GCM_SIV_254);
+            }
+        }
+        1
+    }
+}
+
+/// `aes_gcm_siv_known_settable_ctx_params` — `cipher_aes_gcm_siv.c:261-266`.
+static GCM_SIV_SETTABLE_CTX_PARAMS: [OsslParam; 4] = [
+    param_size_t(OSSL_CIPHER_PARAM_KEYLEN),
+    param_uint(OSSL_CIPHER_PARAM_SPEED),
+    param_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG),
+    END,
+];
+
+/// `ossl_aes_gcm_siv_settable_ctx_params` — `cipher_aes_gcm_siv.c:267-271`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn ossl_aes_gcm_siv_settable_ctx_params(
+    _cctx: *mut c_void,
+    _provctx: *mut c_void,
+) -> *const OsslParam {
+    GCM_SIV_SETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `#define IMPLEMENT_cipher(alg, lc, UCMODE, flags, kbits, blkbits, ivbits)` —
+/// `cipher_aes_gcm_siv.c:273-312`.
+///
+/// One table per key size, with the fourteen entries the authority's macro writes and in its order.
+/// The three rows differ only in `kbits`: their `newctx` wrappers pass it to the shared
+/// `ossl_aes_gcm_siv_newctx`, and `get_params` publishes it along with `ivbits` = 96, which is why
+/// the IV is a twelve-byte nonce.
+macro_rules! gcm_siv_dispatch {
+    ($opc_newctx:ident, $getparams:ident, $table:ident, $kbits:literal) => {
+        unsafe extern "C" fn $opc_newctx(provctx: *mut c_void) -> *mut c_void {
+            // SAFETY: the dispatch contract.
+            unsafe { ossl_aes_gcm_siv_newctx(provctx, $kbits) }
+        }
+
+        unsafe extern "C" fn $getparams(params: *mut OsslParam) -> c_int {
+            // SAFETY: the dispatch contract.
+            unsafe {
+                ossl_cipher_generic_get_params(
+                    params,
+                    EVP_CIPH_GCM_SIV_MODE,
+                    GCM_SIV_AEAD_FLAGS,
+                    $kbits,
+                    8,
+                    96,
+                )
+            }
+        }
+
+        pub(crate) static $table: [OsslDispatch; 15] = [
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_NEWCTX,
+                function: $opc_newctx as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_FREECTX,
+                function: ossl_aes_gcm_siv_freectx as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: crate::evp::cipher::OSSL_FUNC_CIPHER_DUPCTX,
+                function: ossl_aes_gcm_siv_dupctx as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_ENCRYPT_INIT,
+                function: ossl_aes_gcm_siv_einit as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_DECRYPT_INIT,
+                function: ossl_aes_gcm_siv_dinit as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_UPDATE,
+                function: ossl_aes_gcm_siv_cipher as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_FINAL,
+                function: ossl_aes_gcm_siv_stream_final as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: crate::evp::cipher::OSSL_FUNC_CIPHER_CIPHER,
+                function: ossl_aes_gcm_siv_cipher as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GET_PARAMS,
+                function: $getparams as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GETTABLE_PARAMS,
+                function: ossl_cipher_generic_gettable_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GET_CTX_PARAMS,
+                function: ossl_aes_gcm_siv_get_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_GETTABLE_CTX_PARAMS,
+                function: ossl_aes_gcm_siv_gettable_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_SET_CTX_PARAMS,
+                function: aes_gcm_siv_set_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS,
+                function: ossl_aes_gcm_siv_settable_ctx_params as *mut c_void,
+            },
+            OsslDispatch {
+                function_id: OSSL_DISPATCH_END,
+                function: ptr::null_mut(),
+            },
+        ];
+    };
+}
+
+// `ossl_aes128gcm_siv_functions` … `ossl_aes256gcm_siv_functions` —
+// `cipher_aes_gcm_siv.c:314-316`'s three `IMPLEMENT_cipher` invocations.
+gcm_siv_dispatch!(
+    aes128gcm_siv_newctx,
+    aes128gcm_siv_get_params,
+    AES128GCM_SIV_FUNCTIONS,
+    128
+);
+gcm_siv_dispatch!(
+    aes192gcm_siv_newctx,
+    aes192gcm_siv_get_params,
+    AES192GCM_SIV_FUNCTIONS,
+    192
+);
+gcm_siv_dispatch!(
+    aes256gcm_siv_newctx,
+    aes256gcm_siv_get_params,
+    AES256GCM_SIV_FUNCTIONS,
+    256
+);
+
 // ---------------------------------------------------------------------------------------------
 // `deflt_ciphers[]` — the rows, in `defltprov.c`'s order
 // ---------------------------------------------------------------------------------------------
@@ -12316,6 +13627,11 @@ alias!(N_AES_256_CBC_HMAC_SHA256_ETM, "AES-256-CBC-HMAC-SHA256-ETM");
 alias!(N_AES_128_CBC_HMAC_SHA512_ETM, "AES-128-CBC-HMAC-SHA512-ETM");
 alias!(N_AES_192_CBC_HMAC_SHA512_ETM, "AES-192-CBC-HMAC-SHA512-ETM");
 alias!(N_AES_256_CBC_HMAC_SHA512_ETM, "AES-256-CBC-HMAC-SHA512-ETM");
+// The three `AES-*-GCM-SIV` rows, `defltprov.c:198-200`, inside `#ifndef OPENSSL_NO_SIV`. Single
+// aliases with no OID, per `prov/names.h:105-107`.
+alias!(N_AES_128_GCM_SIV, "AES-128-GCM-SIV");
+alias!(N_AES_192_GCM_SIV, "AES-192-GCM-SIV");
+alias!(N_AES_256_GCM_SIV, "AES-256-GCM-SIV");
 alias!(N_AES_192_WRAP_INV, "AES-192-WRAP-INV:AES192-WRAP-INV");
 alias!(N_AES_128_WRAP_INV, "AES-128-WRAP-INV:AES128-WRAP-INV");
 alias!(
@@ -12378,7 +13694,7 @@ const fn capable_row(
 
 /// `static const OSSL_ALGORITHM_CAPABLE deflt_ciphers[]` — `providers/defltprov.c:161-330`,
 /// restricted to the rows this half implements, in the authority's order.
-pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 128] = [
+pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 131] = [
     row(N_NULL, NULL_FUNCTIONS.as_ptr().cast()),
     row(N_AES_256_ECB, AES256ECB_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_ECB, AES192ECB_FUNCTIONS.as_ptr().cast()),
@@ -12412,6 +13728,9 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 128] = [
     row(N_AES_128_SIV, AES128SIV_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_SIV, AES192SIV_FUNCTIONS.as_ptr().cast()),
     row(N_AES_256_SIV, AES256SIV_FUNCTIONS.as_ptr().cast()),
+    row(N_AES_128_GCM_SIV, AES128GCM_SIV_FUNCTIONS.as_ptr().cast()),
+    row(N_AES_192_GCM_SIV, AES192GCM_SIV_FUNCTIONS.as_ptr().cast()),
+    row(N_AES_256_GCM_SIV, AES256GCM_SIV_FUNCTIONS.as_ptr().cast()),
     row(N_AES_256_CCM, AES256CCM_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_CCM, AES192CCM_FUNCTIONS.as_ptr().cast()),
     row(N_AES_128_CCM, AES128CCM_FUNCTIONS.as_ptr().cast()),
@@ -12513,6 +13832,9 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 128] = [
         AES256CBC_HMAC_SHA512_ETM_FUNCTIONS.as_ptr().cast(),
         Some(ossl_cipher_capable_aes_cbc_hmac_sha512_etm),
     ),
+    // The `AES-*-GCM-SIV` trio, `defltprov.c:198-200`, immediately before the `AES-*-GCM` three and
+    // inside the same block. All three are `ALG(...)` rows with no capability predicate, and
+    // `cipher_aes_gcm_siv.c:314-316` differs only in `keybits`.
     // The `ARIA` family, `defltprov.c:246-274`, after the AES-CBC-HMAC `ALGC` rows and before
     // `CAMELLIA`. The six GCM and CCM rows precede these in the authority; the GCM three are
     // Phase 9's on `RAND_bytes_ex` and the CCM three are landed below, ahead of the mode rows
@@ -12630,13 +13952,13 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 128] = [
 /// against the write. This crate keeps the same discipline: the only writer is
 /// `crate::provider::cipher::cache_exported_ciphers`, called from provider init, and every reader
 /// goes through [`exported_ciphers`].
-static EXPORTED_CIPHERS: SyncCell<[OsslAlgorithm; 128]> = SyncCell(UnsafeCell::new(
+static EXPORTED_CIPHERS: SyncCell<[OsslAlgorithm; 131]> = SyncCell(UnsafeCell::new(
     [OsslAlgorithm {
         algorithm_names: ptr::null(),
         property_definition: ptr::null(),
         implementation: ptr::null(),
         algorithm_description: ptr::null(),
-    }; 128],
+    }; 131],
 ));
 
 /// A `static` the crate mutates once at provider init and shares afterwards, exactly as the
@@ -14384,10 +15706,55 @@ mod tests {
     use crate::aes::AES_MAXNR;
 
     #[test]
+    fn the_polyval_helpers_match_the_authority_oracle() {
+        // The three values are `courts/layout/oracle-polyval.c`'s, which calls the authority's own
+        // `ossl_polyval_ghash_init`/`_hash` out of the pinned static archive. They are the only
+        // direct observation of the byte-order bridging this module makes: through the provider the
+        // same error would look identical to an error anywhere else in the construction.
+        let h_key = [
+            0x00u8, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d,
+            0x0e, 0x0f,
+        ];
+        let block1 = [
+            0x10u8, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d,
+            0x1e, 0x1f,
+        ];
+        let block2 = [
+            0x20u8, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d,
+            0x2e, 0x2f,
+        ];
+        let hex = |p: &[u8; 16]| -> String { p.iter().map(|b| std::format!("{b:02x}")).collect() };
+
+        let mut table = [0u64; 32];
+        polyval_ghash_init(&mut table, &h_key);
+
+        let mut tag = [0u8; 16];
+        polyval_ghash_hash(&table, &mut tag, &block1);
+        assert_eq!(hex(&tag), "60ae5488532667200d8e39a83e060a00", "polyval.one");
+
+        let mut two = [0u8; 32];
+        two[0..16].copy_from_slice(&block1);
+        two[16..32].copy_from_slice(&block2);
+        tag = [0u8; 16];
+        polyval_ghash_hash(&table, &mut tag, &two);
+        assert_eq!(hex(&tag), "a9041791b80bbad7e122c3efc71bc600", "polyval.two");
+
+        // A nonzero starting accumulator, which is the shape two calls make.
+        tag = [0u8; 16];
+        polyval_ghash_hash(&table, &mut tag, &block1);
+        polyval_ghash_hash(&table, &mut tag, &block2);
+        assert_eq!(
+            hex(&tag),
+            "a9041791b80bbad7e122c3efc71bc600",
+            "polyval.split"
+        );
+    }
+
+    #[test]
     fn the_cipher_table_terminates_and_names_the_rows() {
-        assert_eq!(DEFLT_CIPHERS.len(), 128);
+        assert_eq!(DEFLT_CIPHERS.len(), 131);
         // SAFETY: every entry up to the terminator is initialised.
-        let last = DEFLT_CIPHERS[127].alg.algorithm_names;
+        let last = DEFLT_CIPHERS[130].alg.algorithm_names;
         assert!(last.is_null(), "the table is NULL-name terminated");
         // SAFETY: the first row's name is a `'static` C string.
         let first = unsafe { core::ffi::CStr::from_ptr(DEFLT_CIPHERS[0].alg.algorithm_names) };
@@ -14804,7 +16171,7 @@ mod tests {
         // the relation rather than a copy of the table, and the refused set is asserted by name --
         // which is what makes "the nine ETM rows are dropped on this profile" an observation.
         let mut real = [NULL_ROW; DEFLT_CIPHERS.len()];
-        // SAFETY: `DEFLT_CIPHERS` is `NULL`-named terminated with 127 rows; `real` has 128 slots.
+        // SAFETY: `DEFLT_CIPHERS` is `NULL`-named terminated with 130 rows; `real` has 131 slots.
         unsafe { ossl_prov_cache_exported_algorithms(DEFLT_CIPHERS.as_ptr(), real.as_mut_ptr()) };
 
         let mut kept: Vec<*const c_char> = Vec::new();

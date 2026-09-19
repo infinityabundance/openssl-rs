@@ -18097,3 +18097,82 @@ only in `keybits` (`cipher_aes_gcm_siv.c:314-316`) and share one measurement of
 closed and 8.4 (RSA) begins, which is the first block whose rows are `OSSL_OP_SIGNATURE`,
 `OSSL_OP_KEYMGMT`, `OSSL_OP_KDF`, `OSSL_OP_KEM`, `OSSL_OP_KEYEXCH` and `OSSL_OP_ASYM_CIPHER`'s --
 the 140 rows the census records as `open` owning Phase 8 with no blocker once these four land: 59 `OSSL_OP_SIGNATURE`, 40 `OSSL_OP_KEYMGMT`, 19 `OSSL_OP_KDF`, 11 `OSSL_OP_KEM`, 7 `OSSL_OP_KEYEXCH`, 2 `OSSL_OP_ASYM_CIPHER` and 2 `OSSL_OP_SKEYMGMT`.
+
+## D278 — the `AES-*-GCM-SIV` trio lands, and its POLYVAL byte order was found by an oracle
+
+The first half of D277's order, and the first unit in this project whose *defect* was found by a
+program written to interrogate the authority directly rather than by a court.
+
+**What landed.** All three rows from `cipher_aes_gcm_siv.c`, `cipher_aes_gcm_siv_hw.c` and
+`cipher_aes_gcm_siv_polyval.c`, which is the whole block: the row layer with its three dispatch
+tables and its `provctx`-derived library context, and the construction -- `aes_gcm_siv_initkey`'s
+derivation of `msg_auth_key` and `msg_enc_key` by fetching `AES-*-ECB` and encrypting counter
+blocks, `aes_gcm_siv_aad`'s rounded allocation, `aes_gcm_siv_encrypt`/`_decrypt`'s POLYVAL over
+`aad || payload || lengths`, the `S_s[15] &= 0x7f` masking, `aes_gcm_siv_ctr32` and the finish path
+that compares the tag in constant time. The context is 448 bytes with `htable` at 184, measured by
+`courts/layout/measure-gcm-siv-ctx.c`; the one member that could not be written as its declared type
+is that table, because the authority's `u128` is `unsigned __int128` with **eight**-byte alignment
+in this profile while Rust's `u128` is sixteen-aligned, so the table is carried as its thirty-two
+`u64`s at the same offset and the size assertion holds the total.
+
+**The defect, and how it was found.** `ossl_polyval_ghash_init` byte-reverses the authentication
+key, halves it, and then -- on little-endian machines -- swaps both words *again* before handing the
+pair to the GHASH table builder. This crate's GCM model carries the field key rather than the Shoup
+table, so the bridge from the authority's `u64 H[2]` to the model's `u128` had to be worked out, and
+the first attempt reasoned that the two `gswap8` passes cancel. **They do not.** The differential
+court can only see this through a whole AES-GCM-SIV record, where a wrong byte order in the key
+setup and a wrong byte order in the accumulator look identical, so the entry that found it is
+`courts/layout/oracle-polyval.c`: a program that links the authority's own
+`ossl_polyval_ghash_init`/`_hash` out of the **static** archive -- they have external linkage but no
+dynamic symbol -- and prints three answers. Measured, the wrong bridge produces
+`e4361d75d58d2c8e8d707433bccbc599` where the authority produces
+`60ae5488532667200d8e39a83e060a00`. The corrected bridge and the three values are pinned by the unit
+test `the_polyval_helpers_match_the_authority_oracle`, so the reasoning cannot drift back.
+
+That is a new evidence plane for this project -- an *oracle program* rather than a court or a
+measurement -- and it exists because the observable that carries the defect is buried three layers
+below the API. It is recorded in `courts/layout/README.md` beside the measurement programs, with the
+same argument: a reviewer must be able to run it.
+
+**The evidence.** `RT-CIPHER` grew from 6505 to **6772** observations with the `rt_gcm_siv_records`
+arm: per row, the flags, the three lengths and the mode; the gettable list, the tag read *before* one
+exists (a refusal), `keylen` set to a wrong value (a refusal), the `speed` flag; the AAD, a twenty-byte
+payload and its tag through both the params list and the classic control; a decrypting acceptance, a
+flipped ciphertext and a flipped tag; the empty message, whose tag comes from a final-only operation
+and whose POLYVAL input is a different shape from any non-empty one; a thirty-two-byte message, which
+takes the `IS16` arm rather than the padding arm; and a second payload update without `speed`, which
+the row refuses **silently** with an empty error queue. `CT-CIPHER` gained a new set:
+`forensics/vectors/gcm_siv.json`, **50** vectors, mirrored from the corpus file whose own title is
+"RFC8452 AES-GCM-SIV" -- the RFC's published known answers, which for this construction is a genuine
+primary source rather than the corpus standing in for one. Its expected tail is `accept || reject` on
+every vector, so a rejected tag is a commitment rather than an assertion. CT-CIPHER is now
+**3173/3173**.
+
+**A trap the new vectors exposed in the correctness court, and fixed there.** `ct_gcm` selected its
+arm with `strncmp(cipher + 4, "128-gcm", 7)`, which also matches `aes-128-gcm-siv`. The GCM-SIV
+vectors would therefore have been claimed by the plain-GCM arm and *answered with the wrong
+construction* -- a wrong answer that succeeds, which is the worst failure mode a correctness court
+can have. `ct_gcm`'s test is now `strcmp(cipher + 4, "128-gcm")`, a whole-name test, and
+`ct_gcm_siv` is dispatched before it, so the two orders cannot disagree. The comment records why the
+prefix form was there and what it cost. A second difference is recorded in `ct_gcm_siv` itself:
+GCM's arm declares its tag length with `EVP_CTRL_AEAD_SET_TAG` and a NULL pointer, which GCM-SIV's
+setter would `memcpy` from, so the GCM-SIV arm supplies the tag as a value and never makes that call.
+
+**What this entry moves.** `src/provider/cipher.rs` (about 1 100 lines: the POLYVAL helpers, the hw
+unit, the row layer, the dispatch macro and the three rows), `courts/phase8/rt_cipher_probe.c`
+(census list, the new arm, and the three-name insertion in `defltprov.c`'s order),
+`courts/phase8/ct_cipher.c` (the fourth AEAD arm and the `ct_gcm` hardening),
+`courts/layout/measure-gcm-siv-ctx.c`, `courts/layout/oracle-polyval.c`, `courts/layout/README.md`,
+`forensics/tools/correctness_vectors.py` (the `gcm_siv` family), `forensics/tools/phase8_courts.py`,
+`forensics/tools/gen_err_raise_sites.py` (the row layer's ten raises),
+`forensics/vectors/gcm_siv.json`, `docs/PHASE-8-SUBPHASES.md`'s 8.3 row, and every derived artefact
+they feed. Measured: unit tests **606**; provider census **165 implemented / 141 open / 690
+deferred** with Phase 8 owning 165 of them and row coverage 165/165/0; `RT-CIPHER` **6772**;
+`RT-DIGEST` 468; `CT-DIGEST` 272/272; `CT-CIPHER` **3173/3173**; `libcrypto` unchanged at **2035
+implemented**, because none of the three is an export.
+
+**What remains of 8.3.** The multiblock *encrypt* parameter of the four published `AES-*-CBC-HMAC-*`
+rows -- the family's one recorded narrowing, on `RAND_bytes_ex`
+(`docs/SECURITY_DIVERGENCE_POLICY.md` D-CBCHMAC-MULTIBLOCK-ENC-1) -- and the CT-CIPHER construction
+arm D276's entry names for those rows. Then `ChaCha20-Poly1305`, whose prerequisite D277 measured as
+already discharged.
