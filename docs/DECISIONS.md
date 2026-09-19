@@ -19857,3 +19857,54 @@ anything to assert against yet. Each carries an `allow(dead_code)` naming that c
 and the DRBG rows the front depends on are still unpublished. The next unit is the decoder key
 tables: mapping the staged `*_ctx_params_decoder` field lists to the real line-numbered raise sites
 in `drbg_{ctr,hash,hmac}.c`, which is the class that holds the parked DRBG at 108 compile errors.
+
+## D306 -- the decoder key-table mapping is measured, and it is field-name-keyed, not positional
+
+The class that holds the parked DRBG at 108 compile errors, measured so the next unit is
+mechanical. The six tables, from `forensics/atlas/err-raise-sites.json` against
+`court/phase9/drbg_renamed.rs.txt`:
+
+| decoder | sites | staged keys |
+|---|---|---|
+| CTR get | 16 | 15 |
+| CTR set | 6 | 6 |
+| HASH get | 15 | 14 |
+| HASH set | 7 | 6 |
+| HMAC get | 16 | 15 |
+| HMAC set | 8 | 7 |
+
+**Two facts make the mapping non-obvious, and the first is a finding about the generator.**
+
+1. **Every decoder but CTR set has exactly one more site than the staged table has keys, and the
+extra is a raise inside an inactive `FIPS_MODULE` guard.** The staged file's own note says so for
+   one unit -- "`ind` is `fips`-guarded and absent" -- and the generated file confirms the same arm
+   in each case: `drbg_ctr.c:757-764` in the build tree is `case 'f'` / `# if defined(FIPS_MODULE)` /
+   `/* OSSL_KDF_PARAM_FIPS_APPROVED_INDICATOR */` / `ERR_raise_data(... PROV_R_REPEATED_PARAMETER
+   ...)`, and the atlas records that site at line 763. `FIPS_MODULE` is undefined on this profile, so
+   the arm is **not compiled**, and a site that cannot be reached is coverage that does not exist --
+   the rule `mdc2_prov.c` is named under in D206. Whether the fix belongs in the generator's guard
+   handling or in the covered-set documentation is not decided here: the generator already honours
+   `#if` for the provider **tables** (the machinery D297 extended), and whether it should honour them
+   for raise **sites** is a separate question, because the reason to drop one is that its coordinates
+   are unobservable rather than that its text is unreachable. CTR set is the one table whose counts
+   already match, because its spec (`drbg_ctr.c.in:820-827`) has no fips-indicator field.
+2. **The generated decoder is ordered by switch case, not by the spec's field list.** The emitted code
+   is a trie over the parameter name's first character, so the raises appear as `'c'` (cipher), `'f'`
+   (fips-indicator), `'m'` (max_*), `'r'` (reseed_*), `'s'` (state, strength) -- while the staged key
+   tables list fields in **spec order**. A positional zip therefore mismatches silently, which is
+   exactly how a wrong site attribution would survive review. The mapping is recoverable without
+   guessing: each raise carries the field's own macro name in a comment directly above it
+   (`/* OSSL_DRBG_PARAM_CIPHER */`, `/* OSSL_RAND_PARAM_STATE */`), so the assignment is
+   **field-macro-name to line**, and the staged tables already carry that macro name as their second
+   tuple element. The tables need no restructure -- only the `_DECODER_<FIELD>` constant in the first
+   element replaced by the real line-numbered name.
+
+**What is not in doubt.** The sites exist under the names the generator emits (`PROV_DRBG_CTR_751`,
+`PROV_DRBG_HASH_540`, ...), the generated `.c` files are readable in the build tree, and the staged
+tables' structure is already right. The unit is a scripted rewrite once obstacle 1 is decided -- and
+if the generator should drop guarded sites, every table's site list shrinks by one and becomes
+exactly as long as its key list, which is the check that would confirm the whole reading.
+
+**What this entry does not claim.** The DRBG remains parked at `court/phase9/drbg_renamed.rs.txt`.
+No export is implemented, no Phase 9 court has landed, and this entry's only evidence is the six
+counts above and the generated file's own text.
