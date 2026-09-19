@@ -34236,6 +34236,7 @@
     ],
     "translation_units_without_a_source_file": [
       "src/aes.rs: crypto/aes/aes-x86_64.c",
+      "src/mac/ssl3_cbc.rs: ssl/record/methods/libdefault-lib-ssl3_cbc.c",
       "src/provider/cipher.rs: providers/implementations/ciphers/libcommon-lib-ciphercommon.c",
       "src/provider/ctx.rs: providers/common/libcommon-lib-provider_ctx.c",
       "src/provider/digest.rs: providers/implementations/digests/libcommon-lib-digestcommon.c",

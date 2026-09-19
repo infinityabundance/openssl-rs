@@ -7,8 +7,13 @@
 //! is what the plan's row 7.6 means by "implemented against the `EVP_MAC`/`EVP_KDF` objects 7.3
 //! built". A court for each observes its own surface and not the shared machinery.
 //!
+//! `ssl3_cbc` belongs here for the other reason a record MAC can: `ssl/record/methods/ssl3_cbc.c`
+//! is compiled into **libcrypto** as well as libssl because it is shared with the providers, and
+//! `hmac_prov.c` is its caller. It is Phase 8.3's, and the module says why under `ssl/`.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 pub mod cmac;
 pub mod hmac;
 pub mod siphash;
+pub mod ssl3_cbc;

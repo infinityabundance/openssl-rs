@@ -16639,3 +16639,114 @@ the blind spot here so the next person does not have to rediscover it.
 Phase 8 stays **194 implemented / 576 open / 16 deferred**, the provider census stays **996 rows /
 111 implemented / 199 open / 686 deferred**, and no court observation moves. The unit tests move
 **562 -> 569 passed, 0 failed**.
+
+## D251 — `ssl3_cbc.c` lands, and the `bits` increment belongs to TLS rather than to the big-endian branch
+
+`ssl3_cbc_digest_record` is the third and last unit HMAC's TLS arm needs, and it is
+`ssl/record/methods/ssl3_cbc.c`. The file lives under `ssl/`, and it is still a Phase 8 unit, for the
+reason the file's own header gives: *"This file has no dependencies on the rest of libssl because it
+is shared with the providers."* The build agrees — the object is compiled twice,
+`ssl/record/methods/libdefault-lib-ssl3_cbc.o` into libcrypto and `libssl-shlib-ssl3_cbc.o` into
+libssl — and `hmac_prov.c` is the caller this stratum wants, so the crate takes the libcrypto half.
+
+**`pub(crate)`, and deliberately not an export.** The authority declares it in
+`include/internal/ssl3_cbc.h`, and `nm -D libcrypto.so.3` does not list it. `ssl3_cbc_record_digest_supported`,
+which the same header declares, is a *different* unit and a different library: it is
+`ssl/record/methods/tls_common.c` in libssl, Phase 14's, and `hmac_prov.c` does not call it. Writing
+this one with `#[no_mangle]` would have credited the crate with a `libcrypto` export the authority
+does not have, so the archetype here is `pub(crate)` with no `#[no_mangle]`, and the module doc says
+so, so that a later reader does not "fix" it.
+
+**The oracle is the unit itself.** `courts/phase8/gen-ssl3-cbc-values.c` compiles the authority's own
+`ssl3_cbc.c` against the authority's own libcrypto and prints 243 cases: six digests the record layer
+supports (MD5, SHA1, SHA2-224/256/384/512) x SSLv3-or-TLS x ten message lengths
+(0, 1, 5, 16, 31, 32, 63, 64, 100, 255) x two paddings (16 and 0), plus the three digests it refuses
+(SHA3-256, BLAKE2B-512, SM3). It is a transcription check and the module says so rather than dressing
+it up: what it covers is the constant-time variance arithmetic, which is where a transcription
+diverges and where the divergence is invisible from outside. `-DNDEBUG` is load-bearing in the
+generator's command line, because it is what makes the refusal arm return `0` instead of calling
+`OPENSSL_die`.
+
+**The defect the fixture catches, and the proof that it catches it.** The authority increments the
+hash-length-in-bits **unconditionally** for TLS and *before* the single `if (length_is_big_endian)`
+fill:
+
+```c
+    bits = 8 * mac_end_offset;
+    if (!is_sslv3) {
+        bits += 8 * md_block_size;      /* the extra HMAC-key block */
+        ... hmac_pad, md_transform ...
+    }
+    if (length_is_big_endian) { ... } else { ... }
+```
+
+The natural misreading is that the increment belongs to the big-endian branch — MD5 is the only
+little-endian digest, so `bits` reaches the `else` un-incremented and TLS+MD5 hashes a length field
+one block short. The first draft of this module did exactly that, with a shadowing `let bits`, and the
+fixture failed on its first MD5 TLS row. That was then proved rather than asserted: re-introducing the
+branch-local increment alone makes `every_case_matches_the_authority` fail with
+
+```text
+assertion `left == right` failed: MD5 is_sslv3=0 data=0 mac=16 pad=16
+  left: "9ff6e7e2ee989bef64476f7b6648e7ad"
+ right: "46aef553fa7db8a61f482864348325b7"
+```
+
+so the table is sensitive to this exact defect and the two are causally linked, not merely
+co-present. The landed form mutates the outer binding, as the authority does.
+
+**Three transcription shapes the authority's C forces, and how each is spelled.** The digest state is
+a bare `unsigned char` buffer that four different context types are cast onto, so `MdState` is
+`#[repr(C, align(8))]` over `size_of::<Sha512Ctx>()` — `OSSL_UNION_ALIGN` is `double`/`uintmax_t`/`void
+*`, all eight bytes on this profile, and `LARGEST_DIGEST_CTX` is `SHA512_CTX`, so both the size and
+the alignment are the authority's and both are load-bearing for the cast. The transform is reached
+through a C function-pointer cast that Rust will not perform, so each of the four becomes a
+`*_transform_raw` wrapper whose body *is* the cast. And the C89 hoisting — a dozen declarations at
+the top of the function — is Rusted to a `let` at each computation site, which is what clippy's
+`unneeded_late_init` asks for and changes nothing: the two divisions that clippy would have rewritten
+as `div_ceil` are left as the authority's literal
+`(255 + 1 + md_size + md_block_size - 1) / md_block_size` under a two-line allow, because that
+arithmetic is one of the things this module exists to make checkable by eye.
+
+**The tests fetch their methods, because that is how the caller gets them.** `EVP_md5()` and
+`EVP_sha256()` are not this crate's surface at Phase 8, and more to the point they are not how
+`hmac_prov.c` reaches a digest. The fixture names a digest and calls `EVP_MD_fetch`, which is what
+exercises the property the module doc claims — that the dispatch is `EVP_MD_is_a` and therefore a
+provider-supplied method lands in the same arm a legacy one does.
+
+**A correction to two claims of "tracked", and the generator set they belong to.** `courts/phase8/ct_expectations.txt`
+and `src/runtime/constant_time.rs` both described `court/gen-constant-time-values.c` as tracked, and
+`src/mac/siphash.rs` described `court/gen-siphash-vectors.c` the same way. Neither was: `/court/` is
+gitignored scratch, and `git ls-files` has never held either. The provenance was therefore weaker
+than the prose claimed — the *data* was sound, but the command that produced it could not be re-run
+from the repository. All three generators (those two and this entry's) are now tracked under
+`courts/phase8/`, which is where the tracked `discover_*.c` archaeology programs already live, and the
+provenance headers and doc comments name the tracked paths. D250's prose is quoted from a time when it
+was believed true and this file is append-only, so the correction is this entry.
+
+**One mechanical consequence of a name, recorded because it is not obvious.** The prerequisite gate's
+language census moves **3132 -> 3102**: thirty authority units each drop by exactly one name. The
+cause is `ossl_assert`. The gate builds a crate-global set of defined names, and this module defines a
+Rust `ossl_assert` — the `-DNDEBUG` form of the macro, `ossl_likely((x) != 0)`, a check that returns
+0 or 1 rather than dying. `ossl_assert` is referenced by exactly thirty of the 169 authority units, so
+all thirty now satisfy the census's *name-level* "modelled" test at once. That claim is true at the
+level the census asks about and false per call site: no other module's `ossl_assert` becomes reachable,
+and in a non-`NDEBUG` build the same macro dies instead. This is recorded rather than engineered away,
+and the name is kept, for the reason `src/blowfish.rs`, `src/cast.rs` and `src/idea.rs` each keep
+their own `l2n`: the authority's is a macro in a header every translation unit includes.
+
+**What this entry moves.** `implemented[libcrypto]` stays **2035 / 5896**. Phase 8 stays **194
+implemented / 576 open / 16 deferred**. The provider census stays **996 rows / 111 implemented / 199
+open / 686 deferred**, and its coverage stays **111 / 111 / 0 unmatched**. No court observation moves.
+The unit tests move **569 -> 573 passed, 0 failed**. Three structural counters move because a file now
+exists: `crate_modules` **228 -> 229**, `translation_units_without_a_source_file` **9 -> 10** (the
+authority TU is the build-generated `ssl/record/methods/libdefault-lib-ssl3_cbc.c`), and
+`transcription-edges.json` gains `src/mac/ssl3_cbc.rs -> ssl/record/methods/libdefault-lib-ssl3_cbc.c`
+at `share 1/1`, which is exact: `ssl3_cbc.c` defines that one global symbol and the four
+`tls1_*_final_raw` serialisers are `static`.
+
+**A gap recorded rather than assumed.** Internal units have no machine-checked evidence plane. The
+court-coverage atlas covers *exports*, so the evidence for this unit is a tracked expectation table
+referenced from its module doc, and nothing fails if a future internal unit lands with neither. That
+is the same class as the Phase 7 coverage hole that D236 closed, one level down, and it is named here
+so the next internal unit has a decision to make rather than a precedent to follow by accident.
