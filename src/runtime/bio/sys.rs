@@ -94,8 +94,16 @@ extern "C" {
     pub fn close(fd: c_int) -> c_int;
     /// `off_t lseek(int, off_t, int)`.
     pub fn lseek(fd: c_int, off: i64, whence: c_int) -> i64;
-    /// `int open(const char *, int, ...)` — the two-argument form is used only.
-    pub fn open(path: *const c_char, flags: c_int) -> c_int;
+    /// `int open(const char *, int, ...)` — `<fcntl.h>`, in its **variadic** form.
+    ///
+    /// The declaration used to be the two-argument narrowng, which was true of every call site
+    /// the crate had at the time and stopped being true when the random layer's `randfile.c`
+    /// arrived: it needs `open(path, O_WRONLY | O_CREAT, 0600)` (`crypto/rand/randfile.c`). The
+    /// header's own prototype is variadic, so declaring it that way removes the possibility of a
+    /// second, narrower signature disagreeing with this one -- which is exactly what
+    /// `clashing_extern_declarations` refused to compile when the two were both present
+    /// (docs/DECISIONS.md D302). A two-argument call is still a correct call against it.
+    pub fn open(path: *const c_char, flags: c_int, ...) -> c_int;
     /// `int fcntl(int, int, ...)`.
     pub fn fcntl(fd: c_int, cmd: c_int, arg: c_int) -> c_int;
     /// `int ioctl(int, unsigned long, ...)`.

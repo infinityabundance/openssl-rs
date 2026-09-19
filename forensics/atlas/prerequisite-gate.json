@@ -29,7 +29,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 55,
-      "language_surface_not_modelled_by_name": 3140,
+      "language_surface_not_modelled_by_name": 3139,
       "planned_prerequisites": 14
     },
     "census_by_unit": {
@@ -241,7 +241,7 @@
         "crypto/stack/stack.c": 18,
         "crypto/thread/api.c": 4,
         "crypto/threads_common.c": 8,
-        "crypto/threads_pthread.c": 25,
+        "crypto/threads_pthread.c": 24,
         "crypto/trace.c": 24,
         "crypto/whrlpool/wp_dgst.c": 3
       },
@@ -364,7 +364,7 @@
     },
     "checked": {
       "authority_units": 178,
-      "crate_modules": 241,
+      "crate_modules": 242,
       "deferral_blocker_rows": 5,
       "deferrals_recorded": 24,
       "divergence_names_covered": 31,
@@ -485,7 +485,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "9a4723e186cb497017cedc36dd2ab2ebdf2941b05682a22f7a88cdb73520f80f",
+  "body_hash": "4d3eccf4d3375b1c1bcf1276f3536102594bafd3752b96a5563d19812cd589e8",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -521,12 +521,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "dbef24d07c2ebce5f2228396cf01de28a50db97af580b7d15580d262528839fd"
+      "sha256": "3ad93ed1c8ebfd5f80f4270d123056d762dc22a3ad9197925607268c74e6c565"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "a021e4c787905997f148bbac3076ee8de700f69093f178f2b6d419318dcb0ab6"
+      "sha256": "7ce33a8e9cb87ea94d4ef11c11c0ed0fa4f350e5cba8791e59bbe85cda19af9c"
     },
     {
       "name": "prerequisites",

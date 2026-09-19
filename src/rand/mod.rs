@@ -17,3 +17,4 @@
 //! SPDX-License-Identifier: Apache-2.0
 
 pub(crate) mod pool;
+pub(crate) mod sys;
