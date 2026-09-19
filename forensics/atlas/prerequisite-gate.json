@@ -22,7 +22,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 58,
-      "language_surface_not_modelled_by_name": 3179,
+      "language_surface_not_modelled_by_name": 3187,
       "planned_prerequisites": 11
     },
     "census_by_unit": {
@@ -114,14 +114,15 @@
         "crypto/bio/bss_mem.c": 12,
         "crypto/bio/bss_null.c": 4,
         "crypto/bio/ossl_core_bio.c": 6,
-        "crypto/bn/bn_blind.c": 21,
-        "crypto/bn/bn_ctx.c": 16,
-        "crypto/bn/bn_gf2m.c": 28,
+        "crypto/bn/bn_blind.c": 20,
+        "crypto/bn/bn_ctx.c": 15,
+        "crypto/bn/bn_gf2m.c": 24,
         "crypto/bn/bn_kron.c": 4,
         "crypto/bn/bn_lib.c": 30,
         "crypto/bn/bn_mod.c": 14,
         "crypto/bn/bn_mont.c": 15,
         "crypto/bn/bn_nist.c": 15,
+        "crypto/bn/bn_rand.c": 14,
         "crypto/bn/bn_recp.c": 10,
         "crypto/bsearch.c": 1,
         "crypto/buffer/buffer.c": 12,
@@ -352,8 +353,8 @@
       ]
     },
     "checked": {
-      "authority_units": 181,
-      "crate_modules": 249,
+      "authority_units": 182,
+      "crate_modules": 250,
       "deferral_blocker_rows": 5,
       "deferrals_recorded": 17,
       "divergence_names_covered": 30,
@@ -401,9 +402,6 @@
         "crypto/bio/bio_sock.c": [
           "bio_sock_cleanup_int"
         ],
-        "crypto/bn/bn_ctx.c": [
-          "ossl_bn_get_libctx"
-        ],
         "crypto/bn/bn_lib.c": [
           "bn_cmp_part_words",
           "bn_cmp_words",
@@ -426,6 +424,10 @@
           "bn_to_mont_fixed_top",
           "ossl_bn_mont_ctx_eq",
           "ossl_bn_mont_ctx_set"
+        ],
+        "crypto/bn/bn_rand.c": [
+          "ossl_bn_gen_dsa_nonce_fixed_top",
+          "ossl_bn_priv_rand_range_fixed_top"
         ],
         "crypto/bn/bn_recp.c": [
           "BN_RECP_CTX_init"
@@ -464,7 +466,7 @@
         ]
       },
       "definition": "authority internal functions a transcribed unit calls, whose own translation unit's stratum has already sealed. Not a failure: each is either modelled differently by the crate or is work carried across the boundary by a later stratum. The count is held to non-increase by the regression guard.",
-      "names": 56
+      "names": 57
     },
     "universes": {
       "crate_references_checked": 32438,
@@ -474,7 +476,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "447768587efcb8e5c7ddb8e62503ff65777453500b07a60314fe2b3902f03945",
+  "body_hash": "49528850e5b8098d83cef68ba335e52089c0e5f4618849c6c16f34297a64d1d9",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -495,7 +497,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "6cfb7c6110aee75447e2d0f36ad9ba7a872220e2d15a5a1f9f18932635ca8a76"
+      "sha256": "f74f357e0b88e81f8e9331d81fe63e5412835c834dd0b900eedc5246f423a828"
     },
     {
       "name": "symbol-ownership",
@@ -510,12 +512,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "fd2a529846bff555ebbb9c00ff66fec5470d6ef22d73f3c8dfe7931dbd55de60"
+      "sha256": "273c449a9965b9698f3a4a150bbf4a06a7a001b98774f6f212cf8acb062c0e4d"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "48dc932215b0485aa4dfe246bc64e6791f3de5e55911555711319bbaf8b43634"
+      "sha256": "b2929d95ff9e20a5c755667bac6cbf353b1cd3103ded5bd0cf1dc7540a5f04b4"
     },
     {
       "name": "prerequisites",

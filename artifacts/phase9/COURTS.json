@@ -38,16 +38,32 @@
           "candidate": "artifacts/phase9/probes/rt_rand_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 173,
+        "candidate_exit_code": 0,
+        "candidate_observations": 173,
+        "candidate_stderr_tail": [],
+        "court": "RT-BN-RAND",
+        "crashed": false,
+        "probe": "courts/phase9/rt_bn_rand_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase9/probes/rt_bn_rand_probe.authority",
+          "candidate": "artifacts/phase9/probes/rt_bn_rand_probe.candidate"
+        },
+        "verdict": "pass"
       }
     ],
     "pending_courts": {
-      "CT-DRBG": "9.4 -- the DRBGs' construction vectors, which the pinned tree already carries: `test/recipes/30-test_evp_data/evprand.txt` mirror the NIST CAVP `drbgtestvectors.zip` sets, with the URL written in the file, and `evpkdf_hmac_drbg.txt` carries the HMAC-DRBG KDF cases. No network fetch is needed and none is permitted (docs/AUTHORITY_POLICY.md).",
-      "RT-BN-RAND": "9.1 -- the BN random family against the authority, with a fixed seed source on both sides. It cannot be written before the front exists, because the authority's own `BN_rand` reaches it."
+      "CT-DRBG": "9.4 -- the DRBGs' construction vectors, which the pinned tree already carries: `test/recipes/30-test_evp_data/evprand.txt` mirror the NIST CAVP `drbgtestvectors.zip` sets, with the URL written in the file, and `evpkdf_hmac_drbg.txt` carries the HMAC-DRBG KDF cases. No network fetch is needed and none is permitted (docs/AUTHORITY_POLICY.md)."
     },
     "summary": {
       "fail": 0,
-      "pass": 2,
-      "total": 2
+      "pass": 3,
+      "total": 3
     }
   },
   "generator": "forensics/tools/phase9_courts.py",
@@ -66,6 +82,11 @@
       "name": "probe",
       "path": "courts/phase9/rt_rand_probe.c",
       "sha256": "446ce654ced9048505cd809d4b71458e3ad91f21d82074c53f197398fb0f75be"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase9/rt_bn_rand_probe.c",
+      "sha256": "ceb74df4342a2c8f4c20fa5e333545b05e67e358f76533a193985ef737f4ab82"
     }
   ],
   "kind": "phase9-courts",

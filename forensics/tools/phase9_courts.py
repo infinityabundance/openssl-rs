@@ -50,6 +50,20 @@ header: each setter is observed both before and after the object it guards exist
 `RAND_set_DRBG_type` refuses with `RAND_R_ALREADY_INSTANTIATED` once the primary is built and a
 probe that only called it late would measure the refusal on both sides and prove nothing.
 
+`RT-BN-RAND` and why it observes properties rather than values
+-------------------------------------------------------------
+`rt_bn_rand_probe.c` drives `crypto/bn/bn_rand.c`'s public family -- the ten draw entry points,
+their `_ex` and deprecated spellings, and the range family -- through the authority's own surface.
+It **cannot** compare the drawn values: the two sides seed from different pools, so a byte
+comparison would compare two machines. It compares each arm's *contract* instead -- the return
+code, the error queue, `BN_num_bits(rnd) <= bits`, the pinned top/bottom bits, and
+`BN_cmp(rnd, range) < 0` for the range family -- and at `bits = 1` and `bits = 2` the masks pin
+the value exactly, so those two arms observe the mask arithmetic itself rather than a property of
+it. Every draw is made twice, once with no `BN_CTX` and once with a live one, because
+`bnrand` reads its context's library context through `ossl_bn_get_libctx` and hands it to
+`RAND_bytes_ex`; the refusal arms are the other half, since a draw that silently answered zero
+where the authority raised looks identical in a success-only transcript.
+
 SPDX-License-Identifier: Apache-2.0"""
 
 from __future__ import annotations
@@ -86,15 +100,13 @@ RUN_TIMEOUT_S = "60"
 COURTS: list[tuple[str, str]] = [
     ("RT-DRBG", "rt_drbg_probe.c"),
     ("RT-RAND", "rt_rand_probe.c"),
+    ("RT-BN-RAND", "rt_bn_rand_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. Not a registered court: nothing here
 # can pass, and each is printed with the subphase that brings it so that "not run yet" cannot be
 # read as "passed".
 PENDING_COURTS: dict[str, str] = {
-    "RT-BN-RAND": "9.1 -- the BN random family against the authority, with a fixed seed source "
-                  "on both sides. It cannot be written before the front exists, because the "
-                  "authority's own `BN_rand` reaches it.",
     "CT-DRBG": "9.4 -- the DRBGs' construction vectors, which the pinned tree already carries: "
                "`test/recipes/30-test_evp_data/evprand.txt` mirror the NIST CAVP "
                "`drbgtestvectors.zip` sets, with the URL written in the file, and "
