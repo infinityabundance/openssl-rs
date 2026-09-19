@@ -575,6 +575,129 @@ def plan_for(plan: dict, provider: str, operation: str, row: dict) -> tuple[int 
     return None, None, "none"
 
 
+# --- the provider context, and the one thing it becomes load-bearing for ---------------------
+#
+# `ciphercommon.c.in`'s `ossl_cipher_generic_initkey` ends with
+#
+#     if (provctx != NULL)
+#         ctx->libctx = PROV_LIBCTX_OF(provctx); /* used for rand */
+#
+# so a provider *cipher* context carries the library context of the provider that created it.
+# That is the context `RAND_bytes_ex(ctx->libctx, ...)` resolves against in the GCM rows' no-IV
+# arm and in `cipher_tdes_wrap.c`'s IV generation, and it is the one thing this crate's
+# `ossl_default_provider_init` cannot supply: it publishes `*provctx = NULL`, so
+# `PROV_LIBCTX_OF` has no argument at all.
+#
+# The consequence is not a wrong answer today -- every landed cipher row is deterministic -- it is
+# a **library-context isolation** difference the moment a random-dependent row lands. An
+# application that loads the default provider in a private `OSSL_LIB_CTX` A and fetches such a row
+# in A gets the authority's A and the candidate's *global* context, and a test taken against the
+# global default context cannot tell the two apart. That is why the obligation is recorded here
+# as a **second blocker** beside `RAND_bytes_ex` rather than only in prose.
+#
+# It is measured rather than asserted, and every measurement is a fatal if it stops being true:
+# the day the crate grows the plumbing this generator fails instead of the claim going stale, and
+# a reviewer never has to re-derive which spelling is current.
+CRATE_PROVIDER_CONTEXT_FACTS = [
+    (
+        "src/provider/digest.rs",
+        "*provctx = ptr::null_mut();",
+        "`ossl_default_provider_init` publishes a NULL provctx",
+    ),
+    (
+        "src/provider/cipher.rs",
+        "_provctx: *mut c_void,",
+        "`ossl_cipher_generic_initkey` takes the provider context and ignores it",
+    ),
+]
+
+# The point the authority's line makes, in one place so the check and the artefact cannot drift.
+AUTHORITY_PROVIDER_CONTEXT_FACT = (
+    "providers/implementations/ciphers/ciphercommon.c.in",
+    "ctx->libctx = PROV_LIBCTX_OF(provctx);",
+)
+
+
+def provider_context(auth: Authority) -> dict:
+    """The measured provider-context gap, and the rows whose blockers it joins.
+
+    Reads the crate and the authority's template, and fails on any of the three facts moving:
+    a crate fact disappears, the crate starts assigning `(*ctx).libctx` (the obligation is
+    retired), or the authority's line moves. A `CensusError` rather than a warning, because a
+    stale obligation here is exactly the class D237 exists to stop.
+    """
+    for rel, needle, what in CRATE_PROVIDER_CONTEXT_FACTS:
+        if needle not in read(REPO_ROOT / rel):
+            raise CensusError(
+                f"[provider-algorithms] fatal: {rel} no longer contains {needle!r}, so the "
+                f"provider-context fact recorded here ({what}) has moved: re-derive this block "
+                "rather than trusting it"
+            )
+    # **The absence is the finding.** Nothing writes a provider cipher context's `libctx` from a
+    # provider context; the field exists and is only ever NULL-initialised in a unit test. The
+    # test is `any assignment to the field at all`, not one spelling of one: the first version
+    # looked for the literal `(*ctx).libctx =` and a negative test with a differently-named
+    # receiver (`(*c).libctx =`) sailed past it, which is precisely the false comfort this block
+    # exists to prevent. Any assignment means the plumbing is arriving, so the obligation has to
+    # be re-derived rather than trusted -- and its removal, not this check, is what retires it.
+    cipher_rs = read(REPO_ROOT / "src" / "provider" / "cipher.rs")
+    assignment = re.search(r"\.libctx\s*=", cipher_rs)
+    if assignment is not None:
+        line = cipher_rs.count("\n", 0, assignment.start()) + 1
+        raise CensusError(
+            "[provider-algorithms] fatal: src/provider/cipher.rs line "
+            f"{line} assigns a `.libctx` field, so the provider context may now be plumbed: "
+            "re-derive this obligation and the second blocker of the random-dependent rows with "
+            "it. **This check failing is the obligation's retirement condition, not a bug in the "
+            "generator**: delete this block and the `blocked_by` half in "
+            "`provider-algorithm-plans.json` in the same commit that lands the plumbing, and "
+            "replace both with the court arm the `court_requirement` below asks for."
+        )
+    auth_rel, auth_needle = AUTHORITY_PROVIDER_CONTEXT_FACT
+    if auth_needle not in read(auth.source / auth_rel):
+        raise CensusError(
+            f"[provider-algorithms] fatal: the authority's {auth_rel} no longer contains "
+            f"{auth_needle!r}, so a row's second blocker may no longer be what this says"
+        )
+    return {
+        "obligation": (
+            "The default provider's `provctx` is NULL in this crate, so `PROV_LIBCTX_OF(provctx)` "
+            "-- and therefore a provider cipher context's `libctx` -- cannot be supplied. Counted "
+            "as the **second** blocker of every provider row whose first blocker is randomness, "
+            "because those are the rows where `ctx->libctx` is what the random call resolves "
+            "against. It is the provider's own port of D117's residual."
+        ),
+        "authority": {
+            "unit": auth_rel,
+            "line": auth_needle,
+            "effect": (
+                "every provider cipher context stores the creating provider's library context, "
+                "and the GCM no-IV arm and `cipher_tdes_wrap.c`'s IV generation call "
+                "`RAND_bytes_ex(ctx->libctx, ...)` against it"
+            ),
+        },
+        "crate": [
+            {"path": rel, "fact": what} for rel, _needle, what in CRATE_PROVIDER_CONTEXT_FACTS
+        ]
+        + [
+            {
+                "path": "src/provider/cipher.rs",
+                "fact": (
+                    "no assignment from a provider context to `(*ctx).libctx` exists; the field "
+                    "is only ever NULL-initialised in a unit test"
+                ),
+            }
+        ],
+        "blocked_rows": [],
+        "court_requirement": (
+            "Before Phase 9 retires a random-dependent row, the observation has to be taken in a "
+            "**private `OSSL_LIB_CTX`**, not the global default context: with both providers "
+            "loaded in the global context the isolation difference is invisible, so a passing "
+            "test there would certify nothing about this obligation."
+        ),
+    }
+
+
 def weak_tier() -> int:
     """Without the authority's tree, check the committed artefact against itself.
 
@@ -659,13 +782,27 @@ def main(argv: list[str]) -> int:
         switch = query_switch(text)
         filtered = cache_relation(text)
         rows_here: list[dict] = []
+        empty_tables: list[str] = []
         for table, body in tables.items():
             parsed = parse_table(body, provider, auth.source, defined, names, table)
             if not parsed:
+                empty_tables.append(table)
                 continue
             rows_here.append({"table": table, "rows": parsed})
-        # A table the query switch returns but the parser saw none of is a fatal: the census
-        # would silently drop a whole operation.
+        # **A table the parser saw no rows in is a fatal, not a skip.** The first version
+        # `continue`d past it, and that left one hole in this file's `unknown = 0` invariant: a
+        # table the query switch does not return -- and so is not caught by the check below --
+        # could parse to nothing and vanish from the census without a word, which is the same
+        # class of blind spot `DES3-WRAP` was before the table reader existed. It is also the
+        # check that has to fail if the authority's `configuration.h` guards ever change which
+        # rows a table carries.
+        if empty_tables:
+            raise CensusError(
+                f"[provider-algorithms] fatal: {rel_source} declares "
+                f"{', '.join(sorted(empty_tables))}, which the parser found no rows in"
+            )
+        # A table the query switch returns but the parser attributed to nothing is a fatal: the
+        # census would silently drop a whole operation.
         for operation, table in sorted(switch.items()):
             if not any(t["table"] == table for t in rows_here) and table not in filtered.values():
                 raise CensusError(
@@ -674,8 +811,15 @@ def main(argv: list[str]) -> int:
                 )
         for t in rows_here:
             operation = next((op for op, tbl in switch.items() if tbl == t["table"] or filtered.get(t["table"]) == tbl), None)
+            # A parsed table that no operation claims is a fatal rather than a skip: it would be
+            # a row set the census knows about and never classifies, which is exactly the
+            # `unknown = 0` invariant this file exists to hold.
             if operation is None:
-                continue
+                raise CensusError(
+                    f"[provider-algorithms] fatal: {rel_source}'s {t['table']} parses to "
+                    f"{len(t['rows'])} row(s) and no operation returns it or its filtered "
+                    "target, so it has no operation to be classified under"
+                )
             op_id = ops[operation]
             for order, row in enumerate(t["rows"]):
                 entry = {
@@ -712,6 +856,15 @@ def main(argv: list[str]) -> int:
             }
         )
         total += sum(len(t["rows"]) for t in rows_here)
+        # Per-provider accounting, not only the global total: a row counted twice under one
+        # provider and not at all under another used to close globally and lie locally.
+        parsed_here = sum(len(t["rows"]) for t in rows_here)
+        counted_here = sum(1 for r in census_rows if r["provider"] == provider)
+        if counted_here != parsed_here:
+            raise CensusError(
+                f"[provider-algorithms] fatal: {provider}: {counted_here} census row(s) for "
+                f"{parsed_here} parsed row(s)"
+            )
 
     if total != len(census_rows):
         raise CensusError("[provider-algorithms] fatal: row accounting does not close")
@@ -808,8 +961,14 @@ def main(argv: list[str]) -> int:
                 "the first capability-gated row lands, not repaired after it."
             ),
         },
+        "provider_context": provider_context(auth),
         "rows": census_rows,
     }
+    body["provider_context"]["blocked_rows"] = [
+        [r["provider"], r["operation"], r["algorithm_names"]]
+        for r in census_rows
+        if r["operation"] == "OSSL_OP_CIPHER" and r["blocked_by"] and "RAND" in r["blocked_by"]
+    ]
     doc = envelope(kind="provider-algorithms", authority=auth.id, inputs=inputs, body=body, generator=GENERATOR)
     write_json(OUT, doc)
 
