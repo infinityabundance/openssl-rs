@@ -213,6 +213,14 @@
       "reason": "7.6 withholds `OSSL_HPKE_get_grease_value`, and `forensics/prerequisites.json` records the *dependency* that blocks it rather than a row for itself (D165 refused a deferral for a Phase-7-owned export). One dependency name is new: `RAND_bytes_ex` (`crypto/hpke/hpke.c:1433`, Phase 9's), which the random GREASE fill is the whole observable of; its random-suite helper `ossl_rand_uniform_uint32` (`hpke_util.c:198`, `:220`, `:243`) is the same stratum and is named in the same row's reason rather than as a second blocking entry. Phase 9 has not started, so the name is blocking by the gate's rule. This row is the same change measured against this branch's previous head (`34c68191`), whose committed baseline already counts 25. The count rises because a blocker became *recorded*, not because work appeared, and nothing was undone.",
       "authority_artifact": "forensics/prerequisites.json",
       "recorded_by": "docs/DECISIONS.md D195"
+    },
+    {
+      "metric": "sealed_census",
+      "before": 56,
+      "after": 57,
+      "reason": "D314 gives `crypto/bn/bn_rand.c` a transcription edge (`src/bn/rand.rs`). The gate's sealed census counts authority internals a transcribed unit calls whose own defining unit's stratum has sealed, so transcribing another authority file necessarily enters that file's not-yet-built tail: two names of it appeared -- `ossl_bn_priv_rand_range_fixed_top` (`crypto/bn/bn_rand.c:241-283`) and `ossl_bn_gen_dsa_nonce_fixed_top` (`:293-395`), neither of which the crate defines -- and one left because D314 built it (`ossl_bn_get_libctx`, `crypto/bn/bn_ctx.c:243`). The count rises because a whole authority unit that nothing referenced became visible, which is the cause D132 recorded for the blocking list from the same direction: landing work can move such a count up without any work being undone. Both names are the later slice `src/bn/rand.rs`'s module note already records as not transcribed, and both need `ossl_bn_mask_bits_fixed_top` and the fixed-top representation.",
+      "authority_artifact": "forensics/atlas/prerequisite-gate.json",
+      "recorded_by": "docs/DECISIONS.md D314"
     }
   ]
 }

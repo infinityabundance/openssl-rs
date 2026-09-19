@@ -20447,3 +20447,21 @@ observations. `forensics/prerequisites.json` needed no change and that is a meas
 than an omission: `ossl_bn_get_libctx` had no deferral row to retire, because the crate never
 referenced it until this commit -- the module was the first caller, and it defines it in the same
 commit.
+
+### The one count that had to increase, and the row that blesses it
+
+`regression_guard.py` reported `prerequisites[sealed_census]: 56 -> 57 (+1)` against this branch's
+previous head, and it is right to: the sealed census counts authority internals a transcribed unit
+calls whose own defining unit's stratum has sealed, so **transcribing another authority file
+necessarily enters that file's not-yet-built tail**. Two names of `bn_rand.c`'s tail became
+visible -- `ossl_bn_priv_rand_range_fixed_top` (`:241-283`) and `ossl_bn_gen_dsa_nonce_fixed_top`
+(`:293-395`) -- and one left the census because this commit built it (`ossl_bn_get_libctx`).
+
+The count moved up because a whole authority unit that nothing referenced became visible, which is
+the cause D132 recorded for the blocking list from the same direction, and the mechanism it added
+is what is used here: a `prerequisite_transitions` row in
+`forensics/ownership-transitions.json` matching `sealed_census` 56 -> 57 exactly, with the reason
+above and D314 as its `recorded_by`. A row blesses the change it describes and nothing else -- a
+larger increase, or a different metric, fails -- so the increase is recorded rather than permitted.
+Both names are the later slice this module's own note already says is not transcribed, and both
+need `ossl_bn_mask_bits_fixed_top` and the fixed-top representation.
